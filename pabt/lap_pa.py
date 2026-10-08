@@ -14,7 +14,7 @@ from datetime import datetime
 
 from . import csdl
 from .nghiep_vu import (MA_ON_DINH, MA_TDC, MA_THEO_NK, NGUON_DM, NGUON_TAY, NGUON_TD, BoiCanh, DongDat, DongKhoan, PhuongAn,
-                        de_xuat_dao_tao_pa, doc_phuong_an, don_gia_theo_nhan_khau, goi_y_ho_tro, goi_y_khoan, kiem_tra_pa,
+                        de_xuat_dao_tao_pa, doc_phuong_an, goi_y_ho_tro, goi_y_khoan, kiem_tra_pa,
                         so_vi_tri, thanh_tien_dong, thanh_tien_dong_dat, tinh_pa)
 from .tien import D, KHONG, chuoi, so_luong_vn, so_vn, vn
 
@@ -27,11 +27,41 @@ def bo_dau(s) -> str:
     return _bo_dau(str(s or ''))
 
 
+def _bang_bo_dau() -> dict:
+    """Ký tự Latin có dấu (gồm mọi chữ tiếng Việt) -> chữ không dấu, dựng MỘT lần: str.translate thay cho tách dấu NFD từng ký tự
+    (danh mục 5.668 mục: 0,2 giây -> vài chục ms mỗi lần mở dự án / cửa sổ lập phương án)."""
+    bang = {}
+    for i in list(range(0xC0, 0x250)) + list(range(0x1E00, 0x1F00)):
+        c = chr(i)
+        k = ''.join(x for x in unicodedata.normalize('NFD', c) if unicodedata.category(x) != 'Mn')
+        if k != c:
+            bang[i] = k
+    bang[ord('đ')], bang[ord('Đ')] = 'd', 'D'
+    return bang
+
+
+_BANG_BO_DAU = _bang_bo_dau()
+_RE_NGOAI_ASCII = re.compile(r'[^\x00-\x7f]')
+_ON_DINH = {}          # ký tự ngoài ASCII -> True nếu tách dấu không đổi nó (², ×, –, Ø...: không có dạng tách, không phải dấu)
+
+
+def _on_dinh(c: str) -> bool:
+    v = _ON_DINH.get(c)
+    if v is None:
+        v = _ON_DINH[c] = (unicodedata.normalize('NFD', c) == c and unicodedata.category(c) != 'Mn'
+                           and unicodedata.combining(c) == 0)
+    return v
+
+
 @functools.lru_cache(maxsize=65536)
 def _bo_dau(s: str) -> str:
     """Chữ thường không dấu (nhớ kết quả: danh mục vài nghìn mục được tìm / lọc nhiều lần mỗi khi mở cửa sổ)."""
-    s = unicodedata.normalize('NFD', s).replace('đ', 'd').replace('Đ', 'D')
-    return ' '.join(''.join(c for c in s if unicodedata.category(c) != 'Mn').lower().split())
+    t = s.translate(_BANG_BO_DAU)
+    if not t.isascii() and not all(_on_dinh(c) for c in _RE_NGOAI_ASCII.findall(t)):
+        # còn dấu rời (chữ dạng NFD) / ký tự có dạng tách ngoài bảng: tách dấu như cũ - kết quả giống hệt
+        t = unicodedata.normalize('NFD', t).replace('đ', 'd').replace('Đ', 'D')
+        t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
+    return ' '.join(t.lower().split())
 
 
 def doc_so(text, ten_o: str, cho_phep_trong: bool = True, toi_thieu=KHONG, toi_da=None):
@@ -52,10 +82,9 @@ def doc_so(text, ten_o: str, cho_phep_trong: bool = True, toi_thieu=KHONG, toi_d
             return KHONG
         raise LoiNhap(f'{ten_o}: chưa nhập.')
     if s is not None:
-        if re.fullmatch(r'-?\d{1,3}(\.\d{3})+', s.replace(' ', '')):
-            s = s.replace('.', '')                  # kiểu Việt Nam: 1.000 = một nghìn (số lẻ dùng dấu phẩy: 2,125)
+        from .tien import doc_so_vn
         try:
-            v = D(s)
+            v = doc_so_vn(s)                        # kiểu Việt Nam: 1.000 = một nghìn (số lẻ dùng dấu phẩy: 2,125)
         except ValueError:
             raise LoiNhap(f'{ten_o}: "{text}" không phải là số.') from None
         if phan_tram:
@@ -110,6 +139,48 @@ class MucDanhMuc:
 
 NHOM_TIM = {2: 'Nhà, công trình', 3: 'Cây trồng', 4: 'Hỗ trợ', 9: 'Quy ước tương đương'}
 TU_LAP = 'Phương án tự lập - chưa soát'       # trạng thái hộ: phương án phần mềm tự lập lúc tạo Dự án mới, người dùng chưa mở soát
+HANG_LOAT_GIAY, HANG_LOAT_TOI_THIEU = 3, 5
+
+
+def phan_loai_lap(con, co_pa: dict | None = None) -> dict:
+    """ma_ho -> 'da_lap' (người dùng đã lập / lưu, hoặc nhập từ Excel) | 'tu_lap' (phần mềm tự lập lúc tạo Dự án mới, chưa soát)
+    | 'chua' (chưa có dòng nào). co_pa: {ma_ho: có phương án} đã tính sẵn (không thì tính lại).
+
+    Từ 0.9.13 phương án tự lập mang trạng thái TU_LAP. File dự án tạo trước đó: phương án tự lập cũng ghi "Đã lập phương
+    án" - nhận ra vì được lưu hàng loạt (>= 5 hộ, mỗi hộ cách hộ trước <= 3 giây) lúc tạo dự án; hộ người dùng lập lưu rời rạc.
+    (Trước 0.9.16 nằm ở in_an - in_an vẫn giữ tên này.)"""
+    from datetime import datetime as _dt
+    if co_pa is None:
+        from .nghiep_vu import tinh_tat_ca
+        co_pa = {k.ma_ho: k.co_phuong_an for k in tinh_tat_ca(con)}
+    ho = con.execute('SELECT ma_ho, trang_thai, luu_luc FROM ho').fetchall()
+    luc = []
+    for r in ho:
+        if co_pa.get(r['ma_ho']) and r['luu_luc']:
+            try:
+                luc.append((_dt.fromisoformat(str(r['luu_luc'])), r['ma_ho']))
+            except ValueError:
+                pass
+    luc.sort()
+    hang_loat, dot = set(), []
+    for i, (t, m) in enumerate(luc):
+        if dot and (t - luc[i - 1][0]).total_seconds() > HANG_LOAT_GIAY:
+            if len(dot) >= HANG_LOAT_TOI_THIEU:
+                hang_loat.update(dot)
+            dot = []
+        dot.append(m)
+    if len(dot) >= HANG_LOAT_TOI_THIEU:
+        hang_loat.update(dot)
+    kq = {}
+    for r in ho:
+        m = r['ma_ho']
+        if not co_pa.get(m):
+            kq[m] = 'chua'
+        elif str(r['trang_thai'] or '').startswith(TU_LAP) or m in hang_loat:
+            kq[m] = 'tu_lap'
+        else:
+            kq[m] = 'da_lap'
+    return kq
 
 
 class DanhMuc:

@@ -215,6 +215,17 @@ class BoiCanh:
             self.__dict__['_thua_theo_ho'] = cm
         return cm.get(ma_ho, [])
 
+    def muc_thuong(self, tong) -> Decimal:
+        """muc_thuong(tong, self.bieu): biểu thưởng đổi sang số và sắp xếp MỘT lần (trước đây mỗi hộ một lần - 3.000 hộ ~0,1 giây)."""
+        b = self.__dict__.get('_bieu_so')
+        if b is None:
+            b = self.__dict__['_bieu_so'] = sorted(((D(a), D(m)) for a, m in self.bieu), key=lambda t: t[0])
+        tong, kq = D(tong), KHONG
+        for tu, muc in b:
+            if tong >= tu:
+                kq = muc
+        return kq
+
     def so_ts(self, ma) -> Decimal:
         v = self.ts.get(ma)
         try:
@@ -365,7 +376,7 @@ def tinh_pa(pa: PhuongAn, bc: BoiCanh) -> KetQuaHo:
                                 r.id or 0, r.thanh_tien_excel, r.cach_tinh))
             kq.muc[muc] += tt
     if kq.muc[1] > 0:
-        kq.muc[5] = muc_thuong(kq.muc[1] + kq.muc[2] + kq.muc[3] + kq.muc[4], bc.bieu)
+        kq.muc[5] = bc.muc_thuong(kq.muc[1] + kq.muc[2] + kq.muc[3] + kq.muc[4])
     return kq
 
 

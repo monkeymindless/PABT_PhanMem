@@ -15,7 +15,7 @@ from decimal import Decimal, ROUND_FLOOR
 
 from . import csdl
 from .lap_pa import bo_dau
-from .tien import D, KHONG, chuoi, so_vn
+from .tien import D, KHONG, chuoi, doc_so_vn, so_vn
 
 PI = Decimal('3.14159265358979')
 
@@ -201,10 +201,8 @@ def mat_do_tu_danh_muc(ten: str, ghi_chu: str = ''):
     if not m:
         return None
     s = m.group(1).strip('.,')
-    if re.fullmatch(r'\d{1,3}(\.\d{3})+', s):          # kiểu Việt Nam: 1.111 = một nghìn một trăm mười một
-        s = s.replace('.', '')
     try:
-        v = D(s)
+        v = doc_so_vn(s)                                 # kiểu Việt Nam: 1.111 = một nghìn một trăm mười một
     except ValueError:
         return None
     return v if v > 0 else None

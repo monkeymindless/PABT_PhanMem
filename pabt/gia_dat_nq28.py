@@ -8,7 +8,6 @@ Chép từ bản PDF đóng dấu của Nghị quyết, kiểm tra chéo bằng 
 from __future__ import annotations
 import json
 import re
-import sys
 from functools import lru_cache
 from pathlib import Path
 

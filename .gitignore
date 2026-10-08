@@ -1,0 +1,32 @@
+# Môi trường, bộ đệm
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# Sản phẩm dựng (bộ cài, exe, gói cập nhật) - dựng lại bằng DUNG_*.bat
+build/
+dist/
+bo_cai/
+# bộ cài Visual C++ của Microsoft (~25 MB, tải lại từ Microsoft): giữ trong bo_cai_win\ để dựng bộ cài, không đưa vào lịch sử git
+bo_cai_win/*.exe
+
+# Dữ liệu thật của người dùng: KHÔNG đưa vào repo (CLAUDE.md)
+*.pabt
+*.pabt.khoa
+*.pabtdt
+*.pabtcn
+du_lieu/
+*.xlsm
+*.xls
+*.doc
+*.pdf
+
+# Khóa ký gói cập nhật (chỉ ở %LOCALAPPDATA%\PABT_dev, phòng khi chép nhầm vào đây)
+khoa_ky_cap_nhat*.json
+
+# Kết quả kiểm tra, ảnh so sánh, cấu hình máy
+ket_qua_kiem_tra/
+so_sanh_giao_dien/
+.claude/settings.local.json
+loi.log

@@ -1,5 +1,6 @@
 """Số tiền, diện tích, đơn giá: tính bằng Decimal và làm tròn giống hàm ROUND của Excel."""
 from __future__ import annotations
+import re
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 KHONG = Decimal(0)
@@ -33,16 +34,31 @@ def D(x) -> Decimal:
         raise ValueError(f'không đọc được số: {x!r}')
 
 
+_RE_NGHIN_CHAM = re.compile(r'[-+]?[1-9]\d{0,2}(\.\d{3})+')        # 1.070 / 2.500.000: dấu chấm ngăn nghìn (không bắt 0.125)
+_RE_NGHIN_PHAY = re.compile(r'[-+]?[1-9]\d{0,2}(,\d{3}){2,}')      # 1,500,000 kiểu Anh (từ 2 nhóm: "1,500" vẫn là 1,5)
+
+
+def doc_so_vn(x) -> Decimal:
+    """Số NGƯỜI DÙNG GÕ hoặc ô chữ trong file Excel / Word / PDF -> Decimal, một quy tắc chung cho mọi chỗ nhập liệu:
+    '1.070' = 1.070 (chấm ngăn nghìn), '2.500.000', '1.070,5' = 1070,5, '12,5' = 12,5, '0.125' / '12.5' = số lẻ dấu chấm,
+    '1,500,000' = 1500000. Sai -> ValueError.
+    Khác D(): D đọc chuỗi LƯU TRONG CSDL (tien.chuoi ghi '1.07' cho 1,07) - không dùng D cho chữ người gõ (trước đây '1.070' gõ
+    vào ô diện tích Excel thành 1,07 m², '1.070,5' ở số tiền quyết định thành 10.705)."""
+    if not isinstance(x, str):
+        return D(x)
+    s = x.strip().replace(' ', '').replace(' ', '')
+    if _RE_NGHIN_CHAM.fullmatch(s):
+        s = s.replace('.', '')
+    elif _RE_NGHIN_PHAY.fullmatch(s):
+        s = s.replace(',', '')
+    return D(s)
+
+
 def _so_trong_cong_thuc(t: str) -> Decimal:
-    """Một số trong công thức, kiểu Việt Nam: 1.480.500 / 4,2 / 1.000,5; kiểu dấu chấm thập phân 4.2 cũng nhận."""
-    import re
-    if re.fullmatch(r'\d{1,3}(\.\d{3})+(,\d+)?', t):
-        t = t.replace('.', '').replace(',', '.')
-    elif ',' in t:
-        t = t.replace('.', '').replace(',', '.')
+    """Một số trong công thức: cùng quy tắc doc_so_vn (1.480.500 / 4,2 / 1.000,5 / 4.2)."""
     try:
-        return Decimal(t)
-    except InvalidOperation:
+        return doc_so_vn(t)
+    except ValueError:
         raise ValueError(f'không đọc được số "{t}"') from None
 
 

@@ -2,7 +2,6 @@
 lọc tiến độ, nâng cấp file v9, màn hình Bảng tổng hợp / Theo dõi tiến độ / trạng thái một hộ."""
 from __future__ import annotations
 import os
-import sqlite3
 import tempfile
 import unittest
 from pathlib import Path

@@ -57,7 +57,7 @@ class HopNhapChiTiet(QDialog):
                                    '; '.join(gc)], start=1):
                 it = QTableWidgetItem(v)
                 if c == 4:
-                    it.setTextAlignment(int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter))
+                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(i, c, it)
         hd = self.bang.horizontalHeader()
         for c, w in enumerate((58, 70, 230, 400, 140)):

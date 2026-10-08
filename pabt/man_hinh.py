@@ -10,12 +10,13 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
-                               QFileDialog, QFormLayout, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit, QListWidget,
+                               QFileDialog, QFormLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
                                QListWidgetItem, QMessageBox, QPlainTextEdit, QPushButton, QRadioButton, QSpinBox,
                                QStyledItemDelegate, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
-from . import in_an, lap_pa, nghiep_vu
+from . import lap_pa, nghiep_vu
 from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
+# in_an (kéo theo openpyxl ~0,2 giây) chỉ nạp trong hộp In / Xuất: mở dự án, cửa sổ lập phương án không phải chờ
 from .nghiep_vu import MA_TDC, NGUON_TAY, NGUON_TD, TEN_MUC
 from .tien import D, lam_tron, so_vn, vn
 
@@ -1549,11 +1550,12 @@ class HopIn(QDialog):
     """Chọn hộ, loại bản in, đầu ra (Excel / Excel + PDF / máy in) và thư mục."""
 
     def __init__(self, con, parent=None, ma_ho_chon: list | None = None, file_du_an=None):
+        from . import in_an
         super().__init__(parent)
         self.con = con
         self.ket_qua = None
         self.setWindowTitle('In / xuất phương án')
-        self.resize(980, 760)
+        self.resize(1000, 880)
         # hộ + tình trạng lập phương án: "đã lập" không tính phương án phần mềm tự lập lúc tạo Dự án mới mà chưa soát
         kq = nghiep_vu.tinh_tat_ca(con)
         self.tong = {k.ma_ho: k.tong for k in kq}
@@ -1618,9 +1620,33 @@ class HopIn(QDialog):
         self.o_ct.setChecked(True)
         self.o_bth = QCheckBox('Bảng tổng hợp (mẫu IN_BANGTONGHOP, A3 ngang)')
         self.o_bth.setChecked(not self.ma_ho_chon)
-        self.r_excel = QRadioButton('File Excel (.xlsx)')
-        self.r_pdf = QRadioButton('File Excel + PDF (qua Microsoft Excel)')
-        self.r_in = QRadioButton('In ra máy in mặc định (qua Microsoft Excel)')
+        # văn bản trình của đợt (0.9.16): tờ trình / văn bản trình, phương án tổng - số, ngày lấy theo đợt trình đã chọn
+        self.o_tt = QCheckBox('Tờ trình / văn bản trình (mẫu Word / Excel - sửa ở "Đợt trình…")')
+        self.o_pat = QCheckBox('Phương án tổng (mẫu Word)')
+        self.cb_dot = QComboBox()
+        self.cb_dot.addItem('(Không theo đợt: số tờ trình, số phương án tổng để trống)', None)
+        from . import quan_ly
+        try:
+            self.ds_dot = quan_ly.ds_dot(con)
+        except Exception:                               # file chỉ xem phiên bản cũ
+            self.ds_dot = []
+        for d in self.ds_dot:
+            self.cb_dot.addItem(f'{d.ten} - {d.so_ho} hộ' + (f' - {d.van_ban_trinh}' if d.van_ban_trinh else ''), d.id)
+        self.cb_dot.currentIndexChanged.connect(lambda _: self._theo_dot())
+        b_het = QPushButton('Chọn tất cả mẫu (in đồng loạt)')
+        b_het.clicked.connect(lambda: self.chon_mau(True))
+        b_bo = QPushButton('Bỏ chọn mẫu')
+        b_bo.clicked.connect(lambda: self.chon_mau(False))
+        hang_mau_in = QHBoxLayout()
+        hang_mau_in.addWidget(b_het)
+        hang_mau_in.addWidget(b_bo)
+        hang_mau_in.addStretch(1)
+        self.o_chia = QCheckBox('Lưu thành 2 thư mục: "PA CHI TIET" (phương án chi tiết) và "PA TONG" (tờ trình / văn bản trình, '
+                                'phương án tổng, bảng tổng hợp)')
+        self.o_chia.setChecked(True)
+        self.r_excel = QRadioButton('File Excel / Word (.xlsx / .docx)')
+        self.r_pdf = QRadioButton('File Excel / Word + PDF (qua Microsoft Excel / Word)')
+        self.r_in = QRadioButton('In ra máy in mặc định (qua Microsoft Excel / Word)')
         self.r_pdf.setChecked(True)
         self.nhom_ra = QButtonGroup(self)
         for b in (self.r_excel, self.r_pdf, self.r_in):
@@ -1648,25 +1674,31 @@ class HopIn(QDialog):
         hang.addWidget(self.o_thu_muc, 1)
         hang.addWidget(b_chon)
         form = QFormLayout()
+        form.addRow('Đợt trình:', self.cb_dot)
         form.addRow('Hộ cần in:', self.cb_pham_vi)
         form.addRow('', hang_chon)
         form.addRow('', self.bang_ho)
         form.addRow('', self.lb_chon)
         form.addRow('Bản in:', self.o_ct)
         form.addRow('', self.o_bth)
+        form.addRow('', self.o_tt)
+        form.addRow('', self.o_pat)
+        form.addRow('', hang_mau_in)
         form.addRow('Đầu ra:', self.r_excel)
         form.addRow('', self.r_pdf)
         form.addRow('', self.o_gop)
         form.addRow('', hang_in)
         form.addRow('Lưu vào thư mục:', hang)
+        form.addRow('', self.o_chia)
         form.addRow('', self.o_mo)
         nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         nut.button(QDialogButtonBox.StandardButton.Ok).setText('Thực hiện')
         nut.button(QDialogButtonBox.StandardButton.Cancel).setText('Đóng')
         nut.accepted.connect(lambda: self.thuc_hien())
         nut.rejected.connect(self.reject)
-        self.lb = QLabel('Bản in lấy đúng mẫu IN_CHITIET / IN_BANGTONGHOP của file PABT Excel (thư mục mau_in). '
-                         'PDF và máy in cần Microsoft Excel trên máy.')
+        self.lb = QLabel('Bản in lấy đúng mẫu IN_CHITIET / IN_BANGTONGHOP của file PABT Excel (thư mục mau_in); tờ trình, phương án '
+                         'tổng theo mẫu ở cửa sổ "Đợt trình…" (số văn bản, số phương án tổng lấy theo đợt đã chọn). PDF và máy in '
+                         'cần Microsoft Excel (văn bản Word: Microsoft Word) trên máy.')
         self.lb.setWordWrap(True)
         b_xem = QPushButton('Xem trước bản in…')
         b_xem.setToolTip('In thử phương án chi tiết của hộ đầu tiên trong danh sách và mở ra xem (không lưu vào thư mục)')
@@ -1678,6 +1710,11 @@ class HopIn(QDialog):
         hang_mau = QHBoxLayout()
         hang_mau.addWidget(b_xem)
         hang_mau.addWidget(b_mau)
+        for chu, loai in (('Sửa mẫu tờ trình…', 'to_trinh'), ('Sửa mẫu phương án tổng…', 'pa_tong')):
+            b = QPushButton(chu)
+            b.setToolTip('Mở mẫu bằng Word / Excel để sửa; thêm mẫu từ file Word / Excel / PDF ở cửa sổ "Đợt trình…"')
+            b.clicked.connect(lambda _=False, x=loai: self.sua_mau_van_ban(x))
+            hang_mau.addWidget(b)
         hang_mau.addStretch(1)
         lo = QVBoxLayout(self)
         lo.addLayout(form)
@@ -1744,8 +1781,40 @@ class HopIn(QDialog):
         self.o_gop.setEnabled(self.r_pdf.isChecked())
         self.o_so_ban.setEnabled(self.r_in.isChecked())
 
+    # ---- đợt trình, chọn mẫu in
+    def dot_chon(self):
+        """quan_ly.Dot đang chọn ở ô "Đợt trình" (None: không theo đợt)."""
+        i = self.cb_dot.currentData()
+        return next((d for d in self.ds_dot if d.id == i), None)
+
+    def _theo_dot(self):
+        """Chọn một đợt: đánh dấu các hộ của đợt và chọn sẵn mọi mẫu (số tờ trình, số / ngày phương án tổng lấy theo đợt)."""
+        d = self.dot_chon()
+        if d is None:
+            return
+        from . import quan_ly
+        self._danh_dau(quan_ly.ho_cua_dot(self.con, d.id))
+        self.chon_mau(True)
+
+    def chon_mau(self, co: bool):
+        """Chọn / bỏ chọn mọi mẫu in (in đồng loạt), hoặc đánh dấu từng mẫu để in riêng lẻ."""
+        for o in (self.o_ct, self.o_bth, self.o_tt, self.o_pat):
+            o.setChecked(co)
+
+    def sua_mau_van_ban(self, loai: str, mo: bool = True):
+        from . import van_ban_trinh as vb
+        from .in_an import mo_file
+        p = vb.mau_de_sua(loai)
+        if mo:
+            QMessageBox.information(self, TEN_UD, f'Mở mẫu {vb.LOAI[loai][1].lower()} bằng {"Excel" if p.suffix == ".xlsx" else "Word"}:'
+                                    f'\n{p}\n\nSửa xong bấm Lưu rồi đóng. Chỗ trống viết trong ngoặc nhọn, ví dụ {{so_to_trinh}} '
+                                    '(danh sách ở cửa sổ "Đợt trình…" > "Chỗ trống dùng trong mẫu…").')
+            mo_file(p)
+        return p
+
     def xem_truoc(self, mo: bool = True):
         """In thử hộ đầu tiên của phạm vi đang chọn vào thư mục tạm và mở ra xem. Trả file đã tạo."""
+        from . import in_an
         ds = self.ds_ho()
         if not ds:
             QMessageBox.information(self, TEN_UD, 'Không có hộ nào để xem.')
@@ -1763,6 +1832,7 @@ class HopIn(QDialog):
         return f
 
     def sua_mau(self, mo: bool = True):
+        from . import in_an
         try:
             f = in_an.mau_de_sua()
         except (in_an.LoiIn, OSError) as e:
@@ -1786,8 +1856,12 @@ class HopIn(QDialog):
                 if self.bang_ho.item(i, 0).checkState() == Qt.CheckState.Checked]
 
     def thuc_hien(self, xac_nhan: bool = True):
+        from . import in_an
+        from . import van_ban_trinh as vb
         ds = self.ds_ho()
-        if not (self.o_ct.isChecked() or self.o_bth.isChecked()):
+        chon = dict(chi_tiet=self.o_ct.isChecked(), bang_tong_hop=self.o_bth.isChecked(), to_trinh=self.o_tt.isChecked(),
+                    pa_tong=self.o_pat.isChecked())
+        if not any(chon.values()):
             QMessageBox.information(self, TEN_UD, 'Chọn ít nhất một loại bản in.')
             return None
         if not ds:
@@ -1801,7 +1875,7 @@ class HopIn(QDialog):
         in_may = self.r_in.isChecked()
         so_ban = self.o_so_ban.value() if in_may else 1
         if in_may and xac_nhan:
-            so = (len(ds) if self.o_ct.isChecked() else 0) + (1 if self.o_bth.isChecked() else 0)
+            so = (len(ds) if chon['chi_tiet'] else 0) + sum(1 for k in ('bang_tong_hop', 'to_trinh', 'pa_tong') if chon[k])
             if QMessageBox.question(self, TEN_UD, f'Gửi {so} bản in' + (f' × {so_ban} bản' if so_ban > 1 else '') +
                                     ' tới máy in mặc định của Windows?') != QMessageBox.StandardButton.Yes:
                 return None
@@ -1833,28 +1907,19 @@ class HopIn(QDialog):
             return tien.wasCanceled()
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            kq = dict(excel=[], pdf=[], loi=[])
-            if self.o_ct.isChecked():
-                kq = in_an.xuat_hang_loat(self.con, ds, thu_muc, pdf=self.r_pdf.isChecked(), in_may=in_may,
-                                          bang_tong_hop=self.o_bth.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
-                                          so_ban=so_ban)
-            else:
-                p = in_an.lap_bang_tong_hop(self.con, thu_muc / 'BANG_TONG_HOP.xlsx', ds)
-                kq['excel'].append(p)
-                if self.r_pdf.isChecked() or in_may:
-                    kq['loi'] = in_an.chay_excel([(p, p.with_suffix('.pdf') if not in_may else None)], 'in' if in_may else 'pdf',
-                                                 bao=bao_excel, so_ban=so_ban)
-                    if p.with_suffix('.pdf').exists():
-                        kq['pdf'].append(p.with_suffix('.pdf'))
-            ct = [f for f in kq['pdf'] if f.name != 'BANG_TONG_HOP.pdf']
+            # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
+            kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=self.dot_chon(), pdf=self.r_pdf.isChecked(), in_may=in_may,
+                                  so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
+                                  **chon)
+            ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]
             if self.o_gop.isChecked() and self.o_gop.isEnabled() and len(ct) > 1:
                 tien.setLabelText(f'Đang gộp {len(ct)} file PDF…')
                 QApplication.processEvents()
                 try:
-                    kq['gop'] = in_an.gop_pdf(ct, thu_muc / 'PHUONG_AN_CHI_TIET.pdf')
+                    kq['gop'] = in_an.gop_pdf(ct, kq['thu_muc_ct'] / 'PHUONG_AN_CHI_TIET.pdf')
                 except Exception as e:                 # pypdf báo nhiều loại lỗi khác nhau
                     kq['loi'].append(f'LOI_GOP\t\tKhông gộp được PDF: {e}')
-        except in_an.LoiIn as e:
+        except (in_an.LoiIn, LoiNhap) as e:
             QApplication.restoreOverrideCursor()
             tien.close()
             QMessageBox.warning(self, TEN_UD, str(e))
@@ -1868,7 +1933,8 @@ class HopIn(QDialog):
         tien.close()
         self.ket_qua = kq
         dung = any(x.startswith(('DA_DUNG', 'LOI_TREO')) for x in kq['loi'])
-        tb = f'Đã tạo {len(kq["excel"])} file Excel' + (f', {len(kq["pdf"])} file PDF' if kq['pdf'] else '') + \
+        tb = f'Đã tạo {len(kq["excel"])} file Excel' + (f', {len(kq["word"])} file Word' if kq.get('word') else '') + \
+             (f', {len(kq["pdf"])} file PDF' if kq['pdf'] else '') + \
              (f' (gộp: {kq["gop"].name})' if kq.get('gop') else '') + \
              (' và gửi tới máy in' if in_may and not kq['loi'] else '') + f'.\nThư mục: {thu_muc}'
         if kq['loi']:

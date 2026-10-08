@@ -28,7 +28,7 @@ from openpyxl.worksheet.cell_range import CellRange, MultiCellRange
 
 from . import nghiep_vu
 from .nghiep_vu import MA_ON_DINH, BoiCanh, doc_phuong_an, tinh_pa
-from .tien import D, KHONG, lam_tron
+from .tien import D, KHONG
 
 TEN_CT, TEN_BTH = 'IN_CHITIET', 'IN_BANGTONGHOP'
 COT_KIND = 30          # cột AD (ngoài vùng in): loại dòng H / I / R / T cho định dạng có điều kiện của mẫu
@@ -345,6 +345,34 @@ def _dinh_dang_gop(ws, m) -> None:
         if x is None:
             x = o[toa_do] = MergedCell(ws, row=toa_do[0], column=toa_do[1])
         _kieu(x).protectionId = id_kh
+
+
+_CHO_VIET = r'[\s….,_]*'                         # khoảng chấm / cách chừa để viết tay số, ngày
+
+
+def dien_so_ngay(ws, so: str = '', ngay: str = '', nhan_so: str = 'Số:', den_dong: int | None = None) -> int:
+    """Điền số / ngày văn bản vào chỗ chừa trống của mẫu (mẫu không cần sửa): '<nhan_so>      /ký hiệu' -> '<nhan_so> 125/ký hiệu';
+    'ngày …… tháng …… năm {nam}' -> 'ngày 10 tháng 10 năm 2026' (ngay = dd/mm/yyyy). Trả số ô đã điền."""
+    m_ngay = re.fullmatch(r'(\d{1,2})/(\d{1,2})/(\d{4})', str(ngay or '').strip())
+    if not so and not m_ngay:
+        return 0
+    re_so = re.compile(re.escape(nhan_so) + _CHO_VIET + '/')
+    re_ngay = re.compile(r'ngày' + _CHO_VIET + r'tháng' + _CHO_VIET + r'năm\s*(?:\{nam\}|\d{4}|[….]+)')
+    n = 0
+    for row in ws.iter_rows(max_row=den_dong):
+        for o in row:
+            v = o.value
+            if not isinstance(v, str):
+                continue
+            s = v
+            if so:
+                s = re_so.sub(lambda m: f'{nhan_so} {so}/', s)
+            if m_ngay:
+                s = re_ngay.sub(f'ngày {int(m_ngay.group(1)):02d} tháng {int(m_ngay.group(2)):02d} năm {m_ngay.group(3)}', s)
+            if s != v:
+                o.value = s
+                n += 1
+    return n
 
 
 def _thay_cho_trong(ws, gia_tri: dict):
@@ -790,8 +818,10 @@ def _thong_tin_ho(con, ma_ho: int, da: dict) -> dict:
     tdc = cau_tai_dinh_cu(h['tai_dinh_cu']) or \
         f'Sau khi UBND {da["cap_dia_ban_thuong"] or "xã, phường"} xác nhận điều kiện tái định cư (nếu có).'
     dt = (h['dien_thoai'] or '').strip()
+    k = h.keys()
     return dict(ma_ho=ma_ho, ho_ten=ten, cccd=cccd.strip(' -'), dia_chi=(h['dia_chi'] or '').strip(),
-                dien_thoai='' if dt == '0' else dt, nguon_goc='\n'.join(ng), tai_dinh_cu=tdc)
+                dien_thoai='' if dt == '0' else dt, nguon_goc='\n'.join(ng), tai_dinh_cu=tdc,
+                so_pa=(h['so_pa'] or '').strip() if 'so_pa' in k else '', ngay_pa=(h['ngay_pa'] or '') if 'ngay_pa' in k else '')
 
 
 # ---------------------------------------------------------------- phương án chi tiết (A4 dọc)
@@ -841,6 +871,7 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
         ws.row_dimensions[r].height = cao
     _vung_cf(ws, dau, dau + n - 1)
     gia_tri = dict(da, **ttho)
+    dien_so_ngay(ws, ttho['so_pa'], ttho['ngay_pa'], 'Số:', dau - 1)      # số / ngày PA chi tiết (đợt trình) vào chỗ chừa trống
     _thay_cho_trong(ws, gia_tri)
     vua_chu(ws, vt_du_an, do)
     for r in range(dau + n, min(dau + n + 6, ws.max_row + 1)):          # dòng IV: "Tái định cư: …" (mẫu cũ ghi "Phương án …")
@@ -866,47 +897,8 @@ def ho_co_phuong_an(con) -> list:
 
 
 LAP = {'da_lap': 'Đã lập phương án', 'tu_lap': 'Tự lập, chưa soát', 'chua': 'Chưa có phương án'}
-HANG_LOAT_GIAY, HANG_LOAT_TOI_THIEU = 3, 5
-
-
-def phan_loai_lap(con, co_pa: dict | None = None) -> dict:
-    """ma_ho -> 'da_lap' (người dùng đã lập / lưu, hoặc nhập từ Excel) | 'tu_lap' (phần mềm tự lập lúc tạo Dự án mới, chưa soát)
-    | 'chua' (chưa có dòng nào). co_pa: {ma_ho: có phương án} đã tính sẵn (không thì tính lại).
-
-    Từ 0.9.13 phương án tự lập mang trạng thái lap_pa.TU_LAP. File dự án tạo trước đó: phương án tự lập cũng ghi "Đã lập phương
-    án" - nhận ra vì được lưu hàng loạt (>= 5 hộ, mỗi hộ cách hộ trước <= 3 giây) lúc tạo dự án; hộ người dùng lập lưu rời rạc."""
-    from datetime import datetime as _dt
-    from .lap_pa import TU_LAP
-    if co_pa is None:
-        co_pa = {k.ma_ho: k.co_phuong_an for k in nghiep_vu.tinh_tat_ca(con)}
-    ho = con.execute('SELECT ma_ho, trang_thai, luu_luc FROM ho').fetchall()
-    luc = []
-    for r in ho:
-        if co_pa.get(r['ma_ho']) and r['luu_luc']:
-            try:
-                luc.append((_dt.fromisoformat(str(r['luu_luc'])), r['ma_ho']))
-            except ValueError:
-                pass
-    luc.sort()
-    hang_loat, dot = set(), []
-    for i, (t, m) in enumerate(luc):
-        if dot and (t - luc[i - 1][0]).total_seconds() > HANG_LOAT_GIAY:
-            if len(dot) >= HANG_LOAT_TOI_THIEU:
-                hang_loat.update(dot)
-            dot = []
-        dot.append(m)
-    if len(dot) >= HANG_LOAT_TOI_THIEU:
-        hang_loat.update(dot)
-    kq = {}
-    for r in ho:
-        m = r['ma_ho']
-        if not co_pa.get(m):
-            kq[m] = 'chua'
-        elif str(r['trang_thai'] or '').startswith(TU_LAP) or m in hang_loat:
-            kq[m] = 'tu_lap'
-        else:
-            kq[m] = 'da_lap'
-    return kq
+# phan_loai_lap chuyển sang lap_pa (màn hình chính gọi mỗi lần tải lại mà không phải nạp openpyxl); giữ tên cũ ở đây
+from .lap_pa import HANG_LOAT_GIAY, HANG_LOAT_TOI_THIEU, phan_loai_lap  # noqa: E402,F401
 
 
 def ho_da_lap(con) -> list:
@@ -927,7 +919,10 @@ def gop_pdf(ds: list, file_ra) -> Path:
     return file_ra
 
 
-def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | None = None) -> Path:
+def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | None = None, so_pa_tong: str = '',
+                      ngay_pa_tong: str = '') -> Path:
+    """Bảng tổng hợp các hộ. so_pa_tong / ngay_pa_tong (phương án tổng của đợt trình): điền vào "(Đính kèm Phương án số …/…
+    ngày … tháng … năm …)" và ngày ký của mẫu (chỗ trống {so_pa_tong}, {ngay_pa_tong} cũng dùng được)."""
     mau = Path(mau or thu_muc_mau()) / f'{TEN_BTH}.xlsx'
     duong_ke = duong_ke_cua_mau(mau, TEN_BTH)
     wb = openpyxl.load_workbook(mau)
@@ -1015,7 +1010,8 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
     if '(Đối với ' in a6:
         ws['A6'] = re.sub(r'\(Đối với .*?m2\)', f'(Đối với {len(khoi):02d} trường hợp/ {tong_thua} thửa đất/ '
                           f'{format(float(tong_dt), ",.1f").replace(",", "#").replace(".", ",").replace("#", ".")}m2)', a6)
-    _thay_cho_trong(ws, da)
+    dien_so_ngay(ws, so_pa_tong, ngay_pa_tong, 'Phương án số')
+    _thay_cho_trong(ws, dict(da, so_pa_tong=so_pa_tong or '', ngay_pa_tong=ngay_pa_tong or ''))
     ws.print_area = f'A1:Y{_dong_cuoi(ws, 25) + 1}'
     wb.calculation.fullCalcOnLoad = True
     file_ra = Path(file_ra)
@@ -1105,11 +1101,13 @@ def _doc_luong(luong, ra: list) -> None:
     luong.close()
 
 
-def _tat_excel_tu_dong(tu_luc: float) -> int:
-    """Tắt các EXCEL.EXE chạy ngầm do tự động hóa (dòng lệnh -Embedding / /automation) khởi động từ thời điểm tu_luc
-    - không đụng tới Excel người dùng đang mở. Trả số tiến trình đã tắt."""
+def _tat_excel_tu_dong(tu_luc: float, ten_exe: str = 'EXCEL.EXE') -> int:
+    """Tắt các EXCEL.EXE (WINWORD.EXE: ten_exe) chạy ngầm do tự động hóa (dòng lệnh -Embedding / /automation) khởi động từ thời
+    điểm tu_luc - không đụng tới Excel / Word người dùng đang mở. Trả số tiến trình đã tắt."""
     import datetime as _dt
-    lenh = ("Get-WmiObject Win32_Process -Filter \"Name='EXCEL.EXE'\" | Where-Object { $_.CommandLine -match "
+    if not re.fullmatch(r'[A-Za-z0-9_]+\.EXE', ten_exe, re.I):
+        return 0
+    lenh = (f"Get-WmiObject Win32_Process -Filter \"Name='{ten_exe}'\" | Where-Object {{ $_.CommandLine -match "
             "'(-Embedding|/automation)' } | ForEach-Object { [string]$_.ProcessId + ' ' + $_.CreationDate }")
     try:
         r = subprocess.run(['powershell', '-NoProfile', '-Command', lenh], capture_output=True, timeout=60,

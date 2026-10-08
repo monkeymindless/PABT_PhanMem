@@ -60,7 +60,9 @@ CREATE TABLE IF NOT EXISTS ho (
     ban_giao_ngay   TEXT NOT NULL DEFAULT '',
     theo_doi        TEXT NOT NULL DEFAULT '',         -- ghi chú theo dõi tiến độ (danh sách tổng hợp)
     ly_do_ban_giao  TEXT NOT NULL DEFAULT '',         -- v10: lý do chưa bàn giao mặt bằng
-    bien_ban_ban_giao TEXT NOT NULL DEFAULT ''         -- v10: file biên bản bàn giao
+    bien_ban_ban_giao TEXT NOT NULL DEFAULT '',        -- v10: file biên bản bàn giao
+    so_pa           TEXT NOT NULL DEFAULT '',         -- v11: số phương án chi tiết của hộ (phần trước "/ký hiệu")
+    ngay_pa         TEXT NOT NULL DEFAULT ''          -- v11: ngày phương án chi tiết
 );
 
 CREATE TABLE IF NOT EXISTS thua (
@@ -186,7 +188,10 @@ CREATE TABLE IF NOT EXISTS tho_nhap (
 CREATE TABLE IF NOT EXISTS dot_trinh (
     id INTEGER PRIMARY KEY, so INTEGER NOT NULL DEFAULT 0, ten TEXT NOT NULL DEFAULT '',
     ngay_trinh TEXT NOT NULL DEFAULT '', so_to_trinh TEXT NOT NULL DEFAULT '', ghi_chu TEXT NOT NULL DEFAULT '',
-    thu_muc TEXT NOT NULL DEFAULT ''                  -- thư mục hồ sơ đợt đã xuất gần nhất
+    thu_muc TEXT NOT NULL DEFAULT '',                 -- thư mục hồ sơ đợt đã xuất gần nhất
+    loai_van_ban TEXT NOT NULL DEFAULT 'Tờ trình',    -- v11: văn bản trình: Tờ trình / Văn bản (số, ngày: so_to_trinh, ngay_trinh)
+    so_pa_tong TEXT NOT NULL DEFAULT '',              -- v11: số phương án tổng của đợt (in vào bảng tổng hợp)
+    ngay_pa_tong TEXT NOT NULL DEFAULT ''             -- v11: ngày phương án tổng
 );
 CREATE TABLE IF NOT EXISTS cai_dat (ma TEXT PRIMARY KEY, gia_tri TEXT NOT NULL DEFAULT '');
 -- mật độ cây trồng dùng tách cây trong / ngoài mật độ (mặc định đọc từ ghi chú danh mục "Mật độ N cây/ha")

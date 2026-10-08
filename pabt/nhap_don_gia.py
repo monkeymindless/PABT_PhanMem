@@ -7,7 +7,6 @@ Quy trình: đọc bảng -> nhận các dòng (tên, ĐVT, đơn giá, mã nế
 """
 from __future__ import annotations
 import csv
-import os
 import re
 import shutil
 import subprocess

@@ -8,10 +8,11 @@ from __future__ import annotations
 import getpass
 import json
 import os
-import platform
 import time
 from datetime import datetime
 from pathlib import Path
+
+from .csdl import ten_may
 
 HET_HAN = 180          # giây
 LAM_MOI = 60
@@ -31,7 +32,7 @@ class KhoaFile:
     def __init__(self, file_du_an):
         p = Path(file_du_an)
         self.p = p.with_name(p.name + '.khoa')
-        self.cua_toi = dict(may=platform.node(), nguoi=_nguoi(), pid=os.getpid())
+        self.cua_toi = dict(may=ten_may(), nguoi=_nguoi(), pid=os.getpid())
         self.dang_giu = False
 
     def doc(self) -> dict | None:

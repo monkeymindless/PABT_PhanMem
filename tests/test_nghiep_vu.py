@@ -7,7 +7,6 @@ from decimal import Decimal
 from pathlib import Path
 
 from pabt import csdl, doi_chieu, nghiep_vu, nhap_excel
-from pabt.tien import D
 
 BIEU = [('0', '2000000'), ('20000000', '4000000'), ('50000000', '8000000'),
         ('100000000', '12000000'), ('200000000', '16000000'), ('500000000', '20000000')]

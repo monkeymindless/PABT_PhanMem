@@ -19,7 +19,7 @@ import openpyxl
 from . import csdl, nhap_excel
 from .lap_pa import LoiNhap
 from .nhap_excel import BaoCaoNhap, _txt, chuan_hoa
-from .tien import D, chuoi
+from .tien import D, chuoi, doc_so_vn
 
 # trường -> [(mẫu regex trên tiêu đề đã chuẩn hóa, điểm)]; mẫu loại trừ đặt trong LOAI_TRU
 MAU_COT = {
@@ -170,7 +170,7 @@ def _doc_dt(v):
     if isinstance(v, (int, float)):
         return D(v)
     s = re.sub(r'(m2|m²|ha)\s*$', '', str(v).strip(), flags=re.I).strip()
-    return D(s)
+    return doc_so_vn(s)                             # '1.070' = 1.070 m² (trước đây đọc thành 1,07)
 
 
 @dataclass

@@ -2,14 +2,13 @@
 from __future__ import annotations
 import getpass
 import os
-import platform
 import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-PHIEN_BAN_CSDL = 10
+PHIEN_BAN_CSDL = 11
 # bảng danh mục, tham số: cố định (trigger chặn sửa); chỉ nạp / cập nhật bộ đơn giá mới mở khóa (mo_khoa_danh_muc)
 DANH_MUC = ('dm_taisan', 'dm_hotro', 'dm_loaidat', 'gia_dat', 'dm_xa', 'tham_so', 'bieu_thuong', 'quy_uoc', 'van_ban')
 THONG_BAO_KHOA = 'Danh mục đơn giá, tham số được cố định theo bộ đơn giá; chỉ cập nhật bằng lệnh Bộ đơn giá.'
@@ -54,6 +53,12 @@ _NANG_CAP = {
            SELECT q.id, h.ma_ho, h.qd_so_tien, h.da_chi_tra, h.chi_tra_ngay, h.chi_tra_so_tien
            FROM ho h JOIN quyet_dinh q ON q.so = h.qd_so AND q.ngay = h.qd_ngay
            WHERE h.da_phe_duyet = 1 OR TRIM(h.qd_so) <> ''"""],
+    # v11: trình phê duyệt - số, ngày phương án chi tiết từng hộ; văn bản trình, số / ngày phương án tổng của đợt
+    10: ["ALTER TABLE ho ADD COLUMN so_pa TEXT NOT NULL DEFAULT ''",
+         "ALTER TABLE ho ADD COLUMN ngay_pa TEXT NOT NULL DEFAULT ''",
+         "ALTER TABLE dot_trinh ADD COLUMN loai_van_ban TEXT NOT NULL DEFAULT 'Tờ trình'",
+         "ALTER TABLE dot_trinh ADD COLUMN so_pa_tong TEXT NOT NULL DEFAULT ''",
+         "ALTER TABLE dot_trinh ADD COLUMN ngay_pa_tong TEXT NOT NULL DEFAULT ''"],
 }
 
 
@@ -186,21 +191,31 @@ def mo_khoa_danh_muc(con):
         con.execute('UPDATE khoa_dm SET mo = 0 WHERE id = 1')
 
 
+def _cot(con, so_do: str, bang: str) -> list:
+    return [r[1] for r in con.execute(f'PRAGMA {so_do}.table_info("{bang}")')]
+
+
 def chep_danh_muc(con, file_nguon, don_vi: bool = True, bang=DANH_MUC) -> None:
-    """Chép các bảng danh mục (và thông tin đơn vị lập, người ký nếu don_vi) từ một file .pabt / bộ đơn giá khác."""
-    try:
-        mo(file_nguon).close()                      # nâng cấp file nguồn cũ nếu cần
-    except (sqlite3.Error, OSError):
-        pass                                        # nguồn chỉ đọc (bộ đơn giá trong thư mục cài): bảng danh mục không đổi
+    """Chép các bảng danh mục (và thông tin đơn vị lập, người ký nếu don_vi) từ một file .pabt / bộ đơn giá khác.
+    File nguồn chỉ được ĐỌC (trước 0.9.16 được mở ghi để nâng cấp lược đồ: bộ đơn giá đóng gói / trong gói cập nhật bị sửa ->
+    sai mã SHA-256, gói cập nhật tự tắt; file dự án khác bị nâng cấp ngầm). Chép theo các cột có ở cả hai bên - cột nguồn cũ
+    chưa có lấy giá trị mặc định; bảng nguồn chưa có thì giữ nguyên danh mục đó của dự án."""
     con.execute('ATTACH DATABASE ? AS nguon', (str(file_nguon),))
     try:
+        co = {r[0] for r in con.execute("SELECT name FROM nguon.sqlite_master WHERE type = 'table'")}
         with con, mo_khoa_danh_muc(con):
             for b in bang:
+                if b not in co:
+                    continue
+                nguon = set(_cot(con, 'nguon', b))
+                ds = ', '.join(f'"{c}"' for c in _cot(con, 'main', b) if c in nguon)
                 con.execute(f'DELETE FROM {b}')
-                con.execute(f'INSERT INTO {b} SELECT * FROM nguon.{b}')
-            if don_vi:
-                cot = ', '.join(TRUONG_DON_VI)
-                con.execute(f'UPDATE du_an SET ({cot}) = (SELECT {cot} FROM nguon.du_an WHERE id = 1) WHERE id = 1')
+                con.execute(f'INSERT INTO {b} ({ds}) SELECT {ds} FROM nguon.{b}')
+            if don_vi and 'du_an' in co:
+                nguon = set(_cot(con, 'nguon', 'du_an'))
+                cot = ', '.join(c for c in TRUONG_DON_VI if c in nguon)
+                if cot:
+                    con.execute(f'UPDATE du_an SET ({cot}) = (SELECT {cot} FROM nguon.du_an WHERE id = 1) WHERE id = 1')
     finally:
         con.execute('DETACH DATABASE nguon')
 
@@ -208,6 +223,68 @@ def chep_danh_muc(con, file_nguon, don_vi: bool = True, bang=DANH_MUC) -> None:
 # thông tin đơn vị lập, người ký: thuộc về đơn vị chứ không thuộc dự án -> giữ khi xóa trắng, chép khi tạo dự án mới
 TRUONG_DON_VI = ('don_vi_cap_tren', 'don_vi_tieu_de', 'don_vi_lap', 'ky_hieu_so', 'nguoi_lap', 'nguoi_kiem_tra', 'chuc_vu_ky',
                  'nguoi_ky')
+
+
+class DauVetHo:
+    """Ghi lại các hộ có dữ liệu bị thêm / sửa / xóa trên một kết nối (trigger TẠM - chỉ sống trong phiên, không ghi vào file
+    .pabt), để màn hình chỉ tính và vẽ lại các hộ đó thay vì cả dự án (3.000 hộ: ~0,6 giây mỗi lần lưu một hộ).
+
+    lay(): tập mã hộ đã đổi kể từ lần lấy trước; None = phải nạp lại toàn bộ: thêm / xóa hộ, đổi thứ tự / mã hộ, ghi bảng không
+    theo hộ (danh mục, dự án, quyết định, đợt trình, cài đặt...), hoặc kết nối / máy khác đã ghi vào file (PRAGMA data_version).
+    Sổ ghi chỉ thêm dòng (không xóa sau mỗi lần lấy) để việc lấy không mở giao dịch, không làm đổi total_changes (csdl.nho)."""
+    BO_QUA = ('nhat_ky', 'khoa_dm', 'sqlite_sequence', 'tho_nhap')   # không ảnh hưởng số liệu hiển thị của hộ
+    TOI_DA = 200000                                                  # sổ dài quá thì dọn (một lần, khi lấy)
+
+    def __init__(self, con):
+        self.con = con
+        con.execute('CREATE TEMP TABLE IF NOT EXISTS _dv_ho (seq INTEGER PRIMARY KEY, ma_ho INTEGER)')
+        bang = [r[0] for r in con.execute("SELECT name FROM main.sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+                if r[0] not in self.BO_QUA]
+        for b in bang:
+            cot = [r[1] for r in con.execute(f'PRAGMA main.table_info("{b}")')]
+            if b == 'ho':                                            # thêm / xóa hộ, đổi thứ tự / mã hộ: nạp lại toàn bộ
+                than = {'them': 'VALUES (NULL)', 'xoa': 'VALUES (NULL)',
+                        'sua': 'VALUES (CASE WHEN old.thu_tu IS NOT new.thu_tu OR old.ma_ho IS NOT new.ma_ho THEN NULL '
+                               'ELSE new.ma_ho END)'}
+                lenh = {k: f'INSERT INTO _dv_ho (ma_ho) {v};' for k, v in than.items()}
+            elif 'ma_ho' in cot:
+                lenh = {'them': 'INSERT INTO _dv_ho (ma_ho) SELECT new.ma_ho WHERE new.ma_ho IS NOT NULL;',
+                        'xoa': 'INSERT INTO _dv_ho (ma_ho) SELECT old.ma_ho WHERE old.ma_ho IS NOT NULL;',
+                        'sua': 'INSERT INTO _dv_ho (ma_ho) SELECT old.ma_ho WHERE old.ma_ho IS NOT NULL; '
+                               'INSERT INTO _dv_ho (ma_ho) SELECT new.ma_ho WHERE new.ma_ho IS NOT NULL '
+                               'AND new.ma_ho IS NOT old.ma_ho;'}
+            else:
+                lenh = dict.fromkeys(('them', 'xoa', 'sua'), 'INSERT INTO _dv_ho (ma_ho) VALUES (NULL);')
+            for k, viec in (('them', 'INSERT'), ('xoa', 'DELETE'), ('sua', 'UPDATE')):
+                con.execute(f'CREATE TEMP TRIGGER IF NOT EXISTS _dv_{b}_{k} AFTER {viec} ON main."{b}" BEGIN {lenh[k]} END')
+        self._moc = self._max()
+        self._dv = self._data_version()
+
+    def _max(self) -> int:
+        return self.con.execute('SELECT COALESCE(MAX(seq), 0) FROM temp._dv_ho').fetchone()[0]
+
+    def _data_version(self) -> int:
+        return self.con.execute('PRAGMA data_version').fetchone()[0]
+
+    def lay(self):
+        """Mã hộ đã đổi từ lần lấy trước (set), hoặc None nếu phải nạp lại toàn bộ."""
+        try:
+            dv = self._data_version()
+            moc, so_null = self.con.execute('SELECT MAX(seq), SUM(ma_ho IS NULL) FROM temp._dv_ho WHERE seq > ?',
+                                            (self._moc,)).fetchone()
+            ds = {r[0] for r in self.con.execute('SELECT DISTINCT ma_ho FROM temp._dv_ho WHERE seq > ? AND ma_ho IS NOT NULL',
+                                                  (self._moc,))}
+        except sqlite3.Error:                           # kết nối đã đóng / bảng tạm mất: coi như phải nạp lại
+            return None
+        khac = dv != self._dv
+        self._dv = dv
+        if moc is not None:
+            self._moc = moc
+            if moc > self.TOI_DA and not self.con.in_transaction:
+                self.con.execute('DELETE FROM temp._dv_ho')
+                self.con.commit()
+                self._moc = 0
+        return None if khac or so_null else ds
 
 
 NGUOI_DUNG = None          # tên người đăng nhập máy chủ (may_chu.dang_nhap); None = tài khoản Windows
@@ -225,7 +302,17 @@ def ghi_nhat_ky(con: sqlite3.Connection, viec: str, chi_tiet: str = '') -> None:
         except Exception:
             nguoi = os.environ.get('USERNAME', '')
     con.execute('INSERT INTO nhat_ky (thoi_gian, may, nguoi_dung, viec, chi_tiet) VALUES (?,?,?,?,?)',
-                (datetime.now().isoformat(timespec='seconds'), platform.node(), nguoi, viec, chi_tiet))
+                (datetime.now().isoformat(timespec='seconds'), ten_may(), nguoi, viec, chi_tiet))
+
+
+def ten_may() -> str:
+    """Tên máy tính (ghi nhật ký, khóa file, máy chủ LAN). Bằng đúng platform.node() - hàm đó cũng gọi socket.gethostname() - nhưng
+    không qua platform.uname(): từ Python 3.12 uname() đọc thông tin Windows qua WMI, lần gọi đầu mất ~50 ms."""
+    import socket
+    try:
+        return socket.gethostname()
+    except OSError:
+        return ''
 
 
 def tham_so(con: sqlite3.Connection) -> dict:

@@ -13,7 +13,7 @@ from pathlib import Path
 import openpyxl
 
 from . import csdl
-from .tien import D, chuoi, co_so
+from .tien import D, chuoi, co_so, doc_so_vn
 
 
 def chuan_hoa(s) -> str:
@@ -33,12 +33,20 @@ def _txt(v) -> str:
     return str(v).strip()
 
 
-def _so(v) -> str:
-    return chuoi(D(v)) if co_so(v) else '0'
-
-
 def _so_hoac_rong(v):
-    return chuoi(D(v)) if co_so(v) else None
+    """Ô số của file Excel (ô số hoặc ô chữ gõ kiểu Việt Nam '1.070' / '1.070,5' - tien.doc_so_vn) -> chuỗi lưu CSDL; trống /
+    không phải số -> None."""
+    if v is None or str(v).strip() == '':
+        return None
+    try:
+        return chuoi(doc_so_vn(v))
+    except ValueError:
+        return None
+
+
+def _so(v) -> str:
+    r = _so_hoac_rong(v)
+    return '0' if r is None else r
 
 
 @dataclass
@@ -267,8 +275,9 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
         sh = wb[vt_tu[0]]
         ct_, cm_ = (openpyxl.utils.column_index_from_string(vt_tu[1]) - 1, openpyxl.utils.column_index_from_string(vt_muc[1]) - 1)
         for r in sh.iter_rows(min_row=vt_tu[2], max_row=vt_tu[2] + 5, values_only=True):
-            if co_so(r[ct_]) and co_so(r[cm_]):
-                bieu.append((chuoi(D(r[ct_])), chuoi(D(r[cm_]))))
+            tu, muc = _so_hoac_rong(r[ct_]), _so_hoac_rong(r[cm_])
+            if tu is not None and muc is not None:
+                bieu.append((tu, muc))
     if 'QUY_UOC_TUONG_DUONG' in wb.sheetnames:
         for r in wb['QUY_UOC_TUONG_DUONG'].iter_rows(min_row=2, values_only=True):
             if r and co_so(r[0]) and _txt(r[1]):
@@ -289,7 +298,7 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
             m = r[hd['ma ho']] if hd['ma ho'] < len(r) else None
             if not co_so(m):
                 continue
-            g = lambda k: D(r[hd[k]]) if k in hd and co_so(r[hd[k]]) else None
+            g = lambda k: D(_so_hoac_rong(r[hd[k]])) if k in hd and _so_hoac_rong(r[hd[k]]) is not None else None
             bc.tong_excel[int(D(m))] = {1: g('1. dat'), 2: g('2. nha, ct'), 3: g('3. cay trong'), 4: g('4. ho tro'),
                                         5: g('5. thuong'), 'tong': g('tong cong')}
 
@@ -311,8 +320,9 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
                 bc.canh_bao.append(f'HS_KIEMKE: thửa {_txt(b.gia_tri(r, cso))} tờ {_txt(b.gia_tri(r, cto))} chưa có trong DB_THUA '
                                    '(chạy ĐỒNG BỘ trên file Excel).')
                 continue
-            if co_so(b.gia_tri(r, cdt)) and D(b.gia_tri(r, cdt)) != D(t['dt_thu_hoi']):
-                bc.canh_bao.append(f'Thửa {t["so_thua"]} tờ {t["so_to"]}: DT HS_KIEMKE {D(b.gia_tri(r, cdt))} ≠ DB_THUA {D(t["dt_thu_hoi"])}.')
+            dt_kk = _so_hoac_rong(b.gia_tri(r, cdt))
+            if dt_kk is not None and D(dt_kk) != D(t['dt_thu_hoi']):
+                bc.canh_bao.append(f'Thửa {t["so_thua"]} tờ {t["so_to"]}: DT HS_KIEMKE {D(dt_kk)} ≠ DB_THUA {D(t["dt_thu_hoi"])}.')
             vt_kk = ' '.join(_txt(b.gia_tri(r, cvt)).split())
             if vt_kk and not t['vi_tri']:
                 t['vi_tri'] = vt_kk

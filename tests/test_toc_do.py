@@ -192,5 +192,32 @@ class TestGopONhanh(unittest.TestCase):
         self.assertEqual(self._o(moi), self._o(cu))
 
 
+class TestBoDauNhanh(unittest.TestCase):
+    """lap_pa._bo_dau dùng bảng đổi ký tự (str.translate): kết quả phải giống hệt cách cũ (tách dấu NFD từng ký tự)."""
+
+    @staticmethod
+    def _cu(s: str) -> str:
+        import unicodedata
+        s = unicodedata.normalize('NFD', s).replace('đ', 'd').replace('Đ', 'D')
+        return ' '.join(''.join(c for c in s if unicodedata.category(c) != 'Mn').lower().split())
+
+    def test_giong_cach_cu(self):
+        import unicodedata
+        from pabt import don_gia
+        from pabt.lap_pa import _bo_dau
+        mau = [chr(i) for i in range(0x20, 0x3000)]                     # từng ký tự: Latin, dấu rời, khoảng trắng lạ...
+        mau += ['Nhà cấp 4 - Tường gạch, mái tôn', 'ĐƯỜNG  ĐT762 đoạn', 'Cây Xoài (Đk thân > 20-30 cm)', 'Æsir ǼĲ ﬁ',
+                unicodedata.normalize('NFD', 'Bàu Hàm, Trảng Bom'), 'İstanbul ŉ ẞ', '  ', '',
+                'Sân bê tông – 120 m² × 2 ≥ Ø 30 …', 'Cà phế ²̀', 'Ω Å K (ký hiệu dạng tách khác)']
+        con = csdl.mo(don_gia.file_goc(), chi_doc=True)
+        try:
+            for b, cot in (('dm_taisan', 'ten'), ('dm_taisan', 'phan_loai'), ('dm_hotro', 'ten'), ('dm_loaidat', 'ten')):
+                mau += [r[0] or '' for r in con.execute(f'SELECT {cot} FROM {b}')]
+        finally:
+            con.close()
+        for s in mau:
+            self.assertEqual(_bo_dau(s), self._cu(s), repr(s))
+
+
 if __name__ == '__main__':
     unittest.main()

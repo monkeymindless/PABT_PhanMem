@@ -12,6 +12,13 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDial
 from . import may_chu
 from .may_chu import LoiMayChu
 
+
+def ket_noi_duoc(cha, goc) -> bool:
+    """may_chu.ket_noi_duoc chạy ở luồng nền (giao_dien.chay_nen): mạng / thư mục dùng chung không tới được thì cửa sổ vẫn vẽ lại,
+    hiện "Đang kết nối máy chủ…" thay vì đứng hình tới 4 giây (mỗi lần kiểm tra)."""
+    from .giao_dien import chay_nen
+    return chay_nen(cha, lambda: may_chu.ket_noi_duoc(goc), f'Đang kết nối máy chủ {goc}…')
+
 TIEU_DE = 'Máy chủ, tài khoản'
 
 
@@ -113,7 +120,7 @@ class HopDangNhap(_Hop):
         if not self.goc:
             self.lb.setText('Chưa thiết lập máy chủ: bấm "Thiết lập máy chủ…" hoặc làm việc offline.')
             return None
-        if not may_chu.ket_noi_duoc(self.goc):
+        if not ket_noi_duoc(self, self.goc):
             self.lb.setText('Không kết nối được máy chủ (mạng / thư mục dùng chung). Có thể chọn "Làm việc offline".')
             return None
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
@@ -216,10 +223,11 @@ class HopThietLap(_Hop):
             return 'trong'
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            if may_chu.ket_noi_duoc(goc):
+            from .giao_dien import chay_nen
+            if ket_noi_duoc(self, goc):
                 n = len(may_chu.ds_nguoi_dung(goc))
                 kq, chu = 'co', f'✔ Đây là máy chủ PABT ({n} tài khoản): bấm "Kết nối máy chủ có sẵn".'
-            elif may_chu.thu_muc_ton_tai(goc):
+            elif chay_nen(self, lambda: may_chu.thu_muc_ton_tai(goc), f'Đang kiểm tra thư mục {goc}…'):
                 kq, chu = 'moi', 'Thư mục chưa phải máy chủ PABT: nhập tài khoản quản trị rồi bấm "Khởi tạo máy chủ mới".'
             else:
                 kq, chu = 'khong', ('Thư mục chưa có hoặc không truy cập được (kiểm tra mạng, tên máy chủ, quyền chia sẻ). '
@@ -232,7 +240,7 @@ class HopThietLap(_Hop):
 
     def ket_noi(self):
         goc = self.o_goc.text().strip()
-        if not may_chu.ket_noi_duoc(goc):
+        if not ket_noi_duoc(self, goc):
             self.bao('Thư mục này chưa phải máy chủ PABT hoặc không truy cập được.')
             return False
         may_chu.ghi_cau_hinh(may_chu=goc)
@@ -457,7 +465,7 @@ class HopDuAnMayChu(_Hop):
     def ve(self):
         p = may_chu.PHIEN
         self.ds = []
-        if p is not None and may_chu.ket_noi_duoc(p.goc):
+        if p is not None and ket_noi_duoc(self, p.goc):
             self.ds = may_chu.ds_du_an()
             self.lb.setText(f'Dự án trên máy chủ {p.goc}  ·  {p.ten_hien}')
         else:

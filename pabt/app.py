@@ -11,8 +11,10 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDial
                                QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
-from . import __version__, csdl, doi_chieu, khoa, lap_pa, may_chu, nghiep_vu, nhap_excel, nhap_tho
+from . import __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
 from .tien import D, so_vn, vn
+
+# doi_chieu, nhap_excel, nhap_tho (kéo theo openpyxl ~0,2 giây - 60% thời gian nạp mã lúc mở phần mềm) nạp khi dùng tới
 
 TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
 # danh sách hộ ở màn hình chính: gọn (0.9.12). Tiền từng mục, quyết định, chi trả, bàn giao, ghi chú: menu "Bảng tổng hợp",
@@ -39,13 +41,19 @@ class LocHo(QSortFilterProxyModel):
 
     def dat(self, dot=None, trang_thai=None, tu_khoa=None):
         from .lap_pa import bo_dau
+        moi = hasattr(self, 'endFilterChange')          # Qt 6.10+: invalidateFilter() lỗi thời; Qt5 / Qt6 cũ chưa có begin/end
+        if moi:
+            self.beginFilterChange()
         if dot is not None:
             self.dot = dot
         if trang_thai is not None:
             self.trang_thai = trang_thai
         if tu_khoa is not None:
             self.tu_khoa = bo_dau(tu_khoa).split()
-        self.invalidateFilter()
+        if moi:
+            self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
+        else:
+            self.invalidateFilter()
 
     def filterAcceptsRow(self, r, parent):
         from .lap_pa import bo_dau
@@ -76,6 +84,11 @@ class BangHo(QAbstractTableModel):
         self.beginResetModel()
         self.dong = dong
         self.endResetModel()
+
+    def thay_dong(self, r: int, dong: dict):
+        """Thay một dòng (hộ vừa đổi): bảng lọc / sắp xếp tự cập nhật dòng đó, không dựng lại cả danh sách."""
+        self.dong[r] = dong
+        self.dataChanged.emit(self.index(r, 0), self.index(r, len(COT) - 1))
 
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self.dong)
@@ -164,6 +177,7 @@ class CuaSoChinh(QMainWindow):
         self.menu_trai = menu_trai
         self.la_cua_so_chinh = True
         self.ht = None                                   # hoan_tac.HoanTac của dự án đang mở (Ctrl+Z / Ctrl+Y)
+        self.dv = None                                   # csdl.DauVetHo: hộ vừa đổi -> tai_lai chỉ tính lại các hộ đó
         self.con = None
         self.file = None
         self.kq = None
@@ -197,7 +211,7 @@ class CuaSoChinh(QMainWindow):
                          ('Dự án trên máy chủ…', lambda: self.du_an_may_chu()),
                          *((t, lambda _=False, i=i: self.mo_trang(i)) for i, t in enumerate(TRANG))):
             a = QAction(ten, self)
-            a.triggered.connect(ham)
+            a.triggered.connect(lambda _=False, ham=ham: self._chay_lenh(ham))
             self.lenh[ten] = a
         self.dm = None
         self.lb_du_an = QLabel(CHUA_MO)
@@ -234,7 +248,7 @@ class CuaSoChinh(QMainWindow):
         self.bang.verticalHeader().setVisible(False)
         self.bang.horizontalHeader().setResizeContentsPrecision(300)    # tự canh cột: đo 300 dòng mẫu, không đo hết (3.000 hộ)
         self.bang.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-        self.bang.doubleClicked.connect(self.mo_chi_tiet)
+        self.bang.doubleClicked.connect(lambda idx: self._chay_lenh(lambda: self.mo_chi_tiet(idx)))
         self.bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.bang.customContextMenuRequested.connect(lambda p: self._menu_ho(self.bang, p))
         self._vua_tieu_de()
@@ -357,6 +371,7 @@ class CuaSoChinh(QMainWindow):
                                                 'File Excel (*.xlsm *.xlsx)')
             if not xl:
                 return
+        from . import nhap_excel, nhap_tho
         try:
             tho = not nhap_tho.la_file_pabt(xl)
         except Exception as e:
@@ -507,6 +522,10 @@ class CuaSoChinh(QMainWindow):
                 from .hoan_tac import HoanTac
                 self.ht = HoanTac(self.con, hen=lambda ham: QTimer.singleShot(0, ham))
                 self.ht.khi_doi.append(self._cap_nhat_nut_ht)
+                try:
+                    self.dv = csdl.DauVetHo(self.con)
+                except Exception:                      # không tạo được: vẫn mở dự án, tai_lai nạp toàn bộ như trước
+                    self.dv = None
             self._cap_nhat_nut_ht()
             self.file = Path(p)
             self.dm = lap_pa.DanhMuc(self.con)
@@ -541,6 +560,7 @@ class CuaSoChinh(QMainWindow):
         if self.ht is not None:
             self.ht.dong()
             self.ht = None
+        self.dv = None
         if self.con is not None:
             self.con.close()
             self.con = None
@@ -556,80 +576,138 @@ class CuaSoChinh(QMainWindow):
         self.lb_loc.setText('')
         self._cap_nhat_the_so()
 
+    TAI_LAI_HO_TOI_DA = 200        # đổi nhiều hộ hơn (cập nhật trạng thái hàng loạt...): nạp lại toàn bộ
+
     def tai_lai(self, giu_trang: bool = False):
-        """Nạp lại danh sách hộ (và các trang tổng hợp, tiến độ). giu_trang: gọi từ trang tổng hợp / tiến độ sau khi ghi."""
+        """Nạp lại danh sách hộ (và các trang tổng hợp, tiến độ). giu_trang: gọi từ trang tổng hợp / tiến độ sau khi ghi.
+        Chỉ một số hộ đổi (csdl.DauVetHo - lưu phương án, sửa hồ sơ, trạng thái một hộ, hoàn tác...): tính và vẽ lại các hộ đó;
+        thêm / xóa hộ, đổi danh mục, dự án, quyết định, đợt, hoặc máy khác ghi vào file: nạp lại toàn bộ như trước."""
+        doi = self.dv.lay() if self.dv is not None else None
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            self.kq = doi_chieu.doi_chieu(self.con)
-            so_thua = {r[0]: (r[1], D(r[2] or 0)) for r in self.con.execute(
-                "SELECT ma_ho, COUNT(*), SUM(CAST(dt_thu_hoi AS REAL)) FROM thua GROUP BY ma_ho")}
-            from . import theo_doi
-            from .man_hinh_theo_doi import DO as MAU_DO, VANG as MAU_VANG, XANH as MAU_XANH
-            from .quan_ly import TRUONG_TT, ds_dot
-            tt = {r['ma_ho']: dict(r) for r in self.con.execute(
-                f'SELECT ma_ho, trang_thai, dot_id, dia_chi, {", ".join(TRUONG_TT)} FROM ho')}
-            th = {x.ma_ho: x for x in theo_doi.tong_hop(self.con, tinh_pa=False)}
-            ten_dot = {d.id: d.ten for d in ds_dot(self.con)}
-            dong = []
-            for i, h in enumerate(self.kq.ho, start=1):
-                st, dt = so_thua.get(h['ma_ho'], (0, D(0)))
-                x = tt.get(h['ma_ho'], {})
-                t = th.get(h['ma_ho'])
-                if t is not None:
-                    t.tong_pa = h['tong']
-                    trang_thai = t.trang_thai
-                    goi_y = '\n'.join([f'QĐ {q["so_qd"]} ({q["ngay_qd"]}): {vn(q["so_tien"]) if q["so_tien"] else "?"} đ - '
-                                       + (f'đã nhận {q["chi_tra_ngay"]}' if q['da_chi_tra'] else 'chưa nhận') for q in t.qd]
-                                      + [f'Bàn giao: {t.ban_giao_ngay or "đã"}' if t.da_ban_giao else '',
-                                         f'Đợt trình: {ten_dot[x["dot_id"]]}' if x.get('dot_id') in ten_dot else '']).strip()
-                    mau = MAU_XANH if t.da_ban_giao else (MAU_VANG if t.qd else None)
-                    if t.qd and t.qd_chua_nhan and len(t.qd_chua_nhan) == len(t.qd):
-                        mau = None
-                else:
-                    trang_thai, goi_y, mau = x.get('trang_thai', ''), '', None
-                dong.append(dict(ma_ho=h['ma_ho'], tong=h['tong'], lech=h['lech'], **{k: x.get(k) for k in TRUONG_TT},
-                                 dot_id=x.get('dot_id'), goi_y_tt=goi_y, mau_tt=mau,
-                                 tim=f'{h["ma_ho"]} {x.get("theo_doi") or ""} {ten_dot.get(x.get("dot_id"), "")} '
-                                     f'{x.get("qd_so") or ""}',
-                                 o=[i, h['ho_ten'], x.get('dia_chi') or '', st, dt.quantize(D('0.1')), trang_thai]))
-            self.mo_hinh.dat_du_lieu(dong)
-            self._nap_ds_dot(ten_dot)
-            dau = self.bang.horizontalHeader()
-            dau.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-            self.bang.resizeColumnsToContents()
-            self.bang.setColumnWidth(1, min(max(int(self.bang.columnWidth(1)), 240), 340))   # họ tên dài: xem đủ khi rê chuột
-            self.bang.setColumnWidth(2, min(max(int(self.bang.columnWidth(2)), 240), 420))   # địa chỉ
-            self.bang.setColumnWidth(5, max(int(self.bang.columnWidth(5)), 220))              # trạng thái
-            dau.setStretchLastSection(True)
-            self._vua_tieu_de()
-            if not giu_trang or self.trang.currentIndex() == 0:
-                self.bang_tong_hop.nap()
-                self.tien_do.nap()
-            elif self.trang.currentIndex() == 1:
-                self.tien_do.nap()
-                self.bang_tong_hop._can_nap = {0, 1, 2} - {self.bang_tong_hop.tab.currentIndex()}
-            else:
-                self.bang_tong_hop.nap()
-            self._cap_nhat_the_so()
-            self._dem_loc()
-            self.bang.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-            da = self.con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()
-            co_pa = [h for h in self.kq.ho if h['tong'] > 0]
-            tong = sum((h['tong'] for h in self.kq.ho), D(0))
-            self.lb_du_an.setText(f'<b>{da["ten"]}</b><br>{da["cap_dia_ban"]} {da["ten_dia_ban"]}  ·  {len(self.kq.ho)} hộ, '
-                                  f'{len(co_pa)} hộ đã lập phương án  ·  tổng {vn(tong)} đồng  ·  file {self.file.name}')
-            sua = f' (trừ {self.kq.so_ho_sua} hộ đã sửa trong phần mềm)' if self.kq.so_ho_sua else ''
-            if self.kq.khop_het:
-                self.lb_ket_qua.setText(f'Đối chiếu file Excel: KHỚP 100%{sua}  ·  {len(self.kq.canh_bao)} điểm cần xem lại')
-                self.lb_ket_qua.setStyleSheet('QLabel { font-weight: 600; padding: 5px 8px; color: #1E6B34; background: #EAF6EC; '
-                                              'border: 1px solid #CDE8D2; border-radius: 6px; }')
-            else:
-                self.lb_ket_qua.setText(f'Đối chiếu file Excel: LỆCH {self.kq.so_ho_lech} hộ, {len(self.kq.dong_lech)} dòng{sua}')
-                self.lb_ket_qua.setStyleSheet('QLabel { font-weight: 600; padding: 5px 8px; color: #A12A1F; background: #FCEDEB; '
-                                              'border: 1px solid #F3CFCA; border-radius: 6px; }')
-            self.dat_tieu_de()
+            xong = False
+            if self.kq is not None and doi is not None:
+                try:
+                    xong = self._tai_lai_ho(doi)
+                except Exception:                      # tính riêng từng hộ lỗi: nạp lại toàn bộ (không để danh sách sai)
+                    xong = False
+            if not xong:
+                self._tai_lai_toan_bo()
+            self._sau_tai_lai(giu_trang)
         finally:
             QApplication.restoreOverrideCursor()
+
+    def _so_lieu_dong(self, ds_ma_ho=None) -> tuple:
+        """(số thửa + DT, trường trạng thái trên bảng ho, TongHopHo, tên đợt) để dựng dòng danh sách; ds_ma_ho: chỉ các hộ này."""
+        from . import theo_doi
+        from .quan_ly import TRUONG_TT, ds_dot
+        loc, ts = '', ()
+        if ds_ma_ho is not None:
+            loc, ts = f' WHERE ma_ho IN ({",".join("?" * len(ds_ma_ho))})', tuple(ds_ma_ho)
+        so_thua = {r[0]: (r[1], D(r[2] or 0)) for r in self.con.execute(
+            f"SELECT ma_ho, COUNT(*), SUM(CAST(dt_thu_hoi AS REAL)) FROM thua{loc} GROUP BY ma_ho", ts)}
+        tt = {r['ma_ho']: dict(r) for r in self.con.execute(
+            f'SELECT ma_ho, trang_thai, dot_id, dia_chi, {", ".join(TRUONG_TT)} FROM ho{loc}', ts)}
+        th = {x.ma_ho: x for x in theo_doi.tong_hop(self.con, ds_ma_ho, tinh_pa=False)}
+        ten_dot = {d.id: d.ten for d in ds_dot(self.con)}
+        return so_thua, tt, th, ten_dot
+
+    @staticmethod
+    def _dong_ho(i: int, h: dict, so_lieu: tuple) -> dict:
+        """Một dòng danh sách hộ (BangHo) từ kết quả đối chiếu h của hộ và số liệu _so_lieu_dong."""
+        from .man_hinh_theo_doi import VANG as MAU_VANG, XANH as MAU_XANH
+        from .quan_ly import TRUONG_TT
+        so_thua, tt, th, ten_dot = so_lieu
+        st, dt = so_thua.get(h['ma_ho'], (0, D(0)))
+        x = tt.get(h['ma_ho'], {})
+        t = th.get(h['ma_ho'])
+        if t is not None:
+            t.tong_pa = h['tong']
+            trang_thai = t.trang_thai
+            goi_y = '\n'.join([f'QĐ {q["so_qd"]} ({q["ngay_qd"]}): {vn(q["so_tien"]) if q["so_tien"] else "?"} đ - '
+                               + (f'đã nhận {q["chi_tra_ngay"]}' if q['da_chi_tra'] else 'chưa nhận') for q in t.qd]
+                              + [f'Bàn giao: {t.ban_giao_ngay or "đã"}' if t.da_ban_giao else '',
+                                 f'Đợt trình: {ten_dot[x["dot_id"]]}' if x.get('dot_id') in ten_dot else '']).strip()
+            mau = MAU_XANH if t.da_ban_giao else (MAU_VANG if t.qd else None)
+            if t.qd and t.qd_chua_nhan and len(t.qd_chua_nhan) == len(t.qd):
+                mau = None
+        else:
+            trang_thai, goi_y, mau = x.get('trang_thai', ''), '', None
+        return dict(ma_ho=h['ma_ho'], tong=h['tong'], lech=h['lech'], **{k: x.get(k) for k in TRUONG_TT},
+                    dot_id=x.get('dot_id'), goi_y_tt=goi_y, mau_tt=mau,
+                    tim=f'{h["ma_ho"]} {x.get("theo_doi") or ""} {ten_dot.get(x.get("dot_id"), "")} '
+                        f'{x.get("qd_so") or ""}',
+                    o=[i, h['ho_ten'], x.get('dia_chi') or '', st, dt.quantize(D('0.1')), trang_thai])
+
+    def _tai_lai_toan_bo(self):
+        from . import doi_chieu
+        self.kq = doi_chieu.doi_chieu(self.con)
+        so_lieu = self._so_lieu_dong()
+        self.mo_hinh.dat_du_lieu([self._dong_ho(i, h, so_lieu) for i, h in enumerate(self.kq.ho, start=1)])
+        self._nap_ds_dot(so_lieu[3])
+        dau = self.bang.horizontalHeader()
+        dau.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.bang.resizeColumnsToContents()
+        self.bang.setColumnWidth(1, min(max(int(self.bang.columnWidth(1)), 240), 340))   # họ tên dài: xem đủ khi rê chuột
+        self.bang.setColumnWidth(2, min(max(int(self.bang.columnWidth(2)), 240), 420))   # địa chỉ
+        self.bang.setColumnWidth(5, max(int(self.bang.columnWidth(5)), 220))              # trạng thái
+        dau.setStretchLastSection(True)
+        self._vua_tieu_de()
+        self.bang.sortByColumn(0, Qt.SortOrder.AscendingOrder)
+
+    def _tai_lai_ho(self, doi: set) -> bool:
+        """Tính lại và vẽ lại các hộ trong doi (csdl.DauVetHo.lay), giữ nguyên các hộ khác, cách sắp xếp, độ rộng cột.
+        False: không làm riêng được (nhiều hộ quá, hộ lạ...) - gọi nạp lại toàn bộ."""
+        if len(doi) > self.TAI_LAI_HO_TOI_DA:
+            return False
+        vi_tri = {h['ma_ho']: i for i, h in enumerate(self.kq.ho)}
+        if len(self.mo_hinh.dong) != len(self.kq.ho) or any(m not in vi_tri for m in doi):
+            return False
+        if not doi:
+            return True
+        from . import doi_chieu
+        ds = sorted(doi, key=vi_tri.get)
+        moi = doi_chieu.doi_chieu(self.con, ds_ma_ho=ds)
+        if sorted(h['ma_ho'] for h in moi.ho) != sorted(ds):
+            return False
+        for h in moi.ho:
+            self.kq.ho[vi_tri[h['ma_ho']]] = h
+        theo_vi_tri = lambda x: vi_tri[x[0]]            # noqa: E731 - giữ thứ tự hộ như khi tính cả dự án (sắp xếp ổn định)
+        self.kq.dong_lech = sorted([x for x in self.kq.dong_lech if x[0] not in doi] + moi.dong_lech, key=theo_vi_tri)
+        self.kq.canh_bao = sorted([x for x in self.kq.canh_bao if x[0] not in doi] + moi.canh_bao, key=theo_vi_tri)
+        so_lieu = self._so_lieu_dong(ds)
+        for h in moi.ho:
+            i = vi_tri[h['ma_ho']]
+            self.mo_hinh.thay_dong(i, self._dong_ho(i + 1, h, so_lieu))
+        return True
+
+    def _sau_tai_lai(self, giu_trang: bool):
+        """Phần chung sau khi nạp lại (toàn bộ hay từng hộ): trang tổng hợp / tiến độ, thẻ số liệu, tiêu đề dự án, đối chiếu."""
+        if not giu_trang or self.trang.currentIndex() == 0:
+            self.bang_tong_hop.nap()
+            self.tien_do.nap()
+        elif self.trang.currentIndex() == 1:
+            self.tien_do.nap()
+            self.bang_tong_hop._can_nap = {0, 1, 2} - {self.bang_tong_hop.tab.currentIndex()}
+        else:
+            self.bang_tong_hop.nap()
+        self._cap_nhat_the_so()
+        self._dem_loc()
+        da = self.con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()
+        co_pa = [h for h in self.kq.ho if h['tong'] > 0]
+        tong = sum((h['tong'] for h in self.kq.ho), D(0))
+        self.lb_du_an.setText(f'<b>{da["ten"]}</b><br>{da["cap_dia_ban"]} {da["ten_dia_ban"]}  ·  {len(self.kq.ho)} hộ, '
+                              f'{len(co_pa)} hộ đã lập phương án  ·  tổng {vn(tong)} đồng  ·  file {self.file.name}')
+        sua = f' (trừ {self.kq.so_ho_sua} hộ đã sửa trong phần mềm)' if self.kq.so_ho_sua else ''
+        if self.kq.khop_het:
+            self.lb_ket_qua.setText(f'Đối chiếu file Excel: KHỚP 100%{sua}  ·  {len(self.kq.canh_bao)} điểm cần xem lại')
+            self.lb_ket_qua.setStyleSheet('QLabel { font-weight: 600; padding: 5px 8px; color: #1E6B34; background: #EAF6EC; '
+                                          'border: 1px solid #CDE8D2; border-radius: 6px; }')
+        else:
+            self.lb_ket_qua.setText(f'Đối chiếu file Excel: LỆCH {self.kq.so_ho_lech} hộ, {len(self.kq.dong_lech)} dòng{sua}')
+            self.lb_ket_qua.setStyleSheet('QLabel { font-weight: 600; padding: 5px 8px; color: #A12A1F; background: #FCEDEB; '
+                                          'border: 1px solid #F3CFCA; border-radius: 6px; }')
+        self.dat_tieu_de()
 
     # ------------------------------------------------ lọc danh sách
     def _nap_ds_dot(self, ten_dot: dict):
@@ -726,9 +804,8 @@ class CuaSoChinh(QMainWindow):
         # "đã lập" không tính phương án phần mềm tự lập lúc tạo Dự án mới mà chưa mở soát (in_an.phan_loai_lap)
         lap = {}
         if ds and self.con is not None:
-            from . import in_an
             try:
-                lap = in_an.phan_loai_lap(self.con, {d['ma_ho']: d['tong'] > 0 for d in ds})
+                lap = lap_pa.phan_loai_lap(self.con, {d['ma_ho']: d['tong'] > 0 for d in ds})
             except Exception:                           # file chỉ xem phiên bản cũ...: đếm như trước
                 lap = {}
         da_pa = sum(1 for v in lap.values() if v == 'da_lap') if lap else sum(1 for d in ds if d['tong'] > 0)
@@ -753,22 +830,53 @@ class CuaSoChinh(QMainWindow):
         for ten, ham in (('Lập phương án hộ đang chọn', lambda: self.mo_lap_pa()), ('Thêm hộ…', lambda: self.mo_ho_so(moi=True)),
                          ('Bảng tổng hợp', lambda: self.mo_trang(1)), ('Theo dõi tiến độ', lambda: self.mo_trang(4))):
             b = QPushButton(ten)
-            b.clicked.connect(ham)
+            b.clicked.connect(lambda _=False, ham=ham: self._chay_lenh(ham))
             h.addWidget(b)
         h.addStretch(1)
         return h
 
+    def _chay_lenh(self, ham):
+        """Chạy một lệnh (menu trái, thanh nút, chuột phải) rồi giải phóng các hộp thoại đã đóng."""
+        try:
+            ham()
+        finally:
+            self.don_hop_da_dong()
+
+    def don_hop_da_dong(self) -> int:
+        """Hộp thoại tạo với cha là cửa sổ chính / trang bên phải không tự xóa khi đóng: mở cửa sổ lập phương án 20 lần để lại
+        20 cửa sổ ẩn (~5.800 thành phần, giữ kết nối dự án cũ) - dùng cả ngày phần mềm nặng dần. Gọi khi lệnh đã chạy xong
+        (không còn mã nào dùng các hộp đó); còn hộp đang mở (lệnh gọi từ bên trong hộp khác) thì để lần sau."""
+        if QApplication.activeModalWidget() is not None:
+            return 0
+        an = [h for h in self.findChildren(QDialog) if not h.isVisible()]
+        for h in an:
+            h.deleteLater()
+        return len(an)
+
     def _menu_ho(self, view, pos):
-        if self.con is None or not view.indexAt(pos).isValid():
+        idx = view.indexAt(pos)
+        if self.con is None or not idx.isValid():
             return
+        if view.currentIndex().row() != idx.row():     # chuột phải lên dòng khác dòng đang chọn: thao tác trên dòng đó
+            view.setCurrentIndex(idx)
         from PySide6.QtWidgets import QMenu
         m = QMenu(self)
-        m.addAction('Lập phương án / hồ sơ hộ…', lambda: self.mo_lap_pa())
-        m.addAction('Xem chi tiết tính tiền…', lambda: ChiTietHo(self.con, self.ho_dang_chon(), self).exec())
+        m.addAction('Lập phương án / hồ sơ hộ…', lambda: self._chay_lenh(self.mo_lap_pa))
+        m.addAction('Xem chi tiết tính tiền…', lambda: self._chay_lenh(self.xem_chi_tiet_tinh))
         m.addSeparator()
         for ten in ('Trạng thái hộ…', 'Đợt trình…', 'In / Xuất…'):
             m.addAction(self.lenh[ten])
         m.exec(view.viewport().mapToGlobal(pos))
+        m.deleteLater()
+
+    def xem_chi_tiet_tinh(self, ma_ho=None, cho: bool = True):
+        ma_ho = self.ho_dang_chon() if ma_ho is None else ma_ho
+        if self.con is None or ma_ho is None:
+            return None
+        d = ChiTietHo(self.con, ma_ho, self)
+        if cho:
+            d.exec()
+        return d
 
     # ------------------------------------------------ hoàn tác / làm lại
     def hoan_tac(self, lam_lai: bool = False) -> str:
@@ -976,6 +1084,7 @@ class CuaSoChinh(QMainWindow):
                 == QMessageBox.StandardButton.Yes
         if not xac_nhan:
             return None
+        from . import nhap_tho
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             dem = nhap_tho.nap_danh_muc(self.file, file_excel)
@@ -1009,6 +1118,7 @@ class CuaSoChinh(QMainWindow):
         if not p:
             return
         da = self.con.execute('SELECT ten, nguon_nhap FROM du_an WHERE id = 1').fetchone()
+        from . import doi_chieu
         try:
             doi_chieu.xuat_bao_cao(self.kq, p, da['ten'], da['nguon_nhap'], lap_pa.ra_soat_gia(self.con, self.dm))
         except OSError as e:
@@ -1336,7 +1446,8 @@ class CuaSoChinh(QMainWindow):
         goc = may_chu.doc_cau_hinh().get('may_chu')
         if not goc:
             return 'khong_dung'
-        if may_chu.ket_noi_duoc(goc):
+        from .man_hinh_may_chu import ket_noi_duoc      # luồng nền: máy chủ không tới được thì cửa sổ không đứng hình 4 giây
+        if ket_noi_duoc(self, goc):
             self.dang_nhap(tu_mo_lai=mo_lai)
             return 'dang_nhap' if may_chu.PHIEN is not None else 'offline'
         self.cap_nhat_tai_khoan()
@@ -1363,8 +1474,9 @@ class CuaSoChinh(QMainWindow):
 def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName('PABT')
-    from .giao_dien import ap_dung
+    from .giao_dien import ap_dung, cai_bat_loi
     ap_dung(app)
+    cai_bat_loi()                                      # lỗi trong nút bấm: báo + ghi loi.log (trước đây mất im lặng)
     menu_trai = '--menu-tren' not in sys.argv              # từ 0.9.3: menu dọc bên trái thay thanh nút phía trên
     w = CuaSoChinh(menu_trai=menu_trai)
     w.dat_tieu_de()

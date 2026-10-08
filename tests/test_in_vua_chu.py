@@ -1,7 +1,6 @@
 """Kiểm thử 0.9.12: bản in phương án chi tiết - nguồn gốc đất dài / ngắn hiện đủ chữ, dòng "Dự án:" cao vừa tên dự án
 (dùng mẫu in mau_in/ đóng gói kèm, không cần file Excel thật; dữ liệu giả)."""
 from __future__ import annotations
-import os
 import tempfile
 import unittest
 from pathlib import Path

@@ -11,7 +11,6 @@ import openpyxl
 
 from pabt import csdl, in_an, nghiep_vu, nhap_excel
 from pabt.lap_pa import BoSoan
-from pabt.tien import D
 from tests.test_nghiep_vu import FILE_EXCEL
 
 

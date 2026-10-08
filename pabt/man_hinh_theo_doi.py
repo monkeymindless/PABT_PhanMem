@@ -389,7 +389,7 @@ class KhungQuyetDinh(_Khung):
         lech = ''
         if str(q.tong_tien).strip() and D(q.tong_tien) != q.tong_ho:
             lech = f' <span style="color:#A12A1F">(tổng ghi trong quyết định {vn(q.tong_tien)} đ)</span>'
-        tep = f' · <a href="mo">mở file quyết định</a>' if q.file else ''
+        tep = ' · <a href="mo">mở file quyết định</a>' if q.file else ''
         self.lb_qd.setText(f'<b>Quyết định số {q.so}</b>' + (f' ngày {q.ngay}' if q.ngay else '') +
                            (f' - {q.trich_yeu}' if q.trich_yeu else '') +
                            f'<br>{q.so_ho} hộ · tổng phê duyệt <b>{vn(q.tong_ho)} đ</b>{lech} · đã nhận tiền '

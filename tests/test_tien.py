@@ -15,6 +15,32 @@ class TestTien(unittest.TestCase):
         self.assertEqual(D(''), 0)
         self.assertEqual(D('1,234.5'), Decimal('1234.5'))
 
+    def test_doc_so_nguoi_go(self):
+        """Một quy tắc đọc số gõ / ô chữ trong file cho mọi chỗ nhập liệu (tien.doc_so_vn)."""
+        from pabt.tien import doc_so_vn
+        for chu, so in (('1.070', '1070'), ('2.500.000', '2500000'), ('1.070,5', '1070.5'), ('12,5', '12.5'), ('0.125', '0.125'),
+                        ('12.5', '12.5'), ('1,500,000', '1500000'), ('1,500', '1.5'), ('-1.000', '-1000'), (' 4 320 000 ', '4320000'),
+                        ('1,234.5', '1234.5'), (1070.5, '1070.5'), (None, '0')):
+            self.assertEqual(doc_so_vn(chu), Decimal(so), repr(chu))
+        with self.assertRaises(ValueError):
+            doc_so_vn('1,2,3')
+        self.assertEqual(D('1.07'), Decimal('1.07'))                   # D: chuỗi lưu trong CSDL (tien.chuoi) không đổi
+
+    def test_cac_cho_nhap_cung_quy_tac(self):
+        """Trước đây '1.070' ô diện tích Excel -> 1,07 m²; '1.070,5' số tiền quyết định -> 10.705; '0.500' -> 500."""
+        from pabt import cay_trong, lap_pa, nhap_excel, nhap_tho, theo_doi
+        from pabt.tien import tinh_cong_thuc
+        self.assertEqual(nhap_tho._doc_dt('1.070'), 1070)
+        self.assertEqual(nhap_tho._doc_dt('1.070,5 m2'), Decimal('1070.5'))
+        self.assertEqual(nhap_excel._so('1.070'), '1070')
+        self.assertIsNone(nhap_excel._so_hoac_rong('abc'))
+        self.assertEqual(theo_doi._tien('1.070,5'), '1070.5')
+        self.assertEqual(theo_doi._tien('1,500,000'), '1500000')
+        self.assertEqual(lap_pa.doc_so('0.500', 'x'), Decimal('0.5'))
+        self.assertEqual(tinh_cong_thuc('0.125*8'), 1)
+        self.assertEqual(tinh_cong_thuc('1,500,000:2'), 750000)
+        self.assertEqual(cay_trong.mat_do_tu_danh_muc('', 'Mật độ 1.111 cây/ha'), 1111)
+
     def test_lam_tron_nhu_excel(self):
         self.assertEqual(lam_tron(Decimal('2188800'), -3), 2189000)       # 3,8 m³ x 576.000
         self.assertEqual(lam_tron(Decimal('29894784'), -3), 29895000)     # 12 cây x 2.491.232

@@ -13,6 +13,7 @@ Không phụ thuộc Qt.
 from __future__ import annotations
 
 import re
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -20,7 +21,7 @@ from pathlib import Path
 from . import csdl
 from .lap_pa import LoiNhap, bo_dau
 from .quan_ly import chuan_ngay
-from .tien import D, KHONG, chuoi, vn
+from .tien import D, KHONG, chuoi, doc_so_vn, vn
 
 TIEN_QD = ('so_tien', 'tien_dat', 'tien_tai_san', 'tien_cay', 'tien_ho_tro', 'tien_thuong', 'chi_tra_so_tien')
 NGAY_QD = ('ngay_pa', 'qd_ct_ngay', 'chi_tra_ngay')
@@ -40,7 +41,7 @@ def _tien(v) -> str:
     if not s:
         return ''
     try:
-        return chuoi(D(re.sub(r'[.\s]', '', s) if re.fullmatch(r'\d{1,3}(\.\d{3})+', s) else s.replace(',', '.')))
+        return chuoi(doc_so_vn(s))                  # trước đây '1.070,5' -> 10.705 (đổi phẩy thành chấm rồi bỏ mọi dấu chấm)
     except (ValueError, ArithmeticError) as e:
         raise LoiNhap(f'Số tiền "{s}" không đúng.') from e
 
@@ -202,7 +203,14 @@ def ghi_qd_ho(con, qd_id: int, ma_ho: int, gia_tri: dict, ghi_nhat_ky: bool = Tr
         gt.setdefault('chi_tra_ngay', '')
         gt.setdefault('chi_tra_so_tien', '')
     with con:
-        con.execute('INSERT OR IGNORE INTO qd_ho (qd_id, ma_ho) VALUES (?, ?)', (qd_id, ma_ho))
+        moi = con.execute('INSERT OR IGNORE INTO qd_ho (qd_id, ma_ho) VALUES (?, ?)', (qd_id, ma_ho)).rowcount
+        if moi and 'so_pa' not in gt:                   # hộ mới vào quyết định: lấy số / ngày PA chi tiết đã đánh ở đợt trình
+            try:
+                con.execute('''UPDATE qd_ho SET so_pa = (SELECT so_pa FROM ho WHERE ma_ho = ?),
+                               ngay_pa = (SELECT ngay_pa FROM ho WHERE ma_ho = ?) WHERE qd_id = ? AND ma_ho = ?''',
+                            (ma_ho, ma_ho, qd_id, ma_ho))
+            except sqlite3.OperationalError:            # file phiên bản cũ chưa có cột (không xảy ra sau khi nâng cấp v11)
+                pass
         if gt:
             con.execute(f'UPDATE qd_ho SET {", ".join(k + " = ?" for k in gt)} WHERE qd_id = ? AND ma_ho = ?',
                         (*gt.values(), qd_id, ma_ho))

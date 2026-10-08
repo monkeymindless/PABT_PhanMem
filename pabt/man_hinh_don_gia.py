@@ -6,7 +6,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QFileDialog, QHBoxLayout, QLabel, QLineEdit,
-                               QMenu, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
+                               QMenu, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout)
 
 from . import csdl, don_gia
 from .lap_pa import LoiNhap, bo_dau
@@ -225,6 +225,7 @@ class HopBoDonGia(QDialog):
         for ten, url in don_gia.TRA_CUU:
             m.addAction(ten, lambda u=url: QDesktopServices.openUrl(QUrl(u)))
         m.exec(self.cursor().pos())
+        m.deleteLater()
 
     def xem_gia_dat(self, cho: bool = True):
         from .man_hinh_gia_dat import HopTraGiaDat

@@ -253,6 +253,17 @@ class TestHopMayChu(_Nen):
         self.assertIn('Offline', w.nut_tk.text())
         may_chu.ghi_cau_hinh(may_chu='')
         self.assertEqual(w.khoi_dong_may_chu(), 'khong_dung')
+        # máy chủ trả lời chậm (mạng chập chờn): kiểm tra chạy ở luồng nền, cửa sổ vẫn xử lý sự kiện trong lúc chờ
+        import time
+        from unittest import mock
+        from PySide6.QtCore import QTimer
+        may_chu.ghi_cau_hinh(may_chu=str(self.td / 'cham'))
+        da_ve = []
+        QTimer.singleShot(100, lambda: da_ve.append(True))
+        with mock.patch.object(may_chu, 'ket_noi_duoc', side_effect=lambda goc, cho=4.0: time.sleep(0.6) or False):
+            self.assertEqual(w.khoi_dong_may_chu(mo_lai=False), 'mat_ket_noi')
+        self.assertEqual(da_ve, [True])
+        may_chu.ghi_cau_hinh(may_chu='')
         p = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
         may_chu.ghi_mo_du_an(f)
         self.assertEqual(w.sau_dang_nhap(), f)                           # đăng nhập: tự mở lại dự án đang làm

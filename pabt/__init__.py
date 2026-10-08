@@ -1,6 +1,6 @@
 """Phần mềm lập phương án bồi thường, hỗ trợ (PABT): bộ đơn giá Đồng Nai tích hợp, dự án mới từ dữ liệu thô, bản in."""
 from __future__ import annotations
-__version__ = '0.9.15'
+__version__ = '0.9.16'
 
 import sys as _sys
 from pathlib import Path as _Path

@@ -1,5 +1,17 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.15)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.16)
 
+> **0.9.16** - **Trình phê duyệt**: cửa sổ **Đợt trình…** có thêm văn bản trình (Tờ trình / Văn bản: số, ngày), **số / ngày
+> phương án tổng** (tự in vào dòng "Đính kèm Phương án số …" và ngày ký của bảng tổng hợp), **số PA chi tiết từng hộ** (nút
+> **Đánh số PA chi tiết…** hoặc sửa thẳng trên bảng; tự in vào "Số: …/" và ngày của phương án chi tiết, mang sang quyết định phê
+> duyệt), khung **Mẫu văn bản trình**: **Thêm mẫu** tờ trình (Word, Excel, PDF) / phương án tổng (Word, PDF), **Sửa mẫu**, **Mẫu
+> mặc định**, **Chỗ trống dùng trong mẫu…**. Xuất / In: chọn từng mẫu (in riêng lẻ) hoặc **Chọn tất cả mẫu (in đồng loạt)**, lưu
+> thành 2 thư mục **PA CHI TIET** và **PA TONG**. Nút **Sửa đợt…** báo rõ khi chưa chọn đợt (bấm đúp dòng đợt cũng sửa được);
+> lỗi bất thường trong nút bấm không còn mất im lặng (hiện thông báo, ghi `loi.log`). **Nhanh hơn**: mở phần mềm 0,73 -> 0,38
+> giây, lưu một hộ rồi tải lại danh sách (3.000 hộ) 0,47 -> 0,05 giây, mở dự án / cửa sổ lập phương án nhanh hơn ~20%; cửa sổ
+> đã đóng được giải phóng khỏi bộ nhớ (trước: mở - đóng cửa sổ lập phương án nhiều lần trong ngày làm phần mềm nặng dần). Đọc số
+> "1.070" trong ô Excel dạng chữ đúng là 1.070 (trước: 1,07); số tiền "1.070,5" ở quyết định đúng (trước: 10.705). Menu **Đơn
+> giá riêng dự án** có biểu tượng. File dự án nâng lên CSDL v11 khi mở bằng 0.9.16 (bản cũ hơn không mở được file đã nâng cấp).
+>
 > **0.9.15** (gói cập nhật `PABT_CapNhat_0.9.15.pabtcn`, cài lên bản 0.9.13 trở lên: nút **Cập nhật phần mềm** hoặc nhấp đúp file gói):
 > **Nhập phương án chi tiết** từ file Excel mỗi sheet một hộ (menu **Dự án**); **menu trái gọn** - các lệnh Dự án gom vào một nút
 > xổ, bấm tiêu đề nhóm để đóng / mở (nhớ cho lần sau), vừa màn hình 1366×768 không phải cuộn; **↶ Hoàn tác / ↷ Làm lại** lên
@@ -358,10 +370,24 @@ Trong màn hình Lập phương án hộ:
 
 ## Đợt trình, thư mục hồ sơ, theo dõi tiến độ
 
-- **Đợt trình…**: tạo các đợt (Đợt 1, Đợt 2… kèm ngày trình, số tờ trình), xếp hộ vào đợt (chọn hộ trong danh sách chính rồi
-  "Đưa … hộ đang chọn vào đợt", hoặc "Đưa các hộ chưa xếp đợt vào đợt"), chọn **thư mục hồ sơ dự án**. **Xuất hồ sơ đợt** tạo thư mục
-  `<thư mục hồ sơ>\Đợt 1 - 25 hộ\` chứa phương án chi tiết từng hộ (`PA_<STT>_<họ tên>.xlsx`, kèm PDF nếu chọn) và `BANG_TONG_HOP.xlsx`
-  của đợt; xuất lại khi số hộ đổi thì thư mục cũ đổi tên theo số hộ mới. **Xuất tất cả các đợt** làm lần lượt mọi đợt.
+- **Đợt trình…**: tạo các đợt (Đợt 1, Đợt 2…), xếp hộ vào đợt (chọn hộ trong danh sách chính rồi "Đưa … hộ đang chọn vào đợt",
+  hoặc "Đưa các hộ chưa xếp đợt vào đợt"), chọn **thư mục hồ sơ dự án**.
+  - **Sửa đợt…** (hoặc bấm đúp dòng đợt): văn bản trình (**Tờ trình** / **Văn bản**, số, ngày trình), **số / ngày phương án
+    tổng**, ghi chú. Số phương án tổng tự in vào bảng tổng hợp: "(Đính kèm Phương án số **30**/… ngày **09** tháng **10** năm …)".
+  - **Số PA chi tiết** từng hộ: nút **Đánh số PA chi tiết…** (số bắt đầu, số chữ số 01/02…, ngày, chỉ hộ chưa có số) hoặc bấm đúp
+    ô "Số PA chi tiết" / "Ngày PA" để sửa. Số in vào "Số: …/ký hiệu" và ngày của phương án chi tiết; hộ được đưa vào quyết định
+    phê duyệt mang theo số này.
+  - **Mẫu văn bản trình**: Tờ trình / văn bản trình (Word .docx/.doc, Excel .xlsx/.xls, PDF) và Phương án tổng (Word, PDF): **Thêm
+    mẫu…** (PDF: Word mở ra và hỏi chuyển thành văn bản sửa được - bấm OK), **Sửa mẫu** (mở bằng Word / Excel), **Mẫu mặc định**
+    (bỏ mẫu riêng). Trong mẫu gõ chỗ trống trong ngoặc nhọn, ví dụ `{so_to_trinh}`, `{tong_tien_chu}`; dòng bảng có `{ho.ho_ten}`,
+    `{ho.tong_tien}`… được nhân thành mỗi hộ một dòng - danh sách đầy đủ ở nút **Chỗ trống dùng trong mẫu…**.
+  - **Xuất hồ sơ đợt** (chọn: phương án chi tiết, bảng tổng hợp, tờ trình, phương án tổng - từng loại hoặc **Chọn tất cả**) tạo
+    `<thư mục hồ sơ>\Đợt 1 - 25 hộ\PA CHI TIET\` (phương án chi tiết từng hộ `PA_<STT>_<họ tên>.xlsx`) và `...\PA TONG\`
+    (`TO_TRINH.docx`, `PHUONG_AN_TONG.docx`, `BANG_TONG_HOP.xlsx`), kèm PDF nếu chọn (Excel / Word xuất); xuất lại khi số hộ đổi
+    thì thư mục cũ đổi tên theo số hộ mới. **Xuất tất cả các đợt** làm lần lượt mọi đợt.
+- **In / Xuất…**: ô **Đợt trình** - chọn một đợt thì đánh dấu sẵn các hộ của đợt và mọi mẫu (số tờ trình, số phương án tổng lấy
+  theo đợt); bản in chọn từng mẫu hoặc **Chọn tất cả mẫu (in đồng loạt)**; **Lưu vào thư mục** chọn được đường dẫn, mặc định lưu
+  thành 2 thư mục **PA CHI TIET** / **PA TONG**.
 - **Lưu dự án thành…**: chép file `.pabt` đang mở sang chỗ khác (mặc định thư mục hồ sơ dự án) rồi làm việc tiếp trên file mới – để
   file dự án và các thư mục đợt trình nằm cùng một chỗ.
 - **Trạng thái hộ…** (chọn một hoặc nhiều hộ): đã phê duyệt (số, ngày quyết định, số tiền, file quyết định), đã chi trả (ngày, số

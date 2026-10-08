@@ -2,12 +2,10 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 
-import openpyxl
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
-
 from . import nghiep_vu
-from .tien import D, KHONG
+from .tien import D
+
+# openpyxl (~0,2 giây) chỉ nạp khi xuất báo cáo: màn hình chính gọi doi_chieu() mỗi lần mở / tải lại dự án
 
 
 @dataclass
@@ -38,14 +36,27 @@ def tong_excel_da_luu(con) -> dict:
     return kq
 
 
-def doi_chieu(con, tong_excel: dict | None = None) -> KetQuaDoiChieu:
-    """So kết quả tính của phần mềm với số Excel (mặc định: số đã lưu lúc nhập)."""
+MOI_HO_TOI_DA = 50          # tính lại ít hộ: đọc riêng từng hộ (3 câu / hộ) thay vì quét cả bảng phương án
+
+
+def doi_chieu(con, tong_excel: dict | None = None, ds_ma_ho: list | None = None) -> KetQuaDoiChieu:
+    """So kết quả tính của phần mềm với số Excel (mặc định: số đã lưu lúc nhập). ds_ma_ho: chỉ các hộ này (màn hình chính tính
+    lại các hộ vừa đổi - csdl.DauVetHo); None = cả dự án."""
     if tong_excel is None:
         tong_excel = tong_excel_da_luu(con)
     kq = KetQuaDoiChieu()
     bc = nghiep_vu.BoiCanh.tu(con)
     sua = {r[0]: r[1] for r in con.execute('SELECT ma_ho, luu_luc FROM ho WHERE luu_luc IS NOT NULL')}
-    for pa in nghiep_vu.doc_tat_ca_phuong_an(con).values():           # đọc mỗi hộ MỘT lần, dùng cho cả tính tiền và kiểm tra
+    if ds_ma_ho is not None and len(ds_ma_ho) <= MOI_HO_TOI_DA:
+        ds_pa = []
+        for m in ds_ma_ho:
+            try:
+                ds_pa.append(nghiep_vu.doc_phuong_an(con, m))
+            except KeyError:                                           # hộ không còn
+                pass
+    else:
+        ds_pa = nghiep_vu.doc_tat_ca_phuong_an(con, ds_ma_ho).values()
+    for pa in ds_pa:                                                    # đọc mỗi hộ MỘT lần, dùng cho cả tính tiền và kiểm tra
         k = nghiep_vu.tinh_pa(pa, bc)
         ex = tong_excel.get(k.ma_ho)
         # hộ đã lưu lại trong phần mềm: phương án đã khác bản Excel lúc nhập, không tính là lệch
@@ -66,27 +77,29 @@ def doi_chieu(con, tong_excel: dict | None = None) -> KetQuaDoiChieu:
     return kq
 
 
-_MANH = Side(style='thin', color='999999')
-_VIEN = Border(left=_MANH, right=_MANH, top=_MANH, bottom=_MANH)
-_TD = PatternFill('solid', fgColor='1F4E78')
-_DO = PatternFill('solid', fgColor='F8CBAD')
-_XANH = PatternFill('solid', fgColor='E2EFDA')
 _SO = '#,##0'
 
 
-def _tieu_de(ws, hang, cot_rong):
-    for i, (t, w) in enumerate(cot_rong, start=1):
-        c = ws.cell(hang, i, t)
-        c.font = Font(bold=True, color='FFFFFF')
-        c.fill = _TD
-        c.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        c.border = _VIEN
-        ws.column_dimensions[get_column_letter(i)].width = w
-    ws.row_dimensions[hang].height = 32
-    ws.freeze_panes = ws.cell(hang + 1, 1)
-
-
 def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str = '', ra_soat: list | None = None) -> None:
+    import openpyxl
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+    _manh = Side(style='thin', color='999999')
+    _VIEN = Border(left=_manh, right=_manh, top=_manh, bottom=_manh)
+    _DO = PatternFill('solid', fgColor='F8CBAD')
+    _XANH = PatternFill('solid', fgColor='E2EFDA')
+
+    def _tieu_de(ws, hang, cot_rong):
+        for i, (t, w) in enumerate(cot_rong, start=1):
+            c = ws.cell(hang, i, t)
+            c.font = Font(bold=True, color='FFFFFF')
+            c.fill = PatternFill('solid', fgColor='1F4E78')
+            c.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            c.border = _VIEN
+            ws.column_dimensions[get_column_letter(i)].width = w
+        ws.row_dimensions[hang].height = 32
+        ws.freeze_panes = ws.cell(hang + 1, 1)
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'TONG_HO'

@@ -15,7 +15,6 @@ import hashlib
 import hmac
 import json
 import os
-import platform
 import re
 import secrets
 import shutil
@@ -80,7 +79,8 @@ def _bay_gio() -> str:
 
 
 def _may() -> str:
-    return platform.node()
+    from .csdl import ten_may
+    return ten_may()
 
 
 # ---------------------------------------------------------------- cấu hình trên máy này

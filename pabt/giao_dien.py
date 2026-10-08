@@ -221,11 +221,12 @@ KY_HIEU = [
     (r'^thuc hien', 0xE768),
     (r'nhap file excel|^nhap tu|^tu file|^tu danh sach|^tu du an', 0xE8B5), (r'thong tin du an|gioi thieu', 0xE946),
     (r'^ho so ho', 0xE77B), (r'^them ho', 0xE8FA), (r'lap phuong an', 0xE70F), (r'kiem tra loi|kiem tra lai', 0xE9D5),
-    (r'bo don gia', 0xE8FD), (r'ra soat', 0xE721), (r'quy chuan|tinh mat do', 0xE8F1), (r'du toan', 0xE8EF),
+    (r'bo don gia', 0xE8FD), (r'don gia rieng', 0xE8EC), (r'ra soat', 0xE721), (r'quy chuan|tinh mat do', 0xE8F1), (r'du toan', 0xE8EF),
     (r'^dot trinh', 0xE8B7), (r'trang thai ho', 0xE73A), (r'nhap quyet dinh', 0xE8A5), (r'bao cao tong hop', 0xE9F9),
     (r'doi chieu', 0xE7C3), (r'cap nhat mau in', 0xE72C), (r'cap nhat phan mem|^cap nhat', 0xE895),
     (r'^(in|xuat)\b|pdf', 0xE749), (r'^xoa|^go ban', 0xE74D), (r'^them', 0xE710), (r'^(sua|ap don gia|ap dung)', 0xE70F),
-    (r'^(huy|dong|cancel|close)', 0xE711), (r'goi y', 0xE82F), (r'^(chon|tra |tim)', 0xE721), (r'^tach', 0xE8C6),
+    (r'^(huy|dong|cancel|close)', 0xE711), (r'goi y', 0xE82F), (r'^chon tat ca', 0xE73E), (r'^(chon|tra |tim)', 0xE721),
+    (r'^tach', 0xE8C6),
     (r'^(gop|chuyen|dua |bo ho)', 0xE8AB), (r'mo thu muc', 0xE838),
 ]
 _PHONG_KY_HIEU = None
@@ -1443,6 +1444,48 @@ class _BoToMau(QObject):
             if isinstance(obj, QDialog) and not isinstance(obj, QMessageBox):
                 vua_man_hinh(obj)
         return False
+
+
+_BAO_LOI = {'dang': False, 'luc': 0.0}
+
+
+def cai_bat_loi() -> None:
+    """Lỗi không bắt được trong nút bấm / sự kiện Qt: chạy bằng pythonw / bản exe (không có cửa sổ lệnh) trước đây mất im lặng -
+    người dùng thấy nút "không phản ứng". Nay ghi <thư mục máy>\\loi.log và hiện hộp báo lỗi (một lần mỗi 5 giây, không lồng nhau)."""
+    import sys
+    import time
+    import traceback
+    from datetime import datetime
+    goc = sys.excepthook
+
+    def bat(loai, gia_tri, tb):
+        if issubclass(loai, KeyboardInterrupt):
+            return goc(loai, gia_tri, tb)
+        chu = ''.join(traceback.format_exception(loai, gia_tri, tb))
+        file_log = None
+        try:
+            from .may_chu import thu_muc_may
+            file_log = thu_muc_may() / 'loi.log'
+            file_log.parent.mkdir(parents=True, exist_ok=True)
+            with open(file_log, 'a', encoding='utf-8') as f:
+                f.write(f'==== {datetime.now():%d/%m/%Y %H:%M:%S}\n{chu}\n')
+        except OSError:
+            file_log = None
+        if _BAO_LOI['dang'] or time.time() - _BAO_LOI['luc'] < 5:
+            return
+        _BAO_LOI['dang'], _BAO_LOI['luc'] = True, time.time()
+        try:
+            from PySide6.QtWidgets import QApplication
+            if QApplication.instance() is not None:
+                hop_ket_qua(QApplication.activeWindow(), f'Có lỗi không mong muốn: {loai.__name__}: {gia_tri}\n\nThao tác vừa '
+                            'rồi có thể chưa hoàn tất; dữ liệu đã lưu trước đó không bị ảnh hưởng.' +
+                            (f' Chi tiết đã ghi vào {file_log}.' if file_log else ''), chu.splitlines(),
+                            'Chi tiết lỗi (bấm Chép, gửi cho người hỗ trợ)', canh_bao=True)
+        except Exception:                               # noqa: BLE001 - báo lỗi không được thì thôi, không gây lỗi chồng
+            pass
+        finally:
+            _BAO_LOI['dang'] = False
+    sys.excepthook = bat
 
 
 def ap_dung(app) -> None:
