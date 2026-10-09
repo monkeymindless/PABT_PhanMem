@@ -40,9 +40,13 @@ def _qt5_lam_qt6() -> None:
     for ten in ('QAction', 'QActionGroup', 'QShortcut', 'QUndoStack', 'QUndoCommand', 'QFileSystemModel'):
         if not hasattr(QtGui, ten) and hasattr(QtWidgets, ten):
             setattr(QtGui, ten, getattr(QtWidgets, ten))
-    for lop in (QtCore.QCoreApplication, QtCore.QEventLoop, QtWidgets.QDialog, QtWidgets.QMenu):
+    for lop in (QtCore.QCoreApplication, QtCore.QEventLoop, QtWidgets.QDialog):
         if not hasattr(lop, 'exec'):
             lop.exec = lop.exec_
+    if not hasattr(QtWidgets.QMenu, 'exec'):
+        # QMenu.exec_ có cả dạng tĩnh (danh sách action) lẫn dạng thường: chép thẳng `exec = exec_` thì PySide2 gọi sai và phần
+        # mềm SẬP (0xC0000005) khi mở menu chuột phải / menu bật lên - gọi qua chính đối tượng menu
+        QtWidgets.QMenu.exec = lambda self, *a, **k: self.exec_(*a, **k)
     # Qt5 đọc đường dẫn plugin / bản dịch theo bảng mã ANSI: thư mục có chữ Việt (tên người dùng có dấu, "Thư mục mới"...)
     # làm Qt không tìm được plugin nền tảng. Chỉ đường bằng API Unicode.
     goc = _Path(PySide2.__file__).parent

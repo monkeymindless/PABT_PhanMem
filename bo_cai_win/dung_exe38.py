@@ -46,7 +46,10 @@ def main() -> int:
     for f in DU_LIEU:
         lenh += ['--add-data', f'{TAM / f};pabt']
     lenh += ['--add-data', f'{TAM / "mau_in"};mau_in', str(TAM / 'chay.py')]
-    kq = subprocess.run(lenh, cwd=str(TAM))
+    # PATH của máy dựng có thư mục Git / mingw (dựng trong Git Bash): PyInstaller lấy nhầm DLL OpenSSL... của Git vào bản dựng
+    env = dict(os.environ, PATH=os.pathsep.join(x for x in os.environ.get('PATH', '').split(os.pathsep)
+                                                if not any(k in x.lower() for k in ('\\git\\', 'mingw', 'msys'))))
+    kq = subprocess.run(lenh, cwd=str(TAM), env=env)
     if kq.returncode:
         print('PyInstaller (Python 3.8) lỗi.')
         return kq.returncode

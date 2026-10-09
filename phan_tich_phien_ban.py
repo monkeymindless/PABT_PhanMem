@@ -71,8 +71,13 @@ if du_an_that and os.path.exists(du_an_that):
     def lap_pa():
         cs = w.mo_lap_pa(cho=False); cs.show(); qa.processEvents(); cs.close()
     do('cua_so_lap_pa_lan_dau', lap_pa)
-    do('cua_so_lap_pa_lan_sau', lap_pa)
-    do('dong_du_an', lambda: w.dong_du_an())
+    do('cua_so_lap_pa_lan_sau', lap_pa, n=7)        # thao tác ~0,1 s: đo một lần lệch tới ±20% - lấy trung vị nhiều lần
+    ds = []
+    for _ in range(7):                              # đóng dự án ~15 ms: đo nhiều lần (mở lại không tính giờ)
+        t = time.perf_counter(); w.dong_du_an(); qa.processEvents(); ds.append((time.perf_counter() - t) * 1000)
+        mo(p)
+    kq['dong_du_an'] = statistics.median(ds)
+    w.dong_du_an()
 from pabt import doi_chieu, du_an_moi, in_an      # nạp SAU phần dự án thật: không làm sai cờ "openpyxl nạp khi mở dự án"
 # dự án giả lập lớn (tạo bằng chính phiên bản đang đo)
 dong = []

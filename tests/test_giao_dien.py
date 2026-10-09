@@ -216,3 +216,24 @@ class TestMau(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+@unittest.skipUnless(CO_QT, 'cần PySide6 / PySide2')
+class TestMenuBatLen(unittest.TestCase):
+    def test_menu_exec_khong_sap(self):
+        """Menu bật lên (chuột phải danh sách hộ, Tra cứu văn bản mới) mở / đóng được. Bản Win7 (PySide2): bí danh
+        `QMenu.exec = QMenu.exec_` từng làm phần mềm SẬP (0xC0000005) - pabt._qt5_lam_qt6 gọi qua đối tượng."""
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        import pabt  # noqa: F401
+        from PySide6.QtCore import QPoint, QTimer
+        from PySide6.QtWidgets import QApplication, QMenu, QWidget
+        app = QApplication.instance() or QApplication([])  # noqa: F841
+        w = QWidget()
+        m = QMenu(w)
+        da = []
+        a = m.addAction('Mục thử')
+        a.triggered.connect(lambda: da.append(1))
+        QTimer.singleShot(0, lambda: (a.trigger(), m.close()))
+        m.exec(QPoint(0, 0))
+        self.assertEqual(da, [1])
+        w.close()
