@@ -204,7 +204,7 @@ class CuaSoChinh(QMainWindow):
         for ten, ham in (('Dự án mới…', lambda: self.du_an_moi()),
                          ('Nhập file Excel…', lambda: self.nhap_excel()), ('Mở dự án…', self.mo_du_an),
                          ('Nhập phương án chi tiết…', lambda: self.nhap_chi_tiet()),
-                         ('Hồ sơ hộ…', lambda: self.mo_ho_so()), ('Thêm hộ…', lambda: self.mo_ho_so(moi=True)),
+                         ('Thêm hộ…', lambda: self.mo_ho_so(moi=True)),
                          ('Xóa hộ…', lambda: self.xoa_ho()),
                          ('Lập phương án hộ…', lambda: self.mo_lap_pa()), ('Thông tin dự án…', lambda: self.sua_du_an()),
                          ('Rà soát giá…', lambda: self.ra_soat_gia()), ('In / Xuất…', lambda: self.in_xuat()),
@@ -326,7 +326,8 @@ class CuaSoChinh(QMainWindow):
         lo_ds = QVBoxLayout(trang_ds)
         lo_ds.setContentsMargins(0, 0, 0, 0)
         lo_ds.setSpacing(7)
-        lo_ds.addLayout(self._hang_thao_tac())              # băng đối chiếu + 2 thao tác hằng ngày: một hàng (trước: 2 hàng)
+        # băng kết quả đối chiếu; Lập phương án / Thêm hộ chỉ ở menu trái (+ bấm đúp, chuột phải) - không lặp nút ở đây
+        lo_ds.addWidget(self.lb_ket_qua)
         lo_ds.addLayout(hang)
         lo_ds.addWidget(self.bang, 1)
         self.lb_trang = QLabel('')
@@ -536,8 +537,9 @@ class CuaSoChinh(QMainWindow):
             self._cap_nhat_nut_ht()
             self.file = Path(p)
             self.dm = lap_pa.DanhMuc(self.con)
-            for ten in ('Hồ sơ hộ…', 'Thêm hộ…', 'Xóa hộ…', 'Lập phương án hộ…', 'Thông tin dự án…', 'Trạng thái hộ…',
-                        'Nhập quyết định…'):
+            # chỉ xem: tắt mọi lệnh ghi. Mỗi lệnh một QAction dùng chung cho menu trái / chuột phải - không còn nút gọi thẳng
+            # hàm (trước 0.9.18 hai nút nhanh "Thêm hộ…", "Lập phương án hộ đang chọn" vẫn bật khi chỉ xem -> lỗi ghi CSDL)
+            for ten in ('Thêm hộ…', 'Xóa hộ…', 'Lập phương án hộ…', 'Thông tin dự án…', 'Trạng thái hộ…', 'Nhập quyết định…'):
                 self.lenh[ten].setEnabled(not chi_doc)
             self.bang_tong_hop.dat_du_an(self.con, chi_doc)
             self.tien_do.dat_du_an(self.con, chi_doc)
@@ -745,7 +747,21 @@ class CuaSoChinh(QMainWindow):
         """Mã hộ đang hiện trong danh sách (sau lọc), theo thứ tự đang sắp."""
         return [self.mo_hinh.dong[self.loc.mapToSource(self.loc.index(r, 0)).row()]['ma_ho'] for r in range(self.loc.rowCount())]
 
+    def _khung_dang_xem(self):
+        """Trang bên phải đang xem có bảng hộ riêng (Tổng quát, Quyết định, Tổng hợp tiền, Tiến độ); None = danh sách hộ."""
+        i = self.trang.currentIndex() if hasattr(self, 'trang') else 0
+        if i == 1:
+            return self.bang_tong_hop.tab.currentWidget()
+        if i == 2:
+            return self.tien_do
+        return None
+
     def ho_da_chon(self) -> list:
+        """Hộ đang chọn TRÊN TRANG ĐANG XEM (trước 0.9.18 luôn lấy ở danh sách hộ - đang ở trang Tiến độ chọn hộ rồi bấm
+        "Trạng thái hộ…" ở menu trái thì phần mềm lấy hộ của danh sách đang ẩn)."""
+        k = self._khung_dang_xem()
+        if k is not None and hasattr(k, 'ma_da_chon'):
+            return sorted(k.ma_da_chon())
         if self.bang.selectionModel() is None:
             return []
         return sorted({self.mo_hinh.dong[self.loc.mapToSource(i).row()]['ma_ho'] for i in self.bang.selectionModel().selectedRows()})
@@ -832,19 +848,6 @@ class CuaSoChinh(QMainWindow):
             if k in ('da_pa', 'da_pd', 'da_ct', 'da_bg') and ds:
                 o.setText(f'{v} / {len(ds)}')
 
-    def _hang_thao_tac(self) -> QHBoxLayout:
-        """Băng kết quả đối chiếu (giãn hết chỗ trống) + hai thao tác dùng nhiều nhất với hộ đang chọn, cùng một hàng.
-        Bảng tổng hợp / Theo dõi tiến độ chỉ còn ở menu trái (trước 0.9.18 trùng ở đây: thêm một hàng, bảng hộ thấp đi)."""
-        from PySide6.QtWidgets import QPushButton
-        h = QHBoxLayout()
-        h.setSpacing(8)
-        h.addWidget(self.lb_ket_qua, 1)
-        for ten, ham in (('Lập phương án hộ đang chọn', lambda: self.mo_lap_pa()), ('Thêm hộ…', lambda: self.mo_ho_so(moi=True))):
-            b = QPushButton(ten)
-            b.clicked.connect(lambda _=False, ham=ham: self._chay_lenh(ham))
-            h.addWidget(b)
-        return h
-
     def _xoa_ket_qua(self):
         """Băng kết quả trống (chưa mở / đã đóng dự án): bỏ cả nền màu, không để lại ô màu rỗng cạnh nút."""
         self.lb_ket_qua.setText('')
@@ -876,7 +879,9 @@ class CuaSoChinh(QMainWindow):
             view.setCurrentIndex(idx)
         from PySide6.QtWidgets import QMenu
         m = QMenu(self)
-        m.addAction('Lập phương án / hồ sơ hộ…', lambda: self._chay_lenh(self.mo_lap_pa))
+        # lệnh của menu trái dùng lại đúng QAction (cùng tên, cùng trạng thái bật / tắt khi chỉ xem); chỉ "Xem chi tiết tính
+        # tiền…" là riêng của chuột phải
+        m.addAction(self.lenh['Lập phương án hộ…'])
         m.addAction('Xem chi tiết tính tiền…', lambda: self._chay_lenh(self.xem_chi_tiet_tinh))
         m.addSeparator()
         for ten in ('Trạng thái hộ…', 'Đợt trình…', 'In / Xuất…', None, 'Xóa hộ…'):
@@ -946,6 +951,10 @@ class CuaSoChinh(QMainWindow):
             a.setChecked(k == i)
 
     def ho_dang_chon(self):
+        k = self._khung_dang_xem()
+        if k is not None and hasattr(k, 'ma_da_chon'):              # trang Tổng quát / Quyết định / Tiến độ: hộ chọn ở đó
+            ds = k.ma_da_chon()
+            return ds[0] if ds else None
         idx = self.bang.currentIndex()
         if not idx.isValid():
             return None
@@ -958,6 +967,8 @@ class CuaSoChinh(QMainWindow):
             return None
         if ma_ho is None:
             ma_ho = self.ho_dang_chon()
+        if self.chi_doc:                                # chỉ xem (máy khác đang sửa): xem chi tiết, không mở cửa sổ sửa
+            return self.xem_chi_tiet_tinh(ma_ho, cho) if ma_ho is not None else None
         if ma_ho is None:
             r = self.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho LIMIT 1').fetchone()
             if r is None:
@@ -1028,6 +1039,10 @@ class CuaSoChinh(QMainWindow):
         """Hồ sơ hộ nằm chung cửa sổ với phương án (thẻ "Thông tin hộ, thửa đất"). moi: thêm hộ mới (hỏi họ tên) rồi mở."""
         if self.con is None:
             QMessageBox.information(self, TEN_UD, 'Hãy nhập hoặc mở một dự án trước.')
+            return None
+        if moi and self.chi_doc:
+            QMessageBox.information(self, TEN_UD, 'Dự án đang mở ở chế độ CHỈ XEM (máy khác đang sửa file): không thêm hộ được.\n\n'
+                                                  'Đóng dự án ở máy kia rồi mở lại để sửa.')
             return None
         if moi:
             if ho_ten is None:
@@ -1384,9 +1399,10 @@ class CuaSoChinh(QMainWindow):
         m = self.nut_tk.menu()
         m.clear()
         p = may_chu.PHIEN
+        # chỉ việc của tài khoản; mở / mang về / đưa lên dự án trên máy chủ: "Dự án" → "Dự án trên máy chủ…" (trước 0.9.18 lặp
+        # thêm ở đây dưới 2 tên khác: "Dự án trên máy chủ, làm offline…", "Dự án đã mang về làm offline…")
         if p is not None:
             m.addAction(f'Máy chủ: {p.goc}').setEnabled(False)
-            m.addAction('Dự án trên máy chủ, làm offline…', lambda: self.du_an_may_chu())
             m.addAction('Đổi mật khẩu…', lambda: self.doi_mat_khau())
             if p.la_quan_tri:
                 m.addAction('Quản lý tài khoản người dùng…', lambda: self.quan_ly_tai_khoan())
@@ -1394,8 +1410,6 @@ class CuaSoChinh(QMainWindow):
             m.addAction('Đăng xuất', lambda: self.dang_xuat())
         else:
             m.addAction('Đăng nhập máy chủ…', lambda: self.dang_nhap())
-            if may_chu.ds_lay_ve_cuc_bo():
-                m.addAction('Dự án đã mang về làm offline…', lambda: self.du_an_may_chu())
         m.addSeparator()
         m.addAction('Thiết lập máy chủ…', lambda: self.thiet_lap_may_chu())
 

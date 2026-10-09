@@ -72,6 +72,22 @@ class _Khung(QWidget):
         self.con, self.chi_doc = con, chi_doc
         self.nap()
 
+    def ma_da_chon(self) -> list:
+        """Mã hộ các dòng đang chọn trên bảng của trang (dữ liệu UserRole của dòng). Cửa sổ chính dùng khi đang xem trang này:
+        lệnh menu trái (Lập phương án, Trạng thái hộ, Đợt trình, In / Xuất, Xóa hộ) tác động đúng hộ đang chọn trên màn hình."""
+        b = getattr(self, 'bang', None)
+        sm = b.selectionModel() if b is not None else None
+        ds = []
+        for i in (sm.selectedRows() if sm is not None else []):
+            it = b.item(i.row(), 1) or b.item(i.row(), 0)
+            try:
+                m = int(it.data(Qt.ItemDataRole.UserRole)) if it is not None else None
+            except (TypeError, ValueError):
+                m = None
+            if m is not None and m not in ds:
+                ds.append(m)
+        return ds
+
     def nap(self):
         pass
 
@@ -778,8 +794,9 @@ class KhungTienDo(_Khung):
         self.bang.cellDoubleClicked.connect(self._nhap_dup)
         self.nut = {}
         h_nut = QHBoxLayout()
-        for ten, ham in (('Quyết định, chi trả, bàn giao của hộ…', lambda: self._mo_ho_chon()),
-                         ('Bàn giao mặt bằng các hộ đã chọn…', lambda: self.ban_giao()), ('Xuất Excel…', lambda: self.xuat())):
+        # quyết định, chi trả, bàn giao của MỘT hộ: bấm đúp dòng, hoặc "Trạng thái hộ…" ở menu trái (lấy hộ đang chọn ở trang
+        # này - app.ho_da_chon). Trước 0.9.18 thêm nút "Quyết định, chi trả, bàn giao của hộ…" ở đây: cùng một hộp thoại
+        for ten, ham in (('Bàn giao mặt bằng các hộ đã chọn…', lambda: self.ban_giao()), ('Xuất Excel…', lambda: self.xuat())):
             b = QPushButton(ten)
             b.clicked.connect(ham)
             h_nut.addWidget(b)
@@ -931,11 +948,6 @@ class KhungTienDo(_Khung):
                     mo_file(q['chung_tu'])
             return
         self.mo_ho.emit(int(ma))
-
-    def _mo_ho_chon(self):
-        ds = self.ma_da_chon()
-        if ds:
-            self.mo_ho.emit(ds[0])
 
     def ban_giao(self, ds_ma: list | None = None, gia_tri: dict | None = None):
         ds_ma = self.ma_da_chon() if ds_ma is None else ds_ma

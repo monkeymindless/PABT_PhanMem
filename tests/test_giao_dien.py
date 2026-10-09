@@ -229,9 +229,13 @@ class TestMau(unittest.TestCase):
             chu = ' '.join(x.text() for x in bang.findChildren(QLabel))         # chữ đầy đủ kể cả khi đang rút gọn "…"
             for k in (giao_dien.TEN_PHAN_MEM, to_chuc.TEN, to_chuc.DIA_CHI):
                 self.assertIn(k, chu)
-            nut = {b.text() for b in w.findChildren(QPushButton)}
-            self.assertIn('Lập phương án hộ đang chọn', nut)
-            self.assertFalse({'Bảng tổng hợp', 'Theo dõi tiến độ'} & nut)       # đã có ở menu trái
+            # không nút nào trên màn hình chính lặp lệnh của menu trái (trước: Lập phương án hộ đang chọn, Thêm hộ…, Bảng tổng
+            # hợp, Theo dõi tiến độ - nút trùng còn bỏ qua trạng thái tắt khi chỉ xem)
+            def gon(s):
+                return s.replace('…', '').replace(' đang chọn', '').strip().lower()
+            lenh = {gon(t) for t in w.lenh}
+            self.assertFalse({b.text() for b in w.findChildren(QPushButton) if gon(b.text()) in lenh})
+            self.assertNotIn('Hồ sơ hộ…', w.lenh)                              # lệnh ẩn trùng thẻ "Thông tin hộ" của lập PA
             phu = next(x for x in bang.findChildren(giao_dien.NhanRutGon) if x.property('vai') == 'dong_phu')
             phu.resize(120, phu.height())
             self.assertTrue(QLabel.text(phu).endswith('…'))                     # hẹp: hiện rút gọn, tooltip đủ
@@ -240,6 +244,36 @@ class TestMau(unittest.TestCase):
         finally:
             self.app.setStyleSheet('')
             self.app.removeEventFilter(self.app._bo_to_mau)
+
+    def test_lenh_menu_trai_theo_trang_dang_xem(self):
+        """0.9.18: lệnh menu trái (Trạng thái hộ, Lập phương án…) lấy hộ đang chọn TRÊN TRANG ĐANG XEM - trước đây luôn lấy ở
+        danh sách hộ (đang ẩn khi xem trang Tiến độ). Trang Tiến độ không còn nút riêng trùng "Trạng thái hộ…"."""
+        from PySide6.QtWidgets import QPushButton
+        from pabt import app as ud
+        from tests.test_toc_do import _du_an
+        with tempfile.TemporaryDirectory() as td:
+            os.environ['PABT_THU_MUC_MAY'] = str(Path(td) / 'may')
+            try:
+                p = _du_an(Path(td), 6)
+                w = ud.CuaSoChinh(menu_trai=True)
+                w.show()
+                w.mo(str(p))
+                w.bang.selectRow(0)
+                ma_ds = w.ho_dang_chon()
+                w.mo_trang(4)
+                self.app.processEvents()
+                b = w.tien_do.bang
+                b.selectRow(b.rowCount() - 1)
+                ma = w.tien_do.ma_da_chon()
+                self.assertTrue(ma and ma[0] != ma_ds)
+                self.assertEqual(w.ho_da_chon(), ma)
+                self.assertEqual(w.trang_thai_ho(cho=False).ma_ho, ma[0])
+                self.assertNotIn('Quyết định, chi trả, bàn giao của hộ…', {x.text() for x in w.tien_do.findChildren(QPushButton)})
+                w.mo_trang(0)
+                self.assertEqual(w.ho_dang_chon(), ma_ds)                      # về danh sách hộ: lại lấy ở danh sách
+                w.close()
+            finally:
+                os.environ.pop('PABT_THU_MUC_MAY', None)
 
     def test_hop_ket_qua_vua_man_hinh(self):
         """Danh sách cần xem lại dài: hộp không cao quá màn hình, đủ mọi dòng trong ô cuộn (QMessageBox đẩy nút OK ra ngoài)."""

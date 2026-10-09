@@ -854,7 +854,8 @@ class CuaSoLapPA(QDialog):
         self.cb_ho.blockSignals(False)
 
     def hang_dieu_huong(self, the: int) -> QHBoxLayout:
-        """Nút ◀ Trở lại / Tiếp theo ▶ dưới mỗi thẻ (thẻ cuối: Lưu phương án)."""
+        """Nút ◀ Trở lại / Tiếp theo ▶ dưới mỗi thẻ. Thẻ cuối không có nút lưu riêng: "Lưu (Ctrl+S)" luôn ở thanh trên (trước
+        0.9.18 thêm nút "Lưu phương án hộ" ở đây - hai nút cùng một lệnh trên cùng màn hình)."""
         h = QHBoxLayout()
         h.setSpacing(8)
         if the > 0:
@@ -865,10 +866,7 @@ class CuaSoLapPA(QDialog):
         if the < 4:
             b = QPushButton(f'Tiếp theo: {TEN_TAB[the + 1]} ▶')
             b.clicked.connect(lambda: self.sang_the(the + 1))
-        else:
-            b = QPushButton('Lưu phương án hộ')
-            b.clicked.connect(lambda: self.luu())
-        h.addWidget(b)
+            h.addWidget(b)
         return h
 
     def sang_the(self, the: int) -> bool:

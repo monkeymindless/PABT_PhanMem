@@ -210,11 +210,15 @@ class TestManHinhHoSo(CoSo):
         w = ud.CuaSoChinh()
         w.mo(str(self.p), chi_doc=True)
         self.assertTrue(w.chi_doc)
-        self.assertFalse(w.lenh['Hồ sơ hộ…'].isEnabled())
+        self.assertFalse(w.lenh['Lập phương án hộ…'].isEnabled())
+        # 0.9.18: không còn nút gọi thẳng lệnh ghi (trước: nút nhanh "Thêm hộ…" vẫn bật khi chỉ xem -> lỗi ghi CSDL chỉ đọc)
+        from PySide6.QtWidgets import QPushButton
+        self.assertFalse([b.text() for b in w.findChildren(QPushButton)
+                          if b.isEnabled() and b.text() in ('Thêm hộ…', 'Lập phương án hộ đang chọn')])
         self.assertIn('CHỈ XEM', w.windowTitle())
         self.assertEqual(w.mo_hinh.rowCount(), 5)
         w.mo(str(self.p), chi_doc=False)                     # vẫn mở để sửa: lấy khóa
-        self.assertTrue(w.lenh['Hồ sơ hộ…'].isEnabled())
+        self.assertTrue(w.lenh['Lập phương án hộ…'].isEnabled())
         self.assertTrue(w.khoa.la_cua_toi(w.khoa.doc()))
         self.assertIsNotNone(w.mo_ho_so(1, cho=False))
         w.close()
