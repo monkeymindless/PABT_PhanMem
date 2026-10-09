@@ -278,7 +278,12 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   -> `ho_so.xoa_nhieu_ho` (một giao dịch = một bước Hoàn tác, `_danh_lai` một lần; `xoa_ho` gọi lại hàm này). Test:
   `test_ho_so.TestManHinhHoSo.test_xoa_nhieu_ho_tren_danh_sach`.
 - Dựng trong Git Bash: PATH có `C:\Program Files\Git\mingw64\bin` -> PyInstaller từng kéo nhầm `libssl-3-x64.dll` /
-  `libcrypto-3-x64.dll` của Git (+6,5 MB); `PABT.spec` lọc bỏ binary từ thư mục git / mingw64 / msys64.
+  `libcrypto-3-x64.dll` của Git (+6,5 MB); `PABT.spec` lọc bỏ binary từ thư mục git / mingw64 / msys64; `dung_exe38.py` bỏ các
+  thư mục đó khỏi PATH khi gọi PyInstaller 5.
+- Qt5 (bản Win7): `QMenu.exec_` có cả dạng tĩnh lẫn dạng thường - bí danh `QMenu.exec = QMenu.exec_` làm phần mềm SẬP (0xC0000005)
+  khi mở menu bật lên (chuột phải danh sách hộ, Tra cứu văn bản mới); `_qt5_lam_qt6` dùng `lambda self, *a: self.exec_(*a)`.
+  Test `test_giao_dien.TestMenuBatLen` (chạy cả venv38_32). `kiem_tra_giao_dien.py` chạy được bằng venv38_32 (`import pabt` trước
+  khi nạp Qt). Máy dựng đã có môi trường Win7: Python 3.8.10 32-bit ở `%LOCALAPPDATA%\Programs\Python\Python38-32` + venv38_32.
 - Git (từ 09/10/2026): repo cục bộ ở thư mục dự án, `.gitignore` loại `.venv`, sản phẩm dựng, `*.pabt*`, `*.xlsm`, `du_lieu/`,
   `bo_cai_win/*.exe`. Git for Windows ở `C:\Program Files\Git\cmd\git.exe` (PowerShell mở trước khi cài chưa có trong PATH).
 - Thông báo có danh sách dài (kết quả nhập Excel / nhập chi tiết / Dự án mới, lỗi nhập): `giao_dien.hop_ket_qua(cha, tóm tắt,

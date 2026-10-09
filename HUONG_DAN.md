@@ -9,7 +9,8 @@
 > lần mở - trùng với Microsoft Defender của máy (Defender vẫn tự quét file khi tải về / mở). Vẫn giữ: tắt macro khi phần mềm mở
 > file bằng Word / Excel, HTTPS kiểm tra chứng chỉ, chặn file nén / XML độc. **Xóa hộ ngay trên danh sách**: chọn một hoặc nhiều
 > hộ (giữ Ctrl / Shift) rồi bấm **Xóa hộ…** ở menu trái (nhóm Hồ sơ và phương án), chuột phải, hoặc phím **Delete**; hỏi lại trước
-> khi xóa (nêu số thửa, dòng phương án, hộ đã có quyết định); xóa nhầm bấm **Hoàn tác** (Ctrl+Z) lấy lại.
+> khi xóa (nêu số thửa, dòng phương án, hộ đã có quyết định); xóa nhầm bấm **Hoàn tác** (Ctrl+Z) lấy lại. **Bản Windows 7 / 8**:
+> sửa lỗi phần mềm tự tắt khi bấm chuột phải trên danh sách hộ hoặc "Tra cứu văn bản mới…".
 >
 > **0.9.16** - **Trình phê duyệt**: cửa sổ **Đợt trình…** có thêm văn bản trình (Tờ trình / Văn bản: số, ngày), **số / ngày
 > phương án tổng** (tự in vào dòng "Đính kèm Phương án số …" và ngày ký của bảng tổng hợp), **số PA chi tiết từng hộ** (nút
