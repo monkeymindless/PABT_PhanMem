@@ -23,6 +23,9 @@ TEN_FILE = 'bo_don_gia.sqlite'
 TEN_BO = 'BỘ ĐƠN GIÁ BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ - ĐỒNG NAI'
 # bộ đơn giá không chứa giá đất từng dự án: giá đất nhập ở bước "Bảng giá đất" khi lập dự án
 BANG_BO = tuple(b for b in csdl.DANH_MUC if b != 'gia_dat')
+# phân loại dòng vật nuôi trong dm_taisan (nhóm 3 như cây trồng): bộ tích hợp mã VN.. (QĐ 31/2025/QĐ-UBND), mục cập nhật từ văn
+# bản vật nuôi (nhap_don_gia.ap_dung); màn hình Bộ đơn giá có thẻ "Vật nuôi" riêng theo phân loại này
+PHAN_LOAI_VAT_NUOI = '3. Bồi thường thiệt hại về vật nuôi'
 TRA_CUU = [
     ('Công báo Đồng Nai (văn bản quy phạm mới)', 'https://congbao.dongnai.gov.vn/'),
     ('Góp ý dự thảo - Cổng thông tin Đồng Nai', 'https://dongnai.gov.vn/vi/gop-y-du-thao/'),

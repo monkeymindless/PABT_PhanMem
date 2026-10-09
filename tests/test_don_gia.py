@@ -55,6 +55,36 @@ class TestBoDonGia(CoSo):
         self.assertEqual((ts['HM_CHN'], ts['HM_CLN'], ts['HM_RUNG']), ('30000', '100000', '300000'))   # Điều 176, Đông Nam Bộ
         self.assertEqual(don_gia.file_dang_dung(), don_gia.file_goc())
 
+    def test_vat_nuoi_qd31(self):
+        """Bộ tích hợp có đủ đơn giá vật nuôi QĐ 31/2025/QĐ-UBND (trước 0.9.17 chỉ có tên văn bản, không có mục nào) và đúng với
+        tao_bo_don_gia.BO_SUNG (đóng gói lại từ Excel không làm mất)."""
+        import tao_bo_don_gia as tao
+        c = sqlite3.connect(don_gia.file_goc())
+        try:
+            co = {r[0]: tuple(r[1:]) for r in c.execute(
+                "SELECT ma, nhom, phan_loai, ten, dvt, don_gia, ghi_chu FROM dm_taisan WHERE ma LIKE 'VN%'")}
+            vb = [r[0] for r in c.execute("SELECT noi_dung FROM van_ban WHERE so_hieu LIKE '%31/2025/QĐ-UBND%'")]
+        finally:
+            c.close()
+        self.assertEqual(co, {r[0]: tuple(r[1:]) for r in tao.BO_SUNG})
+        self.assertEqual(len(co), 17)
+        self.assertTrue(all(r[0] == 3 and r[1].startswith(don_gia.PHAN_LOAI_VAT_NUOI) for r in co.values()))
+        self.assertEqual(co['VN13'][2:5], ('Ao nuôi cá - Nuôi thâm canh (nuôi dưới 50% định mức KT-KT thời gian nuôi)', 'ha/vụ',
+                                           '621600000'))
+        self.assertEqual(co['VN17'][2:5], ('Chim yến (theo giá thị trường, tối đa)', 'kg yến thô', '18500000'))
+        self.assertEqual(len(vb), 1)                            # sửa dòng văn bản cũ, không thêm dòng trùng
+        self.assertIn('VN01 - VN17', vb[0])
+        # mục 3 của phương án: chọn được từ danh mục như cây trồng
+        con = csdl.tao_moi(self.td / 'vn.pabt')
+        try:
+            don_gia.ap_vao_du_an(con)
+            dm = lap_pa.DanhMuc(con)
+            self.assertIn('VN15', {m.ma for m in dm.muc[3]})
+            # gõ "vat nuoi" ở ô nhập nhanh mục 3 ra đủ 17 mục (tìm cả theo phân loại)
+            self.assertLessEqual({f'VN{i:02d}' for i in range(1, 18)}, {m.ma for m in dm.tim(3, 'vat nuoi', 500)})
+        finally:
+            con.close()
+
     def test_nhap_excel_tho_lay_bo_don_gia(self):
         from tests.test_nhap_tho import _don_gian, _ghi
         xl = self.td / 'ds.xlsx'
@@ -233,11 +263,22 @@ class TestManHinhMoi(CoSo):
         con = csdl.tao_moi(self.td / 'c.pabt')
         d = HopBoDonGia(None, con)
         d.im_lang = True
-        self.assertEqual(d.the.count(), 6)
-        self.assertGreater(d.the.widget(0).rowCount(), 5000)
-        d.the.setCurrentIndex(1)
+        # thẻ nhà / cây trồng / VẬT NUÔI riêng (vật nuôi QĐ 31/2025 không lẫn trong 5.500 dòng cây trồng)
+        self.assertEqual(d.the.count(), 8)
+        self.assertEqual([d.the.tabText(i).rsplit(' (', 1)[0] for i in range(3)], ['Nhà, công trình', 'Cây trồng', 'Vật nuôi'])
+        self.assertGreater(d.the.widget(1).rowCount(), 5000)
+        vn = d.the.widget(2)
+        self.assertEqual([vn.item(r, 0).text() for r in range(vn.rowCount())], [f'VN{i:02d}' for i in range(1, 18)])
+        self.assertEqual(sum(d.the.widget(i).rowCount() for i in range(3)),               # ba thẻ đủ mọi dòng, không trùng
+                         sqlite3.connect(don_gia.file_goc()).execute('SELECT COUNT(*) FROM dm_taisan').fetchone()[0])
+        # hàng nút gọn: cập nhật (file / web / tra cứu), giá đất gom vào nút xổ
+        self.assertEqual([a.text() for a in d.b_cap.menu().actions() if a.text()][:2],
+                         ['Từ file (Excel, Word, PDF, CSV, gói .sqlite)…',
+                          'Từ trang web (Công báo Đồng Nai, CSDL văn bản pháp luật)…'])
+        self.assertEqual(len(d.b_gia_dat.menu().actions()), 2)
+        d.the.setCurrentIndex(3)
         d.o_tim.setText('di chuyen tai san')
-        b = d.the.widget(1)
+        b = d.the.widget(3)
         hien = [b.item(r, 0).text() for r in range(b.rowCount()) if not b.isRowHidden(r)]
         self.assertIn('HT14', hien)
         self.assertNotIn('HT01', hien)

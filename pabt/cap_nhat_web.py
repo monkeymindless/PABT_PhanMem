@@ -282,6 +282,10 @@ def quet(nguon: str, toi_da_trang: int = 20, bao=None, noi: str = 'dongnai') -> 
     nguon = nguon.strip()
     if not nguon:
         raise LoiNhap('Nhập đường dẫn trang web hoặc từ khóa cần tìm.')
+    # tìm theo số hiệu ("31/2025", "31/2025/QĐ-UBND"): trang văn bản mang đúng số đó luôn được mở, kể cả khi tiêu đề chung chung
+    # ("Quyết định số 31/2025/QĐ-UBND của Ủy ban nhân dân tỉnh" - điểm liên quan thấp)
+    m_so = None if re.match(r'^https?://', nguon, re.I) else re.search(r'(?<!\d)(\d+[a-zA-Z]?)\s*/\s*(\d{4})(?!\d)', nguon)
+    so_tim = re.compile(rf'(?<!\d){m_so.group(1)}\s*/\s*{m_so.group(2)}(?!\d)', re.I) if m_so else None
     nguon = duong_dan(nguon, noi)
     url = _google(nguon)
     du, that_url, loai, ten, bang_ma = _lay(url, 30)
@@ -303,6 +307,8 @@ def quet(nguon: str, toi_da_trang: int = 20, bao=None, noi: str = 'dongnai') -> 
                 continue
             da.add(dich)
             diem, _ = cham_diem(c)
+            if so_tim and so_tim.search(c):
+                diem = max(diem, 5)
             if diem >= 5:
                 trang.append((diem, c, dich))
         trang.sort(key=lambda x: -x[0])

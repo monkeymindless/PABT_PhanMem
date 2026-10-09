@@ -14,9 +14,15 @@ from .tien import vn
 from .giao_dien import con_tro_cho
 from .thong_bao import TEN_UD, chu_loi
 
+_TS = 'SELECT ma, phan_loai, ten, dvt, don_gia, ghi_chu FROM dm_taisan WHERE '
+_COT_TS = (['Mã', 'Phân loại', 'Tên', 'ĐVT', 'Đơn giá (đ)', 'Ghi chú'], [70, 240, 420, 80, 110, 300])
+# vật nuôi (mục 3 của phương án như cây trồng): mã VN.. của bộ tích hợp (QĐ 31/2025/QĐ-UBND) hoặc mục cập nhật từ văn bản vật
+# nuôi (nhap_don_gia.ap_dung ghi phân loại PHAN_LOAI_VAT_NUOI) - thẻ riêng để thấy ngay, không lẫn trong 5.500 dòng cây trồng
+_VAT_NUOI = f"(ma LIKE 'VN%' OR phan_loai LIKE '{don_gia.PHAN_LOAI_VAT_NUOI}%')"
 THE = [
-    ('Đơn giá tài sản, cây trồng', 'SELECT ma, phan_loai, ten, dvt, don_gia, ghi_chu FROM dm_taisan',
-     ['Mã', 'Phân loại', 'Tên', 'ĐVT', 'Đơn giá (đ)', 'Ghi chú'], [70, 240, 420, 70, 110, 300]),
+    ('Nhà, công trình', _TS + 'nhom <> 3 ORDER BY nhom, rowid', *_COT_TS),
+    ('Cây trồng', _TS + f'nhom = 3 AND NOT {_VAT_NUOI} ORDER BY rowid', *_COT_TS),
+    ('Vật nuôi', _TS + f'nhom = 3 AND {_VAT_NUOI} ORDER BY ma', *_COT_TS),
     ('Chính sách hỗ trợ (QĐ 42/2025)', 'SELECT ma, ten, dvt, don_gia, can_cu, cach_tinh FROM dm_hotro',
      ['Mã', 'Khoản hỗ trợ', 'ĐVT', 'Đơn giá / hệ số', 'Căn cứ', 'Cách tính'], [55, 420, 90, 110, 330, 330]),
     ('Tham số, hạn mức đất NN', 'SELECT ma, ten, gia_tri, dvt, can_cu, trang_thai FROM tham_so',
@@ -52,21 +58,33 @@ class HopBoDonGia(QDialog):
         self.o_tim.setPlaceholderText('Tìm trong thẻ đang xem (không cần dấu): xoai, nha cap 4, HT09…')
         self.o_tim.textChanged.connect(self.loc)
         self.the = QTabWidget()
+        # hàng nút gọn (trước 0.9.17: 7 nút một hàng, chật ở màn hình 1366): lệnh cùng việc gom vào nút xổ, việc chính ở bên phải
         nut = QHBoxLayout()
-        for ten, ham in (('Cập nhật bộ đơn giá từ file…', lambda: self.cap_nhat_file()),
-                         ('Cập nhật từ trang web…', lambda: self.cap_nhat_web()),
-                         ('Tra cứu văn bản mới…', lambda: self.tra_cuu()),
-                         ('Tra bảng giá đất NQ 28/2025…', lambda: self.xem_gia_dat()),
-                         ('Xuất bảng giá đất ra Excel…', lambda: self.xuat_gia_dat()),
-                         ('Đơn giá riêng của dự án…', lambda: self.don_gia_rieng()),
-                         ('Áp bộ đơn giá vào dự án đang mở', lambda: self.ap_du_an())):
-            b = QPushButton(ten)
-            b.clicked.connect(ham)
-            nut.addWidget(b)
-            setattr(self, 'b_' + bo_dau(ten).split()[0], b)
-        nut.addStretch(1)
+        self.b_cap = QPushButton('Cập nhật đơn giá')
+        self.b_cap.setToolTip('Cập nhật bộ đơn giá từ văn bản mới: file Excel / Word / PDF / CSV, hoặc tìm và tải trên trang web')
+        m = QMenu(self.b_cap)
+        m.addAction('Từ file (Excel, Word, PDF, CSV, gói .sqlite)…', lambda: self.cap_nhat_file())
+        m.addAction('Từ trang web (Công báo Đồng Nai, CSDL văn bản pháp luật)…', lambda: self.cap_nhat_web())
+        m.addSeparator()
+        tra = m.addMenu('Tra cứu văn bản mới trên trình duyệt')
+        for ten, url in don_gia.TRA_CUU:
+            tra.addAction(ten, lambda u=url: QDesktopServices.openUrl(QUrl(u)))
+        self.b_cap.setMenu(m)
+        self.b_gia_dat = QPushButton('Giá đất NQ 28/2025')
+        m = QMenu(self.b_gia_dat)
+        m.addAction('Tra bảng giá đất…', lambda: self.xem_gia_dat())
+        m.addAction('Xuất bảng giá đất ra Excel…', lambda: self.xuat_gia_dat())
+        self.b_gia_dat.setMenu(m)
+        self.b_don = QPushButton('Đơn giá riêng của dự án…')
+        self.b_don.clicked.connect(lambda: self.don_gia_rieng())
+        self.b_ap = QPushButton('Áp bộ đơn giá vào dự án đang mở')
+        self.b_ap.clicked.connect(lambda: self.ap_du_an())
         dong = QPushButton('Đóng')
         dong.clicked.connect(self.accept)
+        for b in (self.b_cap, self.b_gia_dat, self.b_don):
+            nut.addWidget(b)
+        nut.addStretch(1)
+        nut.addWidget(self.b_ap)
         nut.addWidget(dong)
         self.b_ap.setEnabled(con_du_an is not None and not chi_doc)
         self.b_don.setEnabled(con_du_an is not None)
@@ -81,8 +99,10 @@ class HopBoDonGia(QDialog):
     def nap(self):
         tt = don_gia.thong_tin()
         self.lb.setText(f'<b>{tt["ten"]}</b> – phiên bản <b>{tt["phien_ban"]}</b> (nguồn {tt["nguon"]}, đóng gói {tt["ngay"][:10]})<br>'
-                        f'{tt["ghi_chu"]}<br>Danh mục, chính sách, tham số được cố định; chỉ cập nhật bằng các nút bên dưới.')
+                        f'{tt["ghi_chu"]}<br>Danh mục, chính sách, tham số được cố định; chỉ thay đổi bằng nút "Cập nhật đơn giá" '
+                        'bên dưới.')
         self.the.clear()
+        self._khoa_the = {}                             # loc: chữ tìm từng dòng của mỗi thẻ (dựng lại khi nạp lại bộ đơn giá)
         con = csdl.mo(tt['file'], chi_doc=True)
         try:
             for ten, sql, cot, rong in THE:
@@ -123,10 +143,21 @@ class HopBoDonGia(QDialog):
 
     def loc(self, chu: str):
         b = self.the.currentWidget()
-        k = bo_dau(chu)
-        for r in range(b.rowCount()):
-            dong = bo_dau(' '.join(b.item(r, c).text() for c in range(b.columnCount()) if b.item(r, c)))
-            b.setRowHidden(r, bool(k) and not all(x in dong for x in k.split()))
+        i = self.the.currentIndex()
+        if i not in self._khoa_the:     # chữ không dấu từng dòng: tính một lần mỗi thẻ (trước: ghép lại 5.510 dòng × 6 ô mỗi phím)
+            self._khoa_the[i] = ([bo_dau(' '.join(b.item(r, c).text() for c in range(b.columnCount()) if b.item(r, c)))
+                                  for r in range(b.rowCount())], [False] * b.rowCount())
+        khoa, an = self._khoa_the[i]
+        tu = bo_dau(chu).split()
+        b.setUpdatesEnabled(False)
+        try:
+            for r, k in enumerate(khoa):
+                h = bool(tu) and not all(x in k for x in tu)
+                if h != an[r]:                  # chỉ đổi dòng đổi trạng thái (setRowHidden từng dòng là phần tốn nhất)
+                    b.setRowHidden(r, h)
+                    an[r] = h
+        finally:
+            b.setUpdatesEnabled(True)
 
     def cap_nhat_file(self, p=None):
         if p is None:
@@ -215,13 +246,6 @@ class HopBoDonGia(QDialog):
         self.nap()
         self._bao(QMessageBox.information, f'Đã cài bộ đơn giá phiên bản {tt["phien_ban"]}.')
         return tt
-
-    def tra_cuu(self):
-        m = QMenu(self)
-        for ten, url in don_gia.TRA_CUU:
-            m.addAction(ten, lambda u=url: QDesktopServices.openUrl(QUrl(u)))
-        m.exec(self.cursor().pos())
-        m.deleteLater()
 
     def xem_gia_dat(self, cho: bool = True):
         from .man_hinh_gia_dat import HopTraGiaDat

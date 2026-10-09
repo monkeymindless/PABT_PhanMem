@@ -1,5 +1,24 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.16 – BẢN THỬ NGHIỆM)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.17 – BẢN THỬ NGHIỆM)
 
+> **0.9.17 – BẢN THỬ NGHIỆM** - **Đơn giá vật nuôi** theo QĐ 31/2025/QĐ-UBND ngày 29/08/2025 (hiệu lực 10/9/2025) có sẵn trong
+> bộ đơn giá tích hợp (phiên bản 2026.10.09), mã **VN01 – VN17**: bồi thường thiệt hại ngừng sản xuất thủy sản (ao nuôi tôm nước
+> lợ, cua, tôm – cua, hàu treo giàn bè; ao nuôi tôm nước ngọt; ao nuôi cá - quảng canh cải tiến / thâm canh / nuôi ghép, mỗi loại
+> 2 mức: nuôi **dưới 50%** hoặc **từ 50% đến 80%** định mức thời gian nuôi; ĐVT ha/vụ; cá nuôi lồng bè ĐVT 100 m³/vụ) và **chim
+> yến** (theo giá thị trường, tối đa 18.500.000 đ/kg yến thô). Lập phương án: **mục 3**, gõ "vat nuoi", "ao nuoi" hoặc "yen" ở ô
+> nhập nhanh. Giá ở Điều 4 đã tính theo thời gian nuôi (tương ứng tỷ lệ 70% / 50% của Điều 3) - **không nhân thêm tỷ lệ**. Số lượng
+> ĐVT ha/vụ, 100 m³/vụ giữ 4 chữ số thập phân (ao 0,25 ha; lồng 25 m³ = 0,25) - trước đây làm tròn 1 chữ số (0,3).
+> **Cửa sổ Bộ đơn giá** gọn lại: thẻ riêng **Nhà, công trình / Cây trồng / Vật nuôi**; nút **Cập nhật đơn giá** (từ file, từ trang
+> web, tra cứu văn bản mới), **Giá đất NQ 28/2025** (tra bảng giá, xuất Excel), **Đơn giá riêng của dự án…** và **Áp bộ đơn giá
+> vào dự án đang mở** (bên phải). **Cập nhật đơn giá từ văn bản ghi giá trong lời văn** (như QĐ 31/2025) đọc đúng tên từng mức
+> giá kèm điều kiện ("… (nuôi dưới 50% định mức KT-KT thời gian nuôi)"); không còn ghép nhầm "gần đúng" hai mục khác nhau chỉ vì
+> phần trong ngoặc giống nhau; thông báo nêu đúng lý do khi không xử lý được văn bản. Tìm trên Công báo theo số hiệu (vd. "31/2025")
+> mở được trang văn bản mang số đó. Lưu ý: Công báo Đồng Nai có **hai** QĐ số 31/2025/QĐ-UBND (10/04/2025 về canh tác hữu cơ -
+> trước sáp nhập; 29/08/2025 về vật nuôi) - tìm bằng từ khóa **"vật nuôi"** để ra đúng văn bản.
+> **Nhanh hơn với dự án lớn** (10.000 thửa): trang Thông tin tổng quát mở 0,98 -> 0,18 giây, gõ / xóa ô tìm 0,88 -> 0,10 giây;
+> Theo dõi tiến độ vẽ lại 0,47 -> 0,03 giây; Kiểm tra lỗi 1,4 -> 0,9 giây; Dự toán từ dự án 0,5 -> 0,3 giây; mở phần mềm nhanh hơn
+> ~20%. Con trỏ "đồng hồ cát" không còn bị kẹt khi có lỗi; thông báo lỗi ghi rõ **việc gì không làm được - lý do - cách xử lý**
+> (vd. file đang mở trong Excel, không có quyền ghi, ổ đĩa đầy, file dự án hỏng).
+>
 > **0.9.16 – BẢN THỬ NGHIỆM** (nhãn vàng "BẢN THỬ NGHIỆM" trên băng tiêu đề, tiêu đề cửa sổ, hộp Giới thiệu): dùng để kiểm tra
 > trước khi phát hành chính thức. **Bỏ hẳn chữ ký số**: gói cập nhật `.pabtcn` không ký, phần mềm và bản vá cập nhật không
 > kiểm tra chữ ký nữa - gói chỉ được kiểm tra mã SHA-256 từng file (gói hỏng / tải dở thì không cài); chỉ cài gói nhận trực

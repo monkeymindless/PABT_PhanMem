@@ -14,6 +14,7 @@ from .tien import vn
 from .thong_bao import TEN_UD
 
 MAU = {'mới': QColor('#E8F5E9'), 'cập nhật': QColor('#FFF8E1'), 'giữ nguyên': QColor('#F5F5F5')}
+DONG_TU_CAO_TOI_DA = 1500
 TEN_NHOM_NGAN = {2: 'Nhà, công trình', 3: 'Cây trồng, vật nuôi', 4: 'Hỗ trợ'}
 
 
@@ -40,8 +41,9 @@ class HopNhapDonGia(QDialog):
             ds, xem_van = ndg.muc_tu_loi_van(dong, vb.get('nhom', 0))
             tu_loi_van = bool(ds)
         if not ds:
-            raise LoiNhap('Không tìm thấy đơn giá nào trong file: không có bảng (cột Tên, ĐVT, Đơn giá) và không có câu ghi giá '
-                          'dạng "<tên> … <số> đồng/<đơn vị>".' + ('\n\n' + '\n'.join(xem_van[:10]) if xem_van else ''))
+            raise ndg.LoiKhongCoGia('Không tìm thấy đơn giá nào trong file: không có bảng (cột Tên, ĐVT, Đơn giá) và không có câu '
+                                    'ghi giá dạng "<tên> … <số> đồng/<đơn vị>".' +
+                                    ('\n\n' + '\n'.join(xem_van[:10]) if xem_van else ''))
         super().__init__(parent)
         self.tu_loi_van = tu_loi_van
         self.ds = ds
@@ -96,6 +98,7 @@ class HopNhapDonGia(QDialog):
         for c, w in enumerate((50, 80, 520, 110, 120, 140, 150, 130)):          # ĐVT rộng: "m² mặt nước"
             self.bang.setColumnWidth(c, w)
         self.bang.horizontalHeader().setStretchLastSection(True)
+        self.bang.setWordWrap(True)                     # tên dài (điều kiện "nuôi dưới 50%…" ở cuối) không bị cắt "…"
         lo.addWidget(self.bang, 1)
         self.bang.cellChanged.connect(self._sua_o)
         if xem_van:
@@ -146,6 +149,8 @@ class HopNhapDonGia(QDialog):
                 if c in (4, 5):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(i, c, it)
+        if len(self.ds) <= DONG_TU_CAO_TOI_DA:          # cao dòng theo chữ: đo từng dòng, bảng vài nghìn dòng thì bỏ qua
+            self.bang.resizeRowsToContents()
         self._dang_ve = False
         dem = {k: sum(m.trang_thai == k for m in self.ds) for k in MAU}
         gan = sum(1 for m in self.ds if m.khop_gan)

@@ -42,6 +42,10 @@ class TestCongThuc(unittest.TestCase):
         self.assertEqual(doc_so('143,8', 'SL'), D('143.8'))
         self.assertEqual(doc_so_luong('=4,2*5,7'), D('23.9'))             # làm tròn 1 chữ số thập phân
         self.assertEqual(doc_so_luong('=0,12345*2', 'ha'), D('0.2469'))   # ha: 4 chữ số
+        # vật nuôi QĐ 31/2025: ao 0,25 ha (ĐVT ha/vụ), lồng 25 m³ (ĐVT 100m3/vụ) - trước đây làm tròn thành 0,3 (trả thừa 20%)
+        self.assertEqual(doc_so_luong('0,25', 'ha/vụ'), D('0.25'))
+        self.assertEqual(doc_so_luong('0,25', '100m3/vụ'), D('0.25'))
+        self.assertEqual(doc_so_luong('0,25', 'm²'), D('0.3'))
         with self.assertRaises(LoiNhap) as cm:
             doc_so('=4,2*', 'Số lượng')
         self.assertIn('công thức', str(cm.exception))

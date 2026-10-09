@@ -48,6 +48,11 @@ class LoiPdfScan(LoiNhap):
     """PDF không có lớp chữ (ảnh scan): chỉ đọc được bằng nhận dạng chữ (OCR)."""
 
 
+class LoiKhongCoGia(LoiNhap):
+    """Văn bản đọc được nhưng không có đơn giá (không bảng giá, không câu "<số> đồng/<ĐVT>"): văn bản quy định chính sách.
+    Tách khỏi LoiNhap khác để màn hình không báo nhầm lỗi đọc / so khớp thành "không có đơn giá"."""
+
+
 def loai_that(p) -> str:
     """Loại file theo nội dung (vài byte đầu), không theo đuôi: '.pdf', '.xlsx', '.docx', '.sqlite', '.html', '.xls'
     (Office cũ) hoặc '' nếu không nhận ra. File tải từ web hay bị đặt sai đuôi (trang HTML báo lỗi / đăng nhập mang đuôi .pdf)."""
@@ -532,16 +537,31 @@ def nhan_muc(dong: list, nhom: int = 0) -> list:
 # "25.000 đồng/m² mặt nước", "1,5 triệu đồng/con", "30 nghìn đồng/kg", "3.000.000 đ/hộ"
 _RE_GIA_VAN = re.compile(
     r'(?P<so>\d{1,3}(?:[.,]\d{3})+(?:,\d+)?|\d+(?:,\d+)?)\s*(?P<boi>triệu|trieu|nghìn|nghin|ngàn|ngan)?\s*(?:đồng|đ)(?![\w])'
-    r'\s*(?:\([^)]{0,40}\)\s*)?/\s*(?:01\s+|1\s+)?(?P<dvt>[^\s;,.()]+(?:\s+(?:mặt\s+nước|nuôi|thả\s+nuôi|ao|lồng|bè|sàn|năm|tháng))?)',
+    r'\s*(?:\([^)]{0,40}\)\s*)?/\s*(?:01\s+|1\s+)?(?P<dvt>[^\s;,.()]+'
+    r'(?:\s+(?:mặt\s+nước|nuôi|thả\s+nuôi|ao|lồng|bè|sàn|năm|tháng|yến(?:\s+thô)?))?)',
     re.I)
 _RE_KHOANG = re.compile(r'(?i)(?:từ|tu)\s+[\d.,]+\s*(?:triệu|nghìn|ngàn)?\s*(?:đồng|đ)?\s*(?:đến|tới|-|–)\s*$')
-_RE_DAU_KHOAN = re.compile(r'^\s*(?:(?P<dieu>Điều\s+\d+[a-zđ]?\.?)|(?P<so>\d+(?:\.\d+)*\.)|(?P<chu>[a-zđ]\))|(?P<gach>[-+•–*]))\s*',
-                          re.I)
-# cụm đầu / cuối tên không mang nghĩa: "Đơn giá bồi thường đối với ...", "... là", "mức hỗ trợ bằng"
-_RE_DAU_TEN = re.compile(r'(?i)^(?:(?:quy\s+định\s+)?(?:đơn\s+giá|mức(?:\s+giá)?)(?:\s+(?:bồi\s+thường|hỗ\s+trợ|thiệt\s+hại))*'
-                         r'(?:\s+(?:đối\s+với|cho|về|của))?\s+|(?:đối\s+với|trường\s+hợp|về)\s+)')
+# "1." / "1.1." là ký hiệu khoản; "50.000.000 đồng…" (dòng PDF bắt đầu bằng số tiền) thì không: sau dấu chấm không được là chữ số
+_RE_DAU_KHOAN = re.compile(r'^\s*(?:(?P<dieu>Điều\s+\d+[a-zđ]?\.?)|(?P<so>\d+(?:\.\d+)*\.)(?!\d)|(?P<chu>[a-zđ]\))|'
+                           r'(?P<gach>[-+•–*]))\s*', re.I)
+# cụm đầu / cuối tên không mang nghĩa: "Đơn giá bồi thường đối với ...", "Giá trị và đơn giá bồi thường đối với ...",
+# "Bồi thường thiệt hại ngừng sản xuất đối với ...", "... là", "mức hỗ trợ bằng", "... nhưng không quá"
+_RE_DAU_TEN = re.compile(r'(?i)^(?:(?:quy\s+định\s+)?(?:giá\s+trị\s+và\s+)?(?:đơn\s+giá|mức(?:\s+giá)?)'
+                         r'(?:\s+(?:bồi\s+thường|hỗ\s+trợ|thiệt\s+hại))*(?:\s+(?:đối\s+với|cho|về|của))?\s+|'
+                         r'(?:bồi\s+thường|hỗ\s+trợ)(?:\s+thiệt\s+hại)?(?:\s+(?:ngừng|ngưng)\s+sản\s+xuất)?\s+(?:đối\s+với|cho|về)\s+|'
+                         r'(?:đối\s+với|trường\s+hợp|về)\s+)')
 _RE_CUOI_TEN = re.compile(r'(?i)(?:\s*[:,]\s*|\s+(?:là|bằng|với\s+mức|ở\s+mức|tương\s+đương|được\s+bồi\s+thường|được\s+hỗ\s+trợ|'
-                          r'được\s+tính|tính|mức|đơn\s+giá))+\s*$')
+                          r'được\s+tính|tính|mức|đơn\s+giá|(?:nhưng\s+)?không\s+(?:vượt\s+)?quá|tối\s+đa))+\s*$')
+# giá trần: "theo giá thị trường nhưng không quá 18.500.000 đồng/kg" -> tên ghi "(theo giá thị trường, tối đa)"
+_RE_TRAN = re.compile(r'(?i)(?:nhưng\s+)?(?:không\s+(?:vượt\s+)?quá|tối\s+đa)\s*$')
+_RE_THI_TRUONG = re.compile(r'(?i)\s*theo\s+giá\s+thị\s+trường\s*$')
+# điều kiện áp dụng đứng SAU số tiền: "… là 20.300.000 đồng/ha/vụ đối với thủy sản nuôi dưới 50% định mức…, 14.500.000 đồng/ha/vụ
+# đối với thủy sản nuôi từ 50% đến 80%…" (QĐ 31/2025/QĐ-UBND) - mỗi mức giá một dòng "Tên (điều kiện)"
+_RE_DIEU_KIEN = re.compile(r'(?i)^[\s,]*(?:đối\s+với|áp\s+dụng\s+(?:cho|đối\s+với)|khi|trường\s+hợp|nếu)\s+')
+# câu mới bắt đầu giữa đoạn (Word / PDF ghép dòng tiêu đề khoản với câu ghi giá): "… cá nuôi lồng bè Đối với cá nuôi lồng bè là …"
+_RE_CAU_MOI = re.compile(r'(?<=\S)\s+(?=(?:Đối\s+với|Trường\s+hợp|Riêng)\s)')
+# chữ dẫn chung trước dấu ":" không làm tên nhóm: "Đối với các hình thức nuôi như: nuôi hàu…" (giữ tên nhóm của khoản)
+_RE_DAN_CHUNG = re.compile(r'(?:\bnhu|\bgom|\bsau|\bbao gom)$')
 
 
 def _bo_dau_khoan(x: str) -> tuple:
@@ -567,16 +587,63 @@ def _ten_gon(x: str) -> str:
     return x[:1].upper() + x[1:] if x else ''
 
 
+def _la_tieu_de(x: str) -> bool:
+    """Khoản không ghi giá, ngắn, không có dấu kết câu: tiêu đề cho các khoản bên dưới (Word không có dấu ":" cuối tiêu đề -
+    "1. Bồi thường thiệt hại ngừng sản xuất đối với ao nuôi cá")."""
+    return len(x) <= 160 and not x.endswith(('.', ';', ',')) and not _RE_GIA_VAN.search(x)
+
+
+def _ket_cau(s: str, tu: int = 0) -> int:
+    """Vị trí ngay sau dấu kết câu đầu tiên của s (từ vị trí tu): dấu ; hoặc dấu . đứng trước chữ hoa / cuối chuỗi
+    ("50.000" không phải kết câu). Không có -> len(s)."""
+    for m in re.finditer(r'[;.]', s[tu:]):
+        i = tu + m.end()
+        sau = s[i:].lstrip()
+        if m.group() == ';' or not sau or sau[0].isupper():
+            return i
+    return len(s)
+
+
+def _cau_cuoi(s: str) -> str:
+    """Vế câu cuối của s (sau dấu ; hoặc dấu . kết câu)."""
+    tu = 0
+    while True:
+        i = _ket_cau(s, tu)
+        if i >= len(s):
+            return s[tu:]
+        tu = i
+
+
+def _dieu_kien(sau: str) -> tuple:
+    """Điều kiện áp dụng đứng ngay sau số tiền ("đối với thủy sản nuôi dưới 50% định mức…") -> (điều kiện gọn, số ký tự của sau
+    đã dùng). Hết điều kiện ở dấu kết câu, hoặc ở dấu phẩy mà phần sau là tên mục mới (", nuôi cua là …")."""
+    m = _RE_DIEU_KIEN.match(sau)
+    if not m:
+        return '', 0
+    het = _ket_cau(sau, m.end())
+    for p in re.finditer(',', sau[m.end():het]):
+        i = m.end() + p.start()
+        if re.search(r'(?i)(?:\s(?:là|bằng)|:)\s*$', sau[i + 1:het]):
+            het = i
+            break
+    dk = ' '.join(sau[m.end():het].split()).strip(' ,;.')
+    dk = re.sub(r'(?i)định\s+mức\s+kinh\s+tế\s*-?\s*kỹ\s+thuật', 'định mức KT-KT', dk)
+    dk = re.sub(r'(?i)thời\s+gian\s+nuôi\s+trồng\s+(?:thủy|thuỷ)\s+sản', 'thời gian nuôi', dk)
+    dk = re.sub(r'(?i)^(?:thủy|thuỷ)\s+sản\s+(?=nuôi\b)', '', dk)          # "thủy sản nuôi dưới 50%…" -> "nuôi dưới 50%…"
+    return dk, het
+
+
 def _khoan_van(dong: list) -> list:
-    """Dòng chữ (đoạn Word / dòng PDF bị ngắt giữa câu) -> các khoản: ghép dòng nối tiếp, tách ở đầu khoản (Điều, 1., a), -) và
-    sau dấu ; hoặc : cuối dòng."""
+    """Dòng chữ (đoạn Word / dòng PDF bị ngắt giữa câu) -> các khoản: ghép dòng nối tiếp, tách ở đầu khoản (Điều, 1., a), -),
+    sau dấu ; hoặc : cuối dòng, và sau dòng tiêu đề khoản khi dòng kế bắt đầu bằng chữ hoa (đoạn Word riêng)."""
     kq, dang = [], ''
     for r in dong:
         x = r if isinstance(r, str) else (r[0] if len(r) == 1 else '')
         x = ' '.join(str(x or '').split())
         if not x:
             continue
-        if dang and (_RE_DAU_KHOAN.match(x) or dang.endswith((';', ':', '.'))):
+        if dang and (_RE_DAU_KHOAN.match(x) or dang.endswith((';', ':', '.')) or
+                     (x[:1].isupper() and _RE_DAU_KHOAN.match(dang) and _la_tieu_de(dang))):
             kq.append(dang)
             dang = x
         else:
@@ -589,8 +656,10 @@ def _khoan_van(dong: list) -> list:
 def muc_tu_loi_van(dong: list, nhom: int = 0) -> tuple:
     """Văn bản không có bảng giá (đơn giá viết trong điều khoản, như QĐ 31/2025/QĐ-UBND vật nuôi): tìm các cụm "<số> đồng/<ĐVT>"
     trong từng khoản; tên mục = chữ đứng trước số tiền (bỏ "Đơn giá bồi thường đối với…", "… là"), dòng tiêu đề khoản phía trên
-    (không giá, kết thúc ":") làm tên nhóm "Tiêu đề - Mục". Trả ([Muc], [câu cần xem lại: khoảng giá "từ… đến…", không ra tên]).
-    Người dùng đối chiếu từng dòng trên HopNhapDonGia trước khi áp dụng (câu gốc ở Muc.nguon_dong)."""
+    (không giá: kết thúc ":" hoặc khoản ngắn không dấu kết câu) làm tên nhóm "Tiêu đề - Mục"; điều kiện đứng sau số tiền
+    ("… đối với thủy sản nuôi dưới 50%…") ghi trong ngoặc, các mức giá nối tiếp cùng câu dùng lại tên. Trả ([Muc], [câu cần xem
+    lại: khoảng giá "từ… đến…", tỷ lệ %, không ra tên]). Người dùng đối chiếu từng dòng trên HopNhapDonGia trước khi áp dụng
+    (câu gốc ở Muc.nguon_dong)."""
     ds, xem, tieu_de = [], [], {}
     for khoan in _khoan_van(dong):
         cap, than = _bo_dau_khoan(khoan)
@@ -600,7 +669,7 @@ def muc_tu_loi_van(dong: list, nhom: int = 0) -> tuple:
         if not gia and re.search(r'\d\s*%', than) and re.search(r'(?i)bồi\s+thường|hỗ\s+trợ', than):
             xem.append(f'Quy định theo tỷ lệ % (không phải đơn giá - phần mềm không tự đổi cách tính): {khoan[:250]}')
         if not gia:
-            if than.endswith(':') or cap == 0:              # tiêu đề cho các khoản bên dưới
+            if than.endswith(':') or cap == 0 or (cap in (1, 2, 3) and _la_tieu_de(than)):   # tiêu đề cho các khoản bên dưới
                 for k in [k for k in tieu_de if k >= cap]:
                     del tieu_de[k]
                 t = _ten_gon(re.sub(r'(?i)^(?:quy\s+định\s+)?', '', than))
@@ -608,10 +677,11 @@ def muc_tu_loi_van(dong: list, nhom: int = 0) -> tuple:
                     tieu_de[cap] = t
             continue
         cha = next((tieu_de[k] for k in sorted(tieu_de, reverse=True) if k < cap), '')
-        dau = 0
-        for m in gia:
-            truoc = than[dau:m.start()]
-            dau = m.end()
+        pos, goc = 0, None            # goc: (tên nhóm, tên, ghi chú) của mức giá trước - mức giá nối tiếp dùng lại
+        for j, m in enumerate(gia):
+            truoc = than[pos:m.start()]
+            dk, dung = _dieu_kien(than[m.end():gia[j + 1].start() if j + 1 < len(gia) else len(than)])
+            pos = m.end() + dung      # điều kiện của mức giá này không làm tên cho mức giá sau
             if _RE_KHOANG.search(truoc):
                 xem.append(f'Khoảng giá (không tự lấy): {khoan[:250]}')
                 continue
@@ -624,24 +694,44 @@ def muc_tu_loi_van(dong: list, nhom: int = 0) -> tuple:
                 g = doc_gia(so)
             if not g:
                 continue
-            # tên: phần chữ ngay trước số tiền trong cùng vế câu (sau dấu ;). "Đối với nuôi tôm: tôm thẻ 60.000 đồng/m²" -
-            # phần trước ":" là tiêu đề trong dòng, dùng cho cả các giá sau trong khoản
-            ve = _bo_dau_khoan(truoc.split(';')[-1])[1]
-            if ':' in ve:
-                trai, phai = ve.rsplit(':', 1)
-                if _ten_gon(phai):
-                    cha = _ten_gon(_bo_dau_khoan(trai)[1]) or cha
-                    ve = phai
-                else:
-                    ve = trai
-            ten = _ten_gon(ve)
-            if len(ten) < 2:
-                ten = cha
-                cha = ''
-            if not ten:
-                xem.append(f'Có số tiền nhưng không rõ tên mục: {khoan[:250]}')
-                continue
-            ten_day = f'{cha} - {ten}' if cha and bo_dau(cha) not in bo_dau(ten) else ten
+            if goc and not re.sub(r'(?i)\b(?:và|hoặc)\b|[\s,;]', '', truoc):
+                cha_m, ten, ghi = goc[0], goc[1], list(goc[2])   # "…, 14.500.000 đồng/ha/vụ đối với …": cùng tên, khác điều kiện
+            else:
+                # tên: phần chữ ngay trước số tiền trong cùng vế câu (sau dấu ; / dấu chấm kết câu). "Đối với nuôi tôm: tôm thẻ
+                # 60.000 đồng/m²" - phần trước ":" là tiêu đề trong dòng, dùng cho cả các giá sau trong khoản
+                ve = _bo_dau_khoan(_cau_cuoi(truoc))[1]
+                moi = list(_RE_CAU_MOI.finditer(ve))
+                if moi:                                 # "<tiêu đề khoản> Đối với cá nuôi lồng bè là …" (dòng PDF ghép)
+                    cha = _ten_gon(ve[:moi[-1].start()]) or cha
+                    ve = ve[moi[-1].end():]
+                tran = bool(_RE_TRAN.search(ve.strip(' ,;:')))
+                if ':' in ve:
+                    trai, phai = ve.rsplit(':', 1)
+                    if _ten_gon(phai):
+                        t = _ten_gon(_bo_dau_khoan(trai)[1])
+                        if t and not _RE_DAN_CHUNG.search(bo_dau(t)):    # "Đối với các hình thức nuôi như:" giữ tên nhóm
+                            cha = t
+                        ve = phai
+                    else:
+                        ve = trai
+                ten, ghi = _ten_gon(ve), []
+                if tran:                                # giá trần: "theo giá thị trường nhưng không quá …"
+                    mt = _RE_THI_TRUONG.search(ten)
+                    if mt:
+                        ten = ten[:mt.start()]
+                    ghi.append('theo giá thị trường, tối đa' if mt else 'tối đa')
+                cha_m = cha
+                if len(ten) < 2:
+                    ten, cha_m = cha, ''
+                if not ten:
+                    xem.append(f'Có số tiền nhưng không rõ tên mục: {khoan[:250]}')
+                    continue
+                goc = (cha_m, ten, tuple(ghi))
+            if dk:
+                ghi.append(dk)
+            ten_day = f'{cha_m} - {ten}' if cha_m and bo_dau(cha_m) not in bo_dau(ten) else ten
+            if ghi:
+                ten_day += f' ({"; ".join(ghi)})'
             dvt = ' '.join(m.group('dvt').split())
             ds.append(Muc(ten_day[:200], dvt, g, '', khoan[:300], nhom=nhom or _nhom_dong(ten_day, dvt)))
     return ds, xem
@@ -658,6 +748,18 @@ def _khoa_gon(ten: str) -> str:
 
 
 GAN_DUNG = 0.9          # tên giống >= 90% (cùng ĐVT) thì coi là cùng mục; hiện "gần đúng" để người dùng xem lại
+
+
+def _giong_tung_phan(a: str, b: str) -> bool:
+    """Tên gần đúng phải giống cả phần ngoài ngoặc lẫn phần trong ngoặc (>= GAN_DUNG): điều kiện dài trong ngoặc giống hệt nhau
+    làm cả tên giống 93% dù là mục khác ("Ao nuôi tôm nước lợ - Nuôi quảng canh (nuôi dưới 50% định mức…)" ~ "Ao nuôi tôm
+    nước ngọt - Nuôi thâm canh (nuôi dưới 50% định mức…)") - ghép nhầm sẽ ghi đè giá của mục khác."""
+    import difflib
+
+    def ngoac(s):
+        return _khoa(' '.join(re.findall(r'\(([^)]*)\)', s)))
+    return all(difflib.SequenceMatcher(None, x, y).ratio() >= GAN_DUNG
+               for x, y in ((_khoa_gon(a), _khoa_gon(b)), (ngoac(a), ngoac(b))))
 
 
 def so_khop(ds: list, nhom: int | None = None) -> list:
@@ -690,9 +792,10 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
         m.khop_gan = 0.0
         if r is None:
             k, cung = _khoa(m.ten), theo_dvt.get(bo_dau(m.dvt), {})
-            gan = difflib.get_close_matches(k, list(cung), n=1, cutoff=GAN_DUNG)
-            if gan:
-                r, m.khop_gan = cung[gan[0]], difflib.SequenceMatcher(None, k, gan[0]).ratio()
+            for g in difflib.get_close_matches(k, list(cung), n=3, cutoff=GAN_DUNG):
+                if _giong_tung_phan(m.ten, cung[g]['ten']):
+                    r, m.khop_gan = cung[g], difflib.SequenceMatcher(None, k, g).ratio()
+                    break
         if r is None:
             m.trang_thai, m.ma_khop, m.gia_cu = 'mới', '', None
         else:
@@ -700,6 +803,17 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
             m.gia_cu = doc_gia(r['don_gia']) if r['don_gia'] not in (None, '') else None
             m.trang_thai = 'giữ nguyên' if m.gia_cu == m.don_gia else 'cập nhật'
     return ds
+
+
+def _phan_loai(nm: int, ten: str, van_ban: dict | None) -> str:
+    """Phân loại dòng mới của dm_taisan. Nhóm 3: vật nuôi (tên, hoặc trích yếu văn bản chỉ nói vật nuôi / thủy sản) ghi
+    don_gia.PHAN_LOAI_VAT_NUOI - thẻ "Vật nuôi" riêng trên màn hình Bộ đơn giá."""
+    if nm == 3:
+        vb = bo_dau((van_ban or {}).get('trich_yeu', ''))
+        if re.search(r'vat nuoi|thuy san|chan nuoi|chim yen', bo_dau(ten)) or \
+                (re.search(r'vat nuoi|thuy san', vb) and not re.search(r'cay trong|hoa mau', vb)):
+            return don_gia.PHAN_LOAI_VAT_NUOI
+    return NHOM[nm]
 
 
 def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban: dict | None = None) -> dict:
@@ -736,7 +850,8 @@ def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban
                     else:
                         n_ts += 1
                         con.execute('INSERT INTO dm_taisan (ma, nhom, phan_loai, ten, dvt, don_gia, ghi_chu) VALUES (?,?,?,?,?,?,?)',
-                                    (m.ma or f'TSN{n_ts:04d}', nm, NHOM[nm], m.ten, m.dvt, chuoi(m.don_gia), f'Cập nhật từ {nguon}'))
+                                    (m.ma or f'TSN{n_ts:04d}', nm, _phan_loai(nm, m.ten, van_ban), m.ten, m.dvt,
+                                     chuoi(m.don_gia), f'Cập nhật từ {nguon}'))
                     so[m.trang_thai] += 1
                     theo_nhom.setdefault(nm, {'mới': 0, 'cập nhật': 0})[m.trang_thai] += 1
                 tom_tat = '; '.join(f'{NHOM[k]}: {v["mới"]} mục mới, {v["cập nhật"]} mục đổi giá'

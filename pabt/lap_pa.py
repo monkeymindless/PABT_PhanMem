@@ -103,11 +103,18 @@ def _cong_thuc(text) -> str:
     return ('=' + s.lstrip('=').strip()) if s and la_cong_thuc(s) else ''
 
 
+def so_le_so_luong(dvt: str) -> int:
+    """Số chữ số thập phân của số lượng theo ĐVT: ha (cả "ha/vụ", "ha/năm" - vật nuôi QĐ 31/2025) và đơn vị bội ("100m3/vụ":
+    lồng 25 m³ = 0,25) giữ 4 chữ số; đơn vị khác 1 chữ số."""
+    d = bo_dau(dvt).split('/')[0].strip()
+    return 4 if d == 'ha' or d[:1].isdigit() else 1
+
+
 def doc_so_luong(text, dvt: str = '', ten_o: str = 'Số lượng'):
-    """Số lượng mục 2, 3, 4 (gõ số hoặc công thức): làm tròn 1 chữ số thập phân; ĐVT ha giữ 4 chữ số."""
+    """Số lượng mục 2, 3, 4 (gõ số hoặc công thức): làm tròn 1 chữ số thập phân; ĐVT ha giữ 4 chữ số (so_le_so_luong)."""
     from .tien import lam_tron
     v = doc_so(text, ten_o)
-    return lam_tron(v, 4 if bo_dau(dvt).strip() == 'ha' else 1)
+    return lam_tron(v, so_le_so_luong(dvt))
 
 
 def doc_ty_le(text):

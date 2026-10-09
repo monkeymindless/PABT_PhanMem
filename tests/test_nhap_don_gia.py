@@ -487,7 +487,76 @@ LOI_VAN = [
     'Mức bồi thường bằng 30% giá trị sản lượng thu hoạch.']
 
 
+# văn bản GIẢ LẬP theo đúng cách viết của QĐ 31/2025/QĐ-UBND bản thật (đoạn Word): tiêu đề khoản không có ":", điều kiện đứng SAU
+# số tiền ("… là A đồng/ha/vụ đối với …, B đồng/ha/vụ đối với …"), câu "Đối với các hình thức nuôi như: …", giá trần - số liệu giả
+DIEU_KIEN = [
+    'Điều 4. Đơn giá bồi thường vật nuôi là thủy sản',
+    '1. Bồi thường thiệt hại ngừng sản xuất đối với ao nuôi tôm nước lợ',
+    'a) Nuôi quảng canh là 10.000.000 đồng/ha/vụ đối với thủy sản nuôi dưới 50% định mức kinh tế kỹ thuật thời gian nuôi trồng '
+    'thủy sản, 7.000.000 đồng/ha/vụ đối với thủy sản nuôi từ 50% đến 80% định mức kinh tế kỹ thuật thời gian nuôi trồng thủy '
+    'sản. Đối với các hình thức nuôi như: nuôi cua là 9.000.000 đồng/ha/vụ đối với thủy sản nuôi dưới 50% định mức kinh tế kỹ '
+    'thuật thời gian nuôi trồng thủy sản.',
+    '2. Bồi thường thiệt hại ngừng sản xuất đối với cá nuôi lồng bè',
+    'Đối với cá nuôi lồng bè là 50.000.000 đồng/100m3/vụ đối với thủy sản nuôi dưới 50% định mức kinh tế kỹ thuật thời gian '
+    'nuôi trồng thủy sản.',
+    'Điều 6. Giá trị và đơn giá bồi thường đối với chim yến',
+    '1. Giá trị bồi thường đối với chim yến được tính bằng tổng sản lượng tổ yến trong một năm.',
+    '2. Đơn giá bồi thường đối với chim yến theo giá thị trường nhưng không quá 9.000.000 đồng/kg yến thô.']
+DK1, DK2 = 'nuôi dưới 50% định mức KT-KT thời gian nuôi', 'nuôi từ 50% đến 80% định mức KT-KT thời gian nuôi'
+
+
 class TestLoiVan(CoSo):
+    def test_dieu_kien_sau_so_tien(self):
+        mong = [(f'Ao nuôi tôm nước lợ - Nuôi quảng canh ({DK1})', 'ha/vụ', 10000000),
+                (f'Ao nuôi tôm nước lợ - Nuôi quảng canh ({DK2})', 'ha/vụ', 7000000),
+                (f'Ao nuôi tôm nước lợ - Nuôi cua ({DK1})', 'ha/vụ', 9000000),
+                (f'Cá nuôi lồng bè ({DK1})', '100m3/vụ', 50000000),
+                ('Chim yến (theo giá thị trường, tối đa)', 'kg yến thô', 9000000)]
+        ds, _ = ndg.muc_tu_loi_van([[x] for x in DIEU_KIEN], 3)
+        self.assertEqual([(m.ten, m.dvt, m.don_gia) for m in ds], mong)
+        # PDF: dòng tiêu đề khoản dính với câu ghi giá, câu bị ngắt dòng giữa chừng - cùng kết quả
+        pdf = DIEU_KIEN[:3] + ['2. Bồi thường thiệt hại ngừng sản xuất đối với cá nuôi lồng bè Đối với cá nuôi lồng bè là',
+                               '50.000.000 đồng/100m3/vụ đối với thủy sản nuôi dưới 50% định mức kinh tế kỹ thuật thời gian',
+                               'nuôi trồng thủy sản.'] + DIEU_KIEN[5:]
+        ds, _ = ndg.muc_tu_loi_van([[x] for x in pdf], 3)
+        self.assertEqual([(m.ten, m.dvt, m.don_gia) for m in ds], mong)
+        # áp dụng: vật nuôi ghi phân loại riêng (thẻ "Vật nuôi" trên màn hình Bộ đơn giá)
+        ds, _ = ndg.muc_tu_loi_van([[x] for x in DIEU_KIEN], 3)
+        ndg.so_khop(ds, 3)
+        # "Ao nuôi tôm nước lợ - Nuôi quảng canh (nuôi dưới 50%…)" giống 93% "Ao nuôi tôm nước ngọt - Nuôi thâm canh (nuôi dưới
+        # 50%…)" (VN09) chỉ nhờ phần trong ngoặc: không được ghép "gần đúng" (sẽ ghi đè giá mục khác)
+        self.assertEqual([(m.trang_thai, m.ma_khop) for m in ds],
+                         [('mới', ''), ('mới', ''), ('mới', ''), ('cập nhật', 'VN15'), ('cập nhật', 'VN17')])
+        ndg.ap_dung(ds, 3, 'thử', van_ban={'so_hieu': '999/2026/QĐ-UBND', 'trich_yeu': 'Đơn giá bồi thường vật nuôi là thủy sản'})
+        con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
+        try:
+            pl = {r[0] for r in con.execute("SELECT phan_loai FROM dm_taisan WHERE ghi_chu = 'Cập nhật từ thử'")}
+        finally:
+            con.close()
+        self.assertEqual(pl, {don_gia.PHAN_LOAI_VAT_NUOI})
+
+    def test_tim_theo_so_hieu(self):
+        """Gõ số hiệu ("31/2025"): trang văn bản mang đúng số đó được mở dù tiêu đề chung chung (Công báo Đồng Nai trả
+        "Quyết định số 31/2025/QĐ-UBND của Ủy ban nhân dân tỉnh") - trước đây 0 kết quả."""
+        from unittest import mock
+        web = self.td / 'so'
+        web.mkdir()
+        (web / 'tim.html').write_text('<html><body><a href="ct31.html">Quyết định số 31/2025/QĐ-UBND của Ủy ban nhân dân tỉnh</a>'
+                                      '<a href="ct131.html">Quyết định số 131/2025/QĐ-UBND của Ủy ban nhân dân tỉnh</a>'
+                                      '</body></html>', encoding='utf-8')
+        for so in ('31', '131'):
+            (web / f'ct{so}.html').write_text(f'<html><head><title>Quyết định số {so}/2025/QĐ-UBND ban hành đơn giá bồi '
+                                              f'thường vật nuôi</title></head><body><a href="tep{so}.docx">Tải tập tin '
+                                              f'{so}-2025-qd.doc</a></body></html>', encoding='utf-8')
+        sv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), partial(_Im, directory=str(web)))
+        threading.Thread(target=sv.serve_forever, daemon=True).start()
+        self.addCleanup(sv.server_close)
+        self.addCleanup(sv.shutdown)
+        mau = f'http://127.0.0.1:{sv.server_address[1]}/tim.html?q={{q}}'
+        with mock.patch.dict(cw.NOI_TIM, {'thu': ('Thử', mau)}):
+            self.assertEqual([t.so_hieu for t in cw.quet('31/2025', noi='thu')], ['31/2025/QĐ-UBND'])   # không lấy nhầm 131
+            self.assertEqual(cw.quet('đơn giá', noi='thu'), [])        # không có số hiệu: tiêu đề chung chung không mở
+
     def test_don_gia_trong_loi_van(self):
         dong = [[x] for x in LOI_VAN]
         self.assertEqual(ndg.nhan_muc(dong, 3), [])                     # không có bảng

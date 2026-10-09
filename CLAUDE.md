@@ -295,8 +295,13 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   [dòng], tiêu đề danh sách, canh_bao=, hien=False khi test)` - ô cuộn, đủ mọi dòng, nút Chép / Đóng, `vua_man_hinh`; KHÔNG ghép
   danh sách vào QMessageBox (giãn theo chữ, đẩy nút OK ra ngoài màn hình). `nhap_chi_tiet.ket_qua(bc)` -> (tóm tắt, cảnh báo).
 - Số lượng mục 2-4 trên bảng nhập: `tien.so_luong_vn` (luôn >= 1 chữ số thập phân "20,0"; số nhiều chữ số lẻ hơn hiện đủ, tối đa 4) ở
-  `BoSoan.o_khoan` - người dùng yêu cầu "dạng kế toán". QĐ 31/2025/QĐ-UBND (đơn giá vật nuôi): bộ đơn giá tích hợp CHƯA có mục vật
-  nuôi (chỉ ghi văn bản ở `van_ban`); nhập bằng "Cập nhật từ trang web / từ file" (nhóm 3) - kết quả nằm ở `%APPDATA%\PABT` của máy.
+  `BoSoan.o_khoan` - người dùng yêu cầu "dạng kế toán". QĐ 31/2025/QĐ-UBND ngày 29/08/2025 (vật nuôi; Công báo còn một QĐ 31/2025
+  ngày 10/04/2025 về canh tác hữu cơ - trước sáp nhập, trùng số; tìm theo số chỉ ra bản này, tìm "vật nuôi" mới ra bản đúng): từ 0.9.17
+  bộ tích hợp (2026.10.09) có 17 mục `VN01`-`VN17` (nhóm 3, phân loại `don_gia.PHAN_LOAI_VAT_NUOI`, thẻ "Vật nuôi" của `HopBoDonGia`)
+  thêm bằng `tao_bo_don_gia.py --bo-sung` (`BO_SUNG` / `SUA_VAN_BAN`; đóng gói lại từ Excel cũng tự thêm). Tên = đúng tên
+  `muc_tu_loi_van` đọc văn bản thật (cập nhật lại từ web -> "giữ nguyên"; test `test_don_gia.test_vat_nuoi_qd31`). Giá Điều 4 đã
+  theo thời gian nuôi (= 70% / 50% của Điều 3) - không nhân thêm. Số lượng ĐVT "ha/…" và đơn vị bội "100m3/vụ": 4 chữ số thập phân
+  (`lap_pa.so_le_so_luong`; trước đây "ha/vụ" làm tròn 1 chữ số: 0,25 ha -> 0,3).
 - Văn bản không có bảng giá (đơn giá viết trong điều khoản - QĐ 31/2025 vật nuôi): `HopNhapDonGia` không ra dòng từ `nhan_muc` thì
   `nhap_don_gia.muc_tu_loi_van(dong, nhom)` -> ([Muc], [câu cần xem]): `_khoan_van` ghép dòng PDF / đoạn Word thành khoản (tách ở
   Điều / 1. / a) / - và sau ; : .), `_RE_GIA_VAN` "<số> [triệu|nghìn] đồng/<ĐVT>[ mặt nước…]", tên = chữ trước số tiền (`_ten_gon` bỏ
@@ -304,6 +309,17 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   Mục"; khoảng giá "từ… đến…", tỷ lệ % -> danh sách xem (không tự lấy). `tu_loi_van`: sửa được Tên / ĐVT trên bảng (`_sua_o` -> so
   khớp lại). Văn bản `da_co`: chỉ bỏ chọn sẵn dòng ĐỔI GIÁ, mục mới vẫn chọn. `ap_dung` văn bản đã có -> UPDATE dòng `van_ban` cũ
   (không thêm dòng trùng). Test: `tests/test_nhap_don_gia.TestLoiVan` (văn bản GIẢ LẬP, không phải giá thật).
+  0.9.17 (thử trên văn bản thật QĐ 31 - bản 0.9.15 chỉ thử văn bản giả lập, tên mục sai): điều kiện đứng SAU số tiền ("… là A
+  đồng/ha/vụ đối với thủy sản nuôi dưới 50%…, B đồng/ha/vụ đối với …") -> `_dieu_kien` (hết ở dấu kết câu `_ket_cau` / dấu phẩy
+  trước tên mới) ghi "(điều kiện)", mức giá nối tiếp dùng lại tên (`goc`); tiêu đề khoản không có ":" (`_la_tieu_de`: cấp 1-3, ngắn,
+  không dấu kết câu, không giá) và `_khoan_van` tách sau dòng tiêu đề khi dòng kế bắt đầu chữ hoa (đoạn Word); `_RE_CAU_MOI` tách
+  "<tiêu đề> Đối với … là" (dòng PDF ghép); `_RE_DAN_CHUNG` ("các hình thức nuôi như:") không làm tên nhóm; giá trần `_RE_TRAN`
+  ("theo giá thị trường nhưng không quá") -> "(theo giá thị trường, tối đa)"; `_RE_DAU_KHOAN`: "50.000.000 đồng" đầu dòng không
+  phải ký hiệu khoản "50.000.". `so_khop` gần đúng phải giống cả phần ngoài lẫn trong ngoặc (`_giong_tung_phan`; trước đây "tôm
+  nước lợ - quảng canh (dưới 50%…)" khớp 93% "tôm nước ngọt - thâm canh (dưới 50%…)" -> ghi đè giá mục khác). Không có đơn giá ->
+  `nhap_don_gia.LoiKhongCoGia` (HopNhapDonGia); `HopQuetWeb.tai_va_phan_tich` chỉ báo "không tìm thấy đơn giá" với lỗi này, LoiNhap
+  khác báo đúng lý do (trước: mọi lỗi -> "không có bảng đơn giá"). `cap_nhat_web.quet` từ khóa có số hiệu ("31/2025"): liên kết
+  mang đúng số đó luôn được mở (`so_tim`, không khớp 131/2025).
 - Đơn giá riêng của dự án (`don_gia_rieng.py`, cửa sổ `man_hinh_don_gia_rieng.HopDonGiaRieng`, lệnh "Đơn giá riêng dự án…" /
   nút trong `HopBoDonGia`): KHÔNG đổi cấu trúc CSDL - dùng bảng `quy_uoc` của dự án. id < `ID_RIENG` (1.000.000) = dòng của bộ đơn giá;
   id >= ID_RIENG = dòng riêng (nhập tay / sửa từ dòng của bộ / thẩm định giá) -> `don_gia.ap_vao_du_an` giữ lại (`doc_rieng` trước,
@@ -323,6 +339,15 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   Luật / Nghị định / Thông tư. `man_hinh_quet_web`: ô "Từ khóa tìm trên" (`cb_noi`); lịch sử QSettings bỏ địa chỉ máy nội bộ
   (`_MAY_NOI_BO`, test chạy máy chủ 127.0.0.1 từng ghi vào). Test: `TestApDung.test_nguon_trung_uong`,
   `test_lich_su_khong_nho_may_noi_bo` (số hiệu văn bản mới là GIẢ LẬP).
+- 0.9.17 (tải lớn 10.000 thửa, lỗi ẩn): `bang_ao.BangAo` (QTableView + `_MoHinhAo`, API giống QTableWidget: `dat_du_lieu(dong,
+  du_lieu, kieu, gop)`, `item(r, c)` trả `_OAo`, tín hiệu `cellDoubleClicked`; `resizeRowsToContents` chỉ khi <= `DONG_TU_CAO_TOI_DA`)
+  cho `KhungTongQuat` / `KhungTienDo` (nạp 980 -> 182 ms). `thong_bao.py`: `TEN_UD` (một nguồn), `chu_loi(viec, e)` = "Việc. Lý do /
+  Cách xử lý (`giai_thich`: quyền, file khóa, đầy đĩa, CSDL hỏng…) + chi tiết kỹ thuật" - dùng thay `str(e)` trong hộp lỗi.
+  `giao_dien.con_tro_cho` (with: con trỏ chờ luôn trả lại khi lỗi - đừng `setOverrideCursor` không finally), `dat_trang_thai(nhan,
+  muc, chu)` + `MAU_TRANG_THAI` (dat / tin / canh_bao / loi). `kiem_loi` / `du_toan.tu_du_an` đọc `doc_tat_ca_phuong_an` một lần
+  (15.009 -> ~10 truy vấn; test `test_toc_do.TestKhongTruyVanTungHo`). `HopBoDonGia`: thẻ Nhà, công trình / Cây trồng / Vật nuôi
+  (theo `_VAT_NUOI`), hàng nút gọn - `b_cap` (QMenu: từ file / từ trang web / tra cứu văn bản), `b_gia_dat` (tra / xuất), `b_don`,
+  `b_ap`, Đóng (người dùng: 7 nút một hàng "chưa phù hợp").
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

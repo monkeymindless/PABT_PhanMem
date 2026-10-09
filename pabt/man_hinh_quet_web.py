@@ -223,10 +223,11 @@ class HopQuetWeb(QDialog):
             nguon = mo_ta_van_ban(vb) or t.ten
             try:
                 d = HopNhapDonGia(f, self, nguon, dong=dong, van_ban=vb)
-            except LoiNhap:
-                # không có bảng giá: văn bản quy định chính sách -> ghi vào danh mục văn bản căn cứ để theo dõi
+            except ndg.LoiKhongCoGia:
+                # không có đơn giá (không bảng, không câu ghi giá): văn bản quy định chính sách -> ghi vào danh mục văn bản căn
+                # cứ để theo dõi
                 if vb.get('so_hieu') and not ndg.da_co(vb['so_hieu']) and (self.im_lang or QMessageBox.question(
-                        self, TEN_UD, f'{nguon}\n{vb.get("trich_yeu", "")}\n\nVăn bản không có bảng đơn giá (văn bản quy định '
+                        self, TEN_UD, f'{nguon}\n{vb.get("trich_yeu", "")}\n\nVăn bản không ghi đơn giá (văn bản quy định '
                                       'chính sách): phần mềm không tự đổi quy tắc tính. Ghi văn bản vào danh mục văn bản căn cứ '
                                       'của bộ đơn giá để theo dõi, đối chiếu?') == QMessageBox.StandardButton.Yes):
                     try:
@@ -234,7 +235,11 @@ class HopQuetWeb(QDialog):
                     except LoiNhap as e:
                         loi.append(f'{nguon}: {e}')
                 else:
-                    loi.append(f'{nguon}: không có bảng đơn giá')
+                    loi.append(f'{nguon}: không tìm thấy đơn giá (không có bảng giá, không có câu ghi "… đồng/<đơn vị>")'
+                               + (' - văn bản đã có trong danh mục văn bản căn cứ' if ndg.da_co(vb.get('so_hieu', '')) else ''))
+                continue
+            except LoiNhap as e:                        # lỗi khác (đọc bộ đơn giá, so khớp…): báo đúng lý do
+                loi.append(f'{nguon}: {e}')
                 continue
             d.im_lang = self.im_lang
             if not cho:
