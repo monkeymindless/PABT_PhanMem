@@ -205,10 +205,9 @@ nhấp đúp ô Ghi chú theo dõi để ghi tiến độ của hộ (lưu ngay 
 Màn hình hẹp (laptop 1366 px, màn hình phóng to 125%…) thì các nhóm tự xuống dòng và băng tiêu đề tự cao lên, cửa sổ không tràn ra
 ngoài màn hình; cửa sổ mở vừa màn hình đang dùng.
 
-**Thử nghiệm menu dọc bên trái** (để so sánh, chưa phải giao diện chính): chạy `PABT.exe --menu-trai` (lối tắt
-`so_sanh_giao_dien\PABT - Thu nghiem menu trai.lnk`, hoặc `THU_MENU_TRAI.bat` khi chạy từ mã nguồn). Các lệnh thành một cột bên trái
-theo 5 nhóm, nút **Thu gọn menu** chỉ để lại biểu tượng (rê chuột hiện tên lệnh); danh sách hộ dùng gần trọn chiều cao (khoảng gấp đôi số
-dòng so với thanh nút phía trên). Ảnh so sánh hai kiểu ở thư mục `so_sanh_giao_dien`.
+**Menu dọc bên trái** là giao diện chính từ 0.9.3: các lệnh thành một cột bên trái theo nhóm, nút **Thu gọn menu** chỉ để lại
+biểu tượng (rê chuột hiện tên lệnh); danh sách hộ dùng gần trọn chiều cao. Muốn dùng thanh nút phía trên như bản cũ: chạy
+`PABT.exe --menu-tren`.
 
 **Menu trái gọn** — để màn hình nhỏ (1366×768) không phải cuộn tìm lệnh:
 - Các lệnh nhóm Dự án (Dự án mới, Mở, Lưu dự án thành, Nhập file Excel, Nhập phương án chi tiết, Thông tin dự án, Dự án trên

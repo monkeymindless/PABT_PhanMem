@@ -22,8 +22,7 @@ du_lieu/
 *.doc
 *.pdf
 
-# Kết quả kiểm tra, ảnh so sánh, cấu hình máy
+# Kết quả kiểm tra, cấu hình máy
 ket_qua_kiem_tra/
-so_sanh_giao_dien/
 .claude/settings.local.json
 loi.log
