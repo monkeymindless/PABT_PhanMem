@@ -510,11 +510,15 @@ class KhungQuyetDinh(_Khung):
         return n
 
     def nhap_file(self, file=None):
-        """Nhập quyết định tổng / bổ sung có danh sách hộ đính kèm: dùng hộp "Nhập quyết định" (khớp hộ theo danh sách)."""
+        """Nhập quyết định tổng / bổ sung có danh sách hộ đính kèm: dùng hộp "Nhập quyết định" (khớp hộ theo danh sách).
+        Từ 0.9.18 là lối DUY NHẤT nhập quyết định (bỏ mục "Nhập quyết định…" trùng ở menu trái): truyền thư mục hồ sơ như lệnh
+        cũ của cửa sổ chính - ô "chép file quyết định vào thư mục hồ sơ" có sẵn."""
+        from . import quan_ly
         from .man_hinh_quan_ly import HopNhapQD
         from .nghiep_vu import tinh_tat_ca
         tong = {k.ma_ho: k.tong for k in tinh_tat_ca(self.con)}
-        dlg = HopNhapQD(self.con, self, tong, None, None)
+        file_du_an = self.con.execute('PRAGMA database_list').fetchone()[2] or None     # đường dẫn file .pabt đang mở
+        dlg = HopNhapQD(self.con, self, tong, quan_ly.thu_muc_ho_so(self.con, file_du_an), None)
         dlg.im_lang = self.im_lang
         if file is not None:
             dlg.doc(file)

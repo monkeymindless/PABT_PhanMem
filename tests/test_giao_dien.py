@@ -269,6 +269,17 @@ class TestMau(unittest.TestCase):
                 self.assertEqual(w.ho_da_chon(), ma)
                 self.assertEqual(w.trang_thai_ho(cho=False).ma_ho, ma[0])
                 self.assertNotIn('Quyết định, chi trả, bàn giao của hộ…', {x.text() for x in w.tien_do.findChildren(QPushButton)})
+                # 0.9.19: nhập quyết định chỉ còn ở trang Quyết định phê duyệt (nhóm Trình, theo dõi tiến độ), giữ ô chép file
+                # quyết định vào thư mục hồ sơ như mục "Nhập quyết định…" cũ của menu trái
+                self.assertNotIn('Nhập quyết định…', w.lenh)
+                qd = w.bang_tong_hop.quyet_dinh
+                qd.im_lang = True
+                d = qd.nhap_file()
+                self.assertIsNotNone(d.thu_muc_ho_so)
+                self.assertTrue(d.o_chep.isChecked())
+                from PySide6.QtWidgets import QToolButton                       # "Quy chuẩn cây, tài sản…" có lại trên menu trái
+                self.assertTrue(any(b.defaultAction() is w.lenh['Quy chuẩn cây, tài sản…']
+                                    for b in w.khung_menu.findChildren(QToolButton)))
                 w.mo_trang(0)
                 self.assertEqual(w.ho_dang_chon(), ma_ds)                      # về danh sách hộ: lại lấy ở danh sách
                 w.close()

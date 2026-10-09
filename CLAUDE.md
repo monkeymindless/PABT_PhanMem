@@ -360,6 +360,15 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   gõ (debounce) cho ô tìm danh sách hộ: đo 5.000 hộ 24-51 ms/phím (dưới ngưỡng cảm nhận ~100 ms) - chờ 250 ms làm chậm hơn. Vẽ
   `BangToChuc` 0,9 ms/lần: không cần đệm ảnh. Test `test_giao_dien.test_bo_cuc_gon_man_hinh_1366` kiểm tra CẤU TRÚC (px phụ thuộc
   phông: offscreen không phông Windows chữ rộng gần gấp đôi).
+- 0.9.19 mỗi lệnh một chỗ (người dùng yêu cầu rà nút trùng; quét bằng AST: chữ nút -> hàm được gọi): bỏ nút nhanh "Lập phương án
+  hộ đang chọn" / "Thêm hộ…" (gọi thẳng hàm nên KHÔNG tắt khi chỉ xem -> lỗi ghi CSDL chỉ đọc), lệnh ẩn "Hồ sơ hộ…", mục máy chủ
+  lặp trong `_menu_tai_khoan`, nút "Lưu phương án hộ" cuối thẻ 4 (`hang_dieu_huong`), nút "Quyết định, chi trả, bàn giao của hộ…"
+  (KhungTienDo), lệnh + hàm `nhap_quyet_dinh` (cùng HopNhapQD với `KhungQuyetDinh.nhap_file` - nay truyền thư mục hồ sơ, file dự án
+  lấy từ `PRAGMA database_list`). Trang "Quyết định phê duyệt" ở nhóm Trình, theo dõi tiến độ; "Quy chuẩn cây, tài sản…" lại có
+  trên menu (nhóm Đơn giá, dự toán). Chuột phải danh sách hộ dùng lại QAction của menu trái (`self.lenh[...]`) - ĐỪNG thêm nút /
+  mục gọi thẳng hàm của lệnh đã có QAction (mất trạng thái tắt khi chỉ xem). `mo_lap_pa` / `mo_ho_so(moi=True)` tự chặn `chi_doc`.
+  `ho_da_chon` / `ho_dang_chon` theo trang đang xem (`_khung_dang_xem`, `_Khung.ma_da_chon`). Test `test_giao_dien.
+  test_bo_cuc_gon_man_hinh_1366` (không QPushButton nào lặp chữ lệnh menu trái), `test_lenh_menu_trai_theo_trang_dang_xem`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

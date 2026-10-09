@@ -214,7 +214,7 @@ class CuaSoChinh(QMainWindow):
                          ('Xuất báo cáo đối chiếu…', self.xuat_bao_cao), ('Cập nhật phần mềm…', lambda: self.cap_nhat_phan_mem()),
                          ('Giới thiệu', self.gioi_thieu),
                          ('Lưu dự án thành…', lambda: self.luu_du_an_thanh()), ('Đợt trình…', lambda: self.dot_trinh()),
-                         ('Trạng thái hộ…', lambda: self.trang_thai_ho()), ('Nhập quyết định…', lambda: self.nhap_quyet_dinh()),
+                         ('Trạng thái hộ…', lambda: self.trang_thai_ho()),
                          ('Báo cáo tổng hợp…', lambda: self.bao_cao_tong_hop()), ('Kiểm tra lỗi…', lambda: self.kiem_tra_loi()),
                          ('Dự toán, áp giá dự thảo…', lambda: self.du_toan()),
                          ('Quy chuẩn cây, tài sản…', lambda: self.quy_chuan()),
@@ -292,9 +292,11 @@ class CuaSoChinh(QMainWindow):
                        L['Nhập phương án chi tiết…'], L['Thông tin dự án…'], L['Dự án trên máy chủ…']]),
             ('Hồ sơ và phương án', [L['Lập phương án hộ…'], L['Thêm hộ…'], L['Xóa hộ…'], L['Kiểm tra lỗi…']]),
             ('Đơn giá, dự toán', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Rà soát giá…'],
-                                  L['Dự toán, áp giá dự thảo…']]),
-            ('Bảng tổng hợp', [L[t] for t in TRANG[:4]]),
-            ('Trình, theo dõi tiến độ', [L['Theo dõi tiến độ'], L['Đợt trình…'], L['Trạng thái hộ…'], L['Nhập quyết định…']]),
+                                  L['Dự toán, áp giá dự thảo…'], L['Quy chuẩn cây, tài sản…']]),
+            ('Bảng tổng hợp', [L['Danh sách hộ'], L['Thông tin tổng quát hộ'], L['Tổng hợp tiền theo phương án']]),
+            # mọi việc về quyết định ở MỘT chỗ: trang "Quyết định phê duyệt" (Thêm / Nhập từ file / Sửa / Xóa); trước 0.9.18 trang
+            # nằm ở nhóm Bảng tổng hợp và nhóm này có thêm "Nhập quyết định…" - cùng hộp thoại với nút "Nhập từ file…" của trang
+            ('Trình, theo dõi tiến độ', [L['Theo dõi tiến độ'], L['Đợt trình…'], L['Quyết định phê duyệt'], L['Trạng thái hộ…']]),
             ('In ấn, báo cáo', [L['In / Xuất…'], L['Báo cáo tổng hợp…'], L['Xuất báo cáo đối chiếu…'], L['Cập nhật mẫu in…']]),
         ]
         # hoàn tác / làm lại thao tác đã ghi vào file dự án (Ctrl+Z / Ctrl+Y ở mọi cửa sổ): trên băng tiêu đề, cạnh tên phần mềm
@@ -539,7 +541,7 @@ class CuaSoChinh(QMainWindow):
             self.dm = lap_pa.DanhMuc(self.con)
             # chỉ xem: tắt mọi lệnh ghi. Mỗi lệnh một QAction dùng chung cho menu trái / chuột phải - không còn nút gọi thẳng
             # hàm (trước 0.9.18 hai nút nhanh "Thêm hộ…", "Lập phương án hộ đang chọn" vẫn bật khi chỉ xem -> lỗi ghi CSDL)
-            for ten in ('Thêm hộ…', 'Xóa hộ…', 'Lập phương án hộ…', 'Thông tin dự án…', 'Trạng thái hộ…', 'Nhập quyết định…'):
+            for ten in ('Thêm hộ…', 'Xóa hộ…', 'Lập phương án hộ…', 'Thông tin dự án…', 'Trạng thái hộ…'):
                 self.lenh[ten].setEnabled(not chi_doc)
             self.bang_tong_hop.dat_du_an(self.con, chi_doc)
             self.tien_do.dat_du_an(self.con, chi_doc)
@@ -1273,21 +1275,6 @@ class CuaSoChinh(QMainWindow):
             return dlg
         if dlg.exec():
             self.tai_lai(giu_trang=True)
-        return dlg
-
-    def nhap_quyet_dinh(self, file=None, cho: bool = True):
-        if not self._can_du_an(sua=True):
-            return None
-        from . import quan_ly
-        from .man_hinh_quan_ly import HopNhapQD
-        dlg = HopNhapQD(self.con, self, self._tong_pa(), quan_ly.thu_muc_ho_so(self.con, self.file), file)
-        if not cho:
-            return dlg
-        if dlg.exec():
-            self.tai_lai()
-            if (getattr(dlg, 'ket_qua', None) or {}).get('qd_id'):        # xem ngay danh sách hộ của quyết định vừa nhập
-                self.bang_tong_hop.quyet_dinh.qd_id = dlg.ket_qua['qd_id']
-                self.mo_trang(2)
         return dlg
 
     def bao_cao_tong_hop(self, file=None):

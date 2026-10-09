@@ -1,5 +1,13 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.18 – BẢN THỬ NGHIỆM)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.19 – BẢN THỬ NGHIỆM)
 
+> **0.9.19 – BẢN THỬ NGHIỆM** - **Mỗi lệnh một chỗ**: bỏ các nút / mục trùng lệnh - hai nút "Lập phương án hộ đang chọn", "Thêm
+> hộ…" trên danh sách (dùng menu trái, bấm đúp hoặc chuột phải), nút "Lưu phương án hộ" cuối thẻ Hỗ trợ (dùng **Lưu (Ctrl+S)**),
+> nút "Quyết định, chi trả, bàn giao của hộ…" ở trang Theo dõi tiến độ (dùng **Trạng thái hộ…** hoặc bấm đúp dòng), mục "Dự án trên
+> máy chủ…" lặp trong menu tài khoản. **Quyết định phê duyệt** chuyển sang nhóm **Trình, theo dõi tiến độ**; nhập quyết định từ file
+> bằng nút **Nhập từ file…** trên trang này (bỏ mục "Nhập quyết định…" trùng). **Quy chuẩn cây, tài sản…** có lại trên menu (nhóm
+> Đơn giá, dự toán). Lệnh với hộ đang chọn lấy hộ chọn **trên trang đang xem**. Dự án mở **chỉ xem** (máy khác đang sửa): không còn
+> nút nào bấm được để sửa / thêm hộ (trước đây nút "Thêm hộ…" vẫn bấm được rồi báo lỗi).
+>
 > **0.9.18 – BẢN THỬ NGHIỆM** - **Màn hình gọn, vừa laptop 1366×768**: băng tiêu đề thấp còn khoảng một nửa (vẫn đủ tên phần mềm,
 > tên đơn vị, địa chỉ - dòng địa chỉ tự rút gọn "…" khi cửa sổ hẹp, rê chuột xem đủ; nút Hoàn tác / Làm lại; nhãn BẢN THỬ
 > NGHIỆM); tên dự án một dòng; băng đối chiếu Excel và hai nút **Lập phương án hộ đang chọn**, **Thêm hộ…** chung một hàng (nút
@@ -132,7 +140,8 @@ Bấm nút **Dự án** (đầu menu trái) → **Dự án mới…** và làm 4
    sống khi có nhân khẩu…), tính thưởng, rồi xuất **phương án chi tiết từng hộ** và **bảng tổng hợp** (Excel, kèm PDF nếu có
    Microsoft Excel) vào thư mục `BanIn_…` cạnh file dự án.
 
-Sau đó bổ sung từng hộ ở **Lập phương án hộ…** (nhà, công trình, cây trồng từ danh mục; số lượng) và **Hồ sơ hộ…**.
+Sau đó bổ sung từng hộ ở **Lập phương án hộ…** (nhà, công trình, cây trồng từ danh mục; số lượng; hồ sơ hộ ở thẻ **Thông tin hộ,
+thửa đất** của cùng cửa sổ).
 
 ## Bản in (phương án chi tiết, bảng tổng hợp)
 
@@ -219,9 +228,13 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
 `pabt/to_chuc.py`; tên đơn vị, ký hiệu số phương án cũng được điền sẵn khi lập dự án mới). Màn hình Dự án mới có băng tổ chức tương tự.
 
 Ngay dưới băng tiêu đề là **khu vực nút lệnh** gom trong một khung trắng (đổ bóng nhẹ), chia 5 thẻ nhóm có tên nhóm chữ nhỏ phía trên; nút nền nhạt theo màu nhóm, biểu tượng trên – chữ dưới, dàn kín chiều ngang (thường 2 dòng khi cửa sổ phóng to): **Dự án** (Dự án mới, Mở dự án,
-Lưu dự án thành, Nhập file Excel, Thông tin dự án), **Hồ sơ và phương án** (Hồ sơ hộ, Thêm hộ, Xóa hộ, Lập phương án hộ, Kiểm tra lỗi),
-**Đơn giá, dự toán** (Bộ đơn giá, Rà soát giá, Quy chuẩn cây, tài sản, Dự toán, áp giá dự thảo), **Trình, theo dõi tiến độ** (Đợt
-trình, Trạng thái hộ, Nhập quyết định), **In ấn, báo cáo** (In / Xuất, Báo cáo tổng hợp, Xuất báo cáo đối chiếu, Cập nhật mẫu in).
+Lưu dự án thành, Nhập file Excel, Thông tin dự án), **Hồ sơ và phương án** (Lập phương án hộ, Thêm hộ, Xóa hộ, Kiểm tra lỗi),
+**Đơn giá, dự toán** (Bộ đơn giá, Đơn giá riêng dự án, Rà soát giá, Dự toán, áp giá dự thảo, Quy chuẩn cây, tài sản), **Bảng tổng
+hợp** (Danh sách hộ, Thông tin tổng quát hộ, Tổng hợp tiền theo phương án), **Trình, theo dõi tiến độ** (Theo dõi tiến độ, Đợt
+trình, Quyết định phê duyệt, Trạng thái hộ), **In ấn, báo cáo** (In / Xuất, Báo cáo tổng hợp, Xuất báo cáo đối chiếu, Cập nhật mẫu
+in). Từ 0.9.18 các nhóm này nằm ở **menu bên trái**; mỗi lệnh chỉ có một chỗ trên màn hình (chuột phải danh sách hộ là lối tắt
+của cùng lệnh). Lệnh với "hộ đang chọn" (Lập phương án, Trạng thái hộ, Đợt trình, In / Xuất, Xóa hộ) lấy hộ chọn **trên trang
+đang xem** (Danh sách hộ, Thông tin tổng quát, Quyết định phê duyệt, Theo dõi tiến độ).
 Nút **Cập nhật phần mềm** và **Giới thiệu** nằm ở **góc dưới bên phải** cửa sổ, trên dòng trạng thái.
 
 Trên danh sách hộ có bộ lọc **Đợt** (tất cả / chưa xếp đợt / từng đợt), **Trạng thái** (chưa / đã lập PA, chưa / đã phê duyệt,
@@ -263,7 +276,7 @@ chưa dùng được (ví dụ **Lưu** khi chưa có thay đổi). Đổi màu 
 
 ## Hồ sơ kiểm kê: hộ, thửa (giai đoạn 4)
 
-Chọn một hộ rồi bấm **Hồ sơ hộ…** (hoặc **Thêm hộ…** để tạo hộ mới):
+Chọn một hộ rồi bấm **Lập phương án hộ…** - thẻ **Thông tin hộ, thửa đất** (hoặc **Thêm hộ…** để tạo hộ mới):
 
 - Sửa họ tên, CCCD, ngày / nơi cấp, địa chỉ, điện thoại, pháp lý, tranh chấp, tái định cư, trạng thái, ghi chú.
 - Bảng **thửa đất thu hồi**: nhấp đúp ô để sửa tờ, thửa, loại đất, DT thu hồi (`143,8`, `1.070`), nguồn gốc, vị trí;
@@ -327,7 +340,7 @@ việc ở máy bất kỳ. Nên sao lưu định kỳ thư mục máy chủ.
 ## Lập phương án hộ (giai đoạn 2)
 
 Nhấp đúp một hộ trong danh sách (hoặc bấm **Lập phương án hộ…**). Hồ sơ hộ và phương án nằm **chung một cửa sổ**, nhập theo
-thứ tự 5 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶** (thẻ cuối: **Lưu phương án hộ**):
+thứ tự 5 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶**; lưu bằng nút **Lưu (Ctrl+S)** trên cùng cửa sổ:
 
 1. **Thông tin hộ, thửa đất**: họ tên, CCCD, ngày cấp, nơi cấp, điện thoại, địa chỉ, pháp lý, tranh chấp, ghi chú và bảng thửa
    (tờ, thửa, loại đất, DT thu hồi, nguồn gốc, vị trí); tách thửa theo loại đất, chuyển thửa, gộp hộ, xóa hộ. Bấm **Tiếp theo**:
@@ -401,7 +414,7 @@ Trong màn hình Lập phương án hộ:
 - **Thẻ Nhà, công trình → Tách theo ranh thu hồi…** (chọn dòng tài sản): nhập tổng diện tích / khối lượng xây dựng và phần nằm trong
   ranh thu hồi. Phần trong ranh tính 100%; phần ngoài ranh tính theo tỷ lệ (mặc định 0%), hoặc tính toàn bộ nếu đánh dấu "ảnh hưởng kết
   cấu, không sử dụng được". Mô tả trong / ngoài ranh ghi ở cột Quy cách để làm cơ sở lập phương án.
-- **Quy chuẩn cây, tài sản…** (thanh lệnh): bảng mật độ mọi loại cây (sửa mật độ, tỷ lệ bồi thường cây ngoài mật độ, căn cứ – lưu trong
+- **Quy chuẩn cây, tài sản…** (menu trái, nhóm Đơn giá, dự toán): bảng mật độ mọi loại cây (sửa mật độ, tỷ lệ bồi thường cây ngoài mật độ, căn cứ – lưu trong
   file dự án) và tỷ lệ mặc định phần ngoài mật độ / ngoài ranh thu hồi của dự án.
 
 ## Đợt trình, thư mục hồ sơ, theo dõi tiến độ
@@ -429,7 +442,7 @@ Trong màn hình Lập phương án hộ:
 - **Trạng thái hộ…** (chọn một hoặc nhiều hộ): đã phê duyệt (số, ngày quyết định, số tiền, file quyết định), đã chi trả (ngày, số
   tiền), đã bàn giao mặt bằng (ngày), ghi chú theo dõi. Chọn nhiều hộ: ô để trống giữ nguyên; "Số tiền = tổng phương án của từng hộ"
   điền số tiền riêng cho từng hộ.
-- **Nhập quyết định…**: chọn file quyết định phê duyệt / danh sách chi trả / biên bản bàn giao (Excel, Word, PDF có chữ, CSV). Phần
+- **Nhập quyết định** (menu trái **Trình, theo dõi tiến độ** → **Quyết định phê duyệt** → nút **Nhập từ file…**): chọn file quyết định phê duyệt / danh sách chi trả / biên bản bàn giao (Excel, Word, PDF có chữ, CSV). Phần
   mềm tự đọc số và ngày quyết định, khớp từng dòng với hộ theo mã hộ, số CCCD hoặc họ tên (bỏ "Ông/Bà", không phân biệt hoa thường,
   dấu), lấy số tiền và tô đỏ dòng có số tiền khác tổng phương án; tên trùng nhiều hộ được liệt kê để chọn tay. Bấm cập nhật để ghi
   trạng thái cho các hộ đã đánh dấu; có thể chép file vào `<thư mục hồ sơ>\Quyết định phê duyệt` (Chi trả, Bàn giao mặt bằng).
