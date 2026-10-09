@@ -500,8 +500,7 @@ def bang_to_chuc(phai: str = '', nut: tuple = ()) -> QFrame:
         tn = QLabel(NHAN_THU_NGHIEM)
         tn.setProperty('vai', 'thu_nghiem')
         tn.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        tn.setToolTip('Bản thử nghiệm: dùng để kiểm tra trước khi phát hành chính thức. Gói cập nhật của bản thử nghiệm '
-                      'không có chữ ký số - chỉ cài gói nhận trực tiếp từ người phát triển.')
+        tn.setToolTip('Bản thử nghiệm: dùng để kiểm tra trước khi phát hành chính thức.')
         khung.nhan_thu_nghiem = tn
         cot_phai.addWidget(tn, 0, Qt.AlignmentFlag.AlignRight)
     if cot_phai.count():

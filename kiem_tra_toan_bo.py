@@ -217,7 +217,7 @@ def b_bo_cai():
                                    'print("phien ban", m["phien_ban"], "-", len(m["file"]), "file, ma kiem tra dung")', goi])
         ghi(f'Gói cập nhật: {ra.strip()}')
         if ma != 0:
-            loi.append('gói cập nhật hỏng / sai chữ ký')
+            loi.append('gói cập nhật hỏng (sai mã SHA-256)')
     if loi:
         return 'LOI', '; '.join(loi)
     return ('CANH BAO', '; '.join(canh)) if canh else ('DAT', f'bộ cài {pc}, gói cập nhật {pb}, không chứa dữ liệu')

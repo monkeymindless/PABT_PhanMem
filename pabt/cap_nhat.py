@@ -1,11 +1,9 @@
 """Gói cập nhật phần mềm (.pabtcn): sửa lỗi, thêm tính năng mà không phải cài lại bộ cài.
 
-Gói là file zip: cap_nhat.json (ung_dung, phien_ban, ban_goc_toi_thieu, ngay, mo_ta, file: {đường dẫn: sha256}), chữ ký số
-cap_nhat.sig (RSA-3072 của cap_nhat.json, an_toan.ky) và toàn bộ pabt/*.py cùng file dữ liệu của gói pabt. Tạo bằng
-tao_cap_nhat.py (máy dựng có khóa bí mật - tao_khoa_ky.py); cài vào thư mục máy (nap_cap_nhat.thu_muc), có hiệu lực từ lần mở
-phần mềm sau (nap_cap_nhat.nap kiểm tra lại chữ ký và mã từng file trước khi nạp). Phần mềm có khóa công khai
-(an_toan.KHOA_CONG_KHAI) thì gói thiếu / sai chữ ký bị từ chối: gói giả mạo không chạy được mã trên máy người dùng.
-Bản thử nghiệm 0.9.16 đã xóa khóa (KHOA_CONG_KHAI rỗng): gói không ký; bản cài 0.9.13-0.9.15 (có khóa) từ chối gói không ký.
+Gói là file zip: cap_nhat.json (ung_dung, phien_ban, ban_goc_toi_thieu, ngay, mo_ta, file: {đường dẫn: sha256}) và toàn bộ
+pabt/*.py cùng file dữ liệu của gói pabt. Tạo bằng tao_cap_nhat.py; cài vào thư mục máy (nap_cap_nhat.thu_muc), có hiệu lực từ
+lần mở phần mềm sau (nap_cap_nhat.nap kiểm tra lại mã SHA-256 từng file, file lạ trước khi nạp). Không dùng chữ ký số (người
+dùng yêu cầu bỏ từ 0.9.16): file cap_nhat.sig trong gói cũ (0.9.14, 0.9.15) được bỏ qua.
 Gói chỉ thay mã PABT, không thay Python / Qt / thư viện đóng trong bộ cài: thay đổi cần thư viện mới thì dựng bộ cài mới.
 """
 from __future__ import annotations
@@ -23,7 +21,6 @@ from pathlib import Path
 from . import __version__, an_toan
 
 DUOI = '.pabtcn'
-FILE_CHU_KY = 'cap_nhat.sig'
 UNG_DUNG = 'PABT'
 BAN_GOC_TOI_THIEU = '0.8.0'          # bản cài đầu tiên chạy Python 3.8 + Qt5 (Win 7 - 11)
 DU_LIEU = ('schema.sql', 'bo_don_gia.sqlite', 'bang_gia_nq28.json', 'bieu_tuong.png')
@@ -63,15 +60,8 @@ def _bam(du: bytes) -> str:
     return hashlib.sha256(du).hexdigest()
 
 
-def tao_goi(goc, file_ra, mo_ta: str = '', toi_thieu: str = BAN_GOC_TOI_THIEU, khoa: dict | None = None) -> dict:
-    """Đóng gói pabt/ trong thư mục mã nguồn `goc` thành gói cập nhật (phiên bản lấy từ pabt/__init__.py), ký bằng khóa bí
-    mật của máy dựng (khoa, mặc định an_toan.doc_khoa_bi_mat())."""
-    if khoa is None:                                    # khoa=False: không ký
-        # phần mềm không có khóa công khai (bản thử nghiệm): không ký, kể cả khi máy dựng còn khóa bí mật cũ
-        khoa = an_toan.doc_khoa_bi_mat() if an_toan.KHOA_CONG_KHAI else False
-    if an_toan.KHOA_CONG_KHAI and not khoa:
-        raise LoiCapNhat(f'Máy này không có khóa ký gói cập nhật ({an_toan.file_khoa_bi_mat()}): gói không chữ ký sẽ bị '
-                         'phần mềm từ chối. Chép khóa bí mật dự phòng về đúng chỗ này rồi tạo lại.')
+def tao_goi(goc, file_ra, mo_ta: str = '', toi_thieu: str = BAN_GOC_TOI_THIEU) -> dict:
+    """Đóng gói pabt/ trong thư mục mã nguồn `goc` thành gói cập nhật (phiên bản lấy từ pabt/__init__.py)."""
     th = Path(goc) / 'pabt'
     m = re.search(r"__version__\s*=\s*'([^']+)'", (th / '__init__.py').read_text(encoding='utf-8'))
     if not m:
@@ -92,38 +82,21 @@ def tao_goi(goc, file_ra, mo_ta: str = '', toi_thieu: str = BAN_GOC_TOI_THIEU, k
             du = f.read_bytes()
             tt['file']['pabt/' + f.name] = _bam(du)
             z.writestr('pabt/' + f.name, du)
-        jb = json.dumps(tt, ensure_ascii=False, indent=1).encode('utf-8')
-        z.writestr('cap_nhat.json', jb)
-        if khoa:
-            ck = an_toan.ky(jb, khoa)
-            if an_toan.KHOA_CONG_KHAI and not an_toan.xac_minh(jb, ck):
-                raise LoiCapNhat('Khóa bí mật trên máy dựng không khớp khóa công khai trong phần mềm (an_toan.KHOA_CONG_KHAI).')
-            z.writestr(FILE_CHU_KY, ck)
+        z.writestr('cap_nhat.json', json.dumps(tt, ensure_ascii=False, indent=1).encode('utf-8'))
     return tt
 
 
-def _doc_ky(z) -> tuple:
-    """(thông tin, nội dung cap_nhat.json gốc, chữ ký) của gói đang mở; kiểm tra chữ ký số khi phần mềm có khóa công khai."""
+def _doc_json(z) -> tuple:
+    """(thông tin, nội dung cap_nhat.json gốc) của gói đang mở."""
     try:
         jb = z.read('cap_nhat.json')
-        m = json.loads(jb.decode('utf-8'))
+        return json.loads(jb.decode('utf-8')), jb
     except (KeyError, ValueError) as e:
         raise LoiCapNhat('Gói cập nhật thiếu hoặc hỏng cap_nhat.json.') from e
-    try:
-        ck = z.read(FILE_CHU_KY).decode('ascii', 'replace')
-    except KeyError:
-        ck = ''
-    if an_toan.KHOA_CONG_KHAI:
-        if not ck:
-            raise LoiCapNhat('Gói cập nhật không có chữ ký số của nhà phát triển PABT: không cài (có thể là gói giả mạo).')
-        if not an_toan.xac_minh(jb, ck):
-            raise LoiCapNhat('Chữ ký số của gói cập nhật KHÔNG HỢP LỆ: gói không do nhà phát triển PABT phát hành hoặc đã bị '
-                             'sửa. Không cài.')
-    return m, jb, ck
 
 
 def doc_goi(file) -> dict:
-    """Đọc và kiểm tra gói: file nén an toàn, chữ ký số, nguyên vẹn từng file; trả thông tin cap_nhat.json."""
+    """Đọc và kiểm tra gói: file nén an toàn, nguyên vẹn từng file (SHA-256); trả thông tin cap_nhat.json."""
     try:
         an_toan.kiem_tra_zip(file, toi_da=100 * 2 ** 20)
     except an_toan.LoiAnToan as e:
@@ -133,7 +106,7 @@ def doc_goi(file) -> dict:
     except (OSError, zipfile.BadZipFile) as e:
         raise LoiCapNhat('File không phải gói cập nhật PABT (không đọc được).') from e
     with z:
-        m, _, _ = _doc_ky(z)
+        m, _ = _doc_json(z)
         if m.get('ung_dung') != UNG_DUNG or not so(m.get('phien_ban')):
             raise LoiCapNhat('File không phải gói cập nhật PABT.')
         ds = m.get('file') or {}
@@ -181,15 +154,13 @@ def cai(file) -> dict:
     try:
         (dich / 'pabt').mkdir(parents=True)
         with zipfile.ZipFile(file) as z:
-            m, jb, ck = _doc_ky(z)                      # đọc lại từ file (không tin bản đã kiểm tra trước: file có thể đã đổi)
+            m, jb = _doc_json(z)                        # đọc lại từ file (không tin bản đã kiểm tra trước: file có thể đã đổi)
             for f, bam in m['file'].items():
                 du = z.read(f)
                 if not re.fullmatch(r'pabt/[\w.-]+', f) or _bam(du) != bam:
                     raise LoiCapNhat(f'File {f} trong gói bị đổi trong lúc cài: không cài.')
                 (dich / f).write_bytes(du)
-        (dich / 'cap_nhat.json').write_bytes(jb)        # giữ nguyên bản đã ký để kiểm tra lại mỗi lần khởi động
-        if ck:
-            (dich / FILE_CHU_KY).write_text(ck, encoding='ascii')
+        (dich / 'cap_nhat.json').write_bytes(jb)        # mã SHA-256 từng file: kiểm tra lại mỗi lần khởi động
         (d / 'hien_hanh.txt').write_text(ten, encoding='utf-8')
         (d / 'dang_khoi_dong.txt').unlink(missing_ok=True)
     except LoiCapNhat:

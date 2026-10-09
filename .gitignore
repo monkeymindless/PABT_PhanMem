@@ -22,9 +22,6 @@ du_lieu/
 *.doc
 *.pdf
 
-# Khóa ký gói cập nhật (chỉ ở %LOCALAPPDATA%\PABT_dev, phòng khi chép nhầm vào đây)
-khoa_ky_cap_nhat*.json
-
 # Kết quả kiểm tra, ảnh so sánh, cấu hình máy
 ket_qua_kiem_tra/
 so_sanh_giao_dien/

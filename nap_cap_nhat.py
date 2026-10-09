@@ -23,7 +23,6 @@ DANG_DUNG = None      # phiên bản cập nhật đang dùng (None: bản gốc
 FILE_HIEN_HANH = 'hien_hanh.txt'
 FILE_DEM = 'dang_khoi_dong.txt'
 FILE_LOI = 'LOI.txt'
-BAN_CO_CHU_KY = (0, 9, 13)   # từ bản cài này pabt.an_toan luôn có: không đọc được khóa công khai = KHÔNG nạp (không bỏ qua chữ ký)
 
 
 def thu_muc() -> Path:
@@ -78,24 +77,10 @@ def _ghi(p: Path, noi_dung: str):
         pass
 
 
-def _kiem_chu_ky(d: Path, jb: bytes, m: dict) -> str:
-    """'' nếu bản cập nhật đã cài còn nguyên: chữ ký số của cap_nhat.json (khi bản gốc có khóa công khai) và mã SHA-256 từng
-    file. Kiểm tra bằng pabt.an_toan của BẢN GỐC (trong PABT.exe), không dùng mã của bản cập nhật."""
+def _kiem_ban(d: Path, m: dict) -> str:
+    """'' nếu bản cập nhật đã cài còn nguyên: đúng mã SHA-256 từng file trong cap_nhat.json, không có file lạ (không dùng chữ ký
+    số - người dùng yêu cầu bỏ từ 0.9.16)."""
     import hashlib
-    try:
-        from pabt import an_toan
-        khoa = an_toan.KHOA_CONG_KHAI
-    except Exception as e:                           # bản gốc cũ chưa có an_toan
-        if so(BAN_GOC) >= BAN_CO_CHU_KY:             # bản gốc phải có an_toan: lỗi nạp -> từ chối, không bỏ qua chữ ký
-            return f'không kiểm tra được chữ ký số ({type(e).__name__}: {e}).'
-        an_toan, khoa = None, None
-    if khoa:
-        try:
-            ck = (d / 'cap_nhat.sig').read_text(encoding='ascii')
-        except OSError:
-            ck = ''
-        if not an_toan.xac_minh(jb, ck):
-            return 'chữ ký số không hợp lệ hoặc không có (gói không do nhà phát triển phát hành, hoặc đã bị sửa).'
     ds = m.get('file') or {}
     # .pyc cũ / giả trong __pycache__ được Python ưu tiên nạp thay file .py đã kiểm tra: xóa, và không ghi lại (nap)
     import shutil
@@ -105,7 +90,7 @@ def _kiem_chu_ky(d: Path, jb: bytes, m: dict) -> str:
     except OSError:
         la = []
     if la:
-        return f'có file lạ không thuộc gói đã ký: {", ".join(la[:5])}.'
+        return f'có file lạ không thuộc gói cập nhật: {", ".join(la[:5])}.'
     for ten, bam in ds.items():
         if not re.fullmatch(r'pabt/[\w.-]+', ten) or '..' in ten:
             return f'tên file không hợp lệ: {ten}'
@@ -128,14 +113,13 @@ def nap(bat_buoc=False):
     if d is None or (d / FILE_LOI).exists():
         return None
     try:
-        jb = (d / 'cap_nhat.json').read_bytes()
-        m = json.loads(jb.decode('utf-8'))
+        m = json.loads((d / 'cap_nhat.json').read_bytes().decode('utf-8'))
     except (OSError, ValueError):
         return None
     pb = m.get('phien_ban')
     if so(pb) <= so(BAN_GOC) or so(m.get('ban_goc_toi_thieu')) > so(BAN_GOC):
         return None                                  # bộ cài mới hơn bản cập nhật, hoặc bản cài quá cũ
-    loi = _kiem_chu_ky(d, jb, m)
+    loi = _kiem_ban(d, m)
     if loi:                                          # bị sửa sau khi cài (mã độc / người khác chép đè): không nạp
         _ghi(d / FILE_LOI, f'Bản cập nhật {pb} không được nạp, dùng bản gốc {BAN_GOC}: {loi}')
         return None
@@ -149,7 +133,7 @@ def nap(bat_buoc=False):
         _ghi(dem, '0')
         return None
     _ghi(dem, str(lan + 1))
-    sys.dont_write_bytecode = True                   # không để lại .pyc trong thư mục cập nhật (xem _kiem_chu_ky)
+    sys.dont_write_bytecode = True                   # không để lại .pyc trong thư mục cập nhật (xem _kiem_ban)
     _bo_pabt()
     sys.meta_path.insert(0, _TimTruoc(d))
     try:

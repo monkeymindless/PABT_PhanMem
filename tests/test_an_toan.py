@@ -1,4 +1,4 @@
-"""Kiểm thử lớp an toàn (pabt/an_toan.py): chữ ký số, file nén / XML độc, toàn vẹn bản cài, TLS, quét file, màn hình."""
+"""Kiểm thử lớp an toàn (pabt/an_toan.py): file nén / XML độc, toàn vẹn bản cài, TLS, quét file, màn hình."""
 from __future__ import annotations
 import os
 import ssl
@@ -11,29 +11,11 @@ from unittest import mock
 from pabt import an_toan
 
 
-class TestChuKy(unittest.TestCase):
-    def test_ky_xac_minh(self):
-        k = an_toan.tao_khoa(1024)
-        cong = dict(n=k['n'], e=k['e'])
-        ck = an_toan.ky(b'noi dung goi', k)
-        self.assertTrue(an_toan.xac_minh(b'noi dung goi', ck, cong))
-        self.assertFalse(an_toan.xac_minh(b'noi dung goi!', ck, cong))                # nội dung bị sửa
-        self.assertFalse(an_toan.xac_minh(b'noi dung goi', ck[:-1] + ('0' if ck[-1] != '0' else '1'), cong))
-        self.assertFalse(an_toan.xac_minh(b'noi dung goi', '', cong))
-        self.assertFalse(an_toan.xac_minh(b'noi dung goi', 'zz', cong))
-        k2 = an_toan.tao_khoa(1024)
-        self.assertFalse(an_toan.xac_minh(b'noi dung goi', an_toan.ky(b'noi dung goi', k2), cong))   # khóa khác
-        self.assertEqual(int(k['n'], 16).bit_length(), 1024)
-
-    def test_khoa_cong_khai_dong_goi(self):
-        import pabt
-        if pabt.BAN_THU_NGHIEM:                         # bản thử nghiệm 0.9.16: người dùng yêu cầu xóa khóa ký
-            self.assertEqual(an_toan.KHOA_CONG_KHAI, {})
-            self.assertFalse(an_toan.xac_minh(b'x', 'ab'))
-            return
-        # bản chính thức có khóa công khai RSA-3072
-        self.assertEqual(int(an_toan.KHOA_CONG_KHAI['n'], 16).bit_length(), 3072)
-        self.assertEqual(an_toan.KHOA_CONG_KHAI['e'], 65537)
+class TestKhongChuKy(unittest.TestCase):
+    def test_khong_con_chu_ky_so(self):
+        # người dùng yêu cầu bỏ hẳn chữ ký số gói cập nhật (0.9.16): không còn khóa, hàm ký / xác minh
+        for ten in ('KHOA_CONG_KHAI', 'ky', 'xac_minh', 'tao_khoa', 'doc_khoa_bi_mat', 'file_khoa_bi_mat'):
+            self.assertFalse(hasattr(an_toan, ten), ten)
 
 
 class TestFileDoc(unittest.TestCase):

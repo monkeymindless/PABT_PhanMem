@@ -193,12 +193,11 @@ def tu_kiem(file_ra=None) -> int:
     def an_toan():
         from pabt import an_toan as at
         at.ngu_canh_tls()
-        assert at.xac_minh(b'x', '') is False
         tv = at.kiem_tra_toan_ven()
         dat, mt = at.mo_ta_toan_ven(tv)
         if dat is False:
             raise RuntimeError(mt)
-        return mt + ('' if at.KHOA_CONG_KHAI else ' Gói cập nhật: không khóa ký (bản thử nghiệm), kiểm tra SHA-256.')
+        return mt
 
     for ten, ham in (('Phiên bản', phien_ban), ('Giao diện', giao_dien), ('Đọc PDF', pdf), ('Bộ đơn giá', bo_don_gia), ('Mẫu in', mau_in),
                      ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('An toàn', an_toan)):

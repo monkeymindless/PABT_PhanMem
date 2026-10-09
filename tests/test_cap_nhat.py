@@ -9,15 +9,10 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
-from unittest import mock
 
-from pabt import __version__, an_toan, cap_nhat
+from pabt import __version__, cap_nhat
 
 GOC = Path(__file__).resolve().parents[1]
-KHOA_THU = an_toan.tao_khoa(1024)                      # khóa thử (không dùng khóa thật của máy dựng)
-CONG_KHAI_THU = dict(n=KHOA_THU['n'], e=KHOA_THU['e'])
-# tiến trình con (nạp bản cập nhật): tin khóa thử thay khóa công khai đóng trong phần mềm
-TIN_KHOA_THU = f'import pabt.an_toan as _a; _a.KHOA_CONG_KHAI = {CONG_KHAI_THU!r}; '
 
 
 def _ma_nguon(td: Path, phien_ban: str, them=None) -> Path:
@@ -37,11 +32,8 @@ class TestCapNhat(unittest.TestCase):
         self.td = Path(tempfile.mkdtemp())
         self.cu = os.environ.get('PABT_THU_MUC_MAY')
         os.environ['PABT_THU_MUC_MAY'] = str(self.td / 'may')
-        self.khoa_cu = an_toan.KHOA_CONG_KHAI
-        an_toan.KHOA_CONG_KHAI = CONG_KHAI_THU
 
     def tearDown(self):
-        an_toan.KHOA_CONG_KHAI = self.khoa_cu
         if self.cu is None:
             os.environ.pop('PABT_THU_MUC_MAY', None)
         else:
@@ -50,12 +42,10 @@ class TestCapNhat(unittest.TestCase):
 
     def _goi(self, phien_ban='9.9.9', **kw):
         p = self.td / f'g_{phien_ban}.pabtcn'
-        kw.setdefault('khoa', KHOA_THU)
         cap_nhat.tao_goi(_ma_nguon(self.td / phien_ban, phien_ban, kw.pop('them', None)), p, 'thử', **kw)
         return p
 
     def _chay(self, ma: str) -> str:
-        ma = TIN_KHOA_THU + ma
         r = subprocess.run([sys.executable, '-c', ma], cwd=GOC, capture_output=True, text=True, encoding='utf-8',
                            env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen'}, timeout=120)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -111,56 +101,36 @@ class TestCapNhat(unittest.TestCase):
         self.assertIn('không khởi động được', cap_nhat.trang_thai()['loi'])
 
     def test_nap_ban_loi_quay_ve_goc(self):
-        cap_nhat.cai(self._goi(them={'loi_khi_nap.py': 'raise RuntimeError("hong")\n'}))   # gói ký đúng nhưng mã lỗi
+        cap_nhat.cai(self._goi(them={'loi_khi_nap.py': 'raise RuntimeError("hong")\n'}))   # gói đúng mã SHA-256 nhưng mã lỗi
         kq = self._chay('import nap_cap_nhat as n; n.nap(bat_buoc=True); import pabt, pabt.tien; '
                         'print(pabt.__version__, n.DANG_DUNG, hasattr(pabt.tien, "D"))')
         self.assertEqual(kq, f'{__version__} None True')
         self.assertIn('hong', cap_nhat.trang_thai()['loi'])
 
-    def test_chu_ky_so(self):
-        # gói không chữ ký / ký bằng khóa khác: từ chối, không cài
-        an_toan.KHOA_CONG_KHAI = {}                      # tạo gói giả: không chữ ký / ký bằng khóa lạ
-        khong_ky, khoa_la = self._goi('9.9.7', khoa=False), self._goi('9.9.6', khoa=an_toan.tao_khoa(1024))
-        an_toan.KHOA_CONG_KHAI = CONG_KHAI_THU
-        with self.assertRaisesRegex(cap_nhat.LoiCapNhat, 'không có chữ ký số'):
-            cap_nhat.cai(khong_ky)
-        with self.assertRaisesRegex(cap_nhat.LoiCapNhat, 'KHÔNG HỢP LỆ'):
-            cap_nhat.cai(khoa_la)
-        # sửa cap_nhat.json (mã sha256 mới cho file đã sửa) mà không có khóa bí mật: chữ ký sai
+    def test_khong_chu_ky_so(self):
+        """Không còn chữ ký số (người dùng yêu cầu bỏ hẳn từ 0.9.16): gói mới không có cap_nhat.sig; gói cũ có cap_nhat.sig
+        (0.9.14, 0.9.15) vẫn đọc / cài / nạp được - file chữ ký bị bỏ qua; gói bị sửa mã vẫn bị từ chối (SHA-256)."""
         p = self._goi()
-        gia = self.td / 'gia.pabtcn'
-        with zipfile.ZipFile(p) as z, zipfile.ZipFile(gia, 'w') as w:
-            for i in z.infolist():
-                du = z.read(i)
-                w.writestr(i, du.replace(b'"th\xe1\xbb\xad"', b'"gia"') if i.filename == 'cap_nhat.json' else du)
-        with self.assertRaisesRegex(cap_nhat.LoiCapNhat, 'KHÔNG HỢP LỆ'):
-            cap_nhat.cai(gia)
-        self.assertIsNone(cap_nhat.trang_thai()['da_cai'])
-
-    def test_khong_khoa_ky(self):
-        """Bản thử nghiệm (KHOA_CONG_KHAI rỗng): gói tạo không cần khóa bí mật, không ký; cài và nạp được (kiểm tra SHA-256);
-        file bị sửa vẫn bị từ chối."""
-        an_toan.KHOA_CONG_KHAI = {}
-        with mock.patch.object(an_toan, 'doc_khoa_bi_mat', return_value=KHOA_THU):     # máy dựng còn khóa cũ: vẫn không ký
-            p = self.td / 'khong_ky.pabtcn'
-            cap_nhat.tao_goi(_ma_nguon(self.td / 'kk', '9.9.9'), p, 'thử')
         with zipfile.ZipFile(p) as z:
-            self.assertNotIn(cap_nhat.FILE_CHU_KY, z.namelist())
-        cap_nhat.cai(p)
+            self.assertNotIn('cap_nhat.sig', z.namelist())
+        cu = self.td / 'goi_cu_co_chu_ky.pabtcn'
+        with zipfile.ZipFile(p) as z, zipfile.ZipFile(cu, 'w') as w:
+            for i in z.infolist():
+                w.writestr(i, z.read(i))
+            w.writestr('cap_nhat.sig', 'ab' * 384)
+        cap_nhat.cai(cu)
         self.assertEqual(cap_nhat.trang_thai()['da_cai'], '9.9.9')
-        ma = 'import pabt.an_toan as _a; _a.KHOA_CONG_KHAI = {}; import nap_cap_nhat as n; n.nap(bat_buoc=True); import pabt; ' \
-             'print(pabt.__version__)'
-        r = subprocess.run([sys.executable, '-c', ma], cwd=GOC, capture_output=True, text=True, encoding='utf-8',
-                           env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen'}, timeout=120)
-        self.assertEqual(r.stdout.strip(), '9.9.9', r.stderr)
+        self.assertEqual(self._chay('import nap_cap_nhat as n; n.nap(bat_buoc=True); import pabt; print(pabt.__version__)'),
+                         '9.9.9')
         cap_nhat.go()
-        hong = self.td / 'hong_kk.pabtcn'
+        hong = self.td / 'hong_ma.pabtcn'
         with zipfile.ZipFile(p) as z, zipfile.ZipFile(hong, 'w') as w:
             for i in z.infolist():
                 du = z.read(i)
                 w.writestr(i, du + b'#' if i.filename == 'pabt/tien.py' else du)
         with self.assertRaisesRegex(cap_nhat.LoiCapNhat, 'bị hỏng'):
             cap_nhat.cai(hong)
+        self.assertIsNone(cap_nhat.trang_thai()['da_cai'])
 
     def test_ban_da_cai_bi_sua_khong_nap(self):
         """Mã độc sửa / chèn file vào bản cập nhật đã cài (thư mục %APPDATA%): bộ nạp kiểm tra lại, không chạy mã đó."""

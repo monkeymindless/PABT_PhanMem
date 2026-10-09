@@ -4,7 +4,7 @@ r"""Phân tích một phiên bản PABT (chạy MỖI LẦN sửa phiên bản),
                                               [--du-an <file .pabt thật, chỉ đọc - chạy trên bản sao>] [--lan 3]
   Hoặc bấm đúp PHAN_TICH_PHIEN_BAN.bat (tự so với gói .pabtcn mới nhất trong bo_cai\ khác phiên bản mã nguồn).
 
-Mỗi phiên bản chạy trong tiến trình riêng (gói .pabtcn: kiểm tra chữ ký, giải nén ra thư mục tạm), cùng một kịch bản:
+Mỗi phiên bản chạy trong tiến trình riêng (gói .pabtcn: kiểm tra mã SHA-256, giải nén ra thư mục tạm), cùng một kịch bản:
   - TỐC ĐỘ: nạp mã lúc mở phần mềm, khởi động tới cửa sổ, mở dự án thật / dự án giả lập N hộ, mở cửa sổ lập phương án, lưu 1
     hộ + tải lại danh sách, đối chiếu, bảng tổng hợp, đóng dự án / cửa sổ, lệnh dòng lệnh doi-chieu; thư viện nặng (openpyxl)
     có bị nạp lúc mở hay không. Mỗi phép đo lấy trung vị --lan lần.
@@ -122,7 +122,7 @@ MAU_LAP = [('Bỏ dấu tiếng Việt (normalize NFD)', r"normalize\('NFD'"), (
 
 
 def tra(goc: Path, so_sanh: str, tam: Path) -> Path:
-    """Thư mục mã của phiên bản so sánh: thư mục có pabt/, hoặc gói .pabtcn (kiểm tra chữ ký, giải nén)."""
+    """Thư mục mã của phiên bản so sánh: thư mục có pabt/, hoặc gói .pabtcn (kiểm tra mã SHA-256, giải nén)."""
     p = Path(so_sanh)
     if p.is_dir():
         return p

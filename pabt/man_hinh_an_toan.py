@@ -1,4 +1,4 @@
-"""Màn hình "Kiểm tra an toàn": phần mềm diệt virus của máy, quét file, kết nối HTTPS, toàn vẹn bản cài, chữ ký gói cập nhật
+"""Màn hình "Kiểm tra an toàn": phần mềm diệt virus của máy, quét file, kết nối HTTPS, toàn vẹn bản cài, gói cập nhật
 (pabt/an_toan.py); quét một file bất kỳ trước khi mở."""
 from __future__ import annotations
 
@@ -22,12 +22,9 @@ class HopAnToan(QDialog):
         self.resize(1050, 470)
         self.thong_bao_cuoi = ''
         lo = QVBoxLayout(self)
-        goi = ('gói cập nhật phải có chữ ký số của nhà phát triển' if an_toan.KHOA_CONG_KHAI else
-               'gói cập nhật (bản thử nghiệm, không chữ ký số) được kiểm tra mã từng file - chỉ cài gói nhận trực tiếp từ người '
-               'phát triển')
         gt = QLabel('PABT bảo vệ dữ liệu ở những chỗ nhận dữ liệu từ bên ngoài: file tải từ web, gói cập nhật, file Word / Excel cũ '
                     'được quét bằng phần mềm diệt virus của máy trước khi mở; kết nối mạng chỉ chấp nhận chứng chỉ hợp lệ; '
-                    f'{goi}. PABT không thay thế phần mềm diệt virus: hãy giữ Microsoft '
+                    'gói cập nhật được kiểm tra mã từng file. PABT không thay thế phần mềm diệt virus: hãy giữ Microsoft '
                     'Defender (hoặc phần mềm diệt virus khác) luôn bật và cập nhật.')
         gt.setWordWrap(True)
         lo.addWidget(gt)

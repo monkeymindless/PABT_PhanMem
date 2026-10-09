@@ -6,20 +6,15 @@ PABT không phải phần mềm diệt virus: việc phát hiện mã độc nh�
   - ngu_canh_tls: kết nối HTTPS bắt buộc kiểm tra chứng chỉ, TLS >= 1.2 (chặn chứng chỉ giả / hết hạn / tự ký);
   - kiem_tra_zip / kiem_tra_xml: chặn file nén "bom" (giải nén ra hàng GB) và XML có thực thể (tấn công "billion laughs");
   - toàn vẹn bản cài: toan_ven.json (SHA-256 mọi file, tạo khi dựng) -> phát hiện file bị sửa / DLL, EXE lạ chèn vào thư mục cài;
-  - chữ ký số RSA-3072 (PKCS#1 v1.5, SHA-256) cho gói cập nhật .pabtcn khi có KHOA_CONG_KHAI: chỉ cài gói do nhà phát triển
-    ký (khóa bí mật chỉ nằm trên máy dựng, %LOCALAPPDATA%\\PABT_dev\\khoa_ky_cap_nhat.json - tao_khoa_ky.py). Bản thử nghiệm
-    0.9.16 không có khóa: gói không ký;
   - tinh_trang_diet_virus: phần mềm diệt virus của máy (Trung tâm bảo mật Windows) có bật, có cập nhật không.
 Chỉ dùng thư viện chuẩn (chạy cả Python 3.8 bản Windows 7/8).
 """
 from __future__ import annotations
 import ctypes
 import hashlib
-import hmac
 import json
 import os
 import re
-import secrets
 import ssl
 import subprocess
 import sys
@@ -29,10 +24,6 @@ from pathlib import Path
 
 TEN_TOAN_VEN = 'toan_ven.json'
 DUOI_THUC_THI = ('.exe', '.dll', '.pyd', '.ocx', '.cpl', '.scr', '.com', '.bat', '.cmd', '.ps1', '.vbs', '.js')
-# khóa công khai kiểm tra chữ ký gói cập nhật (tao_khoa_ky.py); rỗng = chưa có khóa: gói không chữ ký vẫn cài được.
-# 0.9.16 BẢN THỬ NGHIỆM: người dùng yêu cầu xóa khóa ký - gói .pabtcn không ký, chỉ kiểm tra SHA-256 từng file, file nén an
-# toàn, quét virus. Bản chính thức muốn ký lại: tạo khóa (tao_khoa_ky.py) rồi dán khóa công khai vào đây (khóa cũ: git ac0e8ac).
-KHOA_CONG_KHAI: dict = {}
 _KHONG_CUA_SO = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 
 
@@ -256,96 +247,6 @@ def mo_ta_toan_ven(kq: dict) -> tuple:
     return False, 'CẢNH BÁO: ' + '; '.join(phan) + '. Quét virus toàn máy rồi cài lại PABT bằng bộ cài chính thức.'
 
 
-# ---------------------------------------------------------------- chữ ký số RSA (gói cập nhật .pabtcn)
-_DIGEST_SHA256 = bytes.fromhex('3031300d060960864801650304020105000420')
-_SO_NGUYEN_TO_NHO = [p for p in range(3, 2000, 2) if all(p % q for q in range(3, int(p ** 0.5) + 1, 2))]
-
-
-def _la_so_nguyen_to(n: int, vong: int = 40) -> bool:
-    if n < 2:
-        return False
-    for p in _SO_NGUYEN_TO_NHO:
-        if n % p == 0:
-            return n == p
-    d, s = n - 1, 0
-    while d % 2 == 0:
-        d, s = d // 2, s + 1
-    for _ in range(vong):
-        a = 2 + secrets.randbelow(n - 3)
-        x = pow(a, d, n)
-        if x in (1, n - 1):
-            continue
-        for _ in range(s - 1):
-            x = pow(x, 2, n)
-            if x == n - 1:
-                break
-        else:
-            return False
-    return True
-
-
-def _so_nguyen_to(bit: int, e: int) -> int:
-    while True:
-        p = secrets.randbits(bit) | (3 << (bit - 2)) | 1
-        if p % e != 1 and _la_so_nguyen_to(p):
-            return p
-
-
-def tao_khoa(bit: int = 3072) -> dict:
-    """Cặp khóa RSA: dict(n, e, d) (số dạng hex). Chỉ dùng trên máy dựng (tao_khoa_ky.py)."""
-    e = 65537
-    while True:
-        p, q = _so_nguyen_to(bit // 2, e), _so_nguyen_to(bit - bit // 2, e)
-        n = p * q
-        if p != q and n.bit_length() == bit:
-            break
-    import math
-    lam = (p - 1) * (q - 1) // math.gcd(p - 1, q - 1)
-    return dict(n=format(n, 'x'), e=e, d=format(pow(e, -1, lam), 'x'))
-
-
-def _ma_hoa_pkcs1(du: bytes, k: int) -> bytes:
-    t = _DIGEST_SHA256 + hashlib.sha256(du).digest()
-    if k < len(t) + 11:
-        raise LoiAnToan('Khóa RSA quá ngắn.')
-    return b'\x00\x01' + b'\xff' * (k - len(t) - 3) + b'\x00' + t
-
-
-def ky(du: bytes, khoa: dict) -> str:
-    """Chữ ký RSA PKCS#1 v1.5 / SHA-256 của du (hex)."""
-    n, d = int(khoa['n'], 16), int(khoa['d'], 16)
-    k = (n.bit_length() + 7) // 8
-    s = pow(int.from_bytes(_ma_hoa_pkcs1(du, k), 'big'), d, n)
-    return s.to_bytes(k, 'big').hex()
-
-
-def xac_minh(du: bytes, chu_ky: str, khoa: dict | None = None) -> bool:
-    """Kiểm tra chữ ký: so TOÀN BỘ khối giải mã với khối mong đợi (không tách từng phần - tránh giả mạo chữ ký kiểu
-    Bleichenbacher)."""
-    khoa = KHOA_CONG_KHAI if khoa is None else khoa
-    try:
-        n, e = int(khoa['n'], 16), int(khoa['e'])
-        s = int(chu_ky.strip(), 16)
-    except (KeyError, TypeError, ValueError):
-        return False
-    k = (n.bit_length() + 7) // 8
-    if not 0 < s < n or len(chu_ky.strip()) != 2 * k:
-        return False
-    return hmac.compare_digest(pow(s, e, n).to_bytes(k, 'big'), _ma_hoa_pkcs1(du, k))
-
-
-def file_khoa_bi_mat() -> Path:
-    return Path(os.environ.get('LOCALAPPDATA') or Path.home()) / 'PABT_dev' / 'khoa_ky_cap_nhat.json'
-
-
-def doc_khoa_bi_mat() -> dict | None:
-    try:
-        k = json.loads(file_khoa_bi_mat().read_text(encoding='utf-8'))
-        return k if k.get('d') else None
-    except (OSError, ValueError):
-        return None
-
-
 # ---------------------------------------------------------------- phần mềm diệt virus của máy
 def tinh_trang_diet_virus() -> list:
     """[(tên, đang bật, đã cập nhật)] theo Trung tâm bảo mật Windows (root/SecurityCenter2, Windows 7 - 11 bản máy trạm)."""
@@ -391,8 +292,6 @@ def tong_quan() -> list:
     kq.append(('File nén, XML', True, 'Chặn "bom nén", đường dẫn vượt thư mục, XML có DOCTYPE / ENTITY.'))
     dat, mt = mo_ta_toan_ven(kiem_tra_toan_ven())
     kq.append(('Toàn vẹn bản cài đặt', dat, mt))
-    kq.append(('Gói cập nhật (.pabtcn)', bool(KHOA_CONG_KHAI) or None,
-               'Bắt buộc chữ ký số RSA-3072 của nhà phát triển.' if KHOA_CONG_KHAI else
-               'Bản thử nghiệm, không có khóa ký: gói cập nhật chỉ được kiểm tra mã SHA-256 từng file và quét virus - chỉ cài '
-               'gói nhận trực tiếp từ người phát triển.'))
+    kq.append(('Gói cập nhật (.pabtcn)', None, 'Kiểm tra mã SHA-256 từng file (gói hỏng / bị sửa dở thì không cài) và quét virus '
+               'trước khi cài - chỉ cài gói nhận trực tiếp từ người phát triển.'))
     return kq
