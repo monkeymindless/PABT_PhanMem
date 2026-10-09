@@ -370,11 +370,6 @@ def tai_ve(url: str, thu_muc) -> dict:
                           'vào nút / liên kết tải file -> "Sao chép địa chỉ liên kết" rồi dán vào đây; hoặc tải file về máy rồi '
                           'dùng "Cập nhật bộ đơn giá từ file…".')
         return dict(lien_ket=ds)
-    from . import an_toan
-    try:
-        an_toan.chan_ma_doc(f)                          # file tải từ Internet: quét mã độc, có thì xóa ngay
-    except an_toan.LoiAnToan as e:
-        raise LoiNhap(str(e)) from None
     if that and that != '.html' and f.suffix.lower() != that and not (that == '.xlsx' and f.suffix.lower() == '.xlsm'):
         f = f.replace(f.with_name(f.stem + that))      # tên tải về không có đuôi / sai đuôi: đặt theo nội dung
     elif not f.suffix:

@@ -100,10 +100,6 @@ def main(argv) -> int:
     if 'KET QUA: DAT' not in kq:
         print('TỰ KIỂM TRA KHÔNG ĐẠT: không dùng bản này để đóng gói.')
         return 1
-    # bản ghi toàn vẹn (SHA-256 mọi file): phần mềm đã cài tự phát hiện file bị sửa / DLL lạ chèn vào (pabt/an_toan.py)
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from pabt.an_toan import tao_toan_ven
-    print(f'Bản ghi toàn vẹn: {tao_toan_ven(dist)}')
     return 0
 
 

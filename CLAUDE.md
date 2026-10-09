@@ -190,13 +190,11 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `dung_exe38.LOAI_TRU_WEB`) `--exclude-module` hai module này + `--hidden-import html.parser urllib.request difflib`; bộ cài
   0.9.13 = gốc, gói 0.9.14 thêm web (`man_hinh_don_gia.cap_nhat_web` ImportError -> hướng dẫn cài gói). Đừng import
   `cap_nhat_web` từ module khác của bộ cài gốc.
-- An toàn (`an_toan.py`, 0.9.13): `quet_file`/`chan_ma_doc` (MpCmdRun đường dẫn tuyệt đối, đọc báo cáo "found N threats" - mã 2
-  dùng chung cho lỗi; rồi AMSI ctypes) ở `cap_nhat_web.tai_ve`, `nhap_don_gia.chuyen_office`, `cap_nhat.cai`; `ngu_canh_tls`
-  (mọi urlopen); `kiem_tra_zip`/`kiem_tra_xml`; `toan_ven.json` (rut_gon.py ghi sau tu-kiem) -> `kiem_tra_toan_ven` (app nền +
-  tu-kiem "An toàn"); gói cập nhật: `doc_goi`/`cai` kiểm tra SHA-256 từng file + zip an toàn + quét virus;
-  `nap_cap_nhat._kiem_ban` kiểm lại SHA-256 + file lạ, xóa `__pycache__`, `dont_write_bytecode`. KHÔNG có chữ ký số (xem 0.9.16
-  BẢN THỬ NGHIỆM). Màn hình `man_hinh_an_toan.HopAnToan`.
-  VBS Word/Excel: `AutomationSecurity = 3` (tắt macro).
+- An toàn (`an_toan.py`, gọn từ 0.9.16 - người dùng bỏ màn hình "Kiểm tra an toàn", quét virus chủ động MpCmdRun / AMSI,
+  toàn vẹn bản cài `toan_ven.json`, chữ ký số; ĐỪNG thêm lại): chỉ còn `ngu_canh_tls` (mọi urlopen), `kiem_tra_zip` /
+  `kiem_tra_xml`, `LoiAnToan`. Gói cập nhật: `doc_goi`/`cai` kiểm tra SHA-256 từng file + zip; `nap_cap_nhat._kiem_ban` kiểm
+  lại SHA-256 + file lạ, xóa `__pycache__`, `dont_write_bytecode`. tu-kiem bước "HTTPS". VBS Word/Excel: `AutomationSecurity = 3`
+  (tắt macro - BẮT BUỘC giữ: Office tự động hóa mặc định cho chạy macro).
 - In hàng loạt: `in_an.chay_excel(bao=)` Popen + VBS in "XONG\t<i>" mỗi file, file cờ dừng (đối số 2); canh giờ từng file
   `CHO_MOI_FILE` (+`CHO_KHOI_DONG` file đầu) -> `_tat_excel_tu_dong` (EXCEL.EXE -Embedding khởi động sau mốc); lỗi `DA_DUNG` /
   `LOI_TREO`. `xuat_hang_loat(bao_tien_do -> True = dừng, bao_excel)`; `HopIn.thuc_hien` QProgressDialog nút Dừng.
@@ -273,7 +271,12 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   CHỮ KÝ SỐ ĐÃ BỎ HẲN (người dùng yêu cầu "bỏ sạch hoàn toàn các lệnh chữ ký, bản vá cập nhật không check chữ ký"): không
   còn khóa, `ky`/`xac_minh`/`tao_khoa`, `tao_khoa_ky.py`, `cap_nhat.sig` (gói cũ có file này: bỏ qua). Đừng thêm lại chữ ký.
   Bản cài 0.9.13-0.9.15 (mã cũ đòi chữ ký) TỪ CHỐI gói mới -> cài bộ cài 0.9.16 một lần. Test: `test_cap_nhat.test_khong_chu_ky_so`,
-  `test_an_toan.TestKhongChuKy`. Chữ ký số trên PDF quyết định (`pdf_bang.chu_chu_ky`/`dien_so_ky`) là tính năng ĐỌC văn bản - giữ.
+  `test_an_toan.TestDaBo`. Chữ ký số trên PDF quyết định (`pdf_bang.chu_chu_ky`/`dien_so_ky`) là tính năng ĐỌC văn bản - giữ.
+- Xóa hộ trên danh sách (0.9.16): lệnh `Xóa hộ…` (`CuaSoChinh.xoa_ho(ds_ma_ho=, xac_nhan=)`, menu trái nhóm Hồ sơ và
+  phương án, chuột phải `_menu_ho`, phím Delete = QShortcut WidgetShortcut trên `self.bang`; tắt khi chỉ xem) -> hộ đang chọn
+  (`ho_da_chon`) -> `ho_so.thong_tin_xoa` (số thửa, dòng PA, QĐ, đã nhận tiền - hiện trong hộp hỏi, tối đa `XOA_HIEN_TOI_DA` dòng)
+  -> `ho_so.xoa_nhieu_ho` (một giao dịch = một bước Hoàn tác, `_danh_lai` một lần; `xoa_ho` gọi lại hàm này). Test:
+  `test_ho_so.TestManHinhHoSo.test_xoa_nhieu_ho_tren_danh_sach`.
 - Dựng trong Git Bash: PATH có `C:\Program Files\Git\mingw64\bin` -> PyInstaller từng kéo nhầm `libssl-3-x64.dll` /
   `libcrypto-3-x64.dll` của Git (+6,5 MB); `PABT.spec` lọc bỏ binary từ thư mục git / mingw64 / msys64.
 - Git (từ 09/10/2026): repo cục bộ ở thư mục dự án, `.gitignore` loại `.venv`, sản phẩm dựng, `*.pabt*`, `*.xlsm`, `du_lieu/`,

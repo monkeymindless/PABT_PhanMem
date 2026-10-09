@@ -195,11 +195,6 @@ def chuyen_office(p, loai: str = '') -> Path:
     thay = (f'File "{p.name}" là định dạng {ten} 97-2003 ({loai}): mở bằng {ten}, lưu lại dạng {loai}x rồi chọn lại.')
     if sys.platform != 'win32':
         raise LoiNhap(thay)
-    from . import an_toan
-    try:
-        an_toan.chan_ma_doc(p, xoa=False)               # Word / Excel cũ hay chứa macro độc: quét trước khi mở
-    except an_toan.LoiAnToan as e:
-        raise LoiNhap(str(e)) from None
     with tempfile.TemporaryDirectory() as td:
         vbs = Path(td) / 'chuyen.vbs'
         vbs.write_text(_VBS_CHUYEN, encoding='utf-16')

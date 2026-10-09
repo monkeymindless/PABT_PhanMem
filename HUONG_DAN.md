@@ -2,9 +2,14 @@
 
 > **0.9.16 – BẢN THỬ NGHIỆM** (nhãn vàng "BẢN THỬ NGHIỆM" trên băng tiêu đề, tiêu đề cửa sổ, hộp Giới thiệu): dùng để kiểm tra
 > trước khi phát hành chính thức. **Bỏ hẳn chữ ký số**: gói cập nhật `.pabtcn` không ký, phần mềm và bản vá cập nhật không
-> kiểm tra chữ ký nữa - gói chỉ được kiểm tra mã SHA-256 từng file (gói hỏng / tải dở thì không cài) và quét virus; chỉ cài gói
-> nhận trực tiếp từ người phát triển. Máy đang dùng 0.9.13 – 0.9.15 (bản cũ còn đòi chữ ký) **không cài được** gói mới: cài bộ
+> kiểm tra chữ ký nữa - gói chỉ được kiểm tra mã SHA-256 từng file (gói hỏng / tải dở thì không cài); chỉ cài gói nhận trực
+> tiếp từ người phát triển. Máy đang dùng 0.9.13 – 0.9.15 (bản cũ còn đòi chữ ký) **không cài được** gói mới: cài bộ
 > cài 0.9.16 một lần (dự án, cài đặt, mẫu in trong `%APPDATA%\PABT` giữ nguyên); từ đó các gói sau cài bình thường.
+> **Bỏ màn hình "Kiểm tra an toàn"** (nút góc dưới bên phải) cùng việc phần mềm tự quét virus và kiểm tra toàn vẹn file cài mỗi
+> lần mở - trùng với Microsoft Defender của máy (Defender vẫn tự quét file khi tải về / mở). Vẫn giữ: tắt macro khi phần mềm mở
+> file bằng Word / Excel, HTTPS kiểm tra chứng chỉ, chặn file nén / XML độc. **Xóa hộ ngay trên danh sách**: chọn một hoặc nhiều
+> hộ (giữ Ctrl / Shift) rồi bấm **Xóa hộ…** ở menu trái (nhóm Hồ sơ và phương án), chuột phải, hoặc phím **Delete**; hỏi lại trước
+> khi xóa (nêu số thửa, dòng phương án, hộ đã có quyết định); xóa nhầm bấm **Hoàn tác** (Ctrl+Z) lấy lại.
 >
 > **0.9.16** - **Trình phê duyệt**: cửa sổ **Đợt trình…** có thêm văn bản trình (Tờ trình / Văn bản: số, ngày), **số / ngày
 > phương án tổng** (tự in vào dòng "Đính kèm Phương án số …" và ngày ký của bảng tổng hợp), **số PA chi tiết từng hộ** (nút
@@ -162,12 +167,9 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
   chính sách không có bảng giá: chỉ ghi vào danh mục văn bản căn cứ để theo dõi — phần mềm **không tự đổi quy tắc tính**; các câu
   "Sửa đổi / Bãi bỏ …" trong văn bản được liệt kê để tự xử lý. Đường dẫn kết thúc `.json` là thông báo cập nhật của đơn vị quản lý
   (`phien_ban`, `tai_ve`, `sha256`): tải, kiểm tra mã SHA-256 rồi cài. Luôn xem bảng trước khi áp dụng.
-- **Kiểm tra an toàn** (góc dưới bên phải): tình trạng phần mềm diệt virus của máy, bộ quét file, toàn vẹn file cài đặt (phát
-  hiện file bị sửa / DLL lạ chèn vào), gói cập nhật; nút **Quét một file…** quét file nhận qua Zalo / email / USB trước
-  khi mở. PABT tự quét file tải từ web, gói cập nhật, file Word / Excel cũ (Microsoft Defender hoặc phần mềm diệt virus có AMSI)
-  — có mã độc thì chặn / xóa; Word / Excel tự động hóa luôn tắt macro; kết nối mạng chỉ chấp nhận chứng chỉ HTTPS hợp lệ (TLS
-  1.2+); gói cập nhật sai mã SHA-256 (hỏng, bị sửa) bị từ chối (từ 0.9.16 không dùng chữ ký số). PABT không thay phần mềm
-  diệt virus: giữ Defender luôn bật, cập nhật.
+- **An toàn khi nhận file từ ngoài** (từ 0.9.16 không còn màn hình riêng): Word / Excel do PABT tự mở luôn tắt macro; kết nối
+  mạng chỉ chấp nhận chứng chỉ HTTPS hợp lệ (TLS 1.2+); file nén / XML độc bị chặn; gói cập nhật sai mã SHA-256 (hỏng, bị sửa)
+  bị từ chối. Quét virus do Microsoft Defender của máy đảm nhận: giữ Defender luôn bật, cập nhật.
 - **Tra cứu văn bản mới…**: mở Công báo Đồng Nai, trang góp ý dự thảo, Thư viện pháp luật để theo dõi quyết định mới.
 - **Áp bộ đơn giá vào dự án đang mở**: dự án đã lập không tự đổi giá; chọn lệnh này khi muốn dùng bộ mới (dòng đã lập giữ giá cũ —
   dùng Rà soát giá để kiểm tra).
@@ -190,7 +192,7 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
 `pabt/to_chuc.py`; tên đơn vị, ký hiệu số phương án cũng được điền sẵn khi lập dự án mới). Màn hình Dự án mới có băng tổ chức tương tự.
 
 Ngay dưới băng tiêu đề là **khu vực nút lệnh** gom trong một khung trắng (đổ bóng nhẹ), chia 5 thẻ nhóm có tên nhóm chữ nhỏ phía trên; nút nền nhạt theo màu nhóm, biểu tượng trên – chữ dưới, dàn kín chiều ngang (thường 2 dòng khi cửa sổ phóng to): **Dự án** (Dự án mới, Mở dự án,
-Lưu dự án thành, Nhập file Excel, Thông tin dự án), **Hồ sơ và phương án** (Hồ sơ hộ, Thêm hộ, Lập phương án hộ, Kiểm tra lỗi),
+Lưu dự án thành, Nhập file Excel, Thông tin dự án), **Hồ sơ và phương án** (Hồ sơ hộ, Thêm hộ, Xóa hộ, Lập phương án hộ, Kiểm tra lỗi),
 **Đơn giá, dự toán** (Bộ đơn giá, Rà soát giá, Quy chuẩn cây, tài sản, Dự toán, áp giá dự thảo), **Trình, theo dõi tiến độ** (Đợt
 trình, Trạng thái hộ, Nhập quyết định), **In ấn, báo cáo** (In / Xuất, Báo cáo tổng hợp, Xuất báo cáo đối chiếu, Cập nhật mẫu in).
 Nút **Cập nhật phần mềm** và **Giới thiệu** nằm ở **góc dưới bên phải** cửa sổ, trên dòng trạng thái.
@@ -245,7 +247,8 @@ Chọn một hộ rồi bấm **Hồ sơ hộ…** (hoặc **Thêm hộ…** đ�
 - **Chuyển thửa sang hộ khác…**: chuyển thửa cùng các dòng bồi thường đất gắn với thửa.
 - **Gộp hộ khác vào hộ này…**: dùng khi một người bị tách thành hai hộ (cùng tên khác địa chỉ…); danh sách chọn đưa hộ
   cùng họ tên lên đầu (★). Thửa, phương án của hộ kia chuyển sang, ô còn trống được điền từ hộ kia, hộ kia bị xóa.
-- **Xóa hộ…**: xóa hộ cùng thửa và phương án (hỏi lại, không hoàn tác).
+- **Xóa hộ…**: xóa hộ cùng thửa và phương án (hỏi lại; xóa nhầm bấm **Hoàn tác** - Ctrl+Z - ở cửa sổ chính). Xóa nhiều hộ
+  một lần: chọn trên danh sách hộ (giữ Ctrl / Shift) rồi **Xóa hộ…** ở menu trái, chuột phải, hoặc phím **Delete**.
 - **Lưu**: ghi cả hộ trong một lần, có nhật ký; phần mềm báo nếu thửa của hộ cũng có ở hộ khác.
 
 ## Nhiều máy cùng dùng một file dự án (giai đoạn 4)

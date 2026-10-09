@@ -1,5 +1,6 @@
 """Cửa sổ chính phần mềm PABT: nhập file Excel, danh sách hộ, lập phương án từng hộ, thông tin dự án, rà soát giá, đối chiếu."""
 from __future__ import annotations
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -197,13 +198,14 @@ class CuaSoChinh(QMainWindow):
                          ('Nhập file Excel…', lambda: self.nhap_excel()), ('Mở dự án…', self.mo_du_an),
                          ('Nhập phương án chi tiết…', lambda: self.nhap_chi_tiet()),
                          ('Hồ sơ hộ…', lambda: self.mo_ho_so()), ('Thêm hộ…', lambda: self.mo_ho_so(moi=True)),
+                         ('Xóa hộ…', lambda: self.xoa_ho()),
                          ('Lập phương án hộ…', lambda: self.mo_lap_pa()), ('Thông tin dự án…', lambda: self.sua_du_an()),
                          ('Rà soát giá…', lambda: self.ra_soat_gia()), ('In / Xuất…', lambda: self.in_xuat()),
                          ('Cập nhật mẫu in…', lambda: self.cap_nhat_mau_in()),
                          ('Bộ đơn giá…', lambda: self.bo_don_gia()),
                          ('Đơn giá riêng dự án…', lambda: self.don_gia_rieng()),
                          ('Xuất báo cáo đối chiếu…', self.xuat_bao_cao), ('Cập nhật phần mềm…', lambda: self.cap_nhat_phan_mem()),
-                         ('Giới thiệu', self.gioi_thieu), ('Kiểm tra an toàn…', lambda: self.kiem_tra_an_toan()),
+                         ('Giới thiệu', self.gioi_thieu),
                          ('Lưu dự án thành…', lambda: self.luu_du_an_thanh()), ('Đợt trình…', lambda: self.dot_trinh()),
                          ('Trạng thái hộ…', lambda: self.trang_thai_ho()), ('Nhập quyết định…', lambda: self.nhap_quyet_dinh()),
                          ('Báo cáo tổng hợp…', lambda: self.bao_cao_tong_hop()), ('Kiểm tra lỗi…', lambda: self.kiem_tra_loi()),
@@ -252,6 +254,10 @@ class CuaSoChinh(QMainWindow):
         self.bang.doubleClicked.connect(lambda idx: self._chay_lenh(lambda: self.mo_chi_tiet(idx)))
         self.bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.bang.customContextMenuRequested.connect(lambda p: self._menu_ho(self.bang, p))
+        from PySide6.QtGui import QKeySequence, QShortcut
+        phim_xoa = QShortcut(QKeySequence(QKeySequence.StandardKey.Delete), self.bang)    # phím Delete trên danh sách hộ
+        phim_xoa.setContext(Qt.ShortcutContext.WidgetShortcut)                            # (không áp khi đang sửa ô ghi chú)
+        phim_xoa.activated.connect(lambda: self.lenh['Xóa hộ…'].isEnabled() and self._chay_lenh(self.xoa_ho))
         self._vua_tieu_de()
         # trang bên phải: danh sách hộ / bảng tổng hợp (3 mục) / theo dõi tiến độ - chọn ở menu trái
         from .man_hinh_theo_doi import KhungBangTongHop, KhungTienDo
@@ -277,7 +283,7 @@ class CuaSoChinh(QMainWindow):
         nhom = [
             ('Dự án', [L['Dự án mới…'], L['Mở dự án…'], L['Lưu dự án thành…'], L['Nhập file Excel…'],
                        L['Nhập phương án chi tiết…'], L['Thông tin dự án…'], L['Dự án trên máy chủ…']]),
-            ('Hồ sơ và phương án', [L['Lập phương án hộ…'], L['Thêm hộ…'], L['Kiểm tra lỗi…']]),
+            ('Hồ sơ và phương án', [L['Lập phương án hộ…'], L['Thêm hộ…'], L['Xóa hộ…'], L['Kiểm tra lỗi…']]),
             ('Đơn giá, dự toán', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Rà soát giá…'],
                                   L['Dự toán, áp giá dự thảo…']]),
             ('Bảng tổng hợp', [L[t] for t in TRANG[:4]]),
@@ -350,7 +356,7 @@ class CuaSoChinh(QMainWindow):
         self.nut_tk.menu().aboutToShow.connect(self._menu_tai_khoan)
         self.statusBar().addPermanentWidget(self.nut_tk)
         self.cap_nhat_tai_khoan()
-        for ten in ('Kiểm tra an toàn…', 'Cập nhật phần mềm…', 'Giới thiệu'):       # góc dưới bên phải cửa sổ
+        for ten in ('Cập nhật phần mềm…', 'Giới thiệu'):                            # góc dưới bên phải cửa sổ
             a = L[ten]
             a.setIconText(a.text().rstrip('…'))
             from .giao_dien import MAU, icon_ky_hieu, ky_hieu_nut, nhom_nut
@@ -530,7 +536,8 @@ class CuaSoChinh(QMainWindow):
             self._cap_nhat_nut_ht()
             self.file = Path(p)
             self.dm = lap_pa.DanhMuc(self.con)
-            for ten in ('Hồ sơ hộ…', 'Thêm hộ…', 'Lập phương án hộ…', 'Thông tin dự án…', 'Trạng thái hộ…', 'Nhập quyết định…'):
+            for ten in ('Hồ sơ hộ…', 'Thêm hộ…', 'Xóa hộ…', 'Lập phương án hộ…', 'Thông tin dự án…', 'Trạng thái hộ…',
+                        'Nhập quyết định…'):
                 self.lenh[ten].setEnabled(not chi_doc)
             self.bang_tong_hop.dat_du_an(self.con, chi_doc)
             self.tien_do.dat_du_an(self.con, chi_doc)
@@ -865,8 +872,11 @@ class CuaSoChinh(QMainWindow):
         m.addAction('Lập phương án / hồ sơ hộ…', lambda: self._chay_lenh(self.mo_lap_pa))
         m.addAction('Xem chi tiết tính tiền…', lambda: self._chay_lenh(self.xem_chi_tiet_tinh))
         m.addSeparator()
-        for ten in ('Trạng thái hộ…', 'Đợt trình…', 'In / Xuất…'):
-            m.addAction(self.lenh[ten])
+        for ten in ('Trạng thái hộ…', 'Đợt trình…', 'In / Xuất…', None, 'Xóa hộ…'):
+            if ten is None:
+                m.addSeparator()
+            else:
+                m.addAction(self.lenh[ten])
         m.exec(view.viewport().mapToGlobal(pos))
         m.deleteLater()
 
@@ -960,6 +970,52 @@ class CuaSoChinh(QMainWindow):
         if w.ho_so.canh_bao:
             self.statusBar().showMessage('Lưu ý: ' + '; '.join(w.ho_so.canh_bao), 15000)
         return w
+
+    XOA_HIEN_TOI_DA = 12           # hộp hỏi xóa: liệt kê tối đa bấy nhiêu hộ (danh sách dài không đẩy nút ra ngoài màn hình)
+
+    def xoa_ho(self, ds_ma_ho=None, xac_nhan=None):
+        """Xóa các hộ đang chọn trong danh sách (giữ Ctrl / Shift để chọn nhiều hộ; phím Delete) cùng thửa, phương án, quyết
+        định / chi trả của hộ. Hoàn tác được (nút Hoàn tác / Ctrl+Z). xac_nhan: bỏ qua câu hỏi (kiểm thử)."""
+        if self.con is None:
+            QMessageBox.information(self, TEN_UD, 'Hãy nhập hoặc mở một dự án trước.')
+            return None
+        if self.chi_doc:
+            return None
+        from . import ho_so
+        ds = ho_so.thong_tin_xoa(self.con, self.ho_da_chon() if ds_ma_ho is None else ds_ma_ho)
+        if not ds:
+            if xac_nhan is None:
+                QMessageBox.information(self, TEN_UD, 'Chọn hộ cần xóa trong danh sách (giữ Ctrl hoặc Shift để chọn nhiều hộ) rồi '
+                                                      'bấm "Xóa hộ…" hoặc phím Delete.')
+            return None
+        if xac_nhan is None:
+            n = self.XOA_HIEN_TOI_DA
+            dong = [f'  {x["thu_tu"]}. {x["ho_ten"]} - {x["so_thua"]} thửa, {x["so_dong_pa"]} dòng phương án'
+                    + (f', {x["so_qd"]} quyết định' if x['so_qd'] else '') + (', ĐÃ NHẬN TIỀN' if x['da_nhan_tien'] else '')
+                    for x in ds[:n]]
+            if len(ds) > n:
+                dong.append(f'  … và {len(ds) - n} hộ khác')
+            qd = sum(1 for x in ds if x['so_qd'])
+            chu = (f'XÓA {len(ds)} hộ khỏi dự án?\n\n' + '\n'.join(dong) +
+                   '\n\nXóa cả thửa đất, phương án' + (', quyết định phê duyệt / chi trả của hộ' if qd else '') + ' của các hộ này.'
+                   + (f'\nCHÚ Ý: {qd} hộ đã có quyết định phê duyệt.' if qd else '') +
+                   '\n\nXóa nhầm: bấm "Hoàn tác" trên băng tiêu đề (Ctrl+Z) để lấy lại.')
+            hop = QMessageBox(QMessageBox.Icon.Warning, TEN_UD, chu,
+                              QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, self)
+            hop.button(QMessageBox.StandardButton.Yes).setText(f'Xóa {len(ds)} hộ')
+            hop.button(QMessageBox.StandardButton.No).setText('Không xóa')
+            hop.setDefaultButton(QMessageBox.StandardButton.No)
+            xac_nhan = hop.exec() == QMessageBox.StandardButton.Yes
+        if not xac_nhan:
+            return None
+        try:
+            tb = ho_so.xoa_nhieu_ho(self.con, [x['ma_ho'] for x in ds])
+        except (lap_pa.LoiNhap, sqlite3.Error) as e:
+            QMessageBox.warning(self, TEN_UD, f'Không xóa được:\n{e}')
+            return None
+        self.tai_lai()
+        self.statusBar().showMessage(tb + '  Xóa nhầm: bấm Hoàn tác (Ctrl+Z).', 20000)
+        return tb
 
     def mo_ho_so(self, ma_ho=None, moi: bool = False, cho: bool = True, ho_ten: str | None = None):
         """Hồ sơ hộ nằm chung cửa sổ với phương án (thẻ "Thông tin hộ, thửa đất"). moi: thêm hộ mới (hỏi họ tên) rồi mở."""
@@ -1284,31 +1340,6 @@ class CuaSoChinh(QMainWindow):
             h.cai_file(file)
         h.exec()
 
-    def kiem_tra_an_toan(self, cho: bool = True):
-        from .man_hinh_an_toan import HopAnToan
-        h = HopAnToan(self)
-        if cho:
-            h.exec()
-        return h
-
-    def kiem_tra_toan_ven_nen(self):
-        """Bản đã cài: kiểm tra toàn vẹn file cài đặt ở luồng nền (không làm chậm khởi động); có bất thường thì cảnh báo."""
-        import threading
-        from . import an_toan
-        if an_toan.thu_muc_cai() is None:
-            return
-        kq = {}
-        threading.Thread(target=lambda: kq.update(an_toan.kiem_tra_toan_ven()), daemon=True).start()
-
-        def xem():
-            if not kq:
-                QTimer.singleShot(1000, xem)
-                return
-            dat, mt = an_toan.mo_ta_toan_ven(kq)
-            if dat is False:
-                QMessageBox.warning(self, TEN_UD, mt + '\n\nXem chi tiết: nút "Kiểm tra an toàn" ở góc dưới bên phải.')
-        QTimer.singleShot(1500, xem)
-
     def gioi_thieu(self):
         from . import to_chuc
         from .cap_nhat import ban_goc
@@ -1493,7 +1524,6 @@ def main() -> int:
         QTimer.singleShot(5000, nap_cap_nhat.khoi_dong_tot)
     except ImportError:
         pass
-    w.kiem_tra_toan_ven_nen()
     if tep and tep[0].lower().endswith('.pabtcn'):                          # nhấp đúp gói cập nhật
         QTimer.singleShot(0, lambda: w.cap_nhat_phan_mem(tep[0]))
     return app.exec()

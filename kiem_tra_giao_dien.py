@@ -6,8 +6,8 @@ ngăn xếp rồi dừng), các thông báo lỗi phần mềm hiện ra.
   .venv\Scripts\python kiem_tra_giao_dien.py [--du-an <file .pabt - chạy trên BẢN SAO>] [--so-ho 12] [--chi "Đợt trình…"]
   Hoặc bấm đúp KIEM_TRA_GIAO_DIEN.bat. Kết quả: ket_qua_kiem_tra\GiaoDien_<phiên bản>_<ngày giờ>.md
 
-An toàn khi chạy: không in ra máy in, không mở Excel / Word, không mở file bằng chương trình khác, không gọi mạng, không quét
-virus, không ghi vào %APPDATA%\PABT thật (PABT_THU_MUC_MAY tạm); hộp chọn file trả "Hủy" (mở) hoặc thư mục tạm (lưu); hộp hỏi
+An toàn khi chạy: không in ra máy in, không mở Excel / Word, không mở file bằng chương trình khác, không gọi mạng,
+không ghi vào %APPDATA%\PABT thật (PABT_THU_MUC_MAY tạm); hộp chọn file trả "Hủy" (mở) hoặc thư mục tạm (lưu); hộp hỏi
 Có / Không trả "Có" để đi sâu - mọi thao tác ghi đều trên bản sao dự án, mỗi lệnh dùng một bản sao mới.
 """
 from __future__ import annotations
@@ -178,7 +178,7 @@ def chan_tac_dong(kt: KiemTra) -> None:
     import urllib.request
     from PySide6.QtGui import QDesktopServices
     from PySide6.QtWidgets import QDialog, QFileDialog, QInputDialog, QMenu, QMessageBox
-    from pabt import an_toan, in_an, van_ban_trinh
+    from pabt import in_an, van_ban_trinh
 
     def hoi(loai):
         def ham(cha, tieu_de='', chu='', *a, **k):
@@ -244,8 +244,6 @@ def chan_tac_dong(kt: KiemTra) -> None:
     in_an.mo_file = lambda p: kt.dem.update(['mo_file'])
     in_an.chay_excel = lambda *a, **k: []            # không mở Excel, không in
     van_ban_trinh.chay_word = lambda *a, **k: []    # không mở Word, không in
-    an_toan.quet_file = lambda p, cho=180: an_toan.KetQuaQuet('sach', 'bỏ qua khi kiểm tra giao diện')
-    an_toan.tinh_trang_diet_virus = lambda: []
 
     def khong_mang(*a, **k):
         raise OSError('Kiểm tra giao diện: không kết nối mạng')

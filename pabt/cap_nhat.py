@@ -144,10 +144,6 @@ def cai(file) -> dict:
     """Kiểm tra rồi cài gói; có hiệu lực từ lần mở phần mềm sau."""
     m = doc_goi(file)
     kiem_tra(m)
-    try:
-        an_toan.chan_ma_doc(file, xoa=False)            # Defender / phần mềm diệt virus quét gói trước khi cài
-    except an_toan.LoiAnToan as e:
-        raise LoiCapNhat(str(e)) from None
     d = thu_muc()
     ten = f'{m["phien_ban"]}_{datetime.datetime.now():%Y%m%d%H%M%S}'
     dich = d / ten

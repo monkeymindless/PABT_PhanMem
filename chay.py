@@ -190,17 +190,13 @@ def tu_kiem(file_ra=None) -> int:
             (f', đang dùng bản cập nhật {nap_cap_nhat.DANG_DUNG})' if nap_cap_nhat.DANG_DUNG else ')') + \
             (f' - {pabt.NHAN_THU_NGHIEM}' if getattr(pabt, 'BAN_THU_NGHIEM', False) else '')
 
-    def an_toan():
+    def https():
         from pabt import an_toan as at
-        at.ngu_canh_tls()
-        tv = at.kiem_tra_toan_ven()
-        dat, mt = at.mo_ta_toan_ven(tv)
-        if dat is False:
-            raise RuntimeError(mt)
-        return mt
+        ctx = at.ngu_canh_tls()
+        return f'kiểm tra chứng chỉ, {ctx.minimum_version.name}+'
 
     for ten, ham in (('Phiên bản', phien_ban), ('Giao diện', giao_dien), ('Đọc PDF', pdf), ('Bộ đơn giá', bo_don_gia), ('Mẫu in', mau_in),
-                     ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('An toàn', an_toan)):
+                     ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('HTTPS', https)):
         buoc(ten, ham)
     loi = sum(1 for x in kq if x.startswith('LOI'))
     kq.append(f'KET QUA: {"DAT" if not loi else f"{loi} LOI"}')

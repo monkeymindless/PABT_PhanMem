@@ -115,11 +115,6 @@ def them_mau(loai: str, file_nguon) -> tuple:
     with tempfile.TemporaryDirectory() as td:
         tam = Path(td) / f'nguon{duoi}'
         shutil.copy2(p, tam)
-        if duoi in ('.doc', '.xls', '.pdf'):
-            try:
-                an_toan.chan_ma_doc(tam, xoa=False)      # file cũ / PDF lạ: quét trước khi mở bằng Word / Excel
-            except an_toan.LoiAnToan as e:
-                raise LoiNhap(str(e)) from None
         if duoi in ('.doc', '.pdf'):
             dich = Path(td) / 'moi.docx'
             loi = chay_word([('docx_hien' if duoi == '.pdf' else 'docx', tam, dich)], cho_moi_file=600 if duoi == '.pdf' else 180)

@@ -221,6 +221,40 @@ class TestManHinhHoSo(CoSo):
         self.assertFalse(k.p.exists())                       # đóng thì nhả khóa
         self.con = csdl.mo(self.p)
 
+    def test_xoa_nhieu_ho_tren_danh_sach(self):
+        """Lệnh "Xóa hộ…" (menu trái, chuột phải, phím Delete): xóa các hộ đang chọn trong một bước, đánh lại STT, tải lại danh
+        sách; hoàn tác lấy lại đủ hộ, thửa; chỉ xem thì tắt lệnh."""
+        from PySide6.QtCore import QItemSelectionModel
+        from pabt import app as ud
+        self.con.close()
+        w = ud.CuaSoChinh(menu_trai=True)
+        self.addCleanup(w.close)
+        w.mo(str(self.p), chi_doc=False)
+        self.assertIn(w.lenh['Xóa hộ…'], [a for a in w.findChildren(ud.QAction)])
+        self.assertIsNone(w.xoa_ho(ds_ma_ho=[], xac_nhan=True))          # chưa chọn hộ: không làm gì
+        thua_dau = w.con.execute('SELECT COUNT(*) FROM thua').fetchone()[0]
+        sm = w.bang.selectionModel()
+        for r in (1, 3):                                                   # chọn dòng 2 và 4 (Ctrl + bấm)
+            sm.select(w.loc.index(r, 0), QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows)
+        chon = w.ho_da_chon()
+        self.assertEqual(len(chon), 2)
+        thong_tin = ho_so.thong_tin_xoa(w.con, chon)
+        tb = w.xoa_ho(xac_nhan=True)
+        self.assertIn('Đã xóa 2 hộ', tb)
+        self.assertEqual(w.mo_hinh.rowCount(), 3)
+        self.assertEqual([r[0] for r in w.con.execute('SELECT thu_tu FROM ho ORDER BY thu_tu')], [1, 2, 3])
+        self.assertEqual(w.con.execute('SELECT COUNT(*) FROM thua').fetchone()[0],
+                         thua_dau - sum(x['so_thua'] for x in thong_tin))
+        w.ht.chot()
+        self.assertIn('Xóa hộ', w.hoan_tac())                             # xóa nhầm: hoàn tác một bước lấy lại cả 2 hộ
+        self.assertEqual(w.mo_hinh.rowCount(), 5)
+        self.assertEqual(w.con.execute('SELECT COUNT(*) FROM thua').fetchone()[0], thua_dau)
+        w.mo(str(self.p), chi_doc=True)
+        self.assertFalse(w.lenh['Xóa hộ…'].isEnabled())
+        self.assertIsNone(w.xoa_ho(ds_ma_ho=[1], xac_nhan=True))
+        w.dong_du_an()
+        self.con = csdl.mo(self.p)
+
 
 if __name__ == '__main__':
     unittest.main()

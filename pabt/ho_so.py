@@ -119,12 +119,43 @@ def _danh_lai(con) -> None:
 
 
 def xoa_ho(con, ma_ho: int) -> str:
-    ho = doc_ho(con, ma_ho)
+    return xoa_nhieu_ho(con, [ma_ho])
+
+
+def thong_tin_xoa(con, ds_ma_ho) -> list:
+    """Hỏi trước khi xóa: [dict(ma_ho, thu_tu, ho_ten, so_thua, so_dong_pa, so_qd, da_nhan_tien)] theo thứ tự hộ trong danh sách
+    (mã không còn trong dự án: bỏ qua)."""
+    kq = []
+    for m in dict.fromkeys(ds_ma_ho):
+        r = con.execute(
+            '''SELECT ma_ho, thu_tu, ho_ten,
+                      (SELECT COUNT(*) FROM thua t WHERE t.ma_ho = h.ma_ho),
+                      (SELECT COUNT(*) FROM ct_dat d WHERE d.ma_ho = h.ma_ho) + (SELECT COUNT(*) FROM ct_khoan k WHERE k.ma_ho = h.ma_ho),
+                      (SELECT COUNT(*) FROM qd_ho q WHERE q.ma_ho = h.ma_ho),
+                      (SELECT COUNT(*) FROM qd_ho q WHERE q.ma_ho = h.ma_ho AND q.da_chi_tra)
+               FROM ho h WHERE ma_ho = ?''', (m,)).fetchone()
+        if r is not None:
+            kq.append(dict(zip(('ma_ho', 'thu_tu', 'ho_ten', 'so_thua', 'so_dong_pa', 'so_qd', 'da_nhan_tien'), r)))
+    return sorted(kq, key=lambda x: (x['thu_tu'] or 0, x['ma_ho']))
+
+
+def xoa_nhieu_ho(con, ds_ma_ho) -> str:
+    """Xóa các hộ cùng thửa, phương án, quyết định / chi trả của hộ (CASCADE) trong MỘT giao dịch - một bước hoàn tác; đánh
+    lại số thứ tự một lần."""
+    ds = thong_tin_xoa(con, ds_ma_ho)
+    if not ds:
+        raise LoiNhap('Không có hộ nào để xóa (hộ đã bị xóa hoặc chưa chọn hộ).')
+    thua, dong = sum(x['so_thua'] for x in ds), sum(x['so_dong_pa'] for x in ds)
     with con:
-        con.execute('DELETE FROM ho WHERE ma_ho = ?', (ma_ho,))              # thửa, phương án xóa theo (CASCADE)
-        con.execute('DELETE FROM tong_excel WHERE ma_ho = ?', (ma_ho,))
+        for x in ds:
+            con.execute('DELETE FROM ho WHERE ma_ho = ?', (x['ma_ho'],))     # thửa, phương án, qd_ho xóa theo (CASCADE)
+            con.execute('DELETE FROM tong_excel WHERE ma_ho = ?', (x['ma_ho'],))
         _danh_lai(con)
-        tb = f'Đã xóa hộ {ma_ho} {ho["ho_ten"]} ({len(ho["thua"])} thửa, {ho["so_dong_pa"]} dòng phương án).'
+        if len(ds) == 1:
+            tb = f'Đã xóa hộ {ds[0]["ma_ho"]} {ds[0]["ho_ten"]} ({thua} thửa, {dong} dòng phương án).'
+        else:
+            ten = ', '.join(f'{x["ma_ho"]} {x["ho_ten"]}' for x in ds[:5]) + (f' và {len(ds) - 5} hộ khác' if len(ds) > 5 else '')
+            tb = f'Đã xóa {len(ds)} hộ ({thua} thửa, {dong} dòng phương án): {ten}.'
         csdl.ghi_nhat_ky(con, 'Xóa hộ', tb)
     return tb
 

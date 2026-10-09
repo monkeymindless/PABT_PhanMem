@@ -39,7 +39,7 @@ LUAT = [
     (r'du an moi|du toan', 'pa'),
     (r'^(dot trinh|trang thai ho|nhap quyet dinh)', 'hoso'),
     (r'kiem tra cap nhat|bo don gia|cap nhat tu trang web|^tu (du an|file|danh sach)|^mo du toan', 'nhap'),
-    (r'tra bang gia|lay gia|tra gia|kiem tra loi|kiem tra lai|kiem tra an toan|quy chuan|tinh mat do', 'tra'),
+    (r'tra bang gia|lay gia|tra gia|kiem tra loi|kiem tra lai|quy chuan|tinh mat do', 'tra'),
     (r'^cap nhat', 'nhap'),
     (r'(^|\W)in(\W|$)|xuat|pdf|bao cao', 'in'),
     (r'^ho so', 'hoso'),
@@ -215,7 +215,6 @@ def bieu_tuong():
 # ---------------------------------------------------------------- biểu tượng nút (ký hiệu Segoe Fluent Icons / MDL2 Assets)
 # (mẫu trên chữ đã bỏ dấu, mã ký hiệu) - xét theo thứ tự; Windows 7 không có các phông này thì nút chỉ hiện chữ
 KY_HIEU = [
-    (r'an toan', 0xEA18),
     (r'^danh sach ho', 0xE716), (r'tong quat ho', 0xE8FD), (r'^quyet dinh phe duyet', 0xE8A5), (r'tong hop tien', 0xE9F9),
     (r'theo doi tien do', 0xE9D2), (r'^bang tong hop', 0xE80A), (r'^hoan tac', 0xE7A7), (r'^lam lai', 0xE7A6),
     (r'du an tren may chu', 0xE839), (r'mang ve lam offline', 0xE896), (r'dua len may chu', 0xE898),

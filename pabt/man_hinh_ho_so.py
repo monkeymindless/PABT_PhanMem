@@ -446,7 +446,8 @@ class KhungHoSo(QWidget):
             ho = ho_so.doc_ho(self.con, self.ma_ho)
             xac_nhan = QMessageBox.warning(
                 self, TEN_UD, f'XÓA hộ {self.ma_ho} - {ho["ho_ten"]} cùng {len(ho["thua"])} thửa và {ho["so_dong_pa"]} dòng phương án?\n'
-                              'Không hoàn tác được.', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                              'Xóa nhầm: bấm "Hoàn tác" (Ctrl+Z) ở cửa sổ chính để lấy lại.',
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes
         if not xac_nhan:
             return None
