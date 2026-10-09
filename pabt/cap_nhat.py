@@ -5,6 +5,7 @@ cap_nhat.sig (RSA-3072 của cap_nhat.json, an_toan.ky) và toàn bộ pabt/*.py
 tao_cap_nhat.py (máy dựng có khóa bí mật - tao_khoa_ky.py); cài vào thư mục máy (nap_cap_nhat.thu_muc), có hiệu lực từ lần mở
 phần mềm sau (nap_cap_nhat.nap kiểm tra lại chữ ký và mã từng file trước khi nạp). Phần mềm có khóa công khai
 (an_toan.KHOA_CONG_KHAI) thì gói thiếu / sai chữ ký bị từ chối: gói giả mạo không chạy được mã trên máy người dùng.
+Bản thử nghiệm 0.9.16 đã xóa khóa (KHOA_CONG_KHAI rỗng): gói không ký; bản cài 0.9.13-0.9.15 (có khóa) từ chối gói không ký.
 Gói chỉ thay mã PABT, không thay Python / Qt / thư viện đóng trong bộ cài: thay đổi cần thư viện mới thì dựng bộ cài mới.
 """
 from __future__ import annotations
@@ -65,8 +66,9 @@ def _bam(du: bytes) -> str:
 def tao_goi(goc, file_ra, mo_ta: str = '', toi_thieu: str = BAN_GOC_TOI_THIEU, khoa: dict | None = None) -> dict:
     """Đóng gói pabt/ trong thư mục mã nguồn `goc` thành gói cập nhật (phiên bản lấy từ pabt/__init__.py), ký bằng khóa bí
     mật của máy dựng (khoa, mặc định an_toan.doc_khoa_bi_mat())."""
-    if khoa is None:                                    # khoa=False: không ký (chỉ dùng khi kiểm thử)
-        khoa = an_toan.doc_khoa_bi_mat()
+    if khoa is None:                                    # khoa=False: không ký
+        # phần mềm không có khóa công khai (bản thử nghiệm): không ký, kể cả khi máy dựng còn khóa bí mật cũ
+        khoa = an_toan.doc_khoa_bi_mat() if an_toan.KHOA_CONG_KHAI else False
     if an_toan.KHOA_CONG_KHAI and not khoa:
         raise LoiCapNhat(f'Máy này không có khóa ký gói cập nhật ({an_toan.file_khoa_bi_mat()}): gói không chữ ký sẽ bị '
                          'phần mềm từ chối. Chép khóa bí mật dự phòng về đúng chỗ này rồi tạo lại.')

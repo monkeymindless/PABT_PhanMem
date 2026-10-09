@@ -187,7 +187,8 @@ def tu_kiem(file_ra=None) -> int:
         import platform
         return f'{pabt.__version__}, Python {platform.python_version()}, ' + \
             ('Qt5' if pabt.QT5 else 'Qt6') + f' (bản cài gốc {nap_cap_nhat.BAN_GOC}' + \
-            (f', đang dùng bản cập nhật {nap_cap_nhat.DANG_DUNG})' if nap_cap_nhat.DANG_DUNG else ')')
+            (f', đang dùng bản cập nhật {nap_cap_nhat.DANG_DUNG})' if nap_cap_nhat.DANG_DUNG else ')') + \
+            (f' - {pabt.NHAN_THU_NGHIEM}' if getattr(pabt, 'BAN_THU_NGHIEM', False) else '')
 
     def an_toan():
         from pabt import an_toan as at
@@ -197,7 +198,7 @@ def tu_kiem(file_ra=None) -> int:
         dat, mt = at.mo_ta_toan_ven(tv)
         if dat is False:
             raise RuntimeError(mt)
-        return mt
+        return mt + ('' if at.KHOA_CONG_KHAI else ' Gói cập nhật: không khóa ký (bản thử nghiệm), kiểm tra SHA-256.')
 
     for ten, ham in (('Phiên bản', phien_ban), ('Giao diện', giao_dien), ('Đọc PDF', pdf), ('Bộ đơn giá', bo_don_gia), ('Mẫu in', mau_in),
                      ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('An toàn', an_toan)):

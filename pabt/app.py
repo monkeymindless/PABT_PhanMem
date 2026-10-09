@@ -11,12 +11,13 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDial
                                QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
-from . import __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
+from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
 from .tien import D, so_vn, vn
 
 # doi_chieu, nhap_excel, nhap_tho (kéo theo openpyxl ~0,2 giây - 60% thời gian nạp mã lúc mở phần mềm) nạp khi dùng tới
 
 TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
+TIEU_DE_CUA_SO = TEN_UD + (f' ({NHAN_THU_NGHIEM})' if BAN_THU_NGHIEM else '')     # tiêu đề cửa sổ chính
 # danh sách hộ ở màn hình chính: gọn (0.9.12). Tiền từng mục, quyết định, chi trả, bàn giao, ghi chú: menu "Bảng tổng hợp",
 # "Theo dõi tiến độ" (man_hinh_theo_doi)
 COT = ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²)', 'Trạng thái']
@@ -186,7 +187,7 @@ class CuaSoChinh(QMainWindow):
         self.dong_ho = QTimer(self)                      # làm mới khóa file mỗi phút
         self.dong_ho.setInterval(khoa.LAM_MOI * 1000)
         self.dong_ho.timeout.connect(self.lam_moi_khoa)
-        self.setWindowTitle(TEN_UD)
+        self.setWindowTitle(TIEU_DE_CUA_SO)
         man = QApplication.primaryScreen()
         vung = man.availableGeometry() if man else None
         self.resize(min(1360, vung.width() - 40) if vung else 1360, min(760, vung.height() - 40) if vung else 760)
@@ -1312,12 +1313,13 @@ class CuaSoChinh(QMainWindow):
         from . import to_chuc
         from .cap_nhat import ban_goc
         goc = ban_goc()
-        pb = f'Phiên bản {__version__}' + (f' (bản cập nhật, bản cài gốc {goc})' if goc != __version__ else '') + '.'
+        pb = f'Phiên bản {__version__}' + (f' (bản cập nhật, bản cài gốc {goc})' if goc != __version__ else '') + \
+            (f' - {NHAN_THU_NGHIEM}' if BAN_THU_NGHIEM else '') + '.'
         QMessageBox.about(self, TEN_UD, f'{TEN_UD}\n{pb}\n{to_chuc.TAC_GIA}.')
 
     # ------------------------------------------------ máy chủ LAN, tài khoản
     def dat_tieu_de(self):
-        t = TEN_UD
+        t = TIEU_DE_CUA_SO
         if self.file is not None:
             t += f' - {self.file.name}'
             if self.chi_doc:

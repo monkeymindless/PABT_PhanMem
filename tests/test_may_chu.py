@@ -277,7 +277,8 @@ class TestHopMayChu(_Nen):
         self.assertIsNone(w.con)
         w.close()
         w2 = CuaSoChinh(menu_trai=True)                               # 0.9.3: menu dọc bên trái là giao diện chính
-        self.assertEqual(w2.windowTitle().count('THỬ NGHIỆM'), 0)
+        import pabt                                                     # chỉ nhãn bản thử nghiệm, không còn "menu thử nghiệm"
+        self.assertEqual(w2.windowTitle().count('THỬ NGHIỆM'), 1 if pabt.BAN_THU_NGHIEM else 0)
         w2.close()
 
 

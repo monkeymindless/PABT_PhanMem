@@ -6,8 +6,9 @@ PABT không phải phần mềm diệt virus: việc phát hiện mã độc nh�
   - ngu_canh_tls: kết nối HTTPS bắt buộc kiểm tra chứng chỉ, TLS >= 1.2 (chặn chứng chỉ giả / hết hạn / tự ký);
   - kiem_tra_zip / kiem_tra_xml: chặn file nén "bom" (giải nén ra hàng GB) và XML có thực thể (tấn công "billion laughs");
   - toàn vẹn bản cài: toan_ven.json (SHA-256 mọi file, tạo khi dựng) -> phát hiện file bị sửa / DLL, EXE lạ chèn vào thư mục cài;
-  - chữ ký số RSA-3072 (PKCS#1 v1.5, SHA-256) cho gói cập nhật .pabtcn: chỉ cài gói do nhà phát triển ký (khóa bí mật chỉ nằm
-    trên máy dựng, %LOCALAPPDATA%\\PABT_dev\\khoa_ky_cap_nhat.json - tao_khoa_ky.py);
+  - chữ ký số RSA-3072 (PKCS#1 v1.5, SHA-256) cho gói cập nhật .pabtcn khi có KHOA_CONG_KHAI: chỉ cài gói do nhà phát triển
+    ký (khóa bí mật chỉ nằm trên máy dựng, %LOCALAPPDATA%\\PABT_dev\\khoa_ky_cap_nhat.json - tao_khoa_ky.py). Bản thử nghiệm
+    0.9.16 không có khóa: gói không ký;
   - tinh_trang_diet_virus: phần mềm diệt virus của máy (Trung tâm bảo mật Windows) có bật, có cập nhật không.
 Chỉ dùng thư viện chuẩn (chạy cả Python 3.8 bản Windows 7/8).
 """
@@ -28,19 +29,10 @@ from pathlib import Path
 
 TEN_TOAN_VEN = 'toan_ven.json'
 DUOI_THUC_THI = ('.exe', '.dll', '.pyd', '.ocx', '.cpl', '.scr', '.com', '.bat', '.cmd', '.ps1', '.vbs', '.js')
-# khóa công khai kiểm tra chữ ký gói cập nhật (tao_khoa_ky.py); rỗng = chưa có khóa: gói không chữ ký vẫn cài được
-KHOA_CONG_KHAI: dict = {
-  'e': 65537,
-  'n': (
-    'a930e4b9b28424e7ad14504eb71e61bc97df16eae2350fe438d8c946b0b36400fc6568d5ee6d33ebef9f1f54a578f1d3'
-    'c8accd97ff8cd4adc21eb6effbee4da3c4d6d655fa53e6995988cbdf9a0d1319c577ad41b0d6ad4b6974bd3ccde4a277'
-    'f8a88d779dcab3c5c076a6a4170baffd4c0951fc3c24b4a6a9f62b27b0c8fffcc992fc460b855677c9effbe0dcca17ab'
-    'd5488484379d7eb3bcdd530be41905d892e8d372b2bfe8b483218ca3423d6108e83675ee206203adf5e5b310cfb46ebb'
-    '5593b18bc77b34a80c38daa36f4e8b40e4a7799c5c3d26427b00fa53e1b65f5c948c84662f500b8618a340bf1ef2713f'
-    '3e28372d4be71adf3a44ca60c404692865dbbda0f41a82db9550955e689b73848c99a2e8366daafdf35d675a4d63f7a4'
-    'bf130843bca07edb6cbf5948b19adf309c81da3395c26e42a8799cbdf8570b1744aaab5ba34dea509fe988145fa37004'
-    '92553dc3e9faa3faf4b84b3fdf75a94aac5e7e437cf477f1b8cdf540d1b4d3b4a46eb85458d10fb3bdd895a580fa94b3'),
-}
+# khóa công khai kiểm tra chữ ký gói cập nhật (tao_khoa_ky.py); rỗng = chưa có khóa: gói không chữ ký vẫn cài được.
+# 0.9.16 BẢN THỬ NGHIỆM: người dùng yêu cầu xóa khóa ký - gói .pabtcn không ký, chỉ kiểm tra SHA-256 từng file, file nén an
+# toàn, quét virus. Bản chính thức muốn ký lại: tạo khóa (tao_khoa_ky.py) rồi dán khóa công khai vào đây (khóa cũ: git ac0e8ac).
+KHOA_CONG_KHAI: dict = {}
 _KHONG_CUA_SO = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 
 
@@ -400,5 +392,7 @@ def tong_quan() -> list:
     dat, mt = mo_ta_toan_ven(kiem_tra_toan_ven())
     kq.append(('Toàn vẹn bản cài đặt', dat, mt))
     kq.append(('Gói cập nhật (.pabtcn)', bool(KHOA_CONG_KHAI) or None,
-               'Bắt buộc chữ ký số RSA-3072 của nhà phát triển.' if KHOA_CONG_KHAI else 'Chưa có khóa ký: chỉ kiểm tra mã SHA-256.'))
+               'Bắt buộc chữ ký số RSA-3072 của nhà phát triển.' if KHOA_CONG_KHAI else
+               'Bản thử nghiệm, không có khóa ký: gói cập nhật chỉ được kiểm tra mã SHA-256 từng file và quét virus - chỉ cài '
+               'gói nhận trực tiếp từ người phát triển.'))
     return kq

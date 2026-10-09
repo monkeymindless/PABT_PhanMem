@@ -26,7 +26,12 @@ class TestChuKy(unittest.TestCase):
         self.assertEqual(int(k['n'], 16).bit_length(), 1024)
 
     def test_khoa_cong_khai_dong_goi(self):
-        # phần mềm phát hành có khóa công khai RSA-3072
+        import pabt
+        if pabt.BAN_THU_NGHIEM:                         # bản thử nghiệm 0.9.16: người dùng yêu cầu xóa khóa ký
+            self.assertEqual(an_toan.KHOA_CONG_KHAI, {})
+            self.assertFalse(an_toan.xac_minh(b'x', 'ab'))
+            return
+        # bản chính thức có khóa công khai RSA-3072
         self.assertEqual(int(an_toan.KHOA_CONG_KHAI['n'], 16).bit_length(), 3072)
         self.assertEqual(an_toan.KHOA_CONG_KHAI['e'], 65537)
 

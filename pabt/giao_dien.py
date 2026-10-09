@@ -193,6 +193,8 @@ def _qss() -> str:
     QLabel[vai="nhom_menu"][dong="1"] {{ color: #6D8299; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="phien_ban"] {{ color: #FFE082; background: rgba(255, 255, 255, 18); font-weight: 600;
         font-size: 11px; border: 1px solid rgba(255, 213, 79, 150); border-radius: 10px; padding: 2px 10px; }}
+    QFrame[vai="bang_to_chuc"] QLabel[vai="thu_nghiem"] {{ color: #0A2747; background: #F2B705; font-weight: 800;
+        font-size: 13px; letter-spacing: 1px; border: 1px solid #FFD54F; border-radius: 6px; padding: 3px 12px; }}
     QFrame[vai="vach_vang"] {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #F2B705, stop:0.7 rgba(242,183,5,90),
         stop:1 rgba(242,183,5,0)); border: 0; }}
     QFrame[vai="ribbon"] {{ background: #FFFFFF; border: 1px solid #DCE4EC; border-radius: 10px; }}
@@ -486,11 +488,25 @@ def bang_to_chuc(phai: str = '', nut: tuple = ()) -> QFrame:
     phu.setWordWrap(True)
     cot.addWidget(phu)
     lo.addLayout(cot, 1)
+    from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM
+    cot_phai = QVBoxLayout()
+    cot_phai.setSpacing(8)
     if phai:
         p = QLabel(phai)
         p.setProperty('vai', 'phien_ban')
         p.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lo.addWidget(p, 0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+        cot_phai.addWidget(p, 0, Qt.AlignmentFlag.AlignRight)
+    if BAN_THU_NGHIEM:                                  # nhãn vàng đặc dưới phiên bản: nhìn là biết không phải bản chính thức
+        tn = QLabel(NHAN_THU_NGHIEM)
+        tn.setProperty('vai', 'thu_nghiem')
+        tn.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        tn.setToolTip('Bản thử nghiệm: dùng để kiểm tra trước khi phát hành chính thức. Gói cập nhật của bản thử nghiệm '
+                      'không có chữ ký số - chỉ cài gói nhận trực tiếp từ người phát triển.')
+        khung.nhan_thu_nghiem = tn
+        cot_phai.addWidget(tn, 0, Qt.AlignmentFlag.AlignRight)
+    if cot_phai.count():
+        cot_phai.addStretch(1)
+        lo.addLayout(cot_phai)
     return khung
 
 

@@ -1,5 +1,10 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.16)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.16 – BẢN THỬ NGHIỆM)
 
+> **0.9.16 – BẢN THỬ NGHIỆM** (nhãn vàng "BẢN THỬ NGHIỆM" trên băng tiêu đề, tiêu đề cửa sổ, hộp Giới thiệu): dùng để kiểm tra
+> trước khi phát hành chính thức. **Đã bỏ khóa ký gói cập nhật**: gói `.pabtcn` của bản thử nghiệm không có chữ ký số, chỉ được
+> kiểm tra mã SHA-256 từng file và quét virus - chỉ cài gói nhận trực tiếp từ người phát triển. Máy đang dùng 0.9.13 – 0.9.15
+> (còn khóa ký) **không cài được** gói không ký: cài bộ cài 0.9.16 (dự án, cài đặt, mẫu in trong `%APPDATA%\PABT` giữ nguyên).
+>
 > **0.9.16** - **Trình phê duyệt**: cửa sổ **Đợt trình…** có thêm văn bản trình (Tờ trình / Văn bản: số, ngày), **số / ngày
 > phương án tổng** (tự in vào dòng "Đính kèm Phương án số …" và ngày ký của bảng tổng hợp), **số PA chi tiết từng hộ** (nút
 > **Đánh số PA chi tiết…** hoặc sửa thẳng trên bảng; tự in vào "Số: …/" và ngày của phương án chi tiết, mang sang quyết định phê
@@ -160,7 +165,8 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
   hiện file bị sửa / DLL lạ chèn vào), chữ ký số gói cập nhật; nút **Quét một file…** quét file nhận qua Zalo / email / USB trước
   khi mở. PABT tự quét file tải từ web, gói cập nhật, file Word / Excel cũ (Microsoft Defender hoặc phần mềm diệt virus có AMSI)
   — có mã độc thì chặn / xóa; Word / Excel tự động hóa luôn tắt macro; kết nối mạng chỉ chấp nhận chứng chỉ HTTPS hợp lệ (TLS
-  1.2+); gói cập nhật thiếu / sai chữ ký số bị từ chối. PABT không thay phần mềm diệt virus: giữ Defender luôn bật, cập nhật.
+  1.2+); gói cập nhật thiếu / sai chữ ký số bị từ chối (bản thử nghiệm 0.9.16 không có khóa ký: chỉ kiểm tra mã SHA-256 từng
+  file của gói). PABT không thay phần mềm diệt virus: giữ Defender luôn bật, cập nhật.
 - **Tra cứu văn bản mới…**: mở Công báo Đồng Nai, trang góp ý dự thảo, Thư viện pháp luật để theo dõi quyết định mới.
 - **Áp bộ đơn giá vào dự án đang mở**: dự án đã lập không tự đổi giá; chọn lệnh này khi muốn dùng bộ mới (dòng đã lập giữ giá cũ —
   dùng Rà soát giá để kiểm tra).

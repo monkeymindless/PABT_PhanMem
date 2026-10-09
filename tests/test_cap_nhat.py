@@ -9,6 +9,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 from pabt import __version__, an_toan, cap_nhat
 
@@ -135,6 +136,31 @@ class TestCapNhat(unittest.TestCase):
         with self.assertRaisesRegex(cap_nhat.LoiCapNhat, 'KHÔNG HỢP LỆ'):
             cap_nhat.cai(gia)
         self.assertIsNone(cap_nhat.trang_thai()['da_cai'])
+
+    def test_khong_khoa_ky(self):
+        """Bản thử nghiệm (KHOA_CONG_KHAI rỗng): gói tạo không cần khóa bí mật, không ký; cài và nạp được (kiểm tra SHA-256);
+        file bị sửa vẫn bị từ chối."""
+        an_toan.KHOA_CONG_KHAI = {}
+        with mock.patch.object(an_toan, 'doc_khoa_bi_mat', return_value=KHOA_THU):     # máy dựng còn khóa cũ: vẫn không ký
+            p = self.td / 'khong_ky.pabtcn'
+            cap_nhat.tao_goi(_ma_nguon(self.td / 'kk', '9.9.9'), p, 'thử')
+        with zipfile.ZipFile(p) as z:
+            self.assertNotIn(cap_nhat.FILE_CHU_KY, z.namelist())
+        cap_nhat.cai(p)
+        self.assertEqual(cap_nhat.trang_thai()['da_cai'], '9.9.9')
+        ma = 'import pabt.an_toan as _a; _a.KHOA_CONG_KHAI = {}; import nap_cap_nhat as n; n.nap(bat_buoc=True); import pabt; ' \
+             'print(pabt.__version__)'
+        r = subprocess.run([sys.executable, '-c', ma], cwd=GOC, capture_output=True, text=True, encoding='utf-8',
+                           env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen'}, timeout=120)
+        self.assertEqual(r.stdout.strip(), '9.9.9', r.stderr)
+        cap_nhat.go()
+        hong = self.td / 'hong_kk.pabtcn'
+        with zipfile.ZipFile(p) as z, zipfile.ZipFile(hong, 'w') as w:
+            for i in z.infolist():
+                du = z.read(i)
+                w.writestr(i, du + b'#' if i.filename == 'pabt/tien.py' else du)
+        with self.assertRaisesRegex(cap_nhat.LoiCapNhat, 'bị hỏng'):
+            cap_nhat.cai(hong)
 
     def test_ban_da_cai_bi_sua_khong_nap(self):
         """Mã độc sửa / chèn file vào bản cập nhật đã cài (thư mục %APPDATA%): bộ nạp kiểm tra lại, không chạy mã đó."""

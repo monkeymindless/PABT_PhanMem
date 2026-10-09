@@ -270,6 +270,12 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `beginFilterChange/endFilterChange` (invalidateFilter lỗi thời), Qt5 vẫn `invalidateFilter`.
   `kiem_tra_giao_dien.py`: PySide6 6.11 KHÔNG cho gán đè `QMenu.exec` trên lớp (vẫn gọi hàm C++) -> bắt sự kiện Show của QMenu
   (bộ lọc sự kiện toàn ứng dụng) rồi chạy từng mục; thời gian CHẬM là thời gian riêng (trừ thao tác con); đếm hộp ẩn sau mỗi lệnh.
+- 0.9.16 BẢN THỬ NGHIỆM (người dùng yêu cầu): `pabt.BAN_THU_NGHIEM` / `NHAN_THU_NGHIEM` -> nhãn vàng `QLabel[vai="thu_nghiem"]`
+  dưới phiên bản trên `bang_to_chuc` (cả băng Dự án mới), `app.TIEU_DE_CUA_SO`, Giới thiệu, `tu-kiem`. Bản chính thức: False.
+  Khóa ký ĐÃ XÓA: `an_toan.KHOA_CONG_KHAI = {}` -> `tao_goi` không ký (kể cả máy còn khóa bí mật), `doc_goi` / `cai` /
+  `nap_cap_nhat._kiem_chu_ky` bỏ qua chữ ký, vẫn kiểm tra SHA-256 + file lạ + zip + quét virus. Bản cài 0.9.13-0.9.15 (có khóa)
+  TỪ CHỐI gói không ký -> người dùng phải cài bộ cài 0.9.16. Ký lại: tạo khóa (`tao_khoa_ky.py`), dán khóa công khai (khóa cũ ở
+  git ac0e8ac). Test: `test_cap_nhat.test_khong_khoa_ky` (bộ test khác vẫn dùng khóa thử `KHOA_THU`).
 - Git (từ 09/10/2026): repo cục bộ ở thư mục dự án, `.gitignore` loại `.venv`, sản phẩm dựng, `*.pabt*`, `*.xlsm`, `du_lieu/`,
   khóa ký, `bo_cai_win/*.exe`. Git for Windows ở `C:\Program Files\Git\cmd\git.exe` (PowerShell mở trước khi cài chưa có trong PATH).
 - Thông báo có danh sách dài (kết quả nhập Excel / nhập chi tiết / Dự án mới, lỗi nhập): `giao_dien.hop_ket_qua(cha, tóm tắt,

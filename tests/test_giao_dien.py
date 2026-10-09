@@ -191,6 +191,10 @@ class TestMau(unittest.TestCase):
             self.assertIs(w2.nut_ht['lui'].parent(), bang)
             self.assertEqual(w2.nut_ht['lui'].property('vai'), 'nut_bang')
             self.assertFalse(w2.nut_ht['lui'].isEnabled())           # chưa mở dự án
+            import pabt                                              # nhãn "BẢN THỬ NGHIỆM" trên băng tiêu đề, tiêu đề cửa sổ
+            tn = [x for x in bang.findChildren(QLabel) if x.property('vai') == 'thu_nghiem']
+            self.assertEqual([x.text() for x in tn], ['BẢN THỬ NGHIỆM'] if pabt.BAN_THU_NGHIEM else [])
+            self.assertEqual('BẢN THỬ NGHIỆM' in w2.windowTitle(), pabt.BAN_THU_NGHIEM)
             w2.close()
         finally:
             cai.remove(giao_dien.KHOA_NHOM_DONG)
