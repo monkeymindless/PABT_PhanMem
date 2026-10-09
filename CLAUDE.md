@@ -348,6 +348,18 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   (15.009 -> ~10 truy vấn; test `test_toc_do.TestKhongTruyVanTungHo`). `HopBoDonGia`: thẻ Nhà, công trình / Cây trồng / Vật nuôi
   (theo `_VAT_NUOI`), hàng nút gọn - `b_cap` (QMenu: từ file / từ trang web / tra cứu văn bản), `b_gia_dat` (tra / xuất), `b_don`,
   `b_ap`, Đóng (người dùng: 7 nút một hàng "chưa phù hợp").
+- 0.9.18 bố cục màn hình 1366x768 (theo bản audit người dùng gửi; đo bằng phông Windows, tỷ lệ 110%): `bang_to_chuc` gọn 112 ->
+  63 px (logo 46, chữ 17/12 px, phiên bản + BẢN THỬ NGHIỆM cùng hàng; GIỮ tên đơn vị, "Trực thuộc… • địa chỉ", Hoàn tác / Làm lại
+  cùng dòng tên phần mềm - người dùng yêu cầu trước đây); chữ dài trên băng = `giao_dien.NhanRutGon` (một dòng, rút gọn "…",
+  tooltip đủ, `text()` trả chữ đầy đủ; sizePolicy Ignored - không ép cửa sổ rộng ra). Cửa sổ chính: `lb_du_an` một dòng (số hộ /
+  tổng tiền đã có ở thẻ số), `_hang_thao_tac` = băng đối chiếu `lb_ket_qua` + 2 nút (Lập PA, Thêm hộ) một hàng - bỏ nút Bảng tổng
+  hợp / Theo dõi tiến độ (trùng menu trái); `_xoa_ket_qua`. Bảng hộ 8 -> 12 dòng nhìn thấy; rộng tối thiểu 1449 -> 1020 px (băng
+  tiêu đề + hàng nút trang Quyết định phê duyệt - nay `XepDong`). `CuaSoLapPA.o_cb` chỉ hiện khi có điểm cần xem lại, cao theo số
+  dòng. Màu: `giao_dien.kieu_trang_thai(muc, loai)` (một nguồn với `dat_trang_thai`), thẻ số liệu: `MAU_THE_SO` + `_qss_the_so`
+  trong QSS chung (thẻ gắn `vai="the_so"`, `the=<khóa>`, WA_StyledBackground) thay 18 setStyleSheet cục bộ. KHÔNG thêm chờ ngừng
+  gõ (debounce) cho ô tìm danh sách hộ: đo 5.000 hộ 24-51 ms/phím (dưới ngưỡng cảm nhận ~100 ms) - chờ 250 ms làm chậm hơn. Vẽ
+  `BangToChuc` 0,9 ms/lần: không cần đệm ảnh. Test `test_giao_dien.test_bo_cuc_gon_man_hinh_1366` kiểm tra CẤU TRÚC (px phụ thuộc
+  phông: offscreen không phông Windows chữ rộng gần gấp đôi).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

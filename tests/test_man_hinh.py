@@ -62,6 +62,9 @@ class TestManHinhLapPA(unittest.TestCase):
         self.assertEqual(w.bang[2].bang.rowCount(), 9)
         self.assertIn('812.506.000', w.lb_tong.text())
         self.assertFalse(w.b_luu.isEnabled())
+        # ô "Cần xem lại" chỉ hiện khi có điểm cần xem lại (trước 0.9.18 luôn chiếm 96 px)
+        self.assertEqual(w.o_cb.isHidden(), not w.bo.canh_bao)
+        self.assertEqual(bool(w.o_cb.toPlainText()), bool(w.bo.canh_bao))
         # sửa số lượng dòng 2.1 ngay trên lưới
         c = self._cot(w, 2, 'so_luong')
         w.bang[2].bang.item(0, c).setText('130')

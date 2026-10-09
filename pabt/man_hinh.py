@@ -822,7 +822,9 @@ class CuaSoLapPA(QDialog):
         self.lb_tb.setStyleSheet('QLabel { color: #1F4E78; padding: 2px 6px; }')
         self.o_cb = QPlainTextEdit()
         self.o_cb.setReadOnly(True)
-        self.o_cb.setMaximumHeight(96)
+        from .giao_dien import kieu_trang_thai
+        self.o_cb.setStyleSheet(kieu_trang_thai('canh_bao', 'QPlainTextEdit', dam=False))   # màu "cần xem lại" dùng chung
+        self.o_cb.setVisible(False)
         lo = QVBoxLayout(self)
         lo.setContentsMargins(14, 12, 14, 12)
         lo.setSpacing(8)
@@ -922,7 +924,12 @@ class CuaSoLapPA(QDialog):
         tl = self.bo.ty_le_thu_hoi_nn()
         self.lb_tl.setText(f'→ thu hồi {so_vn(round(tl * 100, 1))}% đất NN' if tl is not None else '')
         cb = self.bo.canh_bao
-        self.o_cb.setPlainText('Cần xem lại:\n' + '\n'.join('- ' + x for x in cb) if cb else 'Không có điểm cần xem lại.')
+        # chỉ hiện khi có điểm cần xem lại, cao vừa số dòng (trước 0.9.18: luôn chiếm 96 px để ghi "Không có điểm cần xem lại")
+        self.o_cb.setPlainText('Cần xem lại:\n' + '\n'.join('- ' + x for x in cb) if cb else '')
+        if cb:
+            dong = min(len(cb) + 1, 5)
+            self.o_cb.setFixedHeight(self.o_cb.fontMetrics().lineSpacing() * dong + 22)
+        self.o_cb.setVisible(bool(cb))
         thay = self.bo.co_thay_doi
         self.b_luu.setEnabled(thay or self.ho_so.co_thay_doi())
         self.b_bo.setEnabled(thay)

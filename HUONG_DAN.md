@@ -1,5 +1,12 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.17 – BẢN THỬ NGHIỆM)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.18 – BẢN THỬ NGHIỆM)
 
+> **0.9.18 – BẢN THỬ NGHIỆM** - **Màn hình gọn, vừa laptop 1366×768**: băng tiêu đề thấp còn khoảng một nửa (vẫn đủ tên phần mềm,
+> tên đơn vị, địa chỉ - dòng địa chỉ tự rút gọn "…" khi cửa sổ hẹp, rê chuột xem đủ; nút Hoàn tác / Làm lại; nhãn BẢN THỬ
+> NGHIỆM); tên dự án một dòng; băng đối chiếu Excel và hai nút **Lập phương án hộ đang chọn**, **Thêm hộ…** chung một hàng (nút
+> Bảng tổng hợp, Theo dõi tiến độ dùng ở menu trái). Danh sách hộ hiện được **12 dòng** thay vì 8 trên màn hình 1366×768; cửa sổ
+> không còn rộng hơn màn hình (trang **Quyết định phê duyệt**: hàng nút tự xuống dòng). Cửa sổ lập phương án: ô **"Cần xem
+> lại"** chỉ hiện khi có điểm cần xem lại (nền vàng nhạt), không còn chiếm chỗ để ghi "Không có điểm cần xem lại".
+>
 > **0.9.17 – BẢN THỬ NGHIỆM** - **Đơn giá vật nuôi** theo QĐ 31/2025/QĐ-UBND ngày 29/08/2025 (hiệu lực 10/9/2025) có sẵn trong
 > bộ đơn giá tích hợp (phiên bản 2026.10.09), mã **VN01 – VN17**: bồi thường thiệt hại ngừng sản xuất thủy sản (ao nuôi tôm nước
 > lợ, cua, tôm – cua, hàu treo giàn bè; ao nuôi tôm nước ngọt; ao nuôi cá - quảng canh cải tiến / thâm canh / nuôi ghép, mỗi loại

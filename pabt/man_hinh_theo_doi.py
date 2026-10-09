@@ -336,7 +336,8 @@ class KhungQuyetDinh(_Khung):
         for c, w in enumerate((44, 190, 190, 110, 86, 110, 86, 56, 56, 92, 70, 110, 110, 100, 110, 120, 200, 130)):
             self.bang.setColumnWidth(c, w)
         self.bang.cellDoubleClicked.connect(lambda r, c: self.sua_ho(self._ma_dong(r)))
-        h_ho = QHBoxLayout()
+        from .giao_dien import XepDong
+        h_ho = XepDong(cach=6)          # hết chỗ thì xuống dòng (trước 0.9.18: một hàng 932 px ép cửa sổ rộng hơn màn hình 1366)
         for ten, ham in (('Thêm hộ vào quyết định…', lambda: self.them_ho()), ('Sửa hộ đang chọn…', lambda: self.sua_ho()),
                          ('Ghi nhận đã nhận tiền…', lambda: self.ghi_chi_tra()), ('Bỏ hộ khỏi quyết định', lambda: self.bo_ho()),
                          ('Xuất Excel…', lambda: self.xuat())):
@@ -344,7 +345,6 @@ class KhungQuyetDinh(_Khung):
             b.clicked.connect(ham)
             h_ho.addWidget(b)
             self.nut[ten] = b
-        h_ho.addStretch(1)
         phai = QWidget()
         lp = QVBoxLayout(phai)
         lp.setContentsMargins(0, 0, 0, 0)

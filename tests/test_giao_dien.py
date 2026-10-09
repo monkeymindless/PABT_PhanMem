@@ -202,6 +202,45 @@ class TestMau(unittest.TestCase):
                 cai.setValue(giao_dien.KHOA_NHOM_DONG, cu)
 
 
+    def test_bo_cuc_gon_man_hinh_1366(self):
+        """0.9.18: băng tiêu đề gọn (112 -> ~63 px, giữ đủ tên đơn vị / địa chỉ / Hoàn tác / BẢN THỬ NGHIỆM), nhãn dự án một
+        dòng, không còn nút Bảng tổng hợp / Theo dõi tiến độ trùng menu trái, cửa sổ vừa màn hình 1366 (trước: tối thiểu 1449)."""
+        # số px phụ thuộc phông (môi trường test offscreen dùng phông dự phòng rộng gần gấp đôi): kiểm tra cấu trúc. Đo thật
+        # bằng phông Windows (1366x728, 110%): băng 63 px, bảng hộ 12 dòng (trước 8), rộng tối thiểu 1020 px (trước 1449).
+        from PySide6.QtWidgets import QLabel, QPushButton
+        from pabt import app as ud, giao_dien, to_chuc
+        from pabt.man_hinh_theo_doi import KhungQuyetDinh
+        giao_dien.ap_dung(self.app)
+        try:
+            w = ud.CuaSoChinh(menu_trai=True)
+            w.resize(1366, 728)
+            w.show()
+            self.app.processEvents()
+            bang = w.findChildren(giao_dien.BangToChuc)[0]
+            logo = next(x for x in bang.findChildren(QLabel) if x.property('vai') == 'logo')
+            self.assertEqual(logo.height(), 46)                                 # trước 84 px
+            # chữ dài trên băng: một dòng, rút gọn "…" khi hẹp - không xuống dòng (băng cao lên), không ép cửa sổ rộng ra
+            self.assertFalse(any(x.wordWrap() for x in bang.findChildren(QLabel)))
+            self.assertEqual({x.property('vai') for x in bang.findChildren(giao_dien.NhanRutGon)}, {'ten_phan_mem', 'dong_phu'})
+            # hàng nút trang Quyết định phê duyệt tự xuống dòng (trước: một hàng 932 px)
+            kq = w.findChildren(KhungQuyetDinh)[0]
+            xep = kq.findChildren(giao_dien.XepDong)
+            self.assertTrue(any(lo.indexOf(kq.nut['Xuất Excel…']) >= 0 for lo in xep))
+            chu = ' '.join(x.text() for x in bang.findChildren(QLabel))         # chữ đầy đủ kể cả khi đang rút gọn "…"
+            for k in (giao_dien.TEN_PHAN_MEM, to_chuc.TEN, to_chuc.DIA_CHI):
+                self.assertIn(k, chu)
+            nut = {b.text() for b in w.findChildren(QPushButton)}
+            self.assertIn('Lập phương án hộ đang chọn', nut)
+            self.assertFalse({'Bảng tổng hợp', 'Theo dõi tiến độ'} & nut)       # đã có ở menu trái
+            phu = next(x for x in bang.findChildren(giao_dien.NhanRutGon) if x.property('vai') == 'dong_phu')
+            phu.resize(120, phu.height())
+            self.assertTrue(QLabel.text(phu).endswith('…'))                     # hẹp: hiện rút gọn, tooltip đủ
+            self.assertEqual(phu.toolTip(), phu.text())
+            w.close()
+        finally:
+            self.app.setStyleSheet('')
+            self.app.removeEventFilter(self.app._bo_to_mau)
+
     def test_hop_ket_qua_vua_man_hinh(self):
         """Danh sách cần xem lại dài: hộp không cao quá màn hình, đủ mọi dòng trong ô cuộn (QMessageBox đẩy nút OK ra ngoài)."""
         from pabt.giao_dien import hop_ket_qua

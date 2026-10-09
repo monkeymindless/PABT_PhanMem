@@ -84,6 +84,22 @@ def mau_chu_nut(n: str | None) -> str:
     return MAU[n][1] if n in DAC else _tron(MAU[n][0], 0.08, '#000000')
 
 
+# thẻ số liệu màn hình chính (app.CuaSoChinh.THE_SO): màu viền trái + màu số. Kiểu nằm trong QSS chung (trước 0.9.18: mỗi
+# thẻ 3 lần setStyleSheet riêng = 18 kiểu cục bộ, phóng to / thu nhỏ phải co giãn lại từng cái)
+MAU_THE_SO = {'so_ho': '#2D64A6', 'da_pa': '#2F7A4F', 'tong': '#6950A1', 'da_pd': '#1F7A86', 'da_ct': '#B8651F', 'da_bg': '#4E5D6C'}
+
+
+def _qss_the_so() -> str:
+    return '''
+    QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #DCE3EA; border-left: 4px solid #4E5D6C; border-radius: 8px; }
+    QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
+    QLabel[vai="so_the"] { font-size: 19px; font-weight: 700; }
+    QLabel[vai="nhan_the"] { color: #4A5B6C; font-size: 12px; font-weight: 600; }''' + ''.join(
+        f'''
+    QWidget[vai="the_so"][the="{k}"] {{ border-left-color: {m}; }}
+    QWidget[vai="the_so"][the="{k}"] QLabel[vai="so_the"] {{ color: {m}; }}''' for k, m in MAU_THE_SO.items())
+
+
 def _qss() -> str:
     nut = '\n'.join(
         f'''{_nut_qss(n, nen, chu, re_)}
@@ -175,13 +191,12 @@ def _qss() -> str:
     QStatusBar QToolButton {{ border-radius: 6px; padding: 3px 10px; }}
     QFrame[vai="bang_to_chuc"] {{ background: transparent; border: 0; }}
     QFrame[vai="bang_to_chuc"] QLabel {{ color: #FFFFFF; background: transparent; border: 0; }}
-    QFrame[vai="bang_to_chuc"] QLabel[vai="logo"] {{ background: #FFFFFF; border: 2px solid #F2B705; border-radius: 16px; }}
-    QFrame[vai="bang_to_chuc"] QLabel[vai="ten_phan_mem"] {{ color: #FFFFFF; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;
-        min-height: 32px; }}
-    QFrame[vai="bang_to_chuc"] QLabel[vai="ten_to_chuc"] {{ color: #FFD54F; font-size: 16px; font-weight: 700; letter-spacing: 0.6px; }}
-    QFrame[vai="bang_to_chuc"] QLabel[vai="dong_phu"] {{ color: #C7DBEF; font-size: 13px; }}
+    QFrame[vai="bang_to_chuc"] QLabel[vai="logo"] {{ background: #FFFFFF; border: 2px solid #F2B705; border-radius: 10px; }}
+    QFrame[vai="bang_to_chuc"] QLabel[vai="ten_phan_mem"] {{ color: #FFFFFF; font-size: 17px; font-weight: 700; letter-spacing: 0.4px; }}
+    QFrame[vai="bang_to_chuc"] QLabel[vai="ten_to_chuc"] {{ color: #FFD54F; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; }}
+    QFrame[vai="bang_to_chuc"] QLabel[vai="dong_phu"] {{ color: #C7DBEF; font-size: 12px; }}
     QFrame[vai="bang_to_chuc"] QToolButton[vai="nut_bang"] {{ color: #FFFFFF; background: rgba(255, 255, 255, 26);
-        border: 1px solid rgba(255, 255, 255, 70); border-radius: 7px; padding: 3px 10px; font-weight: 600; font-size: 13px; }}
+        border: 1px solid rgba(255, 255, 255, 70); border-radius: 6px; padding: 2px 8px; font-weight: 600; font-size: 12px; }}
     QFrame[vai="bang_to_chuc"] QToolButton[vai="nut_bang"]:hover {{ background: rgba(255, 255, 255, 52);
         border-color: #FFD54F; }}
     QFrame[vai="bang_to_chuc"] QToolButton[vai="nut_bang"]:pressed {{ background: rgba(255, 255, 255, 80); }}
@@ -194,7 +209,7 @@ def _qss() -> str:
     QFrame[vai="bang_to_chuc"] QLabel[vai="phien_ban"] {{ color: #FFE082; background: rgba(255, 255, 255, 18); font-weight: 600;
         font-size: 11px; border: 1px solid rgba(255, 213, 79, 150); border-radius: 10px; padding: 2px 10px; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="thu_nghiem"] {{ color: #0A2747; background: #F2B705; font-weight: 800;
-        font-size: 13px; letter-spacing: 1px; border: 1px solid #FFD54F; border-radius: 6px; padding: 3px 12px; }}
+        font-size: 12px; letter-spacing: 0.8px; border: 1px solid #FFD54F; border-radius: 6px; padding: 2px 10px; }}
     QFrame[vai="vach_vang"] {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #F2B705, stop:0.7 rgba(242,183,5,90),
         stop:1 rgba(242,183,5,0)); border: 0; }}
     QFrame[vai="ribbon"] {{ background: #FFFFFF; border: 1px solid #DCE4EC; border-radius: 10px; }}
@@ -202,7 +217,7 @@ def _qss() -> str:
     QLabel[vai="nhan_ribbon"] {{ color: #4A6785; font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
         background: transparent; border: 0; }}
     QLabel[vai="dong_phu"] {{ color: #DCEBFA; font-size: 12px; }}
-    '''
+    ''' + _qss_the_so()
 
 
 def bieu_tuong():
@@ -309,12 +324,17 @@ MAU_TRANG_THAI = {
 }
 
 
+def kieu_trang_thai(muc: str, loai: str = 'QLabel', dam: bool = True) -> str:
+    """QSS màu trạng thái (MAU_TRANG_THAI) cho một loại thành phần - một nguồn màu cho băng kết quả, ô cảnh báo..."""
+    chu_mau, nen, vien = MAU_TRANG_THAI[muc]
+    return (f'{loai} {{ {"font-weight: 600; " if dam else ""}padding: 5px 8px; color: {chu_mau}; background: {nen}; '
+            f'border: 1px solid {vien}; border-radius: 6px; }}')
+
+
 def dat_trang_thai(nhan, muc: str, chu: str) -> None:
     """Đặt chữ + màu trạng thái cho QLabel (băng kết quả, dòng báo trong hộp thoại). muc: dat / tin / canh_bao / loi."""
-    chu_mau, nen, vien = MAU_TRANG_THAI[muc]
     nhan.setText(chu)
-    nhan.setStyleSheet(f'QLabel {{ font-weight: 600; padding: 5px 8px; color: {chu_mau}; background: {nen}; '
-                       f'border: 1px solid {vien}; border-radius: 6px; }}')
+    nhan.setStyleSheet(kieu_trang_thai(muc))
 
 
 class con_tro_cho:
@@ -461,7 +481,7 @@ class BangToChuc(KhungCao):
             g.setColorAt(t, QColor(m))
         p.fillPath(khung, g)
         p.setClipPath(khung)
-        sang = QRadialGradient(QPointF(r.left() + 58, r.top() + h * 0.5), h * 1.5)    # quầng sáng sau biểu tượng
+        sang = QRadialGradient(QPointF(r.left() + 35, r.top() + h * 0.5), h * 1.5)    # quầng sáng sau biểu tượng
         sang.setColorAt(0, QColor(255, 255, 255, 34))
         sang.setColorAt(1, QColor(255, 255, 255, 0))
         p.fillRect(r, sang)
@@ -487,61 +507,99 @@ class BangToChuc(KhungCao):
         p.end()
 
 
+class NhanRutGon(QLabel):
+    """Nhãn một dòng tự rút gọn "…" khi không đủ chỗ (chữ đầy đủ ở tooltip): chữ dài không ép cửa sổ rộng hơn màn hình
+    1366 px. text() trả chữ đầy đủ."""
+
+    def __init__(self, chu: str = '', parent=None):
+        super().__init__(parent)
+        from PySide6.QtWidgets import QSizePolicy
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.setMinimumWidth(60)
+        self._chu = ''
+        self.setText(chu)
+
+    def setText(self, chu: str):
+        self._chu = chu
+        self.setToolTip(chu)
+        self._ve()
+
+    def text(self) -> str:
+        return self._chu
+
+    def sizeHint(self):                             # bố cục cấp đủ chỗ cho cả dòng khi còn rộng
+        return QSize(self.fontMetrics().horizontalAdvance(self._chu) + 4, super().sizeHint().height())
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._ve()
+
+    def changeEvent(self, e):                       # đổi phông (QSS, phóng to / thu nhỏ): đo lại
+        super().changeEvent(e)
+        if e.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange):
+            self._ve()
+
+    def _ve(self):
+        QLabel.setText(self, self.fontMetrics().elidedText(self._chu, Qt.TextElideMode.ElideRight, max(self.width(), 1)))
+
+
 def bang_to_chuc(phai: str = '', nut: tuple = ()) -> QFrame:
-    """Băng tiêu đề: biểu tượng (khung trắng viền vàng) | tên phần mềm (trắng) + nút (nut: Hoàn tác / Làm lại, cùng dòng) /
-    tổ chức làm nhiệm vụ bồi thường (vàng) / trực thuộc - địa chỉ | phiên bản. Mọi dòng chữ canh trái cùng một cột (pabt/to_chuc.py)."""
+    """Băng tiêu đề GỌN (~60 px, trước 0.9.18: 112 px - màn hình 1366x768 mất gần 1/5 chiều cao): biểu tượng | dòng 1: tên
+    phần mềm + nút (nut: Hoàn tác / Làm lại, cùng dòng - người dùng yêu cầu) / dòng 2: tổ chức làm nhiệm vụ bồi thường (vàng) ·
+    trực thuộc - địa chỉ (rút gọn "…" khi hẹp, đủ ở tooltip) | phiên bản + BẢN THỬ NGHIỆM cùng một hàng (pabt/to_chuc.py)."""
     from . import to_chuc
     khung = BangToChuc()
     khung.setProperty('vai', 'bang_to_chuc')
     lo = QHBoxLayout(khung)
-    lo.setContentsMargins(18, 12, 20, 16)
-    lo.setSpacing(18)
+    lo.setContentsMargins(12, 6, 14, 10)                # dưới 10: chừa vạch vàng 4 px chân băng
+    lo.setSpacing(12)
     logo = QLabel()
     logo.setProperty('vai', 'logo')
-    logo.setFixedSize(84, 84)
+    logo.setFixedSize(46, 46)
     logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    logo.setPixmap(bieu_tuong().pixmap(72, 72))
+    logo.setPixmap(bieu_tuong().pixmap(40, 40))
     lo.addWidget(logo, 0, Qt.AlignmentFlag.AlignVCenter)
     cot = QVBoxLayout()
-    cot.setSpacing(3)
-    tieu_de = QLabel(TEN_PHAN_MEM)
+    cot.setSpacing(1)
+    tieu_de = NhanRutGon(TEN_PHAN_MEM)
     tieu_de.setProperty('vai', 'ten_phan_mem')
     dong_dau = QHBoxLayout()
     dong_dau.setSpacing(6)
-    dong_dau.addWidget(tieu_de)
+    dong_dau.addWidget(tieu_de, 1)
     if nut:
-        dong_dau.addSpacing(14)
+        dong_dau.addSpacing(8)
     for b in nut:
         b.setProperty('vai', 'nut_bang')
         dong_dau.addWidget(b, 0, Qt.AlignmentFlag.AlignVCenter)
-    dong_dau.addStretch(1)
+    dong_dau.addStretch(0)
     cot.addLayout(dong_dau)
+    dong2 = QHBoxLayout()
+    dong2.setSpacing(10)
     ten = QLabel(f'{to_chuc.TEN}')
     ten.setProperty('vai', 'ten_to_chuc')
-    cot.addWidget(ten)
-    phu = QLabel(f'Trực thuộc {to_chuc.TRUC_THUOC}   •   {to_chuc.DIA_CHI}')
+    dong2.addWidget(ten)
+    phu = NhanRutGon(f'Trực thuộc {to_chuc.TRUC_THUOC}   •   {to_chuc.DIA_CHI}')
     phu.setProperty('vai', 'dong_phu')
-    phu.setWordWrap(True)
-    cot.addWidget(phu)
+    dong2.addWidget(phu, 1)
+    cot.addLayout(dong2)
     lo.addLayout(cot, 1)
     from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM
-    cot_phai = QVBoxLayout()
-    cot_phai.setSpacing(8)
+    hang_phai = QHBoxLayout()
+    hang_phai.setSpacing(8)
     if phai:
         p = QLabel(phai)
         p.setProperty('vai', 'phien_ban')
         p.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cot_phai.addWidget(p, 0, Qt.AlignmentFlag.AlignRight)
-    if BAN_THU_NGHIEM:                                  # nhãn vàng đặc dưới phiên bản: nhìn là biết không phải bản chính thức
+        hang_phai.addWidget(p, 0, Qt.AlignmentFlag.AlignVCenter)
+    if BAN_THU_NGHIEM:                                  # nhãn vàng đặc cạnh phiên bản: nhìn là biết không phải bản chính thức
         tn = QLabel(NHAN_THU_NGHIEM)
         tn.setProperty('vai', 'thu_nghiem')
         tn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         tn.setToolTip('Bản thử nghiệm: dùng để kiểm tra trước khi phát hành chính thức.')
         khung.nhan_thu_nghiem = tn
-        cot_phai.addWidget(tn, 0, Qt.AlignmentFlag.AlignRight)
-    if cot_phai.count():
-        cot_phai.addStretch(1)
-        lo.addLayout(cot_phai)
+        hang_phai.addWidget(tn, 0, Qt.AlignmentFlag.AlignVCenter)
+    if hang_phai.count():
+        lo.addLayout(hang_phai)
     return khung
 
 

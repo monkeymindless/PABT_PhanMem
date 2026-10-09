@@ -326,8 +326,7 @@ class CuaSoChinh(QMainWindow):
         lo_ds = QVBoxLayout(trang_ds)
         lo_ds.setContentsMargins(0, 0, 0, 0)
         lo_ds.setSpacing(7)
-        lo_ds.addLayout(self._hang_thao_tac())
-        lo_ds.addWidget(self.lb_ket_qua)
+        lo_ds.addLayout(self._hang_thao_tac())              # băng đối chiếu + 2 thao tác hằng ngày: một hàng (trước: 2 hàng)
         lo_ds.addLayout(hang)
         lo_ds.addWidget(self.bang, 1)
         self.lb_trang = QLabel('')
@@ -581,7 +580,7 @@ class CuaSoChinh(QMainWindow):
         if hasattr(self, 'tien_do'):
             self.bang_tong_hop.dat_du_an(None)
             self.tien_do.dat_du_an(None)
-        self.lb_ket_qua.setText('')
+        self._xoa_ket_qua()
         self.lb_loc.setText('')
         self._cap_nhat_the_so()
 
@@ -703,10 +702,9 @@ class CuaSoChinh(QMainWindow):
         self._cap_nhat_the_so()
         self._dem_loc()
         da = self.con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()
-        co_pa = [h for h in self.kq.ho if h['tong'] > 0]
-        tong = sum((h['tong'] for h in self.kq.ho), D(0))
-        self.lb_du_an.setText(f'<b>{da["ten"]}</b><br>{da["cap_dia_ban"]} {da["ten_dia_ban"]}  ·  {len(self.kq.ho)} hộ, '
-                              f'{len(co_pa)} hộ đã lập phương án  ·  tổng {vn(tong)} đồng  ·  file {self.file.name}')
+        # một dòng (trước 0.9.18: 2 dòng, nhắc lại số hộ / đã lập / tổng tiền đã có ở hàng thẻ số liệu ngay bên dưới)
+        self.lb_du_an.setText(f'<b>{da["ten"]}</b>  ·  {da["cap_dia_ban"]} {da["ten_dia_ban"]}  ·  file {self.file.name}')
+        self.lb_du_an.setToolTip(str(self.file))
         sua = f' (trừ {self.kq.so_ho_sua} hộ đã sửa trong phần mềm)' if self.kq.so_ho_sua else ''
         from .giao_dien import dat_trang_thai
         if self.kq.khop_het:
@@ -768,8 +766,9 @@ class CuaSoChinh(QMainWindow):
         self.mo_lap_pa(self.mo_hinh.dong[r]['ma_ho'])
 
     # ------------------------------------------------ màn hình chính: thẻ số liệu, thao tác nhanh, menu chuột phải
-    THE_SO = [('so_ho', 'Số hộ', '#2D64A6'), ('da_pa', 'Đã lập phương án', '#2F7A4F'), ('tong', 'Tổng kinh phí (đồng)', '#6950A1'),
-              ('da_pd', 'Đã phê duyệt', '#1F7A86'), ('da_ct', 'Đã chi trả', '#B8651F'), ('da_bg', 'Đã bàn giao mặt bằng', '#4E5D6C')]
+    # màu từng thẻ: giao_dien.MAU_THE_SO (kiểu nằm trong QSS chung, thẻ chỉ gắn thuộc tính vai / the)
+    THE_SO = [('so_ho', 'Số hộ'), ('da_pa', 'Đã lập phương án'), ('tong', 'Tổng kinh phí (đồng)'), ('da_pd', 'Đã phê duyệt'),
+              ('da_ct', 'Đã chi trả'), ('da_bg', 'Đã bàn giao mặt bằng')]
 
     def _hien_ty_le(self, t: float):
         self.nut_ty_le['ty_le'].setText(f'{round(t * 100)}%')
@@ -791,18 +790,19 @@ class CuaSoChinh(QMainWindow):
         h = QHBoxLayout()
         h.setSpacing(10)
         self.the_so = {}
-        for k, ten, mau in self.THE_SO:
+        for k, ten in self.THE_SO:
             khung = QWidget()
             khung.setObjectName('the_so')
-            khung.setStyleSheet(f'QWidget#the_so {{ background: #FFFFFF; border: 1px solid #DCE3EA; border-left: 4px solid {mau}; '
-                                'border-radius: 8px; }')
+            khung.setProperty('vai', 'the_so')
+            khung.setProperty('the', k)
+            khung.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)    # QWidget thường: cần để QSS vẽ nền / viền
             o = QVBoxLayout(khung)
             o.setContentsMargins(12, 7, 12, 7)
             o.setSpacing(1)
             so = QLabel('–')
-            so.setStyleSheet(f'QLabel {{ color: {mau}; font-size: 19px; font-weight: 700; }}')
+            so.setProperty('vai', 'so_the')
             nhan = QLabel(ten)
-            nhan.setStyleSheet('QLabel { color: #4A5B6C; font-size: 12px; font-weight: 600; }')
+            nhan.setProperty('vai', 'nhan_the')
             o.addWidget(so)
             o.addWidget(nhan)
             self.the_so[k] = so
@@ -833,18 +833,22 @@ class CuaSoChinh(QMainWindow):
                 o.setText(f'{v} / {len(ds)}')
 
     def _hang_thao_tac(self) -> QHBoxLayout:
-        """Các thao tác hay dùng nhất với hộ đang chọn, ngay trên danh sách."""
+        """Băng kết quả đối chiếu (giãn hết chỗ trống) + hai thao tác dùng nhiều nhất với hộ đang chọn, cùng một hàng.
+        Bảng tổng hợp / Theo dõi tiến độ chỉ còn ở menu trái (trước 0.9.18 trùng ở đây: thêm một hàng, bảng hộ thấp đi)."""
         from PySide6.QtWidgets import QPushButton
         h = QHBoxLayout()
         h.setSpacing(8)
-        # hai thao tác dùng nhiều nhất + bảng tổng hợp, tiến độ; Trạng thái hộ, In / Xuất đã có ở menu trái và chuột phải
-        for ten, ham in (('Lập phương án hộ đang chọn', lambda: self.mo_lap_pa()), ('Thêm hộ…', lambda: self.mo_ho_so(moi=True)),
-                         ('Bảng tổng hợp', lambda: self.mo_trang(1)), ('Theo dõi tiến độ', lambda: self.mo_trang(4))):
+        h.addWidget(self.lb_ket_qua, 1)
+        for ten, ham in (('Lập phương án hộ đang chọn', lambda: self.mo_lap_pa()), ('Thêm hộ…', lambda: self.mo_ho_so(moi=True))):
             b = QPushButton(ten)
             b.clicked.connect(lambda _=False, ham=ham: self._chay_lenh(ham))
             h.addWidget(b)
-        h.addStretch(1)
         return h
+
+    def _xoa_ket_qua(self):
+        """Băng kết quả trống (chưa mở / đã đóng dự án): bỏ cả nền màu, không để lại ô màu rỗng cạnh nút."""
+        self.lb_ket_qua.setText('')
+        self.lb_ket_qua.setStyleSheet('QLabel { font-weight: bold; padding: 5px 8px; }')
 
     def _chay_lenh(self, ham):
         """Chạy một lệnh (menu trái, thanh nút, chuột phải) rồi giải phóng các hộp thoại đã đóng."""
@@ -1433,8 +1437,7 @@ class CuaSoChinh(QMainWindow):
         self.dong_du_an()
         self.file = None
         self.lb_du_an.setText(CHUA_MO)
-        self.lb_ket_qua.setText('')
-        self.lb_ket_qua.setStyleSheet('QLabel { font-weight: bold; padding: 5px 8px; }')
+        self._xoa_ket_qua()
         may_chu.dang_xuat()
         self.cap_nhat_tai_khoan()
 
