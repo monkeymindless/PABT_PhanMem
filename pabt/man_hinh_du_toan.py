@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor, QFont
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout,
                                QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem,
                                QVBoxLayout)
 
@@ -14,6 +14,8 @@ from . import du_toan
 from .du_toan import DongDT, DuToan
 from .lap_pa import DanhMuc, LoiNhap, doc_so
 from .tien import D, KHONG, so_vn, tien_bang_chu, vn
+from .giao_dien import con_tro_cho
+from .thong_bao import chu_loi
 
 TIEU_DE = 'Dự toán, áp giá dự thảo'
 XAM, XANH = QColor('#F2F2F2'), QColor('#DDEBF7')
@@ -326,21 +328,19 @@ class HopDuToan(QDialog):
             file, _ = QFileDialog.getOpenFileName(self, 'Chọn file', '', loc)
             if not file:
                 return None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            if nguon == 'du_an':
-                dt = du_toan.tu_du_an(self.con)
-            elif nguon == 'pabt':
-                dt = du_toan.tu_file_pabt(file)
-            elif nguon == 'excel':
-                dt = du_toan.tu_excel_pabt(file)
-            else:
-                dt = du_toan.tu_ds_tho(file)
+            with con_tro_cho():
+                if nguon == 'du_an':
+                    dt = du_toan.tu_du_an(self.con)
+                elif nguon == 'pabt':
+                    dt = du_toan.tu_file_pabt(file)
+                elif nguon == 'excel':
+                    dt = du_toan.tu_excel_pabt(file)
+                else:
+                    dt = du_toan.tu_ds_tho(file)
         except Exception as e:                      # file hỏng / không đúng mẫu
-            QApplication.restoreOverrideCursor()
-            self.bao(f'Không lấy được khối lượng:\n{e}')
+            self.bao(chu_loi('Không lấy được khối lượng', e))
             return None
-        QApplication.restoreOverrideCursor()
         self.dt = dt
         self.file = None
         self.ve()
@@ -469,7 +469,7 @@ class HopDuToan(QDialog):
         try:
             self.dt = DuToan.mo(file)
         except (OSError, ValueError, TypeError) as e:
-            self.bao(f'Không mở được file dự toán:\n{e}')
+            self.bao(chu_loi('Không mở được file dự toán', e))
             return None
         self.file = Path(file)
         self.ve()
@@ -487,14 +487,12 @@ class HopDuToan(QDialog):
                                                   'File Excel (*.xlsx)')
             if not file:
                 return None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            kq = du_toan.xuat_khai_toan(self.dt, file, pdf=pdf)
+            with con_tro_cho():
+                kq = du_toan.xuat_khai_toan(self.dt, file, pdf=pdf)
         except Exception as e:                      # file đang mở trong Excel, không có Excel để xuất PDF...
-            QApplication.restoreOverrideCursor()
-            self.bao(f'Không xuất được Bảng khái toán:\n{e}')
+            self.bao(chu_loi('Không xuất được Bảng khái toán', e))
             return None
-        QApplication.restoreOverrideCursor()
         mo = kq['pdf'] or kq['excel']
         if kq['loi']:
             self.bao('Đã lưu Excel nhưng không xuất được PDF:\n' + '\n'.join(kq['loi'][:5]))
@@ -515,7 +513,7 @@ class HopDuToan(QDialog):
         try:
             p = du_toan.xuat_excel(self.dt, file)
         except OSError as e:
-            self.bao(f'Không ghi được file (đang mở trong Excel?):\n{e}')
+            self.bao(chu_loi('Không ghi được file', e))
             return None
         if not self.im_lang and QMessageBox.question(self, TIEU_DE, f'Đã xuất:\n{p}\n\nMở file?') == QMessageBox.StandardButton.Yes:
             from .in_an import mo_file

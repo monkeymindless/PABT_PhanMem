@@ -12,8 +12,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QFormLay
 from . import don_gia_rieng as dgr
 from .lap_pa import LoiNhap
 from .tien import so_vn as vn
+from .thong_bao import TEN_UD
 
-TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
 COT_QU = [('ten_thuc_te', 'Tên tài sản thực tế (in ra phương án)', 300), ('ten_tuong_duong', 'Áp giá theo / nguồn giá', 260),
           ('dvt', 'ĐVT', 60), ('don_gia', 'Đơn giá (đ)', 100), ('can_cu', 'Căn cứ', 300), ('nguon', 'Thuộc', 100)]
 MAU_RIENG, MAU_TD = QColor('#E8F5E9'), QColor('#E3F2FD')

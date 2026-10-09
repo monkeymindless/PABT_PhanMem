@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 from . import nhap_don_gia as ndg
 from .lap_pa import LoiNhap
 from .tien import vn
+from .thong_bao import TEN_UD
 
-TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
 MAU = {'mới': QColor('#E8F5E9'), 'cập nhật': QColor('#FFF8E1'), 'giữ nguyên': QColor('#F5F5F5')}
 TEN_NHOM_NGAN = {2: 'Nhà, công trình', 3: 'Cây trồng, vật nuôi', 4: 'Hỗ trợ'}
 

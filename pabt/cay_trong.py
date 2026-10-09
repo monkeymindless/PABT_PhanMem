@@ -249,12 +249,12 @@ def luu_quy_chuan_mat_do(con, q: QuyChuanMatDo) -> None:
 def ds_quy_chuan_mat_do(con) -> list:
     """Mọi loại cây có mật độ (danh mục + dự án), sắp theo tên."""
     kq = {}
+    tl_mac_dinh = D(csdl.doc_cai_dat(con, 'TL_NGOAI_MAT_DO', '0'))     # đọc một lần (trước: mỗi loại cây một truy vấn - 327 lần)
     for r in con.execute('SELECT ten, ghi_chu FROM dm_taisan WHERE nhom = 3'):
         md = mat_do_tu_danh_muc(r['ten'], r['ghi_chu'])
         if md is not None:
             g = ten_goc(r['ten'])
-            kq.setdefault(g, QuyChuanMatDo(g, md, D(csdl.doc_cai_dat(con, 'TL_NGOAI_MAT_DO', '0')),
-                                           'Ghi chú danh mục đơn giá', 'danh mục'))
+            kq.setdefault(g, QuyChuanMatDo(g, md, tl_mac_dinh, 'Ghi chú danh mục đơn giá', 'danh mục'))
     try:
         ds = con.execute('SELECT * FROM quy_chuan_mat_do').fetchall()
     except sqlite3.OperationalError:                # bộ đơn giá / file cũ chưa có bảng quy chuẩn

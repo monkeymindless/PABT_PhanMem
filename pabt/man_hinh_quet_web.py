@@ -12,8 +12,9 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 
 from . import cap_nhat_web as cw, nhap_don_gia as ndg, ocr
 from .lap_pa import LoiNhap
+from .giao_dien import con_tro_cho
+from .thong_bao import TEN_UD
 
-TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
 KHOA_NHO = 'cap_nhat/nguon_web'
 _MAY_NOI_BO = re.compile(r'(?i)^https?://(?:127\.|localhost\b|\[?::1\]?|0\.0\.0\.0)')   # máy chạy thử (kiểm thử): không nhớ
 COT = ['Chọn', 'Văn bản', 'Số hiệu', 'Nhóm', 'Tình trạng', 'File']
@@ -144,15 +145,13 @@ class HopQuetWeb(QDialog):
             tien.setLabelText(f'Đang xem trang {i}/{n}: {chu[:80]}…')
             QApplication.processEvents()
             return tien.wasCanceled()
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            self.ds = cw.quet(nguon, bao=bao, noi=self.cb_noi.currentData() or 'dongnai')
+            with con_tro_cho():
+                self.ds = cw.quet(nguon, bao=bao, noi=self.cb_noi.currentData() or 'dongnai')
         except LoiNhap as e:
-            QApplication.restoreOverrideCursor()
             tien.close()
             self._bao(QMessageBox.warning, str(e))
             return []
-        QApplication.restoreOverrideCursor()
         tien.close()
         self._nho(nguon if nguon.lower().startswith('http') else '')
         self.hien()

@@ -14,10 +14,11 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDial
 
 from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
 from .tien import D, so_vn, vn
+from .giao_dien import con_tro_cho
+from .thong_bao import TEN_UD, chu_loi
 
 # doi_chieu, nhap_excel, nhap_tho (kéo theo openpyxl ~0,2 giây - 60% thời gian nạp mã lúc mở phần mềm) nạp khi dùng tới
 
-TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
 TIEU_DE_CUA_SO = TEN_UD + (f' ({NHAN_THU_NGHIEM})' if BAN_THU_NGHIEM else '')     # tiêu đề cửa sổ chính
 # danh sách hộ ở màn hình chính: gọn (0.9.12). Tiền từng mục, quyết định, chi trả, bàn giao, ghi chú: menu "Bảng tổng hợp",
 # "Theo dõi tiến độ" (man_hinh_theo_doi)
@@ -40,9 +41,9 @@ class LocHo(QSortFilterProxyModel):
         self.dot = ''                  # '' tất cả / 'chua' chưa xếp đợt / id đợt
         self.trang_thai = ''           # khóa trong quan_ly.TRANG_THAI
         self.tu_khoa = []
+        self._hop_tt = None            # quan_ly.hop_trang_thai - nạp khi lần đầu lọc theo trạng thái (không nạp lúc mở phần mềm)
 
     def dat(self, dot=None, trang_thai=None, tu_khoa=None):
-        from .lap_pa import bo_dau
         moi = hasattr(self, 'endFilterChange')          # Qt 6.10+: invalidateFilter() lỗi thời; Qt5 / Qt6 cũ chưa có begin/end
         if moi:
             self.beginFilterChange()
@@ -50,28 +51,34 @@ class LocHo(QSortFilterProxyModel):
             self.dot = dot
         if trang_thai is not None:
             self.trang_thai = trang_thai
+            if trang_thai and self._hop_tt is None:
+                from .quan_ly import hop_trang_thai
+                self._hop_tt = hop_trang_thai
         if tu_khoa is not None:
-            self.tu_khoa = bo_dau(tu_khoa).split()
+            self.tu_khoa = lap_pa.bo_dau(tu_khoa).split()
         if moi:
             self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
         else:
             self.invalidateFilter()
 
     def filterAcceptsRow(self, r, parent):
-        from .lap_pa import bo_dau
-        from .quan_ly import hop_trang_thai
+        # gọi cho TỪNG dòng mỗi lần lọc (5.000 hộ x mỗi phím gõ): không import / tra thuộc tính thừa ở đây
         d = self.sourceModel().dong[r]
-        if self.dot == 'chua' and d.get('dot_id'):
+        dot = self.dot
+        if dot:
+            if dot == 'chua':
+                if d.get('dot_id'):
+                    return False
+            elif d.get('dot_id') != dot:
+                return False
+        if self.trang_thai and not self._hop_tt(d, self.trang_thai):
             return False
-        if self.dot not in ('', 'chua') and d.get('dot_id') != self.dot:
-            return False
-        if self.trang_thai and not hop_trang_thai(d, self.trang_thai):
-            return False
-        if self.tu_khoa:
+        tu_khoa = self.tu_khoa
+        if tu_khoa:
             chu = d.get('_tim')
-            if chu is None:
-                chu = d['_tim'] = bo_dau(' '.join(str(x) for x in d['o']) + ' ' + d.get('tim', ''))
-            return all(t in chu for t in self.tu_khoa)
+            if chu is None:                             # chuỗi tìm không dấu: tính một lần cho mỗi dòng rồi nhớ trên dòng
+                chu = d['_tim'] = lap_pa.bo_dau(' '.join(str(x) for x in d['o']) + ' ' + d.get('tim', ''))
+            return all(t in chu for t in tu_khoa)
         return True
 
 
@@ -382,7 +389,7 @@ class CuaSoChinh(QMainWindow):
         try:
             tho = not nhap_tho.la_file_pabt(xl)
         except Exception as e:
-            QMessageBox.critical(self, TEN_UD, f'Không đọc được file:\n{e}')
+            QMessageBox.critical(self, TEN_UD, chu_loi('Không đọc được file', e))
             return
         from . import nhap_chi_tiet
         if tho and dich is None and nhap_chi_tiet.la_file_chi_tiet(xl):    # mỗi sheet một phương án chi tiết
@@ -402,17 +409,15 @@ class CuaSoChinh(QMainWindow):
             QMessageBox.warning(self, TEN_UD, f'File dự án đang được sửa trên {khoa.mo_ta(k)}.\nKhông ghi đè được.')
             return
         danh_muc = self.file if tho and self.file and not Path(dich).exists() else None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            self.dong_du_an()
-            from .giao_dien import chay_nen                 # luồng nền (tự mở kết nối file đích): file lớn không làm treo cửa sổ
-            bc = chay_nen(self, lambda: nhap_tho.nhap(xl, dich, danh_muc=danh_muc) if tho else nhap_excel.nhap(xl, dich),
-                          f'Đang nhập {Path(xl).name}…')
+            with con_tro_cho():
+                self.dong_du_an()
+                from .giao_dien import chay_nen                 # luồng nền (tự mở kết nối file đích): file lớn không làm treo cửa sổ
+                bc = chay_nen(self, lambda: nhap_tho.nhap(xl, dich, danh_muc=danh_muc) if tho else nhap_excel.nhap(xl, dich),
+                              f'Đang nhập {Path(xl).name}…')
         except Exception as e:                       # file hỏng, đang mở khóa...
-            QApplication.restoreOverrideCursor()
-            QMessageBox.critical(self, TEN_UD, f'Không nhập được file:\n{e}')
+            QMessageBox.critical(self, TEN_UD, chu_loi('Không nhập được file', e))
             return
-        QApplication.restoreOverrideCursor()
         if bc.loi:
             from .giao_dien import hop_ket_qua
             hop_ket_qua(self, 'Không nhập được file.', bc.loi, 'Lý do', canh_bao=True, tieu_de=TEN_UD)
@@ -433,15 +438,13 @@ class CuaSoChinh(QMainWindow):
                                                 'File Excel (*.xlsm *.xlsx)')
             if not xl:
                 return None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            from .giao_dien import chay_nen                 # chỉ đọc file Excel: chạy nền, cửa sổ không treo khi file nhiều sheet
-            kq = chay_nen(self, lambda: nhap_chi_tiet.doc(xl), f'Đang đọc {Path(xl).name}…')
+            with con_tro_cho():
+                from .giao_dien import chay_nen                 # chỉ đọc file Excel: chạy nền, cửa sổ không treo khi file nhiều sheet
+                kq = chay_nen(self, lambda: nhap_chi_tiet.doc(xl), f'Đang đọc {Path(xl).name}…')
         except Exception as e:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.critical(self, TEN_UD, f'Không đọc được file:\n{e}')
+            QMessageBox.critical(self, TEN_UD, chu_loi('Không đọc được file', e))
             return None
-        QApplication.restoreOverrideCursor()
         if not kq.ho:
             QMessageBox.warning(self, TEN_UD, 'File không có sheet phương án chi tiết nào (bảng STT / Tên tài sản / Số lượng / '
                                               'Thành tiền và dòng "Họ và tên").')
@@ -473,19 +476,17 @@ class CuaSoChinh(QMainWindow):
             if k:
                 QMessageBox.warning(self, TEN_UD, f'File dự án đang được sửa trên {khoa.mo_ta(k)}.\nKhông ghi được.')
                 return None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            if vao_mo:
-                bc = nhap_chi_tiet.ghi(self.con, kq.ho, cach, Path(xl).name, kq.du_an)
-            else:
-                if self.file is not None and Path(dich).resolve() == self.file.resolve():
-                    self.dong_du_an()
-                bc = nhap_chi_tiet.ghi_file(kq, dich, cach)
+            with con_tro_cho():
+                if vao_mo:
+                    bc = nhap_chi_tiet.ghi(self.con, kq.ho, cach, Path(xl).name, kq.du_an)
+                else:
+                    if self.file is not None and Path(dich).resolve() == self.file.resolve():
+                        self.dong_du_an()
+                    bc = nhap_chi_tiet.ghi_file(kq, dich, cach)
         except Exception as e:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.critical(self, TEN_UD, f'Không nhập được:\n{e}')
+            QMessageBox.critical(self, TEN_UD, chu_loi('Không nhập được', e))
             return None
-        QApplication.restoreOverrideCursor()
         if vao_mo:
             self.tai_lai()
         else:
@@ -548,7 +549,7 @@ class CuaSoChinh(QMainWindow):
             may_chu.ghi_mo_du_an(self.file)            # đăng nhập máy chủ: máy khác đăng nhập cùng tài khoản sẽ mở tiếp dự án này
         except Exception as e:
             self.dong_du_an()
-            QMessageBox.critical(self, TEN_UD, f'Không mở được dự án:\n{e}')
+            QMessageBox.critical(self, TEN_UD, chu_loi('Không mở được dự án', e))
 
     def lam_moi_khoa(self):
         if self.khoa is not None and not self.khoa.lam_moi():
@@ -707,14 +708,16 @@ class CuaSoChinh(QMainWindow):
         self.lb_du_an.setText(f'<b>{da["ten"]}</b><br>{da["cap_dia_ban"]} {da["ten_dia_ban"]}  ·  {len(self.kq.ho)} hộ, '
                               f'{len(co_pa)} hộ đã lập phương án  ·  tổng {vn(tong)} đồng  ·  file {self.file.name}')
         sua = f' (trừ {self.kq.so_ho_sua} hộ đã sửa trong phần mềm)' if self.kq.so_ho_sua else ''
+        from .giao_dien import dat_trang_thai
         if self.kq.khop_het:
-            self.lb_ket_qua.setText(f'Đối chiếu file Excel: KHỚP 100%{sua}  ·  {len(self.kq.canh_bao)} điểm cần xem lại')
-            self.lb_ket_qua.setStyleSheet('QLabel { font-weight: 600; padding: 5px 8px; color: #1E6B34; background: #EAF6EC; '
-                                          'border: 1px solid #CDE8D2; border-radius: 6px; }')
+            dat_trang_thai(self.lb_ket_qua, 'dat',
+                           f'✓ Đối chiếu file Excel: KHỚP 100%{sua}  ·  {len(self.kq.canh_bao)} điểm cần xem lại')
         else:
-            self.lb_ket_qua.setText(f'Đối chiếu file Excel: LỆCH {self.kq.so_ho_lech} hộ, {len(self.kq.dong_lech)} dòng{sua}')
-            self.lb_ket_qua.setStyleSheet('QLabel { font-weight: 600; padding: 5px 8px; color: #A12A1F; background: #FCEDEB; '
-                                          'border: 1px solid #F3CFCA; border-radius: 6px; }')
+            # lệch so với file Excel lúc nhập = cần rà lại (thường do đã sửa / áp giá mới), không phải lỗi: màu cảnh báo,
+            # kèm bước tiếp theo thay vì chỉ báo con số
+            dat_trang_thai(self.lb_ket_qua, 'canh_bao',
+                           f'⚠ Đối chiếu file Excel: LỆCH {self.kq.so_ho_lech} hộ, {len(self.kq.dong_lech)} dòng{sua}  ·  '
+                           'xem từng dòng lệch: In ấn, báo cáo → Xuất báo cáo đối chiếu…')
         self.dat_tieu_de()
 
     # ------------------------------------------------ lọc danh sách
@@ -897,7 +900,7 @@ class CuaSoChinh(QMainWindow):
         try:
             viec = self.ht.lam_lai() if lam_lai else self.ht.hoan_tac()
         except Exception as e:                          # file bị khóa / lỗi SQLite: không làm hỏng dữ liệu (đã rollback)
-            QMessageBox.warning(self, TEN_UD, f'Không {"làm lại" if lam_lai else "hoàn tác"} được:\n{e}')
+            QMessageBox.warning(self, TEN_UD, chu_loi(f'Không {"làm lại" if lam_lai else "hoàn tác"} được', e))
             return ''
         if not viec:
             self.statusBar().showMessage('Không còn thao tác để ' + ('làm lại.' if lam_lai else 'hoàn tác.'), 4000)
@@ -1011,7 +1014,7 @@ class CuaSoChinh(QMainWindow):
         try:
             tb = ho_so.xoa_nhieu_ho(self.con, [x['ma_ho'] for x in ds])
         except (lap_pa.LoiNhap, sqlite3.Error) as e:
-            QMessageBox.warning(self, TEN_UD, f'Không xóa được:\n{e}')
+            QMessageBox.warning(self, TEN_UD, chu_loi('Không xóa được', e))
             return None
         self.tai_lai()
         self.statusBar().showMessage(tb + '  Xóa nhầm: bấm Hoàn tác (Ctrl+Z).', 20000)
@@ -1074,7 +1077,7 @@ class CuaSoChinh(QMainWindow):
         try:
             ds = in_an.tao_mau_tu_excel(file_excel, in_an.thu_muc_mau_ghi())
         except (in_an.LoiIn, OSError, KeyError) as e:
-            QMessageBox.warning(self, TEN_UD, f'Không lấy được mẫu in:\n{e}')
+            QMessageBox.warning(self, TEN_UD, chu_loi('Không lấy được mẫu in', e))
             return None
         QMessageBox.information(self, TEN_UD, 'Đã cập nhật mẫu in:\n' + '\n'.join(str(p) for p in ds))
         return ds
@@ -1142,14 +1145,12 @@ class CuaSoChinh(QMainWindow):
         if not xac_nhan:
             return None
         from . import nhap_tho
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            dem = nhap_tho.nap_danh_muc(self.file, file_excel)
+            with con_tro_cho():
+                dem = nhap_tho.nap_danh_muc(self.file, file_excel)
         except Exception as e:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.warning(self, TEN_UD, f'Không nạp được danh mục:\n{e}')
+            QMessageBox.warning(self, TEN_UD, chu_loi('Không nạp được danh mục', e))
             return None
-        QApplication.restoreOverrideCursor()
         self.dm = lap_pa.DanhMuc(self.con)
         self.tai_lai()
         self.statusBar().showMessage(f'Đã nạp danh mục: {dem["dm_taisan"]} tài sản, cây trồng; {dem["dm_hotro"]} khoản hỗ trợ; '
@@ -1179,7 +1180,7 @@ class CuaSoChinh(QMainWindow):
         try:
             doi_chieu.xuat_bao_cao(self.kq, p, da['ten'], da['nguon_nhap'], lap_pa.ra_soat_gia(self.con, self.dm))
         except OSError as e:
-            QMessageBox.warning(self, TEN_UD, f'Không ghi được file (file đang mở trong Excel?):\n{e}')
+            QMessageBox.warning(self, TEN_UD, chu_loi('Không ghi được file', e))
             return
         QMessageBox.information(self, TEN_UD, f'Đã lưu báo cáo:\n{p}')
 
@@ -1215,7 +1216,7 @@ class CuaSoChinh(QMainWindow):
         try:
             p = quan_ly.luu_thanh(self.con, dich)
         except Exception as e:                         # thư mục không ghi được, file đích đang mở, SQLite...
-            QMessageBox.warning(self, TEN_UD, f'Không lưu được:\n{e}')
+            QMessageBox.warning(self, TEN_UD, chu_loi('Không lưu được', e))
             return None
         if mo_ban_moi is None:
             mo_ban_moi = QMessageBox.question(self, TEN_UD, f'Đã lưu dự án thành:\n{p}\n\nLàm việc tiếp trên file mới này?') \
@@ -1285,14 +1286,12 @@ class CuaSoChinh(QMainWindow):
             file, _ = QFileDialog.getSaveFileName(self, 'Lưu báo cáo tổng hợp', mac_dinh, 'File Excel (*.xlsx)')
             if not file:
                 return None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            p = quan_ly.xuat_bao_cao_tong_hop(self.con, file, ds, dieu_kien=self.mo_ta_loc())
+            with con_tro_cho():
+                p = quan_ly.xuat_bao_cao_tong_hop(self.con, file, ds, dieu_kien=self.mo_ta_loc())
         except OSError as e:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.warning(self, TEN_UD, f'Không ghi được file (đang mở trong Excel?):\n{e}')
+            QMessageBox.warning(self, TEN_UD, chu_loi('Không ghi được file', e))
             return None
-        QApplication.restoreOverrideCursor()
         if QMessageBox.question(self, TEN_UD, f'Đã lưu báo cáo {len(ds)} hộ:\n{p}\n\nMở file?') == QMessageBox.StandardButton.Yes:
             from .in_an import mo_file
             mo_file(p)

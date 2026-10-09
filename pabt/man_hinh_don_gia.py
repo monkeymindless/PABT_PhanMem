@@ -3,16 +3,17 @@ cập nhật bộ đơn giá từ file hoặc qua Internet; tra cứu văn bản
 from __future__ import annotations
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QFileDialog, QHBoxLayout, QLabel, QLineEdit,
+from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QHBoxLayout, QLabel, QLineEdit,
                                QMenu, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout)
 
 from . import csdl, don_gia
 from .lap_pa import LoiNhap, bo_dau
 from .tien import vn
+from .giao_dien import con_tro_cho
+from .thong_bao import TEN_UD, chu_loi
 
-TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
 THE = [
     ('Đơn giá tài sản, cây trồng', 'SELECT ma, phan_loai, ten, dvt, don_gia, ghi_chu FROM dm_taisan',
      ['Mã', 'Phân loại', 'Tên', 'ĐVT', 'Đơn giá (đ)', 'Ghi chú'], [70, 240, 420, 70, 110, 300]),
@@ -136,14 +137,12 @@ class HopBoDonGia(QDialog):
         from .nhap_tho import la_file_pabt
         if Path(p).suffix.lower() != '.sqlite' and not (Path(p).suffix.lower() in ('.xlsx', '.xlsm') and la_file_pabt(p)):
             return self.cap_nhat_file_bat_ky(p)
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            tt = don_gia.cap_nhat_tu_file(p)
+            with con_tro_cho():
+                tt = don_gia.cap_nhat_tu_file(p)
         except Exception as e:
-            QApplication.restoreOverrideCursor()
-            self._bao(QMessageBox.warning, f'Không cập nhật được:\n{e}')
+            self._bao(QMessageBox.warning, chu_loi('Không cập nhật được', e))
             return None
-        QApplication.restoreOverrideCursor()
         self.nap()
         self._bao(QMessageBox.information, f'Đã cập nhật bộ đơn giá phiên bản {tt["phien_ban"]}. Dự án mới dùng bộ này; '
                                               'dự án đang lập muốn đổi thì bấm "Áp bộ đơn giá vào dự án đang mở".')
@@ -198,24 +197,21 @@ class HopBoDonGia(QDialog):
     def cap_nhat_mang(self, url=None):
         if url is None:
             return self.cap_nhat_web()
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            tb = don_gia.kiem_tra_mang(url.strip())
+            with con_tro_cho():                                 # hỏi nơi phát hành: có bộ đơn giá mới không
+                tb = don_gia.kiem_tra_mang(url.strip())
             if tb is None:
-                QApplication.restoreOverrideCursor()
                 self._bao(QMessageBox.information, 'Bộ đơn giá đang dùng là mới nhất.')
                 return None
-            QApplication.restoreOverrideCursor()
+            # hỏi người dùng ngoài khối chờ: con trỏ đã trở lại bình thường
             if QMessageBox.question(self, TEN_UD, f'Có bộ đơn giá phiên bản {tb["phien_ban"]}.\n{tb.get("ghi_chu", "")}\n\nTải và cài?') \
                     != QMessageBox.StandardButton.Yes:
                 return None
-            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-            tt = don_gia.tai_va_cai(tb)
+            with con_tro_cho():
+                tt = don_gia.tai_va_cai(tb)
         except LoiNhap as e:
-            QApplication.restoreOverrideCursor()
             self._bao(QMessageBox.warning, str(e))
             return None
-        QApplication.restoreOverrideCursor()
         self.nap()
         self._bao(QMessageBox.information, f'Đã cài bộ đơn giá phiên bản {tt["phien_ban"]}.')
         return tt
@@ -243,7 +239,7 @@ class HopBoDonGia(QDialog):
         try:
             f = nq.xuat_excel(p)
         except OSError as e:
-            self._bao(QMessageBox.warning, f'Không ghi được file (đang mở trong Excel?):\n{e}')
+            self._bao(QMessageBox.warning, chu_loi('Không ghi được file', e))
             return None
         self._bao(QMessageBox.information, f'Đã lưu bảng giá đất:\n{f}')
         return f

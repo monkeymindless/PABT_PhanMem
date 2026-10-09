@@ -15,11 +15,14 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QWidget)
 
 from . import theo_doi
+from .bang_ao import BangAo
 from .lap_pa import LoiNhap, bo_dau
 from .tien import D, KHONG, so_vn, vn
+from .thong_bao import chu_loi
 
 TIEU_DE = 'Theo dõi phê duyệt, chi trả, bàn giao'
 XANH, VANG, DO, XAM = QColor('#E2EFDA'), QColor('#FFF2CC'), QColor('#F8CBAD'), QColor('#F2F4F7')
+MAU_LIEN_KET = QColor('#0B5CAD')                          # chữ ô bấm đúp mở được file (biên lai, chứng từ)
 
 
 def _tien(v) -> str:
@@ -199,7 +202,7 @@ class KhungTongQuat(_Khung):
         self.lb = QLabel('')
         b_xuat = QPushButton('Xuất Excel…')
         b_xuat.clicked.connect(lambda: self.xuat())
-        self.bang = _bang(self.COT)
+        self.bang = BangAo(self.COT, can_phai=(0, 1, 5, 7))    # mỗi thửa một dòng: 10.000 thửa = 110.000 ô -> bảng ảo
         for c, w in enumerate((50, 60, 210, 80, 80, 110, 90, 150, 260, 170, 220)):
             self.bang.setColumnWidth(c, w)
         self.bang.cellDoubleClicked.connect(self._nhap_dup)
@@ -241,30 +244,28 @@ class KhungTongQuat(_Khung):
         return kq
 
     def ve(self):
-        dong = self.dong()
-        b = self.bang
-        b.setUpdatesEnabled(False)
-        b.clearSpans()
-        b.setRowCount(len(dong))
-        for r, (x, gt, n) in enumerate(dong):
-            ct, mau_ct = mo_ta_chi_tra(x.qd)
-            bg, mau_bg = mo_ta_ban_giao(x)
-            for c, v in enumerate(gt):
-                if c == 5:
-                    _o(b, r, c, so_vn(v) if v is not None else '', so=True)
-                elif c == 7:
-                    _o(b, r, c, vn(v) if v is not None else '', so=True, dam=True,
-                       goi_y='\n'.join(f'QĐ {q["so_qd"]} ({q["ngay_qd"]}): {_tien(q["so_tien"])} đ' for q in x.qd))
-                elif c in (0, 1):
-                    _o(b, r, c, v, so=True, du_lieu=x.ma_ho)
-                else:
-                    _o(b, r, c, v, nen=mau_ct if c == 8 and n else mau_bg if c == 9 and n else None, du_lieu=x.ma_ho)
-            if n:
-                _gop(b, r, n, self.COT_HO)
-        b.setUpdatesEnabled(True)
-        b.resizeRowsToContents()
-        tong = sum((x.tong_phe_duyet for x in self.loc()), KHONG)
-        self.lb.setText(f'{len(self.loc())}/{len(self.ds)} hộ · tổng phê duyệt {vn(tong)} đ')
+        # chỉ dựng chuỗi hiển thị (Python thuần) - BangAo vẽ các ô đang hiện; kiểu riêng (nền, đậm, chú thích) chỉ cho ô cần
+        hien, ma, kieu, gop = [], [], {}, []
+        for r, (x, gt, n) in enumerate(self.dong()):
+            o = [str(v) if v is not None else '' for v in gt]
+            o[5] = so_vn(gt[5]) if gt[5] is not None else ''
+            o[7] = vn(gt[7]) if gt[7] is not None else ''
+            hien.append(o)
+            ma.append(x.ma_ho)
+            if n:                                        # dòng đầu của hộ: màu chi trả / bàn giao, chú thích các quyết định
+                _, mau_ct = mo_ta_chi_tra(x.qd)
+                _, mau_bg = mo_ta_ban_giao(x)
+                kieu[(r, 7)] = dict(dam=True, goi_y='\n'.join(f'QĐ {q["so_qd"]} ({q["ngay_qd"]}): {_tien(q["so_tien"])} đ'
+                                                              for q in x.qd))
+                if mau_ct is not None:
+                    kieu[(r, 8)] = dict(nen=mau_ct)
+                if mau_bg is not None:
+                    kieu[(r, 9)] = dict(nen=mau_bg)
+                gop.append((r, n, self.COT_HO))
+        self.bang.dat_du_lieu(hien, ma, kieu, gop)
+        loc = self.loc()
+        tong = sum((x.tong_phe_duyet for x in loc), KHONG)
+        self.lb.setText(f'{len(loc)}/{len(self.ds)} hộ · tổng phê duyệt {vn(tong)} đ')
 
     def _nhap_dup(self, r, c):
         it = self.bang.item(r, 2) or self.bang.item(r, 0)
@@ -286,7 +287,7 @@ class KhungTongQuat(_Khung):
             p = theo_doi.xuat_excel(file, 'THÔNG TIN TỔNG QUÁT HỘ', self.COT, [d for _, d, _ in dong],
                                     [6, 8, 26, 9, 9, 12, 10, 16, 34, 20, 28], gop, ten[0] if ten else '')
         except OSError as e:
-            self.bao(f'Không ghi được file (đang mở trong Excel?):\n{e}')
+            self.bao(chu_loi('Không ghi được file', e))
             return None
         if not self.im_lang:
             mo_file(p)
@@ -605,7 +606,7 @@ class KhungQuyetDinh(_Khung):
                                     self.COT, [d for _, _, d, _ in dong],
                                     [5, 24, 24, 13, 11, 13, 11, 7, 7, 11, 9, 14, 14, 13, 14, 15, 24, 16], gop, q.trich_yeu)
         except OSError as e:
-            self.bao(f'Không ghi được file (đang mở trong Excel?):\n{e}')
+            self.bao(chu_loi('Không ghi được file', e))
             return None
         if not self.im_lang:
             mo_file(p)
@@ -771,7 +772,7 @@ class KhungTienDo(_Khung):
             o.setToolTip(t)
             self.the[k] = (o, t)
             h_the.addWidget(o, 1)
-        self.bang = _bang(self.COT)
+        self.bang = BangAo(self.COT, can_phai=(0, 1, 5, 6))     # 5.000 hộ x 13 cột -> bảng ảo
         for c, w in enumerate((44, 56, 190, 190, 200, 120, 120, 110, 230, 150, 140, 180, 180)):
             self.bang.setColumnWidth(c, w)
         self.bang.cellDoubleClicked.connect(self._nhap_dup)
@@ -886,27 +887,22 @@ class KhungTienDo(_Khung):
         return kq
 
     def ve(self):
-        dong = self.dong()
-        b = self.bang
-        b.setUpdatesEnabled(False)
-        b.setRowCount(len(dong))
-        for r, (x, qd, gt) in enumerate(dong):
-            for c, v in enumerate(gt):
-                nen = None
-                if c == 8 and v:
-                    nen = DO
-                elif c == 7 and v:
-                    nen = XANH
-                elif c == 10:
-                    nen = XANH if x.da_ban_giao else VANG if qd else None
-                it = _o(b, r, c, vn(v) if c in (5, 6) and v is not None else ('' if v is None else v), so=c in (0, 1, 5, 6),
-                        nen=nen, du_lieu=x.ma_ho)
-                if c == 9 and v:
-                    it.setForeground(QBrush(QColor('#0B5CAD')))
-                    it.setToolTip('Nhấp đúp để mở biên lai / biên bản chi trả:\n' +
-                                  '\n'.join(q['chung_tu'] for q in qd if q['chung_tu']))
-        b.setUpdatesEnabled(True)
-        b.resizeRowsToContents()
+        # chuỗi hiển thị + kiểu riêng của các ô cần tô (bảng ảo: chỉ vẽ ô đang hiện, không dựng 65.000 QTableWidgetItem)
+        hien, ma, kieu = [], [], {}
+        for r, (x, qd, gt) in enumerate(self.dong()):
+            hien.append([vn(v) if c in (5, 6) and v is not None else ('' if v is None else str(v)) for c, v in enumerate(gt)])
+            ma.append(x.ma_ho)
+            if gt[8]:
+                kieu[(r, 8)] = dict(nen=DO)
+            if gt[7]:
+                kieu[(r, 7)] = dict(nen=XANH)
+            nen_bg = XANH if x.da_ban_giao else VANG if qd else None
+            if nen_bg is not None:
+                kieu[(r, 10)] = dict(nen=nen_bg)
+            if gt[9]:
+                kieu[(r, 9)] = dict(mau_chu=MAU_LIEN_KET, goi_y='Nhấp đúp để mở biên lai / biên bản chi trả:\n' +
+                                    '\n'.join(q['chung_tu'] for q in qd if q['chung_tu']))
+        self.bang.dat_du_lieu(hien, ma, kieu)
         ds = self.loc()
         n_pd = sum(1 for x in self.ds if x.qd)
         dem = dict(tong=len(self.ds), pd=n_pd, nhan=sum(1 for x in self.ds if x.qd and not x.qd_chua_nhan),

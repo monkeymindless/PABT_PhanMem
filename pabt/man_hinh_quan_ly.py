@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import kiem_loi, quan_ly
 from .lap_pa import LoiNhap
 from .tien import D, vn
+from .giao_dien import con_tro_cho
+from .thong_bao import chu_loi
 
 TIEU_DE = 'Quản lý hồ sơ trình phương án'
 DO, VANG, XANH = QColor('#F8CBAD'), QColor('#FFF2CC'), QColor('#E2EFDA')
@@ -423,14 +425,12 @@ class HopDotTrinh(_Hop):
                     'Microsoft Word sẽ mở file PDF và hỏi "chuyển PDF thành văn bản sửa được": bấm OK trong cửa sổ Word. '
                     'Bố cục bản chuyển gần đúng - nên mở "Sửa mẫu" kiểm tra lại. Tiếp tục?'):
                 return None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            p, cho = vb.them_mau(loai, file)
+            with con_tro_cho():
+                p, cho = vb.them_mau(loai, file)
         except (LoiNhap, OSError) as e:
-            QApplication.restoreOverrideCursor()
             self.bao(str(e))
             return None
-        QApplication.restoreOverrideCursor()
         self._ve_mau()
         self.bao(f'Đã dùng làm mẫu {vb.LOAI[loai][1].lower()}: {p.name}.\n' +
                  (f'Chỗ trống có trong mẫu: {", ".join("{" + x + "}" for x in cho)}' if cho else
@@ -585,35 +585,33 @@ class HopDotTrinh(_Hop):
             tien_do.setWindowModality(Qt.WindowModality.WindowModal)
             tien_do.setMinimumDuration(0)
         kq_tong, da = [], 0
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            for d in ds:
-                def bao(i, n, _da=da):
-                    if tien_do is not None:
-                        tien_do.setValue(min(_da + i, tien_do.maximum()))
-                        tien_do.setLabelText(f'Đang tạo file: {i}/{n}…')
-                        QApplication.processEvents()
-                        return tien_do.wasCanceled()
-                    return False
+            with con_tro_cho():
+                for d in ds:
+                    def bao(i, n, _da=da):
+                        if tien_do is not None:
+                            tien_do.setValue(min(_da + i, tien_do.maximum()))
+                            tien_do.setLabelText(f'Đang tạo file: {i}/{n}…')
+                            QApplication.processEvents()
+                            return tien_do.wasCanceled()
+                        return False
 
-                def bao_excel(i, n):            # Excel xuất PDF từng file: giữ giao diện chạy, cho phép Hủy
-                    if tien_do is not None:
-                        tien_do.setLabelText(f'Microsoft Excel đang xuất PDF: xong {i}/{n} file… (văn bản Word: Word xuất sau)')
-                        QApplication.processEvents()
-                        return tien_do.wasCanceled()
-                    return False
-                kq = quan_ly.xuat_dot(self.con, d, goc, pdf=pdf, bao_tien_do=bao, bao_excel=bao_excel, **chon)
-                da += quan_ly.lay_dot(self.con, d).so_ho + 3
-                kq_tong.append(kq)
-                if tien_do is not None and tien_do.wasCanceled():
-                    break
+                    def bao_excel(i, n):            # Excel xuất PDF từng file: giữ giao diện chạy, cho phép Hủy
+                        if tien_do is not None:
+                            tien_do.setLabelText(f'Microsoft Excel đang xuất PDF: xong {i}/{n} file… (văn bản Word: Word xuất sau)')
+                            QApplication.processEvents()
+                            return tien_do.wasCanceled()
+                        return False
+                    kq = quan_ly.xuat_dot(self.con, d, goc, pdf=pdf, bao_tien_do=bao, bao_excel=bao_excel, **chon)
+                    da += quan_ly.lay_dot(self.con, d).so_ho + 3
+                    kq_tong.append(kq)
+                    if tien_do is not None and tien_do.wasCanceled():
+                        break
         except Exception as e:                       # file đang mở trong Excel, không ghi được thư mục...
-            QApplication.restoreOverrideCursor()
             if tien_do is not None:
                 tien_do.close()
-            self.bao(f'Không xuất được:\n{e}')
+            self.bao(chu_loi('Không xuất được', e))
             return kq_tong
-        QApplication.restoreOverrideCursor()
         if tien_do is not None:
             tien_do.close()
         self.ve_dot()
@@ -896,7 +894,7 @@ class HopNhapQD(_Hop):
         except ocr.DaHuy:
             return None
         except Exception as e:                      # file hỏng, PDF scan khi máy chưa có bộ nhận dạng chữ...
-            self.bao(f'Không đọc được file:\n{e}')
+            self.bao(chu_loi('Không đọc được file', e))
             return None
         self.file = [Path(f) for f in ds] if len(ds) > 1 else Path(ds[0])
         self.o_file.setText('; '.join(str(f) for f in ds))
@@ -1044,7 +1042,7 @@ class HopKiemLoi(_Hop):
         try:
             kiem_loi.xuat_excel(self.hien, file, self.ten_du_an)
         except OSError as e:
-            self.bao(f'Không ghi được file (đang mở trong Excel?):\n{e}')
+            self.bao(chu_loi('Không ghi được file', e))
             return None
         return file
 

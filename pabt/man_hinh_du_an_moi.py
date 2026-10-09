@@ -10,15 +10,15 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QBrush, QColor
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout,
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QPushButton, QStackedWidget,
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import csdl, don_gia, du_an_moi, in_an, lap_pa, may_chu, to_chuc
-from .giao_dien import ChonXoXuong, bang_to_chuc, chay_nen
+from .giao_dien import ChonXoXuong, bang_to_chuc, chay_nen, con_tro_cho
 from .lap_pa import LoiNhap
+from .thong_bao import TEN_UD, chu_loi
 
-TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
 BUOC = ['1. Thông tin dự án', '2. Danh sách hộ, thửa (nhập thô)', '3. Bảng giá đất của dự án', '4. Hoàn thiện, in']
 CAM, XAM = QColor('#FCE4D6'), QColor('#EEF1F4')
 COT_GIA = [('loai_dat', 'Loại đất', 80), ('nhom', 'Nhóm', 110), ('vi_tri', 'Vị trí (theo dữ liệu)', 130),
@@ -146,7 +146,7 @@ class HopDuAnMoi(QDialog):
         try:
             dong, kq = du_an_moi.dong_tu_excel(file_excel)
         except Exception as e:
-            self._bao(QMessageBox.warning, f'Không đọc được file:\n{e}')
+            self._bao(QMessageBox.warning, chu_loi('Không đọc được file', e))
             return None
         if kq.loi:
             self._bao(QMessageBox.warning, '\n'.join(kq.loi))
@@ -346,30 +346,27 @@ class HopDuAnMoi(QDialog):
         if file_pabt is None and p.exists() and QMessageBox.question(
                 self, TEN_UD, f'File {p.name} đã có. Ghi đè (mất toàn bộ dữ liệu trong file đó)?') != QMessageBox.StandardButton.Yes:
             return None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            tt, dong, gia, tu_lap = self.thong_tin(), self.dong_tho(), self.gia_dat(), self.c_tu_lap.isChecked()
-            # luồng nền (tự mở kết nối file mới): hàng nghìn hộ không làm cửa sổ "Không phản hồi"
-            kq = chay_nen(self, lambda: du_an_moi.tao_du_an(p, tt, dong, gia, tu_lap, self.nguon),
-                          f'Đang tạo dự án và tự lập phương án ({len(dong)} dòng thửa)…')
-            xuat = self.c_in.isChecked() if xuat is None else xuat
-            if xuat and kq['so_ho_co_pa']:
-                con = csdl.mo(p)
-                try:
-                    thu_muc = p.with_name(f'BanIn_{p.stem}_{datetime.now():%Y%m%d_%H%M}')
-                    kq['in'] = du_an_moi.xuat_2_bang(con, thu_muc, pdf=self.c_pdf.isChecked())
-                    kq['thu_muc_in'] = str(thu_muc)
-                finally:
-                    con.close()
+            with con_tro_cho():
+                tt, dong, gia, tu_lap = self.thong_tin(), self.dong_tho(), self.gia_dat(), self.c_tu_lap.isChecked()
+                # luồng nền (tự mở kết nối file mới): hàng nghìn hộ không làm cửa sổ "Không phản hồi"
+                kq = chay_nen(self, lambda: du_an_moi.tao_du_an(p, tt, dong, gia, tu_lap, self.nguon),
+                              f'Đang tạo dự án và tự lập phương án ({len(dong)} dòng thửa)…')
+                xuat = self.c_in.isChecked() if xuat is None else xuat
+                if xuat and kq['so_ho_co_pa']:
+                    con = csdl.mo(p)
+                    try:
+                        thu_muc = p.with_name(f'BanIn_{p.stem}_{datetime.now():%Y%m%d_%H%M}')
+                        kq['in'] = du_an_moi.xuat_2_bang(con, thu_muc, pdf=self.c_pdf.isChecked())
+                        kq['thu_muc_in'] = str(thu_muc)
+                    finally:
+                        con.close()
         except LoiNhap as e:
-            QApplication.restoreOverrideCursor()
             self._bao(QMessageBox.warning, str(e))
             return None
         except Exception as e:
-            QApplication.restoreOverrideCursor()
-            self._bao(QMessageBox.critical, f'Không tạo được dự án:\n{e}')
+            self._bao(QMessageBox.critical, chu_loi('Không tạo được dự án', e))
             return None
-        QApplication.restoreOverrideCursor()
         if self.luu_cai_dat:
             cai = QSettings('PABT', 'PABT')
             for k in csdl.TRUONG_DON_VI:

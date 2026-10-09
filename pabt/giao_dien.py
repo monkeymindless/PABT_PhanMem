@@ -300,6 +300,43 @@ def to_mau(goc: QWidget) -> None:
                 b.setProperty('khong_icon', True)
 
 
+# Trạng thái của băng / nhãn thông báo: (chữ, nền, viền) - một bảng màu cho cả phần mềm (trước: chuỗi QSS chép tay từng nơi)
+MAU_TRANG_THAI = {
+    'dat': ('#1E6B34', '#EAF6EC', '#CDE8D2'),          # xong, khớp
+    'tin': ('#1F4E79', '#EAF2FB', '#C9DCF2'),          # thông tin trung tính
+    'canh_bao': ('#7A4B00', '#FFF4DB', '#F1D9A0'),     # cần xem lại (không phải lỗi của người dùng)
+    'loi': ('#A12A1F', '#FCEDEB', '#F3CFCA'),          # lỗi phải xử lý mới làm tiếp được
+}
+
+
+def dat_trang_thai(nhan, muc: str, chu: str) -> None:
+    """Đặt chữ + màu trạng thái cho QLabel (băng kết quả, dòng báo trong hộp thoại). muc: dat / tin / canh_bao / loi."""
+    chu_mau, nen, vien = MAU_TRANG_THAI[muc]
+    nhan.setText(chu)
+    nhan.setStyleSheet(f'QLabel {{ font-weight: 600; padding: 5px 8px; color: {chu_mau}; background: {nen}; '
+                       f'border: 1px solid {vien}; border-radius: 6px; }}')
+
+
+class con_tro_cho:
+    """Con trỏ chờ (đồng hồ cát) trong khối `with`; LUÔN trả lại con trỏ thường kể cả khi lỗi.
+
+        with con_tro_cho():
+            ket_qua = viec_lau()
+
+    Trước đây 16 hàm viết tay setOverrideCursor / restoreOverrideCursor (trả lại ở từng nhánh except): lỗi bất ngờ ngoài các
+    nhánh đó làm con trỏ kẹt đồng hồ cát - người dùng tưởng phần mềm treo. Lồng nhau được (Qt đếm số lần đặt / trả)."""
+
+    def __enter__(self):
+        from PySide6.QtWidgets import QApplication
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        return self
+
+    def __exit__(self, *_):
+        from PySide6.QtWidgets import QApplication
+        QApplication.restoreOverrideCursor()
+        return False                                    # không nuốt lỗi: để nơi gọi xử lý / báo
+
+
 HIEN_CHO_SAU_MS = 400                                   # chay_nen: việc lâu hơn bấy nhiêu ms thì hiện hộp "Đang xử lý…"
 
 

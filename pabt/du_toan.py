@@ -110,7 +110,7 @@ class DuToan:
 # ---------------------------------------------------------------- lấy khối lượng
 def tu_du_an(con, ds_ma_ho: list | None = None, ten: str = '') -> DuToan:
     """Gom các dòng phương án của dự án (cùng mục, hạng mục, đơn giá, hệ số) thành dòng dự toán."""
-    from .nghiep_vu import BoiCanh, doc_phuong_an, tinh_pa
+    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_pa
     bc = BoiCanh.tu(con)
     da = con.execute('SELECT ten, cap_dia_ban, ten_dia_ban FROM du_an WHERE id = 1').fetchone()
     ten_ld = {r['ma'].upper(): r['ten'] for r in con.execute('SELECT ma, ten FROM dm_loaidat')}
@@ -119,11 +119,9 @@ def tu_du_an(con, ds_ma_ho: list | None = None, ten: str = '') -> DuToan:
     gom = {}
     thuong = KHONG
     so_ho = 0
-    chon = set(ds_ma_ho) if ds_ma_ho is not None else None
-    for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho'):
-        if chon is not None and r[0] not in chon:
-            continue
-        pa = doc_phuong_an(con, r[0])
+    # phương án các hộ cần lấy: một lần đọc (3 truy vấn), theo thứ tự hộ - thay cho doc_phuong_an từng hộ (N+1)
+    tat_ca = doc_tat_ca_phuong_an(con, ds_ma_ho)
+    for pa in tat_ca.values():
         k = tinh_pa(pa, bc)
         if k.co_phuong_an:
             so_ho += 1

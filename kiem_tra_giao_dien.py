@@ -286,10 +286,9 @@ def main(argv) -> int:
         (td / ten).mkdir()
     os.environ['PABT_THU_MUC_MAY'] = str(td / 'may')
     os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-    import pabt  # noqa: F401 - môi trường Win7 (Python 3.8 + PySide2): đặt bí danh PySide6 -> PySide2 trước khi nạp Qt
+    import pabt                    # môi trường Win7 (Python 3.8 + PySide2): đặt bí danh PySide6 -> PySide2 trước khi nạp Qt
     from PySide6.QtWidgets import QApplication
     qa = QApplication([])
-    import pabt
     from pabt import app as ud
     from pabt.giao_dien import ap_dung
     ap_dung(qa)

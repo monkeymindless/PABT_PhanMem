@@ -11,7 +11,7 @@ from datetime import datetime
 
 from . import csdl
 from .lap_pa import DanhMuc, bo_dau, ra_soat_gia
-from .nghiep_vu import BoiCanh, doc_phuong_an, kiem_tra_pa, tinh_pa
+from .nghiep_vu import BoiCanh, doc_phuong_an, doc_tat_ca_phuong_an, kiem_tra_pa, tinh_pa
 from .tien import D, KHONG, so_vn, vn
 
 LOI, CANH_BAO = 'Lỗi', 'Cảnh báo'
@@ -177,9 +177,11 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
                      'kiểm tra đồng sử dụng / trùng hồ sơ.', ma, ten_ho.get(ma, ''))
     # ---- phương án từng hộ
     da_sua = {r[0] for r in con.execute('SELECT ma_ho FROM ho WHERE luu_luc IS NOT NULL')}
+    # đọc phương án cả dự án một lần (3 truy vấn) - trước đây doc_phuong_an mỗi hộ: 5.000 hộ = 15.000 truy vấn
+    tat_ca = doc_tat_ca_phuong_an(con)
     for h in ho:
         ma, ten = h['ma_ho'], h['ho_ten']
-        pa = doc_phuong_an(con, ma)
+        pa = tat_ca.get(ma) or doc_phuong_an(con, ma)
         k = tinh_pa(pa, bc)
         if ma not in da_sua:                                # hộ chưa sửa trong phần mềm: so thành tiền với file Excel lúc nhập
             for d in k.dong:

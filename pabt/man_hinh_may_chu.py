@@ -11,6 +11,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDial
 
 from . import may_chu
 from .may_chu import LoiMayChu
+from .giao_dien import con_tro_cho
+from .thong_bao import chu_loi
 
 
 def ket_noi_duoc(cha, goc) -> bool:
@@ -123,15 +125,13 @@ class HopDangNhap(_Hop):
         if not ket_noi_duoc(self, self.goc):
             self.lb.setText('Không kết nối được máy chủ (mạng / thư mục dùng chung). Có thể chọn "Làm việc offline".')
             return None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            self.phien = may_chu.dang_nhap(self.goc, tk, mk)
+            with con_tro_cho():
+                self.phien = may_chu.dang_nhap(self.goc, tk, mk)
         except LoiMayChu as e:
-            QApplication.restoreOverrideCursor()
             self.lb.setText(str(e))
             self.o_mk.selectAll()
             return None
-        QApplication.restoreOverrideCursor()
         self.accept()
         return self.phien
 
@@ -533,7 +533,7 @@ class HopDuAnMayChu(_Hop):
             self.bao(str(e))
             return None
         except OSError as e:
-            self.bao(f'Không đưa lên được (file đang mở?): {e}')
+            self.bao(chu_loi('Không đưa lên được', e))
             return None
         self.ve()
         self.bao(f'Đã đưa lên máy chủ:\n{f}', loi=False)

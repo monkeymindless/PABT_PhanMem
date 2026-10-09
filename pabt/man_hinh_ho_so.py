@@ -13,8 +13,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QDialog, QDialogButtonBox, QGr
 from . import ho_so
 from .lap_pa import LoiNhap
 from .tien import so_vn
+from .thong_bao import TEN_UD
 
-TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
 COT_AN = ('vi_tri',)                    # vị trí nhập ở mục 1 (Đất): cột ẩn, dữ liệu cũ vẫn giữ khi lưu
 COT_GIUA = ('so_to', 'so_thua', 'loai_dat', 'dt_thu_hoi')
 CAO_DONG_TOI_DA = 104                   # dòng thửa không cao quá mức này: nguồn gốc dài thì thu nhỏ chữ / cắt "…" (xem đủ ở tooltip)

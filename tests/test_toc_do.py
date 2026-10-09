@@ -219,5 +219,38 @@ class TestBoDauNhanh(unittest.TestCase):
             self.assertEqual(_bo_dau(s), self._cu(s), repr(s))
 
 
+class TestKhongTruyVanTungHo(unittest.TestCase):
+    """Kiểm tra lỗi, dự toán, quy chuẩn mật độ: số truy vấn KHÔNG tăng theo số hộ (trước: 3 truy vấn mỗi hộ - 5.000 hộ =
+    15.000 truy vấn; quy chuẩn đọc lại cài đặt cho từng loại cây). Kết quả như đọc từng hộ."""
+
+    @staticmethod
+    def _dem(con, ham) -> int:
+        n = [0]
+        con.set_trace_callback(lambda s: n.__setitem__(0, n[0] + 1))
+        try:
+            ham()
+        finally:
+            con.set_trace_callback(None)
+        return n[0]
+
+    def test_so_truy_van_khong_doi_theo_so_ho(self):
+        from pabt import cay_trong, du_toan, kiem_loi
+        dem = {}
+        for so_ho in (20, 80):
+            with tempfile.TemporaryDirectory() as td:
+                con = csdl.mo(_du_an(Path(td), so_ho=so_ho))
+                try:
+                    dem[so_ho] = [self._dem(con, lambda: kiem_loi.kiem_tra(con)), self._dem(con, lambda: du_toan.tu_du_an(con)),
+                                  self._dem(con, lambda: cay_trong.ds_quy_chuan_mat_do(con))]
+                    if so_ho == 80:                        # cùng kết quả như cách cũ (đọc phương án từng hộ)
+                        moi = [(x.ma_ho, x.noi_dung) for x in kiem_loi.kiem_tra(con)]
+                        with mock.patch.object(kiem_loi, 'doc_tat_ca_phuong_an', return_value={}):
+                            cu = [(x.ma_ho, x.noi_dung) for x in kiem_loi.kiem_tra(con)]
+                        self.assertEqual(moi, cu)
+                finally:
+                    con.close()
+        self.assertEqual(dem[20], dem[80], 'số truy vấn tăng theo số hộ (truy vấn N+1)')
+
+
 if __name__ == '__main__':
     unittest.main()

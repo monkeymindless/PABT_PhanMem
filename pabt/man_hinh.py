@@ -19,8 +19,9 @@ from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
 # in_an (kéo theo openpyxl ~0,2 giây) chỉ nạp trong hộp In / Xuất: mở dự án, cửa sổ lập phương án không phải chờ
 from .nghiep_vu import MA_TDC, NGUON_TAY, NGUON_TD, TEN_MUC
 from .tien import D, lam_tron, so_vn, vn
+from .giao_dien import con_tro_cho
+from .thong_bao import TEN_UD, chu_loi
 
-TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'
 XAM, VANG, CAM = QColor('#F4F6F8'), QColor('#FFF6D6'), QColor('#FDEBDD')
 COT_SO = {'dien_tich', 'gia_bang_gia', 'he_so_k', 'ty_le', 'thanh_tien', 'so_luong', 'don_gia'}
 
@@ -1819,14 +1820,12 @@ class HopIn(QDialog):
         if not ds:
             QMessageBox.information(self, TEN_UD, 'Không có hộ nào để xem.')
             return None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            f = in_an.xem_truoc(self.con, ds[0])
+            with con_tro_cho():
+                f = in_an.xem_truoc(self.con, ds[0])
         except (in_an.LoiIn, OSError) as e:
-            QApplication.restoreOverrideCursor()
             QMessageBox.warning(self, TEN_UD, str(e))
             return None
-        QApplication.restoreOverrideCursor()
         if mo:
             in_an.mo_file(f)
         return f
@@ -1905,31 +1904,28 @@ class HopIn(QDialog):
                               ('\n(Đang dừng sau file hiện tại…)' if tien.wasCanceled() else ''))
             QApplication.processEvents()
             return tien.wasCanceled()
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
-            kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=self.dot_chon(), pdf=self.r_pdf.isChecked(), in_may=in_may,
-                                  so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
-                                  **chon)
-            ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]
-            if self.o_gop.isChecked() and self.o_gop.isEnabled() and len(ct) > 1:
-                tien.setLabelText(f'Đang gộp {len(ct)} file PDF…')
-                QApplication.processEvents()
-                try:
-                    kq['gop'] = in_an.gop_pdf(ct, kq['thu_muc_ct'] / 'PHUONG_AN_CHI_TIET.pdf')
-                except Exception as e:                 # pypdf báo nhiều loại lỗi khác nhau
-                    kq['loi'].append(f'LOI_GOP\t\tKhông gộp được PDF: {e}')
+            with con_tro_cho():
+                # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
+                kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=self.dot_chon(), pdf=self.r_pdf.isChecked(), in_may=in_may,
+                                      so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
+                                      **chon)
+                ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]
+                if self.o_gop.isChecked() and self.o_gop.isEnabled() and len(ct) > 1:
+                    tien.setLabelText(f'Đang gộp {len(ct)} file PDF…')
+                    QApplication.processEvents()
+                    try:
+                        kq['gop'] = in_an.gop_pdf(ct, kq['thu_muc_ct'] / 'PHUONG_AN_CHI_TIET.pdf')
+                    except Exception as e:                 # pypdf báo nhiều loại lỗi khác nhau
+                        kq['loi'].append(f'LOI_GOP\t\tKhông gộp được PDF: {e}')
         except (in_an.LoiIn, LoiNhap) as e:
-            QApplication.restoreOverrideCursor()
             tien.close()
             QMessageBox.warning(self, TEN_UD, str(e))
             return None
         except OSError as e:
-            QApplication.restoreOverrideCursor()
             tien.close()
-            QMessageBox.warning(self, TEN_UD, f'Không ghi được file (file đang mở trong Excel?):\n{e}')
+            QMessageBox.warning(self, TEN_UD, chu_loi('Không ghi được file', e))
             return None
-        QApplication.restoreOverrideCursor()
         tien.close()
         self.ket_qua = kq
         dung = any(x.startswith(('DA_DUNG', 'LOI_TREO')) for x in kq['loi'])
