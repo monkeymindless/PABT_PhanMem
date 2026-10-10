@@ -21,6 +21,17 @@ def _gon(v) -> str:
     return ' '.join(str(v if v is not None else '').split())
 
 
+# ký hiệu đầu dòng của một đoạn nguồn gốc: "- ", "– ", "+ ", "• ", "* ", "a) ", "1. ", "1) "
+_RE_DAU_DONG = re.compile(r'^\s*(?:[-–+•*]|[a-zđ]\)|\d{1,2}[.)])\s+', re.I)
+
+
+def dau_dong(doan: str) -> str:
+    """Phần ký hiệu đầu dòng (cả khoảng trắng sau) của đoạn, '' nếu đoạn không bắt đầu bằng gạch đầu dòng. Dòng tràn của đoạn
+    có ký hiệu thì thụt vào thẳng chữ sau ký hiệu (thụt lề treo - màn hình hồ sơ và bản in, người dùng yêu cầu)."""
+    m = _RE_DAU_DONG.match(doan or '')
+    return m.group(0) if m else ''
+
+
 def chuan_loai_dat(v) -> str:
     """' ont + cln ' -> 'ONT+CLN'"""
     return '+'.join(p.strip().upper() for p in _gon(v).split('+') if p.strip())

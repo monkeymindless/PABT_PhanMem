@@ -153,5 +153,32 @@ class TestCuaSoLapPA(_CoDuAn):
             w.deleteLater()
 
 
+@unittest.skipUnless(CO_QT, 'cần PySide6')
+class TestNguonGocThutLe(unittest.TestCase):
+    def test_dong_tran_gach_dau_dong_thut_vao(self):
+        # ô Nguồn gốc trên màn hình hồ sơ: dòng tràn của "- ..." thụt vào thẳng chữ sau "- ", đoạn thường sát lề
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtGui import QFont, QFontMetricsF
+        from PySide6.QtWidgets import QApplication
+        QApplication.instance() or QApplication([])
+        from pabt.man_hinh_ho_so import _bo_tri_chu
+        f = QFont()
+        chu = 'Căn cứ ' + 'chữ dài ' * 30 + '\n- Thửa ' + 'chữ dài ' * 30
+        ds, _ = _bo_tri_chu(chu, f, 300)
+        thuong, gach = ds[0][0], ds[1][0]
+        self.assertGreater(thuong.lineCount(), 1)
+        self.assertTrue(all(thuong.lineAt(i).x() == 0 for i in range(thuong.lineCount())))
+        self.assertGreater(gach.lineCount(), 1)
+        self.assertEqual(gach.lineAt(0).x(), 0)
+        thut = QFontMetricsF(f).horizontalAdvance('- ')
+        for i in range(1, gach.lineCount()):
+            self.assertAlmostEqual(gach.lineAt(i).x(), thut, places=3)
+            self.assertLessEqual(gach.lineAt(i).naturalTextWidth(), 300 - thut + 0.5)
+        # chữ hiển thị của ô (initStyleOption) dùng U+2028 thay '\n': vẫn phải tách đoạn, nhận gạch đầu dòng
+        ds2, _ = _bo_tri_chu(chu.replace('\n', ' '), f, 300)
+        self.assertEqual(len(ds2), 2)
+        self.assertAlmostEqual(ds2[1][0].lineAt(1).x(), thut, places=3)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import unicodedata
 import time
 from copy import copy
 from datetime import date, datetime
@@ -110,11 +111,14 @@ def luu_duong_ke(file_excel, thu_muc) -> list:
     return tao
 
 
-def chen_duong_ke(file_xlsx, file_duong_ke) -> bool:
-    """Chèn các đường kẻ (XML) vào sheet đầu của file .xlsx do openpyxl lưu. Trả True nếu đã chèn."""
+def chen_duong_ke(file_xlsx, file_duong_ke, xml: str | None = None) -> bool:
+    """Chèn các đường kẻ (XML) vào sheet đầu của file .xlsx do openpyxl lưu. Trả True nếu đã chèn. xml: nội dung đã canh lại
+    (can_duong_ke) thay cho nội dung file."""
     import zipfile
     p, dk = Path(file_xlsx), Path(file_duong_ke)
-    if not dk.exists() or not dk.read_text(encoding='utf-8').strip():
+    if xml is None:
+        xml = dk.read_text(encoding='utf-8') if dk.exists() else ''
+    if not xml.strip():
         return False
     with zipfile.ZipFile(p) as zi:
         ten = zi.namelist()
@@ -141,7 +145,7 @@ def chen_duong_ke(file_xlsx, file_duong_ke) -> bool:
                     'ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>')
     tep[sheet], tep[srel], tep['[Content_Types].xml'] = sx.encode('utf-8'), rels.encode('utf-8'), ct.encode('utf-8')
     tep[f'xl/drawings/drawing{n}.xml'] = (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="{_DS_DR}" '
-                                          f'xmlns:a="{_DS_A}">' + dk.read_text(encoding='utf-8') + '</xdr:wsDr>').encode('utf-8')
+                                          f'xmlns:a="{_DS_A}">' + xml + '</xdr:wsDr>').encode('utf-8')
     tam = p.with_name(p.name + '.tmp')
     try:
         with zipfile.ZipFile(tam, 'w', zipfile.ZIP_DEFLATED) as zo:
@@ -153,6 +157,188 @@ def chen_duong_ke(file_xlsx, file_duong_ke) -> bool:
             tam.unlink()
         raise
     return True
+
+
+# ---- canh đường kẻ theo chữ phía trên (người dùng yêu cầu 10/10/2026: "đường ngang dưới chữ gần sát, nằm giữa từng nội dung")
+EMU_PX, EMU_PT = 9525, 12700
+# khoảng từ chân dòng chữ (tính theo phông) tới đường kẻ, theo cỡ chữ - đo trên bản PDF Excel in ra: dòng có dấu nặng / chữ có
+# chân (ạ, ộ, ị, g, p, y…) cần xa hơn để đường kẻ không che dấu (người dùng: "hở chữ 1 chút xíu để không che dấu chữ")
+DK_CO_DAU_DUOI = 0.33
+DK_KHONG_DAU_DUOI = 0.12
+DK_CACH = 2.0                  # tối thiểu (pt)
+_DAU_DUOI = set('gjpqyạặậẹệịọộợụựỵẠẶẬẸỆỊỌỘỢỤỰỴ,;')
+DK_LE_TREN = 1.0               # Excel chừa phía trên chữ (pt) khi canh trên
+_RE_NEO = re.compile(r'<xdr:(from|to)><xdr:col>(\d+)</xdr:col><xdr:colOff>(-?\d+)</xdr:colOff>'
+                     r'<xdr:row>(\d+)</xdr:row><xdr:rowOff>(-?\d+)</xdr:rowOff></xdr:\1>')
+_TIEU_NGU = 'doc lap - tu do - hanh phuc'
+
+
+def _bien_cot(ws) -> list:
+    """Mép trái (EMU) của cột 1..61 (phần tử 0 = cột A) theo độ rộng cột như Excel (_px_cot: cột ẩn, dải cột)."""
+    x, kq = 0, []
+    for px in _px_cot(ws, 61):
+        kq.append(x)
+        x += px * EMU_PX
+    kq.append(x)
+    return kq
+
+
+def _bien_dong(ws, den: int = 60) -> list:
+    """Mép trên (EMU) của dòng 1..den (phần tử 0 = dòng 1)."""
+    mac_dinh = float(ws.sheet_format.defaultRowHeight or 15)
+    y, kq = 0, []
+    for r in range(1, den + 2):
+        kq.append(y)
+        y += int(round(float(ws.row_dimensions[r].height or mac_dinh) * EMU_PT))
+    return kq
+
+
+def _neo(gia: int, bien: list) -> tuple:
+    """Vị trí tuyệt đối (EMU) -> (chỉ số cột / dòng từ 0, độ lệch). Chỉ neo vào cột / dòng có bề rộng (cột ẩn rộng 0: Excel
+    không đặt được điểm neo bên trong)."""
+    for k in range(len(bien) - 1):
+        if bien[k] <= gia < bien[k + 1]:
+            return k, gia - bien[k]
+    k = len(bien) - 2 if gia >= bien[-1] else 0
+    return k, max(0, gia - bien[k])
+
+
+def _dong_chu_o(ws, r: int, c: int, bc: list, bd: list, do) -> dict | None:
+    """Bố trí chữ trong ô (r, c) (tính cả vùng gộp): x trái / phải (EMU), canh ngang, các dòng chữ và y chân từng dòng."""
+    o = ws.cell(r, c)
+    if not isinstance(o.value, str) or not o.value.strip():
+        return None
+    m = _vung_tron(ws, r, c)
+    r1, c1, r2, c2 = (m.min_row, m.min_col, m.max_row, m.max_col) if m else (r, c, r, c)
+    ten, co, dam = _phong(o)
+    dong = ngat_dong(o.value.rstrip('\n'), _rong_vung(ws, c1, c2), ten, co, dam, do)
+    dong = [x for x in dong] or ['']
+    cao = co * 1.107 * EMU_PT                 # Times New Roman: ascent 0,891 + descent 0,216 cỡ chữ (khoảng cách dòng của Excel)
+    tren, duoi = bd[r1 - 1], bd[r2]
+    doc = (o.alignment.vertical or 'bottom') if o.alignment is not None else 'bottom'
+    if doc == 'top':
+        y0 = tren + DK_LE_TREN * EMU_PT
+    elif doc in ('center', 'justify', 'distributed'):
+        y0 = tren + ((duoi - tren) - cao * len(dong)) / 2
+    else:                                     # canh dưới: Excel đặt chữ sát đáy ô (đo trên bản in)
+        y0 = duoi - cao * len(dong)
+    ngang = (o.alignment.horizontal or 'general') if o.alignment is not None else 'general'
+    return dict(x1=bc[c1 - 1], x2=bc[c2], ngang=ngang, dong=dong, chan=[y0 + cao * (i + 1) for i in range(len(dong))],
+                ten=ten, co=co, dam=dam, doan_cuoi=o.value.rstrip('\n').split('\n')[-1].strip())
+
+
+def can_duong_ke(ws, xml: str, do=None) -> str:
+    """Canh lại các đường kẻ ngang (XML của mẫu) theo chữ ngay phía trên, sau khi đã điền nội dung: đường kẻ nằm sát chân dòng
+    chữ cuối của ô phía trên (hở theo cỡ chữ, xa hơn khi có dấu nặng - DK_*) và căn giữa theo dòng chữ đó. Độ dài: dưới "Độc lập - Tự do - Hạnh phúc" bằng
+    đúng dòng chữ (thể thức văn bản); đường khác giữ độ dài trong mẫu nhưng không dài quá dòng chữ. Không tìm được chữ phía
+    trên thì giữ nguyên đường kẻ."""
+    if not xml.strip():
+        return xml
+    do = do or _ham_do_chu()
+    if do is None:
+        do = lambda s, ten, co, dam: len(s) * co * (0.52 if dam else 0.47)      # noqa: E731
+    bc, bd = _bien_cot(ws), _bien_dong(ws)
+    from .lap_pa import bo_dau
+
+    def mot(a: str) -> str:
+        neo = {m.group(1): tuple(int(v) for v in m.group(2, 3, 4, 5)) for m in _RE_NEO.finditer(a)}
+        if 'from' not in neo or 'to' not in neo:
+            return a
+        (c1, o1, r1, q1), (c2, o2, r2, q2) = neo['from'], neo['to']
+        if r1 + 1 >= len(bd) or r2 + 1 >= len(bd):
+            return a
+        x1, x2 = bc[c1] + o1, bc[c2] + o2
+        y = (bd[r1] + q1 + bd[r2] + q2) / 2
+        if x2 < x1:
+            x1, x2 = x2, x1
+        xg = (x1 + x2) / 2
+        # chữ phía trên: ô (dòng của đường kẻ hoặc 1-2 dòng trên) phủ điểm giữa đường kẻ, chân dòng chữ cuối gần đường kẻ nhất
+        tot, kc, da = None, None, set()
+        for r in range(max(1, r1 - 1), r1 + 2):            # dòng Excel phía trên, dòng chứa đường kẻ, dòng kế
+            for c in range(1, 26):
+                m = _vung_tron(ws, r, c)
+                rr, cc, cuoi = (m.min_row, m.min_col, m.max_col) if m else (r, c, c)
+                if (rr, cc) in da or not (bc[cc - 1] <= xg < bc[cuoi]):
+                    continue
+                da.add((rr, cc))
+                t = _dong_chu_o(ws, rr, cc, bc, bd, do)
+                if t is None:
+                    continue
+                d = abs(t['chan'][-1] - y)
+                if kc is None or d < kc:
+                    tot, kc = t, d
+        if tot is None or kc > 40 * EMU_PT:
+            return a
+        chu = tot['dong'][-1].strip()
+        rong = do(chu, tot['ten'], tot['co'], tot['dam']) * EMU_PT
+        if bo_dau(tot['doan_cuoi']).lower() == _TIEU_NGU:     # tiêu ngữ: đường kẻ dài bằng cả dòng tiêu ngữ (thể thức văn bản)
+            dai = min(do(tot['doan_cuoi'], tot['ten'], tot['co'], tot['dam']) * EMU_PT, tot['x2'] - tot['x1'])
+        else:
+            dai = min(x2 - x1, rong)
+        if tot['ngang'] in ('left', 'general', 'justify'):
+            giua = tot['x1'] + 2 * EMU_PX + rong / 2
+        elif tot['ngang'] == 'right':
+            giua = tot['x2'] - 2 * EMU_PX - rong / 2
+        else:
+            giua = (tot['x1'] + tot['x2']) / 2
+        nx1, nx2, ny = int(giua - dai / 2), int(giua + dai / 2), int(tot['chan'][-1] + max(DK_CACH, tot['co'] * (
+            DK_CO_DAU_DUOI if _DAU_DUOI & set(unicodedata.normalize('NFC', chu)) else DK_KHONG_DAU_DUOI)) * EMU_PT)
+        (ca, oa), (cb, ob), (ra, qa) = _neo(nx1, bc), _neo(nx2, bc), _neo(ny, bd)
+        a = _RE_NEO.sub(lambda m: (f'<xdr:{m.group(1)}><xdr:col>{ca if m.group(1) == "from" else cb}</xdr:col><xdr:colOff>'
+                                   f'{oa if m.group(1) == "from" else ob}</xdr:colOff><xdr:row>{ra}</xdr:row><xdr:rowOff>{qa}'
+                                   f'</xdr:rowOff></xdr:{m.group(1)}>'), a)
+        a = re.sub(r'<a:off x="-?\d+" y="-?\d+"/>', f'<a:off x="{nx1}" y="{ny}"/>', a)
+        return re.sub(r'<a:ext cx="\d+" cy="\d+"/>', f'<a:ext cx="{nx2 - nx1}" cy="0"/>', a)
+
+    return re.sub(r'<xdr:twoCellAnchor.*?</xdr:twoCellAnchor>', lambda m: mot(m.group(0)), xml, flags=re.S)
+
+
+def _mot_duong(so: int, x1: int, x2: int, y: int, bc: list, bd: list) -> str:
+    """XML một đường kẻ ngang (twoCellAnchor, nét đen mảnh) từ x1 tới x2 (EMU) ở độ cao y."""
+    (ca, oa), (cb, ob), (r, q) = _neo(x1, bc), _neo(x2, bc), _neo(y, bd)
+    return (f'<xdr:twoCellAnchor><xdr:from><xdr:col>{ca}</xdr:col><xdr:colOff>{oa}</xdr:colOff><xdr:row>{r}</xdr:row>'
+            f'<xdr:rowOff>{q}</xdr:rowOff></xdr:from><xdr:to><xdr:col>{cb}</xdr:col><xdr:colOff>{ob}</xdr:colOff><xdr:row>{r}'
+            f'</xdr:row><xdr:rowOff>{q}</xdr:rowOff></xdr:to><xdr:cxnSp macro=""><xdr:nvCxnSpPr><xdr:cNvPr id="{so}" '
+            f'name="Đường kẻ {so}"/><xdr:cNvCxnSpPr/></xdr:nvCxnSpPr><xdr:spPr><a:xfrm><a:off x="{x1}" y="{y}"/>'
+            f'<a:ext cx="{x2 - x1}" cy="0"/></a:xfrm><a:prstGeom prst="line"><a:avLst/></a:prstGeom>{_NET}</xdr:spPr>'
+            f'</xdr:cxnSp><xdr:clientData/></xdr:twoCellAnchor>')
+
+
+def dk_mac_dinh(ws, ds: list, do=None) -> str:
+    """Đường kẻ mặc định khi mẫu không có file .duong_ke.xml (máy cập nhật bằng gói .pabtcn - gói không mang mau_in):
+    ds = [(vị trí ô (vi_tri_cho), tỷ lệ độ dài so với dòng chữ cuối)]; vị trí dọc / ngang canh lại bằng can_duong_ke."""
+    do = do or _ham_do_chu() or (lambda s, ten, co, dam: len(s) * co * (0.52 if dam else 0.47))
+    bc, bd = _bien_cot(ws), _bien_dong(ws)
+    kq = []
+    for vt, ty_le in ds:
+        if not vt:
+            continue
+        r, c1, c2, r2 = vt
+        t = _dong_chu_o(ws, r, c1, bc, bd, do)
+        if t is None:
+            continue
+        rong = do(t['dong'][-1].strip(), t['ten'], t['co'], t['dam']) * EMU_PT * ty_le
+        giua = (t['x1'] + t['x2']) / 2
+        kq.append(_mot_duong(len(kq) + 2, int(giua - rong / 2), int(giua + rong / 2), int(t['chan'][-1]), bc, bd))
+    return ''.join(kq)
+
+
+def o_tieu_ngu(ws, den_dong: int = 8):
+    """Vị trí (như vi_tri_cho) ô có dòng "Độc lập - Tự do - Hạnh phúc", hoặc None."""
+    from .lap_pa import bo_dau
+    for row in ws.iter_rows(min_row=1, max_row=den_dong):
+        for o in row:
+            if isinstance(o.value, str) and bo_dau(o.value.rstrip('\n').split('\n')[-1].strip()).lower() == _TIEU_NGU:
+                m = _vung_tron(ws, o.row, o.column)
+                return (o.row, m.min_col, m.max_col, m.max_row) if m else (o.row, o.column, o.column, o.row)
+    return None
+
+
+def _doc_dk(file_dk) -> str:
+    try:
+        return Path(file_dk).read_text(encoding='utf-8')
+    except OSError:
+        return ''
 
 
 def duong_ke_cua_mau(mau_xlsx, ten: str) -> Path:
@@ -507,16 +693,34 @@ def _mdw(wb) -> int:
         return 7
 
 
+def _px_cot(ws, den: int = 61) -> list:
+    """Bề rộng (px) cột 1..den (phần tử 0 = cột A) như Excel: cột ẩn = 0; khai báo theo dải cột (<col min max>) áp cho cả
+    dải; không khai báo = độ rộng mặc định của sheet. (Trước 0.9.21 đọc theo chữ cột: cột ẩn vẫn tính, dải cột bị bỏ -
+    bảng tổng hợp có cột L, M, O ẩn làm đường kẻ lệch.) Không tạo thêm khai báo cột như ws.column_dimensions[chữ]."""
+    mdw = _mdw(ws.parent)
+    mac_dinh = float(ws.sheet_format.defaultColWidth or 8.43)
+    rong = [mac_dinh] * den
+    for d in list(ws.column_dimensions.values()):
+        a, b = (d.min or 0), (d.max or d.min or 0)
+        for c in range(max(1, a), min(b, den) + 1):
+            rong[c - 1] = 0.0 if d.hidden else float(d.width or mac_dinh)
+    return [int(w * mdw + 0.5) if w > 0 else 0 for w in rong]
+
+
 def _rong_vung(ws, c1: int, c2: int) -> float:
     """Bề rộng (pt) chỗ viết chữ trong vùng cột c1..c2 (trừ lề trong ô)."""
-    from openpyxl.utils import get_column_letter
-    mdw = _mdw(ws.parent)
-    px = sum(int((ws.column_dimensions[get_column_letter(c)].width or 8.43) * mdw + 0.5) for c in range(c1, c2 + 1))
+    px = sum(_px_cot(ws, max(c2, 1))[c1 - 1:c2])
     return px * 0.75 - 6
 
 
+TREO = 'treo'           # dòng tràn của gạch đầu dòng: xuống dòng cứng + khoảng trắng thụt vào (Excel không có thụt lề treo)
+
+
 def _ngat(chu: str, rong: float, ten: str, co: float, dam: bool, do=None) -> list:
-    """Ngắt chữ thành các dòng như Excel (theo từ; '\\n' là xuống đoạn). Trả [(dòng, là đầu đoạn)]."""
+    """Ngắt chữ thành các dòng như Excel (theo từ; '\\n' là xuống đoạn). Trả [(dòng, đầu đoạn)]: đầu đoạn True / False, hoặc
+    TREO = dòng tràn của đoạn bắt đầu bằng gạch đầu dòng ("- ", "+ ", "a) "… - ho_so.dau_dong): dòng đó đã có sẵn khoảng trắng
+    thụt vào thẳng chữ sau ký hiệu, khi ghi vào ô phải xuống dòng cứng (dat_doan_van)."""
+    from .ho_so import dau_dong
     do = do or _ham_do_chu()
     if do is None:                               # ước: bề rộng trung bình một ký tự Times New Roman ~ 0,47 cỡ chữ (đậm 0,52)
         tb = co * (0.52 if dam else 0.47)
@@ -524,24 +728,34 @@ def _ngat(chu: str, rong: float, ten: str, co: float, dam: bool, do=None) -> lis
     rong = rong * 0.97                          # chừa 3%: phông máy in / PDF có thể rộng hơn chút
     kq = []
     for doan in str(chu or '').split('\n'):
+        ky = dau_dong(doan)
+        thut, sau = '', False                   # sau: dòng kế tiếp trong đoạn là dòng tràn
+        if ky:
+            cach = do(' ', ten, co, dam) or co * 0.25
+            thut = ' ' * max(1, int(round(do(ky.strip() + ' ', ten, co, dam) / cach)))
+            if do(thut, ten, co, dam) > rong / 3:
+                thut = ''
         dau = True
         dong = ''
+
+        def xong(d):
+            nonlocal dau
+            kq.append((d, dau if dau or not thut else TREO))
+            dau = False
         for tu in doan.split():
-            thu = f'{dong} {tu}' if dong else tu
-            if do(thu, ten, co, dam) <= rong or not dong:
+            thu = f'{dong} {tu}' if dong.strip() else (dong + tu)
+            if do(thu, ten, co, dam) <= rong or not dong.strip():
                 dong = thu
                 while do(dong, ten, co, dam) > rong and len(dong) > 1:    # một từ dài hơn cả dòng: cắt ngang
                     n = len(dong)
                     while n > 1 and do(dong[:n], ten, co, dam) > rong:
                         n -= 1
-                    kq.append((dong[:n], dau))
-                    dau = False
-                    dong = dong[n:]
+                    xong(dong[:n])
+                    dong = thut + dong[n:]
             else:
-                kq.append((dong, dau))
-                dau = False
-                dong = tu
-        kq.append((dong, dau))
+                xong(dong)
+                dong = thut + tu
+        xong(dong)
     return kq
 
 
@@ -612,7 +826,8 @@ def dat_doan_van(ws, cho: str, chu: str, do=None) -> int:
             continue
         oo = ws.cell(rr, c1)
         oo._style = copy(kieu)
-        # nối lại các dòng đã ngắt (Excel ngắt lại đúng chỗ cũ vì cùng bề rộng): đầu đoạn thì xuống dòng
+        # nối lại các dòng đã ngắt (Excel ngắt lại đúng chỗ cũ vì cùng bề rộng): đầu đoạn và dòng tràn của gạch đầu dòng
+        # (TREO - đã có khoảng trắng thụt vào) thì xuống dòng cứng
         oo.value = ''.join(('\n' if dau and j else ' ' if j else '') + x for j, (x, dau) in enumerate(khoi[i])) or None
         al = copy(oo.alignment)
         al.wrap_text = True
@@ -1021,8 +1236,10 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
     wb.calculation.fullCalcOnLoad = True
     file_ra = Path(file_ra)
     file_ra.parent.mkdir(parents=True, exist_ok=True)
+    dk = _doc_dk(duong_ke)
+    dk = can_duong_ke(ws, dk) if dk else dk       # đường kẻ sát chân chữ phía trên, căn giữa theo chữ (sau khi điền xong)
     wb.save(file_ra)
-    chen_duong_ke(file_ra, duong_ke)              # đường kẻ của mẫu (openpyxl không giữ hình vẽ)
+    chen_duong_ke(file_ra, duong_ke, dk)          # đường kẻ của mẫu (openpyxl không giữ hình vẽ)
     return file_ra
 
 
@@ -1064,6 +1281,11 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
     duong_ke = duong_ke_cua_mau(mau, TEN_BTH)
     wb = openpyxl.load_workbook(mau)
     ws = wb.worksheets[0]
+    # ô cần đường kẻ dưới (tên đơn vị, tiêu ngữ, Dự án): tìm trước khi điền - dùng khi mẫu không có file đường kẻ
+    vt_dk = [(vi_tri_cho(ws, '{DON_VI_TIEU_DE}'), 0.55), (o_tieu_ngu(ws), 1.0), (vi_tri_cho(ws, '{du_an}'), 0.5)]
+    vt = vt_dk[2][0]
+    if vt:                                        # dòng "Dự án" đủ cao cho đường kẻ dưới chữ (mẫu cũ 25,2 pt: đường kẻ chạm dòng dưới)
+        ws.row_dimensions[vt[0]].height = max(float(ws.row_dimensions[vt[0]].height or 15), _phong(ws.cell(vt[0], vt[1]))[1] * 1.7)
     da = _thong_tin_du_an(con)
     bc = BoiCanh.tu(con)
     if ds_ma_ho is None:
@@ -1175,8 +1397,10 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
     wb.calculation.fullCalcOnLoad = True
     file_ra = Path(file_ra)
     file_ra.parent.mkdir(parents=True, exist_ok=True)
+    dk = _doc_dk(duong_ke) or dk_mac_dinh(ws, vt_dk)    # máy cập nhật bằng gói .pabtcn: chưa có file đường kẻ bảng tổng hợp
+    dk = can_duong_ke(ws, dk) if dk else dk       # đường kẻ sát chân chữ phía trên, căn giữa theo chữ (sau khi điền xong)
     wb.save(file_ra)
-    chen_duong_ke(file_ra, duong_ke)              # đường kẻ của mẫu (openpyxl không giữ hình vẽ)
+    chen_duong_ke(file_ra, duong_ke, dk)          # đường kẻ của mẫu (openpyxl không giữ hình vẽ)
     return file_ra
 
 

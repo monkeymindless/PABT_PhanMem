@@ -22,21 +22,28 @@ CO_CHU_NHO_NHAT = 0.78                  # nguồn gốc dài: thu nhỏ chữ t�
 
 
 def _bo_tri_chu(chu: str, font: QFont, rong: float) -> tuple:
-    """Ngắt dòng chữ theo bề rộng: [(QTextLayout, chiều cao)] và tổng chiều cao."""
+    """Ngắt dòng chữ theo bề rộng: [(QTextLayout, chiều cao)] và tổng chiều cao. Đoạn bắt đầu bằng gạch đầu dòng ("- ",
+    "+ ", "a) "…): các dòng tràn thụt vào thẳng chữ sau ký hiệu (ho_so.dau_dong)."""
     ds, tong = [], 0.0
-    for doan in chu.split('\n'):
+    fm = QFontMetricsF(font)
+    # chữ hiển thị của ô (QStyledItemDelegate.initStyleOption) đã đổi '\n' thành U+2028 (QChar::LineSeparator): tách cả hai,
+    # không thì cả ô là một đoạn và gạch đầu dòng bên trong không được nhận ra
+    for doan in chu.replace(' ', '\n').split('\n'):
         tl = QTextLayout(doan, font)
         op = QTextOption()
         op.setWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
         tl.setTextOption(op)
+        ky = ho_so.dau_dong(doan)
+        thut = min(fm.horizontalAdvance(ky), rong / 3) if ky else 0.0
         tl.beginLayout()
         h = 0.0
         while True:
             dong = tl.createLine()
             if not dong.isValid():
                 break
-            dong.setLineWidth(rong)
-            dong.setPosition(QRectF(0, h, 0, 0).topLeft())
+            x = thut if h > 0 else 0.0                     # dòng đầu đoạn sát lề, dòng tràn thụt vào
+            dong.setLineWidth(rong - x)
+            dong.setPosition(QRectF(x, h, 0, 0).topLeft())
             h += dong.height()
         tl.endLayout()
         ds.append((tl, h))
@@ -117,8 +124,9 @@ class ONguonGoc(QStyledItemDelegate):
                 if y + dong.height() * 2 > vung.bottom() + 0.5 and tong > vung.height():
                     # dòng cuối còn chỗ: in phần còn lại rút gọn bằng "…"
                     con = tl.text()[dong.textStart():]
-                    p.drawText(QRectF(vung.left(), y, vung.width(), dong.height()), Qt.AlignmentFlag.AlignLeft,
-                               fm.elidedText(' '.join(con.split()), Qt.TextElideMode.ElideRight, vung.width()))
+                    x = dong.x()                                   # dòng tràn của gạch đầu dòng: giữ thụt lề
+                    p.drawText(QRectF(vung.left() + x, y, vung.width() - x, dong.height()), Qt.AlignmentFlag.AlignLeft,
+                               fm.elidedText(' '.join(con.split()), Qt.TextElideMode.ElideRight, vung.width() - x))
                     het = True
                     break
                 dong.draw(p, QRectF(vung.left(), y - dong.y(), 0, 0).topLeft())   # draw() cộng sẵn vị trí dòng

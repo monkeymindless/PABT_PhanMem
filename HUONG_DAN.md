@@ -183,6 +183,10 @@ thửa đất** của cùng cửa sổ).
 
 ## Bản in (phương án chi tiết, bảng tổng hợp)
 
+Đường kẻ ngang dưới tên đơn vị, dưới "Độc lập - Tự do - Hạnh phúc" và dưới dòng "Dự án" được phần mềm tự canh mỗi lần in: nằm sát
+ngay dưới chữ (hở một khoảng nhỏ, không che dấu nặng), căn giữa theo nội dung phía trên; đường dưới tiêu ngữ dài bằng dòng
+tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đúng.
+
 - Đầu trang: tiêu đề cơ quan 2 dòng ("TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT / THÀNH PHỐ ĐỒNG NAI", "CHI NHÁNH VĨNH CỬU"), quốc hiệu, số
   phương án "Số: …/PA-TTPTQĐ.CNVC", chức vụ người ký "PHÓ GIÁM ĐỐC" — lấy từ **Thông tin dự án** (Đơn vị cấp trên, Tên đơn vị trên
   tiêu đề bản in, Ký hiệu số phương án, Chức vụ người ký…); ô nào để trống thì dùng thông tin mặc định của Chi nhánh Vĩnh Cửu
@@ -385,6 +389,9 @@ thứ tự 6 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶
 1. **Thông tin hộ, thửa đất**: họ tên, CCCD, ngày cấp, nơi cấp, điện thoại, địa chỉ, pháp lý, tranh chấp, ghi chú và bảng thửa
    (tờ, thửa, loại đất, DT thu hồi, nguồn gốc, vị trí); tách thửa theo loại đất, chuyển thửa, gộp hộ, xóa hộ. Bấm **Tiếp theo**:
    hồ sơ được lưu để thửa mới dùng được ngay ở mục 1. **Thêm hộ…** chỉ hỏi họ tên rồi mở thẳng thẻ này.
+   Ô **Nguồn gốc**: mỗi nội dung một dòng (Shift+Enter xuống dòng khi sửa); dòng bắt đầu bằng gạch đầu dòng ("- ", "+ ",
+   "a) ", "1. "…) thì phần chữ tràn sang dòng sau tự thụt vào thẳng chữ sau dấu gạch – cả trên màn hình và bản in phương án
+   chi tiết.
 2. **1. Đất**: chọn thửa ở ô **Thửa** → **Thêm thửa vào mục 1** (tự điền loại đất, diện tích còn lại, giá). Ô **Thửa** của dòng
    đổi được (nhấp đúp, chọn thửa khác của hộ). Ô **Vị trí** xổ xuống các tuyến đường, vị trí (MT, T1–T3, K1–K3) của **bảng giá
    NQ 28** của **mọi địa bàn có trong bảng** (địa bàn của dự án đứng đầu, mỗi dòng ghi tên xã / phường – dự án đi qua nhiều xã

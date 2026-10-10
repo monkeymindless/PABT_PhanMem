@@ -476,6 +476,23 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     thoát mã 3010); từ chối / lỗi -> `KB_LOI`. Thử logic bằng giả lập wusa (máy phát triển là Win 11, chưa thử Win 7 thật).
     Kiểm bộ cài: `kiem_tra_toan_bo.py` (zip đủ file cài, danh_sach.txt khớp mã băm), `--cai-thu`; `tests/test_bo_cai.py`.
   - Shell Bash của Claude Code nuốt dấu "\" trong heredoc: script Python sửa file nên ghi bằng công cụ Write rồi chạy.
+  - Nguồn gốc - gạch đầu dòng thụt lề treo (người dùng yêu cầu 10/10/2026, màn hình + bản in): `ho_so.dau_dong(doan)` nhận "- ",
+    "– ", "+ ", "• ", "* ", "a) ", "1. ", "1) ". Màn hình: `man_hinh_ho_so._bo_tri_chu` đặt x dòng tràn = bề rộng ký hiệu
+    (`QTextLine.setPosition`, draw() cộng x); CHÚ Ý chữ ô từ `initStyleOption` đổi '\n' thành U+2028 - phải tách cả hai (trước
+    đây cả ô thành một đoạn). Bản in: `in_an._ngat` trả dòng tràn đánh dấu `TREO` (có sẵn khoảng trắng thụt = bề rộng ký hiệu /
+    bề rộng dấu cách), `dat_doan_van` xuống dòng cứng trước dòng TREO (Excel không có thụt lề treo trong ô).
+  - Đường kẻ dưới tên đơn vị / tiêu ngữ / "Dự án" (người dùng 10/10/2026: "gần sát chữ, nằm giữa từng nội dung, hở chút xíu
+    để không che dấu"): `in_an.can_duong_ke(ws, xml)` chạy SAU khi điền mẫu, trước `chen_duong_ke(file, dk, xml)`: mỗi đường
+    tìm ô chữ phía trên (dòng trên / cùng dòng / dòng kế, ô gộp phủ tâm đường) có chân dòng chữ cuối gần nhất (`_dong_chu_o`:
+    ngắt dòng `ngat_dong`, khoảng dòng 1,107 cỡ chữ, canh top +1 pt / center / bottom sát đáy), đặt y = chân + cỡ chữ x
+    `DK_CO_DAU_DUOI` (0,33 - dòng có dấu nặng / chữ có chân `_DAU_DUOI`) hoặc `DK_KHONG_DAU_DUOI` (0,12), căn giữa theo chữ; độ
+    dài: tiêu ngữ = cả dòng tiêu ngữ, đường khác giữ độ dài mẫu nhưng không dài hơn dòng chữ. Hằng số đo trên PDF Excel in ra
+    (đo ảnh: khe 5-6 px chi tiết, 3 px bảng tổng hợp; lệch tâm <= 3 px). Cột: `_px_cot` / `_bien_cot` / `_rong_vung` tính CỘT ẨN = 0
+    và khai báo theo dải cột (<col min max>) - bảng tổng hợp có cột L, M, O ẩn (trước đây đường kẻ lệch ~100 pt, ngắt dòng chữ
+    cũng sai); `_neo` không neo vào cột rộng 0. Bảng tổng hợp có `mau_in/IN_BANGTONGHOP.duong_ke.xml` (3 đường) + dòng 6
+    "Dự án" 34 pt; không có file đường kẻ (máy cập nhật bằng .pabtcn - gói không mang mau_in) -> `dk_mac_dinh` tự tạo,
+    `lap_bang_tong_hop` nới dòng Dự án >= 1,7 cỡ chữ. Test `tests/test_in_vua_chu.TestDuongKe` dùng hàm đo chữ cố định (phông
+    offscreen khác Windows).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.
