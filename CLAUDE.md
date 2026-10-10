@@ -35,19 +35,21 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   KHÔNG kèm Visual C++ Redistributable - người dùng yêu cầu bỏ 25 MB: Win10/11 có UCRT, DLL VC++ cần thiết đã nằm trong bản dựng,
   kiểm bằng bảng import PE; `dung_bo_cai_win.BAN['win10']['vc'] = None`) và `PABT_CaiDat_<ver>_Win7-8.exe` (**32-bit**, chạy Win 7/8 32 & 64-bit và Win 10 32-bit: Python 3.8.10 32-bit + PySide2 5.15,
   PyInstaller 5, môi trường `%LOCALAPPDATA%\PABT_dev\venv38_32` tạo bằng `CAI_DAT_PHAT_HANH.bat` / `requirements38.txt`,
-  `vc_redist_win7.x86.exe` 14.29, vỏ IExpress 32-bit từ `SysWOW64` — `dung_bo_cai_win.IEXPRESS`, `kien_truc()` in x86/x64,
+  UCRT Win 7 đóng sẵn (`bo_cai_win\ucrt_win7.py` lấy từ `vc_redist_win7.x86.exe` 14.29 - chỉ để dựng), vỏ IExpress 32-bit từ `SysWOW64` — `dung_bo_cai_win.IEXPRESS`, `kien_truc()` in x86/x64,
   dựng bằng `bo_cai_win\dung_exe38.py` từ bản chép ở thư mục tạm không dấu → `dist\PABT_Win7`). Mã dùng chung phải chạy Python 3.8 +
   Qt5: mỗi file có `from __future__ import annotations`, không dùng API Python 3.9+; `pabt/__init__._qt5_lam_qt6` đặt bí danh
   PySide6 → PySide2 (+ QAction/exec/QLibraryInfo.path, đường dẫn plugin Unicode); đọc PDF: QtPdf hoặc pypdf. Chạy test cả hai venv.
-  `cai_dat.ps1` dùng chung (đọc `ban.txt` win10/win7 → `$KIEN` x64/x86, bộ VC++ đóng gói tên `vc_redist.exe` - vắng mặt thì `$CO_VC` = false, bỏ bước cài VC++, chặn cài nhầm), viết theo PowerShell 2.0 (không `$PSScriptRoot`, `-Raw`, `-in`,
-  `-File`; giải nén bằng Shell.Application khi không có .NET 4.5; gọi `powershell -STA`).
+  `cai_dat.ps1` dùng chung (đọc `ban.txt` win10/win7 → `$KIEN` x64/x86; `vc_redist.exe` vắng mặt ở cả hai bộ cài từ 0.9.21 -
+  `$CO_VC` = false), viết theo PowerShell 2.0 (không `$PSScriptRoot`, `-Raw`, `-in`, `-File`; gọi `-STA`). TIÊU CHUẨN CÀI ĐẶT
+  0.9.21 (người dùng yêu cầu "máy nào cũng cài được"): xem mục 0.9.21 cuối file.
 - Dựng bộ cài: `DUNG_BO_CAI.bat` (PyInstaller rồi `bo_cai_win\dung_bo_cai_win.py`: IExpress + `cai_dat.ps1`/`go_cai_dat.ps1`, cài
   per-user vào `%LOCALAPPDATA%\Programs\PABT`) → `bo_cai\PABT_CaiDat_<ver>.exe` + `bo_cai\PABT_ChayNgay_<ver>.zip`. KHÔNG dùng
   Inno Setup ≥ 6.5 (lỗi tạo thư mục tạm is-*.tmp trên Windows 11 build mới); phiên bản lấy từ `pabt/__init__.py` `__version__`. Lệnh PyInstaller phải kèm
   `--add-data "pabt\bo_don_gia.sqlite;pabt"`. Sau PyInstaller chạy `bo_cai_win\rut_gon.py` (giữ theo danh sách `GIU_MODULE`;
   bản Qt5 phải giữ `Qt5Qml.dll` vì `pyside2.abi3.dll` liên kết cứng - thiếu thì exe treo im lặng, không báo lỗi; rồi
-  `PABT.exe tu-kiem <file>` = `chay.tu_kiem`, phải ra `KET QUA: DAT`). Bộ cài Win7-8 kèm `vc_redist_win7.x86.exe` (cài nếu thiếu);
-  `cai_dat.ps1` là cửa sổ WinForms (kiểm tra Win10/11 x64, tiến trình, tự kiểm tra), `-Im` cài im lặng. `KiemTraThuMuc`: chỉ xóa
+  `kiem_dll` (mọi DLL nhập phải có trong bản dựng hoặc trong Windows đích, không thì dừng), rồi
+  `PABT.exe tu-kiem <file>` = `chay.tu_kiem`, phải ra `KET QUA: DAT`).
+  `cai_dat.ps1` là cửa sổ WinForms (`KiemTraMay` chặn / `CanhBaoMay` nhắc, tiến trình, tự kiểm tra), `-Im` cài im lặng. `KiemTraThuMuc`: chỉ xóa
   thư mục cài trống / có PABT.exe, không gốc ổ đĩa, không chứa .pabt/.pabtdt; `go_cai_dat.ps1` giữ file dự án trong thư mục cài. Từ PowerShell gọi .bat bằng đường dẫn đầy đủ (`& (Resolve-Path .\X.bat).Path`).
 - Đóng gói lại bộ đơn giá tích hợp: `.venv\Scripts\python tao_bo_don_gia.py <PABT_CHUAN.xlsm> <YYYY.MM.DD>` → `pabt/bo_don_gia.sqlite`.
 - Test cập nhật bộ đơn giá đặt `PABT_THU_MUC_MAY` (không ghi vào `%APPDATA%\PABT` thật). Hộp thoại mới có `im_lang = True` cho test —
@@ -419,7 +421,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     file); `duong_ke_cua_mau` theo stem của mẫu; mẫu cũ chép vào `mau_in\cu\`. `HopIn.cb_mau_ct / cb_mau_bth` ->
     `van_ban_trinh.xuat_bo_ho_so(mau_ct=, mau_bth=)`. Lệnh `app.cap_nhat_mau_in(file, ten_mau=, loai=, cho=)`.
     Mẫu riêng đóng kèm (`mau_in\IN_CHITIET__Du thao.xlsx` - bản có "(DỰ THẢO)"; mẫu chính bỏ chữ này) đặt tên KHÔNG dấu: bộ cài Win7
-    giải nén PABT.zip bằng Shell.Application (zip Windows 7 không đọc tên UTF-8).
+    giải nén PABT.zip bằng Shell.Application (zip Windows 7 không đọc tên UTF-8; từ 0.9.21 không giải nén zip khi cài nhưng
+    tên file trong bản dựng vẫn phải ASCII - IExpress / cmd).
   - Menu: `app.NHAN_MENU` chữ ngắn (khóa `self.lenh` giữ tên đầy đủ = gợi ý), tên nhóm mới, `giao_dien.TEN_NHOM_CU` đổi tên nhóm đã
     nhớ trong QSettings; nút xổ "Dự án" kiểu `QToolButton[xo="1"]` nền xanh đậm + vạch vàng, chữ "DỰ ÁN ▾". "Đối chiếu với file
     Excel…" ở nút Dự án.
@@ -437,8 +440,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     khoản. Bảng / cột cố định 5 mục (tong_excel, quyết định tien_*, báo cáo, bảng tổng hợp cột 18, mẫu văn bản trình {tien_cay}) gộp
     vật nuôi vào cây trồng qua `muc_5_cot` (nhãn "Cây trồng, vật nuôi"). Danh mục: dm_taisan nhóm 3 có phan_loai "vật nuôi"
     (`la_vat_nuoi`) -> `DanhMuc.muc[MUC_VN]`. CSDL v12 (`_NANG_CAP[11]` = "@ct_khoan_vat_nuoi" -> `csdl._dung_lai_ct_khoan`: dựng lại
-    ct_khoan theo schema.sql (CHECK muc IN (2, 3, 4, 7); đoạn CREATE hết ở "
-);" - chú thích có dấu ";") + `chuyen_vat_nuoi`
+    ct_khoan theo schema.sql (CHECK muc IN (2, 3, 4, 7); đoạn CREATE hết ở "\n);" - chú thích có dấu ";") + `chuyen_vat_nuoi`
     (lọc phan_loai bằng Python: lower() SQLite chỉ ASCII); `nhap_excel` gọi `chuyen_vat_nuoi` sau khi ghi. `pabt/bo_don_gia.sqlite`
     đã nâng lên v12 (mở bằng csdl.mo không được ghi bộ đơn giá đóng gói - test so băm). Dự toán: vật nuôi gộp mục 3
     (`du_toan.muc_du_toan`). `nhap_chi_tiet.muc_theo_ten`: chỉ vật nuôi -> MUC_VN, "cây trồng, vật nuôi" -> 3; kiểu số: mục theo tên,
@@ -454,6 +456,26 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - `nhap_chi_tiet` đọc kiểu La Mã (I. II. … / A. B.) theo tên mục; `phan_loai_tai_san.py` + `man_hinh_phan_loai.HopDanTaiSan`
     ("Dán danh sách tài sản…" trong CuaSoLapPA): khớp danh mục -> từ đầu -> luật từ khóa + ĐVT.
   - Test GUI: đóng CuaSoLapPA còn sửa đổi thì hỏi lưu (hộp thoại treo test) - `bo_thay_doi()` trước `close()`.
+  - TIÊU CHUẨN CÀI ĐẶT (người dùng: "bộ cài Win 7/8 và Win 10/11 phải cài được trên tất cả các máy khác, quy về 1 tiêu chuẩn"):
+    (1) cài cho người dùng hiện tại, KHÔNG cần quyền quản trị, KHÔNG cài gì vào Windows - Visual C++ và UCRT nằm trong bản dựng
+    (Win7: `ucrt_win7.chep_ucrt` gọi trong `dung_exe38.py`; UCRT 10.0.10240 bản Windows 7 trong KB2999226 của vc_redist, giải
+    nén bằng expand.exe), `rut_gon.kiem_dll` chặn dựng nếu thiếu DLL (`HE_THONG_WIN7` / `HE_THONG_WIN10`; Win7 cho phép các
+    nhóm `rut_gon.API_WIN7` - không phải mọi l1-1-0: core-path chỉ từ Win 8); (2) khởi chạy `bo_cai_win\CAI_DAT.cmd` (CHỈ ASCII) -> `powershell -Command "& ([scriptblock]::Create(
+    ReadAllText($env:PABT_GOC + 'cai_dat.ps1')))"` - KHÔNG `-File` (ExecutionPolicy / Group Policy Restricted chặn -File: đã
+    thử); gỡ cài (UninstallString) cũng `-Command` + `go_cai_dat.ps1 -Dich`; (3) không giải nén zip khi cài: file phẳng
+    `f001_<tên>` trong IExpress + `danh_sach.txt` (nguồn, đích, cỡ, SHA-256) -> `cai_dat.ChepFile` chép rồi kiểm từng file (báo
+    rõ file bị diệt virus chặn); tên file trong bản dựng phải ASCII; (4) `PABT_ChayNgay_*.zip` = cây chương trình + CAI_DAT.cmd
+    (cài dự phòng khi .exe không chạy: tên người dùng có dấu làm IExpress (ANSI) lỗi, diệt virus chặn exe); (5) điều kiện máy: bộ
+    cài Win10-11 cần Windows 10 1809 (build 17763)+ 64-bit (Qt 6); bộ cài Win7-8 chạy MỌI Windows từ 7 SP1 (cả 10/11 64-bit: chỉ
+    nhắc). Python 3.8 trên Windows 7 cần bản cập nhật KB2533623 (gộp trong KB3063858): `ThieuKbWin7` (kernel32.dll <
+    6.1.7601.17651). Bộ cài Win7-8 KÈM `Windows6.1-KB3063858-x86.msu` / `-x64.msu` (người dùng đồng ý tải 10/10/2026; Update Catalog
+    chỉ còn bản Vista -> tải từ download.microsoft.com, chữ ký số Microsoft, SHA-256 trong `dung_bo_cai_win.KB_WIN7` - đóng gói
+    kiểm băm; file ở `bo_cai_win\*.msu`, KHÔNG đưa vào git). `cai_dat.CaiKbWin7`: chọn theo kiến trúc WINDOWS, `wusa` qua
+    `Sysnative` (PowerShell 32-bit trên Windows 64-bit), `-Verb RunAs` (chỉ máy Win 7 còn thiếu mới hỏi quyền quản trị); mã 0 /
+    3010 / 2359302 (đã có, chờ khởi động lại) -> `KB_CHO_KHOI_DONG` (cửa sổ: "KHỞI ĐỘNG LẠI MÁY rồi mở PABT", ẩn nút Mở PABT; -Im
+    thoát mã 3010); từ chối / lỗi -> `KB_LOI`. Thử logic bằng giả lập wusa (máy phát triển là Win 11, chưa thử Win 7 thật).
+    Kiểm bộ cài: `kiem_tra_toan_bo.py` (zip đủ file cài, danh_sach.txt khớp mã băm), `--cai-thu`; `tests/test_bo_cai.py`.
+  - Shell Bash của Claude Code nuốt dấu "\" trong heredoc: script Python sửa file nên ghi bằng công cụ Write rồi chạy.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

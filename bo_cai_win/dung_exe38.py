@@ -56,6 +56,9 @@ def main() -> int:
     if RA.exists():
         shutil.rmtree(RA)
     shutil.copytree(TAM / 'dist' / 'PABT', RA)
+    # UCRT đóng kèm (app-local): chạy trên Windows 7 / 8 chưa cài Visual C++ / KB2999226, không cần quyền quản trị
+    from ucrt_win7 import chep_ucrt
+    print(f'UCRT Windows 7: {chep_ucrt(RA)} file')
     print(f'Bản Windows 7 / 8: {RA}')
     return 0
 

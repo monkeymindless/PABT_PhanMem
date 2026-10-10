@@ -10,6 +10,7 @@ Chỉ dùng thư viện chuẩn (chạy được bằng Python 3.8 lẫn 3.14).
 from __future__ import annotations
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -74,6 +75,79 @@ def rut_gon(dist: Path) -> int:
     return len(bo)
 
 
+# ---------------------------------------------------------------- tiêu chuẩn: mọi DLL cần có trong bản dựng hoặc trong Windows đích
+# DLL hệ thống có trên MỌI máy Windows 7 SP1 (bản Win7-8 32-bit); bản Win10-11 cần Windows 10 1809 (build 17763) trở lên.
+# DLL nào khác (Visual C++, UCRT, OpenSSL…) phải nằm trong bản dựng - không dựa vào việc máy người dùng đã cài gì.
+HE_THONG_WIN7 = {
+    'advapi32', 'bcrypt', 'comctl32', 'comdlg32', 'crypt32', 'd3d11', 'd3d9', 'dnsapi', 'dwmapi', 'dxgi', 'gdi32', 'imm32',
+    'iphlpapi', 'kernel32', 'mpr', 'msimg32', 'netapi32', 'ntdll', 'ole32', 'oleaut32', 'psapi', 'rpcrt4', 'secur32',
+    'setupapi', 'shell32', 'shlwapi', 'user32', 'userenv', 'uxtheme', 'version', 'winhttp', 'wininet', 'winmm', 'winspool.drv',
+    'ws2_32', 'wtsapi32', 'opengl32', 'glu32', 'normaliz', 'ncrypt', 'propsys', 'authz', 'credui', 'cryptui', 'wldap32',
+}
+HE_THONG_WIN10 = HE_THONG_WIN7 | {'d3d12', 'dwrite', 'uiautomationcore', 'icuuc', 'icuin', 'shcore', 'windowscodecs',
+                                  'dcomp', 'd2d1', 'bluetoothapis', 'wevtapi'}
+
+
+def _nhap_dll(f: Path) -> tuple:
+    """(DLL nhập thường, DLL nhập trễ) của một file PE; ((), ()) nếu không phải PE."""
+    b = f.read_bytes()
+    if b[:2] != b'MZ':
+        return (), ()
+    pe = struct.unpack_from('<I', b, 0x3C)[0]
+    if b[pe:pe + 4] != b'PE\0\0':
+        return (), ()
+    magic = struct.unpack_from('<H', b, pe + 24)[0]
+    dd = pe + 24 + (96 if magic == 0x10B else 112)
+    nsec, sopt = struct.unpack_from('<H', b, pe + 6)[0], struct.unpack_from('<H', b, pe + 20)[0]
+    secs = [struct.unpack_from('<8sIIII', b, pe + 24 + sopt + 40 * i) for i in range(nsec)]
+
+    def off(r):
+        for _, vs, va, rs, ra in secs:
+            if va <= r < va + max(vs, rs):
+                return r - va + ra
+        return None
+    kq = []
+    for idx, buoc, o_ten in ((1, 20, 12), (13, 32, 4)):           # bảng nhập, bảng nhập trễ
+        rva = struct.unpack_from('<I', b, dd + 8 * idx)[0]
+        i, ds = (off(rva) if rva else None), []
+        while i is not None and i + buoc <= len(b):
+            ten = struct.unpack_from('<I', b, i + o_ten)[0]
+            o = off(ten) if ten else None
+            if o is None:
+                break
+            ds.append(b[o:b.index(b'\0', o)].decode('latin1').lower())
+            i += buoc
+        kq.append(tuple(ds))
+    return tuple(kq)
+
+
+# nhóm API lõi có trong lược đồ API của Windows 7 (ucrtbase bản Win 7 cần) - liệt kê cụ thể: không phải mọi "-l1-1-0" đều có
+# trên Windows 7 (api-ms-win-core-path-l1-1-0 chỉ từ Windows 8)
+API_WIN7 = {f'api-ms-win-core-{x}-l1-1-0.dll' for x in (
+    'console', 'datetime', 'debug', 'delayload', 'errorhandling', 'fibers', 'file', 'handle', 'heap', 'interlocked', 'io',
+    'libraryloader', 'localization', 'localregistry', 'memory', 'misc', 'namedpipe', 'processenvironment', 'processthreads',
+    'profile', 'rtlsupport', 'string', 'synch', 'sysinfo', 'threadpool', 'util', 'xstate')}
+
+
+def _api_win7(d: str) -> bool:
+    return d in API_WIN7
+
+
+def kiem_dll(dist: Path, win7: bool) -> list:
+    """DLL được nhập (thường) mà không có trong bản dựng lẫn Windows đích -> [(dll, file cần)]. Rỗng = đạt tiêu chuẩn."""
+    co = {f.name.lower() for f in dist.rglob('*') if f.is_file()}
+    he = HE_THONG_WIN7 if win7 else HE_THONG_WIN10
+    thieu = {}
+    for f in dist.rglob('*'):
+        if f.is_file() and f.suffix.lower() in ('.dll', '.pyd', '.exe'):
+            for d in _nhap_dll(f)[0]:
+                goc = d[:-4] if d.endswith('.dll') else d
+                if d in co or goc in he or (not win7 and d.startswith(('api-ms-win-', 'ext-ms-'))) or _api_win7(d):
+                    continue
+                thieu.setdefault(d, str(f.relative_to(dist)))
+    return sorted(thieu.items())
+
+
 def tu_kiem(dist: Path) -> str:
     exe = dist / 'PABT.exe'
     with tempfile.TemporaryDirectory() as td:
@@ -95,6 +169,14 @@ def main(argv) -> int:
         return 2
     dist = Path(argv[0]).resolve()
     rut_gon(dist)
+    win7 = (dist / 'python38.dll').exists() or (dist / 'PySide2').is_dir()
+    thieu = kiem_dll(dist, win7)
+    if thieu:
+        print(f'THIẾU THƯ VIỆN (bản {"Win7-8" if win7 else "Win10-11"} sẽ không chạy trên máy chưa cài sẵn):')
+        for d, f in thieu:
+            print(f'  {d}  (cần cho {f})')
+        return 1
+    print(f'Thư viện: đủ - chỉ cần DLL có sẵn của Windows {"7 SP1" if win7 else "10 (1809+)"}.')
     kq = tu_kiem(dist)
     print(kq)
     if 'KET QUA: DAT' not in kq:

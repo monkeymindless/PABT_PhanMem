@@ -595,27 +595,38 @@ cài từ 0.8.0 trở lên (cả bản Win 10/11 và Win 7/8) (`--toi-thieu` đ�
 
 ## Cài đặt
 
-**Máy dùng (không cần Python):** có **hai bộ cài**, chọn theo Windows của máy (bộ cài tự kiểm tra, cài nhầm sẽ báo):
+**Máy dùng (không cần Python):** có **hai bộ cài**, cùng **một tiêu chuẩn cài đặt** (từ 0.9.21):
 
-| Máy | Bộ cài | Nền chạy | Bộ VC++ kèm theo |
-|---|---|---|---|
-| **Windows 10 / 11** 64-bit | `PABT_CaiDat_0.9.12_Win10-11.exe` | Python 3.14 + Qt6, 64-bit | x64 14.44 |
-| **Windows 7 SP1 / 8 / 8.1** – máy **32-bit hoặc 64-bit**; cả Windows 10 **32-bit** | `PABT_CaiDat_0.9.12_Win7-8.exe` | Python 3.8 + Qt5, chương trình 32-bit | x86 14.29 (bản cuối cài được trên Win 7) |
+- cài cho **người dùng hiện tại** vào `%LOCALAPPDATA%\Programs\PABT` – **không cần quyền quản trị**, **không cài thêm gì vào
+  Windows** (không Visual C++, .NET, Python hay bản cập nhật nào: mọi thư viện đã nằm sẵn trong bộ cài);
+- chạy được cả trên máy cơ quan **khóa chạy script PowerShell** (Group Policy / ExecutionPolicy);
+- chép xong bộ cài **kiểm lại từng file** (mã SHA-256): phần mềm diệt virus chặn file nào thì báo rõ file đó;
+- cài xong tự kiểm tra phần mềm trên chính máy đó (giao diện, đọc PDF, bộ đơn giá, mẫu in, bảng giá đất). Nhật ký:
+  `%TEMP%\pabt_cai_dat.log`. Cần ổ đĩa còn trống ≥ 300 MB.
 
-Chép **một file** bộ cài phù hợp sang máy, bấm đúp → cửa sổ cài đặt (chọn thư mục, biểu tượng Desktop, liên kết file `.pabt`) →
-**Cài đặt** → thanh tiến trình → bộ cài tự kiểm tra phần mềm trên máy đó (giao diện, đọc PDF, bộ đơn giá, mẫu in, bảng giá đất) →
-**Mở PABT**. Nhật ký cài: `%TEMP%\pabt_cai_dat.log`. Còn trống ≥ 300 MB. Microsoft Visual C++ Redistributable (x64): máy chưa có
-(hoặc bản cũ hơn) thì cài kèm (Windows hỏi quyền quản trị một lần). **Không cần cài .NET, Python hay Office** (in PDF qua Excel thì
-cần Excel). Windows 7 dùng PowerShell 2.0 và .NET 3.5 có sẵn; cần **Service Pack 1** và bản cập nhật Windows thường kỳ
-(KB2533623, KB2999226 – máy cập nhật Windows Update đầy đủ là có). Bản Win 7/8 là chương trình 32-bit nên chạy được cả trên
-Windows 32-bit lẫn 64-bit (máy 64-bit vẫn chạy bình thường).
-Hai bản có cùng chức năng; bản Win 7/8 đọc PDF đơn giá bằng `pypdf` thay cho QtPdf. Cùng một **gói cập nhật `.pabtcn`** dùng
-được cho cả hai bản.
+| Máy | Bộ cài | Nền chạy |
+|---|---|---|
+| **Windows 10 (bản 1809 trở lên) / 11**, 64-bit | `PABT_CaiDat_<phiên bản>_Win10-11.exe` | Python 3.14 + Qt6, 64-bit |
+| **Mọi Windows từ 7 SP1**: 7, 8, 8.1, Windows 10 / 11 32-bit hoặc 64-bit, Windows 10 bản cũ | `PABT_CaiDat_<phiên bản>_Win7-8.exe` | Python 3.8 + Qt5, 32-bit |
 
-Hoặc giải nén `PABT_ChayNgay_0.9.12_Win10-11.zip` / `_Win7-8.zip` vào một thư mục rồi chạy `PABT.exe`, không cần cài. Bộ cài cài cho
-người dùng hiện tại (không cần quyền quản trị) vào `%LOCALAPPDATA%\Programs\PABT`, tạo biểu tượng ở menu Start / Desktop và cho mở
-file `.pabt` bằng nhấp đúp. Gỡ bằng Settings → Apps (Win 7: Control Panel → Programs) – file dự án `.pabt` được giữ. Cài im lặng:
-`PABT_CaiDat_<phiên bản>_<bản>.exe /Q`. Mẫu in sửa bằng **Cập nhật mẫu in…** được lưu ở `%APPDATA%\PABT\mau_in`.
+Không chắc máy là loại nào thì dùng **bộ cài Win7-8**: cài và chạy được trên mọi máy (trên Windows 10/11 64-bit bộ cài chỉ nhắc
+có bản Win10-11 chạy nhanh hơn). Bộ cài Win10-11 dùng nhầm trên máy không hợp sẽ báo và chỉ sang bộ cài Win7-8.
+Windows 7 cần **Service Pack 1** và bản cập nhật **KB2533623** (có trong KB3063858; máy đã chạy Windows Update là có). Bộ cài
+Win7-8 **kèm sẵn KB3063858** (bản 32-bit và 64-bit của Microsoft): máy Windows 7 còn thiếu thì cửa sổ cài có ô "Cài bản cập nhật
+Windows 7 KB3063858" (đánh dấu sẵn) – Windows hỏi quyền quản trị một lần, cài xong **khởi động lại máy** rồi mở PABT. Máy đã có bản
+cập nhật thì bỏ qua bước này (không hỏi gì).
+
+Chép **một file** bộ cài sang máy, bấm đúp → cửa sổ cài đặt (chọn thư mục, biểu tượng Desktop, liên kết file `.pabt`) → **Cài đặt**
+→ thanh tiến trình → tự kiểm tra → **Mở PABT**. Cài im lặng: `PABT_CaiDat_<phiên bản>_<bản>.exe /Q`.
+
+**Máy không chạy được file `.exe` của bộ cài** (phần mềm diệt virus chặn, hoặc tên người dùng Windows có dấu làm vỏ giải nén lỗi):
+giải nén `PABT_ChayNgay_<phiên bản>_<bản>.zip` vào một thư mục rồi
+- bấm đúp **`CAI_DAT.cmd`** trong thư mục đó để cài như bộ cài `.exe` (cùng cửa sổ, cùng kiểm tra), hoặc
+- chạy thẳng **`PABT.exe`** không cần cài.
+
+Gỡ bằng Settings → Apps (Win 7: Control Panel → Programs) – file dự án `.pabt` được giữ. Hai bản có cùng chức năng (bản Win7-8 đọc
+PDF đơn giá bằng `pypdf` thay cho QtPdf); cùng một **gói cập nhật `.pabtcn`** dùng được cho cả hai bản. Mẫu in sửa bằng **Cập nhật
+mẫu in…** được lưu ở `%APPDATA%\PABT\mau_in`.
 
 **Máy phát triển (có mã nguồn):**
 
@@ -630,9 +641,11 @@ file `.pabt` bằng nhấp đúp. Gỡ bằng Settings → Apps (Win 7: Control 
 6. **DUNG_BO_CAI.bat**: dựng **cả hai bản** – `dist\PABT` (PyInstaller 6, Python 3.14 + Qt6) và `dist\PABT_Win7`
    (`bo_cai_win\dung_exe38.py`: chép mã sang thư mục tạm không dấu, PyInstaller 5), rút gọn từng bản (`bo_cai_win\rut_gon.py`: bỏ thư
    viện Qt không dùng, rồi chạy `PABT.exe tu-kiem`, dừng nếu không đạt), rồi `bo_cai_win\dung_bo_cai_win.py` đóng gói (IExpress có sẵn
-   trong Windows, kịch bản `cai_dat.ps1` / `go_cai_dat.ps1` chạy được PowerShell 2.0) thành `bo_cai\PABT_CaiDat_<phiên bản>_Win10-11.exe`
-   (kèm `vc_redist.x64.exe` 14.44), `..._Win7-8.exe` (32-bit, vỏ IExpress 32-bit từ SysWOW64, kèm `vc_redist_win7.x86.exe` 14.29)
-   và hai bản chạy ngay `.zip`.
+   trong Windows, khởi chạy `CAI_DAT.cmd` → `cai_dat.ps1` / `go_cai_dat.ps1` chạy được PowerShell 2.0) thành
+   `bo_cai\PABT_CaiDat_<phiên bản>_Win10-11.exe`, `..._Win7-8.exe` (32-bit, vỏ IExpress 32-bit từ SysWOW64; thư viện C chung UCRT
+   của Windows 7 đóng sẵn - `bo_cai_win\ucrt_win7.py` lấy từ `vc_redist_win7.x86.exe`) và hai gói `.zip` (chạy ngay / cài dự
+   phòng bằng `CAI_DAT.cmd`). `rut_gon.py` dừng dựng nếu bản dựng cần DLL không có sẵn trên Windows đích (Windows 7 SP1 /
+   Windows 10 1809).
    Mã nguồn dùng chung phải chạy được cả Python 3.8 + Qt5: `from __future__ import annotations` ở đầu mỗi file; không dùng tính năng
    Python 3.9+ khi chạy; Qt5 được nạp dưới tên PySide6 bởi `pabt/__init__.py` (`_qt5_lam_qt6`). Kiểm thử cả hai:
    `.venv\Scripts\python -m unittest …` và `%LOCALAPPDATA%\PABT_dev\venv38_32\Scripts\python -m unittest …`.

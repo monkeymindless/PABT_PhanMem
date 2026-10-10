@@ -1,0 +1,92 @@
+"""Tiêu chuẩn cài đặt chung của hai bộ cài (0.9.21 - người dùng yêu cầu "máy nào cũng cài được"): giữ các điều kiện đã kiểm
+khi thử cài thật, để lần sửa sau không vô tình làm hỏng."""
+from __future__ import annotations
+import re
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+GOC = Path(__file__).resolve().parents[1]
+BC = GOC / 'bo_cai_win'
+sys.path.insert(0, str(BC))
+
+
+class TestKichBanCai(unittest.TestCase):
+    def test_trinh_khoi_chay_ascii_va_chay_bang_command(self):
+        b = (BC / 'CAI_DAT.cmd').read_bytes()
+        self.assertTrue(b.isascii(), 'cmd đọc file .cmd theo bảng mã OEM: chỉ được chữ ASCII')
+        s = b.decode()
+        self.assertIn('-Command', s)
+        self.assertIn('[scriptblock]::Create', s)                   # không -File: ExecutionPolicy / Group Policy chặn -File
+        self.assertNotRegex(s, r'(?im)^[^r].*powershell[^\n]*-File ')
+
+    def test_script_co_bom_utf8(self):
+        for ten in ('cai_dat.ps1', 'go_cai_dat.ps1'):
+            # PowerShell 2.0 / 5.1 đọc .ps1 không BOM theo bảng mã ANSI của máy: chữ Việt hỏng, có thể vỡ cú pháp
+            self.assertEqual((BC / ten).read_bytes()[:3], b'\xef\xbb\xbf', ten)
+
+    def test_khong_dung_include_voi_literalpath_va_lenh_ps3(self):
+        for ten in ('cai_dat.ps1', 'go_cai_dat.ps1'):
+            s = (BC / ten).read_text(encoding='utf-8-sig')
+            for dong in (d.split('#', 1)[0] for d in s.splitlines()):
+                if '-LiteralPath' in dong:
+                    # -Include không có tác dụng với -LiteralPath (trả về MỌI file - go_cai_dat từng giữ lại cả thư mục cài)
+                    self.assertNotIn('-Include', dong, dong)
+            ma = '\n'.join(d.split('#', 1)[0] for d in s.splitlines())          # bỏ chú thích
+            for lenh in ('$PSScriptRoot', ' -Raw', ' -in ', ' -notin ', '[ordered]', '[pscustomobject]', 'Get-CimInstance',
+                         'ConvertFrom-Json', 'Invoke-WebRequest', '.ForEach(', '.Where(', 'ZipFile'):
+                self.assertNotIn(lenh, ma, f'{ten}: {lenh} cần PowerShell 3+ / .NET 4.5 (Windows 7 chỉ có 2.0)')
+
+    def test_go_cai_dat_dung_command(self):
+        s = (BC / 'cai_dat.ps1').read_text(encoding='utf-8-sig')
+        i = s.index("$go = ")
+        self.assertIn('-Command', s[i:i + 400])
+        self.assertNotIn('-File', s[i:i + 400])
+
+    def test_sed_iexpress(self):
+        import dung_bo_cai_win as d
+        sed = d._sed(Path('X'), Path('Y'), ['a'])
+        # ".\" tường minh: máy bật NoDefaultCurrentDirectoryInExePath thì "cmd /c CAI_DAT.cmd" không chạy (bộ cài thoát im lặng)
+        self.assertIn('AppLaunched=cmd.exe /c .\\CAI_DAT.cmd', sed)
+        self.assertIn('UserQuietInstCmd=cmd.exe /c .\\CAI_DAT.cmd -Im', sed)
+        self.assertIsNone(d.BAN['win7']['vc'])                   # không cài Visual C++ (cần quyền quản trị): đã đóng sẵn
+        self.assertIsNone(d.BAN['win10']['vc'])
+
+    def test_kem_ban_cap_nhat_windows7(self):
+        # bộ cài Win7-8 kèm KB3063858 x86 + x64 (Python 3.8 cần KB2533623); cai_dat.ps1 chọn theo kiến trúc WINDOWS, cài bằng wusa
+        import dung_bo_cai_win as d
+        self.assertEqual(set(d.BAN['win7']['kb']), {'Windows6.1-KB3063858-x86.msu', 'Windows6.1-KB3063858-x64.msu'})
+        self.assertEqual(d.BAN['win10']['kb'], ())
+        s = (BC / 'cai_dat.ps1').read_text(encoding='utf-8-sig')
+        for ten in d.BAN['win7']['kb']:
+            self.assertIn(ten, s)
+        self.assertIn('Sysnative', s)                            # PowerShell 32-bit trên Windows 64-bit: wusa 64-bit thật
+        self.assertIn('exit 3010', s)                            # cài im lặng: báo cần khởi động lại
+        import hashlib
+        for ten, bam in d.KB_WIN7.items():
+            f = BC / ten
+            if f.exists():                                       # file không đưa vào git: chỉ kiểm khi có trên máy dựng
+                self.assertEqual(hashlib.sha256(f.read_bytes()).hexdigest(), bam, ten)
+
+    @unittest.skipUnless(sys.platform == 'win32', 'cần PowerShell')
+    def test_cu_phap_powershell(self):
+        for ten in ('cai_dat.ps1', 'go_cai_dat.ps1'):
+            lenh = ("$e = $null; [void][System.Management.Automation.PSParser]::Tokenize("
+                    f"[IO.File]::ReadAllText('{BC / ten}'), [ref]$e); $e.Count")
+            kq = subprocess.run(['powershell', '-NoProfile', '-Command', lenh], capture_output=True, text=True, timeout=120)
+            self.assertEqual(kq.stdout.strip(), '0', f'{ten}: {kq.stdout} {kq.stderr}')
+
+
+class TestThuVien(unittest.TestCase):
+    def test_kiem_dll(self):
+        import rut_gon
+        self.assertTrue(rut_gon._api_win7('api-ms-win-core-file-l1-1-0.dll'))
+        self.assertFalse(rut_gon._api_win7('api-ms-win-core-path-l1-1-0.dll'))      # Windows 8+: Win7 không có
+        for dist, win7 in ((GOC / 'dist' / 'PABT_Win7', True), (GOC / 'dist' / 'PABT', False)):
+            if (dist / 'PABT.exe').exists():
+                self.assertEqual(rut_gon.kiem_dll(dist, win7), [], f'{dist.name} cần DLL không có sẵn trên Windows đích')
+
+
+if __name__ == '__main__':
+    unittest.main()

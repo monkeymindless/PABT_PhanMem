@@ -208,6 +208,25 @@ def b_bo_cai():
             loi.append(f'{z.name}: file hỏng {hong}')
         if cam:
             loi.append(f'{z.name} có file dữ liệu: {cam[:5]}')
+        # gói zip cũng là bộ cài dự phòng (CAI_DAT.cmd): đủ file cài và danh sách khớp nội dung
+        with zipfile.ZipFile(z) as zf:
+            ten = set(zf.namelist())
+            thieu_cai = [x for x in ('CAI_DAT.cmd', 'cai_dat.ps1', 'go_cai_dat.ps1', 'danh_sach.txt', 'ban.txt', 'phien_ban.txt')
+                         if x not in ten]
+            sai = []
+            if 'danh_sach.txt' in ten:
+                import hashlib
+                for dong in zf.read('danh_sach.txt').decode('utf-8-sig').splitlines():
+                    x = dong.split('\t')
+                    if len(x) < 4:
+                        continue
+                    n = x[0].replace('\\', '/')
+                    if n not in ten or hashlib.sha256(zf.read(n)).hexdigest() != x[3]:
+                        sai.append(n)
+        if thieu_cai:
+            canh.append(f'{z.name}: thiếu file cài dự phòng {thieu_cai} (bộ cài cũ trước 0.9.21?)')
+        if sai:
+            loi.append(f'{z.name}: danh_sach.txt không khớp {len(sai)} file, ví dụ {sai[:3]}')
         ghi(f'{z.name}: nguyên vẹn, ' + ('CÓ DỮ LIỆU THẬT' if cam else 'không chứa dữ liệu'))
     goi = d / f'PABT_CapNhat_{pb}.pabtcn'
     if goi.exists() and not VENV.exists():
