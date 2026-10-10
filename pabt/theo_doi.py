@@ -20,6 +20,7 @@ from pathlib import Path
 
 from . import csdl
 from .lap_pa import LoiNhap, bo_dau
+from .nghiep_vu import muc_5_cot
 from .quan_ly import chuan_ngay
 from .tien import D, KHONG, chuoi, doc_so_vn, vn
 
@@ -28,7 +29,7 @@ NGAY_QD = ('ngay_pa', 'qd_ct_ngay', 'chi_tra_ngay')
 TRUONG_QD_HO = ('so_tien', 'tien_dat', 'tien_tai_san', 'tien_cay', 'tien_ho_tro', 'tien_thuong', 'so_pa', 'ngay_pa', 'qd_ct_so',
                 'qd_ct_ngay', 'da_chi_tra', 'chi_tra_ngay', 'chi_tra_so_tien', 'chung_tu', 'ly_do_chua_nhan', 'ghi_chu')
 TEN_TRUONG = dict(so_tien='Số tiền phê duyệt', tien_dat='Tiền đất', tien_tai_san='Tiền nhà, công trình, tài sản',
-                  tien_cay='Tiền cây trồng', tien_ho_tro='Các chính sách hỗ trợ', tien_thuong='Thưởng bàn giao',
+                  tien_cay='Tiền cây trồng, vật nuôi', tien_ho_tro='Các chính sách hỗ trợ', tien_thuong='Thưởng bàn giao',
                   so_pa='Phương án chi tiết số', ngay_pa='Ngày phương án', qd_ct_so='Quyết định chi tiết số',
                   qd_ct_ngay='Ngày ban hành QĐ chi tiết', da_chi_tra='Đã nhận tiền', chi_tra_ngay='Ngày nhận tiền',
                   chi_tra_so_tien='Số tiền đã nhận', chung_tu='Biên lai / biên bản chi trả', ly_do_chua_nhan='Lý do chưa nhận',
@@ -255,8 +256,9 @@ def chi_tiet_tu_phuong_an(con, ma_ho: int, bc=None) -> dict:
 
 
 def _chi_tiet_kq(k) -> dict:
-    return dict(so_tien=chuoi(k.tong), tien_dat=chuoi(k.muc[1]), tien_tai_san=chuoi(k.muc[2]), tien_cay=chuoi(k.muc[3]),
-                tien_ho_tro=chuoi(k.muc[4]), tien_thuong=chuoi(k.muc[5]))
+    m = muc_5_cot(k.muc)                                # tien_cay: cây trồng + vật nuôi
+    return dict(so_tien=chuoi(k.tong), tien_dat=chuoi(m[1]), tien_tai_san=chuoi(m[2]), tien_cay=chuoi(m[3]),
+                tien_ho_tro=chuoi(m[4]), tien_thuong=chuoi(m[5]))
 
 
 def ghi_chi_tra(con, ds: list, ngay: str = '', chung_tu: str = '', theo_qd: bool = True) -> int:
@@ -428,7 +430,7 @@ def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
                       bien_ban_ban_giao=h['bien_ban_ban_giao'], theo_doi=h['theo_doi'])
         if tinh_pa and h['ma_ho'] in kqh:
             k = kqh[h['ma_ho']][0]
-            x.tong_pa, x.muc_pa = k.tong, dict(k.muc)
+            x.tong_pa, x.muc_pa = k.tong, muc_5_cot(k.muc)
         kq.append(x)
     return kq
 

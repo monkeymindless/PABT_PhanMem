@@ -236,14 +236,18 @@ class TestLapPA(unittest.TestCase):
         with self.assertRaises(LoiNhap):
             bo.sua_khoan(2, 0, 'thanh_tien', '1')
 
-    def test_xoa_het_ve_chua_lap(self):
+    def test_xoa_het_van_la_da_lap(self):
+        # 0.9.21: người dùng lưu phương án không còn dòng nào = đã lập, mọi mục 0 đồng (trước: về "Chưa lập phương án")
         bo = BoSoan(self.con, 2, self.dm)
-        for m in (1, 2, 3, 4):
+        for m in (1, 2, 3, nghiep_vu.MUC_VN, 4):
             while bo.ds(m):
                 bo.xoa(m, 0)
         bo.luu()
-        self.assertEqual(self.con.execute('SELECT trang_thai FROM ho WHERE ma_ho = 2').fetchone()[0], 'Chưa lập phương án')
-        self.assertEqual(nghiep_vu.tinh_ho(self.con, 2).tong, 0)
+        self.assertTrue(self.con.execute('SELECT trang_thai FROM ho WHERE ma_ho = 2').fetchone()[0].startswith(
+            nghiep_vu.DA_LAP_LUU))
+        k = nghiep_vu.tinh_ho(self.con, 2)
+        self.assertEqual(k.tong, 0)
+        self.assertTrue(k.co_phuong_an)
 
     def test_di_chuyen_dong_va_ho_ke(self):
         bo = BoSoan(self.con, 1, self.dm)

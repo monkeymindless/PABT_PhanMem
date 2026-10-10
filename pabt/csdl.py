@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-PHIEN_BAN_CSDL = 11
+PHIEN_BAN_CSDL = 12
 # bảng danh mục, tham số: cố định (trigger chặn sửa); chỉ nạp / cập nhật bộ đơn giá mới mở khóa (mo_khoa_danh_muc)
 DANH_MUC = ('dm_taisan', 'dm_hotro', 'dm_loaidat', 'gia_dat', 'dm_xa', 'tham_so', 'bieu_thuong', 'quy_uoc', 'van_ban')
 THONG_BAO_KHOA = 'Danh mục đơn giá, tham số được cố định theo bộ đơn giá; chỉ cập nhật bằng lệnh Bộ đơn giá.'
@@ -59,6 +59,8 @@ _NANG_CAP = {
          "ALTER TABLE dot_trinh ADD COLUMN loai_van_ban TEXT NOT NULL DEFAULT 'Tờ trình'",
          "ALTER TABLE dot_trinh ADD COLUMN so_pa_tong TEXT NOT NULL DEFAULT ''",
          "ALTER TABLE dot_trinh ADD COLUMN ngay_pa_tong TEXT NOT NULL DEFAULT ''"],
+    # 0.9.20: mục Vật nuôi riêng (ct_khoan.muc = 7): dựng lại bảng (ràng buộc CHECK), dòng vật nuôi đang ở mục cây / nhà -> 7
+    11: ["@ct_khoan_vat_nuoi"],
 }
 
 
@@ -67,6 +69,37 @@ def _bang_quyet_dinh() -> str:
     s = _SCHEMA.read_text(encoding='utf-8')
     return s[s.index('CREATE TABLE IF NOT EXISTS quyet_dinh'):]
 _SCHEMA = Path(__file__).with_name('schema.sql')
+
+
+def _dung_lai_ct_khoan(con) -> None:
+    """Nâng cấp v11 -> v12: bảng ct_khoan theo schema.sql mới (CHECK muc IN (2, 3, 4, 7)), giữ nguyên mọi dòng / id; dòng có mã
+    danh mục thuộc nhóm vật nuôi (dm_taisan.phan_loai "… vật nuôi …") chuyển sang mục 7 (Vật nuôi)."""
+    s = _SCHEMA.read_text(encoding='utf-8')
+    i = s.index('CREATE TABLE IF NOT EXISTS ct_khoan')
+    tao = s[i:s.index('\n);', i) + 3]                # hết ở ");" đầu dòng: chú thích trong bảng có dấu ";"
+    tao = tao.replace('CREATE TABLE IF NOT EXISTS ct_khoan', 'CREATE TABLE ct_khoan_moi', 1)
+    con.execute('DROP TABLE IF EXISTS ct_khoan_moi')
+    con.execute(tao)
+    cu = [r[1] for r in con.execute('PRAGMA table_info(ct_khoan)')]
+    moi = {r[1] for r in con.execute('PRAGMA table_info(ct_khoan_moi)')}
+    cot = ', '.join(c for c in cu if c in moi)
+    con.execute(f'INSERT INTO ct_khoan_moi ({cot}) SELECT {cot} FROM ct_khoan')
+    con.execute('DROP TABLE ct_khoan')
+    con.execute('ALTER TABLE ct_khoan_moi RENAME TO ct_khoan')
+    con.execute('CREATE INDEX IF NOT EXISTS ix_ctkhoan_ho ON ct_khoan(ma_ho, muc)')
+    chuyen_vat_nuoi(con)
+
+
+def chuyen_vat_nuoi(con) -> int:
+    """Dòng mục 2 / 3 có mã danh mục nhóm vật nuôi (dm_taisan.phan_loai có "vật nuôi") -> mục 7 (Vật nuôi). Trả số dòng đổi."""
+    # lower() của SQLite chỉ đổi chữ ASCII ("VẬT NUÔI" không khớp): lọc bằng Python
+    import unicodedata
+    vn = [r[0] for r in con.execute('SELECT ma, phan_loai FROM dm_taisan')
+          if r[0] and 'vật nuôi' in unicodedata.normalize('NFC', str(r[1] or '')).lower()]
+    n = 0
+    for ma in vn:
+        n += con.execute("UPDATE ct_khoan SET muc = 7 WHERE muc IN (2, 3) AND ma = ?", (ma,)).rowcount
+    return n
 
 
 def tao_moi(duong_dan) -> sqlite3.Connection:
@@ -169,6 +202,9 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
                         for x in _bang_quyet_dinh().split(';'):
                             if x.strip():
                                 con.execute(x)
+                        continue
+                    if lenh == '@ct_khoan_vat_nuoi':
+                        _dung_lai_ct_khoan(con)
                         continue
                     con.execute(lenh)
             con.execute(f'PRAGMA user_version = {PHIEN_BAN_CSDL}')

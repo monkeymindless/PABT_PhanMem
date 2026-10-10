@@ -11,7 +11,8 @@ from datetime import datetime
 
 from . import csdl
 from .lap_pa import DanhMuc, bo_dau, ra_soat_gia
-from .nghiep_vu import BoiCanh, doc_phuong_an, doc_tat_ca_phuong_an, ket_qua_ho_san, kiem_tra_pa, tinh_pa
+from .nghiep_vu import (MUC_KHOAN, BoiCanh, doc_phuong_an, doc_tat_ca_phuong_an, dong_bang_0, ket_qua_ho_san, kiem_tra_pa,
+                        so_muc, tinh_pa)
 from .tien import D, KHONG, so_vn, vn
 
 LOI, CANH_BAO = 'Lỗi', 'Cảnh báo'
@@ -196,14 +197,18 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
             them(CANH_BAO, 'Phương án', 'Hộ có thửa thu hồi nhưng chưa lập phương án.', ma, ten)
         for x in ds_kt:
             them(LOI if 'chưa có' in x or 'không gắn' in x else CANH_BAO, 'Phương án', x, ma, ten)
-        for muc in (2, 3, 4):
+        if not k.da_luu:                                    # người dùng đã lưu: số 0 là cố ý (không bồi thường mục đó)
+            for x in dong_bang_0(pa):
+                them(CANH_BAO, 'Phương án', x, ma, ten)
+        for muc in MUC_KHOAN:
+            sm = so_muc(muc)
             for i, d in enumerate(pa.khoan[muc], start=1):
                 for nhan, v in (('tên', d.ten), ('ghi chú', d.ghi_chu), ('quy cách', d.quy_cach)):
                     lf = loi_font(v)
                     if lf:
-                        them(LOI, 'Font chữ', f'Dòng {muc}.{i} ({nhan}): {lf}.', ma, ten, 'tổ hợp' in lf)
+                        them(LOI, 'Font chữ', f'Dòng {sm}.{i} ({nhan}): {lf}.', ma, ten, 'tổ hợp' in lf)
                 if d.so_luong < 0 or d.don_gia < 0:
-                    them(LOI, 'Số liệu, tổng tiền', f'Dòng {muc}.{i} ({d.ten[:40]}): số âm.', ma, ten)
+                    them(LOI, 'Số liệu, tổng tiền', f'Dòng {sm}.{i} ({d.ten[:40]}): số âm.', ma, ten)
         for i, d in enumerate(pa.dat, start=1):
             if d.dien_tich < 0:
                 them(LOI, 'Số liệu, tổng tiền', f'Dòng 1.{i}: diện tích âm.', ma, ten)

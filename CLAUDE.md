@@ -134,7 +134,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `khoi_dong_may_chu` (không kết nối được → offline bình thường), nút tài khoản ở thanh trạng thái (`nut_tk`, `_menu_tai_khoan`).
   Test đặt `PABT_THU_MUC_MAY`.
 - 0.9.4 nhập liệu: `CuaSoLapPA` = hồ sơ + phương án một cửa sổ (thẻ 0 `man_hinh_ho_so.KhungHoSo` với `an=('trang_thai',
-  'tai_dinh_cu')`, thẻ 1-4 `BangMuc`; chỉ số thẻ = số mục; `hang_dieu_huong`/`sang_the` lưu hồ sơ khi rời thẻ 0; `HopHoSo` chỉ bọc
+  'tai_dinh_cu')`, thẻ 1-5 `BangMuc` (từ 0.9.21 thẻ != mục: `man_hinh.THE_MUC` / `the_cua(muc)`, `self.bang` theo MỤC); `hang_dieu_huong`/`sang_the` lưu hồ sơ khi rời thẻ 0; `HopHoSo` chỉ bọc
   KhungHoSo). Hàng nhập nhanh `giao_dien.OTimChon` (lọc không dấu) → `CuaSoLapPA.them_nhanh` (mục 3 kiểu 'dk'/'cv' →
   `cay_trong.gom_theo_kich_thuoc`). Ô thửa / vị trí mục 1: `XoXuongDong` → `BoSoan.doi_thua`, `ds_vi_tri_nq28`/`chon_vi_tri_nq28`;
   chữ dài: `ChuNhieuDong`. Công thức trong ô số: `tien.tinh_cong_thuc` qua `lap_pa.doc_so`; `doc_so_luong` làm tròn 1 chữ số (ha: 4).
@@ -431,6 +431,29 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     Anh / tên người dùng có dấu -> "Unable to save shortcut …L?p…" làm hỏng cả lần cài; dự phòng WScript tên "PABT.lnk"; lối tắt lỗi
     chỉ cảnh báo. Tự kiểm tra sau cài `WaitForExit(180000)`. Máy phát triển bật UTF-8 toàn hệ thống nên không tái hiện được lỗi ANSI.
   - `in_an.ten_file_ho` cắt họ tên ở " là chủ / người / đại diện / đồng…".
+- 0.9.21 (yêu cầu người dùng 10/10/2026):
+  - VẬT NUÔI MỤC RIÊNG: mã bên trong `nghiep_vu.MUC_VN = 7` (6 là "Chi phí khác" của dự toán); thứ tự `THU_TU_MUC` (1, 2, 3, 7, 4, 5),
+    số in `SO_MUC` / `so_muc(muc)`: 4 vật nuôi, 5 hỗ trợ, 6 thưởng; `MUC_KHOAN` = (2, 3, 7, 4) - ĐỪNG viết `(2, 3, 4)` cho vòng lặp
+    khoản. Bảng / cột cố định 5 mục (tong_excel, quyết định tien_*, báo cáo, bảng tổng hợp cột 18, mẫu văn bản trình {tien_cay}) gộp
+    vật nuôi vào cây trồng qua `muc_5_cot` (nhãn "Cây trồng, vật nuôi"). Danh mục: dm_taisan nhóm 3 có phan_loai "vật nuôi"
+    (`la_vat_nuoi`) -> `DanhMuc.muc[MUC_VN]`. CSDL v12 (`_NANG_CAP[11]` = "@ct_khoan_vat_nuoi" -> `csdl._dung_lai_ct_khoan`: dựng lại
+    ct_khoan theo schema.sql (CHECK muc IN (2, 3, 4, 7); đoạn CREATE hết ở "
+);" - chú thích có dấu ";") + `chuyen_vat_nuoi`
+    (lọc phan_loai bằng Python: lower() SQLite chỉ ASCII); `nhap_excel` gọi `chuyen_vat_nuoi` sau khi ghi. `pabt/bo_don_gia.sqlite`
+    đã nâng lên v12 (mở bằng csdl.mo không được ghi bộ đơn giá đóng gói - test so băm). Dự toán: vật nuôi gộp mục 3
+    (`du_toan.muc_du_toan`). `nhap_chi_tiet.muc_theo_ten`: chỉ vật nuôi -> MUC_VN, "cây trồng, vật nuôi" -> 3; kiểu số: mục theo tên,
+    tên lạ theo số (bản in mới `_MUC_THEO_SO`). `phan_loai_tai_san.LOAI[VAT_NUOI]` = MUC_VN.
+  - LƯU KHI BẰNG 0: `BoSoan.loi_chan_luu` chỉ chặn diện tích ÂM (0 = tài sản trên đất người khác); người dùng Lưu -> luôn
+    `nghiep_vu.DA_LAP_LUU` "(lưu …)" kể cả không dòng nào (`KetQuaHo.da_luu` -> `co_phuong_an`); tự lập (Dự án mới) không dòng
+    vẫn "Chưa lập". `kiem_tra_pa` bỏ "chưa có giá bảng giá" / "chưa có số lượng, đơn giá" và lệch DT khi DT mục 1 = 0 - các dòng 0
+    đồng ở `dong_bang_0` (chỉ Kiểm tra lỗi, chỉ hộ chưa lưu). Nút Lưu bật khi hộ chưa lưu lần nào (xác nhận phương án 0 đồng).
+  - Vị trí NQ 28 ở mục 1: `gia_dat_nq28.theo_dia_ban` - ĐỦ các địa bàn (dự án qua nhiều xã), địa bàn dự án đứng đầu, nhãn có tên xã
+    (`ten_ngan_xa`); `XoXuongDong.setEditorData` chữ không thuộc danh sách -> mở từ dòng đầu (trước: chỉ số -1 mở ở CUỐI danh sách,
+    người dùng tưởng thiếu tuyến). Bảng NQ 28 hiện có 4 địa bàn, đối chiếu bản PDF quét `FILE NQ28 BẢN FULL.pdf` (3.206 trang, không
+    có lớp chữ; dựng ảnh trang bằng QtPdf): Trị An đủ TT 1-427 (trang 2700-2742). Địa bàn khác phải chép thêm từ PDF.
+  - `nhap_chi_tiet` đọc kiểu La Mã (I. II. … / A. B.) theo tên mục; `phan_loai_tai_san.py` + `man_hinh_phan_loai.HopDanTaiSan`
+    ("Dán danh sách tài sản…" trong CuaSoLapPA): khớp danh mục -> từ đầu -> luật từ khóa + ĐVT.
+  - Test GUI: đóng CuaSoLapPA còn sửa đổi thì hỏi lưu (hộp thoại treo test) - `bo_thay_doi()` trước `close()`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

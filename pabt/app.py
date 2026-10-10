@@ -153,8 +153,8 @@ class ChiTietHo(QDialog):
         cay.setHeaderLabels(['STT', 'Tên tài sản, khoản', 'ĐVT', 'Số lượng', 'Đơn giá', 'Tỷ lệ', 'Thành tiền (đồng)'])
         dam = QFont()
         dam.setBold(True)
-        for muc in (1, 2, 3, 4, 5):
-            goc = QTreeWidgetItem([str(muc), nghiep_vu.TEN_MUC[muc], '', '', '', '', vn(k.muc[muc])])
+        for muc in nghiep_vu.THU_TU_MUC:                # 1 đất, 2 nhà, 3 cây, 4 vật nuôi, 5 hỗ trợ, 6 thưởng
+            goc = QTreeWidgetItem([str(nghiep_vu.so_muc(muc)), nghiep_vu.TEN_MUC[muc], '', '', '', '', vn(k.muc[muc])])
             for i in (0, 1, 6):
                 goc.setFont(i, dam)
             goc.setTextAlignment(6, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)

@@ -25,9 +25,14 @@ TEN_MUC = {1: 'Bồi thường về đất', 2: 'Bồi thường, hỗ trợ nh�
            6: 'Chi phí khác'}
 # theo mẫu Bảng khái toán của đơn vị: 2,5% chi phí thực hiện công tác bồi thường, 10% dự phòng (tính trên tổng cộng mục 1-5)
 CP_MAC_DINH = [('Chi phí thực hiện công tác bồi thường', '2.5'), ('Phí dự phòng', '10')]
-TEN_MUC_KT = {1: 'Bồi thường về đất', 2: 'Nhà và công trình xây dựng', 3: 'Cây trồng', 4: 'Các chính sách hỗ trợ',
+TEN_MUC_KT = {1: 'Bồi thường về đất', 2: 'Nhà và công trình xây dựng', 3: 'Cây trồng, vật nuôi', 4: 'Các chính sách hỗ trợ',
               5: 'Thưởng bàn giao mặt bằng trước thời hạn'}
 LA_MA = ['I', 'II', 'III', 'IV', 'V', 'VI']
+MUC_VN = 7                          # = nghiep_vu.MUC_VN: phương án tách vật nuôi thành mục riêng; dự toán gộp vào mục 3
+
+
+def muc_du_toan(muc: int) -> int:
+    return 3 if muc == MUC_VN else muc
 
 
 @dataclass
@@ -145,8 +150,9 @@ def tu_du_an(con, ds_ma_ho: list | None = None, ten: str = '') -> DuToan:
                 x = gom[khoa] = DongDT(1, ten_dong, 'm²', KHONG, d.gia_bang_gia * d.he_so_k, d.ty_le, d.loai_dat,
                                        'Giá đất theo bảng giá x hệ số K của dự án')
             x.khoi_luong += d.dien_tich
-        for muc in (2, 3, 4):
-            for d in pa.khoan[muc]:
+        for muc_pa in (2, 3, MUC_VN, 4):
+            muc = muc_du_toan(muc_pa)
+            for d in pa.khoan[muc_pa]:
                 khoa = (muc, d.ma or bo_dau(d.ten), d.dvt, d.don_gia, d.ty_le)
                 x = gom.get(khoa)
                 if x is None:

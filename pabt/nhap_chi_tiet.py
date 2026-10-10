@@ -20,7 +20,8 @@ from pathlib import Path
 from . import csdl
 from .ho_so import chuan_loai_dat
 from .lap_pa import DanhMuc, LoiNhap, bo_dau, doc_so
-from .nghiep_vu import NGUON_DM, NGUON_TAY, BoiCanh, DongDat, DongKhoan, thanh_tien_dong, thanh_tien_dong_dat
+from .nghiep_vu import (MUC_KHOAN, MUC_VN, NGUON_DM, NGUON_TAY, SO_MUC, BoiCanh, DongDat, DongKhoan, so_muc, thanh_tien_dong,
+                        thanh_tien_dong_dat)
 from .tien import D, KHONG, chuoi, so_vn, vn
 
 TRANG_THAI = 'Đã lập phương án (nhập từ Excel chi tiết)'
@@ -30,7 +31,8 @@ COT = {'stt': ('stt',), 'ten': ('ten tai san', 'noi dung', 'hang muc', 'ten'), '
        'sl': ('so luong', 'khoi luong', 'dien tich'), 'dg': ('don gia',), 'tl': ('ty le',), 'tt': ('thanh tien',),
        'gc': ('ghi chu',)}
 NHAN = {'ho_ten': ('ho va ten', 'ho ten', 'ten to chuc', 'to chuc', 'chu ho', 'chu su dung'),
-        'cccd': ('so cccd', 'cccd', 'so cmnd', 'cmnd', 'can cuoc', 'chung minh'), 'dia_chi': ('dia chi',),
+        'cccd': ('so cccd', 'cccd', 'so cmnd', 'cmnd', 'can cuoc', 'chung minh', 'so dinh danh', 'dinh danh'),
+        'dia_chi': ('dia chi',),
         'dien_thoai': ('so dien thoai', 'dien thoai', 'sdt')}
 
 
@@ -61,7 +63,7 @@ class HoChiTiet:
     nguon_goc: str = ''
     tai_dinh_cu: str = ''
     dat: list = field(default_factory=list)                                   # [DongBang] mục 1
-    khoan: dict = field(default_factory=lambda: {2: [], 3: [], 4: []})        # {mục: [DongBang]}
+    khoan: dict = field(default_factory=lambda: {m: [] for m in MUC_KHOAN})   # {mục: [DongBang]} (vật nuôi = MUC_VN)
     tong: dict = field(default_factory=dict)                                  # {1..5, 'tong'}: số trên dòng mục / TỔNG CỘNG
     canh_bao: list = field(default_factory=list)
     loi: list = field(default_factory=list)                                   # lỗi chặn (ô #N/A...): mặc định không nhập
@@ -176,6 +178,8 @@ def _gia_tri_sau(r: list, c: int) -> str:
 
 def _doc_cccd(s: str) -> tuple:
     """'092075012345 - ngày 29/9/2021 - Nơi cấp: Cục CS QLHC về TTXH.' -> (số, ngày cấp, nơi cấp)."""
+    # ô có hai người (chồng / vợ): "030056005715\n030158008419" hoặc "… ; …" -> số đầu (ghép lại thành 24 chữ số là sai)
+    s = re.split(r'\n|;|\s-\s(?=\d)|\svà\s', _nfc(s).strip())[0]
     s = _txt(s).rstrip('.')
     m = re.match(r'([\d\s.]{9,20})', s)
     so = re.sub(r'\D', '', m.group(1)) if m else ''
@@ -187,15 +191,46 @@ def _doc_cccd(s: str) -> tuple:
 
 
 def _thua_tu_ten(ten: str) -> dict:
-    """'Thửa đất số 168, tờ bản đồ số 156, loại đất RPD, phường Trị An (Vị trí 1)' -> so_thua, so_to, loai_dat, vi_tri."""
+    """'Thửa đất số 168, tờ bản đồ số 156, loại đất RPD, phường Trị An (Vị trí 1)' / 'Thửa 457 tờ 35 - đất LUK (VT 1: phạm
+    vi 2)' -> so_thua, so_to, loai_dat, vi_tri."""
     t = _txt(ten)
     so_thua = re.search(r'thửa(?:\s+đất)?\s+số\s*:?\s*([^,(]+)', t, re.I)
-    so_to = re.search(r'tờ(?:\s+bản\s+đồ)?(?:\s+số)?\s*:?\s*([^,(]+)', t, re.I)
-    ld = re.search(r'loại\s+đất\s*:?\s*([A-ZĐ]{2,4}(?:\s*\+\s*[A-ZĐ]{2,4})*)', t)
+    if so_thua and re.search(r'\stờ\s', so_thua.group(1), re.I):          # "Thửa đất số 457 tờ 35…": số thửa là một cụm
+        so_thua = re.search(r'thửa(?:\s+đất)?\s+số\s*:?\s*(\d[^\s,(]*)', t, re.I)
+    so_thua = so_thua or re.search(r'thửa(?:\s+đất)?\s*:?\s*(\d[^\s,(]*)', t, re.I)      # "Thửa 457 tờ 35 - đất LUK"
+    so_to = re.search(r'tờ(?:\s+bản\s+đồ)?(?:\s+địa\s+chính)?(?:\s+số)?\s*:?\s*([^,(]+)', t, re.I)
+    if so_to and not re.fullmatch(r'[\w./-]+', so_to.group(1).strip(' .')):
+        so_to = re.search(r'tờ(?:\s+bản\s+đồ)?(?:\s+địa\s+chính)?(?:\s+số)?\s*:?\s*(\d[^\s,(]*)', t, re.I)
+    ld = re.search(r'loại\s+đất\s*:?\s*([A-ZĐ]{2,4}(?:\s*\+\s*[A-ZĐ]{2,4})*)', t) or \
+        re.search(r'(?:^|[\s-])đất\s+([A-ZĐ]{2,4}(?:\s*\+\s*[A-ZĐ]{2,4})*)\b', t)                  # "- đất LUK"
     vt = re.search(r'\((?:vị\s+trí|vt)\s*:?\s*([^)]+)\)', t, re.I)
     return dict(so_thua=so_thua.group(1).strip(' .') if so_thua else '', so_to=so_to.group(1).strip(' .') if so_to else '',
                 loai_dat=chuan_loai_dat(ld.group(1)) if ld else '', vi_tri=vt.group(1).strip() if vt else '',
                 mot_phan=bool(re.match(r'một\s+phần', t, re.I)))
+
+
+def muc_theo_ten(ten: str) -> int:
+    """Mục theo tên dòng mục ("Bồi thường đất", "…vật kiến trúc", "…cây trồng", "…vật nuôi", "Hỗ trợ các loại", "Thưởng…"):
+    1, 2, 3, MUC_VN (chỉ vật nuôi; "cây trồng, vật nuôi" = 3), 4, 5; 0 = không rõ."""
+    k = bo_dau(ten)
+    if k.startswith('thuong') or 'ban giao' in k and 'truoc thoi han' in k:
+        return 5
+    if re.search(r'cay trong|hoa mau|cay coi', k):
+        return 3
+    if re.search(r'vat nuoi|thuy san', k):
+        return MUC_VN
+    if re.search(r'vat kien truc|\bnha\b|cong trinh|tai san', k):
+        return 2
+    if re.search(r'(boi thuong|ve) dat\b|dat dai', k):
+        return 1
+    if k.startswith('ho tro') or 'chinh sach ho tro' in k:
+        return 4
+    return 0
+
+
+_LA_MA = {'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5}
+_MUC_THEO_SO = {v: k for k, v in SO_MUC.items()}           # bản in từ 0.9.21: 4 vật nuôi, 5 hỗ trợ, 6 thưởng
+_MUC_TONG = (1, 2, 3, MUC_VN, 4, 5)
 
 
 def doc_sheet(ten_sheet: str, hang: list):
@@ -220,7 +255,8 @@ def doc_sheet(ten_sheet: str, hang: list):
             trong_ng = False
             continue
         if trong_ng:
-            ng.append(' '.join(_doan(r[c]) for c, _ in chu))
+            if not re.match(r'theo (chi tiet|bang)', k0):          # "Theo chi tiết sau:" (dẫn vào bảng) không phải nguồn gốc
+                ng.append(' '.join(_doan(r[c]) for c, _ in chu))
             continue
         for c, s in chu[:3]:
             k = bo_dau(s).rstrip(':').strip()
@@ -231,6 +267,10 @@ def doc_sheet(ten_sheet: str, hang: list):
                     gt = _gia_tri_sau(r, c)
                     if truong == 'cccd':
                         h.so_cccd, h.ngay_cap, h.noi_cap = _doc_cccd(gt)
+                        so_khac = [x for x in re.findall(r'\d{9,12}', re.sub(r'[ .]', '', gt)) if x != h.so_cccd]
+                        if h.so_cccd and so_khac:
+                            h.canh_bao.append(f'Ô CCCD có nhiều số: lấy {h.so_cccd}, số khác ({", ".join(so_khac)}) '
+                                              'ghi vào hồ sơ hộ nếu cần.')
                         if gt and not h.so_cccd:
                             h.canh_bao.append(f'Số CCCD "{_txt(gt)}" không đọc được, để trống.')
                     elif truong == 'ho_ten':
@@ -245,6 +285,11 @@ def doc_sheet(ten_sheet: str, hang: list):
     def o(r, k):
         c = cot.get(k)
         return r[c] if c is not None and c < len(r) else None
+
+    # hai kiểu đánh số: mẫu IN_CHITIET (mục 1, 2… / dòng 1.1, 2.3…) hoặc mục La Mã I, II… (nhóm A / B) với dòng 1, 2, 3…
+    # (bảng kiểu "Phương án bồi thường bằng tiền" - áp giá NĐC). Kiểu La Mã: mục lấy theo TÊN dòng mục (muc_theo_ten).
+    la_ma = any(re.fullmatch(r'[ivx]+\.?', bo_dau(_txt(o(r, 'stt')))) and muc_theo_ten(_txt(o(r, 'ten')))
+                for r in hang[i0 + 1:])
 
     for i in range(i0 + 1, len(hang)):
         r = hang[i]
@@ -265,19 +310,35 @@ def doc_sheet(ten_sheet: str, hang: list):
         if kt.startswith('phuong an tai dinh cu') or kt.startswith('tai dinh cu'):
             h.tai_dinh_cu = _txt(ten.split(':', 1)[1] if ':' in ten else '')
             continue
-        if re.fullmatch(r'[ivx]+\.?', ka):
-            muc = 9                                     # IV, V…: phần sau bảng
-            continue
-        if re.fullmatch(r'\d+\.?', ka):
-            muc = int(ka.rstrip('.'))
-            if 1 <= muc <= 5:
-                h.tong[muc] = tt
-            continue
-        if not 1 <= muc <= 4 or not ten:
-            continue
-        la_con = not re.fullmatch(r'\d+\.\d+\.?', ka)
-        if la_con and ka not in ('', '-', '+', '*', '.') and not re.fullmatch(r'[a-z]\)?', ka):
-            continue
+        if la_ma:
+            if re.fullmatch(r'[ivx]+\.?', ka):          # dòng mục: theo tên, không rõ thì theo số La Mã
+                muc = muc_theo_ten(ten) or _LA_MA.get(ka.rstrip('.'), 9)
+                if muc in _MUC_TONG:
+                    h.tong[muc] = tt
+                continue
+            if re.fullmatch(r'[a-z]\.?', ka):           # nhóm A (phương án bằng tiền) / B…: không phải dòng tiền
+                continue
+            if muc not in h.khoan and muc != 1 or not ten:
+                continue
+            la_con = not re.fullmatch(r'\d+(\.\d+)*\.?', ka)
+            if la_con and ka not in ('', '-', '+', '*', '.') and not re.fullmatch(r'[a-z]\)', ka):
+                continue
+        else:
+            if re.fullmatch(r'[ivx]+\.?', ka):
+                muc = 9                                 # IV, V…: phần sau bảng
+                continue
+            if re.fullmatch(r'\d+\.?', ka):
+                # mục theo tên (bản in 0.9.21: 4 vật nuôi, 5 hỗ trợ, 6 thưởng; bản cũ: 4 hỗ trợ, 5 thưởng); tên lạ: theo số
+                so = int(ka.rstrip('.'))
+                muc = muc_theo_ten(ten) or (_MUC_THEO_SO.get(so, 9) if MUC_VN in h.tong else so)
+                if muc in _MUC_TONG:
+                    h.tong[muc] = tt
+                continue
+            if muc not in h.khoan and muc != 1 or not ten:
+                continue
+            la_con = not re.fullmatch(r'\d+\.\d+\.?', ka)
+            if la_con and ka not in ('', '-', '+', '*', '.') and not re.fullmatch(r'[a-z]\)?', ka):
+                continue
         d = DongBang(i + 1, sa, ten, _txt(o(r, 'dvt')), ghi_chu=_doan(o(r, 'gc')), thanh_tien=tt, con=la_con)
         for k, ham in (('so_luong', _so), ('don_gia', _so), ('ty_le', _ty_le)):
             try:
@@ -287,7 +348,7 @@ def doc_sheet(ten_sheet: str, hang: list):
         (h.dat if muc == 1 else h.khoan[muc]).append(d)
     if loi_o:
         h.loi.append(f'Ô lỗi công thức (#N/A…) ở dòng {", ".join(map(str, loi_o[:8]))}{"…" if len(loi_o) > 8 else ""}.')
-    for m in (2, 3, 4):
+    for m in MUC_KHOAN:
         h.khoan[m] = _gop_dong_con(h.khoan[m])
     if not h.ho_ten:
         h.chon, h.ly_do = False, 'không có họ tên'
@@ -331,12 +392,12 @@ def _gop_dong_con(ds: list) -> list:
 
 def _kiem_cong(h: HoChiTiet) -> None:
     """Cộng thành tiền các dòng so với dòng mục: lệch thì cảnh báo (dòng trùng / sót khi đọc)."""
-    for m in (2, 3, 4):
+    for m in MUC_KHOAN:
         if h.tong.get(m) is None:
             continue
         cong = sum((d.thanh_tien or KHONG for d in h.khoan[m]), KHONG)
         if cong != h.tong[m]:
-            h.canh_bao.append(f'Mục {m}: cộng các dòng {vn(cong)} đ khác dòng mục {vn(h.tong[m])} đ.')
+            h.canh_bao.append(f'Mục {so_muc(m)}: cộng các dòng {vn(cong)} đ khác dòng mục {vn(h.tong[m])} đ.')
 
 
 def _thong_tin_du_an(hang: list) -> dict:
@@ -503,7 +564,7 @@ class _KhopDanhMuc:
     def __init__(self, con):
         self.dm = DanhMuc(con)
         self.ten, self.gon = {}, {}
-        for nhom in (2, 3):
+        for nhom in (2, 3, MUC_VN):
             for m in self.dm.muc[nhom]:
                 self.ten.setdefault((nhom, bo_dau(m.ten)), []).append(m)
                 self.gon.setdefault((nhom, self._gon(m.ten)), []).append(m)
@@ -529,7 +590,7 @@ def _dong_khoan(muc: int, d: DongBang, khop: _KhopDanhMuc, nguon: str) -> tuple:
                   ty_le=d.ty_le if d.ty_le is not None else D(1), ghi_chu=d.ghi_chu, nguon_gia=NGUON_TAY,
                   thanh_tien_excel=d.thanh_tien)
     cb = ''
-    if muc in (2, 3):
+    if muc in (2, 3, MUC_VN):
         dung, gan = khop.tim(muc, d.ten, d.don_gia)
         if dung is not None:
             k.ma, k.nguon_gia = dung.ma, NGUON_DM
@@ -545,7 +606,7 @@ def _dong_khoan(muc: int, d: DongBang, khop: _KhopDanhMuc, nguon: str) -> tuple:
             k.can_cu_gia = f'Đơn giá theo {nguon}'
     else:
         k.can_cu_gia = f'Theo {nguon}'
-    if d.don_gia is None and (d.thanh_tien or (muc in (2, 3) and d.so_luong)):
+    if d.don_gia is None and (d.thanh_tien or (muc in (2, 3, MUC_VN) and d.so_luong)):
         cb = f'{muc}.x "{d.ten[:50]}": chưa có đơn giá trong file.'
     return k, cb
 
@@ -628,19 +689,22 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
                                 (ma, mt, k, dd.loai_dat, dd.nhom_dat, chuoi(dd.dien_tich), dd.vi_tri, chuoi(dd.gia_bang_gia),
                                  '1', chuoi(dd.ty_le), dd.ghi_chu, _chuoi(d.thanh_tien)))
                     bc.so_dong += 1
-            for muc in (2, 3, 4):
+            for muc in MUC_KHOAN:
+                sm = so_muc(muc)
                 for k, d in enumerate(h.khoan[muc], start=1):
                     dk, cb = _dong_khoan(muc, d, khop, f'{nguon}, sheet "{h.sheet}"')
                     if cb:
-                        bc.canh_bao.append(f'{ten_ho}: {cb.replace(f"{muc}.x", f"{muc}.{k}")}')
-                    _so_sanh(bc, ten_ho, f'{muc}.{k}', thanh_tien_dong(dk, ctx), d.thanh_tien)
+                        bc.canh_bao.append(f'{ten_ho}: {cb.replace(f"{muc}.x", f"{sm}.{k}")}')
+                    _so_sanh(bc, ten_ho, f'{sm}.{k}', thanh_tien_dong(dk, ctx), d.thanh_tien)
                     con.execute('''INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia, ty_le, quy_cach,
                                    ghi_chu, nguon_gia, ma_tuong_duong, can_cu_gia, thanh_tien_excel)
                                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                                 (muc, ma, k, dk.ma, dk.ten, dk.dvt, chuoi(dk.so_luong), chuoi(dk.don_gia), chuoi(dk.ty_le),
                                  dk.quy_cach, dk.ghi_chu, dk.nguon_gia, dk.ma_tuong_duong, dk.can_cu_gia, _chuoi(d.thanh_tien)))
                     bc.so_dong += 1
-            g = h.tong
+            g = dict(h.tong)
+            if g.get(MUC_VN) is not None:                   # tong_excel 5 cột: cây trồng gồm cả vật nuôi
+                g[3] = (g.get(3) or KHONG) + g[MUC_VN]
             con.execute('INSERT OR REPLACE INTO tong_excel VALUES (?,?,?,?,?,?,?)',
                         (ma, *(_chuoi(g.get(m) if g.get(m) is not None else (KHONG if g.get('tong') is not None else None))
                                for m in (1, 2, 3, 4, 5)), _chuoi(g.get('tong'))))

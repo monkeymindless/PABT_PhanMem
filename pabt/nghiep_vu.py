@@ -17,8 +17,8 @@ from decimal import Decimal
 from .tien import D, KHONG, lam_tron, so_vn
 
 TEN_MUC = {1: 'Bồi thường về đất', 2: 'Bồi thường, hỗ trợ về nhà và công trình xây dựng',
-           3: 'Bồi thường, hỗ trợ về cây trồng', 4: 'Các chính sách hỗ trợ khác',
-           5: 'Thưởng chấp hành bàn giao mặt bằng trước thời hạn'}
+           3: 'Bồi thường, hỗ trợ về cây trồng', 7: 'Bồi thường, hỗ trợ về vật nuôi', 4: 'Các chính sách hỗ trợ khác',
+           5: 'Thưởng chấp hành bàn giao mặt bằng trước thời hạn'}           # 7 = MUC_VN (in là mục 4)
 MA_ON_DINH = ('HT01', 'HT02', 'HT03', 'HT04', 'HT05', 'HT06', 'HT34', 'HT35')
 MA_TDC = ('HT11', 'HT12', 'HT13')               # tái định cư: là điều kiện (suất TĐC), không phải dòng tiền
 # thuê nhà chờ TĐC / tự lo chỗ ở: mức cơ bản (hộ đến N nhân khẩu, đồng/tháng) + mỗi nhân khẩu vượt (đồng/khẩu/tháng)
@@ -45,6 +45,32 @@ def don_gia_theo_nhan_khau(bc, ma: str, nhan_khau, nguong: int | None = None) ->
     return dg, (f'Hộ {nk} nhân khẩu: {so_vn(co_ban)} đ/tháng ({n} nhân khẩu) + {vuot} khẩu × {so_vn(them)} đ '
                 f'= {so_vn(dg)} đ/tháng')
 NGUON_DM, NGUON_TD, NGUON_TAY = 'danh mục', 'tương đương', 'nhập tay'
+# Mục của phương án (0.9.20 tách Vật nuôi khỏi Cây trồng - người dùng yêu cầu). Mã mục bên trong GIỮ như cũ để dữ liệu đã lưu,
+# tong_excel, quyết định (tien_dat/tai_san/cay/ho_tro/thuong) không đổi: 1 đất, 2 nhà / công trình, 3 cây trồng, 4 hỗ trợ,
+# 5 thưởng; vật nuôi = MUC_VN (7 - mã 6 là "Chi phí khác" của dự toán). Hiển thị / bản in theo THU_TU_MUC, đánh số SO_MUC:
+# 1 Đất, 2 Nhà, 3 Cây trồng, 4 Vật nuôi, 5 Hỗ trợ, 6 Thưởng.
+MUC_VN = 7
+MUC_KHOAN = (2, 3, MUC_VN, 4)                   # các mục có dòng khoản (ct_khoan.muc), theo thứ tự hiển thị
+THU_TU_MUC = (1, 2, 3, MUC_VN, 4, 5)
+SO_MUC = {1: 1, 2: 2, 3: 3, MUC_VN: 4, 4: 5, 5: 6}
+TEN_MUC_NGAN = {1: 'Đất', 2: 'Nhà, công trình', 3: 'Cây trồng', MUC_VN: 'Vật nuôi', 4: 'Hỗ trợ', 5: 'Thưởng'}
+
+
+def so_muc(muc: int) -> int:
+    """Số thứ tự hiển thị của mục (vật nuôi = 4, hỗ trợ = 5, thưởng = 6)."""
+    return SO_MUC.get(muc, muc)
+
+
+def muc_5_cot(muc: dict) -> dict:
+    """{1..5} cho các bảng / cột cố định 5 hạng mục (tong_excel, tiền quyết định, báo cáo, bảng tổng hợp): vật nuôi gộp vào 3
+    (cây trồng, vật nuôi)."""
+    return {1: muc.get(1, KHONG), 2: muc.get(2, KHONG), 3: muc.get(3, KHONG) + muc.get(MUC_VN, KHONG), 4: muc.get(4, KHONG),
+            5: muc.get(5, KHONG)}
+
+
+def la_vat_nuoi(phan_loai: str) -> bool:
+    """Mục danh mục (dm_taisan.phan_loai) thuộc nhóm vật nuôi (QĐ 31/2025)."""
+    return 'vật nuôi' in str(phan_loai or '').lower()
 
 
 def he_so(x) -> Decimal:
@@ -150,7 +176,7 @@ class ThongTinHo:
 class PhuongAn:
     ho: ThongTinHo
     dat: list = field(default_factory=list)                                   # [DongDat]
-    khoan: dict = field(default_factory=lambda: {2: [], 3: [], 4: []})        # {mục: [DongKhoan]}
+    khoan: dict = field(default_factory=lambda: {m: [] for m in MUC_KHOAN})   # {mục: [DongKhoan]} (2, 3, MUC_VN, 4)
 
     def dong_ho_tro(self, *ma) -> list:
         return [d for d in self.khoan[4] if d.ma in ma]
@@ -317,12 +343,17 @@ class Dong:
     cach_tinh: str = ''
 
 
+# trạng thái hộ người dùng đã bấm Lưu trong cửa sổ lập phương án (lap_pa.BoSoan.luu): "Đã lập phương án (lưu dd/mm/yyyy hh:mm)"
+DA_LAP_LUU = 'Đã lập phương án (lưu'
+
+
 @dataclass
 class KetQuaHo:
     ma_ho: int
     ho_ten: str = ''
     dong: list = field(default_factory=list)
-    muc: dict = field(default_factory=lambda: {1: KHONG, 2: KHONG, 3: KHONG, 4: KHONG, 5: KHONG})
+    muc: dict = field(default_factory=lambda: {1: KHONG, 2: KHONG, 3: KHONG, MUC_VN: KHONG, 4: KHONG, 5: KHONG})
+    da_luu: bool = False              # người dùng đã lưu phương án (kể cả không có dòng nào: mọi mục 0 đồng)
 
     @property
     def tong(self) -> Decimal:
@@ -330,7 +361,9 @@ class KetQuaHo:
 
     @property
     def co_phuong_an(self) -> bool:
-        return any(d.muc in (1, 2, 3, 4) for d in self.dong)
+        """Đã có phương án: có dòng ở mục 1-5, hoặc người dùng đã lưu (từ 0.9.21: hộ không có đất / tài sản / hỗ trợ - mọi mục
+        0 đồng - lưu xong vẫn là đã lập phương án)."""
+        return self.da_luu or any(d.muc in (1, 2, 3, MUC_VN, 4) for d in self.dong)
 
 
 def mo_ta_thua(so_to, so_thua, loai_dat, cap_dia_ban, ten_dia_ban, vi_tri) -> str:
@@ -359,7 +392,8 @@ def thanh_tien_dong(d: DongKhoan, bc: BoiCanh) -> Decimal:
 
 def tinh_pa(pa: PhuongAn, bc: BoiCanh) -> KetQuaHo:
     """Tính toàn bộ phương án của một hộ (không dùng thành tiền cũ của Excel)."""
-    kq = KetQuaHo(ma_ho=pa.ho.ma_ho, ho_ten=pa.ho.ho_ten)
+    kq = KetQuaHo(ma_ho=pa.ho.ma_ho, ho_ten=pa.ho.ho_ten,
+                  da_luu=bool(pa.ho.luu_luc) and str(pa.ho.trang_thai or '').startswith(DA_LAP_LUU))
     for k, r in enumerate(pa.dat, start=1):
         tt = thanh_tien_dong_dat(r, bc)
         t = bc.thua.get(r.ma_thua) or {}
@@ -369,14 +403,14 @@ def tinh_pa(pa: PhuongAn, bc: BoiCanh) -> KetQuaHo:
         kq.dong.append(Dong(1, f'1.{k}', ten, 'm²', r.dien_tich, r.gia_bang_gia * r.he_so_k, r.ty_le, tt,
                             r.loai_dat, r.ghi_chu, r.id or 0, r.thanh_tien_excel))
         kq.muc[1] += tt
-    for muc in (2, 3, 4):
+    for muc in MUC_KHOAN:
         for k, r in enumerate(pa.khoan[muc], start=1):
             tt = thanh_tien_dong(r, bc)
-            kq.dong.append(Dong(muc, f'{muc}.{k}', r.ten, r.dvt, r.so_luong, r.don_gia, r.ty_le, tt, r.ma, r.ghi_chu,
+            kq.dong.append(Dong(muc, f'{so_muc(muc)}.{k}', r.ten, r.dvt, r.so_luong, r.don_gia, r.ty_le, tt, r.ma, r.ghi_chu,
                                 r.id or 0, r.thanh_tien_excel, r.cach_tinh))
             kq.muc[muc] += tt
     if kq.muc[1] > 0:
-        kq.muc[5] = bc.muc_thuong(kq.muc[1] + kq.muc[2] + kq.muc[3] + kq.muc[4])
+        kq.muc[5] = bc.muc_thuong(kq.muc[1] + kq.muc[2] + kq.muc[3] + kq.muc[MUC_VN] + kq.muc[4])
     return kq
 
 
@@ -660,11 +694,8 @@ def kiem_tra_pa(pa: PhuongAn, bc: BoiCanh) -> list:
         tong_dt[r.ma_thua] = tong_dt.get(r.ma_thua, KHONG) + r.dien_tich
     for mt, dtt in tong_dt.items():
         t = bc.thua[mt]
-        if D(t['dt_thu_hoi']) != dtt:
+        if dtt != 0 and D(t['dt_thu_hoi']) != dtt:     # DT mục 1 = 0: không bồi thường đất (tài sản trên đất người khác)
             ct.append(f'Thửa {t["so_thua"]} tờ {t["so_to"]}: tổng DT ở mục 1 = {so_vn(dtt)} m², kiểm kê ghi {so_vn(t["dt_thu_hoi"])} m².')
-    for r in pa.dat:
-        if r.gia_bang_gia == 0:
-            ct.append(f'Mục 1: dòng loại đất {r.loai_dat or "(trống)"} chưa có giá bảng giá.')
     for ma, gk in (('HT09', False), ('HT10', True)):
         co = pa.dong_ho_tro(ma)
         if not co or any(_dao_tao_theo_thua(d) for d in co):
@@ -673,14 +704,28 @@ def kiem_tra_pa(pa: PhuongAn, bc: BoiCanh) -> list:
         if co[0].so_luong != sl or co[0].don_gia != dg:
             ct.append(f'{ma}: đang lưu SL {so_vn(co[0].so_luong)} m² x ĐG {so_vn(co[0].don_gia)} đ; theo quy tắc hiện hành '
                       f'(chỉ đất nông nghiệp{", giao khoán" if gk else ""}) là SL {so_vn(sl)} m² x ĐG {so_vn(dg)} đ.')
-    for muc in (2, 3, 4):
+    for muc in MUC_KHOAN:
         for k, d in enumerate(pa.khoan[muc], start=1):
             if d.nguon_gia in (NGUON_TD, NGUON_TAY) and not d.can_cu_gia.strip():
-                ct.append(f'Dòng {muc}.{k} ({d.ten[:40]}): áp giá {d.nguon_gia}, chưa ghi căn cứ đơn giá.')
+                ct.append(f'Dòng {so_muc(muc)}.{k} ({d.ten[:40]}): áp giá {d.nguon_gia}, chưa ghi căn cứ đơn giá.')
+    return ct
+
+
+def dong_bang_0(pa: PhuongAn) -> list:
+    """Dòng có diện tích / số lượng / đơn giá = 0 (thành tiền 0 đồng). Từ 0.9.21 KHÔNG còn là điểm cần xem lại khi lập phương
+    án (người dùng nhập 0 = không bồi thường mục đó: cho lưu, vẫn là đã lập) - chỉ liệt kê để tham khảo ở Kiểm tra lỗi."""
+    ct = []
+    for k, r in enumerate(pa.dat, start=1):
+        if r.dien_tich == 0 or r.gia_bang_gia == 0:
+            ct.append(f'Dòng 1.{k} (loại đất {r.loai_dat or "(trống)"}): '
+                      f'{"diện tích" if r.dien_tich == 0 else "giá đất"} = 0, thành tiền 0 đồng.')
+    for muc in MUC_KHOAN:
+        for k, d in enumerate(pa.khoan[muc], start=1):
             if muc == 4 and d.ma in MA_TDC:
                 continue                                # suất tái định cư: không có đơn giá tiền
             if d.so_luong == 0 or d.don_gia == 0:
-                ct.append(f'Dòng {muc}.{k} ({d.ten[:40]}): chưa có {"số lượng" if d.so_luong == 0 else "đơn giá"}.')
+                ct.append(f'Dòng {so_muc(muc)}.{k} ({d.ten[:40]}): {"số lượng" if d.so_luong == 0 else "đơn giá"} = 0, '
+                          'thành tiền 0 đồng.')
     return ct
 
 

@@ -13,7 +13,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 
 from . import csdl
-from .nghiep_vu import (MA_ON_DINH, MA_TDC, MA_THEO_NK, NGUON_DM, NGUON_TAY, NGUON_TD, BoiCanh, DongDat, DongKhoan, PhuongAn,
+from .nghiep_vu import (DA_LAP_LUU, MA_ON_DINH, MA_TDC, MA_THEO_NK, MUC_KHOAN, MUC_VN, NGUON_DM, NGUON_TAY, NGUON_TD, BoiCanh,
+                        DongDat, DongKhoan, PhuongAn, la_vat_nuoi, so_muc,
                         de_xuat_dao_tao_pa, doc_phuong_an, giu_ket_qua_ho, goi_y_ho_tro, goi_y_khoan, ket_qua_ho_san,
                         kiem_tra_pa, so_vi_tri, thanh_tien_dong, thanh_tien_dong_dat, tinh_pa)
 from .tien import D, KHONG, chuoi, so_luong_vn, so_vn, vn
@@ -144,7 +145,7 @@ class MucDanhMuc:
     _khoa: str = ''
 
 
-NHOM_TIM = {2: 'Nhà, công trình', 3: 'Cây trồng', 4: 'Hỗ trợ', 9: 'Quy ước tương đương'}
+NHOM_TIM = {2: 'Nhà, công trình', 3: 'Cây trồng', MUC_VN: 'Vật nuôi', 4: 'Hỗ trợ', 9: 'Quy ước tương đương'}
 TU_LAP = 'Phương án tự lập - chưa soát'       # trạng thái hộ: phương án phần mềm tự lập lúc tạo Dự án mới, người dùng chưa mở soát
 HANG_LOAT_GIAY, HANG_LOAT_TOI_THIEU = 3, 5
 
@@ -194,11 +195,12 @@ class DanhMuc:
     """Danh mục đơn giá của dự án (DG_NHANUOC, DM_HOTRO, quy ước tương đương) để tìm theo từ khóa không dấu."""
 
     def __init__(self, con):
-        self.muc = {2: [], 3: [], 4: [], 9: []}
+        self.muc = {2: [], 3: [], MUC_VN: [], 4: [], 9: []}
         for r in con.execute('SELECT * FROM dm_taisan WHERE nhom IN (2, 3) ORDER BY rowid'):
+            nhom = MUC_VN if r['nhom'] == 3 and la_vat_nuoi(r['phan_loai']) else r['nhom']    # vật nuôi: mục riêng (0.9.20)
             m = MucDanhMuc('taisan', r['ma'], r['ten'], r['dvt'], D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
-                           r['phan_loai'], r['ghi_chu'], r['nhom'])
-            self.muc[r['nhom']].append(m)
+                           r['phan_loai'], r['ghi_chu'], nhom)
+            self.muc[nhom].append(m)
         for r in con.execute('SELECT * FROM dm_hotro ORDER BY ma'):
             self.muc[4].append(MucDanhMuc('hotro', r['ma'], r['ten'], r['dvt'],
                                           D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
@@ -485,17 +487,19 @@ class BoSoan:
         return (f'Đã gắn dòng 1.{i + 1} với {self.ten_thua(ma_thua)}. ' + tb).strip()
 
     def ds_vi_tri_nq28(self, i: int) -> list:
-        """Các vị trí tuyến đường theo bảng giá NQ 28/2025 của địa bàn dự án, giá theo loại đất của dòng:
-        [(nhãn, dòng bảng giá, giá đồng/m²)]. Loại đất không có cột giá tương ứng: []."""
+        """Các vị trí tuyến đường theo bảng giá NQ 28/2025, giá theo loại đất của dòng: [(nhãn, dòng bảng giá, giá đồng/m²)].
+        Đủ mọi địa bàn có trong bảng (dự án đi qua nhiều xã: thửa ở xã khác vẫn chọn được), địa bàn của dự án đứng đầu, nhãn
+        ghi tên xã / phường. Loại đất không có cột giá tương ứng: []."""
         from . import gia_dat_nq28 as nq
         d = self.pa.dat[i]
         cot = nq.cot_cua_loai(d.loai_dat)
         if not cot:
             return []
         kq = []
-        for r in nq.tim(self.bc.ten_dia_ban):
+        for r in nq.theo_dia_ban(self.bc.ten_dia_ban):
             g = nq.gia_dong(r, cot)
-            kq.append((f'{r["vi_tri"]} · {r["ten_duong"]} (từ {r["diem_dau"]} đến {r["diem_cuoi"]}) · {vn(g)} đ/m²', r, g))
+            kq.append((f'{nq.ten_ngan_xa(r["xa"])} · {r["vi_tri"]} · {r["ten_duong"]} (từ {r["diem_dau"]} đến {r["diem_cuoi"]})'
+                       f' · {vn(g)} đ/m²', r, g))
         return kq
 
     def chon_vi_tri_nq28(self, i: int, r: dict) -> str:
@@ -620,7 +624,7 @@ class BoSoan:
             if not v:
                 raise LoiNhap('Tên không được để trống.')
             m = self.dm.lay(d.ma) if d.ma else None
-            if muc in (2, 3) and d.nguon_gia == NGUON_DM and m is not None and m.don_gia is not None and v != d.ten:
+            if muc in (2, 3, MUC_VN) and d.nguon_gia == NGUON_DM and m is not None and m.don_gia is not None and v != d.ten:
                 # tài sản thực tế không có trong đơn giá: giữ đơn giá của mục danh mục làm giá tương đương, tên in là tên mới
                 d.ma, d.ma_tuong_duong, d.nguon_gia = '', m.ma, NGUON_TD
                 d.can_cu_gia = (f'Áp giá tương đương: {m.ma} - {m.ten} ({vn(m.don_gia)} đ/{m.dvt})'
@@ -714,12 +718,12 @@ class BoSoan:
         for k, d in enumerate(self.pa.dat, start=1):
             if not d.loai_dat:
                 loi.append(f'Dòng 1.{k}: chưa chọn loại đất.')
-            if d.dien_tich <= 0:
-                loi.append(f'Dòng 1.{k}: diện tích phải lớn hơn 0.')
-        for muc in (2, 3, 4):
+            if d.dien_tich < 0:                          # = 0: không bồi thường đất (tài sản trên đất người khác) - cho lưu
+                loi.append(f'Dòng 1.{k}: diện tích không được âm.')
+        for muc in MUC_KHOAN:
             for k, d in enumerate(self.pa.khoan[muc], start=1):
                 if not d.ten.strip():
-                    loi.append(f'Dòng {muc}.{k}: chưa có tên.')
+                    loi.append(f'Dòng {so_muc(muc)}.{k}: chưa có tên.')
         return loi
 
     def luu(self, tu_dong: bool = False) -> str:
@@ -732,9 +736,10 @@ class BoSoan:
         san = ket_qua_ho_san(con)
         cu = san[self.ma_ho][0].tong if san and self.ma_ho in san else tinh_pa(doc_phuong_an(con, self.ma_ho), self.bc).tong
         moi = self.ket_qua
-        co_dong = any(pa.dat) or any(pa.khoan[m] for m in (2, 3, 4))
+        co_dong = any(pa.dat) or any(pa.khoan[m] for m in MUC_KHOAN)
         luc = datetime.now()
-        trang_thai = (TU_LAP if tu_dong else f'Đã lập phương án (lưu {luc:%d/%m/%Y %H:%M})') if co_dong else 'Chưa lập phương án'
+        # người dùng Lưu: luôn là đã lập phương án - mục không có / bỏ trống tính 0 đồng (0.9.21; trước: không dòng nào = chưa lập)
+        trang_thai = f'{DA_LAP_LUU} {luc:%d/%m/%Y %H:%M})' if not tu_dong else TU_LAP if co_dong else 'Chưa lập phương án'
         truoc = csdl.trang_thai_nho(con)
         with con:
             con.execute('''UPDATE ho SET nhan_khau = ?, phai_di_chuyen = ?, dt_nn_dang_dung = ?, trang_thai = ?, luu_luc = ?,
@@ -750,7 +755,7 @@ class BoSoan:
                             (self.ma_ho, d.ma_thua, k, d.loai_dat, d.nhom_dat, chuoi(d.dien_tich), d.vi_tri, chuoi(d.gia_bang_gia),
                              chuoi(d.he_so_k), chuoi(d.ty_le), d.ghi_chu,
                              chuoi(d.thanh_tien_excel) if d.thanh_tien_excel is not None else None, d.cong_thuc))
-            for muc in (2, 3, 4):
+            for muc in MUC_KHOAN:
                 for k, d in enumerate(pa.khoan[muc], start=1):
                     con.execute('''INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia, ty_le, quy_cach, ghi_chu,
                                    nguon_gia, ma_tuong_duong, can_cu_gia, thanh_tien_excel, cach_tinh, cong_thuc)
@@ -761,7 +766,7 @@ class BoSoan:
                                  d.cong_thuc))
             csdl.ghi_nhat_ky(con, 'Lưu phương án hộ',
                              f'Hộ {self.ma_ho} {pa.ho.ho_ten}: tổng {vn(cu)} -> {vn(moi.tong)} đ; '
-                             f'{len(pa.dat)} dòng đất, {sum(len(pa.khoan[m]) for m in (2, 3, 4))} dòng khoản')
+                             f'{len(pa.dat)} dòng đất, {sum(len(pa.khoan[m]) for m in MUC_KHOAN)} dòng khoản')
         csdl.giu_nho(con, ('BoiCanh', type(self.bc)), truoc)      # chỉ ghi ho / ct_dat / ct_khoan / nhật ký: bối cảnh không đổi
         if type(self.bc) is BoiCanh:
             giu_ket_qua_ho(con, [self.ma_ho], truoc)            # kết quả cả dự án: chỉ tính lại hộ vừa lưu
@@ -865,11 +870,11 @@ def ra_soat_gia(con, dm: DanhMuc | None = None) -> list:
     dm = dm or DanhMuc(con)
     kq = []
     ten_ho = {r['ma_ho']: r['ho_ten'] for r in con.execute('SELECT ma_ho, ho_ten FROM ho')}
-    for muc in (2, 3, 4):
+    for muc in MUC_KHOAN:
         dem = {}
         for r in con.execute('SELECT * FROM ct_khoan WHERE muc = ? ORDER BY ma_ho, thu_tu, id', (muc,)):
             dem[r['ma_ho']] = dem.get(r['ma_ho'], 0) + 1
-            stt = f'{muc}.{dem[r["ma_ho"]]}'
+            stt = f'{so_muc(muc)}.{dem[r["ma_ho"]]}'
             nguon = r['nguon_gia'] or NGUON_DM
             note = ''
             if nguon == NGUON_DM:

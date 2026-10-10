@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pabt import csdl, don_gia, du_an_moi, lap_pa, nhap_tho
+from pabt import csdl, don_gia, du_an_moi, lap_pa, nghiep_vu, nhap_tho
 from pabt.lap_pa import LoiNhap
 from tests.test_nghiep_vu import FILE_EXCEL
 
@@ -79,9 +79,10 @@ class TestBoDonGia(CoSo):
         try:
             don_gia.ap_vao_du_an(con)
             dm = lap_pa.DanhMuc(con)
-            self.assertIn('VN15', {m.ma for m in dm.muc[3]})
-            # gõ "vat nuoi" ở ô nhập nhanh mục 3 ra đủ 17 mục (tìm cả theo phân loại)
-            self.assertLessEqual({f'VN{i:02d}' for i in range(1, 18)}, {m.ma for m in dm.tim(3, 'vat nuoi', 500)})
+            # từ 0.9.21 vật nuôi là mục riêng (MUC_VN, in là mục 4): không còn lẫn trong danh sách cây trồng
+            self.assertIn('VN15', {m.ma for m in dm.muc[nghiep_vu.MUC_VN]})
+            self.assertNotIn('VN15', {m.ma for m in dm.muc[3]})
+            self.assertEqual({f'VN{i:02d}' for i in range(1, 18)}, {m.ma for m in dm.tim(nghiep_vu.MUC_VN, '', 500)})
         finally:
             con.close()
 

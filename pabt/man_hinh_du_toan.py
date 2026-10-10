@@ -371,7 +371,7 @@ class HopDuToan(QDialog):
             if dlg.exec() != QDialog.DialogCode.Accepted:
                 return None
             m = dlg.chon
-        muc = m.nhom if m.nhom in (2, 3, 4) else 2
+        muc = du_toan.muc_du_toan(m.nhom) if m.nhom in (2, 3, du_toan.MUC_VN, 4) else 2
         don_gia = m.don_gia if (m.don_gia is not None and not (muc == 4 and m.don_gia < 100)) else KHONG
         self.dt.dong.append(DongDT(muc, m.ten, m.dvt, D(1) if muc == 4 else KHONG, don_gia, D(1), m.ma, m.can_cu))
         self.ve()

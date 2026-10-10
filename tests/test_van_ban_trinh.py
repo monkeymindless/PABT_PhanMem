@@ -87,7 +87,7 @@ class _DuAn(_Co):
 
 class TestDotTrinh(_DuAn):
     def test_csdl_v11(self):
-        self.assertEqual(self.con.execute('PRAGMA user_version').fetchone()[0], 11)
+        self.assertEqual(self.con.execute('PRAGMA user_version').fetchone()[0], csdl.PHIEN_BAN_CSDL)
         d = quan_ly.tao_dot(self.con, ngay_trinh='10/10/2026', so_to_trinh='113/TTr', loai_van_ban='Văn bản',
                             so_pa_tong='30', ngay_pa_tong='9/10/2026')
         x = quan_ly.lay_dot(self.con, d)
@@ -173,7 +173,7 @@ class TestDotTrinh(_DuAn):
         c.close()
         self.assertEqual(quan_ly.ds_dot(csdl.mo(self.p, chi_doc=True)), [])  # mở chỉ xem file cũ: không lỗi
         self.con = csdl.mo(self.p)
-        self.assertEqual(self.con.execute('PRAGMA user_version').fetchone()[0], 11)
+        self.assertEqual(self.con.execute('PRAGMA user_version').fetchone()[0], csdl.PHIEN_BAN_CSDL)
         self.assertIn('so_pa', [r[1] for r in self.con.execute('PRAGMA table_info(ho)')])
         # áp bộ đơn giá: chỉ ĐỌC bộ đơn giá đóng gói (trước đây mở ghi để nâng cấp -> sai mã SHA-256 của bản cài / gói cập nhật)
         goc = don_gia.file_goc()

@@ -17,6 +17,7 @@ from pathlib import Path
 from . import csdl
 from .lap_pa import LoiNhap, bo_dau
 from .pdf_bang import loai_cot
+from .nghiep_vu import muc_5_cot
 from .tien import D, KHONG, chuoi, doc_so_vn, vn
 
 # ---------------------------------------------------------------- trạng thái xử lý
@@ -956,7 +957,7 @@ def _ghi_ket_qua(con, loai, ds, so_qd, ngay, luu, file_goc) -> dict:
 
 # ---------------------------------------------------------------- báo cáo tổng hợp
 COT_BAO_CAO = ['STT', 'Mã hộ', 'Họ và tên', 'Địa chỉ', 'Đợt trình', 'Số thửa', 'DT thu hồi (m²)', '1. Đất', '2. Nhà, CT',
-               '3. Cây trồng', '4. Hỗ trợ', '5. Thưởng', 'TỔNG CỘNG', 'Phê duyệt (QĐ số, ngày)', 'Số tiền phê duyệt',
+               '3. Cây trồng, vật nuôi', '4. Hỗ trợ', '5. Thưởng', 'TỔNG CỘNG', 'Phê duyệt (QĐ số, ngày)', 'Số tiền phê duyệt',
                'Chi trả (ngày)', 'Số tiền đã chi', 'Bàn giao MB (ngày)', 'Ghi chú theo dõi']
 
 
@@ -975,7 +976,7 @@ def du_lieu_tong_hop(con, ds_ma_ho: list | None = None) -> list:
         k = kqh[h['ma_ho']][0]
         st, dt = thua.get(h['ma_ho'], (0, KHONG))
         kq.append(dict(ma_ho=h['ma_ho'], thu_tu=h['thu_tu'], ho_ten=h['ho_ten'], dia_chi=h['dia_chi'],
-                       dot=dot.get(h['dot_id'], ''), dot_id=h['dot_id'], so_thua=st, dt=dt, muc=dict(k.muc), tong=k.tong,
+                       dot=dot.get(h['dot_id'], ''), dot_id=h['dot_id'], so_thua=st, dt=dt, muc=muc_5_cot(k.muc), tong=k.tong,
                        **{t: h[t] for t in TRUONG_TT}))
     return kq
 

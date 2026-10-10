@@ -381,6 +381,7 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
             con.executemany('INSERT INTO van_ban (so_hieu, co_quan, noi_dung, trang_thai) VALUES (?,?,?,?)', vb)
             con.executemany('INSERT OR REPLACE INTO bieu_thuong VALUES (?,?)', bieu)
             con.executemany('INSERT INTO quy_uoc (ten_thuc_te, ten_tuong_duong, dvt, don_gia, can_cu) VALUES (?,?,?,?,?)', quy_uoc)
+            csdl.chuyen_vat_nuoi(con)                   # dòng vật nuôi (mã nhóm vật nuôi) ở DB_CAY -> mục Vật nuôi riêng
             con.executemany('INSERT OR REPLACE INTO tong_excel VALUES (?,?,?,?,?,?,?)',
                             [(m, *(chuoi(v[k]) if v.get(k) is not None else None for k in (1, 2, 3, 4, 5, 'tong')))
                              for m, v in bc.tong_excel.items()])
@@ -391,7 +392,7 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
     bc.so_ho, bc.so_thua = len(ho), len(thua)
     bc.so_ho_co_pa = len({d['ma_ho'] for d in ct_dat + ct_khoan})
     bc.so_dong = {1: len(ct_dat), 2: sum(d['muc'] == 2 for d in ct_khoan), 3: sum(d['muc'] == 3 for d in ct_khoan),
-                  4: sum(d['muc'] == 4 for d in ct_khoan)}
+                  4: sum(d['muc'] == 4 for d in ct_khoan)}           # 3: cây trồng gồm cả vật nuôi
     bc.so_danh_muc = {'tài sản, cây trồng': len(dm_ts), 'hỗ trợ': len(dm_ht), 'loại đất': len(dm_ld), 'giá đất': len(gia),
                       'xã, phường': len(xa), 'tham số': len(ts), 'văn bản căn cứ': len(vb), 'biểu thưởng': len(bieu),
                       'quy ước tương đương': len(quy_uoc)}

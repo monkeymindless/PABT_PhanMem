@@ -70,8 +70,9 @@ def doi_chieu(con, tong_excel: dict | None = None, ds_ma_ho: list | None = None)
         dong = dict(ma_ho=k.ma_ho, ho_ten=k.ho_ten, muc=dict(k.muc), tong=k.tong, excel=ex, lech=False,
                     co_excel=ex is not None, sua=sua.get(k.ma_ho))
         if ex is not None and not dong['sua']:
+            m5 = nghiep_vu.muc_5_cot(k.muc)                     # tong_excel 5 cột: cây trồng gồm cả vật nuôi
             for m in (1, 2, 3, 4, 5):
-                if ex.get(m) is not None and D(ex[m]) != k.muc[m]:
+                if ex.get(m) is not None and D(ex[m]) != m5[m]:
                     dong['lech'] = True
             if ex.get('tong') is not None and D(ex['tong']) != k.tong:
                 dong['lech'] = True
@@ -118,14 +119,15 @@ def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str 
                 f'{f" (trừ {kq.so_ho_sua} hộ đã sửa trong phần mềm)" if kq.so_ho_sua else ""}  |  '
                 f'{len(kq.canh_bao)} điểm cần xem lại')
     ws['A3'].font = Font(bold=True, color='006100' if kq.khop_het else 'C00000')
-    cot = [('Mã hộ', 8), ('Họ và tên', 28), ('1. Đất', 14), ('2. Nhà, CT', 14), ('3. Cây trồng', 14), ('4. Hỗ trợ', 14),
-           ('5. Thưởng', 13), ('TỔNG (phần mềm)', 16), ('TỔNG (Excel)', 16), ('Chênh lệch', 13), ('Kết quả', 12)]
+    cot = [('Mã hộ', 8), ('Họ và tên', 28), ('Đất', 14), ('Nhà, CT', 14), ('Cây trồng, vật nuôi', 14), ('Hỗ trợ', 14),
+           ('Thưởng', 13), ('TỔNG (phần mềm)', 16), ('TỔNG (Excel)', 16), ('Chênh lệch', 13), ('Kết quả', 12)]
     _tieu_de(ws, 5, cot)
     r = 6
     for h in kq.ho:
         ex = h['excel'] or {}
         tong_ex = ex.get('tong')
-        vals = [h['ma_ho'], h['ho_ten']] + [float(h['muc'][m]) for m in (1, 2, 3, 4, 5)] + [
+        m5 = nghiep_vu.muc_5_cot(h['muc'])
+        vals = [h['ma_ho'], h['ho_ten']] + [float(m5[m]) for m in (1, 2, 3, 4, 5)] + [
             float(h['tong']), float(tong_ex) if tong_ex is not None else None,
             float(h['tong'] - tong_ex) if tong_ex is not None else None,
             'Không có số Excel' if not h['co_excel'] else 'Sửa trong phần mềm' if h.get('sua') else ('LỆCH' if h['lech'] else 'Khớp')]

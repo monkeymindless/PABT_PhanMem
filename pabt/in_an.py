@@ -896,14 +896,16 @@ def dong_chi_tiet(con, ma_ho: int, bc: BoiCanh | None = None) -> tuple:
             tong_dt += D(t['dt_thu_hoi'])
         hdr[3] = tong_dt
         hdr[6] = KHONG
-    # 2, 3
-    for muc in (2, 3):
-        dong.append(['H', [str(muc), nghiep_vu.TEN_MUC[muc], None, None, None, None, kq.muc[muc], None]])
+    # 2 nhà, 3 cây trồng, 4 vật nuôi (0.9.20: mục riêng, in dưới cây trồng - mã bên trong MUC_VN)
+    for muc in (2, 3, nghiep_vu.MUC_VN):
+        dong.append(['H', [str(nghiep_vu.so_muc(muc)), nghiep_vu.TEN_MUC[muc], None, None, None, None, kq.muc[muc], None]])
         for d in (x for x in kq.dong if x.muc == muc):
             dong.append(['I', [d.stt, d.ten, d.dvt, d.so_luong, d.don_gia, d.ty_le, d.thanh_tien, ghi_chu_in(con, d.ma, d.ghi_chu)]])
-    # 4: dòng có cách tính in gộp ô ĐVT..tỷ lệ; hỗ trợ đào tạo nhập theo từng thửa có dòng tên chính sách đứng đầu nhóm
+    # 5 các chính sách hỗ trợ: dòng có cách tính in gộp ô ĐVT..tỷ lệ; hỗ trợ đào tạo nhập theo từng thửa có dòng tên chính sách
+    # đứng đầu nhóm
     from .chinh_sach import ten_ngan
-    dong.append(['H', ['4', nghiep_vu.TEN_MUC[4], None, None, None, None, kq.muc[4], None]])
+    s4 = nghiep_vu.so_muc(4)
+    dong.append(['H', [str(s4), nghiep_vu.TEN_MUC[4], None, None, None, None, kq.muc[4], None]])
     ds4 = [x for x in kq.dong if x.muc == 4]
     k = i = 0
     while i < len(ds4):
@@ -916,18 +918,19 @@ def dong_chi_tiet(con, ma_ho: int, bc: BoiCanh | None = None) -> tuple:
             nhom = ds4[i:j]
             ten = ten_ngan((bc.hotro.get(d.ma) or {}).get('ten', ''), d.ma) or 'Hỗ trợ đào tạo, chuyển đổi nghề và tìm kiếm việc làm'
             dt = sum((x.so_luong for x in nhom), KHONG)
-            dong.append(['I', [f'4.{k}', ten, 'm²', dt, None, None, sum((x.thanh_tien for x in nhom), KHONG),
+            dong.append(['I', [f'{s4}.{k}', ten, 'm²', dt, None, None, sum((x.thanh_tien for x in nhom), KHONG),
                                ghi_chu_in(con, d.ma, d.ghi_chu)]])
             for x in nhom:
                 dong.append(['I', ['-', x.ten, x.dvt, x.so_luong, x.don_gia, x.ty_le, x.thanh_tien, None]])
             i = j
             continue
-        gt = [f'4.{k}', d.ten, d.dvt, d.so_luong, d.don_gia, d.ty_le, d.thanh_tien, ghi_chu_in(con, d.ma, d.ghi_chu)]
+        gt = [f'{s4}.{k}', d.ten, d.dvt, d.so_luong, d.don_gia, d.ty_le, d.thanh_tien, ghi_chu_in(con, d.ma, d.ghi_chu)]
         dong.append(['I', gt, d.cach_tinh] if d.cach_tinh else ['I', gt])
         i += 1
-    # 5. thưởng (chỉ khi có bồi thường về đất), tổng
+    # 6. thưởng (chỉ khi có bồi thường về đất), tổng
     co = kq.muc[1] > 0
-    dong.append(['R', ['5', nghiep_vu.TEN_MUC[5], 'Hộ', D(1) if co else KHONG, kq.muc[5], D(1), kq.muc[5], None]])
+    dong.append(['R', [str(nghiep_vu.so_muc(5)), nghiep_vu.TEN_MUC[5], 'Hộ', D(1) if co else KHONG, kq.muc[5], D(1), kq.muc[5],
+                       None]])
     dong.append(['T', [None, 'TỔNG CỘNG', None, None, None, None, kq.tong, None]])
     return dong, kq
 
@@ -1084,6 +1087,7 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
         ws.row_dimensions[r].height = cao
     r = DONG_DAU_BTH
     tong_thua, tong_dt = 0, KHONG
+    co_vat_nuoi = False                                                 # có hộ có vật nuôi: tiêu đề cột cây trồng ghi cả vật nuôi
     ho = {r['ma_ho']: r for r in con.execute('SELECT * FROM ho')}       # một câu thay vì một câu mỗi hộ
     for stt, (ma, pa, kq, thua) in enumerate(khoi, start=1):
         if bao_tien_do and stt % 100 == 0:
@@ -1118,7 +1122,9 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
         ht = kq.muc[4]
         dao_tao = sum((nghiep_vu.thanh_tien_dong(d, bc) for d in pa.dong_ho_tro('HT09', 'HT10')), KHONG)
         on_dinh = sum((nghiep_vu.thanh_tien_dong(d, bc) for d in pa.dong_ho_tro(*MA_ON_DINH)), KHONG)
-        for c, v in ((16, kq.muc[1]), (17, kq.muc[2]), (18, kq.muc[3]), (19, dao_tao), (20, on_dinh), (21, kq.muc[5]), (22, kq.tong)):
+        co_vat_nuoi = co_vat_nuoi or kq.muc[nghiep_vu.MUC_VN] != 0
+        for c, v in ((16, kq.muc[1]), (17, kq.muc[2]), (18, kq.muc[3] + kq.muc[nghiep_vu.MUC_VN]), (19, dao_tao), (20, on_dinh),
+                     (21, kq.muc[5]), (22, kq.tong)):
             ws.cell(r0, c).value = _so(v)
         ws.cell(r0, 24).value = h['tai_dinh_cu'] or None
         khac = ht - dao_tao - on_dinh
@@ -1127,6 +1133,11 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
             for c in (1, 2, 3, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25):
                 _gop_o(ws, r0, c, r - 1, c)
     tong = DONG_DAU_BTH + can
+    if co_vat_nuoi:                                                     # cột 18 = cây trồng + vật nuôi (mục 4 của bản chi tiết)
+        for rr in range(1, DONG_DAU_BTH):
+            v = ws.cell(rr, 18).value
+            if isinstance(v, str) and 'cây trồng' in v and 'vật nuôi' not in v:
+                ws.cell(rr, 18).value = v.replace('cây trồng', 'cây trồng, vật nuôi')
     for c in range(7, 23):
         cl = openpyxl.utils.get_column_letter(c)
         if c in (12, 13, 15):

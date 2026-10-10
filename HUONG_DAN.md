@@ -204,6 +204,8 @@ tiếp và thông ra đường (theo bề rộng và khoảng cách: ≤1.000m /
   chọn theo loại đất (ONT/ODT → đất ở; CLN, HNK, BHK, LUK… → cây lâu năm, hằng năm; NTS, RSX → rừng, thủy sản), tìm tên đường không
   cần dấu → nhấp đúp. Giá (quy ra đồng/m²) và căn cứ (đường, đoạn, mức vị trí) được điền vào, căn cứ lưu theo giá đất của dự án.
 - **Bộ đơn giá… → Tra bảng giá đất NQ 28/2025…** để xem; **Xuất bảng giá đất ra Excel…** (mỗi địa bàn một sheet).
+- Ô **Vị trí** mục 1 khi lập phương án xổ đủ các tuyến của cả 4 địa bàn (địa bàn dự án đứng đầu). Địa bàn khác của tỉnh chưa có
+  trong bảng: gõ tay vị trí và giá đất, hoặc đề nghị bổ sung (chép từ Nghị quyết).
 - Số liệu chép từ bản PDF đóng dấu của Nghị quyết (Phụ lục I trang 172–205, 1143–1214; Phụ lục III trang 1672–1707, 2700–2775) và
   kiểm tra chéo bằng nhận dạng chữ; khi dùng làm căn cứ chính thức nên đối chiếu văn bản gốc. Dữ liệu ở `pabt/bang_gia_nq28.json`.
 
@@ -378,16 +380,18 @@ việc ở máy bất kỳ. Nên sao lưu định kỳ thư mục máy chủ.
 ## Lập phương án hộ (giai đoạn 2)
 
 Nhấp đúp một hộ trong danh sách (hoặc bấm **Lập phương án hộ…**). Hồ sơ hộ và phương án nằm **chung một cửa sổ**, nhập theo
-thứ tự 5 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶**; lưu bằng nút **Lưu (Ctrl+S)** trên cùng cửa sổ:
+thứ tự 6 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶**; lưu bằng nút **Lưu (Ctrl+S)** trên cùng cửa sổ:
 
 1. **Thông tin hộ, thửa đất**: họ tên, CCCD, ngày cấp, nơi cấp, điện thoại, địa chỉ, pháp lý, tranh chấp, ghi chú và bảng thửa
    (tờ, thửa, loại đất, DT thu hồi, nguồn gốc, vị trí); tách thửa theo loại đất, chuyển thửa, gộp hộ, xóa hộ. Bấm **Tiếp theo**:
    hồ sơ được lưu để thửa mới dùng được ngay ở mục 1. **Thêm hộ…** chỉ hỏi họ tên rồi mở thẳng thẻ này.
 2. **1. Đất**: chọn thửa ở ô **Thửa** → **Thêm thửa vào mục 1** (tự điền loại đất, diện tích còn lại, giá). Ô **Thửa** của dòng
    đổi được (nhấp đúp, chọn thửa khác của hộ). Ô **Vị trí** xổ xuống các tuyến đường, vị trí (MT, T1–T3, K1–K3) của **bảng giá
-   NQ 28** theo địa bàn dự án: chọn là giá đất tự điền theo loại đất của dòng; gõ tay nội dung khác nếu vị trí không có trong bảng
+   NQ 28** của **mọi địa bàn có trong bảng** (địa bàn của dự án đứng đầu, mỗi dòng ghi tên xã / phường – dự án đi qua nhiều xã
+   vẫn chọn được tuyến của xã khác; gõ vài chữ, ví dụ `761`, để lọc): chọn là giá đất tự điền theo loại đất của dòng; gõ tay nội dung khác nếu vị trí không có trong bảng
    giá. Giá đất khác vẫn gõ đè được (ghi "Giá đất nhập tay" ở Ghi chú để rà soát).
-3. **2. Nhà, công trình** / **3. Cây trồng** / **4. Hỗ trợ**: hàng **nhập nhanh** – gõ tên không cần dấu (`nha 1 tang`, `xoai 11-15`,
+   - **Diện tích = 0 / giá đất = 0** lưu được (hộ tạo lập tài sản trên đất người khác: chỉ có tài sản, không bồi thường đất).
+3. **2. Nhà, công trình** / **3. Cây trồng** / **4. Vật nuôi** / **5. Hỗ trợ**: hàng **nhập nhanh** – gõ tên không cần dấu (`nha 1 tang`, `xoai 11-15`,
    `thue nha`) hoặc bấm ▼, chọn mục, gõ **số lượng**, **tỷ lệ %** (trống = 100) rồi Enter / **Thêm vào bảng**. Gõ tên không có trong
    đơn giá: dòng "nhập tay", con trỏ chuyển ngay tới ô Đơn giá để gõ giá và ghi Căn cứ giá (hoặc **Chọn giá tương đương…**).
    - Ô số (số lượng, diện tích, đơn giá, tỷ lệ) gõ được **công thức**: `=4,2*5,7`, `12x3+1,5`, `(10-2)*3`; số lượng làm tròn 1 chữ số
@@ -398,7 +402,11 @@ thứ tự 5 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶
    - Ô **Ghi chú** dưới hàng nhập nhanh: quy định pháp luật áp dụng, cách tính… (in ở cột Ghi chú của phương án). Tài sản chọn từ
      đơn giá vẫn **sửa thẳng tên hoặc đơn giá** trên bảng: đổi tên giữ đơn giá; đổi đơn giá thì dòng thành "nhập tay" (ghi lại giá
      trong bộ đơn giá ở cột Căn cứ giá để rà soát).
-   - **Hỗ trợ** (thẻ 4): đầu thẻ có **Nhân khẩu**, Phải di chuyển chỗ ở, **DT đất NN đang sử dụng** (để trống = tự lấy diện tích đất
+   - **Vật nuôi** (thẻ 4, từ 0.9.21 là mục riêng): đơn giá vật nuôi, thủy sản theo QĐ 31/2025/QĐ-UBND (VN01–VN17). Bản in:
+     **4. Bồi thường, hỗ trợ về vật nuôi** nằm dưới mục cây trồng; các chính sách hỗ trợ thành mục **5**, thưởng bàn giao mặt bằng
+     mục **6**. Bảng tổng hợp, quyết định, báo cáo 5 cột gộp vật nuôi vào cột "Cây trồng, vật nuôi". File dự án cũ mở lần đầu tự
+     chuyển các dòng vật nuôi (mã nhóm vật nuôi) đang ở mục cây trồng sang mục Vật nuôi.
+   - **Hỗ trợ** (thẻ 5): đầu thẻ có **Nhân khẩu**, Phải di chuyển chỗ ở, **DT đất NN đang sử dụng** (để trống = tự lấy diện tích đất
      nông nghiệp đã nhập ở mục 1) và **Tái định cư**. Dòng hỗ trợ ghi **tên chính sách theo câu chữ quy định** (Hỗ trợ ổn định đời
      sống; Hỗ trợ đào tạo, chuyển đổi nghề và tìm kiếm việc làm; Hỗ trợ tiền thuê nhà ở, tạm cư…), căn cứ ở cột Ghi chú, cột **Cách
      tính** in gộp thay ĐVT / số lượng / đơn giá / tỷ lệ:
@@ -424,7 +432,9 @@ thứ tự 5 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶
 - **Chọn hộ / Hộ trước / Hộ sau** (Ctrl+PgUp, Ctrl+PgDown). Rời hộ còn thay đổi chưa lưu thì phần mềm hỏi Lưu / Không lưu / Hủy.
 - **Gợi ý hỗ trợ…** rà mục 4 theo nhân khẩu, di chuyển chỗ ở, DT đất NN đang sử dụng và đề xuất thêm / sửa (đào tạo HT09/HT10, ổn định
   đời sống HT01–HT06 theo tỷ lệ thu hồi, di chuyển tài sản…); đánh dấu khoản muốn áp dụng.
-- **Lưu (Ctrl+S)**: ghi hồ sơ và phương án của hộ, có nhật ký. Hộ đã lưu trong phần mềm hiện "Sửa trong phần mềm" ở cột Đối chiếu Excel.
+- **Lưu (Ctrl+S)**: ghi hồ sơ và phương án của hộ, có nhật ký. Mục nào không có / bỏ trống tính **0 đồng**; hộ đã Lưu là
+  **đã lập phương án** kể cả mọi mục bằng 0 (hộ chưa lưu lần nào: nút Lưu luôn bấm được để xác nhận). Dòng có số lượng, đơn giá,
+  diện tích bằng 0 không còn báo "cần xem lại". Hộ đã lưu trong phần mềm hiện "Sửa trong phần mềm" ở cột Đối chiếu Excel.
 
 Thanh lệnh còn có **Thông tin dự án…** (tên, cấp và tên xã/phường, số phương án…), **Rà soát giá…** (mọi dòng áp giá tương đương, nhập tay, đơn giá khác danh mục; báo cáo đối chiếu có thêm sheet RA_SOAT_GIA), **In / Xuất…** và **Cập nhật mẫu in…** (giai đoạn 3).
 

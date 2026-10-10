@@ -239,5 +239,73 @@ class TestNhapChiTiet(unittest.TestCase):
             w.close()
 
 
+class TestKieuLaMa(unittest.TestCase):
+    """Bảng kiểu "áp giá" (0.9.20): mục La Mã I-V theo tên, nhóm A / B, dòng đánh số 1, 2, 3; "Thửa 457 tờ 35 - đất LUK (VT 1…)";
+    nhãn "Số định danh cá nhân/CCCD" có hai số. Số liệu GIẢ LẬP."""
+
+    def _file(self, p: Path) -> None:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = '1, Thử'
+        for o, v in {'A1': 'TRUNG TÂM THỬ', 'A6': 'PHƯƠNG ÁN BỒI THƯỜNG… DỰ ÁN ĐƯỜNG THỬ',
+                     'A8': 'I. Tổ chức và hộ gia đình, cá nhân bị thu hồi, tài sản gắn liền với đất:',
+                     'A9': 'Họ và tên chủ hộ:', 'C9': 'Nguyễn Văn Thử - Trần Thị Mẫu', 'A10': 'Địa chỉ thường trú:',
+                     'C10': 'Khu phố 1, phường Thử', 'A11': 'Số định danh cá nhân/CCCD:', 'C11': '001001000001\n001001000002',
+                     'A12': 'Số điện thoại:', 'C12': '0900000000', 'A13': 'II. Thông tin vị trí, nguồn gốc đất:',
+                     'A15': '* Nguồn gốc đất: đất khai hoang năm 1990.', 'A16': 'Theo chi tiết sau:'}.items():
+            ws[o] = v
+        for c, s in enumerate(['STT', 'Hạng mục', 'ĐVT', 'Số lượng', 'Đơn giá', 'Tỷ lệ (%)', 'Thành Tiền\n(đồng)', 'Ghi chú'], 1):
+            ws.cell(17, c, s)
+        dong = [('A', 'Phương án bồi thường bằng tiền'), ('I', 'Bồi thường đất', None, 110, None, None, 73_370_000),
+                (1, 'Thửa 457 tờ 35 - đất LUK (VT 1: phạm vi 2)', 'm2', 100, 667000, 1, 66_700_000),
+                (2, 'Thửa 123 tờ 36 - đất NTS (VT 2)', 'm2', 10, 667000, 1, 6_670_000),
+                ('II', 'Bồi thường, hỗ trợ vật kiến trúc', None, None, None, None, 606_000),
+                (1, 'Hàng rào lưới B40', 'm2', 6, 101000, 1, 606_000),
+                ('III', 'Hỗ trợ cây trồng', None, None, None, None, 1_617_000),
+                (1, 'Dừa năm thứ 2', 'cây', 3, 673935, 0.8, 1_617_000),
+                ('IV', 'Hỗ trợ các loại', None, None, None, None, 0),
+                (1, 'Hỗ trợ đào tạo, chuyển đổi nghề và tìm kiếm việc làm bằng tiền', 'm2', 110, None, 1.5, 0),
+                ('V', 'Thưởng cho người có đất thu hồi bàn giao đất trước thời hạn', None, None, None, None, 2_000_000),
+                ('TỔNG CỘNG (I+II+III+IV+V)', None, None, None, None, None, 77_593_000),
+                ('B', 'Phương án tái định cư: không đủ điều kiện bố trí TĐC')]
+        for i, d in enumerate(dong):
+            for c, v in enumerate(d, 1):
+                if v is not None:
+                    ws.cell(18 + i, c, v)
+        wb.save(p)
+
+    def test_doc_va_nhap(self):
+        with tempfile.TemporaryDirectory() as td:
+            f = Path(td) / 'ap_gia.xlsx'
+            self._file(f)
+            h = nhap_chi_tiet.doc(f).ho[0]
+            self.assertTrue(h.chon, h.ly_do)
+            self.assertEqual((len(h.dat), len(h.khoan[2]), len(h.khoan[3]), len(h.khoan[4])), (2, 1, 1, 1))
+            self.assertEqual((h.tong[1], h.tong[2], h.tong[3], h.tong[5], h.tong['tong']),
+                             (73_370_000, 606_000, 1_617_000, 2_000_000, 77_593_000))
+            self.assertEqual(h.so_cccd, '001001000001')                               # ô có 2 số: lấy số đầu, báo số kia
+            self.assertTrue(any('001001000002' in x for x in h.canh_bao))
+            self.assertNotIn('Theo chi tiết', h.nguon_goc)
+            self.assertEqual(h.tai_dinh_cu, 'không đủ điều kiện bố trí TĐC')
+            t = nhap_chi_tiet._thua_tu_ten(h.dat[0].ten)
+            self.assertEqual((t['so_thua'], t['so_to'], t['loai_dat']), ('457', '35', 'LUK'))
+            p = Path(td) / 'a.pabt'
+            bc = nhap_chi_tiet.nhap(f, p)
+            self.assertEqual((len(bc.them), bc.so_thua), (1, 2))
+            con = csdl.mo(p)
+            try:
+                k = doi_chieu.doi_chieu(con).ho[0]
+                for m in (1, 2, 3):
+                    self.assertEqual(k['muc'][m], D(h.tong[m]), m)
+            finally:
+                con.close()
+
+    def test_muc_theo_ten(self):
+        for ten, m in (('Bồi thường đất', 1), ('Bồi thường, hỗ trợ vật kiến trúc', 2), ('Hỗ trợ cây trồng', 3),
+                       ('Bồi thường cây trồng', 3), ('Hỗ trợ các loại', 4),
+                       ('Thưởng cho người có đất thu hồi bàn giao đất trước thời hạn', 5), ('Phương án bồi thường bằng tiền', 0)):
+            self.assertEqual(nhap_chi_tiet.muc_theo_ten(ten), m, ten)
+
+
 if __name__ == '__main__':
     unittest.main()

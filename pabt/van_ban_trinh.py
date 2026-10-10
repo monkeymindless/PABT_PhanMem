@@ -42,7 +42,7 @@ DS_CHO_TRONG = [
     ('so_pa_tong', 'Số phương án tổng'), ('ngay_pa_tong', 'Ngày phương án tổng'),
     ('ngay_pa_tong_chu', 'Ngày phương án tổng: "ngày … tháng … năm …"'),
     ('so_ho', 'Số hộ (trường hợp)'), ('so_thua', 'Số thửa đất'), ('dt_thu_hoi', 'Tổng diện tích thu hồi (m²)'),
-    ('tien_dat', 'Tiền bồi thường đất'), ('tien_nha', 'Tiền nhà, công trình'), ('tien_cay', 'Tiền cây trồng'),
+    ('tien_dat', 'Tiền bồi thường đất'), ('tien_nha', 'Tiền nhà, công trình'), ('tien_cay', 'Tiền cây trồng, vật nuôi'),
     ('tien_ho_tro', 'Tiền các chính sách hỗ trợ'), ('tien_thuong', 'Tiền thưởng bàn giao'), ('tong_tien', 'Tổng tiền (số)'),
     ('tong_tien_chu', 'Tổng tiền bằng chữ'), ('ngay_lap_chu', 'Hôm nay: "ngày … tháng … năm …"'),
     ('ho.stt', 'Dòng bảng hộ: số thứ tự'), ('ho.ho_ten', 'Dòng bảng hộ: họ và tên'), ('ho.dia_chi', 'Dòng bảng hộ: địa chỉ'),
@@ -50,7 +50,7 @@ DS_CHO_TRONG = [
     ('ho.so_pa_day_du', 'Dòng bảng hộ: "125/PA-…" (số / ký hiệu)'), ('ho.ngay_pa', 'Dòng bảng hộ: ngày phương án chi tiết'),
     ('ho.so_thua', 'Dòng bảng hộ: số thửa'), ('ho.dt_thu_hoi', 'Dòng bảng hộ: DT thu hồi (m²)'),
     ('ho.tien_dat', 'Dòng bảng hộ: tiền đất'), ('ho.tien_nha', 'Dòng bảng hộ: tiền nhà, công trình'),
-    ('ho.tien_cay', 'Dòng bảng hộ: tiền cây trồng'), ('ho.tien_ho_tro', 'Dòng bảng hộ: tiền hỗ trợ'),
+    ('ho.tien_cay', 'Dòng bảng hộ: tiền cây trồng, vật nuôi'), ('ho.tien_ho_tro', 'Dòng bảng hộ: tiền hỗ trợ'),
     ('ho.tien_thuong', 'Dòng bảng hộ: tiền thưởng'), ('ho.tong_tien', 'Dòng bảng hộ: tổng tiền'),
     ('ho.tai_dinh_cu', 'Dòng bảng hộ: tái định cư'),
 ]
@@ -191,7 +191,7 @@ def du_lieu(con, ds_ma_ho: list, dot=None) -> tuple:
         if h is None:
             continue
         kq = nghiep_vu.tinh_pa(pas[m], bc) if m in pas else None
-        muc = kq.muc if kq else {k: KHONG for k in (1, 2, 3, 4, 5)}
+        muc = nghiep_vu.muc_5_cot(kq.muc) if kq else {k: KHONG for k in (1, 2, 3, 4, 5)}   # cây gồm vật nuôi
         for k in tong:
             tong[k] += muc[k]
         thua = bc.thua_cua(m)
@@ -564,7 +564,7 @@ def _noi_dung_to_trinh() -> str:
             _r(' (Bằng chữ: {tong_tien_chu}), trong đó:'), dau_dong=567),
          _p(_r('- Bồi thường về đất: {tien_dat} đồng;'), dau_dong=567),
          _p(_r('- Bồi thường, hỗ trợ về nhà, công trình: {tien_nha} đồng;'), dau_dong=567),
-         _p(_r('- Bồi thường, hỗ trợ về cây trồng: {tien_cay} đồng;'), dau_dong=567),
+         _p(_r('- Bồi thường, hỗ trợ về cây trồng, vật nuôi: {tien_cay} đồng;'), dau_dong=567),
          _p(_r('- Các chính sách hỗ trợ khác: {tien_ho_tro} đồng;'), dau_dong=567),
          _p(_r('- Thưởng bàn giao mặt bằng trước thời hạn: {tien_thuong} đồng.'), dau_dong=567),
          _p(_r('3. Hồ sơ kèm theo: Phương án tổng số {so_pa_tong}/{ky_hieu_so} {ngay_pa_tong_chu}; bảng tổng hợp và phương án '

@@ -99,10 +99,10 @@ CREATE TABLE IF NOT EXISTS ct_dat (
 CREATE INDEX IF NOT EXISTS ix_ctdat_ho ON ct_dat(ma_ho);
 CREATE INDEX IF NOT EXISTS ix_ctdat_thua ON ct_dat(ma_thua);
 
--- Mục 2 (nhà, công trình), mục 3 (cây trồng), mục 4 (hỗ trợ): cùng cấu trúc
+-- Mục 2 (nhà, công trình), mục 3 (cây trồng), mục 7 (vật nuôi - in là mục 4), mục 4 (hỗ trợ - in là mục 5): cùng cấu trúc
 CREATE TABLE IF NOT EXISTS ct_khoan (
     id           INTEGER PRIMARY KEY,
-    muc          INTEGER NOT NULL CHECK (muc IN (2, 3, 4)),
+    muc          INTEGER NOT NULL CHECK (muc IN (2, 3, 4, 7)),
     ma_ho        INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE,
     thu_tu       INTEGER NOT NULL DEFAULT 0,
     ma           TEXT NOT NULL DEFAULT '',             -- mã TS / mã hỗ trợ (trống nếu nhập tay)

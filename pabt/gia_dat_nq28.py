@@ -81,6 +81,17 @@ def tim(xa: str = '', tu_khoa: str = '') -> list:
     return ds
 
 
+def theo_dia_ban(xa: str = '') -> list:
+    """Mọi dòng của bảng (đủ các địa bàn - dự án có thể đi qua nhiều xã, phường), địa bàn của dự án đứng đầu."""
+    ds = tat_ca()
+    return [r for r in ds if khop_xa(xa, r['xa'])] + [r for r in ds if not khop_xa(xa, r['xa'])]
+
+
+def ten_ngan_xa(r_xa: str) -> str:
+    """"Xã Trị An" -> "Trị An"."""
+    return re.sub(r'^(Xã|Phường|Thị trấn)\s+', '', r_xa or '')
+
+
 def gia_dong(r: dict, cot: str) -> int:
     """Giá đồng/m² của một dòng theo cột (văn bản ghi nghìn đồng)."""
     return int(r[cot]) * 1000

@@ -633,7 +633,7 @@ class KhungQuyetDinh(_Khung):
 
 class KhungTongHopTien(_Khung):
     """Tổng hợp tiền theo phương án hiện tại (từng mục) - bảng "Tổng hợp sau áp giá" cũ."""
-    COT = ['STT', 'Mã hộ', 'Họ và tên', 'Số thửa', 'DT thu hồi (m²)', '1. Đất', '2. Nhà, CT', '3. Cây trồng', '4. Hỗ trợ',
+    COT = ['STT', 'Mã hộ', 'Họ và tên', 'Số thửa', 'DT thu hồi (m²)', '1. Đất', '2. Nhà, CT', '3. Cây trồng, vật nuôi', '4. Hỗ trợ',
            '5. Thưởng', 'TỔNG PHƯƠNG ÁN', 'Tổng phê duyệt', 'Chênh lệch PA - phê duyệt', 'Đối chiếu Excel']
     mo_ho = Signal(int)
 
