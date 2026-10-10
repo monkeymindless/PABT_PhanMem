@@ -26,6 +26,9 @@ du_lieu/
 
 # hồ sơ đợt trình xuất ra (<tên file dự án> - Hồ sơ PA\: phương án chi tiết, bảng tổng hợp có họ tên thật)
 * - Hồ sơ PA/
+# bản in hàng loạt (In / Xuất -> BanIn_<giờ>\) và báo cáo đối chiếu (<file dự án>_DoiChieu.xlsx): dữ liệu thật của các hộ
+BanIn_*/
+*_DoiChieu.xlsx
 # mẫu in cũ được giữ lại khi thay mẫu (lệnh "Mẫu in")
 mau_in/cu/
 
