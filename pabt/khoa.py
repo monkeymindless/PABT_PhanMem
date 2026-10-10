@@ -56,8 +56,15 @@ class KhoaFile:
     def _ghi(self, mo_luc=None) -> None:
         k = dict(self.cua_toi, mo_luc=mo_luc or time.time(), cap_nhat=time.time())
         tam = self.p.with_name(self.p.name + f'.{os.getpid()}.tmp')
-        tam.write_text(json.dumps(k, ensure_ascii=False), encoding='utf-8')
-        os.replace(tam, self.p)
+        try:
+            tam.write_text(json.dumps(k, ensure_ascii=False), encoding='utf-8')
+            os.replace(tam, self.p)
+        except OSError:                                 # Drive đang đồng bộ / file bị giữ: không để lại file .tmp
+            try:
+                tam.unlink()
+            except OSError:
+                pass
+            raise
 
     def lay(self, ep: bool = False):
         """Giữ khóa. Trả (True, None) nếu được; (False, khóa của người khác) nếu đang bị khóa và không ép."""

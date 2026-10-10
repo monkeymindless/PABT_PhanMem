@@ -369,6 +369,68 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   mục gọi thẳng hàm của lệnh đã có QAction (mất trạng thái tắt khi chỉ xem). `mo_lap_pa` / `mo_ho_so(moi=True)` tự chặn `chi_doc`.
   `ho_da_chon` / `ho_dang_chon` theo trang đang xem (`_khung_dang_xem`, `_Khung.ma_da_chon`). Test `test_giao_dien.
   test_bo_cuc_gon_man_hinh_1366` (không QPushButton nào lặp chữ lệnh menu trái), `test_lenh_menu_trai_theo_trang_dang_xem`.
+- 0.9.20 rà soát tải lớn (làm trên đám mây 08/10 trên nền 0.9.15, ghép vào 0.9.19 ngày 10/10; `tests/test_toc_do.TestRaSoatTaiLon`):
+  - KẾT QUẢ DÙNG CHUNG: `nghiep_vu.ket_qua_ho(con)` = {ma_ho: (KetQuaHo, [cảnh báo kiem_tra_pa])} nhớ bằng `csdl.nho` (khóa
+    `KHOA_KQ`). `tinh_tat_ca`, `doi_chieu` (cả dự án; `ds_ma_ho` của DauVetHo: dùng `ket_qua_ho_san` nếu còn đúng, không thì
+    tính riêng các hộ đó), `theo_doi.tong_hop(tinh_pa=True)`, `quan_ly.du_lieu_tong_hop`, `in_an.lap_bang_tong_hop`
+    dùng nó (`kiem_loi`, `du_toan.tu_du_an`: chỉ `ket_qua_ho_san` khi bối cảnh đúng lớp `BoiCanh` - bảng nhớ cũ thì tính trên
+    phương án vừa đọc, không đọc lại lần 2 - gọi `ket_qua_ho` ở đây làm Kiểm tra lỗi 3.000 hộ chậm 0,5 -> 0,64 s) - KHÔNG tự `tinh_pa` cả dự án, KHÔNG sửa đối tượng
+    trả về. `BoSoan.luu` -> `giu_ket_qua_ho(con, [ma_ho], truoc)`: chỉ tính lại hộ vừa lưu (bản dict mới; hộ khác giữ nguyên đối
+    tượng). `ket_qua_ho_san(con)`: lấy nếu đang nhớ (không tính). `hoan_tac._xoa` (xóa bảng temp) -> `csdl.giu_tat_ca` (total_changes
+    đếm cả bảng tạm: trước đây sau 50 bước mọi lần lưu làm mất bộ nhớ đệm).
+  - GIAO DỊCH LỒNG: `with con:` lồng trong `with con:` của sqlite3 COMMIT ngay ở tầng trong -> hàm ghi dùng chung (`theo_doi`
+    ghi_qd_ho / ghi_chi_tra / ghi_ban_giao..., `quan_ly.cap_nhat_trang_thai`) dùng `csdl.giao_dich(con)` (chỉ tầng ngoài cùng commit /
+    rollback); vòng lặp nhiều hộ bọc `csdl.giao_dich` (`quan_ly.ap_quyet_dinh`, `HopTrangThai.luu`, `theo_doi.them_ho_theo_pa`,
+    `bo_cac_ho_khoi_qd`, `nhap_tu_ket_qua` đọc phương án một lượt). Nhập QĐ 3.000 hộ 5,8 s -> 0,5 s (HDD / ổ mạng: phút -> giây).
+  - ĐÚNG SAI: `nhap_excel` đọc hết sheet THEO_DOI (trước: 400 dòng đầu -> dự án > ~395 hộ không được đối chiếu); `nhap_chi_tiet.doc_hang`
+    đọc hết sheet hộ (trước: 600 dòng), dừng sau `TRONG_LIEN_TIEP` (200) dòng trống liền nhau.
+  - Chỉ mục `ix_ctdat_thua` (khóa ngoại ct_dat.ma_thua): tạo trong `csdl.mo` khi chưa có và file có ct_dat (KHÔNG đổi PHIEN_BAN_CSDL;
+    KHÔNG ghi vào bộ đơn giá / file chỉ danh mục - csdl.mo cũng mở các file đó; test so băm bộ đơn giá).
+  - `tra_gia_dat`: bảng gia_dat theo loại đất nhớ trên bối cảnh (`bc.__dict__['_gia_dat_theo_loai']`), giá đã dùng gộp GROUP BY.
+    `tien.D(chuỗi)` nhớ `_d_chuoi` (lru 65.536). `nhap_don_gia.so_khop`: khớp gần đúng
+    nhớ `_NHO_GAN` theo (file bộ đơn giá + mtime + size, nhóm, ĐVT, tên gốc - vì `_giong_tung_phan` so tên gốc) - đổi nhóm / sửa ô so lại 4 s -> 0,06 s, kết quả như cũ.
+  - Giao diện: `giao_dien.vua_dong(bang)` thay resizeRowsToContents (chỉ đo dòng có chữ dài / nhiều dòng); `_o` (theo dõi) chỉ gắn
+    tooltip khi chữ > 25 ký tự; `_loc_nho` so `self.ds is` (không so id); Kiểm tra lỗi: tìm chờ ngừng gõ 300 ms, chuỗi không dấu
+    tính một lần; `HopNhapChiTiet.chon_tat_ca` chặn itemChanged.
+  - Luồng nền / tiến trình: báo cáo tổng hợp (`quan_ly.du_lieu_bao_cao` ở luồng giao diện + `ghi_bao_cao_tong_hop` chạy nền), báo
+    cáo đối chiếu, cài gói cập nhật, ghi chi tiết vào file dự án khác (`ghi_file`). `lap_bang_tong_hop(..., bao_tien_do)` (mỗi 100
+    hộ; `van_ban_trinh.xuat_bo_ho_so` / `xuat_hang_loat` truyền tiếp); `HopIn.thuc_hien` lỗi lạ: đóng hộp tiến trình rồi ném
+    lên `cai_bat_loi`; Dự án mới xuất bản in có hộp tiến trình + Dừng.
+    Máy chủ: `ghi_mo_du_an` chạy luồng riêng, `dang_xuat` lúc đóng chờ tối đa 3 s.
+  - Web: `cap_nhat_web._lay(file_ra=)` ghi file từng khối 64 KB (không giữ cả file trong RAM 32-bit), `chi_html=True` khi quét (liên
+    kết là file thì không tải phần thân); thư mục tạm tải về được xóa; nút Quét khóa khi đang quét.
+  - Dọn: `in_an._don_xem_truoc_cu` (thư mục in thử > 12 giờ), file `.tmp` khi ghi lỗi (`chen_duong_ke`, `khoa._ghi`); `ho_so._danh_lai`
+    chỉ ghi hộ đổi số thứ tự; Thêm hộ tải lại một lần.
+  - Phần trùng với 0.9.16-0.9.19 KHÔNG ghép (đã có cách làm riêng): biểu thưởng (`BoiCanh.muc_thuong`), lọc Bộ đơn giá
+    (`_khoa_the`), nút Sửa / Xóa đợt khi chưa chọn đợt (`HopDotTrinh`), `chep_danh_muc` chỉ đọc file nguồn.
+  - CHƯA làm (ghi để làm tiếp): OCR dựng ảnh từng trang trước khi hiện tiến trình (`ocr._anh_trang_pdf`); `.docx` lớn đọc cả XML
+    (`ET.fromstring`); danh sách dự án máy chủ mở từng file qua mạng; `HopDuToan` vẽ lại cả bảng mỗi lần sửa ô; PDF quyết định đọc
+    2-3 lần; `OTimChon` dựng lại danh sách mỗi phím; `lap_chi_tiet` nạp lại mẫu mỗi hộ khi in hàng loạt; tạo dự án ghi đè xóa file
+    cũ trước (nên tạo file tạm rồi os.replace); `nhap_chi_tiet.ghi` vào dự án đang mở vẫn ở luồng giao diện (giữ được hoàn tác).
+- 0.9.20 (tiếp, yêu cầu người dùng 10/10/2026):
+  - Kinh phí tổ chức thực hiện (QĐ 08/2025/QĐ-UBND ngày 10/02/2025 Đồng Nai: theo tuyến <= 3,5%, cụm / vùng / khác <= 2,5%):
+    `lap_pa.LOAI_KINH_PHI`, `loai_kinh_phi_tu_ten` ("Khu / Cụm / Vùng" trong 3 từ đầu -> khác; đường, tuyến, kênh, đường dây… ->
+    tuyến), `kinh_phi_to_chuc(con)` -> (loại, tỷ lệ, tự nhận?) từ `cai_dat` LOAI_KINH_PHI / TL_KINH_PHI, `luu_kinh_phi_to_chuc` (không
+    vượt mức tối đa). `in_an.lap_bang_tong_hop` thay % trong chữ dòng "Kinh phí đảm bảo…" + ghi căn cứ; dòng 85% / 15% giữ theo mẫu.
+    `HopDuAn` ô loại / tỷ lệ; `du_toan.them_chi_phi_mac_dinh` theo tên dự toán.
+  - Mẫu in: `in_an.tao_mau_tu_excel(file, thu_muc, loai=, ten_mau=)` lấy sheet nào có (không đòi đủ IN_CHITIET + IN_BANGTONGHOP);
+    file mẫu đã sửa (có `{…}`) một sheet .xlsx -> chép nguyên zip, đổi tên sheet trong workbook.xml (giữ hình vẽ); không nhận ra loại
+    -> `LoiChuaRoMau` (màn hình hỏi). Mẫu riêng `<TEN>__<tên>.xlsx` (`TACH_MAU`), `ds_mau`, `file_mau(mau, ten)` (mau = thư mục hoặc
+    file); `duong_ke_cua_mau` theo stem của mẫu; mẫu cũ chép vào `mau_in\cu\`. `HopIn.cb_mau_ct / cb_mau_bth` ->
+    `van_ban_trinh.xuat_bo_ho_so(mau_ct=, mau_bth=)`. Lệnh `app.cap_nhat_mau_in(file, ten_mau=, loai=, cho=)`.
+    Mẫu riêng đóng kèm (`mau_in\IN_CHITIET__Du thao.xlsx` - bản có "(DỰ THẢO)"; mẫu chính bỏ chữ này) đặt tên KHÔNG dấu: bộ cài Win7
+    giải nén PABT.zip bằng Shell.Application (zip Windows 7 không đọc tên UTF-8).
+  - Menu: `app.NHAN_MENU` chữ ngắn (khóa `self.lenh` giữ tên đầy đủ = gợi ý), tên nhóm mới, `giao_dien.TEN_NHOM_CU` đổi tên nhóm đã
+    nhớ trong QSettings; nút xổ "Dự án" kiểu `QToolButton[xo="1"]` nền xanh đậm + vạch vàng, chữ "DỰ ÁN ▾". "Đối chiếu với file
+    Excel…" ở nút Dự án.
+  - Đợt trình: `quan_ly.NHOM_HO_DOT` / `ho_theo_nhom(con, loai, dot_id)` (da_lap / gan_nhat / chua_xep / chua_duyet; 'chon' do màn
+    hình), `HopDotTrinh.cb_nhom_ho` + `b_dua` (`dua_nhom`). Nút "Mã điền tự động {…}…" (trước: "Chỗ trống dùng trong mẫu…").
+  - Biểu tượng: `logo_PABT_nen_trang.png` (chữ PABT tách khỏi ảnh nền của logo_PABT.png, nền trắng sữa #FBF7EE) ưu tiên trong
+    `tao_bieu_tuong.py`; khung logo băng tiêu đề nền #FBF7EE, viền vàng giữ.
+  - Bộ cài (`cai_dat.ps1`): lối tắt qua `IShellLinkW` (C# Add-Type, chạy .NET 2.0) - WScript.Shell đổi tên sang ANSI: Windows tiếng
+    Anh / tên người dùng có dấu -> "Unable to save shortcut …L?p…" làm hỏng cả lần cài; dự phòng WScript tên "PABT.lnk"; lối tắt lỗi
+    chỉ cảnh báo. Tự kiểm tra sau cài `WaitForExit(180000)`. Máy phát triển bật UTF-8 toàn hệ thống nên không tái hiện được lỗi ANSI.
+  - `in_an.ten_file_ho` cắt họ tên ở " là chủ / người / đại diện / đồng…".
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

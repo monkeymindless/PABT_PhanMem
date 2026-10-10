@@ -1,5 +1,43 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.19 – BẢN THỬ NGHIỆM)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.20 – BẢN THỬ NGHIỆM)
 
+> **0.9.20 – BẢN THỬ NGHIỆM** - **Rà soát dự án lớn** (3.000 hộ / 5.000 thửa, đo cùng máy, trước -> sau):
+> - Sửa lỗi số liệu: nhập file PABT Excel đọc **hết** sheet THEO_DOI (trước đây chỉ 400 dòng đầu - dự án trên ~395 hộ thì các hộ sau
+>   không được đối chiếu với Excel mà không báo); nhập phương án chi tiết đọc **hết** sheet của hộ (trước đây cắt ở dòng 600 - hộ
+>   nhiều cây / công trình mất các dòng cuối và dòng TỔNG CỘNG).
+> - Nhập quyết định phê duyệt cho 3.000 hộ: 5,8 giây -> 0,5 giây (cả lô ghi một lần; trên ổ cứng HDD / thư mục Google Drive / ổ mạng
+>   trước đây có thể vài phút). Lỗi giữa chừng không còn để lại quyết định ghi dở. Trạng thái hộ, chi trả, bàn giao, thêm / bỏ hộ
+>   khỏi quyết định cũng ghi cả lô một lần.
+> - Kết quả tính tiền 3.000 hộ dùng chung, lưu một hộ chỉ tính lại hộ đó: tải lại danh sách 0,64 -> 0,28 giây, lưu một hộ rồi tải
+>   lại 1,1 -> 0,7 giây, trang Tổng hợp tiền 0,94 -> 0,44 giây, tổng hợp theo dõi 0,23 -> 0,05 giây, dự toán 0,23 -> 0,09 giây.
+> - Không còn "Không phản hồi": báo cáo tổng hợp, báo cáo đối chiếu, cài gói cập nhật ghi ở luồng nền (hộp "Đang xử lý…"); xuất
+>   bảng tổng hợp có tiến trình; Dự án mới xuất bản in từng hộ có hộp tiến trình và nút **Dừng**; mở / đóng phần mềm khi máy chủ mất
+>   mạng không còn bị treo.
+> - Cập nhật đơn giá: đổi nhóm / sửa một ô rồi so khớp lại 4 giây -> 0,06 giây; tải văn bản trên mạng ghi thẳng ra file (không giữ
+>   cả file trong bộ nhớ), không tải cả file chỉ để xem loại; xóa file tạm sau khi phân tích.
+> - Kiểm tra lỗi: gõ ô tìm không còn vẽ lại bảng theo từng phím; chọn tất cả sheet khi nhập chi tiết không còn treo với file nhiều sheet.
+>
+> **0.9.20 (tiếp)**:
+> - **Kinh phí tổ chức thực hiện bồi thường** theo Quyết định số 08/2025/QĐ-UBND ngày 10/02/2025 của UBND tỉnh Đồng Nai: dự án hạ
+>   tầng **theo tuyến** (đường, kênh, đường dây, đường ống…) tối đa **3,5%**; dự án **cụm, vùng, khu** và dự án khác tối đa **2,5%**
+>   tổng kinh phí bồi thường, hỗ trợ, tái định cư. Phần mềm tự nhận loại theo tên dự án ("Xây dựng đường…" = theo tuyến; "Khu…",
+>   "Cụm…" = cụm / vùng); đổi ở **Dự án → Thông tin dự án…**, ô "Kinh phí tổ chức thực hiện bồi thường" (chọn loại, hoặc gõ tỷ lệ
+>   thấp hơn mức tối đa). Bảng tổng hợp tự ghi đúng tỷ lệ và căn cứ vào dòng "Kinh phí đảm bảo…"; dòng chia 85% / 15% giữ theo mẫu.
+>   Dự toán: dòng "Chi phí thực hiện công tác bồi thường" lấy mặc định 3,5% / 2,5% theo tên dự án.
+> - **Mẫu in** (menu In, báo cáo → **Mẫu in**, trước là "Cập nhật mẫu in"): nhận cả file chỉ có MỘT mẫu (trước đây báo "File Excel
+>   không có sheet IN_CHITIET / IN_BANGTONGHOP" khi file thiếu một trong hai sheet) và file mẫu đã sửa sẵn, sheet tên bất kỳ (tự nhận
+>   là mẫu chi tiết hay bảng tổng hợp; không nhận ra thì hỏi). Chọn **Thay mẫu chính** hoặc **Thêm mẫu riêng…** (đặt tên, ví dụ "Dự
+>   thảo"): mẫu riêng chọn ở ô cạnh "Phương án chi tiết" / "Bảng tổng hợp" trong **In / Xuất**. Mẫu cũ được giữ trong mau_in\cu.
+> - Nút **Dự án** trên menu trái nổi bật (nền xanh đậm, vạch vàng); menu gọn chữ ("Lập phương án", "Dự toán", "Mẫu in"…, rê chuột
+>   xem tên đầy đủ); "Đối chiếu với file Excel…" chuyển vào nút Dự án. Biểu tượng: chữ PABT trên nền trắng sữa.
+> - **Đợt trình**: ô **Chọn hộ** + nút **Đưa … hộ vào đợt**: hộ đã lập phương án chưa xếp đợt / hộ vừa lưu phương án gần nhất / mọi
+>   hộ chưa xếp đợt / hộ đã trình đợt khác nhưng chưa phê duyệt (trình lại) / hộ đang chọn ở danh sách. Nút "Chỗ trống dùng trong
+>   mẫu…" đổi tên **Mã điền tự động {…}…**: danh sách mã gõ vào mẫu Word / Excel của tờ trình, phương án tổng (khi xuất hồ sơ mã được
+>   thay bằng số liệu thật); không sửa mẫu thì không cần dùng.
+> - Tên file bản in bỏ phần "là chủ sở hữu…" sau họ tên.
+> - **Bộ cài** (Win10-11 và Win7-8): sửa lỗi "Unable to save shortcut …L?p phương án b?i thư?ng.lnk" trên máy Windows tiếng Anh /
+>   tên người dùng có dấu - lối tắt tạo bằng API Unicode; lối tắt lỗi không còn làm hỏng cả lần cài; tự kiểm tra sau cài chờ tối đa
+>   3 phút.
+>
 > **0.9.19 – BẢN THỬ NGHIỆM** - **Mỗi lệnh một chỗ**: bỏ các nút / mục trùng lệnh - hai nút "Lập phương án hộ đang chọn", "Thêm
 > hộ…" trên danh sách (dùng menu trái, bấm đúp hoặc chuột phải), nút "Lưu phương án hộ" cuối thẻ Hỗ trợ (dùng **Lưu (Ctrl+S)**),
 > nút "Quyết định, chi trả, bàn giao của hộ…" ở trang Theo dõi tiến độ (dùng **Trạng thái hộ…** hoặc bấm đúp dòng), mục "Dự án trên
@@ -50,7 +88,7 @@
 > phương án tổng** (tự in vào dòng "Đính kèm Phương án số …" và ngày ký của bảng tổng hợp), **số PA chi tiết từng hộ** (nút
 > **Đánh số PA chi tiết…** hoặc sửa thẳng trên bảng; tự in vào "Số: …/" và ngày của phương án chi tiết, mang sang quyết định phê
 > duyệt), khung **Mẫu văn bản trình**: **Thêm mẫu** tờ trình (Word, Excel, PDF) / phương án tổng (Word, PDF), **Sửa mẫu**, **Mẫu
-> mặc định**, **Chỗ trống dùng trong mẫu…**. Xuất / In: chọn từng mẫu (in riêng lẻ) hoặc **Chọn tất cả mẫu (in đồng loạt)**, lưu
+> mặc định**, **Mã điền tự động {…}…**. Xuất / In: chọn từng mẫu (in riêng lẻ) hoặc **Chọn tất cả mẫu (in đồng loạt)**, lưu
 > thành 2 thư mục **PA CHI TIET** và **PA TONG**. Nút **Sửa đợt…** báo rõ khi chưa chọn đợt (bấm đúp dòng đợt cũng sửa được);
 > lỗi bất thường trong nút bấm không còn mất im lặng (hiện thông báo, ghi `loi.log`). **Nhanh hơn**: mở phần mềm 0,73 -> 0,38
 > giây, lưu một hộ rồi tải lại danh sách (3.000 hộ) 0,47 -> 0,05 giây, mở dự án / cửa sổ lập phương án nhanh hơn ~20%; cửa sổ
@@ -429,7 +467,7 @@ Trong màn hình Lập phương án hộ:
   - **Mẫu văn bản trình**: Tờ trình / văn bản trình (Word .docx/.doc, Excel .xlsx/.xls, PDF) và Phương án tổng (Word, PDF): **Thêm
     mẫu…** (PDF: Word mở ra và hỏi chuyển thành văn bản sửa được - bấm OK), **Sửa mẫu** (mở bằng Word / Excel), **Mẫu mặc định**
     (bỏ mẫu riêng). Trong mẫu gõ chỗ trống trong ngoặc nhọn, ví dụ `{so_to_trinh}`, `{tong_tien_chu}`; dòng bảng có `{ho.ho_ten}`,
-    `{ho.tong_tien}`… được nhân thành mỗi hộ một dòng - danh sách đầy đủ ở nút **Chỗ trống dùng trong mẫu…**.
+    `{ho.tong_tien}`… được nhân thành mỗi hộ một dòng - danh sách đầy đủ ở nút **Mã điền tự động {…}…**.
   - **Xuất hồ sơ đợt** (chọn: phương án chi tiết, bảng tổng hợp, tờ trình, phương án tổng - từng loại hoặc **Chọn tất cả**) tạo
     `<thư mục hồ sơ>\Đợt 1 - 25 hộ\PA CHI TIET\` (phương án chi tiết từng hộ `PA_<STT>_<họ tên>.xlsx`) và `...\PA TONG\`
     (`TO_TRINH.docx`, `PHUONG_AN_TONG.docx`, `BANG_TONG_HOP.xlsx`), kèm PDF nếu chọn (Excel / Word xuất); xuất lại khi số hộ đổi

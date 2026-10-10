@@ -5,14 +5,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
                                QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
                                QPlainTextEdit, QProgressDialog, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
                                QVBoxLayout, QWidget)
 
-from . import kiem_loi, quan_ly
+from . import csdl, kiem_loi, quan_ly
 from .lap_pa import LoiNhap
 from .tien import D, vn
 from .giao_dien import con_tro_cho
@@ -222,15 +222,24 @@ class HopDotTrinh(_Hop):
         self.b_so = QPushButton('Đánh số PA chi tiết…')
         self.b_so.setToolTip('Đánh số phương án chi tiết liên tục cho các hộ của đợt (in vào "Số: …/" của bản in)')
         self.b_so.clicked.connect(lambda: self.danh_so())
+        # chọn nhóm hộ đưa vào đợt (quan_ly.NHOM_HO_DOT): đã lập PA / vừa lưu gần nhất / chưa xếp đợt / chưa phê duyệt / đang chọn
+        hc_ho = QHBoxLayout()
+        hc_ho.addWidget(QLabel('Chọn hộ:'))
+        self.cb_nhom_ho = QComboBox()
+        for k, t in quan_ly.NHOM_HO_DOT:
+            self.cb_nhom_ho.addItem(t, k)
+        if self.ma_ho_chon:
+            self.cb_nhom_ho.setCurrentIndex(self.cb_nhom_ho.findData('chon'))
+        self.cb_nhom_ho.currentIndexChanged.connect(lambda *_: self._dem_nhom())
+        hc_ho.addWidget(self.cb_nhom_ho, 1)
+        self.b_dua = QPushButton('Đưa vào đợt')
+        self.b_dua.setToolTip('Đưa các hộ của nhóm đang chọn vào đợt đang chọn bên trái')
+        self.b_dua.clicked.connect(lambda: self.dua_nhom())
+        hc_ho.addWidget(self.b_dua)
         hh = QHBoxLayout()
-        self.b_dua = QPushButton(f'Đưa {len(self.ma_ho_chon)} hộ đang chọn vào đợt')
-        self.b_dua.setEnabled(bool(self.ma_ho_chon) and not chi_doc)
-        self.b_dua.clicked.connect(lambda: self.dua_vao())
-        self.b_con = QPushButton('Đưa các hộ chưa xếp đợt vào đợt')
-        self.b_con.clicked.connect(lambda: self.dua_vao(quan_ly.ho_cua_dot(con, None)))
         self.b_bo = QPushButton('Bỏ hộ đã chọn khỏi đợt')
         self.b_bo.clicked.connect(lambda: self.bo_ra())
-        for b in (self.b_dua, self.b_con, self.b_bo, self.b_so):
+        for b in (self.b_bo, self.b_so):
             b.setEnabled(b.isEnabled() and not chi_doc)
             hh.addWidget(b)
         hh.addStretch(1)
@@ -239,6 +248,7 @@ class HopDotTrinh(_Hop):
         lp.setContentsMargins(0, 0, 0, 0)
         lp.addWidget(self.lb_ho)
         lp.addWidget(self.bang_ho)
+        lp.addLayout(hc_ho)
         lp.addLayout(hh)
         tach = QSplitter()
         tach.addWidget(trai)
@@ -265,8 +275,9 @@ class HopDotTrinh(_Hop):
                 b.clicked.connect(ham)
                 h.addWidget(b)
             lm.addLayout(h)
-        b_cho = QPushButton('Chỗ trống dùng trong mẫu…')
-        b_cho.setToolTip('Các chỗ trống {…} điền được: thông tin dự án, đợt, số tiền; {ho.…} trong một dòng bảng = mỗi hộ một dòng')
+        b_cho = QPushButton('Mã điền tự động {…}…')
+        b_cho.setToolTip('Danh sách mã {…} gõ vào mẫu Word / Excel (tờ trình, phương án tổng): khi xuất hồ sơ phần mềm thay bằng '
+                         'tên dự án, số / ngày tờ trình, số tiền…; {ho.…} trong một dòng bảng = mỗi hộ một dòng')
         b_cho.clicked.connect(lambda: self.xem_cho_trong())
         hc = QHBoxLayout()
         hc.addWidget(b_cho)
@@ -336,7 +347,9 @@ class HopDotTrinh(_Hop):
         for c, v in enumerate(('(Chưa xếp đợt)', '', '', len(chua), vn(sum((self.tong.get(m, 0) for m in chua), D(0))), '')):
             _o(self.bang_dot, r, c, v, so=c in (3, 4), nen=VANG)
         ids = [d.id for d in self.ds]
+        self.bang_dot.blockSignals(True)                # selectRow phát itemSelectionChanged -> ve_ho: chỉ vẽ một lần
         self.bang_dot.selectRow(ids.index(cu) if cu in ids else (0 if self.ds else r))
+        self.bang_dot.blockSignals(False)
         self.ve_ho()
 
     def dot_chon(self):
@@ -355,6 +368,7 @@ class HopDotTrinh(_Hop):
         so_pa = quan_ly.so_pa_cua_ho(self.con, self.ho_hien)
         self.lb_ho.setText(f'Hộ trong {next((d.ten for d in self.ds if d.id == dot), "(chưa xếp đợt)")}: {len(self.ho_hien)} hộ')
         self.bang_ho.blockSignals(True)                 # điền bảng: không coi là người dùng sửa số PA
+        self.bang_ho.setUpdatesEnabled(False)
         try:
             self.bang_ho.setRowCount(len(self.ho_hien))
             for r, m in enumerate(self.ho_hien):
@@ -365,10 +379,9 @@ class HopDotTrinh(_Hop):
                     if c not in (3, 4):
                         it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
         finally:
+            self.bang_ho.setUpdatesEnabled(True)
             self.bang_ho.blockSignals(False)
-        self.b_dua.setText(f'Đưa {len(self.ma_ho_chon)} hộ đang chọn vào đợt')
-        self.b_con.setEnabled(dot is not None and not self.chi_doc)
-        self.b_dua.setEnabled(dot is not None and bool(self.ma_ho_chon) and not self.chi_doc)
+        self._dem_nhom()
         self.b_bo.setEnabled(dot is not None and not self.chi_doc)
         self.b_so.setEnabled(dot is not None and bool(self.ho_hien) and not self.chi_doc)
 
@@ -434,7 +447,7 @@ class HopDotTrinh(_Hop):
         self._ve_mau()
         self.bao(f'Đã dùng làm mẫu {vb.LOAI[loai][1].lower()}: {p.name}.\n' +
                  (f'Chỗ trống có trong mẫu: {", ".join("{" + x + "}" for x in cho)}' if cho else
-                  'Mẫu chưa có chỗ trống {…}: bấm "Sửa mẫu" để chèn (xem "Chỗ trống dùng trong mẫu…") - nếu không, '
+                  'Mẫu chưa có chỗ trống {…}: bấm "Sửa mẫu" để chèn (xem "Mã điền tự động {…}…") - nếu không, '
                   'văn bản xuất ra giữ nguyên như file mẫu.'), loi=False)
         return p
 
@@ -462,8 +475,11 @@ class HopDotTrinh(_Hop):
         from . import van_ban_trinh as vb
         from .giao_dien import hop_ket_qua
         dong = [f'{{{k}}}  —  {mo_ta}' for k, mo_ta in vb.DS_CHO_TRONG]
-        return hop_ket_qua(self, 'Chép các chỗ trống dưới đây vào mẫu Word / Excel (gõ đúng cả ngoặc nhọn). Chỗ trống {ho.…} '
-                                 'đặt trong MỘT dòng bảng: dòng đó được nhân thành mỗi hộ một dòng.', dong, 'Chỗ trống',
+        return hop_ket_qua(self, 'Mã điền tự động dùng khi SỬA MẪU tờ trình / phương án tổng (bấm "Sửa mẫu", mẫu mở bằng Word '
+                                 'hoặc Excel): gõ mã (đúng cả ngoặc nhọn) vào chỗ muốn phần mềm điền, ví dụ "Dự án: {du_an}". Khi '
+                                 'xuất hồ sơ đợt, mỗi mã được thay bằng số liệu thật của dự án / đợt / các hộ. Mã {ho.…} đặt trong '
+                                 'MỘT dòng bảng: dòng đó được nhân thành mỗi hộ một dòng. Không sửa mẫu thì không cần dùng.',
+                           dong, 'Mã điền tự động',
                            tieu_de=TIEU_DE, hien=not self.im_lang)
 
     # ---------------------------------------------- thao tác
@@ -492,8 +508,14 @@ class HopDotTrinh(_Hop):
         self.ve_dot(i)
         return i
 
-    def sua_dot(self, gia_tri: dict | None = None):
+    def _dot_cho_lenh(self):
+        """Đợt cho nút Sửa / Xóa đợt: dòng đang chọn; đứng ở dòng "(Chưa xếp đợt)" mà dự án chỉ có MỘT đợt thì lấy đợt đó."""
         dot = self.dot_chon()
+        ds = getattr(self, 'ds', [])
+        return ds[0].id if dot is None and len(ds) == 1 else dot
+
+    def sua_dot(self, gia_tri: dict | None = None):
+        dot = self._dot_cho_lenh()
         if dot is None:                                 # trước đây thoát im lặng: người dùng tưởng nút không hoạt động
             self.bao('Chọn một đợt (dòng "Đợt …" trong bảng "Các đợt trình") rồi bấm "Sửa đợt…" - dòng "(Chưa xếp đợt)" '
                      'không sửa được. Có thể bấm đúp vào dòng đợt.', loi=False)
@@ -521,7 +543,7 @@ class HopDotTrinh(_Hop):
         return dot
 
     def xoa_dot(self):
-        dot = self.dot_chon()
+        dot = self._dot_cho_lenh()                      # hỏi lại kèm tên đợt trước khi xóa
         if dot is None:
             self.bao('Chọn một đợt (dòng "Đợt …" trong bảng "Các đợt trình") để xóa.', loi=False)
             return None
@@ -532,6 +554,31 @@ class HopDotTrinh(_Hop):
         self.thay_doi = True
         self.ve_dot()
         return dot
+
+    def ho_nhom(self, loai: str | None = None) -> list:
+        """Mã hộ của nhóm đang chọn ở ô "Chọn hộ" (loai: mã nhóm quan_ly.NHOM_HO_DOT, None = nhóm đang chọn)."""
+        loai = loai or self.cb_nhom_ho.currentData()
+        if loai == 'chon':
+            return list(self.ma_ho_chon)
+        return quan_ly.ho_theo_nhom(self.con, loai, self.dot_chon())
+
+    def _dem_nhom(self):
+        if not hasattr(self, 'cb_nhom_ho') or not hasattr(self, 'ds'):
+            return
+        n = len(self.ho_nhom())
+        self.b_dua.setText(f'Đưa {n} hộ vào đợt')
+        self.b_dua.setEnabled(self.dot_chon() is not None and n > 0 and not self.chi_doc)
+
+    def dua_nhom(self, loai: str | None = None) -> int:
+        """Đưa các hộ của nhóm (ô "Chọn hộ") vào đợt đang chọn."""
+        if self.dot_chon() is None:
+            self.bao('Chọn một đợt (dòng "Đợt …" trong bảng "Các đợt trình") trước.', loi=False)
+            return 0
+        ds = self.ho_nhom(loai)
+        if not ds:
+            self.bao('Không có hộ nào thuộc nhóm này.', loi=False)
+            return 0
+        return self.dua_vao(ds)
 
     def dua_vao(self, ds: list | None = None):
         dot = self.dot_chon()
@@ -802,19 +849,23 @@ class HopTrangThai(_Hop):
 
     def luu(self, gia_tri: dict | None = None) -> int:
         gt = self.gia_tri() if gia_tri is None else gia_tri
-        n = 0
         if self.o_theo_pa.isChecked():
-            for m in self.ds_ma_ho:
-                rieng = dict(gt)
-                tong = self.tong_pa.get(m)
-                if tong is not None:
-                    if rieng.get('da_phe_duyet', None) is not False:
-                        rieng['qd_so_tien'] = tong
-                    if rieng.get('da_chi_tra'):
-                        rieng['chi_tra_so_tien'] = tong
-                n += quan_ly.cap_nhat_trang_thai(self.con, [m], rieng) if rieng else 0
-            return n
+            with csdl.giao_dich(self.con):              # cả lô một giao dịch (trước đây mỗi hộ một lần ghi đĩa)
+                return self._luu_theo_pa(gt)
         return quan_ly.cap_nhat_trang_thai(self.con, self.ds_ma_ho, gt)
+
+    def _luu_theo_pa(self, gt: dict) -> int:
+        n = 0
+        for m in self.ds_ma_ho:
+            rieng = dict(gt)
+            tong = self.tong_pa.get(m)
+            if tong is not None:
+                if rieng.get('da_phe_duyet', None) is not False:
+                    rieng['qd_so_tien'] = tong
+                if rieng.get('da_chi_tra'):
+                    rieng['chi_tra_so_tien'] = tong
+            n += quan_ly.cap_nhat_trang_thai(self.con, [m], rieng) if rieng else 0
+        return n
 
     def accept(self):
         try:
@@ -996,7 +1047,11 @@ class HopKiemLoi(_Hop):
         lo.addLayout(hn)
         self.cb_nhom.currentIndexChanged.connect(lambda *_: self.ve())
         self.o_chi_loi.toggled.connect(lambda *_: self.ve())
-        self.o_tim.textChanged.connect(lambda *_: self.ve())
+        self._hen = QTimer(self)                        # ô tìm: lọc khi ngừng gõ (danh sách lỗi có thể hàng chục nghìn dòng)
+        self._hen.setSingleShot(True)
+        self._hen.setInterval(300)
+        self._hen.timeout.connect(self.ve)
+        self.o_tim.textChanged.connect(lambda *_: self._hen.start())
         self.kiem_tra()
 
     def kiem_tra(self):
@@ -1017,13 +1072,18 @@ class HopKiemLoi(_Hop):
         from .lap_pa import bo_dau
         nhom = self.cb_nhom.currentData()
         tu = bo_dau(self.o_tim.text()).split()
-        self.hien = [x for x in self.ds if (not nhom or x.nhom == nhom) and (not self.o_chi_loi.isChecked() or x.muc_do == kiem_loi.LOI)
-                     and all(t in bo_dau(f'{x.ho_ten} {x.noi_dung} {x.ma_ho}') for t in tu)]
+        if tu and getattr(self, '_tim_ds', None) is not self.ds:   # chuỗi không dấu mỗi dòng: tính một lần cho mỗi lần kiểm tra
+            self._tim_ds, self._tim = self.ds, [bo_dau(f'{x.ho_ten} {x.noi_dung} {x.ma_ho}') for x in self.ds]
+        khoa = self._tim if tu else [''] * len(self.ds)
+        self.hien = [x for x, k in zip(self.ds, khoa) if (not nhom or x.nhom == nhom)
+                     and (not self.o_chi_loi.isChecked() or x.muc_do == kiem_loi.LOI) and all(t in k for t in tu)]
+        self.bang.setUpdatesEnabled(False)
         self.bang.setRowCount(len(self.hien))
         for r, x in enumerate(self.hien):
             nen = DO if x.muc_do == kiem_loi.LOI else VANG
             for c, v in enumerate((x.muc_do, x.nhom, x.ma_ho if x.ma_ho is not None else '', x.ho_ten, x.noi_dung)):
                 _o(self.bang, r, c, v, so=c == 2, nen=nen if c == 0 else None)
+        self.bang.setUpdatesEnabled(True)
 
     def sua_tu_dong(self):
         if not self.hoi('Sửa tự động các lỗi trình bày (khoảng trắng, viết hoa họ tên, chữ tổ hợp, số CCCD) cho toàn dự án?'):

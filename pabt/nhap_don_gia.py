@@ -7,6 +7,7 @@ Quy trình: đọc bảng -> nhận các dòng (tên, ĐVT, đơn giá, mã nế
 """
 from __future__ import annotations
 import csv
+import os
 import re
 import shutil
 import subprocess
@@ -762,11 +763,19 @@ def _giong_tung_phan(a: str, b: str) -> bool:
                for x, y in ((_khoa_gon(a), _khoa_gon(b)), (ngoac(a), ngoac(b))))
 
 
+_NHO_GAN = {}
+
+
 def so_khop(ds: list, nhom: int | None = None) -> list:
     """So với bộ đơn giá đang dùng: theo mã, tên (không dấu), rồi tên gần đúng cùng ĐVT. nhom None / 0: mỗi dòng theo
     nhóm của dòng (Muc.nhom); có nhom thì cả bảng theo nhóm đó."""
     import difflib
-    con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
+    f = don_gia.file_dang_dung()
+    try:
+        ban = (str(f), os.path.getmtime(f), os.path.getsize(f))   # bộ đơn giá đổi (cập nhật) -> khóa nhớ khác
+    except OSError:
+        ban = (str(f), 0, 0)
+    con = csdl.mo(f, chi_doc=True)
     try:
         hien = {4: [dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia FROM dm_hotro')]}
         for n in (2, 3):
@@ -791,11 +800,22 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
             r = x if x is not None and bo_dau(x['dvt'] or '') == bo_dau(m.dvt) else None
         m.khop_gan = 0.0
         if r is None:
-            k, cung = _khoa(m.ten), theo_dvt.get(bo_dau(m.dvt), {})
-            for g in difflib.get_close_matches(k, list(cung), n=3, cutoff=GAN_DUNG):
-                if _giong_tung_phan(m.ten, cung[g]['ten']):
-                    r, m.khop_gan = cung[g], difflib.SequenceMatcher(None, k, g).ratio()
-                    break
+            k, dv = _khoa(m.ten), bo_dau(m.dvt)
+            cung = theo_dvt.get(dv, {})
+            # khớp gần đúng (difflib, so với hàng nghìn tên): nhớ theo bộ đơn giá + nhóm + ĐVT + tên - đổi nhóm, sửa một ô rồi
+            # so lại cả bảng không phải tính lại các dòng cũ
+            kn = (ban, n, dv, m.ten)
+            if kn not in _NHO_GAN:
+                gan = None
+                for g in difflib.get_close_matches(k, list(cung), n=3, cutoff=GAN_DUNG):
+                    if _giong_tung_phan(m.ten, cung[g]['ten']):
+                        gan = (g, difflib.SequenceMatcher(None, k, g).ratio())
+                        break
+                if len(_NHO_GAN) > 50000:
+                    _NHO_GAN.clear()
+                _NHO_GAN[kn] = gan
+            if _NHO_GAN[kn] is not None and _NHO_GAN[kn][0] in cung:
+                r, m.khop_gan = cung[_NHO_GAN[kn][0]], _NHO_GAN[kn][1]
         if r is None:
             m.trang_thai, m.ma_khop, m.gia_cu = 'mới', '', None
         else:

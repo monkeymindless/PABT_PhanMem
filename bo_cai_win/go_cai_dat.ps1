@@ -8,8 +8,9 @@ if (-not $Im) {
 }
 Get-Process PABT -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$dich*" } | Stop-Process -Force
 foreach ($p in @((Join-Path ([Environment]::GetFolderPath('Programs')) 'PABT - Lập phương án bồi thường.lnk'),
+                 (Join-Path ([Environment]::GetFolderPath('Programs')) 'PABT.lnk'),      # tên dự phòng (máy không tạo được tên có dấu)
                  (Join-Path ([Environment]::GetFolderPath('Desktop')) 'PABT.lnk'))) {
-    if (Test-Path $p) { Remove-Item $p -Force }
+    if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force }
 }
 if ((Get-ItemProperty 'HKCU:\Software\Classes\.pabt' -ErrorAction SilentlyContinue).'(default)' -eq 'PABT.DuAn') {
     Remove-Item 'HKCU:\Software\Classes\.pabt' -Recurse -Force

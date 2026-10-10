@@ -121,6 +121,67 @@ function GiaiNen($zip, $dich, $tienDo) {
     }
 }
 
+# ---------------------------------------------------------------- lối tắt (Start Menu, Desktop)
+# WScript.Shell đổi tên / đường dẫn lối tắt sang bảng mã ANSI của Windows: máy Windows tiếng Anh (hoặc tên người dùng có dấu)
+# thì "Lập phương án bồi thường" thành "L?p … b?i thư?ng" -> Save() lỗi "Unable to save shortcut" và cả lần cài dừng lại.
+# Dùng IShellLinkW (Unicode) qua C# biên dịch tại chỗ (chạy được với .NET 2.0 / 3.5 của PowerShell 2.0 - Windows 7).
+$LOI_TAT_CS = @'
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+public static class PabtLoiTat {
+    [ComImport, Guid("00021401-0000-0000-C000-000000000046")] class ShellLink { }
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("000214F9-0000-0000-C000-000000000046")]
+    interface IShellLinkW {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder f, int c, IntPtr fd, int fl);
+        void GetIDList(out IntPtr p);
+        void SetIDList(IntPtr p);
+        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder s, int c);
+        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string s);
+        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder s, int c);
+        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string s);
+        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder s, int c);
+        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string s);
+        void GetHotkey(out short k);
+        void SetHotkey(short k);
+        void GetShowCmd(out int n);
+        void SetShowCmd(int n);
+        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder s, int c, out int i);
+        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string s, int i);
+        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string s, int r);
+        void Resolve(IntPtr h, int f);
+        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string s);
+    }
+    public static void Tao(string lnk, string dich, string thuMuc, string bieuTuong, string moTa) {
+        IShellLinkW l = (IShellLinkW)new ShellLink();
+        l.SetPath(dich);
+        l.SetWorkingDirectory(thuMuc);
+        l.SetIconLocation(bieuTuong, 0);
+        l.SetDescription(moTa);
+        ((IPersistFile)l).Save(lnk, true);
+        Marshal.ReleaseComObject(l);
+    }
+}
+'@
+
+function TaoLoiTat($lnk, $exe, $thu, $ico) {
+    # trả đường dẫn lối tắt đã tạo, hoặc '' nếu không tạo được (không làm hỏng lần cài)
+    try {
+        if (-not ('PabtLoiTat' -as [type])) { Add-Type -TypeDefinition $LOI_TAT_CS }
+        [PabtLoiTat]::Tao($lnk, $exe, $thu, $ico, $TEN)
+        if (Test-Path -LiteralPath $lnk) { return $lnk }
+    } catch { Ghi "Lối tắt (IShellLinkW) lỗi: $_" }
+    try {                                       # dự phòng: WScript.Shell với tên không dấu
+        $p = Join-Path (Split-Path $lnk) 'PABT.lnk'
+        $l = (New-Object -ComObject WScript.Shell).CreateShortcut($p)
+        $l.TargetPath = $exe; $l.WorkingDirectory = $thu; $l.IconLocation = "$ico,0"; $l.Description = 'PABT'
+        $l.Save()
+        return $p
+    } catch { Ghi "Lối tắt (WScript) lỗi: $_" }
+    return ''
+}
+
 # ---------------------------------------------------------------- cài
 function KiemTraThuMuc($dich) {
     # chỉ xóa thư mục trống hoặc bản PABT cũ: gõ nhầm D:\ hay chọn Documents thì không được xóa dữ liệu người dùng
@@ -149,13 +210,13 @@ function Cai($dich, $desktop, $lienKet, $tienDo) {
     $exe = Join-Path $dich 'PABT.exe'
     $ico = Join-Path $dich 'PABT.ico'
     if (-not (Test-Path $ico)) { $ico = $exe }
-    $ws = New-Object -ComObject WScript.Shell
     $lnk = @((Join-Path ([Environment]::GetFolderPath('Programs')) 'PABT - Lập phương án bồi thường.lnk'))
     $dk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'PABT.lnk'
     if ($desktop) { $lnk += $dk } elseif (Test-Path $dk) { Remove-Item $dk -Force }
+    $script:LOI_TAT = @()
     foreach ($p in $lnk) {
-        $l = $ws.CreateShortcut($p); $l.TargetPath = $exe; $l.WorkingDirectory = $dich; $l.IconLocation = "$ico,0"
-        $l.Description = $TEN; $l.Save()
+        $da = TaoLoiTat $p $exe $dich $ico
+        if ($da) { Ghi "Lối tắt: $da" } else { $script:LOI_TAT += (Split-Path $p -Leaf) }
     }
     # khóa registry: New-Item -Value đặt giá trị mặc định (cách viết chạy được cả PowerShell 2.0)
     if ($lienKet) {
@@ -188,8 +249,14 @@ function Cai($dich, $desktop, $lienKet, $tienDo) {
     if ($tienDo) { & $tienDo 94 'Tự kiểm tra phần mềm trên máy này…' }
     $kq = Join-Path $env:TEMP 'pabt_tu_kiem.txt'
     Remove-Item $kq -ErrorAction SilentlyContinue
-    Start-Process $exe -ArgumentList 'tu-kiem', "`"$kq`"" -Wait
     $tk = 'KET QUA: không chạy được PABT.exe'
+    try {                                       # chờ tối đa 3 phút: exe treo (thiếu DLL...) không làm bộ cài đứng im
+        $pr = Start-Process $exe -ArgumentList 'tu-kiem', "`"$kq`"" -PassThru
+        if (-not $pr.WaitForExit(180000)) {
+            try { $pr.Kill() } catch { }
+            $tk = 'KET QUA: PABT.exe không trả lời sau 3 phút (tự kiểm tra bị dừng)'
+        }
+    } catch { $tk = "KET QUA: không chạy được PABT.exe ($_)" }
     if (Test-Path $kq) { $tk = [System.IO.File]::ReadAllText($kq, [System.Text.Encoding]::UTF8) }
     Ghi $tk
     return $tk
@@ -290,9 +357,11 @@ $bCai.Add_Click({
         & $tienDo 8 'Đang cài PABT…'
         $tk = Cai $oThu.Text $cDesk.Checked $cLk.Checked $tienDo
         & $tienDo 100 ''
+        $them = ''
+        if ($script:LOI_TAT.Count -gt 0) { $them = " Chưa tạo được lối tắt ($($script:LOI_TAT -join ', ')): mở PABT.exe trong thư mục cài." }
         if ($tk -match 'KET QUA: DAT') {
             $tt.ForeColor = [System.Drawing.Color]::DarkGreen
-            $tt.Text = "Đã cài xong PABT $PHIEN_BAN và tự kiểm tra đạt (giao diện, PDF, bộ đơn giá, mẫu in, bảng giá đất)."
+            $tt.Text = "Đã cài xong PABT $PHIEN_BAN và tự kiểm tra đạt (giao diện, PDF, bộ đơn giá, mẫu in, bảng giá đất).$them"
         } else {
             $tt.ForeColor = [System.Drawing.Color]::DarkRed
             $tt.Text = "Đã cài nhưng tự kiểm tra chưa đạt - xem nhật ký: $nk"

@@ -252,5 +252,107 @@ class TestKhongTruyVanTungHo(unittest.TestCase):
         self.assertEqual(dem[20], dem[80], 'số truy vấn tăng theo số hộ (truy vấn N+1)')
 
 
+class TestRaSoatTaiLon(unittest.TestCase):
+    """Rà soát tốc độ / đúng sai: kết quả dùng chung, giao dịch lồng, đọc hết dòng Excel, không ghi vào bộ đơn giá."""
+
+    def setUp(self):
+        self.td = tempfile.TemporaryDirectory()
+        self.p = _du_an(Path(self.td.name), 15)
+        self.con = csdl.mo(self.p)
+
+    def tearDown(self):
+        self.con.close()
+        self.td.cleanup()
+
+    def test_ket_qua_dung_chung_va_tinh_lai_mot_ho(self):
+        a = nghiep_vu.ket_qua_ho(self.con)
+        self.assertIs(nghiep_vu.ket_qua_ho(self.con), a)                  # chưa đổi gì: không tính lại
+        ma = list(a)[3]
+        bo = BoSoan(self.con, ma)
+        bo.pa.dat[0].ty_le = nghiep_vu.D('0.5')
+        bo.luu()
+        b = nghiep_vu.ket_qua_ho(self.con)
+        self.assertIsNot(b, a)
+        moi = {m: nghiep_vu.tinh_pa(pa, nghiep_vu.BoiCanh._doc(self.con))
+               for m, pa in nghiep_vu.doc_tat_ca_phuong_an(self.con).items()}
+        self.assertEqual({m: (k.tong, dict(k.muc)) for m, (k, _) in b.items()}, {m: (k.tong, dict(k.muc)) for m, k in moi.items()})
+        self.assertNotEqual(b[ma][0].tong, a[ma][0].tong)
+        self.assertTrue(all(b[m] is a[m] for m in a if m != ma))         # hộ khác: dùng lại, không tính lại
+        with self.con:                                                    # ghi khác (thửa): tính lại cả dự án
+            self.con.execute("UPDATE thua SET dt_thu_hoi = '1' WHERE ma_ho = ?", (list(a)[0],))
+        self.assertIsNot(nghiep_vu.ket_qua_ho(self.con), b)
+
+    def test_giao_dich_long_mot_lan_ghi(self):
+        from pabt import theo_doi
+        ma = [r[0] for r in self.con.execute('SELECT ma_ho FROM ho')]
+        qd = theo_doi.luu_qd(self.con, None, '9/QĐ-UBND', '01/09/2026')
+        dem = []
+        self.con.set_trace_callback(lambda s: dem.append(s) if s.strip().upper() == 'COMMIT' else None)
+        try:
+            theo_doi.them_ho_theo_pa(self.con, qd, ma)
+        finally:
+            self.con.set_trace_callback(None)
+        self.assertEqual(len(dem), 1)                                     # trước đây mỗi hộ một COMMIT
+        self.assertEqual(self.con.execute('SELECT COUNT(*) FROM qd_ho WHERE qd_id = ?', (qd,)).fetchone()[0], len(ma))
+        # lỗi giữa chừng: hủy cả lô (không để lại hộ ghi dở)
+        with self.assertRaises(KeyError):
+            with csdl.giao_dich(self.con):
+                theo_doi.bo_cac_ho_khoi_qd(self.con, qd, ma[:5])
+                theo_doi.ghi_qd_ho(self.con, qd, ma[6], {'khong_co': 1})
+        self.assertEqual(self.con.execute('SELECT COUNT(*) FROM qd_ho WHERE qd_id = ?', (qd,)).fetchone()[0], len(ma))
+
+    def test_doc_het_dong_excel(self):
+        from pabt import nhap_chi_tiet
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        for r in range(1, 900):
+            ws.cell(r, 1, f'dòng {r}' if r % 7 else None)
+        ws.cell(1000, 1, 'TỔNG CỘNG')                                    # sau dòng 600 (trước đây bị cắt), cách 100 dòng trống
+        ws.cell(1001 + nhap_chi_tiet.TRONG_LIEN_TIEP + 5, 1, 'rác sau khoảng trống dài')
+        hang = nhap_chi_tiet.doc_hang(ws)
+        self.assertEqual(len(hang), 1000)
+        self.assertEqual(hang[-1][0], 'TỔNG CỘNG')
+
+    def test_khong_ghi_vao_bo_don_gia(self):
+        import hashlib
+        import shutil
+        from pabt import don_gia
+        goc = Path(self.td.name) / 'bo.sqlite'
+        shutil.copy(don_gia.file_goc(), goc)
+        truoc = hashlib.sha256(goc.read_bytes()).hexdigest()
+        csdl.chep_danh_muc(self.con, goc, don_vi=False, bang=don_gia.BANG_BO)
+        csdl.mo(goc).close()
+        self.assertEqual(hashlib.sha256(goc.read_bytes()).hexdigest(), truoc)
+        self.assertTrue(self.con.execute("SELECT 1 FROM sqlite_master WHERE name = 'ix_ctdat_thua'").fetchone())
+
+
+class TestSuaDot(unittest.TestCase):
+    """Sửa / xóa đợt khi đang đứng ở dòng "(Chưa xếp đợt)": trước đây bấm không có phản hồi."""
+
+    def test_sua_dot_khi_dung_dong_chua_xep(self):
+        import os
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication, QMessageBox
+        app = QApplication.instance() or QApplication([])  # noqa: F841
+        from pabt import man_hinh_quan_ly as M, quan_ly
+        td = tempfile.TemporaryDirectory()
+        self.addCleanup(td.cleanup)
+        con = csdl.mo(_du_an(Path(td.name), 4))
+        self.addCleanup(con.close)
+        d = M.HopDotTrinh(con, None)
+        thong_bao = []
+        with mock.patch.object(QMessageBox, 'information', side_effect=lambda *a, **k: thong_bao.append(a[2])):
+            i = d.them_dot(dict(ten='Đợt 1', ngay_trinh='10/10/2026', so_to_trinh='113', ghi_chu=''))
+            d.bang_dot.selectRow(1)                                       # dòng "(Chưa xếp đợt)"
+            self.assertIsNone(d.dot_chon())
+            self.assertEqual(d.sua_dot(dict(ten='Đợt 1', ngay_trinh='10/10/2026', so_to_trinh='114', ghi_chu='')), i)
+            self.assertEqual(quan_ly.lay_dot(con, i).so_to_trinh, '114')  # chỉ một đợt: lấy đợt đó
+            j = d.them_dot(dict(ten='Đợt 2', ngay_trinh='', so_to_trinh='', ghi_chu=''))
+            d.bang_dot.selectRow(2)
+            self.assertIsNone(d.sua_dot(dict(ten='X', ngay_trinh='', so_to_trinh='', ghi_chu='')))
+            self.assertTrue(thong_bao and 'Chọn một đợt' in thong_bao[-1])         # nhiều đợt: báo chọn đợt
+            self.assertEqual(quan_ly.lay_dot(con, j).ten, 'Đợt 2')
+
+
 if __name__ == '__main__':
     unittest.main()

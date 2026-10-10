@@ -14,8 +14,8 @@ from datetime import datetime
 
 from . import csdl
 from .nghiep_vu import (MA_ON_DINH, MA_TDC, MA_THEO_NK, NGUON_DM, NGUON_TAY, NGUON_TD, BoiCanh, DongDat, DongKhoan, PhuongAn,
-                        de_xuat_dao_tao_pa, doc_phuong_an, goi_y_ho_tro, goi_y_khoan, kiem_tra_pa,
-                        so_vi_tri, thanh_tien_dong, thanh_tien_dong_dat, tinh_pa)
+                        de_xuat_dao_tao_pa, doc_phuong_an, giu_ket_qua_ho, goi_y_ho_tro, goi_y_khoan, ket_qua_ho_san,
+                        kiem_tra_pa, so_vi_tri, thanh_tien_dong, thanh_tien_dong_dat, tinh_pa)
 from .tien import D, KHONG, chuoi, so_luong_vn, so_vn, vn
 
 
@@ -231,15 +231,25 @@ def tra_gia_dat(con, bc: BoiCanh, loai_dat: str, vi_tri: str):
     ld, vt = (loai_dat or '').upper(), so_vi_tri(vi_tri)
     if not ld or not vt:
         return None, None, ''
-    for r in con.execute('SELECT * FROM gia_dat WHERE upper(loai_dat) = ? ORDER BY id', (ld,)):
+    # bảng GIA_DAT theo loại đất: dựng một lần trên bối cảnh (bối cảnh đọc lại khi dữ liệu đổi; lưu phương án giữ bối cảnh
+    # nhưng không đổi gia_dat) - tự lập phương án 5.000 thửa trước đây quét cả bảng gia_dat cho từng thửa
+    bang = bc.__dict__.get('_gia_dat_theo_loai')
+    if bang is None:
+        bang = {}
+        for r in con.execute('SELECT * FROM gia_dat ORDER BY id'):
+            bang.setdefault((r['loai_dat'] or '').upper(), []).append(r)
+        bc.__dict__['_gia_dat_theo_loai'] = bang
+    for r in bang.get(ld, ()):
         if so_vi_tri(r['vi_tri']) == vt and r['gia'] not in (None, '') and (
                 not r['xa_phuong'] or bo_dau(bc.ten_dia_ban) in bo_dau(r['xa_phuong'])):
             return D(r['gia']), D(r['he_so_k']) if r['he_so_k'] not in (None, '') else D(1), 'bảng giá đất'
     dem = {}
-    for r in con.execute('SELECT gia_bang_gia, he_so_k, vi_tri FROM ct_dat WHERE upper(loai_dat) = ?', (ld,)):
+    # giá đã dùng: gộp trong SQL (mỗi bộ giá / hệ số / vị trí một dòng) thay vì đổi số từng dòng ct_dat bằng Python
+    for r in con.execute('''SELECT gia_bang_gia, he_so_k, vi_tri, COUNT(*) AS n FROM ct_dat WHERE upper(loai_dat) = ?
+                            GROUP BY gia_bang_gia, he_so_k, vi_tri''', (ld,)):
         if so_vi_tri(r['vi_tri']) == vt and D(r['gia_bang_gia']) > 0:
             k = (D(r['gia_bang_gia']), D(r['he_so_k'] or 1))
-            dem[k] = dem.get(k, 0) + 1
+            dem[k] = dem.get(k, 0) + r['n']
     if dem:
         (g, k), _ = max(dem.items(), key=lambda t: t[1])
         return g, k, 'giá đã dùng trong dự án'
@@ -719,7 +729,8 @@ class BoSoan:
         if loi:
             raise LoiNhap('Chưa lưu được:\n' + '\n'.join('- ' + x for x in loi))
         con, pa = self.con, self.pa
-        cu = tinh_pa(doc_phuong_an(con, self.ma_ho), self.bc).tong
+        san = ket_qua_ho_san(con)
+        cu = san[self.ma_ho][0].tong if san and self.ma_ho in san else tinh_pa(doc_phuong_an(con, self.ma_ho), self.bc).tong
         moi = self.ket_qua
         co_dong = any(pa.dat) or any(pa.khoan[m] for m in (2, 3, 4))
         luc = datetime.now()
@@ -752,6 +763,8 @@ class BoSoan:
                              f'Hộ {self.ma_ho} {pa.ho.ho_ten}: tổng {vn(cu)} -> {vn(moi.tong)} đ; '
                              f'{len(pa.dat)} dòng đất, {sum(len(pa.khoan[m]) for m in (2, 3, 4))} dòng khoản')
         csdl.giu_nho(con, ('BoiCanh', type(self.bc)), truoc)      # chỉ ghi ho / ct_dat / ct_khoan / nhật ký: bối cảnh không đổi
+        if type(self.bc) is BoiCanh:
+            giu_ket_qua_ho(con, [self.ma_ho], truoc)            # kết quả cả dự án: chỉ tính lại hộ vừa lưu
         self.mo(self.ma_ho)
         return f'Đã lưu hộ {self.ma_ho} – {pa.ho.ho_ten}: tổng {vn(moi.tong)} đồng.'
 
@@ -787,6 +800,63 @@ def luu_du_an(con, gia_tri: dict) -> None:
                     [gt_ghi[k] for k, _ in TRUONG_DU_AN])
         doi = [f'{ten}: "{cu[k]}" -> "{gt[k]}"' for k, ten in TRUONG_DU_AN if cu[k] != (gt[k] if k != 'nam' else (str(nam) if nam else ''))]
         csdl.ghi_nhat_ky(con, 'Sửa thông tin dự án', '; '.join(doi))
+
+
+# ---------------------------------------------------------------- kinh phí bảo đảm tổ chức thực hiện bồi thường
+# QĐ 08/2025/QĐ-UBND ngày 10/02/2025 của UBND tỉnh Đồng Nai (hiệu lực 21/02/2025): dự án, tiểu dự án hạ tầng theo tuyến không quá
+# 3,5%; dự án còn lại (cụm, vùng, khu...) không quá 2,5% tổng kinh phí bồi thường, hỗ trợ, tái định cư. Lưu ở cai_dat của dự án:
+# LOAI_KINH_PHI ('' = tự nhận theo tên dự án / 'tuyen' / 'khac'), TL_KINH_PHI ('' = mức tối đa của loại).
+CAN_CU_KINH_PHI = 'Quyết định số 08/2025/QĐ-UBND ngày 10/02/2025 của UBND tỉnh Đồng Nai'
+LOAI_KINH_PHI = {'tuyen': ('Hạ tầng theo tuyến (đường, kênh, đường dây, đường ống…)', D('3.5')),
+                 'khac': ('Dự án khác (cụm, vùng, khu…)', D('2.5'))}
+_RE_CUM_VUNG = re.compile(r'^(?:\S+\s+){0,2}?(khu|cum|vung)\b')        # "Xây dựng khu…", "Dự án cụm…"
+_RE_TUYEN = re.compile(r'\b(duong|tuyen|kenh|muong|cao toc|quoc lo|tinh lo|huong lo|duong day|duong ong|truc)\b')
+
+
+def loai_kinh_phi_tu_ten(ten: str) -> str:
+    """'tuyen' / 'khac' theo tên dự án: "Khu / Cụm / Vùng …" trong 3 từ đầu -> khác (kể cả "Khu tái định cư đường …");
+    có đường, tuyến, kênh, mương, cao tốc, quốc lộ, đường dây, đường ống… -> theo tuyến; còn lại -> khác."""
+    t = bo_dau(ten or '')
+    if _RE_CUM_VUNG.search(t):
+        return 'khac'
+    return 'tuyen' if _RE_TUYEN.search(t) else 'khac'
+
+
+def kinh_phi_to_chuc(con) -> tuple:
+    """(loại, tỷ lệ % Decimal, tự nhận theo tên?) của kinh phí tổ chức thực hiện bồi thường cho dự án đang mở."""
+    loai = csdl.doc_cai_dat(con, 'LOAI_KINH_PHI', '')
+    tu_nhan = loai not in LOAI_KINH_PHI
+    if tu_nhan:
+        da = con.execute('SELECT ten, ten_day_du FROM du_an WHERE id = 1').fetchone()
+        loai = loai_kinh_phi_tu_ten(' '.join(str(x or '') for x in da) if da else '')
+    tl = csdl.doc_cai_dat(con, 'TL_KINH_PHI', '')
+    try:
+        tl = D(tl) if tl else LOAI_KINH_PHI[loai][1]
+    except Exception:
+        tl = LOAI_KINH_PHI[loai][1]
+    return loai, tl, tu_nhan
+
+
+def luu_kinh_phi_to_chuc(con, loai: str, ty_le: str = '') -> None:
+    """loai '' (tự nhận theo tên) / 'tuyen' / 'khac'; ty_le '' = mức tối đa của loại, không được vượt mức tối đa."""
+    if loai and loai not in LOAI_KINH_PHI:
+        raise LoiNhap('Loại dự án (kinh phí tổ chức thực hiện) không hợp lệ.')
+    tl = ''
+    if str(ty_le or '').strip():
+        so = doc_so(ty_le, 'Tỷ lệ kinh phí tổ chức thực hiện')
+        that = loai or loai_kinh_phi_tu_ten(' '.join(doc_du_an(con)[k] for k in ('ten', 'ten_day_du')))
+        toi_da = LOAI_KINH_PHI[that][1]
+        if not 0 < so <= toi_da:
+            raise LoiNhap(f'Tỷ lệ kinh phí tổ chức thực hiện: từ trên 0 đến {so_vn(toi_da)}% '
+                          f'({LOAI_KINH_PHI[that][0]} - {CAN_CU_KINH_PHI}).')
+        tl = chuoi(so)
+    cu = (csdl.doc_cai_dat(con, 'LOAI_KINH_PHI', ''), csdl.doc_cai_dat(con, 'TL_KINH_PHI', ''))
+    if cu == (loai, tl):
+        return
+    with con:
+        csdl.ghi_cai_dat(con, 'LOAI_KINH_PHI', loai)
+        csdl.ghi_cai_dat(con, 'TL_KINH_PHI', tl)
+        csdl.ghi_nhat_ky(con, 'Kinh phí tổ chức thực hiện', f'loại "{loai or "tự nhận"}", tỷ lệ "{tl or "mức tối đa"}"')
 
 
 def ra_soat_gia(con, dm: DanhMuc | None = None) -> list:

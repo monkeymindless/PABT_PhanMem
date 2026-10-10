@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS ct_dat (
     cong_thuc    TEXT NOT NULL DEFAULT ''              -- công thức đã gõ ra diện tích
 );
 CREATE INDEX IF NOT EXISTS ix_ctdat_ho ON ct_dat(ma_ho);
+CREATE INDEX IF NOT EXISTS ix_ctdat_thua ON ct_dat(ma_thua);
 
 -- Mục 2 (nhà, công trình), mục 3 (cây trồng), mục 4 (hỗ trợ): cùng cấu trúc
 CREATE TABLE IF NOT EXISTS ct_khoan (

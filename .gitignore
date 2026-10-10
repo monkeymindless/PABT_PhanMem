@@ -22,7 +22,13 @@ du_lieu/
 *.doc
 *.pdf
 
+# hồ sơ đợt trình xuất ra (<tên file dự án> - Hồ sơ PA\: phương án chi tiết, bảng tổng hợp có họ tên thật)
+* - Hồ sơ PA/
+# mẫu in cũ được giữ lại khi thay mẫu (lệnh "Mẫu in")
+mau_in/cu/
+
 # Kết quả kiểm tra, cấu hình máy
 ket_qua_kiem_tra/
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 loi.log

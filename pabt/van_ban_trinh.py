@@ -362,10 +362,11 @@ def lap_van_ban(con, loai: str, ds_ma_ho: list, thu_muc, dot=None) -> Path:
 
 def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True, bang_tong_hop: bool = True,
                   to_trinh: bool = False, pa_tong: bool = False, pdf: bool = False, in_may: bool = False, so_ban: int = 1,
-                  chia_thu_muc: bool = True, bao_tien_do=None, bao_excel=None) -> dict:
+                  chia_thu_muc: bool = True, bao_tien_do=None, bao_excel=None, mau_ct=None, mau_bth=None) -> dict:
     """Bộ hồ sơ trình: PA CHI TIET\\ (phương án chi tiết từng hộ) + PA TONG\\ (bảng tổng hợp có số / ngày phương án tổng, tờ
     trình / văn bản trình, phương án tổng). pdf: kèm PDF (Excel / Word xuất); in_may: in ra máy in mặc định. Mỗi mẫu chọn riêng
-    hoặc tất cả. Trả dict(excel, word, pdf, loi, thu_muc_ct, thu_muc_tong). bao_tien_do(i, n) / bao_excel(i, n): trả True = dừng."""
+    hoặc tất cả. Trả dict(excel, word, pdf, loi, thu_muc_ct, thu_muc_tong). bao_tien_do(i, n) / bao_excel(i, n): trả True = dừng.
+    mau_ct / mau_bth: file mẫu riêng (in_an.ds_mau), None = mẫu chính."""
     from . import in_an
     thu_muc = Path(thu_muc)
     tm_ct = thu_muc / THU_MUC_CT if chia_thu_muc else thu_muc
@@ -380,7 +381,7 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
         return bool(bao_tien_do and bao_tien_do(da, so_viec))
     if chi_tiet:
         tm_ct.mkdir(parents=True, exist_ok=True)
-        mau = in_an.thu_muc_mau()
+        mau = mau_ct or in_an.thu_muc_mau()
         bc = in_an.BoiCanh.tu(con)
         for i, ma in enumerate(ds_ma_ho, start=1):
             kq['excel'].append(in_an.lap_chi_tiet(con, ma, tm_ct / f'{in_an.ten_file_ho(con, ma)}.xlsx', mau, bc))
@@ -390,9 +391,10 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
     if bang_tong_hop or to_trinh or pa_tong:
         tm_tong.mkdir(parents=True, exist_ok=True)
     if bang_tong_hop:
-        kq['excel'].append(in_an.lap_bang_tong_hop(con, tm_tong / 'BANG_TONG_HOP.xlsx', ds_ma_ho,
+        kq['excel'].append(in_an.lap_bang_tong_hop(con, tm_tong / 'BANG_TONG_HOP.xlsx', ds_ma_ho, mau_bth,
                                                    so_pa_tong=getattr(dot, 'so_pa_tong', '') or '',
-                                                   ngay_pa_tong=getattr(dot, 'ngay_pa_tong', '') or ''))
+                                                   ngay_pa_tong=getattr(dot, 'ngay_pa_tong', '') or '',
+                                                   bao_tien_do=(lambda i, n: bao_tien_do(da, so_viec)) if bao_tien_do else None))
         bao()
     for loai, chon in (('to_trinh', to_trinh), ('pa_tong', pa_tong)):
         if chon:

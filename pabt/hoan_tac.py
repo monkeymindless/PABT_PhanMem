@@ -113,7 +113,9 @@ class HoanTac:
         return b
 
     def _xoa(self, b: Buoc):
+        truoc = csdl.trang_thai_nho(self.con)          # chỉ xóa bảng tạm: giữ bộ nhớ đệm số liệu dự án
         self._chay_rieng(lambda: self.con.execute('DELETE FROM temp._ht_nhat_ky WHERE seq BETWEEN ? AND ?', (b.tu, b.den)))
+        csdl.giu_tat_ca(self.con, truoc)
 
     def _bo_lam_lai(self):
         for b in self.lam_lai_ds:

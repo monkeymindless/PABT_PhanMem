@@ -5,6 +5,7 @@ kiểm tra mã trùng / dữ liệu mồ côi, rồi ghi tất cả trong một 
 """
 from __future__ import annotations
 import re
+from collections import Counter
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -143,7 +144,7 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
                        phap_ly=_txt(r[c['pl']]), tranh_chap=_txt(r[c['tc']]), tai_dinh_cu=_txt(r[c['tdc']]),
                        ghi_chu=_txt(r[c['gc']]), trang_thai=_txt(r[c['tt']]) or 'Chưa lập phương án'))
     ma_ho = [h['ma_ho'] for h in ho]
-    trung = sorted({m for m in ma_ho if ma_ho.count(m) > 1})
+    trung = sorted(m for m, n in Counter(ma_ho).items() if n > 1)
     if trung:
         bc.loi.append('Mã hộ bị trùng trong DB_HO: ' + ', '.join(map(str, trung)) + ' (chạy ĐÁNH LẠI MÃ HỘ trên file Excel rồi nhập lại).')
 
@@ -288,7 +289,18 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
     # tổng từng hộ theo THEO_DOI của Excel (giá trị Excel tính lúc lưu file) để đối chiếu
     if 'THEO_DOI' in wb.sheetnames:
         hd = None
-        for i, r in enumerate(wb['THEO_DOI'].iter_rows(min_row=1, max_row=400, values_only=True), start=1):
+        trong = 0
+        # đọc hết sheet (trước đây chỉ 400 dòng đầu: dự án > ~395 hộ thì các hộ sau không được đối chiếu với Excel)
+        for i, r in enumerate(wb['THEO_DOI'].iter_rows(min_row=1, values_only=True), start=1):
+            if hd is None and i > 400:
+                break                                   # không có dòng tiêu đề (Mã hộ / Tổng cộng) trong 400 dòng đầu
+            if hd is not None:
+                if any(v is not None and str(v).strip() for v in r):
+                    trong = 0
+                else:
+                    trong += 1
+                    if trong >= 200:                    # hết dữ liệu (sheet định dạng sẵn tới cuối)
+                        break
             if hd is None:
                 ch = [chuan_hoa(x) for x in r]
                 if 'ma ho' in ch and 'tong cong' in ch:

@@ -122,6 +122,18 @@ def giu_nho(con, khoa, truoc) -> None:
         bo[khoa] = (_trang_thai(con), cu[1])
 
 
+def giu_tat_ca(con, truoc) -> None:
+    """Giữ mọi giá trị đã nhớ sau một lần ghi KHÔNG đụng dữ liệu dự án (bảng tạm temp.* của hoàn tác): total_changes đếm cả
+    bảng tạm - không giữ thì bộ nhớ đệm (bối cảnh, kết quả 3.000 hộ) bị bỏ mỗi lần hoàn tác dọn bước cũ."""
+    bo = getattr(con, 'bo_nho', None)
+    if bo is None or truoc is None or con.in_transaction:
+        return
+    moi = _trang_thai(con)
+    for k, (tt, gt) in list(bo.items()):
+        if tt == truoc:
+            bo[k] = (moi, gt)
+
+
 def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connection:
     """Mở file dự án (tự nâng cấp file cũ). chi_doc: mở chỉ xem, mọi lệnh ghi đều bị SQLite từ chối."""
     p = Path(duong_dan)
@@ -164,6 +176,16 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
         con.close()
         raise RuntimeError(f'File dự án được tạo bằng phiên bản phần mềm mới hơn (CSDL v{ver}); hãy cập nhật phần mềm.')
     _dam_bao_khoa(con)
+    # chỉ mục thêm không đổi phiên bản CSDL (máy chưa cập nhật vẫn mở được file): ct_dat.ma_thua là khóa ngoại tới thua - xóa /
+    # đổi mã thửa (thay phương án khi nhập chi tiết, xóa hộ) không phải quét cả bảng ct_dat cho từng thửa
+    # (chỉ file có phương án: không ghi vào bộ đơn giá / file chỉ có danh mục - csdl.mo cũng mở các file đó)
+    if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'ix_ctdat_thua'").fetchone() \
+            and con.execute('SELECT 1 FROM ct_dat LIMIT 1').fetchone():
+        try:
+            with con:
+                con.execute('CREATE INDEX IF NOT EXISTS ix_ctdat_thua ON ct_dat(ma_thua)')
+        except sqlite3.OperationalError:                # file chỉ đọc / đang bị khóa: chỉ chậm hơn khi xóa thửa
+            pass
     return con
 
 
@@ -179,6 +201,31 @@ def _dam_bao_khoa(con) -> None:
                 con.execute(f'''CREATE TRIGGER IF NOT EXISTS khoa_{b}_{viec} BEFORE {viec} ON {b}
                                 WHEN (SELECT mo FROM khoa_dm WHERE id = 1) = 0
                                 BEGIN SELECT RAISE(ABORT, '{THONG_BAO_KHOA}'); END''')
+
+
+_SAU_GD = {}              # id(kết nối) -> số tầng giao_dich đang mở
+
+
+@contextmanager
+def giao_dich(con):
+    """Như `with con:` nhưng lồng được: chỉ tầng ngoài cùng COMMIT / ROLLBACK. `with con:` lồng trong `with con:` của sqlite3
+    COMMIT ngay khi tầng trong kết thúc - vòng lặp gọi hàm ghi từng hộ thành mỗi hộ một lần ghi đĩa (chậm trên HDD / ổ mạng,
+    lỗi giữa chừng để lại dữ liệu ghi dở). Hàm ghi dùng chung (ghi_qd_ho, ghi_ban_giao...) dùng giao_dich; vòng lặp bọc ngoài
+    cũng dùng giao_dich -> cả lô một giao dịch."""
+    k = id(con)
+    sau = _SAU_GD.get(k, 0)
+    _SAU_GD[k] = sau + 1
+    try:
+        if sau:
+            yield con
+        else:
+            with con:
+                yield con
+    finally:
+        if sau:
+            _SAU_GD[k] = sau
+        else:
+            _SAU_GD.pop(k, None)
 
 
 @contextmanager

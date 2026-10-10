@@ -30,7 +30,15 @@ XANH, DO, VANG = QColor('#E2EFDA'), QColor('#F8CBAD'), QColor('#FFF2CC')
 CHUA_MO = ('Chưa mở dự án. Bấm <b>"Dự án"</b> → <b>"Dự án mới…"</b> để nhập thông tin dự án, danh sách hộ, '
            'thửa (thô) và bảng giá đất: phần mềm tự lập phương án và xuất 2 bảng in. Hoặc "Mở dự án…" / "Nhập file Excel…".')
 # menu trái: nhóm đóng sẵn lần đầu mở phần mềm (sau đó nhớ theo người dùng) - vừa màn hình 1366x768 không phải cuộn
-NHOM_DONG_MAC_DINH = ('Đơn giá, dự toán', 'Trình, theo dõi tiến độ', 'In ấn, báo cáo')
+NHOM_DONG_MAC_DINH = ('Đơn giá, dự toán', 'Trình duyệt, tiến độ', 'In, báo cáo')
+# chữ ngắn trên menu (khóa = tên lệnh đầy đủ trong self.lenh, hiện ở gợi ý khi rê chuột)
+NHAN_MENU = {'Lập phương án hộ…': 'Lập phương án', 'Thêm hộ…': 'Thêm hộ', 'Xóa hộ…': 'Xóa hộ', 'Kiểm tra lỗi…': 'Kiểm tra lỗi',
+             'Bộ đơn giá…': 'Bộ đơn giá', 'Đơn giá riêng dự án…': 'Đơn giá riêng', 'Rà soát giá…': 'Rà soát giá',
+             'Dự toán, áp giá dự thảo…': 'Dự toán', 'Quy chuẩn cây, tài sản…': 'Quy chuẩn cây',
+             'Thông tin tổng quát hộ': 'Tổng quát hộ', 'Tổng hợp tiền theo phương án': 'Tổng hợp tiền',
+             'Quyết định phê duyệt': 'Quyết định', 'Đợt trình…': 'Đợt trình', 'Trạng thái hộ…': 'Trạng thái hộ',
+             'In / Xuất…': 'In / Xuất', 'Báo cáo tổng hợp…': 'Báo cáo tổng hợp', 'Cập nhật mẫu in…': 'Mẫu in',
+             'Xuất báo cáo đối chiếu…': 'Đối chiếu với file Excel…'}
 
 
 class LocHo(QSortFilterProxyModel):
@@ -287,17 +295,22 @@ class CuaSoChinh(QMainWindow):
         from .giao_dien import bang_to_chuc, do_bong, thanh_lenh
         from .giao_dien import menu_trai as tao_menu_trai
         L = self.lenh
+        # 0.9.20 (người dùng yêu cầu "gọn chữ"): chữ trên menu ngắn (NHAN_MENU, tên đầy đủ ở gợi ý); khóa self.lenh giữ tên cũ
+        for k, ngan in NHAN_MENU.items():
+            L[k].setText(ngan)
+            L[k].setToolTip(k.rstrip('…'))
         nhom = [
             ('Dự án', [L['Dự án mới…'], L['Mở dự án…'], L['Lưu dự án thành…'], L['Nhập file Excel…'],
-                       L['Nhập phương án chi tiết…'], L['Thông tin dự án…'], L['Dự án trên máy chủ…']]),
-            ('Hồ sơ và phương án', [L['Lập phương án hộ…'], L['Thêm hộ…'], L['Xóa hộ…'], L['Kiểm tra lỗi…']]),
+                       L['Nhập phương án chi tiết…'], L['Xuất báo cáo đối chiếu…'], L['Thông tin dự án…'],
+                       L['Dự án trên máy chủ…']]),
+            ('Hồ sơ, phương án', [L['Lập phương án hộ…'], L['Thêm hộ…'], L['Xóa hộ…'], L['Kiểm tra lỗi…']]),
             ('Đơn giá, dự toán', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Rà soát giá…'],
                                   L['Dự toán, áp giá dự thảo…'], L['Quy chuẩn cây, tài sản…']]),
-            ('Bảng tổng hợp', [L['Danh sách hộ'], L['Thông tin tổng quát hộ'], L['Tổng hợp tiền theo phương án']]),
+            ('Tổng hợp', [L['Danh sách hộ'], L['Thông tin tổng quát hộ'], L['Tổng hợp tiền theo phương án']]),
             # mọi việc về quyết định ở MỘT chỗ: trang "Quyết định phê duyệt" (Thêm / Nhập từ file / Sửa / Xóa); trước 0.9.18 trang
             # nằm ở nhóm Bảng tổng hợp và nhóm này có thêm "Nhập quyết định…" - cùng hộp thoại với nút "Nhập từ file…" của trang
-            ('Trình, theo dõi tiến độ', [L['Theo dõi tiến độ'], L['Đợt trình…'], L['Quyết định phê duyệt'], L['Trạng thái hộ…']]),
-            ('In ấn, báo cáo', [L['In / Xuất…'], L['Báo cáo tổng hợp…'], L['Xuất báo cáo đối chiếu…'], L['Cập nhật mẫu in…']]),
+            ('Trình duyệt, tiến độ', [L['Theo dõi tiến độ'], L['Đợt trình…'], L['Quyết định phê duyệt'], L['Trạng thái hộ…']]),
+            ('In, báo cáo', [L['In / Xuất…'], L['Báo cáo tổng hợp…'], L['Cập nhật mẫu in…']]),
         ]
         # hoàn tác / làm lại thao tác đã ghi vào file dự án (Ctrl+Z / Ctrl+Y ở mọi cửa sổ): trên băng tiêu đề, cạnh tên phần mềm
         from .giao_dien import XU_LY_HOAN_TAC
@@ -485,7 +498,8 @@ class CuaSoChinh(QMainWindow):
                 else:
                     if self.file is not None and Path(dich).resolve() == self.file.resolve():
                         self.dong_du_an()
-                    bc = nhap_chi_tiet.ghi_file(kq, dich, cach)
+                    from .giao_dien import chay_nen         # file khác (kết nối riêng): ghi ở luồng nền, cửa sổ không treo
+                    bc = chay_nen(self, lambda: nhap_chi_tiet.ghi_file(kq, dich, cach), f'Đang ghi vào {Path(dich).name}…')
         except Exception as e:
             QMessageBox.critical(self, TEN_UD, chu_loi('Không nhập được', e))
             return None
@@ -549,7 +563,9 @@ class CuaSoChinh(QMainWindow):
             from .man_hinh import lam_san                 # lúc rảnh: dựng sẵn danh sách chọn của cửa sổ lập phương án
             dm = self.dm
             QTimer.singleShot(400, lambda: dm is self.dm and lam_san(dm))
-            may_chu.ghi_mo_du_an(self.file)            # đăng nhập máy chủ: máy khác đăng nhập cùng tài khoản sẽ mở tiếp dự án này
+            if may_chu.PHIEN is not None:                   # đăng nhập máy chủ: máy khác đăng nhập cùng tài khoản sẽ mở tiếp dự án
+                import threading                            # luồng riêng: máy chủ chậm / mất mạng không làm chậm việc mở dự án
+                threading.Thread(target=may_chu.ghi_mo_du_an, args=(self.file,), daemon=True).start()
         except Exception as e:
             self.dong_du_an()
             QMessageBox.critical(self, TEN_UD, chu_loi('Không mở được dự án', e))
@@ -719,7 +735,7 @@ class CuaSoChinh(QMainWindow):
             # kèm bước tiếp theo thay vì chỉ báo con số
             dat_trang_thai(self.lb_ket_qua, 'canh_bao',
                            f'⚠ Đối chiếu file Excel: LỆCH {self.kq.so_ho_lech} hộ, {len(self.kq.dong_lech)} dòng{sua}  ·  '
-                           'xem từng dòng lệch: In ấn, báo cáo → Xuất báo cáo đối chiếu…')
+                           'xem từng dòng lệch: Dự án → Đối chiếu với file Excel…')
         self.dat_tieu_de()
 
     # ------------------------------------------------ lọc danh sách
@@ -962,7 +978,7 @@ class CuaSoChinh(QMainWindow):
             return None
         return self.mo_hinh.dong[self.loc.mapToSource(idx).row()]['ma_ho']
 
-    def mo_lap_pa(self, ma_ho=None, cho: bool = True, the: int | None = None):
+    def mo_lap_pa(self, ma_ho=None, cho: bool = True, the: int | None = None, truoc: int | None = None):
         """Mở cửa sổ hồ sơ và phương án hộ (cho=False: chỉ tạo cửa sổ, dùng khi kiểm thử; the: thẻ mở đầu, 0 = thông tin hộ)."""
         if self.con is None:
             QMessageBox.information(self, TEN_UD, 'Hãy nhập hoặc mở một dự án trước.')
@@ -983,7 +999,7 @@ class CuaSoChinh(QMainWindow):
             w.tab.setCurrentIndex(the)
         if not cho:
             return w
-        truoc = self.con.total_changes
+        truoc = self.con.total_changes if truoc is None else truoc
         w.exec()
         if self.con.total_changes != truoc:             # chỉ xem, không ghi gì: khỏi tải lại cả dự án (3.000 hộ ~1 giây)
             self.tai_lai()
@@ -1053,12 +1069,15 @@ class CuaSoChinh(QMainWindow):
                 if not ok or not ho_ten.strip():
                     return None
             from . import ho_so
+            truoc = self.con.total_changes                  # tải lại MỘT lần khi đóng cửa sổ hộ (tính cả hộ vừa thêm)
             try:
                 ma_ho = ho_so.luu_ho(self.con, None, dict(ho_ten=ho_ten), [])
             except lap_pa.LoiNhap as e:
                 QMessageBox.warning(self, TEN_UD, str(e))
                 return None
-            self.tai_lai()
+            if not cho:
+                self.tai_lai()
+            return self.mo_lap_pa(ma_ho, cho=cho, the=0, truoc=truoc)
         elif ma_ho is None:
             ma_ho = self.ho_dang_chon()
             if ma_ho is None:
@@ -1088,19 +1107,60 @@ class CuaSoChinh(QMainWindow):
             dlg.exec()
         return dlg
 
-    def cap_nhat_mau_in(self, file_excel=None):
-        """Lấy lại mẫu in từ sheet IN_CHITIET / IN_BANGTONGHOP của một file PABT Excel (khi đã sửa mẫu trong Excel)."""
+    def cap_nhat_mau_in(self, file_excel=None, ten_mau: str | None = None, loai: str | None = None, cho: bool = True):
+        """Thêm / thay mẫu in từ file Excel: file PABT Excel (sheet IN_CHITIET và / hoặc IN_BANGTONGHOP) hoặc file mẫu đã sửa
+        sẵn (một sheet, có chỗ trống {…}). ten_mau '' = thay mẫu chính, có tên = thêm mẫu riêng (chọn ở In / Xuất), None = hỏi."""
         from . import in_an
         if file_excel is None:
-            file_excel, _ = QFileDialog.getOpenFileName(self, 'Chọn file PABT Excel có mẫu in', '', 'File Excel (*.xlsm *.xlsx)')
+            file_excel, _ = QFileDialog.getOpenFileName(self, 'Chọn file mẫu in (file PABT Excel hoặc mẫu đã sửa)', '',
+                                                        'File Excel (*.xlsx *.xlsm)')
             if not file_excel:
                 return None
+        if ten_mau is None:
+            hop = QMessageBox(QMessageBox.Icon.Question, TEN_UD,
+                              f'Dùng file {Path(file_excel).name} làm:\n\n'
+                              '- Mẫu chính: thay mẫu đang in (mẫu cũ được giữ trong thư mục mau_in\\cu).\n'
+                              '- Mẫu riêng: thêm một mẫu có tên (ví dụ "Dự thảo"), chọn được khi In / Xuất; mẫu chính giữ nguyên.',
+                              parent=self)
+            b_chinh = hop.addButton('Thay mẫu chính', QMessageBox.ButtonRole.AcceptRole)
+            b_rieng = hop.addButton('Thêm mẫu riêng…', QMessageBox.ButtonRole.AcceptRole)
+            hop.addButton('Hủy', QMessageBox.ButtonRole.RejectRole)
+            hop.exec()
+            if hop.clickedButton() is b_chinh:
+                ten_mau = ''
+            elif hop.clickedButton() is b_rieng:
+                import re
+                from PySide6.QtWidgets import QInputDialog
+                goi_y = re.sub(r'^(IN_CHITIET|IN_BANGTONGHOP)[_ -]*', '', Path(file_excel).stem, flags=re.I) or 'Mẫu 2'
+                ten_mau, ok = QInputDialog.getText(self, TEN_UD, 'Tên mẫu riêng (hiện ở ô chọn mẫu khi In / Xuất):', text=goi_y)
+                if not ok or not in_an.ten_mau_hop_le(ten_mau):
+                    return None
+            else:
+                return None
         try:
-            ds = in_an.tao_mau_tu_excel(file_excel, in_an.thu_muc_mau_ghi())
+            in_an.mau_de_sua()                          # bản cài: chép mẫu đang dùng sang thư mục ghi (đổi một mẫu, giữ mẫu kia)
+            try:
+                ds = in_an.tao_mau_tu_excel(file_excel, in_an.thu_muc_mau_ghi(), loai=loai, ten_mau=ten_mau)
+            except in_an.LoiChuaRoMau:
+                if not cho:
+                    raise
+                hop = QMessageBox(QMessageBox.Icon.Question, TEN_UD, f'File {Path(file_excel).name} là mẫu in nào?', parent=self)
+                b_ct = hop.addButton('Phương án chi tiết từng hộ', QMessageBox.ButtonRole.AcceptRole)
+                b_bth = hop.addButton('Bảng tổng hợp', QMessageBox.ButtonRole.AcceptRole)
+                hop.addButton('Hủy', QMessageBox.ButtonRole.RejectRole)
+                hop.exec()
+                if hop.clickedButton() not in (b_ct, b_bth):
+                    return None
+                ds = in_an.tao_mau_tu_excel(file_excel, in_an.thu_muc_mau_ghi(),
+                                            loai=in_an.TEN_CT if hop.clickedButton() is b_ct else in_an.TEN_BTH, ten_mau=ten_mau)
         except (in_an.LoiIn, OSError, KeyError) as e:
-            QMessageBox.warning(self, TEN_UD, chu_loi('Không lấy được mẫu in', e))
-            return None
-        QMessageBox.information(self, TEN_UD, 'Đã cập nhật mẫu in:\n' + '\n'.join(str(p) for p in ds))
+            if cho:
+                QMessageBox.warning(self, TEN_UD, chu_loi('Không lấy được mẫu in', e))
+                return None
+            raise
+        if cho:
+            QMessageBox.information(self, TEN_UD, ('Đã thêm mẫu riêng "' + in_an.ten_mau_hop_le(ten_mau) + '"' if ten_mau else
+                                                   'Đã cập nhật mẫu in chính') + ':\n' + '\n'.join(str(p) for p in ds))
         return ds
 
     def du_an_moi(self, cho: bool = True):
@@ -1199,7 +1259,11 @@ class CuaSoChinh(QMainWindow):
         da = self.con.execute('SELECT ten, nguon_nhap FROM du_an WHERE id = 1').fetchone()
         from . import doi_chieu
         try:
-            doi_chieu.xuat_bao_cao(self.kq, p, da['ten'], da['nguon_nhap'], lap_pa.ra_soat_gia(self.con, self.dm))
+            with con_tro_cho():
+                rs = lap_pa.ra_soat_gia(self.con, self.dm)
+                from .giao_dien import chay_nen             # chỉ ghi Excel (số liệu đã có): chạy nền
+                chay_nen(self, lambda: doi_chieu.xuat_bao_cao(self.kq, p, da['ten'], da['nguon_nhap'], rs),
+                         'Đang ghi báo cáo đối chiếu…')
         except OSError as e:
             QMessageBox.warning(self, TEN_UD, chu_loi('Không ghi được file', e))
             return
@@ -1294,7 +1358,12 @@ class CuaSoChinh(QMainWindow):
                 return None
         try:
             with con_tro_cho():
-                p = quan_ly.xuat_bao_cao_tong_hop(self.con, file, ds, dieu_kien=self.mo_ta_loc())
+                # số liệu đọc ở đây (kết quả tính dùng chung), ghi Excel ở luồng nền: hàng nghìn hộ không "Không phản hồi"
+                so_lieu = quan_ly.du_lieu_bao_cao(self.con, ds)
+                dk = self.mo_ta_loc()
+                from .giao_dien import chay_nen
+                p = chay_nen(self, lambda: quan_ly.ghi_bao_cao_tong_hop(so_lieu, file, dieu_kien=dk),
+                             f'Đang ghi báo cáo tổng hợp {len(ds)} hộ…')
         except OSError as e:
             QMessageBox.warning(self, TEN_UD, chu_loi('Không ghi được file', e))
             return None
@@ -1503,7 +1572,11 @@ class CuaSoChinh(QMainWindow):
         if self.hoan_tac_phim in XU_LY_HOAN_TAC:
             XU_LY_HOAN_TAC.remove(self.hoan_tac_phim)
         self.dong_du_an()
-        may_chu.dang_xuat()
+        if may_chu.PHIEN is not None:                   # ghi "Đăng xuất" lên máy chủ: chờ tối đa 3 giây (mất mạng không treo lúc đóng)
+            import threading
+            t = threading.Thread(target=may_chu.dang_xuat, daemon=True)
+            t.start()
+            t.join(3)
         super().closeEvent(e)
 
 

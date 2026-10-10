@@ -11,7 +11,7 @@ from datetime import datetime
 
 from . import csdl
 from .lap_pa import DanhMuc, bo_dau, ra_soat_gia
-from .nghiep_vu import BoiCanh, doc_phuong_an, doc_tat_ca_phuong_an, kiem_tra_pa, tinh_pa
+from .nghiep_vu import BoiCanh, doc_phuong_an, doc_tat_ca_phuong_an, ket_qua_ho_san, kiem_tra_pa, tinh_pa
 from .tien import D, KHONG, so_vn, vn
 
 LOI, CANH_BAO = 'Lỗi', 'Cảnh báo'
@@ -179,10 +179,13 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
     da_sua = {r[0] for r in con.execute('SELECT ma_ho FROM ho WHERE luu_luc IS NOT NULL')}
     # đọc phương án cả dự án một lần (3 truy vấn) - trước đây doc_phuong_an mỗi hộ: 5.000 hộ = 15.000 truy vấn
     tat_ca = doc_tat_ca_phuong_an(con)
+    # kết quả tính + kiểm tra đang nhớ (dùng chung) nếu còn đúng; không thì tính ngay trên phương án vừa đọc (không đọc lại lần 2)
+    kqh = (ket_qua_ho_san(con) or {}) if type(bc) is BoiCanh else {}
+    mat_do = {}                                         # quy chuẩn mật độ theo loại cây: tra một lần
     for h in ho:
         ma, ten = h['ma_ho'], h['ho_ten']
         pa = tat_ca.get(ma) or doc_phuong_an(con, ma)
-        k = tinh_pa(pa, bc)
+        k, ds_kt = kqh[ma] if ma in kqh else (tinh_pa(pa, bc), kiem_tra_pa(pa, bc))
         if ma not in da_sua:                                # hộ chưa sửa trong phần mềm: so thành tiền với file Excel lúc nhập
             for d in k.dong:
                 if d.thanh_tien_excel is not None and d.thanh_tien_excel != d.thanh_tien:
@@ -191,7 +194,7 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
         co_thua = bool(bc.thua_cua(ma))
         if co_thua and not k.co_phuong_an:
             them(CANH_BAO, 'Phương án', 'Hộ có thửa thu hồi nhưng chưa lập phương án.', ma, ten)
-        for x in kiem_tra_pa(pa, bc):
+        for x in ds_kt:
             them(LOI if 'chưa có' in x or 'không gắn' in x else CANH_BAO, 'Phương án', x, ma, ten)
         for muc in (2, 3, 4):
             for i, d in enumerate(pa.khoan[muc], start=1):
@@ -222,7 +225,10 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
                 gom.setdefault(ten_goc(d.ten), [KHONG, d])[0] += d.so_luong
         for g, (sl, d) in gom.items():
             m = dm.lay(d.ma or d.ma_tuong_duong)
-            q = quy_chuan_mat_do(con, g, m.ten if m else d.ten, m.can_cu if m else '')
+            kq_md = (g, m.ten if m else d.ten, m.can_cu if m else '')
+            q = mat_do.get(kq_md)
+            if q is None:
+                q = mat_do[kq_md] = quy_chuan_mat_do(con, *kq_md)
             if q.mat_do and dt_nn > 0:
                 toi_da = so_cay_toi_da(q.mat_do, dt_nn)
                 if sl > toi_da:

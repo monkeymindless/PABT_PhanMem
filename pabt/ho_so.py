@@ -114,8 +114,10 @@ def luu_ho(con, ma_ho, thong_tin: dict, ds_thua: list) -> int:
 
 
 def _danh_lai(con) -> None:
-    for i, (m,) in enumerate(con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho').fetchall(), start=1):
-        con.execute('UPDATE ho SET thu_tu = ? WHERE ma_ho = ?', (i, m))
+    # chỉ ghi các hộ đổi số thứ tự (trước đây ghi lại cả 3.000 hộ - mỗi dòng còn một dòng nhật ký hoàn tác)
+    doi = [(i, m) for i, (m, tt) in enumerate(con.execute('SELECT ma_ho, thu_tu FROM ho ORDER BY thu_tu, ma_ho').fetchall(),
+                                              start=1) if tt != i]
+    con.executemany('UPDATE ho SET thu_tu = ? WHERE ma_ho = ?', doi)
 
 
 def xoa_ho(con, ma_ho: int) -> str:

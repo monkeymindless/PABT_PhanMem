@@ -144,7 +144,7 @@ def luu_qd(con, qd_id, so: str, ngay: str = '', trich_yeu: str = '', tong_tien='
     if trung is not None and trung != qd_id:
         raise LoiNhap(f'Đã có quyết định số {so}' + (f' ngày {ngay}' if ngay else '') + '.')
     gt = (so, ngay, str(trich_yeu or '').strip(), _tien(tong_tien), str(file or ''), str(ghi_chu or '').strip())
-    with con:
+    with csdl.giao_dich(con):
         if qd_id is None:
             qd_id = con.execute('INSERT INTO quyet_dinh (so, ngay, trich_yeu, tong_tien, file, ghi_chu) VALUES (?,?,?,?,?,?)',
                                 gt).lastrowid
@@ -161,7 +161,7 @@ def luu_qd(con, qd_id, so: str, ngay: str = '', trich_yeu: str = '', tong_tien='
 def xoa_qd(con, qd_id: int) -> int:
     """Xóa quyết định và các dòng hộ của nó (hồ sơ hộ, phương án giữ nguyên). Trả số hộ bị bỏ ra."""
     ds = ho_cua_qd(con, qd_id)
-    with con:
+    with csdl.giao_dich(con):
         so = con.execute('SELECT so FROM quyet_dinh WHERE id = ?', (qd_id,)).fetchone()
         con.execute('DELETE FROM qd_ho WHERE qd_id = ?', (qd_id,))
         con.execute('DELETE FROM quyet_dinh WHERE id = ?', (qd_id,))
@@ -202,7 +202,7 @@ def ghi_qd_ho(con, qd_id: int, ma_ho: int, gia_tri: dict, ghi_nhat_ky: bool = Tr
     if gt.get('da_chi_tra') == 0:                    # bỏ đánh dấu đã nhận: xóa ngày, số tiền nhận
         gt.setdefault('chi_tra_ngay', '')
         gt.setdefault('chi_tra_so_tien', '')
-    with con:
+    with csdl.giao_dich(con):
         moi = con.execute('INSERT OR IGNORE INTO qd_ho (qd_id, ma_ho) VALUES (?, ?)', (qd_id, ma_ho)).rowcount
         if moi and 'so_pa' not in gt:                   # hộ mới vào quyết định: lấy số / ngày PA chi tiết đã đánh ở đợt trình
             try:
@@ -220,16 +220,41 @@ def ghi_qd_ho(con, qd_id: int, ma_ho: int, gia_tri: dict, ghi_nhat_ky: bool = Tr
 
 
 def bo_ho_khoi_qd(con, qd_id: int, ma_ho: int) -> None:
-    with con:
+    with csdl.giao_dich(con):
         con.execute('DELETE FROM qd_ho WHERE qd_id = ? AND ma_ho = ?', (qd_id, ma_ho))
         dong_bo_ho(con, ma_ho)
         csdl.ghi_nhat_ky(con, 'Bỏ hộ khỏi quyết định', f'QĐ {qd_id}, hộ {ma_ho}')
 
 
+def them_ho_theo_pa(con, qd_id: int, ds_ma: list) -> int:
+    """Thêm các hộ vào quyết định, tiền từng hạng mục theo phương án hiện tại: đọc phương án một lượt, một giao dịch."""
+    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_pa
+    bc = BoiCanh.tu(con)
+    pas = doc_tat_ca_phuong_an(con, list(ds_ma))
+    with csdl.giao_dich(con):
+        for m in ds_ma:
+            ct = _chi_tiet_kq(tinh_pa(pas[m], bc)) if m in pas else chi_tiet_tu_phuong_an(con, m, bc)
+            ghi_qd_ho(con, qd_id, m, ct, ghi_nhat_ky=False)
+        csdl.ghi_nhat_ky(con, 'Quyết định - thêm hộ', f'QĐ {qd_id}: {len(ds_ma)} hộ')
+    return len(ds_ma)
+
+
+def bo_cac_ho_khoi_qd(con, qd_id: int, ds_ma: list) -> int:
+    with csdl.giao_dich(con):
+        for m in ds_ma:
+            con.execute('DELETE FROM qd_ho WHERE qd_id = ? AND ma_ho = ?', (qd_id, m))
+            dong_bo_ho(con, m)
+        csdl.ghi_nhat_ky(con, 'Bỏ hộ khỏi quyết định', f'QĐ {qd_id}: {len(ds_ma)} hộ')
+    return len(ds_ma)
+
+
 def chi_tiet_tu_phuong_an(con, ma_ho: int, bc=None) -> dict:
     """Tiền đất / tài sản / cây / hỗ trợ / thưởng / tổng theo phương án hiện tại của hộ (điền sẵn khi chưa có số liệu QĐ)."""
     from .nghiep_vu import tinh_ho
-    k = tinh_ho(con, ma_ho, bc)
+    return _chi_tiet_kq(tinh_ho(con, ma_ho, bc))
+
+
+def _chi_tiet_kq(k) -> dict:
     return dict(so_tien=chuoi(k.tong), tien_dat=chuoi(k.muc[1]), tien_tai_san=chuoi(k.muc[2]), tien_cay=chuoi(k.muc[3]),
                 tien_ho_tro=chuoi(k.muc[4]), tien_thuong=chuoi(k.muc[5]))
 
@@ -237,7 +262,7 @@ def chi_tiet_tu_phuong_an(con, ma_ho: int, bc=None) -> dict:
 def ghi_chi_tra(con, ds: list, ngay: str = '', chung_tu: str = '', theo_qd: bool = True) -> int:
     """Ghi nhận đã nhận tiền cho các cặp (qd_id, ma_ho): số tiền nhận = số tiền phê duyệt (nếu chưa nhập). Trả số dòng."""
     n = 0
-    with con:
+    with csdl.giao_dich(con):
         for qd_id, ma in ds:
             r = con.execute('SELECT so_tien, chi_tra_so_tien FROM qd_ho WHERE qd_id = ? AND ma_ho = ?', (qd_id, ma)).fetchone()
             if r is None:
@@ -302,7 +327,7 @@ def ghi_ban_giao(con, ds_ma_ho: list, gia_tri: dict) -> int:
         return 0
     if gt.get('da_ban_giao') == 1:
         gt.setdefault('ly_do_ban_giao', '')
-    with con:
+    with csdl.giao_dich(con):
         for m in ds_ma_ho:
             con.execute(f'UPDATE ho SET {", ".join(k + " = ?" for k in gt)} WHERE ma_ho = ?', (*gt.values(), m))
         csdl.ghi_nhat_ky(con, 'Bàn giao mặt bằng', f'{len(ds_ma_ho)} hộ: ' + ', '.join(f'{k}={v}' for k, v in gt.items())[:300])
@@ -382,9 +407,8 @@ class TongHopHo:
 
 def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
     """[TongHopHo] theo thứ tự hộ: thửa, các quyết định, bàn giao, tổng phương án."""
-    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_pa as _tinh
-    bc = BoiCanh.tu(con) if tinh_pa else None
-    pas = doc_tat_ca_phuong_an(con, ds_ma_ho) if tinh_pa else {}
+    from .nghiep_vu import ket_qua_ho
+    kqh = ket_qua_ho(con) if tinh_pa else {}            # dùng chung kết quả đã tính (danh sách hộ vừa tính xong)
     thua = {}
     for t in con.execute('SELECT ma_ho, so_to, so_thua, dt_thu_hoi, loai_dat FROM thua ORDER BY thu_tu, ma_thua'):
         thua.setdefault(t['ma_ho'], []).append(dict(t))
@@ -402,8 +426,8 @@ def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
         x = TongHopHo(h['ma_ho'], h['thu_tu'], h['ho_ten'], h['dia_chi'], thua.get(h['ma_ho'], []), qd.get(h['ma_ho'], []),
                       da_ban_giao=bool(h['da_ban_giao']), ban_giao_ngay=h['ban_giao_ngay'], ly_do_ban_giao=h['ly_do_ban_giao'],
                       bien_ban_ban_giao=h['bien_ban_ban_giao'], theo_doi=h['theo_doi'])
-        if tinh_pa:
-            k = _tinh(pas[h['ma_ho']], bc)
+        if tinh_pa and h['ma_ho'] in kqh:
+            k = kqh[h['ma_ho']][0]
             x.tong_pa, x.muc_pa = k.tong, dict(k.muc)
         kq.append(x)
     return kq
@@ -441,10 +465,13 @@ def nhap_tu_ket_qua(con, so: str, ngay: str, ds: list, file=None, trich_yeu: str
     moi = qd_id is None
     if moi:
         qd_id = luu_qd(con, None, so, ngay, trich_yeu, tong_tien, str(file or ''))
-    from .nghiep_vu import BoiCanh
+    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_pa
     bc = BoiCanh.tu(con) if lay_chi_tiet_pa else None
+    # phương án các hộ cần điền chi tiết: đọc một lượt (3 câu truy vấn) thay vì 3 câu mỗi hộ
+    can = [d.ma_ho for d in ds if getattr(d, 'chon', True) and d.ma_ho is not None and not getattr(d, 'chi_tiet', None)]
+    pas = doc_tat_ca_phuong_an(con, can) if lay_chi_tiet_pa and can else {}
     n = 0
-    with con:
+    with csdl.giao_dich(con):                           # cả lô một giao dịch (trước đây mỗi hộ một lần ghi đĩa)
         for d in ds:
             if not getattr(d, 'chon', True) or d.ma_ho is None:
                 continue
@@ -453,7 +480,7 @@ def nhap_tu_ket_qua(con, so: str, ngay: str, ds: list, file=None, trich_yeu: str
             if getattr(d, 'chi_tiet', None):                  # tiền từng hạng mục đọc được trong bảng kèm quyết định
                 gt.update({k: v for k, v in d.chi_tiet.items() if k in TIEN_QD})
             elif lay_chi_tiet_pa:
-                ct = chi_tiet_tu_phuong_an(con, d.ma_ho, bc)
+                ct = _chi_tiet_kq(tinh_pa(pas[d.ma_ho], bc)) if d.ma_ho in pas else chi_tiet_tu_phuong_an(con, d.ma_ho, bc)
                 if tien is None or D(ct['so_tien']) == D(tien):
                     gt.update(ct)
             ghi_qd_ho(con, qd_id, d.ma_ho, gt, ghi_nhat_ky=False)

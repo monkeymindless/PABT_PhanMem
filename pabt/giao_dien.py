@@ -157,8 +157,13 @@ def _qss() -> str:
     QToolButton[menu="1"]:hover {{ background: #E8F0F8; border-color: #C9D9EA; }}
     QToolButton[menu="1"]:pressed {{ background: #D6E4F2; }}
     QToolButton[menu="1"]:checked {{ background: #DCEBFA; border-color: #9FC3E8; font-weight: 600; }}
-    QToolButton[xo="1"] {{ background: #EEF3F8; border-color: #D5E1ED; padding-right: 22px; color: {CHINH}; }}
-    QToolButton[xo="1"]::menu-indicator {{ subcontrol-position: right center; right: 8px; }}
+    QToolButton[xo="1"] {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0A2747, stop:1 #1B5A92);
+        border: 1px solid #0A2747; border-left: 5px solid #F2B705; border-radius: 8px; padding: 7px 10px;
+        color: #FFFFFF; font-weight: 700; font-size: 14px; }}
+    QToolButton[xo="1"]:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #113D6A, stop:1 #2672B4);
+        border-color: #F2B705; }}
+    QToolButton[xo="1"]:pressed {{ background: #0A2747; }}
+    QToolButton[xo="1"]::menu-indicator {{ image: none; width: 0; }}
     QCheckBox, QRadioButton {{ spacing: 7px; }}
     QScrollBar:vertical {{ background: transparent; width: 11px; margin: 2px; }}
     QScrollBar::handle:vertical {{ background: #C3CFDB; border-radius: 4px; min-height: 28px; }}
@@ -191,7 +196,7 @@ def _qss() -> str:
     QStatusBar QToolButton {{ border-radius: 6px; padding: 3px 10px; }}
     QFrame[vai="bang_to_chuc"] {{ background: transparent; border: 0; }}
     QFrame[vai="bang_to_chuc"] QLabel {{ color: #FFFFFF; background: transparent; border: 0; }}
-    QFrame[vai="bang_to_chuc"] QLabel[vai="logo"] {{ background: #FFFFFF; border: 2px solid #F2B705; border-radius: 10px; }}
+    QFrame[vai="bang_to_chuc"] QLabel[vai="logo"] {{ background: #FBF7EE; border: 2px solid #F2B705; border-radius: 10px; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="ten_phan_mem"] {{ color: #FFFFFF; font-size: 17px; font-weight: 700; letter-spacing: 0.4px; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="ten_to_chuc"] {{ color: #FFD54F; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="dong_phu"] {{ color: #C7DBEF; font-size: 12px; }}
@@ -230,8 +235,8 @@ def bieu_tuong():
 # ---------------------------------------------------------------- biểu tượng nút (ký hiệu Segoe Fluent Icons / MDL2 Assets)
 # (mẫu trên chữ đã bỏ dấu, mã ký hiệu) - xét theo thứ tự; Windows 7 không có các phông này thì nút chỉ hiện chữ
 KY_HIEU = [
-    (r'^danh sach ho', 0xE716), (r'tong quat ho', 0xE8FD), (r'^quyet dinh phe duyet', 0xE8A5), (r'tong hop tien', 0xE9F9),
-    (r'theo doi tien do', 0xE9D2), (r'^bang tong hop', 0xE80A), (r'^hoan tac', 0xE7A7), (r'^lam lai', 0xE7A6),
+    (r'^danh sach ho', 0xE716), (r'tong quat ho', 0xE8FD), (r'^quyet dinh( phe duyet)?$', 0xE8A5), (r'tong hop tien', 0xE9F9),
+    (r'theo doi tien do|^tien do', 0xE9D2), (r'^mau in', 0xE72C), (r'^bang tong hop', 0xE80A), (r'^hoan tac', 0xE7A7), (r'^lam lai', 0xE7A6),
     (r'du an tren may chu', 0xE839), (r'mang ve lam offline', 0xE896), (r'dua len may chu', 0xE898),
     (r'^dang nhap', 0xE77B), (r'du an moi', 0xE710), (r'^mo du an|^mo du toan', 0xE8E5), (r'luu du an thanh', 0xE792), (r'^(luu|save)', 0xE74E),
     (r'^thuc hien', 0xE768),
@@ -765,7 +770,12 @@ def _doc_nhom_dong(mac_dinh: tuple) -> set:
         v = None
     if v is None:
         return set(mac_dinh)
-    return {x for x in str(v).split('|') if x}
+    return {TEN_NHOM_CU.get(x, x) for x in str(v).split('|') if x}
+
+
+# tên nhóm menu trước 0.9.20 (đã nhớ trong QSettings) -> tên ngắn mới: nhóm người dùng đã đóng vẫn đóng
+TEN_NHOM_CU = {'Hồ sơ và phương án': 'Hồ sơ, phương án', 'Bảng tổng hợp': 'Tổng hợp',
+               'Trình, theo dõi tiến độ': 'Trình duyệt, tiến độ', 'In ấn, báo cáo': 'In, báo cáo'}
 
 
 def _ghi_nhom_dong(dong: set) -> None:
@@ -819,9 +829,10 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     for ten, ds in nhom:
         if ten in xo:                                        # một nút, bấm xổ danh sách lệnh của nhóm
             b = QToolButton()
-            b.setText(ten)
+            # nổi bật (nền xanh đậm như băng tiêu đề, vạch vàng, chữ trắng): nơi mở / tạo / lưu dự án - người dùng hay tìm
+            b.setText(f'{ten.upper()}   ▾')
             k = ky_hieu_nut('Mở dự án') if ten == 'Dự án' else ky_hieu_nut(ten)
-            ic = icon_ky_hieu(k, CHINH, 22) if k else None
+            ic = icon_ky_hieu(k, '#FFFFFF', 22) if k else None
             if ic is not None:
                 b.setIcon(ic)
                 b.setIconSize(QSize(22, 22))
@@ -836,7 +847,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
             b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
             b.setProperty('menu', '1')
             b.setProperty('xo', '1')
-            b.setMinimumHeight(34)
+            b.setMinimumHeight(40)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             b.setToolTip(f'{ten}: ' + ', '.join(a.text().rstrip('…') for a in ds))
@@ -1340,6 +1351,29 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
         QSettings('PABT', 'PABT').setValue('giao_dien/ty_le', t)
     _bao_ty_le(t)
     return t
+
+
+def vua_dong(b) -> None:
+    """Chiều cao dòng bảng QTableWidget (chữ xuống dòng) cho đủ chữ - chỉ đo các dòng có ô nhiều dòng / chữ dài hơn bề rộng cột;
+    dòng khác giữ chiều cao mặc định. resizeRowsToContents đo mọi ô (5.000 dòng × 11 cột: ~0,4-1,5 giây mỗi lần vẽ / lọc)."""
+    fm = b.fontMetrics()
+    tb = max(1, fm.averageCharWidth())
+    rong = [max(1, b.columnWidth(c) - 10) for c in range(b.columnCount())]
+    cao = b.verticalHeader().defaultSectionSize()
+    for r in range(b.rowCount()):
+        can = False
+        for c, w in enumerate(rong):
+            it = b.item(r, c)
+            if it is None:
+                continue
+            t = it.text()
+            if '\n' in t or len(t) * tb > w:
+                can = True
+                break
+        if can:
+            b.resizeRowToContents(r)
+        elif b.rowHeight(r) != cao:
+            b.setRowHeight(r, cao)
 
 
 def _gian_bang() -> None:

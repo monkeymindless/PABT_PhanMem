@@ -355,12 +355,33 @@ class HopDuAnMoi(QDialog):
                 xuat = self.c_in.isChecked() if xuat is None else xuat
                 if xuat and kq['so_ho_co_pa']:
                     con = csdl.mo(p)
+                    # in từng hộ dùng Qt đo chữ (phải ở luồng giao diện): hộp tiến trình có nút Dừng, vẽ lại sau mỗi hộ / mỗi file
+                    from PySide6.QtWidgets import QApplication, QProgressDialog
+                    tien = QProgressDialog('Đang tạo file Excel từng hộ…', 'Dừng', 0, 0, self)
+                    tien.setWindowTitle(TEN_UD)
+                    tien.setWindowModality(Qt.WindowModality.WindowModal)
+                    tien.setMinimumDuration(300)
+                    tien.setAutoClose(False)
+                    tien.setAutoReset(False)
+
+                    def bao(chu):
+                        def f(i, n):
+                            tien.setMaximum(n)
+                            tien.setValue(min(i, n))
+                            tien.setLabelText(chu.format(i=i, n=n))
+                            QApplication.processEvents()
+                            return tien.wasCanceled()
+                        return f
                     try:
                         thu_muc = p.with_name(f'BanIn_{p.stem}_{datetime.now():%Y%m%d_%H%M}')
-                        kq['in'] = du_an_moi.xuat_2_bang(con, thu_muc, pdf=self.c_pdf.isChecked())
+                        kq['in'] = du_an_moi.xuat_2_bang(con, thu_muc, pdf=self.c_pdf.isChecked(),
+                                                         bao_tien_do=bao('Đang tạo file Excel: {i}/{n}…'),
+                                                         bao_excel=bao('Microsoft Excel đang xuất PDF: xong {i}/{n} file…'))
                         kq['thu_muc_in'] = str(thu_muc)
                     finally:
                         con.close()
+                        tien.close()
+                        tien.deleteLater()
         except LoiNhap as e:
             self._bao(QMessageBox.warning, str(e))
             return None

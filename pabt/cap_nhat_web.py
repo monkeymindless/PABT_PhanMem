@@ -131,16 +131,39 @@ def lien_ket_file(html: str, url: str) -> list:
     return ds
 
 
-def _lay(url: str, timeout: int = 60) -> tuple:
-    """Tải một đường dẫn: (nội dung, đường dẫn thật sau chuyển hướng, Content-Type, tên file, bảng mã). Lỗi -> LoiNhap."""
+def _lay(url: str, timeout: int = 60, file_ra=None, chi_html: bool = False) -> tuple:
+    """Tải một đường dẫn: (nội dung, đường dẫn thật sau chuyển hướng, Content-Type, tên file, bảng mã). Lỗi -> LoiNhap.
+    file_ra: ghi thẳng ra file từng khối 64 KB (nội dung trả về None) - không giữ cả file trong bộ nhớ (Python 32-bit).
+    chi_html: chỉ cần trang web - máy chủ báo không phải HTML thì không tải phần thân (nội dung b'')."""
     try:
         r = _mo(url, timeout)
         try:
             loai = r.headers.get('Content-Type', '')
             ten = r.headers.get_filename() or Path(urllib.parse.unquote(urllib.parse.urlparse(r.geturl()).path)).name
+            try:
+                dai = int(r.headers.get('Content-Length') or 0)
+            except ValueError:
+                dai = 0
+            qua_lon = f'File tải về lớn hơn {TOI_DA_TAI // 2 ** 20} MB: không phải văn bản đơn giá, đã dừng tải.'
+            if dai > TOI_DA_TAI:
+                raise LoiNhap(qua_lon)
+            if chi_html and loai and 'html' not in loai.lower():
+                return b'', r.geturl(), loai, ten, r.headers.get_content_charset()
+            if file_ra is not None:
+                n = 0
+                with open(file_ra, 'wb') as f:
+                    while True:
+                        khoi = r.read(65536)
+                        if not khoi:
+                            break
+                        n += len(khoi)
+                        if n > TOI_DA_TAI:
+                            raise LoiNhap(qua_lon)
+                        f.write(khoi)
+                return None, r.geturl(), loai, ten, r.headers.get_content_charset()
             du = r.read(TOI_DA_TAI + 1)
             if len(du) > TOI_DA_TAI:
-                raise LoiNhap(f'File tải về lớn hơn {TOI_DA_TAI // 2 ** 20} MB: không phải văn bản đơn giá, đã dừng tải.')
+                raise LoiNhap(qua_lon)
             return du, r.geturl(), loai, ten, r.headers.get_content_charset()
         finally:
             r.close()
@@ -288,7 +311,7 @@ def quet(nguon: str, toi_da_trang: int = 20, bao=None, noi: str = 'dongnai') -> 
     so_tim = re.compile(rf'(?<!\d){m_so.group(1)}\s*/\s*{m_so.group(2)}(?!\d)', re.I) if m_so else None
     nguon = duong_dan(nguon, noi)
     url = _google(nguon)
-    du, that_url, loai, ten, bang_ma = _lay(url, 30)
+    du, that_url, loai, ten, bang_ma = _lay(url, 30, chi_html=True)   # đường dẫn thẳng tới file: không tải cả file ở bước quét
     kq = []
     if not ('html' in loai.lower() or du.lstrip()[:200].lower().startswith((b'<!doctype', b'<html'))):
         kq.append(TaiLieu(ten=ten or url, url=nguon, tep=ten))         # đường dẫn thẳng tới file
@@ -317,7 +340,7 @@ def quet(nguon: str, toi_da_trang: int = 20, bao=None, noi: str = 'dongnai') -> 
             if bao and bao(i, len(trang), c):
                 break
             try:
-                du2, u2, loai2, ten2, bm2 = _lay(dich, 30)
+                du2, u2, loai2, ten2, bm2 = _lay(dich, 30, chi_html=True)     # liên kết là file: không tải cả file chỉ để xem loại
             except LoiNhap:
                 continue
             if 'html' not in loai2.lower():
@@ -359,11 +382,20 @@ def tai_ve(url: str, thu_muc) -> dict:
     if not re.match(r'^https?://', url, re.I):
         raise LoiNhap('Nhập đường dẫn bắt đầu bằng http:// hoặc https://')
     goc, url = url, _google(url)
-    du, that_url, loai, ten, bang_ma = _lay(url)
+    tam = Path(thu_muc) / f'_dang_tai_{abs(hash(url))}'
+    try:
+        _, that_url, loai, ten, bang_ma = _lay(url, file_ra=tam)     # ghi thẳng ra file, không giữ trong bộ nhớ
+    except BaseException:
+        if tam.exists():
+            tam.unlink()
+        raise
     f = Path(thu_muc) / (re.sub(r'[\\/:*?"<>|]+', '_', ten) or 'don_gia')
-    f.write_bytes(du)
+    if f.exists():
+        f.unlink()
+    tam.replace(f)
     that = loai_that(f)
     if that == '.html' or (not that and 'html' in loai.lower()):
+        du = f.read_bytes()
         ds = [x for x in lien_ket_file(du.decode(bang_ma or 'utf-8', errors='replace'), that_url)
               if x[1].split('#')[0] not in (url.split('#')[0], goc.split('#')[0])]
         f.unlink()

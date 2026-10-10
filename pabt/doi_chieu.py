@@ -45,19 +45,26 @@ def doi_chieu(con, tong_excel: dict | None = None, ds_ma_ho: list | None = None)
     if tong_excel is None:
         tong_excel = tong_excel_da_luu(con)
     kq = KetQuaDoiChieu()
-    bc = nghiep_vu.BoiCanh.tu(con)
     sua = {r[0]: r[1] for r in con.execute('SELECT ma_ho, luu_luc FROM ho WHERE luu_luc IS NOT NULL')}
-    if ds_ma_ho is not None and len(ds_ma_ho) <= MOI_HO_TOI_DA:
-        ds_pa = []
-        for m in ds_ma_ho:
-            try:
-                ds_pa.append(nghiep_vu.doc_phuong_an(con, m))
-            except KeyError:                                           # hộ không còn
-                pass
+    # kết quả tính + kiểm tra mỗi hộ: dùng chung trên kết nối (nghiep_vu.ket_qua_ho; lưu một hộ chỉ tính lại hộ đó). Chỉ vài hộ
+    # (DauVetHo) mà bảng nhớ đã cũ: tính riêng các hộ đó, không tính lại cả dự án
+    kqh = nghiep_vu.ket_qua_ho(con) if ds_ma_ho is None else nghiep_vu.ket_qua_ho_san(con)
+    if kqh is not None:
+        chon = None if ds_ma_ho is None else set(ds_ma_ho)
+        ds_kq = [x for m, x in kqh.items() if chon is None or m in chon]
     else:
-        ds_pa = nghiep_vu.doc_tat_ca_phuong_an(con, ds_ma_ho).values()
-    for pa in ds_pa:                                                    # đọc mỗi hộ MỘT lần, dùng cho cả tính tiền và kiểm tra
-        k = nghiep_vu.tinh_pa(pa, bc)
+        bc = nghiep_vu.BoiCanh.tu(con)
+        if len(ds_ma_ho) <= MOI_HO_TOI_DA:
+            ds_pa = []
+            for m in ds_ma_ho:
+                try:
+                    ds_pa.append(nghiep_vu.doc_phuong_an(con, m))
+                except KeyError:                                       # hộ không còn
+                    pass
+        else:
+            ds_pa = nghiep_vu.doc_tat_ca_phuong_an(con, ds_ma_ho).values()
+        ds_kq = [(nghiep_vu.tinh_pa(pa, bc), nghiep_vu.kiem_tra_pa(pa, bc)) for pa in ds_pa]   # đọc mỗi hộ MỘT lần
+    for k, ds_canh_bao in ds_kq:
         ex = tong_excel.get(k.ma_ho)
         # hộ đã lưu lại trong phần mềm: phương án đã khác bản Excel lúc nhập, không tính là lệch
         dong = dict(ma_ho=k.ma_ho, ho_ten=k.ho_ten, muc=dict(k.muc), tong=k.tong, excel=ex, lech=False,
@@ -72,7 +79,7 @@ def doi_chieu(con, tong_excel: dict | None = None, ds_ma_ho: list | None = None)
         for d in k.dong:
             if d.thanh_tien_excel is not None and d.thanh_tien_excel != d.thanh_tien:
                 kq.dong_lech.append((k.ma_ho, k.ho_ten, d))
-        for ct in nghiep_vu.kiem_tra_pa(pa, bc):
+        for ct in ds_canh_bao:
             kq.canh_bao.append((k.ma_ho, k.ho_ten, ct))
     return kq
 

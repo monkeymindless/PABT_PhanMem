@@ -160,6 +160,8 @@ def png(img: QImage) -> bytes:
 
 
 ANH_LOGO = Path(__file__).resolve().parent / 'logo_PABT.png'      # ảnh logo của đơn vị (nếu có thì dùng thay hình vẽ)
+# chữ PABT của logo trên nền trắng sữa (đã tách khỏi ảnh nền đường / cây của logo_PABT.png) - có thì ưu tiên
+ANH_LOGO_NEN_TRANG = ANH_LOGO.with_name('logo_PABT_nen_trang.png')
 
 
 def ve_tu_anh(anh: QImage, s: int) -> QImage:
@@ -185,7 +187,7 @@ def main():
     app = QGuiApplication(sys.argv)  # noqa: F841 - giữ QGuiApplication sống để vẽ QImage / QFont
     goc = Path(__file__).resolve().parent / 'pabt'
     co = [16, 20, 24, 32, 40, 48, 64, 128, 256]
-    nguon = Path(sys.argv[1]) if len(sys.argv) > 1 else ANH_LOGO
+    nguon = Path(sys.argv[1]) if len(sys.argv) > 1 else (ANH_LOGO_NEN_TRANG if ANH_LOGO_NEN_TRANG.exists() else ANH_LOGO)
     if nguon.exists():
         anh = QImage(str(nguon))
         if anh.isNull():

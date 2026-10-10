@@ -69,7 +69,9 @@ class HopCapNhat(QDialog):
             if not p:
                 return None
         try:
-            m = cap_nhat.cai(p)
+            # luồng nền: đọc, kiểm tra SHA-256 từng file, nạp thử - cửa sổ không "Không phản hồi"
+            from .giao_dien import chay_nen
+            m = chay_nen(self, lambda: cap_nhat.cai(p), 'Đang kiểm tra và cài gói cập nhật…')
         except cap_nhat.LoiCapNhat as e:
             self._bao('warning', str(e))
             return None

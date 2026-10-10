@@ -28,7 +28,7 @@ class HopNhapChiTiet(QDialog):
         dich = f'vào dự án đang mở <b>{ten_du_an}</b>' if con is not None else 'vào <b>dự án mới</b> (bộ đơn giá tích hợp)'
         gt = QLabel(f'Mỗi sheet là phương án chi tiết của một hộ. Đánh dấu các sheet cần nhập {dich}. Dòng nhà, công trình, '
                     'cây trồng trùng tên và đơn giá với bộ đơn giá được gắn mã danh mục; dòng khác giá / ngoài danh mục ghi '
-                    '"nhập tay". Thành tiền của file được giữ để đối chiếu (Xuất báo cáo đối chiếu).')
+                    '"nhập tay". Thành tiền của file được giữ để đối chiếu (Dự án → Đối chiếu với file Excel).')
         gt.setWordWrap(True)
         lo.addWidget(gt)
         self.bang = QTableWidget(len(kq.ho), len(COT))
@@ -101,10 +101,17 @@ class HopNhapChiTiet(QDialog):
         self._dem()
 
     def chon_tat_ca(self, co: bool) -> None:
-        for i in range(self.bang.rowCount()):
-            o = self.bang.item(i, 0)
-            if o.flags() & Qt.ItemFlag.ItemIsUserCheckable:
-                o.setCheckState(Qt.CheckState.Checked if co else Qt.CheckState.Unchecked)
+        # chặn itemChanged trong lúc đánh dấu (mỗi ô một lần đếm lại cả bảng: 3.000 sheet = 9 triệu lần đọc ô); đếm một lần sau cùng
+        self.bang.blockSignals(True)
+        try:
+            for i in range(self.bang.rowCount()):
+                o = self.bang.item(i, 0)
+                if o.flags() & Qt.ItemFlag.ItemIsUserCheckable:
+                    o.setCheckState(Qt.CheckState.Checked if co else Qt.CheckState.Unchecked)
+        finally:
+            self.bang.blockSignals(False)
+        self.bang.viewport().update()
+        self._dem()
 
     def ds_chon(self) -> list:
         """Tên các sheet đang đánh dấu."""

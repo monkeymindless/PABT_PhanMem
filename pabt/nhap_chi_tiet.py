@@ -8,10 +8,11 @@ ghi(con, ds_ho, trung=...) -> BaoCaoNhap: thêm hộ, thửa, dòng phương án
 
 Dòng mục 2, 3 so khớp tên với bộ đơn giá của dự án: cùng tên và cùng đơn giá -> dòng danh mục (có mã); cùng tên khác giá ->
 nhập tay (ghi giá danh mục ở Căn cứ giá); không có trong danh mục -> nhập tay theo đơn giá của file. Thành tiền của file lưu
-vào thanh_tien_excel và tổng từng mục vào tong_excel để đối chiếu (Xuất báo cáo đối chiếu).
+vào thanh_tien_excel và tổng từng mục vào tong_excel để đối chiếu (Dự án → Đối chiếu với file Excel).
 """
 from __future__ import annotations
 import re
+from bisect import insort
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -378,6 +379,27 @@ def _mo(file):
     return openpyxl.load_workbook(file, read_only=True, data_only=True)
 
 
+TRONG_LIEN_TIEP = 200      # đọc tới hết dữ liệu: dừng sau ngần này dòng trống liền nhau (sheet định dạng sẵn tới dòng 1.048.576)
+
+
+def doc_hang(ws, trong_lien_tiep: int = TRONG_LIEN_TIEP) -> list:
+    """Mọi dòng có dữ liệu của sheet (không giới hạn số dòng; trước đây cắt ở dòng 600 - hộ nhiều cây / công trình mất dòng
+    cuối và dòng TỔNG CỘNG). Dòng trống ở giữa giữ nguyên; bỏ phần trống cuối sheet."""
+    hang, trong = [], 0
+    for r in ws.iter_rows(values_only=True):
+        r = list(r)
+        hang.append(r)
+        if any(v is not None and str(v).strip() for v in r):
+            trong = 0
+        else:
+            trong += 1
+            if trong >= trong_lien_tiep:
+                break
+    while hang and not any(v is not None and str(v).strip() for v in hang[-1]):
+        hang.pop()
+    return hang
+
+
 def la_file_chi_tiet(file) -> bool:
     """File có ít nhất một sheet phương án chi tiết (bảng STT / Tên tài sản / Số lượng / Thành tiền và dòng Họ và tên)."""
     try:
@@ -401,7 +423,7 @@ def doc(file) -> KetQuaDoc:
     wb = _mo(file)
     try:
         for ws in wb.worksheets:
-            hang = [list(r) for r in ws.iter_rows(max_row=600, values_only=True)]
+            hang = doc_hang(ws)
             h = doc_sheet(ws.title, hang)
             if h is None:
                 kq.bo_qua.append(ws.title)
@@ -450,11 +472,9 @@ class ChiMucTrung:
             ds = bang.get(k, [])
             if ma in ds:
                 ds.remove(ma)
-        khoa = [(self.cccd, str(so_cccd or '').replace(' ', '')), (self.ten, _khoa_ten(ho_ten))]
-        for bang, k in khoa:
-            ds = bang.setdefault(k, [])
-            ds.append(ma)
-            ds.sort()
+        khoa = [(b, k) for b, k in ((self.cccd, str(so_cccd or '').replace(' ', '')), (self.ten, _khoa_ten(ho_ten))) if k]
+        for bang, k in khoa:                            # khóa rỗng (không CCCD / tên): tim() không tra, không gom vào một danh sách dài
+            insort(bang.setdefault(k, []), ma)
         self.khoa[ma] = khoa
 
     def tim(self, h: HoChiTiet):
@@ -549,6 +569,7 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
                 con.execute("UPDATE du_an SET nguon_nhap = ?, ngay_nhap = datetime('now', 'localtime') WHERE id = 1",
                             (f'Phương án chi tiết: {nguon}',))
         chi_muc = ChiMucTrung(con) if trung != 'them' else None
+        tiep = None                                     # mã / thứ tự hộ mới kế tiếp: đọc MAX một lần (thu_tu không có chỉ mục)
         for h in ds_ho:
             if not h.chon or not h.ho_ten:
                 bc.bo_qua.append((h.sheet, h.ly_do or ('không có họ tên' if not h.ho_ten else 'không chọn')))
@@ -564,7 +585,10 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
             tt = dict(ho_ten=h.ho_ten, so_cccd=h.so_cccd, ngay_cap=h.ngay_cap, noi_cap=h.noi_cap, dia_chi=h.dia_chi,
                       dien_thoai=h.dien_thoai, phap_ly='' if dat_tinh else ghi_chu_dat, tai_dinh_cu=tdc, trang_thai=TRANG_THAI)
             if ma is None:
-                ma, thu_tu = con.execute('SELECT COALESCE(MAX(ma_ho), 0) + 1, COALESCE(MAX(thu_tu), 0) + 1 FROM ho').fetchone()
+                if tiep is None:
+                    tiep = tuple(con.execute('SELECT COALESCE(MAX(ma_ho), 0) + 1, COALESCE(MAX(thu_tu), 0) + 1 FROM ho').fetchone())
+                ma, thu_tu = tiep
+                tiep = (ma + 1, thu_tu + 1)
                 con.execute(f'INSERT INTO ho (ma_ho, thu_tu, {", ".join(tt)}) VALUES (?, ?, {", ".join("?" * len(tt))})',
                             (ma, thu_tu, *tt.values()))
                 bc.them.append((ma, h.ten_ngan))
@@ -673,7 +697,7 @@ def ket_qua(bc: BaoCaoNhap) -> tuple:
     if bc.bo_qua:
         t.append('Không nhập: ' + '; '.join(f'sheet "{s}" ({ly_do})' for s, ly_do in bc.bo_qua[:15]) +
                  ('…' if len(bc.bo_qua) > 15 else '') + '.')
-    t.append('So tổng tiền phần mềm tính với file: lệnh "Xuất báo cáo đối chiếu…".')
+    t.append('So tổng tiền phần mềm tính với file: lệnh "Dự án → Đối chiếu với file Excel…".')
     return '\n\n'.join(t), list(bc.canh_bao)
 
 
@@ -687,7 +711,7 @@ def tom_tat(bc: BaoCaoNhap, toi_da: int = 15) -> str:
     if bc.canh_bao:
         t.append(f'Cần xem lại ({len(bc.canh_bao)}):\n' + '\n'.join('- ' + x for x in bc.canh_bao[:toi_da]) +
                  (f'\n- … và {len(bc.canh_bao) - toi_da} điểm khác' if len(bc.canh_bao) > toi_da else ''))
-    t.append('So tổng tiền phần mềm tính với file: lệnh "Xuất báo cáo đối chiếu…".')
+    t.append('So tổng tiền phần mềm tính với file: lệnh "Dự án → Đối chiếu với file Excel…".')
     return '\n\n'.join(t)
 
 

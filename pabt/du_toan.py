@@ -101,16 +101,22 @@ class DuToan:
 
     # ---------------------------------------------- thêm dòng
     def them_chi_phi_mac_dinh(self) -> None:
+        from .lap_pa import CAN_CU_KINH_PHI, LOAI_KINH_PHI, loai_kinh_phi_tu_ten
         co = {bo_dau(d.ten) for d in self.dong if d.muc == 6}
-        for ten, pt in CP_MAC_DINH:
+        for i, (ten, pt) in enumerate(CP_MAC_DINH):
             if bo_dau(ten) not in co:
-                self.dong.append(DongDT(6, ten, '%', phan_tram=pt, can_cu='Tỷ lệ tạm tính - điều chỉnh theo quy định áp dụng'))
+                cc = 'Tỷ lệ tạm tính - điều chỉnh theo quy định áp dụng'
+                if i == 0:                              # theo tuyến 3,5%, cụm / vùng / khác 2,5% (QĐ 08/2025/QĐ-UBND)
+                    loai = loai_kinh_phi_tu_ten(self.ten)
+                    pt = str(LOAI_KINH_PHI[loai][1])
+                    cc = f'{LOAI_KINH_PHI[loai][0]}: không quá {pt.replace(".", ",")}% ({CAN_CU_KINH_PHI})'
+                self.dong.append(DongDT(6, ten, '%', phan_tram=pt, can_cu=cc))
 
 
 # ---------------------------------------------------------------- lấy khối lượng
 def tu_du_an(con, ds_ma_ho: list | None = None, ten: str = '') -> DuToan:
     """Gom các dòng phương án của dự án (cùng mục, hạng mục, đơn giá, hệ số) thành dòng dự toán."""
-    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_pa
+    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, ket_qua_ho_san, so_vi_tri, tinh_pa
     bc = BoiCanh.tu(con)
     da = con.execute('SELECT ten, cap_dia_ban, ten_dia_ban FROM du_an WHERE id = 1').fetchone()
     ten_ld = {r['ma'].upper(): r['ten'] for r in con.execute('SELECT ma, ten FROM dm_loaidat')}
@@ -121,13 +127,13 @@ def tu_du_an(con, ds_ma_ho: list | None = None, ten: str = '') -> DuToan:
     so_ho = 0
     # phương án các hộ cần lấy: một lần đọc (3 truy vấn), theo thứ tự hộ - thay cho doc_phuong_an từng hộ (N+1)
     tat_ca = doc_tat_ca_phuong_an(con, ds_ma_ho)
-    for pa in tat_ca.values():
-        k = tinh_pa(pa, bc)
+    kqh = (ket_qua_ho_san(con) or {}) if type(bc) is BoiCanh else {}   # kết quả đang nhớ (dùng chung) nếu còn đúng
+    for ma, pa in tat_ca.items():
+        k = kqh[ma][0] if ma in kqh else tinh_pa(pa, bc)
         if k.co_phuong_an:
             so_ho += 1
         thuong += k.muc[5]
         for d in pa.dat:
-            from .nghiep_vu import so_vi_tri
             vt = so_vi_tri(d.vi_tri) or d.vi_tri
             khoa = (1, d.loai_dat.upper(), vt, d.gia_bang_gia * d.he_so_k, d.ty_le)
             x = gom.get(khoa)

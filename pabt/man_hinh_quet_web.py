@@ -147,7 +147,11 @@ class HopQuetWeb(QDialog):
             return tien.wasCanceled()
         try:
             with con_tro_cho():
-                self.ds = cw.quet(nguon, bao=bao, noi=self.cb_noi.currentData() or 'dongnai')
+                self.b_quet.setEnabled(False)           # đang quét: không bấm chồng (hộp tiến trình chưa hiện trong 400 ms đầu)
+                try:
+                    self.ds = cw.quet(nguon, bao=bao, noi=self.cb_noi.currentData() or 'dongnai')
+                finally:
+                    self.b_quet.setEnabled(True)
         except LoiNhap as e:
             tien.close()
             self._bao(QMessageBox.warning, str(e))
@@ -248,6 +252,9 @@ class HopQuetWeb(QDialog):
             if d.exec() and d.ket_qua:
                 xong.append(d.ket_qua)
         self.ket_qua += xong
+        if cho:                                         # file tải về đã đọc xong (dong): xóa thư mục tạm
+            import shutil
+            shutil.rmtree(td, ignore_errors=True)
         if xong or loi:
             self._bao(QMessageBox.warning if loi else QMessageBox.information,
                       (f'Đã cập nhật {len(xong)} văn bản vào bộ đơn giá.' if xong else 'Chưa cập nhật văn bản nào.') +

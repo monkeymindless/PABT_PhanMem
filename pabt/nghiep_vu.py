@@ -384,9 +384,59 @@ def tinh_ho(con, ma_ho: int, bc: BoiCanh | None = None) -> KetQuaHo:
     return tinh_pa(doc_phuong_an(con, ma_ho), bc or BoiCanh.tu(con))
 
 
-def tinh_tat_ca(con) -> list:
+# ---------------------------------------------------------------- kết quả tính của cả dự án (dùng chung)
+KHOA_KQ = ('KetQuaHo',)
+
+
+def _tinh_kiem(pa: PhuongAn, bc: BoiCanh) -> tuple:
+    return tinh_pa(pa, bc), kiem_tra_pa(pa, bc)
+
+
+def ket_qua_ho(con) -> dict:
+    """{ma_ho: (KetQuaHo, [cảnh báo kiem_tra_pa])} theo thứ tự hộ - tính một lần trên kết nối, dùng chung cho danh sách hộ
+    (đối chiếu), các trang tổng hợp, In / Xuất, đợt trình, báo cáo... tới khi dữ liệu đổi (csdl.nho). Lưu phương án một hộ chỉ
+    tính lại hộ đó (giu_ket_qua_ho). Trước đây mỗi lần tải lại / chuyển trang / mở hộp thoại tính lại cả 3.000 hộ.
+    Dùng chung: KHÔNG sửa các đối tượng trả về."""
+    from .csdl import nho
+
+    def tao():
+        bc = BoiCanh.tu(con)
+        return {m: _tinh_kiem(pa, bc) for m, pa in doc_tat_ca_phuong_an(con).items()}
+    return nho(con, KHOA_KQ, tao)
+
+
+def ket_qua_ho_san(con):
+    """ket_qua_ho nếu đang nhớ và còn đúng (không tính lại); không thì None."""
+    from .csdl import _trang_thai
+    bo = getattr(con, 'bo_nho', None)
+    if bo is None or con.in_transaction:
+        return None
+    cu = bo.get(KHOA_KQ)
+    return cu[1] if cu is not None and cu[0] == _trang_thai(con) else None
+
+
+def giu_ket_qua_ho(con, ds_ma_ho, truoc) -> None:
+    """Sau một lần ghi CHỈ đổi phương án của các hộ ds_ma_ho (bảng ho / ct_dat / ct_khoan của các hộ đó; bối cảnh đã giữ bằng
+    csdl.giu_nho): tính lại riêng các hộ này trong ket_qua_ho thay vì bỏ cả bảng nhớ. truoc = csdl.trang_thai_nho trước khi ghi;
+    có thay đổi khác chen vào thì thôi (lần sau tính lại cả dự án)."""
+    from .csdl import _trang_thai
+    bo = getattr(con, 'bo_nho', None)
+    if bo is None or truoc is None or con.in_transaction:
+        return
+    cu = bo.get(KHOA_KQ)
+    if cu is None or cu[0] != truoc:
+        return
     bc = BoiCanh.tu(con)
-    return [tinh_pa(pa, bc) for pa in doc_tat_ca_phuong_an(con).values()]
+    moi = dict(cu[1])                                   # bản mới: nơi đang giữ bản cũ không bị đổi giữa chừng
+    for m in ds_ma_ho:
+        if m in moi:
+            moi[m] = _tinh_kiem(doc_phuong_an(con, m), bc)
+    bo[KHOA_KQ] = (_trang_thai(con), moi)
+
+
+def tinh_tat_ca(con) -> list:
+    """[KetQuaHo] mọi hộ theo thứ tự (dùng chung ket_qua_ho - không sửa)."""
+    return [k for k, _ in ket_qua_ho(con).values()]
 
 
 def lamtron_du_an(con) -> int:

@@ -1,6 +1,7 @@
 """Số tiền, diện tích, đơn giá: tính bằng Decimal và làm tròn giống hàm ROUND của Excel."""
 from __future__ import annotations
 import re
+import functools
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 KHONG = Decimal(0)
@@ -18,6 +19,19 @@ def D(x) -> Decimal:
         return Decimal(x)
     if isinstance(x, float):
         return Decimal(repr(x))          # 143.8 -> '143.8' (không lấy đuôi nhị phân)
+    if type(x) is str:
+        return _d_chuoi(x)
+    return _d_chuoi_goc(str(x))
+
+
+@functools.lru_cache(maxsize=1 << 16)
+def _d_chuoi(x: str) -> Decimal:
+    """Chuỗi -> Decimal, nhớ kết quả (Decimal bất biến): số liệu đọc từ CSDL lặp lại rất nhiều (tải lại 3.000 hộ: ~440.000 lần
+    đổi số, phần lớn trùng chuỗi). Lỗi (ValueError) không được nhớ."""
+    return _d_chuoi_goc(x)
+
+
+def _d_chuoi_goc(x: str) -> Decimal:
     s = str(x).strip().replace(' ', '').replace(' ', '')
     if s == '':
         return KHONG

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QWidget)
 
 from . import theo_doi
+from .giao_dien import vua_dong
 from .bang_ao import BangAo
 from .lap_pa import LoiNhap, bo_dau
 from .tien import D, KHONG, so_vn, vn
@@ -107,12 +108,12 @@ class _Khung(QWidget):
 
     def _loc_nho(self, khoa, ham) -> list:
         """Kết quả lọc nhớ theo (danh sách đang có, điều kiện lọc): ve() / dong() / đếm gọi nhiều lần chỉ lọc một lần."""
-        k = (id(self.ds), len(self.ds), khoa)
         cu = getattr(self, '_kq_loc', None)
-        if cu is not None and cu[0] == k:
-            return cu[1]
+        # so chính đối tượng danh sách (is), không so id(): danh sách nạp lại có thể trùng id với danh sách cũ đã bị hủy
+        if cu is not None and cu[0] is self.ds and cu[1] == khoa:
+            return cu[2]
         kq = ham()
-        self._kq_loc = (k, kq)
+        self._kq_loc = (self.ds, khoa, kq)
         return kq
 
 
@@ -164,7 +165,9 @@ def _o(b: QTableWidget, r: int, c: int, v, so: bool = False, nen=None, dam: bool
         it.setFont(_CHU_DAM[0])
     if du_lieu is not None:
         it.setData(Qt.ItemDataRole.UserRole, du_lieu)
-    it.setToolTip(goi_y or ('' if v is None else str(v)))
+    t = '' if v is None else str(v)
+    if goi_y or len(t) > 25 or '\n' in t:              # chữ ngắn hiện đủ trong ô: không gắn gợi ý (hàng chục nghìn ô)
+        it.setToolTip(goi_y or t)
     b.setItem(r, c, it)
     return it
 
@@ -457,7 +460,7 @@ class KhungQuyetDinh(_Khung):
             if n:
                 _gop(b, r, n, self.COT_HO)
         b.setUpdatesEnabled(True)
-        b.resizeRowsToContents()
+        vua_dong(b)                                     # chỉ đo dòng có chữ dài / nhiều dòng
 
     def _ma_dong(self, r=None):
         r = self.bang.currentRow() if r is None else r
@@ -541,11 +544,7 @@ class KhungQuyetDinh(_Khung):
             if not dlg.exec():
                 return 0
             ds_ma = dlg.chon()
-        from .nghiep_vu import BoiCanh
-        bc = BoiCanh.tu(self.con)
-        with self.con:
-            for m in ds_ma:
-                theo_doi.ghi_qd_ho(self.con, self.qd_id, m, theo_doi.chi_tiet_tu_phuong_an(self.con, m, bc), ghi_nhat_ky=False)
+        theo_doi.them_ho_theo_pa(self.con, self.qd_id, ds_ma)
         self.nap()
         self.da_doi.emit()
         return len(ds_ma)
@@ -596,8 +595,7 @@ class KhungQuyetDinh(_Khung):
             xac_nhan = self.hoi(f'Bỏ {len(ds)} hộ khỏi quyết định này?')
         if not xac_nhan:
             return 0
-        for m in ds:
-            theo_doi.bo_ho_khoi_qd(self.con, self.qd_id, m)
+        theo_doi.bo_cac_ho_khoi_qd(self.con, self.qd_id, ds)
         self.nap()
         self.da_doi.emit()
         return len(ds)
@@ -1355,7 +1353,7 @@ class HopHoTheoDoi(_Hop):
             for c, v in enumerate((q['so_qd'], q['ngay_qd'], _tien(q['so_tien']), q['so_pa'], q['qd_ct_so'], ct,
                                    Path(q['chung_tu']).name if q['chung_tu'] else '')):
                 _o(b, r, c, v, so=c == 2, nen=(XANH if q['da_chi_tra'] else DO) if c == 5 else None)
-        b.resizeRowsToContents()
+        vua_dong(b)                                     # chỉ đo dòng có chữ dài / nhiều dòng
         tong = sum((_so(q['so_tien']) for q in self.ds), KHONG)
         nhan = sum((_so(q['chi_tra_so_tien']) or _so(q['so_tien']) for q in self.ds if q['da_chi_tra']), KHONG)
         t = f'{len(self.ds)} quyết định · tổng phê duyệt <b>{vn(tong)} đ</b> · đã nhận {vn(nhan)} đ'

@@ -11,13 +11,14 @@ from __future__ import annotations
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import time
 from copy import copy
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import openpyxl
@@ -53,7 +54,7 @@ def thu_muc_mau() -> Path:
     for p in ung_vien:
         if (p / f'{TEN_CT}.xlsx').exists():
             return p
-    raise LoiIn('Không tìm thấy thư mục mẫu in (mau_in\\IN_CHITIET.xlsx). Dùng lệnh "Cập nhật mẫu in từ file Excel".')
+    raise LoiIn('Không tìm thấy thư mục mẫu in (mau_in\\IN_CHITIET.xlsx). Dùng lệnh "Mẫu in" (nhóm In, báo cáo).')
 
 
 def thu_muc_mau_ghi() -> Path:
@@ -142,10 +143,15 @@ def chen_duong_ke(file_xlsx, file_duong_ke) -> bool:
     tep[f'xl/drawings/drawing{n}.xml'] = (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="{_DS_DR}" '
                                           f'xmlns:a="{_DS_A}">' + dk.read_text(encoding='utf-8') + '</xdr:wsDr>').encode('utf-8')
     tam = p.with_name(p.name + '.tmp')
-    with zipfile.ZipFile(tam, 'w', zipfile.ZIP_DEFLATED) as zo:
-        for k in ['[Content_Types].xml'] + [x for x in tep if x != '[Content_Types].xml']:
-            zo.writestr(k, tep[k])
-    os.replace(tam, p)
+    try:
+        with zipfile.ZipFile(tam, 'w', zipfile.ZIP_DEFLATED) as zo:
+            for k in ['[Content_Types].xml'] + [x for x in tep if x != '[Content_Types].xml']:
+                zo.writestr(k, tep[k])
+        os.replace(tam, p)
+    except BaseException:
+        if tam.exists():                                # ghi lỗi (đầy đĩa, file đang mở): không để lại file .tmp cạnh file in
+            tam.unlink()
+        raise
     return True
 
 
@@ -154,12 +160,15 @@ def duong_ke_cua_mau(mau_xlsx, ten: str) -> Path:
     trong mẫu và ghi lại <mẫu>.duong_ke.xml; không thì dùng file .duong_ke.xml sẵn có."""
     import zipfile
     mau_xlsx = Path(mau_xlsx)
-    p = mau_xlsx.with_name(f'{ten}.duong_ke.xml')
+    p = mau_xlsx.with_name(f'{mau_xlsx.stem}.duong_ke.xml')      # mẫu riêng (IN_CHITIET__Duthao) có đường kẻ riêng
+    if mau_xlsx.stem != ten and not p.exists():
+        p = mau_xlsx.with_name(f'{ten}.duong_ke.xml')             # chưa có: dùng đường kẻ của mẫu chính
     try:
         x = doc_duong_ke(mau_xlsx, ten)
     except (KeyError, OSError, AttributeError, zipfile.BadZipFile):
         x = ''
     if x:
+        p = mau_xlsx.with_name(f'{mau_xlsx.stem}.duong_ke.xml')
         try:
             if not p.exists() or p.read_text(encoding='utf-8') != x:
                 p.write_text(x, encoding='utf-8')
@@ -167,6 +176,32 @@ def duong_ke_cua_mau(mau_xlsx, ten: str) -> Path:
             p = Path(tempfile.gettempdir()) / f'PABT_{ten}.duong_ke.xml'
             p.write_text(x, encoding='utf-8')
     return p
+
+
+TACH_MAU = '__'                 # mẫu riêng: <TEN>__<tên mẫu>.xlsx (vd. IN_CHITIET__Duthao.xlsx) cạnh mẫu chính
+
+
+def file_mau(mau, ten: str) -> Path:
+    """mau: thư mục mẫu (None = thu_muc_mau()) hoặc chính file mẫu .xlsx (mẫu riêng chọn khi In / Xuất)."""
+    if mau is not None and str(mau).lower().endswith('.xlsx'):
+        return Path(mau)
+    return Path(mau or thu_muc_mau()) / f'{ten}.xlsx'
+
+
+def ds_mau(ten: str) -> list:
+    """[(tên hiển thị, file)] các mẫu của loại ten: mẫu chính trước, rồi các mẫu riêng (thư mục mẫu đang dùng + thư mục ghi)."""
+    try:
+        chinh = thu_muc_mau() / f'{ten}.xlsx'
+    except LoiIn:
+        return []
+    kq, da = [('Mẫu chính', chinh)], set()
+    for d in dict.fromkeys([chinh.parent, thu_muc_mau_ghi()]):
+        for f in sorted(Path(d).glob(f'{ten}{TACH_MAU}*.xlsx')):
+            t = f.stem[len(ten) + len(TACH_MAU):]
+            if t and t.lower() not in da and not f.name.startswith('~$'):
+                da.add(t.lower())
+                kq.append((t, f))
+    return kq
 
 
 def mau_de_sua(ten: str = TEN_CT) -> Path:
@@ -182,10 +217,27 @@ def mau_de_sua(ten: str = TEN_CT) -> Path:
     return ghi / f'{ten}.xlsx'
 
 
-def xem_truoc(con, ma_ho: int, thu_muc=None) -> Path:
-    """Bản in thử phương án chi tiết của một hộ (PDF nếu máy có Excel, không thì .xlsx) trong thư mục tạm. Trả file."""
+def _don_xem_truoc_cu(giu_gio: float = 12) -> None:
+    """Xóa các thư mục in thử cũ (quá giu_gio giờ) trong %TEMP% - mỗi lần xem trước để lại một file xlsx / pdf."""
+    han = time.time() - giu_gio * 3600
+    try:
+        for d in Path(tempfile.gettempdir()).glob('PABT_xem_truoc_*'):
+            try:
+                if d.is_dir() and d.stat().st_mtime < han:
+                    shutil.rmtree(d, ignore_errors=True)
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+
+def xem_truoc(con, ma_ho: int, thu_muc=None, mau=None) -> Path:
+    """Bản in thử phương án chi tiết của một hộ (PDF nếu máy có Excel, không thì .xlsx) trong thư mục tạm. Trả file.
+    mau: file mẫu riêng (None = mẫu chính)."""
+    if thu_muc is None:
+        _don_xem_truoc_cu()
     td = Path(thu_muc or tempfile.mkdtemp(prefix='PABT_xem_truoc_'))
-    f = lap_chi_tiet(con, ma_ho, td / f'{ten_file_ho(con, ma_ho)}.xlsx')
+    f = lap_chi_tiet(con, ma_ho, td / f'{ten_file_ho(con, ma_ho)}.xlsx', mau)
     if co_excel():
         pdf = f.with_suffix('.pdf')
         if not chay_excel([(f, pdf)], 'pdf') and pdf.exists():
@@ -593,31 +645,112 @@ _O_CT = {'E3': '{ten_dia_ban}, ngày       tháng        năm {nam}', 'A5': 'D�
          'C8': '{ho_ten}', 'C9': '{cccd}', 'C10': '{dia_chi}', 'C11': '{dien_thoai}', 'A13': '{nguon_goc}'}
 
 
-def tao_mau_tu_excel(file_excel, thu_muc) -> list:
-    """Tách hai sheet IN_CHITIET và IN_BANGTONGHOP của file PABT Excel thành mẫu in .xlsx. Trả danh sách file đã tạo."""
+class LoiChuaRoMau(LoiIn):
+    """File không có sheet IN_CHITIET / IN_BANGTONGHOP và không nhận ra theo nội dung: hỏi người dùng là mẫu loại nào."""
+
+
+_CHO_CT = ('{ho_ten}', '{nguon_goc}', '{ma_ho}', '{cccd}', '{tai_dinh_cu}')
+_CHO_BTH = ('BẢNG TỔNG HỢP', '{so_pa_tong}')
+
+
+def _chu_sheet(ws, so_dong: int = 40) -> str:
+    return '\n'.join(str(v) for r in ws.iter_rows(max_row=so_dong, max_col=30, values_only=True) for v in r
+                     if isinstance(v, str))
+
+
+def nhan_loai_mau(ws) -> str | None:
+    """TEN_CT / TEN_BTH theo tên sheet, rồi theo nội dung (chỗ trống {ho_ten}… / chữ "BẢNG TỔNG HỢP"); không rõ: None."""
+    if ws.title in (TEN_CT, TEN_BTH):
+        return ws.title
+    chu = _chu_sheet(ws)
+    ct, bth = any(x in chu for x in _CHO_CT), any(x in chu.upper() for x in _CHO_BTH)
+    return TEN_CT if ct and not bth else TEN_BTH if bth and not ct else None
+
+
+def ten_mau_hop_le(ten: str) -> str:
+    """Tên mẫu riêng dùng trong tên file: bỏ ký tự cấm, khoảng trắng gọn."""
+    return re.sub(r'[\\/:*?"<>|]+', ' ', ' '.join(str(ten or '').split())).strip()[:40]
+
+
+def tao_mau_tu_excel(file_excel, thu_muc, loai: str | None = None, ten_mau: str = '') -> list:
+    """Lấy mẫu in từ file Excel. Trả danh sách file đã tạo.
+    - File PABT Excel (.xlsm / .xlsx có sheet IN_CHITIET và / hoặc IN_BANGTONGHOP): sheet nào có thì lấy sheet đó (trước đây
+      đòi đủ cả hai sheet -> file chỉ có một mẫu báo "không có sheet …").
+    - File mẫu đã sửa sẵn (đã có chỗ trống {ho_ten}, {du_an}…, sheet tên bất kỳ): nhận loại theo tên sheet / nội dung, không
+      rõ thì LoiChuaRoMau (gọi lại với loai=TEN_CT / TEN_BTH). Chép nguyên file (giữ đường kẻ, hình), chỉ đổi tên sheet.
+    ten_mau: '' = thay mẫu chính; có tên = thêm mẫu riêng <TEN>__<tên>.xlsx (chọn khi In / Xuất). Mẫu cũ cùng tên được chép
+    vào <thư mục mẫu>\\cu\\ trước khi ghi đè."""
+    import shutil
+    import zipfile
     thu_muc = Path(thu_muc)
     thu_muc.mkdir(parents=True, exist_ok=True)
+    ten_mau = ten_mau_hop_le(ten_mau)
+    duoi = f'{TACH_MAU}{ten_mau}' if ten_mau else ''
+    wb0 = openpyxl.load_workbook(file_excel, read_only=True)
+    try:
+        ten_sheet = list(wb0.sheetnames)
+        lay = {t: t for t in (TEN_CT, TEN_BTH) if t in ten_sheet}            # loại mẫu -> sheet trong file
+        if not lay:
+            hien = [s for s in ten_sheet if wb0[s].sheet_state == 'visible'] or ten_sheet
+            for s in hien:
+                k = nhan_loai_mau(wb0[s])
+                if k and k not in lay:
+                    lay[k] = s
+            if loai in (TEN_CT, TEN_BTH):
+                lay = {loai: lay.get(loai) or hien[0]}
+            elif not lay:
+                raise LoiChuaRoMau('Không nhận ra file này là mẫu phương án chi tiết hay bảng tổng hợp (không có sheet '
+                                   f'{TEN_CT} / {TEN_BTH}, không có chỗ trống {{ho_ten}}… hay chữ "BẢNG TỔNG HỢP").')
+        da_la_mau = {k: '{' in _chu_sheet(wb0[s], 60) and '}' in _chu_sheet(wb0[s], 60) for k, s in lay.items()}
+    finally:
+        wb0.close()
     tao = []
-    for ten in (TEN_CT, TEN_BTH):
+    for ten, s in lay.items():
+        p = thu_muc / f'{ten}{duoi}.xlsx'
+        if p.exists():                                  # giữ bản cũ (đổi mẫu nhầm thì lấy lại)
+            cu = thu_muc / 'cu'
+            cu.mkdir(exist_ok=True)
+            shutil.copy2(p, cu / f'{p.stem}_{datetime.now():%Y%m%d_%H%M%S}.xlsx')
+        if da_la_mau[ten] and len(ten_sheet) == 1 and str(file_excel).lower().endswith('.xlsx'):
+            # mẫu đã sửa sẵn, một sheet: chép nguyên file (openpyxl làm mất hình vẽ / đường kẻ), đổi tên sheet trong workbook.xml
+            tam = p.with_name(p.name + '.tmp')
+            with zipfile.ZipFile(file_excel) as zi, zipfile.ZipFile(tam, 'w', zipfile.ZIP_DEFLATED) as zo:
+                for it in zi.infolist():
+                    du = zi.read(it.filename)
+                    if it.filename == 'xl/workbook.xml' and s != ten:
+                        du = du.replace(f'name="{_xml_attr(s)}"'.encode('utf-8'), f'name="{ten}"'.encode('utf-8'), 1)
+                    zo.writestr(it, du)
+            os.replace(tam, p)
+            tao.append(p)
+            x = doc_duong_ke(p, ten)
+            if x:
+                (thu_muc / f'{p.stem}.duong_ke.xml').write_text(x, encoding='utf-8')
+            continue
         wb = openpyxl.load_workbook(file_excel, keep_vba=False)
-        if ten not in wb.sheetnames:
-            raise LoiIn(f'File Excel không có sheet {ten}.')
-        for s in list(wb.sheetnames):
-            if s != ten:
-                del wb[s]
+        for s2 in list(wb.sheetnames):
+            if s2 != s:
+                del wb[s2]
         for n in list(wb.defined_names):
             del wb.defined_names[n]
-        ws = wb[ten]
+        ws = wb[s]
         ws.data_validations.dataValidation = []
         ws.title = ten
-        (_lam_mau_ct if ten == TEN_CT else _lam_mau_bth)(ws)
+        if not da_la_mau[ten]:                          # sheet của file PABT Excel (công thức) -> chỗ trống {ten}
+            (_lam_mau_ct if ten == TEN_CT else _lam_mau_bth)(ws)
         ws.sheet_view.selection[0].activeCell = 'A1'
         ws.sheet_view.selection[0].sqref = 'A1'
-        p = thu_muc / f'{ten}.xlsx'
         wb.save(p)
         tao.append(p)
-    tao += luu_duong_ke(file_excel, thu_muc)
+        x = doc_duong_ke(file_excel, s)
+        dk = thu_muc / f'{p.stem}.duong_ke.xml'
+        if x:
+            dk.write_text(x, encoding='utf-8')
+            tao.append(dk)
     return tao
+
+
+def _xml_attr(s: str) -> str:
+    return s.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
 
 
 def _lam_mau_ct(ws):
@@ -826,8 +959,8 @@ def _thong_tin_ho(con, ma_ho: int, da: dict) -> dict:
 
 # ---------------------------------------------------------------- phương án chi tiết (A4 dọc)
 def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh | None = None) -> Path:
-    """Điền mẫu IN_CHITIET cho một hộ, lưu thành file .xlsx. Trả đường dẫn file."""
-    mau = Path(mau or thu_muc_mau()) / f'{TEN_CT}.xlsx'
+    """Điền mẫu IN_CHITIET cho một hộ, lưu thành file .xlsx. Trả đường dẫn file. mau: thư mục mẫu hoặc file mẫu riêng."""
+    mau = file_mau(mau, TEN_CT)
     duong_ke = duong_ke_cua_mau(mau, TEN_CT)
     wb = openpyxl.load_workbook(mau)
     ws = wb.worksheets[0]
@@ -920,10 +1053,11 @@ def gop_pdf(ds: list, file_ra) -> Path:
 
 
 def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | None = None, so_pa_tong: str = '',
-                      ngay_pa_tong: str = '') -> Path:
+                      ngay_pa_tong: str = '', bao_tien_do=None) -> Path:
     """Bảng tổng hợp các hộ. so_pa_tong / ngay_pa_tong (phương án tổng của đợt trình): điền vào "(Đính kèm Phương án số …/…
-    ngày … tháng … năm …)" và ngày ký của mẫu (chỗ trống {so_pa_tong}, {ngay_pa_tong} cũng dùng được)."""
-    mau = Path(mau or thu_muc_mau()) / f'{TEN_BTH}.xlsx'
+    ngày … tháng … năm …)" và ngày ký của mẫu (chỗ trống {so_pa_tong}, {ngay_pa_tong} cũng dùng được).
+    bao_tien_do(i, n): gọi mỗi 100 hộ để hộp tiến trình vẽ lại (bảng nhiều hộ, không "Không phản hồi"); không dừng giữa chừng."""
+    mau = file_mau(mau, TEN_BTH)
     duong_ke = duong_ke_cua_mau(mau, TEN_BTH)
     wb = openpyxl.load_workbook(mau)
     ws = wb.worksheets[0]
@@ -935,9 +1069,10 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
     ds_ma_ho = sorted(ds_ma_ho, key=lambda m: thu_tu.get(m, (0, m)))
     khoi = []
     tat_ca = nghiep_vu.doc_tat_ca_phuong_an(con, ds_ma_ho)              # 3 câu truy vấn thay vì 3 câu mỗi hộ
+    kqh = nghiep_vu.ket_qua_ho(con)                                     # kết quả đã tính dùng chung (cùng dữ liệu)
     for ma in ds_ma_ho:
         pa = tat_ca.get(ma) or doc_phuong_an(con, ma)
-        kq = tinh_pa(pa, bc)
+        kq = kqh[ma][0] if ma in kqh else tinh_pa(pa, bc)
         thua = list(bc.thua_cua(ma))
         khoi.append((ma, pa, kq, thua))
     can = sum(max(1, len(t)) for _, _, _, t in khoi) or 1
@@ -949,8 +1084,11 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
         ws.row_dimensions[r].height = cao
     r = DONG_DAU_BTH
     tong_thua, tong_dt = 0, KHONG
+    ho = {r['ma_ho']: r for r in con.execute('SELECT * FROM ho')}       # một câu thay vì một câu mỗi hộ
     for stt, (ma, pa, kq, thua) in enumerate(khoi, start=1):
-        h = con.execute('SELECT * FROM ho WHERE ma_ho = ?', (ma,)).fetchone()
+        if bao_tien_do and stt % 100 == 0:
+            bao_tien_do(stt, len(khoi))
+        h = ho[ma]
         r0 = r
         ws.cell(r0, 1).value = stt
         ws.cell(r0, 2).value = h['ho_ten']
@@ -994,12 +1132,22 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
         if c in (12, 13, 15):
             continue
         ws.cell(tong, c).value = f'=SUM({cl}{DONG_DAU_BTH}:{cl}{tong - 1})'
-    # các dòng kinh phí dưới dòng tổng (giữ đúng tỷ lệ trong chữ của mẫu)
+    # các dòng kinh phí dưới dòng tổng: kinh phí tổ chức thực hiện theo loại dự án (QĐ 08/2025/QĐ-UBND: theo tuyến 3,5%, cụm /
+    # vùng / khác 2,5% - lap_pa.kinh_phi_to_chuc), thay tỷ lệ trong chữ của mẫu; dòng chia (85% / 15%...) giữ tỷ lệ của mẫu
+    from .lap_pa import CAN_CU_KINH_PHI, kinh_phi_to_chuc
+    from .tien import chuoi, so_vn
+    _, tl_kp, _ = kinh_phi_to_chuc(con)
     for rr in range(tong + 1, tong + 5):
         a = str(ws.cell(rr, 1).value or '') + ' ' + str(ws.cell(rr, 8).value or '')
         if rr == tong + 1:
-            pt = re.search(r'([\d,\.]+)%', a)
-            ws.cell(rr, 22).value = f'=ROUND(V{tong}*{(pt.group(1).replace(",", ".") if pt else "2.5")}%, -3)'
+            chu = str(ws.cell(rr, 1).value or '')
+            if chu:
+                chu = re.sub(r'[\d,\.]+\s*%', f'{so_vn(tl_kp)}%', chu, count=1) if '%' in chu else \
+                    chu.rstrip(': ') + f' {so_vn(tl_kp)}%:'
+                if '08/2025' not in chu:
+                    chu = chu.rstrip(': ') + f' (theo {CAN_CU_KINH_PHI}):'
+                ws.cell(rr, 1).value = chu
+            ws.cell(rr, 22).value = f'=ROUND(V{tong}*{chuoi(tl_kp)}%, -3)'
         elif 'TỔNG CỘNG' in a:
             ws.cell(rr, 22).value = f'=V{tong}+V{tong + 1}'
         else:
@@ -1196,7 +1344,10 @@ def chay_excel(cap_file: list, che_do: str = 'pdf', cho_moi_file: int = CHO_MOI_
 # ---------------------------------------------------------------- in hàng loạt
 def ten_file_ho(con, ma_ho: int) -> str:
     h = con.execute('SELECT thu_tu, ho_ten FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
-    ten = re.sub(r'[\\/:*?"<>|\r\n\t]+', ' ', ' '.join(str(h['ho_ten'] or '').split()))[:60].strip()
+    ten = ' '.join(str(h['ho_ten'] or '').split())
+    # "Nguyễn Văn A là chủ sở hữu tài sản gắn liền với thửa đất số…" (họ tên nhập kèm diễn giải): tên file chỉ lấy phần họ tên
+    ten = re.split(r'\s+là\s+(?:chủ|người|đại diện|đồng)\b', ten, maxsplit=1, flags=re.I)[0]
+    ten = re.sub(r'[\\/:*?"<>|\r\n\t]+', ' ', ten)[:60].strip()
     return f'PA_{h["thu_tu"]:03d}_ma{ma_ho}_{ten}'
 
 
@@ -1216,7 +1367,9 @@ def xuat_hang_loat(con, ds_ma_ho: list, thu_muc, pdf: bool = False, in_may: bool
             kq['loi'].append(f'DA_DUNG\t\tĐã dừng theo yêu cầu sau {i}/{len(ds_ma_ho)} hộ (chưa xuất PDF / in)')
             return kq
     if bang_tong_hop:
-        p = lap_bang_tong_hop(con, thu_muc / 'BANG_TONG_HOP.xlsx', ds_ma_ho, mau)
+        n = len(ds_ma_ho) + 1
+        p = lap_bang_tong_hop(con, thu_muc / 'BANG_TONG_HOP.xlsx', ds_ma_ho, mau,
+                              bao_tien_do=(lambda i, m: bao_tien_do(n - 1, n)) if bao_tien_do else None)
         kq['excel'].append(p)
     if pdf or in_may:
         cap = [(p, p.with_suffix('.pdf') if pdf else None) for p in kq['excel']]

@@ -1479,9 +1479,25 @@ class HopDuAn(QDialog):
                 w.setCursorPosition(0)
             self.o[k] = w
             (don_vi if k in csdl.TRUONG_DON_VI else du_an).append((ten + ':', w))
+        # kinh phí tổ chức thực hiện bồi thường (QĐ 08/2025/QĐ-UBND): theo tuyến 3,5%, cụm / vùng / khác 2,5%
+        loai, tl, tu_nhan = lap_pa.kinh_phi_to_chuc(con)
+        self.o_loai_kp = QComboBox()
+        self.o_loai_kp.addItem(f'Tự nhận theo tên dự án (hiện: {lap_pa.LOAI_KINH_PHI[loai][0]})', '')
+        for k, (ten, toi_da) in lap_pa.LOAI_KINH_PHI.items():
+            self.o_loai_kp.addItem(f'{ten} - tối đa {so_vn(toi_da)}%', k)
+        self.o_loai_kp.setCurrentIndex(0 if tu_nhan else self.o_loai_kp.findData(loai))
+        self.o_tl_kp = QLineEdit(csdl.doc_cai_dat(con, 'TL_KINH_PHI', '').replace('.', ','))
+        self.o_tl_kp.setPlaceholderText(f'để trống = mức tối đa ({so_vn(tl)}%)')
+        kp = the_form('Kinh phí tổ chức thực hiện bồi thường (bảng tổng hợp, dự toán)',
+                      [('Loại dự án:', self.o_loai_kp), ('Tỷ lệ (%):', self.o_tl_kp)], 110)
+        kp.setToolTip(f'{lap_pa.CAN_CU_KINH_PHI}: dự án, tiểu dự án hạ tầng theo tuyến không quá 3,5%; dự án còn lại '
+                      '(cụm, vùng, khu…) không quá 2,5% tổng kinh phí bồi thường, hỗ trợ, tái định cư.')
         form = QVBoxLayout()
         form.addWidget(can_giua(the_form('Thông tin dự án', du_an, 110), the_form('Đơn vị lập, người ký', don_vi, 160)))
-        ghi = QLabel('Cấp và tên xã, phường dùng trong mô tả thửa trên bản in và để chọn mức hỗ trợ theo địa bàn xã / phường.')
+        form.addWidget(can_giua(kp))
+        ghi = QLabel('Cấp và tên xã, phường dùng trong mô tả thửa trên bản in và để chọn mức hỗ trợ theo địa bàn xã / phường. '
+                     f'Kinh phí tổ chức thực hiện theo {lap_pa.CAN_CU_KINH_PHI}: theo tuyến tối đa 3,5%, cụm / vùng / khác '
+                     'tối đa 2,5%.')
         ghi.setWordWrap(True)
         nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         nut.button(QDialogButtonBox.StandardButton.Save).setText('Lưu')
@@ -1499,6 +1515,7 @@ class HopDuAn(QDialog):
     def accept(self):
         try:
             lap_pa.luu_du_an(self.con, self.gia_tri())
+            lap_pa.luu_kinh_phi_to_chuc(self.con, self.o_loai_kp.currentData() or '', self.o_tl_kp.text())
         except LoiNhap as e:
             QMessageBox.warning(self, TEN_UD, str(e))
             return
@@ -1685,8 +1702,22 @@ class HopIn(QDialog):
         form.addRow('', hang_chon)
         form.addRow('', self.bang_ho)
         form.addRow('', self.lb_chon)
-        form.addRow('Bản in:', self.o_ct)
-        form.addRow('', self.o_bth)
+        # mẫu riêng (in_an.ds_mau: IN_CHITIET__<tên>.xlsx, thêm bằng "Mẫu in…"): chọn mẫu cho từng loại bản in
+        from . import in_an as _ia
+        self.cb_mau_ct, self.cb_mau_bth = QComboBox(), QComboBox()
+        for cb, ten_mau, o in ((self.cb_mau_ct, _ia.TEN_CT, self.o_ct), (self.cb_mau_bth, _ia.TEN_BTH, self.o_bth)):
+            for t, f in _ia.ds_mau(ten_mau):
+                cb.addItem(t, None if t == 'Mẫu chính' else str(f))
+            cb.setToolTip('Mẫu in dùng cho bản in này. Thêm mẫu riêng (ví dụ bản Dự thảo): lệnh "Mẫu in…" ở menu In ấn.')
+            cb.setVisible(cb.count() > 1)
+            h = QHBoxLayout()
+            h.addWidget(o)
+            h.addWidget(cb)
+            h.addStretch(1)
+            if o is self.o_ct:
+                form.addRow('Bản in:', h)
+            else:
+                form.addRow('', h)
         form.addRow('', self.o_tt)
         form.addRow('', self.o_pat)
         form.addRow('', hang_mau_in)
@@ -1814,7 +1845,7 @@ class HopIn(QDialog):
         if mo:
             QMessageBox.information(self, TEN_UD, f'Mở mẫu {vb.LOAI[loai][1].lower()} bằng {"Excel" if p.suffix == ".xlsx" else "Word"}:'
                                     f'\n{p}\n\nSửa xong bấm Lưu rồi đóng. Chỗ trống viết trong ngoặc nhọn, ví dụ {{so_to_trinh}} '
-                                    '(danh sách ở cửa sổ "Đợt trình…" > "Chỗ trống dùng trong mẫu…").')
+                                    '(danh sách ở cửa sổ "Đợt trình…" > "Mã điền tự động {…}…").')
             mo_file(p)
         return p
 
@@ -1827,7 +1858,7 @@ class HopIn(QDialog):
             return None
         try:
             with con_tro_cho():
-                f = in_an.xem_truoc(self.con, ds[0])
+                f = in_an.xem_truoc(self.con, ds[0], mau=self.cb_mau_ct.currentData())
         except (in_an.LoiIn, OSError) as e:
             QMessageBox.warning(self, TEN_UD, str(e))
             return None
@@ -1838,7 +1869,7 @@ class HopIn(QDialog):
     def sua_mau(self, mo: bool = True):
         from . import in_an
         try:
-            f = in_an.mau_de_sua()
+            f = Path(self.cb_mau_ct.currentData()) if self.cb_mau_ct.currentData() else in_an.mau_de_sua()
         except (in_an.LoiIn, OSError) as e:
             QMessageBox.warning(self, TEN_UD, str(e))
             return None
@@ -1913,6 +1944,7 @@ class HopIn(QDialog):
             with con_tro_cho():
                 # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
                 kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=self.dot_chon(), pdf=self.r_pdf.isChecked(), in_may=in_may,
+                                      mau_ct=self.cb_mau_ct.currentData(), mau_bth=self.cb_mau_bth.currentData(),
                                       so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
                                       **chon)
                 ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]
@@ -1931,7 +1963,11 @@ class HopIn(QDialog):
             tien.close()
             QMessageBox.warning(self, TEN_UD, chu_loi('Không ghi được file', e))
             return None
+        except Exception:                               # lỗi khác (mẫu in, dữ liệu...): không để kẹt hộp tiến trình
+            tien.close()                                # (giao_dien.cai_bat_loi báo lỗi)
+            raise
         tien.close()
+        tien.deleteLater()
         self.ket_qua = kq
         dung = any(x.startswith(('DA_DUNG', 'LOI_TREO')) for x in kq['loi'])
         tb = f'Đã tạo {len(kq["excel"])} file Excel' + (f', {len(kq["word"])} file Word' if kq.get('word') else '') + \

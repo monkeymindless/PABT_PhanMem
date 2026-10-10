@@ -152,9 +152,9 @@ class TestMau(unittest.TestCase):
         from PySide6.QtWidgets import QToolButton
         nut = {b.text().rstrip('…'): b.property('nhom') for b in w.findChildren(QToolButton)}
         self.assertEqual(nut['Nhập file Excel'], 'nhap')            # Qt bỏ dấu … trên nút thanh lệnh
-        self.assertEqual(nut['Lập phương án hộ'], 'pa')
+        self.assertEqual(nut['Lập phương án'], 'pa')                # chữ ngắn trên menu (app.NHAN_MENU)
         self.assertEqual(nut['Thêm hộ'], 'them')
-        self.assertEqual(nut['Cập nhật mẫu in'], 'nhap')
+        self.assertEqual(nut['Mẫu in'], 'in')
         self.assertEqual(w.lb_du_an.property('vai'), 'bang_ten')
         self.assertIn('QHeaderView::section', self.app.styleSheet())
         w.close()
@@ -178,13 +178,13 @@ class TestMau(unittest.TestCase):
             self.assertIn(w.lenh['Nhập phương án chi tiết…'], xo.menu().actions())
             self.assertEqual(m.nhom_dong, set(ud.NHOM_DONG_MAC_DINH))
             nut_in = next(b for b in m.findChildren(giao_dien.QToolButton) if b.defaultAction() is w.lenh['In / Xuất…'])
-            self.assertTrue(nut_in.isHidden())                       # nhóm "In ấn, báo cáo" đóng sẵn
-            m.tieu_de_nhom['In ấn, báo cáo'].bam()
+            self.assertTrue(nut_in.isHidden())                       # nhóm "In, báo cáo" đóng sẵn
+            m.tieu_de_nhom['In, báo cáo'].bam()
             self.assertFalse(nut_in.isHidden())
-            self.assertIn('▾', m.tieu_de_nhom['In ấn, báo cáo'].text())
+            self.assertIn('▾', m.tieu_de_nhom['In, báo cáo'].text())
             w.close()
             w2 = ud.CuaSoChinh(menu_trai=True)                       # nhớ nhóm đã mở
-            self.assertNotIn('In ấn, báo cáo', w2.khung_menu.nhom_dong)
+            self.assertNotIn('In, báo cáo', w2.khung_menu.nhom_dong)
             chu = ' '.join(x.text() for x in w2.findChildren(QLabel))
             self.assertNotIn('Tổ chức làm nhiệm vụ', chu)
             bang = next(f for f in w2.findChildren(giao_dien.QFrame) if f.property('vai') == 'bang_to_chuc')
