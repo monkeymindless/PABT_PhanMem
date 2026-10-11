@@ -181,6 +181,16 @@ def vn(x, so_le: int = 0) -> str:
     return s.replace(',', '#').replace('.', ',').replace('#', '.')
 
 
+def vn_gon(x) -> str:
+    """Số tiền gọn cho thẻ số liệu (0.9.23): 185.412.000.000 -> "185,4 tỷ"; 23.500.000 -> "23,5 triệu"; dưới 1 triệu: vn().
+    Chỉ để xem nhanh - số đầy đủ ở chú thích / bảng."""
+    x = D(x)
+    for nguong, ten in ((D(10) ** 9, 'tỷ'), (D(10) ** 6, 'triệu')):
+        if abs(x) >= nguong:
+            return f'{vn(x / nguong, 1)} {ten}'
+    return vn(x)
+
+
 def so_vn(x) -> str:
     """Số trong câu chữ: 410,6 ; 135.000 (tự bỏ phần lẻ khi là số nguyên)."""
     x = D(x)

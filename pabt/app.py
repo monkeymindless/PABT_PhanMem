@@ -4,16 +4,16 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSortFilterProxyModel, Qt, QTimer
-from PySide6.QtGui import QAction, QBrush, QColor, QFont
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSortFilterProxyModel, Qt, QTimer, Signal
+from PySide6.QtGui import QAction, QBrush, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
-                               QLineEdit,
+                               QLineEdit, QListWidget, QListWidgetItem,
                                QMainWindow, QMessageBox, QPlainTextEdit, QStackedWidget, QTableView, QToolButton,
                                QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
-from .tien import D, so_vn, vn
+from .tien import D, so_vn, vn, vn_gon
 from .giao_dien import con_tro_cho
 from .thong_bao import TEN_UD, THE_TONG_HOP, chu_loi
 
@@ -24,21 +24,68 @@ TIEU_DE_CUA_SO = TEN_UD + (f' ({NHAN_THU_NGHIEM})' if BAN_THU_NGHIEM else '')   
 # "Theo dõi tiến độ" (man_hinh_theo_doi)
 COT = ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²)', 'Trạng thái']
 COT_SO = {4}
-# các trang bên phải cửa sổ chính (chọn ở menu trái)
-TRANG = ['Danh sách hộ', *THE_TONG_HOP, 'Theo dõi tiến độ']     # trang bên phải: 1-3 = các thẻ của Bảng tổng hợp
+# các trang bên phải cửa sổ chính (chọn ở menu trái): 1-3 = các thẻ của Bảng tổng hợp; 5 = Dự toán (0.9.23 - lộ trình người
+# dùng: dự toán / khái toán là mục tiêu tài chính của DỰ ÁN, thành trang trong cửa sổ chính thay hộp thoại riêng)
+TRANG = ['Danh sách hộ', *THE_TONG_HOP, 'Theo dõi tiến độ', 'Dự toán & khái toán']
+TRANG_DU_TOAN = 5
+TRANG_CHAO = 4                     # chỉ số trong self.trang (QStackedWidget) của màn hình chào khi chưa mở dự án
 XANH, DO, VANG = QColor('#E2EFDA'), QColor('#F8CBAD'), QColor('#FFF2CC')
-CHUA_MO = ('Chưa mở dự án. Bấm <b>"Dự án"</b> → <b>"Dự án mới…"</b> để nhập thông tin dự án, danh sách hộ, '
-           'thửa (thô) và bảng giá đất: phần mềm tự lập phương án và xuất 2 bảng in. Hoặc "Mở dự án…" / "Nhập file Excel…".')
 # menu trái: nhóm đóng sẵn lần đầu mở phần mềm (sau đó nhớ theo người dùng) - vừa màn hình 1366x768 không phải cuộn
-NHOM_DONG_MAC_DINH = ('Đơn giá, dự toán', 'Trình duyệt, tiến độ', 'In, báo cáo')
+NHOM_DONG_MAC_DINH = ('Bảng giá & chính sách', 'Tiến độ & bàn giao')
+GAN_DAY_TOI_DA = 8                 # số dự án nhớ trong danh sách "Dự án làm việc gần đây" (màn hình chào hiện 5)
 # chữ ngắn trên menu (khóa = tên lệnh đầy đủ trong self.lenh, hiện ở gợi ý khi rê chuột)
 NHAN_MENU = {'Lập phương án hộ…': 'Lập phương án', 'Thêm hộ…': 'Thêm hộ', 'Xóa hộ…': 'Xóa hộ', 'Kiểm tra lỗi…': 'Kiểm tra lỗi',
              'Bộ đơn giá…': 'Bộ đơn giá', 'Đơn giá riêng dự án…': 'Đơn giá riêng', 'Rà soát giá…': 'Rà soát giá',
-             'Dự toán, áp giá dự thảo…': 'Dự toán', 'Quy chuẩn cây, tài sản…': 'Quy chuẩn cây',
+             'Quy chuẩn cây, tài sản…': 'Quy chuẩn cây', 'Thông tin dự án…': 'Thông tin dự án',
+             'Bảng giá đất NQ 28…': 'Bảng giá đất',
              'Thông tin tổng quát hộ': 'Tổng quát hộ', 'Tổng hợp tiền theo phương án': 'Tổng hợp tiền',
              'Quyết định phê duyệt': 'Quyết định', 'Đợt trình…': 'Đợt trình', 'Trạng thái hộ…': 'Trạng thái hộ',
              'In / Xuất…': 'In / Xuất', 'Báo cáo tổng hợp…': 'Báo cáo tổng hợp', 'Cập nhật mẫu in…': 'Mẫu in',
-             'Xuất báo cáo đối chiếu…': 'Đối chiếu với file Excel…'}
+             'Xuất báo cáo đối chiếu…': 'Đối chiếu file Excel'}
+
+
+def _file_gan_day() -> Path:
+    return may_chu.thu_muc_may() / 'du_an_gan_day.json'
+
+
+def doc_gan_day() -> list:
+    """Đường dẫn các dự án mở gần đây (mới nhất trước) - màn hình chào."""
+    import json
+    try:
+        ds = json.loads(_file_gan_day().read_text(encoding='utf-8'))
+        return [str(x) for x in ds if isinstance(x, str)]
+    except (OSError, ValueError):
+        return []
+
+
+def ghi_gan_day(p) -> None:
+    import json
+    try:
+        moi = str(Path(p).resolve())
+        ds = [moi] + [x for x in doc_gan_day() if x.lower() != moi.lower()]
+        f = _file_gan_day()
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(ds[:GAN_DAY_TOI_DA], ensure_ascii=False, indent=1), encoding='utf-8')
+    except OSError:                                     # thư mục máy không ghi được: bỏ qua, không ảnh hưởng mở dự án
+        pass
+
+
+def file_huong_dan():
+    """HUONG_DAN.md: đóng gói cạnh mã (bản cài: _internal) hoặc ở gốc mã nguồn."""
+    ds = [Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent)) / 'HUONG_DAN.md'] if getattr(sys, 'frozen', False) else []
+    ds.append(Path(__file__).resolve().parents[1] / 'HUONG_DAN.md')
+    return next((f for f in ds if f.exists()), None)
+
+
+class TheSo(QWidget):
+    """Thẻ số liệu ở đầu cửa sổ chính - bấm để lọc danh sách hộ theo chỉ số đó (0.9.23: thẻ tương tác, lộ trình người dùng)."""
+    bam = Signal()
+
+    def mouseReleaseEvent(self, e):
+        if e.button() == Qt.MouseButton.LeftButton and self.rect().contains(e.position().toPoint() if hasattr(e, 'position')
+                                                                          else e.pos()):
+            self.bam.emit()
+        super().mouseReleaseEvent(e)
 
 
 class LocHo(QSortFilterProxyModel):
@@ -224,7 +271,13 @@ class CuaSoChinh(QMainWindow):
                          ('Lưu dự án thành…', lambda: self.luu_du_an_thanh()), ('Đợt trình…', lambda: self.dot_trinh()),
                          ('Trạng thái hộ…', lambda: self.trang_thai_ho()),
                          ('Báo cáo tổng hợp…', lambda: self.bao_cao_tong_hop()), ('Kiểm tra lỗi…', lambda: self.kiem_tra_loi()),
-                         ('Dự toán, áp giá dự thảo…', lambda: self.du_toan()),
+                         ('Bảng giá đất NQ 28…', lambda: self.bang_gia_dat()),
+                         ('Đóng dự án', lambda: self.dong_du_an_lenh()), ('Thoát', self.close),
+                         ('Hướng dẫn sử dụng', lambda: self.huong_dan()),
+                         ('Lưu dự án', lambda: self.luu_du_an_lenh()),
+                         ('Kết nối máy chủ LAN…', lambda: self.thiet_lap_may_chu()),
+                         ('Phóng to chữ', lambda: self._phong_to(1)), ('Thu nhỏ chữ', lambda: self._phong_to(-1)),
+                         ('Cỡ chữ 100%', lambda: self._phong_to(0)),
                          ('Quy chuẩn cây, tài sản…', lambda: self.quy_chuan()),
                          ('Dự án trên máy chủ…', lambda: self.du_an_may_chu()),
                          *((t, lambda _=False, i=i: self.mo_trang(i)) for i, t in enumerate(TRANG))):
@@ -234,22 +287,30 @@ class CuaSoChinh(QMainWindow):
         for k, t in enumerate(TRANG):                   # mục trang ở menu trái: đánh dấu trang đang xem
             self.lenh[t].setCheckable(True)
             self.lenh[t].setChecked(k == 0)
+        for ten, phim in (('Dự án mới…', 'Ctrl+N'), ('Mở dự án…', 'Ctrl+O'), ('Dự án trên máy chủ…', 'Ctrl+Shift+O'),
+                          ('Lưu dự án', 'Ctrl+S'),
+                          ('Lưu dự án thành…', 'Ctrl+Shift+S'), ('Hướng dẫn sử dụng', 'F1')):
+            self.lenh[ten].setShortcut(QKeySequence(phim))
+        self._i_trang = 0                                # trang (chỉ số TRANG) đang chọn - mở lại dự án thì về trang này
+        self.khung_du_toan = None                        # trang Dự toán: tạo khi mở lần đầu (không làm chậm lúc khởi động)
         self.dm = None
-        self.lb_du_an = QLabel(CHUA_MO)
+        self.lb_du_an = QLabel('')
         self.lb_du_an.setWordWrap(True)
         self.lb_du_an.setProperty('vai', 'bang_ten')
         self.lb_ket_qua = QLabel('')
         self.lb_ket_qua.setStyleSheet('QLabel { font-weight: bold; padding: 5px 8px; }')
-        self.o_tim = QLineEdit()
+        from .giao_dien import OTimKiemThongMinh
+        self.o_tim = OTimKiemThongMinh()                 # chờ ngừng gõ 200 ms: bộ gõ tiếng Việt gửi nhiều phím / chữ có dấu
         self.o_tim.setPlaceholderText('Tìm theo mã hộ, họ tên, trạng thái, ghi chú (không cần dấu)…')
         self.o_tim.setClearButtonEnabled(True)
+        self.o_tim.setMinimumWidth(220)
         self.mo_hinh = BangHo()
         self.loc = LocHo(self)
         self.loc.setSourceModel(self.mo_hinh)
         self.loc.setSortRole(Qt.ItemDataRole.UserRole)
-        self.o_tim.textChanged.connect(lambda t: self._loc(tu_khoa=t))
+        self.o_tim.chuoi_da_doi.connect(lambda t: self._loc(tu_khoa=t))
         self.cb_dot = QComboBox()
-        self.cb_dot.setMinimumWidth(150)
+        self.cb_dot.setMinimumWidth(120)
         self.cb_dot.addItem('Tất cả đợt', '')
         self.cb_dot.currentIndexChanged.connect(lambda *_: self._loc(dot=self.cb_dot.currentData()))
         self.cb_tt = QComboBox()
@@ -272,7 +333,7 @@ class CuaSoChinh(QMainWindow):
         self.bang.doubleClicked.connect(lambda idx: self._chay_lenh(lambda: self.mo_chi_tiet(idx)))
         self.bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.bang.customContextMenuRequested.connect(lambda p: self._menu_ho(self.bang, p))
-        from PySide6.QtGui import QKeySequence, QShortcut
+        from PySide6.QtGui import QShortcut
         phim_xoa = QShortcut(QKeySequence(QKeySequence.StandardKey.Delete), self.bang)    # phím Delete trên danh sách hộ
         phim_xoa.setContext(Qt.ShortcutContext.WidgetShortcut)                            # (không áp khi đang sửa ô ghi chú)
         phim_xoa.activated.connect(lambda: self.lenh['Xóa hộ…'].isEnabled() and self._chay_lenh(self.xoa_ho))
@@ -286,13 +347,12 @@ class CuaSoChinh(QMainWindow):
             k.mo_ho.connect(lambda m: self.trang_thai_ho([m]))
         # bấm thẳng thẻ của Bảng tổng hợp: tiêu đề trang + dấu chọn ở menu trái đi theo (trước: giữ trang cũ)
         self.bang_tong_hop.the_da_doi.connect(lambda i: self.trang.currentIndex() == 1 and self._danh_dau_trang(1 + i))
-        hang = QHBoxLayout()
+        hang = self._thanh_cong_cu_ds()                  # Thêm hộ, Lập phương án, Xóa hộ (theo ngữ cảnh) | bộ lọc
         for ten, w in (('Đợt:', self.cb_dot), ('Trạng thái:', self.cb_tt), ('Tìm:', self.o_tim)):
             nhan_tim = QLabel(ten)
             nhan_tim.setProperty('vai', 'nhan')
             hang.addWidget(nhan_tim)
             hang.addWidget(w, 1 if w is self.o_tim else 0)
-        hang.addWidget(self.lb_loc)
         nen = QWidget()
         lo = QVBoxLayout(nen)
         lo.setContentsMargins(10, 8, 10, 6)
@@ -304,19 +364,25 @@ class CuaSoChinh(QMainWindow):
         for k, ngan in NHAN_MENU.items():
             L[k].setText(ngan)
             L[k].setToolTip(k.rstrip('…'))
+        for k in TRANG:                                  # "&" trong chữ QAction = phím tắt gạch dưới: viết "&&" để hiện "&"
+            if '&' in k:
+                L[k].setText(k.replace('&', '&&'))
+        # 0.9.23 (lộ trình người dùng): 5 nhóm theo vòng đời nghiệp vụ - dự án -> bảng giá -> lập phương án -> tổng hợp, trình ->
+        # tiến độ. Thao tác file (tạo / mở / lưu / nhập) lên thanh menu Tệp tin / Dữ liệu (trước: nút xổ "DỰ ÁN ▾" đầu menu trái,
+        # danh sách xổ đè lên các nút bên dưới); Thêm hộ / Xóa hộ (thao tác theo hộ đang chọn) ở thanh công cụ của danh sách hộ.
+        # Mọi nơi dùng chung MỘT QAction mỗi lệnh (cùng trạng thái tắt khi chỉ xem).
         nhom = [
-            ('Dự án', [L['Dự án mới…'], L['Mở dự án…'], L['Lưu dự án thành…'], L['Nhập file Excel…'],
-                       L['Nhập phương án chi tiết…'], L['Xuất báo cáo đối chiếu…'], L['Thông tin dự án…'],
-                       L['Dự án trên máy chủ…']]),
-            ('Hồ sơ, phương án', [L['Lập phương án hộ…'], L['Thêm hộ…'], L['Xóa hộ…'], L['Kiểm tra lỗi…']]),
-            ('Đơn giá, dự toán', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Rà soát giá…'],
-                                  L['Dự toán, áp giá dự thảo…'], L['Quy chuẩn cây, tài sản…']]),
-            ('Tổng hợp', [L['Danh sách hộ'], L['Thông tin tổng quát hộ'], L['Tổng hợp tiền theo phương án']]),
-            # mọi việc về quyết định ở MỘT chỗ: trang "Quyết định phê duyệt" (Thêm / Nhập từ file / Sửa / Xóa); trước 0.9.18 trang
-            # nằm ở nhóm Bảng tổng hợp và nhóm này có thêm "Nhập quyết định…" - cùng hộp thoại với nút "Nhập từ file…" của trang
-            ('Trình duyệt, tiến độ', [L['Theo dõi tiến độ'], L['Đợt trình…'], L['Quyết định phê duyệt'], L['Trạng thái hộ…']]),
-            ('In, báo cáo', [L['In / Xuất…'], L['Báo cáo tổng hợp…'], L['Cập nhật mẫu in…']]),
+            ('Dự án & dự toán', [L['Thông tin dự án…'], L['Dự toán & khái toán'], L['Danh sách hộ']]),
+            ('Bảng giá & chính sách', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Bảng giá đất NQ 28…'],
+                                       L['Quy chuẩn cây, tài sản…']]),
+            ('Lập phương án', [L['Lập phương án hộ…'], L['Kiểm tra lỗi…'], L['Xuất báo cáo đối chiếu…']]),
+            ('Tổng hợp & trình duyệt', [L['Thông tin tổng quát hộ'], L['Tổng hợp tiền theo phương án'], L['Đợt trình…'],
+                                        L['In / Xuất…']]),
+            # mọi việc về quyết định ở MỘT chỗ: trang "Quyết định phê duyệt" (Thêm / Nhập từ file / Sửa / Xóa)
+            ('Tiến độ & bàn giao', [L['Quyết định phê duyệt'], L['Theo dõi tiến độ'], L['Trạng thái hộ…'],
+                                    L['Báo cáo tổng hợp…']]),
         ]
+        self._thanh_menu()
         # hoàn tác / làm lại thao tác đã ghi vào file dự án (Ctrl+Z / Ctrl+Y ở mọi cửa sổ): trên băng tiêu đề, cạnh tên phần mềm
         from .giao_dien import XU_LY_HOAN_TAC
         self.nut_ht = {}
@@ -326,40 +392,55 @@ class CuaSoChinh(QMainWindow):
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.clicked.connect(lambda _=False, x=lai: self.hoan_tac(x))
             self.nut_ht[k] = b
-        lo.addWidget(do_bong(bang_to_chuc(f'Phiên bản {__version__}', (self.nut_ht['lui'], self.nut_ht['toi'])), 18, 3, 45))
+        self.bang_tieu_de = bang_to_chuc(f'Phiên bản {__version__}', (self.nut_ht['lui'], self.nut_ht['toi']))
+        lo.addWidget(do_bong(self.bang_tieu_de, 18, 3, 45))
         if self.menu_trai:
             ngang = QHBoxLayout()
             ngang.setSpacing(8)
-            # "Dự án" (lệnh ít dùng) = một nút xổ; nhóm khác bấm tiêu đề để đóng / mở - menu không tràn màn hình 1366x768
-            self.khung_menu = tao_menu_trai(nhom, xo=('Dự án',), dong_mac_dinh=NHOM_DONG_MAC_DINH)
+            # bấm tiêu đề nhóm để đóng / mở - menu không tràn màn hình 1366x768
+            self.khung_menu = tao_menu_trai(nhom, dong_mac_dinh=NHOM_DONG_MAC_DINH)
             ngang.addWidget(self.khung_menu)
             phai = QVBoxLayout()
             phai.setSpacing(7)
             ngang.addLayout(phai, 1)
             lo.addLayout(ngang, 1)
-        else:
-            lo.addWidget(thanh_lenh(nhom))
+        else:                                           # kiểu cũ (--menu-tren): thanh nút, kèm nhóm Dự án như trước
+            lo.addWidget(thanh_lenh([('Dự án', [L['Dự án mới…'], L['Mở dự án…'], L['Lưu dự án thành…'],
+                                                L['Nhập file Excel…'], L['Nhập phương án chi tiết…']]), *nhom]))
             phai = lo
         phai.addWidget(self.lb_du_an)
-        phai.addLayout(self._hang_the_so())
+        self.hang_the = QWidget()                        # thẻ số liệu (ẩn ở màn hình chào)
+        self.hang_the.setLayout(self._hang_the_so())
+        self.hang_the.layout().setContentsMargins(0, 0, 0, 0)
+        phai.addWidget(self.hang_the)
         trang_ds = QWidget()
         lo_ds = QVBoxLayout(trang_ds)
         lo_ds.setContentsMargins(0, 0, 0, 0)
         lo_ds.setSpacing(7)
         # băng kết quả đối chiếu; Lập phương án / Thêm hộ chỉ ở menu trái (+ bấm đúp, chuột phải) - không lặp nút ở đây
-        lo_ds.addWidget(self.lb_ket_qua)
+        hang_kq = QHBoxLayout()                         # kết quả đối chiếu | số hộ đang hiện theo bộ lọc
+        hang_kq.addWidget(self.lb_ket_qua, 1)
+        hang_kq.addWidget(self.lb_loc)
+        lo_ds.addLayout(hang_kq)
         lo_ds.addLayout(hang)
+        lo_ds.addWidget(self.hang_chon)
         lo_ds.addWidget(self.bang, 1)
         self.lb_trang = QLabel('')
         self.lb_trang.setProperty('vai', 'tieu_de')
         self.lb_trang.setVisible(False)
         self.trang = QStackedWidget()
-        for w in (trang_ds, self.bang_tong_hop, self.tien_do):
+        self.trang_dt = QWidget()                        # trang Dự toán & khái toán (KhungDuToan tạo khi mở lần đầu)
+        lo_dt = QVBoxLayout(self.trang_dt)
+        lo_dt.setContentsMargins(0, 0, 0, 0)
+        for w in (trang_ds, self.bang_tong_hop, self.tien_do, self.trang_dt, self._trang_chao()):
             self.trang.addWidget(w)
         phai.addWidget(self.lb_trang)
         phai.addWidget(self.trang, 1)
+        self.bang.selectionModel().selectionChanged.connect(lambda *_: self._cap_nhat_chon())
         self.setCentralWidget(nen)
-        self.statusBar().showMessage('Nhấp đúp một hộ để lập / sửa phương án.')
+        self.lb_tom_tat = QLabel('Sẵn sàng')             # thanh trạng thái: Sẵn sàng · tổng số hộ | đã chọn
+        self.lb_tom_tat.setToolTip('Nhấp đúp một hộ để lập / sửa phương án.')
+        self.statusBar().addWidget(self.lb_tom_tat, 1)
         from PySide6.QtWidgets import QMenu
         # cỡ giao diện: nút − / + , bấm vào % để về 100%; phím Ctrl + con lăn chuột, Ctrl + "+" / "-" / "0"
         from .giao_dien import KHI_DOI_TY_LE, TY_LE, phong_to
@@ -383,19 +464,8 @@ class CuaSoChinh(QMainWindow):
         self.nut_tk.menu().aboutToShow.connect(self._menu_tai_khoan)
         self.statusBar().addPermanentWidget(self.nut_tk)
         self.cap_nhat_tai_khoan()
-        for ten in ('Cập nhật phần mềm…', 'Giới thiệu'):                            # góc dưới bên phải cửa sổ
-            a = L[ten]
-            a.setIconText(a.text().rstrip('…'))
-            from .giao_dien import MAU, icon_ky_hieu, ky_hieu_nut, nhom_nut
-            k, n = ky_hieu_nut(ten), nhom_nut(ten)
-            ic = icon_ky_hieu(k, MAU[n][1] if n else '#1F4E79', 16) if k else None
-            if ic is not None:
-                a.setIcon(ic)
-            b = QToolButton()
-            b.setDefaultAction(a)
-            b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon if ic is not None
-                                 else Qt.ToolButtonStyle.ToolButtonTextOnly)
-            self.statusBar().addPermanentWidget(b)
+        # Cập nhật phần mềm / Giới thiệu: menu Trợ giúp (trước 0.9.23 thêm hai nút ở góc dưới - mỗi lệnh một chỗ)
+        self._hien_trang_chao()
 
     # ------------------------------------------------ lệnh
     def nhap_excel(self, xl=None, dich=None):
@@ -564,7 +634,13 @@ class CuaSoChinh(QMainWindow):
                 self.lenh[ten].setEnabled(not chi_doc)
             self.bang_tong_hop.dat_du_an(self.con, chi_doc)
             self.tien_do.dat_du_an(self.con, chi_doc)
+            if self.khung_du_toan is not None:
+                self.khung_du_toan.dat_du_an(self.con, self.file)
+            self.lb_du_an.setVisible(True)
+            self.hang_the.setVisible(True)
             self.tai_lai()
+            self.mo_trang(self._i_trang)                # từ màn hình chào về trang đang chọn
+            ghi_gan_day(self.file)
             from .man_hinh import lam_san                 # lúc rảnh: dựng sẵn danh sách chọn của cửa sổ lập phương án
             dm = self.dm
             QTimer.singleShot(400, lambda: dm is self.dm and lam_san(dm))
@@ -605,9 +681,13 @@ class CuaSoChinh(QMainWindow):
         if hasattr(self, 'tien_do'):
             self.bang_tong_hop.dat_du_an(None)
             self.tien_do.dat_du_an(None)
+        if getattr(self, 'khung_du_toan', None) is not None:
+            self.khung_du_toan.dat_du_an(None)
         self._xoa_ket_qua()
         self.lb_loc.setText('')
         self._cap_nhat_the_so()
+        if hasattr(self, 'trang'):
+            self._hien_trang_chao()
 
     TAI_LAI_HO_TOI_DA = 200        # đổi nhiều hộ hơn (cập nhật trạng thái hàng loạt...): nạp lại toàn bộ
 
@@ -730,6 +810,15 @@ class CuaSoChinh(QMainWindow):
         # một dòng (trước 0.9.18: 2 dòng, nhắc lại số hộ / đã lập / tổng tiền đã có ở hàng thẻ số liệu ngay bên dưới)
         self.lb_du_an.setText(f'<b>{da["ten"]}</b>  ·  {da["cap_dia_ban"]} {da["ten_dia_ban"]}  ·  file {self.file.name}')
         self.lb_du_an.setToolTip(str(self.file))
+        # băng tiêu đề: đơn vị lập phương án của DỰ ÁN đang mở (0.9.23 - trước: luôn một đơn vị cố định trong to_chuc.py)
+        from .giao_dien import dat_to_chuc
+        k = da.keys()
+        dv = str(da['don_vi_lap'] or '').strip() if 'don_vi_lap' in k else ''
+        cap = str(da['don_vi_cap_tren'] or '').strip() if 'don_vi_cap_tren' in k else ''
+        dat_to_chuc(self.bang_tieu_de, dv.upper(), (f'Trực thuộc {cap}   •   ' if cap else '') +
+                    f'{da["cap_dia_ban"] or ""} {da["ten_dia_ban"] or ""}'.strip() if dv else '')
+        self._dat_co_quan(dv)
+        self._cap_nhat_chon()
         sua = f' (trừ {self.kq.so_ho_sua} hộ đã sửa trong phần mềm)' if self.kq.so_ho_sua else ''
         from .giao_dien import dat_trang_thai
         if self.kq.khop_het:
@@ -740,7 +829,7 @@ class CuaSoChinh(QMainWindow):
             # kèm bước tiếp theo thay vì chỉ báo con số
             dat_trang_thai(self.lb_ket_qua, 'canh_bao',
                            f'⚠ Đối chiếu file Excel: LỆCH {self.kq.so_ho_lech} hộ, {len(self.kq.dong_lech)} dòng{sua}  ·  '
-                           'xem từng dòng lệch: Dự án → Đối chiếu với file Excel…')
+                           'xem từng dòng lệch: menu trái Lập phương án → Đối chiếu file Excel')
         self.dat_tieu_de()
 
     # ------------------------------------------------ lọc danh sách
@@ -806,8 +895,10 @@ class CuaSoChinh(QMainWindow):
 
     # ------------------------------------------------ màn hình chính: thẻ số liệu, thao tác nhanh, menu chuột phải
     # màu từng thẻ: giao_dien.MAU_THE_SO (kiểu nằm trong QSS chung, thẻ chỉ gắn thuộc tính vai / the)
-    THE_SO = [('so_ho', 'Số hộ'), ('da_pa', 'Đã lập phương án'), ('tong', 'Tổng kinh phí (đồng)'), ('da_pd', 'Đã phê duyệt'),
+    THE_SO = [('so_ho', 'Số hộ'), ('da_pa', 'Đã lập phương án'), ('tong', 'Tổng kinh phí'), ('da_pd', 'Đã phê duyệt'),
               ('da_ct', 'Đã chi trả'), ('da_bg', 'Đã bàn giao mặt bằng')]
+    # bấm thẻ: lọc danh sách hộ theo trạng thái (quan_ly.TRANG_THAI); '' = bỏ lọc trạng thái
+    LOC_THE = {'so_ho': '', 'da_pa': 'co_pa', 'tong': '', 'da_pd': 'da_pd', 'da_ct': 'da_ct', 'da_bg': 'da_bg'}
 
     def _hien_ty_le(self, t: float):
         self.nut_ty_le['ty_le'].setText(f'{round(t * 100)}%')
@@ -830,8 +921,11 @@ class CuaSoChinh(QMainWindow):
         h.setSpacing(10)
         self.the_so = {}
         for k, ten in self.THE_SO:
-            khung = QWidget()
+            khung = TheSo()
             khung.setObjectName('the_so')
+            khung.setCursor(Qt.CursorShape.PointingHandCursor)
+            khung.setToolTip('Bấm để xem tất cả hộ' if not self.LOC_THE[k] else f'Bấm để lọc danh sách hộ: {ten.lower()}')
+            khung.bam.connect(lambda k=k: self.bam_the_so(k))
             khung.setProperty('vai', 'the_so')
             khung.setProperty('the', k)
             khung.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)    # QWidget thường: cần để QSS vẽ nền / viền
@@ -862,7 +956,7 @@ class CuaSoChinh(QMainWindow):
         tu_lap = sum(1 for v in lap.values() if v == 'tu_lap')
         if 'da_pa' in self.the_so:
             self.the_so['da_pa'].setToolTip(f'{tu_lap} hộ có phương án phần mềm tự lập, chưa mở soát và lưu' if tu_lap else '')
-        gt = dict(so_ho=len(ds), da_pa=da_pa, tong=vn(tong) if ds else '–',
+        gt = dict(so_ho=len(ds), da_pa=da_pa, tong=vn_gon(tong) if ds else '–',
                   da_pd=sum(1 for d in ds if d.get('da_phe_duyet')), da_ct=sum(1 for d in ds if d.get('da_chi_tra')),
                   da_bg=sum(1 for d in ds if d.get('da_ban_giao')))
         for k, o in self.the_so.items():
@@ -870,6 +964,206 @@ class CuaSoChinh(QMainWindow):
             o.setText(str(v) if ds else '–')
             if k in ('da_pa', 'da_pd', 'da_ct', 'da_bg') and ds:
                 o.setText(f'{v} / {len(ds)}')
+        if 'tong' in self.the_so:
+            self.the_so['tong'].setToolTip(f'{vn(tong)} đồng' if ds else '')
+
+    def bam_the_so(self, k: str):
+        """Thẻ số liệu: Số hộ / Tổng kinh phí = bỏ mọi bộ lọc; thẻ khác = lọc trạng thái tương ứng; về danh sách hộ."""
+        if self.con is None:
+            return
+        if not self.LOC_THE.get(k):
+            self.cb_dot.setCurrentIndex(0)
+            self.o_tim.clear()
+            self.o_tim.phat_ngay()                      # bỏ lọc ngay, không chờ ô tìm
+        self.cb_tt.setCurrentIndex(max(0, self.cb_tt.findData(self.LOC_THE.get(k, ''))))
+        self.mo_trang(0)
+
+    # ------------------------------------------------ thanh công cụ danh sách hộ, màn hình chào
+    def _thanh_cong_cu_ds(self) -> QHBoxLayout:
+        """Thanh công cụ theo ngữ cảnh của danh sách hộ (0.9.23 - lộ trình người dùng): Thêm hộ, Lập phương án, Xóa hộ (chỉ
+        sáng khi đang chọn hộ) - trước nằm ở menu trái (điều hướng) như một màn hình; đặt cùng hàng với bộ lọc. Chọn nhiều hộ:
+        hàng "Đã chọn N hộ" với thao tác hàng loạt. Nút dùng chính QAction của lệnh (tắt khi chỉ xem như mọi nơi khác)."""
+        from .giao_dien import nut_lenh
+        h = QHBoxLayout()
+        h.setSpacing(6)
+        from .giao_dien import KieuNut, ap_kieu_nut
+        self.nut_ds = {}
+        for ten, kieu in (('Thêm hộ…', KieuNut.LUU), ('Lập phương án hộ…', KieuNut.CHINH), ('Xóa hộ…', KieuNut.NGUY_HIEM)):
+            b = nut_lenh(self.lenh[ten], 18)
+            b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            ap_kieu_nut(b, kieu)
+            h.addWidget(b)
+            self.nut_ds[ten] = b
+        h.addSpacing(12)
+        self.hang_chon = QWidget()
+        hc = QHBoxLayout(self.hang_chon)
+        hc.setContentsMargins(0, 0, 0, 0)
+        hc.setSpacing(6)
+        self.lb_chon = QLabel('')
+        self.lb_chon.setProperty('vai', 'nhan')
+        hc.addWidget(self.lb_chon)
+        for ten in ('In / Xuất…', 'Đợt trình…', 'Trạng thái hộ…', 'Xóa hộ…'):
+            b = nut_lenh(self.lenh[ten], 16)
+            b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            ap_kieu_nut(b, KieuNut.NGUY_HIEM if ten == 'Xóa hộ…' else KieuNut.PHU)
+            hc.addWidget(b)
+        hc.addStretch(1)
+        self.hang_chon.setVisible(False)
+        return h
+
+    def _cap_nhat_chon(self):
+        """Xóa hộ chỉ sáng khi đang chọn hộ trên danh sách; chọn từ 2 hộ: hiện hàng thao tác hàng loạt."""
+        sm = self.bang.selectionModel()
+        n = len(sm.selectedRows()) if sm is not None and self.con is not None else 0
+        self.lenh['Xóa hộ…'].setEnabled(n > 0 and not self.chi_doc)
+        self.hang_chon.setVisible(n >= 2)
+        self.lb_chon.setText(f'Đã chọn {n} hộ:')
+        self.lb_tom_tat.setText(f'Sẵn sàng · Tổng cộng: {len(self.mo_hinh.dong)} hộ | Đã chọn: {n} hộ' if self.con is not None
+                                else 'Sẵn sàng · Chưa mở dự án')
+
+    def _trang_chao(self) -> QWidget:
+        """Màn hình chào khi chưa mở dự án (0.9.23 - thay dòng chữ vàng): 3 nút bắt đầu + dự án làm việc gần đây."""
+        from .giao_dien import nut_lenh
+        w = QWidget()
+        lo = QVBoxLayout(w)
+        lo.setContentsMargins(40, 24, 40, 24)
+        lo.addStretch(1)
+        tieu = QLabel('BẮT ĐẦU LÀM VIỆC')
+        tieu.setStyleSheet('QLabel { font-size: 20px; font-weight: 700; color: #0A2540; letter-spacing: 1px; }')
+        tieu.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lo.addWidget(tieu)
+        phu = QLabel('Chưa mở dự án. Tạo dự án mới từ danh sách kiểm đếm (thông tin dự án, hộ, thửa, bảng giá đất - phần mềm tự '
+                     'lập phương án), mở file dự án có sẵn, hoặc nhập nhanh từ file Excel.')
+        phu.setWordWrap(True)
+        phu.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lo.addWidget(phu)
+        h = QHBoxLayout()
+        h.setSpacing(16)
+        h.addStretch(1)
+        self.nut_chao = {}
+        for ten, goi_y in (('Dự án mới…', 'Tạo dự án mới (3 bước) - Ctrl+N'), ('Mở dự án…', 'Mở file dự án có sẵn (.pabt) - Ctrl+O'),
+                           ('Nhập file Excel…', 'Nhập nhanh từ bảng kiểm đếm Excel (.xlsx) hoặc file PABT Excel cũ')):
+            b = nut_lenh(self.lenh[ten], 34, duoi=True)
+            b.setMinimumSize(210, 96)
+            b.setToolTip(goi_y)
+            h.addWidget(b)
+            self.nut_chao[ten] = b
+        h.addStretch(1)
+        lo.addLayout(h)
+        h_tl = QHBoxLayout()                             # tài liệu hướng dẫn nghiệp vụ (F1)
+        h_tl.addStretch(1)
+        b = nut_lenh(self.lenh['Hướng dẫn sử dụng'], 16)
+        b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        b.setToolTip('Hướng dẫn sử dụng, quy trình nghiệp vụ (F1)')
+        h_tl.addWidget(b)
+        h_tl.addStretch(1)
+        lo.addLayout(h_tl)
+        nhan = QLabel('Dự án làm việc gần đây (nhấp đúp để mở):')
+        nhan.setProperty('vai', 'nhan')
+        lo.addSpacing(8)
+        lo.addWidget(nhan)
+        self.ds_gan_day = QListWidget()
+        self.ds_gan_day.setMaximumHeight(170)
+        self.ds_gan_day.itemActivated.connect(lambda it: it.data(Qt.ItemDataRole.UserRole) and
+                                              self._chay_lenh(lambda: self.mo(it.data(Qt.ItemDataRole.UserRole))))
+        lo.addWidget(self.ds_gan_day)
+        lo.addStretch(2)
+        return w
+
+    def _nap_gan_day(self):
+        from datetime import datetime
+        self.ds_gan_day.clear()
+        n = 0
+        for f in map(Path, doc_gan_day()):
+            try:
+                st = f.stat()
+            except OSError:                             # đã xóa / ổ mạng, USB chưa cắm: không hiện
+                continue
+            it = QListWidgetItem(f'{f.name}    —    {f.parent}    ·    sửa {datetime.fromtimestamp(st.st_mtime):%d/%m/%Y %H:%M}'
+                                 f'    ·    {st.st_size / 2 ** 20:.1f} MB')
+            it.setData(Qt.ItemDataRole.UserRole, str(f))
+            it.setToolTip(str(f))
+            self.ds_gan_day.addItem(it)
+            n += 1
+            if n == 5:
+                break
+        if not n:
+            it = QListWidgetItem('Chưa có dự án nào mở gần đây.')
+            it.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.ds_gan_day.addItem(it)
+
+    def _hien_trang_chao(self):
+        """Chưa mở / vừa đóng dự án: màn hình chào thay danh sách trống (trang Dự toán dùng được khi chưa mở dự án: giữ)."""
+        self.lb_du_an.setVisible(False)
+        self.hang_the.setVisible(False)
+        self._cap_nhat_chon()
+        from .giao_dien import dat_to_chuc
+        dat_to_chuc(self.bang_tieu_de)
+        self._dat_co_quan('')
+        if self.trang.currentIndex() != 3:
+            self.trang.setCurrentIndex(TRANG_CHAO)
+            self.lb_trang.setVisible(False)
+        self._nap_gan_day()
+
+    def _dat_co_quan(self, dv: str):
+        from . import to_chuc
+        ten = dv or to_chuc.MAC_DINH.get('don_vi_lap', '')
+        self.lb_co_quan.setText(f'Cơ quan: {ten}' if ten else '')
+
+    def luu_du_an_lenh(self):
+        """Tệp tin → Lưu dự án (Ctrl+S). Mọi thao tác đã ghi ngay vào file dự án (SQLite, từng giao dịch); lệnh này ép ghi hẳn xuống
+        đĩa (đồng bộ Google Drive / ổ mạng) và báo giờ lưu - người dùng quen Ctrl+S không phải đoán đã lưu chưa."""
+        if self.con is None or self.file is None:
+            self.statusBar().showMessage('Chưa mở dự án.', 4000)
+            return False
+        if self.chi_doc:
+            self.statusBar().showMessage('Dự án đang mở chỉ xem: không ghi.', 4000)
+            return False
+        import os
+        from datetime import datetime
+        try:
+            if self.con.in_transaction:
+                self.con.commit()
+            with open(self.file, 'rb+') as f:
+                os.fsync(f.fileno())
+        except OSError as e:
+            QMessageBox.warning(self, TEN_UD, chu_loi('Không ghi được file dự án xuống đĩa', e))
+            return False
+        self.statusBar().showMessage(f'Đã lưu {self.file.name} lúc {datetime.now():%H:%M:%S} '
+                                     '(mọi thay đổi được ghi ngay sau mỗi thao tác).', 6000)
+        return True
+
+    def _phong_to(self, buoc: int):
+        from .giao_dien import phong_to
+        phong_to(buoc)
+
+    def _thanh_menu(self):
+        """Thanh menu chuẩn (0.9.23 - lộ trình người dùng): thao tác file / dữ liệu / công cụ / trợ giúp, phím tắt."""
+        L = self.lenh
+        self.menu_tren = {}
+        for ten, ds in (('&Tệp tin', ['Dự án mới…', 'Mở dự án…', 'Dự án trên máy chủ…', None, 'Lưu dự án', 'Lưu dự án thành…',
+                                      'Đóng dự án', None, 'Thoát']),
+                        ('&Dữ liệu', ['Nhập file Excel…', 'Nhập phương án chi tiết…', None, 'Báo cáo tổng hợp…',
+                                      'Xuất báo cáo đối chiếu…']),
+                        ('&Công cụ', ['Cập nhật mẫu in…', 'Bộ đơn giá…', 'Rà soát giá…']),
+                        ('C&ài đặt', ['Thông tin dự án…', 'Kết nối máy chủ LAN…', None, 'Phóng to chữ', 'Thu nhỏ chữ',
+                                      'Cỡ chữ 100%']),
+                        ('Trợ &giúp', ['Hướng dẫn sử dụng', 'Cập nhật phần mềm…', None, 'Giới thiệu'])):
+            # QMenu có cha + giữ tham chiếu: PySide2 (bản Win7) xóa menu do menuBar().addMenu("chữ") trả về khi biến Python
+            # hết phạm vi (thanh menu còn tiêu đề nhưng mất danh sách lệnh)
+            from PySide6.QtWidgets import QMenu
+            m = QMenu(ten, self)
+            self.menuBar().addMenu(m)
+            self.menu_tren[ten.replace('&', '')] = m
+            for t in ds:
+                if t is None:
+                    m.addSeparator()
+                else:
+                    m.addAction(L[t])
+        self.lb_co_quan = QLabel('')                     # góc phải thanh menu: cơ quan thực hiện (theo dự án đang mở)
+        self.lb_co_quan.setProperty('vai', 'nhan')
+        self.lb_co_quan.setContentsMargins(0, 0, 12, 0)
+        self.menuBar().setCornerWidget(self.lb_co_quan, Qt.Corner.TopRightCorner)
 
     def _xoa_ket_qua(self):
         """Băng kết quả trống (chưa mở / đã đóng dự án): bỏ cả nền màu, không để lại ô màu rỗng cạnh nút."""
@@ -958,18 +1252,33 @@ class CuaSoChinh(QMainWindow):
                          ('Chưa có thao tác để ' + ('làm lại' if k == 'toi' else 'hoàn tác')))
 
     def mo_trang(self, i: int):
-        """Trang bên phải: 0 danh sách hộ, 1-3 các thẻ của Bảng tổng hợp, 4 theo dõi tiến độ."""
-        self.trang.setCurrentIndex(0 if i == 0 else 1 if i <= 3 else 2)
-        if 1 <= i <= 3:
-            self.bang_tong_hop.mo_the(i - 1)            # -> the_da_doi -> _danh_dau_trang
+        """Trang bên phải: 0 danh sách hộ, 1-3 các thẻ của Bảng tổng hợp, 4 theo dõi tiến độ, 5 dự toán & khái toán.
+        Chưa mở dự án: trang 0-4 hiện màn hình chào (trang Dự toán dùng được cả khi chưa mở dự án)."""
+        self.hang_the.setVisible(self.con is not None and i != TRANG_DU_TOAN)   # thẻ số liệu lọc danh sách hộ: không cần ở dự toán
+        if i == TRANG_DU_TOAN:
+            self._dam_bao_du_toan()
+            self.trang.setCurrentIndex(3)
+        elif self.con is None:
+            self.trang.setCurrentIndex(TRANG_CHAO)
+        else:
+            self.trang.setCurrentIndex(0 if i == 0 else 1 if i <= 3 else 2)
+            if 1 <= i <= 3:
+                self.bang_tong_hop.mo_the(i - 1)        # -> the_da_doi -> _danh_dau_trang
         self._danh_dau_trang(i)
 
     def _danh_dau_trang(self, i: int):
         """Tiêu đề trang bên phải và dấu chọn ở menu trái theo trang i (gọi cả khi bấm thẳng thẻ của Bảng tổng hợp)."""
+        self._i_trang = i
         self.lb_trang.setText(TRANG[i].upper() + ('  ·  ◀ bấm "Danh sách hộ" ở menu trái để quay lại' if i else ''))
-        self.lb_trang.setVisible(i != 0)
+        self.lb_trang.setVisible(i != 0 and self.trang.currentIndex() != TRANG_CHAO)
         for k, t in enumerate(TRANG):
             self.lenh[t].setChecked(k == i)
+
+    def _dam_bao_du_toan(self):
+        if self.khung_du_toan is None:
+            from .man_hinh_du_toan import KhungDuToan
+            self.khung_du_toan = KhungDuToan(self.trang_dt, self.con, self.file if self.con is not None else None)
+            self.trang_dt.layout().addWidget(self.khung_du_toan)
 
     def ho_dang_chon(self):
         k = self._khung_dang_xem()
@@ -1394,11 +1703,51 @@ class CuaSoChinh(QMainWindow):
         return dlg
 
     def du_toan(self, cho: bool = True):
-        from .man_hinh_du_toan import HopDuToan
-        dlg = HopDuToan(self, self.con, self.file)
+        """Trang Dự toán & khái toán (0.9.23: trang trong cửa sổ chính, trước là hộp thoại riêng). Trả KhungDuToan."""
+        self.mo_trang(TRANG_DU_TOAN)
+        return self.khung_du_toan
+
+    def bang_gia_dat(self, cho: bool = True):
+        """Bảng giá đất NQ 28/2025 (tra cứu theo địa bàn của dự án đang mở)."""
+        from .man_hinh_du_toan import HopTraNQ28
+        xa = ''
+        if self.con is not None:
+            r = self.con.execute('SELECT ten_dia_ban FROM du_an WHERE id = 1').fetchone()
+            xa = (r[0] or '') if r else ''
+        d = HopTraNQ28(self, xa)
         if cho:
-            dlg.exec()
-        return dlg
+            d.exec()
+        return d
+
+    def huong_dan(self, cho: bool = True):
+        """Hướng dẫn sử dụng (HUONG_DAN.md đóng gói kèm) - F1."""
+        from PySide6.QtWidgets import QDialogButtonBox, QTextBrowser
+        d = QDialog(self)
+        d.setWindowTitle(f'Hướng dẫn sử dụng - {TEN_UD}')
+        d.resize(1000, 720)
+        tb = QTextBrowser()
+        tb.setOpenExternalLinks(True)
+        f = file_huong_dan()
+        if f is not None:
+            tb.setMarkdown(f.read_text(encoding='utf-8'))
+        else:
+            tb.setPlainText('Không tìm thấy file hướng dẫn (HUONG_DAN.md) trong thư mục cài phần mềm.')
+        nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        nut.rejected.connect(d.reject)
+        lo = QVBoxLayout(d)
+        lo.addWidget(tb)
+        lo.addWidget(nut)
+        from .giao_dien import vua_man_hinh
+        vua_man_hinh(d)
+        if cho:
+            d.exec()
+        return d
+
+    def dong_du_an_lenh(self):
+        """Lệnh Tệp tin → Đóng dự án: đóng file đang mở, về màn hình chào."""
+        self.dong_du_an()
+        self.file = None
+        self.dat_tieu_de()
 
     def quy_chuan(self, cho: bool = True):
         if not self._can_du_an():
@@ -1423,7 +1772,8 @@ class CuaSoChinh(QMainWindow):
         goc = ban_goc()
         pb = f'Phiên bản {__version__}' + (f' (bản cập nhật, bản cài gốc {goc})' if goc != __version__ else '') + \
             (f' - {NHAN_THU_NGHIEM}' if BAN_THU_NGHIEM else '') + '.'
-        QMessageBox.about(self, TEN_UD, f'{TEN_UD}\n{pb}\n{to_chuc.TAC_GIA}.')
+        from .ban_quyen import mo_ta
+        QMessageBox.about(self, TEN_UD, f'{TEN_UD}\n{pb}\n{mo_ta()}.\n{to_chuc.TAC_GIA}.')
 
     # ------------------------------------------------ máy chủ LAN, tài khoản
     def dat_tieu_de(self):
@@ -1442,16 +1792,21 @@ class CuaSoChinh(QMainWindow):
         self.setWindowTitle(t)
 
     def cap_nhat_tai_khoan(self):
+        # đèn báo mạng LAN (đặc tả: Online / Offline trên thanh trạng thái) gộp vào nút tài khoản - một chỗ
         p = may_chu.PHIEN
         if p is not None:
-            self.nut_tk.setText(f'Tài khoản: {p.ten_hien}')
+            self.nut_tk.setText(f'● LAN: Trực tuyến · Tài khoản: {p.ten_hien}')
             self.nut_tk.setToolTip(f'Đăng nhập máy chủ {p.goc}')
+            mau = '#107C41'
         elif may_chu.doc_cau_hinh().get('may_chu'):
-            self.nut_tk.setText('Offline · Đăng nhập máy chủ')
+            self.nut_tk.setText('● LAN: Ngoại tuyến (Offline) · Đăng nhập máy chủ')
             self.nut_tk.setToolTip('Đang làm việc offline với file trên máy này')
+            mau = '#B86E00'
         else:
-            self.nut_tk.setText('Máy chủ LAN')
-            self.nut_tk.setToolTip('Thiết lập máy chủ trong mạng nội bộ, tài khoản đăng nhập (không bắt buộc)')
+            self.nut_tk.setText('● Máy đơn · Máy chủ LAN')
+            self.nut_tk.setToolTip('Không dùng máy chủ trong mạng nội bộ. Bấm để thiết lập (không bắt buộc).')
+            mau = '#5F6368'
+        self.nut_tk.setStyleSheet(f'QToolButton {{ color: {mau}; font-weight: 600; }}')
         self.dat_tieu_de()
 
     def _menu_tai_khoan(self):
@@ -1509,7 +1864,6 @@ class CuaSoChinh(QMainWindow):
             return
         self.dong_du_an()
         self.file = None
-        self.lb_du_an.setText(CHUA_MO)
         self._xoa_ket_qua()
         may_chu.dang_xuat()
         self.cap_nhat_tai_khoan()
@@ -1589,6 +1943,10 @@ def main() -> int:
     from .giao_dien import ap_dung, cai_bat_loi
     ap_dung(app)
     cai_bat_loi()                                      # lỗi trong nút bấm: báo + ghi loi.log (trước đây mất im lặng)
+    from .ban_quyen import kiem_tra_ban_quyen          # cổng chờ bản quyền (giai đoạn này luôn hợp lệ - ban_quyen.py)
+    if not kiem_tra_ban_quyen():
+        QMessageBox.critical(None, TEN_UD, 'Bản quyền phần mềm không hợp lệ hoặc đã hết hạn.')
+        return 1
     menu_trai = '--menu-tren' not in sys.argv              # từ 0.9.3: menu dọc bên trái thay thanh nút phía trên
     w = CuaSoChinh(menu_trai=menu_trai)
     w.dat_tieu_de()

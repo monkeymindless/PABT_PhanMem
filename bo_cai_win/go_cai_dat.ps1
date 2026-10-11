@@ -6,6 +6,13 @@ $dich = $Dich
 if (-not $dich) { $dich = Split-Path -Parent $MyInvocation.MyCommand.Definition }   # chạy thẳng file (PowerShell 2.0: không $PSScriptRoot)
 $dich = $dich.TrimEnd([char]92)                 # bỏ "\" cuối
 Set-Location -LiteralPath $env:TEMP             # thư mục làm việc không nằm trong thư mục cài (sẽ không xóa được)
+
+function GhiDuoc($d) {
+    # thư mục cài ghi / xóa được bằng quyền người dùng không (Program Files: cần quyền quản trị) - như cai_dat.ps1
+    if (-not (Test-Path -LiteralPath $d)) { return $true }
+    $thu = Join-Path $d ('pabt_thu_ghi_' + [Guid]::NewGuid().ToString('N') + '.tmp')
+    try { [System.IO.File]::WriteAllText($thu, ''); [System.IO.File]::Delete($thu); return $true } catch { return $false }
+}
 if (-not $Im) {
     $tl = [System.Windows.Forms.MessageBox]::Show("Gỡ PABT khỏi máy?`n(Các file dự án .pabt của bạn được giữ nguyên.)", 'Gỡ cài đặt PABT', 'YesNo', 'Question')
     if ($tl -ne 'Yes') { exit 2 }
@@ -31,21 +38,34 @@ Remove-Item 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PABT' -Re
 $giu = @(Get-ChildItem -LiteralPath $dich -Recurse -Force -ErrorAction SilentlyContinue |
          Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
 $tb = 'Đã gỡ PABT.'
-if ($giu.Count -eq 0) {
-    # xóa thư mục cài sau khi script này thoát; thử lại tới 30 giây (Windows / diệt virus còn giữ file vừa đóng một lúc - một lần
-    # rmdir sau 2 giây từng để sót thư mục rỗng). Đường dẫn qua biến môi trường: không phải đặt trong ngoặc kép (tên có dấu, nháy)
-    $env:PABT_XOA = $dich
-    $lenh = 'for ($i = 0; $i -lt 30; $i++) { Start-Sleep 1; Remove-Item -LiteralPath $env:PABT_XOA -Recurse -Force ' +
-            '-ErrorAction SilentlyContinue; if (-not (Test-Path -LiteralPath $env:PABT_XOA)) { break } }'
-    Start-Process powershell.exe -ArgumentList '-NoProfile', '-WindowStyle', 'Hidden', '-Command', $lenh `
-        -WindowStyle Hidden -WorkingDirectory $env:TEMP
+# lệnh xóa (một dòng, không dấu ngoặc kép - truyền qua dòng lệnh powershell -Command); $d = thư mục cài.
+# Xóa hết: thử lại tới 30 giây (Windows / diệt virus còn giữ file vừa đóng một lúc - một lần rmdir sau 2 giây từng để sót thư mục
+# rỗng). Giữ dự án (có file .pabt trong thư mục cài): chỉ xóa file phần mềm và thư mục rỗng.
+$XOA_HET = 'for ($i = 0; $i -lt 30; $i++) { Start-Sleep 1; Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction SilentlyContinue; ' +
+           'if (-not (Test-Path -LiteralPath $d)) { break } }'
+$XOA_GIU = 'Get-ChildItem -LiteralPath $d -Recurse -Force | Where-Object { -not $_.PSIsContainer -and $_.Extension -ne ''.pabt'' -and ' +
+           '$_.Extension -ne ''.pabtdt'' } | Remove-Item -Force -ErrorAction SilentlyContinue; Get-ChildItem -LiteralPath $d -Recurse ' +
+           '-Force | Where-Object { $_.PSIsContainer } | Sort-Object { $_.FullName.Length } -Descending | Where-Object { @(Get-ChildItem ' +
+           '-LiteralPath $_.FullName -Force).Count -eq 0 } | Remove-Item -Force -ErrorAction SilentlyContinue'
+$than = $XOA_HET
+if ($giu.Count -gt 0) { $than = $XOA_GIU; $tb = "Đã gỡ PABT. Giữ lại $($giu.Count) file dự án trong $dich." }
+$lenh = "`$d = '" + $dich.Replace("'", "''") + "'; " + $than
+if (GhiDuoc $dich) {
+    if ($giu.Count -gt 0) { & ([scriptblock]::Create($lenh)) }
+    else {                                      # xóa sau khi script này thoát
+        Start-Process powershell.exe -ArgumentList '-NoProfile', '-WindowStyle', 'Hidden', '-Command', $lenh `
+            -WindowStyle Hidden -WorkingDirectory $env:TEMP
+    }
 } else {
-    # có file dự án lưu trong thư mục cài: chỉ xóa file phần mềm, giữ file dự án
-    Get-ChildItem -LiteralPath $dich -Recurse -Force | Where-Object { -not $_.PSIsContainer -and $_.Extension -ne '.pabt' -and $_.Extension -ne '.pabtdt' } |
-        Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -LiteralPath $dich -Recurse -Force | Where-Object { $_.PSIsContainer } | Sort-Object { $_.FullName.Length } -Descending |
-        Where-Object { @(Get-ChildItem -LiteralPath $_.FullName -Force).Count -eq 0 } | Remove-Item -Force -ErrorAction SilentlyContinue
-    $tb = "Đã gỡ PABT. Giữ lại $($giu.Count) file dự án trong $dich."
+    # cài trong Program Files (bộ cài đã chép bằng quyền quản trị): xóa cũng cần quyền quản trị - Windows hỏi UAC
+    try {
+        Start-Process "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Verb RunAs -Wait -WindowStyle Hidden `
+            -WorkingDirectory $env:TEMP -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', $lenh
+        if ($giu.Count -eq 0 -and (Test-Path -LiteralPath $dich)) { $tb = "Đã gỡ PABT nhưng chưa xóa hết thư mục $dich - xóa thư mục này bằng tay." }
+    } catch {
+        $tb = "Đã gỡ PABT khỏi Windows (biểu tượng, liên kết file, mục gỡ cài đặt) nhưng chưa xóa được thư mục $dich vì chưa " +
+              'được cấp quyền quản trị. Xóa thư mục này bằng tay (cần tài khoản quản trị).'
+    }
 }
 if (-not $Im) { [System.Windows.Forms.MessageBox]::Show($tb, 'Gỡ cài đặt PABT', 'OK', 'Information') | Out-Null }
 exit 0

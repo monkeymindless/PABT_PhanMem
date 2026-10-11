@@ -185,6 +185,8 @@ def du_lieu(con, ds_ma_ho: list, dot=None) -> tuple:
     ky_hieu = da.get('ky_hieu_so') or ''
     tong = {k: KHONG for k in (1, 2, 3, 4, 5)}
     so_thua, dt = 0, KHONG
+    from .an_toan import can_che_cccd, che_cccd
+    che = che_cccd if can_che_cccd(con) else (lambda x: x)  # bản niêm yết công khai: che số CCCD (NĐ 13/2023)
     dong = []
     for stt, m in enumerate(ds_ma_ho, start=1):
         h = ho.get(m)
@@ -200,7 +202,7 @@ def du_lieu(con, ds_ma_ho: list, dot=None) -> tuple:
         dt += dt_ho
         so_pa = (h.get('so_pa') or '').strip()
         dong.append({'ho.stt': str(stt), 'ho.ma_ho': str(m), 'ho.ho_ten': ' '.join(str(h['ho_ten'] or '').split()),
-                     'ho.dia_chi': (h['dia_chi'] or '').strip(), 'ho.cccd': (h['so_cccd'] or '').strip(),
+                     'ho.dia_chi': (h['dia_chi'] or '').strip(), 'ho.cccd': che((h['so_cccd'] or '').strip()),
                      'ho.so_pa': so_pa, 'ho.so_pa_day_du': (f'{so_pa}/{ky_hieu}' if ky_hieu else so_pa) if so_pa else '',
                      'ho.ngay_pa': h.get('ngay_pa') or '', 'ho.so_thua': str(len(thua)), 'ho.dt_thu_hoi': so_vn(dt_ho),
                      'ho.tien_dat': vn(muc[1]), 'ho.tien_nha': vn(muc[2]), 'ho.tien_cay': vn(muc[3]),

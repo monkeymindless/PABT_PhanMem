@@ -1707,6 +1707,12 @@ class HopIn(QDialog):
         self.o_so_ban.setSuffix(' bản / hộ')
         self.o_mo = QCheckBox('Mở thư mục kết quả khi xong')
         self.o_mo.setChecked(True)
+        # Nghị định 13/2023/NĐ-CP: bản niêm yết công khai che số CCCD (lưu theo dự án - an_toan.KHOA_CHE_CCCD)
+        from .an_toan import can_che_cccd
+        self.o_che_cccd = QCheckBox('Che số CCCD - bản niêm yết công khai tại UBND xã (ví dụ 075092******)')
+        self.o_che_cccd.setChecked(can_che_cccd(con))
+        self.o_che_cccd.setToolTip('Bảo vệ dữ liệu cá nhân (Nghị định 13/2023/NĐ-CP): phương án chi tiết và tờ trình in số CCCD '
+                                   'dạng che, bỏ ngày / nơi cấp. Phần mềm nhớ lựa chọn theo dự án.')
         hang_in = QHBoxLayout()
         hang_in.addWidget(self.r_in)
         hang_in.addWidget(QLabel('Số bản:'))
@@ -1751,6 +1757,7 @@ class HopIn(QDialog):
         form.addRow('', self.r_pdf)
         form.addRow('', self.o_gop)
         form.addRow('', hang_in)
+        form.addRow('', self.o_che_cccd)
         form.addRow('Lưu vào thư mục:', hang)
         form.addRow('', self.o_chia)
         form.addRow('', self.o_mo)
@@ -1916,6 +1923,23 @@ class HopIn(QDialog):
         return [self.bang_ho.item(i, 0).data(Qt.ItemDataRole.UserRole) for i in range(self.bang_ho.rowCount())
                 if self.bang_ho.item(i, 0).checkState() == Qt.CheckState.Checked]
 
+    def _luu_che_cccd(self) -> bool:
+        """Ô "Che số CCCD" đổi: lưu vào dự án (bản in / văn bản trình đọc từ dự án). Dự án mở chỉ xem: báo, không in."""
+        import sqlite3
+        from . import csdl
+        from .an_toan import KHOA_CHE_CCCD, can_che_cccd
+        bat = self.o_che_cccd.isChecked()
+        if bat == can_che_cccd(self.con):
+            return True
+        try:
+            with self.con:
+                csdl.ghi_cai_dat(self.con, KHOA_CHE_CCCD, '1' if bat else '0')
+                csdl.ghi_nhat_ky(self.con, 'Đổi chế độ che số CCCD', 'bật (bản niêm yết công khai)' if bat else 'tắt')
+        except sqlite3.Error as e:                    # dự án mở chỉ xem
+            QMessageBox.warning(self, TEN_UD, chu_loi('Không đổi được chế độ che số CCCD (dự án đang mở chỉ xem?)', e))
+            return False
+        return True
+
     def thuc_hien(self, xac_nhan: bool = True):
         from . import in_an
         from . import van_ban_trinh as vb
@@ -1927,6 +1951,8 @@ class HopIn(QDialog):
             return None
         if not ds:
             QMessageBox.information(self, TEN_UD, 'Chưa chọn hộ nào để in: đánh dấu cột "Chọn" trong danh sách hộ.')
+            return None
+        if not self._luu_che_cccd():
             return None
         tu_lap = [m for m in ds if self.lap.get(m) == 'tu_lap']
         if tu_lap and xac_nhan and QMessageBox.question(

@@ -179,9 +179,10 @@ def tao_du_an(file_pabt, thong_tin: dict, dong: list, bang_gia: list, tu_lap: bo
     if not tt['ten']:
         raise LoiNhap('Tên dự án không được để trống.')
     p = Path(file_pabt)
-    con = csdl.tao_moi(p)
+    con, tam = csdl.tao_moi_tam(p)                     # nguyên tử: dựng ở file tạm, xong mới thay file đích (file cũ không mất)
+    xong = False
     # file mới đang tạo: không ép ghi đĩa sau mỗi hộ (tự lập N hộ = N lần ghi, chậm trên ổ HDD / thư mục Google Drive); ép ghi một
-    # lần khi xong (_ghi_xuong_dia). Mất điện giữa chừng chỉ hỏng file đang tạo dở - tạo lại; file dự án đang dùng không ảnh hưởng.
+    # lần khi xong (csdl.hoan_tat_tao_moi). Mất điện giữa chừng chỉ hỏng file đang tạo dở - tạo lại; file dự án đang dùng không ảnh hưởng.
     con.execute('PRAGMA synchronous = OFF')
     # nhật ký giao dịch trong RAM (vẫn rollback được): journal_mode DELETE tạo rồi xóa file "-journal" mỗi giao dịch = mỗi hộ tự
     # lập (3.000 hộ: 1,5 s chỉ cho việc này). Không lưu vào file - lần mở sau csdl.mo đặt lại DELETE.
@@ -211,23 +212,13 @@ def tao_du_an(file_pabt, thong_tin: dict, dong: list, bang_gia: list, tu_lap: bo
         kq = tinh_tat_ca(con)
         bao_cao = dict(file=str(p), so_ho=len(ho), so_thua=len(thua), so_ho_co_pa=sum(1 for k in kq if k.tong > 0),
                        tong=sum((k.tong for k in kq), KHONG), canh_bao=cb)
+        xong = True
     finally:
         con.close()
-    _ghi_xuong_dia(p)
+        if not xong:
+            csdl.huy_tao_moi(tam)
+    csdl.hoan_tat_tao_moi(tam, p)                      # fsync một lần + os.replace (thay _ghi_xuong_dia)
     return bao_cao
-
-
-def _ghi_xuong_dia(p) -> None:
-    """Ép hệ điều hành ghi hẳn file xuống đĩa (một lần, thay cho mỗi giao dịch một lần khi synchronous = OFF)."""
-    import os
-    try:
-        fd = os.open(str(p), os.O_RDWR | getattr(os, 'O_BINARY', 0))
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
-    except OSError:
-        pass
 
 
 def tu_lap_phuong_an(con, ds_ma_ho: list | None = None) -> list:

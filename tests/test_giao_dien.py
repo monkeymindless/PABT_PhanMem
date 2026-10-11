@@ -154,7 +154,7 @@ class TestMau(unittest.TestCase):
         self.assertEqual(nut['Nhập file Excel'], 'nhap')            # Qt bỏ dấu … trên nút thanh lệnh
         self.assertEqual(nut['Lập phương án'], 'pa')                # chữ ngắn trên menu (app.NHAN_MENU)
         self.assertEqual(nut['Thêm hộ'], 'them')
-        self.assertEqual(nut['Mẫu in'], 'in')
+        self.assertEqual(nut['In / Xuất'], 'in')                    # Mẫu in: thanh menu Công cụ (0.9.23)
         self.assertEqual(w.lb_du_an.property('vai'), 'bang_ten')
         self.assertIn('QHeaderView::section', self.app.styleSheet())
         w.close()
@@ -162,8 +162,8 @@ class TestMau(unittest.TestCase):
         self.app.removeEventFilter(self.app._bo_to_mau)
 
     def test_menu_trai_gon_va_bang_tieu_de(self):
-        """Menu trái: "Dự án" là một nút xổ, nhóm đóng / mở bằng tiêu đề (nhớ lại); băng tiêu đề có Hoàn tác / Làm lại,
-        không còn chữ "Tổ chức làm nhiệm vụ bồi thường"."""
+        """0.9.23 (lộ trình người dùng): thao tác file ở thanh menu Tệp tin (không còn nút xổ "DỰ ÁN ▾" đè lên menu trái); menu
+        trái 5 nhóm theo vòng đời, nhóm đóng / mở bằng tiêu đề (nhớ lại); băng tiêu đề có Hoàn tác / Làm lại."""
         from PySide6.QtCore import QSettings
         from PySide6.QtWidgets import QLabel
         from pabt import app as ud, giao_dien
@@ -173,18 +173,27 @@ class TestMau(unittest.TestCase):
         try:
             w = ud.CuaSoChinh(menu_trai=True)
             m = w.khung_menu
-            xo = m.nut_xo['Dự án']
-            self.assertEqual([a.text() for a in xo.menu().actions()][:3], ['Dự án mới…', 'Mở dự án…', 'Lưu dự án thành…'])
-            self.assertIn(w.lenh['Nhập phương án chi tiết…'], xo.menu().actions())
+            self.assertFalse(getattr(m, 'nut_xo', {}))               # không còn nút xổ trong menu trái
+            menu = {a.text().replace('&', ''): a.menu() for a in w.menuBar().actions()}
+            self.assertEqual(list(menu), ['Tệp tin', 'Dữ liệu', 'Công cụ', 'Cài đặt', 'Trợ giúp'])
+            self.assertEqual(menu['Tệp tin'].actions()[:2], [w.lenh['Dự án mới…'], w.lenh['Mở dự án…']])
+            self.assertIn(w.lenh['Nhập phương án chi tiết…'], menu['Dữ liệu'].actions())
+            self.assertEqual(w.lenh['Dự án mới…'].shortcut().toString(), 'Ctrl+N')
+            self.assertEqual(list(m.tieu_de_nhom), ['Dự án & dự toán', 'Bảng giá & chính sách', 'Lập phương án',
+                                                    'Tổng hợp & trình duyệt', 'Tiến độ & bàn giao'])
+            nut = {b.defaultAction(): b for b in m.findChildren(giao_dien.QToolButton) if b.defaultAction() is not None}
+            for ten in ('Thêm hộ…', 'Xóa hộ…', 'Nhập file Excel…', 'Dự án mới…'):   # không phải màn hình điều hướng
+                self.assertNotIn(w.lenh[ten], nut, ten)
+            self.assertIn(w.lenh['Dự toán & khái toán'], nut)       # dự toán lên nhóm Dự án
             self.assertEqual(m.nhom_dong, set(ud.NHOM_DONG_MAC_DINH))
-            nut_in = next(b for b in m.findChildren(giao_dien.QToolButton) if b.defaultAction() is w.lenh['In / Xuất…'])
-            self.assertTrue(nut_in.isHidden())                       # nhóm "In, báo cáo" đóng sẵn
-            m.tieu_de_nhom['In, báo cáo'].bam()
-            self.assertFalse(nut_in.isHidden())
-            self.assertIn('▾', m.tieu_de_nhom['In, báo cáo'].text())
+            nut_bc = nut[w.lenh['Báo cáo tổng hợp…']]
+            self.assertTrue(nut_bc.isHidden())                       # nhóm "Tiến độ & bàn giao" đóng sẵn
+            m.tieu_de_nhom['Tiến độ & bàn giao'].bam()
+            self.assertFalse(nut_bc.isHidden())
+            self.assertIn('▾', m.tieu_de_nhom['Tiến độ & bàn giao'].text())
             w.close()
             w2 = ud.CuaSoChinh(menu_trai=True)                       # nhớ nhóm đã mở
-            self.assertNotIn('In, báo cáo', w2.khung_menu.nhom_dong)
+            self.assertNotIn('Tiến độ & bàn giao', w2.khung_menu.nhom_dong)
             chu = ' '.join(x.text() for x in w2.findChildren(QLabel))
             self.assertNotIn('Tổ chức làm nhiệm vụ', chu)
             bang = next(f for f in w2.findChildren(giao_dien.QFrame) if f.property('vai') == 'bang_to_chuc')

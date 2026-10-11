@@ -28,7 +28,7 @@ class HopNhapChiTiet(QDialog):
         dich = f'vào dự án đang mở <b>{ten_du_an}</b>' if con is not None else 'vào <b>dự án mới</b> (bộ đơn giá tích hợp)'
         gt = QLabel(f'Mỗi sheet là phương án chi tiết của một hộ. Đánh dấu các sheet cần nhập {dich}. Dòng nhà, công trình, '
                     'cây trồng trùng tên và đơn giá với bộ đơn giá được gắn mã danh mục; dòng khác giá / ngoài danh mục ghi '
-                    '"nhập tay". Thành tiền của file được giữ để đối chiếu (Dự án → Đối chiếu với file Excel).')
+                    '"nhập tay". Thành tiền của file được giữ để đối chiếu (Lập phương án → Đối chiếu file Excel).')
         gt.setWordWrap(True)
         lo.addWidget(gt)
         self.bang = QTableWidget(len(kq.ho), len(COT))

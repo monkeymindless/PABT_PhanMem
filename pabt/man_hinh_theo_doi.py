@@ -28,7 +28,7 @@ from .tien import D, KHONG, so_vn, vn
 TIEU_DE = 'Theo dõi phê duyệt, chi trả, bàn giao'
 XANH, VANG, DO, XAM = QColor('#E2EFDA'), QColor('#FFF2CC'), QColor('#F8CBAD'), QColor('#F2F4F7')
 MAU_LIEN_KET = QColor('#0B5CAD')                          # chữ ô bấm đúp mở được file (biên lai, chứng từ)
-CHO_GO_MS = 300                                           # ô tìm: chờ ngừng gõ bấy nhiêu ms mới lọc
+CHO_GO_MS = 200                                           # ô tìm: chờ ngừng gõ bấy nhiêu ms mới lọc (như OTimKiemThongMinh)
 DO_MAU = 300                                              # số dòng Qt đo khi tự canh bề rộng cột (bảng QTableWidget của hộp thoại)
 THUA_TRONG = dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')     # hộ chưa có thửa: vẫn một dòng
 _DAM = dict(dam=True)                                     # kiểu ô chữ đậm (bảng ảo, dùng chung - chỉ đọc)

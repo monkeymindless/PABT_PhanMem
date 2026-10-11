@@ -103,12 +103,45 @@ def chuyen_vat_nuoi(con) -> int:
 
 
 def tao_moi(duong_dan) -> sqlite3.Connection:
-    """Tạo file .pabt mới (ghi đè nếu đã có)."""
+    """Tạo file .pabt mới (ghi đè nếu đã có). Tạo dự án / nhập vào file mới: dùng tao_moi_tam + hoan_tat_tao_moi (nguyên tử)."""
     p = Path(duong_dan)
     if p.exists():
         p.unlink()
     con = mo(p, tao=True)
     return con
+
+
+def tao_moi_tam(duong_dan) -> tuple:
+    """Tạo file dự án mới GHI NGUYÊN TỬ (đặc tả ARCH-PABT-2026-V4 mục 7.1): CSDL dựng ở '<tên>.dang_tao' cạnh file đích (cùng ổ
+    đĩa - os.replace thay tức thời). Trả (kết nối, file tạm). Xong: đóng kết nối rồi hoan_tat_tao_moi; lỗi: huy_tao_moi.
+    Trước 0.9.24 tao_moi() XÓA file cũ trước khi ghi: lỗi / mất điện giữa chừng mất cả file cũ lẫn file mới."""
+    p = Path(duong_dan)
+    tam = p.with_name(p.name + '.dang_tao')
+    huy_tao_moi(tam)
+    return mo(tam, tao=True), tam
+
+
+def huy_tao_moi(tam) -> None:
+    for f in (Path(tam), Path(str(tam) + '-journal')):
+        try:
+            f.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def hoan_tat_tao_moi(tam, duong_dan) -> Path:
+    """Kết nối tới file tạm đã đóng: ép ghi xuống đĩa (fsync) rồi os.replace thay file đích (thao tác nguyên tử trên NTFS).
+    File đích đang mở ở chương trình khác (Excel, PABT khác…): PermissionError - file cũ còn nguyên, file tạm bị xóa."""
+    import os
+    tam, p = Path(tam), Path(duong_dan)
+    try:
+        with open(tam, 'rb+') as f:
+            os.fsync(f.fileno())
+        os.replace(tam, p)
+    except OSError:
+        huy_tao_moi(tam)
+        raise
+    return p
 
 
 class KetNoi(sqlite3.Connection):

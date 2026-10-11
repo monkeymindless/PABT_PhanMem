@@ -5,21 +5,38 @@ mà không phải sửa từng màn hình. Muốn đổi màu một nhóm: sửa
 """
 from __future__ import annotations
 import re
+from contextlib import contextmanager
+from enum import Enum
 
-from PySide6.QtCore import QEvent, QLibraryInfo, QLocale, QObject, QPoint, QRect, QSize, QTimer, QTranslator
+from PySide6.QtCore import QEvent, QLibraryInfo, QLocale, QObject, QPoint, QRect, QSize, QTimer, QTranslator, Signal
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QAbstractButton, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QLayout, QPushButton, QRadioButton,
-                               QStyledItemDelegate, QToolButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QLayout, QPushButton, QRadioButton,
+                               QLineEdit, QStyledItemDelegate, QToolButton, QVBoxLayout, QWidget)
 
 from .lap_pa import bo_dau
 
-CHINH = '#1F4E79'           # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
+# Hệ thống thiết kế (đặc tả ARCH-PABT-2026-V4 mục 3, người dùng 11/10/2026): MỘT nguồn màu cho cả phần mềm
+TOKEN = dict(
+    chinh='#0F3866',          # Primary - Deep Navy: tiêu đề, nút chính, băng tiêu đề
+    chinh_nhat='#E8F0FE',     # Primary Light: nền mục đang chọn
+    nhan='#F59E0B',           # Accent - Amber Gold: viền nhấn, vạch vàng, cảnh báo nhẹ
+    phu='#107C41',            # Secondary - Forest Green: Lưu, Duyệt, Xuất
+    nguy_hiem='#D83B01',      # Danger - Crimson: xóa, lỗi nghiêm trọng
+    chu='#202124',            # Neutral Dark: chữ chính
+    chu_phu='#5F6368',        # Neutral Medium: chữ phụ, nhãn đơn vị
+    vach='#E0E0E0',           # Neutral Light: đường kẻ
+    nen='#F8F9FA',            # Surface: nền ứng dụng
+    khung='#FFFFFF',          # Panel: nền bảng, ô nhập
+)
+CAO_NUT_MENU = 36             # lưới 8 px (mục 3.3): nút điều hướng menu trái
+CAO_DONG_BANG = 32            # chiều cao dòng bảng dữ liệu
+CHINH = TOKEN['chinh']       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
 # nhóm nút: (nền, chữ, nền khi rê chuột)
 MAU = {                                            # tông dịu kiểu phần mềm quản lý: chỉ nút Lưu nền đặc, nút khác nền nhạt
-    'luu':    ('#2F7A4F', '#FFFFFF', '#27673F'),   # Lưu, Áp dụng
+    'luu':    ('#107C41', '#FFFFFF', '#0D6B37'),   # Lưu, Áp dụng (Secondary - Forest Green)
     'them':   ('#1D7A6C', '#FFFFFF', '#17675B'),   # Thêm…
-    'xoa':    ('#B8433A', '#FFFFFF', '#9C3830'),   # Xóa…
+    'xoa':    ('#D83B01', '#FFFFFF', '#B83201'),   # Xóa… (Danger - Crimson)
     'sua':    ('#B8651F', '#FFFFFF', '#9C551A'),   # Gộp, Chuyển, Tách, Bỏ thay đổi
     'in':     ('#6950A1', '#FFFFFF', '#594389'),   # In / Xuất, PDF
     'nhap':   ('#2D64A6', '#FFFFFF', '#26558D'),   # Nhập, Mở, Nạp, Cập nhật
@@ -47,6 +64,85 @@ LUAT = [
     (r'^(nhap|mo du an|nap|cap nhat)', 'nhap'),
     (r'goi y|chon|ra soat|thong tin|doi chieu|ho truoc|ho sau|tim|tra cuu|quay lai|^tiep', 'tra'),
 ]
+
+
+class KieuNut(Enum):
+    """Biến thể nút KHAI BÁO TƯỜNG MINH (đặc tả mục 6.1) - ưu tiên hơn màu đoán theo chữ (LUAT, giữ cho các nút chưa khai báo)."""
+    CHINH = 'primary'          # nền Primary đặc, chữ trắng: thao tác chính của màn hình
+    PHU = 'secondary'          # nền trắng, viền xám, chữ đen
+    LUU = 'success'            # nền xanh lá: Lưu, Duyệt, Thêm
+    NGUY_HIEM = 'danger'       # nền đỏ nhạt: Xóa
+
+
+def ap_kieu_nut(w, kieu: KieuNut) -> None:
+    """Gán biến thể cho nút (QPushButton / QToolButton) - setProperty + unpolish / polish để QSS áp ngay."""
+    w.setProperty('bien_the', kieu.value)
+    w.style().unpolish(w)
+    w.style().polish(w)
+    w.update()
+    if kieu in (KieuNut.CHINH, KieuNut.LUU):           # nền đặc: biểu tượng trắng (màu nhóm trên nền cùng màu thì mất)
+        k = ky_hieu_nut(w.text())
+        ic = icon_ky_hieu(k, '#FFFFFF', max(16, w.iconSize().width())) if k else None
+        if ic is not None:
+            w.setIcon(ic)
+            a = w.defaultAction() if isinstance(w, QToolButton) else None
+            if a is not None:                           # lệnh đổi (bật / tắt): Qt chép lại biểu tượng của lệnh - gắn lại màu trắng
+
+                def gan_lai(w=w, ic=ic):
+                    try:
+                        w.setIcon(ic)
+                    except RuntimeError:                # nút đã bị hủy
+                        pass
+                a.changed.connect(lambda: QTimer.singleShot(0, gan_lai))
+
+
+def _qss_kieu_nut() -> str:
+    """QSS các biến thể KieuNut: đặt CUỐI bảng kiểu (cùng độ ưu tiên thì quy tắc sau thắng màu đoán theo chữ / ribbon)."""
+    t = TOKEN
+    kieu = {'primary': (t['chinh'], '#FFFFFF', t['chinh'], '#1A4C85'),
+            'success': (t['phu'], '#FFFFFF', t['phu'], '#0D6B37'),
+            'danger': ('#FDECE7', '#B32D00', '#F3B9A6', '#FAD9CE'),
+            'secondary': (t['khung'], t['chu'], t['vach'], '#F1F3F4')}
+    qss = ''
+    for k, (nen, chu, vien, re_) in kieu.items():
+        for loai in ('QPushButton', 'QToolButton'):
+            sel = f'{loai}[bien_the="{k}"]'
+            qss += f'''
+    {sel}, {sel}[ribbon="0"], {sel}[ribbon="1"] {{ color: {chu}; background: {nen}; border: 1px solid {vien}; border-radius: 6px;
+        padding: 5px 12px; font-weight: 600; }}
+    {sel}:hover, {sel}[ribbon="0"]:hover, {sel}[ribbon="1"]:hover {{ background: {re_}; }}
+    {sel}:disabled, {sel}[ribbon="0"]:disabled, {sel}[ribbon="1"]:disabled {{ color: #9AA0A6; background: #F1F3F4;
+        border-color: {t['vach']}; }}'''
+    return qss
+
+
+@contextmanager
+def chan_tin_hieu(widget):
+    """with chan_tin_hieu(w): cập nhật hàng loạt không phát tín hiệu (đặc tả mục 6.3) - luôn trả lại trạng thái cũ kể cả khi lỗi."""
+    cu = widget.blockSignals(True)
+    try:
+        yield widget
+    finally:
+        widget.blockSignals(cu)
+
+
+class OTimKiemThongMinh(QLineEdit):
+    """Ô tìm có chờ ngừng gõ (đặc tả mục 6.2): bộ gõ tiếng Việt (Unikey...) gửi nhiều phím cho một chữ có dấu (xóa + gõ lại) -
+    lọc sau MỖI phím làm bảng nháy, con trỏ giật. chuoi_da_doi phát sau CHO_MS ms kể từ phím cuối; phat_ngay() phát luôn."""
+    chuoi_da_doi = Signal(str)
+    CHO_MS = 200
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._hen = QTimer(self)
+        self._hen.setSingleShot(True)
+        self._hen.setInterval(self.CHO_MS)
+        self._hen.timeout.connect(self.phat_ngay)
+        self.textChanged.connect(lambda *_: self._hen.start())
+
+    def phat_ngay(self) -> None:
+        self._hen.stop()
+        self.chuoi_da_doi.emit(self.text().strip())
 
 
 def nhom_nut(chu: str) -> str | None:
@@ -98,6 +194,12 @@ def _qss_the_so() -> str:
         f'''
     QWidget[vai="the_so"][the="{k}"] {{ border-left-color: {m}; }}
     QWidget[vai="the_so"][the="{k}"] QLabel[vai="so_the"] {{ color: {m}; }}''' for k, m in MAU_THE_SO.items())
+
+
+def _qss_day_du() -> str:
+    """Bảng kiểu cả phần mềm: kiểu chung + biến thể nút KieuNut (đặt cuối). Mọi chỗ đặt / dựng lại bảng kiểu (phóng to, thu
+    nhỏ) dùng hàm này - trước đây phong_to dựng lại thiếu phần biến thể."""
+    return _qss() + _qss_kieu_nut()
 
 
 def _qss() -> str:
@@ -215,8 +317,10 @@ def _qss() -> str:
         font-size: 11px; border: 1px solid rgba(255, 213, 79, 150); border-radius: 10px; padding: 2px 10px; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="thu_nghiem"] {{ color: #0A2747; background: #F2B705; font-weight: 800;
         font-size: 12px; letter-spacing: 0.8px; border: 1px solid #FFD54F; border-radius: 6px; padding: 2px 10px; }}
-    QFrame[vai="vach_vang"] {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #F2B705, stop:0.7 rgba(242,183,5,90),
-        stop:1 rgba(242,183,5,0)); border: 0; }}
+    QFrame[vai="vach_vang"] {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #F59E0B, stop:0.7 rgba(245,158,11,90),
+        stop:1 rgba(245,158,11,0)); border: 0; }}
+    QFrame[vai="bang_to_chuc"] QLabel[vai="ban_quyen"] {{ color: #FDE68A; background: rgba(255, 255, 255, 14); font-weight: 600;
+        font-size: 11px; border: 1px solid rgba(245, 158, 11, 160); border-radius: 10px; padding: 2px 10px; }}
     QFrame[vai="ribbon"] {{ background: #FFFFFF; border: 1px solid #DCE4EC; border-radius: 10px; }}
     QFrame[vai="nhom_ribbon"] {{ background: #F7FAFD; border: 1px solid #E5ECF3; border-radius: 8px; }}
     QLabel[vai="nhan_ribbon"] {{ color: #4A6785; font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
@@ -444,7 +548,7 @@ class KhungCao(QFrame):
         self._cao()
 
 
-MAU_BANG = ('#0A2747', '#113D6A', '#1B5A92')       # nền băng tiêu đề: xanh đậm -> xanh (đồng bộ màu bộ cài)
+MAU_BANG = ('#0B2C52', '#0F3866', '#1A4C85')       # nền băng tiêu đề: Primary Deep Navy (TOKEN['chinh'])
 VANG = '#F2B705'
 
 
@@ -586,6 +690,7 @@ def bang_to_chuc(phai: str = '', nut: tuple = ()) -> QFrame:
     phu = NhanRutGon(f'Trực thuộc {to_chuc.TRUC_THUOC}   •   {to_chuc.DIA_CHI}')
     phu.setProperty('vai', 'dong_phu')
     dong2.addWidget(phu, 1)
+    khung.nhan_to_chuc, khung.nhan_phu = ten, phu       # dat_to_chuc: đơn vị của dự án đang mở
     cot.addLayout(dong2)
     lo.addLayout(cot, 1)
     from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM
@@ -603,9 +708,25 @@ def bang_to_chuc(phai: str = '', nut: tuple = ()) -> QFrame:
         tn.setToolTip('Bản thử nghiệm: dùng để kiểm tra trước khi phát hành chính thức.')
         khung.nhan_thu_nghiem = tn
         hang_phai.addWidget(tn, 0, Qt.AlignmentFlag.AlignVCenter)
+    else:                                               # bản phát hành: gói bản quyền (ban_quyen.mo_ta - cổng chờ bản quyền)
+        from .ban_quyen import mo_ta
+        bq = QLabel(mo_ta())
+        bq.setProperty('vai', 'ban_quyen')
+        bq.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        bq.setToolTip('Chế độ sử dụng nội bộ - chưa kích hoạt bản quyền thương mại.')
+        khung.nhan_ban_quyen = bq
+        hang_phai.addWidget(bq, 0, Qt.AlignmentFlag.AlignVCenter)
     if hang_phai.count():
         lo.addLayout(hang_phai)
     return khung
+
+
+def dat_to_chuc(khung, ten: str = '', phu: str = '') -> None:
+    """Dòng đơn vị trên băng tiêu đề theo dự án đang mở (0.9.23 - lộ trình người dùng: thông tin đơn vị lấy theo dự án, không cố
+    định một đơn vị); trống = đơn vị mặc định của máy (to_chuc.py)."""
+    from . import to_chuc
+    khung.nhan_to_chuc.setText(ten or to_chuc.TEN)
+    khung.nhan_phu.setText(phu or f'Trực thuộc {to_chuc.TRUC_THUOC}   •   {to_chuc.DIA_CHI}')
 
 
 class XepDong(QLayout):
@@ -759,7 +880,9 @@ class NhanBam(QLabel):
         super().mouseReleaseEvent(e)
 
 
-KHOA_NHOM_DONG = 'giao_dien/menu_trai_dong'            # QSettings: tên các nhóm menu trái đang đóng, nối bằng "|"
+# QSettings: tên các nhóm menu trái đang đóng, nối bằng "|". 0.9.23 menu 5 nhóm mới: khóa mới (nhóm cũ không còn) - lần đầu
+# dùng nhóm đóng sẵn mặc định
+KHOA_NHOM_DONG = 'giao_dien/menu_trai_dong_2'
 
 
 def _doc_nhom_dong(mac_dinh: tuple) -> set:
@@ -821,7 +944,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
         b = nut_lenh(a, 22)                                  # biểu tượng 22 px, nét dày (icon_ky_hieu)
         b.setProperty('ribbon', '0')
         b.setProperty('menu', '1')                           # kiểu danh sách: không viền, rê chuột mới hiện nền
-        b.setMinimumHeight(32)
+        b.setMinimumHeight(CAO_NUT_MENU)
         b.setToolTip(a.text().rstrip('…'))
         nut.append(b)
         return b
@@ -938,7 +1061,13 @@ def nhap_mot_lan(delegate, event, option, index) -> bool:
 
 def mo_danh_sach(cb) -> None:
     """Ô xổ vừa mở để sửa: hiện luôn danh sách (không phải bấm thêm lần nữa)."""
-    QTimer.singleShot(0, lambda: cb.showPopup() if cb.isVisible() else None)
+    def mo():
+        try:
+            if cb.isVisible():
+                cb.showPopup()
+        except RuntimeError:                            # ô đã bị hủy trước khi tới lượt (đóng cửa sổ ngay)
+            pass
+    QTimer.singleShot(0, mo)
 
 
 class ChonXoXuong(QStyledItemDelegate):
@@ -1336,7 +1465,7 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
         f = QFont(app.font())
         f.setPointSizeF(_CO_CHU_GOC * t)
         app.setFont(f)
-        app.setStyleSheet(_co_gian(_qss(), t))
+        app.setStyleSheet(_co_gian(_qss_day_du(), t))
         for w in app.allWidgets():
             _co_gian_widget(w, t)
     finally:
@@ -1576,6 +1705,10 @@ class _BoToMau(QObject):
                 return True
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow():
             to_mau(obj)
+            for bang in obj.findChildren(QAbstractItemView):    # dòng bảng dữ liệu 32 px (đặc tả mục 3.3)
+                vh = getattr(bang, 'verticalHeader', None)
+                if vh is not None and vh().defaultSectionSize() < CAO_DONG_BANG:
+                    vh().setDefaultSectionSize(CAO_DONG_BANG)
             gian_cach(obj)
             if TY_LE[0] != 1:
                 for w in [obj, *obj.findChildren(QWidget)]:
@@ -1642,15 +1775,15 @@ def ap_dung(app) -> None:
     f.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
     app.setFont(f)
     p = QPalette()
-    for vai_, mau in ((QPalette.ColorRole.Window, '#F7F9FC'), (QPalette.ColorRole.Base, '#FFFFFF'),
-                      (QPalette.ColorRole.AlternateBase, '#EEF4FA'), (QPalette.ColorRole.Text, '#1A1A1A'),
-                      (QPalette.ColorRole.WindowText, '#1A1A1A'), (QPalette.ColorRole.ButtonText, '#1A1A1A'),
+    for vai_, mau in ((QPalette.ColorRole.Window, TOKEN['nen']), (QPalette.ColorRole.Base, TOKEN['khung']),
+                      (QPalette.ColorRole.AlternateBase, '#F3F6FB'), (QPalette.ColorRole.Text, TOKEN['chu']),
+                      (QPalette.ColorRole.WindowText, TOKEN['chu']), (QPalette.ColorRole.ButtonText, TOKEN['chu']),
                       (QPalette.ColorRole.Button, '#FFFFFF'), (QPalette.ColorRole.Highlight, '#2E75B6'),
                       (QPalette.ColorRole.HighlightedText, '#FFFFFF'), (QPalette.ColorRole.ToolTipBase, '#FFFDE7'),
                       (QPalette.ColorRole.ToolTipText, '#1A1A1A')):
         p.setColor(vai_, QColor(mau))
     app.setPalette(p)
-    app.setStyleSheet(_qss())
+    app.setStyleSheet(_qss_day_du())
     tr = QTranslator(app)
     if tr.load(QLocale('vi'), 'qtbase', '_', QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
         app.installTranslator(tr)

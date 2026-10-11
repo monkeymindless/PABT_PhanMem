@@ -185,18 +185,62 @@ def tu_kiem(file_ra=None) -> int:
     def phien_ban():
         import pabt
         import platform
+        from pabt import ban_quyen
         return f'{pabt.__version__}, Python {platform.python_version()}, ' + \
             ('Qt5' if pabt.QT5 else 'Qt6') + f' (bản cài gốc {nap_cap_nhat.BAN_GOC}' + \
             (f', đang dùng bản cập nhật {nap_cap_nhat.DANG_DUNG})' if nap_cap_nhat.DANG_DUNG else ')') + \
-            (f' - {pabt.NHAN_THU_NGHIEM}' if getattr(pabt, 'BAN_THU_NGHIEM', False) else '')
+            (f' - {pabt.NHAN_THU_NGHIEM}' if getattr(pabt, 'BAN_THU_NGHIEM', False) else '') + \
+            f' - {ban_quyen.mo_ta()}'
 
     def https():
         from pabt import an_toan as at
         ctx = at.ngu_canh_tls()
         return f'kiểm tra chứng chỉ, {ctx.minimum_version.name}+'
 
+    def lap_in_thu():
+        # máy mới cài (chưa có dữ liệu gì): chạy thử việc chính bằng dữ liệu GIẢ LẬP trong thư mục tạm, chỉ dùng thành phần đóng
+        # gói kèm (bộ đơn giá, mẫu in, mẫu văn bản trình) - không cần Excel / Word (chỉ ghi file .xlsx / .docx)
+        from PySide6.QtWidgets import QApplication
+        QApplication.instance() or QApplication([])                 # in_an đo chữ bằng Qt
+        import openpyxl
+        from pabt import du_an_moi, du_toan, nhap_tho, van_ban_trinh
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            dong = [dict(ho_ten=f'Nguyễn Văn Thử {i}', dia_chi='Ấp 1', so_to='10', so_thua=str(100 + i), loai_dat=l,
+                         dt_thu_hoi='120', vi_tri='1') for i, l in enumerate(('ONT', 'CLN', 'LUC'))]
+            gia = [dict(loai_dat=l, vi_tri='1', gia=g) for l, g in (('ONT', '3000000'), ('CLN', '250000'), ('LUC', '200000'))]
+            bc = du_an_moi.tao_du_an(td / 'thu.pabt', dict(ten='Dự án thử', cap_dia_ban='Xã', ten_dia_ban='Thử', nam='2026'),
+                                     dong, gia)
+            con = csdl.mo(td / 'thu.pabt')
+            try:
+                ds = [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu')]
+                kq = van_ban_trinh.xuat_bo_ho_so(con, ds, td / 'ho_so', to_trinh=True, pa_tong=True)
+                if kq['loi']:
+                    raise RuntimeError(f'xuất hồ sơ lỗi: {kq["loi"][:2]}')
+                du_toan.xuat_khai_toan(du_toan.tu_du_an(con), td / 'khai_toan.xlsx')
+            finally:
+                con.close()
+            wb = openpyxl.Workbook()
+            wb.active.append(['STT', 'Họ và tên', 'Địa chỉ', 'Tờ bản đồ', 'Thửa đất', 'Loại đất', 'Diện tích thu hồi'])
+            wb.active.append([1, 'Trần Thị Thử', 'Ấp 2', 5, 12, 'ONT', 80])
+            wb.save(td / 'tho.xlsx')
+            nh = nhap_tho.nhap(td / 'tho.xlsx', td / 'nhap.pabt', 'Nhập thử')
+            so_ho_nhap = getattr(nh, 'so_ho', None)
+        return (f'dự án mới {bc["so_ho"]} hộ, {bc["so_ho_co_pa"]} hộ có phương án; {len(kq["excel"])} file Excel + '
+                f'{len(kq["word"])} file Word (chi tiết, bảng tổng hợp, tờ trình, phương án tổng); khái toán; nhập Excel'
+                + (f' {so_ho_nhap} hộ' if so_ho_nhap is not None else ''))
+
+    def huong_dan():
+        from pabt import app as ud
+        f = ud.file_huong_dan()
+        if f is None:
+            raise FileNotFoundError('thiếu HUONG_DAN.md (Trợ giúp → Hướng dẫn sử dụng)')
+        return f'{f.name}, {f.stat().st_size // 1024} KB'
+
     for ten, ham in (('Phiên bản', phien_ban), ('Giao diện', giao_dien), ('Đọc PDF', pdf), ('Bộ đơn giá', bo_don_gia), ('Mẫu in', mau_in),
-                     ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('HTTPS', https)):
+                     ('Hướng dẫn sử dụng', huong_dan),
+                     ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('HTTPS', https),
+                     ('Lập và in thử (dữ liệu giả lập)', lap_in_thu)):
         buoc(ten, ham)
     loi = sum(1 for x in kq if x.startswith('LOI'))
     kq.append(f'KET QUA: {"DAT" if not loi else f"{loi} LOI"}')

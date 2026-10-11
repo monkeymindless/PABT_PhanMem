@@ -350,8 +350,9 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
         d['ten'] = viet_hoa_dau(d['ten'])
     dm_ts = [(r[0], r[1], r[2], viet_hoa_dau(r[3]), *r[4:]) for r in dm_ts]
 
-    # ------------------------------------------------ ghi (một giao dịch)
-    con = csdl.tao_moi(file_pabt)
+    # ------------------------------------------------ ghi (một giao dịch) - file tạm rồi thay file đích (nguyên tử)
+    con, tam = csdl.tao_moi_tam(file_pabt)
+    xong = False
     try:
         with con, csdl.mo_khoa_danh_muc(con):
             con.execute('''UPDATE du_an SET ten=?, ten_day_du=?, don_vi_cap_tren=?, don_vi_lap=?, cap_dia_ban=?, ten_dia_ban=?,
@@ -387,8 +388,12 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
                              for m, v in bc.tong_excel.items()])
             csdl.ghi_nhat_ky(con, 'Nhập từ Excel', f'{Path(file_excel).name}: {len(ho)} hộ, {len(thua)} thửa, '
                                                    f'{len(ct_dat) + len(ct_khoan)} dòng phương án')
+        xong = True
     finally:
         con.close()
+        if not xong:
+            csdl.huy_tao_moi(tam)
+    csdl.hoan_tat_tao_moi(tam, file_pabt)
     bc.so_ho, bc.so_thua = len(ho), len(thua)
     bc.so_ho_co_pa = len({d['ma_ho'] for d in ct_dat + ct_khoan})
     bc.so_dong = {1: len(ct_dat), 2: sum(d['muc'] == 2 for d in ct_khoan), 3: sum(d['muc'] == 3 for d in ct_khoan),

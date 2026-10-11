@@ -47,10 +47,12 @@ KB_WIN7 = {
 BAN = {
     # Win10-11 không kèm Visual C++ Redistributable (25 MB): Windows 10/11 có sẵn UCRT, DLL Visual C++ PABT cần
     # (vcruntime140, msvcp140...) đã nằm trong bản dựng PyInstaller.
-    'win10': dict(dist='PABT', ten='Win10-11', vc=None, kien='x64', iexpress=IEXPRESS_64, kb=()),
+    # tên theo đặc tả ARCH-PABT-2026-V4 mục 9.1 (0.9.24): PABT_CaiDat_<ver>_Win10-11_x64.exe / PABT_ChayNgay_<ver>_x64.zip
+    'win10': dict(dist='PABT', ten='Win10-11_x64', zip='x64', vc=None, kien='x64', iexpress=IEXPRESS_64, kb=()),
     # Win7-8: UCRT + Visual C++ đóng sẵn trong bản dựng (ucrt_win7.py) -> không kèm / không cài vc_redist (cần quyền quản trị).
     # Kèm bản cập nhật Windows 7 KB3063858 (có KB2533623 - Python 3.8 cần): cai_dat.ps1 chỉ cài trên Windows 7 còn thiếu.
-    'win7': dict(dist='PABT_Win7', ten='Win7-8', vc=None, kien='x86', iexpress=IEXPRESS, kb=tuple(KB_WIN7)),
+    # chạy Win 7 SP1 / 8 / 8.1 / Windows 10 32-bit (và cả 64-bit): PABT_CaiDat_<ver>_Win7-8-10_x86.exe / PABT_ChayNgay_<ver>_x86.zip
+    'win7': dict(dist='PABT_Win7', ten='Win7-8-10_x86', zip='x86', vc=None, kien='x86', iexpress=IEXPRESS, kb=tuple(KB_WIN7)),
 }
 # không bao giờ đóng dữ liệu thật vào bộ cài (CLAUDE.md)
 DU_LIEU_CAM = re.compile(r'\.(pabt|pabtdt|xlsm)$|^DS |PABT_CHUAN', re.I)
@@ -95,7 +97,9 @@ def _sed(goi: Path, ra: Path, file: list) -> str:
     return '\r\n'.join(dong) + '\r\n'
 
 
-def dong_goi(ban: str, pb: str) -> Path:
+def _ds_chuong_trinh(ban: str) -> list:
+    """[(đường dẫn trong thư mục cài, file nguồn)] của bản dựng: chương trình + hướng dẫn + biểu tượng riêng cho lối tắt
+    (tránh bộ đệm biểu tượng của Windows). Chặn: chưa dựng / sai kiến trúc / có file dữ liệu / tên có dấu."""
     c = BAN[ban]
     dist = GOC / 'dist' / c['dist']
     exe = dist / 'PABT.exe'
@@ -103,31 +107,49 @@ def dong_goi(ban: str, pb: str) -> Path:
         raise SystemExit(f'Chưa có {exe}: dựng exe trước (DUNG_BO_CAI.bat).')
     if kien_truc(exe) != c['kien']:
         raise SystemExit(f'{exe} là {kien_truc(exe)}, bộ cài {c["ten"]} cần {c["kien"]}.')
-    goi = DEV / f'goi_{ban}'
-    if goi.exists():
-        shutil.rmtree(goi)
-    goi.mkdir(parents=True)
-    if not str(goi).isascii():
-        raise SystemExit(f'IExpress cần đường dẫn không dấu: {goi}')
-    # file chương trình: bản dựng + hướng dẫn + biểu tượng riêng cho lối tắt (tránh bộ đệm biểu tượng của Windows)
     ct = [(f.relative_to(dist).as_posix(), f) for f in sorted(dist.rglob('*')) if f.is_file()]
-    ct += [('HUONG_DAN.md', GOC / 'HUONG_DAN.md'), ('PABT.ico', GOC / 'pabt' / 'bieu_tuong.ico')]
+    co = {t.lower() for t, _ in ct}
+    # PyInstaller 5 (bản Win7) đặt file dữ liệu ở thư mục gốc: HUONG_DAN.md đã có - không thêm lần nữa (0.9.23 trùng tên trong zip)
+    ct += [(t, f) for t, f in (('HUONG_DAN.md', GOC / 'HUONG_DAN.md'), ('PABT.ico', GOC / 'pabt' / 'bieu_tuong.ico'))
+           if t.lower() not in co]
     for ten, _ in ct:
         if DU_LIEU_CAM.search(ten.rsplit('/', 1)[-1]):
             raise SystemExit(f'Bản dựng có file dữ liệu, không đóng gói: {ten}')
         if not ten.isascii():
             raise SystemExit(f'Tên file có dấu (vỏ IExpress / zip của Windows 7 đọc sai): {ten}')
+    return ct
+
+
+def _chep_phang(goi: Path, ct: list, tien_to: str) -> tuple:
+    """Chép phẳng các file vào thư mục gói (IExpress không giữ thư mục): ([tên phẳng], [dòng danh sách exe], [dòng danh sách zip])."""
     phang, ds_exe, ds_zip = [], [], []
     for i, (ten, f) in enumerate(ct, start=1):
-        p = f'f{i:03d}_{f.name}'                    # IExpress chép phẳng: tên duy nhất, giữ tên gốc cho dễ đọc nhật ký
+        p = f'{tien_to}{i:03d}_{f.name}'            # tên duy nhất, giữ tên gốc cho dễ đọc nhật ký
         shutil.copy2(f, goi / p)
         co, bam = f.stat().st_size, hashlib.sha256(f.read_bytes()).hexdigest()
         dich = ten.replace('/', '\\')
         ds_exe.append(f'{p}\t{dich}\t{co}\t{bam}')
         ds_zip.append(f'{dich}\t{dich}\t{co}\t{bam}')
         phang.append(p)
-    n = len(ct)
-    (goi / 'danh_sach.txt').write_bytes(('\r\n'.join(ds_exe) + '\r\n').encode('utf-8'))
+    return phang, ds_exe, ds_zip
+
+
+def _ghi_ds(f: Path, dong: list) -> None:
+    f.write_bytes(('\r\n'.join(dong) + '\r\n').encode('utf-8'))
+
+
+def _goi_moi(ten: str) -> Path:
+    goi = DEV / f'goi_{ten}'
+    if goi.exists():
+        shutil.rmtree(goi)
+    goi.mkdir(parents=True)
+    if not str(goi).isascii():
+        raise SystemExit(f'IExpress cần đường dẫn không dấu: {goi}')
+    return goi
+
+
+def _chep_cai_dat(goi: Path, ban: str, pb: str) -> list:
+    """Script cài / gỡ, ban.txt, phien_ban.txt, biểu tượng vào gói. Trả tên các file đó."""
     for ten, nd in (('ban.txt', ban), ('phien_ban.txt', pb)):
         (goi / ten).write_text(nd, encoding='ascii')
     if not (BC / 'CAI_DAT.cmd').read_bytes().isascii():
@@ -136,25 +158,28 @@ def dong_goi(ban: str, pb: str) -> Path:
         shutil.copy2(BC / ten, goi / ten)
     shutil.copy2(GOC / 'pabt' / 'bieu_tuong.ico', goi / 'PABT.ico')
     shutil.copy2(GOC / 'pabt' / 'bieu_tuong.png', goi / 'bieu_tuong.png')
-    file = ['CAI_DAT.cmd', 'cai_dat.ps1', 'go_cai_dat.ps1', 'danh_sach.txt', 'ban.txt', 'phien_ban.txt', 'PABT.ico',
-            'bieu_tuong.png'] + phang
-    if c['vc']:
-        shutil.copy2(BC / c['vc'], goi / 'vc_redist.exe')
-        file.append('vc_redist.exe')
-    for ten in c['kb']:                             # bản cập nhật Windows (Win7-8): kiểm mã băm trước khi đóng gói
+    return ['CAI_DAT.cmd', 'cai_dat.ps1', 'go_cai_dat.ps1', 'ban.txt', 'phien_ban.txt', 'PABT.ico', 'bieu_tuong.png']
+
+
+def _chep_kb(goi: Path, kb: tuple) -> list:
+    """Bản cập nhật Windows 7 KB3063858 (bộ cài x86 / phổ quát): kiểm mã băm trước khi đóng gói."""
+    for ten in kb:
         f = BC / ten
         if not f.exists():
-            raise SystemExit(f'Thiếu {f} (bản cập nhật Windows 7 đóng kèm bộ cài Win7-8): xem KB_WIN7.')
+            raise SystemExit(f'Thiếu {f} (bản cập nhật Windows 7 đóng kèm bộ cài x86): xem KB_WIN7.')
         if hashlib.sha256(f.read_bytes()).hexdigest() != KB_WIN7[ten]:
             raise SystemExit(f'{f.name} sai mã SHA-256: không phải bản Microsoft phát hành.')
         shutil.copy2(f, goi / ten)
-        file.append(ten)
-    vo = DEV / f'PABT_CaiDat_{ban}.exe'
+    return list(kb)
+
+
+def _iexpress(goi: Path, file: list, ten_vo: str, iexpress: Path, ra_ten: str) -> Path:
+    vo = DEV / f'{ten_vo}.exe'
     vo.unlink(missing_ok=True)
-    sed = DEV / f'goi_{ban}.sed'
+    sed = DEV / f'{ten_vo}.sed'
     sed.write_text(_sed(goi, vo, file), encoding='mbcs')
-    subprocess.run([str(c['iexpress']), '/N', '/Q', str(sed)], check=True)
-    for _ in range(120):                            # iexpress có thể trả về trước khi ghi xong
+    subprocess.run([str(iexpress), '/N', '/Q', str(sed)], check=True)
+    for _ in range(180):                            # iexpress có thể trả về trước khi ghi xong
         if vo.exists() and time.time() - vo.stat().st_mtime > 2:
             break
         time.sleep(1)
@@ -162,24 +187,62 @@ def dong_goi(ban: str, pb: str) -> Path:
         raise SystemExit(f'IExpress không tạo được {vo}')
     doi_bieu_tuong(vo, GOC / 'pabt' / 'bieu_tuong.ico')
     RA.mkdir(exist_ok=True)
-    dich = RA / f'PABT_CaiDat_{pb}_{c["ten"]}.exe'
+    dich = RA / ra_ten
     shutil.copy2(vo, dich)
-    # gói chạy ngay / cài dự phòng: cây thư mục chương trình (PABT.exe chạy được ngay) + bộ cài (CAI_DAT.cmd; danh sách: nguồn =
-    # đường dẫn trong gói)
-    with zipfile.ZipFile(RA / f'PABT_ChayNgay_{pb}_{c["ten"]}.zip', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    return dich
+
+
+def dong_goi(ban: str, pb: str) -> Path:
+    c = BAN[ban]
+    ct = _ds_chuong_trinh(ban)
+    goi = _goi_moi(ban)
+    phang, ds_exe, ds_zip = _chep_phang(goi, ct, 'f')
+    _ghi_ds(goi / 'danh_sach.txt', ds_exe)
+    file = _chep_cai_dat(goi, ban, pb) + ['danh_sach.txt'] + phang
+    if c['vc']:
+        shutil.copy2(BC / c['vc'], goi / 'vc_redist.exe')
+        file.append('vc_redist.exe')
+    file += _chep_kb(goi, c['kb'])
+    dich = _iexpress(goi, file, f'PABT_CaiDat_{ban}', c['iexpress'], f'PABT_CaiDat_{pb}_{c["ten"]}.exe')
+    # gói chạy ngay / cài dự phòng: cây thư mục chương trình (PABT.exe chạy được ngay - giải nén ra USB / ổ D: là dùng) + bộ cài
+    # (CAI_DAT.cmd; danh sách: nguồn = đường dẫn trong gói)
+    with zipfile.ZipFile(RA / f'PABT_ChayNgay_{pb}_{c["zip"]}.zip', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for ten, f in ct:
             z.write(f, ten)
         z.writestr('danh_sach.txt', ('\r\n'.join(ds_zip) + '\r\n').encode('utf-8'))
         for ten in ('CAI_DAT.cmd', 'cai_dat.ps1', 'go_cai_dat.ps1', 'ban.txt', 'phien_ban.txt', 'bieu_tuong.png', *c['kb']):
             z.write(goi / ten, ten)
-    print(f'{dich.name}: {dich.stat().st_size / 2**20:.1f} MB, vỏ {kien_truc(dich)}, {n} file')
+    print(f'{dich.name}: {dich.stat().st_size / 2**20:.1f} MB, vỏ {kien_truc(dich)}, {len(ct)} file')
+    return dich
+
+
+def dong_goi_pho_quat(pb: str) -> Path:
+    """PABT_Setup_Universal_<ver>.exe (đặc tả ARCH-PABT-2026-V4 mục 9.2): CẢ HAI bản trong một vỏ IExpress 32-bit (chạy được
+    trên Windows 7 32-bit). cai_dat.ps1 (ban.txt = 'universal') tự chọn: Windows 10 1809+ / 11 64-bit -> bản Qt6 x64
+    (danh_sach_x64.txt); Windows 7 / 8 / 8.1 / Windows 32-bit -> bản Qt5 x86 (danh_sach_x86.txt) + KB3063858 khi Win 7 còn thiếu.
+    Cài như hai bộ cài riêng (cùng cai_dat.ps1): mặc định Program Files (x86), không có quyền quản trị thì thư mục người dùng."""
+    goi = _goi_moi('universal')
+    file = []
+    n = {}
+    for ban, tien_to, ten_ds in (('win10', 'a', 'danh_sach_x64.txt'), ('win7', 'b', 'danh_sach_x86.txt')):
+        ct = _ds_chuong_trinh(ban)
+        phang, ds_exe, _ = _chep_phang(goi, ct, tien_to)
+        _ghi_ds(goi / ten_ds, ds_exe)
+        file += [ten_ds] + phang
+        n[ban] = len(ct)
+    file = _chep_cai_dat(goi, 'universal', pb) + file + _chep_kb(goi, BAN['win7']['kb'])
+    dich = _iexpress(goi, file, 'PABT_Setup_Universal', IEXPRESS, f'PABT_Setup_Universal_{pb}.exe')
+    print(f'{dich.name}: {dich.stat().st_size / 2**20:.1f} MB, vỏ {kien_truc(dich)}, x64 {n["win10"]} + x86 {n["win7"]} file')
     return dich
 
 
 def main(argv) -> int:
     pb = phien_ban()
-    for ban in (argv or list(BAN)):
-        dong_goi(ban, pb)
+    for ban in (argv or [*BAN, 'universal']):
+        if ban == 'universal':
+            dong_goi_pho_quat(pb)
+        else:
+            dong_goi(ban, pb)
     return 0
 
 

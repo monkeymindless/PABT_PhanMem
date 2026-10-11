@@ -9,7 +9,7 @@ a = Analysis(
     ['chay.py'],
     pathex=[],
     binaries=[],
-    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'), ('mau_in', 'mau_in')],
+    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'), ('mau_in', 'mau_in'), ('HUONG_DAN.md', '.')],
     hiddenimports=['html.parser', 'urllib.request', 'difflib'],
     hookspath=[],
     hooksconfig={},

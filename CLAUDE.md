@@ -43,7 +43,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `$CO_VC` = false), viết theo PowerShell 2.0 (không `$PSScriptRoot`, `-Raw`, `-in`, `-File`; gọi `-STA`). TIÊU CHUẨN CÀI ĐẶT
   0.9.21 (người dùng yêu cầu "máy nào cũng cài được"): xem mục 0.9.21 cuối file.
 - Dựng bộ cài: `DUNG_BO_CAI.bat` (PyInstaller rồi `bo_cai_win\dung_bo_cai_win.py`: IExpress + `cai_dat.ps1`/`go_cai_dat.ps1`, cài
-  per-user vào `%LOCALAPPDATA%\Programs\PABT`) → `bo_cai\PABT_CaiDat_<ver>.exe` + `bo_cai\PABT_ChayNgay_<ver>.zip`. KHÔNG dùng
+  mặc định vào `Program Files (x86)\PABT` - xem 0.9.22; từ chối quyền quản trị -> `%LOCALAPPDATA%\Programs\PABT`) → `bo_cai\PABT_CaiDat_<ver>.exe` + `bo_cai\PABT_ChayNgay_<ver>.zip`. KHÔNG dùng
   Inno Setup ≥ 6.5 (lỗi tạo thư mục tạm is-*.tmp trên Windows 11 build mới); phiên bản lấy từ `pabt/__init__.py` `__version__`. Lệnh PyInstaller phải kèm
   `--add-data "pabt\bo_don_gia.sqlite;pabt"`. Sau PyInstaller chạy `bo_cai_win\rut_gon.py` (giữ theo danh sách `GIU_MODULE`;
   bản Qt5 phải giữ `Qt5Qml.dll` vì `pyside2.abi3.dll` liên kết cứng - thiếu thì exe treo im lặng, không báo lỗi; rồi
@@ -458,7 +458,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     ("Dán danh sách tài sản…" trong CuaSoLapPA): khớp danh mục -> từ đầu -> luật từ khóa + ĐVT.
   - Test GUI: đóng CuaSoLapPA còn sửa đổi thì hỏi lưu (hộp thoại treo test) - `bo_thay_doi()` trước `close()`.
   - TIÊU CHUẨN CÀI ĐẶT (người dùng: "bộ cài Win 7/8 và Win 10/11 phải cài được trên tất cả các máy khác, quy về 1 tiêu chuẩn"):
-    (1) cài cho người dùng hiện tại, KHÔNG cần quyền quản trị, KHÔNG cài gì vào Windows - Visual C++ và UCRT nằm trong bản dựng
+    (1) cài cho người dùng hiện tại (từ 0.9.22 mặc định Program Files (x86): chỉ bước chép file hỏi quyền quản trị; từ chối -> thư
+    mục không cần quyền), KHÔNG cài gì vào Windows - Visual C++ và UCRT nằm trong bản dựng
     (Win7: `ucrt_win7.chep_ucrt` gọi trong `dung_exe38.py`; UCRT 10.0.10240 bản Windows 7 trong KB2999226 của vc_redist, giải
     nén bằng expand.exe), `rut_gon.kiem_dll` chặn dựng nếu thiếu DLL (`HE_THONG_WIN7` / `HE_THONG_WIN10`; Win7 cho phép các
     nhóm `rut_gon.API_WIN7` - không phải mọi l1-1-0: core-path chỉ từ Win 8); (2) khởi chạy `bo_cai_win\CAI_DAT.cmd` (CHỈ ASCII) -> `powershell -Command "& ([scriptblock]::Create(
@@ -521,10 +522,91 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     cũ cho nhật ký khi lưu không đọc lại CSDL), `BoSoan.luu(mo_lai=False)` cho `tu_lap_phuong_an` (không đọc lại phương án vừa lưu).
   - Mã chết bỏ: `chinh_sach.la_dao_tao_theo_thua`, `in_an.luu_duong_ke` / `ho_da_lap`, `HopDanTaiSan.dat_loai`, `nghiep_vu.lamtron_du_an`
     + 1 thuộc tính, `BoPhanLoai.phan_loai_ds`, `quan_ly.mo_ta_trang_thai` / `tien_vn`, `theo_doi.lay_qd` / `tien_vn`, import thừa.
+  - Bộ cài MẶC ĐỊNH `$MAC_DINH` = `${env:ProgramFiles(x86)}\PABT` (Windows 32-bit: ProgramFiles; người dùng 11/10/2026), thư mục
+    không cần quyền `$KHONG_QT` = %LOCALAPPDATA%\Programs\PABT: từ chối UAC (`$script:TU_CHOI`) -> cửa sổ chuyển sẵn sang đó, `-Im`
+    không -ThuMuc thì tự cài vào đó; `GoBanCu` gỡ bản cũ ở thư mục khác (InstallLocation HKCU cũ; chỉ khi có PABT.exe, không .pabt).
+  - Bộ cài vào Program Files / Program Files (x86) (người dùng 11/10/2026; trước: "Access … denied" và nút Cài đặt khóa luôn):
+    `cai_dat.GhiDuoc` (thử ghi file tạm ở thư mục / thư mục cha gần nhất); không ghi được -> hỏi Có (cài đây) / Không (thư mục mặc
+    định `$MAC_DINH`) / Hủy -> `ChepQuyenQuanTri`: chạy lại cai_dat.ps1 `-Verb RunAs` với `-ChiChep <file kết quả> -ThuMuc -Goc`
+    (biến môi trường không sang tiến trình quản trị), CHỈ `ChepVao` (kiểm thư mục, gỡ bản cũ, chép + kiểm SHA-256); tiến độ qua
+    `<kết quả>.tien_do`, nhật ký `<kết quả>.log` ghép vào nhật ký chính; lối tắt / HKCU / mục gỡ cài / tu-kiem vẫn quyền người
+    dùng. Lỗi -> mở lại nút Cài đặt / Chọn… / ô thư mục. `go_cai_dat.ps1`: thư mục không ghi được -> lệnh xóa `$XOA_HET` /
+    `$XOA_GIU` (một dòng, không ngoặc kép, `$d` = thư mục) chạy `-Verb RunAs -Wait`; từ chối -> báo xóa tay. Phần mềm không ghi vào
+    thư mục cài (mẫu in / cập nhật ở %APPDATA%\PABT). Test `test_bo_cai.test_cai_vao_program_files`.
+  - `chay.tu_kiem` bước "Lập và in thử (dữ liệu giả lập)": tạo dự án 3 hộ + tự lập, `van_ban_trinh.xuat_bo_ho_so` (chi tiết, bảng
+    tổng hợp, tờ trình, phương án tổng - mẫu đóng kèm, không cần Excel / Word), khái toán, nhập Excel thô - chạy lúc dựng và ngay
+    sau khi cài trên máy đích. Đã thử giả lập máy trắng (APPDATA / LOCALAPPDATA / TEMP / USERPROFILE trỏ thư mục trống, bản cài
+    chép bằng `-ChiChep`): ĐẠT, chỉ tạo %APPDATA%\PABT\mau_in\mac_dinh.
   - Test: `tests/test_ra_soat_0922.py`, `test_giao_dien.test_bam_the_bang_tong_hop_dong_bo_menu`. Bộ đo dùng lại: dự án giả lập
     `tests.test_toc_do._du_an(td, N)` + 3 quyết định (`theo_doi.luu_qd`, `them_ho_theo_pa`, `ghi_chi_tra`).
   - CHƯA làm: lap_bang_tong_hop đọc `doc_tat_ca_phuong_an` 2 lần (một lần trong ket_qua_ho, ~0,08 s / 3.000 hộ); ghi xlsx của
     openpyxl (bảng tổng hợp 3.000 hộ ~4 s, 150.000 ô) - giới hạn thư viện; các mục CHƯA làm của 0.9.20 vẫn còn.
+- 0.9.23 theo lộ trình người dùng (`lo_trinh_huong_dan_pabt.txt` trên Desktop, 11/10/2026 - "chuẩn thương mại"):
+  - Thanh menu `CuaSoChinh._thanh_menu` (Tệp tin / Dữ liệu / Công cụ / Trợ giúp, dùng chính QAction của `self.lenh`; phím tắt
+    Ctrl+N / Ctrl+O / Ctrl+Shift+O / Ctrl+Shift+S / F1); lệnh mới 'Đóng dự án' (`dong_du_an_lenh`), 'Thoát', 'Bảng giá đất NQ 28…'
+    (`bang_gia_dat` = HopTraNQ28), 'Hướng dẫn sử dụng' (`huong_dan`: QTextBrowser.setMarkdown của `file_huong_dan()` - HUONG_DAN.md
+    đóng gói: `PABT.spec` datas + `dung_exe38` CHEP / --add-data; tu-kiem bước "Hướng dẫn sử dụng"). Bỏ nút xổ "DỰ ÁN ▾" của menu
+    trái (QMenu đè các nút dưới) và hai nút góc dưới Cập nhật / Giới thiệu (nay ở Trợ giúp). `kiem_tra_giao_dien` bỏ qua 'Thoát'.
+  - Menu trái 5 nhóm (`nhom` trong `__init__`): Dự án & dự toán / Bảng giá & chính sách / Lập phương án / Tổng hợp & trình duyệt /
+    Tiến độ & bàn giao; `NHOM_DONG_MAC_DINH`; khóa QSettings mới `giao_dien.KHOA_NHOM_DONG = 'giao_dien/menu_trai_dong_2'`. Thêm hộ
+    / Xóa hộ không còn ở menu trái: `_thanh_cong_cu_ds` (nut_lenh của QAction Thêm hộ, Lập phương án, Xóa hộ + bộ lọc một hàng;
+    `hang_chon` "Đã chọn N hộ" khi chọn >= 2), `_cap_nhat_chon` (selectionChanged; Xóa hộ chỉ bật khi chọn hộ và không chỉ xem).
+    Bộ đếm lọc `lb_loc` sang hàng kết quả đối chiếu (1366 px: hàng công cụ + lọc quá chật). `&` trong chữ QAction là phím tắt gạch
+    dưới: TRANG có "&" -> setText với "&&".
+  - TRANG thêm 'Dự toán & khái toán' (`TRANG_DU_TOAN` = 5, ô 3 của QStackedWidget `self.trang_dt`; `KhungDuToan` tạo khi mở lần
+    đầu `_dam_bao_du_toan`; `dat_du_an(con, file)` khi mở / đóng dự án; `du_toan(cho)` trả khung). `man_hinh_du_toan.KhungDuToan`
+    (QWidget, thẻ Khái toán / So sánh với thực tế áp giá); `HopDuToan` = vỏ QDialog (`__getattr__` chuyển sang khung, `im_lang`
+    property). Sửa ô: `_ve_lai_dong` (dòng đó + dòng % mục 6 + tổng; đổi mục thì `ve()` vì sắp theo mục). `du_toan.so_sanh(goc,
+    thuc_te)` (mục 6 của thực tế theo tỷ lệ khái toán; `vuot`). Trang Dự toán ẩn hàng thẻ số liệu (chỗ cho bảng).
+  - Màn hình chào (`TRANG_CHAO` = ô 4; `_trang_chao`, `_hien_trang_chao`, `nut_chao`): chưa mở dự án thì trang 0-4 hiện màn hình
+    chào, ẩn `lb_du_an` / `hang_the`; dự án gần đây `doc_gan_day` / `ghi_gan_day` = `<thư mục máy>\du_an_gan_day.json` (tối đa
+    `GAN_DAY_TOI_DA`, hiện 5 file còn tồn tại). `mo()` về trang đang chọn `self._i_trang` (đặt trong `_danh_dau_trang`).
+  - Thẻ số liệu `TheSo` (QWidget có tín hiệu bam) -> `bam_the_so(k)` lọc `cb_tt` theo `LOC_THE` (Số hộ / Tổng = bỏ lọc); tổng
+    tiền `tien.vn_gon` ("185,4 tỷ", tooltip đủ số). Băng tiêu đề theo dự án: `giao_dien.dat_to_chuc(khung, ten, phu)` (khung
+    `nhan_to_chuc` / `nhan_phu`) từ `du_an.don_vi_lap` / `don_vi_cap_tren` trong `_sau_tai_lai`; trống / đóng dự án = to_chuc.
+  - KHÔNG làm (ghi rõ với người dùng): bỏ Excel / Word (VBS) cho PDF / in - chưa có cách dựng PDF đúng mẫu Excel bằng Python
+    (tạo xlsx / docx vốn thuần Python); thay "BẢN THỬ NGHIỆM" bằng bản quyền - chưa có hệ thống bản quyền; bỏ Win7/8 + gộp một
+    bộ cài + Inno Setup - trái yêu cầu giữ 2 bộ cài, Inno >= 6.5 lỗi Windows 11; nạp sẵn các trang lúc rảnh (bảng Qt dựng ở luồng
+    giao diện: cửa sổ khựng sau khi mở dự án). Chuyển trang đã nạp 13-19 ms (3.000 / 10.000 hộ); lần đầu mở trang 0,17-0,33 s
+    (3.000 hộ), 0,6-1 s (10.000 hộ).
+  - Test: `tests/test_yeu_cau_0923.py`; `test_giao_dien.test_menu_trai_gon_va_bang_tieu_de` viết lại theo menu mới.
+- 0.9.24 theo đặc tả ARCH-PABT-2026-V4 (`lo_trinh_huong_dan_pabt3.txt` trên Desktop, 11/10/2026; mã mục = mục đặc tả):
+  - 3 token: `giao_dien.TOKEN` (chinh #0F3866, chinh_nhat, nhan #F59E0B, phu #107C41, nguy_hiem #D83B01, chu #202124, chu_phu,
+    vach, nen #F8F9FA, khung) - CHINH, MAU['luu' / 'xoa'], MAU_BANG, vạch vàng, bảng màu `ap_dung`; `CAO_NUT_MENU` 36,
+    `CAO_DONG_BANG` 32 (`_BoToMau` nâng defaultSectionSize khi cửa sổ hiện). Phông giữ Segoe UI 9,5 pt x phóng to (110% ~10,5 pt).
+  - 6.1 `KieuNut` (CHINH / PHU / LUU / NGUY_HIEM) + `ap_kieu_nut` (setProperty bien_the + unpolish / polish; nền đặc -> biểu tượng
+    trắng, gắn lại sau action.changed); QSS `_qss_kieu_nut` đặt CUỐI; MỌI chỗ đặt bảng kiểu dùng `_qss_day_du()` (phong_to từng dựng
+    lại thiếu phần biến thể). Màu đoán theo chữ (LUAT) giữ cho nút chưa khai báo - KieuNut thắng. 6.2 `OTimKiemThongMinh`
+    (chuoi_da_doi sau CHO_MS 200; `phat_ngay()`) cho ô tìm danh sách hộ - thay quyết định 0.9.18 (người dùng yêu cầu: bộ gõ tiếng
+    Việt); trang theo dõi / kiểm tra lỗi chờ 200 ms. 6.3 `chan_tin_hieu(w)`. 6.4 WA_DeleteOnClose: KHÔNG áp hàng loạt (mã đọc
+    thuộc tính hộp sau exec) - đã có `don_hop_da_dong`, quét giao diện 0 hộp rò rỉ.
+  - 4.2 / 12.2: `pabt/ban_quyen.py` (`kiem_tra_ban_quyen()` luôn True, `mo_ta()` 'Bản Tiêu chuẩn · Sử dụng nội bộ'; `app.main`
+    gọi lúc khởi động; gói .pabtcn sau này thay module) - `BAN_THU_NGHIEM = False`, băng tiêu đề nhãn `vai="ban_quyen"`.
+    Thanh menu thêm Cài đặt (Thông tin dự án, Kết nối máy chủ LAN, Phóng to / Thu nhỏ / 100%), Tệp tin → Lưu dự án Ctrl+S
+    (`luu_du_an_lenh`: commit + fsync, báo giờ - dữ liệu vốn ghi ngay mỗi thao tác); góc phải `lb_co_quan` "Cơ quan: …"
+    (`_dat_co_quan`); thanh trạng thái `lb_tom_tat` "Sẵn sàng · Tổng cộng: N hộ | Đã chọn: k hộ" (KHÔNG showMessage cố định - che
+    widget trái), đèn LAN gộp vào `nut_tk` ("● LAN: Trực tuyến · Tài khoản…" / "Ngoại tuyến (Offline)" / "Máy đơn"), phiên bản chỉ
+    ở băng tiêu đề. Màn hình chào thêm nút Hướng dẫn sử dụng.
+  - 7.1 ghi nguyên tử: `csdl.tao_moi_tam(p)` -> (con, '<tên>.dang_tao'), `hoan_tat_tao_moi(tam, p)` (fsync + os.replace),
+    `huy_tao_moi(tam)` - dùng ở `du_an_moi.tao_du_an`, `nhap_excel.nhap`, `nhap_chi_tiet.ghi_file` (file mới); lỗi giữa chừng file
+    cũ còn nguyên. `quan_ly.luu_thanh` fsync + os.replace. `csdl.tao_moi` (xóa trước) còn cho chỗ khác.
+  - 7.2 giữ mẫu Excel trong RAM: KHÔNG làm được an toàn - pickle (0.9.22) và deepcopy (0.9.24) đều làm hỏng openpyxl
+    (row_dimensions mất hàm tạo; deepcopy còn lệch chỉ mục bảng kiểu IndexedList -> IndexError khi ghi). In 50 hộ ~3 s (0.9.22).
+  - 7.4 `may_chu.ds_du_an`: chỉ mục `DuAn\danh_muc_du_an.json` ({đường dẫn tương đối: ten, mtime ns, size}, ghi tmp + os.replace;
+    `_doc_chi_muc` / `_ghi_chi_muc`) - file không đổi không mở qua mạng.
+  - 8.1 `an_toan.che_cccd` (12 số giữ 6 đầu "075092******", từ 9 số giữ nửa đầu), `can_che_cccd(con)` = cai_dat `CHE_CCCD`
+    ('1'); HopIn ô `o_che_cccd` (`_luu_che_cccd`: ghi cai_dat + ghi_nhat_ky; chỉ xem -> báo, không in); `in_an._thong_tin_ho` (che
+    số, bỏ ngày / nơi cấp), `van_ban_trinh.du_lieu` {ho.cccd}. KHÔNG mã hóa trường cccd trong CSDL (phá khớp quyết định theo CCCD,
+    tìm kiếm; không có quản lý khóa), KHÔNG RBAC 4 vai trò / nhật ký giá trị cũ-mới (cần quyết định nghiệp vụ) - ghi rõ với người dùng.
+  - 9 bộ cài: tên `PABT_CaiDat_<ver>_Win10-11_x64.exe`, `PABT_CaiDat_<ver>_Win7-8-10_x86.exe`, `PABT_ChayNgay_<ver>_x64.zip` /
+    `_x86.zip` (`BAN[...]['ten' / 'zip']`), thêm `PABT_Setup_Universal_<ver>.exe` (`dong_goi_pho_quat`: cả hai bản, file phẳng
+    a###_ / b###_, `danh_sach_x64.txt` / `danh_sach_x86.txt`, ban.txt 'universal', KB3063858, vỏ IExpress 32-bit) - `cai_dat.ps1`
+    ban 'universal' chọn: Win10 build >= 17763 VÀ 64-bit -> win10 / x64, còn lại win7 / x86 (`$DANH_SACH`, `$PHO_QUAT`). Hàm chung
+    `_ds_chuong_trinh` (không thêm HUONG_DAN.md khi bản dựng đã có - zip x86 0.9.23 trùng tên), `_chep_phang`, `_chep_cai_dat`,
+    `_chep_kb`, `_iexpress`. `kiem_tra_toan_bo` theo tên mới.
+  - 13 bỏ Office (VBS) / 5 tái cấu trúc 4 tầng: KHÔNG làm (xem 0.9.23; logic đã tách khỏi Qt ở nghiep_vu / lap_pa / csdl /
+    theo_doi... - dùng chung Qt5 / Qt6, kiểm thử độc lập; viết lại 26.000 dòng thành 4 tầng: rủi ro hồi quy lớn, không lợi ích
+    người dùng thấy). Test: `tests/test_dac_ta_v4.py`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

@@ -1049,7 +1049,7 @@ class HopKiemLoi(_Hop):
         self.o_chi_loi.toggled.connect(lambda *_: self.ve())
         self._hen = QTimer(self)                        # ô tìm: lọc khi ngừng gõ (danh sách lỗi có thể hàng chục nghìn dòng)
         self._hen.setSingleShot(True)
-        self._hen.setInterval(300)
+        self._hen.setInterval(200)          # chờ ngừng gõ 200 ms (OTimKiemThongMinh.CHO_MS)
         self._hen.timeout.connect(self.ve)
         self.o_tim.textChanged.connect(lambda *_: self._hen.start())
         self.kiem_tra()

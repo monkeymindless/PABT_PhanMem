@@ -8,7 +8,7 @@ ghi(con, ds_ho, trung=...) -> BaoCaoNhap: thêm hộ, thửa, dòng phương án
 
 Dòng mục 2, 3 so khớp tên với bộ đơn giá của dự án: cùng tên và cùng đơn giá -> dòng danh mục (có mã); cùng tên khác giá ->
 nhập tay (ghi giá danh mục ở Căn cứ giá); không có trong danh mục -> nhập tay theo đơn giá của file. Thành tiền của file lưu
-vào thanh_tien_excel và tổng từng mục vào tong_excel để đối chiếu (Dự án → Đối chiếu với file Excel).
+vào thanh_tien_excel và tổng từng mục vào tong_excel để đối chiếu (Lập phương án → Đối chiếu file Excel).
 """
 from __future__ import annotations
 import re
@@ -730,18 +730,27 @@ def ghi_file(kq: KetQuaDoc, file_pabt, trung: str = 'bo_qua') -> BaoCaoNhap:
         raise LoiNhap('Không có sheet phương án chi tiết nào để nhập '
                       '(cần bảng STT / Tên tài sản / Số lượng / Thành tiền và dòng "Họ và tên").')
     p = Path(file_pabt)
+    tam = None
     if p.exists():
         con = csdl.mo(p)
-    else:
-        con = csdl.tao_moi(p)
-        don_gia.ap_vao_du_an(con)
-        da = dict(kq.du_an)
-        lap_pa.luu_du_an(con, dict(da, ten=da.get('ten') or Path(kq.file).stem, ten_day_du=da.get('ten') or '',
-                                   cap_dia_ban=da.get('cap_dia_ban') or 'Phường'))
+    else:                                               # file mới: dựng ở file tạm, xong mới đặt tên (nguyên tử)
+        con, tam = csdl.tao_moi_tam(p)
+    xong = False
     try:
-        return ghi(con, kq.ho, trung, Path(kq.file).name, kq.du_an)
+        if tam is not None:
+            don_gia.ap_vao_du_an(con)
+            da = dict(kq.du_an)
+            lap_pa.luu_du_an(con, dict(da, ten=da.get('ten') or Path(kq.file).stem, ten_day_du=da.get('ten') or '',
+                                       cap_dia_ban=da.get('cap_dia_ban') or 'Phường'))
+        bc = ghi(con, kq.ho, trung, Path(kq.file).name, kq.du_an)
+        xong = True
     finally:
         con.close()
+        if tam is not None and not xong:
+            csdl.huy_tao_moi(tam)
+    if tam is not None:
+        csdl.hoan_tat_tao_moi(tam, p)
+    return bc
 
 
 def nhap(file_excel, file_pabt, trung: str = 'bo_qua', ten_sheet: list | None = None) -> BaoCaoNhap:
@@ -761,7 +770,7 @@ def ket_qua(bc: BaoCaoNhap) -> tuple:
     if bc.bo_qua:
         t.append('Không nhập: ' + '; '.join(f'sheet "{s}" ({ly_do})' for s, ly_do in bc.bo_qua[:15]) +
                  ('…' if len(bc.bo_qua) > 15 else '') + '.')
-    t.append('So tổng tiền phần mềm tính với file: lệnh "Dự án → Đối chiếu với file Excel…".')
+    t.append('So tổng tiền phần mềm tính với file: lệnh "Lập phương án → Đối chiếu file Excel".')
     return '\n\n'.join(t), list(bc.canh_bao)
 
 
@@ -775,7 +784,7 @@ def tom_tat(bc: BaoCaoNhap, toi_da: int = 15) -> str:
     if bc.canh_bao:
         t.append(f'Cần xem lại ({len(bc.canh_bao)}):\n' + '\n'.join('- ' + x for x in bc.canh_bao[:toi_da]) +
                  (f'\n- … và {len(bc.canh_bao) - toi_da} điểm khác' if len(bc.canh_bao) > toi_da else ''))
-    t.append('So tổng tiền phần mềm tính với file: lệnh "Dự án → Đối chiếu với file Excel…".')
+    t.append('So tổng tiền phần mềm tính với file: lệnh "Lập phương án → Đối chiếu file Excel".')
     return '\n\n'.join(t)
 
 

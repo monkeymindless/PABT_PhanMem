@@ -186,10 +186,11 @@ def b_bo_cai():
     d = GOC / 'bo_cai'
     pb = phien_ban()
     # bộ cài có thể là bản cũ hơn (phiên bản mới chỉ phát hành gói cập nhật): lấy bộ cài mới nhất đang có
-    pc = max(ds_phien_ban(d, 'PABT_CaiDat_*_Win10-11.exe'), key=so, default=pb)
+    pc = max(ds_phien_ban(d, 'PABT_CaiDat_*_Win10-11*.exe'), key=so, default=pb)
     ghi(f'Bộ cài mới nhất: {pc}  ·  gói cập nhật cần có: {pb}')
-    can = [f'PABT_CaiDat_{pc}_Win10-11.exe', f'PABT_CaiDat_{pc}_Win7-8.exe', f'PABT_CapNhat_{pb}.pabtcn',
-           f'PABT_ChayNgay_{pc}_Win10-11.zip', f'PABT_ChayNgay_{pc}_Win7-8.zip']
+    # tên theo đặc tả ARCH-PABT-2026-V4 mục 9 (0.9.24): x64 / x86 + bộ cài phổ quát tự chọn
+    can = [f'PABT_CaiDat_{pc}_Win10-11_x64.exe', f'PABT_CaiDat_{pc}_Win7-8-10_x86.exe', f'PABT_Setup_Universal_{pc}.exe',
+           f'PABT_CapNhat_{pb}.pabtcn', f'PABT_ChayNgay_{pc}_x64.zip', f'PABT_ChayNgay_{pc}_x86.zip']
     loi, canh = [], []
     for t in can:
         f = d / t
@@ -302,7 +303,7 @@ def b_may_chu():
 @buoc('10. Cài thử bộ cài mới nhất (--cai-thu)')
 def b_cai_thu():
     pb = max(ds_phien_ban(GOC / 'bo_cai', 'PABT_CaiDat_*.exe'), key=so, default=phien_ban())
-    ban = 'Win10-11' if platform.machine().endswith('64') and sys.getwindowsversion().major >= 10 else 'Win7-8'
+    ban = 'Win10-11_x64' if platform.machine().endswith('64') and sys.getwindowsversion().major >= 10 else 'Win7-8-10_x86'
     bo = GOC / 'bo_cai' / f'PABT_CaiDat_{pb}_{ban}.exe'
     if not bo.exists():
         return 'LOI', f'không có {bo.name}'

@@ -55,7 +55,7 @@ def thu_muc_mau() -> Path:
     for p in ung_vien:
         if (p / f'{TEN_CT}.xlsx').exists():
             return p
-    raise LoiIn('Không tìm thấy thư mục mẫu in (mau_in\\IN_CHITIET.xlsx). Dùng lệnh "Mẫu in" (nhóm In, báo cáo).')
+    raise LoiIn('Không tìm thấy thư mục mẫu in (mau_in\\IN_CHITIET.xlsx). Dùng lệnh "Công cụ → Mẫu in" trên thanh menu.')
 
 
 def thu_muc_mau_ghi() -> Path:
@@ -1161,6 +1161,9 @@ def _thong_tin_ho(con, ma_ho: int, da: dict) -> dict:
         cccd += f' - Ngày cấp: {h["ngay_cap"].strip()}'
     if (h['noi_cap'] or '').strip():
         cccd += f' - Nơi cấp: {h["noi_cap"].strip()}'
+    from .an_toan import can_che_cccd, che_cccd
+    if can_che_cccd(con):                       # bản niêm yết công khai: che số CCCD, bỏ ngày / nơi cấp (NĐ 13/2023)
+        cccd = che_cccd((h['so_cccd'] or '').strip())
     ng = []                                     # nguồn gốc các thửa (bỏ trùng, giữ thứ tự): mỗi nội dung một đoạn
     for r in con.execute("SELECT nguon_goc FROM thua WHERE ma_ho = ? AND TRIM(nguon_goc) <> '' ORDER BY thu_tu, ma_thua",
                          (ma_ho,)):

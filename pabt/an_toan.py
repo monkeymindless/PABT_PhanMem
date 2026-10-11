@@ -16,6 +16,31 @@ class LoiAnToan(Exception):
     pass
 
 
+# ---------------------------------------------------------------- dữ liệu cá nhân (Nghị định 13/2023/NĐ-CP)
+KHOA_CHE_CCCD = 'CHE_CCCD'          # cai_dat của dự án: '1' = bản in / văn bản trình che số CCCD (bản niêm yết công khai)
+
+
+def che_cccd(chu: str) -> str:
+    """Che số định danh trong chuỗi khi niêm yết công khai tại UBND xã: CCCD 12 số giữ 6 số đầu (075092******), số khác từ 9
+    chữ số (CMND cũ...) giữ nửa đầu. Chữ khác giữ nguyên."""
+    import re
+
+    def thay(m):
+        x = m.group(0)
+        giu = 6 if len(x) >= 12 else len(x) // 2
+        return x[:giu] + '*' * (len(x) - giu)
+    return re.sub(r'\d{9,}', thay, chu or '')
+
+
+def can_che_cccd(con) -> bool:
+    """Dự án đang đặt chế độ che CCCD (ô "Che số CCCD" trong hộp In / Xuất)."""
+    try:
+        from .csdl import doc_cai_dat
+        return doc_cai_dat(con, KHOA_CHE_CCCD) == '1'
+    except Exception:                                   # file chỉ xem phiên bản cũ / kết nối lạ: không che
+        return False
+
+
 # ---------------------------------------------------------------- mạng: HTTPS kiểm tra chứng chỉ, TLS >= 1.2
 def ngu_canh_tls() -> ssl.SSLContext:
     ctx = ssl.create_default_context()                  # kiểm tra chứng chỉ + tên máy chủ (chặn chứng chỉ giả, tự ký, hết hạn)

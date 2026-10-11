@@ -310,6 +310,7 @@ class TestManHinhQuanLy(unittest.TestCase):
         self.assertEqual(w.ho_dang_loc(), [ma0])
         w.cb_tt.setCurrentIndex(0)
         w.o_tim.setText('ky bien ban')                          # tìm không dấu trong ghi chú
+        w.o_tim.phat_ngay()                                     # ô tìm chờ ngừng gõ 200 ms (0.9.24): lọc ngay
         self.assertEqual(w.ho_dang_loc(), [ma0])
         w.o_tim.setText('')
         self.assertEqual(len(w.ho_dang_loc()), n)

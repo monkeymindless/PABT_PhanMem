@@ -308,7 +308,8 @@ def main(argv) -> int:
         shutil.copy2(mau, p)
         w.mo(str(p), chi_doc=False)
         qa.processEvents()
-    lenh = [(t, a) for t, a in w.lenh.items() if not chi or chi in t]
+    # "Thoát" (thanh menu Tệp tin, 0.9.23) đóng cửa sổ chính - các lệnh sau sẽ chạy trên cửa sổ đã đóng: bỏ qua
+    lenh = [(t, a) for t, a in w.lenh.items() if (not chi or chi in t) and t != 'Thoát']
     for i, (ten, a) in enumerate(lenh, start=1):
         print(f'[{i}/{len(lenh)}] {ten}', flush=True)
         faulthandler.dump_traceback_later(TREO_GIAY, exit=True)       # treo thật: in vết ngăn xếp, dừng

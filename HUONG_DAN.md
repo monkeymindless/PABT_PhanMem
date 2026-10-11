@@ -1,4 +1,44 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.22 – BẢN THỬ NGHIỆM)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.24 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.24** - **Chuẩn hóa theo đặc tả kiến trúc ARCH-PABT-2026-V4**:
+> - **Bộ cài cho mọi máy**: `PABT_Setup_Universal_<phiên bản>.exe` tự nhận Windows - Windows 10 (1809 trở lên) / 11 64-bit cài bản
+>   64-bit (Qt6); Windows 7 / 8 / 8.1, Windows 32-bit cài bản 32-bit (Qt5, tự cài bản vá KB3063858 cho Windows 7 khi thiếu). Vẫn có
+>   hai bộ cài riêng `PABT_CaiDat_<phiên bản>_Win10-11_x64.exe`, `PABT_CaiDat_<phiên bản>_Win7-8-10_x86.exe` và bản chạy ngay
+>   (giải nén ra ổ D: / USB là dùng) `PABT_ChayNgay_<phiên bản>_x64.zip` / `_x86.zip`.
+> - Băng tiêu đề ghi **Bản Tiêu chuẩn · Sử dụng nội bộ** thay nhãn "BẢN THỬ NGHIỆM" (chưa kích hoạt bản quyền thương mại).
+> - Thanh menu thêm **Cài đặt** (Thông tin dự án, Kết nối máy chủ LAN, cỡ chữ) và **Tệp tin → Lưu dự án (Ctrl+S)** (mọi thay đổi
+>   vốn được ghi ngay; lệnh ép ghi hẳn xuống đĩa và báo giờ lưu). Góc phải thanh menu ghi **Cơ quan** thực hiện.
+> - Thanh trạng thái: **Sẵn sàng · Tổng cộng: N hộ | Đã chọn: k hộ**, đèn **● LAN** (Trực tuyến / Ngoại tuyến / Máy đơn).
+> - Màu sắc theo bộ chuẩn doanh nghiệp (xanh Navy chủ đạo, nút Lưu / Thêm xanh lá, nút Xóa đỏ nhạt); dòng bảng cao 32 px, nút menu
+>   trái cao 36 px. Ô tìm danh sách hộ chờ ngừng gõ 0,2 giây mới lọc (gõ tiếng Việt có dấu không còn làm bảng nháy).
+> - **Che số CCCD** khi in bản niêm yết công khai (hộp **In / Xuất** → ô "Che số CCCD", ví dụ 075092******, bỏ ngày / nơi cấp) -
+>   theo Nghị định 13/2023/NĐ-CP; phần mềm nhớ lựa chọn theo dự án.
+> - **Ghi file an toàn**: tạo dự án mới / nhập Excel vào file mới / lưu dự án thành… ghi ra file tạm rồi mới thay file đích - lỗi
+>   hoặc mất điện giữa chừng không còn làm mất file cũ.
+> - Máy chủ LAN: danh sách dự án đọc một file chỉ mục nhỏ thay vì mở từng file dự án qua mạng (ổ mạng chậm mở nhanh hơn nhiều).
+
+> **0.9.23 – BẢN THỬ NGHIỆM** - **Bố cục lại theo vòng đời dự án** (theo lộ trình tái cấu trúc giao diện):
+> - **Thanh menu** đầu cửa sổ: **Tệp tin** (Dự án mới Ctrl+N, Mở dự án Ctrl+O, Dự án trên máy chủ Ctrl+Shift+O, Lưu dự án thành
+>   Ctrl+Shift+S, Đóng dự án, Thoát), **Dữ liệu** (Nhập file Excel, Nhập phương án chi tiết, Báo cáo tổng hợp, Đối chiếu file Excel),
+>   **Công cụ** (Mẫu in, Bộ đơn giá, Rà soát giá, Thông tin dự án), **Trợ giúp** (Hướng dẫn sử dụng **F1**, Cập nhật phần mềm,
+>   Giới thiệu). Không còn nút xổ "DỰ ÁN ▾" ở đầu menu trái (danh sách xổ từng che các nút bên dưới).
+> - **Menu trái 5 nhóm** theo thứ tự công việc: **Dự án & dự toán** (Thông tin dự án, **Dự toán & khái toán**, Danh sách hộ) ·
+>   **Bảng giá & chính sách** (Bộ đơn giá, Đơn giá riêng, **Bảng giá đất** NQ 28, Quy chuẩn cây) · **Lập phương án** (Lập phương án,
+>   Kiểm tra lỗi, Đối chiếu file Excel) · **Tổng hợp & trình duyệt** (Tổng quát hộ, Tổng hợp tiền, Đợt trình, In / Xuất) · **Tiến
+>   độ & bàn giao** (Quyết định phê duyệt, Theo dõi tiến độ, Trạng thái hộ, Báo cáo tổng hợp).
+> - **Danh sách hộ**: thanh công cụ **Thêm hộ · Lập phương án · Xóa hộ** ngay trên bảng, cùng hàng bộ lọc; **Xóa hộ chỉ sáng khi
+>   đang chọn hộ**. Chọn từ 2 hộ: hàng "Đã chọn N hộ" với In / Xuất, Đợt trình, Trạng thái hộ, Xóa hộ.
+> - **Thẻ số liệu bấm được**: bấm "Đã phê duyệt" / "Đã chi trả" / "Đã bàn giao" / "Đã lập phương án" để lọc ngay danh sách; bấm
+>   "Số hộ" để bỏ lọc. Tổng kinh phí hiện gọn (ví dụ **185,4 tỷ**, rê chuột xem đủ số).
+> - **Dự toán & khái toán** là một trang trong cửa sổ chính (trước là hộp thoại riêng), dùng được cả khi chưa mở dự án. Thẻ mới
+>   **So sánh với thực tế áp giá**: khái toán đã duyệt (mở file .pabtdt, hoặc bảng đang lập) so với tổng phương án các hộ theo từng
+>   mục; **cảnh báo đỏ khi thực tế vượt khái toán**. Sửa một ô dự toán không còn vẽ lại cả bảng.
+> - **Màn hình chào** khi chưa mở dự án: 3 nút lớn (Dự án mới, Mở dự án, Nhập file Excel) và **5 dự án làm việc gần đây** (nhấp
+>   đúp để mở).
+> - Băng tiêu đề ghi **đơn vị lập phương án của dự án đang mở** (ô "Đơn vị lập phương án" trong Thông tin dự án); chưa mở dự án:
+>   đơn vị mặc định của máy.
+> - Bộ cài: mặc định cài vào **C:\Program Files (x86)\PABT** (Windows hỏi quyền quản trị một lần; không có quyền thì tự cài vào
+>   thư mục người dùng). Tự kiểm tra sau khi cài chạy thử tạo dự án, in phương án chi tiết, bảng tổng hợp, tờ trình.
 
 > **0.9.22 – BẢN THỬ NGHIỆM** - **Rà soát toàn bộ** (dự án giả lập 3.000 hộ có 3 quyết định, đo cùng máy, trước -> sau):
 > - **Bảng tổng hợp** (menu trái): bấm thẳng vào thẻ (Thông tin tổng quát hộ / Quyết định phê duyệt / Tổng hợp tiền) thì tiêu đề
@@ -172,7 +212,8 @@ in theo mẫu; đối chiếu với Excel; khóa file khi nhiều máy cùng m�
 ## Bắt đầu: Dự án mới (nhập thô → tự lập phương án → 2 bảng in)
 
 Bộ cài gồm phần mềm, **bộ đơn giá Đồng Nai tích hợp** và hai mẫu in trống; không kèm dự án hay hồ sơ hộ nào.
-Bấm nút **Dự án** (đầu menu trái) → **Dự án mới…** và làm 4 bước — đây là nơi duy nhất nhập / sửa dữ liệu thô:
+Thanh menu **Tệp tin** → **Dự án mới…** (Ctrl+N, hoặc nút lớn **Dự án mới** trên màn hình chào) và làm 4 bước — đây là nơi
+duy nhất nhập / sửa dữ liệu thô:
 
 1. **Thông tin dự án**: tên dự án, cấp và tên xã/phường, năm, đơn vị lập, người ký… (thông tin đơn vị, người ký được nhớ cho lần sau).
 2. **Danh sách hộ, thửa (nhập thô)**: bấm **Nhập file Excel thô…** hoặc gõ trực tiếp; sửa ngay trên bảng. Các trường:
@@ -283,15 +324,15 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
 (**Trung tâm Phát triển quỹ đất Chi nhánh Vĩnh Cửu**), dòng trực thuộc và địa chỉ, cùng phiên bản đang chạy ở góc phải (sửa ở
 `pabt/to_chuc.py`; tên đơn vị, ký hiệu số phương án cũng được điền sẵn khi lập dự án mới). Màn hình Dự án mới có băng tổ chức tương tự.
 
-Ngay dưới băng tiêu đề là **khu vực nút lệnh** gom trong một khung trắng (đổ bóng nhẹ), chia 5 thẻ nhóm có tên nhóm chữ nhỏ phía trên; nút nền nhạt theo màu nhóm, biểu tượng trên – chữ dưới, dàn kín chiều ngang (thường 2 dòng khi cửa sổ phóng to): **Dự án** (Dự án mới, Mở dự án,
-Lưu dự án thành, Nhập file Excel, Thông tin dự án), **Hồ sơ và phương án** (Lập phương án hộ, Thêm hộ, Xóa hộ, Kiểm tra lỗi),
-**Đơn giá, dự toán** (Bộ đơn giá, Đơn giá riêng dự án, Rà soát giá, Dự toán, áp giá dự thảo, Quy chuẩn cây, tài sản), **Bảng tổng
-hợp** (Danh sách hộ, Thông tin tổng quát hộ, Tổng hợp tiền theo phương án), **Trình, theo dõi tiến độ** (Theo dõi tiến độ, Đợt
-trình, Quyết định phê duyệt, Trạng thái hộ), **In ấn, báo cáo** (In / Xuất, Báo cáo tổng hợp, Xuất báo cáo đối chiếu, Cập nhật mẫu
-in). Từ 0.9.18 các nhóm này nằm ở **menu bên trái**; mỗi lệnh chỉ có một chỗ trên màn hình (chuột phải danh sách hộ là lối tắt
-của cùng lệnh). Lệnh với "hộ đang chọn" (Lập phương án, Trạng thái hộ, Đợt trình, In / Xuất, Xóa hộ) lấy hộ chọn **trên trang
-đang xem** (Danh sách hộ, Thông tin tổng quát, Quyết định phê duyệt, Theo dõi tiến độ).
-Nút **Cập nhật phần mềm** và **Giới thiệu** nằm ở **góc dưới bên phải** cửa sổ, trên dòng trạng thái.
+Dưới băng tiêu đề (từ 0.9.23): **thanh menu** Tệp tin / Dữ liệu / Công cụ / Trợ giúp (tạo, mở, lưu, đóng dự án; nhập dữ liệu;
+mẫu in, bộ đơn giá; hướng dẫn F1, cập nhật phần mềm, giới thiệu) và **menu bên trái** chia 5 nhóm theo thứ tự công việc:
+**Dự án & dự toán** (Thông tin dự án, Dự toán & khái toán, Danh sách hộ), **Bảng giá & chính sách** (Bộ đơn giá, Đơn giá riêng,
+Bảng giá đất, Quy chuẩn cây), **Lập phương án** (Lập phương án, Kiểm tra lỗi, Đối chiếu file Excel), **Tổng hợp & trình duyệt**
+(Tổng quát hộ, Tổng hợp tiền, Đợt trình, In / Xuất), **Tiến độ & bàn giao** (Quyết định phê duyệt, Theo dõi tiến độ, Trạng thái
+hộ, Báo cáo tổng hợp). Bấm tên nhóm để đóng / mở (phần mềm nhớ). Mỗi lệnh là MỘT lệnh dùng chung cho menu, thanh công cụ, chuột
+phải (cùng trạng thái tắt khi chỉ xem). Lệnh với "hộ đang chọn" (Lập phương án, Trạng thái hộ, Đợt trình, In / Xuất) lấy hộ chọn
+**trên trang đang xem** (Danh sách hộ, Thông tin tổng quát, Quyết định phê duyệt, Theo dõi tiến độ).
+Chưa mở dự án: **màn hình chào** với 3 nút lớn và danh sách **dự án làm việc gần đây**.
 
 Trên danh sách hộ có bộ lọc **Đợt** (tất cả / chưa xếp đợt / từng đợt), **Trạng thái** (chưa / đã lập PA, chưa / đã phê duyệt,
 đã phê duyệt chưa chi trả, đã chi trả chưa bàn giao, đã bàn giao, có ghi chú…) và ô **Tìm** (không cần dấu, tìm cả ghi chú); bên
@@ -343,7 +384,8 @@ Chọn một hộ rồi bấm **Lập phương án hộ…** - thẻ **Thông ti
 - **Gộp hộ khác vào hộ này…**: dùng khi một người bị tách thành hai hộ (cùng tên khác địa chỉ…); danh sách chọn đưa hộ
   cùng họ tên lên đầu (★). Thửa, phương án của hộ kia chuyển sang, ô còn trống được điền từ hộ kia, hộ kia bị xóa.
 - **Xóa hộ…**: xóa hộ cùng thửa và phương án (hỏi lại; xóa nhầm bấm **Hoàn tác** - Ctrl+Z - ở cửa sổ chính). Xóa nhiều hộ
-  một lần: chọn trên danh sách hộ (giữ Ctrl / Shift) rồi **Xóa hộ…** ở menu trái, chuột phải, hoặc phím **Delete**.
+  một lần: chọn trên danh sách hộ (giữ Ctrl / Shift) rồi **Xóa hộ** ở thanh công cụ trên danh sách (chỉ sáng khi đang chọn
+  hộ), chuột phải, hoặc phím **Delete**.
 - **Lưu**: ghi cả hộ trong một lần, có nhật ký; phần mềm báo nếu thửa của hộ cũng có ở hộ khác.
 
 ## Nhiều máy cùng dùng một file dự án (giai đoạn 4)
@@ -481,7 +523,7 @@ Trong màn hình Lập phương án hộ:
 - **Thẻ Nhà, công trình → Tách theo ranh thu hồi…** (chọn dòng tài sản): nhập tổng diện tích / khối lượng xây dựng và phần nằm trong
   ranh thu hồi. Phần trong ranh tính 100%; phần ngoài ranh tính theo tỷ lệ (mặc định 0%), hoặc tính toàn bộ nếu đánh dấu "ảnh hưởng kết
   cấu, không sử dụng được". Mô tả trong / ngoài ranh ghi ở cột Quy cách để làm cơ sở lập phương án.
-- **Quy chuẩn cây, tài sản…** (menu trái, nhóm Đơn giá, dự toán): bảng mật độ mọi loại cây (sửa mật độ, tỷ lệ bồi thường cây ngoài mật độ, căn cứ – lưu trong
+- **Quy chuẩn cây, tài sản…** (menu trái, nhóm Bảng giá & chính sách): bảng mật độ mọi loại cây (sửa mật độ, tỷ lệ bồi thường cây ngoài mật độ, căn cứ – lưu trong
   file dự án) và tỷ lệ mặc định phần ngoài mật độ / ngoài ranh thu hồi của dự án.
 
 ## Đợt trình, thư mục hồ sơ, theo dõi tiến độ
@@ -509,7 +551,7 @@ Trong màn hình Lập phương án hộ:
 - **Trạng thái hộ…** (chọn một hoặc nhiều hộ): đã phê duyệt (số, ngày quyết định, số tiền, file quyết định), đã chi trả (ngày, số
   tiền), đã bàn giao mặt bằng (ngày), ghi chú theo dõi. Chọn nhiều hộ: ô để trống giữ nguyên; "Số tiền = tổng phương án của từng hộ"
   điền số tiền riêng cho từng hộ.
-- **Nhập quyết định** (menu trái **Trình, theo dõi tiến độ** → **Quyết định phê duyệt** → nút **Nhập từ file…**): chọn file quyết định phê duyệt / danh sách chi trả / biên bản bàn giao (Excel, Word, PDF có chữ, CSV). Phần
+- **Nhập quyết định** (menu trái **Tiến độ & bàn giao** → **Quyết định phê duyệt** → nút **Nhập từ file…**): chọn file quyết định phê duyệt / danh sách chi trả / biên bản bàn giao (Excel, Word, PDF có chữ, CSV). Phần
   mềm tự đọc số và ngày quyết định, khớp từng dòng với hộ theo mã hộ, số CCCD hoặc họ tên (bỏ "Ông/Bà", không phân biệt hoa thường,
   dấu), lấy số tiền và tô đỏ dòng có số tiền khác tổng phương án; tên trùng nhiều hộ được liệt kê để chọn tay. Bấm cập nhật để ghi
   trạng thái cho các hộ đã đánh dấu; có thể chép file vào `<thư mục hồ sơ>\Quyết định phê duyệt` (Chi trả, Bàn giao mặt bằng).
@@ -528,9 +570,10 @@ tương đương / nhập tay), số liệu (thành tiền khác file Excel, s�
 tổng phương án…). Nhấp đúp dòng để mở phương án của hộ; **Sửa tự động lỗi trình bày** chuẩn hóa khoảng trắng, chữ hoa họ tên (chỉ
 tên người, không đụng tên có mô tả kèm theo), chữ tổ hợp, số CCCD; **Xuất Excel** lưu danh sách lỗi.
 
-## Dự toán, áp giá dự thảo
+## Dự toán & khái toán
 
-**Dự toán, áp giá dự thảo…** (dùng được cả khi chưa mở dự án): bảng dự toán theo mục 1 đất, 2 nhà – công trình, 3 cây trồng, 4 hỗ
+**Dự toán & khái toán** (menu trái, nhóm Dự án & dự toán - từ 0.9.23 là một trang của cửa sổ chính; dùng được cả khi chưa mở dự
+án). Thẻ **Khái toán / dự toán**: bảng dự toán theo mục 1 đất, 2 nhà – công trình, 3 cây trồng, 4 hỗ
 trợ, 5 thưởng, 6 chi phí khác (tính % trên tổng mục 1-5: mặc định 2,5% chi phí thực hiện công tác bồi thường, 10% phí dự phòng –
 sửa theo quy định).
 
@@ -547,6 +590,10 @@ sửa theo quy định).
   lượng, đơn giá, hệ số.
 - **Lưu dự toán…** (file `.pabtdt`), **Mở dự toán…**, **Xuất bảng chi tiết (Excel)…** (có tổng cộng và số tiền bằng chữ). Thành tiền làm tròn theo
   từng dòng dự toán nên có thể chênh vài nghìn đồng so với tổng các phương án chi tiết.
+- Thẻ **So sánh với thực tế áp giá** (0.9.23, cần mở dự án): khái toán đã duyệt là **ngân sách trần**. Bấm **Mở khái toán đã duyệt
+  (.pabtdt)…** (hoặc dùng bảng đang lập ở thẻ Khái toán / dự toán); phần mềm tính thực tế từ phương án các hộ trong dự án và so
+  từng mục (khái toán, thực tế, chênh lệch, tỷ lệ %). Chi phí khác (mục 6) của thực tế tính theo đúng các tỷ lệ của khái toán.
+  Thực tế **vượt** khái toán: dòng thông báo đỏ - rà soát phương án các hộ hoặc trình điều chỉnh tổng mức kinh phí.
 
 ## Nhập file Excel
 
@@ -616,8 +663,14 @@ cài từ 0.8.0 trở lên (cả bản Win 10/11 và Win 7/8) (`--toi-thieu` đ�
 
 **Máy dùng (không cần Python):** có **hai bộ cài**, cùng **một tiêu chuẩn cài đặt** (từ 0.9.21):
 
-- cài cho **người dùng hiện tại** vào `%LOCALAPPDATA%\Programs\PABT` – **không cần quyền quản trị**, **không cài thêm gì vào
-  Windows** (không Visual C++, .NET, Python hay bản cập nhật nào: mọi thư viện đã nằm sẵn trong bộ cài);
+- từ 0.9.22 mặc định cài vào **`C:\Program Files (x86)\PABT`** (Windows 32-bit: `C:\Program Files\PABT`): Windows hỏi quyền
+  quản trị một lần để chép file – chọn **Có (Yes)**. Không có tài khoản quản trị / bấm Không: bộ cài tự chuyển sang
+  `%LOCALAPPDATA%\Programs\PABT` (không cần quyền quản trị) để cài tiếp. Máy đã cài bản cũ ở thư mục khác: bản cũ được gỡ (thư
+  mục cũ có file dự án .pabt thì giữ nguyên). Gỡ cài bản trong Program Files: Windows hỏi quyền quản trị để xóa thư mục;
+- **không cài thêm gì vào Windows** (không Visual C++, .NET, Python hay bản cập nhật nào: mọi thư viện đã nằm sẵn trong bộ cài);
+  bộ cài có đủ **mẫu in** (phương án chi tiết, bảng tổng hợp, mẫu "Dự thảo"), **bộ đơn giá**, **bảng giá đất NQ 28**, mẫu tờ
+  trình / phương án tổng - máy mới chưa có dữ liệu gì vẫn lập và in được ngay; tự kiểm tra sau khi cài chạy thử tạo dự án, in
+  phương án chi tiết, bảng tổng hợp, tờ trình (dữ liệu giả lập);
 - chạy được cả trên máy cơ quan **khóa chạy script PowerShell** (Group Policy / ExecutionPolicy);
 - chép xong bộ cài **kiểm lại từng file** (mã SHA-256): phần mềm diệt virus chặn file nào thì báo rõ file đó;
 - cài xong tự kiểm tra phần mềm trên chính máy đó (giao diện, đọc PDF, bộ đơn giá, mẫu in, bảng giá đất). Nhật ký:
@@ -625,8 +678,9 @@ cài từ 0.8.0 trở lên (cả bản Win 10/11 và Win 7/8) (`--toi-thieu` đ�
 
 | Máy | Bộ cài | Nền chạy |
 |---|---|---|
-| **Windows 10 (bản 1809 trở lên) / 11**, 64-bit | `PABT_CaiDat_<phiên bản>_Win10-11.exe` | Python 3.14 + Qt6, 64-bit |
-| **Mọi Windows từ 7 SP1**: 7, 8, 8.1, Windows 10 / 11 32-bit hoặc 64-bit, Windows 10 bản cũ | `PABT_CaiDat_<phiên bản>_Win7-8.exe` | Python 3.8 + Qt5, 32-bit |
+| **Mọi máy (tự chọn)** - không biết máy là gì thì dùng bộ này | `PABT_Setup_Universal_<phiên bản>.exe` | tự chọn một trong hai bản dưới |
+| **Windows 10 (bản 1809 trở lên) / 11**, 64-bit | `PABT_CaiDat_<phiên bản>_Win10-11_x64.exe` | Python 3.14 + Qt6, 64-bit |
+| **Mọi Windows từ 7 SP1**: 7, 8, 8.1, Windows 10 / 11 32-bit hoặc 64-bit, Windows 10 bản cũ | `PABT_CaiDat_<phiên bản>_Win7-8-10_x86.exe` | Python 3.8 + Qt5, 32-bit |
 
 Không chắc máy là loại nào thì dùng **bộ cài Win7-8**: cài và chạy được trên mọi máy (trên Windows 10/11 64-bit bộ cài chỉ nhắc
 có bản Win10-11 chạy nhanh hơn). Bộ cài Win10-11 dùng nhầm trên máy không hợp sẽ báo và chỉ sang bộ cài Win7-8.
@@ -639,7 +693,7 @@ Chép **một file** bộ cài sang máy, bấm đúp → cửa sổ cài đặt
 → thanh tiến trình → tự kiểm tra → **Mở PABT**. Cài im lặng: `PABT_CaiDat_<phiên bản>_<bản>.exe /Q`.
 
 **Máy không chạy được file `.exe` của bộ cài** (phần mềm diệt virus chặn, hoặc tên người dùng Windows có dấu làm vỏ giải nén lỗi):
-giải nén `PABT_ChayNgay_<phiên bản>_<bản>.zip` vào một thư mục rồi
+giải nén `PABT_ChayNgay_<phiên bản>_x64.zip` (hoặc `_x86.zip`) vào một thư mục rồi
 - bấm đúp **`CAI_DAT.cmd`** trong thư mục đó để cài như bộ cài `.exe` (cùng cửa sổ, cùng kiểm tra), hoặc
 - chạy thẳng **`PABT.exe`** không cần cài.
 

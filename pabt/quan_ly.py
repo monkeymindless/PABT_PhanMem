@@ -363,9 +363,10 @@ def luu_thanh(con, dich) -> Path:
         con.backup(moi)
     finally:
         moi.close()
-    if dich.exists():
-        dich.unlink()
-    tam.rename(dich)
+    import os                                           # nguyên tử: fsync + os.replace (trước: xóa file đích rồi đổi tên -
+    with open(tam, 'rb+') as f:                          # lỗi giữa hai bước mất bản cũ)
+        os.fsync(f.fileno())
+    os.replace(tam, dich)
     return dich
 
 

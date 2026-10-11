@@ -18,7 +18,7 @@ DEV = Path(os.environ['LOCALAPPDATA']) / 'PABT_dev'
 PY38 = DEV / 'venv38_32' / 'Scripts' / 'python.exe'
 TAM = DEV / 'nguon38'
 RA = GOC / 'dist' / 'PABT_Win7'
-CHEP = ('chay.py', 'nap_cap_nhat.py', 'pabt', 'mau_in')
+CHEP = ('chay.py', 'nap_cap_nhat.py', 'pabt', 'mau_in', 'HUONG_DAN.md')
 DU_LIEU = ('pabt/schema.sql', 'pabt/bo_don_gia.sqlite', 'pabt/bang_gia_nq28.json', 'pabt/bieu_tuong.png')
 # cập nhật đơn giá từ trang web phát hành riêng bằng gói .pabtcn: không đóng vào exe, nhưng giữ thư viện chuẩn nó cần
 LOAI_TRU_WEB = ['--exclude-module', 'pabt.cap_nhat_web', '--exclude-module', 'pabt.man_hinh_quet_web',
@@ -45,7 +45,8 @@ def main() -> int:
             '--exclude-module', 'PySide6', '--exclude-module', 'tkinter', *LOAI_TRU_WEB]
     for f in DU_LIEU:
         lenh += ['--add-data', f'{TAM / f};pabt']
-    lenh += ['--add-data', f'{TAM / "mau_in"};mau_in', str(TAM / 'chay.py')]
+    # HUONG_DAN.md: Trợ giúp -> Hướng dẫn sử dụng (F1) đọc trong _internal (0.9.23)
+    lenh += ['--add-data', f'{TAM / "mau_in"};mau_in', '--add-data', f'{TAM / "HUONG_DAN.md"};.', str(TAM / 'chay.py')]
     # PATH của máy dựng có thư mục Git / mingw (dựng trong Git Bash): PyInstaller lấy nhầm DLL OpenSSL... của Git vào bản dựng
     env = dict(os.environ, PATH=os.pathsep.join(x for x in os.environ.get('PATH', '').split(os.pathsep)
                                                 if not any(k in x.lower() for k in ('\\git\\', 'mingw', 'msys'))))

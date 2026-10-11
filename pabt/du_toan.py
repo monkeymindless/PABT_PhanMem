@@ -443,6 +443,24 @@ def xuat_khai_toan(dt: DuToan, file_ra, pdf: bool = False) -> dict:
     return kq
 
 
+def so_sanh(goc: DuToan, thuc_te: DuToan) -> dict:
+    """Khái toán đã duyệt (ngân sách trần) so với thực tế áp giá của dự án, theo từng mục. Thực tế chưa có chi phí khác (mục 6
+    - % của tổng mục 1-5) thì tính theo các tỷ lệ của khái toán, để hai bên cùng cơ sở.
+    Trả dict(dong=[(mục, tên, khái toán, thực tế, chênh lệch, tỷ lệ % | None)], tong=(khái toán, thực tế, chênh, tỷ lệ),
+    vuot=thực tế > khái toán, thuc_te=DuToan đã thêm mục 6)."""
+    from dataclasses import replace
+    tt = DuToan(ten=thuc_te.ten, lamtron=thuc_te.lamtron, dong=list(thuc_te.dong))
+    if not any(d.muc == 6 for d in tt.dong):
+        tt.dong += [replace(d) for d in goc.dong if d.muc == 6 and d.phan_tram is not None]
+
+    def ty_le(a, b):
+        return (b - a) * 100 / a if a else None
+    dong = [(m, TEN_MUC[m], goc.tong_muc(m), tt.tong_muc(m), tt.tong_muc(m) - goc.tong_muc(m), ty_le(goc.tong_muc(m), tt.tong_muc(m)))
+            for m in sorted(TEN_MUC)]
+    a, b = goc.tong, tt.tong
+    return dict(dong=dong, tong=(a, b, b - a, ty_le(a, b)), vuot=b > a, thuc_te=tt)
+
+
 def mo_ta_tong(dt: DuToan) -> str:
     return '  ·  '.join(f'{m}. {vn(dt.tong_muc(m))}' for m in (1, 2, 3, 4, 5, 6) if any(d.muc == m for d in dt.dong)) + \
         f'  ·  TỔNG: {vn(dt.tong)} đồng'

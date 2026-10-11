@@ -1,19 +1,24 @@
 ﻿# Trình cài PABT cho người dùng hiện tại - MỘT tiêu chuẩn cho cả hai bộ cài (ban.txt: win10 / win7) và gói .zip dự phòng:
 #   - chạy qua CAI_DAT.cmd: PowerShell -Command đọc script này thành khối lệnh (không bị chính sách ExecutionPolicy /
 #     Group Policy chặn như -File), PowerShell 2.0 (Windows 7) trở lên, -STA;
-#   - cài cho người dùng hiện tại (%LOCALAPPDATA%\Programs\PABT), KHÔNG cần quyền quản trị, KHÔNG cài thêm gì vào Windows:
+#   - mặc định cài vào C:\Program Files (x86)\PABT (người dùng yêu cầu 11/10/2026; Windows 32-bit: Program Files) - Windows hỏi
+#     quyền quản trị cho bước chép file; từ chối -> %LOCALAPPDATA%\Programs\PABT (không cần quyền quản trị). KHÔNG cài thêm gì vào Windows:
 #     mọi thư viện (Visual C++, UCRT cho Windows 7) đã nằm trong bản dựng (bo_cai_win\rut_gon.kiem_dll kiểm khi dựng);
 #   - chép file theo danh_sach.txt (nguồn, đích, cỡ, SHA-256), kiểm lại từng file sau khi chép (bị diệt virus chặn / ổ đầy
 #     -> báo rõ file nào) - không giải nén zip (không phụ thuộc Shell.Application / .NET 4.5).
 #   Không tham số: cửa sổ cài đặt (chọn thư mục, tùy chọn, thanh tiến trình, tự kiểm tra sau khi cài).
 #   -Im          cài im lặng (không hỏi, không mở phần mềm sau khi cài)
-#   -ThuMuc X    thư mục cài (mặc định %LOCALAPPDATA%\Programs\PABT)
+#   -ThuMuc X    thư mục cài (mặc định Program Files (x86)\PABT; không được cấp quyền quản trị -> %LOCALAPPDATA%\Programs\PABT)
 #   -KhongDesktop / -KhongLienKet   bỏ biểu tượng Desktop / không gắn file .pabt
+#   Thư mục cài không ghi được bằng quyền người dùng (Program Files, Program Files (x86)): CHỈ bước chép file chạy lại script
+#   này với quyền quản trị (-ChiChep <file kết quả> -ThuMuc <thư mục> -Goc <thư mục bộ cài>, Windows hỏi UAC); lối tắt, liên
+#   kết .pabt, mục gỡ cài, tự kiểm tra vẫn làm với quyền người dùng đang cài (nhập tài khoản quản trị khác vẫn đúng người dùng).
 # Bộ cài win10 = Windows 10 1809 (build 17763) trở lên, 64-bit. Bộ cài win7 (32-bit) = mọi Windows từ 7 SP1: 7, 8, 8.1, 10 / 11
 # (32 hoặc 64-bit) - dùng khi bộ cài win10 không hợp. Không dùng lệnh của PowerShell 3+.
-param([switch]$Im, [string]$ThuMuc = '', [switch]$KhongDesktop, [switch]$KhongLienKet)
+param([switch]$Im, [string]$ThuMuc = '', [switch]$KhongDesktop, [switch]$KhongLienKet, [string]$ChiChep = '', [string]$Goc = '')
 $ErrorActionPreference = 'Stop'
-$GOC = $env:PABT_GOC                                # CAI_DAT.cmd đặt; chạy thẳng bằng -File thì lấy theo đường dẫn script
+$GOC = $Goc                                         # tiến trình quyền quản trị: biến môi trường của người cài không truyền sang
+if (-not $GOC) { $GOC = $env:PABT_GOC }             # CAI_DAT.cmd đặt; chạy thẳng bằng -File thì lấy theo đường dẫn script
 if (-not $GOC) { $GOC = Split-Path -Parent $MyInvocation.MyCommand.Definition }     # PowerShell 2.0 chưa có $PSScriptRoot
 $GOC = $GOC.TrimEnd('\')
 Add-Type -AssemblyName System.Windows.Forms
@@ -24,8 +29,20 @@ $TEN_DAY_DU = 'PHẦN MỀM LẬP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI
 $PHIEN_BAN = [System.IO.File]::ReadAllText((Join-Path $GOC 'phien_ban.txt')).Trim()
 $BAN = 'win10'
 if (Test-Path -LiteralPath (Join-Path $GOC 'ban.txt')) { $BAN = [System.IO.File]::ReadAllText((Join-Path $GOC 'ban.txt')).Trim() }
-$TEN_BAN = 'Windows 10 / 11'
-if ($BAN -eq 'win7') { $TEN_BAN = 'Windows 7 / 8' }
+$DANH_SACH = 'danh_sach.txt'                        # danh sách file chép (nguồn, đích, cỡ, SHA-256)
+$PHO_QUAT = $false
+if ($BAN -eq 'universal') {
+    # bộ cài phổ quát PABT_Setup_Universal (đặc tả ARCH-PABT-2026-V4 mục 9.2) chứa cả hai bản: tự chọn theo Windows của máy.
+    # Windows 10 bản 1809 (build 17763) trở lên / Windows 11, 64-bit -> bản Qt6 x64; Windows 7 / 8 / 8.1, Windows 32-bit hoặc
+    # Windows 10 bản cũ -> bản Qt5 x86 (chạy mọi Windows từ 7 SP1). Tiến trình chép file quyền quản trị đọc cùng ban.txt: chọn y hệt.
+    $PHO_QUAT = $true
+    $v0 = [Environment]::OSVersion.Version
+    $may64_0 = ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64' -or $env:PROCESSOR_ARCHITEW6432 -eq 'AMD64')
+    if ($v0.Major -ge 10 -and $v0.Build -ge 17763 -and $may64_0) { $BAN = 'win10'; $DANH_SACH = 'danh_sach_x64.txt' }
+    else { $BAN = 'win7'; $DANH_SACH = 'danh_sach_x86.txt' }
+}
+$TEN_BAN = 'Windows 10 / 11 (64-bit)'
+if ($BAN -eq 'win7') { $TEN_BAN = 'Windows 7 / 8 / 10 (32-bit)' }
 $KIEN = 'x64'                                   # kiến trúc chương trình và bộ Visual C++ kèm theo
 if ($BAN -eq 'win7') { $KIEN = 'x86' }
 $MAY64 = ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64' -or $env:PROCESSOR_ARCHITEW6432 -eq 'AMD64')
@@ -34,11 +51,12 @@ if ($MAY64) { $BIT = '64-bit' }
 $VC = Join-Path $GOC 'vc_redist.exe'
 $CO_VC = Test-Path -LiteralPath $VC                          # bộ cài Win10-11 không kèm Visual C++ Redistributable
 $nk =Join-Path $env:TEMP 'pabt_cai_dat.log'
+if ($ChiChep) { $nk = "$ChiChep.log" }              # tiến trình chép file: nhật ký riêng, không xóa nhật ký của tiến trình cài
 function Ghi($s) { Add-Content -Path $nk -Value ("{0:HH:mm:ss} {1}" -f (Get-Date), $s) -Encoding UTF8 }
 Set-Content -Path $nk -Value "Cài PABT $PHIEN_BAN" -Encoding UTF8
 
 # ---------------------------------------------------------------- kiểm tra hệ thống
-Ghi "Bộ cài: $TEN_BAN ($BAN)"
+Ghi "Bộ cài: $TEN_BAN ($BAN)$(if ($PHO_QUAT) { ' - bộ cài phổ quát tự chọn theo Windows' })"
 
 function KiemTraMay {
     # điều kiện BẮT BUỘC (không đạt thì không cài): trả câu báo, '' = đạt
@@ -48,7 +66,7 @@ function KiemTraMay {
     if ($v.Major -eq 6 -and $v.Minor -eq 1 -and $v.Build -lt 7601) {
         return 'Windows 7 cần cài Service Pack 1 (SP1) trước khi cài PABT.' }
     if ($BAN -eq 'win10') {
-        $khac = "dùng bộ cài PABT_CaiDat_$($PHIEN_BAN)_Win7-8.exe (chạy được trên mọi Windows từ 7 SP1)."
+        $khac = "dùng bộ cài PABT_CaiDat_$($PHIEN_BAN)_Win7-8-10_x86.exe hoặc PABT_Setup_Universal_$($PHIEN_BAN).exe (chạy được trên mọi Windows từ 7 SP1)."
         if ($v.Major -lt 10) { return "Bộ cài này dành cho Windows 10 / 11. Máy này là Windows $($v.Major).$($v.Minor): $khac" }
         if (-not $MAY64) { return "Máy này là Windows 32-bit: $khac" }
         if ($v.Build -lt 17763) { return "Windows 10 bản cũ (build $($v.Build); bộ cài này cần bản 1809 - build 17763 trở lên): $khac" }
@@ -117,7 +135,7 @@ function CanhBaoMay {
                'khi cài bản cập nhật đó (Windows Update).'
     }
     if ($BAN -eq 'win7' -and $v.Major -ge 10 -and $MAY64) {
-        return "Máy Windows 10 / 11 64-bit: bộ cài PABT_CaiDat_$($PHIEN_BAN)_Win10-11.exe chạy nhanh hơn; bộ cài này vẫn cài và chạy được." }
+        return "Máy Windows 10 / 11 64-bit: bộ cài PABT_CaiDat_$($PHIEN_BAN)_Win10-11_x64.exe chạy nhanh hơn; bộ cài này vẫn cài và chạy được." }
     return ''
 }
 
@@ -162,11 +180,11 @@ function ChepFile($dich, $tienDo) {
     # danh_sach.txt (UTF-8): mỗi dòng "nguồn<TAB>đích<TAB>cỡ<TAB>SHA-256" - nguồn tính từ thư mục bộ cài, đích từ thư mục cài.
     # Bộ cài .exe: nguồn là file phẳng f001_… (IExpress không giữ thư mục); gói .zip: nguồn là đường dẫn trong gói.
     $ds = @()
-    foreach ($d in [System.IO.File]::ReadAllLines((Join-Path $GOC 'danh_sach.txt'), [System.Text.Encoding]::UTF8)) {
+    foreach ($d in [System.IO.File]::ReadAllLines((Join-Path $GOC $DANH_SACH), [System.Text.Encoding]::UTF8)) {
         $x = $d.Split("`t")
         if ($x.Count -ge 4) { $ds += , @($x[0], $x[1], [long]$x[2], $x[3]) }
     }
-    if ($ds.Count -eq 0) { throw 'Bộ cài thiếu danh sách file (danh_sach.txt): tải lại bộ cài.' }
+    if ($ds.Count -eq 0) { throw "Bộ cài thiếu danh sách file ($DANH_SACH): tải lại bộ cài." }
     $n = $ds.Count; $i = 0; $loi = @()
     foreach ($x in $ds) {
         $nguon = Join-Path $GOC $x[0]; $ra = Join-Path $dich $x[1]
@@ -254,6 +272,67 @@ function TaoLoiTat($lnk, $exe, $thu, $ico) {
 }
 
 # ---------------------------------------------------------------- cài
+$PF = ${env:ProgramFiles(x86)}                      # Windows 32-bit không có Program Files (x86)
+if (-not $PF) { $PF = $env:ProgramFiles }
+$MAC_DINH = Join-Path $PF 'PABT'                    # mặc định (người dùng 11/10/2026) - cần quyền quản trị (Windows hỏi UAC)
+$KHONG_QT = Join-Path $env:LOCALAPPDATA 'Programs\PABT'   # không cần quyền quản trị: từ chối UAC / chọn "Không"
+$script:TU_CHOI = $false                            # vừa bị từ chối quyền quản trị (ChepQuyenQuanTri)
+
+function GhiDuoc($dich) {
+    # thư mục cài (hoặc thư mục cha gần nhất đã có) ghi được bằng quyền người dùng hiện tại không: Program Files, Windows... cần
+    # quyền quản trị - bộ cài không xin quyền (tiêu chuẩn cài đặt 0.9.21), trước đây lỗi "Access to the path ... is denied"
+    try { $p = [System.IO.Path]::GetFullPath($dich) } catch { return $false }
+    while ($p -and -not (Test-Path -LiteralPath $p)) { $p = [System.IO.Path]::GetDirectoryName($p) }
+    if (-not $p) { return $false }
+    $thu = Join-Path $p ('pabt_thu_ghi_' + [Guid]::NewGuid().ToString('N') + '.tmp')
+    try { [System.IO.File]::WriteAllText($thu, ''); [System.IO.File]::Delete($thu); return $true } catch { return $false }
+}
+
+function ChuKhongGhiDuoc($dich) {
+    return "Chưa được cấp quyền quản trị nên không chép được PABT vào $dich (thư mục hệ thống của Windows như Program Files). " +
+           "Bấm Cài đặt lại và chọn Có (Yes) khi Windows hỏi, hoặc cài vào thư mục không cần quyền quản trị: $KHONG_QT."
+}
+
+function ChepVao($dich, $tienDo) {
+    # phần GHI vào thư mục cài - chạy thẳng, hoặc trong tiến trình quyền quản trị (ChepQuyenQuanTri) khi cài vào Program Files
+    KiemTraThuMuc $dich
+    Get-Process PABT -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($dich, 'OrdinalIgnoreCase') } |
+        Stop-Process -Force
+    if (Test-Path -LiteralPath $dich) { Remove-Item -LiteralPath $dich -Recurse -Force; Ghi 'Đã gỡ bản cũ' }
+    [void][System.IO.Directory]::CreateDirectory($dich)
+    ChepFile $dich $tienDo | Out-Null
+    [System.IO.File]::Copy((Join-Path $GOC 'go_cai_dat.ps1'), (Join-Path $dich 'go_cai_dat.ps1'), $true)
+}
+
+function ChepQuyenQuanTri($dich, $tienDo) {
+    # chạy lại script này với quyền quản trị (Windows hỏi UAC) chỉ để chép file; theo dõi tiến độ qua file "<kết quả>.tien_do"
+    $kq = Join-Path $env:TEMP ('pabt_chep_' + [Guid]::NewGuid().ToString('N') + '.txt')
+    $ps = Join-Path $GOC 'cai_dat.ps1'
+    $lenh = "& ([scriptblock]::Create([IO.File]::ReadAllText('" + $ps.Replace("'", "''") + "', [Text.Encoding]::UTF8))) " +
+            "-ChiChep '" + $kq.Replace("'", "''") + "' -ThuMuc '" + $dich.Replace("'", "''") + "' -Goc '" + $GOC.Replace("'", "''") + "'"
+    Ghi "Chép file bằng quyền quản trị vào $dich"
+    if ($tienDo) { & $tienDo 10 'Windows hỏi quyền quản trị để chép PABT vào thư mục hệ thống - chọn Có (Yes)…' }
+    try {
+        $pr = Start-Process "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Verb RunAs -PassThru -WindowStyle Hidden `
+              -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Hidden', '-Command', $lenh
+    } catch { Ghi "Không được cấp quyền quản trị: $_"; $script:TU_CHOI = $true; throw (ChuKhongGhiDuoc $dich) }
+    while (-not $pr.HasExited) {
+        Start-Sleep -Milliseconds 250
+        if ($tienDo -and (Test-Path -LiteralPath "$kq.tien_do")) {
+            try { $x = [System.IO.File]::ReadAllText("$kq.tien_do", [System.Text.Encoding]::UTF8).Split("`t")
+                  if ($x.Count -ge 2) { & $tienDo ([int]$x[0]) $x[1] } } catch { }
+        }
+        [System.Windows.Forms.Application]::DoEvents()
+    }
+    if (Test-Path -LiteralPath "$kq.log") { Add-Content -Path $nk -Value ([System.IO.File]::ReadAllText("$kq.log")) -Encoding UTF8 }
+    $ra = ''
+    if (Test-Path -LiteralPath $kq) { $ra = [System.IO.File]::ReadAllText($kq, [System.Text.Encoding]::UTF8) }
+    foreach ($f in @($kq, "$kq.log", "$kq.tien_do")) { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue }
+    if ($ra -eq 'OK') { return }
+    if ($ra.StartsWith("LOI`t")) { throw $ra.Substring(4) }
+    throw "Bước chép file (quyền quản trị) dừng giữa chừng, mã $($pr.ExitCode). Xem nhật ký: $nk"
+}
+
 function KiemTraThuMuc($dich) {
     # chỉ xóa thư mục trống hoặc bản PABT cũ: gõ nhầm D:\ hay chọn Documents thì không được xóa dữ liệu người dùng
     if ($dich.TrimEnd('\') -eq [System.IO.Path]::GetPathRoot($dich).TrimEnd('\')) {
@@ -269,16 +348,29 @@ function KiemTraThuMuc($dich) {
         throw "Thư mục cài có $($da.Count) file dự án (ví dụ $($da[0].FullName)). Chuyển các file dự án ra thư mục khác rồi cài lại." }
 }
 
+function GoBanCu($cu, $dich) {
+    # bản PABT đã cài ở thư mục KHÁC (mục gỡ cài cũ trong HKCU): gỡ thư mục chương trình cũ - chỉ khi có PABT.exe và không có file
+    # dự án (.pabt / .pabtdt); không xóa được (cần quyền quản trị...) thì chỉ ghi nhật ký
+    if (-not $cu) { return }
+    try { $cu = [System.IO.Path]::GetFullPath($cu).TrimEnd('\') } catch { return }
+    if ($cu -eq $dich.TrimEnd('\') -or -not (Test-Path -LiteralPath (Join-Path $cu 'PABT.exe'))) { return }
+    $da = @(Get-ChildItem -LiteralPath $cu -Recurse -Force -ErrorAction SilentlyContinue |
+            Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
+    if ($da.Count -gt 0) { Ghi "Giữ bản cũ $cu (có $($da.Count) file dự án)"; return }
+    try {
+        Get-Process PABT -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($cu, 'OrdinalIgnoreCase') } |
+            Stop-Process -Force
+        Remove-Item -LiteralPath $cu -Recurse -Force
+        Ghi "Đã gỡ bản cũ ở thư mục khác: $cu"
+    } catch { Ghi "Chưa gỡ được bản cũ $cu ($_)" }
+}
+
 function Cai($dich, $desktop, $lienKet, $tienDo) {
     $dich = [System.IO.Path]::GetFullPath($dich)
     Ghi "Thư mục cài: $dich"
-    KiemTraThuMuc $dich
-    Get-Process PABT -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($dich, 'OrdinalIgnoreCase') } |
-        Stop-Process -Force
-    if (Test-Path -LiteralPath $dich) { Remove-Item -LiteralPath $dich -Recurse -Force; Ghi 'Đã gỡ bản cũ' }
-    [void][System.IO.Directory]::CreateDirectory($dich)
-    ChepFile $dich $tienDo | Out-Null
-    [System.IO.File]::Copy((Join-Path $GOC 'go_cai_dat.ps1'), (Join-Path $dich 'go_cai_dat.ps1'), $true)
+    $cu = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PABT' -ErrorAction SilentlyContinue).InstallLocation
+    if (GhiDuoc $dich) { ChepVao $dich $tienDo } else { ChepQuyenQuanTri $dich $tienDo }      # Program Files: hỏi quyền quản trị
+    GoBanCu $cu $dich
     Ghi "Đã chép $(DemFile $dich) file (PowerShell $($PSVersionTable.PSVersion), Windows $([Environment]::OSVersion.Version))"
     if ($tienDo) { & $tienDo 88 'Tạo biểu tượng, liên kết file…' }
     $exe = Join-Path $dich 'PABT.exe'
@@ -340,6 +432,21 @@ function Cai($dich, $desktop, $lienKet, $tienDo) {
     return $tk
 }
 
+# ---------------------------------------------------------------- tiến trình quyền quản trị: chỉ chép file (ChepQuyenQuanTri)
+if ($ChiChep) {
+    $tienDoTep = { param($phan, $chu)
+        try { [System.IO.File]::WriteAllText("$ChiChep.tien_do", "$phan`t$chu", [System.Text.Encoding]::UTF8) } catch { } }
+    try {
+        ChepVao ([System.IO.Path]::GetFullPath($ThuMuc)) $tienDoTep
+        [System.IO.File]::WriteAllText($ChiChep, 'OK', [System.Text.Encoding]::UTF8)
+        exit 0
+    } catch {
+        Ghi "LỖI: $_"
+        [System.IO.File]::WriteAllText($ChiChep, "LOI`t$_", [System.Text.Encoding]::UTF8)
+        exit 1
+    }
+}
+
 # ---------------------------------------------------------------- cài im lặng
 if ($Im) {
     try {
@@ -348,8 +455,13 @@ if ($Im) {
         CaiVcRedist | Out-Null
         CaiKbWin7 | Out-Null                        # chỉ Windows 7 còn thiếu KB2533623
         $dich = $ThuMuc
-        if (-not $dich) { $dich = Join-Path $env:LOCALAPPDATA 'Programs\PABT' }
-        $tk = Cai $dich (-not $KhongDesktop) (-not $KhongLienKet) $null
+        if (-not $dich) { $dich = $MAC_DINH }
+        try { $tk = Cai $dich (-not $KhongDesktop) (-not $KhongLienKet) $null }
+        catch {
+            if (-not ($script:TU_CHOI -and -not $ThuMuc)) { throw }
+            Ghi "Không được cấp quyền quản trị: cài vào $KHONG_QT"
+            $tk = Cai $KHONG_QT (-not $KhongDesktop) (-not $KhongLienKet) $null
+        }
         Ghi 'XONG'
         if ($script:KB_CHO_KHOI_DONG) { Ghi 'Cần khởi động lại máy (bản cập nhật Windows 7 KB3063858)'; exit 3010 }
         if ($tk -match 'KET QUA: DAT') { exit 0 } else { exit 4 }
@@ -394,11 +506,19 @@ $l1 = New-Object System.Windows.Forms.Label; $l1.Text = 'Thư mục cài đặt:
 $f.Controls.Add($l1)
 $oThu = New-Object System.Windows.Forms.TextBox; $oThu.Location = New-Object System.Drawing.Point(24, ($y + 22)); $oThu.Width = 490
 $oThu.Text = $ThuMuc
-if (-not $ThuMuc) { $oThu.Text = Join-Path $env:LOCALAPPDATA 'Programs\PABT' }
+if (-not $ThuMuc) { $oThu.Text = $MAC_DINH }
 $f.Controls.Add($oThu)
 $bChon = New-Object System.Windows.Forms.Button; $bChon.Text = 'Chọn…'; $bChon.Location = New-Object System.Drawing.Point(524, ($y + 20))
 $bChon.Width = 90; $f.Controls.Add($bChon)
-$bChon.Add_Click({ $d = New-Object System.Windows.Forms.FolderBrowserDialog; if ($d.ShowDialog() -eq 'OK') { $oThu.Text = Join-Path $d.SelectedPath 'PABT' } })
+$bChon.Add_Click({
+    $d = New-Object System.Windows.Forms.FolderBrowserDialog
+    if ($d.ShowDialog() -eq 'OK') {
+        $oThu.Text = Join-Path $d.SelectedPath 'PABT'
+        if (-not (GhiDuoc $oThu.Text)) {
+            $tt.ForeColor = [System.Drawing.Color]::FromArgb(176, 96, 0)
+            $tt.Text = "Thư mục hệ thống của Windows: khi bấm `"Cài đặt`", Windows sẽ hỏi quyền quản trị để chép file PABT vào đây." }
+        else { $tt.ForeColor = $XANH; $tt.Text = "Cài vào $($oThu.Text). Bấm `"Cài đặt`" để bắt đầu." }
+    } })
 $cDesk = New-Object System.Windows.Forms.CheckBox; $cDesk.Text = 'Tạo biểu tượng PABT trên Desktop'; $cDesk.Checked = -not $KhongDesktop
 $cDesk.Location = New-Object System.Drawing.Point(24, ($y + 58)); $cDesk.AutoSize = $true; $f.Controls.Add($cDesk)
 $cLk = New-Object System.Windows.Forms.CheckBox; $cLk.Text = 'Mở file dự án .pabt bằng PABT khi nhấp đúp'; $cLk.Checked = -not $KhongLienKet
@@ -435,6 +555,7 @@ if ($loi) {
 }
 else {
     $tt.Text = "Máy đạt yêu cầu (Windows $([Environment]::OSVersion.Version.Major).$([Environment]::OSVersion.Version.Minor) $BIT). Bấm `"Cài đặt`" để bắt đầu."
+    if (-not (GhiDuoc $oThu.Text)) { $tt.Text += ' Windows sẽ hỏi quyền quản trị để chép file vào Program Files - chọn Có (Yes).' }
     $cb = CanhBaoMay
     if ($cb) { Ghi "LƯU Ý: $cb"; $tt.Text = "Lưu ý: $cb"; $tt.ForeColor = [System.Drawing.Color]::FromArgb(176, 96, 0) }
 }
@@ -442,6 +563,15 @@ $script:xong = $false
 $tienDo = { param($phan, $chu) $pb.Value = [Math]::Min(100, $phan); $tt.Text = $chu; [System.Windows.Forms.Application]::DoEvents() }
 $bCai.Add_Click({
     if ($script:xong) { Start-Process (Join-Path $oThu.Text 'PABT.exe'); $this.FindForm().DialogResult = 'OK'; return }
+    $laMacDinh = $oThu.Text.TrimEnd('\') -eq $MAC_DINH.TrimEnd('\')
+    if (-not $laMacDinh -and -not (GhiDuoc $oThu.Text)) {    # thư mục hệ thống khác do người dùng chọn: hỏi trước
+        $hoi = [System.Windows.Forms.MessageBox]::Show($f, ("Thư mục $($oThu.Text) là thư mục hệ thống của Windows: Windows sẽ " +
+            "hỏi quyền quản trị (tài khoản quản trị) để chép file PABT vào đây.`r`n`r`n" +
+            "Có (Yes): cài vào thư mục này`r`nKhông (No): cài vào $KHONG_QT (không cần quyền quản trị)`r`nHủy (Cancel): chọn lại"),
+            'Cài đặt PABT', 'YesNoCancel', 'Question')
+        if ($hoi -eq 'Cancel') { return }
+        if ($hoi -eq 'No') { $oThu.Text = $KHONG_QT }
+    }
     $bCai.Enabled = $false; $bHuy.Enabled = $false; $bChon.Enabled = $false; $oThu.Enabled = $false
     try {
         if ($script:O_LA_KB) {
@@ -472,6 +602,14 @@ $bCai.Add_Click({
         Ghi "LỖI: $_"
         $tt.ForeColor = [System.Drawing.Color]::DarkRed; $tt.Text = "Không cài được: $_ (nhật ký: $nk)"
         $bHuy.Text = 'Đóng'; $bHuy.Enabled = $true
+        # mở lại để chọn thư mục khác rồi cài tiếp (trước đây khóa luôn - phải đóng bộ cài chạy lại)
+        $bCai.Enabled = $true; $bChon.Enabled = $true; $oThu.Enabled = $true
+        if ($script:TU_CHOI) {                      # từ chối UAC: chuyển sẵn sang thư mục không cần quyền quản trị
+            $script:TU_CHOI = $false
+            $tt.Text = "Không được cấp quyền quản trị nên chưa cài vào $($oThu.Text). Đã chuyển thư mục cài sang $KHONG_QT " +
+                       '(không cần quyền quản trị): bấm "Cài đặt" để cài tiếp - hoặc bấm "Chọn…" chọn lại Program Files rồi chọn Có khi Windows hỏi.'
+            $oThu.Text = $KHONG_QT
+        }
     }
 })
 [void]$f.ShowDialog()

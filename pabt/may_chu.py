@@ -450,20 +450,57 @@ def ds_du_an(goc=None) -> list:
     finally:
         con.close()
     kq = []
-    for f in sorted((goc / THU_MUC_DU_AN).rglob('*.pabt'), key=lambda x: x.stat().st_mtime, reverse=True):
-        ten = f.stem
-        try:
-            c = sqlite3.connect(f.resolve().as_uri() + '?mode=ro', uri=True, timeout=3)
-            r = c.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
-            c.close()
-            ten = (r[0] or f.stem) if r else f.stem
-        except sqlite3.Error:
-            pass
-        k = khoa.KhoaFile(f).nguoi_khac()
+    tm = goc / THU_MUC_DU_AN
+    cu = _doc_chi_muc(tm)
+    moi = {}
+    for f in sorted(tm.rglob('*.pabt'), key=lambda x: x.stat().st_mtime, reverse=True):
         st = f.stat()
+        k = f.relative_to(tm).as_posix()
+        e = cu.get(k)
+        if e and e.get('mtime') == st.st_mtime_ns and e.get('size') == st.st_size:
+            ten = e.get('ten') or f.stem                # file không đổi: tên dự án lấy ở chỉ mục, không mở file qua mạng
+        else:
+            ten = f.stem
+            try:
+                c = sqlite3.connect(f.resolve().as_uri() + '?mode=ro', uri=True, timeout=3)
+                r = c.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
+                c.close()
+                ten = (r[0] or f.stem) if r else f.stem
+            except sqlite3.Error:
+                pass
+        moi[k] = dict(ten=ten, mtime=st.st_mtime_ns, size=st.st_size)
+        kh = khoa.KhoaFile(f).nguoi_khac()
         kq.append(dict(file=f, ten=ten, sua_luc=datetime.fromtimestamp(st.st_mtime).strftime('%H:%M %d/%m/%Y'),
-                       kich_thuoc=st.st_size, dang_mo=khoa.mo_ta(k) if k else '', lay_ve=lay.get(_tuong_doi(goc, f))))
+                       kich_thuoc=st.st_size, dang_mo=khoa.mo_ta(kh) if kh else '', lay_ve=lay.get(_tuong_doi(goc, f))))
+    if moi != cu:
+        _ghi_chi_muc(tm, moi)
     return kq
+
+
+CHI_MUC = 'danh_muc_du_an.json'
+
+
+def _doc_chi_muc(thu_muc: Path) -> dict:
+    """Chỉ mục nhẹ của thư mục dự án trên máy chủ (đặc tả ARCH-PABT-2026-V4 mục 7.4): {đường dẫn tương đối: {ten, mtime, size}}.
+    Liệt kê dự án chỉ đọc một file JSON vài KB thay vì mở từng file SQLite qua SMB (ổ mạng chậm: mỗi file vài trăm ms);
+    file nào đổi (mtime / cỡ) mới mở lại để đọc tên. Hỏng / không đọc được: coi như chưa có (tự dựng lại)."""
+    import json
+    try:
+        d = json.loads((Path(thu_muc) / CHI_MUC).read_text(encoding='utf-8'))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _ghi_chi_muc(thu_muc: Path, d: dict) -> None:
+    import json
+    f = Path(thu_muc) / CHI_MUC
+    tam = f.with_name(f.name + '.tam')
+    try:
+        tam.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding='utf-8')
+        os.replace(tam, f)                              # nguyên tử: máy khác đang đọc không gặp file ghi dở
+    except OSError:                                     # thư mục chỉ đọc / mạng chập chờn: bỏ qua, lần sau dựng lại
+        pass
 
 
 # ---------------------------------------------------------------- mang dự án về làm offline / đưa lên lại

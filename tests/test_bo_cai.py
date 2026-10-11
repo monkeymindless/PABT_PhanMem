@@ -69,6 +69,33 @@ class TestKichBanCai(unittest.TestCase):
             if f.exists():                                       # file không đưa vào git: chỉ kiểm khi có trên máy dựng
                 self.assertEqual(hashlib.sha256(f.read_bytes()).hexdigest(), bam, ten)
 
+    def test_cai_vao_program_files(self):
+        # 0.9.22 (người dùng chọn C:\Program Files (x86)\PABT: lỗi "Access ... denied", nút Cài đặt khóa luôn): thư mục không ghi
+        # được -> CHỈ bước chép file chạy lại với quyền quản trị (-Verb RunAs, -ChiChep); lối tắt / registry HKCU / tự kiểm tra vẫn
+        # quyền người dùng; lỗi thì mở lại nút để cài tiếp; gỡ cài cũng xin quyền quản trị khi thư mục không ghi được
+        s = (BC / 'cai_dat.ps1').read_text(encoding='utf-8-sig')
+        self.assertIn('[string]$ChiChep', s)
+        self.assertIn('if (GhiDuoc $dich) { ChepVao $dich $tienDo } else { ChepQuyenQuanTri $dich $tienDo }', s)
+        i = s.index('function ChepQuyenQuanTri')
+        self.assertIn('-Verb RunAs', s[i:i + 2000])
+        self.assertIn("-Goc '", s[i:i + 2000])                  # biến môi trường PABT_GOC không truyền sang tiến trình quản trị
+        i = s.index('if ($ChiChep) {')
+        self.assertNotIn('TaoLoiTat', s[i:s.index('# ---', i + 10)])  # tiến trình quản trị không tạo lối tắt / registry
+        self.assertIn('$bCai.Enabled = $true; $bChon.Enabled = $true; $oThu.Enabled = $true', s)
+        # mặc định Program Files (x86)\PABT (người dùng 11/10/2026; Windows 32-bit: Program Files); từ chối quyền quản trị ->
+        # thư mục không cần quyền (cửa sổ chuyển sẵn, cài im lặng tự cài vào đó); bản cũ ở thư mục khác được gỡ (không 2 bản)
+        self.assertIn("$PF = ${env:ProgramFiles(x86)}", s)
+        self.assertIn("$MAC_DINH = Join-Path $PF 'PABT'", s)
+        self.assertIn("$KHONG_QT = Join-Path $env:LOCALAPPDATA 'Programs\\PABT'", s)
+        self.assertIn('$tk = Cai $KHONG_QT', s)
+        self.assertIn('GoBanCu $cu $dich', s)
+        g = (BC / 'go_cai_dat.ps1').read_text(encoding='utf-8-sig')
+        self.assertIn('function GhiDuoc', g)
+        self.assertIn('-Verb RunAs', g)
+        for ten in ('$XOA_HET', '$XOA_GIU'):                     # lệnh xóa truyền qua dòng lệnh: không được có ngoặc kép
+            i = g.index(ten + ' = ')
+            self.assertNotIn('"', g[i:g.index('\n$', i + 5)], ten)
+
     @unittest.skipUnless(sys.platform == 'win32', 'cần PowerShell')
     def test_cu_phap_powershell(self):
         for ten in ('cai_dat.ps1', 'go_cai_dat.ps1'):

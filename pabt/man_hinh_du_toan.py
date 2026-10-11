@@ -1,5 +1,10 @@
-"""Màn hình dự toán / áp giá dự thảo kinh phí bồi thường, hỗ trợ (logic: du_toan.py). Dùng được khi chưa mở dự án nào
-(đơn giá lấy theo bộ đơn giá đang dùng của máy)."""
+"""Màn hình dự toán / khái toán kinh phí bồi thường, hỗ trợ (logic: du_toan.py). Dùng được khi chưa mở dự án nào
+(đơn giá lấy theo bộ đơn giá đang dùng của máy).
+
+0.9.23 (lộ trình người dùng 11/10/2026: dự toán là "mục tiêu tài chính của dự án", đưa lên nhóm Dự án): KhungDuToan là MỘT TRANG
+của cửa sổ chính (trước: hộp thoại HopDuToan - nay chỉ là vỏ cho mã cũ / kiểm thử); thẻ "So sánh với thực tế áp giá" (khái toán
+đã duyệt = ngân sách trần, cảnh báo vượt); sửa một ô chỉ vẽ lại dòng đó + các dòng % + tổng (trước: dựng lại cả bảng mỗi ô).
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,8 +12,8 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout,
-                               QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem,
-                               QVBoxLayout)
+                               QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QTabWidget, QTableWidget,
+                               QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import du_toan
 from .du_toan import DongDT, DuToan
@@ -17,8 +22,10 @@ from .tien import D, KHONG, so_vn, tien_bang_chu, vn
 from .giao_dien import con_tro_cho
 from .thong_bao import chu_loi
 
-TIEU_DE = 'Dự toán, áp giá dự thảo'
+TIEU_DE = 'Dự toán & khái toán'
 XAM, XANH = QColor('#F2F2F2'), QColor('#DDEBF7')
+DO_NHAT, XANH_LA = QColor('#F8CBAD'), QColor('#E2EFDA')
+COT_SS = ['Mục', 'Hạng mục', 'Khái toán (đ)', 'Thực tế áp giá (đ)', 'Chênh lệch (đ)', 'Tỷ lệ']
 COT = [('muc', 'Mục', 45), ('ten', 'Hạng mục', 380), ('dvt', 'ĐVT', 60), ('khoi_luong', 'Khối lượng (%)', 100),
        ('don_gia', 'Đơn giá (đ)', 110), ('he_so', 'Hệ số / tỷ lệ', 80), ('thanh_tien', 'Thành tiền (đ)', 130), ('ma', 'Mã', 70),
        ('can_cu', 'Căn cứ, ghi chú', 300)]
@@ -93,18 +100,21 @@ class HopTraNQ28(QDialog):
         super().accept()
 
 
-class HopDuToan(QDialog):
+class KhungDuToan(QWidget):
+    """Trang "Dự toán & khái toán": thẻ 1 lập khái toán / dự toán (lấy khối lượng từ dự án đang mở, file .pabt, file Excel, danh
+    sách thô; áp đơn giá hiện hành; chi phí tổ chức 2,5% / 3,5% theo QĐ 08/2025), thẻ 2 so sánh với thực tế áp giá."""
     im_lang = False
 
     def __init__(self, parent=None, con=None, file_du_an=None):
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
         self.con, self.file_du_an = con, file_du_an
         self.file = None
         self.dt = DuToan()
+        self.dt_goc = None                              # khái toán đã duyệt mở từ file (thẻ So sánh); None: dùng bảng thẻ 1
+        self.ss = None                                  # kết quả so sánh gần nhất (du_toan.so_sanh)
+        self.dt_goc_file = None
+        self.b_tu_du_an = None                          # nút "Từ dự án đang mở": bật / tắt theo dự án (dat_du_an)
         self._dm = None
-        self.setWindowTitle('Dự toán / áp giá dự thảo kinh phí bồi thường, hỗ trợ')
-        self.resize(1360, 760)
         self.o_ten = QLineEdit()
         self.o_ten.setPlaceholderText('Tên dự án / công trình dự toán')
         self.o_dia_ban = QLineEdit()
@@ -130,6 +140,8 @@ class HopDuToan(QDialog):
             b.clicked.connect(ham)
             b.setEnabled(bat)
             h1.addWidget(b)
+            if ten == 'Từ dự án đang mở':
+                self.b_tu_du_an = b
         h1.addStretch(1)
         for ten, ham in (('Áp đơn giá hiện hành', lambda: self.ap_gia_hien_hanh()),
                          ('Thêm chi phí 2,5% và dự phòng 10%', lambda: self.them_chi_phi())):
@@ -147,7 +159,6 @@ class HopDuToan(QDialog):
         self.bang.setAlternatingRowColors(True)
         self.bang.cellChanged.connect(self._doi_o)
         # ---- thêm đất (mục 1): loại đất xổ xuống (dùng chung danh sách loại đất của phương án hộ), diện tích, đơn giá
-        from .giao_dien import mo_danh_sach
         from .loai_dat import ds_chon
         self.cb_loai_dat = QComboBox()
         self.cb_loai_dat.setEditable(True)
@@ -158,7 +169,6 @@ class HopDuToan(QDialog):
             self.cb_loai_dat.addItem(nhan, ma)
         self.cb_loai_dat.setCurrentIndex(-1)
         self.cb_loai_dat.lineEdit().setPlaceholderText('Loại đất (▼ chọn, hoặc gõ mã: CLN, ONT…)')
-        mo_danh_sach(self.cb_loai_dat)
         self.o_dt_dat = QLineEdit()
         self.o_dt_dat.setPlaceholderText('Diện tích (m²), =12*30')
         self.o_dt_dat.setMaximumWidth(170)
@@ -199,22 +209,27 @@ class HopDuToan(QDialog):
             b.clicked.connect(ham)
             h3.addWidget(b)
         h3.addStretch(1)
-        b = QPushButton('Đóng')
-        b.clicked.connect(self.reject)
-        h3.addWidget(b)
         ghi = QLabel('Mục 1 đất, 2 nhà - công trình, 3 cây trồng, 4 hỗ trợ, 5 thưởng, 6 chi phí khác (cột Khối lượng là %, tính trên '
                      'tổng mục 1-5). Thành tiền = khối lượng × đơn giá × hệ số, làm tròn như dự án. "Áp đơn giá hiện hành" thay '
                      'đơn giá các dòng có mã theo bộ đơn giá đang dùng (áp giá dự thảo cho dự án tương tự).')
         ghi.setWordWrap(True)
-        lo = QVBoxLayout(self)
+        self._cach_tinh = ghi.text()                    # cách tính: chú thích của ô tổng (dòng chữ dài chiếm chỗ của bảng)
+        the1 = QWidget()
+        lo = QVBoxLayout(the1)
         lo.addLayout(h0)
         lo.addLayout(h1)
         lo.addLayout(h_dat)
         lo.addWidget(self.bang, 1)
         lo.addLayout(h2)
         lo.addWidget(self.lb_tong)
-        lo.addWidget(ghi)
         lo.addLayout(h3)
+        self.tab = QTabWidget()
+        self.tab.addTab(the1, 'Khái toán / dự toán')
+        self.tab.addTab(self._the_so_sanh(), 'So sánh với thực tế áp giá')
+        self.tab.currentChanged.connect(lambda i: i == 1 and self.con is not None and self.so_sanh_thuc_te())
+        ngoai = QVBoxLayout(self)
+        ngoai.setContentsMargins(0, 0, 0, 0)
+        ngoai.addWidget(self.tab)
         self._dang_ve = False
         self.o_ten.textChanged.connect(lambda t: setattr(self.dt, 'ten', t.strip()))
         self.o_dia_ban.textChanged.connect(lambda t: setattr(self.dt, 'dia_ban', t.strip()))
@@ -241,44 +256,66 @@ class HopDuToan(QDialog):
             (QMessageBox.warning if loi else QMessageBox.information)(self, TIEU_DE, chu)
 
     # ---------------------------------------------- hiển thị
+    def _ve_dong(self, r: int) -> None:
+        """Dựng các ô của dòng r (gọi trong _dang_ve)."""
+        d = self.dt.dong[r]
+        pt = d.muc == 6 and d.phan_tram is not None
+        gt = dict(muc=str(d.muc), ten=d.ten, dvt='%' if pt else d.dvt,
+                  khoi_luong=so_vn(d.phan_tram) if pt else so_vn(d.khoi_luong),
+                  don_gia=vn(self.dt.co_so_phan_tram()) if pt else vn(d.don_gia),
+                  he_so='' if pt else so_vn(d.he_so), thanh_tien=vn(self.dt.thanh_tien(d)), ma=d.ma,
+                  can_cu=d.can_cu + ('; ' if d.can_cu and d.ghi_chu else '') + d.ghi_chu)
+        for c, (k, _, _) in enumerate(COT):
+            it = QTableWidgetItem(gt[k])
+            it.setToolTip(gt[k])
+            if k in SO:
+                it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            if k == 'thanh_tien' or (pt and k in ('don_gia', 'he_so', 'dvt')):
+                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                it.setBackground(QBrush(XAM))
+            if k == 'thanh_tien':
+                f = QFont()
+                f.setBold(True)
+                it.setFont(f)
+            self.bang.setItem(r, c, it)
+
     def ve(self, chon: int | None = None):
         self._dang_ve = True
         try:
             self.dt.sap_xep()
             self.bang.setRowCount(len(self.dt.dong))
-            for r, d in enumerate(self.dt.dong):
-                pt = d.muc == 6 and d.phan_tram is not None
-                gt = dict(muc=str(d.muc), ten=d.ten, dvt='%' if pt else d.dvt,
-                          khoi_luong=so_vn(d.phan_tram) if pt else so_vn(d.khoi_luong),
-                          don_gia=vn(self.dt.co_so_phan_tram()) if pt else vn(d.don_gia),
-                          he_so='' if pt else so_vn(d.he_so), thanh_tien=vn(self.dt.thanh_tien(d)), ma=d.ma,
-                          can_cu=d.can_cu + ('; ' if d.can_cu and d.ghi_chu else '') + d.ghi_chu)
-                for c, (k, _, _) in enumerate(COT):
-                    it = QTableWidgetItem(gt[k])
-                    it.setToolTip(gt[k])
-                    if k in SO:
-                        it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                    if k == 'thanh_tien' or (pt and k in ('don_gia', 'he_so', 'dvt')):
-                        it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                        it.setBackground(QBrush(XAM))
-                    if k == 'thanh_tien':
-                        f = QFont()
-                        f.setBold(True)
-                        it.setFont(f)
-                    self.bang.setItem(r, c, it)
+            for r in range(len(self.dt.dong)):
+                self._ve_dong(r)
         finally:
             self._dang_ve = False
         self.bang.resizeRowsToContents()                 # chữ dài xuống dòng, hiện đủ nội dung
         if chon is not None and 0 <= chon < len(self.dt.dong):
             self.bang.setCurrentCell(chon, 1)
+        self._ve_dau_tong()
+
+    def _ve_lai_dong(self, r: int) -> None:
+        """Sửa một ô (không đổi mục - không đổi thứ tự dòng): vẽ lại dòng r, các dòng % (mục 6, tính trên tổng mục 1-5) và
+        dòng tổng - không dựng lại cả bảng (dự toán vài trăm dòng: mỗi lần gõ một ô trước đây dựng lại hàng nghìn ô)."""
+        self._dang_ve = True
+        try:
+            for i, d in enumerate(self.dt.dong):
+                if i == r or (d.muc == 6 and d.phan_tram is not None):
+                    self._ve_dong(i)
+        finally:
+            self._dang_ve = False
+        self.bang.resizeRowToContents(r)
+        self._ve_dau_tong()
+
+    def _ve_dau_tong(self):
         if self.o_ten.text().strip() != self.dt.ten:
             self.o_ten.setText(self.dt.ten)
         if self.o_dia_ban.text().strip() != self.dt.dia_ban:
             self.o_dia_ban.setText(self.dt.dia_ban)
         if self.o_dia_chi.text().strip() != self.dt.dia_chi:
             self.o_dia_chi.setText(self.dt.dia_chi)
-        self.lb_tong.setText(du_toan.mo_ta_tong(self.dt) + f'<br><i>Bằng chữ: {tien_bang_chu(self.dt.tong)}.</i>'
-                             + (f'<br>Nguồn: {self.dt.nguon}' if self.dt.nguon else ''))
+        # 2 dòng (trang trong cửa sổ chính: dành chỗ cho bảng); nguồn khối lượng + cách tính ở chú thích khi rê chuột
+        self.lb_tong.setText(du_toan.mo_ta_tong(self.dt) + f'<br><i>Bằng chữ: {tien_bang_chu(self.dt.tong)}.</i>')
+        self.lb_tong.setToolTip((f'Nguồn khối lượng: {self.dt.nguon}\n\n' if self.dt.nguon else '') + self._cach_tinh)
 
     def _doi_o(self, r: int, c: int):
         if self._dang_ve or not 0 <= r < len(self.dt.dong):
@@ -310,12 +347,133 @@ class HopDuToan(QDialog):
                 setattr(d, k, ' '.join(text.split()))
         except LoiNhap as e:
             self.bao(str(e))
-        self.ve(r)
+        if k == 'muc':
+            self.ve(r)                                  # đổi mục: thứ tự dòng đổi (sắp theo mục) - vẽ lại cả bảng
+        else:
+            self._ve_lai_dong(r)
 
     def _doc_dau(self):
         self.dt.ten = self.o_ten.text().strip()
         self.dt.dia_ban = self.o_dia_ban.text().strip()
         self.dt.dia_chi = self.o_dia_chi.text().strip()
+
+    # ---------------------------------------------- dự án đang mở (trang của cửa sổ chính)
+    def dat_du_an(self, con, file_du_an=None):
+        """Cửa sổ chính mở / đóng dự án: nút "Từ dự án đang mở", thẻ So sánh theo dự án mới; danh sách loại đất theo dự án."""
+        self.con, self.file_du_an, self._dm = con, file_du_an, None
+        if self.b_tu_du_an is not None:
+            self.b_tu_du_an.setEnabled(con is not None)
+        from .loai_dat import ds_chon
+        self.cb_loai_dat.clear()
+        for ma, nhan in ds_chon(con):
+            self.cb_loai_dat.addItem(nhan, ma)
+        self.cb_loai_dat.setCurrentIndex(-1)
+        self.ss = None
+        if con is None:
+            self.bang_ss.setRowCount(0)
+            self.lb_ss.setText('Mở một dự án để so sánh khái toán với thực tế áp giá của các hộ.')
+        elif self.tab.currentIndex() == 1:
+            self.so_sanh_thuc_te()
+
+    # ---------------------------------------------- so sánh khái toán - thực tế áp giá
+    def _the_so_sanh(self) -> QWidget:
+        w = QWidget()
+        lo = QVBoxLayout(w)
+        h = QHBoxLayout()
+        self.lb_goc = QLabel('')
+        self.lb_goc.setWordWrap(True)
+        h.addWidget(self.lb_goc, 1)
+        for ten, ham in (('Mở khái toán đã duyệt (.pabtdt)…', lambda: self.mo_khai_toan_goc()),
+                         ('Dùng bảng ở thẻ "Khái toán / dự toán"', lambda: self.mo_khai_toan_goc(dung_bang=True)),
+                         ('Tính lại', lambda: self.so_sanh_thuc_te())):
+            b = QPushButton(ten)
+            b.clicked.connect(ham)
+            h.addWidget(b)
+        self.bang_ss = QTableWidget(0, len(COT_SS))
+        self.bang_ss.setHorizontalHeaderLabels(COT_SS)
+        for i, rong in enumerate((50, 420, 160, 160, 160, 90)):
+            self.bang_ss.setColumnWidth(i, rong)
+        self.bang_ss.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.bang_ss.verticalHeader().setVisible(False)
+        self.bang_ss.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.lb_ss = QLabel('')
+        self.lb_ss.setWordWrap(True)
+        self.lb_ss.setStyleSheet('QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; }')
+        ghi = QLabel('Khái toán đã duyệt là ngân sách trần của dự án; thực tế = tổng các phương án đã áp giá trong dự án đang mở '
+                     '(chi phí khác mục 6 tính theo các tỷ lệ của khái toán). Đỏ: thực tế vượt khái toán.')
+        ghi.setWordWrap(True)
+        lo.addLayout(h)
+        lo.addWidget(self.bang_ss, 1)
+        lo.addWidget(self.lb_ss)
+        lo.addWidget(ghi)
+        self._ghi_goc()
+        return w
+
+    def _ghi_goc(self):
+        self.lb_goc.setText(f'<b>Khái toán:</b> file {self.dt_goc_file.name}' if self.dt_goc is not None else
+                            '<b>Khái toán:</b> bảng đang lập ở thẻ "Khái toán / dự toán"')
+
+    def mo_khai_toan_goc(self, file=None, dung_bang: bool = False):
+        if dung_bang:
+            self.dt_goc = None
+        else:
+            if file is None:
+                file, _ = QFileDialog.getOpenFileName(self, 'Mở khái toán đã duyệt', self._thu_muc(),
+                                                      f'Dự toán PABT (*{du_toan.DUOI})')
+                if not file:
+                    return None
+            try:
+                self.dt_goc = DuToan.mo(file)
+            except (OSError, ValueError, TypeError) as e:
+                self.bao(chu_loi('Không mở được file khái toán', e))
+                return None
+            self.dt_goc_file = Path(file)
+        self._ghi_goc()
+        return self.so_sanh_thuc_te() if self.con is not None else None
+
+    def so_sanh_thuc_te(self):
+        """Khái toán (file đã duyệt hoặc bảng thẻ 1) so với thực tế áp giá của dự án đang mở. Trả du_toan.so_sanh."""
+        if self.con is None:
+            self.bao('Mở một dự án để so sánh với thực tế áp giá.', loi=False)
+            return None
+        goc = self.dt_goc if self.dt_goc is not None else self.dt
+        try:
+            with con_tro_cho():
+                self.ss = du_toan.so_sanh(goc, du_toan.tu_du_an(self.con))
+        except Exception as e:                          # dự án lỗi dữ liệu: báo, không làm hỏng trang
+            self.bao(chu_loi('Không tính được thực tế áp giá', e))
+            return None
+        dong = self.ss['dong'] + [('', 'TỔNG CỘNG', *self.ss['tong'])]
+        self.bang_ss.setRowCount(len(dong))
+        dam = QFont()
+        dam.setBold(True)
+        for r, (m, ten, kt, tt, chenh, tl) in enumerate(dong):
+            o = [str(m), ten, vn(kt), vn(tt), ('+' if chenh > 0 else '') + vn(chenh),
+                 '' if tl is None else f'{"+" if tl > 0 else ""}{so_vn(tl.quantize(D("0.1")))}%']
+            for c, v in enumerate(o):
+                it = QTableWidgetItem(v)
+                if c != 1:
+                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                if c in (4, 5) and (kt or tt):
+                    it.setBackground(QBrush(DO_NHAT if chenh > 0 else XANH_LA))
+                if r == len(dong) - 1:
+                    it.setFont(dam)
+                self.bang_ss.setItem(r, c, it)
+        kt, tt, chenh, tl = self.ss['tong']
+        if not kt:
+            self.lb_ss.setStyleSheet('QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; background: #EAF2FB; }')
+            self.lb_ss.setText('Khái toán chưa có số liệu: lập bảng ở thẻ "Khái toán / dự toán" hoặc mở file khái toán đã duyệt.')
+        elif self.ss['vuot']:
+            self.lb_ss.setStyleSheet('QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; background: #F8CBAD; '
+                                     'color: #7A1B12; font-weight: bold; }')
+            self.lb_ss.setText(f'⚠ Thực tế áp giá VƯỢT khái toán {vn(chenh)} đồng ({so_vn(tl.quantize(D("0.1")))}%): '
+                               'rà soát phương án các hộ hoặc trình điều chỉnh tổng mức kinh phí.')
+        else:
+            self.lb_ss.setStyleSheet('QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; background: #E2EFDA; '
+                                     'color: #1E5E2F; font-weight: bold; }')
+            self.lb_ss.setText(f'✓ Thực tế áp giá trong phạm vi khái toán: còn {vn(-chenh)} đồng '
+                               f'({so_vn((-tl).quantize(D("0.1")))}% tổng mức).')
+        return self.ss
 
     # ---------------------------------------------- lấy khối lượng
     def lay(self, nguon: str, file=None):
@@ -519,3 +677,34 @@ class HopDuToan(QDialog):
             from .in_an import mo_file
             mo_file(p)
         return p
+
+
+class HopDuToan(QDialog):
+    """Dự toán trong hộp thoại riêng (giữ cho mã cũ / kiểm thử). Cửa sổ chính dùng KhungDuToan làm một trang (0.9.23).
+    Thuộc tính / hàm không có ở hộp thoại chuyển sang khung (dlg.dt, dlg.lay(), dlg.bang...)."""
+
+    def __init__(self, parent=None, con=None, file_du_an=None):
+        super().__init__(parent)
+        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
+        self.setWindowTitle('Dự toán & khái toán kinh phí bồi thường, hỗ trợ')
+        self.resize(1360, 760)
+        self.khung = KhungDuToan(self, con, file_du_an)
+        nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        nut.rejected.connect(self.reject)
+        lo = QVBoxLayout(self)
+        lo.addWidget(self.khung, 1)
+        lo.addWidget(nut)
+
+    @property
+    def im_lang(self):
+        return self.khung.im_lang
+
+    @im_lang.setter
+    def im_lang(self, v):
+        self.khung.im_lang = v
+
+    def __getattr__(self, ten):
+        khung = self.__dict__.get('khung')
+        if khung is None:
+            raise AttributeError(ten)
+        return getattr(khung, ten)
