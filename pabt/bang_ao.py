@@ -6,6 +6,9 @@ BangAo chỉ giữ danh sách chuỗi; Qt hỏi dữ liệu (data()) cho CÁC Ô
 
 API giống phần QTableWidget mà các trang đang dùng (rowCount, columnCount, item(r, c).text() / .data(UserRole), tín hiệu
 cellDoubleClicked(r, c)) để mã gọi và kiểm thử cũ không phải đổi.
+
+Sắp xếp (sap_xep=True, bấm tiêu đề cột): theo GIÁ TRỊ từng ô truyền ở `khoa` (Decimal, int, chuỗi), không theo chuỗi hiển thị
+- QTableWidget sắp cột tiền theo chữ ("9.000" đứng sau "10.000.000"). Ô trống (None) luôn ở cuối. Bảng có gộp ô không sắp xếp.
 """
 from __future__ import annotations
 
@@ -13,7 +16,9 @@ from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 from PySide6.QtGui import QBrush, QFont
 from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTableView
 
-DONG_TU_CAO_TOI_DA = 2000       # bảng nhiều dòng hơn: không đo chiều cao từng dòng (chữ dài xem ở chú thích khi rê chuột)
+DO_MAU = 300                    # số dòng Qt đo khi tự canh bề rộng cột
+SO_DONG_CHU_TOI_DA = 6          # ô chữ dài: dòng bảng cao tối đa bấy nhiêu dòng chữ (đủ chữ xem ở chú thích khi rê chuột)
+DU_RONG = 1.15                  # chữ xuống dòng theo từ: ước dài hơn số ký tự trung bình chút ít cho khỏi thiếu dòng
 GOI_Y_TU = 15                   # ô có chữ dài hơn bấy nhiêu ký tự: chú thích (tooltip) = nội dung ô
 _PHAI = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 _TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -29,13 +34,38 @@ class _MoHinhAo(QAbstractTableModel):
         self.dong: list = []            # [[chuỗi hiển thị của từng cột]]
         self.du_lieu: list = []         # giá trị UserRole của từng dòng (mã hộ...)
         self.kieu: dict = {}            # {(dòng, cột): dict(nen=QColor, mau_chu=QColor, dam=True, goi_y=str)} - chỉ ô có kiểu riêng
+        self.khoa: list = []            # [[giá trị sắp xếp của từng cột]] - rỗng: bảng không sắp xếp
+        self._sap = None                # (cột, thứ tự) người dùng đã chọn: giữ khi nạp lại dữ liệu
         self._dam = QFont()
         self._dam.setBold(True)
 
-    def dat(self, dong: list, du_lieu: list, kieu: dict) -> None:
+    def dat(self, dong: list, du_lieu: list, kieu: dict, khoa: list | None = None) -> None:
         self.beginResetModel()           # một lần báo "đổi toàn bộ" thay cho hàng trăm nghìn setItem
-        self.dong, self.du_lieu, self.kieu = dong, du_lieu, kieu
+        self.dong, self.du_lieu, self.kieu, self.khoa = dong, du_lieu, kieu, khoa or []
+        if self._sap is not None and self.khoa:
+            self._sap_xep(*self._sap)
         self.endResetModel()
+
+    def sort(self, column, order=Qt.SortOrder.AscendingOrder):
+        if not self.khoa or not 0 <= column < len(self.cot):
+            return
+        self.beginResetModel()
+        self._sap = (column, order)
+        self._sap_xep(column, order)
+        self.endResetModel()
+
+    def _sap_xep(self, c: int, order) -> None:
+        k = self.khoa
+        co = [r for r in range(len(k)) if k[r][c] is not None]
+        co.sort(key=lambda r: k[r][c].casefold() if isinstance(k[r][c], str) else k[r][c],
+                reverse=order == Qt.SortOrder.DescendingOrder)
+        thu_tu = co + [r for r in range(len(k)) if k[r][c] is None]
+        moi = {cu: i for i, cu in enumerate(thu_tu)}
+        self.dong = [self.dong[r] for r in thu_tu]
+        self.khoa = [k[r] for r in thu_tu]
+        if self.du_lieu:
+            self.du_lieu = [self.du_lieu[r] for r in thu_tu]
+        self.kieu = {(moi[r], cot): v for (r, cot), v in self.kieu.items()}
 
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self.dong)
@@ -98,8 +128,9 @@ class BangAo(QTableView):
     setItem từng ô."""
     cellDoubleClicked = Signal(int, int)
 
-    def __init__(self, cot: list, can_phai=(), parent=None):
+    def __init__(self, cot: list, can_phai=(), parent=None, sap_xep: bool = False, tu_cao: bool = True):
         super().__init__(parent)
+        self.tu_cao = tu_cao             # False: bảng không có chữ xuống dòng - không đo chiều cao dòng
         self.mo_hinh = _MoHinhAo(cot, set(can_phai), self)
         self.setModel(self.mo_hinh)
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -111,21 +142,62 @@ class BangAo(QTableView):
         dau.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         dau.setStretchLastSection(True)
         dau.setMinimumHeight(46)                         # tiêu đề 2 dòng
+        dau.setResizeContentsPrecision(DO_MAU)           # resizeColumnsToContents: đo mẫu, không đo hết hàng nghìn dòng
+        if sap_xep:
+            dau.setSortIndicator(0, Qt.SortOrder.AscendingOrder)    # mặc định Qt: cột 0 GIẢM dần (STT ngược)
+            self.setSortingEnabled(True)
         self.doubleClicked.connect(lambda i: self.cellDoubleClicked.emit(i.row(), i.column()))
 
-    def dat_du_lieu(self, dong: list, du_lieu: list | None = None, kieu: dict | None = None, gop=()) -> None:
+    def dat_du_lieu(self, dong: list, du_lieu: list | None = None, kieu: dict | None = None, gop=(),
+                    khoa: list | None = None) -> None:
         """dong: [[chuỗi]] mỗi dòng đủ số cột; du_lieu: giá trị UserRole của từng dòng; kieu: {(r, c): dict(nen, mau_chu, dam,
-        goi_y)}; gop: [(dòng, số dòng, [cột...])] - gộp ô thông tin hộ trên các dòng thửa."""
+        goi_y)}; gop: [(dòng, số dòng, [cột...])] - gộp ô thông tin hộ trên các dòng thửa; khoa: giá trị sắp xếp từng ô
+        (bảng sap_xep=True)."""
         self.clearSpans()
-        self.mo_hinh.dat(dong, du_lieu or [], kieu or {})
+        self.mo_hinh.dat(dong, du_lieu or [], kieu or {}, khoa)
         for r, n, cot in gop:
             if n > 1:
                 for c in cot:
                     self.setSpan(r, c, n, 1)
-        if len(dong) <= DONG_TU_CAO_TOI_DA:
-            self.resizeRowsToContents()              # bảng vừa: dòng cao theo chữ; bảng lớn: đo mọi dòng là O(n) - bỏ
+        if self.tu_cao:
+            self._vua_dong(dong)
+
+    def _vua_dong(self, dong: list) -> None:
+        """Dòng cao theo chữ: ƯỚC số dòng chữ của ô (dòng "\\n" + chữ dài / số ký tự vừa cột) rồi đặt chiều cao - chỉ các dòng
+        cần cao hơn mặc định (đặt lại mô hình = mọi dòng về mặc định). Trước 0.9.22 Qt đo từng ô (resizeRowsToContents, ~105 lần
+        hỏi dữ liệu mỗi dòng): trang Tiến độ lọc còn 1.500 hộ mất 0,33 s mỗi lần đổi bộ lọc, bảng > 2.000 dòng phải bỏ không đo."""
+        fm = self.fontMetrics()
+        tb = max(1, fm.averageCharWidth())
+        vua = [max(1, int((self.columnWidth(c) - 10) / (tb * DU_RONG))) for c in range(len(self.mo_hinh.cot))]  # ký tự / dòng
+        cao_chu, mac_dinh = fm.lineSpacing(), self.verticalHeader().defaultSectionSize()
+        dat = self.verticalHeader().resizeSection
+        for r, o in enumerate(dong):
+            n = 1
+            for t, v in zip(o, vua):
+                if len(t) > v or '\n' in t:
+                    n = max(n, sum(-(-len(d) // v) or 1 for d in t.split('\n')))
+            if n > 1:
+                dat(r, max(mac_dinh, min(n, SO_DONG_CHU_TOI_DA) * cao_chu + 8))
+
+    def ma_dong(self, r: int):
+        """Giá trị UserRole (mã hộ) của dòng r."""
+        dl = self.mo_hinh.du_lieu
+        return dl[r] if 0 <= r < len(dl) else None
+
+    def ma_da_chon(self) -> list:
+        """Mã của các dòng đang chọn (không trùng, theo thứ tự dòng)."""
+        sm = self.selectionModel()
+        ds = []
+        for r in sorted(i.row() for i in sm.selectedRows()) if sm is not None else []:
+            m = self.ma_dong(r)
+            if m is not None and m not in ds:
+                ds.append(m)
+        return ds
 
     # ---- tương thích QTableWidget (phần đọc)
+    def currentRow(self) -> int:
+        return self.currentIndex().row()
+
     def rowCount(self) -> int:
         return self.mo_hinh.rowCount()
 

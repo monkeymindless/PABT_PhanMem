@@ -22,7 +22,7 @@ from . import csdl
 from .lap_pa import LoiNhap, bo_dau
 from .nghiep_vu import muc_5_cot
 from .quan_ly import chuan_ngay
-from .tien import D, KHONG, chuoi, doc_so_vn, vn
+from .tien import D, KHONG, chuoi, doc_so_vn
 
 TIEN_QD = ('so_tien', 'tien_dat', 'tien_tai_san', 'tien_cay', 'tien_ho_tro', 'tien_thuong', 'chi_tra_so_tien')
 NGAY_QD = ('ngay_pa', 'qd_ct_ngay', 'chi_tra_ngay')
@@ -111,13 +111,6 @@ def ds_quyet_dinh(con) -> list:
             n = datetime.min
         return (n, q.id)
     return sorted(kq, key=khoa, reverse=True)
-
-
-def lay_qd(con, qd_id: int) -> QuyetDinh:
-    for q in ds_quyet_dinh(con):
-        if q.id == qd_id:
-            return q
-    raise LoiNhap('Quyết định không còn trong dự án.')
 
 
 def tim_qd(con, so: str, ngay: str = ''):
@@ -444,17 +437,32 @@ LOC_TIEN_DO = [
 ]
 
 
-def hop_loc(x: TongHopHo, khoa: str, ds_qd: set | None = None) -> bool:
-    """Hộ x có thỏa bộ lọc tiến độ khoa không. ds_qd: chỉ xét các quyết định này (rỗng / None: mọi quyết định)."""
+def _dieu_kien(x: TongHopHo, ds_qd: set | None) -> dict:
+    """{khóa LOC_TIEN_DO: hộ x có thỏa không}; {} = hộ không thuộc các quyết định ds_qd (không thỏa điều kiện nào)."""
     qd = [q for q in x.qd if not ds_qd or q['qd_id'] in ds_qd]
     if ds_qd and not qd:
-        return False
+        return {}
     chua = [q for q in qd if not q['da_chi_tra']]
     return {
         '': True, 'chua_pd': not x.qd, 'da_pd': bool(qd), 'nhieu_qd': len(x.qd) >= 2,
         'chua_nhan': bool(chua), 'da_nhan_het': bool(qd) and not chua,
         'chua_bg': not x.da_ban_giao, 'da_nhan_chua_bg': bool(qd) and not chua and not x.da_ban_giao, 'da_bg': x.da_ban_giao,
-    }.get(khoa, True)
+    }
+
+
+def hop_loc(x: TongHopHo, khoa: str, ds_qd: set | None = None) -> bool:
+    """Hộ x có thỏa bộ lọc tiến độ khoa không. ds_qd: chỉ xét các quyết định này (rỗng / None: mọi quyết định)."""
+    dk = _dieu_kien(x, ds_qd)
+    return bool(dk) and dk.get(khoa, True)
+
+
+def dem_loc(ds: list, ds_qd: set | None = None) -> dict:
+    """{khóa LOC_TIEN_DO: số hộ thỏa} - một lượt qua danh sách (ô Lọc của trang Tiến độ ghi số hộ từng điều kiện)."""
+    dem = dict.fromkeys((k for k, _ in LOC_TIEN_DO), 0)
+    for x in ds:
+        for k, v in _dieu_kien(x, ds_qd).items():
+            dem[k] += bool(v)
+    return dem
 
 
 # ---------------------------------------------------------------- nhập quyết định từ file
@@ -546,6 +554,3 @@ def xuat_excel(file, tieu_de_bang: str, tieu_de: list, dong: list, rong: list | 
     wb.save(p)
     return p
 
-
-def tien_vn(v) -> str:
-    return vn(v) if v not in (None, '') and D(v) != 0 else ('0' if v not in (None, '') else '')

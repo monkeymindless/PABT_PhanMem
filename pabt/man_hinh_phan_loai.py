@@ -138,9 +138,6 @@ class HopDanTaiSan(QDialog):
             self.bang.item(r, 6).setText('(ngoài danh mục: nhập đơn giá sau)')
         k.loai = loai
 
-    def dat_loai(self, r: int, loai: str) -> None:
-        """Đổi loại dòng r (dùng khi kiểm thử)."""
-        self.bang.cellWidget(r, 5).setCurrentIndex(self.bang.cellWidget(r, 5).findData(loai))
 
     # ---------------------------------------------- thêm vào phương án
     def them(self) -> int:

@@ -259,9 +259,6 @@ class BoiCanh:
         except ValueError:
             return KHONG
 
-    @property
-    def la_phuong(self) -> bool:
-        return 'phường' in (self.cap_dia_ban or '').lower() or 'thị trấn' in (self.cap_dia_ban or '').lower()
 
 
 def _dec_hoac_none(v):
@@ -471,10 +468,6 @@ def giu_ket_qua_ho(con, ds_ma_ho, truoc) -> None:
 def tinh_tat_ca(con) -> list:
     """[KetQuaHo] mọi hộ theo thứ tự (dùng chung ket_qua_ho - không sửa)."""
     return [k for k, _ in ket_qua_ho(con).values()]
-
-
-def lamtron_du_an(con) -> int:
-    return BoiCanh.tu(con).lamtron
 
 
 def bieu_thuong(con) -> list:

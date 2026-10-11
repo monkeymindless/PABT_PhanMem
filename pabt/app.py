@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDial
 from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
 from .tien import D, so_vn, vn
 from .giao_dien import con_tro_cho
-from .thong_bao import TEN_UD, chu_loi
+from .thong_bao import TEN_UD, THE_TONG_HOP, chu_loi
 
 # doi_chieu, nhap_excel, nhap_tho (kéo theo openpyxl ~0,2 giây - 60% thời gian nạp mã lúc mở phần mềm) nạp khi dùng tới
 
@@ -25,7 +25,7 @@ TIEU_DE_CUA_SO = TEN_UD + (f' ({NHAN_THU_NGHIEM})' if BAN_THU_NGHIEM else '')   
 COT = ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²)', 'Trạng thái']
 COT_SO = {4}
 # các trang bên phải cửa sổ chính (chọn ở menu trái)
-TRANG = ['Danh sách hộ', 'Thông tin tổng quát hộ', 'Quyết định phê duyệt', 'Tổng hợp tiền theo phương án', 'Theo dõi tiến độ']
+TRANG = ['Danh sách hộ', *THE_TONG_HOP, 'Theo dõi tiến độ']     # trang bên phải: 1-3 = các thẻ của Bảng tổng hợp
 XANH, DO, VANG = QColor('#E2EFDA'), QColor('#F8CBAD'), QColor('#FFF2CC')
 CHUA_MO = ('Chưa mở dự án. Bấm <b>"Dự án"</b> → <b>"Dự án mới…"</b> để nhập thông tin dự án, danh sách hộ, '
            'thửa (thô) và bảng giá đất: phần mềm tự lập phương án và xuất 2 bảng in. Hoặc "Mở dự án…" / "Nhập file Excel…".')
@@ -231,6 +231,9 @@ class CuaSoChinh(QMainWindow):
             a = QAction(ten, self)
             a.triggered.connect(lambda _=False, ham=ham: self._chay_lenh(ham))
             self.lenh[ten] = a
+        for k, t in enumerate(TRANG):                   # mục trang ở menu trái: đánh dấu trang đang xem
+            self.lenh[t].setCheckable(True)
+            self.lenh[t].setChecked(k == 0)
         self.dm = None
         self.lb_du_an = QLabel(CHUA_MO)
         self.lb_du_an.setWordWrap(True)
@@ -281,6 +284,8 @@ class CuaSoChinh(QMainWindow):
         for k in (self.bang_tong_hop, self.tien_do):
             k.da_doi.connect(lambda: self.tai_lai(giu_trang=True))
             k.mo_ho.connect(lambda m: self.trang_thai_ho([m]))
+        # bấm thẳng thẻ của Bảng tổng hợp: tiêu đề trang + dấu chọn ở menu trái đi theo (trước: giữ trang cũ)
+        self.bang_tong_hop.the_da_doi.connect(lambda i: self.trang.currentIndex() == 1 and self._danh_dau_trang(1 + i))
         hang = QHBoxLayout()
         for ten, w in (('Đợt:', self.cb_dot), ('Trạng thái:', self.cb_tt), ('Tìm:', self.o_tim)):
             nhan_tim = QLabel(ten)
@@ -953,20 +958,18 @@ class CuaSoChinh(QMainWindow):
                          ('Chưa có thao tác để ' + ('làm lại' if k == 'toi' else 'hoàn tác')))
 
     def mo_trang(self, i: int):
-        """Trang bên phải: 0 danh sách hộ, 1-3 các mục của Bảng tổng hợp, 4 theo dõi tiến độ."""
-        if i == 0:
-            self.trang.setCurrentIndex(0)
-        elif i in (1, 2, 3):
-            self.trang.setCurrentIndex(1)
-            self.bang_tong_hop.mo_the(i - 1)
-        else:
-            self.trang.setCurrentIndex(2)
+        """Trang bên phải: 0 danh sách hộ, 1-3 các thẻ của Bảng tổng hợp, 4 theo dõi tiến độ."""
+        self.trang.setCurrentIndex(0 if i == 0 else 1 if i <= 3 else 2)
+        if 1 <= i <= 3:
+            self.bang_tong_hop.mo_the(i - 1)            # -> the_da_doi -> _danh_dau_trang
+        self._danh_dau_trang(i)
+
+    def _danh_dau_trang(self, i: int):
+        """Tiêu đề trang bên phải và dấu chọn ở menu trái theo trang i (gọi cả khi bấm thẳng thẻ của Bảng tổng hợp)."""
         self.lb_trang.setText(TRANG[i].upper() + ('  ·  ◀ bấm "Danh sách hộ" ở menu trái để quay lại' if i else ''))
         self.lb_trang.setVisible(i != 0)
         for k, t in enumerate(TRANG):
-            a = self.lenh[t]
-            a.setCheckable(True)
-            a.setChecked(k == i)
+            self.lenh[t].setChecked(k == i)
 
     def ho_dang_chon(self):
         k = self._khung_dang_xem()

@@ -1117,16 +1117,3 @@ def ghi_bao_cao_tong_hop(so_lieu: dict, file_ra, tieu_de: str = '', dieu_kien: s
     wb.save(p)
     return p
 
-
-def mo_ta_trang_thai(h: dict) -> tuple:
-    """(phê duyệt, chi trả, bàn giao) để hiển thị trong danh sách."""
-    pd = ''
-    if h.get('da_phe_duyet'):
-        pd = 'Đã PD' + (f' {h["qd_so"]}' if h.get('qd_so') else '') + (f' ({h["qd_ngay"]})' if h.get('qd_ngay') else '')
-    ct = ('Đã chi' + (f' {h["chi_tra_ngay"]}' if h.get('chi_tra_ngay') else '')) if h.get('da_chi_tra') else ''
-    bg = ('Đã BG' + (f' {h["ban_giao_ngay"]}' if h.get('ban_giao_ngay') else '')) if h.get('da_ban_giao') else ''
-    return pd, ct, bg
-
-
-def tien_vn(v) -> str:
-    return vn(v) if v not in (None, '') else ''

@@ -1,4 +1,16 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.20 – BẢN THỬ NGHIỆM)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.22 – BẢN THỬ NGHIỆM)
+
+> **0.9.22 – BẢN THỬ NGHIỆM** - **Rà soát toàn bộ** (dự án giả lập 3.000 hộ có 3 quyết định, đo cùng máy, trước -> sau):
+> - **Bảng tổng hợp** (menu trái): bấm thẳng vào thẻ (Thông tin tổng quát hộ / Quyết định phê duyệt / Tổng hợp tiền) thì tiêu đề
+>   trang và dấu chọn ở menu trái đổi theo.
+> - Thẻ **Quyết định phê duyệt** mở 1,6 giây -> 0,16 giây (trước đây bảng hộ bị dựng hai lần); thẻ **Tổng hợp tiền** 0,58 -> 0,29
+>   giây; trang **Theo dõi tiến độ** đổi bộ lọc 0,5 -> 0,09 giây. Bấm tiêu đề cột ở thẻ Tổng hợp tiền sắp xếp **theo số tiền**
+>   (trước đây sắp theo chữ: 9.000 đứng sau 10.000.000). Cột hạng mục bỏ số thứ tự (bản in: 4 vật nuôi, 5 hỗ trợ, 6 thưởng).
+> - Trang **Theo dõi tiến độ** bỏ hàng 6 ô đếm (trùng hàng số liệu phía trên cửa sổ): số hộ của từng điều kiện ghi ngay trong ô
+>   **Lọc**, ví dụ "Còn quyết định chưa nhận tiền (12)". Xuất Excel ở trang Tổng hợp tiền / Tiến độ khi file đang mở trong Excel nay
+>   báo rõ lý do (trước đây hiện lỗi kỹ thuật).
+> - **Dự án mới** 3.000 hộ (tạo + tự lập phương án): 8,5 -> 3,4 giây. **In / xuất** phương án chi tiết 50 hộ: 4,1 -> 3,0 giây (file
+>   in ra giống hệt bản trước).
 
 > **0.9.20 – BẢN THỬ NGHIỆM** - **Rà soát dự án lớn** (3.000 hộ / 5.000 thửa, đo cùng máy, trước -> sau):
 > - Sửa lỗi số liệu: nhập file PABT Excel đọc **hết** sheet THEO_DOI (trước đây chỉ 400 dòng đầu - dự án trên ~395 hộ thì các hộ sau

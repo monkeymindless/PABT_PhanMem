@@ -238,8 +238,6 @@ class BoPhanLoai:
         tong = sum(diem.values())
         return KetQua(ten, dvt, tot, round(min(0.95, diem[tot] / tong * min(1.0, diem[tot] / 5)), 2), '; '.join(dict.fromkeys(ly_do)))
 
-    def phan_loai_ds(self, dong: list) -> list:
-        return [self.phan_loai(d.get('ten', ''), d.get('dvt', '')) for d in dong]
 
 
 # ---------------------------------------------------------------- đọc danh sách dán vào

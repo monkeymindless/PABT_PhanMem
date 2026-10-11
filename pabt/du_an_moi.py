@@ -183,6 +183,9 @@ def tao_du_an(file_pabt, thong_tin: dict, dong: list, bang_gia: list, tu_lap: bo
     # file mới đang tạo: không ép ghi đĩa sau mỗi hộ (tự lập N hộ = N lần ghi, chậm trên ổ HDD / thư mục Google Drive); ép ghi một
     # lần khi xong (_ghi_xuong_dia). Mất điện giữa chừng chỉ hỏng file đang tạo dở - tạo lại; file dự án đang dùng không ảnh hưởng.
     con.execute('PRAGMA synchronous = OFF')
+    # nhật ký giao dịch trong RAM (vẫn rollback được): journal_mode DELETE tạo rồi xóa file "-journal" mỗi giao dịch = mỗi hộ tự
+    # lập (3.000 hộ: 1,5 s chỉ cho việc này). Không lưu vào file - lần mở sau csdl.mo đặt lại DELETE.
+    con.execute('PRAGMA journal_mode = MEMORY')
     try:
         don_gia.ap_vao_du_an(con)
         lap_pa.luu_du_an(con, dict(tt, ten_day_du=tt['ten_day_du'] or tt['ten'], cap_dia_ban=tt['cap_dia_ban'] or 'Xã'))
@@ -253,7 +256,7 @@ def tu_lap_phuong_an(con, ds_ma_ho: list | None = None) -> list:
         de_xuat, _ = bo.goi_y()
         bo.ap_dung_goi_y(de_xuat)
         if bo.pa.dat or any(bo.pa.khoan[m] for m in MUC_KHOAN):
-            bo.luu(tu_dong=True)                        # "Phương án tự lập - chưa soát": chưa tính là đã lập (in_an.phan_loai_lap)
+            bo.luu(tu_dong=True, mo_lai=False)  # "Phương án tự lập - chưa soát": chưa tính là đã lập (in_an.phan_loai_lap)
     return cb
 
 

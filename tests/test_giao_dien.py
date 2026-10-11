@@ -286,6 +286,37 @@ class TestMau(unittest.TestCase):
             finally:
                 os.environ.pop('PABT_THU_MUC_MAY', None)
 
+    def test_bam_the_bang_tong_hop_dong_bo_menu(self):
+        """Bấm thẳng thẻ của Bảng tổng hợp (không qua menu trái): tiêu đề trang và dấu chọn ở menu trái đi theo (tín hiệu
+        KhungBangTongHop.the_da_doi). Đang xem trang khác thì đổi thẻ ngầm không làm đổi tiêu đề."""
+        from pabt import app as ud
+        from tests.test_toc_do import _du_an
+        with tempfile.TemporaryDirectory() as td:
+            os.environ['PABT_THU_MUC_MAY'] = str(Path(td) / 'may')
+            try:
+                w = ud.CuaSoChinh(menu_trai=True)
+                w.show()
+                w.mo(str(_du_an(Path(td), 4)))
+                self.assertTrue(w.lenh[ud.TRANG[0]].isChecked())                 # mở: đánh dấu Danh sách hộ
+                self.assertEqual(ud.TRANG[1:4], list(w.bang_tong_hop.THE))     # một nguồn tên thẻ / trang
+                w.mo_trang(1)
+                for the in (2, 1, 0):
+                    w.bang_tong_hop.tab.setCurrentIndex(the)                     # như người dùng bấm thẻ
+                    self.app.processEvents()
+                    self.assertTrue(w.lb_trang.text().startswith(ud.TRANG[1 + the].upper()))
+                    self.assertEqual([k for k, t in enumerate(ud.TRANG) if w.lenh[t].isChecked()], [1 + the])
+                    self.assertIs(w._khung_dang_xem(), w.bang_tong_hop.tab.currentWidget())
+                w.mo_trang(3)                                                   # menu trái chọn đúng thẻ, nạp thẻ đó
+                self.assertEqual(w.bang_tong_hop.tab.currentIndex(), 2)
+                self.assertGreater(w.bang_tong_hop.tien.bang.rowCount(), 0)
+                w.mo_trang(0)
+                w.bang_tong_hop.tab.setCurrentIndex(0)                           # đang xem danh sách hộ: không đổi tiêu đề
+                self.assertFalse(w.lb_trang.isVisible())
+                self.assertEqual([k for k, t in enumerate(ud.TRANG) if w.lenh[t].isChecked()], [0])
+                w.close()
+            finally:
+                os.environ.pop('PABT_THU_MUC_MAY', None)
+
     def test_hop_ket_qua_vua_man_hinh(self):
         """Danh sách cần xem lại dài: hộp không cao quá màn hình, đủ mọi dòng trong ô cuộn (QMessageBox đẩy nút OK ra ngoài)."""
         from pabt.giao_dien import hop_ket_qua

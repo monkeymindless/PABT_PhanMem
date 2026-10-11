@@ -303,7 +303,8 @@ class BoSoan:
     def mo(self, ma_ho: int):
         self.bc = BoiCanh.tu(self.con)
         self.pa = doc_phuong_an(self.con, ma_ho)
-        self._goc = copy.deepcopy(_dang_luu(self.pa))
+        self._pa_goc = copy.deepcopy(self.pa)           # bản lúc mở: so thay đổi, tổng cũ khi lưu (không đọc lại CSDL)
+        self._goc = _dang_luu(self._pa_goc)
 
     @property
     def ma_ho(self) -> int:
@@ -726,15 +727,16 @@ class BoSoan:
                     loi.append(f'Dòng {so_muc(muc)}.{k}: chưa có tên.')
         return loi
 
-    def luu(self, tu_dong: bool = False) -> str:
+    def luu(self, tu_dong: bool = False, mo_lai: bool = True) -> str:
         """Lưu phương án đang soạn (một giao dịch). Trả mô tả để hiện cho người dùng.
-        tu_dong: phương án phần mềm tự lập (Dự án mới) - trạng thái TU_LAP, chỉ thành "Đã lập" khi người dùng mở ra soát và Lưu."""
+        tu_dong: phương án phần mềm tự lập (Dự án mới) - trạng thái TU_LAP, chỉ thành "Đã lập" khi người dùng mở ra soát và Lưu.
+        mo_lai=False: không đọc lại phương án vừa lưu (bộ soạn bỏ đi ngay - tự lập hàng loạt)."""
         loi = self.loi_chan_luu()
         if loi:
             raise LoiNhap('Chưa lưu được:\n' + '\n'.join('- ' + x for x in loi))
         con, pa = self.con, self.pa
         san = ket_qua_ho_san(con)
-        cu = san[self.ma_ho][0].tong if san and self.ma_ho in san else tinh_pa(doc_phuong_an(con, self.ma_ho), self.bc).tong
+        cu = san[self.ma_ho][0].tong if san and self.ma_ho in san else tinh_pa(self._pa_goc, self.bc).tong
         moi = self.ket_qua
         co_dong = any(pa.dat) or any(pa.khoan[m] for m in MUC_KHOAN)
         luc = datetime.now()
@@ -770,7 +772,8 @@ class BoSoan:
         csdl.giu_nho(con, ('BoiCanh', type(self.bc)), truoc)      # chỉ ghi ho / ct_dat / ct_khoan / nhật ký: bối cảnh không đổi
         if type(self.bc) is BoiCanh:
             giu_ket_qua_ho(con, [self.ma_ho], truoc)            # kết quả cả dự án: chỉ tính lại hộ vừa lưu
-        self.mo(self.ma_ho)
+        if mo_lai:
+            self.mo(self.ma_ho)
         return f'Đã lưu hộ {self.ma_ho} – {pa.ho.ho_ten}: tổng {vn(moi.tong)} đồng.'
 
 

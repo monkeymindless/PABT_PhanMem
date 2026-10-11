@@ -112,11 +112,6 @@ def dong_dao_tao(m, mo_ta: str, dien_tich, don_gia, ty_le) -> DongKhoan:
                      ty_le=D(ty_le), nguon_gia=NGUON_DM, ghi_chu=can_cu_ghi_chu(m.can_cu), quy_cach=ten_ngan(m.ten, m.ma))
 
 
-def la_dao_tao_theo_thua(d: DongKhoan) -> bool:
-    """Dòng đào tạo kiểu mới (mỗi thửa một dòng, đơn giá = giá đất, tỷ lệ 150%) - không so theo quy tắc gộp cũ."""
-    return d.ma in MA_DAO_TAO and (d.ty_le != 1 or d.ten.startswith('Thửa đất'))
-
-
 # ---------------------------------------------------------------- thuê nhà, tự lo chỗ ở
 def gia_thue_nha(bc, ma: str) -> tuple:
     """(mức hộ đến N khẩu / tháng, mức mỗi khẩu tăng thêm / tháng, N)."""

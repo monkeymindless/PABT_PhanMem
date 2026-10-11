@@ -76,7 +76,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   (băng tiêu đề, giá trị điền sẵn) ở `pabt/to_chuc.py`. Đổi tên dòng danh mục mục 2/3 trong `BoSoan.sua_khoan` → dòng "tương đương",
   giữ đơn giá.
 - Bản in: `in_an._thong_tin_du_an` lấy `to_chuc.MAC_DINH` cho ô đơn vị trống; đường kẻ (hình vẽ openpyxl làm mất) lưu ở
-  `mau_in/<mẫu>.duong_ke.xml` (`in_an.luu_duong_ke`, gọi trong `tao_mau_tu_excel`) và chèn sau `wb.save` bằng `in_an.chen_duong_ke`.
+  `mau_in/<mẫu>.duong_ke.xml` (ghi trong `tao_mau_tu_excel`; mẫu sửa trong Excel còn hình vẽ: `duong_ke_cua_mau`) và chèn sau
+  `wb.save` bằng `in_an.chen_duong_ke`.
 - `gia_dat_nq28.py`: bảng giá đất NQ 28/2025 (4 địa bàn) từ `pabt/bang_gia_nq28.json` (giá nghìn đồng/m², 7 mức MT/T1-3/K1-3 mỗi
   đoạn); dùng ở bước 3 Dự án mới (`HopDuAnMoi.tra_gia_nq28`) và Bộ đơn giá. Biểu tượng vẽ bằng `tao_bieu_tuong.py` → `pabt/bieu_tuong.ico/.png`;
   PyInstaller cần `--icon pabt\bieu_tuong.ico`, `--add-data` cho `bang_gia_nq28.json`, `bieu_tuong.png` (dùng `--clean` khi đổi biểu tượng);
@@ -342,7 +343,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   (`_MAY_NOI_BO`, test chạy máy chủ 127.0.0.1 từng ghi vào). Test: `TestApDung.test_nguon_trung_uong`,
   `test_lich_su_khong_nho_may_noi_bo` (số hiệu văn bản mới là GIẢ LẬP).
 - 0.9.17 (tải lớn 10.000 thửa, lỗi ẩn): `bang_ao.BangAo` (QTableView + `_MoHinhAo`, API giống QTableWidget: `dat_du_lieu(dong,
-  du_lieu, kieu, gop)`, `item(r, c)` trả `_OAo`, tín hiệu `cellDoubleClicked`; `resizeRowsToContents` chỉ khi <= `DONG_TU_CAO_TOI_DA`)
+  du_lieu, kieu, gop, khoa)`, `item(r, c)` trả `_OAo`, tín hiệu `cellDoubleClicked`; chiều cao dòng ƯỚC theo chữ - xem 0.9.22)
   cho `KhungTongQuat` / `KhungTienDo` (nạp 980 -> 182 ms). `thong_bao.py`: `TEN_UD` (một nguồn), `chu_loi(viec, e)` = "Việc. Lý do /
   Cách xử lý (`giai_thich`: quyền, file khóa, đầy đĩa, CSDL hỏng…) + chi tiết kỹ thuật" - dùng thay `str(e)` trong hộp lỗi.
   `giao_dien.con_tro_cho` (with: con trỏ chờ luôn trả lại khi lỗi - đừng `setOverrideCursor` không finally), `dat_trang_thai(nhan,
@@ -493,6 +494,37 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     "Dự án" 34 pt; không có file đường kẻ (máy cập nhật bằng .pabtcn - gói không mang mau_in) -> `dk_mac_dinh` tự tạo,
     `lap_bang_tong_hop` nới dòng Dự án >= 1,7 cỡ chữ. Test `tests/test_in_vua_chu.TestDuongKe` dùng hàm đo chữ cố định (phông
     offscreen khác Windows).
+- 0.9.22 rà soát (người dùng 10-11/10/2026 - "rà soát toàn diện, tối ưu, lược bỏ bất hợp lý"; chỉ sửa điều đã đo / tái hiện):
+  - Bảng tổng hợp: thẻ con <-> menu trái đồng bộ - `KhungBangTongHop.the_da_doi(i)` (bấm thẳng thẻ hoặc `mo_the`) ->
+    `app._danh_dau_trang` (tiêu đề `lb_trang` + dấu chọn QAction checkable của `TRANG`); tên thẻ một nguồn `thong_bao.THE_TONG_HOP`
+    (`app.TRANG = ['Danh sách hộ', *THE_TONG_HOP, 'Theo dõi tiến độ']`).
+  - `man_hinh_theo_doi`: cả 4 trang danh sách dùng `BangAo` (thẻ Quyết định 3.000 hộ 1.637 -> 161 ms: trước đây `nap` dựng bảng
+    HAI lần - setCurrentRow phát currentRowChanged -> chon + gọi chon thẳng; nay chọn lại khi đang blockSignals). Mã chung ở
+    `_Khung`: `mo_ho` Signal (trước khai báo 4 lần), `_mo_ho_dong`, `ma_da_chon` (= `BangAo.ma_da_chon`), `_da_ghi(kq)` (nạp lại +
+    `da_doi`), `_xuat(file, tiêu đề hộp, tên file, ghi)` (bắt OSError - trước đây Tổng hợp tiền / Tiến độ chưa bắt), `_ten_du_an`;
+    `_bao` / `_hoi` dùng chung `_Hop` + `_Khung`; `_o_tim`, `_nut`, `_chu` (chuỗi hiển thị), `_so_hoac_trong`, `THUA_TRONG`.
+    `_bang` / `_o` (QTableWidget) chỉ còn cho hộp thoại một hộ (`HopHoTheoDoi`). Tổng hợp tiền: cột hạng mục KHÔNG đánh số (bản
+    in: 4 vật nuôi, 5 hỗ trợ, 6 thưởng - bảng 5 cột gộp cây + vật nuôi), sắp xếp theo GIÁ TRỊ (QTableWidget cũ sắp cột tiền theo chữ).
+    Tiến độ: bỏ hàng 6 thẻ số (trùng hàng thẻ số cửa sổ chính) - số hộ từng điều kiện trong ô Lọc (`theo_doi.dem_loc` một lượt,
+    `_dieu_kien` dùng chung với `hop_loc`; đếm lại khi nạp / đổi quyết định đánh dấu, không khi đổi Lọc / gõ tìm); `TEN_LOC`.
+  - `bang_ao`: `BangAo(sap_xep=True)` sắp theo `khoa` (giá trị từng ô, None cuối, giữ cách sắp khi nạp lại; bảng có gộp ô không sắp),
+    `tu_cao=False` (bảng không chữ xuống dòng), `ma_dong(r)`, `ma_da_chon()`, `currentRow()`; chiều cao dòng `_vua_dong` ƯỚC số dòng
+    chữ (dòng "\n" + độ dài / ký tự vừa cột x `DU_RONG`, tối đa `SO_DONG_CHU_TOI_DA`) rồi resizeSection - trước đây
+    resizeRowsToContents (~105 lần hỏi data mỗi dòng; Tiến độ đổi bộ lọc 514 -> 87 ms) và bảng > 2.000 dòng không chỉnh cao.
+  - Bản in: `in_an._o_chu(ws, den_dong)` duyệt `ws._cells` (ô có chữ, thứ tự dòng-cột) thay `ws.iter_rows` (TẠO ô rỗng mọi vị trí
+    vùng sheet - file in ra thêm ~700 ô rỗng / hộ, ghi chậm) ở `vi_tri_cho`, `o_tieu_ngu`, `dien_so_ngay`, `_thay_cho_trong`; in 50
+    hộ 4,1 -> 3,0 s, file in ra giống hệt (so từng ô, ô gộp, cao dòng, rộng cột, đường kẻ). `_chi_muc_gop(ws)` {dòng: [vùng gộp]} cho
+    `can_duong_ke` / `_dong_chu_o` / `_vung_tron(..., chi_muc)` (bảng tổng hợp 26.000 vùng gộp). KHÔNG giữ mẫu bằng pickle
+    (openpyxl `row_dimensions` mất hàm tạo mặc định -> KeyError khi chèn dòng; đã thử).
+  - Dự án mới 3.000 hộ 8,5 -> 3,4 s: `tao_du_an` đặt `PRAGMA journal_mode = MEMORY` (cùng `synchronous = OFF`; không lưu vào file,
+    csdl.mo đặt lại DELETE) - journal DELETE tạo / xóa file "-journal" mỗi hộ tự lập; `BoSoan.mo` giữ `_pa_goc` (bản lúc mở: tổng
+    cũ cho nhật ký khi lưu không đọc lại CSDL), `BoSoan.luu(mo_lai=False)` cho `tu_lap_phuong_an` (không đọc lại phương án vừa lưu).
+  - Mã chết bỏ: `chinh_sach.la_dao_tao_theo_thua`, `in_an.luu_duong_ke` / `ho_da_lap`, `HopDanTaiSan.dat_loai`, `nghiep_vu.lamtron_du_an`
+    + 1 thuộc tính, `BoPhanLoai.phan_loai_ds`, `quan_ly.mo_ta_trang_thai` / `tien_vn`, `theo_doi.lay_qd` / `tien_vn`, import thừa.
+  - Test: `tests/test_ra_soat_0922.py`, `test_giao_dien.test_bam_the_bang_tong_hop_dong_bo_menu`. Bộ đo dùng lại: dự án giả lập
+    `tests.test_toc_do._du_an(td, N)` + 3 quyết định (`theo_doi.luu_qd`, `them_ho_theo_pa`, `ghi_chi_tra`).
+  - CHƯA làm: lap_bang_tong_hop đọc `doc_tat_ca_phuong_an` 2 lần (một lần trong ket_qua_ho, ~0,08 s / 3.000 hộ); ghi xlsx của
+    openpyxl (bảng tổng hợp 3.000 hộ ~4 s, 150.000 ô) - giới hạn thư viện; các mục CHƯA làm của 0.9.20 vẫn còn.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

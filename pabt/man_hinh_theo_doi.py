@@ -1,13 +1,17 @@
 """Màn hình theo dõi (0.9.12): Bảng tổng hợp (thông tin tổng quát hộ - mỗi thửa một dòng; quyết định phê duyệt - danh sách quyết
-định, bấm vào xem các hộ của quyết định), Theo dõi tiến độ (chi trả theo từng quyết định, bàn giao mặt bằng, lý do chưa nhận /
-chưa bàn giao, biên lai), hộp thoại quyết định của một hộ. Logic ở theo_doi.py; các hàm thao tác nhận tham số để kiểm thử
-(im_lang = True: không hiện hộp thông báo / hộp hỏi).
+định, bấm vào xem các hộ của quyết định; tổng hợp tiền theo phương án), Theo dõi tiến độ (chi trả theo từng quyết định, bàn giao
+mặt bằng, lý do chưa nhận / chưa bàn giao, biên lai), hộp thoại quyết định của một hộ. Logic ở theo_doi.py; các hàm thao tác nhận
+tham số để kiểm thử (im_lang = True: không hiện hộp thông báo / hộp hỏi).
+
+Bốn trang danh sách dùng bảng ảo (bang_ao.BangAo) - 0.9.22: thẻ Quyết định và Tổng hợp tiền chuyển từ QTableWidget (3.000 hộ:
+nạp 1,7 s / 0,6 s). Mã dùng chung của các trang ở _Khung (mở hộ khi nhấp đúp, hộ đang chọn, ghi xong -> nạp lại + báo cửa sổ chính,
+xuất Excel có bắt lỗi ghi file).
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
                                QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMessageBox,
@@ -15,15 +19,19 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QWidget)
 
 from . import theo_doi
-from .giao_dien import vua_dong
 from .bang_ao import BangAo
+from .giao_dien import vua_dong
 from .lap_pa import LoiNhap, bo_dau
+from .thong_bao import THE_TONG_HOP, chu_loi
 from .tien import D, KHONG, so_vn, vn
-from .thong_bao import chu_loi
 
 TIEU_DE = 'Theo dõi phê duyệt, chi trả, bàn giao'
 XANH, VANG, DO, XAM = QColor('#E2EFDA'), QColor('#FFF2CC'), QColor('#F8CBAD'), QColor('#F2F4F7')
 MAU_LIEN_KET = QColor('#0B5CAD')                          # chữ ô bấm đúp mở được file (biên lai, chứng từ)
+CHO_GO_MS = 300                                           # ô tìm: chờ ngừng gõ bấy nhiêu ms mới lọc
+DO_MAU = 300                                              # số dòng Qt đo khi tự canh bề rộng cột (bảng QTableWidget của hộp thoại)
+THUA_TRONG = dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')     # hộ chưa có thửa: vẫn một dòng
+_DAM = dict(dam=True)                                     # kiểu ô chữ đậm (bảng ảo, dùng chung - chỉ đọc)
 
 
 def _tien(v) -> str:
@@ -36,70 +44,94 @@ def _so(v):
     return D(s) if s else KHONG
 
 
+def _so_hoac_trong(v):
+    """Số của ô lưu TEXT; ô trống / NULL -> None (hiện trống, khác 0)."""
+    return D(str(v).strip()) if v is not None and str(v).strip() else None
+
+
 def mo_file(p) -> None:
     from .in_an import mo_file as _mo
     if p and Path(p).exists():
         _mo(p)
 
 
+def _bao(self, chu: str, loi: bool = True) -> None:
+    if not self.im_lang:
+        (QMessageBox.warning if loi else QMessageBox.information)(self, TIEU_DE, chu)
+
+
+def _hoi(self, chu: str) -> bool:
+    return self.im_lang or QMessageBox.question(self, TIEU_DE, chu) == QMessageBox.StandardButton.Yes
+
+
 class _Hop(QDialog):
     im_lang = False
-
-    def bao(self, chu: str, loi: bool = True) -> None:
-        if not self.im_lang:
-            (QMessageBox.warning if loi else QMessageBox.information)(self, TIEU_DE, chu)
-
-    def hoi(self, chu: str) -> bool:
-        return self.im_lang or QMessageBox.question(self, TIEU_DE, chu) == QMessageBox.StandardButton.Yes
+    bao, hoi = _bao, _hoi
 
 
 class _Khung(QWidget):
-    """Khung nhúng trong cửa sổ chính; da_doi phát ra khi đã ghi CSDL (cửa sổ chính tải lại danh sách hộ)."""
+    """Khung nhúng trong cửa sổ chính; da_doi phát ra khi đã ghi CSDL (cửa sổ chính tải lại danh sách hộ); mo_ho(mã) khi nhấp đúp
+    một hộ (cửa sổ chính mở quyết định, chi trả, bàn giao của hộ)."""
     da_doi = Signal()
+    mo_ho = Signal(int)
     im_lang = False
+    bao, hoi = _bao, _hoi
 
     def __init__(self, con=None, parent=None, chi_doc: bool = False):
         super().__init__(parent)
         self.con, self.chi_doc = con, chi_doc
 
-    def bao(self, chu: str, loi: bool = True) -> None:
-        if not self.im_lang:
-            (QMessageBox.warning if loi else QMessageBox.information)(self, TIEU_DE, chu)
-
-    def hoi(self, chu: str) -> bool:
-        return self.im_lang or QMessageBox.question(self, TIEU_DE, chu) == QMessageBox.StandardButton.Yes
-
     def dat_du_an(self, con, chi_doc: bool = False):
         self.con, self.chi_doc = con, chi_doc
         self.nap()
 
-    def ma_da_chon(self) -> list:
-        """Mã hộ các dòng đang chọn trên bảng của trang (dữ liệu UserRole của dòng). Cửa sổ chính dùng khi đang xem trang này:
-        lệnh menu trái (Lập phương án, Trạng thái hộ, Đợt trình, In / Xuất, Xóa hộ) tác động đúng hộ đang chọn trên màn hình."""
-        b = getattr(self, 'bang', None)
-        sm = b.selectionModel() if b is not None else None
-        ds = []
-        for i in (sm.selectedRows() if sm is not None else []):
-            it = b.item(i.row(), 1) or b.item(i.row(), 0)
-            try:
-                m = int(it.data(Qt.ItemDataRole.UserRole)) if it is not None else None
-            except (TypeError, ValueError):
-                m = None
-            if m is not None and m not in ds:
-                ds.append(m)
-        return ds
-
     def nap(self):
         pass
 
+    def ma_da_chon(self) -> list:
+        """Mã hộ các dòng đang chọn trên bảng của trang. Cửa sổ chính dùng khi đang xem trang này: lệnh menu trái (Lập phương án,
+        Trạng thái hộ, Đợt trình, In / Xuất, Xóa hộ) tác động đúng hộ đang chọn trên màn hình."""
+        b = getattr(self, 'bang', None)
+        return b.ma_da_chon() if b is not None else []
+
+    def _mo_ho_dong(self, r: int, c: int = 0):
+        ma = self.bang.ma_dong(r)
+        if ma is not None:
+            self.mo_ho.emit(int(ma))
+
+    def _da_ghi(self, kq=None):
+        """Sau khi ghi CSDL: nạp lại trang, báo cửa sổ chính tải lại; trả kq."""
+        self.nap()
+        self.da_doi.emit()
+        return kq
+
+    def _ten_du_an(self) -> str:
+        r = self.con.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
+        return (r[0] or '') if r else ''
+
+    def _xuat(self, file, tieu_de_hop: str, ten_file: str, ghi):
+        """Hỏi nơi lưu (file None) rồi ghi(file) -> đường dẫn; lỗi ghi file (đang mở trong Excel, không có quyền) báo dễ hiểu
+        (trước 0.9.22 trang Tổng hợp tiền / Tiến độ chưa bắt lỗi này); xong mở file."""
+        if file is None:
+            file, _ = QFileDialog.getSaveFileName(self, tieu_de_hop, ten_file, 'File Excel (*.xlsx)')
+            if not file:
+                return None
+        try:
+            p = ghi(file)
+        except OSError as e:
+            self.bao(chu_loi('Không ghi được file', e))
+            return None
+        if not self.im_lang:
+            mo_file(p)
+        return p
+
     def _tim_khi_go(self):
-        """Ô tìm: chờ ngừng gõ ~0,3 giây mới lọc / vẽ lại (3.000 hộ: mỗi lần vẽ hàng chục nghìn ô - gõ từng phím thì giật)."""
+        """Ô tìm: chờ ngừng gõ ~0,3 giây mới lọc / vẽ lại (3.000 hộ: gõ từng phím mà vẽ lại ngay thì giật)."""
         if self.im_lang:
             self.ve()
             return
         t = getattr(self, '_hen_tim', None)
         if t is None:
-            from PySide6.QtCore import QTimer
             t = self._hen_tim = QTimer(self)
             t.setSingleShot(True)
             t.setInterval(CHO_GO_MS)
@@ -117,7 +149,21 @@ class _Khung(QWidget):
         return kq
 
 
-CHO_GO_MS = 300                                              # ô tìm: chờ ngừng gõ bấy nhiêu ms mới lọc
+def _o_tim(chu: str, khung: _Khung) -> QLineEdit:
+    o = QLineEdit()
+    o.setPlaceholderText(chu)
+    o.setClearButtonEnabled(True)
+    o.textChanged.connect(lambda *_: khung._tim_khi_go())
+    return o
+
+
+def _nut(ds: list, lo, nut: dict) -> None:
+    """Thêm các nút (chữ, hàm) vào lo, ghi vào nut[chữ]."""
+    for ten, ham in ds:
+        b = QPushButton(ten)
+        b.clicked.connect(ham)
+        lo.addWidget(b)
+        nut[ten] = b
 
 
 def _chuoi_tim(x, loai: str, cac_phan) -> str:
@@ -131,29 +177,30 @@ def _chuoi_tim(x, loai: str, cac_phan) -> str:
 
 
 def _bang(cot: list) -> QTableWidget:
+    """Bảng nhỏ có sửa / hoàn tác (hộp thoại một hộ) - danh sách lớn dùng BangAo."""
     b = QTableWidget(0, len(cot))
     b.setHorizontalHeaderLabels(cot)
     b.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
     b.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-    b.setAlternatingRowColors(False)
     b.setWordWrap(True)
     b.verticalHeader().setVisible(False)
-    b.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
-    b.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-    b.horizontalHeader().setStretchLastSection(True)
-    b.horizontalHeader().setMinimumHeight(46)                # tiêu đề 2 dòng
-    b.horizontalHeader().setResizeContentsPrecision(DO_MAU)  # tự canh cột: đo mẫu, không đo hết hàng nghìn dòng
+    dau = b.horizontalHeader()
+    dau.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+    dau.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+    dau.setStretchLastSection(True)
+    dau.setMinimumHeight(46)                                 # tiêu đề 2 dòng
+    dau.setResizeContentsPrecision(DO_MAU)
     return b
 
 
-DO_MAU = 300                                                 # số dòng Qt đo khi tự canh bề rộng cột (bảng lớn)
-_CANH_PHAI = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter     # tính sẵn: _o gọi cho hàng chục nghìn ô
+_CANH_PHAI = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
 _CANH_TRAI = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
 _CHU_DAM = []
 
 
 def _o(b: QTableWidget, r: int, c: int, v, so: bool = False, nen=None, dam: bool = False, du_lieu=None, goi_y: str = ''):
-    it = QTableWidgetItem('' if v is None else str(v))
+    t = '' if v is None else str(v)
+    it = QTableWidgetItem(t)
     it.setTextAlignment(_CANH_PHAI if so else _CANH_TRAI)
     if nen is not None:
         it.setBackground(QBrush(nen))
@@ -165,18 +212,10 @@ def _o(b: QTableWidget, r: int, c: int, v, so: bool = False, nen=None, dam: bool
         it.setFont(_CHU_DAM[0])
     if du_lieu is not None:
         it.setData(Qt.ItemDataRole.UserRole, du_lieu)
-    t = '' if v is None else str(v)
-    if goi_y or len(t) > 25 or '\n' in t:              # chữ ngắn hiện đủ trong ô: không gắn gợi ý (hàng chục nghìn ô)
+    if goi_y or len(t) > 25 or '\n' in t:              # chữ ngắn hiện đủ trong ô: không gắn gợi ý
         it.setToolTip(goi_y or t)
     b.setItem(r, c, it)
     return it
-
-
-def _gop(b: QTableWidget, r: int, n: int, cot: list) -> None:
-    """Gộp các ô thông tin hộ trên n dòng thửa của một hộ."""
-    if n > 1:
-        for c in cot:
-            b.setSpan(r, c, n, 1)
 
 
 def mo_ta_chi_tra(qd: list) -> tuple:
@@ -202,6 +241,11 @@ def mo_ta_ban_giao(x) -> tuple:
     return '', None
 
 
+def _chu(gt: list, so: tuple = (), tien: tuple = ()) -> list:
+    """Chuỗi hiển thị một dòng: cột trong `so` = diện tích (so_vn), trong `tien` = số tiền (vn), None = ô trống."""
+    return [('' if v is None else so_vn(v) if c in so else vn(v) if c in tien else str(v)) for c, v in enumerate(gt)]
+
+
 # ---------------------------------------------------------------- Bảng tổng hợp: thông tin tổng quát hộ
 class KhungTongQuat(_Khung):
     """STT | Mã hộ | Họ tên | Tờ | Thửa | DT thu hồi | Loại đất | Tổng tiền phê duyệt | Chi trả | Bàn giao MB | Ghi chú.
@@ -209,27 +253,22 @@ class KhungTongQuat(_Khung):
     COT = ['STT', 'Mã hộ', 'Họ và tên', 'Tờ bản đồ', 'Thửa đất', 'DT thu hồi (m²)', 'Loại đất', 'Tổng tiền\nphê duyệt (đ)',
            'Chi trả', 'Bàn giao mặt bằng', 'Ghi chú']
     COT_HO = (0, 1, 2, 7, 8, 9, 10)
-    mo_ho = Signal(int)
 
     def __init__(self, con=None, parent=None, chi_doc: bool = False):
         super().__init__(con, parent, chi_doc)
         self.ds = []
-        self.o_tim = QLineEdit()
-        self.o_tim.setPlaceholderText('Tìm họ tên, mã hộ, tờ, thửa, số quyết định, ghi chú (không cần dấu)…')
-        self.o_tim.setClearButtonEnabled(True)
-        self.o_tim.textChanged.connect(lambda *_: self._tim_khi_go())
+        self.o_tim = _o_tim('Tìm họ tên, mã hộ, tờ, thửa, số quyết định, ghi chú (không cần dấu)…', self)
         self.lb = QLabel('')
-        b_xuat = QPushButton('Xuất Excel…')
-        b_xuat.clicked.connect(lambda: self.xuat())
+        self.nut = {}
         self.bang = BangAo(self.COT, can_phai=(0, 1, 5, 7))    # mỗi thửa một dòng: 10.000 thửa = 110.000 ô -> bảng ảo
         for c, w in enumerate((50, 60, 210, 80, 80, 110, 90, 150, 260, 170, 220)):
             self.bang.setColumnWidth(c, w)
-        self.bang.cellDoubleClicked.connect(self._nhap_dup)
+        self.bang.cellDoubleClicked.connect(self._mo_ho_dong)
         h = QHBoxLayout()
         h.addWidget(QLabel('Tìm:'))
         h.addWidget(self.o_tim, 1)
         h.addWidget(self.lb)
-        h.addWidget(b_xuat)
+        _nut([('Xuất Excel…', lambda: self.xuat())], h, self.nut)
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
         lo.addLayout(h)
@@ -254,22 +293,19 @@ class KhungTongQuat(_Khung):
             ct, _ = mo_ta_chi_tra(x.qd)
             bg, _ = mo_ta_ban_giao(x)
             tong = x.tong_phe_duyet if x.qd else None
-            thua = x.thua or [dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')]
+            thua = x.thua or [THUA_TRONG]
             for i, t in enumerate(thua):
-                kq.append((x, [stt if i == 0 else None, x.ma_ho if i == 0 else None, x.ho_ten if i == 0 else None, t['so_to'],
-                               t['so_thua'], _so(t['dt_thu_hoi']) if str(t['dt_thu_hoi']).strip() else None, t['loai_dat'],
-                               tong if i == 0 else None, ct if i == 0 else None, bg if i == 0 else None,
-                               x.theo_doi if i == 0 else None], len(thua) if i == 0 else 0))
+                dau = i == 0
+                kq.append((x, [stt if dau else None, x.ma_ho if dau else None, x.ho_ten if dau else None, t['so_to'],
+                               t['so_thua'], _so_hoac_trong(t['dt_thu_hoi']), t['loai_dat'], tong if dau else None,
+                               ct if dau else None, bg if dau else None, x.theo_doi if dau else None], len(thua) if dau else 0))
         return kq
 
     def ve(self):
         # chỉ dựng chuỗi hiển thị (Python thuần) - BangAo vẽ các ô đang hiện; kiểu riêng (nền, đậm, chú thích) chỉ cho ô cần
         hien, ma, kieu, gop = [], [], {}, []
         for r, (x, gt, n) in enumerate(self.dong()):
-            o = [str(v) if v is not None else '' for v in gt]
-            o[5] = so_vn(gt[5]) if gt[5] is not None else ''
-            o[7] = vn(gt[7]) if gt[7] is not None else ''
-            hien.append(o)
+            hien.append(_chu(gt, so=(5,), tien=(7,)))
             ma.append(x.ma_ho)
             if n:                                        # dòng đầu của hộ: màu chi trả / bàn giao, chú thích các quyết định
                 _, mau_ct = mo_ta_chi_tra(x.qd)
@@ -286,31 +322,16 @@ class KhungTongQuat(_Khung):
         tong = sum((x.tong_phe_duyet for x in loc), KHONG)
         self.lb.setText(f'{len(loc)}/{len(self.ds)} hộ · tổng phê duyệt {vn(tong)} đ')
 
-    def _nhap_dup(self, r, c):
-        it = self.bang.item(r, 2) or self.bang.item(r, 0)
-        ma = it.data(Qt.ItemDataRole.UserRole) if it else None
-        if ma is not None:
-            self.mo_ho.emit(int(ma))
-
     def xuat(self, file=None):
         if self.con is None:
             return None
-        if file is None:
-            file, _ = QFileDialog.getSaveFileName(self, 'Lưu bảng thông tin tổng quát hộ', 'TongQuatHo.xlsx', 'File Excel (*.xlsx)')
-            if not file:
-                return None
-        dong = self.dong()
-        gop = [(i, c, i + n - 1, c) for i, (_, _, n) in enumerate(dong) if n > 1 for c in self.COT_HO]
-        ten = self.con.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
-        try:
-            p = theo_doi.xuat_excel(file, 'THÔNG TIN TỔNG QUÁT HỘ', self.COT, [d for _, d, _ in dong],
-                                    [6, 8, 26, 9, 9, 12, 10, 16, 34, 20, 28], gop, ten[0] if ten else '')
-        except OSError as e:
-            self.bao(chu_loi('Không ghi được file', e))
-            return None
-        if not self.im_lang:
-            mo_file(p)
-        return p
+
+        def ghi(f):
+            dong = self.dong()
+            gop = [(i, c, i + n - 1, c) for i, (_, _, n) in enumerate(dong) if n > 1 for c in self.COT_HO]
+            return theo_doi.xuat_excel(f, 'THÔNG TIN TỔNG QUÁT HỘ', self.COT, [d for _, d, _ in dong],
+                                       [6, 8, 26, 9, 9, 12, 10, 16, 34, 20, 28], gop, self._ten_du_an())
+        return self._xuat(file, 'Lưu bảng thông tin tổng quát hộ', 'TongQuatHo.xlsx', ghi)
 
 
 # ---------------------------------------------------------------- Bảng tổng hợp: quyết định phê duyệt
@@ -320,6 +341,9 @@ class KhungQuyetDinh(_Khung):
            'DT thu hồi\n(m²)', 'Loại đất', 'Tiền đất', 'Tiền tài sản', 'Tiền cây\ntrồng', 'Các chính\nsách hỗ trợ', 'Tổng\nphê duyệt',
            'Chi trả', 'Bàn giao MB']
     COT_HO = (0, 1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15, 16, 17)
+    COT_TIEN = (11, 12, 13, 14, 15)
+    TIEN_QD = ('tien_dat', 'tien_tai_san', 'tien_cay', 'tien_ho_tro', 'so_tien')     # cột 11-15
+    LUON_BAT = ('Thêm…', 'Nhập từ file…', 'Xuất Excel…')                            # các nút khác cần một quyết định đang chọn
 
     def __init__(self, con=None, parent=None, chi_doc: bool = False):
         super().__init__(con, parent, chi_doc)
@@ -337,12 +361,8 @@ class KhungQuyetDinh(_Khung):
         cot_trai.addWidget(nhan)
         cot_trai.addWidget(self.ds_qd_w, 1)
         h_qd = QHBoxLayout()
-        for ten, ham in (('Thêm…', lambda: self.sua_qd(None)), ('Nhập từ file…', lambda: self.nhap_file()),
-                         ('Sửa…', lambda: self.sua_qd(self.qd_id)), ('Xóa', lambda: self.xoa_qd())):
-            b = QPushButton(ten)
-            b.clicked.connect(ham)
-            h_qd.addWidget(b)
-            self.nut[ten] = b
+        _nut([('Thêm…', lambda: self.sua_qd(None)), ('Nhập từ file…', lambda: self.nhap_file()),
+              ('Sửa…', lambda: self.sua_qd(self.qd_id)), ('Xóa', lambda: self.xoa_qd())], h_qd, self.nut)
         cot_trai.addLayout(h_qd)
         trai = QWidget()
         trai.setLayout(cot_trai)
@@ -351,19 +371,15 @@ class KhungQuyetDinh(_Khung):
         self.lb_qd.setTextFormat(Qt.TextFormat.RichText)
         self.lb_qd.setOpenExternalLinks(False)
         self.lb_qd.linkActivated.connect(lambda *_: self.mo_file_qd())
-        self.bang = _bang(self.COT)
+        self.bang = BangAo(self.COT, can_phai=(0, 9, *self.COT_TIEN))     # 1.000 hộ x 3 thửa x 18 cột: bảng ảo
         for c, w in enumerate((44, 190, 190, 110, 86, 110, 86, 56, 56, 92, 70, 110, 110, 100, 110, 120, 200, 130)):
             self.bang.setColumnWidth(c, w)
-        self.bang.cellDoubleClicked.connect(lambda r, c: self.sua_ho(self._ma_dong(r)))
+        self.bang.cellDoubleClicked.connect(lambda r, c: self.sua_ho(self.bang.ma_dong(r)))
         from .giao_dien import XepDong
         h_ho = XepDong(cach=6)          # hết chỗ thì xuống dòng (trước 0.9.18: một hàng 932 px ép cửa sổ rộng hơn màn hình 1366)
-        for ten, ham in (('Thêm hộ vào quyết định…', lambda: self.them_ho()), ('Sửa hộ đang chọn…', lambda: self.sua_ho()),
-                         ('Ghi nhận đã nhận tiền…', lambda: self.ghi_chi_tra()), ('Bỏ hộ khỏi quyết định', lambda: self.bo_ho()),
-                         ('Xuất Excel…', lambda: self.xuat())):
-            b = QPushButton(ten)
-            b.clicked.connect(ham)
-            h_ho.addWidget(b)
-            self.nut[ten] = b
+        _nut([('Thêm hộ vào quyết định…', lambda: self.them_ho()), ('Sửa hộ đang chọn…', lambda: self.sua_ho()),
+              ('Ghi nhận đã nhận tiền…', lambda: self.ghi_chi_tra()), ('Bỏ hộ khỏi quyết định', lambda: self.bo_ho()),
+              ('Xuất Excel…', lambda: self.xuat())], h_ho, self.nut)
         phai = QWidget()
         lp = QVBoxLayout(phai)
         lp.setContentsMargins(0, 0, 0, 0)
@@ -379,33 +395,39 @@ class KhungQuyetDinh(_Khung):
         lo.setContentsMargins(0, 0, 0, 0)
         lo.addWidget(tach)
 
+    def _qd(self, qd_id):
+        return next((x for x in self.ds_qd if x.id == qd_id), None)
+
     def nap(self, giu: bool = True):
         cu = self.qd_id if giu else None
         self.ds_qd = theo_doi.ds_quyet_dinh(self.con) if self.con is not None else []
-        self.ds_qd_w.blockSignals(True)
-        self.ds_qd_w.clear()
+        w = self.ds_qd_w
+        w.blockSignals(True)
+        w.clear()
         for q in self.ds_qd:
             it = QListWidgetItem(f'Quyết định số {q.so}' + (f'\nngày {q.ngay}' if q.ngay else '') +
                                  f'  ·  {q.so_ho} hộ  ·  {vn(q.tong_ho)} đ' + (f'\nđã nhận tiền {q.so_ho_da_nhan}/{q.so_ho} hộ'
                                                                                if q.so_ho else ''))
             it.setToolTip(q.trich_yeu or q.nhan)
-            self.ds_qd_w.addItem(it)
-        self.ds_qd_w.blockSignals(False)
+            w.addItem(it)
         i = next((k for k, q in enumerate(self.ds_qd) if q.id == cu), 0 if self.ds_qd else -1)
-        self.ds_qd_w.setCurrentRow(i)
+        w.setCurrentRow(i)
+        # chọn lại khi tín hiệu đang chặn: chon() chạy MỘT lần (trước 0.9.22 currentRowChanged + gọi thẳng = dựng bảng 2 lần)
+        w.blockSignals(False)
         self.chon(self.ds_qd[i].id if i >= 0 else None)
-        for ten in ('Thêm…', 'Nhập từ file…', 'Sửa…', 'Xóa', 'Thêm hộ vào quyết định…', 'Sửa hộ đang chọn…',
-                    'Ghi nhận đã nhận tiền…', 'Bỏ hộ khỏi quyết định'):
-            self.nut[ten].setEnabled(self.con is not None and not self.chi_doc and (ten in ('Thêm…', 'Nhập từ file…') or i >= 0))
+        sua = self.con is not None and not self.chi_doc
+        for ten, b in self.nut.items():
+            if ten != 'Xuất Excel…':
+                b.setEnabled(sua and (ten in self.LUON_BAT or i >= 0))
 
     def chon(self, qd_id):
         self.qd_id = qd_id
-        if qd_id is None:
+        q = self._qd(qd_id)
+        if q is None:
             self.lb_qd.setText('Chưa có quyết định nào. Bấm "Nhập từ file…" (quyết định có danh sách hộ đính kèm) hoặc "Thêm…".'
                                if self.con is not None else '')
-            self.bang.setRowCount(0)
+            self.bang.dat_du_lieu([])
             return
-        q = next(x for x in self.ds_qd if x.id == qd_id)
         lech = ''
         if str(q.tong_tien).strip() and D(q.tong_tien) != q.tong_ho:
             lech = f' <span style="color:#A12A1F">(tổng ghi trong quyết định {vn(q.tong_tien)} đ)</span>'
@@ -417,10 +439,11 @@ class KhungQuyetDinh(_Khung):
         self.ve()
 
     def dong(self) -> list:
+        """[(hộ, dòng quyết định của hộ, [giá trị 18 cột], số dòng thửa)]."""
         if self.qd_id is None:
             return []
-        ds = [x for x in theo_doi.tong_hop(self.con, theo_doi.ho_cua_qd(self.con, self.qd_id), tinh_pa=False)]
         kq = []
+        ds = theo_doi.tong_hop(self.con, theo_doi.ho_cua_qd(self.con, self.qd_id), tinh_pa=False)
         for stt, x in enumerate(ds, start=1):
             q = next(y for y in x.qd if y['qd_id'] == self.qd_id)
             if q['da_chi_tra']:
@@ -429,88 +452,55 @@ class KhungQuyetDinh(_Khung):
             else:
                 ct = 'Chưa nhận' + (f': {q["ly_do_chua_nhan"]}' if q['ly_do_chua_nhan'] else '')
             bg, _ = mo_ta_ban_giao(x)
-            thua = x.thua or [dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')]
+            ho = [stt, x.ho_ten, x.dia_chi, q['so_pa'], q['ngay_pa'], q['qd_ct_so'], q['qd_ct_ngay']]
+            tien = [_so_hoac_trong(q[k]) for k in self.TIEN_QD]
+            thua = x.thua or [THUA_TRONG]
             for i, t in enumerate(thua):
                 dau = i == 0
-                kq.append((x, q, [stt if dau else None, x.ho_ten if dau else None, x.dia_chi if dau else None,
-                                  q['so_pa'] if dau else None, q['ngay_pa'] if dau else None, q['qd_ct_so'] if dau else None,
-                                  q['qd_ct_ngay'] if dau else None, t['so_to'], t['so_thua'],
-                                  _so(t['dt_thu_hoi']) if str(t['dt_thu_hoi']).strip() else None, t['loai_dat'],
-                                  *((_so(q[k]) if str(q[k]).strip() else None) if dau else None
-                                    for k in ('tien_dat', 'tien_tai_san', 'tien_cay', 'tien_ho_tro', 'so_tien')),
-                                  ct if dau else None, bg if dau else None], len(thua) if dau else 0))
+                kq.append((x, q, [*(ho if dau else [None] * 7), t['so_to'], t['so_thua'], _so_hoac_trong(t['dt_thu_hoi']),
+                                  t['loai_dat'], *(tien if dau else [None] * 5), ct if dau else None, bg if dau else None],
+                           len(thua) if dau else 0))
         return kq
 
     def ve(self):
-        dong = self.dong()
-        b = self.bang
-        b.setUpdatesEnabled(False)
-        b.clearSpans()
-        b.setRowCount(len(dong))
-        for r, (x, q, gt, n) in enumerate(dong):
-            for c, v in enumerate(gt):
-                if c == 9:
-                    _o(b, r, c, so_vn(v) if v is not None else '', so=True, du_lieu=x.ma_ho)
-                elif 11 <= c <= 15:
-                    _o(b, r, c, vn(v) if v is not None else '', so=True, dam=c == 15, du_lieu=x.ma_ho)
-                elif c == 16:
-                    _o(b, r, c, v, nen=(XANH if q['da_chi_tra'] else DO) if n else None, du_lieu=x.ma_ho)
-                else:
-                    _o(b, r, c, v, so=c == 0, du_lieu=x.ma_ho)
+        hien, ma, kieu, gop = [], [], {}, []
+        for r, (x, q, gt, n) in enumerate(self.dong()):
+            hien.append(_chu(gt, so=(9,), tien=self.COT_TIEN))
+            ma.append(x.ma_ho)
             if n:
-                _gop(b, r, n, self.COT_HO)
-        b.setUpdatesEnabled(True)
-        vua_dong(b)                                     # chỉ đo dòng có chữ dài / nhiều dòng
-
-    def _ma_dong(self, r=None):
-        r = self.bang.currentRow() if r is None else r
-        it = self.bang.item(r, 1) if r is not None and r >= 0 else None
-        if it is None and r is not None and r >= 0:
-            it = self.bang.item(r, 7)
-        return it.data(Qt.ItemDataRole.UserRole) if it else None
-
-    def ma_da_chon(self) -> list:
-        ds = []
-        for i in self.bang.selectionModel().selectedRows() if self.bang.selectionModel() else []:
-            m = self._ma_dong(i.row())
-            if m is not None and m not in ds:
-                ds.append(m)
-        return ds
+                kieu[(r, 15)] = _DAM
+                kieu[(r, 16)] = dict(nen=XANH if q['da_chi_tra'] else DO)
+                gop.append((r, n, self.COT_HO))
+        self.bang.dat_du_lieu(hien, ma, kieu, gop)
 
     # ---- thao tác
     def sua_qd(self, qd_id, gia_tri: dict | None = None):
         if self.con is None or self.chi_doc:
             return None
-        q = next((x for x in self.ds_qd if x.id == qd_id), None)
-        dlg = HopQuyetDinh(self, q)
         if gia_tri is None:
+            dlg = HopQuyetDinh(self, self._qd(qd_id))
             if not dlg.exec():
                 return None
             gia_tri = dlg.gia_tri()
         try:
-            moi = theo_doi.luu_qd(self.con, qd_id, **gia_tri)
+            self.qd_id = theo_doi.luu_qd(self.con, qd_id, **gia_tri)
         except LoiNhap as e:
             self.bao(str(e))
             return None
-        self.qd_id = moi
-        self.nap()
-        self.da_doi.emit()
-        return moi
+        return self._da_ghi(self.qd_id)
 
     def xoa_qd(self, xac_nhan: bool | None = None):
-        if self.qd_id is None:
+        q = self._qd(self.qd_id)
+        if q is None:
             return None
-        q = next(x for x in self.ds_qd if x.id == self.qd_id)
         if xac_nhan is None:
             xac_nhan = self.hoi(f'Xóa quyết định số {q.so} cùng {q.so_ho} dòng hộ của quyết định (chi trả theo quyết định này '
                                 'cũng bị xóa)?\nHồ sơ hộ, phương án giữ nguyên.')
         if not xac_nhan:
             return None
-        n = theo_doi.xoa_qd(self.con, self.qd_id)
-        self.qd_id = None
-        self.nap(giu=False)
-        self.da_doi.emit()
-        return n
+        n = theo_doi.xoa_qd(self.con, q.id)
+        self.qd_id = None                                # nạp lại: chọn quyết định đầu danh sách
+        return self._da_ghi(n)
 
     def nhap_file(self, file=None):
         """Nhập quyết định tổng / bổ sung có danh sách hộ đính kèm: dùng hộp "Nhập quyết định" (khớp hộ theo danh sách).
@@ -533,8 +523,7 @@ class KhungQuyetDinh(_Khung):
 
     def sau_nhap(self, dlg):
         self.qd_id = (getattr(dlg, 'ket_qua', None) or {}).get('qd_id') or self.qd_id
-        self.nap()
-        self.da_doi.emit()
+        self._da_ghi()
 
     def them_ho(self, ds_ma: list | None = None):
         if self.qd_id is None:
@@ -545,17 +534,15 @@ class KhungQuyetDinh(_Khung):
                 return 0
             ds_ma = dlg.chon()
         theo_doi.them_ho_theo_pa(self.con, self.qd_id, ds_ma)
-        self.nap()
-        self.da_doi.emit()
-        return len(ds_ma)
+        return self._da_ghi(len(ds_ma))
 
     def sua_ho(self, ma=None, gia_tri: dict | None = None):
-        ma = self._ma_dong() if ma is None else ma
+        ma = self.bang.ma_dong(self.bang.currentRow()) if ma is None else ma
         if ma is None or self.qd_id is None or self.chi_doc:
             return None
-        dong = next((x for x in theo_doi.doc_qd_ho(self.con, ma) if x['qd_id'] == self.qd_id), None)
-        dlg = HopQDHo(self.con, ma, self.qd_id, dong, self)
         if gia_tri is None:
+            dong = next((x for x in theo_doi.doc_qd_ho(self.con, ma) if x['qd_id'] == self.qd_id), None)
+            dlg = HopQDHo(self.con, ma, self.qd_id, dong, self)
             if not dlg.exec():
                 return None
             gia_tri = dlg.gia_tri()
@@ -564,9 +551,7 @@ class KhungQuyetDinh(_Khung):
         except LoiNhap as e:
             self.bao(str(e))
             return None
-        self.nap()
-        self.da_doi.emit()
-        return ma
+        return self._da_ghi(ma)
 
     def ghi_chi_tra(self, ds_ma: list | None = None, ngay: str | None = None, chung_tu: str = ''):
         ds_ma = self.ma_da_chon() if ds_ma is None else ds_ma
@@ -583,9 +568,7 @@ class KhungQuyetDinh(_Khung):
         except LoiNhap as e:
             self.bao(str(e))
             return 0
-        self.nap()
-        self.da_doi.emit()
-        return n
+        return self._da_ghi(n)
 
     def bo_ho(self, xac_nhan: bool | None = None):
         ds = self.ma_da_chon()
@@ -596,12 +579,10 @@ class KhungQuyetDinh(_Khung):
         if not xac_nhan:
             return 0
         theo_doi.bo_cac_ho_khoi_qd(self.con, self.qd_id, ds)
-        self.nap()
-        self.da_doi.emit()
-        return len(ds)
+        return self._da_ghi(len(ds))
 
     def mo_file_qd(self):
-        q = next((x for x in self.ds_qd if x.id == self.qd_id), None)
+        q = self._qd(self.qd_id)
         if q and q.file:
             if Path(q.file).exists():
                 mo_file(q.file)
@@ -609,45 +590,38 @@ class KhungQuyetDinh(_Khung):
                 self.bao(f'Không thấy file:\n{q.file}')
 
     def xuat(self, file=None):
-        if self.qd_id is None:
+        q = self._qd(self.qd_id)
+        if q is None:
             return None
-        q = next(x for x in self.ds_qd if x.id == self.qd_id)
-        if file is None:
-            ten = ''.join(ch if ch.isalnum() else '_' for ch in q.so)
-            file, _ = QFileDialog.getSaveFileName(self, 'Lưu danh sách hộ của quyết định', f'QD_{ten}.xlsx', 'File Excel (*.xlsx)')
-            if not file:
-                return None
-        dong = self.dong()
-        gop = [(i, c, i + n - 1, c) for i, (_, _, _, n) in enumerate(dong) if n > 1 for c in self.COT_HO]
-        try:
-            p = theo_doi.xuat_excel(file, f'DANH SÁCH HỘ THEO QUYẾT ĐỊNH SỐ {q.so}' + (f' NGÀY {q.ngay}' if q.ngay else ''),
-                                    self.COT, [d for _, _, d, _ in dong],
-                                    [5, 24, 24, 13, 11, 13, 11, 7, 7, 11, 9, 14, 14, 13, 14, 15, 24, 16], gop, q.trich_yeu)
-        except OSError as e:
-            self.bao(chu_loi('Không ghi được file', e))
-            return None
-        if not self.im_lang:
-            mo_file(p)
-        return p
+
+        def ghi(f):
+            dong = self.dong()
+            gop = [(i, c, i + n - 1, c) for i, (_, _, _, n) in enumerate(dong) if n > 1 for c in self.COT_HO]
+            return theo_doi.xuat_excel(f, f'DANH SÁCH HỘ THEO QUYẾT ĐỊNH SỐ {q.so}' + (f' NGÀY {q.ngay}' if q.ngay else ''),
+                                       self.COT, [d for _, _, d, _ in dong],
+                                       [5, 24, 24, 13, 11, 13, 11, 7, 7, 11, 9, 14, 14, 13, 14, 15, 24, 16], gop, q.trich_yeu)
+        ten = ''.join(ch if ch.isalnum() else '_' for ch in q.so)
+        return self._xuat(file, 'Lưu danh sách hộ của quyết định', f'QD_{ten}.xlsx', ghi)
 
 
+# ---------------------------------------------------------------- Bảng tổng hợp: tiền theo phương án
 class KhungTongHopTien(_Khung):
-    """Tổng hợp tiền theo phương án hiện tại (từng mục) - bảng "Tổng hợp sau áp giá" cũ."""
-    COT = ['STT', 'Mã hộ', 'Họ và tên', 'Số thửa', 'DT thu hồi (m²)', '1. Đất', '2. Nhà, CT', '3. Cây trồng, vật nuôi', '4. Hỗ trợ',
-           '5. Thưởng', 'TỔNG PHƯƠNG ÁN', 'Tổng phê duyệt', 'Chênh lệch PA - phê duyệt', 'Đối chiếu Excel']
-    mo_ho = Signal(int)
+    """Tổng hợp tiền theo phương án hiện tại (từng hạng mục), so với phê duyệt và file Excel; bấm tiêu đề cột để sắp xếp."""
+    # hạng mục KHÔNG đánh số: bản in đánh 1 Đất, 2 Nhà, 3 Cây, 4 Vật nuôi, 5 Hỗ trợ, 6 Thưởng - bảng 5 cột gộp cây + vật nuôi
+    # (nghiep_vu.muc_5_cot) nên số "4. Hỗ trợ" cũ lệch với bản in
+    COT = ['STT', 'Mã hộ', 'Họ và tên', 'Số thửa', 'DT thu hồi (m²)', 'Đất', 'Nhà, công trình', 'Cây trồng, vật nuôi', 'Hỗ trợ',
+           'Thưởng', 'TỔNG PHƯƠNG ÁN', 'Tổng phê duyệt', 'Chênh lệch PA - phê duyệt', 'Đối chiếu Excel']
 
     def __init__(self, con=None, parent=None, chi_doc: bool = False):
         super().__init__(con, parent, chi_doc)
-        self.bang = _bang(self.COT)
-        self.bang.setSortingEnabled(True)
-        self.bang.cellDoubleClicked.connect(lambda r, c: self.mo_ho.emit(int(self.bang.item(r, 1).data(Qt.ItemDataRole.UserRole))))
+        self.nut = {}
+        # sắp theo giá trị số (QTableWidget cũ sắp cột tiền theo chữ); không chữ xuống dòng: không đo chiều cao dòng
+        self.bang = BangAo(self.COT, can_phai=(0, 1, *range(3, 13)), sap_xep=True, tu_cao=False)
+        self.bang.cellDoubleClicked.connect(self._mo_ho_dong)
         self.lb = QLabel('')
-        b = QPushButton('Xuất Excel…')
-        b.clicked.connect(lambda: self.xuat())
         h = QHBoxLayout()
         h.addWidget(self.lb, 1)
-        h.addWidget(b)
+        _nut([('Xuất Excel…', lambda: self.xuat())], h, self.nut)
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
         lo.addLayout(h)
@@ -670,46 +644,35 @@ class KhungTongHopTien(_Khung):
 
     def nap(self):
         ds = self.dong()
-        b = self.bang
-        b.setSortingEnabled(False)
-        b.setUpdatesEnabled(False)
-        b.setRowCount(len(ds))
+        hien, ma, kieu = [], [], {}
         for r, d in enumerate(ds):
-            for c, v in enumerate(d):
-                if c in (0, 1, 3):
-                    it = _o(b, r, c, v, so=True, du_lieu=d[1])
-                    it.setData(Qt.ItemDataRole.DisplayRole, v)
-                elif c in (2, 13):
-                    _o(b, r, c, v, du_lieu=d[1], nen=(DO if v == 'LỆCH' else XANH if v else None) if c == 13 else None)
-                else:
-                    nen = (DO if v else XANH) if c == 12 and v is not None else None
-                    _o(b, r, c, (so_vn(v) if c == 4 else vn(v)) if v is not None else '', so=True, dam=c == 10, nen=nen)
-        b.setUpdatesEnabled(True)
-        b.setSortingEnabled(True)
+            hien.append(_chu(d, so=(4,), tien=tuple(range(5, 13))))
+            ma.append(d[1])
+            kieu[(r, 10)] = _DAM
+            if d[12] is not None:
+                kieu[(r, 12)] = dict(nen=DO if d[12] else XANH)
+            if d[13]:
+                kieu[(r, 13)] = dict(nen=DO if d[13] == 'LỆCH' else XANH)
+        b = self.bang
+        b.dat_du_lieu(hien, ma, kieu, khoa=ds)
         b.resizeColumnsToContents()
         b.setColumnWidth(2, min(max(b.columnWidth(2), 200), 300))
-        tong = sum((d[10] for d in ds), KHONG)
-        self.lb.setText(f'{len(ds)} hộ · tổng phương án {vn(tong)} đ · tổng phê duyệt '
+        self.lb.setText(f'{len(ds)} hộ · tổng phương án {vn(sum((d[10] for d in ds), KHONG))} đ · tổng phê duyệt '
                         f'{vn(sum((d[11] or KHONG for d in ds), KHONG))} đ')
 
     def xuat(self, file=None):
         if self.con is None:
             return None
-        if file is None:
-            file, _ = QFileDialog.getSaveFileName(self, 'Lưu tổng hợp tiền theo phương án', 'TongHopTien.xlsx', 'File Excel (*.xlsx)')
-            if not file:
-                return None
-        p = theo_doi.xuat_excel(file, 'TỔNG HỢP TIỀN BỒI THƯỜNG, HỖ TRỢ THEO PHƯƠNG ÁN', self.COT, self.dong(),
-                                [6, 8, 26, 8, 12, 15, 15, 15, 15, 13, 17, 17, 17, 16])
-        if not self.im_lang:
-            mo_file(p)
-        return p
+        return self._xuat(file, 'Lưu tổng hợp tiền theo phương án', 'TongHopTien.xlsx', lambda f: theo_doi.xuat_excel(
+            f, 'TỔNG HỢP TIỀN BỒI THƯỜNG, HỖ TRỢ THEO PHƯƠNG ÁN', self.COT, self.dong(),
+            [6, 8, 26, 8, 12, 15, 15, 15, 15, 13, 17, 17, 17, 16], None, self._ten_du_an()))
 
 
 class KhungBangTongHop(_Khung):
-    """Bảng tổng hợp theo dõi toàn bộ dự án: 3 mục (thông tin tổng quát hộ, quyết định phê duyệt, tiền theo phương án)."""
-    THE = ['Thông tin tổng quát hộ', 'Quyết định phê duyệt', 'Tổng hợp tiền theo phương án']
-    mo_ho = Signal(int)
+    """Bảng tổng hợp theo dõi toàn bộ dự án: 3 thẻ (thông tin tổng quát hộ, quyết định phê duyệt, tiền theo phương án)."""
+    THE = THE_TONG_HOP
+    # thẻ vừa chuyển tới (bấm thẳng thẻ hoặc mo_the): cửa sổ chính đồng bộ tiêu đề trang và dấu chọn ở menu trái
+    the_da_doi = Signal(int)
 
     def __init__(self, con=None, parent=None, chi_doc: bool = False):
         super().__init__(con, parent, chi_doc)
@@ -717,24 +680,26 @@ class KhungBangTongHop(_Khung):
         self.quyet_dinh = KhungQuyetDinh(con, self, chi_doc)
         self.tien = KhungTongHopTien(con, self, chi_doc)
         self.tab = QTabWidget()
-        for w, t in zip((self.tong_quat, self.quyet_dinh, self.tien), self.THE):
+        for w, t in zip(self.cac_the, self.THE):
             self.tab.addTab(w, t)
             w.da_doi.connect(self._doi)
-        for w in (self.tong_quat, self.tien):
             w.mo_ho.connect(self.mo_ho.emit)
-        self.tab.currentChanged.connect(lambda i: self._nap_the(i))
+        self.tab.currentChanged.connect(self._doi_the)
         self._can_nap = set(range(3))
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
         lo.addWidget(self.tab)
+
+    @property
+    def cac_the(self) -> tuple:
+        return self.tong_quat, self.quyet_dinh, self.tien
 
     def _doi(self):
         self._can_nap = set(range(3)) - {self.tab.currentIndex()}
         self.da_doi.emit()
 
     def dat_du_an(self, con, chi_doc: bool = False):
-        self.con, self.chi_doc = con, chi_doc
-        for w in (self.tong_quat, self.quyet_dinh, self.tien):
+        for w in (self, *self.cac_the):
             w.con, w.chi_doc = con, chi_doc
         self.nap()
 
@@ -751,58 +716,52 @@ class KhungBangTongHop(_Khung):
     def _nap_the(self, i: int):
         if i in self._can_nap:
             self._can_nap.discard(i)
-            (self.tong_quat, self.quyet_dinh, self.tien)[i].nap()
+            self.cac_the[i].nap()
+
+    def _doi_the(self, i: int):
+        self._nap_the(i)
+        self.the_da_doi.emit(i)
 
     def mo_the(self, i: int):
-        self.tab.setCurrentIndex(i)
-        self._nap_the(i)
+        """Chuyển tới thẻ i (lệnh menu trái); thẻ đang là i thì không có currentChanged: nạp + báo thẳng."""
+        if self.tab.currentIndex() == i:
+            self._doi_the(i)
+        else:
+            self.tab.setCurrentIndex(i)                 # -> currentChanged -> _doi_the
 
 
 # ---------------------------------------------------------------- Theo dõi tiến độ
 class KhungTienDo(_Khung):
-    """Hộ đã / chưa nhận tiền (theo từng quyết định hoặc nhiều quyết định), đã / chưa bàn giao, lý do, ngày nhận, biên lai."""
+    """Hộ đã / chưa nhận tiền (theo từng quyết định hoặc nhiều quyết định), đã / chưa bàn giao, lý do, ngày nhận, biên lai.
+    Số hộ của từng điều kiện nằm ngay trong ô Lọc (0.9.22 bỏ hàng 6 thẻ số trùng hàng thẻ số của cửa sổ chính)."""
     COT = ['STT', 'Mã hộ', 'Họ và tên', 'Địa chỉ', 'Quyết định phê duyệt', 'Tổng phê\nduyệt (đ)', 'Đã nhận (đ)', 'Ngày nhận\ntiền',
            'Chưa nhận - lý do', 'Biên lai / biên\nbản chi trả', 'Bàn giao\nmặt bằng', 'Lý do chưa\nbàn giao', 'Ghi chú theo dõi']
-    mo_ho = Signal(int)
+    TEN_LOC = dict(theo_doi.LOC_TIEN_DO)
 
     def __init__(self, con=None, parent=None, chi_doc: bool = False):
         super().__init__(con, parent, chi_doc)
         self.ds = []
+        self.dang_hien = []
+        self._can_nap = False
         self.cb_loc = QComboBox()
         for k, t in theo_doi.LOC_TIEN_DO:
             self.cb_loc.addItem(t, k)
+        self.cb_loc.setToolTip('Số trong ngoặc: số hộ thỏa điều kiện (theo các quyết định đang đánh dấu)')
         self.cb_loc.currentIndexChanged.connect(lambda *_: self.ve())
         self.ds_qd_w = QListWidget()
         self.ds_qd_w.setMaximumHeight(72)
-        self.ds_qd_w.itemChanged.connect(lambda *_: self.ve())
-        self.o_tim = QLineEdit()
-        self.o_tim.setPlaceholderText('Tìm họ tên, mã hộ, lý do… (không cần dấu)')
-        self.o_tim.setClearButtonEnabled(True)
-        self.o_tim.textChanged.connect(lambda *_: self._tim_khi_go())
-        self.the = {}
-        h_the = QHBoxLayout()
-        for k, t, mau in (('tong', 'Số hộ', '#2D64A6'), ('pd', 'Đã có QĐ phê duyệt', '#1F7A86'), ('nhan', 'Đã nhận đủ tiền', '#2F7A4F'),
-                          ('chua', 'Còn QĐ chưa nhận', '#B8651F'), ('bg', 'Đã bàn giao MB', '#4E5D6C'),
-                          ('chua_bg', 'Chưa bàn giao', '#A12A1F')):
-            o = QLabel('–')
-            o.setStyleSheet(f'QLabel {{ background: #FFFFFF; border: 1px solid #DCE3EA; border-left: 4px solid {mau}; '
-                            f'border-radius: 7px; padding: 5px 10px; color: {mau}; font-weight: 600; }}')
-            o.setToolTip(t)
-            self.the[k] = (o, t)
-            h_the.addWidget(o, 1)
+        self.ds_qd_w.setToolTip('Đánh dấu một hoặc nhiều quyết định; bỏ trống = tất cả')
+        self.ds_qd_w.itemChanged.connect(lambda *_: self._doi_qd())
+        self.o_tim = _o_tim('Tìm họ tên, mã hộ, lý do… (không cần dấu)', self)
         self.bang = BangAo(self.COT, can_phai=(0, 1, 5, 6))     # 5.000 hộ x 13 cột -> bảng ảo
         for c, w in enumerate((44, 56, 190, 190, 200, 120, 120, 110, 230, 150, 140, 180, 180)):
             self.bang.setColumnWidth(c, w)
         self.bang.cellDoubleClicked.connect(self._nhap_dup)
         self.nut = {}
         h_nut = QHBoxLayout()
-        # quyết định, chi trả, bàn giao của MỘT hộ: bấm đúp dòng, hoặc "Trạng thái hộ…" ở menu trái (lấy hộ đang chọn ở trang
-        # này - app.ho_da_chon). Trước 0.9.18 thêm nút "Quyết định, chi trả, bàn giao của hộ…" ở đây: cùng một hộp thoại
-        for ten, ham in (('Bàn giao mặt bằng các hộ đã chọn…', lambda: self.ban_giao()), ('Xuất Excel…', lambda: self.xuat())):
-            b = QPushButton(ten)
-            b.clicked.connect(ham)
-            h_nut.addWidget(b)
-            self.nut[ten] = b
+        # quyết định, chi trả, bàn giao của MỘT hộ: bấm đúp dòng, hoặc "Trạng thái hộ…" ở menu trái (hộ đang chọn ở trang này)
+        _nut([('Bàn giao mặt bằng các hộ đã chọn…', lambda: self.ban_giao()), ('Xuất Excel…', lambda: self.xuat())],
+             h_nut, self.nut)
         h_nut.addStretch(1)
         h_loc = QHBoxLayout()
         h_loc.addWidget(QLabel('Lọc:'))
@@ -810,54 +769,58 @@ class KhungTienDo(_Khung):
         h_loc.addWidget(QLabel('Tìm:'))
         h_loc.addWidget(self.o_tim, 1)
         h_qd = QHBoxLayout()
-        nhan = QLabel('Theo quyết định\n(đánh dấu một\nhoặc nhiều; bỏ\ntrống = tất cả):')
-        h_qd.addWidget(nhan)
+        h_qd.addWidget(QLabel('Quyết định:'), 0, Qt.AlignmentFlag.AlignTop)
         h_qd.addWidget(self.ds_qd_w, 1)
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
-        lo.addLayout(h_the)
         lo.addLayout(h_loc)
         lo.addLayout(h_qd)
         lo.addWidget(self.bang, 1)
         lo.addLayout(h_nut)
 
     def nap(self):
-        """Nạp lại; trang đang ẩn thì chỉ đánh dấu, nạp khi hiện (showEvent) - lưu một hộ không phải dựng lại bảng
-        hàng chục nghìn ô của trang không ai đang xem (3.000 hộ: ~1 giây mỗi lần lưu)."""
-        if not self.isVisible() and not getattr(self, 'im_lang', False):
+        """Nạp lại; trang đang ẩn thì chỉ đánh dấu, nạp khi hiện (showEvent) - lưu một hộ không phải dựng lại bảng của trang
+        không ai đang xem."""
+        if not self.isVisible() and not self.im_lang:
             self._can_nap = True
             return
         self._can_nap = False
-        if self.con is None:
-            self.ds = []
-            self.ds_qd_w.clear()
-            self.ve()
-            return
-        self.ds = theo_doi.tong_hop(self.con, tinh_pa=False)
+        self.ds = theo_doi.tong_hop(self.con, tinh_pa=False) if self.con is not None else []
         chon = self.qd_chon()
-        self.ds_qd_w.blockSignals(True)
-        self.ds_qd_w.clear()
-        for q in theo_doi.ds_quyet_dinh(self.con):
+        w = self.ds_qd_w
+        w.blockSignals(True)
+        w.clear()
+        for q in theo_doi.ds_quyet_dinh(self.con) if self.con is not None else []:
             it = QListWidgetItem(f'QĐ {q.so}' + (f' ngày {q.ngay}' if q.ngay else '') + f' - {q.so_ho} hộ, đã nhận '
                                  f'{q.so_ho_da_nhan}/{q.so_ho}')
             it.setFlags(it.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             it.setCheckState(Qt.CheckState.Checked if q.id in chon else Qt.CheckState.Unchecked)
             it.setData(Qt.ItemDataRole.UserRole, q.id)
-            self.ds_qd_w.addItem(it)
-        self.ds_qd_w.blockSignals(False)
-        self.ve()
+            w.addItem(it)
+        w.blockSignals(False)
+        self._doi_qd()
 
     def showEvent(self, e):
         super().showEvent(e)
-        if getattr(self, '_can_nap', False):
+        if self._can_nap:
             self.nap()
+
+    def _doi_qd(self):
+        """Đổi danh sách hộ / quyết định đánh dấu: đếm lại số hộ từng điều kiện lọc (đổi ô Lọc, gõ tìm thì không đếm lại)."""
+        dem = theo_doi.dem_loc(self.ds, self.qd_chon())
+        for i in range(self.cb_loc.count()):
+            k = self.cb_loc.itemData(i)
+            self.cb_loc.setItemText(i, f'{self.TEN_LOC[k]} ({dem.get(k, 0)})' if self.ds else self.TEN_LOC[k])
+        self.ve()
 
     def qd_chon(self) -> set:
         return {self.ds_qd_w.item(i).data(Qt.ItemDataRole.UserRole) for i in range(self.ds_qd_w.count())
                 if self.ds_qd_w.item(i).checkState() == Qt.CheckState.Checked}
 
     def dat_loc(self, khoa: str = '', ds_qd: set | None = None, tu_khoa: str | None = None):
+        self.cb_loc.blockSignals(True)
         self.cb_loc.setCurrentIndex(max(0, self.cb_loc.findData(khoa)))
+        self.cb_loc.blockSignals(False)
         if ds_qd is not None:
             self.ds_qd_w.blockSignals(True)
             for i in range(self.ds_qd_w.count()):
@@ -865,8 +828,13 @@ class KhungTienDo(_Khung):
                 it.setCheckState(Qt.CheckState.Checked if it.data(Qt.ItemDataRole.UserRole) in ds_qd else Qt.CheckState.Unchecked)
             self.ds_qd_w.blockSignals(False)
         if tu_khoa is not None:
+            self.o_tim.blockSignals(True)
             self.o_tim.setText(tu_khoa)
-        self.ve()
+            self.o_tim.blockSignals(False)
+        if ds_qd is not None:
+            self._doi_qd()
+        else:
+            self.ve()
 
     def loc(self) -> list:
         k, qd = self.cb_loc.currentData() or '', self.qd_chon()
@@ -909,7 +877,7 @@ class KhungTienDo(_Khung):
         # chuỗi hiển thị + kiểu riêng của các ô cần tô (bảng ảo: chỉ vẽ ô đang hiện, không dựng 65.000 QTableWidgetItem)
         hien, ma, kieu = [], [], {}
         for r, (x, qd, gt) in enumerate(self.dong()):
-            hien.append([vn(v) if c in (5, 6) and v is not None else ('' if v is None else str(v)) for c, v in enumerate(gt)])
+            hien.append(_chu(gt, tien=(5, 6)))
             ma.append(x.ma_ho)
             if gt[8]:
                 kieu[(r, 8)] = dict(nen=DO)
@@ -922,28 +890,13 @@ class KhungTienDo(_Khung):
                 kieu[(r, 9)] = dict(mau_chu=MAU_LIEN_KET, goi_y='Nhấp đúp để mở biên lai / biên bản chi trả:\n' +
                                     '\n'.join(q['chung_tu'] for q in qd if q['chung_tu']))
         self.bang.dat_du_lieu(hien, ma, kieu)
-        ds = self.loc()
-        n_pd = sum(1 for x in self.ds if x.qd)
-        dem = dict(tong=len(self.ds), pd=n_pd, nhan=sum(1 for x in self.ds if x.qd and not x.qd_chua_nhan),
-                   chua=sum(1 for x in self.ds if x.qd_chua_nhan), bg=sum(1 for x in self.ds if x.da_ban_giao),
-                   chua_bg=sum(1 for x in self.ds if not x.da_ban_giao))
-        for k, (o, t) in self.the.items():
-            o.setText(f'{t}: {dem[k]}' + (f' / {len(self.ds)}' if k != 'tong' else '') if self.ds else f'{t}: –')
-        self.dang_hien = [x.ma_ho for x in ds]
-
-    def _ma(self, r) -> int | None:
-        it = self.bang.item(r, 1)
-        return it.data(Qt.ItemDataRole.UserRole) if it else None
-
-    def ma_da_chon(self) -> list:
-        return sorted({self._ma(i.row()) for i in self.bang.selectionModel().selectedRows()} - {None}) \
-            if self.bang.selectionModel() else []
+        self.dang_hien = ma
 
     def _nhap_dup(self, r, c):
-        ma = self._ma(r)
+        ma = self.bang.ma_dong(r)
         if ma is None:
             return
-        if c == 9:
+        if c == 9:                                       # cột biên lai: mở file chứng từ
             x = next((y for y in self.ds if y.ma_ho == ma), None)
             for q in x.qd if x else []:
                 if q['chung_tu']:
@@ -966,26 +919,16 @@ class KhungTienDo(_Khung):
         except LoiNhap as e:
             self.bao(str(e))
             return 0
-        self.nap()
-        self.da_doi.emit()
-        return n
+        return self._da_ghi(n)
 
     def xuat(self, file=None):
         if self.con is None:
             return None
-        if file is None:
-            file, _ = QFileDialog.getSaveFileName(self, 'Lưu danh sách theo dõi tiến độ', 'TheoDoiTienDo.xlsx', 'File Excel (*.xlsx)')
-            if not file:
-                return None
-        ten = self.con.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
-        tieu = 'THEO DÕI TIẾN ĐỘ CHI TRẢ, BÀN GIAO MẶT BẰNG'
-        if self.cb_loc.currentData():
-            tieu += f' - {self.cb_loc.currentText().upper()}'
-        p = theo_doi.xuat_excel(file, tieu, self.COT, [d for _, _, d in self.dong()],
-                                [5, 7, 24, 24, 22, 15, 15, 14, 28, 22, 16, 22, 22], None, ten[0] if ten else '')
-        if not self.im_lang:
-            mo_file(p)
-        return p
+        k = self.cb_loc.currentData()
+        tieu = 'THEO DÕI TIẾN ĐỘ CHI TRẢ, BÀN GIAO MẶT BẰNG' + (f' - {self.TEN_LOC[k].upper()}' if k else '')
+        return self._xuat(file, 'Lưu danh sách theo dõi tiến độ', 'TheoDoiTienDo.xlsx', lambda f: theo_doi.xuat_excel(
+            f, tieu, self.COT, [d for _, _, d in self.dong()], [5, 7, 24, 24, 22, 15, 15, 14, 28, 22, 16, 22, 22], None,
+            self._ten_du_an()))
 
 
 # ---------------------------------------------------------------- hộp thoại

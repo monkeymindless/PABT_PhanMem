@@ -1,6 +1,6 @@
 """Phần mềm lập phương án bồi thường, hỗ trợ (PABT): bộ đơn giá Đồng Nai tích hợp, dự án mới từ dữ liệu thô, bản in."""
 from __future__ import annotations
-__version__ = '0.9.21'
+__version__ = '0.9.22'
 # Bản thử nghiệm: giao diện ghi "BẢN THỬ NGHIỆM" (băng tiêu đề, tiêu đề cửa sổ chính, Giới thiệu, tự kiểm tra). Bản chính thức: False.
 BAN_THU_NGHIEM = True
 NHAN_THU_NGHIEM = 'BẢN THỬ NGHIỆM'

@@ -97,20 +97,6 @@ def doc_duong_ke(file_excel, ten_sheet: str) -> str:
     return ''.join(re.sub(r'(<a:prstGeom prst="line">.*?</a:prstGeom>)(?!<a:ln)', r'\1' + _NET, a, flags=re.S) for a in kq)
 
 
-def luu_duong_ke(file_excel, thu_muc) -> list:
-    """Lưu đường kẻ của 2 sheet mẫu in thành mau_in/<mẫu>.duong_ke.xml."""
-    tao = []
-    for ten in (TEN_CT, TEN_BTH):
-        x = doc_duong_ke(file_excel, ten)
-        p = Path(thu_muc) / f'{ten}.duong_ke.xml'
-        if x:
-            p.write_text(x, encoding='utf-8')
-            tao.append(p)
-        elif p.exists():
-            p.unlink()
-    return tao
-
-
 def chen_duong_ke(file_xlsx, file_duong_ke, xml: str | None = None) -> bool:
     """Chèn các đường kẻ (XML) vào sheet đầu của file .xlsx do openpyxl lưu. Trả True nếu đã chèn. xml: nội dung đã canh lại
     (can_duong_ke) thay cho nội dung file."""
@@ -203,12 +189,12 @@ def _neo(gia: int, bien: list) -> tuple:
     return k, max(0, gia - bien[k])
 
 
-def _dong_chu_o(ws, r: int, c: int, bc: list, bd: list, do) -> dict | None:
+def _dong_chu_o(ws, r: int, c: int, bc: list, bd: list, do, chi_muc: dict | None = None) -> dict | None:
     """Bố trí chữ trong ô (r, c) (tính cả vùng gộp): x trái / phải (EMU), canh ngang, các dòng chữ và y chân từng dòng."""
     o = ws.cell(r, c)
     if not isinstance(o.value, str) or not o.value.strip():
         return None
-    m = _vung_tron(ws, r, c)
+    m = _vung_tron(ws, r, c, chi_muc)
     r1, c1, r2, c2 = (m.min_row, m.min_col, m.max_row, m.max_col) if m else (r, c, r, c)
     ten, co, dam = _phong(o)
     dong = ngat_dong(o.value.rstrip('\n'), _rong_vung(ws, c1, c2), ten, co, dam, do)
@@ -238,6 +224,7 @@ def can_duong_ke(ws, xml: str, do=None) -> str:
     if do is None:
         do = lambda s, ten, co, dam: len(s) * co * (0.52 if dam else 0.47)      # noqa: E731
     bc, bd = _bien_cot(ws), _bien_dong(ws)
+    cm = _chi_muc_gop(ws)
     from .lap_pa import bo_dau
 
     def mot(a: str) -> str:
@@ -256,12 +243,12 @@ def can_duong_ke(ws, xml: str, do=None) -> str:
         tot, kc, da = None, None, set()
         for r in range(max(1, r1 - 1), r1 + 2):            # dòng Excel phía trên, dòng chứa đường kẻ, dòng kế
             for c in range(1, 26):
-                m = _vung_tron(ws, r, c)
+                m = _vung_tron(ws, r, c, cm)
                 rr, cc, cuoi = (m.min_row, m.min_col, m.max_col) if m else (r, c, c)
                 if (rr, cc) in da or not (bc[cc - 1] <= xg < bc[cuoi]):
                     continue
                 da.add((rr, cc))
-                t = _dong_chu_o(ws, rr, cc, bc, bd, do)
+                t = _dong_chu_o(ws, rr, cc, bc, bd, do, cm)
                 if t is None:
                     continue
                 d = abs(t['chan'][-1] - y)
@@ -326,11 +313,10 @@ def dk_mac_dinh(ws, ds: list, do=None) -> str:
 def o_tieu_ngu(ws, den_dong: int = 8):
     """Vị trí (như vi_tri_cho) ô có dòng "Độc lập - Tự do - Hạnh phúc", hoặc None."""
     from .lap_pa import bo_dau
-    for row in ws.iter_rows(min_row=1, max_row=den_dong):
-        for o in row:
-            if isinstance(o.value, str) and bo_dau(o.value.rstrip('\n').split('\n')[-1].strip()).lower() == _TIEU_NGU:
-                m = _vung_tron(ws, o.row, o.column)
-                return (o.row, m.min_col, m.max_col, m.max_row) if m else (o.row, o.column, o.column, o.row)
+    for o in _o_chu(ws, den_dong):
+        if bo_dau(o.value.rstrip('\n').split('\n')[-1].strip()).lower() == _TIEU_NGU:
+            m = _vung_tron(ws, o.row, o.column)
+            return (o.row, m.min_col, m.max_col, m.max_row) if m else (o.row, o.column, o.column, o.row)
     return None
 
 
@@ -597,31 +583,26 @@ def dien_so_ngay(ws, so: str = '', ngay: str = '', nhan_so: str = 'Số:', den_d
     re_so = re.compile(re.escape(nhan_so) + _CHO_VIET + '/')
     re_ngay = re.compile(r'ngày' + _CHO_VIET + r'tháng' + _CHO_VIET + r'năm\s*(?:\{nam\}|\d{4}|[….]+)')
     n = 0
-    for row in ws.iter_rows(max_row=den_dong):
-        for o in row:
-            v = o.value
-            if not isinstance(v, str):
-                continue
-            s = v
-            if so:
-                s = re_so.sub(lambda m: f'{nhan_so} {so}/', s)
-            if m_ngay:
-                s = re_ngay.sub(f'ngày {int(m_ngay.group(1)):02d} tháng {int(m_ngay.group(2)):02d} năm {m_ngay.group(3)}', s)
-            if s != v:
-                o.value = s
-                n += 1
+    for o in _o_chu(ws, den_dong):
+        v = s = o.value
+        if so:
+            s = re_so.sub(lambda m: f'{nhan_so} {so}/', s)
+        if m_ngay:
+            s = re_ngay.sub(f'ngày {int(m_ngay.group(1)):02d} tháng {int(m_ngay.group(2)):02d} năm {m_ngay.group(3)}', s)
+        if s != v:
+            o.value = s
+            n += 1
     return n
 
 
 def _thay_cho_trong(ws, gia_tri: dict):
     """Thay {ten} trong mọi ô chữ của sheet."""
-    for row in ws.iter_rows():
-        for c in row:
-            if isinstance(c.value, str) and '{' in c.value:
-                s = c.value
-                for k, v in gia_tri.items():
-                    s = s.replace('{' + k + '}', str(v))
-                c.value = s
+    for c in _o_chu(ws):
+        if '{' in c.value:
+            s = c.value
+            for k, v in gia_tri.items():
+                s = s.replace('{' + k + '}', str(v))
+            c.value = s
 
 
 def _uoc_cao(text, rong_cot: float, co_chu: float, toi_thieu: float = 26) -> float:
@@ -770,20 +751,40 @@ def cao_dong_chu(so_dong: int, co: float) -> float:
     return so_dong * co * 1.2
 
 
-def _vung_tron(ws, r: int, c: int):
+def _chi_muc_gop(ws) -> dict:
+    """{dòng: [vùng gộp phủ dòng đó]} - để dò nhiều ô trên sheet có hàng chục nghìn vùng gộp (bảng tổng hợp 3.000 hộ: 26.000
+    vùng; can_duong_ke dò ~235 ô, mỗi lần duyệt hết danh sách vùng gộp)."""
+    kq = {}
     for m in ws.merged_cells.ranges:
+        for r in range(m.min_row, m.max_row + 1):
+            kq.setdefault(r, []).append(m)
+    return kq
+
+
+def _vung_tron(ws, r: int, c: int, chi_muc: dict | None = None):
+    for m in ws.merged_cells.ranges if chi_muc is None else chi_muc.get(r, ()):
         if m.min_row <= r <= m.max_row and m.min_col <= c <= m.max_col:
             return m
     return None
 
 
+def _o_chu(ws, den_dong: int | None = None):
+    """Các ô CÓ CHỮ của sheet theo thứ tự dòng, cột (tới dòng den_dong). Không dùng ws.iter_rows: nó TẠO ô rỗng cho mọi vị trí
+    trong vùng sheet (mẫu chi tiết ~700 ô mỗi hộ) - dò chậm và file in ra ghi thêm hàng trăm ô rỗng."""
+    for k in sorted(ws._cells):
+        if den_dong is not None and k[0] > den_dong:
+            break
+        o = ws._cells[k]
+        if isinstance(o.value, str):
+            yield o
+
+
 def vi_tri_cho(ws, cho: str, den_dong: int = 80):
     """(dòng, cột đầu, cột cuối, dòng cuối) của ô có chỗ trống cho (tính cả vùng gộp), hoặc None."""
-    for row in ws.iter_rows(min_row=1, max_row=min(den_dong, ws.max_row)):
-        for o in row:
-            if isinstance(o.value, str) and cho in o.value:
-                m = _vung_tron(ws, o.row, o.column)
-                return (o.row, m.min_col, m.max_col, m.max_row) if m else (o.row, o.column, o.column, o.row)
+    for o in _o_chu(ws, den_dong):
+        if cho in o.value:
+            m = _vung_tron(ws, o.row, o.column)
+            return (o.row, m.min_col, m.max_col, m.max_row) if m else (o.row, o.column, o.column, o.row)
     return None
 
 
@@ -1251,13 +1252,7 @@ def ho_co_phuong_an(con) -> list:
 
 LAP = {'da_lap': 'Đã lập phương án', 'tu_lap': 'Tự lập, chưa soát', 'chua': 'Chưa có phương án'}
 # phan_loai_lap chuyển sang lap_pa (màn hình chính gọi mỗi lần tải lại mà không phải nạp openpyxl); giữ tên cũ ở đây
-from .lap_pa import HANG_LOAT_GIAY, HANG_LOAT_TOI_THIEU, phan_loai_lap  # noqa: E402,F401
-
-
-def ho_da_lap(con) -> list:
-    """Hộ người dùng đã lập phương án (không tính phương án tự lập chưa soát), theo thứ tự danh sách."""
-    pl = phan_loai_lap(con)
-    return [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho') if pl.get(r[0]) == 'da_lap']
+from .lap_pa import phan_loai_lap  # noqa: E402,F401
 
 
 def gop_pdf(ds: list, file_ra) -> Path:
