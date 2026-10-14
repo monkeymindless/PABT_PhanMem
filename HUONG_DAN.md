@@ -1,5 +1,106 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.24 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.87 – Bản Tiêu chuẩn · Sử dụng nội bộ)
 
+> **0.9.86**: **Nhật ký kiểm toán** (menu **Dữ liệu** / chuột phải danh sách hộ) - ai sửa, lúc nào, máy nào, giá trị cũ -> mới; không sửa,
+> không xóa được, xuất Excel. **Kiểm tra lỗi** thêm nhóm **Bác sĩ hồ sơ** (DT bồi thường > DT thu hồi, tỷ lệ > 100%, nhân khẩu, hạn mức đất ở).
+
+> **0.9.85**: **hồ sơ địa phương** `pabt_profile.json` (cơ quan, căn cứ pháp lý, số ngày, tỷ lệ kinh phí tổ chức thực hiện và phân bổ
+> 85 / 15, vị trí cột mẫu in) và **gói mẫu in & cấu hình `.pabtcfg`** (menu **Công cụ**): xuất ở máy đã sửa mẫu, gửi qua Zalo, máy khác bấm
+> đúp là cập nhật. Nguồn gốc đất trên bản in canh trên; bản dự thảo tự che số CCCD.
+
+> **0.9.84**: **xem trước bản in A4 ngay trong cửa sổ** - hộp **Xuất hồ sơ & Bản in** có trang A4 ở nửa phải (bấm hộ nào xem hộ đó, đổi
+> Dự thảo / Chính thức là đổi theo); cửa sổ lập phương án hộ bấm **Xem trước A4 (F4)** hoặc phím **F4**. Cần Microsoft Excel (bản xem trước chính là bản in).
+
+> **0.9.83**: bản in - mọi ô bảng căn giữa theo chiều dọc, dòng cao vừa chữ có chừa trên / dưới (không còn chữ chạm đường kẻ), nguồn gốc đất dài tự
+> tách dòng ở chỗ hết câu, đường kẻ dưới tên đơn vị / tiêu ngữ / dự án cách chữ 5 pt.
+
+> **0.9.82**: **một bộ mẫu in** cho hai chế độ - đặt sẵn dòng "(DỰ THẢO)" trong mẫu chính (hoặc để phần mềm tự thêm); chọn **Bản DỰ THẢO** thì in có chữ đó, chọn **Bản CHÍNH THỨC** thì phần mềm tự xóa. Ô tìm có kính lúp, lọc khi ngừng gõ.
+
+> **0.9.81**: biểu tượng PABT mới (nền xanh hoàng gia, mái nhà vàng kim, thửa đất ngọc lục bảo). Cài bộ cài 0.9.81 để biểu tượng Desktop / taskbar đổi theo; đã ghim PABT lên taskbar từ bản cũ thì bỏ ghim rồi ghim lại.
+
+> **0.9.80**: màn hình chào - bảng dự án gần đây có trạng thái trống, nút thao tác nằm trên đầu bảng, chân trang 4 liên kết (có **Quy trình 16 bước QĐ 18**); chưa mở dự án thì các nhóm Lập phương án, Tổng hợp, Phê duyệt ở menu trái bị mờ.
+
+> **0.9.79**: màn hình chào có ba thẻ lớn hơn (Dự án mới - xanh lá, Mở dự án - xanh dương, Nhập file Excel - xanh navy); bấm vào bất cứ chỗ nào trong thẻ là chạy lệnh.
+
+> **0.9.78**: cửa sổ lập phương án hộ có nút **Dán danh sách tài sản… (Ctrl+Shift+V)** nổi bật; có bảng tài sản trong bộ nhớ đệm thì hộp tự điền và phân loại sẵn.
+
+> **0.9.77** (theo bố cục chuẩn V10): mọi cửa sổ con có đủ nút Thu nhỏ - Phóng to - Đóng, kéo góc để đổi cỡ và nhớ kích thước lần sau; cửa sổ chính tối thiểu
+> 1024 x 680, Thu về = 1200 x 740 giữa màn hình. Niêm yết & Lấy ý kiến có nút **Xóa đợt** và **In PA Dự thảo gửi dân**. **Xuất hồ sơ & Bản in** là nơi duy nhất
+> xuất file (chế độ Dự thảo / Chính thức). Kinh phí tổ chức thực hiện tính đúng 2,5% / 3,5% trên tổng bồi thường (gốc 100%).
+
+> **0.9.76** (theo Mục IV Quyết định 18/2026/QĐ-UBND): nâng cấp **Nhóm 5 Tổng hợp & trình duyệt** và **Nhóm 6 Phê duyệt & bàn giao** - xem mục
+> "Nhóm 5 và Nhóm 6: tổng hợp, trình thẩm định, phê duyệt, chi trả, bàn giao, cưỡng chế" bên dưới.
+
+> **0.9.64**: Nút thu nhỏ, phóng to và đóng trở lại trên thanh tiêu đề Windows. Menu và banner xanh giữ nguyên.
+
+> **0.9.54**: Cập nhật giá đất chỉ ở menu trái. Bộ đơn giá không còn mục trùng “Cập nhật bảng giá đất”.
+
+> **0.9.53**: Chân trang màn hình chào là **Lịch sử cập nhật phần mềm**. Lịch sử bắt đầu từ bản này; các bản trước không được ghi. Hướng dẫn sử dụng vẫn mở bằng F1.
+
+> **0.9.51**: Ô địa bàn chỉ cần tên (Trị An, Trảng Bom, Vũng Tàu; Đồng Nai, Hồ Chí Minh). Tải từ web mở thẳng nghị quyết bảng giá đất Đồng Nai. PDF ảnh đọc từng trang, có nút Dừng. Mẫu in chi tiết và tổng hợp lưu riêng trên từng máy. Nút Tệp tin mở menu khi thả chuột.
+
+> **0.9.50**: **Tải từ web** mở Công báo, vào nghị quyết bảng giá đất, tải phụ lục Word và lấy đúng xã / phường đã nhập (bảy mức vị trí). Không còn dừng ở câu không thấy văn bản khi Công báo có nghị quyết.
+
+> **0.9.49**: Nút **Tải từ web** trong Cập nhật giá đất không còn báo lỗi tiếng Anh khi thiếu module web. Bản cài kèm phần tìm web. Không tìm được bảng giá thì chọn file.
+
+> **0.9.48**: **Cập nhật giá đất** thay hai lệnh Thay bảng giá đất và Bảng giá gắn sẵn. Nhập xã và tỉnh rồi tải từ web; không ra bảng giá thì chọn file Excel, Word hoặc PDF. Bảng mới thay bốn địa bàn gắn sẵn. Nút **Dùng lại bảng gắn sẵn** nằm trong hộp này.
+
+> **0.9.47**: Bỏ mục **Quy chuẩn cây** trên menu trái. Mật độ cây vẫn lấy từ ghi chú bộ đơn giá khi bấm **Tính mật độ…** trong thẻ Cây trồng.
+
+> **0.9.46**: Xóa ô Tỷ lệ % trên mục Đất thì ô để trống (tiền vẫn tính 100%). Hộ đã bấm Lưu, hoặc đã có dòng phương án, hiện Đã lập phương án kể cả khi đất, tài sản, cây, vật nuôi, hỗ trợ đều bỏ trống. Nguồn gốc có gạch đầu dòng được xuống dòng và thụt lề. Cập nhật mẫu in từ Excel hoặc PDF luôn xong, không báo lỗi.
+
+> **0.9.45**: Cập nhật mẫu in nhận Excel hoặc PDF, tự nhận cấu trúc, không chặn bằng báo lỗi. Hộ đã lưu hoặc đã có dòng phương án (kể cả 0 đồng) là đã lập. Nguồn gốc có gạch đầu dòng xuống dòng và thụt lề. Ô tỷ lệ đất xóa trống thì không hiện lại 100.
+
+> **0.9.44**: nút Tệp tin trên thanh menu nhận đúng vùng bấm. Bảng tổng hợp giãn dòng theo chữ. Đường kẻ dưới tên đơn vị gần chữ hơn, ngắn hơn dòng chữ và căn giữa.
+
+> **0.9.43**: dự toán có nút **Thêm hạng mục** (nhà, cây, vật nuôi, hỗ trợ, thưởng — cùng danh mục lập phương án). Chi phí bồi thường chọn **2,5%** hoặc **3,5%** theo QĐ 08/2025/QĐ-UBND.
+
+> **0.9.42**: tiêu đề thanh menu (Tệp tin, Chỉnh sửa, …) không còn bị cắt khi phóng to chữ. Thanh cao theo cỡ chữ.
+
+> **0.9.41**: menu trái có biểu tượng ở Thay bảng giá đất, Bảng giá gắn sẵn và Dự thảo PABT. Trong dự thảo, **Thêm hộ vào đợt…** chọn thủ công hộ của đợt 1, đợt 2, đợt khác, hộ chưa lấy ý kiến, chưa đồng thuận hoặc có ý kiến khác.
+
+> **0.9.40**: mục **Dự thảo PABT** (nhóm Lập phương án). Phễu 6 mắt xích trên số hộ thật. Đợt niêm yết 10 ngày, đối thoại 30 ngày. Ba tỷ lệ đồng thuận tách riêng: theo đợt, lũy kế đã niêm yết, độ bao phủ cả dự án. Hộ vướng V1–V5 không vào đợt. Bảng niêm yết che CCCD.
+
+> **0.9.39**: thay cả bảng giá đất bằng file Excel của địa bàn đang làm (ví dụ Phường Trảng Bom, hoặc tỉnh khác). Bốn địa bàn gắn sẵn không còn hiện cho đến khi dùng lại.
+
+> **0.9.38**: ô Loại đất đủ danh mục Thông tư 08/2024; ô Vị trí xổ có thanh cuộn, đủ 4 địa bàn NQ 28. Mẫu dự thảo chỉ để áp giá trước niêm yết (Luật Đất đai 2024, Nghị định 88/2024/NĐ-CP). Đường kẻ in cách chữ hơn. Thanh menu bấm đúng mục.
+
+> **0.9.37**: mẫu in chính thức không có chữ dự thảo. Mẫu dự thảo chọn trong hộp In: `IN_CHITIET_DT`, `IN_TONGHOP_DT`. Hộ không có tiền thưởng thì không in tỷ lệ. Đường kẻ dưới tên cơ quan, tiêu ngữ và tên dự án sát chân chữ, căn giữa.
+
+> **0.9.35**: danh sách hộ có cột **Ghi chú** (bên phải Trạng thái) — nội dung lệch so với file Excel, ô vàng cam.
+
+> **0.9.34**: dải nhận diện 48px (logo, tên phần mềm, cơ quan / đơn vị lập, tên dự án, đèn LAN). Họ tên chủ sở hữu được có chữ số.
+
+> **0.9.33**: Ctrl+S khi đang soạn hộ ghi phương án rồi mới ép file xuống đĩa; tab kéo đổi chỗ; chân trang chào thêm Cài đặt.
+
+> **0.9.32** (đặc tả 5.0 đủ): thanh điều hành 38px (ẩn băng xanh ~65px); **đa tab** Màn hình chính ⇄ Danh sách hộ ⇄
+> **Hộ: …** ⇄ Dự toán ⇄ **Bộ đơn giá** (Ctrl+Tab, giữ số liệu đang nhập); màn hình chào thẻ đổ bóng + lưới gần đây có
+> **ghim**; chân trang cẩm nang QĐ 08/2025 và bảng giá NQ 28; màu Deep Navy / Royal Blue, bỏ vàng neon.
+>
+> **0.9.31** (đặc tả 5.0): thanh menu hợp nhất (logo + tên dự án + LAN, ẩn băng tiêu đề xanh để thêm chỗ cho bảng);
+> thanh **tab** mở nhiều trang cùng lúc (Ctrl+Tab); màn hình chào dạng thẻ + lưới dự án gần đây; chân trang Hướng dẫn / NQ 28 / Cài đặt.
+>
+> **0.9.30**: màn hình chào — **Hướng dẫn sử dụng (F1)** là liên kết nhỏ, không còn nút cạnh ba lệnh bắt đầu.
+> Bỏ chữ **Cơ quan: …** góc phải thanh menu.
+>
+> **0.9.29**: **Bộ đơn giá** có **Sửa bộ đơn giá** (thêm / sửa / xóa / thay thế một mục, hoặc cập nhật cả bộ) — chỉ khi đã đăng
+> nhập tài khoản **quản trị máy chủ LAN**, hoặc sau khi mở khóa bằng **mật khẩu quản trị bộ đơn giá** trên máy này (lần đầu tự
+> đặt). **Màn hình chính**: đóng dự án, mở dự án khác, xóa khỏi danh sách gần đây hoặc xóa file `.pabt` — không cần thoát phần mềm.
+> Thẻ **Quy ước giá tương đương** trong Bộ đơn giá hiện quy ước của dự án đang mở và tự làm mới sau khi xóa / sửa ở **Đơn giá
+> riêng**.
+>
+> **0.9.27**: biểu tượng mới duy nhất (chữ PABT trên nền trắng sữa, viền xanh đậm + đường vàng - nổi rõ trên Desktop; chữ không
+> còn bị góc bo cắt). Menu trái có **Màn hình chính** (về màn hình bắt đầu, dự án đang mở vẫn mở); **Bảng giá đất** có biểu tượng,
+> chữ thẳng hàng như các mục khác. Máy đã cài bản cũ mà biểu tượng Desktop chưa đổi: Windows còn giữ ảnh cũ trong bộ đệm - khởi
+> động lại máy (hoặc xóa rồi tạo lại lối tắt).
+>
+> **0.9.26**:
+> - **Một bộ cài cho mọi máy Windows**: `PABT_Setup_Universal_<phiên bản>.exe` (Windows 7 SP1 → Windows 11, 32-bit và 64-bit) - tự
+>   chọn bản hợp với máy; không cần Python, Visual C++ hay mạng. Gói dự phòng `PABT_ChayNgay_<phiên bản>_Universal.zip`.
+> - Danh sách hộ: nút **Xuất** - Excel các hộ đang chọn, hoặc các hộ đang lọc theo Đợt / Trạng thái / Tìm (theo dõi, trình, lưu trữ).
+> - **Chỉnh sửa → Hoàn tác / Làm lại** trên thanh menu (Ctrl+Z / Ctrl+Y như cũ). Sửa: cửa sổ mở không phủ hết màn hình (lỗi hình
+>   góc phải); màn hình 1366 px hàng công cụ tự xuống dòng; in bảng tổng hợp khi mẫu in chỉ cập nhật một mẫu; thẻ Vật nuôi của
+>   dự án cũ trống (nút **Bổ sung vật nuôi từ bộ đơn giá**); ô Nhân khẩu gõ số không còn dính chữ "chưa nhập".
+>
 > **0.9.24** - **Chuẩn hóa theo đặc tả kiến trúc ARCH-PABT-2026-V4**:
 > - **Bộ cài cho mọi máy**: `PABT_Setup_Universal_<phiên bản>.exe` tự nhận Windows - Windows 10 (1809 trở lên) / 11 64-bit cài bản
 >   64-bit (Qt6); Windows 7 / 8 / 8.1, Windows 32-bit cài bản 32-bit (Qt5, tự cài bản vá KB3063858 cho Windows 7 khi thiếu). Vẫn có
@@ -7,7 +108,7 @@
 >   (giải nén ra ổ D: / USB là dùng) `PABT_ChayNgay_<phiên bản>_x64.zip` / `_x86.zip`.
 > - Băng tiêu đề ghi **Bản Tiêu chuẩn · Sử dụng nội bộ** thay nhãn "BẢN THỬ NGHIỆM" (chưa kích hoạt bản quyền thương mại).
 > - Thanh menu thêm **Cài đặt** (Thông tin dự án, Kết nối máy chủ LAN, cỡ chữ) và **Tệp tin → Lưu dự án (Ctrl+S)** (mọi thay đổi
->   vốn được ghi ngay; lệnh ép ghi hẳn xuống đĩa và báo giờ lưu). Góc phải thanh menu ghi **Cơ quan** thực hiện.
+>   vốn được ghi ngay; lệnh ép ghi hẳn xuống đĩa và báo giờ lưu).
 > - Thanh trạng thái: **Sẵn sàng · Tổng cộng: N hộ | Đã chọn: k hộ**, đèn **● LAN** (Trực tuyến / Ngoại tuyến / Máy đơn).
 > - Màu sắc theo bộ chuẩn doanh nghiệp (xanh Navy chủ đạo, nút Lưu / Thêm xanh lá, nút Xóa đỏ nhạt); dòng bảng cao 32 px, nút menu
 >   trái cao 36 px. Ô tìm danh sách hộ chờ ngừng gõ 0,2 giây mới lọc (gõ tiếng Việt có dấu không còn làm bảng nháy).
@@ -248,6 +349,83 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   `mau_in\IN_CHITIET.duong_ke.xml` và chèn vào từng file bản in; **Cập nhật mẫu in…** từ file Excel lấy lại cả đường kẻ.
 - Dòng 1.x (bồi thường đất): "Thửa đất số …, tờ bản đồ số …, loại đất …, xã (phường) … (Vị trí 1 / 2 / 3 / 4)"; thiếu thông tin
   thì để "……" chờ điền.
+- **Xem trước A4 (0.9.84)**: hộp **Xuất hồ sơ & Bản in** chia đôi - nửa phải luôn hiện trang A4 của hộ đang bấm trong danh sách
+  (đổi **Bản DỰ THẢO / CHÍNH THỨC**, ô **Che số CCCD** hay mẫu thì bản xem trước lập lại). Cửa sổ lập phương án hộ: nút
+  **Xem trước A4 (F4)** / phím **F4** mở / đóng nửa phải, hiện cả số liệu đang soạn chưa lưu (sửa xong ~1,5 giây tự lập lại).
+  Thanh công cụ: **+ / −** phóng to / thu nhỏ, **Vừa trang**, **◀ k / N ▶** lật trang, **In nhanh** (hỏi trước, in bản đang xem ra
+  máy in mặc định). Bản xem trước do Microsoft Excel tạo ở nền (~1,5 - 2 giây, vẫn thao tác được); file tạm ở
+  `%TEMP%\pabt_preview` tự xóa khi đóng cửa sổ. Máy không có Microsoft Excel (hoặc Excel lỗi / treo): phần mềm tự dựng **bản
+  gần đúng** (nhãn vàng "Bản gần đúng" trên thanh công cụ) từ chính file bản in - đủ chữ, số, ô gộp, khung bảng; không có đường kẻ
+  vẽ và ngắt trang của Excel. In / xuất PDF chính thức vẫn cần Excel.
+- Chủ sử dụng là **tổ chức** (tên bắt đầu bằng Công ty, UBND / Ủy ban nhân dân, Ban quản lý, Hợp tác xã, Trung tâm, Nhà thờ, Chùa,
+  Trường tiểu học…, hoặc có TNHH / cổ phần): bản in ghi **"Tổ chức:"** thay "Họ và tên:". Ghi chú của các thửa đất **liền nhau
+  giống nhau** ở mục 1 gộp thành một ô. Tiêu đề mục II luôn là "II. Thông tin vị trí, nguồn gốc đất".
+
+## Công cụ thực địa, chẩn đoán và cấu hình nghiệp vụ (0.9.87)
+- **Cài đặt → Cấu hình nghiệp vụ…**: số ngày (niêm yết, đối thoại, thẩm định, thông báo thu hồi đất nông nghiệp / phi nông nghiệp,
+  vận động trước cưỡng chế), căn cứ pháp lý, mức kinh phí tổ chức thực hiện và tỷ lệ phân bổ, ngưỡng kiểm tra, che CCCD bản dự
+  thảo, thông tin cơ quan. Bấm Lưu là áp dụng ngay; "Khôi phục mặc định…" bỏ mọi sửa đổi. Quy trình 16 bước hiện thời hạn theo cấu hình.
+- **Dữ liệu → Nhập bản vẽ CAD (.dxf)…**: chọn lớp ranh thửa, lớp ranh thu hồi (nếu có), số tờ; phần mềm đọc số thửa / diện tích /
+  loại đất trong nhãn, đo diện tích hình và phần nằm trong ranh thu hồi, đối chiếu với hồ sơ; đánh dấu thửa nào cập nhật diện tích
+  thu hồi theo bản vẽ. **Bản đồ thửa đất** (nhóm Lập phương án): tô xanh thửa hộ đã đồng thuận, đỏ chưa đồng thuận, vàng chưa lấy ý
+  kiến, xám thửa không có trong hồ sơ; bấm (không kéo) vào thửa mở hồ sơ hộ, ô "Số thửa → Enter" nhảy tới thửa, cuộn chuột phóng to.
+- **Quét giấy tờ (OCR)…** (cửa sổ lập phương án, trang Dự toán): chọn ảnh chụp / PDF scan giấy chứng nhận, biên bản kiểm kê (cần
+  Tesseract như đọc quyết định scan). Soát lại các ô rồi "Điền thông tin hộ & thửa" (trang Dự toán: "Thêm dòng đất") / "Đưa tài sản vào phương án…".
+- **Công cụ → Phiếu kiểm đếm thực địa…**: (1) **Xuất phiếu (.html)** - một file, chép sang điện thoại, mở bằng trình duyệt (không cần
+  mạng): chọn hộ, ghi tài sản / cây (được ghi phép tính 4x5, số đo đường kính / chu vi cây), phiếu tự lưu trên máy; bấm "Tải file
+  kết quả (.json)". (2) **Nhập kết quả** - các dòng thêm vào phương án từng hộ như "Dán danh sách tài sản" (khớp danh mục đơn giá;
+  không khớp thành hạng mục ngoài danh mục). (3) **Gắn ảnh hiện trạng** - chọn thư mục ảnh; ảnh đặt tên theo **số CCCD**, **họ tên**
+  (Nguyen_Van_A_nha.jpg) hoặc **HO<số thứ tự>** (HO012_cay.jpg) được gắn vào hộ; bảng hiện số ảnh mỗi hộ, bấm đúp mở ảnh.
+- **Trợ giúp → Chẩn đoán & sửa lỗi hệ thống…**: bảng kiểm tra máy (thư mục dữ liệu, ổ đĩa, Microsoft Excel, Tesseract, chứng chỉ
+  HTTPS). **Kiểm tra & sửa file dự án…**: sao lưu file vào thư mục `SaoLuu_SuaLoi` cạnh file, gỡ file khóa cũ (máy kia tắt đột ngột -
+  khóa của máy ĐANG mở thì không gỡ), dựng lại chỉ mục, nén file; file hỏng trang dữ liệu thì chép mọi dòng đọc được sang file mới
+  và báo bảng nào có thể mất dòng. Dự án đang mở được đóng trong lúc sửa và mở lại sau đó. **Xuất gói chẩn đoán (.zip)**: thông tin
+  máy, nhật ký lỗi, hồ sơ địa phương và bản sao dự án ĐÃ ẨN DANH (họ tên thành "Hộ kiểm thử 0001…", xóa CCCD, điện thoại, nguồn gốc
+  đất, ý kiến dân, nhật ký; giữ diện tích, đơn giá, loại đất, tỷ lệ để tái hiện lỗi) - gửi cho người hỗ trợ. Hộp báo "lỗi không
+  mong muốn" cũng có nút này.
+- **CSDL v16**: file dự án mở bằng 0.9.87 được nâng lên v16; máy dùng bản 0.9.86 trở về trước sẽ báo "file được tạo bằng phiên bản
+  phần mềm mới hơn" - cập nhật mọi máy dùng chung dự án (gói .pabtcn hoặc bộ cài).
+
+## Nhật ký kiểm toán và Bác sĩ hồ sơ (0.9.86)
+
+**Nhật ký kiểm toán** (menu **Dữ liệu → Nhật ký kiểm toán…**, hoặc chuột phải một hộ): mỗi thay đổi số liệu được ghi tự động vào chính
+file dự án - thời gian, người sửa (tài khoản máy chủ LAN, không thì tài khoản Windows), tên máy, hộ, đối tượng (thửa / dòng phương án /
+mục đơn giá), trường, **giá trị cũ -> mới**:
+- thêm / sửa / xóa hộ (họ tên, CCCD, địa chỉ, nhân khẩu, tái định cư…) và thửa (số tờ, số thửa, loại đất, diện tích thu hồi, nguồn gốc);
+- **Lưu phương án hộ**: từng dòng thêm / xóa, từng trường sửa (diện tích, giá, hệ số K, tỷ lệ, số lượng, đơn giá…);
+- sửa đơn giá danh mục, giá đất của dự án (nạp lại cả bộ đơn giá ghi ở nhật ký thao tác, không ghi từng mục).
+Không ghi: số liệu gốc lúc tạo dự án / nhập Excel, phương án phần mềm tự lập. Nhật ký **không sửa, không xóa được** (kể cả mở file bằng
+công cụ SQLite khác); Hoàn tác (Ctrl+Z) không xóa nhật ký - lần hoàn tác cũng được ghi. Lọc theo hộ, thời gian, từ khóa; **Xuất Excel…**
+(A4 ngang) để nộp đoàn thanh tra / kiểm toán. Dự án mở chỉ xem: xem được, không ghi.
+
+**Kiểm tra lỗi → nhóm "Bác sĩ hồ sơ"**: diện tích bồi thường ở mục 1 **lớn hơn** diện tích thu hồi của thửa (lỗi); tỷ lệ chất lượng / bồi
+thường của đất, nhà, công trình, cây, vật nuôi vượt 100% (lỗi - hỗ trợ như đào tạo 150% không tính); có hỗ trợ theo nhân khẩu mà hộ chưa nhập
+số nhân khẩu (lỗi) hoặc dòng ổn định đời sống khác số nhân khẩu của hộ; nhân khẩu trên 20 (ngưỡng trong hồ sơ địa phương); diện tích đất ở
+bồi thường vượt **hạn mức đất ở** - mặc định CHƯA kiểm tra, ghi hạn mức (m²) theo quy định của tỉnh vào hồ sơ địa phương
+`quy_tac_kiem_tra.han_muc_dat_o_m2` (`xa` / `phuong` / `dac_khu` theo cấp địa bàn của dự án). Trùng số CCCD giữa hai hộ: nhóm Thông tin hộ.
+
+## Hồ sơ địa phương và gói mẫu in & cấu hình (0.9.85)
+
+Những gì khác nhau giữa các địa phương / đơn vị nằm trong **một file JSON** - `pabt_profile.json`:
+
+| Mục | Nội dung | Mặc định đóng kèm |
+|---|---|---|
+| `co_quan` | Tên tổ chức làm nhiệm vụ bồi thường, đơn vị trực thuộc, địa chỉ; thông tin điền sẵn trên bản in (đơn vị cấp trên, tên trên tiêu đề, ký hiệu số phương án, chức vụ người ký) | Chi nhánh Vĩnh Cửu |
+| `can_cu_phap_ly` | Căn cứ kinh phí tổ chức thực hiện, căn cứ hạn thẩm định, các dòng "Căn cứ …" chung của tờ trình mặc định | QĐ 08/2025, QĐ 30/2025, 42/2025, 18/2026 |
+| `thoi_han` | Số ngày mặc định: thẩm định 15, đã thông báo thu hồi đất NN 60 / PNN 120, vận động 10, niêm yết 10, đối thoại 30 (mỗi dự án vẫn sửa riêng được) | QĐ 18/2026 |
+| `kinh_phi_to_chuc` | Mức tối đa theo tuyến / dự án khác, làm tròn (`-3` = đến nghìn đồng), phân bổ (tên, %; tổng phải 100%) | 3,5% / 2,5%; 85% / 15% |
+| `ban_in` | Bản dự thảo tự che CCCD; căn chỉnh ô nguồn gốc đất | che; căn đều, canh trên |
+| `mau_in` | Vị trí cột của mẫu phương án chi tiết (A-H, cột loại dòng AD) và bảng tổng hợp (dòng dữ liệu đầu 13, 25 cột A-Y, các cột cộng) | mẫu Đồng Nai |
+
+- File mặc định nằm trong phần mềm (`pabt\pabt_profile.json`, đi theo gói cập nhật .pabtcn). Máy dùng ở địa phương khác đặt
+  `%APPDATA%\PABT\pabt_profile.json` - **chỉ cần ghi các mục khác mặc định** (phần còn lại lấy mặc định). Số tỷ lệ ghi trong ngoặc kép
+  (`"3.5"`) để tính bằng số thập phân chính xác. File sai (JSON hỏng, phân bổ không đủ 100%, chữ cột sai…): phần mềm báo khi mở và dùng
+  mặc định; **Trợ giúp → Giới thiệu** ghi hồ sơ đang dùng.
+- **Công cụ → Xuất gói mẫu in & cấu hình…**: đóng hồ sơ địa phương đang dùng + mẫu in (IN_CHITIET, IN_BANGTONGHOP, mẫu riêng, đường kẻ) +
+  mẫu tờ trình đã sửa thành **một file `.pabtcfg`**. Gửi qua Zalo / email.
+- Máy nhận: **bấm đúp file `.pabtcfg`** (bộ cài từ 0.9.85 đăng ký đuôi file) hoặc **Công cụ → Nhập gói mẫu in & cấu hình…** → xem danh sách
+  → Có. Phần mềm kiểm tra gói (mã SHA-256 từng file, chỉ nhận mẫu .xlsx / .docx / .xml không có macro và hồ sơ hợp lệ), sao lưu mẫu cũ vào
+  `%APPDATA%\PABT\sao_luu_mau\<giờ>` (giữ 10 lần gần nhất) rồi thay - dùng ngay, không cài lại phần mềm.
 
 ## Bảng giá đất NQ 28/2025/NQ-HĐND (tích hợp)
 
@@ -261,18 +439,39 @@ tiếp và thông ra đường (theo bề rộng và khoảng cách: ≤1.000m /
   chọn theo loại đất (ONT/ODT → đất ở; CLN, HNK, BHK, LUK… → cây lâu năm, hằng năm; NTS, RSX → rừng, thủy sản), tìm tên đường không
   cần dấu → nhấp đúp. Giá (quy ra đồng/m²) và căn cứ (đường, đoạn, mức vị trí) được điền vào, căn cứ lưu theo giá đất của dự án.
 - **Bộ đơn giá… → Tra bảng giá đất NQ 28/2025…** để xem; **Xuất bảng giá đất ra Excel…** (mỗi địa bàn một sheet).
-- Ô **Vị trí** mục 1 khi lập phương án xổ đủ các tuyến của cả 4 địa bàn (địa bàn dự án đứng đầu). Địa bàn khác của tỉnh chưa có
-  trong bảng: gõ tay vị trí và giá đất, hoặc đề nghị bổ sung (chép từ Nghị quyết).
+- Ô **Vị trí** mục 1 khi lập phương án xổ các tuyến của bảng đang dùng (địa bàn dự án đứng đầu).
+- **Cập nhật giá đất** (menu Bảng giá & chính sách, hoặc Bộ đơn giá → Giá đất): nhập xã / phường và tỉnh, bấm **Tải từ web**
+  (Công báo Đồng Nai, hoặc vbpl.vn nếu tỉnh khác). Web không ra bảng đơn giá thì chọn file **Excel, Word, PDF hoặc CSV**.
+  Cột tối thiểu **Tên đường** và **Đất ở** hoặc **Đơn giá** (đồng/m²). Mỗi sheet Excel một địa bàn. Bấm **Dùng bảng này**:
+  bốn địa bàn gắn sẵn không còn hiện ở ô Vị trí và tra cứu — chỉ còn địa bàn trong file. **Dùng lại bảng gắn sẵn** (trong cùng hộp)
+  trả về Xã Trị An, Xã Tân An, Xã Phú Lý, Phường Tân Triều. File nằm ở `%APPDATA%\PABT\bang_gia_dat.json` (không ghi vào bộ cài,
+  không xóa đơn giá đã nhập trong phương án). Xuất bảng hiện tại ra Excel để lấy đúng mẫu cột: **Xuất bảng giá đất ra Excel…**.
 - Số liệu chép từ bản PDF đóng dấu của Nghị quyết (Phụ lục I trang 172–205, 1143–1214; Phụ lục III trang 1672–1707, 2700–2775) và
   kiểm tra chéo bằng nhận dạng chữ; khi dùng làm căn cứ chính thức nên đối chiếu văn bản gốc. Dữ liệu ở `pabt/bang_gia_nq28.json`.
 
+## Dự thảo PABT (niêm yết, lấy ý kiến, đối thoại)
+
+Menu **Lập phương án → Dự thảo PABT**. Số trên sáu thẻ là hộ của dự án đang mở.
+
+1. Thẻ **Hộ vướng**: hộ chưa đủ điều kiện, hoặc nhóm V1 chờ UBND xã xác nhận nguồn gốc, V2 tranh chấp ranh, V3 thừa kế chưa có đại diện, V4 chờ đo lại, V5 chờ thẩm định. Những hộ này không vào đợt lấy ý kiến. **Gợi ý đủ điều kiện** chỉ đánh dấu hộ đã có tên, nguồn gốc thửa, không tranh chấp và đã có phương án — vẫn phải đối chiếu hồ sơ trước khi niêm yết.
+2. **Tạo đợt**: ngày kết thúc niêm yết = ngày bắt đầu + 10 ngày. **Đưa hộ đủ điều kiện vào đợt**.
+3. Ba tỷ lệ không thay nhau: **theo đợt** (đồng ý / hộ của đợt), **lũy kế đã niêm yết**, **độ bao phủ cả dự án** (đồng ý / tổng hộ). Đợt 1 đạt 93% không có nghĩa cả dự án đã xong.
+4. Bấm đúp hộ để ghi ý kiến: Đồng ý / Ý kiến khác / Không đồng ý. **Ngày họp lấy ý kiến** đặt hạn đối thoại + 30 ngày. Hộ chưa đồng ý chuyển sang đợt sau; ý kiến đợt cũ giữ nguyên.
+5. **Xuất bảng niêm yết** che CCCD. **Xuất danh sách đôn đốc** ra Excel các hộ V1, V2 để lập công văn — phần mềm không tự ký công văn.
+
 ## Bộ đơn giá tích hợp (cố định)
 
-**Bộ đơn giá…** xem (chỉ đọc) toàn bộ: 5.668 đơn giá tài sản, cây trồng (QĐ 48/2025 sửa đổi bởi QĐ 66/2025; nhà, công trình theo
+**Bộ đơn giá…** xem toàn bộ: 5.668 đơn giá tài sản, cây trồng (QĐ 48/2025 sửa đổi bởi QĐ 66/2025; nhà, công trình theo
 QĐ 18/2026 sửa đổi bởi QĐ 53/2026), 39 khoản chính sách hỗ trợ, tái định cư (QĐ 42/2025), tham số và **hạn mức giao đất nông nghiệp
 khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng năm, NTS 3 ha; cây lâu năm 10 ha vùng đồng bằng; rừng 30 ha), biểu
 **thưởng bàn giao mặt bằng**, quy ước giá tương đương và 17 văn bản căn cứ (gồm dự thảo sửa đổi QĐ 42/2025 đang theo dõi).
 
+- **Sửa một mục** (thêm / sửa / xóa / thay thế): nút **Sửa bộ đơn giá**. Cần quyền quản trị — tài khoản **quản trị máy chủ LAN**,
+  hoặc **mật khẩu quản trị bộ đơn giá** trên máy này (lần đầu mở khóa sẽ đặt mật khẩu, ít nhất 6 ký tự; đổi ở cùng menu).
+  Người đã đăng nhập máy chủ nhưng không phải quản trị thì không sửa được. Sửa ghi vào bản bộ đơn giá trên máy
+  (`%APPDATA%\PABT`); dự án đang mở muốn dùng mục mới thì bấm **Áp bộ đơn giá vào dự án đang mở**.
+- Thẻ **Quy ước giá tương đương** khi đang mở dự án hiện quy ước **của dự án** (đồng bộ với **Đơn giá riêng**). Xóa / sửa quy
+  ước ở Đơn giá riêng rồi đóng hộp thoại: danh sách thẻ này tự cập nhật. Sửa quy ước của dự án vẫn dùng **Đơn giá riêng**.
 - Danh mục, chính sách, tham số trong mỗi dự án được **khóa**: không sửa được, kể cả bằng công cụ SQLite (trigger chặn).
   Trong **Lập phương án hộ**, đơn giá dòng lấy từ danh mục cố định. Giá đất lấy từ bảng giá đất của dự án cũng cố định.
 - **Tài sản không có trong đơn giá**: thêm mục tương đương từ danh mục rồi **sửa tên** thành tên tài sản thực tế (nhấp đúp ô Tên).
@@ -325,14 +524,18 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
 `pabt/to_chuc.py`; tên đơn vị, ký hiệu số phương án cũng được điền sẵn khi lập dự án mới). Màn hình Dự án mới có băng tổ chức tương tự.
 
 Dưới băng tiêu đề (từ 0.9.23): **thanh menu** Tệp tin / Dữ liệu / Công cụ / Trợ giúp (tạo, mở, lưu, đóng dự án; nhập dữ liệu;
-mẫu in, bộ đơn giá; hướng dẫn F1, cập nhật phần mềm, giới thiệu) và **menu bên trái** chia 5 nhóm theo thứ tự công việc:
-**Dự án & dự toán** (Thông tin dự án, Dự toán & khái toán, Danh sách hộ), **Bảng giá & chính sách** (Bộ đơn giá, Đơn giá riêng,
-Bảng giá đất, Quy chuẩn cây), **Lập phương án** (Lập phương án, Kiểm tra lỗi, Đối chiếu file Excel), **Tổng hợp & trình duyệt**
-(Tổng quát hộ, Tổng hợp tiền, Đợt trình, In / Xuất), **Tiến độ & bàn giao** (Quyết định phê duyệt, Theo dõi tiến độ, Trạng thái
-hộ, Báo cáo tổng hợp). Bấm tên nhóm để đóng / mở (phần mềm nhớ). Mỗi lệnh là MỘT lệnh dùng chung cho menu, thanh công cụ, chuột
-phải (cùng trạng thái tắt khi chỉ xem). Lệnh với "hộ đang chọn" (Lập phương án, Trạng thái hộ, Đợt trình, In / Xuất) lấy hộ chọn
-**trên trang đang xem** (Danh sách hộ, Thông tin tổng quát, Quyết định phê duyệt, Theo dõi tiến độ).
-Chưa mở dự án: **màn hình chào** với 3 nút lớn và danh sách **dự án làm việc gần đây**.
+mẫu in, bộ đơn giá; hướng dẫn F1, cập nhật phần mềm, giới thiệu) và **menu bên trái** theo 16 bước của Mục IV QĐ 18/2026: nút
+**Màn hình chính** riêng, rồi 6 nhóm - **1. Khái toán & dự toán**, **2. Dự án triển khai** (Thông tin dự án, Danh sách hộ và Thửa),
+**3. Đơn giá & bảng giá**, **4. Lập phương án** (Lập phương án chi tiết, Niêm yết & Lấy ý kiến, Kiểm tra lỗi pháp lý, Đối chiếu số liệu),
+**5. Tổng hợp & trình duyệt** (Bảng tổng hợp kinh phí, Đợt trình thẩm định, Xuất hồ sơ & Bản in), **6. Phê duyệt & bàn giao**
+(Quyết định phê duyệt, Theo dõi chi trả & Bàn giao, Báo cáo tiến độ GPMB). Bấm tên nhóm để đóng / mở (phần mềm nhớ). Mỗi lệnh là
+MỘT lệnh dùng chung cho menu, thanh công cụ, chuột phải (cùng trạng thái tắt khi chỉ xem). Lệnh với "hộ đang chọn" (Lập phương án,
+Trạng thái hộ, Đợt trình, In / Xuất) lấy hộ chọn **trên trang đang xem** (Danh sách hộ, Bảng tổng hợp kinh phí, Quyết định phê duyệt,
+Theo dõi chi trả & Bàn giao, Báo cáo tiến độ GPMB).
+**Màn hình chính** / màn hình chào: 3 nút lớn (Dự án mới, Mở dự án, Nhập Excel), **Đóng dự án** / **Xóa dự án** khi đang mở file;
+góc dưới phải có liên kết **Hướng dẫn sử dụng (F1)** (cùng lệnh menu Trợ giúp),
+danh sách **dự án làm việc gần đây** (nhấp đúp hoặc **Mở dự án đã chọn** để thay dự án — không thoát phần mềm; **Xóa khỏi danh
+sách** giữ file; **Xóa file dự án** xóa hẳn `.pabt`, thư mục bản in giữ nguyên). Tệp tin → **Xóa dự án…** cùng lệnh.
 
 Trên danh sách hộ có bộ lọc **Đợt** (tất cả / chưa xếp đợt / từng đợt), **Trạng thái** (chưa / đã lập PA, chưa / đã phê duyệt,
 đã phê duyệt chưa chi trả, đã chi trả chưa bàn giao, đã bàn giao, có ghi chú…) và ô **Tìm** (không cần dấu, tìm cả ghi chú); bên
@@ -438,7 +641,17 @@ việc ở máy bất kỳ. Nên sao lưu định kỳ thư mục máy chủ.
 ## Lập phương án hộ (giai đoạn 2)
 
 Nhấp đúp một hộ trong danh sách (hoặc bấm **Lập phương án hộ…**). Hồ sơ hộ và phương án nằm **chung một cửa sổ**, nhập theo
-thứ tự 6 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶**; lưu bằng nút **Lưu (Ctrl+S)** trên cùng cửa sổ:
+thứ tự 6 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶**; lưu bằng nút **Lưu (Ctrl+S)** trên cùng cửa sổ.
+
+**Dán danh sách tài sản (Ctrl+Shift+V)**: nút xanh ở hàng nút trên cùng, dùng được ở mọi thẻ (cùng hộp với nút "Dán danh sách…" của
+Khái toán & dự toán). **Gõ tay mỗi dòng một tài sản: `Tên tài sản, công trình` ␣ `Đơn vị tính` ␣ `Số lượng`** (cách nhau dấu cách),
+ví dụ `Nhà tạm m2 4*5` → tên "Nhà tạm", ĐVT m², số lượng **20** (phép tính tự tính; nhân bằng `*` hoặc `x`, có ngoặc, số lẻ dấu phẩy:
+`Sân bê tông m2 (4+2)*3,5` = 21). Có tỷ lệ thì thêm cuối dòng: `Mít 6 năm cây 3 80%`. Tên có số / mã (`Nhà cấp 4 mái tôn`, `Lưới B40`,
+`Ống D110`) không bị cắt nhầm vì phần mềm đọc từ cuối dòng: số lượng → ĐVT ngay trước → phần còn lại là tên. Chép bảng tài sản từ Excel / Word
+(các cột Tên, ĐVT, Số lượng, Tỷ lệ, Ghi chú) rồi bấm nút hoặc **Ctrl+Shift+V**: nếu bộ nhớ đệm có bảng (nhiều dòng hoặc nhiều
+cột cách nhau Tab) thì hộp mở ra đã **điền sẵn và Phân loại** (dòng nền vàng nên xem lại loại); không thì mở hộp trống để dán /
+gõ. Bấm **Thêm vào phương án**: từng dòng vào đúng mục Nhà, công trình / Cây trồng / Vật nuôi / Hỗ trợ và tổng tiền phương án
+tính lại ngay (chưa lưu cho tới khi bấm **Lưu**).
 
 1. **Thông tin hộ, thửa đất**: họ tên, CCCD, ngày cấp, nơi cấp, điện thoại, địa chỉ, pháp lý, tranh chấp, ghi chú và bảng thửa
    (tờ, thửa, loại đất, DT thu hồi, nguồn gốc, vị trí); tách thửa theo loại đất, chuyển thửa, gộp hộ, xóa hộ. Bấm **Tiếp theo**:
@@ -477,7 +690,7 @@ thứ tự 6 thẻ, mỗi thẻ có nút **◀ Trở lại** / **Tiếp theo ▶
        đất, tỷ lệ 150% / 50%) → mỗi thửa một dòng; bản in có dòng tên chính sách đứng đầu nhóm.
      - **Thuê nhà ở, tạm cư / tự lo chỗ ở**: số tháng, mức hộ, mức mỗi nhân khẩu tăng thêm → một dòng "(1 hộ (4 nhân khẩu) * 1 tháng *
        6.000.000 đồng) + (1 nhân khẩu tăng thêm * 1.500.000 đồng * 1 tháng)". Đổi nhân khẩu là đơn giá và cách tính tự tính lại. (Số
-       nhân khẩu của mức hộ đặt ở **Quy chuẩn cây, tài sản…**, mặc định 4 theo QĐ 42/2025.)
+       nhân khẩu của mức hộ mặc định 4 theo QĐ 42/2025.)
      - Chính sách không có trong đơn giá (**Hỗ trợ học phí, Hỗ trợ y tế, Hỗ trợ khác**) hoặc gõ tên khác: nhập số lượng, đơn giá.
    - **Tái định cư** không phải khoản tiền: chọn ở ô **Tái định cư** – không đủ điều kiện; đủ điều kiện theo khoản 4 / khoản 5 Điều
      111 Luật Đất đai năm 2024; đủ điều kiện theo khoản 4 (hộ nhiều thế hệ / nhiều cặp vợ chồng…), hoặc không có. Bản in ghi dòng
@@ -516,15 +729,13 @@ Trong màn hình Lập phương án hộ:
 - **Cây theo đường kính / chu vi**: nhập ở hàng nhập nhanh của thẻ Cây trồng (xem trên). Danh sách chọn ghi kèm quy cách theo chu vi
   (ví dụ d >15-18 cm = chu vi > 47,1 đến ≤ 56,5 cm).
 - **Thẻ Cây trồng → Tính mật độ…** (chọn dòng cây tính theo cây): nhập diện tích trồng (mặc định DT đất nông nghiệp thu hồi của hộ),
-  số cây kiểm đếm; mật độ quy chuẩn lấy từ ghi chú bộ đơn giá ("Mật độ 210 cây/ha") hoặc quy chuẩn riêng của dự án. Hộp hiện: mật độ
+  số cây kiểm đếm; mật độ lấy từ ghi chú bộ đơn giá ("Mật độ 210 cây/ha"). Hộp hiện: mật độ
   quy định (cây/ha, m²/cây), số cây tối đa trên diện tích trồng, **diện tích cần cho số cây kiểm đếm**, có **vượt mật độ** không, vượt
   bao nhiêu cây (thiếu bao nhiêu m²), bao nhiêu cây **đảm bảo mật độ**. Áp dụng: dòng hiện tại = số cây đảm bảo mật độ (100%), thêm dòng
-  **vượt mật độ** ngay dưới với tỷ lệ bồi thường theo quy chuẩn (mặc định 0% – đặt theo quy định áp dụng cho dự án).
+  **vượt mật độ** ngay dưới với tỷ lệ bồi thường (mặc định 0%).
 - **Thẻ Nhà, công trình → Tách theo ranh thu hồi…** (chọn dòng tài sản): nhập tổng diện tích / khối lượng xây dựng và phần nằm trong
   ranh thu hồi. Phần trong ranh tính 100%; phần ngoài ranh tính theo tỷ lệ (mặc định 0%), hoặc tính toàn bộ nếu đánh dấu "ảnh hưởng kết
   cấu, không sử dụng được". Mô tả trong / ngoài ranh ghi ở cột Quy cách để làm cơ sở lập phương án.
-- **Quy chuẩn cây, tài sản…** (menu trái, nhóm Bảng giá & chính sách): bảng mật độ mọi loại cây (sửa mật độ, tỷ lệ bồi thường cây ngoài mật độ, căn cứ – lưu trong
-  file dự án) và tỷ lệ mặc định phần ngoài mật độ / ngoài ranh thu hồi của dự án.
 
 ## Đợt trình, thư mục hồ sơ, theo dõi tiến độ
 
@@ -558,6 +769,55 @@ Trong màn hình Lập phương án hộ:
 - **Báo cáo tổng hợp…**: xuất Excel các hộ **đang hiện theo bộ lọc** (đợt, trạng thái, từ khóa): sheet danh sách (mục 1-5, tổng,
   phê duyệt, chi trả, bàn giao, ghi chú theo dõi, tổng cộng và bằng chữ) và sheet tổng hợp theo đợt (số hộ, tổng tiền, số hộ / số
   tiền đã phê duyệt, đã chi, đã bàn giao).
+
+## Nhóm 5 và Nhóm 6: tổng hợp, trình thẩm định, phê duyệt, chi trả, bàn giao, cưỡng chế
+
+Theo Mục IV Quyết định 18/2026/QĐ-UBND (16 bước). Các mốc ngày bên dưới là **mặc định theo đặc tả của phần mềm**, đặt ở cài đặt của dự án
+(**Theo dõi chi trả & Bàn giao → Mốc thời hạn…**) - đối chiếu văn bản gốc và đổi khi quy định thay đổi.
+
+### Nhóm 5 - Tổng hợp & trình duyệt (Bước 8, 11)
+
+- **Bảng tổng hợp kinh phí** có 3 thẻ:
+  1. **Cơ cấu kinh phí dự án**: tiền đất, tài sản (nhà, công trình), cây trồng - vật nuôi, hỗ trợ - tái định cư, thưởng; cộng bồi
+     thường, hỗ trợ, tái định cư; **kinh phí tổ chức thực hiện** (QĐ 08/2025: theo tuyến tối đa 3,5%, dự án khác 2,5% - chọn ở
+     Thông tin dự án); tổng kinh phí và tỷ trọng. Cột *Đã phê duyệt* lấy từ các quyết định; *Chưa phê duyệt* là phương án của các hộ chưa
+     có quyết định; *Lệch PA - QĐ* chỉ so các hộ đã có quyết định (khác 0 nghĩa là quyết định ghi khác phương án).
+  2. **Bảng kinh phí chi tiết** (tên thẻ ghi số hộ của dự án): từng hộ - đất, nhà, cây, hỗ trợ, thưởng, tổng phương án, tổng phê duyệt.
+  3. **Đối soát dự toán Pre-F/S**: so kinh phí thực tế (áp giá của dự án) với **bảng khái toán ban đầu** - bấm **Dùng bảng khái toán đang mở**
+     (bảng ở Nhóm 1) hoặc **Chọn file khái toán…** (`.pabtdt`, phần mềm nhớ file đã chọn cho dự án). Báo "VƯỢT khái toán" khi thực tế lớn hơn.
+  Nút **Đi đến Phân hệ Phê duyệt →** (góc phải) mở trang Quyết định phê duyệt của Nhóm 6.
+- **Đợt trình thẩm định** (bố cục hai cột): bên trái *Quản lý đợt trình* và *Tờ trình thẩm định*, bên phải *Danh sách hộ và đánh số PA*.
+  - **Hạn thẩm định**: nhãn đếm ngược "Còn X / 15 ngày" tính từ **ngày trình** của đợt (xanh còn hạn, vàng còn không quá 3 ngày, đỏ quá
+    hạn; hiện "đã có quyết định phê duyệt" khi mọi hộ của đợt đã duyệt). Chưa nhập ngày trình thì nhãn nhắc nhập (Sửa đợt…).
+  - **Lấy hộ đã niêm yết xong từ Nhóm 4**: một nút xổ - *tất cả hộ đã niêm yết xong*, *chỉ hộ đã đồng thuận*, hoặc từng đợt niêm yết.
+    "Đã niêm yết xong" = đợt niêm yết đã hết thời hạn và hộ không vướng pháp lý V1-V5; hộ đã có trong đợt được bỏ qua, hộ đang ở đợt
+    trình khác thì hỏi trước khi chuyển.
+  - **Xuất bản hồ sơ (Bước 8)** (0.9.77): hộp Đợt trình **không còn tự xuất file**. Phía dưới chỉ có danh sách kiểm tra hồ sơ (đạt a/5 điều kiện:
+    số hộ, số PA chi tiết, số / ngày tờ trình, số PA tổng, ý kiến nhân dân - chỉ nhắc, rê chuột xem chi tiết [Đạt] / [Xem lại] / [Thiếu]) và **một nút
+    "Xuất bản hồ sơ đợt này →"**, mở **Xuất hồ sơ & Bản in** với đợt đang chọn. Ở đó chọn **Bản chính thức** (mẫu chính, trọn bộ: phương án chi tiết từng
+    hộ, bảng tổng hợp, tờ trình thẩm định, báo cáo tiếp thu ý kiến) hay **Bản Dự thảo** (mẫu có chữ DỰ THẢO, tự che số CCCD, chỉ phương án chi tiết và
+    bảng tổng hợp - để gửi dân niêm yết). Hồ sơ đợt lưu ở thư mục "Đợt N - k hộ" trong thư mục hồ sơ.
+  - **Số PA chi tiết** đánh số mặc định **2 chữ số** (01, 02, 03…), đổi được ở hộp Đánh số.
+
+### Nhóm 6 - Phê duyệt & bàn giao (Bước 9, 12 - 16)
+
+- **Quyết định phê duyệt** là nơi **duy nhất** quản lý quyết định (Thêm / Nhập từ file / Sửa / Xóa; thêm hộ, ghi nhận đã nhận tiền).
+  Bên trái danh sách quyết định, bên phải hộ của quyết định và **thanh khớp số liệu**: "Đã duyệt: X/N hộ · Tổng tiền: Y đ", báo *KHỚP* hoặc
+  *LỆCH* so với tổng tiền ghi trong quyết định (nhập ở **Sửa…**).
+- **Theo dõi chi trả & Bàn giao**:
+  - **Ngày thông báo thu hồi đất** (nhập, **Lưu ngày thông báo**): cột **Mốc thu hồi đất** cho biết hộ đã đủ thời gian thông báo để ban hành
+    quyết định thu hồi đất chưa - từ **60 ngày** với đất nông nghiệp, **120 ngày** với đất phi nông nghiệp; hộ có thửa phi nông nghiệp
+    (ví dụ ONT+CLN) hoặc loại đất không rõ tính theo 120 ngày.
+  - **Sổ nhật ký vận động…**: ghi các buổi vận động hộ **không nhận tiền bồi thường** hoặc **không bàn giao mặt bằng** (ngày, hình thức,
+    thành phần, nội dung, kết quả, biên bản). Tính từ buổi đầu tiên: quá **10 ngày** mà hộ vẫn chưa nhận tiền / chưa bàn giao thì cột
+    **Vận động / cưỡng chế** chuyển sang **"Đủ điều kiện cưỡng chế thu hồi đất theo Điều 89"** (tô đỏ). Bộ lọc có thêm *Đang vận động* và
+    *Đủ điều kiện cưỡng chế*. Hộ chưa có quyết định phê duyệt chưa áp dụng thời hạn vận động.
+  - **Xuất DS đề nghị cưỡng chế…**: Excel danh sách đề nghị ban hành quyết định cưỡng chế (hộ, thửa, quyết định, số buổi vận động, hạn vận
+    động, số ngày quá hạn, mốc thu hồi đất).
+- **Báo cáo tiến độ GPMB** (bảng điều hành): tỷ lệ **giải ngân** (tiền đã chi / tiền đã phê duyệt), tỷ lệ **diện tích mặt bằng sạch** đã bàn giao,
+  số thửa còn vướng, số hộ đủ điều kiện cưỡng chế; bảng **thửa chưa bàn giao mặt bằng (còn vướng mắc)** của hộ đã có quyết định mà chưa bàn giao, xếp **Gấp** (đủ điều kiện cưỡng
+  chế, hoặc đã nhận đủ tiền mà chưa bàn giao và cùng tờ bản đồ với thửa đã giải tỏa) / **Cao** (đã nhận đủ tiền, hoặc đang vận động) / **Theo
+  dõi**. Có xuất Excel báo cáo, xuất danh sách cưỡng chế và xuất danh sách đầy đủ các hộ.
 
 ## Kiểm tra lỗi trước khi trình
 
@@ -676,26 +936,26 @@ cài từ 0.8.0 trở lên (cả bản Win 10/11 và Win 7/8) (`--toi-thieu` đ�
 - cài xong tự kiểm tra phần mềm trên chính máy đó (giao diện, đọc PDF, bộ đơn giá, mẫu in, bảng giá đất). Nhật ký:
   `%TEMP%\pabt_cai_dat.log`. Cần ổ đĩa còn trống ≥ 300 MB.
 
-| Máy | Bộ cài | Nền chạy |
-|---|---|---|
-| **Mọi máy (tự chọn)** - không biết máy là gì thì dùng bộ này | `PABT_Setup_Universal_<phiên bản>.exe` | tự chọn một trong hai bản dưới |
-| **Windows 10 (bản 1809 trở lên) / 11**, 64-bit | `PABT_CaiDat_<phiên bản>_Win10-11_x64.exe` | Python 3.14 + Qt6, 64-bit |
-| **Mọi Windows từ 7 SP1**: 7, 8, 8.1, Windows 10 / 11 32-bit hoặc 64-bit, Windows 10 bản cũ | `PABT_CaiDat_<phiên bản>_Win7-8-10_x86.exe` | Python 3.8 + Qt5, 32-bit |
+**Một bộ cài cho mọi máy** (từ 0.9.26): `PABT_Setup_Universal_<phiên bản>.exe` (~50 MB) chứa hai bản chương trình và tự chọn khi
+cài:
 
-Không chắc máy là loại nào thì dùng **bộ cài Win7-8**: cài và chạy được trên mọi máy (trên Windows 10/11 64-bit bộ cài chỉ nhắc
-có bản Win10-11 chạy nhanh hơn). Bộ cài Win10-11 dùng nhầm trên máy không hợp sẽ báo và chỉ sang bộ cài Win7-8.
+| Máy | Bản được cài | Nền chạy |
+|---|---|---|
+| **Windows 10 (bản 1809 trở lên) / 11**, 64-bit | bản 64-bit | Python 3.14 + Qt6 |
+| **Windows 7 SP1 / 8 / 8.1**, Windows 32-bit, Windows 10 bản cũ | bản 32-bit | Python 3.8 + Qt5 |
+
 Windows 7 cần **Service Pack 1** và bản cập nhật **KB2533623** (có trong KB3063858; máy đã chạy Windows Update là có). Bộ cài
-Win7-8 **kèm sẵn KB3063858** (bản 32-bit và 64-bit của Microsoft): máy Windows 7 còn thiếu thì cửa sổ cài có ô "Cài bản cập nhật
+**kèm sẵn KB3063858** (bản 32-bit và 64-bit của Microsoft): máy Windows 7 còn thiếu thì cửa sổ cài có ô "Cài bản cập nhật
 Windows 7 KB3063858" (đánh dấu sẵn) – Windows hỏi quyền quản trị một lần, cài xong **khởi động lại máy** rồi mở PABT. Máy đã có bản
 cập nhật thì bỏ qua bước này (không hỏi gì).
 
 Chép **một file** bộ cài sang máy, bấm đúp → cửa sổ cài đặt (chọn thư mục, biểu tượng Desktop, liên kết file `.pabt`) → **Cài đặt**
-→ thanh tiến trình → tự kiểm tra → **Mở PABT**. Cài im lặng: `PABT_CaiDat_<phiên bản>_<bản>.exe /Q`.
+→ thanh tiến trình → tự kiểm tra → **Mở PABT**. Cài im lặng: `PABT_Setup_Universal_<phiên bản>.exe /Q`.
 
 **Máy không chạy được file `.exe` của bộ cài** (phần mềm diệt virus chặn, hoặc tên người dùng Windows có dấu làm vỏ giải nén lỗi):
-giải nén `PABT_ChayNgay_<phiên bản>_x64.zip` (hoặc `_x86.zip`) vào một thư mục rồi
-- bấm đúp **`CAI_DAT.cmd`** trong thư mục đó để cài như bộ cài `.exe` (cùng cửa sổ, cùng kiểm tra), hoặc
-- chạy thẳng **`PABT.exe`** không cần cài.
+giải nén `PABT_ChayNgay_<phiên bản>_Universal.zip` vào một thư mục rồi
+- bấm đúp **`CAI_DAT.cmd`** trong thư mục đó để cài như bộ cài `.exe` (cùng cửa sổ, cùng kiểm tra, tự chọn bản), hoặc
+- chạy thẳng **`x64\PABT.exe`** (Windows 10 / 11 64-bit) hoặc **`x86\PABT.exe`** (Windows 7 / 8, 32-bit) không cần cài.
 
 Gỡ bằng Settings → Apps (Win 7: Control Panel → Programs) – file dự án `.pabt` được giữ. Hai bản có cùng chức năng (bản Win7-8 đọc
 PDF đơn giá bằng `pypdf` thay cho QtPdf); cùng một **gói cập nhật `.pabtcn`** dùng được cho cả hai bản. Mẫu in sửa bằng **Cập nhật
@@ -714,10 +974,10 @@ mẫu in…** được lưu ở `%APPDATA%\PABT\mau_in`.
 6. **DUNG_BO_CAI.bat**: dựng **cả hai bản** – `dist\PABT` (PyInstaller 6, Python 3.14 + Qt6) và `dist\PABT_Win7`
    (`bo_cai_win\dung_exe38.py`: chép mã sang thư mục tạm không dấu, PyInstaller 5), rút gọn từng bản (`bo_cai_win\rut_gon.py`: bỏ thư
    viện Qt không dùng, rồi chạy `PABT.exe tu-kiem`, dừng nếu không đạt), rồi `bo_cai_win\dung_bo_cai_win.py` đóng gói (IExpress có sẵn
-   trong Windows, khởi chạy `CAI_DAT.cmd` → `cai_dat.ps1` / `go_cai_dat.ps1` chạy được PowerShell 2.0) thành
-   `bo_cai\PABT_CaiDat_<phiên bản>_Win10-11.exe`, `..._Win7-8.exe` (32-bit, vỏ IExpress 32-bit từ SysWOW64; thư viện C chung UCRT
-   của Windows 7 đóng sẵn - `bo_cai_win\ucrt_win7.py` lấy từ `vc_redist_win7.x86.exe`) và hai gói `.zip` (chạy ngay / cài dự
-   phòng bằng `CAI_DAT.cmd`). `rut_gon.py` dừng dựng nếu bản dựng cần DLL không có sẵn trên Windows đích (Windows 7 SP1 /
+   trong Windows, khởi chạy `CAI_DAT.cmd` → `cai_dat.ps1` / `go_cai_dat.ps1` chạy được PowerShell 2.0) thành MỘT bộ cài
+   `bo_cai\PABT_Setup_Universal_<phiên bản>.exe` (vỏ IExpress 32-bit từ SysWOW64; thư viện C chung UCRT của Windows 7 đóng sẵn -
+   `bo_cai_win\ucrt_win7.py` lấy từ `vc_redist_win7.x86.exe`) và gói `PABT_ChayNgay_<phiên bản>_Universal.zip` (chạy ngay / cài
+   dự phòng bằng `CAI_DAT.cmd`). Hai bộ cài riêng như trước 0.9.26: `dung_bo_cai_win.py win10 win7`. `rut_gon.py` dừng dựng nếu bản dựng cần DLL không có sẵn trên Windows đích (Windows 7 SP1 /
    Windows 10 1809).
    Mã nguồn dùng chung phải chạy được cả Python 3.8 + Qt5: `from __future__ import annotations` ở đầu mỗi file; không dùng tính năng
    Python 3.9+ khi chạy; Qt5 được nạp dưới tên PySide6 bởi `pabt/__init__.py` (`_qt5_lam_qt6`). Kiểm thử cả hai:
@@ -767,11 +1027,11 @@ Bộ kiểm thử so khớp với file Excel thật nếu đặt file ở `du_li
 | `pabt/khoa.py` | Khóa file dự án khi nhiều máy cùng mở (`.pabt.khoa`, làm mới mỗi phút, hết hạn sau 3 phút) |
 | `pabt/nhap_excel.py` | Đọc file PABT Excel theo tên tiêu đề cột; chặn khi mã hộ trùng, thửa mồ côi, dòng phương án trỏ tới thửa/hộ không có; ghi trong một giao dịch |
 | `pabt/nhap_tho.py` | Nhập danh sách hộ, thửa từ file Excel bất kỳ: tự tìm tiêu đề, nhận cột theo tên, gom hộ; xóa trắng hồ sơ, giữ danh mục |
-| `pabt/don_gia.py`, `pabt/bo_don_gia.sqlite`, `tao_bo_don_gia.py` | Bộ đơn giá tích hợp: đọc, áp vào dự án, cập nhật từ file / Internet; script đóng gói |
+| `pabt/don_gia.py`, `pabt/bo_don_gia.sqlite`, `pabt/quan_tri_bo.py`, `tao_bo_don_gia.py` | Bộ đơn giá: đọc, áp vào dự án, thêm/sửa/xóa/thay (quyền quản trị), cập nhật từ file / Internet |
 | `pabt/du_an_moi.py`, `pabt/man_hinh_du_an_moi.py` | Dự án mới từ dữ liệu thô: gom hộ, bảng giá đất, tự lập phương án, xuất 2 bảng in |
-| `pabt/man_hinh_don_gia.py` | Màn hình Bộ đơn giá (chỉ đọc, cập nhật, tra cứu văn bản) |
+| `pabt/man_hinh_don_gia.py` | Màn hình Bộ đơn giá (xem, sửa có mở khóa quản trị, cập nhật, tra cứu văn bản) |
 | `pabt/gia_dat_nq28.py`, `pabt/bang_gia_nq28.json`, `pabt/man_hinh_gia_dat.py` | Bảng giá đất NQ 28/2025 (4 địa bàn): tra cứu, điền giá, xuất Excel |
-| `tao_bieu_tuong.py`, `pabt/bieu_tuong.ico` | Biểu tượng phần mềm / bộ cài (đường cao tốc, mặt bằng GPMB, cột mốc) |
+| `tao_bieu_tuong.py`, `pabt/bieu_tuong.ico` | Biểu tượng duy nhất của phần mềm / bộ cài, dựng từ `logo_PABT_nen_trang.png` (chữ PABT, nền trắng sữa, viền xanh đậm + vàng) |
 | `pabt/nhap_don_gia.py`, `pabt/man_hinh_nhap_don_gia.py` | Cập nhật bộ đơn giá từ Excel / Word / PDF / CSV hoặc trang web: đọc bảng, so khớp, xem trước, tạo phiên bản mới |
 | `pabt/man_hinh_quet_web.py` | Quét trang web / Công báo Đồng Nai: tìm văn bản đơn giá, chính sách; tải, phân tích, áp dụng theo ngày ban hành |
 | `pabt/ho_so.py` | Hồ sơ kiểm kê: thêm / sửa / xóa hộ, thửa; gộp hộ; chuyển thửa |

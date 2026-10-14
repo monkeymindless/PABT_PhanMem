@@ -25,6 +25,9 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $TEN = 'PABT - Lập phương án bồi thường, hỗ trợ'
+# định danh ứng dụng trên taskbar - PHẢI trùng pabt.app.APP_USER_MODEL_ID (tiến trình PABT tự đăng ký khi mở): lối tắt mang cùng
+# định danh thì cửa sổ đang chạy nhập vào nút đã ghim, ghim lên taskbar giữ biểu tượng PABT (không tách hai nút / mất biểu tượng)
+$APP_ID = 'gov.pabt.boithuong.enterprise.2026'
 $TEN_DAY_DU = 'PHẦN MỀM LẬP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ'
 $PHIEN_BAN = [System.IO.File]::ReadAllText((Join-Path $GOC 'phien_ban.txt')).Trim()
 $BAN = 'win10'
@@ -242,12 +245,38 @@ public static class PabtLoiTat {
         void Resolve(IntPtr h, int f);
         void SetPath([MarshalAs(UnmanagedType.LPWStr)] string s);
     }
-    public static void Tao(string lnk, string dich, string thuMuc, string bieuTuong, string moTa) {
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
+    interface IPropertyStore {
+        void GetCount(out uint c);
+        void GetAt(uint i, out KhoaThuocTinh k);
+        void GetValue(ref KhoaThuocTinh k, IntPtr v);
+        void SetValue(ref KhoaThuocTinh k, ref GiaTriThuocTinh v);
+        void Commit();
+    }
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    struct KhoaThuocTinh { public Guid fmtid; public uint pid; }
+    [StructLayout(LayoutKind.Explicit)]
+    struct GiaTriThuocTinh { [FieldOffset(0)] public ushort vt; [FieldOffset(8)] public IntPtr p; [FieldOffset(16)] public IntPtr du; }
+    // System.AppUserModel.ID (PKEY_AppUserModel_ID) - Windows 7 trở lên; lỗi thì bỏ qua (lối tắt vẫn tạo được)
+    static void DatAppId(IShellLinkW l, string appId) {
+        if (appId == null || appId.Length == 0) return;
+        IPropertyStore ps = (IPropertyStore)l;
+        KhoaThuocTinh k = new KhoaThuocTinh();
+        k.fmtid = new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3");
+        k.pid = 5;
+        GiaTriThuocTinh v = new GiaTriThuocTinh();
+        v.vt = 31;                                      // VT_LPWSTR
+        v.p = Marshal.StringToCoTaskMemUni(appId);
+        try { ps.SetValue(ref k, ref v); ps.Commit(); }
+        finally { Marshal.FreeCoTaskMem(v.p); }
+    }
+    public static void Tao(string lnk, string dich, string thuMuc, string bieuTuong, string moTa, string appId) {
         IShellLinkW l = (IShellLinkW)new ShellLink();
         l.SetPath(dich);
         l.SetWorkingDirectory(thuMuc);
         l.SetIconLocation(bieuTuong, 0);
         l.SetDescription(moTa);
+        try { DatAppId(l, appId); } catch (Exception) { }
         ((IPersistFile)l).Save(lnk, true);
         Marshal.ReleaseComObject(l);
     }
@@ -258,7 +287,7 @@ function TaoLoiTat($lnk, $exe, $thu, $ico) {
     # trả đường dẫn lối tắt đã tạo, hoặc '' nếu không tạo được (không làm hỏng lần cài)
     try {
         if (-not ('PabtLoiTat' -as [type])) { Add-Type -TypeDefinition $LOI_TAT_CS }
-        [PabtLoiTat]::Tao($lnk, $exe, $thu, $ico, $TEN)
+        [PabtLoiTat]::Tao($lnk, $exe, $thu, $ico, $TEN, $APP_ID)
         if (Test-Path -LiteralPath $lnk) { return $lnk }
     } catch { Ghi "Lối tắt (IShellLinkW) lỗi: $_" }
     try {                                       # dự phòng: WScript.Shell với tên không dấu
@@ -293,12 +322,101 @@ function ChuKhongGhiDuoc($dich) {
            "Bấm Cài đặt lại và chọn Có (Yes) khi Windows hỏi, hoặc cài vào thư mục không cần quyền quản trị: $KHONG_QT."
 }
 
+function CungThuMuc($duong, $goc) {
+    # cùng thư mục hoặc thư mục con (so không phân biệt hoa thường)
+    if (-not $duong -or -not $goc) { return $false }
+    $a = $duong.TrimEnd('\').ToLower(); $b = $goc.TrimEnd('\').ToLower()
+    return ($a -eq $b) -or $a.StartsWith($b + '\')
+}
+
+function TatPabtDangMo($dich) {
+    # Bộ cài phổ quát chạy PowerShell 32-bit (vỏ IExpress 32-bit). Get-Process.Path của tiến trình PABT 64-bit trả về RỖNG
+    # nên trước đây không tắt được phần mềm đang mở, Remove-Item kẹt ở qwindows.dll ("Access is denied").
+    # Win32_Process.ExecutablePath đọc được từ PowerShell 32-bit.
+    $i = 0
+    while ($i -lt 25) {
+        $con = $false
+        foreach ($q in @(Get-WmiObject Win32_Process -Filter "Name='PABT.exe'" -ErrorAction SilentlyContinue)) {
+            if (CungThuMuc $q.ExecutablePath $dich) {
+                $con = $true
+                if ($i -eq 0) { Ghi "Đóng PABT đang mở để cài đè (pid $($q.ProcessId), $($q.ExecutablePath))" }
+                Stop-Process -Id $q.ProcessId -Force -ErrorAction SilentlyContinue
+            }
+        }
+        if (-not $con) { return }
+        Start-Sleep -Milliseconds 200
+        $i++
+    }
+}
+
+function TienTrinhGiuFile($file) {
+    # Restart Manager: tên tiến trình đang mở file (PABT còn chạy, chương trình diệt virus...)
+    if (-not ('PabtKhoaFile' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public class PabtKhoaFile {
+  [DllImport("rstrtmgr.dll", CharSet=CharSet.Unicode)] static extern int RmStartSession(out uint s, int d, string k);
+  [DllImport("rstrtmgr.dll")] static extern int RmEndSession(uint s);
+  [DllImport("rstrtmgr.dll", CharSet=CharSet.Unicode)] static extern int RmRegisterResources(uint s, uint nFiles, string[] files, uint nApp, IntPtr apps, uint nSvc, string[] svcs);
+  [DllImport("rstrtmgr.dll")] static extern int RmGetList(uint s, out uint needed, ref uint n, [In, Out] RM_PROCESS_INFO[] info, ref uint reboot);
+  [StructLayout(LayoutKind.Sequential)] public struct FILETIME { public uint a, b; }
+  [StructLayout(LayoutKind.Sequential)] public struct RM_UNIQUE_PROCESS { public int dwProcessId; public FILETIME ProcessStartTime; }
+  [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+  public struct RM_PROCESS_INFO {
+    public RM_UNIQUE_PROCESS Process;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst=256)] public string strAppName;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst=64)] public string strServiceShortName;
+    public uint ApplicationType, AppStatus, TSSessionId;
+    [MarshalAs(UnmanagedType.Bool)] public bool bRestartable;
+  }
+  public static string LietKe(string file) {
+    uint s; if (RmStartSession(out s, 0, Guid.NewGuid().ToString()) != 0) return "";
+    try {
+      if (RmRegisterResources(s, 1, new string[] { file }, 0, IntPtr.Zero, 0, null) != 0) return "";
+      uint need = 0, n = 0, reboot = 0;
+      RmGetList(s, out need, ref n, null, ref reboot);
+      if (need == 0) return "";
+      RM_PROCESS_INFO[] info = new RM_PROCESS_INFO[need];
+      n = need;
+      if (RmGetList(s, out need, ref n, info, ref reboot) != 0) return "";
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < n; i++) {
+        if (sb.Length > 0) sb.Append("; ");
+        sb.Append(info[i].strAppName).Append(" (pid ").Append(info[i].Process.dwProcessId).Append(")");
+      }
+      return sb.ToString();
+    } finally { RmEndSession(s); }
+  }
+}
+'@
+    }
+    try { return [PabtKhoaFile]::LietKe($file) } catch { return '' }
+}
+
+function XoaThuMucCu($dich) {
+    if (-not (Test-Path -LiteralPath $dich)) { return }
+    TatPabtDangMo $dich
+    $loi = ''
+    $lan = 0
+    while ($lan -lt 6) {
+        try { Remove-Item -LiteralPath $dich -Recurse -Force -ErrorAction Stop; Ghi 'Đã gỡ bản cũ'; return }
+        catch { $loi = "$_"; $lan++; Start-Sleep -Milliseconds 300; TatPabtDangMo $dich }
+    }
+    $mau = Join-Path $dich '_internal\PySide6\plugins\platforms\qwindows.dll'
+    if (-not (Test-Path -LiteralPath $mau)) { $mau = Join-Path $dich 'PABT.exe' }
+    $giu = ''
+    if (Test-Path -LiteralPath $mau) { $giu = TienTrinhGiuFile $mau }
+    $chu = "Không xóa được bản PABT đang có trong $dich vì có file đang bị chương trình khác giữ"
+    if ($giu) { $chu += " ($giu)" } else { $chu += ". $loi" }
+    throw ($chu + '. Đóng phần mềm đó rồi bấm "Cài đặt" lại.')
+}
+
 function ChepVao($dich, $tienDo) {
     # phần GHI vào thư mục cài - chạy thẳng, hoặc trong tiến trình quyền quản trị (ChepQuyenQuanTri) khi cài vào Program Files
     KiemTraThuMuc $dich
-    Get-Process PABT -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($dich, 'OrdinalIgnoreCase') } |
-        Stop-Process -Force
-    if (Test-Path -LiteralPath $dich) { Remove-Item -LiteralPath $dich -Recurse -Force; Ghi 'Đã gỡ bản cũ' }
+    XoaThuMucCu $dich
     [void][System.IO.Directory]::CreateDirectory($dich)
     ChepFile $dich $tienDo | Out-Null
     [System.IO.File]::Copy((Join-Path $GOC 'go_cai_dat.ps1'), (Join-Path $dich 'go_cai_dat.ps1'), $true)
@@ -358,9 +476,7 @@ function GoBanCu($cu, $dich) {
             Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
     if ($da.Count -gt 0) { Ghi "Giữ bản cũ $cu (có $($da.Count) file dự án)"; return }
     try {
-        Get-Process PABT -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($cu, 'OrdinalIgnoreCase') } |
-            Stop-Process -Force
-        Remove-Item -LiteralPath $cu -Recurse -Force
+        XoaThuMucCu $cu
         Ghi "Đã gỡ bản cũ ở thư mục khác: $cu"
     } catch { Ghi "Chưa gỡ được bản cũ $cu ($_)" }
 }
@@ -396,6 +512,11 @@ function Cai($dich, $desktop, $lienKet, $tienDo) {
     New-Item 'HKCU:\Software\Classes\PABT.CapNhat' -Value 'Gói cập nhật PABT' -Force | Out-Null
     New-Item 'HKCU:\Software\Classes\PABT.CapNhat\DefaultIcon' -Value "`"$ico`",0" -Force | Out-Null
     New-Item 'HKCU:\Software\Classes\PABT.CapNhat\shell\open\command' -Value "`"$exe`" `"%1`"" -Force | Out-Null
+    # gói mẫu in & cấu hình .pabtcfg (0.9.85): bấm đúp để thay mẫu in / hồ sơ địa phương
+    New-Item 'HKCU:\Software\Classes\.pabtcfg' -Value 'PABT.MauIn' -Force | Out-Null
+    New-Item 'HKCU:\Software\Classes\PABT.MauIn' -Value 'Gói mẫu in & cấu hình PABT' -Force | Out-Null
+    New-Item 'HKCU:\Software\Classes\PABT.MauIn\DefaultIcon' -Value "`"$ico`",0" -Force | Out-Null
+    New-Item 'HKCU:\Software\Classes\PABT.MauIn\shell\open\command' -Value "`"$exe`" `"%1`"" -Force | Out-Null
     $k = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PABT'
     New-Item $k -Force | Out-Null
     # gỡ cài cũng chạy qua -Command (không bị ExecutionPolicy / Group Policy chặn như -File)
@@ -403,9 +524,13 @@ function Cai($dich, $desktop, $lienKet, $tienDo) {
     $go = "powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -WindowStyle Hidden -Command `"& ([scriptblock]::Create(" +
           "[IO.File]::ReadAllText('$q1', [Text.Encoding]::UTF8))) -Dich '$q2'"
     $goIm = "$go -Im`""; $go = "$go`""
+    # nút Gỡ của Windows: PABT.exe (ứng dụng cửa sổ, không console) chạy go_cai_dat.ps1 bằng PowerShell không cửa sổ - Windows
+    # chạy thẳng powershell.exe thì Windows 11 mở cửa sổ Windows Terminal trống suốt lúc gỡ (-WindowStyle Hidden không ẩn được).
+    # Gỡ im lặng (công cụ quản trị chờ lệnh chạy xong): giữ lệnh PowerShell.
+    $goAn = "`"$exe`" go-cai-dat"
     $mb = [int]((Get-ChildItem -LiteralPath $dich -Recurse -Force | Where-Object { -not $_.PSIsContainer } | Measure-Object Length -Sum).Sum / 1KB)
     foreach ($kv in @(@('DisplayName', $TEN), @('DisplayVersion', $PHIEN_BAN), @('Publisher', 'PABT'), @('InstallLocation', $dich),
-                      @('DisplayIcon', "$ico,0"), @('UninstallString', $go), @('QuietUninstallString', $goIm))) {
+                      @('DisplayIcon', "$ico,0"), @('UninstallString', $goAn), @('QuietUninstallString', $goIm))) {
         New-ItemProperty $k -Name $kv[0] -Value $kv[1] -PropertyType String -Force | Out-Null
     }
     foreach ($kv in @(@('NoModify', 1), @('NoRepair', 1), @('EstimatedSize', $mb))) {
@@ -471,44 +596,101 @@ if ($Im) {
 # ---------------------------------------------------------------- cửa sổ cài đặt
 $XANH = [System.Drawing.Color]::FromArgb(10, 37, 64); $VANG = [System.Drawing.Color]::FromArgb(255, 213, 79)
 $f = New-Object System.Windows.Forms.Form
-$f.Text = "Cài đặt PABT $PHIEN_BAN - $TEN_BAN"; $f.ClientSize = New-Object System.Drawing.Size(640, 430)
+$RONG_CUA_SO = 620                                              # 620 x 440 (người dùng 13/10/2026); cao thêm khi băng tiêu đề / dòng Visual C++ cần chỗ
+$f.Text = "Cài đặt PABT $PHIEN_BAN - $TEN_BAN"; $f.ClientSize = New-Object System.Drawing.Size($RONG_CUA_SO, 440)
 $f.FormBorderStyle = 'FixedDialog'; $f.MaximizeBox = $false; $f.StartPosition = 'CenterScreen'
 $f.Font = New-Object System.Drawing.Font('Segoe UI', 9.5); $f.BackColor = [System.Drawing.Color]::White
 $icoF = Join-Path $GOC 'PABT.ico'
 if (Test-Path -LiteralPath $icoF) { $f.Icon = New-Object System.Drawing.Icon($icoF) }
-$dau = New-Object System.Windows.Forms.Panel; $dau.Dock = 'Top'; $dau.Height = 110; $dau.BackColor = $XANH
+# banner nền trắng (người dùng 13/10/2026): logo squircle nổi khối trên nền sáng; $XANH giữ cho chữ trạng thái ở thân cửa sổ
+$NAVY = [System.Drawing.Color]::FromArgb(15, 56, 102)           # #0F3866 - tiêu đề
+$XAM_THAN = [System.Drawing.Color]::FromArgb(71, 85, 105)       # #475569 - dòng phiên bản
+$MAU_CO_QUAN = [System.Drawing.Color]::FromArgb(14, 116, 144)   # #0E7490 - dòng cơ quan: cùng sắc xanh lơ của phần mềm (#67E8F9 trên nền tối), đậm lên để đọc được trên nền trắng
+$KE_BANNER = [System.Drawing.Color]::FromArgb(226, 232, 240)    # #E2E8F0 - đường kẻ chân banner
+# thẻ thông báo (Alert Card): nền hổ phách nhạt, vạch trái 4 px; dòng cam kết dữ liệu xanh ngọc
+$HP_NEN = [System.Drawing.Color]::FromArgb(255, 251, 235)       # #FFFBEB
+$HP_VACH = [System.Drawing.Color]::FromArgb(245, 158, 11)       # #F59E0B
+$HP_KE = [System.Drawing.Color]::FromArgb(253, 230, 138)        # #FDE68A - đường ngăn trong thẻ
+$XANH_NGOC = [System.Drawing.Color]::FromArgb(4, 120, 87)       # #047857
+$CHU_THE = [System.Drawing.Color]::FromArgb(30, 41, 59)         # #1E293B - chữ thông báo thường
+$LUC_NUT = [System.Drawing.Color]::FromArgb(16, 124, 65)        # #107C41 - nút Cài đặt
+function CoPhongBieu {
+    # phông Segoe UI Emoji: Windows 10+; Windows 7 / 8 không có -> không hiện biểu tượng (chữ vẫn đủ nghĩa)
+    if ($script:CO_PHONG_BIEU -eq $null) {
+        $script:CO_PHONG_BIEU = $false
+        if ([Environment]::OSVersion.Version.Major -ge 10) {
+            foreach ($h in (New-Object System.Drawing.Text.InstalledFontCollection).Families) { if ($h.Name -eq 'Segoe UI Emoji') { $script:CO_PHONG_BIEU = $true } }
+        }
+    }
+    return $script:CO_PHONG_BIEU
+}
+function HinhBieu($ma, $mau, $co) {
+    # emoji vẽ sẵn vào ảnh 24 x 24 một màu: nhãn / nút WinForms (GDI) không thay phông cho ký tự ngoài BMP nên chữ emoji hiện ô vuông
+    if (-not (CoPhongBieu)) { return $null }
+    $bm = New-Object System.Drawing.Bitmap(24, 24)
+    $g = [System.Drawing.Graphics]::FromImage($bm)
+    $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+    $sf = New-Object System.Drawing.StringFormat; $sf.Alignment = 'Center'; $sf.LineAlignment = 'Center'
+    $fn = New-Object System.Drawing.Font('Segoe UI Emoji', $co, [System.Drawing.GraphicsUnit]::Pixel)
+    $g.DrawString([char]::ConvertFromUtf32($ma), $fn, (New-Object System.Drawing.SolidBrush($mau)), (New-Object System.Drawing.RectangleF(0, 0, 24, 24)), $sf)
+    $g.Dispose(); $fn.Dispose()
+    return $bm
+}
+function GanHinh($nut, $hinh) {
+    # nút: ảnh trước chữ, cả cụm canh giữa
+    $nut.Image = $hinh
+    if ($hinh) { $nut.ImageAlign = 'MiddleLeft'; $nut.TextImageRelation = 'ImageBeforeText' }
+}
+function BoGoc($c, $r) {
+    $gp = New-Object System.Drawing.Drawing2D.GraphicsPath; $d = 2 * $r
+    $gp.AddArc(0, 0, $d, $d, 180, 90); $gp.AddArc(($c.Width - $d), 0, $d, $d, 270, 90)
+    $gp.AddArc(($c.Width - $d), ($c.Height - $d), $d, $d, 0, 90); $gp.AddArc(0, ($c.Height - $d), $d, $d, 90, 90)
+    $gp.CloseFigure(); $c.Region = New-Object System.Drawing.Region($gp)
+}
+$dau = New-Object System.Windows.Forms.Panel; $dau.Dock = 'Top'; $dau.Height = 110; $dau.BackColor = [System.Drawing.Color]::White
 $f.Controls.Add($dau)
 $anh = New-Object System.Windows.Forms.PictureBox; $anh.Size = New-Object System.Drawing.Size(84, 84)
 $anh.Location = New-Object System.Drawing.Point(18, 13); $anh.SizeMode = 'Zoom'
 $png = Join-Path $GOC 'bieu_tuong.png'; if (Test-Path -LiteralPath $png) { $anh.Image = [System.Drawing.Image]::FromFile($png) }
 $dau.Controls.Add($anh)
-$t1 = New-Object System.Windows.Forms.Label; $t1.Text = $TEN_DAY_DU; $t1.ForeColor = $VANG; $t1.AutoSize = $false
-$t1.Font = New-Object System.Drawing.Font('Segoe UI', 13, [System.Drawing.FontStyle]::Bold)
+# cả ba dòng chữ AutoSize (một dòng, không ngắt): tiêu đề 11 pt đậm ~488 px nằm gọn trong 620 - 115 = 505 px sau logo.
+# Màn hình phóng to 125% / 150% làm chữ to hơn mà cửa sổ không rộng theo: giảm cỡ chữ từng nấc 0,5 pt (tối thiểu 8 pt) cho vừa MỘT dòng
+$t1 = New-Object System.Windows.Forms.Label; $t1.Text = $TEN_DAY_DU; $t1.ForeColor = $NAVY; $t1.AutoSize = $true; $t1.UseMnemonic = $false
 $dau.Controls.Add($t1)
-$t2 = New-Object System.Windows.Forms.Label; $t2.ForeColor = [System.Drawing.Color]::White; $t2.AutoSize = $false
-$t2.Text = "Phiên bản $PHIEN_BAN ($TEN_BAN)`r`nTrung tâm Phát triển quỹ đất Chi nhánh Vĩnh Cửu"
+$t2 = New-Object System.Windows.Forms.Label; $t2.ForeColor = $XAM_THAN; $t2.AutoSize = $true; $t2.UseMnemonic = $false
+$t2.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
+$t2.Text = "Phiên bản $PHIEN_BAN ($TEN_BAN)"
 $dau.Controls.Add($t2)
-# chữ tiêu đề: đo chiều cao thật theo phông (màn hình phóng to 125% / 150% chữ to hơn mà ô không tự to theo) rồi xếp dòng,
-# băng xanh cao theo chữ - không cắt mất chữ cuối ("Cửu") như ô cố định 510 x 22 trước đây
-$rongChu = 510
-$c1 = $t1.GetPreferredSize((New-Object System.Drawing.Size($rongChu, 0))).Height
-$t1.Location = New-Object System.Drawing.Point(115, 12); $t1.Size = New-Object System.Drawing.Size($rongChu, $c1)
-$c2 = $t2.GetPreferredSize((New-Object System.Drawing.Size($rongChu, 0))).Height
-$t2.Location = New-Object System.Drawing.Point(116, ($t1.Bottom + 4)); $t2.Size = New-Object System.Drawing.Size($rongChu, $c2)
-$dau.Height = [Math]::Max(110, $t2.Bottom + 12)
-$LECH = $dau.Height - 110                                   # phần băng tiêu đề cao thêm: dời các ô bên dưới xuống
-$f.ClientSize = New-Object System.Drawing.Size(640, (430 + $LECH))
-$vach = New-Object System.Windows.Forms.Panel; $vach.Dock = 'Top'; $vach.Height = 3; $vach.BackColor = $VANG; $f.Controls.Add($vach)
+$t3 = New-Object System.Windows.Forms.Label; $t3.ForeColor = $MAU_CO_QUAN; $t3.AutoSize = $true; $t3.UseMnemonic = $false
+$t3.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
+$t3.Text = 'Trung tâm Phát triển quỹ đất Chi nhánh Vĩnh Cửu'
+$dau.Controls.Add($t3)
+$XCHU = 115; $rongToiDa = $RONG_CUA_SO - $XCHU - 12
+$coT1 = 11.0
+do {
+    $t1.Font = New-Object System.Drawing.Font('Segoe UI', $coT1, [System.Drawing.FontStyle]::Bold)
+    if ($t1.PreferredSize.Width -le $rongToiDa) { break }
+    $coT1 -= 0.5
+} while ($coT1 -ge 8)
+# khối ba dòng đặt giữa theo chiều dọc so với logo (13 - 97 px)
+$caoKhoi = $t1.PreferredSize.Height + 4 + $t2.PreferredSize.Height + $t3.PreferredSize.Height
+$yKhoi = [Math]::Max(10, [int]((110 - $caoKhoi) / 2))
+$t1.Location = New-Object System.Drawing.Point($XCHU, $yKhoi)
+$t2.Location = New-Object System.Drawing.Point(($XCHU + 1), ($t1.Bottom + 4))
+$t3.Location = New-Object System.Drawing.Point(($XCHU + 1), $t2.Bottom)
+$dau.Height = [Math]::Max(110, $t3.Bottom + $yKhoi)
+$vach = New-Object System.Windows.Forms.Panel; $vach.Dock = 'Top'; $vach.Height = 1; $vach.BackColor = $KE_BANNER; $f.Controls.Add($vach)
 $vach.BringToFront()
 
-$y = 130 + $LECH
+$y = $dau.Height + 1 + 16
+$RONG_THAN = $RONG_CUA_SO - 48                              # thân cửa sổ: lề trái / phải 24 px
 $l1 = New-Object System.Windows.Forms.Label; $l1.Text = 'Thư mục cài đặt:'; $l1.Location = New-Object System.Drawing.Point(24, $y); $l1.AutoSize = $true
 $f.Controls.Add($l1)
-$oThu = New-Object System.Windows.Forms.TextBox; $oThu.Location = New-Object System.Drawing.Point(24, ($y + 22)); $oThu.Width = 490
+$oThu = New-Object System.Windows.Forms.TextBox; $oThu.Location = New-Object System.Drawing.Point(24, ($y + 22)); $oThu.Width = $RONG_THAN - 100
 $oThu.Text = $ThuMuc
 if (-not $ThuMuc) { $oThu.Text = $MAC_DINH }
 $f.Controls.Add($oThu)
-$bChon = New-Object System.Windows.Forms.Button; $bChon.Text = 'Chọn…'; $bChon.Location = New-Object System.Drawing.Point(524, ($y + 20))
+$bChon = New-Object System.Windows.Forms.Button; $bChon.Text = 'Chọn…'; $bChon.Location = New-Object System.Drawing.Point((24 + $RONG_THAN - 90), ($y + 20))
 $bChon.Width = 90; $f.Controls.Add($bChon)
 $bChon.Add_Click({
     $d = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -518,6 +700,7 @@ $bChon.Add_Click({
             $tt.ForeColor = [System.Drawing.Color]::FromArgb(176, 96, 0)
             $tt.Text = "Thư mục hệ thống của Windows: khi bấm `"Cài đặt`", Windows sẽ hỏi quyền quản trị để chép file PABT vào đây." }
         else { $tt.ForeColor = $XANH; $tt.Text = "Cài vào $($oThu.Text). Bấm `"Cài đặt`" để bắt đầu." }
+        CapNhatNutCu
     } })
 $cDesk = New-Object System.Windows.Forms.CheckBox; $cDesk.Text = 'Tạo biểu tượng PABT trên Desktop'; $cDesk.Checked = -not $KhongDesktop
 $cDesk.Location = New-Object System.Drawing.Point(24, ($y + 58)); $cDesk.AutoSize = $true; $f.Controls.Add($cDesk)
@@ -533,17 +716,63 @@ if ((ThieuKbWin7) -and (Test-Path -LiteralPath $KB)) {
     $cVc.Text = 'Cài bản cập nhật Windows 7 KB3063858 (PABT cần) - hỏi quyền quản trị, khởi động lại máy sau khi cài'
     $cVc.Checked = $true; $cVc.Enabled = $true; $script:O_LA_KB = $true
 }
+$cVc.Visible = $cVc.Enabled                    # dòng chỉ để báo "không cần cài thêm" (ô khóa, không chọn) ẩn đi - chỉ hiện khi có việc cho người dùng chọn
 $f.Controls.Add($cVc)
-$tt = New-Object System.Windows.Forms.Label; $tt.Location = New-Object System.Drawing.Point(24, ($y + 150)); $tt.Size = New-Object System.Drawing.Size(590, 40)
-$tt.ForeColor = $XANH; $f.Controls.Add($tt)
-$pb = New-Object System.Windows.Forms.ProgressBar; $pb.Location = New-Object System.Drawing.Point(24, ($y + 192)); $pb.Size = New-Object System.Drawing.Size(590, 18)
+$ySau = $y + 112; if ($cVc.Visible) { $ySau = $y + 138 }
+# Alert Card: vạch trái 4 px hổ phách, nền #FFFBEB, bo góc 6 px. $tt (RichTextBox: thanh cuộn chỉ hiện khi chữ dài) giữ tên cũ
+# để mọi chỗ ghi trạng thái / lỗi bên dưới ($tt.Text, $tt.ForeColor) vẫn chạy nguyên
+$CAO_THE = 112
+$the = New-Object System.Windows.Forms.Panel; $the.Location = New-Object System.Drawing.Point(24, $ySau)
+$the.Size = New-Object System.Drawing.Size($RONG_THAN, $CAO_THE); $the.BackColor = $HP_NEN
+$soc = New-Object System.Windows.Forms.Panel; $soc.Location = New-Object System.Drawing.Point(0, 0)
+$soc.Size = New-Object System.Drawing.Size(4, $CAO_THE); $soc.BackColor = $HP_VACH; $the.Controls.Add($soc)
+$tt = New-Object System.Windows.Forms.RichTextBox
+$tt.ReadOnly = $true; $tt.WordWrap = $true; $tt.ScrollBars = 'Vertical'; $tt.DetectUrls = $false; $tt.TabStop = $false
+$tt.BorderStyle = 'None'; $tt.BackColor = $HP_NEN
+$tt.Location = New-Object System.Drawing.Point(16, 9); $tt.Size = New-Object System.Drawing.Size(($RONG_THAN - 28), 58)
+$tt.ForeColor = $XANH; $the.Controls.Add($tt)
+$ke = New-Object System.Windows.Forms.Panel; $ke.Location = New-Object System.Drawing.Point(16, 74)
+$ke.Size = New-Object System.Drawing.Size(($RONG_THAN - 28), 1); $ke.BackColor = $HP_KE; $the.Controls.Add($ke)
+$lbAn = New-Object System.Windows.Forms.Label; $lbAn.AutoSize = $true; $lbAn.UseMnemonic = $false; $lbAn.UseCompatibleTextRendering = $true; $lbAn.ForeColor = $XANH_NGOC
+$lbAn.Font = New-Object System.Drawing.Font('Segoe UI', 9.5, [System.Drawing.FontStyle]::Bold)
+$lbAn.Text = 'BẢO VỆ DỮ LIỆU: Các tệp dự án (.pabt) và file Excel của bạn luôn an toàn 100%!'
+$lbAn.Location = New-Object System.Drawing.Point(16, 82)
+$hKhien = HinhBieu 0x1F6E1 $XANH_NGOC 19
+if ($hKhien) {
+    $anhKhien = New-Object System.Windows.Forms.PictureBox; $anhKhien.Image = $hKhien; $anhKhien.SizeMode = 'CenterImage'
+    $anhKhien.Size = New-Object System.Drawing.Size(24, 24); $anhKhien.Location = New-Object System.Drawing.Point(14, 79); $the.Controls.Add($anhKhien)
+    $lbAn.Location = New-Object System.Drawing.Point(40, 82)
+}
+$the.Controls.Add($lbAn)
+$f.Controls.Add($the); BoGoc $the 6
+# thanh tiến trình chỉ hiện khi đang cài (thẻ thông báo đã có chữ tiến độ)
+$pb = New-Object System.Windows.Forms.ProgressBar; $pb.Location = New-Object System.Drawing.Point(24, ($ySau + $CAO_THE + 8))
+$pb.Size = New-Object System.Drawing.Size($RONG_THAN, 10); $pb.Visible = $false
 $f.Controls.Add($pb)
-$bCai = New-Object System.Windows.Forms.Button; $bCai.Text = 'Cài đặt'; $bCai.Size = New-Object System.Drawing.Size(120, 34)
-$bCai.Location = New-Object System.Drawing.Point(364, (380 + $LECH)); $bCai.BackColor = [System.Drawing.Color]::FromArgb(46, 125, 50)
-$bCai.ForeColor = [System.Drawing.Color]::White; $bCai.FlatStyle = 'Flat'; $bCai.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
+# hàng nút: Gỡ cài đặt tách riêng góc trái (chỉ hiện khi đã có bản cũ), Cài đặt (lại) + Hủy bỏ góc phải
+$yNut = [Math]::Max(($pb.Bottom + 14), (440 - 16 - 36))
+$f.ClientSize = New-Object System.Drawing.Size($RONG_CUA_SO, ($yNut + 36 + 16))
+$bXoa = New-Object System.Windows.Forms.Button; $bXoa.Text = 'Gỡ cài đặt…'; $bXoa.Size = New-Object System.Drawing.Size(150, 36)
+$bXoa.Location = New-Object System.Drawing.Point(24, $yNut); $bXoa.Visible = $false
+$bXoa.UseCompatibleTextRendering = $true; $bXoa.FlatStyle = 'Flat'; $bXoa.BackColor = [System.Drawing.Color]::FromArgb(254, 242, 242); $bXoa.ForeColor = [System.Drawing.Color]::FromArgb(220, 38, 38)
+$bXoa.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(254, 202, 202)
+GanHinh $bXoa (HinhBieu 0x1F5D1 $bXoa.ForeColor 19); $f.Controls.Add($bXoa)
+$bHuy = New-Object System.Windows.Forms.Button; $bHuy.Text = 'Hủy bỏ'; $bHuy.Size = New-Object System.Drawing.Size(110, 36)
+$bHuy.Location = New-Object System.Drawing.Point((24 + $RONG_THAN - 110), $yNut); $f.Controls.Add($bHuy); $f.CancelButton = $bHuy; $bHuy.UseCompatibleTextRendering = $true; $bHuy.FlatStyle = 'Flat'; $bHuy.BackColor = [System.Drawing.Color]::White; $bHuy.ForeColor = [System.Drawing.Color]::FromArgb(51, 65, 85); $bHuy.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(203, 213, 225)
+$bCai = New-Object System.Windows.Forms.Button; $bCai.Size = New-Object System.Drawing.Size(150, 36); $bCai.Top = $yNut
+$bCai.UseCompatibleTextRendering = $true; $bCai.BackColor = $LUC_NUT; $bCai.ForeColor = [System.Drawing.Color]::White; $bCai.FlatStyle = 'Flat'; $bCai.FlatAppearance.BorderSize = 0
+$bCai.Font = New-Object System.Drawing.Font('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
 $f.Controls.Add($bCai); $f.AcceptButton = $bCai
-$bHuy = New-Object System.Windows.Forms.Button; $bHuy.Text = 'Hủy'; $bHuy.Size = New-Object System.Drawing.Size(120, 34)
-$bHuy.Location = New-Object System.Drawing.Point(494, (380 + $LECH)); $f.Controls.Add($bHuy); $f.CancelButton = $bHuy
+$script:HINH_LAI = HinhBieu 0x1F504 ([System.Drawing.Color]::White) 19
+function DatNutCai($che) {
+    # che: 'cai' (Cài đặt) / 'lai' (Cài đặt lại - Nâng cấp, khi đã có bản cũ) / 'mo' (Mở PABT sau khi cài); nút canh phải, cạnh Hủy bỏ
+    $script:CHE_DO = $che
+    if ($che -eq 'lai') { $bCai.Text = 'Cài đặt lại (Nâng cấp)'; $bCai.Width = 244; GanHinh $bCai $script:HINH_LAI }
+    elseif ($che -eq 'mo') { $bCai.Text = 'Mở PABT'; $bCai.Width = 150; GanHinh $bCai $null }
+    else { $bCai.Text = 'Cài đặt'; $bCai.Width = 150; GanHinh $bCai $null }
+    $bCai.Left = $bHuy.Left - 10 - $bCai.Width
+}
+DatNutCai 'cai'
 $bHuy.DialogResult = [System.Windows.Forms.DialogResult]::Cancel   # đóng bằng cơ chế sẵn của hộp thoại
 # sau khi cài, ô thư mục đang giữ tiêu điểm đã bị khóa nên WinForms bỏ sự kiện Click của nút: tự đóng khi nhả chuột trên nút
 $bHuy.Add_MouseUp({ if ($_.Button -eq 'Left' -and $this.Enabled -and $this.ClientRectangle.Contains($_.Location)) {
@@ -559,8 +788,26 @@ else {
     $cb = CanhBaoMay
     if ($cb) { Ghi "LƯU Ý: $cb"; $tt.Text = "Lưu ý: $cb"; $tt.ForeColor = [System.Drawing.Color]::FromArgb(176, 96, 0) }
 }
+function CoBanCu($dich) {
+    if (-not $dich) { return $false }
+    return (Test-Path -LiteralPath (Join-Path $dich.TrimEnd('\') 'PABT.exe'))
+}
+function CapNhatNutCu {
+    # Đã có PABT.exe trong thư mục đang chọn: Cài đặt lại = đóng bản đang chạy rồi chép đè; Gỡ cài đặt = gỡ bản cũ.
+    if ($script:xong) { return }
+    $co = CoBanCu $oThu.Text
+    $bXoa.Visible = $co
+    $bXoa.Enabled = $co
+    if ($co) {
+        DatNutCai 'lai'
+        $tt.ForeColor = $CHU_THE
+        $tt.Text = "• Phát hiện phiên bản cũ đã cài đặt tại: $($oThu.Text)`r`n" +
+            "• Chọn `"Cài đặt lại`" để tự động nâng cấp, đè bản mới $PHIEN_BAN lên bản cũ (khuyên dùng)."
+    } elseif ($script:CHE_DO -eq 'lai') { DatNutCai 'cai' }
+}
+if (-not $loi) { CapNhatNutCu }
 $script:xong = $false
-$tienDo = { param($phan, $chu) $pb.Value = [Math]::Min(100, $phan); $tt.Text = $chu; [System.Windows.Forms.Application]::DoEvents() }
+$tienDo = { param($phan, $chu) $pb.Visible = $true; $pb.Value = [Math]::Min(100, $phan); $tt.Text = $chu; [System.Windows.Forms.Application]::DoEvents() }
 $bCai.Add_Click({
     if ($script:xong) { Start-Process (Join-Path $oThu.Text 'PABT.exe'); $this.FindForm().DialogResult = 'OK'; return }
     $laMacDinh = $oThu.Text.TrimEnd('\') -eq $MAC_DINH.TrimEnd('\')
@@ -578,7 +825,9 @@ $bCai.Add_Click({
             if ($cVc.Checked) { & $tienDo 3 'Cài bản cập nhật Windows 7 KB3063858 (Windows hỏi quyền quản trị, có thể mất vài phút)…'
                                 $kb = CaiKbWin7 }
         } elseif ($cVc.Checked) { & $tienDo 3 'Cài Microsoft Visual C++ Redistributable (có thể hỏi quyền quản trị)…'; $vc = CaiVcRedist }
-        & $tienDo 8 'Đang cài PABT…'
+        $chuCai = 'Đang cài PABT…'
+        if ($script:CHE_DO -eq 'lai') { $chuCai = 'Đang đóng PABT đang chạy và cài bản mới đè lên bản cũ…' }
+        & $tienDo 8 $chuCai
         $tk = Cai $oThu.Text $cDesk.Checked $cLk.Checked $tienDo
         & $tienDo 100 ''
         $them = ''
@@ -591,7 +840,7 @@ $bCai.Add_Click({
             $tt.Text = "Đã cài nhưng tự kiểm tra chưa đạt - xem nhật ký: $nk"
             $cb = CanhBaoMay; if ($cb) { $tt.Text = "Đã cài. $cb" }
         }
-        $bCai.Text = 'Mở PABT'; $bCai.Enabled = $true; $bHuy.Text = 'Đóng'; $bHuy.Enabled = $true; $script:xong = $true
+        DatNutCai 'mo'; $bCai.Enabled = $true; $bHuy.Text = 'Đóng'; $bHuy.Enabled = $true; $script:xong = $true
         if ($script:KB_CHO_KHOI_DONG) {             # bản cập nhật Windows có hiệu lực sau khi khởi động lại: chưa mở PABT được
             $tt.ForeColor = [System.Drawing.Color]::FromArgb(176, 96, 0)
             $tt.Text = "Đã cài PABT $PHIEN_BAN và bản cập nhật Windows 7 KB3063858. KHỞI ĐỘNG LẠI MÁY rồi mở PABT (biểu tượng PABT)."
@@ -600,17 +849,52 @@ $bCai.Add_Click({
         $f.ActiveControl = $bCai
     } catch {
         Ghi "LỖI: $_"
+        $pb.Visible = $false; $pb.Value = 0
         $tt.ForeColor = [System.Drawing.Color]::DarkRed; $tt.Text = "Không cài được: $_ (nhật ký: $nk)"
         $bHuy.Text = 'Đóng'; $bHuy.Enabled = $true
         # mở lại để chọn thư mục khác rồi cài tiếp (trước đây khóa luôn - phải đóng bộ cài chạy lại)
         $bCai.Enabled = $true; $bChon.Enabled = $true; $oThu.Enabled = $true
+        CapNhatNutCu
+        if ($bXoa.Visible) { $tt.Text = "Không cài đè được: $_`r`nBấm `"Cài đặt lại`" để thử lại, hoặc `"Gỡ cài đặt`" để gỡ bản cũ. Nhật ký: $nk" }
         if ($script:TU_CHOI) {                      # từ chối UAC: chuyển sẵn sang thư mục không cần quyền quản trị
             $script:TU_CHOI = $false
             $tt.Text = "Không được cấp quyền quản trị nên chưa cài vào $($oThu.Text). Đã chuyển thư mục cài sang $KHONG_QT " +
                        '(không cần quyền quản trị): bấm "Cài đặt" để cài tiếp - hoặc bấm "Chọn…" chọn lại Program Files rồi chọn Có khi Windows hỏi.'
             $oThu.Text = $KHONG_QT
+            CapNhatNutCu
         }
     }
+})
+$bXoa.Add_Click({
+    if (-not (CoBanCu $oThu.Text)) { CapNhatNutCu; return }
+    $hoi = [System.Windows.Forms.MessageBox]::Show($f, ("Gỡ cài đặt PABT trong`r`n$($oThu.Text)?`r`n`r`n" +
+        'Gỡ chương trình, biểu tượng và liên kết file. File dự án .pabt của bạn được giữ nguyên.'),
+        'Gỡ cài đặt PABT', 'YesNo', 'Question')
+    if ($hoi -ne 'Yes') { return }
+    $bCai.Enabled = $false; $bXoa.Enabled = $false; $bHuy.Enabled = $false; $bChon.Enabled = $false; $oThu.Enabled = $false
+    $tt.ForeColor = $XANH
+    $tt.Text = 'Đang đóng PABT và xóa bản cài cũ… Nếu Windows hỏi quyền quản trị, chọn Có (Yes).'
+    [System.Windows.Forms.Application]::DoEvents()
+    try {
+        $ps = Join-Path $GOC 'go_cai_dat.ps1'
+        $lenh = "& ([scriptblock]::Create([IO.File]::ReadAllText('" + $ps.Replace("'", "''") + "', [Text.Encoding]::UTF8))) -Im -Dich '" +
+                $oThu.Text.Replace("'", "''") + "'"
+        $pr = Start-Process "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Wait -PassThru -WindowStyle Hidden `
+              -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Hidden', '-Command', $lenh
+        if (CoBanCu $oThu.Text) {
+            $tt.ForeColor = [System.Drawing.Color]::DarkRed
+            $tt.Text = "Chưa xóa hết thư mục $($oThu.Text) (mã $($pr.ExitCode)). Đóng PABT nếu vẫn đang chạy, chọn Có khi Windows hỏi quyền, rồi bấm `"Gỡ cài đặt`" lại."
+        } else {
+            $tt.ForeColor = [System.Drawing.Color]::DarkGreen
+            $tt.Text = "Đã xóa cài đặt PABT trong $($oThu.Text). File dự án .pabt được giữ. Bấm `"Cài đặt`" nếu muốn cài bản $PHIEN_BAN."
+        }
+    } catch {
+        Ghi "LỖI gỡ: $_"
+        $tt.ForeColor = [System.Drawing.Color]::DarkRed
+        $tt.Text = "Không xóa được: $_"
+    }
+    $bCai.Enabled = $true; $bHuy.Enabled = $true; $bChon.Enabled = $true; $oThu.Enabled = $true
+    CapNhatNutCu
 })
 [void]$f.ShowDialog()
 exit 0

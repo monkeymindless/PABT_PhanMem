@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS du_an (
     nguoi_kiem_tra   TEXT NOT NULL DEFAULT '',
     chuc_vu_ky       TEXT NOT NULL DEFAULT '',
     nguoi_ky         TEXT NOT NULL DEFAULT '',
-    don_vi_tieu_de   TEXT NOT NULL DEFAULT ''           -- dòng 2 tiêu đề cơ quan trên bản in, ví dụ CHI NHÁNH VĨNH CỬU
+    don_vi_tieu_de   TEXT NOT NULL DEFAULT '',          -- dòng 2 tiêu đề cơ quan trên bản in, ví dụ CHI NHÁNH VĨNH CỬU
+    chu_dau_tu       TEXT NOT NULL DEFAULT '',          -- v14: chủ đầu tư dự án (văn bản trình: nơi nhận)
+    co_quan_tham_dinh TEXT NOT NULL DEFAULT ''          -- v15: cơ quan thẩm định phương án (văn bản trình: kính gửi, đề nghị)
 );
 
 -- ---------------------------------------------------------------- hồ sơ kiểm kê
@@ -62,7 +64,11 @@ CREATE TABLE IF NOT EXISTS ho (
     ly_do_ban_giao  TEXT NOT NULL DEFAULT '',         -- v10: lý do chưa bàn giao mặt bằng
     bien_ban_ban_giao TEXT NOT NULL DEFAULT '',        -- v10: file biên bản bàn giao
     so_pa           TEXT NOT NULL DEFAULT '',         -- v11: số phương án chi tiết của hộ (phần trước "/ký hiệu")
-    ngay_pa         TEXT NOT NULL DEFAULT ''          -- v11: ngày phương án chi tiết
+    ngay_pa         TEXT NOT NULL DEFAULT '',         -- v11: ngày phương án chi tiết
+    du_dieu_kien    INTEGER NOT NULL DEFAULT 0,       -- v13: 1 = đủ điều kiện đưa vào dự thảo lấy ý kiến
+    ma_vuong        TEXT NOT NULL DEFAULT '',         -- v13: V1..V5 nhóm vướng pháp lý (trống = không vướng)
+    ghi_chu_phap_ly TEXT NOT NULL DEFAULT '',
+    dot_du_thao_id  INTEGER                           -- v13: đợt dự thảo gần nhất
 );
 
 CREATE TABLE IF NOT EXISTS thua (
@@ -192,7 +198,8 @@ CREATE TABLE IF NOT EXISTS dot_trinh (
     thu_muc TEXT NOT NULL DEFAULT '',                 -- thư mục hồ sơ đợt đã xuất gần nhất
     loai_van_ban TEXT NOT NULL DEFAULT 'Tờ trình',    -- v11: văn bản trình: Tờ trình / Văn bản (số, ngày: so_to_trinh, ngay_trinh)
     so_pa_tong TEXT NOT NULL DEFAULT '',              -- v11: số phương án tổng của đợt (in vào bảng tổng hợp)
-    ngay_pa_tong TEXT NOT NULL DEFAULT ''             -- v11: ngày phương án tổng
+    ngay_pa_tong TEXT NOT NULL DEFAULT '',            -- v11: ngày phương án tổng
+    ky_hieu_so TEXT NOT NULL DEFAULT ''               -- v15: ký hiệu số phương án của đợt (phần sau "Số: …/"); trống = của dự án
 );
 CREATE TABLE IF NOT EXISTS cai_dat (ma TEXT PRIMARY KEY, gia_tri TEXT NOT NULL DEFAULT '');
 -- mật độ cây trồng dùng tách cây trong / ngoài mật độ (mặc định đọc từ ghi chú danh mục "Mật độ N cây/ha")
@@ -231,3 +238,112 @@ CREATE TABLE IF NOT EXISTS qd_ho (
     UNIQUE (qd_id, ma_ho)
 );
 CREATE INDEX IF NOT EXISTS qd_ho_ma_ho ON qd_ho (ma_ho);
+
+-- ---------------------------------------------------------------- dự thảo phương án, niêm yết, lấy ý kiến (v13)
+-- Niêm yết 10 ngày, đối thoại không quá 30 ngày. Hộ vướng pháp lý không đưa vào đợt.
+CREATE TABLE IF NOT EXISTS dot_du_thao (
+    id INTEGER PRIMARY KEY,
+    ten TEXT NOT NULL DEFAULT '',
+    ngay_bat_dau TEXT NOT NULL DEFAULT '',
+    ngay_ket_thuc TEXT NOT NULL DEFAULT '',
+    dia_diem TEXT NOT NULL DEFAULT '',
+    so_bb_bat_dau TEXT NOT NULL DEFAULT '',
+    so_bb_ket_thuc TEXT NOT NULL DEFAULT '',
+    ngay_hop TEXT NOT NULL DEFAULT '',
+    han_doi_thoai TEXT NOT NULL DEFAULT '',
+    trang_thai TEXT NOT NULL DEFAULT 'dang_niem_yet',
+    ghi_chu TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS y_kien_du_thao (
+    id INTEGER PRIMARY KEY,
+    dot_id INTEGER NOT NULL REFERENCES dot_du_thao(id) ON DELETE CASCADE,
+    ma_ho INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE,
+    loai TEXT NOT NULL DEFAULT 'chua',
+    nhom TEXT NOT NULL DEFAULT '',
+    noi_dung TEXT NOT NULL DEFAULT '',
+    huong_xu_ly TEXT NOT NULL DEFAULT '',
+    so_tien_chenh TEXT NOT NULL DEFAULT '0',
+    ket_qua_doi_thoai TEXT NOT NULL DEFAULT '',
+    chuyen_dot_id INTEGER,
+    ngay_cap_nhat TEXT NOT NULL DEFAULT '',
+    UNIQUE (dot_id, ma_ho)
+);
+CREATE TABLE IF NOT EXISTS doi_thoai_ho (
+    id INTEGER PRIMARY KEY,
+    dot_id INTEGER NOT NULL REFERENCES dot_du_thao(id) ON DELETE CASCADE,
+    ma_ho INTEGER NOT NULL,
+    lan INTEGER NOT NULL DEFAULT 1,
+    ngay TEXT NOT NULL DEFAULT '',
+    dia_diem TEXT NOT NULL DEFAULT '',
+    thanh_phan TEXT NOT NULL DEFAULT '',
+    dien_bien TEXT NOT NULL DEFAULT '',
+    ket_luan TEXT NOT NULL DEFAULT '',
+    bien_ban_so TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS ix_ykien_dot_ho ON y_kien_du_thao(dot_id, ma_ho);
+CREATE INDEX IF NOT EXISTS ix_doithoai_ho ON doi_thoai_ho(dot_id, ma_ho);
+
+-- ---------------------------------------------------------------- sổ nhật ký vận động (Bước 14, 15 Mục IV QĐ 18/2026)
+-- Từ v16 (0.9.87) các bảng phụ dưới đây là một bước nâng cấp chính thức (csdl._NANG_CAP[15] -> _tao_bang_phu, chỉ file có hộ).
+CREATE TABLE IF NOT EXISTS nhat_ky_van_dong (
+    id INTEGER PRIMARY KEY,
+    ma_ho INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE,
+    viec TEXT NOT NULL,                               -- 'tien' (không nhận tiền) / 'mat_bang' (không bàn giao mặt bằng)
+    ngay TEXT NOT NULL,                               -- dd/mm/yyyy
+    hinh_thuc TEXT NOT NULL DEFAULT '', thanh_phan TEXT NOT NULL DEFAULT '', noi_dung TEXT NOT NULL DEFAULT '',
+    ket_qua TEXT NOT NULL DEFAULT 'chua_dong_y',      -- chua_dong_y / vang_mat / dong_y
+    bien_ban TEXT NOT NULL DEFAULT '', ghi_chu TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS ix_van_dong_ho ON nhat_ky_van_dong(ma_ho, viec);
+
+-- nhật ký kiểm toán (0.9.86, kiem_toan.py): ai sửa, lúc nào, trường nào cũ -> mới; trigger chặn sửa / xóa dòng nhật ký
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id        INTEGER PRIMARY KEY,
+    luc       TEXT NOT NULL,                 -- ngày giờ máy (YYYY-MM-DDTHH:MM:SS)
+    nguoi     TEXT,                          -- tài khoản máy chủ LAN / tài khoản Windows
+    may       TEXT,                          -- tên máy tính
+    hanh_dong TEXT NOT NULL CHECK (hanh_dong IN ('them', 'sua', 'xoa')),
+    bang      TEXT NOT NULL,                 -- ho / thua / ct_dat / ct_khoan / gia_dat / dm_taisan / dm_hotro
+    khoa      TEXT,                          -- khóa dòng (mã hộ, mã thửa, mã danh mục…)
+    ma_ho     INTEGER,
+    ma_thua   INTEGER,
+    doi_tuong TEXT,                          -- mô tả người đọc được: họ tên, "Thửa 12 tờ 5", "2.3 Nhà cấp 4"…
+    truong    TEXT,                          -- tên cột (sửa); trống khi thêm / xóa cả dòng
+    cu        TEXT,
+    moi       TEXT,
+    thao_tac  TEXT                           -- thao tác (vd "Lưu phương án hộ")
+);
+CREATE INDEX IF NOT EXISTS ix_audit_logs_ho ON audit_logs(ma_ho, luc);
+CREATE INDEX IF NOT EXISTS ix_audit_logs_luc ON audit_logs(luc);
+CREATE TRIGGER IF NOT EXISTS audit_logs_khong_sua BEFORE UPDATE ON audit_logs
+BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được sửa.'); END;
+CREATE TRIGGER IF NOT EXISTS audit_logs_khong_xoa BEFORE DELETE ON audit_logs
+BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được xóa.'); END;
+
+-- bản đồ thửa từ bản vẽ địa chính CAD .dxf (0.9.87, ban_do_cad.py): số tờ, số thửa, diện tích, tọa độ ranh thửa
+CREATE TABLE IF NOT EXISTS thua_ban_do (
+    id INTEGER PRIMARY KEY,
+    so_to TEXT NOT NULL,
+    so_thua TEXT NOT NULL,
+    loai_dat TEXT NOT NULL DEFAULT '',
+    dt_ban_ve TEXT,                     -- diện tích ghi trên nhãn bản vẽ (m²)
+    dt_hinh TEXT,                       -- diện tích tính theo hình (m²)
+    dt_trong_ranh TEXT,                 -- diện tích nằm trong ranh thu hồi (m²) - trống: không có lớp ranh
+    toa_do TEXT NOT NULL,               -- JSON [[x, y], …] hệ tọa độ bản vẽ
+    nhan TEXT NOT NULL DEFAULT '',      -- chữ nhãn gốc trong thửa
+    lop TEXT NOT NULL DEFAULT '',
+    nguon TEXT NOT NULL DEFAULT '',     -- tên file .dxf
+    luc TEXT NOT NULL,
+    UNIQUE (so_to, so_thua)
+);
+
+-- ảnh hiện trạng gắn vào hộ (0.9.87, phieu_kiem_dem.gan_anh_hien_trang): theo CCCD / họ tên / HO<số thứ tự> trong tên file ảnh
+CREATE TABLE IF NOT EXISTS anh_hien_trang (
+    id INTEGER PRIMARY KEY,
+    ma_ho INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE,
+    duong_dan TEXT NOT NULL,             -- đường dẫn đầy đủ của ảnh lúc gắn
+    ten_file TEXT NOT NULL,
+    khop_theo TEXT NOT NULL DEFAULT '',  -- cccd / ho_ten / stt
+    luc TEXT NOT NULL,
+    UNIQUE (ma_ho, duong_dan)
+);

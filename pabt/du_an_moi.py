@@ -189,7 +189,7 @@ def tao_du_an(file_pabt, thong_tin: dict, dong: list, bang_gia: list, tu_lap: bo
     con.execute('PRAGMA journal_mode = MEMORY')
     try:
         don_gia.ap_vao_du_an(con)
-        lap_pa.luu_du_an(con, dict(tt, ten_day_du=tt['ten_day_du'] or tt['ten'], cap_dia_ban=tt['cap_dia_ban'] or 'Xã'))
+        lap_pa.luu_du_an(con, dict(tt, ten_day_du=tt.get('ten_day_du') or tt['ten'], cap_dia_ban=tt['cap_dia_ban'] or 'Xã'))
         with con, csdl.mo_khoa_danh_muc(con):
             for i, h in enumerate(ho, start=1):
                 con.execute('''INSERT INTO ho (ma_ho, thu_tu, ho_ten, so_cccd, ngay_cap, noi_cap, dia_chi, dien_thoai, ghi_chu,

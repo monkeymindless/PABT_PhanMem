@@ -5,16 +5,25 @@
 # upx=False: nén UPX làm hỏng / bị diệt virus báo nhầm DLL Qt.
 
 
+# ezdxf (0.9.87 - nhập bản vẽ CAD .dxf): nạp trong hàm (không ảnh hưởng tốc độ mở phần mềm) - gom đủ module con + dữ liệu
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+EZDXF = collect_submodules('ezdxf', filter=lambda m: '.addons.drawing' not in m and '.addons.browser' not in m)
+
 a = Analysis(
     ['chay.py'],
     pathex=[],
     binaries=[],
-    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'), ('mau_in', 'mau_in'), ('HUONG_DAN.md', '.')],
-    hiddenimports=['html.parser', 'urllib.request', 'difflib'],
+    # mau_in: chỉ mẫu .xlsx / đường kẻ .xml (0.9.85 - thư mục còn file người dùng để tham khảo, vd PDF phương án thật: KHÔNG đóng gói)
+    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'),
+           ('pabt/pabt_profile.json', 'pabt'), ('HUONG_DAN.md', '.')] +
+          [(str(f), 'mau_in') for f in sorted(__import__('pathlib').Path('mau_in').glob('*')) if f.suffix.lower() in ('.xlsx', '.xml')] +
+          collect_data_files('ezdxf'),
+    hiddenimports=['html.parser', 'urllib.request', 'difflib', 'PySide6.QtPdfWidgets'] + EZDXF,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['pabt.cap_nhat_web', 'pabt.man_hinh_quet_web'],
+    # cap_nhat_web đi cùng bản cài từ 0.9.49 (nút Tải từ web của bảng giá đất). man_hinh_quet_web vẫn để gói .pabtcn.
+    excludes=['pabt.man_hinh_quet_web'],
     noarchive=False,
     optimize=0,
 )

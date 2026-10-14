@@ -234,7 +234,41 @@ def quy_chuan_mat_do(con, ten_cay: str, ten_muc: str = '', ghi_chu_muc: str = ''
             md = mat_do_tu_danh_muc(x['ten'], x['ghi_chu'])
             if md is not None:
                 break
+    if md is None:
+        q = _mat_do_gan_dung(con, goc)
+        if q is not None:
+            return QuyChuanMatDo(goc, q[1], tl_mac_dinh, f'Theo mật độ của "{q[0]}" trong danh mục đơn giá (tên gần đúng)',
+                                 'gần đúng')
     return QuyChuanMatDo(goc, md, tl_mac_dinh, 'Ghi chú danh mục đơn giá' if md else '', 'danh mục' if md else '')
+
+
+def _mat_do_gan_dung(con, goc: str):
+    """(tên loại, mật độ) của loại cây có mật độ trong danh mục mà tên là phần đầu tên cây này ("Xoài ghép" -> "Xoài"), hoặc
+    ngược lại (tên cây là phần đầu tên loại: "Cà phê" -> "Cà phê vối"); trùng hẳn tên (bỏ chữ "Cây" đầu tên) trước, rồi tên dài
+    nhất khớp. None nếu không có."""
+    def gon(x: str) -> str:                         # danh mục ghi "Cây bưởi", người nhập "Bưởi da xanh": bỏ chữ "cây" đầu tên
+        return re.sub(r'^cay\s+', '', bo_dau(x).strip())
+    t = gon(goc)
+    if not t:
+        return None
+    tot, diem_tot = None, None
+    for r in con.execute("SELECT ten, ghi_chu FROM dm_taisan WHERE nhom = 3 AND ghi_chu LIKE '%ật độ%'"):
+        md = mat_do_tu_danh_muc(r['ten'], r['ghi_chu'])
+        g = ten_goc(r['ten'])
+        k = gon(g)
+        if md is None or not k or g == goc:
+            continue
+        if k == t or t.startswith(k + ' ') or k.startswith(t + ' '):
+            diem = (k == t, len(k))                     # trùng hẳn tên trước, rồi tên dài nhất
+            if diem_tot is None or diem > diem_tot:
+                tot, diem_tot = (g, md), diem
+    return tot
+
+
+def mat_do_thuc_te(so_cay, dien_tich_m2):
+    """Mật độ thực tế (cây/ha) = số cây × 10.000 / diện tích trồng; None khi chưa có diện tích."""
+    dt = D(dien_tich_m2)
+    return (D(so_cay) * Decimal(10000) / dt).quantize(Decimal('1')) if dt > 0 else None
 
 
 def luu_quy_chuan_mat_do(con, q: QuyChuanMatDo) -> None:

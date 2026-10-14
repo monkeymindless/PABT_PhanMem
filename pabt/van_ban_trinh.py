@@ -24,13 +24,18 @@ from .lap_pa import LoiNhap
 
 THU_MUC_CT, THU_MUC_TONG = 'PA CHI TIET', 'PA TONG'
 # loại mẫu -> (tên file, tên hiển thị, đuôi nhận)
-LOAI = {'to_trinh': ('TO_TRINH', 'Tờ trình / văn bản trình', ('.docx', '.xlsx')),
-        'pa_tong': ('PA_TONG', 'Phương án tổng', ('.docx',))}
-TEN_RA = {'to_trinh': 'TO_TRINH', 'pa_tong': 'PHUONG_AN_TONG'}
-NHAN_FILE = {'to_trinh': ('.docx', '.doc', '.xlsx', '.xls', '.pdf'), 'pa_tong': ('.docx', '.doc', '.pdf')}
+# 0.9.69 (người dùng 12/10/2026): bỏ mẫu "Phương án tổng" (tự làm thủ công) - số / ngày phương án tổng của đợt vẫn dùng ở
+# bảng tổng hợp và tờ trình
+LOAI = {'to_trinh': ('TO_TRINH', 'Tờ trình / văn bản trình', ('.docx', '.xlsx'))}
+TEN_RA = {'to_trinh': 'TO_TRINH'}
+NHAN_FILE = {'to_trinh': ('.docx', '.doc', '.xlsx', '.xls', '.pdf')}
 
 DS_CHO_TRONG = [
-    ('du_an', 'Tên dự án'), ('ten_dia_ban', 'Tên xã / phường'), ('cap_dia_ban', 'Cấp địa bàn (Xã / Phường)'),
+    ('du_an', 'Tên dự án'), ('chu_dau_tu', 'Chủ đầu tư'),
+    ('co_quan_tham_dinh', 'Cơ quan thẩm định (trống: Phòng Kinh tế, Hạ tầng và Đô thị phường / Phòng Kinh tế xã)'),
+    ('ten_dia_ban', 'Tên xã / phường'),
+    ('cap_dia_ban', 'Cấp địa bàn (Xã / Phường)'), ('cap_dia_ban_thuong', 'Cấp địa bàn viết thường (xã / phường)'),
+    ('don_vi_cap_tren', 'Đơn vị cấp trên'), ('KY_THAY', 'Ký thay: "KT. GIÁM ĐỐC" khi người ký là phó (không thì trống)'),
     ('DON_VI_CAP_TREN', 'Đơn vị cấp trên (chữ hoa)'), ('DON_VI_CAP_TREN_2DONG', 'Đơn vị cấp trên, tự xuống dòng'),
     ('DON_VI_TIEU_DE', 'Tên đơn vị trên tiêu đề (chữ hoa)'), ('DON_VI_LAP', 'Đơn vị lập (chữ hoa)'), ('don_vi_lap', 'Đơn vị lập'),
     ('ky_hieu_so', 'Ký hiệu số văn bản (sau "Số: …/")'), ('nam', 'Năm'),
@@ -41,7 +46,7 @@ DS_CHO_TRONG = [
     ('ngay_trinh', 'Ngày trình (dd/mm/yyyy)'), ('ngay_trinh_chu', 'Ngày trình: "ngày 10 tháng 10 năm 2026"'),
     ('so_pa_tong', 'Số phương án tổng'), ('ngay_pa_tong', 'Ngày phương án tổng'),
     ('ngay_pa_tong_chu', 'Ngày phương án tổng: "ngày … tháng … năm …"'),
-    ('so_ho', 'Số hộ (trường hợp)'), ('so_thua', 'Số thửa đất'), ('dt_thu_hoi', 'Tổng diện tích thu hồi (m²)'),
+    ('so_ho', 'Số hộ (trường hợp)'), ('so_ho_02', 'Số hộ hai chữ số: "01"'), ('so_thua', 'Số thửa đất'), ('dt_thu_hoi', 'Tổng diện tích thu hồi (m²)'),
     ('tien_dat', 'Tiền bồi thường đất'), ('tien_nha', 'Tiền nhà, công trình'), ('tien_cay', 'Tiền cây trồng, vật nuôi'),
     ('tien_ho_tro', 'Tiền các chính sách hỗ trợ'), ('tien_thuong', 'Tiền thưởng bàn giao'), ('tong_tien', 'Tổng tiền (số)'),
     ('tong_tien_chu', 'Tổng tiền bằng chữ'), ('ngay_lap_chu', 'Hôm nay: "ngày … tháng … năm …"'),
@@ -182,7 +187,8 @@ def du_lieu(con, ds_ma_ho: list, dot=None) -> tuple:
     ds_ma_ho = sorted(ds_ma_ho, key=lambda m: thu_tu.get(m, (0, m)))
     pas = nghiep_vu.doc_tat_ca_phuong_an(con, ds_ma_ho)
     ho = {r['ma_ho']: dict(r) for r in con.execute('SELECT * FROM ho')}
-    ky_hieu = da.get('ky_hieu_so') or ''
+    ky_hieu = (getattr(dot, 'ky_hieu_so', '') or '') or da.get('ky_hieu_so') or ''     # 0.9.72: ký hiệu theo đợt trình
+    da = dict(da, ky_hieu_so=ky_hieu)
     tong = {k: KHONG for k in (1, 2, 3, 4, 5)}
     so_thua, dt = 0, KHONG
     from .an_toan import can_che_cccd, che_cccd
@@ -215,6 +221,16 @@ def du_lieu(con, ds_ma_ho: list, dot=None) -> tuple:
                  dt_thu_hoi=so_vn(dt), tien_dat=vn(tong[1]), tien_nha=vn(tong[2]), tien_cay=vn(tong[3]),
                  tien_ho_tro=vn(tong[4]), tien_thuong=vn(tong[5]), tong_tien=vn(tong_tien),
                  tong_tien_chu=tien_bang_chu(tong_tien), ngay_lap_chu=ngay_chu(date.today().strftime('%d/%m/%Y')))
+    du = con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()
+    co = set(du.keys()) if du is not None else set()
+    cv = (chung.get('chuc_vu_ky') or '').strip()
+    from .lap_pa import co_quan_tham_dinh_mac_dinh
+    cq = ' '.join(str(du['co_quan_tham_dinh'] or '').split()) if 'co_quan_tham_dinh' in co else ''
+    chung['co_quan_tham_dinh'] = cq or co_quan_tham_dinh_mac_dinh(chung.get('cap_dia_ban'), chung.get('ten_dia_ban'))
+    chung.update(chu_dau_tu=(' '.join(str(du['chu_dau_tu'] or '').split()) if 'chu_dau_tu' in co else '') or 'Chủ đầu tư',
+                 don_vi_cap_tren=' '.join(str(du['don_vi_cap_tren'] or '').split()) if 'don_vi_cap_tren' in co else '',
+                 cap_dia_ban_thuong=(chung.get('cap_dia_ban') or '').lower(),
+                 KY_THAY=('KT. ' + re.sub(r'(?i)^phó\s+', '', cv).upper()) if re.match(r'(?i)phó\s', cv) else '')
     loai_vb = (getattr(dot, 'loai_van_ban', '') or 'Tờ trình') if dot is not None else 'Tờ trình'
     chung.update(ten_dot=getattr(dot, 'ten', '') or '', loai_van_ban=loai_vb, LOAI_VAN_BAN=loai_vb.upper(),
                  so_to_trinh=getattr(dot, 'so_to_trinh', '') or '', ngay_trinh=getattr(dot, 'ngay_trinh', '') or '',
@@ -355,7 +371,7 @@ def _gia_tri_o(v: str, gia_tri: dict):
 
 # ---------------------------------------------------------------- lập văn bản của đợt
 def lap_van_ban(con, loai: str, ds_ma_ho: list, thu_muc, dot=None) -> Path:
-    """Điền mẫu loại ('to_trinh' / 'pa_tong') cho các hộ (của đợt) vào thư mục. Trả file .docx / .xlsx đã tạo."""
+    """Điền mẫu loại ('to_trinh') cho các hộ (của đợt) vào thư mục. Trả file .docx / .xlsx đã tạo."""
     mau = file_mau(loai)
     chung, dong = du_lieu(con, ds_ma_ho, dot)
     ra = Path(thu_muc) / f'{TEN_RA[loai]}{mau.suffix}'
@@ -363,18 +379,21 @@ def lap_van_ban(con, loai: str, ds_ma_ho: list, thu_muc, dot=None) -> Path:
 
 
 def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True, bang_tong_hop: bool = True,
-                  to_trinh: bool = False, pa_tong: bool = False, pdf: bool = False, in_may: bool = False, so_ban: int = 1,
-                  chia_thu_muc: bool = True, bao_tien_do=None, bao_excel=None, mau_ct=None, mau_bth=None) -> dict:
+                  to_trinh: bool = False, pdf: bool = False, in_may: bool = False, so_ban: int = 1,
+                  chia_thu_muc: bool = True, bao_tien_do=None, bao_excel=None, mau_ct=None, mau_bth=None,
+                  bao_cao_y_kien: bool = False, du_thao: bool | None = None) -> dict:
     """Bộ hồ sơ trình: PA CHI TIET\\ (phương án chi tiết từng hộ) + PA TONG\\ (bảng tổng hợp có số / ngày phương án tổng, tờ
-    trình / văn bản trình, phương án tổng). pdf: kèm PDF (Excel / Word xuất); in_may: in ra máy in mặc định. Mỗi mẫu chọn riêng
+    trình / văn bản trình). pdf: kèm PDF (Excel / Word xuất); in_may: in ra máy in mặc định. Mỗi mẫu chọn riêng
     hoặc tất cả. Trả dict(excel, word, pdf, loi, thu_muc_ct, thu_muc_tong). bao_tien_do(i, n) / bao_excel(i, n): trả True = dừng.
-    mau_ct / mau_bth: file mẫu riêng (in_an.ds_mau), None = mẫu chính."""
+    mau_ct / mau_bth: file mẫu riêng (in_an.ds_mau), None = mẫu chính. bao_cao_y_kien: kèm báo cáo tổng hợp ý kiến, tiếp thu,
+    giải trình (.docx, thư mục PA TONG, file BAO_CAO_TIEP_THU_Y_KIEN.docx - bao_cao_y_kien.ghi_docx).
+    du_thao: chế độ phát hành của bản in (True dự thảo / False chính thức / None theo tên mẫu - in_an.lap_chi_tiet)."""
     from . import in_an
     thu_muc = Path(thu_muc)
     tm_ct = thu_muc / THU_MUC_CT if chia_thu_muc else thu_muc
     tm_tong = thu_muc / THU_MUC_TONG if chia_thu_muc else thu_muc
     kq = dict(excel=[], word=[], pdf=[], loi=[], thu_muc_ct=tm_ct, thu_muc_tong=tm_tong)
-    so_viec = (len(ds_ma_ho) if chi_tiet else 0) + int(bang_tong_hop) + int(to_trinh) + int(pa_tong)
+    so_viec = (len(ds_ma_ho) if chi_tiet else 0) + int(bang_tong_hop) + int(to_trinh) + int(bao_cao_y_kien)
     da = 0
 
     def bao():
@@ -386,23 +405,27 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
         mau = mau_ct or in_an.thu_muc_mau()
         bc = in_an.BoiCanh.tu(con)
         for i, ma in enumerate(ds_ma_ho, start=1):
-            kq['excel'].append(in_an.lap_chi_tiet(con, ma, tm_ct / f'{in_an.ten_file_ho(con, ma)}.xlsx', mau, bc))
+            kq['excel'].append(in_an.lap_chi_tiet(con, ma, tm_ct / f'{in_an.ten_file_ho(con, ma)}.xlsx', mau, bc, du_thao=du_thao))
             if bao():
                 kq['loi'].append(f'DA_DUNG\t\tĐã dừng theo yêu cầu sau {i}/{len(ds_ma_ho)} hộ (chưa xuất PDF / in)')
                 return kq
-    if bang_tong_hop or to_trinh or pa_tong:
+    if bang_tong_hop or to_trinh or bao_cao_y_kien:
         tm_tong.mkdir(parents=True, exist_ok=True)
     if bang_tong_hop:
         kq['excel'].append(in_an.lap_bang_tong_hop(con, tm_tong / 'BANG_TONG_HOP.xlsx', ds_ma_ho, mau_bth,
                                                    so_pa_tong=getattr(dot, 'so_pa_tong', '') or '',
                                                    ngay_pa_tong=getattr(dot, 'ngay_pa_tong', '') or '',
+                                                   ky_hieu_so=getattr(dot, 'ky_hieu_so', '') or '', du_thao=du_thao,
                                                    bao_tien_do=(lambda i, n: bao_tien_do(da, so_viec)) if bao_tien_do else None))
         bao()
-    for loai, chon in (('to_trinh', to_trinh), ('pa_tong', pa_tong)):
-        if chon:
-            p = lap_van_ban(con, loai, ds_ma_ho, tm_tong, dot)
-            kq['excel' if p.suffix == '.xlsx' else 'word'].append(p)
-            bao()
+    if to_trinh:
+        p = lap_van_ban(con, 'to_trinh', ds_ma_ho, tm_tong, dot)
+        kq['excel' if p.suffix == '.xlsx' else 'word'].append(p)
+        bao()
+    if bao_cao_y_kien:
+        from . import bao_cao_y_kien as bc
+        kq['word'].append(bc.ghi_docx(con, ds_ma_ho, tm_tong / bc.TEN_FILE, dot))
+        bao()
     if pdf or in_may:
         if kq['excel']:
             cap = [(p, p.with_suffix('.pdf') if pdf else None) for p in kq['excel']]
@@ -507,20 +530,23 @@ def _r(chu: str, dam: bool = False, nghieng: bool = False, gach: bool = False, c
     return f'<w:r>{"<w:rPr>" + pr + "</w:rPr>" if pr else ""}<w:t xml:space="preserve">{_xml(chu)}</w:t></w:r>'
 
 
-def _p(*chay, can: str = 'both', truoc: int = 0, sau: int = 60, dau_dong: int = 0) -> str:
-    thut = f'<w:ind w:firstLine="{dau_dong}"/>' if dau_dong else ''
-    return (f'<w:p><w:pPr><w:spacing w:before="{truoc}" w:after="{sau}" w:line="300" w:lineRule="auto"/>{thut}'
+def _p(*chay, can: str = 'both', truoc: int = 0, sau: int = 60, dau_dong: int = 0, trai: int = 0, phai: int = 0,
+       dong: int = 300) -> str:
+    thut = ''.join(f' w:{k}="{v}"' for k, v in (('left', trai), ('right', phai), ('firstLine', dau_dong)) if v)
+    thut = f'<w:ind{thut}/>' if thut else ''
+    return (f'<w:p><w:pPr><w:spacing w:before="{truoc}" w:after="{sau}" w:line="{dong}" w:lineRule="auto"/>{thut}'
             f'<w:jc w:val="{can}"/></w:pPr>{"".join(chay)}</w:p>')
 
 
-def _bang(hang: list, rong: list, vien: bool = True) -> str:
+def _bang(hang: list, rong: list, vien: bool = True, doc: str = 'center', lech: int = 0) -> str:
     """hang: [[nội dung ô (chuỗi các w:p)]]. Trang A4 dọc lề trái 3 cm, phải 2 cm: tổng độ rộng cột <= 9.071 (twip)."""
     b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="4" w:space="0" w:color="000000"/>'
                 for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
     luoi = ''.join(f'<w:gridCol w:w="{x}"/>' for x in rong)
-    dong = ''.join('<w:tr>' + ''.join(f'<w:tc><w:tcPr><w:tcW w:w="{rong[i]}" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>'
+    dong = ''.join('<w:tr>' + ''.join(f'<w:tc><w:tcPr><w:tcW w:w="{rong[i]}" w:type="dxa"/><w:vAlign w:val="{doc}"/></w:tcPr>'
                                       f'{o}</w:tc>' for i, o in enumerate(h)) + '</w:tr>' for h in hang)
-    return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong)}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>{b}</w:tblBorders>'
+    vi_tri = f'<w:tblInd w:w="{lech}" w:type="dxa"/>' if lech else '<w:jc w:val="center"/>'      # lech: lùi trái (twip, âm)
+    return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong)}" w:type="dxa"/>{vi_tri}<w:tblBorders>{b}</w:tblBorders>'
             f'<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="45" w:type="dxa"/><w:right w:w="45" w:type="dxa"/>'
             f'</w:tblCellMar></w:tblPr><w:tblGrid>{luoi}</w:tblGrid>{dong}</w:tbl>')
 
@@ -530,88 +556,66 @@ def _o(chu: str, dam: bool = False, can: str = 'center', co: float = 0, nghieng:
 
 
 def _dau_trang(so: str, ngay: str) -> str:
-    """Khối tiêu đề 2 cột: cơ quan | quốc hiệu, tiêu ngữ; số; địa danh, ngày."""
-    trai = _o('{DON_VI_CAP_TREN_2DONG}', co=10.5) + _o('{DON_VI_TIEU_DE}', dam=True, co=12) + _o('______', co=12) + \
+    """Khối tiêu đề 2 cột: cơ quan, số | quốc hiệu, tiêu ngữ, địa danh, ngày."""
+    trai = _o('{DON_VI_CAP_TREN_2DONG}', co=12) + _o('{DON_VI_TIEU_DE}', dam=True, co=12) + _o('______', co=12) + \
         _o(so, co=13)
-    phai = _o('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', dam=True, co=11.5) + \
+    phai = _o('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', dam=True, co=12) + \
         _p(_r('Độc lập - Tự do - Hạnh phúc', dam=True, co=13), can='center', sau=0) + \
         _o('______________________', co=12) + _o(f'{{ten_dia_ban}}, {ngay}', nghieng=True, co=13)
-    return _bang([[trai, phai]], [3970, 5100], vien=False)
+    # như văn bản hành chính: khối tiêu đề lấn lề trái 1 cm (cột cơ quan đủ rộng cho tên đơn vị một dòng)
+    return _bang([[trai, phai]], [_RONG_CO_QUAN, 9071 + 567 - _RONG_CO_QUAN], vien=False, doc='top', lech=-567)
+
+
+_RONG_CO_QUAN = 4400                                    # twip: cột cơ quan của khối tiêu đề
 
 
 def _ky_ten() -> str:
+    """Nơi nhận | ký: {KY_THAY} ("KT. GIÁM ĐỐC" khi người ký là phó - không thì dòng trống), chức vụ, người ký."""
     trai = _p(_r('Nơi nhận:', dam=True, nghieng=True, co=12), can='left', sau=0) + \
-        _p(_r('- Như trên;', co=11), can='left', sau=0) + _p(_r('- Lưu: VT.', co=11), can='left', sau=0)
-    phai = _o('{CHUC_VU_KY}', dam=True) + _o(' ') + _o(' ') + _o(' ') + _o(' ') + _o('{nguoi_ky}', dam=True)
-    return _bang([[trai, phai]], [4170, 4900], vien=False)
+        ''.join(_p(_r(x, co=11), can='left', sau=0) for x in (
+            '- Như trên;', '- {don_vi_cap_tren} (báo cáo);', '- {chu_dau_tu};', '- Ban Giám đốc;', '- Lưu: VT.'))
+    phai = _o('{KY_THAY}', dam=True, co=13) + _o('{CHUC_VU_KY}', dam=True, co=13) + _o(' ') * 5 + \
+        _o('{nguoi_ky}', dam=True, co=13)
+    return _bang([[trai, phai]], [4170, 4900], vien=False, doc='top')
 
 
-def _can_cu_trong() -> str:
-    """Dòng "Căn cứ ……;" chừa để điền (canh trái: canh đều làm giãn chữ khi dòng chấm xuống dòng)."""
-    return _p(_r('Căn cứ ……………………………………………………………………;'), can='left', dau_dong=567)
+_DOI_TUONG = '(Đối với {so_ho_02} trường hợp/ {so_thua} thửa đất/ {dt_thu_hoi}m²)'
+_UBND = 'UBND {cap_dia_ban_thuong} {ten_dia_ban}'
+_PHONG = '{co_quan_tham_dinh}'                  # 0.9.72: Thông tin dự án -> Cơ quan thẩm định (trống: theo cấp xã / phường)
 
 
 def _noi_dung_to_trinh() -> str:
+    """Văn bản đề nghị thẩm định, phê duyệt phương án và quyết định thu hồi đất (theo mẫu người dùng gửi 12/10/2026, đã bỏ số
+    liệu thật: tên đơn vị, dự án, số văn bản, ngày, người ký -> chỗ trống {…}; quyết định phê duyệt dự án, thông báo thu hồi đất
+    của từng dự án -> dòng chấm để điền). Căn cứ chung của tỉnh giữ nguyên như văn bản mẫu - sửa ở "Sửa mẫu tờ trình…"."""
+    from . import dia_phuong
+
+    def doan(*chay, **k):
+        return _p(*chay, dau_dong=709, truoc=60, sau=60, dong=240, **k)
+    co = 14
     t = [_dau_trang('Số: {so_to_trinh}', '{ngay_trinh_chu}'),
-         _p(_r('{LOAI_VAN_BAN}', dam=True, co=14), can='center', truoc=240, sau=0),
-         _p(_r('Về việc thẩm định, phê duyệt phương án bồi thường, hỗ trợ, tái định cư', dam=True), can='center', sau=0),
-         _p(_r('{ten_dot} - Dự án: {du_an}', dam=True), can='center', sau=120),
-         _p(_r('Kính gửi: ……………………………………………………'), can='center', sau=200),
-         _p(_r('Căn cứ Luật Đất đai năm 2024;'), dau_dong=567),
-         _can_cu_trong(),
-         _p(_r('{don_vi_lap} kính trình thẩm định, phê duyệt phương án bồi thường, hỗ trợ, tái định cư {ten_dot} dự án '
-               '{du_an} như sau:'), dau_dong=567),
-         _p(_r('1. Tổng số trường hợp: {so_ho} hộ, {so_thua} thửa đất, tổng diện tích thu hồi {dt_thu_hoi} m².'), dau_dong=567),
-         _p(_r('2. Tổng kinh phí bồi thường, hỗ trợ: '), _r('{tong_tien} đồng', dam=True),
-            _r(' (Bằng chữ: {tong_tien_chu}), trong đó:'), dau_dong=567),
-         _p(_r('- Bồi thường về đất: {tien_dat} đồng;'), dau_dong=567),
-         _p(_r('- Bồi thường, hỗ trợ về nhà, công trình: {tien_nha} đồng;'), dau_dong=567),
-         _p(_r('- Bồi thường, hỗ trợ về cây trồng, vật nuôi: {tien_cay} đồng;'), dau_dong=567),
-         _p(_r('- Các chính sách hỗ trợ khác: {tien_ho_tro} đồng;'), dau_dong=567),
-         _p(_r('- Thưởng bàn giao mặt bằng trước thời hạn: {tien_thuong} đồng.'), dau_dong=567),
-         _p(_r('3. Hồ sơ kèm theo: Phương án tổng số {so_pa_tong}/{ky_hieu_so} {ngay_pa_tong_chu}; bảng tổng hợp và phương án '
-               'chi tiết của từng hộ theo danh sách sau:'), dau_dong=567, sau=120),
-         _bang([[_o('STT', True, co=12), _o('Họ và tên', True, co=12), _o('Địa chỉ', True, co=12),
-                 _o('Phương án chi tiết số', True, co=12), _o('Số tiền (đồng)', True, co=12)],
-                [_o('{ho.stt}', co=12), _o('{ho.ho_ten}', can='left', co=12), _o('{ho.dia_chi}', can='left', co=11),
-                 _o('{ho.so_pa_day_du}', co=11), _o('{ho.tong_tien}', can='right', co=12)],
-                [_o(''), _o('Tổng cộng', True, co=12), _o(''), _o(''), _o('{tong_tien}', True, can='right', co=12)]],
-               [550, 2250, 2250, 2300, 1700]),
-         _p(_r('{don_vi_lap} kính trình xem xét, phê duyệt./.'), dau_dong=567, truoc=200, sau=200),
+         _p(_r('V/v thẩm định, phê duyệt phương án bồi thường, hỗ trợ, tái định cư và Quyết định thu hồi đất để thực hiện '
+               'dự án {du_an} ' + _DOI_TUONG + '.', co=12), can='center', trai=-567, phai=9071 - (_RONG_CO_QUAN - 567), truoc=60, sau=240, dong=240),
+         _p(_r('Kính gửi:', co=co), can='left', dau_dong=2410, truoc=100, sau=40, dong=240),
+         _p(_r(_UBND + ';', co=co), can='left', trai=3544, sau=40, dong=240),
+         _p(_r(_PHONG + '.', co=co), can='left', trai=3544, sau=200, dong=240),
+         # căn cứ chung của tỉnh: hồ sơ địa phương (pabt_profile.json can_cu_phap_ly.to_trinh, 0.9.85)
+         *[doan(_r(cc, co=co)) for cc in dia_phuong.lay('can_cu_phap_ly.to_trinh')],
+         doan(_r('Căn cứ Quyết định số ………… ngày ………… của ………………………… về việc phê duyệt dự án {du_an};', co=co)),
+         doan(_r('Căn cứ các Thông báo thu hồi đất ngày ………… của ' + _UBND + ' về việc thu hồi đất để thực hiện dự án '
+                 '{du_an};', co=co)),
+         doan(_r('Trên cơ sở kết quả niêm yết công khai dự thảo phương án bồi thường, hỗ trợ, tái định cư và Biên bản lấy ý '
+                 'kiến phương án bồi thường, hỗ trợ, tái định cư dự án {du_an} ' + _DOI_TUONG + '.', co=co)),
+         doan(_r('Ngày {ngay_pa_tong}, {don_vi_lap} có Phương án số {so_pa_tong}/{ky_hieu_so} về việc bồi thường, hỗ trợ, '
+                 'tái định cư dự án {du_an} ' + _DOI_TUONG + '.', co=co)),
+         doan(_r('Trên cơ sở Phương án nêu trên, {don_vi_lap} kính đề nghị ' + _PHONG + ' thẩm định phương án, tham mưu, '
+                 'trình ' + _UBND + ' ban hành Quyết định phê duyệt phương án bồi thường, hỗ trợ, tái định cư và Quyết định '
+                 'thu hồi đất đối với trường hợp nêu trên theo quy định.', co=co)),
+         doan(_r('(Đính kèm Phương án {so_pa_tong}/{ky_hieu_so} ngày {ngay_pa_tong}; Bảng tổng hợp và Phương án chi tiết '
+                 'thuộc dự án).', nghieng=True, co=co)),
+         doan(_r('Kính mong được sự quan tâm, phối hợp của ' + _UBND + ' và ' + _PHONG + './.', co=co)),
+         _p(_r(' '), sau=120),
          _ky_ten()]
-    return ''.join(t)
-
-
-def _noi_dung_pa_tong() -> str:
-    co = 9.5                                        # 6 cột tiền trên khổ A4 dọc: số tới hàng tỷ không bị ngắt dòng
-    t = [_dau_trang('Số: {so_pa_tong}/{ky_hieu_so}', '{ngay_pa_tong_chu}'),
-         _p(_r('PHƯƠNG ÁN', dam=True, co=14), can='center', truoc=240, sau=0),
-         _p(_r('Bồi thường, hỗ trợ, tái định cư {ten_dot}', dam=True), can='center', sau=0),
-         _p(_r('Dự án: {du_an}', dam=True), can='center', sau=200),
-         _p(_r('I. CĂN CỨ LẬP PHƯƠNG ÁN', dam=True)),
-         _p(_r('Căn cứ Luật Đất đai năm 2024;'), dau_dong=567),
-         _can_cu_trong(),
-         _p(_r('II. TỔNG HỢP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ', dam=True), truoc=120),
-         _p(_r('Tổng số trường hợp: {so_ho} hộ, {so_thua} thửa đất, tổng diện tích thu hồi {dt_thu_hoi} m². Tổng kinh phí: '),
-            _r('{tong_tien} đồng', dam=True), _r(' (Bằng chữ: {tong_tien_chu}). Chi tiết từng hộ:'), dau_dong=567, sau=120),
-         _bang([[_o('STT', True, co=co), _o('Họ và tên', True, co=co), _o('PA chi tiết số', True, co=co), _o('Đất', True, co=co),
-                 _o('Nhà, công trình', True, co=co), _o('Cây trồng', True, co=co), _o('Hỗ trợ', True, co=co),
-                 _o('Thưởng', True, co=co), _o('Tổng cộng', True, co=co)],
-                [_o('{ho.stt}', co=co), _o('{ho.ho_ten}', can='left', co=co), _o('{ho.so_pa}', co=co),
-                 _o('{ho.tien_dat}', can='right', co=co), _o('{ho.tien_nha}', can='right', co=co),
-                 _o('{ho.tien_cay}', can='right', co=co), _o('{ho.tien_ho_tro}', can='right', co=co),
-                 _o('{ho.tien_thuong}', can='right', co=co), _o('{ho.tong_tien}', can='right', co=co)],
-                [_o(''), _o('Tổng cộng', True, co=co), _o(''), _o('{tien_dat}', True, can='right', co=co),
-                 _o('{tien_nha}', True, can='right', co=co), _o('{tien_cay}', True, can='right', co=co),
-                 _o('{tien_ho_tro}', True, can='right', co=co), _o('{tien_thuong}', True, can='right', co=co),
-                 _o('{tong_tien}', True, can='right', co=co)]],
-               [400, 1500, 600, 1100, 1100, 1000, 1100, 1000, 1200]),
-         _p(_r('III. TỔ CHỨC THỰC HIỆN', dam=True), truoc=200),
-         _p(_r('……………………………………………………………………'), can='left', dau_dong=567, sau=200),
-         _bang([[_o('NGƯỜI LẬP', dam=True) + _o(' ') + _o(' ') + _o(' ') + _o('{nguoi_lap}', dam=True),
-                 _o('NGƯỜI KIỂM TRA', dam=True) + _o(' ') + _o(' ') + _o(' ') + _o('{nguoi_kiem_tra}', dam=True),
-                 _o('{CHUC_VU_KY}', dam=True) + _o(' ') + _o(' ') + _o(' ') + _o('{nguoi_ky}', dam=True)]],
-               [3000, 3000, 3050], vien=False)]
     return ''.join(t)
 
 
@@ -651,7 +655,7 @@ def _goi_docx(than: str) -> bytes:
 
 
 def _byte_mac_dinh(loai: str) -> bytes:
-    return _goi_docx(_noi_dung_to_trinh() if loai == 'to_trinh' else _noi_dung_pa_tong())
+    return _goi_docx(_noi_dung_to_trinh())
 
 
 def tao_mau_mac_dinh(loai: str) -> Path:

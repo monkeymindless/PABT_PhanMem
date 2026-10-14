@@ -1,11 +1,11 @@
 """Các chính sách hỗ trợ (mục 4) theo cách tính: tên chính sách ngắn theo câu chữ quy định, các ô nhập theo từng loại và chuỗi
 "cách tính" in ra phương án (thay ĐVT / số lượng / đơn giá / tỷ lệ), căn cứ ghi ở cột Ghi chú.
 
-  - Ổn định đời sống (HT01-06, 34, 35): số nhân khẩu × số kg gạo × số tháng × giá gạo × tỷ lệ
+  - Ổn định đời sống (CS1-06, 34, 35): số nhân khẩu × số kg gạo × số tháng × giá gạo × tỷ lệ
       -> "4 nhân khẩu x 30kg gạo x 6 tháng x 16.000 đồng x 50%"
-  - Đào tạo, chuyển đổi nghề và tìm kiếm việc làm (HT09, HT10): mỗi thửa đất nông nghiệp một dòng: diện tích × đơn giá đất ×
+  - Đào tạo, chuyển đổi nghề và tìm kiếm việc làm (CS9, CS10): mỗi thửa đất nông nghiệp một dòng: diện tích × đơn giá đất ×
     tỷ lệ (150% / 50%)
-  - Thuê nhà ở, tạm cư chờ tái định cư / tự lo chỗ ở (HT17, 18, 23, 24): (1 hộ (4 nhân khẩu) × số tháng × mức hộ) + (số nhân khẩu
+  - Thuê nhà ở, tạm cư chờ tái định cư / tự lo chỗ ở (CS17, 18, 23, 24): (1 hộ (4 nhân khẩu) × số tháng × mức hộ) + (số nhân khẩu
     tăng thêm × mức mỗi khẩu × số tháng), một dòng
   - Tái định cư: tình trạng của hộ (lap_pa.TAI_DINH_CU), không phải dòng tiền.
 Không phụ thuộc Qt.
@@ -14,10 +14,10 @@ from __future__ import annotations
 
 import re
 
-from .nghiep_vu import MA_ON_DINH, MA_TDC, MA_THEO_NK, NK_CO_BAN, NGUON_DM, DongKhoan
+from .nghiep_vu import MA_ON_DINH, MA_TDC, MA_THEO_NK, NK_CO_BAN, NGUON_DM, DongKhoan, he_so
 from .tien import D, lam_tron, so_vn
 
-MA_DAO_TAO = ('HT09', 'HT10')
+MA_DAO_TAO = ('CS9', 'CS10')
 # chính sách không có trong bộ đơn giá, người dùng nhập số tiền (tên theo câu chữ quy định)
 CHINH_SACH_KHAC = ['Hỗ trợ học phí', 'Hỗ trợ y tế', 'Hỗ trợ khác']
 
@@ -39,7 +39,7 @@ def ten_ngan(ten: str, ma: str = '') -> str:
     """Tên chính sách theo câu chữ quy định, bỏ phần điều kiện / mức: 'Hỗ trợ ổn định đời sống - Thu hồi dưới 30%…' ->
     'Hỗ trợ ổn định đời sống'; 'Hỗ trợ đào tạo, chuyển đổi nghề và tìm kiếm việc làm (hệ số 1,5)' -> '… việc làm'."""
     if ma in MA_THEO_NK:
-        return 'Hỗ trợ tiền thuê nhà ở, tạm cư chờ tái định cư' if ma in ('HT23', 'HT24') else 'Hỗ trợ tự lo chỗ ở'
+        return 'Hỗ trợ tiền thuê nhà ở, tạm cư chờ tái định cư' if ma in ('CS23', 'CS24') else 'Hỗ trợ tự lo chỗ ở'
     t = ' '.join(str(ten or '').split())
     t = re.split(r'\s+-\s+|:\s', t)[0]
     t = re.sub(r'\s*\([^)]*\)\s*$', '', t)
@@ -69,7 +69,7 @@ def mac_dinh_on_dinh(bc, ten: str) -> dict:
 
 def dong_on_dinh(m, nhan_khau, gia_gao, kg, thang, ty_le) -> DongKhoan:
     """Một dòng: SL = nhân khẩu, ĐG = kg × giá gạo × tháng (mỗi khẩu), tỷ lệ; cách tính in nguyên công thức."""
-    nk, gia, kg, th, tl = D(nhan_khau), D(gia_gao), D(kg), D(thang), D(ty_le)
+    nk, gia, kg, th, tl = D(nhan_khau), D(gia_gao), D(kg), D(thang), he_so(ty_le)
     return DongKhoan(muc=4, ma=m.ma, ten=ten_ngan(m.ten, m.ma), dvt='Nhân khẩu', so_luong=nk, don_gia=kg * gia * th, ty_le=tl,
                      nguon_gia=NGUON_DM, ghi_chu=can_cu_ghi_chu(m.can_cu),
                      cach_tinh=cach_tinh_on_dinh(nk, kg, th, gia, tl))
@@ -102,14 +102,14 @@ def ds_thua_nn(bo) -> list:
 
 
 def ty_le_dao_tao(bc, ma: str):
-    """Tỷ lệ hỗ trợ đào tạo theo giá đất NN: 150% (HT09) / 50% đất giao khoán (HT10)."""
-    return bc.so_ts('HS_DAOTAO_2' if ma == 'HT10' else 'HS_DAOTAO') or (D('0.5') if ma == 'HT10' else D('1.5'))
+    """Tỷ lệ hỗ trợ đào tạo theo giá đất NN: 150% (CS9) / 50% đất giao khoán (CS10)."""
+    return bc.so_ts('HS_DAOTAO_2' if ma == 'CS10' else 'HS_DAOTAO') or (D('0.5') if ma == 'CS10' else D('1.5'))
 
 
 def dong_dao_tao(m, mo_ta: str, dien_tich, don_gia, ty_le) -> DongKhoan:
     """Một dòng đào tạo, chuyển đổi nghề cho một thửa: 'Thửa đất số …' × m² × đơn giá đất × tỷ lệ."""
     return DongKhoan(muc=4, ma=m.ma, ten=mo_ta, dvt='m²', so_luong=lam_tron(D(dien_tich), 1), don_gia=D(don_gia),
-                     ty_le=D(ty_le), nguon_gia=NGUON_DM, ghi_chu=can_cu_ghi_chu(m.can_cu), quy_cach=ten_ngan(m.ten, m.ma))
+                     ty_le=he_so(ty_le), nguon_gia=NGUON_DM, ghi_chu=can_cu_ghi_chu(m.can_cu), quy_cach=ten_ngan(m.ten, m.ma))
 
 
 # ---------------------------------------------------------------- thuê nhà, tự lo chỗ ở

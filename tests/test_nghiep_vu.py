@@ -75,7 +75,7 @@ class TestHoTuTao(unittest.TestCase):
     def test_thuong_tinh_ca_ho_tro(self):
         c = self.con
         c.execute("INSERT INTO ct_dat (ma_ho, ma_thua, loai_dat, nhom_dat, dien_tich, gia_bang_gia) VALUES (1, 1, 'CLN', 'Nông nghiệp', '400', '100000')")
-        c.execute("INSERT INTO ct_khoan (muc, ma_ho, ma, ten, so_luong, don_gia) VALUES (4, 1, 'HT14', 'Di chuyển', '1', '10000000')")
+        c.execute("INSERT INTO ct_khoan (muc, ma_ho, ma, ten, so_luong, don_gia) VALUES (4, 1, 'CS14', 'Di chuyển', '1', '10000000')")
         k = nghiep_vu.tinh_ho(c, 1)
         # đất 40 tr + hỗ trợ 10 tr = 50 tr -> nấc 50-100 tr = 8 tr (nếu chỉ tính đất thì 4 tr)
         self.assertEqual(k.muc[5], 8000000)

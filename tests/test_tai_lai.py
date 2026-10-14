@@ -146,18 +146,21 @@ class TestTaiLaiTheoHo(unittest.TestCase):
         self._so_voi_toan_bo(w)
 
     def test_lenh_giai_phong_hop_da_dong(self):
-        """Mở cửa sổ lập phương án nhiều lần qua lệnh: hộp đã đóng được giải phóng (trước: mỗi lần để lại một cửa sổ ẩn
-        ~290 thành phần giữ kết nối dự án)."""
+        """Mở cửa sổ lập phương án nhiều lần qua lệnh: không để lại cửa sổ ẩn (trước 0.9.16: mỗi lần một cửa sổ ẩn ~290 thành
+        phần giữ kết nối dự án). Từ 0.9.32 hộ mở trong tab: mở lại cùng hộ dùng lại tab, không tạo thêm cửa sổ."""
         from PySide6.QtCore import QEvent
         from PySide6.QtWidgets import QApplication, QDialog
         from pabt.man_hinh import CuaSoLapPA
         w = self._cua_so()
-        with mock.patch.object(CuaSoLapPA, 'exec', return_value=0) as ex:
-            for _ in range(5):
-                w.lenh['Lập phương án hộ…'].trigger()
-        self.assertEqual(ex.call_count, 5)
+        for _ in range(5):
+            w.lenh['Lập phương án hộ…'].trigger()
+        QApplication.processEvents()
+        lap = [h for h in w.findChildren(CuaSoLapPA)]
+        self.assertEqual(len(lap), 1)                                   # một tab hộ, không phải 5 cửa sổ
+        self.assertEqual(sum(1 for k in w.khung_tab.khoa if isinstance(k, tuple) and k[0] == 'ho'), 1)
         QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-        self.assertEqual([h for h in w.findChildren(QDialog) if not h.isVisible()], [])
+        self.assertEqual([h for h in w.findChildren(QDialog) if not h.isVisible() and not h.property('nhung_tab')], [])
+        lap[0].bo_thay_doi()
         from PySide6.QtCore import QModelIndex
         w.bang.setCurrentIndex(QModelIndex())
         self.assertIsNone(w.xem_chi_tiet_tinh(cho=False))             # chưa chọn hộ (trước: KeyError 'không có hộ mã None')

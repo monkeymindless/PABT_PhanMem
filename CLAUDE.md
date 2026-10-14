@@ -31,7 +31,11 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 - Một test: `.venv\Scripts\python -m unittest tests.test_ho_so.TestHoSo.test_gop_ho`
 - Test so khớp với Excel thật cần `du_lieu\PABT.xlsm` hoặc biến `PABT_EXCEL`; không có thì tự bỏ qua (khoảng 34 bài).
 - Dựng exe: `DUNG_EXE.bat` → `dist\PABT\PABT.exe` (PyInstaller onedir, kèm `pabt\schema.sql`, `mau_in\`).
-- **Hai bộ cài** (người dùng yêu cầu tách, đừng gộp): `PABT_CaiDat_<ver>_Win10-11.exe` (Python 3.14 + PySide6, PyInstaller 6, `.venv`,
+- **MỘT bộ cài phát hành** (người dùng 11/10/2026 đổi ý: "tối giản chỉ 1 bộ cài cho mọi Windows" - thay yêu cầu tách cũ):
+ `PABT_Setup_Universal_<ver>.exe` + `PABT_ChayNgay_<ver>_Universal.zip` (`dung_bo_cai_win.MAC_DINH`; zip: `x64\` + `x86\`,
+ danh_sach_x64/x86.txt nguồn `x64\…`, ban.txt universal, DOC_TRUOC.txt). Vẫn dựng HAI bản chương trình (dưới đây) - Universal
+ chứa cả hai, cai_dat.ps1 tự chọn. Bộ riêng chỉ khi cần: `dung_bo_cai_win.py win10 win7`. Hai bản chương trình:
+ `PABT_CaiDat_<ver>_Win10-11.exe` (Python 3.14 + PySide6, PyInstaller 6, `.venv`,
   KHÔNG kèm Visual C++ Redistributable - người dùng yêu cầu bỏ 25 MB: Win10/11 có UCRT, DLL VC++ cần thiết đã nằm trong bản dựng,
   kiểm bằng bảng import PE; `dung_bo_cai_win.BAN['win10']['vc'] = None`) và `PABT_CaiDat_<ver>_Win7-8.exe` (**32-bit**, chạy Win 7/8 32 & 64-bit và Win 10 32-bit: Python 3.8.10 32-bit + PySide2 5.15,
   PyInstaller 5, môi trường `%LOCALAPPDATA%\PABT_dev\venv38_32` tạo bằng `CAI_DAT_PHAT_HANH.bat` / `requirements38.txt`,
@@ -153,7 +157,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   → nhập tay, `can_cu_gia` ghi giá danh mục). `nghiep_vu._dao_tao_theo_thua` tắt so khớp quy tắc gộp HT09. DT đất NN đang sử dụng
   trống = DT đất NN mục 1. Màn hình chính: `the_so` (thẻ số liệu), `bang_th` (thẻ tổng hợp, cột `COT_TONG_HOP`, chung
   selectionModel với `bang`). `OTimChon`: danh sách gợi ý là cửa sổ ToolTip không giữ bàn phím (bộ gõ tiếng Việt). Logo:
-  `logo_PABT.png` → `tao_bieu_tuong.py` → `pabt/bieu_tuong.ico/.png` (biểu tượng exe đổi khi dựng lại bộ cài).
+  `logo_PABT_nen_trang.png` → `tao_bieu_tuong.py` → `pabt/bieu_tuong.ico/.png` (biểu tượng exe đổi khi dựng lại bộ cài; từ 0.9.27
+  là nguồn DUY NHẤT - logo_PABT.png nền xanh đã bỏ).
 - 0.9.12: thẻ hồ sơ (`KhungHoSo`): cột vị trí ẩn (`COT_AN`, dữ liệu vẫn lưu), nguồn gốc giãn hết bề rộng (`ONguonGoc`: sửa nhiều
   dòng, ô dài tự thu nhỏ chữ / cắt "…"), dòng cao tối đa `CAO_DONG_TOI_DA`; thao tác thửa/hộ trong nút "+ Thêm thửa" + menu "Thao tác
   khác" (`self.nut` chứa QAction). Bản in: `in_an.dat_doan_van` (ô `{nguon_goc}` cao vừa số dòng chữ, quá 409 pt chia nhiều dòng),
@@ -208,7 +213,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `da_pa` màn hình chính. `ho_co_phuong_an` (mọi hộ có dòng) vẫn dùng cho Dự án mới xuất 2 bảng.
 - Băng tiêu đề `giao_dien.BangToChuc` (paintEvent: nền `MAU_BANG`, họa tiết `_luoi_thua`, thửa vàng `_THUA_THU_HOI`, vạch vàng).
   `bang_to_chuc(phai, nut=)`: dòng phụ chỉ "Trực thuộc … • địa chỉ" (bỏ chữ "Tổ chức làm nhiệm vụ bồi thường" - người dùng yêu cầu);
-  nút Hoàn tác / Làm lại (`CuaSoChinh.nut_ht`, `vai="nut_bang"`) đặt cùng dòng tên phần mềm, không còn ở thanh trạng thái.
+  Hoàn tác / Làm lại (`CuaSoChinh.nut_ht`): từ 0.9.25 là QAction ở menu "Chỉnh sửa" trên thanh menu (người dùng 11/10/2026 - như
+ phần mềm khác; trước đó nút trên băng tiêu đề), xem mục 0.9.25.
 - Menu trái gọn: `menu_trai(nhom, xo=('Dự án',), dong_mac_dinh=app.NHOM_DONG_MAC_DINH)` - nhóm trong `xo` = một nút QMenu xổ
   (`khung.nut_xo`); nhóm khác có tiêu đề `NhanBam` (QLabel, không phải nút: `to_mau` không tô màu theo chữ) bấm đóng / mở
   (`khung.tieu_de_nhom[ten].bam()`, `khung.nhom_dong`), nhớ ở QSettings `KHOA_NHOM_DONG` (chuỗi nối "|", "|" = không nhóm nào
@@ -290,8 +296,12 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   dụng Claude (MSIX) ảo hóa `%LOCALAPPDATA%` - venv38_32 tạo trong phiên Claude nằm thật ở
   `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\PABT_dev\venv38_32`, chỉ phiên Claude thấy; chạy DUNG_BO_CAI.bat
   ngoài Claude thì chạy CAI_DAT_PHAT_HANH.bat trước. Đừng xóa thư mục đó (không phải bản trùng).
-- Dọn bản cũ (09/10/2026, người dùng yêu cầu): chỉ giữ bộ cài / gói mới nhất trong `bo_cai\`; bản cũ, sao lưu, file trung gian dựng
-  -> Thùng rác (không xóa vĩnh viễn). Bỏ `THU_MENU_TRAI.bat`, `so_sanh_giao_dien\` (thử menu trái 0.9.3 - nay là mặc định).
+- TỪ 14/10/2026 (0.9.87, người dùng): dựng bộ cài GIỮ các bộ cài / gói cũ trong `bo_cai\`, KHÔNG xóa, KHÔNG chuyển sang `G:\` (bỏ qua ổ G:) - thay quy định cũ dưới đây.
+  `rut_gon.HE_THONG_WIN7` có `msvcrt` (openblas của numpy, đi kèm ezdxf). Dựng bằng chuỗi lệnh: dừng khi một bước lỗi (`set -e` trong subshell có `||` KHÔNG dừng - 0.9.87 đã đóng gói nhầm bản Win7 chưa tự kiểm).
+- Dọn bản cũ (09/10/2026, người dùng yêu cầu): chỉ giữ bộ cài / gói mới nhất trong `bo_cai\`. TỪ 14/10/2026 (người dùng đổi): sau khi chạy
+  test + dựng bộ cài mới, CHUYỂN các bộ cài / gói cũ (`PABT_Setup_*`, `PABT_ChayNgay_*`, `PABT_CapNhat_*`) sang THƯ MỤC GỐC `G:\` (người
+  dùng tự khôi phục các bản 0.9.65-0.9.80 từ Thùng rác vào đó) - KHÔNG đưa vào Thùng rác nữa; trùng tên trên G: thì bỏ qua, không ghi đè.
+  Gói `.pabtcn` của bản trước (mốc `phan_tich_phien_ban.py --so-sanh`) vì thế nằm ở `G:\`. File trung gian dựng / sao lưu khác vẫn -> Thùng rác. Bỏ `THU_MENU_TRAI.bat`, `so_sanh_giao_dien\` (thử menu trái 0.9.3 - nay là mặc định).
 - Git (từ 09/10/2026): repo cục bộ ở thư mục dự án, `.gitignore` loại `.venv`, sản phẩm dựng, `*.pabt*`, `*.xlsm`, `du_lieu/`,
   `bo_cai_win/*.exe`. Git for Windows ở `C:\Program Files\Git\cmd\git.exe` (PowerShell mở trước khi cài chưa có trong PATH).
 - Thông báo có danh sách dài (kết quả nhập Excel / nhập chi tiết / Dự án mới, lỗi nhập): `giao_dien.hop_ket_qua(cha, tóm tắt,
@@ -352,8 +362,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   (theo `_VAT_NUOI`), hàng nút gọn - `b_cap` (QMenu: từ file / từ trang web / tra cứu văn bản), `b_gia_dat` (tra / xuất), `b_don`,
   `b_ap`, Đóng (người dùng: 7 nút một hàng "chưa phù hợp").
 - 0.9.18 bố cục màn hình 1366x768 (theo bản audit người dùng gửi; đo bằng phông Windows, tỷ lệ 110%): `bang_to_chuc` gọn 112 ->
-  63 px (logo 46, chữ 17/12 px, phiên bản + BẢN THỬ NGHIỆM cùng hàng; GIỮ tên đơn vị, "Trực thuộc… • địa chỉ", Hoàn tác / Làm lại
-  cùng dòng tên phần mềm - người dùng yêu cầu trước đây); chữ dài trên băng = `giao_dien.NhanRutGon` (một dòng, rút gọn "…",
+  63 px (logo 46, chữ 17/12 px, phiên bản + BẢN THỬ NGHIỆM cùng hàng; GIỮ tên đơn vị, "Trực thuộc… • địa chỉ" - người dùng
+  yêu cầu trước đây; Hoàn tác / Làm lại từ 0.9.25 ở menu Chỉnh sửa); chữ dài trên băng = `giao_dien.NhanRutGon` (một dòng, rút gọn "…",
   tooltip đủ, `text()` trả chữ đầy đủ; sizePolicy Ignored - không ép cửa sổ rộng ra). Cửa sổ chính: `lb_du_an` một dòng (số hộ /
   tổng tiền đã có ở thẻ số), `_hang_thao_tac` = băng đối chiếu `lb_ket_qua` + 2 nút (Lập PA, Thêm hộ) một hàng - bỏ nút Bảng tổng
   hợp / Theo dõi tiến độ (trùng menu trái); `_xoa_ket_qua`. Bảng hộ 8 -> 12 dòng nhìn thấy; rộng tối thiểu 1449 -> 1020 px (băng
@@ -429,8 +439,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     Excel…" ở nút Dự án.
   - Đợt trình: `quan_ly.NHOM_HO_DOT` / `ho_theo_nhom(con, loai, dot_id)` (da_lap / gan_nhat / chua_xep / chua_duyet; 'chon' do màn
     hình), `HopDotTrinh.cb_nhom_ho` + `b_dua` (`dua_nhom`). Nút "Mã điền tự động {…}…" (trước: "Chỗ trống dùng trong mẫu…").
-  - Biểu tượng: `logo_PABT_nen_trang.png` (chữ PABT tách khỏi ảnh nền của logo_PABT.png, nền trắng sữa #FBF7EE) ưu tiên trong
-    `tao_bieu_tuong.py`; khung logo băng tiêu đề nền #FBF7EE, viền vàng giữ.
+  - Biểu tượng: `logo_PABT_nen_trang.png` (chữ PABT tách khỏi ảnh nền của logo_PABT.png, nền trắng sữa #FBF7EE) - từ 0.9.27
+    nguồn duy nhất, xem mục 0.9.27.
   - Bộ cài (`cai_dat.ps1`): lối tắt qua `IShellLinkW` (C# Add-Type, chạy .NET 2.0) - WScript.Shell đổi tên sang ANSI: Windows tiếng
     Anh / tên người dùng có dấu -> "Unable to save shortcut …L?p…" làm hỏng cả lần cài; dự phòng WScript tên "PABT.lnk"; lối tắt lỗi
     chỉ cảnh báo. Tự kiểm tra sau cài `WaitForExit(180000)`. Máy phát triển bật UTF-8 toàn hệ thống nên không tái hiện được lỗi ANSI.
@@ -583,10 +593,10 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - 4.2 / 12.2: `pabt/ban_quyen.py` (`kiem_tra_ban_quyen()` luôn True, `mo_ta()` 'Bản Tiêu chuẩn · Sử dụng nội bộ'; `app.main`
     gọi lúc khởi động; gói .pabtcn sau này thay module) - `BAN_THU_NGHIEM = False`, băng tiêu đề nhãn `vai="ban_quyen"`.
     Thanh menu thêm Cài đặt (Thông tin dự án, Kết nối máy chủ LAN, Phóng to / Thu nhỏ / 100%), Tệp tin → Lưu dự án Ctrl+S
-    (`luu_du_an_lenh`: commit + fsync, báo giờ - dữ liệu vốn ghi ngay mỗi thao tác); góc phải `lb_co_quan` "Cơ quan: …"
-    (`_dat_co_quan`); thanh trạng thái `lb_tom_tat` "Sẵn sàng · Tổng cộng: N hộ | Đã chọn: k hộ" (KHÔNG showMessage cố định - che
+    (`luu_du_an_lenh`: commit + fsync, báo giờ - dữ liệu vốn ghi ngay mỗi thao tác); thanh trạng thái `lb_tom_tat`
+    "Sẵn sàng · Tổng cộng: N hộ | Đã chọn: k hộ" (KHÔNG showMessage cố định - che
     widget trái), đèn LAN gộp vào `nut_tk` ("● LAN: Trực tuyến · Tài khoản…" / "Ngoại tuyến (Offline)" / "Máy đơn"), phiên bản chỉ
-    ở băng tiêu đề. Màn hình chào thêm nút Hướng dẫn sử dụng.
+    ở băng tiêu đề. Màn hình chào: liên kết nhỏ Hướng dẫn sử dụng (F1) góc dưới phải, không cạnh 3 nút bắt đầu.
   - 7.1 ghi nguyên tử: `csdl.tao_moi_tam(p)` -> (con, '<tên>.dang_tao'), `hoan_tat_tao_moi(tam, p)` (fsync + os.replace),
     `huy_tao_moi(tam)` - dùng ở `du_an_moi.tao_du_an`, `nhap_excel.nhap`, `nhap_chi_tiet.ghi_file` (file mới); lỗi giữa chừng file
     cũ còn nguyên. `quan_ly.luu_thanh` fsync + os.replace. `csdl.tao_moi` (xóa trước) còn cho chỗ khác.
@@ -607,6 +617,506 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - 13 bỏ Office (VBS) / 5 tái cấu trúc 4 tầng: KHÔNG làm (xem 0.9.23; logic đã tách khỏi Qt ở nghiep_vu / lap_pa / csdl /
     theo_doi... - dùng chung Qt5 / Qt6, kiểm thử độc lập; viết lại 26.000 dòng thành 4 tầng: rủi ro hồi quy lớn, không lợi ích
     người dùng thấy). Test: `tests/test_dac_ta_v4.py`.
+- 0.9.25 (người dùng 11/10/2026):
+  - Mẫu in tìm THEO TỪNG MẪU: `in_an.thu_muc_mau(ten=TEN_CT)` (thư mục đầu tiên có `<ten>.xlsx`), `file_mau(None, ten)`,
+    `ds_mau`, `mau_de_sua` (chép mẫu còn thiếu). Trước đây chọn thư mục theo IN_CHITIET: "Cập nhật mẫu in" từ file một sheet
+    để %APPDATA%\PABT\mau_in chỉ có một mẫu -> bảng tổng hợp FileNotFoundError (tu-kiem "Lập và in thử" LOI trên máy người
+    dùng), mẫu bảng tổng hợp đã sửa bị bỏ qua. `xuat_hang_loat` bảng tổng hợp truyền mau=None. Test `tests/test_mau_in_mot_loai.py`.
+  - Vật nuôi: dự án lập trước bộ đơn giá có vật nuôi (QĐ 31/2025) không có dòng nào -> thẻ Vật nuôi trống. `don_gia.bo_sung_vat_nuoi`
+    (chỉ thêm mã còn thiếu, mo_khoa_danh_muc + ghi_nhat_ky), thẻ Vật nuôi `khung_thieu_vn` + nút "Bổ sung vật nuôi từ bộ đơn giá"
+    (`CuaSoLapPA.bo_sung_vat_nuoi`, cập nhật `bo.dm` và `dm` cửa sổ chính). ĐT762 Trị An: 0 -> 17 mục.
+  - Ô Nhân khẩu: `giao_dien.OSoChuaNhap` (QSpinBox có specialValueText "chưa nhập": bấm / Tab / gõ phím thì chữ mất - trước đây
+    gõ số dính vào chữ "ch1ưa nhập"). Test `tests/test_vat_nuoi_nhan_khau.py`.
+  - Test chạy với file Excel mẫu (`PABT_EXCEL` = `PABT_CHUAN_06-10-2026_QD42.xlsm` NẰM TRONG thư mục dự án, `kiem_tra_toan_bo.py
+    --mau`): 9 bài cũ chưa cập nhật theo 0.9.17-0.9.24 (số lượng "130,0", 6 thẻ, tuyến 3,5%, tiêu đề mục vật nuôi, DT 0 cho lưu,
+    ô tìm chờ 200 ms) - đã sửa. Bài GUI lỗi giữa chừng để CuaSoLapPA mở -> tiến trình TREO khi thoát (hộp hỏi lưu): chạy test
+    bằng Start-Process có hạn giờ. Ngoài phiên Claude: venv38_32 ở `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\
+    Local\PABT_dev` - dựng Win7 bằng `dung_exe38.py` với LOCALAPPDATA đặt tạm thư mục đó (chỉ tiến trình dựng).
+  - `kiem_tra_giao_dien.py` chạy được trên màn hình thật: `QT_QPA_PLATFORM=windows` (mặc định offscreen).
+  - Thử MÁY TRẮNG sau khi đóng gói (không cài đè bản thật như `--cai-thu`): `ket_qua_kiem_tra\thu_that\thu_may_trang.ps1`
+    (chạy bằng -Command ReadAllText UTF8 như CAI_DAT.cmd): giải nén từng bộ cài (`/C /T:`), chép bằng `cai_dat.ps1 -ChiChep`
+    (kiểm SHA-256) vào %TEMP%, `PABT.exe tu-kiem` với môi trường trống (ProcessStartInfo: APPDATA / LOCALAPPDATA / TEMP /
+    USERPROFILE mới, PATH chỉ thư mục hệ thống). 0.9.25: cả 3 bộ cài DAT, chỉ tạo %APPDATA%\PABT\mau_in\mac_dinh.
+    `donggoi.pdf` người dùng gửi (PyQt + Inno Setup + onefile + cài VC++ Redistributable): KHÔNG theo các điểm đó (Inno >= 6.5 lỗi
+    Win 11, VC++ đã nằm trong bản dựng + kiem_dll, onedir mở nhanh hơn); phần còn lại (loại module Qt, dữ liệu ở %APPDATA%, thử
+    máy sạch) đã có trong quy trình.
+  - Hoàn tác / Làm lại: menu "Chỉnh &sửa" (sau Tệp tin) = `self.nut_ht` (QAction, chữ "Hoàn tác: <thao tác>\tCtrl+Z" như Office,
+    `_cap_nhat_nut_ht`); băng tiêu đề không còn nút. KHÔNG gắn setShortcut Ctrl+Z / Ctrl+Y cho QAction: phím tắt QAction chạy trước
+    KeyPress -> bỏ qua `giao_dien.xu_ly_hoan_tac` (Ctrl+Z theo khung / cửa sổ đang làm việc); chữ sau "\t" chỉ để hiện.
+- 0.9.26 (người dùng 11/10/2026):
+  - Lỗi hình góc trên bên phải khi mở (máy 2 màn hình, 125%): `showMaximized()` ngay lúc tạo -> kiểu áp lúc Show (`_BoToMau`)
+    làm bề rộng tối thiểu tăng (1380 -> 1414 điểm) > kích thước thường 1360 -> Qt ép lại kích thước SAU khi phóng to: Windows ghi
+    "phóng to" nhưng cửa sổ 1414 x 760, phần màn hình còn lại hiện cửa sổ phía sau. `app.hien_cua_so(w)`: setGeometry = vùng làm
+    việc của màn hình rồi showMaximized (KHÔNG show() rồi QTimer phóng to: khung đầu đen). Đo / giả lập:
+    `ket_qua_kiem_tra\thu_that\do_khoi_dong.py [--cu] [--ep]` (QT thật, in Qt size x dpr so với GetClientRect; --ep ép bề rộng
+    tối thiểu 1414 trong sự kiện Show).
+  - Bề rộng tối thiểu cửa sổ chính 1414 / 1443 -> 1020 điểm (màn hình 1366): hàng công cụ danh sách hộ = `giao_dien.XepDong`
+    hai khối (nút | bộ lọc Đợt / Trạng thái / Tìm - hẹp thì xuống dòng); `lb_ket_qua` (đối chiếu, ~980 điểm) setWordWrap.
+    Thêm widget vào hàng một dòng: đo `w.minimumSizeHint()` trên dự án thật (offscreen phông khác - test chỉ kiểm cấu trúc).
+  - Nút "Xuất" (thanh công cụ danh sách hộ) = QAction `Xuất danh sách hộ…` (iconText 'Xuất', cũng ở menu Dữ liệu, bật khi chỉ
+    xem) -> `CuaSoChinh.xuat_danh_sach`: hộ đang chọn (>= 2) hoặc đang lọc -> `bao_cao_tong_hop(ds=, dieu_kien=, ten_file=,
+    tieu_de=, hoi=)` (cùng bảng Báo cáo tổng hợp; tên file `DanhSachHo_<đợt>_<trạng thái>_<giờ>.xlsx` ở thư mục hồ sơ).
+  - `kiem_tra_toan_bo.CAI`: tìm bản cài ở Program Files (x86) / Program Files rồi %LOCALAPPDATA%\Programs (trước: chỉ chỗ cũ).
+    Bước 6 / 10 theo bộ Universal + zip Universal (kiểm cả danh_sach_x64 / x86 khớp SHA-256). `thu_may_trang.ps1`: mỗi gói
+    (exe, zip) thử nhánh tự chọn + nhánh x86 ép (ban.txt = win7, danh_sach_x86 -> danh_sach.txt) - máy dựng là Win 11 64-bit.
+  - Test `test_giao_dien.test_mo_phong_to_va_khong_ep_rong`, `test_xuat_danh_sach_ho`.
+- 0.9.27 (người dùng 11/10/2026):
+  - MỘT biểu tượng (bỏ logo_PABT.png nền xanh - Thùng rác - và hình vẽ dự phòng `ve()` cũ): `tao_bieu_tuong.py` lấy khung chữ
+    (điểm khác màu nền > 14) của logo_PABT_nen_trang.png, làm nét (unsharp: ảnh mờ = thu 1/3 rồi phóng lại, k = LAM_NET), đặt
+    giữa ô lề LE_CHU (trước: cắt vuông nguyên ảnh - chữ P / T bị góc bo cắt), thu nhỏ từng nấc 1/2, viền ngoài #0F3866 (3%) +
+    đường vàng #F2B705 (1,2%, từ 24 px). Băng tiêu đề: ô logo trong suốt, pixmap 46 px (viền nằm sẵn trong ảnh). Xem trước:
+    `ket_qua_kiem_tra\thu_that\xem_bieu_tuong.py`. Test `test_giao_dien.test_bieu_tuong_duy_nhat_co_vien`.
+  - Menu trái: lệnh không có ký hiệu (hoặc máy không có phông biểu tượng) -> `nut_menu` gắn biểu tượng TRỐNG lên QAction (nút
+    lấy lại biểu tượng của lệnh mỗi khi lệnh đổi), `icon_trong`: thu gọn menu vẫn hiện chữ - trước đây Qt căn chữ ra giữa ("Bảng
+    giá đất"). KY_HIEU thêm 'bang gia dat' (0xE707), 'trang chu' (0xE80F).
+  - Lệnh "Màn hình chính" (đầu nhóm Dự án & dự toán; trước là "Trang chủ") -> `CuaSoChinh.ve_trang_chu`: trang TRANG_CHAO, dự án
+    vẫn mở, dấu chọn `_danh_dau_trang_chu`; `lb_chao` đổi chữ theo dự án đang mở (`_nap_gan_day`). Test `test_trang_chu_va_bieu_tuong_menu`.
+- 0.9.29 (người dùng 11/10/2026):
+  - Bộ đơn giá: `quan_tri_bo` (mật khẩu PBKDF2 ở `<thư mục máy>/quan_tri_bo.json`; tài khoản quản trị máy chủ LAN được sửa
+    không cần mật khẩu; người dùng máy chủ thường bị chặn). `HopBoDonGia` nút **Sửa bộ đơn giá** (thêm / sửa / xóa / thay
+    thế một mục + đổi mật khẩu); `don_gia.them_dong/sua_dong/xoa_dong/thay_the_dong` ghi bản máy (`dam_bao_ban_sua`). Cập
+    nhật cả bộ (file / web) cũng cần mở khóa. Thẻ Quy ước khi có dự án mở đọc `con_du_an` (nhãn "· dự án");
+    `don_gia_rieng` sau khi lưu gọi `nap()` — xóa ở Đơn giá riêng thì danh sách thẻ đổi theo.
+  - Màn hình chính: nút Đóng dự án / Xóa dự án (Tệp tin + hàng nút khi có dự án); dưới danh sách gần đây: Mở đã chọn, Xóa khỏi
+    danh sách, Xóa file `.pabt` (`xoa_du_an`, `bo_gan_day`). Không thoát phần mềm. Test `tests/test_yeu_cau_0929.py`.
+    Hướng dẫn trên trang chào = `lk_huong_dan` (NhanBam, góc dưới phải), không còn nút cạnh 3 lệnh bắt đầu.
+- 0.9.30 (người dùng 11/10/2026): liên kết Hướng dẫn chân trang chào; bỏ chữ "Cơ quan: …" góc phải thanh menu
+  (`lb_co_quan` / `_dat_co_quan`).
+- 0.9.31 ARCH-PABT-2026-V5: ẩn `bang_tieu_de` (tiết kiệm ~65 px); menu bar 38 px navy + logo + `lb_du_an_nho` / `lb_lan_nho`;
+  `thanh_tab` (QTabBar document mode, Ctrl+Tab) trên `QStackedWidget` giữ chỉ số trang cũ; welcome: thẻ 3 nút, `QTableWidget`
+  dự án gần đây (5 cột), chân trang 3 liên kết; TOKEN accent `#2563EB`, menu trái vạch trái 3 px khi chọn. KHÔNG làm: viết lại
+  4 tầng, đệm mẫu Excel trong RAM, bỏ Office/VBS, WA_DeleteOnClose hàng loạt, tab Bộ đơn giá / CuaSoLapPA (vẫn hộp thoại).
+  Test `tests/test_dac_ta_v5.py`.
+- 0.9.32 V5 đủ: `tao_thanh_tieu_de_hop_nhat`, `KhungLamViecDaTab`, `TheChao` + `QSS_THE_CHAO`; tab **Hộ: …** (`CuaSoLapPA`
+  nhúng, `nhung_tab`) và **Bộ đơn giá**; ghim `du_an_ghim.json`; chân trang QĐ 08/2025 + NQ 28; `VANG` = `#2563EB` (bỏ neon);
+  icon menu trái đơn sắc `TOKEN['chinh']`. `cho=False` vẫn trả hộp thoại (test). 0.9.33: Ctrl+S trên tab hộ gọi `luu` rồi fsync (tắt shortcut Save của hộp nhúng để khỏi trùng phím); tab `setMovable`; chân trang thêm Cài đặt. 0.9.34: `tao_dai_nhan_dien` 48px (logo, tên phần mềm, `to_chuc.TEN` / `don_vi_lap`, dự án, LAN) dưới menu 26px; `kiem_loi` không báo lỗi họ tên có chữ số. KHÔNG làm: frameless (giữ title bar Windows - từ 0.9.65 thay bằng thanh hợp nhất giữ khung Windows, xem 0.9.65),
+  viết lại 4 tầng, đệm Excel, bỏ VBS, khóa phần cứng. Test `tests/test_dac_ta_v5.py`.
+- 0.9.38: đường kẻ in cách chữ (`DK_CACH` 5 pt); tiêu đề `QGroupBox` không bị khung cắt. Ô Loại đất = `loai_dat.ds_chon` (đủ Thông tư 08/2024, kể cả RDD). Ô Vị trí = `HopXo` (popup trong màn hình, thanh cuộn) + `ds_vi_tri_nq28` luôn đủ 4 địa bàn kể cả loại đất không có cột giá. Mẫu "Dự thảo (áp giá trước niêm yết)" tooltip Luật Đất đai 2024 / NĐ 88/2024. Menu bar cao cố định 32 px + vạch 1 px (hết lệch vùng bấm). Màn hình chào ẩn Đóng/Xóa dự án; nút Mở căn giữa, viền `#2563EB`.
+- 0.9.40: dự thảo PABT (`du_thao.py`, `man_hinh_du_thao.py`, CSDL v13). Không dùng số liệu mẫu. Phễu trên `ho` thật. Ba tỷ lệ: theo đợt / lũy kế đã niêm yết / bao phủ cả dự án. Hộ `ma_vuong` V1–V5 không vào đợt. Niêm yết +10 ngày, đối thoại +30 ngày. Menu Lập phương án → Dự thảo PABT. `bo_don_gia.sqlite` nâng v13 (bảng trống, không hộ).
+- 0.9.39: bảng giá đất thay được (`gia_dat_nq28.ghi_thay` / `xoa_thay`, file `%APPDATA%\PABT\bang_gia_dat.json`). Lệnh **Thay bảng giá đất…** đọc Excel (mỗi sheet một địa bàn) và bỏ 4 xã gắn sẵn khỏi tra cứu / ô Vị trí. **Dùng lại bảng giá gắn sẵn** khôi phục. `tat_ca()` đọc file thay nếu có (cache theo đường + mtime). Test `tests/test_gia_dat_nq28.py`.
+- 0.9.46: `in_an.nap_mau_in` nhận Excel/PDF, không ném lỗi (không đọc được thì giữ file gốc và dùng mẫu chuẩn). `doc_ty_le('')` = None, `hien_ty_le` để trống, `he_so(None)` vẫn = 1. Danh sách hộ: trạng thái bắt đầu bằng "Đã lập" hoặc có dòng `ct_dat`/`ct_khoan` = đã lập, kể cả 0 đồng. `ho_so.chuan_nguon_goc` tách " - " thành dòng `- `; ô nguồn gốc và bản in thụt lề treo.
+- 0.9.47: bỏ mục menu **Quy chuẩn cây** (`Quy chuẩn cây, tài sản…` không còn trong `self.lenh`). Mật độ cây khi **Tính mật độ…** vẫn đọc ghi chú bộ đơn giá. `quy_chuan()` còn để test.
+- 0.9.48: `cap_nhat_gia_dat` — web (`tim_tren_web`, LoiWeb thì chọn file) và `doc_file` Excel/Word/PDF/CSV. `ap_dung` = `ghi_thay` (bỏ 4 xã gắn sẵn). Menu **Cập nhật bảng giá đất…** thay **Thay bảng giá đất…** và **Dùng lại bảng giá gắn sẵn** (khôi phục nằm trong hộp).
+- 0.9.49: `cap_nhat_web` đóng trong bộ cài (`PABT.spec` / `dung_exe38` không còn `--exclude-module` module này). Thiếu module thì `LoiWeb` tiếng Việt, không hiện `cannot import`. `man_hinh_quet_web` vẫn loại khỏi bản dựng.
+- 0.9.50: `tim_tren_web` mở trang chi tiết Công báo (từ khóa ngắn "bảng giá đất"), tải phụ lục .docx, `phan_tich_nghi_quyet` bóc mục xã/phường (MT/T/K) rồi `loc_xa`. Không gán cả tỉnh vào tên xã khi không nhận ra mục.
+- 0.9.51: ô địa bàn chỉ cần tên (`ten_gon` bỏ xã/phường/tỉnh/thành phố). Đồng Nai mở thẳng nghị quyết 28/2025; tiêu đề mục dạng `53. Xã Trị An`. PDF ảnh / ảnh: `ocr.tung_trang` từng trang, nút Dừng, dừng sớm khi hết mục xã. Menu Tệp tin: bộ lọc `_BamMenu` mở khi thả chuột. `cap_nhat_mau_in` hỏi mẫu chi tiết hoặc tổng hợp, lưu riêng `%APPDATA%\PABT\mau_in`.
+- 0.9.52: menu mở bằng `QTimer.singleShot` sau cú thả chuột. `tim_tren_web` xóa thư mục tạm và dừng khi đã có đất ở lẫn nông nghiệp. `QPdfDocument.close` sau khi đọc. Cột giá trên hộp cập nhật hiện giá nông nghiệp khi đất ở bằng 0.
+- 0.9.53: chân trang chào `Lịch sử cập nhật phần mềm` (`lich_su_cap_nhat.MUC`, mục mới ở đầu, cùng số `__version__`). Không chép các bản trước 0.9.53. F1 vẫn mở `HUONG_DAN.md`.
+- 0.9.54: bỏ “Cập nhật bảng giá đất…” khỏi nút Giá đất của `HopBoDonGia`. Lệnh cập nhật chỉ còn menu trái (`Cập nhật giá đất`).
+- 0.9.55: banner `tao_dai_nhan_dien` cao 42px, logo `KhungLogo` 32px bo 6. Menu `#081226` chữ 13px `#CBD5E1`. Tên phần mềm 11,5px `#F8FAFC`, cơ quan 10px `#93C5FD`. Chip trạng thái, đèn `#10B981`.
+- 0.9.56: `setMenuWidget` gộp logo, chữ PABT và `QMenuBar` một hàng cao 52px. Tiêu đề cửa sổ là `PABT`. Không xếp `dai_nhan_dien` thêm một lần trong layout.
+- 0.9.57: thanh menu chỉ logo + mục menu, cao 40px. Không hiện chữ PABT / tên cơ quan / chip trên thanh đó.
+- 0.9.58: menu nằm trên hàng tiêu đề (cửa sổ không khung), cao 60px, cạnh logo. Không hiện chữ PABT trên hàng đó. Nút thu nhỏ / phóng to / đóng ở cuối hàng.
+- 0.9.59: `tao_dai_nhan_dien` hiện lại tên phần mềm và tên cơ quan, cả hai 13px.
+- 0.9.60: menu trắng chữ `#1E293B`. Banner xanh `tao_banner_ten` phía dưới: tên phần mềm trắng, cơ quan `#67E8F9`.
+- 0.9.61: `MAU_BANG` navy sâu hơn, `VIEN_DAY` `#2563EB` dày 2px, tên cơ quan `MAU_PHU_DE` `#E2E8F0`. Tên phần mềm 12px, cơ quan 11px.
+- 0.9.65 thanh tiêu đề hợp nhất kiểu VS Code (người dùng 12/10/2026 - thay quyết định "giữ title bar Windows"): `pabt/thanh_tieu_de.py`
+  `ThanhTieuDe` (logo, QMenuBar `CuaSoChinh._mb_rieng` - `menuBar()` ghi đè trả nó, Hoàn tác / Làm lại theo `nut_ht`, tiêu đề giữa =
+  windowTitle, Hướng dẫn, Cài đặt, nút cửa sổ `nut_cua_so` property `nut_cua_so` - kiem_tra_giao_dien bỏ qua) qua `setMenuWidget`.
+  `_KhungWin32`: FramelessWindowHint + thêm lại WS_CAPTION | WS_THICKFRAME… + thay WNDPROC bằng ctypes (Qt 6.11 xử lý
+  WM_NCCALCSIZE / WM_NCHITTEST TRƯỚC nativeEvent và QAbstractNativeEventFilter - đã thử, không nhận được); NCCALCSIZE trả 0, phóng
+  to thu client bằng bề dày khung (không thì tràn ~9 px); NCHITTEST: mép `VIEN_KEO` đổi cỡ, `la_vung_keo` = HTCAPTION (Aero Snap,
+  bấm đúp, menu hệ thống do Windows làm). Đừng gọi `winId()` trong thủ tục / nativeEvent (tạo lại cửa sổ -> đệ quy, sập).
+  Qt 6.11 `ExpandedClientAreaHint` trên Windows tự vẽ thanh tiêu đề, không đặt widget lên được - không dùng. Dự phòng
+  `dung_thanh_hop_nhat()` False (bản Qt 5 Win7, `--khung-windows`, `PABT_KHUNG_WINDOWS`) hoặc gắn lỗi -> `dung_khung_windows`.
+  Banner `tao_banner_ten`: `goc_phai` (Fixed) giữ ô dự án `NutRutGon` (≤ `RONG_O_DU_AN`, rút "…"), máy đơn, phiên bản, tem; chữ
+  trái NhanRutGon (Ignored). `vua_cao_menu` = max(`CAO_MENU`, sizeHint): ép 28 px ở DPI 125% làm Qt dồn mọi mục vào "»".
+  Bỏ `gan_nut_cua_so` (nút tự vẽ thời không khung). Test `tests/test_dac_ta_v5.py`.
+- 0.9.65 tải lớn: `ket_qua_kiem_tra/thu_that/do_tai_lon.py --so-ho 5000` (nhập: Dự án mới, Excel thô, .xlsm, nhập tay 1 hộ, doc_so;
+  lệnh: mở, trang, lọc, lập PA, lưu + tải lại, tính nguội / có đệm, kiểm tra lỗi, đối chiếu, xuất xlsx, xóa / hoàn tác; cProfile
+  bước > 400 ms). `kiem_loi.loi_font` đường tắt regex `_RE_KY_TU_LA` (×12, nhánh đầy đủ `_loi_font_day_du` - test so 30.000 chuỗi);
+  `doi_chieu.xuat_bao_cao` `_kieu`: chép StyleArray thay gán Border / Fill từng ô (×2,3, so 55.105 ô giống hệt). openpyxl
+  StyleProxy KHÔNG so bằng nội dung (`x.font == y.font` luôn False giữa hai ô) - so `._StyleProxy__target`. Còn chậm: bảng tổng hợp
+  5.000 hộ ~5 s (ghi xlsx của openpyxl + gộp ô), Dự án mới ~3,8 s, nhập Excel thô 10.000 dòng ~1,6 s (cần chế độ đầy đủ vì ô gộp).
+  `in_an.la_mau_du_thao` bỏ dấu (mẫu riêng "Dự thảo" có dấu bị coi là bản chính thức, chữ DỰ THẢO bị xóa).
+- 0.9.65 giá đất web (`pabt/nguon_gia_dat.py`, khảo sát `ket_qua_kiem_tra/GiaDat_NguonWeb_0.9.65.md`): KHÔNG có nguồn chính thức đọc
+  bằng máy cho 34 tỉnh (Công báo chỉ Đồng Nai / Tây Ninh chung nền tảng; vbpl.vn mới = Next.js Server Actions, không API ổn định;
+  thuvienphapluat 403, thuviennhadat 500). `tim_tren_web(tinh, xa, url=, tham_khao=True)`: (1) url dán + danh bạ
+  `danh_ba_gia_dat.json` (thư mục máy, `DANH_BA_GAN_SAN` Đồng Nai) - đọc được thì `ghi_danh_ba`; file phụ lục tải thẳng, không lọc
+  < 80 KB; (2) tìm Công báo / vbpl; (3) `doc_guland` (9 tỉnh `GULAND`, VT1-4, `tham_khao=True`, `NHAN_THAM_KHAO` vào căn cứ).
+  `chuan_tinh` 34 tỉnh + tỉnh cũ (NQ 202/2025/QH15). `an_toan.nap_goc_ca_windows`: Python chỉ đọc gốc CA đã có trong kho Windows
+  -> lỗi CERTIFICATE_VERIFY_FAILED thì cho .NET kết nối thử (Windows tự tải gốc, vẫn xác minh) rồi `_mo` thử lại MỘT lần.
+  Test `tests/test_nguon_gia_dat.py` (trang GIẢ LẬP, không mạng). Phụ lục tỉnh khác Đồng Nai: thử trên file THẬT trước khi thêm mẫu.
+- Dựng 0.9.65 trong phiên Claude: `dung_bo_cai_win._goi_moi` lỗi FileExistsError - `PABT_dev\goi_universal` THẬT (lần dựng trước)
+  còn sau rmtree vì MSIX ảo hóa %LOCALAPPDATA% -> nay tạo tên phụ `goi_<ban>_<pid>` (dọn ở lần sau). Kiểm máy trắng:
+  `thu_may_trang.ps1` chạy bằng `[scriptblock]::Create(ReadAllText(UTF8))` (4 trường hợp exe / zip × x64 / x86 ĐẠT).
+- 0.9.66 mỗi lệnh một chỗ (người dùng 12/10/2026: "menu trái hoặc thanh menu đã có thì bỏ lệnh trùng"): menu trái + thanh menu
+  là hai chỗ chính, KHÔNG lặp nhau (Dữ liệu bỏ Báo cáo tổng hợp / Xuất báo cáo đối chiếu, Công cụ bỏ Bộ đơn giá, Cài đặt bỏ Thông
+  tin dự án); không lặp thành nút: thanh tiêu đề chỉ 3 nút cửa sổ (bỏ Hoàn tác / Làm lại / Hướng dẫn / Cài đặt), thanh công cụ danh
+  sách hộ chỉ Thêm hộ / Xóa hộ (`nut_ds`), bỏ `hang_chon` (số hộ chọn ở `lb_tom_tat`), bỏ `hang_dong_xoa` / `nut_chao_du_an` (luôn
+  ẩn), chân trang chào chỉ "Lịch sử cập nhật phần mềm" (bỏ `lk_cai_dat`, liên kết NQ 28). GIỮ: thẻ bắt đầu màn hình chào
+  (`nut_chao`), menu chuột phải (dùng QAction), nút "Xuất Excel…" của từng trang (mỗi trang xuất bảng riêng). Thêm nút / mục mới:
+  `tests/test_khong_trung_lenh.py` chặn trùng. Kiểm kê lệnh: `kiem_ke_lenh.py` trong phiên Claude (QAction -> các chỗ đặt).
+- 0.9.67 nhập tài sản DÙNG CHUNG phương án hộ + dự toán (người dùng 12/10/2026): `pabt/nhap_tai_san.py` (không Qt) -
+  `them_mot(dich, muc, m, ten, so_luong, ty_le, kieu, ghi_chu)` -> (i, thông báo, tự do?) (danh mục / tên tự do / cây theo
+  đường kính - chu vi `_them_theo_do`), `them_dong_tho` (một dòng hộp Dán danh sách); đích `DichPhuongAn(bo)` (BoSoan) /
+  `DichDuToan(dt, dm)` (DongDT, vật nuôi gộp mục 3, tỷ lệ = he_so, quy cách -> ghi_chu) cùng giao diện them_danh_muc / them_tu_do /
+  dat_so_luong / dat_ty_le / dat_ghi_chu / dat_quy_cach / dat_dvt. `pabt/hang_nhap_nhanh.py`: `HangNhapNhanh(them, muc=|chon_muc=)`
+  (+ `ds_chon_nhanh` / `lam_san` / `KIEU_SL` chuyển từ man_hinh - man_hinh xuất lại tên cũ), `sau_chon(m)` -> True = đã đặt con trỏ
+  (BangMuc mục 4 `_sau_chon`: ô theo cách tính ổn định / đào tạo / thuê nhà - riêng hộ, KHÔNG có trong dự toán). BangMuc: `self.hang`
+  + bí danh o_chon / o_sl / o_tl / o_gc / cb_kieu / nut['Thêm vào bảng']. `HopDanTaiSan(cua_so, chu, dich=)` gọi
+  `cua_so.sau_khi_dan_tai_san(n, muc)`. KhungDuToan: `hang` (cb_muc Nhà / Cây / Vật nuôi / Hỗ trợ / Thưởng), `them_nhanh(**thay)`,
+  `dan_tai_san`, `lb_tb` (ẩn khi trống), bỏ `b_hm` "Thêm hạng mục" + `them_tu_nhom`; `them_danh_muc(m)` đi qua DichDuToan. Test
+  `tests/test_nhap_tai_san.py` (cùng thao tác trên hai đích ra cùng tên / SL / ĐG / tỷ lệ / ghi chú). `cb_kieu` chỉ tạo khi hàng
+  có mục 3 (None ở thẻ khác): luôn tạo làm mở cửa sổ lập PA chậm 4-9 ms (đo riêng 15 lần, máy rảnh). PhanTich chạy cùng lúc dựng
+  bộ cài cho số nhiễu ±20-30% - nghi chậm thì đo riêng trước khi kết luận.
+- 0.9.68 "Tệp tin" không bấm được (người dùng 12/10/2026): `KhungLamViecDaTab` (bộ điều khiển tab, cha = cửa sổ chính, KHÔNG nằm
+  trong bố cục - bar / stack_phu xếp chỗ khác) HIỆN ở góc (0, 0) 100 x 30 trong suốt, nuốt cú bấm vào mục menu đầu (từ 0.9.32;
+  0.9.51 / 0.9.52 tưởng DPI nên thêm `_BamMenu` mở menu khi thả chuột - nguyên nhân thật là khung này). Nay `setVisible(False)` +
+  WA_TransparentForMouseEvents. Widget con của cửa sổ chính không nằm trong bố cục = phải ẩn. Test `test_khong_trung_lenh.
+  test_moi_muc_menu_bam_duoc` (childAt tâm mọi mục menu = QMenuBar, cả khung Windows). Thử bấm thật: SendInput với INPUT 40 byte
+  (x64) - khai 48 byte thì SendInput trả 0, lỗi 87, không cú bấm nào tới cửa sổ.
+- 0.9.69 (người dùng 12/10/2026, 18 mục):
+  - MÃ TÀI SẢN (CSDL v14, `_NANG_CAP[13]` = cột `du_an.chu_dau_tu` + "@doi_ma_tai_san"): nhà TS1…, cây CT1… (= TS140… cũ, `ma_tai_san.
+    CAY_TS_DAU`), vật nuôi VN1… (VN01 cũ), chính sách hỗ trợ CS1… (HT01 cũ), thưởng TH1… (`ma_thuong(i)` - biểu thưởng không lưu mã,
+    đánh theo thứ tự mức). `ma_tai_san.chuyen_csdl(con)`: đổi dm_taisan / dm_hotro (hai bước qua mã tạm), ct_khoan.ma / ma_tuong_duong,
+    BỎ dm_taisan nhóm 4 / 5 (dòng HT / TH lẫn vào thẻ Nhà - trùng dm_hotro / bieu_thuong); chạy lại không đổi thêm. Gọi khi nâng cấp
+    CSDL, sau `nhap_excel` (file PABT Excel vẫn mã cũ), `tao_bo_don_gia.chuan_hoa` (`--chuan-hoa`), `don_gia._nang_cap_ban_may` (bản
+    bộ đơn giá ở %APPDATA% của phiên bản cũ). Mã mới khi thêm mục: `ma_tai_san.ma_tiep` / `tien_to`. Mã cố định trong nguồn (HTnn ->
+    CSn, VN0n -> VNn) đã đổi bằng script; dm_hotro sắp `ORDER BY LENGTH(ma), ma` (CS10 sau CS9). Dự toán `.pabtdt` cũ: `du_toan._doi_ma_dong`.
+  - QUY ƯỚC: bộ đơn giá đóng gói không còn dòng quy_uoc (0 dòng); quy ước chỉ do người dùng tạo ở Đơn giá đặc biệt (id >= ID_RIENG),
+    thẻ Quy ước của HopBoDonGia bỏ (`I_QUY_UOC = -1`). `ds_chon_nhanh` bỏ quy ước id < ID_RIENG của dự án cũ.
+  - Menu: Dự thảo PABT -> "Niêm yết & Lấy ý kiến" (tab `TEN_TAB` dùng "&&"), Đợt trình -> "Trình phê duyệt", Bộ đơn giá -> "Đơn giá
+    bồi thường", Đơn giá riêng -> "Đơn giá đặc biệt"; bỏ "Tổng quát hộ" khỏi menu trái (vẫn là thẻ đầu Bảng tổng hợp). Khóa `self.lenh`
+    giữ tên cũ (test, kiem_tra_giao_dien). Mở / nhập dự án -> `mo_trang(0)` (Danh sách hộ), không về trang đang chọn.
+  - Thẻ Vật nuôi: danh sách trống (dự án cũ chưa có VN) -> `OTimChon.khi_trong` -> `CuaSoLapPA.bo_sung_vat_nuoi(hoi=True)`.
+  - Bản in: đường kẻ dưới "Dự án" dài `in_an.DK_DU_AN_CM` (7 cm), giữa dòng chữ; ô nguồn gốc ngang justify, dọc center; mục đất / thưởng
+    0 đồng để trống SL / ĐG / tỷ lệ; thưởng: thành tiền in đậm, ĐVT trống.
+  - Thông tin dự án: `chu_dau_tu` (TRUONG_DU_AN, `doc_du_an` chịu được file chỉ xem < v14); kinh phí chỉ ô Loại dự án (bỏ `o_tl_kp`,
+    tỷ lệ '' = mức tối đa của loại).
+  - Trình phê duyệt: mẫu mặc định TO_TRINH = văn bản đề nghị thẩm định, phê duyệt PA và quyết định thu hồi đất theo file người dùng gửi
+    ("VĂN BẢN THẨM ĐỊNH & PHÊ DUYỆT.doc" ở thư mục dự án - KHÔNG đóng gói, có số liệu thật), dựng trong mã `_noi_dung_to_trinh` (không
+    tên đơn vị / dự án / người ký thật; QĐ phê duyệt dự án, thông báo thu hồi đất = dòng chấm; căn cứ chung QĐ 30/2025, 42/2025,
+    18/2026 giữ). Không có bảng hộ (bảng tổng hợp đính kèm). Chỗ trống mới: chu_dau_tu (trống -> "Chủ đầu tư"), don_vi_cap_tren,
+    cap_dia_ban_thuong, so_ho_02, KY_THAY ("KT. GIÁM ĐỐC" khi chức vụ ký bắt đầu "Phó"). `_bang(doc=, lech=)`, `_p(trai=, phai=, dong=)`.
+    BỎ mẫu Phương án tổng: `LOAI` chỉ 'to_trinh', không còn `pa_tong=` ở `xuat_bo_ho_so` / `quan_ly.xuat_dot`, `o_pat` ở HopIn /
+    HopDotTrinh (số / ngày PA tổng của đợt vẫn dùng ở bảng tổng hợp + tờ trình). `HopDotTrinh.xoa_so` (nút "Xóa số PA chi tiết").
+  - Chọn hộ niêm yết (mục 9): lệnh 'Chọn hộ niêm yết…' (nút thanh công cụ danh sách hộ + chuột phải; không ở menu trái / menu trên) ->
+    `man_hinh_du_thao.HopChonNiemYet` (hộ đang chọn >= 2, không thì cả dự án): `du_thao.danh_gia_niem_yet` (đã lập - tự lập chưa soát
+    KHÔNG đạt, họ tên, nguồn gốc mọi thửa, không tranh chấp, không vướng V1-V5; `can_xem` = cảnh báo kiem_tra_pa, không chặn; đọc gộp,
+    167 hộ 17 ms) tích sẵn -> `ghi_danh_dau` (ho.du_dieu_kien, hộ vướng bỏ qua) + tùy chọn `dua_ho_vao_dot`. Test `tests/test_yeu_cau_0969.py`.
+- 0.9.70 đặc tả ARCH-PABT-2026-V7 (`phuong_an_tich_hop_du_thao_va_y_kien_dan.txt` ở thư mục dự án, người dùng 12/10/2026):
+  - Menu trái: nhóm tên None/'' = nút độc lập + vạch ngăn (`menu_trai`; `thanh_lenh` thẻ không chữ) -> "Màn hình chính" trên
+    cùng, rồi 6 nhóm '1. Khái toán & dự toán' (Dự toán & khái toán, lệnh mới 'So sánh với thực tế' = `so_sanh_du_toan`: trang dự
+    toán thẻ 1) / '2. Dự án triển khai' / '3. Đơn giá & bảng giá' / '4. Lập phương án' / '5. Tổng hợp & trình duyệt' / '6. Phê
+    duyệt & bàn giao'. Nhãn mới qua NHAN_MENU (khóa self.lenh GIỮ tên cũ; TRANG có '&' trong NHAN_MENU không bị vòng '&&' ghi đè);
+    `lb_trang` / `_ten_tab` dùng nhãn NHAN_MENU. Rời menu trái: 'Cập nhật bảng giá đất…' -> menu Công cụ, 'Trạng thái hộ…' ->
+    menu Dữ liệu (+ chuột phải). KHOA_NHOM_DONG '..._3', NHOM_DONG_MAC_DINH nhóm 1, 3, 6. KY_HIEU thêm mẫu cho nhãn mới (so
+    sánh 0xE8AB, đơn giá bồi thường / đặc biệt, niêm yết, theo dõi chi trả, báo cáo tiến độ) - nhãn mới phải có biểu tượng.
+    KPI `the_so` (6 thẻ) giữ nguyên.
+  - Khái toán: `du_toan.TRUONG_CHUAN_BI` / `NHAN_CHUAN_BI` (ten, chu_dau_tu, nguon_von (`NGUON_VON`), dia_ban, quy_mo_dt,
+    so_thua_dk, so_ho_dk - chữ, lưu trong .pabtdt; file cũ thiếu khóa -> ''). `KhungDuToan._khoi_chuan_bi` (QFrame#khoi_chuan_bi,
+    `o_cb` {khóa: ô}) thay hàng Dự án / Địa bàn / Địa chỉ (bỏ ô Địa chỉ; `dia_chi` vẫn đọc / ghi, bảng khái toán in `dia_chi or
+    dia_ban`). `lay()` giữ các ô đã gõ, chỉ điền ô trống từ nguồn khối lượng. Bảng dự toán / các nút bên dưới không đổi.
+  - Niêm yết & Lấy ý kiến 4 thẻ: '1. Niêm yết công khai' (QSplitter: bảng niêm yết + khung "Hộ vướng / chưa đủ điều kiện" - thẻ 5
+    cũ, giữ đánh dấu V1-V5 / xuất đôn đốc), '2. Lấy ý kiến nhân dân', '3. Đối thoại && Tiếp thu', '4. Tổng hợp kết quả ý kiến';
+    tên thẻ không ghi số ngày (chữ chú thích dùng `du_thao.SO_NGAY_*`). KHÔNG thêm bảng dot_niem_yet / y_kien_niem_yet của đặc tả
+    (đã có dot_du_thao / y_kien_du_thao từ v13). Test `tests/test_yeu_cau_0970.py`.
+- 0.9.71 (người dùng 12/10/2026):
+  - Ô Khối lượng: `HangNhapNhanh.o_do` (số đo đường kính / chu vi, chỉ hiện ở kiểu dk / cv - `kieu()`, `_doi_kieu`) tách khỏi
+    `o_sl` (Khối lượng, luôn hiện; kiểu dk / cv = số cây MỖI số đo, trống = 1); `gia_tri()['so_do']`; `o_do` chỉ tạo khi hàng có mục 3 (None ở thẻ khác - tạo ở mọi thẻ làm mở lại cửa sổ lập PA
+    133 -> 147 ms); `nhap_tai_san.them_mot(...,
+    so_do='')` - không có so_do thì so_luong là các số đo (cách gọi cũ: hộp Dán danh sách, test); `_them_theo_do(so_cay=)` nhân số
+    cây (nguyên > 0). Enter trên nút: `setAutoDefault(True)` (ngoài QDialog nút Qt chỉ nhận Space); Enter ở ô Loại đất -> Diện tích.
+  - Bố cục Khái toán theo `bo_cuc_khai_toan.txt` + mã mẫu `KhungDuToanTinhChinh` người dùng gửi (file .crdownload tải dở - chỉ đọc
+    làm tham khảo, KHÔNG dùng lớp mẫu vì không có logic): giữ `KhungDuToan` và mọi đối tượng logic, xếp lại - tiêu đề + chế độ
+    (`rd_khai_toan` / `rd_so_sanh`, `nhom_che_do` <-> `self.tab` thanh thẻ ẩn), `_khoi_chuan_bi` + `cb_kp` (Kinh phí QĐ08:
+    `activated` -> `_doi_kinh_phi` -> `them_chi_phi(loai)`; `DuToan.loai_kinh_phi` lưu .pabtdt; bỏ nút "Chi phí bồi thường QĐ
+    08/2025"), thanh nhập nhanh `thanh_nhap_nhanh` (`b_lay` QMenu: 4 nguồn + Áp đơn giá hiện hành - `b_tu_du_an` nay là QAction;
+    `cb_muc_nhap` 1 Đất..6 Thưởng -> `ngan_nhap` QStackedWidget: trang đất / `self.hang` (cb_muc + nut_them của hàng ẨN);
+    `b_tra_nq28` chỉ hiện ở Đất, Dán Excel, `b_them` = `them_tu_thanh`, `b_them_dat` bí danh), hàng tiêu đề bảng (Thêm dòng / Tra
+    giá đất dòng chọn / Xóa dòng; chuột phải bảng `_menu_bang`), thẻ tổng `lb_tong` (QLabel#the_tong_khai_toan, rich text: tổng +
+    bằng chữ + từng mục), hàng đáy (Mở tệp, `tao_moi`, `b_xuat` QMenu 3 loại, `b_luu`). Ctrl+S: `app.luu_du_an_lenh` đang ở trang
+    dự toán (`trang` ô 3) -> `khung_du_toan.luu()` (KHÔNG thêm QShortcut Ctrl+S riêng: trùng phím thì Qt không chạy cái nào). Không
+    dùng emoji trong chữ nút (Win 7 không có phông emoji; biểu tượng theo `ky_hieu_nut`). Test `tests/test_yeu_cau_0971.py`.
+  - Thanh nhập nhanh MỘT hàng (người dùng 13/10/2026): `khoi_nut_nhap` (Tra NQ 28, "Dán danh sách…" `b_dan`, Thêm vào bảng) cuối
+    `_h_d1`; ô của `hang` cố định o_sl 90 / o_tl 60 / o_gc 120-180 / o_do 100-150, kiểu ô gọn (`nhap` = '0', không phải kiểu ô nhập
+    lớn 14 px); ô chọn rộng theo số ký tự `_co_theo_ky_tu` (cb_muc_nhap, cb_kieu, cb_kp, cb_loai_dat - không theo mục dài nhất);
+    `KIEU_SL` chữ ngắn "Đường kính" / "Chu vi" (cm ở chữ gợi ý ô số đo). Thanh `thanh_nhap` sizePolicy ngang Ignored + `eventFilter`
+    Resize -> `_xep_thanh_nhap`: rộng >= `can_mot_hang()` thì một hàng, hẹp thì cụm nút sang `_h_d2` - trang tối thiểu ~950 điểm
+    (một hàng cần ~1.200 / 1.310 điểm kiểu Đường kính: ép làm bề rộng tối thiểu thì cửa sổ rộng hơn màn hình 1366, lỗi 0.9.26).
+    Hàng 2 thông tin: nhãn ngắn `NHAN_NGAN` (Địa bàn / DT dự kiến / Số thửa / Số hộ / Kinh phí QĐ08; tên đầy đủ ở chú thích), ô
+    DT 130, Số thửa / Số hộ 75. Test `TestThanhMotHang` (kiểm theo `can_mot_hang`, phông offscreen rộng hơn Windows).
+- 0.9.72 (người dùng 13/10/2026): CSDL v15 (`_NANG_CAP[14]`): `du_an.co_quan_tham_dinh`, `dot_trinh.ky_hieu_so`; bộ đơn giá
+  đóng gói nâng v15 (`tao_bo_don_gia.py --chuan-hoa 2026.10.12`).
+  - `lap_pa.TRUONG_DU_AN` bỏ ten_day_du / so_phuong_an / ky_hieu_so (cột CSDL giữ: file cũ, nhập Excel, in_an); `luu_du_an` ghi
+    ten_day_du = ten (trừ khi nơi gọi đưa riêng) - một tên dự án; ĐỪNG đọc `doc_du_an(con)['ten_day_du']` (không còn khóa).
+    `co_quan_tham_dinh_mac_dinh(cap, ten)`: phường -> Phòng Kinh tế, Hạ tầng và Đô thị; xã / đặc khu -> Phòng Kinh tế. HopDuAn:
+    ô Cơ quan thẩm định = QComboBox sửa được (gợi ý theo cấp / tên địa bàn `_goi_y_tham_dinh`); kinh phí 2 mục (không còn "Tự
+    nhận"), `_kp_tu_dong` chọn theo `loai_kinh_phi_tu_ten` khi sửa tên tới khi người dùng `activated`; lưu '' khi còn tự chọn.
+  - Ký hiệu số theo đợt: `quan_ly.Dot.ky_hieu_so`, `tao_dot(ky_hieu_so=None -> ky_hieu_mac_dinh: đợt gần nhất, không thì
+    du_an / to_chuc)`, `sua_dot(ky_hieu_so=)`, `HopSuaDot.o_ky_hieu`; in: `in_an.ky_hieu_cua_ho(con, ma_ho, mặc định)` trong
+    `lap_chi_tiet`, `lap_bang_tong_hop(ky_hieu_so=)`, `van_ban_trinh.du_lieu` (dot.ky_hieu_so trước). Tờ trình: `_PHONG` =
+    `{co_quan_tham_dinh}` (trống -> mặc định theo cấp).
+  - Danh sách hộ: `ho_so.rut_gon_dia_chi(dia_chi, ten_dia_ban)` cắt từ đoạn trùng xã / phường dự án (bỏ tiền tố xã / phường / thị
+    trấn, so không dấu) - xã khác giữ nguyên; `_so_lieu_dong` trả thêm địa bàn; dòng có `dia_chi` đầy đủ (chú thích cột 2, tìm kiếm).
+  - CuaSoLapPA: QShortcut Ctrl+Left / Ctrl+Right (+ Ctrl+PgUp / PgDn) -> `sang_ho`; ô chữ vẫn nhảy từng từ (ShortcutOverride).
+  - Mật độ: `cay_trong._mat_do_gan_dung` (bỏ chữ "cây" đầu tên, trùng hẳn trước rồi tên dài nhất; nguon 'gần đúng'),
+    `mat_do_thuc_te`; `man_hinh_cay.canh_bao_mat_do(bo, i)` (chỉ nhắc, không đổi số liệu; bỏ qua dòng đã tách "mật độ") gọi trong
+    `CuaSoLapPA.sua_o` (mục 3, cột so_luong) và `_sau_khi_them` (mục 3); HopMatDo thêm dòng "Mật độ thực tế".
+    Test `tests/test_yeu_cau_0972.py`.
+- 0.9.73 (người dùng 13/10/2026) nhóm 3 Đơn giá & bảng giá:
+  - `HopBoDonGia`: `lb` = dải 28 px (QLabel#dai_bo_don_gia: tên bộ + phiên bản + "QĐ n/yyyy" lấy từ van_ban "…/QĐ-UBND" bỏ dòng "Dự
+    thảo" + `trang_thai_khoa()`; mô tả đầy đủ ở chú thích). `b_cap` = Nạp từ file (cap_nhat_file - vẫn nhận Word / PDF) / Sao lưu
+    (`sao_luu` -> `don_gia.sao_luu_bo`: .sqlite = sqlite backup API, .xlsx = mỗi BANG_BO một sheet). `b_qt` (= `b_sua`) "Quản trị
+    bảo mật": mở khóa, đổi mật khẩu, `khoi_phuc_goc` -> `don_gia.khoi_phuc_bo_goc` (bản máy đổi tên `.truoc_khoi_phuc_<giờ>.sqlite`,
+    KHÔNG xóa; cần quyền). Thêm / sửa / thay / xóa mục: `_menu_bang` (chuột phải mọi bảng thẻ). BỎ nút Giá đất / Đơn giá riêng và
+    hàm `xem_gia_dat` / `xuat_gia_dat` / `don_gia_rieng` / `cap_nhat_web` / `cap_nhat_mang` của hộp, `don_gia.TRA_CUU` (menu trái có
+    Bảng giá đất, Đơn giá đặc biệt; web không dùng được - người dùng). `man_hinh_quet_web` không còn đường mở từ hộp này.
+  - `HopDonGiaRieng`: tiêu đề "Đơn giá đặc biệt…", mô tả một dòng (đầy đủ ở chú thích), `b_luu` "Lưu thay đổi" KieuNut.LUU (chỉ bật
+    khi có thay đổi); thẻ thẩm định: thanh trên cùng b_file | lb_file | b_dua (KieuNut.CHINH), 6 ô chứng thư QGridLayout 3 hàng x 2
+    cặp (Chứng thư số | QĐ phê duyệt giá / Ngày | Căn cứ / Đơn vị | Áp dụng theo). Test `tests/test_yeu_cau_0973.py` (QMenu giả cho
+    menu chuột phải - exec chặn kiểm thử).
+- 0.9.74 (người dùng 13/10/2026) biểu tượng "PABT Fluent Isometric 3D": nguồn = ảnh thiết kế `pabt/bieu_tuong_thiet_ke.webp` (1024 px,
+  người dùng gửi; KHÔNG đóng gói). `tao_bieu_tuong.py` (QT_QPA_PLATFORM=windows, Qt6) -> `ve_bieu_tuong.cat_squircle` (cắt khung 170-853,
+  bo góc `BO_GOC`, trong suốt ngoài góc) -> `pabt/bieu_tuong.png` 512 + `bieu_tuong.ico` 9 cỡ (16, 20, 24, 32, 40, 48, 64, 128, 256 - 20 / 40
+  cho màn hình 125%), thu nhỏ từng nấc `thu_nho_muot`. Runtime: `giao_dien.bieu_tuong()` = `ve_bieu_tuong.icon()` (QIcon nhiều cỡ từ
+  png 512 - Qt5 không cần plugin webp vì chỉ đọc png); `ve_mach` (hình vẽ bằng QPainter) chỉ là dự phòng khi thiếu png. Đổi biểu tượng:
+  thay ảnh, chạy lệnh trên, dựng lại bộ cài `--clean` (exe / Desktop / IExpress lấy .ico; gói .pabtcn mang bieu_tuong.png). `app.
+  dat_app_user_model_id()` gọi ĐẦU `app.main` TRƯỚC `QApplication` (AppUserModelID `gov.pabt.boithuong.enterprise.2026`; không có
+  `main.py` - điểm vào là `chay.py` -> `app.main`). Test `test_giao_dien.test_bieu_tuong_duy_nhat_co_vien` / `test_app_user_model_id`.
+- 0.9.75 (người dùng 13/10/2026) nhóm 4 Lập phương án (mã ở `man_hinh_du_thao.py` / `man_hinh.py` / `man_hinh_ho_so.py` - không có file
+  `man_hinh_niem_yet.py` / `cua_so_lap_pa.py`):
+  - `KhungDuThao`: `b_dua` = nút xổ "Đưa hộ vào đợt" (Thêm toàn bộ hộ đủ điều kiện = `_dua`, Chọn hộ từ danh sách = `_them_ho`; BỎ `b_them` và
+    nút "Thêm hộ vào đợt…" lặp ở các thẻ), `b_hop` "Ngày họp dân"; dải `dai_tien_do_ny` một dòng (`lb_dot` "Tiến độ đợt|lũy kế: Đồng thuận a/b (p%)
+    · Không đồng ý · Ý kiến khác · Chưa lấy ý kiến", `lb_luy`, `lb_phu` = `NhanRutGon`); thẻ 1 `self.tach` QSplitter dọc (không thu gập, tay
+    cầm 10 px); `_nut` {chữ nút: QPushButton} - nút Xuất tắt khi chưa chọn đợt / không dữ liệu. Thẻ 2: cột Ý kiến "● <loại>" màu `MAU_Y_KIEN`,
+    `cellClicked` cột 2 / QShortcut Space (WidgetShortcut) -> `_doi_nhanh` -> `du_thao.doi_y_kien_nhanh` (vòng `VONG_Y_KIEN`: chua -> dong_y ->
+    khong_dong_y -> y_kien_khac -> chua; giữ dòng chọn); bấm đúp: cột 4 Nội dung -> `HopNoiDung` (`cap_nhat_y_kien(noi_dung=)`), cột 2 bỏ qua (hai
+    cú bấm = hai lần đổi), cột khác -> HopYKien đủ. Thẻ 3: lọc sẵn khong_dong_y / y_kien_khac, nút "Chuyển hộ sang đợt sau" + "Xuất biên bản
+    đối thoại" (`du_thao.xuat_doi_thoai`: mỗi lần đối thoại một dòng). Thẻ 4: `du_thao.tong_hop_nhom` (nhóm lý do: hộ kiến nghị / đã đồng thuận
+    / chưa / % ; dòng "Toàn đợt"), `xuat_y_kien` thêm trang "Theo nhóm lý do".
+  - CuaSoLapPA: `tra_gia_dat_nq28(i=None, dong=None)` + nút 'Tra giá đất NQ 28…' ở hàng nhập mục 1 (`HopTraNQ28.dong` = dòng bảng giá đã chọn ->
+    `BoSoan.chon_vi_tri_nq28`); `man_hinh_ho_so.HopNguonGoc` + `ONguonGoc.editorEvent` (bấm đúp ô Nguồn gốc mở hộp riêng, trả True để Qt không tạo
+    khung sửa tràn - tránh vỡ chiều cao dòng; chỉ xem thì không mở; gõ phím vẫn sửa trong ô). Ctrl+←/→ đã có từ 0.9.72. Test `tests/test_yeu_cau_0975.py`.
+- 0.9.76 (người dùng 13/10/2026, Mục IV QĐ 18/2026 - đặc tả `phuong_an_tich_hop_du_thao_va_y_kien_dan.txt` có ma trận 16 bước) Nhóm 5 - 6. Tên file /
+  lớp trong yêu cầu (`man_hinh_tong_hop.py`, `KhungTongHopKinhPhi`, `man_hinh_quyet_dinh.py`, `man_hinh_chi_tra.py`, `KhungQuanLyDotTrinh`) KHÔNG tồn tại: làm
+  trên `man_hinh_theo_doi.py`, `man_hinh_quan_ly.py` (`HopDotTrinh` là hộp thoại, không phải trang) và file mới `man_hinh_bao_cao.py`.
+  - CẤU TRÚC TRANG (`app.py`): `TRANG` = [Danh sách hộ, Tổng hợp tiền theo phương án, Quyết định phê duyệt, Theo dõi tiến độ, Báo cáo tổng hợp…, Dự toán & khái
+    toán] (hằng `TRANG_DS` … `TRANG_DU_TOAN` = 0…5; `TRANG_DU_TOAN` vẫn 5). `self.trang` (QStackedWidget) thêm trang CUỐI để giữ chỉ số cũ: 0 danh sách, 1 bảng tổng
+    hợp, 2 theo dõi, 3 dự toán, 4 chào (`TRANG_CHAO`), 5 quyết định, 6 báo cáo tiến độ; `STACK_CUA_TRANG` = (0, 1, 5, 2, 6, 3) đổi chỉ số TRANG -> chỉ số stack
+    (đừng nhầm hai không gian chỉ số: `mo_trang(i)` nhận chỉ số TRANG). `self.khung_trang` {chỉ số stack: khung} (bảng tổng hợp, tiến độ, quyết định, báo cáo)
+    dùng chung ở `mo` / `dong_du_an` / `_sau_tai_lai` / `_khung_dang_xem`. Bỏ `THE_TONG_HOP` khỏi TRANG (nay chỉ là tên 3 thẻ trong `thong_bao`); bỏ lệnh
+    `Thông tin tổng quát hộ` và lớp `KhungTongQuat`; dòng nhắc "◀ bấm Danh sách hộ… ở menu trái" trên tiêu đề trang đã BỎ ở mọi trang (`_danh_dau_trang`).
+    Lệnh `Báo cáo tổng hợp…` nay mở TRANG_BAO_CAO (Excel danh sách hộ vẫn qua `bao_cao_tong_hop` / `xuat_danh_sach`, nút "Xuất danh sách đầy đủ các hộ…").
+  - NGHIỆP VỤ không Qt (mỗi module có test trong `tests/test_yeu_cau_0976.py`): `thoi_han.py` (mốc thời hạn lưu `cai_dat` SO_NGAY_THAM_DINH 15 / THU_HOI_NN 60 /
+    THU_HOI_PNN 120 / VAN_DONG 10 + NGAY_THONG_BAO_THU_HOI - KHÔNG gán cứng, đặc tả "zero-hardcode"; ngày dương lịch; `han_tham_dinh`, `phan_nhom_dat`: mã không
+    có trong `loai_dat.LOAI_DAT` / trống -> 'khong_ro' tính như đất phi NN; `moc_thu_hoi_tat_ca`), `van_dong.py` (sổ nhật ký, quy tắc cưỡng chế, xuất Excel),
+    `kinh_phi_du_an.py` (cơ cấu kinh phí + đối soát khái toán, nhớ file `.pabtdt` ở cai_dat FILE_KHAI_TOAN), `bao_cao_gpmb.py` (dashboard), `bao_cao_y_kien.py`
+    (báo cáo tiếp thu ý kiến .docx dựng bằng `van_ban_trinh._p/_r/_bang/_goi_docx` rồi `dien_docx` điền chỗ trống chung với tờ trình), `du_thao.dot_niem_yet_xong` /
+    `ho_niem_yet_xong`, `quan_ly.kiem_tra_xuat_dot`, `xuat_dot(..., bao_cao_y_kien=)` -> `van_ban_trinh.xuat_bo_ho_so(..., bao_cao_y_kien=)` (file
+    `PA TONG\BAO_CAO_TIEP_THU_Y_KIEN.docx`, tính vào `kq['word']`).
+  - SỔ NHẬT KÝ VẬN ĐỘNG: bảng `nhat_ky_van_dong` (FK ho CASCADE) KHÔNG đổi `PHIEN_BAN_CSDL` (vẫn 15; file cũ / bản cũ mở được, bộ đơn giá đóng gói không bị ghi):
+    có trong `schema.sql` (dự án mới), `csdl.mo` tạo khi file có hộ (để `hoan_tac` - liệt kê bảng lúc khởi tạo - theo dõi được), `van_dong.dam_bao_bang` tạo khi
+    ghi buổi đầu, `nhap_tho.xoa_trang` gọi `van_dong.xoa_het`. Quy tắc: thời điểm = buổi vận động ĐẦU TIÊN của (hộ, việc); "quá" = số ngày đã qua > hạn; việc
+    'tien' áp dụng khi hộ có QĐ mà còn QĐ chưa nhận tiền, 'mat_bang' khi có QĐ mà chưa bàn giao; hết áp dụng -> 'hoan_thanh'; hộ chưa QĐ -> 'chua_ap_dung';
+    hộ chưa có buổi nào KHÔNG phát sinh trạng thái. Kết quả 'dong_y' chỉ đổi chữ trong hạn - hết hạn vẫn đủ điều kiện cưỡng chế.
+  - GIAO DIỆN: `KhungBangTongHop` 3 thẻ `co_cau` / `tien` / `doi_soat` (`KhungCoCau`, `KhungTongHopTien`, `KhungDoiSoat`; `doi_soat.nguon_dang_mo` do `app` gắn
+    = `_khai_toan_dang_mo`), tên thẻ 2 ghi số hộ thật, tín hiệu `di_den_phe_duyet`; `KhungQuyetDinh` là trang riêng (lazy nap như `KhungTienDo`, `lb_khop`
+    = `dat_trang_thai`); `KhungTienDo.COT` 15 cột - hằng `C_MOC, C_VD, C_QD, C_TONG, C_NHAN, C_NGAY, C_CHUA, C_BIEN_LAI, C_BG` (mốc thu hồi + vận động đặt ngay
+    sau Địa chỉ để không phải cuộn ngang; tests dùng hằng, đừng viết số), lọc thêm `dang_vd` / `du_cuong_che` (ngoài `theo_doi.LOC_TIEN_DO`), hàng ngày thông báo
+    + `HopMocThoiHan`, `HopNhatKyVanDong`; `KhungBaoCaoTienDo` (`man_hinh_bao_cao.py`, thẻ `_TheKPI`); `HopDotTrinh`: QSplitter 2 cột, `lb_han`,
+    `b_niem_yet` (QToolButton + `menu_ny` dựng lại ở `aboutToShow`), `lb_kiem`, `o_bc`. Emoji KHÔNG dùng trong chữ (Win 7): tab dùng `icon_ky_hieu`.
+  - CHƯA XÁC MINH văn bản gốc (chỉ theo đặc tả + lời người dùng): "Khoản 8 Mục IV QĐ 18" (chữ trên nhãn thẩm định, `thoi_han.CAN_CU_THAM_DINH`), 15 / 60 / 120 / 10
+    ngày, "Điều 89" (Luật Đất đai 2024 - cưỡng chế thu hồi đất), thẩm định tính ngày dương lịch kể từ ngày trình. Điều kiện tiên quyết ban hành QĐ cưỡng chế
+    (đã có QĐ thu hồi đất, đủ mốc thông báo) chỉ HIỆN ở cột "Mốc thu hồi đất" / file xuất, KHÔNG chặn.
+  - Test cũ đã sửa theo cấu trúc mới: `test_theo_doi.test_bang_tong_hop_quyet_dinh_tien_do`, `test_giao_dien` (`test_bang_tong_hop_3_the_va_lien_ket_phe_duyet`
+    thay `test_bam_the_bang_tong_hop_dong_bo_menu`), `test_van_ban_trinh.test_sua_dot_va_so_pa` (xuất trọn gói mặc định có báo cáo tiếp thu ý kiến).
+- 0.9.77 đặc tả V10 (`BAN_BO_CUC_CHUAN_XUAT_XUONG_THUONG_MAI_PABT_2026.pdf` = `phuong_an_tich_hop_du_thao_va_y_kien_dan.txt` bản V10; so sánh ở
+  `ket_qua_kiem_tra/SoSanh_DacTa_V10_0.9.77.md`; người dùng 13/10/2026). Chỉ làm phần chưa có / sai lệch, KHÔNG viết lại 4 tầng:
+  - Tỷ lệ kinh phí: `kinh_phi_du_an.co_cau` gốc 100% = CỘNG bồi thường (đất + tài sản + cây + hỗ trợ + thưởng); kinh phí tổ chức = tỷ lệ % của gốc (2,5 / 3,5),
+    tổng = 100 + tl (trước: tính trên tổng kinh phí -> 2,4% / 3,4%). Hiển thị `man_hinh_theo_doi._ty_le` ("2,5", "100,0", "102,5").
+  - Cửa sổ chính 1024 x 680 tối thiểu (`giao_dien.TOI_THIEU_CUA_SO`, `dat_toi_thieu_cua_so`: không lớn hơn vùng làm việc màn hình), kích thước thường
+    1200 x 740 canh giữa (`kich_thuoc_thuong`; `hien_cua_so` đặt rồi showMaximized; `ThanhTieuDe._ve_kich_thuoc_thuong` khi Thu về mà kích thước thường ~ cả màn hình).
+  - CỬA SỔ CON (`giao_dien.chuan_hoa_cua_so_con`, gọi từ bộ lọc sự kiện toàn ứng dụng `_BoToMau` ở sự kiện POLISH - trước khi hiện, đổi cờ không chớp): mọi
+    QDialog của gói `pabt` (`la_cua_so_con_pabt`; QMessageBox / QFileDialog của Qt không đụng) có Thu nhỏ + Phóng to + Đóng, bỏ nút "?", tay nắm co giãn;
+    hộp cố định kích thước (min = max) giữ nguyên. Kích thước nhớ ở QSettings('PABT','PABT') khóa `cua_so/<TênLớp>` (lưu ở sự kiện Hide; offscreen / kiểm thử
+    KHÔNG đọc / ghi - `_cai_dat_cua_so()` trả None). Cờ cửa sổ PySide6: `~flag` làm mất bit chưa có tên -> tính bằng số nguyên (`int(getattr(x, 'value', x))`).
+  - Niêm yết & Lấy ý kiến: `du_thao.xoa_dot` / `thong_tin_xoa_dot` (xóa đợt: ý kiến + đối thoại của đợt mất, hộ về danh sách chờ hoặc đợt gần nhất còn lại,
+    phương án KHÔNG đổi, có nhật ký -> Hoàn tác được) + nút `b_xoa_dot`; nút `b_in_du_thao` -> `CuaSoChinh.in_xuat(ma_ho=, che_do='du_thao')`.
+  - TRUNG TÂM XUẤT BẢN DUY NHẤT = `man_hinh.HopIn(che_do='du_thao'|'chinh_thuc', dot_id=)` (tiêu đề "Xuất hồ sơ & Bản in"): Dự thảo = mẫu "Dự thảo…" (chữ DỰ THẢO),
+    che CCCD, chỉ phương án chi tiết + bảng tổng hợp; Chính thức = mẫu chính, che CCCD theo cài đặt dự án, trọn bộ (thêm tờ trình + `o_bc` báo cáo tiếp thu ý kiến);
+    chọn theo đợt -> thư mục `<thư mục hồ sơ>/<Đợt N - k hộ>` (`quan_ly.thu_muc_cua_dot` đổi tên khi số hộ đổi, `dat_thu_muc_dot` ghi nhớ). `HopDotTrinh` KHÔNG còn
+    xuất file (bỏ `o_tt/o_bth/o_ct/o_bc/o_pdf`, `xuat`): chân trang có `lb_kiem` (danh sách kiểm tra, đạt a/5) + MỘT nút `b_xuat` "Xuất bản hồ sơ đợt này →"
+    -> `xuat_ban()` đặt `mo_xuat_dot` rồi accept; `app.dot_trinh` mở `in_xuat(dot_id=, che_do='chinh_thuc')`. `quan_ly.xuat_dot` giữ làm logic dùng chung.
+  - Số PA mặc định 2 chữ số (`man_hinh_quan_ly.SO_CHU_SO_PA`, HopDanhSo): 01, 02, 03 (gọi từ mã không truyền `so_chu_so` vẫn không thêm số 0).
+  - Sai lệch đặc tả đã ghi rõ với người dùng: PDF và txt đặt tên thẻ 3 Bảng tổng hợp khác nhau ("Đối soát dự toán Pre-F/S" giữ); ma trận nhắc "7. Trung tâm Xuất bản"
+    nhưng menu trái chỉ 6 nhóm (Trung tâm Xuất bản là hộp `HopIn` mở từ nút / lệnh, không thêm nhóm); chiều cao tối thiểu 680 bị kẹp theo màn hình nhỏ (1366x768 @125%).
+  - Test: `tests/test_yeu_cau_0977.py`; đã sửa `test_quan_ly`, `test_van_ban_trinh`, `test_giao_dien.test_mo_phong_to_va_khong_ep_rong`, `test_yeu_cau_0976`.
+- 0.9.78 (người dùng 13/10/2026): nút "Dán danh sách tài sản… (Ctrl+Shift+V)" của `CuaSoLapPA` - NÚT ĐÃ CÓ từ 0.9.21 (`b_dan`, hàng nút đầu cửa sổ, hiện ở mọi
+  thẻ), chỉ nâng cấp, KHÔNG thêm nút thứ hai ở từng `BangMuc` (trùng lệnh - `test_khong_trung_lenh`): `b_dan` = `btn_dan_ts` (QSS có bộ chọn
+  `QSS_NUT_DAN_TS`: #0284C7 / hover #0369A1, cao 32, bo 6; `khong_icon` để `to_mau` không đè biểu tượng; không emoji - Win 7 - dùng `icon_ky_hieu(0xE77F)`),
+  QShortcut `Ctrl+Shift+V` trong `self._phim`, `mo_dan_tai_san(cho=True, clip=None)` = đọc `QApplication.clipboard()` -> có bảng (> 5 ký tự, có xuống dòng
+  / Tab, <= `CLIP_TOI_DA` 200.000) thì `dan_tai_san(chu=clip)` (HopDanTaiSan tự Phân loại khi có `chu`), không thì hộp trống; `dan_tai_san` giữ làm
+  lõi (test, KhungDuToan). Thêm vào phương án / tính lại tổng: sẵn có (`sau_khi_dan_tai_san` -> `cap_nhat`). `cb_ho` tối thiểu 320 -> 200 để chữ nút
+  dài không làm hàng nút rộng thêm (màn hình 1366 @125% chỉ ~1093 điểm). Test `tests/test_yeu_cau_0978.py`.
+- 0.9.79 (người dùng 13/10/2026) thẻ chào đón: `TheChao` + `QSS_THE_CHAO` nằm ở `giao_dien.py` (không phải `man_hinh.py`), thẻ dựng ở `app._trang_chao`.
+  Thẻ cố định `KICH_THE_CHAO` 210 x 135, bo 12px, khoảng cách 20; `TheChao(loai='moi'|'mo'|'excel')` + `MAU_THE_CHAO` (nền, viền, nền / viền khi rê chuột,
+  màu icon); `dat_noi_dung(nut, phu)` xếp nút lệnh `the_chao_nut` (icon `CO_ICON_THE_CHAO` 38px TÔ MÀU THEO LOẠI, vẽ lại khi QAction đổi - Qt chép lại biểu tượng
+  của lệnh) + nhãn mô tả TRONG thẻ (trong suốt với chuột); `mouseReleaseEvent` bấm cả thẻ = `nut.click()` (lệnh tắt thì không chạy). Nút GIỮ `defaultAction`
+  (lệnh dùng chung với menu - đừng tự `setIcon` lên QAction: đổi biểu tượng menu; tests dùng `w.nut_chao`, `w.the_chao`). Kiểu: QSS chọn theo
+  `QFrame[vai="the_chao"][loai=…]` (bộ chọn theo tên lớp Python `TheChao` Qt KHÔNG hiểu), `QToolButton#the_chao_nut` (bộ chọn #id thắng các
+  `[ribbon][nhom]`), tên lệnh 14,5pt đậm #0F172A, mô tả 10,5pt #64748B. Qt làm tròn viền `1.5px` lên 2px -> ghi `2px`. Nhãn biểu tượng `QLabel#icon_moi`
+  của yêu cầu không dùng (biểu tượng là của QToolButton). Test (bấm thẻ): ngắt slot thật của QAction trước khi bấm (lệnh mở hộp chọn file -> treo test).
+  Test `tests/test_yeu_cau_0979.py`.
+- 0.9.80 (người dùng 13/10/2026, 7 mục màn hình chào): (1) banner `tao_banner_ten` BỎ `lb_lan` / `giao_dien.dat_den_lan` / `app.lb_lan_nho` - trạng thái máy đơn / LAN
+  chỉ ở `nut_tk` (thanh trạng thái); (2) thẻ chào đã làm ở 0.9.79; (3) bảng dự án gần đây nằm trong `self.ngan_gan_day` (QStackedWidget: 0 = `ds_gan_day`,
+  1 = `_trang_trong_gan_day`), `_hien_trong_gan_day` gọi cuối `_nap_gan_day`; (4) cụm nút `khung_nut_gan` (Mở đã chọn, Xóa khỏi danh sách, Xóa file dự án - nút thứ ba
+  yêu cầu không nêu, giữ cùng cụm cho khỏi mồ côi ở đáy) trên đầu bảng cùng hàng với tiêu đề và `o_tim_gan` (ẩn / tắt khi bảng trống); ô tìm khớp tên file + tên dự án +
+  địa bàn (`_tom_tat_pabt` nay trả 3 giá trị, UserRole + 1); (5) `LENH_CAN_DU_AN` (nhóm 4, 5, 6) + `_cap_nhat_lenh_theo_du_an` gọi ở cuối `__init__`, `mo`, `dong_du_an`
+  (QAction.setEnabled - dùng chung với thanh menu; Lập phương án hộ vẫn tắt khi chỉ xem); QSS `QToolButton[menu="1"]:disabled`; CHÚ Ý `QAction.trigger()` trên lệnh tắt
+  không chạy gì - test cần dự án mở trước; (6) chân trang `lien_ket_chan` {huong_dan, bang_gia_dat, quy_trinh, lich_su} (`_lien_ket_icon`; `lk_huong_dan` giữ tên cũ = lịch
+  sử cập nhật) - liên kết gọi lại QAction của lệnh (đừng gọi thẳng hàm), `quy_trinh_16_buoc` -> `man_hinh_quy_trinh.HopQuyTrinh` (dữ liệu `quy_trinh_qd18.BUOC`, ma trận
+  đặc tả; bước 11 ghi "Xuất hồ sơ & Bản in" vì menu không có nhóm 7); (7) tên đơn vị `MAU_DON_VI_BANNER` #FCD34D, A− / A+ `QSS_NUT_ZOOM` (objectName `nut_zoom`).
+  Biểu tượng chân trang / trạng thái trống dùng `icon_ky_hieu` (Segoe MDL2: Help E897, bảng giá E707, danh sách E8FD, lịch sử E81C, thư mục E8B7), KHÔNG emoji (Win 7 không có
+  phông emoji; máy không có phông thì chỉ hiện chữ). QSS cục bộ bị `phong_to` nhân theo tỷ lệ (6px -> 7px ở 110%): test dùng regex. Test `tests/test_yeu_cau_0980.py`.
+  BỘ TEST "TREO" (thật ra chậm bậc hai): `giao_dien.ap_dung(app)` mỗi lần gọi từng CÀI THÊM một `_BoToMau` (bộ cũ không gỡ) + đặt lại bảng kiểu toàn
+  ứng dụng; test gọi trong setUp -> sau ~17 lần mọi sự kiện xử lý 17 lần, mọi widget của mọi cửa sổ tồn đọng (cửa sổ test chỉ close, không hủy: 13 cửa sổ
+  cấp cao / lần) tô lại kiểu -> toàn bộ test > 25 phút. Nay `ap_dung` gọi lại không làm gì (đã có `app._bo_to_mau`); gỡ cho test = `giao_dien.bo_ap_dung(app)`
+  (đừng tự removeEventFilter rồi để lại `_bo_to_mau`). 60 bài GUI: 163 s / 21 bài -> 29,6 s / 60 bài. Test `test_ap_dung_goi_lai_khong_chong_bo_loc`.
+- 0.9.81 (người dùng 14/10/2026) biểu tượng mới "PABT 3D 2026" (nền xanh hoàng gia sáng hơn bản 0.9.74): thay `pabt/bieu_tuong_thiet_ke.webp` (khung squircle
+  đo lại: viền ~175-850 / 1024 px như bản cũ -> `ve_bieu_tuong.KHUNG` (170, 853) giữ nguyên) rồi `tao_bieu_tuong.py` (QT_QPA_PLATFORM=windows). Yêu cầu nêu
+  `pabt/tai_nguyen/PABT.ico` / `main.py` - KHÔNG có: file là `pabt/bieu_tuong.ico` (9 cỡ ⊇ 7 cỡ yêu cầu; bộ cài chép thành `PABT.ico` trong thư mục cài),
+  điểm vào `chay.py` -> `app.main` (AppUserModelID đặt trước QApplication từ 0.9.74). MỚI: lối tắt bộ cài mang `System.AppUserModel.ID` (`cai_dat.ps1`
+  `$APP_ID` - PHẢI trùng `app.APP_USER_MODEL_ID`; C# `IPropertyStore` + PKEY {9F4C2855-…}, 5, VT_LPWSTR; lỗi thì bỏ qua) - trước đây lối tắt không có ID
+  -> ghim taskbar có thể tách nút / mất biểu tượng. Đã thử thật: PowerShell x64 + x86 đọc lại đúng ID, biên dịch được bằng csc .NET 2.0 (Windows 7).
+  Test `test_giao_dien.test_app_user_model_id` (so `$APP_ID`), `test_bieu_tuong_duy_nhat_co_vien` (nền: xanh dương chiếm ưu thế, không còn "navy đậm").
+  Dán danh sách tài sản (cùng `phan_loai_tai_san.doc_danh_sach` cho CuaSoLapPA và KhungDuToan): dòng gõ tay "Tên ␣ ĐVT ␣ Số lượng [␣ Tỷ lệ %]" ->
+  `_tach_dau_cach` đọc TỪ CUỐI (ô có % = tỷ lệ; các ô `_RE_O_PHEP_TINH` liền nhau ở cuối = số lượng, ghép lại "4 x 5" -> "4x5"; 1-2 ô ngay trước khớp
+  `re_dvt` = ĐVT; còn lại = tên); không có ĐVT trước số -> kiểu cũ "Tên SL ĐVT", không thì cả dòng là tên ("Nhà cấp 4" KHÔNG thành SL 4). Số lượng phép
+  tính -> `_tinh_so_luong` (tien.tinh_cong_thuc, hiện "20", `cong_thuc` ở chú thích ô); ô Excel là phép tính cũng nhận (`_la_so_hoac_phep_tinh`: phải bắt
+  đầu bằng số / "(" / "=" - "B40", "D110" không phải). Chữ mẫu `man_hinh_phan_loai.VI_DU` theo quy tắc mới (trước đây chữ mẫu ghi "Nhà… m2 45" nhưng gõ
+  y như vậy thì cả dòng thành tên). ĐVT lưu theo bộ đơn giá (m2 -> m²). Test `tests/test_yeu_cau_0981.py`.
+- 0.9.82 (người dùng 14/10/2026; rà soát đặc tả V10 5 trụ cột - báo cáo `ket_qua_kiem_tra/RaSoat_DacTa_V10_0.9.82.md`):
+  - MỘT BỘ MẪU IN: chữ DỰ THẢO do CHẾ ĐỘ PHÁT HÀNH quyết định, không do tên file mẫu. `in_an.lap_chi_tiet / lap_bang_tong_hop / xem_truoc(du_thao=)`,
+    `van_ban_trinh.xuat_bo_ho_so(du_thao=)` (HopIn truyền `che_do() == 'du_thao'`; None = theo tên mẫu `la_mau_du_thao` như cũ - xuat_hang_loat / Dự án mới):
+    `ap_che_do_du_thao` -> dự thảo `dat_dau_du_thao` (mẫu có chữ DỰ THẢO -> giữ; chưa có -> "(DỰ THẢO)" dòng dưới "Số:" chi tiết / cuối tiêu đề "BẢNG TỔNG HỢP")
+    + để trống số / ngày PA; chính thức `_an_du_thao`. `HopIn._chon_mau_theo`: cả hai chế độ "Mẫu chính" (mẫu riêng vẫn chọn tay). Lỗi cũ: chế độ Dự thảo tìm
+    mục bắt đầu "Dự thảo" - mẫu riêng tên không dấu, mẫu IN_CHITIET_DT nằm ở thư mục cài còn máy đã sửa mẫu chính ở %APPDATA% -> "Chưa có mẫu Dự thảo"; mẫu
+    chính có sẵn dòng DỰ THẢO thì bị xóa vì tên file không phải dự thảo.
+  - `giao_dien.loc_khi_ngung_go(o, ham)`: ô tìm QLineEdit có sẵn (đơn giá, cây, chọn hộ in, giá đất, theo dõi…) - có con trỏ thì chờ 200 ms, setText bằng mã thì
+    lọc ngay (test không phải chờ); kính lúp (0xE721) + nút xóa; `OTimKiemThongMinh` cũng có kính lúp. `thanh_tieu_de.CAO` 36 -> 38, `CAO_BANNER` 60 -> 48.
+  - ĐÃ ĐO, KHÔNG LÀM (giữ quyết định cũ): WAL / synchronous NORMAL (file trên Google Drive / thư mục mạng; DELETE + FULL an toàn mất điện), cache_size 64 MB
+    (5.000 hộ: -4%, nhiễu; bản 32-bit thiếu bộ nhớ), chỉ mục ho(dot_id) (0,3 -> 0,0 ms), WA_DeleteOnClose hàng loạt (đã có `don_hop_da_dong`, quét giao diện
+    0 hộp rò rỉ), emoji trên chữ nút (Win 7). Chuyển trang đã nạp ~70 ms ở 125% (Python ~2 ms, còn lại Qt dựng bố cục / vẽ) - trang vẫn giữ trong RAM.
+  - Test `tests/test_yeu_cau_0982.py`; sửa `test_yeu_cau_0977` (chế độ Dự thảo dùng Mẫu chính).
+- 0.9.83 (người dùng 14/10/2026, ảnh Format Cells + bảng tính dính viền) bản in `in_an`: ô bảng mục III (cột 1-8, cả hàng tiêu đề) và
+  ô dữ liệu bảng tổng hợp (cột 1-25 + dòng tổng / kinh phí) `_can_giua_doc` (vertical center + wrap, giữ căn ngang mẫu - đặt ở dòng mẫu
+  trước `_chep_kieu_dong`). Chiều cao `cao_dong_bang(so_dong, co)` = max(24, số dòng x `dong_chu_bang(co)` + 8); `dong_chu_bang` =
+  max(16,5 x co/14 (yêu cầu), 1,3 x co) - ĐO Excel AutoFit ở màn hình 125%: Times New Roman 12/14/16/20 = 15,6/18/21/25,2 pt mỗi dòng,
+  16,5 chỉ đúng màn hình 100% (ô gộp bảng tổng hợp bị cắt dòng cuối - đã xuất PDF thử). Số dòng ĐO bằng `_ngat` (`so_dong_o`), không
+  ước theo ký tự (`_uoc_cao` cũ thiếu dòng). Hàng tiêu đề cột `CAO_TIEU_DE_BANG` 28 pt (tiêu đề nhiều dòng cao theo chữ - mẫu có
+  "Thành tiền\n(đồng)"). VBS PDF: AutoFit + 8, không thấp hơn chiều cao phần mềm đặt (AutoFit bỏ qua ô gộp C:F cách tính), tối thiểu 24.
+  Nguồn gốc: `CAO_DOAN_TOI_DA` 350 pt, `_chia_doan_van` cắt CHỮ ở chỗ hết câu / đoạn muộn nhất (tìm nhị phân, khối >= nửa) rồi ngắt dòng
+  lại (cắt theo dòng đã ngắt gần như không gặp dấu chấm cuối dòng). Bảng tổng hợp: `cao_can_ho_bth` > số dòng x 409 -> thêm dòng cho hộ
+  (`_doi_dong`, ô thửa cuối gộp xuống, `dong_them` dời dòng tổng), `_vua_cao_ho_bth` chia phần thiếu không vượt 409 / dòng.
+  `DK_CACH` 1,6 -> 5 pt; `vua_chu` mặc định them = DK_CACH + 3 (đường kẻ dưới "Dự án" nằm trong dòng). Test `tests/test_yeu_cau_0983.py`.
+  Tốc độ: đo chữ bảng tổng hợp nhớ theo (chữ, cột, phông) trong một lần lập (`nho`), `so_dong_o` vừa một dòng thì đo một lần;
+  3.000 hộ 4,9-5,2 s (0.9.82) -> 5,3-5,6 s.
+- 0.9.84 (người dùng 14/10/2026) xem trước A4 trong cửa sổ: `pabt/xem_truoc_tai_lieu.py` `KhungXemTruocTaiLieu` (thanh công cụ 3 cụm
+  trong XepDong: + / − / Vừa trang | Trang ◀ k / N ▶ | In nhanh; QPdfView MultiPage zoom Custom - FitInView của Qt chỉ vừa bề ngang, vừa
+  trang tự tính `_he_so_vua`; không có QtPdfWidgets -> `_TrangAnh` vẽ trang bằng QPdfDocument + bóng đổ; Qt5 không QtPdf -> báo + mở
+  ngoài). `yeu_cau(khoa, tao_xlsx, ten)`: `tao_xlsx(thu_muc)` (lap_chi_tiet, luồng giao diện) rồi `chuyen_pdf` (in_an.chay_excel) ở
+  threading.Thread + QTimer `_kiem_nen`; chỉ giữ yêu cầu MỚI NHẤT, chờ ngừng bấm CHO_MS, nhớ theo khóa (`xoa_nho`). PDF nạp từ BỘ NHỚ
+  (QBuffer): `doc.load(đường dẫn)` giữ khóa file sau `close()` -> thư mục tạm không xóa được. Thư mục `%TEMP%\pabt_preview\<pid>_<n>`
+  xóa ở `don_dep` (HopIn.done, CuaSoLapPA.done / closeEvent), khi khung bị hủy (tab hộ deleteLater), atexit, `don_thu_muc_cu` (> 12 giờ).
+  Offscreen KHÔNG mở Excel (`dung_duoc_excel`; PABT_XEM_TRUOC_EXCEL=1 để cho) - test thay `chuyen_pdf` bằng chép PDF giả lập.
+  `in_an.lap_chi_tiet(pa=, che_cccd=)` / `dong_chi_tiet(pa=)` / `_thong_tin_ho(che=)`: phương án trong bộ nhớ (BoSoan.pa), che CCCD theo ô
+  chưa lưu. HopIn: QSplitter (trái QScrollArea tùy chọn - không ép hộp rộng hơn màn hình; phải khung min 520), 50/50 tới khi người dùng
+  kéo (`_da_keo`), `xem_dong` (currentCellChanged / cellClicked), khóa `khoa_xem_truoc` (hộ, dự thảo, mẫu, che CCCD); BỎ nút "Xem trước
+  bản in…" (mở file ngoài) - `xem_truoc()` nay xem trong khung. CuaSoLapPA: `btn_toggle_preview` (checkable, QSS_NUT_XEM_TRUOC navy /
+  #2563EB, icon View 0xE890 - không emoji), QShortcut F4 trong `_phim`, `bat_tat_xem_truoc`, `lam_moi_xem_truoc` (pa=bo.pa, khóa None),
+  `cap_nhat` hẹn `CHO_XEM_SAU_SUA_MS`; màn hình hẹp hạ tối thiểu khung (`_vua_xem_truoc`, >= RONG_XEM_TOI_THIEU 320). Hàng trên cùng
+  `thanh_tren` = XepDong 3 khối: tối thiểu 1.419 (một hàng cứng, trước 0.9.84) -> 1.010 điểm (Windows 125%). `rut_gon.GIU_MODULE` +
+  'PdfWidgets', PABT.spec hiddenimports PySide6.QtPdfWidgets (dựng lại bộ cài mới có QPdfView). Đo: Excel lập 1 bản 1,5 - 1,9 s.
+  Test `tests/test_yeu_cau_0984.py`.
+- 0.9.85 hồ sơ địa phương + gói mẫu (người dùng 14/10/2026 yêu cầu "Configurable Rules & Template Engine" với file mới vn_filters.py /
+  template_engine.py / updater.py, %APPDATA%\PABT_Enterprise - người dùng CHỌN "tích hợp vào hệ thống cũ", không viết động cơ in thứ
+  hai; chỉ đổi nguồn gốc đất canh TRÊN; GIỮ kinh phí theo loại dự án QĐ 08/2025, MỘT bộ mẫu (0.9.82), %APPDATA%\PABT):
+  - `pabt/pabt_profile.json` (mặc định Đồng Nai, đóng gói: PABT.spec / dung_exe38 DU_LIEU / cap_nhat.DU_LIEU) + `pabt/dia_phuong.py`
+    (`doc` trộn sâu file máy `<thư mục máy>\pabt_profile.json` lên mặc định, nhớ theo mtime; `kiem_tra` -> danh sách lỗi tiếng Việt;
+    file máy sai -> `loi()` + dùng mặc định, app.main báo; `lay('a.b')`, `ty_le_kinh_phi`, `phan_bo_kinh_phi`, `cot_mau`, `ghi_may`,
+    `dang_ky(ham)` / `nap_lai()`). Module đọc lúc nạp ĐĂNG KÝ để cập nhật biến module: to_chuc (TEN, TRUC_THUOC, DIA_CHI, VAI_TRO,
+    MAC_DINH - TAC_GIA giữ mã), lap_pa (LOAI_KINH_PHI, CAN_CU_KINH_PHI), thoi_han (MOC mặc định + căn cứ, CAN_CU_THAM_DINH), du_thao
+    (SO_NGAY_NIEM_YET / DOI_THOAI). Nơi dùng đọc thuộc tính module LÚC GỌI - đừng `from .to_chuc import TEN` ở cấp module (mất giá trị
+    mới). van_ban_trinh `_noi_dung_to_trinh` căn cứ chung = `can_cu_phap_ly.to_trinh` (mặc định byte giống hệt 0.9.82 - đã so).
+  - in_an: `_cot_ct()` / `TRUONG_CT` (cột bảng chi tiết, cột loại dòng, chữ "STT"), `lap_bang_tong_hop` cột `K = cot_mau`, dòng đầu,
+    `cot_cong` (G..M, P..V - trước đây cộng cả N vị trí), `cot_cuoi`, làm tròn `lam_tron_den`, phân bổ: dòng có "%" dưới dòng kinh phí
+    thứ j lấy `phan_bo[j]`, THAY số % trong chữ mẫu cho khớp công thức. `_can_nguon_goc()` (mặc định justify / top). `lap_chi_tiet`:
+    che_cccd None + dự thảo -> che theo `ban_in.che_cccd_ban_du_thao`. `cao_can_ho_bth` / `_vua_cao_ho_bth(cot_ho=, cot_thua=)`.
+    `tien.tien_bang_chu(x, cham=True)` -> "… đồng." (mặc định không chấm - nơi gọi cũ tự thêm).
+  - `pabt/goi_mau.py` gói `.pabtcfg` (zip: goi_mau.json danh sách + SHA-256, pabt_profile.json đầy đủ, mau_in/<mẫu .xlsx/.docx/.xml>):
+    `tao_goi`, `doc_goi` (an_toan.kiem_tra_zip / kiem_tra_xml, chỉ file khai báo, tên an toàn, không macro vbaProject.bin, hồ sơ hợp lệ -
+    kiểm XONG mới ghi), `cai` (sao lưu `<thư mục máy>\sao_luu_mau\<giờ>`, giữ 10; ghi tmp + os.replace; nap_lai), `thu_muc_mau_cai`
+    (bản đóng gói = in_an.thu_muc_mau_ghi; mã nguồn / PABT_THU_MUC_MAY = `<thư mục máy>\mau_in` - KHÔNG ghi đè mau_in của repo).
+    App: lệnh 'Xuất gói mẫu in & cấu hình…' / 'Nhập gói mẫu in & cấu hình…' (CHỈ menu Công cụ), app.main nhận `.pabtcfg` (chay.py),
+    cai_dat.ps1 HKCU `.pabtcfg` -> PABT.MauIn, go_cai_dat.ps1 gỡ. tu-kiem bước "Hồ sơ địa phương, gói mẫu in".
+  - mau_in\ có `MAU PA CHI TIET 1.pdf` (phương án THẬT - tên người ký, dự án): PABT.spec / dung_exe38 nay chỉ đóng `mau_in\*.xlsx|*.xml`.
+  - CHƯA làm (so với PDF phương án thật): gộp ô Ghi chú các dòng đất cùng nội dung, nhãn "Tổ chức:" thay "Họ và tên:" khi chủ sử dụng là
+    tổ chức, tiêu đề "II. Thông tin vị trí, nguồn gốc đất". Test `tests/test_yeu_cau_0985.py`.
+- 0.9.86 Cụm 1 + 2 (người dùng 14/10/2026 - đặc tả "PABT Enterprise" muốn cây pabt_app/ mới + smart_clipboard / bulk_importer /
+  rule_checker / audit_trail; đã hỏi: KHÔNG tái cấu trúc, làm từng cụm trong pabt/):
+  - `pabt/kiem_toan.py` nhật ký kiểm toán: bảng `audit_logs` (tên người dùng chọn) KHÔNG đổi PHIEN_BAN_CSDL - schema.sql (file mới) +
+    csdl.mo tạo khi file có hộ và không chỉ xem; 2 trigger LƯU TRONG FILE chặn UPDATE / DELETE (RAISE ABORT) - đừng viết mã xóa / sửa
+    bảng này; `hoan_tac.BO_QUA` có 'audit_logs'. Ghi vết: TRIGGER TẠM (`gan(con)` trong app.mo sau HoanTac / DauVetHo; người / máy ở
+    bảng tạm `_kt_phien` - `dat_phien` sau đăng nhập LAN) trên ho, thua (thêm / sửa từng trường THEO_DOI / xóa), gia_dat, dm_taisan,
+    dm_hotro (chỉ sửa - nạp cả bộ đơn giá là thay hàng loạt). Phương án: BoSoan.luu xóa + chèn lại -> `ghi_thay_doi_pa` so `_pa_goc` với
+    bản lưu (mục 1 ghép theo (thửa, loại đất), mục 2-4 theo mã / tên; dòng cùng khóa theo thứ tự), không ghi khi tu_dong. Kết nối riêng
+    (Dự án mới, nhập Excel, nhập chi tiết vào file khác) không gắn trigger = số liệu gốc. Đo 3.000 hộ: UPDATE theo dõi 11 -> 40 ms.
+    `csdl.nguoi_dung()` (dùng chung với ghi_nhat_ky). Màn hình `man_hinh_kiem_toan.HopKiemToan` (lệnh 'Nhật ký kiểm toán…' menu Dữ liệu
+    + chuột phải, LENH_CAN_DU_AN), `kiem_toan.xuat_excel`.
+  - Bác sĩ hồ sơ: `kiem_loi.BAC_SI` nhóm mới - DT mục 1 > DT thu hồi (LỖI, thay cảnh báo "khác" của kiem_tra_pa cho thửa đó), tỷ lệ mục
+    1 / 2 / 3 / vật nuôi > `quy_tac_kiem_tra.ty_le_toi_da_tai_san` (mục 4 hỗ trợ không xét), nhân khẩu (thiếu khi có MA_ON_DINH /
+    MA_THEO_NK; dòng ổn định khác nhân khẩu; > `nhan_khau_canh_bao`), hạn mức đất ở `han_muc_dat_o_m2` theo cap_dia_ban (mặc định null =
+    không kiểm - CHƯA có số liệu hạn mức của tỉnh, người dùng tự điền). Trùng CCCD đã có từ trước (nhóm Thông tin hộ).
+  - Cụm 1: dán danh sách tài sản đã có (phan_loai_tai_san - 500 dòng 0,13 s). Nhập hàng loạt: `csdl.tao_moi_tam` đặt synchronous OFF +
+    journal MEMORY (file tạm, fsync + os.replace ở hoan_tat_tao_moi); `nhap_excel.chuan_hoa` lru_cache. 20.000 dòng / 10.000 hộ 3,1 ->
+    2,8 s - ~90% là openpyxl đọc xlsx (giới hạn thư viện). Test `tests/test_yeu_cau_0986.py`.
+- 0.9.87 (người dùng 14/10/2026 + `master_prompt_pabt_0987.md`; gói `PABT_BoCongCu_TuDong_0.9.87.zip` người dùng giải nén vào dự án
+  đã GHI ĐÈ `pabt/__init__.py` thành tệp 2 dòng (mất tai_nguyen / _qt5_lam_qt6) - khôi phục từ gói .pabtcn 0.9.82; mã trong zip giả
+  định sai lược đồ (ho.ten / sdt / ma_ho TEXT) nên VIẾT LẠI, không dùng; TU_DONG_NANG_CAP_0987.py / .bat (chèn import tên không tồn tại
+  vào in_an / csdl) đã đưa vào Thùng rác - thư mục `PABT_BoCongCu_TuDong_0.9.87\` vẫn còn bản gốc, ĐỪNG chạy):
+  - CSDL v16 (`_NANG_CAP[15]` = "@bang_phu_v16" -> `csdl._tao_bang_phu`, CHỈ file có hộ): nhat_ky_van_dong, audit_logs (+ 2 trigger
+    chặn sửa / xóa, tên `audit_logs_khong_sua/_xoa` giữ như 0.9.86), thua_ban_do, anh_hien_trang, chỉ mục ix_ctdat_thua; schema.sql
+    có đủ. File v16 tạo khi chưa có hộ: csdl.mo tạo bảng phụ khi đã có hộ (dấu hiệu: thiếu anh_hien_trang). `bo_don_gia.sqlite`
+    nâng v16 bằng `tao_bo_don_gia.py --chuan-hoa 2026.10.12` (không bảng phụ). Bản ≤ 0.9.86 KHÔNG mở được file v16 (báo "mới hơn").
+    `csdl.mo` lỗi giữa chừng -> đóng kết nối (`_mo_tiep`; trước đây file bị giữ khóa tới khi Python dọn rác).
+  - Cấu hình nghiệp vụ: `man_hinh_cau_hinh.HopCauHinhNghiepVu` (Cài đặt) ghi `dia_phuong.luu_cau_hinh` (chỉ phần khác mặc định),
+    `khoi_phuc_mac_dinh`; `quy_trinh_qd18.sla_buoc` / `MOC_CUA_BUOC`. "Xôi đỗ" -> "thửa chưa bàn giao mặt bằng (còn vướng mắc)".
+  - CAD: `ban_do_cad.py` (ezdxf, nạp trong hàm; hình học thuần Python: diện tích, giao với ranh thu hồi Sutherland-Hodgman + tam
+    giác hóa; `boc_nhan` nhãn "12\n245,6\nONT"; nhãn nhiều dòng là MTEXT), `man_hinh_ban_do.HopNhapCad` / `HopBanDo` (QGraphicsView,
+    `view.tim`, bấm thửa -> mo_ho). Lệnh 'Bản đồ thửa đất' (menu trái nhóm 4), 'Nhập bản vẽ CAD (.dxf)…' (Dữ liệu). requirements:
+    ezdxf 1.4.4 (Py3.14) / 1.1.4 (Py3.8); PABT.spec / dung_exe38 gom module con + dữ liệu ezdxf; tu-kiem bước "Bản vẽ CAD (.dxf)".
+  - OCR giấy tờ: `ocr_ho_so.boc_tach` (GCN / biên bản: họ tên, CCCD, địa chỉ, thửa, dòng tài sản) + `man_hinh_ocr.HopQuetGiayTo`
+    (cửa sổ lập PA `quet_giay_to`, KhungDuToan). `ocr.py`: Qt5 đọc từng trang (`_anh_trang_pypdf` generator), ảnh chuyển xám TRƯỚC
+    khi phóng, file tạm ở thư mục tạm (trước đây `_xl.png` ghi cạnh ảnh của người dùng), không xoay đè ảnh gốc.
+  - Bản in: `ho_so.la_to_chuc` (tên BẮT ĐẦU bằng loại tổ chức / có TNHH, cổ phần; không dùng từ trùng họ người: "trường" phải kèm
+    cấp học, không có "đinh") -> `in_an.dat_nhan_chu_su_dung` ("Tổ chức:"); `in_an.gop_ghi_chu_dat` (mục 1, dòng 'I' liền nhau cùng
+    ghi chú, `_gop_o`); `chuan_tieu_de_muc_ii` -> `TIEU_DE_MUC_II`. Đệm mẫu `in_an.nap_mau_bytes` / `mo_mau` (bytes theo mtime_ns +
+    cỡ, mỗi hộ load_workbook(BytesIO) - workbook độc lập), `xoa_bo_nho_mau` ở nap_mau_in / goi_mau.cai.
+  - PDF dự phòng `pdf_du_phong.py`: file bản in .xlsx đã điền -> HTML (rộng cột theo % SỐ NGUYÊN - Qt bỏ qua số lẻ; hàng định cỡ cao 0
+    vì phần đầu mẫu toàn ô gộp; viền theo từng cạnh px; định dạng số Excel `_so_vn` có điều kiện "[=0]0;#,##0.0#"; tỷ lệ in / vừa bề
+    ngang -> `he_so` nhân cỡ chữ, cao dòng; khổ A3/A4) -> QTextDocument.print_ ra QPdfWriter, khổ trang đặt theo pt x 96/72. Luồng
+    giao diện. `KhungXemTruocTaiLieu._du_phong` khi `dung_duoc_excel()` báo lý do hoặc Excel lỗi -> nhãn `lb_gan_dung`. Offscreen không
+    có phông (ô vuông): xem bằng QT_QPA_PLATFORM=windows.
+  - Chẩn đoán: `chua_benh_csdl.py` (không Qt: kiem_tra_tep_pabt chỉ đọc, sua_tep_pabt - sao lưu `SaoLuu_SuaLoi`, gỡ khóa HẾT HẠN
+    (khóa còn hiệu lực -> LoiSuaTep), REINDEX + VACUUM; trang hỏng -> `_cuu_du_lieu` chép TỪNG BẢNG (lược đồ trước, đọc xuôi rồi ngược
+    quanh trang hỏng; iterdump dừng ở lỗi đầu tiên làm mất các bảng sau), an_danh_du_an (backup API, bỏ trigger trên bản sao, xóa /
+    thay chữ cá nhân giữ độ dài, xóa tho_nhap / nhat_ky / audit_logs / anh_hien_trang), dong_goi_chan_doan, kiem_tra_moi_truong,
+    thong_tin_may), `man_hinh_chan_doan.HopChanDoanHeThong(file_pabt, dong_du_an, mo_lai)` (lệnh Trợ giúp, sửa file đang mở: đóng
+    -> sửa -> mở lại), `xuat_goi_chan_doan`; `giao_dien.hop_ket_qua(nut_them=[(chữ, hàm(hộp))])` - hộp lỗi của cai_bat_loi có nút gói.
+  - Phiếu kiểm đếm: `phieu_kiem_dem.py` (HTML một file, JSON nhúng chống "</script>", localStorage; nhập .json qua BoPhanLoai +
+    `nhap_tai_san.them_dong_tho` / `them_mot(('nhom', tên))` cho số đo cây, BoSoan.luu mỗi hộ; ảnh -> anh_hien_trang theo CCCD / họ
+    tên / HO<stt>), `man_hinh_kiem_dem.HopKiemDem`; lệnh 'Phiếu kiểm đếm thực địa…' (Công cụ, LENH_CAN_DU_AN).
+  - Kiểm tra tĩnh `tao_ban_do_ma.py` (viết lại; ruff F811/F841/F821/F401/E722 + thiếu __future__, import vòng cấp module, `from .X import
+    TÊN` của biến dia_phuong.dang_ky, mã chết theo tên (bỏ qua phương thức Qt / HTMLParser ghi đè, hàm có decorator, `GIU_LAI`)) ->
+    BAN_DO_MA.md, mã thoát 1 khi còn cảnh báo; test đòi 0. Đã gỡ 7 hàm chết + import thừa (ruff --fix).
+  - Tốc độ: `pdf_bang._nho` (PdfReader / layout / chữ ký số theo đường dẫn + mtime_ns + cỡ, 4 file) - đọc lại QĐ 300 hộ 10,6 -> 0,8 s;
+    `quan_ly.doc_quyet_dinh` tên ≥ 2 từ tính trước (`ten_nhieu_tu`; 8 triệu str.split mỗi lần đọc); `nhap_don_gia._doc_docx` iterparse
+    theo hàng bảng cấp ngoài (11,8 MB XML: đỉnh RAM 152 -> 26 MB, kết quả giống hệt); `lap_bang_tong_hop` đọc phương án một lần
+    (`ket_qua_ho(con, tat_ca)`); `OTimChon._hien` không dựng lại khi kết quả lọc không đổi; `nhap_chi_tiet.ghi(bao_tien_do=)` mỗi
+    `BAO_MOI` hộ + `DaDung` (app `_ghi_chi_tiet_co_tien_do`, Dừng = hoàn tác cả lô); `may_chu.ds_du_an` stat một lần. Test
+    `tests/test_yeu_cau_0987.py`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

@@ -66,7 +66,7 @@ class TestCuaSo(unittest.TestCase):
             if CO_QT:
                 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
                 from PySide6.QtWidgets import QApplication
-                app = QApplication.instance() or QApplication([])
+                app = QApplication.instance() or QApplication([])   # noqa: F841 - giữ QApplication sống
                 from pabt import app as ud
                 w = ud.CuaSoChinh()
                 w.mo(str(p))

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pabt  # noqa: F401  (Qt5: đặt bí danh PySide6 -> PySide2 trước khi các bài kiểm thử nạp Qt)
 
 # Một QApplication dùng chung, giữ tới khi tiến trình kết thúc. Các bài kiểm thử viết `app = QApplication.instance() or

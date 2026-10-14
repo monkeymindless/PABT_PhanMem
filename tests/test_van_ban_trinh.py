@@ -61,17 +61,22 @@ class TestDocx(_Co):
         for loai in vb.LOAI:
             p = vb.file_mau(loai)                                       # chưa có: tự tạo mẫu mặc định
             self.assertTrue(p.exists() and p.suffix == '.docx')
-            self.assertIn('ho.ho_ten', vb.cho_trong_trong_file(p))
+            self.assertNotIn('ho.ho_ten', vb.cho_trong_trong_file(p))   # 0.9.69: mẫu theo văn bản người dùng, không bảng hộ
+        # mẫu riêng có bảng hộ (dòng {ho.…} lặp mỗi hộ một dòng) - dựng bằng chính hàm của mẫu mặc định
+        mau = self.td / 'co_bang.docx'
+        mau.write_bytes(vb._goi_docx(vb._p(vb._r('Số: {so_to_trinh} - {du_an}')) + vb._bang(
+            [[vb._o('STT'), vb._o('Họ và tên')], [vb._o('{ho.stt}'), vb._o('{ho.ho_ten}')]], [1000, 4000])))
+        self.assertIn('ho.ho_ten', vb.cho_trong_trong_file(mau))
         ds = [{'ho.stt': str(i), 'ho.ho_ten': f'Nguyễn Văn {c}', 'ho.dia_chi': 'Ấp 1', 'ho.so_pa_day_du': f'{i}/PA',
                'ho.so_pa': str(i), 'ho.tong_tien': '1.000', 'ho.tien_dat': '1', 'ho.tien_nha': '0', 'ho.tien_cay': '0',
                'ho.tien_ho_tro': '0', 'ho.tien_thuong': '0'} for i, c in enumerate('ABC', start=1)]
-        ra = vb.dien_docx(vb.file_mau('to_trinh'), self.td / 'tt.docx', {'so_to_trinh': '113/TTr', 'du_an': 'A & B <1>'}, ds)
+        ra = vb.dien_docx(mau, self.td / 'tt.docx', {'so_to_trinh': '113/TTr', 'du_an': 'A & B <1>'}, ds)
         chu = _chu_docx(ra)
         self.assertIn('Số: 113/TTr', chu)
         self.assertIn('A &amp; B &lt;1&gt;', chu)                     # ký tự đặc biệt được mã hóa XML
         self.assertEqual(sum(chu.count(f'Nguyễn Văn {c}') for c in 'ABC'), 3)
         self.assertNotIn('{ho.', chu)
-        self.assertNotIn('{ho.', _chu_docx(vb.dien_docx(vb.file_mau('to_trinh'), self.td / 'rong.docx', {}, [])))
+        self.assertNotIn('{ho.', _chu_docx(vb.dien_docx(mau, self.td / 'rong.docx', {}, [])))
 
 
 class _DuAn(_Co):
@@ -114,13 +119,13 @@ class TestDotTrinh(_DuAn):
         quan_ly.gan_dot(self.con, self.ma[:2], d)
         quan_ly.danh_so_pa(self.con, self.ma[:2], 101, '9/10/2026')
         goc = self.td / 'hs'
-        kq = quan_ly.xuat_dot(self.con, d, goc, to_trinh=True, pa_tong=True)
+        kq = quan_ly.xuat_dot(self.con, d, goc, to_trinh=True)
         tm = kq['thu_muc']
         self.assertEqual(tm.name, 'Đợt 1 - 2 hộ')
         self.assertEqual(sorted(p.name for p in (tm / 'PA CHI TIET').iterdir())[0][:3], 'PA_')
         self.assertEqual(len(list((tm / 'PA CHI TIET').glob('*.xlsx'))), 2)
         self.assertEqual(sorted(p.name for p in (tm / 'PA TONG').iterdir()),
-                         ['BANG_TONG_HOP.xlsx', 'PHUONG_AN_TONG.docx', 'TO_TRINH.docx'])
+                         ['BANG_TONG_HOP.xlsx', 'TO_TRINH.docx'])              # 0.9.69: bỏ mẫu phương án tổng
         # số PA chi tiết của hộ vào chỗ "Số:      /…" của mẫu; số / ngày PA tổng vào dòng "Đính kèm Phương án số …"
         ct = openpyxl.load_workbook(sorted((tm / 'PA CHI TIET').glob('*.xlsx'))[0]).worksheets[0]
         self.assertTrue(str(ct['A3'].value).startswith('Số: 101/'))
@@ -130,7 +135,9 @@ class TestDotTrinh(_DuAn):
         self.assertIn('ngày 09 tháng 10 năm 2026', str(bth['A7'].value))
         chu = _chu_docx(tm / 'PA TONG' / 'TO_TRINH.docx')
         chung, dong = vb.du_lieu(self.con, self.ma[:2], quan_ly.lay_dot(self.con, d))
-        for x in ('Số: 113/TTr', 'ngày 10 tháng 10 năm 2026', chung['tong_tien'], dong[0]['ho.ho_ten'], '101'):
+        # mẫu 0.9.69 (văn bản đề nghị thẩm định - theo mẫu người dùng): không có bảng hộ; số / ngày PA tổng của đợt
+        for x in ('Số: 113/TTr', 'ngày 10 tháng 10 năm 2026', 'Phương án số 30/', 'ngày 09/10/2026', 'Đối với 02 trường hợp',
+                  chung['du_an']):
             self.assertIn(x, chu)
         self.assertNotIn('{', chu)                                      # mọi chỗ trống của mẫu mặc định đều có số liệu
         # chỉ một số mẫu (in riêng lẻ)
@@ -155,8 +162,7 @@ class TestDotTrinh(_DuAn):
         self.assertEqual([ws.cell(r, 1).value for r in range(4, 8)], [1, 2, 3, 4])          # mỗi hộ một dòng, số ghi dạng số
         self.assertEqual(ws['A8'].value, 'Cuối bảng')
         self.assertIsInstance(ws['C4'].value, int)
-        with self.assertRaises(LoiNhap):
-            vb.them_mau('pa_tong', f)                                   # phương án tổng: chỉ mẫu Word
+        self.assertNotIn('pa_tong', vb.LOAI)                            # 0.9.69: bỏ mẫu phương án tổng
         vb.khoi_phuc_mac_dinh('to_trinh')
         self.assertEqual(vb.file_mau('to_trinh').suffix, '.docx')
 
@@ -220,27 +226,37 @@ class TestManHinh(_DuAn):
         self.assertEqual(quan_ly.so_pa_cua_ho(self.con, [self.ma[1]])[self.ma[1]][0], '6a')
         d.bang_ho.item(1, 4).setText('32/13/2026')                       # ngày sai: báo, giữ giá trị cũ
         self.assertEqual(quan_ly.so_pa_cua_ho(self.con, [self.ma[1]])[self.ma[1]][1], '09/10/2026')
-        # xuất chỉ tờ trình (in riêng lẻ) rồi tất cả (đồng loạt)
+        # 0.9.77 (đặc tả V10): không còn khối xuất file ở đáy - MỘT nút mở Trung tâm Xuất bản (HopIn) với đợt đang chọn
+        self.assertFalse(hasattr(d, 'o_ct') or hasattr(d, 'o_pat') or hasattr(d, 'xuat'))
         d.chon_thu_muc(str(self.td / 'hs'))
-        for o in (d.o_ct, d.o_bth, d.o_pat):
-            o.setChecked(False)
-        kq = d.xuat(pdf=False)
-        self.assertEqual([p.name for p in kq[0]['word']], ['TO_TRINH.docx'])
-        for o in (d.o_ct, d.o_bth, d.o_pat):
-            o.setChecked(True)
-        kq = d.xuat(pdf=False)
-        self.assertEqual(len(kq[0]['excel']) + len(kq[0]['word']), 3 + 1 + 2)
-        self.assertTrue((kq[0]['thu_muc'] / 'PA TONG' / 'PHUONG_AN_TONG.docx').exists())
+        self.assertEqual(d.xuat_ban(), i)
+        self.assertEqual(d.mo_xuat_dot, i)
+        from pabt.man_hinh import HopIn
+        h = HopIn(self.con, None, file_du_an=self.p, che_do='chinh_thuc', dot_id=i)
+        self.addCleanup(h.close)
+        self.assertEqual(h.ds_ho(), self.ma[:3])
+        self.assertEqual(h.o_thu_muc.text(), str(self.td / 'hs' / 'Đợt 1 - 3 hộ'))
+        h.r_excel.setChecked(True)
+        h.o_thu_muc.setText(h.o_thu_muc.text())
+        kq = h.thuc_hien(xac_nhan=False)
+        tm = self.td / 'hs' / 'Đợt 1 - 3 hộ'
+        # 3 phương án chi tiết + bảng tổng hợp + tờ trình + báo cáo tiếp thu ý kiến (chính thức: trọn bộ)
+        self.assertEqual(len(kq['excel']) + len(kq['word']), 3 + 1 + 1 + 1)
+        self.assertEqual(sorted(p.name for p in (tm / 'PA TONG').iterdir()),
+                         ['BANG_TONG_HOP.xlsx', 'BAO_CAO_TIEP_THU_Y_KIEN.docx', 'TO_TRINH.docx'])
+        self.assertEqual(quan_ly.lay_dot(self.con, i).thu_muc, str(tm))      # cột "Thư mục đã xuất" của đợt
+        self.assertFalse((tm / 'PA TONG' / 'PHUONG_AN_TONG.docx').exists())
 
     def test_mau_trong_cua_so(self):
         d = self.d
         self.assertIn('mặc định', d.lb_mau['to_trinh'].text())
-        f = vb.dien_docx(vb.file_mau('pa_tong'), self.td / 'mau.docx', {'du_an': 'Mẫu riêng'}, [])   # khác mẫu mặc định
-        self.assertEqual(d.them_mau('pa_tong', f).name, 'PA_TONG.docx')
-        self.assertEqual(d.lb_mau['pa_tong'].text(), 'PA_TONG.docx (Word)')
-        self.assertEqual(d.sua_mau('pa_tong', mo=False).name, 'PA_TONG.docx')
-        self.assertIsNotNone(d.mau_mac_dinh('pa_tong'))
-        self.assertIn('mặc định', d.lb_mau['pa_tong'].text())
+        self.assertEqual(set(d.lb_mau), {'to_trinh'})                   # 0.9.69: chỉ còn mẫu tờ trình
+        f = vb.dien_docx(vb.file_mau('to_trinh'), self.td / 'mau.docx', {'du_an': 'Mẫu riêng'}, [])   # khác mẫu mặc định
+        self.assertEqual(d.them_mau('to_trinh', f).name, 'TO_TRINH.docx')
+        self.assertEqual(d.lb_mau['to_trinh'].text(), 'TO_TRINH.docx (Word)')
+        self.assertEqual(d.sua_mau('to_trinh', mo=False).name, 'TO_TRINH.docx')
+        self.assertIsNotNone(d.mau_mac_dinh('to_trinh'))
+        self.assertIn('mặc định', d.lb_mau['to_trinh'].text())
         hop = d.xem_cho_trong()
         self.assertIsNotNone(hop)
 
@@ -253,12 +269,13 @@ class TestManHinh(_DuAn):
         self.assertFalse(h.o_tt.isChecked())                           # không theo đợt: tờ trình, PA tổng không chọn sẵn
         h.cb_dot.setCurrentIndex(h.cb_dot.findData(i))                  # chọn đợt: đánh dấu hộ của đợt + chọn mọi mẫu
         self.assertEqual(h.ds_ho(), self.ma[:2])
-        self.assertTrue(all(o.isChecked() for o in (h.o_ct, h.o_bth, h.o_tt, h.o_pat)))
+        self.assertTrue(all(o.isChecked() for o in (h.o_ct, h.o_bth, h.o_tt, h.o_bc)))
+        self.assertFalse(hasattr(h, 'o_pat'))
         h.o_thu_muc.setText(str(self.td / 'in'))
         h.r_excel.setChecked(True)
         kq = h.thuc_hien(xac_nhan=False)
         self.assertEqual(sorted(p.name for p in (self.td / 'in' / 'PA TONG').iterdir()),
-                         ['BANG_TONG_HOP.xlsx', 'PHUONG_AN_TONG.docx', 'TO_TRINH.docx'])
+                         ['BANG_TONG_HOP.xlsx', 'BAO_CAO_TIEP_THU_Y_KIEN.docx', 'TO_TRINH.docx'])
         self.assertEqual(len(list((self.td / 'in' / 'PA CHI TIET').glob('PA_*.xlsx'))), 2)
         self.assertIn('Phương án số 30/', str(openpyxl.load_workbook(self.td / 'in' / 'PA TONG' / 'BANG_TONG_HOP.xlsx')
                                               .worksheets[0]['A7'].value))
@@ -276,12 +293,12 @@ class TestWord(_Co):
     def test_xuat_pdf_va_luu_docx(self):
         """Mẫu mặc định (XML tự dựng) Word mở được, xuất PDF được; lưu lại .docx qua Word (đường chuyển file .doc). Chuyển PDF ->
         .docx không thử tự động: Word luôn hỏi người dùng (docx_hien)."""
-        p = vb.dien_docx(vb.file_mau('pa_tong'), self.td / 'pa.docx', {'so_pa_tong': '30', 'du_an': 'Thử'}, [])
-        mau = vb.file_mau('pa_tong')
+        p = vb.dien_docx(vb.file_mau('to_trinh'), self.td / 'tt.docx', {'so_pa_tong': '30', 'du_an': 'Thử'}, [])
+        mau = vb.file_mau('to_trinh')
         self.assertEqual(vb.chay_word([('pdf', p, p.with_suffix('.pdf')), ('docx', mau, self.td / 'luu_lai.docx')]), [])
         self.assertTrue(p.with_suffix('.pdf').stat().st_size > 1000)
-        moi, cho = vb.them_mau('pa_tong', self.td / 'luu_lai.docx')    # mẫu Word lưu lại: vẫn dùng làm mẫu được
-        self.assertEqual(moi.name, 'PA_TONG.docx')
+        moi, cho = vb.them_mau('to_trinh', self.td / 'luu_lai.docx')   # mẫu Word lưu lại: vẫn dùng làm mẫu được
+        self.assertEqual(moi.name, 'TO_TRINH.docx')
         self.assertEqual(cho, vb.cho_trong_trong_file(mau))            # Word giữ nguyên các chỗ trống (gom lại nếu tách)
 
 

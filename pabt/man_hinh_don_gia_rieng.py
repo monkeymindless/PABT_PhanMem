@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor
-from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QFormLayout, QHBoxLayout, QInputDialog, QLabel,
+from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QGridLayout, QHBoxLayout, QInputDialog, QLabel,
                                QLineEdit, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout,
                                QWidget)
 
@@ -29,7 +29,7 @@ class HopDonGiaRieng(QDialog):
         self.thong_bao_cuoi = ''
         self.ds_td = []
         self._dang_ve = False
-        self.setWindowTitle('Đơn giá riêng của dự án (quy ước tương đương, đơn giá thẩm định)')
+        self.setWindowTitle('Đơn giá đặc biệt của dự án (quy ước tương đương, đơn giá thẩm định)')
         self.resize(1250, 680)
         self.tab = QTabWidget()
         self.tab.addTab(self._the_quy_uoc(), 'Quy ước giá tương đương')
@@ -53,11 +53,12 @@ class HopDonGiaRieng(QDialog):
     # ------------------------------------------------------------ thẻ 1: quy ước tương đương
     def _the_quy_uoc(self) -> QWidget:
         w = QWidget()
-        lb = QLabel('Tài sản đặc biệt / không có trong bộ đơn giá của dự án này: gõ tên thực tế, giá áp theo mục tương đương '
-                    '(hoặc đơn giá thẩm định), ĐVT, căn cứ. Khi lập phương án, các dòng này nằm đầu ô chọn nhanh mục Nhà, công '
-                    'trình và Cây trồng, vật nuôi (nhãn [Quy ước] / [Thẩm định]). Dòng nền xanh là dòng riêng của dự án - '
-                    'được giữ khi "Áp bộ đơn giá vào dự án"; dòng của bộ đơn giá mà sửa thì thành dòng riêng.')
-        lb.setWordWrap(True)
+        # mô tả một dòng (người dùng 13/10/2026: thu gọn) - đầy đủ ở chú thích
+        lb = QLabel('Tài sản không có trong bộ đơn giá: tên thực tế + giá theo mục tương đương. Dòng nền xanh = riêng của dự án.')
+        lb.setToolTip('Tài sản đặc biệt / không có trong bộ đơn giá của dự án này: gõ tên thực tế, giá áp theo mục tương đương '
+                      '(hoặc đơn giá thẩm định), ĐVT, căn cứ. Khi lập phương án, các dòng này nằm đầu ô chọn nhanh mục Nhà, công '
+                      'trình và Cây trồng, vật nuôi (nhãn [Quy ước] / [Thẩm định]). Dòng nền xanh là dòng riêng của dự án - '
+                      'được giữ khi "Áp bộ đơn giá vào dự án"; dòng của bộ đơn giá mà sửa thì thành dòng riêng.')
         self.bang = QTableWidget(0, len(COT_QU))
         self.bang.setHorizontalHeaderLabels([c[1] for c in COT_QU])
         for i, c in enumerate(COT_QU):
@@ -76,8 +77,10 @@ class HopDonGiaRieng(QDialog):
         self.b_chon.clicked.connect(lambda: self.them_theo_danh_muc())
         self.b_xoa = QPushButton('Xóa dòng chọn')
         self.b_xoa.clicked.connect(self.xoa_dong)
-        self.b_luu = QPushButton('Lưu quy ước')
+        self.b_luu = QPushButton('Lưu thay đổi')
         self.b_luu.setDefault(True)
+        from .giao_dien import KieuNut, ap_kieu_nut
+        ap_kieu_nut(self.b_luu, KieuNut.LUU)            # xanh lá đậm; chỉ bật khi có thay đổi chưa lưu
         self.b_luu.clicked.connect(lambda: self.luu())
         for b in (self.b_them, self.b_chon, self.b_xoa):
             h.addWidget(b)
@@ -197,15 +200,22 @@ class HopDonGiaRieng(QDialog):
     # ------------------------------------------------------------ thẻ 2: đơn giá thẩm định
     def _the_tham_dinh(self) -> QWidget:
         w = QWidget()
-        lb = QLabel(f'Tài sản đặc biệt chưa có đơn giá trong bộ đơn giá: lấy đơn giá của đơn vị thẩm định giá đã được phê duyệt '
-                    f'(theo {dgr.QD_TAI_SAN_DAC_BIET} - sửa số hiệu ở ô "Áp dụng theo" nếu khác). Chọn file kết quả / chứng '
-                    'thư thẩm định giá (Excel, Word, PDF, CSV) có bảng Tên tài sản - ĐVT - Đơn giá; xem lại từng dòng (sửa '
-                    'được tên, ĐVT, đơn giá; bỏ chọn dòng không lấy) rồi bấm "Đưa vào đơn giá của dự án".')
+        lb = QLabel(f'Đơn giá của đơn vị thẩm định giá đã được phê duyệt (theo {dgr.QD_TAI_SAN_DAC_BIET}): chọn file, xem lại '
+                    'từng dòng rồi đưa vào đơn giá của dự án.')
+        lb.setToolTip(f'Tài sản đặc biệt chưa có đơn giá trong bộ đơn giá: lấy đơn giá của đơn vị thẩm định giá đã được phê '
+                      f'duyệt (theo {dgr.QD_TAI_SAN_DAC_BIET} - sửa số hiệu ở ô "Áp dụng theo" nếu khác). Chọn file kết quả / '
+                      'chứng thư thẩm định giá (Excel, Word, PDF, CSV) có bảng Tên tài sản - ĐVT - Đơn giá; xem lại từng dòng '
+                      '(sửa được tên, ĐVT, đơn giá; bỏ chọn dòng không lấy) rồi bấm "Đưa vào đơn giá của dự án".')
         lb.setWordWrap(True)
+        from .giao_dien import KieuNut, ap_kieu_nut
         self.b_file = QPushButton('Chọn file thẩm định giá…')
         self.b_file.clicked.connect(lambda: self.chon_file())
         self.b_file.setEnabled(not self.chi_doc)
         self.lb_file = QLabel('')
+        self.b_dua = QPushButton('Đưa vào đơn giá của dự án')
+        self.b_dua.setEnabled(False)
+        self.b_dua.clicked.connect(lambda: self.dua_vao())
+        ap_kieu_nut(self.b_dua, KieuNut.CHINH)
         self.o_so = QLineEdit()
         self.o_ngay = QLineEdit()
         self.o_ngay.setPlaceholderText('dd/mm/yyyy')
@@ -216,13 +226,21 @@ class HopDonGiaRieng(QDialog):
         self.o_can_cu = QLineEdit()
         for o in (self.o_so, self.o_ngay, self.o_don_vi, self.o_qd, self.o_ap_dung):
             o.textEdited.connect(self._ghep_can_cu)
-        f = QFormLayout()
-        f.addRow('Chứng thư thẩm định giá số:', self.o_so)
-        f.addRow('Ngày chứng thư:', self.o_ngay)
-        f.addRow('Đơn vị thẩm định giá:', self.o_don_vi)
-        f.addRow('Quyết định phê duyệt giá:', self.o_qd)
-        f.addRow('Áp dụng theo:', self.o_ap_dung)
-        f.addRow('Căn cứ ghi vào phương án:', self.o_can_cu)
+        # 6 trường chứng thư: lưới 2 cột (người dùng 13/10/2026: trước 1 cột dài ~220 px) - bảng tài sản thẩm định cao hơn
+        luoi = QGridLayout()
+        luoi.setHorizontalSpacing(10)
+        luoi.setVerticalSpacing(4)
+        for hang, ((n1, o1), (n2, o2)) in enumerate((
+                (('Chứng thư số:', self.o_so), ('Quyết định phê duyệt giá:', self.o_qd)),
+                (('Ngày chứng thư:', self.o_ngay), ('Căn cứ ghi vào phương án:', self.o_can_cu)),
+                (('Đơn vị thẩm định giá:', self.o_don_vi), ('Áp dụng theo:', self.o_ap_dung)))):
+            for cot, (nhan, o) in enumerate(((n1, o1), (n2, o2))):
+                lbn = QLabel(nhan)
+                lbn.setProperty('vai', 'nhan')
+                luoi.addWidget(lbn, hang, cot * 2)
+                luoi.addWidget(o, hang, cot * 2 + 1)
+        luoi.setColumnStretch(1, 2)
+        luoi.setColumnStretch(3, 3)
         self.bang_td = QTableWidget(0, 5)
         self.bang_td.setHorizontalHeaderLabels(['Lấy', 'Tên tài sản', 'ĐVT', 'Đơn giá thẩm định (đ)', 'Dòng gốc trong file'])
         for i, x in enumerate((45, 380, 80, 150, 450)):
@@ -232,22 +250,16 @@ class HopDonGiaRieng(QDialog):
         self.lb_xem = QLabel('')
         self.lb_xem.setWordWrap(True)
         self.lb_xem.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self.b_dua = QPushButton('Đưa vào đơn giá của dự án')
-        self.b_dua.setEnabled(False)
-        self.b_dua.clicked.connect(lambda: self.dua_vao())
-        h1 = QHBoxLayout()
+        h1 = QHBoxLayout()                              # thanh công cụ trên cùng: chọn file | tên file | đưa vào
         h1.addWidget(self.b_file)
         h1.addWidget(self.lb_file, 1)
-        h2 = QHBoxLayout()
-        h2.addStretch(1)
-        h2.addWidget(self.b_dua)
+        h1.addWidget(self.b_dua)
         v = QVBoxLayout(w)
-        v.addWidget(lb)
         v.addLayout(h1)
-        v.addLayout(f)
+        v.addWidget(lb)
+        v.addLayout(luoi)
         v.addWidget(self.bang_td, 1)
         v.addWidget(self.lb_xem)
-        v.addLayout(h2)
         return w
 
     def _ghep_can_cu(self, *_):

@@ -1,6 +1,6 @@
 """Phần mềm lập phương án bồi thường, hỗ trợ (PABT): bộ đơn giá Đồng Nai tích hợp, dự án mới từ dữ liệu thô, bản in."""
 from __future__ import annotations
-__version__ = '0.9.24'
+__version__ = '0.9.87'
 # Bản thử nghiệm: giao diện ghi "BẢN THỬ NGHIỆM" (băng tiêu đề, tiêu đề cửa sổ chính, Giới thiệu, tự kiểm tra). Bản chính thức: False.
 BAN_THU_NGHIEM = False      # 0.9.24: bỏ nhãn - băng tiêu đề hiện gói bản quyền (ban_quyen.py)
 NHAN_THU_NGHIEM = 'BẢN THỬ NGHIỆM'
@@ -33,8 +33,17 @@ def _qt5_lam_qt6() -> None:
             return
     except (ImportError, ValueError):
         return
-    import PySide2
-    from PySide2 import QtCore, QtGui, QtWidgets
+    # shiboken2 tự nạp numpy khi khởi động nếu máy có (numpy đi kèm ezdxf - đọc bản vẽ CAD): +150 ms lúc mở phần mềm mà Qt không
+    # cần. Chặn numpy chỉ trong lúc nạp PySide2 (0.9.87); ezdxf vẫn nạp numpy bình thường khi nhập bản vẽ.
+    co_numpy = 'numpy' in _sys.modules
+    if not co_numpy:
+        _sys.modules['numpy'] = None
+    try:
+        import PySide2
+        from PySide2 import QtCore, QtGui, QtWidgets
+    finally:
+        if not co_numpy and _sys.modules.get('numpy', 0) is None:
+            del _sys.modules['numpy']
     for ten, m in (('', PySide2), ('.QtCore', QtCore), ('.QtGui', QtGui), ('.QtWidgets', QtWidgets)):
         _sys.modules['PySide6' + ten] = m
     for ten in ('QAction', 'QActionGroup', 'QShortcut', 'QUndoStack', 'QUndoCommand', 'QFileSystemModel'):

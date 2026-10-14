@@ -242,6 +242,45 @@ class BoPhanLoai:
 
 # ---------------------------------------------------------------- đọc danh sách dán vào
 _RE_SO = re.compile(r'^[-+]?\d[\d.,]*$')
+_RE_O_PHEP_TINH = re.compile(r'^[=\d.,*x×/+\-:()]+$', re.I)        # một ô thuộc số lượng: 20 / 4*5 / 4x5 / 2,5 / * / x
+_RE_TY_LE = re.compile(r'^\d[\d.,]*\s*%$')
+
+
+def _la_so_hoac_phep_tinh(x: str) -> bool:
+    """'20', '4*5', '4x5', '(3+2)*4', '=4,2*5,7' - số lượng; chữ / mã có số ('B40', 'D110') không phải."""
+    x = x.replace(' ', '')
+    return bool(x) and bool(re.search(r'\d', x)) and bool(_RE_O_PHEP_TINH.match(x)) and bool(re.match(r'^[=(\d]', x))
+
+
+def _tach_dau_cach(dong: str, re_dvt) -> list | None:
+    """Quy tắc gõ tay (người dùng 14/10/2026): Tên tài sản ␣ ĐVT ␣ Số lượng [␣ Tỷ lệ %] - đọc TỪ CUỐI dòng: ô có % = tỷ lệ, các ô số /
+    phép tính liền nhau ở cuối = số lượng ("4*5", "4 x 5"), 1-2 ô ngay trước khớp đơn vị tính = ĐVT, phần còn lại = tên. Không có
+    ĐVT đứng ngay trước số lượng -> None (thử kiểu cũ "Tên Số lượng ĐVT")."""
+    t = dong.split()
+    ty_le = ''
+    if len(t) > 3 and _RE_TY_LE.match(t[-1]):
+        ty_le = t.pop()
+    j = len(t)
+    while j > 1 and _RE_O_PHEP_TINH.match(t[j - 1]):
+        j -= 1
+    sl = ''.join(t[j:])
+    if not _la_so_hoac_phep_tinh(sl):
+        return None
+    for n in (2, 1):                                     # ĐVT hai chữ trước ("ha/ vụ", "nhân khẩu")
+        if j - n >= 1 and re_dvt.match(' '.join(t[j - n:j])):
+            return [' '.join(t[:j - n]), ' '.join(t[j - n:j]), sl] + ([ty_le] if ty_le else [])
+    return None
+
+
+def _tinh_so_luong(d: dict) -> None:
+    """Số lượng là phép tính ("4*5") -> tính sẵn ("20"), giữ phép tính ở d['cong_thuc'] (hiện ở chú thích ô Số lượng)."""
+    from .tien import la_cong_thuc, so_vn, tinh_cong_thuc
+    x = d.get('so_luong') or ''
+    if x and la_cong_thuc(x):
+        try:
+            d['so_luong'], d['cong_thuc'] = so_vn(tinh_cong_thuc(x)), x
+        except (ValueError, ArithmeticError):
+            pass                                         # để nguyên: ô Số lượng báo lỗi rõ khi Thêm vào phương án
 
 
 def doc_danh_sach(chu: str) -> list:
@@ -256,10 +295,14 @@ def doc_danh_sach(chu: str) -> list:
         if not dong.strip():
             continue
         o = [x.strip() for x in re.split(r'\t|;|\|', dong)]
-        if len(o) == 1:                                   # gõ tay một ô: "Mít 6 năm 3 cây" -> tách số lượng + ĐVT ở cuối
-            m = re.match(r'^(.*?)\s+([-+]?\d[\d.,]*)\s*([^\d\s][^\d]{0,12})?$', o[0])
-            if m and m.group(3) and re_dvt.match(m.group(3).strip()):
-                o = [m.group(1), m.group(3).strip(), m.group(2)]
+        if len(o) == 1:                                   # gõ tay một ô, cách nhau dấu cách: "Nhà tạm m2 4*5" (Tên ĐVT Số lượng)
+            tach = _tach_dau_cach(o[0], re_dvt)
+            if tach:
+                o = tach
+            else:                                         # kiểu cũ: "Mít 6 năm 3 cây" -> số lượng + ĐVT ở cuối
+                m = re.match(r'^(.*?)\s+([-+]?\d[\d.,]*)\s*([^\d\s][^\d]{0,12})?$', o[0])
+                if m and m.group(3) and re_dvt.match(m.group(3).strip()):
+                    o = [m.group(1), m.group(3).strip(), m.group(2)]
         o = [x for x in o]
         while o and (not o[0] or re.fullmatch(r'\d+\.?|[ivxIVX]+\.?|[-+*]', o[0])):   # cột STT / ký hiệu đầu dòng
             if len(o) > 1 and o[1]:
@@ -276,7 +319,7 @@ def doc_danh_sach(chu: str) -> list:
             if not x:
                 continue
             so = x.rstrip('%').strip()
-            if _RE_SO.match(so):
+            if _RE_SO.match(so) or (not d['so_luong'] and not x.endswith('%') and _la_so_hoac_phep_tinh(x)):
                 if not d['so_luong'] and not x.endswith('%'):
                     d['so_luong'] = x
                 elif not d['ty_le']:
@@ -286,5 +329,6 @@ def doc_danh_sach(chu: str) -> list:
                 d['dvt'] = x
             elif not d['ghi_chu']:
                 d['ghi_chu'] = x
+        _tinh_so_luong(d)
         kq.append(d)
     return kq

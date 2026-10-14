@@ -124,7 +124,8 @@ class TestDuongKe(CoSo):
             giua, dai, y = min(kq, key=lambda k: abs(k[2] - t['chan'][-1]) + abs(k[0] - (t['x1'] + t['x2']) / 2))
             self.assertAlmostEqual(giua, (t['x1'] + t['x2']) / 2, delta=2 * in_an.EMU_PX, msg=o)       # căn giữa theo chữ
             khe = (y - t['chan'][-1]) / in_an.EMU_PT
-            self.assertTrue(in_an.DK_CACH - 0.01 <= khe <= t['co'] * in_an.DK_CO_DAU_DUOI + 0.01, (o, khe))  # sát, có khe
+            self.assertTrue(in_an.DK_CACH - 0.01 <= khe <= max(in_an.DK_CACH, t['co'] * in_an.DK_CO_DAU_DUOI) + 0.01,
+                            (o, khe))                    # hở >= DK_CACH (5 pt): không chạm chân chữ / dấu nặng
             self.assertGreater(dai, 0)
 
     def test_chi_tiet(self):
@@ -220,7 +221,7 @@ class TestTenDuAn(CoSo):
     def test_ten_ngan_mot_dong(self):
         r, cao, o = self._dong_du_an(self.in_ho('x'))
         self.assertEqual(o.value, f'Dự án: {self.TEN}')
-        self.assertAlmostEqual(cao, in_an.cao_dong_chu(1, 14) + 3, places=1)    # sát chữ, không còn 38,4 pt cố định
+        self.assertAlmostEqual(cao, in_an.cao_dong_chu(1, 14) + in_an.DK_CACH + 3, places=1)    # sát chữ, không còn 38,4 pt cố định
         self.assertEqual(o.alignment.vertical, 'top')
         self.assertTrue(o.alignment.wrap_text)
 
@@ -230,7 +231,7 @@ class TestTenDuAn(CoSo):
         r, cao, o = self._dong_du_an(self.in_ho('x', ten))
         so = len(in_an.ngat_dong(o.value, in_an._rong_vung(self.in_ho('x', ten), 1, 8), dam=True))
         self.assertGreaterEqual(so, 2)
-        self.assertAlmostEqual(cao, in_an.cao_dong_chu(so, 14) + 3, places=1)
+        self.assertAlmostEqual(cao, in_an.cao_dong_chu(so, 14) + in_an.DK_CACH + 3, places=1)
 
 
 class TestMauIn(CoSo):

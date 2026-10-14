@@ -16,7 +16,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-GIU_MODULE = ('Core', 'Gui', 'Widgets', 'Network', 'Pdf', 'Svg')
+# PdfWidgets (0.9.84): QPdfView của khung xem trước tài liệu (xem_truoc_tai_lieu) - thiếu thì khung vẽ trang bằng QPdfDocument
+GIU_MODULE = ('Core', 'Gui', 'Widgets', 'Network', 'Pdf', 'PdfWidgets', 'Svg')
 GIU_MODULE_QT5 = GIU_MODULE + ('Qml',)          # pyside2.abi3.dll (PySide2 5.15) liên kết cứng Qt5Qml: thiếu thì PABT.exe treo
 # thư mục plugin -> tên file giữ (None = giữ cả thư mục)
 GIU_PLUGIN = {
@@ -83,6 +84,8 @@ HE_THONG_WIN7 = {
     'iphlpapi', 'kernel32', 'mpr', 'msimg32', 'netapi32', 'ntdll', 'ole32', 'oleaut32', 'psapi', 'rpcrt4', 'secur32',
     'setupapi', 'shell32', 'shlwapi', 'user32', 'userenv', 'uxtheme', 'version', 'winhttp', 'wininet', 'winmm', 'winspool.drv',
     'ws2_32', 'wtsapi32', 'opengl32', 'glu32', 'normaliz', 'ncrypt', 'propsys', 'authz', 'credui', 'cryptui', 'wldap32',
+    # thư viện C của Windows (có từ XP): openblas của numpy (đi kèm ezdxf - bản vẽ CAD, 0.9.87) bản MinGW liên kết tới
+    'msvcrt',
 }
 HE_THONG_WIN10 = HE_THONG_WIN7 | {'d3d12', 'dwrite', 'uiautomationcore', 'icuuc', 'icuin', 'shcore', 'windowscodecs',
                                   'dcomp', 'd2d1', 'bluetoothapis', 'wevtapi'}

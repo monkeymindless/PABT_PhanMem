@@ -1,7 +1,6 @@
 """Tiêu chuẩn cài đặt chung của hai bộ cài (0.9.21 - người dùng yêu cầu "máy nào cũng cài được"): giữ các điều kiện đã kiểm
 khi thử cài thật, để lần sửa sau không vô tình làm hỏng."""
 from __future__ import annotations
-import re
 import subprocess
 import sys
 import unittest
@@ -43,6 +42,36 @@ class TestKichBanCai(unittest.TestCase):
         i = s.index("$go = ")
         self.assertIn('-Command', s[i:i + 400])
         self.assertNotIn('-File', s[i:i + 400])
+
+    def test_go_cai_dat_khong_mo_cua_so_powershell(self):
+        """11/10/2026: nút Gỡ của Windows chạy thẳng powershell.exe -> Windows 11 mở cửa sổ Windows Terminal trống suốt lúc gỡ.
+        UninstallString = PABT.exe go-cai-dat (ứng dụng cửa sổ) -> PowerShell CREATE_NO_WINDOW, thoát ngay."""
+        import tempfile
+        from unittest import mock
+        s = (BC / 'cai_dat.ps1').read_text(encoding='utf-8-sig')
+        self.assertIn("$goAn = \"`\"$exe`\" go-cai-dat\"", s)
+        self.assertIn("@('UninstallString', $goAn)", s)
+        self.assertIn("@('QuietUninstallString', $goIm)", s)                # gỡ im lặng: công cụ quản trị chờ lệnh xong
+        sys.path.insert(0, str(GOC))
+        import chay
+        with tempfile.TemporaryDirectory() as td:
+            exe = Path(td) / "Thu muc O'Neil" / 'PABT.exe'
+            exe.parent.mkdir()
+            (exe.parent / 'go_cai_dat.ps1').write_text('#', encoding='utf-8')
+            with mock.patch.object(sys, 'frozen', True, create=True), mock.patch.object(sys, 'executable', str(exe)), \
+                    mock.patch('subprocess.Popen') as popen:
+                self.assertEqual(chay.main(['go-cai-dat']), 0)
+                self.assertEqual(chay.main(['go-cai-dat', '-Im']), 0)
+            (a1, k1), (a2, _) = popen.call_args_list[0], popen.call_args_list[1]
+            self.assertEqual(k1['creationflags'], subprocess.CREATE_NO_WINDOW)
+            lenh = a1[0][-1]
+            self.assertIn(str(exe.parent / 'go_cai_dat.ps1').replace("'", "''"), lenh)
+            self.assertIn(f"-Dich '{str(exe.parent).replace(chr(39), chr(39) * 2)}'", lenh)
+            self.assertFalse(lenh.endswith('-Im'))
+            self.assertTrue(a2[0][-1].endswith(' -Im'))
+            (exe.parent / 'go_cai_dat.ps1').unlink()
+            with mock.patch.object(sys, 'frozen', True, create=True), mock.patch.object(sys, 'executable', str(exe)):
+                self.assertEqual(chay.main(['go-cai-dat']), 1)                 # không có script gỡ: báo lỗi, không chạy gì
 
     def test_sed_iexpress(self):
         import dung_bo_cai_win as d

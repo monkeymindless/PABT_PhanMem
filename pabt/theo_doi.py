@@ -369,6 +369,7 @@ class TongHopHo:
     bien_ban_ban_giao: str = ''
     theo_doi: str = ''
     muc_pa: dict = field(default_factory=dict)
+    da_lap: bool = False              # đã lưu phương án, kể cả mọi mục 0 đồng / ô bỏ trống
 
     @property
     def tong_phe_duyet(self):
@@ -397,7 +398,9 @@ class TongHopHo:
             return f'Đã nhận {len(self.qd) - len(self.qd_chua_nhan)}/{len(self.qd)} QĐ'
         if self.qd:
             return 'Đã phê duyệt' + (f' ({len(self.qd)} QĐ)' if len(self.qd) > 1 else '') + ', chưa nhận tiền'
-        return 'Đã lập phương án' if self.tong_pa > 0 else 'Chưa lập phương án'
+        if self.da_lap or self.tong_pa > 0:
+            return 'Đã lập phương án'
+        return 'Chưa lập phương án'
 
 
 def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
@@ -414,13 +417,16 @@ def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
     for v in qd.values():
         v.sort(key=lambda x: (_khoa_ngay(x['ngay_qd']), x['id']))
     chon = set(ds_ma_ho) if ds_ma_ho is not None else None
+    co_dong = {r[0] for r in con.execute('SELECT DISTINCT ma_ho FROM ct_dat UNION SELECT DISTINCT ma_ho FROM ct_khoan')}
     kq = []
     for h in con.execute('SELECT * FROM ho ORDER BY thu_tu, ma_ho'):
         if chon is not None and h['ma_ho'] not in chon:
             continue
+        # "Đã lập…" (đã bấm Lưu, hoặc nhập từ Excel) kể cả mọi mục bỏ trống; có dòng phương án cũng là đã lập
+        da_lap = str(h['trang_thai'] or '').startswith('Đã lập') or h['ma_ho'] in co_dong
         x = TongHopHo(h['ma_ho'], h['thu_tu'], h['ho_ten'], h['dia_chi'], thua.get(h['ma_ho'], []), qd.get(h['ma_ho'], []),
                       da_ban_giao=bool(h['da_ban_giao']), ban_giao_ngay=h['ban_giao_ngay'], ly_do_ban_giao=h['ly_do_ban_giao'],
-                      bien_ban_ban_giao=h['bien_ban_ban_giao'], theo_doi=h['theo_doi'])
+                      bien_ban_ban_giao=h['bien_ban_ban_giao'], theo_doi=h['theo_doi'], da_lap=da_lap)
         if tinh_pa and h['ma_ho'] in kqh:
             k = kqh[h['ma_ho']][0]
             x.tong_pa, x.muc_pa = k.tong, muc_5_cot(k.muc)

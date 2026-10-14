@@ -322,7 +322,8 @@ def dia_ban_tu_ten(ten: str) -> tuple:
     return m.group(1).capitalize(), ' '.join(m.group(2).split())
 
 
-DU_LIEU_HO = ('qd_ho', 'quyet_dinh', 'ct_dat', 'ct_khoan', 'thua', 'ho', 'tong_excel', 'nhat_ky', 'tho_nhap', 'dot_trinh')
+DU_LIEU_HO = ('doi_thoai_ho', 'y_kien_du_thao', 'dot_du_thao', 'qd_ho', 'quyet_dinh', 'ct_dat', 'ct_khoan', 'thua', 'ho',
+              'tong_excel', 'nhat_ky', 'tho_nhap', 'dot_trinh')
 
 
 TRUONG_DON_VI = csdl.TRUONG_DON_VI
@@ -333,6 +334,8 @@ def xoa_trang(con) -> None:
     giữ danh mục, tham số và thông tin đơn vị lập, người ký."""
     giu = TRUONG_DON_VI + ('phien_ban_gia',)          # thông tin đơn vị, người ký, phiên bản bộ đơn giá đang áp
     dv = con.execute(f'SELECT {", ".join(giu)} FROM du_an WHERE id = 1').fetchone()
+    from . import van_dong
+    van_dong.xoa_het(con)                              # sổ nhật ký vận động (bảng tạo khi cần) - xóa trước hộ
     for b in DU_LIEU_HO:
         con.execute(f'DELETE FROM {b}')
     con.execute('DELETE FROM du_an')

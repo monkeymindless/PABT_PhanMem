@@ -17,6 +17,18 @@ except ImportError:
 
 
 class TestBangGia(unittest.TestCase):
+    def setUp(self):
+        self._cu = os.environ.get('PABT_THU_MUC_MAY')
+        self._td = tempfile.TemporaryDirectory()
+        os.environ['PABT_THU_MUC_MAY'] = self._td.name
+
+    def tearDown(self):
+        if self._cu is None:
+            os.environ.pop('PABT_THU_MUC_MAY', None)
+        else:
+            os.environ['PABT_THU_MUC_MAY'] = self._cu
+        self._td.cleanup()
+
     def test_du_lieu_day_du(self):
         ds = nq.tat_ca()
         self.assertEqual(nq.ds_xa(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều'])
@@ -67,6 +79,44 @@ class TestBangGia(unittest.TestCase):
             self.assertEqual(ws.max_row, 4 + 385)
             self.assertEqual(ws['G5'].value, 40600000)
 
+    def test_thay_bang_dia_ban_khac_roi_khoi_phuc(self):
+        """File Excel một phường thay cả 4 địa bàn gắn sẵn; xóa file thì trở lại bảng cũ."""
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Phường Trảng Bom'
+        ws['A1'] = 'Quyết định giá đất Phường Trảng Bom'
+        ws['A2'] = 'Đơn vị: đồng/m².'
+        ws.append(['Tên đường', 'Điểm đầu', 'Điểm cuối', 'Vị trí', 'Đất ở', 'Đất thương mại, dịch vụ'])
+        ws.append(['Đường Quốc lộ 1', 'Ngã tư', 'Cầu', 'MT', 12_500_000, 8_000_000])
+        ws.append(['Đường Quốc lộ 1', 'Ngã tư', 'Cầu', 'Vị trí 1', 6_000_000, 4_000_000])
+        p = Path(self._td.name) / 'trang_bom.xlsx'
+        wb.save(p)
+        dong, vb, chu = nq.doc_excel(p)
+        self.assertIn('đồng/m²', chu)
+        self.assertIn('Trảng Bom', vb)
+        nq.ghi_thay(dong, vb, p)
+        self.assertTrue(nq.dang_thay())
+        self.assertEqual(nq.ds_xa(), ['Phường Trảng Bom'])
+        self.assertEqual(len(nq.tat_ca()), 2)
+        r = nq.tat_ca()[0]
+        self.assertEqual((r['dat_o'], r['tmdv'], r['vi_tri']), (12500, 8000, 'MT'))
+        self.assertEqual(nq.gia_dong(r, 'dat_o'), 12_500_000)
+        self.assertEqual(nq.tat_ca()[1]['vi_tri'], 'VT1')
+        self.assertEqual(nq.mo_ta_vi_tri(nq.tat_ca()[1]), 'VT1')
+        self.assertIn('Trảng Bom', nq.can_cu(r, 'dat_o'))
+        self.assertTrue(nq.xoa_thay())
+        self.assertFalse(nq.dang_thay())
+        self.assertEqual(nq.ds_xa(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều'])
+
+    def test_doc_lai_file_xuat(self):
+        f = nq.xuat_excel(Path(self._td.name) / 'bg.xlsx')
+        dong, vb, _ = nq.doc_excel(f)
+        self.assertIn('28/2025', vb)
+        self.assertEqual(len(dong), len(nq.tat_ca()))
+        goc = {(r['xa'], r['tt'], r['vi_tri']): r['dat_o'] for r in nq.tat_ca()}
+        doc = {(r['xa'], r['tt'], r['vi_tri']): r['dat_o'] for r in dong}
+        self.assertEqual(doc[('Phường Tân Triều', 1, 'MT')], goc[('Phường Tân Triều', 1, 'MT')])
+
 
 @unittest.skipUnless(CO_QT, 'không có PySide6')
 class TestManHinhGiaDat(unittest.TestCase):
@@ -112,6 +162,136 @@ class TestManHinhGiaDat(unittest.TestCase):
                 self.assertIn('NQ 28/2025', r[1])
             finally:
                 con.close()
+
+
+class TestCapNhatGiaDat(unittest.TestCase):
+    """Web không ra giá thì không ghi; file Excel/CSV thay bốn địa bàn gắn sẵn rồi khôi phục được."""
+
+    def setUp(self):
+        self._cu = os.environ.get('PABT_THU_MUC_MAY')
+        self._td = tempfile.TemporaryDirectory()
+        os.environ['PABT_THU_MUC_MAY'] = self._td.name
+
+    def tearDown(self):
+        if self._cu is None:
+            os.environ.pop('PABT_THU_MUC_MAY', None)
+        else:
+            os.environ['PABT_THU_MUC_MAY'] = self._cu
+        self._td.cleanup()
+
+    def test_ten_gon_khong_can_xa_phuong(self):
+        from pabt.cap_nhat_gia_dat import ten_gon
+        self.assertEqual(ten_gon('Xã Trị An'), 'Trị An')
+        self.assertEqual(ten_gon('Trảng Bom'), 'Trảng Bom')
+        self.assertEqual(ten_gon('Thành phố Hồ Chí Minh'), 'Hồ Chí Minh')
+        self.assertEqual(ten_gon('TP. Vũng Tàu'), 'Vũng Tàu')
+        self.assertEqual(ten_gon('Tỉnh Lâm Đồng'), 'Lâm Đồng')
+        self.assertEqual(ten_gon('TP.HCM'), 'Hồ Chí Minh')
+        self.assertEqual(ten_gon('TP HCM'), 'Hồ Chí Minh')
+
+    def test_boc_nghi_quyet_bay_muc_vi_tri(self):
+        from pabt.cap_nhat_gia_dat import loc_xa, phan_tich_nghi_quyet
+        rows = [
+            ['Xã Trảng Bom'],
+            ['TT', 'Tên đường giao thông', 'Điểm đầu', 'Điểm cuối', 'Giá đất ở',
+             'Giá đất thương mại, dịch vụ', 'Giá đất sản xuất phi nông nghiệp'],
+            ['1', 'Đường A', '15.300', '10.700', '9.200'],
+            ['2', 'Các tuyến đường giao thông đấu nối trực tiếp ra Đường A', '5.900', '4.100', '3.500'],
+            ['5', 'Các tuyến đường giao thông không đấu nối trực tiếp và thông ra Đường A', '5.300', '3.700', '3.200'],
+        ]
+        dong = loc_xa(phan_tich_nghi_quyet(rows), 'Trảng Bom')
+        self.assertEqual([r['vi_tri'] for r in dong], ['MT', 'T1', 'K1'])
+        self.assertEqual(dong[0]['ten_duong'], 'Đường A')
+        self.assertEqual(dong[1]['ten_duong'], 'Đường A')
+        self.assertEqual((dong[0]['dat_o'], dong[0]['tmdv'], dong[0]['sxkd']), (15300, 10700, 9200))
+        self.assertEqual(nq.gia_dong(dong[0], 'dat_o'), 15_300_000)
+
+    def test_thieu_module_web_ra_loi_tieng_viet(self):
+        import sys
+        from unittest import mock
+        from pabt.cap_nhat_gia_dat import LoiWeb, _module_web
+        import pabt
+        # bài khác đã nạp module: `from . import cap_nhat_web` lấy thuộc tính của gói pabt trước sys.modules -> gỡ tạm cả hai
+        cu = pabt.__dict__.pop('cap_nhat_web', None)
+        try:
+            with mock.patch.dict(sys.modules, {'pabt.cap_nhat_web': None}):
+                with self.assertRaises(LoiWeb) as ctx:
+                    _module_web()
+        finally:
+            if cu is not None:
+                pabt.cap_nhat_web = cu
+        self.assertNotIn('cannot import', str(ctx.exception))
+        self.assertIn('Excel', str(ctx.exception))
+        self.assertFalse(nq.dang_thay())
+
+    def test_web_khong_co_gia_khong_ghi(self):
+        from unittest import mock
+        from pabt.cap_nhat_gia_dat import LoiWeb, tim_tren_web
+        from pabt.lap_pa import LoiNhap
+        # không truy cập mạng (trước 0.9.65 bài này gọi vbpl.vn thật): trang tìm lỗi, nguồn tham khảo không có xã này
+        with mock.patch('pabt.cap_nhat_web.quet', return_value=[]), \
+                mock.patch('pabt.cap_nhat_web._lay', side_effect=LoiNhap('không có mạng (test)')), \
+                mock.patch('pabt.nguon_gia_dat.doc_guland', return_value=[]):
+            with self.assertRaises(LoiWeb):
+                tim_tren_web('Bình Dương', 'Phường Thử')
+        self.assertFalse(nq.dang_thay())
+        self.assertEqual(nq.ds_xa(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều'])
+
+    def test_csv_va_excel_thay_bon_xa(self):
+        from pabt.cap_nhat_gia_dat import ap_dung, doc_file
+        p = Path(self._td.name) / 'gia.csv'
+        p.write_text(
+            'Quyết định thử, không phải giá thật\n'
+            'Tên đường,Điểm đầu,Điểm cuối,Vị trí,Đất ở\n'
+            'Đường Thử,Đầu,Cuối,MT,"15.000.000"\n',
+            encoding='utf-8')
+        dong, vb, chu = doc_file(p, 'Tỉnh Thử', 'Phường Thử')
+        self.assertIn('đồng/m²', chu)
+        self.assertEqual(dong[0]['xa'], 'Phường Thử')
+        self.assertEqual(nq.gia_dong(dong[0], 'dat_o'), 15_000_000)
+        ap_dung(dong, vb, p)
+        self.assertEqual(nq.ds_xa(), ['Phường Thử'])
+        self.assertNotIn('Xã Trị An', nq.ds_xa())
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Xã Khác'
+        ws['A1'] = 'Đơn vị: đồng/m².'
+        ws.append(['Tên đường', 'Vị trí', 'Đơn giá'])
+        ws.append(['Đường B', 'VT 2', 8_000_000])
+        xp = Path(self._td.name) / 'khac.xlsx'
+        wb.save(xp)
+        dong2, _, _ = doc_file(xp, 'Tỉnh Thử', '')
+        self.assertEqual(dong2[0]['xa'], 'Xã Khác')
+        self.assertEqual(dong2[0]['vi_tri'], 'VT2')
+        ap_dung(dong2, 'VB thử', xp)
+        self.assertEqual(nq.ds_xa(), ['Xã Khác'])
+        self.assertTrue(nq.xoa_thay())
+        self.assertEqual(nq.ds_xa()[0], 'Xã Trị An')
+
+    @unittest.skipUnless(CO_QT, 'không có PySide6')
+    def test_hop_va_menu(self):
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        from PySide6.QtWidgets import QApplication
+        from pabt.app import CuaSoChinh
+        from pabt.man_hinh_gia_dat import HopCapNhatGiaDat
+        app = QApplication.instance() or QApplication([])  # noqa: F841
+        w = CuaSoChinh(menu_trai=True)
+        self.assertIn('Cập nhật bảng giá đất…', w.lenh)
+        self.assertNotIn('Thay bảng giá đất…', w.lenh)
+        self.assertNotIn('Dùng lại bảng giá gắn sẵn', w.lenh)
+        d = w.cap_nhat_bang_gia_dat(cho=False)
+        self.assertIsInstance(d, HopCapNhatGiaDat)
+        p = Path(self._td.name) / 'gia.csv'
+        p.write_text('Tên đường,Vị trí,Đất ở\nĐường C,MT,9000000\n', encoding='utf-8')
+        d.im_lang = True
+        d.o_xa.setText('Xã Mới')
+        self.assertIsNotNone(d.nap_file(str(p)))
+        self.assertEqual(d.ghi(), ['Xã Mới'])
+        self.assertEqual(nq.ds_xa(), ['Xã Mới'])
+        d.khoi_phuc()
+        self.assertEqual(nq.ds_xa(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều'])
+        d.close()
+        w.close()
 
 
 if __name__ == '__main__':

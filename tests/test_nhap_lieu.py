@@ -144,7 +144,7 @@ class TestNhapLieuDuAn(unittest.TestCase):
         self.assertEqual(ws['A5'].value, 'BẢNG KHÁI TOÁN')
         self.assertIn('Bồi thường về đất', cot2)
         self.assertIn('Tổng cộng', cot2)
-        self.assertIn('Chi phí thực hiện công tác bồi thường 2,5%', cot2)
+        self.assertIn('Chi phí thực hiện công tác bồi thường 3,5%', cot2)   # dự án theo tuyến (QĐ 08/2025)
         self.assertIn('Phí dự phòng 10%', cot2)
         r = cot2.index('TỔNG DỰ ƯỚC KINH PHÍ') + 1
         self.assertEqual(D(ws.cell(r, 7).value), dt.tong)
@@ -181,7 +181,7 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
     def test_mot_cua_so_ho_so_va_nhap_nhanh(self):
         from pabt.man_hinh import CuaSoLapPA
         w = CuaSoLapPA(self.con, 1)
-        self.assertEqual(w.tab.count(), 5)
+        self.assertEqual(w.tab.count(), 6)                       # hồ sơ + 5 mục (0.9.21: thẻ Vật nuôi)
         # thẻ hồ sơ: sửa CCCD, "Tiếp theo" lưu hồ sơ
         w.tab.setCurrentIndex(0)
         w.ho_so.o['so_cccd'].setText('079 123 456 789')
@@ -215,7 +215,7 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         self.assertTrue(all('Đường kính đo' in x.quy_cach for x in moi))
         # mục 4: thuê nhà chờ TĐC (phường) - một dòng theo nhân khẩu
         w.o_nk.setValue(7)
-        w.bang[4].o_chon.chon_du_lieu(w.bo.dm.lay('HT24'))
+        w.bang[4].o_chon.chon_du_lieu(w.bo.dm.lay('CS24'))
         k = w.them_nhanh(4, so_luong='3')
         d4 = w.bo.pa.khoan[4][k]
         self.assertEqual((d4.so_luong, d4.don_gia), (3, 14000000))
@@ -223,7 +223,7 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         self.assertEqual(d4.don_gia, 10000000)
         # tái định cư: chọn tình trạng, không có trong danh sách chọn khoản tiền
         ds4 = list(w.bang[4].o_chon._theo_nhan.values())
-        self.assertFalse(any(getattr(x, 'ma', '') in ('HT11', 'HT12', 'HT13') for x in ds4))
+        self.assertFalse(any(getattr(x, 'ma', '') in ('CS11', 'CS12', 'CS13') for x in ds4))
         w.bang[4].cb_tdc.setCurrentIndex(2)
         self.assertIn('khoản 4 Điều 111', w.bo.pa.ho.tai_dinh_cu)
         self.assertTrue(w.luu())
@@ -238,7 +238,7 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         w.o_nk.setValue(4)
         n = len(w.bo.pa.khoan[4])
         # ổn định đời sống: nhân khẩu, giá gạo, kg, tháng, tỷ lệ
-        b4.o_chon.chon_du_lieu(w.bo.dm.lay('HT01'))
+        b4.o_chon.chon_du_lieu(w.bo.dm.lay('CS1'))
         self.assertEqual(b4.cs_loai, 'od')
         b4.o_gao.setText('16.000')
         w.them_nhanh(4)
@@ -246,11 +246,11 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         self.assertEqual((d.ten, d.cach_tinh), ('Hỗ trợ ổn định đời sống', '4 nhân khẩu x 30kg gạo x 6 tháng x 16.000 đồng x 50%'))
         self.assertIn('Hỗ trợ theo', d.ghi_chu)
         # đào tạo, chuyển đổi nghề: mỗi thửa đất NN một dòng, giá đất × 150%
-        b4.o_chon.chon_du_lieu(w.bo.dm.lay('HT09'))
+        b4.o_chon.chon_du_lieu(w.bo.dm.lay('CS9'))
         self.assertEqual(b4.cs_loai, 'dt')
         self.assertGreater(b4.bang_dt.rowCount(), 0)
         w.them_nhanh(4)
-        dt = [x for x in w.bo.pa.khoan[4][n + 1:] if x.ma == 'HT09']
+        dt = [x for x in w.bo.pa.khoan[4][n + 1:] if x.ma == 'CS9']
         self.assertTrue(dt and all(x.ty_le == D('1.5') and x.ten.startswith('Thửa đất') for x in dt))
         # chính sách không có trong đơn giá: nhập tên, số tiền
         b4.o_chon.chon_du_lieu(('ten', 'Hỗ trợ học phí'))
@@ -286,12 +286,13 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         self.assertEqual(cs.the_so['so_ho'].text(), str(cs.mo_hinh.rowCount()))
         from PySide6.QtCore import Qt
         self.assertEqual([cs.mo_hinh.headerData(c, Qt.Orientation.Horizontal) for c in range(cs.mo_hinh.columnCount())],
-                         ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²)', 'Trạng thái'])     # danh sách gọn (0.9.12)
-        cs.mo_trang(3)                                                              # tiền từng mục: Bảng tổng hợp
-        self.assertEqual(cs.trang.currentIndex(), 1)
+                         ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²)', 'Trạng thái', 'Ghi chú'])
+        cs.mo_trang(ud.TRANG_TONG_HOP)                                              # tiền từng mục: Bảng tổng hợp kinh phí
+        self.assertEqual(cs.trang.currentIndex(), ud.STACK_TONG_HOP)
+        cs.bang_tong_hop.mo_the(1)                                                  # thẻ Bảng kinh phí chi tiết
         self.assertEqual(cs.bang_tong_hop.tien.bang.rowCount(), cs.mo_hinh.rowCount())
-        cs.mo_trang(4)
-        self.assertEqual(cs.trang.currentIndex(), 2)
+        cs.mo_trang(ud.TRANG_THEO_DOI)
+        self.assertEqual(cs.trang.currentIndex(), ud.STACK_THEO_DOI)
         self.assertTrue(cs.lenh['Theo dõi tiến độ'].isChecked())
         cs.close()
 

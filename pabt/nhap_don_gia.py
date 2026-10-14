@@ -8,6 +8,7 @@ Quy trình: đọc bảng -> nhận các dòng (tên, ĐVT, đơn giá, mã nế
 from __future__ import annotations
 import csv
 import os
+import io
 import re
 import shutil
 import subprocess
@@ -228,21 +229,44 @@ def _doc_docx(p: Path) -> list:
         an_toan.kiem_tra_xml(du, p.name)                # XML có DOCTYPE / ENTITY: không phân tích
     except an_toan.LoiAnToan as e:
         raise LoiNhap(str(e)) from None
-    goc = ET.fromstring(du)
 
     def chu(par) -> str:
         return ' '.join(''.join(t.text or '' for t in par.iter(W + 't')).split())
 
     def o(tc) -> str:                                   # các đoạn trong một ô cách nhau dấu cách ("ỦY BAN NHÂN DÂN TỈNH ...")
         return ' '.join(x for x in (chu(par) for par in tc.iter(W + 'p')) if x)
-    # theo thứ tự trong văn bản: đoạn văn (số, ngày, trích yếu ở đầu quyết định) mỗi đoạn một dòng; bảng mỗi hàng một dòng
+    # theo thứ tự trong văn bản: đoạn văn (số, ngày, trích yếu ở đầu quyết định) mỗi đoạn một dòng; bảng mỗi hàng một dòng.
+    # Đọc dòng chảy (iterparse, 0.9.87): đọc xong một hàng của bảng cấp ngoài / một đoạn văn thì xử lý rồi xóa khỏi cây - không
+    # giữ cả cây XML của văn bản lớn trong RAM (bản 32-bit Windows 7). Thứ tự và kết quả như dựng cả cây (kể cả hàng của bảng lồng
+    # trong ô: xếp ngay sau hàng chứa nó, như tbl.iter('tr')).
     dong = []
-    than = goc.find(W + 'body')
-    for el in (than if than is not None else goc):
-        if el.tag == W + 'tbl':
-            dong += [[o(tc) for tc in tr.findall(W + 'tc')] for tr in el.iter(W + 'tr')]
-        else:
-            dong += [[t] for t in (chu(par) for par in ([el] if el.tag == W + 'p' else el.iter(W + 'p'))) if t]
+    ngan = []                                           # các phần tử đang mở (gốc -> phần tử hiện tại)
+    for su_kien, el in ET.iterparse(io.BytesIO(du), events=('start', 'end')):
+        if su_kien == 'start':
+            ngan.append(el)
+            continue
+        ngan.pop()
+        if not ngan:
+            break
+        cha = ngan[-1]
+        tang_ngoai = len(ngan) == 2 and ngan[1].tag == W + 'body'          # phần tử con của <w:body>
+        if el.tag == W + 'tr' and len(ngan) == 3 and ngan[1].tag == W + 'body' and cha.tag == W + 'tbl':
+            dong += [[o(tc) for tc in tr.findall(W + 'tc')] for tr in el.iter(W + 'tr')]      # hàng của bảng cấp ngoài
+            el.clear()
+            cha.remove(el)
+        elif tang_ngoai:
+            if el.tag == W + 'tbl':
+                dong += [[o(tc) for tc in tr.findall(W + 'tc')] for tr in el.iter(W + 'tr')]  # (hàng đã xử lý ở trên)
+            else:
+                dong += [[t] for t in (chu(par) for par in ([el] if el.tag == W + 'p' else el.iter(W + 'p'))) if t]
+            el.clear()
+            cha.remove(el)
+    if not dong and b'body>' not in du:                 # XML lạ không có <w:body>: đọc các phần tử con của gốc như trước
+        for el in ET.fromstring(du):
+            if el.tag == W + 'tbl':
+                dong += [[o(tc) for tc in tr.findall(W + 'tc')] for tr in el.iter(W + 'tr')]
+            else:
+                dong += [[t] for t in (chu(par) for par in ([el] if el.tag == W + 'p' else el.iter(W + 'p'))) if t]
     return dong
 
 
@@ -856,22 +880,25 @@ def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban
             so = {'mới': 0, 'cập nhật': 0}
             theo_nhom = {}
             with con, csdl.mo_khoa_danh_muc(con):
-                n_ht = con.execute("SELECT COUNT(*) FROM dm_hotro WHERE ma LIKE 'HTN%'").fetchone()[0]
-                n_ts = con.execute("SELECT COUNT(*) FROM dm_taisan WHERE ma LIKE 'TSN%'").fetchone()[0]
+                # mã mục mới theo quy ước 0.9.69 (ma_tai_san): CS (hỗ trợ), TS (nhà), CT (cây), VN (vật nuôi) - số tiếp theo
+                from .ma_tai_san import doi_ma, ma_tiep, tien_to
+                from .nghiep_vu import la_vat_nuoi
+                da_cap = {}
                 for m in chon:
                     nm = nhom or m.nhom or 3
                     if m.trang_thai == 'cập nhật':
                         bang = 'dm_hotro' if nm == 4 else 'dm_taisan'
                         con.execute(f'UPDATE {bang} SET don_gia = ? WHERE ma = ?', (chuoi(m.don_gia), m.ma_khop))
                     elif nm == 4:
-                        n_ht += 1
+                        ma = doi_ma(m.ma, 4) if m.ma else ma_tiep(con, 'dm_hotro', 'CS', da_cap)
                         con.execute('INSERT INTO dm_hotro (ma, ten, dvt, don_gia, can_cu, trang_thai) VALUES (?,?,?,?,?,?)',
-                                    (m.ma or f'HTN{n_ht:03d}', m.ten, m.dvt, chuoi(m.don_gia), nguon, 'Cập nhật từ file'))
+                                    (ma, m.ten, m.dvt, chuoi(m.don_gia), nguon, 'Cập nhật từ file'))
                     else:
-                        n_ts += 1
+                        pl = _phan_loai(nm, m.ten, van_ban)
+                        vn = nm == 3 and la_vat_nuoi(pl)
+                        ma = doi_ma(m.ma, nm, vn) if m.ma else ma_tiep(con, 'dm_taisan', tien_to(nm, vn), da_cap)
                         con.execute('INSERT INTO dm_taisan (ma, nhom, phan_loai, ten, dvt, don_gia, ghi_chu) VALUES (?,?,?,?,?,?,?)',
-                                    (m.ma or f'TSN{n_ts:04d}', nm, _phan_loai(nm, m.ten, van_ban), m.ten, m.dvt,
-                                     chuoi(m.don_gia), f'Cập nhật từ {nguon}'))
+                                    (ma, nm, pl, m.ten, m.dvt, chuoi(m.don_gia), f'Cập nhật từ {nguon}'))
                     so[m.trang_thai] += 1
                     theo_nhom.setdefault(nm, {'mới': 0, 'cập nhật': 0})[m.trang_thai] += 1
                 tom_tat = '; '.join(f'{NHOM[k]}: {v["mới"]} mục mới, {v["cập nhật"]} mục đổi giá'

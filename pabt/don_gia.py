@@ -26,14 +26,6 @@ BANG_BO = tuple(b for b in csdl.DANH_MUC if b != 'gia_dat')
 # phân loại dòng vật nuôi trong dm_taisan (nhóm 3 như cây trồng): bộ tích hợp mã VN.. (QĐ 31/2025/QĐ-UBND), mục cập nhật từ văn
 # bản vật nuôi (nhap_don_gia.ap_dung); màn hình Bộ đơn giá có thẻ "Vật nuôi" riêng theo phân loại này
 PHAN_LOAI_VAT_NUOI = '3. Bồi thường thiệt hại về vật nuôi'
-TRA_CUU = [
-    ('Công báo Đồng Nai (văn bản quy phạm mới)', 'https://congbao.dongnai.gov.vn/'),
-    ('Góp ý dự thảo - Cổng thông tin Đồng Nai', 'https://dongnai.gov.vn/vi/gop-y-du-thao/'),
-    ('Thư viện pháp luật: Đồng Nai bồi thường, hỗ trợ, tái định cư',
-     'https://thuvienphapluat.vn/page/tim-van-ban.aspx?keyword=%C4%90%E1%BB%93ng%20Nai%20b%E1%BB%93i%20th%C6%B0%E1%BB%9Dng%20h%E1%BB%97%20tr%E1%BB%A3%20t%C3%A1i%20%C4%91%E1%BB%8Bnh%20c%C6%B0&sort=1'),
-    ('Thư viện pháp luật: Đồng Nai đơn giá bồi thường',
-     'https://thuvienphapluat.vn/page/tim-van-ban.aspx?keyword=%C4%90%E1%BB%93ng%20Nai%20%C4%91%C6%A1n%20gi%C3%A1%20b%E1%BB%93i%20th%C6%B0%E1%BB%9Dng&sort=1'),
-]
 
 
 def file_goc() -> Path:
@@ -76,10 +68,34 @@ def kiem_tra_bo(p) -> dict:
     return tt
 
 
+_DA_NANG_CAP = set()
+
+
+def _nang_cap_ban_may(p: Path) -> None:
+    """Bản bộ đơn giá trên máy (đã cập nhật / sửa) tạo bằng phiên bản cũ: mở GHI một lần để nâng cấp lược đồ - CSDL v14 đổi mã
+    tài sản sang TS / CT / VN / CS (ma_tai_san). Không thì mã cũ (HT01…) trong bộ không khớp quy tắc tính của phần mềm."""
+    k = str(p)
+    if k in _DA_NANG_CAP:
+        return
+    _DA_NANG_CAP.add(k)
+    try:
+        import sqlite3
+        c = sqlite3.connect(k)
+        try:
+            ver = c.execute('PRAGMA user_version').fetchone()[0]
+        finally:
+            c.close()
+        if 0 < ver < csdl.PHIEN_BAN_CSDL:
+            csdl.mo(p).close()
+    except Exception:                                   # noqa: BLE001 - file khóa / hỏng: kiem_tra_bo xử lý tiếp như cũ
+        pass
+
+
 def file_dang_dung() -> Path:
     """Bộ đơn giá mới nhất: bản đã cập nhật (nếu hợp lệ và mới hơn) hoặc bản đóng gói."""
     goc, moi = file_goc(), file_cap_nhat()
     if moi.exists():
+        _nang_cap_ban_may(moi)
         try:
             if kiem_tra_bo(moi)['phien_ban'] >= kiem_tra_bo(goc)['phien_ban']:
                 return moi
@@ -102,6 +118,29 @@ def ap_vao_du_an(con) -> dict:
         con.execute('UPDATE du_an SET phien_ban_gia = ? WHERE id = 1', (tt['phien_ban'],))
         csdl.ghi_nhat_ky(con, 'Áp bộ đơn giá', f'Phiên bản {tt["phien_ban"]} ({tt["nguon"]})')
     return tt
+
+
+def bo_sung_vat_nuoi(con) -> int:
+    """Dự án lập trước khi bộ đơn giá có vật nuôi (QĐ 31/2025/QĐ-UBND, bộ 2026.10.09): thêm các dòng vật nuôi của bộ đơn giá
+    đang dùng mà danh mục dự án chưa có (theo mã) - không đổi dòng nào khác (khác "Áp bộ đơn giá": thay cả danh mục).
+    Trả số dòng đã thêm."""
+    from .nghiep_vu import la_vat_nuoi
+    bo = csdl.mo(file_dang_dung(), chi_doc=True)
+    try:
+        ds = [dict(r) for r in bo.execute('SELECT * FROM dm_taisan WHERE nhom = 3 ORDER BY rowid') if la_vat_nuoi(r['phan_loai'])]
+    finally:
+        bo.close()
+    cot = {r[1] for r in con.execute('PRAGMA table_info(dm_taisan)')}
+    co = {r[0] for r in con.execute('SELECT ma FROM dm_taisan')}
+    moi = [r for r in ds if r['ma'] not in co]
+    if not moi:
+        return 0
+    with con, csdl.mo_khoa_danh_muc(con):
+        for r in moi:
+            k = [c for c in r if c in cot]
+            con.execute(f'INSERT INTO dm_taisan ({", ".join(k)}) VALUES ({", ".join("?" * len(k))})', [r[c] for c in k])
+        csdl.ghi_nhat_ky(con, 'Bổ sung vật nuôi', f'{len(moi)} mục từ bộ đơn giá {file_dang_dung().name}')
+    return len(moi)
 
 
 def viet_hoa_dau(s: str) -> str:
@@ -165,6 +204,57 @@ def cai_bo(p) -> dict:
     return dict(tt, file=str(dich))
 
 
+def sao_luu_bo(dich) -> Path:
+    """Sao lưu bộ đơn giá đang dùng ra file (0.9.73): .sqlite = bản sao đầy đủ (nạp lại được bằng "Nạp từ file"), .xlsx = mỗi
+    danh mục một sheet (xem / gửi đi). Không đổi bộ đang dùng."""
+    import sqlite3
+    dich = Path(dich)
+    nguon = file_dang_dung()
+    dich.parent.mkdir(parents=True, exist_ok=True)
+    if dich.suffix.lower() in ('.xlsx', '.xlsm'):
+        import openpyxl
+        con = csdl.mo(nguon, chi_doc=True)
+        try:
+            wb = openpyxl.Workbook()
+            wb.remove(wb.active)
+            for b in BANG_BO:
+                cur = con.execute(f'SELECT * FROM {b}')
+                ws = wb.create_sheet(b[:31])
+                ws.append([c[0] for c in cur.description])
+                for r in cur:
+                    ws.append(list(r))
+            tam = dich.with_name(dich.name + '.tmp')
+            wb.save(tam)
+            os.replace(tam, dich)
+        finally:
+            con.close()
+        return dich
+    if dich.suffix.lower() != '.sqlite':
+        dich = dich.with_suffix('.sqlite')
+    tam = dich.with_name(dich.name + '.tmp')
+    nguon_con = sqlite3.connect(nguon.resolve().as_uri() + '?mode=ro', uri=True)
+    ra = sqlite3.connect(str(tam))
+    try:
+        nguon_con.backup(ra)                         # bản sao nhất quán (không chép giữa lúc đang ghi)
+    finally:
+        ra.close()
+        nguon_con.close()
+    os.replace(tam, dich)
+    return dich
+
+
+def khoi_phuc_bo_goc() -> dict:
+    """Dùng lại bộ đơn giá chuẩn đóng gói kèm phần mềm (0.9.73): bản đã cập nhật / sửa trên máy KHÔNG xóa - đổi tên thành
+    "<tên>.truoc_khoi_phuc_<giờ>.sqlite" cạnh đó (lấy lại được). Trả thông tin bộ gốc + file đã cất (hoặc '' nếu chưa có bản máy)."""
+    moi = file_cap_nhat()
+    cat = ''
+    if moi.exists():
+        dich = moi.with_name(f'{moi.stem}.truoc_khoi_phuc_{datetime.now():%Y%m%d_%H%M%S}.sqlite')
+        os.replace(moi, dich)
+        cat = str(dich)
+    return dict(kiem_tra_bo(file_goc()), cat=cat)
+
+
 def cap_nhat_tu_file(p, phien_ban: str = '') -> dict:
     """Cập nhật bộ đơn giá từ file PABT Excel chuẩn (.xlsm/.xlsx) hoặc gói bộ đơn giá (.sqlite)."""
     p = Path(p)
@@ -204,3 +294,186 @@ def tai_va_cai(tb: dict, timeout: int = 120) -> dict:
         if tb.get('sha256') and hashlib.sha256(p.read_bytes()).hexdigest().lower() != str(tb['sha256']).lower():
             raise LoiNhap('File tải về sai mã kiểm tra (SHA-256): không cài.')
         return cai_bo(p)
+
+
+# ---------------------------------------------------------------- sửa từng mục (quyền quản trị — man_hinh_don_gia + quan_tri_bo)
+# khóa từng bảng: mã (dm_*) / tu (biểu thưởng) / id (quy_uoc, van_ban)
+COT_SUA = {
+    'dm_taisan': ('ma', 'nhom', 'phan_loai', 'ten', 'dvt', 'don_gia', 'ghi_chu'),
+    'dm_hotro': ('ma', 'ten', 'dvt', 'don_gia', 'can_cu', 'cach_tinh'),
+    'tham_so': ('ma', 'ten', 'gia_tri', 'dvt', 'can_cu', 'trang_thai'),
+    'bieu_thuong': ('tu', 'muc'),
+    'quy_uoc': ('ten_thuc_te', 'ten_tuong_duong', 'dvt', 'don_gia', 'can_cu'),
+    'van_ban': ('so_hieu', 'co_quan', 'noi_dung', 'trang_thai'),
+}
+KHOA_SUA = {
+    'dm_taisan': 'ma', 'dm_hotro': 'ma', 'tham_so': 'ma',
+    'bieu_thuong': 'tu', 'quy_uoc': 'id', 'van_ban': 'id',
+}
+_COT_GIA = ('don_gia', 'gia_tri', 'muc', 'tu')
+
+
+def dam_bao_ban_sua() -> Path:
+    """Bản bộ đơn giá ghi được trên máy này (%APPDATA% / PABT_THU_MUC_MAY). Bản đóng gói không ghi; chưa có bản máy thì chép ra."""
+    dich = file_cap_nhat()
+    dang = file_dang_dung()
+    if dang.resolve() == dich.resolve() and dich.exists():
+        return dich
+    dich.parent.mkdir(parents=True, exist_ok=True)
+    tam = dich.with_suffix('.chep')
+    shutil.copyfile(dang, tam)
+    os.replace(tam, dich)
+    return dich
+
+
+def _sach_gia(k: str, v) -> str:
+    s = ' '.join(str(v if v is not None else '').split())
+    if k not in _COT_GIA or not s:
+        return s
+    from . import don_gia_rieng as dgr
+    return dgr.chuan_gia(s)
+
+
+def _sach_dong(bang: str, gt: dict, nhom=None) -> dict:
+    if bang not in COT_SUA:
+        raise LoiNhap(f'Không sửa bảng "{bang}" trong bộ đơn giá.')
+    ra = {}
+    for k in COT_SUA[bang]:
+        if k == 'nhom':
+            n = gt.get('nhom', nhom)
+            try:
+                n = int(n)
+            except (TypeError, ValueError):
+                raise LoiNhap('Nhóm danh mục phải là 2 (nhà, công trình) hoặc 3 (cây trồng, vật nuôi).') from None
+            if n not in (2, 3):
+                raise LoiNhap('Nhóm danh mục phải là 2 (nhà, công trình) hoặc 3 (cây trồng, vật nuôi).')
+            ra[k] = n
+            continue
+        ra[k] = _sach_gia(k, gt.get(k, ''))
+    if bang == 'dm_taisan':
+        if not ra['ma']:
+            raise LoiNhap('Chưa có mã mục.')
+        if not ra['ten']:
+            raise LoiNhap('Chưa có tên mục.')
+        if not ra['dvt']:
+            raise LoiNhap('Chưa có đơn vị tính.')
+        if not ra['don_gia']:
+            raise LoiNhap('Chưa có đơn giá.')
+        ra['ma'] = ra['ma'].upper() if ra['ma'][:2].upper() in ('TS', 'CT', 'VN', 'HT', 'CS', 'TH') else ra['ma']
+    elif bang == 'dm_hotro':
+        if not ra['ma'] or not ra['ten']:
+            raise LoiNhap('Chưa có mã / tên khoản hỗ trợ.')
+    elif bang == 'tham_so':
+        if not ra['ma'] or not ra['ten']:
+            raise LoiNhap('Chưa có mã / tên tham số.')
+    elif bang == 'bieu_thuong':
+        if not ra['tu'] or not ra['muc']:
+            raise LoiNhap('Chưa có mốc tổng bồi thường / mức thưởng.')
+    elif bang == 'quy_uoc':
+        if not ra['ten_thuc_te'] or not ra['dvt'] or not ra['don_gia']:
+            raise LoiNhap('Quy ước tương đương cần tên thực tế, ĐVT và đơn giá.')
+    elif bang == 'van_ban':
+        if not ra['so_hieu']:
+            raise LoiNhap('Chưa có số hiệu văn bản.')
+    return ra
+
+
+def _mo_sua():
+    """Mở bản máy, khóa danh mục. Gọi: `with _mo_sua() as con:`."""
+    from contextlib import contextmanager
+
+    @contextmanager
+    def _trong():
+        p = dam_bao_ban_sua()
+        con = csdl.mo(p)
+        try:
+            with con, csdl.mo_khoa_danh_muc(con):
+                yield con
+        finally:
+            con.close()
+
+    return _trong()
+
+
+def doc_dong(bang: str, khoa, p=None) -> dict | None:
+    """Một dòng bộ đơn giá (hoặc None)."""
+    if bang not in KHOA_SUA:
+        raise LoiNhap(f'Không đọc bảng "{bang}".')
+    con = csdl.mo(p or file_dang_dung(), chi_doc=True)
+    try:
+        r = con.execute(f'SELECT * FROM {bang} WHERE {KHOA_SUA[bang]} = ?', (khoa,)).fetchone()
+        return dict(r) if r is not None else None
+    finally:
+        con.close()
+
+
+def them_dong(bang: str, gt: dict, nhom=None) -> dict:
+    """Thêm một mục vào bộ đơn giá đang dùng (ghi bản máy). Trả dòng đã ghi."""
+    d = _sach_dong(bang, gt, nhom)
+    ck = KHOA_SUA[bang]
+    with _mo_sua() as con:
+        if ck != 'id' and con.execute(f'SELECT 1 FROM {bang} WHERE {ck} = ?', (d[ck],)).fetchone():
+            raise LoiNhap(f'Đã có mục {ck} = "{d[ck]}" trong bộ đơn giá.')
+        cot = list(d)
+        con.execute(f'INSERT INTO {bang} ({", ".join(cot)}) VALUES ({", ".join("?" * len(cot))})',
+                    [d[c] for c in cot])
+        if ck == 'id':
+            d['id'] = con.execute('SELECT last_insert_rowid()').fetchone()[0]
+        csdl.ghi_nhat_ky(con, 'Sửa bộ đơn giá: thêm mục', f'{bang} {d.get(ck, d.get("ten") or d.get("ten_thuc_te") or "")}')
+    return d
+
+
+def sua_dong(bang: str, khoa, gt: dict, nhom=None) -> dict:
+    """Sửa mục đang có (khóa không đổi, trừ quy_uoc/van_ban không có mã)."""
+    d = _sach_dong(bang, gt, nhom)
+    ck = KHOA_SUA[bang]
+    with _mo_sua() as con:
+        if con.execute(f'SELECT 1 FROM {bang} WHERE {ck} = ?', (khoa,)).fetchone() is None:
+            raise LoiNhap(f'Không thấy mục {ck} = "{khoa}" để sửa.')
+        if ck != 'id' and ck in d and str(d[ck]) != str(khoa):
+            raise LoiNhap(f'Đổi mã / khóa thì dùng "Thay thế" (không sửa tại chỗ thành mã khác).')
+        cot = [c for c in d if c != ck]
+        con.execute(f'UPDATE {bang} SET {", ".join(c + " = ?" for c in cot)} WHERE {ck} = ?',
+                    [d[c] for c in cot] + [khoa])
+        d[ck] = khoa
+        csdl.ghi_nhat_ky(con, 'Sửa bộ đơn giá: sửa mục', f'{bang} {khoa}')
+    return d
+
+
+def xoa_dong(bang: str, khoa) -> dict:
+    """Xóa một mục khỏi bộ đơn giá đang dùng."""
+    if bang not in KHOA_SUA:
+        raise LoiNhap(f'Không xóa bảng "{bang}".')
+    ck = KHOA_SUA[bang]
+    with _mo_sua() as con:
+        r = con.execute(f'SELECT * FROM {bang} WHERE {ck} = ?', (khoa,)).fetchone()
+        if r is None:
+            raise LoiNhap(f'Không thấy mục {ck} = "{khoa}" để xóa.')
+        con.execute(f'DELETE FROM {bang} WHERE {ck} = ?', (khoa,))
+        csdl.ghi_nhat_ky(con, 'Sửa bộ đơn giá: xóa mục', f'{bang} {khoa}')
+        return dict(r)
+
+
+def thay_the_dong(bang: str, khoa, gt: dict, nhom=None) -> dict:
+    """Thay một mục bằng nội dung mới (được đổi mã). Mục cũ bị xóa."""
+    d = _sach_dong(bang, gt, nhom)
+    ck = KHOA_SUA[bang]
+    with _mo_sua() as con:
+        if con.execute(f'SELECT 1 FROM {bang} WHERE {ck} = ?', (khoa,)).fetchone() is None:
+            raise LoiNhap(f'Không thấy mục {ck} = "{khoa}" để thay thế.')
+        moi_khoa = d.get(ck, khoa)
+        if ck != 'id' and str(moi_khoa) != str(khoa):
+            if con.execute(f'SELECT 1 FROM {bang} WHERE {ck} = ?', (moi_khoa,)).fetchone():
+                raise LoiNhap(f'Đã có mục {ck} = "{moi_khoa}", không thay được.')
+        con.execute(f'DELETE FROM {bang} WHERE {ck} = ?', (khoa,))
+        cot = list(d)
+        if ck == 'id':
+            d['id'] = khoa
+            if 'id' not in cot:
+                cot = ['id'] + cot
+        con.execute(f'INSERT INTO {bang} ({", ".join(cot)}) VALUES ({", ".join("?" * len(cot))})',
+                    [d[c] for c in cot])
+        if ck == 'id':
+            d['id'] = khoa
+        csdl.ghi_nhat_ky(con, 'Sửa bộ đơn giá: thay thế mục', f'{bang} {khoa} → {d.get(ck, "")}')
+    return d

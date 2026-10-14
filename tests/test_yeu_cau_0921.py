@@ -10,7 +10,6 @@ from pathlib import Path
 from pabt import csdl, gia_dat_nq28, in_an, lap_pa, nghiep_vu, nhap_chi_tiet, phan_loai_tai_san
 from pabt.lap_pa import BoSoan
 from pabt.nghiep_vu import MUC_VN
-from pabt.tien import D
 from tests.test_toc_do import _du_an
 
 
@@ -31,13 +30,13 @@ class TestVatNuoi(_CoDuAn):
         bo = BoSoan(self.con, self.ma[0])
         self.assertTrue(bo.dm.muc[MUC_VN])
         self.assertFalse([m for m in bo.dm.muc[3] if nghiep_vu.la_vat_nuoi(m.phan_loai)])
-        m = bo.dm.lay('VN05')
+        m = bo.dm.lay('VN5')
         i, _ = bo.them_tu_danh_muc(MUC_VN, m)
         bo.sua_khoan(MUC_VN, i, 'so_luong', '2')
         bo.them_hang_muc_khac(4, 'Hỗ trợ khác')
         bo.sua_khoan(4, len(bo.ds(4)) - 1, 'don_gia', '1000000')
         bo.luu()
-        self.assertEqual(self.con.execute('SELECT muc FROM ct_khoan WHERE ma = ?', ('VN05',)).fetchone()[0], MUC_VN)
+        self.assertEqual(self.con.execute('SELECT muc FROM ct_khoan WHERE ma = ?', ('VN5',)).fetchone()[0], MUC_VN)
         kq = nghiep_vu.tinh_ho(self.con, self.ma[0])
         self.assertEqual([d.stt for d in kq.dong if d.muc == MUC_VN], ['4.1'])
         self.assertEqual([d.stt for d in kq.dong if d.muc == 4], ['5.1'])
@@ -51,9 +50,9 @@ class TestVatNuoi(_CoDuAn):
         self.assertIn('Thưởng', tieu_de[5][1])
 
     def test_nang_cap_v11_chuyen_vat_nuoi(self):
-        self.con.execute("INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia) VALUES (3, ?, 9, 'VN05', 'x', "
+        self.con.execute("INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia) VALUES (3, ?, 9, 'VN5', 'x', "
                          "'con', '1', '1')", (self.ma[0],))
-        self.con.execute("UPDATE ct_khoan SET muc = 3 WHERE ma = 'VN05'")
+        self.con.execute("UPDATE ct_khoan SET muc = 3 WHERE ma = 'VN5'")
         self.con.commit()
         self.con.close()
         c = sqlite3.connect(str(self.p))                       # dựng lại file v11: bảng ct_khoan cũ (CHECK muc IN (2, 3, 4))
@@ -67,8 +66,8 @@ class TestVatNuoi(_CoDuAn):
         c.close()
         self.con = csdl.mo(self.p)
         self.assertEqual(self.con.execute('PRAGMA user_version').fetchone()[0], csdl.PHIEN_BAN_CSDL)
-        self.assertEqual(self.con.execute("SELECT muc FROM ct_khoan WHERE ma = 'VN05'").fetchone()[0], MUC_VN)
-        self.con.execute("INSERT INTO ct_khoan (muc, ma_ho, ma, ten) VALUES (7, ?, 'VN01', 'y')", (self.ma[0],))   # CHECK mới
+        self.assertEqual(self.con.execute("SELECT muc FROM ct_khoan WHERE ma = 'VN5'").fetchone()[0], MUC_VN)
+        self.con.execute("INSERT INTO ct_khoan (muc, ma_ho, ma, ten) VALUES (7, ?, 'VN1', 'y')", (self.ma[0],))   # CHECK mới
         with self.assertRaises(sqlite3.IntegrityError):
             self.con.execute("INSERT INTO ct_khoan (muc, ma_ho, ma, ten) VALUES (5, ?, '', 'z')", (self.ma[0],))
 
@@ -139,7 +138,7 @@ class TestCuaSoLapPA(_CoDuAn):
             ten = [w.tab.tabText(i).rsplit(' (', 1)[0] for i in range(w.tab.count())]
             self.assertEqual(ten[1:], ['1. Đất', '2. Nhà, công trình', '3. Cây trồng', '4. Vật nuôi', '5. Hỗ trợ'])
             self.assertEqual((the_cua(MUC_VN), the_cua(4)), (4, 5))
-            w.them_nhanh(MUC_VN, w.bo.dm.lay('VN05'), so_luong='3')
+            w.them_nhanh(MUC_VN, w.bo.dm.lay('VN5'), so_luong='3')
             self.assertEqual(w.tab.currentIndex(), 4)
             self.assertEqual(len(w.bo.ds(MUC_VN)), 1)
             self.assertIn('4. ', w.lb_tong.text())

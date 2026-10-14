@@ -240,11 +240,12 @@ def _doc_ba_so(n: int, day_du: bool) -> str:
     return ' '.join(t)
 
 
-def tien_bang_chu(x) -> str:
-    """Số tiền (làm tròn đến đồng) bằng chữ: 1.480.500 -> 'Một triệu bốn trăm tám mươi nghìn năm trăm đồng'."""
+def tien_bang_chu(x, cham: bool = False) -> str:
+    """Số tiền (làm tròn đến đồng) bằng chữ: 1.480.500 -> 'Một triệu bốn trăm tám mươi nghìn năm trăm đồng'.
+    cham=True: kết thúc dấu chấm như văn bản hành chính ("… đồng.") - nơi gọi cũ tự thêm dấu chấm nên mặc định không có."""
     n = int(lam_tron(x, 0))
     if n == 0:
-        return 'Không đồng'
+        return 'Không đồng' + ('.' if cham else '')
     am, n = n < 0, abs(n)
     nhom = []
     while n:
@@ -265,5 +266,5 @@ def tien_bang_chu(x) -> str:
         if dv:
             t.append(dv)
     s = ' '.join(x for x in t if x)
-    s = ('âm ' if am else '') + s + ' đồng'
+    s = ('âm ' if am else '') + s + ' đồng' + ('.' if cham else '')
     return s[0].upper() + s[1:]

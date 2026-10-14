@@ -1,6 +1,7 @@
 """Hộp "Dán danh sách tài sản": dán / gõ nhiều dòng tài sản thô (Tên, ĐVT, Số lượng, Tỷ lệ, Ghi chú) -> phần mềm tự xếp mỗi dòng
 vào Nhà, công trình / Cây trồng / Vật nuôi / Chính sách hỗ trợ (phan_loai_tai_san) và tìm mục đơn giá khớp; người dùng sửa
-loại nếu cần rồi thêm vào phương án của hộ đang mở (CuaSoLapPA)."""
+loại nếu cần rồi thêm vào phương án của hộ đang mở (CuaSoLapPA) hoặc bảng Dự toán & khái toán (KhungDuToan) - 0.9.67: cùng
+một hộp, ghi qua "đích" của nhap_tai_san (DichPhuongAn / DichDuToan); màn hình chủ vẽ lại ở `sau_khi_dan_tai_san(n, muc)`."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
@@ -8,15 +9,14 @@ from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox, QPlainTextEdit,
                                QPushButton, QSplitter, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
-from . import lap_pa
 from .lap_pa import LoiNhap
 from .phan_loai_tai_san import LOAI, BoPhanLoai, doc_danh_sach
 from .thong_bao import TEN_UD
 
 VANG = QColor('#FFF2CC')
 COT = ['Thêm', 'Tên tài sản', 'ĐVT', 'Số lượng', 'Tỷ lệ', 'Xếp vào', 'Mục đơn giá khớp', 'Độ tin', 'Căn cứ xếp loại']
-VI_DU = ('Nhà cấp 4 mái tôn\tm2\t45\nHàng rào lưới B40\tm2\t30\nMít 6 năm\tcây\t3\t80%\nAo nuôi cá ghép\tha/vụ\t0,03\t70%\n'
-         'Gà ta\tcon\t40\nDi dời đồng hồ điện\tbộ\t1')
+VI_DU = ('Nhà tạm m2 4*5\nNhà cấp 4 mái tôn m2 45\nHàng rào lưới B40 m2 30\nMít 6 năm cây 3 80%\nAo nuôi cá ghép ha/vụ 0,03 70%\n'
+         'Gà ta con 40\nDi dời đồng hồ điện bộ 1')
 
 
 def _bo_phan_loai(dm) -> BoPhanLoai:
@@ -30,16 +30,22 @@ def _bo_phan_loai(dm) -> BoPhanLoai:
 class HopDanTaiSan(QDialog):
     im_lang = False
 
-    def __init__(self, cua_so, chu: str = ''):
-        """cua_so: CuaSoLapPA (cần .bo = BoSoan, .bang, .cap_nhat, .thong_bao)."""
+    def __init__(self, cua_so, chu: str = '', dich=None):
+        """cua_so: màn hình chủ có `sau_khi_dan_tai_san(n, muc_cuoi)` (CuaSoLapPA, KhungDuToan); dich: đích ghi của
+        nhap_tai_san (mặc định DichPhuongAn(cua_so.bo))."""
         super().__init__(cua_so)
         self.cua_so = cua_so
+        if dich is None:
+            from .nhap_tai_san import DichPhuongAn
+            dich = DichPhuongAn(cua_so.bo)
+        self.dich = dich
         self.ds = []                                    # [(dict dòng thô, KetQua)]
         self.setWindowTitle('Dán danh sách tài sản - tự xếp vào Nhà, công trình / Cây trồng / Vật nuôi / Hỗ trợ')
         self.resize(1250, 680)
-        hd = QLabel('Dán từ Excel (chép các cột <b>Tên, ĐVT, Số lượng, Tỷ lệ, Ghi chú</b>) hoặc gõ mỗi dòng một tài sản, cột cách nhau '
-                    'bằng Tab, dấu <b>;</b> hoặc <b>|</b> (chỉ cần tên; gõ "Mít 6 năm 3 cây" cũng được). Bấm <b>Phân loại</b>: phần '
-                    'mềm so với bộ đơn giá, rồi theo từ khóa và đơn vị tính; dòng nền vàng nên xem lại loại.')
+        hd = QLabel('Mỗi dòng một tài sản: <b>Tên tài sản, công trình</b> ␣ <b>Đơn vị tính</b> ␣ <b>Số lượng</b> (cách nhau dấu cách; '
+                    'thêm ␣ <b>Tỷ lệ %</b> nếu có). Số lượng gõ số hoặc phép tính: <b>Nhà tạm m2 4*5</b> = 20 m² (nhân bằng * hoặc x). '
+                    'Dán thẳng từ Excel (cột Tên, ĐVT, Số lượng, Tỷ lệ, Ghi chú) cũng được. Bấm <b>Phân loại</b>: phần mềm tự xếp '
+                    'vào Nhà / Cây / Vật nuôi / Hỗ trợ theo bộ đơn giá; dòng nền vàng nên xem lại loại.')
         hd.setWordWrap(True)
         self.o_chu = QPlainTextEdit(chu)
         self.o_chu.setPlaceholderText(VI_DU)
@@ -92,7 +98,7 @@ class HopDanTaiSan(QDialog):
         if not dong:
             self.bao('Chưa có dòng tài sản nào: dán hoặc gõ danh sách vào ô phía trên.', loi=False)
             return []
-        bo = _bo_phan_loai(self.cua_so.bo.dm)
+        bo = _bo_phan_loai(self.dich.dm)
         self.ds = [(d, bo.phan_loai(d['ten'], d['dvt'])) for d in dong]
         b = self.bang
         b.setUpdatesEnabled(False)
@@ -104,6 +110,8 @@ class HopDanTaiSan(QDialog):
             b.setItem(r, 0, o)
             for c, v in ((1, d['ten']), (2, k.dvt or d['dvt']), (3, d['so_luong']), (4, d['ty_le'])):
                 b.setItem(r, c, QTableWidgetItem(v))
+            if d.get('cong_thuc'):                       # "4*5" đã tính thành 20: giữ phép tính gốc ở chú thích
+                b.item(r, 3).setToolTip(f'= {d["cong_thuc"]}')
             cb = QComboBox()
             for ma, (_, ten) in LOAI.items():
                 cb.addItem(ten, ma)
@@ -141,7 +149,7 @@ class HopDanTaiSan(QDialog):
 
     # ---------------------------------------------- thêm vào phương án
     def them(self) -> int:
-        bo = self.cua_so.bo
+        from .nhap_tai_san import them_dong_tho
         n, loi, muc_cuoi = 0, [], None
         for r, (d, k) in enumerate(self.ds):
             if self.bang.item(r, 0).checkState() != Qt.CheckState.Checked:
@@ -150,32 +158,14 @@ class HopDanTaiSan(QDialog):
             sl, tl = self.bang.item(r, 3).text().strip(), self.bang.item(r, 4).text().strip()
             muc = LOAI[k.loai][0]
             try:
-                if k.khop is not None:
-                    i, _ = bo.them_tu_danh_muc(muc, k.khop)
-                else:
-                    i = bo.them_hang_muc_khac(muc, ten)
-                    if dvt:
-                        bo.sua_khoan(muc, i, 'dvt', dvt)
-                if sl:
-                    bo.sua_khoan(muc, i, 'so_luong', sl)
-                if tl:
-                    so = lap_pa.doc_so(tl.rstrip('%'), 'Tỷ lệ')
-                    bo.pa.khoan[muc][i].ty_le = so if so <= 5 and not tl.endswith('%') else lap_pa.doc_ty_le(tl)
-                if d.get('ghi_chu'):
-                    bo.pa.khoan[muc][i].ghi_chu = d['ghi_chu']
+                them_dong_tho(self.dich, muc, k.khop, ten, dvt, sl, tl, d.get('ghi_chu') or '')
                 n += 1
                 muc_cuoi = muc
                 self.bang.item(r, 0).setCheckState(Qt.CheckState.Unchecked)       # đã thêm: bấm lại không thêm trùng
             except LoiNhap as e:
                 loi.append(f'Dòng {r + 1} "{ten[:40]}": {e}')
         if muc_cuoi is not None:
-            from .man_hinh import the_cua
-            from .nghiep_vu import MUC_KHOAN
-            for m in MUC_KHOAN:
-                self.cua_so.bang[m].ve()
-            self.cua_so.tab.setCurrentIndex(the_cua(muc_cuoi))
-            self.cua_so.cap_nhat()
-            self.cua_so.thong_bao(f'Đã thêm {n} dòng từ danh sách tài sản (chưa lưu: bấm Lưu).')
+            self.cua_so.sau_khi_dan_tai_san(n, muc_cuoi)
         if loi:
             self.bao(f'Đã thêm {n} dòng; {len(loi)} dòng chưa thêm được:\n' + '\n'.join(loi[:15]))
         elif n and not self.im_lang:

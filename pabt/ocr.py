@@ -96,45 +96,27 @@ def san_sang() -> str:
 
 
 # ---------------------------------------------------------------- ảnh từng trang
-def _anh_trang_pdf(file: Path, td: Path) -> list:
-    """Ảnh PNG từng trang PDF: Qt6 vẽ bằng QtPdf; Qt5 (bản Win 7/8) lấy ảnh scan lớn nhất của trang bằng pypdf."""
-    try:
-        from PySide6.QtPdf import QPdfDocument
-    except ImportError:
-        QPdfDocument = None
-    ds = []
-    if QPdfDocument is not None:
-        from PySide6.QtCore import QCoreApplication, QSize
-        app = QCoreApplication.instance() or QCoreApplication([])  # noqa: F841
-        d = QPdfDocument()
-        d.load(str(file))
-        for i in range(d.pageCount()):
-            kt = d.pagePointSize(i)
-            anh = d.render(i, QSize(int(kt.width() * DPI / 72), int(kt.height() * DPI / 72)))
-            p = td / f'trang_{i + 1:03d}.png'
-            if anh.isNull() or not anh.save(str(p)):
-                raise LoiOCR(f'Không dựng được ảnh trang {i + 1} của PDF.')
-            ds.append(p)
-        if ds:
-            return ds
+def _anh_trang_pypdf(file: Path, td: Path):
+    """Qt5 (bản Win 7/8, không có QtPdf): ảnh scan lớn nhất của TỪNG trang bằng pypdf - yield (số trang, tổng, ảnh | None) ngay khi
+    lấy xong một trang (không dựng hết file trước khi đọc / báo tiến độ)."""
     try:
         from pypdf import PdfReader
     except ImportError as e:
         raise LoiOCR('Máy này thiếu bộ đọc PDF.') from e
-    for i, trang in enumerate(PdfReader(str(file)).pages):
-        p = _anh_jpeg(trang, td / f'trang_{i + 1:03d}')
+    trang_ds = PdfReader(str(file)).pages
+    tong = len(trang_ds)
+    for i, trang in enumerate(trang_ds):
+        p = _anh_jpeg(trang, td / f'trang_{i + 1:04d}')
         if p is None:
             try:                                        # ảnh nén kiểu khác: pypdf cần thư viện Pillow
                 anh = sorted(trang.images, key=lambda a: len(a.data), reverse=True)
             except ImportError as e:
                 raise LoiOCR('PDF scan có ảnh không phải JPEG: máy này (Windows 7/8) chưa đọc được, chuyển file sang ảnh '
                              'JPG rồi chọn lại.') from e
-            if not anh:
-                continue
-            p = td / f'trang_{i + 1:03d}{Path(anh[0].name).suffix or ".png"}'
-            p.write_bytes(anh[0].data)
-        ds.append(p)
-    return ds
+            if anh:
+                p = td / f'trang_{i + 1:04d}{Path(anh[0].name).suffix or ".png"}'
+                p.write_bytes(anh[0].data)
+        yield i + 1, tong, p
 
 
 def _anh_jpeg(trang, goc: Path) -> Path | None:
@@ -161,7 +143,7 @@ def _anh_jpeg(trang, goc: Path) -> Path | None:
     return p
 
 
-def _chuan_bi(anh: Path) -> Path:
+def _chuan_bi(anh: Path, td: Path | None = None) -> Path:
     """Ảnh scan độ phân giải thấp (máy scan để 150 dpi): phóng lên ~300 dpi, chuyển ảnh xám - Tesseract đọc chính xác hơn
     hẳn. Trả file PNG đã xử lý (hoặc ảnh gốc khi không xử lý được)."""
     try:
@@ -172,13 +154,13 @@ def _chuan_bi(anh: Path) -> Path:
     im = QImage(str(anh))
     if im.isNull():
         return anh
+    im = im.convertToFormat(QImage.Format.Format_Grayscale8)     # xám TRƯỚC khi phóng: 1 byte / điểm ảnh thay 4 (nhanh ~3 lần)
     canh = min(im.width(), im.height())
     if canh < 2000:                                     # cạnh ngắn A4 ở 300 dpi ~ 2480 px
         he_so = 2480 / canh
         im = im.scaled(int(im.width() * he_so), int(im.height() * he_so), Qt.AspectRatioMode.KeepAspectRatio,
                        Qt.TransformationMode.SmoothTransformation)
-    im = im.convertToFormat(QImage.Format.Format_Grayscale8)
-    ra = anh.with_name(anh.stem + '_xl.png')
+    ra = (td or anh.parent) / (anh.stem + '_xl.png')         # td: thư mục tạm - không ghi cạnh ảnh của người dùng
     return ra if im.save(str(ra)) else anh
 
 
@@ -190,16 +172,17 @@ def _xoay(anh: Path, do: int) -> None:
 
 
 # ---------------------------------------------------------------- nhận dạng
-def doc_anh(anh: Path, tess: Path | None = None, cho=None) -> str:
+def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = None) -> str:
     """Chữ trên một ảnh trang; trang nằm ngang (bảng danh sách đính kèm) tự xoay lại trước khi đọc."""
     tess = tess or tim_tesseract()
     if tess is None:
         raise LoiOCR(san_sang())
-    anh = _chuan_bi(Path(anh))
+    goc = Path(anh)
+    anh = _chuan_bi(goc, td)
     try:
         r = _chay([str(tess), str(anh), '-', '--psm', '0'], cho, 60)
         m = re.search(rb'Rotate:\s*(\d+)', r.stdout)
-        if m and int(m.group(1)) in (90, 180, 270):
+        if m and int(m.group(1)) in (90, 180, 270) and anh != goc:    # chỉ xoay bản đã xử lý, không ghi đè ảnh gốc
             _xoay(anh, int(m.group(1)))
     except LoiOCR:
         raise
@@ -211,24 +194,79 @@ def doc_anh(anh: Path, tess: Path | None = None, cho=None) -> str:
     return r.stdout.decode('utf-8', 'replace')
 
 
-def doc_chu(file, bao_tien_do=None, cho=None) -> list:
-    """Các dòng chữ của bản scan (PDF ảnh hoặc file ảnh). bao_tien_do(trang, tổng số trang); cho() trả True để hủy."""
+def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
+    """Đọc từng trang rồi xóa ảnh trang (không dựng hết file trước — file lớn không chiếm bộ nhớ). Yield chữ từng trang."""
     loi = san_sang()
     if loi:
         raise LoiOCR(loi)
     tess = tim_tesseract()
     file = Path(file)
-    with tempfile.TemporaryDirectory(prefix='PABT_ocr_') as td:
+    td = Path(tempfile.mkdtemp(prefix='PABT_ocr_'))
+    try:
         if file.suffix.lower() in DUOI_ANH:
-            anh = [Path(td) / f'trang_001{file.suffix.lower()}']
-            shutil.copy2(file, anh[0])
-        else:
-            anh = _anh_trang_pdf(file, Path(td))
-        if not anh:
-            raise LoiOCR('Không lấy được ảnh trang nào trong file.')
-        dong = []
-        for i, a in enumerate(anh, start=1):
             if bao_tien_do:
-                bao_tien_do(i, len(anh))
-            dong += [x.strip() for x in doc_anh(a, tess, cho).splitlines() if x.strip()]
+                bao_tien_do(1, 1)
+            if cho and cho():
+                raise DaHuy()
+            yield doc_anh(file, tess, cho, td)
+            return
+        try:
+            from PySide6.QtPdf import QPdfDocument
+        except ImportError:
+            QPdfDocument = None
+        if QPdfDocument is not None:
+            from PySide6.QtCore import QSize
+            d = QPdfDocument()
+            try:
+                d.load(str(file))
+                tong = d.pageCount()
+                if tong <= 0:
+                    raise LoiOCR('Không mở được PDF hoặc file không có trang.')
+                for i in range(tong):
+                    if cho and cho():
+                        raise DaHuy()
+                    if bao_tien_do:
+                        bao_tien_do(i + 1, tong)
+                    kt = d.pagePointSize(i)
+                    # Một trang một ảnh, xóa ngay sau khi đọc: file vài nghìn trang không giữ hết ảnh trong RAM.
+                    anh = d.render(i, QSize(max(1, int(kt.width() * dpi / 72)), max(1, int(kt.height() * dpi / 72))))
+                    p = td / f'trang_{i + 1:04d}.png'
+                    if anh.isNull() or not anh.save(str(p)):
+                        continue
+                    try:
+                        yield doc_anh(p, tess, cho)
+                    finally:
+                        try:
+                            p.unlink()
+                        except OSError:
+                            pass
+            finally:
+                d.close()
+            return
+        for i, tong, p in _anh_trang_pypdf(file, td):
+            if cho and cho():
+                raise DaHuy()
+            if bao_tien_do:
+                bao_tien_do(i, tong)
+            if p is None:
+                continue
+            try:
+                yield doc_anh(p, tess, cho)
+            finally:
+                try:
+                    p.unlink()
+                except OSError:
+                    pass
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+
+
+def doc_chu(file, bao_tien_do=None, cho=None) -> list:
+    """Các dòng chữ của bản scan (PDF ảnh hoặc file ảnh). bao_tien_do(trang, tổng số trang); cho() trả True để hủy."""
+    loi = san_sang()
+    if loi:
+        raise LoiOCR(loi)
+    dong = []
+    for chu in tung_trang(file, bao_tien_do, cho):
+        dong += [x.strip() for x in chu.splitlines() if x.strip()]
     return dong

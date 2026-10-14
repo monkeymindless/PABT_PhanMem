@@ -11,6 +11,7 @@
       tạo mới với bộ đơn giá tích hợp) rồi đối chiếu tổng tiền với file. Hộ đã có (cùng CCCD / họ tên): mặc định bỏ qua.
   python chay.py doi-chieu <file.pabt>             tính lại và đối chiếu một file dự án đã nhập
   python chay.py tu-kiem <file_ket_qua.txt>         tự kiểm tra bản cài (giao diện, PDF, bộ đơn giá, mẫu in, bảng giá đất)
+  PABT.exe go-cai-dat [-Im]                         gỡ cài đặt (mục "Gỡ" của Windows) - không mở cửa sổ PowerShell
 """
 from __future__ import annotations
 import sys
@@ -214,7 +215,7 @@ def tu_kiem(file_ra=None) -> int:
             con = csdl.mo(td / 'thu.pabt')
             try:
                 ds = [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu')]
-                kq = van_ban_trinh.xuat_bo_ho_so(con, ds, td / 'ho_so', to_trinh=True, pa_tong=True)
+                kq = van_ban_trinh.xuat_bo_ho_so(con, ds, td / 'ho_so', to_trinh=True)
                 if kq['loi']:
                     raise RuntimeError(f'xuất hồ sơ lỗi: {kq["loi"][:2]}')
                 du_toan.xuat_khai_toan(du_toan.tu_du_an(con), td / 'khai_toan.xlsx')
@@ -227,8 +228,69 @@ def tu_kiem(file_ra=None) -> int:
             nh = nhap_tho.nhap(td / 'tho.xlsx', td / 'nhap.pabt', 'Nhập thử')
             so_ho_nhap = getattr(nh, 'so_ho', None)
         return (f'dự án mới {bc["so_ho"]} hộ, {bc["so_ho_co_pa"]} hộ có phương án; {len(kq["excel"])} file Excel + '
-                f'{len(kq["word"])} file Word (chi tiết, bảng tổng hợp, tờ trình, phương án tổng); khái toán; nhập Excel'
+                f'{len(kq["word"])} file Word (chi tiết, bảng tổng hợp, tờ trình); khái toán; nhập Excel'
                 + (f' {so_ho_nhap} hộ' if so_ho_nhap is not None else ''))
+
+    def nhom_5_6():
+        # Nhóm 5 - 6 (Mục IV QĐ 18/2026): cơ cấu kinh phí, mốc thời hạn, sổ nhật ký vận động + cưỡng chế, báo cáo tiến độ GPMB, báo cáo
+        # tiếp thu ý kiến (Word) - dữ liệu GIẢ LẬP; bản đóng gói thiếu module nào của nhóm này thì báo ở đây
+        from datetime import date, timedelta
+        from PySide6.QtWidgets import QApplication
+        QApplication.instance() or QApplication([])
+        from pabt import bao_cao_gpmb, bao_cao_y_kien, du_an_moi, kinh_phi_du_an, theo_doi, thoi_han, van_dong
+        import pabt.man_hinh_bao_cao                                # noqa: F401 - trang Báo cáo tiến độ GPMB có trong bản đóng gói
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            dong = [dict(ho_ten=f'Trần Văn Thử {i}', dia_chi='Ấp 1', so_to='10', so_thua=str(100 + i), loai_dat=l,
+                         dt_thu_hoi='120', vi_tri='1') for i, l in enumerate(('ONT', 'CLN', 'LUC'))]
+            gia = [dict(loai_dat=l, vi_tri='1', gia=g) for l, g in (('ONT', '3000000'), ('CLN', '250000'), ('LUC', '200000'))]
+            du_an_moi.tao_du_an(td / 'n56.pabt', dict(ten='Dự án thử', cap_dia_ban='Xã', ten_dia_ban='Thử', nam='2026'), dong, gia)
+            con = csdl.mo(td / 'n56.pabt')
+            try:
+                ds = [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu')]
+                q = theo_doi.luu_qd(con, None, '1/QĐ-UBND', '01/09/2026', 'Phê duyệt thử')
+                theo_doi.them_ho_theo_pa(con, q, ds)
+                nay = date.today()
+                thoi_han.dat_ngay_thong_bao(con, (nay - timedelta(days=130)).strftime('%d/%m/%Y'))
+                van_dong.ghi_buoi(con, ds[0], 'tien', (nay - timedelta(days=15)).strftime('%d/%m/%Y'), 'Họp tổ', 'Tổ vận động')
+                cc = kinh_phi_du_an.co_cau(con)
+                tq = bao_cao_gpmb.tong_quan(con)
+                ds_cc = van_dong.ds_cuong_che(con)
+                assert cc['tong'] > 0 and len(cc['dong']) == 8, cc['dong']
+                assert tq['so_ho_phe_duyet'] == 3 and tq['so_ho_cuong_che'] == 1 and len(ds_cc) == 1, (tq['so_ho_cuong_che'], ds_cc)
+                assert all(m['du'] for m in thoi_han.moc_thu_hoi_tat_ca(con).values()), 'mốc thu hồi 130 ngày phải đủ'
+                van_dong.xuat_ds_cuong_che(con, td / 'cuong_che.xlsx')
+                bao_cao_gpmb.xuat_excel(con, td / 'bao_cao.xlsx')
+                bao_cao_y_kien.ghi_docx(con, ds, td / 'tiep_thu.docx')
+            finally:
+                con.close()
+        return 'cơ cấu kinh phí, mốc thời hạn, 1 hộ đủ điều kiện cưỡng chế, báo cáo tiến độ, báo cáo tiếp thu ý kiến'
+
+    def ho_so_dia_phuong():
+        from pabt import dia_phuong, goi_mau
+        hs = dia_phuong.doc(lam_moi=True)                   # file đóng kèm hỏng -> LoiHoSo
+        with tempfile.TemporaryDirectory() as td:
+            ds = goi_mau.tao_goi(Path(td) / 'thu.pabtcfg', mo_ta='tu-kiem')
+            goi_mau.doc_goi(ds['file'])                     # đọc lại + kiểm tra (không cài)
+        loi = dia_phuong.loi()
+        return f'{hs["ten_ho_so"]}' + (f' - FILE MÁY SAI, dùng mặc định: {loi[0][:120]}' if loi else '') + \
+            f'; gói mẫu {len(ds["tep"])} file'
+
+    def ban_ve_cad():
+        import ezdxf
+        from pabt import ban_do_cad
+        with tempfile.TemporaryDirectory() as td:
+            doc = ezdxf.new()
+            msp = doc.modelspace()
+            msp.add_lwpolyline([(0, 0), (20, 0), (20, 10), (0, 10)], close=True, dxfattribs={'layer': 'RANH THUA'})
+            msp.add_text('7', dxfattribs={'layer': 'NHAN', 'insert': (5, 5)})
+            msp.add_lwpolyline([(10, -5), (30, -5), (30, 20), (10, 20)], close=True, dxfattribs={'layer': 'RANH THU HOI'})
+            f = Path(td) / 'To_3.dxf'
+            doc.saveas(f)
+            kq = ban_do_cad.phan_tich(f, 'RANH THUA', 'RANH THU HOI')
+        t = kq.thua[0]
+        assert (t.so_to, t.so_thua, float(t.dt_hinh), float(t.dt_trong_ranh)) == ('3', '7', 200.0, 100.0), (t.so_to, t.so_thua, t.dt_hinh)
+        return f'ezdxf {ezdxf.__version__}: thửa 7 tờ 3, DT 200 m², trong ranh 100 m²'
 
     def huong_dan():
         from pabt import app as ud
@@ -238,9 +300,10 @@ def tu_kiem(file_ra=None) -> int:
         return f'{f.name}, {f.stat().st_size // 1024} KB'
 
     for ten, ham in (('Phiên bản', phien_ban), ('Giao diện', giao_dien), ('Đọc PDF', pdf), ('Bộ đơn giá', bo_don_gia), ('Mẫu in', mau_in),
-                     ('Hướng dẫn sử dụng', huong_dan),
+                     ('Hướng dẫn sử dụng', huong_dan), ('Hồ sơ địa phương, gói mẫu in', ho_so_dia_phuong),
+                     ('Bản vẽ CAD (.dxf)', ban_ve_cad),
                      ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('HTTPS', https),
-                     ('Lập và in thử (dữ liệu giả lập)', lap_in_thu)):
+                     ('Lập và in thử (dữ liệu giả lập)', lap_in_thu), ('Nhóm 5 - 6: kinh phí, vận động, báo cáo tiến độ', nhom_5_6)):
         buoc(ten, ham)
     loi = sum(1 for x in kq if x.startswith('LOI'))
     kq.append(f'KET QUA: {"DAT" if not loi else f"{loi} LOI"}')
@@ -252,11 +315,33 @@ def tu_kiem(file_ra=None) -> int:
     return 1 if loi else 0
 
 
+def go_cai_dat(im: bool = False) -> int:
+    """"Gỡ cài đặt" của Windows (UninstallString = PABT.exe go-cai-dat): chạy go_cai_dat.ps1 cạnh PABT.exe bằng PowerShell
+    KHÔNG có cửa sổ console (CREATE_NO_WINDOW) rồi thoát ngay. Windows chạy thẳng powershell.exe thì Windows 11 (terminal mặc
+    định Windows Terminal) mở một cửa sổ PowerShell trống suốt lúc gỡ: -WindowStyle Hidden không ẩn được (người dùng 11/10/2026).
+    Thoát ngay: go_cai_dat.ps1 xóa cả thư mục chứa PABT.exe."""
+    import os
+    import subprocess
+    goc = Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve().parent
+    ps1 = goc / 'go_cai_dat.ps1'
+    if not ps1.exists():
+        return 1
+    ps = Path(os.environ.get('SystemRoot', r'C:\Windows')) / 'System32' / 'WindowsPowerShell' / 'v1.0' / 'powershell.exe'
+    q = lambda p: str(p).replace("'", "''")                                      # noqa: E731 - chuỗi '…' của PowerShell
+    lenh = f"& ([scriptblock]::Create([IO.File]::ReadAllText('{q(ps1)}', [Text.Encoding]::UTF8))) -Dich '{q(goc)}'"
+    subprocess.Popen([str(ps) if ps.exists() else 'powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA',
+                      '-WindowStyle', 'Hidden', '-Command', lenh + (' -Im' if im else '')],
+                     cwd=os.environ.get('TEMP') or None, creationflags=subprocess.CREATE_NO_WINDOW, close_fds=True)
+    return 0
+
+
 def main(argv) -> int:
-    if not argv or argv[0].lower().endswith(('.pabt', '.pabtcn')) or argv[0] in ('--menu-trai', '--menu-tren'):   # mở cửa sổ
+    if not argv or argv[0].lower().endswith(('.pabt', '.pabtcn', '.pabtcfg')) or argv[0] in ('--menu-trai', '--menu-tren'):
         from pabt.app import main as mo_cua_so
         return mo_cua_so()
     lenh = argv[0]
+    if lenh == 'go-cai-dat':
+        return go_cai_dat('-Im' in argv[1:])
     if lenh not in TUY_CHON:
         print(__doc__)
         return 2

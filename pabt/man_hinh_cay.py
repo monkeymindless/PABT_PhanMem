@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDialog, QDialogBut
 
 from . import cay_trong as ct
 from . import csdl
+from .giao_dien import loc_khi_ngung_go
 from .lap_pa import LoiNhap, doc_so, doc_ty_le
 from .nghiep_vu import NGUON_DM
 from .tien import D, KHONG, so_vn, vn
@@ -89,7 +90,7 @@ class HopCayChuVi(_Hop):
         lo.addLayout(h)
         lo.addWidget(self.lb)
         lo.addWidget(self._nut('Thêm vào mục 3'))
-        self.o_tim.textChanged.connect(self._loc)
+        loc_khi_ngung_go(self.o_tim, self._loc)
         self.ds_loai.currentTextChanged.connect(lambda *_: self.xem())
         self.o_cv.textChanged.connect(lambda: self.xem())
         self._loc()
@@ -169,6 +170,28 @@ def dt_dat_nn(bo) -> object:
     return sum((D(t['dt_thu_hoi'] or 0) for t in bo.bc.thua_cua(bo.ma_ho)), KHONG)
 
 
+def canh_bao_mat_do(bo, i: int) -> str:
+    """Dòng cây trồng i (mục 3) vượt mật độ quy chuẩn trên diện tích đất nông nghiệp của hộ: câu nhắc dùng "Tính mật độ…";
+    không vượt / chưa có mật độ / dòng đã tách trong - ngoài mật độ: ''. Không đổi số liệu (người dùng quyết định tách)."""
+    try:
+        d = bo.pa.khoan[3][i]
+    except (IndexError, KeyError):
+        return ''
+    if 'mật độ' in (d.quy_cach or '').lower() or not d.so_luong:
+        return ''
+    m = bo.dm.lay(d.ma or d.ma_tuong_duong)
+    q = ct.quy_chuan_mat_do(bo.con, d.ten, m.ten if m else d.ten, m.can_cu if m else '')
+    dt = dt_dat_nn(bo)
+    if q.mat_do is None or dt <= 0:
+        return ''
+    trong, ngoai = ct.tach_mat_do(d.so_luong, dt, q.mat_do)
+    if not ngoai:
+        return ''
+    return (f'Mật độ: {so_vn(d.so_luong)} cây {ct.ten_goc(d.ten)} trên {so_vn(dt)} m² = {so_vn(ct.mat_do_thuc_te(d.so_luong, dt))} '
+            f'cây/ha, vượt mật độ {so_vn(q.mat_do)} cây/ha ({ngoai} cây ngoài mật độ). Bấm "Tính mật độ…" để tách '
+            '(sửa được diện tích trồng).')
+
+
 class HopMatDo(_Hop):
     """Tách số cây của dòng mục 3 đang chọn thành trong mật độ (100%) và ngoài mật độ (theo tỷ lệ quy chuẩn)."""
 
@@ -235,7 +258,9 @@ class HopMatDo(_Hop):
         p = ct.phan_tich_mat_do(so, dt, md)
         do = '#C62828'
         dong = [
-            ('Mật độ quy định', f'{so_vn(md)} cây/ha (= {so_vn(p["m2_moi_cay"])} m²/cây)'),
+            ('Mật độ quy định', f'{so_vn(md)} cây/ha (= {so_vn(p["m2_moi_cay"])} m²/cây)' +
+                                (f' - <i>{self.q.can_cu}</i>' if self.q.nguon == 'gần đúng' else '')),
+            ('Mật độ thực tế', f'{so} cây / {so_vn(dt)} m² = <b>{so_vn(ct.mat_do_thuc_te(so, dt) or 0)} cây/ha</b>'),
             ('Diện tích trồng', f'{so_vn(dt)} m² → trồng tối đa <b>{p["toi_da"]} cây</b> theo mật độ'),
             ('Số cây kiểm đếm', f'{so} cây → cần diện tích <b>{so_vn(p["dt_can"])} m²</b> theo mật độ'),
             ('Đối chiếu', (f'<span style="color:{do}"><b>VƯỢT mật độ {ngoai} cây</b> '
@@ -498,7 +523,7 @@ class HopQuyChuan(_Hop):
         nut = self._nut('Lưu')
         nut.button(QDialogButtonBox.StandardButton.Ok).setEnabled(not chi_doc)
         lo.addWidget(nut)
-        self.o_tim.textChanged.connect(self._loc)
+        loc_khi_ngung_go(self.o_tim, self._loc)
         self._goc = [(self.bang.item(r, 1).text(), self.bang.item(r, 2).text(), self.bang.item(r, 3).text())
                      for r in range(len(self.ds))]
 

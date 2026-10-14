@@ -73,7 +73,7 @@ class TestBoDonGia(CoSo):
                                            '621600000'))
         self.assertEqual(co['VN17'][2:5], ('Chim yến (theo giá thị trường, tối đa)', 'kg yến thô', '18500000'))
         self.assertEqual(len(vb), 1)                            # sửa dòng văn bản cũ, không thêm dòng trùng
-        self.assertIn('VN01 - VN17', vb[0])
+        self.assertIn('VN1 - VN17', vb[0])
         # mục 3 của phương án: chọn được từ danh mục như cây trồng
         con = csdl.tao_moi(self.td / 'vn.pabt')
         try:
@@ -82,7 +82,7 @@ class TestBoDonGia(CoSo):
             # từ 0.9.21 vật nuôi là mục riêng (MUC_VN, in là mục 4): không còn lẫn trong danh sách cây trồng
             self.assertIn('VN15', {m.ma for m in dm.muc[nghiep_vu.MUC_VN]})
             self.assertNotIn('VN15', {m.ma for m in dm.muc[3]})
-            self.assertEqual({f'VN{i:02d}' for i in range(1, 18)}, {m.ma for m in dm.tim(nghiep_vu.MUC_VN, '', 500)})
+            self.assertEqual({f'VN{i}' for i in range(1, 18)}, {m.ma for m in dm.tim(nghiep_vu.MUC_VN, '', 500)})
         finally:
             con.close()
 
@@ -117,7 +117,7 @@ class TestBoDonGia(CoSo):
         con = csdl.tao_moi(goi)
         csdl.chep_danh_muc(con, don_gia.file_goc(), don_vi=False, bang=don_gia.BANG_BO)
         with con, csdl.mo_khoa_danh_muc(con):
-            con.execute("UPDATE dm_hotro SET don_gia = '20000000' WHERE ma = 'HT14'")
+            con.execute("UPDATE dm_hotro SET don_gia = '20000000' WHERE ma = 'CS14'")
             con.execute("UPDATE du_an SET ten = 'Bộ thử', phien_ban_gia = '2099.01.01'")
         con.close()
         tb = dict(phien_ban='2099.01.01', tai_ve=goi.as_uri(), sha256=hashlib.sha256(goi.read_bytes()).hexdigest(),
@@ -133,7 +133,7 @@ class TestBoDonGia(CoSo):
         self.assertIsNone(don_gia.kiem_tra_mang(url.as_uri()))                         # đã mới nhất
         con = csdl.tao_moi(self.td / 'b.pabt')
         don_gia.ap_vao_du_an(con)
-        self.assertEqual(con.execute("SELECT don_gia FROM dm_hotro WHERE ma = 'HT14'").fetchone()[0], '20000000')
+        self.assertEqual(con.execute("SELECT don_gia FROM dm_hotro WHERE ma = 'CS14'").fetchone()[0], '20000000')
         con.close()
         with self.assertRaises(LoiNhap):
             don_gia.kiem_tra_mang('')
@@ -185,7 +185,7 @@ class TestDuAnMoi(CoSo):
             self.assertEqual(dat[(1, 'CLN')], ('400', '200000', '1.2', '1'))
             self.assertEqual(dat[(2, 'LUK')], ('1200', '150000', '1', '2'))          # vị trí áp dụng
             ht = [r[0] for r in con.execute("SELECT ma FROM ct_khoan WHERE ma_ho = 1 AND muc = 4")]
-            self.assertIn('HT09', ht)                                               # đào tạo, chuyển đổi nghề
+            self.assertIn('CS9', ht)                                               # đào tạo, chuyển đổi nghề
             self.assertEqual(con.execute("SELECT nhan_khau FROM ho WHERE ma_ho = 1").fetchone()[0], 5)
             self.assertEqual(lap_pa.doc_du_an(con)['nguoi_ky'], 'Người Ký')
             h = con.execute('SELECT so_cccd, ngay_cap, noi_cap, dien_thoai FROM ho WHERE ma_ho = 1').fetchone()
@@ -265,24 +265,24 @@ class TestManHinhMoi(CoSo):
         d = HopBoDonGia(None, con)
         d.im_lang = True
         # thẻ nhà / cây trồng / VẬT NUÔI riêng (vật nuôi QĐ 31/2025 không lẫn trong 5.500 dòng cây trồng)
-        self.assertEqual(d.the.count(), 8)
+        self.assertEqual(d.the.count(), 7)                              # 0.9.69: bỏ thẻ Quy ước giá tương đương
+        self.assertNotIn('Quy ước', ' '.join(d.the.tabText(i) for i in range(d.the.count())))
         self.assertEqual([d.the.tabText(i).rsplit(' (', 1)[0] for i in range(3)], ['Nhà, công trình', 'Cây trồng', 'Vật nuôi'])
         self.assertGreater(d.the.widget(1).rowCount(), 5000)
         vn = d.the.widget(2)
-        self.assertEqual([vn.item(r, 0).text() for r in range(vn.rowCount())], [f'VN{i:02d}' for i in range(1, 18)])
+        self.assertEqual([vn.item(r, 0).text() for r in range(vn.rowCount())], [f'VN{i}' for i in range(1, 18)])
         self.assertEqual(sum(d.the.widget(i).rowCount() for i in range(3)),               # ba thẻ đủ mọi dòng, không trùng
                          sqlite3.connect(don_gia.file_goc()).execute('SELECT COUNT(*) FROM dm_taisan').fetchone()[0])
-        # hàng nút gọn: cập nhật (file / web / tra cứu), giá đất gom vào nút xổ
-        self.assertEqual([a.text() for a in d.b_cap.menu().actions() if a.text()][:2],
-                         ['Từ file (Excel, Word, PDF, CSV, gói .sqlite)…',
-                          'Từ trang web (Công báo Đồng Nai, CSDL văn bản pháp luật)…'])
-        self.assertEqual(len(d.b_gia_dat.menu().actions()), 2)
+        # 0.9.73: Cập nhật = nạp file / sao lưu (bỏ web, tra cứu trình duyệt); bỏ nút Giá đất, Đơn giá riêng (menu trái có)
+        self.assertEqual([a.text() for a in d.b_cap.menu().actions() if a.text()],
+                         ['Nạp từ file định mức (Excel, gói .sqlite, CSV)…', 'Sao lưu bộ đơn giá ra file (.sqlite / Excel)…'])
+        self.assertFalse(hasattr(d, 'b_gia_dat') or hasattr(d, 'b_don'))
         d.the.setCurrentIndex(3)
         d.o_tim.setText('di chuyen tai san')
         b = d.the.widget(3)
         hien = [b.item(r, 0).text() for r in range(b.rowCount()) if not b.isRowHidden(r)]
-        self.assertIn('HT14', hien)
-        self.assertNotIn('HT01', hien)
+        self.assertIn('CS14', hien)
+        self.assertNotIn('CS1', hien)
         self.assertTrue(d.b_ap.isEnabled())
         d.ap_du_an(xac_nhan=True)
         self.assertGreater(con.execute('SELECT COUNT(*) FROM dm_hotro').fetchone()[0], 0)

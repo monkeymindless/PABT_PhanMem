@@ -56,25 +56,25 @@ class TestQuyUoc(CoSo):
             dgr.chuan_gia('abc')
 
     def test_luu_giu_khi_ap_bo(self):
+        """0.9.69: bộ đơn giá không còn quy ước gắn sẵn. Dự án cũ còn dòng quy ước của bộ trước (id nhỏ): áp bộ thì bỏ; dòng riêng
+        (Đơn giá đặc biệt, id >= ID_RIENG) giữ nguyên."""
+        self.assertEqual(dgr.doc(self.con), [])                          # dự án mới: không quy ước nào
+        with self.con, csdl.mo_khoa_danh_muc(self.con):                 # giả lập dự án lập bằng bộ đơn giá cũ
+            self.con.execute("INSERT INTO quy_uoc (id, ten_thuc_te, ten_tuong_duong, dvt, don_gia, can_cu) "
+                             "VALUES (1, 'Mái tôn hiên phụ', 'Mái che, mái hiên', 'm²', '259000', 'bộ cũ')")
         bo = dgr.doc(self.con)
         self.assertTrue(bo and not any(r['rieng'] for r in bo))
         ds = [dict(r) for r in bo]
-        ds[0]['don_gia'] = '2.000.000'                                  # sửa dòng của bộ -> dòng riêng
         ds.append(dict(ten_thuc_te='Giếng khoan sâu 80m', ten_tuong_duong='Giếng khoan', dvt='md', don_gia='350.000',
                        can_cu='Áp giá tương đương theo giếng khoan'))
-        del ds[1]                                                       # bỏ một dòng của bộ
         kq = dgr.luu(self.con, ds)
-        self.assertEqual((kq['moi'], kq['bo']), (2, len(bo) - 2))
-        sau = dgr.doc(self.con)
-        rieng = [r for r in sau if r['rieng']]
-        self.assertEqual(sorted(r['don_gia'] for r in rieng), ['2000000', '350000'])
+        self.assertEqual(kq['moi'], 1)
+        rieng = [r for r in dgr.doc(self.con) if r['rieng']]
+        self.assertEqual([r['don_gia'] for r in rieng], ['350000'])
         self.assertTrue(all(r['id'] >= dgr.ID_RIENG for r in rieng))
-        # áp lại bộ đơn giá: dòng riêng giữ nguyên, dòng của bộ đã sửa không bị nhân đôi
-        don_gia.ap_vao_du_an(self.con)
+        don_gia.ap_vao_du_an(self.con)                                  # áp lại bộ: dòng riêng giữ, dòng của bộ cũ bỏ
         lai = dgr.doc(self.con)
-        self.assertEqual(sorted(r['don_gia'] for r in lai if r['rieng']), ['2000000', '350000'])
-        self.assertEqual(sum(1 for r in lai if r['ten_thuc_te'] == bo[0]['ten_thuc_te']), 1)
-        self.assertEqual(len(lai), len(bo) + 1)                         # dòng của bộ bị bỏ thì trở lại khi áp bộ
+        self.assertEqual([(r['ten_thuc_te'], r['don_gia']) for r in lai], [('Giếng khoan sâu 80m', '350000')])
         # thiếu đơn giá / ĐVT: báo lỗi, không ghi
         with self.assertRaises(LoiNhap):
             dgr.luu(self.con, [dict(ten_thuc_te='X', ten_tuong_duong='Y', dvt='', don_gia='')])

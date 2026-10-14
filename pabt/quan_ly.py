@@ -35,7 +35,7 @@ TRUONG_TT = ('da_phe_duyet', 'qd_so', 'qd_ngay', 'qd_so_tien', 'qd_file', 'da_ch
 
 def hop_trang_thai(h: dict, khoa: str) -> bool:
     """h: dict có tong, dot_id, da_phe_duyet, da_chi_tra, da_ban_giao, theo_doi."""
-    co_pa = h.get('tong', KHONG) > 0
+    co_pa = bool(h.get('da_lap')) or h.get('tong', KHONG) > 0
     return {
         'chua_pa': not co_pa, 'co_pa': co_pa,
         'chua_dot': not h.get('dot_id'), 'co_dot': bool(h.get('dot_id')),
@@ -123,6 +123,7 @@ class Dot:
     loai_van_ban: str = 'Tờ trình'      # v11: Tờ trình / Văn bản (số: so_to_trinh, ngày: ngay_trinh)
     so_pa_tong: str = ''                # v11: số / ngày phương án tổng của đợt (in vào bảng tổng hợp, mẫu PA tổng)
     ngay_pa_tong: str = ''
+    ky_hieu_so: str = ''                # v15: ký hiệu số phương án của đợt (phần sau "Số: …/"); trống = của dự án
 
     @property
     def ten_thu_muc(self) -> str:
@@ -149,7 +150,8 @@ def ds_dot(con) -> list:
         k = r.keys()                                     # file chỉ xem phiên bản cũ (v10) chưa có các cột v11
         kq.append(Dot(r['id'], r['so'], r['ten'], r['ngay_trinh'], r['so_to_trinh'], r['ghi_chu'], r['thu_muc'],
                       dem.get(r['id'], 0), (r['loai_van_ban'] if 'loai_van_ban' in k else '') or 'Tờ trình',
-                      r['so_pa_tong'] if 'so_pa_tong' in k else '', r['ngay_pa_tong'] if 'ngay_pa_tong' in k else ''))
+                      r['so_pa_tong'] if 'so_pa_tong' in k else '', r['ngay_pa_tong'] if 'ngay_pa_tong' in k else '',
+                      (r['ky_hieu_so'] or '') if 'ky_hieu_so' in k else ''))
     return kq
 
 
@@ -168,7 +170,8 @@ def _truong_dot(ngay_trinh, so_to_trinh, ghi_chu, loai_van_ban, so_pa_tong, ngay
 
 
 def tao_dot(con, ten: str = '', ngay_trinh: str = '', so_to_trinh: str = '', ghi_chu: str = '', loai_van_ban: str = 'Tờ trình',
-            so_pa_tong: str = '', ngay_pa_tong: str = '') -> int:
+            so_pa_tong: str = '', ngay_pa_tong: str = '', ky_hieu_so: str | None = None) -> int:
+    """ky_hieu_so None: lấy ký hiệu của đợt gần nhất, không có thì của dự án (cột du_an cũ / tổ chức mặc định)."""
     so = (con.execute('SELECT MAX(so) FROM dot_trinh').fetchone()[0] or 0) + 1
     ten = ' '.join(str(ten or '').split()) or f'Đợt {so}'
     if con.execute('SELECT 1 FROM dot_trinh WHERE ten = ?', (ten,)).fetchone():
@@ -176,13 +179,23 @@ def tao_dot(con, ten: str = '', ngay_trinh: str = '', so_to_trinh: str = '', ghi
     gt = _truong_dot(ngay_trinh, so_to_trinh, ghi_chu, loai_van_ban, so_pa_tong, ngay_pa_tong)
     with csdl.giao_dich(con):
         cur = con.execute('''INSERT INTO dot_trinh (so, ten, ngay_trinh, so_to_trinh, ghi_chu, loai_van_ban, so_pa_tong,
-                             ngay_pa_tong) VALUES (?,?,?,?,?,?,?,?)''', (so, ten, *gt))
+                             ngay_pa_tong, ky_hieu_so) VALUES (?,?,?,?,?,?,?,?,?)''',
+                          (so, ten, *gt, ky_hieu_mac_dinh(con) if ky_hieu_so is None else ' '.join(ky_hieu_so.split())))
         csdl.ghi_nhat_ky(con, 'Tạo đợt trình', ten)
     return cur.lastrowid
 
 
+def ky_hieu_mac_dinh(con) -> str:
+    """Ký hiệu số cho đợt mới: của đợt gần nhất đã đặt, không thì của dự án (Thông tin dự án cũ / tổ chức mặc định)."""
+    r = con.execute("SELECT ky_hieu_so FROM dot_trinh WHERE TRIM(ky_hieu_so) <> '' ORDER BY so DESC, id DESC").fetchone()
+    if r:
+        return r[0]
+    from .in_an import _thong_tin_du_an
+    return _thong_tin_du_an(con).get('ky_hieu_so') or ''
+
+
 def sua_dot(con, dot_id: int, ten: str, ngay_trinh: str = '', so_to_trinh: str = '', ghi_chu: str = '',
-            loai_van_ban: str = 'Tờ trình', so_pa_tong: str = '', ngay_pa_tong: str = '') -> None:
+            loai_van_ban: str = 'Tờ trình', so_pa_tong: str = '', ngay_pa_tong: str = '', ky_hieu_so: str | None = None) -> None:
     ten = ' '.join(str(ten or '').split())
     if not ten:
         raise LoiNhap('Tên đợt không được để trống.')
@@ -192,6 +205,8 @@ def sua_dot(con, dot_id: int, ten: str, ngay_trinh: str = '', so_to_trinh: str =
     with csdl.giao_dich(con):
         con.execute('''UPDATE dot_trinh SET ten = ?, ngay_trinh = ?, so_to_trinh = ?, ghi_chu = ?, loai_van_ban = ?, so_pa_tong = ?,
                        ngay_pa_tong = ? WHERE id = ?''', (ten, *gt, dot_id))
+        if ky_hieu_so is not None:
+            con.execute('UPDATE dot_trinh SET ky_hieu_so = ? WHERE id = ?', (' '.join(ky_hieu_so.split()), dot_id))
         csdl.ghi_nhat_ky(con, 'Sửa đợt trình', ten)
 
 
@@ -323,14 +338,27 @@ def _thu_muc_dot(goc: Path, dot: Dot) -> Path:
     return dich
 
 
+def thu_muc_cua_dot(goc, dot) -> Path:
+    """Thư mục "<Tên đợt> - <số hộ> hộ" của đợt trong thư mục hồ sơ goc; thư mục cũ của đợt (số hộ đã đổi) được đổi tên theo số hộ mới.
+    CHỈ gọi lúc xuất (có đổi tên thư mục trên đĩa); chỉ hiện đường dẫn thì dùng goc / dot.ten_thu_muc."""
+    return _thu_muc_dot(Path(goc), dot)
+
+
+def dat_thu_muc_dot(con, dot_id: int, thu_muc) -> None:
+    """Ghi nhớ thư mục hồ sơ đã xuất gần nhất của đợt (cột "Thư mục đã xuất" ở Đợt trình thẩm định)."""
+    with csdl.giao_dich(con):
+        con.execute('UPDATE dot_trinh SET thu_muc = ? WHERE id = ?', (str(thu_muc), dot_id))
+        csdl.ghi_nhat_ky(con, 'Xuất hồ sơ đợt', f'đợt {dot_id} -> {thu_muc}')
+
+
 def glob_an_toan(s: str) -> str:
     return re.sub(r'([\[\]*?])', r'[\1]', s)
 
 
 def xuat_dot(con, dot_id: int, goc, pdf: bool = False, bao_tien_do=None, bao_excel=None, chi_tiet: bool = True,
-             bang_tong_hop: bool = True, to_trinh: bool = False, pa_tong: bool = False) -> dict:
+             bang_tong_hop: bool = True, to_trinh: bool = False, bao_cao_y_kien: bool = False) -> dict:
     """Xuất hồ sơ một đợt: <gốc>/<Đợt N - k hộ>/PA CHI TIET/ (phương án chi tiết từng hộ, số PA chi tiết của hộ) + PA TONG/
-    (bảng tổng hợp có số phương án tổng, tờ trình / văn bản trình, phương án tổng) (+ PDF). Trả dict của
+    (bảng tổng hợp có số phương án tổng, tờ trình / văn bản trình) (+ PDF). Trả dict của
     van_ban_trinh.xuat_bo_ho_so + thu_muc (thư mục đợt)."""
     from . import van_ban_trinh
     dot = lay_dot(con, dot_id)
@@ -341,12 +369,34 @@ def xuat_dot(con, dot_id: int, goc, pdf: bool = False, bao_tien_do=None, bao_exc
     goc.mkdir(parents=True, exist_ok=True)
     tm = _thu_muc_dot(goc, dot)
     kq = van_ban_trinh.xuat_bo_ho_so(con, ds, tm, dot=dot, chi_tiet=chi_tiet, bang_tong_hop=bang_tong_hop, to_trinh=to_trinh,
-                                     pa_tong=pa_tong, pdf=pdf, bao_tien_do=bao_tien_do, bao_excel=bao_excel)
+                                     pdf=pdf, bao_tien_do=bao_tien_do, bao_excel=bao_excel, bao_cao_y_kien=bao_cao_y_kien)
     with csdl.giao_dich(con):
         con.execute('UPDATE dot_trinh SET thu_muc = ? WHERE id = ?', (str(tm), dot_id))
         csdl.ghi_nhat_ky(con, 'Xuất hồ sơ đợt', f'{dot.ten}: {len(ds)} hộ -> {tm}')
     kq['thu_muc'] = tm
     return kq
+
+
+def kiem_tra_xuat_dot(con, dot_id: int) -> list:
+    """Hồ sơ trọn gói Bước 8 của đợt đã đủ chưa: [(trạng thái, chữ)] - True đạt / None cần xem lại / False thiếu. Chỉ để nhắc,
+    KHÔNG chặn xuất (người dùng có thể xuất bản nháp)."""
+    dot = lay_dot(con, dot_id)
+    ds = ho_cua_dot(con, dot_id)
+    n = len(ds)
+    if not n:
+        return [(False, f'{dot.ten} chưa có hộ nào - đưa hộ vào đợt trước khi xuất.')]
+    so = so_pa_cua_ho(con, ds)
+    chua_so = sum(1 for m in ds if not (so.get(m) or ('', ''))[0])
+    ykien = {r[0] for r in con.execute("SELECT DISTINCT ma_ho FROM y_kien_du_thao WHERE loai <> 'chua'")}         if con.execute("SELECT 1 FROM sqlite_master WHERE name = 'y_kien_du_thao'").fetchone() else set()
+    co_y = sum(1 for m in ds if m in ykien)
+    return [(True, f'{n} hộ trong đợt'),
+            (True if not chua_so else None, f'Số phương án chi tiết: {n - chua_so}/{n} hộ đã có số' +
+             ('' if not chua_so else ' - bấm "Đánh số PA chi tiết…"')),
+            (True if dot.so_to_trinh and dot.ngay_trinh else None,
+             f'{dot.van_ban_trinh}' if dot.so_to_trinh and dot.ngay_trinh else 'Chưa có số / ngày văn bản trình (Sửa đợt…)'),
+            (True if dot.so_pa_tong else None, f'Phương án tổng số {dot.so_pa_tong}' if dot.so_pa_tong else 'Chưa có số phương án tổng'),
+            (True if co_y == n else None, f'Ý kiến nhân dân: {co_y}/{n} hộ đã lấy ý kiến' +
+             ('' if co_y == n else ' (báo cáo tiếp thu sẽ ghi các hộ còn lại là chưa lấy ý kiến)'))]
 
 
 def luu_thanh(con, dich) -> Path:
@@ -622,6 +672,8 @@ def doc_quyet_dinh(con, file, tong_pa: dict | None = None, dong: list | None = N
                        ngay=next((i for i, t in enumerate(o) if re.search(r'^ngay|ngay (ky|qd|chi|ban giao)', t)), None))
             break
     da = set()
+    # tên hộ ≥ 2 từ (tìm trong dòng chữ khi văn bản không có bảng): tính một lần, không tách tên lại cho từng dòng x từng hộ
+    ten_nhieu_tu = [(f' {k} ', ds) for k, ds in theo_ten.items() if len(k.split()) >= 2]
     for r in dong:
         text = ' '.join(c for c in r if c)
         if not text.strip():
@@ -648,7 +700,7 @@ def doc_quyet_dinh(con, file, tong_pa: dict | None = None, dong: list | None = N
             cach = 'số CCCD' if h else ''
             if h is None:
                 t = ' ' + _ten_chuan(text) + ' '
-                ung = [x for k, ds in theo_ten.items() if len(k.split()) >= 2 and f' {k} ' in t for x in ds]
+                ung = [x for k, ds in ten_nhieu_tu if k in t for x in ds]
                 if len(ung) == 1:
                     h, cach = ung[0], 'họ tên'
                 elif len(ung) > 1:

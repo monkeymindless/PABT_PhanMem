@@ -26,7 +26,9 @@ from pathlib import Path
 GOC = Path(__file__).resolve().parent
 VENV = GOC / '.venv' / 'Scripts' / 'python.exe'
 VENV38 = Path(os.environ.get('LOCALAPPDATA', '')) / 'PABT_dev' / 'venv38_32' / 'Scripts' / 'python.exe'
-CAI = Path(os.environ.get('LOCALAPPDATA', '')) / 'Programs' / 'PABT' / 'PABT.exe'
+_CAI = [Path(os.environ.get(k, '')) / 'PABT' / 'PABT.exe' for k in ('ProgramFiles(x86)', 'ProgramFiles') if os.environ.get(k)]
+_CAI.append(Path(os.environ.get('LOCALAPPDATA', '')) / 'Programs' / 'PABT' / 'PABT.exe')   # từ chối quyền quản trị / bản cũ
+CAI = next((p for p in _CAI if p.exists()), _CAI[0])      # 0.9.22+: mặc định Program Files (x86)\PABT
 MAY = Path(os.environ.get('PABT_THU_MUC_MAY') or Path(os.environ.get('APPDATA') or Path.home()) / 'PABT')
 DU_LIEU_CAM = re.compile(r'\.(pabt|pabtdt|xlsm)$|DT\d+|DoiChieu|BanIn_', re.I)     # không được có trong bản phát hành
 
@@ -64,7 +66,7 @@ def ds_phien_ban(thu_muc: Path, mau: str) -> list:
     """Phiên bản trong tên các file khớp `mau` (glob); file tên lạ (không có số phiên bản) bỏ qua, không làm hỏng bước."""
     kq = []
     for f in thu_muc.glob(mau):
-        m = re.search(r'PABT_CaiDat_(\d+(?:\.\d+)*)_', f.name)
+        m = re.search(r'PABT_(?:CaiDat|Setup_Universal)_(\d+(?:\.\d+)*)[_.]', f.name)
         if m:
             kq.append(m.group(1))
     return kq
@@ -186,11 +188,10 @@ def b_bo_cai():
     d = GOC / 'bo_cai'
     pb = phien_ban()
     # bộ cài có thể là bản cũ hơn (phiên bản mới chỉ phát hành gói cập nhật): lấy bộ cài mới nhất đang có
-    pc = max(ds_phien_ban(d, 'PABT_CaiDat_*_Win10-11*.exe'), key=so, default=pb)
+    pc = max(ds_phien_ban(d, 'PABT_Setup_Universal_*.exe'), key=so, default=pb)
     ghi(f'Bộ cài mới nhất: {pc}  ·  gói cập nhật cần có: {pb}')
-    # tên theo đặc tả ARCH-PABT-2026-V4 mục 9 (0.9.24): x64 / x86 + bộ cài phổ quát tự chọn
-    can = [f'PABT_CaiDat_{pc}_Win10-11_x64.exe', f'PABT_CaiDat_{pc}_Win7-8-10_x86.exe', f'PABT_Setup_Universal_{pc}.exe',
-           f'PABT_CapNhat_{pb}.pabtcn', f'PABT_ChayNgay_{pc}_x64.zip', f'PABT_ChayNgay_{pc}_x86.zip']
+    # 0.9.26 (người dùng 11/10/2026): MỘT bộ cài cho mọi Windows + gói zip dự phòng (dung_bo_cai_win.MAC_DINH)
+    can = [f'PABT_Setup_Universal_{pc}.exe', f'PABT_ChayNgay_{pc}_Universal.zip', f'PABT_CapNhat_{pb}.pabtcn']
     loi, canh = [], []
     for t in can:
         f = d / t
@@ -212,12 +213,14 @@ def b_bo_cai():
         # gói zip cũng là bộ cài dự phòng (CAI_DAT.cmd): đủ file cài và danh sách khớp nội dung
         with zipfile.ZipFile(z) as zf:
             ten = set(zf.namelist())
-            thieu_cai = [x for x in ('CAI_DAT.cmd', 'cai_dat.ps1', 'go_cai_dat.ps1', 'danh_sach.txt', 'ban.txt', 'phien_ban.txt')
+            # zip một bản: danh_sach.txt; zip Universal (0.9.26): danh_sach_x64.txt + danh_sach_x86.txt
+            ds_ten = ['danh_sach_x64.txt', 'danh_sach_x86.txt'] if z.stem.endswith('_Universal') else ['danh_sach.txt']
+            thieu_cai = [x for x in ('CAI_DAT.cmd', 'cai_dat.ps1', 'go_cai_dat.ps1', 'ban.txt', 'phien_ban.txt', *ds_ten)
                          if x not in ten]
             sai = []
-            if 'danh_sach.txt' in ten:
-                import hashlib
-                for dong in zf.read('danh_sach.txt').decode('utf-8-sig').splitlines():
+            import hashlib
+            for dt in (x for x in ds_ten if x in ten):
+                for dong in zf.read(dt).decode('utf-8-sig').splitlines():
                     x = dong.split('\t')
                     if len(x) < 4:
                         continue
@@ -302,9 +305,8 @@ def b_may_chu():
 
 @buoc('10. Cài thử bộ cài mới nhất (--cai-thu)')
 def b_cai_thu():
-    pb = max(ds_phien_ban(GOC / 'bo_cai', 'PABT_CaiDat_*.exe'), key=so, default=phien_ban())
-    ban = 'Win10-11_x64' if platform.machine().endswith('64') and sys.getwindowsversion().major >= 10 else 'Win7-8-10_x86'
-    bo = GOC / 'bo_cai' / f'PABT_CaiDat_{pb}_{ban}.exe'
+    pb = max(ds_phien_ban(GOC / 'bo_cai', 'PABT_Setup_Universal_*.exe'), key=so, default=phien_ban())
+    bo = GOC / 'bo_cai' / f'PABT_Setup_Universal_{pb}.exe'             # một bộ cài cho mọi Windows (0.9.26)
     if not bo.exists():
         return 'LOI', f'không có {bo.name}'
     ghi(f'Cài im lặng: {bo.name} /Q ...')

@@ -53,6 +53,45 @@ def ngu_canh_tls() -> ssl.SSLContext:
     return ctx
 
 
+def la_loi_chung_chi(e) -> bool:
+    """Lỗi xác minh chứng chỉ HTTPS (không phải lỗi mạng / HTTP)."""
+    ly_do = getattr(e, 'reason', e)
+    return isinstance(ly_do, ssl.SSLCertVerificationError) or 'CERTIFICATE_VERIFY_FAILED' in str(ly_do).upper()
+
+
+_DA_NAP_GOC = {}                    # tên máy chủ -> kết quả nạp (mỗi máy chủ thử một lần mỗi phiên)
+
+
+def nap_goc_ca_windows(url: str, cho: int = 20) -> bool:
+    """Windows tải chứng chỉ gốc khi chính Windows (CryptoAPI) dựng chuỗi chứng chỉ ("Automatic Root Certificates Update");
+    Python chỉ đọc các chứng chỉ gốc ĐÃ có trong kho -> lần đầu gặp CA gốc mới báo CERTIFICATE_VERIFY_FAILED dù trình duyệt mở
+    bình thường (vbpl.vn - GlobalSign R46, đo 12/10/2026: Python lỗi, .NET mở được, sau đó Python mở được). Cho Windows kết nối
+    thử (VẪN xác minh chứng chỉ đầy đủ - không tắt kiểm tra) để kho có gốc CA rồi gọi lại. True = Windows tin chứng chỉ."""
+    import re
+    import subprocess
+    import sys
+    import urllib.parse
+    if sys.platform != 'win32':
+        return False
+    may = urllib.parse.urlparse(url).hostname or ''
+    if not re.fullmatch(r'[A-Za-z0-9.\-]{1,253}', may):  # chỉ tên máy chủ - không chèn được lệnh vào PowerShell
+        return False
+    if may in _DA_NAP_GOC:
+        return _DA_NAP_GOC[may]
+    lenh = ("$ErrorActionPreference='Stop';try{[Net.ServicePointManager]::SecurityProtocol=3072}catch{};"
+            f"$r=[Net.HttpWebRequest]::Create('https://{may}/');$r.Method='HEAD';$r.Timeout={int(cho) * 1000};"
+            "try{$x=$r.GetResponse();$x.Close();exit 0}catch [Net.WebException]{"
+            "if($_.Exception.Status -eq 'TrustFailure'){exit 2};if($_.Exception.Response){exit 0};exit 3}")
+    try:
+        kq = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', lenh], capture_output=True,
+                            timeout=cho + 10, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        ok = kq.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        ok = False
+    _DA_NAP_GOC[may] = ok
+    return ok
+
+
 # ---------------------------------------------------------------- file nén, XML độc
 def kiem_tra_zip(p, toi_da: int = 400 * 2 ** 20, ti_le: int = 250, so_muc: int = 20000) -> None:
     """File Office (.xlsx / .docx) / gói .pabtcn là file nén: chặn "bom nén" (giải nén ra quá lớn) và tên file vượt thư mục."""

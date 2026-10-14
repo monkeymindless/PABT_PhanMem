@@ -51,13 +51,13 @@ VAT_NUOI_QD31 = (
         f'Điều 6 {_VB31}: theo giá thị trường nhưng không quá 18.500.000 đ/kg yến thô; giá trị = tổng sản lượng tổ yến một năm '
         '(3 lần thu hoạch) của mỗi nhà nuôi × đơn giá; chỉ tính tổ không có trứng, chim non (Điều 5: cơ sở đã kê khai theo '
         'Điều 54 Luật Chăn nuôi)')])
-BO_SUNG = [(f'VN{i:02d}', 3, PHAN_LOAI_VAT_NUOI, ten, dvt, str(gia), ghi)
+BO_SUNG = [(f'VN{i}', 3, PHAN_LOAI_VAT_NUOI, ten, dvt, str(gia), ghi)
            for i, (ten, dvt, gia, ghi) in enumerate(VAT_NUOI_QD31, start=1)]
 # (số hiệu để tìm dòng cũ, số hiệu, cơ quan, nội dung, trạng thái)
 SUA_VAN_BAN = [
     ('31/2025/QĐ-UBND', 'Quyết định 31/2025/QĐ-UBND ngày 29/08/2025 (hiệu lực 10/9/2025)', 'UBND tỉnh (nay là thành phố) Đồng Nai',
      'Đơn giá bồi thường thiệt hại vật nuôi là thủy sản (Điều 4: 16 mức theo hình thức nuôi và thời gian nuôi, ĐVT ha/vụ, '
-     '100 m³/vụ) và chim yến (Điều 6) - mã VN01 - VN17; thay thế QĐ 61/2024/QĐ-UBND', 'Đã đưa vào bộ đơn giá (09/10/2026)'),
+     '100 m³/vụ) và chim yến (Điều 6) - mã VN1 - VN17; thay thế QĐ 61/2024/QĐ-UBND', 'Đã đưa vào bộ đơn giá (09/10/2026)'),
 ]
 
 
@@ -88,6 +88,24 @@ def bo_sung(file, phien_ban: str = '') -> dict:
     return don_gia.kiem_tra_bo(file)
 
 
+def chuan_hoa(file, phien_ban: str = '') -> dict:
+    """0.9.69 (người dùng 12/10/2026): mã TS / CT / VN / CS (ma_tai_san - bỏ dòng HT / TH trùng của dm_taisan), bỏ quy ước giá
+    tương đương gắn sẵn (quy ước tùy biến từng máy / dự án ở Đơn giá đặc biệt). csdl.mo (ghi) nâng lược đồ lên phiên bản mới."""
+    from pabt import ma_tai_san
+    con = csdl.mo(file)
+    try:
+        kq = ma_tai_san.chuyen_csdl(con)               # đã nâng cấp lúc mở thì không đổi thêm
+        with con, csdl.mo_khoa_danh_muc(con):
+            kq['bo_quy_uoc'] = con.execute('DELETE FROM quy_uoc').rowcount
+            if phien_ban:
+                con.execute('UPDATE du_an SET phien_ban_gia = ?, ngay_nhap = ? WHERE id = 1',
+                            (phien_ban, datetime.now().isoformat(timespec='seconds')))
+        con.execute('VACUUM')
+    finally:
+        con.close()
+    return kq
+
+
 def _in(tt: dict):
     print(f'Đã tạo {tt["file"]}: phiên bản {tt["phien_ban"]}, nguồn {tt["nguon"]}')
     for b, n in tt['dem'].items():
@@ -101,6 +119,15 @@ if __name__ == '__main__':
         print(__doc__)
         sys.exit(2)
     pb = sys.argv[2] if len(sys.argv) > 2 else ''
+    if sys.argv[1] == '--chuan-hoa':                    # đổi mã 0.9.69 + bỏ quy ước gắn sẵn trên bộ đang đóng gói
+        goc = don_gia.file_goc()
+        with tempfile.TemporaryDirectory() as td:
+            tam = Path(td) / goc.name
+            shutil.copyfile(goc, tam)
+            print(chuan_hoa(tam, pb or datetime.now().strftime('%Y.%m.%d')))
+            shutil.copyfile(tam, goc)
+        _in(don_gia.thong_tin(goc))
+        sys.exit(0)
     if sys.argv[1] == '--bo-sung':                      # thêm vào bộ đang đóng gói (không cần file Excel nguồn)
         goc = don_gia.file_goc()
         with tempfile.TemporaryDirectory() as td:
@@ -114,4 +141,5 @@ if __name__ == '__main__':
                                  'QĐ 42/2025, 18/2026 (sửa đổi bởi 53/2026), 48/2025 (sửa đổi bởi 66/2025), 31/2025 của UBND '
                                  'tỉnh (nay là thành phố) Đồng Nai; Luật Đất đai 2024; NĐ 88/2024', THEO_DOI)
     bo_sung(tt['file'])
+    chuan_hoa(tt['file'])
     _in(don_gia.thong_tin(tt['file']))

@@ -2,7 +2,6 @@
 lại CSDL, Dự án mới ghi nhật ký giao dịch trong RAM. Mọi tối ưu phải cho kết quả như cách cũ."""
 from __future__ import annotations
 import os
-import sqlite3
 import tempfile
 import unittest
 from decimal import Decimal

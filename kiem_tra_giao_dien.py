@@ -29,7 +29,7 @@ sys.path.insert(0, str(GOC))
 NGUONG_CHAM = 5.0          # giây: một thao tác lâu hơn = chậm / đơ (người dùng thấy cửa sổ đứng)
 TREO_GIAY = 120            # giây: một lệnh của cửa sổ chính lâu hơn = treo (in vết ngăn xếp, dừng kiểm tra)
 SAU_TOI_DA = 3             # số tầng hộp thoại lồng nhau được thử
-BO_QUA_NUT = re.compile(r'^\s*(đóng|hủy|thoát|close|cancel)\b', re.I)
+BO_QUA_NUT = re.compile(r'^\s*(đóng|hủy|thoát|close|cancel|xóa dự án)\b', re.I)   # xóa dự án: mất bản sao giữa lượt thử
 
 
 class KiemTra:
@@ -40,6 +40,7 @@ class KiemTra:
         self.gio_con = []
         self.sau = 0
         self.da_thu = set()
+        self.da_xoa = []                                    # nút bị xóa bởi thao tác trước trong cùng lượt thử (không phải lỗi)
 
     # ------------------------------------------------ một thao tác: đo giờ, bắt lỗi
     def lam(self, ten: str, ham) -> None:
@@ -108,19 +109,29 @@ class KiemTra:
                 self.lam('chọn dòng đầu bảng', lambda b=b: b.selectRow(0))
                 self.lam('bấm đúp dòng đầu bảng', lambda b=b, m=m: b.doubleClicked.emit(m.index(0, 1)))
         nut = [x for x in ds if isinstance(x, QAbstractButton) and not isinstance(x, (QCheckBox, QRadioButton))]
+        try:
+            from shiboken6 import isValid as con_song
+        except ImportError:                                 # Qt5 (venv38_32): shiboken2
+            from shiboken2 import isValid as con_song
+        truoc = ''
         for b in nut:
-            chu = (b.text() or b.toolTip() or b.objectName() or '').replace('\n', ' ').strip()
-            if not chu or BO_QUA_NUT.match(chu) or not b.isEnabled():
+            if not con_song(b):                             # cú bấm trước đã xóa nút này (dựng lại tab, đóng khung...): bỏ qua
+                self.da_xoa.append(f'{ten or type(w).__name__}: sau "{truoc}"')
                 continue
+            chu = (b.text() or b.toolTip() or b.objectName() or '').replace('\n', ' ').strip()
+            if not chu or BO_QUA_NUT.match(chu) or not b.isEnabled() or b.property('nut_cua_so'):
+                continue                                    # nút cửa sổ của thanh tiêu đề hợp nhất: đóng / thu nhỏ cửa sổ
             if isinstance(b, QToolButton) and b.defaultAction() is not None and getattr(w, 'la_cua_so_chinh', False):
                 continue                                    # nút menu trái = lệnh cửa sổ chính: thử ở vòng lệnh
             if isinstance(b, QToolButton) and b.menu() is not None:
                 for a in b.menu().actions():
                     if a.text() and a.isEnabled() and not a.isSeparator():
                         self.dem['menu'] += 1
+                        truoc = f'{chu[:30]} → {a.text()}'
                         self.lam(f'menu "{chu[:30]}" → "{a.text()}"', a.trigger)
                 continue
             self.dem['nut'] += 1
+            truoc = chu[:40]
             self.lam(f'nút "{chu[:50]}"', b.click)
 
     def thu_bang(self, b) -> None:
@@ -309,7 +320,7 @@ def main(argv) -> int:
         w.mo(str(p), chi_doc=False)
         qa.processEvents()
     # "Thoát" (thanh menu Tệp tin, 0.9.23) đóng cửa sổ chính - các lệnh sau sẽ chạy trên cửa sổ đã đóng: bỏ qua
-    lenh = [(t, a) for t, a in w.lenh.items() if (not chi or chi in t) and t != 'Thoát']
+    lenh = [(t, a) for t, a in w.lenh.items() if (not chi or chi in t) and t not in ('Thoát', 'Đóng dự án', 'Xóa dự án…')]
     for i, (ten, a) in enumerate(lenh, start=1):
         print(f'[{i}/{len(lenh)}] {ten}', flush=True)
         faulthandler.dump_traceback_later(TREO_GIAY, exit=True)       # treo thật: in vết ngăn xếp, dừng
@@ -362,6 +373,9 @@ def bao_cao(kt: KiemTra, phien_ban: str, phut: float, du_an: str) -> str:
         t += [f'- **{duong}**', f'  - `{dong_cuoi}`', '```', vet.strip()[-1800:], '```']
     t += ['', f'## CHẬM / ĐƠ (một thao tác > {NGUONG_CHAM:.0f} giây) ({len(kt.cham)})', '']
     t += [f'- {duong}: {dt:.1f} giây' for duong, dt in sorted(kt.cham, key=lambda x: -x[1])] or ['Không có thao tác nào chậm.']
+    if kt.da_xoa:
+        t += ['', f'## Nút bị xóa bởi thao tác trước, đã bỏ qua ({len(kt.da_xoa)})', '']
+        t += [f'- {x} ×{n}' for x, n in Counter(kt.da_xoa).most_common(20)]
     t += ['', f'## Thông báo cảnh báo / lỗi phần mềm đã hiện ({len(kt.thong_bao)}) - xem có hợp lý không', '']
     gom = Counter((loai, chu.split('\n')[0][:160]) for _, loai, chu in kt.thong_bao)
     t += [f'- [{loai}] ×{n}: {chu}' for (loai, chu), n in gom.most_common(60)] or ['Không có.']

@@ -19,11 +19,11 @@ from .tien import D, KHONG, lam_tron, so_vn
 TEN_MUC = {1: 'Bồi thường về đất', 2: 'Bồi thường, hỗ trợ về nhà và công trình xây dựng',
            3: 'Bồi thường, hỗ trợ về cây trồng', 7: 'Bồi thường, hỗ trợ về vật nuôi', 4: 'Các chính sách hỗ trợ khác',
            5: 'Thưởng chấp hành bàn giao mặt bằng trước thời hạn'}           # 7 = MUC_VN (in là mục 4)
-MA_ON_DINH = ('HT01', 'HT02', 'HT03', 'HT04', 'HT05', 'HT06', 'HT34', 'HT35')
-MA_TDC = ('HT11', 'HT12', 'HT13')               # tái định cư: là điều kiện (suất TĐC), không phải dòng tiền
+MA_ON_DINH = ('CS1', 'CS2', 'CS3', 'CS4', 'CS5', 'CS6', 'CS34', 'CS35')
+MA_TDC = ('CS11', 'CS12', 'CS13')               # tái định cư: là điều kiện (suất TĐC), không phải dòng tiền
 # thuê nhà chờ TĐC / tự lo chỗ ở: mức cơ bản (hộ đến N nhân khẩu, đồng/tháng) + mỗi nhân khẩu vượt (đồng/khẩu/tháng)
-MA_THEO_NK = {'HT17': ('THUENHA_XA', 'THUENHA_NK_XA'), 'HT18': ('THUENHA_PHUONG', 'THUENHA_NK_PHUONG'),
-              'HT23': ('THUENHA_XA', 'THUENHA_NK_XA'), 'HT24': ('THUENHA_PHUONG', 'THUENHA_NK_PHUONG')}
+MA_THEO_NK = {'CS17': ('THUENHA_XA', 'THUENHA_NK_XA'), 'CS18': ('THUENHA_PHUONG', 'THUENHA_NK_PHUONG'),
+              'CS23': ('THUENHA_XA', 'THUENHA_NK_XA'), 'CS24': ('THUENHA_PHUONG', 'THUENHA_NK_PHUONG')}
 NK_CO_BAN = 4                                   # QĐ 42/2025: mức cơ bản cho hộ đến 4 nhân khẩu, cộng thêm từ khẩu thứ 5
 
 
@@ -276,7 +276,7 @@ def _tao_ho(h) -> ThongTinHo:
 def _dong_dat(r) -> DongDat:
     return DongDat(ma_thua=r['ma_thua'], loai_dat=r['loai_dat'], nhom_dat=r['nhom_dat'], dien_tich=D(r['dien_tich']),
                    vi_tri=r['vi_tri'], gia_bang_gia=D(r['gia_bang_gia']), he_so_k=he_so(r['he_so_k']),
-                   ty_le=he_so(r['ty_le']), ghi_chu=r['ghi_chu'],
+                   ty_le=None if r['ty_le'] in (None, '') else D(r['ty_le']), ghi_chu=r['ghi_chu'],
                    thanh_tien_excel=_dec_hoac_none(r['thanh_tien_excel']), id=r['id'],
                    cong_thuc=(r['cong_thuc'] or '') if 'cong_thuc' in r.keys() else '')
 
@@ -285,7 +285,8 @@ def _dong_khoan(r) -> DongKhoan:
     kk = r.keys()
     return DongKhoan(
         muc=r['muc'], ma=r['ma'], ten=r['ten'], dvt=r['dvt'], so_luong=D(r['so_luong']), don_gia=D(r['don_gia']),
-        ty_le=he_so(r['ty_le']), quy_cach=r['quy_cach'], ghi_chu=r['ghi_chu'], nguon_gia=r['nguon_gia'] or NGUON_DM,
+        ty_le=None if r['ty_le'] in (None, '') else D(r['ty_le']), quy_cach=r['quy_cach'], ghi_chu=r['ghi_chu'],
+        nguon_gia=r['nguon_gia'] or NGUON_DM,
         ma_tuong_duong=r['ma_tuong_duong'], can_cu_gia=r['can_cu_gia'] if 'can_cu_gia' in kk else '',
         thanh_tien_excel=_dec_hoac_none(r['thanh_tien_excel']), id=r['id'],
         cach_tinh=(r['cach_tinh'] or '') if 'cach_tinh' in kk else '',
@@ -423,16 +424,17 @@ def _tinh_kiem(pa: PhuongAn, bc: BoiCanh) -> tuple:
     return tinh_pa(pa, bc), kiem_tra_pa(pa, bc)
 
 
-def ket_qua_ho(con) -> dict:
+def ket_qua_ho(con, tat_ca: dict | None = None) -> dict:
     """{ma_ho: (KetQuaHo, [cảnh báo kiem_tra_pa])} theo thứ tự hộ - tính một lần trên kết nối, dùng chung cho danh sách hộ
     (đối chiếu), các trang tổng hợp, In / Xuất, đợt trình, báo cáo... tới khi dữ liệu đổi (csdl.nho). Lưu phương án một hộ chỉ
     tính lại hộ đó (giu_ket_qua_ho). Trước đây mỗi lần tải lại / chuyển trang / mở hộp thoại tính lại cả 3.000 hộ.
+    tat_ca: phương án CẢ dự án nơi gọi vừa đọc (doc_tat_ca_phuong_an(con)) - chưa nhớ thì tính trên đó, không đọc lại lần 2.
     Dùng chung: KHÔNG sửa các đối tượng trả về."""
     from .csdl import nho
 
     def tao():
         bc = BoiCanh.tu(con)
-        return {m: _tinh_kiem(pa, bc) for m, pa in doc_tat_ca_phuong_an(con).items()}
+        return {m: _tinh_kiem(pa, bc) for m, pa in (tat_ca if tat_ca is not None else doc_tat_ca_phuong_an(con)).items()}
     return nho(con, KHOA_KQ, tao)
 
 
@@ -487,11 +489,11 @@ def dt_nn_thu_hoi(pa: PhuongAn) -> Decimal:
 
 def _dao_tao_theo_thua(d: DongKhoan) -> bool:
     """Dòng hỗ trợ đào tạo nhập theo từng thửa (đơn giá = giá đất, tỷ lệ 150% / 50%), không phải một dòng gộp theo hệ số."""
-    return d.ty_le != 1 or d.ten.startswith('Thửa đất')
+    return he_so(d.ty_le) != 1 or d.ten.startswith('Thửa đất')
 
 
 def de_xuat_dao_tao_pa(pa: PhuongAn, bc: BoiCanh, giao_khoan: bool = False):
-    """Gợi ý HT09 (giao_khoan=False) / HT10 (True): (SL m², ĐG).
+    """Gợi ý CS9 (giao_khoan=False) / CS10 (True): (SL m², ĐG).
     SL = DT đất nông nghiệp thu hồi ở mục 1, trong hạn mức giao đất NN (Điều 176 Luật Đất đai);
     ĐG = round(hệ số x giá đất NN bình quân theo DT, 0) (Điều 13 QĐ 42/2025)."""
     hs = bc.so_ts('HS_DAOTAO_2' if giao_khoan else 'HS_DAOTAO')
@@ -533,12 +535,12 @@ def goi_y_khoan(pa: PhuongAn, bc: BoiCanh, ma: str) -> GoiY:
     Người dùng vẫn sửa được; thong_bao cho biết còn thiếu số liệu gì."""
     g = GoiY()
     ts = bc.so_ts
-    if ma in ('HT09', 'HT10'):
-        sl, dg = de_xuat_dao_tao_pa(pa, bc, ma == 'HT10')
+    if ma in ('CS9', 'CS10'):
+        sl, dg = de_xuat_dao_tao_pa(pa, bc, ma == 'CS10')
         g.dvt = 'm²'
         if sl > 0:
             g.so_luong, g.don_gia = sl, dg
-        elif ma == 'HT10':
+        elif ma == 'CS10':
             g.thong_bao = ('Mục 1 chưa có thửa đất nông nghiệp giao khoán (hợp đồng chưa thanh lý): ghi "giao khoán" ở '
                            'nguồn gốc đất của thửa hoặc ghi chú dòng mục 1.')
         else:
@@ -549,45 +551,45 @@ def goi_y_khoan(pa: PhuongAn, bc: BoiCanh, ma: str) -> GoiY:
             g.so_luong = D(nk)
         else:
             g.thong_bao = 'Chưa có số nhân khẩu của hộ: nhập ô Nhân khẩu ở đầu màn hình.'
-    elif ma == 'HT08':
+    elif ma == 'CS8':
         g.don_gia = ts('VATNUOI') or None
-    elif ma in ('HT14', 'HT15', 'HT16'):
+    elif ma in ('CS14', 'CS15', 'CS16'):
         g.so_luong = D(1)
-        g.don_gia = ts({'HT14': 'DICHUYEN_XA', 'HT15': 'DICHUYEN_TP', 'HT16': 'DICHUYEN_NGOAI'}[ma]) or None
-    elif ma in ('HT17', 'HT18'):
+        g.don_gia = ts({'CS14': 'DICHUYEN_XA', 'CS15': 'DICHUYEN_TP', 'CS16': 'DICHUYEN_NGOAI'}[ma]) or None
+    elif ma in ('CS17', 'CS18'):
         g.so_luong = ts('TULO_THANG') or D(6)
         g.don_gia, g.thong_bao = don_gia_theo_nhan_khau(bc, ma, pa.nhan_khau, bc.nguong_nk)
         g.dvt = 'Tháng'
-    elif ma in ('HT21', 'HT22', 'HT25', 'HT26'):
+    elif ma in ('CS21', 'CS22', 'CS25', 'CS26'):
         nk = pa.nhan_khau or 0
-        if ma in ('HT21', 'HT22'):
+        if ma in ('CS21', 'CS22'):
             th = ts('TULO_THANG') or D(6)
         else:
-            th = next((d.so_luong for d in pa.dong_ho_tro('HT23', 'HT24') if d.so_luong > 0), KHONG)
+            th = next((d.so_luong for d in pa.dong_ho_tro('CS23', 'CS24') if d.so_luong > 0), KHONG)
         if nk > 4 and th > 0:
             g.so_luong = (nk - 4) * th
-        g.don_gia = ts('THUENHA_NK_XA' if ma in ('HT21', 'HT25') else 'THUENHA_NK_PHUONG') or None
+        g.don_gia = ts('THUENHA_NK_XA' if ma in ('CS21', 'CS25') else 'THUENHA_NK_PHUONG') or None
         if not nk:
             g.thong_bao = 'Chưa có số nhân khẩu của hộ: nhập ô Nhân khẩu ở đầu màn hình.'
         elif nk <= 4:
             g.thong_bao = f'Hộ có {nk} nhân khẩu: khoản cộng thêm chỉ tính từ nhân khẩu thứ 5.'
         elif th == 0:
-            g.thong_bao = 'Nhập số tháng thuê nhà ở dòng HT23/HT24 trước, rồi chọn lại khoản này.'
-    elif ma in ('HT23', 'HT24'):
+            g.thong_bao = 'Nhập số tháng thuê nhà ở dòng CS23/CS24 trước, rồi chọn lại khoản này.'
+    elif ma in ('CS23', 'CS24'):
         g.don_gia, mo_ta = don_gia_theo_nhan_khau(bc, ma, pa.nhan_khau, bc.nguong_nk)
         g.dvt = 'Tháng'
         g.thong_bao = (f'{mo_ta}. Số lượng = số tháng thực tế thuê nhà chờ tái định cư '
                        f'(tối đa {so_vn(ts("THUENHA_TOIDA") or 12)} tháng).')
-    elif ma in ('HT19', 'HT27', 'HT28'):
+    elif ma in ('CS19', 'CS27', 'CS28'):
         g.so_luong = D(1)
-        g.don_gia = ts({'HT19': 'HOCHINHSACH', 'HT27': 'HOCHINHSACH_2', 'HT28': 'HOCHINHSACH_3'}[ma]) or None
-    elif ma == 'HT29':
+        g.don_gia = ts({'CS19': 'HOCHINHSACH', 'CS27': 'HOCHINHSACH_2', 'CS28': 'HOCHINHSACH_3'}[ma]) or None
+    elif ma == 'CS29':
         g.don_gia = ts('MOMA') or None
         g.thong_bao = 'Nhập số mộ ở cột Số lượng.'
-    elif ma in ('HT31', 'HT32', 'HT33'):
+    elif ma in ('CS31', 'CS32', 'CS33'):
         g.so_luong = D(1)
         g.thong_bao = 'Nhập đơn giá theo báo giá của đơn vị cung cấp, ghi số báo giá ở cột Căn cứ giá.'
-    elif ma in ('HT37', 'HT38', 'HT39'):
+    elif ma in ('CS37', 'CS38', 'CS39'):
         g.so_luong = D(1)
     return g
 
@@ -595,10 +597,10 @@ def goi_y_khoan(pa: PhuongAn, bc: BoiCanh, ma: str) -> GoiY:
 def ma_on_dinh_doi_song(ty_le_thu_hoi: Decimal, phai_di_chuyen: bool) -> str:
     """Mã khoản ổn định đời sống theo tỷ lệ DT đất NN thu hồi (danh mục DM_HOTRO, Điều 10 QĐ 42/2025)."""
     if ty_le_thu_hoi < D('0.3'):
-        return 'HT02' if phai_di_chuyen else 'HT01'
+        return 'CS2' if phai_di_chuyen else 'CS1'
     if ty_le_thu_hoi <= D('0.7'):
-        return 'HT04' if phai_di_chuyen else 'HT03'
-    return 'HT06' if phai_di_chuyen else 'HT05'
+        return 'CS4' if phai_di_chuyen else 'CS3'
+    return 'CS6' if phai_di_chuyen else 'CS5'
 
 
 @dataclass
@@ -622,7 +624,7 @@ def goi_y_ho_tro(pa: PhuongAn, bc: BoiCanh) -> tuple:
         return D(v) if v not in (None, '') else None
 
     # đào tạo, chuyển đổi nghề
-    for ma, gk in (('HT09', False), ('HT10', True)):
+    for ma, gk in (('CS9', False), ('CS10', True)):
         sl, dg = de_xuat_dao_tao_pa(pa, bc, gk)
         co = pa.dong_ho_tro(ma)
         if any(_dao_tao_theo_thua(d) for d in co):
@@ -643,19 +645,19 @@ def goi_y_ho_tro(pa: PhuongAn, bc: BoiCanh) -> tuple:
             ly = f'thu hồi {so_vn(lam_tron(tl * 100, 1))}% đất NN đang sử dụng, {"phải" if pa.ho.phai_di_chuyen else "không"} di chuyển chỗ ở, {nk} nhân khẩu'
             if not od:
                 dx.append(DeXuat(ma, D(nk), dg_dm(ma), ly))
-            elif od[0].ma not in (ma, 'HT34', 'HT35'):
+            elif od[0].ma not in (ma, 'CS34', 'CS35'):
                 dx.append(DeXuat(ma, D(nk), dg_dm(ma), f'đang ghi {od[0].ma}; {ly}', 'thay', od[0]))
             elif od[0].so_luong != nk:
                 dx.append(DeXuat(od[0].ma, D(nk), od[0].don_gia, f'số lượng = {nk} nhân khẩu', 'sửa', od[0]))
         elif od and od[0].so_luong != nk:
             dx.append(DeXuat(od[0].ma, D(nk), od[0].don_gia, f'số lượng = {nk} nhân khẩu', 'sửa', od[0]))
     # di chuyển tài sản khi phải di chuyển chỗ ở
-    if pa.ho.phai_di_chuyen and not pa.dong_ho_tro('HT14', 'HT15', 'HT16'):
-        g = goi_y_khoan(pa, bc, 'HT14')
-        dx.append(DeXuat('HT14', g.so_luong, g.don_gia, 'hộ phải di chuyển chỗ ở (đổi sang HT15/HT16 nếu chuyển ra ngoài xã, phường)'))
-    # thuê nhà / tự lo chỗ ở: một dòng, đơn giá tháng gồm mức cơ bản + nhân khẩu vượt (bản cũ có dòng cộng thêm HT21/22/25/26:
+    if pa.ho.phai_di_chuyen and not pa.dong_ho_tro('CS14', 'CS15', 'CS16'):
+        g = goi_y_khoan(pa, bc, 'CS14')
+        dx.append(DeXuat('CS14', g.so_luong, g.don_gia, 'hộ phải di chuyển chỗ ở (đổi sang CS15/CS16 nếu chuyển ra ngoài xã, phường)'))
+    # thuê nhà / tự lo chỗ ở: một dòng, đơn giá tháng gồm mức cơ bản + nhân khẩu vượt (bản cũ có dòng cộng thêm CS21/22/25/26:
     # giữ nguyên, không gộp lại)
-    co_dong_them = bool(pa.dong_ho_tro('HT21', 'HT22', 'HT25', 'HT26'))
+    co_dong_them = bool(pa.dong_ho_tro('CS21', 'CS22', 'CS25', 'CS26'))
     for d in pa.dong_ho_tro(*MA_THEO_NK):
         if co_dong_them or d.nguon_gia != NGUON_DM:
             continue
@@ -664,10 +666,10 @@ def goi_y_ho_tro(pa: PhuongAn, bc: BoiCanh) -> tuple:
             dx.append(DeXuat(d.ma, d.so_luong, dg, mo_ta, 'sửa', d))
     tu_xac_dinh = []
     if dt_nn > 0 and not nk:
-        tu_xac_dinh.append('Ổn định đời sống (HT01–HT06): nhập số nhân khẩu của hộ.')
+        tu_xac_dinh.append('Ổn định đời sống (CS1–CS6): nhập số nhân khẩu của hộ.')
     if pa.ho.phai_di_chuyen:
-        tu_xac_dinh.append('Tự lo chỗ ở (HT17/HT18) hoặc thuê nhà chờ tái định cư (HT23/HT24): theo phương án bố trí tái định cư của hộ.')
-    tu_xac_dinh.append('Hộ chính sách (HT19/HT27/HT28), di dời mồ mả (HT29), di dời điện, nước, Internet (HT31–HT33): theo hồ sơ của hộ.')
+        tu_xac_dinh.append('Tự lo chỗ ở (CS17/CS18) hoặc thuê nhà chờ tái định cư (CS23/CS24): theo phương án bố trí tái định cư của hộ.')
+    tu_xac_dinh.append('Hộ chính sách (CS19/CS27/CS28), di dời mồ mả (CS29), di dời điện, nước, Internet (CS31–CS33): theo hồ sơ của hộ.')
     return dx, tu_xac_dinh
 
 
@@ -689,7 +691,7 @@ def kiem_tra_pa(pa: PhuongAn, bc: BoiCanh) -> list:
         t = bc.thua[mt]
         if dtt != 0 and D(t['dt_thu_hoi']) != dtt:     # DT mục 1 = 0: không bồi thường đất (tài sản trên đất người khác)
             ct.append(f'Thửa {t["so_thua"]} tờ {t["so_to"]}: tổng DT ở mục 1 = {so_vn(dtt)} m², kiểm kê ghi {so_vn(t["dt_thu_hoi"])} m².')
-    for ma, gk in (('HT09', False), ('HT10', True)):
+    for ma, gk in (('CS9', False), ('CS10', True)):
         co = pa.dong_ho_tro(ma)
         if not co or any(_dao_tao_theo_thua(d) for d in co):
             continue

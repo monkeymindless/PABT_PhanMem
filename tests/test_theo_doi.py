@@ -148,36 +148,45 @@ class TestManHinh(CoSo):
         cls.app = QApplication.instance() or QApplication([])
 
     def test_bang_tong_hop_quyet_dinh_tien_do(self):
-        from pabt.man_hinh_theo_doi import KhungBangTongHop, KhungTienDo
+        from pabt.man_hinh_theo_doi import KhungBangTongHop, KhungQuyetDinh, KhungTienDo
         q1, q2 = self.hai_qd()
         a, b, c = self.ma[:3]
+        # Bảng tổng hợp kinh phí (0.9.76): 3 thẻ - cơ cấu, chi tiết từng hộ, đối soát khái toán; KHÔNG còn thẻ quyết định
         bth = KhungBangTongHop(self.con)
         bth.im_lang = True
-        for k in (bth.tong_quat, bth.quyet_dinh, bth.tien):
+        for k in bth.cac_the:
             k.im_lang = True
+        self.assertEqual(bth.tab.count(), 3)
+        self.assertFalse(hasattr(bth, 'quyet_dinh'))
         bth.mo_the(0)
-        tq = bth.tong_quat
-        so_thua = self.con.execute('SELECT COUNT(*) FROM thua').fetchone()[0]
-        self.assertEqual(tq.bang.rowCount(), so_thua + sum(1 for m in self.ma if not self.con.execute(
-            'SELECT 1 FROM thua WHERE ma_ho = ?', (m,)).fetchone()))                           # mỗi thửa một dòng
-        self.assertEqual(tq.bang.item(0, 7).text(), '100.000.000')
-        tq.o_tim.setText('3334')
-        self.assertEqual(sorted({x.ma_ho for x in tq.loc()}), sorted([b, c]))
-        tq.o_tim.setText('')
-        f = tq.xuat(self.td / 'tq.xlsx')
-        self.assertEqual(openpyxl.load_workbook(f).active['C5'].value, tq.ds[0].ho_ten)
-        # quyết định: danh sách, chọn, thêm hộ, ghi nhận chi trả, bỏ hộ, xuất
+        self.assertEqual([d['loai'] for d in bth.co_cau.cc['dong']], ['nhom'] * 5 + ['cong', 'kinh_phi', 'tong'])
+        self.assertEqual(bth.co_cau.bang.rowCount(), 8)
+        f = bth.co_cau.xuat(self.td / 'cc.xlsx')
+        self.assertEqual(openpyxl.load_workbook(f).active['A1'].value, 'CƠ CẤU KINH PHÍ DỰ ÁN')
         bth.mo_the(1)
-        kq = bth.quyet_dinh
+        self.assertEqual(bth.tien.bang.rowCount(), len(self.ma))
+        self.assertIn(f'({len(self.ma)} hộ)', bth.tab.tabText(1))                       # tên thẻ ghi số hộ thật
+        bth.mo_the(2)
+        self.assertIsNone(bth.doi_soat.ss)                                               # chưa chọn bảng khái toán
+        # quyết định: trang riêng (Nhóm 6): danh sách, chọn, thêm hộ, ghi nhận chi trả, bỏ hộ, xuất
+        kq = KhungQuyetDinh(self.con)
+        kq.im_lang = True
+        kq.nap()
         self.assertEqual(kq.ds_qd_w.count(), 2)
         kq.ds_qd_w.setCurrentRow(1)                                     # QĐ 1234
         self.assertEqual(kq.qd_id, q1)
         self.assertIn('1234/QĐ-UBND', kq.lb_qd.text())
+        n = len(self.ma)
+        self.assertIn(f'Đã duyệt: 2/{n} hộ · Tổng tiền: 300.000.000 đ', kq.lb_khop.text())     # thanh khớp số liệu
+        self.assertIn('KHỚP', kq.lb_khop.text())
         self.assertEqual(kq.them_ho([self.ma[3]]), 1)
         self.assertEqual(len(theo_doi.ho_cua_qd(self.con, q1)), 3)
+        self.assertIn(f'Đã duyệt: 3/{n} hộ', kq.lb_khop.text())
         self.assertEqual(kq.ghi_chi_tra([a, b], '10/10/2026'), 2)
         self.assertEqual(kq.sua_ho(self.ma[3], dict(so_tien='1.234.000', da_chi_tra=False, ly_do_chua_nhan='Vắng nhà')), self.ma[3])
         self.assertEqual(D(theo_doi.doc_qd_ho(self.con, self.ma[3])[0]['so_tien']), D(1234000))
+        self.assertIn('Tổng tiền: 301.234.000 đ', kq.lb_khop.text())
+        self.assertIn('LỆCH', kq.lb_khop.text())                        # cộng các hộ khác tổng 300.000.000 ghi trong quyết định
         self.assertEqual(kq.bang.item(0, 3).text(), '101/PA')
         f = kq.xuat(self.td / 'qd.xlsx')
         self.assertIn('1234/QĐ-UBND', openpyxl.load_workbook(f).active['A1'].value)
@@ -187,8 +196,6 @@ class TestManHinh(CoSo):
         moi = kq.sua_qd(None, dict(so='1/QĐ-UBND', ngay='01/01/2027'))
         self.assertEqual(kq.qd_id, moi)
         self.assertEqual(kq.xoa_qd(xac_nhan=True), 0)
-        bth.mo_the(2)
-        self.assertEqual(bth.tien.bang.rowCount(), len(self.ma))
         # tiến độ
         td = KhungTienDo(self.con)
         td.im_lang = True
@@ -197,7 +204,7 @@ class TestManHinh(CoSo):
         self.assertEqual(sorted(td.dang_hien), sorted([b, c, self.ma[3]]))
         td.dat_loc('chua_nhan', {q1})
         self.assertEqual(td.dang_hien, [self.ma[3]])
-        self.assertIn('Vắng nhà', td.bang.item(0, 8).text())
+        self.assertIn('Vắng nhà', td.bang.item(0, td.C_CHUA).text())
         td.dat_loc('', set(), 'vang nha')
         self.assertEqual(td.dang_hien, [self.ma[3]])
         td.dat_loc('', set(), '')
@@ -302,6 +309,7 @@ class TestHoanTac(CoSo):
         w.ht.chot()
         self.assertTrue(w.nut_ht['lui'].isEnabled())
         self.assertIn('hồ sơ hộ', w.nut_ht['lui'].toolTip())
+        self.assertIn('hồ sơ hộ', w.nut_ht['lui'].text())            # menu Chỉnh sửa: "Hoàn tác: <thao tác>\tCtrl+Z"
         self.assertTrue(w.hoan_tac())
         self.assertEqual(w.mo_hinh.dong[0]['o'][1], ten)
         self.assertTrue(w.nut_ht['toi'].isEnabled())

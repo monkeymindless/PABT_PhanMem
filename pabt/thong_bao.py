@@ -12,8 +12,8 @@ import sqlite3
 import zipfile
 
 TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'     # tiêu đề cửa sổ / hộp thoại (trước: khai báo lại ở 8 module)
-# các thẻ của Bảng tổng hợp = các trang 1-3 ở menu trái (app.TRANG): một nguồn cho tên thẻ, mục menu, tiêu đề trang
-THE_TONG_HOP = ('Thông tin tổng quát hộ', 'Quyết định phê duyệt', 'Tổng hợp tiền theo phương án')
+# 3 thẻ của "Bảng tổng hợp kinh phí" (Nhóm 5, 0.9.76): một nguồn cho tên thẻ. Quyết định phê duyệt là trang riêng của Nhóm 6.
+THE_TONG_HOP = ('Cơ cấu kinh phí dự án', 'Bảng kinh phí chi tiết', 'Đối soát dự toán Pre-F/S')
 
 
 def giai_thich(e: BaseException) -> tuple:

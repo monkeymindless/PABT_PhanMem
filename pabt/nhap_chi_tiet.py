@@ -611,8 +611,18 @@ def _dong_khoan(muc: int, d: DongBang, khop: _KhopDanhMuc, nguon: str) -> tuple:
     return k, cb
 
 
-def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_an: dict | None = None) -> BaoCaoNhap:
-    """Ghi các hộ (HoChiTiet có chon = True) vào dự án, một giao dịch.
+BAO_MOI = 10                    # ghi vào dự án đang mở: báo tiến độ (hộp tiến trình) sau mỗi chừng này hộ
+
+
+class DaDung(LoiNhap):
+    """Người dùng bấm Dừng khi đang ghi: cả lô được hoàn tác (không hộ nào được ghi)."""
+
+
+def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_an: dict | None = None,
+        bao_tien_do=None) -> BaoCaoNhap:
+    """Ghi các hộ (HoChiTiet có chon = True) vào dự án, một giao dịch (một bước Hoàn tác).
+    bao_tien_do(i, n) -> True để dừng: gọi mỗi BAO_MOI hộ (hộp tiến trình vẽ lại, không "Không phản hồi"); dừng -> DaDung, hoàn
+    tác cả lô.
     trung: 'bo_qua' (hộ đã có trong dự án - cùng CCCD / họ tên - thì bỏ qua), 'thay' (thay hồ sơ, thửa, phương án của hộ đó;
     giữ mã hộ, đợt trình, quyết định), 'them' (vẫn thêm thành hộ mới). du_an: điền các ô thông tin dự án còn trống."""
     if trung not in ('bo_qua', 'thay', 'them'):
@@ -620,7 +630,8 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
     bc = BaoCaoNhap()
     khop = _KhopDanhMuc(con)
     ctx = BoiCanh.tu(con)
-    with con:
+    n_ho = len(ds_ho)
+    with csdl.giao_dich(con):
         if du_an:
             cu = con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()
             for k, v in du_an.items():
@@ -631,7 +642,9 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
                             (f'Phương án chi tiết: {nguon}',))
         chi_muc = ChiMucTrung(con) if trung != 'them' else None
         tiep = None                                     # mã / thứ tự hộ mới kế tiếp: đọc MAX một lần (thu_tu không có chỉ mục)
-        for h in ds_ho:
+        for i_ho, h in enumerate(ds_ho):
+            if bao_tien_do is not None and i_ho % BAO_MOI == 0 and bao_tien_do(i_ho, n_ho):
+                raise DaDung('Đã dừng: không hộ nào được ghi (dữ liệu dự án giữ nguyên như trước khi nhập).')
             if not h.chon or not h.ho_ten:
                 bc.bo_qua.append((h.sheet, h.ly_do or ('không có họ tên' if not h.ho_ten else 'không chọn')))
                 continue

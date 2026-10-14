@@ -51,11 +51,55 @@ def _bo_tri_chu(chu: str, font: QFont, rong: float) -> tuple:
     return ds, tong
 
 
+class HopNguonGoc(QDialog):
+    """Xem / sửa nguồn gốc đất (trích lục) của một thửa trong hộp riêng - bấm đúp ô Nguồn gốc (0.9.75): khung sửa tràn trong ô làm
+    vỡ chiều cao dòng bảng thửa. Dòng "- " tự thụt lề treo như ô trong bảng (ho_so.chuan_nguon_goc)."""
+
+    def __init__(self, parent, chu: str, thua: str = ''):
+        super().__init__(parent)
+        self.setWindowTitle('Nguồn gốc đất' + (f' - {thua}' if thua else ''))
+        self.resize(720, 360)
+        self.o = QPlainTextEdit(ho_so.chuan_nguon_goc(chu))
+        self.o.setTabChangesFocus(True)
+        self.o.setPlaceholderText('Nguồn gốc, quá trình sử dụng đất (trích lục). Mỗi ý một dòng, bắt đầu bằng "- ".')
+        lo = QVBoxLayout(self)
+        lo.addWidget(self.o, 1)
+        nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+        nut.button(QDialogButtonBox.StandardButton.Save).setText('Lưu')
+        nut.button(QDialogButtonBox.StandardButton.Cancel).setText('Hủy')
+        nut.accepted.connect(self.accept)
+        nut.rejected.connect(self.reject)
+        lo.addWidget(nut)
+
+    def chu(self) -> str:
+        return ho_so.chuan_nguon_goc(self.o.toPlainText())
+
+
 class ONguonGoc(QStyledItemDelegate):
     """Ô nguồn gốc đất: sửa trong khung nhiều dòng rộng (Enter ghi, Shift+Enter xuống dòng). Chữ dài hơn chiều cao dòng
     thì tự thu nhỏ chữ cho vừa; vẫn không vừa thì cắt bớt, cuối ô hiện "…" (xem đủ nội dung ở tooltip hoặc khi sửa)."""
 
     LE = 4
+    im_lang = False                      # kiểm thử: không mở hộp (trả về chữ mới qua `chu_moi`)
+    chu_moi = None
+
+    def editorEvent(self, event, model, option, index):
+        """Bấm đúp: mở HopNguonGoc (không dùng khung sửa tràn trong ô). Gõ phím vẫn sửa trực tiếp trong ô."""
+        if event.type() == QEvent.Type.MouseButtonDblClick and (index.flags() & Qt.ItemFlag.ItemIsEditable):
+            w = option.widget
+            if w is not None and w.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers:
+                return False                                   # chỉ xem
+            chu = str(index.data() or '')
+            if self.im_lang:
+                moi = self.chu_moi
+            else:
+                thua = ' '.join(str(model.index(index.row(), c).data() or '') for c in (1, 2)).strip()
+                d = HopNguonGoc(w.window() if w is not None else None, chu, f'tờ {thua}' if thua else '')
+                moi = d.chu() if d.exec() == QDialog.DialogCode.Accepted else None
+            if moi is not None and moi != chu:
+                model.setData(index, moi)
+            return True
+        return super().editorEvent(event, model, option, index)
 
     def createEditor(self, parent, option, index):
         o = QPlainTextEdit(parent)
@@ -65,12 +109,11 @@ class ONguonGoc(QStyledItemDelegate):
         return o
 
     def setEditorData(self, o, index):
-        o.setPlainText(str(index.data() or ''))
+        o.setPlainText(ho_so.chuan_nguon_goc(index.data()))
         o.moveCursor(o.textCursor().MoveOperation.End)
 
     def setModelData(self, o, model, index):
-        dong = [' '.join(x.split()) for x in o.toPlainText().split('\n')]
-        model.setData(index, '\n'.join(x for x in dong if x))
+        model.setData(index, ho_so.chuan_nguon_goc(o.toPlainText()))
 
     def updateEditorGeometry(self, o, option, index):
         r = option.rect
@@ -92,7 +135,7 @@ class ONguonGoc(QStyledItemDelegate):
     def paint(self, p, option, index):
         op = QStyleOptionViewItem(option)
         self.initStyleOption(op, index)
-        chu = op.text
+        chu = ho_so.chuan_nguon_goc(index.data())
         op.text = ''
         w = op.widget
         st = w.style() if w is not None else None
@@ -137,7 +180,7 @@ class ONguonGoc(QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         kq = super().sizeHint(option, index)
-        chu = str(index.data() or '')
+        chu = ho_so.chuan_nguon_goc(index.data())
         w = option.widget
         rong = w.columnWidth(index.column()) if w is not None and hasattr(w, 'columnWidth') else option.rect.width()
         if chu and rong > 2 * (self.LE + 2):

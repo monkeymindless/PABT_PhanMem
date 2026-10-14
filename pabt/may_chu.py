@@ -453,8 +453,13 @@ def ds_du_an(goc=None) -> list:
     tm = goc / THU_MUC_DU_AN
     cu = _doc_chi_muc(tm)
     moi = {}
-    for f in sorted(tm.rglob('*.pabt'), key=lambda x: x.stat().st_mtime, reverse=True):
-        st = f.stat()
+    ds = []
+    for f in tm.rglob('*.pabt'):                        # stat MỘT lần mỗi file (thư mục mạng: mỗi lần một vòng hỏi máy chủ)
+        try:
+            ds.append((f, f.stat()))
+        except OSError:
+            pass
+    for f, st in sorted(ds, key=lambda x: x[1].st_mtime, reverse=True):
         k = f.relative_to(tm).as_posix()
         e = cu.get(k)
         if e and e.get('mtime') == st.st_mtime_ns and e.get('size') == st.st_size:
@@ -463,8 +468,10 @@ def ds_du_an(goc=None) -> list:
             ten = f.stem
             try:
                 c = sqlite3.connect(f.resolve().as_uri() + '?mode=ro', uri=True, timeout=3)
-                r = c.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
-                c.close()
+                try:
+                    r = c.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
+                finally:
+                    c.close()                           # file lỗi: không giữ khóa file trên máy chủ
                 ten = (r[0] or f.stem) if r else f.stem
             except sqlite3.Error:
                 pass

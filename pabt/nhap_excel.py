@@ -8,6 +8,7 @@ import re
 from collections import Counter
 import unicodedata
 from dataclasses import dataclass, field
+from functools import lru_cache
 from datetime import datetime
 from pathlib import Path
 
@@ -19,7 +20,13 @@ from .tien import D, chuoi, co_so, doc_so_vn
 
 def chuan_hoa(s) -> str:
     """'Diện tích\\nthu hồi' -> 'dien tich thu hoi' (bỏ dấu, chữ thường, gộp khoảng trắng)."""
-    s = unicodedata.normalize('NFD', str(s or '')).replace('đ', 'd').replace('Đ', 'D')
+    return _chuan_hoa(str(s or ''))
+
+
+@lru_cache(maxsize=65536)
+def _chuan_hoa(s: str) -> str:
+    # nhớ kết quả (0.9.86): nhập Excel thô gọi cho từng ô - tên cột, địa chỉ, loại đất lặp lại hàng nghìn lần
+    s = unicodedata.normalize('NFD', s).replace('đ', 'd').replace('Đ', 'D')
     s = ''.join(ch for ch in s if unicodedata.category(ch) != 'Mn')
     return ' '.join(s.lower().split())
 
@@ -383,6 +390,8 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
             con.executemany('INSERT OR REPLACE INTO bieu_thuong VALUES (?,?)', bieu)
             con.executemany('INSERT INTO quy_uoc (ten_thuc_te, ten_tuong_duong, dvt, don_gia, can_cu) VALUES (?,?,?,?,?)', quy_uoc)
             csdl.chuyen_vat_nuoi(con)                   # dòng vật nuôi (mã nhóm vật nuôi) ở DB_CAY -> mục Vật nuôi riêng
+            from .ma_tai_san import chuyen_csdl
+            chuyen_csdl(con)                            # file Excel dùng mã cũ (HT01, VN01, cây TS140…) -> mã 0.9.69
             con.executemany('INSERT OR REPLACE INTO tong_excel VALUES (?,?,?,?,?,?,?)',
                             [(m, *(chuoi(v[k]) if v.get(k) is not None else None for k in (1, 2, 3, 4, 5, 'tong')))
                              for m, v in bc.tong_excel.items()])

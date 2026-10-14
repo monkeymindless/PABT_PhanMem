@@ -30,12 +30,70 @@ def _file() -> Path:
     return tai_nguyen('bang_gia_nq28.json')
 
 
-@lru_cache(maxsize=1)
-def tat_ca() -> list:
+TEN_FILE_THAY = 'bang_gia_dat.json'    # bảng người dùng thay (một hoặc nhiều xã / tỉnh), trong thư mục máy
+
+
+class LoiBangGia(ValueError):
+    """File bảng giá không đọc được."""
+
+
+def file_thay() -> Path:
+    """File bảng giá đất người dùng đã thay trên máy này (PABT_THU_MUC_MAY / %APPDATA%\\PABT)."""
+    from .may_chu import thu_muc_may
+    return thu_muc_may() / TEN_FILE_THAY
+
+
+def _nguon() -> tuple:
+    """(đường file đang dùng, đã thay bảng gắn sẵn?)."""
+    p = file_thay()
+    if p.is_file():
+        return p, True
+    return _file(), False
+
+
+@lru_cache(maxsize=4)
+def _doc(duong: str, mtime: int) -> tuple:
     try:
-        return json.loads(_file().read_text(encoding='utf-8'))
+        data = json.loads(Path(duong).read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return (), ''
+    if isinstance(data, dict):
+        return tuple(data.get('dong') or ()), str(data.get('van_ban') or '')
+    if isinstance(data, list):
+        return tuple(data), ''
+    return (), ''
+
+
+def _da_doc() -> tuple:
+    p, thay = _nguon()
+    try:
+        m = p.stat().st_mtime_ns
     except OSError:
-        return []
+        return (), '', False
+    dong, vb = _doc(str(p), m)
+    return dong, vb, thay
+
+
+def tat_ca() -> list:
+    return list(_da_doc()[0])
+
+
+def dang_thay() -> bool:
+    """True: máy này đang dùng bảng giá người dùng nhập, không còn 4 địa bàn gắn sẵn."""
+    return _da_doc()[2]
+
+
+def van_ban_dang_dung() -> str:
+    if dang_thay():
+        return _da_doc()[1] or 'Bảng giá đất'
+    return VAN_BAN
+
+
+def tom_tat() -> str:
+    xs = ds_xa()
+    if dang_thay():
+        return f'Bảng giá đang dùng (đã thay bảng gắn sẵn): {", ".join(xs)} — {len(tat_ca())} dòng'
+    return 'Bảng gắn sẵn: ' + ', '.join(xs)
 
 
 def ds_xa() -> list:
@@ -44,15 +102,19 @@ def ds_xa() -> list:
 
 def mo_ta_vi_tri(r: dict) -> str:
     """Điều kiện của dòng (bề rộng, khoảng cách tới đường giao thông) theo văn bản."""
-    vt = r['vi_tri']
-    a, b = r['nguong']
+    vt = r.get('vi_tri') or ''
+    if r.get('dieu_kien'):
+        return str(r['dieu_kien'])
     if vt == 'MT':
         return f'Mặt tiền {r["ten_duong"]}'
-    loai = 'đấu nối trực tiếp ra' if vt[0] == 'T' else 'không đấu nối trực tiếp và thông ra'
-    dk = {'1': f'rộng ≥5m cách đường ≤{a:,}m; rộng 3-<5m cách ≤{b:,}m',
-          '2': f'rộng ≥5m cách >{a:,}m; rộng 3-<5m cách >{b:,}m đến ≤{a:,}m; rộng <3m cách ≤200m',
-          '3': f'rộng 3-<5m cách >{a:,}m; rộng <3m cách >200m'}[vt[1]]
-    return f'Đường nhựa, BTXM {loai} {r["ten_duong"]}: {dk}'.replace(',', '.')
+    if len(vt) == 2 and vt[0] in 'TK' and vt[1] in '123':
+        a, b = (r.get('nguong') or [1000, 500])[:2]
+        loai = 'đấu nối trực tiếp ra' if vt[0] == 'T' else 'không đấu nối trực tiếp và thông ra'
+        dk = {'1': f'rộng ≥5m cách đường ≤{a:,}m; rộng 3-<5m cách ≤{b:,}m',
+              '2': f'rộng ≥5m cách >{a:,}m; rộng 3-<5m cách >{b:,}m đến ≤{a:,}m; rộng <3m cách ≤200m',
+              '3': f'rộng 3-<5m cách >{a:,}m; rộng <3m cách >200m'}[vt[1]]
+        return f'Đường nhựa, BTXM {loai} {r["ten_duong"]}: {dk}'.replace(',', '.')
+    return vt or r.get('ten_duong') or ''
 
 
 def cot_cua_loai(loai_dat: str) -> str | None:
@@ -98,8 +160,10 @@ def gia_dong(r: dict, cot: str) -> int:
 
 
 def can_cu(r: dict, cot: str) -> str:
-    return (f'NQ 28/2025/NQ-HĐND: {r["xa"]}, {r["ten_duong"]} (từ {r["diem_dau"]} đến {r["diem_cuoi"]}), '
-            f'{TEN_VT[r["vi_tri"]]}, TT {r["tt"]}, {dict(COT)[cot]}')
+    vb = (r.get('van_ban') or van_ban_dang_dung()) if dang_thay() else 'NQ 28/2025/NQ-HĐND'
+    ten_vt = TEN_VT.get(r['vi_tri'], r['vi_tri'])
+    return (f'{vb}: {r["xa"]}, {r["ten_duong"]} (từ {r["diem_dau"]} đến {r["diem_cuoi"]}), '
+            f'{ten_vt}, TT {r["tt"]}, {dict(COT)[cot]}')
 
 
 def xuat_excel(file_ra) -> Path:
@@ -142,3 +206,169 @@ def xuat_excel(file_ra) -> Path:
     file_ra = Path(file_ra)
     wb.save(file_ra)
     return file_ra
+
+
+def _chuan_vi_tri(chu: str) -> str:
+    t = bo_dau(chu or '').strip()
+    if t in ('mt', 'mat tien', 'mat tien duong', 'm'):
+        return 'MT'
+    m = re.fullmatch(r'([tk])\s*([123])', t)
+    if m:
+        return m.group(1).upper() + m.group(2)
+    if t in ('1', '2', '3', '4', '5'):
+        return 'VT' + t
+    m = re.search(r'(?:vi tri|vt)\s*([1-5])$', t)
+    if m:
+        return 'VT' + m.group(1)
+    goc = (chu or '').strip()
+    return (goc[:16] or 'MT')
+
+
+def _so_gia(v) -> int:
+    if v is None or v == '':
+        return 0
+    if isinstance(v, bool):
+        return 0
+    if isinstance(v, (int, float)):
+        return int(round(v))
+    from .tien import doc_so_vn
+    try:
+        return int(round(float(doc_so_vn(str(v)))))
+    except (ValueError, ArithmeticError):
+        return 0
+
+
+_COT_EXCEL = (
+    ('dat_o', ('dat o',)),
+    ('tmdv', ('thuong mai', 'tmd')),
+    ('sxkd', ('sx-kd', 'sxkd', 'khoang san', 'san xuat kinh doanh')),
+    ('nn_cay', ('cay lau nam', 'cay hang nam')),
+    ('nn_rung_nts', ('rung san xuat', 'thuy san', 'nuoi trong')),
+)
+
+
+def _tieu_de(ws):
+    for i in range(1, 16):
+        o = {}
+        for c in range(1, min(ws.max_column or 1, 24) + 1):
+            chu = bo_dau(str(ws.cell(i, c).value or '')).strip()
+            if chu:
+                o[c] = chu
+        if any('ten duong' in v or v in ('duong', 'tuyen duong', 'tuyen') for v in o.values()):
+            return i, o
+    return None, {}
+
+
+def _cot(o: dict, *mau: str):
+    for c, chu in o.items():
+        if any(m in chu for m in mau):
+            return c
+    return None
+
+
+def doc_excel(file) -> tuple:
+    """Đọc file Excel bảng giá đất. Trả (danh sách dòng, tên văn bản, câu đơn vị đã hiểu).
+
+    Mỗi sheet một địa bàn (tên sheet), hoặc một cột Địa bàn. Cột giá ghi đồng/m² (file xuất từ phần mềm)
+    hoặc nghìn đồng/m² nếu dòng tiêu đề ghi "nghìn". Cột tối thiểu: Tên đường và một cột giá (Đất ở hoặc Đơn giá).
+    """
+    import openpyxl
+    wb = openpyxl.load_workbook(file, data_only=True)
+    dong, van_ban = [], ''
+    thay_don_vi = []
+    try:
+        for ws in wb.worksheets:
+            hang, o = _tieu_de(ws)
+            if hang is None:
+                continue
+            phan_dau = ' '.join(str(ws.cell(i, 1).value or '') for i in range(1, hang))
+            if not van_ban:
+                a1 = str(ws.cell(1, 1).value or '').strip()
+                if a1 and 'bang gia' not in bo_dau(a1):
+                    van_ban = a1
+                else:
+                    a2 = re.sub(r'\.?\s*[Đđ]ơn vị:.*', '', str(ws.cell(2, 1).value or '')).strip()
+                    van_ban = a2
+            khoa = bo_dau(phan_dau)
+            if 'nghin' in khoa:
+                don_vi = 'nghin'
+            elif 'dong/m' in khoa:
+                don_vi = 'dong'
+            else:
+                don_vi = ''
+            c_ten = _cot(o, 'ten duong', 'tuyen duong') or _cot(o, 'duong')
+            c_dau = _cot(o, 'diem dau') or _cot(o, 'tu ')
+            c_cuoi = _cot(o, 'diem cuoi') or _cot(o, 'den')
+            c_vt = _cot(o, 'vi tri')
+            c_xa = _cot(o, 'dia ban', 'xa/phuong', 'xa phuong') or _cot(o, 'xa', 'phuong')
+            c_tt = _cot(o, 'tt', 'stt')
+            c_gia = {}
+            for khoa_cot, mau in _COT_EXCEL:
+                c = _cot(o, *mau)
+                if c:
+                    c_gia[khoa_cot] = c
+            if not c_gia:
+                c = _cot(o, 'don gia', 'gia dat') or _cot(o, 'gia')
+                if c:
+                    c_gia['dat_o'] = c
+            if not c_gia:
+                raise LoiBangGia(f'Sheet "{ws.title}": chưa thấy cột giá. Cần cột "Đất ở" hoặc "Đơn giá" (đồng/m²).')
+            ten_sheet = re.sub(r'(?i)^bảng giá đất\s*-\s*', '', ws.title).strip() or ws.title
+            dem = 0
+            so_duong = []
+            bat = len(dong)
+            for row in ws.iter_rows(min_row=hang + 1, max_col=min(ws.max_column or 1, 24), values_only=True):
+                def o_cot(c, row=row):
+                    return row[c - 1] if c and c - 1 < len(row) else None
+                ten = str(o_cot(c_ten) or '').strip()
+                if not ten or ten.lower() in ('none', 'tên đường'):
+                    continue
+                dem += 1
+                xa = str(o_cot(c_xa) or '').strip() if c_xa else ''
+                if not xa or xa.lower() == 'none':
+                    xa = ten_sheet
+                vt = _chuan_vi_tri('' if o_cot(c_vt) is None else str(o_cot(c_vt)))
+                gia = {k: _so_gia(o_cot(c_gia.get(k))) for k, _ in COT}
+                so_duong.extend(v for v in gia.values() if v)
+                tt = _so_gia(o_cot(c_tt)) or dem
+                dong.append(dict(xa=xa, tt=tt, ten_duong=ten,
+                                 diem_dau=str(o_cot(c_dau) or '').strip(),
+                                 diem_cuoi=str(o_cot(c_cuoi) or '').strip(),
+                                 vi_tri=vt, nguong=[1000, 500],
+                                 trang={'pl3': '', 'pl1': ''}, **gia))
+            if so_duong and not don_vi:
+                don_vi = 'dong' if max(so_duong) >= 1_000_000 else 'nghin'
+            thay_don_vi.append(don_vi or 'nghin')
+            if don_vi == 'dong':
+                for r in dong[bat:]:
+                    for k, _ in COT:
+                        r[k] = int(round(r[k] / 1000))
+    finally:
+        wb.close()
+    if not dong:
+        raise LoiBangGia('Không thấy bảng giá. Dòng tiêu đề cần có cột "Tên đường" và một cột giá.')
+    chu = 'Giá hiểu theo đồng/m².' if 'dong' in thay_don_vi and 'nghin' not in thay_don_vi else (
+        'Giá hiểu theo nghìn đồng/m² (như văn bản).' if 'dong' not in thay_don_vi else
+        'Một số sheet theo đồng/m², một số theo nghìn đồng/m².')
+    return dong, van_ban, chu
+
+
+def ghi_thay(dong: list, van_ban: str = '', nguon: str = '') -> Path:
+    """Ghi đè bảng giá đất của máy này. Bốn địa bàn gắn sẵn không còn hiện cho đến khi khôi phục."""
+    import os
+    p = file_thay()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tam = p.with_suffix('.json.tmp')
+    tam.write_text(json.dumps({'van_ban': van_ban, 'nguon': str(nguon), 'dong': dong}, ensure_ascii=False),
+                   encoding='utf-8')
+    os.replace(tam, p)
+    return p
+
+
+def xoa_thay() -> bool:
+    """Xóa bảng người dùng: phần mềm trở lại 4 địa bàn gắn sẵn. False nếu đang không thay."""
+    p = file_thay()
+    if not p.is_file():
+        return False
+    p.unlink()
+    return True

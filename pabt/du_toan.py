@@ -56,6 +56,21 @@ class DongDT:
             self.phan_tram = None
 
 
+def _doi_ma_dong(d: DongDT) -> DongDT:
+    """File dự toán lưu bằng phiên bản trước 0.9.69: mã cũ (HT01, VN01, cây TS140…) -> mã mới (ma_tai_san)."""
+    from .ma_tai_san import doi_ma
+    if d.ma:
+        d.ma = doi_ma(d.ma, 4 if d.muc == 4 else d.muc)
+    return d
+
+
+# 0.9.70: 7 trường thông tin chuẩn bị đầu tư trên đầu trang Khái toán (thuộc tính DuToan -> nhãn)
+NHAN_CHUAN_BI = {'ten': 'Tên dự án', 'chu_dau_tu': 'Chủ đầu tư', 'nguon_von': 'Nguồn vốn', 'dia_ban': 'Địa bàn thu hồi',
+                 'quy_mo_dt': 'Diện tích dự kiến', 'so_thua_dk': 'Số thửa dự kiến', 'so_ho_dk': 'Số hộ dự kiến'}
+TRUONG_CHUAN_BI = tuple(NHAN_CHUAN_BI)
+NGUON_VON = ('Vốn đầu tư công', 'Vốn ngoài ngân sách / Doanh nghiệp')
+
+
 @dataclass
 class DuToan:
     ten: str = ''
@@ -65,6 +80,13 @@ class DuToan:
     dong: list = field(default_factory=list)
     ngay: str = ''
     dia_chi: str = ''                 # địa chỉ dự án trên Bảng khái toán (trống: dùng địa bàn)
+    # 0.9.70 thông tin chuẩn bị đầu tư (người dùng 12/10/2026): lưu trong .pabtdt, không phụ thuộc file dự án .pabt đang mở
+    chu_dau_tu: str = ''
+    nguon_von: str = ''               # một trong NGUON_VON
+    quy_mo_dt: str = ''               # chữ người gõ: "15,5 ha", "155.000 m²"
+    so_thua_dk: str = ''
+    so_ho_dk: str = ''
+    loai_kinh_phi: str = ''           # ô "Kinh phí QĐ08" (0.9.71): '' tự nhận theo tên, 'tuyen' 3,5%, 'khac' 2,5%
 
     # ---------------------------------------------- tính
     def thanh_tien(self, d: DongDT) -> object:
@@ -91,6 +113,8 @@ class DuToan:
         if p.suffix.lower() != DUOI:
             p = p.with_suffix(DUOI)
         du = dict(phien_ban=1, ten=self.ten, dia_ban=self.dia_ban, dia_chi=self.dia_chi, nguon=self.nguon, lamtron=self.lamtron,
+                  **{k: getattr(self, k) for k in TRUONG_CHUAN_BI if k not in ('ten', 'dia_ban')},
+                  loai_kinh_phi=self.loai_kinh_phi,
                   ngay=datetime.now().strftime('%d/%m/%Y %H:%M'),
                   dong=[{k: (chuoi(v) if k in ('khoi_luong', 'don_gia', 'he_so') or (k == 'phan_tram' and v is not None) else v)
                          for k, v in asdict(d).items()} for d in self.dong])
@@ -102,26 +126,38 @@ class DuToan:
         du = json.loads(Path(file).read_text(encoding='utf-8'))
         return cls(ten=du.get('ten', ''), dia_ban=du.get('dia_ban', ''), dia_chi=du.get('dia_chi', ''), nguon=du.get('nguon', ''),
                    lamtron=int(du.get('lamtron', -3)), ngay=du.get('ngay', ''),
-                   dong=[DongDT(**x) for x in du.get('dong', [])])
+                   **{k: str(du.get(k) or '') for k in TRUONG_CHUAN_BI if k not in ('ten', 'dia_ban')},
+                   loai_kinh_phi=str(du.get('loai_kinh_phi') or ''),
+                   dong=[_doi_ma_dong(DongDT(**x)) for x in du.get('dong', [])])
 
     # ---------------------------------------------- thêm dòng
-    def them_chi_phi_mac_dinh(self) -> None:
+    def them_chi_phi_mac_dinh(self, loai: str | None = None) -> None:
+        """Thêm (hoặc sửa) chi phí tổ chức thực hiện và dự phòng 10%.
+
+        loai 'tuyen' = 3,5%, 'khac' = 2,5% (QĐ 08/2025/QĐ-UBND). Bỏ trống: tự nhận theo tên dự án, không đè tỷ lệ đã nhập.
+        """
         from .lap_pa import CAN_CU_KINH_PHI, LOAI_KINH_PHI, loai_kinh_phi_tu_ten
-        co = {bo_dau(d.ten) for d in self.dong if d.muc == 6}
-        for i, (ten, pt) in enumerate(CP_MAC_DINH):
-            if bo_dau(ten) not in co:
-                cc = 'Tỷ lệ tạm tính - điều chỉnh theo quy định áp dụng'
-                if i == 0:                              # theo tuyến 3,5%, cụm / vùng / khác 2,5% (QĐ 08/2025/QĐ-UBND)
-                    loai = loai_kinh_phi_tu_ten(self.ten)
-                    pt = str(LOAI_KINH_PHI[loai][1])
-                    cc = f'{LOAI_KINH_PHI[loai][0]}: không quá {pt.replace(".", ",")}% ({CAN_CU_KINH_PHI})'
-                self.dong.append(DongDT(6, ten, '%', phan_tram=pt, can_cu=cc))
+        ep = loai in LOAI_KINH_PHI
+        if not ep:
+            loai = loai_kinh_phi_tu_ten(self.ten)
+        ten_tc, ten_dp = CP_MAC_DINH[0][0], CP_MAC_DINH[1][0]
+        pt = str(LOAI_KINH_PHI[loai][1])
+        cc = f'{LOAI_KINH_PHI[loai][0]}: không quá {pt.replace(".", ",")}% ({CAN_CU_KINH_PHI})'
+        co = next((d for d in self.dong if d.muc == 6 and bo_dau(d.ten) == bo_dau(ten_tc)), None)
+        if co is None:
+            self.dong.append(DongDT(6, ten_tc, '%', phan_tram=pt, can_cu=cc))
+        elif ep:
+            co.phan_tram = D(pt)
+            co.can_cu = cc
+        if not any(d.muc == 6 and bo_dau(d.ten) == bo_dau(ten_dp) for d in self.dong):
+            self.dong.append(DongDT(6, ten_dp, '%', phan_tram='10',
+                                    can_cu='Tỷ lệ tạm tính - điều chỉnh theo quy định áp dụng'))
 
 
 # ---------------------------------------------------------------- lấy khối lượng
 def tu_du_an(con, ds_ma_ho: list | None = None, ten: str = '') -> DuToan:
     """Gom các dòng phương án của dự án (cùng mục, hạng mục, đơn giá, hệ số) thành dòng dự toán."""
-    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, ket_qua_ho_san, so_vi_tri, tinh_pa
+    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, he_so, ket_qua_ho_san, so_vi_tri, tinh_pa
     bc = BoiCanh.tu(con)
     da = con.execute('SELECT ten, cap_dia_ban, ten_dia_ban FROM du_an WHERE id = 1').fetchone()
     ten_ld = {r['ma'].upper(): r['ten'] for r in con.execute('SELECT ma, ten FROM dm_loaidat')}
@@ -140,23 +176,25 @@ def tu_du_an(con, ds_ma_ho: list | None = None, ten: str = '') -> DuToan:
         thuong += k.muc[5]
         for d in pa.dat:
             vt = so_vi_tri(d.vi_tri) or d.vi_tri
-            khoa = (1, d.loai_dat.upper(), vt, d.gia_bang_gia * d.he_so_k, d.ty_le)
+            tl = he_so(d.ty_le)
+            khoa = (1, d.loai_dat.upper(), vt, d.gia_bang_gia * d.he_so_k, tl)
             x = gom.get(khoa)
             if x is None:
                 ten_ld_d = ten_ld.get(d.loai_dat.upper(), d.loai_dat)
                 if not bo_dau(ten_ld_d).startswith('dat'):
                     ten_ld_d = 'Đất ' + ten_ld_d
                 ten_dong = f'{ten_ld_d} ({d.loai_dat})' + (f' - vị trí {vt}' if vt else '')
-                x = gom[khoa] = DongDT(1, ten_dong, 'm²', KHONG, d.gia_bang_gia * d.he_so_k, d.ty_le, d.loai_dat,
+                x = gom[khoa] = DongDT(1, ten_dong, 'm²', KHONG, d.gia_bang_gia * d.he_so_k, tl, d.loai_dat,
                                        'Giá đất theo bảng giá x hệ số K của dự án')
             x.khoi_luong += d.dien_tich
         for muc_pa in (2, 3, MUC_VN, 4):
             muc = muc_du_toan(muc_pa)
             for d in pa.khoan[muc_pa]:
-                khoa = (muc, d.ma or bo_dau(d.ten), d.dvt, d.don_gia, d.ty_le)
+                tl = he_so(d.ty_le)
+                khoa = (muc, d.ma or bo_dau(d.ten), d.dvt, d.don_gia, tl)
                 x = gom.get(khoa)
                 if x is None:
-                    x = gom[khoa] = DongDT(muc, d.ten, d.dvt, KHONG, d.don_gia, d.ty_le, d.ma or d.ma_tuong_duong,
+                    x = gom[khoa] = DongDT(muc, d.ten, d.dvt, KHONG, d.don_gia, tl, d.ma or d.ma_tuong_duong,
                                            d.can_cu_gia or (d.quy_cach if muc == 4 else ''))
                 x.khoi_luong += d.so_luong
     dt.dong = list(gom.values())
@@ -223,7 +261,7 @@ def ap_don_gia_hien_hanh(dt: DuToan, dm: DanhMuc) -> list:
         m = dm.lay(d.ma)
         if m is None or m.don_gia is None or m.don_gia == d.don_gia:
             continue
-        if d.muc == 4 and m.don_gia < 100:           # mục 4: cột đơn giá danh mục là hệ số (HT09...) -> giữ
+        if d.muc == 4 and m.don_gia < 100:           # mục 4: cột đơn giá danh mục là hệ số (CS9...) -> giữ
             continue
         doi.append((d.ten, d.don_gia, m.don_gia))
         d.don_gia = m.don_gia
@@ -242,7 +280,8 @@ def xuat_excel(dt: DuToan, file_ra) -> Path:
     mong = Side(style='thin', color='808080')
     vien = Border(left=mong, right=mong, top=mong, bottom=mong)
     ws.cell(1, 1, 'DỰ TOÁN KINH PHÍ BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ (DỰ THẢO)').font = Font(bold=True, size=14)
-    ws.cell(2, 1, f'Dự án: {dt.ten}' + (f'  -  {dt.dia_ban}' if dt.dia_ban else ''))
+    ws.cell(2, 1, f'Dự án: {dt.ten}' + (f'  -  {dt.dia_ban}' if dt.dia_ban else '') +
+            (f'  -  Chủ đầu tư: {dt.chu_dau_tu}' if dt.chu_dau_tu else '') + (f'  -  {dt.nguon_von}' if dt.nguon_von else ''))
     ws.cell(3, 1, f'Nguồn khối lượng: {dt.nguon}  -  lập lúc {datetime.now():%H:%M %d/%m/%Y}')
     for i in (1, 2, 3):
         ws.merge_cells(start_row=i, start_column=1, end_row=i, end_column=9)

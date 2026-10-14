@@ -1,7 +1,11 @@
-"""Đóng gói 2 bộ cài PABT bằng IExpress (có sẵn trong Windows) -> thư mục bo_cai\\:
+"""Đóng gói bộ cài PABT bằng IExpress (có sẵn trong Windows) -> thư mục bo_cai\\.
 
-    PABT_CaiDat_<ver>_Win10-11.exe  + PABT_ChayNgay_<ver>_Win10-11.zip   (dist\\PABT: Python 3.14 + Qt6, 64-bit)
-    PABT_CaiDat_<ver>_Win7-8.exe    + PABT_ChayNgay_<ver>_Win7-8.zip     (dist\\PABT_Win7: Python 3.8 + Qt5, 32-bit)
+Từ 0.9.26 (người dùng 11/10/2026: "tối giản chỉ 1 bộ cài cho mọi Windows") mặc định chỉ phát hành MỘT bộ cài:
+    PABT_Setup_Universal_<ver>.exe  + PABT_ChayNgay_<ver>_Universal.zip (cài dự phòng / chạy ngay)
+chứa cả dist\\PABT (Python 3.14 + Qt6, 64-bit) và dist\\PABT_Win7 (Python 3.8 + Qt5, 32-bit); cai_dat.ps1 tự chọn theo máy.
+Hai bộ riêng (trước 0.9.26) vẫn dựng được khi cần: tham số win10 / win7
+    PABT_CaiDat_<ver>_Win10-11_x64.exe  + PABT_ChayNgay_<ver>_x64.zip
+    PABT_CaiDat_<ver>_Win7-8-10_x86.exe + PABT_ChayNgay_<ver>_x86.zip
 
 MỘT TIÊU CHUẨN CÀI ĐẶT cho cả hai bản (người dùng yêu cầu: máy nào cũng cài được):
   - cài cho người dùng hiện tại, KHÔNG cần quyền quản trị, KHÔNG cài thêm gì vào Windows: thư viện Visual C++ và UCRT (bản
@@ -15,7 +19,7 @@ MỘT TIÊU CHUẨN CÀI ĐẶT cho cả hai bản (người dùng yêu cầu: m
     không chạy được file .exe: diệt virus chặn, tên người dùng có dấu làm vỏ IExpress lỗi…).
 Vỏ Win7-8 dựng bằng iexpress 32-bit (SysWOW64) để chạy được trên Windows 32-bit. `PABT_CaiDat_....exe /Q` = cài im lặng.
 
-    .venv\\Scripts\\python bo_cai_win\\dung_bo_cai_win.py [win10] [win7]     (mặc định cả hai)
+    .venv\\Scripts\\python bo_cai_win\\dung_bo_cai_win.py [universal] [win10] [win7]     (mặc định: universal)
 Cần chạy sau PyInstaller + rut_gon.py (DUNG_BO_CAI.bat). Dùng .venv (cần PyInstaller 6 để đổi biểu tượng vỏ IExpress).
 """
 from __future__ import annotations
@@ -54,6 +58,7 @@ BAN = {
     # chạy Win 7 SP1 / 8 / 8.1 / Windows 10 32-bit (và cả 64-bit): PABT_CaiDat_<ver>_Win7-8-10_x86.exe / PABT_ChayNgay_<ver>_x86.zip
     'win7': dict(dist='PABT_Win7', ten='Win7-8-10_x86', zip='x86', vc=None, kien='x86', iexpress=IEXPRESS, kb=tuple(KB_WIN7)),
 }
+MAC_DINH = ('universal',)           # 0.9.26: một bộ cài cho mọi Windows (hai bộ riêng: tham số win10 / win7)
 # không bao giờ đóng dữ liệu thật vào bộ cài (CLAUDE.md)
 DU_LIEU_CAM = re.compile(r'\.(pabt|pabtdt|xlsm)$|^DS |PABT_CHUAN', re.I)
 
@@ -139,10 +144,18 @@ def _ghi_ds(f: Path, dong: list) -> None:
 
 
 def _goi_moi(ten: str) -> Path:
+    for cu in DEV.glob(f'goi_{ten}_*'):                 # gói tên phụ của lần dựng trước
+        if cu.is_dir():
+            shutil.rmtree(cu, ignore_errors=True)
     goi = DEV / f'goi_{ten}'
     if goi.exists():
-        shutil.rmtree(goi)
-    goi.mkdir(parents=True)
+        shutil.rmtree(goi, ignore_errors=True)
+    try:
+        goi.mkdir(parents=True)
+    except FileExistsError:
+        # chạy trong ứng dụng Claude (MSIX ảo hóa %LOCALAPPDATA%): thư mục thật còn đó dù bản ảo đã xóa (12/10/2026) -> tên mới
+        goi = DEV / f'goi_{ten}_{os.getpid()}'
+        goi.mkdir(parents=True)
     if not str(goi).isascii():
         raise SystemExit(f'IExpress cần đường dẫn không dấu: {goi}')
     return goi
@@ -223,22 +236,47 @@ def dong_goi_pho_quat(pb: str) -> Path:
     Cài như hai bộ cài riêng (cùng cai_dat.ps1): mặc định Program Files (x86), không có quyền quản trị thì thư mục người dùng."""
     goi = _goi_moi('universal')
     file = []
-    n = {}
+    n, cay, ds_zip = {}, {}, {}
     for ban, tien_to, ten_ds in (('win10', 'a', 'danh_sach_x64.txt'), ('win7', 'b', 'danh_sach_x86.txt')):
         ct = _ds_chuong_trinh(ban)
-        phang, ds_exe, _ = _chep_phang(goi, ct, tien_to)
+        phang, ds_exe, dz = _chep_phang(goi, ct, tien_to)
         _ghi_ds(goi / ten_ds, ds_exe)
         file += [ten_ds] + phang
-        n[ban] = len(ct)
+        n[ban], cay[ban] = len(ct), ct
+        ds_zip[ten_ds] = [f'{BAN[ban]["zip"]}\\{d}' for d in dz]          # nguồn trong zip: x64\… / x86\…
     file = _chep_cai_dat(goi, 'universal', pb) + file + _chep_kb(goi, BAN['win7']['kb'])
     dich = _iexpress(goi, file, 'PABT_Setup_Universal', IEXPRESS, f'PABT_Setup_Universal_{pb}.exe')
     print(f'{dich.name}: {dich.stat().st_size / 2**20:.1f} MB, vỏ {kien_truc(dich)}, x64 {n["win10"]} + x86 {n["win7"]} file')
+    # gói zip dự phòng (máy không chạy được .exe của bộ cài): x64\ và x86\ chạy ngay PABT.exe; CAI_DAT.cmd cài như bộ cài .exe
+    # (ban.txt 'universal' -> cai_dat.ps1 tự chọn danh_sach_x64 / x86)
+    z_ten = RA / f'PABT_ChayNgay_{pb}_Universal.zip'
+    with zipfile.ZipFile(z_ten, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+        for ban in ('win10', 'win7'):
+            for ten, f in cay[ban]:
+                z.write(f, f'{BAN[ban]["zip"]}/{ten}')
+        for ten_ds, dong in ds_zip.items():
+            z.writestr(ten_ds, ('\r\n'.join(dong) + '\r\n').encode('utf-8'))
+        for ten in ('CAI_DAT.cmd', 'cai_dat.ps1', 'go_cai_dat.ps1', 'ban.txt', 'phien_ban.txt', 'bieu_tuong.png', 'PABT.ico',
+                    *BAN['win7']['kb']):
+            z.write(goi / ten, ten)
+        z.writestr('DOC_TRUOC.txt', DOC_TRUOC.format(pb=pb).replace('\n', '\r\n').encode('utf-8-sig'))
+    print(f'{z_ten.name}: {z_ten.stat().st_size / 2**20:.1f} MB')
     return dich
+
+
+DOC_TRUOC = """PABT {pb} - goi cai du phong / chay ngay (dung khi file PABT_Setup_Universal_{pb}.exe bi chan)
+
+CÀI ĐẶT: bấm đúp CAI_DAT.cmd - cùng cửa sổ cài như bộ cài .exe, tự chọn bản hợp với máy.
+CHẠY NGAY (không cài):
+  - Windows 10 (bản 1809 trở lên) / Windows 11, 64-bit: chạy x64\\PABT.exe
+  - Windows 7 SP1 / 8 / 8.1, Windows 32-bit: chạy x86\\PABT.exe
+Không cần Python, Visual C++ hay kết nối mạng.
+"""
 
 
 def main(argv) -> int:
     pb = phien_ban()
-    for ban in (argv or [*BAN, 'universal']):
+    for ban in (argv or MAC_DINH):
         if ban == 'universal':
             dong_goi_pho_quat(pb)
         else:

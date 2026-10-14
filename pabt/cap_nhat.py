@@ -23,7 +23,7 @@ from . import __version__, an_toan
 DUOI = '.pabtcn'
 UNG_DUNG = 'PABT'
 BAN_GOC_TOI_THIEU = '0.8.0'          # bản cài đầu tiên chạy Python 3.8 + Qt5 (Win 7 - 11)
-DU_LIEU = ('schema.sql', 'bo_don_gia.sqlite', 'bang_gia_nq28.json', 'bieu_tuong.png')
+DU_LIEU = ('schema.sql', 'bo_don_gia.sqlite', 'bang_gia_nq28.json', 'bieu_tuong.png', 'pabt_profile.json')
 
 
 class LoiCapNhat(Exception):

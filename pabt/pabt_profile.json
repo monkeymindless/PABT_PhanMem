@@ -1,0 +1,75 @@
+{
+  "loai": "pabt_profile",
+  "phien_ban_cau_truc": 1,
+  "ten_ho_so": "Tỉnh Đồng Nai - Trung tâm Phát triển quỹ đất Chi nhánh Vĩnh Cửu (mặc định)",
+  "ghi_chu": "Hồ sơ địa phương mặc định đóng kèm phần mềm. Máy dùng ở địa phương khác: đặt %APPDATA%\\PABT\\pabt_profile.json (chỉ cần các mục khác mặc định) hoặc nhập gói .pabtcfg. Số tiền / tỷ lệ ghi dạng chuỗi (\"3.5\") để đọc bằng Decimal, không sai số.",
+  "co_quan": {
+    "vai_tro": "TỔ CHỨC LÀM NHIỆM VỤ BỒI THƯỜNG",
+    "ten": "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT CHI NHÁNH VĨNH CỬU",
+    "truc_thuoc": "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT THÀNH PHỐ ĐỒNG NAI",
+    "dia_chi": "Đường Phan Chu Trinh, khu phố Vĩnh An 1, phường Trị An, thành phố Đồng Nai",
+    "ban_in_mac_dinh": {
+      "don_vi_cap_tren": "Trung tâm Phát triển quỹ đất thành phố Đồng Nai",
+      "don_vi_tieu_de": "Chi nhánh Vĩnh Cửu",
+      "don_vi_lap": "Trung tâm Phát triển quỹ đất Chi nhánh Vĩnh Cửu",
+      "ky_hieu_so": "PA-TTPTQĐ.CNVC",
+      "chuc_vu_ky": "Phó Giám đốc"
+    }
+  },
+  "can_cu_phap_ly": {
+    "kinh_phi_to_chuc": "Quyết định số 08/2025/QĐ-UBND ngày 10/02/2025 của UBND tỉnh Đồng Nai",
+    "tham_dinh": "Khoản 8 Mục IV QĐ 18",
+    "to_trinh": [
+      "Căn cứ Quyết định số 30/2025/QĐ-UBND ngày 29/8/2025 của UBND tỉnh Đồng Nai về quy chế phối hợp thực hiện chức năng, nhiệm vụ, quyền hạn giữa Trung tâm Phát triển quỹ đất tỉnh, Trung tâm Phát triển quỹ đất chi nhánh/ khu vực với cơ quan có chức năng quản lý đất đai, cơ quan tài chính và cơ quan, đơn vị khác có liên quan trên địa bàn tỉnh Đồng Nai;",
+      "Căn cứ Quyết định số 42/2025/QĐ-UBND ngày 02/10/2025 của UBND tỉnh Đồng Nai về việc ban hành Quy định về bồi thường, hỗ trợ, tái định cư khi Nhà nước thu hồi đất trên địa bàn tỉnh Đồng Nai;",
+      "Căn cứ Quyết định số 18/2026/QĐ-UBND ngày 19/6/2026 của UBND thành phố Đồng Nai về việc quy định trình tự, thủ tục hành chính về đất đai áp dụng trên địa bàn thành phố Đồng Nai;"
+    ]
+  },
+  "thoi_han": {
+    "tham_dinh": {"so_ngay": 15, "can_cu": "Bước 8 Mục IV QĐ 18/2026/QĐ-UBND"},
+    "thu_hoi_nn": {"so_ngay": 60, "can_cu": "Bước 13 Mục IV QĐ 18/2026/QĐ-UBND"},
+    "thu_hoi_pnn": {"so_ngay": 120, "can_cu": "Bước 13 Mục IV QĐ 18/2026/QĐ-UBND"},
+    "van_dong": {"so_ngay": 10, "can_cu": "Bước 14, 15 Mục IV QĐ 18/2026/QĐ-UBND; cưỡng chế thực hiện quyết định thu hồi đất theo Điều 89 Luật Đất đai năm 2024"},
+    "niem_yet": {"so_ngay": 10, "can_cu": "Luật Đất đai năm 2024, Nghị định 88/2024/NĐ-CP"},
+    "doi_thoai": {"so_ngay": 30, "can_cu": "Luật Đất đai năm 2024, Nghị định 88/2024/NĐ-CP"}
+  },
+  "kinh_phi_to_chuc": {
+    "loai": {
+      "tuyen": {"ten": "Hạ tầng theo tuyến (đường, kênh, đường dây, đường ống…)", "ty_le_toi_da": "3.5"},
+      "khac": {"ten": "Dự án khác (cụm, vùng, khu…)", "ty_le_toi_da": "2.5"}
+    },
+    "lam_tron_den": -3,
+    "phan_bo": [
+      {"ten": "Tổ chức làm nhiệm vụ bồi thường, hỗ trợ, tái định cư", "ty_le": "85"},
+      {"ten": "UBND cấp xã nơi có đất thu hồi", "ty_le": "15"}
+    ]
+  },
+  "quy_tac_kiem_tra": {
+    "ghi_chu": "Bác sĩ hồ sơ (Kiểm tra lỗi). han_muc_dat_o_m2: hạn mức đất ở theo quy định của tỉnh (m²) - null = chưa áp dụng kiểm tra; khóa theo cấp địa bàn của dự án (Thông tin dự án: Xã / Phường / Đặc khu).",
+    "han_muc_dat_o_m2": {"xa": null, "phuong": null, "dac_khu": null},
+    "nhan_khau_canh_bao": 20,
+    "ty_le_toi_da_tai_san": "100"
+  },
+  "ban_in": {
+    "che_cccd_ban_du_thao": true,
+    "nguon_goc": {"can_ngang": "justify", "can_doc": "top"}
+  },
+  "mau_in": {
+    "IN_CHITIET": {
+      "chu_dau_bang": "STT",
+      "cot": {"stt": "A", "ten": "B", "dvt": "C", "so_luong": "D", "don_gia": "E", "ty_le": "F", "thanh_tien": "G", "ghi_chu": "H"},
+      "cot_loai_dong": "AD"
+    },
+    "IN_BANGTONGHOP": {
+      "dong_du_lieu_dau": 13,
+      "cot": {
+        "stt": "A", "ho_ten": "B", "dia_chi": "C", "so_to": "D", "so_thua": "E", "loai_dat": "F", "dt_thu_hoi": "G",
+        "dt_nong_nghiep": "H", "dt_lua": "I", "dt_phi_nong_nghiep": "J", "dt_o": "K", "vi_tri": "N",
+        "tien_dat": "P", "tien_tai_san": "Q", "tien_cay_vat_nuoi": "R", "ho_tro_dao_tao": "S", "ho_tro_on_dinh": "T",
+        "thuong": "U", "tong": "V", "nguon_goc": "W", "tai_dinh_cu": "X", "ghi_chu": "Y"
+      },
+      "cot_cong": ["G", "H", "I", "J", "K", "L", "M", "P", "Q", "R", "S", "T", "U", "V"],
+      "cot_cuoi": "Y"
+    }
+  }
+}

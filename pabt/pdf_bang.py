@@ -10,9 +10,46 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .lap_pa import bo_dau
 from .tien import D, KHONG
+
+# Đọc PDF quyết định MỘT lần (0.9.87): đọc / xem lại cùng một file (dien_so_ky, doc_bang_pdf, mở lại hộp Trạng thái…) dùng lại
+# PdfReader và kết quả theo (đường dẫn, mtime_ns, cỡ) - file đổi thì đọc lại. Giữ tối đa _NHO_TOI_DA file.
+_NHO = {}
+_NHO_TOI_DA = 4
+
+
+def _khoa_file(file):
+    import os
+    st = os.stat(file)
+    return str(Path(file).resolve()), st.st_mtime_ns, st.st_size
+
+
+def _nho(file, loai: str, tao):
+    """Giá trị tao() của file nhớ theo loại ('reader' / 'layout' / 'ky'); file không đọc được: tao() như thường."""
+    try:
+        k = _khoa_file(file)
+    except OSError:
+        return tao()
+    muc = _NHO.get(k[0])
+    if muc is None or muc[0] != k[1:]:
+        if len(_NHO) >= _NHO_TOI_DA:
+            _NHO.pop(next(iter(_NHO)))
+        muc = _NHO[k[0]] = (k[1:], {})
+    if loai not in muc[1]:
+        muc[1][loai] = tao()
+    return muc[1][loai]
+
+
+def xoa_nho() -> None:
+    _NHO.clear()
+
+
+def _reader(file):
+    from pypdf import PdfReader
+    return _nho(file, 'reader', lambda: PdfReader(str(file)))
 
 # loại cột tiền theo chữ tiêu đề (không dấu); thứ tự kiểm tra quan trọng ("bồi thường" có chữ "thường")
 _LOAI = [
@@ -54,14 +91,18 @@ class DongBang:
 
 
 def dong_layout(file) -> list:
-    """Các dòng chữ giữ bố cục của mọi trang PDF (pypdf); [] nếu không có pypdf / không đọc được."""
+    """Các dòng chữ giữ bố cục của mọi trang PDF (pypdf); [] nếu không có pypdf / không đọc được. Nhớ theo file (_nho)."""
+    return list(_nho(file, 'layout', lambda: _dong_layout(file)))
+
+
+def _dong_layout(file) -> list:
     try:
-        from pypdf import PdfReader
+        import pypdf  # noqa: F401
     except ImportError:
         return []
     try:
         kq = []
-        for trang in PdfReader(str(file)).pages:
+        for trang in _reader(file).pages:
             try:
                 t = trang.extract_text(extraction_mode='layout')
             except TypeError:                              # pypdf cũ không có chế độ bố cục
@@ -235,15 +276,19 @@ def tach_bang(dong: list) -> list:
 
 def chu_chu_ky(file) -> list:
     """Chữ đóng kèm chữ ký số (số văn bản, ngày, tháng do phần mềm ký số điền lúc ký, nằm trong hình hiển thị của ô chữ ký -
-    không thuộc lớp chữ của trang): [(trang, x giữa, y giữa, rộng trang, chữ)]."""
+    không thuộc lớp chữ của trang): [(trang, x giữa, y giữa, rộng trang, chữ)]. Nhớ theo file (_nho)."""
+    return list(_nho(file, 'ky', lambda: _chu_chu_ky(file)))
+
+
+def _chu_chu_ky(file) -> list:
     try:
-        from pypdf import PageObject, PdfReader
+        from pypdf import PageObject
         from pypdf.generic import NameObject
     except ImportError:
         return []
     kq = []
     try:
-        doc = PdfReader(str(file))
+        doc = _reader(file)
         for i, trang in enumerate(doc.pages):
             rong = float(trang.mediabox.width)
             for a in trang.get('/Annots') or []:

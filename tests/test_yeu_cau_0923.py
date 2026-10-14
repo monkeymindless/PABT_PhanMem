@@ -68,7 +68,13 @@ class TestCuaSoChinh(CoSoCuaSo):
         self.assertEqual(w.trang.currentIndex(), ud.TRANG_CHAO)             # chưa mở dự án: màn hình chào
         self.assertFalse(w.hang_the.isVisible())
         self.assertEqual(set(w.nut_chao), {'Dự án mới…', 'Mở dự án…', 'Nhập file Excel…'})
-        self.assertFalse(w.ds_gan_day.item(0).flags())                      # "Chưa có dự án nào mở gần đây."
+        self.assertEqual(w.lk_huong_dan.text(), 'Lịch sử cập nhật phần mềm')
+        from PySide6.QtWidgets import QAbstractButton
+        self.assertNotIn(w.lk_huong_dan, w.findChildren(QAbstractButton))   # liên kết chữ, không phải nút cạnh 3 lệnh
+        from PySide6.QtCore import QPoint
+        self.assertGreater(w.lk_huong_dan.mapTo(w, QPoint(0, 0)).y(),
+                           w.ngan_gan_day.mapTo(w, QPoint(0, 0)).y())       # chân trang, dưới lưới dự án gần đây (0.9.80: trong ngăn xếp)
+        self.assertEqual(w.ds_gan_day.rowCount(), 0)                        # chưa có dự án gần đây
         w.mo_trang(2)                                                       # trang cần dự án: vẫn màn hình chào
         self.assertEqual(w.trang.currentIndex(), ud.TRANG_CHAO)
         w.mo_trang(0)
@@ -80,8 +86,8 @@ class TestCuaSoChinh(CoSoCuaSo):
         w.dong_du_an_lenh()
         self.assertIsNone(w.file)
         self.assertEqual(w.trang.currentIndex(), ud.TRANG_CHAO)
-        self.assertEqual(w.ds_gan_day.item(0).data(ud.Qt.ItemDataRole.UserRole), str(p.resolve()))
-        w.ds_gan_day.itemActivated.emit(w.ds_gan_day.item(0))              # nhấp đúp dự án gần đây: mở
+        self.assertEqual(w.ds_gan_day.item(0, 0).data(ud.Qt.ItemDataRole.UserRole), str(p.resolve()))
+        w.ds_gan_day.cellDoubleClicked.emit(0, 0)                          # nhấp đúp dự án gần đây: mở
         self.assertEqual(w.file, Path(str(p.resolve())))
         w.close()
 
@@ -93,14 +99,13 @@ class TestCuaSoChinh(CoSoCuaSo):
         w.show()
         w.mo(str(_du_an(self.td, 6)))
         self.assertFalse(w.lenh['Xóa hộ…'].isEnabled())                    # chưa chọn hộ
-        self.assertFalse(w.hang_chon.isVisible())
+        self.assertFalse(hasattr(w, 'hang_chon'))                           # 0.9.66: hàng "Đã chọn N hộ" trùng menu trái: bỏ
         w.bang.selectRow(0)
         self.assertTrue(w.lenh['Xóa hộ…'].isEnabled())
         from PySide6.QtCore import QItemSelectionModel
         w.bang.selectionModel().select(w.loc.index(1, 0), QItemSelectionModel.SelectionFlag.Select |
                                        QItemSelectionModel.SelectionFlag.Rows)
-        self.assertTrue(w.hang_chon.isVisible())                            # chọn 2 hộ: hàng thao tác hàng loạt
-        self.assertEqual(w.lb_chon.text(), 'Đã chọn 2 hộ:')
+        self.assertIn('Đã chọn: 2 hộ', w.lb_tom_tat.text())                 # số hộ chọn ở thanh trạng thái
         # thẻ số liệu bấm để lọc; Số hộ = bỏ lọc
         n = w.loc.rowCount()
         w.mo_trang(4)
@@ -146,7 +151,8 @@ class TestCuaSoChinh(CoSoCuaSo):
         self.assertFalse(k.b_tu_du_an.isEnabled())
         k.im_lang = True
         w.mo(str(_du_an(self.td, 6)))
-        self.assertEqual(w.trang.currentIndex(), 3)                         # mở dự án: giữ trang đang xem
+        self.assertEqual(w.trang.currentIndex(), 0)                         # 0.9.69: mở dự án -> Danh sách hộ
+        w.mo_trang(ud.TRANG_DU_TOAN)
         self.assertTrue(k.b_tu_du_an.isEnabled())
         dt = k.lay('du_an')
         self.assertGreater(len(dt.dong), 0)

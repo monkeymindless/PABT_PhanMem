@@ -64,7 +64,8 @@ class TestBanIn(unittest.TestCase):
         kq = nghiep_vu.tinh_ho(self.con, 1)
         loai = [ws.cell(r, in_an.COT_KIND).value for r in range(18, 60)]
         n = loai.index(None)
-        self.assertEqual(''.join(loai[:n]), 'HII' + 'H' + 'I' * 9 + 'H' + 'III' + 'H' + 'II' + 'RT')
+        # 0.9.21: mục 4 vật nuôi luôn in tiêu đề (hộ không có vật nuôi: tiêu đề trống) trước mục 5 hỗ trợ
+        self.assertEqual(''.join(loai[:n]), 'HII' + 'H' + 'I' * 9 + 'H' + 'III' + 'H' + 'H' + 'II' + 'RT')
         tong_r = 18 + n - 1
         self.assertEqual(ws.cell(tong_r, 2).value, 'TỔNG CỘNG')
         self.assertEqual(ws.cell(tong_r, 7).value, 812506000)
@@ -92,10 +93,11 @@ class TestBanIn(unittest.TestCase):
         ws = openpyxl.load_workbook(f).active
         self.assertEqual(ws['A19'].value, '1.1')
         self.assertTrue(ws['B19'].value.startswith('Thửa đất số'))
-        self.assertEqual(ws['D18'].value, 186.5)
+        self.assertIsNone(ws['D18'].value)        # 0.9.69: mục đất không có tiền -> bỏ số lượng, đơn giá, tỷ lệ
         tong_r = next(r for r in range(18, 40) if ws.cell(r, 2).value == 'TỔNG CỘNG')
         self.assertEqual(ws.cell(tong_r, 7).value, 0)
-        self.assertEqual(ws.cell(tong_r - 1, 4).value, 0)               # không có đất: không thưởng
+        self.assertIsNone(ws.cell(tong_r - 1, 4).value)                # không có đất: không thưởng -> trống (0.9.69)
+        self.assertEqual(ws.cell(tong_r - 1, 7).value, 0)
 
     def test_ho_nhieu_dong(self):
         bo = BoSoan(self.con, 1)
@@ -107,7 +109,7 @@ class TestBanIn(unittest.TestCase):
         f = in_an.lap_chi_tiet(self.con, 1, self.td / 'nhieu.xlsx', self.mau)
         ws = openpyxl.load_workbook(f).active
         tong_r = next(r for r in range(18, 400) if ws.cell(r, 2).value == 'TỔNG CỘNG')
-        self.assertEqual(tong_r, 18 + 22 + 150 - 1)
+        self.assertEqual(tong_r, 18 + 23 + 150 - 1)
         self.assertEqual(ws.cell(tong_r, 7).value, int(nghiep_vu.tinh_ho(self.con, 1).tong))
         self.assertEqual(ws.cell(tong_r + 1, 1).value, 'IV')
 
@@ -120,13 +122,13 @@ class TestBanIn(unittest.TestCase):
         self.assertEqual(ws['P13'].value, 153108000)
         self.assertEqual(ws['V13'].value, 812506000)
         self.assertEqual(ws['V15'].value, 474130000)
-        self.assertEqual(ws['S13'].value, 36954000)                     # đào tạo HT09
+        self.assertEqual(ws['S13'].value, 36954000)                     # đào tạo CS9
         self.assertEqual(ws['T13'].value, 7403000)                      # ổn định đời sống
         self.assertEqual(ws['H13'].value, 0)                            # thửa 394 ở mục 1 là ODT
         self.assertEqual(ws['J13'].value, 215.1)
         self.assertEqual(ws['A17'].value, 'TỔNG CỘNG')
         self.assertEqual(ws['V17'].value, '=SUM(V13:V16)')
-        self.assertEqual(ws['V18'].value, '=ROUND(V17*2.5%, -3)')
+        self.assertEqual(ws['V18'].value, '=ROUND(V17*3.5%, -3)')       # dự án "Xây dựng đường…": theo tuyến 3,5% (QĐ 08/2025)
         self.assertEqual(ws['V19'].value, '=ROUND(V18*85%, -3)')
         self.assertEqual(ws['V21'].value, '=V17+V18')
         chu = ' '.join(_o_chu(ws))

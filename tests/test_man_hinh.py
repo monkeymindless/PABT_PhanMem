@@ -58,7 +58,7 @@ class TestManHinhLapPA(unittest.TestCase):
         from pabt import nghiep_vu
         from pabt.man_hinh import CuaSoLapPA
         w = CuaSoLapPA(self.con, 1)
-        self.assertEqual(w.tab.count(), 5)                       # thông tin hộ, thửa + 4 mục
+        self.assertEqual(w.tab.count(), 6)                       # thông tin hộ, thửa + 5 mục (0.9.21: thẻ Vật nuôi)
         self.assertEqual(w.bang[2].bang.rowCount(), 9)
         self.assertIn('812.506.000', w.lb_tong.text())
         self.assertFalse(w.b_luu.isEnabled())
@@ -76,7 +76,7 @@ class TestManHinhLapPA(unittest.TestCase):
         # gõ sai: báo lỗi, ô trở lại giá trị cũ
         w.bang[2].bang.item(0, c).setText('abc')
         self.assertTrue(self.thong_bao and 'không phải là số' in self.thong_bao[-1])
-        self.assertEqual(w.bang[2].bang.item(0, c).text(), '130')
+        self.assertEqual(w.bang[2].bang.item(0, c).text(), '130,0')     # số lượng kiểu kế toán (tien.so_luong_vn)
         self.assertTrue(w.luu())
         self.assertFalse(w.windowTitle().startswith('*'))
         self.assertEqual(nghiep_vu.tinh_ho(self.con, 1).muc[2], w.bo.ket_qua.muc[2])
@@ -101,13 +101,13 @@ class TestManHinhLapPA(unittest.TestCase):
         j = w.them_tu_danh_muc(3, dlg3.chon_hien_tai())
         self.assertEqual(w.bang[3].bang.rowCount(), 4)
         self.assertEqual(j, 3)
-        # gợi ý hỗ trợ: HT09 sửa theo quy tắc
+        # gợi ý hỗ trợ: CS9 sửa theo quy tắc
         dx, tu = w.bo.goi_y()
         hop = HopGoiY(dx, tu, w)
         self.assertEqual(len(hop.da_chon()), len(dx))
         chon = w.goi_y(tu_dong=True)
-        self.assertIn('HT09', [x.ma for x in chon])
-        self.assertEqual(w.bo.pa.dong_ho_tro('HT09')[0].don_gia, 135000)
+        self.assertIn('CS9', [x.ma for x in chon])
+        self.assertEqual(w.bo.pa.dong_ho_tro('CS9')[0].don_gia, 135000)
         self.assertTrue(w.luu())
         w.close()
 
@@ -157,10 +157,10 @@ class TestManHinhLapPA(unittest.TestCase):
         rs = w.ra_soat_gia(cho=False)
         self.assertEqual(rs.bang.rowCount(), 1)
         da = w.sua_du_an(cho=False)
-        da.o['so_phuong_an'].setText('01/PA-2026')
+        da.o['co_quan_tham_dinh'].setEditText('Phòng thẩm định thử')       # 0.9.72: bỏ Số phương án, thêm Cơ quan thẩm định
         da.accept()
         from pabt import lap_pa
-        self.assertEqual(lap_pa.doc_du_an(w.con)['so_phuong_an'], '01/PA-2026')
+        self.assertEqual(lap_pa.doc_du_an(w.con)['co_quan_tham_dinh'], 'Phòng thẩm định thử')
         da2 = w.sua_du_an(cho=False)
         da2.o['ten'].setText('')
         da2.accept()                                     # tên trống: báo lỗi, không lưu

@@ -1,5 +1,5 @@
-"""Cập nhật đơn giá, chính sách bồi thường từ trang web - PHÁT HÀNH RIÊNG bằng gói cập nhật (.pabtcn), không có trong bộ cài
-gốc (dựng exe loại trừ module này và man_hinh_quet_web; bộ cài gốc chỉ có "Cập nhật bộ đơn giá từ file").
+"""Cập nhật đơn giá, chính sách bồi thường từ trang web. Từ 0.9.49 module này nằm trong bộ cài (nút Tải từ web của bảng giá đất).
+Màn hình quét web đầy đủ (man_hinh_quet_web) vẫn phát hành bằng gói .pabtcn.
 
 Quét trang web / tìm trên Công báo thành phố Đồng Nai (quet -> [TaiLieu]: số hiệu, nhóm, đã có trong bộ đơn giá chưa), tải file
 (tai_ve: Google Drive / Sheets / Docs, trang HTML có liên kết, nút "Tải tập tin" không đuôi; loại file theo nội dung; quét mã độc).
@@ -61,6 +61,12 @@ def _mo(url: str, timeout: int = 60):
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PABT',
                                                'Accept': '*/*', 'Accept-Language': 'vi,en;q=0.8'})
     # HTTPS: bắt buộc chứng chỉ hợp lệ, đúng tên máy chủ, TLS >= 1.2 (an_toan.ngu_canh_tls)
+    try:
+        return urllib.request.urlopen(req, timeout=timeout, context=an_toan.ngu_canh_tls())
+    except urllib.error.URLError as e:
+        # CA gốc chưa có trong kho Windows (Windows tải khi chính nó kiểm chứng chỉ): nạp rồi thử lại, vẫn xác minh đầy đủ
+        if isinstance(e, urllib.error.HTTPError) or not an_toan.la_loi_chung_chi(e) or not an_toan.nap_goc_ca_windows(url):
+            raise
     return urllib.request.urlopen(req, timeout=timeout, context=an_toan.ngu_canh_tls())
 
 

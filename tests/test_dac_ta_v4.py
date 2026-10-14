@@ -156,9 +156,8 @@ class TestGiaoDien(CoSo):
         self.assertEqual(nhan[-1], 'x')
 
     def test_cua_so_ban_quyen_luu_trang_thai_che_cccd(self):
-        from PySide6.QtWidgets import QLabel
         import pabt
-        from pabt import app as ud, giao_dien, in_an
+        from pabt import app as ud, in_an
         w = ud.CuaSoChinh(menu_trai=True)
         self.addCleanup(w.close)
         if not pabt.BAN_THU_NGHIEM:                                         # bản phát hành: nhãn gói bản quyền thay "BẢN THỬ NGHIỆM"
@@ -166,7 +165,7 @@ class TestGiaoDien(CoSo):
             self.assertNotIn('THỬ NGHIỆM', w.windowTitle())
         self.assertIn('Sẵn sàng', w.lb_tom_tat.text())
         self.assertIn('●', w.nut_tk.text())                                  # đèn báo LAN
-        self.assertTrue(w.lb_co_quan.text().startswith('Cơ quan:'))
+        self.assertFalse(hasattr(w, 'lb_co_quan'))                           # 0.9.30: bỏ chữ "Cơ quan: …" góc phải thanh menu
         self.assertIn('Cài đặt', [a.text().replace('&', '') for a in w.menuBar().actions()])
         self.assertEqual(w.lenh['Lưu dự án'].shortcut().toString(), 'Ctrl+S')
         self.assertFalse(w.luu_du_an_lenh())                                 # chưa mở dự án
@@ -209,6 +208,9 @@ class TestBoCaiPhoQuat(unittest.TestCase):
         self.assertEqual((d.BAN['win10']['ten'], d.BAN['win7']['ten']), ('Win10-11_x64', 'Win7-8-10_x86'))
         self.assertEqual((d.BAN['win10']['zip'], d.BAN['win7']['zip']), ('x64', 'x86'))
         self.assertTrue(callable(d.dong_goi_pho_quat))
+        self.assertEqual(d.MAC_DINH, ('universal',))       # 0.9.26 (người dùng): chỉ phát hành MỘT bộ cài cho mọi Windows
+        self.assertIn('x64\\PABT.exe', d.DOC_TRUOC)
+        self.assertIn('x86\\PABT.exe', d.DOC_TRUOC)
 
     def test_khong_trung_huong_dan(self):
         import sys

@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-PHIEN_BAN_CSDL = 12
+PHIEN_BAN_CSDL = 16
 # bảng danh mục, tham số: cố định (trigger chặn sửa); chỉ nạp / cập nhật bộ đơn giá mới mở khóa (mo_khoa_danh_muc)
 DANH_MUC = ('dm_taisan', 'dm_hotro', 'dm_loaidat', 'gia_dat', 'dm_xa', 'tham_so', 'bieu_thuong', 'quy_uoc', 'van_ban')
 THONG_BAO_KHOA = 'Danh mục đơn giá, tham số được cố định theo bộ đơn giá; chỉ cập nhật bằng lệnh Bộ đơn giá.'
@@ -61,13 +61,47 @@ _NANG_CAP = {
          "ALTER TABLE dot_trinh ADD COLUMN ngay_pa_tong TEXT NOT NULL DEFAULT ''"],
     # 0.9.20: mục Vật nuôi riêng (ct_khoan.muc = 7): dựng lại bảng (ràng buộc CHECK), dòng vật nuôi đang ở mục cây / nhà -> 7
     11: ["@ct_khoan_vat_nuoi"],
+    # v16 (0.9.87): sổ nhật ký vận động, nhật ký kiểm toán (+ trigger chặn sửa / xóa), bản đồ thửa CAD, chỉ mục ct_dat(ma_thua)
+    # - trước đây tạo khi mở file không đổi phiên bản; nay là bước nâng cấp chính thức (chỉ file có hộ: _tao_bang_phu)
+    15: ["@bang_phu_v16"],
+    # v14 (0.9.69): chủ đầu tư; mã tài sản mới TS / CT / VN / CS (ma_tai_san.chuyen_csdl - bỏ dòng HT / TH trùng của dm_taisan)
+    14: ["ALTER TABLE du_an ADD COLUMN co_quan_tham_dinh TEXT NOT NULL DEFAULT ''",
+         "ALTER TABLE dot_trinh ADD COLUMN ky_hieu_so TEXT NOT NULL DEFAULT ''"],
+    13: ["ALTER TABLE du_an ADD COLUMN chu_dau_tu TEXT NOT NULL DEFAULT ''", "@doi_ma_tai_san"],
+    # v13: dự thảo phương án — đủ điều kiện / 5 nhóm vướng, đợt niêm yết, ý kiến, đối thoại
+    12: ["ALTER TABLE ho ADD COLUMN du_dieu_kien INTEGER NOT NULL DEFAULT 0",
+         "ALTER TABLE ho ADD COLUMN ma_vuong TEXT NOT NULL DEFAULT ''",
+         "ALTER TABLE ho ADD COLUMN ghi_chu_phap_ly TEXT NOT NULL DEFAULT ''",
+         "ALTER TABLE ho ADD COLUMN dot_du_thao_id INTEGER",
+         '''CREATE TABLE IF NOT EXISTS dot_du_thao (
+            id INTEGER PRIMARY KEY, ten TEXT NOT NULL DEFAULT '', ngay_bat_dau TEXT NOT NULL DEFAULT '',
+            ngay_ket_thuc TEXT NOT NULL DEFAULT '', dia_diem TEXT NOT NULL DEFAULT '',
+            so_bb_bat_dau TEXT NOT NULL DEFAULT '', so_bb_ket_thuc TEXT NOT NULL DEFAULT '',
+            ngay_hop TEXT NOT NULL DEFAULT '', han_doi_thoai TEXT NOT NULL DEFAULT '',
+            trang_thai TEXT NOT NULL DEFAULT 'dang_niem_yet', ghi_chu TEXT NOT NULL DEFAULT '')''',
+         '''CREATE TABLE IF NOT EXISTS y_kien_du_thao (
+            id INTEGER PRIMARY KEY, dot_id INTEGER NOT NULL REFERENCES dot_du_thao(id) ON DELETE CASCADE,
+            ma_ho INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE,
+            loai TEXT NOT NULL DEFAULT 'chua', nhom TEXT NOT NULL DEFAULT '', noi_dung TEXT NOT NULL DEFAULT '',
+            huong_xu_ly TEXT NOT NULL DEFAULT '', so_tien_chenh TEXT NOT NULL DEFAULT '0',
+            ket_qua_doi_thoai TEXT NOT NULL DEFAULT '', chuyen_dot_id INTEGER, ngay_cap_nhat TEXT NOT NULL DEFAULT '',
+            UNIQUE (dot_id, ma_ho))''',
+         '''CREATE TABLE IF NOT EXISTS doi_thoai_ho (
+            id INTEGER PRIMARY KEY, dot_id INTEGER NOT NULL REFERENCES dot_du_thao(id) ON DELETE CASCADE,
+            ma_ho INTEGER NOT NULL, lan INTEGER NOT NULL DEFAULT 1, ngay TEXT NOT NULL DEFAULT '',
+            dia_diem TEXT NOT NULL DEFAULT '', thanh_phan TEXT NOT NULL DEFAULT '', dien_bien TEXT NOT NULL DEFAULT '',
+            ket_luan TEXT NOT NULL DEFAULT '', bien_ban_so TEXT NOT NULL DEFAULT '')''',
+         "CREATE INDEX IF NOT EXISTS ix_ykien_dot_ho ON y_kien_du_thao(dot_id, ma_ho)",
+         "CREATE INDEX IF NOT EXISTS ix_doithoai_ho ON doi_thoai_ho(dot_id, ma_ho)"],
 }
 
 
 def _bang_quyet_dinh() -> str:
     """Các lệnh tạo bảng quyết định (phần cuối schema.sql) - dùng khi nâng cấp file cũ lên v10."""
     s = _SCHEMA.read_text(encoding='utf-8')
-    return s[s.index('CREATE TABLE IF NOT EXISTS quyet_dinh'):]
+    # tách theo ';' (nơi gọi) - dừng trước nhật ký kiểm toán (trigger có ';' trong BEGIN … END; bảng đó csdl.mo tạo sau khi nâng cấp)
+    het = s.find('-- nhật ký kiểm toán')
+    return s[s.index('CREATE TABLE IF NOT EXISTS quyet_dinh'):het if het > 0 else None]
 _SCHEMA = Path(__file__).with_name('schema.sql')
 
 
@@ -118,7 +152,12 @@ def tao_moi_tam(duong_dan) -> tuple:
     p = Path(duong_dan)
     tam = p.with_name(p.name + '.dang_tao')
     huy_tao_moi(tam)
-    return mo(tam, tao=True), tam
+    con = mo(tam, tao=True)
+    # nhập hàng loạt (0.9.86 - Cụm 1): file tạm chỉ thành file dự án sau fsync + os.replace (hoan_tat_tao_moi) - mất điện giữa chừng
+    # chỉ hỏng file tạm, file cũ còn nguyên: không cần SQLite fsync mỗi giao dịch, nhật ký giao dịch trong RAM (vẫn rollback được)
+    con.execute('PRAGMA synchronous = OFF')
+    con.execute('PRAGMA journal_mode = MEMORY')
+    return con, tam
 
 
 def huy_tao_moi(tam) -> None:
@@ -214,6 +253,15 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
             raise RuntimeError(f'File dự án phiên bản CSDL v{ver} cần được mở để sửa một lần (nâng cấp) trước khi mở chỉ xem.')
         return con
     con = sqlite3.connect(str(p), factory=KetNoi)
+    try:
+        return _mo_tiep(con, tao)
+    except BaseException:
+        con.close()                                     # không để file bị giữ (Windows khóa file tới khi Python dọn rác)
+        raise
+
+
+def _mo_tiep(con, tao: bool):
+    """Phần sau khi kết nối của mo (nâng cấp lược đồ, khóa danh mục, bảng phụ)."""
     con.row_factory = sqlite3.Row
     con.execute('PRAGMA foreign_keys = ON')
     # file dự án có thể nằm trong thư mục Google Drive: không dùng WAL (Drive đồng bộ kém các file -wal, -shm)
@@ -239,23 +287,46 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
                     if lenh == '@ct_khoan_vat_nuoi':
                         _dung_lai_ct_khoan(con)
                         continue
+                    if lenh == '@bang_phu_v16':
+                        _tao_bang_phu(con)
+                        continue
+                    if lenh == '@doi_ma_tai_san':
+                        from .ma_tai_san import chuyen_csdl
+                        chuyen_csdl(con)
+                        continue
                     con.execute(lenh)
             con.execute(f'PRAGMA user_version = {PHIEN_BAN_CSDL}')
     elif ver > PHIEN_BAN_CSDL:
-        con.close()
         raise RuntimeError(f'File dự án được tạo bằng phiên bản phần mềm mới hơn (CSDL v{ver}); hãy cập nhật phần mềm.')
     _dam_bao_khoa(con)
-    # chỉ mục thêm không đổi phiên bản CSDL (máy chưa cập nhật vẫn mở được file): ct_dat.ma_thua là khóa ngoại tới thua - xóa /
-    # đổi mã thửa (thay phương án khi nhập chi tiết, xóa hộ) không phải quét cả bảng ct_dat cho từng thửa
-    # (chỉ file có phương án: không ghi vào bộ đơn giá / file chỉ có danh mục - csdl.mo cũng mở các file đó)
-    if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'ix_ctdat_thua'").fetchone() \
-            and con.execute('SELECT 1 FROM ct_dat LIMIT 1').fetchone():
+    # file v16 nâng cấp lúc CHƯA có hộ (dự án trống) không có bảng phụ: tạo khi đã có hộ - trước khi Hoàn tác liệt kê bảng
+    # (bộ đơn giá / file chỉ có danh mục không có hộ: không bị ghi)
+    if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anh_hien_trang'").fetchone() \
+            and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
         try:
             with con:
-                con.execute('CREATE INDEX IF NOT EXISTS ix_ctdat_thua ON ct_dat(ma_thua)')
-        except sqlite3.OperationalError:                # file chỉ đọc / đang bị khóa: chỉ chậm hơn khi xóa thửa
+                _tao_bang_phu(con)
+        except sqlite3.OperationalError:                # file đang bị khóa: các hàm dùng bảng phụ tự tạo khi ghi
             pass
     return con
+
+
+def _tao_bang_phu(con) -> bool:
+    """Bảng phụ của file dự án (v16): nhat_ky_van_dong, audit_logs (+ 2 trigger chặn sửa / xóa), thua_ban_do, anh_hien_trang, chỉ mục
+    ix_ctdat_thua. Chỉ file có hộ - bộ đơn giá đóng gói (cùng lược đồ, không hộ) không bị ghi. Chạy trong giao dịch của nơi gọi."""
+    if not con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
+        return False
+    from . import ban_do_cad, kiem_toan, van_dong
+    for lenh in van_dong._SQL_TAO:
+        con.execute(lenh)
+    if not kiem_toan.co_bang(con):
+        for cau in kiem_toan._cau(kiem_toan.SQL_BANG):
+            con.execute(cau)
+    con.execute(ban_do_cad.SQL_BANG)
+    from .phieu_kiem_dem import SQL_BANG_ANH
+    con.execute(SQL_BANG_ANH)
+    con.execute('CREATE INDEX IF NOT EXISTS ix_ctdat_thua ON ct_dat(ma_thua)')
+    return True
 
 
 def _dam_bao_khoa(con) -> None:
@@ -407,18 +478,22 @@ NGUOI_DUNG = None          # tên người đăng nhập máy chủ (may_chu.dan
 HOAN_TAC = {}              # id(kết nối) -> hoan_tac.HoanTac (ghi_nhat_ky báo tên thao tác cho bước hoàn tác)
 
 
+def nguoi_dung() -> str:
+    """Người ghi nhật ký: tài khoản đăng nhập máy chủ LAN, không thì tài khoản Windows."""
+    if NGUOI_DUNG:
+        return NGUOI_DUNG
+    try:
+        return getpass.getuser()
+    except Exception:
+        return os.environ.get('USERNAME', '')
+
+
 def ghi_nhat_ky(con: sqlite3.Connection, viec: str, chi_tiet: str = '') -> None:
     ht = HOAN_TAC.get(id(con))
     if ht is not None:
         ht.dat_ten(viec)
-    nguoi = NGUOI_DUNG
-    if not nguoi:
-        try:
-            nguoi = getpass.getuser()
-        except Exception:
-            nguoi = os.environ.get('USERNAME', '')
     con.execute('INSERT INTO nhat_ky (thoi_gian, may, nguoi_dung, viec, chi_tiet) VALUES (?,?,?,?,?)',
-                (datetime.now().isoformat(timespec='seconds'), ten_may(), nguoi, viec, chi_tiet))
+                (datetime.now().isoformat(timespec='seconds'), ten_may(), nguoi_dung(), viec, chi_tiet))
 
 
 def ten_may() -> str:

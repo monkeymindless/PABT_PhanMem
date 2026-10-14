@@ -117,7 +117,7 @@ class TestNhapTho(unittest.TestCase):
         con = csdl.tao_moi(pabt)
         with con, csdl.mo_khoa_danh_muc(con):
             con.execute("DELETE FROM dm_hotro")
-            con.execute("INSERT INTO dm_hotro (ma, ten) VALUES ('HT01', 'Ổn định đời sống')")
+            con.execute("INSERT INTO dm_hotro (ma, ten) VALUES ('CS1', 'Ổn định đời sống')")
             con.execute("INSERT INTO ho (ma_ho, thu_tu, ho_ten) VALUES (99, 1, 'Hộ cũ')")
             con.execute("INSERT INTO thua (ma_thua, ma_ho, so_to) VALUES (500, 99, '1')")
             con.execute("INSERT INTO ct_khoan (muc, ma_ho, ten) VALUES (2, 99, 'Nhà')")

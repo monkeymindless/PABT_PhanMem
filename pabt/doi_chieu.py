@@ -27,6 +27,27 @@ class KetQuaDoiChieu:
         return self.so_ho_lech == 0 and not self.dong_lech
 
 
+def chu_lech(h: dict, ds_dong=()) -> str:
+    """Nội dung lệch so với file Excel của một hộ (cột Ghi chú trên danh sách). Hộ đã sửa trong phần mềm: không ghi."""
+    if h.get('sua'):
+        return ''
+    from .tien import vn
+    dong = []
+    ex = h.get('excel') or {}
+    if h.get('lech') and ex:
+        m5 = nghiep_vu.muc_5_cot(h['muc'])
+        for m, ten in ((1, 'Đất'), (2, 'Nhà, công trình'), (3, 'Cây trồng, vật nuôi'), (4, 'Hỗ trợ'), (5, 'Thưởng')):
+            if ex.get(m) is not None and D(ex[m]) != m5[m]:
+                dong.append(f'{ten}: phần mềm {vn(m5[m])} / Excel {vn(ex[m])}')
+        if ex.get('tong') is not None and D(ex['tong']) != h['tong']:
+            dong.append(f'Tổng: phần mềm {vn(h["tong"])} / Excel {vn(ex["tong"])}')
+        if not dong:
+            dong.append('Lệch so với file Excel')
+    for d in ds_dong:
+        dong.append(f'{d.ten}: phần mềm {vn(d.thanh_tien)} / Excel {vn(d.thanh_tien_excel)}')
+    return '; '.join(dong)
+
+
 def tong_excel_da_luu(con) -> dict:
     """Tổng từng hộ của file Excel đã lưu trong file dự án lúc nhập."""
     kq = {}
@@ -77,9 +98,12 @@ def doi_chieu(con, tong_excel: dict | None = None, ds_ma_ho: list | None = None)
             if ex.get('tong') is not None and D(ex['tong']) != k.tong:
                 dong['lech'] = True
         kq.ho.append(dong)
+        ds_dong = []
         for d in k.dong:
             if d.thanh_tien_excel is not None and d.thanh_tien_excel != d.thanh_tien:
                 kq.dong_lech.append((k.ma_ho, k.ho_ten, d))
+                ds_dong.append(d)
+        dong['ghi_chu_dc'] = chu_lech(dong, ds_dong)
         for ct in ds_canh_bao:
             kq.canh_bao.append((k.ma_ho, k.ho_ten, ct))
     return kq
@@ -96,6 +120,31 @@ def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str 
     _VIEN = Border(left=_manh, right=_manh, top=_manh, bottom=_manh)
     _DO = PatternFill('solid', fgColor='F8CBAD')
     _XANH = PatternFill('solid', fgColor='E2EFDA')
+    from copy import copy
+    nho_kieu = {}
+
+    def _kieu(c, khoa, ap):
+        """Kiểu ô: lần đầu gán bằng openpyxl (băm Border / Fill / Alignment để tra bảng kiểu), các ô sau cùng kiểu chép mảng
+        chỉ số kiểu (StyleArray) - file ra giống hệt; 5.000 hộ: ~60.000 lần gán, ~1 triệu lần __hash__ (0.9.65 đo: 1,25 s)."""
+        k = nho_kieu.get(khoa)
+        if k is None:
+            ap(c)
+            nho_kieu[khoa] = copy(c._style)
+        else:
+            c._style = copy(k)
+
+    def _vien(c):
+        c.border = _VIEN
+
+    def _vien_so(c, dinh_dang=None):
+        c.border = _VIEN
+        c.number_format = dinh_dang or _SO
+
+    def _vien_chu(c, so=False):
+        c.border = _VIEN
+        c.alignment = Alignment(wrap_text=True, vertical='top')
+        if so:
+            c.number_format = _SO
 
     def _tieu_de(ws, hang, cot_rong):
         for i, (t, w) in enumerate(cot_rong, start=1):
@@ -133,10 +182,13 @@ def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str 
             'Không có số Excel' if not h['co_excel'] else 'Sửa trong phần mềm' if h.get('sua') else ('LỆCH' if h['lech'] else 'Khớp')]
         for i, v in enumerate(vals, start=1):
             c = ws.cell(r, i, v)
-            c.border = _VIEN
             if 3 <= i <= 10:
-                c.number_format = _SO
-        ws.cell(r, 11).fill = _DO if h['lech'] else _XANH
+                _kieu(c, 'so', _vien_so)
+            elif i == 11:
+                nen = _DO if h['lech'] else _XANH
+                _kieu(c, ('kq', h['lech']), lambda c, nen=nen: (_vien(c), setattr(c, 'fill', nen)))
+            else:
+                _kieu(c, 'vien', _vien)
         r += 1
     ws.cell(r, 2, 'TỔNG CỘNG').font = Font(bold=True)
     for i in range(3, 11):
@@ -154,9 +206,12 @@ def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str 
         for j, v in enumerate([ma, ten, d.stt, d.ten, float(d.so_luong), float(d.don_gia), float(d.thanh_tien),
                                float(d.thanh_tien_excel)], start=1):
             c = ws2.cell(i, j, v)
-            c.border = _VIEN
-            if j >= 5:
-                c.number_format = _SO if j != 5 else '#,##0.0##'
+            if j == 5:
+                _kieu(c, 'sl', lambda c: _vien_so(c, '#,##0.0##'))
+            elif j > 5:
+                _kieu(c, 'so', _vien_so)
+            else:
+                _kieu(c, 'vien', _vien)
     if not kq.dong_lech:
         ws2.cell(2, 1, 'Không có dòng nào lệch: mọi thành tiền phần mềm tính lại đều bằng thành tiền trong file Excel.')
 
@@ -164,9 +219,7 @@ def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str 
     _tieu_de(ws3, 1, [('Mã hộ', 8), ('Họ và tên', 26), ('Nội dung cần xem lại', 110)])
     for i, (ma, ten, ct) in enumerate(kq.canh_bao, start=2):
         for j, v in enumerate([ma, ten, ct], start=1):
-            c = ws3.cell(i, j, v)
-            c.border = _VIEN
-            c.alignment = Alignment(wrap_text=True, vertical='top')
+            _kieu(ws3.cell(i, j, v), 'chu', _vien_chu)
 
     if ra_soat is not None:
         ws4 = wb.create_sheet('RA_SOAT_GIA')
@@ -176,10 +229,10 @@ def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str 
             for j, v in enumerate([x['ma_ho'], x['ho_ten'], x['stt'], x['ten'], x['dvt'], float(x['don_gia']), x['nguon'],
                                    x['ma_tuong_duong'], x['can_cu_gia'], x['ghi_chu_ra_soat']], start=1):
                 c = ws4.cell(i, j, v)
-                c.border = _VIEN
-                c.alignment = Alignment(wrap_text=True, vertical='top')
                 if j == 6:
-                    c.number_format = _SO
+                    _kieu(c, 'chu_so', lambda c: _vien_chu(c, True))
+                else:
+                    _kieu(c, 'chu', _vien_chu)
             if 'chưa ghi căn cứ' in x['ghi_chu_ra_soat']:
                 ws4.cell(i, 10).fill = _DO
         if not ra_soat:

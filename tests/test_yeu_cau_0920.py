@@ -104,8 +104,10 @@ class TestMauIn(unittest.TestCase):
         wb.active['A2'] = 'Họ và tên: {ho_ten}'
         f = self.d / 'la.xlsx'
         wb.save(f)
-        with self.assertRaises(in_an.LoiChuaRoMau):
-            in_an.tao_mau_tu_excel(f, self.d / 'ra')
+        # không nhận ra loại: tự chọn theo bề rộng sheet, không chặn người dùng (0.9.46 - màn hình hỏi loại mẫu từ 0.9.51)
+        tu_chon = in_an.tao_mau_tu_excel(f, self.d / 'ra')
+        self.assertEqual(len(tu_chon), 1)
+        self.assertIn(tu_chon[0].name, ('IN_CHITIET.xlsx', 'IN_BANGTONGHOP.xlsx'))
         tao = in_an.tao_mau_tu_excel(f, self.d / 'ra', loai=in_an.TEN_BTH)
         self.assertEqual(tao[0].name, 'IN_BANGTONGHOP.xlsx')
 

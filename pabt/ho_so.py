@@ -21,8 +21,60 @@ def _gon(v) -> str:
     return ' '.join(str(v if v is not None else '').split())
 
 
+def chuan_nguon_goc(v) -> str:
+    """Giữ xuống dòng. Gạch đầu dòng viết liền trong câu ('... - đất ở') tách thành dòng riêng bắt đầu bằng '- '
+    để màn hình và bản in thụt lề treo."""
+    s = str(v or '').replace('\r\n', '\n').replace('\r', '\n')
+    s = re.sub(r'[ \t]+([•*])[ \t]+', r'\n\1 ', s)
+    s = re.sub(r'[ \t]+([-–])[ \t]+', r'\n- ', s)
+    dong = [' '.join(x.split()) for x in s.split('\n')]
+    return '\n'.join(x for x in dong if x)
+
+
 # ký hiệu đầu dòng của một đoạn nguồn gốc: "- ", "– ", "+ ", "• ", "* ", "a) ", "1. ", "1) "
 _RE_DAU_DONG = re.compile(r'^\s*(?:[-–+•*]|[a-zđ]\)|\d{1,2}[.)])\s+', re.I)
+
+
+_RE_CAP_XA = re.compile(r'^(xa|phuong|thi tran|dac khu|p\.?|x\.?|tt\.?)\s+')
+
+
+def rut_gon_dia_chi(dia_chi: str, ten_dia_ban: str) -> str:
+    """Địa chỉ hiển thị gọn trên danh sách hộ (người dùng 13/10/2026): bỏ đoạn xã / phường trùng địa bàn dự án và các cấp sau nó
+    ("Ấp 1, xã Trị An, huyện Vĩnh Cửu, tỉnh Đồng Nai" + địa bàn "Trị An" -> "Ấp 1"). Xã / phường khác, hoặc chỉ có một đoạn: giữ
+    nguyên (địa chỉ đầy đủ ở chú thích của ô)."""
+    chu = ' '.join(str(dia_chi or '').split())
+    xa = _RE_CAP_XA.sub('', bo_dau(ten_dia_ban or '').strip())
+    if not chu or not xa:
+        return chu
+    doan = [d.strip() for d in re.split(r'[,;]', chu)]
+    for i in range(1, len(doan)):
+        if _RE_CAP_XA.sub('', bo_dau(doan[i]).strip()) == xa:
+            gon = ', '.join(d for d in doan[:i] if d)
+            return gon or chu
+    return chu
+
+
+# chủ sử dụng là tổ chức (0.9.87 - bản in ghi "Tổ chức:" thay "Họ và tên:"): tên BẮT ĐẦU bằng loại tổ chức (so không dấu). Không
+# dùng từ trùng họ người ("trường" = Trương, "đinh" = Đinh): trường học phải có cấp học đi kèm.
+_DAU_TO_CHUC = ('cong ty', 'tong cong ty', 'doanh nghiep', 'dntn', 'hop tac xa', 'htx', 'uy ban nhan dan', 'ubnd',
+                'ban quan ly', 'bql', 'trung tam', 'chi nhanh', 'tap doan', 'xi nghiep', 'nha may', 'nong truong', 'lam truong',
+                'nha tho', 'chua', 'tinh xa', 'tinh that', 'thanh that', 'giao xu', 'giao ho', 'hoi thanh',
+                'truong mam non', 'truong mau giao', 'truong tieu hoc', 'truong thcs', 'truong thpt', 'truong trung hoc',
+                'truong cao dang', 'truong dai hoc', 'benh vien', 'tram y te', 'ngan hang', 'kho bac', 'co quan', 'to chuc',
+                'cong an', 'ban chi huy', 'bo chi huy', 'dang uy', 'mat tran to quoc', 'hoi nong dan', 'hoi cuu chien binh',
+                'hoi lien hiep phu nu', 'hoi chu thap do', 'van phong', 'cong doan', 'quy tin dung')
+_RE_TO_CHUC = re.compile(r'^(?:' + '|'.join(re.escape(x) for x in _DAU_TO_CHUC) + r')\b|\b(?:tnhh|co phan|cp|mtv)\b')
+_RE_LA_NGUOI = re.compile(r'^(?:ong|ba|ho ong|ho ba|ho gia dinh|anh|chi|cu)\b')
+
+
+def la_to_chuc(ten: str, loai: str = '') -> bool:
+    """Chủ sử dụng đất là tổ chức: loai ('to_chuc' / 'Tổ chức'…) nếu có, không thì theo tên (Công ty…, UBND…, Ban quản lý…,
+    Hợp tác xã, Trung tâm, Nhà thờ, Chùa, Trường tiểu học…, hoặc có TNHH / cổ phần). "Ông / Bà / Hộ …" luôn là hộ, cá nhân."""
+    lo = bo_dau(loai or '').strip().replace('_', ' ')
+    if lo:
+        return lo in ('to chuc', 'tc', 'doanh nghiep', 'co quan')
+    s = ' '.join(bo_dau(ten or '').split())
+    return bool(s) and not _RE_LA_NGUOI.match(s) and bool(_RE_TO_CHUC.search(s))
 
 
 def dau_dong(doan: str) -> str:
@@ -56,6 +108,7 @@ def chuan_hoa_thua(ds: list) -> list:
     kq, da_co = [], set()
     for i, t in enumerate(ds, start=1):
         g = {k: _gon(t.get(k)) for k, _ in TRUONG_THUA}
+        g['nguon_goc'] = chuan_nguon_goc(t.get('nguon_goc'))
         g['loai_dat'] = chuan_loai_dat(g['loai_dat'])
         if not any(g.values()):
             continue

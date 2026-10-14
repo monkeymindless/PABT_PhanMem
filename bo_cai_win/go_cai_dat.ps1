@@ -17,7 +17,14 @@ if (-not $Im) {
     $tl = [System.Windows.Forms.MessageBox]::Show("Gỡ PABT khỏi máy?`n(Các file dự án .pabt của bạn được giữ nguyên.)", 'Gỡ cài đặt PABT', 'YesNo', 'Question')
     if ($tl -ne 'Yes') { exit 2 }
 }
-Get-Process PABT -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($dich, 'OrdinalIgnoreCase') } | Stop-Process -Force
+# PowerShell 32-bit không đọc được .Path của PABT 64-bit (trả về rỗng) nên không tắt được phần mềm đang mở.
+# Win32_Process.ExecutablePath đọc được. Gọi lại trong lệnh xóa (quyền quản trị) vì file còn bị giữ vài giây.
+function TatPabt($d) {
+    Get-WmiObject Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+        $_.Name -eq 'PABT.exe' -and $_.ExecutablePath -and $_.ExecutablePath.ToLower().StartsWith($d.ToLower()) } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+}
+TatPabt $dich
 foreach ($p in @((Join-Path ([Environment]::GetFolderPath('Programs')) 'PABT - Lập phương án bồi thường.lnk'),
                  (Join-Path ([Environment]::GetFolderPath('Programs')) 'PABT.lnk'),      # tên dự phòng (máy không tạo được tên có dấu)
                  (Join-Path ([Environment]::GetFolderPath('Desktop')) 'PABT.lnk'))) {
@@ -31,6 +38,10 @@ if ((Get-ItemProperty 'HKCU:\Software\Classes\.pabtcn' -ErrorAction SilentlyCont
     Remove-Item 'HKCU:\Software\Classes\.pabtcn' -Recurse -Force
 }
 Remove-Item 'HKCU:\Software\Classes\PABT.CapNhat' -Recurse -Force -ErrorAction SilentlyContinue
+if ((Get-ItemProperty 'HKCU:\Software\Classes\.pabtcfg' -ErrorAction SilentlyContinue).'(default)' -eq 'PABT.MauIn') {
+    Remove-Item 'HKCU:\Software\Classes\.pabtcfg' -Recurse -Force
+}
+Remove-Item 'HKCU:\Software\Classes\PABT.MauIn' -Recurse -Force -ErrorAction SilentlyContinue
 # bản cập nhật .pabtcn đã cài (mã phần mềm, không phải dữ liệu người dùng)
 Remove-Item -LiteralPath (Join-Path $env:APPDATA 'PABT\cap_nhat') -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PABT' -Recurse -Force -ErrorAction SilentlyContinue
@@ -41,7 +52,7 @@ $tb = 'Đã gỡ PABT.'
 # lệnh xóa (một dòng, không dấu ngoặc kép - truyền qua dòng lệnh powershell -Command); $d = thư mục cài.
 # Xóa hết: thử lại tới 30 giây (Windows / diệt virus còn giữ file vừa đóng một lúc - một lần rmdir sau 2 giây từng để sót thư mục
 # rỗng). Giữ dự án (có file .pabt trong thư mục cài): chỉ xóa file phần mềm và thư mục rỗng.
-$XOA_HET = 'for ($i = 0; $i -lt 30; $i++) { Start-Sleep 1; Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction SilentlyContinue; ' +
+$XOA_HET = 'for ($i = 0; $i -lt 30; $i++) { Start-Sleep 1; Get-WmiObject Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq ''PABT.exe'' -and $_.ExecutablePath -and $_.ExecutablePath.ToLower().StartsWith($d.ToLower()) } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction SilentlyContinue; ' +
            'if (-not (Test-Path -LiteralPath $d)) { break } }'
 $XOA_GIU = 'Get-ChildItem -LiteralPath $d -Recurse -Force | Where-Object { -not $_.PSIsContainer -and $_.Extension -ne ''.pabt'' -and ' +
            '$_.Extension -ne ''.pabtdt'' } | Remove-Item -Force -ErrorAction SilentlyContinue; Get-ChildItem -LiteralPath $d -Recurse ' +

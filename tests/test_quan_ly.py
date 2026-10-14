@@ -65,6 +65,20 @@ class TestKhongCanDuAn(unittest.TestCase):
         self.assertEqual(kiem_loi.chuan_ho_ten('  nguyễn   văn  an '), 'Nguyễn Văn An')
         self.assertEqual(kiem_loi.loi_font('Giếng khoan (ống > Φ114 mm), ống Ø90'), '')
         self.assertTrue(kiem_loi.la_ho_ten_don('nguyễn văn an'))
+        from pabt.doi_chieu import chu_lech
+        from pabt.tien import D as _D
+        h = dict(lech=True, sua=None, tong=_D('90000'), muc={1: _D('90000')},
+                 excel={1: _D('100000'), 'tong': _D('100000')})
+        self.assertIn('Đất:', chu_lech(h))
+        self.assertIn('Excel', chu_lech(h))
+        self.assertEqual(chu_lech(dict(h, sua='đã sửa')), '')
+        with tempfile.TemporaryDirectory() as td:
+            con = csdl.mo(Path(td) / 'a.pabt', tao=True)
+            con.execute("INSERT INTO ho (ma_ho, thu_tu, ho_ten, dia_chi) VALUES (1, 1, ?, 'Ấp 1')",
+                        ('Nguyễn Văn A là chủ sở hữu thửa đất số 168',))
+            con.commit()
+            self.assertFalse(any('chữ số' in x.noi_dung for x in kiem_loi.kiem_tra(con)))
+            con.close()
         self.assertFalse(kiem_loi.la_ho_ten_don('Phạm Văn Thoa được cấp giấy - Bùi Văn Hữu (đã chết)'))
 
     def test_chuan_ngay(self):
@@ -313,6 +327,7 @@ class TestManHinhQuanLy(unittest.TestCase):
         w.o_tim.phat_ngay()                                     # ô tìm chờ ngừng gõ 200 ms (0.9.24): lọc ngay
         self.assertEqual(w.ho_dang_loc(), [ma0])
         w.o_tim.setText('')
+        w.o_tim.phat_ngay()
         self.assertEqual(len(w.ho_dang_loc()), n)
         # đợt trình
         dlg = w.dot_trinh(cho=False)
@@ -322,7 +337,7 @@ class TestManHinhQuanLy(unittest.TestCase):
         self.assertEqual(dlg.dua_vao(), 1)
         goc = Path(self.tmp.name) / f'hs_{self._testMethodName}'
         dlg.chon_thu_muc(goc)
-        kq = dlg.xuat(pdf=False)
+        kq = quan_ly.xuat_dot(w.con, i, goc)                    # 0.9.77: xuất file ở Trung tâm Xuất bản; xuat_dot là logic dùng chung
         self.assertTrue((goc / 'Đợt 1 - 1 hộ').is_dir() and kq)
         w.tai_lai()
         w.cb_dot.setCurrentIndex(w.cb_dot.findData(i))

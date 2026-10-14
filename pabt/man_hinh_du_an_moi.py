@@ -88,6 +88,8 @@ class HopDuAnMoi(QDialog):
                 o = QLineEdit()
                 if k == 'nam':
                     o.setText(str(datetime.now().year))
+                if k == 'co_quan_tham_dinh':
+                    o.setPlaceholderText('Để trống: Phòng Kinh tế, Hạ tầng và Đô thị (phường) / Phòng Kinh tế (xã)')
                 if k in csdl.TRUONG_DON_VI:
                     o.setText(str((cai.value(f'don_vi/{k}', '') if cai is not None else '') or to_chuc.MAC_DINH.get(k, '')))
             self.o[k] = o
@@ -194,10 +196,11 @@ class HopDuAnMoi(QDialog):
         self.bang_gia.horizontalHeader().setStretchLastSection(True)
         lo.addWidget(self.bang_gia, 1)
         h = QHBoxLayout()
-        b = QPushButton('Tra bảng giá đất NQ 28/2025… (dòng đang chọn)')
+        b = QPushButton('Tra bảng giá đất… (dòng đang chọn)')
         b.clicked.connect(lambda: self.tra_gia_nq28())
         h.addWidget(b)
-        h.addWidget(QLabel('Có sẵn: Xã Trị An, Xã Tân An, Xã Phú Lý, Phường Tân Triều. Giá lấy về vẫn sửa được.'))
+        from . import gia_dat_nq28 as nq
+        h.addWidget(QLabel(nq.tom_tat() + '. Giá lấy về vẫn sửa được.'))
         h.addStretch(1)
         lo.addLayout(h)
         return w

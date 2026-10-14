@@ -524,7 +524,7 @@ class TestLoiVan(CoSo):
         ds, _ = ndg.muc_tu_loi_van([[x] for x in DIEU_KIEN], 3)
         ndg.so_khop(ds, 3)
         # "Ao nuôi tôm nước lợ - Nuôi quảng canh (nuôi dưới 50%…)" giống 93% "Ao nuôi tôm nước ngọt - Nuôi thâm canh (nuôi dưới
-        # 50%…)" (VN09) chỉ nhờ phần trong ngoặc: không được ghép "gần đúng" (sẽ ghi đè giá mục khác)
+        # 50%…)" (VN9) chỉ nhờ phần trong ngoặc: không được ghép "gần đúng" (sẽ ghi đè giá mục khác)
         self.assertEqual([(m.trang_thai, m.ma_khop) for m in ds],
                          [('mới', ''), ('mới', ''), ('mới', ''), ('cập nhật', 'VN15'), ('cập nhật', 'VN17')])
         ndg.ap_dung(ds, 3, 'thử', van_ban={'so_hieu': '999/2026/QĐ-UBND', 'trich_yeu': 'Đơn giá bồi thường vật nuôi là thủy sản'})
