@@ -435,7 +435,7 @@ _BIEU_TUONG = []
 
 
 def bieu_tuong():
-    """Biểu tượng phần mềm (0.9.74): vẽ bằng mã nhiều cỡ (ve_bieu_tuong - cùng nguồn với file .ico của exe / Desktop), nhớ lại
+    """Biểu tượng phần mềm: ve_bieu_tuong.icon() - nhiều cỡ từ pabt/bieu_tuong.png (cùng nguồn với file .ico của exe / Desktop), nhớ lại
     sau lần đầu; lỗi vẽ thì dùng ảnh pabt/bieu_tuong.png."""
     if not _BIEU_TUONG:
         try:
@@ -449,25 +449,26 @@ def bieu_tuong():
 
 
 class KhungLogo(QWidget):
-    """Logo gốc, khung bo góc. canh=32 cho băng cũ; hàng menu 28px dùng bản nhỏ hơn cho vừa."""
+    """Logo phần mềm (thanh tiêu đề 20 px, banner 22 / 32 px). Nền trong suốt, KHÔNG cắt khung (0.9.87 Mẫu 3: khối pha lê nghiêng có
+    viền sáng - cắt bo góc cố định xén mất viền); ảnh lấy theo tỷ lệ màn hình (devicePixelRatioF) cho nét ở 125 / 150%."""
 
     def __init__(self, canh: int = 32, parent=None):
         super().__init__(parent)
         self._canh = canh
         self.setFixedSize(canh, canh)
         self.setProperty('vai', 'logo')
-        self._pm = bieu_tuong().pixmap(canh, canh)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self._pm = None
 
     def paintEvent(self, e):
-        from PySide6.QtGui import QPainter, QPainterPath
-        from PySide6.QtCore import QRectF
+        from PySide6.QtGui import QPainter
+        tl = self.devicePixelRatioF() if hasattr(self, 'devicePixelRatioF') else 1.0
+        n = max(1, int(round(self._canh * tl)))
+        if self._pm is None or self._pm.width() != n:
+            self._pm = bieu_tuong().pixmap(n, n)
+            self._pm.setDevicePixelRatio(self._pm.width() / self._canh if self._pm.width() else 1.0)
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        n = self._canh
-        duong = QPainterPath()
-        duong.addRoundedRect(QRectF(0, 0, n, n), max(4, n * 6 / 32), max(4, n * 6 / 32))
-        p.setClipPath(duong)
         p.drawPixmap(self.rect(), self._pm)
         p.end()
 

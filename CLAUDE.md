@@ -875,6 +875,12 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   thay ảnh, chạy lệnh trên, dựng lại bộ cài `--clean` (exe / Desktop / IExpress lấy .ico; gói .pabtcn mang bieu_tuong.png). `app.
   dat_app_user_model_id()` gọi ĐẦU `app.main` TRƯỚC `QApplication` (AppUserModelID `gov.pabt.boithuong.enterprise.2026`; không có
   `main.py` - điểm vào là `chay.py` -> `app.main`). Test `test_giao_dien.test_bieu_tuong_duy_nhat_co_vien` / `test_app_user_model_id`.
+- 0.9.87 biểu tượng "Mẫu 3 - Lăng kính công lý & nhịp cầu đồng thuận" (người dùng 15/10/2026, `lenh_tu_dong_thay_icon_mau3.md`): ảnh
+  `pabt/bieu_tuong_thiet_ke.webp` là khối pha lê NGHIÊNG 3D trên nền gần trắng -> `tao_bieu_tuong.tach_nen` (loang từ mép ảnh qua điểm
+  chênh màu nền < `NGUONG_NEN`, làm mịn mép, cắt vuông theo khung vật thể + `LE`; numpy - chỉ lúc tạo) thay `cat_squircle` / `KHUNG`
+  (đã bỏ - cắt khung cố định xén viền khối nghiêng). `ve_mach` dự phòng vẽ cùng tông (xanh băng #38BDF8, trắng sứ, vàng #F59E0B, cam
+  #F97316). `KhungLogo` không cắt bo góc nữa, ảnh theo devicePixelRatioF. Gói .pabtcn mang bieu_tuong.png (biểu tượng TRONG phần mềm);
+  biểu tượng exe / lối tắt / bộ cài chỉ đổi khi cài bộ cài mới. Test `test_giao_dien.test_bieu_tuong_duy_nhat_co_vien`.
 - 0.9.75 (người dùng 13/10/2026) nhóm 4 Lập phương án (mã ở `man_hinh_du_thao.py` / `man_hinh.py` / `man_hinh_ho_so.py` - không có file
   `man_hinh_niem_yet.py` / `cua_so_lap_pa.py`):
   - `KhungDuThao`: `b_dua` = nút xổ "Đưa hộ vào đợt" (Thêm toàn bộ hộ đủ điều kiện = `_dua`, Chọn hộ từ danh sách = `_them_ho`; BỎ `b_them` và

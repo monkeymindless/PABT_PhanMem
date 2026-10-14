@@ -371,40 +371,39 @@ class TestMau(unittest.TestCase):
                 os.environ.pop('PABT_THU_MUC_MAY', None)
 
     def test_bieu_tuong_duy_nhat_co_vien(self):
-        """0.9.74 (PABT Fluent Isometric 3D): biểu tượng cắt từ ảnh thiết kế - squircle navy, mái nhà vàng kim, khối thửa đất ngọc
-        lục bảo; pabt/bieu_tuong.png 512 trong suốt ngoài góc bo, bieu_tuong.ico đủ cỡ; QIcon của phần mềm nhiều cỡ."""
+        """0.9.87 Mẫu 3 (lăng kính công lý & nhịp cầu đồng thuận): pabt/bieu_tuong.png 512 tách nền - 4 góc trong suốt; tông sáng (pha
+        lê xanh băng + trắng sứ, KHÔNG navy đậm), có điểm xanh băng và điểm vàng cam; bieu_tuong.ico đủ 9 cỡ; QIcon nhiều cỡ; hình vẽ
+        dự phòng ve_mach cùng tông sáng."""
         import struct
         from PySide6.QtGui import QImage
         from pabt import ve_bieu_tuong as vbt
         goc = Path(__file__).resolve().parents[1]
         self.assertFalse((goc / 'logo_PABT.png').exists())                   # bỏ bản nền xanh cũ
         anh = QImage(str(goc / 'pabt' / 'bieu_tuong.png'))
-        self.assertEqual(anh.width(), 512)
-        self.assertEqual(anh.pixelColor(3, 3).alpha(), 0)                    # ngoài góc bo: trong suốt
+        self.assertEqual((anh.width(), anh.height()), (512, 512))
+        for x, y in ((0, 0), (511, 0), (0, 511), (511, 511)):
+            self.assertEqual(anh.pixelColor(x, y).alpha(), 0, (x, y))        # nền tách trong suốt
         self.assertGreater(anh.pixelColor(256, 256).alpha(), 250)
-
-        def mau(x, y):
-            c = anh.pixelColor(x, y)
-            return c.red(), c.green(), c.blue()
-        r, g, b = mau(40, 300)                                               # nền squircle: xanh dương (0.9.81: xanh hoàng gia sáng hơn)
-        self.assertTrue(b > 100 and b > r + 60 and b > g + 30, (r, g, b))
-        co_vang = any(c.red() > 170 and c.green() > 120 and c.blue() < 110
-                      for c in (anh.pixelColor(x, y) for x in range(150, 360, 6) for y in range(110, 250, 6)))
-        co_xanh = any(c.green() > 120 and c.green() > c.red() + 30 and c.green() > c.blue()
-                      for c in (anh.pixelColor(x, y) for x in range(150, 360, 6) for y in range(230, 380, 6)))
-        self.assertTrue(co_vang, 'thiếu mái nhà vàng kim')
-        self.assertTrue(co_xanh, 'thiếu khối thửa đất xanh ngọc')
+        dac = [c for c in (anh.pixelColor(x, y) for x in range(0, 512, 4) for y in range(0, 512, 4)) if c.alpha() > 200]
+        self.assertGreater(len(dac), 8000)
+        sang = sum((c.red() + c.green() + c.blue()) / 3 for c in dac) / len(dac)
+        self.assertGreater(sang, 130, 'tông tối - còn nền navy cũ?')
+        self.assertTrue(any(c.blue() > c.red() and c.green() > 140 for c in dac), 'thiếu xanh băng')
+        self.assertTrue(any(c.red() > 180 and c.green() > 120 and c.blue() < 120 for c in dac), 'thiếu vàng cam')
         du = (goc / 'pabt' / 'bieu_tuong.ico').read_bytes()
         n = struct.unpack('<HHH', du[:6])[2]
         self.assertEqual(n, len(vbt.CO_ICO))
         cos = [struct.unpack('<BBBBHHII', du[6 + 16 * k: 22 + 16 * k])[0] or 256 for k in range(n)]
-        for s in (16, 24, 32, 48, 64, 128, 256):
-            self.assertIn(s, cos)
+        self.assertEqual(sorted(cos), [16, 20, 24, 32, 40, 48, 64, 128, 256])
         from pabt.giao_dien import bieu_tuong
         ds = sorted(z.width() for z in bieu_tuong().availableSizes())
-        self.assertIn(16, ds)
-        self.assertIn(256, ds)
+        for s in (16, 20, 40, 256):
+            self.assertIn(s, ds)
         self.assertEqual(vbt.ve(32).width(), 32)
+        ve = vbt.ve_mach(128)                                                # dự phòng: cùng tông sáng, góc trong suốt
+        self.assertEqual(ve.pixelColor(0, 0).alpha(), 0)
+        c = ve.pixelColor(64, 40)
+        self.assertGreater((c.red() + c.green() + c.blue()) / 3, 130, (c.red(), c.green(), c.blue()))
 
     def test_app_user_model_id(self):
         """Taskbar Windows nhận đúng biểu tượng PABT (không gộp vào python.exe): đặt AppUserModelID trước QApplication."""

@@ -2948,6 +2948,8 @@ def main() -> int:
         return 1
     menu_trai = '--menu-tren' not in sys.argv              # từ 0.9.3: menu dọc bên trái thay thanh nút phía trên
     w = CuaSoChinh(menu_trai=menu_trai)
+    from .giao_dien import bieu_tuong
+    w.setWindowIcon(bieu_tuong())                       # (app.setWindowIcon ở ap_dung đã gán cho mọi cửa sổ; gắn thẳng cho chắc)
     w.dat_tieu_de()
     tep = [a for a in sys.argv[1:] if not a.startswith('--')]
     co_file = bool(tep and tep[0].lower().endswith('.pabt'))
