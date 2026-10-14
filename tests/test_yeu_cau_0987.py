@@ -485,9 +485,15 @@ class TestLenhVaKiemTraTinh(unittest.TestCase):
             cc = [a.text() for a in w.menu_tren['Công cụ'].actions()]
             self.assertIn('Chẩn đoán & sửa lỗi hệ thống…', tg)
             self.assertIn('Phiếu kiểm đếm thực địa…', cc)
-            self.assertIn('Phiếu kiểm đếm thực địa…', LENH_CAN_DU_AN)
-            self.assertFalse(w.lenh['Phiếu kiểm đếm thực địa…'].isEnabled())     # chưa mở dự án
-            self.assertTrue(w.lenh['Chẩn đoán & sửa lỗi hệ thống…'].isEnabled())
+            # chưa mở dự án: VẪN bấm được (mục mờ bấm không phản ứng - người dùng tưởng hỏng), bấm thì báo mở dự án trước
+            for t in ('Phiếu kiểm đếm thực địa…', 'Nhập bản vẽ CAD (.dxf)…', 'Chẩn đoán & sửa lỗi hệ thống…'):
+                self.assertNotIn(t, LENH_CAN_DU_AN)
+                self.assertTrue(w.lenh[t].isEnabled(), t)
+            from unittest import mock as _m
+            with _m.patch('pabt.app.QMessageBox.information') as bao:
+                self.assertIsNone(w.phieu_kiem_dem(cho=False))
+                self.assertFalse(w.nhap_ban_ve_cad(cho=False))
+            self.assertEqual(bao.call_count, 2)
             d = w.chan_doan_he_thong(cho=False)
             self.assertIsNone(d.file_pabt)
         finally:

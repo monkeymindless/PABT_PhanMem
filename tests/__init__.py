@@ -8,6 +8,12 @@ import atexit
 import os
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+# Thư mục dữ liệu máy RIÊNG cho cả lượt kiểm thử (0.9.87): trước đây bài mở dự án ghi đường dẫn tệp tạm vào danh sách "Dự án
+# gần đây" (%APPDATA%\PABT\du_an_gan_day.json) của người dùng, đẩy các dự án thật ra khỏi danh sách. Bài nào cần thư mục riêng
+# vẫn tự đặt PABT_THU_MUC_MAY (mock.patch.dict).
+if not os.environ.get('PABT_THU_MUC_MAY'):
+    import tempfile
+    os.environ['PABT_THU_MUC_MAY'] = tempfile.mkdtemp(prefix='pabt_test_may_')
 try:
     from PySide6.QtWidgets import QApplication
 except ImportError:                                     # máy không có Qt: các bài giao diện tự bỏ qua

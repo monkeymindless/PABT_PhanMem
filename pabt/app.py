@@ -44,8 +44,9 @@ GAN_DAY_TOI_DA = 8                 # số dự án nhớ trong danh sách "Dự 
 # mở / đóng dự án thì bật / tắt lại. Nhóm 1 (khái toán), 2, 3 và Màn hình chính vẫn dùng được khi chưa có dự án
 LENH_CAN_DU_AN = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…', 'Xuất báo cáo đối chiếu…',
                   'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…',
-                  'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Báo cáo tổng hợp…', 'Nhật ký kiểm toán…', 'Bản đồ thửa đất',
-                  'Nhập bản vẽ CAD (.dxf)…', 'Phiếu kiểm đếm thực địa…')
+                  'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Báo cáo tổng hợp…', 'Nhật ký kiểm toán…', 'Bản đồ thửa đất')
+# Nhập bản vẽ CAD, Phiếu kiểm đếm (menu Dữ liệu / Công cụ, 0.9.87): KHÔNG tắt khi chưa mở dự án - mục menu mờ bấm không có phản
+# ứng, người dùng tưởng hỏng; bấm thì báo "mở dự án trước" (_can_du_an).
 # nút A− / A+ trên thanh trạng thái: khung nút nhỏ, viền nhẹ, bo 4px
 QSS_NUT_ZOOM = ('QToolButton#nut_zoom { border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 8px; background: #FFFFFF; '
                 'color: #1E293B; font-weight: 600; }'
