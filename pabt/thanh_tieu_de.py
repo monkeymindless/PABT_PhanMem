@@ -116,6 +116,9 @@ class ThanhTieuDe(QWidget):
             'QMenuBar::item { background: transparent; padding: 4px 8px; margin: 0 1px; border-radius: 5px; }'
             'QMenuBar::item:selected { background: rgba(0,0,0,0.07); }'
             'QMenuBar::item:pressed { background: rgba(0,0,0,0.12); }' % MAU_CHU)
+        mb.setProperty('trong_thanh_td', True)       # giao_dien.vua_cao_menu: cao đúng bằng mục menu, canh giữa thanh
+        from .giao_dien import vua_cao_menu
+        vua_cao_menu(mb)
         lo.addWidget(mb, 0, Qt.AlignmentFlag.AlignVCenter)
         # 0.9.66 (người dùng 12/10/2026 - bỏ lệnh trùng): không đặt nút Hoàn tác / Làm lại, Hướng dẫn, Cài đặt trên thanh này -
         # đã có ở menu Chỉnh sửa / Trợ giúp / Cài đặt ngay bên cạnh (Ctrl+Z / Ctrl+Y / F1 vẫn dùng được)

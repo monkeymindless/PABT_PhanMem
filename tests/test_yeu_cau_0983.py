@@ -51,7 +51,7 @@ class TestBangChiTiet(CoSo):
 
     def _bang(self, ws):
         stt = next(r for r in range(1, 200) if str(ws.cell(r, 1).value or '').strip().upper() == 'STT')
-        cuoi = next(r for r in range(stt + 1, 300) if ws.cell(r, 2).value == 'TỔNG CỘNG')
+        cuoi = next(r for r in range(stt + 1, 300) if 'TỔNG CỘNG' in (ws.cell(r, 1).value, ws.cell(r, 2).value))   # 0.9.88: gộp từ cột STT
         return stt, cuoi
 
     def test_can_giua_doc_va_chieu_cao(self):
@@ -59,6 +59,8 @@ class TestBangChiTiet(CoSo):
         stt, cuoi = self._bang(ws)
         for r in range(stt, cuoi + 1):
             for c in range(1, 9):
+                if type(ws.cell(r, c)).__name__ == 'MergedCell':      # ô bị gộp (thưởng, tổng cộng - 0.9.88): kiểu ở ô đầu vùng
+                    continue
                 al = ws.cell(r, c).alignment
                 self.assertEqual(al.vertical, 'center', (r, c))
                 self.assertTrue(al.wrap_text, (r, c))
@@ -70,7 +72,10 @@ class TestBangChiTiet(CoSo):
             h = ws.row_dimensions[r].height
             self.assertGreaterEqual(h, in_an.CAO_DONG_BANG_TOI_THIEU, r)
             dam = ws.cell(r, in_an.COT_KIND).value != 'I'                     # dòng mục / tổng in đậm
-            so = in_an.so_dong_o(ws.cell(r, 2).value, px[1] * 0.75 - 6, dam=dam)
+            gop = next((m for m in ws.merged_cells.ranges if m.min_row == r and m.min_col <= 2 <= m.max_col), None)
+            c1, c2 = (gop.min_col, gop.max_col) if gop else (2, 2)          # thưởng / tổng cộng gộp ô (0.9.88): đo cả vùng
+            chu = ws.cell(r, c1).value
+            so = in_an.so_dong_o(chu, sum(px[c1 - 1:c2]) * 0.75 - 6, dam=dam)
             self.assertGreaterEqual(h, in_an.cao_dong_bang(so) - 0.01, r)     # đủ chỗ cho mọi dòng chữ + đệm
 
     def test_tieu_de_mot_dong_28pt(self):

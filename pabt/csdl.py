@@ -239,13 +239,22 @@ def giu_tat_ca(con, truoc) -> None:
             bo[k] = (moi, gt)
 
 
+def uri_chi_doc(duong_dan) -> str:
+    """URI SQLite mở chỉ đọc ("file:///D:/thư mục/a.pabt?mode=ro"). Không dùng Path.as_uri(): nó nạp urllib.request (~40 ms - màn
+    hình chào đọc tóm tắt các dự án gần đây lúc khởi động, 0.9.88). Chữ có dấu giữ nguyên (SQLite nhận UTF-8); %, ?, #, khoảng
+    trắng mã hóa; đường dẫn mạng \\\\máy\\thư mục -> file:////máy/thư mục."""
+    s = str(Path(duong_dan).resolve()).replace('\\', '/')
+    s = s.replace('%', '%25').replace('?', '%3f').replace('#', '%23').replace(' ', '%20')
+    return ('file://' + s if s.startswith('/') else 'file:///' + s) + '?mode=ro'
+
+
 def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connection:
     """Mở file dự án (tự nâng cấp file cũ). chi_doc: mở chỉ xem, mọi lệnh ghi đều bị SQLite từ chối."""
     p = Path(duong_dan)
     if not tao and not p.exists():
         raise FileNotFoundError(str(p))
     if chi_doc:
-        con = sqlite3.connect(p.resolve().as_uri() + '?mode=ro', uri=True, factory=KetNoi)
+        con = sqlite3.connect(uri_chi_doc(p), uri=True, factory=KetNoi)
         con.row_factory = sqlite3.Row
         ver = con.execute('PRAGMA user_version').fetchone()[0]
         if not 3 <= ver <= PHIEN_BAN_CSDL:

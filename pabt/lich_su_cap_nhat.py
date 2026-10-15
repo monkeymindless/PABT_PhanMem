@@ -7,7 +7,18 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
-    ('0.9.87', '14/10/2026', (
+    ('0.9.88', '15/10/2026', (
+        'Bản in phương án chi tiết: ô nguồn gốc đất căn đều hai bên như văn bản Word (không còn bên phải lởm chởm); dòng thưởng bàn '
+        'giao mặt bằng chỉ ghi tên và thành tiền; dòng TỔNG CỘNG gộp ô từ cột STT, căn giữa, in đậm.',
+        'Nguồn gốc đất: dấu " - " nối giữa tên riêng ("Khu Bảo tồn thiên nhiên - Văn hoá Đồng Nai") hoặc trong ngoặc không còn bị '
+        'tách thành dòng mới; chỉ tách sau dấu kết câu / hai chấm hoặc danh sách ngắn ("đất ở - đất lúa"). Nội dung đã lưu bị tách '
+        'sai ở bản trước không tự nối lại - sửa tay trong ô Nguồn gốc nếu cần.',
+        'Menu trái: nhóm "Đơn giá & bảng giá" chuyển xuống cuối (nhóm 6), các nhóm làm hằng ngày lên trên; chưa mở dự án thì Đơn giá '
+        'đặc biệt mờ, Đơn giá bồi thường và Bảng giá đất vẫn tra cứu được.',
+        'Thanh menu trên cùng: chữ menu ngang hàng chữ tiêu đề (màn hình 125% trước đây lệch vài điểm ảnh); mở phần mềm nhanh hơn chút '
+        'khi đọc danh sách dự án gần đây.',
+    )),
+    ('0.9.87','14/10/2026', (
         'Cấu hình nghiệp vụ (menu Cài đặt): số ngày niêm yết, đối thoại, thẩm định, thông báo thu hồi đất, vận động trước cưỡng chế, '
         'mức kinh phí tổ chức thực hiện, ngưỡng kiểm tra, bản in, thông tin cơ quan - sửa trên màn hình, áp dụng ngay; "Quy trình 16 '
         'bước" hiện thời hạn từng bước theo cấu hình.',

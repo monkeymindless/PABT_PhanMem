@@ -506,6 +506,24 @@ class TestLenhVaKiemTraTinh(unittest.TestCase):
         self.assertIn('to_chuc', kq['bien_dong'])
         self.assertIn('TEN', kq['bien_dong']['to_chuc'])
 
+    def test_thu_tu_nhom_menu_trai_va_lenh_khi_chua_mo_du_an(self):
+        """Người dùng 15/10/2026: Đơn giá & bảng giá xuống nhóm 6; đóng sẵn 1, 5, 6. Chưa mở dự án: Đơn giá bồi thường, Bảng giá đất
+        vẫn bật (liên kết màn hình chào), Đơn giá đặc biệt và nhóm 3, 4, 5 tắt."""
+        _app()
+        from pabt import app as ud, giao_dien
+        self.assertEqual(ud.NHOM_DONG_MAC_DINH, ('1. Khái toán & dự toán', '5. Phê duyệt & bàn giao', '6. Đơn giá & bảng giá'))
+        self.assertEqual(giao_dien.TEN_NHOM_CU['3. Đơn giá & bảng giá'], '6. Đơn giá & bảng giá')
+        self.assertEqual(giao_dien.TEN_NHOM_CU['6. Phê duyệt & bàn giao'], '5. Phê duyệt & bàn giao')
+        w = ud.CuaSoChinh(menu_trai=True)
+        try:
+            self.assertEqual(list(w.khung_menu.tieu_de_nhom)[-1], '6. Đơn giá & bảng giá')
+            for t in ('Bộ đơn giá…', 'Bảng giá đất NQ 28…', 'Dự toán & khái toán', 'Thông tin dự án…'):
+                self.assertTrue(w.lenh[t].isEnabled(), t)
+            for t in ('Đơn giá riêng dự án…', 'Lập phương án hộ…', 'Đợt trình…', 'Quyết định phê duyệt'):
+                self.assertFalse(w.lenh[t].isEnabled(), t)
+        finally:
+            w.close()
+
     def test_hop_moi_vua_man_hinh_nho(self):
         _app()
         from pabt.man_hinh_chan_doan import HopChanDoanHeThong

@@ -166,12 +166,15 @@ class TestNguonGoc(CoSo):
         ws = self.in_ho(ng)
         chu = next(x for _, x, _ in self.dong_nguon_goc(ws) if x)
         dong = chu.split('\n')
+        # 0.9.88 (người dùng 15/10/2026): căn đều hai bên như văn bản Word - mỗi đoạn MỘT dòng trong ô (Excel tự ngắt và căn đều),
+        # không còn xuống dòng cứng + thụt lề treo ở dòng tràn (dòng kết thúc bằng xuống dòng cứng Excel không căn đều)
+        self.assertEqual(len(dong), 3, dong)
         self.assertTrue(dong[0].startswith('Căn cứ'))
-        dau = [i for i, d in enumerate(dong) if d.startswith('- ')]
-        self.assertEqual(len(dau), 2)
-        tran = [d for d in dong[dau[0] + 1:dau[1]]]                  # dòng tràn của gạch đầu dòng thứ nhất
-        self.assertTrue(tran and all(d.startswith(' ') and not d.startswith('-') for d in tran), dong)
+        self.assertTrue(dong[1].startswith('- ') and dong[2].startswith('- '))
+        self.assertFalse(any(d.startswith(' ') for d in dong))
         self.assertEqual(' '.join(chu.split()), ' '.join(ng.split()))       # không mất chữ
+        o = next(o for row in ws.iter_rows() for o in row if isinstance(o.value, str) and o.value.startswith('Căn cứ'))
+        self.assertEqual(o.alignment.horizontal, 'justify')
 
     def test_nguon_goc_dai_hien_du(self):
         ws = self.in_ho(NGUON_GOC)

@@ -440,7 +440,7 @@ def du_an_cuoi(phien=None):
 
 def ds_du_an(goc=None) -> list:
     """Các dự án trong thư mục DuAn của máy chủ: dict(file, ten, sua_luc, kich_thuoc, dang_mo, lay_ve)."""
-    from . import khoa
+    from . import csdl, khoa
     goc = Path(goc) if goc else (PHIEN.goc if PHIEN else None)
     if goc is None:
         return []
@@ -467,7 +467,7 @@ def ds_du_an(goc=None) -> list:
         else:
             ten = f.stem
             try:
-                c = sqlite3.connect(f.resolve().as_uri() + '?mode=ro', uri=True, timeout=3)
+                c = sqlite3.connect(csdl.uri_chi_doc(f), uri=True, timeout=3)
                 try:
                     r = c.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
                 finally:

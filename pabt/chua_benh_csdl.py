@@ -23,8 +23,13 @@ from pathlib import Path
 DUOI_KHOA = '.khoa'
 
 
+def csdl_uri(p) -> str:
+    from .csdl import uri_chi_doc
+    return uri_chi_doc(p)
+
+
 def _con_ro(p: Path):
-    return sqlite3.connect(p.resolve().as_uri() + '?mode=ro', uri=True, timeout=5)
+    return sqlite3.connect(csdl_uri(p), uri=True, timeout=5)
 
 
 def _co_bang(con, ten: str) -> bool:

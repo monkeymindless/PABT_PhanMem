@@ -12,7 +12,7 @@ from tests.test_toc_do import _du_an
 
 NHOM_MO = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…', 'Xuất báo cáo đối chiếu…', 'Tổng hợp tiền theo phương án',
            'Đợt trình…', 'In / Xuất…', 'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Báo cáo tổng hợp…')
-NHOM_SANG = ('Màn hình chính', 'Thông tin dự án…', 'Bộ đơn giá…', 'Đơn giá riêng dự án…', 'Bảng giá đất NQ 28…', 'Dự toán & khái toán')
+NHOM_SANG = ('Màn hình chính', 'Thông tin dự án…', 'Bộ đơn giá…', 'Bảng giá đất NQ 28…', 'Dự toán & khái toán')   # 0.9.88: Đơn giá đặc biệt cần dự án
 
 
 class CoSo(unittest.TestCase):
@@ -200,7 +200,7 @@ class TestChanTrang(CoSo):
         self.assertEqual([hop.bang.item(r, 0).text() for r in range(16)], [f'Bước {i}' for i in range(1, 17)])
         self.assertEqual(len(quy_trinh_qd18.BUOC), 16)
         chu = ' '.join(hop.bang.item(r, 3).text() for r in range(16))   # cột 2 = Thời hạn (SLA, 0.9.87)
-        for nhom in ('1. Khái toán & dự toán', '4. Lập phương án', '5. Tổng hợp & trình duyệt', '6. Phê duyệt & bàn giao'):
+        for nhom in ('1. Khái toán & dự toán', '3. Lập phương án', '4. Tổng hợp & trình duyệt', '5. Phê duyệt & bàn giao'):
             self.assertIn(nhom, chu)
 
 

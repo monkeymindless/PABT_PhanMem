@@ -1173,8 +1173,13 @@ def tao_banner_ten():
 
 
 def vua_cao_menu(mb) -> None:
-    """Hàng menu trắng: tối thiểu CAO_MENU, đủ cao cho mục menu theo phông / DPI (thấp hơn thì Qt dồn mục vào nút "»")."""
+    """Hàng menu trắng: tối thiểu CAO_MENU, đủ cao cho mục menu theo phông / DPI (thấp hơn thì Qt dồn mục vào nút "»").
+    Menu trong thanh tiêu đề hợp nhất (property trong_thanh_td): cao ĐÚNG bằng mục menu - QMenuBar vẽ mục sát mép trên, cao dư
+    dồn xuống dưới làm chữ menu cao hơn chữ tiêu đề (người dùng 15/10/2026, màn hình 125%: lệch 4-5 px); bố cục canh giữa thanh."""
     try:
+        if mb.property('trong_thanh_td'):
+            mb.setFixedHeight(mb.sizeHint().height())
+            return
         mb.setFixedHeight(max(CAO_MENU, mb.sizeHint().height()))
     except RuntimeError:
         pass
@@ -1415,7 +1420,7 @@ class NhanBam(QLabel):
 
 # QSettings: tên các nhóm menu trái đang đóng, nối bằng "|". 0.9.23 menu 5 nhóm mới: khóa mới (nhóm cũ không còn) - lần đầu
 # dùng nhóm đóng sẵn mặc định
-KHOA_NHOM_DONG = 'giao_dien/menu_trai_dong_3'    # 0.9.70: 6 nhóm mới - nhóm đóng sẵn theo NHOM_DONG_MAC_DINH mới
+KHOA_NHOM_DONG = 'giao_dien/menu_trai_dong_4'    # 0.9.88: đổi thứ tự nhóm (Đơn giá & bảng giá xuống cuối) - đóng sẵn theo NHOM_DONG_MAC_DINH mới
 
 
 def _doc_nhom_dong(mac_dinh: tuple) -> set:
@@ -1431,7 +1436,10 @@ def _doc_nhom_dong(mac_dinh: tuple) -> set:
 
 # tên nhóm menu trước 0.9.20 (đã nhớ trong QSettings) -> tên ngắn mới: nhóm người dùng đã đóng vẫn đóng
 TEN_NHOM_CU = {'Hồ sơ và phương án': 'Hồ sơ, phương án', 'Bảng tổng hợp': 'Tổng hợp',
-               'Trình, theo dõi tiến độ': 'Trình duyệt, tiến độ', 'In ấn, báo cáo': 'In, báo cáo'}
+               'Trình, theo dõi tiến độ': 'Trình duyệt, tiến độ', 'In ấn, báo cáo': 'In, báo cáo',
+               # 0.9.88: tên nhóm đánh số cũ -> số mới (Đơn giá & bảng giá 3 -> 6, các nhóm 4, 5, 6 lên 3, 4, 5)
+               '3. Đơn giá & bảng giá': '6. Đơn giá & bảng giá', '4. Lập phương án': '3. Lập phương án',
+               '5. Tổng hợp & trình duyệt': '4. Tổng hợp & trình duyệt', '6. Phê duyệt & bàn giao': '5. Phê duyệt & bàn giao'}
 
 
 def _ghi_nhom_dong(dong: set) -> None:

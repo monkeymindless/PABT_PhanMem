@@ -1,4 +1,8 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.87 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.88 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.88**: bản in chi tiết - ô **nguồn gốc đất căn đều hai bên**, dòng thưởng chỉ tên + thành tiền, **TỔNG CỘNG** gộp từ cột STT;
+> dấu " - " nối tên riêng không còn bị tách dòng (nội dung đã tách sai ở bản trước: sửa tay); menu trái - **Đơn giá & bảng giá**
+> xuống cuối (nhóm 6).
 
 > **0.9.86**: **Nhật ký kiểm toán** (menu **Dữ liệu** / chuột phải danh sách hộ) - ai sửa, lúc nào, máy nào, giá trị cũ -> mới; không sửa,
 > không xóa được, xuất Excel. **Kiểm tra lỗi** thêm nhóm **Bác sĩ hồ sơ** (DT bồi thường > DT thu hồi, tỷ lệ > 100%, nhân khẩu, hạn mức đất ở).
@@ -526,9 +530,12 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
 Dưới băng tiêu đề (từ 0.9.23): **thanh menu** Tệp tin / Dữ liệu / Công cụ / Trợ giúp (tạo, mở, lưu, đóng dự án; nhập dữ liệu;
 mẫu in, bộ đơn giá; hướng dẫn F1, cập nhật phần mềm, giới thiệu) và **menu bên trái** theo 16 bước của Mục IV QĐ 18/2026: nút
 **Màn hình chính** riêng, rồi 6 nhóm - **1. Khái toán & dự toán**, **2. Dự án triển khai** (Thông tin dự án, Danh sách hộ và Thửa),
-**3. Đơn giá & bảng giá**, **4. Lập phương án** (Lập phương án chi tiết, Niêm yết & Lấy ý kiến, Kiểm tra lỗi pháp lý, Đối chiếu số liệu),
-**5. Tổng hợp & trình duyệt** (Bảng tổng hợp kinh phí, Đợt trình thẩm định, Xuất hồ sơ & Bản in), **6. Phê duyệt & bàn giao**
-(Quyết định phê duyệt, Theo dõi chi trả & Bàn giao, Báo cáo tiến độ GPMB). Bấm tên nhóm để đóng / mở (phần mềm nhớ). Mỗi lệnh là
+**3. Lập phương án** (Lập phương án chi tiết, Niêm yết & Lấy ý kiến, Bản đồ thửa đất, Kiểm tra lỗi pháp lý, Đối chiếu số liệu),
+**4. Tổng hợp & trình duyệt** (Bảng tổng hợp kinh phí, Đợt trình thẩm định, Xuất hồ sơ & Bản in), **5. Phê duyệt & bàn giao**
+(Quyết định phê duyệt, Theo dõi chi trả & Bàn giao, Báo cáo tiến độ GPMB), **6. Đơn giá & bảng giá** (Đơn giá bồi thường, Đơn giá
+đặc biệt, Bảng giá đất - 0.9.88 chuyển xuống cuối: các nhóm làm hằng ngày lên trên). Lần đầu mở, nhóm 2, 3, 4 mở sẵn; nhóm 1, 5, 6
+đóng. Chưa mở dự án: các lệnh nhóm 3, 4, 5 và Đơn giá đặc biệt mờ; Đơn giá bồi thường, Bảng giá đất vẫn tra cứu được. Bấm tên nhóm
+để đóng / mở (phần mềm nhớ). Mỗi lệnh là
 MỘT lệnh dùng chung cho menu, thanh công cụ, chuột phải (cùng trạng thái tắt khi chỉ xem). Lệnh với "hộ đang chọn" (Lập phương án,
 Trạng thái hộ, Đợt trình, In / Xuất) lấy hộ chọn **trên trang đang xem** (Danh sách hộ, Bảng tổng hợp kinh phí, Quyết định phê duyệt,
 Theo dõi chi trả & Bàn giao, Báo cáo tiến độ GPMB).

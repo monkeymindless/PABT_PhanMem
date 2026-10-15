@@ -85,14 +85,15 @@ class TestMenuTrai(_Co):
         m = w.khung_menu
         nut = [b.defaultAction() for b in m.findChildren(QToolButton) if b.defaultAction() is not None]
         self.assertIs(nut[0], L['Màn hình chính'])                      # đỉnh menu, trước mọi nhóm
-        self.assertEqual(list(m.tieu_de_nhom), ['1. Khái toán & dự toán', '2. Dự án triển khai', '3. Đơn giá & bảng giá',
-                                                '4. Lập phương án', '5. Tổng hợp & trình duyệt',
-                                                '6. Phê duyệt & bàn giao'])
+        self.assertEqual(list(m.tieu_de_nhom), ['1. Khái toán & dự toán', '2. Dự án triển khai', '3. Lập phương án',
+                                                '4. Tổng hợp & trình duyệt', '5. Phê duyệt & bàn giao',
+                                                '6. Đơn giá & bảng giá'])
         self.assertEqual(nut[1:], [L[k] for k in (
-            'Dự toán & khái toán', 'So sánh với thực tế', 'Thông tin dự án…', 'Danh sách hộ', 'Bộ đơn giá…',
-            'Đơn giá riêng dự án…', 'Bảng giá đất NQ 28…', 'Lập phương án hộ…', 'Dự thảo PABT…', 'Bản đồ thửa đất', 'Kiểm tra lỗi…',
+            'Dự toán & khái toán', 'So sánh với thực tế', 'Thông tin dự án…', 'Danh sách hộ',
+            'Lập phương án hộ…', 'Dự thảo PABT…', 'Bản đồ thửa đất', 'Kiểm tra lỗi…',
             'Xuất báo cáo đối chiếu…', 'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…', 'Quyết định phê duyệt',
-            'Theo dõi tiến độ', 'Báo cáo tổng hợp…')])
+            'Theo dõi tiến độ', 'Báo cáo tổng hợp…',
+            'Bộ đơn giá…', 'Đơn giá riêng dự án…', 'Bảng giá đất NQ 28…')])     # 0.9.88: nhóm Đơn giá & bảng giá ở cuối
         nhan = {k: L[k].text().replace('&&', '&') for k in ('Dự toán & khái toán', 'Danh sách hộ', 'Lập phương án hộ…',
                                                             'Kiểm tra lỗi…', 'Xuất báo cáo đối chiếu…', 'Đợt trình…',
                                                             'In / Xuất…', 'Theo dõi tiến độ', 'Báo cáo tổng hợp…')}

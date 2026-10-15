@@ -232,7 +232,7 @@ def sao_luu_bo(dich) -> Path:
     if dich.suffix.lower() != '.sqlite':
         dich = dich.with_suffix('.sqlite')
     tam = dich.with_name(dich.name + '.tmp')
-    nguon_con = sqlite3.connect(nguon.resolve().as_uri() + '?mode=ro', uri=True)
+    nguon_con = sqlite3.connect(csdl.uri_chi_doc(nguon), uri=True)
     ra = sqlite3.connect(str(tam))
     try:
         nguon_con.backup(ra)                         # bản sao nhất quán (không chép giữa lúc đang ghi)

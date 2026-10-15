@@ -43,13 +43,19 @@ class TestDacTaV5(CoSo):
         else:                                                           # bản Qt 5 (Win 7/8): khung Windows + hàng menu trắng
             self.assertEqual(w.dai_nhan_dien.height(), 28)
         self.assertEqual(w.banner_ten.height(), giao_dien.CAO_BANNER)
-        # hàng menu đủ cao cho mục menu (0.9.65: ép 28 px ở DPI 125% làm mọi mục dồn vào nút "»")
-        self.assertGreaterEqual(w.menuBar().height(), giao_dien.CAO_MENU)
-        self.assertGreaterEqual(w.menuBar().height(), w.menuBar().sizeHint().height())
+        # hàng menu đủ cao cho mục menu (0.9.65: ép 28 px ở DPI 125% làm mọi mục dồn vào nút "»"); 0.9.88: trong thanh tiêu đề hợp
+        # nhất cao ĐÚNG bằng mục menu và canh giữa thanh (cao dư làm chữ menu lệch lên trên chữ tiêu đề)
+        mb = w.menuBar()
+        self.assertGreaterEqual(mb.height(), mb.sizeHint().height())
+        if mb.property('trong_thanh_td'):
+            self.assertEqual(mb.height(), mb.sizeHint().height())
+            giua_mb, giua_thanh = mb.y() + mb.height() / 2, mb.parentWidget().height() / 2
+            self.assertLessEqual(abs(giua_mb - giua_thanh), 1, (mb.geometry(), mb.parentWidget().height()))
+        else:
+            self.assertGreaterEqual(mb.height(), giao_dien.CAO_MENU)
         self.assertEqual(w.lb_du_an_nho.text(), 'Chưa mở dự án')
         self.assertIn('VĨNH CỬU', w.lb_don_vi.text())
         self.assertTrue(w.lb_ban_quyen_nho.text())
-        self.assertGreaterEqual(w.menuBar().height(), 22)
         self.assertIsInstance(w.khung_tab, giao_dien.KhungLamViecDaTab)
         self.assertEqual(w.thanh_tab.count(), 1)
         self.assertEqual(w._tab_khoa, [-1])

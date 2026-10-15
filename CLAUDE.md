@@ -881,6 +881,24 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   (đã bỏ - cắt khung cố định xén viền khối nghiêng). `ve_mach` dự phòng vẽ cùng tông (xanh băng #38BDF8, trắng sứ, vàng #F59E0B, cam
   #F97316). `KhungLogo` không cắt bo góc nữa, ảnh theo devicePixelRatioF. Gói .pabtcn mang bieu_tuong.png (biểu tượng TRONG phần mềm);
   biểu tượng exe / lối tắt / bộ cài chỉ đổi khi cài bộ cài mới. Test `test_giao_dien.test_bieu_tuong_duy_nhat_co_vien`.
+- 0.9.88 nguồn gốc đất bản in (người dùng 15/10/2026, ảnh Excel căn đều): ô căn đều (`_can_nguon_goc` 'justify', mặc định) -> `dat_doan_van`
+  gọi `_chia_doan_van(..., treo=False)` / `_ngat(treo=False)`: KHÔNG thụt lề treo gạch đầu dòng (thụt lề treo cần xuống dòng cứng mỗi dòng
+  tràn - Excel không căn đều dòng kết thúc bằng xuống dòng cứng -> bên phải lởm chởm); xuống dòng cứng chỉ giữa các đoạn. Màn hình (ô
+  nguồn gốc của KhungHoSo) vẫn thụt lề treo. `ho_so.chuan_nguon_goc`: " - " chỉ thành mục mới khi sau dấu kết câu / hai chấm
+  (`_RE_GACH_MUC`) hoặc cả dòng là danh sách ngắn >= 2 gạch, mọi đoạn <= `DS_NGAN_TU` từ (`_tach_ds_ngan`, yêu cầu 0.9.46 "đất ở - đất
+  lúa"); gạch trong ngoặc đơn / gạch nối tên riêng ("Khu Bảo tồn thiên nhiên - Văn hoá Đồng Nai") giữ nguyên. Dữ liệu đã lưu bị tách sai
+  trước đây (chuan_nguon_goc chạy cả khi lưu thửa) KHÔNG tự nối lại - người dùng sửa tay.
+- 0.9.88 bảng chi tiết (người dùng 15/10/2026, ảnh mẫu): dòng thưởng bàn giao mặt bằng ('R') chỉ tên + thành tiền (bỏ ĐVT / SL / ĐG /
+  tỷ lệ trong `dong_chi_tiet`), tên gộp cột Tên..Tỷ lệ; dòng TỔNG CỘNG ('T') gộp cột STT..Tỷ lệ, căn giữa, đậm - `lap_chi_tiet` (chỉ khi
+  các cột liền nhau; chiều cao đo trên bề rộng vùng gộp). `nhap_chi_tiet` dò "TỔNG CỘNG" ở cột STT lẫn cột Tên nên vẫn đọc bản in mới.
+- 0.9.88 thứ tự nhóm menu trái (người dùng 15/10/2026): 1 Khái toán & dự toán, 2 Dự án triển khai, 3 Lập phương án, 4 Tổng hợp & trình
+  duyệt, 5 Phê duyệt & bàn giao, 6 Đơn giá & bảng giá (trước: Đơn giá là nhóm 3). Khóa `self.lenh` / NHAN_MENU giữ nguyên; tên nhóm cũ -> mới
+  trong `giao_dien.TEN_NHOM_CU`, `KHOA_NHOM_DONG` '..._4'; `NHOM_DONG_MAC_DINH` = 1, 5, 6. `LENH_CAN_DU_AN` thêm 'Đơn giá riêng dự án…'
+  (Đơn giá bồi thường, Bảng giá đất vẫn bật khi chưa mở dự án - liên kết màn hình chào). Các mục "nhóm 4 / 5 / 6" ghi ở các bản cũ bên
+  dưới là số nhóm CŨ. `csdl.uri_chi_doc(p)` thay `Path.as_uri()` (nạp urllib.request ~40 ms lúc màn hình chào đọc dự án gần đây).
+- 0.9.88 thanh tiêu đề hợp nhất (người dùng 15/10/2026, màn hình 125%: chữ menu cao hơn chữ tiêu đề 4-5 px): QMenuBar trong `ThanhTieuDe`
+  có property `trong_thanh_td` -> `giao_dien.vua_cao_menu` đặt cao ĐÚNG `sizeHint` (QMenuBar vẽ mục sát mép trên, cao dư dồn xuống dưới),
+  bố cục canh giữa; menu ngoài thanh hợp nhất vẫn tối thiểu `CAO_MENU`.
 - 0.9.75 (người dùng 13/10/2026) nhóm 4 Lập phương án (mã ở `man_hinh_du_thao.py` / `man_hinh.py` / `man_hinh_ho_so.py` - không có file
   `man_hinh_niem_yet.py` / `cua_so_lap_pa.py`):
   - `KhungDuThao`: `b_dua` = nút xổ "Đưa hộ vào đợt" (Thêm toàn bộ hộ đủ điều kiện = `_dua`, Chọn hộ từ danh sách = `_them_ho`; BỎ `b_them` và

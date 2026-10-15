@@ -848,10 +848,11 @@ def _rong_vung(ws, c1: int, c2: int) -> float:
 TREO = 'treo'           # dòng tràn của gạch đầu dòng: xuống dòng cứng + khoảng trắng thụt vào (Excel không có thụt lề treo)
 
 
-def _ngat(chu: str, rong: float, ten: str, co: float, dam: bool, do=None) -> list:
+def _ngat(chu: str, rong: float, ten: str, co: float, dam: bool, do=None, treo: bool = True) -> list:
     """Ngắt chữ thành các dòng như Excel (theo từ; '\\n' là xuống đoạn). Trả [(dòng, đầu đoạn)]: đầu đoạn True / False, hoặc
     TREO = dòng tràn của đoạn bắt đầu bằng gạch đầu dòng ("- ", "+ ", "a) "… - ho_so.dau_dong): dòng đó đã có sẵn khoảng trắng
-    thụt vào thẳng chữ sau ký hiệu, khi ghi vào ô phải xuống dòng cứng (dat_doan_van)."""
+    thụt vào thẳng chữ sau ký hiệu, khi ghi vào ô phải xuống dòng cứng (dat_doan_van). treo=False: không thụt lề treo - dòng tràn
+    về sát lề như Excel tự ngắt (ô căn đều hai bên: dòng kết thúc bằng xuống dòng cứng Excel KHÔNG căn đều)."""
     from .ho_so import dau_dong
     do = do or _ham_do_chu()
     if do is None:                               # ước: bề rộng trung bình một ký tự Times New Roman ~ 0,47 cỡ chữ (đậm 0,52)
@@ -860,7 +861,7 @@ def _ngat(chu: str, rong: float, ten: str, co: float, dam: bool, do=None) -> lis
     rong = rong * 0.97                          # chừa 3%: phông máy in / PDF có thể rộng hơn chút
     kq = []
     for doan in str(chu or '').split('\n'):
-        ky = dau_dong(doan)
+        ky = dau_dong(doan) if treo else ''
         thut = ''
         if ky:
             cach = do(' ', ten, co, dam) or co * 0.25
@@ -940,7 +941,7 @@ _RE_HET_CAU = re.compile(r'[.;:!?](?=\s)|\n')
 _RE_KHOANG = re.compile(r'\s')
 
 
-def _chia_doan_van(chu: str, rong: float, ten: str, co: float, dam: bool, do, toi_da: int) -> list:
+def _chia_doan_van(chu: str, rong: float, ten: str, co: float, dam: bool, do, toi_da: int, treo: bool = True) -> list:
     """Chia chữ thành các khối <= toi_da dòng (mỗi khối một dòng Excel), mỗi khối là các dòng đã ngắt (_ngat). Cắt ở chỗ hết
     câu / hết đoạn (. ; : ! ? hoặc xuống dòng) muộn nhất mà khối vẫn vừa và không ngắn hơn nửa khối; không có thì cắt ở
     khoảng trắng muộn nhất (từ quá dài: cắt giữa từ). Phần sau ngắt dòng lại từ đầu - không mất chữ."""
@@ -948,13 +949,13 @@ def _chia_doan_van(chu: str, rong: float, ten: str, co: float, dam: bool, do, to
     chu = str(chu or '')
     do = do or _ham_do_chu()
     while True:
-        dong = _ngat(chu, rong, ten, co, dam, do)
+        dong = _ngat(chu, rong, ten, co, dam, do, treo)
         if len(dong) <= toi_da:
             kq.append(dong)
             break
 
         def so(p: int) -> int:
-            return len(_ngat(chu[:p].rstrip(), rong, ten, co, dam, do))
+            return len(_ngat(chu[:p].rstrip(), rong, ten, co, dam, do, treo))
 
         def muon_nhat(ds: list, it_nhat: int = 1):
             lo, hi, tot = 0, len(ds) - 1, None          # số dòng tăng theo độ dài phần đầu: tìm nhị phân
@@ -969,7 +970,7 @@ def _chia_doan_van(chu: str, rong: float, ten: str, co: float, dam: bool, do, to
         cat = (muon_nhat([m.end() for m in _RE_HET_CAU.finditer(chu)], max(1, toi_da // 2))
                or muon_nhat([m.start() for m in _RE_KHOANG.finditer(chu) if m.start() > 0])
                or muon_nhat(list(range(1, len(chu)))) or 1)
-        kq.append(_ngat(chu[:cat].rstrip(), rong, ten, co, dam, do))
+        kq.append(_ngat(chu[:cat].rstrip(), rong, ten, co, dam, do, treo))
         chu = chu[cat:].lstrip()
     return [k for k in kq if k] or [[('', True)]]
 
@@ -1048,7 +1049,10 @@ def dat_doan_van(ws, cho: str, chu: str, do=None) -> int:
     chu = o.value.replace(cho, str(chu or ''))
     ten, co, dam = _phong(o)
     toi_da = max(1, int((CAO_DOAN_TOI_DA - DEM_DONG) // dong_chu_bang(co)))
-    khoi = _chia_doan_van(chu, _rong_vung(ws, c1, c2), ten, co, dam, do, toi_da)
+    # căn đều hai bên (mặc định - người dùng 15/10/2026, như văn bản Word): KHÔNG thụt lề treo gạch đầu dòng - thụt lề treo cần
+    # xuống dòng cứng mỗi dòng tràn, mà dòng kết thúc bằng xuống dòng cứng thì Excel canh trái (bên phải lởm chởm)
+    ngang = _can_nguon_goc()[0]
+    khoi = _chia_doan_van(chu, _rong_vung(ws, c1, c2), ten, co, dam, do, toi_da, treo=ngang != 'justify')
     m = _vung_tron(ws, r, c1)
     if m:
         ws.unmerge_cells(m.coord)
@@ -1504,11 +1508,9 @@ def dong_chi_tiet(con, ma_ho: int, bc: BoiCanh | None = None, pa=None) -> tuple:
         gt = [f'{s4}.{k}', d.ten, d.dvt, d.so_luong, d.don_gia, d.ty_le, d.thanh_tien, ghi_chu_in(con, d.ma, d.ghi_chu)]
         dong.append(['I', gt, d.cach_tinh] if d.cach_tinh else ['I', gt])
         i += 1
-    # 6. thưởng (chỉ khi có bồi thường về đất). Không có tiền thưởng: bỏ tỷ lệ (để trống như dòng mục 4, 5 phía trên)
-    co_thuong = kq.muc[5] > 0
-    # ĐVT bỏ chữ "Hộ"; không có tiền thưởng: bỏ số lượng, đơn giá, tỷ lệ (người dùng 12/10/2026); thành tiền in đậm (lap_chi_tiet)
-    dong.append(['R', [str(nghiep_vu.so_muc(5)), nghiep_vu.TEN_MUC[5], None, D(1) if co_thuong else None,
-                       kq.muc[5] if co_thuong else None, D(1) if co_thuong else None, kq.muc[5], None]])
+    # 6. thưởng (chỉ khi có bồi thường về đất): chỉ tên + thành tiền - bỏ ĐVT, số lượng, đơn giá, tỷ lệ (người dùng 15/10/2026: tên
+    # gộp ô sang hết các cột đó trong lap_chi_tiet; trước đây "1,0 | 20.000.000 | 100%"); thành tiền in đậm
+    dong.append(['R', [str(nghiep_vu.so_muc(5)), nghiep_vu.TEN_MUC[5], None, None, None, None, kq.muc[5], None]])
     dong.append(['T', [None, 'TỔNG CỘNG', None, None, None, None, kq.tong, None]])
     return dong, kq
 
@@ -1704,11 +1706,33 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
             f = copy(ot.font)
             f.b = True
             ot.font = f
+        gop_ten = None
+        if loai in ('R', 'T'):
+            # thưởng: tên gộp từ cột Tên tới cột Tỷ lệ; TỔNG CỘNG: gộp từ cột STT, căn giữa (người dùng 15/10/2026) - chỉ khi các cột liền nhau
+            c1 = k_ten if loai == 'R' else k_stt
+            c2 = max(k_dvt, k_sl, k_dg, k_tl)
+            if c2 > c1 and set(range(c1, c2 + 1)) <= {k_stt, k_ten, k_dvt, k_sl, k_dg, k_tl}:
+                chu_gop = ws.cell(r, k_ten).value
+                for c in range(c1, c2 + 1):
+                    ws.cell(r, c).value = None
+                o1 = ws.cell(r, c1)
+                o1.value = chu_gop
+                o1.alignment = Alignment(horizontal='left' if loai == 'R' else 'center', vertical='center', wrap_text=True)
+                if loai == 'T':
+                    f = copy(o1.font)
+                    f.b = True
+                    o1.font = f
+                _gop_o(ws, r, c1, r, c2)
+                gop_ten = (c1, c2)
         # số dòng chữ đo theo phông thật (Excel ngắt dòng theo bề rộng cột): dòng mục / tổng in đậm (định dạng có điều kiện)
         dam = loai != 'I'
         so = 1
         for c in (k_stt, k_ten, k_dvt, k_gc):
             o = ws.cell(r, c)
+            if gop_ten is not None and gop_ten[0] <= c <= gop_ten[1]:
+                if c == gop_ten[0]:                     # ô gộp: đo trên bề rộng cả vùng
+                    so = max(so, so_dong_o(o.value, rong(*gop_ten), ten_b, float(o.font.sz or co), True, do))
+                continue
             so = max(so, so_dong_o(o.value, rong(c, c), ten_b, float(o.font.sz or co), dam or bool(o.font.b), do))
         if cach_tinh:                                   # cách tính in gộp ô ĐVT..tỷ lệ (thay số lượng, đơn giá)
             c1, c2 = min(k_dvt, k_tl), max(k_dvt, k_tl)

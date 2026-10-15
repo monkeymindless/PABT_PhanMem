@@ -331,7 +331,11 @@ class TestTyLeTrongVaDaLap(unittest.TestCase):
 
     def test_nguon_goc_va_mau_in_khong_loi(self):
         from pabt import ho_so, in_an
-        self.assertEqual(ho_so.chuan_nguon_goc('a - b – c'), 'a\n- b\n- c')
+        self.assertEqual(ho_so.chuan_nguon_goc('a: - b. – c'), 'a:\n- b.\n- c')
+        # 0.9.88: gạch nối giữa tên (không sau dấu kết câu) giữ trên cùng dòng
+        self.assertEqual(ho_so.chuan_nguon_goc('Khu Bảo tồn thiên nhiên - Văn hoá Đồng Nai; ông A (con bà B - đại diện) sử dụng'),
+                         'Khu Bảo tồn thiên nhiên - Văn hoá Đồng Nai; ông A (con bà B - đại diện) sử dụng')
+        self.assertEqual(ho_so.chuan_nguon_goc('như sau: - Thửa 1 - Văn hoá. - Thửa 2'), 'như sau:\n- Thửa 1 - Văn hoá.\n- Thửa 2')
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
             import openpyxl

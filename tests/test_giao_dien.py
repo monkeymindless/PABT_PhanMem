@@ -183,9 +183,9 @@ class TestMau(unittest.TestCase):
             self.assertIn(w.lenh['Nhập phương án chi tiết…'], menu['Dữ liệu'].actions())
             self.assertEqual(w.lenh['Dự án mới…'].shortcut().toString(), 'Ctrl+N')
             # 0.9.70 (đặc tả ARCH-PABT-2026-V7): Màn hình chính độc lập trên cùng + 6 nhóm
-            self.assertEqual(list(m.tieu_de_nhom), ['1. Khái toán & dự toán', '2. Dự án triển khai', '3. Đơn giá & bảng giá',
-                                                    '4. Lập phương án', '5. Tổng hợp & trình duyệt',
-                                                    '6. Phê duyệt & bàn giao'])
+            self.assertEqual(list(m.tieu_de_nhom), ['1. Khái toán & dự toán', '2. Dự án triển khai', '3. Lập phương án',
+                                                    '4. Tổng hợp & trình duyệt', '5. Phê duyệt & bàn giao',
+                                                    '6. Đơn giá & bảng giá'])
             nut = {b.defaultAction(): b for b in m.findChildren(giao_dien.QToolButton) if b.defaultAction() is not None}
             for ten in ('Thêm hộ…', 'Xóa hộ…', 'Nhập file Excel…', 'Dự án mới…'):   # không phải màn hình điều hướng
                 self.assertNotIn(w.lenh[ten], nut, ten)
@@ -196,12 +196,12 @@ class TestMau(unittest.TestCase):
             nut_bc = nut[w.lenh['Báo cáo tổng hợp…']]
             self.assertTrue(nut_bc.isHidden())                       # nhóm "Phê duyệt & bàn giao" đóng sẵn
             self.assertFalse(nut[w.lenh['Màn hình chính']].isHidden())   # nút độc lập: không thuộc nhóm nào, luôn hiện
-            m.tieu_de_nhom['6. Phê duyệt & bàn giao'].bam()
+            m.tieu_de_nhom['5. Phê duyệt & bàn giao'].bam()
             self.assertFalse(nut_bc.isHidden())
-            self.assertIn('▾', m.tieu_de_nhom['6. Phê duyệt & bàn giao'].text())
+            self.assertIn('▾', m.tieu_de_nhom['5. Phê duyệt & bàn giao'].text())
             w.close()
             w2 = ud.CuaSoChinh(menu_trai=True)                       # nhớ nhóm đã mở
-            self.assertNotIn('6. Phê duyệt & bàn giao', w2.khung_menu.nhom_dong)
+            self.assertNotIn('5. Phê duyệt & bàn giao', w2.khung_menu.nhom_dong)
             chu = ' '.join(x.text() for x in w2.findChildren(QLabel))
             self.assertNotIn('Tổ chức làm nhiệm vụ', chu)
             bang = next(f for f in w2.findChildren(giao_dien.QFrame) if f.property('vai') == 'bang_to_chuc')

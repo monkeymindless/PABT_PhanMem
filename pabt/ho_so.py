@@ -21,12 +21,37 @@ def _gon(v) -> str:
     return ' '.join(str(v if v is not None else '').split())
 
 
+# gạch đầu dòng viết liền trong câu: " - " đứng SAU dấu kết câu / hai chấm ("như sau: - Thửa đất…", "…năm 2002. - Bà…")
+_RE_GACH_MUC = re.compile(r'([.;:!?…]["”’\')\]]?)[ \t]+[-–][ \t]+')
+_RE_GACH = re.compile(r'[ \t]+[-–][ \t]+')
+DS_NGAN_TU = 8          # danh sách liền một dòng "đất ở - đất lúa - đất vườn": mọi đoạn <= chừng này từ
+
+
+def _tach_ds_ngan(dong: str) -> str:
+    """Một dòng là danh sách ngắn liền nhau (>= 2 dấu " - " ngoài ngoặc, mọi đoạn <= DS_NGAN_TU từ) -> mỗi đoạn sau một dòng "- "."""
+    # gạch nằm trong ngoặc đơn ("(con bà A - đại diện)") không tính
+    cat = [(m.start(), m.end()) for m in _RE_GACH.finditer(dong) if dong.count('(', 0, m.start()) <= dong.count(')', 0, m.start())]
+    if len(cat) < 2:
+        return dong
+    doan, dau = [], 0
+    for a, b in cat:
+        doan.append(dong[dau:a])
+        dau = b
+    doan.append(dong[dau:])
+    if any(len(d.split()) > DS_NGAN_TU for d in doan):
+        return dong
+    return '\n- '.join(d.strip() for d in doan)
+
+
 def chuan_nguon_goc(v) -> str:
-    """Giữ xuống dòng. Gạch đầu dòng viết liền trong câu ('... - đất ở') tách thành dòng riêng bắt đầu bằng '- '
-    để màn hình và bản in thụt lề treo."""
+    """Giữ xuống dòng. Gạch đầu dòng viết liền trong câu tách thành dòng riêng bắt đầu bằng '- ' khi: " - " đứng sau dấu kết câu
+    / dấu hai chấm, hoặc cả dòng là danh sách ngắn ("đất ở - đất lúa - đất vườn", 0.9.46). 0.9.88 (người dùng 15/10/2026): KHÔNG
+    tách gạch nối giữa tên riêng ("Khu Bảo tồn thiên nhiên - Văn hoá Đồng Nai") hay trong ngoặc ("(con bà A - đại diện)") - trước
+    đây mọi " - " đều tách, cắt đôi các tên này. Dấu • * giữa chữ vẫn là đầu mục."""
     s = str(v or '').replace('\r\n', '\n').replace('\r', '\n')
     s = re.sub(r'[ \t]+([•*])[ \t]+', r'\n\1 ', s)
-    s = re.sub(r'[ \t]+([-–])[ \t]+', r'\n- ', s)
+    s = _RE_GACH_MUC.sub(r'\1\n- ', s)
+    s = '\n'.join(_tach_ds_ngan(x) for x in s.split('\n'))
     dong = [' '.join(x.split()) for x in s.split('\n')]
     return '\n'.join(x for x in dong if x)
 

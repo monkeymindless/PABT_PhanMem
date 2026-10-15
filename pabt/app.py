@@ -38,13 +38,18 @@ STACK_TONG_HOP, STACK_THEO_DOI, STACK_DU_TOAN, STACK_QUYET_DINH, STACK_BAO_CAO =
 XANH, DO, VANG = QColor('#E2EFDA'), QColor('#F8CBAD'), QColor('#FFF2CC')
 # menu trái: nhóm đóng sẵn lần đầu mở phần mềm (sau đó nhớ theo người dùng) - vừa màn hình 1366x768 không phải cuộn
 # 0.9.70 (6 nhóm): nhóm ít dùng hằng ngày đóng sẵn - Khái toán (giai đoạn chuẩn bị đầu tư), Đơn giá, Phê duyệt & bàn giao
-NHOM_DONG_MAC_DINH = ('1. Khái toán & dự toán', '3. Đơn giá & bảng giá', '6. Phê duyệt & bàn giao')
+# 0.9.88 (người dùng 15/10/2026): nhóm Đơn giá & bảng giá xuống cuối (6); đóng sẵn 1, 5, 6 - mở sẵn 2, 3, 4 (thao tác hằng ngày)
+NHOM_DONG_MAC_DINH = ('1. Khái toán & dự toán', '5. Phê duyệt & bàn giao', '6. Đơn giá & bảng giá')
 GAN_DAY_TOI_DA = 8                 # số dự án nhớ trong danh sách "Dự án làm việc gần đây" (màn hình chào hiện 5)
-# 0.9.80: chưa mở dự án thì nhóm 4 (Lập phương án), 5 (Tổng hợp & trình duyệt), 6 (Phê duyệt & bàn giao) của menu trái bị làm mờ (QAction tắt);
-# mở / đóng dự án thì bật / tắt lại. Nhóm 1 (khái toán), 2, 3 và Màn hình chính vẫn dùng được khi chưa có dự án
+# 0.9.80: chưa mở dự án thì các lệnh của dự án bị làm mờ (QAction tắt); mở / đóng dự án thì bật / tắt lại. Từ 0.9.88 (thứ tự nhóm
+# mới): nhóm 3 (Lập phương án), 4 (Tổng hợp & trình duyệt), 5 (Phê duyệt & bàn giao) + Đơn giá đặc biệt của nhóm 6. Nhóm 1 (khái
+# toán), 2, Đơn giá bồi thường, Bảng giá đất và Màn hình chính vẫn dùng được khi chưa có dự án
 LENH_CAN_DU_AN = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…', 'Xuất báo cáo đối chiếu…',
                   'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…',
-                  'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Báo cáo tổng hợp…', 'Nhật ký kiểm toán…', 'Bản đồ thửa đất')
+                  'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Báo cáo tổng hợp…', 'Nhật ký kiểm toán…', 'Bản đồ thửa đất',
+                  # nhóm 6 Đơn giá & bảng giá: Đơn giá đặc biệt là của DỰ ÁN (tắt khi chưa mở); Đơn giá bồi thường, Bảng giá đất vẫn
+                  # bật (liên kết chân màn hình chào, tra cứu khi chưa có dự án)
+                  'Đơn giá riêng dự án…')
 # Nhập bản vẽ CAD, Phiếu kiểm đếm (menu Dữ liệu / Công cụ, 0.9.87): KHÔNG tắt khi chưa mở dự án - mục menu mờ bấm không có phản
 # ứng, người dùng tưởng hỏng; bấm thì báo "mở dự án trước" (_can_du_an).
 # nút A− / A+ trên thanh trạng thái: khung nút nhỏ, viền nhẹ, bo 4px
@@ -536,12 +541,12 @@ class CuaSoChinh(QMainWindow):
             (None, [L['Màn hình chính']]),
             ('1. Khái toán & dự toán', [L['Dự toán & khái toán'], L['So sánh với thực tế']]),
             ('2. Dự án triển khai', [L['Thông tin dự án…'], L['Danh sách hộ']]),
-            ('3. Đơn giá & bảng giá', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Bảng giá đất NQ 28…']]),
-            ('4. Lập phương án', [L['Lập phương án hộ…'], L['Dự thảo PABT…'], L['Bản đồ thửa đất'], L['Kiểm tra lỗi…'],
+            ('3. Lập phương án', [L['Lập phương án hộ…'], L['Dự thảo PABT…'], L['Bản đồ thửa đất'], L['Kiểm tra lỗi…'],
                                   L['Xuất báo cáo đối chiếu…']]),
-            ('5. Tổng hợp & trình duyệt', [L['Tổng hợp tiền theo phương án'], L['Đợt trình…'], L['In / Xuất…']]),
+            ('4. Tổng hợp & trình duyệt', [L['Tổng hợp tiền theo phương án'], L['Đợt trình…'], L['In / Xuất…']]),
             # mọi việc về quyết định ở MỘT chỗ: trang "Quyết định phê duyệt" (Thêm / Nhập từ file / Sửa / Xóa)
-            ('6. Phê duyệt & bàn giao', [L['Quyết định phê duyệt'], L['Theo dõi tiến độ'], L['Báo cáo tổng hợp…']]),
+            ('5. Phê duyệt & bàn giao', [L['Quyết định phê duyệt'], L['Theo dõi tiến độ'], L['Báo cáo tổng hợp…']]),
+            ('6. Đơn giá & bảng giá', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Bảng giá đất NQ 28…']]),
         ]
         # hoàn tác / làm lại thao tác đã ghi vào file dự án: menu Chỉnh sửa trên thanh menu (người dùng 11/10/2026 - như các phần
         # mềm khác; trước đây nút trên băng tiêu đề). Chữ "Ctrl+Z" sau "\t" chỉ để hiện: KHÔNG gắn phím tắt cho QAction - phím
@@ -648,7 +653,7 @@ class CuaSoChinh(QMainWindow):
         self.statusBar().addPermanentWidget(self.nut_tk)
         self.cap_nhat_tai_khoan()
         # Cập nhật phần mềm / Giới thiệu: menu Trợ giúp (trước 0.9.23 thêm hai nút ở góc dưới - mỗi lệnh một chỗ)
-        self._cap_nhat_lenh_theo_du_an()                # chưa mở dự án: làm mờ nhóm 4, 5, 6
+        self._cap_nhat_lenh_theo_du_an()                # chưa mở dự án: làm mờ nhóm 3, 4, 5 + Đơn giá đặc biệt
         self._hien_trang_chao()
 
     # ------------------------------------------------ lệnh
@@ -874,7 +879,7 @@ class CuaSoChinh(QMainWindow):
             QMessageBox.critical(self, TEN_UD, chu_loi('Không mở được dự án', e))
 
     def _cap_nhat_lenh_theo_du_an(self):
-        """Chưa mở dự án: tắt các lệnh của nhóm 4, 5, 6 (LENH_CAN_DU_AN); có dự án: bật (riêng Lập phương án hộ vẫn tắt khi chỉ xem)."""
+        """Chưa mở dự án: tắt các lệnh của nhóm 3, 4, 5 + Đơn giá đặc biệt (LENH_CAN_DU_AN); có dự án: bật (riêng Lập phương án hộ vẫn tắt khi chỉ xem)."""
         co = self.con is not None
         for ten in LENH_CAN_DU_AN:
             a = self.lenh.get(ten)
@@ -907,7 +912,7 @@ class CuaSoChinh(QMainWindow):
         if self.con is not None:
             self.con.close()
             self.con = None
-        self._cap_nhat_lenh_theo_du_an()                # đóng dự án: làm mờ lại nhóm 4, 5, 6 của menu trái
+        self._cap_nhat_lenh_theo_du_an()                # đóng dự án: làm mờ lại nhóm 3, 4, 5 (+ Đơn giá đặc biệt) của menu trái
         if hasattr(self, 'nut_ht'):
             self._cap_nhat_nut_ht()
         self.kq = None
