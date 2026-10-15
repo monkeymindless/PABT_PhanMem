@@ -76,7 +76,7 @@ class TestManHinhLapPA(unittest.TestCase):
         # gõ sai: báo lỗi, ô trở lại giá trị cũ
         w.bang[2].bang.item(0, c).setText('abc')
         self.assertTrue(self.thong_bao and 'không phải là số' in self.thong_bao[-1])
-        self.assertEqual(w.bang[2].bang.item(0, c).text(), '130,0')     # số lượng kiểu kế toán (tien.so_luong_vn)
+        self.assertEqual(w.bang[2].bang.item(0, c).text(), '130,00')     # số lượng kiểu kế toán (tien.so_luong_vn)
         self.assertTrue(w.luu())
         self.assertFalse(w.windowTitle().startswith('*'))
         self.assertEqual(nghiep_vu.tinh_ho(self.con, 1).muc[2], w.bo.ket_qua.muc[2])

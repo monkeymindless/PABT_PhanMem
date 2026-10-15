@@ -111,6 +111,10 @@ class TestMenuTrai(_Co):
         k = w.so_sanh_du_toan()
         self.assertEqual(k.tab.currentIndex(), 1)
         self.assertEqual(w.trang.currentIndex(), 3)
+        # 15/10/2026: menu trái "Lập khái toán & Dự toán" về thẻ khái toán; trang không lặp tiêu đề (đã có ở menu trái)
+        w.lenh['Dự toán & khái toán'].trigger()
+        self.assertEqual(k.tab.currentIndex(), 0)
+        self.assertFalse(w.lb_trang.isVisibleTo(w))
 
 
 class TestNiemYet(_Co):

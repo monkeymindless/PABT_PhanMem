@@ -207,11 +207,30 @@ def so_vn(x) -> str:
     return vn(x, le)
 
 
-def so_luong_vn(x) -> str:
-    """Số lượng mục 2-4 trên bảng nhập (kiểu kế toán): luôn ít nhất 1 chữ số thập phân - 20 -> "20,0", 1250 -> "1.250,0";
-    số có nhiều chữ số lẻ hơn (nhập từ Excel: 35,15) hiện đủ (tối đa 4) để khớp thành tiền đang tính."""
+# cột Số lượng / Khối lượng / Diện tích - định dạng kế toán (người dùng 15/10/2026): tài sản (mục 2 nhà, công trình) "*,00"; đất,
+# cây, vật nuôi, chính sách hỗ trợ và số lượng khác "*,0". Số có nhiều chữ số lẻ hơn (ha: 0,0325) hiện đủ, tối đa 4. Một nguồn cho
+# màn hình (so_luong_vn) và mọi file Excel (khái toán, bản in chi tiết, đối chiếu). Trước đây khái toán dùng '#,##0.##' -> số tròn
+# in "46," / "1.453," (dấu thập phân treo)
+DINH_DANG_SO_LUONG = '#,##0.0###'
+DINH_DANG_SO_LUONG_TAI_SAN = '#,##0.00##'
+MUC_TAI_SAN = 2                                         # mục 2 (nhà, công trình) - cùng số ở phương án hộ và khái toán
+
+
+def le_so_luong(muc=None) -> int:
+    """Số chữ số thập phân tối thiểu của cột số lượng theo mục: tài sản 2, còn lại 1."""
+    return 2 if muc == MUC_TAI_SAN else 1
+
+
+def dinh_dang_so_luong(muc=None) -> str:
+    """number_format Excel của cột số lượng theo mục."""
+    return DINH_DANG_SO_LUONG_TAI_SAN if muc == MUC_TAI_SAN else DINH_DANG_SO_LUONG
+
+
+def so_luong_vn(x, muc=None) -> str:
+    """Số lượng trên màn hình (kiểu kế toán, cùng dinh_dang_so_luong): tài sản "20,00" / "1.250,00", mục khác "16,0" / "1.453,0";
+    số có nhiều chữ số lẻ hơn (35,155; ha 0,0325) hiện đủ (tối đa 4) để khớp thành tiền đang tính."""
     x = D(x)
-    le = min(max(-x.normalize().as_tuple().exponent, 1), 4)
+    le = min(max(-x.normalize().as_tuple().exponent, le_so_luong(muc)), 4)
     return vn(x, le)
 
 

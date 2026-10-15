@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from . import nghiep_vu
-from .tien import D
+from .tien import D, dinh_dang_so_luong
 
 # openpyxl (~0,2 giây) chỉ nạp khi xuất báo cáo: màn hình chính gọi doi_chieu() mỗi lần mở / tải lại dự án
 
@@ -207,7 +207,7 @@ def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str 
                                float(d.thanh_tien_excel)], start=1):
             c = ws2.cell(i, j, v)
             if j == 5:
-                _kieu(c, 'sl', lambda c: _vien_so(c, '#,##0.0##'))
+                _kieu(c, ('sl', dinh_dang_so_luong(d.muc)), lambda c: _vien_so(c, dinh_dang_so_luong(d.muc)))
             elif j > 5:
                 _kieu(c, 'so', _vien_so)
             else:

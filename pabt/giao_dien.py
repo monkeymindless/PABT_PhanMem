@@ -1268,14 +1268,16 @@ def kieu_menu_bar(mb) -> None:
 
 
 class KhungLamViecDaTab(QWidget):
-    """Thanh tab động: trang chính (số nguyên) + widget phụ (hộ / bộ đơn giá) giữ nguyên trong RAM khi chuyển tab."""
+    """Bộ điều khiển trang làm việc: trang chính (số nguyên) + widget phụ (hộ / bộ đơn giá / niêm yết) giữ nguyên trong RAM.
+    Từ 15/10/2026 (người dùng: thu hồi chiều cao) KHÔNG còn thanh tab hiện trên màn hình - chuyển trang bằng menu trái / thanh
+    menu; `bar` chỉ còn là danh sách các trang đang mở (Ctrl+Tab), luôn ẩn, con của khung ẩn này."""
     da_doi = Signal(object)          # khoa đang chọn
     yeu_cau_dong = Signal(int)       # chỉ số tab (cửa sổ chính hỏi lưu rồi mới bo)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         from PySide6.QtWidgets import QStackedWidget, QTabBar
-        self.bar = QTabBar()
+        self.bar = QTabBar(self)
         self.bar.setProperty('vai', 'lam_viec')
         self.bar.setDocumentMode(True)
         self.bar.setExpanding(False)
@@ -1320,8 +1322,8 @@ class KhungLamViecDaTab(QWidget):
         return i
 
     def _hien_thanh(self):
-        """Chỉ một tab ("Màn hình chính" - trùng mục menu trái, người dùng 12/10/2026): ẩn thanh tab; từ 2 tab mới hiện."""
-        self.bar.setVisible(self.bar.count() > 1)
+        """Thanh tab không hiện nữa (15/10/2026): mọi trang mở bằng menu trái / thanh menu - trước đây hiện khi có từ 2 tab."""
+        self.bar.setVisible(False)
 
     def chon(self, khoa) -> bool:
         if khoa not in self.khoa:

@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .lap_pa import DanhMuc, bo_dau
-from .tien import D, KHONG, chuoi, lam_tron, so_vn, tien_bang_chu, vn
+from .tien import D, KHONG, chuoi, dinh_dang_so_luong, lam_tron, so_vn, tien_bang_chu, vn
 
 DUOI = '.pabtdt'
 TEN_MUC = {1: 'Bồi thường về đất', 2: 'Bồi thường, hỗ trợ nhà, công trình xây dựng, vật kiến trúc',
@@ -318,7 +318,7 @@ def xuat_excel(dt: DuToan, file_ra) -> Path:
                 o = ws.cell(r, c, v)
                 o.border = vien
                 if c in (4, 5, 7):
-                    o.number_format = '#,##0.##' if c == 4 else '#,##0'
+                    o.number_format = dinh_dang_so_luong(d.muc) if c == 4 else '#,##0'
                 if c == 6:
                     o.number_format = '0.###'
                 if c in (2, 9):
@@ -426,7 +426,7 @@ def xuat_khai_toan(dt: DuToan, file_ra, pdf: bool = False) -> dict:
         o.border = vien
     ws.row_dimensions[r].height = 36
 
-    def ghi(gia: list, dam: bool = False, nghieng: bool = False):
+    def ghi(gia: list, dam: bool = False, nghieng: bool = False, muc=None):
         nonlocal r
         r += 1
         for c, v in enumerate(gia, start=1):
@@ -435,7 +435,7 @@ def xuat_khai_toan(dt: DuToan, file_ra, pdf: bool = False) -> dict:
             o.border = vien
             o.alignment = giua if c in (1, 3, 6) else (trai if c in (2, 8) else phai)
             if c in (4, 5, 7) and isinstance(v, float):
-                o.number_format = '#,##0.##' if c == 4 else '#,##0'
+                o.number_format = dinh_dang_so_luong(muc) if c == 4 else '#,##0'
         return r
     stt = 0
     for muc in (1, 2, 3, 4, 5):
@@ -445,11 +445,11 @@ def xuat_khai_toan(dt: DuToan, file_ra, pdf: bool = False) -> dict:
         dvt = {d.dvt for d in ds} or {'m²'}
         tong_kl = float(sum((d.khoi_luong for d in ds), KHONG)) if len(dvt) == 1 and muc in (1, 3) else None
         ghi([LA_MA[stt], TEN_MUC_KT[muc], dvt.pop() if tong_kl is not None else '', tong_kl, None, None,
-             float(dt.tong_muc(muc)), None], dam=True)
+             float(dt.tong_muc(muc)), None], dam=True, muc=muc)
         stt += 1
         for i, d in enumerate(ds, start=1):
             ghi([i, d.ten, d.dvt, float(d.khoi_luong), float(d.don_gia), f'{so_vn(d.he_so * 100)}%', float(dt.thanh_tien(d)),
-                 '; '.join(x for x in (d.can_cu, d.ghi_chu) if x) or None])
+                 '; '.join(x for x in (d.can_cu, d.ghi_chu) if x) or None], muc=muc)
     co_so = dt.co_so_phan_tram()
     ghi(['', 'Tổng cộng', None, None, None, None, float(co_so), None], dam=True)
     for d in (x for x in dt.dong if x.muc == 6):

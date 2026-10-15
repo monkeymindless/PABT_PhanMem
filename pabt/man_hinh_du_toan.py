@@ -11,14 +11,13 @@ from pathlib import Path
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QFont
-from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFrame,
-                               QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu, QMessageBox, QPushButton, QRadioButton,
-                               QSizePolicy, QStackedWidget, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFrame,
+                               QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu, QMessageBox, QPushButton, QSizePolicy, QStackedWidget, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import csdl, du_toan
 from .du_toan import DongDT, DuToan
 from .lap_pa import DanhMuc, LoiNhap, doc_so
-from .tien import D, KHONG, so_vn, tien_bang_chu, vn
+from .tien import D, KHONG, so_luong_vn, so_vn, tien_bang_chu, vn
 from .giao_dien import con_tro_cho
 from .thong_bao import chu_loi
 
@@ -136,23 +135,8 @@ class KhungDuToan(QWidget):
         # 0.9.71 (người dùng 12/10/2026 - bo_cuc_khai_toan.txt): tiêu đề phân hệ + chế độ | thông tin chuẩn bị đầu tư | thanh nhập
         # nhanh MỘT khung | bảng dự toán (phần lớn chiều cao) | thẻ tổng cộng | hàng nút đáy. Logic giữ nguyên (cùng đối tượng:
         # bang, hang, cb_loai_dat / o_dt_dat / o_gia_dat, lb_tong, lb_tb; self.tab = 2 chế độ, thanh thẻ ẩn - nút chọn chế độ)
-        tieu = QLabel('KHÁI TOÁN KINH PHÍ BỒI THƯỜNG, HỖ TRỢ & TÁI ĐỊNH CƯ')
-        tieu.setObjectName('tieu_khai_toan')
-        tieu.setStyleSheet('QLabel#tieu_khai_toan { font-size: 13px; font-weight: bold; color: #0F3866; }')
-        self.rd_khai_toan = QRadioButton('Lập khái toán')
-        self.rd_so_sanh = QRadioButton('So sánh với thực tế')
-        self.rd_khai_toan.setChecked(True)
-        self.nhom_che_do = QButtonGroup(self)
-        self.nhom_che_do.addButton(self.rd_khai_toan, 0)
-        self.nhom_che_do.addButton(self.rd_so_sanh, 1)
-        h_top = QHBoxLayout()
-        h_top.addWidget(tieu)
-        h_top.addStretch(1)
-        nhan = QLabel('Chế độ:')
-        nhan.setProperty('vai', 'nhan')
-        h_top.addWidget(nhan)
-        h_top.addWidget(self.rd_khai_toan)
-        h_top.addWidget(self.rd_so_sanh)
+        # 15/10/2026 (người dùng): bỏ tiêu đề "KHÁI TOÁN KINH PHÍ…" và nút Chế độ Lập khái toán / So sánh - trùng hai mục menu trái
+        # "Lập khái toán & Dự toán" / "So sánh với thực tế" (app.mo_trang / so_sanh_du_toan chọn self.tab); dành chỗ cho phần nhập liệu
         khoi_dau = self._khoi_chuan_bi()                # 7 trường + Kinh phí QĐ08 (lưu trong .pabtdt)
         # ---- thanh nhập nhanh: Lấy khối lượng ▾ | Mục | (đất: loại đất, diện tích, đơn giá) / (tài sản: hàng dùng chung với hộ)
         self.b_lay = QPushButton('Lấy khối lượng')
@@ -347,18 +331,15 @@ class KhungDuToan(QWidget):
         lo.addWidget(self.bang, 1)
         lo.addWidget(self.lb_tong)
         lo.addLayout(h_day)
-        self.tab = QTabWidget()                         # 2 chế độ; thanh thẻ ẩn - chọn bằng nút Chế độ (giữ self.tab cho mã cũ)
+        self.tab = QTabWidget()                         # 2 chế độ; thanh thẻ ẩn - chọn bằng menu trái
         self.tab.addTab(the1, 'Khái toán / dự toán')
         self.tab.addTab(self._the_so_sanh(), 'So sánh với thực tế áp giá')
         self.tab.tabBar().setVisible(False)
         self.tab.setDocumentMode(True)
         self.tab.currentChanged.connect(lambda i: i == 1 and self.con is not None and self.so_sanh_thuc_te())
-        self.tab.currentChanged.connect(lambda i: self.nhom_che_do.button(i).setChecked(True))
-        self.nhom_che_do.idClicked.connect(self.tab.setCurrentIndex)
         ngoai = QVBoxLayout(self)
         ngoai.setContentsMargins(10, 8, 10, 8)
         ngoai.setSpacing(8)
-        ngoai.addLayout(h_top)
         ngoai.addWidget(self.tab)
         self._doi_muc_nhap()
         self._dang_ve = False
@@ -585,7 +566,7 @@ class KhungDuToan(QWidget):
         d = self.dt.dong[r]
         pt = d.muc == 6 and d.phan_tram is not None
         gt = dict(muc=str(d.muc), ten=d.ten, dvt='%' if pt else d.dvt,
-                  khoi_luong=so_vn(d.phan_tram) if pt else so_vn(d.khoi_luong),
+                  khoi_luong=so_vn(d.phan_tram) if pt else so_luong_vn(d.khoi_luong, d.muc),
                   don_gia=vn(self.dt.co_so_phan_tram()) if pt else vn(d.don_gia),
                   he_so='' if pt else so_vn(d.he_so), thanh_tien=vn(self.dt.thanh_tien(d)), ma=d.ma,
                   can_cu=d.can_cu + ('; ' if d.can_cu and d.ghi_chu else '') + d.ghi_chu)

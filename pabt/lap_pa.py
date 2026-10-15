@@ -527,7 +527,7 @@ class BoSoan:
 
     def o_dat(self, i: int) -> dict:
         d = self.pa.dat[i]
-        return dict(thua=self.ten_thua(d.ma_thua), loai_dat=d.loai_dat, dien_tich=so_vn(d.dien_tich), vi_tri=d.vi_tri,
+        return dict(thua=self.ten_thua(d.ma_thua), loai_dat=d.loai_dat, dien_tich=so_luong_vn(d.dien_tich, 1), vi_tri=d.vi_tri,
                     gia_bang_gia=vn(d.gia_bang_gia), he_so_k=so_vn(d.he_so_k), ty_le=hien_ty_le(d.ty_le),
                     thanh_tien=vn(thanh_tien_dong_dat(d, self.bc)), ghi_chu=d.ghi_chu, cong_thuc=d.cong_thuc)
 
@@ -650,7 +650,7 @@ class BoSoan:
     def o_khoan(self, muc: int, i: int) -> dict:
         d = self.pa.khoan[muc][i]
         nguon = d.nguon_gia + (f': {d.ma_tuong_duong}' if d.nguon_gia != NGUON_DM and d.ma_tuong_duong else '')
-        return dict(ma=d.ma, ten=d.ten, dvt=d.dvt, so_luong=so_luong_vn(d.so_luong), don_gia=vn(d.don_gia), ty_le=hien_ty_le(d.ty_le),
+        return dict(ma=d.ma, ten=d.ten, dvt=d.dvt, so_luong=so_luong_vn(d.so_luong, muc), don_gia=vn(d.don_gia), ty_le=hien_ty_le(d.ty_le),
                     thanh_tien=vn(thanh_tien_dong(d, self.bc)), nguon=nguon, quy_cach=d.quy_cach, can_cu_gia=d.can_cu_gia,
                     ghi_chu=d.ghi_chu, cach_tinh=d.cach_tinh, cong_thuc=d.cong_thuc)
 

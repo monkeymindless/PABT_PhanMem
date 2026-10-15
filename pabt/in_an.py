@@ -31,7 +31,7 @@ from openpyxl.worksheet.cell_range import CellRange, MultiCellRange
 
 from . import nghiep_vu
 from .nghiep_vu import MA_ON_DINH, BoiCanh, doc_phuong_an, tinh_pa
-from .tien import D, KHONG
+from .tien import D, KHONG, dinh_dang_so_luong
 
 TEN_CT, TEN_BTH = 'IN_CHITIET', 'IN_BANGTONGHOP'
 COT_KIND = 30          # cột AD (ngoài vùng in): loại dòng H / I / R / T cho định dạng có điều kiện của mẫu (mặc định hồ sơ)
@@ -1718,16 +1718,21 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
         ws.row_dimensions[dau - 1].height = CAO_TIEU_DE_BANG if so_td <= 1 else max(CAO_TIEU_DE_BANG, cao_dong_bang(so_td, co))
     ten_b, _, _ = _phong(ws.cell(dau, k_ten))
     so_khac, so_gc = {}, {}                                      # hàng -> số dòng chữ (cột khác / cột ghi chú)
+    muc_sl = None
     for i, x in enumerate(dong):
         loai, gt = x[0], x[1]
         cach_tinh = x[2] if len(x) > 2 else ''
         r = dau + i
+        if loai == 'H':                                 # tiêu đề mục: số lượng các dòng dưới theo mục (tài sản *,00, khác *,0)
+            muc_sl = 2 if str(gt[0]) == str(nghiep_vu.so_muc(2)) else None
         for c, v in zip(cot, gt):
             o = ws.cell(r, c)
             if c == k_stt:
                 o.value = None if v is None else str(v)
             elif c in (k_sl, k_dg, k_tl, k_tt):
                 o.value = _so(v)
+                if c == k_sl and o.value is not None:   # số lượng kiểu kế toán: tài sản 46,00 / 35,80, khác 16,0 / 0,0325
+                    o.number_format = dinh_dang_so_luong(muc_sl)
             else:
                 o.value = v if v not in ('',) else None
         ws.cell(r, cot_loai).value = loai

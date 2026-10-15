@@ -436,9 +436,11 @@ class CuaSoChinh(QMainWindow):
             a = QAction(ten, self)
             a.triggered.connect(lambda _=False, ham=ham: self._chay_lenh(ham))
             self.lenh[ten] = a
-        for k, t in enumerate(TRANG):                   # mục trang ở menu trái: đánh dấu trang đang xem
+        for k, t in enumerate(TRANG):                   # mục trang ở menu trái: đánh dấu trang đang xem; Ctrl+1..6 chuyển trang
             self.lenh[t].setCheckable(True)
             self.lenh[t].setChecked(k == 0)
+            self.lenh[t].setShortcut(QKeySequence(f'Ctrl+{k + 1}'))
+            self.addAction(self.lenh[t])
         self.lenh['Màn hình chính'].setCheckable(True)
         self.lenh['Màn hình chính'].setToolTip('Về màn hình bắt đầu (dự án mới, mở dự án, nhập Excel, dự án gần đây)')
         for ten, phim in (('Dự án mới…', 'Ctrl+N'), ('Mở dự án…', 'Ctrl+O'), ('Dự án trên máy chủ…', 'Ctrl+Shift+O'),
@@ -609,7 +611,8 @@ class CuaSoChinh(QMainWindow):
         for chu, buoc in (('Ctrl+Tab', 1), ('Ctrl+Shift+Tab', -1)):
             phim = QShortcut(QKeySequence(chu), self)
             phim.activated.connect(lambda b=buoc: self._tab_ke(b))
-        phai.addWidget(self.thanh_tab)
+        # thanh tab KHÔNG xếp vào bố cục (15/10/2026, người dùng: thu hồi ~40 px chiều cao) - chuyển trang bằng menu trái /
+        # thanh menu (Ctrl+1..6 = các trang); khung_tab chỉ giữ danh sách trang / tab hộ đang mở trong RAM
         self.trang = QStackedWidget()
         self.trang_dt = QWidget()                        # trang Dự toán & khái toán (KhungDuToan tạo khi mở lần đầu)
         lo_dt = QVBoxLayout(self.trang_dt)
@@ -862,7 +865,7 @@ class CuaSoChinh(QMainWindow):
                 k.dat_du_an(self.con, chi_doc)
             if self.khung_du_toan is not None:
                 self.khung_du_toan.dat_du_an(self.con, self.file)
-            self.lb_du_an.setVisible(True)
+            self.lb_du_an.setVisible(False)             # tên dự án đã có ở banner (lb_du_an_nho) - không lặp một dòng (15/10/2026)
             self.hang_the.setVisible(True)
             self.tai_lai()
             # mở / nhập dự án: luôn vào Danh sách hộ (người dùng 12/10/2026 - trước: về trang chọn lần trước, ví dụ Dự toán)
@@ -1066,7 +1069,7 @@ class CuaSoChinh(QMainWindow):
                     f'{da["cap_dia_ban"] or ""} {da["ten_dia_ban"] or ""}'.strip() if dv else '')
         if hasattr(self, 'lb_du_an_nho'):
             self.lb_du_an_nho.setText(f'Dự án: {da["ten"]}' if da['ten'] else self.file.name)
-            self.lb_du_an_nho.setToolTip(str(self.file))
+            self.lb_du_an_nho.setToolTip(f'{da["ten"] or ""}\n{da["cap_dia_ban"] or ""} {da["ten_dia_ban"] or ""}\n{self.file}'.strip())
         if hasattr(self, 'lb_don_vi'):
             from . import to_chuc
             self.lb_don_vi.setText((dv or to_chuc.TEN).upper())
@@ -1913,6 +1916,7 @@ class CuaSoChinh(QMainWindow):
         self.hang_the.setVisible(self.con is not None and i != TRANG_DU_TOAN)   # thẻ số liệu lọc danh sách hộ: không cần ở dự toán
         if i == TRANG_DU_TOAN:
             self._dam_bao_du_toan()
+            self.khung_du_toan.tab.setCurrentIndex(0)   # menu trái "Lập khái toán & Dự toán" (So sánh: so_sanh_du_toan chọn thẻ 1)
             self.trang.setCurrentIndex(STACK_DU_TOAN)
         elif self.con is None:
             self.trang.setCurrentIndex(TRANG_CHAO)
@@ -1930,7 +1934,8 @@ class CuaSoChinh(QMainWindow):
         """Tiêu đề trang bên phải và dấu chọn ở menu trái theo trang i (gọi cả khi bấm thẳng thẻ của Bảng tổng hợp)."""
         self._i_trang = i
         self.lb_trang.setText(NHAN_MENU.get(TRANG[i], TRANG[i]).upper())
-        self.lb_trang.setVisible(i != 0 and self.trang.currentIndex() != TRANG_CHAO)
+        # trang Dự toán: không tiêu đề trang (trùng mục menu trái đang chọn - người dùng 15/10/2026, dành chỗ nhập liệu)
+        self.lb_trang.setVisible(i not in (0, TRANG_DU_TOAN) and self.trang.currentIndex() != TRANG_CHAO)
         for k, t in enumerate(TRANG):
             self.lenh[t].setChecked(k == i)
         self.lenh['Màn hình chính'].setChecked(False)
@@ -2076,6 +2081,13 @@ class CuaSoChinh(QMainWindow):
             ma_ho = r[0]
         from .man_hinh import CuaSoLapPA
         khoa = ('ho', int(ma_ho))
+        if cho and hasattr(self, 'khung_tab'):
+            # không còn thanh tab (15/10/2026): hộ khác đang mở mà không có thay đổi chưa lưu thì đóng, khỏi chất cửa sổ ẩn trong
+            # RAM; hộ còn thay đổi chưa lưu giữ lại (mở lại hộ đó là thấy; đóng dự án / thoát vẫn hỏi lưu)
+            for k in [k for k in self.khung_tab.khoa if isinstance(k, tuple) and k[0] == 'ho' and k != khoa]:
+                ww = self.khung_tab.widget.get(k)
+                if ww is not None and not (ww.bo.co_thay_doi or ww.ho_so.co_thay_doi()):
+                    self.khung_tab.bo(self.khung_tab.khoa.index(k))
         if cho and hasattr(self, 'khung_tab') and khoa in self.khung_tab.khoa:
             w = self.khung_tab.widget.get(khoa)
             if the is not None and w is not None:

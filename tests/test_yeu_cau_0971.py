@@ -12,7 +12,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QLabel, QApplication
 
 from pabt import cay_trong as ct
 from pabt.lap_pa import LoiNhap
@@ -105,11 +105,9 @@ class TestBoCucKhaiToan(_Co):
 
     def test_che_do_kinh_phi_tao_moi(self):
         k = self.k
-        self.assertFalse(k.tab.tabBar().isVisible())                    # 2 chế độ chọn bằng nút, không phải thanh thẻ
-        k.rd_so_sanh.click()
-        self.assertEqual(k.tab.currentIndex(), 1)
-        k.tab.setCurrentIndex(0)                                        # menu trái "Lập khái toán": nút chế độ đi theo
-        self.assertTrue(k.rd_khai_toan.isChecked())
+        self.assertFalse(k.tab.tabBar().isVisible())                    # 2 chế độ chọn bằng menu trái, không phải thanh thẻ
+        self.assertFalse(hasattr(k, 'rd_so_sanh'))                      # 15/10/2026: bỏ nút Chế độ (trùng menu trái)
+        self.assertFalse(any(x.text().startswith('KHÁI TOÁN KINH PHÍ') for x in k.findChildren(QLabel)))
         # Kinh phí QĐ08: chọn loại -> dòng chi phí mục 6 theo mức của loại; lưu cùng .pabtdt
         k.them_dat('CLN', '1000', '100000')
         k.cb_kp.setCurrentIndex(k.cb_kp.findData('tuyen'))

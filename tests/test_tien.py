@@ -55,10 +55,16 @@ class TestTien(unittest.TestCase):
         self.assertEqual(chuoi(Decimal('1E+3')), '1000')
 
     def test_so_luong_kieu_ke_toan(self):
-        """Số lượng mục 2-4: luôn ít nhất 1 chữ số thập phân; số nhiều chữ số lẻ hơn hiện đủ (khớp thành tiền)."""
-        from pabt.tien import so_luong_vn
-        for v, chu in (('20', '20,0'), ('79.8', '79,8'), ('1250', '1.250,0'), ('35.15', '35,15'), ('0', '0,0'), ('1.23456', '1,2346')):
-            self.assertEqual(so_luong_vn(Decimal(v)), chu, v)
+        """Số lượng kiểu kế toán (15/10/2026): tài sản (mục 2) *,00; đất, cây, hỗ trợ, khác *,0; số nhiều chữ số lẻ hơn hiện đủ (tối đa 4)."""
+        from pabt.tien import dinh_dang_so_luong, so_luong_vn
+        for v, chu in (('20', '20,00'), ('79.8', '79,80'), ('1250', '1.250,00'), ('35.15', '35,15'), ('0', '0,00'), ('1.23456', '1,2346'),
+                        ('35.155', '35,155')):
+            self.assertEqual(so_luong_vn(Decimal(v), 2), chu, v)
+        for muc in (None, 1, 3, 4, 5, 7):
+            for v, chu in (('16', '16,0'), ('1453', '1.453,0'), ('35.8', '35,8'), ('0', '0,0'), ('0.0325', '0,0325')):
+                self.assertEqual(so_luong_vn(Decimal(v), muc), chu, (muc, v))
+            self.assertEqual(dinh_dang_so_luong(muc), '#,##0.0###')
+        self.assertEqual(dinh_dang_so_luong(2), '#,##0.00##')
 
 
 if __name__ == '__main__':

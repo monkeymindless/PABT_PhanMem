@@ -1201,6 +1201,17 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `lap_chi_tiet` ghi chú đất gộp ô: chiều cao từng dòng theo cột khác, thiếu thì chia đều cho đủ ô gộp; `ho_so._tach_ds_ngan` bỏ
   qua gạch giữa hai số; `tien.vn_gon` làm tròn lên ngưỡng tỷ. Sửa file bằng script Python: GIỮ kiểu xuống dòng của file (git
   ls-files --eol; Path.write_text đổi LF thành CRLF). Rò rỉ kết nối: chỉ trong test (`tests/test_don_gia.py`, …), phần mềm không.
+- Số lượng kiểu kế toán (người dùng 15/10/2026, sau 0.9.93): tài sản (mục 2 nhà, công trình) "*,00", đất / cây / vật nuôi / hỗ trợ /
+  khác "*,0"; số nhiều chữ số lẻ hơn hiện đủ, tối đa 4 (ha 0,0325). MỘT nguồn `tien.le_so_luong(muc)` / `dinh_dang_so_luong(muc)`
+  (Excel '#,##0.00##' / '#,##0.0###') / `so_luong_vn(x, muc)` - dùng ở BoSoan.o_dat (diện tích) / o_khoan, KhungDuToan, du_toan
+  xuat_excel / xuat_khai_toan, in_an.lap_chi_tiet (mục theo dòng tiêu đề 'H'), doi_chieu. Trước: khái toán '#,##0.##' in "46,".
+  Trang Khái toán bỏ tiêu đề "KHÁI TOÁN KINH PHÍ…" + nút Chế độ (trùng menu trái; `mo_trang(TRANG_DU_TOAN)` chọn thẻ 0, lb_trang ẩn).
+- Bỏ thanh tab ngang (người dùng 15/10/2026, sau 0.9.93): `thanh_tab` KHÔNG xếp vào bố cục, `KhungLamViecDaTab.bar` là con của
+  khung ẩn, `_hien_thanh` luôn ẩn - khung_tab chỉ còn giữ danh sách trang / hộ / bộ đơn giá / niêm yết trong RAM (Ctrl+Tab vẫn
+  đi vòng). Chuyển trang: menu trái / thanh menu, Ctrl+1..6 = 6 mục TRANG (QAction có `self.addAction`). `lb_du_an` luôn ẩn (tên
+  dự án ở banner `lb_du_an_nho`, chú thích có địa bàn + đường dẫn). Mở hộ mới -> đóng tab hộ khác KHÔNG có thay đổi chưa lưu (không
+  còn dấu X của tab: hộ thoát bằng nút Đóng `b_dong` của CuaSoLapPA). Đo 1161 x 741: thẻ số y 141 -> 94, bảng 383 -> 290, 6 -> 8 dòng.
+  Test `tests/test_bo_thanh_tab.py`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.
