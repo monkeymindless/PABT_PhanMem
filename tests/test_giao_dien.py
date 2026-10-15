@@ -371,8 +371,8 @@ class TestMau(unittest.TestCase):
                 os.environ.pop('PABT_THU_MUC_MAY', None)
 
     def test_bieu_tuong_duy_nhat_co_vien(self):
-        """0.9.87 Mẫu 3 (lăng kính công lý & nhịp cầu đồng thuận): pabt/bieu_tuong.png 512 tách nền - 4 góc trong suốt; tông sáng (pha
-        lê xanh băng + trắng sứ, KHÔNG navy đậm), có điểm xanh băng và điểm vàng cam; bieu_tuong.ico đủ 9 cỡ; QIcon nhiều cỡ; hình vẽ
+        """Biểu tượng (ảnh thiết kế 15/10/2026, tách nền như 0.9.87): pabt/bieu_tuong.png 512 - 4 góc trong suốt; xanh dương chủ đạo,
+        có vàng và đỏ; bieu_tuong.ico đủ 9 cỡ; QIcon nhiều cỡ; hình vẽ
         dự phòng ve_mach cùng tông sáng."""
         import struct
         from PySide6.QtGui import QImage
@@ -386,10 +386,11 @@ class TestMau(unittest.TestCase):
         self.assertGreater(anh.pixelColor(256, 256).alpha(), 250)
         dac = [c for c in (anh.pixelColor(x, y) for x in range(0, 512, 4) for y in range(0, 512, 4)) if c.alpha() > 200]
         self.assertGreater(len(dac), 8000)
-        sang = sum((c.red() + c.green() + c.blue()) / 3 for c in dac) / len(dac)
-        self.assertGreater(sang, 130, 'tông tối - còn nền navy cũ?')
-        self.assertTrue(any(c.blue() > c.red() and c.green() > 140 for c in dac), 'thiếu xanh băng')
-        self.assertTrue(any(c.red() > 180 and c.green() > 120 and c.blue() < 120 for c in dac), 'thiếu vàng cam')
+        # mẫu 15/10/2026 (sau 0.9.89): ô vuông xanh dương viền vàng, sách "Luật Đất đai 2024" đỏ - KHÔNG còn tông pha lê sáng Mẫu 3
+        xanh = sum(1 for c in dac if c.blue() > c.red() + 40 and c.blue() > 120)
+        self.assertGreater(xanh / len(dac), 0.25, 'xanh dương không chủ đạo - còn ảnh Mẫu 3?')
+        self.assertTrue(any(c.red() > 180 and c.green() > 120 and c.blue() < 120 for c in dac), 'thiếu vàng')
+        self.assertTrue(any(c.red() > 100 and c.green() < 70 and c.blue() < 70 for c in dac), 'thiếu đỏ (sách Luật Đất đai)')
         du = (goc / 'pabt' / 'bieu_tuong.ico').read_bytes()
         n = struct.unpack('<HHH', du[:6])[2]
         self.assertEqual(n, len(vbt.CO_ICO))

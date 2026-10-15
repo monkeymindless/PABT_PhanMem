@@ -1141,6 +1141,9 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     (`ket_qua_ho(con, tat_ca)`); `OTimChon._hien` không dựng lại khi kết quả lọc không đổi; `nhap_chi_tiet.ghi(bao_tien_do=)` mỗi
     `BAO_MOI` hộ + `DaDung` (app `_ghi_chi_tiet_co_tien_do`, Dừng = hoàn tác cả lô); `may_chu.ds_du_an` stat một lần. Test
     `tests/test_yeu_cau_0987.py`.
+- 0.9.90 biểu tượng (người dùng 15/10/2026): ảnh thiết kế mới `pabt/bieu_tuong_thiet_ke.webp` 2000 px (ô vuông xanh viền
+  vàng, lưới địa chính, nhịp cầu, sách "Luật Đất đai 2024", chữ PABT) -> `tao_bieu_tuong.py` (tach_nen, như 0.9.87) -> png 512 + ico 9 cỡ.
+  Exe / lối tắt / bộ cài chỉ đổi khi dựng lại bộ cài (PyInstaller --clean); gói .pabtcn chỉ đổi biểu tượng trong phần mềm.
 - 0.9.89 rà soát lỗi (người dùng 15/10/2026 "check lại toàn bộ mã nguồn"; thử các hàm đọc dữ liệu người gõ / dán bằng giá trị khó):
   `phan_loai_tai_san._co_the_la_ty_le` (số sau số lượng là tỷ lệ chỉ khi có % hoặc <= 500 - cột Đơn giá / Thành tiền dán từ Excel
   bỏ qua); `nhap_excel.chuan_cccd` (ô số 11 chữ số -> thêm 0 đầu; ô số 8 chữ số = CMND -> 9) dùng ở nhap_excel / nhap_tho / du_an_moi.gom

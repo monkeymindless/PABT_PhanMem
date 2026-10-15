@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('0.9.90', '15/10/2026', (
+        'Biểu tượng phần mềm mới: ô vuông xanh dương viền vàng, lưới bản đồ địa chính, nhịp cầu, sách "Luật Đất đai 2024", chữ PABT. '
+        'Biểu tượng của file PABT.exe, lối tắt Desktop và bộ cài đổi khi cài bộ cài 0.9.90; gói cập nhật chỉ đổi biểu tượng trong '
+        'phần mềm (thanh tiêu đề, thanh tác vụ).',
+    )),
     ('0.9.89', '15/10/2026', (
         'Dán danh sách tài sản từ bảng Excel có cột Đơn giá / Thành tiền: các cột đó không còn bị đọc nhầm thành tỷ lệ (trước đây mọi '
         'dòng báo lỗi tỷ lệ quá 500%).',

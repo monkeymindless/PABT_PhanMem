@@ -3,7 +3,9 @@ r"""Xuất biểu tượng PABT ra file từ ảnh thiết kế: pabt/bieu_tuong
 0.9.87 (người dùng 15/10/2026): "Mẫu 3 - Lăng kính công lý & nhịp cầu đồng thuận" - khối squircle pha lê xanh băng nhìn nghiêng 3D,
 nhịp cầu vàng hổ phách, cán cân pha lê, dấu tích cam, chữ PABT trắng viền vàng; ảnh gốc 1024 x 1024 nền gần trắng. Khối NGHIÊNG nên
 không cắt khung cố định + bo góc như bản 0.9.74 (xén mất viền): TÁCH NỀN - loang từ mép ảnh qua các điểm gần màu nền (nền -> trong
-suốt), mép làm mịn, cắt vuông theo khung vật thể (chừa lề), thu nhỏ từng nấc 1/2. Hình vẽ `pabt/ve_bieu_tuong.ve_mach` chỉ là dự phòng.
+suốt), mép làm mịn, cắt vuông theo khung vật thể (chừa lề), thu nhỏ từng nấc 1/2.
+0.9.90 (người dùng 15/10/2026): ảnh mới 2000 x 2000 - ô vuông bo góc xanh dương viền vàng, lưới địa chính, nhịp cầu hổ phách, sách
+"Luật Đất đai 2024", chữ PABT trắng viền vàng; nền trắng - cùng cách tách nền. Hình vẽ `pabt/ve_bieu_tuong.ve_mach` chỉ là dự phòng.
   set QT_QPA_PLATFORM=windows
   .venv\Scripts\python tao_bieu_tuong.py [anh_thiet_ke.webp]
 Chỉ chạy lúc tạo biểu tượng (cần numpy trong .venv); phần mềm khi chạy chỉ đọc bieu_tuong.png. Rồi dựng lại bộ cài (PyInstaller --clean).

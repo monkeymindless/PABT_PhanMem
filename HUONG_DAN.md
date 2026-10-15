@@ -1,4 +1,8 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.89 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.90 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.90**: **biểu tượng mới** (ô vuông xanh viền vàng, sách "Luật Đất đai 2024", chữ PABT). Biểu tượng PABT.exe / lối tắt Desktop
+> đổi khi cài bộ cài 0.9.90 (gói cập nhật .pabtcn chỉ đổi biểu tượng bên trong phần mềm). Windows giữ biểu tượng cũ trong bộ nhớ đệm:
+> nếu Desktop chưa đổi, bỏ ghim rồi ghim lại PABT trên thanh tác vụ hoặc khởi động lại máy.
 
 > **0.9.89** (sửa lỗi): dán bảng Excel có cột Đơn giá / Thành tiền không còn đọc nhầm thành tỷ lệ; **CCCD** ô số Excel mất số 0 đầu
 > được thêm lại khi nhập; ngày thiếu số năm báo lỗi; thư mục hồ sơ của đợt không đổi tên nhầm đợt khác; ghi chú đất gộp ô không làm
