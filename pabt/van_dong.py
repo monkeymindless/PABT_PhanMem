@@ -169,7 +169,9 @@ def tinh_trang_ho(x, buoi: list, n_van_dong: int, hom_nay: date) -> list:
             ma, chu = 'du_dk_cuong_che', CHU_CUONG_CHE
         else:
             ma = 'dang_van_dong'
-            chu = (f'Đang vận động: ngày {da_qua + 1}/{n_van_dong}, còn {con_lai} ngày' +
+            # da_qua == thời hạn: hôm nay là ngày hết hạn (trước đây hiện "ngày 11/10, còn 0 ngày")
+            chu = ((f'Đang vận động: ngày {da_qua + 1}/{n_van_dong}, còn {con_lai} ngày' if con_lai else
+                    f'Đang vận động: hôm nay hết hạn {n_van_dong} ngày') +
                    ('; hộ đã đồng ý, chờ thực hiện' if cuoi == 'dong_y' else ''))
         kq.append(TinhTrang(viec, ma, chu, len(b), dau, da_qua, con_lai, han, cuoi))
     return kq

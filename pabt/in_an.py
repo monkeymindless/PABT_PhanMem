@@ -1688,6 +1688,7 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
                 so_td = max(so_td, so_dong_o(o.value, rong(c, c), ten, co_td, dam, do))
         ws.row_dimensions[dau - 1].height = CAO_TIEU_DE_BANG if so_td <= 1 else max(CAO_TIEU_DE_BANG, cao_dong_bang(so_td, co))
     ten_b, _, _ = _phong(ws.cell(dau, k_ten))
+    so_khac, so_gc = {}, {}                                      # hàng -> số dòng chữ (cột khác / cột ghi chú)
     for i, x in enumerate(dong):
         loai, gt = x[0], x[1]
         cach_tinh = x[2] if len(x) > 2 else ''
@@ -1733,7 +1734,12 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
                 if c == gop_ten[0]:                     # ô gộp: đo trên bề rộng cả vùng
                     so = max(so, so_dong_o(o.value, rong(*gop_ten), ten_b, float(o.font.sz or co), True, do))
                 continue
-            so = max(so, so_dong_o(o.value, rong(c, c), ten_b, float(o.font.sz or co), dam or bool(o.font.b), do))
+            n_o = so_dong_o(o.value, rong(c, c), ten_b, float(o.font.sz or co), dam or bool(o.font.b), do)
+            if c == k_gc:
+                so_gc[r] = n_o
+            else:
+                so_khac[r] = max(so_khac.get(r, 1), n_o)
+            so = max(so, n_o)
         if cach_tinh:                                   # cách tính in gộp ô ĐVT..tỷ lệ (thay số lượng, đơn giá)
             c1, c2 = min(k_dvt, k_tl), max(k_dvt, k_tl)
             for c in range(c1 + 1, c2 + 1):
@@ -1741,9 +1747,19 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
             ws.cell(r, c1).value = cach_tinh
             ws.cell(r, c1).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             _gop_o(ws, r, c1, r, c2)
-            so = max(so, so_dong_o(cach_tinh, rong(c1, c2), ten_b, co, dam, do))
+            n_ct = so_dong_o(cach_tinh, rong(c1, c2), ten_b, co, dam, do)
+            so_khac[r] = max(so_khac.get(r, 1), n_ct)
+            so = max(so, n_ct)
         ws.row_dimensions[r].height = cao_dong_bang(so, co)
-    gop_ghi_chu_dat(ws, dong, dau, k_gc)                         # 0.9.87: ghi chú đất trùng nhau gộp một ô
+    # 0.9.87: ghi chú đất trùng nhau gộp một ô. Chiều cao: mỗi dòng theo chữ các cột khác, ô ghi chú gộp chỉ cần đủ cao CẢ KHỐI -
+    # trước đây mỗi dòng vẫn cao theo chữ ghi chú lặp lại (3 dòng cùng ghi chú 4 dòng chữ = khối cao 12 dòng chữ)
+    for r1, r2 in gop_ghi_chu_dat(ws, dong, dau, k_gc):
+        cao = [cao_dong_bang(so_khac.get(r, 1), co) for r in range(r1, r2 + 1)]
+        thieu = cao_dong_bang(so_gc.get(r1, 1), co) - sum(cao)
+        if thieu > 0:
+            cao = [h + thieu / len(cao) for h in cao]
+        for r, h in zip(range(r1, r2 + 1), cao):
+            ws.row_dimensions[r].height = min(409, h)
     from .ho_so import la_to_chuc
     dat_nhan_chu_su_dung(ws, dau - 1, la_to_chuc(ttho['ho_ten']))
     chuan_tieu_de_muc_ii(ws, dau - 1)

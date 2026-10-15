@@ -7,6 +7,18 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('0.9.89', '15/10/2026', (
+        'Dán danh sách tài sản từ bảng Excel có cột Đơn giá / Thành tiền: các cột đó không còn bị đọc nhầm thành tỷ lệ (trước đây mọi '
+        'dòng báo lỗi tỷ lệ quá 500%).',
+        'Nhập Excel: số CCCD ở ô kiểu số bị Excel bỏ số 0 đầu (075092001234 thành 75092001234) được thêm lại số 0 - khớp quyết định, '
+        'gom hộ, che CCCD đúng. Hồ sơ đã nhập trước đây không tự sửa.',
+        'Ngày gõ thiếu số năm ("12/10/202") báo lỗi thay vì nhận thành năm 0202; ô số không nhận "nan", "inf".',
+        'Xuất hồ sơ theo đợt: không còn đổi tên nhầm thư mục của đợt khác tên gần giống ("Đợt 1" / "Đợt 1 - bổ sung"); đợt có dấu ":" '
+        'trong tên tìm lại được thư mục cũ.',
+        'Bản in chi tiết: các thửa cùng ghi chú gộp một ô không còn làm từng dòng cao quá mức; nguồn gốc đất có khoảng năm '
+        '("1975 - 1990, 1990 - 2005") không bị tách thành gạch đầu dòng.',
+        'Thẻ tổng tiền hiện "1,0 tỷ" thay "1.000,0 triệu"; sổ vận động ghi "hôm nay hết hạn" vào ngày cuối thời hạn.',
+    )),
     ('0.9.88', '15/10/2026', (
         'Bản in phương án chi tiết: ô nguồn gốc đất căn đều hai bên như văn bản Word (không còn bên phải lởm chởm); dòng thưởng bàn '
         'giao mặt bằng chỉ ghi tên và thành tiền; dòng TỔNG CỘNG gộp ô từ cột STT, căn giữa, in đậm.',

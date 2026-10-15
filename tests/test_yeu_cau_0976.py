@@ -159,7 +159,8 @@ class TestVanDong(_Co):
             return van_dong.tinh_trang_tat_ca(self.con, hom_nay=ngay_nay)[m][0]
         t = tt(HOM_NAY)
         self.assertEqual((t.ma, t.da_qua, t.con_lai, t.so_buoi), ('dang_van_dong', 10, 0, 2))   # đúng ngày thứ 10: chưa "quá"
-        self.assertIn('ngày 11/10', t.chu)
+        self.assertIn('hôm nay hết hạn 10 ngày', t.chu)                                  # trước đây "ngày 11/10, còn 0 ngày"
+        self.assertIn('ngày 5/10, còn 6 ngày', tt(HOM_NAY - timedelta(days=6)).chu)
         t = tt(HOM_NAY + timedelta(days=1))
         self.assertEqual(t.ma, 'du_dk_cuong_che')                                        # ngày 11: quá 10 ngày
         self.assertEqual(t.chu, van_dong.CHU_CUONG_CHE)

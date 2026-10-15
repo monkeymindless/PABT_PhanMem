@@ -336,6 +336,10 @@ class TestTyLeTrongVaDaLap(unittest.TestCase):
         self.assertEqual(ho_so.chuan_nguon_goc('Khu Bảo tồn thiên nhiên - Văn hoá Đồng Nai; ông A (con bà B - đại diện) sử dụng'),
                          'Khu Bảo tồn thiên nhiên - Văn hoá Đồng Nai; ông A (con bà B - đại diện) sử dụng')
         self.assertEqual(ho_so.chuan_nguon_goc('như sau: - Thửa 1 - Văn hoá. - Thửa 2'), 'như sau:\n- Thửa 1 - Văn hoá.\n- Thửa 2')
+        # khoảng năm "1975 - 1990" không phải gạch đầu dòng (trước đây hai khoảng năm trên một dòng bị tách thành danh sách)
+        self.assertEqual(ho_so.chuan_nguon_goc('Ông A sử dụng 1975 - 1990, bà B 1990 - 2005 - nay'),
+                         'Ông A sử dụng 1975 - 1990, bà B 1990 - 2005 - nay')
+        self.assertEqual(ho_so.chuan_nguon_goc('đất ở - đất lúa - đất vườn'), 'đất ở\n- đất lúa\n- đất vườn')
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
             import openpyxl

@@ -19,6 +19,7 @@ from pathlib import Path
 
 from . import csdl
 from .ho_so import chuan_loai_dat
+from .nhap_excel import chuan_cccd
 from .lap_pa import DanhMuc, LoiNhap, bo_dau, doc_so
 from .nghiep_vu import (MUC_KHOAN, MUC_VN, NGUON_DM, NGUON_TAY, SO_MUC, BoiCanh, DongDat, DongKhoan, so_muc, thanh_tien_dong,
                         thanh_tien_dong_dat)
@@ -183,6 +184,7 @@ def _doc_cccd(s: str) -> tuple:
     s = _txt(s).rstrip('.')
     m = re.match(r'([\d\s.]{9,20})', s)
     so = re.sub(r'\D', '', m.group(1)) if m else ''
+    so = chuan_cccd(so)                                  # ô số Excel mất số 0 đầu (11 chữ số)
     if not so or len(so) < 9:
         return '', '', ''
     ngay = re.search(r'(?:ngày\s*(?:cấp)?\s*:?\s*)?(\d{1,2}/\d{1,2}/\d{4})', s, re.I)

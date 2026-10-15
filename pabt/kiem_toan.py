@@ -123,7 +123,7 @@ _AI = '(SELECT nguoi FROM _kt_phien WHERE id = 1), (SELECT may FROM _kt_phien WH
 
 def _trigger(bang: str) -> list:
     khoa, ho, thua, dt, them_xoa, truong = THEO_DOI[bang]
-    cot = f'luc, nguoi, may, hanh_dong, bang, khoa, ma_ho, ma_thua, doi_tuong, truong, cu, moi'
+    cot = 'luc, nguoi, may, hanh_dong, bang, khoa, ma_ho, ma_thua, doi_tuong, truong, cu, moi'
 
     def theo(dong: str, x: str) -> str:
         return x.replace('R.', f'{dong}.')

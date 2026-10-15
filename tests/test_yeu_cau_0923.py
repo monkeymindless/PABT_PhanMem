@@ -18,6 +18,15 @@ class TestTienGon(unittest.TestCase):
         self.assertEqual(vn_gon(D('23500000')), '23,5 triệu')
         self.assertEqual(vn_gon(D('950000')), '950.000')
         self.assertEqual(vn_gon(D('-2000000000')), '-2,0 tỷ')
+        # làm tròn lên ngưỡng tỷ: không hiện "1.000,0 triệu"
+        self.assertEqual(vn_gon(D('999960000')), '1,0 tỷ')
+        self.assertEqual(vn_gon(D('999949999')), '999,9 triệu')
+
+    def test_khong_nhan_so_vo_cuc(self):
+        from pabt.lap_pa import LoiNhap, doc_so
+        for s in ('nan', 'inf', 'Infinity', '1_000'):     # Decimal nhận các chữ này - trước đây NaN ném InvalidOperation
+            with self.assertRaises(LoiNhap):
+                doc_so(s, 'Số lượng')
 
 
 class TestSoSanh(unittest.TestCase):

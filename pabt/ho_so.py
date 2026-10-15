@@ -30,7 +30,9 @@ DS_NGAN_TU = 8          # danh sách liền một dòng "đất ở - đất lú
 def _tach_ds_ngan(dong: str) -> str:
     """Một dòng là danh sách ngắn liền nhau (>= 2 dấu " - " ngoài ngoặc, mọi đoạn <= DS_NGAN_TU từ) -> mỗi đoạn sau một dòng "- "."""
     # gạch nằm trong ngoặc đơn ("(con bà A - đại diện)") không tính
-    cat = [(m.start(), m.end()) for m in _RE_GACH.finditer(dong) if dong.count('(', 0, m.start()) <= dong.count(')', 0, m.start())]
+    # gạch giữa hai số là khoảng năm / số ("sử dụng 1975 - 1990, 1990 - 2005 bà B") - không phải danh sách
+    cat = [(m.start(), m.end()) for m in _RE_GACH.finditer(dong) if dong.count('(', 0, m.start()) <= dong.count(')', 0, m.start())
+           and not (dong[:m.start()][-1:].isdigit() and dong[m.end():m.end() + 1].isdigit())]
     if len(cat) < 2:
         return dong
     doan, dau = [], 0

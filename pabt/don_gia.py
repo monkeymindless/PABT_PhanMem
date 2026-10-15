@@ -431,7 +431,7 @@ def sua_dong(bang: str, khoa, gt: dict, nhom=None) -> dict:
         if con.execute(f'SELECT 1 FROM {bang} WHERE {ck} = ?', (khoa,)).fetchone() is None:
             raise LoiNhap(f'Không thấy mục {ck} = "{khoa}" để sửa.')
         if ck != 'id' and ck in d and str(d[ck]) != str(khoa):
-            raise LoiNhap(f'Đổi mã / khóa thì dùng "Thay thế" (không sửa tại chỗ thành mã khác).')
+            raise LoiNhap('Đổi mã / khóa thì dùng "Thay thế" (không sửa tại chỗ thành mã khác).')
         cot = [c for c in d if c != ck]
         con.execute(f'UPDATE {bang} SET {", ".join(c + " = ?" for c in cot)} WHERE {ck} = ?',
                     [d[c] for c in cot] + [khoa])

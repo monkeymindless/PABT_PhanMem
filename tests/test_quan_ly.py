@@ -89,6 +89,27 @@ class TestKhongCanDuAn(unittest.TestCase):
             quan_ly.chuan_ngay('31/02/2026')
         with self.assertRaises(LoiNhap):
             quan_ly.chuan_ngay('abc')
+        self.assertEqual(quan_ly.chuan_ngay('5/3/26'), '05/03/2026')
+
+    def test_thu_muc_dot_khong_nhan_nham_dot_khac(self):
+        from types import SimpleNamespace as NS
+
+        def dot(ten, so_ho):
+            return NS(ten=ten, thu_muc='', ten_thu_muc=quan_ly.ten_thu_muc_dot(ten, so_ho))
+        with tempfile.TemporaryDirectory() as td:
+            goc = Path(td)
+            (goc / 'Đợt 1 - bổ sung - 3 hộ').mkdir()                  # thư mục của ĐỢT KHÁC: không được đổi tên
+            (goc / 'Đợt 2  khu A - 4 hộ').mkdir()                      # "Đợt 2: khu A" (dấu ":" đã thay khi tạo thư mục)
+            self.assertEqual(quan_ly.thu_muc_cua_dot(goc, dot('Đợt 1', 5)).name, 'Đợt 1 - 5 hộ')
+            self.assertTrue((goc / 'Đợt 1 - bổ sung - 3 hộ').is_dir())
+            self.assertEqual(quan_ly.thu_muc_cua_dot(goc, dot('Đợt 2: khu A', 6)).name, 'Đợt 2  khu A - 6 hộ')
+            self.assertTrue((goc / 'Đợt 2  khu A - 6 hộ').is_dir())                # thư mục cũ đổi tên theo số hộ mới
+            self.assertFalse((goc / 'Đợt 2  khu A - 4 hộ').exists())
+
+    def test_chuan_ngay_nam_sai(self):
+        for sai in ('12/10/202', '1/1/0026', '1/1/1800'):      # gõ thiếu số năm: trước đây thành năm 0202 / 2026 im lặng
+            with self.assertRaises(LoiNhap):
+                quan_ly.chuan_ngay(sai)
 
     def test_nang_cap_v6_len_v7(self):
         with tempfile.TemporaryDirectory() as td:

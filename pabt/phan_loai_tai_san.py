@@ -252,6 +252,16 @@ def _la_so_hoac_phep_tinh(x: str) -> bool:
     return bool(x) and bool(re.search(r'\d', x)) and bool(_RE_O_PHEP_TINH.match(x)) and bool(re.match(r'^[=(\d]', x))
 
 
+def _co_the_la_ty_le(so: str) -> bool:
+    """Số không có "%" sau số lượng là tỷ lệ khi <= 500 (lap_pa.doc_ty_le: tối đa 500%; <= 5 là hệ số - nhap_tai_san.them_dong_tho).
+    Lớn hơn là cột Đơn giá / Thành tiền của bảng Excel dán vào - trước đây thành tỷ lệ 1.500.000%, cả dòng báo lỗi."""
+    from .tien import doc_so_vn
+    try:
+        return abs(doc_so_vn(so)) <= 500
+    except (ValueError, ArithmeticError):
+        return False
+
+
 def _tach_dau_cach(dong: str, re_dvt) -> list | None:
     """Quy tắc gõ tay (người dùng 14/10/2026): Tên tài sản ␣ ĐVT ␣ Số lượng [␣ Tỷ lệ %] - đọc TỪ CUỐI dòng: ô có % = tỷ lệ, các ô số /
     phép tính liền nhau ở cuối = số lượng ("4*5", "4 x 5"), 1-2 ô ngay trước khớp đơn vị tính = ĐVT, phần còn lại = tên. Không có
@@ -322,9 +332,9 @@ def doc_danh_sach(chu: str) -> list:
             if _RE_SO.match(so) or (not d['so_luong'] and not x.endswith('%') and _la_so_hoac_phep_tinh(x)):
                 if not d['so_luong'] and not x.endswith('%'):
                     d['so_luong'] = x
-                elif not d['ty_le']:
+                elif not d['ty_le'] and (x.endswith('%') or _co_the_la_ty_le(so)):
                     d['ty_le'] = x
-                continue
+                continue                                  # số khác (cột Đơn giá, Thành tiền của bảng Excel): bỏ qua
             if not d['dvt'] and re_dvt.match(x):
                 d['dvt'] = x
             elif not d['ghi_chu']:

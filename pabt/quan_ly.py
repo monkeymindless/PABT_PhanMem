@@ -61,8 +61,12 @@ def chuan_ngay(text) -> str:
         if not m:
             raise LoiNhap(f'Ngày "{s}" không đúng dạng ngày/tháng/năm (ví dụ 05/03/2026).')
         d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        if y < 100:
+        if len(m.group(3)) == 2:
             y += 2000
+        elif len(m.group(3)) == 3:                   # gõ thiếu một số ("12/10/202"): trước đây thành năm 0202
+            raise LoiNhap(f'Ngày "{s}": năm phải đủ 4 chữ số (ví dụ 05/03/2026).')
+    if not 1900 <= y <= 2100:
+        raise LoiNhap(f'Ngày "{s}": năm {y} không hợp lý (ví dụ 05/03/2026).')
     try:
         return datetime(y, mo, d).strftime('%d/%m/%Y')
     except ValueError as e:
@@ -138,9 +142,12 @@ class Dot:
                                     f'ngày {self.ngay_trinh}' if self.ngay_trinh else '') if x)
 
 
+def _ten_sach_dot(ten: str) -> str:
+    return re.sub(r'[\\/:*?"<>|\r\n\t]+', ' ', ' '.join(str(ten or '').split())).strip() or 'Đợt'
+
+
 def ten_thu_muc_dot(ten: str, so_ho: int) -> str:
-    t = re.sub(r'[\\/:*?"<>|\r\n\t]+', ' ', ' '.join(str(ten or '').split())).strip() or 'Đợt'
-    return f'{t} - {so_ho} hộ'
+    return f'{_ten_sach_dot(ten)} - {so_ho} hộ'
 
 
 def ds_dot(con) -> list:
@@ -325,7 +332,10 @@ def dat_thu_muc_ho_so(con, thu_muc) -> None:
 def _thu_muc_dot(goc: Path, dot: Dot) -> Path:
     """Thư mục của đợt trong thư mục gốc: dùng lại thư mục cũ của đợt (đổi tên theo số hộ mới) nếu có."""
     dich = goc / dot.ten_thu_muc
-    cu = [p for p in goc.glob(f'{glob_an_toan(dot.ten)} - * hộ') if p.is_dir()] if goc.exists() else []
+    # đúng "<tên đợt đã làm sạch> - <số> hộ": trước đây tìm theo tên CHƯA làm sạch ("Đợt 1: khu A" không thấy thư mục cũ) và "* hộ"
+    # (đợt "Đợt 1" nhận nhầm thư mục "Đợt 1 - bổ sung - 3 hộ" của đợt khác rồi đổi tên nó)
+    mau = re.compile(re.escape(_ten_sach_dot(dot.ten)) + r' - \d+ hộ', re.I)
+    cu = [p for p in goc.iterdir() if p.is_dir() and mau.fullmatch(p.name)] if goc.exists() else []
     if dot.thu_muc and Path(dot.thu_muc).is_dir() and Path(dot.thu_muc).parent == goc:
         cu.insert(0, Path(dot.thu_muc))
     for p in cu:
@@ -349,10 +359,6 @@ def dat_thu_muc_dot(con, dot_id: int, thu_muc) -> None:
     with csdl.giao_dich(con):
         con.execute('UPDATE dot_trinh SET thu_muc = ? WHERE id = ?', (str(thu_muc), dot_id))
         csdl.ghi_nhat_ky(con, 'Xuất hồ sơ đợt', f'đợt {dot_id} -> {thu_muc}')
-
-
-def glob_an_toan(s: str) -> str:
-    return re.sub(r'([\[\]*?])', r'[\1]', s)
 
 
 def xuat_dot(con, dot_id: int, goc, pdf: bool = False, bao_tien_do=None, bao_excel=None, chi_tiet: bool = True,

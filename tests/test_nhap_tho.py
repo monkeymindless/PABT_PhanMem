@@ -84,6 +84,19 @@ class TestNhapTho(unittest.TestCase):
         self.assertIn('Tờ 72 thửa 99 (thửa 33 cũ) có 2 hộ', cb)
         self.assertIn('Không Thửa', cb)
 
+    def test_cccd_o_so_mat_so_0_dau(self):
+        def bang(wb):
+            ws = wb.active
+            ws.append(['STT', 'Họ và tên', 'Địa chỉ', 'Số CCCD', 'Tờ', 'Thửa', 'DT thu hồi', 'Loại đất'])
+            ws.append([1, 'Nguyễn Văn A', 'ấp 1', 75092001234, 1, 1, 100, 'ONT'])      # ô SỐ: Excel bỏ số 0 đầu
+            ws.append([2, 'Nguyễn Văn A', 'ấp 1', '075092001234', 1, 2, 50, 'CLN'])   # cùng người, ô chữ đủ 12 số
+            ws.append([3, 'Trần B', 'ấp 1', 25123456, 1, 3, 30, 'LUC'])                 # CMND 9 số mất số 0
+        p = self.td / 'cccd.xlsx'
+        _ghi(p, bang)
+        kq = nhap_tho.doc(p)
+        self.assertEqual([(h['ho_ten'], h['so_cccd']) for h in kq.ho],
+                         [('Nguyễn Văn A', '075092001234'), ('Trần B', '025123456')])
+
     def test_bang_lon_xon(self):
         p = self.td / 'lonxon.xlsx'
         _ghi(p, _lon_xon)

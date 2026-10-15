@@ -18,6 +18,12 @@ def _mot(dong: str) -> tuple:
 
 
 class TestQuyTacDauCach(unittest.TestCase):
+    def test_bang_excel_co_cot_don_gia(self):
+        # dán bảng có cột Đơn giá / Thành tiền: số lớn sau số lượng KHÔNG phải tỷ lệ (trước đây tỷ lệ 1.500.000% -> dòng lỗi)
+        self.assertEqual(_mot('1\tNhà cấp 4\tm2\t45\t1.500.000\t67.500.000'), ('Nhà cấp 4', 'm2', '45', ''))
+        self.assertEqual(_mot('2\tGiếng\tcái\t1\t70'), ('Giếng', 'cái', '1', '70'))
+        self.assertEqual(_mot('3\tSân\tm2\t20\t0,8\t50.000'), ('Sân', 'm2', '20', '0,8'))
+
     def test_ten_dvt_so_luong(self):
         self.assertEqual(_mot('Nhà tạm m2 20'), ('Nhà tạm', 'm2', '20', ''))
         self.assertEqual(_mot('Nhà cấp 4 mái tôn m2 45'), ('Nhà cấp 4 mái tôn', 'm2', '45', ''))

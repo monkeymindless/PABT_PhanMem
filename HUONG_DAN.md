@@ -1,4 +1,8 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.88 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.89 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.89** (sửa lỗi): dán bảng Excel có cột Đơn giá / Thành tiền không còn đọc nhầm thành tỷ lệ; **CCCD** ô số Excel mất số 0 đầu
+> được thêm lại khi nhập; ngày thiếu số năm báo lỗi; thư mục hồ sơ của đợt không đổi tên nhầm đợt khác; ghi chú đất gộp ô không làm
+> dòng cao quá mức; khoảng năm "1975 - 1990" trong nguồn gốc không bị tách dòng.
 
 > **0.9.88**: bản in chi tiết - ô **nguồn gốc đất căn đều hai bên**, dòng thưởng chỉ tên + thành tiền, **TỔNG CỘNG** gộp từ cột STT;
 > dấu " - " nối tên riêng không còn bị tách dòng (nội dung đã tách sai ở bản trước: sửa tay); menu trái - **Đơn giá & bảng giá**

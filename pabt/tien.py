@@ -43,9 +43,13 @@ def _d_chuoi_goc(x: str) -> Decimal:
     elif s.count('.') > 1:
         s = s.replace('.', '')
     try:
-        return Decimal(s)
+        d = Decimal(s)
     except InvalidOperation:
         raise ValueError(f'không đọc được số: {x!r}')
+    # Decimal nhận cả "nan", "inf", "1_000": gõ vào ô số lượng thành vô cực / NaN (NaN so sánh ném InvalidOperation, không phải LoiNhap)
+    if not d.is_finite() or '_' in s:
+        raise ValueError(f'không đọc được số: {x!r}')
+    return d
 
 
 _RE_NGHIN_CHAM = re.compile(r'[-+]?[1-9]\d{0,2}(\.\d{3})+')        # 1.070 / 2.500.000: dấu chấm ngăn nghìn (không bắt 0.125)
@@ -131,8 +135,10 @@ def tinh_cong_thuc(s) -> Decimal:
                 raise ValueError('thiếu dấu ")"')
         elif t is not None and t[0].isdigit():
             v = _so_trong_cong_thuc(t)
+        elif t is None:                             # "4*5+": trước đây báo 'ký tự "" không hợp lệ'
+            raise ValueError('công thức thiếu số ở cuối')
         else:
-            raise ValueError(f'ký tự "{t or ""}" không hợp lệ')
+            raise ValueError(f'ký tự "{t}" không hợp lệ')
         if xem() == '%':
             lay()
             v = v / 100
@@ -186,7 +192,8 @@ def vn_gon(x) -> str:
     Chỉ để xem nhanh - số đầy đủ ở chú thích / bảng."""
     x = D(x)
     for nguong, ten in ((D(10) ** 9, 'tỷ'), (D(10) ** 6, 'triệu')):
-        if abs(x) >= nguong:
+        # 999.960.000 làm tròn 1 chữ số lẻ thành "1.000,0 triệu": so sau khi làm tròn để lên bậc tỷ ("1,0 tỷ")
+        if abs(x) >= nguong or (ten == 'tỷ' and abs(lam_tron(x / 10 ** 6, 1)) >= 1000):
             return f'{vn(x / nguong, 1)} {ten}'
     return vn(x)
 

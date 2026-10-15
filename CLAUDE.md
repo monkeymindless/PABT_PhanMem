@@ -1141,6 +1141,14 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     (`ket_qua_ho(con, tat_ca)`); `OTimChon._hien` không dựng lại khi kết quả lọc không đổi; `nhap_chi_tiet.ghi(bao_tien_do=)` mỗi
     `BAO_MOI` hộ + `DaDung` (app `_ghi_chi_tiet_co_tien_do`, Dừng = hoàn tác cả lô); `may_chu.ds_du_an` stat một lần. Test
     `tests/test_yeu_cau_0987.py`.
+- 0.9.89 rà soát lỗi (người dùng 15/10/2026 "check lại toàn bộ mã nguồn"; thử các hàm đọc dữ liệu người gõ / dán bằng giá trị khó):
+  `phan_loai_tai_san._co_the_la_ty_le` (số sau số lượng là tỷ lệ chỉ khi có % hoặc <= 500 - cột Đơn giá / Thành tiền dán từ Excel
+  bỏ qua); `nhap_excel.chuan_cccd` (ô số 11 chữ số -> thêm 0 đầu; ô số 8 chữ số = CMND -> 9) dùng ở nhap_excel / nhap_tho / du_an_moi.gom
+  / nhap_chi_tiet._doc_cccd; `quan_ly.chuan_ngay` năm 3 chữ số / ngoài 1900-2100 -> LoiNhap; `tien._d_chuoi_goc` chặn NaN / Infinity /
+  "1_000" (Decimal nhận); `quan_ly._thu_muc_dot` tìm thư mục cũ đúng "<tên đã làm sạch> - <số> hộ" (bỏ `glob_an_toan`);
+  `lap_chi_tiet` ghi chú đất gộp ô: chiều cao từng dòng theo cột khác, thiếu thì chia đều cho đủ ô gộp; `ho_so._tach_ds_ngan` bỏ
+  qua gạch giữa hai số; `tien.vn_gon` làm tròn lên ngưỡng tỷ. Sửa file bằng script Python: GIỮ kiểu xuống dòng của file (git
+  ls-files --eol; Path.write_text đổi LF thành CRLF). Rò rỉ kết nối: chỉ trong test (`tests/test_don_gia.py`, …), phần mềm không.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

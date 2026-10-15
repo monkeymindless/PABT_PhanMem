@@ -18,7 +18,7 @@ import openpyxl
 
 from . import csdl, nhap_excel
 from .lap_pa import LoiNhap
-from .nhap_excel import BaoCaoNhap, _txt, chuan_hoa
+from .nhap_excel import BaoCaoNhap, _txt, chuan_cccd, chuan_hoa
 from .tien import D, chuoi, doc_so_vn
 
 # trường -> [(mẫu regex trên tiêu đề đã chuẩn hóa, điểm)]; mẫu loại trừ đặt trong LOAI_TRU
@@ -229,7 +229,7 @@ def doc(file_excel) -> KetQuaDoc:
             stt = _txt(g(r, 'stt'))
             if not co_thua and not _txt(g(r, 'dia_chi')) and stt and not stt.isdigit():
                 continue                                                     # dòng nhóm: "I", "A", "Ấp 8"...
-            cccd = re.sub(r'\s', '', _txt(g(r, 'so_cccd')))
+            cccd = chuan_cccd(g(r, 'so_cccd'))
             dc = ' '.join(_txt(g(r, 'dia_chi')).split())
             khoa = ('cccd', cccd) if cccd else ('ten', chuan_hoa(ten), chuan_hoa(dc))
             h = theo_khoa.get(khoa)

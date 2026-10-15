@@ -4,11 +4,11 @@
 Dữ liệu thô là các dòng dict theo COT_THO (mỗi dòng một thửa; họ tên để trống = thửa tiếp của hộ phía trên).
 """
 from __future__ import annotations
-import re
 from pathlib import Path
 
 from . import csdl, don_gia, in_an, lap_pa, nhap_tho
 from .ho_so import chuan_loai_dat
+from .nhap_excel import chuan_cccd
 from .lap_pa import BoSoan, DanhMuc, LoiNhap, bo_dau, doc_so
 from .nghiep_vu import MUC_KHOAN, so_vi_tri, tinh_tat_ca
 from .tien import KHONG, chuoi, so_vn
@@ -65,7 +65,7 @@ def gom(dong: list) -> tuple:
         if not any(g.values()):
             continue
         if g['ho_ten']:
-            cccd = re.sub(r'\s', '', g['so_cccd'])
+            cccd = chuan_cccd(g['so_cccd'])
             khoa = ('cccd', cccd) if cccd else ('ten', bo_dau(g['ho_ten']), bo_dau(g['dia_chi']))
             h = theo_khoa.get(khoa)
             if h is None:

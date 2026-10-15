@@ -41,6 +41,17 @@ def _txt(v) -> str:
     return str(v).strip()
 
 
+def chuan_cccd(v) -> str:
+    """Số CCCD / CMND đọc từ ô Excel hoặc chữ dán vào: bỏ khoảng trắng; số 0 đầu bị Excel bỏ (ô kiểu SỐ: 075092001234 ->
+    75092001234) thì thêm lại - CCCD 12 số luôn bắt đầu bằng 0 (mã tỉnh 001-096) nên 11 chữ số là thiếu số 0; ô số 8 chữ số = CMND 9
+    số mất số 0. Không thì khớp quyết định theo CCCD, che CCCD, gom hộ cùng CCCD đều lệch."""
+    la_so = isinstance(v, (int, float)) and not isinstance(v, bool)
+    s = re.sub(r'\s', '', _txt(v))
+    if s.isdigit() and (len(s) == 11 or (la_so and len(s) == 8)):
+        s = '0' + s
+    return s
+
+
 def _so_hoac_rong(v):
     """Ô số của file Excel (ô số hoặc ô chữ gõ kiểu Việt Nam '1.070' / '1.070,5' - tien.doc_so_vn) -> chuỗi lưu CSDL; trống /
     không phải số -> None."""
@@ -146,7 +157,7 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
         ma = b_ho.gia_tri(r, c['ma'])
         if not co_so(ma):
             continue
-        ho.append(dict(ma_ho=int(D(ma)), ho_ten=_txt(r[c['ten']]), so_cccd=_txt(r[c['cccd']]), ngay_cap=_txt(r[c['nc']]),
+        ho.append(dict(ma_ho=int(D(ma)), ho_ten=_txt(r[c['ten']]), so_cccd=chuan_cccd(r[c['cccd']]), ngay_cap=_txt(r[c['nc']]),
                        noi_cap=_txt(r[c['noi']]), dia_chi=_txt(r[c['dc']]), dien_thoai=_txt(r[c['dt']]),
                        phap_ly=_txt(r[c['pl']]), tranh_chap=_txt(r[c['tc']]), tai_dinh_cu=_txt(r[c['tdc']]),
                        ghi_chu=_txt(r[c['gc']]), trang_thai=_txt(r[c['tt']]) or 'Chưa lập phương án'))

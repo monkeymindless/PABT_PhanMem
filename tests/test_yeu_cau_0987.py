@@ -268,6 +268,24 @@ class TestBanIn(CoSoMay):
         self.assertEqual(vung, {'H12:H13', 'H14:H15'})            # mục 2 (sau dòng H) không gộp
         self.assertEqual(ws.cell(12, 8).alignment.vertical, 'center')
 
+    def test_ghi_chu_gop_khong_nhan_chieu_cao(self):
+        # ghi chú đất trùng nhau gộp một ô: khối đủ cao cho chữ ghi chú, nhưng KHÔNG mỗi dòng cao bằng cả ghi chú (trước đây 3 x 299 pt)
+        from tests.test_toc_do import _du_an
+        (self.td / 'gc').mkdir()
+        con = csdl.mo(_du_an(self.td / 'gc', 3))                         # hộ 3 có 3 thửa, mỗi thửa một dòng đất
+        try:
+            gc = ' '.join(['Đất nông nghiệp đủ điều kiện bồi thường theo Điều 95 Luật Đất đai năm 2024'] * 2)
+            with con:
+                con.execute('UPDATE ct_dat SET ghi_chu = ? WHERE ma_ho = 3', (gc,))
+            ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 3, self.td / 'gc.xlsx')).active
+        finally:
+            con.close()
+        vung = next(m for m in ws.merged_cells.ranges if m.min_col == m.max_col == 8 and m.max_row > m.min_row)
+        cao = [ws.row_dimensions[r].height for r in range(vung.min_row, vung.max_row + 1)]
+        can = in_an.cao_dong_bang(in_an.so_dong_o(gc, in_an._px_cot(ws, 9)[7] * 0.75 - 6))
+        self.assertGreaterEqual(sum(cao), can - 0.01)
+        self.assertLess(min(cao), can)
+
     def test_dem_mau_trong_ram(self):
         in_an.xoa_bo_nho_mau()
         mau = in_an.file_mau(None, in_an.TEN_CT)
