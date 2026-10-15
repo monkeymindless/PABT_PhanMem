@@ -15,7 +15,8 @@ from .thong_bao import TEN_UD
 
 MAU = {'mới': QColor('#E8F5E9'), 'cập nhật': QColor('#FFF8E1'), 'giữ nguyên': QColor('#F5F5F5')}
 DONG_TU_CAO_TOI_DA = 1500
-TEN_NHOM_NGAN = {2: 'Nhà, công trình', 3: 'Cây trồng, vật nuôi', 4: 'Hỗ trợ'}
+TEN_NHOM_NGAN = {2: 'Nhà, công trình', 3: 'Cây trồng', ndg.NHOM_VN: 'Vật nuôi', 4: 'Hỗ trợ'}
+C_MA, C_TEN, C_DVT, C_GIA = 1, 2, 3, 4
 
 
 def mo_ta_van_ban(vb: dict) -> str:
@@ -29,16 +30,19 @@ def mo_ta_van_ban(vb: dict) -> str:
 class HopNhapDonGia(QDialog):
     im_lang = False
 
-    def __init__(self, file, parent=None, nguon: str = '', dong: list | None = None, van_ban: dict | None = None):
-        """dong: các dòng đã đọc sẵn (ndg.doc_bang_ocr, có hộp tiến trình khi phải nhận dạng bản scan).
-        van_ban: ndg.phan_tich_van_ban (không có thì tự phân tích các dòng đầu của file)."""
+    def __init__(self, file, parent=None, nguon: str = '', dong: list | None = None, van_ban: dict | None = None,
+                 nhom_uu_tien: int | None = None):
+        """dong: các dòng đã đọc sẵn (ndg.doc_bang_ocr, có hộp tiến trình khi phải nhận dạng bản scan; chữ dán từ Clipboard).
+        van_ban: ndg.phan_tich_van_ban (không có thì tự phân tích các dòng đầu của file). nhom_uu_tien: nhóm của thẻ đang xem ở Bộ
+        đơn giá (2 / 3 / 7 / 4) - dùng khi văn bản không cho biết nhóm (bảng dán, file không có trích yếu)."""
         # đọc file trước khi tạo hộp thoại: file lỗi thì không để lại hộp thoại dở dang
         dong = ndg.doc_bang(file) if dong is None else dong
         vb = van_ban if van_ban is not None else ndg.phan_tich_van_ban(dong)
-        ds = ndg.nhan_muc(dong, vb.get('nhom', 0))
+        nhom_vb = vb.get('nhom', 0) or nhom_uu_tien or 0
+        ds = ndg.nhan_muc(dong, nhom_vb)
         xem_van, tu_loi_van = [], False
         if not ds:                                      # không có bảng: đơn giá viết trong điều khoản (QĐ 31/2025 vật nuôi...)
-            ds, xem_van = ndg.muc_tu_loi_van(dong, vb.get('nhom', 0))
+            ds, xem_van = ndg.muc_tu_loi_van(dong, nhom_vb)
             tu_loi_van = bool(ds)
         if not ds:
             raise ndg.LoiKhongCoGia('Không tìm thấy đơn giá nào trong file: không có bảng (cột Tên, ĐVT, Đơn giá) và không có câu '
@@ -50,7 +54,7 @@ class HopNhapDonGia(QDialog):
         self.van_ban = vb
         self.da_co = ndg.da_co(vb.get('so_hieu', ''))
         self.ket_qua = None
-        self.nguon = nguon or Path(file).name
+        self.nguon = nguon or Path(str(file or 'Clipboard')).name
         self.setWindowTitle(f'Cập nhật đơn giá từ {self.nguon}')
         self.resize(1300, 760)
         lo = QVBoxLayout(self)
@@ -79,9 +83,9 @@ class HopNhapDonGia(QDialog):
             l_canh.setStyleSheet('QLabel { color: #B71C1C; background: #FFEBEE; padding: 6px; border-radius: 4px; }')
             lo.addWidget(l_canh)
         self.o_nhom = QComboBox()
-        self.o_nhom.addItem('Tự động: theo văn bản, tiêu đề nhóm và từng dòng', 0)
+        self.o_nhom.addItem('Tự động: theo văn bản, tiêu đề nhóm và từng dòng (tên, ĐVT)', 0)
         for k, t in ndg.NHOM.items():
-            self.o_nhom.addItem('Cả bảng thuộc ' + t, k)
+            self.o_nhom.addItem('Toàn bộ là ' + t, k)
         self.o_nhom.currentIndexChanged.connect(self.khop)
         hang = QHBoxLayout()
         n = QLabel('Nhóm danh mục:')
@@ -139,10 +143,13 @@ class HopNhapDonGia(QDialog):
             chk.setCheckState(Qt.CheckState.Checked if dung else Qt.CheckState.Unchecked)
             self.bang.setItem(i, 0, chk)
             tt = m.trang_thai + (f' (gần đúng {m.khop_gan:.0%})' if m.khop_gan else '')
-            for c, v in enumerate((m.ma_khop or m.ma, m.ten, m.dvt, vn(m.don_gia), vn(m.gia_cu) if m.gia_cu else '', tt,
-                                   TEN_NHOM_NGAN.get(nhom_bang or m.nhom, '')), start=1):
+            n = nhom_bang or m.nhom or 3
+            # mục mới: tiền tố mã sẽ cấp khi áp dụng (số tiếp theo của bộ đơn giá - ma_tai_san.ma_tiep)
+            ma = m.ma_khop or m.ma or (f'{ndg.TIEN_TO.get(n, "")}… (mới)' if m.trang_thai == 'mới' else '')
+            for c, v in enumerate((ma, m.ten, m.dvt, vn(m.don_gia), vn(m.gia_cu) if m.gia_cu else '', tt,
+                                   TEN_NHOM_NGAN.get(n, '')), start=1):
                 it = QTableWidgetItem(v)
-                if not (self.tu_loi_van and c in (2, 3)):      # đọc từ lời văn: sửa được tên, ĐVT
+                if c not in (C_TEN, C_DVT, C_GIA):              # sửa được Tên, ĐVT, Đơn giá mới trước khi áp dụng
                     it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 it.setToolTip(m.nguon_dong)
                 it.setBackground(QBrush(MAU[m.trang_thai]))
@@ -158,14 +165,26 @@ class HopNhapDonGia(QDialog):
                         + (f', {gan} khớp tên gần đúng.' if gan else '.'))
 
     def _sua_o(self, r: int, c: int):
-        """Sửa tên / ĐVT (đơn giá đọc từ lời văn): ghi vào mục rồi so khớp lại với bộ đơn giá đang dùng."""
-        if getattr(self, '_dang_ve', False) or c not in (2, 3) or not 0 <= r < len(self.ds):
+        """Sửa tên / ĐVT / đơn giá mới: ghi vào mục rồi so khớp lại với bộ đơn giá đang dùng (đổi trạng thái mới / đổi giá)."""
+        if getattr(self, '_dang_ve', False) or c not in (C_TEN, C_DVT, C_GIA) or not 0 <= r < len(self.ds):
             return
         chu = ' '.join(self.bang.item(r, c).text().split())
         m = self.ds[r]
-        if not chu or chu == (m.ten if c == 2 else m.dvt):
+        if c == C_GIA:
+            g = ndg.doc_gia(chu)
+            if not g:
+                if not self.im_lang:
+                    QMessageBox.warning(self, TEN_UD, f'Đơn giá "{chu}" không đọc được: gõ số tiền (ví dụ 1.250.000).')
+                self.khop()
+                return
+            if g == m.don_gia:
+                return
+            m.don_gia = g
+            self.khop()
             return
-        if c == 2:
+        if not chu or chu == (m.ten if c == C_TEN else m.dvt):
+            return
+        if c == C_TEN:
             m.ten = chu
         else:
             m.dvt = chu

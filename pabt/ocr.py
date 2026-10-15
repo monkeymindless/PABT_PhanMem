@@ -1,9 +1,14 @@
-"""Nhận dạng chữ (OCR) cho văn bản scan: PDF dạng ảnh, file ảnh JPG / PNG. Dùng Tesseract OCR (miễn phí, có gói tiếng Việt).
+"""Nhận dạng chữ (OCR) cho văn bản scan: PDF dạng ảnh, file ảnh JPG / PNG. Hai bộ nhận dạng (15/10/2026):
 
-Tesseract không đóng gói trong mã nguồn; phần mềm tìm theo thứ tự: biến môi trường PABT_TESSERACT, thư mục `tesseract\\`
-cạnh PABT.exe, `%APPDATA%\\PABT\\tesseract\\`, nơi cài mặc định (`C:\\Program Files\\Tesseract-OCR`), rồi PATH. Cần dữ liệu
-tiếng Việt `vie.traineddata` (và `osd.traineddata` để tự xoay trang ngang). Không có Tesseract: PDF có chữ, Word, Excel vẫn
-đọc bình thường, chỉ bản scan là không đọc được.
+1. Windows OCR (Windows 10 / 11, có sẵn trong Windows - không cài thêm phần mềm): gọi Windows.Media.Ocr qua PowerShell 5.1
+   (-Command như bộ cài: không vướng ExecutionPolicy). CẦN gói nhận dạng tiếng Việt của Windows ("Language.OCR~~~vi-VN") - máy
+   Windows tiếng Anh thường chỉ có en-US: trang_thai_windows() báo 'thieu_tieng_viet', cai_tieng_viet_windows() mở lệnh cài
+   (Windows hỏi quyền quản trị, tải vài MB). Kết quả là từng từ kèm toạ độ - gom các từ cùng hàng ngang thành một dòng.
+2. Tesseract OCR (dự phòng, kể cả Windows 7 / 8): không đóng gói trong mã nguồn; tìm theo thứ tự biến môi trường PABT_TESSERACT,
+   thư mục `tesseract\\` cạnh PABT.exe, `%APPDATA%\\PABT\\tesseract\\`, nơi cài mặc định (`C:\\Program Files\\Tesseract-OCR`),
+   rồi PATH. Cần `vie.traineddata` (và `osd.traineddata` để tự xoay trang ngang).
+Chọn bộ: Windows OCR có tiếng Việt -> Windows; không thì Tesseract có tiếng Việt; biến PABT_OCR = windows / tesseract để ép (kiểm
+thử). Không có bộ nào: PDF có chữ, Word, Excel vẫn đọc bình thường, chỉ bản scan là không đọc được (dán chữ từ Clipboard thay thế).
 """
 from __future__ import annotations
 import os
@@ -84,15 +89,175 @@ def ngon_ngu(tess: Path | None = None) -> list:
     return [x.strip() for x in (r.stdout + r.stderr).decode('utf-8', 'replace').splitlines()[1:] if x.strip()]
 
 
-def san_sang() -> str:
-    """'' nếu nhận dạng được bản scan tiếng Việt, không thì câu giải thích còn thiếu gì."""
+def _tesseract_san_sang() -> str:
     tess = tim_tesseract()
     if tess is None:
-        return ('Máy chưa có bộ nhận dạng chữ Tesseract OCR (để đọc bản scan). Cài Tesseract (kèm tiếng Việt) hoặc chép '
-                'thư mục "tesseract" cạnh PABT.exe; hoặc nhập số tiền bằng tay.')
+        return 'chưa có Tesseract OCR'
     if 'vie' not in ngon_ngu(tess):
-        return f'Tesseract ({tess}) chưa có dữ liệu tiếng Việt (vie.traineddata).'
+        return f'Tesseract ({tess}) chưa có dữ liệu tiếng Việt (vie.traineddata)'
     return ''
+
+
+HUONG_DAN_TIENG_VIET = ('Cài gói nhận dạng chữ tiếng Việt của Windows: Cài đặt (Settings) > Thời gian và ngôn ngữ > Ngôn ngữ > Thêm '
+                        'ngôn ngữ > Tiếng Việt (chọn "Nhận dạng chữ viết tay / OCR"), hoặc bấm "Cài gói tiếng Việt" - Windows hỏi '
+                        'quyền quản trị rồi tải vài MB. Cài xong không cần khởi động lại.')
+
+
+def may_doc() -> tuple:
+    """Bộ nhận dạng sẽ dùng: ('windows', None) / ('tesseract', đường dẫn) / ('', None)."""
+    ep = os.environ.get('PABT_OCR', '').lower()
+    if ep != 'tesseract' and trang_thai_windows() == 'san_sang':
+        return 'windows', None
+    if ep != 'windows' and not _tesseract_san_sang():
+        return 'tesseract', tim_tesseract()
+    return '', None
+
+
+def san_sang() -> str:
+    """'' nếu nhận dạng được bản scan tiếng Việt, không thì câu giải thích còn thiếu gì và cách khắc phục."""
+    if may_doc()[0]:
+        return ''
+    tt = trang_thai_windows()
+    if tt == 'thieu_tieng_viet':
+        return ('Máy có bộ nhận dạng chữ của Windows nhưng CHƯA có gói tiếng Việt. ' + HUONG_DAN_TIENG_VIET +
+                ' Hoặc dán chữ / chọn file Excel, Word thay bản scan.')
+    return ('Máy chưa có bộ nhận dạng chữ tiếng Việt (Windows 7 / 8 không có Windows OCR; ' + _tesseract_san_sang() + '). Cài '
+            'Tesseract OCR kèm tiếng Việt hoặc chép thư mục "tesseract" cạnh PABT.exe; hoặc dán chữ (Snipping Tool, Zalo…) / chọn '
+            'file Excel, Word thay bản scan.')
+
+
+# ---------------------------------------------------------------- Windows OCR (Windows.Media.Ocr qua PowerShell)
+_PS_OCR = r'''
+param([string]$Anh = '', [string]$NgonNgu = 'vi')
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+try {
+    Add-Type -AssemblyName System.Runtime.WindowsRuntime
+    $null = [Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime]
+    $null = [Windows.Globalization.Language, Windows.Foundation, ContentType = WindowsRuntime]
+} catch { Write-Output '##KHONG_CO##'; exit 2 }
+$lang = New-Object Windows.Globalization.Language($NgonNgu)
+if (-not [Windows.Media.Ocr.OcrEngine]::IsLanguageSupported($lang)) { Write-Output '##THIEU_NGON_NGU##'; exit 3 }
+if (-not $Anh) { Write-Output '##SAN_SANG##'; exit 0 }
+$null = [Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime]
+$null = [Windows.Graphics.Imaging.BitmapDecoder, Windows.Graphics, ContentType = WindowsRuntime]
+$asTask = @([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
+    $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
+function Cho($op, [Type]$t) { $k = $asTask.MakeGenericMethod($t).Invoke($null, @($op)); $null = $k.Wait(-1); $k.Result }
+$eng = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage($lang)
+$f = Cho ([Windows.Storage.StorageFile]::GetFileFromPathAsync($Anh)) ([Windows.Storage.StorageFile])
+$st = Cho ($f.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
+$dec = Cho ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($st)) ([Windows.Graphics.Imaging.BitmapDecoder])
+$bmp = Cho ($dec.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
+$bmp = [Windows.Graphics.Imaging.SoftwareBitmap]::Convert($bmp, [Windows.Graphics.Imaging.BitmapPixelFormat]::Bgra8)
+$kq = Cho ($eng.RecognizeAsync($bmp)) ([Windows.Media.Ocr.OcrResult])
+foreach ($d in $kq.Lines) { foreach ($w in $d.Words) {
+    $r = $w.BoundingRect
+    Write-Output ("{0}`t{1}`t{2}`t{3}`t{4}" -f [int]$r.X, [int]$r.Y, [int]$r.Width, [int]$r.Height, $w.Text) } }
+$st.Dispose()
+'''
+_TRANG_THAI_WIN = {}
+
+
+def _powershell() -> str:
+    """powershell.exe 5.1 (WinRT; PowerShell 7 không nạp được kiểu Windows Runtime). Tiến trình 32-bit trên Windows 64-bit vẫn gọi được."""
+    goc = os.environ.get('SystemRoot', r'C:\Windows')
+    p = Path(goc) / 'System32' / 'WindowsPowerShell' / 'v1.0' / 'powershell.exe'
+    return str(p) if p.is_file() else 'powershell.exe'
+
+
+def _chay_ps(td: Path, *thamso, cho=None, gioi_han: float = 120) -> subprocess.CompletedProcess:
+    kb = td / 'pabt_ocr.ps1'
+    if not kb.is_file():
+        kb.write_text(_PS_OCR, encoding='utf-8-sig')
+    ts = ' '.join("'" + str(x).replace("'", "''") + "'" for x in thamso)
+    lenh = (f"& ([scriptblock]::Create([IO.File]::ReadAllText('{str(kb).replace(chr(39), chr(39) * 2)}', "
+            f"[Text.Encoding]::UTF8))) {ts}")
+    return _chay([_powershell(), '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', lenh], cho, gioi_han)
+
+
+def trang_thai_windows(ngon_ngu: str = 'vi') -> str:
+    """'san_sang' / 'thieu_tieng_viet' (có Windows OCR, thiếu gói ngôn ngữ) / 'khong_co' (Windows 7 / 8, không chạy được).
+    Nhớ trong tiến trình (gọi PowerShell ~1 giây); xoa_nho_windows() sau khi cài gói."""
+    if sys.platform != 'win32':
+        return 'khong_co'
+    if ngon_ngu in _TRANG_THAI_WIN:
+        return _TRANG_THAI_WIN[ngon_ngu]
+    tt = 'khong_co'
+    td = Path(tempfile.mkdtemp(prefix='PABT_ocr_'))
+    try:
+        r = _chay_ps(td, '', ngon_ngu, gioi_han=60)
+        ra = r.stdout.decode('utf-8', 'replace')
+        tt = 'san_sang' if '##SAN_SANG##' in ra else 'thieu_tieng_viet' if '##THIEU_NGON_NGU##' in ra else 'khong_co'
+    except (OSError, LoiOCR):
+        pass
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+    _TRANG_THAI_WIN[ngon_ngu] = tt
+    return tt
+
+
+def xoa_nho_windows() -> None:
+    _TRANG_THAI_WIN.clear()
+
+
+def cai_tieng_viet_windows():
+    """Mở lệnh cài gói nhận dạng chữ tiếng Việt của Windows (Windows hỏi quyền quản trị - UAC). Trả tiến trình (không chờ).
+    Chỉ gọi khi người dùng bấm "Cài gói tiếng Việt"."""
+    lenh = ("Add-WindowsCapability -Online -Name 'Language.OCR~~~vi-VN~0.0.1.0'; "
+            "Write-Host 'Xong. Đóng cửa sổ này rồi đọc lại bản scan trong PABT.'; Start-Sleep 5")
+    return subprocess.Popen([_powershell(), '-NoProfile', '-Command',
+                             f"Start-Process '{_powershell()}' -Verb RunAs -ArgumentList '-NoProfile','-Command',\"{lenh}\""],
+                            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+
+
+def gom_dong(tu: list, he_so: float = 0.6) -> list:
+    """[(x, y, rộng, cao, chữ)] các từ -> dòng chữ: từ có tâm dọc cách tâm hàng < he_so x chiều cao chữ là cùng hàng (bảng giá nhiều
+    cột: Windows OCR trả các cột thành các dòng riêng), trong hàng xếp theo x."""
+    hang = []                                           # [[tâm y, cao, [từ]]]
+    for x, y, w, h, t in sorted(tu, key=lambda a: (a[1] + a[3] / 2, a[0])):
+        tam = y + h / 2
+        for hg in hang:
+            if abs(tam - hg[0]) < he_so * max(h, hg[1]):
+                hg[2].append((x, t))
+                hg[0] = (hg[0] * (len(hg[2]) - 1) + tam) / len(hg[2])
+                break
+        else:
+            hang.append([tam, h, [(x, t)]])
+    return [' '.join(t for _, t in sorted(hg[2])) for hg in sorted(hang, key=lambda a: a[0])]
+
+
+_RE_CUM_SO = re.compile(r'(?<![^\W\d_])[\doO][\doO.,]*[\doO](?![^\W\d_])')
+
+
+def sua_so(dong: str) -> str:
+    """Lỗi nhận dạng hay gặp trong số tiền: chữ o / O thay số 0 ("3.500.ooo" -> "3.500.000") - chỉ sửa cụm có >= 2 chữ số và
+    toàn chữ số / o / dấu ngăn (không đụng chữ "Ô", "o" trong từ)."""
+    def sua(m):
+        t = m.group(0)
+        return t.replace('o', '0').replace('O', '0') if sum(c.isdigit() for c in t) >= 2 else t
+    return _RE_CUM_SO.sub(sua, dong)
+
+
+def doc_anh_windows(anh: Path, cho=None, td: Path | None = None, ngon_ngu: str = 'vi') -> str:
+    """Chữ trên một ảnh bằng Windows OCR (mỗi hàng ngang một dòng)."""
+    tam = td or Path(tempfile.mkdtemp(prefix='PABT_ocr_'))
+    try:
+        r = _chay_ps(tam, str(Path(anh).resolve()), ngon_ngu, cho=cho, gioi_han=180)
+        ra = r.stdout.decode('utf-8', 'replace')
+        if '##THIEU_NGON_NGU##' in ra:
+            raise LoiOCR('Windows chưa có gói nhận dạng chữ tiếng Việt. ' + HUONG_DAN_TIENG_VIET)
+        if r.returncode != 0 or '##KHONG_CO##' in ra:
+            raise LoiOCR('Windows OCR báo lỗi: ' + (r.stderr.decode('utf-8', 'replace').strip() or ra.strip())[:300])
+        tu = []
+        for d in ra.splitlines():
+            p = d.split('\t', 4)
+            if len(p) == 5 and all(x.lstrip('-').isdigit() for x in p[:4]):
+                tu.append((int(p[0]), int(p[1]), int(p[2]), int(p[3]), p[4]))
+        return '\n'.join(gom_dong(tu))
+    finally:
+        if td is None:
+            shutil.rmtree(tam, ignore_errors=True)
 
 
 # ---------------------------------------------------------------- ảnh từng trang
@@ -172,8 +337,10 @@ def _xoay(anh: Path, do: int) -> None:
 
 
 # ---------------------------------------------------------------- nhận dạng
-def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = None) -> str:
-    """Chữ trên một ảnh trang; trang nằm ngang (bảng danh sách đính kèm) tự xoay lại trước khi đọc."""
+def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = None, may: str = '') -> str:
+    """Chữ trên một ảnh trang (may 'windows': Windows OCR; còn lại Tesseract - trang nằm ngang tự xoay lại trước khi đọc)."""
+    if may == 'windows':                                # ảnh nhỏ (scan 150 dpi) phóng lên ~300 dpi như với Tesseract
+        return doc_anh_windows(_chuan_bi(Path(anh), td), cho, td)
     tess = tess or tim_tesseract()
     if tess is None:
         raise LoiOCR(san_sang())
@@ -196,10 +363,9 @@ def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = Non
 
 def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
     """Đọc từng trang rồi xóa ảnh trang (không dựng hết file trước — file lớn không chiếm bộ nhớ). Yield chữ từng trang."""
-    loi = san_sang()
-    if loi:
-        raise LoiOCR(loi)
-    tess = tim_tesseract()
+    may, tess = may_doc()
+    if not may:
+        raise LoiOCR(san_sang())
     file = Path(file)
     td = Path(tempfile.mkdtemp(prefix='PABT_ocr_'))
     try:
@@ -208,7 +374,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
                 bao_tien_do(1, 1)
             if cho and cho():
                 raise DaHuy()
-            yield doc_anh(file, tess, cho, td)
+            yield doc_anh(file, tess, cho, td, may)
             return
         try:
             from PySide6.QtPdf import QPdfDocument
@@ -234,7 +400,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
                     if anh.isNull() or not anh.save(str(p)):
                         continue
                     try:
-                        yield doc_anh(p, tess, cho)
+                        yield doc_anh(p, tess, cho, td, may)
                     finally:
                         try:
                             p.unlink()
@@ -251,7 +417,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
             if p is None:
                 continue
             try:
-                yield doc_anh(p, tess, cho)
+                yield doc_anh(p, tess, cho, td, may)
             finally:
                 try:
                     p.unlink()
@@ -263,10 +429,9 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
 
 def doc_chu(file, bao_tien_do=None, cho=None) -> list:
     """Các dòng chữ của bản scan (PDF ảnh hoặc file ảnh). bao_tien_do(trang, tổng số trang); cho() trả True để hủy."""
-    loi = san_sang()
-    if loi:
-        raise LoiOCR(loi)
+    if not may_doc()[0]:
+        raise LoiOCR(san_sang())
     dong = []
     for chu in tung_trang(file, bao_tien_do, cho):
-        dong += [x.strip() for x in chu.splitlines() if x.strip()]
+        dong += [sua_so(x.strip()) for x in chu.splitlines() if x.strip()]
     return dong

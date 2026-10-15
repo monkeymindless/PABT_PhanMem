@@ -26,7 +26,14 @@ from .tien import D, chuoi
 
 DUOI_HO_TRO = ('.xlsx', '.xlsm', '.docx', '.pdf', '.csv', '.txt', '.sqlite')
 DUOI_LIEN_KET = DUOI_HO_TRO + ('.xls', '.doc')     # liên kết trên trang web đáng đưa vào danh sách chọn
-NHOM = {2: '2. Nhà, công trình xây dựng', 3: '3. Cây trồng, vật nuôi', 4: '4. Chính sách hỗ trợ'}
+# nhóm danh mục khi cập nhật đơn giá. 7 = vật nuôi (= nghiep_vu.MUC_VN) CHỈ dùng khi phân tích / chọn trên màn hình - ghi vào bộ
+# đơn giá là nhom 3 + phân loại vật nuôi + mã VN (cấu trúc CSDL không đổi: dm_taisan.nhom 2 / 3, chính sách ở bảng dm_hotro)
+NHOM_VN = 7
+NHOM = {2: 'Nhà, công trình, vật kiến trúc (mã TS)', 3: 'Cây trồng, hoa màu (mã CT)', NHOM_VN: 'Vật nuôi, thủy sản (mã VN)',
+        4: 'Chính sách hỗ trợ (mã CS)'}
+TIEN_TO = {2: 'TS', 3: 'CT', NHOM_VN: 'VN', 4: 'CS'}
+# phân loại mặc định khi bộ đơn giá chưa có dòng nào của nhóm (bình thường lấy đúng chuỗi đang dùng trong bộ - _phan_loai)
+PHAN_LOAI_MAC_DINH = {2: '2. Bồi thường, hỗ trợ về nhà và công trình xây dựng', 3: '3. Bồi thường, hỗ trợ về cây trồng'}
 DVT = (r'm²|m2|m³|m3|md|m|cây|cay|bụi|bui|khóm|hố|ha|kg|cái|chiếc|bộ|hộ|khẩu|nhân khẩu|tháng|ngôi|mộ|con|đơn vị|'
        r'lần|đồng/m²|đ/m²|ô|gốc|bụi|m²sàn|m2 sàn')
 
@@ -42,7 +49,7 @@ class Muc:
     trang_thai: str = ''          # mới / cập nhật / giữ nguyên
     ma_khop: str = ''
     gia_cu: int | None = None
-    nhom: int = 0                 # 2 nhà, công trình / 3 cây trồng, vật nuôi / 4 hỗ trợ (0: chưa xác định)
+    nhom: int = 0                 # 2 nhà, công trình / 3 cây trồng / 7 vật nuôi / 4 hỗ trợ (0: chưa xác định)
     khop_gan: float = 0.0         # so khớp tên gần đúng (tỷ lệ giống); 0 = khớp đúng mã / tên
 
 
@@ -304,6 +311,20 @@ def _doc_pdf(p: Path) -> list:
     return dong
 
 
+def dong_tu_chu(chu: str) -> list:
+    """Chữ dán từ Clipboard -> dòng bảng như doc_bang: dòng có Tab (chép từ Excel / bảng Word) tách thành ô, không có Tab thì cả dòng
+    là một ô (chữ Snipping Tool, Zalo OCR - đọc theo mẫu '<tên> <ĐVT> <đơn giá>'). Dòng trống bỏ."""
+    from .ocr import sua_so
+    kq = []
+    for d in str(chu or '').replace('\r\n', '\n').replace('\r', '\n').split('\n'):
+        if not d.strip():
+            continue
+        o = [' '.join(x.split()) for x in d.split('\t')] if '\t' in d else [sua_so(' '.join(d.split()))]
+        if any(o):
+            kq.append(o)
+    return kq
+
+
 def doc_bang_ocr(file, bao_tien_do=None, cho=None) -> list:
     """Như doc_bang; PDF ảnh scan thì nhận dạng chữ bằng Tesseract (nếu máy có) - mỗi dòng chữ một ô, đọc theo mẫu
     '<tên> <ĐVT> <đơn giá>'. bao_tien_do(trang, tổng), cho() -> True để hủy (ocr.DaHuy)."""
@@ -448,13 +469,24 @@ _LA_MA = re.compile(r'^(?:[IVXL]+|[A-H])\.?$')          # STT tiêu đề nhóm:
 _CON = re.compile(r'^(?:[-+–•*]+|[a-zđ][).]?|\d+\.\d+\.?)$', re.I)   # STT dòng con: -, +, *, a, a), 1.1
 
 
+_RE_VAT_NUOI = re.compile(r'vat nuoi|thuy san|thuy hai san|chan nuoi|gia suc|gia cam|long be|long, be|tham canh|quang canh|'
+                         r'ao nuoi|nuoi trong|chim yen|\bca (giong|thit)\b|\btom\b')
+_RE_CAY = re.compile(r'cay trong|hoa mau|cay an qua|cay lau nam|cay hang nam|cay canh|\brau\b|\bcay\b')
+
+
 def nhom_theo_chu(chu: str) -> int:
-    """Nhóm danh mục theo chữ (tiêu đề văn bản / tiêu đề nhóm / tên mục): 3 cây trồng, vật nuôi; 2 nhà, công trình;
-    4 chính sách hỗ trợ; 0 không rõ."""
+    """Nhóm danh mục theo chữ (tiêu đề văn bản / tiêu đề nhóm / tên mục): 3 cây trồng, hoa màu; 7 vật nuôi, thủy sản (chỉ khi
+    không nói tới cây trồng - "cây trồng, vật nuôi" là 3, từng dòng tự phân); 2 nhà, công trình, vật kiến trúc, mồ mả; 4 chính sách
+    hỗ trợ (kể cả di dời mồ mả); 0 không rõ."""
     k = re.sub(r'nha nuoc|uy ban nhan dan|nhan dan', ' ', bo_dau(chu))     # "khi Nhà nước thu hồi đất" không phải nhà ở
-    if re.search(r'cay trong|hoa mau|vat nuoi|thuy san|cay an qua|cay lau nam|cay hang nam|cay canh|\brau\b|\bcay\b', k):
+    co_vn, co_cay = _RE_VAT_NUOI.search(k), _RE_CAY.search(k)
+    if co_vn and not co_cay:
+        return NHOM_VN
+    if co_cay or co_vn:
         return 3
-    if re.search(r'\bnha\b|cong trinh|vat kien truc|nha o|xay dung', k):
+    if re.search(r'(di doi|boc|cai tang|dao,? boc).{0,12}mo', k):        # "Hỗ trợ đào, bốc, di dời mồ mả": chính sách hỗ trợ
+        return 4
+    if re.search(r'\bnha\b|cong trinh|vat kien truc|nha o|xay dung|mo ma|\bmo (xay|dat|da)\b', k):
         return 2
     if re.search(r'ho tro|on dinh doi song|dao tao|chuyen doi nghe|tai dinh cu|thue nha', k):
         return 4
@@ -466,8 +498,11 @@ def _nhom_dong(ten: str, dvt: str) -> int:
     n = nhom_theo_chu(ten)
     if n:
         return n
-    d = bo_dau(dvt)
-    if d in ('cay', 'bui', 'khom', 'goc', 'ha', 'chau', 'hoc', 'con', 'kg'):
+    d = ' '.join(bo_dau(dvt).replace('/', ' / ').split())
+    # vật nuôi: con, kg, m² mặt nước, ha/vụ, 100m³/vụ, lồng; cây trồng: cây, bụi, gốc, ha (hoa màu)
+    if d in ('con', 'kg', 'kg yen tho', 'long', 'be', 'dan', 'o') or re.search(r'mat nuoc|/ vu$|100 ?m[3³]', d):
+        return NHOM_VN
+    if d in ('cay', 'bui', 'khom', 'goc', 'ha', 'chau', 'hoc'):
         return 3
     if d in ('nhan khau', 'khau', 'ho', 'thang', 'lan'):
         return 4
@@ -803,7 +838,10 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
     try:
         hien = {4: [dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia FROM dm_hotro')]}
         for n in (2, 3):
-            hien[n] = [dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia FROM dm_taisan WHERE nhom = ?', (n,))]
+            hien[n] = [dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia, phan_loai FROM dm_taisan WHERE nhom = ?', (n,))]
+        # vật nuôi (nhóm 7 khi phân tích): các dòng nhóm 3 có mã VN / phân loại vật nuôi - nhóm 3 vẫn gồm cả hai (giữ cách khớp cũ)
+        from .nghiep_vu import la_vat_nuoi
+        hien[NHOM_VN] = [x for x in hien[3] if str(x['ma']).upper().startswith('VN') or la_vat_nuoi(x['phan_loai'])]
     finally:
         con.close()
     bang = {}
@@ -849,15 +887,31 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
     return ds
 
 
-def _phan_loai(nm: int, ten: str, van_ban: dict | None) -> str:
-    """Phân loại dòng mới của dm_taisan. Nhóm 3: vật nuôi (tên, hoặc trích yếu văn bản chỉ nói vật nuôi / thủy sản) ghi
-    don_gia.PHAN_LOAI_VAT_NUOI - thẻ "Vật nuôi" riêng trên màn hình Bộ đơn giá."""
+def _phan_loai_dang_dung(con, vat_nuoi: bool, nhom: int) -> str:
+    """Chuỗi phân loại bộ đơn giá đang dùng nhiều nhất cho nhóm (vật nuôi / không) - mục mới cùng phân loại với mục cũ, không tách
+    thành nhóm lạ trên các thẻ / bảng in. Bộ chưa có dòng nào: mặc định."""
+    from .nghiep_vu import la_vat_nuoi
+    dem = {}
+    for pl, n in con.execute('SELECT phan_loai, COUNT(*) FROM dm_taisan WHERE nhom = ? GROUP BY phan_loai', (nhom,)):
+        if pl and bool(la_vat_nuoi(pl)) == vat_nuoi:
+            dem[pl] = n
+    if dem:
+        return max(dem, key=dem.get)
+    return don_gia.PHAN_LOAI_VAT_NUOI if vat_nuoi else PHAN_LOAI_MAC_DINH.get(nhom, '')
+
+
+def _phan_loai(con, nm: int, ten: str, van_ban: dict | None) -> str:
+    """Phân loại dòng mới của dm_taisan theo ĐÚNG chuỗi bộ đơn giá đang dùng (trước 15/10/2026 ghi "2. Nhà, công trình xây dựng" /
+    "3. Cây trồng, vật nuôi" - lệch với phân loại của bộ). Nhóm 7 (vật nuôi) hoặc nhóm 3 mà tên / trích yếu văn bản chỉ nói vật
+    nuôi, thủy sản -> phân loại vật nuôi (thẻ "Vật nuôi" của Bộ đơn giá)."""
+    if nm == NHOM_VN:
+        return _phan_loai_dang_dung(con, True, 3)
     if nm == 3:
         vb = bo_dau((van_ban or {}).get('trich_yeu', ''))
         if re.search(r'vat nuoi|thuy san|chan nuoi|chim yen', bo_dau(ten)) or \
                 (re.search(r'vat nuoi|thuy san', vb) and not re.search(r'cay trong|hoa mau', vb)):
-            return don_gia.PHAN_LOAI_VAT_NUOI
-    return NHOM[nm]
+            return _phan_loai_dang_dung(con, True, 3)
+    return _phan_loai_dang_dung(con, False, nm)
 
 
 def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban: dict | None = None) -> dict:
@@ -894,11 +948,12 @@ def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban
                         con.execute('INSERT INTO dm_hotro (ma, ten, dvt, don_gia, can_cu, trang_thai) VALUES (?,?,?,?,?,?)',
                                     (ma, m.ten, m.dvt, chuoi(m.don_gia), nguon, 'Cập nhật từ file'))
                     else:
-                        pl = _phan_loai(nm, m.ten, van_ban)
-                        vn = nm == 3 and la_vat_nuoi(pl)
-                        ma = doi_ma(m.ma, nm, vn) if m.ma else ma_tiep(con, 'dm_taisan', tien_to(nm, vn), da_cap)
+                        nhom_db = 3 if nm == NHOM_VN else nm          # vật nuôi: nhom 3 + phân loại vật nuôi (CSDL không có nhom 7)
+                        pl = _phan_loai(con, nm, m.ten, van_ban)
+                        vn = nhom_db == 3 and la_vat_nuoi(pl)
+                        ma = doi_ma(m.ma, nhom_db, vn) if m.ma else ma_tiep(con, 'dm_taisan', tien_to(nhom_db, vn), da_cap)
                         con.execute('INSERT INTO dm_taisan (ma, nhom, phan_loai, ten, dvt, don_gia, ghi_chu) VALUES (?,?,?,?,?,?,?)',
-                                    (ma, nm, pl, m.ten, m.dvt, chuoi(m.don_gia), f'Cập nhật từ {nguon}'))
+                                    (ma, nhom_db, pl, m.ten, m.dvt, chuoi(m.don_gia), f'Cập nhật từ {nguon}'))
                     so[m.trang_thai] += 1
                     theo_nhom.setdefault(nm, {'mới': 0, 'cập nhật': 0})[m.trang_thai] += 1
                 tom_tat = '; '.join(f'{NHOM[k]}: {v["mới"]} mục mới, {v["cập nhật"]} mục đổi giá'
@@ -922,4 +977,4 @@ def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban
         finally:
             con.close()
         tt = don_gia.cai_bo(moi)
-    return dict(tt, so_moi=so['mới'], so_cap_nhat=so['cập nhật'])
+    return dict(tt, so_moi=so['mới'], so_cap_nhat=so['cập nhật'], theo_nhom=theo_nhom)

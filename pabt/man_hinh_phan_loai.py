@@ -14,9 +14,11 @@ from .phan_loai_tai_san import LOAI, BoPhanLoai, doc_danh_sach
 from .thong_bao import TEN_UD
 
 VANG = QColor('#FFF2CC')
-COT = ['Thêm', 'Tên tài sản', 'ĐVT', 'Số lượng', 'Tỷ lệ', 'Xếp vào', 'Mục đơn giá khớp', 'Độ tin', 'Căn cứ xếp loại']
-VI_DU = ('Nhà tạm m2 4*5\nNhà cấp 4 mái tôn m2 45\nHàng rào lưới B40 m2 30\nMít 6 năm cây 3 80%\nAo nuôi cá ghép ha/vụ 0,03 70%\n'
-         'Gà ta con 40\nDi dời đồng hồ điện bộ 1')
+COT = ['Thêm', 'Tên tài sản', 'ĐVT', 'Số lượng', 'Tỷ lệ', 'Xếp vào', 'Mục đơn giá khớp', 'Độ tin', 'Căn cứ xếp loại',
+       'Quy cách (số đo / tuổi), ghi chú']
+C_QUY_CACH = 9
+VI_DU = ('Nhà tạm: 46m2\nGác để ở tính bằng Nhà 01 tầng kết cấu loại 4: 35,8m2\nXoài: 16 cây, 17 năm tuổi\n'
+         'Tràm: 1453 cây, đường kính 28cm\nAo nuôi cá ghép: 1,5ha, 1 năm 1 vụ\nNhà tạm m2 4*5\nGà ta con 40\nDi dời đồng hồ điện bộ 1')
 
 
 def _bo_phan_loai(dm) -> BoPhanLoai:
@@ -42,10 +44,12 @@ class HopDanTaiSan(QDialog):
         self.ds = []                                    # [(dict dòng thô, KetQua)]
         self.setWindowTitle('Dán danh sách tài sản - tự xếp vào Nhà, công trình / Cây trồng / Vật nuôi / Hỗ trợ')
         self.resize(1250, 680)
-        hd = QLabel('Mỗi dòng một tài sản: <b>Tên tài sản, công trình</b> ␣ <b>Đơn vị tính</b> ␣ <b>Số lượng</b> (cách nhau dấu cách; '
-                    'thêm ␣ <b>Tỷ lệ %</b> nếu có). Số lượng gõ số hoặc phép tính: <b>Nhà tạm m2 4*5</b> = 20 m² (nhân bằng * hoặc x). '
-                    'Dán thẳng từ Excel (cột Tên, ĐVT, Số lượng, Tỷ lệ, Ghi chú) cũng được. Bấm <b>Phân loại</b>: phần mềm tự xếp '
-                    'vào Nhà / Cây / Vật nuôi / Hỗ trợ theo bộ đơn giá; dòng nền vàng nên xem lại loại.')
+        hd = QLabel('Mỗi dòng một tài sản, viết tự nhiên: <b>Tên: số lượng + đơn vị, quy cách</b> - <b>Xoài: 16 cây, 17 năm tuổi</b>; '
+                    '<b>Tràm: 1453 cây, đường kính 28cm</b> (hoặc <b>Tràm cây 1500 d28</b>, chu vi: <b>cv 45</b>); <b>Nhà tạm: 46m2</b>; '
+                    '<b>Gác để ở tính bằng Nhà 01 tầng kết cấu loại 4: 35,8m2</b> (áp giá mục sau chữ "tính bằng"); <b>Ao nuôi cá ghép: '
+                    '1,5ha, 1 năm 1 vụ</b>. Cách cũ <b>Tên ␣ ĐVT ␣ Số lượng</b> (<b>Nhà tạm m2 4*5</b> = 20 m²) và dán từ Excel (cột Tên, '
+                    'ĐVT, Số lượng, Tỷ lệ, Ghi chú) vẫn dùng được. Bấm <b>Phân loại</b>: phần mềm tự xếp vào Nhà / Cây / Vật nuôi / Hỗ trợ, '
+                    'chọn mục đơn giá theo năm tuổi / quy cách đường kính; dòng nền vàng nên xem lại.')
         hd.setWordWrap(True)
         self.o_chu = QPlainTextEdit(chu)
         self.o_chu.setPlaceholderText(VI_DU)
@@ -64,7 +68,7 @@ class HopDanTaiSan(QDialog):
         self.bang.setHorizontalHeaderLabels(COT)
         self.bang.verticalHeader().setVisible(False)
         self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        for c, w in enumerate((45, 300, 70, 80, 60, 170, 300, 60, 400)):
+        for c, w in enumerate((45, 260, 60, 80, 60, 150, 320, 55, 300, 220)):
             self.bang.setColumnWidth(c, w)
         self.bang.horizontalHeader().setStretchLastSection(True)
         self.lb = QLabel('')
@@ -98,8 +102,10 @@ class HopDanTaiSan(QDialog):
         if not dong:
             self.bao('Chưa có dòng tài sản nào: dán hoặc gõ danh sách vào ô phía trên.', loi=False)
             return []
+        from .hieu_tai_san import bo_sung
         bo = _bo_phan_loai(self.dich.dm)
-        self.ds = [(d, bo.phan_loai(d['ten'], d['dvt'])) for d in dong]
+        # bo_sung: cây theo đường kính / chu vi -> loại cây của bảng quy cách; năm tuổi -> mục đúng năm; khớp theo từ; "… tính bằng …"
+        self.ds = [(d, bo_sung(bo, self.dich.dm, d, bo.phan_loai(d['ten'], d['dvt']))) for d in dong]
         b = self.bang
         b.setUpdatesEnabled(False)
         b.setRowCount(len(self.ds))
@@ -118,8 +124,13 @@ class HopDanTaiSan(QDialog):
             cb.setCurrentIndex(cb.findData(k.loai))
             cb.currentIndexChanged.connect(lambda _=0, rr=r: self._doi_loai(rr))
             b.setCellWidget(r, 5, cb)
-            for c, v in ((6, k.khop.ten if k.khop is not None else '(ngoài danh mục: nhập đơn giá sau)'),
-                         (7, f'{k.do_tin:.0%}'), (8, k.ly_do)):
+            if k.kieu:
+                khop = f'{k.loai_cay}: chọn quy cách theo {"đường kính" if k.kieu == "dk" else "chu vi"} {k.so_do} cm'
+            else:
+                khop = k.khop.ten if k.khop is not None else '(ngoài danh mục: nhập đơn giá sau)'
+            quy = '; '.join(x for x in ((f'{"Đường kính" if k.kieu == "dk" else "Chu vi"} {k.so_do} cm' if k.kieu else ''),
+                                        (f'{d["tuoi"]} năm tuổi' if d.get('tuoi') else ''), d.get('ghi_chu') or '', k.ghi_them) if x)
+            for c, v in ((6, khop), (7, f'{k.do_tin:.0%}'), (8, k.ly_do), (C_QUY_CACH, quy)):
                 it = QTableWidgetItem(v)
                 it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 it.setToolTip(v)
@@ -141,15 +152,15 @@ class HopDanTaiSan(QDialog):
         """Người dùng đổi loại: mục danh mục đã khớp khác loại thì bỏ (dòng thành ngoài danh mục)."""
         d, k = self.ds[r]
         loai = self.bang.cellWidget(r, 5).currentData()
-        if k.khop is not None and loai != k.loai:
-            k.khop = None
+        if (k.khop is not None or k.kieu) and loai != k.loai:
+            k.khop, k.kieu = None, ''
             self.bang.item(r, 6).setText('(ngoài danh mục: nhập đơn giá sau)')
         k.loai = loai
 
 
     # ---------------------------------------------- thêm vào phương án
     def them(self) -> int:
-        from .nhap_tai_san import them_dong_tho
+        from .nhap_tai_san import them_dong_tho, them_mot
         n, loi, muc_cuoi = 0, [], None
         for r, (d, k) in enumerate(self.ds):
             if self.bang.item(r, 0).checkState() != Qt.CheckState.Checked:
@@ -157,8 +168,12 @@ class HopDanTaiSan(QDialog):
             ten, dvt = self.bang.item(r, 1).text().strip(), self.bang.item(r, 2).text().strip()
             sl, tl = self.bang.item(r, 3).text().strip(), self.bang.item(r, 4).text().strip()
             muc = LOAI[k.loai][0]
+            gc = '; '.join(x for x in (d.get('ghi_chu') or '', k.ghi_them) if x)
             try:
-                them_dong_tho(self.dich, muc, k.khop, ten, dvt, sl, tl, d.get('ghi_chu') or '')
+                if k.kieu in ('dk', 'cv'):              # cây theo số đo: số cây (ô Số lượng) x quy cách đường kính / chu vi
+                    them_mot(self.dich, 3, ('nhom', k.loai_cay), ten, sl, tl, k.kieu, gc, k.so_do)
+                else:
+                    them_dong_tho(self.dich, muc, k.khop, ten, dvt, sl, tl, gc)
                 n += 1
                 muc_cuoi = muc
                 self.bang.item(r, 0).setCheckState(Qt.CheckState.Unchecked)       # đã thêm: bấm lại không thêm trùng

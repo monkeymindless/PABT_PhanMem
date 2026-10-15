@@ -531,9 +531,12 @@ class TestLoiVan(CoSo):
         con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
         try:
             pl = {r[0] for r in con.execute("SELECT phan_loai FROM dm_taisan WHERE ghi_chu = 'Cập nhật từ thử'")}
+            cu = {r[0] for r in con.execute("SELECT phan_loai FROM dm_taisan WHERE ma IN ('VN1', 'VN15')")}
         finally:
             con.close()
-        self.assertEqual(pl, {don_gia.PHAN_LOAI_VAT_NUOI})
+        # 15/10/2026: mục mới mang ĐÚNG chuỗi phân loại vật nuôi bộ đơn giá đang dùng (không tách nhóm lạ trên thẻ / bản in)
+        self.assertEqual(pl, cu)
+        self.assertTrue(next(iter(pl)).startswith(don_gia.PHAN_LOAI_VAT_NUOI))
 
     def test_tim_theo_so_hieu(self):
         """Gõ số hiệu ("31/2025"): trang văn bản mang đúng số đó được mở dù tiêu đề chung chung (Công báo Đồng Nai trả

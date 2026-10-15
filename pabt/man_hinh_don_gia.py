@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
                                QHBoxLayout, QLabel, QLineEdit, QMenu, QMessageBox, QPushButton, QTableWidget,
                                QTableWidgetItem, QTabWidget, QVBoxLayout)
@@ -44,6 +45,10 @@ THE_BANG = (
 I_QUY_UOC = -1
 _AN_KHOA = {'quy_uoc', 'van_ban'}           # cột đầu SQL là id, không đưa lên bảng
 NHOM_THE = {0: 2, 1: 3, 2: 3}              # nhà = nhóm 2; cây / vật nuôi = nhóm 3
+# nhóm của nhap_don_gia (7 = vật nuôi, 4 = chính sách - bảng dm_hotro) <-> thẻ: cập nhật từ file / dán dùng thẻ đang xem làm nhóm
+# ưu tiên, áp dụng xong chuyển về thẻ của nhóm có nhiều mục thay đổi nhất (người dùng 15/10/2026)
+THE_NHOM_CAP_NHAT = {0: 2, 1: 3, 2: 7, 3: 4}
+NHOM_THE_CAP_NHAT = {v: k for k, v in THE_NHOM_CAP_NHAT.items()}
 
 
 class HopBoDonGia(QDialog):
@@ -79,7 +84,8 @@ class HopBoDonGia(QDialog):
         self.b_cap = QPushButton('Cập nhật đơn giá')
         self.b_cap.setToolTip('Nạp bộ đơn giá từ file định mức, hoặc sao lưu bộ đang dùng ra file')
         m = QMenu(self.b_cap)
-        m.addAction('Nạp từ file định mức (Excel, gói .sqlite, CSV)…', lambda: self.cap_nhat_file())
+        m.addAction('Nạp từ file định mức (Excel, Word, PDF, gói .sqlite, CSV)…', lambda: self.cap_nhat_file())
+        m.addAction('Dán bảng / văn bản đơn giá (Ctrl+Shift+V)', lambda: self.dan_don_gia())
         m.addAction('Sao lưu bộ đơn giá ra file (.sqlite / Excel)…', lambda: self.sao_luu())
         self.b_cap.setMenu(m)
         self.b_qt = self.b_sua = QPushButton('Quản trị bảo mật')
@@ -106,6 +112,12 @@ class HopBoDonGia(QDialog):
         lo.addWidget(self.o_tim)
         lo.addWidget(self.the, 1)
         lo.addLayout(nut)
+        # dán bảng / chữ đơn giá đã chép (Excel, Word, Snipping Tool "Chép văn bản", Zalo OCR) hoặc ảnh chụp màn hình (nhận dạng chữ)
+        self._phim_dan = QShortcut(QKeySequence('Ctrl+Shift+V'), self)
+        # chỉ khi đang làm việc trong hộp này: cửa sổ lập phương án cũng dùng Ctrl+Shift+V (dán tài sản) - hai phím trùng trong một
+        # cửa sổ (Bộ đơn giá mở dạng thẻ) thì Qt không chạy phím nào
+        self._phim_dan.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self._phim_dan.activated.connect(lambda: self.dan_don_gia())
         self.nap()
 
     def trang_thai_khoa(self) -> str:
@@ -486,18 +498,111 @@ class HopBoDonGia(QDialog):
         from .man_hinh_quan_ly import doc_co_tien_do
         try:
             dong = doc_co_tien_do(self, ndg.doc_bang_ocr, p)        # PDF scan: nhận dạng chữ từng trang, có nút Hủy
-            d = HopNhapDonGia(p, self, nguon, dong=dong)
+            d = HopNhapDonGia(p, self, nguon, dong=dong, nhom_uu_tien=THE_NHOM_CAP_NHAT.get(self.the.currentIndex()))
         except ocr.DaHuy:
             return None
+        except ndg.LoiPdfScan as e:
+            return self.xu_ly_pdf_scan(str(e))
         except (LoiNhap, ocr.LoiOCR, OSError, ValueError) as e:
             self._bao(QMessageBox.warning, str(e))
             return None
+        return self._xem_truoc(d, cho)
+
+    def _xem_truoc(self, d, cho: bool = True):
+        """Hộp xem trước cập nhật đơn giá: áp dụng xong nạp lại bảng và chuyển về thẻ của nhóm vừa cập nhật."""
         d.im_lang = self.im_lang
         if not cho:
             return d
         if d.exec() and d.ket_qua:
-            self.nap()
+            self.sau_cap_nhat(d.ket_qua)
         return d.ket_qua
+
+    def sau_cap_nhat(self, kq: dict) -> None:
+        self.nap()
+        theo = kq.get('theo_nhom') or {}
+        if theo:
+            n = max(theo, key=lambda k: sum(theo[k].values()))
+            if n in NHOM_THE_CAP_NHAT:
+                self.the.setCurrentIndex(NHOM_THE_CAP_NHAT[n])
+
+    def dan_don_gia(self, chu: str | None = None, cho: bool = True, mat_khau=None, anh=None):
+        """Dán bảng / văn bản đơn giá (Ctrl+Shift+V): chữ trong Clipboard (bảng Excel / Word: cột theo Tab; chữ của Snipping Tool,
+        Zalo OCR: mỗi dòng '<tên> <ĐVT> <đơn giá>'); Clipboard chỉ có ẢNH (chụp màn hình) thì nhận dạng chữ (Windows OCR / Tesseract).
+        chu / anh: truyền thẳng (kiểm thử). Trả kết quả áp dụng (hoặc hộp xem trước khi cho=False)."""
+        if not self._can_sua(mat_khau):
+            return None
+        from . import nhap_don_gia as ndg, ocr
+        from .man_hinh_nhap_don_gia import HopNhapDonGia
+        if chu is None and anh is None:
+            from PySide6.QtWidgets import QApplication
+            cb = QApplication.clipboard()
+            chu = cb.text() or ''
+            if not chu.strip() and cb.mimeData() is not None and cb.mimeData().hasImage():
+                anh = cb.image()
+        if not (chu or '').strip() and anh is not None:
+            import tempfile
+            td = Path(tempfile.mkdtemp(prefix='PABT_dan_'))
+            try:
+                f = td / 'anh_dan.png'
+                if not anh.save(str(f)):
+                    self._bao(QMessageBox.warning, 'Không lưu được ảnh trong Clipboard để nhận dạng chữ.')
+                    return None
+                if ocr.san_sang():
+                    self._bao(QMessageBox.warning, 'Clipboard là ảnh, cần nhận dạng chữ (OCR) nhưng máy chưa sẵn sàng:\n\n' +
+                              ocr.san_sang())
+                    return None
+                with con_tro_cho():
+                    chu = '\n'.join(ocr.doc_chu(f))
+            except ocr.LoiOCR as e:
+                self._bao(QMessageBox.warning, f'Không nhận dạng được chữ trong ảnh: {e}')
+                return None
+            finally:
+                import shutil
+                shutil.rmtree(td, ignore_errors=True)
+        dong = ndg.dong_tu_chu(chu)
+        if not dong:
+            self._bao(QMessageBox.information, 'Clipboard chưa có bảng / chữ đơn giá. Chép bảng trong Excel, Word, hoặc dùng Snipping '
+                                                  'Tool (Win+Shift+S, "Chép văn bản") / Zalo "Trích xuất chữ" rồi bấm lại Ctrl+Shift+V.')
+            return None
+        try:
+            d = HopNhapDonGia(None, self, 'Clipboard (dán)', dong=dong, nhom_uu_tien=THE_NHOM_CAP_NHAT.get(self.the.currentIndex()))
+        except (LoiNhap, ValueError) as e:
+            self._bao(QMessageBox.warning, str(e))
+            return None
+        return self._xem_truoc(d, cho)
+
+    def xu_ly_pdf_scan(self, ly_do: str, chon: str | None = None):
+        """PDF là ảnh scan mà máy chưa nhận dạng được: hỏi cách xử lý - cài gói tiếng Việt cho Windows OCR (có Windows OCR), dán
+        chữ từ Clipboard, chọn file Excel / Word khác. chon: 'cai' / 'dan' / 'file' (kiểm thử, không hỏi)."""
+        from . import ocr
+        co_win = ocr.trang_thai_windows() == 'thieu_tieng_viet'
+        if chon is None:
+            if self.im_lang:
+                self.thong_bao_cuoi = ly_do
+                return None
+            h = QMessageBox(QMessageBox.Icon.Warning, TEN_UD, 'File PDF là ẢNH SCAN (không có lớp chữ).\n\n' + ly_do, parent=self)
+            b_cai = h.addButton('Cài gói tiếng Việt cho Windows OCR', QMessageBox.ButtonRole.ActionRole) if co_win else None
+            b_dan = h.addButton('Dán văn bản từ Clipboard', QMessageBox.ButtonRole.ActionRole)
+            b_file = h.addButton('Chọn file Excel / Word khác', QMessageBox.ButtonRole.ActionRole)
+            h.addButton('Đóng', QMessageBox.ButtonRole.RejectRole)
+            h.exec()
+            nhan = h.clickedButton()
+            chon = 'cai' if nhan is b_cai and b_cai is not None else 'dan' if nhan is b_dan else 'file' if nhan is b_file else ''
+        if chon == 'cai':
+            try:
+                ocr.cai_tieng_viet_windows()
+            except OSError as e:
+                self._bao(QMessageBox.warning, f'Không mở được lệnh cài: {e}\n\n{ocr.HUONG_DAN_TIENG_VIET}')
+                return None
+            ocr.xoa_nho_windows()
+            self._bao(QMessageBox.information, 'Đã mở lệnh cài gói nhận dạng chữ tiếng Việt (Windows hỏi quyền quản trị, tải vài MB). '
+                                                  'Cài xong, chọn lại file PDF: phần mềm tự đọc bằng Windows OCR.')
+            return None
+        if chon == 'dan':
+            return self.dan_don_gia()
+        if chon == 'file':
+            return self.cap_nhat_file()
+        return None
 
     def ap_du_an(self, xac_nhan=None):
         if self.con_du_an is None or self.chi_doc:

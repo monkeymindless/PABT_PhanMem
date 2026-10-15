@@ -258,7 +258,8 @@ def duong_dan(nguon: str, noi: str = 'dongnai') -> str:
         noi, nguon = m.group(1), m.group(2).strip()
     mau = ds.get(noi, ds['dongnai'])[1]
     return mau.replace('{q}', urllib.parse.quote_plus(nguon))
-TEN_NHOM_VB = {2: 'Nhà, công trình', 3: 'Cây trồng, vật nuôi', 4: 'Chính sách hỗ trợ', 1: 'Giá đất', 0: 'Khác'}
+TEN_NHOM_VB = {2: 'Nhà, công trình', 3: 'Cây trồng, vật nuôi', 7: 'Vật nuôi, thủy sản', 4: 'Chính sách hỗ trợ', 1: 'Giá đất',
+               0: 'Khác'}
 _DIEM = ((r'don gia', 3), (r'boi thuong', 3), (r'tai dinh cu', 2), (r'thu hoi dat', 2), (r'\bho tro\b', 1),
          (r'cay trong|vat nuoi|thuy san|cong trinh xay dung|vat kien truc|nha o', 2), (r'gia dat|he so dieu chinh', 2),
          (r'dong nai', 1), (r'quyet dinh|nghi quyet|nghi dinh|thong tu|\bluat\b', 1),
@@ -374,7 +375,7 @@ def quet(nguon: str, toi_da_trang: int = 20, bao=None, noi: str = 'dongnai') -> 
         t.so_hieu = re.sub(r'\s+', '', m.group(1)) if m else ''
         t.diem, t.nhom = cham_diem(f'{t.ten} {t.tep}')
         t.da_co = da_co(t.so_hieu, co)
-        t.chon = t.diem >= 5 and not t.da_co and t.nhom in (2, 3, 4)
+        t.chon = t.diem >= 5 and not t.da_co and t.nhom in (2, 3, 4, 7)
         ds.append(t)
     ds.sort(key=lambda t: (not t.chon, -t.diem))
     return ds

@@ -219,6 +219,8 @@ def nhap_ket_qua_kiem_dem(con, file, dm=None) -> dict:
     """Thêm các dòng kiểm đếm vào phương án từng hộ (BoSoan, lưu mỗi hộ một lần). Trả {'so_ho', 'so_dong', 'loi': [chữ]}."""
     from .lap_pa import BoSoan, DanhMuc
     from .nhap_tai_san import DichPhuongAn, them_dong_tho, them_mot
+    from .cay_trong import BangCayDK
+    from .hieu_tai_san import bo_sung, la_dong_tu_nhien, loai_cay_dk, tach_dong
     from .phan_loai_tai_san import LOAI, BoPhanLoai
     ket_qua = doc_ket_qua(file)
     dm = dm or DanhMuc(con)
@@ -239,6 +241,14 @@ def nhap_ket_qua_kiem_dem(con, file, dm=None) -> dict:
             ten, dvt = ' '.join(str(d.get('ten') or '').split()), str(d.get('dvt') or '').strip()
             sl, tl, gc = str(d.get('so_luong') or '').strip(), str(d.get('ty_le') or '').strip(), str(d.get('ghi_chu') or '').strip()
             do, kieu = str(d.get('so_do') or '').strip(), str(d.get('kieu') or 'dk')
+            tuoi = ''
+            # ô tên ghi cả câu ("Xoài: 16 cây, 17 năm tuổi", "Tràm 1453 cây d28"): tách như hộp Dán danh sách - ô trống lấy theo câu
+            t = tach_dong(ten) if la_dong_tu_nhien(ten) else None
+            if t is not None:
+                ten, dvt, sl, tl = t['ten'], dvt or t['dvt'], sl or t['so_luong'], tl or t['ty_le']
+                do, tuoi = do or t['so_do'], t['tuoi']
+                kieu = t['kieu'] or kieu
+                gc = '; '.join(x for x in (gc, t['ghi_chu']) if x)
             try:
                 muc = int(d.get('muc') or 2)
             except (TypeError, ValueError):
@@ -246,13 +256,15 @@ def nhap_ket_qua_kiem_dem(con, file, dm=None) -> dict:
             if muc not in (2, 3, 7):
                 muc = 2
             try:
-                if muc == 3 and do:                     # cây theo số đo: quy cách đường kính / chu vi
-                    them_mot(dich, 3, ('nhom', ten), ten, sl, tl if tl and tl != '100' else '',
-                             'cv' if kieu == 'cv' else 'dk', gc, do)
+                tl = tl if tl and tl != '100' else ''
+                if muc == 3 and do:                     # cây theo số đo: loại cây trong bảng quy cách ("Tràm" -> "Keo lá tràm")
+                    loai_cay = loai_cay_dk(BangCayDK(dm.muc.get(3, [])), ten) or ten
+                    them_mot(dich, 3, ('nhom', loai_cay), ten, sl, tl, 'cv' if kieu == 'cv' else 'dk', gc, do)
                 else:
-                    khop = pl.khop_danh_muc(ten, dvt)
-                    m = khop[0] if khop is not None and khop[2] >= 0.86 and LOAI[khop[1]][0] == muc else None
-                    them_dong_tho(dich, muc, m, ten, dvt, sl, tl if tl and tl != '100' else '', gc)
+                    # cùng bộ hiểu với hộp Dán danh sách: năm tuổi -> mục đúng năm, khớp theo từ, "… tính bằng …"
+                    kq = bo_sung(pl, dm, dict(ten=ten, dvt=dvt, tuoi=tuoi), pl.phan_loai(ten, dvt))
+                    m = kq.khop if kq.khop is not None and LOAI[kq.loai][0] == muc else None
+                    them_dong_tho(dich, muc, m, ten, dvt, sl, tl, '; '.join(x for x in (gc, kq.ghi_them) if x))
                 n += 1
             except LoiNhap as e:
                 loi.append(f'{co_ho[ma_ho]} - dòng {k} "{ten[:40]}": {e}')

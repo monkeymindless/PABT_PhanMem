@@ -275,7 +275,8 @@ class TestManHinhMoi(CoSo):
                          sqlite3.connect(don_gia.file_goc()).execute('SELECT COUNT(*) FROM dm_taisan').fetchone()[0])
         # 0.9.73: Cập nhật = nạp file / sao lưu (bỏ web, tra cứu trình duyệt); bỏ nút Giá đất, Đơn giá riêng (menu trái có)
         self.assertEqual([a.text() for a in d.b_cap.menu().actions() if a.text()],
-                         ['Nạp từ file định mức (Excel, gói .sqlite, CSV)…', 'Sao lưu bộ đơn giá ra file (.sqlite / Excel)…'])
+                         ['Nạp từ file định mức (Excel, Word, PDF, gói .sqlite, CSV)…', 'Dán bảng / văn bản đơn giá (Ctrl+Shift+V)',
+                          'Sao lưu bộ đơn giá ra file (.sqlite / Excel)…'])          # 15/10/2026: thêm dán từ Clipboard
         self.assertFalse(hasattr(d, 'b_gia_dat') or hasattr(d, 'b_don'))
         d.the.setCurrentIndex(3)
         d.o_tim.setText('di chuyen tai san')

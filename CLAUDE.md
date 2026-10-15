@@ -1144,6 +1144,41 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 - 0.9.90 biểu tượng (người dùng 15/10/2026): ảnh thiết kế mới `pabt/bieu_tuong_thiet_ke.webp` 2000 px (ô vuông xanh viền
   vàng, lưới địa chính, nhịp cầu, sách "Luật Đất đai 2024", chữ PABT) -> `tao_bieu_tuong.py` (tach_nen, như 0.9.87) -> png 512 + ico 9 cỡ.
   Exe / lối tắt / bộ cài chỉ đổi khi dựng lại bộ cài (PyInstaller --clean); gói .pabtcn chỉ đổi biểu tượng trong phần mềm.
+- 0.9.93 dán tài sản viết tự nhiên (người dùng 15/10/2026): `pabt/hieu_tai_san.py` (không Qt) dùng chung cho hộp "Dán danh sách
+  tài sản" (phương án hộ + Khái toán) và nhập Phiếu kiểm đếm. `tach_dong` ("Xoài: 16 cây, 17 năm tuổi", "Tràm: 1453 cây, đường kính
+  28cm", "Tràm cây 1500 d28", "Nhà tạm: 46m2", "Ao nuôi cá ghép: 1,5ha, 1 năm 1 vụ") -> tên, ĐVT, số lượng, so_do + kieu dk / cv,
+  tuoi, tỷ lệ, ghi chú; chỉ dùng khi `la_dong_tu_nhien` (có ":" / số dính đơn vị / đường kính, chu vi, tuổi, vụ) - còn lại quy tắc
+  cũ "Tên ␣ ĐVT ␣ Số lượng" (`_tach_dau_cach`). "d" trơn chỉ là đường kính khi đứng SAU số lượng ("Đường ống D110" là tên); không ":"
+  thì số trơn phải kèm đơn vị / số đo / tuổi ("Nhà cấp 4" không phải số lượng 4). `bo_sung(bo, dm, d, kq)` sau BoPhanLoai.phan_loai:
+  "… tính bằng / tương đương <mục>" áp giá theo <mục> + ghi chú "Thực tế: …" (`ten_ap_gia`); cây có số đo -> `loai_cay_dk`
+  (so CÓ DẤU trước: "tràm" -> "Keo lá tràm", không "Trám đen"; cây gỗ trước cây cảnh) -> `them_mot(..., ('nhom', loai_cay), kieu,
+  so_do)`; năm tuổi -> `chon_theo_tuoi` (`khoang_tuoi`: "(Năm thứ 4,5,6)", "Năm 1", "trở đi", "Từ năm thứ a đến b", "Trên / dưới N
+  năm tuổi"); `khop_theo_tu` (mọi từ của tên có trong tên mục, ít từ thừa nhất; vật nuôi luôn nền vàng - nhiều mức thời gian nuôi).
+  `KetQua` thêm kieu / loai_cay / so_do / ghi_them (`ten_loai` là property sẵn có - đừng đặt trùng). HopDanTaiSan cột 9 "Quy cách".
+  Test `tests/test_hieu_tai_san.py`.
+- 0.9.93 cập nhật đơn giá (người dùng 15/10/2026, phương án điều chỉnh `ma_tinh_chinh_don_gia.md` - giữ CSDL): `nhap_don_gia.NHOM_VN` = 7
+  CHỈ khi phân tích / chọn (nhom_theo_chu: vật nuôi, thủy sản, lồng bè, thâm canh… -> 7 trừ khi có cả cây trồng -> 3; mồ mả -> 2, di
+  dời mồ mả -> 4; `_nhom_dong` ĐVT con / kg / m² mặt nước / ha/vụ / 100m3/vụ -> 7); `ap_dung` ghi nhom 7 thành dm_taisan nhom 3 +
+  phân loại vật nuôi + mã VN; `_phan_loai(con, …)` lấy ĐÚNG chuỗi phân loại bộ đang dùng (`_phan_loai_dang_dung` - trước đây "2. Nhà,
+  công trình xây dựng" / "3. Cây trồng, vật nuôi" lệch bộ); trả `theo_nhom`. `so_khop` nhóm 7 = dòng nhóm 3 có mã VN / phân loại vật
+  nuôi. `TIEN_TO`, `dong_tu_chu` (chữ dán: Tab -> ô; không Tab -> một ô, `ocr.sua_so`). `cap_nhat_web` nhận nhóm 7. HopNhapDonGia:
+  `nhom_uu_tien` (thẻ đang xem, dùng khi văn bản không ghi nhóm), bộ chọn 5 mục, cột Mã "TS… (mới)", sửa Tên / ĐVT / Đơn giá mọi dòng
+  (`C_TEN / C_DVT / C_GIA`). HopBoDonGia: `THE_NHOM_CAP_NHAT` {0: 2, 1: 3, 2: 7, 3: 4}, `dan_don_gia` (menu + QShortcut Ctrl+Shift+V
+  ngữ cảnh WidgetWithChildrenShortcut - trùng phím Dán tài sản của CuaSoLapPA khi cùng cửa sổ; Clipboard chỉ có ảnh -> OCR),
+  `xu_ly_pdf_scan` (cài gói tiếng Việt / dán / chọn file khác), `sau_cap_nhat` (nạp lại + chuyển thẻ nhóm thay đổi nhiều nhất).
+  OCR (`ocr.py`): Windows OCR (`Windows.Media.Ocr` qua powershell.exe 5.1 -Command, mã `_PS_OCR`; trả từ + toạ độ -> `gom_dong` theo
+  hàng ngang; ~0,7 s / trang) ưu tiên khi có tiếng Việt, rồi Tesseract (`may_doc`, PABT_OCR = windows / tesseract để ép);
+  `trang_thai_windows` (san_sang / thieu_tieng_viet / khong_co, nhớ trong tiến trình), `cai_tieng_viet_windows` (Add-WindowsCapability
+  Language.OCR~~~vi-VN qua RunAs - CHỈ khi người dùng bấm; KHÔNG chạy trên máy phát triển: thay đổi hệ thống), `sua_so` ("3.500.ooo").
+  Máy phát triển (Windows 11 tiếng Anh) chỉ có OCR en-US: đường Windows OCR kiểm bằng en-US (`test_windows_ocr_that` - ảnh vẽ ở tiến
+  trình QT_QPA_PLATFORM=windows: offscreen không có phông). Test `tests/test_don_gia_15_10.py`.
+- 0.9.93 bản in chi tiết (người dùng 15/10/2026): nguồn gốc đất `in_an.cao_doan_van` (khoảng dòng `dong_chu_bang`, đệm
+  `DEM_DOAN_VAN` 3 pt - không đệm 8 pt / tối thiểu 24 pt như ô bảng), dòng thừa của vùng gộp mẫu A13:H15 ẨN (trước: 4 pt mỗi dòng)
+  -> hết khoảng hở tới "III."; hỗ trợ đào tạo theo thửa: dòng tên chính sách chỉ tên + căn cứ (ĐVT / SL / thành tiền ở dòng "-"
+  thửa - nhap_chi_tiet._gop_dong_con vẫn lấy số ở dòng con); dòng IV `_nhan_dam(o, NHAN_TDC)`: CellRichText "Tái định cư:" đậm +
+  nội dung thường (openpyxl 3.1.5 cả hai venv; đọc lại cần `load_workbook(rich_text=True)` mới thấy từng khối). Xem thật: lập bằng
+  QT_QPA_PLATFORM=windows (offscreen đo chữ rộng -> dòng bảng cao bất thường) rồi `in_an.chay_excel` ra PDF. Test
+  `tests/test_ban_in_15_10.py`.
 - 0.9.92 tên LARC + đuôi .larc (người dùng 15/10/2026): TÊN BÊN NGOÀI = LARC - lối tắt Desktop `LARC.lnk`, Start Menu / mô tả /
   Cài đặt > Ứng dụng "LARC - Bồi thường, hỗ trợ, tái định cư" (`cai_dat.ps1` `$TEN` / `$TEN_NGAN`, Publisher LARC, gỡ lối tắt tên cũ
   `$LOI_TAT_CU`), bộ cài `LARC_Setup_Universal_<ver>.exe` (FriendlyName "LARC - Cai dat"); zip `PABT_ChayNgay_*`, gói `PABT_CapNhat_*`,

@@ -7,6 +7,19 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('0.9.93', '15/10/2026', (
+        'Dán danh sách tài sản (Lập phương án hộ, Khái toán, Phiếu kiểm đếm) hiểu câu viết tự nhiên: "Xoài: 16 cây, 17 năm tuổi" chọn '
+        'đúng mục theo năm tuổi; "Tràm: 1453 cây, đường kính 28cm" (hoặc "Tràm cây 1500 d28") chọn quy cách theo đường kính; "Nhà tạm: '
+        '46m2"; "Gác để ở tính bằng Nhà 01 tầng kết cấu loại 4: 35,8m2" áp giá theo mục sau chữ "tính bằng"; "Ao nuôi cá ghép: 1,5ha, 1 '
+        'năm 1 vụ" vào Vật nuôi.',
+        'Cập nhật đơn giá: nhóm Vật nuôi riêng (tự nhận theo tên và đơn vị tính); mục mới mang đúng phân loại của bộ đơn giá; bảng xem '
+        'trước hiện mã sẽ cấp (TS / CT / VN / CS) và sửa được Tên, ĐVT, Đơn giá; dán bảng / văn bản đơn giá bằng Ctrl+Shift+V trong hộp '
+        'Đơn giá bồi thường; áp dụng xong tự chuyển về thẻ vừa cập nhật.',
+        'PDF ảnh scan: đọc bằng nhận dạng chữ của Windows 10 / 11 (cần gói tiếng Việt của Windows - có nút cài) hoặc Tesseract; máy chưa '
+        'đọc được thì chọn cài gói, dán chữ từ Clipboard hoặc chọn file Excel / Word khác.',
+        'Bản in phương án chi tiết: đoạn nguồn gốc đất sát mục III; dòng "Hỗ trợ đào tạo, chuyển đổi nghề…" không lặp diện tích, thành '
+        'tiền của dòng thửa; dòng IV chỉ chữ "Tái định cư:" in đậm, nội dung chữ thường.',
+    )),
     ('0.9.92', '15/10/2026', (
         'Tên hiển thị mới: biểu tượng Desktop "LARC", tên đầy đủ "LARC - Bồi thường, hỗ trợ, tái định cư" (Start Menu, Cài đặt > Ứng '
         'dụng); bộ cài LARC_Setup_Universal. Cài bản này thì lối tắt tên PABT cũ được thay bằng lối tắt LARC.',

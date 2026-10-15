@@ -767,6 +767,24 @@ def _vua_cao_ho_bth(ws, r0: int, r: int, px: list | None = None, do=None, can: f
         ws.row_dimensions[r0 + i].height = cao
 
 
+NHAN_TDC = 'Tái định cư:'
+
+
+def _nhan_dam(o, nhan: str) -> None:
+    """Ô chữ "<nhãn> <nội dung>": nhãn in đậm, nội dung chữ thường (không đậm / nghiêng) - người dùng 15/10/2026 dòng IV "Tái định
+    cư: Đủ điều kiện…" (mẫu cả dòng in đậm). Chữ nhiều định dạng trong một ô (openpyxl >= 3.1); thiếu thì giữ nguyên."""
+    try:
+        from openpyxl.cell.rich_text import CellRichText, TextBlock
+        from openpyxl.cell.text import InlineFont
+    except ImportError:
+        return
+    f = o.font
+    kieu = dict(rFont=f.name, sz=f.sz, color=f.color, u=f.u)
+    con_lai = str(o.value)[len(nhan):]
+    o.value = CellRichText([TextBlock(InlineFont(b=True, **kieu), nhan)] +
+                           ([TextBlock(InlineFont(b=False, i=False, **kieu), con_lai)] if con_lai else []))
+
+
 def _gian_dong(ws, r: int, c: int, co_chu: float) -> None:
     """Ô chữ dài (kể cả ô gộp nhiều cột): bật xuống dòng và tăng chiều cao dòng cho đủ chữ."""
     from openpyxl.utils import get_column_letter
@@ -913,6 +931,15 @@ HE_SO_DONG_EXCEL = 1.3
 DEM_DONG = 8.0
 CAO_TIEU_DE_BANG = 28.0         # hàng tiêu đề cột (STT, Tên tài sản, ĐVT…) một dòng chữ; tiêu đề nhiều dòng cao theo chữ
 CAO_DOAN_TOI_DA = 350           # nguồn gốc đất: một dòng Excel không cao quá chừng này (trần Excel 409) - dư thì tách sang dòng kế
+# nguồn gốc đất (đoạn văn, chữ canh trên): đệm dưới chữ nhỏ - người dùng 15/10/2026: khoảng hở tới dòng "III. Bảng tính toán…"
+# quá xa (trước đây đệm 8 pt như ô bảng + 2 dòng thừa của vùng gộp mẫu A13:H15 cao 4 pt mỗi dòng)
+DEM_DOAN_VAN = 3.0
+
+
+def cao_doan_van(so_dong: int, co: float = 14) -> float:
+    """Chiều cao (pt) dòng Excel chứa so_dong dòng chữ của đoạn văn nguồn gốc đất: cùng khoảng dòng với ô bảng (dong_chu_bang - Excel
+    125% không cắt dòng cuối), chỉ thêm DEM_DOAN_VAN cho chân chữ; không chặn tối thiểu 24 pt như ô bảng."""
+    return min(CAO_TOI_DA, so_dong * dong_chu_bang(co) + DEM_DOAN_VAN)
 
 
 def dong_chu_bang(co: float = 14) -> float:
@@ -1068,7 +1095,9 @@ def dat_doan_van(ws, cho: str, chu: str, do=None) -> int:
         for cc in range(c1, c2 + 1):
             ws.cell(rr, cc).value = None
         if i >= len(khoi):
-            ws.row_dimensions[rr].height = 4         # dòng thừa của vùng gộp cũ: chỉ còn là khoảng cách nhỏ
+            # dòng thừa của vùng gộp mẫu: ẩn hẳn (trước 15/10/2026 cao 4 pt mỗi dòng - cộng vào khoảng hở trước mục III)
+            ws.row_dimensions[rr].height = 1
+            ws.row_dimensions[rr].hidden = True
             continue
         oo = ws.cell(rr, c1)
         oo._style = copy(kieu)
@@ -1083,7 +1112,7 @@ def dat_doan_van(ws, cho: str, chu: str, do=None) -> int:
         oo.alignment = al
         if c2 > c1:
             _gop_o(ws, rr, c1, rr, c2)
-        ws.row_dimensions[rr].height = cao_dong_bang(len(khoi[i]), co)
+        ws.row_dimensions[rr].height = cao_doan_van(len(khoi[i]), co)
     return chen
 
 
@@ -1498,9 +1527,9 @@ def dong_chi_tiet(con, ma_ho: int, bc: BoiCanh | None = None, pa=None) -> tuple:
                 j += 1
             nhom = ds4[i:j]
             ten = ten_ngan((bc.hotro.get(d.ma) or {}).get('ten', ''), d.ma) or 'Hỗ trợ đào tạo, chuyển đổi nghề và tìm kiếm việc làm'
-            dt = sum((x.so_luong for x in nhom), KHONG)
-            dong.append(['I', [f'{s4}.{k}', ten, 'm²', dt, None, None, sum((x.thanh_tien for x in nhom), KHONG),
-                               ghi_chu_in(con, d.ma, d.ghi_chu)]])
+            # dòng tên chính sách chỉ ghi tên + căn cứ; diện tích, đơn giá, tỷ lệ, thành tiền ở các dòng thửa bên dưới (người dùng
+            # 15/10/2026: trước đây dòng tên lặp lại diện tích + thành tiền của dòng thửa - một thửa thì hai ô trùng số)
+            dong.append(['I', [f'{s4}.{k}', ten, None, None, None, None, None, ghi_chu_in(con, d.ma, d.ghi_chu)]])
             for x in nhom:
                 dong.append(['I', ['-', x.ten, x.dvt, x.so_luong, x.don_gia, x.ty_le, x.thanh_tien, None]])
             i = j
@@ -1777,6 +1806,8 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
             o.value = 'Tái định cư:' + o.value[len('Phương án tái định cư:'):]
         if isinstance(o.value, str) and len(o.value) > 40:
             _gian_dong(ws, r, k_ten, co)
+        if isinstance(o.value, str) and o.value.startswith(NHAN_TDC):
+            _nhan_dam(o, NHAN_TDC)
     from openpyxl.utils import get_column_letter
     cl = get_column_letter(cuoi_bang)
     ws.print_area = f'A1:{cl}{_dong_cuoi(ws, cuoi_bang) + 1}'

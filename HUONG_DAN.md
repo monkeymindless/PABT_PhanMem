@@ -1,4 +1,10 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.92 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.93 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.93**: **Dán danh sách tài sản** hiểu câu viết tự nhiên - `Xoài: 16 cây, 17 năm tuổi`, `Tràm: 1453 cây, đường kính 28cm`,
+> `Nhà tạm: 46m2`, `Gác để ở tính bằng Nhà 01 tầng kết cấu loại 4: 35,8m2`, `Ao nuôi cá ghép: 1,5ha, 1 năm 1 vụ` (dòng nền vàng: xem
+> lại). **Cập nhật đơn giá**: nhóm Vật nuôi riêng, sửa Tên / ĐVT / Đơn giá trên bảng xem trước, dán bảng bằng **Ctrl+Shift+V**; PDF
+> scan đọc bằng nhận dạng chữ của Windows 10 / 11 (cần gói tiếng Việt: Cài đặt > Thời gian và ngôn ngữ > Ngôn ngữ) hoặc Tesseract.
+> Bản in: nguồn gốc đất sát mục III, dòng hỗ trợ đào tạo không lặp số, "Tái định cư:" in đậm.
 
 > **0.9.92**: tên hiển thị **LARC** (lối tắt Desktop "LARC", tên đầy đủ "LARC - Bồi thường, hỗ trợ, tái định cư", bộ cài
 > `LARC_Setup_Universal_<phiên bản>.exe`); file dự án mới đuôi **.larc** - file **.pabt** cũ vẫn mở và lưu bình thường; biểu tượng

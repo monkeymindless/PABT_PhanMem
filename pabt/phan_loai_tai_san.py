@@ -30,6 +30,11 @@ class KetQua:
     ly_do: str
     khop: object = None          # lap_pa.MucDanhMuc khớp (None: ngoài danh mục)
     ty_le_khop: float = 0.0
+    # hieu_tai_san.bo_sung (dòng viết tự nhiên): cây theo số đo -> kieu 'dk' / 'cv', loai_cay trong bảng quy cách, số đo (cm)
+    kieu: str = ''
+    loai_cay: str = ''
+    so_do: str = ''
+    ghi_them: str = ''           # ghi chú thêm khi thêm vào phương án ("Thực tế: Gác để ở" - dòng "… tính bằng …")
 
     @property
     def muc(self) -> int:
@@ -299,12 +304,21 @@ def doc_danh_sach(chu: str) -> list:
     = tỷ lệ, ô chữ ngắn khớp đơn vị tính = ĐVT). Dòng tiêu đề (Tên / Hạng mục / ĐVT / Số lượng), dòng trống, cột STT bỏ qua.
     Trả [dict(ten, dvt, so_luong, ty_le, ghi_chu)] (số giữ dạng chữ như người dùng gõ)."""
     from .nhap_don_gia import DVT as _MAU_DVT
+    from .hieu_tai_san import la_dong_tu_nhien, tach_dong
     re_dvt = re.compile(rf'^({_MAU_DVT}|ha/vụ|ha/ vụ|100m3/vụ|nhân khẩu|khẩu|tháng|hộ|người|trụ|cánh|chậu|cây|con|kg)$', re.I)
     kq = []
     for dong in str(chu or '').splitlines():
         if not dong.strip():
             continue
         o = [x.strip() for x in re.split(r'\t|;|\|', dong)]
+        if len(o) == 1 and la_dong_tu_nhien(o[0]):        # viết tự nhiên: "Xoài: 16 cây, 17 năm tuổi", "Tràm cây 1500 d28"
+            t = tach_dong(o[0])
+            if t is not None:
+                d = dict(ten=t['ten'], dvt=t['dvt'], so_luong=t['so_luong'], ty_le=t['ty_le'], ghi_chu=t['ghi_chu'],
+                         so_do=t['so_do'], kieu=t['kieu'], tuoi=t['tuoi'])
+                _tinh_so_luong(d)
+                kq.append(d)
+                continue
         if len(o) == 1:                                   # gõ tay một ô, cách nhau dấu cách: "Nhà tạm m2 4*5" (Tên ĐVT Số lượng)
             tach = _tach_dau_cach(o[0], re_dvt)
             if tach:
