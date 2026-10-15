@@ -1,4 +1,7 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.90 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.91 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.91**: **biểu tượng mới "3D LARC"** (ngôi nhà và chìa khóa vàng trên nền bản đồ địa chính xanh dương). Biểu tượng PABT.exe /
+> lối tắt Desktop đổi khi cài bộ cài 0.9.91; Windows còn giữ biểu tượng cũ thì bỏ ghim rồi ghim lại PABT hoặc khởi động lại máy.
 
 > **0.9.90**: **biểu tượng mới** (ô vuông xanh viền vàng, sách "Luật Đất đai 2024", chữ PABT). Biểu tượng PABT.exe / lối tắt Desktop
 > đổi khi cài bộ cài 0.9.90 (gói cập nhật .pabtcn chỉ đổi biểu tượng bên trong phần mềm). Windows giữ biểu tượng cũ trong bộ nhớ đệm:

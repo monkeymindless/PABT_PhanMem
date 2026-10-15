@@ -22,6 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pabt.ve_bieu_tuong import CO_ICO, thu_nho_muot  # noqa: E402
 
 NGUONG_NEN = 20         # tổng chênh 3 kênh so với màu nền: dưới mức này (và nối liền mép ảnh) là nền
+XAM_SAC = 10            # bóng đổ xám: chênh lệch kênh lớn nhất - nhỏ nhất tối đa
+XAM_SANG = 150          # bóng đổ xám: kênh tối nhất tối thiểu
 LAM_MIN = 2             # bán kính làm mịn mép (px ảnh gốc 1024)
 LE = 0.015              # lề quanh vật thể (tỷ lệ cạnh) - viền pha lê không chạm mép biểu tượng
 
@@ -71,6 +73,10 @@ def tach_nen(anh: QImage, canh: int = 512) -> QImage:
                           rgb[-8:, -8:].reshape(-1, 3)])
     nen = np.median(goc, axis=0)
     gan = np.abs(rgb - nen).sum(axis=2) < NGUONG_NEN
+    # bóng đổ xám trung tính quanh khối (ảnh LARC: R = G = B 204-247, rộng ~25 px dưới đáy): không có màu, đủ sáng -> cũng là nền
+    # (viền vàng / xanh có màu nên loang dừng ở đó; trước đây bóng này thành vệt sáng quanh biểu tượng trên nền tối)
+    sac = rgb.max(axis=2) - rgb.min(axis=2)
+    gan |= (sac <= XAM_SAC) & (rgb.min(axis=2) >= XAM_SANG)
     # loang từ mép ảnh qua các điểm gần màu nền (lặp nở 4 hướng tới khi không đổi)
     la_nen = np.zeros_like(gan)
     la_nen[0, :], la_nen[-1, :], la_nen[:, 0], la_nen[:, -1] = gan[0, :], gan[-1, :], gan[:, 0], gan[:, -1]

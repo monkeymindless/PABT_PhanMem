@@ -1144,6 +1144,10 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 - 0.9.90 biểu tượng (người dùng 15/10/2026): ảnh thiết kế mới `pabt/bieu_tuong_thiet_ke.webp` 2000 px (ô vuông xanh viền
   vàng, lưới địa chính, nhịp cầu, sách "Luật Đất đai 2024", chữ PABT) -> `tao_bieu_tuong.py` (tach_nen, như 0.9.87) -> png 512 + ico 9 cỡ.
   Exe / lối tắt / bộ cài chỉ đổi khi dựng lại bộ cài (PyInstaller --clean); gói .pabtcn chỉ đổi biểu tượng trong phần mềm.
+- 0.9.91 biểu tượng "3D LARC" (người dùng 15/10/2026): ảnh 1024 px nhà + chìa
+  khóa vàng, chữ LARC (tên trên biểu tượng là LARC, phần mềm vẫn tên PABT). `tao_bieu_tuong.tach_nen` thêm `XAM_SAC` / `XAM_SANG`:
+  bóng đổ xám trung tính nối liền mép ảnh cũng là nền (trước: vệt sáng quanh biểu tượng trên nền tối). Test `test_bieu_tuong_duy_nhat_co_vien`
+  theo mẫu LARC (xanh > 40%, vàng, trắng, không mảng đỏ, mép trong suốt).
 - 0.9.89 rà soát lỗi (người dùng 15/10/2026 "check lại toàn bộ mã nguồn"; thử các hàm đọc dữ liệu người gõ / dán bằng giá trị khó):
   `phan_loai_tai_san._co_the_la_ty_le` (số sau số lượng là tỷ lệ chỉ khi có % hoặc <= 500 - cột Đơn giá / Thành tiền dán từ Excel
   bỏ qua); `nhap_excel.chuan_cccd` (ô số 11 chữ số -> thêm 0 đầu; ô số 8 chữ số = CMND -> 9) dùng ở nhap_excel / nhap_tho / du_an_moi.gom
