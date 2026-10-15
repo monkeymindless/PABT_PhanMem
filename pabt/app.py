@@ -674,9 +674,9 @@ class CuaSoChinh(QMainWindow):
         if tho and dich is None and nhap_chi_tiet.la_file_chi_tiet(xl):    # mỗi sheet một phương án chi tiết
             return self.nhap_chi_tiet(xl)
         if dich is None:
-            mac_dinh = str(self.file if tho and self.file else Path(xl).with_suffix('.pabt'))
+            mac_dinh = str(self.file if tho and self.file else Path(xl).with_suffix(csdl.DUOI_DU_AN))
             hoi = {'options': QFileDialog.Option.DontConfirmOverwrite} if tho else {}   # tự hỏi "xóa trắng" bên dưới
-            dich, _ = QFileDialog.getSaveFileName(self, 'Lưu vào file dự án', mac_dinh, 'Dự án PABT (*.pabt)', **hoi)
+            dich, _ = QFileDialog.getSaveFileName(self, 'Lưu vào file dự án', mac_dinh, csdl.LOC_LUU, **hoi)
             if not dich:
                 return
             if tho and Path(dich).exists() and QMessageBox.question(
@@ -754,8 +754,8 @@ class CuaSoChinh(QMainWindow):
             return None
         vao_mo = self.con is not None and not self.chi_doc and dich is None
         if not vao_mo and dich is None:
-            dich, _ = QFileDialog.getSaveFileName(self, 'Lưu vào file dự án', str(Path(xl).with_suffix('.pabt')),
-                                                  'Dự án PABT (*.pabt)')
+            dich, _ = QFileDialog.getSaveFileName(self, 'Lưu vào file dự án', str(Path(xl).with_suffix(csdl.DUOI_DU_AN)),
+                                                  csdl.LOC_LUU)
             if not dich:
                 return None
         con_xem = self.con if vao_mo else (csdl.mo(dich, chi_doc=True) if dich and Path(dich).exists() else None)
@@ -807,7 +807,7 @@ class CuaSoChinh(QMainWindow):
 
     def mo_du_an(self):
         tm = self.file.parent if self.file else may_chu.thu_muc_mac_dinh()
-        p, _ = QFileDialog.getOpenFileName(self, 'Mở dự án', str(tm), 'Dự án PABT (*.pabt)')
+        p, _ = QFileDialog.getOpenFileName(self, 'Mở dự án', str(tm), csdl.LOC_MO)
         if p:
             self.mo(p)
 
@@ -1303,8 +1303,8 @@ class CuaSoChinh(QMainWindow):
         h.addStretch(1)
         self.nut_chao = {}
         mo_ta_nut = (
-            ('Dự án mới…', 'moi', 'Khởi tạo CSDL .pabt', 'Tạo dự án mới (3 bước) - Ctrl+N'),
-            ('Mở dự án…', 'mo', 'Chọn tệp từ máy / LAN', 'Mở file dự án có sẵn (.pabt) - Ctrl+O'),
+            ('Dự án mới…', 'moi', 'Khởi tạo CSDL .larc', 'Tạo dự án mới (3 bước) - Ctrl+N'),
+            ('Mở dự án…', 'mo', 'Chọn tệp từ máy / LAN', 'Mở file dự án có sẵn (.larc, .pabt) - Ctrl+O'),
             ('Nhập file Excel…', 'excel', 'Bảng kiểm đếm số liệu', 'Nhập nhanh từ bảng kiểm đếm Excel'),
         )
         from .giao_dien import CO_ICON_THE_CHAO, TheChao
@@ -1339,7 +1339,7 @@ class CuaSoChinh(QMainWindow):
         self.b_bo_gan.setToolTip('Bỏ khỏi danh sách gần đây; file dự án vẫn còn trên đĩa')
         self.b_bo_gan.clicked.connect(lambda: self._chay_lenh(lambda: self.xoa_du_an(xoa_file=False, tu_danh_sach=True)))
         self.b_xoa_gan = QPushButton('Xóa file dự án…')
-        self.b_xoa_gan.setToolTip('Xóa hẳn file .pabt đang chọn (không đưa vào Thùng rác). Thư mục bản in giữ nguyên.')
+        self.b_xoa_gan.setToolTip('Xóa hẳn file dự án đang chọn (không đưa vào Thùng rác). Thư mục bản in giữ nguyên.')
         self.b_xoa_gan.clicked.connect(lambda: self._chay_lenh(lambda: self.xoa_du_an(xoa_file=True, tu_danh_sach=True)))
         for b in (self.b_mo_gan, self.b_bo_gan, self.b_xoa_gan):
             h3.addWidget(b)
@@ -1537,7 +1537,7 @@ class CuaSoChinh(QMainWindow):
         self.lenh['Đóng dự án'].setEnabled(dang_mo)
         if hasattr(self, 'nut_chao'):
             goi_y = ('Mở file dự án khác (đóng dự án hiện tại, không thoát phần mềm) - Ctrl+O' if dang_mo
-                     else 'Mở file dự án có sẵn (.pabt) - Ctrl+O')
+                     else 'Mở file dự án có sẵn (.larc, .pabt) - Ctrl+O')
             self.nut_chao['Mở dự án…'].setToolTip(goi_y)
             self.the_chao['Mở dự án…'].setToolTip(goi_y)
         self._hien_trong_gan_day()
@@ -2397,7 +2397,7 @@ class CuaSoChinh(QMainWindow):
         if dich is None:
             goc = quan_ly.thu_muc_ho_so(self.con, self.file)
             mac_dinh = str((goc if goc.exists() else self.file.parent) / self.file.name)
-            dich, _ = QFileDialog.getSaveFileName(self, 'Lưu dự án thành', mac_dinh, 'Dự án PABT (*.pabt)')
+            dich, _ = QFileDialog.getSaveFileName(self, 'Lưu dự án thành', mac_dinh, csdl.LOC_LUU)
             if not dich:
                 return None
         dich = Path(dich)
@@ -2957,7 +2957,7 @@ def main() -> int:
     w.setWindowIcon(bieu_tuong())                       # (app.setWindowIcon ở ap_dung đã gán cho mọi cửa sổ; gắn thẳng cho chắc)
     w.dat_tieu_de()
     tep = [a for a in sys.argv[1:] if not a.startswith('--')]
-    co_file = bool(tep and tep[0].lower().endswith('.pabt'))
+    co_file = bool(tep and csdl.la_file_du_an(tep[0]))
     hien_cua_so(w)                         # dùng hết màn hình: thanh nút gọn 2 dòng, danh sách hộ rộng
     w.khoi_dong_may_chu(mo_lai=not co_file)   # máy chủ LAN (nếu có thiết lập): đăng nhập, mở lại dự án đang làm
     if co_file:

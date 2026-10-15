@@ -30,7 +30,7 @@ _CAI = [Path(os.environ.get(k, '')) / 'PABT' / 'PABT.exe' for k in ('ProgramFile
 _CAI.append(Path(os.environ.get('LOCALAPPDATA', '')) / 'Programs' / 'PABT' / 'PABT.exe')   # từ chối quyền quản trị / bản cũ
 CAI = next((p for p in _CAI if p.exists()), _CAI[0])      # 0.9.22+: mặc định Program Files (x86)\PABT
 MAY = Path(os.environ.get('PABT_THU_MUC_MAY') or Path(os.environ.get('APPDATA') or Path.home()) / 'PABT')
-DU_LIEU_CAM = re.compile(r'\.(pabt|pabtdt|xlsm)$|DT\d+|DoiChieu|BanIn_', re.I)     # không được có trong bản phát hành
+DU_LIEU_CAM = re.compile(r'\.(larc|pabt|pabtdt|xlsm)$|DT\d+|DoiChieu|BanIn_', re.I)     # không được có trong bản phát hành
 
 KQ = []          # (trạng thái, bước, chi tiết)
 NHAT_KY = []
@@ -188,10 +188,10 @@ def b_bo_cai():
     d = GOC / 'bo_cai'
     pb = phien_ban()
     # bộ cài có thể là bản cũ hơn (phiên bản mới chỉ phát hành gói cập nhật): lấy bộ cài mới nhất đang có
-    pc = max(ds_phien_ban(d, 'PABT_Setup_Universal_*.exe'), key=so, default=pb)
+    pc = max(ds_phien_ban(d, 'LARC_Setup_Universal_*.exe'), key=so, default=pb)
     ghi(f'Bộ cài mới nhất: {pc}  ·  gói cập nhật cần có: {pb}')
     # 0.9.26 (người dùng 11/10/2026): MỘT bộ cài cho mọi Windows + gói zip dự phòng (dung_bo_cai_win.MAC_DINH)
-    can = [f'PABT_Setup_Universal_{pc}.exe', f'PABT_ChayNgay_{pc}_Universal.zip', f'PABT_CapNhat_{pb}.pabtcn']
+    can = [f'LARC_Setup_Universal_{pc}.exe', f'PABT_ChayNgay_{pc}_Universal.zip', f'PABT_CapNhat_{pb}.pabtcn']
     loi, canh = [], []
     for t in can:
         f = d / t
@@ -305,8 +305,8 @@ def b_may_chu():
 
 @buoc('10. Cài thử bộ cài mới nhất (--cai-thu)')
 def b_cai_thu():
-    pb = max(ds_phien_ban(GOC / 'bo_cai', 'PABT_Setup_Universal_*.exe'), key=so, default=phien_ban())
-    bo = GOC / 'bo_cai' / f'PABT_Setup_Universal_{pb}.exe'             # một bộ cài cho mọi Windows (0.9.26)
+    pb = max(ds_phien_ban(GOC / 'bo_cai', 'LARC_Setup_Universal_*.exe'), key=so, default=phien_ban())
+    bo = GOC / 'bo_cai' / f'LARC_Setup_Universal_{pb}.exe'             # một bộ cài cho mọi Windows (0.9.26)
     if not bo.exists():
         return 'LOI', f'không có {bo.name}'
     ghi(f'Cài im lặng: {bo.name} /Q ...')

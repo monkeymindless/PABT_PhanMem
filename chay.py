@@ -356,7 +356,7 @@ def main(argv) -> int:
             _doi_chieu_va_in(_file_vao(so[0]))
             return 0
         xl = _file_vao(so[0])
-        f_pabt = Path(so[1]) if len(so) >= 2 else xl.with_suffix('.pabt')
+        f_pabt = Path(so[1]) if len(so) >= 2 else xl.with_suffix(csdl.DUOI_DU_AN)
         if f_pabt.resolve() == xl.resolve():
             raise LoiDoiSo('file dự án trùng với file Excel đầu vào.')
         if lenh == 'nhap-chi-tiet' and tc.get('trung', 'bo_qua') not in CACH_TRUNG:

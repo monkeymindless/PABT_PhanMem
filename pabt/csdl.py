@@ -9,6 +9,22 @@ from datetime import datetime
 from pathlib import Path
 
 PHIEN_BAN_CSDL = 16
+# đuôi file dự án (người dùng 15/10/2026: ".larc"); file .pabt của các bản trước vẫn mở / nhận như cũ (cùng CSDL SQLite)
+DUOI_DU_AN = '.larc'
+DUOI_DU_AN_CU = ('.pabt',)
+DUOI_MO = (DUOI_DU_AN,) + DUOI_DU_AN_CU
+LOC_LUU = 'Dự án LARC (*.larc)'                          # hộp lưu: luôn .larc
+LOC_MO = 'Dự án LARC (*.larc *.pabt)'                    # hộp mở: cả file .pabt cũ
+
+
+def la_file_du_an(p) -> bool:
+    return Path(str(p)).suffix.lower() in DUOI_MO
+
+
+def duoi_du_an(p) -> Path:
+    """Đường dẫn file dự án: giữ .larc / .pabt đã có, còn lại (không đuôi / đuôi khác) đổi sang .larc."""
+    p = Path(p)
+    return p if p.suffix.lower() in DUOI_MO else p.with_suffix(DUOI_DU_AN)
 # bảng danh mục, tham số: cố định (trigger chặn sửa); chỉ nạp / cập nhật bộ đơn giá mới mở khóa (mo_khoa_danh_muc)
 DANH_MUC = ('dm_taisan', 'dm_hotro', 'dm_loaidat', 'gia_dat', 'dm_xa', 'tham_so', 'bieu_thuong', 'quy_uoc', 'van_ban')
 THONG_BAO_KHOA = 'Danh mục đơn giá, tham số được cố định theo bộ đơn giá; chỉ cập nhật bằng lệnh Bộ đơn giá.'

@@ -29,7 +29,7 @@ def giai_thich(e: BaseException) -> tuple:
         return ('File dự án đang được máy khác (hoặc cửa sổ PABT khác) ghi.',
                 'Chờ vài giây rồi làm lại; nếu vẫn lỗi, mở dự án ở chế độ chỉ xem.')
     if isinstance(e, sqlite3.DatabaseError) and any(k in str(e).lower() for k in ('not a database', 'malformed', 'corrupt')):
-        return ('File dự án bị hỏng hoặc không phải file dự án PABT (.pabt).',
+        return ('File dự án bị hỏng hoặc không phải file dự án (.larc / .pabt).',
                 'Mở bản sao lưu gần nhất (lệnh "Lưu dự án thành…" / thư mục SaoLuu của máy chủ).')
     if isinstance(e, zipfile.BadZipFile):
         return ('File không đúng định dạng Excel / Word mới (có thể bị hỏng, hoặc là file .xls / .doc cũ đổi đuôi).',

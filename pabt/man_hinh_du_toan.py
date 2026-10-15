@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QComboBox, QDial
                                QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu, QMessageBox, QPushButton, QRadioButton,
                                QSizePolicy, QStackedWidget, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
-from . import du_toan
+from . import csdl, du_toan
 from .du_toan import DongDT, DuToan
 from .lap_pa import DanhMuc, LoiNhap, doc_so
 from .tien import D, KHONG, so_vn, tien_bang_chu, vn
@@ -156,12 +156,12 @@ class KhungDuToan(QWidget):
         khoi_dau = self._khoi_chuan_bi()                # 7 trường + Kinh phí QĐ08 (lưu trong .pabtdt)
         # ---- thanh nhập nhanh: Lấy khối lượng ▾ | Mục | (đất: loại đất, diện tích, đơn giá) / (tài sản: hàng dùng chung với hộ)
         self.b_lay = QPushButton('Lấy khối lượng')
-        self.b_lay.setToolTip('Lấy khối lượng (thay các dòng đang có) từ dự án đang mở, file dự án .pabt, file PABT Excel hoặc danh '
+        self.b_lay.setToolTip('Lấy khối lượng (thay các dòng đang có) từ dự án đang mở, file dự án (.larc / .pabt), file PABT Excel hoặc danh '
                               'sách thô; áp đơn giá hiện hành của bộ đơn giá')
         m_lay = QMenu(self.b_lay)
         self.b_tu_du_an = m_lay.addAction('Từ dự án đang mở', lambda: self.lay('du_an'))
         self.b_tu_du_an.setEnabled(con is not None)
-        m_lay.addAction('Từ file dự án .pabt…', lambda: self.lay('pabt'))
+        m_lay.addAction('Từ file dự án (.larc)…', lambda: self.lay('pabt'))
         m_lay.addAction('Từ file PABT Excel…', lambda: self.lay('excel'))
         m_lay.addAction('Từ danh sách thô…', lambda: self.lay('tho'))
         m_lay.addSeparator()
@@ -815,7 +815,7 @@ class KhungDuToan(QWidget):
                 self, TIEU_DE, 'Thay toàn bộ các dòng dự toán hiện có bằng khối lượng mới?') != QMessageBox.StandardButton.Yes:
             return None
         if nguon != 'du_an' and file is None:
-            loc = {'pabt': 'Dự án PABT (*.pabt)', 'excel': 'File PABT Excel (*.xlsm *.xlsx)',
+            loc = {'pabt': csdl.LOC_MO, 'excel': 'File PABT Excel (*.xlsm *.xlsx)',
                    'tho': 'Danh sách Excel (*.xlsx *.xlsm)'}[nguon]
             file, _ = QFileDialog.getOpenFileName(self, 'Chọn file', '', loc)
             if not file:

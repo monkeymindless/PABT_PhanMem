@@ -408,8 +408,7 @@ def kiem_tra_xuat_dot(con, dot_id: int) -> list:
 def luu_thanh(con, dich) -> Path:
     """Chép toàn bộ file dự án đang mở sang đường dẫn mới (SQLite backup, an toàn cả khi đang mở)."""
     dich = Path(dich)
-    if dich.suffix.lower() != '.pabt':
-        dich = dich.with_suffix('.pabt')
+    dich = csdl.duoi_du_an(dich)
     dich.parent.mkdir(parents=True, exist_ok=True)
     tam = dich.with_name(dich.name + '.tam')
     if tam.exists():

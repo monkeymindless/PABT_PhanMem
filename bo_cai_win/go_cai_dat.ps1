@@ -14,7 +14,7 @@ function GhiDuoc($d) {
     try { [System.IO.File]::WriteAllText($thu, ''); [System.IO.File]::Delete($thu); return $true } catch { return $false }
 }
 if (-not $Im) {
-    $tl = [System.Windows.Forms.MessageBox]::Show("Gỡ PABT khỏi máy?`n(Các file dự án .pabt của bạn được giữ nguyên.)", 'Gỡ cài đặt PABT', 'YesNo', 'Question')
+    $tl = [System.Windows.Forms.MessageBox]::Show("Gỡ LARC khỏi máy?`n(Các file dự án .larc / .pabt của bạn được giữ nguyên.)", 'Gỡ cài đặt LARC', 'YesNo', 'Question')
     if ($tl -ne 'Yes') { exit 2 }
 }
 # PowerShell 32-bit không đọc được .Path của PABT 64-bit (trả về rỗng) nên không tắt được phần mềm đang mở.
@@ -27,11 +27,17 @@ function TatPabt($d) {
 TatPabt $dich
 foreach ($p in @((Join-Path ([Environment]::GetFolderPath('Programs')) 'PABT - Lập phương án bồi thường.lnk'),
                  (Join-Path ([Environment]::GetFolderPath('Programs')) 'PABT.lnk'),      # tên dự phòng (máy không tạo được tên có dấu)
-                 (Join-Path ([Environment]::GetFolderPath('Desktop')) 'PABT.lnk'))) {
+                 (Join-Path ([Environment]::GetFolderPath('Desktop')) 'PABT.lnk'),
+                 # tên hiển thị LARC (0.9.92)
+                 (Join-Path ([Environment]::GetFolderPath('Programs')) 'LARC - Bồi thường, hỗ trợ, tái định cư.lnk'),
+                 (Join-Path ([Environment]::GetFolderPath('Programs')) 'LARC.lnk'),
+                 (Join-Path ([Environment]::GetFolderPath('Desktop')) 'LARC.lnk'))) {
     if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force }
 }
-if ((Get-ItemProperty 'HKCU:\Software\Classes\.pabt' -ErrorAction SilentlyContinue).'(default)' -eq 'PABT.DuAn') {
-    Remove-Item 'HKCU:\Software\Classes\.pabt' -Recurse -Force
+foreach ($duoi in '.larc', '.pabt') {
+    if ((Get-ItemProperty "HKCU:\Software\Classes\$duoi" -ErrorAction SilentlyContinue).'(default)' -eq 'PABT.DuAn') {
+        Remove-Item "HKCU:\Software\Classes\$duoi" -Recurse -Force
+    }
 }
 Remove-Item 'HKCU:\Software\Classes\PABT.DuAn' -Recurse -Force -ErrorAction SilentlyContinue
 if ((Get-ItemProperty 'HKCU:\Software\Classes\.pabtcn' -ErrorAction SilentlyContinue).'(default)' -eq 'PABT.CapNhat') {
@@ -47,14 +53,14 @@ Remove-Item -LiteralPath (Join-Path $env:APPDATA 'PABT\cap_nhat') -Recurse -Forc
 Remove-Item 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PABT' -Recurse -Force -ErrorAction SilentlyContinue
 # lọc theo đuôi bằng Where-Object: -Include KHÔNG có tác dụng khi dùng -LiteralPath (trả về mọi file)
 $giu = @(Get-ChildItem -LiteralPath $dich -Recurse -Force -ErrorAction SilentlyContinue |
-         Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
+         Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.larc' -or $_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
 $tb = 'Đã gỡ PABT.'
 # lệnh xóa (một dòng, không dấu ngoặc kép - truyền qua dòng lệnh powershell -Command); $d = thư mục cài.
 # Xóa hết: thử lại tới 30 giây (Windows / diệt virus còn giữ file vừa đóng một lúc - một lần rmdir sau 2 giây từng để sót thư mục
 # rỗng). Giữ dự án (có file .pabt trong thư mục cài): chỉ xóa file phần mềm và thư mục rỗng.
 $XOA_HET = 'for ($i = 0; $i -lt 30; $i++) { Start-Sleep 1; Get-WmiObject Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq ''PABT.exe'' -and $_.ExecutablePath -and $_.ExecutablePath.ToLower().StartsWith($d.ToLower()) } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction SilentlyContinue; ' +
            'if (-not (Test-Path -LiteralPath $d)) { break } }'
-$XOA_GIU = 'Get-ChildItem -LiteralPath $d -Recurse -Force | Where-Object { -not $_.PSIsContainer -and $_.Extension -ne ''.pabt'' -and ' +
+$XOA_GIU = 'Get-ChildItem -LiteralPath $d -Recurse -Force | Where-Object { -not $_.PSIsContainer -and $_.Extension -ne ''.larc'' -and $_.Extension -ne ''.pabt'' -and ' +
            '$_.Extension -ne ''.pabtdt'' } | Remove-Item -Force -ErrorAction SilentlyContinue; Get-ChildItem -LiteralPath $d -Recurse ' +
            '-Force | Where-Object { $_.PSIsContainer } | Sort-Object { $_.FullName.Length } -Descending | Where-Object { @(Get-ChildItem ' +
            '-LiteralPath $_.FullName -Force).Count -eq 0 } | Remove-Item -Force -ErrorAction SilentlyContinue'

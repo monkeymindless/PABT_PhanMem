@@ -1,4 +1,8 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.91 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.92 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.92**: tên hiển thị **LARC** (lối tắt Desktop "LARC", tên đầy đủ "LARC - Bồi thường, hỗ trợ, tái định cư", bộ cài
+> `LARC_Setup_Universal_<phiên bản>.exe`); file dự án mới đuôi **.larc** - file **.pabt** cũ vẫn mở và lưu bình thường; biểu tượng
+> Desktop / thanh tác vụ đổi đúng khi cài bản mới (mỗi phiên bản một file biểu tượng riêng).
 
 > **0.9.91**: **biểu tượng mới "3D LARC"** (ngôi nhà và chìa khóa vàng trên nền bản đồ địa chính xanh dương). Biểu tượng PABT.exe /
 > lối tắt Desktop đổi khi cài bộ cài 0.9.91; Windows còn giữ biểu tượng cũ thì bỏ ghim rồi ghim lại PABT hoặc khởi động lại máy.

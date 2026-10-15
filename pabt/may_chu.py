@@ -3,7 +3,7 @@ r"""Làm việc qua máy chủ trong mạng nội bộ (LAN): tài khoản ngư�
 "Máy chủ" là một thư mục dùng chung trên máy chủ của đơn vị (ví dụ \\MAYCHU\PABT hoặc ổ mạng Z:\PABT) - không cần cài phần mềm
 máy chủ riêng. Cấu trúc:
     <máy chủ>\pabt_may_chu.sqlite   tài khoản (mật khẩu băm PBKDF2), dự án gần đây của từng người, dự án đang lấy về, nhật ký
-    <máy chủ>\DuAn\*.pabt           các file dự án dùng chung (khóa nhiều máy bằng khoa.py như khi mở file bất kỳ)
+    <máy chủ>\DuAn\*.larc          các file dự án dùng chung (khóa nhiều máy bằng khoa.py như khi mở file bất kỳ)
     <máy chủ>\SaoLuu\               bản cũ được sao lưu trước khi ghi đè lúc đưa dự án offline lên lại
 Không thiết lập máy chủ (hoặc máy chủ không truy cập được) thì phần mềm làm việc offline với file trên máy như trước.
 Quyền đọc / ghi thư mục dùng chung do Windows cấp; đăng nhập trong phần mềm để biết ai làm việc gì và nối tiếp dự án ở máy bất kỳ.
@@ -23,6 +23,8 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+
+from . import csdl
 
 TEN_CSDL = 'pabt_may_chu.sqlite'
 THU_MUC_DU_AN = 'DuAn'
@@ -433,7 +435,7 @@ def ds_gan_day(phien=None) -> list:
 def du_an_cuoi(phien=None):
     """Dự án người dùng mở gần nhất (còn tồn tại), để tự mở lại khi đăng nhập ở máy bất kỳ."""
     for p, _ in ds_gan_day(phien):
-        if p.suffix.lower() == '.pabt' and p.exists():
+        if csdl.la_file_du_an(p) and p.exists():
             return p
     return None
 
@@ -454,7 +456,7 @@ def ds_du_an(goc=None) -> list:
     cu = _doc_chi_muc(tm)
     moi = {}
     ds = []
-    for f in tm.rglob('*.pabt'):                        # stat MỘT lần mỗi file (thư mục mạng: mỗi lần một vòng hỏi máy chủ)
+    for f in (x for duoi in csdl.DUOI_MO for x in tm.rglob('*' + duoi)):                        # stat MỘT lần mỗi file (thư mục mạng: mỗi lần một vòng hỏi máy chủ)
         try:
             ds.append((f, f.stat()))
         except OSError:
@@ -549,7 +551,7 @@ def lay_ve(file, phien=None) -> Path:
         k = khoa.KhoaFile(f).nguoi_khac()
         if k:
             raise LoiMayChu(f'Dự án đang được sửa trên {khoa.mo_ta(k)}: chờ đóng rồi mới mang về.')
-        dich = thu_muc_offline() / f'{f.stem}__{phien.tai_khoan}.pabt'
+        dich = thu_muc_offline() / f'{f.stem}__{phien.tai_khoan}{f.suffix}'
         dich.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(f, dich)
         sua = f.stat().st_mtime
@@ -590,7 +592,7 @@ def dua_len(ban_sao, phien=None, ep: bool = False) -> Path:
         raise LoiMayChu('XUNG ĐỘT: bản trên máy chủ đã được sửa sau lúc mang về. Chọn "Vẫn đưa lên" để ghi đè '
                         '(bản trên máy chủ được sao lưu vào thư mục SaoLuu), hoặc liên hệ người đã sửa.')
     if f.exists():
-        sl = goc / THU_MUC_SAO_LUU / f'{f.stem}_{datetime.now():%Y%m%d_%H%M%S}.pabt'
+        sl = goc / THU_MUC_SAO_LUU / f'{f.stem}_{datetime.now():%Y%m%d_%H%M%S}{f.suffix}'
         sl.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(f, sl)
     f.parent.mkdir(parents=True, exist_ok=True)

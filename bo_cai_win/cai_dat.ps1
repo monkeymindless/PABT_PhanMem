@@ -24,7 +24,12 @@ $GOC = $GOC.TrimEnd('\')
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
-$TEN = 'PABT - Lập phương án bồi thường, hỗ trợ'
+# tên hiển thị bên ngoài (người dùng 15/10/2026): lối tắt Desktop "LARC", mô tả / Start Menu / Cài đặt > Ứng dụng tên đầy đủ;
+# chương trình bên trong vẫn là PABT (PABT.exe, thư mục cài PABT, file .pabt)
+$TEN = 'LARC - Bồi thường, hỗ trợ, tái định cư'
+$TEN_NGAN = 'LARC'
+# lối tắt các bản trước (gỡ khi cài bản mới - tên đã đổi)
+$LOI_TAT_CU = @('PABT - Lập phương án bồi thường.lnk', 'PABT.lnk')
 # định danh ứng dụng trên taskbar - PHẢI trùng pabt.app.APP_USER_MODEL_ID (tiến trình PABT tự đăng ký khi mở): lối tắt mang cùng
 # định danh thì cửa sổ đang chạy nhập vào nút đã ghim, ghim lên taskbar giữ biểu tượng PABT (không tách hai nút / mất biểu tượng)
 $APP_ID = 'gov.pabt.boithuong.enterprise.2026'
@@ -69,7 +74,7 @@ function KiemTraMay {
     if ($v.Major -eq 6 -and $v.Minor -eq 1 -and $v.Build -lt 7601) {
         return 'Windows 7 cần cài Service Pack 1 (SP1) trước khi cài PABT.' }
     if ($BAN -eq 'win10') {
-        $khac = "dùng bộ cài PABT_CaiDat_$($PHIEN_BAN)_Win7-8-10_x86.exe hoặc PABT_Setup_Universal_$($PHIEN_BAN).exe (chạy được trên mọi Windows từ 7 SP1)."
+        $khac = "dùng bộ cài PABT_CaiDat_$($PHIEN_BAN)_Win7-8-10_x86.exe hoặc LARC_Setup_Universal_$($PHIEN_BAN).exe (chạy được trên mọi Windows từ 7 SP1)."
         if ($v.Major -lt 10) { return "Bộ cài này dành cho Windows 10 / 11. Máy này là Windows $($v.Major).$($v.Minor): $khac" }
         if (-not $MAY64) { return "Máy này là Windows 32-bit: $khac" }
         if ($v.Build -lt 17763) { return "Windows 10 bản cũ (build $($v.Build); bộ cài này cần bản 1809 - build 17763 trở lên): $khac" }
@@ -280,6 +285,24 @@ public static class PabtLoiTat {
         ((IPersistFile)l).Save(lnk, true);
         Marshal.ReleaseComObject(l);
     }
+    // lối tắt đã có (ghim taskbar / Start) trỏ tới exe: đổi biểu tượng + mô tả. Trả true nếu đã sửa
+    public static bool DoiBieuTuong(string lnk, string exe, string bieuTuong, string moTa, string appId) {
+        IShellLinkW l = (IShellLinkW)new ShellLink();
+        try {
+            ((IPersistFile)l).Load(lnk, 2);             // STGM_READWRITE
+            StringBuilder p = new StringBuilder(1024);
+            l.GetPath(p, p.Capacity, IntPtr.Zero, 0);
+            if (!string.Equals(p.ToString(), exe, StringComparison.OrdinalIgnoreCase)) return false;
+            l.SetIconLocation(bieuTuong, 0);
+            l.SetDescription(moTa);
+            try { DatAppId(l, appId); } catch (Exception) { }
+            ((IPersistFile)l).Save(lnk, true);
+            return true;
+        } finally { Marshal.ReleaseComObject(l); }
+    }
+    [DllImport("shell32.dll")] static extern void SHChangeNotify(int e, uint f, IntPtr a, IntPtr b);
+    // SHCNE_ASSOCCHANGED: Explorer / taskbar vẽ lại biểu tượng lối tắt
+    public static void LamMoi() { SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero); }
 }
 '@
 
@@ -291,9 +314,9 @@ function TaoLoiTat($lnk, $exe, $thu, $ico) {
         if (Test-Path -LiteralPath $lnk) { return $lnk }
     } catch { Ghi "Lối tắt (IShellLinkW) lỗi: $_" }
     try {                                       # dự phòng: WScript.Shell với tên không dấu
-        $p = Join-Path (Split-Path $lnk) 'PABT.lnk'
+        $p = Join-Path (Split-Path $lnk) 'LARC.lnk'
         $l = (New-Object -ComObject WScript.Shell).CreateShortcut($p)
-        $l.TargetPath = $exe; $l.WorkingDirectory = $thu; $l.IconLocation = "$ico,0"; $l.Description = 'PABT'
+        $l.TargetPath = $exe; $l.WorkingDirectory = $thu; $l.IconLocation = "$ico,0"; $l.Description = 'LARC'
         $l.Save()
         return $p
     } catch { Ghi "Lối tắt (WScript) lỗi: $_" }
@@ -461,7 +484,7 @@ function KiemTraThuMuc($dich) {
         throw "Thư mục $dich đã có file khác (không phải bản cài PABT). Chọn thư mục trống hoặc thư mục PABT đã cài trước đây." }
     # lọc đuôi bằng Where-Object (-Include không có tác dụng với -LiteralPath); -LiteralPath: tên có "[" không bị hiểu là ký tự đại diện
     $da = @(Get-ChildItem -LiteralPath $dich -Recurse -Force -ErrorAction SilentlyContinue |
-            Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
+            Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.larc' -or $_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
     if ($da.Count -gt 0) {
         throw "Thư mục cài có $($da.Count) file dự án (ví dụ $($da[0].FullName)). Chuyển các file dự án ra thư mục khác rồi cài lại." }
 }
@@ -473,7 +496,7 @@ function GoBanCu($cu, $dich) {
     try { $cu = [System.IO.Path]::GetFullPath($cu).TrimEnd('\') } catch { return }
     if ($cu -eq $dich.TrimEnd('\') -or -not (Test-Path -LiteralPath (Join-Path $cu 'PABT.exe'))) { return }
     $da = @(Get-ChildItem -LiteralPath $cu -Recurse -Force -ErrorAction SilentlyContinue |
-            Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
+            Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.larc' -or $_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
     if ($da.Count -gt 0) { Ghi "Giữ bản cũ $cu (có $($da.Count) file dự án)"; return }
     try {
         XoaThuMucCu $cu
@@ -490,20 +513,41 @@ function Cai($dich, $desktop, $lienKet, $tienDo) {
     Ghi "Đã chép $(DemFile $dich) file (PowerShell $($PSVersionTable.PSVersion), Windows $([Environment]::OSVersion.Version))"
     if ($tienDo) { & $tienDo 88 'Tạo biểu tượng, liên kết file…' }
     $exe = Join-Path $dich 'PABT.exe'
-    $ico = Join-Path $dich 'PABT.ico'
+    # biểu tượng MANG SỐ PHIÊN BẢN (LARC_<ver>.ico): bộ đệm biểu tượng của Windows giữ ảnh theo ĐƯỜNG DẪN file - trước đây mọi bản
+    # dùng chung PABT.ico nên đổi biểu tượng (0.9.87 -> 0.9.91) Desktop / taskbar vẫn hiện ảnh cũ
+    $ico = Join-Path $dich "LARC_$PHIEN_BAN.ico"
+    if (-not (Test-Path -LiteralPath $ico)) { $ico = Join-Path $dich 'PABT.ico' }
     if (-not (Test-Path -LiteralPath $ico)) { $ico = $exe }
-    $lnk = @((Join-Path ([Environment]::GetFolderPath('Programs')) 'PABT - Lập phương án bồi thường.lnk'))
-    $dk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'PABT.lnk'
+    $thuPr = [Environment]::GetFolderPath('Programs'); $thuDk = [Environment]::GetFolderPath('Desktop')
+    foreach ($t in $LOI_TAT_CU) {                    # lối tắt tên cũ (PABT) của bản trước
+        foreach ($p in @((Join-Path $thuPr $t), (Join-Path $thuDk $t))) {
+            if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue }
+        }
+    }
+    $lnk = @((Join-Path $thuPr "$TEN.lnk"))
+    $dk = Join-Path $thuDk "$TEN_NGAN.lnk"
     if ($desktop) { $lnk += $dk } elseif (Test-Path -LiteralPath $dk) { Remove-Item -LiteralPath $dk -Force }
     $script:LOI_TAT = @()
     foreach ($p in $lnk) {
         $da = TaoLoiTat $p $exe $dich $ico
         if ($da) { Ghi "Lối tắt: $da" } else { $script:LOI_TAT += (Split-Path $p -Leaf) }
     }
+    # PABT đã ghim lên taskbar / Start (lối tắt Windows tạo khi ghim): đổi sang biểu tượng mới
+    $ghim = Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned'
+    if (Test-Path -LiteralPath $ghim) {
+        foreach ($g in @(Get-ChildItem -LiteralPath $ghim -Recurse -Force -ErrorAction SilentlyContinue |
+                         Where-Object { -not $_.PSIsContainer -and $_.Extension -eq '.lnk' })) {
+            try { if ([PabtLoiTat]::DoiBieuTuong($g.FullName, $exe, $ico, $TEN, $APP_ID)) { Ghi "Lối tắt đã ghim: $($g.FullName)" } }
+            catch { }
+        }
+    }
+    try { [PabtLoiTat]::LamMoi() } catch { }
     # khóa registry: New-Item -Value đặt giá trị mặc định (cách viết chạy được cả PowerShell 2.0)
     if ($lienKet) {
+        # .larc = file dự án từ 15/10/2026; .pabt của các bản trước vẫn mở bằng phần mềm (cùng định dạng)
+        New-Item 'HKCU:\Software\Classes\.larc' -Value 'PABT.DuAn' -Force | Out-Null
         New-Item 'HKCU:\Software\Classes\.pabt' -Value 'PABT.DuAn' -Force | Out-Null
-        New-Item 'HKCU:\Software\Classes\PABT.DuAn' -Value 'Dự án PABT' -Force | Out-Null
+        New-Item 'HKCU:\Software\Classes\PABT.DuAn' -Value 'Dự án LARC' -Force | Out-Null
         New-Item 'HKCU:\Software\Classes\PABT.DuAn\DefaultIcon' -Value "`"$ico`",0" -Force | Out-Null
         New-Item 'HKCU:\Software\Classes\PABT.DuAn\shell\open\command' -Value "`"$exe`" `"%1`"" -Force | Out-Null
     }
@@ -529,7 +573,7 @@ function Cai($dich, $desktop, $lienKet, $tienDo) {
     # Gỡ im lặng (công cụ quản trị chờ lệnh chạy xong): giữ lệnh PowerShell.
     $goAn = "`"$exe`" go-cai-dat"
     $mb = [int]((Get-ChildItem -LiteralPath $dich -Recurse -Force | Where-Object { -not $_.PSIsContainer } | Measure-Object Length -Sum).Sum / 1KB)
-    foreach ($kv in @(@('DisplayName', $TEN), @('DisplayVersion', $PHIEN_BAN), @('Publisher', 'PABT'), @('InstallLocation', $dich),
+    foreach ($kv in @(@('DisplayName', $TEN), @('DisplayVersion', $PHIEN_BAN), @('Publisher', $TEN_NGAN), @('InstallLocation', $dich),
                       @('DisplayIcon', "$ico,0"), @('UninstallString', $goAn), @('QuietUninstallString', $goIm))) {
         New-ItemProperty $k -Name $kv[0] -Value $kv[1] -PropertyType String -Force | Out-Null
     }
@@ -597,7 +641,7 @@ if ($Im) {
 $XANH = [System.Drawing.Color]::FromArgb(10, 37, 64); $VANG = [System.Drawing.Color]::FromArgb(255, 213, 79)
 $f = New-Object System.Windows.Forms.Form
 $RONG_CUA_SO = 620                                              # 620 x 440 (người dùng 13/10/2026); cao thêm khi băng tiêu đề / dòng Visual C++ cần chỗ
-$f.Text = "Cài đặt PABT $PHIEN_BAN - $TEN_BAN"; $f.ClientSize = New-Object System.Drawing.Size($RONG_CUA_SO, 440)
+$f.Text = "Cài đặt $TEN_NGAN $PHIEN_BAN - $TEN_BAN"; $f.ClientSize = New-Object System.Drawing.Size($RONG_CUA_SO, 440)
 $f.FormBorderStyle = 'FixedDialog'; $f.MaximizeBox = $false; $f.StartPosition = 'CenterScreen'
 $f.Font = New-Object System.Drawing.Font('Segoe UI', 9.5); $f.BackColor = [System.Drawing.Color]::White
 $icoF = Join-Path $GOC 'PABT.ico'
@@ -704,7 +748,7 @@ $bChon.Add_Click({
     } })
 $cDesk = New-Object System.Windows.Forms.CheckBox; $cDesk.Text = 'Tạo biểu tượng PABT trên Desktop'; $cDesk.Checked = -not $KhongDesktop
 $cDesk.Location = New-Object System.Drawing.Point(24, ($y + 58)); $cDesk.AutoSize = $true; $f.Controls.Add($cDesk)
-$cLk = New-Object System.Windows.Forms.CheckBox; $cLk.Text = 'Mở file dự án .pabt bằng PABT khi nhấp đúp'; $cLk.Checked = -not $KhongLienKet
+$cLk = New-Object System.Windows.Forms.CheckBox; $cLk.Text = 'Mở file dự án .larc bằng LARC khi nhấp đúp'; $cLk.Checked = -not $KhongLienKet
 $cLk.Location = New-Object System.Drawing.Point(24, ($y + 84)); $cLk.AutoSize = $true; $f.Controls.Add($cLk)
 $cVc = New-Object System.Windows.Forms.CheckBox; $cVc.AutoSize = $true; $cVc.Location = New-Object System.Drawing.Point(24, ($y + 110))
 if (-not $CO_VC) { $cVc.Text = "Thư viện Visual C++: đóng gói sẵn trong PABT, không cần cài thêm"; $cVc.Checked = $false; $cVc.Enabled = $false }
@@ -735,7 +779,7 @@ $ke = New-Object System.Windows.Forms.Panel; $ke.Location = New-Object System.Dr
 $ke.Size = New-Object System.Drawing.Size(($RONG_THAN - 28), 1); $ke.BackColor = $HP_KE; $the.Controls.Add($ke)
 $lbAn = New-Object System.Windows.Forms.Label; $lbAn.AutoSize = $true; $lbAn.UseMnemonic = $false; $lbAn.UseCompatibleTextRendering = $true; $lbAn.ForeColor = $XANH_NGOC
 $lbAn.Font = New-Object System.Drawing.Font('Segoe UI', 9.5, [System.Drawing.FontStyle]::Bold)
-$lbAn.Text = 'BẢO VỆ DỮ LIỆU: Các tệp dự án (.pabt) và file Excel của bạn luôn an toàn 100%!'
+$lbAn.Text = 'BẢO VỆ DỮ LIỆU: Các tệp dự án (.larc, .pabt) và file Excel của bạn luôn an toàn 100%!'
 $lbAn.Location = New-Object System.Drawing.Point(16, 82)
 $hKhien = HinhBieu 0x1F6E1 $XANH_NGOC 19
 if ($hKhien) {
@@ -868,7 +912,7 @@ $bCai.Add_Click({
 $bXoa.Add_Click({
     if (-not (CoBanCu $oThu.Text)) { CapNhatNutCu; return }
     $hoi = [System.Windows.Forms.MessageBox]::Show($f, ("Gỡ cài đặt PABT trong`r`n$($oThu.Text)?`r`n`r`n" +
-        'Gỡ chương trình, biểu tượng và liên kết file. File dự án .pabt của bạn được giữ nguyên.'),
+        'Gỡ chương trình, biểu tượng và liên kết file. File dự án .larc / .pabt của bạn được giữ nguyên.'),
         'Gỡ cài đặt PABT', 'YesNo', 'Question')
     if ($hoi -ne 'Yes') { return }
     $bCai.Enabled = $false; $bXoa.Enabled = $false; $bHuy.Enabled = $false; $bChon.Enabled = $false; $oThu.Enabled = $false
@@ -886,7 +930,7 @@ $bXoa.Add_Click({
             $tt.Text = "Chưa xóa hết thư mục $($oThu.Text) (mã $($pr.ExitCode)). Đóng PABT nếu vẫn đang chạy, chọn Có khi Windows hỏi quyền, rồi bấm `"Gỡ cài đặt`" lại."
         } else {
             $tt.ForeColor = [System.Drawing.Color]::DarkGreen
-            $tt.Text = "Đã xóa cài đặt PABT trong $($oThu.Text). File dự án .pabt được giữ. Bấm `"Cài đặt`" nếu muốn cài bản $PHIEN_BAN."
+            $tt.Text = "Đã xóa cài đặt PABT trong $($oThu.Text). File dự án .larc / .pabt được giữ. Bấm `"Cài đặt`" nếu muốn cài bản $PHIEN_BAN."
         }
     } catch {
         Ghi "LỖI gỡ: $_"

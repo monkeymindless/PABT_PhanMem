@@ -10,7 +10,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QLabel, QMessageBox, QPushButton,
                                QTableWidget, QWidget, QTableWidgetItem, QVBoxLayout)
 
-from . import chua_benh_csdl
+from . import chua_benh_csdl, csdl
 
 MAU_MUC = {'dat': '#047857', 'canh_bao': '#B45309', 'loi': '#B91C1C'}
 CHU_MUC = {'dat': 'Đạt', 'canh_bao': 'Lưu ý', 'loi': 'Lỗi'}
@@ -107,7 +107,7 @@ class HopChanDoanHeThong(QDialog):
             self.lb_tep.setText(f'Dự án đang mở ({Path(self.file_pabt).name}): {self.kiem_tra_file["thong_bao"]}')
         else:
             self.kiem_tra_file = None
-            self.lb_tep.setText('Chưa mở dự án: "Kiểm tra & sửa file dự án…" sẽ hỏi chọn file .pabt.')
+            self.lb_tep.setText('Chưa mở dự án: "Kiểm tra & sửa file dự án…" sẽ hỏi chọn file dự án (.larc).')
         return ds
 
     def _bao(self, chu: str, canh_bao: bool = False) -> None:
@@ -120,7 +120,7 @@ class HopChanDoanHeThong(QDialog):
         if not f:
             if self.im_lang:
                 return None
-            f, _ = QFileDialog.getOpenFileName(self, 'Chọn file dự án cần kiểm tra và sửa', '', 'Dự án PABT (*.pabt)')
+            f, _ = QFileDialog.getOpenFileName(self, 'Chọn file dự án cần kiểm tra và sửa', '', csdl.LOC_MO)
             if not f:
                 return None
         dang_mo = bool(self.file_pabt) and Path(f).resolve() == Path(self.file_pabt).resolve()

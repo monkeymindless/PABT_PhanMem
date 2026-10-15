@@ -7,6 +7,14 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('0.9.92', '15/10/2026', (
+        'Tên hiển thị mới: biểu tượng Desktop "LARC", tên đầy đủ "LARC - Bồi thường, hỗ trợ, tái định cư" (Start Menu, Cài đặt > Ứng '
+        'dụng); bộ cài LARC_Setup_Universal. Cài bản này thì lối tắt tên PABT cũ được thay bằng lối tắt LARC.',
+        'Biểu tượng Desktop / thanh tác vụ không còn hiện ảnh cũ sau khi cập nhật: mỗi phiên bản dùng file biểu tượng riêng, lối tắt đã '
+        'ghim lên thanh tác vụ cũng được đổi biểu tượng.',
+        'File dự án mới có đuôi .larc. File .pabt của các bản trước vẫn mở, lưu bình thường (giữ nguyên đuôi); bấm đúp file .larc / '
+        '.pabt đều mở bằng phần mềm.',
+    )),
     ('0.9.91', '15/10/2026', (
         'Biểu tượng phần mềm mới "3D LARC": ô vuông xanh dương viền vàng, ngôi nhà và chìa khóa vàng trên nền bản đồ địa chính. '
         'Biểu tượng sắc nét hơn trên thanh tác vụ nền tối (bỏ viền bóng xám của ảnh gốc). PABT.exe, lối tắt Desktop và bộ cài đổi khi '

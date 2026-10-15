@@ -133,6 +133,26 @@ class TestKichBanCai(unittest.TestCase):
             kq = subprocess.run(['powershell', '-NoProfile', '-Command', lenh], capture_output=True, text=True, timeout=120)
             self.assertEqual(kq.stdout.strip(), '0', f'{ten}: {kq.stdout} {kq.stderr}')
 
+    def test_ten_larc_va_bieu_tuong_theo_phien_ban(self):
+        # người dùng 15/10/2026: lối tắt Desktop "LARC", tên đầy đủ "LARC - Bồi thường, hỗ trợ, tái định cư", bộ cài LARC_Setup_Universal
+        s = (BC / 'cai_dat.ps1').read_text(encoding='utf-8-sig')
+        self.assertIn("$TEN = 'LARC - Bồi thường, hỗ trợ, tái định cư'", s)
+        self.assertIn('$dk = Join-Path $thuDk "$TEN_NGAN.lnk"', s)
+        self.assertIn("@('Publisher', $TEN_NGAN)", s)
+        # biểu tượng mang số phiên bản (bộ đệm biểu tượng Windows giữ ảnh theo đường dẫn) + đổi biểu tượng lối tắt đã ghim taskbar
+        self.assertIn('$ico = Join-Path $dich "LARC_$PHIEN_BAN.ico"', s)
+        self.assertIn('DoiBieuTuong', s)
+        self.assertIn('LamMoi()', s)
+        self.assertIn("'HKCU:\\Software\\Classes\\.larc' -Value 'PABT.DuAn'", s)            # file dự án .larc (vẫn mở .pabt)
+        g = (BC / 'go_cai_dat.ps1').read_text(encoding='utf-8-sig')
+        self.assertIn("'LARC.lnk'", g)
+        self.assertIn("''.larc''", g)                                                       # gỡ cài giữ file dự án .larc
+        import dung_bo_cai_win as d
+        self.assertIn(f'LARC_{d.phien_ban()}.ico', [t for t, _ in d._ds_chuong_trinh('win10')]
+                      if (GOC / 'dist' / 'PABT' / 'PABT.exe').exists() else [f'LARC_{d.phien_ban()}.ico'])
+        self.assertIn("f'LARC_Setup_Universal_{pb}.exe'", (BC / 'dung_bo_cai_win.py').read_text(encoding='utf-8'))
+        self.assertTrue(d.DU_LIEU_CAM.search('du_an.larc'))
+
 
 class TestThuVien(unittest.TestCase):
     def test_kiem_dll(self):

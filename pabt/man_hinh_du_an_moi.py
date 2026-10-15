@@ -277,7 +277,7 @@ class HopDuAnMoi(QDialog):
         h = QHBoxLayout()
         h.addWidget(self.o_file, 1)
         h.addWidget(b)
-        f.addRow(_nhan('Lưu file dự án (.pabt):'), h)
+        f.addRow(_nhan('Lưu file dự án (.larc):'), h)
         self.c_tu_lap = QCheckBox('Tự lập phương án: mục 1 từ các thửa (giá theo bảng giá đất), mục 4 theo gợi ý hỗ trợ QĐ 42/2025')
         self.c_tu_lap.setChecked(True)
         self.c_in = QCheckBox('Xuất 2 bảng in chuẩn (phương án chi tiết từng hộ, bảng tổng hợp) vào thư mục cạnh file dự án')
@@ -294,8 +294,8 @@ class HopDuAnMoi(QDialog):
         return w
 
     def chon_file(self):
-        mac_dinh = self.o_file.text() or str(may_chu.thu_muc_mac_dinh() / f'{self.o["ten"].text()[:60] or "DuAn"}.pabt')
-        p, _ = QFileDialog.getSaveFileName(self, 'Lưu file dự án', mac_dinh, 'Dự án PABT (*.pabt)')
+        mac_dinh = self.o_file.text() or str(may_chu.thu_muc_mac_dinh() / f'{self.o["ten"].text()[:60] or "DuAn"}{csdl.DUOI_DU_AN}')
+        p, _ = QFileDialog.getSaveFileName(self, 'Lưu file dự án', mac_dinh, csdl.LOC_LUU)
         if p:
             self.o_file.setText(p)
 
@@ -345,7 +345,7 @@ class HopDuAnMoi(QDialog):
             p = self.o_file.text().strip()
             if not p:
                 return None
-        p = Path(p).with_suffix('.pabt')
+        p = Path(p).with_suffix(csdl.DUOI_DU_AN)
         if file_pabt is None and p.exists() and QMessageBox.question(
                 self, TEN_UD, f'File {p.name} đã có. Ghi đè (mất toàn bộ dữ liệu trong file đó)?') != QMessageBox.StandardButton.Yes:
             return None

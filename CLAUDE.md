@@ -1144,6 +1144,16 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 - 0.9.90 biểu tượng (người dùng 15/10/2026): ảnh thiết kế mới `pabt/bieu_tuong_thiet_ke.webp` 2000 px (ô vuông xanh viền
   vàng, lưới địa chính, nhịp cầu, sách "Luật Đất đai 2024", chữ PABT) -> `tao_bieu_tuong.py` (tach_nen, như 0.9.87) -> png 512 + ico 9 cỡ.
   Exe / lối tắt / bộ cài chỉ đổi khi dựng lại bộ cài (PyInstaller --clean); gói .pabtcn chỉ đổi biểu tượng trong phần mềm.
+- 0.9.92 tên LARC + đuôi .larc (người dùng 15/10/2026): TÊN BÊN NGOÀI = LARC - lối tắt Desktop `LARC.lnk`, Start Menu / mô tả /
+  Cài đặt > Ứng dụng "LARC - Bồi thường, hỗ trợ, tái định cư" (`cai_dat.ps1` `$TEN` / `$TEN_NGAN`, Publisher LARC, gỡ lối tắt tên cũ
+  `$LOI_TAT_CU`), bộ cài `LARC_Setup_Universal_<ver>.exe` (FriendlyName "LARC - Cai dat"); zip `PABT_ChayNgay_*`, gói `PABT_CapNhat_*`,
+  PABT.exe, thư mục cài `PABT`, khóa registry Uninstall\PABT, AppUserModelID GIỮ tên cũ. Biểu tượng lối tắt: file MANG SỐ PHIÊN BẢN
+  `LARC_<ver>.ico` trong thư mục cài (`dung_bo_cai_win._ds_chuong_trinh`) - Windows giữ ảnh theo ĐƯỜNG DẪN nên PABT.ico chung mọi bản
+  làm Desktop / taskbar hiện biểu tượng cũ sau khi đổi; lối tắt đã ghim (User Pinned) trỏ PABT.exe được đổi biểu tượng
+  (`PabtLoiTat.DoiBieuTuong`), rồi `SHChangeNotify` (`LamMoi`). Đuôi file dự án: `csdl.DUOI_DU_AN` = ".larc", `DUOI_MO` (.larc +
+  .pabt cũ), `LOC_LUU` / `LOC_MO`, `la_file_du_an`, `duoi_du_an` (lưu mới / lưu thành -> .larc; .pabt cũ giữ đuôi); máy chủ LAN liệt kê
+  cả hai; bộ cài gắn .larc và .pabt; gỡ cài giữ .larc / .pabt / .pabtdt. Gọi bộ cài IExpress từ Git Bash: "/Q" bị đổi thành đường dẫn
+  ("Command line option syntax error") - chạy bằng PowerShell / subprocess.
 - 0.9.91 biểu tượng "3D LARC" (người dùng 15/10/2026): ảnh 1024 px nhà + chìa
   khóa vàng, chữ LARC (tên trên biểu tượng là LARC, phần mềm vẫn tên PABT). `tao_bieu_tuong.tach_nen` thêm `XAM_SAC` / `XAM_SANG`:
   bóng đổ xám trung tính nối liền mép ảnh cũng là nền (trước: vệt sáng quanh biểu tượng trên nền tối). Test `test_bieu_tuong_duy_nhat_co_vien`

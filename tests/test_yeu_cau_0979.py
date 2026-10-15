@@ -9,7 +9,7 @@ from pathlib import Path
 
 TEN = ('Dự án mới…', 'Mở dự án…', 'Nhập file Excel…')
 LOAI = {'Dự án mới…': 'moi', 'Mở dự án…': 'mo', 'Nhập file Excel…': 'excel'}
-PHU = {'Dự án mới…': 'Khởi tạo CSDL .pabt', 'Mở dự án…': 'Chọn tệp từ máy / LAN', 'Nhập file Excel…': 'Bảng kiểm đếm số liệu'}
+PHU = {'Dự án mới…': 'Khởi tạo CSDL .larc', 'Mở dự án…': 'Chọn tệp từ máy / LAN', 'Nhập file Excel…': 'Bảng kiểm đếm số liệu'}
 
 
 class TestTheChao(unittest.TestCase):

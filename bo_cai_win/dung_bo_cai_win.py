@@ -1,7 +1,8 @@
 """Đóng gói bộ cài PABT bằng IExpress (có sẵn trong Windows) -> thư mục bo_cai\\.
 
 Từ 0.9.26 (người dùng 11/10/2026: "tối giản chỉ 1 bộ cài cho mọi Windows") mặc định chỉ phát hành MỘT bộ cài:
-    PABT_Setup_Universal_<ver>.exe  + PABT_ChayNgay_<ver>_Universal.zip (cài dự phòng / chạy ngay)
+    LARC_Setup_Universal_<ver>.exe  + PABT_ChayNgay_<ver>_Universal.zip (cài dự phòng / chạy ngay; tên bộ cài LARC - người dùng
+    15/10/2026, phần mềm bên trong vẫn PABT)
 chứa cả dist\\PABT (Python 3.14 + Qt6, 64-bit) và dist\\PABT_Win7 (Python 3.8 + Qt5, 32-bit); cai_dat.ps1 tự chọn theo máy.
 Hai bộ riêng (trước 0.9.26) vẫn dựng được khi cần: tham số win10 / win7
     PABT_CaiDat_<ver>_Win10-11_x64.exe  + PABT_ChayNgay_<ver>_x64.zip
@@ -60,7 +61,7 @@ BAN = {
 }
 MAC_DINH = ('universal',)           # 0.9.26: một bộ cài cho mọi Windows (hai bộ riêng: tham số win10 / win7)
 # không bao giờ đóng dữ liệu thật vào bộ cài (CLAUDE.md)
-DU_LIEU_CAM = re.compile(r'\.(pabt|pabtdt|xlsm)$|^DS |PABT_CHUAN', re.I)
+DU_LIEU_CAM = re.compile(r'\.(larc|pabt|pabtdt|xlsm)$|^DS |PABT_CHUAN', re.I)
 
 
 def phien_ban() -> str:
@@ -95,7 +96,7 @@ def _sed(goi: Path, ra: Path, file: list) -> str:
             'FriendlyName=%FriendlyName%', 'AppLaunched=%AppLaunched%', 'PostInstallCmd=%PostInstallCmd%',
             'AdminQuietInstCmd=%AdminQuietInstCmd%', 'UserQuietInstCmd=%UserQuietInstCmd%', 'SourceFiles=SourceFiles',
             '[Strings]', 'InstallPrompt=', 'DisplayLicense=', 'FinishMessage=', f'TargetName={ra}',
-            'FriendlyName=PABT - Cai dat', f'AppLaunched={lenh}', 'PostInstallCmd=<None>',
+            'FriendlyName=LARC - Cai dat', f'AppLaunched={lenh}', 'PostInstallCmd=<None>',
             f'AdminQuietInstCmd={lenh} -Im', f'UserQuietInstCmd={lenh} -Im']
     dong += [f'FILE{i}="{f}"' for i, f in enumerate(file)]
     dong += ['[SourceFiles]', f'SourceFiles0={goi}\\', '[SourceFiles0]'] + [f'%FILE{i}%=' for i in range(len(file))]
@@ -115,7 +116,10 @@ def _ds_chuong_trinh(ban: str) -> list:
     ct = [(f.relative_to(dist).as_posix(), f) for f in sorted(dist.rglob('*')) if f.is_file()]
     co = {t.lower() for t, _ in ct}
     # PyInstaller 5 (bản Win7) đặt file dữ liệu ở thư mục gốc: HUONG_DAN.md đã có - không thêm lần nữa (0.9.23 trùng tên trong zip)
-    ct += [(t, f) for t, f in (('HUONG_DAN.md', GOC / 'HUONG_DAN.md'), ('PABT.ico', GOC / 'pabt' / 'bieu_tuong.ico'))
+    # LARC_<ver>.ico: lối tắt trỏ file mang số phiên bản - bộ đệm biểu tượng của Windows giữ ảnh theo đường dẫn (PABT.ico chung mọi
+    # bản: đổi biểu tượng mà Desktop / taskbar vẫn hiện ảnh cũ)
+    ct += [(t, f) for t, f in (('HUONG_DAN.md', GOC / 'HUONG_DAN.md'), ('PABT.ico', GOC / 'pabt' / 'bieu_tuong.ico'),
+                               (f'LARC_{phien_ban()}.ico', GOC / 'pabt' / 'bieu_tuong.ico'))
            if t.lower() not in co]
     for ten, _ in ct:
         if DU_LIEU_CAM.search(ten.rsplit('/', 1)[-1]):
@@ -245,7 +249,7 @@ def dong_goi_pho_quat(pb: str) -> Path:
         n[ban], cay[ban] = len(ct), ct
         ds_zip[ten_ds] = [f'{BAN[ban]["zip"]}\\{d}' for d in dz]          # nguồn trong zip: x64\… / x86\…
     file = _chep_cai_dat(goi, 'universal', pb) + file + _chep_kb(goi, BAN['win7']['kb'])
-    dich = _iexpress(goi, file, 'PABT_Setup_Universal', IEXPRESS, f'PABT_Setup_Universal_{pb}.exe')
+    dich = _iexpress(goi, file, 'LARC_Setup_Universal', IEXPRESS, f'LARC_Setup_Universal_{pb}.exe')
     print(f'{dich.name}: {dich.stat().st_size / 2**20:.1f} MB, vỏ {kien_truc(dich)}, x64 {n["win10"]} + x86 {n["win7"]} file')
     # gói zip dự phòng (máy không chạy được .exe của bộ cài): x64\ và x86\ chạy ngay PABT.exe; CAI_DAT.cmd cài như bộ cài .exe
     # (ban.txt 'universal' -> cai_dat.ps1 tự chọn danh_sach_x64 / x86)
@@ -264,7 +268,7 @@ def dong_goi_pho_quat(pb: str) -> Path:
     return dich
 
 
-DOC_TRUOC = """PABT {pb} - goi cai du phong / chay ngay (dung khi file PABT_Setup_Universal_{pb}.exe bi chan)
+DOC_TRUOC = """PABT {pb} - goi cai du phong / chay ngay (dung khi file LARC_Setup_Universal_{pb}.exe bi chan)
 
 CÀI ĐẶT: bấm đúp CAI_DAT.cmd - cùng cửa sổ cài như bộ cài .exe, tự chọn bản hợp với máy.
 CHẠY NGAY (không cài):

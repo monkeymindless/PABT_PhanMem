@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 rem Dung MOT bo cai cho moi Windows trong thu muc bo_cai (IExpress co san trong Windows), tu 0.9.26:
-rem   PABT_Setup_Universal_<phien ban>.exe + PABT_ChayNgay_<phien ban>_Universal.zip
+rem   LARC_Setup_Universal_<phien ban>.exe + PABT_ChayNgay_<phien ban>_Universal.zip
 rem   chua 2 ban: Python 3.14 + Qt6 64-bit (PyInstaller 6, .venv) va Python 3.8 + Qt5 32-bit (PyInstaller 5, CAI_DAT_PHAT_HANH.bat)
 rem   hai bo cai rieng nhu truoc: .venv\Scripts\python bo_cai_win\dung_bo_cai_win.py win10 win7
 cd /d "%~dp0"

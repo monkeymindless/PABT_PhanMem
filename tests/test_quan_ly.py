@@ -106,6 +106,23 @@ class TestKhongCanDuAn(unittest.TestCase):
             self.assertTrue((goc / 'Đợt 2  khu A - 6 hộ').is_dir())                # thư mục cũ đổi tên theo số hộ mới
             self.assertFalse((goc / 'Đợt 2  khu A - 4 hộ').exists())
 
+    def test_duoi_file_du_an_larc(self):
+        # người dùng 15/10/2026: đuôi file dự án .larc; file .pabt cũ vẫn nhận / mở
+        self.assertEqual(csdl.DUOI_DU_AN, '.larc')
+        self.assertTrue(csdl.la_file_du_an('D:/a/b.LARC') and csdl.la_file_du_an('b.pabt'))
+        self.assertFalse(csdl.la_file_du_an('b.pabtdt') or csdl.la_file_du_an('b.xlsx'))
+        self.assertEqual(csdl.duoi_du_an('x/du an').name, 'du an.larc')
+        self.assertEqual(csdl.duoi_du_an('x/cu.pabt').suffix, '.pabt')
+        self.assertIn('*.pabt', csdl.LOC_MO)
+        self.assertNotIn('*.pabt', csdl.LOC_LUU)
+        with tempfile.TemporaryDirectory() as td:                        # lưu thành (sao lưu) không đuôi -> .larc
+            p = Path(td) / 'a.larc'
+            con = csdl.mo(p, tao=True)
+            try:
+                self.assertEqual(quan_ly.luu_thanh(con, Path(td) / 'ban_sao').suffix, '.larc')
+            finally:
+                con.close()
+
     def test_chuan_ngay_nam_sai(self):
         for sai in ('12/10/202', '1/1/0026', '1/1/1800'):      # gõ thiếu số năm: trước đây thành năm 0202 / 2026 im lặng
             with self.assertRaises(LoiNhap):
@@ -188,7 +205,7 @@ class TestQuanLyDuAn(unittest.TestCase):
         self.assertEqual(quan_ly.xoa_dot(self.con, d1), 3)
         self.assertEqual(len(quan_ly.ho_cua_dot(self.con, None)), len(self.ma))
         dich = quan_ly.luu_thanh(self.con, goc / 'ban_sao')
-        self.assertEqual(dich.suffix, '.pabt')
+        self.assertEqual(dich.suffix, '.larc')                   # đuôi dự án .larc (15/10/2026)
         c2 = csdl.mo(dich)
         self.assertEqual(c2.execute('SELECT COUNT(*) FROM ho').fetchone()[0], len(self.ma))
         c2.close()
