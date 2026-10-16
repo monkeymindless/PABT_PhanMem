@@ -1,6 +1,6 @@
 r"""Phân tích một phiên bản PABT (chạy MỖI LẦN sửa phiên bản), có thể so với bản trước - ví dụ gói cập nhật đã phát hành:
 
-  .venv\Scripts\python phan_tich_phien_ban.py [--so-sanh bo_cai\PABT_CapNhat_0.9.15.pabtcn | <thư mục mã>] [--so-ho 3000]
+  .venv\Scripts\python phan_tich_phien_ban.py [--so-sanh bo_cai\LARC_CapNhat_0.9.94.pabtcn | <thư mục mã>] [--so-ho 3000]
                                               [--du-an <file .pabt thật, chỉ đọc - chạy trên bản sao>] [--lan 3]
   Hoặc bấm đúp PHAN_TICH_PHIEN_BAN.bat (tự so với gói .pabtcn mới nhất trong bo_cai\ khác phiên bản mã nguồn).
 
@@ -264,7 +264,8 @@ def main(argv) -> int:
     if not so_sanh and '--khong-so-sanh' not in argv:                   # mặc định: gói cập nhật mới nhất khác phiên bản mã nguồn
         pb = re.search(r"__version__\s*=\s*'([^']+)'", (GOC / 'pabt' / '__init__.py').read_text(encoding='utf-8')).group(1)
         so = lambda s: tuple(int(x) for x in re.findall(r'\d+', s))       # noqa: E731
-        goi = [p for p in (GOC / 'bo_cai').glob('PABT_CapNhat_*.pabtcn') if p.stem.split('_')[-1] != pb]
+        goi = [p for g in ('LARC_CapNhat_*.pabtcn', 'PABT_CapNhat_*.pabtcn')       # từ 0.9.94 tên LARC_CapNhat
+               for p in (GOC / 'bo_cai').glob(g) if p.stem.split('_')[-1] != pb]
         if goi:
             so_sanh = str(max(goi, key=lambda p: so(p.stem.split('_')[-1])))
     with tempfile.TemporaryDirectory() as td:

@@ -752,7 +752,7 @@ class HopTrangThai(_Hop):
         self.kq_qd = None
         tt = quan_ly.doc_trang_thai(con, self.ds_ma_ho[0]) if mot else {}
         ten = con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (self.ds_ma_ho[0],)).fetchone()[0]
-        self.setWindowTitle(f'Trạng thái xử lý - {ten} (mã {self.ds_ma_ho[0]})' if mot else
+        self.setWindowTitle(f'Trạng thái xử lý - {ten}' if mot else
                             f'Trạng thái xử lý - {len(self.ds_ma_ho)} hộ')
         self.resize(720, 560)
 

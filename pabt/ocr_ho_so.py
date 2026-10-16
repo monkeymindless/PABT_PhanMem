@@ -34,6 +34,10 @@ class KetQuaOcr:
     tai_san: list = field(default_factory=list)       # [{'ten', 'dvt', 'so_luong', 'ty_le', 'ghi_chu'}] (doc_danh_sach)
     dong_tai_san: list = field(default_factory=list)  # dòng chữ gốc của bảng tài sản (đưa vào "Dán danh sách tài sản")
     canh_bao: list = field(default_factory=list)
+    # 0.9.95: phương án chi tiết của hộ đã số hóa (loai 'pa_chi_tiet')
+    nhan_khau: int | None = None
+    nguon_goc: str = ''
+    tai_dinh_cu: str = ''
 
 
 # ---------------------------------------------------------------- đọc file
@@ -41,7 +45,8 @@ def doc_chu(file, bao_tien_do=None, cho=None) -> tuple:
     """(chữ toàn văn, đã phải OCR?) của PDF / ảnh. Lỗi -> ocr.LoiOCR / LoiNhap (thông báo tiếng Việt)."""
     from .quan_ly import doc_van_ban
     dong, da_ocr = doc_van_ban(Path(file), bao_tien_do, cho)
-    chu = '\n'.join(' '.join(str(o) for o in d if str(o or '').strip()) for d in dong)
+    # 0.9.95: ô của một hàng nối bằng Tab (giữ cột bảng phương án chi tiết: Tên \t ĐVT \t Số lượng \t Đơn giá…)
+    chu = '\n'.join('\t'.join(str(o).strip() for o in d if str(o or '').strip()) for d in dong)
     return chu, da_ocr
 
 
@@ -67,13 +72,17 @@ def _bo_dau_giu_do_dai(s: str) -> str:
 
 
 def _sau_nhan(chu: str, mau: str, het: str = r'[\n;]') -> str:
-    """Giá trị sau nhãn (tới hết dòng / dấu chấm phẩy)."""
+    """Giá trị sau nhãn (tới hết dòng / dấu chấm phẩy / ô kế - Tab). Dấu cách / Tab / ":" ngay sau nhãn bỏ qua trước (ô giá trị
+    của bảng nằm sau nhãn một Tab)."""
     c = unicodedata.normalize('NFC', chu)
     vt = _vi_tri(c, mau)
     if not vt:
         return ''
-    m = re.compile(het).search(c, vt[1])
-    return c[vt[1]:m.start() if m else len(c)].strip(' :.-\t')
+    dau = vt[1]
+    while dau < len(c) and c[dau] in ' \t:.-':
+        dau += 1
+    m = re.compile(het).search(c, dau)
+    return c[dau:m.start() if m else len(c)].strip(' :.-\t')
 
 
 def _chuan_ho_ten(s: str) -> str:
@@ -85,14 +94,24 @@ def _chuan_ho_ten(s: str) -> str:
 _RE_CCCD = re.compile(r'(?<!\d)(\d[\d .]{7,16}\d)(?!\d)')
 
 
+def _sua_so_ocr(s: str) -> str:
+    """Lỗi nhận dạng hay gặp trong dãy số: O / o -> 0, l / I / | -> 1 (chỉ trong cụm >= 6 ký tự toàn số / các chữ đó)."""
+    return re.sub(r'(?<![A-Za-zÀ-ỹ])[\dOoIl|][\dOoIl| .]{5,}[\dOoIl|](?![A-Za-zÀ-ỹ])',
+                  lambda m: m.group(0).translate(str.maketrans('OoIl|', '00111')) if sum(ch.isdigit() for ch in m.group(0)) >= 4
+                  else m.group(0), s)
+
+
 def _so_cccd(chu: str) -> str:
     c = unicodedata.normalize('NFC', chu)
     vt = _vi_tri(c, r'(cccd|can cuoc|cmnd|chung minh nhan dan|so dinh danh|dinh danh ca nhan)')
-    vung = c[vt[1]:vt[1] + 80] if vt else c
+    vung = _sua_so_ocr(c[vt[1]:vt[1] + 80] if vt else c)
     for m in _RE_CCCD.finditer(vung):
         s = re.sub(r'\D', '', m.group(1))
-        if len(s) in (12, 9):
-            return s
+        if len(s) in (12, 11, 9, 8):
+            from .nhap_excel import chuan_cccd                 # 11 số (mất số 0 đầu khi qua Excel / OCR) -> 12; CMND 8 -> 9
+            s = chuan_cccd(s)
+            if len(s) in (12, 9):
+                return s
     return ''
 
 
@@ -143,7 +162,7 @@ def ma_loai_dat(chu: str) -> str:
 
 # ---------------------------------------------------------------- bóc tách
 _NHAN_HO_TEN = (r'(?:ho va ten chu ho|ho ten chu ho|ten chu su dung|chu su dung dat|ho va ten|ho ten|ho ong \(ba\)|ho ong/ba)\s*:?'
-                r'|\b(?:ong \(ba\)|ong/ba|ong|ba)\b\s*:')          # "Ông:" / "Bà:" phải là từ riêng có dấu hai chấm
+                r'|\b(?:ong \(ba\)|ong/ba|ong|ba|chu ho|to chuc)\b\s*:')   # "Ông:" / "Bà:" / "Tổ chức:" - từ riêng có dấu hai chấm
 
 
 def _thua(chu: str) -> list:
@@ -207,21 +226,206 @@ def _dong_tai_san(chu: str) -> list:
     return kq
 
 
+# ---------------------------------------------------------------- phương án chi tiết của hộ đã số hóa (0.9.95)
+# bản in IN_CHITIET (in_an.lap_chi_tiet): "I. … Họ và tên / Số CCCD / Địa chỉ", "II. Thông tin (vị trí,) nguồn gốc đất", "III. Bảng tính
+# toán bồi thường, hỗ trợ" (STT | Tên tài sản | ĐVT | Số lượng | Đơn giá | Tỷ lệ | Thành tiền | Ghi chú; mục 1 đất … 6 thưởng),
+# "TỔNG CỘNG", "IV. Phương án tái định cư: …". Chữ có thể từ lớp chữ PDF (ô bị ngắt dòng, "m²" thành "m" + "2") hoặc OCR (ô cách nhau
+# bằng Tab - ocr.gom_dong) - đọc theo DÒNG LOGIC: dòng mới bắt đầu bằng STT (1, 1.2, 2.10, -), dòng khác nối vào dòng trước.
+_RE_STT = re.compile(r'^\s*(\d{1,2}(?:\.\d{1,3})?|-)(?=[\s\t])')
+_RE_DVT_PA = re.compile(r'^(m\s*2|m²|m2|m\s*3|m³|m3|md|m|cây|cay|cái|cai|con|kg|ha|ha/vụ|bụi|bui|bộ|bo|hộ|ho|người|nguoi|nhân khẩu|'
+                        r'khẩu|khau|tháng|thang|đồng|dong|ngôi|mộ|cụm|gốc|lần|chiếc|trụ|hố|giếng|hệ thống|công trình|%)$', re.I)
+_RE_SO_O = re.compile(r'^-?[\d.,]+%?$|^-$')
+_RE_KET_THUC_BANG = re.compile(r'tong cong|bang chu|lap bieu|nguoi lap|kiem tra|giam doc|phuong an tai dinh cu', re.I)
+# tiêu đề mục (dòng STT số nguyên): số in -> mục nội bộ (bản in: 4 vật nuôi, 5 hỗ trợ, 6 thưởng)
+# thứ tự quan trọng: "Bồi thường, hỗ trợ về nhà…" có chữ "hỗ trợ"; "bồi thường" có chữ "thường"
+_MUC_THEO_TEN = (('ban giao mat bang', 'thuong'), ('thuong chap hanh', 'thuong'), ('vat nuoi', 'vn'), ('cay', 'cay'),
+                 ('ve nha', 'nha'), ('cong trinh', 'nha'), ('vat kien truc', 'nha'), ('tai san', 'nha'), ('ho tro', 'ho_tro'),
+                 ('dat', 'dat'))
+_RE_CACH_TINH = re.compile(r'\s\d[\d.,]*\s*(?:nhân khẩu|khẩu|người|tháng|m²|m2|ha|lần)\b.*\sx\s', re.I)
+
+
+def _dong_logic(chu: str) -> list:
+    """Dòng của bảng III (từ tiêu đề cột "STT" tới "TỔNG CỘNG"), nối các dòng bị ngắt vào dòng có STT."""
+    dong = [x.rstrip() for x in unicodedata.normalize('NFC', chu).split('\n')]
+    kq, trong = [], False
+    for x in dong:
+        kd = _bo_dau(x)
+        if not trong:
+            if re.match(r'^\s*stt\b', kd) and ('ten' in kd or 'tai san' in kd or 'dvt' in kd):
+                trong = True
+            continue
+        if _RE_KET_THUC_BANG.search(kd) and not _RE_STT.match(x):
+            break
+        if not x.strip() or re.match(r'^\s*(\(%\)|\(dong\)|thanh tien|ghi chu|don gia|so luong|ty le)\s*', kd) and not kq:
+            continue
+        noi_m2 = kq and re.search(r'\bm$', kq[-1]) and re.match(r'^\s*[23]\b', x)     # "m" + "2" của m² bị ngắt dòng
+        if (_RE_STT.match(x) and not noi_m2) or not kq:
+            kq.append(x.strip())
+        elif noi_m2:
+            kq[-1] += x.strip()[0] + ' ' + x.strip()[1:].strip()
+        else:
+            kq[-1] += ('\t' if '\t' in x else ' ') + x.strip()
+    return kq
+
+
+def _o_dong(dong: str) -> tuple:
+    """(stt, tên, ĐVT, [các ô số]) của một dòng logic. Có Tab: theo ô; không Tab: tên = chữ trước ĐVT, sau ĐVT là các số."""
+    m = _RE_STT.match(dong)
+    stt = m.group(1) if m else ''
+    con = dong[m.end():] if m else dong
+    if '\t' in con:
+        o = [x.strip() for x in con.split('\t') if x.strip()]
+    else:
+        o = con.split()
+    # gộp "m 2" (chỉ số trên của m² tách ra khi lấy chữ PDF)
+    gon = []
+    for x in o:
+        if gon and re.fullmatch(r'[23]', x) and gon[-1].lower() == 'm':
+            gon[-1] = 'm²' if x == '2' else 'm³'
+        else:
+            gon.append(x)
+    o = gon
+    i_dvt = next((i for i, x in enumerate(o) if i > 0 and _RE_DVT_PA.match(x.strip())), None)
+    if '\t' in con and i_dvt is None:                   # ô tên chứa luôn ĐVT ở cuối ("Nhà tạm m2")
+        ten = o[0] if o else ''
+        so = [x for x in o[1:] if _RE_SO_O.match(x)]
+        return stt, ten, '', so
+    if i_dvt is None:
+        ten = ' '.join(x for x in o if not _RE_SO_O.match(x))
+        return stt, ten, '', [x for x in o if _RE_SO_O.match(x)]
+    ten = ' '.join(o[:i_dvt])
+    so = []
+    for x in o[i_dvt + 1:]:
+        if _RE_SO_O.match(x):
+            so.append(x)
+        elif so:                                         # tới ô Ghi chú (chữ): thôi
+            break
+    return stt, ten, o[i_dvt].replace('m2', 'm²'), so
+
+
+def _muc_tieu_de(stt: str, ten: str):
+    if not re.fullmatch(r'\d{1,2}', stt or ''):
+        return None
+    k = _bo_dau(ten)
+    for tu, muc in _MUC_THEO_TEN:
+        if tu in k:
+            return muc
+    return None
+
+
+def _bang_pa(chu: str) -> tuple:
+    """(thửa mục 1, dòng tài sản mục 2-5 "Tên\\tĐVT\\tSố lượng[\\tTỷ lệ %]", nhân khẩu từ dòng ĐVT khẩu) của bảng III."""
+    from .tien import doc_so_vn
+    thua, ts, nk = [], [], None
+    muc = None
+    for d in _dong_logic(chu):
+        stt, ten, dvt, so = _o_dong(d)
+        m = _muc_tieu_de(stt, ten)
+        if m:
+            muc = m
+            continue
+        if not stt or stt == '-' or not ten.strip():
+            continue
+        if muc == 'dat' or re.search(r'thua (dat )?so', _bo_dau(ten)):
+            kd = _bo_dau_giu_do_dai(ten)
+            a = re.search(r'thua (?:dat )?so\s*:?\s*([0-9A-Za-z-]+)', kd)
+            b = re.search(r'to (?:ban do )?so\s*:?\s*([0-9A-Za-z-]+)', kd)
+            so_thua = (a.group(1) if a else '').strip('-')
+            so_to = (b.group(1) if b else '').strip('-')
+            ld = re.search(r'loai dat\s*:?\s*([A-Za-z+]{2,})', kd)
+            loai = ma_loai_dat(ten[ld.start(1):ld.end(1)].upper()) if ld else ma_loai_dat(ten)
+            dt = gia = None
+            try:
+                dt = doc_so_vn(so[0]) if so and so[0] != '-' else None
+                gia = doc_so_vn(so[1]) if len(so) > 1 and so[1] != '-' else None
+            except Exception:                            # noqa: BLE001 - số lạ: để trống cho người dùng sửa
+                pass
+            if so_thua or so_to:
+                thua.append(dict(so_to=so_to, so_thua=so_thua, dt_thu_hoi=dt, loai_dat=loai, dia_chi_thua='', don_gia=gia))
+            continue
+        if muc == 'thuong':                              # thưởng bàn giao mặt bằng: phần mềm tự tính theo biểu thưởng
+            continue
+        ct = _RE_CACH_TINH.search(' ' + d.replace('\t', ' '))
+        if muc == 'ho_tro' and ct:
+            # chính sách hỗ trợ in kèm câu cách tính ("5 nhân khẩu x 30kg gạo x 6 tháng…"): chỉ lấy tên - số lượng, đơn giá do
+            # phần mềm tự tính theo hồ sơ hộ (nhân khẩu, diện tích); nhân khẩu lấy từ câu cách tính
+            ten_cs = re.split(r'\s\d', ' ' + re.sub(r'^\s*\S+\s+', '', d.replace('\t', ' ')), maxsplit=1)[0].strip()
+            ts.append(ten_cs)
+            m = re.search(r'(\d{1,3})\s*(?:nhân khẩu|khẩu)', d)
+            if m and nk is None:
+                nk = int(m.group(1))
+            continue
+        if not so or so[0] == '-':
+            continue
+        tl = ''
+        if len(so) >= 4:                                 # Số lượng, Đơn giá, Tỷ lệ, Thành tiền: tỷ lệ là ô thứ 3
+            v = _so(so[2].rstrip('%'))
+            if v is not None and 0 < v <= 500:
+                v = v * 100 if not so[2].endswith('%') and v <= 5 else v       # ô Excel định dạng %: 1 = 100%
+                if v != 100:
+                    tl = f'{v.normalize():f}%'.replace('.', ',')
+        dong = '\t'.join(x for x in (ten.strip(), dvt, so[0], tl) if x)
+        ts.append(dong)
+        if re.search(r'khau', _bo_dau(dvt)) and nk is None:
+            try:
+                nk = int(doc_so_vn(so[0]))
+            except Exception:                            # noqa: BLE001
+                pass
+    return thua, ts, nk
+
+
+def _doan_sau_tieu_de(chu: str, mau: str, het: str) -> str:
+    """Đoạn chữ sau tiêu đề (không dấu, regex) tới tiêu đề kế tiếp - nối các dòng thành đoạn, giữ gạch đầu dòng."""
+    c = unicodedata.normalize('NFC', chu)
+    vt = _vi_tri(c, mau)
+    if not vt:
+        return ''
+    m = re.compile(het, re.I | re.M).search(_bo_dau_giu_do_dai(c), vt[1])
+    doan = c[vt[1]:m.start() if m else len(c)].lstrip(' :.\t\n').rstrip()       # giữ dấu chấm cuối đoạn
+    dong = [' '.join(x.replace('\t', ' ').split()) for x in doan.split('\n')]
+    kq = []
+    for x in dong:
+        if not x:
+            continue
+        if kq and not re.match(r'^([-–+•*]|\d+[.)]|[a-z]\))\s', x):
+            kq[-1] += ' ' + x
+        else:
+            kq.append(x)
+    return '\n'.join(kq)[:6000]
+
+
 def boc_tach(chu: str) -> KetQuaOcr:
     """Thông tin chủ sử dụng, thửa đất, tài sản từ chữ của giấy tờ (đã OCR hoặc lớp chữ PDF)."""
     c = unicodedata.normalize('NFC', chu or '')
     k = _bo_dau(c)
     kq = KetQuaOcr()
-    if 'giay chung nhan' in k and ('quyen su dung dat' in k or 'quyen so huu' in k):
+    if re.search(r'phuong an chi tiet|bang tinh toan boi thuong', k):
+        kq.loai = 'pa_chi_tiet'
+    elif 'giay chung nhan' in k and ('quyen su dung dat' in k or 'quyen so huu' in k):
         kq.loai = 'gcn'
     elif re.search(r'bien ban (kiem ke|kiem dem|dieu tra|xac minh)', k):
         kq.loai = 'bien_ban'
-    ten = _sau_nhan(c, _NHAN_HO_TEN, r'[\n;,]|\bnăm sinh|\bsinh năm|\bCCCD|\bCMND')
-    kq.ho_ten = _chuan_ho_ten(ten)[:80] if ten and len(ten) < 120 else ''
+    ten = _sau_nhan(c, _NHAN_HO_TEN, r'[\n\t;,]|\bnăm sinh|\bsinh năm|\bCCCD|\bCMND')
+    kq.ho_ten = _chuan_ho_ten(ten)[:80] if ten and len(ten) < 120 and not re.match(r'(?i)(số|địa chỉ|cccd)', ten) else ''
     kq.so_cccd = _so_cccd(c)
-    kq.dia_chi = _sau_nhan(c, r'(dia chi thuong tru|noi thuong tru|thuong tru tai|dia chi)\s*:?')[:200]
-    kq.thua = _thua(c)
-    kq.dong_tai_san = _dong_tai_san(c)
+    kq.dia_chi = _sau_nhan(c, r'(dia chi thuong tru|noi thuong tru|thuong tru tai|dia chi)\s*:?', r'[\n\t;]')[:200]
+    if re.match(r'(?i)(số điện thoại|ii\.)', kq.dia_chi):
+        kq.dia_chi = ''
+    m = re.search(r'(?:so nhan khau|nhan khau)\s*:?\s*(\d{1,3})\b|\b(\d{1,3})\s*nhan khau', k)
+    if m:
+        kq.nhan_khau = int(m.group(1) or m.group(2))
+    kq.nguon_goc = _doan_sau_tieu_de(c, r'(ii\.?\s*thong tin (?:vi tri, )?nguon goc (?:su dung )?dat|nguon goc su dung dat)\s*:?',
+                                     r'^\s*(iii\.?|stt\b)')
+    kq.tai_dinh_cu = _sau_nhan(c, r'(?:phuong an )?tai dinh cu\s*:', r'\n')[:300]     # bản in: "Tái định cư: …" (có dấu ":")
+    if kq.loai == 'pa_chi_tiet':
+        thua, ts, nk = _bang_pa(c)
+        kq.thua = thua or _thua(c)
+        kq.dong_tai_san = ts
+        if kq.nhan_khau is None:
+            kq.nhan_khau = nk
+    else:
+        kq.thua = _thua(c)
+        kq.dong_tai_san = _dong_tai_san(c)
     if kq.dong_tai_san:
         from .phan_loai_tai_san import doc_danh_sach
         try:
@@ -250,7 +454,7 @@ def gop(ds: list) -> KetQuaOcr:
     """Gộp kết quả nhiều file (mặt trước / sau GCN, nhiều trang biên bản): lấy giá trị đầu tiên có, thửa / tài sản nối tiếp."""
     kq = KetQuaOcr()
     for x in ds:
-        for k in ('ho_ten', 'so_cccd', 'dia_chi'):
+        for k in ('ho_ten', 'so_cccd', 'dia_chi', 'nhan_khau', 'nguon_goc', 'tai_dinh_cu'):
             if not getattr(kq, k) and getattr(x, k):
                 setattr(kq, k, getattr(x, k))
         if kq.loai == 'khac':

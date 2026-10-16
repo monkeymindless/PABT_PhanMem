@@ -7,6 +7,38 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('0.9.95', '16/10/2026', (
+        'Giao diện gọn, nhiều chỗ cho bảng: hàng thẻ số chỉ ở Danh sách hộ (một dòng); banner xanh chỉ ở màn hình chào; menu trái '
+        'gọn (nút 27 px); không còn tiêu đề trang lặp mục menu.',
+        'Cửa sổ lập phương án hộ: ô chọn hộ và các nút lệnh chung một hàng (◀ / ▶ chuyển hộ); mục 1 nút Xóa / Lên / Xuống và Cộng '
+        'mục cùng hàng chọn thửa; ◀ Trở lại / Tiếp theo ▶ chung hàng với dải tổng cộng; cột ngắn gọn, cột tên / ghi chú giãn.',
+        'Khái toán: tổng cộng và nút Mở tệp / Tạo mới / Xuất / Lưu chung một hàng; nút Ẩn / Hiện thông tin chung; So sánh với thực '
+        'tế: khái toán bằng 0 không tô cảnh báo vượt. Niêm yết: 6 thẻ số một dòng, nút Xuất của từng thẻ ở góc phải thanh thẻ.',
+        'Màn hình chào: tổng kinh phí dự án gần đây khớp danh sách hộ (có thưởng, làm tròn), tên hiển thị "Tên dự án · Địa bàn (file)".',
+        'Quét giấy tờ: bên trái xem trước TOÀN BỘ các trang ảnh / PDF (phóng to, Ctrl + lăn chuột, kéo, xoay 90°, chuyển trang; "Chữ OCR" '
+        'để xem chữ); đọc bảng phương án chi tiết của hộ đã scan (thông tin hộ, nhân khẩu, nguồn gốc đất, tái định cư, thửa mục 1, tài '
+        'sản / cây / hỗ trợ mục 2-5); nút "Nhập trọn bộ vào phương án hộ"; lưu đính kèm file vào hồ sơ hộ.',
+        'Sửa: nhận dạng chữ trang scan nhiều chữ (bảng giá, bảng phương án) báo "quá lâu" sau 3 phút - nay khoảng 1 giây / trang.',
+    )),
+    ('0.9.94', '15/10/2026', (
+        'Tên hiển thị LARC ở mọi nơi: tiêu đề cửa sổ "LARC - <tên dự án>…", hộp thông báo, thanh tác vụ; gói cập nhật đổi tên '
+        'LARC_CapNhat_<phiên bản>.pabtcn, gói chạy ngay LARC_ChayNgay_… (như bộ cài LARC_Setup). Gói PABT_CapNhat của bản trước '
+        'vẫn cài được.',
+        'Cột Số lượng theo định dạng kế toán: nhà, công trình 2 chữ số thập phân (46,00); đất, cây trồng, vật nuôi, chính sách hỗ trợ '
+        'và số lượng khác 1 chữ số (16,0); số lẻ hơn hiện đủ (0,0325 ha). Áp dụng trên màn hình, bảng khái toán, bản in chi tiết và '
+        'báo cáo đối chiếu (trước đây bảng khái toán in "46," thiếu số lẻ).',
+        'Trang Khái toán & dự toán: bỏ tiêu đề và nút Chế độ trùng menu trái, dành chỗ cho phần nhập liệu.',
+        'Bỏ thanh tab phía trên nội dung: bảng thấy thêm dòng. Chuyển trang bằng menu trái / thanh menu hoặc Ctrl+1 … Ctrl+6; cửa sổ '
+        'hộ đóng bằng nút Đóng.',
+        'Tên dự án chỉ hiện một chỗ - giữa thanh menu trên cùng: "PABT - <tên dự án> · <địa bàn> (<tên file>)"; bỏ ô "Dự án" trên '
+        'banner xanh và dòng tên dự án dưới banner.',
+        'Dự án làm việc gần đây: file không còn trên đĩa tự rời danh sách, không đẩy dự án thật ra ngoài (trước đây danh sách có thể '
+        'trống dù vừa mở dự án).',
+        'Niêm yết & Lấy ý kiến: nút "Xuất bảng niêm yết" nằm trên hàng nút đợt; cột "CCCD" (số vẫn che theo Nghị định 13/2023); 4 thẻ '
+        'gọn; cột đủ rộng, chữ tiêu đề không bị cắt ("Tổng tiền dự thảo", "Nhóm vướng"). Thẻ số liệu và nút bấm gọn hơn, bảng có '
+        'thêm chỗ.',
+        'Tên hộ trong ô chọn hộ (cửa sổ lập phương án, nhật ký kiểm toán, quyết định, trạng thái, phạm vi in) không còn kèm "(mã n)".',
+    )),
     ('0.9.93', '15/10/2026', (
         'Dán danh sách tài sản (Lập phương án hộ, Khái toán, Phiếu kiểm đếm) hiểu câu viết tự nhiên: "Xoài: 16 cây, 17 năm tuổi" chọn '
         'đúng mục theo năm tuổi; "Tràm: 1453 cây, đường kính 28cm" (hoặc "Tràm cây 1500 d28") chọn quy cách theo đường kính; "Nhà tạm: '

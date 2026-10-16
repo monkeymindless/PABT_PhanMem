@@ -90,7 +90,7 @@ def ve_mach(s: int) -> QImage:
         f.setBold(True)
         f.setPixelSize(max(6, round(0.20 * s)))
         chu = QPainterPath()
-        chu.addText(0, 0, f, 'PABT')
+        chu.addText(0, 0, f, 'LARC')
         r = chu.boundingRect()
         chu.translate(s / 2 - r.center().x(), 0.80 * s - r.center().y())
         p.setPen(QPen(VANG, max(1.0, 0.014 * s), Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))

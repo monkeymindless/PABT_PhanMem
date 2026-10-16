@@ -1,12 +1,12 @@
 """Đóng gói bộ cài PABT bằng IExpress (có sẵn trong Windows) -> thư mục bo_cai\\.
 
 Từ 0.9.26 (người dùng 11/10/2026: "tối giản chỉ 1 bộ cài cho mọi Windows") mặc định chỉ phát hành MỘT bộ cài:
-    LARC_Setup_Universal_<ver>.exe  + PABT_ChayNgay_<ver>_Universal.zip (cài dự phòng / chạy ngay; tên bộ cài LARC - người dùng
+    LARC_Setup_Universal_<ver>.exe  + LARC_ChayNgay_<ver>_Universal.zip (cài dự phòng / chạy ngay; tên bộ cài LARC - người dùng
     15/10/2026, phần mềm bên trong vẫn PABT)
 chứa cả dist\\PABT (Python 3.14 + Qt6, 64-bit) và dist\\PABT_Win7 (Python 3.8 + Qt5, 32-bit); cai_dat.ps1 tự chọn theo máy.
 Hai bộ riêng (trước 0.9.26) vẫn dựng được khi cần: tham số win10 / win7
-    PABT_CaiDat_<ver>_Win10-11_x64.exe  + PABT_ChayNgay_<ver>_x64.zip
-    PABT_CaiDat_<ver>_Win7-8-10_x86.exe + PABT_ChayNgay_<ver>_x86.zip
+    LARC_CaiDat_<ver>_Win10-11_x64.exe  + LARC_ChayNgay_<ver>_x64.zip
+    LARC_CaiDat_<ver>_Win7-8-10_x86.exe + LARC_ChayNgay_<ver>_x86.zip
 
 MỘT TIÊU CHUẨN CÀI ĐẶT cho cả hai bản (người dùng yêu cầu: máy nào cũng cài được):
   - cài cho người dùng hiện tại, KHÔNG cần quyền quản trị, KHÔNG cài thêm gì vào Windows: thư viện Visual C++ và UCRT (bản
@@ -16,9 +16,9 @@ MỘT TIÊU CHUẨN CÀI ĐẶT cho cả hai bản (người dùng yêu cầu: m
     ExecutionPolicy / Group Policy chặn như -File; PowerShell 2.0 (Windows 7) trở lên;
   - không giải nén zip khi cài: file chương trình nằm phẳng trong bộ cài (f001_<tên> - IExpress không giữ thư mục) +
     danh_sach.txt (nguồn, đích, cỡ, SHA-256): cai_dat.ps1 chép rồi kiểm lại từng file;
-  - gói PABT_ChayNgay_*.zip: giải nén là chạy được PABT.exe, HOẶC bấm CAI_DAT.cmd để cài như bộ cài .exe (dùng khi máy
+  - gói LARC_ChayNgay_*.zip: giải nén là chạy được PABT.exe, HOẶC bấm CAI_DAT.cmd để cài như bộ cài .exe (dùng khi máy
     không chạy được file .exe: diệt virus chặn, tên người dùng có dấu làm vỏ IExpress lỗi…).
-Vỏ Win7-8 dựng bằng iexpress 32-bit (SysWOW64) để chạy được trên Windows 32-bit. `PABT_CaiDat_....exe /Q` = cài im lặng.
+Vỏ Win7-8 dựng bằng iexpress 32-bit (SysWOW64) để chạy được trên Windows 32-bit. `LARC_CaiDat_....exe /Q` = cài im lặng.
 
     .venv\\Scripts\\python bo_cai_win\\dung_bo_cai_win.py [universal] [win10] [win7]     (mặc định: universal)
 Cần chạy sau PyInstaller + rut_gon.py (DUNG_BO_CAI.bat). Dùng .venv (cần PyInstaller 6 để đổi biểu tượng vỏ IExpress).
@@ -52,11 +52,11 @@ KB_WIN7 = {
 BAN = {
     # Win10-11 không kèm Visual C++ Redistributable (25 MB): Windows 10/11 có sẵn UCRT, DLL Visual C++ PABT cần
     # (vcruntime140, msvcp140...) đã nằm trong bản dựng PyInstaller.
-    # tên theo đặc tả ARCH-PABT-2026-V4 mục 9.1 (0.9.24): PABT_CaiDat_<ver>_Win10-11_x64.exe / PABT_ChayNgay_<ver>_x64.zip
+    # tên theo đặc tả ARCH-PABT-2026-V4 mục 9.1 (0.9.24): LARC_CaiDat_<ver>_Win10-11_x64.exe / LARC_ChayNgay_<ver>_x64.zip
     'win10': dict(dist='PABT', ten='Win10-11_x64', zip='x64', vc=None, kien='x64', iexpress=IEXPRESS_64, kb=()),
     # Win7-8: UCRT + Visual C++ đóng sẵn trong bản dựng (ucrt_win7.py) -> không kèm / không cài vc_redist (cần quyền quản trị).
     # Kèm bản cập nhật Windows 7 KB3063858 (có KB2533623 - Python 3.8 cần): cai_dat.ps1 chỉ cài trên Windows 7 còn thiếu.
-    # chạy Win 7 SP1 / 8 / 8.1 / Windows 10 32-bit (và cả 64-bit): PABT_CaiDat_<ver>_Win7-8-10_x86.exe / PABT_ChayNgay_<ver>_x86.zip
+    # chạy Win 7 SP1 / 8 / 8.1 / Windows 10 32-bit (và cả 64-bit): LARC_CaiDat_<ver>_Win7-8-10_x86.exe / LARC_ChayNgay_<ver>_x86.zip
     'win7': dict(dist='PABT_Win7', ten='Win7-8-10_x86', zip='x86', vc=None, kien='x86', iexpress=IEXPRESS, kb=tuple(KB_WIN7)),
 }
 MAC_DINH = ('universal',)           # 0.9.26: một bộ cài cho mọi Windows (hai bộ riêng: tham số win10 / win7)
@@ -220,10 +220,10 @@ def dong_goi(ban: str, pb: str) -> Path:
         shutil.copy2(BC / c['vc'], goi / 'vc_redist.exe')
         file.append('vc_redist.exe')
     file += _chep_kb(goi, c['kb'])
-    dich = _iexpress(goi, file, f'PABT_CaiDat_{ban}', c['iexpress'], f'PABT_CaiDat_{pb}_{c["ten"]}.exe')
+    dich = _iexpress(goi, file, f'LARC_CaiDat_{ban}', c['iexpress'], f'LARC_CaiDat_{pb}_{c["ten"]}.exe')
     # gói chạy ngay / cài dự phòng: cây thư mục chương trình (PABT.exe chạy được ngay - giải nén ra USB / ổ D: là dùng) + bộ cài
     # (CAI_DAT.cmd; danh sách: nguồn = đường dẫn trong gói)
-    with zipfile.ZipFile(RA / f'PABT_ChayNgay_{pb}_{c["zip"]}.zip', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    with zipfile.ZipFile(RA / f'LARC_ChayNgay_{pb}_{c["zip"]}.zip', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for ten, f in ct:
             z.write(f, ten)
         z.writestr('danh_sach.txt', ('\r\n'.join(ds_zip) + '\r\n').encode('utf-8'))
@@ -253,7 +253,7 @@ def dong_goi_pho_quat(pb: str) -> Path:
     print(f'{dich.name}: {dich.stat().st_size / 2**20:.1f} MB, vỏ {kien_truc(dich)}, x64 {n["win10"]} + x86 {n["win7"]} file')
     # gói zip dự phòng (máy không chạy được .exe của bộ cài): x64\ và x86\ chạy ngay PABT.exe; CAI_DAT.cmd cài như bộ cài .exe
     # (ban.txt 'universal' -> cai_dat.ps1 tự chọn danh_sach_x64 / x86)
-    z_ten = RA / f'PABT_ChayNgay_{pb}_Universal.zip'
+    z_ten = RA / f'LARC_ChayNgay_{pb}_Universal.zip'
     with zipfile.ZipFile(z_ten, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for ban in ('win10', 'win7'):
             for ten, f in cay[ban]:

@@ -203,7 +203,7 @@ def doc_ket_qua(file) -> dict:
         raise LoiNhap(f'Không đọc được file kết quả kiểm đếm: {e}') from None
     kq = du.get('ket_qua') if isinstance(du, dict) else None
     if not isinstance(kq, dict):
-        raise LoiNhap('File không phải kết quả của Phiếu kiểm đếm PABT (thiếu "ket_qua").')
+        raise LoiNhap('File không phải kết quả của Phiếu kiểm đếm LARC (thiếu "ket_qua").')
     ra = {}
     for ma, ds in kq.items():
         try:

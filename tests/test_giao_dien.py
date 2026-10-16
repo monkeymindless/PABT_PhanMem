@@ -1,6 +1,7 @@
 """Kiểm thử: màu giao diện, mẫu in không chứa dữ liệu cố định, giữ thông tin đơn vị, nạp danh mục, nâng cấp CSDL v3."""
 from __future__ import annotations
 import os
+
 import sys
 import re
 import sqlite3
@@ -19,6 +20,18 @@ try:
     CO_QT = True
 except ImportError:
     CO_QT = False
+
+
+# thư mục máy TẠM do tests/__init__ đặt: bài tự đặt PABT_THU_MUC_MAY phải trả lại giá trị này - gỡ hẳn thì các bài sau ghi vào
+# %APPDATA%\PABT thật (danh sách "Dự án gần đây" của người dùng bị thay bằng file tạm đã xóa - 15/10/2026)
+_MAY_GOC = os.environ.get('PABT_THU_MUC_MAY')
+
+
+def _tra_thu_muc_may():
+    if _MAY_GOC:
+        os.environ['PABT_THU_MUC_MAY'] = _MAY_GOC
+    else:
+        os.environ.pop('PABT_THU_MUC_MAY', None)
 
 
 class TestMauIn(unittest.TestCase):
@@ -158,7 +171,6 @@ class TestMau(unittest.TestCase):
         self.assertEqual(nut['Lập phương án chi tiết'], 'pa')       # chữ trên menu (app.NHAN_MENU, 0.9.70)
         self.assertEqual(nut['Thêm hộ'], 'them')
         self.assertEqual(nut['Xuất hồ sơ && Bản in'], 'in')         # Mẫu in: thanh menu Công cụ (0.9.23)
-        self.assertEqual(w.lb_du_an.property('vai'), 'bang_ten')
         self.assertIn('QHeaderView::section', self.app.styleSheet())
         w.close()
         from pabt.giao_dien import bo_ap_dung
@@ -305,7 +317,7 @@ class TestMau(unittest.TestCase):
                 self.assertEqual(w.ho_dang_chon(), ma_ds)                      # về danh sách hộ: lại lấy ở danh sách
                 w.close()
             finally:
-                os.environ.pop('PABT_THU_MUC_MAY', None)
+                _tra_thu_muc_may()
 
     def test_mo_phong_to_va_khong_ep_rong(self):
         """11/10/2026 (lỗi hình góc phải khi mở): showMaximized ngay lúc tạo -> kiểu áp lúc Show làm bề rộng tối thiểu tăng, Qt ép
@@ -336,7 +348,7 @@ class TestMau(unittest.TestCase):
                 self.assertTrue(w.lb_ket_qua.wordWrap())
                 w.close()
             finally:
-                os.environ.pop('PABT_THU_MUC_MAY', None)
+                _tra_thu_muc_may()
 
     def test_trang_chu_va_bieu_tuong_menu(self):
         """Nút "Màn hình chính" đầu menu trái (về màn hình bắt đầu, dự án vẫn mở); mọi nút menu trái có biểu tượng (lệnh
@@ -368,7 +380,7 @@ class TestMau(unittest.TestCase):
                 w.dong_du_an()
                 w.close()
             finally:
-                os.environ.pop('PABT_THU_MUC_MAY', None)
+                _tra_thu_muc_may()
 
     def test_bieu_tuong_duy_nhat_co_vien(self):
         """Biểu tượng 3D LARC (ảnh thiết kế 15/10/2026, tách nền + bóng xám): pabt/bieu_tuong.png 512 - góc, mép trong suốt; xanh dương
@@ -476,7 +488,7 @@ class TestMau(unittest.TestCase):
                 w.dong_du_an()
                 w.close()
             finally:
-                os.environ.pop('PABT_THU_MUC_MAY', None)
+                _tra_thu_muc_may()
 
     def test_bang_tong_hop_3_the_va_lien_ket_phe_duyet(self):
         """0.9.76 (Nhóm 5 - 6): "Bảng tổng hợp kinh phí" là MỘT trang 3 thẻ (cơ cấu, chi tiết hộ, đối soát khái toán), không còn thẻ
@@ -519,7 +531,7 @@ class TestMau(unittest.TestCase):
                 self.assertEqual([k for k, t in enumerate(ud.TRANG) if w.lenh[t].isChecked()], [0])
                 w.close()
             finally:
-                os.environ.pop('PABT_THU_MUC_MAY', None)
+                _tra_thu_muc_may()
 
     def test_hop_ket_qua_vua_man_hinh(self):
         """Danh sách cần xem lại dài: hộp không cao quá màn hình, đủ mọi dòng trong ô cuộn (QMessageBox đẩy nút OK ra ngoài)."""

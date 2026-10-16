@@ -49,8 +49,8 @@ class TestDanTaiSanTuClipboard(unittest.TestCase):
         self.assertIs(b, self.lp.btn_dan_ts)
         self.assertEqual(b.objectName(), 'btn_dan_ts')
         self.assertIn('Dán danh sách tài sản', b.text())
-        self.assertIn('Ctrl+Shift+V', b.text())
-        self.assertEqual(b.height() or b.minimumHeight(), 32)
+        self.assertIn('Ctrl+Shift+V', b.toolTip())                   # 0.9.95: phím tắt ở chú thích (hàng nút gọn)
+        self.assertEqual(b.height() or b.minimumHeight(), 27)     # 0.9.95: hàng trên cùng gọn 27 px (trước 32)
         qss = b.styleSheet()
         for mau in ('#0284C7', '#0369A1', '#FFFFFF', 'border-radius: 6px', 'font-weight: 700'):
             self.assertIn(mau, qss)

@@ -26,7 +26,7 @@ class HopKiemToan(QDialog):
         self.cb_ho = QComboBox()
         self.cb_ho.addItem('Mọi hộ và danh mục', None)
         for r in con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho'):
-            self.cb_ho.addItem(f'{r["thu_tu"]}. {r["ho_ten"]} (mã {r["ma_ho"]})', r['ma_ho'])
+            self.cb_ho.addItem(f'{r["thu_tu"]}. {r["ho_ten"]}', r['ma_ho'])
         if ma_ho is not None and self.cb_ho.findData(ma_ho) >= 0:
             self.cb_ho.setCurrentIndex(self.cb_ho.findData(ma_ho))
         self.cb_ky = QComboBox()

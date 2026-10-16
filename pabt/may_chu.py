@@ -187,7 +187,7 @@ def khoi_tao(goc, tai_khoan: str, mat_khau: str, ho_ten: str = 'Quản trị h�
     """Khởi tạo thư mục máy chủ mới với tài khoản quản trị đầu tiên."""
     goc = chuan_goc(goc)
     if (goc / TEN_CSDL).exists():
-        raise LoiMayChu('Thư mục này đã là máy chủ PABT: chọn "Kết nối" thay vì khởi tạo.')
+        raise LoiMayChu('Thư mục này đã là máy chủ LARC: chọn "Kết nối" thay vì khởi tạo.')
     tk = _kiem_tai_khoan(tai_khoan)
     _kiem_mat_khau(mat_khau)
     try:

@@ -155,7 +155,8 @@ class TestOCR(unittest.TestCase):
     def test_gom_dong_va_sua_so(self):
         tu = [(10, 100, 50, 20, 'Nhà'), (70, 102, 40, 20, 'tạm'), (400, 99, 30, 20, 'm2'), (600, 101, 90, 20, '576.ooo'),
               (10, 140, 60, 20, 'Giếng'), (600, 141, 90, 20, '3.500.000')]
-        self.assertEqual(ocr.gom_dong(tu), ['Nhà tạm m2 576.ooo', 'Giếng 3.500.000'])   # cột cùng hàng gộp một dòng
+        # cột cùng hàng gộp một dòng; 0.9.95: khoảng trống > 2,2 x cao chữ (sang cột kế) nối bằng Tab
+        self.assertEqual(ocr.gom_dong(tu), ['Nhà tạm\tm2\t576.ooo', 'Giếng\t3.500.000'])
         self.assertEqual(ocr.sua_so('Nhà tạm m2 576.ooo'), 'Nhà tạm m2 576.000')
         self.assertEqual(ocr.sua_so('Ô tô cũ'), 'Ô tô cũ')
 
@@ -198,7 +199,8 @@ class TestOCR(unittest.TestCase):
                            timeout=120, cwd=str(Path(__file__).resolve().parents[1]))
             dong = ocr.doc_anh_windows(f, ngon_ngu='en-US').splitlines()
         self.assertEqual(len(dong), 2)
-        self.assertTrue(dong[0].startswith('1 Nha tam') and dong[0].endswith('576000'), dong)
+        # 0.9.95: cột cách xa -> Tab (gom_dong): "1\tNha tam\tm2\t576000"
+        self.assertEqual(dong[0].split('\t'), ['1', 'Nha tam', 'm2', '576000'], dong)
 
 
 if __name__ == '__main__':

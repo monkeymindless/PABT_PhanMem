@@ -37,8 +37,8 @@ class TestBoThanhTab(CoSo):
         self.assertGreaterEqual(w.thanh_tab.count(), 2)                 # danh sách trang đang mở vẫn giữ (Ctrl+Tab)
         self.assertFalse(w.thanh_tab.isVisibleTo(w))
         self.assertIs(w.thanh_tab.parentWidget(), w.khung_tab)          # không nằm trong bố cục cửa sổ chính
-        self.assertFalse(w.lb_du_an.isVisibleTo(w))                     # tên dự án đã có ở banner
-        self.assertIn('Dự án', w.lb_du_an_nho.text())
+        self.assertFalse(hasattr(w, 'lb_du_an'))                        # tên dự án chỉ ở tiêu đề cửa sổ (thanh menu trắng)
+        self.assertTrue(w.windowTitle().startswith('LARC - '))
         # thẻ số liệu ngay dưới banner: không còn dòng nào chen giữa (thanh tab, dòng tên dự án)
         w.mo_trang(ud.TRANG_DS)
         self.app.processEvents()
@@ -77,3 +77,19 @@ class TestBoThanhTab(CoSo):
         for k in [k for k in w.khung_tab.khoa if isinstance(k, tuple)]:
             w.khung_tab.widget[k].bo_thay_doi()
         self.assertFalse(w.thanh_tab.isVisibleTo(w))
+
+    def test_ten_du_an_chi_o_tieu_de(self):
+        """Tên dự án ở MỘT chỗ - tiêu đề giữa thanh menu trắng: "LARC - <tên> · <địa bàn> (<file>)"; banner không còn ô dự án."""
+        ud, w = self._cua_so()
+        da = w.con.execute('SELECT ten, ten_dia_ban FROM du_an WHERE id = 1').fetchone()
+        self.assertTrue(w.windowTitle().startswith(f'LARC - {da[0]} · {da[1]} ('), w.windowTitle())
+        self.assertTrue(w.windowTitle().endswith(f'({w.file.name})'))
+        self.assertFalse(hasattr(w.banner_ten, 'lb_du_an'))
+        from pabt import lap_pa
+        lap_pa.luu_du_an(w.con, dict(lap_pa.doc_du_an(w.con), ten='Đường ĐT 762'))   # sửa Thông tin dự án -> tiêu đề đổi theo
+        w.tai_lai()
+        self.assertIn('LARC - Đường ĐT 762 · ', w.windowTitle())
+        if w.thanh_td is not None:
+            self.assertEqual(w.thanh_td.tieu_de(), w.windowTitle())
+        w.dong_du_an_lenh()                                             # Tệp tin -> Đóng dự án
+        self.assertEqual(w.windowTitle(), 'LARC - ' + ud.MO_TA_UD)

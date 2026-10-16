@@ -61,21 +61,30 @@ def tim_tesseract() -> Path | None:
 
 def _chay(lenh: list, cho=None, gioi_han: float = 300) -> subprocess.CompletedProcess:
     """Chạy lệnh; trong lúc chờ gọi cho() (giữ giao diện không treo, trả True = người dùng hủy)."""
+    import threading
     pr = subprocess.Popen(lenh, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    # đọc stdout / stderr SONG SONG (0.9.95): trước đây chỉ chờ tiến trình kết thúc rồi mới đọc - trang scan nhiều chữ (bảng giá,
+    # bảng phương án: > ~64 KB kết quả) làm đầy ống, PowerShell / Tesseract chặn ghi, hai bên chờ nhau tới hết giờ ("quá lâu")
+    ra, loi = [], []
+    doc = [threading.Thread(target=lambda: ra.append(pr.stdout.read()), daemon=True),
+           threading.Thread(target=lambda: loi.append(pr.stderr.read()), daemon=True)]
+    for t in doc:
+        t.start()
     bat_dau = time.monotonic()
     while pr.poll() is None:
         if cho is not None and cho():
             pr.kill()
-            pr.communicate()
+            pr.wait()
             raise DaHuy('Đã hủy nhận dạng chữ.')
         if time.monotonic() - bat_dau > gioi_han:
             pr.kill()
-            pr.communicate()
+            pr.wait()
             raise LoiOCR('Nhận dạng chữ quá lâu, đã dừng.')
         time.sleep(0.05)
-    out, err = pr.communicate()
-    return subprocess.CompletedProcess(lenh, pr.returncode, out, err)
+    for t in doc:
+        t.join(10)
+    return subprocess.CompletedProcess(lenh, pr.returncode, b''.join(ra), b''.join(loi))
 
 
 def ngon_ngu(tess: Path | None = None) -> list:
@@ -205,7 +214,7 @@ def cai_tieng_viet_windows():
     """Mở lệnh cài gói nhận dạng chữ tiếng Việt của Windows (Windows hỏi quyền quản trị - UAC). Trả tiến trình (không chờ).
     Chỉ gọi khi người dùng bấm "Cài gói tiếng Việt"."""
     lenh = ("Add-WindowsCapability -Online -Name 'Language.OCR~~~vi-VN~0.0.1.0'; "
-            "Write-Host 'Xong. Đóng cửa sổ này rồi đọc lại bản scan trong PABT.'; Start-Sleep 5")
+            "Write-Host 'Xong. Đóng cửa sổ này rồi đọc lại bản scan trong LARC.'; Start-Sleep 5")
     return subprocess.Popen([_powershell(), '-NoProfile', '-Command',
                              f"Start-Process '{_powershell()}' -Verb RunAs -ArgumentList '-NoProfile','-Command',\"{lenh}\""],
                             creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
@@ -219,12 +228,26 @@ def gom_dong(tu: list, he_so: float = 0.6) -> list:
         tam = y + h / 2
         for hg in hang:
             if abs(tam - hg[0]) < he_so * max(h, hg[1]):
-                hg[2].append((x, t))
+                hg[2].append((x, w, h, t))
                 hg[0] = (hg[0] * (len(hg[2]) - 1) + tam) / len(hg[2])
                 break
         else:
-            hang.append([tam, h, [(x, t)]])
-    return [' '.join(t for _, t in sorted(hg[2])) for hg in sorted(hang, key=lambda a: a[0])]
+            hang.append([tam, h, [(x, w, h, t)]])
+    kq = []
+    for hg in sorted(hang, key=lambda a: a[0]):
+        # 0.9.95: khoảng trống ngang > CACH_COT x chiều cao chữ = sang cột kế của bảng -> nối bằng Tab (giữ cấu trúc cột "Tên \t ĐVT
+        # \t Số lượng \t Đơn giá \t Tỷ lệ \t Thành tiền" cho bóc tách bảng phương án chi tiết / bảng giá)
+        chu, cuoi = '', None
+        for x, w, h, t in sorted(hg[2]):
+            if cuoi is not None:
+                chu += '\t' if x - cuoi > CACH_COT * max(h, 1) else ' '
+            chu += t
+            cuoi = x + w
+        kq.append(chu)
+    return kq
+
+
+CACH_COT = 2.2                                          # gom_dong: khoảng trống (x chiều cao chữ) coi là sang cột mới
 
 
 _RE_CUM_SO = re.compile(r'(?<![^\W\d_])[\doO][\doO.,]*[\doO](?![^\W\d_])')

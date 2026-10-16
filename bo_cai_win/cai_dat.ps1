@@ -70,7 +70,7 @@ function KiemTraMay {
     # điều kiện BẮT BUỘC (không đạt thì không cài): trả câu báo, '' = đạt
     $v = [Environment]::OSVersion.Version
     if ($v.Major -lt 6 -or ($v.Major -eq 6 -and $v.Minor -lt 1)) {
-        return "PABT cần Windows 7 SP1 trở lên (máy này: Windows $($v.Major).$($v.Minor))." }
+        return "LARC cần Windows 7 SP1 trở lên (máy này: Windows $($v.Major).$($v.Minor))." }
     if ($v.Major -eq 6 -and $v.Minor -eq 1 -and $v.Build -lt 7601) {
         return 'Windows 7 cần cài Service Pack 1 (SP1) trước khi cài PABT.' }
     if ($BAN -eq 'win10') {
@@ -553,12 +553,12 @@ function Cai($dich, $desktop, $lienKet, $tienDo) {
     }
     # gói cập nhật .pabtcn: bấm đúp để cập nhật phần mềm
     New-Item 'HKCU:\Software\Classes\.pabtcn' -Value 'PABT.CapNhat' -Force | Out-Null
-    New-Item 'HKCU:\Software\Classes\PABT.CapNhat' -Value 'Gói cập nhật PABT' -Force | Out-Null
+    New-Item 'HKCU:\Software\Classes\PABT.CapNhat' -Value 'Gói cập nhật LARC' -Force | Out-Null
     New-Item 'HKCU:\Software\Classes\PABT.CapNhat\DefaultIcon' -Value "`"$ico`",0" -Force | Out-Null
     New-Item 'HKCU:\Software\Classes\PABT.CapNhat\shell\open\command' -Value "`"$exe`" `"%1`"" -Force | Out-Null
     # gói mẫu in & cấu hình .pabtcfg (0.9.85): bấm đúp để thay mẫu in / hồ sơ địa phương
     New-Item 'HKCU:\Software\Classes\.pabtcfg' -Value 'PABT.MauIn' -Force | Out-Null
-    New-Item 'HKCU:\Software\Classes\PABT.MauIn' -Value 'Gói mẫu in & cấu hình PABT' -Force | Out-Null
+    New-Item 'HKCU:\Software\Classes\PABT.MauIn' -Value 'Gói mẫu in & cấu hình LARC' -Force | Out-Null
     New-Item 'HKCU:\Software\Classes\PABT.MauIn\DefaultIcon' -Value "`"$ico`",0" -Force | Out-Null
     New-Item 'HKCU:\Software\Classes\PABT.MauIn\shell\open\command' -Value "`"$exe`" `"%1`"" -Force | Out-Null
     $k = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PABT'

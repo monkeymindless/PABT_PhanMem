@@ -12,7 +12,8 @@ from pathlib import Path
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
                                QFileDialog, QFormLayout, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
                                QListWidgetItem, QMessageBox, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSpinBox,
-                               QSplitter, QStyledItemDelegate, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
+                               QHeaderView, QSplitter, QStyledItemDelegate, QTableWidget, QTableWidgetItem, QTabWidget,
+                               QVBoxLayout, QWidget)
 
 from . import lap_pa, nghiep_vu
 from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
@@ -39,6 +40,11 @@ COT_GD[4] = [('ma', 'Mã', 60), ('ten', 'Chính sách hỗ trợ', 300), ('cach_
              ('so_luong', 'Số lượng', 80), ('don_gia', 'Đơn giá (đ)', 110), ('ty_le', 'Tỷ lệ %', 60),
              ('thanh_tien', 'Thành tiền (đ)', 120), ('ghi_chu', 'Ghi chú (căn cứ)', 280)]
 # thẻ của cửa sổ lập phương án: chỉ số thẻ -> mục (0 = hồ sơ hộ). Từ 0.9.21 vật nuôi là thẻ 4 (mục MUC_VN), hỗ trợ thẻ 5 (mục 4)
+# 0.9.95 (đặc tả Ultra-Compact): cột ngắn bề rộng gọn; cột chữ (tên, cách tính, quy cách, ghi chú, vị trí) GIÃN chia phần còn lại -
+# hết thanh cuộn ngang thừa. Cột vẫn không hẹp hơn chữ tiêu đề (giao_dien.san_tieu_de)
+RONG_COT_GON = {'ma': 52, 'dvt': 55, 'so_luong': 72, 'don_gia': 92, 'ty_le': 54, 'thanh_tien': 105, 'nguon': 68}
+COT_GIAN = ('ten', 'cach_tinh', 'quy_cach', 'ghi_chu', 'vi_tri')
+CAO_NUT_DONG = 24                  # nút thao tác dòng (Xóa dòng, Lên, Xuống…) gọn
 THE_MUC = (0, 1, 2, 3, MUC_VN, 4)
 TEN_TAB = {0: 'Thông tin hộ, thửa đất', 1: '1. Đất', 2: '2. Nhà, công trình', 3: '3. Cây trồng', 4: '4. Vật nuôi',
            5: '5. Hỗ trợ'}                  # theo chỉ số thẻ
@@ -294,9 +300,15 @@ class BangMuc(QWidget):
         self.cot = COT_GD[muc]
         self.bang = QTableWidget(0, len(self.cot))
         self.bang.setHorizontalHeaderLabels([c[1] for c in self.cot])
+        hd = self.bang.horizontalHeader()
+        hd.setStretchLastSection(False)
         for i, c in enumerate(self.cot):
-            self.bang.setColumnWidth(i, c[2])
-        self.bang.horizontalHeader().setStretchLastSection(True)
+            if c[0] in COT_GIAN:
+                hd.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
+            else:
+                self.bang.setColumnWidth(i, RONG_COT_GON.get(c[0], c[2]))
+        from .giao_dien import san_tieu_de
+        san_tieu_de(self.bang)
         self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.bang.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.bang.setAlternatingRowColors(True)
@@ -333,7 +345,7 @@ class BangMuc(QWidget):
         self.nut = {}
         if muc == 1:
             self.cb_thua = QComboBox()
-            self.cb_thua.setMinimumWidth(420)
+            self.cb_thua.setMinimumWidth(260)
             nhan = QLabel('Thửa:')
             nhan.setProperty('vai', 'nhan')
             nhap.addWidget(nhan)
@@ -375,19 +387,23 @@ class BangMuc(QWidget):
         for ten, ham in ds:
             b = QPushButton(ten)
             b.clicked.connect(ham)
+            b.setFixedHeight(CAO_NUT_DONG)
+            b.setStyleSheet('QPushButton { padding: 1px 8px; }')
             nut.addWidget(b)
             self.nut[ten] = b
         nut.addStretch(1)
         self.lb_tong = QLabel('')
         self.lb_tong.setStyleSheet('QLabel { font-weight: bold; color: #1F4E79; }')
         nut.addWidget(self.lb_tong)
+        nut.setContentsMargins(0, 0, 0, 0)
         lo = QVBoxLayout(self)
-        lo.setContentsMargins(10, 10, 10, 8)
-        lo.setSpacing(8)
+        lo.setContentsMargins(6, 4, 6, 4)
+        lo.setSpacing(4)
         if muc == 4:
-            # một hàng: thông tin hộ dùng tính hỗ trợ + tình trạng tái định cư
+            # một hàng: thông tin hộ dùng tính hỗ trợ + tình trạng tái định cư (gọn 26 px, lề 0)
             h = QHBoxLayout()
-            h.setSpacing(8)
+            h.setContentsMargins(0, 0, 0, 0)
+            h.setSpacing(6)
             for w in (QLabel('Nhân khẩu:'), man.o_nk, man.o_di_chuyen, QLabel('DT đất NN đang dùng (m²):'),
                       man.o_dt_nn, man.lb_tl):
                 if isinstance(w, QLabel) and w is not man.lb_tl:
@@ -408,11 +424,18 @@ class BangMuc(QWidget):
             h.addSpacing(10)
             h.addWidget(nhan)
             h.addWidget(self.cb_tdc, 1)
+            for i in range(h.count()):
+                w = h.itemAt(i).widget()
+                if w is not None:
+                    w.setMaximumHeight(26)
             lo.addLayout(h)
-        khung_nhap = QWidget()                       # hàng nhập trong một khung nền nhạt, tách khỏi bảng
+        # 0.9.95: bỏ khung viền bao hàng nhập (lề 0); mục 1: nút thao tác dòng + "Cộng mục 1" lên CÙNG hàng chọn thửa
+        if muc == 1:
+            nhap.addSpacing(6)
+            nhap.addLayout(nut)
+        khung_nhap = QWidget()
         khung_nhap.setObjectName('khung_nhap')
-        khung_nhap.setStyleSheet('QWidget#khung_nhap { background: #F4F8FC; border: 1px solid #D5E1EC; border-radius: 8px; }')
-        nhap.setContentsMargins(10, 8, 10, 8)
+        nhap.setContentsMargins(0, 0, 0, 0)
         khung_nhap.setLayout(nhap)
         lo.addWidget(khung_nhap)
         if muc == MUC_VN:
@@ -435,9 +458,10 @@ class BangMuc(QWidget):
             self.cb_thua.setProperty('nhap', '1')
         if muc == 4:
             lo.addWidget(self._the_cach_tinh())
-        lo.addLayout(nut)
+        if muc != 1:
+            lo.addLayout(nut)
         lo.addWidget(self.bang, 1)
-        lo.addLayout(man.hang_dieu_huong(the_cua(muc)))
+        # nút Trở lại / Tiếp theo: MỘT hàng chung dưới đáy cửa sổ, cùng dải tổng cộng (CuaSoLapPA.hang_dieu_huong)
         from .giao_dien import nhap_bang_phim
         nhap_bang_phim(self.bang)                    # dòng cao; Tab / Enter đi giữa các ô, không cần chuột
         # ô xổ có chữ dài (câu tái định cư, mô tả thửa): không bắt cửa sổ rộng theo chữ dài nhất
@@ -703,6 +727,9 @@ QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #FFFFFF; backgroun
                      'QPushButton#btn_toggle_preview:checked { background: #2563EB; border-color: #93C5FD; }')
 
 
+CAO_NUT_TREN = 27                  # 0.9.95: hàng trên cùng cửa sổ lập phương án (chọn hộ + nút lệnh) một hàng 27 px
+
+
 class CuaSoLapPA(QDialog):
     """Hồ sơ và phương án một hộ trong một cửa sổ: thẻ 0 thông tin hộ, thửa đất → 1 đất → 2 nhà, công trình → 3 cây trồng →
     4 vật nuôi → 5 hỗ trợ (Tiếp theo / Trở lại). self.bang theo MỤC (bang[4] = hỗ trợ, bang[MUC_VN] = vật nuôi), thẻ: the_cua."""
@@ -716,27 +743,30 @@ class CuaSoLapPA(QDialog):
         self.thay_doi_csdl = False
         # ---- dòng chọn hộ
         self.cb_ho = QComboBox()
-        self.cb_ho.setMinimumWidth(200)             # 0.9.78: nhường chỗ cho chữ "(Ctrl+Shift+V)" của nút Dán (ô vẫn giãn khi còn chỗ)
+        self.cb_ho.setMinimumWidth(190)             # 0.9.95: ô chọn hộ 190-270 px, cùng hàng với các nút lệnh
+        self.cb_ho.setMaximumWidth(270)
         self.cb_ho.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self.cb_ho.setMinimumContentsLength(24)
+        self.cb_ho.setMinimumContentsLength(14)
         self.cb_ho.setEditable(True)
         self.cb_ho.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self._nap_ds_ho()
         self.cb_ho.activated.connect(self._chon_ho_tu_hop)
-        self.b_truoc = QPushButton('◀ Hộ trước')
-        self.b_sau = QPushButton('Hộ sau ▶')
+        self.b_truoc = QPushButton('◀')
+        self.b_sau = QPushButton('▶')
         self.b_truoc.clicked.connect(lambda: self.sang_ho(-1))
         self.b_sau.clicked.connect(lambda: self.sang_ho(1))
-        self.b_truoc.setToolTip('Hộ trước (Ctrl + ←, Ctrl + PgUp)')
-        self.b_sau.setToolTip('Hộ sau (Ctrl + →, Ctrl + PgDn)')
+        self.b_truoc.setToolTip('Hộ trước (Ctrl+Left, Ctrl+PgUp)')
+        self.b_sau.setToolTip('Hộ sau (Ctrl+Right, Ctrl+PgDn)')
+        for b in (self.b_truoc, self.b_sau):
+            b.setFixedWidth(32)
         self.b_goi_y = QPushButton('Gợi ý hỗ trợ…')
         self.b_goi_y.clicked.connect(lambda: self.goi_y())
-        self.b_dan = self.btn_dan_ts = QPushButton('Dán danh sách tài sản… (Ctrl+Shift+V)')
+        self.b_dan = self.btn_dan_ts = QPushButton('Dán danh sách tài sản…')   # 0.9.95: phím tắt ở chú thích (hàng gọn)
         self.b_dan.setObjectName('btn_dan_ts')
-        self.b_dan.setToolTip('Dán / gõ nhiều dòng tài sản (Tên, ĐVT, Số lượng…): phần mềm tự xếp vào Nhà, công trình / Cây trồng / '
+        self.b_dan.setToolTip('Ctrl+Shift+V. Dán / gõ nhiều dòng tài sản (Tên, ĐVT, Số lượng…): phần mềm tự xếp vào Nhà, công trình / Cây trồng / '
                               'Vật nuôi / Hỗ trợ theo bộ đơn giá. Đang có bảng tài sản trong bộ nhớ đệm (Excel, Word…) thì tự điền '
                               'và phân loại ngay khi mở.')
-        self.b_dan.setFixedHeight(32)
+        self.b_dan.setFixedHeight(CAO_NUT_TREN)
         self.b_dan.setCursor(Qt.CursorShape.PointingHandCursor)
         self.b_dan.setStyleSheet(QSS_NUT_DAN_TS)        # có bộ chọn #btn_dan_ts: không truyền sang tooltip của nút
         self.b_dan.setProperty('khong_icon', True)      # to_mau không gắn biểu tượng màu nhóm đè lên nền xanh
@@ -746,7 +776,7 @@ class CuaSoLapPA(QDialog):
             self.b_dan.setIcon(ic)
         self.b_dan.clicked.connect(lambda: self.mo_dan_tai_san())
         # 0.9.87: quét Giấy chứng nhận QSDĐ / biên bản kiểm kê (ảnh chụp điện thoại, PDF) -> thông tin hộ, thửa, tài sản
-        self.b_ocr = QPushButton('Quét giấy tờ (OCR)…')
+        self.b_ocr = QPushButton('Quét giấy tờ…')
         self.b_ocr.setToolTip('Ảnh chụp / PDF Giấy chứng nhận QSDĐ, biên bản kiểm kê: nhận dạng chữ lấy họ tên, CCCD, địa chỉ, thửa đất, '
                               'tài sản - soát lại rồi điền (chưa lưu cho tới khi bấm Lưu)')
         self.b_ocr.clicked.connect(lambda: self.quet_giay_to())
@@ -760,7 +790,7 @@ class CuaSoLapPA(QDialog):
         self.btn_toggle_preview = QPushButton('Xem trước A4 (F4)')
         self.btn_toggle_preview.setObjectName('btn_toggle_preview')
         self.btn_toggle_preview.setCheckable(True)
-        self.btn_toggle_preview.setFixedHeight(32)
+        self.btn_toggle_preview.setFixedHeight(CAO_NUT_TREN)
         self.btn_toggle_preview.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_toggle_preview.setToolTip('Hiện / ẩn bản in A4 của hộ đang mở ở nửa phải cửa sổ (F4). Bản xem trước lấy cả số liệu '
                                            'chưa lưu; cần Microsoft Excel.')
@@ -776,17 +806,22 @@ class CuaSoLapPA(QDialog):
         # 125%), cửa sổ không thu nhỏ được dưới mức đó, rộng hơn màn hình 1366; nay tối thiểu = khối rộng nhất
         from .giao_dien import XepDong
         self.thanh_tren = QWidget()
-        h1 = XepDong(self.thanh_tren, 8)
+        h1 = XepDong(self.thanh_tren, 4)
         h1.setContentsMargins(0, 0, 0, 0)
+        for b in (self.b_truoc, self.b_sau, self.b_ocr, self.b_goi_y, self.b_luu, self.b_bo, self.b_in, self.b_dong):
+            b.setFixedHeight(CAO_NUT_TREN)
         nhan = QLabel('Hộ:')
         nhan.setProperty('vai', 'nhan')
+        # 0.9.95: 4 khối nhỏ (chọn hộ | nhập liệu | lưu | xem / in / đóng) - đủ rộng (>= ~1.300 điểm) thì MỘT hàng 27 px với ô chọn hộ,
+        # hẹp (màn hình 1366 ở 125%) thì xuống 2 hàng thay vì 3
         for nhom, gian in (((nhan, self.cb_ho, self.b_truoc, self.b_sau), None),
-                           ((self.b_dan, self.b_ocr, self.b_goi_y, self.b_luu, self.b_bo), 'dau'),
+                           ((self.b_dan, self.b_ocr, self.b_goi_y), 'dau'),
+                           ((self.b_luu, self.b_bo), 'dau'),
                            ((self.btn_toggle_preview, self.b_in, self.b_dong), 'dau')):
             khoi = QWidget()
             hk = QHBoxLayout(khoi)
             hk.setContentsMargins(0, 0, 0, 0)
-            hk.setSpacing(8)
+            hk.setSpacing(6)
             if gian:
                 hk.addStretch(1)                    # nút dồn về phải trong khối (chỗ thừa khi một hàng)
             for w in nhom:
@@ -812,11 +847,10 @@ class CuaSoLapPA(QDialog):
         self.tab = QTabWidget()
         the0 = QWidget()
         lo0 = QVBoxLayout(the0)
-        lo0.setContentsMargins(10, 10, 10, 8)
+        lo0.setContentsMargins(6, 4, 6, 4)
         self.ho_so = KhungHoSo(con, ma_ho, the0, an=('trang_thai', 'tai_dinh_cu'), khi_thay_doi_csdl=self._sau_ghi_ho_so,
                                khi_xoa_ho=self._sau_xoa_ho)
         lo0.addWidget(self.ho_so, 1)
-        lo0.addLayout(self.hang_dieu_huong(0))
         self.tab.addTab(the0, TEN_TAB[0])
         self.bang = {}
         for the, m in enumerate(THE_MUC[1:], start=1):
@@ -825,8 +859,8 @@ class CuaSoLapPA(QDialog):
         # ---- tổng + cảnh báo
         self.lb_tong = QLabel('')
         self.lb_tong.setObjectName('tong_pa')
-        self.lb_tong.setStyleSheet('QLabel#tong_pa { font-size: 14px; padding: 8px 10px; background: #EAF2FB; '
-                                   'border: 1px solid #D3E2F1; border-radius: 6px; }')
+        self.lb_tong.setStyleSheet('QLabel#tong_pa { font-size: 13px; padding: 3px 8px; background: #EAF2FB; '
+                                   'border: 1px solid #D3E2F1; border-radius: 5px; }')
         self.lb_tong.setWordWrap(True)
         self.lb_tb = QLabel('')
         self.lb_tb.setWordWrap(True)
@@ -841,10 +875,10 @@ class CuaSoLapPA(QDialog):
         trai = QWidget()
         lo_trai = QVBoxLayout(trai)
         lo_trai.setContentsMargins(0, 0, 0, 0)
-        lo_trai.setSpacing(8)
+        lo_trai.setSpacing(4)
         lo_trai.addWidget(self.tab, 1)
         lo_trai.addWidget(self.lb_tb)
-        lo_trai.addWidget(self.lb_tong)
+        lo_trai.addLayout(self.hang_dieu_huong())       # dải tổng cộng + ◀ Trở lại / Tiếp theo ▶ một hàng (0.9.95)
         lo_trai.addWidget(self.o_cb)
         self.w_preview = KhungXemTruocTaiLieu(self, ham_in=lambda pdf, xlsx: in_qua_excel(self, pdf, xlsx))
         self.w_preview.setMinimumWidth(520)
@@ -859,8 +893,8 @@ class CuaSoLapPA(QDialog):
         self._hen_xem.setSingleShot(True)
         self._hen_xem.timeout.connect(lambda: self.lam_moi_xem_truoc())
         lo = QVBoxLayout(self)
-        lo.setContentsMargins(14, 12, 14, 12)
-        lo.setSpacing(8)
+        lo.setContentsMargins(6, 4, 6, 4)
+        lo.setSpacing(4)
         lo.addWidget(self.thanh_tren)
         lo.addWidget(self.tach, 1)
         self._phim = []
@@ -888,24 +922,36 @@ class CuaSoLapPA(QDialog):
         self.cb_ho.blockSignals(True)
         self.cb_ho.clear()
         for ma, tt, ten in self.bo.danh_sach_ho():
-            self.cb_ho.addItem(f'{tt}. {ten}  (mã {ma})', ma)
+            self.cb_ho.addItem(f'{tt}. {ten}', ma)            # không hiện "(mã n)" (16/10/2026)
         self.cb_ho.blockSignals(False)
 
-    def hang_dieu_huong(self, the: int) -> QHBoxLayout:
-        """Nút ◀ Trở lại / Tiếp theo ▶ dưới mỗi thẻ. Thẻ cuối không có nút lưu riêng: "Lưu (Ctrl+S)" luôn ở thanh trên (trước
-        0.9.18 thêm nút "Lưu phương án hộ" ở đây - hai nút cùng một lệnh trên cùng màn hình)."""
+    def hang_dieu_huong(self, the: int | None = None) -> QHBoxLayout:
+        """0.9.95: MỘT hàng dưới đáy cửa sổ (28 px) = dải tổng cộng `lb_tong` + ◀ Trở lại / Tiếp theo ▶ theo thẻ đang xem (trước
+        0.9.95 mỗi thẻ một hàng nút riêng cao 40 px). Thẻ cuối không có nút lưu riêng: "Lưu (Ctrl+S)" ở thanh trên."""
         h = QHBoxLayout()
-        h.setSpacing(8)
-        if the > 0:
-            b = QPushButton(f'◀ Trở lại: {TEN_TAB[the - 1]}')
-            b.clicked.connect(lambda: self.sang_the(the - 1))
-            h.addWidget(b)
-        h.addStretch(1)
-        if the < len(THE_MUC) - 1:
-            b = QPushButton(f'Tiếp theo: {TEN_TAB[the + 1]} ▶')
-            b.clicked.connect(lambda: self.sang_the(the + 1))
-            h.addWidget(b)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(6)
+        self.b_tro_lai = QPushButton('◀ Trở lại')
+        self.b_tiep_theo = QPushButton('Tiếp theo ▶')
+        self.b_tro_lai.clicked.connect(lambda: self.sang_the(self.tab.currentIndex() - 1))
+        self.b_tiep_theo.clicked.connect(lambda: self.sang_the(self.tab.currentIndex() + 1))
+        for b in (self.b_tro_lai, self.b_tiep_theo):
+            b.setFixedHeight(28)
+        h.addWidget(self.lb_tong, 1)
+        h.addWidget(self.b_tro_lai)
+        h.addWidget(self.b_tiep_theo)
+        self.tab.currentChanged.connect(lambda i: self._cap_nhat_dieu_huong(i))
+        self._cap_nhat_dieu_huong(self.tab.currentIndex() if the is None else the)
         return h
+
+    def _cap_nhat_dieu_huong(self, the: int):
+        co_lui, co_tien = the > 0, the < len(THE_MUC) - 1
+        self.b_tro_lai.setVisible(co_lui)
+        self.b_tiep_theo.setVisible(co_tien)
+        if co_lui:
+            self.b_tro_lai.setText(f'◀ Trở lại: {TEN_TAB[the - 1]}')
+        if co_tien:
+            self.b_tiep_theo.setText(f'Tiếp theo: {TEN_TAB[the + 1]} ▶')
 
     def sang_the(self, the: int) -> bool:
         """Chuyển thẻ; rời thẻ hồ sơ hộ có sửa đổi thì lưu hồ sơ trước (để thửa mới dùng được ở mục 1)."""
@@ -1596,7 +1642,7 @@ class HopDuAn(QDialog):
         super().__init__(parent)
         self.con = con
         self.setWindowTitle('Thông tin dự án')
-        self.resize(1080, 420)
+        self.resize(1080, 500)                          # 0.9.95: đủ cao, ô tên đơn vị bên phải không bị cắt (rộng >= 920)
         gt = lap_pa.doc_du_an(con)
         self.o = {}
         from . import csdl
@@ -1761,7 +1807,7 @@ class HopIn(QDialog):
         self.cb_pham_vi = QComboBox()
         if self.ma_ho_chon:
             ten = con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (self.ma_ho_chon[0],)).fetchone()[0]
-            self.cb_pham_vi.addItem(f'Hộ đang chọn: {ten} (mã {self.ma_ho_chon[0]})' if len(self.ma_ho_chon) == 1
+            self.cb_pham_vi.addItem(f'Hộ đang chọn: {ten}' if len(self.ma_ho_chon) == 1
                                     else f'{len(self.ma_ho_chon)} hộ đang chọn', 'chon')
         self.cb_pham_vi.addItem(f'Các hộ đã lập phương án ({len(self.ds_pa)} hộ)', 'pa')
         if self.ds_tu_lap:

@@ -203,7 +203,7 @@ class TestCuaSoChinh(CoSoCuaSo):
         self.assertIsNotNone(ud.file_huong_dan())
         h = w.huong_dan(cho=False)
         from PySide6.QtWidgets import QTextBrowser
-        self.assertIn('PABT', h.findChild(QTextBrowser).toPlainText()[:500])
+        self.assertIn('LARC', h.findChild(QTextBrowser).toPlainText()[:500])   # 0.9.94: tên hiển thị LARC
         h.close()
         self.assertEqual(w.lenh['Hướng dẫn sử dụng'].shortcut().toString(), 'F1')
         w.close()

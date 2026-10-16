@@ -75,9 +75,9 @@ class HopDangNhap(_Hop):
         self.goc = str(goc or ch.get('may_chu', ''))
         self.phien = None
         self.offline = False
-        self.setWindowTitle('Đăng nhập PABT')
+        self.setWindowTitle('Đăng nhập LARC')
         self.setFixedWidth(430)
-        tieu = QLabel('<b>Đăng nhập máy chủ PABT</b>')
+        tieu = QLabel('<b>Đăng nhập máy chủ LARC</b>')
         tieu.setProperty('vai', 'tieu_de')
         self.lb_may_chu = QLabel(f'Máy chủ: {self.goc or "(chưa thiết lập)"}')
         self.lb_may_chu.setWordWrap(True)
@@ -195,7 +195,7 @@ class HopThietLap(_Hop):
         hn.addWidget(b_bo)
         hn.addWidget(b_dong)
         ghi = QLabel('Máy chủ là một thư mục dùng chung trên máy chủ của đơn vị (chia sẻ trong mạng, cấp quyền đọc / ghi cho người '
-                     'dùng PABT). Máy đầu tiên khởi tạo máy chủ và tài khoản quản trị; các máy khác chỉ cần chọn cùng thư mục rồi '
+                     'dùng LARC). Máy đầu tiên khởi tạo máy chủ và tài khoản quản trị; các máy khác chỉ cần chọn cùng thư mục rồi '
                      '"Kết nối". Dự án dùng chung đặt trong thư mục DuAn của máy chủ.')
         ghi.setWordWrap(True)
         lo = QVBoxLayout(self)
@@ -228,7 +228,7 @@ class HopThietLap(_Hop):
                 n = len(may_chu.ds_nguoi_dung(goc))
                 kq, chu = 'co', f'✔ Đây là máy chủ PABT ({n} tài khoản): bấm "Kết nối máy chủ có sẵn".'
             elif chay_nen(self, lambda: may_chu.thu_muc_ton_tai(goc), f'Đang kiểm tra thư mục {goc}…'):
-                kq, chu = 'moi', 'Thư mục chưa phải máy chủ PABT: nhập tài khoản quản trị rồi bấm "Khởi tạo máy chủ mới".'
+                kq, chu = 'moi', 'Thư mục chưa phải máy chủ LARC: nhập tài khoản quản trị rồi bấm "Khởi tạo máy chủ mới".'
             else:
                 kq, chu = 'khong', ('Thư mục chưa có hoặc không truy cập được (kiểm tra mạng, tên máy chủ, quyền chia sẻ). '
                                     'Khởi tạo máy chủ mới sẽ tạo thư mục nếu có quyền ghi.')
@@ -241,7 +241,7 @@ class HopThietLap(_Hop):
     def ket_noi(self):
         goc = self.o_goc.text().strip()
         if not ket_noi_duoc(self, goc):
-            self.bao('Thư mục này chưa phải máy chủ PABT hoặc không truy cập được.')
+            self.bao('Thư mục này chưa phải máy chủ LARC hoặc không truy cập được.')
             return False
         may_chu.ghi_cau_hinh(may_chu=goc)
         self.goc = goc

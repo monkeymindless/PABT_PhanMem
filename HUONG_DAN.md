@@ -1,4 +1,15 @@
-# Phần mềm PABT – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.93 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.95 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.95**: giao diện gọn - thẻ số chỉ ở Danh sách hộ, banner chỉ ở màn hình chào, cửa sổ lập phương án hộ một hàng nút (◀ / ▶
+> chuyển hộ), nút Trở lại / Tiếp theo cùng hàng tổng cộng. **Quét giấy tờ**: xem trước mọi trang ảnh / PDF bên trái (Ctrl + lăn chuột
+> phóng to, kéo để di chuyển, Xoay 90°, nút "Chữ OCR" xem chữ nhận dạng); đọc được **bảng phương án chi tiết** của hộ đã scan và
+> **Nhập trọn bộ vào phương án hộ** (hộ, nhân khẩu, nguồn gốc, tái định cư, thửa, tài sản / cây / hỗ trợ). PDF scan cần gói nhận dạng
+> chữ tiếng Việt của Windows (Cài đặt > Thời gian và ngôn ngữ > Ngôn ngữ) hoặc Tesseract.
+
+> **0.9.94**: cột **Số lượng** kiểu kế toán - nhà, công trình `46,00`; đất, cây, vật nuôi, hỗ trợ, khác `16,0`. Không còn thanh tab
+> phía trên trang: chuyển trang bằng menu trái hoặc **Ctrl+1 … Ctrl+6** (Danh sách hộ, Tổng hợp tiền, Quyết định, Theo dõi tiến độ,
+> Báo cáo, Dự toán); cửa sổ hộ đóng bằng nút **Đóng**. Tên dự án hiện ở giữa thanh menu trên cùng. **Niêm yết & Lấy ý kiến**: nút
+> **Xuất bảng niêm yết** cùng hàng các nút đợt (số CCCD tự che).
 
 > **0.9.93**: **Dán danh sách tài sản** hiểu câu viết tự nhiên - `Xoài: 16 cây, 17 năm tuổi`, `Tràm: 1453 cây, đường kính 28cm`,
 > `Nhà tạm: 46m2`, `Gác để ở tính bằng Nhà 01 tầng kết cấu loại 4: 35,8m2`, `Ao nuôi cá ghép: 1,5ha, 1 năm 1 vụ` (dòng nền vàng: xem

@@ -105,7 +105,7 @@ class ThanhTieuDe(QWidget):
         lo.setSpacing(2)
         from .giao_dien import KhungLogo
         self.logo = KhungLogo(20)
-        self.logo.setToolTip('PABT')
+        self.logo.setToolTip('LARC')
         lo.addWidget(self.logo, 0, Qt.AlignmentFlag.AlignVCenter)
         lo.addSpacing(6)
         mb.setParent(self)
@@ -157,13 +157,13 @@ class ThanhTieuDe(QWidget):
         return self.lb_tieu_de.property('chu_day_du') or ''
 
     def _dat_vi_tri(self) -> None:
-        """Tiêu đề canh giữa cửa sổ; đè lên menu / nút thì dời sang phần trống, chữ dài rút "…"."""
+        """Tiêu đề canh giữa cửa sổ; đè lên menu / nút thì dời sang phần trống, chữ dài rút "…" ở giữa."""
         chu = self.lb_tieu_de.property('chu_day_du') or ''
         trai = (self.mb.geometry().right() if self.mb.isVisible() else 0) + 12
         phai = min([w.geometry().left() for w in self.nut_cua_so.values() if w.isVisible()] or [self.width()]) - 12
         con = max(phai - trai, 0)
         fm = self.lb_tieu_de.fontMetrics()
-        hien = fm.elidedText(chu, Qt.TextElideMode.ElideRight, con)
+        hien = fm.elidedText(chu, Qt.TextElideMode.ElideMiddle, con)   # giữ "PABT - …" và "(tên file)" khi rút gọn
         rong = min(fm.horizontalAdvance(hien) + 8, con)
         x = min(max((self.width() - rong) // 2, trai), max(phai - rong, trai))
         self.lb_tieu_de.setText(hien)

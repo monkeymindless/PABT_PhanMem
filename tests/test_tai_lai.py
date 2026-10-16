@@ -96,7 +96,7 @@ class TestTaiLaiTheoHo(unittest.TestCase):
         kq = w.kq
         return dict(dong=dong, ho=[(h['ma_ho'], str(h['tong']), h['lech'], h['sua'] is not None) for h in kq.ho],
                     lech=[(m, d.stt, str(d.thanh_tien)) for m, _, d in kq.dong_lech], canh_bao=list(kq.canh_bao),
-                    du_an=w.lb_du_an.text().split('·  file')[0], ket_qua=w.lb_ket_qua.text(),
+                    du_an=w.windowTitle().split('  [')[0], ket_qua=w.lb_ket_qua.text(),
                     the_so={k: o.text() for k, o in w.the_so.items()})
 
     def _so_voi_toan_bo(self, w):

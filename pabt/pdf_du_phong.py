@@ -214,7 +214,7 @@ def xuat_pdf_du_phong_qt(xlsx, pdf) -> Path:
     w = QPdfWriter(str(pdf))
     w.setResolution(300)
     w.setTitle(Path(xlsx).stem)
-    w.setCreator('PABT')
+    w.setCreator('LARC')
     kho = QPageSize.PageSizeId.A3 if trang['kho'] == 'A3' else QPageSize.PageSizeId.A4
     hl = QPageLayout(QPageSize(kho), QPageLayout.Orientation.Landscape if trang['ngang'] else QPageLayout.Orientation.Portrait,
                      QMarginsF(*trang['le']), QPageLayout.Unit.Millimeter)

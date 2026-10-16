@@ -18,7 +18,8 @@ from .thong_bao import TEN_UD, chu_loi
 
 # doi_chieu, nhap_excel, nhap_tho (kéo theo openpyxl ~0,2 giây - 60% thời gian nạp mã lúc mở phần mềm) nạp khi dùng tới
 
-TIEU_DE_CUA_SO = 'PABT' + (f' ({NHAN_THU_NGHIEM})' if BAN_THU_NGHIEM else '')
+TIEU_DE_CUA_SO = 'LARC' + (f' ({NHAN_THU_NGHIEM})' if BAN_THU_NGHIEM else '')   # tên hiển thị (15/10/2026: PABT -> LARC)
+MO_TA_UD = 'Lập phương án bồi thường, hỗ trợ'      # tiêu đề cửa sổ khi chưa mở dự án
 # danh sách hộ ở màn hình chính: gọn (0.9.12). Tiền từng mục, quyết định, chi trả, bàn giao, ghi chú: menu "Bảng tổng hợp",
 # "Theo dõi tiến độ" (man_hinh_theo_doi)
 COT = ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²)', 'Trạng thái', 'Ghi chú']
@@ -104,11 +105,23 @@ def doc_gan_day() -> list:
         return []
 
 
+def _con_tren_dia(x) -> bool:
+    """False chỉ khi CHẮC file đã mất: ổ đĩa / thư mục dùng chung còn truy cập được mà không có file. Ổ mạng / USB đang ngắt
+    -> giữ lại trong danh sách (cắm lại là mở được)."""
+    f = Path(x)
+    try:
+        return f.is_file() or not Path(f.anchor).exists()
+    except OSError:
+        return True
+
+
 def ghi_gan_day(p) -> None:
     import json
     try:
         moi = str(Path(p).resolve())
-        ds = [moi] + [x for x in doc_gan_day() if x.lower() != moi.lower()]
+        # bỏ file không còn trên đĩa (15/10/2026): trước đây file tạm đã xóa vẫn chiếm chỗ trong GAN_DAY_TOI_DA mục, đẩy dự án thật
+        # ra khỏi danh sách -> bảng "Dự án làm việc gần đây" trống dù vừa mở dự án
+        ds = [moi] + [x for x in doc_gan_day() if x.lower() != moi.lower() and _con_tren_dia(x)]
         f = _file_gan_day()
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(json.dumps(ds[:GAN_DAY_TOI_DA], ensure_ascii=False, indent=1), encoding='utf-8')
@@ -159,41 +172,75 @@ def ghim_du_an(p, ghim: bool = True) -> list:
     return ds
 
 
+def _file_tong_du_an() -> Path:
+    return may_chu.thu_muc_may() / 'tong_du_an.json'
+
+
+def _doc_tong_nho() -> dict:
+    import json
+    try:
+        d = json.loads(_file_tong_du_an().read_text(encoding='utf-8'))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def ghi_tong_nho(p, so_ho: int, tong) -> None:
+    """Nhớ tổng kinh phí CHUẨN (cùng cách tính danh sách hộ: mọi mục kể cả thưởng, làm tròn như dự án) của file dự án theo thời
+    điểm sửa + cỡ file - màn hình chào hiện đúng số mà không tính lại cả dự án (0.9.95). Lỗi ghi: bỏ qua."""
+    import json
+    try:
+        st = Path(p).stat()
+        d = _doc_tong_nho()
+        d[str(Path(p).resolve()).lower()] = [st.st_mtime_ns, st.st_size, int(so_ho), str(tong)]
+        if len(d) > 60:                                 # chỉ giữ các file gần đây
+            for k in list(d)[:len(d) - 60]:
+                d.pop(k, None)
+        f = _file_tong_du_an()
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+    except (OSError, ValueError):
+        pass
+
+
 def _tom_tat_pabt(p) -> tuple:
-    """(số hộ, chuỗi tổng tiền, chữ để tìm: tên dự án + địa bàn) đọc nhanh file .pabt chỉ xem; lỗi / khóa -> (None, None, '')."""
+    """(số hộ, chuỗi tổng tiền, chữ để tìm: tên dự án + địa bàn, tên hiển thị) đọc file dự án chỉ xem; lỗi / khóa ->
+    (None, None, '', tên file). Tổng = tổng kinh phí như danh sách hộ (0.9.95: trước đây cộng thô ct_dat / ct_khoan - thiếu thưởng
+    bàn giao mặt bằng, không làm tròn, lệch số danh sách hộ). Tính một lần mỗi khi file đổi (ghi_tong_nho), lần sau đọc nhớ.
+    Tên hiển thị: "<tên dự án> · <địa bàn> (<tên file>)" khi có tên dự án."""
+    p = Path(p)
     try:
         con = csdl.mo(str(p), chi_doc=True)
         try:
             n = con.execute('SELECT COUNT(*) FROM ho').fetchone()[0]
+            ten = dia_ban = ''
             try:
                 r = con.execute('SELECT ten, cap_dia_ban, ten_dia_ban FROM du_an WHERE id = 1').fetchone()
                 chu_tim = ' '.join(x for x in (r or ()) if x)
+                if r is not None:
+                    ten, dia_ban = str(r[0] or '').strip(), str(r[2] or '').strip()
             except sqlite3.Error:
                 chu_tim = ''
+            hien = (f'{ten}' + (f' · {dia_ban}' if dia_ban else '') + f' ({p.name})') if ten else p.name
             tong = None
             try:
-                r = con.execute("SELECT gia_tri FROM tham_so WHERE ma = 'TONG_DU_AN'").fetchone()
-                if r and r[0]:
-                    tong = vn(r[0])
-            except (sqlite3.Error, Exception):
+                st = p.stat()
+                nho = _doc_tong_nho().get(str(p.resolve()).lower())
+                if nho and nho[0] == st.st_mtime_ns and nho[1] == st.st_size:
+                    tong = D(nho[3])
+            except (OSError, ValueError, IndexError, TypeError):
                 pass
-            if tong is None:
+            if tong is None and n:
                 try:
-                    s = D('0')
-                    for dt, gia, hs, tl in con.execute(
-                            'SELECT dien_tich, gia_bang_gia, he_so_k, ty_le FROM ct_dat'):
-                        s += D(dt or '0') * D(gia or '0') * D(hs or '1') * D(tl or '1')
-                    for sl, dg, tl in con.execute('SELECT so_luong, don_gia, ty_le FROM ct_khoan'):
-                        s += D(sl or '0') * D(dg or '0') * D(tl or '1')
-                    if s:
-                        tong = vn(s)
-                except (sqlite3.Error, Exception):
-                    pass
-            return n, tong, chu_tim
+                    tong = sum((k.tong for k in nghiep_vu.tinh_tat_ca(con)), D('0'))
+                    ghi_tong_nho(p, n, tong)
+                except Exception:                       # file cũ / hỏng: không hiện tổng, vẫn liệt kê
+                    tong = None
+            return n, (vn(tong) if tong else None), chu_tim, hien
         finally:
             con.close()
     except Exception:
-        return None, None, ''
+        return None, None, '', p.name
 
 
 def file_huong_dan():
@@ -450,9 +497,6 @@ class CuaSoChinh(QMainWindow):
         self._i_trang = 0                                # trang (chỉ số TRANG) đang chọn - mở lại dự án thì về trang này
         self.khung_du_toan = None                        # trang Dự toán: tạo khi mở lần đầu (không làm chậm lúc khởi động)
         self.dm = None
-        self.lb_du_an = QLabel('')
-        self.lb_du_an.setWordWrap(True)
-        self.lb_du_an.setProperty('vai', 'bang_ten')
         self.lb_ket_qua = QLabel('')
         self.lb_ket_qua.setStyleSheet('QLabel { font-weight: bold; padding: 5px 8px; }')
         self.lb_ket_qua.setWordWrap(True)               # chữ đối chiếu dài (~980 điểm) không ép cửa sổ rộng hơn màn hình 1366
@@ -582,7 +626,6 @@ class CuaSoChinh(QMainWindow):
             lo.addWidget(thanh_lenh([('Dự án', [L['Dự án mới…'], L['Mở dự án…'], L['Lưu dự án thành…'],
                                                 L['Nhập file Excel…'], L['Nhập phương án chi tiết…']]), *nhom]))
             phai = lo
-        phai.addWidget(self.lb_du_an)
         self.hang_the = QWidget()                        # thẻ số liệu (ẩn ở màn hình chào)
         self.hang_the.setLayout(self._hang_the_so())
         self.hang_the.layout().setContentsMargins(0, 0, 0, 0)
@@ -620,6 +663,8 @@ class CuaSoChinh(QMainWindow):
         for w in (trang_ds, self.bang_tong_hop, self.tien_do, self.trang_dt, self._trang_chao(), self.quyet_dinh, self.bao_cao):
             self.trang.addWidget(w)
         self.ngan_lv = QStackedWidget()
+        self.trang.currentChanged.connect(lambda *_: self._cap_nhat_hien_hang_the())
+        self.ngan_lv.currentChanged.connect(lambda *_: self._cap_nhat_hien_hang_the())
         self.ngan_lv.addWidget(self.trang)
         self.ngan_lv.addWidget(self.khung_tab.stack_phu)
         phai.addWidget(self.lb_trang)
@@ -865,8 +910,6 @@ class CuaSoChinh(QMainWindow):
                 k.dat_du_an(self.con, chi_doc)
             if self.khung_du_toan is not None:
                 self.khung_du_toan.dat_du_an(self.con, self.file)
-            self.lb_du_an.setVisible(False)             # tên dự án đã có ở banner (lb_du_an_nho) - không lặp một dòng (15/10/2026)
-            self.hang_the.setVisible(True)
             self.tai_lai()
             # mở / nhập dự án: luôn vào Danh sách hộ (người dùng 12/10/2026 - trước: về trang chọn lần trước, ví dụ Dự toán)
             self.mo_trang(0)
@@ -901,6 +944,12 @@ class CuaSoChinh(QMainWindow):
     def dong_du_an(self):
         if hasattr(self, 'khung_tab') and not self._dong_tab_phu(hoi=True):
             return False
+        if self.con is not None and self.file is not None and self.kq is not None:
+            try:                                        # nhớ tổng chuẩn cho bảng dự án gần đây (màn hình chào)
+                self.con.commit()
+            except sqlite3.Error:
+                pass
+            ghi_tong_nho(self.file, len(self.kq.ho), sum((h['tong'] for h in self.kq.ho), D('0')))
         self.dong_ho.stop()
         if self.khoa is not None:
             self.khoa.nha()
@@ -1057,9 +1106,6 @@ class CuaSoChinh(QMainWindow):
         self._cap_nhat_the_so()
         self._dem_loc()
         da = self.con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()
-        # một dòng (trước 0.9.18: 2 dòng, nhắc lại số hộ / đã lập / tổng tiền đã có ở hàng thẻ số liệu ngay bên dưới)
-        self.lb_du_an.setText(f'<b>{da["ten"]}</b>  ·  {da["cap_dia_ban"]} {da["ten_dia_ban"]}  ·  file {self.file.name}')
-        self.lb_du_an.setToolTip(str(self.file))
         # băng tiêu đề: đơn vị lập phương án của DỰ ÁN đang mở (0.9.23 - trước: luôn một đơn vị cố định trong to_chuc.py)
         from .giao_dien import dat_to_chuc
         k = da.keys()
@@ -1067,9 +1113,6 @@ class CuaSoChinh(QMainWindow):
         cap = str(da['don_vi_cap_tren'] or '').strip() if 'don_vi_cap_tren' in k else ''
         dat_to_chuc(self.bang_tieu_de, dv.upper(), (f'Trực thuộc {cap}   •   ' if cap else '') +
                     f'{da["cap_dia_ban"] or ""} {da["ten_dia_ban"] or ""}'.strip() if dv else '')
-        if hasattr(self, 'lb_du_an_nho'):
-            self.lb_du_an_nho.setText(f'Dự án: {da["ten"]}' if da['ten'] else self.file.name)
-            self.lb_du_an_nho.setToolTip(f'{da["ten"] or ""}\n{da["cap_dia_ban"] or ""} {da["ten_dia_ban"] or ""}\n{self.file}'.strip())
         if hasattr(self, 'lb_don_vi'):
             from . import to_chuc
             self.lb_don_vi.setText((dv or to_chuc.TEN).upper())
@@ -1086,6 +1129,7 @@ class CuaSoChinh(QMainWindow):
                            f'⚠ Đối chiếu file Excel: LỆCH {self.kq.so_ho_lech} hộ, {len(self.kq.dong_lech)} dòng{sua}  ·  '
                            'xem từng dòng lệch: menu trái Lập phương án → Đối chiếu file Excel')
         self.dat_tieu_de()
+        self._cap_nhat_hien_hang_the()
 
     # ------------------------------------------------ lọc danh sách
     def _nap_ds_dot(self, ten_dot: dict):
@@ -1171,7 +1215,8 @@ class CuaSoChinh(QMainWindow):
 
     def _hang_the_so(self) -> QHBoxLayout:
         h = QHBoxLayout()
-        h.setSpacing(10)
+        h.setSpacing(4)                                  # 0.9.95: dải KPI một dòng 30-32 px (số + nhãn cùng hàng), thẻ cách 4 px
+        h.setProperty('giu_khoang_cach', True)          # giao_dien.gian_cach không nâng lên 10 px
         self.the_so = {}
         for k, ten in self.THE_SO:
             khung = TheSo()
@@ -1182,15 +1227,17 @@ class CuaSoChinh(QMainWindow):
             khung.setProperty('vai', 'the_so')
             khung.setProperty('the', k)
             khung.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)    # QWidget thường: cần để QSS vẽ nền / viền
-            o = QVBoxLayout(khung)
-            o.setContentsMargins(12, 7, 12, 7)
-            o.setSpacing(1)
+            o = QHBoxLayout(khung)
+            o.setContentsMargins(8, 2, 8, 2)
+            o.setSpacing(6)
+            o.setProperty('giu_khoang_cach', True)
+            khung.setMaximumHeight(32)
             so = QLabel('–')
             so.setProperty('vai', 'so_the')
             nhan = QLabel(ten)
             nhan.setProperty('vai', 'nhan_the')
             o.addWidget(so)
-            o.addWidget(nhan)
+            o.addWidget(nhan, 1)
             self.the_so[k] = so
             h.addWidget(khung, 1)
         return h
@@ -1249,8 +1296,10 @@ class CuaSoChinh(QMainWindow):
         # danh sách hộ (menu Dữ liệu) không lặp ở đây
         # 0.9.69: Chọn hộ niêm yết (đánh dấu hộ đủ điều kiện niêm yết, lấy ý kiến sau khi lập phương án) - chỉ có ở đây
         for ten, kieu in (('Thêm hộ…', KieuNut.LUU), ('Chọn hộ niêm yết…', KieuNut.PHU), ('Xóa hộ…', KieuNut.NGUY_HIEM)):
-            b = nut_lenh(self.lenh[ten], 18)
+            b = nut_lenh(self.lenh[ten], 16)
             b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            b.setMinimumHeight(28)                      # nút thao tác chuẩn công sở 28-30 px (15/10/2026; nut_lenh mặc định 32)
+            b.setMaximumHeight(30)
             ap_kieu_nut(b, kieu)
             hn.addWidget(b)
             self.nut_ds[ten] = b
@@ -1492,10 +1541,12 @@ class CuaSoChinh(QMainWindow):
                 st = f.stat()
             except OSError:
                 continue
-            so_ho, tong, chu_tim = _tom_tat_pabt(f)
+            if self.con is not None and self.file is not None and self.kq is not None and f.resolve() == self.file.resolve():
+                ghi_tong_nho(f, len(self.kq.ho), sum((h['tong'] for h in self.kq.ho), D('0')))    # dự án đang mở: tổng vừa tính, khỏi tính lại
+            so_ho, tong, chu_tim, ten_hien = _tom_tat_pabt(f)
             r = self.ds_gan_day.rowCount()
             self.ds_gan_day.insertRow(r)
-            ten = QTableWidgetItem(f.name)
+            ten = QTableWidgetItem(ten_hien)
             ten.setData(Qt.ItemDataRole.UserRole, str(f))
             ten.setData(Qt.ItemDataRole.UserRole + 1, f'{f.name} {chu_tim}')      # ô tìm: tên file + tên dự án + địa bàn
             ten.setToolTip(str(f))
@@ -1621,13 +1672,9 @@ class CuaSoChinh(QMainWindow):
 
     def _hien_trang_chao(self):
         """Chưa mở / vừa đóng dự án: màn hình chào thay danh sách trống (trang Dự toán dùng được khi chưa mở dự án: giữ)."""
-        self.lb_du_an.setVisible(False)
-        self.hang_the.setVisible(False)
         self._cap_nhat_chon()
         from .giao_dien import dat_to_chuc
         dat_to_chuc(self.bang_tieu_de)
-        if hasattr(self, 'lb_du_an_nho'):
-            self.lb_du_an_nho.setText('Chưa mở dự án' if self.file is None else f'Dự án: {self.file.name}')
         if hasattr(self, 'lb_don_vi'):
             from . import to_chuc
             self.lb_don_vi.setText(to_chuc.TEN)
@@ -1637,6 +1684,7 @@ class CuaSoChinh(QMainWindow):
             self._danh_dau_trang_chu()
             self._dam_bao_tab(-1)
         self._nap_gan_day()
+        self._cap_nhat_hien_hang_the()
 
     def ve_trang_chu(self):
         """Nút "Màn hình chính" (menu trái): về màn hình bắt đầu như lúc mở phần mềm - Dự án mới, Mở dự án,
@@ -1645,10 +1693,10 @@ class CuaSoChinh(QMainWindow):
         if hasattr(self, 'ngan_lv'):
             self.ngan_lv.setCurrentWidget(self.trang)
         self.lb_trang.setVisible(False)
-        self.hang_the.setVisible(False)
         self._nap_gan_day()
         self._danh_dau_trang_chu()
         self._dam_bao_tab(-1)
+        self._cap_nhat_hien_hang_the()
 
     def _danh_dau_trang_chu(self):
         for t in TRANG:
@@ -1739,7 +1787,6 @@ class CuaSoChinh(QMainWindow):
             self.menuBar().setCornerWidget(self.dai_nhan_dien, Qt.Corner.TopLeftCorner)
         self.banner_ten = tao_banner_ten()
         self.lb_don_vi = self.banner_ten.lb_don_vi
-        self.lb_du_an_nho = self.banner_ten.lb_du_an
         self.lb_ban_quyen_nho = self.banner_ten.lb_ban_quyen
 
     def menuBar(self):
@@ -1913,7 +1960,6 @@ class CuaSoChinh(QMainWindow):
         """Trang bên phải (chỉ số TRANG): 0 danh sách hộ, 1 bảng tổng hợp kinh phí (3 thẻ), 2 quyết định phê duyệt, 3 theo dõi chi
         trả & bàn giao, 4 báo cáo tiến độ GPMB, 5 dự toán & khái toán. Chưa mở dự án: trang 0-4 hiện màn hình chào (trang Dự toán dùng
         được cả khi chưa mở dự án)."""
-        self.hang_the.setVisible(self.con is not None and i != TRANG_DU_TOAN)   # thẻ số liệu lọc danh sách hộ: không cần ở dự toán
         if i == TRANG_DU_TOAN:
             self._dam_bao_du_toan()
             self.khung_du_toan.tab.setCurrentIndex(0)   # menu trái "Lập khái toán & Dự toán" (So sánh: so_sanh_du_toan chọn thẻ 1)
@@ -1929,13 +1975,15 @@ class CuaSoChinh(QMainWindow):
                 k.nap()
         self._dam_bao_tab(-1 if self.trang.currentIndex() == TRANG_CHAO else i)
         self._danh_dau_trang(i)
+        self._cap_nhat_hien_hang_the()
 
     def _danh_dau_trang(self, i: int):
         """Tiêu đề trang bên phải và dấu chọn ở menu trái theo trang i (gọi cả khi bấm thẳng thẻ của Bảng tổng hợp)."""
         self._i_trang = i
         self.lb_trang.setText(NHAN_MENU.get(TRANG[i], TRANG[i]).upper())
-        # trang Dự toán: không tiêu đề trang (trùng mục menu trái đang chọn - người dùng 15/10/2026, dành chỗ nhập liệu)
-        self.lb_trang.setVisible(i not in (0, TRANG_DU_TOAN) and self.trang.currentIndex() != TRANG_CHAO)
+        # không hiện tiêu đề trang ở trang nào: trùng mục menu trái đang chọn và tiêu đề khung của trang (người dùng 15-16/10/2026:
+        # Dự toán, Quyết định phê duyệt "bị trùng tiêu đề mục"). lb_trang vẫn giữ chữ (test, tên trang hiện tại)
+        self.lb_trang.setVisible(False)
         for k, t in enumerate(TRANG):
             self.lenh[t].setChecked(k == i)
         self.lenh['Màn hình chính'].setChecked(False)
@@ -1955,10 +2003,25 @@ class CuaSoChinh(QMainWindow):
         if not hasattr(self, 'khung_tab'):
             return
         self.khung_tab.dam_bao(khoa, ten or self._ten_tab(khoa), widget, dong_duoc)
-        if widget is not None:
+        if widget is not None or not isinstance(khoa, int):
             self.ngan_lv.setCurrentWidget(self.khung_tab.stack_phu)
+            self.lb_trang.setVisible(False)
         elif isinstance(khoa, int):
             self.ngan_lv.setCurrentWidget(self.trang)
+        self._cap_nhat_hien_hang_the()
+
+    def _cap_nhat_hien_hang_the(self):
+        """0.9.95 (đặc tả "Ultra-Compact"): hàng thẻ số liệu CHỈ ở trang Danh sách hộ khi đã mở dự án - ẩn ở mọi trang khác (hộ đang
+        soạn, Niêm yết, Đơn giá, Dự toán, Bảng tổng hợp, Quyết định, Tiến độ, Báo cáo). Banner xanh (tên phần mềm, đơn vị, phiên bản)
+        CHỈ ở màn hình chào - màn hình làm việc nhường chiều cao cho bảng (tên dự án đã ở tiêu đề giữa thanh menu). Nối với tín hiệu
+        đổi trang của `trang` / `ngan_lv` nên đúng dù trang đổi theo đường nào."""
+        if not hasattr(self, 'ngan_lv') or not hasattr(self, 'hang_the'):
+            return
+        o_trang = self.ngan_lv.currentWidget() is self.trang
+        chao = o_trang and self.trang.currentIndex() == TRANG_CHAO
+        self.hang_the.setVisible(self.con is not None and o_trang and self.trang.currentIndex() == STACK_CUA_TRANG[TRANG_DS])
+        if hasattr(self, 'banner_ten'):
+            self.banner_ten.setVisible(self.con is None or chao)
 
     def _tab_doi(self, i: int):
         if i < 0 or i >= len(self._tab_khoa):
@@ -1970,7 +2033,6 @@ class CuaSoChinh(QMainWindow):
             self.ngan_lv.setCurrentWidget(self.trang)
             if k < 0:
                 self.trang.setCurrentIndex(TRANG_CHAO)
-                self.hang_the.setVisible(False)
                 self.lb_trang.setVisible(False)
                 self._danh_dau_trang_chu()
                 return
@@ -1980,8 +2042,8 @@ class CuaSoChinh(QMainWindow):
         w = self.khung_tab.widget.get(k)
         if w is not None:
             self.khung_tab.stack_phu.setCurrentWidget(w)
-        self.hang_the.setVisible(False)
         self.lb_trang.setVisible(False)
+        self._cap_nhat_hien_hang_the()
 
     def _tab_dong(self, i: int):
         if i < 0 or i >= len(self._tab_khoa):
@@ -2704,7 +2766,7 @@ class CuaSoChinh(QMainWindow):
         from . import dia_phuong, goi_mau
         from .lap_pa import bo_dau
         if file is None:
-            ten = re.sub(r'[^\w\-]+', '_', bo_dau(dia_phuong.ten_ho_so()))[:40].strip('_') or 'PABT'
+            ten = re.sub(r'[^\w\-]+', '_', bo_dau(dia_phuong.ten_ho_so()))[:40].strip('_') or 'LARC'
             mac = Path.home() / 'Documents' / f'PABT_MauIn_{ten}_{datetime.now():%Y%m%d}{goi_mau.DUOI}'
             file, _ = QFileDialog.getSaveFileName(self, 'Lưu gói mẫu in & cấu hình', str(mac),
                                                   f'Gói mẫu in & cấu hình PABT (*{goi_mau.DUOI})')
@@ -2758,9 +2820,25 @@ class CuaSoChinh(QMainWindow):
 
     # ------------------------------------------------ máy chủ LAN, tài khoản
     def dat_tieu_de(self):
+        """Tiêu đề cửa sổ = chỗ DUY NHẤT hiện tên dự án (15/10/2026, người dùng: trước đây lặp ở banner và dòng dưới banner):
+        "PABT - <tên dự án> · <địa bàn> (<file>)"; chưa mở dự án: "PABT - Lập phương án bồi thường, hỗ trợ". Thanh tiêu đề hợp
+        nhất hiện ở giữa thanh menu trắng (dài thì rút "…" ở giữa, đủ chữ ở chú thích)."""
         t = TIEU_DE_CUA_SO
-        if self.file is not None:
-            t += f' - {self.file.name}'
+        if self.file is None:
+            t += ' - ' + MO_TA_UD
+        else:
+            ten = dia_ban = ''
+            if self.con is not None:
+                try:
+                    da = self.con.execute('SELECT ten, ten_dia_ban FROM du_an WHERE id = 1').fetchone()
+                except sqlite3.Error:
+                    da = None
+                if da is not None:
+                    ten, dia_ban = (str(da[0] or '').strip(), str(da[1] or '').strip())
+            if ten:
+                t += f' - {ten}' + (f' · {dia_ban}' if dia_ban else '') + f' ({self.file.name})'
+            else:
+                t += f' - {self.file.name}'
             if self.chi_doc:
                 t += '  [CHỈ XEM]'
             try:

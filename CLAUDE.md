@@ -1201,17 +1201,77 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `lap_chi_tiet` ghi chú đất gộp ô: chiều cao từng dòng theo cột khác, thiếu thì chia đều cho đủ ô gộp; `ho_so._tach_ds_ngan` bỏ
   qua gạch giữa hai số; `tien.vn_gon` làm tròn lên ngưỡng tỷ. Sửa file bằng script Python: GIỮ kiểu xuống dòng của file (git
   ls-files --eol; Path.write_text đổi LF thành CRLF). Rò rỉ kết nối: chỉ trong test (`tests/test_don_gia.py`, …), phần mềm không.
-- Số lượng kiểu kế toán (người dùng 15/10/2026, sau 0.9.93): tài sản (mục 2 nhà, công trình) "*,00", đất / cây / vật nuôi / hỗ trợ /
+- 0.9.94 số lượng kiểu kế toán (người dùng 15/10/2026): tài sản (mục 2 nhà, công trình) "*,00", đất / cây / vật nuôi / hỗ trợ /
   khác "*,0"; số nhiều chữ số lẻ hơn hiện đủ, tối đa 4 (ha 0,0325). MỘT nguồn `tien.le_so_luong(muc)` / `dinh_dang_so_luong(muc)`
   (Excel '#,##0.00##' / '#,##0.0###') / `so_luong_vn(x, muc)` - dùng ở BoSoan.o_dat (diện tích) / o_khoan, KhungDuToan, du_toan
   xuat_excel / xuat_khai_toan, in_an.lap_chi_tiet (mục theo dòng tiêu đề 'H'), doi_chieu. Trước: khái toán '#,##0.##' in "46,".
   Trang Khái toán bỏ tiêu đề "KHÁI TOÁN KINH PHÍ…" + nút Chế độ (trùng menu trái; `mo_trang(TRANG_DU_TOAN)` chọn thẻ 0, lb_trang ẩn).
-- Bỏ thanh tab ngang (người dùng 15/10/2026, sau 0.9.93): `thanh_tab` KHÔNG xếp vào bố cục, `KhungLamViecDaTab.bar` là con của
+- 0.9.94 bỏ thanh tab ngang (người dùng 15/10/2026): `thanh_tab` KHÔNG xếp vào bố cục, `KhungLamViecDaTab.bar` là con của
   khung ẩn, `_hien_thanh` luôn ẩn - khung_tab chỉ còn giữ danh sách trang / hộ / bộ đơn giá / niêm yết trong RAM (Ctrl+Tab vẫn
-  đi vòng). Chuyển trang: menu trái / thanh menu, Ctrl+1..6 = 6 mục TRANG (QAction có `self.addAction`). `lb_du_an` luôn ẩn (tên
-  dự án ở banner `lb_du_an_nho`, chú thích có địa bàn + đường dẫn). Mở hộ mới -> đóng tab hộ khác KHÔNG có thay đổi chưa lưu (không
+  đi vòng). Chuyển trang: menu trái / thanh menu, Ctrl+1..6 = 6 mục TRANG (QAction có `self.addAction`). `lb_du_an` đã bỏ (tên
+  dự án chỉ ở tiêu đề - xem dưới). Mở hộ mới -> đóng tab hộ khác KHÔNG có thay đổi chưa lưu (không
   còn dấu X của tab: hộ thoát bằng nút Đóng `b_dong` của CuaSoLapPA). Đo 1161 x 741: thẻ số y 141 -> 94, bảng 383 -> 290, 6 -> 8 dòng.
-  Test `tests/test_bo_thanh_tab.py`.
+  Test `tests/test_bo_thanh_tab.py`. Tên dự án MỘT chỗ (người dùng 15/10/2026): `CuaSoChinh.dat_tieu_de` = "PABT - <ten> · <ten_dia_ban>
+  (<file>)" (chưa mở: "PABT - " + `MO_TA_UD`; gọi cuối `_sau_tai_lai` nên sửa Thông tin dự án đổi theo), ThanhTieuDe rút "…" ở GIỮA;
+  đã BỎ `lb_du_an` (dòng dưới banner), ô banner "Dự án: …" (`NutRutGon`, `RONG_O_DU_AN`, `lb_du_an_nho`) - góc phải banner chỉ phiên bản + tem.
+  `_dam_bao_tab` mở trang phụ (hộ / Niêm yết / Đơn giá) ẩn `hang_the` (trước: Niêm yết hiện hai hàng thẻ số).
+- 0.9.94 tên LARC (người dùng 15/10/2026 "sửa toàn bộ chữ PABT thành LARC"): chữ HIỂN THỊ = LARC - `thong_bao.TEN_UD`,
+  `app.TIEU_DE_CUA_SO` ("LARC - <tên dự án> · <địa bàn> (<file>)"), hộp thông báo, máy chủ LAN, báo cáo đối chiếu, mô tả loại file
+  `.pabtcn` / `.pabtcfg` (cai_dat.ps1). File phát hành: `LARC_CapNhat_<ver>.pabtcn` (tao_cap_nhat), `LARC_ChayNgay_<ver>_*.zip`,
+  `LARC_CaiDat_<ver>_*.exe`, `LARC_Setup_Universal_<ver>.exe`; `phan_tich_phien_ban` tìm mốc cả LARC_CapNhat_* lẫn PABT_CapNhat_*
+  (gói <= 0.9.93). GIỮ tên nội bộ: PABT.exe, thư mục cài / `%APPDATA%\PABT`, QSettings('PABT','PABT'), applicationName, khóa đăng ký
+  (PABT.DuAn, Uninstall\PABT), `cap_nhat.UNG_DUNG` = 'PABT' (bản cài cũ kiểm mã này), gói pabt/, đuôi .pabt / .pabtcn / .pabtdt, thư mục
+  Documents\PABT - Hồ sơ PA, "file PABT Excel" (tên mẫu Excel PABT_CHUAN.xlsm của người dùng), khóa self.lenh 'Dự thảo PABT…'.
+- 0.9.94 dự án gần đây (người dùng 15/10/2026 "bảng không hiện"): NGUYÊN NHÂN là bộ test - 5 bài `test_giao_dien` gỡ hẳn
+  PABT_THU_MUC_MAY trong `finally` -> các bài sau ghi file tạm vào `%APPDATA%\PABT\du_an_gan_day.json` thật, đẩy hết dự án thật ra
+  (GAN_DAY_TOI_DA 8), file tạm bị xóa -> bảng trống. Bài tự đặt biến phải TRẢ LẠI giá trị của tests/__init__ (`_tra_thu_muc_may`), không
+  pop. `app.ghi_gan_day` bỏ file không còn (`_con_tren_dia`: ổ / thư mục dùng chung truy cập được mà không có file; ổ mạng ngắt thì giữ).
+  Nhập Excel / Dự án mới / nhập chi tiết vào file mới đều qua `mo()` -> đã ghi gần đây.
+- 0.9.94 Niêm yết (`man_hinh_du_thao`): `_bang(cot, rong=, gian=)` bề rộng chuẩn + MỘT cột Stretch, `san_tieu_de(b)` (cột >= chữ tiêu đề +
+  `DEM_TIEU_DE` 26, minimumSectionSize 60; gọi cuối `nap` và `showEvent`); nút `b_xuat_ny` "Xuất bảng niêm yết" trên hàng nút đợt (`_nut`
+  khóa mới), thẻ không nút: bảng sát thanh thẻ; tiêu đề cột "CCCD" (dữ liệu vẫn `cccd_che`); thanh 4 thẻ QSS cục bộ padding 4px 12px, 12px
+  (đo 29 px); `_The` 2 hàng (nhãn | số + chữ phụ) 45 px. Nút toàn phần mềm: QSS padding 4px 10px, bo 5px (QPushButton đo 29 px); nút
+  thanh công cụ danh sách hộ min 28 / max 30 (nut_lenh mặc định 32 - menu trái giữ); thẻ số màn hình chính lề 2, cách 6, số 16px (44 px).
+  `gian_cach` (nâng khoảng cách hàng ngang < 10 lên 10 khi cửa sổ hiện) bỏ qua layout có property `giu_khoang_cach` (2 hàng thẻ KPI 6 px).
+  `lb_trang` (tiêu đề trang) KHÔNG hiện ở trang nào (người dùng 16/10/2026: Quyết định phê duyệt "trùng tiêu đề mục") - chữ vẫn đặt.
+  Tên hộ trong ô / danh sách chọn hộ, tiêu đề hộp một hộ: KHÔNG kèm "(mã n)" (người dùng 16/10/2026) - mã hộ ở itemData / UserRole.
+  Test `tests/test_yeu_cau_0994.py`.
+- 0.9.95 "Ultra-Compact" (người dùng 16/10/2026, đặc tả dán trong phiên):
+  - `CuaSoChinh._cap_nhat_hien_hang_the` (nối `trang.currentChanged` / `ngan_lv.currentChanged`, gọi cuối mo_trang / _dam_bao_tab /
+    _tab_doi_khoa / _hien_trang_chao / ve_trang_chu / _sau_tai_lai): `hang_the` CHỈ khi có dự án + trang Danh sách hộ (không tab phụ);
+    `banner_ten` CHỈ ở màn hình chào / chưa mở dự án. Đừng tự `hang_the.setVisible` ở chỗ khác. Thẻ số `TheSo` một dòng (QHBoxLayout số +
+    nhãn, max 32, số 13,5px, cách 4). Menu trái: `CAO_NUT_MENU` 27, lề 4, cách 2, icon 18, chữ 12px; bề rộng `rong_mo()` = max(RONG_MENU_TRAI
+    175, lệnh dài nhất + 18) <= RONG_MENU_TOI_DA 248 (đo lại ở Show / StyleChange / FontChange - `_VuaRongMenu`): "Theo dõi chi trả & Bàn
+    giao" cần ~210 px ở 125% nên thực tế ~228 (175 cứng thì cắt chữ); tên nhóm `setWordWrap`.
+  - CuaSoLapPA: hàng trên `thanh_tren` XepDong 4 khối (chọn hộ | Dán, Quét, Gợi ý | Lưu, Bỏ | Xem A4, In, Đóng), nút `CAO_NUT_TREN` 27,
+    `cb_ho` 190-270, `b_truoc` / `b_sau` = "◀" / "▶" (chú thích Ctrl+Left / Right) - một hàng từ ~1.270 điểm (Full HD 125%), 1366 x 768
+    hai hàng. `hang_dieu_huong()` = MỘT hàng đáy: `lb_tong` + `b_tro_lai` / `b_tiep_theo` (chữ theo thẻ, `_cap_nhat_dieu_huong`) - BangMuc
+    KHÔNG còn nút điều hướng riêng. BangMuc: mục 1 nút dòng + "Cộng mục 1" cùng hàng chọn thửa (cb_thua >= 260), không khung viền hàng nhập,
+    nút dòng `CAO_NUT_DONG` 24, lề (6, 4, 6, 4); cột `RONG_COT_GON` + `COT_GIAN` Stretch; `giao_dien.san_tieu_de(b, rieng)` (đo phông ĐẬM
+    + `DEM_TIEU_DE` 30; dùng chung Niêm yết). b_dan chữ "Dán danh sách tài sản…" (phím tắt ở chú thích).
+  - KhungDuToan: `h_day` = `lb_tong` (một dòng rich text, chi tiết từng mục ở chú thích) + 4 nút, cao `CAO_HANG_DAY` 34; `b_an_tt` /
+    `an_thong_tin_chung` (`_than_chuan_bi`); o_dt_dat >= 105, o_gia_dat >= 115; `can_mot_hang` đặt min width nút = sizeHint + 8; so sánh:
+    tô màu ô chỉ khi khái toán (kt) khác 0. KhungDuThao: `_The` một dòng (NhanRutGon nhãn | số, chữ phụ ở chú thích, max 32); nút của thẻ 2-4
+    ở `tabs.cornerWidget` (`_nut_goc`, `_hien_nut_goc`); `bang_th` cột 0 >= 185 (property `the_tong_hop`).
+  - `app._tom_tat_pabt` -> (số hộ, tổng, chữ tìm, tên hiển thị "Tên · Địa bàn (file)"): tổng = sum(KetQuaHo.tong) như danh sách hộ (có
+    thưởng, làm tròn), nhớ ở `<thư mục máy>\tong_du_an.json` theo mtime_ns + cỡ (`ghi_tong_nho` - gọi cả khi đóng dự án / nạp màn hình chào
+    với số vừa tính). 3.000 hộ: lần đầu 0,27 s, sau 0,008 s. HopDuAn 1080 x 500.
+  - Quét giấy tờ (`man_hinh_ocr`): `KhungXemFile` (QScrollArea, trang xếp dọc nền #475569, `nap` / `nap_anh`, `phong_to`, `vua_khung`, `xoay`,
+    `sang_trang` - kích hoạt bố cục + resize vùng trong trước khi cuộn, Ctrl + lăn, kéo) + `anh_cac_trang(files)` (QtPdf; Qt5: ảnh scan trong
+    PDF qua `ocr._anh_trang_pypdf`; tối đa TRANG_TOI_DA). `ngan_trai` 0 = xem trước (mặc định), 1 = `o_chu` (nút `b_doi_xem` "Chữ OCR").
+    Phải: o_nk, o_ng (nguồn gốc -> cột nguon_goc thửa thêm mới), o_tdc; `o_luu_dinh_kem` -> `luu_dinh_kem` (anh_hien_trang, khop_theo 'quet');
+    `b_tron_bo` -> `nhap_tron_bo` (dien_ho_thua + dien_nhan_khau_tdc + đính kèm + dan_tai_san). Chưa làm: OCR trả ảnh trang để khỏi dựng
+    PDF hai lần (xem trước dựng bằng QtPdf nhanh: 48 trang 3,9 s).
+  - `ocr_ho_so`: `doc_chu` nối ô bằng TAB; `boc_tach` loại 'pa_chi_tiet' ("phương án chi tiết" / "bảng tính toán bồi thường") -> `_bang_pa`
+    (`_dong_logic`: bảng III từ "STT" tới "TỔNG CỘNG", nối dòng bị ngắt, "m" + "2" của m²; `_o_dong`: có Tab theo ô, không Tab theo ĐVT;
+    `_MUC_THEO_TEN` THỨ TỰ quan trọng - "Bồi thường, hỗ trợ về nhà" có "hỗ trợ", "bồi thường" có "thường"; tỷ lệ ô Excel 1 = 100%; hỗ trợ có
+    câu cách tính -> chỉ tên, nhân khẩu lấy từ câu). `nhan_khau`, `nguon_goc` (`_doan_sau_tieu_de`), `tai_dinh_cu` ("Tái định cư:"), nhãn "Tổ
+    chức:", `_sua_so_ocr` (O / l -> 0 / 1) + chuan_cccd. `_sau_nhan` bỏ Tab / ":" ngay sau nhãn. Thử file thật `mau_in\MAU PA CHI TIET 1.pdf`
+    (KHÔNG đưa vào test): 180 thửa đúng, nguồn gốc, TĐC; họ tên trống (lớp chữ PDF đặt giá trị xa nhãn).
+  - `ocr.gom_dong`: khoảng trống > `CACH_COT` 2,2 x cao chữ -> Tab. `ocr._chay`: đọc stdout / stderr bằng luồng SONG SONG - trước đây kết quả >
+    ~64 KB (trang scan bảng giá) làm đầy ống, hết 180 s báo "quá lâu" (thử file người dùng "VBHN cây trồng.pdf" 48 trang: nay 0,6 s / trang).
+    Máy phát triển chỉ có OCR en-US (không gói vi) - đường tiếng Việt chưa thử thật.
+  Test `tests/test_yeu_cau_0995.py` (bản in chi tiết GIẢ LẬP qua in_an.lap_chi_tiet).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

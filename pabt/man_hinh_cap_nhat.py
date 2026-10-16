@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QHBoxLayout, 
 
 from . import cap_nhat
 
-TIEU_DE = 'Cập nhật phần mềm PABT'
+TIEU_DE = 'Cập nhật phần mềm LARC'
 
 
 class HopCapNhat(QDialog):
@@ -65,7 +65,7 @@ class HopCapNhat(QDialog):
 
     def cai_file(self, p=None):
         if p is None:
-            p, _ = QFileDialog.getOpenFileName(self, 'Chọn gói cập nhật PABT', '', f'Gói cập nhật PABT (*{cap_nhat.DUOI})')
+            p, _ = QFileDialog.getOpenFileName(self, 'Chọn gói cập nhật LARC', '', f'Gói cập nhật PABT (*{cap_nhat.DUOI})')
             if not p:
                 return None
         try:

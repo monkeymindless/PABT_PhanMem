@@ -53,7 +53,8 @@ class TestDacTaV5(CoSo):
             self.assertLessEqual(abs(giua_mb - giua_thanh), 1, (mb.geometry(), mb.parentWidget().height()))
         else:
             self.assertGreaterEqual(mb.height(), giao_dien.CAO_MENU)
-        self.assertEqual(w.lb_du_an_nho.text(), 'Chưa mở dự án')
+        self.assertEqual(w.windowTitle(), 'LARC - Lập phương án bồi thường, hỗ trợ')   # 15/10/2026: tên dự án chỉ ở tiêu đề
+        self.assertFalse(hasattr(w, 'lb_du_an_nho'))
         self.assertIn('VĨNH CỬU', w.lb_don_vi.text())
         self.assertTrue(w.lb_ban_quyen_nho.text())
         self.assertIsInstance(w.khung_tab, giao_dien.KhungLamViecDaTab)
@@ -73,7 +74,7 @@ class TestDacTaV5(CoSo):
         self.assertNotIn('#F2B705', giao_dien.QSS_THE_CHAO)
         p = _du_an(self.td, 4)
         w.mo(str(p))
-        self.assertIn('Dự án:', w.lb_du_an_nho.text())
+        self.assertIn('(a.pabt)', w.windowTitle())
         self.assertIn(0, w._tab_khoa)                                   # tab danh sách hộ
         w.mo_trang(ud.TRANG_DU_TOAN)
         self.assertIn(ud.TRANG_DU_TOAN, w._tab_khoa)
@@ -86,7 +87,7 @@ class TestDacTaV5(CoSo):
         """0.9.65 (người dùng 12/10/2026): góc phải banner (ô dự án, máy đơn, phiên bản, tem bản quyền) và nút thu nhỏ /
         phóng to / đóng của Windows luôn còn: tên dự án dài rút "…", không làm cửa sổ rộng ra; chữ bên trái nhường chỗ."""
         from PySide6.QtCore import Qt
-        from pabt import app as ud, giao_dien, __version__
+        from pabt import app as ud, __version__
         w = ud.CuaSoChinh(menu_trai=True)
         self.addCleanup(w.close)
         co = w.windowFlags()
@@ -99,18 +100,23 @@ class TestDacTaV5(CoSo):
         self.app.processEvents()
         b = w.banner_ten
         goc = b.goc_phai
-        for nhan in (b.lb_du_an, b.lb_phien_ban, b.lb_ban_quyen):
+        self.assertFalse(hasattr(b, 'lb_du_an'))                       # 15/10/2026: bỏ ô "Dự án: …" (tên dự án ở tiêu đề)
+        for nhan in (b.lb_phien_ban, b.lb_ban_quyen):
             self.assertTrue(nhan.isVisible())
             self.assertIs(nhan.parentWidget(), goc)
         self.assertFalse(hasattr(b, 'lb_lan'))                         # 0.9.80: "● Máy đơn" chỉ ở nút nut_tk của thanh trạng thái
         self.assertEqual(b.lb_phien_ban.text(), f'Phiên bản {__version__}')
         min_truoc = w.minimumSizeHint().width()
-        dai = 'Dự án: ' + 'Đường giao thông nối các xã ' * 8
-        w.lb_du_an_nho.setText(dai)
+        dai = 'LARC - ' + 'Đường giao thông nối các xã ' * 8 + '(du_an.larc)'
+        w.setWindowTitle(dai)                                           # tên dự án dài: tiêu đề rút "…" ở giữa, không ép rộng
         self.app.processEvents()
-        self.assertEqual(w.lb_du_an_nho.text(), dai)                   # text() đủ chữ, hiển thị rút gọn
-        self.assertLessEqual(w.lb_du_an_nho.width(), giao_dien.RONG_O_DU_AN)
-        self.assertLessEqual(w.minimumSizeHint().width(), max(min_truoc, 1020) + giao_dien.RONG_O_DU_AN)
+        self.assertLessEqual(w.minimumSizeHint().width(), max(min_truoc, 1020) + 40)   # vài px: phông offscreen sau test khác
+        if w.thanh_td is not None:
+            self.assertEqual(w.thanh_td.tieu_de(), dai)
+            chu = w.thanh_td.lb_tieu_de.text()
+            if chu:                                                     # offscreen: menu chữ rộng có thể chiếm hết chỗ tiêu đề
+                self.assertIn('…', chu)
+                self.assertTrue(chu.startswith('LARC') and chu.endswith('(du_an.larc)'), chu)
         self.assertLessEqual(goc.geometry().right(), b.width())        # góc phải nằm trọn trong banner
         # cấu trúc (px phụ thuộc phông - offscreen chữ rộng gần gấp đôi Windows): góc phải cố định theo nội dung, chữ bên trái
         # Ignored (nhường chỗ, rút "…")
@@ -151,9 +157,9 @@ class TestDacTaV5(CoSo):
         self.app.processEvents()
         self.assertEqual(t.height(), ttd.CAO)
         self.assertFalse(any(b.isVisible() for b in t.nut_cua_so.values()))   # khung Windows có nút riêng: không trùng
-        w.setWindowTitle('PABT - Thử.pabt')
+        w.setWindowTitle('LARC - Thử.pabt')
         self.app.processEvents()
-        self.assertEqual(t.tieu_de(), 'PABT - Thử.pabt')
+        self.assertEqual(t.tieu_de(), 'LARC - Thử.pabt')
         mb = w.menuBar()
         muc = mb.actionGeometry(mb.actions()[0]).center()
         self.assertFalse(t.la_vung_keo(mb.mapTo(t, muc)))               # mục menu: bấm được

@@ -29,7 +29,10 @@ TOKEN = dict(
     nen='#F8FAFC',            # Surface
     khung='#FFFFFF',          # Panel
 )
-CAO_NUT_MENU = 36             # lưới 8 px (mục 3.3): nút điều hướng menu trái
+CAO_NUT_MENU = 27             # nút điều hướng menu trái (0.9.95 gọn: 36 -> 27, đủ 6 nhóm không phải cuộn)
+RONG_MENU_TRAI = 175          # bề rộng menu trái mở (0.9.95: 248 -> 175; thu gọn: 44)
+RONG_MENU_GON = 44
+RONG_MENU_TOI_DA = 248        # lệnh dài ("Bảng tổng hợp kinh phí" ~189 px ở 125%) nới menu tới mức này - không cắt chữ
 CAO_DONG_BANG = 32            # chiều cao dòng bảng dữ liệu
 CHINH = TOKEN['chinh']       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
 # nhóm nút: (nền, chữ, nền khi rê chuột)
@@ -108,8 +111,8 @@ def _qss_kieu_nut() -> str:
         for loai in ('QPushButton', 'QToolButton'):
             sel = f'{loai}[bien_the="{k}"]'
             qss += f'''
-    {sel}, {sel}[ribbon="0"], {sel}[ribbon="1"] {{ color: {chu}; background: {nen}; border: 1px solid {vien}; border-radius: 6px;
-        padding: 5px 12px; font-weight: 600; }}
+    {sel}, {sel}[ribbon="0"], {sel}[ribbon="1"] {{ color: {chu}; background: {nen}; border: 1px solid {vien}; border-radius: 5px;
+        padding: 4px 10px; font-weight: 600; }}
     {sel}:hover, {sel}[ribbon="0"]:hover, {sel}[ribbon="1"]:hover {{ background: {re_}; }}
     {sel}:disabled, {sel}[ribbon="0"]:disabled, {sel}[ribbon="1"]:disabled {{ color: #9AA0A6; background: #F1F3F4;
         border-color: {t['vach']}; }}'''
@@ -230,13 +233,13 @@ def _nut_qss(n: str, nen: str, chu: str, re_: str) -> str:
     if n == 'nhat':
         return ''
     if n in DAC:
-        return f'''QPushButton[nhom="{n}"] {{ color: {chu}; background: {nen}; border: 1px solid {re_}; border-radius: 6px;
-            padding: 6px 16px; font-weight: 600; }}
+        return f'''QPushButton[nhom="{n}"] {{ color: {chu}; background: {nen}; border: 1px solid {re_}; border-radius: 5px;
+            padding: 4px 10px; font-weight: 600; }}
         QPushButton[nhom="{n}"]:hover {{ background: {re_}; }}
         QPushButton[nhom="{n}"]:pressed {{ background: {_tron(re_, 0.12, '#000000')}; }}'''
     # nút viền (outline): nền trắng, chữ trung tính, chỉ biểu tượng mang màu nhóm; rê chuột mới hiện nền nhạt cùng màu
-    return f'''QPushButton[nhom="{n}"] {{ color: #253545; background: #FFFFFF; border: 1px solid #CDD6E0; border-radius: 6px;
-            padding: 6px 14px; font-weight: 600; }}
+    return f'''QPushButton[nhom="{n}"] {{ color: #253545; background: #FFFFFF; border: 1px solid #CDD6E0; border-radius: 5px;
+            padding: 4px 10px; font-weight: 600; }}
         QPushButton[nhom="{n}"]:hover {{ background: {_tron(nen, 0.93)}; border-color: {_tron(nen, 0.55)}; color: {_tron(nen, 0.15, '#000000')}; }}
         QPushButton[nhom="{n}"]:pressed {{ background: {_tron(nen, 0.86)}; }}'''
 
@@ -277,10 +280,10 @@ QSS_THE_CHAO = (
 
 def _qss_the_so() -> str:
     return '''
-    QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #DCE3EA; border-left: 4px solid #4E5D6C; border-radius: 8px; }
+    QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #DCE3EA; border-left: 4px solid #4E5D6C; border-radius: 6px; }
     QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
-    QLabel[vai="so_the"] { font-size: 19px; font-weight: 700; }
-    QLabel[vai="nhan_the"] { color: #4A5B6C; font-size: 12px; font-weight: 600; }''' + ''.join(
+    QLabel[vai="so_the"] { font-size: 13.5px; font-weight: 700; }
+    QLabel[vai="nhan_the"] { color: #4A5B6C; font-size: 11px; font-weight: 600; }''' + ''.join(
         f'''
     QWidget[vai="the_so"][the="{k}"] {{ border-left-color: {m}; }}
     QWidget[vai="the_so"][the="{k}"] QLabel[vai="so_the"] {{ color: {m}; }}''' for k, m in MAU_THE_SO.items())
@@ -295,12 +298,12 @@ def _qss_day_du() -> str:
 def _qss() -> str:
     nut = '\n'.join(
         f'''{_nut_qss(n, nen, chu, re_)}
-        QToolButton[nhom="{n}"] {{ background: {nen}; color: {chu}; border: 1px solid {re_}; border-radius: 6px; padding: 4px 8px;
+        QToolButton[nhom="{n}"] {{ background: {nen}; color: {chu}; border: 1px solid {re_}; border-radius: 5px; padding: 4px 10px;
             font-weight: 600; }}
         QToolButton[nhom="{n}"]:hover {{ background: {re_}; }}
         QToolButton[ribbon="1"][nhom="{n}"] {{ background: {_tron(nen, 0.9) if n != 'nhat' else '#F3F6F9'};
             color: {nen if n != 'nhat' else CHINH}; border: 1px solid {_tron(nen, 0.72) if n != 'nhat' else '#D5DEE7'};
-            border-radius: 7px; padding: 4px 10px; font-weight: 600; text-align: left; }}
+            border-radius: 5px; padding: 4px 10px; font-weight: 600; text-align: left; }}
         QToolButton[ribbon="1"][nhom="{n}"]:hover {{ background: {_tron(nen, 0.8) if n != 'nhat' else '#E7EDF3'};
             border-color: {nen if n != 'nhat' else '#9FB3C8'}; }}
         QToolButton[ribbon="1"][nhom="{n}"]:pressed {{ background: {_tron(nen, 0.68) if n != 'nhat' else '#DCE5EE'}; }}
@@ -311,7 +314,7 @@ def _qss() -> str:
     QMainWindow {{ background: #EEF2F7; }}
     QDialog {{ background: #F4F7FB; }}
     QToolBar {{ background: #FFFFFF; border-bottom: 2px solid {CHINH}; spacing: 4px; padding: 5px; }}
-    QPushButton {{ border-radius: 6px; padding: 6px 14px; border: 1px solid #CBD5E0; background: #FFFFFF; color: #1F2D3A; }}
+    QPushButton {{ border-radius: 5px; padding: 4px 10px; border: 1px solid #CBD5E0; background: #FFFFFF; color: #1F2D3A; }}
     QPushButton:hover {{ background: #F1F5FA; border-color: #A9BCD0; }}
     QPushButton:pressed {{ background: #E4ECF5; }}
     QPushButton:disabled {{ color: #A0AAB4; background: #F4F6F8; border-color: #E3E8EE; }}
@@ -344,8 +347,8 @@ def _qss() -> str:
         border: 1px solid #2E75B6; background: #FBFDFF; }}
     QLineEdit:read-only {{ background: #F1F4F7; color: #4A5866; }}
     QToolButton[nho="1"] {{ font-size: 11px; padding: 3px 6px 2px 6px; }}
-    QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 7px; padding: 5px 10px;
-        text-align: left; font-weight: 600; font-size: 13px; color: #172A3D; }}
+    QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px;
+        text-align: left; font-weight: 600; font-size: 12px; color: #172A3D; }}
     QToolButton[menu="1"]:hover {{ background: #E8F0F8; border-color: #C9D9EA; }}
     QToolButton[menu="1"]:pressed {{ background: #D6E4F2; }}
     QToolButton[menu="1"]:disabled {{ color: #A8B3BF; background: transparent; border-color: transparent; }}
@@ -639,7 +642,7 @@ def chay_nen(cha, ham, chu: str = 'Đang xử lý…'):
                 vong.quit()
             elif not hop and (time.monotonic() - bat_dau) * 1000 >= HIEN_CHO_SAU_MS:
                 h = QProgressDialog(chu, None, 0, 0, cha)              # 0..0: thanh chạy qua lại (không biết trước thời gian)
-                h.setWindowTitle('PABT')
+                h.setWindowTitle('LARC')
                 h.setWindowModality(Qt.WindowModality.WindowModal)
                 h.setMinimumDuration(0)
                 h.setCancelButton(None)
@@ -1066,39 +1069,6 @@ def tao_dai_nhan_dien(mb=None):
 CAO_MENU = 28          # hàng menu trắng tối thiểu; thực tế = max(CAO_MENU, sizeHint): DPI 125% mục menu cao 30 px - ép 28 px
                        # làm Qt dồn MỌI mục (Tệp tin, Chỉnh sửa…) vào nút "»" (0.9.63-0.9.64 trên máy dựng)
 CAO_BANNER = 48        # banner xanh: tên phần mềm + cơ quan canh giữa theo chiều dọc (0.9.82: 60 -> 48 theo đặc tả V10 Brand Strip)
-RONG_O_DU_AN = 300     # ô "Dự án: …" rộng tối đa - tên dự án dài rút "…", không đẩy góc phải ra ngoài màn hình
-
-
-class NutRutGon(QPushButton):
-    """Nút một dòng rộng tối đa `toi_da`: chữ dài rút "…" (đủ ở tooltip); text() trả chữ đầy đủ. Dùng cho ô dự án trên
-    banner - trước đây tên dự án dài làm nút giãn theo chữ, bề rộng tối thiểu cửa sổ tăng, góc phải (phiên bản, tem bản
-    quyền, nút đóng của Windows) bị đẩy ra ngoài màn hình."""
-
-    def __init__(self, chu: str = '', toi_da: int = RONG_O_DU_AN, parent=None):
-        super().__init__(parent)
-        self._chu = ''
-        self._toi_da = toi_da
-        self.setMaximumWidth(toi_da)
-        self.setText(chu)
-
-    def setText(self, chu: str):
-        self._chu = str(chu or '')
-        self.setToolTip(self._chu)
-        self._ve()
-
-    def text(self) -> str:
-        return self._chu
-
-    def changeEvent(self, e):                       # QSS / phóng to đổi phông: đo lại
-        super().changeEvent(e)
-        if e.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange):
-            self._ve()
-
-    def _ve(self):
-        chu = self.fontMetrics().elidedText(self._chu, Qt.TextElideMode.ElideRight, max(self._toi_da - 34, 40))
-        if QPushButton.text(self) != chu:
-            QPushButton.setText(self, chu)
-            self.updateGeometry()
 
 
 def tao_banner_ten():
@@ -1145,17 +1115,7 @@ def tao_banner_ten():
     lo = QHBoxLayout(goc)
     lo.setContentsMargins(0, 0, 0, 0)
     lo.setSpacing(12)
-    du_an = NutRutGon('Chưa mở dự án')
-    du_an.setCursor(Qt.CursorShape.PointingHandCursor)
-    du_an.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-    du_an.setFixedHeight(26)
-    du_an.setStyleSheet(
-        'QPushButton { color: #FFFFFF; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.85); '
-        'border-radius: 12px; padding: 0px 14px; font-size: 12px; font-weight: 600; }'
-        'QPushButton:hover { background: rgba(255,255,255,0.16); }')
-    vach = QFrame()
-    vach.setFixedSize(1, 18)
-    vach.setStyleSheet('QFrame { background: rgba(255,255,255,0.32); border: 0; }')
+    # 15/10/2026 (người dùng): bỏ ô "Dự án: …" - tên dự án ở MỘT chỗ: tiêu đề giữa thanh menu trắng (CuaSoChinh.dat_tieu_de)
     phien = QLabel(f'Phiên bản {__version__}')
     phien.setStyleSheet(
         'QLabel { color: #E2E8F0; font-size: 12px; font-weight: 500; background: transparent; border: 0; }')
@@ -1164,11 +1124,11 @@ def tao_banner_ten():
     bq.setStyleSheet(
         'QLabel { color: #FFFFFF; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.35); '
         'border-radius: 10px; padding: 0px 10px; font-size: 11px; font-weight: 600; }')
-    for w in (du_an, vach, phien, bq):                # 0.9.80: bỏ "● Máy đơn" - trạng thái máy đơn / LAN chỉ ở nút nut_tk thanh trạng thái
+    for w in (phien, bq):                             # 0.9.80: bỏ "● Máy đơn" - trạng thái máy đơn / LAN chỉ ở nút nut_tk thanh trạng thái
         lo.addWidget(w, 0, Qt.AlignmentFlag.AlignVCenter)
     hang.addWidget(goc, 0, Qt.AlignmentFlag.AlignVCenter)
     k.goc_phai = goc
-    k.lb_ten, k.lb_don_vi, k.lb_du_an, k.lb_phien_ban, k.lb_ban_quyen = ten, co_quan, du_an, phien, bq
+    k.lb_ten, k.lb_don_vi, k.lb_phien_ban, k.lb_ban_quyen = ten, co_quan, phien, bq
     return k
 
 
@@ -1461,8 +1421,8 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     khung = QFrame()
     khung.setProperty('vai', 'ribbon')
     ngoai = QVBoxLayout(khung)
-    ngoai.setContentsMargins(6, 6, 6, 6)
-    ngoai.setSpacing(4)
+    ngoai.setContentsMargins(4, 4, 4, 4)
+    ngoai.setSpacing(2)
     b_gon = QToolButton()
     b_gon.setProperty('ribbon', '1')
     b_gon.setProperty('nhom', 'nhat')
@@ -1484,18 +1444,19 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     dong = _doc_nhom_dong(dong_mac_dinh)
 
     def nut_menu(a) -> QToolButton:
-        b = nut_lenh(a, 22, mau=TOKEN['chinh'])              # icon đơn sắc Deep Navy + vạch trái khi chọn
+        b = nut_lenh(a, 18, mau=TOKEN['chinh'])              # icon đơn sắc Deep Navy + vạch trái khi chọn
         if a.icon().isNull():
             # lệnh chưa có ký hiệu / máy không có phông biểu tượng (Win 7): Qt căn chữ ra giữa nút - lệch so với các dòng khác
             # (11/10/2026 "Bảng giá đất"). Biểu tượng trống cùng cỡ giữ chữ thẳng hàng; khi thu gọn vẫn hiện chữ (icon_trong)
             from PySide6.QtGui import QIcon, QPixmap
-            pm = QPixmap(22, 22)
+            pm = QPixmap(18, 18)
             pm.fill(Qt.GlobalColor.transparent)
             a.setIcon(QIcon(pm))                             # trên QAction: nút lấy lại biểu tượng của lệnh mỗi khi lệnh đổi
             b.setProperty('icon_trong', True)
         b.setProperty('ribbon', '0')
         b.setProperty('menu', '1')                           # kiểu danh sách: không viền, rê chuột mới hiện nền
         b.setMinimumHeight(CAO_NUT_MENU)
+        b.setMaximumHeight(CAO_NUT_MENU + 3)
         b.setToolTip(a.text().rstrip('…'))
         nut.append(b)
         return b
@@ -1541,6 +1502,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
             continue
         t = NhanBam()                                        # nhãn (không phải nút): to_mau không tô màu theo chữ
         t.setProperty('vai', 'nhom_menu')
+        t.setWordWrap(True)                                  # tên nhóm dài xuống dòng, không bị cắt (menu 175 px)
         lo.addWidget(t)
         con = [nut_menu(a) for a in ds]
         for b in con:
@@ -1577,14 +1539,57 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
             b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly if gon and co_icon
                                  else Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         ve_nhom()
-        khung.setFixedWidth(70 if gon else 248)
+        khung.setFixedWidth(RONG_MENU_GON if gon else khung.rong_mo())
         b_gon.setText('' if gon else '  Thu gọn menu')
         ic = icon_ky_hieu(0xE76C if gon else 0xE76B, CHINH, 16)       # mũi tên mở rộng / thu gọn
         b_gon.setIcon(ic) if ic is not None else b_gon.setText('»' if gon else '«  Thu gọn menu')
         b_gon.setToolTip('Mở rộng menu' if gon else 'Thu gọn menu (chỉ hiện biểu tượng)')
+    def rong_mo() -> int:
+        """Bề rộng menu mở: RONG_MENU_TRAI, nới theo lệnh dài nhất (chữ đo theo phông / tỷ lệ phóng to hiện tại), tối đa
+        RONG_MENU_TOI_DA - không cắt chữ lệnh."""
+        can = max([b.sizeHint().width() for b in nut if b.toolButtonStyle() != Qt.ToolButtonStyle.ToolButtonIconOnly] or [0])
+        return min(max(RONG_MENU_TRAI, can + 8 + 10), RONG_MENU_TOI_DA)     # lề 2 x 4 + chỗ thanh cuộn
+    khung.rong_mo = rong_mo
+    khung._vua_rong = _VuaRongMenu(khung)
+    khung.installEventFilter(khung._vua_rong)
     b_gon.clicked.connect(lambda: dat(not khung.thu_gon))
     dat(thu_gon_luc_dau)
     return do_bong(khung, 16, 2, 30)
+
+
+
+DEM_TIEU_DE = 30             # chữ tiêu đề (đo bằng phông ĐẬM như QSS tiêu đề) + mũi tên sắp xếp / lề ô
+
+
+def san_tieu_de(b, rieng: dict | None = None) -> None:
+    """Sàn bảo vệ tiêu đề cột (0.9.94-0.9.95): cột không giãn nào hẹp hơn chữ tiêu đề thì nới ra. Đo bằng phông ĐẬM (tiêu đề in
+    đậm qua QSS, fontMetrics của widget là phông thường - đo thiếu ~10%: "Tổng tiền dự thảo" -> "ổng tiền dự thả"). rieng:
+    {cột: bề rộng tối thiểu riêng}. Gọi lại sau khi nạp / đổi cỡ chữ (phóng to)."""
+    from PySide6.QtGui import QFont, QFontMetrics
+    from PySide6.QtWidgets import QHeaderView
+    hd = b.horizontalHeader()
+    f = QFont(hd.font())
+    f.setBold(True)
+    fm = QFontMetrics(f)
+    for c in range(b.columnCount()):
+        if hd.sectionResizeMode(c) == QHeaderView.ResizeMode.Stretch:
+            continue
+        it = b.horizontalHeaderItem(c)
+        chu = it.text() if it is not None else str(b.model().headerData(c, Qt.Orientation.Horizontal) or '')
+        can = max([fm.horizontalAdvance(t) for t in chu.split('\n')] or [0]) + DEM_TIEU_DE
+        can = max(can, (rieng or {}).get(c, 0))
+        if b.columnWidth(c) < can:
+            b.setColumnWidth(c, can)
+
+class _VuaRongMenu(QObject):
+    """Đo lại bề rộng menu trái khi hiện / đổi kiểu / đổi phông (phóng to): sizeHint của nút chỉ đúng sau khi áp QSS."""
+
+    def eventFilter(self, obj, ev):
+        if ev.type() in (QEvent.Type.Show, QEvent.Type.StyleChange, QEvent.Type.FontChange) and not getattr(obj, 'thu_gon', True):
+            w = obj.rong_mo()
+            if obj.width() != w:
+                obj.setFixedWidth(w)
+        return False
 
 
 def ve_mui_ten(delegate_cha, p, option, index) -> None:
@@ -1916,7 +1921,7 @@ def can_giua(*the, rong_toi_da: int = 1180) -> QWidget:
 
 
 def hop_ket_qua(cha, tom_tat: str, chi_tiet: list | None = None, tieu_de_ds: str = 'Cần xem lại', canh_bao: bool = False,
-                hien: bool = True, tieu_de: str = 'PABT - Lập phương án bồi thường, hỗ trợ', nut_them=()):
+                hien: bool = True, tieu_de: str = 'LARC - Lập phương án bồi thường, hỗ trợ', nut_them=()):
     """Hộp kết quả không bao giờ cao quá màn hình (QMessageBox giãn theo chữ: danh sách dài đẩy nút OK ra ngoài màn hình):
     tóm tắt ngắn ở trên, danh sách ĐẦY ĐỦ trong ô cuộn, nút Chép (dán sang Excel / Zalo) và Đóng. hien=False: chỉ tạo (kiểm thử).
     nut_them: [(chữ, hàm(hộp))] nút thêm ở hàng nút (hộp báo lỗi: xuất gói chẩn đoán) - giữ ở d.nut_them {chữ: nút}."""
@@ -2179,6 +2184,8 @@ def gian_cach(goc: QWidget) -> None:
             continue
         cha = lo.parentWidget()
         if cha is not None and (cha.objectName() == 'menu_trong' or cha.property('vai') in ('ribbon', 'nhom_ribbon')):
+            continue
+        if lo.property('giu_khoang_cach'):              # hàng cố ý xếp gọn (thẻ KPI 6 px - người dùng 15/10/2026)
             continue
         sp = lo.spacing()
         toi_thieu = 10 if isinstance(lo, QHBoxLayout) else 8

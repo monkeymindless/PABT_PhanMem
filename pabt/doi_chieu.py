@@ -160,7 +160,7 @@ def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'TONG_HO'
-    ws['A1'] = 'BÁO CÁO ĐỐI CHIẾU PHẦN MỀM PABT VỚI FILE EXCEL'
+    ws['A1'] = 'BÁO CÁO ĐỐI CHIẾU PHẦN MỀM LARC VỚI FILE EXCEL'
     ws['A1'].font = Font(bold=True, size=14)
     ws['A2'] = f'Dự án: {ten_du_an}'
     ws['A3'] = (f'Nguồn: {nguon}  |  {len(kq.ho)} hộ, {sum(1 for h in kq.ho if h["tong"] > 0)} hộ có phương án  |  '

@@ -100,15 +100,15 @@ def doc_goi(file) -> dict:
     try:
         an_toan.kiem_tra_zip(file, toi_da=100 * 2 ** 20)
     except an_toan.LoiAnToan as e:
-        raise LoiCapNhat(f'File không phải gói cập nhật PABT hợp lệ: {e}') from None
+        raise LoiCapNhat(f'File không phải gói cập nhật LARC hợp lệ: {e}') from None
     try:
         z = zipfile.ZipFile(file)
     except (OSError, zipfile.BadZipFile) as e:
-        raise LoiCapNhat('File không phải gói cập nhật PABT (không đọc được).') from e
+        raise LoiCapNhat('File không phải gói cập nhật LARC (không đọc được).') from e
     with z:
         m, _ = _doc_json(z)
         if m.get('ung_dung') != UNG_DUNG or not so(m.get('phien_ban')):
-            raise LoiCapNhat('File không phải gói cập nhật PABT.')
+            raise LoiCapNhat('File không phải gói cập nhật LARC.')
         ds = m.get('file') or {}
         if 'pabt/__init__.py' not in ds:
             raise LoiCapNhat('Gói cập nhật thiếu pabt/__init__.py.')

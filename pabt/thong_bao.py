@@ -11,7 +11,7 @@ import errno
 import sqlite3
 import zipfile
 
-TEN_UD = 'PABT - Lập phương án bồi thường, hỗ trợ'     # tiêu đề cửa sổ / hộp thoại (trước: khai báo lại ở 8 module)
+TEN_UD = 'LARC - Lập phương án bồi thường, hỗ trợ'     # tiêu đề cửa sổ / hộp thoại (trước: khai báo lại ở 8 module)
 # 3 thẻ của "Bảng tổng hợp kinh phí" (Nhóm 5, 0.9.76): một nguồn cho tên thẻ. Quyết định phê duyệt là trang riêng của Nhóm 6.
 THE_TONG_HOP = ('Cơ cấu kinh phí dự án', 'Bảng kinh phí chi tiết', 'Đối soát dự toán Pre-F/S')
 
@@ -26,7 +26,7 @@ def giai_thich(e: BaseException) -> tuple:
     if isinstance(e, OSError) and e.errno == errno.ENOSPC:
         return 'Ổ đĩa đã đầy.', 'Giải phóng dung lượng (dọn Thùng rác, file tạm) rồi làm lại.'
     if isinstance(e, sqlite3.OperationalError) and 'locked' in str(e).lower():
-        return ('File dự án đang được máy khác (hoặc cửa sổ PABT khác) ghi.',
+        return ('File dự án đang được máy khác (hoặc cửa sổ LARC khác) ghi.',
                 'Chờ vài giây rồi làm lại; nếu vẫn lỗi, mở dự án ở chế độ chỉ xem.')
     if isinstance(e, sqlite3.DatabaseError) and any(k in str(e).lower() for k in ('not a database', 'malformed', 'corrupt')):
         return ('File dự án bị hỏng hoặc không phải file dự án (.larc / .pabt).',

@@ -48,7 +48,7 @@ class TestBannerVaThanhTrangThai(CoSo):
             x.text() for x in b.goc_phai.findChildren(__import__('PySide6.QtWidgets', fromlist=['QPushButton']).QPushButton))
         self.assertNotIn('Máy đơn', chu)
         self.assertIn('Phiên bản', chu)
-        self.assertIn('Chưa mở dự án', chu)
+        self.assertNotIn('Dự án', chu)                                 # 15/10/2026: tên dự án chỉ ở tiêu đề cửa sổ
         self.assertIn('Máy đơn', self.w.nut_tk.text())                 # trạng thái kết nối: DUY NHẤT ở thanh trạng thái
         self.assertFalse(hasattr(giao_dien, 'dat_den_lan'))
         self.assertIn('#FCD34D', b.lb_don_vi.styleSheet())              # tên đơn vị: vàng kim nhạt trên nền navy

@@ -191,14 +191,14 @@ def b_bo_cai():
     pc = max(ds_phien_ban(d, 'LARC_Setup_Universal_*.exe'), key=so, default=pb)
     ghi(f'Bộ cài mới nhất: {pc}  ·  gói cập nhật cần có: {pb}')
     # 0.9.26 (người dùng 11/10/2026): MỘT bộ cài cho mọi Windows + gói zip dự phòng (dung_bo_cai_win.MAC_DINH)
-    can = [f'LARC_Setup_Universal_{pc}.exe', f'PABT_ChayNgay_{pc}_Universal.zip', f'PABT_CapNhat_{pb}.pabtcn']
+    can = [f'LARC_Setup_Universal_{pc}.exe', f'LARC_ChayNgay_{pc}_Universal.zip', f'LARC_CapNhat_{pb}.pabtcn']
     loi, canh = [], []
     for t in can:
         f = d / t
         ghi(f'{"có   " if f.exists() else "THIẾU"} {t}' + (f'  ({f.stat().st_size / 2 ** 20:.1f} MB)' if f.exists() else ''))
         if not f.exists():
             canh.append(f'thiếu {t}')
-    for z in d.glob(f'PABT_ChayNgay_{pc}_*.zip'):
+    for z in d.glob(f'LARC_ChayNgay_{pc}_*.zip'):
         try:
             with zipfile.ZipFile(z) as zf:
                 hong = zf.testzip()
@@ -232,7 +232,7 @@ def b_bo_cai():
         if sai:
             loi.append(f'{z.name}: danh_sach.txt không khớp {len(sai)} file, ví dụ {sai[:3]}')
         ghi(f'{z.name}: nguyên vẹn, ' + ('CÓ DỮ LIỆU THẬT' if cam else 'không chứa dữ liệu'))
-    goi = d / f'PABT_CapNhat_{pb}.pabtcn'
+    goi = d / f'LARC_CapNhat_{pb}.pabtcn'
     if goi.exists() and not VENV.exists():
         canh.append('không kiểm được gói cập nhật (thiếu .venv)')
     elif goi.exists():

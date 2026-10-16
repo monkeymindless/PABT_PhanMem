@@ -730,7 +730,7 @@ class KhungDoiSoat(_Khung):
         if self.con is None:
             return None
         if file is None:
-            file, _ = QFileDialog.getOpenFileName(self, 'Chọn file khái toán', '', 'Bảng khái toán PABT (*.pabtdt)')
+            file, _ = QFileDialog.getOpenFileName(self, 'Chọn file khái toán', '', 'Bảng khái toán LARC (*.pabtdt)')
             if not file:
                 return None
         try:
@@ -1251,7 +1251,7 @@ class HopQDHo(_Hop):
         self.con, self.ma_ho = con, ma_ho
         dong = dong or {}
         ten = con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
-        self.setWindowTitle(f'Quyết định phê duyệt - {ten[0] if ten else ""} (mã {ma_ho})')
+        self.setWindowTitle(f'Quyết định phê duyệt - {ten[0] if ten else ""}')
         self.resize(720, 640)
         self.cb_qd = QComboBox()
         self.cb_qd.setEditable(False)
@@ -1411,7 +1411,7 @@ class HopChonHo(_Hop):
         for r in con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho'):
             if r[0] in bo:
                 continue
-            it = QListWidgetItem(f'{r[1]}. {r[2]} (mã {r[0]})')
+            it = QListWidgetItem(f'{r[1]}. {r[2]}')
             it.setFlags(it.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             it.setCheckState(Qt.CheckState.Unchecked)
             it.setData(Qt.ItemDataRole.UserRole, r[0])
@@ -1519,7 +1519,7 @@ class HopNhatKyVanDong(_Hop):
         # hộ có buổi vận động / cần vận động lên đầu danh sách
         for x in sorted(self.ds, key=lambda x: (not (x.ma_ho in buoi or van_dong.viec_ap_dung(x)), x.thu_tu, x.ma_ho)):
             dau = '● ' if (x.ma_ho in buoi or van_dong.viec_ap_dung(x)) else ''
-            self.cb_ho.addItem(f'{dau}{x.ho_ten} (mã {x.ma_ho})', x.ma_ho)
+            self.cb_ho.addItem(f'{dau}{x.ho_ten}', x.ma_ho)
         if ma_ho is not None:
             self.cb_ho.setCurrentIndex(max(0, self.cb_ho.findData(ma_ho)))
         self.cb_ho.currentIndexChanged.connect(lambda *_: self.nap())
@@ -1706,7 +1706,7 @@ class HopHoTheoDoi(_Hop):
         self.con, self.ma_ho, self.tong_pa = con, ma_ho, tong_pa
         self.da_doi = False
         ten = con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()[0]
-        self.setWindowTitle(f'Trạng thái hộ - {ten} (mã {ma_ho})')
+        self.setWindowTitle(f'Trạng thái hộ - {ten}')
         self.resize(980, 640)
         self.bang = _bang(self.COT)
         for c, w in enumerate((170, 90, 140, 110, 110, 220, 120)):

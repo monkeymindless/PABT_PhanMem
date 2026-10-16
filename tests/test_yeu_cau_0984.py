@@ -264,8 +264,9 @@ class TestCuaSoLapPA(CoSoXem):
         from pabt.man_hinh import CuaSoLapPA
         w = CuaSoLapPA(self.con, 1)
         cac_khoi = [w.thanh_tren.layout().itemAt(i).widget() for i in range(w.thanh_tren.layout().count())]
-        self.assertEqual(len(cac_khoi), 3)                      # [Hộ ◀ ▶] [Dán… Bỏ thay đổi] [Xem trước A4, In, Đóng]
-        self.assertIn(w.btn_toggle_preview, cac_khoi[2].findChildren(type(w.btn_toggle_preview)))
+        # 0.9.95: 4 khối [Hộ ◀ ▶] [Dán, Quét, Gợi ý] [Lưu, Bỏ thay đổi] [Xem trước A4, In, Đóng] - hẹp thì xuống dòng ít hơn
+        self.assertEqual(len(cac_khoi), 4)
+        self.assertIn(w.btn_toggle_preview, cac_khoi[3].findChildren(type(w.btn_toggle_preview)))
         mot_hang = sum(k.sizeHint().width() for k in cac_khoi)
         self.assertLess(w.thanh_tren.minimumSizeHint().width(), mot_hang)    # không ép cửa sổ rộng bằng cả hàng
         w.bo_thay_doi()
