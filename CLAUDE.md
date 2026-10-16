@@ -1312,19 +1312,27 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   phía trên phủ cột giữa, bỏ dấu cách thừa của chức danh (mẫu IN_CHITIET ghi "   KIỂM TRA     " - Excel căn giữa tính cả dấu cách),
   ô họ tên gộp đúng các cột của chức danh (mẫu người dùng sửa lệch), căn giữa indent 0; ô khác có chữ trong vùng thì chỉ căn giữa.
   Đã xuất PDF bằng Excel kiểm (chi tiết + tổng hợp). Test `tests/test_khoi_ky.py`.
-- Hệ số K (người dùng 16/10/2026, QĐ 03/2026/QĐ-UBND Đồng Nai - CHƯA có văn bản gốc: cấu trúc chung, phần mềm KHÔNG đóng gói số liệu):
-  `pabt/he_so_k.py` (không Qt, không đổi lược đồ) lưu `<thư mục máy>\he_so_k.json` {van_ban, nguon, dong: [dia_ban, loai_dat (khóa
-  nhóm = cột bảng giá NQ 28 `dat_o/tmdv/sxkd/nn_cay/nn_rung_nts` + nhóm chung `nn` / `pnn`, hoặc mã 'ONT,ODT'), vi_tri (MT, T1-K3,
-  VT1, KV1), tuyen_duong, he_so (chuỗi Decimal), ghi_chu]}; trường trống = mọi giá trị; `tra(dia_ban, loai_dat, vi_tri, tuyen)` chọn
-  dòng cụ thể nhất (tuyến > vị trí > loại đất > địa bàn). `phan_tich(o)`: bảng có tiêu đề "Hệ số" / mỗi cột một loại đất (tiêu đề hai
-  tầng), không thì chữ thường (tiêu đề "Xã …", dòng loại đất, "Vị trí 1: 1,2"; bỏ dòng giá tiền "1.500.000 đồng/m2"); `doc_file`
-  (doc_bang; PDF ảnh / ảnh -> `ocr.tung_trang` + Dừng), `doc_chu` (chữ dán). Giao diện: `HopTraNQ28(xem=True, the=)` (lệnh Bảng giá đất
-  `app.bang_gia_dat`) hai thẻ "Bảng giá đất 2026" | "Hệ số K (QĐ 03/2026/QĐ-UBND)" (`man_hinh_he_so_k.KhungHeSoK`: đọc file, dán chữ,
-  cột Lấy, sửa ô, Lưu / Bỏ toàn bộ); bảng tra có cột Hệ số K + Giá × K (`he_so_k` của dòng chọn; khái toán `_gia_nhan_k`). Lập PA:
-  `BoSoan._ap_he_so_k` gọi trong `_dien_gia_dat` (thêm thửa, đổi loại đất / vị trí - địa bàn dự án) và `chon_vi_tri_nq28` (xã + mã vị
-  trí + tên đường của dòng bảng giá): khớp -> `he_so_k` + "Hệ số K theo QĐ 03/2026/QĐ-UBND" ở Ghi chú; hết khớp -> bỏ căn cứ, K về 1.
-  Hỗ trợ đào tạo: `chinh_sach.ds_thua_nn` (sẵn có) và `nghiep_vu.de_xuat_dao_tao_pa` dùng giá đất × K. Test `tests/test_he_so_k.py`
-  (số GIẢ LẬP; bài tạo thư mục máy riêng - file hệ số K lọt sang bài khác làm tự lập phương án nhân K).
+- Hệ số K (người dùng 16/10/2026) = hệ số điều chỉnh giá đất QĐ 03/2026/QĐ-UBND ngày 11/5/2026 UBND thành phố Đồng Nai: giá = giá bảng
+  giá NQ 28 × K Phụ lục I (biến động thị trường: I.1 PNN 3 cột đất ở / TMDV / SX phi NN; I.2 NN một cột; I.3 loại còn lại theo loại
+  tương ứng) × Phụ lục II (quy hoạch) × III (yếu tố khác) - phần mềm tự áp Phụ lục I; II, III người dùng nhân thêm ở ô Hệ số K.
+  Bảng Phụ lục I mỗi xã một bảng, mỗi TT một dòng TRÙNG số TT bảng giá NQ 28 (QĐ ghi "Phường Trị An", bảng giá "Xã Trị An" - so tên bỏ
+  Xã / Phường). GẮN SẴN `pabt/he_so_k_qd03.json` (4 địa bàn của bảng giá gắn sẵn, 1.127 TT x 4 nhóm; đóng gói như bang_gia_nq28.json:
+  PABT.spec, dung_exe38.DU_LIEU, cap_nhat.DU_LIEU) dựng từ PDF Phụ lục người dùng gửi (thư mục E:\…\03: Bảng 8 Tân Triều, 53 Trị An, 54
+  Tân An, 55 Phú Lý trong file PNN / NN) bằng `doc_phu_luc` + `noi_bang_gia` (tên đường / đoạn / vị trí lấy theo dòng cùng TT của bảng
+  giá; đủ mọi TT, 0 lệch). Hệ số trong Phụ lục luôn 2 chữ số lẻ ("1,24"): số 1 chữ số lẻ cuối dòng là chữ tên đoạn ("Khu tái định cư 3,8
+  ha"). Người dùng nhập / sửa -> `<thư mục máy>\he_so_k.json` thay bảng gắn sẵn (`dang_thay`; `xoa` = dùng lại). Dòng: dia_ban, tt,
+  loai_dat (nhóm cột NQ 28 + `nn` / `pnn`, hoặc mã 'ONT,ODT'), vi_tri, tuyen_duong, diem_dau, diem_cuoi, he_so, ghi_chu; file gộp một
+  TT nhiều nhóm thành {'k': {nhóm: hệ số}} (`_gon` / `_mo_rong`). `tra(xa, loai_dat, vi_tri, tuyen, tt=)`: có TT -> dòng (xã, TT); không
+  -> dòng có TT khớp mã vị trí + tên đường + điểm đầu + điểm cuối trong chữ vị trí (do chon_vi_tri_nq28 ghi; xã dự án trước, rồi xã
+  khác), rồi dòng chung (không TT); chỉ mục `_ChiMuc`. Loại đất -> nhóm `nhom_cho_ma` (OTC = đất ở, RPH / RDD = rừng sx, NN khác = cây
+  lâu năm, PNN còn lại = SX phi NN, CQP / CAN không tự áp). `doc_file`: PDF -> chữ từng trang (pypdf; ít chữ thì `ocr.tung_trang`) ->
+  `la_phu_luc` ? `doc_phu_luc` (chỉ địa bàn ô Địa bàn, trống = `nq.ds_xa()`) : doc_bang / `phan_tich` (bảng / chữ văn bản khác). Giao diện:
+  `HopTraNQ28(xem=True, the=)` (lệnh Bảng giá đất) thẻ "Bảng giá đất 2026" (cột Hệ số K, Giá × K) | "Hệ số K (QĐ 03/2026/QĐ-UBND)"
+  (`man_hinh_he_so_k.KhungHeSoK`: bảng dựng khi thẻ hiện lần đầu, đọc NHIỀU file một lần (gộp, dòng cùng khóa thay), dán chữ, lọc,
+  Lấy / sửa ô, Lưu, Dùng lại bảng gắn sẵn); khái toán `_gia_nhan_k`. Lập PA: `BoSoan._ap_he_so_k` trong `_dien_gia_dat` và
+  `chon_vi_tri_nq28` (xã + vị trí + tên đường + TT): khớp -> `he_so_k` + "Hệ số K theo QĐ 03/2026/QĐ-UBND" ở Ghi chú; hết khớp -> bỏ căn
+  cứ, K về 1. Hỗ trợ đào tạo: `chinh_sach.ds_thua_nn`, `nghiep_vu.de_xuat_dao_tao_pa` dùng giá × K. Test `tests/test_he_so_k.py` (chữ Phụ
+  lục GIẢ LẬP + kiểm bảng gắn sẵn khớp bảng giá; bài ghi he_so_k.json dùng thư mục máy riêng).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

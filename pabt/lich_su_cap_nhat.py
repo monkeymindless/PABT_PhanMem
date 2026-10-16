@@ -7,6 +7,19 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('0.9.96', '16/10/2026', (
+        'Bảng giá đất có hai thẻ "Bảng giá đất 2026" và "Hệ số K" (QĐ 03/2026/QĐ-UBND, gắn sẵn 4 xã / phường của bảng giá); mục Đất '
+        'và hỗ trợ tính theo giá đất tự nhân hệ số K; nhập / sửa hệ số K từ file (cả PDF ảnh) hoặc chữ dán.',
+        'Bảng phương án hộ: dòng cao theo chữ (30-88 px) - ô Ghi chú trống không làm dòng cao; cột Ghi chú, Quy cách gọn.',
+        'Mục 1. Đất: "Thêm tất cả thửa", "Chọn nhiều thửa…" (lọc tờ / loại đất, Ctrl+A); chọn nhiều dòng để xóa cả loạt hoặc đặt cùng '
+        'vị trí / giá / tỷ lệ. Thẻ thửa đất của hộ: chọn nhiều thửa rồi Xóa thửa.',
+        'Loại đất đủ danh mục (RDD, RPH, DGT, LUN…): hết báo "không có trong danh mục"; gõ chữ thường / tên đầy đủ tự đổi về mã.',
+        'Nhập phương án chi tiết từ Excel: mỗi thửa luôn có dòng mục 1 (cả đơn giá 0); một sheet nhiều phương án tự tách. Nhập Excel '
+        'thô: ưu tiên cột diện tích trong dự án, đọc đúng dòng tiếp của cùng hộ.',
+        'Hồ sơ scan (PDF / ảnh) đính kèm từng hộ, mở nhanh; Theo dõi tiến độ thêm cột Hoàn tất CTBT (theo đợt), Hồ sơ scan và danh sách hộ '
+        'hoàn tất xuất Excel.',
+        'Bản in: họ tên Lập biểu / Kiểm tra / người ký căn giữa dưới chức danh. Nút "Quét hồ sơ" của cửa sổ lập phương án đang hoàn thiện.',
+    )),
     ('0.9.95', '16/10/2026', (
         'Giao diện gọn, nhiều chỗ cho bảng: hàng thẻ số chỉ ở Danh sách hộ (một dòng); banner xanh chỉ ở màn hình chào; menu trái '
         'gọn (nút 27 px); không còn tiêu đề trang lặp mục menu.',

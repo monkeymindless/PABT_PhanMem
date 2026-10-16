@@ -1,4 +1,8 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.95 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.96 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.96**: **Bảng giá đất** có thẻ **Hệ số K** (QĐ 03/2026/QĐ-UBND) - mục Đất tự nhân hệ số K. Mục 1. Đất: **Thêm tất cả thửa** /
+> **Chọn nhiều thửa…**, chọn nhiều dòng (Shift / Ctrl) để xóa hoặc đặt cùng vị trí / giá. **Hồ sơ scan** của hộ (nút ở thẻ thửa đất,
+> Trạng thái hộ, cột ở Theo dõi tiến độ) và danh sách **Hộ hoàn tất CTBT** (có quyết định + đã bàn giao) xuất Excel.
 
 > **0.9.95**: giao diện gọn - thẻ số chỉ ở Danh sách hộ, banner chỉ ở màn hình chào, cửa sổ lập phương án hộ một hàng nút (◀ / ▶
 > chuyển hộ), nút Trở lại / Tiếp theo cùng hàng tổng cộng. **Quét giấy tờ**: xem trước mọi trang ảnh / PDF bên trái (Ctrl + lăn chuột
