@@ -27,12 +27,14 @@ def _so(v):
     return D(s) if s else KHONG
 
 
-def tong_quan(con, hom_nay=None) -> dict:
+def tong_quan(con, hom_nay=None, ds=None, tt=None, moc=None) -> dict:
+    """ds / tt / moc: tổng hợp hộ (theo_doi.tong_hop), trạng thái vận động, mốc thu hồi đã tính sẵn - trang Tiến độ chi trả & Bàn
+    giao (1.0.00) tính MỘT lần cho cả bảng theo hộ lẫn thẻ chỉ số / bảng thửa còn vướng."""
     from . import theo_doi
     nay = thoi_han.hom_nay_hoac(hom_nay)
-    ds = theo_doi.tong_hop(con, tinh_pa=False)
-    tt = van_dong.tinh_trang_tat_ca(con, ds, nay)
-    moc = thoi_han.moc_thu_hoi_tat_ca(con, None, nay)
+    ds = theo_doi.tong_hop(con, tinh_pa=False) if ds is None else ds
+    tt = van_dong.tinh_trang_tat_ca(con, ds, nay) if tt is None else tt
+    moc = thoi_han.moc_thu_hoi_tat_ca(con, None, nay) if moc is None else moc
     tong_pd = sum((x.tong_phe_duyet for x in ds), KHONG)
     da_chi = sum((x.da_nhan for x in ds), KHONG)
     dt_tong = sum((x.dt for x in ds), KHONG)

@@ -1471,6 +1471,19 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `ocr.windows_64bit()` False -> báo dán chữ; tu-kiem bước "Nhận dạng chữ bản scan" (32-bit: DAT kèm ghi chú). Đo: trang ~1 s,
   PDF scan A4 150 dpi bảng giá 2,5 s. Test `test_don_gia_15_10.TestOCR` (đọc thật), `test_doc_quyet_dinh.TestOCRThat` (trước đây vẽ ảnh
   bằng Qt offscreen - không phông, chỉ "đạt" vì bị bỏ qua; nay vẽ ở tiến trình QT_QPA_PLATFORM=windows).
+- 1.0.00 GỘP "Báo cáo tiến độ GPMB" VÀO "Tiến độ chi trả & Bàn giao" (người dùng 16/10/2026, phân tích Hội đồng chuyên gia: hai
+  trang trùng ~70% dữ liệu - mốc thu hồi, vận động / cưỡng chế, lý do còn vướng - và 3 nút trùng lệnh: Xuất DS đề nghị cưỡng chế, Xuất
+  danh sách đầy đủ các hộ, Mở theo dõi chi trả). `TRANG` còn 5 mục (`TRANG_BAO_CAO`, `STACK_BAO_CAO`, lệnh `'Báo cáo tổng hợp…'`,
+  property `bao_cao` ĐÃ BỎ; `TRANG_DU_TOAN` = 4, Ctrl+1..5; `STACK_CUA_TRANG` = (0, 1, 5, 2, 3) - self.trang 6 ô). Khóa lệnh trang vẫn
+  `'Theo dõi tiến độ'`, nhãn `NHAN_MENU` "Tiến độ chi trả & Bàn giao". `man_hinh_bao_cao.py` chỉ còn thành phần: `DaiKPI` (4 `_TheKPI`
+  gọn ~64 px, bấm -> `bam(khóa)`, chưa có QĐ / diện tích -> `KHONG_SO` "—" + lời nhắc) và `BangThuaVuong` (cb_muc, BangAo, `lb_trong` +
+  `chu_trong()` khi bảng trống, `ma_da_chon` bỏ trùng hộ). `KhungTienDo`: `kpi` + nút chế độ ghép đôi (`nut_che_do`, `QSS_CHE_DO` cục bộ -
+  thắng tô màu theo chữ; `che_do()` / `dat_che_do('ho'|'thua')`, `ngan_xem`), `KPI_LOC` (bấm thẻ -> chế độ + bộ lọc), `lb_moc` một dòng
+  (đủ chữ ở chú thích) + nút "Mốc pháp lý…" = `HopMocThoiHan(ngay_thong_bao=True)` (ô ngày + số ngày; `mo_moc(gia_tri=, ngay=)`; bỏ
+  `o_ngay_tb` / "Lưu ngày thông báo"; `luu_ngay_thong_bao(chu)` giữ), `w_qd` (ô quyết định ẩn khi 0 QĐ, cao theo số QĐ `QD_CAO_DONG`),
+  MỘT nút "Xuất" (`menu_xuat`, `hanh_dong_xuat`, `XUAT`: xuat / xuat_bao_cao / xuat_cuong_che). `nap` tính tong_hop + van_dong + mốc
+  MỘT lần -> `_ve_tong_quan` -> `bao_cao_gpmb.tong_quan(con, ds=, tt=, moc=)`. `ma_da_chon` theo chế độ đang xem. Test
+  `tests/test_yeu_cau_1000.py` (cả bài chặn cùng chữ nút ở 2 trang trở lên, trừ "Xuất Excel…" - mỗi trang xuất bảng riêng).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

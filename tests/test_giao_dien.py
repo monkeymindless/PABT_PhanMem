@@ -205,7 +205,7 @@ class TestMau(unittest.TestCase):
             self.assertIn(w.lenh['Màn hình chính'], nut)
             self.assertIn(w.lenh['So sánh với thực tế'], nut)
             self.assertEqual(m.nhom_dong, set(ud.NHOM_DONG_MAC_DINH))
-            nut_bc = nut[w.lenh['Báo cáo tổng hợp…']]
+            nut_bc = nut[w.lenh['Theo dõi tiến độ']]                 # 1.0.00: Tiến độ chi trả & Bàn giao (gộp báo cáo tiến độ)
             self.assertTrue(nut_bc.isHidden())                       # nhóm "Phê duyệt & bàn giao" đóng sẵn
             self.assertFalse(nut[w.lenh['Màn hình chính']].isHidden())   # nút độc lập: không thuộc nhóm nào, luôn hiện
             m.tieu_de_nhom['5. Phê duyệt & bàn giao'].bam()

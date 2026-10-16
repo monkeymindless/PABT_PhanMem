@@ -26,16 +26,16 @@ COT = ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²
 MAU_LECH = QColor('#F8CBAD')          # vàng cam: hộ lệch so với file Excel đối chiếu
 COT_SO = {4}
 # các trang bên phải cửa sổ chính (chọn ở menu trái). 0.9.76 (Mục IV QĐ 18/2026, Nhóm 5 - 6): Bảng tổng hợp kinh phí là MỘT trang 3 thẻ
-# (cơ cấu, chi tiết hộ, đối soát khái toán); Quyết định phê duyệt, Theo dõi chi trả & bàn giao, Báo cáo tiến độ GPMB (bảng điều hành)
-# là ba trang riêng của Nhóm 6; Dự toán / khái toán (0.9.23 - lộ trình người dùng: mục tiêu tài chính của DỰ ÁN, trang trong cửa sổ chính)
-TRANG = ['Danh sách hộ', 'Tổng hợp tiền theo phương án', 'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Báo cáo tổng hợp…',
-         'Dự toán & khái toán']
-TRANG_DS, TRANG_TONG_HOP, TRANG_QUYET_DINH, TRANG_THEO_DOI, TRANG_BAO_CAO, TRANG_DU_TOAN = range(6)
+# (cơ cấu, chi tiết hộ, đối soát khái toán); Quyết định phê duyệt; Tiến độ chi trả & Bàn giao (1.0.00: gộp trang "Báo cáo tiến độ
+# GPMB" - thẻ chỉ số + chế độ xem "Thửa còn vướng" - vào trang theo dõi; man_hinh_theo_doi.KhungTienDo); Dự toán / khái toán (0.9.23 -
+# lộ trình người dùng: mục tiêu tài chính của DỰ ÁN, trang trong cửa sổ chính). Ctrl+1..5 theo thứ tự này
+TRANG = ['Danh sách hộ', 'Tổng hợp tiền theo phương án', 'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Dự toán & khái toán']
+TRANG_DS, TRANG_TONG_HOP, TRANG_QUYET_DINH, TRANG_THEO_DOI, TRANG_DU_TOAN = range(5)
 TRANG_CHAO = 4                     # chỉ số trong self.trang (QStackedWidget) của màn hình chào khi chưa mở dự án
-# chỉ số TRANG -> chỉ số trong self.trang (QStackedWidget): 0 danh sách, 1 bảng tổng hợp, 2 theo dõi, 3 dự toán, 4 chào, 5 quyết định,
-# 6 báo cáo tiến độ (các trang mới thêm cuối để giữ nguyên chỉ số cũ)
-STACK_CUA_TRANG = (0, 1, 5, 2, 6, 3)
-STACK_TONG_HOP, STACK_THEO_DOI, STACK_DU_TOAN, STACK_QUYET_DINH, STACK_BAO_CAO = 1, 2, 3, 5, 6
+# chỉ số TRANG -> chỉ số trong self.trang (QStackedWidget): 0 danh sách, 1 bảng tổng hợp, 2 theo dõi, 3 dự toán, 4 chào, 5 quyết định
+# (các trang mới thêm cuối để giữ nguyên chỉ số cũ)
+STACK_CUA_TRANG = (0, 1, 5, 2, 3)
+STACK_TONG_HOP, STACK_THEO_DOI, STACK_DU_TOAN, STACK_QUYET_DINH = 1, 2, 3, 5
 XANH, DO, VANG = QColor('#E2EFDA'), QColor('#F8CBAD'), QColor('#FFF2CC')
 # menu trái: nhóm đóng sẵn lần đầu mở phần mềm (sau đó nhớ theo người dùng) - vừa màn hình 1366x768 không phải cuộn
 # 0.9.70 (6 nhóm): nhóm ít dùng hằng ngày đóng sẵn - Khái toán (giai đoạn chuẩn bị đầu tư), Đơn giá, Phê duyệt & bàn giao
@@ -47,7 +47,7 @@ GAN_DAY_TOI_DA = 8                 # số dự án nhớ trong danh sách "Dự 
 # toán), 2, Đơn giá bồi thường, Bảng giá đất và Màn hình chính vẫn dùng được khi chưa có dự án
 LENH_CAN_DU_AN = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…', 'Xuất báo cáo đối chiếu…',
                   'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…',
-                  'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Báo cáo tổng hợp…', 'Nhật ký kiểm toán…', 'Bản đồ thửa đất',
+                  'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Nhật ký kiểm toán…', 'Bản đồ thửa đất',
                   # nhóm 6 Đơn giá & bảng giá: Đơn giá đặc biệt là của DỰ ÁN (tắt khi chưa mở); Đơn giá bồi thường, Bảng giá đất vẫn
                   # bật (liên kết chân màn hình chào, tra cứu khi chưa có dự án)
                   'Đơn giá riêng dự án…')
@@ -63,7 +63,7 @@ NHAN_MENU = {'Lập phương án hộ…': 'Lập phương án chi tiết', 'Th�
              'Kiểm tra lỗi…': 'Kiểm tra lỗi pháp lý',
              # 0.9.70 (đặc tả ARCH-PABT-2026-V7, người dùng 12/10/2026): chữ trên menu trái theo 6 nhóm nghiệp vụ
              'Dự toán & khái toán': 'Lập khái toán & Dự toán', 'Danh sách hộ': 'Danh sách hộ và Thửa',
-             'Theo dõi tiến độ': 'Theo dõi chi trả & Bàn giao',
+             'Theo dõi tiến độ': 'Tiến độ chi trả & Bàn giao',
              'Bộ đơn giá…': 'Đơn giá bồi thường', 'Đơn giá riêng dự án…': 'Đơn giá đặc biệt', 'Rà soát giá…': 'Rà soát giá',
              'Thông tin dự án…': 'Thông tin dự án',
              'Bảng giá đất NQ 28…': 'Bảng giá đất',
@@ -72,7 +72,7 @@ NHAN_MENU = {'Lập phương án hộ…': 'Lập phương án chi tiết', 'Th�
              'Tổng hợp tiền theo phương án': 'Bảng tổng hợp kinh phí',
              'Quyết định phê duyệt': 'Quyết định phê duyệt', 'Đợt trình…': 'Đợt trình thẩm định',
              'Trạng thái hộ…': 'Trạng thái hộ',
-             'In / Xuất…': 'Xuất hồ sơ & Bản in', 'Báo cáo tổng hợp…': 'Báo cáo tiến độ GPMB', 'Cập nhật mẫu in…': 'Mẫu in',
+             'In / Xuất…': 'Xuất hồ sơ & Bản in', 'Cập nhật mẫu in…': 'Mẫu in',
              'Xuất báo cáo đối chiếu…': 'Đối chiếu số liệu'}
 # 0.9.69 (người dùng 12/10/2026 đổi tên): gợi ý khi rê chuột theo tên mới (khóa self.lenh giữ tên cũ - mã / test gọi theo khóa)
 GOI_Y_MENU = {'Bộ đơn giá…': 'Đơn giá bồi thường (bộ đơn giá nhà, cây, vật nuôi, chính sách hỗ trợ)',
@@ -85,8 +85,8 @@ GOI_Y_MENU = {'Bộ đơn giá…': 'Đơn giá bồi thường (bộ đơn giá
               'Tổng hợp tiền theo phương án': 'Bảng tổng hợp kinh phí: cơ cấu, chi tiết từng hộ, đối soát khái toán',
               'Xuất báo cáo đối chiếu…': 'Đối chiếu số liệu với file Excel kiểm đếm (xuất báo cáo)',
               'In / Xuất…': 'Xuất hồ sơ & bản in: phương án chi tiết, bảng tổng hợp, tờ trình',
-              'Theo dõi tiến độ': 'Theo dõi chi trả tiền, bàn giao mặt bằng, mốc thu hồi đất, vận động và cưỡng chế',
-              'Báo cáo tổng hợp…': 'Bảng điều hành tiến độ giải phóng mặt bằng: giải ngân, mặt bằng sạch, thửa còn vướng',
+              'Theo dõi tiến độ': 'Tiến độ chi trả & bàn giao: tỷ lệ giải ngân, mặt bằng sạch, thửa còn vướng, mốc thu hồi đất, vận '
+                                  'động và cưỡng chế; báo cáo tiến độ GPMB',
               'Quyết định phê duyệt': 'Quản lý quyết định phê duyệt phương án và các hộ của từng quyết định'}
 TEN_TAB = {'don_gia': 'Đơn giá bồi thường', 'du_thao': 'Niêm yết && Lấy ý kiến'}   # "&&": QTabBar hiện "&"
 
@@ -464,7 +464,7 @@ class CuaSoChinh(QMainWindow):
                          ('Giới thiệu', self.gioi_thieu),
                          ('Lưu dự án thành…', lambda: self.luu_du_an_thanh()), ('Đợt trình…', lambda: self.dot_trinh()),
                          ('Trạng thái hộ…', lambda: self.trang_thai_ho()),
-                         ('Báo cáo tổng hợp…', lambda: self.bao_cao_tong_hop()), ('Kiểm tra lỗi…', lambda: self.kiem_tra_loi()),
+                         ('Kiểm tra lỗi…', lambda: self.kiem_tra_loi()),
                          ('Xuất danh sách hộ…', lambda: self.xuat_danh_sach()),
                          ('Màn hình chính', lambda: self.ve_trang_chu()),
                          ('Bảng giá đất NQ 28…', lambda: self.bang_gia_dat()),
@@ -497,7 +497,7 @@ class CuaSoChinh(QMainWindow):
             a = QAction(ten, self)
             a.triggered.connect(lambda _=False, ham=ham: self._chay_lenh(ham))
             self.lenh[ten] = a
-        for k, t in enumerate(TRANG):                   # mục trang ở menu trái: đánh dấu trang đang xem; Ctrl+1..6 chuyển trang
+        for k, t in enumerate(TRANG):                   # mục trang ở menu trái: đánh dấu trang đang xem; Ctrl+1..5 chuyển trang
             self.lenh[t].setCheckable(True)
             self.lenh[t].setChecked(k == 0)
             self.lenh[t].setShortcut(QKeySequence(f'Ctrl+{k + 1}'))
@@ -554,12 +554,12 @@ class CuaSoChinh(QMainWindow):
         phim_xoa.activated.connect(lambda: self.lenh['Xóa hộ…'].isEnabled() and self._chay_lenh(self.xoa_ho))
         self._vua_tieu_de()
         # trang bên phải: danh sách hộ / bảng tổng hợp (3 mục) / theo dõi tiến độ - chọn ở menu trái. Bảng tổng hợp, theo dõi tiến độ,
-        # quyết định, báo cáo tiến độ TẠO KHI MỞ LẦN ĐẦU (máy yếu - 16/10/2026: mở phần mềm không dựng ~200 thành phần và nạp ~10
+        # quyết định TẠO KHI MỞ LẦN ĐẦU (máy yếu - 16/10/2026: mở phần mềm không dựng ~200 thành phần và nạp ~10
         # module chưa dùng); chỗ của chúng trong self.trang là khung trống giữ chỉ số (_dam_bao_trang). self.khung_trang chỉ chứa
-        # trang đã tạo; self.bang_tong_hop / tien_do / quyet_dinh / bao_cao (property) tạo khi được hỏi tới
+        # trang đã tạo; self.bang_tong_hop / tien_do / quyet_dinh (property) tạo khi được hỏi tới
         self.khung_trang = {}
         self._cho_trang = {}
-        for i in (STACK_TONG_HOP, STACK_THEO_DOI, STACK_QUYET_DINH, STACK_BAO_CAO):
+        for i in (STACK_TONG_HOP, STACK_THEO_DOI, STACK_QUYET_DINH):
             cho = QWidget()
             lo_cho = QVBoxLayout(cho)
             lo_cho.setContentsMargins(0, 0, 0, 0)
@@ -598,7 +598,8 @@ class CuaSoChinh(QMainWindow):
                                   L['Xuất báo cáo đối chiếu…']]),
             ('4. Tổng hợp & trình duyệt', [L['Tổng hợp tiền theo phương án'], L['Đợt trình…'], L['In / Xuất…']]),
             # mọi việc về quyết định ở MỘT chỗ: trang "Quyết định phê duyệt" (Thêm / Nhập từ file / Sửa / Xóa)
-            ('5. Phê duyệt & bàn giao', [L['Quyết định phê duyệt'], L['Theo dõi tiến độ'], L['Báo cáo tổng hợp…']]),
+            # 1.0.00: "Báo cáo tiến độ GPMB" gộp vào "Tiến độ chi trả & Bàn giao" (thẻ chỉ số, chế độ Thửa còn vướng, Xuất báo cáo)
+            ('5. Phê duyệt & bàn giao', [L['Quyết định phê duyệt'], L['Theo dõi tiến độ']]),
             ('6. Đơn giá & bảng giá', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Bảng giá đất NQ 28…']]),
         ]
         # hoàn tác / làm lại thao tác đã ghi vào file dự án: menu Chỉnh sửa trên thanh menu (người dùng 11/10/2026 - như các phần
@@ -662,13 +663,13 @@ class CuaSoChinh(QMainWindow):
             phim = QShortcut(QKeySequence(chu), self)
             phim.activated.connect(lambda b=buoc: self._tab_ke(b))
         # thanh tab KHÔNG xếp vào bố cục (15/10/2026, người dùng: thu hồi ~40 px chiều cao) - chuyển trang bằng menu trái /
-        # thanh menu (Ctrl+1..6 = các trang); khung_tab chỉ giữ danh sách trang / tab hộ đang mở trong RAM
+        # thanh menu (Ctrl+1..5 = các trang); khung_tab chỉ giữ danh sách trang / tab hộ đang mở trong RAM
         self.trang = QStackedWidget()
         self.trang_dt = QWidget()                        # trang Dự toán & khái toán (KhungDuToan tạo khi mở lần đầu)
         lo_dt = QVBoxLayout(self.trang_dt)
         lo_dt.setContentsMargins(0, 0, 0, 0)
         for w in (trang_ds, self._cho_trang[STACK_TONG_HOP], self._cho_trang[STACK_THEO_DOI], self.trang_dt, self._trang_chao(),
-                  self._cho_trang[STACK_QUYET_DINH], self._cho_trang[STACK_BAO_CAO]):
+                  self._cho_trang[STACK_QUYET_DINH]):
             self.trang.addWidget(w)
         self.ngan_lv = QStackedWidget()
         self.trang.currentChanged.connect(lambda *_: self._cap_nhat_hien_hang_the())
@@ -1167,7 +1168,7 @@ class CuaSoChinh(QMainWindow):
         return [self.mo_hinh.dong[self.loc.mapToSource(self.loc.index(r, 0)).row()]['ma_ho'] for r in range(self.loc.rowCount())]
 
     def _khung_dang_xem(self):
-        """Trang bên phải đang xem có bảng hộ riêng (thẻ Bảng tổng hợp, Quyết định, Tiến độ, Báo cáo tiến độ); None = danh sách hộ."""
+        """Trang bên phải đang xem có bảng hộ riêng (thẻ Bảng tổng hợp, Quyết định, Tiến độ chi trả & Bàn giao); None = danh sách hộ."""
         i = self.trang.currentIndex() if hasattr(self, 'trang') else 0
         if i == STACK_TONG_HOP and STACK_TONG_HOP in getattr(self, 'khung_trang', {}):
             return self.khung_trang[STACK_TONG_HOP].tab.currentWidget()
@@ -1966,7 +1967,7 @@ class CuaSoChinh(QMainWindow):
 
     def mo_trang(self, i: int):
         """Trang bên phải (chỉ số TRANG): 0 danh sách hộ, 1 bảng tổng hợp kinh phí (3 thẻ), 2 quyết định phê duyệt, 3 theo dõi chi
-        trả & bàn giao, 4 báo cáo tiến độ GPMB, 5 dự toán & khái toán. Chưa mở dự án: trang 0-4 hiện màn hình chào (trang Dự toán dùng
+        trả & bàn giao (gộp báo cáo tiến độ GPMB từ 1.0.00), 4 dự toán & khái toán. Chưa mở dự án: trang 0-3 hiện màn hình chào (trang Dự toán dùng
         được cả khi chưa mở dự án)."""
         if i == TRANG_DU_TOAN:
             self._dam_bao_du_toan()
@@ -2126,13 +2127,7 @@ class CuaSoChinh(QMainWindow):
         if k is not None or i not in self._cho_trang:
             return k
         from .man_hinh_theo_doi import KhungBangTongHop, KhungQuyetDinh, KhungTienDo
-        if i == STACK_BAO_CAO:
-            from .man_hinh_bao_cao import KhungBaoCaoTienDo
-            k = KhungBaoCaoTienDo(None, self)               # Nhóm 6: bảng điều hành tiến độ GPMB
-            k.mo_theo_doi.connect(lambda: self.mo_trang(TRANG_THEO_DOI))
-            k.xuat_tong_hop.connect(lambda: self.bao_cao_tong_hop(ds=[d['ma_ho'] for d in self.mo_hinh.dong],
-                                                                    dieu_kien='Toàn bộ các hộ của dự án'))
-        elif i == STACK_TONG_HOP:
+        if i == STACK_TONG_HOP:
             k = KhungBangTongHop(None, self)
             k.di_den_phe_duyet.connect(lambda: self.mo_trang(TRANG_QUYET_DINH))
             k.doi_soat.nguon_dang_mo = self._khai_toan_dang_mo
@@ -2162,10 +2157,6 @@ class CuaSoChinh(QMainWindow):
     @property
     def quyet_dinh(self):
         return self._dam_bao_trang(STACK_QUYET_DINH)
-
-    @property
-    def bao_cao(self):
-        return self._dam_bao_trang(STACK_BAO_CAO)
 
     def _dam_bao_du_toan(self):
         if self.khung_du_toan is None:

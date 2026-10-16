@@ -16,9 +16,9 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QIcon
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-                               QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMessageBox,
-                               QPlainTextEdit, QPushButton, QSpinBox, QSplitter, QTableWidget, QTableWidgetItem, QTabWidget,
-                               QVBoxLayout, QWidget)
+                               QButtonGroup, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+                               QMenu, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QSplitter, QStackedWidget, QTableWidget,
+                               QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from . import ho_so_scan, kinh_phi_du_an, thoi_han, theo_doi, van_dong
 from .bang_ao import BangAo
@@ -874,11 +874,24 @@ class KhungBangTongHop(_Khung):
 
 
 # ---------------------------------------------------------------- Theo dõi tiến độ
+# hai nút chế độ xem ghép đôi (Theo hộ | Thửa còn vướng): nút đang chọn nền xanh đậm - kiểu cục bộ thắng kiểu tô theo chữ của
+# giao_dien (_BoToMau), không thì hai nút giống hệt nhau, không biết đang xem chế độ nào
+QSS_CHE_DO = ('QPushButton { border: 1px solid #CBD5E1; background: #FFFFFF; color: #334155; padding: 4px 14px; border-radius: 0; }'
+              'QPushButton:hover { background: #F1F5F9; }'
+              'QPushButton:checked { background: #0F3866; border-color: #0F3866; color: #FFFFFF; font-weight: 600; }'
+              'QPushButton[che_do="ho"] { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }'
+              'QPushButton[che_do="thua"] { border-top-right-radius: 5px; border-bottom-right-radius: 5px; border-left: 0; }')
+
+
 class KhungTienDo(_Khung):
-    """Hộ đã / chưa nhận tiền (theo từng quyết định hoặc nhiều quyết định), đã / chưa bàn giao, lý do, ngày nhận, biên lai.
-    Số hộ của từng điều kiện nằm ngay trong ô Lọc (0.9.22 bỏ hàng 6 thẻ số trùng hàng thẻ số của cửa sổ chính).
-    0.9.76 (Mục IV QĐ 18/2026): cột mốc thu hồi đất (đã thông báo >= 60 ngày đất nông nghiệp / >= 120 ngày đất phi nông nghiệp -
-    Bước 13), cột vận động / cưỡng chế (sổ nhật ký vận động 10 ngày - Bước 14, 15), xuất danh sách đề nghị cưỡng chế."""
+    """Tiến độ chi trả & Bàn giao (Bước 13-16 Mục IV QĐ 18/2026/QĐ-UBND) - MỘT trang từ 1.0.00 (người dùng 16/10/2026: gộp trang
+    "Báo cáo tiến độ GPMB" - trùng ~70% dữ liệu và 3 nút trùng lệnh với trang này):
+      - dải 4 thẻ chỉ số (man_hinh_bao_cao.DaiKPI): giải ngân, mặt bằng sạch, thửa chưa bàn giao, hộ đủ ĐK cưỡng chế - bấm thẻ = lọc;
+      - hai chế độ xem: "Theo hộ" (nhập liệu: quyết định, chi trả, bàn giao, biên lai, vận động, HS đính kèm - bấm đúp dòng mở
+        Trạng thái hộ) và "Thửa còn vướng" (thửa của hộ đã phê duyệt mà chưa bàn giao, xếp Gấp / Cao / Theo dõi);
+      - dòng "Mốc pháp lý" một dòng + nút "Mốc pháp lý…" (ngày thông báo thu hồi đất, số ngày các mốc - việc làm một lần của dự án);
+      - MỘT nút "Xuất" (menu): bảng theo dõi, báo cáo tiến độ GPMB, DS đề nghị cưỡng chế.
+    Số liệu tính MỘT lần (theo_doi.tong_hop + van_dong + thoi_han) cho cả bảng lẫn thẻ / bảng thửa (bao_cao_gpmb.tong_quan nhận sẵn)."""
     COT = ['STT', 'Mã hộ', 'Họ và tên', 'Địa chỉ', 'Mốc thu hồi đất\n(Bước 13)', 'Vận động / cưỡng chế\n(Bước 14, 15)',
            'Quyết định phê duyệt', 'Tổng phê\nduyệt (đ)', 'Đã nhận (đ)', 'Ngày nhận\ntiền', 'Chưa nhận - lý do',
            'Biên lai / biên\nbản chi trả', 'Bàn giao\nmặt bằng', 'Lý do chưa\nbàn giao', 'Ghi chú theo dõi',
@@ -888,14 +901,53 @@ class KhungTienDo(_Khung):
     C_HOAN_TAT, C_SCAN = 15, 16                         # 0.9.96: hoàn tất CTBT = có QĐ + đã bàn giao; số file hồ sơ scan
     LOC_VAN_DONG = [('dang_vd', 'Đang vận động'), ('du_cuong_che', 'Đủ điều kiện cưỡng chế (Điều 89)')]
     TEN_LOC = dict(theo_doi.LOC_TIEN_DO + LOC_VAN_DONG)
+    CHE_DO = (('ho', 'Theo hộ'), ('thua', 'Thửa còn vướng'))
+    # bấm thẻ chỉ số: (chế độ xem, bộ lọc của chế độ Theo hộ)
+    KPI_LOC = dict(giai_ngan=('ho', 'chua_nhan'), mat_bang=('ho', 'chua_bg'), con_vuong=('thua', None),
+                   cuong_che=('ho', 'du_cuong_che'))
+    # nút "Xuất" (menu): chữ mục -> tên hàm
+    XUAT = (('Bảng theo dõi chi trả & bàn giao (Excel)…', 'xuat'), ('Báo cáo tiến độ GPMB (Excel)…', 'xuat_bao_cao'),
+            ('Danh sách đề nghị cưỡng chế (Excel)…', 'xuat_cuong_che'))
+    QD_CAO_DONG = 22                                     # px mỗi quyết định trong ô danh sách quyết định (cao theo số quyết định)
 
     def __init__(self, con=None, parent=None, chi_doc: bool = False):
         super().__init__(con, parent, chi_doc)
+        from .man_hinh_bao_cao import BangThuaVuong, DaiKPI
         self.ds = []
         self.dang_hien = []
+        self.tq = None                                      # bao_cao_gpmb.tong_quan (thẻ chỉ số + thửa còn vướng)
         self._can_nap = False
         self.vd, self.moc = {}, {}                          # trạng thái vận động {mã hộ: [TinhTrang]}, mốc thu hồi {mã hộ: dict}
         self.dot_ho, self.scan = {}, {}                     # {mã hộ: 'Đợt N'}, {mã hộ: số file hồ sơ scan}
+        self.kpi = DaiKPI(self)
+        self.kpi.bam.connect(self.bam_kpi)
+        # chế độ xem: hai nút bật / tắt liền nhau (một nhóm)
+        self.nut_che_do = {}
+        self.nhom_che_do = QButtonGroup(self)
+        self.nhom_che_do.setExclusive(True)
+        h_dk = QHBoxLayout()
+        h_dk.setSpacing(0)
+        for i, (k, chu) in enumerate(self.CHE_DO):
+            b = QPushButton(chu)
+            b.setCheckable(True)
+            b.setProperty('che_do', k)
+            b.setToolTip('Từng hộ: quyết định, chi trả, bàn giao, vận động (bấm đúp dòng để cập nhật)' if k == 'ho' else
+                         'Thửa của hộ đã phê duyệt mà chưa bàn giao mặt bằng, xếp theo mức ưu tiên giải tỏa')
+            b.setStyleSheet(QSS_CHE_DO)
+            self.nhom_che_do.addButton(b, i)
+            self.nut_che_do[k] = b
+            h_dk.addWidget(b)
+        self.nut_che_do['ho'].setChecked(True)
+        self.nhom_che_do.idClicked.connect(lambda i: self.dat_che_do(self.CHE_DO[i][0]))
+        self.lb_moc = QLabel('')
+        self.lb_moc.setWordWrap(True)
+        h_dk.addSpacing(14)
+        h_dk.addWidget(self.lb_moc, 1)
+        self.nut = {}
+        _nut([('Mốc pháp lý…', lambda: self.mo_moc())], h_dk, self.nut)
+        self.nut['Mốc pháp lý…'].setToolTip('Ngày thông báo thu hồi đất và số ngày các mốc pháp lý (thẩm định, thu hồi đất nông '
+                                            'nghiệp / phi nông nghiệp, vận động) của dự án')
+        # ---- chế độ Theo hộ
         self.cb_loc = QComboBox()
         for k, t in theo_doi.LOC_TIEN_DO + self.LOC_VAN_DONG:
             self.cb_loc.addItem(t, k)
@@ -910,41 +962,69 @@ class KhungTienDo(_Khung):
         for c, w in enumerate((40, 50, 160, 120, 230, 250, 190, 115, 115, 100, 220, 140, 130, 170, 170, 150, 80)):
             self.bang.setColumnWidth(c, w)
         self.bang.cellDoubleClicked.connect(self._nhap_dup)
-        self.nut = {}
-        h_nut = XepDong(cach=6)                              # hẹp thì xuống dòng (cửa sổ 1366: 4 nút một hàng ~1.000 điểm)
-        # quyết định, chi trả, bàn giao của MỘT hộ: bấm đúp dòng, hoặc "Trạng thái hộ…" ở menu trái (hộ đang chọn ở trang này)
-        _nut([('Bàn giao mặt bằng các hộ đã chọn…', lambda: self.ban_giao()),
-              ('Sổ nhật ký vận động…', lambda: self.so_van_dong()),
-              ('Xuất DS đề nghị cưỡng chế…', lambda: self.xuat_cuong_che()),
-              ('Hộ hoàn tất CTBT…', lambda: self.hoan_tat_ctbt()), ('Xuất Excel…', lambda: self.xuat())],
-             h_nut, self.nut)
-        # hàng mốc: ngày thông báo thu hồi đất (Bước 3) và các mốc thời hạn pháp lý
-        self.o_ngay_tb = QLineEdit()
-        self.o_ngay_tb.setPlaceholderText('dd/mm/yyyy')
-        self.o_ngay_tb.setMaximumWidth(110)
-        self.o_ngay_tb.returnPressed.connect(lambda: self.luu_ngay_thong_bao())
-        self.lb_moc = QLabel('')
-        self.lb_moc.setWordWrap(True)
-        h_moc = QHBoxLayout()
-        h_moc.addWidget(QLabel('Ngày thông báo thu hồi đất:'))
-        h_moc.addWidget(self.o_ngay_tb)
-        _nut([('Lưu ngày thông báo', lambda: self.luu_ngay_thong_bao()), ('Mốc thời hạn…', lambda: self.mo_moc())], h_moc, self.nut)
-        h_moc.addWidget(self.lb_moc, 1)
         h_loc = QHBoxLayout()
+        h_loc.setContentsMargins(0, 0, 0, 0)
         h_loc.addWidget(QLabel('Lọc:'))
         h_loc.addWidget(self.cb_loc)
         h_loc.addWidget(QLabel('Tìm:'))
         h_loc.addWidget(self.o_tim, 1)
-        h_qd = QHBoxLayout()
+        self.w_qd = QWidget()                               # chưa có quyết định nào: ẩn (không chiếm chỗ của bảng)
+        h_qd = QHBoxLayout(self.w_qd)
+        h_qd.setContentsMargins(0, 0, 0, 0)
         h_qd.addWidget(QLabel('Quyết định:'), 0, Qt.AlignmentFlag.AlignTop)
         h_qd.addWidget(self.ds_qd_w, 1)
+        self.w_ho = QWidget()
+        lo_ho = QVBoxLayout(self.w_ho)
+        lo_ho.setContentsMargins(0, 0, 0, 0)
+        lo_ho.addLayout(h_loc)
+        lo_ho.addWidget(self.w_qd)
+        lo_ho.addWidget(self.bang, 1)
+        # ---- chế độ Thửa còn vướng
+        self.thua = BangThuaVuong(self)
+        self.thua.mo_ho.connect(self.mo_ho.emit)
+        self.ngan_xem = QStackedWidget()
+        self.ngan_xem.addWidget(self.w_ho)
+        self.ngan_xem.addWidget(self.thua)
+        # ---- nút thao tác + MỘT nút Xuất (menu)
+        h_nut = XepDong(cach=6)                              # hẹp thì xuống dòng (cửa sổ 1366)
+        # quyết định, chi trả, bàn giao của MỘT hộ: bấm đúp dòng, hoặc "Trạng thái hộ…" (menu Dữ liệu / chuột phải)
+        _nut([('Bàn giao mặt bằng các hộ đã chọn…', lambda: self.ban_giao()),
+              ('Sổ nhật ký vận động…', lambda: self.so_van_dong()),
+              ('Hộ hoàn tất CTBT…', lambda: self.hoan_tat_ctbt()), ('Xuất', lambda: None)], h_nut, self.nut)
+        self.menu_xuat = QMenu(self.nut['Xuất'])
+        self.hanh_dong_xuat = {}
+        for chu, ham in self.XUAT:
+            a = self.menu_xuat.addAction(chu)
+            a.triggered.connect(lambda _=False, ham=ham: getattr(self, ham)())
+            self.hanh_dong_xuat[chu] = a
+        self.nut['Xuất'].setMenu(self.menu_xuat)
+        self.nut['Xuất'].setToolTip('Bảng theo dõi chi trả & bàn giao, báo cáo tiến độ GPMB, danh sách đề nghị cưỡng chế (Excel)')
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
-        lo.addLayout(h_moc)
-        lo.addLayout(h_loc)
-        lo.addLayout(h_qd)
-        lo.addWidget(self.bang, 1)
+        lo.addWidget(self.kpi)
+        lo.addLayout(h_dk)
+        lo.addWidget(self.ngan_xem, 1)
         lo.addLayout(h_nut)
+
+    def che_do(self) -> str:
+        return self.CHE_DO[self.ngan_xem.currentIndex()][0]
+
+    def dat_che_do(self, k: str):
+        """'ho' / 'thua': đổi chế độ xem (nút chế độ đổi theo)."""
+        i = next(i for i, (x, _) in enumerate(self.CHE_DO) if x == k)
+        self.ngan_xem.setCurrentIndex(i)
+        self.nut_che_do[k].setChecked(True)
+
+    def bam_kpi(self, k: str):
+        """Bấm thẻ chỉ số: chuyển chế độ xem + lọc (KPI_LOC)."""
+        che_do, loc = self.KPI_LOC[k]
+        self.dat_che_do(che_do)
+        if loc is not None:
+            self.dat_loc(loc)
+
+    def ma_da_chon(self) -> list:
+        """Hộ đang chọn trên bảng của chế độ đang xem (lệnh Trạng thái hộ, Lập phương án… của cửa sổ chính, Bàn giao, Sổ vận động)."""
+        return self.thua.ma_da_chon() if self.che_do() == 'thua' else self.bang.ma_da_chon()
 
     def nap(self):
         """Nạp lại; trang đang ẩn thì chỉ đánh dấu, nạp khi hiện (showEvent) - lưu một hộ không phải dựng lại bảng của trang
@@ -967,6 +1047,8 @@ class KhungTienDo(_Khung):
             it.setData(Qt.ItemDataRole.UserRole, q.id)
             w.addItem(it)
         w.blockSignals(False)
+        w.setFixedHeight(min(72, w.count() * self.QD_CAO_DONG + 6))
+        self.w_qd.setVisible(w.count() > 0)
         self._doi_qd()
 
     def showEvent(self, e):
@@ -975,32 +1057,44 @@ class KhungTienDo(_Khung):
             self.nap()
 
     def _nap_van_dong(self):
-        """Trạng thái vận động từng hộ, mốc thu hồi đất từng hộ, ô ngày thông báo (chỉ đọc lại khi nạp trang)."""
-        sua = self.con is not None and not self.chi_doc
-        for ten in ('Lưu ngày thông báo', 'Mốc thời hạn…'):
-            self.nut[ten].setEnabled(sua)
-        self.o_ngay_tb.setEnabled(sua)
+        """Trạng thái vận động, mốc thu hồi đất từng hộ, thẻ chỉ số + thửa còn vướng (chỉ đọc lại khi nạp trang)."""
+        self.nut['Mốc pháp lý…'].setEnabled(self.con is not None and not self.chi_doc)
         self.nut['Sổ nhật ký vận động…'].setEnabled(self.con is not None)
         self.nut['Hộ hoàn tất CTBT…'].setEnabled(self.con is not None)
+        self.nut['Xuất'].setEnabled(self.con is not None)
         if self.con is None:
-            self.vd, self.moc, self.dot_ho, self.scan = {}, {}, {}, {}
-            self.o_ngay_tb.setText('')
+            self.vd, self.moc, self.dot_ho, self.scan, self.tq = {}, {}, {}, {}, None
             self.lb_moc.setText('')
+            self.kpi.dat(None)
+            self.thua.dat(None)
             return
         self.dot_ho, self.scan = ho_so_scan.ten_dot_theo_ho(self.con), ho_so_scan.dem_theo_ho(self.con)
         self.vd = van_dong.tinh_trang_tat_ca(self.con, self.ds)
         self.moc = thoi_han.moc_thu_hoi_tat_ca(self.con)
-        self.o_ngay_tb.setText(thoi_han.hien_ngay(thoi_han.ngay_thong_bao(self.con)))
+        self._ve_tong_quan()
         self._ve_moc()
+
+    def _ve_tong_quan(self):
+        """Thẻ chỉ số + bảng thửa còn vướng: tính từ số liệu đã nạp (không đọc lại CSDL lần hai)."""
+        from . import bao_cao_gpmb
+        self.tq = bao_cao_gpmb.tong_quan(self.con, ds=self.ds, tt=self.vd, moc=self.moc)
+        self.kpi.dat(self.tq, thoi_han.so_ngay(self.con, 'van_dong'))
+        self.thua.dat(self.tq)
 
     def _ve_moc(self):
         n = thoi_han.tat_ca_so_ngay(self.con)
         co_qd = [x for x in self.ds if x.qd]
         du = sum(1 for x in co_qd if self.moc.get(x.ma_ho, {}).get('du'))
-        mau = '' if thoi_han.ngay_thong_bao(self.con) else \
-            ' <span style="color:#A12A1F;">(chưa nhập ngày thông báo: chưa kiểm tra được mốc)</span>'
-        self.lb_moc.setText(f'Mốc thu hồi đất: đất nông nghiệp ≥ {n["thu_hoi_nn"]} ngày, đất phi nông nghiệp ≥ {n["thu_hoi_pnn"]} '
-                            f'ngày · vận động {n["van_dong"]} ngày · hộ đã có quyết định đủ mốc: <b>{du}/{len(co_qd)}</b>{mau}')
+        ngay = thoi_han.ngay_thong_bao(self.con)
+        tb = f'thông báo thu hồi đất {thoi_han.hien_ngay(ngay)}' if ngay else \
+            '<span style="color:#A12A1F;">chưa nhập ngày thông báo</span>'
+        # một dòng (vừa màn hình 1366): chữ đầy đủ ở chú thích
+        self.lb_moc.setText(f'<b>Mốc pháp lý:</b> {tb} · đất NN ≥ {n["thu_hoi_nn"]} ngày, PNN ≥ {n["thu_hoi_pnn"]} ngày · vận động '
+                            f'{n["van_dong"]} ngày · đủ mốc <b>{du}/{len(co_qd)}</b> hộ')
+        self.lb_moc.setToolTip(f'Ngày thông báo thu hồi đất: {thoi_han.hien_ngay(ngay) if ngay else "chưa nhập (chưa kiểm tra được mốc)"}'
+                               f'\nThu hồi đất nông nghiệp sau ít nhất {n["thu_hoi_nn"]} ngày, đất phi nông nghiệp sau ít nhất '
+                               f'{n["thu_hoi_pnn"]} ngày kể từ ngày thông báo\nThời hạn vận động: {n["van_dong"]} ngày\n'
+                               f'Hộ đã có quyết định đủ mốc thu hồi: {du}/{len(co_qd)}\nSửa ở nút "Mốc pháp lý…"')
 
     def _vd(self, x) -> tuple:
         return van_dong.trang_thai_chung(self.vd.get(x.ma_ho, []))
@@ -1189,35 +1283,50 @@ class KhungTienDo(_Khung):
         return self._xuat(file, 'Lưu danh sách đề nghị cưỡng chế', 'DS_DeNghi_CuongChe.xlsx',
                           lambda f: van_dong.xuat_ds_cuong_che(self.con, f))
 
-    def luu_ngay_thong_bao(self, chu=None):
-        """Ghi ngày thông báo thu hồi đất của dự án (ô trống = xóa) rồi vẽ lại cột mốc thu hồi. Trả chuỗi ngày đã chuẩn hóa."""
+    def xuat_bao_cao(self, file=None):
+        """Excel báo cáo tiến độ GPMB (Bước 16): chỉ số điều hành + danh sách thửa còn vướng - văn bản báo cáo định kỳ."""
+        if self.con is None:
+            return None
+        from . import bao_cao_gpmb
+        return self._xuat(file, 'Lưu báo cáo tiến độ GPMB', 'BaoCaoTienDoGPMB.xlsx', lambda f: bao_cao_gpmb.xuat_excel(self.con, f))
+
+    def luu_ngay_thong_bao(self, chu: str):
+        """Ghi ngày thông báo thu hồi đất của dự án (trống = xóa) rồi vẽ lại mốc thu hồi, thẻ chỉ số. Trả chuỗi ngày đã chuẩn hóa.
+        Ô nhập nằm trong hộp "Mốc pháp lý…" (1.0.00 - trước đây chiếm hàng trên cùng của trang)."""
         if self.con is None or self.chi_doc:
             return None
         try:
-            moi = thoi_han.dat_ngay_thong_bao(self.con, self.o_ngay_tb.text() if chu is None else chu)
+            moi = thoi_han.dat_ngay_thong_bao(self.con, chu)
         except LoiNhap as e:
             self.bao(str(e))
             return None
-        self.o_ngay_tb.setText(moi)
         self.moc = thoi_han.moc_thu_hoi_tat_ca(self.con)
+        self._ve_tong_quan()
         self._ve_moc()
         self.ve()
         return moi
 
-    def mo_moc(self, gia_tri: dict | None = None):
-        """Hộp "Mốc thời hạn…": số ngày thẩm định, mốc thu hồi đất nông nghiệp / phi nông nghiệp, vận động. True nếu có đổi."""
+    def mo_moc(self, gia_tri: dict | None = None, ngay: str | None = None):
+        """Hộp "Mốc pháp lý…": ngày thông báo thu hồi đất + số ngày thẩm định, mốc thu hồi đất nông nghiệp / phi nông nghiệp, vận
+        động. gia_tri / ngay: truyền thẳng (kiểm thử, không hiện hộp). True nếu có đổi."""
         if self.con is None or self.chi_doc:
             return False
-        if gia_tri is None:
-            dlg = HopMocThoiHan(self.con, self)
+        if gia_tri is None and ngay is None:
+            dlg = HopMocThoiHan(self.con, self, ngay_thong_bao=True)
             if not dlg.exec():
                 return False
-            gia_tri = dlg.gia_tri()
-        try:
-            doi = thoi_han.dat_so_ngay(self.con, gia_tri)
-        except LoiNhap as e:
-            self.bao(str(e))
-            return False
+            gia_tri, ngay = dlg.gia_tri(), dlg.ngay_thong_bao()
+        doi = False
+        if ngay is not None and ngay.strip() != thoi_han.hien_ngay(thoi_han.ngay_thong_bao(self.con)):
+            if self.luu_ngay_thong_bao(ngay) is None:
+                return False
+            doi = True
+        if gia_tri:
+            try:
+                doi = bool(thoi_han.dat_so_ngay(self.con, gia_tri)) or doi
+            except LoiNhap as e:
+                self.bao(str(e))
+                return doi
         if doi:
             self._da_ghi()
         return doi
@@ -1525,12 +1634,20 @@ class HopBanGiao(_Hop):
 class HopMocThoiHan(_Hop):
     """Các mốc thời hạn pháp lý (Mục IV QĐ 18/2026/QĐ-UBND) của dự án: số ngày KHÔNG gán cứng - sửa khi quy định đổi."""
 
-    def __init__(self, con, parent=None):
+    def __init__(self, con, parent=None, ngay_thong_bao: bool = False):
         super().__init__(parent)
-        self.setWindowTitle('Mốc thời hạn pháp lý')
-        self.resize(600, 300)
+        self.setWindowTitle('Mốc pháp lý của dự án')
+        self.resize(600, 340)
         self.o = {}
         f = QFormLayout(self)
+        self.o_ngay = None
+        if ngay_thong_bao:                              # 1.0.00: ô ngày thông báo chuyển từ trang Tiến độ chi trả & Bàn giao vào đây
+            self.o_ngay = QLineEdit(thoi_han.hien_ngay(thoi_han.ngay_thong_bao(con)))
+            self.o_ngay.setPlaceholderText('dd/mm/yyyy')
+            self.o_ngay.setMaximumWidth(140)
+            self.o_ngay.setToolTip('Ngày thông báo thu hồi đất (Bước 3) - mốc tính thời hạn thu hồi đất nông nghiệp / phi nông '
+                                   'nghiệp. Để trống = chưa có thông báo.')
+            f.addRow('Ngày thông báo thu hồi đất:', self.o_ngay)
         f.addRow(QLabel('Số ngày tính theo ngày dương lịch. Giá trị mặc định theo đặc tả ARCH-PABT-2026-V7 (Mục IV QĐ 18/2026/QĐ-UBND);\n'
                         'đối chiếu văn bản gốc khi áp dụng cho dự án.'))
         for k, (_, mac_dinh, nhan, can_cu) in thoi_han.MOC.items():
@@ -1545,6 +1662,10 @@ class HopMocThoiHan(_Hop):
 
     def gia_tri(self) -> dict:
         return {k: o.value() for k, o in self.o.items()}
+
+    def ngay_thong_bao(self) -> str | None:
+        """Chữ ô ngày thông báo (None khi hộp không có ô này)."""
+        return None if self.o_ngay is None else self.o_ngay.text().strip()
 
 
 class HopNhatKyVanDong(_Hop):

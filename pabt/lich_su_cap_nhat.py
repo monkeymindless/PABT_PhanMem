@@ -7,6 +7,15 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.00', '16/10/2026', (
+        'Mục "Tiến độ chi trả & Bàn giao" thay hai mục "Theo dõi chi trả & Bàn giao" và "Báo cáo tiến độ GPMB" (trùng phần lớn số '
+        'liệu và nút lệnh): 4 thẻ chỉ số ở trên cùng (giải ngân, mặt bằng sạch, thửa chưa bàn giao, hộ đủ điều kiện cưỡng chế) - bấm '
+        'thẻ để lọc ngay; hai chế độ xem "Theo hộ" (nhập liệu) và "Thửa còn vướng" (xếp Gấp / Cao / Theo dõi).',
+        'Một nút "Xuất" gom các báo cáo: bảng theo dõi chi trả & bàn giao, báo cáo tiến độ GPMB, danh sách đề nghị cưỡng chế.',
+        'Mốc pháp lý gọn một dòng; ngày thông báo thu hồi đất nhập ở nút "Mốc pháp lý…". Dự án chưa có quyết định: thẻ hiện "—" kèm '
+        'lời nhắc, bảng thửa trống nói rõ vì sao; ô danh sách quyết định ẩn khi chưa có quyết định.',
+        'Phím tắt chuyển trang Ctrl+1..5 (Lập khái toán & Dự toán là Ctrl+5).',
+    )),
     ('0.9.99', '16/10/2026', (
         'Đọc PDF ảnh / ảnh scan (bảng đơn giá, quyết định, hệ số K, giấy tờ) bằng Tesseract OCR ĐÓNG KÈM phần mềm, thay nhận dạng '
         'chữ của Windows: không còn phải cài gói tiếng Việt của Windows; bảng scan giữ đúng cột (STT, tên, ĐVT, đơn giá), "m²" đọc '

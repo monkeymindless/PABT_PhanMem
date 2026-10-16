@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 22:48. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 23:15. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -12,11 +12,11 @@ Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 22:48. Kiểm tra tĩnh: 0 cảnh
 |---|---:|---:|---:|---|
 | `__init__.py` | 78 | 0 | 2 | - |
 | `an_toan.py` | 120 | 1 | 7 | - |
-| `app.py` | 3131 | 5 | 16 | BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, giao_dien, khoa, lap_pa, may_chu, nghiep_vu, thong_bao, tien |
+| `app.py` | 3122 | 5 | 16 | BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, giao_dien, khoa, lap_pa, may_chu, nghiep_vu, thong_bao, tien |
 | `ban_do_cad.py` | 426 | 4 | 22 | csdl, tien |
 | `ban_quyen.py` | 23 | 0 | 2 | - |
 | `bang_ao.py` | 209 | 3 | 0 | - |
-| `bao_cao_gpmb.py` | 96 | 0 | 4 | thoi_han, tien, van_dong |
+| `bao_cao_gpmb.py` | 98 | 0 | 4 | thoi_han, tien, van_dong |
 | `bao_cao_y_kien.py` | 131 | 0 | 4 | du_thao, van_ban_trinh |
 | `cap_nhat.py` | 197 | 1 | 13 | __version__, an_toan |
 | `cap_nhat_gia_dat.py` | 550 | 1 | 23 | gia_dat_nq28, lap_pa |
@@ -48,12 +48,12 @@ Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 22:48. Kiểm tra tĩnh: 0 cảnh
 | `kiem_toan.py` | 320 | 0 | 14 | csdl |
 | `kinh_phi_du_an.py` | 108 | 0 | 7 | csdl, theo_doi, tien |
 | `lap_pa.py` | 992 | 4 | 23 | csdl, loai_dat, nghiep_vu, tien |
-| `lich_su_cap_nhat.py` | 419 | 0 | 1 | - |
+| `lich_su_cap_nhat.py` | 428 | 0 | 1 | - |
 | `loai_dat.py` | 137 | 0 | 6 | - |
 | `ma_tai_san.py` | 142 | 0 | 8 | - |
 | `man_hinh.py` | 2729 | 11 | 2 | giao_dien, hang_nhap_nhanh, lap_pa, nghiep_vu, thong_bao, tien |
 | `man_hinh_ban_do.py` | 363 | 4 | 0 | ban_do_cad, giao_dien, thong_bao, tien |
-| `man_hinh_bao_cao.py` | 181 | 2 | 0 | bang_ao, bao_cao_gpmb, giao_dien, man_hinh_theo_doi, thoi_han, tien, van_dong |
+| `man_hinh_bao_cao.py` | 226 | 3 | 0 | bang_ao, bao_cao_gpmb, giao_dien, man_hinh_theo_doi, tien, van_dong |
 | `man_hinh_cap_nhat.py` | 103 | 1 | 0 | cap_nhat |
 | `man_hinh_cau_hinh.py` | 281 | 1 | 2 | dia_phuong, quy_trinh_qd18, thong_bao |
 | `man_hinh_cay.py` | 569 | 6 | 3 | cay_trong, csdl, giao_dien, lap_pa, nghiep_vu, tien |
@@ -77,7 +77,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 22:48. Kiểm tra tĩnh: 0 cảnh
 | `man_hinh_quan_ly.py` | 1173 | 7 | 4 | csdl, du_thao, giao_dien, kiem_loi, lap_pa, quan_ly, thoi_han, thong_bao, tien |
 | `man_hinh_quet_web.py` | 269 | 1 | 1 | cap_nhat_web, giao_dien, lap_pa, nhap_don_gia, ocr, thong_bao |
 | `man_hinh_quy_trinh.py` | 52 | 1 | 0 | quy_trinh_qd18 |
-| `man_hinh_theo_doi.py` | 1939 | 16 | 17 | bang_ao, giao_dien, ho_so_scan, kinh_phi_du_an, lap_pa, theo_doi, thoi_han, thong_bao, tien, van_dong |
+| `man_hinh_theo_doi.py` | 2060 | 16 | 17 | bang_ao, giao_dien, ho_so_scan, kinh_phi_du_an, lap_pa, theo_doi, thoi_han, thong_bao, tien, van_dong |
 | `may_chu.py` | 644 | 2 | 44 | csdl |
 | `nghiep_vu.py` | 739 | 9 | 40 | tien |
 | `nguon_gia_dat.py` | 254 | 0 | 14 | lap_pa |
@@ -106,7 +106,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 22:48. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 727 | 2 | 12 | - |
 
-Tổng: 47026 dòng mã trong pabt/.
+Tổng: 47194 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -129,7 +129,7 @@ Tổng: 47026 dòng mã trong pabt/.
 - lớp `LocHo` (dòng 278): `__init__`, `dat`, `filterAcceptsRow`
 - lớp `BangHo` (dòng 327): `__init__`, `dat_du_lieu`, `thay_dong`, `rowCount`, `columnCount`, `headerData`, `data`
 - lớp `ChiTietHo` (dòng 384): `__init__`
-- lớp `CuaSoChinh` (dòng 430): `__init__`, `nhap_excel`, `_ghi_chi_tiet_co_tien_do`, `nhap_chi_tiet`, `mo_du_an`, `mo`, `_cap_nhat_lenh_theo_du_an`, `lam_moi_khoa`, `dong_du_an`, `tai_lai`, `_so_lieu_dong`, `_dong_ho`, `_tai_lai_toan_bo`, `_tai_lai_ho`, `_sau_tai_lai`, `_nap_ds_dot`, `_loc`, `_dem_loc`, `ho_dang_loc`, `_khung_dang_xem`, `ho_da_chon`, `mo_ta_loc`, `mo_chi_tiet`, `_hien_ty_le`, `_vua_tieu_de` … (+107)
+- lớp `CuaSoChinh` (dòng 430): `__init__`, `nhap_excel`, `_ghi_chi_tiet_co_tien_do`, `nhap_chi_tiet`, `mo_du_an`, `mo`, `_cap_nhat_lenh_theo_du_an`, `lam_moi_khoa`, `dong_du_an`, `tai_lai`, `_so_lieu_dong`, `_dong_ho`, `_tai_lai_toan_bo`, `_tai_lai_ho`, `_sau_tai_lai`, `_nap_ds_dot`, `_loc`, `_dem_loc`, `ho_dang_loc`, `_khung_dang_xem`, `ho_da_chon`, `mo_ta_loc`, `mo_chi_tiet`, `_hien_ty_le`, `_vua_tieu_de` … (+106)
 - hàm: `_file_gan_day`, `doc_gan_day`, `_con_tren_dia`, `ghi_gan_day`, `bo_gan_day`, `_file_ghim`, `doc_ghim`, `ghim_du_an`, `_file_tong_du_an`, `_doc_tong_nho`, `ghi_tong_nho`, `_tom_tat_pabt`, `file_huong_dan`, `hien_cua_so`, `dat_app_user_model_id`, `main`
 
 ### `ban_do_cad.py`
@@ -324,8 +324,9 @@ Tổng: 47026 dòng mã trong pabt/.
 - lớp `HopBanDo` (dòng 285): `__init__`, `nap_to`, `nap`, `_bam_ho`, `_nhap`
 
 ### `man_hinh_bao_cao.py`
-- lớp `_TheKPI` (dòng 29): `__init__`, `dat`
-- lớp `KhungBaoCaoTienDo` (dòng 65): `__init__`, `nap`, `showEvent`, `thua_hien`, `ve`, `xuat`, `xuat_cuong_che`
+- lớp `_TheKPI` (dòng 43): `__init__`, `dat`, `mouseReleaseEvent`
+- lớp `DaiKPI` (dòng 94): `__init__`, `dat`
+- lớp `BangThuaVuong` (dòng 141): `__init__`, `dat`, `thua_hien`, `ve`, `chu_trong`, `_mo_ho_dong`, `ma_da_chon`
 
 ### `man_hinh_cap_nhat.py`
 - lớp `HopCapNhat` (dòng 14): `__init__`, `hien`, `_bao`, `cai_file`, `go_cap_nhat`, `khoi_dong_lai`
@@ -452,15 +453,15 @@ Tổng: 47026 dòng mã trong pabt/.
 - lớp `KhungCoCau` (dòng 618): `__init__`, `nap`, `dong`, `ve`, `xuat`
 - lớp `KhungDoiSoat` (dòng 688): `__init__`, `nap`, `dung_dang_mo`, `chon_file`, `dong`, `ve`, `xuat`
 - lớp `KhungBangTongHop` (dòng 798): `__init__`, `cac_the`, `_doi`, `dat_du_an`, `nap`, `showEvent`, `_nap_the`, `_doi_the`, `mo_the`
-- lớp `KhungTienDo` (dòng 877): `__init__`, `nap`, `showEvent`, `_nap_van_dong`, `_ve_moc`, `_vd`, `_doi_qd`, `qd_chon`, `dat_loc`, `loc`, `dong`, `ve`, `_nhap_dup`, `hoan_tat_ctbt`, `_thu_muc_ho_so`, `ban_giao`, `so_van_dong`, `xuat_cuong_che`, `luu_ngay_thong_bao`, `mo_moc`, `xuat`
-- lớp `HopQuyetDinh` (dòng 1264): `__init__`, `gia_tri`
-- lớp `HopQDHo` (dòng 1292): `__init__`, `_doi_qd`, `_doi_chi_tra`, `lay_theo_pa`, `doc_file`, `qd_id`, `gia_tri`
-- lớp `HopChonHo` (dòng 1446): `__init__`, `_loc`, `chon`
-- lớp `HopNgayChiTra` (dòng 1483): `__init__`
-- lớp `HopBanGiao` (dòng 1497): `__init__`, `gia_tri`
-- lớp `HopMocThoiHan` (dòng 1525): `__init__`, `gia_tri`
-- lớp `HopNhatKyVanDong` (dòng 1550): `__init__`, `ma_ho`, `chon_ho`, `_x`, `nap`, `_chon_dong`, `_doc_form`, `them`, `sua`, `xoa`
-- lớp `HopHoTheoDoi` (dòng 1746): `__init__`, `nap`, `_dong`, `hoan_tac_phim`, `them`, `sua`, `bo`, `_doc_ho`, `luu`, `accept`, `reject`
+- lớp `KhungTienDo` (dòng 886): `__init__`, `che_do`, `dat_che_do`, `bam_kpi`, `ma_da_chon`, `nap`, `showEvent`, `_nap_van_dong`, `_ve_tong_quan`, `_ve_moc`, `_vd`, `_doi_qd`, `qd_chon`, `dat_loc`, `loc`, `dong`, `ve`, `_nhap_dup`, `hoan_tat_ctbt`, `_thu_muc_ho_so`, `ban_giao`, `so_van_dong`, `xuat_cuong_che`, `xuat_bao_cao`, `luu_ngay_thong_bao` … (+2)
+- lớp `HopQuyetDinh` (dòng 1373): `__init__`, `gia_tri`
+- lớp `HopQDHo` (dòng 1401): `__init__`, `_doi_qd`, `_doi_chi_tra`, `lay_theo_pa`, `doc_file`, `qd_id`, `gia_tri`
+- lớp `HopChonHo` (dòng 1555): `__init__`, `_loc`, `chon`
+- lớp `HopNgayChiTra` (dòng 1592): `__init__`
+- lớp `HopBanGiao` (dòng 1606): `__init__`, `gia_tri`
+- lớp `HopMocThoiHan` (dòng 1634): `__init__`, `gia_tri`, `ngay_thong_bao`
+- lớp `HopNhatKyVanDong` (dòng 1671): `__init__`, `ma_ho`, `chon_ho`, `_x`, `nap`, `_chon_dong`, `_doc_form`, `them`, `sua`, `xoa`
+- lớp `HopHoTheoDoi` (dòng 1867): `__init__`, `nap`, `_dong`, `hoan_tac_phim`, `them`, `sua`, `bo`, `_doc_ho`, `luu`, `accept`, `reject`
 - hàm: `_tien`, `_so`, `_so_hoac_trong`, `mo_file`, `_bao`, `_hoi`, `_o_tim`, `_nut`, `_chuoi_tim`, `_bang`, `_o`, `mo_ta_ban_giao`, `_chu`, `_ty_le`, `_o_chon_file`, `_chon_file`, `_nut_luu`
 
 ### `may_chu.py`

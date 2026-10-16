@@ -634,40 +634,47 @@ class TestBangTongHopVaBaoCaoGiaoDien(_Co):
         self.assertIsNone(k3.chon_file(self.td / 'khong_co.pabtdt'))        # file hỏng: báo, giữ nguồn cũ
         self.assertIn('g.pabtdt', k3.lb_nguon.text())
 
-    def test_bao_cao_tien_do_dashboard(self):
+    def test_tien_do_tong_quan_the_va_thua_con_vuong(self):
+        """1.0.00: bảng điều hành (thẻ chỉ số + thửa còn vướng) nằm trong trang Tiến độ chi trả & Bàn giao (KhungTienDo)."""
         _qt()
-        from pabt.man_hinh_bao_cao import KhungBaoCaoTienDo
-        q = self.qd()
-        k = KhungBaoCaoTienDo(self.con)
+        from pabt.man_hinh_bao_cao import KHONG_SO
+        from pabt.man_hinh_theo_doi import KhungTienDo
+        k = KhungTienDo(self.con)
         k.im_lang = True
         self.addCleanup(k.close)
         k.nap()
-        self.assertEqual(k.the['giai_ngan'].lb_so.text(), '0,0%')
+        self.assertEqual(k.kpi.the['giai_ngan'].lb_so.text(), KHONG_SO)      # chưa có quyết định: "—", không phải "0,0%"
+        self.assertIn('Chưa có hộ nào được phê duyệt', k.thua.chu_trong())
+        self.assertIs(k.thua.ngan.currentWidget(), k.thua.lb_trong)         # bảng trống: lời giải thích thay chỗ bảng
+        q = self.qd()
+        k.nap()
+        self.assertEqual(k.kpi.the['giai_ngan'].lb_so.text(), '0,0%')
+        b = k.thua.bang
         so_thua_4_ho = sum(self.con.execute('SELECT COUNT(*) FROM thua WHERE ma_ho = ?', (m,)).fetchone()[0] for m in self.ma[:4])
-        self.assertEqual(k.bang.rowCount(), so_thua_4_ho)                   # mỗi THỬA một dòng: 4 hộ đã phê duyệt, chưa nhận tiền
+        self.assertEqual(b.rowCount(), so_thua_4_ho)                        # mỗi THỬA một dòng: 4 hộ đã phê duyệt, chưa nhận tiền
         self.assertEqual(k.tq['dem'], dict(gap=0, cao=0, theo_doi=so_thua_4_ho))        # đều "theo dõi"
         self.assertIsNone(k.xuat_cuong_che(self.td / 'x.xlsx'))             # chưa hộ nào đủ điều kiện cưỡng chế
         theo_doi.ghi_chi_tra(self.con, [(q, self.ma[0]), (q, self.ma[1])], _hn(-1))
         theo_doi.ghi_ban_giao(self.con, [self.ma[0]], dict(da_ban_giao=1))
         van_dong.ghi_buoi(self.con, self.ma[2], 'tien', _hn(-20))
         k.nap()
-        self.assertEqual(k.the['giai_ngan'].lb_so.text()[-1], '%')
-        self.assertNotEqual(k.the['giai_ngan'].lb_so.text(), '0,0%')
-        self.assertNotEqual(k.the['mat_bang'].lb_so.text(), '0,0%')
-        self.assertEqual(k.the['cuong_che'].lb_so.text(), '1')
-        self.assertEqual(k.the['giai_ngan'].thanh.value(), int(k.tq['pt_giai_ngan'] * 10))
+        self.assertEqual(k.kpi.the['giai_ngan'].lb_so.text()[-1], '%')
+        self.assertNotEqual(k.kpi.the['giai_ngan'].lb_so.text(), '0,0%')
+        self.assertNotEqual(k.kpi.the['mat_bang'].lb_so.text(), '0,0%')
+        self.assertEqual(k.kpi.the['cuong_che'].lb_so.text(), '1')
+        self.assertEqual(k.kpi.the['giai_ngan'].thanh.value(), int(k.tq['pt_giai_ngan'] * 10))
         tong_thua = len(k.tq['thua'])
-        self.assertEqual(k.bang.rowCount(), tong_thua)
-        self.assertEqual(k.bang.item(0, 0).text(), 'Gấp')                   # gấp lên đầu
-        k.cb_muc.setCurrentIndex(k.cb_muc.findData('theo_doi'))
-        self.assertEqual(k.bang.rowCount(), k.tq['dem']['theo_doi'])
-        self.assertIn(f'/{tong_thua} thửa', k.lb_dem.text())
-        self.assertTrue(k.xuat(self.td / 'bc.xlsx').exists())
+        self.assertEqual(b.rowCount(), tong_thua)
+        self.assertEqual(b.item(0, 0).text(), 'Gấp')                        # gấp lên đầu
+        k.thua.cb_muc.setCurrentIndex(k.thua.cb_muc.findData('theo_doi'))
+        self.assertEqual(b.rowCount(), k.tq['dem']['theo_doi'])
+        self.assertIn(f'/{tong_thua} thửa', k.thua.lb_dem.text())
+        self.assertTrue(k.xuat_bao_cao(self.td / 'bc.xlsx').exists())
         f2 = k.xuat_cuong_che(self.td / 'cc.xlsx')
         self.assertEqual(__import__('openpyxl').load_workbook(f2).active.cell(5, 2).value, self.ma[2])
         k.con = None
         k.nap()
-        self.assertEqual(k.bang.rowCount(), 0)
+        self.assertEqual(k.thua.bang.rowCount(), 0)
 
 
 class TestDotTrinhGiaoDien(_Co):
@@ -770,28 +777,31 @@ class TestCuaSoChinhNhom56(_Co):
 
     def test_cau_truc_trang(self):
         ud, w = self._cua_so()
+        # 1.0.00: "Báo cáo tiến độ GPMB" gộp vào "Tiến độ chi trả & Bàn giao" - 5 trang, Ctrl+1..5
         self.assertEqual(ud.TRANG, ['Danh sách hộ', 'Tổng hợp tiền theo phương án', 'Quyết định phê duyệt', 'Theo dõi tiến độ',
-                                    'Báo cáo tổng hợp…', 'Dự toán & khái toán'])
-        self.assertEqual(ud.TRANG_DU_TOAN, 5)
-        self.assertEqual(w.trang.count(), 7)
-        for i, t in enumerate(ud.TRANG[:5]):
+                                    'Dự toán & khái toán'])
+        self.assertEqual(ud.TRANG_DU_TOAN, 4)
+        self.assertEqual(w.trang.count(), 6)
+        self.assertNotIn('Báo cáo tổng hợp…', w.lenh)
+        self.assertFalse(hasattr(w, 'bao_cao'))
+        for i, t in enumerate(ud.TRANG[:4]):
             w.lenh[t].trigger()
             _qt().processEvents()
             self.assertEqual(w.trang.currentIndex(), ud.STACK_CUA_TRANG[i], t)
             self.assertEqual([k for k, x in enumerate(ud.TRANG) if w.lenh[x].isChecked()], [i])
-        w.lenh['Báo cáo tổng hợp…'].trigger()
-        self.assertIs(w._khung_dang_xem(), w.bao_cao)
-        self.assertEqual(w.lb_trang.text(), 'BÁO CÁO TIẾN ĐỘ GPMB')
-        self.assertEqual(w.bao_cao.the['giai_ngan'].lb_so.text(), '0,0%')
+            self.assertEqual(w.lenh[t].shortcut().toString(), f'Ctrl+{i + 1}')
+        self.assertIs(w._khung_dang_xem(), w.tien_do)
+        self.assertEqual(w.lb_trang.text(), 'TIẾN ĐỘ CHI TRẢ & BÀN GIAO')
+        from pabt.man_hinh_bao_cao import KHONG_SO
+        self.assertEqual(w.tien_do.kpi.the['giai_ngan'].lb_so.text(), KHONG_SO)
 
     def test_lien_ket_giua_cac_trang_va_dong_du_an(self):
         ud, w = self._cua_so()
-        w.mo_trang(ud.TRANG_BAO_CAO)
-        w.bao_cao.mo_theo_doi.emit()
-        self.assertEqual(w.trang.currentIndex(), ud.STACK_THEO_DOI)
-        with mock.patch.object(w, 'bao_cao_tong_hop') as bc:
-            w.bao_cao.xuat_tong_hop.emit()
-        self.assertEqual(sorted(bc.call_args.kwargs['ds']), sorted(self.ma))
+        w.mo_trang(ud.TRANG_THEO_DOI)
+        w.tien_do.bam_kpi('con_vuong')                                      # thẻ "Thửa chưa bàn giao": chế độ Thửa còn vướng
+        self.assertEqual(w.tien_do.che_do(), 'thua')
+        w.tien_do.bam_kpi('cuong_che')                                      # thẻ cưỡng chế: về Theo hộ, lọc hộ đủ điều kiện
+        self.assertEqual((w.tien_do.che_do(), w.tien_do.cb_loc.currentData()), ('ho', 'du_cuong_che'))
         self.assertIsNone(w.bang_tong_hop.doi_soat.nguon_dang_mo())         # chưa mở trang khái toán: chưa có bảng đang mở
         k = w.du_toan(cho=False)
         from pabt import du_toan
@@ -807,7 +817,7 @@ class TestCuaSoChinhNhom56(_Co):
         self.assertIsNone(w.bang_tong_hop.doi_soat.goc)                     # đóng dự án: bỏ khái toán đối soát của dự án
 
     def test_ghi_o_trang_khac_nap_lai_cac_trang(self):
-        """Ghi chi trả ở trang Quyết định thì các trang khác (báo cáo tiến độ, theo dõi) nạp lại khi xem."""
+        """Ghi chi trả ở trang Quyết định thì trang Tiến độ chi trả & Bàn giao (bảng + thẻ chỉ số) nạp lại khi xem."""
         ud, w = self._cua_so()
         self.qd()
         w.mo_trang(ud.TRANG_QUYET_DINH)
@@ -815,11 +825,9 @@ class TestCuaSoChinhNhom56(_Co):
         w.quyet_dinh.im_lang = True
         w.quyet_dinh.ds_qd_w.setCurrentRow(0)
         self.assertEqual(w.quyet_dinh.ghi_chi_tra(self.ma[:2], _hn(-1)), 2)
-        w.mo_trang(ud.TRANG_BAO_CAO)
-        _qt().processEvents()
-        self.assertEqual(w.bao_cao.tq['so_ho_nhan_du'], 2)
         w.mo_trang(ud.TRANG_THEO_DOI)
         _qt().processEvents()
+        self.assertEqual(w.tien_do.tq['so_ho_nhan_du'], 2)                 # thẻ chỉ số nạp lại cùng bảng
         self.assertEqual(sum(1 for r in range(w.tien_do.bang.rowCount()) if w.tien_do.bang.item(r, w.tien_do.C_NHAN).text()), 2)
 
 

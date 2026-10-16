@@ -90,7 +90,7 @@ class TestKhongTrungLenh(unittest.TestCase):
     def test_lenh_van_dung_duoc(self):
         """Bỏ nút không bỏ lệnh: vẫn có trong self.lenh và ở đúng một chỗ trên giao diện."""
         w = self._cua_so()
-        for ten in ('Thông tin dự án…', 'Báo cáo tổng hợp…', 'Xuất báo cáo đối chiếu…', 'Bộ đơn giá…', 'Lập phương án hộ…',
+        for ten in ('Thông tin dự án…', 'Theo dõi tiến độ', 'Xuất báo cáo đối chiếu…', 'Bộ đơn giá…', 'Lập phương án hộ…',
                     'Xuất danh sách hộ…', 'Hướng dẫn sử dụng', 'Bảng giá đất NQ 28…'):
             self.assertIn(ten, w.lenh)
         self.assertEqual(w.lenh['Hướng dẫn sử dụng'].shortcut().toString(), 'F1')

@@ -1,4 +1,9 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.99 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.00 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **1.0.00**: **Tiến độ chi trả & Bàn giao** - một trang thay hai mục "Theo dõi chi trả & Bàn giao" và "Báo cáo tiến độ GPMB" (trùng phần
+> lớn số liệu): 4 thẻ chỉ số bấm để lọc, hai chế độ xem **Theo hộ** / **Thửa còn vướng**, một nút **Xuất ▾** (bảng theo dõi, báo cáo tiến độ
+> GPMB, đề nghị cưỡng chế), dòng **Mốc pháp lý** gọn (ngày thông báo thu hồi đất nhập ở nút "Mốc pháp lý…"). Phím tắt trang: Ctrl+1..5
+> (Lập khái toán & Dự toán là Ctrl+5).
 
 > **0.9.99**: bản in **tự dàn trang** (lề chuẩn, vừa bề ngang, ngắt trang ở chỗ hợp lý; trang cuối tràn ít thì nén khít, hở
 > nhiều thì giãn cân đối; tổng cộng và chữ ký cùng trang). Lề trang chỉnh được trong hồ sơ địa phương (`ban_in.le_trang`). Bảng
@@ -586,13 +591,13 @@ mẫu in, bộ đơn giá; hướng dẫn F1, cập nhật phần mềm, giới 
 **Màn hình chính** riêng, rồi 6 nhóm - **1. Khái toán & dự toán**, **2. Dự án triển khai** (Thông tin dự án, Danh sách hộ và Thửa),
 **3. Lập phương án** (Lập phương án chi tiết, Niêm yết & Lấy ý kiến, Bản đồ thửa đất, Kiểm tra lỗi pháp lý, Đối chiếu số liệu),
 **4. Tổng hợp & trình duyệt** (Bảng tổng hợp kinh phí, Đợt trình thẩm định, Xuất hồ sơ & Bản in), **5. Phê duyệt & bàn giao**
-(Quyết định phê duyệt, Theo dõi chi trả & Bàn giao, Báo cáo tiến độ GPMB), **6. Đơn giá & bảng giá** (Đơn giá bồi thường, Đơn giá
+(Quyết định phê duyệt, Tiến độ chi trả & Bàn giao), **6. Đơn giá & bảng giá** (Đơn giá bồi thường, Đơn giá
 đặc biệt, Bảng giá đất - 0.9.88 chuyển xuống cuối: các nhóm làm hằng ngày lên trên). Lần đầu mở, nhóm 2, 3, 4 mở sẵn; nhóm 1, 5, 6
 đóng. Chưa mở dự án: các lệnh nhóm 3, 4, 5 và Đơn giá đặc biệt mờ; Đơn giá bồi thường, Bảng giá đất vẫn tra cứu được. Bấm tên nhóm
 để đóng / mở (phần mềm nhớ). Mỗi lệnh là
 MỘT lệnh dùng chung cho menu, thanh công cụ, chuột phải (cùng trạng thái tắt khi chỉ xem). Lệnh với "hộ đang chọn" (Lập phương án,
 Trạng thái hộ, Đợt trình, In / Xuất) lấy hộ chọn **trên trang đang xem** (Danh sách hộ, Bảng tổng hợp kinh phí, Quyết định phê duyệt,
-Theo dõi chi trả & Bàn giao, Báo cáo tiến độ GPMB).
+Tiến độ chi trả & Bàn giao - cả ở chế độ Thửa còn vướng).
 **Màn hình chính** / màn hình chào: 3 nút lớn (Dự án mới, Mở dự án, Nhập Excel), **Đóng dự án** / **Xóa dự án** khi đang mở file;
 góc dưới phải có liên kết **Hướng dẫn sử dụng (F1)** (cùng lệnh menu Trợ giúp),
 danh sách **dự án làm việc gần đây** (nhấp đúp hoặc **Mở dự án đã chọn** để thay dự án — không thoát phần mềm; **Xóa khỏi danh
@@ -834,7 +839,7 @@ Trong màn hình Lập phương án hộ:
 ## Nhóm 5 và Nhóm 6: tổng hợp, trình thẩm định, phê duyệt, chi trả, bàn giao, cưỡng chế
 
 Theo Mục IV Quyết định 18/2026/QĐ-UBND (16 bước). Các mốc ngày bên dưới là **mặc định theo đặc tả của phần mềm**, đặt ở cài đặt của dự án
-(**Theo dõi chi trả & Bàn giao → Mốc thời hạn…**) - đối chiếu văn bản gốc và đổi khi quy định thay đổi.
+(**Tiến độ chi trả & Bàn giao → Mốc pháp lý…**) - đối chiếu văn bản gốc và đổi khi quy định thay đổi.
 
 ### Nhóm 5 - Tổng hợp & trình duyệt (Bước 8, 11)
 
@@ -865,20 +870,31 @@ Theo Mục IV Quyết định 18/2026/QĐ-UBND (16 bước). Các mốc ngày b�
 - **Quyết định phê duyệt** là nơi **duy nhất** quản lý quyết định (Thêm / Nhập từ file / Sửa / Xóa; thêm hộ, ghi nhận đã nhận tiền).
   Bên trái danh sách quyết định, bên phải hộ của quyết định và **thanh khớp số liệu**: "Đã duyệt: X/N hộ · Tổng tiền: Y đ", báo *KHỚP* hoặc
   *LỆCH* so với tổng tiền ghi trong quyết định (nhập ở **Sửa…**).
-- **Theo dõi chi trả & Bàn giao**:
-  - **Ngày thông báo thu hồi đất** (nhập, **Lưu ngày thông báo**): cột **Mốc thu hồi đất** cho biết hộ đã đủ thời gian thông báo để ban hành
-    quyết định thu hồi đất chưa - từ **60 ngày** với đất nông nghiệp, **120 ngày** với đất phi nông nghiệp; hộ có thửa phi nông nghiệp
-    (ví dụ ONT+CLN) hoặc loại đất không rõ tính theo 120 ngày.
+- **Tiến độ chi trả & Bàn giao** (từ 1.0.00 gộp cả "Báo cáo tiến độ GPMB" - hai trang cũ trùng phần lớn số liệu):
+  - **4 thẻ chỉ số** ở trên cùng - bấm thẻ để lọc ngay:
+    - **Giải ngân tiền bồi thường** (tiền đã chi / tiền đã phê duyệt) → lọc hộ *còn quyết định chưa nhận tiền*;
+    - **Mặt bằng sạch đã bàn giao** (diện tích thu hồi của hộ đã bàn giao / tổng) → lọc hộ *chưa bàn giao*;
+    - **Thửa chưa bàn giao mặt bằng** (Gấp / Cao / Theo dõi) → chuyển sang chế độ **Thửa còn vướng**;
+    - **Hộ đủ điều kiện cưỡng chế** → lọc hộ *đủ điều kiện cưỡng chế*.
+    Chưa có quyết định phê duyệt thì thẻ hiện "—" kèm lời nhắc (không hiện 0,0%). Rê chuột lên thẻ xem số đầy đủ.
+  - **Hai chế độ xem** (nút ghép đôi, nút đang chọn nền xanh đậm):
+    - **Theo hộ** (nhập liệu): mỗi hộ một dòng - mốc thu hồi đất, vận động / cưỡng chế, quyết định, tiền phê duyệt / đã nhận, ngày nhận,
+      lý do chưa nhận, biên lai, bàn giao, ghi chú, hoàn tất CTBT, HS đính kèm. Lọc theo điều kiện, tìm không cần dấu, đánh dấu quyết định
+      (ô danh sách quyết định ẩn khi dự án chưa có quyết định). Bấm đúp dòng để cập nhật chi trả / bàn giao của hộ.
+    - **Thửa còn vướng**: thửa của hộ **đã có quyết định** mà chưa bàn giao, xếp **Gấp** (đủ điều kiện cưỡng chế, hoặc đã nhận đủ tiền mà
+      chưa bàn giao và cùng tờ bản đồ với thửa đã giải tỏa) / **Cao** (đã nhận đủ tiền, hoặc đang vận động) / **Theo dõi**. Bảng trống thì
+      phần mềm nói rõ vì sao (chưa có hộ được phê duyệt, hoặc mọi hộ đã bàn giao).
+  - **Mốc pháp lý** (một dòng): ngày thông báo thu hồi đất, số ngày mốc thu hồi đất nông nghiệp (**60 ngày**) / phi nông nghiệp
+    (**120 ngày**), thời hạn vận động (**10 ngày**), số hộ đã đủ mốc. Bấm **Mốc pháp lý…** để nhập **ngày thông báo thu hồi đất** và sửa số
+    ngày các mốc. Hộ có thửa phi nông nghiệp (ví dụ ONT+CLN) hoặc loại đất không rõ tính theo 120 ngày.
   - **Sổ nhật ký vận động…**: ghi các buổi vận động hộ **không nhận tiền bồi thường** hoặc **không bàn giao mặt bằng** (ngày, hình thức,
     thành phần, nội dung, kết quả, biên bản). Tính từ buổi đầu tiên: quá **10 ngày** mà hộ vẫn chưa nhận tiền / chưa bàn giao thì cột
-    **Vận động / cưỡng chế** chuyển sang **"Đủ điều kiện cưỡng chế thu hồi đất theo Điều 89"** (tô đỏ). Bộ lọc có thêm *Đang vận động* và
-    *Đủ điều kiện cưỡng chế*. Hộ chưa có quyết định phê duyệt chưa áp dụng thời hạn vận động.
-  - **Xuất DS đề nghị cưỡng chế…**: Excel danh sách đề nghị ban hành quyết định cưỡng chế (hộ, thửa, quyết định, số buổi vận động, hạn vận
-    động, số ngày quá hạn, mốc thu hồi đất).
-- **Báo cáo tiến độ GPMB** (bảng điều hành): tỷ lệ **giải ngân** (tiền đã chi / tiền đã phê duyệt), tỷ lệ **diện tích mặt bằng sạch** đã bàn giao,
-  số thửa còn vướng, số hộ đủ điều kiện cưỡng chế; bảng **thửa chưa bàn giao mặt bằng (còn vướng mắc)** của hộ đã có quyết định mà chưa bàn giao, xếp **Gấp** (đủ điều kiện cưỡng
-  chế, hoặc đã nhận đủ tiền mà chưa bàn giao và cùng tờ bản đồ với thửa đã giải tỏa) / **Cao** (đã nhận đủ tiền, hoặc đang vận động) / **Theo
-  dõi**. Có xuất Excel báo cáo, xuất danh sách cưỡng chế và xuất danh sách đầy đủ các hộ.
+    **Vận động / cưỡng chế** chuyển sang **"Đủ điều kiện cưỡng chế thu hồi đất theo Điều 89"** (tô đỏ). Hộ chưa có quyết định phê duyệt
+    chưa áp dụng thời hạn vận động.
+  - **Bàn giao mặt bằng các hộ đã chọn…**, **Hộ hoàn tất CTBT…** (xem + xuất Excel).
+  - **Xuất ▾** (một nút): *Bảng theo dõi chi trả & bàn giao (Excel)*, *Báo cáo tiến độ GPMB (Excel)* (chỉ số điều hành + danh sách thửa
+    còn vướng - báo cáo định kỳ), *Danh sách đề nghị cưỡng chế (Excel)* (hộ, thửa, quyết định, số buổi vận động, hạn vận động, số ngày quá
+    hạn, mốc thu hồi đất). Danh sách đầy đủ các hộ: **Dữ liệu → Xuất danh sách hộ…**.
 
 ## Kiểm tra lỗi trước khi trình
 
