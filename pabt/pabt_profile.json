@@ -53,7 +53,7 @@
   "ban_in": {
     "che_cccd_ban_du_thao": true,
     "dia_danh_ngay": "Trị An",
-    "nguon_goc": {"can_ngang": "justify", "can_doc": "top"}
+    "nguon_goc": {"can_ngang": "justify", "can_doc": "top", "thut_dau_cm": 1.0}
   },
   "mau_in": {
     "IN_CHITIET": {

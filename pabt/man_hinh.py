@@ -2089,6 +2089,15 @@ class HopRaSoat(QDialog):
 
 
 # ---------------------------------------------------------------- in / xuất
+# mô tả hai chế độ phát hành (chú thích nút chọn - 16/10/2026 bỏ dòng ghi chú dưới nút cho gọn cửa sổ)
+MO_TA_CHE_DO = {
+    'du_thao': 'In bằng mẫu chính, CÓ chữ "(DỰ THẢO)" (mẫu chưa có thì phần mềm tự thêm dưới dòng "Số:" và vào tiêu đề bảng '
+               'tổng hợp), chưa ghi số phương án, tự che số CCCD (NĐ 13/2023/NĐ-CP); dùng khi niêm yết và họp dân lấy ý kiến.',
+    'chinh_thuc': 'In bằng mẫu chính, KHÔNG có chữ "DỰ THẢO" (phần mềm tự xóa nếu mẫu có), số phương án chính thức theo đợt; '
+                  'tờ trình, bảng tổng hợp, phương án chi tiết từng hộ.',
+}
+
+
 class HopIn(QDialog):
     """Chọn hộ, loại bản in, đầu ra (Excel / Excel + PDF / máy in) và thư mục."""
 
@@ -2168,7 +2177,8 @@ class HopIn(QDialog):
         # văn bản trình của đợt (0.9.16): tờ trình / văn bản trình - số, ngày lấy theo đợt trình đã chọn; phương án tổng bỏ
         # từ 0.9.69 (người dùng tự làm)
         self.o_tt = QCheckBox('Tờ trình / văn bản trình (mẫu Word / Excel - sửa ở "Trình phê duyệt")')
-        self.o_bc = QCheckBox('Báo cáo tiếp thu ý kiến (Word - kết quả niêm yết, lấy ý kiến, đối thoại)')
+        # 16/10/2026 (người dùng): bỏ ô "Báo cáo tiếp thu ý kiến", ô chọn mẫu (Mẫu chính / Dự thảo) từng bản in và dòng ghi chú
+        # dưới Chế độ phát hành - chữ DỰ THẢO đã do Chế độ phát hành quyết định (một lệnh một chỗ); mô tả chế độ ở chú thích nút chọn
         # chế độ phát hành (đặc tả V10 phần V): bản DỰ THẢO (niêm yết, họp dân - Bước 6) / bản CHÍNH THỨC (trình thẩm định Bước 8, gửi hộ Bước 11)
         self.r_du_thao = QRadioButton('Bản DỰ THẢO (niêm yết công khai, họp dân - Bước 6)')
         self.r_chinh_thuc = QRadioButton('Bản CHÍNH THỨC (trình thẩm định - Bước 8, gửi từng hộ - Bước 11)')
@@ -2176,9 +2186,8 @@ class HopIn(QDialog):
         self.nhom_che_do = QButtonGroup(self)
         for b in (self.r_du_thao, self.r_chinh_thuc):
             self.nhom_che_do.addButton(b)
-        self.lb_che_do = QLabel('')
-        self.lb_che_do.setWordWrap(True)
-        self.lb_che_do.setProperty('vai', 'phu')
+        self.r_du_thao.setToolTip(MO_TA_CHE_DO['du_thao'])
+        self.r_chinh_thuc.setToolTip(MO_TA_CHE_DO['chinh_thuc'])
         self.cb_dot = QComboBox()
         self.cb_dot.addItem('(Không theo đợt: số tờ trình, số phương án tổng để trống)', None)
         from . import quan_ly
@@ -2238,29 +2247,15 @@ class HopIn(QDialog):
         form = QFormLayout()
         form.addRow('Chế độ phát hành:', self.r_du_thao)
         form.addRow('', self.r_chinh_thuc)
-        form.addRow('', self.lb_che_do)
         form.addRow('Đợt trình:', self.cb_dot)
         form.addRow('Hộ cần in:', self.cb_pham_vi)
         form.addRow('', hang_chon)
         form.addRow('', self.bang_ho)
         form.addRow('', self.lb_chon)
-        # mẫu riêng (in_an.ds_mau: IN_CHITIET__<tên>.xlsx, thêm bằng "Mẫu in…"): chọn mẫu cho từng loại bản in
-        from . import in_an as _ia
-        self.cb_mau_ct, self.cb_mau_bth = QComboBox(), QComboBox()
-        for cb, ten_mau, o in ((self.cb_mau_ct, _ia.TEN_CT, self.o_ct), (self.cb_mau_bth, _ia.TEN_BTH, self.o_bth)):
-            for t, f in _ia.ds_mau(ten_mau):
-                cb.addItem(t, None if t == 'Mẫu chính' else str(f))
-                if t.startswith('Dự thảo'):
-                    cb.setItemData(cb.count() - 1,
-                                   'Chỉ dùng khi áp giá trước khi niêm yết công khai, lấy ý kiến phương án bồi thường '
-                                   'theo Luật Đất đai năm 2024 và Nghị định 88/2024/NĐ-CP.',
-                                   Qt.ItemDataRole.ToolTipRole)
-            cb.setToolTip('Mẫu chính: in chính thức (có số phương án, không chữ dự thảo). '
-                          'Dự thảo: chỉ khi áp giá trước niêm yết, lấy ý kiến theo Luật Đất đai 2024 và Nghị định 88/2024/NĐ-CP.')
-            cb.setVisible(cb.count() > 1)
+        # bản in dùng mẫu chính (IN_CHITIET / IN_BANGTONGHOP - sửa ở "Mẫu in…"); chữ DỰ THẢO theo Chế độ phát hành
+        for o in (self.o_ct, self.o_bth):
             h = QHBoxLayout()
             h.addWidget(o)
-            h.addWidget(cb)
             if o is self.o_bth:                     # 16/10/2026: xem trước bảng tổng hợp của các hộ đang đánh dấu ngay trong khung
                 self.b_xem_bth = QPushButton('Xem trước bảng tổng hợp')
                 self.b_xem_bth.setToolTip('Lập bảng tổng hợp các hộ đang đánh dấu (theo mẫu, chế độ dự thảo / chính thức đang chọn) '
@@ -2273,7 +2268,6 @@ class HopIn(QDialog):
             else:
                 form.addRow('', h)
         form.addRow('', self.o_tt)
-        form.addRow('', self.o_bc)
         form.addRow('', hang_mau_in)
         form.addRow('Đầu ra:', self.r_excel)
         form.addRow('', self.r_pdf)
@@ -2338,15 +2332,12 @@ class HopIn(QDialog):
         for b in (self.r_du_thao, self.r_chinh_thuc):
             b.toggled.connect(lambda dang, x=b: dang and (self._ap_che_do(), self._lam_moi_xem_truoc()))
         self.o_che_cccd.toggled.connect(lambda _: self._lam_moi_xem_truoc())
-        self.cb_mau_ct.currentIndexChanged.connect(lambda _: self._lam_moi_xem_truoc())
         self.bang_ho.currentCellChanged.connect(lambda r, c, r0, c0: r != r0 and self.xem_dong(r))
         self.bang_ho.cellClicked.connect(lambda r, c: self.xem_dong(r))
         if dot_id is not None and self.cb_dot.findData(dot_id) >= 0:
             self.cb_dot.setCurrentIndex(self.cb_dot.findData(dot_id))       # -> _theo_dot: hộ của đợt, mọi mẫu, thư mục của đợt
         if che_do in ('du_thao', 'chinh_thuc'):
             self.dat_che_do(che_do)
-        else:
-            self._ghi_chu_che_do()
         if self.ma_ho_chon:                         # mở từ hộ đang chọn: xem trước ngay hộ đầu
             i = next((i for i, h in enumerate(self.ho) if h['ma_ho'] == self.ma_ho_chon[0]), None)
             if i is not None:
@@ -2380,8 +2371,9 @@ class HopIn(QDialog):
         self._lam_moi_xem_truoc()
 
     def khoa_xem_truoc(self):
-        """Khóa bản xem trước: (hộ, dự thảo?, mẫu, che CCCD?) - cùng khóa thì dùng lại bản đã lập trong phiên."""
-        return (self._ma_xem, self.che_do() == 'du_thao', self.cb_mau_ct.currentData(), self.o_che_cccd.isChecked())
+        """Khóa bản xem trước: (hộ, dự thảo?, mẫu, che CCCD?) - cùng khóa thì dùng lại bản đã lập trong phiên. Mẫu = None (mẫu
+        chính - 16/10/2026 bỏ ô chọn mẫu)."""
+        return (self._ma_xem, self.che_do() == 'du_thao', None, self.o_che_cccd.isChecked())
 
     def _lam_moi_xem_truoc(self, ngay: bool = False) -> None:
         if self._ma_xem is None:
@@ -2404,7 +2396,7 @@ class HopIn(QDialog):
             if not getattr(self, 'im_lang', False):
                 QMessageBox.information(self, TEN_UD, 'Đánh dấu ít nhất một hộ để xem trước bảng tổng hợp.')
             return None
-        du_thao, mau = self.che_do() == 'du_thao', self.cb_mau_bth.currentData()
+        du_thao, mau = self.che_do() == 'du_thao', None
         khoa = ('bth', tuple(ds), du_thao, mau)
         self._ma_xem = None                         # bấm lại một dòng hộ thì xem lại phương án chi tiết của hộ đó
 
@@ -2426,40 +2418,19 @@ class HopIn(QDialog):
         (self.r_du_thao if che_do == 'du_thao' else self.r_chinh_thuc).setChecked(True)
         self._ap_che_do()
 
-    def _chon_mau_theo(self, du_thao: bool) -> bool:
-        """0.9.82 (người dùng 14/10/2026 - MỘT bộ mẫu): cả hai chế độ dùng "Mẫu chính"; chữ DỰ THẢO do chế độ phát hành quyết định khi
-        in (in_an.ap_che_do_du_thao: dự thảo giữ / tự thêm, chính thức xóa). Mẫu riêng vẫn chọn tay được trong ô. Trước đây chế độ Dự
-        thảo tìm mục tên bắt đầu "Dự thảo" - mẫu riêng tên không dấu ("Du thao"), mẫu dự thảo nằm ở thư mục cài trong khi máy đã sửa mẫu
-        chính ở %APPDATA% -> báo "chưa có mẫu Dự thảo"; còn mẫu chính có sẵn dòng DỰ THẢO thì bị xóa vì tên file không phải dự thảo."""
-        for cb in (self.cb_mau_ct, self.cb_mau_bth):
-            cb.setCurrentIndex(0)
-        return True
-
     def _ap_che_do(self) -> None:
-        """DỰ THẢO: mẫu in có chữ DỰ THẢO, che số CCCD (NĐ 13/2023/NĐ-CP), chỉ phương án chi tiết + bảng tổng hợp (chưa tờ trình, báo cáo
-        tiếp thu). CHÍNH THỨC: mẫu chính (số PA chính thức, không chữ dự thảo), trọn bộ hồ sơ trình - tờ trình, bảng tổng hợp, phương án
-        chi tiết, báo cáo tiếp thu ý kiến - số che CCCD theo cài đặt của dự án."""
+        """DỰ THẢO: mẫu chính có chữ DỰ THẢO, che số CCCD (NĐ 13/2023/NĐ-CP), chỉ phương án chi tiết + bảng tổng hợp (chưa tờ trình).
+        CHÍNH THỨC: mẫu chính (số PA chính thức, không chữ dự thảo), tờ trình + bảng tổng hợp + phương án chi tiết, che CCCD theo cài đặt
+        của dự án. Mô tả ở chú thích hai nút chọn (MO_TA_CHE_DO)."""
         from .an_toan import can_che_cccd
         if self.che_do() == 'du_thao':
-            self._chon_mau_theo(True)
             self.o_che_cccd.setChecked(True)
-            for o, v in ((self.o_ct, True), (self.o_bth, True), (self.o_tt, False), (self.o_bc, False)):
+            for o, v in ((self.o_ct, True), (self.o_bth, True), (self.o_tt, False)):
                 o.setChecked(v)
         else:
-            self._chon_mau_theo(False)
             self.o_che_cccd.setChecked(can_che_cccd(self.con))
-            for o in (self.o_ct, self.o_bth, self.o_tt, self.o_bc):
+            for o in (self.o_ct, self.o_bth, self.o_tt):
                 o.setChecked(True)
-        self._ghi_chu_che_do()
-
-    def _ghi_chu_che_do(self) -> None:
-        if self.che_do() == 'du_thao':
-            self.lb_che_do.setText('In bằng mẫu chính, CÓ chữ "(DỰ THẢO)" (mẫu đã có dòng này thì giữ, chưa có thì phần mềm tự thêm dưới '
-                                   'dòng "Số:" và vào tiêu đề bảng tổng hợp), chưa ghi số phương án, tự che số CCCD (NĐ 13/2023/NĐ-CP); '
-                                   'dùng khi niêm yết 10 ngày và họp dân lấy ý kiến.')
-        else:
-            self.lb_che_do.setText('In bằng mẫu chính, KHÔNG có chữ "DỰ THẢO" (phần mềm tự xóa nếu mẫu có), số phương án chính thức theo '
-                                   'đợt; trọn bộ: tờ trình, bảng tổng hợp, phương án chi tiết từng hộ, báo cáo tiếp thu ý kiến.')
 
     # ---- danh sách hộ đánh dấu chọn
     def _theo_pham_vi(self):
@@ -2540,7 +2511,7 @@ class HopIn(QDialog):
 
     def chon_mau(self, co: bool):
         """Chọn / bỏ chọn mọi mẫu in (in đồng loạt), hoặc đánh dấu từng mẫu để in riêng lẻ."""
-        for o in (self.o_ct, self.o_bth, self.o_tt, self.o_bc):
+        for o in (self.o_ct, self.o_bth, self.o_tt):
             o.setChecked(co)
 
     def sua_mau_van_ban(self, loai: str, mo: bool = True):
@@ -2572,7 +2543,7 @@ class HopIn(QDialog):
     def sua_mau(self, mo: bool = True):
         from . import in_an
         try:
-            f = Path(self.cb_mau_ct.currentData()) if self.cb_mau_ct.currentData() else in_an.mau_de_sua()
+            f = in_an.mau_de_sua()
         except (in_an.LoiIn, OSError) as e:
             QMessageBox.warning(self, TEN_UD, str(e))
             return None
@@ -2617,7 +2588,7 @@ class HopIn(QDialog):
         from . import van_ban_trinh as vb
         ds = self.ds_ho()
         chon = dict(chi_tiet=self.o_ct.isChecked(), bang_tong_hop=self.o_bth.isChecked(), to_trinh=self.o_tt.isChecked(),
-                    bao_cao_y_kien=self.o_bc.isChecked())
+                    bao_cao_y_kien=False)
         if not any(chon.values()):
             QMessageBox.information(self, TEN_UD, 'Chọn ít nhất một loại bản in.')
             return None
@@ -2672,7 +2643,7 @@ class HopIn(QDialog):
             with con_tro_cho():
                 # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
                 kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=dot, pdf=self.r_pdf.isChecked(), in_may=in_may,
-                                      mau_ct=self.cb_mau_ct.currentData(), mau_bth=self.cb_mau_bth.currentData(),
+                                      mau_ct=None, mau_bth=None,
                                       du_thao=self.che_do() == 'du_thao', so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
                                       **chon)
                 ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]

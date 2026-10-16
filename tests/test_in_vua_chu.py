@@ -54,7 +54,10 @@ class CoSo(unittest.TestCase):
         for rr in range(r + 1, r + 40):
             if str(ws.cell(rr, 1).value or '').startswith('III.'):
                 break
-            kq.append((rr, ws.cell(rr, 1).value, ws.row_dimensions[rr].height))
+            v = ws.cell(rr, 1).value
+            if isinstance(v, str):                                  # bỏ thụt đầu dòng (NBSP, 16/10/2026) - so nội dung chữ
+                v = '\n'.join(x.lstrip(in_an.NBSP) for x in v.split('\n'))
+            kq.append((rr, v, ws.row_dimensions[rr].height))
         return kq
 
 
@@ -173,8 +176,10 @@ class TestNguonGoc(CoSo):
         self.assertTrue(dong[1].startswith('- ') and dong[2].startswith('- '))
         self.assertFalse(any(d.startswith(' ') for d in dong))
         self.assertEqual(' '.join(chu.split()), ' '.join(ng.split()))       # không mất chữ
-        o = next(o for row in ws.iter_rows() for o in row if isinstance(o.value, str) and o.value.startswith('Căn cứ'))
+        o = next(o for row in ws.iter_rows() for o in row if isinstance(o.value, str) and 'Căn cứ các Giấy' in o.value)
         self.assertEqual(o.alignment.horizontal, 'justify')
+        # 16/10/2026 (người dùng): mỗi đoạn thụt đầu dòng bằng NBSP (Excel căn đều không giãn chỗ này)
+        self.assertTrue(all(x.startswith(in_an.NBSP) and not x.startswith(in_an.NBSP + ' ') for x in o.value.split('\n')))
 
     def test_nguon_goc_dai_hien_du(self):
         ws = self.in_ho(NGUON_GOC)

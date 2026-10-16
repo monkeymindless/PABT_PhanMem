@@ -1389,6 +1389,14 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - Đổi tỷ lệ giao diện: `dat_ty_le` hiện con trỏ chờ, `phong_to` chờ 150 ms. Còn ~0,4-1,1 s mỗi nấc: `app.setStyleSheet` tô lại
     MỌI widget đã polish (cả trang / tab ẩn) - giảm thật cần bỏ cỡ chữ px khỏi QSS (dùng font ứng dụng) hoặc bớt trang giữ trong RAM.
   - Test `tests/test_in_16_10.py` (máy in = QPrinter ghi file PDF).
+  - Nguồn gốc đất (phương án chi tiết): mỗi đoạn THỤT ĐẦU DÒNG bằng chuỗi NBSP (`in_an.NBSP`; Excel căn đều không giãn / không
+    ngắt ở NBSP - dấu cách thường sẽ bị giãn), dài `thut_dau_nguon_goc()` = hồ sơ địa phương `ban_in.nguon_goc.thut_dau_cm` (mặc định
+    1,0; 0 = không thụt). `_ngat(thut_dau=, noi_tiep=)`, `_chia_doan_van(thut_dau=)`: khối Excel bắt đầu giữa đoạn (cắt ở chỗ hết
+    câu) không thụt. Căn đều / căn trên giữ nguyên; nhập lại bản in (`nhap_chi_tiet._doan`) tự bỏ NBSP. Màn hình không đổi.
+  - HopIn (người dùng 16/10/2026 - một lệnh một chỗ): BỎ `cb_mau_ct` / `cb_mau_bth` (luôn mẫu chính, mau=None; chữ DỰ THẢO do
+    Chế độ phát hành), `lb_che_do` (mô tả ở chú thích nút chọn - `man_hinh.MO_TA_CHE_DO`), `o_bc` (Xuất hồ sơ & Bản in không xuất
+    báo cáo tiếp thu ý kiến: bao_cao_y_kien=False; `quan_ly.xuat_dot` / `van_ban_trinh` vẫn có tùy chọn). `_chon_mau_theo`,
+    `_ghi_chu_che_do` đã bỏ. Mẫu riêng (`in_an.ds_mau`) không còn chọn được trong HopIn.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

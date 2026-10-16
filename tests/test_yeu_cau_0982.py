@@ -84,12 +84,11 @@ class TestMotBoMau(unittest.TestCase):
         from pabt.man_hinh import HopIn
         h = HopIn(self.con, None, che_do='du_thao', ma_ho_chon=self.ma[:1])
         self.addCleanup(h.close)
-        self.assertEqual(h.cb_mau_ct.currentIndex(), 0)                        # mẫu chính cho cả hai chế độ
-        self.assertNotIn('Chưa có mẫu', h.lb_che_do.text())
-        self.assertIn('(DỰ THẢO)', h.lb_che_do.text())
+        self.assertIsNone(h.khoa_xem_truoc()[2])                               # mẫu chính cho cả hai chế độ
+        self.assertIn('(DỰ THẢO)', h.r_du_thao.toolTip())                      # mô tả chế độ ở chú thích (16/10/2026)
         h.r_chinh_thuc.setChecked(True)
-        self.assertIn('KHÔNG có chữ', h.lb_che_do.text())
-        self.assertEqual(h.cb_mau_ct.currentIndex(), 0)
+        self.assertIn('KHÔNG có chữ', h.r_chinh_thuc.toolTip())
+        self.assertIsNone(h.khoa_xem_truoc()[2])
 
 
 class TestLocKhiNgungGo(unittest.TestCase):

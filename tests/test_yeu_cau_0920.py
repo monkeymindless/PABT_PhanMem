@@ -48,7 +48,8 @@ class TestKinhPhi(unittest.TestCase):
         p = in_an.lap_bang_tong_hop(self.con, Path(self.td.name) / 'bth.xlsx')
         ws = openpyxl.load_workbook(p).worksheets[0]
         chu = [str(c.value) for r in ws.iter_rows() for c in r if isinstance(c.value, str) and 'Kinh phí đảm bảo' in c.value]
-        self.assertTrue(chu and '3,5%' in chu[0] and '08/2025/QĐ-UBND' in chu[0], chu)
+        # 16/10/2026 (người dùng): dòng kinh phí không ghi "(theo Quyết định số 08/2025/QĐ-UBND …)"
+        self.assertTrue(chu and '3,5%' in chu[0] and '08/2025/QĐ-UBND' not in chu[0], chu)
         cong_thuc = [c.value for r in ws.iter_rows() for c in r if isinstance(c.value, str) and c.value.startswith('=ROUND(')]
         self.assertTrue(any('*3.5%' in x for x in cong_thuc), cong_thuc)
 

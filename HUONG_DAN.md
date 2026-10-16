@@ -1,4 +1,10 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.97 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.98 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.98**: nút **In…** (Ctrl+P) trong khung xem trước: chọn máy in, số bản, trang cần in như Word / Excel. Bảng tổng hợp
+> ngắt trang giữa các hộ (không còn hộ vắt hai trang, mất đường kẻ), cột số đủ rộng (hết "#####"), bỏ chữ "(theo Quyết định số 08…)".
+> Phương án chi tiết: tiêu đề bảng III không nằm trơ cuối trang; nguồn gốc đất thụt đầu dòng mỗi đoạn. "Hồ sơ scan" đổi thành
+> **HS đính kèm**. Xuất hồ sơ & Bản in: chữ DỰ THẢO chỉ theo **Chế độ phát hành** (bỏ ô chọn mẫu từng bản in, dòng ghi chú,
+> ô Báo cáo tiếp thu ý kiến).
 
 > **0.9.97**: bảng các mục phương án có **menu chuột phải** (thêm / nhân bản / xóa dòng…). Gói cập nhật đổi đuôi thành **.larcud**
 > (Trợ giúp → Cập nhật phần mềm; gói .pabtcn cũ vẫn nhận). Bản in: "Trị An, ngày ...... tháng ..... năm", tổ chức không in dòng CCCD,

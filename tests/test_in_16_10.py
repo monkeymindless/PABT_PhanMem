@@ -193,6 +193,34 @@ class TestChiTiet(unittest.TestCase):
                                      f'dòng thưởng {r} bị gộp ô {vung}')
 
 
+class TestThutDauDong(unittest.TestCase):
+    """Nguồn gốc đất bản in chi tiết: mỗi đoạn thụt đầu dòng (NBSP), căn đều giữ nguyên (người dùng 16/10/2026)."""
+    DO = staticmethod(lambda s, *_: len(s) * 5.0)                   # mỗi ký tự 5 pt
+
+    def test_moi_doan_thut_dong_tran_khong_thut(self):
+        kq = in_an._ngat('aaa bbb ccc ddd\neee', 60 / 0.97, 'x', 14, False, self.DO, treo=False, thut_dau=10)
+        self.assertEqual(kq, [(in_an.NBSP * 2 + 'aaa bbb', True), ('ccc ddd', False), (in_an.NBSP * 2 + 'eee', True)])
+
+    def test_khoi_noi_tiep_khong_thut(self):
+        chu = 'Câu một rất dài. Câu hai cũng dài. Câu ba nữa.'
+        khoi = in_an._chia_doan_van(chu, 80 / 0.97, 'x', 14, False, self.DO, 2, treo=False, thut_dau=10)
+        self.assertGreater(len(khoi), 1)
+        self.assertTrue(khoi[0][0][0].startswith(in_an.NBSP))
+        self.assertFalse(any(k[0][0].startswith(in_an.NBSP) for k in khoi[1:]))     # phần tiếp của cùng đoạn
+        self.assertEqual(' '.join(x.replace(in_an.NBSP, '') for k in khoi for x, _ in k).split(), chu.split())
+
+    def test_ho_so_dia_phuong(self):
+        from pabt import dia_phuong
+        self.assertAlmostEqual(in_an.thut_dau_nguon_goc(), 72 / 2.54, places=3)       # mặc định 1 cm
+        hs = dia_phuong.doc()
+        import copy
+        sai = copy.deepcopy(hs)
+        sai['ban_in']['nguon_goc']['thut_dau_cm'] = 'abc'
+        self.assertTrue(any('thut_dau_cm' in x for x in dia_phuong.kiem_tra(sai)))
+        sai['ban_in']['nguon_goc']['thut_dau_cm'] = 0
+        self.assertFalse(any('thut_dau_cm' in x for x in dia_phuong.kiem_tra(sai)))
+
+
 class TestGiaoDien(unittest.TestCase):
     def test_ten_nut_hs_dinh_kem(self):
         from pabt import man_hinh_ho_so_scan

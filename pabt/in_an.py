@@ -940,7 +940,11 @@ def _rong_vung(ws, c1: int, c2: int) -> float:
 TREO = 'treo'           # dòng tràn của gạch đầu dòng: xuống dòng cứng + khoảng trắng thụt vào (Excel không có thụt lề treo)
 
 
-def _ngat(chu: str, rong: float, ten: str, co: float, dam: bool, do=None, treo: bool = True) -> list:
+NBSP = '\xa0'                   # khoảng trắng không ngắt: thụt đầu dòng - Excel căn đều không giãn / không ngắt ở đây
+
+
+def _ngat(chu: str, rong: float, ten: str, co: float, dam: bool, do=None, treo: bool = True, thut_dau: float = 0,
+          noi_tiep: bool = False) -> list:
     """Ngắt chữ thành các dòng như Excel (theo từ; '\\n' là xuống đoạn). Trả [(dòng, đầu đoạn)]: đầu đoạn True / False, hoặc
     TREO = dòng tràn của đoạn bắt đầu bằng gạch đầu dòng ("- ", "+ ", "a) "… - ho_so.dau_dong): dòng đó đã có sẵn khoảng trắng
     thụt vào thẳng chữ sau ký hiệu, khi ghi vào ô phải xuống dòng cứng (dat_doan_van). treo=False: không thụt lề treo - dòng tràn
@@ -951,8 +955,14 @@ def _ngat(chu: str, rong: float, ten: str, co: float, dam: bool, do=None, treo: 
         tb = co * (0.52 if dam else 0.47)
         do = lambda s, *_: len(s) * tb          # noqa: E731
     rong = rong * 0.97                          # chừa 3%: phông máy in / PDF có thể rộng hơn chút
+    # thụt đầu dòng (pt) mỗi đoạn: chuỗi NBSP đứng trước từ đầu đoạn (noi_tiep: đoạn đầu là phần tiếp của đoạn bị chia sang dòng
+    # Excel trước - không thụt)
+    dau_doan = ''
+    if thut_dau > 0:
+        mot = do(NBSP, ten, co, dam) or co * 0.25
+        dau_doan = NBSP * max(1, int(round(thut_dau / mot)))
     kq = []
-    for doan in str(chu or '').split('\n'):
+    for k, doan in enumerate(str(chu or '').split('\n')):
         ky = dau_dong(doan) if treo else ''
         thut = ''
         if ky:
@@ -961,7 +971,9 @@ def _ngat(chu: str, rong: float, ten: str, co: float, dam: bool, do=None, treo: 
             if do(thut, ten, co, dam) > rong / 3:
                 thut = ''
         dau = True
-        dong = ''
+        dong = dau_doan if doan.strip() and not (noi_tiep and k == 0) else ''
+        if dong and thut:
+            thut = ' ' * len(dong) + thut
 
         def xong(d):
             nonlocal dau
@@ -1042,21 +1054,23 @@ _RE_HET_CAU = re.compile(r'[.;:!?](?=\s)|\n')
 _RE_KHOANG = re.compile(r'\s')
 
 
-def _chia_doan_van(chu: str, rong: float, ten: str, co: float, dam: bool, do, toi_da: int, treo: bool = True) -> list:
+def _chia_doan_van(chu: str, rong: float, ten: str, co: float, dam: bool, do, toi_da: int, treo: bool = True,
+                   thut_dau: float = 0) -> list:
     """Chia chữ thành các khối <= toi_da dòng (mỗi khối một dòng Excel), mỗi khối là các dòng đã ngắt (_ngat). Cắt ở chỗ hết
     câu / hết đoạn (. ; : ! ? hoặc xuống dòng) muộn nhất mà khối vẫn vừa và không ngắn hơn nửa khối; không có thì cắt ở
     khoảng trắng muộn nhất (từ quá dài: cắt giữa từ). Phần sau ngắt dòng lại từ đầu - không mất chữ."""
     kq = []
     chu = str(chu or '')
     do = do or _ham_do_chu()
+    noi_tiep = False                                    # khối đang xét bắt đầu giữa một đoạn (cắt ở chỗ hết câu)
     while True:
-        dong = _ngat(chu, rong, ten, co, dam, do, treo)
+        dong = _ngat(chu, rong, ten, co, dam, do, treo, thut_dau, noi_tiep)
         if len(dong) <= toi_da:
             kq.append(dong)
             break
 
         def so(p: int) -> int:
-            return len(_ngat(chu[:p].rstrip(), rong, ten, co, dam, do, treo))
+            return len(_ngat(chu[:p].rstrip(), rong, ten, co, dam, do, treo, thut_dau, noi_tiep))
 
         def muon_nhat(ds: list, it_nhat: int = 1):
             lo, hi, tot = 0, len(ds) - 1, None          # số dòng tăng theo độ dài phần đầu: tìm nhị phân
@@ -1071,8 +1085,10 @@ def _chia_doan_van(chu: str, rong: float, ten: str, co: float, dam: bool, do, to
         cat = (muon_nhat([m.end() for m in _RE_HET_CAU.finditer(chu)], max(1, toi_da // 2))
                or muon_nhat([m.start() for m in _RE_KHOANG.finditer(chu) if m.start() > 0])
                or muon_nhat(list(range(1, len(chu)))) or 1)
-        kq.append(_ngat(chu[:cat].rstrip(), rong, ten, co, dam, do, treo))
-        chu = chu[cat:].lstrip()
+        kq.append(_ngat(chu[:cat].rstrip(), rong, ten, co, dam, do, treo, thut_dau, noi_tiep))
+        sau = chu[cat:]
+        noi_tiep = '\n' not in chu[:cat][-2:] + sau[:len(sau) - len(sau.lstrip())]
+        chu = sau.lstrip()
     return [k for k in kq if k] or [[('', True)]]
 
 
@@ -1130,6 +1146,20 @@ def _phong(o) -> tuple:
         bool(f is not None and f.b)
 
 
+THUT_DAU_CM = 1.0               # thụt đầu dòng mỗi đoạn nguồn gốc đất (người dùng 16/10/2026) - đổi ở ban_in.nguon_goc.thut_dau_cm
+
+
+def thut_dau_nguon_goc() -> float:
+    """Thụt đầu dòng đoạn nguồn gốc đất (pt) theo hồ sơ địa phương ban_in.nguon_goc.thut_dau_cm (0 = không thụt)."""
+    from . import dia_phuong
+    ng = dia_phuong.lay('ban_in.nguon_goc') or {}
+    try:
+        cm = float(ng.get('thut_dau_cm', THUT_DAU_CM))
+    except (TypeError, ValueError):
+        cm = THUT_DAU_CM
+    return max(0.0, cm) * 72 / 2.54
+
+
 def _can_nguon_goc() -> tuple:
     """(căn ngang, căn dọc) ô nguồn gốc đất theo hồ sơ địa phương (mặc định 'justify', 'top')."""
     from . import dia_phuong
@@ -1153,7 +1183,9 @@ def dat_doan_van(ws, cho: str, chu: str, do=None) -> int:
     # căn đều hai bên (mặc định - người dùng 15/10/2026, như văn bản Word): KHÔNG thụt lề treo gạch đầu dòng - thụt lề treo cần
     # xuống dòng cứng mỗi dòng tràn, mà dòng kết thúc bằng xuống dòng cứng thì Excel canh trái (bên phải lởm chởm)
     ngang = _can_nguon_goc()[0]
-    khoi = _chia_doan_van(chu, _rong_vung(ws, c1, c2), ten, co, dam, do, toi_da, treo=ngang != 'justify')
+    # mỗi đoạn thụt đầu dòng (người dùng 16/10/2026), căn chỉnh giữ nguyên
+    khoi = _chia_doan_van(chu, _rong_vung(ws, c1, c2), ten, co, dam, do, toi_da, treo=ngang != 'justify',
+                          thut_dau=thut_dau_nguon_goc())
     m = _vung_tron(ws, r, c1)
     if m:
         ws.unmerge_cells(m.coord)
@@ -1994,12 +2026,16 @@ def vua_cot_so_bth(ws, d0: int, tong: int, n_cot: int, do=None) -> dict:
         cd = ws.column_dimensions.get(get_column_letter(c))
         if cd is None or cd.hidden or (cd.min and cd.max and cd.min != cd.max):
             continue
-        so = [ws.cell(r, c).value for r in range(d0, tong) if isinstance(ws.cell(r, c).value, (int, float))
-              and not isinstance(ws.cell(r, c).value, bool)]
+        o_co = ws._cells                                # đọc thẳng ô đã có (ws.cell tạo ô rỗng + chậm khi 3.000 hộ)
+        so = [v for v in (getattr(o_co.get((r, c)), 'value', None) for r in range(d0, tong))
+              if isinstance(v, (int, float)) and not isinstance(v, bool)]
         if not so:
             continue
         fmt = ws.cell(d0, c).number_format
-        ds = [(_chu_so_excel(v, fmt), ws.cell(d0, c)) for v in so] + [(_chu_so_excel(sum(so), fmt), ws.cell(tong, c))]
+        # chữ số Times New Roman cùng bề rộng: chuỗi dài nhất là của số lớn nhất / âm nhỏ nhất - chỉ đo các số đó (trước: đo mọi ô,
+        # bảng tổng hợp 3.000 hộ chậm thêm ~1 s)
+        ds = [(_chu_so_excel(v, fmt), ws.cell(d0, c)) for v in {max(so), min(so)}] + \
+            [(_chu_so_excel(sum(so), fmt), ws.cell(tong, c))]
         can_pt = 0.0
         for chu, o in ds:
             ten, co, dam = _phong(o)

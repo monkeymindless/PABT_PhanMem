@@ -164,6 +164,9 @@ def kiem_tra(hs: dict) -> list:
             loi.append('ban_in.nguon_goc.can_ngang: "left" / "justify" / "center" / "distributed".')
         if ng.get('can_doc') not in ('top', 'center', 'bottom', 'justify'):
             loi.append('ban_in.nguon_goc.can_doc: "top" / "center" / "bottom" / "justify".')
+        td = ng.get('thut_dau_cm', 0)
+        if isinstance(td, bool) or not isinstance(td, (int, float)) or not 0 <= td <= 5:
+            loi.append('ban_in.nguon_goc.thut_dau_cm: số cm từ 0 đến 5 (0 = không thụt đầu dòng).')
     mi = hs.get('mau_in')
     can = {'IN_CHITIET': ('stt', 'ten', 'dvt', 'so_luong', 'don_gia', 'ty_le', 'thanh_tien', 'ghi_chu'),
            'IN_BANGTONGHOP': ('stt', 'ho_ten', 'dia_chi', 'so_to', 'so_thua', 'loai_dat', 'dt_thu_hoi', 'dt_nong_nghiep', 'dt_lua',

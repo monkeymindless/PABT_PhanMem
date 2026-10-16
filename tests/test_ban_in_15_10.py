@@ -41,14 +41,15 @@ class TestBanInChiTiet(unittest.TestCase):
 
     def _dong(self, dau: str) -> int:
         return next(r for r in range(1, self.ws.max_row + 1)
-                    if any(str(self.ws.cell(r, c).value or '').startswith(dau) for c in (1, 2)))
+                    if any(str(self.ws.cell(r, c).value or '').lstrip(in_an.NBSP).startswith(dau) for c in (1, 2)))
 
     def test_nguon_goc_sat_muc_iii(self):
         ws = self.ws
         r, r3 = self._dong('Đất do ông'), self._dong('III.')
         for rr in range(r + 1, r3):                     # dòng thừa của vùng gộp mẫu: ẩn (trước đây cao 4 pt mỗi dòng)
             self.assertTrue(ws.row_dimensions[rr].hidden, rr)
-        so = len(in_an._ngat(NGUON_GOC, in_an._rong_vung(ws, 1, 8), *in_an._phong(ws.cell(r, 1)), treo=False))
+        so = len(in_an._ngat(NGUON_GOC, in_an._rong_vung(ws, 1, 8), *in_an._phong(ws.cell(r, 1)), treo=False,
+                                thut_dau=in_an.thut_dau_nguon_goc()))
         self.assertAlmostEqual(ws.row_dimensions[r].height, in_an.cao_doan_van(so, 14), places=2)
         self.assertLess(ws.row_dimensions[r].height, in_an.cao_dong_bang(so, 14))   # đệm nhỏ hơn ô bảng (8 pt)
 

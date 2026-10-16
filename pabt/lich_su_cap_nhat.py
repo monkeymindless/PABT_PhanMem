@@ -7,6 +7,17 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('0.9.98', '16/10/2026', (
+        'Xem trước bản in: nút "In…" (Ctrl+P) mở hộp in của Windows - chọn máy in, số bản, trang cần in (như Word / Excel). "In nhanh" '
+        'vẫn gửi máy in mặc định qua Excel.',
+        'Bảng tổng hợp: ngắt trang ở ranh giới giữa các hộ (không còn hộ vắt hai trang mất đường kẻ, chữ ô gộp xô lệch); cột số đủ rộng, '
+        'hết "#####"; cột Vị trí rộng hơn; dòng kinh phí bỏ "(theo Quyết định số 08…)"; tổng cộng và chữ ký cùng trang.',
+        'Phương án chi tiết: dòng "III. Bảng tính toán…" và tiêu đề cột không nằm trơ cuối trang (sang trang sau cùng dòng số liệu); '
+        'nguồn gốc đất thụt đầu dòng mỗi đoạn (căn đều giữ nguyên); dòng "Thưởng bàn giao mặt bằng" ngắt dòng như các mục 2-5.',
+        '"Hồ sơ scan" đổi tên thành "HS đính kèm". Đổi cỡ giao diện (A− / A+) hiện con trỏ chờ, phản hồi nhanh hơn.',
+        'Xuất hồ sơ & Bản in gọn hơn: bỏ ô chọn mẫu "Mẫu chính / Dự thảo" ở từng bản in (chữ DỰ THẢO theo Chế độ phát hành ở đầu '
+        'cửa sổ), bỏ dòng ghi chú dưới Chế độ phát hành (xem ở chú thích khi rê chuột) và ô "Báo cáo tiếp thu ý kiến".',
+    )),
     ('0.9.97', '16/10/2026', (
         'Sửa: mở Niêm yết rồi bấm lại "Lập phương án chi tiết" không hiện cửa sổ nhập - nay mở đúng cửa sổ lập phương án.',
         'Bảng các mục phương án: menu chuột phải (thêm, nhân bản, xóa, lên / xuống, chép ô; mục 1: thêm nhiều thửa, tra giá NQ 28; mục 2 '
