@@ -1,11 +1,11 @@
 """Nhập bản vẽ địa chính CAD (.dxf) và dữ liệu bản đồ thửa đất (0.9.87 - người dùng 14/10/2026). Không Qt.
 
-Đọc bằng ezdxf: hình KHÉP KÍN (LWPOLYLINE / POLYLINE đóng) trên lớp ranh thửa = thửa; chữ (TEXT, MTEXT, thuộc tính ATTRIB của khối
+Đọc bằng pabt.dxf_thuan (Python thuần, không cần ezdxf / numpy): hình KHÉP KÍN (LWPOLYLINE / POLYLINE đóng) trên lớp ranh thửa = thửa; chữ (TEXT, MTEXT, thuộc tính ATTRIB của khối
 nhãn) đặt BÊN TRONG thửa = nhãn thửa -> số thửa (số nguyên đầu tiên), diện tích (số có phần thập phân), loại đất (mã có trong danh mục
 loại đất). Số tờ: tham số, không thì chữ "TỜ (BẢN ĐỒ) SỐ n" trong bản vẽ, không thì chữ số trong tên file. Lớp ranh thửa không chỉ định:
 lớp có nhiều hình khép kín nhất. Lớp ranh thu hồi (tùy chọn): DT TRONG RANH của từng thửa = diện tích giao (tam giác hóa ranh, cắt thửa
 theo từng tam giác - đúng cả ranh hành lang không lồi). Tọa độ giữ nguyên hệ của bản vẽ (VN-2000, mét); cung tròn (bulge) tính theo dây
-cung. DWG: lưu sang DXF bằng AutoCAD / MicroStation trước (ezdxf không đọc DWG).
+cung. DWG: lưu sang DXF bằng AutoCAD / MicroStation trước (DWG là định dạng đóng).
 
 Lưu vào bảng thua_ban_do của file dự án (không đổi PHIEN_BAN_CSDL - csdl.mo tạo khi file có hộ, như nhat_ky_van_dong): ghép với hồ
 sơ theo (số tờ, số thửa); bảng Hoàn tác được. Màn hình: man_hinh_ban_do (nhập, xem bản đồ).
@@ -171,48 +171,24 @@ class KetQuaCad:
     nguon: str = ''
 
 
-def _ezdxf():
-    import logging
-    logging.getLogger('fontTools').setLevel(logging.ERROR)     # fontTools (ezdxf dùng) cảnh báo phông hệ thống lỗi bảng 'name'
-    try:
-        import ezdxf
-        return ezdxf
-    except ImportError:
-        raise LoiCad('Máy chưa có thư viện ezdxf (đọc bản vẽ CAD) - cài lại phần mềm bản 0.9.87 trở lên.') from None
-
-
-def _mo(file):
+def _mo(file) -> list:
+    """Thực thể của bản vẽ (pabt.dxf_thuan - Python thuần, 16/10/2026: bỏ ezdxf + numpy khỏi bản cài, máy yếu nhẹ ~30 MB)."""
     p = Path(file)
     if p.suffix.lower() == '.dwg':
         raise LoiCad('File .dwg chưa đọc được trực tiếp: mở bằng AutoCAD / MicroStation, Lưu thành (Save As) dạng DXF rồi nhập.')
-    ez = _ezdxf()
+    from .dxf_thuan import LoiDxf, doc
     try:
-        return ez.readfile(str(p))
-    except IOError as e:
-        raise LoiCad(f'Không mở được {p.name}: {e}') from None
-    except ez.DXFStructureError:
-        try:
-            from ezdxf import recover
-            doc, _ = recover.readfile(str(p))
-            return doc
-        except Exception as e:                           # noqa: BLE001 - mọi lỗi cấu trúc: báo tiếng Việt
-            raise LoiCad(f'{p.name} hỏng cấu trúc DXF: {e}') from None
+        return doc(p)
+    except LoiDxf as e:
+        raise LoiCad(str(e)) from None
 
 
 def _hinh_kin(e) -> list | None:
-    """Tọa độ hình khép kín của LWPOLYLINE / POLYLINE (bỏ điểm cuối trùng điểm đầu), hoặc None."""
-    t = e.dxftype()
-    try:
-        if t == 'LWPOLYLINE':
-            p = [(float(x), float(y)) for x, y, *_ in e.get_points('xy')]
-            kin = bool(e.closed)
-        elif t == 'POLYLINE' and not e.is_3d_polyline and not e.is_poly_face_mesh and not e.is_polygon_mesh:
-            p = [(float(v.dxf.location[0]), float(v.dxf.location[1])) for v in e.vertices]
-            kin = bool(e.is_closed)
-        else:
-            return None
-    except Exception:                                    # noqa: BLE001 - thực thể hỏng: bỏ qua
+    """Tọa độ hình khép kín của LWPOLYLINE / POLYLINE 2D (bỏ điểm cuối trùng điểm đầu), hoặc None."""
+    if e.loai not in ('LWPOLYLINE', 'POLYLINE'):
         return None
+    p = list(e.diem)
+    kin = e.kin
     if len(p) >= 2 and p[0] == p[-1]:
         p.pop()
         kin = True
@@ -220,39 +196,20 @@ def _hinh_kin(e) -> list | None:
 
 
 def _chu(e) -> list:
-    """[(chữ, x, y)] của TEXT / MTEXT / thuộc tính khối."""
-    t = e.dxftype()
-    kq = []
-    try:
-        if t == 'TEXT':
-            p = e.dxf.align_point if e.dxf.hasattr('align_point') and (e.dxf.halign or e.dxf.valign) else e.dxf.insert
-            kq.append((e.dxf.text, float(p[0]), float(p[1])))
-        elif t == 'MTEXT':
-            kq.append((e.plain_text(), float(e.dxf.insert[0]), float(e.dxf.insert[1])))
-        elif t == 'INSERT':
-            for a in e.attribs:
-                kq.append((a.dxf.text, float(a.dxf.insert[0]), float(a.dxf.insert[1])))
-            if not e.attribs:                            # khối nhãn không thuộc tính: chữ bên trong khối, đặt ở điểm chèn
-                try:
-                    for v in e.virtual_entities():
-                        kq.extend(_chu(v))
-                except Exception:                        # noqa: BLE001
-                    pass
-    except Exception:                                    # noqa: BLE001
-        pass
-    return [(str(c or '').strip(), x, y) for c, x, y in kq if str(c or '').strip()]
+    """[(chữ, x, y)] của TEXT / MTEXT / thuộc tính khối (hoặc chữ trong khối không thuộc tính)."""
+    return [(str(c or '').strip(), x, y) for c, x, y in e.chu if str(c or '').strip()]
 
 
 def doc_lop(file) -> list:
     """[(tên lớp, số hình khép kín, số chữ)] - chọn lớp ranh thửa / ranh thu hồi."""
     doc = _mo(file)
     dem = {}
-    for e in doc.modelspace():
-        lop = e.dxf.layer if e.dxf.hasattr('layer') else '0'
+    for e in doc:
+        lop = e.lop
         d = dem.setdefault(lop, [0, 0])
         if _hinh_kin(e) is not None:
             d[0] += 1
-        elif e.dxftype() in ('TEXT', 'MTEXT', 'INSERT'):
+        elif e.loai in ('TEXT', 'MTEXT', 'INSERT'):
             d[1] += 1
     return sorted(((k, v[0], v[1]) for k, v in dem.items()), key=lambda x: (-x[1], -x[2], x[0]))
 
@@ -294,13 +251,13 @@ def phan_tich(file, lop_thua: str | None = None, lop_ranh: str | None = None, so
     doc = _mo(file)
     kq = KetQuaCad(nguon=Path(file).name)
     hinh, chu, ranh = {}, [], []
-    for e in doc.modelspace():
-        lop = e.dxf.layer if e.dxf.hasattr('layer') else '0'
+    for e in doc:
+        lop = e.lop
         p = _hinh_kin(e)
         if p is not None:
             hinh.setdefault(lop, []).append(p)
             continue
-        if e.dxftype() in ('TEXT', 'MTEXT', 'INSERT'):
+        if e.loai in ('TEXT', 'MTEXT', 'INSERT'):
             chu.extend(_chu(e))
     if not hinh:
         raise LoiCad('Bản vẽ không có hình khép kín (polyline đóng) nào - ranh thửa vẽ bằng đường rời (LINE) cần tạo vùng (topology / '

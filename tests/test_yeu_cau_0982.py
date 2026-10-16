@@ -65,7 +65,7 @@ class TestMotBoMau(unittest.TestCase):
         self.assertTrue(a3.rstrip().endswith(in_an.DAU_DU_THAO), a3)            # dòng dưới "Số: …/…" như mẫu IN_CHITIET_DT
         bth = in_an.lap_bang_tong_hop(self.con, self.d / 'bth_dt.xlsx', self.ma, MAU / 'IN_BANGTONGHOP.xlsx', du_thao=True)
         a5 = str(openpyxl.load_workbook(bth).worksheets[0]['A5'].value)
-        self.assertTrue(a5.startswith('BẢNG TỔNG HỢP') and a5.endswith('(DỰ THẢO)'), a5)
+        self.assertTrue(a5.startswith('BẢNG TỔNG HỢP') and a5.endswith('\n(DỰ THẢO)'), a5)   # 16/10/2026: dòng riêng dưới tiêu đề
         bth_ct = in_an.lap_bang_tong_hop(self.con, self.d / 'bth_ct.xlsx', self.ma, MAU / 'IN_BANGTONGHOP.xlsx', du_thao=False)
         self.assertNotIn('DỰ THẢO', _chu(bth_ct).upper())
 

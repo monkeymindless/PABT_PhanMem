@@ -1397,6 +1397,80 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     Chế độ phát hành), `lb_che_do` (mô tả ở chú thích nút chọn - `man_hinh.MO_TA_CHE_DO`), `o_bc` (Xuất hồ sơ & Bản in không xuất
     báo cáo tiếp thu ý kiến: bao_cao_y_kien=False; `quan_ly.xuat_dot` / `van_ban_trinh` vẫn có tùy chọn). `_chon_mau_theo`,
     `_ghi_chu_che_do` đã bỏ. Mẫu riêng (`in_an.ds_mau`) không còn chọn được trong HopIn.
+- 0.9.99 (người dùng 16/10/2026; trước khi tăng phiên bản ghi là "Sau 0.9.98"):
+  - CuaSoLapPA: BỎ nút SCAN (`b_ocr`), `quet_giay_to`, `TB_QUET_HO_SO` (Khái toán vẫn có "Quét giấy tờ…" riêng). Hàng trên cùng
+    `thanh_tren` = MỘT QHBoxLayout (không còn XepDong 4 khối): Hộ [cb_ho] ◀ ▶ Dán tài sản | Lưu, Bỏ thay đổi | Xem trước, In / Xuất,
+    Đóng. `cb_ho` AdjustToMinimumContentsLengthWithIcon + Expanding, `RONG_O_HO` (160, 560) - co / giãn thay cho xuống dòng (đo
+    Windows 125%: hàng tối thiểu ~1.030 điểm, màn hình 1366 còn ~1.090).
+  - Bảng tổng hợp bản DỰ THẢO: `dat_dau_du_thao(ws, TEN_BTH)` thêm "(DỰ THẢO)" thành DÒNG RIÊNG dưới tiêu đề "BẢNG TỔNG HỢP…" (cùng
+    ô, wrap, dòng cao `cao_dong_chu(số dòng)`) - trước nối cuối tiêu đề, người dùng không thấy trên A3.
+  - DÀN TRANG THÍCH ỨNG cả hai bản in (người dùng 16/10/2026, 6 hạng mục; `in_an` mục "dàn trang thích ứng"): `chuan_le_trang(ws,
+    'chi_tiet'|'tong_hop')` (`LE_TRANG`, hồ sơ địa phương `ban_in.le_trang` ghi đè - `dia_phuong.kiem_tra` kiểm), `dat_ti_le_vua_ngang`
+    (scale vừa bề ngang, TẮT fitToPage - Excel bỏ qua ngắt tay khi bật; `RONG_DU_PHONG` 0,96: đo bằng xuất PDF, bảng 683 pt ở 75% = 512 pt
+    vẫn bị Excel tách cột Ghi chú sang trang riêng trên khổ in 523 pt, 73% thì không), `cao_trang_in` (`DU_PHONG_TRANG` 0,98), `xep_trang`
+    (cụm 'tu_do' / 'lien' / 'lon'; ĐO bằng Excel thật: sức chứa trang = đúng chiều cao vùng in, dòng tiêu đề lặp chỉ in ở trang BẮT ĐẦU
+    SAU dòng tiêu đề), `co_gian_vua_trang` (NÉN KHÍT khi nội dung trang cuối tràn khỏi trang áp chót <= `NEN_TOI_DA` 14%: dòng bảng hai
+    trang cuối đệm 8 -> 4,5 pt, không dưới `san` (chữ + 4,5) / `CAO_NEN_TOI_THIEU` 20,5, vùng gộp `san_khoi`; GIÃN CÂN ĐỐI trang hở 8-22%:
+    +<= 3 pt mỗi dòng), `ghi_ngat_trang` (ngắt tay cuối MỌI trang). Đã nén -> tên `PABT_DEM_DONG` / `PABT_CAO_MIN` (phần mười pt): VBS xuất
+    PDF AutoFit vùng PABT_TU_GIAN_DONG dùng đệm / tối thiểu đó (mặc định 8 / 24). `ngat_trang_ct(ws, dau, loai, cuoi_bang, san, san_khoi,
+    nhom_gc, cot_gc, co)`: đặt `print_title_rows` = hàng tiêu đề cột (`_doi_dong` / insert_rows KHÔNG dời dòng tiêu đề lặp của mẫu - nguồn
+    gốc dài chèn dòng làm lặp nhầm dòng), cụm "III." + tiêu đề cột + mục 1. + dòng số liệu đầu, dòng mục + dòng con, cụm cuối (dòng số liệu
+    cuối + TỔNG CỘNG + IV + ngày + chữ ký); vùng gộp ghi chú đất (`gop_ghi_chu_dat` <= `GHI_CHU_TOI_DA` 12 dòng) qua ranh trang tách đôi,
+    chữ lặp (`_tach_gop_doc`). Nguồn gốc: `CAO_DOAN_TOI_DA` 90 pt, `DEM_DOAN_VAN` 1,5 + `DEM_DOAN_CUOI` 4 (dòng trước III, `cao_doan_van(
+    cuoi=)`); `_chia_doan_van` cắt ở RANH GIỚI DÒNG đã ngắt (hết đoạn muộn nhất, rồi dòng kết thúc dấu hết câu, rồi đủ khối) - KHÔNG cắt
+    giữa dòng sau dấu chấm (xuống dòng sớm giữa đoạn, đã thấy trên PDF). `ngat_trang_bth(ws, khoi_ho, tong, n_cot, cuoi, (9, 12), san,
+    san_khoi, cam, tach_ho)`: hộ <= `HO_LON` 45% trang không tách; hộ nhiều thửa không đẩy cả hộ khi trang còn >= `CON_CHO_HO_LON` 85 pt,
+    tách ở ranh dòng thửa (`cam`: dòng nối dài ô thửa khi chữ > 409 pt - không ngắt sau), `tach_ho` (trong lap_bang_tong_hop) tách MỌI
+    vùng gộp dọc qua ranh, lặp STT / họ tên / địa chỉ, chia chữ nguồn gốc theo chỗ phần trên (đo bằng `so_dong_o` như chỗ tính cao), số
+    tiền ở phần đầu (SUM không đổi), phần sau thiếu cao thì giãn rồi xếp lại; cụm tổng cộng + kinh phí + chữ ký đứng trơ một trang -> ghép
+    với đoạn cuối hộ cuối. Hộ cần dòng thêm (chữ > 409 pt) chừa một dòng chữ + đệm mỗi dòng (`tran`) cho lúc tách. `can_bang_cot_bth`
+    (trước khi tính cao: cột số dư > 15% so với số lớn nhất dự kiến - tổng tiền / tổng DT - thu về +5%, phần thừa chia cho họ tên / địa chỉ /
+    vị trí; tổng bề rộng giữ). Bảng tổng hợp in ~25% (mẫu rộng 2.922 pt): một trang ~55 dòng thửa. Đã xuất PDF bằng Excel kiểm (chi tiết 90
+    thửa + nguồn gốc 10 đoạn: 8 trang = 7 ngắt; tổng hợp tổ chức 90 thửa + 12 hộ: 3 trang). Test `tests/test_in_16_10.TestDanTrangThichUng`.
+- Máy cấu hình yếu (người dùng 16/10/2026, phát hành ở 0.9.99; đo `ket_qua_kiem_tra` / phiên Claude):
+  - Cửa sổ chính: trang Bảng tổng hợp / Theo dõi tiến độ / Quyết định / Báo cáo tiến độ TẠO KHI MỞ LẦN ĐẦU (`_dam_bao_trang(ô)`;
+    `self._cho_trang` = khung trống giữ chỉ số trong `self.trang`; `self.khung_trang` chỉ chứa trang đã tạo; `bang_tong_hop` / `tien_do`
+    / `quyet_dinh` / `bao_cao` là property - tạo khi hỏi tới). So sánh trang theo chỉ số (`STACK_TONG_HOP`), ĐỪNG `k is
+    self.bang_tong_hop` (tạo trang ngoài ý muốn). Khung tạo sau khi cửa sổ hiện: `giao_dien.ap_kieu_cay(k)` (màu / biểu tượng nút,
+    dòng bảng 32 px, khoảng cách, co giãn tỷ lệ) - `_BoToMau` chỉ áp lúc CỬA SỔ hiện lần đầu (`_da_to_mau`; hiện lại chỉ `to_mau`).
+    `TRANG_THAI` (bộ lọc) chuyển sang `thong_bao` (quan_ly re-export) - mở phần mềm không nạp quan_ly. Màn hình chào: `tong_du_an.json`
+    nhớ cả số hộ, chữ tìm, tên hiển thị (`ghi_tong_nho(…, chu_tim, hien)`) - file không đổi thì `_tom_tat_pabt` không mở SQLite.
+  - CuaSoLapPA: khung xem trước A4 tạo khi bật lần đầu (`w_preview` property, `_w_preview`, `_dang_xem_truoc`); `nap_ho` chỉ vẽ
+    bảng thẻ đang hiện, thẻ khác `BangMuc.ve_sau()` - vẽ ở showEvent hoặc khi đọc `BangMuc.bang` (property). `ve()` GIỮ cờ `_dang_ve`
+    của nơi gọi (vẽ lười chạy giữa `_ve_dong` từng làm cellChanged gọi lại sua_o + hộp báo lỗi). `sua_o` vẫn chỉ vẽ lại dòng sửa.
+  - `giao_dien.do_bong`: TẮT mặc định (`PABT_HIEU_UNG_BONG=1` để bật). `csdl._mo_tiep`: `PRAGMA temp_store = MEMORY` (thiết lập kết
+    nối, không ghi file). `kiem_toan._trigger`: `AFTER UPDATE OF <trường theo dõi> … WHEN <có trường đổi>` (cập nhật cột tiến độ
+    3.000 hộ 13,3 -> 9,4 ms, như không có trigger).
+  - `nap_cap_nhat`: sau MỘT lần kiểm đủ (SHA-256 + nạp thử mọi module) biên dịch .pyc + ghi `<bản>/.da_kiem_tot` (dấu = tên / cỡ /
+    mtime mọi file pabt\ kể cả __pycache__ + cap_nhat.json + cache_tag); lần mở sau (`dang_khoi_dong` = 0, dấu khớp) chỉ gắn thư mục
+    cập nhật, dùng .pyc. Lần trước chưa tới cửa sổ chính / file đổi -> kiểm đủ lại. Đo: 2.209 -> ~240 ms mỗi lần mở (máy dựng).
+    Chỉ có hiệu lực ở bản cài dựng từ mã này (nap_cap_nhat nằm trong exe, gói .larcud không thay được). Test `test_cap_nhat.
+    test_duong_nhanh_sau_lan_kiem_du`.
+  - Bản vẽ CAD: `pabt/dxf_thuan.py` (Python thuần: DXF ASCII, LWPOLYLINE / POLYLINE 2D, TEXT / MTEXT / ATTRIB / chữ trong khối
+    theo điểm chèn + tỷ lệ + góc, mã hóa AC1021+ UTF-8 hoặc $DWGCODEPAGE + NFC, \U+XXXX, bỏ paper space; DXF nhị phân -> LoiDxf;
+    `viet` ghi DXF R12 tối thiểu cho tu-kiem / test) thay ezdxf trong `ban_do_cad._mo`. ezdxf 1.4 KHÔNG nạp được khi thiếu numpy
+    (ezdxf.math import numpy). PABT.spec `LOAI_TRU` / dung_exe38: loại numpy, scipy, matplotlib, PIL, tkinter, unittest, pydoc,
+    doctest, ezdxf, fontTools. ezdxf trong requirements chỉ để kiểm thử. Test `tests/test_may_yeu.py`.
+- 0.9.99 sửa in đậm nhầm dòng (người dùng 16/10/2026, ảnh PDF): đề mục / TỔNG CỘNG bản in chi tiết đậm nhờ ĐỊNH DẠNG CÓ ĐIỀU KIỆN
+  của mẫu (`=OR($AD18="H",$AD18="T")`, công thức tính theo ô trên cùng bên trái vùng). Nguồn gốc dài chèn dòng phía trên bảng
+  (`CAO_DOAN_TOI_DA` 90 pt) -> `_doi_dong` / `_vung_cf` dời vùng mà công thức vẫn "$AD18" -> đậm lệch dòng. Nay `in_an._them_cf`
+  dời công thức (openpyxl Translator) theo góc vùng mới. Test `test_in_16_10.TestChiTiet.test_dinh_dang_dam_dung_dong_khi_nguon_goc_dai`.
+- 0.9.99 Tesseract OCR ĐÓNG KÈM, THAY Windows OCR (người dùng 16/10/2026: "cài tesseract đọc file pdf ảnh, thay thế window OCR";
+  Windows tiếng Anh thiếu gói OCR tiếng Việt). `pabt/ocr.py` chỉ còn Tesseract (bỏ `_PS_OCR`, `trang_thai_windows`,
+  `cai_tieng_viet_windows`, `doc_anh_windows`; `may_doc()` -> ('tesseract', đường dẫn) / ('', None); HopBoDonGia.xu_ly_pdf_scan bỏ nút
+  cài gói Windows). Đầu ra TSV (`tu_tsv`) -> `gom_dong` (cột cách Tab như Windows OCR trước đây); `--tessdata-dir` khi tessdata cạnh exe;
+  `ngon_ngu` nhớ theo (đường dẫn, mtime). Tiền xử lý: ảnh xám nguyên cỡ, đọc, đo chiều cao chữ (trung vị khung từ) -> `he_so_phong`
+  (< `CAO_CHU_TOI_THIEU` 24 px thì phóng tới 36 px, tối đa x4) rồi đọc lại - KHÔNG phóng chữ đã đủ lớn (đo: ảnh 42 px phóng x3 đọc
+  "Giếng" -> "Giêng", "1" -> "J"; quy tắc cũ "cạnh ngắn < 2000 px thì phóng" làm ảnh chụp nhỏ đọc sai). `sua_dvt` ("m°" -> "m²").
+  `nhap_don_gia.doc_bang_ocr` tách Tab thành ô (`dong_tu_chu`). Đóng gói: `bo_cai_win/chuan_bi_tesseract.py <giải nén> <tessdata>` ->
+  `bo_cai_win/tesseract/` (gitignore): bản Windows 64-bit 5.4.0 của UB Mannheim (GitHub, giải nén bằng 7-Zip - KHÔNG chạy bộ cài),
+  chỉ tesseract.exe + DLL theo bảng import PE, cắt section `.debug_*` cuối file (`cat_debug`: libtesseract 101 -> 3,3 MB), tessdata
+  vie + osd (tessdata_best) + configs tsv / txt, LICENSE; 42,7 MB. `rut_gon.main` chép cạnh PABT.exe cả HAI bản (thiếu -> dừng dựng),
+  `kiem_dll` kiểm luôn; bộ cài phổ quát dùng chung file phẳng Tesseract (`_chep_phang(da_co=)` theo SHA-256 + đích). Tesseract 64-bit
+  không nhập hàm nào chỉ có từ Windows 8 (đã kiểm bảng import) -> bản x86 trên Windows 64-bit (cả Win 7) dùng được; Windows 32-bit:
+  `ocr.windows_64bit()` False -> báo dán chữ; tu-kiem bước "Nhận dạng chữ bản scan" (32-bit: DAT kèm ghi chú). Đo: trang ~1 s,
+  PDF scan A4 150 dpi bảng giá 2,5 s. Test `test_don_gia_15_10.TestOCR` (đọc thật), `test_doc_quyet_dinh.TestOCRThat` (trước đây vẽ ảnh
+  bằng Qt offscreen - không phông, chỉ "đạt" vì bị bỏ qua; nay vẽ ở tiến trình QT_QPA_PLATFORM=windows).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

@@ -46,12 +46,15 @@ class TestBanInChiTiet(unittest.TestCase):
     def test_nguon_goc_sat_muc_iii(self):
         ws = self.ws
         r, r3 = self._dong('Đất do ông'), self._dong('III.')
-        for rr in range(r + 1, r3):                     # dòng thừa của vùng gộp mẫu: ẩn (trước đây cao 4 pt mỗi dòng)
-            self.assertTrue(ws.row_dimensions[rr].hidden, rr)
-        so = len(in_an._ngat(NGUON_GOC, in_an._rong_vung(ws, 1, 8), *in_an._phong(ws.cell(r, 1)), treo=False,
-                                thut_dau=in_an.thut_dau_nguon_goc()))
-        self.assertAlmostEqual(ws.row_dimensions[r].height, in_an.cao_doan_van(so, 14), places=2)
-        self.assertLess(ws.row_dimensions[r].height, in_an.cao_dong_bang(so, 14))   # đệm nhỏ hơn ô bảng (8 pt)
+        co_chu = [rr for rr in range(r, r3) if ws.cell(rr, 1).value]
+        for rr in range(r, r3):                         # dòng thừa của vùng gộp mẫu: ẩn (trước đây cao 4 pt mỗi dòng)
+            self.assertTrue(rr in co_chu or ws.row_dimensions[rr].hidden, rr)
+        self.assertEqual(co_chu, list(range(r, co_chu[-1] + 1)))                     # các dòng nguồn gốc liền nhau
+        rong, phong = in_an._rong_vung(ws, 1, 8), in_an._phong(ws.cell(r, 1))
+        for rr in co_chu:                               # 16/10/2026: đệm 1,5 pt giữa các dòng, dòng cuối (trước III) thêm 4 pt
+            so = len(in_an._ngat(ws.cell(rr, 1).value, rong, *phong, treo=False))
+            self.assertAlmostEqual(ws.row_dimensions[rr].height, in_an.cao_doan_van(so, 14, cuoi=rr == co_chu[-1]), places=2)
+            self.assertLess(ws.row_dimensions[rr].height, in_an.cao_dong_bang(so, 14))   # đệm nhỏ hơn ô bảng (8 pt)
 
     def test_dong_ten_dao_tao_khong_lap_so(self):
         ws = self.ws

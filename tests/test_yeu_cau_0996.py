@@ -115,9 +115,8 @@ class TestNutQuetHoSo(_CoCuaSo):
     def test_chi_bao_dang_hoan_thien(self):
         from pabt import man_hinh_ocr
         _, c = self._mo()
-        self.assertEqual(c.b_ocr.text(), 'SCAN')
-        self.assertEqual(c.quet_giay_to(cho=False), 'Tiện ích đang trong quá trình hoàn thiện')
-        self.assertEqual(c.b_ocr.toolTip(), 'Tiện ích đang trong quá trình hoàn thiện')
+        # 16/10/2026 (người dùng): bỏ hẳn nút SCAN và lệnh quét hồ sơ của cửa sổ lập phương án
+        self.assertFalse(hasattr(c, 'b_ocr') or hasattr(c, 'quet_giay_to'))
         for ten in ('nhap_tron_bo', 'luu_dinh_kem', 'dien_nhan_khau_tdc'):             # mã quét dành cho lập PA đã bỏ
             self.assertFalse(hasattr(man_hinh_ocr.HopQuetGiayTo, ten), ten)
 

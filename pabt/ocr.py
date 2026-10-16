@@ -1,14 +1,12 @@
-"""Nhận dạng chữ (OCR) cho văn bản scan: PDF dạng ảnh, file ảnh JPG / PNG. Hai bộ nhận dạng (15/10/2026):
+"""Nhận dạng chữ (OCR) cho văn bản scan: PDF dạng ảnh, file ảnh JPG / PNG - bằng Tesseract OCR (người dùng 16/10/2026: thay
+Windows OCR - Windows tiếng Anh thiếu gói tiếng Việt, phải cài thêm có quyền quản trị).
 
-1. Windows OCR (Windows 10 / 11, có sẵn trong Windows - không cài thêm phần mềm): gọi Windows.Media.Ocr qua PowerShell 5.1
-   (-Command như bộ cài: không vướng ExecutionPolicy). CẦN gói nhận dạng tiếng Việt của Windows ("Language.OCR~~~vi-VN") - máy
-   Windows tiếng Anh thường chỉ có en-US: trang_thai_windows() báo 'thieu_tieng_viet', cai_tieng_viet_windows() mở lệnh cài
-   (Windows hỏi quyền quản trị, tải vài MB). Kết quả là từng từ kèm toạ độ - gom các từ cùng hàng ngang thành một dòng.
-2. Tesseract OCR (dự phòng, kể cả Windows 7 / 8): không đóng gói trong mã nguồn; tìm theo thứ tự biến môi trường PABT_TESSERACT,
-   thư mục `tesseract\\` cạnh PABT.exe, `%APPDATA%\\PABT\\tesseract\\`, nơi cài mặc định (`C:\\Program Files\\Tesseract-OCR`),
-   rồi PATH. Cần `vie.traineddata` (và `osd.traineddata` để tự xoay trang ngang).
-Chọn bộ: Windows OCR có tiếng Việt -> Windows; không thì Tesseract có tiếng Việt; biến PABT_OCR = windows / tesseract để ép (kiểm
-thử). Không có bộ nào: PDF có chữ, Word, Excel vẫn đọc bình thường, chỉ bản scan là không đọc được (dán chữ từ Clipboard thay thế).
+Tesseract 5 (64-bit, Apache 2.0) ĐÓNG KÈM bộ cài: thư mục `tesseract\\` cạnh PABT.exe (tesseract.exe + DLL, tessdata\\vie - tiếng
+Việt, osd - tự xoay trang ngang; dựng bằng bo_cai_win\\chuan_bi_tesseract.py). Tìm theo thứ tự: biến môi trường PABT_TESSERACT,
+`tesseract\\` cạnh PABT.exe, bo_cai_win\\tesseract (chạy từ mã nguồn), `%APPDATA%\\PABT\\tesseract\\`, nơi cài riêng
+(`C:\\Program Files\\Tesseract-OCR`), rồi PATH. Đầu ra TSV (toạ độ từng từ) -> gom_dong: các từ cùng hàng một dòng, cột cách xa nối
+bằng Tab (giữ cấu trúc bảng giá / bảng phương án). Windows 32-bit không chạy được bản 64-bit: PDF có chữ, Word, Excel vẫn đọc bình
+thường, chỉ bản scan là không đọc được (dán chữ từ Clipboard thay thế).
 """
 from __future__ import annotations
 import os
@@ -39,7 +37,8 @@ def _ung_vien() -> list:
     exe = 'tesseract.exe' if sys.platform == 'win32' else 'tesseract'
     if getattr(sys, 'frozen', False):
         ds.append(Path(sys.executable).parent / 'tesseract' / exe)
-    ds.append(Path(__file__).resolve().parents[1] / 'tesseract' / exe)
+    goc = Path(__file__).resolve().parents[1]
+    ds += [goc / 'tesseract' / exe, goc / 'bo_cai_win' / 'tesseract' / exe]      # chạy từ mã nguồn
     ds.append(Path(os.environ.get('PABT_THU_MUC_MAY') or Path(os.environ.get('APPDATA') or Path.home()) / 'PABT') /
               'tesseract' / exe)
     for bien in ('ProgramFiles', 'ProgramFiles(x86)', 'LOCALAPPDATA'):
@@ -59,13 +58,27 @@ def tim_tesseract() -> Path | None:
     return None
 
 
+def _thu_muc_du_lieu(tess: Path) -> list:
+    """--tessdata-dir khi tessdata nằm cạnh tesseract.exe (bản đóng kèm): biến TESSDATA_PREFIX của bản Tesseract khác cài trên máy
+    không làm lạc sang thư mục thiếu tiếng Việt."""
+    td = Path(tess).parent / 'tessdata'
+    return ['--tessdata-dir', str(td)] if td.is_dir() else []
+
+
+def windows_64bit() -> bool:
+    if sys.platform != 'win32':
+        return True
+    return (os.environ.get('PROCESSOR_ARCHITECTURE', '').upper().endswith('64')
+            or bool(os.environ.get('PROCESSOR_ARCHITEW6432')))      # tiến trình 32-bit (bản Win7) trên Windows 64-bit
+
+
 def _chay(lenh: list, cho=None, gioi_han: float = 300) -> subprocess.CompletedProcess:
     """Chạy lệnh; trong lúc chờ gọi cho() (giữ giao diện không treo, trả True = người dùng hủy)."""
     import threading
     pr = subprocess.Popen(lenh, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     # đọc stdout / stderr SONG SONG (0.9.95): trước đây chỉ chờ tiến trình kết thúc rồi mới đọc - trang scan nhiều chữ (bảng giá,
-    # bảng phương án: > ~64 KB kết quả) làm đầy ống, PowerShell / Tesseract chặn ghi, hai bên chờ nhau tới hết giờ ("quá lâu")
+    # bảng phương án: > ~64 KB kết quả) làm đầy ống, Tesseract chặn ghi, hai bên chờ nhau tới hết giờ ("quá lâu")
     ra, loi = [], []
     doc = [threading.Thread(target=lambda: ra.append(pr.stdout.read()), daemon=True),
            threading.Thread(target=lambda: loi.append(pr.stderr.read()), daemon=True)]
@@ -87,142 +100,59 @@ def _chay(lenh: list, cho=None, gioi_han: float = 300) -> subprocess.CompletedPr
     return subprocess.CompletedProcess(lenh, pr.returncode, b''.join(ra), b''.join(loi))
 
 
+_NGON_NGU = {}                                          # (đường dẫn, mtime) -> ngôn ngữ: không chạy lại tesseract mỗi lần hỏi
+
+
 def ngon_ngu(tess: Path | None = None) -> list:
     tess = tess or tim_tesseract()
     if tess is None:
         return []
     try:
-        r = _chay([str(tess), '--list-langs'], gioi_han=30)
-    except (OSError, LoiOCR):
+        khoa = (str(tess), Path(tess).stat().st_mtime_ns)
+    except OSError:
         return []
-    return [x.strip() for x in (r.stdout + r.stderr).decode('utf-8', 'replace').splitlines()[1:] if x.strip()]
+    if khoa not in _NGON_NGU:
+        try:
+            r = _chay([str(tess), *_thu_muc_du_lieu(tess), '--list-langs'], gioi_han=30)
+        except (OSError, LoiOCR):
+            return []                                   # không chạy được (Windows 32-bit, bị diệt virus chặn): không nhớ
+        _NGON_NGU[khoa] = [x.strip() for x in (r.stdout + r.stderr).decode('utf-8', 'replace').splitlines()[1:] if x.strip()]
+    return _NGON_NGU[khoa]
 
 
 def _tesseract_san_sang() -> str:
     tess = tim_tesseract()
     if tess is None:
-        return 'chưa có Tesseract OCR'
-    if 'vie' not in ngon_ngu(tess):
+        return 'chưa có Tesseract OCR (thư mục "tesseract" cạnh PABT.exe - cài lại phần mềm bằng bộ cài mới)'
+    ds = ngon_ngu(tess)
+    if not ds:
+        if not windows_64bit():
+            return 'Windows 32-bit không chạy được bộ nhận dạng chữ Tesseract 64-bit đóng kèm'
+        return f'không chạy được Tesseract ({tess}) - phần mềm diệt virus chặn hoặc thiếu file, cài lại phần mềm'
+    if 'vie' not in ds:
         return f'Tesseract ({tess}) chưa có dữ liệu tiếng Việt (vie.traineddata)'
     return ''
 
 
-HUONG_DAN_TIENG_VIET = ('Cài gói nhận dạng chữ tiếng Việt của Windows: Cài đặt (Settings) > Thời gian và ngôn ngữ > Ngôn ngữ > Thêm '
-                        'ngôn ngữ > Tiếng Việt (chọn "Nhận dạng chữ viết tay / OCR"), hoặc bấm "Cài gói tiếng Việt" - Windows hỏi '
-                        'quyền quản trị rồi tải vài MB. Cài xong không cần khởi động lại.')
-
-
 def may_doc() -> tuple:
-    """Bộ nhận dạng sẽ dùng: ('windows', None) / ('tesseract', đường dẫn) / ('', None)."""
-    ep = os.environ.get('PABT_OCR', '').lower()
-    if ep != 'tesseract' and trang_thai_windows() == 'san_sang':
-        return 'windows', None
-    if ep != 'windows' and not _tesseract_san_sang():
+    """Bộ nhận dạng sẽ dùng: ('tesseract', đường dẫn) / ('', None) khi chưa đọc được bản scan tiếng Việt."""
+    if not _tesseract_san_sang():
         return 'tesseract', tim_tesseract()
     return '', None
 
 
 def san_sang() -> str:
     """'' nếu nhận dạng được bản scan tiếng Việt, không thì câu giải thích còn thiếu gì và cách khắc phục."""
-    if may_doc()[0]:
+    ly_do = _tesseract_san_sang()
+    if not ly_do:
         return ''
-    tt = trang_thai_windows()
-    if tt == 'thieu_tieng_viet':
-        return ('Máy có bộ nhận dạng chữ của Windows nhưng CHƯA có gói tiếng Việt. ' + HUONG_DAN_TIENG_VIET +
-                ' Hoặc dán chữ / chọn file Excel, Word thay bản scan.')
-    return ('Máy chưa có bộ nhận dạng chữ tiếng Việt (Windows 7 / 8 không có Windows OCR; ' + _tesseract_san_sang() + '). Cài '
-            'Tesseract OCR kèm tiếng Việt hoặc chép thư mục "tesseract" cạnh PABT.exe; hoặc dán chữ (Snipping Tool, Zalo…) / chọn '
-            'file Excel, Word thay bản scan.')
-
-
-# ---------------------------------------------------------------- Windows OCR (Windows.Media.Ocr qua PowerShell)
-_PS_OCR = r'''
-param([string]$Anh = '', [string]$NgonNgu = 'vi')
-$ErrorActionPreference = 'Stop'
-[Console]::OutputEncoding = [Text.Encoding]::UTF8
-try {
-    Add-Type -AssemblyName System.Runtime.WindowsRuntime
-    $null = [Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime]
-    $null = [Windows.Globalization.Language, Windows.Foundation, ContentType = WindowsRuntime]
-} catch { Write-Output '##KHONG_CO##'; exit 2 }
-$lang = New-Object Windows.Globalization.Language($NgonNgu)
-if (-not [Windows.Media.Ocr.OcrEngine]::IsLanguageSupported($lang)) { Write-Output '##THIEU_NGON_NGU##'; exit 3 }
-if (-not $Anh) { Write-Output '##SAN_SANG##'; exit 0 }
-$null = [Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime]
-$null = [Windows.Graphics.Imaging.BitmapDecoder, Windows.Graphics, ContentType = WindowsRuntime]
-$asTask = @([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
-    $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
-function Cho($op, [Type]$t) { $k = $asTask.MakeGenericMethod($t).Invoke($null, @($op)); $null = $k.Wait(-1); $k.Result }
-$eng = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage($lang)
-$f = Cho ([Windows.Storage.StorageFile]::GetFileFromPathAsync($Anh)) ([Windows.Storage.StorageFile])
-$st = Cho ($f.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
-$dec = Cho ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($st)) ([Windows.Graphics.Imaging.BitmapDecoder])
-$bmp = Cho ($dec.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
-$bmp = [Windows.Graphics.Imaging.SoftwareBitmap]::Convert($bmp, [Windows.Graphics.Imaging.BitmapPixelFormat]::Bgra8)
-$kq = Cho ($eng.RecognizeAsync($bmp)) ([Windows.Media.Ocr.OcrResult])
-foreach ($d in $kq.Lines) { foreach ($w in $d.Words) {
-    $r = $w.BoundingRect
-    Write-Output ("{0}`t{1}`t{2}`t{3}`t{4}" -f [int]$r.X, [int]$r.Y, [int]$r.Width, [int]$r.Height, $w.Text) } }
-$st.Dispose()
-'''
-_TRANG_THAI_WIN = {}
-
-
-def _powershell() -> str:
-    """powershell.exe 5.1 (WinRT; PowerShell 7 không nạp được kiểu Windows Runtime). Tiến trình 32-bit trên Windows 64-bit vẫn gọi được."""
-    goc = os.environ.get('SystemRoot', r'C:\Windows')
-    p = Path(goc) / 'System32' / 'WindowsPowerShell' / 'v1.0' / 'powershell.exe'
-    return str(p) if p.is_file() else 'powershell.exe'
-
-
-def _chay_ps(td: Path, *thamso, cho=None, gioi_han: float = 120) -> subprocess.CompletedProcess:
-    kb = td / 'pabt_ocr.ps1'
-    if not kb.is_file():
-        kb.write_text(_PS_OCR, encoding='utf-8-sig')
-    ts = ' '.join("'" + str(x).replace("'", "''") + "'" for x in thamso)
-    lenh = (f"& ([scriptblock]::Create([IO.File]::ReadAllText('{str(kb).replace(chr(39), chr(39) * 2)}', "
-            f"[Text.Encoding]::UTF8))) {ts}")
-    return _chay([_powershell(), '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', lenh], cho, gioi_han)
-
-
-def trang_thai_windows(ngon_ngu: str = 'vi') -> str:
-    """'san_sang' / 'thieu_tieng_viet' (có Windows OCR, thiếu gói ngôn ngữ) / 'khong_co' (Windows 7 / 8, không chạy được).
-    Nhớ trong tiến trình (gọi PowerShell ~1 giây); xoa_nho_windows() sau khi cài gói."""
-    if sys.platform != 'win32':
-        return 'khong_co'
-    if ngon_ngu in _TRANG_THAI_WIN:
-        return _TRANG_THAI_WIN[ngon_ngu]
-    tt = 'khong_co'
-    td = Path(tempfile.mkdtemp(prefix='PABT_ocr_'))
-    try:
-        r = _chay_ps(td, '', ngon_ngu, gioi_han=60)
-        ra = r.stdout.decode('utf-8', 'replace')
-        tt = 'san_sang' if '##SAN_SANG##' in ra else 'thieu_tieng_viet' if '##THIEU_NGON_NGU##' in ra else 'khong_co'
-    except (OSError, LoiOCR):
-        pass
-    finally:
-        shutil.rmtree(td, ignore_errors=True)
-    _TRANG_THAI_WIN[ngon_ngu] = tt
-    return tt
-
-
-def xoa_nho_windows() -> None:
-    _TRANG_THAI_WIN.clear()
-
-
-def cai_tieng_viet_windows():
-    """Mở lệnh cài gói nhận dạng chữ tiếng Việt của Windows (Windows hỏi quyền quản trị - UAC). Trả tiến trình (không chờ).
-    Chỉ gọi khi người dùng bấm "Cài gói tiếng Việt"."""
-    lenh = ("Add-WindowsCapability -Online -Name 'Language.OCR~~~vi-VN~0.0.1.0'; "
-            "Write-Host 'Xong. Đóng cửa sổ này rồi đọc lại bản scan trong LARC.'; Start-Sleep 5")
-    return subprocess.Popen([_powershell(), '-NoProfile', '-Command',
-                             f"Start-Process '{_powershell()}' -Verb RunAs -ArgumentList '-NoProfile','-Command',\"{lenh}\""],
-                            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    return ('Máy chưa nhận dạng được chữ trên bản scan: ' + ly_do + '. Có thể dán chữ (Snipping Tool, Zalo…) hoặc chọn file '
+            'Excel, Word thay bản scan.')
 
 
 def gom_dong(tu: list, he_so: float = 0.6) -> list:
     """[(x, y, rộng, cao, chữ)] các từ -> dòng chữ: từ có tâm dọc cách tâm hàng < he_so x chiều cao chữ là cùng hàng (bảng giá nhiều
-    cột: Windows OCR trả các cột thành các dòng riêng), trong hàng xếp theo x."""
+    cột), trong hàng xếp theo x."""
     hang = []                                           # [[tâm y, cao, [từ]]]
     for x, y, w, h, t in sorted(tu, key=lambda a: (a[1] + a[3] / 2, a[0])):
         tam = y + h / 2
@@ -250,6 +180,19 @@ def gom_dong(tu: list, he_so: float = 0.6) -> list:
 CACH_COT = 2.2                                          # gom_dong: khoảng trống (x chiều cao chữ) coi là sang cột mới
 
 
+def tu_tsv(tsv: str) -> list:
+    """Đầu ra TSV của Tesseract -> [(x, y, rộng, cao, chữ)] các từ (dòng level 5, bỏ từ trống)."""
+    tu = []
+    for d in tsv.splitlines()[1:]:
+        p = d.split('\t')
+        if len(p) >= 12 and p[0] == '5' and p[11].strip():
+            try:
+                tu.append((int(p[6]), int(p[7]), int(p[8]), int(p[9]), p[11].strip()))
+            except ValueError:
+                continue
+    return tu
+
+
 _RE_CUM_SO = re.compile(r'(?<![^\W\d_])[\doO][\doO.,]*[\doO](?![^\W\d_])')
 
 
@@ -262,25 +205,13 @@ def sua_so(dong: str) -> str:
     return _RE_CUM_SO.sub(sua, dong)
 
 
-def doc_anh_windows(anh: Path, cho=None, td: Path | None = None, ngon_ngu: str = 'vi') -> str:
-    """Chữ trên một ảnh bằng Windows OCR (mỗi hàng ngang một dòng)."""
-    tam = td or Path(tempfile.mkdtemp(prefix='PABT_ocr_'))
-    try:
-        r = _chay_ps(tam, str(Path(anh).resolve()), ngon_ngu, cho=cho, gioi_han=180)
-        ra = r.stdout.decode('utf-8', 'replace')
-        if '##THIEU_NGON_NGU##' in ra:
-            raise LoiOCR('Windows chưa có gói nhận dạng chữ tiếng Việt. ' + HUONG_DAN_TIENG_VIET)
-        if r.returncode != 0 or '##KHONG_CO##' in ra:
-            raise LoiOCR('Windows OCR báo lỗi: ' + (r.stderr.decode('utf-8', 'replace').strip() or ra.strip())[:300])
-        tu = []
-        for d in ra.splitlines():
-            p = d.split('\t', 4)
-            if len(p) == 5 and all(x.lstrip('-').isdigit() for x in p[:4]):
-                tu.append((int(p[0]), int(p[1]), int(p[2]), int(p[3]), p[4]))
-        return '\n'.join(gom_dong(tu))
-    finally:
-        if td is None:
-            shutil.rmtree(tam, ignore_errors=True)
+# chỉ số trên của m² trong ô ĐVT bảng scan: Tesseract đọc thành dấu độ / nháy ("m°", 'm"', "mˆ")
+_RE_DVT_MU = re.compile(r'm\s*(?:[°º˚ˆ"\'’`*?²]|\^2)', re.I)
+
+
+def sua_dvt(o: str) -> str:
+    """Ô chỉ có ĐVT diện tích đọc lệch ("m°", 'm"', "m^2") -> "m²". Chữ khác giữ nguyên."""
+    return 'm²' if len(o.strip()) <= 4 and _RE_DVT_MU.fullmatch(o.strip()) else o
 
 
 # ---------------------------------------------------------------- ảnh từng trang
@@ -331,9 +262,14 @@ def _anh_jpeg(trang, goc: Path) -> Path | None:
     return p
 
 
-def _chuan_bi(anh: Path, td: Path | None = None) -> Path:
-    """Ảnh scan độ phân giải thấp (máy scan để 150 dpi): phóng lên ~300 dpi, chuyển ảnh xám - Tesseract đọc chính xác hơn
-    hẳn. Trả file PNG đã xử lý (hoặc ảnh gốc khi không xử lý được)."""
+CAO_CHU_TOI_THIEU = 24        # px: chiều cao trung vị các từ (khung chữ TSV) dưới mức này thì phóng ảnh rồi đọc lại
+CAO_CHU_MUC_TIEU = 36         # px: phóng tới cỡ này (Tesseract đọc tốt chữ cao ~30-40 px; PHÓNG chữ đã đủ lớn lại đọc SAI hơn - đo
+PHONG_TOI_DA = 4.0            # 16/10/2026: ảnh 42 px phóng x3 thì "Giếng" -> "Giêng", "1" -> "J")
+
+
+def _chuan_bi(anh: Path, td: Path | None = None, he_so: float = 1.0) -> Path:
+    """Ảnh xám (1 byte / điểm ảnh - Tesseract đọc ổn định hơn ảnh màu), phóng he_so lần khi > 1. Trả file PNG đã xử lý (hoặc ảnh
+    gốc khi không xử lý được)."""
     try:
         from PySide6.QtCore import Qt
         from PySide6.QtGui import QImage
@@ -343,13 +279,32 @@ def _chuan_bi(anh: Path, td: Path | None = None) -> Path:
     if im.isNull():
         return anh
     im = im.convertToFormat(QImage.Format.Format_Grayscale8)     # xám TRƯỚC khi phóng: 1 byte / điểm ảnh thay 4 (nhanh ~3 lần)
-    canh = min(im.width(), im.height())
-    if canh < 2000:                                     # cạnh ngắn A4 ở 300 dpi ~ 2480 px
-        he_so = 2480 / canh
+    if he_so > 1:
         im = im.scaled(int(im.width() * he_so), int(im.height() * he_so), Qt.AspectRatioMode.KeepAspectRatio,
                        Qt.TransformationMode.SmoothTransformation)
-    ra = (td or anh.parent) / (anh.stem + '_xl.png')         # td: thư mục tạm - không ghi cạnh ảnh của người dùng
+    ra = (td or anh.parent) / (anh.stem + (f'_x{he_so:g}' if he_so > 1 else '') + '_xl.png')   # td: thư mục tạm, không ghi cạnh ảnh gốc
     return ra if im.save(str(ra)) else anh
+
+
+def _canh_ngan(anh: Path) -> int:
+    try:
+        from PySide6.QtGui import QImageReader
+    except ImportError:
+        return 0
+    kt = QImageReader(str(anh)).size()
+    return min(kt.width(), kt.height()) if kt.isValid() else 0
+
+
+def he_so_phong(tu: list, canh_ngan: int = 0) -> float:
+    """Hệ số phóng ảnh theo chiều cao chữ thật (trung vị khung các từ): chữ nhỏ (scan 150 dpi, ảnh chụp màn hình) phóng tới
+    CAO_CHU_MUC_TIEU; không thấy chữ nào mà ảnh nhỏ (chữ quá bé, Tesseract không tách được) thì phóng như trang A4 300 dpi."""
+    cao = sorted(t[3] for t in tu if t[3] > 0)
+    if cao:
+        h = cao[len(cao) // 2]
+        return min(PHONG_TOI_DA, CAO_CHU_MUC_TIEU / h) if h < CAO_CHU_TOI_THIEU else 1.0
+    if 0 < canh_ngan < 2000:                            # cạnh ngắn A4 ở 300 dpi ~ 2480 px
+        return min(PHONG_TOI_DA, 2480 / canh_ngan)
+    return 1.0
 
 
 def _xoay(anh: Path, do: int) -> None:
@@ -360,28 +315,45 @@ def _xoay(anh: Path, do: int) -> None:
 
 
 # ---------------------------------------------------------------- nhận dạng
-def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = None, may: str = '') -> str:
-    """Chữ trên một ảnh trang (may 'windows': Windows OCR; còn lại Tesseract - trang nằm ngang tự xoay lại trước khi đọc)."""
-    if may == 'windows':                                # ảnh nhỏ (scan 150 dpi) phóng lên ~300 dpi như với Tesseract
-        return doc_anh_windows(_chuan_bi(Path(anh), td), cho, td)
+def _doc_tsv(tess: Path, anh: Path, du_lieu: list, cho=None) -> list:
+    try:
+        r = _chay([str(tess), str(anh), '-', *du_lieu, '-l', 'vie', '--psm', '6', 'tsv'], cho)
+    except OSError as e:
+        raise LoiOCR(san_sang() or f'Không chạy được Tesseract: {e}') from e
+    if r.returncode != 0:
+        raise LoiOCR('Tesseract báo lỗi: ' + r.stderr.decode('utf-8', 'replace').strip()[:300])
+    return tu_tsv(r.stdout.decode('utf-8', 'replace'))
+
+
+def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = None) -> str:
+    """Chữ trên một ảnh trang bằng Tesseract (trang nằm ngang tự xoay lại trước khi đọc): mỗi hàng ngang một dòng, cột cách Tab.
+    Đọc ảnh xám nguyên cỡ; chữ nhỏ thì phóng theo chiều cao chữ đo được (he_so_phong) rồi đọc lại."""
     tess = tess or tim_tesseract()
     if tess is None:
         raise LoiOCR(san_sang())
+    du_lieu = _thu_muc_du_lieu(tess)
     goc = Path(anh)
     anh = _chuan_bi(goc, td)
+    xoay = 0
     try:
-        r = _chay([str(tess), str(anh), '-', '--psm', '0'], cho, 60)
+        r = _chay([str(tess), str(anh), '-', *du_lieu, '--psm', '0'], cho, 60)
         m = re.search(rb'Rotate:\s*(\d+)', r.stdout)
         if m and int(m.group(1)) in (90, 180, 270) and anh != goc:    # chỉ xoay bản đã xử lý, không ghi đè ảnh gốc
-            _xoay(anh, int(m.group(1)))
+            xoay = int(m.group(1))
+            _xoay(anh, xoay)
     except LoiOCR:
         raise
     except OSError:
         pass                                            # thiếu osd.traineddata: đọc nguyên chiều
-    r = _chay([str(tess), str(anh), '-', '-l', 'vie', '--psm', '6'], cho)
-    if r.returncode != 0:
-        raise LoiOCR('Tesseract báo lỗi: ' + r.stderr.decode('utf-8', 'replace').strip()[:300])
-    return r.stdout.decode('utf-8', 'replace')
+    tu = _doc_tsv(tess, anh, du_lieu, cho)
+    k = he_so_phong(tu, _canh_ngan(anh))
+    if k > 1.15 and anh != goc:
+        lon = _chuan_bi(anh, td, k)
+        if lon != anh:
+            tu_lon = _doc_tsv(tess, lon, du_lieu, cho)
+            if len(''.join(t[4] for t in tu_lon)) >= len(''.join(t[4] for t in tu)) * 0.8:   # phóng mà đọc được ít hơn hẳn: giữ lần đầu
+                tu = tu_lon
+    return '\n'.join(gom_dong(tu))
 
 
 def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
@@ -397,7 +369,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
                 bao_tien_do(1, 1)
             if cho and cho():
                 raise DaHuy()
-            yield doc_anh(file, tess, cho, td, may)
+            yield doc_anh(file, tess, cho, td)
             return
         try:
             from PySide6.QtPdf import QPdfDocument
@@ -423,7 +395,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
                     if anh.isNull() or not anh.save(str(p)):
                         continue
                     try:
-                        yield doc_anh(p, tess, cho, td, may)
+                        yield doc_anh(p, tess, cho, td)
                     finally:
                         try:
                             p.unlink()
@@ -440,7 +412,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
             if p is None:
                 continue
             try:
-                yield doc_anh(p, tess, cho, td, may)
+                yield doc_anh(p, tess, cho, td)
             finally:
                 try:
                     p.unlink()
@@ -456,5 +428,5 @@ def doc_chu(file, bao_tien_do=None, cho=None) -> list:
         raise LoiOCR(san_sang())
     dong = []
     for chu in tung_trang(file, bao_tien_do, cho):
-        dong += [sua_so(x.strip()) for x in chu.splitlines() if x.strip()]
+        dong += ['\t'.join(sua_dvt(o) for o in sua_so(x.strip()).split('\t')) for x in chu.splitlines() if x.strip()]
     return dong

@@ -277,20 +277,27 @@ def tu_kiem(file_ra=None) -> int:
             f'; gói mẫu {len(ds["tep"])} file'
 
     def ban_ve_cad():
-        import ezdxf
-        from pabt import ban_do_cad
+        from pabt import ban_do_cad, dxf_thuan          # đọc DXF bằng Python thuần (bản cài không còn ezdxf / numpy)
         with tempfile.TemporaryDirectory() as td:
-            doc = ezdxf.new()
-            msp = doc.modelspace()
-            msp.add_lwpolyline([(0, 0), (20, 0), (20, 10), (0, 10)], close=True, dxfattribs={'layer': 'RANH THUA'})
-            msp.add_text('7', dxfattribs={'layer': 'NHAN', 'insert': (5, 5)})
-            msp.add_lwpolyline([(10, -5), (30, -5), (30, 20), (10, 20)], close=True, dxfattribs={'layer': 'RANH THU HOI'})
-            f = Path(td) / 'To_3.dxf'
-            doc.saveas(f)
+            f = dxf_thuan.viet(Path(td) / 'To_3.dxf', [('RANH THUA', [(0, 0), (20, 0), (20, 10), (0, 10)]),
+                                                         ('RANH THU HOI', [(10, -5), (30, -5), (30, 20), (10, 20)])],
+                               [('NHAN', '7', 5, 5)])
             kq = ban_do_cad.phan_tich(f, 'RANH THUA', 'RANH THU HOI')
         t = kq.thua[0]
         assert (t.so_to, t.so_thua, float(t.dt_hinh), float(t.dt_trong_ranh)) == ('3', '7', 200.0, 100.0), (t.so_to, t.so_thua, t.dt_hinh)
-        return f'ezdxf {ezdxf.__version__}: thửa 7 tờ 3, DT 200 m², trong ranh 100 m²'
+        return 'đọc DXF (Python thuần): thửa 7 tờ 3, DT 200 m², trong ranh 100 m²'
+
+    def nhan_dang_chu():
+        # Tesseract OCR đóng kèm (thư mục tesseract cạnh PABT.exe) chạy được + có tiếng Việt. Windows 32-bit không chạy được bản
+        # 64-bit: không coi là lỗi cài (PDF có chữ / Word / Excel vẫn đọc; bản scan thì dán chữ)
+        from pabt import ocr
+        ly_do = ocr.san_sang()
+        if ly_do:
+            if not ocr.windows_64bit():
+                return 'Windows 32-bit: không đọc được bản scan (dán chữ thay thế)'
+            raise RuntimeError(ly_do)
+        tess = ocr.tim_tesseract()
+        return f'Tesseract ({tess.parent.name}\\{tess.name}), ngôn ngữ: {", ".join(ocr.ngon_ngu(tess))}'
 
     def huong_dan():
         from pabt import app as ud
@@ -301,7 +308,7 @@ def tu_kiem(file_ra=None) -> int:
 
     for ten, ham in (('Phiên bản', phien_ban), ('Giao diện', giao_dien), ('Đọc PDF', pdf), ('Bộ đơn giá', bo_don_gia), ('Mẫu in', mau_in),
                      ('Hướng dẫn sử dụng', huong_dan), ('Hồ sơ địa phương, gói mẫu in', ho_so_dia_phuong),
-                     ('Bản vẽ CAD (.dxf)', ban_ve_cad),
+                     ('Bản vẽ CAD (.dxf)', ban_ve_cad), ('Nhận dạng chữ bản scan', nhan_dang_chu),
                      ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('HTTPS', https),
                      ('Lập và in thử (dữ liệu giả lập)', lap_in_thu), ('Nhóm 5 - 6: kinh phí, vận động, báo cáo tiến độ', nhom_5_6)):
         buoc(ten, ham)

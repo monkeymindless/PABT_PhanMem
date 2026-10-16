@@ -23,6 +23,7 @@ DANG_DUNG = None      # phiên bản cập nhật đang dùng (None: bản gốc
 FILE_HIEN_HANH = 'hien_hanh.txt'
 FILE_DEM = 'dang_khoi_dong.txt'
 FILE_LOI = 'LOI.txt'
+FILE_DA_KIEM = '.da_kiem_tot'     # dấu "đã kiểm đủ + nạp thử tốt" (máy yếu, 16/10/2026): lần mở sau khỏi băm / nạp thử lại
 
 
 def thu_muc() -> Path:
@@ -102,6 +103,35 @@ def _kiem_ban(d: Path, m: dict) -> str:
     return ''
 
 
+def _dau(d: Path) -> str:
+    """Dấu của bản cập nhật đã cài: tên + cỡ + thời điểm sửa mọi file trong pabt\\ (cả .pyc đã biên dịch) và cap_nhat.json, phiên bản
+    Python. File nào đổi / thêm / bớt -> dấu khác -> kiểm tra đầy đủ lại."""
+    import hashlib
+    phan = [sys.implementation.cache_tag or '']
+    for p in [d / 'cap_nhat.json'] + sorted(x for x in (d / 'pabt').rglob('*') if x.is_file()):
+        st = p.stat()
+        phan.append(f'{p.relative_to(d).as_posix()}|{st.st_size}|{st.st_mtime_ns}')
+    return hashlib.sha256('\n'.join(phan).encode('utf-8')).hexdigest()
+
+
+def _da_kiem(d: Path) -> bool:
+    try:
+        return (d / FILE_DA_KIEM).read_text(encoding='utf-8').strip() == _dau(d)
+    except OSError:
+        return False
+
+
+def _danh_dau(d: Path) -> None:
+    """Sau một lần kiểm đủ (SHA-256 từng file) + nạp thử mọi module tốt: biên dịch sẵn .pyc rồi ghi dấu - các lần mở sau dùng .pyc,
+    không băm / nạp thử lại (máy yếu: trước đây mỗi lần mở biên dịch lại ~46.000 dòng mã từ nguồn)."""
+    try:
+        import compileall
+        compileall.compile_dir(str(d / 'pabt'), quiet=1)
+        _ghi(d / FILE_DA_KIEM, _dau(d))
+    except Exception:                                   # noqa: BLE001 - không ghi được dấu: lần sau kiểm đầy đủ như cũ
+        pass
+
+
 def nap(bat_buoc=False):
     """Trả phiên bản cập nhật đang dùng hoặc None. Chạy từ mã nguồn thì bỏ qua (trừ bat_buoc, dùng khi kiểm thử)."""
     global BAN_GOC, DANG_DUNG
@@ -119,33 +149,45 @@ def nap(bat_buoc=False):
     pb = m.get('phien_ban')
     if so(pb) <= so(BAN_GOC) or so(m.get('ban_goc_toi_thieu')) > so(BAN_GOC):
         return None                                  # bộ cài mới hơn bản cập nhật, hoặc bản cài quá cũ
-    loi = _kiem_ban(d, m)
-    if loi:                                          # bị sửa sau khi cài (mã độc / người khác chép đè): không nạp
-        _ghi(d / FILE_LOI, f'Bản cập nhật {pb} không được nạp, dùng bản gốc {BAN_GOC}: {loi}')
-        return None
     dem = d.parent / FILE_DEM
     try:
         lan = int(dem.read_text(encoding='utf-8'))
     except (OSError, ValueError):
         lan = 0
+    # đường nhanh: đã kiểm đủ ở lần trước, không file nào đổi, lần mở trước tới được cửa sổ chính -> chỉ gắn thư mục cập nhật
+    nhanh = lan == 0 and _da_kiem(d)
+    if not nhanh:
+        try:
+            (d / FILE_DA_KIEM).unlink(missing_ok=True)
+        except OSError:
+            pass
+        loi = _kiem_ban(d, m)
+        if loi:                                      # bị sửa sau khi cài (mã độc / người khác chép đè): không nạp
+            _ghi(d / FILE_LOI, f'Bản cập nhật {pb} không được nạp, dùng bản gốc {BAN_GOC}: {loi}')
+            return None
     if lan >= 2:
         _ghi(d / FILE_LOI, f'Bản cập nhật {pb} không khởi động được {lan} lần liền: đã tắt, dùng bản gốc {BAN_GOC}.')
         _ghi(dem, '0')
         return None
     _ghi(dem, str(lan + 1))
-    sys.dont_write_bytecode = True                   # không để lại .pyc trong thư mục cập nhật (xem _kiem_ban)
+    if not nhanh:
+        sys.dont_write_bytecode = True               # lần kiểm đủ: không để .pyc chưa kiểm lại trong thư mục cập nhật (xem _kiem_ban)
     _bo_pabt()
     sys.meta_path.insert(0, _TimTruoc(d))
     try:
         importlib.import_module('pabt')
-        for f in sorted((d / 'pabt').glob('*.py')):
-            if f.stem != '__init__':
-                importlib.import_module('pabt.' + f.stem)
+        if not nhanh:                                # nạp thử mọi module (đường nhanh: module nạp khi cần, dùng .pyc đã biên dịch)
+            for f in sorted((d / 'pabt').glob('*.py')):
+                if f.stem != '__init__':
+                    importlib.import_module('pabt.' + f.stem)
     except BaseException:
         _ghi(d / FILE_LOI, f'Không nạp được bản cập nhật {pb}, dùng bản gốc {BAN_GOC}:\n{traceback.format_exc()}')
         _bo_pabt()
         importlib.import_module('pabt')
         return None
+    if not nhanh:
+        sys.dont_write_bytecode = False
+        _danh_dau(d)
     DANG_DUNG = pb
     return pb
 

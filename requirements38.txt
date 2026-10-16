@@ -2,5 +2,5 @@
 PySide2==5.15.2.1
 openpyxl>=3.1
 pypdf>=4
-ezdxf==1.1.4          # 0.9.87: bản cuối hỗ trợ Python 3.8
+ezdxf==1.1.4          # chỉ để kiểm thử (bản cuối hỗ trợ Python 3.8) - phần mềm đọc DXF bằng pabt/dxf_thuan.py
 pyinstaller==5.13.2

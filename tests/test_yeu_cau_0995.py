@@ -120,7 +120,7 @@ class TestLapPhuongAn(Co0995):
         self.assertIn('Ctrl+Right', c.b_sau.toolTip())
         from pabt.man_hinh import RONG_O_HO                                  # 16/10/2026: ô rộng hơn, đủ tên hộ
         self.assertEqual((c.cb_ho.minimumWidth(), c.cb_ho.maximumWidth()), RONG_O_HO)
-        for b in (c.b_dan, c.b_ocr, c.b_luu, c.btn_toggle_preview, c.b_dong):
+        for b in (c.b_dan, c.b_luu, c.btn_toggle_preview, c.b_dong):
             self.assertEqual(b.height() or b.minimumHeight(), man_hinh.CAO_NUT_TREN)
         # một hàng điều hướng chung với dải tổng cộng, thẻ mục không còn hàng nút riêng
         for bm in c.bang.values():
@@ -302,7 +302,6 @@ class TestQuetGiayTo(Co0995):
             h.b_doi_xem.setChecked(True)
             self.assertEqual(h.ngan_trai.currentIndex(), 1)
             self.assertFalse(hasattr(h, 'b_tron_bo') or hasattr(h, 'o_luu_dinh_kem'))
-            self.assertEqual(c.quet_giay_to(cho=False), 'Tiện ích đang trong quá trình hoàn thiện')
             c.bo_thay_doi()
             c.close()
         finally:

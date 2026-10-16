@@ -152,11 +152,38 @@ class TestCapNhat(unittest.TestCase):
                 kq = self._chay(ma)
                 if viec == 'pyc':
                     self.assertEqual(kq, '9.9.9')
-                    self.assertFalse((ban / 'pabt' / '__pycache__').exists())
+                    # .pyc giả đã bị xóa; sau lần kiểm đủ phần mềm biên dịch .pyc thật (máy yếu, 16/10/2026)
+                    gia = ban / 'pabt' / '__pycache__' / 'tien.cpython-38.pyc'     # Python 3.8: cùng tên với .pyc thật
+                    self.assertFalse(gia.exists() and gia.read_bytes() == b'gia')
                 else:
                     self.assertEqual(kq, __version__)
                     self.assertIn('đã bị sửa' if viec == 'sua' else 'file lạ', cap_nhat.trang_thai()['loi'])
                 cap_nhat.go()
+
+    def test_duong_nhanh_sau_lan_kiem_du(self):
+        """Máy yếu (16/10/2026): lần mở đầu sau khi cài kiểm đủ (SHA-256, nạp thử mọi module), biên dịch .pyc và ghi dấu; các lần
+        mở sau (lần trước tới được cửa sổ chính) chỉ gắn thư mục cập nhật - không nạp thử mọi module. File đổi / lần trước lỗi:
+        kiểm đủ lại."""
+        co = self.td / 'da_nap.txt'
+        cap_nhat.cai(self._goi(them={'cham.py': f'open(r"{co}", "a").write("x")\n'}))
+        d = cap_nhat.thu_muc()
+        ban = d / (d / 'hien_hanh.txt').read_text(encoding='utf-8')
+        ma = 'import nap_cap_nhat as n; n.nap(bat_buoc=True); import pabt; print(pabt.__version__)'
+        self.assertEqual(self._chay(ma), '9.9.9')
+        self.assertEqual(co.read_text(), 'x')                                 # lần đầu: nạp thử mọi module
+        self.assertTrue((ban / '.da_kiem_tot').exists())
+        self.assertTrue(list((ban / 'pabt' / '__pycache__').glob('tien.*.pyc')))
+        (d / 'dang_khoi_dong.txt').unlink()                                   # = khoi_dong_tot (đã tới cửa sổ chính)
+        self.assertEqual(self._chay(ma), '9.9.9')
+        self.assertEqual(co.read_text(), 'x')                                 # đường nhanh: không nạp thử lại
+        (d / 'dang_khoi_dong.txt').write_text('1')                            # lần trước chưa tới cửa sổ chính: kiểm đủ lại
+        self.assertEqual(self._chay(ma), '9.9.9')
+        self.assertEqual(co.read_text(), 'xx')
+        (d / 'dang_khoi_dong.txt').unlink()
+        f = ban / 'pabt' / 'tien.py'                                         # sửa file sau khi đã có dấu: dấu không khớp, bắt được
+        f.write_text(f.read_text(encoding='utf-8') + '\nimport os  # chèn mã\n', encoding='utf-8')
+        self.assertEqual(self._chay(ma), __version__)
+        self.assertIn('đã bị sửa', cap_nhat.trang_thai()['loi'])
 
     def test_bo_cai_moi_hon_bo_qua_ban_cap_nhat(self):
         cap_nhat.cai(self._goi())

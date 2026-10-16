@@ -53,7 +53,11 @@
   "ban_in": {
     "che_cccd_ban_du_thao": true,
     "dia_danh_ngay": "Trị An",
-    "nguon_goc": {"can_ngang": "justify", "can_doc": "top", "thut_dau_cm": 1.0}
+    "nguon_goc": {"can_ngang": "justify", "can_doc": "top", "thut_dau_cm": 1.0},
+    "le_trang": {
+      "chi_tiet": {"top": 0.55, "bottom": 0.55, "left": 0.60, "right": 0.40, "header": 0.22, "footer": 0.22},
+      "tong_hop": {"top": 0.50, "bottom": 0.50, "left": 0.45, "right": 0.40, "header": 0.20, "footer": 0.20}
+    }
   },
   "mau_in": {
     "IN_CHITIET": {

@@ -232,7 +232,11 @@ class TestCuaSoLapPA(CoSoXem):
         self.assertEqual(b.text(), 'Xem trước (F4)')
         self.assertIn('#0F3866', b.styleSheet())
         self.assertIn('#2563EB', b.styleSheet())
-        self.assertIs(w.tach.widget(1), w.w_preview)
+        # 16/10/2026 (máy yếu): khung xem trước tạo khi bật lần đầu - mở cửa sổ chưa có khung
+        self.assertIsNone(w._w_preview)
+        self.assertEqual(w.tach.count(), 1)
+        pv = w.w_preview
+        self.assertIs(w.tach.widget(1), pv)
         self.assertTrue(w.w_preview.isHidden())                  # mặc định ẩn
         f4 = next(sc for sc in w._phim if sc.key() == QKeySequence('F4'))
         w.show()
@@ -263,12 +267,16 @@ class TestCuaSoLapPA(CoSoXem):
     def test_hang_tren_xuong_dong_khi_hep(self):
         from pabt.man_hinh import CuaSoLapPA
         w = CuaSoLapPA(self.con, 1)
-        cac_khoi = [w.thanh_tren.layout().itemAt(i).widget() for i in range(w.thanh_tren.layout().count())]
-        # 0.9.95: 4 khối [Hộ ◀ ▶] [Dán, Quét, Gợi ý] [Lưu, Bỏ thay đổi] [Xem trước A4, In, Đóng] - hẹp thì xuống dòng ít hơn
-        self.assertEqual(len(cac_khoi), 4)
-        self.assertIn(w.btn_toggle_preview, cac_khoi[3].findChildren(type(w.btn_toggle_preview)))
-        mot_hang = sum(k.sizeHint().width() for k in cac_khoi)
-        self.assertLess(w.thanh_tren.minimumSizeHint().width(), mot_hang)    # không ép cửa sổ rộng bằng cả hàng
+        from PySide6.QtWidgets import QHBoxLayout
+        from pabt.man_hinh import RONG_O_HO
+        lo = w.thanh_tren.layout()
+        # 16/10/2026 (người dùng): bỏ SCAN, mọi nút MỘT hàng; ô chọn hộ co / giãn (RONG_O_HO) thay cho xuống dòng
+        self.assertIsInstance(lo, QHBoxLayout)
+        cac = [lo.itemAt(i).widget() for i in range(lo.count()) if lo.itemAt(i).widget() is not None]
+        for b in (w.cb_ho, w.b_dan, w.b_luu, w.b_bo, w.btn_toggle_preview, w.b_in, w.b_dong):
+            self.assertIn(b, cac)
+        self.assertEqual(w.cb_ho.minimumSizeHint().width() <= RONG_O_HO[0] or w.cb_ho.minimumWidth() == RONG_O_HO[0], True)
+        self.assertLess(w.thanh_tren.minimumSizeHint().width(), w.thanh_tren.sizeHint().width() + 1)
         w.bo_thay_doi()
         w.close()
 

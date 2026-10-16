@@ -291,6 +291,9 @@ def _mo_tiep(con, tao: bool):
     con.execute('PRAGMA foreign_keys = ON')
     # file dự án có thể nằm trong thư mục Google Drive: không dùng WAL (Drive đồng bộ kém các file -wal, -shm)
     con.execute('PRAGMA journal_mode = DELETE')
+    # bảng tạm của Hoàn tác (_ht_nhat_ky), dấu vết hộ (_dv_ho), kiểm toán (_kt_phien) nằm trên RAM - không ghi file tạm ra đĩa mỗi lần
+    # lưu (máy yếu, ổ HDD - 16/10/2026). Thiết lập của kết nối, không ghi vào file
+    con.execute('PRAGMA temp_store = MEMORY')
     ver = con.execute('PRAGMA user_version').fetchone()[0]
     if ver == 0:
         con.executescript(_SCHEMA.read_text(encoding='utf-8'))

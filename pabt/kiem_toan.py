@@ -128,7 +128,11 @@ def _trigger(bang: str) -> list:
     def theo(dong: str, x: str) -> str:
         return x.replace('R.', f'{dong}.')
     ds = ' UNION ALL '.join(f"SELECT '{t}' AS t, CAST(OLD.\"{t}\" AS TEXT) AS c, CAST(NEW.\"{t}\" AS TEXT) AS m" for t in truong)
-    kq = [f'''CREATE TEMP TRIGGER IF NOT EXISTS _kt_{bang}_sua AFTER UPDATE ON main."{bang}" BEGIN
+    # máy yếu (16/10/2026): trigger chỉ chạy khi câu UPDATE có ghi một trường được theo dõi (UPDATE OF …) VÀ trường đó đổi giá trị
+    # (WHEN) - cập nhật cột theo dõi tiến độ (phê duyệt, chi trả, bàn giao…) của 3.000 hộ không còn so 15 trường mỗi dòng
+    cot_of = ', '.join(f'"{t}"' for t in truong)
+    doi = ' OR '.join(f'OLD."{t}" IS NOT NEW."{t}"' for t in truong)
+    kq = [f'''CREATE TEMP TRIGGER IF NOT EXISTS _kt_{bang}_sua AFTER UPDATE OF {cot_of} ON main."{bang}" WHEN {doi} BEGIN
               INSERT INTO {BANG} ({cot}) SELECT {_LUC}, {_AI}, 'sua', '{bang}', {theo('NEW', khoa)}, {theo('NEW', ho)},
               {theo('NEW', thua)}, {theo('NEW', dt)}, t, c, m FROM ({ds}) WHERE c IS NOT m; END''']
     if them_xoa:

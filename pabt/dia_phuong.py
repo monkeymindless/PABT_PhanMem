@@ -167,6 +167,15 @@ def kiem_tra(hs: dict) -> list:
         td = ng.get('thut_dau_cm', 0)
         if isinstance(td, bool) or not isinstance(td, (int, float)) or not 0 <= td <= 5:
             loi.append('ban_in.nguon_goc.thut_dau_cm: số cm từ 0 đến 5 (0 = không thụt đầu dòng).')
+        for loai, le in (bi.get('le_trang') or {}).items():
+            if loai not in ('chi_tiet', 'tong_hop') or not isinstance(le, dict):
+                loi.append('ban_in.le_trang: chỉ có "chi_tiet" / "tong_hop", mỗi mục là các lề top / bottom / left / right / '
+                           'header / footer (inch).')
+                continue
+            for k, v in le.items():
+                sai = k not in ('top', 'bottom', 'left', 'right', 'header', 'footer') or isinstance(v, bool)
+                if sai or not isinstance(v, (int, float)) or not 0 <= v <= 3:
+                    loi.append(f'ban_in.le_trang.{loai}.{k}: lề tính bằng inch, từ 0 đến 3.')
     mi = hs.get('mau_in')
     can = {'IN_CHITIET': ('stt', 'ten', 'dvt', 'so_luong', 'don_gia', 'ty_le', 'thanh_tien', 'ghi_chu'),
            'IN_BANGTONGHOP': ('stt', 'ho_ten', 'dia_chi', 'so_to', 'so_thua', 'loai_dat', 'dt_thu_hoi', 'dt_nong_nghiep', 'dt_lua',

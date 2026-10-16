@@ -527,7 +527,7 @@ class HopBoDonGia(QDialog):
 
     def dan_don_gia(self, chu: str | None = None, cho: bool = True, mat_khau=None, anh=None):
         """Dán bảng / văn bản đơn giá (Ctrl+Shift+V): chữ trong Clipboard (bảng Excel / Word: cột theo Tab; chữ của Snipping Tool,
-        Zalo OCR: mỗi dòng '<tên> <ĐVT> <đơn giá>'); Clipboard chỉ có ẢNH (chụp màn hình) thì nhận dạng chữ (Windows OCR / Tesseract).
+        Zalo OCR: mỗi dòng '<tên> <ĐVT> <đơn giá>'); Clipboard chỉ có ẢNH (chụp màn hình) thì nhận dạng chữ (Tesseract OCR).
         chu / anh: truyền thẳng (kiểm thử). Trả kết quả áp dụng (hoặc hộp xem trước khi cho=False)."""
         if not self._can_sua(mat_khau):
             return None
@@ -572,32 +572,19 @@ class HopBoDonGia(QDialog):
         return self._xem_truoc(d, cho)
 
     def xu_ly_pdf_scan(self, ly_do: str, chon: str | None = None):
-        """PDF là ảnh scan mà máy chưa nhận dạng được: hỏi cách xử lý - cài gói tiếng Việt cho Windows OCR (có Windows OCR), dán
-        chữ từ Clipboard, chọn file Excel / Word khác. chon: 'cai' / 'dan' / 'file' (kiểm thử, không hỏi)."""
-        from . import ocr
-        co_win = ocr.trang_thai_windows() == 'thieu_tieng_viet'
+        """PDF là ảnh scan mà máy chưa nhận dạng được (Tesseract đóng kèm thiếu / bị chặn, Windows 32-bit): hỏi cách xử lý - dán
+        chữ từ Clipboard, chọn file Excel / Word khác. chon: 'dan' / 'file' (kiểm thử, không hỏi)."""
         if chon is None:
             if self.im_lang:
                 self.thong_bao_cuoi = ly_do
                 return None
             h = QMessageBox(QMessageBox.Icon.Warning, TEN_UD, 'File PDF là ẢNH SCAN (không có lớp chữ).\n\n' + ly_do, parent=self)
-            b_cai = h.addButton('Cài gói tiếng Việt cho Windows OCR', QMessageBox.ButtonRole.ActionRole) if co_win else None
             b_dan = h.addButton('Dán văn bản từ Clipboard', QMessageBox.ButtonRole.ActionRole)
             b_file = h.addButton('Chọn file Excel / Word khác', QMessageBox.ButtonRole.ActionRole)
             h.addButton('Đóng', QMessageBox.ButtonRole.RejectRole)
             h.exec()
             nhan = h.clickedButton()
-            chon = 'cai' if nhan is b_cai and b_cai is not None else 'dan' if nhan is b_dan else 'file' if nhan is b_file else ''
-        if chon == 'cai':
-            try:
-                ocr.cai_tieng_viet_windows()
-            except OSError as e:
-                self._bao(QMessageBox.warning, f'Không mở được lệnh cài: {e}\n\n{ocr.HUONG_DAN_TIENG_VIET}')
-                return None
-            ocr.xoa_nho_windows()
-            self._bao(QMessageBox.information, 'Đã mở lệnh cài gói nhận dạng chữ tiếng Việt (Windows hỏi quyền quản trị, tải vài MB). '
-                                                  'Cài xong, chọn lại file PDF: phần mềm tự đọc bằng Windows OCR.')
-            return None
+            chon = 'dan' if nhan is b_dan else 'file' if nhan is b_file else ''
         if chon == 'dan':
             return self.dan_don_gia()
         if chon == 'file':

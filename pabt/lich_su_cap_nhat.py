@@ -7,6 +7,21 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('0.9.99', '16/10/2026', (
+        'Đọc PDF ảnh / ảnh scan (bảng đơn giá, quyết định, hệ số K, giấy tờ) bằng Tesseract OCR ĐÓNG KÈM phần mềm, thay nhận dạng '
+        'chữ của Windows: không còn phải cài gói tiếng Việt của Windows; bảng scan giữ đúng cột (STT, tên, ĐVT, đơn giá), "m²" đọc '
+        'đúng; khoảng 1-2 giây mỗi trang, không gửi file ra ngoài.',
+        'Bản in tự dàn trang: lề trang chuẩn, vừa bề ngang khổ giấy, ngắt trang tự động ở chỗ hợp lý (phương án chi tiết: tiêu đề '
+        'bảng, mục và dòng con không tách rời; bảng tổng hợp: ngắt giữa các hộ, hộ nhiều thửa tách ở ranh dòng thửa và lặp họ tên). '
+        'Trang cuối chỉ tràn ít thì nén khít lại; trang hở nhiều thì giãn cân đối. Tổng cộng và chữ ký luôn cùng trang.',
+        'Sửa: phương án chi tiết có nguồn gốc đất dài in đậm nhầm dòng (đề mục 1-6 không đậm, dòng tài sản lại đậm) - nay luôn đậm '
+        'đúng các đề mục và dòng TỔNG CỘNG.',
+        'Bảng tổng hợp bản DỰ THẢO: chữ "(DỰ THẢO)" thành dòng riêng dưới tiêu đề, dễ thấy trên khổ A3; cột số / chữ cân đối bề rộng.',
+        'Cửa sổ lập phương án hộ: bỏ nút SCAN; ô chọn hộ và các nút chung một hàng, co giãn theo bề rộng màn hình.',
+        'Máy cấu hình yếu: mở phần mềm, mở dự án nhanh hơn (các trang Bảng tổng hợp, Theo dõi tiến độ, Quyết định, Báo cáo chỉ tạo '
+        'khi mở lần đầu; khung xem trước A4 tạo khi bật; màn hình chào không mở lại file dự án chưa đổi); bản đã cài gói cập nhật '
+        'khởi động nhanh hơn sau lần đầu. Bộ cài nhỏ hơn: đọc bản vẽ CAD (.dxf) không cần thư viện ngoài.',
+    )),
     ('0.9.98', '16/10/2026', (
         'Xem trước bản in: nút "In…" (Ctrl+P) mở hộp in của Windows - chọn máy in, số bản, trang cần in (như Word / Excel). "In nhanh" '
         'vẫn gửi máy in mặc định qua Excel.',

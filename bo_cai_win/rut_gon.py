@@ -172,6 +172,11 @@ def main(argv) -> int:
         return 2
     dist = Path(argv[0]).resolve()
     rut_gon(dist)
+    # Tesseract OCR đóng kèm (16/10/2026: đọc PDF ảnh / ảnh scan thay Windows OCR) - cạnh PABT.exe, kiểm DLL cùng bản dựng
+    from chuan_bi_tesseract import chep_vao
+    if not chep_vao(dist):
+        print('THIẾU bo_cai_win\\tesseract (Tesseract OCR đóng kèm): chạy bo_cai_win\\chuan_bi_tesseract.py trước khi dựng.')
+        return 1
     win7 = (dist / 'python38.dll').exists() or (dist / 'PySide2').is_dir()
     thieu = kiem_dll(dist, win7)
     if thieu:

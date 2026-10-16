@@ -257,7 +257,8 @@ class TestMau(unittest.TestCase):
             self.assertFalse(any(x.wordWrap() for x in bang.findChildren(QLabel)))
             self.assertEqual({x.property('vai') for x in bang.findChildren(giao_dien.NhanRutGon)}, {'ten_phan_mem', 'dong_phu'})
             # hàng nút trang Quyết định phê duyệt tự xuống dòng (trước: một hàng 932 px)
-            kq = w.findChildren(KhungQuyetDinh)[0]
+            kq = w.quyet_dinh                                       # 16/10/2026: trang tạo khi mở lần đầu
+            self.assertIsInstance(kq, KhungQuyetDinh)
             xep = kq.findChildren(giao_dien.XepDong)
             self.assertTrue(any(lo.indexOf(kq.nut['Xuất Excel…']) >= 0 for lo in xep))
             chu = ' '.join(x.text() for x in bang.findChildren(QLabel))         # chữ đầy đủ kể cả khi đang rút gọn "…"

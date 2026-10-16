@@ -326,8 +326,9 @@ def dong_tu_chu(chu: str) -> list:
 
 
 def doc_bang_ocr(file, bao_tien_do=None, cho=None) -> list:
-    """Như doc_bang; PDF ảnh scan thì nhận dạng chữ bằng Tesseract (nếu máy có) - mỗi dòng chữ một ô, đọc theo mẫu
-    '<tên> <ĐVT> <đơn giá>'. bao_tien_do(trang, tổng), cho() -> True để hủy (ocr.DaHuy)."""
+    """Như doc_bang; PDF ảnh scan thì nhận dạng chữ bằng Tesseract đóng kèm - cột bảng (khoảng trống rộng, ocr.gom_dong nối bằng
+    Tab) tách thành ô như bảng Excel (16/10/2026: trước đây mỗi dòng một ô - STT dính vào tên, dòng ĐVT đọc lệch bị bỏ); dòng không
+    có cột (đoạn văn) một ô, đọc theo mẫu '<tên> <ĐVT> <đơn giá>'. bao_tien_do(trang, tổng), cho() -> True để hủy (ocr.DaHuy)."""
     try:
         return doc_bang(file)
     except LoiPdfScan as e:
@@ -336,7 +337,7 @@ def doc_bang_ocr(file, bao_tien_do=None, cho=None) -> list:
         if thieu:
             raise LoiPdfScan(f'{e}\n\n{thieu}') from None
         try:
-            return [[x] for x in ocr.doc_chu(file, bao_tien_do, cho)]
+            return dong_tu_chu('\n'.join(ocr.doc_chu(file, bao_tien_do, cho)))
         except ocr.DaHuy:
             raise
         except ocr.LoiOCR as l:

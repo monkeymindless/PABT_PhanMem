@@ -972,9 +972,12 @@ def nut_lenh(a, co_icon: int = 18, duoi: bool = False, mau: str | None = None) -
 
 
 def do_bong(w: QWidget, mo: int = 18, lech: int = 3, dam: int = 38) -> QWidget:
-    """Bóng đổ nhẹ dưới khung (chỉ Qt6: Qt5 trên màn hình phóng to làm mờ chữ trong khung)."""
+    """Bóng đổ nhẹ dưới khung - TẮT mặc định (máy yếu, 16/10/2026: QGraphicsDropShadowEffect làm mờ Gaussian bằng CPU mỗi lần
+    vẽ lại khung - cuộn / rê chuột trên máy cũ bị giật; khung đã có viền QSS). Bật bằng biến môi trường PABT_HIEU_UNG_BONG=1 (chỉ Qt6:
+    Qt5 trên màn hình phóng to làm mờ chữ trong khung)."""
+    import os
     import pabt
-    if not getattr(pabt, 'QT5', False):
+    if os.environ.get('PABT_HIEU_UNG_BONG') == '1' and not getattr(pabt, 'QT5', False):
         from PySide6.QtWidgets import QGraphicsDropShadowEffect
         e = QGraphicsDropShadowEffect(w)
         e.setBlurRadius(mo)
@@ -2494,22 +2497,34 @@ class _BoToMau(QObject):
                 nho_kich_thuoc(obj)
             return False
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow():
-            to_mau(obj)
-            for bang in obj.findChildren(QAbstractItemView):    # dòng bảng dữ liệu 32 px (đặc tả mục 3.3)
-                vh = getattr(bang, 'verticalHeader', None)
-                if vh is not None and vh().defaultSectionSize() < CAO_DONG_BANG:
-                    vh().setDefaultSectionSize(CAO_DONG_BANG)
-            gian_cach(obj)
-            if TY_LE[0] != 1:
-                for w in [obj, *obj.findChildren(QWidget)]:
-                    _co_gian_widget(w, TY_LE[0])
-            from PySide6.QtWidgets import QDialog, QLineEdit, QMessageBox
-            for o in obj.findChildren(QLineEdit):        # chữ dài: hiện từ đầu chữ thay vì phần cuối
-                if not o.hasFocus() and o.text():
-                    o.setCursorPosition(0)
+            if obj.property('_da_to_mau'):              # hiện lại cửa sổ đã xử lý: chỉ nút mới (máy yếu - không duyệt lại cả cây)
+                to_mau(obj)
+                return False
+            ap_kieu_cay(obj)
+            obj.setProperty('_da_to_mau', True)
+            from PySide6.QtWidgets import QDialog, QMessageBox
             if isinstance(obj, QDialog) and not isinstance(obj, QMessageBox):
                 vua_man_hinh(obj)
         return False
+
+
+def ap_kieu_cay(obj: QWidget) -> None:
+    """Kiểu áp khi cửa sổ hiện lần đầu (_BoToMau) cho cả cây widget obj: màu + biểu tượng nút theo chữ, dòng bảng 32 px, khoảng
+    cách hàng ngang, co giãn theo tỷ lệ giao diện, ô chữ hiện từ đầu. Gọi thêm cho khung TẠO SAU khi cửa sổ đã hiện (trang cửa sổ chính
+    tạo khi mở lần đầu - 16/10/2026)."""
+    to_mau(obj)
+    for bang in obj.findChildren(QAbstractItemView):    # dòng bảng dữ liệu 32 px (đặc tả mục 3.3)
+        vh = getattr(bang, 'verticalHeader', None)
+        if vh is not None and vh().defaultSectionSize() < CAO_DONG_BANG:
+            vh().setDefaultSectionSize(CAO_DONG_BANG)
+    gian_cach(obj)
+    if TY_LE[0] != 1:
+        for w in [obj, *obj.findChildren(QWidget)]:
+            _co_gian_widget(w, TY_LE[0])
+    from PySide6.QtWidgets import QLineEdit
+    for o in obj.findChildren(QLineEdit):                # chữ dài: hiện từ đầu chữ thay vì phần cuối
+        if not o.hasFocus() and o.text():
+            o.setCursorPosition(0)
 
 
 _BAO_LOI = {'dang': False, 'luc': 0.0}

@@ -21,14 +21,8 @@ from .nghiep_vu import muc_5_cot
 from .tien import D, KHONG, chuoi, doc_so_vn, vn
 
 # ---------------------------------------------------------------- trạng thái xử lý
-TRANG_THAI = [            # (khóa lọc, nhãn)
-    ('chua_pa', 'Chưa lập phương án'), ('co_pa', 'Đã lập phương án'),
-    ('chua_dot', 'Chưa xếp đợt trình'), ('co_dot', 'Đã xếp đợt trình'),
-    ('chua_pd', 'Chưa phê duyệt'), ('da_pd', 'Đã phê duyệt'),
-    ('chua_ct', 'Đã phê duyệt, chưa chi trả'), ('da_ct', 'Đã chi trả'),
-    ('chua_bg', 'Đã chi trả, chưa bàn giao'), ('da_bg', 'Đã bàn giao mặt bằng'),
-    ('co_ghi_chu', 'Có ghi chú theo dõi'),
-]
+# danh sách trạng thái lọc nằm ở thong_bao (cửa sổ chính dùng lúc mở phần mềm - không nạp quan_ly, 16/10/2026)
+from .thong_bao import TRANG_THAI  # noqa: E402,F401
 TRUONG_TT = ('da_phe_duyet', 'qd_so', 'qd_ngay', 'qd_so_tien', 'qd_file', 'da_chi_tra', 'chi_tra_ngay', 'chi_tra_so_tien',
              'da_ban_giao', 'ban_giao_ngay', 'theo_doi', 'ly_do_ban_giao', 'bien_ban_ban_giao')
 

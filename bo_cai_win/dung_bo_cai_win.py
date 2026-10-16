@@ -129,17 +129,23 @@ def _ds_chuong_trinh(ban: str) -> list:
     return ct
 
 
-def _chep_phang(goi: Path, ct: list, tien_to: str) -> tuple:
-    """Chép phẳng các file vào thư mục gói (IExpress không giữ thư mục): ([tên phẳng], [dòng danh sách exe], [dòng danh sách zip])."""
+def _chep_phang(goi: Path, ct: list, tien_to: str, da_co: dict | None = None) -> tuple:
+    """Chép phẳng các file vào thư mục gói (IExpress không giữ thư mục): ([tên phẳng], [dòng danh sách exe], [dòng danh sách zip]).
+    da_co {(SHA-256, tên): tên phẳng} (bộ cài phổ quát): file giống hệt của bản kia - Tesseract OCR đóng kèm cả x64 lẫn x86 - dùng
+    lại tên phẳng đã chép, không chép lần hai (cai_dat.ps1 chỉ CHÉP từ gói theo danh sách, không di chuyển)."""
     phang, ds_exe, ds_zip = [], [], []
     for i, (ten, f) in enumerate(ct, start=1):
-        p = f'{tien_to}{i:03d}_{f.name}'            # tên duy nhất, giữ tên gốc cho dễ đọc nhật ký
-        shutil.copy2(f, goi / p)
         co, bam = f.stat().st_size, hashlib.sha256(f.read_bytes()).hexdigest()
         dich = ten.replace('/', '\\')
+        p = None if da_co is None else da_co.get((bam, dich))
+        if p is None:
+            p = f'{tien_to}{i:03d}_{f.name}'        # tên duy nhất, giữ tên gốc cho dễ đọc nhật ký
+            shutil.copy2(f, goi / p)
+            phang.append(p)
+            if da_co is not None and dich.lower().startswith('tesseract\\'):
+                da_co[(bam, dich)] = p
         ds_exe.append(f'{p}\t{dich}\t{co}\t{bam}')
         ds_zip.append(f'{dich}\t{dich}\t{co}\t{bam}')
-        phang.append(p)
     return phang, ds_exe, ds_zip
 
 
@@ -240,10 +246,10 @@ def dong_goi_pho_quat(pb: str) -> Path:
     Cài như hai bộ cài riêng (cùng cai_dat.ps1): mặc định Program Files (x86), không có quyền quản trị thì thư mục người dùng."""
     goi = _goi_moi('universal')
     file = []
-    n, cay, ds_zip = {}, {}, {}
+    n, cay, ds_zip, da_co = {}, {}, {}, {}
     for ban, tien_to, ten_ds in (('win10', 'a', 'danh_sach_x64.txt'), ('win7', 'b', 'danh_sach_x86.txt')):
         ct = _ds_chuong_trinh(ban)
-        phang, ds_exe, dz = _chep_phang(goi, ct, tien_to)
+        phang, ds_exe, dz = _chep_phang(goi, ct, tien_to, da_co)
         _ghi_ds(goi / ten_ds, ds_exe)
         file += [ten_ds] + phang
         n[ban], cay[ban] = len(ct), ct

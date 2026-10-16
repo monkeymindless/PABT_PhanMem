@@ -167,33 +167,39 @@ class TestNguonGoc(CoSo):
               'chủ sở hữu tài sản trên một phần thửa đất do Khu Bảo tồn Thử quản lý.\n'
               '- Bưu điện Văn hóa Thử đang sử dụng đất, là chủ sở hữu tài sản: Phòng giao dịch, mái che, cửa cổng.')
         ws = self.in_ho(ng)
-        chu = next(x for _, x, _ in self.dong_nguon_goc(ws) if x)
-        dong = chu.split('\n')
-        # 0.9.88 (người dùng 15/10/2026): căn đều hai bên như văn bản Word - mỗi đoạn MỘT dòng trong ô (Excel tự ngắt và căn đều),
-        # không còn xuống dòng cứng + thụt lề treo ở dòng tràn (dòng kết thúc bằng xuống dòng cứng Excel không căn đều)
-        self.assertEqual(len(dong), 3, dong)
-        self.assertTrue(dong[0].startswith('Căn cứ'))
-        self.assertTrue(dong[1].startswith('- ') and dong[2].startswith('- '))
-        self.assertFalse(any(d.startswith(' ') for d in dong))
-        self.assertEqual(' '.join(chu.split()), ' '.join(ng.split()))       # không mất chữ
-        o = next(o for row in ws.iter_rows() for o in row if isinstance(o.value, str) and 'Căn cứ các Giấy' in o.value)
-        self.assertEqual(o.alignment.horizontal, 'justify')
+        ds = [(r, x) for r, x, _ in self.dong_nguon_goc(ws) if x]
+        # 0.9.88 (người dùng 15/10/2026): căn đều hai bên như văn bản Word - không xuống dòng cứng + thụt lề treo ở dòng tràn.
+        # 16/10/2026: chia mịn - mỗi dòng Excel <= CAO_DOAN_TOI_DA (cắt ở chỗ hết câu), các đoạn vẫn xuống dòng cứng giữa đoạn
+        doan = [d for _, x in ds for d in x.split('\n')]
+        self.assertTrue(doan[0].startswith('Căn cứ'))
+        self.assertEqual(sum(d.startswith('- ') for d in doan), 2, doan)
+        self.assertFalse(any(d.startswith(' ') for d in doan))
+        self.assertEqual(' '.join(' '.join(x for _, x in ds).split()), ' '.join(ng.split()))     # không mất chữ
+        for r, _ in ds:
+            self.assertEqual(ws.cell(r, 1).alignment.horizontal, 'justify')
+            self.assertLessEqual(ws.row_dimensions[r].height, in_an.CAO_DOAN_TOI_DA + in_an.DEM_DOAN_CUOI)
         # 16/10/2026 (người dùng): mỗi đoạn thụt đầu dòng bằng NBSP (Excel căn đều không giãn chỗ này)
-        self.assertTrue(all(x.startswith(in_an.NBSP) and not x.startswith(in_an.NBSP + ' ') for x in o.value.split('\n')))
+        tho = [d for r, _ in ds for d in str(ws.cell(r, 1).value).split('\n')]
+        self.assertEqual(sum(d.startswith(in_an.NBSP) for d in tho), 3)
+        self.assertFalse(any(d.startswith(in_an.NBSP + ' ') for d in tho))
 
     def test_nguon_goc_dai_hien_du(self):
         ws = self.in_ho(NGUON_GOC)
         ds = self.dong_nguon_goc(ws)
         chu = [x for _, x, _ in ds if x]
-        self.assertEqual(len(chu), 1)
-        self.assertEqual(' '.join(chu[0].split()), ' '.join(NGUON_GOC.split()))     # không mất chữ
-        r, _, cao = next(x for x in ds if x[1])
-        so_dong = len(in_an.ngat_dong(NGUON_GOC, in_an._rong_vung(ws, 1, 8)))
-        self.assertGreaterEqual(so_dong, 4)
-        self.assertGreaterEqual(cao, in_an.cao_dong_chu(so_dong, 14))              # đủ cao cho mọi dòng chữ
-        m = _vung(ws, r, 1)
-        self.assertEqual((m.min_row, m.max_row, m.min_col, m.max_col), (r, r, 1, 8))  # gộp ngang 1 dòng (Excel ngắt dòng)
-        self.assertTrue(ws.cell(r, 1).alignment.wrap_text)
+        # 16/10/2026: chia mịn <= CAO_DOAN_TOI_DA (90 pt) mỗi dòng Excel - lấp sát đáy trang 1, không đẩy cả khối sang trang 2
+        self.assertGreater(len(chu), 1)
+        self.assertEqual(' '.join(' '.join(chu).split()), ' '.join(NGUON_GOC.split()))     # không mất chữ
+        rong = in_an._rong_vung(ws, 1, 8)
+        co_chu = [x for x in ds if x[1]]
+        for i, (r, x, cao) in enumerate(co_chu):
+            so_dong = len(in_an.ngat_dong(x, rong))
+            self.assertGreaterEqual(cao, in_an.cao_dong_chu(so_dong, 14))          # đủ cao cho mọi dòng chữ
+            self.assertLessEqual(cao, in_an.CAO_DOAN_TOI_DA + in_an.DEM_DOAN_CUOI)
+            m = _vung(ws, r, 1)
+            self.assertEqual((m.min_row, m.max_row, m.min_col, m.max_col), (r, r, 1, 8))  # gộp ngang 1 dòng (Excel ngắt dòng)
+            self.assertTrue(ws.cell(r, 1).alignment.wrap_text)
+        self.assertEqual([r for r, _, _ in co_chu], list(range(co_chu[0][0], co_chu[-1][0] + 1)))     # liền nhau, không khe
         self.assertTrue(all(h <= 6 for _, x, h in ds if not x))                     # dòng thừa của vùng gộp cũ: khoảng cách nhỏ
 
     def test_nguon_goc_ngan_va_nhieu_thua(self):

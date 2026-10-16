@@ -11,7 +11,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
                                QFileDialog, QFormLayout, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
-                               QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSpinBox,
+                               QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSizePolicy, QSpinBox,
                                QHeaderView, QSplitter, QStyledItemDelegate, QTableWidget, QTableWidgetItem, QTabWidget,
                                QVBoxLayout, QWidget)
 
@@ -842,16 +842,42 @@ class BangMuc(QWidget):
             ds = [self.bang.currentRow()]
         return ds
 
+    # vẽ lười (máy yếu - 16/10/2026): mở / chuyển hộ chỉ vẽ bảng của thẻ đang xem; thẻ khác vẽ khi hiện ra hoặc khi mã / kiểm thử
+    # đọc tới bảng (property bang) - dữ liệu luôn đúng khi được dùng
+    _can_ve = False
+
+    @property
+    def bang(self):
+        if self._can_ve:
+            self._can_ve = False
+            self.ve()
+        return self._bang
+
+    @bang.setter
+    def bang(self, v):
+        self._bang = v
+
+    def ve_sau(self) -> None:
+        """Đánh dấu cần vẽ lại; vẽ khi thẻ hiện ra / bảng được đọc tới."""
+        self._can_ve = True
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if self._can_ve:
+            self.bang                                   # noqa: B018 - property: vẽ phần còn chờ
+
     def ve(self, chon: int | None = None):
+        self._can_ve = False
         bo = self.man.bo
         n = len(bo.ds(self.muc))
+        cu = self._dang_ve                              # vẽ lười có thể chạy giữa _ve_dong: giữ cờ của nơi gọi
         self._dang_ve = True
         try:
             self.bang.setRowCount(n)
             for r in range(n):
                 self._ve_dong(r)
         finally:
-            self._dang_ve = False
+            self._dang_ve = cu
         self.vua_dong()
         if chon is not None and 0 <= chon < n:
             self.bang.setCurrentCell(chon, 1)
@@ -867,6 +893,8 @@ class BangMuc(QWidget):
 
     def _vua_neu_doi_rong(self):
         """Đổi cỡ / hiện lại thẻ: chỉ đo lại khi bề rộng cột thật sự đổi (quay lại thẻ 300 dòng không tốn ~60 ms mỗi lần)."""
+        if self._can_ve:                                # thẻ chưa vẽ (đang ẩn): đo khi vẽ
+            return
         if self._rong_cot() != self._rong_da_do:
             self.vua_dong()
 
@@ -930,8 +958,9 @@ class BangMuc(QWidget):
 
 
 # ---------------------------------------------------------------- màn hình lập phương án hộ
-TB_QUET_HO_SO = 'Tiện ích đang trong quá trình hoàn thiện'
-RONG_O_HO = (300, 560)      # ô chọn hộ của cửa sổ lập phương án (px): đủ tên hộ / tổ chức thường gặp
+# ô chọn hộ của cửa sổ lập phương án (px): rộng tới 560 cho đủ tên hộ / tổ chức; hẹp được tới 160 để hàng nút trên cùng luôn MỘT hàng
+# (16/10/2026, người dùng: bỏ nút SCAN, mọi nút lên một dòng) - màn hình 1366 ở 125% còn ~1.090 điểm
+RONG_O_HO = (160, 560)
 CLIP_TOI_DA = 200_000        # clipboard dài hơn (cả một tài liệu) không tự điền vào hộp Dán danh sách: phân loại sẽ đơ
 QSS_NUT_DAN_TS = ('QPushButton#btn_dan_ts { background: #0284C7; color: #FFFFFF; font-weight: 700; border: none; '
                   'border-radius: 6px; padding: 0 14px; }'
@@ -967,8 +996,11 @@ class CuaSoLapPA(QDialog):
         # (ô sửa được trước đây cuộn về cuối: "ất do UBND xã…"), tên đầy đủ ở chú thích
         self.cb_ho.setMinimumWidth(RONG_O_HO[0])
         self.cb_ho.setMaximumWidth(RONG_O_HO[1])
-        self.cb_ho.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)    # rộng theo tên dài nhất, <= RONG_O_HO[1]
-        self.cb_ho.setMinimumContentsLength(24)
+        # không AdjustToContents (tối thiểu = tên dài nhất, hàng nút không còn MỘT hàng trên màn hình 1366): co tới RONG_O_HO[0],
+        # giãn nhận chỗ thừa tới RONG_O_HO[1]; tên đầy đủ ở chú thích
+        self.cb_ho.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.cb_ho.setMinimumContentsLength(12)
+        self.cb_ho.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.cb_ho.setEditable(True)
         self.cb_ho.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.cb_ho.currentIndexChanged.connect(lambda *_: self._hien_ten_ho())
@@ -997,10 +1029,6 @@ class CuaSoLapPA(QDialog):
         if ic is not None:
             self.b_dan.setIcon(ic)
         self.b_dan.clicked.connect(lambda: self.mo_dan_tai_san())
-        # 0.9.96 (người dùng): nút giữ chỗ - quét hồ sơ trong cửa sổ lập phương án hộ đang hoàn thiện, bấm chỉ báo
-        self.b_ocr = QPushButton('SCAN')
-        self.b_ocr.setToolTip(TB_QUET_HO_SO)
-        self.b_ocr.clicked.connect(lambda: self.quet_giay_to())
         self.b_luu = QPushButton('Lưu (Ctrl+S)')
         self.b_luu.clicked.connect(lambda: self.luu())
         self.b_bo = QPushButton('Bỏ thay đổi')
@@ -1023,33 +1051,25 @@ class CuaSoLapPA(QDialog):
         self.btn_toggle_preview.clicked.connect(lambda: self.bat_tat_xem_truoc())
         self.b_dong = QPushButton('Đóng')
         self.b_dong.clicked.connect(lambda: self.close())
-        # 0.9.84: hàng trên cùng = 3 khối trong XepDong (hẹp thì khối sau xuống dòng) - một hàng cứng cần ~1.600 điểm (đo Windows
-        # 125%), cửa sổ không thu nhỏ được dưới mức đó, rộng hơn màn hình 1366; nay tối thiểu = khối rộng nhất
-        from .giao_dien import XepDong
+        # 16/10/2026 (người dùng): bỏ nút SCAN, mọi nút MỘT hàng trên cùng: Hộ [ô chọn hộ] ◀ ▶ | Dán tài sản ... Lưu, Bỏ thay đổi |
+        # Xem trước, In / Xuất, Đóng. Ô chọn hộ giãn / co (200 - 560 px) nhận phần chỗ thừa / thiếu thay cho xuống dòng
         self.thanh_tren = QWidget()
-        h1 = XepDong(self.thanh_tren, 4)
+        h1 = QHBoxLayout(self.thanh_tren)
         h1.setContentsMargins(0, 0, 0, 0)
-        for b in (self.b_truoc, self.b_sau, self.b_ocr, self.b_luu, self.b_bo, self.b_in, self.b_dong):
+        h1.setSpacing(6)
+        for b in (self.b_truoc, self.b_sau, self.b_luu, self.b_bo, self.b_in, self.b_dong):
             b.setFixedHeight(CAO_NUT_TREN)
         nhan = QLabel('Hộ:')
         nhan.setProperty('vai', 'nhan')
-        # 0.9.95: 4 khối nhỏ (chọn hộ | nhập liệu | lưu | xem / in / đóng) - đủ rộng (>= ~1.300 điểm) thì MỘT hàng 27 px với ô chọn hộ,
-        # hẹp (màn hình 1366 ở 125%) thì xuống 2 hàng thay vì 3
-        for nhom, gian in (((nhan, self.cb_ho, self.b_truoc, self.b_sau), None),
-                           ((self.b_dan, self.b_ocr), 'dau'),
-                           ((self.b_luu, self.b_bo), 'dau'),
-                           ((self.btn_toggle_preview, self.b_in, self.b_dong), 'dau')):
-            khoi = QWidget()
-            hk = QHBoxLayout(khoi)
-            hk.setContentsMargins(0, 0, 0, 0)
-            hk.setSpacing(6)
-            if gian:
-                hk.addStretch(1)                    # nút dồn về phải trong khối (chỗ thừa khi một hàng)
-            for w in nhom:
-                hk.addWidget(w, 1 if w is self.cb_ho else 0)
-            if not gian:
-                hk.addStretch(0)                    # khối chọn hộ: phần thừa ra sau nút ▶ (nhãn "Hộ:" không giãn)
-            h1.addWidget(khoi)
+        for w in (nhan, self.cb_ho, self.b_truoc, self.b_sau, self.b_dan):
+            h1.addWidget(w, 1 if w is self.cb_ho else 0)
+        h1.addSpacing(10)
+        h1.addStretch(0)
+        for w in (self.b_luu, self.b_bo):
+            h1.addWidget(w)
+        h1.addSpacing(10)
+        for w in (self.btn_toggle_preview, self.b_in, self.b_dong):
+            h1.addWidget(w)
         # ---- thông tin hộ dùng cho chính sách hỗ trợ
         from .giao_dien import OSoChuaNhap
         self.o_nk = OSoChuaNhap('chưa nhập')
@@ -1093,8 +1113,8 @@ class CuaSoLapPA(QDialog):
         from .giao_dien import kieu_trang_thai
         self.o_cb.setStyleSheet(kieu_trang_thai('canh_bao', 'QPlainTextEdit', dam=False))   # màu "cần xem lại" dùng chung
         self.o_cb.setVisible(False)
-        # QSplitter ngang: trái = các thẻ soạn + tổng / cảnh báo; phải = KhungXemTruocTaiLieu, MẶC ĐỊNH ẨN (F4 / nút bật)
-        from .xem_truoc_tai_lieu import KhungXemTruocTaiLieu, in_qua_excel
+        # QSplitter ngang: trái = các thẻ soạn + tổng / cảnh báo; phải = KhungXemTruocTaiLieu, MẶC ĐỊNH ẨN (F4 / nút bật). Khung xem
+        # trước TẠO KHI BẬT LẦN ĐẦU (máy yếu - 16/10/2026: mở cửa sổ lập phương án không dựng khung PDF ~70 ms) - xem w_preview
         trai = QWidget()
         lo_trai = QVBoxLayout(trai)
         lo_trai.setContentsMargins(0, 0, 0, 0)
@@ -1103,15 +1123,11 @@ class CuaSoLapPA(QDialog):
         lo_trai.addWidget(self.lb_tb)
         lo_trai.addLayout(self.hang_dieu_huong())       # dải tổng cộng + ◀ Trở lại / Tiếp theo ▶ một hàng (0.9.95)
         lo_trai.addWidget(self.o_cb)
-        self.w_preview = KhungXemTruocTaiLieu(self, ham_in=lambda pdf, xlsx: in_qua_excel(self, pdf, xlsx))
-        self.w_preview.setMinimumWidth(520)
-        self.w_preview.setVisible(False)
+        self._w_preview = None
         self.tach = QSplitter(Qt.Orientation.Horizontal)
         self.tach.addWidget(trai)
-        self.tach.addWidget(self.w_preview)
         self.tach.setChildrenCollapsible(False)
         self.tach.setStretchFactor(0, 3)
-        self.tach.setStretchFactor(1, 2)
         self._hen_xem = QTimer(self)                # sửa số liệu khi khung đang hiện: lập lại sau khi ngừng sửa (Excel mất vài giây)
         self._hen_xem.setSingleShot(True)
         self._hen_xem.timeout.connect(lambda: self.lam_moi_xem_truoc())
@@ -1210,8 +1226,12 @@ class CuaSoLapPA(QDialog):
             cb.lineEdit().setCursorPosition(0)
             if self.ho_so.ma_ho != self.bo.ma_ho:
                 self.ho_so.nap(self.bo.ma_ho)
-            for m in THE_MUC[1:]:
-                self.bang[m].ve()
+            for m in THE_MUC[1:]:                       # chỉ vẽ ngay thẻ đang xem; thẻ khác vẽ khi chuyển sang (BangMuc.ve_sau)
+                bm = self.bang[m]
+                if bm.isVisible():
+                    bm.ve()
+                else:
+                    bm.ve_sau()
             self.bang[1].nap_danh_sach()
         finally:
             self._dang_nap = False
@@ -1252,7 +1272,7 @@ class CuaSoLapPA(QDialog):
         self.b_luu.setEnabled(thay or self.ho_so.co_thay_doi() or chua_lap)
         self.b_bo.setEnabled(thay)
         self.setWindowTitle(f'{"* " if thay else ""}Hồ sơ, phương án – hộ {h.ma_ho}: {h.ho_ten}  ·  {h.trang_thai}')
-        if getattr(self, 'w_preview', None) is not None and self.w_preview.isVisible() and not self._dang_nap:
+        if getattr(self, '_w_preview', None) is not None and self._w_preview.isVisible() and not self._dang_nap:
             self._hen_xem.start(CHO_XEM_SAU_SUA_MS)     # phương án đổi: bản xem trước lập lại khi ngừng sửa
 
     def thong_bao(self, tb: str):
@@ -1459,12 +1479,6 @@ class CuaSoLapPA(QDialog):
         clip = (clip or '').strip()
         co_bang = len(clip) > 5 and ('\n' in clip or '\t' in clip) and len(clip) <= CLIP_TOI_DA
         return self.dan_tai_san(clip if co_bang else '', cho=cho)
-
-    def quet_giay_to(self, cho: bool = True) -> str:
-        """Nút "Quét hồ sơ" (0.9.96): tiện ích đang hoàn thiện - chỉ báo, không đọc / ghi gì. Trả chữ thông báo."""
-        if cho and not getattr(self, 'im_lang', False):
-            QMessageBox.information(self, TEN_UD, TB_QUET_HO_SO)
-        return TB_QUET_HO_SO
 
     def dan_tai_san(self, chu: str = '', cho: bool = True):
         """Hộp "Dán danh sách tài sản" (man_hinh_phan_loai): tự xếp từng dòng vào mục nhà / cây / vật nuôi / hỗ trợ."""
@@ -1852,9 +1866,28 @@ class CuaSoLapPA(QDialog):
         self.lam_moi_xem_truoc()
 
     # ---------------------------------------------- xem trước A4 (khung bên phải, F4)
+    @property
+    def w_preview(self):
+        """Khung xem trước A4 - tạo lần đầu được hỏi tới (bật F4 / nút Xem trước), ẩn sẵn."""
+        if self._w_preview is None:
+            from .xem_truoc_tai_lieu import KhungXemTruocTaiLieu, in_qua_excel
+            w = KhungXemTruocTaiLieu(self, ham_in=lambda pdf, xlsx: in_qua_excel(self, pdf, xlsx))
+            w.setMinimumWidth(520)
+            w.setVisible(False)
+            self.tach.addWidget(w)
+            self.tach.setStretchFactor(1, 2)
+            self._w_preview = w
+        return self._w_preview
+
+    def _dang_xem_truoc(self) -> bool:
+        return self._w_preview is not None and self._w_preview.isVisible()
+
     def bat_tat_xem_truoc(self, hien: bool | None = None) -> bool:
         """Hiện / ẩn khung xem trước; hiện thì lập ngay bản in của hộ đang mở. Trả trạng thái mới."""
-        hien = not self.w_preview.isVisible() if hien is None else bool(hien)
+        hien = not self._dang_xem_truoc() if hien is None else bool(hien)
+        if not hien and self._w_preview is None:
+            self.btn_toggle_preview.setChecked(False)
+            return False
         self.w_preview.setVisible(hien)
         self.btn_toggle_preview.setChecked(hien)
         if hien:
@@ -1879,7 +1912,7 @@ class CuaSoLapPA(QDialog):
     def lam_moi_xem_truoc(self, ngay: bool = False) -> None:
         """Bản in A4 (mẫu IN_CHITIET) của hộ đang mở theo phương án ĐANG SOẠN trong bộ nhớ (chưa lưu cũng hiện); thông tin hộ,
         nguồn gốc theo hồ sơ đã lưu."""
-        if not self.w_preview.isVisible():
+        if not self._dang_xem_truoc():
             return
         self._hen_xem.stop()
         from . import in_an
@@ -1932,14 +1965,16 @@ class CuaSoLapPA(QDialog):
 
     def closeEvent(self, e):
         if self.hoi_luu():
-            self.w_preview.don_dep()
+            if self._w_preview is not None:
+                self._w_preview.don_dep()
             e.accept()
             super().closeEvent(e)
         else:
             e.ignore()
 
     def done(self, r):
-        self.w_preview.don_dep()                    # xóa file xem trước tạm
+        if self._w_preview is not None:
+            self._w_preview.don_dep()                   # xóa file xem trước tạm
         super().done(r)
 
 

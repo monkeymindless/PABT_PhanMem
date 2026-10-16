@@ -316,7 +316,7 @@ class HopQuetGiayTo(QDialog):
         tach.setStretchFactor(0, 3)
         tach.setStretchFactor(1, 2)
         tach.setSizes([720, 560])
-        self.lb = QLabel('Nhận dạng chữ trên máy (Windows OCR / Tesseract - không gửi giấy tờ ra ngoài). Chữ viết tay đọc không được / '
+        self.lb = QLabel('Nhận dạng chữ trên máy (Tesseract OCR - không gửi giấy tờ ra ngoài). Chữ viết tay đọc không được / '
                          'sai nhiều: soát lại trước khi điền.')
         self.lb.setWordWrap(True)
         self.b_ho = QPushButton('Thêm dòng đất')

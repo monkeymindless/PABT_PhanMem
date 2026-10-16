@@ -60,3 +60,14 @@ def chu_loi(viec: str, e: BaseException) -> str:
     if ky_thuat.split(': ', 1)[-1] != ly_do:              # lỗi nghiệp vụ đã rõ: không lặp lại câu ở dòng kỹ thuật
         phan += ['', f'Chi tiết kỹ thuật: {ky_thuat}']
     return '\n'.join(phan)
+
+
+# bộ lọc trạng thái hộ (quan_ly.hop_trang_thai) - ở đây để cửa sổ chính không nạp quan_ly lúc mở phần mềm
+TRANG_THAI = [            # (khóa lọc, nhãn)
+    ('chua_pa', 'Chưa lập phương án'), ('co_pa', 'Đã lập phương án'),
+    ('chua_dot', 'Chưa xếp đợt trình'), ('co_dot', 'Đã xếp đợt trình'),
+    ('chua_pd', 'Chưa phê duyệt'), ('da_pd', 'Đã phê duyệt'),
+    ('chua_ct', 'Đã phê duyệt, chưa chi trả'), ('da_ct', 'Đã chi trả'),
+    ('chua_bg', 'Đã chi trả, chưa bàn giao'), ('da_bg', 'Đã bàn giao mặt bằng'),
+    ('co_ghi_chu', 'Có ghi chú theo dõi'),
+]

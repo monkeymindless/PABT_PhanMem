@@ -170,26 +170,33 @@ class TestManHinhTrangThai(TestDocQDMotHo):
 @unittest.skipIf(ocr.san_sang(), 'máy không có Tesseract OCR tiếng Việt')
 class TestOCRThat(unittest.TestCase):
     def test_anh_scan(self):
-        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-        from PySide6.QtCore import Qt
-        from PySide6.QtGui import QColor, QFont, QImage, QPainter
-        from PySide6.QtWidgets import QApplication
-        app = QApplication.instance() or QApplication([])  # noqa: F841
-        im = QImage(2000, 700, QImage.Format.Format_RGB32)
-        im.fill(QColor('white'))
-        p = QPainter(im)
-        f = QFont('Times New Roman')
-        f.setPixelSize(40)
-        p.setFont(f)
-        p.setPen(Qt.GlobalColor.black)
-        for i, x in enumerate(['Số: 25/QĐ-UBND        Xã Mẫu, ngày 03 tháng 10 năm 2026',
-                               'Về việc phê duyệt phương án bồi thường (01 trường hợp)',
-                               '1.10. Tổng cộng giá trị bồi thường, hỗ trợ là: 1.234.000 đồng.']):
-            p.drawText(60, 120 + i * 120, x)
-        p.end()
+        # ảnh vẽ bằng phông Windows trong tiến trình riêng: Qt offscreen không có phông (chỉ ra ô vuông - trước 16/10/2026 bài này
+        # chỉ "đạt" vì máy kiểm thử chưa có Tesseract nên bị bỏ qua)
+        import subprocess
+        import sys
+        ve = '\n'.join((
+            'import sys',
+            'import pabt  # noqa: F401',
+            'from PySide6.QtCore import Qt',
+            'from PySide6.QtGui import QColor, QFont, QGuiApplication, QImage, QPainter',
+            'a = QGuiApplication([])',
+            'im = QImage(2000, 700, QImage.Format.Format_RGB32)',
+            "im.fill(QColor('white'))",
+            'p = QPainter(im)',
+            "f = QFont('Times New Roman')",
+            'f.setPixelSize(40)',
+            'p.setFont(f)',
+            'p.setPen(Qt.GlobalColor.black)',
+            "for i, x in enumerate(['Số: 25/QĐ-UBND        Xã Mẫu, ngày 03 tháng 10 năm 2026',",
+            "                       'Về việc phê duyệt phương án bồi thường (01 trường hợp)',",
+            "                       '1.10. Tổng cộng giá trị bồi thường, hỗ trợ là: 1.234.000 đồng.']):",
+            '    p.drawText(60, 120 + i * 120, x)',
+            'p.end()',
+            'im.save(sys.argv[1])'))
         with tempfile.TemporaryDirectory() as td:
             a = Path(td) / 'qd.png'
-            im.save(str(a))
+            subprocess.run([sys.executable, '-c', ve, str(a)], env=dict(os.environ, QT_QPA_PLATFORM='windows'), check=True,
+                           timeout=120, cwd=str(Path(__file__).resolve().parents[1]))
             dong = ocr.doc_chu(a)
         toan = '\n'.join(dong)
         self.assertEqual(quan_ly.so_ngay_qd(toan), ('25/QĐ-UBND', '03/10/2026'))

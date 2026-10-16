@@ -350,11 +350,13 @@ def kiem_tra_moi_truong(thu_muc_may=None) -> list:
          '' if co else 'Xem trước A4 dùng bộ dựng PDF dự phòng (bản gần đúng); in / xuất PDF chính thức cần Excel.')
     try:
         from . import ocr
-        t = ocr.tim_tesseract()
-    except Exception:                                   # noqa: BLE001
-        t = None
-    them('tesseract', 'Đọc văn bản scan (Tesseract OCR)', 'dat' if t else 'canh_bao',
-         f'Có: {t}' if t else 'Chưa cài Tesseract', '' if t else 'Chỉ cần khi đọc quyết định / giấy tờ là bản scan, ảnh chụp.')
+        t, ly_do = ocr.tim_tesseract(), ocr.san_sang()
+    except Exception as e:                              # noqa: BLE001
+        t, ly_do = None, str(e)
+    them('tesseract', 'Đọc văn bản scan (Tesseract OCR đóng kèm)', 'canh_bao' if ly_do else 'dat',
+         ly_do if ly_do else f'Có: {t}',
+         'Cài lại phần mềm bằng bộ cài mới (thư mục tesseract cạnh PABT.exe; phần mềm diệt virus không chặn). Chỉ cần khi đọc '
+         'quyết định / bảng giá / giấy tờ là bản scan, ảnh chụp.' if ly_do else '')
     try:
         import ssl
         n = len(ssl.create_default_context().get_ca_certs())

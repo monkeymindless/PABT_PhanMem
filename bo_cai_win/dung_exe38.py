@@ -48,9 +48,9 @@ def main() -> int:
             '--distpath', str(TAM / 'dist'), '--workpath', str(TAM / 'build'), '--specpath', str(TAM),
             '--icon', str(TAM / 'pabt' / 'bieu_tuong.ico'), '--log-level', 'WARN',
             # Qt6 không có trong môi trường này; mã nhận PySide2 qua bí danh (pabt._qt5_lam_qt6)
-            '--exclude-module', 'PySide6', '--exclude-module', 'tkinter', *LOAI_TRU_WEB,
-            # ezdxf 1.1 (nhập bản vẽ CAD .dxf, 0.9.87): module con + dữ liệu
-            '--collect-submodules', 'ezdxf', '--collect-data', 'ezdxf']
+            '--exclude-module', 'PySide6', *LOAI_TRU_WEB,
+            # máy yếu (16/10/2026): bản vẽ CAD đọc bằng pabt.dxf_thuan - không đóng ezdxf / numpy / thư viện chỉ dùng lúc phát triển
+            *[x for m in ['numpy', 'scipy', 'matplotlib', 'PIL', 'tkinter', 'unittest', 'pydoc', 'doctest', 'ezdxf', 'fontTools'] for x in ('--exclude-module', m)]]
     for f in DU_LIEU:
         lenh += ['--add-data', f'{TAM / f};pabt']
     # HUONG_DAN.md: Trợ giúp -> Hướng dẫn sử dụng (F1) đọc trong _internal (0.9.23)

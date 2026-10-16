@@ -102,9 +102,13 @@ class TestBangChiTiet(CoSo):
         self.assertGreater(len(ds), 1)
         self.assertTrue(all(h <= in_an.CAO_DOAN_TOI_DA for _, _, h in ds))
         self.assertEqual(' '.join(' '.join(x for _, x, _ in ds).split()), ' '.join(dai.split()))   # không mất chữ
+        toi_da = int((in_an.CAO_DOAN_TOI_DA - in_an.DEM_DONG) // in_an.dong_chu_bang(14))
+        rong = in_an._rong_vung(ws, 1, 8)
         for (r, x, _), (_, sau, _) in zip(ds, ds[1:]):
-            # tách ở chỗ hết câu, hoặc hết đoạn (chuan_nguon_goc đưa " - " thành đoạn "- " mới)
-            self.assertTrue(x.rstrip().endswith(('.', ';', ':')) or sau.startswith('- '), (x[-40:], sau[:20]))
+            # 16/10/2026: tách ở ranh giới dòng đã ngắt - hết đoạn (chuan_nguon_goc đưa " - " thành đoạn "- " mới), dòng kết thúc
+            # bằng dấu hết câu, hoặc đủ khối toi_da dòng (không xuống dòng sớm giữa đoạn)
+            self.assertTrue(x.rstrip().endswith(('.', ';', ':')) or sau.startswith('- ')
+                            or len(in_an.ngat_dong(x, rong)) == toi_da, (x[-40:], sau[:20]))
         for r, _, _ in ds:
             m = _vung(ws, r, 1)
             self.assertEqual((m.min_row, m.max_row, m.min_col, m.max_col), (r, r, 1, 8))    # dòng mới gộp cùng dải cột
@@ -155,17 +159,28 @@ class TestBangTongHop(CoSo):
         f = in_an.lap_bang_tong_hop(self.con, self.td / 'bth3.xlsx', ds_ma_ho=[1])
         ws = openpyxl.load_workbook(f).active
         r0 = in_an.DONG_DAU_BTH
-        m = _vung(ws, r0, 23)
-        self.assertIsNotNone(m)
-        cao = [ws.row_dimensions[r].height for r in range(m.min_row, m.max_row + 1)]
-        self.assertTrue(all(h <= in_an.CAO_TOI_DA for h in cao), cao)
+        tong = next(r for r in range(r0, ws.max_row + 1) if ws.cell(r, 1).value == 'TỔNG CỘNG')
+        # 16/10/2026: hộ cao hơn một trang được tách ở ranh trang - mỗi phần là một vùng gộp riêng, chữ nguồn gốc chia theo phần,
+        # mỗi phần đủ cao cho chữ của nó
         px = in_an._px_cot(ws, 26)
-        ten_p, co, dam = in_an._phong(ws.cell(r0, 23))
-        so = in_an.so_dong_o(ws.cell(r0, 23).value, px[22] * 0.75 - 6, ten_p, co, dam)
-        self.assertGreaterEqual(sum(cao), in_an.cao_dong_bang(so, co, None) - 0.01)
-        self.assertEqual(_vung(ws, r0, 2).max_row, m.max_row)                 # họ tên, địa chỉ gộp cùng các dòng thêm
-        self.assertEqual(ws.cell(m.max_row + 1, 1).value, 'TỔNG CỘNG')
-        self.assertIn(f'{m.max_row}', str(ws.cell(m.max_row + 1, 22).value))    # công thức tổng tính tới dòng thêm cuối
+        r, phan = r0, []
+        while r < tong:
+            m = _vung(ws, r, 23)
+            r2 = m.max_row if m else r
+            phan.append((r, r2))
+            r = r2 + 1
+        chu = ' '.join(str(ws.cell(a, 23).value or '') for a, _ in phan)
+        self.assertEqual(' '.join(chu.split()), ' '.join(dai.split()))           # không mất chữ
+        for a, b in phan:
+            cao = [ws.row_dimensions[x].height for x in range(a, b + 1)]
+            self.assertTrue(all(h <= in_an.CAO_TOI_DA for h in cao), cao)
+            ten_p, co, dam = in_an._phong(ws.cell(a, 23))
+            so = in_an.so_dong_o(ws.cell(a, 23).value, px[22] * 0.75 - 6, ten_p, co, dam)
+            self.assertGreaterEqual(sum(cao), in_an.cao_dong_bang(so, co, None) - 0.01)
+            self.assertEqual(ws.cell(a, 2).value, ws.cell(r0, 2).value)             # họ tên lặp ở mỗi phần
+        self.assertIn(f'{tong - 1}', str(ws.cell(tong, 22).value))                 # công thức tổng tính tới dòng thêm cuối
+        ngat = {b.id for b in ws.row_breaks.brk}
+        self.assertTrue(all(b in ngat for _, b in phan[:-1]))                     # ranh các phần = ngắt trang
 
 
 if __name__ == '__main__':

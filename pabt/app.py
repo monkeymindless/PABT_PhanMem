@@ -185,14 +185,19 @@ def _doc_tong_nho() -> dict:
         return {}
 
 
-def ghi_tong_nho(p, so_ho: int, tong) -> None:
+def ghi_tong_nho(p, so_ho: int, tong, chu_tim: str | None = None, hien: str | None = None) -> None:
     """Nhớ tổng kinh phí CHUẨN (cùng cách tính danh sách hộ: mọi mục kể cả thưởng, làm tròn như dự án) của file dự án theo thời
-    điểm sửa + cỡ file - màn hình chào hiện đúng số mà không tính lại cả dự án (0.9.95). Lỗi ghi: bỏ qua."""
+    điểm sửa + cỡ file - màn hình chào hiện đúng số mà không tính lại cả dự án (0.9.95). 16/10/2026 (máy yếu): nhớ cả chữ tìm và tên
+    hiển thị - file không đổi thì màn hình chào KHÔNG mở file dự án nào (ổ mạng / Google Drive / HDD chậm). Lỗi ghi: bỏ qua."""
     import json
     try:
         st = Path(p).stat()
         d = _doc_tong_nho()
-        d[str(Path(p).resolve()).lower()] = [st.st_mtime_ns, st.st_size, int(so_ho), str(tong)]
+        k = str(Path(p).resolve()).lower()
+        cu = d.get(k)
+        if chu_tim is None and isinstance(cu, list) and len(cu) >= 6 and cu[:2] == [st.st_mtime_ns, st.st_size]:
+            chu_tim, hien = cu[4], cu[5]                # dự án đang mở ghi lại tổng: giữ tên đã nhớ
+        d[k] = [st.st_mtime_ns, st.st_size, int(so_ho), str(tong)] + ([chu_tim, hien] if chu_tim is not None else [])
         if len(d) > 60:                                 # chỉ giữ các file gần đây
             for k in list(d)[:len(d) - 60]:
                 d.pop(k, None)
@@ -209,6 +214,14 @@ def _tom_tat_pabt(p) -> tuple:
     bàn giao mặt bằng, không làm tròn, lệch số danh sách hộ). Tính một lần mỗi khi file đổi (ghi_tong_nho), lần sau đọc nhớ.
     Tên hiển thị: "<tên dự án> · <địa bàn> (<tên file>)" khi có tên dự án."""
     p = Path(p)
+    try:                                                # file không đổi từ lần đọc trước: lấy ngay, không mở SQLite
+        st = p.stat()
+        nho = _doc_tong_nho().get(str(p.resolve()).lower())
+        if isinstance(nho, list) and len(nho) >= 6 and nho[0] == st.st_mtime_ns and nho[1] == st.st_size:
+            tong = D(nho[3])
+            return int(nho[2]), (vn(tong) if tong else None), str(nho[4]), str(nho[5])
+    except (OSError, ValueError, TypeError, ArithmeticError):
+        pass
     try:
         con = csdl.mo(str(p), chi_doc=True)
         try:
@@ -233,9 +246,10 @@ def _tom_tat_pabt(p) -> tuple:
             if tong is None and n:
                 try:
                     tong = sum((k.tong for k in nghiep_vu.tinh_tat_ca(con)), D('0'))
-                    ghi_tong_nho(p, n, tong)
                 except Exception:                       # file cũ / hỏng: không hiện tổng, vẫn liệt kê
                     tong = None
+            if tong is not None or not n:
+                ghi_tong_nho(p, n, tong if tong is not None else D('0'), chu_tim, hien)
             return n, (vn(tong) if tong else None), chu_tim, hien
         finally:
             con.close()
@@ -516,7 +530,7 @@ class CuaSoChinh(QMainWindow):
         self.cb_dot.currentIndexChanged.connect(lambda *_: self._loc(dot=self.cb_dot.currentData()))
         self.cb_tt = QComboBox()
         self.cb_tt.addItem('Tất cả trạng thái', '')
-        from .quan_ly import TRANG_THAI
+        from .thong_bao import TRANG_THAI
         for k, t in TRANG_THAI:
             self.cb_tt.addItem(t, k)
         self.cb_tt.currentIndexChanged.connect(lambda *_: self._loc(trang_thai=self.cb_tt.currentData()))
@@ -539,24 +553,17 @@ class CuaSoChinh(QMainWindow):
         phim_xoa.setContext(Qt.ShortcutContext.WidgetShortcut)                            # (không áp khi đang sửa ô ghi chú)
         phim_xoa.activated.connect(lambda: self.lenh['Xóa hộ…'].isEnabled() and self._chay_lenh(self.xoa_ho))
         self._vua_tieu_de()
-        # trang bên phải: danh sách hộ / bảng tổng hợp (3 mục) / theo dõi tiến độ - chọn ở menu trái
-        from .man_hinh_bao_cao import KhungBaoCaoTienDo
-        from .man_hinh_theo_doi import KhungBangTongHop, KhungQuyetDinh, KhungTienDo
-        self.bang_tong_hop = KhungBangTongHop(None, self)
-        self.tien_do = KhungTienDo(None, self)
-        self.quyet_dinh = KhungQuyetDinh(None, self)             # Nhóm 6: màn hình DUY NHẤT quản lý quyết định phê duyệt
-        self.bao_cao = KhungBaoCaoTienDo(None, self)             # Nhóm 6: bảng điều hành tiến độ GPMB
-        # trang bên phải có khung riêng, theo chỉ số trong self.trang (QStackedWidget)
-        self.khung_trang = {STACK_TONG_HOP: self.bang_tong_hop, STACK_THEO_DOI: self.tien_do, STACK_QUYET_DINH: self.quyet_dinh,
-                            STACK_BAO_CAO: self.bao_cao}
-        for k in self.khung_trang.values():
-            k.da_doi.connect(lambda: self.tai_lai(giu_trang=True))
-            k.mo_ho.connect(lambda m: self.trang_thai_ho([m]))
-        self.bang_tong_hop.di_den_phe_duyet.connect(lambda: self.mo_trang(TRANG_QUYET_DINH))
-        self.bang_tong_hop.doi_soat.nguon_dang_mo = self._khai_toan_dang_mo
-        self.bao_cao.mo_theo_doi.connect(lambda: self.mo_trang(TRANG_THEO_DOI))
-        self.bao_cao.xuat_tong_hop.connect(lambda: self.bao_cao_tong_hop(ds=[d['ma_ho'] for d in self.mo_hinh.dong],
-                                                                           dieu_kien='Toàn bộ các hộ của dự án'))
+        # trang bên phải: danh sách hộ / bảng tổng hợp (3 mục) / theo dõi tiến độ - chọn ở menu trái. Bảng tổng hợp, theo dõi tiến độ,
+        # quyết định, báo cáo tiến độ TẠO KHI MỞ LẦN ĐẦU (máy yếu - 16/10/2026: mở phần mềm không dựng ~200 thành phần và nạp ~10
+        # module chưa dùng); chỗ của chúng trong self.trang là khung trống giữ chỉ số (_dam_bao_trang). self.khung_trang chỉ chứa
+        # trang đã tạo; self.bang_tong_hop / tien_do / quyet_dinh / bao_cao (property) tạo khi được hỏi tới
+        self.khung_trang = {}
+        self._cho_trang = {}
+        for i in (STACK_TONG_HOP, STACK_THEO_DOI, STACK_QUYET_DINH, STACK_BAO_CAO):
+            cho = QWidget()
+            lo_cho = QVBoxLayout(cho)
+            lo_cho.setContentsMargins(0, 0, 0, 0)
+            self._cho_trang[i] = cho
         hang = self._thanh_cong_cu_ds()                  # Thêm hộ, Lập phương án, Xóa hộ (theo ngữ cảnh) | bộ lọc
         nen = QWidget()
         vo = QVBoxLayout(nen)
@@ -660,7 +667,8 @@ class CuaSoChinh(QMainWindow):
         self.trang_dt = QWidget()                        # trang Dự toán & khái toán (KhungDuToan tạo khi mở lần đầu)
         lo_dt = QVBoxLayout(self.trang_dt)
         lo_dt.setContentsMargins(0, 0, 0, 0)
-        for w in (trang_ds, self.bang_tong_hop, self.tien_do, self.trang_dt, self._trang_chao(), self.quyet_dinh, self.bao_cao):
+        for w in (trang_ds, self._cho_trang[STACK_TONG_HOP], self._cho_trang[STACK_THEO_DOI], self.trang_dt, self._trang_chao(),
+                  self._cho_trang[STACK_QUYET_DINH], self._cho_trang[STACK_BAO_CAO]):
             self.trang.addWidget(w)
         self.ngan_lv = QStackedWidget()
         self.trang.currentChanged.connect(lambda *_: self._cap_nhat_hien_hang_the())
@@ -1099,7 +1107,7 @@ class CuaSoChinh(QMainWindow):
         hien = self.trang.currentIndex()
         for i, k in self.khung_trang.items():                    # trang đang xem vừa tự nạp (_da_ghi): không nạp lại, trừ Danh sách hộ
             if giu_trang and i == hien:
-                if k is self.bang_tong_hop:                      # thẻ khác của bảng tổng hợp nạp khi chuyển sang
+                if i == STACK_TONG_HOP:                          # thẻ khác của bảng tổng hợp nạp khi chuyển sang
                     k._can_nap = {0, 1, 2} - {k.tab.currentIndex()}
                 continue
             k.nap()
@@ -1161,8 +1169,8 @@ class CuaSoChinh(QMainWindow):
     def _khung_dang_xem(self):
         """Trang bên phải đang xem có bảng hộ riêng (thẻ Bảng tổng hợp, Quyết định, Tiến độ, Báo cáo tiến độ); None = danh sách hộ."""
         i = self.trang.currentIndex() if hasattr(self, 'trang') else 0
-        if i == STACK_TONG_HOP:
-            return self.bang_tong_hop.tab.currentWidget()
+        if i == STACK_TONG_HOP and STACK_TONG_HOP in getattr(self, 'khung_trang', {}):
+            return self.khung_trang[STACK_TONG_HOP].tab.currentWidget()
         return getattr(self, 'khung_trang', {}).get(i)
 
     def ho_da_chon(self) -> list:
@@ -1967,9 +1975,9 @@ class CuaSoChinh(QMainWindow):
         elif self.con is None:
             self.trang.setCurrentIndex(TRANG_CHAO)
         else:
+            k = self._dam_bao_trang(STACK_CUA_TRANG[i])         # trang nặng: tạo khi mở lần đầu
             self.trang.setCurrentIndex(STACK_CUA_TRANG[i])
-            k = self.khung_trang.get(STACK_CUA_TRANG[i])
-            if k is self.bang_tong_hop:
+            if STACK_CUA_TRANG[i] == STACK_TONG_HOP:
                 k.mo_the(k.tab.currentIndex())          # nạp thẻ đang xem (giữ thẻ người dùng chọn lần trước)
             elif k is not None and hasattr(k, '_can_nap') and k._can_nap:
                 k.nap()
@@ -2110,11 +2118,63 @@ class CuaSoChinh(QMainWindow):
             self.ngan_lv.setCurrentWidget(self.trang)
         return True
 
+    # ---- trang bên phải tạo khi mở lần đầu
+    def _dam_bao_trang(self, i: int):
+        """Khung của trang ở ô i trong self.trang (STACK_TONG_HOP / THEO_DOI / QUYET_DINH / BAO_CAO): tạo, nối tín hiệu, gắn dự án
+        đang mở ở lần hỏi đầu. Ô khác (danh sách hộ, dự toán, màn hình chào): None."""
+        k = self.khung_trang.get(i)
+        if k is not None or i not in self._cho_trang:
+            return k
+        from .man_hinh_theo_doi import KhungBangTongHop, KhungQuyetDinh, KhungTienDo
+        if i == STACK_BAO_CAO:
+            from .man_hinh_bao_cao import KhungBaoCaoTienDo
+            k = KhungBaoCaoTienDo(None, self)               # Nhóm 6: bảng điều hành tiến độ GPMB
+            k.mo_theo_doi.connect(lambda: self.mo_trang(TRANG_THEO_DOI))
+            k.xuat_tong_hop.connect(lambda: self.bao_cao_tong_hop(ds=[d['ma_ho'] for d in self.mo_hinh.dong],
+                                                                    dieu_kien='Toàn bộ các hộ của dự án'))
+        elif i == STACK_TONG_HOP:
+            k = KhungBangTongHop(None, self)
+            k.di_den_phe_duyet.connect(lambda: self.mo_trang(TRANG_QUYET_DINH))
+            k.doi_soat.nguon_dang_mo = self._khai_toan_dang_mo
+        elif i == STACK_THEO_DOI:
+            k = KhungTienDo(None, self)
+        else:
+            k = KhungQuyetDinh(None, self)                  # Nhóm 6: màn hình DUY NHẤT quản lý quyết định phê duyệt
+        k.da_doi.connect(lambda: self.tai_lai(giu_trang=True))
+        k.mo_ho.connect(lambda m: self.trang_thai_ho([m]))
+        self._cho_trang[i].layout().addWidget(k)
+        self.khung_trang[i] = k
+        if self.isVisible():                            # cửa sổ đã hiện (kiểu đã áp lúc hiện): áp cho khung mới tạo
+            from .giao_dien import ap_kieu_cay
+            ap_kieu_cay(k)
+        if self.con is not None:
+            k.dat_du_an(self.con, self.chi_doc)
+        return k
+
+    @property
+    def bang_tong_hop(self):
+        return self._dam_bao_trang(STACK_TONG_HOP)
+
+    @property
+    def tien_do(self):
+        return self._dam_bao_trang(STACK_THEO_DOI)
+
+    @property
+    def quyet_dinh(self):
+        return self._dam_bao_trang(STACK_QUYET_DINH)
+
+    @property
+    def bao_cao(self):
+        return self._dam_bao_trang(STACK_BAO_CAO)
+
     def _dam_bao_du_toan(self):
         if self.khung_du_toan is None:
             from .man_hinh_du_toan import KhungDuToan
             self.khung_du_toan = KhungDuToan(self.trang_dt, self.con, self.file if self.con is not None else None)
             self.trang_dt.layout().addWidget(self.khung_du_toan)
+            if self.isVisible():                        # tạo sau khi cửa sổ đã hiện: áp kiểu như lúc hiện
+                from .giao_dien import ap_kieu_cay
+                ap_kieu_cay(self.khung_du_toan)
 
     def ho_dang_chon(self):
         k = self._khung_dang_xem()

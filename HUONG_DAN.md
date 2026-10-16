@@ -1,4 +1,10 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.98 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.99 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.99**: bản in **tự dàn trang** (lề chuẩn, vừa bề ngang, ngắt trang ở chỗ hợp lý; trang cuối tràn ít thì nén khít, hở
+> nhiều thì giãn cân đối; tổng cộng và chữ ký cùng trang). Lề trang chỉnh được trong hồ sơ địa phương (`ban_in.le_trang`). Bảng
+> tổng hợp dự thảo: "(DỰ THẢO)" thành dòng riêng dưới tiêu đề. Cửa sổ lập phương án bỏ nút SCAN, các nút một hàng. Mở phần
+> mềm / dự án nhanh hơn trên máy yếu; đọc bản vẽ .dxf không cần thư viện ngoài. **PDF ảnh / ảnh scan đọc bằng Tesseract OCR đóng kèm**
+> (thay nhận dạng chữ của Windows - không còn phải cài gói tiếng Việt). Sửa: phương án chi tiết có nguồn gốc đất dài in đậm nhầm dòng.
 
 > **0.9.98**: nút **In…** (Ctrl+P) trong khung xem trước: chọn máy in, số bản, trang cần in như Word / Excel. Bảng tổng hợp
 > ngắt trang giữa các hộ (không còn hộ vắt hai trang, mất đường kẻ), cột số đủ rộng (hết "#####"), bỏ chữ "(theo Quyết định số 08…)".
@@ -537,7 +543,9 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
   quyết định UBND được ghép tên như bộ đơn giá: "Cây bưởi - Năm thứ 1", "Cây lúa (Đông Xuân)". Bỏ chọn dòng không muốn, bấm
   **Áp dụng** → tạo phiên bản bộ đơn giá mới (bộ cũ giữ nguyên; số hiệu, ngày, trích yếu văn bản ghi vào danh mục văn bản căn cứ).
   File Word / Excel cũ (.doc / .xls, văn bản trên Công báo thường là .doc) tự chuyển nhờ Microsoft Word / Excel trên máy. PDF ảnh
-  scan: tự nhận dạng chữ nếu máy có Tesseract OCR (như đọc quyết định), không có thì chuyển sang Excel / Word trước.
+  scan / ảnh chụp: tự nhận dạng chữ bằng **Tesseract OCR đóng kèm phần mềm** (tiếng Việt, từ 0.9.99 - không cần cài gói ngôn ngữ
+  của Windows, không gửi file ra ngoài; ~1-2 giây / trang). Windows 32-bit không chạy được bộ nhận dạng: dán chữ hoặc chuyển sang
+  Excel / Word trước.
 - **Cập nhật từ trang web…** (phát hành riêng bằng **gói cập nhật** `PABT_CapNhat_0.9.14.pabtcn` trở lên, không có trong bộ cài
   gốc — máy chưa cài gói thì nút này hướng dẫn cài): nhập **đường dẫn** trang web (cổng thông tin, trang chi tiết văn bản, Google Drive / Sheets / Docs, thư
   mục Google Drive chia sẻ công khai) hoặc **từ khóa** (tìm trên Công báo thành phố Đồng Nai; có sẵn 3 nguồn gợi ý: đơn giá bồi
