@@ -118,8 +118,8 @@ class TestLapPhuongAn(Co0995):
         self.assertEqual(c.b_sau.text(), '▶')
         self.assertIn('Ctrl+Left', c.b_truoc.toolTip())
         self.assertIn('Ctrl+Right', c.b_sau.toolTip())
-        self.assertEqual(c.cb_ho.minimumWidth(), 190)
-        self.assertEqual(c.cb_ho.maximumWidth(), 270)
+        from pabt.man_hinh import RONG_O_HO                                  # 16/10/2026: ô rộng hơn, đủ tên hộ
+        self.assertEqual((c.cb_ho.minimumWidth(), c.cb_ho.maximumWidth()), RONG_O_HO)
         for b in (c.b_dan, c.b_ocr, c.b_luu, c.btn_toggle_preview, c.b_dong):
             self.assertEqual(b.height() or b.minimumHeight(), man_hinh.CAO_NUT_TREN)
         # một hàng điều hướng chung với dải tổng cộng, thẻ mục không còn hàng nút riêng

@@ -1323,6 +1323,10 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     phan_tich_phien_ban tìm cả .larcud / .pabtcn. Bản cài <= 0.9.96 chỉ lọc *.pabtcn trong hộp chọn: đổi đuôi gói thành .pabtcn để cài.
   - Bảng tổng hợp kinh phí: lề trong mỗi thẻ `man_hinh_theo_doi.LE_THE` 8 px; cột Nhóm khoản vừa chữ dài nhất (240-420 px).
   Test `tests/test_yeu_cau_1610.py`.
+- Hàng nút CuaSoLapPA (người dùng 16/10/2026, sau 0.9.97): BỎ nút "Gợi ý hỗ trợ…" (`b_goi_y`; hàm `goi_y` còn cho test), chữ nút
+  "Dán tài sản" (`b_dan`), "SCAN" (`b_ocr`), "Xem trước (F4)" (`btn_toggle_preview`); ô chọn hộ `RONG_O_HO` (300, 560) AdjustToContents,
+  `_hien_ten_ho` (chữ hiện từ đầu tên - ô sửa được mặc định cuộn về cuối; chú thích tên đầy đủ), khối chọn hộ có stretch cuối (nhãn
+  "Hộ:" không giãn). Một hàng cần ~1.430 điểm, hẹp hơn khối Xem trước / In / Đóng xuống hàng 2.
 - Đợt tổng kiểm toán 16/10/2026 (người dùng: "Hội đồng 5 chuyên gia", báo cáo `ket_qua_kiem_tra/KiemToan_2026-10-16.md`):
   - `kiem_toan_lenh.py` (gốc repo): kiểm kê QAction của `CuaSoChinh.lenh` (chỗ đặt: menu trái / thanh menu / nút / chuột phải - nguồn
     `_menu_ho`), nút không nối tín hiệu (receivers clicked/toggled/pressed = 0; nút có menu / defaultAction / nút nội bộ Qt bỏ qua;

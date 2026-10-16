@@ -184,6 +184,28 @@ class TestLeTheBangTongHop(_Co):
         k.deleteLater()
 
 
+class TestHangNutLapPhuongAn(_Co):
+    def test_chu_nut_va_ten_ho(self):
+        from pabt.man_hinh import CuaSoLapPA
+        con = csdl.mo(str(_du_an(self.td, 2)))
+        dai = 'Khu Bảo tồn Thiên nhiên - Văn hóa Đồng Nai, đất do UBND xã Phú Lý quản lý.'
+        with con:
+            con.execute('UPDATE ho SET ho_ten = ? WHERE ma_ho = 1', (dai,))
+        c = CuaSoLapPA(con, 1)
+        c.im_lang = True
+
+        def don():
+            c.bo_thay_doi()
+            c.close()
+            con.close()
+        self.addCleanup(don)
+        self.assertFalse(hasattr(c, 'b_goi_y'))                            # bỏ nút "Gợi ý hỗ trợ…"
+        self.assertEqual((c.b_dan.text(), c.b_ocr.text(), c.btn_toggle_preview.text()), ('Dán tài sản', 'SCAN', 'Xem trước (F4)'))
+        self.assertTrue(c.cb_ho.currentText().endswith(dai))
+        self.assertEqual(c.cb_ho.lineEdit().cursorPosition(), 0)            # chữ hiện từ đầu tên
+        self.assertEqual(c.cb_ho.toolTip(), c.cb_ho.currentText())
+
+
 class TestToiUuKiemToan(_Co):
     """Đợt kiểm toán 16/10/2026: tối ưu phải cho kết quả như cũ."""
 

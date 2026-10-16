@@ -229,7 +229,7 @@ class TestCuaSoLapPA(CoSoXem):
         w = CuaSoLapPA(self.con, 1)
         b = w.btn_toggle_preview
         self.assertEqual(b.objectName(), 'btn_toggle_preview')
-        self.assertEqual(b.text(), 'Xem trước A4 (F4)')
+        self.assertEqual(b.text(), 'Xem trước (F4)')
         self.assertIn('#0F3866', b.styleSheet())
         self.assertIn('#2563EB', b.styleSheet())
         self.assertIs(w.tach.widget(1), w.w_preview)
