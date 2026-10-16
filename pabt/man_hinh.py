@@ -600,7 +600,8 @@ class BangMuc(QWidget):
         self._hen_vua = QTimer(self)
         self._hen_vua.setSingleShot(True)
         self._hen_vua.setInterval(50)
-        self._hen_vua.timeout.connect(self.vua_dong)
+        self._hen_vua.timeout.connect(self._vua_neu_doi_rong)
+        self._rong_da_do = None
         self.bang.horizontalHeader().sectionResized.connect(lambda *a: self._hen_vua.start())
         # ô xổ có chữ dài (câu tái định cư, mô tả thửa): không bắt cửa sổ rộng theo chữ dài nhất
         for cb in self.findChildren(QComboBox):
@@ -859,6 +860,15 @@ class BangMuc(QWidget):
         """Chiều cao mọi dòng theo chữ thật trên bề rộng cột hiện tại (30-88 px)."""
         from .giao_dien import vua_dong
         vua_dong(self.bang)
+        self._rong_da_do = self._rong_cot()
+
+    def _rong_cot(self) -> tuple:
+        return tuple(self.bang.columnWidth(c) for c in range(self.bang.columnCount()))
+
+    def _vua_neu_doi_rong(self):
+        """Đổi cỡ / hiện lại thẻ: chỉ đo lại khi bề rộng cột thật sự đổi (quay lại thẻ 300 dòng không tốn ~60 ms mỗi lần)."""
+        if self._rong_cot() != self._rong_da_do:
+            self.vua_dong()
 
     def resizeEvent(self, e):
         super().resizeEvent(e)

@@ -118,13 +118,31 @@ def _doc(duong: str, mtime: int) -> tuple:
     return dong, str(data.get('van_ban') or ''), str(data.get('nguon') or '')
 
 
+NHO_GIAY = 2.0              # kiểm lại file hệ số K (stat 2 file) tối đa mỗi chừng này giây - tự lập phương án tra mỗi thửa một lần
+_NHO_DOC = {'t': -1e9, 'khoa': None, 'gt': None}
+
+
 def _da_doc() -> tuple:
+    """(dòng, văn bản, nguồn) của bảng đang dùng. Nhớ NHO_GIAY giây (trước: mỗi lần tra stat 2 file - Dự án mới 3.000 hộ / 4.500 thửa
+    tốn ~0,7 s); ghi / xóa bảng trong phần mềm đặt lại ngay; đổi thư mục máy (PABT_THU_MUC_MAY, kiểm thử) cũng đọc lại."""
+    import time
+    khoa = os.environ.get('PABT_THU_MUC_MAY', '')
+    bay_gio = time.monotonic()
+    if _NHO_DOC['khoa'] == khoa and bay_gio - _NHO_DOC['t'] < NHO_GIAY:
+        return _NHO_DOC['gt']
     p, _ = _nguon()
     try:
         m = p.stat().st_mtime_ns
     except OSError:
-        return (), '', ''
-    return _doc(str(p), m)
+        gt = ((), '', '')
+    else:
+        gt = _doc(str(p), m)
+    _NHO_DOC.update(t=bay_gio, khoa=khoa, gt=gt)
+    return gt
+
+
+def _quen() -> None:
+    _NHO_DOC['t'] = -1e9
 
 
 def tat_ca() -> list:
@@ -180,11 +198,13 @@ def ghi(dong: list, vb: str = '', nguon: str = '') -> Path:
     tam.write_text(json.dumps({'van_ban': vb or VAN_BAN, 'nguon': str(nguon or ''), 'dong': _gon(ds)}, ensure_ascii=False,
                               separators=(',', ':')).replace('},{', '},\n{'), encoding='utf-8')
     os.replace(tam, p)
+    _quen()
     return p
 
 
 def xoa() -> bool:
     p = file_he_so()
+    _quen()
     if not p.is_file():
         return False
     p.unlink()
@@ -333,11 +353,13 @@ class _ChiMuc:
 
     def __init__(self, ds):
         self.theo_tt, self.theo_vt, self.chung = {}, {}, []
+        self.vt_xa = {}                                 # {vị trí: [(xã, dòng)]} - nhánh "thửa thuộc xã khác" không duyệt hết bảng
         for r in ds:
             if r['tt'] != '':
                 x = _ten_xa(r['dia_ban'])
                 self.theo_tt.setdefault((x, r['tt']), []).append(r)
                 self.theo_vt.setdefault((x, r['vi_tri']), []).append(r)
+                self.vt_xa.setdefault(r['vi_tri'], []).append((x, r))
             else:
                 self.chung.append(r)
 
@@ -400,8 +422,7 @@ def tra(dia_ban: str = '', loai_dat: str = '', vi_tri: str = '', tuyen_duong: st
     if r is None and vt and cm.theo_vt:
         r = tot_nhat([d for d in cm.theo_vt.get((x, vt), ()) if _co_doan(d, td)], 32)
         if r is None:                                   # thửa thuộc xã khác của dự án (mô tả vị trí ghi đủ tên đường + đoạn)
-            r = tot_nhat([d for (xa, v), ds_vt in cm.theo_vt.items() if v == vt and xa != x for d in ds_vt
-                          if _co_doan(d, td)], 32)
+            r = tot_nhat([d for xa, d in cm.vt_xa.get(vt, ()) if xa != x and _co_doan(d, td)], 32)
     if r is None:
         tot, diem_tot = None, -1
         for d in cm.chung:

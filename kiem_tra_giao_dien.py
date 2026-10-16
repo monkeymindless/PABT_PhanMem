@@ -4,6 +4,9 @@ từng mục menu. Ghi lại: LỖI (ngoại lệ - kèm vết), CHẬM / ĐƠ (
 ngăn xếp rồi dừng), các thông báo lỗi phần mềm hiện ra.
 
   .venv\Scripts\python kiem_tra_giao_dien.py [--du-an <file .pabt - chạy trên BẢN SAO>] [--so-ho 12] [--chi "Đợt trình…"]
+        [--trang-thai du_an|chua_mo|trang|chi_doc|tat_ca]   (mặc định tat_ca: 4 trạng thái biên - dự án đủ số liệu, chưa mở dự án,
+        dự án trắng 0 hộ, dự án mở chỉ xem; mỗi lệnh xong còn thử trang nhúng đang hiện - lập phương án hộ, Niêm yết, Đơn giá - và
+        menu chuột phải bảng mục)
   Hoặc bấm đúp KIEM_TRA_GIAO_DIEN.bat. Kết quả: ket_qua_kiem_tra\GiaoDien_<phiên bản>_<ngày giờ>.md
 
 An toàn khi chạy: không in ra máy in, không mở Excel / Word, không mở file bằng chương trình khác, không gọi mạng,
@@ -288,6 +291,45 @@ def du_an_thu(td: Path, so_ho: int) -> Path:
     return p
 
 
+def du_an_trang(td: Path) -> Path:
+    """Dự án vừa tạo: 0 hộ, 0 đợt, 0 quyết định (bộ đơn giá tích hợp)."""
+    from pabt import csdl, don_gia, lap_pa
+    p = td / 'trang.pabt'
+    con = csdl.tao_moi(p)
+    try:
+        don_gia.ap_vao_du_an(con)
+        lap_pa.luu_du_an(con, dict(ten='Dự án trắng', cap_dia_ban='Xã', ten_dia_ban='Bàu Hàm'))
+    finally:
+        con.close()
+    return p
+
+
+TRANG_THAI = {'du_an': 'dự án đủ số liệu', 'chua_mo': 'chưa mở dự án', 'trang': 'dự án trắng (0 hộ)', 'chi_doc': 'dự án mở chỉ xem'}
+
+
+def thu_trang_nhung(kt: KiemTra, w) -> None:
+    """Trang nhúng đang hiện (cửa sổ lập phương án hộ, Niêm yết, Đơn giá…): thử điều khiển + menu chuột phải các bảng mục."""
+    if not hasattr(w, 'ngan_lv') or w.ngan_lv.currentWidget() is not w.khung_tab.stack_phu:
+        return
+    trang = w.khung_tab.stack_phu.currentWidget()
+    if trang is None:
+        return
+    ten = type(trang).__name__
+    kt.dem['trang_nhung'] += 1
+    kt.lam(f'Trang nhúng "{ten}"', lambda: kt.thu(trang, ten))
+    for bm in getattr(trang, 'bang', {}).values() if isinstance(getattr(trang, 'bang', None), dict) else []:
+        if hasattr(bm, 'menu_dong'):
+            def chay(bm=bm):
+                m = bm.menu_dong()
+                for a in [x for x in m.actions() if x.text() and x.isEnabled() and not x.isSeparator()]:
+                    kt.dem['menu'] += 1
+                    kt.lam(f'chuột phải mục {bm.muc} → "{a.text()}"', a.trigger)
+                m.deleteLater()
+            kt.lam(f'menu chuột phải bảng mục {bm.muc}', chay)
+    if hasattr(trang, 'bo_thay_doi'):
+        kt.lam('bỏ thay đổi trang nhúng', trang.bo_thay_doi)
+
+
 def main(argv) -> int:
     so_ho = int(argv[argv.index('--so-ho') + 1]) if '--so-ho' in argv else 12
     chi = argv[argv.index('--chi') + 1] if '--chi' in argv else ''
@@ -306,40 +348,56 @@ def main(argv) -> int:
     kt = KiemTra(td)
     sys.excepthook = kt.bat_loi
     chan_tac_dong(kt)
+    tt_chon = argv[argv.index('--trang-thai') + 1] if '--trang-thai' in argv else 'tat_ca'
+    ds_tt = list(TRANG_THAI) if tt_chon == 'tat_ca' else [tt_chon]
     mau = Path(du_an) if du_an else du_an_thu(td, so_ho)
+    mau_trang = du_an_trang(td) if 'trang' in ds_tt else None
     w = ud.CuaSoChinh(menu_trai=True)
     w.show()
     qa.processEvents()
     bat_dau = time.time()
 
-    def mo_ban_sao():
+    def mo_ban_sao(tt):
+        for k in [k for k in getattr(w, 'khung_tab', None).khoa if isinstance(k, tuple)] if hasattr(w, 'khung_tab') else []:
+            ww = w.khung_tab.widget.get(k)
+            if ww is not None and hasattr(ww, 'bo_thay_doi'):
+                ww.bo_thay_doi()                                    # không để hộp hỏi lưu chặn lần đóng dự án
         w.dong_du_an()
+        if tt == 'chua_mo':
+            return
         p = td / f'ban_sao_{kt.dem["ban_sao"]}.pabt'
         kt.dem['ban_sao'] += 1
-        shutil.copy2(mau, p)
-        w.mo(str(p), chi_doc=False)
+        shutil.copy2(mau_trang if tt == 'trang' else mau, p)
+        w.mo(str(p), chi_doc=tt == 'chi_doc')
         qa.processEvents()
     # "Thoát" (thanh menu Tệp tin, 0.9.23) đóng cửa sổ chính - các lệnh sau sẽ chạy trên cửa sổ đã đóng: bỏ qua
     lenh = [(t, a) for t, a in w.lenh.items() if (not chi or chi in t) and t not in ('Thoát', 'Đóng dự án', 'Xóa dự án…')]
-    for i, (ten, a) in enumerate(lenh, start=1):
-        print(f'[{i}/{len(lenh)}] {ten}', flush=True)
-        faulthandler.dump_traceback_later(TREO_GIAY, exit=True)       # treo thật: in vết ngăn xếp, dừng
-        kt.lam('mở bản sao dự án', mo_ban_sao)
-        kt.dem['lenh'] += 1
-        kt.lam(f'Lệnh "{ten}"', a.trigger)
-        from PySide6.QtCore import QEvent
-        qa.sendPostedEvents(None, QEvent.Type.DeferredDelete)          # như vòng sự kiện chính: xóa hộp đã đóng (deleteLater)
-        from PySide6.QtWidgets import QDialog
-        an = [h for h in w.findChildren(QDialog) if not h.isVisible()]
-        if len(an) > kt.dem['hop_an']:                                  # hộp đã đóng còn trong bộ nhớ sau lệnh (rò rỉ)
-            kt.dem['hop_an'] = len(an)
-            kt.dem_hop_an = f'{ten}: ' + ', '.join(sorted({type(h).__name__ for h in an}))
-        if ten in ud.TRANG:                                             # trang bên phải: thử các điều khiển của trang
-            kt.lam(f'Trang "{ten}"', lambda: kt.thu(w.trang.currentWidget()))
-        faulthandler.cancel_dump_traceback_later()
+    kt.dem_trang_thai = {}
+    for tt in ds_tt:
+        kt.duong.append(f'[{TRANG_THAI[tt]}]')
+        loi_truoc = len(kt.loi)
+        for i, (ten, a) in enumerate(lenh, start=1):
+            print(f'[{tt} {i}/{len(lenh)}] {ten}', flush=True)
+            faulthandler.dump_traceback_later(TREO_GIAY, exit=True)       # treo thật: in vết ngăn xếp, dừng
+            kt.lam('mở bản sao dự án', lambda tt=tt: mo_ban_sao(tt))
+            kt.dem['lenh'] += 1
+            kt.lam(f'Lệnh "{ten}"', a.trigger)
+            from PySide6.QtCore import QEvent
+            qa.sendPostedEvents(None, QEvent.Type.DeferredDelete)          # như vòng sự kiện chính: xóa hộp đã đóng (deleteLater)
+            from PySide6.QtWidgets import QDialog
+            an = [h for h in w.findChildren(QDialog) if not h.isVisible()]
+            if len(an) > kt.dem['hop_an']:                                  # hộp đã đóng còn trong bộ nhớ sau lệnh (rò rỉ)
+                kt.dem['hop_an'] = len(an)
+                kt.dem_hop_an = f'{ten}: ' + ', '.join(sorted({type(h).__name__ for h in an}))
+            if ten in ud.TRANG and w.con is not None:                       # trang bên phải: thử các điều khiển của trang
+                kt.lam(f'Trang "{ten}"', lambda: kt.thu(w.trang.currentWidget()))
+            thu_trang_nhung(kt, w)
+            faulthandler.cancel_dump_traceback_later()
+        kt.dem_trang_thai[TRANG_THAI[tt]] = len(kt.loi) - loi_truoc
+        kt.duong.pop()
     if not chi:
         print('[cửa sổ chính] ô tìm, bộ lọc, nút, menu chuột phải', flush=True)
-        kt.lam('mở bản sao dự án', mo_ban_sao)
+        kt.lam('mở bản sao dự án', lambda: mo_ban_sao('du_an'))
         w.mo_trang(0)
         kt.lam('Cửa sổ chính', lambda: kt.thu(w))
         if w.mo_hinh.rowCount():
@@ -362,10 +420,11 @@ def bao_cao(kt: KiemTra, phien_ban: str, phut: float, du_an: str) -> str:
     t = [f'# Kiểm tra giao diện PABT {phien_ban}', f'{datetime.now():%d/%m/%Y %H:%M} · {du_an} · {phut:.1f} phút', '',
          f'Đã thử: {d["lenh"]} lệnh cửa sổ chính, {d["hop"]} lần mở hộp thoại, {d["nut"]} lần bấm nút, {d["menu"]} mục menu, '
          f'{d["o_nhap"]} ô nhập (mỗi ô 4 giá trị), {d["o_bang"]} ô bảng (mỗi ô 3 giá trị), {d["muc_chon"]} mục chọn, '
-         f'{d["danh_dau"]} ô đánh dấu, {d["the"]} thẻ, {d["bang"]} bảng; {d["thong_bao"]} thông báo hiện ra. Hộp thoại đã đóng còn '
+         f'{d["danh_dau"]} ô đánh dấu, {d["the"]} thẻ, {d["bang"]} bảng, {d["trang_nhung"]} lần thử trang nhúng; {d["thong_bao"]} thông báo hiện ra. Hộp thoại đã đóng còn '
          f'nằm trong bộ nhớ ngay sau một lệnh: tối đa {d["hop_an"]} (0 = không rò rỉ'
          + (f'; {kt.dem_hop_an}' if d['hop_an'] else '') + ').', '',
-         f'## LỖI ({len(kt.loi)})', '']
+         'Lỗi theo trạng thái: ' + (', '.join(f'{k}: {v}' for k, v in getattr(kt, 'dem_trang_thai', {}).items()) or '-') + '.',
+         '', f'## LỖI ({len(kt.loi)})', '']
     if not kt.loi:
         t.append('Không có lỗi (ngoại lệ) nào.')
     for duong, vet in kt.loi:

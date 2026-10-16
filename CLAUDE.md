@@ -1323,6 +1323,26 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     phan_tich_phien_ban tìm cả .larcud / .pabtcn. Bản cài <= 0.9.96 chỉ lọc *.pabtcn trong hộp chọn: đổi đuôi gói thành .pabtcn để cài.
   - Bảng tổng hợp kinh phí: lề trong mỗi thẻ `man_hinh_theo_doi.LE_THE` 8 px; cột Nhóm khoản vừa chữ dài nhất (240-420 px).
   Test `tests/test_yeu_cau_1610.py`.
+- Đợt tổng kiểm toán 16/10/2026 (người dùng: "Hội đồng 5 chuyên gia", báo cáo `ket_qua_kiem_tra/KiemToan_2026-10-16.md`):
+  - `kiem_toan_lenh.py` (gốc repo): kiểm kê QAction của `CuaSoChinh.lenh` (chỗ đặt: menu trái / thanh menu / nút / chuột phải - nguồn
+    `_menu_ho`), nút không nối tín hiệu (receivers clicked/toggled/pressed = 0; nút có menu / defaultAction / nút nội bộ Qt bỏ qua;
+    lớp con đặt thuộc tính `menu` trùng tên -> gọi `QPushButton.menu(b)`), widget con của cửa sổ chính ngoài bố cục mà vẫn hiện (che vùng
+    bấm), phím tắt trùng ngữ cảnh cửa sổ (đếm MỘT lần - cửa sổ chính chứa sẵn trang nhúng; chỉ phím đang bật), bật / tắt LENH_CAN_DU_AN
+    theo 4 trạng thái -> `ket_qua_kiem_tra/KiemToanLenh_*.md`, mã thoát 1 khi còn vấn đề. Kết quả: 0 / 0 / 0 / 0.
+  - `kiem_tra_giao_dien.py --trang-thai du_an|chua_mo|trang|chi_doc|tat_ca` (mặc định tat_ca): mọi lệnh ở 4 trạng thái biên (dự án trắng
+    = `du_an_trang`), sau mỗi lệnh thử trang nhúng đang hiện (`thu_trang_nhung`: CuaSoLapPA / KhungDuThao / Đơn giá + menu chuột phải
+    từng `BangMuc.menu_dong`), báo cáo lỗi theo trạng thái. 0 lỗi, 0 chậm, 0 hộp rò rỉ.
+  - Tốc độ: `he_so_k._da_doc` nhớ NHO_GIAY 2 s (khóa PABT_THU_MUC_MAY; `ghi` / `xoa` gọi `_quen`) + `_ChiMuc.vt_xa` (trước: mỗi thửa
+    stat 2 file + duyệt cả bảng ở nhánh xã khác); `BoSoan(con, ma, dm, bc)` - `du_an_moi.tu_lap_phuong_an` dùng MỘT BoiCanh cho cả loạt;
+    `theo_doi.tong_hop(ds_ma_ho)` lọc `IN (?…)` trong SQL khi <= `LOC_SQL_TOI_DA` 400 hộ ([] -> []), dài hơn đọc cả bảng như cũ - lưu 1
+    hộ + tải lại 5.000 hộ 118-134 -> 59-77 ms; `giao_dien.cao_can_dong(nho=)` dùng chung QFontMetrics / bề rộng cột một lượt, ô ngắn
+    (len x maxWidth <= cột) khỏi đo; `BangMuc._vua_neu_doi_rong` chỉ đo lại khi bề rộng cột đổi (vua_dong 300 dòng 75 -> 47 ms);
+    `in_an.can_khoi_ky` một lượt `_o_chu` + vùng gộp chỉ các dòng quanh khối chữ ký (22 -> 3 ms / hộ; trước đó `ws.cell` mọi cột x 12 dòng
+    còn tạo ô rỗng thừa). Đã đo, KHÔNG làm: xóa hộ tải lại toàn bộ (số hộ đổi - DauVetHo trả None; 5.000 hộ ~2 s, thao tác hiếm), ghi xlsx
+    của openpyxl (bảng tổng hợp 5.000 hộ ~9 s - giới hạn thư viện), mở dự án 5.000 hộ 1,2 s (đối chiếu + dựng bảng).
+  - Còn ẩn / chờ quyết định: nút "Quét hồ sơ…" (TB_QUET_HO_SO), `man_hinh_quet_web.HopQuetWeb` (không còn đường mở từ 0.9.73, chỉ test),
+    `CuaSoChinh.quy_chuan` (lệnh bỏ 0.9.47, giữ cho test), `bang_tieu_de` / `KhungLamViecDaTab` (ẩn, trong suốt chuột - còn dùng làm
+    nơi giữ dữ liệu).
 - Khối chữ ký bản in (người dùng 16/10/2026, ảnh PDF "Đinh Công Thiện" lệch dưới "KIỂM TRA"): `in_an.can_khoi_ky(ws)` gọi TRƯỚC
   `_thay_cho_trong` ở `lap_chi_tiet` / `lap_bang_tong_hop` - ô `{nguoi_lap}` / `{nguoi_kiem_tra}` / `{nguoi_ky}` tìm chức danh gần nhất
   phía trên phủ cột giữa, bỏ dấu cách thừa của chức danh (mẫu IN_CHITIET ghi "   KIỂM TRA     " - Excel căn giữa tính cả dấu cách),

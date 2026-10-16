@@ -11,7 +11,7 @@ from .ho_so import chuan_loai_dat
 from .loai_dat import chuan_ma_loai_dat
 from .nhap_excel import chuan_cccd
 from .lap_pa import BoSoan, DanhMuc, LoiNhap, bo_dau, doc_so
-from .nghiep_vu import MUC_KHOAN, so_vi_tri, tinh_tat_ca
+from .nghiep_vu import MUC_KHOAN, BoiCanh, so_vi_tri, tinh_tat_ca
 from .tien import KHONG, chuoi, so_vn
 
 COT_THO = [('ho_ten', 'Họ và tên'), ('dia_chi', 'Địa chỉ'), ('so_cccd', 'Số CCCD'), ('ngay_cap', 'Ngày cấp'),
@@ -233,10 +233,11 @@ def tu_lap_phuong_an(con, ds_ma_ho: list | None = None) -> list:
     """Mỗi hộ: mục 1 = từng thửa (DT, loại đất, vị trí, giá theo bảng giá đất), mục 4 = áp dụng gợi ý hỗ trợ; lưu.
     Hộ đã có phương án thì bỏ qua. Trả danh sách cảnh báo."""
     dm = DanhMuc(con)
+    bc = BoiCanh.tu(con)                               # một bối cảnh cho cả loạt: lưu phương án không đổi thửa / danh mục
     cb = []
     ds = ds_ma_ho or [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho')]
     for ma in ds:
-        bo = BoSoan(con, ma, dm)
+        bo = BoSoan(con, ma, dm, bc)
         if bo.pa.dat or any(bo.pa.khoan[m] for m in MUC_KHOAN):
             continue
         ten = f'Hộ {ma} {bo.pa.ho.ho_ten}'

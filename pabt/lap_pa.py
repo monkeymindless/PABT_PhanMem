@@ -299,14 +299,17 @@ def _dang_luu(pa: PhuongAn):
 
 
 class BoSoan:
-    def __init__(self, con, ma_ho: int, danh_muc: DanhMuc | None = None):
+    def __init__(self, con, ma_ho: int, danh_muc: DanhMuc | None = None, bc: BoiCanh | None = None):
         self.con = con
         self.dm = danh_muc or DanhMuc(con)
+        # bc: bối cảnh dùng chung cả loạt hộ (tự lập phương án Dự án mới - lưu phương án không đổi thửa / danh mục nên bối cảnh còn
+        # đúng); không truyền: lấy theo csdl.nho (mỗi lần mở 1 truy vấn PRAGMA data_version - 3.000 hộ ~0,25 s)
+        self._bc_chung = bc
         self.mo(ma_ho)
 
     # ---------------------------------------------- mở / trạng thái
     def mo(self, ma_ho: int):
-        self.bc = BoiCanh.tu(self.con)
+        self.bc = self._bc_chung if self._bc_chung is not None else BoiCanh.tu(self.con)
         self.pa = doc_phuong_an(self.con, ma_ho)
         self._pa_goc = copy.deepcopy(self.pa)           # bản lúc mở: so thay đổi, tổng cũ khi lưu (không đọc lại CSDL)
         self._goc = _dang_luu(self._pa_goc)

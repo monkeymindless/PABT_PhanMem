@@ -704,10 +704,21 @@ def can_khoi_ky(ws, tim_tren: int = 12) -> int:
     căn giữa tính cả dấu cách nên chữ lệch khỏi họ tên), ô họ tên gộp ĐÚNG các cột của ô chức danh, cả hai căn giữa không thụt lề.
     Mẫu người dùng tự sửa lệch cột cũng được căn lại. Trả số ô họ tên đã căn."""
     from copy import copy
-    o_ten = [c for c in _o_chu(ws) if c.value.strip() in CHO_NGUOI_KY]
+    chu_dong = {}                                       # {dòng: [ô có chữ]} - một lượt duyệt (không gọi ws.cell từng cột: chậm,
+    o_ten = []                                          # còn tạo ô rỗng thừa trong file in ra)
+    for c in _o_chu(ws):
+        v = c.value.strip()
+        if v in CHO_NGUOI_KY:
+            o_ten.append(c)
+        elif v:
+            chu_dong.setdefault(c.row, []).append(c)
     if not o_ten:
         return 0
-    chi_muc = _chi_muc_gop(ws)
+    dong_can = {rr for o in o_ten for rr in range(max(1, o.row - tim_tren), o.row + 1)}
+    chi_muc = {}                                        # vùng gộp chỉ của các dòng quanh khối chữ ký (bảng tổng hợp: 40.000 vùng)
+    for m in ws.merged_cells.ranges:
+        if m.min_row == m.max_row and m.min_row in dong_can:
+            chi_muc.setdefault(m.min_row, []).append(m)
 
     def vung(r, c):
         m = _vung_tron(ws, r, c, chi_muc)
@@ -724,10 +735,8 @@ def can_khoi_ky(ws, tim_tren: int = 12) -> int:
         giua = (n1 + n2) / 2
         td = None
         for rr in range(r - 1, max(0, r - tim_tren), -1):
-            for c in range(1, ws.max_column + 1):
-                x = ws.cell(rr, c)
-                if not isinstance(x.value, str) or not x.value.strip() or x.value.strip() in CHO_NGUOI_KY:
-                    continue
+            for x in chu_dong.get(rr, ()):
+                c = x.column
                 t1, t2, mt = vung(rr, c)
                 if t1 <= giua <= t2 and (mt is None or mt.min_col == c):
                     td = (x, t1, t2)
@@ -752,7 +761,7 @@ def can_khoi_ky(ws, tim_tren: int = 12) -> int:
                 moi.value, moi._style = gia_tri, copy(kieu)
                 if t2 > t1:
                     _gop_o(ws, r, t1, r, t2)
-                    chi_muc = _chi_muc_gop(ws)
+                chi_muc[r] = [m for m in ws.merged_cells.ranges if m.min_row == m.max_row == r]
                 o = moi
         can_giua(o)
         so += 1

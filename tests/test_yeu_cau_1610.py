@@ -170,8 +170,8 @@ class TestDuoiGoiCapNhat(unittest.TestCase):
         goc = Path(__file__).resolve().parents[1]
         self.assertIn("'.larcud'", (goc / 'chay.py').read_text(encoding='utf-8'))
         ps = (goc / 'bo_cai_win' / 'cai_dat.ps1').read_text(encoding='utf-8-sig')
-        self.assertIn('Classes\.larcud', ps)
-        self.assertIn('Classes\.pabtcn', ps)                               # máy cài bản cũ: gói .pabtcn cũ vẫn bấm đúp được
+        self.assertIn(r'Classes\.larcud', ps)
+        self.assertIn(r'Classes\.pabtcn', ps)                             # máy cài bản cũ: gói .pabtcn cũ vẫn bấm đúp được
 
 
 class TestLeTheBangTongHop(_Co):
@@ -182,6 +182,47 @@ class TestLeTheBangTongHop(_Co):
             m = w.layout().contentsMargins()
             self.assertEqual((m.left(), m.right()), (mt.LE_THE, mt.LE_THE))
         k.deleteLater()
+
+
+class TestToiUuKiemToan(_Co):
+    """Đợt kiểm toán 16/10/2026: tối ưu phải cho kết quả như cũ."""
+
+    def test_tong_hop_loc_sql_giong_loc_sau(self):
+        from pabt import theo_doi
+        con = csdl.mo(str(_du_an(self.td, 12)))
+        self.addCleanup(con.close)
+        ds = [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu')]
+        qd = theo_doi.luu_qd(con, None, '7/QĐ-THU', '01/10/2026')
+        theo_doi.them_ho_theo_pa(con, qd, ds[2:5])
+        tat_ca = {x.ma_ho: x for x in theo_doi.tong_hop(con, tinh_pa=False)}
+        chon = [ds[3], ds[0], ds[7]]
+        mot_phan = theo_doi.tong_hop(con, chon, tinh_pa=False)
+        self.assertEqual([x.ma_ho for x in mot_phan], [m for m in ds if m in chon])        # thứ tự hộ như cũ
+        for x in mot_phan:
+            y = tat_ca[x.ma_ho]
+            self.assertEqual((x.thua, x.qd, x.da_lap, x.da_ban_giao), (y.thua, y.qd, y.da_lap, y.da_ban_giao))
+        self.assertEqual(theo_doi.tong_hop(con, [], tinh_pa=False), [])
+        dai = list(range(1, theo_doi.LOC_SQL_TOI_DA + 10))                                 # danh sách dài: đọc cả bảng như cũ
+        self.assertEqual(len(theo_doi.tong_hop(con, dai, tinh_pa=False)), len(ds))
+
+    def test_he_so_k_ghi_xong_doc_ngay(self):
+        from pabt import he_so_k
+        truoc = he_so_k.tat_ca()
+        he_so_k.ghi([dict(dia_ban='Xã Thử', loai_dat='ONT', vi_tri='VT1', he_so='1,5')])
+        self.addCleanup(he_so_k.xoa)
+        self.assertEqual(len(he_so_k.tat_ca()), 1)                      # không chờ hết NHO_GIAY
+        he_so_k.xoa()
+        self.assertEqual(len(he_so_k.tat_ca()), len(truoc))
+
+    def test_bo_soan_boi_canh_chung(self):
+        from pabt.lap_pa import BoSoan
+        from pabt.nghiep_vu import BoiCanh
+        con = csdl.mo(str(_du_an(self.td, 3)))
+        self.addCleanup(con.close)
+        bc = BoiCanh.tu(con)
+        a, b = BoSoan(con, 1, None, bc), BoSoan(con, 1)
+        self.assertIs(a.bc, bc)
+        self.assertEqual(a.ket_qua.tong, b.ket_qua.tong)
 
 
 del tempfile

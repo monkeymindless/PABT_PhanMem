@@ -2126,12 +2126,16 @@ def _rong_do(b, c: int) -> int:
     return max(20, w - 10)
 
 
-def cao_can_dong(b, r: int, cao_chuan: int = CAO_DONG_CHUAN, cao_toi_da: int | None = CAO_DONG_TOI_DA) -> int:
+def cao_can_dong(b, r: int, cao_chuan: int = CAO_DONG_CHUAN, cao_toi_da: int | None = CAO_DONG_TOI_DA, nho: dict | None = None) -> int:
     """Chiều cao cần cho dòng r: đo chữ từng ô bằng QFontMetrics.boundingRect trên bề rộng thật của cột (ô trống, chữ ngắn không
     làm dòng cao). Một dòng chữ: cao_chuan (tối đa 36 khi phông lớn); nhiều dòng: min(cao_toi_da, max(cao_chuan, chữ + 10))."""
     from PySide6.QtCore import QRect
     from PySide6.QtGui import QFontMetrics
-    fm_bang = b.fontMetrics()
+    nho = {} if nho is None else nho                    # nhiều dòng (vua_dong): QFontMetrics / bề rộng cột dùng chung một lượt
+    if 'bang' not in nho:
+        nho['bang'] = (b.fontMetrics(), b.font().key())
+        nho['rong'] = {}
+    fm_bang, khoa_bang = nho['bang']
     mot = fm_bang.height()
     can = 0
     for c in range(b.columnCount()):
@@ -2141,10 +2145,19 @@ def cao_can_dong(b, r: int, cao_chuan: int = CAO_DONG_CHUAN, cao_toi_da: int | N
         t = it.text() if it is not None else ''
         if not t or not t.strip():
             continue
-        fm = QFontMetrics(it.font()) if it.font() != b.font() else fm_bang
-        w = _rong_do(b, c)
-        if '\n' not in t and fm.horizontalAdvance(t) <= w:
-            continue                                    # vừa một dòng: không cần đo ngắt dòng
+        f = it.font()
+        k = f.key()
+        if k == khoa_bang:
+            fm = fm_bang
+        else:
+            fm = nho.get(k)
+            if fm is None:
+                fm = nho[k] = QFontMetrics(f)
+        w = nho['rong'].get(c)
+        if w is None:
+            w = nho['rong'][c] = _rong_do(b, c)
+        if '\n' not in t and (len(t) * fm.maxWidth() <= w or fm.horizontalAdvance(t) <= w):
+            continue                                    # vừa một dòng (ô ngắn: khỏi đo chữ): không cần đo ngắt dòng
         h = fm.boundingRect(QRect(0, 0, w, 100000), int(Qt.TextFlag.TextWordWrap), t).height()
         can = max(can, h)
     if can <= mot * 1.2:                                # một dòng chữ
@@ -2160,8 +2173,9 @@ def vua_dong(b, cao_chuan: int | None = CAO_DONG_CHUAN, cao_toi_da: int | None =
     if cao_chuan is None:
         cao_chuan = b.verticalHeader().defaultSectionSize()
     vh = b.verticalHeader()
+    nho = {}
     for r in range(b.rowCount()):
-        h = cao_can_dong(b, r, cao_chuan, cao_toi_da)
+        h = cao_can_dong(b, r, cao_chuan, cao_toi_da, nho)
         if vh.sectionSize(r) != h:
             b.setRowHeight(r, h)
 

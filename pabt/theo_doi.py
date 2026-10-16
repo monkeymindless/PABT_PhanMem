@@ -403,23 +403,41 @@ class TongHopHo:
         return 'Chưa lập phương án'
 
 
+LOC_SQL_TOI_DA = 400         # tong_hop(ds_ma_ho) lọc bằng IN (?, …) khi danh sách không quá chừng này (giới hạn tham số SQLite cũ 999)
+
+
 def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
     """[TongHopHo] theo thứ tự hộ: thửa, các quyết định, bàn giao, tổng phương án."""
     from .nghiep_vu import ket_qua_ho
     kqh = ket_qua_ho(con) if tinh_pa else {}            # dùng chung kết quả đã tính (danh sách hộ vừa tính xong)
+    # ít hộ (lưu / sửa một vài hộ rồi tải lại danh sách): lọc ngay trong SQL theo các hộ đó - trước đây đọc cả bảng thửa, quyết định
+    # và UNION toàn bộ ct_dat / ct_khoan rồi mới bỏ hộ khác (5.000 hộ: ~45 ms mỗi lần lưu 1 hộ). Nhiều hộ: đọc cả bảng như cũ
+    # (danh sách IN dài vượt giới hạn tham số SQLite cũ)
+    it = ds_ma_ho is not None and len(ds_ma_ho) <= LOC_SQL_TOI_DA
+    loc, ts = ('', ())
+    if it:
+        ts = tuple(int(m) for m in ds_ma_ho)
+        if not ts:
+            return []
+        loc = f'ma_ho IN ({",".join("?" * len(ts))})'
     thua = {}
-    for t in con.execute('SELECT ma_ho, so_to, so_thua, dt_thu_hoi, loai_dat FROM thua ORDER BY thu_tu, ma_thua'):
+    for t in con.execute('SELECT ma_ho, so_to, so_thua, dt_thu_hoi, loai_dat FROM thua'
+                         + (f' WHERE {loc}' if it else '') + ' ORDER BY thu_tu, ma_thua', ts):
         thua.setdefault(t['ma_ho'], []).append(dict(t))
     qd = {}
     for r in con.execute('''SELECT q.*, d.so AS so_qd, d.ngay AS ngay_qd, d.trich_yeu, d.file AS file_qd
-                            FROM qd_ho q JOIN quyet_dinh d ON d.id = q.qd_id'''):
+                            FROM qd_ho q JOIN quyet_dinh d ON d.id = q.qd_id''' + (f' WHERE q.{loc}' if it else ''), ts):
         qd.setdefault(r['ma_ho'], []).append(dict(r))
     for v in qd.values():
         v.sort(key=lambda x: (_khoa_ngay(x['ngay_qd']), x['id']))
     chon = set(ds_ma_ho) if ds_ma_ho is not None else None
-    co_dong = {r[0] for r in con.execute('SELECT DISTINCT ma_ho FROM ct_dat UNION SELECT DISTINCT ma_ho FROM ct_khoan')}
+    if it:
+        co_dong = {r[0] for r in con.execute(f'SELECT DISTINCT ma_ho FROM ct_dat WHERE {loc} UNION '
+                                             f'SELECT DISTINCT ma_ho FROM ct_khoan WHERE {loc}', ts + ts)}
+    else:
+        co_dong = {r[0] for r in con.execute('SELECT DISTINCT ma_ho FROM ct_dat UNION SELECT DISTINCT ma_ho FROM ct_khoan')}
     kq = []
-    for h in con.execute('SELECT * FROM ho ORDER BY thu_tu, ma_ho'):
+    for h in con.execute('SELECT * FROM ho' + (f' WHERE {loc}' if it else '') + ' ORDER BY thu_tu, ma_ho', ts):
         if chon is not None and h['ma_ho'] not in chon:
             continue
         # "Đã lập…" (đã bấm Lưu, hoặc nhập từ Excel) kể cả mọi mục bỏ trống; có dòng phương án cũng là đã lập
