@@ -109,6 +109,24 @@ def luu(con, ds: list) -> dict:
     return dict(tong=len(ra), **dem)
 
 
+def bo_quy_uoc_cu(con) -> int:
+    """Bỏ các dòng quy ước "của bộ đơn giá" (id < ID_RIENG) còn trong dự án: dữ liệu MẪU chép từ bộ đơn giá trước 0.9.69 hoặc
+    sheet QUY_UOC_TUONG_DUONG của file Excel PABT (người dùng 16/10/2026: "xóa toàn bộ quy ước tương đương, để máy trắng - khi
+    nào có tài sản thì nhập bổ sung sau"). Bộ đơn giá hiện không còn quy ước nên "Áp bộ đơn giá vào dự án" cũng sẽ bỏ các dòng
+    này. Dòng riêng của dự án (id >= ID_RIENG: nhập tay, thẩm định giá) giữ nguyên; phương án đã lập không đổi (dòng phương án
+    lưu sẵn tên, đơn giá, căn cứ). Gọi khi mở dự án để sửa (app.mo); có nhật ký - Hoàn tác được. Trả số dòng đã bỏ."""
+    try:
+        n = con.execute('SELECT COUNT(*) FROM quy_uoc WHERE id < ?', (ID_RIENG,)).fetchone()[0]
+    except Exception:                                   # noqa: BLE001 - file không có bảng quy_uoc: không làm gì
+        return 0
+    if not n:
+        return 0
+    with con, csdl.mo_khoa_danh_muc(con):
+        con.execute('DELETE FROM quy_uoc WHERE id < ?', (ID_RIENG,))
+        csdl.ghi_nhat_ky(con, 'Bỏ quy ước tương đương mẫu', f'{n} dòng của bộ đơn giá / file Excel cũ (dòng riêng của dự án giữ nguyên)')
+    return n
+
+
 def doc_rieng(con) -> list:
     """Các dòng riêng của dự án (để giữ lại khi áp bộ đơn giá)."""
     return [tuple(r) for r in con.execute(f'SELECT id, {", ".join(COT)} FROM quy_uoc WHERE id >= ?', (ID_RIENG,))]

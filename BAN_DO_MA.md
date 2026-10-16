@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 23:15. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 23:50. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -12,7 +12,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 23:15. Kiểm tra tĩnh: 0 cảnh
 |---|---:|---:|---:|---|
 | `__init__.py` | 78 | 0 | 2 | - |
 | `an_toan.py` | 120 | 1 | 7 | - |
-| `app.py` | 3122 | 5 | 16 | BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, giao_dien, khoa, lap_pa, may_chu, nghiep_vu, thong_bao, tien |
+| `app.py` | 3127 | 5 | 16 | BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, giao_dien, khoa, lap_pa, may_chu, nghiep_vu, thong_bao, tien |
 | `ban_do_cad.py` | 426 | 4 | 22 | csdl, tien |
 | `ban_quyen.py` | 23 | 0 | 2 | - |
 | `bang_ao.py` | 209 | 3 | 0 | - |
@@ -28,7 +28,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 23:15. Kiểm tra tĩnh: 0 cảnh
 | `dia_phuong.py` | 365 | 1 | 24 | - |
 | `doi_chieu.py` | 241 | 1 | 4 | nghiep_vu, tien |
 | `don_gia.py` | 480 | 0 | 26 | csdl, lap_pa, nhap_excel |
-| `don_gia_rieng.py` | 208 | 0 | 11 | csdl, lap_pa, tien |
+| `don_gia_rieng.py` | 226 | 0 | 12 | csdl, lap_pa, tien |
 | `du_an_moi.py` | 271 | 0 | 10 | csdl, don_gia, ho_so, in_an, lap_pa, loai_dat, nghiep_vu, nhap_excel, nhap_tho, tien |
 | `du_thao.py` | 702 | 0 | 41 | lap_pa, tien |
 | `du_toan.py` | 506 | 2 | 12 | lap_pa, tien |
@@ -83,9 +83,9 @@ Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 23:15. Kiểm tra tĩnh: 0 cảnh
 | `nguon_gia_dat.py` | 254 | 0 | 14 | lap_pa |
 | `nhap_chi_tiet.py` | 873 | 7 | 34 | csdl, lap_pa, loai_dat, nghiep_vu, nhap_excel, tien |
 | `nhap_don_gia.py` | 982 | 3 | 32 | csdl, don_gia, lap_pa, tien |
-| `nhap_excel.py` | 425 | 2 | 10 | csdl, tien |
+| `nhap_excel.py` | 421 | 2 | 10 | csdl, tien |
 | `nhap_tai_san.py` | 202 | 2 | 4 | lap_pa, tien |
-| `nhap_tho.py` | 456 | 2 | 17 | csdl, lap_pa, nhap_excel, tien |
+| `nhap_tho.py` | 460 | 2 | 17 | csdl, lap_pa, nhap_excel, tien |
 | `ocr.py` | 433 | 2 | 23 | - |
 | `ocr_ho_so.py` | 472 | 1 | 20 | - |
 | `pdf_bang.py` | 348 | 1 | 17 | lap_pa, tien |
@@ -106,7 +106,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 16/10/2026 23:15. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 727 | 2 | 12 | - |
 
-Tổng: 47194 dòng mã trong pabt/.
+Tổng: 47217 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -196,7 +196,7 @@ Tổng: 47194 dòng mã trong pabt/.
 - hàm: `file_goc`, `file_cap_nhat`, `thong_tin`, `kiem_tra_bo`, `_nang_cap_ban_may`, `file_dang_dung`, `ap_vao_du_an`, `bo_sung_vat_nuoi`, `viet_hoa_dau`, `chuan_ten_danh_muc`, `tao_bo_tu_excel`, `cai_bo`, `sao_luu_bo`, `khoi_phuc_bo_goc`, `cap_nhat_tu_file`, `kiem_tra_mang`, `tai_va_cai`, `dam_bao_ban_sua`, `_sach_gia`, `_sach_dong`, `_mo_sua`, `doc_dong`, `them_dong`, `sua_dong`, `xoa_dong`, `thay_the_dong`
 
 ### `don_gia_rieng.py`
-- hàm: `la_tham_dinh`, `doc`, `chuan_gia`, `_sach`, `luu`, `doc_rieng`, `tra_rieng`, `thong_tin_chung_thu`, `can_cu_tham_dinh`, `doc_file_tham_dinh`, `them_tham_dinh`
+- hàm: `la_tham_dinh`, `doc`, `chuan_gia`, `_sach`, `luu`, `bo_quy_uoc_cu`, `doc_rieng`, `tra_rieng`, `thong_tin_chung_thu`, `can_cu_tham_dinh`, `doc_file_tham_dinh`, `them_tham_dinh`
 
 ### `du_an_moi.py`
 - hàm: `ds_loai_dat`, `_gon`, `dong_tu_excel`, `gom`, `loai_dat_biet`, `khoa_gia`, `bang_gia_can_nhap`, `tao_du_an`, `tu_lap_phuong_an`, `xuat_2_bang`

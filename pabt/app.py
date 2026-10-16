@@ -905,6 +905,11 @@ class CuaSoChinh(QMainWindow):
                     kiem_toan.gan(self.con)
                 except sqlite3.Error:                  # file đang khóa / lỗi: vẫn mở dự án (nhat_ky vẫn ghi thao tác)
                     pass
+                try:                                   # 16/10/2026: quy ước tương đương mẫu (bộ đơn giá / Excel cũ) -> bỏ
+                    from .don_gia_rieng import bo_quy_uoc_cu
+                    bo_quy_uoc_cu(self.con)
+                except sqlite3.Error:
+                    pass
             self._cap_nhat_nut_ht()
             self.file = Path(p)
             self.dm = lap_pa.DanhMuc(self.con)

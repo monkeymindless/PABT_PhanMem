@@ -445,7 +445,11 @@ def nap_danh_muc(file_pabt, file_excel) -> dict:
             raise LoiNhap('Không đọc được danh mục:\n' + '\n'.join(bc.loi))
         con = csdl.mo(file_pabt)
         try:
+            from . import don_gia_rieng
+            rieng = don_gia_rieng.doc_rieng(con)           # quy ước / đơn giá thẩm định riêng của dự án: giữ (như áp bộ đơn giá)
             _chep_danh_muc(con, tam, don_vi=False)
+            with con, csdl.mo_khoa_danh_muc(con):
+                don_gia_rieng.tra_rieng(con, rieng)
             dem = {b: con.execute(f'SELECT COUNT(*) FROM {b}').fetchone()[0] for b in DANH_MUC}
             with con:
                 csdl.ghi_nhat_ky(con, 'Nạp danh mục đơn giá', f'{Path(file_excel).name}: ' +

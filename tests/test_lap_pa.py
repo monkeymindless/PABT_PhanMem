@@ -191,6 +191,13 @@ class TestLapPA(unittest.TestCase):
         self.assertTrue(any(x['ten'] == 'Mái che tôn' for x in lap_pa.ra_soat_gia(self.con, self.dm)))
 
     def test_quy_uoc_tuong_duong(self):
+        # 16/10/2026: nhập Excel không còn chép sheet quy ước mẫu - dự án không có quy ước nào; người dùng tự thêm (Đơn giá đặc biệt)
+        from pabt import don_gia_rieng
+        self.assertEqual(self.con.execute('SELECT COUNT(*) FROM quy_uoc').fetchone()[0], 0)
+        don_gia_rieng.luu(self.con, [dict(id=None, ten_thuc_te='Gác lửng khung sắt ván ép',
+                                          ten_tuong_duong='Gác để ở của nhà chính (Nhà bán kiên cố)', dvt='m²', don_gia='1854000',
+                                          can_cu='Áp giá tương đương theo Nhà bán kiên cố (TS17)')])
+        self.dm = DanhMuc(self.con)
         bo = BoSoan(self.con, 1, self.dm)
         i = bo.them_hang_muc_khac(2, 'Gác lửng khung sắt ván ép')
         qu = self.dm.tim(9, 'gac lung')

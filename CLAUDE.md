@@ -1484,6 +1484,13 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   MỘT nút "Xuất" (`menu_xuat`, `hanh_dong_xuat`, `XUAT`: xuat / xuat_bao_cao / xuat_cuong_che). `nap` tính tong_hop + van_dong + mốc
   MỘT lần -> `_ve_tong_quan` -> `bao_cao_gpmb.tong_quan(con, ds=, tt=, moc=)`. `ma_da_chon` theo chế độ đang xem. Test
   `tests/test_yeu_cau_1000.py` (cả bài chặn cùng chữ nút ở 2 trang trở lên, trừ "Xuất Excel…" - mỗi trang xuất bảng riêng).
+- Sau 1.0.00 (người dùng 16/10/2026, CHƯA tăng phiên bản) QUY ƯỚC TƯƠNG ĐƯƠNG ĐỂ TRỐNG ("xóa toàn bộ, để máy trắng - khi nào có tài
+  sản thì nhập bổ sung sau"): `don_gia_rieng.bo_quy_uoc_cu(con)` bỏ dòng id < ID_RIENG (mẫu của bộ đơn giá trước 0.9.69 / sheet
+  QUY_UOC_TUONG_DUONG của Excel PABT; nhật ký "Bỏ quy ước tương đương mẫu", hoàn tác được) - gọi trong `app.mo` khi mở để sửa (chỉ xem:
+  không ghi). `nhap_excel` KHÔNG nhập sheet QUY_UOC_TUONG_DUONG (bỏ khỏi `so_danh_muc`); `nhap_tho.nap_danh_muc` giữ dòng riêng
+  (`doc_rieng` / `tra_rieng` như `don_gia.ap_vao_du_an` - trước đây nạp danh mục từ Excel xóa luôn quy ước riêng của dự án). Phương án
+  đã lập không đổi (dòng lưu sẵn tên / giá / căn cứ). Đã xóa 5 dòng trong NGHĨA TRANG PHÚ LÝ.pabt (sao lưu
+  `ket_qua_kiem_tra\sao_luu\`). Test `tests/test_quy_uoc_trong.py`, `test_lap_pa.test_quy_uoc_tuong_duong` (tự thêm dòng riêng).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

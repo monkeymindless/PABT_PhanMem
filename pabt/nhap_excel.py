@@ -288,7 +288,9 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
         b = Bang(wb['CAN_CU'])
         c = {k: b.cot(v) for k, v in dict(vb='VanBan', cq='CoQuan', nd='NoiDungApDung', tt='TrangThai').items()}
         vb = [(_txt(r[c['vb']]), _txt(r[c['cq']]), _txt(r[c['nd']]), _txt(r[c['tt']])) for r in b.dong if _txt(r[c['vb']])]
-    bieu, quy_uoc = [], []
+    # sheet QUY_UOC_TUONG_DUONG của file Excel PABT KHÔNG nhập (16/10/2026, người dùng: quy ước tương đương để trống - mẫu Excel
+    # chỉ có dòng ví dụ; quy ước của dự án nhập ở Đơn giá đặc biệt khi có tài sản cần áp giá tương đương)
+    bieu = []
     vt_tu, vt_muc = _ten_dinh_danh(wb, 'THUONG_TU'), _ten_dinh_danh(wb, 'THUONG_MUC')
     if vt_tu and vt_muc:
         sh = wb[vt_tu[0]]
@@ -297,10 +299,6 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
             tu, muc = _so_hoac_rong(r[ct_]), _so_hoac_rong(r[cm_])
             if tu is not None and muc is not None:
                 bieu.append((tu, muc))
-    if 'QUY_UOC_TUONG_DUONG' in wb.sheetnames:
-        for r in wb['QUY_UOC_TUONG_DUONG'].iter_rows(min_row=2, values_only=True):
-            if r and co_so(r[0]) and _txt(r[1]):
-                quy_uoc.append((_txt(r[1]), _txt(r[2]), _txt(r[3]), _so_hoac_rong(r[4]), _txt(r[5])))
     if not bieu:
         bc.canh_bao.append('Không đọc được biểu thưởng (tên THUONG_TU / THUONG_MUC): thưởng sẽ bằng 0.')
 
@@ -399,7 +397,6 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
             con.executemany('INSERT OR REPLACE INTO tham_so VALUES (?,?,?,?,?,?)', ts)
             con.executemany('INSERT INTO van_ban (so_hieu, co_quan, noi_dung, trang_thai) VALUES (?,?,?,?)', vb)
             con.executemany('INSERT OR REPLACE INTO bieu_thuong VALUES (?,?)', bieu)
-            con.executemany('INSERT INTO quy_uoc (ten_thuc_te, ten_tuong_duong, dvt, don_gia, can_cu) VALUES (?,?,?,?,?)', quy_uoc)
             csdl.chuyen_vat_nuoi(con)                   # dòng vật nuôi (mã nhóm vật nuôi) ở DB_CAY -> mục Vật nuôi riêng
             from .ma_tai_san import chuyen_csdl
             chuyen_csdl(con)                            # file Excel dùng mã cũ (HT01, VN01, cây TS140…) -> mã 0.9.69
@@ -419,6 +416,5 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
     bc.so_dong = {1: len(ct_dat), 2: sum(d['muc'] == 2 for d in ct_khoan), 3: sum(d['muc'] == 3 for d in ct_khoan),
                   4: sum(d['muc'] == 4 for d in ct_khoan)}           # 3: cây trồng gồm cả vật nuôi
     bc.so_danh_muc = {'tài sản, cây trồng': len(dm_ts), 'hỗ trợ': len(dm_ht), 'loại đất': len(dm_ld), 'giá đất': len(gia),
-                      'xã, phường': len(xa), 'tham số': len(ts), 'văn bản căn cứ': len(vb), 'biểu thưởng': len(bieu),
-                      'quy ước tương đương': len(quy_uoc)}
+                      'xã, phường': len(xa), 'tham số': len(ts), 'văn bản căn cứ': len(vb), 'biểu thưởng': len(bieu)}
     return bc
