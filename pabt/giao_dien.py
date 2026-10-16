@@ -2092,6 +2092,10 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
     cua_so = [w for w in app.topLevelWidgets() if w.isVisible()]
     for w in cua_so:
         w.setUpdatesEnabled(False)
+    # Qt áp lại bảng kiểu cho MỌI widget đã hiện (kể cả trang giữ trong RAM): ~0,5 ms / widget - con trỏ chờ cho người dùng biết đang
+    # đổi cỡ (đo 16/10/2026: 785 widget ~0,9 s; bảng kiểu rỗng vẫn ~0,2 s - chi phí theo số widget, không theo số quy tắc)
+    from PySide6.QtCore import Qt
+    app.setOverrideCursor(Qt.CursorShape.WaitCursor)
     try:
         f = QFont(app.font())
         f.setPointSizeF(_CO_CHU_GOC * t)
@@ -2102,6 +2106,7 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
     finally:
         for w in cua_so:
             w.setUpdatesEnabled(True)
+        app.restoreOverrideCursor()
     app.setProperty('pabt_ty_le', t)
     if app.platformName() == 'offscreen':
         _gian_bang()
@@ -2211,7 +2216,7 @@ _CHO = [None]                                           # tỷ lệ đang chờ 
 _HEN = []
 
 
-def phong_to(buoc: int, cho_ms: int = 220) -> float:
+def phong_to(buoc: int, cho_ms: int = 150) -> float:
     """buoc: +1 phóng to, -1 thu nhỏ (mỗi bước 10%), 0 về 100%. Lăn chuột / bấm liên tục: số % đổi ngay, giao diện chỉ áp
     lại một lần khi ngừng (cho_ms) - không giật, không dồn nhiều lần áp kiểu. cho_ms=0: áp ngay."""
     goc = _CHO[0] if _CHO[0] is not None else TY_LE[0]

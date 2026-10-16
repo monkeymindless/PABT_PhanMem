@@ -18,7 +18,7 @@ a = Analysis(
            ('pabt/pabt_profile.json', 'pabt'), ('HUONG_DAN.md', '.')] +
           [(str(f), 'mau_in') for f in sorted(__import__('pathlib').Path('mau_in').glob('*')) if f.suffix.lower() in ('.xlsx', '.xml')] +
           collect_data_files('ezdxf'),
-    hiddenimports=['html.parser', 'urllib.request', 'difflib', 'PySide6.QtPdfWidgets'] + EZDXF,
+    hiddenimports=['html.parser', 'urllib.request', 'difflib', 'PySide6.QtPdfWidgets', 'PySide6.QtPrintSupport'] + EZDXF,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

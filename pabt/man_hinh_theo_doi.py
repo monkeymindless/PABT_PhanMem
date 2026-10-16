@@ -882,7 +882,7 @@ class KhungTienDo(_Khung):
     COT = ['STT', 'Mã hộ', 'Họ và tên', 'Địa chỉ', 'Mốc thu hồi đất\n(Bước 13)', 'Vận động / cưỡng chế\n(Bước 14, 15)',
            'Quyết định phê duyệt', 'Tổng phê\nduyệt (đ)', 'Đã nhận (đ)', 'Ngày nhận\ntiền', 'Chưa nhận - lý do',
            'Biên lai / biên\nbản chi trả', 'Bàn giao\nmặt bằng', 'Lý do chưa\nbàn giao', 'Ghi chú theo dõi',
-           'Hoàn tất CTBT\n(theo đợt)', 'Hồ sơ scan']
+           'Hoàn tất CTBT\n(theo đợt)', 'HS đính kèm']
     # chỉ số cột (hai cột mốc / vận động đặt ngay sau Địa chỉ: cột quyết định, không phải cuộn ngang mới thấy)
     C_MOC, C_VD, C_QD, C_TONG, C_NHAN, C_NGAY, C_CHUA, C_BIEN_LAI, C_BG = 4, 5, 6, 7, 8, 9, 10, 11, 12
     C_HOAN_TAT, C_SCAN = 15, 16                         # 0.9.96: hoàn tất CTBT = có QĐ + đã bàn giao; số file hồ sơ scan
@@ -1103,7 +1103,7 @@ class KhungTienDo(_Khung):
             if gt[self.C_HOAN_TAT]:
                 kieu[(r, self.C_HOAN_TAT)] = dict(nen=XANH, dam=True)
             if gt[self.C_SCAN]:
-                kieu[(r, self.C_SCAN)] = dict(mau_chu=MAU_LIEN_KET, goi_y='Nhấp đúp để mở hồ sơ scan của hộ')
+                kieu[(r, self.C_SCAN)] = dict(mau_chu=MAU_LIEN_KET, goi_y='Nhấp đúp để mở hồ sơ đính kèm của hộ')
             ma_vd = self._vd(x)[0]
             if ma_vd:
                 kieu[(r, self.C_VD)] = dict(nen={'du_dk_cuong_che': DO, 'dang_van_dong': VANG}.get(ma_vd, XANH),

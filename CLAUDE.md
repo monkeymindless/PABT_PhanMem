@@ -1373,6 +1373,22 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `chon_vi_tri_nq28` (xã + vị trí + tên đường + TT): khớp -> `he_so_k` + "Hệ số K theo QĐ 03/2026/QĐ-UBND" ở Ghi chú; hết khớp -> bỏ căn
   cứ, K về 1. Hỗ trợ đào tạo: `chinh_sach.ds_thua_nn`, `nghiep_vu.de_xuat_dao_tao_pa` dùng giá × K. Test `tests/test_he_so_k.py` (chữ Phụ
   lục GIẢ LẬP + kiểm bảng gắn sẵn khớp bảng giá; bài ghi he_so_k.json dùng thư mục máy riêng).
+- Sau 0.9.97 (người dùng 16/10/2026, CHƯA tăng phiên bản):
+  - Nút / cột "HS đính kèm" (`man_hinh_ho_so_scan.TEN_NUT`; trước "Hồ sơ scan").
+  - Bảng tổng hợp: `bo_can_cu_kinh_phi` (bỏ "(theo Quyết định số 08…)" ở dòng kinh phí); `vua_cot_chu_bth` (cột Vị trí <= 4 dòng chữ,
+    gọi TRƯỚC khi tính cao dòng), `vua_cot_so_bth` (chỉ nới cột số cho số dài nhất + dòng TỔNG CỘNG theo định dạng kế toán - hết
+    "#####"); `ngat_trang_bth`: Excel BỎ QUA ngắt trang tay khi fitToPage -> tự tính `scale` vừa bề ngang, tắt fitToPage, ngắt ở
+    RANH GIỚI HỘ (`khoi_ho`), khối cuối = dòng tổng + khối chữ ký (không tách sang trang riêng). `DU_PHONG_TRANG` 0,96.
+  - Phương án chi tiết: `ngat_trang_ct` - dòng "III." + hàng tiêu đề cột rơi cuối trang mà không kèm được dòng số liệu nào -> ngắt
+    trước dòng III (bỏ qua khi fitToPage). Dòng thưởng ('R') KHÔNG gộp ô nữa - ngắt dòng như mục 2-5 (thành tiền vẫn đậm); chỉ
+    TỔNG CỘNG ('T') gộp STT..Tỷ lệ.
+  - Hộp chọn máy in (như Word / Excel): `xem_truoc_tai_lieu.b_in_hop` "In…" + Ctrl+P (cạnh "In nhanh") -> `in_co_hop_thoai`
+    (QPrintDialog: máy in, số bản, khoảng trang) -> `in_tai_lieu` vẽ trang QPdfDocument lên QPrinter (fullPage, ảnh <= `DPI_IN_TOI_DA`
+    300, hướng giấy theo từng trang, máy in không tự in nhiều bản thì lặp). Chỉ Qt 6 (`co_hop_in`; Qt 5 không có QtPdf -> "In
+    nhanh" qua Excel). Bản dựng giữ QtPrintSupport (`rut_gon.GIU_MODULE`, PABT.spec hiddenimports).
+  - Đổi tỷ lệ giao diện: `dat_ty_le` hiện con trỏ chờ, `phong_to` chờ 150 ms. Còn ~0,4-1,1 s mỗi nấc: `app.setStyleSheet` tô lại
+    MỌI widget đã polish (cả trang / tab ẩn) - giảm thật cần bỏ cỡ chữ px khỏi QSS (dùng font ứng dụng) hoặc bớt trang giữ trong RAM.
+  - Test `tests/test_in_16_10.py` (máy in = QPrinter ghi file PDF).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

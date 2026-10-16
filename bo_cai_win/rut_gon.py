@@ -17,7 +17,7 @@ import tempfile
 from pathlib import Path
 
 # PdfWidgets (0.9.84): QPdfView của khung xem trước tài liệu (xem_truoc_tai_lieu) - thiếu thì khung vẽ trang bằng QPdfDocument
-GIU_MODULE = ('Core', 'Gui', 'Widgets', 'Network', 'Pdf', 'PdfWidgets', 'Svg')
+GIU_MODULE = ('Core', 'Gui', 'Widgets', 'Network', 'Pdf', 'PdfWidgets', 'PrintSupport', 'Svg')   # PrintSupport: hộp chọn máy in (16/10/2026)
 GIU_MODULE_QT5 = GIU_MODULE + ('Qml',)          # pyside2.abi3.dll (PySide2 5.15) liên kết cứng Qt5Qml: thiếu thì PABT.exe treo
 # thư mục plugin -> tên file giữ (None = giữ cả thư mục)
 GIU_PLUGIN = {

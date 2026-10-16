@@ -374,7 +374,7 @@ class TestHoSoScan(_Co):
         k.im_lang = True
         k.nap()
         self.assertEqual(k.COT[k.C_HOAN_TAT].split('\n')[0], 'Hoàn tất CTBT')
-        self.assertEqual(k.COT[k.C_SCAN], 'Hồ sơ scan')
+        self.assertEqual(k.COT[k.C_SCAN], 'HS đính kèm')
         dong = {x.ma_ho: gt for x, _, gt in k.dong()}
         self.assertTrue(dong[ds[0]][k.C_HOAN_TAT].startswith('Hoàn tất'))
         self.assertEqual(dong[ds[1]][k.C_HOAN_TAT], '')
@@ -388,7 +388,7 @@ class TestHoSoScan(_Co):
         self.assertTrue(hop.xuat(self.td / 'x.xlsx').exists())
         hs = KhungHoSo(con, ds[0])
         self.assertIsInstance(hs.nut_scan, NutHoSoScan)
-        self.assertEqual(hs.nut_scan.text(), 'Hồ sơ scan (1)')
+        self.assertEqual(hs.nut_scan.text(), 'HS đính kèm (1)')
         self.assertTrue(hs.nut_scan.isEnabled())
         hs.nut_scan._dung_menu()
         chu = [a.text() for a in hs.nut_scan.menu.actions()]
@@ -397,9 +397,9 @@ class TestHoSoScan(_Co):
         g = self.td / 'them.png'
         g.write_bytes(b'png')
         self.assertEqual(hs.nut_scan.dinh_kem([g]), 1)
-        self.assertEqual(hs.nut_scan.text(), 'Hồ sơ scan (2)')
+        self.assertEqual(hs.nut_scan.text(), 'HS đính kèm (2)')
         h = mt.HopHoTheoDoi(con, ds[0])
-        self.assertEqual(h.nut_scan.text(), 'Hồ sơ scan (2)')
+        self.assertEqual(h.nut_scan.text(), 'HS đính kèm (2)')
         for w in (k, hop, hs, h):
             w.deleteLater()
 

@@ -122,7 +122,7 @@ def xuat_excel_hoan_tat_ctbt(con, file_ra, ds=None, ten_du_an: str = '') -> int:
     ws = wb.active
     ws.title = 'Hoàn tất CTBT'
     cot = ['STT', 'Mã hộ', 'Họ và tên', 'Địa chỉ', 'Quyết định phê duyệt', 'Tổng phê duyệt (đ)', 'Đã nhận (đ)', 'Ngày bàn giao',
-           'Hồ sơ scan (file)']
+           'HS đính kèm (file)']
     rong = (6, 8, 28, 30, 30, 18, 18, 14, 12)
     ws.append(['DANH SÁCH HỘ HOÀN TẤT CÔNG TÁC BỒI THƯỜNG (đã có quyết định phê duyệt, đã bàn giao mặt bằng)'])
     ws.append([f'Dự án: {ten_du_an}' if ten_du_an else ''])

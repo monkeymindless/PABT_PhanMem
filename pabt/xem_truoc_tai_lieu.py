@@ -79,6 +79,100 @@ def co_qpdfview() -> bool:
         return False
 
 
+def co_hop_in() -> bool:
+    """Hộp chọn máy in (QPrintDialog) + vẽ trang PDF bằng QtPdf: bản Qt 6. Bản Qt 5 (Win 7) không có QtPdf -> chỉ "In nhanh"."""
+    if not co_qtpdf():
+        return False
+    try:
+        from PySide6.QtPrintSupport import QPrintDialog, QPrinter  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+DPI_IN_TOI_DA = 300             # ảnh trang gửi máy in: đủ nét cho chữ, không dựng ảnh 600 dpi (A4 ngang ~140 MB)
+
+
+def in_tai_lieu(doc, printer, tu: int = 0, den: int = 0) -> int:
+    """Vẽ các trang của QPdfDocument lên máy in (trang tu..den, đánh số từ 1; 0 = cả tài liệu). Bản PDF đã có sẵn lề của mẫu ->
+    in cả tờ giấy (fullPage), giữ tỉ lệ, canh giữa; hướng giấy theo từng trang. Máy in không tự in nhiều bản thì in lặp. Trả số
+    trang đã in."""
+    from PySide6.QtCore import QRectF, QSize
+    from PySide6.QtGui import QPageLayout, QPainter
+    n = doc.pageCount()
+    if n <= 0:
+        return 0
+    tu = max(1, tu or 1)
+    den = min(n, den or n)
+    if tu > den:
+        return 0
+    ban = 1 if printer.supportsMultipleCopies() else max(1, printer.copyCount())
+    printer.setFullPage(True)
+
+    def huong(i):
+        co = doc.pagePointSize(i)
+        return QPageLayout.Orientation.Landscape if co.width() > co.height() else QPageLayout.Orientation.Portrait
+    printer.setPageOrientation(huong(tu - 1))
+    p = QPainter()
+    if not p.begin(printer):
+        raise OSError('Không mở được máy in ' + (printer.printerName() or ''))
+    da_in = 0
+    try:
+        dpi = min(DPI_IN_TOI_DA, printer.resolution() or DPI_IN_TOI_DA)
+        dau = True
+        for _ in range(ban):
+            for i in range(tu - 1, den):
+                if not dau:
+                    printer.setPageOrientation(huong(i))
+                    printer.newPage()
+                dau = False
+                co = doc.pagePointSize(i)
+                anh = doc.render(i, QSize(max(1, round(co.width() / 72 * dpi)), max(1, round(co.height() / 72 * dpi))))
+                vp = p.viewport()
+                p.setWindow(vp)
+                k = min(vp.width() / anh.width(), vp.height() / anh.height())
+                w, h = anh.width() * k, anh.height() * k
+                p.drawImage(QRectF(vp.x() + (vp.width() - w) / 2, vp.y() + (vp.height() - h) / 2, w, h), anh)
+                da_in += 1
+    finally:
+        p.end()
+    return da_in
+
+
+def in_co_hop_thoai(cha, doc, ten: str = '', printer=None, hoi: bool = True) -> int:
+    """Nút "In…": hộp in của Windows như Word / Excel - chọn máy in, số bản, trang in, thuộc tính máy in; bấm In thì gửi bản
+    đang xem. hoi=False (kiểm thử): dùng printer đưa vào, không hiện hộp. Trả số trang đã in (0 = hủy / không in)."""
+    from PySide6.QtWidgets import QMessageBox
+    from PySide6.QtPrintSupport import QAbstractPrintDialog, QPrintDialog, QPrinter
+    from .giao_dien import con_tro_cho
+    from .thong_bao import TEN_UD, chu_loi
+    n = doc.pageCount() if doc is not None else 0
+    if n <= 0:
+        return 0
+    if printer is None:
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+    printer.setDocName(ten or TEN_UD)
+    if hoi:
+        hop = QPrintDialog(printer, cha)
+        hop.setWindowTitle('In – ' + (ten or TEN_UD))
+        hop.setMinMax(1, n)
+        hop.setFromTo(1, n)
+        hop.setOption(QAbstractPrintDialog.PrintDialogOption.PrintPageRange, True)
+        hop.setOption(QAbstractPrintDialog.PrintDialogOption.PrintCurrentPage, False)
+        hop.setOption(QAbstractPrintDialog.PrintDialogOption.PrintSelection, False)
+        if hop.exec() != QPrintDialog.DialogCode.Accepted:
+            return 0
+    tu, den = (printer.fromPage(), printer.toPage()) if printer.printRange() == QPrinter.PrintRange.PageRange else (0, 0)
+    try:
+        with con_tro_cho():
+            return in_tai_lieu(doc, printer, tu, den)
+    except Exception as e:
+        if hoi:
+            QMessageBox.warning(cha, TEN_UD, chu_loi('Chưa in được', e))
+            return 0
+        raise
+
+
 def co_qtpdf() -> bool:
     try:
         from PySide6.QtPdf import QPdfDocument  # noqa: F401
@@ -257,6 +351,14 @@ class KhungXemTruocTaiLieu(QFrame):
         self.ly_do_gan_dung = ''
         self.b_in = nut('In nhanh', 0xE749, 'In bản đang xem ra máy in mặc định (qua Microsoft Excel)', lambda: self.in_nhanh())
         self.b_in.setVisible(ham_in is not None)
+        # 16/10/2026: hộp chọn máy in như Word / Excel (máy in, số bản, trang in) - bản Qt 6 (vẽ trang bằng QtPdf)
+        self.b_in_hop = nut('In…', 0xE749, 'Chọn máy in, số bản, trang cần in rồi in bản đang xem (Ctrl+P)',
+                            lambda: self.in_hop_thoai())
+        self.b_in_hop.setVisible(co_hop_in())
+        from PySide6.QtGui import QKeySequence, QShortcut
+        self._phim_in = QShortcut(QKeySequence('Ctrl+P'), self)
+        self._phim_in.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self._phim_in.activated.connect(lambda: self.b_in_hop.isEnabled() and self.in_hop_thoai())
         # thanh công cụ: 3 cụm trong XepDong - khung hẹp (màn hình nhỏ) thì cụm sau xuống dòng, không cắt chữ nút
         from .giao_dien import XepDong
         self.thanh = QWidget()
@@ -265,7 +367,7 @@ class KhungXemTruocTaiLieu(QFrame):
         nhan = QLabel('Trang')
         nhan.setObjectName('xt_trang')
         for nhom, phai in (((self.b_phong, self.b_thu, self.b_vua), False), ((nhan, self.b_truoc, self.lb_trang, self.b_sau), False),
-                           ((self.lb_gan_dung, self.b_in), True)):
+                           ((self.lb_gan_dung, self.b_in_hop, self.b_in), True)):
             cum = QWidget()
             hc = QHBoxLayout(cum)
             hc.setContentsMargins(0, 0, 0, 0)
@@ -418,6 +520,7 @@ class KhungXemTruocTaiLieu(QFrame):
         self.b_sau.setEnabled(dang_xem and i < n - 1)
         self.lb_trang.setText(f'{i + 1 if n else 0} / {n}')
         self.b_in.setEnabled(self.pdf is not None and self.xlsx is not None and self._dang is None)
+        self.b_in_hop.setEnabled(self.pdf is not None and self.doc is not None and n > 0 and self._dang is None)
 
     # ---- phóng to / trang
     def he_so(self) -> float:
@@ -592,6 +695,12 @@ class KhungXemTruocTaiLieu(QFrame):
     def in_nhanh(self) -> None:
         if self.ham_in is not None and self.pdf is not None:
             self.ham_in(self.pdf, self.xlsx)
+
+    def in_hop_thoai(self, printer=None, hoi: bool = True) -> int:
+        """Hộp in của Windows (chọn máy in, số bản, trang) -> in bản đang xem. Trả số trang đã in."""
+        if self.doc is None or self.pdf is None:
+            return 0
+        return in_co_hop_thoai(self, self.doc, Path(self.xlsx or self.pdf).stem, printer, hoi)
 
     def mo_ngoai(self) -> None:
         f = self.pdf if self.pdf is not None and Path(self.pdf).exists() else self.xlsx

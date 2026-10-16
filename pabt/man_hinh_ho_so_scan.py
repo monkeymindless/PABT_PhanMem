@@ -13,6 +13,9 @@ from . import ho_so_scan
 from .thong_bao import TEN_UD, chu_loi
 
 
+TEN_NUT = 'HS đính kèm'          # người dùng 16/10/2026 (trước: "Hồ sơ scan")
+
+
 def mo_file(p) -> bool:
     """Mở file bằng chương trình mặc định của Windows. False: không mở được (file đã chuyển / xóa)."""
     import os
@@ -31,9 +34,9 @@ class NutHoSoScan(QPushButton):
     im_lang: bool = False
 
     def __init__(self, parent=None):
-        super().__init__('Hồ sơ scan', parent)
+        super().__init__(TEN_NUT, parent)
         self.con, self.ma_ho, self.chi_doc = None, None, False
-        self.setToolTip('Hồ sơ scan (PDF / ảnh) của hộ: đính kèm, mở nhanh (phần mềm ghi đường dẫn, không chép file)')
+        self.setToolTip('Hồ sơ đính kèm (PDF / ảnh scan) của hộ: đính kèm, mở nhanh (phần mềm ghi đường dẫn, không chép file)')
         self.menu = QMenu(self)
         self.menu.aboutToShow.connect(self._dung_menu)
         self.setMenu(self.menu)
@@ -45,7 +48,7 @@ class NutHoSoScan(QPushButton):
 
     def cap_nhat(self) -> None:
         n = len(ho_so_scan.ds_file(self.con, self.ma_ho)) if self.con is not None and self.ma_ho is not None else 0
-        self.setText(f'Hồ sơ scan ({n})' if n else 'Hồ sơ scan')
+        self.setText(f'{TEN_NUT} ({n})' if n else TEN_NUT)
         self.setEnabled(self.con is not None and self.ma_ho is not None)
 
     def _dung_menu(self) -> None:
@@ -119,7 +122,7 @@ def mo_nhanh(cha, con, ma_ho, chi_doc: bool = False, sau=None):
 class HopHoanTatCTBT(QDialog):
     """Danh sách hộ hoàn tất công tác bồi thường (đã có QĐ + đã bàn giao mặt bằng) theo từng đợt - xuất Excel (không có Word)."""
     im_lang: bool = False
-    COT = ['Đợt', 'Mã hộ', 'Họ và tên', 'Địa chỉ', 'Quyết định', 'Ngày bàn giao', 'Hồ sơ scan']
+    COT = ['Đợt', 'Mã hộ', 'Họ và tên', 'Địa chỉ', 'Quyết định', 'Ngày bàn giao', TEN_NUT]
 
     def __init__(self, con, parent=None, ds=None, thu_muc: str = '', ten_du_an: str = ''):
         super().__init__(parent)
