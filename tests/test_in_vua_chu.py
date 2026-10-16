@@ -218,12 +218,12 @@ class TestNguonGoc(CoSo):
 
 class TestTenDuAn(CoSo):
     def _dong_du_an(self, ws):
-        r = next(r for r in range(1, 20) if str(ws.cell(r, 1).value or '').startswith('Dự án:'))
+        r = next(r for r in range(1, 20) if str(ws.cell(r, 1).value or '').startswith('DỰ ÁN '))     # 16/10/2026: "DỰ ÁN <tên>"
         return r, ws.row_dimensions[r].height, ws.cell(r, 1)
 
     def test_ten_ngan_mot_dong(self):
         r, cao, o = self._dong_du_an(self.in_ho('x'))
-        self.assertEqual(o.value, f'Dự án: {self.TEN}')
+        self.assertEqual(o.value, f'DỰ ÁN {self.TEN}')
         self.assertAlmostEqual(cao, in_an.cao_dong_chu(1, 14) + in_an.DK_CACH + 3, places=1)    # sát chữ, không còn 38,4 pt cố định
         self.assertEqual(o.alignment.vertical, 'top')
         self.assertTrue(o.alignment.wrap_text)

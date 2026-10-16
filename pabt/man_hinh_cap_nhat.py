@@ -1,4 +1,4 @@
-"""Hộp thoại "Cập nhật phần mềm": cài gói cập nhật .pabtcn (sửa lỗi, tính năng mới) hoặc gỡ về bản cài gốc."""
+"""Hộp thoại "Cập nhật phần mềm": cài gói cập nhật .larcud (gói .pabtcn cũ vẫn nhận) (sửa lỗi, tính năng mới) hoặc gỡ về bản cài gốc."""
 from __future__ import annotations
 import sys
 
@@ -19,7 +19,7 @@ class HopCapNhat(QDialog):
         self.setWindowTitle(TIEU_DE)
         self.resize(620, 300)
         lo = QVBoxLayout(self)
-        gt = QLabel('Gói cập nhật (file <b>.pabtcn</b>) dùng để sửa lỗi, bổ sung tính năng mà <b>không phải cài lại</b> '
+        gt = QLabel('Gói cập nhật (file <b>.larcud</b>) dùng để sửa lỗi, bổ sung tính năng mà <b>không phải cài lại</b> '
                     'phần mềm. Dữ liệu dự án và bộ đơn giá đã cập nhật được giữ nguyên. Bản cập nhật có hiệu lực khi mở lại '
                     'phần mềm; nếu bản cập nhật lỗi, phần mềm tự quay về bản cài gốc.')
         gt.setWordWrap(True)
@@ -65,7 +65,7 @@ class HopCapNhat(QDialog):
 
     def cai_file(self, p=None):
         if p is None:
-            p, _ = QFileDialog.getOpenFileName(self, 'Chọn gói cập nhật LARC', '', f'Gói cập nhật PABT (*{cap_nhat.DUOI})')
+            p, _ = QFileDialog.getOpenFileName(self, 'Chọn gói cập nhật LARC', '', 'Gói cập nhật LARC (' + ' '.join('*' + d for d in cap_nhat.DUOI_NHAN) + ')')
             if not p:
                 return None
         try:

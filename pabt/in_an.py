@@ -1658,13 +1658,52 @@ def chuan_tieu_de_muc_ii(ws, den_dong: int) -> int:
 
 
 def dat_nhan_chu_su_dung(ws, den_dong: int, to_chuc: bool) -> int:
-    """Nhãn "Họ và tên:" (mục I) -> "Tổ chức:" khi chủ sử dụng là tổ chức (ho_so.la_to_chuc). Trả số ô đã đổi."""
+    """Nhãn "Họ và tên:" (mục I) -> "Tổ chức:" khi chủ sử dụng là tổ chức (ho_so.la_to_chuc); tổ chức không có CCCD: ẨN dòng "Số
+    CCCD:" (người dùng 16/10/2026 - ẩn, không xóa dòng: vị trí các ô phía dưới giữ nguyên). Trả số ô đã đổi."""
     if not to_chuc:
         return 0
     n = 0
     for o in list(_o_chu(ws, den_dong)):
-        if o.value.strip().rstrip(':').strip().lower() == 'họ và tên':
+        k = o.value.strip().rstrip(':').strip().lower()
+        if k == 'họ và tên':
             o.value = NHAN_TO_CHUC
+            n += 1
+        elif k in ('số cccd', 'cccd', 'số cccd/cmnd', 'số cmnd'):
+            ws.row_dimensions[o.row].hidden = True
+    return n
+
+
+DIA_DANH_NGAY_MAC_DINH = 'Trị An'
+_RE_DONG_NGAY = re.compile(r'^\s*(\{ten_dia_ban\}|[^,{}\n]{1,40}),(\s*ngày)')
+_RE_NGAY_TRONG = re.compile(r'ngày[\s….,_]*tháng[\s….,_]*năm')
+
+
+def chuan_dong_ngay(ws, den_dong: int | None = None) -> int:
+    """Dòng "<địa danh>, ngày … tháng … năm 2026" (người dùng 16/10/2026): địa danh CỐ ĐỊNH theo nơi đặt cơ quan (hồ sơ địa phương
+    `ban_in.dia_danh_ngay`, mặc định "Trị An") - không theo xã của dự án; chỗ chưa có ngày ghi dấu chấm "ngày ...... tháng ..... năm".
+    Gọi SAU dien_so_ngay (ngày đã điền giữ nguyên), TRƯỚC _thay_cho_trong. Trả số ô đã đổi."""
+    from . import dia_phuong
+    dia_danh = str(dia_phuong.lay('ban_in.dia_danh_ngay', DIA_DANH_NGAY_MAC_DINH) or '').strip()
+    n = 0
+    for o in list(_o_chu(ws, den_dong)):
+        v = o.value
+        if 'ngày' not in v or 'năm' not in v or not _RE_DONG_NGAY.match(v):
+            continue
+        s = _RE_DONG_NGAY.sub(lambda m: f'{dia_danh},{m.group(2)}', v, count=1) if dia_danh else v
+        s = _RE_NGAY_TRONG.sub('ngày ...... tháng ..... năm', s)
+        if s != v:
+            o.value = s
+            n += 1
+    return n
+
+
+def viet_hoa_du_an(ws, den_dong: int | None = None) -> int:
+    """Tiêu đề phương án chi tiết: "Dự án: <tên>" -> "DỰ ÁN <tên>" (viết hoa, bỏ dấu hai chấm - người dùng 16/10/2026)."""
+    n = 0
+    for o in list(_o_chu(ws, den_dong)):
+        m = re.match(r'^\s*dự án\s*:\s*', o.value, re.I)
+        if m:
+            o.value = 'DỰ ÁN ' + o.value[m.end():]
             n += 1
     return n
 
@@ -1861,12 +1900,14 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
             ws.row_dimensions[r].height = min(409, h)
     from .ho_so import la_to_chuc
     dat_nhan_chu_su_dung(ws, dau - 1, la_to_chuc(ttho['ho_ten']))
+    viet_hoa_du_an(ws, dau - 1)
     chuan_tieu_de_muc_ii(ws, dau - 1)
     _vung_cf(ws, dau, dau + n - 1)
     if du_thao:                                                  # dự thảo chưa có số phương án chính thức (để trống chỗ số / ngày)
         ttho['so_pa'], ttho['ngay_pa'] = '', ''
     gia_tri = dict(da, **ttho)
     dien_so_ngay(ws, ttho['so_pa'], ttho['ngay_pa'], 'Số:', dau - 1)      # số / ngày PA chi tiết (đợt trình) vào chỗ chừa trống
+    chuan_dong_ngay(ws, dau - 1)                                 # "Trị An, ngày ...... tháng ..... năm 2026"
     can_khoi_ky(ws)                                              # họ tên người ký căn giữa dưới chức danh
     _thay_cho_trong(ws, gia_tri)
     ap_che_do_du_thao(ws, du_thao, TEN_CT)                       # dự thảo: giữ / thêm chữ DỰ THẢO; chính thức: xóa
@@ -2087,6 +2128,7 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
         ws['A6'] = re.sub(r'\(Đối với .*?m2\)', f'(Đối với {len(khoi):02d} trường hợp/ {tong_thua} thửa đất/ '
                           f'{format(float(tong_dt), ",.1f").replace(",", "#").replace(".", ",").replace("#", ".")}m2)', a6)
     dien_so_ngay(ws, so_pa_tong, ngay_pa_tong, 'Phương án số')
+    chuan_dong_ngay(ws)
     can_khoi_ky(ws)
     _thay_cho_trong(ws, dict(da, so_pa_tong=so_pa_tong or '', ngay_pa_tong=ngay_pa_tong or '',
                              ky_hieu_so=ky_hieu_so or da.get('ky_hieu_so') or ''))       # ký hiệu theo đợt trình (0.9.72)

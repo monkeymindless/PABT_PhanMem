@@ -336,7 +336,7 @@ def go_cai_dat(im: bool = False) -> int:
 
 
 def main(argv) -> int:
-    if not argv or argv[0].lower().endswith(('.pabt', '.pabtcn', '.pabtcfg')) or argv[0] in ('--menu-trai', '--menu-tren'):
+    if not argv or argv[0].lower().endswith(('.pabt', '.larc', '.larcud', '.pabtcn', '.pabtcfg')) or argv[0] in ('--menu-trai', '--menu-tren'):
         from pabt.app import main as mo_cua_so
         return mo_cua_so()
     lenh = argv[0]

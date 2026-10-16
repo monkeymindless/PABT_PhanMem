@@ -612,6 +612,9 @@ def _ty_le(x: float) -> str:
 
 
 # ---------------------------------------------------------------- Bảng tổng hợp kinh phí: cơ cấu kinh phí dự án
+LE_THE = 8                  # lề trong mỗi thẻ của Bảng tổng hợp kinh phí (px)
+
+
 class KhungCoCau(_Khung):
     """Thẻ 1 - Cơ cấu kinh phí dự án: tiền đất, tài sản (nhà, công trình), cây trồng - vật nuôi, hỗ trợ, thưởng; cộng bồi thường,
     hỗ trợ, tái định cư; kinh phí tổ chức thực hiện bồi thường (QĐ 08/2025/QĐ-UBND); tổng kinh phí. Số theo phương án, đối chiếu số
@@ -659,6 +662,12 @@ class KhungCoCau(_Khung):
             if loai in ('nhom', 'cong') and co_qd and gt[5] is not None:        # có quyết định: lệch số phương án so với phê duyệt
                 kieu[(r, 5)] = dict(nen=DO if gt[5] else XANH, dam=loai == 'cong')
         self.bang.dat_du_lieu([_chu(gt, tien=(2, 3, 4, 5)) for _, gt in dong], [], kieu)
+        if dong:                                         # cột Nhóm khoản vừa chữ dài nhất (chữ đậm) - không xuống dòng, không quá rộng
+            from PySide6.QtGui import QFont, QFontMetrics
+            f = QFont(self.bang.font())
+            f.setBold(True)
+            rong = max(QFontMetrics(f).horizontalAdvance(str(gt[0])) for _, gt in dong) + 2 * LE_THE + 8
+            self.bang.setColumnWidth(0, max(240, min(rong, 420)))
         if self.cc is None:
             self.lb.setText('')
             return
@@ -805,6 +814,9 @@ class KhungBangTongHop(_Khung):
         for w, t, ma in zip(self.cac_the, self.THE, self.KY_HIEU_THE):
             ic = icon_ky_hieu(ma, TOKEN['chinh'], 16)
             self.tab.addTab(w, ic if ic is not None else QIcon(), t)
+            # 16/10/2026 (người dùng): chữ tóm tắt / bảng không sát mép khung thẻ - lề vừa đủ
+            if w.layout() is not None:
+                w.layout().setContentsMargins(LE_THE, LE_THE - 2, LE_THE, LE_THE - 2)
             w.da_doi.connect(self._doi)
             w.mo_ho.connect(self.mo_ho.emit)
         self.b_phe_duyet = QPushButton('Xem Quyết định phê duyệt  →')

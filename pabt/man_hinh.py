@@ -11,7 +11,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
                                QFileDialog, QFormLayout, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
-                               QListWidgetItem, QMessageBox, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSpinBox,
+                               QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSpinBox,
                                QHeaderView, QSplitter, QStyledItemDelegate, QTableWidget, QTableWidgetItem, QTabWidget,
                                QVBoxLayout, QWidget)
 
@@ -591,6 +591,8 @@ class BangMuc(QWidget):
             lo.addLayout(nut)
         lo.addWidget(self.bang, 1)
         # nút Trở lại / Tiếp theo: MỘT hàng chung dưới đáy cửa sổ, cùng dải tổng cộng (CuaSoLapPA.hang_dieu_huong)
+        self.bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.bang.customContextMenuRequested.connect(self.menu_dong)
         from .giao_dien import dat_dong_gon, nhap_bang_phim
         nhap_bang_phim(self.bang)                    # Tab / Enter đi giữa các ô, không cần chuột
         # dòng gọn 30-32 px, cao theo chữ thật (vua_dong) - ô Ghi chú / Quy cách trống không làm dòng cao 60-90 px
@@ -775,6 +777,59 @@ class BangMuc(QWidget):
             if self.muc == 4:
                 self._dat_loai_cs('')
             self.hang.xoa()
+
+    def menu_dong(self, pos=None) -> QMenu:
+        """Menu chuột phải của bảng mục (16/10/2026): thêm / nhân bản / xóa / di chuyển dòng, chép ô, và lệnh riêng của mục (mục 1:
+        thêm nhiều thửa, tra giá NQ 28, chọn mọi dòng; mục 2: kiểm tra DT xây dựng, tách trong / ngoài ranh; mục 3: tính mật độ).
+        pos None: chỉ dựng menu (kiểm thử), không hiện."""
+        man, muc, b = self.man, self.muc, self.bang
+        if pos is not None:
+            r = b.rowAt(pos.y())
+            if r >= 0 and r not in self.cac_dong_chon():            # bấm phải ngoài vùng chọn: chọn dòng dưới con trỏ
+                b.selectRow(r)
+        chon = self.cac_dong_chon()
+        co = bool(chon)
+        m = QMenu(self)
+
+        def them(chu, ham, bat=True):
+            a = m.addAction(chu)
+            a.setEnabled(bat)
+            a.triggered.connect(lambda *_: ham())
+            return a
+        if muc == 1:
+            them('Thêm thửa vào mục 1…', lambda: man.them_thua())
+            them('Thêm tất cả thửa', lambda: man.them_tat_ca_thua())
+            them('Chọn nhiều thửa…', lambda: man.chon_nhieu_thua())
+        else:
+            them('Thêm dòng (ô nhập nhanh)', lambda: self.hang.o_chon.setFocus())
+        them('Nhân bản dòng', lambda: man.nhan_ban_dong(muc), len(chon) == 1)
+        them(f'Xóa {len(chon)} dòng đã chọn' if len(chon) > 1 else 'Xóa dòng', lambda: man.xoa_dong(muc), co)
+        m.addSeparator()
+        them('▲ Lên', lambda: man.di_chuyen(muc, -1), len(chon) == 1)
+        them('▼ Xuống', lambda: man.di_chuyen(muc, 1), len(chon) == 1)
+        m.addSeparator()
+        them('Chép nội dung ô', lambda: self.chep_o(), b.currentItem() is not None)
+        if muc == 1:
+            them('Chọn mọi dòng (Ctrl+A)', lambda: b.selectAll(), b.rowCount() > 0)
+            m.addSeparator()
+            them('Tra giá đất NQ 28…', lambda: man.tra_gia_dat_nq28(), len(chon) == 1)
+        elif muc == 2:
+            m.addSeparator()
+            them('Kiểm tra DT xây dựng…', lambda: man.kiem_tra_dt_xay_dung())
+            them('Tách phần trong / ngoài ranh thu hồi…', lambda: man.tach_ranh(), len(chon) == 1)
+        elif muc == 3:
+            m.addSeparator()
+            them('Tính mật độ…', lambda: man.tinh_mat_do(), len(chon) == 1)
+        if pos is not None:
+            m.exec(b.viewport().mapToGlobal(pos))
+            m.deleteLater()
+        return m
+
+    def chep_o(self) -> str:
+        it = self.bang.currentItem()
+        chu = it.text() if it is not None else ''
+        QApplication.clipboard().setText(chu)
+        return chu
 
     def dong_chon(self) -> int:
         return self.bang.currentRow()
@@ -1642,6 +1697,23 @@ class CuaSoLapPA(QDialog):
             self._sau_khi_them(2, i, 'Đã tách phần trong / ngoài ranh thu hồi (mô tả ở cột Quy cách).')
         return dlg
 
+    def nhan_ban_dong(self, muc: int, i: int | None = None) -> int | None:
+        """Chép dòng đang chọn thành dòng mới ngay dưới (mục 1: cùng thửa - tách diện tích theo loại đất / vị trí). Trả chỉ số dòng mới."""
+        from dataclasses import replace
+        i = self.bang[muc].dong_chon() if i is None else i
+        if not 0 <= i < len(self.bo.ds(muc)):
+            return None
+        if muc == 1:
+            ds = self.bo.pa.dat
+            ds.insert(i + 1, replace(ds[i], id=None, thanh_tien_excel=None))
+            j = i + 1
+        else:
+            j = self.bo.nhan_ban(muc, i)
+        self.bang[muc].ve(chon=j)
+        self.thong_bao(f'Đã nhân bản dòng {i + 1}: sửa số liệu dòng mới.')
+        self.cap_nhat()
+        return j
+
     def them_tat_ca_thua(self) -> int:
         """Thêm dòng mục 1 cho mọi thửa của hộ chưa có trong mục 1. Trả số dòng thêm."""
         return self._them_cac_thua(None)
@@ -2162,6 +2234,12 @@ class HopIn(QDialog):
             h = QHBoxLayout()
             h.addWidget(o)
             h.addWidget(cb)
+            if o is self.o_bth:                     # 16/10/2026: xem trước bảng tổng hợp của các hộ đang đánh dấu ngay trong khung
+                self.b_xem_bth = QPushButton('Xem trước bảng tổng hợp')
+                self.b_xem_bth.setToolTip('Lập bảng tổng hợp các hộ đang đánh dấu (theo mẫu, chế độ dự thảo / chính thức đang chọn) '
+                                          'và hiện ở khung xem trước bên phải')
+                self.b_xem_bth.clicked.connect(lambda: self.xem_truoc_bang_tong_hop())
+                h.addWidget(self.b_xem_bth)
             h.addStretch(1)
             if o is self.o_ct:
                 form.addRow('Bản in:', h)
@@ -2289,6 +2367,24 @@ class HopIn(QDialog):
             return in_an.lap_chi_tiet(self.con, ma, Path(thu_muc) / f'{in_an.ten_file_ho(self.con, ma)}.xlsx', mau,
                                       du_thao=du_thao, che_cccd=che)
         self.w_preview.yeu_cau(self.khoa_xem_truoc(), tao, f'{ten} ({"dự thảo" if du_thao else "chính thức"})', ngay)
+
+    def xem_truoc_bang_tong_hop(self, ngay: bool = False):
+        """Xem trước bảng tổng hợp các hộ đang đánh dấu (khóa: danh sách hộ, dự thảo?, mẫu - cùng khóa thì dùng lại bản đã lập).
+        Trả khóa đã yêu cầu (None: chưa đánh dấu hộ nào)."""
+        from . import in_an
+        ds = list(self.ds_ho())
+        if not ds:
+            if not getattr(self, 'im_lang', False):
+                QMessageBox.information(self, TEN_UD, 'Đánh dấu ít nhất một hộ để xem trước bảng tổng hợp.')
+            return None
+        du_thao, mau = self.che_do() == 'du_thao', self.cb_mau_bth.currentData()
+        khoa = ('bth', tuple(ds), du_thao, mau)
+        self._ma_xem = None                         # bấm lại một dòng hộ thì xem lại phương án chi tiết của hộ đó
+
+        def tao(thu_muc):
+            return in_an.lap_bang_tong_hop(self.con, Path(thu_muc) / 'BangTongHop.xlsx', ds, mau, du_thao=du_thao)
+        self.w_preview.yeu_cau(khoa, tao, f'Bảng tổng hợp {len(ds)} hộ ({"dự thảo" if du_thao else "chính thức"})', ngay)
+        return khoa
 
     def done(self, r):
         self.w_preview.don_dep()                    # xóa file tạm %TEMP%\pabt_preview\…

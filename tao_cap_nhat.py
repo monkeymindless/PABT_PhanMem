@@ -2,7 +2,7 @@ r"""Tạo gói cập nhật PABT (.pabtcn) từ mã nguồn hiện tại - sửa
 
   1. Sửa mã trong pabt/, chạy kiểm thử; tăng __version__ trong pabt/__init__.py (phải lớn hơn bản đang cài ở máy dùng).
   2. .venv\Scripts\python tao_cap_nhat.py [--mo-ta "Sửa lỗi ..."] [--toi-thieu 0.8.0] [--ghi-de]
-     -> bo_cai\LARC_CapNhat_<phiên bản>.pabtcn   (đã có gói cùng phiên bản thì dừng, trừ khi có --ghi-de)
+     -> bo_cai\LARC_CapNhat_<phiên bản>.larcud   (đã có gói cùng phiên bản thì dừng, trừ khi có --ghi-de)
   3. Gửi file cho máy dùng: bấm đúp file, hoặc nút "Cập nhật phần mềm" (góc dưới bên phải) > "Cập nhật từ file…".
 Một gói dùng cho cả bản Windows 10/11 và Windows 7/8. Gói chỉ chứa mã và dữ liệu gói pabt (không có dự án / hồ sơ). Cần thư viện mới (Python, Qt...) thì dựng bộ cài mới.
 """

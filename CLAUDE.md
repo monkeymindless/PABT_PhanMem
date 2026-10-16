@@ -1307,6 +1307,22 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     cột `C_HOAN_TAT` "Hoàn tất CTBT (theo đợt)" + `C_SCAN` "Hồ sơ scan" (bấm đúp: một file mở luôn, nhiều -> menu `mo_nhanh`), nút "Hộ hoàn
     tất CTBT…" -> `HopHoanTatCTBT` (xem + Xuất Excel). Test `tests/test_yeu_cau_0996.py` (lớp `_Co.tearDown` gọi doCleanups TRƯỚC khi xóa
     thư mục tạm - addCleanup chạy sau tearDown, file .pabt còn mở thì Windows không xóa được).
+- Sau 0.9.96 (người dùng 16/10/2026, ảnh màn hình):
+  - LỖI: mở Lập phương án, sang Niêm yết, bấm lại Lập phương án vẫn thấy Niêm yết - `KhungLamViecDaTab.dam_bao` với khóa đã có và
+    widget=None chỉ đổi tab ẨN (thanh tab bỏ từ 0.9.94); nay `stack_phu.setCurrentWidget(self.widget[khoa])`. Lệnh LENH_CAN_DU_AN xóa
+    statusTip "Mở hoặc tạo dự án…" khi đã có dự án (trước giữ mãi trên thanh trạng thái).
+  - Menu chuột phải bảng mục (`BangMuc.menu_dong(pos)`; pos None = chỉ dựng menu cho kiểm thử): thêm (mục 1: thửa / tất cả / chọn nhiều;
+    mục khác: ô nhập nhanh), `CuaSoLapPA.nhan_ban_dong` (mục 1 replace DongDat id=None; khoản `bo.nhan_ban`), xóa (cả loạt), lên / xuống,
+    `chep_o`; mục 1 chọn mọi dòng + Tra NQ 28, mục 2 kiểm tra DT xây dựng + tách ranh, mục 3 tính mật độ.
+  - Bản in: `in_an.chuan_dong_ngay` (sau dien_so_ngay, trước _thay_cho_trong; chi tiết + tổng hợp): địa danh dòng ngày CỐ ĐỊNH = hồ sơ địa
+    phương `ban_in.dia_danh_ngay` (pabt_profile.json "Trị An" - nơi đặt cơ quan, không theo xã dự án), chỗ trống -> "ngày ...... tháng .....
+    năm"; `dat_nhan_chu_su_dung` tổ chức -> ẨN dòng "Số CCCD:"; `viet_hoa_du_an` "Dự án: X" -> "DỰ ÁN X" (chỉ phương án chi tiết).
+  - HopIn: nút `b_xem_bth` "Xem trước bảng tổng hợp" -> `xem_truoc_bang_tong_hop` (hộ đang đánh dấu, khóa ('bth', hộ, dự thảo?, mẫu)).
+  - Gói cập nhật đổi đuôi `.pabtcn` -> `.larcud` (người dùng 16/10/2026): `cap_nhat.DUOI` = '.larcud', `DUOI_NHAN` (.larcud + .pabtcn cũ -
+    hộp chọn file, nhấp đúp, chay.py); bộ cài gắn cả hai đuôi, gỡ cài gỡ cả hai; tao_cap_nhat ra `LARC_CapNhat_<ver>.larcud`;
+    phan_tich_phien_ban tìm cả .larcud / .pabtcn. Bản cài <= 0.9.96 chỉ lọc *.pabtcn trong hộp chọn: đổi đuôi gói thành .pabtcn để cài.
+  - Bảng tổng hợp kinh phí: lề trong mỗi thẻ `man_hinh_theo_doi.LE_THE` 8 px; cột Nhóm khoản vừa chữ dài nhất (240-420 px).
+  Test `tests/test_yeu_cau_1610.py`.
 - Khối chữ ký bản in (người dùng 16/10/2026, ảnh PDF "Đinh Công Thiện" lệch dưới "KIỂM TRA"): `in_an.can_khoi_ky(ws)` gọi TRƯỚC
   `_thay_cho_trong` ở `lap_chi_tiet` / `lap_bang_tong_hop` - ô `{nguoi_lap}` / `{nguoi_kiem_tra}` / `{nguoi_ky}` tìm chức danh gần nhất
   phía trên phủ cột giữa, bỏ dấu cách thừa của chức danh (mẫu IN_CHITIET ghi "   KIỂM TRA     " - Excel căn giữa tính cả dấu cách),

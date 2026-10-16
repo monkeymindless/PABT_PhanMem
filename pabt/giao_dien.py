@@ -1273,6 +1273,10 @@ class KhungLamViecDaTab(QWidget):
             if self.stack_phu.indexOf(widget) < 0:
                 self.stack_phu.addWidget(widget)
             self.stack_phu.setCurrentWidget(widget)
+        elif self.widget.get(khoa) is not None:
+            # trang phụ đã mở (hộ đang soạn / Niêm yết / Đơn giá): chuyển khung hiển thị về đúng trang đó. Trước 16/10/2026 chỉ đổi
+            # tab ẩn (thanh tab đã bỏ, tín hiệu bị chặn) -> mở Niêm yết rồi bấm lại Lập phương án vẫn thấy Niêm yết
+            self.stack_phu.setCurrentWidget(self.widget[khoa])
         if ten:
             self.bar.setTabText(i, ten)
         self.bar.blockSignals(True)

@@ -264,7 +264,7 @@ def main(argv) -> int:
     if not so_sanh and '--khong-so-sanh' not in argv:                   # mặc định: gói cập nhật mới nhất khác phiên bản mã nguồn
         pb = re.search(r"__version__\s*=\s*'([^']+)'", (GOC / 'pabt' / '__init__.py').read_text(encoding='utf-8')).group(1)
         so = lambda s: tuple(int(x) for x in re.findall(r'\d+', s))       # noqa: E731
-        goi = [p for g in ('LARC_CapNhat_*.pabtcn', 'PABT_CapNhat_*.pabtcn')       # từ 0.9.94 tên LARC_CapNhat
+        goi = [p for g in ('LARC_CapNhat_*.larcud', 'LARC_CapNhat_*.pabtcn', 'PABT_CapNhat_*.pabtcn')       # từ 0.9.94 tên LARC_CapNhat
                for p in (GOC / 'bo_cai').glob(g) if p.stem.split('_')[-1] != pb]
         if goi:
             so_sanh = str(max(goi, key=lambda p: so(p.stem.split('_')[-1])))

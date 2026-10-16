@@ -551,8 +551,9 @@ function Cai($dich, $desktop, $lienKet, $tienDo) {
         New-Item 'HKCU:\Software\Classes\PABT.DuAn\DefaultIcon' -Value "`"$ico`",0" -Force | Out-Null
         New-Item 'HKCU:\Software\Classes\PABT.DuAn\shell\open\command' -Value "`"$exe`" `"%1`"" -Force | Out-Null
     }
-    # gói cập nhật .pabtcn: bấm đúp để cập nhật phần mềm
+    # gói cập nhật .larcud (cũ: .pabtcn): bấm đúp để cập nhật phần mềm
     New-Item 'HKCU:\Software\Classes\.pabtcn' -Value 'PABT.CapNhat' -Force | Out-Null
+    New-Item 'HKCU:\Software\Classes\.larcud' -Value 'PABT.CapNhat' -Force | Out-Null
     New-Item 'HKCU:\Software\Classes\PABT.CapNhat' -Value 'Gói cập nhật LARC' -Force | Out-Null
     New-Item 'HKCU:\Software\Classes\PABT.CapNhat\DefaultIcon' -Value "`"$ico`",0" -Force | Out-Null
     New-Item 'HKCU:\Software\Classes\PABT.CapNhat\shell\open\command' -Value "`"$exe`" `"%1`"" -Force | Out-Null

@@ -931,8 +931,8 @@ class CuaSoChinh(QMainWindow):
             a = self.lenh.get(ten)
             if a is not None:
                 a.setEnabled(co and not (self.chi_doc and ten == 'Lập phương án hộ…'))
-                if not co:
-                    a.setStatusTip('Mở hoặc tạo dự án để dùng chức năng này')
+                # có dự án thì xóa nhắc (trước đây giữ mãi: thanh trạng thái vẫn báo "Mở hoặc tạo dự án…" khi đã mở)
+                a.setStatusTip('' if co else 'Mở hoặc tạo dự án để dùng chức năng này')
 
     def lam_moi_khoa(self):
         if self.khoa is not None and not self.khoa.lam_moi():
@@ -3058,7 +3058,7 @@ def main() -> int:
         QTimer.singleShot(5000, nap_cap_nhat.khoi_dong_tot)
     except ImportError:
         pass
-    if tep and tep[0].lower().endswith('.pabtcn'):                          # nhấp đúp gói cập nhật
+    if tep and tep[0].lower().endswith(('.larcud', '.pabtcn')):                          # nhấp đúp gói cập nhật
         QTimer.singleShot(0, lambda: w.cap_nhat_phan_mem(tep[0]))
     if tep and tep[0].lower().endswith('.pabtcfg'):                         # nhấp đúp gói mẫu in & cấu hình (0.9.85)
         QTimer.singleShot(0, lambda: w.nhap_goi_mau(tep[0]))

@@ -40,8 +40,10 @@ foreach ($duoi in '.larc', '.pabt') {
     }
 }
 Remove-Item 'HKCU:\Software\Classes\PABT.DuAn' -Recurse -Force -ErrorAction SilentlyContinue
-if ((Get-ItemProperty 'HKCU:\Software\Classes\.pabtcn' -ErrorAction SilentlyContinue).'(default)' -eq 'PABT.CapNhat') {
-    Remove-Item 'HKCU:\Software\Classes\.pabtcn' -Recurse -Force
+foreach ($duoi in '.pabtcn', '.larcud') {
+  if ((Get-ItemProperty "HKCU:\Software\Classes\$duoi" -ErrorAction SilentlyContinue).'(default)' -eq 'PABT.CapNhat') {
+    Remove-Item "HKCU:\Software\Classes\$duoi" -Recurse -Force
+  }
 }
 Remove-Item 'HKCU:\Software\Classes\PABT.CapNhat' -Recurse -Force -ErrorAction SilentlyContinue
 if ((Get-ItemProperty 'HKCU:\Software\Classes\.pabtcfg' -ErrorAction SilentlyContinue).'(default)' -eq 'PABT.MauIn') {

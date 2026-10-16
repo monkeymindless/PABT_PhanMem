@@ -75,7 +75,7 @@ class TestBanIn(unittest.TestCase):
         self.assertTrue(ws['B19'].value.startswith('Thửa đất số 394, tờ bản đồ số 35, loại đất ODT, phường Trị An'), ws['B19'].value)
         self.assertEqual(ws.cell(tong_r - 1, 7).value, int(kq.muc[5]))  # thưởng
         self.assertEqual(ws['C8'].value, 'Nguyễn Văn Tiệp')
-        self.assertTrue(ws['A5'].value.startswith('Dự án: Xây dựng đường Quang Trung'))
+        self.assertTrue(ws['A5'].value.startswith('DỰ ÁN Xây dựng đường Quang Trung'))
         self.assertTrue(ws['E3'].value.startswith('Trị An, ngày'))
         self.assertFalse([v for v in _o_chu(ws) if '{' in v])          # không còn chỗ trống chưa điền
         # phần cuối dời xuống đúng chỗ, vùng in và định dạng có điều kiện phủ đủ dòng

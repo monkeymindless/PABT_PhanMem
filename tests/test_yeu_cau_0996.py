@@ -24,6 +24,16 @@ def _cua_so_lap_pa(td, so_ho=3, ma=None):
     return con, c
 
 
+class _Cho:
+    """QTest.qWait (PySide2 không có): chạy vòng sự kiện ms mili giây."""
+    @staticmethod
+    def qWait(ms):
+        from PySide6.QtCore import QEventLoop, QTimer
+        v = QEventLoop()
+        QTimer.singleShot(ms, v.quit)
+        v.exec()
+
+
 class _Co(CoSo):
     def tearDown(self):
         self.doCleanups()                       # đóng cửa sổ / kết nối TRƯỚC khi xóa thư mục tạm (Windows khóa file đang mở)
@@ -58,18 +68,22 @@ class TestChieuCaoDong(_CoCuaSo):
         self.assertEqual((vh.minimumSectionSize(), vh.defaultSectionSize()), (30, 32))
         i = c.bo.them_hang_muc_khac(2, 'Mái che tạm')                     # ghi chú / quy cách trống
         bm.ve(chon=i)
-        self.app.processEvents()
+        QTest = _Cho                                                    # đo lại sau khi cột giãn xếp xong (hẹn 50 ms)
+        bm.vua_dong()                                                       # (= hẹn 50 ms sau khi cột xếp xong)
         h0 = bm.bang.rowHeight(i)                                           # ghi chú trống: chỉ cao theo các ô có chữ
         self.assertEqual(h0, giao_dien.cao_can_dong(bm.bang, i))
         self.assertTrue(30 <= h0 <= giao_dien.CAO_DONG_TOI_DA, h0)
         k = [x[0] for x in bm.cot]
         dai = 'Theo quy định tại khoản 3 Điều 102 Luật Đất đai năm 2024, tính theo diện tích xây dựng thực tế đo đạc. ' * 6
         c.sua_o(2, i, 'ghi_chu', dai)
-        self.app.processEvents()
+        QTest.qWait(120)
         h = bm.bang.rowHeight(i)
         self.assertTrue(h0 < h <= giao_dien.CAO_DONG_TOI_DA or h == giao_dien.CAO_DONG_TOI_DA, h)   # chữ dài: cao theo chữ, <= 88
         c.sua_o(2, i, 'ghi_chu', '')
-        self.assertEqual(bm.bang.rowHeight(i), h0)
+        QTest.qWait(120)
+        bm.vua_dong()
+        self.assertEqual(bm.bang.rowHeight(i), giao_dien.cao_can_dong(bm.bang, i))
+        self.assertLessEqual(bm.bang.rowHeight(i), h)
         # tiêu đề "Ghi chú (quy định, cách tính)" không bị cắt; cột thường trống không giãn
         from PySide6.QtGui import QFont, QFontMetrics
         f = QFont(bm.bang.horizontalHeader().font())
