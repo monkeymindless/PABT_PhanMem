@@ -1,4 +1,8 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.96 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 0.9.97 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **0.9.97**: bảng các mục phương án có **menu chuột phải** (thêm / nhân bản / xóa dòng…). Gói cập nhật đổi đuôi thành **.larcud**
+> (Trợ giúp → Cập nhật phần mềm; gói .pabtcn cũ vẫn nhận). Bản in: "Trị An, ngày ...... tháng ..... năm", tổ chức không in dòng CCCD,
+> "DỰ ÁN <tên>". Xuất hồ sơ & Bản in: **Xem trước bảng tổng hợp**.
 
 > **0.9.96**: **Bảng giá đất** có thẻ **Hệ số K** (QĐ 03/2026/QĐ-UBND) - mục Đất tự nhân hệ số K. Mục 1. Đất: **Thêm tất cả thửa** /
 > **Chọn nhiều thửa…**, chọn nhiều dòng (Shift / Ctrl) để xóa hoặc đặt cùng vị trí / giá. **Hồ sơ scan** của hộ (nút ở thẻ thửa đất,

@@ -7,6 +7,16 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('0.9.97', '16/10/2026', (
+        'Sửa: mở Niêm yết rồi bấm lại "Lập phương án chi tiết" không hiện cửa sổ nhập - nay mở đúng cửa sổ lập phương án.',
+        'Bảng các mục phương án: menu chuột phải (thêm, nhân bản, xóa, lên / xuống, chép ô; mục 1: thêm nhiều thửa, tra giá NQ 28; mục 2 '
+        'kiểm tra DT xây dựng, tách ranh; mục 3 tính mật độ).',
+        'Bản in: dòng ngày "Trị An, ngày ...... tháng ..... năm"; tổ chức không in dòng CCCD; tiêu đề "DỰ ÁN <tên dự án>"; họ tên người '
+        'ký căn giữa dưới chức danh. Xuất hồ sơ & Bản in: nút "Xem trước bảng tổng hợp".',
+        'Gói cập nhật đổi đuôi thành .larcud (gói .pabtcn cũ vẫn cài được). Bảng tổng hợp kinh phí có lề, cột Nhóm khoản không xuống dòng.',
+        'Nhanh hơn: lưu một hộ rồi tải lại danh sách (5.000 hộ: ~0,13 s -> ~0,07 s), tạo Dự án mới có hệ số K, chuyển thẻ cửa sổ lập '
+        'phương án, in phương án chi tiết.',
+    )),
     ('0.9.96', '16/10/2026', (
         'Bảng giá đất có hai thẻ "Bảng giá đất 2026" và "Hệ số K" (QĐ 03/2026/QĐ-UBND, gắn sẵn 4 xã / phường của bảng giá); mục Đất '
         'và hỗ trợ tính theo giá đất tự nhân hệ số K; nhập / sửa hệ số K từ file (cả PDF ảnh) hoặc chữ dán.',
