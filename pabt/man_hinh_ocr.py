@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QImage, QPixmap, QTransform
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
                                QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QProgressDialog, QPushButton, QScrollArea, QSplitter,
                                QStackedWidget, QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout, QWidget)
 
@@ -197,10 +197,11 @@ class KhungXemFile(QScrollArea):
 
 
 class HopQuetGiayTo(QDialog):
-    """dich: 'lap_pa' (cua_so = CuaSoLapPA) hoặc 'du_toan' (cua_so = KhungDuToan)."""
+    """Quét giấy tờ cho Khái toán (cua_so = KhungDuToan): thêm dòng đất, đưa tài sản vào khái toán. Cửa sổ lập phương án hộ KHÔNG
+    còn dùng (0.9.96, người dùng: nút "Quét hồ sơ" chỉ báo "Tiện ích đang trong quá trình hoàn thiện")."""
     im_lang = False
 
-    def __init__(self, cua_so, dich: str = 'lap_pa', parent=None, files=None):
+    def __init__(self, cua_so, dich: str = 'du_toan', parent=None, files=None):
         super().__init__(parent or cua_so)
         self.cua_so, self.dich = cua_so, dich
         self.kq = ocr_ho_so.KetQuaOcr()
@@ -318,28 +319,16 @@ class HopQuetGiayTo(QDialog):
         self.lb = QLabel('Nhận dạng chữ trên máy (Windows OCR / Tesseract - không gửi giấy tờ ra ngoài). Chữ viết tay đọc không được / '
                          'sai nhiều: soát lại trước khi điền.')
         self.lb.setWordWrap(True)
-        self.o_luu_dinh_kem = QCheckBox('Lưu đính kèm file vào hồ sơ hộ')
-        self.o_luu_dinh_kem.setToolTip('Ghi đường dẫn các file đã quét vào danh sách file đính kèm (ảnh hiện trạng) của hộ đang mở')
-        self.o_luu_dinh_kem.setVisible(dich == 'lap_pa')
-        self.b_ho = QPushButton('Điền thông tin hộ && thửa' if dich == 'lap_pa' else 'Thêm dòng đất')
+        self.b_ho = QPushButton('Thêm dòng đất')
         self.b_ho.clicked.connect(lambda: self.dien_ho_thua())
-        self.b_ts = QPushButton('Đưa tài sản vào phương án…' if dich == 'lap_pa' else 'Đưa tài sản vào khái toán…')
+        self.b_ts = QPushButton('Đưa tài sản vào khái toán…')
         self.b_ts.clicked.connect(lambda: self.dua_tai_san())
-        self.b_tron_bo = QPushButton('Nhập trọn bộ vào phương án hộ')
-        self.b_tron_bo.setToolTip('Điền thông tin hộ, nhân khẩu, tái định cư, thửa đất + nguồn gốc, rồi đưa toàn bộ tài sản, cây trồng, '
-                                  'vật nuôi, hỗ trợ vào phương án hộ đang mở (chưa lưu - soát rồi bấm Lưu)')
-        self.b_tron_bo.clicked.connect(lambda: self.nhap_tron_bo())
-        self.b_tron_bo.setVisible(dich == 'lap_pa')
-        from .giao_dien import KieuNut, ap_kieu_nut
-        ap_kieu_nut(self.b_tron_bo, KieuNut.CHINH)
         b_dong = QPushButton('Đóng')
         b_dong.clicked.connect(self.reject)
         hn = QHBoxLayout()
-        hn.addWidget(self.o_luu_dinh_kem)
         hn.addStretch(1)
         hn.addWidget(self.b_ho)
         hn.addWidget(self.b_ts)
-        hn.addWidget(self.b_tron_bo)
         hn.addWidget(b_dong)
         lo = QVBoxLayout(self)
         lo.setContentsMargins(8, 6, 8, 6)
@@ -445,8 +434,6 @@ class HopQuetGiayTo(QDialog):
     def _bat_nut(self) -> None:
         self.b_ho.setEnabled(self.bang.rowCount() > 0 or bool(self.o_ten.text().strip()))
         self.b_ts.setEnabled(bool(self.o_ts.toPlainText().strip()) or self.bang.rowCount() == 0)
-        self.b_tron_bo.setEnabled(self.bang.rowCount() > 0 or bool(self.o_ten.text().strip()) or
-                                  bool(self.o_ts.toPlainText().strip()))
 
     # ---- đọc bảng
     def thua_da_chon(self) -> list:
@@ -465,103 +452,19 @@ class HopQuetGiayTo(QDialog):
 
     # ---- điền vào cửa sổ đích
     def dien_ho_thua(self, bao: bool = True) -> int:
-        """Lập phương án: điền họ tên / CCCD / địa chỉ (ô trống hoặc người dùng đồng ý ghi đè) + thêm dòng thửa (kèm nguồn gốc đất)
-        vào thẻ Thông tin hộ. Khái toán: thêm dòng đất (loại đất, diện tích). Trả số thửa đã thêm."""
-        ds = self.thua_da_chon()
-        if self.dich == 'du_toan':
-            n, bo = 0, []
-            for t in ds:
-                ma = (t['loai_dat'] or '').split('+')[0]
-                if not ma or t['dt_thu_hoi'] is None:
-                    bo.append(t['so_thua'])
-                    continue
-                if self.cua_so.them_dat(ma, so_vn(t['dt_thu_hoi'])) is not None:
-                    n += 1
+        """Khái toán: thêm dòng đất (loại đất, diện tích) của các thửa đã chọn. Trả số dòng đã thêm."""
+        n, bo = 0, []
+        for t in self.thua_da_chon():
+            ma = (t['loai_dat'] or '').split('+')[0]
+            if not ma or t['dt_thu_hoi'] is None:
+                bo.append(t['so_thua'])
+                continue
+            if self.cua_so.them_dat(ma, so_vn(t['dt_thu_hoi'])) is not None:
+                n += 1
+        if bao:
             self._bao(f'Đã thêm {n} dòng đất vào bảng khái toán (đơn giá: tra NQ 28 hoặc nhập).' +
                       (f'\nBỏ qua thửa thiếu loại đất / diện tích: {", ".join(bo)}' if bo else ''))
-            return n
-        hs = self.cua_so.ho_so
-        moi = {'ho_ten': self.o_ten.text().strip(), 'so_cccd': self.o_cccd.text().strip(), 'dia_chi': self.o_dc.text().strip()}
-        khac = [k for k, v in moi.items() if v and hs.o[k].text().strip() and hs.o[k].text().strip() != v]
-        ghi_de = True
-        if khac and not self.im_lang:
-            ghi_de = QMessageBox.question(self, TEN_UD, 'Hồ sơ hộ đã có ' + ', '.join({'ho_ten': 'họ tên', 'so_cccd': 'số CCCD',
-                                          'dia_chi': 'địa chỉ'}[k] for k in khac) + ' khác giấy tờ. Ghi đè bằng thông tin trên giấy tờ?') \
-                == QMessageBox.StandardButton.Yes
-        for k, v in moi.items():
-            if v and (ghi_de or not hs.o[k].text().strip()):
-                hs.o[k].setText(v)
-        co = {(str(hs.bang.item(r, hs.cot.index('so_to')).text() if hs.bang.item(r, hs.cot.index('so_to')) else '').strip(),
-               str(hs.bang.item(r, hs.cot.index('so_thua')).text() if hs.bang.item(r, hs.cot.index('so_thua')) else '').strip())
-              for r in range(hs.bang.rowCount())}
-        ng = self.o_ng.toPlainText().strip()
-        n = 0
-        for t in ds:
-            if (t['so_to'], t['so_thua']) in co:
-                continue                                       # thửa đã có trong hồ sơ: không thêm trùng
-            hs.them_dong(dict(so_to=t['so_to'], so_thua=t['so_thua'], loai_dat=t['loai_dat'],
-                              dt_thu_hoi='' if t['dt_thu_hoi'] is None else t['dt_thu_hoi'], nguon_goc=ng))
-            n += 1
-        self.cua_so.tab.setCurrentIndex(0)
-        if bao:
-            self._bao(f'Đã điền thông tin hộ và thêm {n} thửa vào thẻ "Thông tin hộ" (chưa lưu - soát rồi bấm Lưu).')
         return n
-
-    def dien_nhan_khau_tdc(self) -> None:
-        """Nhân khẩu (thẻ Hỗ trợ: ổn định đời sống, thuê nhà tự tính theo số này) và tình trạng tái định cư của hộ đang mở."""
-        from .tien import doc_so_vn
-        try:
-            nk = int(doc_so_vn(self.o_nk.text())) if self.o_nk.text().strip() else None
-        except Exception:                                      # noqa: BLE001 - ô gõ sai: bỏ qua
-            nk = None
-        if nk is not None and hasattr(self.cua_so, 'o_nk'):
-            self.cua_so.o_nk.setValue(nk)
-        tdc = self.o_tdc.text().strip()
-        cb = getattr(self.cua_so.bang.get(4), 'cb_tdc', None) if hasattr(self.cua_so, 'bang') else None
-        if tdc and cb is not None:
-            from .lap_pa import bo_dau
-            khop = next((cb.itemText(i) for i in range(cb.count()) if bo_dau(cb.itemText(i)) == bo_dau(tdc)), tdc)
-            cb.setCurrentText(khop)
-
-    def luu_dinh_kem(self) -> int:
-        """Ghi các file đã quét vào bảng anh_hien_trang của hộ đang mở (khớp theo 'quet'). Trả số file thêm mới."""
-        import sqlite3
-        from datetime import datetime
-        bo = getattr(self.cua_so, 'bo', None)
-        if bo is None or not self.files:
-            return 0
-        con = bo.con
-        n = 0
-        try:
-            with con:
-                for f in self.files:
-                    cur = con.execute('INSERT OR IGNORE INTO anh_hien_trang (ma_ho, duong_dan, ten_file, khop_theo, luc) '
-                                      'VALUES (?, ?, ?, ?, ?)', (bo.ma_ho, str(Path(f).resolve()), Path(f).name, 'quet',
-                                                                 datetime.now().strftime('%d/%m/%Y %H:%M')))
-                    n += cur.rowcount
-                from .csdl import ghi_nhat_ky
-                ghi_nhat_ky(con, f'Đính kèm {n} file quét vào hộ {bo.ma_ho}', 'anh_hien_trang', bo.ma_ho)
-        except sqlite3.Error as e:
-            self._bao(chu_loi('Không lưu được file đính kèm', e), True)
-            return 0
-        return n
-
-    def nhap_tron_bo(self):
-        """Nhập trọn bộ: thông tin hộ + thửa (kèm nguồn gốc) + nhân khẩu + tái định cư + (đính kèm file) + toàn bộ tài sản, cây trồng,
-        vật nuôi, hỗ trợ (hộp "Dán danh sách tài sản" tự phân loại). Chưa lưu phương án tới khi bấm Lưu."""
-        if self.dich != 'lap_pa':
-            return None
-        n = self.dien_ho_thua(bao=False)
-        self.dien_nhan_khau_tdc()
-        dk = self.luu_dinh_kem() if self.o_luu_dinh_kem.isChecked() else 0
-        chu = self.o_ts.toPlainText().strip()
-        tom = f'Đã điền thông tin hộ, {n} thửa' + (f', đính kèm {dk} file' if dk else '') + '.'
-        if not chu:
-            self._bao(tom + ' Không có dòng tài sản nào.')
-            return None
-        self.lb.setText(tom)
-        self.accept()
-        return self.cua_so.dan_tai_san(chu, cho=not self.im_lang)
 
     def dua_tai_san(self):
         """Mở hộp "Dán danh sách tài sản" với các dòng tài sản (tự phân loại nhà / cây / vật nuôi / hỗ trợ)."""
@@ -569,7 +472,5 @@ class HopQuetGiayTo(QDialog):
         if not chu:
             self._bao('Không có dòng tài sản nào.', True)
             return None
-        if self.o_luu_dinh_kem.isChecked():
-            self.luu_dinh_kem()
         self.accept()
         return self.cua_so.dan_tai_san(chu, cho=not self.im_lang)

@@ -310,7 +310,7 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
                          {r[0].upper() for r in self.con.execute('SELECT ma FROM dm_loaidat')})
         w = CuaSoLapPA(self.con, 1)
         b = w.bang[2].bang
-        self.assertGreaterEqual(b.verticalHeader().minimumSectionSize(), 34)
+        self.assertGreaterEqual(b.verticalHeader().minimumSectionSize(), 30)       # 0.9.96: dòng gọn 30-32 (trước 34)
         c_sl = [k for k, _, _ in w.bang[2].cot].index('so_luong')
         b.setCurrentCell(0, c_sl)
         giao_dien.o_ke(b)                                                   # Enter sau khi sửa: sang ô sửa được kế tiếp

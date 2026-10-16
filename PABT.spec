@@ -14,7 +14,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     # mau_in: chỉ mẫu .xlsx / đường kẻ .xml (0.9.85 - thư mục còn file người dùng để tham khảo, vd PDF phương án thật: KHÔNG đóng gói)
-    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'),
+    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/he_so_k_qd03.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'),
            ('pabt/pabt_profile.json', 'pabt'), ('HUONG_DAN.md', '.')] +
           [(str(f), 'mau_in') for f in sorted(__import__('pathlib').Path('mau_in').glob('*')) if f.suffix.lower() in ('.xlsx', '.xml')] +
           collect_data_files('ezdxf'),

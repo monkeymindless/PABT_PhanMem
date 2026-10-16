@@ -153,7 +153,9 @@ class TestNhapChiTiet(unittest.TestCase):
             self.assertEqual(ho[0]['phap_ly'], GHI_CHU_DAT)             # đất không tính tiền: ghi chú vào pháp lý
             self.assertEqual(ho[0]['tai_dinh_cu'], '')                  # câu mặc định "Sau khi UBND…" không lưu
             self.assertEqual(ho[1]['tai_dinh_cu'], 'Không có.')
-            self.assertEqual(con.execute('SELECT COUNT(*) FROM ct_dat WHERE ma_ho = 1').fetchone()[0], 0)
+            # 0.9.96: mục 1 luôn có dòng cho mỗi thửa, kể cả đơn giá 0 (đất không bồi thường vẫn hiện trong phương án)
+            self.assertEqual(con.execute('SELECT COUNT(*) FROM ct_dat WHERE ma_ho = 1').fetchone()[0], 2)
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM ct_dat WHERE ma_ho = 1 AND gia_bang_gia != '0'").fetchone()[0], 0)
             self.assertEqual(con.execute('SELECT COUNT(*) FROM ct_dat WHERE ma_ho = 2').fetchone()[0], 1)
             k = con.execute('SELECT * FROM ct_khoan WHERE ma_ho = 1 AND muc = 2 ORDER BY thu_tu').fetchall()
             self.assertEqual([x['nguon_gia'] for x in k], [NGUON_DM, NGUON_TAY, NGUON_TAY])

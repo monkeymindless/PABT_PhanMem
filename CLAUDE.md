@@ -98,7 +98,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   chi tiết, mỗi sheet một hộ (bản in kiểu IN_CHITIET) -> `doc` (tìm dòng STT + cột theo tiêu đề, nhãn Họ và tên / CCCD… phía trên,
   "II… nguồn gốc", mục 1-5, TỔNG CỘNG, "Phương án tái định cư:"; sheet mẫu / #N/A / không họ tên: chon=False) -> `ghi(con, ds,
   trung='bo_qua'|'thay'|'them')` thêm vào dự án (không xóa hộ khác; trùng = `ho_trung` CCCD / họ tên). Mục 1 mỗi dòng = một thửa;
-  chỉ lập ct_dat khi có đơn giá đất, không thì ghi chú đất -> `ho.phap_ly` (in_an in ở dòng thửa đầu khi hộ không có ct_dat).
+  từ 0.9.96 LUÔN lập ct_dat (kể cả đơn giá 0); ghi chú đất vẫn -> `ho.phap_ly` khi không có tiền đất. Sheet nhiều phương án: tach_phuong_an.
   Mục 2/3: `_KhopDanhMuc` tên (bo_dau, giữ dấu câu: "Mái che, mái hiên" ≠ "…hiên.") + đơn giá -> danh mục / nhập tay.
   Trạng thái `TRANG_THAI`, luu_luc NULL (= da_lap), thanh_tien_excel + tong_excel để `doi_chieu`.
 - `nghiep_vu.py`: quy tắc tính (`PhuongAn`, `BoiCanh` → `tinh_pa` → `KetQuaHo`), gợi ý hỗ trợ theo QĐ 42/2025, kiểm tra hộ.
@@ -1272,6 +1272,59 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     ~64 KB (trang scan bảng giá) làm đầy ống, hết 180 s báo "quá lâu" (thử file người dùng "VBHN cây trồng.pdf" 48 trang: nay 0,6 s / trang).
     Máy phát triển chỉ có OCR en-US (không gói vi) - đường tiếng Việt chưa thử thật.
   Test `tests/test_yeu_cau_0995.py` (bản in chi tiết GIẢ LẬP qua in_an.lap_chi_tiet).
+- 0.9.96 (người dùng 16/10/2026, 7 mục; số liệu thật "ÁP GIÁ-37 thửa.xlsx" ở thư mục dự án chỉ để thử tay - KHÔNG đưa vào test / git):
+  - Chiều cao dòng bảng phương án: `giao_dien.vua_dong(b, cao_chuan=32, cao_toi_da=88)` đo chữ thật (`cao_can_dong`: QFontMetrics.boundingRect
+    trên bề rộng cột - cột < 100 lấy max(160, sizeHint tiêu đề); ô trống / chữ ngắn không làm dòng cao; một dòng 32-36, nhiều dòng
+    min(88, chữ + 10)); `dat_dong_gon` (verticalHeader không giãn dòng cuối, Interactive, min 30 / mặc định 32). BangMuc dùng thay
+    resizeRowsToContents (dòng trống cao 60-90 px vì cột giãn / tiêu đề dài), đo lại sau 50 ms khi đổi cỡ / kéo cột (`_hen_vua`);
+    `_ve_dong` một dòng = `cao_can_dong`. Theo dõi (HopHoTheoDoi) gọi `vua_dong(b, None, None)` như cũ. ChuNhieuDong: khung sửa cao theo
+    chữ, >= 32, <= max(64, cao dòng). Cột: Ghi chú / Quy cách / Căn cứ giá GỌN (RONG_COT_GON), chỉ Tên / Cách tính / Vị trí giãn.
+  - Nút "Quét hồ sơ…" (`b_ocr`) của CuaSoLapPA chỉ báo `man_hinh.TB_QUET_HO_SO` ("Tiện ích đang trong quá trình hoàn thiện"); mã quét
+    cho lập phương án đã BỎ (HopQuetGiayTo không còn dien_nhan_khau_tdc / luu_dinh_kem / nhap_tron_bo / o_luu_dinh_kem / b_tron_bo -
+    chỉ còn đích Khái toán 'du_toan').
+  - Loại đất: `loai_dat.LOAI_DAT` thêm LUN, LNK, RTS (ký hiệu cũ), DHN, DCK (tên DHN / RTS chưa đối chiếu văn bản gốc); `chuan_ma_loai_dat`
+    ('rdd', 'R.D.D', 'ĐGT', tên đầy đủ, 'ONT,CLN' -> mã; dùng ở ho_so.chuan_loai_dat, nhap_chi_tiet, du_an_moi.khoa_gia, BoSoan.sua_dat),
+    `nhom_mac_dinh`. `BoiCanh.loai_dat` = đủ LOAI_DAT + dm_loaidat (dm ghi đè nhóm) -> "RDD không có trong danh mục" hết;
+    `du_an_moi.ds_loai_dat` / `loai_dat_biet` cũng đủ. `BoSoan.them_thua`: mã không có trong danh mục vẫn GIỮ (giá 0 / nhập tay).
+  - `nhap_chi_tiet`: mục 1 LUÔN tạo ct_dat cho mọi thửa (kể cả đơn giá 0 / trống; trước: chỉ khi có tiền đất, không thì ghi chú vào
+    ho.phap_ly - phap_ly vẫn ghi như cũ); `tach_phuong_an` (sheet nhiều phương án nối tiếp: mỗi bảng STT một phương án, ranh = dòng quốc
+    hiệu / "PHƯƠNG ÁN CHI TIẾT" / "Số:" sau TỔNG CỘNG của bảng trước; tên "<sheet> - PA <số>"), `doc_sheet(…, lech)` giữ số dòng Excel
+    thật; `_thua_tu_ten` gộp khoảng trắng, `_so_hieu` ('--', '-', trống -> ''), loại đất chữ thường / "ONT, CLN". `_tim_tieu_de(hang, tu,
+    den)`. File thật: sheet "144 thửa" -> PA 1278 (37 thửa) + PA 1209 (142 thửa), đọc 0,13 s.
+  - `nhap_tho`: `_gia_tri_luoi` dừng sau `TRONG_LIEN_TIEP` 100 dòng trống, bỏ cột trống bên phải (bề rộng = cột có chữ cuối trong
+    `DONG_TIM_COT` 40 dòng đầu - sheet TỔNG 237 cột); DT thu hồi ưu tiên "… trong dự án / ranh / phạm vi" (10 điểm), loại "Tổng diện tích
+    thửa", "diện tích thửa"; dòng đánh số cột cho thiếu số; ô 'NaN' / '--' = trống (`_khong_gia_tri`) -> dòng tiếp của hộ trên; tiêu đề lặp
+    (>= 2 ô trùng tiêu đề); dòng chữ gộp ngang (họ tên = STT / tờ / thửa / địa chỉ) bỏ qua. File thật sheet TỔNG: 1 tổ chức / 183 thửa.
+  - Nhiều thửa: `BoSoan.them_nhieu_thua(ds_ma_thua=None, bo_qua_da_co=True)`, `xoa_nhieu_dat(ds_chi_so)`; thẻ 1. Đất nút
+    `b_them_tat_ca_thua` / `b_chon_nhieu_thua` -> `CuaSoLapPA.them_tat_ca_thua` / `chon_nhieu_thua` (`man_hinh.HopChonNhieuThua`: đánh dấu,
+    lọc Tờ / Loại đất, Ctrl+A = đánh dấu thửa đang hiện); bảng mục 1 ExtendedSelection: `xoa_dong` xóa cả loạt, sửa ô thuộc
+    `AP_NHIEU_DONG` (loại đất, vị trí, giá, K, tỷ lệ, ghi chú) / chọn vị trí NQ 28 khi đang chọn nhiều dòng -> áp cho mọi dòng chọn.
+    Hàng nhập mục 1 = 3 khối XepDong (một hàng cứng ~1.480 điểm). KhungHoSo (thẻ 0): chọn nhiều thửa -> "Xóa thửa" xóa cả loạt.
+  - Hồ sơ scan + hoàn tất CTBT: `pabt/ho_so_scan.py` (không Qt; đường dẫn file ở bảng `anh_hien_trang` có sẵn, `khop_theo = 'ho_so_scan'`,
+    KHÔNG đổi lược đồ; `them_file` / `ds_file` / `bo_file` (không xóa file) / `dem_theo_ho`; `hoan_tat(x)` = có QĐ + đã bàn giao (nhận tiền
+    hay chưa không xét), `ten_dot_theo_ho`, `ds_hoan_tat`, `xuat_excel_hoan_tat_ctbt` - CHỈ Excel). `man_hinh_ho_so_scan.py`: `NutHoSoScan`
+    (menu đính kèm / mở từng file / thư mục / bỏ đính kèm) ở KhungHoSo (`nut_scan`, cạnh "+ Thêm thửa") và HopHoTheoDoi; KhungTienDo thêm
+    cột `C_HOAN_TAT` "Hoàn tất CTBT (theo đợt)" + `C_SCAN` "Hồ sơ scan" (bấm đúp: một file mở luôn, nhiều -> menu `mo_nhanh`), nút "Hộ hoàn
+    tất CTBT…" -> `HopHoanTatCTBT` (xem + Xuất Excel). Test `tests/test_yeu_cau_0996.py` (lớp `_Co.tearDown` gọi doCleanups TRƯỚC khi xóa
+    thư mục tạm - addCleanup chạy sau tearDown, file .pabt còn mở thì Windows không xóa được).
+- Khối chữ ký bản in (người dùng 16/10/2026, ảnh PDF "Đinh Công Thiện" lệch dưới "KIỂM TRA"): `in_an.can_khoi_ky(ws)` gọi TRƯỚC
+  `_thay_cho_trong` ở `lap_chi_tiet` / `lap_bang_tong_hop` - ô `{nguoi_lap}` / `{nguoi_kiem_tra}` / `{nguoi_ky}` tìm chức danh gần nhất
+  phía trên phủ cột giữa, bỏ dấu cách thừa của chức danh (mẫu IN_CHITIET ghi "   KIỂM TRA     " - Excel căn giữa tính cả dấu cách),
+  ô họ tên gộp đúng các cột của chức danh (mẫu người dùng sửa lệch), căn giữa indent 0; ô khác có chữ trong vùng thì chỉ căn giữa.
+  Đã xuất PDF bằng Excel kiểm (chi tiết + tổng hợp). Test `tests/test_khoi_ky.py`.
+- Hệ số K (người dùng 16/10/2026, QĐ 03/2026/QĐ-UBND Đồng Nai - CHƯA có văn bản gốc: cấu trúc chung, phần mềm KHÔNG đóng gói số liệu):
+  `pabt/he_so_k.py` (không Qt, không đổi lược đồ) lưu `<thư mục máy>\he_so_k.json` {van_ban, nguon, dong: [dia_ban, loai_dat (khóa
+  nhóm = cột bảng giá NQ 28 `dat_o/tmdv/sxkd/nn_cay/nn_rung_nts` + nhóm chung `nn` / `pnn`, hoặc mã 'ONT,ODT'), vi_tri (MT, T1-K3,
+  VT1, KV1), tuyen_duong, he_so (chuỗi Decimal), ghi_chu]}; trường trống = mọi giá trị; `tra(dia_ban, loai_dat, vi_tri, tuyen)` chọn
+  dòng cụ thể nhất (tuyến > vị trí > loại đất > địa bàn). `phan_tich(o)`: bảng có tiêu đề "Hệ số" / mỗi cột một loại đất (tiêu đề hai
+  tầng), không thì chữ thường (tiêu đề "Xã …", dòng loại đất, "Vị trí 1: 1,2"; bỏ dòng giá tiền "1.500.000 đồng/m2"); `doc_file`
+  (doc_bang; PDF ảnh / ảnh -> `ocr.tung_trang` + Dừng), `doc_chu` (chữ dán). Giao diện: `HopTraNQ28(xem=True, the=)` (lệnh Bảng giá đất
+  `app.bang_gia_dat`) hai thẻ "Bảng giá đất 2026" | "Hệ số K (QĐ 03/2026/QĐ-UBND)" (`man_hinh_he_so_k.KhungHeSoK`: đọc file, dán chữ,
+  cột Lấy, sửa ô, Lưu / Bỏ toàn bộ); bảng tra có cột Hệ số K + Giá × K (`he_so_k` của dòng chọn; khái toán `_gia_nhan_k`). Lập PA:
+  `BoSoan._ap_he_so_k` gọi trong `_dien_gia_dat` (thêm thửa, đổi loại đất / vị trí - địa bàn dự án) và `chon_vi_tri_nq28` (xã + mã vị
+  trí + tên đường của dòng bảng giá): khớp -> `he_so_k` + "Hệ số K theo QĐ 03/2026/QĐ-UBND" ở Ghi chú; hết khớp -> bỏ căn cứ, K về 1.
+  Hỗ trợ đào tạo: `chinh_sach.ds_thua_nn` (sẵn có) và `nghiep_vu.de_xuat_dao_tao_pa` dùng giá đất × K. Test `tests/test_he_so_k.py`
+  (số GIẢ LẬP; bài tạo thư mục máy riêng - file hệ số K lọt sang bài khác làm tự lập phương án nhân K).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

@@ -2651,14 +2651,15 @@ class CuaSoChinh(QMainWindow):
         self._dam_bao_tab('du_thao', TEN_TAB['du_thao'], w, True)
         return w
 
-    def bang_gia_dat(self, cho: bool = True):
-        """Bảng giá đất NQ 28/2025 (tra cứu theo địa bàn của dự án đang mở)."""
+    def bang_gia_dat(self, cho: bool = True, the: int = 0):
+        """Bảng giá đất: thẻ "Bảng giá đất 2026" (NQ 28/2025, tra theo địa bàn của dự án đang mở) và thẻ "Hệ số K" (QĐ 03/2026/QĐ-UBND,
+        nhập từ file / chữ dán - he_so_k.py). the: 0 / 1 = thẻ mở sẵn."""
         from .man_hinh_du_toan import HopTraNQ28
         xa = ''
         if self.con is not None:
             r = self.con.execute('SELECT ten_dia_ban FROM du_an WHERE id = 1').fetchone()
             xa = (r[0] or '') if r else ''
-        d = HopTraNQ28(self, xa)
+        d = HopTraNQ28(self, xa, xem=True, the=the)
         if cho:
             d.exec()
         return d

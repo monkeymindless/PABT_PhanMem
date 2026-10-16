@@ -112,8 +112,9 @@ def dau_dong(doan: str) -> str:
 
 
 def chuan_loai_dat(v) -> str:
-    """' ont + cln ' -> 'ONT+CLN'"""
-    return '+'.join(p.strip().upper() for p in _gon(v).split('+') if p.strip())
+    """' ont + cln ' -> 'ONT+CLN'; 'rdd', 'ONT,CLN', 'Đất rừng đặc dụng' cũng chuẩn về mã (loai_dat.chuan_ma_loai_dat)."""
+    from .loai_dat import chuan_ma_loai_dat
+    return chuan_ma_loai_dat(_gon(v))
 
 
 def doc_ho(con, ma_ho: int) -> dict:

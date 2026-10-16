@@ -34,6 +34,7 @@ MAU_COT = {
     'so_to': [(r'\bto (ban do|bd|so)\b', 10), (r'\bso to\b', 10), (r'^to$', 9), (r'\bto\b', 5)],
     'so_thua': [(r'\bthua (dat )?so\b', 10), (r'\bso thua\b', 10), (r'^thua( dat)?$', 9), (r'\bthua\b', 5)],
     'dt_thu_hoi': [(r'\b(dien tich|dt)\b.*\bthu hoi\b', 10), (r'\bthu hoi\b.*\b(dien tich|dt|m2)\b', 9),
+                   (r'\b(dien tich|dt)\b.*\b(trong|thuoc) (du an|ranh|pham vi)\b', 10),
                    (r'^(dien tich|dt)( \(?m2\)?)?$', 6), (r'\bdien tich\b', 4)],
     'dt_ban_do': [(r'\b(dien tich|dt)\b.*\bban do\b', 11)],
     'loai_dat': [(r'\bloai dat\b', 10), (r'\bmuc dich( su dung)?\b', 9), (r'\bmdsd\b', 9), (r'\bky hieu\b', 6)],
@@ -46,7 +47,7 @@ LOAI_TRU = {
     'ho_ten': r'\bdia chi\b|\bdat\b.*\bloai\b',
     'so_to': r'\btong\b|\bdan pho\b|\bdia chi\b|\bho ten\b',
     'so_thua': r'\bdien tich\b|\bdt\b|\bloai\b|\bthu hoi\b',
-    'dt_thu_hoi': r'\bban do\b|\bcon lai\b|\bngoai\b|\bthua dat\b.*\btong\b',
+    'dt_thu_hoi': r'\bban do\b|\bcon lai\b|\bngoai\b|\bthua dat\b.*\btong\b|\btong\b.*\bthua( dat)?\b|\bdien tich thua\b',
     'dia_chi': r'\bthua\b|\bdat\b',
 }
 BAT_BUOC = ('ho_ten',)
@@ -64,17 +65,38 @@ class BoCot:
     diem: int = 0
 
 
+TRONG_LIEN_TIEP = 100       # dừng đọc sau ngần này dòng trống liền nhau (sheet định dạng sẵn tới dòng 1.048.576)
+DONG_TIM_COT = 40           # bề rộng bảng = cột có chữ cuối cùng trong ngần này dòng đầu (cột tiêu đề cuối)
+
+
+def _co_chu(v) -> bool:
+    return v is not None and str(v).strip() != ''
+
+
 def _gia_tri_luoi(ws):
-    """Đọc sheet thành lưới giá trị, ô gộp được điền giá trị ô đầu (tiêu đề gộp, họ tên gộp nhiều thửa)."""
-    luoi = [list(r) for r in ws.iter_rows(values_only=True)]
-    rong = max((len(r) for r in luoi), default=0)
+    """Đọc sheet thành lưới giá trị, ô gộp được điền giá trị ô đầu (tiêu đề gộp, họ tên gộp nhiều thửa). Bỏ cột trống bên phải
+    (sheet định dạng tới cột 237: chỉ giữ tới cột có chữ cuối cùng ở phần tiêu đề) và phần trống cuối sheet."""
+    luoi, trong = [], 0
+    for r in ws.iter_rows(values_only=True):
+        luoi.append(list(r))
+        if any(_co_chu(v) for v in r):
+            trong = 0
+        else:
+            trong += 1
+            if trong >= TRONG_LIEN_TIEP:
+                break
+    while luoi and not any(_co_chu(v) for v in luoi[-1]):
+        luoi.pop()
+    cuoi = max((max((j for j, v in enumerate(r) if _co_chu(v)), default=-1) for r in luoi[:DONG_TIM_COT]), default=-1)
+    rong = min(max((len(r) for r in luoi), default=0), cuoi + 1)
+    luoi = [r[:rong] for r in luoi]
     for r in luoi:
         r.extend([None] * (rong - len(r)))
     gop = {}
     for vung in ws.merged_cells.ranges:
         v = luoi[vung.min_row - 1][vung.min_col - 1] if vung.min_row - 1 < len(luoi) else None
         for i in range(vung.min_row, min(vung.max_row, len(luoi)) + 1):
-            for j in range(vung.min_col, vung.max_col + 1):
+            for j in range(vung.min_col, min(vung.max_col, rong) + 1):
                 luoi[i - 1][j - 1] = v
                 gop[(i, j)] = vung.max_col - vung.min_col + 1
     return luoi, gop, rong
@@ -155,12 +177,21 @@ def _la_dong_danh_so(r) -> bool:
         if not m:
             return False
         so.append(int(m.group(1)))
-    return len(so) >= 3 and so == sorted(so) and so[-1] - so[0] == len(so) - 1
+    # 1, 2, … tăng dần, cho phép thiếu vài số (cột ẩn / cột công thức "11 = 8 + 9" bỏ trống)
+    return len(so) >= 3 and so == sorted(set(so)) and so[-1] - so[0] <= 2 * len(so)
+
+
+_TRONG = re.compile(r'^(nan|none|null|-+|–+|—+|\.+|…|x+)$', re.I)
+
+
+def _khong_gia_tri(s: str) -> str:
+    """Ô 'NaN' / '--' / '-' (file xuất từ phần mềm khác, dòng tiếp của cùng hộ) = trống."""
+    return '' if _TRONG.match(s.strip()) else s
 
 
 def _ma_so(v) -> str:
-    """Số tờ / số thửa: 35 -> '35'; '382\\n(164 cũ)' -> '382 (164 cũ)'."""
-    return ' '.join(_txt(v).split())
+    """Số tờ / số thửa: 35 -> '35'; '382\\n(164 cũ)' -> '382 (164 cũ)'; '--' -> ''."""
+    return _khong_gia_tri(' '.join(_txt(v).split()))
 
 
 def _doc_dt(v):
@@ -213,11 +244,19 @@ def doc(file_excel) -> KetQuaDoc:
             continue
         if _la_dong_danh_so(r):
             continue
-        ten = ' '.join(_txt(g(r, 'ho_ten')).split())
+        ten = _khong_gia_tri(' '.join(_txt(g(r, 'ho_ten')).split()))
         to, thua, dt_tho = _ma_so(g(r, 'so_to')), _ma_so(g(r, 'so_thua')), g(r, 'dt_thu_hoi')
+        if isinstance(dt_tho, str) and _TRONG.match(dt_tho.strip()):
+            dt_tho = None
         if any(DONG_CONG.match(chuan_hoa(v)) for v in r if isinstance(v, str)):
             continue
-        if chuan_hoa(ten) == chuan_hoa(bc.tieu_de.get('ho_ten', '')):          # tiêu đề lặp lại giữa bảng
+        # tiêu đề lặp lại giữa bảng (bảng in nhiều trang): họ tên / tờ / thửa / diện tích trùng chữ tiêu đề
+        if sum(1 for k in ('ho_ten', 'so_to', 'so_thua', 'dt_thu_hoi', 'dia_chi') if k in c and bc.tieu_de.get(k)
+               and chuan_hoa(_txt(g(r, k))) == chuan_hoa(bc.tieu_de[k])) >= (1 if ten else 2):
+            continue
+        # dòng chữ gộp ngang nhiều cột ("Kinh phí đảm bảo…", "Trong đó:"): cùng một chữ ở ô họ tên và ô STT / tờ / thửa / địa chỉ
+        if ten and any(k in c and c[k] != c['ho_ten'] and _txt(g(r, k)).strip() == _txt(g(r, 'ho_ten')).strip()
+                       for k in ('stt', 'so_to', 'so_thua', 'dia_chi')):
             continue
         co_thua = bool(to or thua or _txt(dt_tho))
         if not ten:

@@ -136,8 +136,9 @@ class TestLapPhuongAn(Co0995):
         self.assertTrue(c.b_tro_lai.isVisibleTo(c))
         # mục 1: nút thao tác dòng + "Cộng mục 1" cùng hàng chọn thửa
         b1 = c.bang[1]
-        self.assertIs(b1.nut['Xóa dòng'].parentWidget(), b1.cb_thua.parentWidget())
-        self.assertIs(b1.lb_tong.parentWidget(), b1.cb_thua.parentWidget())
+        self.assertIs(b1.nut['Xóa dòng'].parentWidget().parentWidget(), b1.cb_thua.parentWidget().parentWidget())
+        # 0.9.96: hàng nhập mục 1 = các khối XepDong trong cùng khung_nhap (hẹp thì xuống dòng)
+        self.assertIs(b1.lb_tong.parentWidget().parentWidget(), b1.cb_thua.parentWidget().parentWidget())
         for ten in ('Xóa dòng', '▲ Lên', '▼ Xuống'):
             self.assertEqual(c.bang[2].nut[ten].height() or c.bang[2].nut[ten].minimumHeight(), man_hinh.CAO_NUT_DONG)
 
@@ -150,8 +151,9 @@ class TestLapPhuongAn(Co0995):
         bm = c.bang[2]
         khoa = [k[0] for k in bm.cot]
         hd = bm.bang.horizontalHeader()
-        for k in ('ten', 'quy_cach', 'ghi_chu'):
-            self.assertEqual(hd.sectionResizeMode(khoa.index(k)), QHeaderView.ResizeMode.Stretch, k)
+        self.assertEqual(hd.sectionResizeMode(khoa.index('ten')), QHeaderView.ResizeMode.Stretch)
+        for k in ('quy_cach', 'ghi_chu'):                   # 0.9.96: cột thường trống gọn, không giãn
+            self.assertNotEqual(hd.sectionResizeMode(khoa.index(k)), QHeaderView.ResizeMode.Stretch, k)
         for k, rong in man_hinh.RONG_COT_GON.items():
             if k in khoa:
                 self.assertGreaterEqual(bm.bang.columnWidth(khoa.index(k)), rong, k)    # >= (sàn tiêu đề có thể nới)
@@ -271,7 +273,7 @@ class TestQuetGiayTo(Co0995):
         try:
             ma = con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 1').fetchone()[0]
             c = CuaSoLapPA(con, ma)
-            h = HopQuetGiayTo(c, 'lap_pa')
+            h = HopQuetGiayTo(c, 'du_toan')                              # 0.9.96: hộp quét chỉ còn cho Khái toán
             h.im_lang = True
             self.assertEqual(h.ngan_trai.currentIndex(), 0)              # mặc định: xem trước file
             self.assertIs(h.ngan_trai.widget(0), h.khung_xem_file)
@@ -299,8 +301,8 @@ class TestQuetGiayTo(Co0995):
             self.assertEqual(h.khung_xem_file.goc, 90)
             h.b_doi_xem.setChecked(True)
             self.assertEqual(h.ngan_trai.currentIndex(), 1)
-            self.assertTrue(h.b_tron_bo.isVisibleTo(h) or not h.isVisible())
-            self.assertFalse(h.o_luu_dinh_kem.isHidden())
+            self.assertFalse(hasattr(h, 'b_tron_bo') or hasattr(h, 'o_luu_dinh_kem'))
+            self.assertEqual(c.quet_giay_to(cho=False), 'Tiện ích đang trong quá trình hoàn thiện')
             c.bo_thay_doi()
             c.close()
         finally:

@@ -489,7 +489,7 @@ class TestTheoDoiVanDongGiaoDien(_Co):
         van_dong.ghi_buoi(self.con, self.ma[0], 'tien', _hn(-12))
         van_dong.ghi_buoi(self.con, self.ma[1], 'tien', _hn(-3))
         k = self._khung()
-        self.assertEqual(len(k.COT), 15)
+        self.assertEqual(len(k.COT), 17)                                    # 0.9.96: + Hoàn tất CTBT, Hồ sơ scan (cuối bảng)
         self.assertIn('Mốc thu hồi đất', k.COT[k.C_MOC])
         self.assertEqual(k.C_MOC, 4)                                        # ngay sau Địa chỉ: thấy được không cần cuộn ngang
         self.assertIn('Vận động', k.COT[k.C_VD])

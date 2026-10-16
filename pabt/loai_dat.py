@@ -1,6 +1,6 @@
 """Danh mục loại đất và ký hiệu: phân loại theo Điều 9 Luật Đất đai năm 2024; ký hiệu theo Thông tư 08/2024/TT-BTNMT
 (thống kê, kiểm kê đất đai, lập bản đồ hiện trạng sử dụng đất - nay thuộc Bộ Nông nghiệp và Môi trường), kèm một số ký hiệu
-còn gặp trên hồ sơ, bảng giá đất (BHK, NHK). Dùng làm danh sách xổ xuống ô Loại đất của thửa (vẫn gõ tay được, vd ONT+CLN).
+còn gặp trên hồ sơ, bảng giá đất (BHK, NHK) và ký hiệu cũ (LUN, LNK, RTS - tên ghi theo hồ sơ cũ, đối chiếu khi cần). Dùng làm danh sách xổ xuống ô Loại đất của thửa (vẫn gõ tay được, vd ONT+CLN).
 Đối chiếu văn bản gốc khi có thay đổi. Không phụ thuộc Qt.
 """
 from __future__ import annotations
@@ -13,14 +13,17 @@ LOAI_DAT = [
     ('LUA', 'Đất trồng lúa', NONG_NGHIEP),
     ('LUC', 'Đất chuyên trồng lúa', NONG_NGHIEP),
     ('LUK', 'Đất trồng lúa còn lại', NONG_NGHIEP),
+    ('LUN', 'Đất trồng lúa nước còn lại (ký hiệu cũ)', NONG_NGHIEP),
     ('HNK', 'Đất trồng cây hằng năm khác', NONG_NGHIEP),
     ('BHK', 'Đất bằng trồng cây hằng năm khác', NONG_NGHIEP),
     ('NHK', 'Đất nương rẫy trồng cây hằng năm khác', NONG_NGHIEP),
     ('CLN', 'Đất trồng cây lâu năm', NONG_NGHIEP),
+    ('LNK', 'Đất trồng cây lâu năm khác (ký hiệu cũ)', NONG_NGHIEP),
     ('LNP', 'Đất lâm nghiệp', NONG_NGHIEP),
     ('RDD', 'Đất rừng đặc dụng', NONG_NGHIEP),
     ('RPH', 'Đất rừng phòng hộ', NONG_NGHIEP),
     ('RSX', 'Đất rừng sản xuất', NONG_NGHIEP),
+    ('RTS', 'Đất rừng trồng sản xuất (ký hiệu cũ)', NONG_NGHIEP),
     ('NTS', 'Đất nuôi trồng thủy sản', NONG_NGHIEP),
     ('CNT', 'Đất chăn nuôi tập trung', NONG_NGHIEP),
     ('LMU', 'Đất làm muối', NONG_NGHIEP),
@@ -59,6 +62,8 @@ LOAI_DAT = [
     ('DCH', 'Đất chợ dân sinh, chợ đầu mối', PHI_NONG_NGHIEP),
     ('DKV', 'Đất khu vui chơi, giải trí công cộng, sinh hoạt cộng đồng', PHI_NONG_NGHIEP),
     ('DRA', 'Đất công trình xử lý chất thải', PHI_NONG_NGHIEP),
+    ('DHN', 'Đất công trình hạ tầng ngầm', PHI_NONG_NGHIEP),
+    ('DCK', 'Đất công trình công cộng khác', PHI_NONG_NGHIEP),
     ('DDT', 'Đất có di tích lịch sử - văn hóa', PHI_NONG_NGHIEP),
     ('DDL', 'Đất danh lam thắng cảnh', PHI_NONG_NGHIEP),
     ('TON', 'Đất tôn giáo', PHI_NONG_NGHIEP),
@@ -73,6 +78,46 @@ LOAI_DAT = [
     ('NCS', 'Núi đá không có rừng cây', CHUA_SU_DUNG),
 ]
 TEN = {ma: ten for ma, ten, _ in LOAI_DAT}
+NHOM = {ma: nhom for ma, _, nhom in LOAI_DAT}
+_DAT_O = {'OTC', 'ONT', 'ODT'}      # dm_loaidat của bộ đơn giá ghi nhóm 'Đất ở' cho các mã này
+
+
+def nhom_mac_dinh(ma: str) -> str:
+    """Nhóm đất theo danh sách chuẩn (cùng cách ghi với dm_loaidat: 'Đất ở', 'Nông nghiệp', ...); mã lạ -> ''."""
+    ma = (ma or '').upper()
+    return 'Đất ở' if ma in _DAT_O else NHOM.get(ma, '')
+
+
+def _bo_dau(s: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize('NFD', str(s or '').replace('đ', 'd').replace('Đ', 'D'))
+    return ''.join(c for c in s if unicodedata.category(c) != 'Mn').lower()
+
+
+def _ma_mot(x: str) -> str:
+    x = x.strip().strip('.;:()[]')
+    if not x:
+        return ''
+    gon = _bo_dau(x).upper().replace('.', '')
+    if ' ' not in gon and (gon in TEN or (2 <= len(gon) <= 4 and gon.isalpha())):
+        return gon
+    ten = ' '.join(_bo_dau(x).split())
+    if not ten.startswith('dat '):
+        ten = 'dat ' + ten
+    for ma, t, _ in LOAI_DAT:
+        if _bo_dau(t).replace(' (ky hieu cu)', '') == ten:
+            return ma
+    return x.strip().upper()
+
+
+def chuan_ma_loai_dat(chuoi) -> str:
+    """Chuẩn hóa chữ loại đất người gõ / file ghi: 'rdd', 'R.D.D', 'ĐGT' -> mã in hoa không dấu; tên đầy đủ ('Đất rừng đặc dụng')
+    -> mã; loại ghép 'ont + cln' / 'ONT,CLN' -> 'ONT+CLN'. Trống -> ''."""
+    s = str(chuoi or '').strip()
+    if not s:
+        return ''
+    phan = [p for p in (s.replace(',', '+').replace('/', '+').split('+')) if p.strip()]
+    return '+'.join(m for m in (_ma_mot(p) for p in phan) if m)
 
 
 def ds_chon(con=None) -> list:

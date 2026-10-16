@@ -32,15 +32,20 @@ SO = {'khoi_luong', 'don_gia', 'he_so', 'thanh_tien', 'muc'}
 
 
 class HopTraNQ28(QDialog):
-    """Chọn giá đất theo bảng giá NQ 28/2025 (đồng/m²)."""
+    """Chọn giá đất theo bảng giá NQ 28/2025 (đồng/m²); cột Hệ số K / Giá × K theo bảng hệ số K của máy (he_so_k.py).
+    xem=True (lệnh "Bảng giá đất" của cửa sổ chính): hai thẻ "Bảng giá đất 2026" | "Hệ số K" (QĐ 03/2026/QĐ-UBND), nút Đóng."""
+    im_lang = False
 
-    def __init__(self, parent=None, xa: str = '', loai_dat: str = ''):
+    def __init__(self, parent=None, xa: str = '', loai_dat: str = '', xem: bool = False, the: int = 0):
         super().__init__(parent)
         from . import gia_dat_nq28 as nq
-        self.nq = nq
+        from . import he_so_k
+        self.nq, self.hk = nq, he_so_k
         self.chon = None
         self.dong = None
-        self.setWindowTitle('Tra giá đất — ' + nq.tom_tat())
+        self.he_so_k = None                             # hệ số K của dòng đã chọn (None: bảng hệ số không có dòng khớp)
+        self.khung_k = None
+        self.setWindowTitle(('Bảng giá đất — ' if xem else 'Tra giá đất — ') + nq.tom_tat())
         self.resize(1100, 560)
         self.cb_xa = QComboBox()
         self.cb_xa.addItem('Tất cả địa bàn', '')
@@ -56,39 +61,69 @@ class HopTraNQ28(QDialog):
             self.cb_cot.setCurrentIndex([k for k, _ in nq.COT].index(cot))
         self.o_tim = QLineEdit()
         self.o_tim.setPlaceholderText('Tên đường, điểm đầu / cuối, vị trí (MT, T1…K3)…')
-        self.bang = QTableWidget(0, 6)
-        self.bang.setHorizontalHeaderLabels(['Địa bàn', 'Tên đường', 'Từ', 'Đến', 'Vị trí', 'Giá (đồng/m²)'])
+        self.bang = QTableWidget(0, 8)
+        self.bang.setHorizontalHeaderLabels(['Địa bàn', 'Tên đường', 'Từ', 'Đến', 'Vị trí', 'Giá (đồng/m²)', 'Hệ số K',
+                                             'Giá × K (đ/m²)'])
         self.bang.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.bang.verticalHeader().setVisible(False)
-        for c, w in enumerate((120, 260, 220, 220, 60, 120)):
+        for c, w in enumerate((110, 220, 170, 170, 50, 105, 65, 110)):
             self.bang.setColumnWidth(c, w)
-        self.bang.doubleClicked.connect(lambda *_: self.accept())
+        if not xem:
+            self.bang.doubleClicked.connect(lambda *_: self.accept())
         h = QHBoxLayout()
         for w in (QLabel('Địa bàn:'), self.cb_xa, QLabel('Loại đất:'), self.cb_cot, self.o_tim):
             h.addWidget(w)
-        nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        nut.button(QDialogButtonBox.StandardButton.Ok).setText('Lấy giá này')
-        nut.button(QDialogButtonBox.StandardButton.Cancel).setText('Hủy')
-        nut.accepted.connect(self.accept)
+        if xem:
+            nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+            nut.button(QDialogButtonBox.StandardButton.Close).setText('Đóng')
+        else:
+            nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+            nut.button(QDialogButtonBox.StandardButton.Ok).setText('Lấy giá này')
+            nut.button(QDialogButtonBox.StandardButton.Cancel).setText('Hủy')
+            nut.accepted.connect(self.accept)
         nut.rejected.connect(self.reject)
         lo = QVBoxLayout(self)
-        lo.addLayout(h)
-        lo.addWidget(self.bang)
+        if xem:
+            from .man_hinh_he_so_k import KhungHeSoK
+            trang = QWidget()
+            lo_g = QVBoxLayout(trang)
+            lo_g.addLayout(h)
+            lo_g.addWidget(self.bang)
+            self.khung_k = KhungHeSoK(self, xa)
+            self.khung_k.da_luu.connect(self.loc)
+            self.tabs = QTabWidget()
+            self.tabs.addTab(trang, 'Bảng giá đất 2026')
+            self.tabs.addTab(self.khung_k, 'Hệ số K (QĐ 03/2026/QĐ-UBND)')
+            self.tabs.setCurrentIndex(the)
+            lo.addWidget(self.tabs)
+        else:
+            lo.addLayout(h)
+            lo.addWidget(self.bang)
         lo.addWidget(nut)
         for s in (self.cb_xa.currentIndexChanged, self.cb_cot.currentIndexChanged, self.o_tim.textChanged):
             s.connect(lambda *_: self.loc())
         self.loc()
 
+    def _k(self, x: dict, cot: str):
+        return self.hk.tra(x['xa'], cot, x['vi_tri'], x['ten_duong'], ds=self._ds_k, tt=x.get('tt'))[0] if self._ds_k else None
+
     def loc(self):
         nq = self.nq
+        self._ds_k = self.hk.tat_ca()
         self.ds = nq.tim(self.cb_xa.currentData() or '', self.o_tim.text())[:500]
         cot = self.cb_cot.currentData()
         self.bang.setRowCount(len(self.ds))
+        cc = self.hk.can_cu() if self._ds_k else ''
         for r, x in enumerate(self.ds):
-            for c, v in enumerate((x['xa'], x['ten_duong'], x['diem_dau'], x['diem_cuoi'], x['vi_tri'], vn(nq.gia_dong(x, cot)))):
+            g = nq.gia_dong(x, cot)
+            k = self._k(x, cot)
+            for c, v in enumerate((x['xa'], x['ten_duong'], x['diem_dau'], x['diem_cuoi'], x['vi_tri'], vn(g),
+                                   so_vn(k) if k is not None else '', vn(D(g) * k) if k is not None else '')):
                 it = QTableWidgetItem(str(v))
-                it.setToolTip(nq.mo_ta_vi_tri(x) if c == 4 else str(v))
+                it.setToolTip(nq.mo_ta_vi_tri(x) if c == 4 else cc if c >= 6 and k is not None else str(v))
+                if c >= 5:
+                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(r, c, it)
 
     def accept(self):
@@ -98,7 +133,18 @@ class HopTraNQ28(QDialog):
         x, cot = self.ds[r], self.cb_cot.currentData()
         self.dong = x                                   # dòng bảng giá đã chọn (cửa sổ lập phương án ghi vị trí + giá theo dòng này)
         self.chon = (D(self.nq.gia_dong(x, cot)), self.nq.can_cu(x, cot))
+        self.he_so_k = self._k(x, cot)
         super().accept()
+
+
+def _gia_nhan_k(dlg) -> tuple:
+    """(giá đã nhân hệ số K, căn cứ) của dòng chọn trong HopTraNQ28 - khái toán dùng đơn giá bồi thường = giá bảng giá × K."""
+    g, cc = dlg.chon
+    if dlg.he_so_k is not None and dlg.he_so_k != 1:
+        from .tien import lam_tron
+        g = lam_tron(g * dlg.he_so_k, 0)
+        cc = f'{cc}; {dlg.hk.can_cu()}: K = {so_vn(dlg.he_so_k)}'
+    return g, cc
 
 
 # nhãn ngắn trên khối thông tin chuẩn bị đầu tư (vừa màn hình 1366; tên đầy đủ du_toan.NHAN_CHUAN_BI ở chú thích)
@@ -926,8 +972,9 @@ class KhungDuToan(QWidget):
         """Tra giá NQ 28 cho ô đơn giá của hàng "Thêm đất"."""
         dlg = HopTraNQ28(self, self.o_dia_ban.text(), self.cb_loai_dat.currentData() or self.cb_loai_dat.currentText())
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.chon is not None:
-            self.o_gia_dat.setText(vn(dlg.chon[0]))
-            self._can_cu_gia_dat = dlg.chon[1]
+            g, cc = _gia_nhan_k(dlg)
+            self.o_gia_dat.setText(vn(g))
+            self._can_cu_gia_dat = cc
 
     def tra_gia_dat(self, chon=None):
         r = self.bang.currentRow()
@@ -939,7 +986,7 @@ class KhungDuToan(QWidget):
             dlg = HopTraNQ28(self, self.o_dia_ban.text(), d.ma or d.ten)
             if dlg.exec() != QDialog.DialogCode.Accepted or dlg.chon is None:
                 return None
-            chon = dlg.chon
+            chon = _gia_nhan_k(dlg)
         d.don_gia, d.can_cu = chon
         self.ve(r)
         return chon

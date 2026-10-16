@@ -17,6 +17,7 @@ from .nghiep_vu import (DA_LAP_LUU, MA_ON_DINH, MA_TDC, MA_THEO_NK, MUC_KHOAN, M
                         DongDat, DongKhoan, PhuongAn, la_vat_nuoi, so_muc,
                         de_xuat_dao_tao_pa, doc_phuong_an, giu_ket_qua_ho, goi_y_ho_tro, goi_y_khoan, ket_qua_ho_san,
                         kiem_tra_pa, so_vi_tri, thanh_tien_dong, thanh_tien_dong_dat, tinh_pa)
+from .loai_dat import chuan_ma_loai_dat
 from .tien import D, KHONG, chuoi, so_luong_vn, so_vn, vn
 
 
@@ -407,8 +408,9 @@ class BoSoan:
         if t is None or t['ma_ho'] != self.ma_ho:
             raise LoiNhap('Thửa không thuộc hộ đang lập.')
         con_lai = next((x[2] for x in self.thua_cua_ho() if x[0] == ma_thua), KHONG)
-        ds_ld = [x.strip().upper() for x in str(t['loai_dat'] or '').replace(',', '+').split('+') if x.strip()]
-        ld = next((x for x in ds_ld if x in self.bc.loai_dat), '')
+        ds_ld = [x for x in chuan_ma_loai_dat(t['loai_dat']).split('+') if x]
+        # mã có trong danh mục trước; không có thì vẫn giữ mã kiểm kê ghi (đơn giá 0 / nhập tay - không mất loại đất)
+        ld = next((x for x in ds_ld if x in self.bc.loai_dat), ds_ld[0] if ds_ld else '')
         d = DongDat(ma_thua=ma_thua, loai_dat=ld, nhom_dat=self.nhom_dat(ld), dien_tich=con_lai,
                     vi_tri=so_vi_tri(t['vi_tri']))
         tb = self._dien_gia_dat(d)
@@ -421,9 +423,29 @@ class BoSoan:
     def _dien_gia_dat(self, d: DongDat) -> str:
         g, k, nguon = tra_gia_dat(self.con, self.bc, d.loai_dat, d.vi_tri)
         if g is None:
-            return f'Chưa có giá {d.loai_dat or ""} vị trí {d.vi_tri or "?"}: nhập giá theo bảng giá đất.'
+            return (f'Chưa có giá {d.loai_dat or ""} vị trí {d.vi_tri or "?"}: nhập giá theo bảng giá đất.'
+                    + self._ap_he_so_k(d, self.bc.ten_dia_ban, d.vi_tri)).strip()
         d.gia_bang_gia, d.he_so_k = g, k
-        return f'Giá {vn(g)} đ/m² lấy theo {nguon}.'
+        return f'Giá {vn(g)} đ/m² lấy theo {nguon}.' + self._ap_he_so_k(d, self.bc.ten_dia_ban, d.vi_tri)
+
+    def _ap_he_so_k(self, d: DongDat, dia_ban: str, vi_tri: str, tuyen_duong: str = '', tt=None) -> str:
+        """Hệ số K theo bảng hệ số của máy (he_so_k.py - QĐ 03/2026/QĐ-UBND): có dòng khớp địa bàn / loại đất / vị trí / tuyến
+        thì ghi hệ số + căn cứ vào Ghi chú; không khớp thì bỏ hệ số / căn cứ đã ghi trước đó (giữ hệ số của bảng giá dự án)."""
+        from . import he_so_k as hk
+        cu = re.search(r'Hệ số K theo [^;]*', d.ghi_chu or '')
+        k, r = hk.tra(dia_ban, d.loai_dat, vi_tri, tuyen_duong, tt=tt)
+        bo = re.sub(r'\s*;?\s*Hệ số K theo [^;]*', '', d.ghi_chu or '').strip(' ;')
+        if k is None:
+            if cu:
+                d.ghi_chu = bo
+                if d.he_so_k != 1 and not tra_gia_dat(self.con, self.bc, d.loai_dat, d.vi_tri)[1]:
+                    d.he_so_k = D(1)
+            return ''
+        d.he_so_k = k
+        cc = hk.can_cu()
+        d.ghi_chu = (bo + '; ' if bo else '') + cc
+        d.thanh_tien_excel = None
+        return f' Hệ số K = {so_vn(k)} ({cc}).'
 
     def sua_dat(self, i: int, cot: str, text) -> str:
         if cot not in SUA_DUOC_DAT:
@@ -433,9 +455,9 @@ class BoSoan:
         if cot == 'thua':
             return self.doi_thua(i, text)
         if cot == 'loai_dat':
-            ld = str(text or '').strip().upper()
-            if ld and ld not in self.bc.loai_dat:
-                raise LoiNhap(f'Loại đất "{ld}" không có trong danh mục ({", ".join(sorted(self.bc.loai_dat))}).')
+            ld = chuan_ma_loai_dat(text)
+            if ld and any(x not in self.bc.loai_dat for x in ld.split('+')):
+                raise LoiNhap(f'Loại đất "{ld}" không có trong danh mục loại đất (Thông tư 08/2024 hoặc bảng giá dự án).')
             d.loai_dat, d.nhom_dat = ld, self.nhom_dat(ld)
             tb = self._dien_gia_dat(d)
         elif cot == 'vi_tri':
@@ -519,11 +541,12 @@ class BoSoan:
             f'Mặt tiền {r["ten_duong"]} (đoạn từ {r["diem_dau"]} đến {r["diem_cuoi"]})'
         if not cot:
             d.thanh_tien_excel = None
+            self._ap_he_so_k(d, r['xa'], r['vi_tri'], r['ten_duong'], r.get('tt'))
             return (f'Đã ghi vị trí theo {r["xa"]}. Loại đất "{d.loai_dat or "(chưa chọn)"}" không có cột giá trong bảng đang dùng: '
                     'nhập đơn giá bằng tay.')
         d.gia_bang_gia = D(nq.gia_dong(r, cot))
         d.thanh_tien_excel = None
-        return f'Giá {vn(d.gia_bang_gia)} đ/m² theo {nq.can_cu(r, cot)}.'
+        return f'Giá {vn(d.gia_bang_gia)} đ/m² theo {nq.can_cu(r, cot)}.' + self._ap_he_so_k(d, r['xa'], r['vi_tri'], r['ten_duong'], r.get('tt'))
 
     def o_dat(self, i: int) -> dict:
         d = self.pa.dat[i]
@@ -660,6 +683,26 @@ class BoSoan:
 
     def xoa(self, muc: int, i: int) -> None:
         del self.ds(muc)[i]
+
+    def them_nhieu_thua(self, ds_ma_thua=None, bo_qua_da_co: bool = True) -> int:
+        """Thêm dòng mục 1 cho nhiều thửa của hộ (ds_ma_thua None = mọi thửa) theo thứ tự thửa; bo_qua_da_co: thửa đã có dòng mục 1
+        thì không thêm lần nữa. Mỗi dòng như them_thua (loại đất, DT còn lại, vị trí, giá; giá 0 vẫn giữ loại đất). Trả số dòng thêm."""
+        chon = None if ds_ma_thua is None else set(ds_ma_thua)
+        da_co = {d.ma_thua for d in self.pa.dat}
+        n = 0
+        for mt, _, _ in self.thua_cua_ho():
+            if (chon is not None and mt not in chon) or (bo_qua_da_co and mt in da_co):
+                continue
+            self.them_thua(mt)
+            n += 1
+        return n
+
+    def xoa_nhieu_dat(self, ds_chi_so) -> int:
+        """Xóa nhiều dòng mục 1 (chỉ số dòng; trùng / ngoài phạm vi bỏ qua). Trả số dòng đã xóa."""
+        ds = sorted({int(i) for i in ds_chi_so if 0 <= int(i) < len(self.pa.dat)}, reverse=True)
+        for i in ds:
+            del self.pa.dat[i]
+        return len(ds)
 
     def nhan_ban(self, muc: int, i: int) -> int:
         """Chép dòng mục 2-4 thành dòng mới ngay dưới (dùng tách phần ngoài mật độ / ngoài ranh thu hồi). Trả chỉ số dòng mới."""

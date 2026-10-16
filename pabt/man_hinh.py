@@ -19,7 +19,7 @@ from . import lap_pa, nghiep_vu
 from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
 # in_an (kéo theo openpyxl ~0,2 giây) chỉ nạp trong hộp In / Xuất: mở dự án, cửa sổ lập phương án không phải chờ
 from .nghiep_vu import DA_LAP_LUU, MUC_KHOAN, MUC_VN, NGUON_TAY, NGUON_TD, TEN_MUC, so_muc
-from .tien import D, lam_tron, so_vn, vn
+from .tien import D, KHONG, lam_tron, so_luong_vn, so_vn, vn
 from .giao_dien import con_tro_cho, loc_khi_ngung_go
 from .thong_bao import TEN_UD, chu_loi
 
@@ -42,8 +42,11 @@ COT_GD[4] = [('ma', 'Mã', 60), ('ten', 'Chính sách hỗ trợ', 300), ('cach_
 # thẻ của cửa sổ lập phương án: chỉ số thẻ -> mục (0 = hồ sơ hộ). Từ 0.9.21 vật nuôi là thẻ 4 (mục MUC_VN), hỗ trợ thẻ 5 (mục 4)
 # 0.9.95 (đặc tả Ultra-Compact): cột ngắn bề rộng gọn; cột chữ (tên, cách tính, quy cách, ghi chú, vị trí) GIÃN chia phần còn lại -
 # hết thanh cuộn ngang thừa. Cột vẫn không hẹp hơn chữ tiêu đề (giao_dien.san_tieu_de)
-RONG_COT_GON = {'ma': 52, 'dvt': 55, 'so_luong': 72, 'don_gia': 92, 'ty_le': 54, 'thanh_tien': 105, 'nguon': 68}
-COT_GIAN = ('ten', 'cach_tinh', 'quy_cach', 'ghi_chu', 'vi_tri')
+# 0.9.96: Ghi chú / Quy cách thường trống -> bề rộng gọn (không giãn, tiêu đề vẫn đủ chữ nhờ san_tieu_de); phần còn lại giãn cho
+# Tên / Vị trí / Chính sách / Cách tính
+RONG_COT_GON = {'ma': 52, 'dvt': 55, 'so_luong': 72, 'don_gia': 92, 'ty_le': 54, 'thanh_tien': 105, 'nguon': 68,
+                'quy_cach': 110, 'ghi_chu': 150, 'can_cu_gia': 150}
+COT_GIAN = ('ten', 'cach_tinh', 'vi_tri')
 CAO_NUT_DONG = 24                  # nút thao tác dòng (Xóa dòng, Lên, Xuống…) gọn
 THE_MUC = (0, 1, 2, 3, MUC_VN, 4)
 TEN_TAB = {0: 'Thông tin hộ, thửa đất', 1: '1. Đất', 2: '2. Nhà, công trình', 3: '3. Cây trồng', 4: '4. Vật nuôi',
@@ -264,8 +267,13 @@ class ChuNhieuDong(QStyledItemDelegate):
         model.setData(index, ' '.join(o.toPlainText().split()))
 
     def updateEditorGeometry(self, o, option, index):
+        # khung sửa cao vừa đủ: không thấp hơn 32, tối đa max(64, chiều cao dòng) - trước đây 64 cố định đè xuống dòng dưới
         r = option.rect
-        o.setGeometry(r.x(), r.y(), r.width(), max(r.height(), 64))
+        doc = o.document()
+        doc.setTextWidth(max(20, r.width() - 12))
+        can = int(doc.size().height()) + 10                 # cao theo chữ đang sửa
+        o.setMinimumHeight(32)
+        o.setGeometry(r.x(), r.y(), r.width(), max(32, r.height(), min(can, max(64, r.height()))))
 
     def eventFilter(self, o, e):
         if e.type() == QEvent.Type.KeyPress and e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) \
@@ -285,8 +293,96 @@ class CongThucSo(QStyledItemDelegate):
         editor.selectAll()
 
 
+class HopChonNhieuThua(QDialog):
+    """Chọn nhiều thửa của hộ đưa vào mục 1 (0.9.96): ô đánh dấu từng thửa, lọc theo Tờ / Loại đất, Ctrl+A chọn mọi thửa đang hiện.
+    thua: [(ma_thua, so_to, so_thua, loai_dat, dt_con_lai, da_co_trong_muc_1)]. chon_ma() -> mã các thửa đã đánh dấu."""
+    im_lang: bool = False
+    COT = ('', 'Tờ', 'Thửa', 'Loại đất', 'DT còn lại (m²)', 'Đã có ở mục 1')
+
+    def __init__(self, thua: list, parent=None):
+        super().__init__(parent)
+        from PySide6.QtGui import QKeySequence, QShortcut
+        self.setWindowTitle('Chọn nhiều thửa đưa vào mục 1. Đất')
+        self.resize(640, 520)
+        self.thua = list(thua)
+        self.cb_to, self.cb_ld = QComboBox(), QComboBox()
+        for cb, tat_ca, gt in ((self.cb_to, 'Mọi tờ', {t[1] for t in self.thua}), (self.cb_ld, 'Mọi loại đất', {t[3] for t in self.thua})):
+            cb.addItem(tat_ca, None)
+            for v in sorted(gt, key=lambda x: (len(str(x)), str(x))):
+                cb.addItem(str(v) or '(trống)', v)
+            cb.currentIndexChanged.connect(lambda *_: self.loc())
+        h = QHBoxLayout()
+        for nhan, cb in (('Tờ:', self.cb_to), ('Loại đất:', self.cb_ld)):
+            lb = QLabel(nhan)
+            lb.setProperty('vai', 'nhan')
+            h.addWidget(lb)
+            h.addWidget(cb)
+        h.addStretch(1)
+        self.b_tat_ca = QPushButton('Chọn tất cả (Ctrl+A)')
+        self.b_tat_ca.clicked.connect(lambda: self.danh_dau(True))
+        self.b_bo = QPushButton('Bỏ chọn')
+        self.b_bo.clicked.connect(lambda: self.danh_dau(False))
+        h.addWidget(self.b_tat_ca)
+        h.addWidget(self.b_bo)
+        self.bang = QTableWidget(len(self.thua), len(self.COT))
+        self.bang.setHorizontalHeaderLabels(list(self.COT))
+        self.bang.verticalHeader().setVisible(False)
+        self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.bang.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.bang.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        for r, (mt, to, so, ld, con_lai, da_co) in enumerate(self.thua):
+            o = QTableWidgetItem()
+            o.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            o.setCheckState(Qt.CheckState.Unchecked if da_co else Qt.CheckState.Checked)
+            o.setData(Qt.ItemDataRole.UserRole, mt)
+            self.bang.setItem(r, 0, o)
+            for c, v in enumerate((to, so, ld, so_luong_vn(con_lai, 1), 'Có' if da_co else ''), start=1):
+                it = QTableWidgetItem(str(v))
+                if c == 4:
+                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                self.bang.setItem(r, c, it)
+        self.bang.setColumnWidth(0, 30)
+        self.bang.horizontalHeader().setStretchLastSection(True)
+        QShortcut(QKeySequence.StandardKey.SelectAll, self, activated=lambda: self.danh_dau(True))
+        self.lb = QLabel('')
+        nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        nut.button(QDialogButtonBox.StandardButton.Ok).setText('Thêm vào mục 1')
+        nut.accepted.connect(self.accept)
+        nut.rejected.connect(self.reject)
+        lo = QVBoxLayout(self)
+        lo.addLayout(h)
+        lo.addWidget(self.bang, 1)
+        lo.addWidget(self.lb)
+        lo.addWidget(nut)
+        self.bang.itemChanged.connect(lambda *_: self._dem())
+        self._dem()
+
+    def loc(self) -> None:
+        to, ld = self.cb_to.currentData(), self.cb_ld.currentData()
+        for r, t in enumerate(self.thua):
+            self.bang.setRowHidden(r, (to is not None and t[1] != to) or (ld is not None and t[3] != ld))
+        self._dem()
+
+    def danh_dau(self, chon: bool) -> None:
+        """Đánh dấu / bỏ đánh dấu mọi thửa đang hiện (theo bộ lọc)."""
+        self.bang.blockSignals(True)
+        for r in range(self.bang.rowCount()):
+            if not self.bang.isRowHidden(r):
+                self.bang.item(r, 0).setCheckState(Qt.CheckState.Checked if chon else Qt.CheckState.Unchecked)
+        self.bang.blockSignals(False)
+        self._dem()
+
+    def chon_ma(self) -> list:
+        return [self.bang.item(r, 0).data(Qt.ItemDataRole.UserRole) for r in range(self.bang.rowCount())
+                if not self.bang.isRowHidden(r) and self.bang.item(r, 0).checkState() == Qt.CheckState.Checked]
+
+    def _dem(self) -> None:
+        self.lb.setText(f'Đã chọn {len(self.chon_ma())} / {len(self.thua)} thửa.')
+
+
 COT_CHU_DAI = {'ten', 'quy_cach', 'can_cu_gia', 'ghi_chu', 'cach_tinh'}
 COT_CONG_THUC = {'so_luong', 'dien_tich'}
+AP_NHIEU_DONG = {'loai_dat', 'vi_tri', 'gia_bang_gia', 'he_so_k', 'ty_le', 'ghi_chu'}   # mục 1: sửa một ô -> áp cho mọi dòng đã chọn
 # hàng nhập nhanh + danh sách chọn: dùng chung với Dự toán & khái toán (0.9.67) - tên cũ giữ cho mã / test gọi từ man_hinh
 from .hang_nhap_nhanh import KIEU_SL, HangNhapNhanh, ds_chon_nhanh, lam_san  # noqa: E402,F401
 
@@ -309,8 +405,11 @@ class BangMuc(QWidget):
                 self.bang.setColumnWidth(i, RONG_COT_GON.get(c[0], c[2]))
         from .giao_dien import san_tieu_de
         san_tieu_de(self.bang)
+        hd.setMinimumHeight(30)
         self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.bang.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        # mục 1: chọn nhiều dòng (Shift / Ctrl) để xóa hàng loạt, đặt cùng vị trí / giá / tỷ lệ cho các thửa đã chọn
+        self.bang.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection if muc == 1
+                                   else QAbstractItemView.SelectionMode.SingleSelection)
         self.bang.setAlternatingRowColors(True)
         self.bang.setWordWrap(True)
         self.bang.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked | QAbstractItemView.EditTrigger.EditKeyPressed |
@@ -354,6 +453,16 @@ class BangMuc(QWidget):
             b.clicked.connect(lambda: man.them_thua(self.cb_thua.currentData()) if self.cb_thua.count() else man.them_thua())
             nhap.addWidget(b)
             self.nut['Thêm thửa…'] = b
+            # 0.9.96: thêm cả loạt thửa (hộ / tổ chức hàng trăm thửa - trước đây thêm từng thửa)
+            self.b_them_tat_ca_thua = QPushButton('Thêm tất cả thửa')
+            self.b_them_tat_ca_thua.setToolTip('Thêm một dòng mục 1 cho mỗi thửa của hộ chưa có trong mục 1 (loại đất, DT còn lại, vị trí, '
+                                               'giá - giá 0 vẫn giữ loại đất)')
+            self.b_them_tat_ca_thua.clicked.connect(lambda: man.them_tat_ca_thua())
+            nhap.addWidget(self.b_them_tat_ca_thua)
+            self.b_chon_nhieu_thua = QPushButton('Chọn nhiều thửa…')
+            self.b_chon_nhieu_thua.setToolTip('Đánh dấu nhiều thửa (lọc theo tờ / loại đất, Ctrl+A chọn tất cả) rồi thêm vào mục 1')
+            self.b_chon_nhieu_thua.clicked.connect(lambda: man.chon_nhieu_thua())
+            nhap.addWidget(self.b_chon_nhieu_thua)
             # 0.9.75: tra giá đất NQ 28 ngay hàng nhập mục 1 (cạnh cột Vị trí của bảng): chọn dòng đất rồi tra
             b = QPushButton('Tra giá đất NQ 28…')
             b.setToolTip('Chọn dòng đất ở bảng rồi tra bảng giá đất Nghị quyết 28/2025: ghi vị trí và điền giá theo loại đất')
@@ -430,13 +539,33 @@ class BangMuc(QWidget):
                     w.setMaximumHeight(26)
             lo.addLayout(h)
         # 0.9.95: bỏ khung viền bao hàng nhập (lề 0); mục 1: nút thao tác dòng + "Cộng mục 1" lên CÙNG hàng chọn thửa
-        if muc == 1:
-            nhap.addSpacing(6)
-            nhap.addLayout(nut)
         khung_nhap = QWidget()
         khung_nhap.setObjectName('khung_nhap')
-        nhap.setContentsMargins(0, 0, 0, 0)
-        khung_nhap.setLayout(nhap)
+        if muc == 1:
+            # 0.9.96: 3 khối xếp nối tiếp (chọn thửa | thêm nhiều thửa, tra giá | nút dòng + Cộng mục 1) - hẹp thì xuống dòng (một
+            # hàng cứng cần ~1.480 điểm ở Windows 125%, rộng hơn màn hình 1366)
+            from .giao_dien import XepDong
+            ds_w = []
+            while nhap.count():
+                it = nhap.takeAt(0)
+                if it.widget() is not None:
+                    ds_w.append(it.widget())
+            xd = XepDong(khung_nhap, 6)
+            xd.setContentsMargins(0, 0, 0, 0)
+            for nhom in (ds_w[:3], ds_w[3:]):
+                k = QWidget()
+                hk = QHBoxLayout(k)
+                hk.setContentsMargins(0, 0, 0, 0)
+                hk.setSpacing(6)
+                for w in nhom:
+                    hk.addWidget(w, 1 if w is self.cb_thua else 0)
+                xd.addWidget(k)
+            k = QWidget()
+            k.setLayout(nut)
+            xd.addWidget(k)
+        else:
+            nhap.setContentsMargins(0, 0, 0, 0)
+            khung_nhap.setLayout(nhap)
         lo.addWidget(khung_nhap)
         if muc == MUC_VN:
             # dự án lập trước khi bộ đơn giá có vật nuôi (QĐ 31/2025): danh mục dự án không có dòng nào -> ô chọn trống
@@ -462,8 +591,15 @@ class BangMuc(QWidget):
             lo.addLayout(nut)
         lo.addWidget(self.bang, 1)
         # nút Trở lại / Tiếp theo: MỘT hàng chung dưới đáy cửa sổ, cùng dải tổng cộng (CuaSoLapPA.hang_dieu_huong)
-        from .giao_dien import nhap_bang_phim
-        nhap_bang_phim(self.bang)                    # dòng cao; Tab / Enter đi giữa các ô, không cần chuột
+        from .giao_dien import dat_dong_gon, nhap_bang_phim
+        nhap_bang_phim(self.bang)                    # Tab / Enter đi giữa các ô, không cần chuột
+        # dòng gọn 30-32 px, cao theo chữ thật (vua_dong) - ô Ghi chú / Quy cách trống không làm dòng cao 60-90 px
+        dat_dong_gon(self.bang)
+        self._hen_vua = QTimer(self)
+        self._hen_vua.setSingleShot(True)
+        self._hen_vua.setInterval(50)
+        self._hen_vua.timeout.connect(self.vua_dong)
+        self.bang.horizontalHeader().sectionResized.connect(lambda *a: self._hen_vua.start())
         # ô xổ có chữ dài (câu tái định cư, mô tả thửa): không bắt cửa sổ rộng theo chữ dài nhất
         for cb in self.findChildren(QComboBox):
             cb.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
@@ -643,6 +779,13 @@ class BangMuc(QWidget):
     def dong_chon(self) -> int:
         return self.bang.currentRow()
 
+    def cac_dong_chon(self) -> list:
+        """Các dòng đang chọn (tăng dần); không chọn dòng nào thì dòng hiện tại."""
+        ds = sorted({i.row() for i in self.bang.selectionModel().selectedRows()})
+        if not ds and self.bang.currentRow() >= 0:
+            ds = [self.bang.currentRow()]
+        return ds
+
     def ve(self, chon: int | None = None):
         bo = self.man.bo
         n = len(bo.ds(self.muc))
@@ -653,9 +796,18 @@ class BangMuc(QWidget):
                 self._ve_dong(r)
         finally:
             self._dang_ve = False
-        self.bang.resizeRowsToContents()
+        self.vua_dong()
         if chon is not None and 0 <= chon < n:
             self.bang.setCurrentCell(chon, 1)
+
+    def vua_dong(self):
+        """Chiều cao mọi dòng theo chữ thật trên bề rộng cột hiện tại (30-88 px)."""
+        from .giao_dien import vua_dong
+        vua_dong(self.bang)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._hen_vua.start()                        # cột giãn đổi bề rộng: đo lại sau 50 ms (kéo cửa sổ không đo liên tục)
 
     def _ve_dong(self, r: int):
         bo = self.man.bo
@@ -690,7 +842,8 @@ class BangMuc(QWidget):
         finally:
             self._dang_ve = cu
         if not cu:
-            self.bang.resizeRowToContents(r)
+            from .giao_dien import cao_can_dong
+            self.bang.setRowHeight(r, cao_can_dong(self.bang, r))
 
     def _bao_cong_thuc(self, r: int, c: int):
         """Chọn ô số lượng / diện tích: dòng thông báo cho biết số / công thức đã nhập ra số đó."""
@@ -712,6 +865,7 @@ class BangMuc(QWidget):
 
 
 # ---------------------------------------------------------------- màn hình lập phương án hộ
+TB_QUET_HO_SO = 'Tiện ích đang trong quá trình hoàn thiện'
 CLIP_TOI_DA = 200_000        # clipboard dài hơn (cả một tài liệu) không tự điền vào hộp Dán danh sách: phân loại sẽ đơ
 QSS_NUT_DAN_TS = ('QPushButton#btn_dan_ts { background: #0284C7; color: #FFFFFF; font-weight: 700; border: none; '
                   'border-radius: 6px; padding: 0 14px; }'
@@ -775,10 +929,9 @@ class CuaSoLapPA(QDialog):
         if ic is not None:
             self.b_dan.setIcon(ic)
         self.b_dan.clicked.connect(lambda: self.mo_dan_tai_san())
-        # 0.9.87: quét Giấy chứng nhận QSDĐ / biên bản kiểm kê (ảnh chụp điện thoại, PDF) -> thông tin hộ, thửa, tài sản
-        self.b_ocr = QPushButton('Quét giấy tờ…')
-        self.b_ocr.setToolTip('Ảnh chụp / PDF Giấy chứng nhận QSDĐ, biên bản kiểm kê: nhận dạng chữ lấy họ tên, CCCD, địa chỉ, thửa đất, '
-                              'tài sản - soát lại rồi điền (chưa lưu cho tới khi bấm Lưu)')
+        # 0.9.96 (người dùng): nút giữ chỗ - quét hồ sơ trong cửa sổ lập phương án hộ đang hoàn thiện, bấm chỉ báo
+        self.b_ocr = QPushButton('Quét hồ sơ…')
+        self.b_ocr.setToolTip(TB_QUET_HO_SO)
         self.b_ocr.clicked.connect(lambda: self.quet_giay_to())
         self.b_luu = QPushButton('Lưu (Ctrl+S)')
         self.b_luu.clicked.connect(lambda: self.luu())
@@ -1138,14 +1291,25 @@ class CuaSoLapPA(QDialog):
 
     # ---------------------------------------------- sửa ô
     def sua_o(self, muc: int, r: int, cot: str, text: str):
+        # mục 1: sửa ô của một dòng đang nằm trong vùng chọn nhiều dòng -> áp cùng giá trị cho mọi dòng đã chọn (vị trí, giá, tỷ lệ…)
+        ds = [r]
+        if muc == 1 and cot in AP_NHIEU_DONG:
+            chon = self.bang[1].cac_dong_chon()
+            if r in chon and len(chon) > 1:
+                ds = chon
         try:
-            tb = self.bo.sua_dat(r, cot, text) if muc == 1 else self.bo.sua_khoan(muc, r, cot, text)
+            tb = ''
+            for i in ds:
+                tb = self.bo.sua_dat(i, cot, text) if muc == 1 else self.bo.sua_khoan(muc, i, cot, text)
+            if len(ds) > 1:
+                tb = f'Đã áp cho {len(ds)} dòng đã chọn. ' + tb
             if muc == 3 and cot == 'so_luong':          # 0.9.72: tự nhận diện mật độ khi sửa số cây
                 tb = ' '.join(x for x in (tb, self._canh_bao_mat_do(r)) if x)
             self.thong_bao(tb)
         except LoiNhap as e:
             QMessageBox.warning(self, TEN_UD, str(e))
-        self.bang[muc]._ve_dong(r)
+        for i in ds:
+            self.bang[muc]._ve_dong(i)
         self.cap_nhat()
 
     def ds_thua_dong(self, r: int) -> list:
@@ -1159,11 +1323,17 @@ class CuaSoLapPA(QDialog):
 
     def doi_vi_tri_dong(self, r: int, gt):
         if isinstance(gt, tuple) and gt[0] == 'nq28':
+            chon = self.bang[1].cac_dong_chon()
+            ds = chon if r in chon and len(chon) > 1 else [r]          # chọn nhiều dòng: cùng tuyến đường / vị trí cho cả loạt
             try:
-                self.thong_bao(self.bo.chon_vi_tri_nq28(r, gt[1]))
+                tb = ''
+                for i in ds:
+                    tb = self.bo.chon_vi_tri_nq28(i, gt[1])
+                self.thong_bao((f'Đã áp cho {len(ds)} dòng đã chọn. ' if len(ds) > 1 else '') + tb)
             except LoiNhap as e:
                 QMessageBox.warning(self, TEN_UD, str(e))
-            self.bang[1]._ve_dong(r)
+            for i in ds:
+                self.bang[1]._ve_dong(i)
             self.cap_nhat()
         else:
             self.sua_o(1, r, 'vi_tri', str(gt))
@@ -1209,13 +1379,11 @@ class CuaSoLapPA(QDialog):
         co_bang = len(clip) > 5 and ('\n' in clip or '\t' in clip) and len(clip) <= CLIP_TOI_DA
         return self.dan_tai_san(clip if co_bang else '', cho=cho)
 
-    def quet_giay_to(self, files=None, cho: bool = True):
-        """Quét giấy tờ (OCR, 0.9.87): Giấy chứng nhận QSDĐ / biên bản kiểm kê -> thông tin hộ, thửa, tài sản (chưa lưu)."""
-        from .man_hinh_ocr import HopQuetGiayTo
-        hop = HopQuetGiayTo(self, 'lap_pa', self, files)
-        if cho:
-            hop.exec()
-        return hop
+    def quet_giay_to(self, cho: bool = True) -> str:
+        """Nút "Quét hồ sơ" (0.9.96): tiện ích đang hoàn thiện - chỉ báo, không đọc / ghi gì. Trả chữ thông báo."""
+        if cho and not getattr(self, 'im_lang', False):
+            QMessageBox.information(self, TEN_UD, TB_QUET_HO_SO)
+        return TB_QUET_HO_SO
 
     def dan_tai_san(self, chu: str = '', cho: bool = True):
         """Hộp "Dán danh sách tài sản" (man_hinh_phan_loai): tự xếp từng dòng vào mục nhà / cây / vật nuôi / hỗ trợ."""
@@ -1474,7 +1642,47 @@ class CuaSoLapPA(QDialog):
             self._sau_khi_them(2, i, 'Đã tách phần trong / ngoài ranh thu hồi (mô tả ở cột Quy cách).')
         return dlg
 
+    def them_tat_ca_thua(self) -> int:
+        """Thêm dòng mục 1 cho mọi thửa của hộ chưa có trong mục 1. Trả số dòng thêm."""
+        return self._them_cac_thua(None)
+
+    def chon_nhieu_thua(self, cho: bool = True):
+        """Hộp chọn nhiều thửa -> thêm vào mục 1. cho=False: trả hộp (test đặt dấu rồi gọi them_cac_thua_da_chon)."""
+        da_co = {d.ma_thua for d in self.bo.pa.dat}
+        con = {x[0]: x[2] for x in self.bo.thua_cua_ho()}
+        ds = []
+        for t in self.bo.bc.thua_cua(self.bo.ma_ho):
+            con_lai = con.get(t['ma_thua'], KHONG)
+            ds.append((t['ma_thua'], t['so_to'] or '', t['so_thua'] or '', t['loai_dat'] or '', con_lai, t['ma_thua'] in da_co))
+        if not ds:
+            QMessageBox.information(self, TEN_UD, 'Hộ này chưa có thửa: thêm thửa ở thẻ "Thông tin hộ, thửa đất".')
+            return None
+        hop = HopChonNhieuThua(ds, self)
+        if not cho:
+            return hop
+        if hop.exec() == QDialog.DialogCode.Accepted:
+            self._them_cac_thua(hop.chon_ma(), bo_qua_da_co=False)
+        return hop
+
+    def _them_cac_thua(self, ds_ma_thua, bo_qua_da_co: bool = True) -> int:
+        n0 = len(self.bo.pa.dat)
+        n = self.bo.them_nhieu_thua(ds_ma_thua, bo_qua_da_co=bo_qua_da_co)
+        self.tab.setCurrentIndex(the_cua(1))
+        self.bang[1].ve(chon=n0 if n else None)
+        self.bang[1].nap_danh_sach()
+        self.thong_bao(f'Đã thêm {n} thửa vào mục 1.' if n else 'Không có thửa nào cần thêm (các thửa đã có trong mục 1).')
+        self.cap_nhat()
+        return n
+
     def xoa_dong(self, muc: int, i: int | None = None):
+        if i is None and muc == 1 and len(self.bang[1].cac_dong_chon()) > 1:
+            ds = self.bang[1].cac_dong_chon()                         # chọn nhiều dòng mục 1: xóa cả loạt
+            n = self.bo.xoa_nhieu_dat(ds)
+            self.bang[1].ve(chon=min(ds[0], len(self.bo.pa.dat) - 1))
+            self.bang[1].nap_danh_sach()
+            self.thong_bao(f'Đã xóa {n} dòng mục 1.')
+            self.cap_nhat()
+            return
         i = self.bang[muc].dong_chon() if i is None else i
         if 0 <= i < len(self.bo.ds(muc)):
             self.bo.xoa(muc, i)

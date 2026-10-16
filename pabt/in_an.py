@@ -694,6 +694,71 @@ def dien_so_ngay(ws, so: str = '', ngay: str = '', nhan_so: str = 'Số:', den_d
     return n
 
 
+CHO_NGUOI_KY = ('{nguoi_lap}', '{nguoi_kiem_tra}', '{nguoi_ky}')
+
+
+def can_khoi_ky(ws, tim_tren: int = 12) -> int:
+    """Khối chữ ký (LẬP BIỂU / KIỂM TRA / chức vụ ký - họ tên phía dưới): họ tên căn GIỮA ngay dưới chức danh. Gọi TRƯỚC
+    _thay_cho_trong (nhận ô họ tên theo chỗ trống {nguoi_lap}, {nguoi_kiem_tra}, {nguoi_ky}). Mỗi ô họ tên: tìm ô chức danh gần nhất
+    phía trên (tối đa tim_tren dòng) phủ cột giữa của ô họ tên; bỏ dấu cách thừa đầu / cuối chức danh (mẫu "   KIỂM TRA     " - Excel
+    căn giữa tính cả dấu cách nên chữ lệch khỏi họ tên), ô họ tên gộp ĐÚNG các cột của ô chức danh, cả hai căn giữa không thụt lề.
+    Mẫu người dùng tự sửa lệch cột cũng được căn lại. Trả số ô họ tên đã căn."""
+    from copy import copy
+    o_ten = [c for c in _o_chu(ws) if c.value.strip() in CHO_NGUOI_KY]
+    if not o_ten:
+        return 0
+    chi_muc = _chi_muc_gop(ws)
+
+    def vung(r, c):
+        m = _vung_tron(ws, r, c, chi_muc)
+        return (m.min_col, m.max_col, m) if m is not None and m.min_row == m.max_row == r else (c, c, m)
+
+    def can_giua(o):
+        a = copy(o.alignment)
+        a.horizontal, a.indent = 'center', 0
+        o.alignment = a
+    so = 0
+    for o in o_ten:
+        r = o.row
+        n1, n2, mn = vung(r, o.column)
+        giua = (n1 + n2) / 2
+        td = None
+        for rr in range(r - 1, max(0, r - tim_tren), -1):
+            for c in range(1, ws.max_column + 1):
+                x = ws.cell(rr, c)
+                if not isinstance(x.value, str) or not x.value.strip() or x.value.strip() in CHO_NGUOI_KY:
+                    continue
+                t1, t2, mt = vung(rr, c)
+                if t1 <= giua <= t2 and (mt is None or mt.min_col == c):
+                    td = (x, t1, t2)
+                    break
+            if td is not None:
+                break
+        if td is None:
+            continue
+        x, t1, t2 = td
+        x.value = x.value.strip()
+        can_giua(x)
+        o.value = o.value.strip()
+        if (t1, t2) != (n1, n2):
+            # ô khác trên dòng họ tên nằm trong vùng chức danh (họ tên người khác) -> không gộp lại, chỉ căn giữa
+            if all(ws.cell(r, c).value in (None, '') or n1 <= c <= n2 for c in range(t1, t2 + 1)):
+                if mn is not None and mn.min_row == mn.max_row == r:
+                    ws.unmerge_cells(mn.coord)
+                gia_tri, kieu = o.value, o._style
+                for c in range(n1, n2 + 1):
+                    ws.cell(r, c).value = None
+                moi = ws.cell(r, t1)
+                moi.value, moi._style = gia_tri, copy(kieu)
+                if t2 > t1:
+                    _gop_o(ws, r, t1, r, t2)
+                    chi_muc = _chi_muc_gop(ws)
+                o = moi
+        can_giua(o)
+        so += 1
+    return so
+
+
 def _thay_cho_trong(ws, gia_tri: dict):
     """Thay {ten} trong mọi ô chữ của sheet."""
     for c in _o_chu(ws):
@@ -1802,6 +1867,7 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
         ttho['so_pa'], ttho['ngay_pa'] = '', ''
     gia_tri = dict(da, **ttho)
     dien_so_ngay(ws, ttho['so_pa'], ttho['ngay_pa'], 'Số:', dau - 1)      # số / ngày PA chi tiết (đợt trình) vào chỗ chừa trống
+    can_khoi_ky(ws)                                              # họ tên người ký căn giữa dưới chức danh
     _thay_cho_trong(ws, gia_tri)
     ap_che_do_du_thao(ws, du_thao, TEN_CT)                       # dự thảo: giữ / thêm chữ DỰ THẢO; chính thức: xóa
     vua_chu(ws, vt_du_an, do)
@@ -2021,6 +2087,7 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
         ws['A6'] = re.sub(r'\(Đối với .*?m2\)', f'(Đối với {len(khoi):02d} trường hợp/ {tong_thua} thửa đất/ '
                           f'{format(float(tong_dt), ",.1f").replace(",", "#").replace(".", ",").replace("#", ".")}m2)', a6)
     dien_so_ngay(ws, so_pa_tong, ngay_pa_tong, 'Phương án số')
+    can_khoi_ky(ws)
     _thay_cho_trong(ws, dict(da, so_pa_tong=so_pa_tong or '', ngay_pa_tong=ngay_pa_tong or '',
                              ky_hieu_so=ky_hieu_so or da.get('ky_hieu_so') or ''))       # ký hiệu theo đợt trình (0.9.72)
     ap_che_do_du_thao(ws, du_thao, TEN_BTH)                      # dự thảo: "(DỰ THẢO)" ở tiêu đề; chính thức: xóa

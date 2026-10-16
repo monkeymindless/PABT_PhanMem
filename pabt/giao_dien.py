@@ -2109,27 +2109,67 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
     return t
 
 
-def vua_dong(b) -> None:
-    """Chiều cao dòng bảng QTableWidget (chữ xuống dòng) cho đủ chữ - chỉ đo các dòng có ô nhiều dòng / chữ dài hơn bề rộng cột;
-    dòng khác giữ chiều cao mặc định. resizeRowsToContents đo mọi ô (5.000 dòng × 11 cột: ~0,4-1,5 giây mỗi lần vẽ / lọc)."""
-    fm = b.fontMetrics()
-    tb = max(1, fm.averageCharWidth())
-    rong = [max(1, b.columnWidth(c) - 10) for c in range(b.columnCount())]
-    cao = b.verticalHeader().defaultSectionSize()
+CAO_DONG_CHUAN = 32             # bảng nhập phương án: dòng một dòng chữ
+CAO_DONG_TOI_THIEU = 30
+CAO_DONG_TOI_DA = 88            # chữ dài hơn: xem đủ ở chú thích / bấm đúp sửa (khung sửa cao theo chữ)
+
+
+def _rong_do(b, c: int) -> int:
+    """Bề rộng để đo chữ cột c: cột chưa xếp xong (bảng chưa hiện, cột giãn còn ~0) lấy max(160, sizeHint tiêu đề)."""
+    w = b.columnWidth(c)
+    if w < 100:
+        w = max(160, b.horizontalHeader().sectionSizeHint(c))
+    return max(20, w - 10)
+
+
+def cao_can_dong(b, r: int, cao_chuan: int = CAO_DONG_CHUAN, cao_toi_da: int | None = CAO_DONG_TOI_DA) -> int:
+    """Chiều cao cần cho dòng r: đo chữ từng ô bằng QFontMetrics.boundingRect trên bề rộng thật của cột (ô trống, chữ ngắn không
+    làm dòng cao). Một dòng chữ: cao_chuan (tối đa 36 khi phông lớn); nhiều dòng: min(cao_toi_da, max(cao_chuan, chữ + 10))."""
+    from PySide6.QtCore import QRect
+    from PySide6.QtGui import QFontMetrics
+    fm_bang = b.fontMetrics()
+    mot = fm_bang.height()
+    can = 0
+    for c in range(b.columnCount()):
+        if b.isColumnHidden(c):
+            continue
+        it = b.item(r, c)
+        t = it.text() if it is not None else ''
+        if not t or not t.strip():
+            continue
+        fm = QFontMetrics(it.font()) if it.font() != b.font() else fm_bang
+        w = _rong_do(b, c)
+        if '\n' not in t and fm.horizontalAdvance(t) <= w:
+            continue                                    # vừa một dòng: không cần đo ngắt dòng
+        h = fm.boundingRect(QRect(0, 0, w, 100000), int(Qt.TextFlag.TextWordWrap), t).height()
+        can = max(can, h)
+    if can <= mot * 1.2:                                # một dòng chữ
+        return min(max(cao_chuan, mot + 12), max(cao_chuan, 36))
+    kq = max(cao_chuan, can + 10)
+    return kq if cao_toi_da is None else min(cao_toi_da, kq)
+
+
+def vua_dong(b, cao_chuan: int | None = CAO_DONG_CHUAN, cao_toi_da: int | None = CAO_DONG_TOI_DA) -> None:
+    """Chiều cao dòng bảng QTableWidget theo chữ thật (cao_can_dong) - thay resizeRowsToContents (đo sizeHint mọi ô: cột giãn /
+    tiêu đề dài làm dòng trống cũng cao 60-90 px; 5.000 dòng × 11 cột ~0,4-1,5 giây). cao_chuan None = defaultSectionSize của
+    bảng; cao_toi_da None = không giới hạn."""
+    if cao_chuan is None:
+        cao_chuan = b.verticalHeader().defaultSectionSize()
+    vh = b.verticalHeader()
     for r in range(b.rowCount()):
-        can = False
-        for c, w in enumerate(rong):
-            it = b.item(r, c)
-            if it is None:
-                continue
-            t = it.text()
-            if '\n' in t or len(t) * tb > w:
-                can = True
-                break
-        if can:
-            b.resizeRowToContents(r)
-        elif b.rowHeight(r) != cao:
-            b.setRowHeight(r, cao)
+        h = cao_can_dong(b, r, cao_chuan, cao_toi_da)
+        if vh.sectionSize(r) != h:
+            b.setRowHeight(r, h)
+
+
+def dat_dong_gon(b, cao_chuan: int = CAO_DONG_CHUAN, cao_toi_thieu: int = CAO_DONG_TOI_THIEU) -> None:
+    """Bảng nhập phương án: dòng 30-32 px, KHÔNG giãn dòng cuối, chiều cao do vua_dong đặt (không ResizeToContents)."""
+    from PySide6.QtWidgets import QHeaderView
+    vh = b.verticalHeader()
+    vh.setStretchLastSection(False)
+    vh.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+    vh.setMinimumSectionSize(cao_toi_thieu)
+    vh.setDefaultSectionSize(cao_chuan)
 
 
 def _gian_bang() -> None:

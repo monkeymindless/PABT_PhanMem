@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import csdl
-from .ho_so import chuan_loai_dat
+from .loai_dat import chuan_ma_loai_dat
 from .nhap_excel import chuan_cccd
 from .lap_pa import DanhMuc, LoiNhap, bo_dau, doc_so
 from .nghiep_vu import (MUC_KHOAN, MUC_VN, NGUON_DM, NGUON_TAY, SO_MUC, BoiCanh, DongDat, DongKhoan, so_muc, thanh_tien_dong,
@@ -151,9 +151,12 @@ def _bat_dau(s: str, mau: tuple) -> bool:
 
 
 # ---------------------------------------------------------------- nhận sheet
-def _tim_tieu_de(hang: list):
-    """(chỉ số dòng tiêu đề STT, {khóa: cột}) hoặc None."""
-    for i, r in enumerate(hang[:80]):
+def _tim_tieu_de(hang: list, tu: int = 0, den: int | None = 80):
+    """(chỉ số dòng tiêu đề STT, {khóa: cột}) hoặc None. Tìm trong hang[tu:den] (mặc định 80 dòng đầu)."""
+    for i in range(tu, len(hang) if den is None else min(len(hang), den)):
+        r = hang[i]
+        if not any(isinstance(v, str) and v.strip().upper().rstrip(':') == 'STT' for v in r):
+            continue
         chu = [bo_dau(_txt(v)).rstrip(':') for v in r]
         if 'stt' not in chu:
             continue
@@ -195,7 +198,7 @@ def _doc_cccd(s: str) -> tuple:
 def _thua_tu_ten(ten: str) -> dict:
     """'Thửa đất số 168, tờ bản đồ số 156, loại đất RPD, phường Trị An (Vị trí 1)' / 'Thửa 457 tờ 35 - đất LUK (VT 1: phạm
     vi 2)' -> so_thua, so_to, loai_dat, vi_tri."""
-    t = _txt(ten)
+    t = re.sub(r'\s+', ' ', _txt(ten)).strip()
     so_thua = re.search(r'thửa(?:\s+đất)?\s+số\s*:?\s*([^,(]+)', t, re.I)
     if so_thua and re.search(r'\stờ\s', so_thua.group(1), re.I):          # "Thửa đất số 457 tờ 35…": số thửa là một cụm
         so_thua = re.search(r'thửa(?:\s+đất)?\s+số\s*:?\s*(\d[^\s,(]*)', t, re.I)
@@ -203,12 +206,18 @@ def _thua_tu_ten(ten: str) -> dict:
     so_to = re.search(r'tờ(?:\s+bản\s+đồ)?(?:\s+địa\s+chính)?(?:\s+số)?\s*:?\s*([^,(]+)', t, re.I)
     if so_to and not re.fullmatch(r'[\w./-]+', so_to.group(1).strip(' .')):
         so_to = re.search(r'tờ(?:\s+bản\s+đồ)?(?:\s+địa\s+chính)?(?:\s+số)?\s*:?\s*(\d[^\s,(]*)', t, re.I)
-    ld = re.search(r'loại\s+đất\s*:?\s*([A-ZĐ]{2,4}(?:\s*\+\s*[A-ZĐ]{2,4})*)', t) or \
+    ld = re.search(r'loại\s+đất\s*:?\s*([A-ZĐa-zđ]{2,4}(?:\s*[+,]\s*[A-ZĐa-zđ]{2,4})*)\b', t, re.I) or \
         re.search(r'(?:^|[\s-])đất\s+([A-ZĐ]{2,4}(?:\s*\+\s*[A-ZĐ]{2,4})*)\b', t)                  # "- đất LUK"
     vt = re.search(r'\((?:vị\s+trí|vt)\s*:?\s*([^)]+)\)', t, re.I)
-    return dict(so_thua=so_thua.group(1).strip(' .') if so_thua else '', so_to=so_to.group(1).strip(' .') if so_to else '',
-                loai_dat=chuan_loai_dat(ld.group(1)) if ld else '', vi_tri=vt.group(1).strip() if vt else '',
+    return dict(so_thua=_so_hieu(so_thua), so_to=_so_hieu(so_to),
+                loai_dat=chuan_ma_loai_dat(ld.group(1)) if ld else '', vi_tri=vt.group(1).strip() if vt else '',
                 mot_phan=bool(re.match(r'một\s+phần', t, re.I)))
+
+
+def _so_hieu(m) -> str:
+    """Số thửa / số tờ đã bắt: '--', '-', '…', 'chưa có' = chưa có số -> ''."""
+    s = m.group(1).strip(' .') if m else ''
+    return '' if re.fullmatch(r'[-–—_.…/\s]*|(?i:ch[ưu]a\s+c[óo].*|kh[ôo]ng\s+c[óo].*|x+)', s) else s
 
 
 def muc_theo_ten(ten: str) -> int:
@@ -235,8 +244,50 @@ _MUC_THEO_SO = {v: k for k, v in SO_MUC.items()}           # bản in từ 0.9.2
 _MUC_TONG = (1, 2, 3, MUC_VN, 4, 5)
 
 
-def doc_sheet(ten_sheet: str, hang: list):
-    """Một sheet (danh sách dòng giá trị) -> HoChiTiet, hoặc None nếu không có bảng tính toán kiểu phương án chi tiết."""
+def tach_phuong_an(hang: list) -> list:
+    """Sheet có nhiều phương án chi tiết nối tiếp từ trên xuống (mỗi bảng có phần đầu "CỘNG HÒA… / Số: … / PHƯƠNG ÁN CHI TIẾT",
+    họ tên, bảng STT): [(dòng đầu, dòng cuối)] từng phương án; một phương án -> [(0, len(hang))]."""
+    td, tu = [], 0
+    while True:
+        x = _tim_tieu_de(hang, tu, None)
+        if x is None:
+            break
+        td.append(x[0])
+        tu = x[0] + 1
+    if len(td) < 2:
+        return [(0, len(hang))]
+    dau = [0]
+    for a, b in zip(td, td[1:]):
+        # phần đầu của phương án sau: dòng quốc hiệu, không có thì dòng "PHƯƠNG ÁN CHI TIẾT" / "Số:" / nhãn họ tên đầu tiên
+        # sau dòng TỔNG CỘNG của phương án trước
+        tong = next((i for i in range(a + 1, b) if any(bo_dau(_txt(v)).startswith('tong cong') for v in hang[i][:4])), a)
+        moc = None
+        for mau in ('cong hoa xa hoi', 'phuong an chi tiet', 'so:'):
+            moc = next((i for i in range(tong + 1, b) if any(bo_dau(_txt(v)).startswith(mau) for v in hang[i] if v)), None)
+            if moc is not None:
+                break
+        if moc is None:
+            moc = next((i for i in range(tong + 1, b) for v in hang[i][:3]
+                        if _bat_dau(bo_dau(_txt(v)).rstrip(':'), NHAN['ho_ten'])), b)
+        # quốc hiệu thường cùng dòng tên đơn vị: lùi về dòng đầu của cụm dòng không trống liền trước
+        while moc - 1 > tong and any(v not in (None, '') for v in hang[moc - 1]) and moc - 1 > dau[-1]:
+            moc -= 1
+        dau.append(moc)
+    return [(x, y) for x, y in zip(dau, dau[1:] + [len(hang)])]
+
+
+def _so_phuong_an(hang: list) -> str:
+    for r in hang[:15]:
+        for v in r:
+            m = re.match(r'\s*số\s*:?\s*([\w./-]+)', _txt(v), re.I)
+            if m and any(ch.isdigit() for ch in m.group(1)):
+                return m.group(1).split('/')[0]
+    return ''
+
+
+def doc_sheet(ten_sheet: str, hang: list, lech: int = 0):
+    """Một sheet (danh sách dòng giá trị) -> HoChiTiet, hoặc None nếu không có bảng tính toán kiểu phương án chi tiết.
+    lech: số dòng đứng trước hang trong sheet (phương án thứ 2… của sheet nhiều phương án) - để báo đúng số dòng Excel."""
     td = _tim_tieu_de(hang)
     if td is None:
         return None
@@ -300,7 +351,7 @@ def doc_sheet(ten_sheet: str, hang: list):
         sa, ten = _txt(o(r, 'stt')), _doan(o(r, 'ten'))
         ka, kt = bo_dau(sa), bo_dau(ten)
         if any(_la_loi(v) for v in r[:max(cot.values()) + 1]):
-            loi_o.append(i + 1)
+            loi_o.append(i + 1 + lech)
             continue
         try:
             tt = _so(o(r, 'tt'))
@@ -341,12 +392,12 @@ def doc_sheet(ten_sheet: str, hang: list):
             la_con = not re.fullmatch(r'\d+\.\d+\.?', ka)
             if la_con and ka not in ('', '-', '+', '*', '.') and not re.fullmatch(r'[a-z]\)?', ka):
                 continue
-        d = DongBang(i + 1, sa, ten, _txt(o(r, 'dvt')), ghi_chu=_doan(o(r, 'gc')), thanh_tien=tt, con=la_con)
+        d = DongBang(i + 1 + lech, sa, ten, _txt(o(r, 'dvt')), ghi_chu=_doan(o(r, 'gc')), thanh_tien=tt, con=la_con)
         for k, ham in (('so_luong', _so), ('don_gia', _so), ('ty_le', _ty_le)):
             try:
                 setattr(d, k, ham(o(r, {'so_luong': 'sl', 'don_gia': 'dg', 'ty_le': 'tl'}[k])))
             except ValueError as e:
-                h.canh_bao.append(f'Dòng {i + 1} ({ten[:40]}): {e}, coi như trống.')
+                h.canh_bao.append(f'Dòng {i + 1 + lech} ({ten[:40]}): {e}, coi như trống.')
         (h.dat if muc == 1 else h.khoan[muc]).append(d)
     if loi_o:
         h.loi.append(f'Ô lỗi công thức (#N/A…) ở dòng {", ".join(map(str, loi_o[:8]))}{"…" if len(loi_o) > 8 else ""}.')
@@ -487,13 +538,23 @@ def doc(file) -> KetQuaDoc:
     try:
         for ws in wb.worksheets:
             hang = doc_hang(ws)
-            h = doc_sheet(ws.title, hang)
-            if h is None:
+            khoi = tach_phuong_an(hang)
+            co = False
+            for k, (a, b) in enumerate(khoi, start=1):
+                phan = hang[a:b]
+                ten = ws.title
+                if len(khoi) > 1:
+                    so = _so_phuong_an(phan)
+                    ten = f'{ws.title} - PA {so}' if so else f'{ws.title} ({k})'
+                h = doc_sheet(ten, phan, a)
+                if h is None:
+                    continue
+                co = True
+                kq.ho.append(h)
+                if h.chon and not kq.du_an:
+                    kq.du_an = _thong_tin_du_an(phan)
+            if not co:
                 kq.bo_qua.append(ws.title)
-                continue
-            kq.ho.append(h)
-            if h.chon and not kq.du_an:
-                kq.du_an = _thong_tin_du_an(hang)
     finally:
         wb.close()
     # trùng hộ trong file (cùng CCCD hoặc cùng họ tên): cảnh báo
@@ -683,7 +744,7 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
                 t = _thua_tu_ten(d.ten)
                 if not (t['so_thua'] or t['so_to']):
                     bc.canh_bao.append(f'{ten_ho}: dòng 1.{k} "{d.ten[:50]}" không đọc được số tờ, số thửa.')
-                if t['loai_dat'] and t['loai_dat'].split('+')[0] not in ctx.loai_dat:
+                if t['loai_dat'] and any(x not in ctx.loai_dat for x in t['loai_dat'].split('+')):
                     bc.canh_bao.append(f'{ten_ho}: thửa {t["so_thua"]} loại đất {t["loai_dat"]} không có trong danh mục loại đất.')
                 mt = con.execute('SELECT COALESCE(MAX(ma_thua), 0) + 1 FROM thua').fetchone()[0]
                 con.execute('''INSERT INTO thua (ma_thua, ma_ho, so_to, so_thua, loai_dat, dt_thu_hoi, nguon_goc, vi_tri, thu_tu)
@@ -691,19 +752,20 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
                             (mt, ma, t['so_to'], t['so_thua'], t['loai_dat'], chuoi(d.so_luong or KHONG), h.nguon_goc,
                              t['vi_tri'], k))
                 bc.so_thua += 1
+                # mục 1 LUÔN có dòng cho mỗi thửa (cả khi đơn giá 0 / trống: đất không bồi thường vẫn phải hiện trong phương án)
+                ld = t['loai_dat'].split('+')[0] if t['loai_dat'] else ''
+                dd = DongDat(ma_thua=mt, loai_dat=ld, nhom_dat=ctx.loai_dat.get(ld, ''), dien_tich=d.so_luong or KHONG,
+                             vi_tri=t['vi_tri'], gia_bang_gia=d.don_gia or KHONG,
+                             ty_le=d.ty_le if d.ty_le is not None else D(1), ghi_chu=d.ghi_chu, thanh_tien_excel=d.thanh_tien)
+                if not ld:
+                    bc.canh_bao.append(f'{ten_ho}: dòng 1.{k} chưa có loại đất (chọn loại đất khi mở lập phương án).')
                 if dat_tinh:
-                    ld = t['loai_dat'].split('+')[0] if t['loai_dat'] else ''
-                    dd = DongDat(ma_thua=mt, loai_dat=ld, nhom_dat=ctx.loai_dat.get(ld, ''), dien_tich=d.so_luong or KHONG,
-                                 vi_tri=t['vi_tri'], gia_bang_gia=d.don_gia or KHONG,
-                                 ty_le=d.ty_le if d.ty_le is not None else D(1), ghi_chu=d.ghi_chu, thanh_tien_excel=d.thanh_tien)
-                    if not ld:
-                        bc.canh_bao.append(f'{ten_ho}: dòng 1.{k} chưa có loại đất (chọn loại đất khi mở lập phương án).')
                     _so_sanh(bc, ten_ho, f'1.{k}', thanh_tien_dong_dat(dd, ctx), d.thanh_tien)
-                    con.execute('''INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia,
-                                   he_so_k, ty_le, ghi_chu, thanh_tien_excel) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
-                                (ma, mt, k, dd.loai_dat, dd.nhom_dat, chuoi(dd.dien_tich), dd.vi_tri, chuoi(dd.gia_bang_gia),
-                                 '1', chuoi(dd.ty_le), dd.ghi_chu, _chuoi(d.thanh_tien)))
-                    bc.so_dong += 1
+                con.execute('''INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia,
+                               he_so_k, ty_le, ghi_chu, thanh_tien_excel) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+                            (ma, mt, k, dd.loai_dat, dd.nhom_dat, chuoi(dd.dien_tich), dd.vi_tri, chuoi(dd.gia_bang_gia),
+                             '1', chuoi(dd.ty_le), dd.ghi_chu, _chuoi(d.thanh_tien)))
+                bc.so_dong += 1
             for muc in MUC_KHOAN:
                 sm = so_muc(muc)
                 for k, d in enumerate(h.khoan[muc], start=1):

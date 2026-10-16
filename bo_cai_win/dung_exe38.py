@@ -19,7 +19,7 @@ PY38 = DEV / 'venv38_32' / 'Scripts' / 'python.exe'
 TAM = DEV / 'nguon38'
 RA = GOC / 'dist' / 'PABT_Win7'
 CHEP = ('chay.py', 'nap_cap_nhat.py', 'pabt', 'mau_in', 'HUONG_DAN.md')
-DU_LIEU = ('pabt/schema.sql', 'pabt/bo_don_gia.sqlite', 'pabt/bang_gia_nq28.json', 'pabt/bieu_tuong.png', 'pabt/pabt_profile.json')
+DU_LIEU = ('pabt/schema.sql', 'pabt/bo_don_gia.sqlite', 'pabt/bang_gia_nq28.json', 'pabt/he_so_k_qd03.json', 'pabt/bieu_tuong.png', 'pabt/pabt_profile.json')
 # cập nhật đơn giá từ trang web phát hành riêng bằng gói .pabtcn: không đóng vào exe, nhưng giữ thư viện chuẩn nó cần
 # cap_nhat_web đóng trong bản cài từ 0.9.49. Màn hình quét web đầy đủ vẫn để gói .pabtcn.
 LOAI_TRU_WEB = ['--exclude-module', 'pabt.man_hinh_quet_web',

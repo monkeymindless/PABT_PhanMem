@@ -192,8 +192,18 @@ class PhuongAn:
         return None
 
 
+def _loai_dat_day_du(con) -> dict:
+    """{mã loại đất: nhóm}: đủ danh sách chuẩn `loai_dat.LOAI_DAT` (RDD, RPH, DGT... luôn hợp lệ dù bảng giá dự án không có), mã
+    trong dm_loaidat của dự án ghi đè nhóm."""
+    from .loai_dat import LOAI_DAT, nhom_mac_dinh
+    kq = {ma: nhom_mac_dinh(ma) for ma, _, _ in LOAI_DAT}
+    kq.update({r['ma'].upper(): r['nhom'] for r in con.execute('SELECT ma, nhom FROM dm_loaidat')})
+    return kq
+
+
 @dataclass
 class BoiCanh:
+
     """Số liệu chung của dự án dùng khi tính / kiểm tra / gợi ý (đọc một lần)."""
     lamtron: int = -3
     bieu: list = field(default_factory=list)
@@ -228,7 +238,7 @@ class BoiCanh:
         return cls(nguong_nk=nguong or NK_CO_BAN, lamtron=lam, bieu=[(r['tu'], r['muc']) for r in con.execute('SELECT tu, muc FROM bieu_thuong')], ts=ts,
                    cap_dia_ban=da['cap_dia_ban'] if da else '', ten_dia_ban=da['ten_dia_ban'] if da else '',
                    thua={r['ma_thua']: dict(r) for r in con.execute('SELECT * FROM thua')},
-                   loai_dat={r['ma'].upper(): r['nhom'] for r in con.execute('SELECT ma, nhom FROM dm_loaidat')},
+                   loai_dat=_loai_dat_day_du(con),
                    hotro={r['ma']: dict(r) for r in con.execute('SELECT * FROM dm_hotro')})
 
     def thua_cua(self, ma_ho) -> list:
@@ -504,7 +514,7 @@ def de_xuat_dao_tao_pa(pa: PhuongAn, bc: BoiCanh, giao_khoan: bool = False):
         if r.nhom_dat != 'Nông nghiệp' or r.gia_bang_gia == 0 or la_giao_khoan(r, bc) != giao_khoan:
             continue
         g = nhom_han_muc(r.loai_dat)
-        s[g] += r.dien_tich * r.gia_bang_gia
+        s[g] += r.dien_tich * r.gia_bang_gia * he_so(r.he_so_k)      # giá đất đã nhân hệ số K (QĐ 03/2026/QĐ-UBND)
         dt[g] += r.dien_tich
     sl = KHONG
     tien = KHONG

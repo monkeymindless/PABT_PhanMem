@@ -217,6 +217,7 @@ class KhungHoSo(QWidget):
         self.bang = QTableWidget(0, len(ho_so.TRUONG_THUA))
         self.bang.setHorizontalHeaderLabels([t for _, t in ho_so.TRUONG_THUA])
         self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.bang.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)     # xóa nhiều thửa một lần
         self.bang.setAlternatingRowColors(True)
         self.bang.setWordWrap(True)
         self.bang.setMinimumHeight(170)
@@ -276,6 +277,9 @@ class KhungHoSo(QWidget):
         tieu_de.setProperty('vai', 'tieu_de')
         hang_td.addWidget(tieu_de)
         hang_td.addWidget(self.lb, 1)
+        from .man_hinh_ho_so_scan import NutHoSoScan
+        self.nut_scan = NutHoSoScan()                   # 0.9.96: hồ sơ scan (PDF / ảnh) của hộ - đính kèm, mở nhanh
+        hang_td.addWidget(self.nut_scan)
         hang_td.addWidget(b_them)
         hang_td.addWidget(self.b_thao_tac)
         lo.addLayout(hang_td)
@@ -303,6 +307,7 @@ class KhungHoSo(QWidget):
             self.them_dong(t)
         for ten in ('Chuyển thửa sang hộ khác…', 'Gộp hộ khác vào hộ này…', 'Xóa hộ…'):    # QAction trong menu
             self.nut[ten].setEnabled(self.ma_ho is not None)
+        self.nut_scan.dat(self.con, self.ma_ho, bool(getattr(self, 'chi_doc', False)))
         self.lb.setText(f'Hộ đã có {ho["so_dong_pa"]} dòng phương án. ' if ho['so_dong_pa'] else '')
         self.chinh_cao_dong()
         self.ban_dau = self.thu_thap()
@@ -398,6 +403,20 @@ class KhungHoSo(QWidget):
         return len(phan)
 
     def xoa_dong(self, r=None, xac_nhan=None):
+        if r is None:                                   # 0.9.96: chọn nhiều thửa (Shift / Ctrl) -> xóa cả loạt
+            ds = sorted({i.row() for i in self.bang.selectionModel().selectedRows()}, reverse=True)
+            if len(ds) > 1:
+                co_pa = [self.bang.item(i, 0).toolTip() for i in ds if self.bang.item(i, 0) and self.bang.item(i, 0).toolTip()]
+                if co_pa and xac_nhan is None:
+                    xac_nhan = QMessageBox.question(self, TEN_UD, f'{len(co_pa)} / {len(ds)} thửa đã có dòng phương án. Xóa cả '
+                                                    f'{len(ds)} thửa (các dòng đó còn lại, không gắn thửa)?') == QMessageBox.StandardButton.Yes
+                if co_pa and not xac_nhan:
+                    return False
+                for i in ds:
+                    self.bang.removeRow(i)
+                if self._ht_bang is not None:
+                    self._ht_bang.ghi_nho()
+                return True
         r = self._dong_chon(r)
         if r is None:
             return False

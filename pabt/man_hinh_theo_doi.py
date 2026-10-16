@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QPlainTextEdit, QPushButton, QSpinBox, QSplitter, QTableWidget, QTableWidgetItem, QTabWidget,
                                QVBoxLayout, QWidget)
 
-from . import kinh_phi_du_an, thoi_han, theo_doi, van_dong
+from . import ho_so_scan, kinh_phi_du_an, thoi_han, theo_doi, van_dong
 from .bang_ao import BangAo
 from .giao_dien import XepDong, dat_trang_thai, vua_dong, loc_khi_ngung_go
 from .lap_pa import LoiNhap, bo_dau
@@ -869,9 +869,11 @@ class KhungTienDo(_Khung):
     Bước 13), cột vận động / cưỡng chế (sổ nhật ký vận động 10 ngày - Bước 14, 15), xuất danh sách đề nghị cưỡng chế."""
     COT = ['STT', 'Mã hộ', 'Họ và tên', 'Địa chỉ', 'Mốc thu hồi đất\n(Bước 13)', 'Vận động / cưỡng chế\n(Bước 14, 15)',
            'Quyết định phê duyệt', 'Tổng phê\nduyệt (đ)', 'Đã nhận (đ)', 'Ngày nhận\ntiền', 'Chưa nhận - lý do',
-           'Biên lai / biên\nbản chi trả', 'Bàn giao\nmặt bằng', 'Lý do chưa\nbàn giao', 'Ghi chú theo dõi']
+           'Biên lai / biên\nbản chi trả', 'Bàn giao\nmặt bằng', 'Lý do chưa\nbàn giao', 'Ghi chú theo dõi',
+           'Hoàn tất CTBT\n(theo đợt)', 'Hồ sơ scan']
     # chỉ số cột (hai cột mốc / vận động đặt ngay sau Địa chỉ: cột quyết định, không phải cuộn ngang mới thấy)
     C_MOC, C_VD, C_QD, C_TONG, C_NHAN, C_NGAY, C_CHUA, C_BIEN_LAI, C_BG = 4, 5, 6, 7, 8, 9, 10, 11, 12
+    C_HOAN_TAT, C_SCAN = 15, 16                         # 0.9.96: hoàn tất CTBT = có QĐ + đã bàn giao; số file hồ sơ scan
     LOC_VAN_DONG = [('dang_vd', 'Đang vận động'), ('du_cuong_che', 'Đủ điều kiện cưỡng chế (Điều 89)')]
     TEN_LOC = dict(theo_doi.LOC_TIEN_DO + LOC_VAN_DONG)
 
@@ -881,6 +883,7 @@ class KhungTienDo(_Khung):
         self.dang_hien = []
         self._can_nap = False
         self.vd, self.moc = {}, {}                          # trạng thái vận động {mã hộ: [TinhTrang]}, mốc thu hồi {mã hộ: dict}
+        self.dot_ho, self.scan = {}, {}                     # {mã hộ: 'Đợt N'}, {mã hộ: số file hồ sơ scan}
         self.cb_loc = QComboBox()
         for k, t in theo_doi.LOC_TIEN_DO + self.LOC_VAN_DONG:
             self.cb_loc.addItem(t, k)
@@ -892,7 +895,7 @@ class KhungTienDo(_Khung):
         self.ds_qd_w.itemChanged.connect(lambda *_: self._doi_qd())
         self.o_tim = _o_tim('Tìm họ tên, mã hộ, lý do… (không cần dấu)', self)
         self.bang = BangAo(self.COT, can_phai=(0, 1, self.C_TONG, self.C_NHAN))     # 5.000 hộ x 15 cột -> bảng ảo
-        for c, w in enumerate((40, 50, 160, 120, 230, 250, 190, 115, 115, 100, 220, 140, 130, 170, 170)):
+        for c, w in enumerate((40, 50, 160, 120, 230, 250, 190, 115, 115, 100, 220, 140, 130, 170, 170, 150, 80)):
             self.bang.setColumnWidth(c, w)
         self.bang.cellDoubleClicked.connect(self._nhap_dup)
         self.nut = {}
@@ -900,7 +903,8 @@ class KhungTienDo(_Khung):
         # quyết định, chi trả, bàn giao của MỘT hộ: bấm đúp dòng, hoặc "Trạng thái hộ…" ở menu trái (hộ đang chọn ở trang này)
         _nut([('Bàn giao mặt bằng các hộ đã chọn…', lambda: self.ban_giao()),
               ('Sổ nhật ký vận động…', lambda: self.so_van_dong()),
-              ('Xuất DS đề nghị cưỡng chế…', lambda: self.xuat_cuong_che()), ('Xuất Excel…', lambda: self.xuat())],
+              ('Xuất DS đề nghị cưỡng chế…', lambda: self.xuat_cuong_che()),
+              ('Hộ hoàn tất CTBT…', lambda: self.hoan_tat_ctbt()), ('Xuất Excel…', lambda: self.xuat())],
              h_nut, self.nut)
         # hàng mốc: ngày thông báo thu hồi đất (Bước 3) và các mốc thời hạn pháp lý
         self.o_ngay_tb = QLineEdit()
@@ -965,11 +969,13 @@ class KhungTienDo(_Khung):
             self.nut[ten].setEnabled(sua)
         self.o_ngay_tb.setEnabled(sua)
         self.nut['Sổ nhật ký vận động…'].setEnabled(self.con is not None)
+        self.nut['Hộ hoàn tất CTBT…'].setEnabled(self.con is not None)
         if self.con is None:
-            self.vd, self.moc = {}, {}
+            self.vd, self.moc, self.dot_ho, self.scan = {}, {}, {}, {}
             self.o_ngay_tb.setText('')
             self.lb_moc.setText('')
             return
+        self.dot_ho, self.scan = ho_so_scan.ten_dot_theo_ho(self.con), ho_so_scan.dem_theo_ho(self.con)
         self.vd = van_dong.tinh_trang_tat_ca(self.con, self.ds)
         self.moc = thoi_han.moc_thu_hoi_tat_ca(self.con)
         self.o_ngay_tb.setText(thoi_han.hien_ngay(thoi_han.ngay_thong_bao(self.con)))
@@ -1058,7 +1064,9 @@ class KhungTienDo(_Khung):
                 '\n'.join(f'QĐ {q["so_qd"]}' + (f': {q["ly_do_chua_nhan"]}' if q['ly_do_chua_nhan'] else '') for q in chua),
                 '\n'.join(Path(q['chung_tu']).name for q in nhan if q['chung_tu']),
                 ('Đã bàn giao' + (f' {x.ban_giao_ngay}' if x.ban_giao_ngay else '')) if x.da_ban_giao else 'Chưa',
-                x.ly_do_ban_giao if not x.da_ban_giao else '', x.theo_doi]))
+                x.ly_do_ban_giao if not x.da_ban_giao else '', x.theo_doi,
+                ho_so_scan.chu_hoan_tat(x, self.dot_ho.get(x.ma_ho, '')),
+                f'{self.scan[x.ma_ho]} file' if self.scan.get(x.ma_ho) else '']))
         return kq
 
     def ve(self):
@@ -1080,6 +1088,10 @@ class KhungTienDo(_Khung):
             if gt[self.C_MOC]:                            # mốc thu hồi đất: xanh đủ mốc, vàng chưa đủ, xám chưa có ngày thông báo
                 du = self.moc.get(x.ma_ho, {}).get('du')
                 kieu[(r, self.C_MOC)] = dict(nen=XAM if du is None else XANH if du else VANG)
+            if gt[self.C_HOAN_TAT]:
+                kieu[(r, self.C_HOAN_TAT)] = dict(nen=XANH, dam=True)
+            if gt[self.C_SCAN]:
+                kieu[(r, self.C_SCAN)] = dict(mau_chu=MAU_LIEN_KET, goi_y='Nhấp đúp để mở hồ sơ scan của hộ')
             ma_vd = self._vd(x)[0]
             if ma_vd:
                 kieu[(r, self.C_VD)] = dict(nen={'du_dk_cuong_che': DO, 'dang_van_dong': VANG}.get(ma_vd, XANH),
@@ -1091,6 +1103,10 @@ class KhungTienDo(_Khung):
         ma = self.bang.ma_dong(r)
         if ma is None:
             return
+        if c == self.C_SCAN:                             # cột hồ sơ scan: một file mở luôn, nhiều file / chưa có -> menu
+            from .man_hinh_ho_so_scan import mo_nhanh
+            mo_nhanh(self, self.con, int(ma), self.chi_doc, sau=self.nap)
+            return
         if c == self.C_BIEN_LAI:                         # cột biên lai: mở file chứng từ
             x = next((y for y in self.ds if y.ma_ho == ma), None)
             for q in x.qd if x else []:
@@ -1098,6 +1114,24 @@ class KhungTienDo(_Khung):
                     mo_file(q['chung_tu'])
             return
         self.mo_ho.emit(int(ma))
+
+    def hoan_tat_ctbt(self):
+        """Hộ hoàn tất công tác bồi thường theo đợt (có QĐ + đã bàn giao) - hộp xem + xuất Excel. im_lang: trả hộp, không hiện."""
+        if self.con is None:
+            return None
+        from .man_hinh_ho_so_scan import HopHoanTatCTBT
+        dlg = HopHoanTatCTBT(self.con, self, self.ds, self._thu_muc_ho_so(), self._ten_du_an())
+        dlg.im_lang = self.im_lang
+        if not self.im_lang:
+            dlg.exec()
+        return dlg
+
+    def _thu_muc_ho_so(self) -> str:
+        try:
+            from .csdl import doc_cai_dat
+            return doc_cai_dat(self.con, 'THU_MUC_HO_SO', '')
+        except Exception:                                # noqa: BLE001 - chỉ là thư mục gợi ý
+            return ''
 
     def ban_giao(self, ds_ma: list | None = None, gia_tri: dict | None = None):
         ds_ma = self.ma_da_chon() if ds_ma is None else ds_ma
@@ -1723,6 +1757,10 @@ class HopHoTheoDoi(_Hop):
             h.addWidget(b)
             self.nut[t] = b
         h.addStretch(1)
+        from .man_hinh_ho_so_scan import NutHoSoScan
+        self.nut_scan = NutHoSoScan()                   # 0.9.96: hồ sơ scan của hộ - đính kèm / mở nhanh
+        self.nut_scan.dat(con, ma_ho)
+        h.addWidget(self.nut_scan)
         g1 = QGroupBox('Quyết định phê duyệt và chi trả (một hộ có thể có nhiều quyết định - phê duyệt bổ sung)')
         l1 = QVBoxLayout(g1)
         l1.addWidget(self.bang, 1)
@@ -1772,7 +1810,7 @@ class HopHoTheoDoi(_Hop):
             for c, v in enumerate((q['so_qd'], q['ngay_qd'], _tien(q['so_tien']), q['so_pa'], q['qd_ct_so'], ct,
                                    Path(q['chung_tu']).name if q['chung_tu'] else '')):
                 _o(b, r, c, v, so=c == 2, nen=(XANH if q['da_chi_tra'] else DO) if c == 5 else None)
-        vua_dong(b)                                     # chỉ đo dòng có chữ dài / nhiều dòng
+        vua_dong(b, cao_chuan=None, cao_toi_da=None)    # chỉ đo dòng có chữ dài / nhiều dòng
         tong = sum((_so(q['so_tien']) for q in self.ds), KHONG)
         nhan = sum((_so(q['chi_tra_so_tien']) or _so(q['so_tien']) for q in self.ds if q['da_chi_tra']), KHONG)
         t = f'{len(self.ds)} quyết định · tổng phê duyệt <b>{vn(tong)} đ</b> · đã nhận {vn(nhan)} đ'

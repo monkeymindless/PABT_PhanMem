@@ -8,6 +8,7 @@ from pathlib import Path
 
 from . import csdl, don_gia, in_an, lap_pa, nhap_tho
 from .ho_so import chuan_loai_dat
+from .loai_dat import chuan_ma_loai_dat
 from .nhap_excel import chuan_cccd
 from .lap_pa import BoSoan, DanhMuc, LoiNhap, bo_dau, doc_so
 from .nghiep_vu import MUC_KHOAN, so_vi_tri, tinh_tat_ca
@@ -21,12 +22,16 @@ VI_TRI = ['1', '2', '3', '4', '5']                     # vị trí đất theo b
 
 
 def ds_loai_dat() -> list:
-    """Danh sách chọn loại đất: [(mã, tên, nhóm)] theo bộ đơn giá."""
+    """Danh sách chọn loại đất: [(mã, tên, nhóm)] theo bộ đơn giá, rồi các mã còn lại của danh mục chuẩn (loai_dat.LOAI_DAT:
+    RDD, RPH, DGT… - thửa loại đất không có trong bảng giá vẫn chọn được)."""
+    from .loai_dat import LOAI_DAT, nhom_mac_dinh
     con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
     try:
-        return [(r[0], r[1], r[2]) for r in con.execute('SELECT ma, ten, nhom FROM dm_loaidat ORDER BY nhom DESC, ma')]
+        ds = [(r[0], r[1], r[2]) for r in con.execute('SELECT ma, ten, nhom FROM dm_loaidat ORDER BY nhom DESC, ma')]
     finally:
         con.close()
+    co = {x[0].upper() for x in ds}
+    return ds + [(ma, ten, nhom_mac_dinh(ma)) for ma, ten, _ in LOAI_DAT if ma not in co]
 
 
 def _gon(v) -> str:
@@ -111,17 +116,20 @@ def gom(dong: list) -> tuple:
 
 
 def loai_dat_biet() -> dict:
-    """Mã loại đất trong bộ đơn giá -> nhóm đất."""
+    """Mã loại đất -> nhóm đất: danh mục chuẩn (loai_dat.LOAI_DAT), bộ đơn giá ghi đè nhóm."""
+    from .loai_dat import LOAI_DAT, nhom_mac_dinh
+    kq = {ma: nhom_mac_dinh(ma) for ma, _, _ in LOAI_DAT}
     con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
     try:
-        return {r[0].upper(): r[1] for r in con.execute('SELECT ma, nhom FROM dm_loaidat')}
+        kq.update({r[0].upper(): r[1] for r in con.execute('SELECT ma, nhom FROM dm_loaidat')})
     finally:
         con.close()
+    return kq
 
 
 def khoa_gia(loai_dat: str, vi_tri: str, biet: dict) -> tuple:
     """(loại đất dùng tra giá, vị trí): thửa ghi nhiều loại thì lấy loại đầu tiên có trong danh mục (như khi lập mục 1)."""
-    ds = [x.strip().upper() for x in str(loai_dat or '').replace(',', '+').split('+') if x.strip()]
+    ds = [x for x in chuan_ma_loai_dat(loai_dat).split('+') if x]
     return next((x for x in ds if x in biet), ''), so_vi_tri(vi_tri)
 
 
@@ -237,9 +245,10 @@ def tu_lap_phuong_an(con, ds_ma_ho: list | None = None) -> list:
                 continue
             i, tb = bo.them_thua(mt)
             d = bo.pa.dat[i]
-            if not d.loai_dat:
+            if not d.loai_dat or d.loai_dat not in bo.bc.loai_dat:      # mã lạ (không thuộc danh mục chuẩn / bảng giá): không tự lập
                 bo.xoa(1, i)
-                cb.append(f'{ten}: {bo.ten_thua(mt)} loại đất không có trong danh mục, chưa đưa vào mục 1.')
+                cb.append(f'{ten}: {bo.ten_thua(mt)} loại đất {d.loai_dat or ""} không có trong danh mục, chưa đưa vào mục 1.'
+                          .replace('đất  không', 'đất không'))
             elif d.gia_bang_gia <= 0:
                 cb.append(f'{ten}: {bo.ten_thua(mt)} chưa có giá {d.loai_dat} vị trí {d.vi_tri or "?"}.')
             elif tb.startswith('Kiểm kê ghi'):
