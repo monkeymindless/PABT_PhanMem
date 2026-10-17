@@ -24,7 +24,7 @@ from PySide6.QtCore import QEvent, QPoint, Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QMenuBar, QSizePolicy, QToolButton, QWidget)
 
-CAO = 38                 # chiều cao thanh (điểm logic) - như VS Code; 0.9.82: 38 theo đặc tả V10 (Title Bar hợp nhất Menu Bar)
+CAO = 34                 # chiều cao thanh (điểm logic) - như VS Code; 0.9.82: 38; 17/10/2026 Hybrid Enterprise Navy: 34 (1366x768)
 RONG_NUT_CUA_SO = 46     # nút thu nhỏ / phóng to / đóng
 VIEN_KEO = 5             # mép cửa sổ dùng để kéo đổi cỡ (điểm logic)
 MAU_NEN = '#F8F8F8'

@@ -99,17 +99,17 @@ class TestNiemYet(CoSo):
         w, _k = self._khung()
         w.mo_trang(0)
         self.assertTrue(w.hang_the.isVisibleTo(w))                      # quay về danh sách hộ: thẻ số hiện lại
-        for b in w.nut_ds.values():
-            self.assertLessEqual(b.maximumHeight(), 30)
-            self.assertGreaterEqual(b.minimumHeight(), 28)
+        from pabt import app as ud
+        for b in w.nut_ds.values():                                     # 17/10/2026: nút cùng cao dải công cụ 32 px (ô lọc, ô tìm)
+            self.assertEqual((b.minimumHeight(), b.maximumHeight()), (ud.CAO_DAI_CONG_CU, ud.CAO_DAI_CONG_CU))
         from pabt import giao_dien
         tl = max(giao_dien.TY_LE[0], 1.0)                               # phóng to (bài khác để lại) nhân lề / khoảng cách
         the = w.the_so['so_ho'].parentWidget()
         m = the.layout().contentsMargins()
-        self.assertLessEqual(m.top() + m.bottom(), 6 * tl + 1)
+        self.assertLessEqual(m.top() + m.bottom(), 12 * tl + 1)
         from pabt.giao_dien import gian_cach
         gian_cach(w)                                                    # chạy khi cửa sổ hiện: không nâng thẻ lên 10 px
-        self.assertEqual(w.hang_the.layout().spacing(), 4)        # 0.9.95: dải KPI một dòng, thẻ cách 4 px
+        self.assertEqual(w.hang_the.layout().spacing(), 8)        # 17/10/2026: thẻ KPI cách 8 px (0.9.95: 4 px)
         qss = giao_dien._qss_day_du()
         self.assertIn('QPushButton {{ border-radius: 5px; padding: 4px 10px;'.replace('{{', '{'), qss)
 

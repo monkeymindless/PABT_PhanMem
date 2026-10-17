@@ -1491,6 +1491,38 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   (`doc_rieng` / `tra_rieng` như `don_gia.ap_vao_du_an` - trước đây nạp danh mục từ Excel xóa luôn quy ước riêng của dự án). Phương án
   đã lập không đổi (dòng lưu sẵn tên / giá / căn cứ). Đã xóa 5 dòng trong NGHĨA TRANG PHÚ LÝ.pabt (sao lưu
   `ket_qua_kiem_tra\sao_luu\`). Test `tests/test_quy_uoc_trong.py`, `test_lap_pa.test_quy_uoc_tuong_duong` (tự thêm dòng riêng).
+- Sau 1.0.00 GIAO DIỆN "Hybrid Enterprise Navy" (người dùng 17/10/2026, đặc tả 6 bước; CHƯA tăng phiên bản):
+  - Menu trái (`giao_dien.menu_trai`, `_qss_menu_trai`): khung `vai="menu_trai"` sát mép trái cửa sổ (nền #F8FAFC, viền phải 1 px;
+    lề nội dung chuyển sang `phai` của app), nút "Thu gọn menu" (`khung.nut_thu_gon`, `#nut_thu_gon`) ở HÀNG RIÊNG `khung.hang_gon`
+    (`#hang_gon_menu`, cao `CAO_HANG_GON` 32, vạch dưới) TRÊN vùng cuộn `khung.vung_cuon` (`#cuon_menu`, thanh cuộn 6 px) - người
+    dùng thấy nút đè tiêu đề nhóm đầu. `CAO_NUT_MENU` 27 -> 32 (min = max); biểu tượng hai trạng thái `icon_hai_trang_thai` (#475569
+    / đang chọn navy - QIcon State On / Off, gắn lên QAction dùng chung với thanh menu); tiêu đề nhóm 11 px #64748B, cách trên 10 dưới 4;
+    mục chọn nền #EFF6FF + vạch trái 3 px navy. Cỡ chữ QSS mới viết bằng px (phong_to chỉ nhân px, không nhân pt).
+  - Thẻ KPI (`CuaSoChinh._hang_the_so`, `THE_SO` nay Tổng kinh phí CUỐI hàng): cao `CAO_THE_SO` 56, cách 8, tên trên (`NhanRutGon`),
+    số + chữ phụ dưới (`the_phu`: "hộ" / `tien.phan_tram(k, N)` "81,7%" (tổng 0 -> "0%", Decimal) / "VNĐ"; số đủ "k / N hộ" ở chú
+    thích), `the_khung[k]` property `dang_loc` theo `cb_tt` (`_cap_nhat_loc_the`, gọi ở `_dem_loc` / `_cap_nhat_the_so`). Màu viền
+    trái `MAU_THE_SO`. `the_so[k].text()` vẫn là SỐ (test cũ đọc).
+  - Hàng công cụ danh sách hộ: Thêm hộ `KieuNut.CHINH` (navy), Xóa hộ `NGUY_HIEM` (nay nền trắng viền #FECACA chữ #B91C1C, tắt mờ
+    #94A3B8), Chọn hộ niêm yết `PHU` (trắng viền #CBD5E1) - đổi màu biến thể chung `_qss_kieu_nut`; không thêm nút Xuất (mỗi lệnh một
+    chỗ: menu Dữ liệu). Mọi ô cao `CAO_DAI_CONG_CU` 32; bỏ nhãn "Đợt:" / "Trạng thái:" / "Tìm:" - mục đầu ô chọn `TAT_CA_DOT` "Đợt: Tất
+    cả" / `TAT_CA_TRANG_THAI` (data '' - mo_ta_loc / tên file xuất không lẫn chữ này); `lb_loc` = huy hiệu `vai="huy_hieu_loc"` cuối hàng
+    "Đang lọc: <b>k</b> / N hộ" (rich text). Ô tìm tìm cả CCCD (`ho.so_cccd`) và tờ/thửa "12/45" (`_so_lieu_dong` đọc thửa từng dòng,
+    DT cộng Decimal - trước SUM(CAST AS REAL)).
+  - Bảng: QSS chung `QHeaderView::section:horizontal` nền navy chữ trắng (min-height `CAO_TIEU_DE_BANG` - 10; dọc giữ nền nhạt),
+    `QHeaderView { color: #FFFFFF }` để mũi tên sắp xếp của Fusion trắng (không thì xám đậm trên navy), dòng lẻ #F8FAFC, lưới
+    #E2E8F0, chọn #DBEAFE / #0F172A; `CAO_DONG_BANG` 30. Danh sách hộ KHÔNG xuống dòng (`setWordWrap(False)`: `_gian_bang` khi đổi cỡ
+    chữ giãn bảng xuống dòng thành ~41 px), STT #0284C7, họ tên DemiBold (`BangHo._phong` nhớ theo phông ứng dụng), cột Trạng thái =
+    `THANH_NAC[nac]` (■ □ U+25A0 / U+25A1 - không emoji) + chữ gốc, màu `MAU_NAC`; `nac` trong dòng tính từ CÙNG các cờ bộ lọc dùng
+    (da_ban_giao / da_chi_tra / da_phe_duyet / đã lập); `d['o'][5]` giữ chữ gốc (lọc, tìm); sắp xếp theo nấc rồi chữ. TextAlignmentRole
+    trả SỐ NGUYÊN (`CAN_PHAI` / `CAN_TRAI` như bang_ao) - PySide2 bỏ qua cờ ghép enum (bản Win7 cột số canh trái-trên từ trước).
+    Dải cộng `DaiCong` (`self.dai_cong_ds`, `#dai_cong_ds`, ngay dưới bảng): `cong_dai_cong(dòng đang hiện)` Decimal (đất = mục 1, Tài
+    sản & Cây = 2 + 3 + MUC_VN, Hỗ trợ & Thưởng = 4 + 5, TỔNG = cộng `tong` từng hộ) -> `chu_dai_cong` (đầy đủ, gọn); `DaiCong._chon`
+    đo chữ: hẹp (1366) dùng chữ gọn `NHAN_GON_CONG` + `vn_gon`, chú thích luôn đủ số. Ẩn khi chưa có hộ.
+  - Màn hình chào: `MAU_THE_CHAO` cả 3 thẻ nền trắng viền #E2E8F0, rê chuột #F0F6FF + viền màu biểu tượng (navy / #0284C7 / #0F766E);
+    bảng gần đây cột 1-4 ResizeToContents (tiêu đề đậm navy không cắt "Tổng kinh phí"), nút Mở `QSS_NUT_MO_GAN` (#nut_mo_gan), nút ghim
+    dùng biểu tượng MDL2 0xE841 / 0xE718 (bỏ emoji ghim - Win7 ô vuông). `thanh_tieu_de.CAO` 38 -> 34, `CAO_BANNER` 48 -> 42 (chữ 14 / 11 px).
+  - Ảnh thật (QT_QPA_PLATFORM=windows, 125%): 1366x728 và 1916x1020, Qt6 + Qt5 (Qt5: ký tự ■ □ hiện đúng). Test
+    `tests/test_giao_dien_navy.py`; sửa theo đặc tả mới `test_yeu_cau_0979` (màu thẻ chào đọc từ MAU_THE_CHAO), `0994`, `0995`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

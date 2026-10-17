@@ -73,15 +73,19 @@ class TestTheChao(unittest.TestCase):
         from PySide6.QtGui import QColor
         from pabt import giao_dien
         qss = giao_dien.QSS_THE_CHAO
-        for chu in ('#F0FDF4', '#BBF7D0', '#DCFCE7', '#16A34A', '#EFF6FF', '#BFDBFE', '#DBEAFE', '#2563EB', '#F8FAFC', '#CBD5E1',
-                    '#F1F5F9', '#0F3866', 'border-radius: 12px', 'font-size: 14.5pt', '#0F172A'):
+        # 17/10/2026 (Hybrid Enterprise Navy): màu theo giao_dien.MAU_THE_CHAO - nền trắng, rê chuột #F0F6FF, viền / biểu tượng
+        # navy / xanh băng đậm / xanh ngọc (không còn xanh lá tươi)
+        for chu in ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0F3866', '#0284C7', '#0F766E', 'border-radius: 12px', 'font-size: 14.5pt',
+                    '#0F172A'):
             self.assertIn(chu, qss)
+        for bo in ('#F0FDF4', '#16A34A', '#BBF7D0'):
+            self.assertNotIn(bo, qss)
         self.assertIn('#64748B', self.app.styleSheet())                                      # mô tả phụ 10,5pt xám than
         self.assertIn('font-size: 10.5pt', self.app.styleSheet())
         self.w.show()
         self.app.processEvents()
-        mau_nen = {'moi': '#F0FDF4', 'mo': '#EFF6FF', 'excel': '#F8FAFC'}
-        mau_hover = {'moi': '#DCFCE7', 'mo': '#DBEAFE', 'excel': '#F1F5F9'}
+        mau_nen = {k: v[0] for k, v in giao_dien.MAU_THE_CHAO.items()}
+        mau_hover = {k: v[2] for k, v in giao_dien.MAU_THE_CHAO.items()}
         for ten in TEN:
             the = self.w.the_chao[ten]
             anh = the.grab().toImage()

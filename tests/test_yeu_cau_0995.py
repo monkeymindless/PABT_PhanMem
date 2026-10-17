@@ -78,9 +78,10 @@ class TestToanCuc(Co0995):
         from pabt import giao_dien
         ud, w = self._cua_so()
         the = w.the_so['so_ho'].parentWidget()
-        self.assertLessEqual(the.maximumHeight(), 32)
-        self.assertEqual(w.hang_the.layout().spacing(), 4)
-        self.assertEqual(giao_dien.CAO_NUT_MENU, 27)
+        # 17/10/2026 (Hybrid Enterprise Navy - thay mức 0.9.95): thẻ 56 px (tên trên, số + chữ phụ dưới), cách 8 px; nút menu 32 px
+        self.assertEqual(the.maximumHeight(), ud.CuaSoChinh.CAO_THE_SO)
+        self.assertEqual(w.hang_the.layout().spacing(), 8)
+        self.assertEqual(giao_dien.CAO_NUT_MENU, 32)
         km = w.khung_menu
         self.assertGreaterEqual(km.width(), giao_dien.RONG_MENU_TRAI)
         self.assertLessEqual(km.width(), giao_dien.RONG_MENU_TOI_DA)

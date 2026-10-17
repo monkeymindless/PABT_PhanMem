@@ -29,11 +29,14 @@ TOKEN = dict(
     nen='#F8FAFC',            # Surface
     khung='#FFFFFF',          # Panel
 )
-CAO_NUT_MENU = 27             # nút điều hướng menu trái (0.9.95 gọn: 36 -> 27, đủ 6 nhóm không phải cuộn)
+CAO_NUT_MENU = 32             # nút điều hướng menu trái (0.9.95: 27; 17/10/2026 Hybrid Enterprise Navy: 32 - vùng cuộn có thanh 6 px)
+CAO_HANG_GON = 32             # hàng nút "Thu gọn menu" trên đỉnh menu trái (ngoài vùng cuộn, vạch ngăn dưới)
+MAU_ICON_MENU = '#475569'     # biểu tượng menu trái chưa chọn (slate); đang chọn: TOKEN['chinh']
 RONG_MENU_TRAI = 175          # bề rộng menu trái mở (0.9.95: 248 -> 175; thu gọn: 44)
 RONG_MENU_GON = 44
 RONG_MENU_TOI_DA = 248        # lệnh dài ("Bảng tổng hợp kinh phí" ~189 px ở 125%) nới menu tới mức này - không cắt chữ
-CAO_DONG_BANG = 32            # chiều cao dòng bảng dữ liệu
+CAO_DONG_BANG = 30            # chiều cao dòng bảng dữ liệu (17/10/2026 Hybrid Enterprise Navy: 32 -> 30)
+CAO_TIEU_DE_BANG = 34         # hàng tiêu đề cột bảng (nền navy, chữ trắng)
 CHINH = TOKEN['chinh']       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
 # nhóm nút: (nền, chữ, nền khi rê chuột)
 MAU = {                                            # tông dịu kiểu phần mềm quản lý: chỉ nút Lưu nền đặc, nút khác nền nhạt
@@ -102,20 +105,23 @@ def ap_kieu_nut(w, kieu: KieuNut) -> None:
 def _qss_kieu_nut() -> str:
     """QSS các biến thể KieuNut: đặt CUỐI bảng kiểu (cùng độ ưu tiên thì quy tắc sau thắng màu đoán theo chữ / ribbon)."""
     t = TOKEN
-    kieu = {'primary': (t['chinh'], '#FFFFFF', t['chinh'], '#1A4C85'),
-            'success': (t['phu'], '#FFFFFF', t['phu'], '#0D6B37'),
-            'danger': ('#FDECE7', '#B32D00', '#F3B9A6', '#FAD9CE'),
-            'secondary': (t['khung'], t['chu'], t['vach'], '#F1F3F4')}
+    # (nền, chữ, viền, nền rê chuột, (chữ, nền, viền khi tắt)). Hybrid Enterprise Navy (17/10/2026): nút phụ nền trắng viền #CBD5E1
+    # chữ #0F172A; nút xóa viền mảnh đỏ nhạt chữ đỏ, tắt thì mờ hẳn (không còn nền cam nhạt gây chú ý khi chưa chọn hộ)
+    tat = ('#9AA0A6', '#F1F3F4', t['vach'])
+    kieu = {'primary': (t['chinh'], '#FFFFFF', t['chinh'], '#1A4C85', tat),
+            'success': (t['phu'], '#FFFFFF', t['phu'], '#0D6B37', tat),
+            'danger': ('#FFFFFF', '#B91C1C', '#FECACA', '#FEF2F2', ('#94A3B8', '#FFFFFF', '#E2E8F0')),
+            'secondary': ('#FFFFFF', '#0F172A', '#CBD5E1', '#F1F5F9', ('#94A3B8', '#FFFFFF', '#E2E8F0'))}
     qss = ''
-    for k, (nen, chu, vien, re_) in kieu.items():
+    for k, (nen, chu, vien, re_, (chu_tat, nen_tat, vien_tat)) in kieu.items():
         for loai in ('QPushButton', 'QToolButton'):
             sel = f'{loai}[bien_the="{k}"]'
             qss += f'''
     {sel}, {sel}[ribbon="0"], {sel}[ribbon="1"] {{ color: {chu}; background: {nen}; border: 1px solid {vien}; border-radius: 5px;
         padding: 4px 10px; font-weight: 600; }}
     {sel}:hover, {sel}[ribbon="0"]:hover, {sel}[ribbon="1"]:hover {{ background: {re_}; }}
-    {sel}:disabled, {sel}[ribbon="0"]:disabled, {sel}[ribbon="1"]:disabled {{ color: #9AA0A6; background: #F1F3F4;
-        border-color: {t['vach']}; }}'''
+    {sel}:disabled, {sel}[ribbon="0"]:disabled, {sel}[ribbon="1"]:disabled {{ color: {chu_tat}; background: {nen_tat};
+        border-color: {vien_tat}; }}'''
     return qss
 
 
@@ -253,15 +259,17 @@ def mau_chu_nut(n: str | None) -> str:
 
 # thẻ số liệu màn hình chính (app.CuaSoChinh.THE_SO): màu viền trái + màu số. Kiểu nằm trong QSS chung (trước 0.9.18: mỗi
 # thẻ 3 lần setStyleSheet riêng = 18 kiểu cục bộ, phóng to / thu nhỏ phải co giãn lại từng cái)
-MAU_THE_SO = {'so_ho': '#2D64A6', 'da_pa': '#2F7A4F', 'tong': '#6950A1', 'da_pd': '#1F7A86', 'da_ct': '#B8651F', 'da_bg': '#4E5D6C'}
+MAU_THE_SO = {'so_ho': '#0F3866', 'da_pa': '#0284C7', 'da_pd': '#0F766E', 'da_ct': '#2563EB', 'da_bg': '#15803D', 'tong': '#0F3866'}
 # QSS thẻ Card màn hình chào (ARCH-PABT-2026-V5; 0.9.79: thẻ 210 x 135, bo 12px, mỗi thẻ một màu, mô tả nằm TRONG thẻ).
 # loại -> (nền, viền, nền khi rê chuột, viền khi rê chuột, màu biểu tượng). Qt làm tròn viền 1,5px lên 2px: ghi 2px cho đúng thực tế.
 KICH_THE_CHAO = (210, 135)
 CO_ICON_THE_CHAO = 38
+# 17/10/2026 (Hybrid Enterprise Navy): cả 3 thẻ nền trắng viền slate, rê chuột nền xanh băng + viền màu biểu tượng của thẻ
+# (bỏ nền xanh lá / xanh dương tươi của 0.9.79)
 MAU_THE_CHAO = {
-    'moi': ('#F0FDF4', '#BBF7D0', '#DCFCE7', '#16A34A', '#15803D'),
-    'mo': ('#EFF6FF', '#BFDBFE', '#DBEAFE', '#2563EB', '#1D4ED8'),
-    'excel': ('#F8FAFC', '#CBD5E1', '#F1F5F9', '#0F3866', '#0F3866'),
+    'moi': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0F3866', '#0F3866'),
+    'mo': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0284C7', '#0284C7'),
+    'excel': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0F766E', '#0F766E'),
 }
 QSS_THE_CHAO = (
     f'QFrame[vai="the_chao"] {{ background: {TOKEN["khung"]}; border: 2px solid {TOKEN["vach"]}; border-radius: 12px; }}'
@@ -278,15 +286,58 @@ QSS_THE_CHAO = (
 )
 
 
+def _qss_menu_trai() -> str:
+    """Menu trái kiểu Hybrid Enterprise Navy (người dùng 17/10/2026): nền slate rất nhạt, viền phải mảnh, tiêu đề nhóm chữ in hoa
+    xám, mục đang chọn nền xanh băng + vạch trái 3 px navy. Cỡ chữ ghi bằng px (phong_to chỉ nhân px; 8,5 pt ~ 11 px, 9,5 pt ~ 12,5 px)."""
+    c = TOKEN['chinh']
+    return f'''
+    QFrame[vai="menu_trai"] {{ background: #F8FAFC; border: 0; border-right: 1px solid #E2E8F0; border-radius: 0; }}
+    QFrame#hang_gon_menu {{ background: transparent; border: 0; border-bottom: 1px solid #E2E8F0; }}
+    QToolButton#nut_thu_gon {{ background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 2px 8px;
+        text-align: left; color: #475569; font-size: 12px; font-weight: 600; }}
+    QToolButton#nut_thu_gon:hover {{ background: #EEF2F7; border-color: #E2E8F0; color: {c}; }}
+    QScrollArea#cuon_menu, QScrollArea#cuon_menu > QWidget {{ background: transparent; border: 0; }}
+    QFrame[vai="menu_trai"] QScrollBar:vertical {{ background: transparent; width: 6px; margin: 2px 0; }}
+    QFrame[vai="menu_trai"] QScrollBar::handle:vertical {{ background: #CBD5E1; border-radius: 3px; min-height: 24px; }}
+    QFrame[vai="menu_trai"] QScrollBar::handle:vertical:hover {{ background: #94A3B8; }}
+    QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px 2px 12px;
+        text-align: left; font-weight: 500; font-size: 12.5px; color: #334155; }}
+    QToolButton[menu="1"]:hover {{ background: #EEF2F7; border-color: #E2E8F0; }}
+    QToolButton[menu="1"]:pressed {{ background: #E2E8F0; }}
+    QToolButton[menu="1"]:disabled {{ color: #A8B3BF; background: transparent; border-color: transparent; }}
+    QToolButton[menu="1"]:checked {{ background: #EFF6FF; color: {c}; font-weight: 600; border: 0; border-left: 3px solid {c};
+        border-radius: 0 6px 6px 0; padding-left: 10px; }}
+    QLabel[vai="nhom_menu"] {{ color: #64748B; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; background: transparent;
+        border: 0; border-radius: 4px; margin: 10px 0 4px 0; padding: 2px 4px; }}
+    QLabel[vai="nhom_menu"]:hover {{ color: {c}; background: #EEF2F7; }}
+    QLabel[vai="nhom_menu"][dong="1"] {{ color: #7C8CA1; }}'''
+
+
 def _qss_the_so() -> str:
+    """Thẻ KPI cửa sổ chính + hàng công cụ / dải cộng danh sách hộ (Hybrid Enterprise Navy, 17/10/2026)."""
+    c = TOKEN['chinh']
     return '''
-    QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #DCE3EA; border-left: 4px solid #4E5D6C; border-radius: 6px; }
+    QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #0F3866; border-radius: 6px; }
+    QWidget[vai="the_so"]:hover { background: #F8FAFC; }
     QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
-    QLabel[vai="so_the"] { font-size: 13.5px; font-weight: 700; }
-    QLabel[vai="nhan_the"] { color: #4A5B6C; font-size: 11px; font-weight: 600; }''' + ''.join(
+    QLabel[vai="so_the"] { font-size: 17px; font-weight: 700; color: #0F172A; }
+    QLabel[vai="nhan_the"] { color: #475569; font-size: 11.5px; font-weight: 600; }
+    QLabel[vai="phu_the"] { color: #64748B; font-size: 11px; font-weight: 700; }''' + ''.join(
         f'''
     QWidget[vai="the_so"][the="{k}"] {{ border-left-color: {m}; }}
-    QWidget[vai="the_so"][the="{k}"] QLabel[vai="so_the"] {{ color: {m}; }}''' for k, m in MAU_THE_SO.items())
+    QWidget[vai="the_so"][the="{k}"] QLabel[vai="so_the"] {{ color: {m}; }}''' for k, m in MAU_THE_SO.items()) + f'''
+    QWidget[vai="the_so"][dang_loc="1"] {{ background: #F0F6FF; border: 1px solid {c}; border-left: 4px solid {c}; }}
+    QLabel[vai="huy_hieu_loc"] {{ background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 10px;
+        color: #334155; font-size: 12px; }}
+    QComboBox[loc_ds="1"] {{ background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; }}
+    QLineEdit[loc_ds="1"] {{ background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 6px; }}
+    QComboBox[loc_ds="1"]:hover, QLineEdit[loc_ds="1"]:hover {{ border-color: #94A3B8; }}
+    QComboBox[loc_ds="1"]:focus, QLineEdit[loc_ds="1"]:focus {{ border-color: {c}; }}
+    QFrame#dai_cong_ds {{ background: #F1F5F9; border: 1px solid #DCE3EA; border-top: 2px solid #CBD5E1;
+        border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }}
+    QFrame#dai_cong_ds QLabel {{ background: transparent; border: 0; color: #0F172A; font-weight: 700; }}
+    QFrame#dai_cong_ds QLabel[vai="vach_cong"] {{ color: #94A3B8; font-weight: 400; }}
+    QFrame#dai_cong_ds QLabel[vai="o_cong_tong"] {{ color: {c}; font-weight: 800; }}'''
 
 
 def _qss_day_du() -> str:
@@ -320,10 +371,14 @@ def _qss() -> str:
     QPushButton:disabled {{ color: #A0AAB4; background: #F4F6F8; border-color: #E3E8EE; }}
     QHeaderView::section {{ background: #EEF3F8; color: #24415E; font-weight: 600; padding: 7px 6px; border: 0;
         border-right: 1px solid #DDE5EE; border-bottom: 2px solid #C9D6E3; }}
-    QTableView, QTreeView, QTableWidget, QTreeWidget {{ background: #FFFFFF; alternate-background-color: #F7FAFC;
-        gridline-color: #E6ECF2; selection-background-color: #DCEBFA; selection-color: #0F2A44; border: 1px solid #DCE3EA;
+    QHeaderView::section:horizontal {{ background: {CHINH}; color: #FFFFFF; font-weight: 600; padding: 4px 8px;
+        min-height: {CAO_TIEU_DE_BANG - 10}px; border: 0; border-right: 1px solid #1E4976; border-bottom: 2px solid #092240; }}
+    QHeaderView::section:horizontal:hover {{ background: #154D8C; }}
+    QHeaderView {{ color: #FFFFFF; }}
+    QTableView, QTreeView, QTableWidget, QTreeWidget {{ background: #FFFFFF; alternate-background-color: #F8FAFC;
+        gridline-color: #E2E8F0; selection-background-color: #DBEAFE; selection-color: #0F172A; border: 1px solid #DCE3EA;
         border-radius: 6px; }}
-    QTableCornerButton::section {{ background: #EEF3F8; border: 0; }}
+    QTableCornerButton::section {{ background: {CHINH}; border: 0; }}
     QLineEdit[nhap="1"], QComboBox[nhap="1"], QSpinBox[nhap="1"] {{ min-height: 24px; font-size: 13px; padding: 4px 10px; }}
     QTableView QLineEdit, QTableView QComboBox, QTableView QPlainTextEdit {{ font-size: 13px; padding: 2px 6px;
         border: 2px solid #2E75B6; border-radius: 3px; background: #FFFFFF; }}
@@ -347,13 +402,7 @@ def _qss() -> str:
         border: 1px solid #2E75B6; background: #FBFDFF; }}
     QLineEdit:read-only {{ background: #F1F4F7; color: #4A5866; }}
     QToolButton[nho="1"] {{ font-size: 11px; padding: 3px 6px 2px 6px; }}
-    QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px;
-        text-align: left; font-weight: 600; font-size: 12px; color: #172A3D; }}
-    QToolButton[menu="1"]:hover {{ background: #E8F0F8; border-color: #C9D9EA; }}
-    QToolButton[menu="1"]:pressed {{ background: #D6E4F2; }}
-    QToolButton[menu="1"]:disabled {{ color: #A8B3BF; background: transparent; border-color: transparent; }}
-    QToolButton[menu="1"]:checked {{ background: {TOKEN['chinh_nhat']}; border: 0; border-left: 3px solid {TOKEN['nhan']};
-        border-radius: 0 7px 7px 0; font-weight: 600; }}
+{_qss_menu_trai()}
     QTabBar[vai="lam_viec"] {{ background: transparent; }}
     QTabBar[vai="lam_viec"]::tab {{ background: transparent; color: {TOKEN['chu_phu']}; border: 0;
         border-bottom: 2px solid transparent; padding: 7px 14px; margin: 0; font-weight: 600; }}
@@ -390,7 +439,7 @@ def _qss() -> str:
     QListView::item:hover, QListView::item:selected, QListWidget::item:hover, QListWidget::item:selected {{
         background: #BBDEFB; color: #0B2E4F; }}
     QTableView::item:hover, QTreeView::item:hover {{ background: #EEF5FC; color: #1A1A1A; }}
-    QTableView::item:selected, QTreeView::item:selected {{ background: #DCEBFA; color: #0F2A44; }}
+    QTableView::item:selected, QTreeView::item:selected {{ background: #DBEAFE; color: #0F172A; }}
     QMenu {{ background: #FFFFFF; color: #1A1A1A; border: 1px solid #C9D3DD; }}
     QMenu::item {{ padding: 6px 24px 6px 12px; }}
     QMenu::item:selected {{ background: #DCEBFA; color: #0B2E4F; }}
@@ -414,10 +463,6 @@ def _qss() -> str:
     QFrame[vai="bang_to_chuc"] QToolButton[vai="nut_bang"]:pressed {{ background: rgba(255, 255, 255, 80); }}
     QFrame[vai="bang_to_chuc"] QToolButton[vai="nut_bang"]:disabled {{ color: rgba(255, 255, 255, 110);
         background: transparent; border-color: rgba(255, 255, 255, 40); }}
-    QLabel[vai="nhom_menu"] {{ color: #4A6785; font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
-        background: transparent; border: 0; border-radius: 5px; padding: 5px 4px 3px 4px; }}
-    QLabel[vai="nhom_menu"]:hover {{ color: {CHINH}; background: #EEF3F8; }}
-    QLabel[vai="nhom_menu"][dong="1"] {{ color: #6D8299; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="phien_ban"] {{ color: #E2E8F0; background: rgba(255, 255, 255, 18); font-weight: 600;
         font-size: 11px; border: 1px solid rgba(37, 99, 235, 150); border-radius: 10px; padding: 2px 10px; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="thu_nghiem"] {{ color: #FFFFFF; background: {TOKEN['nhan']}; font-weight: 800;
@@ -541,6 +586,20 @@ def icon_ky_hieu(ma: int, mau: str = '#FFFFFF', co: int = 24):
     p.drawPath(duong)
     p.end()
     return QIcon(pm)
+
+
+def icon_hai_trang_thai(ma: int, mau_thuong: str, mau_chon: str, co: int = 18):
+    """QIcon hai màu theo trạng thái nút checkable: chưa chọn (State.Off) mau_thuong, đang chọn (State.On) mau_chon - mục menu trái
+    đang chọn đổi màu biểu tượng cùng màu chữ. None nếu máy không có phông ký hiệu."""
+    from PySide6.QtGui import QIcon
+    thuong, chon = icon_ky_hieu(ma, mau_thuong, co), icon_ky_hieu(ma, mau_chon, co)
+    if thuong is None or chon is None:
+        return None
+    ic = QIcon()
+    for mode in (QIcon.Mode.Normal, QIcon.Mode.Active, QIcon.Mode.Selected):
+        ic.addPixmap(thuong.pixmap(co * 2, co * 2), mode, QIcon.State.Off)
+        ic.addPixmap(chon.pixmap(co * 2, co * 2), mode, QIcon.State.On)
+    return ic
 
 
 def ky_hieu_nut(chu: str):
@@ -1071,7 +1130,7 @@ def tao_dai_nhan_dien(mb=None):
 
 CAO_MENU = 28          # hàng menu trắng tối thiểu; thực tế = max(CAO_MENU, sizeHint): DPI 125% mục menu cao 30 px - ép 28 px
                        # làm Qt dồn MỌI mục (Tệp tin, Chỉnh sửa…) vào nút "»" (0.9.63-0.9.64 trên máy dựng)
-CAO_BANNER = 48        # banner xanh: tên phần mềm + cơ quan canh giữa theo chiều dọc (0.9.82: 60 -> 48 theo đặc tả V10 Brand Strip)
+CAO_BANNER = 42        # banner xanh: tên phần mềm + cơ quan canh giữa theo chiều dọc (0.9.82: 60 -> 48; 17/10/2026: 42)
 
 
 def tao_banner_ten():
@@ -1098,12 +1157,12 @@ def tao_banner_ten():
     ten = NhanRutGon(TEN_PHAN_MEM)                  # sizePolicy Ignored: chữ dài không ép cửa sổ rộng ra
     ten.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
     ten.setStyleSheet(
-        'QLabel { color: #FFFFFF; font-size: 15px; font-weight: 700; letter-spacing: 0.4px; '
+        'QLabel { color: #FFFFFF; font-size: 14px; font-weight: 700; letter-spacing: 0.4px; '
         'background: transparent; border: 0; }')
     co_quan = NhanRutGon(to_chuc.TEN)
     co_quan.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
     co_quan.setStyleSheet(
-        f'QLabel {{ color: {MAU_DON_VI_BANNER}; font-size: 11.5px; font-weight: 600; letter-spacing: 0.6px; '
+        f'QLabel {{ color: {MAU_DON_VI_BANNER}; font-size: 11px; font-weight: 600; letter-spacing: 0.6px; '
         'background: transparent; border: 0; }')
     cot.addStretch(1)
     cot.addWidget(ten)
@@ -1426,32 +1485,48 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     Nhóm khác: bấm tiêu đề nhóm để đóng / mở; nhóm đang đóng nhớ ở QSettings (lần đầu: dong_mac_dinh)."""
     from PySide6.QtWidgets import QMenu, QScrollArea, QSizePolicy
     khung = QFrame()
-    khung.setProperty('vai', 'ribbon')
+    khung.setProperty('vai', 'menu_trai')                    # Hybrid Enterprise Navy (17/10/2026): nền #F8FAFC, viền phải - QSS_MENU_TRAI
     ngoai = QVBoxLayout(khung)
-    ngoai.setContentsMargins(4, 4, 4, 4)
-    ngoai.setSpacing(2)
+    ngoai.setContentsMargins(0, 0, 1, 0)                     # 1 px phải = viền phải của khung
+    ngoai.setSpacing(0)
+    # nút Thu gọn ở HÀNG RIÊNG trên đỉnh, ngoài vùng cuộn (người dùng 17/10/2026: nút đè lên tiêu đề nhóm đầu) - xếp trong bố cục,
+    # không đặt tọa độ nổi; vạch ngăn dưới hàng
+    hang_gon = QFrame()
+    hang_gon.setObjectName('hang_gon_menu')
+    hang_gon.setFixedHeight(CAO_HANG_GON)
+    hg = QHBoxLayout(hang_gon)
+    hg.setContentsMargins(4, 0, 4, 1)                        # 1 px dưới = vạch ngăn
+    hg.setSpacing(0)
     b_gon = QToolButton()
-    b_gon.setProperty('ribbon', '1')
-    b_gon.setProperty('nhom', 'nhat')
+    b_gon.setObjectName('nut_thu_gon')
     b_gon.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
     b_gon.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-    ngoai.addWidget(b_gon)
+    b_gon.setFixedHeight(CAO_HANG_GON - 5)
+    b_gon.setCursor(Qt.CursorShape.PointingHandCursor)
+    hg.addWidget(b_gon)
+    ngoai.addWidget(hang_gon)
     cuon = QScrollArea()
+    cuon.setObjectName('cuon_menu')
     cuon.setWidgetResizable(True)
     cuon.setFrameShape(QFrame.Shape.NoFrame)
     cuon.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    cuon.viewport().setAutoFillBackground(False)
     trong = QWidget()
     trong.setObjectName('menu_trong')
     # có bộ chọn: kiểu không có bộ chọn bị truyền sang ô gợi ý (tooltip) của các nút con -> ô gợi ý nền đen
     trong.setStyleSheet('QWidget#menu_trong { background: transparent; }')
     lo = QVBoxLayout(trong)
-    lo.setContentsMargins(0, 0, 0, 0)
+    lo.setContentsMargins(4, 2, 4, 6)
     lo.setSpacing(2)
     nut, tieu_de = [], []                                    # tieu_de: (nút tiêu đề nhóm, tên nhóm, [nút lệnh của nhóm])
     dong = _doc_nhom_dong(dong_mac_dinh)
 
     def nut_menu(a) -> QToolButton:
-        b = nut_lenh(a, 18, mau=TOKEN['chinh'])              # icon đơn sắc Deep Navy + vạch trái khi chọn
+        b = nut_lenh(a, 18, mau=MAU_ICON_MENU)               # icon đơn sắc slate, mục đang chọn đổi sang navy (icon_hai_trang_thai)
+        k = ky_hieu_nut(a.text())
+        ic = icon_hai_trang_thai(k, MAU_ICON_MENU, TOKEN['chinh'], 18) if k else None
+        if ic is not None:
+            a.setIcon(ic)
         if a.icon().isNull():
             # lệnh chưa có ký hiệu / máy không có phông biểu tượng (Win 7): Qt căn chữ ra giữa nút - lệch so với các dòng khác
             # (11/10/2026 "Bảng giá đất"). Biểu tượng trống cùng cỡ giữ chữ thẳng hàng; khi thu gọn vẫn hiện chữ (icon_trong)
@@ -1463,7 +1538,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
         b.setProperty('ribbon', '0')
         b.setProperty('menu', '1')                           # kiểu danh sách: không viền, rê chuột mới hiện nền
         b.setMinimumHeight(CAO_NUT_MENU)
-        b.setMaximumHeight(CAO_NUT_MENU + 3)
+        b.setMaximumHeight(CAO_NUT_MENU)
         b.setToolTip(a.text().rstrip('…'))
         nut.append(b)
         return b
@@ -1548,7 +1623,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
         ve_nhom()
         khung.setFixedWidth(RONG_MENU_GON if gon else khung.rong_mo())
         b_gon.setText('' if gon else '  Thu gọn menu')
-        ic = icon_ky_hieu(0xE76C if gon else 0xE76B, CHINH, 16)       # mũi tên mở rộng / thu gọn
+        ic = icon_ky_hieu(0xE76C if gon else 0xE76B, MAU_ICON_MENU, 16)    # mũi tên mở rộng / thu gọn
         b_gon.setIcon(ic) if ic is not None else b_gon.setText('»' if gon else '«  Thu gọn menu')
         b_gon.setToolTip('Mở rộng menu' if gon else 'Thu gọn menu (chỉ hiện biểu tượng)')
     def rong_mo() -> int:
@@ -1560,8 +1635,9 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     khung._vua_rong = _VuaRongMenu(khung)
     khung.installEventFilter(khung._vua_rong)
     b_gon.clicked.connect(lambda: dat(not khung.thu_gon))
+    khung.nut_thu_gon, khung.hang_gon, khung.vung_cuon = b_gon, hang_gon, cuon
     dat(thu_gon_luc_dau)
-    return do_bong(khung, 16, 2, 30)
+    return khung
 
 
 
@@ -2249,7 +2325,8 @@ def gian_cach(goc: QWidget) -> None:
         if not isinstance(lo, QBoxLayout):
             continue
         cha = lo.parentWidget()
-        if cha is not None and (cha.objectName() == 'menu_trong' or cha.property('vai') in ('ribbon', 'nhom_ribbon')):
+        if cha is not None and (cha.objectName() in ('menu_trong', 'hang_gon_menu')
+                                or cha.property('vai') in ('ribbon', 'nhom_ribbon', 'menu_trai')):
             continue
         if lo.property('giu_khoang_cach'):              # hàng cố ý xếp gọn (thẻ KPI 6 px - người dùng 15/10/2026)
             continue
@@ -2603,7 +2680,7 @@ def ap_dung(app) -> None:
     app.setFont(f)
     p = QPalette()
     for vai_, mau in ((QPalette.ColorRole.Window, TOKEN['nen']), (QPalette.ColorRole.Base, TOKEN['khung']),
-                      (QPalette.ColorRole.AlternateBase, '#F3F6FB'), (QPalette.ColorRole.Text, TOKEN['chu']),
+                      (QPalette.ColorRole.AlternateBase, '#F8FAFC'), (QPalette.ColorRole.Text, TOKEN['chu']),
                       (QPalette.ColorRole.WindowText, TOKEN['chu']), (QPalette.ColorRole.ButtonText, TOKEN['chu']),
                       (QPalette.ColorRole.Button, '#FFFFFF'), (QPalette.ColorRole.Highlight, '#2E75B6'),
                       (QPalette.ColorRole.HighlightedText, '#FFFFFF'), (QPalette.ColorRole.ToolTipBase, '#FFFDE7'),

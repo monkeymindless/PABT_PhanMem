@@ -4,10 +4,10 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSortFilterProxyModel, Qt, QTimer, Signal
+from PySide6.QtCore import QAbstractTableModel, QEvent, QModelIndex, QSortFilterProxyModel, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QFont, QKeySequence
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
-                               QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QHeaderView, QLabel,
+                               QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QSizePolicy,
                                QStackedWidget, QTableView, QTableWidget, QTableWidgetItem, QToolButton,
                                QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
@@ -25,6 +25,109 @@ MO_TA_UD = 'Lập phương án bồi thường, hỗ trợ'      # tiêu đề c
 COT = ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²)', 'Trạng thái', 'Ghi chú']
 MAU_LECH = QColor('#F8CBAD')          # vàng cam: hộ lệch so với file Excel đối chiếu
 COT_SO = {4}
+# cột Trạng thái danh sách hộ (Hybrid Enterprise Navy, 17/10/2026): thanh tiến độ 4 ô bằng ký tự khối Unicode (■ □ - có trong
+# Segoe UI / Arial của Windows 7, KHÔNG phải emoji) + màu theo nấc. Chữ trạng thái và giá trị lọc giữ nguyên (BangHo.dong[r]['o'][5])
+THANH_NAC = ('□□□□', '■□□□', '■■□□', '■■■□', '■■■■')
+NHAN_NAC = ('Chưa lập PA', 'Đã lập PA', 'Đã phê duyệt', 'Đã chi trả', 'Đã bàn giao')
+MAU_NAC = ('#64748B', '#0284C7', '#0F3866', '#0F766E', '#15803D')
+MAU_MA_HO = '#0284C7'                    # cột STT (định danh hộ trên danh sách)
+CAN_PHAI = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+CAN_TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+TAT_CA_DOT, TAT_CA_TRANG_THAI = 'Đợt: Tất cả', 'Trạng thái: Tất cả'     # mục đầu ô lọc (thay nhãn "Đợt:" riêng)
+CAO_DAI_CONG_CU = 32                    # hàng công cụ + lọc danh sách hộ, dải cộng dưới bảng
+# nút "Mở" của bảng dự án gần đây: viền + chữ navy, rê chuột nền navy chữ trắng (bộ chọn #id thắng tô màu theo chữ "Mở" của _BoToMau)
+QSS_NUT_MO_GAN = ('QPushButton#nut_mo_gan { padding: 2px 14px; border: 1px solid #0F3866; border-radius: 4px; color: #0F3866; '
+                  'background: #FFFFFF; font-weight: 600; } '
+                  'QPushButton#nut_mo_gan:hover { background: #0F3866; color: #FFFFFF; } '
+                  'QPushButton#nut_mo_gan:pressed { background: #092240; color: #FFFFFF; }')
+# dải cộng dưới danh sách hộ: (khóa, nhãn). Tài sản & Cây = mục 2 nhà + 3 cây + vật nuôi (MUC_VN 7); Hỗ trợ & Thưởng = mục 4 + 5
+O_DAI_CONG = (('so_ho', 'CỘNG'), ('dt', 'Tổng diện tích'), ('dat', 'Bồi thường đất'), ('tai_san', 'Tài sản & Cây'),
+              ('ho_tro', 'Hỗ trợ & Thưởng'), ('tong', 'TỔNG CỘNG'))
+
+
+def cong_dai_cong(dong: list) -> dict:
+    """Cộng các dòng danh sách hộ (BangHo.dong) cho dải cộng - Decimal (tien.D), không float. Mục theo nghiep_vu (1 đất, 2 nhà,
+    3 cây, 7 vật nuôi, 4 hỗ trợ, 5 thưởng); TỔNG CỘNG = cộng tổng từng hộ (đã làm tròn như cột tổng phương án)."""
+    kq = dict(dt=D(0), dat=D(0), tai_san=D(0), ho_tro=D(0), tong=D(0))
+    for d in dong:
+        m = d.get('muc') or {}
+        kq['dt'] += D(d.get('dt') or 0)
+        kq['dat'] += D(m.get(1) or 0)
+        kq['tai_san'] += D(m.get(2) or 0) + D(m.get(3) or 0) + D(m.get(nghiep_vu.MUC_VN) or 0)
+        kq['ho_tro'] += D(m.get(4) or 0) + D(m.get(5) or 0)
+        kq['tong'] += D(d.get('tong') or 0)
+    return kq
+
+
+def chu_dai_cong(n: int, tong: dict | None) -> dict:
+    """{khóa: (chữ đầy đủ, chữ gọn)} của dải cộng; tong None = chưa có dữ liệu. Chữ gọn (màn hình hẹp 1366): nhãn ngắn, tiền
+    vn_gon ("23,0 tỷ") - số đủ ở chú thích."""
+    kq = {}
+    for k, ten in O_DAI_CONG:
+        if k == 'so_ho':
+            kq[k] = (f'CỘNG ({n} HỘ ĐANG HIỂN THỊ)', f'CỘNG {n} HỘ') if tong is not None else ('CỘNG', 'CỘNG')
+        elif tong is None:
+            kq[k] = (f'{ten}: –', f'{NHAN_GON_CONG[k]}: –')
+        elif k == 'dt':
+            kq[k] = (f'{ten}: {vn(tong["dt"], 1)} m²', f'{NHAN_GON_CONG[k]}: {vn(tong["dt"], 1)} m²')
+        else:
+            kq[k] = (f'{ten}: {vn(tong[k])} đ', f'{NHAN_GON_CONG[k]}: {vn_gon(tong[k])}')
+    return kq
+
+
+NHAN_GON_CONG = {'dt': 'DT', 'dat': 'Đất', 'tai_san': 'TS & Cây', 'ho_tro': 'HT & Thưởng', 'tong': 'TỔNG'}
+
+
+class DaiCong(QFrame):
+    """Dải cộng dưới danh sách hộ: đủ chỗ thì chữ đầy đủ, hẹp thì chữ gọn (chú thích luôn đầy đủ); vẫn thiếu thì rút "…"."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        from .giao_dien import NhanRutGon
+        self.setObjectName('dai_cong_ds')
+        self.setFixedHeight(CAO_DAI_CONG_CU)
+        h = QHBoxLayout(self)
+        h.setContentsMargins(10, 0, 10, 0)
+        h.setSpacing(8)
+        h.setProperty('giu_khoang_cach', True)
+        self.o, self.vach, self.chu = {}, [], {}
+        for i, (k, _ten) in enumerate(O_DAI_CONG):
+            if i:
+                v = QLabel('|')
+                v.setProperty('vai', 'vach_cong')
+                h.addWidget(v)
+                self.vach.append(v)
+            o = NhanRutGon('')
+            o.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)     # đủ chỗ: hiện đủ; hẹp: rút "…"
+            o.setProperty('vai', 'o_cong_tong' if k == 'tong' else 'o_cong')
+            h.addWidget(o)
+            self.o[k] = o
+        h.addStretch(1)
+        self.gon = False
+
+    def dat(self, chu: dict) -> None:
+        self.chu = chu
+        self._chon()
+
+    def _chon(self) -> None:
+        if not self.chu:
+            return
+        m = self.layout().contentsMargins()
+        con = self.width() - m.left() - m.right() - sum(v.sizeHint().width() + 2 * self.layout().spacing() for v in self.vach)
+        can = sum(self.o[k].fontMetrics().horizontalAdvance(day) + 4 for k, (day, _gon) in self.chu.items())
+        self.gon = can > con
+        for k, (day, gon) in self.chu.items():
+            self.o[k].setText(gon if self.gon else day)
+            self.o[k].setToolTip(day)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._chon()
+
+    def changeEvent(self, e):                           # phông đổi (QSS áp lúc hiện, phóng to): đo lại
+        super().changeEvent(e)
+        if e.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange):
+            self._chon()
 # các trang bên phải cửa sổ chính (chọn ở menu trái). 0.9.76 (Mục IV QĐ 18/2026, Nhóm 5 - 6): Bảng tổng hợp kinh phí là MỘT trang 3 thẻ
 # (cơ cấu, chi tiết hộ, đối soát khái toán); Quyết định phê duyệt; Tiến độ chi trả & Bàn giao (1.0.00: gộp trang "Báo cáo tiến độ
 # GPMB" - thẻ chỉ số + chế độ xem "Thửa còn vướng" - vào trang theo dõi; man_hinh_theo_doi.KhungTienDo); Dự toán / khái toán (0.9.23 -
@@ -360,25 +463,55 @@ class BangHo(QAbstractTableModel):
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             if c == 4:
                 return so_vn(v)
+            if c == 5 and role == Qt.ItemDataRole.DisplayRole:      # thanh tiến độ 4 ô + trạng thái (giá trị gốc ở d['o'][5])
+                return f'{THANH_NAC[d.get("nac", 0)]}  {v}'
             return str(v)
+        if role == Qt.ItemDataRole.ForegroundRole:
+            if c == 5:
+                return self._but(MAU_NAC[d.get('nac', 0)])
+            if c == 0:
+                return self._but(MAU_MA_HO)
+            if c == 1:
+                return self._but('#0F172A')
+            return None
+        if role == Qt.ItemDataRole.FontRole and c == 1:
+            return self._phong()
         if role == Qt.ItemDataRole.ToolTipRole:
             if c == 6 and v:
                 return str(v)
             if c == 5:
-                return d.get('goi_y_tt') or str(v)
+                return (d.get('goi_y_tt') or str(v)) + f'\nTiến độ: {NHAN_NAC[d.get("nac", 0)]} ({d.get("nac", 0)}/4)'
             if c in (1, 2):
                 dau = d.get('dia_chi') or v if c == 2 else v             # cột Địa chỉ: địa chỉ đầy đủ (0.9.72)
                 return f'{dau}\nMã hộ {d["ma_ho"]}' + (f'\nGhi chú: {d["theo_doi"]}' if d.get('theo_doi') else '')
             return None
         if role == Qt.ItemDataRole.UserRole:                       # giá trị để sắp xếp
+            if c == 5:                                             # trạng thái: theo nấc tiến độ rồi theo chữ
+                return f'{d.get("nac", 0)} {v}'
             return float(v) if c in COT_SO or c in (0, 3) else str(v)
-        if role == Qt.ItemDataRole.TextAlignmentRole and (c in COT_SO or c in (0, 3)):
-            return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        if role == Qt.ItemDataRole.TextAlignmentRole:
+            # số nguyên (như bang_ao): Qt5 / PySide2 bỏ qua cờ ghép kiểu enum -> cột số canh trái-trên (17/10/2026)
+            return CAN_PHAI if c in COT_SO or c in (0, 3) else CAN_TRAI
         if role == Qt.ItemDataRole.BackgroundRole and c == 6 and d.get('mau_gc') is not None:
             return QBrush(d['mau_gc'])
-        if role == Qt.ItemDataRole.BackgroundRole and c == 5 and d.get('mau_tt') is not None:
-            return QBrush(d['mau_tt'])
         return None
+
+    def _but(self, mau: str):
+        b = self._nho_but.get(mau) if hasattr(self, '_nho_but') else None
+        if b is None:
+            self._nho_but = getattr(self, '_nho_but', {})
+            b = self._nho_but[mau] = QBrush(QColor(mau))
+        return b
+
+    def _phong(self):
+        """Chủ hộ: đậm nhẹ (DemiBold). Phông nhớ theo phông ứng dụng (data gọi mỗi ô mỗi lần vẽ; phóng to / thu nhỏ đổi phông)."""
+        goc = QApplication.font()
+        k = goc.key()
+        if getattr(self, '_nho_phong', (None,))[0] != k:
+            f = QFont(goc)
+            f.setWeight(QFont.Weight.DemiBold)
+            self._nho_phong = (k, f)
+        return self._nho_phong[1]
 
 
 class ChiTietHo(QDialog):
@@ -516,9 +649,11 @@ class CuaSoChinh(QMainWindow):
         self.lb_ket_qua.setWordWrap(True)               # chữ đối chiếu dài (~980 điểm) không ép cửa sổ rộng hơn màn hình 1366
         from .giao_dien import OTimKiemThongMinh
         self.o_tim = OTimKiemThongMinh()                 # chờ ngừng gõ 200 ms: bộ gõ tiếng Việt gửi nhiều phím / chữ có dấu
-        self.o_tim.setPlaceholderText('Tìm theo mã hộ, họ tên, trạng thái, ghi chú (không cần dấu)…')
+        self.o_tim.setPlaceholderText('Tìm mã hộ, chủ hộ, CCCD, tờ/thửa...')
+        self.o_tim.setToolTip('Tìm theo mã hộ, họ tên chủ hộ, CCCD, tờ / thửa, trạng thái, ghi chú - không cần gõ dấu')
         self.o_tim.setClearButtonEnabled(True)
         self.o_tim.setMinimumWidth(220)
+        self.o_tim.setObjectName('o_tim_ds')
         self.mo_hinh = BangHo()
         self.loc = LocHo(self)
         self.loc.setSourceModel(self.mo_hinh)
@@ -526,10 +661,10 @@ class CuaSoChinh(QMainWindow):
         self.o_tim.chuoi_da_doi.connect(lambda t: self._loc(tu_khoa=t))
         self.cb_dot = QComboBox()
         self.cb_dot.setMinimumWidth(120)
-        self.cb_dot.addItem('Tất cả đợt', '')
+        self.cb_dot.addItem(TAT_CA_DOT, '')
         self.cb_dot.currentIndexChanged.connect(lambda *_: self._loc(dot=self.cb_dot.currentData()))
         self.cb_tt = QComboBox()
-        self.cb_tt.addItem('Tất cả trạng thái', '')
+        self.cb_tt.addItem(TAT_CA_TRANG_THAI, '')
         from .thong_bao import TRANG_THAI
         for k, t in TRANG_THAI:
             self.cb_tt.addItem(t, k)
@@ -539,10 +674,15 @@ class CuaSoChinh(QMainWindow):
         self.bang.setModel(self.loc)
         self.bang.setSortingEnabled(True)
         self.bang.setAlternatingRowColors(True)
-        self.bang.setWordWrap(True)
+        # dòng một hàng chữ 30 px (17/10/2026): không xuống dòng - giao_dien._gian_bang (đổi cỡ chữ) giãn dòng bảng có xuống dòng
+        # thành ~41 px; chữ dài rút "…", đủ ở chú thích (họ tên, địa chỉ, trạng thái, ghi chú)
+        self.bang.setWordWrap(False)
         self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.bang.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked | QAbstractItemView.EditTrigger.EditKeyPressed)
         self.bang.verticalHeader().setVisible(False)
+        from .giao_dien import CAO_DONG_BANG
+        self.bang.verticalHeader().setMinimumSectionSize(CAO_DONG_BANG - 4)
+        self.bang.verticalHeader().setDefaultSectionSize(CAO_DONG_BANG)       # dòng 30 px (Hybrid Enterprise Navy)
         self.bang.horizontalHeader().setResizeContentsPrecision(300)    # tự canh cột: đo 300 dòng mẫu, không đo hết (3.000 hộ)
         self.bang.sortByColumn(0, Qt.SortOrder.AscendingOrder)
         self.bang.doubleClicked.connect(lambda idx: self._chay_lenh(lambda: self.mo_chi_tiet(idx)))
@@ -621,12 +761,15 @@ class CuaSoChinh(QMainWindow):
         vo.addWidget(self.banner_ten)
         vo.addWidget(than, 1)
         if self.menu_trai:
+            # 17/10/2026 (Hybrid Enterprise Navy): menu trái sát mép trái / dưới cửa sổ (thanh bên, viền phải 1 px); lề chỉ ở phần nội dung
+            lo.setContentsMargins(0, 0, 0, 0)
             ngang = QHBoxLayout()
-            ngang.setSpacing(8)
+            ngang.setSpacing(0)
             # bấm tiêu đề nhóm để đóng / mở - menu không tràn màn hình 1366x768
             self.khung_menu = tao_menu_trai(nhom, dong_mac_dinh=NHOM_DONG_MAC_DINH)
             ngang.addWidget(self.khung_menu)
             phai = QVBoxLayout()
+            phai.setContentsMargins(10, 8, 10, 6)
             phai.setSpacing(7)
             ngang.addLayout(phai, 1)
             lo.addLayout(ngang, 1)
@@ -643,12 +786,17 @@ class CuaSoChinh(QMainWindow):
         lo_ds.setContentsMargins(0, 0, 0, 0)
         lo_ds.setSpacing(7)
         # băng kết quả đối chiếu; Lập phương án / Thêm hộ chỉ ở menu trái (+ bấm đúp, chuột phải) - không lặp nút ở đây
-        hang_kq = QHBoxLayout()                         # kết quả đối chiếu | số hộ đang hiện theo bộ lọc
+        hang_kq = QHBoxLayout()                         # kết quả đối chiếu (số hộ đang lọc: huy hiệu cuối hàng công cụ)
         hang_kq.addWidget(self.lb_ket_qua, 1)
-        hang_kq.addWidget(self.lb_loc)
         lo_ds.addLayout(hang_kq)
         lo_ds.addLayout(hang)
-        lo_ds.addWidget(self.bang, 1)
+        # bảng + dải cộng cố định ngay dưới (không cách): cộng các hộ ĐANG HIỆN theo bộ lọc
+        khoi_bang = QVBoxLayout()
+        khoi_bang.setSpacing(0)
+        khoi_bang.setProperty('giu_khoang_cach', True)
+        khoi_bang.addWidget(self.bang, 1)
+        khoi_bang.addWidget(self._dai_cong())
+        lo_ds.addLayout(khoi_bang, 1)
         self.lb_trang = QLabel('')
         self.lb_trang.setProperty('vai', 'tieu_de')
         self.lb_trang.setVisible(False)
@@ -990,7 +1138,7 @@ class CuaSoChinh(QMainWindow):
         if getattr(self, 'khung_du_toan', None) is not None:
             self.khung_du_toan.dat_du_an(None)
         self._xoa_ket_qua()
-        self.lb_loc.setText('')
+        self._dem_loc()                                 # danh sách trống: ẩn huy hiệu lọc + dải cộng
         self._cap_nhat_the_so()
         if hasattr(self, 'trang'):
             self._hien_trang_chao()
@@ -1024,10 +1172,18 @@ class CuaSoChinh(QMainWindow):
         loc, ts = '', ()
         if ds_ma_ho is not None:
             loc, ts = f' WHERE ma_ho IN ({",".join("?" * len(ds_ma_ho))})', tuple(ds_ma_ho)
-        so_thua = {r[0]: (r[1], D(r[2] or 0)) for r in self.con.execute(
-            f"SELECT ma_ho, COUNT(*), SUM(CAST(dt_thu_hoi AS REAL)) FROM thua{loc} GROUP BY ma_ho", ts)}
+        # tờ/thửa "12/45" của mọi thửa: ô tìm danh sách hộ tìm được theo tờ / thửa (17/10/2026)
+        # diện tích cộng bằng Decimal (dải cộng dưới danh sách - trước đây SUM(CAST AS REAL) của SQLite: số thực)
+        so_thua = {}
+        for ma, dt, to, thua in self.con.execute(f'SELECT ma_ho, dt_thu_hoi, so_to, so_thua FROM thua{loc}', ts):
+            n, tong_dt, chu = so_thua.get(ma, (0, D(0), ''))
+            try:
+                dt = D(dt or 0)
+            except (ArithmeticError, ValueError):       # ô diện tích hỏng (file cũ): không cộng, như CAST cũ ra 0
+                dt = D(0)
+            so_thua[ma] = (n + 1, tong_dt + dt, f'{chu} {to}/{thua}')
         tt = {r['ma_ho']: dict(r) for r in self.con.execute(
-            f'SELECT ma_ho, trang_thai, dot_id, dia_chi, {", ".join(TRUONG_TT)} FROM ho{loc}', ts)}
+            f'SELECT ma_ho, trang_thai, dot_id, dia_chi, so_cccd, {", ".join(TRUONG_TT)} FROM ho{loc}', ts)}
         th = {x.ma_ho: x for x in theo_doi.tong_hop(self.con, ds_ma_ho, tinh_pa=False)}
         ten_dot = {d.id: d.ten for d in ds_dot(self.con)}
         r = self.con.execute('SELECT ten_dia_ban FROM du_an WHERE id = 1').fetchone()
@@ -1040,7 +1196,7 @@ class CuaSoChinh(QMainWindow):
         from .quan_ly import TRUONG_TT
         from .ho_so import rut_gon_dia_chi
         so_thua, tt, th, ten_dot, dia_ban = so_lieu
-        st, dt = so_thua.get(h['ma_ho'], (0, D(0)))
+        st, dt, to_thua = so_thua.get(h['ma_ho'], (0, D(0), ''))
         x = tt.get(h['ma_ho'], {})
         t = th.get(h['ma_ho'])
         if t is not None:
@@ -1057,11 +1213,14 @@ class CuaSoChinh(QMainWindow):
             trang_thai, goi_y, mau = x.get('trang_thai', ''), '', None
         gc = h.get('ghi_chu_dc') or ''
         da_lap = bool(getattr(t, 'da_lap', False) or (t is not None and t.tong_pa > 0))
-        return dict(ma_ho=h['ma_ho'], tong=h['tong'], lech=h['lech'], da_lap=da_lap,
+        # nấc tiến độ (cột Trạng thái, thanh 4 ô): theo cùng các cờ mà bộ lọc trạng thái dùng (quan_ly.hop_trang_thai)
+        nac = (4 if x.get('da_ban_giao') else 3 if x.get('da_chi_tra') else 2 if x.get('da_phe_duyet') else
+               1 if da_lap or h['tong'] > 0 else 0)
+        return dict(ma_ho=h['ma_ho'], tong=h['tong'], lech=h['lech'], da_lap=da_lap, nac=nac, muc=h.get('muc') or {}, dt=dt,
                     **{k: x.get(k) for k in TRUONG_TT},
                     dot_id=x.get('dot_id'), goi_y_tt=goi_y, mau_tt=mau, mau_gc=MAU_LECH if gc else None,
                     tim=f'{h["ma_ho"]} {x.get("theo_doi") or ""} {ten_dot.get(x.get("dot_id"), "")} '
-                        f'{x.get("qd_so") or ""} {x.get("dia_chi") or ""}',
+                        f'{x.get("qd_so") or ""} {x.get("dia_chi") or ""} {x.get("so_cccd") or ""} {to_thua}',
                     dia_chi=x.get('dia_chi') or '',          # đầy đủ (chú thích); cột hiện bản gọn theo địa bàn dự án
                     o=[i, h['ho_ten'], rut_gon_dia_chi(x.get('dia_chi'), dia_ban), st, dt.quantize(D('0.1')), trang_thai, gc])
 
@@ -1150,7 +1309,7 @@ class CuaSoChinh(QMainWindow):
         cu = self.cb_dot.currentData()
         self.cb_dot.blockSignals(True)
         self.cb_dot.clear()
-        self.cb_dot.addItem('Tất cả đợt', '')
+        self.cb_dot.addItem(TAT_CA_DOT, '')
         self.cb_dot.addItem('Chưa xếp đợt', 'chua')
         for i, t in ten_dot.items():
             self.cb_dot.addItem(t, i)
@@ -1164,9 +1323,28 @@ class CuaSoChinh(QMainWindow):
         self._dem_loc()
 
     def _dem_loc(self):
+        """Huy hiệu "Đang lọc: k / N hộ" + dải cộng dưới bảng (cộng các hộ ĐANG HIỆN, Decimal) + thẻ KPI đang lọc."""
         n = self.loc.rowCount()
-        tong = sum((self.mo_hinh.dong[self.loc.mapToSource(self.loc.index(r, 0)).row()]['tong'] for r in range(n)), D(0))
-        self.lb_loc.setText(f'{n}/{len(self.mo_hinh.dong)} hộ · {vn(tong)} đ' if self.mo_hinh.dong else '')
+        ds = self.mo_hinh.dong
+        hien = [ds[self.loc.mapToSource(self.loc.index(r, 0)).row()] for r in range(n)]
+        self.lb_loc.setText(f'Đang lọc: <b style="color:#0F3866">{n}</b> / {len(ds)} hộ' if ds else '')
+        self.lb_loc.setVisible(bool(ds))
+        tong_muc = cong_dai_cong(hien)
+        self._ve_dai_cong(n, tong_muc, co_du_lieu=bool(ds))
+        self._cap_nhat_loc_the()
+
+    def _dai_cong(self) -> QWidget:
+        """Dải cộng cố định ngay dưới danh sách hộ (Hybrid Enterprise Navy, 17/10/2026): cộng các hộ đang hiện theo bộ lọc."""
+        self.dai_cong_ds = DaiCong()
+        self.o_cong = self.dai_cong_ds.o
+        self._ve_dai_cong(0, None, co_du_lieu=False)
+        return self.dai_cong_ds
+
+    def _ve_dai_cong(self, n: int, tong_muc: dict | None, co_du_lieu: bool) -> None:
+        if not hasattr(self, 'dai_cong_ds'):
+            return
+        self.dai_cong_ds.dat(chu_dai_cong(n, tong_muc if co_du_lieu else None))
+        self.dai_cong_ds.setVisible(co_du_lieu)
 
     def ho_dang_loc(self) -> list:
         """Mã hộ đang hiện trong danh sách (sau lọc), theo thứ tự đang sắp."""
@@ -1206,8 +1384,9 @@ class CuaSoChinh(QMainWindow):
 
     # ------------------------------------------------ màn hình chính: thẻ số liệu, thao tác nhanh, menu chuột phải
     # màu từng thẻ: giao_dien.MAU_THE_SO (kiểu nằm trong QSS chung, thẻ chỉ gắn thuộc tính vai / the)
-    THE_SO = [('so_ho', 'Số hộ'), ('da_pa', 'Đã lập phương án'), ('tong', 'Tổng kinh phí'), ('da_pd', 'Đã phê duyệt'),
-              ('da_ct', 'Đã chi trả'), ('da_bg', 'Đã bàn giao mặt bằng')]
+    # 17/10/2026 (Hybrid Enterprise Navy): tiến độ trái -> phải, tổng kinh phí cuối hàng; mỗi thẻ: tên (trên), số + chữ phụ (dưới)
+    THE_SO = [('so_ho', 'Số hộ'), ('da_pa', 'Đã lập phương án'), ('da_pd', 'Đã phê duyệt'),
+              ('da_ct', 'Đã chi trả'), ('da_bg', 'Đã bàn giao mặt bằng'), ('tong', 'Tổng kinh phí')]
     # bấm thẻ: lọc danh sách hộ theo trạng thái (quan_ly.TRANG_THAI); '' = bỏ lọc trạng thái
     LOC_THE = {'so_ho': '', 'da_pa': 'co_pa', 'tong': '', 'da_pd': 'da_pd', 'da_ct': 'da_ct', 'da_bg': 'da_bg'}
 
@@ -1227,11 +1406,14 @@ class CuaSoChinh(QMainWindow):
                 if v.columnWidth(c) < can:
                     v.setColumnWidth(c, can)
 
+    CAO_THE_SO = 56                                      # thẻ KPI (Hybrid Enterprise Navy, 17/10/2026): tên trên, số + chữ phụ dưới
+
     def _hang_the_so(self) -> QHBoxLayout:
+        from .giao_dien import NhanRutGon
         h = QHBoxLayout()
-        h.setSpacing(4)                                  # 0.9.95: dải KPI một dòng 30-32 px (số + nhãn cùng hàng), thẻ cách 4 px
+        h.setSpacing(8)                                  # 17/10/2026: thẻ cách 8 px (0.9.95: 4 px, thẻ một dòng 32 px)
         h.setProperty('giu_khoang_cach', True)          # giao_dien.gian_cach không nâng lên 10 px
-        self.the_so = {}
+        self.the_so, self.the_phu, self.the_khung = {}, {}, {}
         for k, ten in self.THE_SO:
             khung = TheSo()
             khung.setObjectName('the_so')
@@ -1240,21 +1422,43 @@ class CuaSoChinh(QMainWindow):
             khung.bam.connect(lambda k=k: self.bam_the_so(k))
             khung.setProperty('vai', 'the_so')
             khung.setProperty('the', k)
+            khung.setProperty('dang_loc', '0')
             khung.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)    # QWidget thường: cần để QSS vẽ nền / viền
-            o = QHBoxLayout(khung)
-            o.setContentsMargins(8, 2, 8, 2)
-            o.setSpacing(6)
+            o = QVBoxLayout(khung)
+            o.setContentsMargins(12, 5, 12, 5)
+            o.setSpacing(1)
             o.setProperty('giu_khoang_cach', True)
-            khung.setMaximumHeight(32)
+            khung.setFixedHeight(self.CAO_THE_SO)
+            nhan = NhanRutGon(ten)                       # hẹp (màn hình 1366): rút "…", không ép cửa sổ rộng ra
+            nhan.setProperty('vai', 'nhan_the')
             so = QLabel('–')
             so.setProperty('vai', 'so_the')
-            nhan = QLabel(ten)
-            nhan.setProperty('vai', 'nhan_the')
-            o.addWidget(so)
-            o.addWidget(nhan, 1)
-            self.the_so[k] = so
+            phu = QLabel('')
+            phu.setProperty('vai', 'phu_the')
+            for x in (nhan, so, phu):                    # bấm vào chữ = bấm thẻ
+                x.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            hang = QHBoxLayout()
+            hang.setContentsMargins(0, 0, 0, 0)
+            hang.setSpacing(5)
+            hang.setProperty('giu_khoang_cach', True)
+            hang.addWidget(so, 0, Qt.AlignmentFlag.AlignBaseline)
+            hang.addWidget(phu, 0, Qt.AlignmentFlag.AlignBaseline)
+            hang.addStretch(1)
+            o.addWidget(nhan)
+            o.addLayout(hang)
+            self.the_so[k], self.the_phu[k], self.the_khung[k] = so, phu, khung
             h.addWidget(khung, 1)
         return h
+
+    def _cap_nhat_loc_the(self):
+        """Thẻ KPI ứng với bộ lọc trạng thái đang dùng: property dang_loc="1" (nền xanh băng, viền navy) - nhìn là biết đang lọc gì."""
+        tt = self.cb_tt.currentData() or '' if hasattr(self, 'cb_tt') else ''
+        for k, khung in getattr(self, 'the_khung', {}).items():
+            v = '1' if tt and self.LOC_THE.get(k) == tt and self.con is not None else '0'
+            if khung.property('dang_loc') != v:
+                khung.setProperty('dang_loc', v)
+                khung.style().unpolish(khung)
+                khung.style().polish(khung)
 
     def _cap_nhat_the_so(self):
         ds = self.mo_hinh.dong
@@ -1268,18 +1472,30 @@ class CuaSoChinh(QMainWindow):
                 lap = {}
         da_pa = sum(1 for v in lap.values() if v == 'da_lap') if lap else sum(1 for d in ds if d['tong'] > 0)
         tu_lap = sum(1 for v in lap.values() if v == 'tu_lap')
-        if 'da_pa' in self.the_so:
-            self.the_so['da_pa'].setToolTip(f'{tu_lap} hộ có phương án phần mềm tự lập, chưa mở soát và lưu' if tu_lap else '')
         gt = dict(so_ho=len(ds), da_pa=da_pa, tong=vn_gon(tong) if ds else '–',
                   da_pd=sum(1 for d in ds if d.get('da_phe_duyet')), da_ct=sum(1 for d in ds if d.get('da_chi_tra')),
                   da_bg=sum(1 for d in ds if d.get('da_ban_giao')))
+        from .tien import phan_tram
+        n = len(ds)
         for k, o in self.the_so.items():
             v = gt[k]
             o.setText(str(v) if ds else '–')
-            if k in ('da_pa', 'da_pd', 'da_ct', 'da_bg') and ds:
-                o.setText(f'{v} / {len(ds)}')
+            phu = self.the_phu.get(k) if hasattr(self, 'the_phu') else None
+            if phu is None:
+                continue
+            if k == 'so_ho':
+                phu.setText('hộ' if ds else '')
+            elif k == 'tong':
+                phu.setText('VNĐ' if ds else '')
+            else:                                        # tỷ lệ so với tổng số hộ (Decimal) - số hộ đủ ở chú thích của số
+                phu.setText(phan_tram(v, n) if ds else '')
+                o.setToolTip(f'{v} / {n} hộ' if ds else '')
         if 'tong' in self.the_so:
             self.the_so['tong'].setToolTip(f'{vn(tong)} đồng' if ds else '')
+        if tu_lap and 'da_pa' in self.the_so:
+            self.the_so['da_pa'].setToolTip(self.the_so['da_pa'].toolTip() +
+                                            f'\n{tu_lap} hộ có phương án phần mềm tự lập, chưa mở soát và lưu')
+        self._cap_nhat_loc_the()
 
     def bam_the_so(self, k: str):
         """Thẻ số liệu: Số hộ / Tổng kinh phí = bỏ mọi bộ lọc; thẻ khác = lọc trạng thái tương ứng; về danh sách hộ."""
@@ -1309,11 +1525,13 @@ class CuaSoChinh(QMainWindow):
         # 0.9.66 (bỏ lệnh trùng): chỉ lệnh KHÔNG có ở menu trái / thanh menu - Thêm hộ, Xóa hộ. Lập phương án (menu trái), Xuất
         # danh sách hộ (menu Dữ liệu) không lặp ở đây
         # 0.9.69: Chọn hộ niêm yết (đánh dấu hộ đủ điều kiện niêm yết, lấy ý kiến sau khi lập phương án) - chỉ có ở đây
-        for ten, kieu in (('Thêm hộ…', KieuNut.LUU), ('Chọn hộ niêm yết…', KieuNut.PHU), ('Xóa hộ…', KieuNut.NGUY_HIEM)):
+        # 17/10/2026 (Hybrid Enterprise Navy): dải cao CAO_DAI_CONG_CU 32 px - Thêm hộ nền navy đặc (thao tác chính), Xóa hộ viền mảnh
+        # đỏ (tắt: mờ), Chọn hộ niêm yết kiểu phụ nền trắng viền xám
+        for ten, kieu in (('Thêm hộ…', KieuNut.CHINH), ('Xóa hộ…', KieuNut.NGUY_HIEM), ('Chọn hộ niêm yết…', KieuNut.PHU)):
             b = nut_lenh(self.lenh[ten], 16)
             b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-            b.setMinimumHeight(28)                      # nút thao tác chuẩn công sở 28-30 px (15/10/2026; nut_lenh mặc định 32)
-            b.setMaximumHeight(30)
+            b.setFixedHeight(CAO_DAI_CONG_CU)
+            b.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             ap_kieu_nut(b, kieu)
             hn.addWidget(b)
             self.nut_ds[ten] = b
@@ -1328,11 +1546,18 @@ class CuaSoChinh(QMainWindow):
         hl = QHBoxLayout(nhom_loc)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(6)
-        for ten, w in (('Đợt:', self.cb_dot), ('Trạng thái:', self.cb_tt), ('Tìm:', self.o_tim)):
-            nhan_tim = QLabel(ten)
-            nhan_tim.setProperty('vai', 'nhan')
-            hl.addWidget(nhan_tim)
+        # bộ lọc không còn nhãn "Đợt:", "Trạng thái:", "Tìm:" riêng: mục đầu của ô chọn ghi "Đợt: Tất cả" / "Trạng thái: Tất cả", ô
+        # tìm có kính lúp + chữ gợi ý; huy hiệu "Đang lọc: k / N hộ" cuối hàng
+        for w in (self.cb_dot, self.cb_tt, self.o_tim):
+            w.setFixedHeight(CAO_DAI_CONG_CU)
+            w.setProperty('loc_ds', '1')
             hl.addWidget(w, 1 if w is self.o_tim else 0)
+        self.cb_dot.setToolTip('Lọc danh sách hộ theo đợt trình')
+        self.cb_tt.setToolTip('Lọc danh sách hộ theo trạng thái xử lý (cũng lọc khi bấm thẻ số liệu)')
+        self.lb_loc.setFixedHeight(CAO_DAI_CONG_CU)
+        self.lb_loc.setProperty('vai', 'huy_hieu_loc')
+        self.lb_loc.setTextFormat(Qt.TextFormat.RichText)
+        hl.addWidget(self.lb_loc)
         h.addWidget(nhom_nut)
         h.addWidget(nhom_loc)
         # 0.9.66: bỏ hàng "Đã chọn N hộ" (In / Xuất, Đợt trình, Trạng thái hộ - menu trái; Xóa hộ - nút ngay trên). Số hộ đang
@@ -1426,6 +1651,8 @@ class CuaSoChinh(QMainWindow):
             ['Tên dự án & địa bàn', 'Số hộ', 'Tổng kinh phí', 'Cập nhật', 'Ghim', 'Thao tác'])
         self.ds_gan_day.horizontalHeader().setStretchLastSection(True)
         self.ds_gan_day.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for c in (1, 2, 3, 4):                           # tiêu đề đậm (nền navy): cột vừa cả chữ tiêu đề lẫn số liệu, không cắt "Tổng kinh phí"
+            self.ds_gan_day.horizontalHeader().setSectionResizeMode(c, QHeaderView.ResizeMode.ResizeToContents)
         self.ds_gan_day.verticalHeader().setVisible(False)
         self.ds_gan_day.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.ds_gan_day.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -1580,7 +1807,13 @@ class CuaSoChinh(QMainWindow):
             from PySide6.QtWidgets import QPushButton, QToolButton
             da_ghim = str(f.resolve()).lower() in ghim or str(f).lower() in ghim
             b_ghim = QToolButton()
-            b_ghim.setText('📌' if da_ghim else '📍')
+            # 17/10/2026: biểu tượng ghim của phông Segoe MDL2 (đã ghim: ghim đặc navy) thay emoji ghim - Windows 7 không có
+            # phông emoji (hiện ô vuông); máy không có phông biểu tượng thì hiện chữ
+            ic_ghim = icon_ky_hieu(0xE841 if da_ghim else 0xE718, TOKEN['chinh'] if da_ghim else '#94A3B8', 16)
+            if ic_ghim is not None:
+                b_ghim.setIcon(ic_ghim)
+            else:
+                b_ghim.setText('Bỏ ghim' if da_ghim else 'Ghim')
             b_ghim.setToolTip('Bỏ ghim — xuống theo thứ tự gần đây' if da_ghim else 'Ghim dự án quan trọng lên đầu')
             b_ghim.setAutoRaise(True)
             b_ghim.clicked.connect(lambda _=False, p=str(f), g=not da_ghim: self._chay_lenh(
@@ -1588,8 +1821,8 @@ class CuaSoChinh(QMainWindow):
             self.ds_gan_day.setCellWidget(r, 4, b_ghim)
             mo = QPushButton('Mở')
             mo.setCursor(Qt.CursorShape.PointingHandCursor)
-            mo.setStyleSheet('QPushButton { padding: 3px 12px; border: 1px solid #2563EB; border-radius: 4px; '
-                             'color: #2563EB; background: #FFFFFF; } QPushButton:hover { background: #E8F0FE; }')
+            mo.setObjectName('nut_mo_gan')
+            mo.setStyleSheet(QSS_NUT_MO_GAN)
             mo.clicked.connect(lambda _=False, p=str(f): self._chay_lenh(lambda: self.mo(p)))
             hop_mo = QWidget()
             hm = QHBoxLayout(hop_mo)

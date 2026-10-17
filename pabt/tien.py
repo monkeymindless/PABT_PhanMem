@@ -198,6 +198,15 @@ def vn_gon(x) -> str:
     return vn(x)
 
 
+def phan_tram(phan, tong) -> str:
+    """Tỷ lệ phần / tổng kiểu VN cho thẻ số liệu (17/10/2026): 49/60 -> "81,7%"; tròn -> "50%"; tổng 0 -> "0%". Decimal, không float."""
+    tong = D(tong)
+    if tong == 0:
+        return '0%'
+    p = lam_tron(D(phan) * 100 / tong, 1)
+    return f'{vn(p)}%' if p == p.to_integral_value() else f'{vn(p, 1)}%'
+
+
 def so_vn(x) -> str:
     """Số trong câu chữ: 410,6 ; 135.000 (tự bỏ phần lẻ khi là số nguyên)."""
     x = D(x)
