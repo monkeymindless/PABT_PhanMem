@@ -61,7 +61,8 @@ class TestQssChung(unittest.TestCase):
         chon = _quy_tac(qss, 'QTabBar::tab:selected')
         self.assertIn('background: #FFFFFF', chon)
         self.assertIn(f'color: {NAVY}', chon)
-        self.assertIn('font-weight: 700', chon)
+        self.assertIn('font-weight: 600', _quy_tac(qss, 'QTabBar'))        # phông ở mức thanh thẻ (Qt5 đo bề rộng theo đây)
+        self.assertNotIn('font', tab)
         self.assertIn(f'border-top: 2px solid {NAVY}', chon)
         self.assertIn('background: #E2E8F0', _quy_tac(qss, 'QTabBar::tab:hover:!selected'))
         nhom = _quy_tac(qss, 'QGroupBox')
@@ -123,7 +124,10 @@ class TestCuaSoLapPA(_Co):
         self.assertIn('#EFF6FF', _quy_tac(w.btn_toggle_preview.styleSheet(), 'QPushButton#btn_toggle_preview:checked'))
         self.assertIn('background: #FFFFFF', _quy_tac(w.btn_toggle_preview.styleSheet(), 'QPushButton#btn_toggle_preview'))
         self.assertTrue(w.tab.documentMode())
-        self.assertIn(f'border-bottom: 2px solid {NAVY}', _quy_tac(w.tab.tabBar().styleSheet(), 'QTabBar::tab:selected'))
+        self.assertEqual(w.tab.tabBar().property('vai'), 'gach_chan')         # kiểu ở QSS chung (Qt5 cắt chữ khi đặt trên QTabBar)
+        self.assertEqual(w.tab.tabBar().styleSheet(), '')
+        self.assertIn(f'border-bottom: 2px solid {NAVY}',
+                      _quy_tac(giao_dien._qss_day_du(), 'QTabBar[vai="gach_chan"]::tab:selected'))
         d = w.dai_dieu_huong
         self.assertIs(w.lb_tong.parentWidget(), d)
         self.assertIs(w.b_tiep_theo.parentWidget(), d)

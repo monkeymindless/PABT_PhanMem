@@ -137,10 +137,10 @@ class TestLapPhuongAn(Co0995):
         self.assertTrue(c.b_tro_lai.isVisibleTo(c))
         # mục 1: nút thao tác dòng + "Cộng mục 1" cùng hàng chọn thửa
         b1 = c.bang[1]
-        self.assertIs(b1.nut['Xóa dòng'].parentWidget().parentWidget(), b1.cb_thua.parentWidget().parentWidget())
+        self.assertIs(b1.nut['▲ Lên'].parentWidget().parentWidget(), b1.cb_thua.parentWidget().parentWidget())
         # 0.9.96: hàng nhập mục 1 = các khối XepDong trong cùng khung_nhap (hẹp thì xuống dòng)
         self.assertIs(b1.lb_tong.parentWidget().parentWidget(), b1.cb_thua.parentWidget().parentWidget())
-        for ten in ('Xóa dòng', '▲ Lên', '▼ Xuống'):
+        for ten in ('▲ Lên', '▼ Xuống'):                                 # Xóa dòng: thùng rác cột cuối (18/10/2026)
             self.assertEqual(c.bang[2].nut[ten].height() or c.bang[2].nut[ten].minimumHeight(), man_hinh.CAO_NUT_DONG)
 
     def test_cot_bang_muc_gon_va_gian(self):

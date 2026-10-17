@@ -38,7 +38,9 @@ RONG_MENU_TOI_DA = 248        # lệnh dài ("Bảng tổng hợp kinh phí" ~18
 CAO_DONG_BANG = 30            # chiều cao dòng bảng dữ liệu (17/10/2026 Hybrid Enterprise Navy: 32 -> 30)
 CAO_TIEU_DE_BANG = 34         # hàng tiêu đề cột bảng (nền navy, chữ trắng)
 CHINH = TOKEN['chinh']       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
-# thẻ (QTabBar) cửa sổ con / trang nhúng (1.0.02): chưa chọn nền slate nhạt chữ slate; đang chọn nền trắng chữ navy đậm + vạch trên navy
+# thẻ (QTabBar) cửa sổ con / trang nhúng (1.0.02): chưa chọn nền slate nhạt chữ slate; đang chọn nền trắng chữ navy + vạch trên navy.
+# PHÔNG THẺ (cỡ, độ đậm) khai ở mức QTabBar, KHÔNG trong ::tab: Qt5 đo bề rộng thẻ theo phông của thanh thẻ, phông trong ::tab chỉ dùng
+# lúc vẽ -> cắt chữ hai đầu (bản Win7); thẻ đang chọn cùng độ đậm
 THE_TAB = dict(nen='#F1F5F9', chu='#475569', vien='#E2E8F0', nen_re='#E2E8F0', chu_re='#0F172A')
 # nhóm nút: (nền, chữ, nền khi rê chuột)
 MAU = {                                            # (màu biểu tượng / nền đặc, chữ, nền rê chuột) theo nhóm nút
@@ -363,6 +365,17 @@ QSS_HANG_NHAP = '''
     QWidget[hang_nhap="1"] QLineEdit:hover, QWidget[hang_nhap="1"] QComboBox:hover { border-color: #94A3B8; }
     QWidget[hang_nhap="1"] QLineEdit:focus, QWidget[hang_nhap="1"] QComboBox:focus { border: 1px solid #0F3866;
         background: #FFFFFF; }'''
+# thẻ kiểu gạch chân (cửa sổ lập phương án - ảnh mẫu 17/10/2026): QTabBar có property vai="gach_chan". Ở QSS chung: kiểu cục bộ trên
+# QTabWidget làm chậm (tính lại kiểu cả cây con). Phông (cỡ, độ đậm) khai ở MỨC QTabBar, không ở ::tab: Qt5 đo bề rộng thẻ theo phông
+# của chính thanh thẻ, phông khai trong ::tab chỉ dùng lúc vẽ -> chữ rộng hơn ô, cắt hai đầu (bản Win7, 18/10/2026). Thẻ đang chọn
+# cùng độ đậm (phân biệt bằng màu navy + vạch dưới), px nguyên
+QSS_THE_GACH_CHAN = '''
+    QTabBar[vai="gach_chan"] { font-weight: 600; font-size: 13px; }
+    QTabBar[vai="gach_chan"]::tab { background: transparent; color: #475569; border: 1px solid transparent;
+        border-bottom: 2px solid transparent; padding: 5px 14px; margin-right: 2px; }
+    QTabBar[vai="gach_chan"]::tab:hover:!selected { background: #F1F5F9; color: #0F172A; }
+    QTabBar[vai="gach_chan"]::tab:selected { background: transparent; color: #0F3866;
+        border: 1px solid transparent; border-bottom: 2px solid #0F3866; }'''
 # khung tùy chọn của Xuất hồ sơ & Bản in (man_hinh.HopIn): thẻ trắng viền slate. Ở QSS chung theo objectName - setStyleSheet trên khung
 # chứa bắt Qt tính lại kiểu cả cây con (chậm; đo 1.0.02 ở cửa sổ lập phương án)
 QSS_THE_TUY_CHON_IN = '''
@@ -408,11 +421,12 @@ def _qss() -> str:
     QLineEdit[nhap="1"], QComboBox[nhap="1"], QSpinBox[nhap="1"] {{ min-height: 24px; font-size: 13px; padding: 4px 10px; }}
     QTableView QLineEdit, QTableView QComboBox, QTableView QPlainTextEdit {{ font-size: 13px; padding: 2px 6px;
         border: 2px solid #2E75B6; border-radius: 3px; background: #FFFFFF; }}
+    QTabBar {{ font-weight: 600; font-size: 13px; }}
     QTabBar::tab {{ background: {THE_TAB['nen']}; color: {THE_TAB['chu']}; padding: 5px 14px; margin-right: 2px; margin-top: 2px;
-        font-weight: 600; font-size: 13px; border: 1px solid {THE_TAB['vien']}; border-bottom: 0;
+        border: 1px solid {THE_TAB['vien']}; border-bottom: 0;
         border-top-left-radius: 5px; border-top-right-radius: 5px; }}
     QTabBar::tab:hover:!selected {{ background: {THE_TAB['nen_re']}; color: {THE_TAB['chu_re']}; }}
-    QTabBar::tab:selected {{ background: #FFFFFF; color: {CHINH}; font-weight: 700; border: 1px solid {THE_TAB['vien']};
+    QTabBar::tab:selected {{ background: #FFFFFF; color: {CHINH}; border: 1px solid {THE_TAB['vien']};
         border-bottom: 0; border-top: 2px solid {CHINH}; margin-top: 0px; }}
     QTabWidget::pane {{ border: 1px solid {THE_TAB['vien']}; border-radius: 0 6px 6px 6px; background: #FFFFFF; top: -1px; }}
     QLabel[vai="nhan"] {{ color: {CHINH}; font-weight: 600; }}
@@ -504,7 +518,7 @@ def _qss() -> str:
     QLabel[vai="nhan_ribbon"] {{ color: #4A6785; font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
         background: transparent; border: 0; }}
     QLabel[vai="dong_phu"] {{ color: #DCEBFA; font-size: 12px; }}
-    ''' + _qss_the_so() + QSS_HANG_NHAP + QSS_THE_TUY_CHON_IN
+    ''' + _qss_the_so() + QSS_HANG_NHAP + QSS_THE_TUY_CHON_IN + QSS_THE_GACH_CHAN
 
 
 _BIEU_TUONG = []

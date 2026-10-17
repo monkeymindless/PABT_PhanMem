@@ -1531,7 +1531,10 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     QTabBar::tab theo `THE_TAB` (nền #F1F5F9 chữ #475569, chọn nền trắng chữ navy 700 + vạch TRÊN 2 px navy, rê chuột #E2E8F0), QGroupBox
     viền #E2E8F0 bo 6 (tiêu đề kiểu thẻ trong vùng margin-top 22px - không bị cắt), QSplitter::handle #E2E8F0 / hover #94A3B8, QDialog
     nền #F8FAFC, `QLabel[vai="tieu_de"]` slate + vạch navy, MAU_TRANG_THAI['tin'] = thanh thông báo #F0F9FF viền #BAE6FD.
-    CỠ CHỮ THẺ (::tab) PHẢI LÀ px NGUYÊN: "12.5px" làm Qt5 tính sai bề rộng thẻ, cắt chữ hai đầu (đã thấy ở bản Win7).
+    PHÔNG THẺ khai ở MỨC QTabBar (`QTabBar { font-weight: 600; font-size: 13px }`), KHÔNG trong `::tab` / `::tab:selected`: Qt5 đo bề
+    rộng thẻ theo phông của thanh thẻ, phông trong ::tab chỉ dùng lúc vẽ -> chữ cắt hai đầu (bản Win7, kiểm ảnh thật Qt5); px nguyên.
+    Thẻ đang chọn cùng độ đậm (màu + vạch phân biệt). Kiểu thẻ riêng: property trên QTabBar + QSS chung (`QSS_THE_GACH_CHAN`,
+    vai="gach_chan" của CuaSoLapPA) - KHÔNG setStyleSheet trên QTabWidget (chậm) hay trên chính QTabBar (Qt5 cắt chữ).
   - CuaSoLapPA (theo ảnh mẫu người dùng gửi trong phiên): `thanh_tren` objectName 'thanh_tren_lap_pa' (`QSS_THANH_TREN`: nền #F8FAFC,
     vạch dưới, lề 8,4,8,4), `cb_ho` #o_chon_ho chữ đậm, ◀ ▶ #nut_ho_truoc / #nut_ho_sau, `CAO_NUT_TREN` 28; Dán tài sản nền trắng viền
     slate (rê chuột xanh băng / #0284C7); Lưu ap_kieu_nut LUU (navy); Xem trước (F4) tắt = trắng chữ navy, BẬT = nền #EFF6FF viền
@@ -1576,6 +1579,11 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   Trang Tiến độ (KPI mặt bằng sạch, bộ lọc da_bg của trang đó) CHƯA chuyển sang kết quả phân tích - vẫn theo cột tích.
 - Menu (người dùng 18/10/2026): "Bản đồ thửa đất" bỏ khỏi menu trái, nằm ở thanh menu Dữ liệu sau "Nhập bản vẽ CAD (.dxf)…" (bỏ hẳn tính
   năng chỉ bớt ~42 KB mỗi bản - ezdxf / numpy đã loại khỏi bản dựng từ 0.9.99).
+- Bảng mục CuaSoLapPA (người dùng 18/10/2026, ảnh mẫu): nút "Xóa dòng" thay bằng cột THÙNG RÁC cuối mỗi dòng - `BangMuc.c_xoa` =
+  len(self.cot) (cột ngoài self.cot: mọi chỗ dùng self.cot[c] phải bỏ qua c >= len(self.cot), như `_doi_o`), `NutXoaDong` (delegate vẽ
+  biểu tượng 0xE74D giữa ô, rê chuột đỏ, Win7 không phông: ký tự ×, không mở khung sửa), `RONG_COT_XOA` 34 cố định, `_bam_o` bấm ô
+  thùng rác -> `man.xoa_dong(muc, r)` (đúng dòng đó, kể cả đang chọn nhiều dòng); phím Delete (`_phim_xoa`, WidgetShortcut trên bảng)
+  và menu chuột phải vẫn xóa dòng đang chọn. Test `tests/test_xoa_dong_thung_rac.py`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

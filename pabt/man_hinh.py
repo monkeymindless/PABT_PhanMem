@@ -251,6 +251,38 @@ class XoXuongDong(QStyledItemDelegate):
         QTimer.singleShot(0, lambda: self.goi(r, gt))          # vẽ lại dòng sau khi ô sửa đã đóng
 
 
+RONG_COT_XOA = 34                  # cột thùng rác cuối bảng mục (px)
+MAU_XOA = ('#94A3B8', '#DC2626')   # biểu tượng thùng rác: thường (slate) / rê chuột (đỏ)
+
+
+class NutXoaDong(QStyledItemDelegate):
+    """Cột cuối bảng mục: biểu tượng thùng rác giữa ô (người dùng 18/10/2026: thay nút "Xóa dòng" - bấm thẳng vào dòng cần xóa).
+    Rê chuột: đỏ. Máy không có phông biểu tượng (Win 7): ký tự ×."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        from .giao_dien import icon_ky_hieu
+        self.icon = [icon_ky_hieu(0xE74D, m, 16) for m in MAU_XOA]
+
+    def paint(self, p, option, index):
+        from PySide6.QtWidgets import QStyle
+        super().paint(p, option, index)                 # nền (dòng xen kẽ, đang chọn) như ô khác
+        re_ = bool(option.state & QStyle.StateFlag.State_MouseOver)
+        ic = self.icon[1 if re_ else 0]
+        r = option.rect
+        if ic is not None:
+            pm = ic.pixmap(16, 16)
+            p.drawPixmap(r.x() + (r.width() - 16) // 2, r.y() + (r.height() - 16) // 2, pm)
+        else:
+            p.save()
+            p.setPen(QColor(MAU_XOA[1 if re_ else 0]))
+            p.drawText(r, int(Qt.AlignmentFlag.AlignCenter), '×')
+            p.restore()
+
+    def createEditor(self, *a):                         # không sửa ô thùng rác
+        return None
+
+
 class ChuNhieuDong(QStyledItemDelegate):
     """Ô chữ dài (tên tài sản, quy cách, căn cứ, ghi chú): sửa trong khung nhiều dòng, Enter để ghi (Shift+Enter xuống dòng)."""
 
@@ -394,8 +426,10 @@ class BangMuc(QWidget):
         super().__init__()
         self.man, self.muc = man, muc
         self.cot = COT_GD[muc]
-        self.bang = QTableWidget(0, len(self.cot))
-        self.bang.setHorizontalHeaderLabels([c[1] for c in self.cot])
+        # cột cuối (ngoài self.cot): thùng rác xóa dòng (18/10/2026 - thay nút "Xóa dòng")
+        self.c_xoa = len(self.cot)
+        self.bang = QTableWidget(0, len(self.cot) + 1)
+        self.bang.setHorizontalHeaderLabels([c[1] for c in self.cot] + [''])
         hd = self.bang.horizontalHeader()
         hd.setStretchLastSection(False)
         for i, c in enumerate(self.cot):
@@ -405,6 +439,8 @@ class BangMuc(QWidget):
                 self.bang.setColumnWidth(i, RONG_COT_GON.get(c[0], c[2]))
         from .giao_dien import san_tieu_de
         san_tieu_de(self.bang)
+        hd.setSectionResizeMode(self.c_xoa, QHeaderView.ResizeMode.Fixed)
+        self.bang.setColumnWidth(self.c_xoa, RONG_COT_XOA)
         hd.setMinimumHeight(30)
         self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         # mục 1: chọn nhiều dòng (Shift / Ctrl) để xóa hàng loạt, đặt cùng vị trí / giá / tỷ lệ cho các thửa đã chọn
@@ -426,6 +462,15 @@ class BangMuc(QWidget):
         for k in COT_CONG_THUC & set(khoa):
             self.bang.setItemDelegateForColumn(khoa.index(k), cong_thuc)
         self.bang.currentCellChanged.connect(lambda r, c, *_: self._bao_cong_thuc(r, c))
+        nut_xoa = NutXoaDong(self.bang)
+        self._uy_quyen.append(nut_xoa)
+        self.bang.setItemDelegateForColumn(self.c_xoa, nut_xoa)
+        self.bang.setMouseTracking(True)                # rê chuột lên thùng rác: đổi màu đỏ
+        self.bang.cellClicked.connect(self._bam_o)
+        # phím Delete trên bảng (không đang sửa ô): xóa dòng / các dòng đang chọn
+        self._phim_xoa = QShortcut(QKeySequence(QKeySequence.StandardKey.Delete), self.bang)
+        self._phim_xoa.setContext(Qt.ShortcutContext.WidgetShortcut)
+        self._phim_xoa.activated.connect(lambda: man.xoa_dong(muc))
         if muc == 1:
             for k, ds, goi, tay in (('thua', man.ds_thua_dong, man.doi_thua_dong, False),
                                     ('vi_tri', man.ds_vi_tri_dong, man.doi_vi_tri_dong, True)):
@@ -493,8 +538,8 @@ class BangMuc(QWidget):
             ds.append(('Kiểm tra DT xây dựng…', lambda: man.kiem_tra_dt_xay_dung()))
         if muc == 3:
             ds.append(('Tính mật độ…', lambda: man.tinh_mat_do()))
-        ds += [('Xóa dòng', lambda: man.xoa_dong(muc)), ('▲ Lên', lambda: man.di_chuyen(muc, -1)),
-               ('▼ Xuống', lambda: man.di_chuyen(muc, 1))]
+        # nút "Xóa dòng" bỏ (18/10/2026): thùng rác ở cột cuối mỗi dòng, phím Delete, menu chuột phải
+        ds += [('▲ Lên', lambda: man.di_chuyen(muc, -1)), ('▼ Xuống', lambda: man.di_chuyen(muc, 1))]
         for ten, ham in ds:
             b = QPushButton(ten)
             b.clicked.connect(ham)
@@ -934,6 +979,10 @@ class BangMuc(QWidget):
                     it.setToolTip(f'Công thức: {o["cong_thuc"]} = {o[k]}')
                     it.setForeground(QBrush(QColor('#1F5FA0')))
                 self.bang.setItem(r, c, it)
+            it = QTableWidgetItem('')                   # ô thùng rác (NutXoaDong vẽ biểu tượng)
+            it.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            it.setToolTip('Xóa dòng này (hoặc chọn dòng rồi nhấn Delete)')
+            self.bang.setItem(r, self.c_xoa, it)
         finally:
             self._dang_ve = cu
         if not cu:
@@ -953,8 +1002,13 @@ class BangMuc(QWidget):
         self.man.thong_bao(f'Dòng {sm}.{r + 1} – {ten}: {ct} = {it.text()}' if ct else
                            f'Dòng {sm}.{r + 1} – {ten}: {it.text()} (gõ số trực tiếp)')
 
+    def _bam_o(self, r: int, c: int):
+        """Bấm ô thùng rác: xóa đúng dòng r (không xóa cả vùng đang chọn)."""
+        if c == self.c_xoa and 0 <= r < self.bang.rowCount():
+            self.man.xoa_dong(self.muc, r)
+
     def _doi_o(self, r: int, c: int):
-        if self._dang_ve:
+        if self._dang_ve or c >= len(self.cot):
             return
         self.man.sua_o(self.muc, r, self.cot[c][0], self.bang.item(r, c).text())
 
@@ -982,13 +1036,10 @@ QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #0F3866; backgroun
                      'QPushButton#btn_toggle_preview:checked { color: #0F3866; background: #EFF6FF; border: 1px solid #0F3866; '
                      'font-weight: 700; }'
                      'QPushButton#btn_toggle_preview:checked:hover { background: #DBEAFE; }')
-# thẻ Hồ sơ / Đất / Nhà… của cửa sổ lập phương án (ảnh mẫu): kiểu gạch chân - chưa chọn chữ slate, đang chọn chữ navy đậm + vạch
-# dưới 2 px navy; tiết kiệm chiều cao hơn thẻ hộp. Cỡ chữ thẻ phải là số px NGUYÊN: Qt5 tính bề rộng thẻ sai với '12.5px' (cắt chữ)
-QSS_THE_LAP_PA = ('QTabBar::tab { background: transparent; color: #475569; border: 1px solid transparent; '
-                  'border-bottom: 2px solid transparent; padding: 5px 14px; margin-right: 2px; font-weight: 600; font-size: 13px; }'
-                  'QTabBar::tab:hover:!selected { background: #F1F5F9; color: #0F172A; }'
-                  'QTabBar::tab:selected { background: transparent; color: #0F3866; font-weight: 700; '
-                  'border-bottom: 2px solid #0F3866; }')
+# thẻ Hồ sơ / Đất / Nhà… của cửa sổ lập phương án (ảnh mẫu): kiểu gạch chân giao_dien.QSS_THE_GACH_CHAN (QSS chung, thanh thẻ có
+# property vai="gach_chan") - KHÔNG setStyleSheet: trên QTabWidget thì chậm (tính lại kiểu cả cây con), trên chính QTabBar thì Qt5 tính
+# bề rộng thẻ theo phông cũ -> cắt chữ hai đầu (bản Win7, 18/10/2026)
+from .giao_dien import QSS_THE_GACH_CHAN as QSS_THE_LAP_PA  # noqa: E402,F401  (tên cũ)
 # thanh trên cùng (chọn hộ + lệnh): nền slate nhạt, vạch dưới; ô chọn hộ nền trắng chữ đậm; nút ◀ ▶ nền trắng viền slate
 QSS_THANH_TREN = ('QWidget#thanh_tren_lap_pa { background: #F8FAFC; border: 0; border-bottom: 1px solid #E2E8F0; }'
                   'QComboBox#o_chon_ho { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; '
@@ -1128,9 +1179,7 @@ class CuaSoLapPA(QDialog):
         from .man_hinh_ho_so import KhungHoSo
         self.tab = QTabWidget()
         self.tab.setDocumentMode(True)
-        # kiểu đặt trên THANH THẺ, không trên QTabWidget: kiểu cục bộ của khung chứa bắt Qt tính lại kiểu cho mọi widget con (mọi
-        # bảng mục) - mở cửa sổ chậm thêm ~170 ms (đo 1.0.02)
-        self.tab.tabBar().setStyleSheet(QSS_THE_LAP_PA)
+        self.tab.tabBar().setProperty('vai', 'gach_chan')   # kiểu thẻ gạch chân: QSS chung (QSS_THE_LAP_PA)
         the0 = QWidget()
         lo0 = QVBoxLayout(the0)
         lo0.setContentsMargins(6, 4, 6, 4)

@@ -352,7 +352,8 @@ class KhungDuThao(QWidget):
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
         # 4 thẻ gọn (15/10/2026, người dùng): cao 28-30 px, chữ 12 px - nhường chiều cao cho bảng
-        self.tabs.setStyleSheet('QTabBar::tab { min-height: 16px; padding: 4px 12px; margin-top: 0px; font-size: 12px; }')
+        # phông ở mức QTabBar (Qt5 đo bề rộng thẻ theo phông thanh thẻ - xem giao_dien.THE_TAB)
+        self.tabs.setStyleSheet('QTabBar { font-size: 12px; } QTabBar::tab { min-height: 16px; padding: 4px 12px; margin-top: 0px; }')
         # CCCD hiển thị đã che (an_toan.che_cccd, NĐ 13/2023) - tiêu đề chỉ "CCCD"; bề rộng chuẩn từng cột + một cột giãn
         self.bang_ny = _bang(['STT', 'Họ và tên', 'CCCD', 'Thửa', 'Tổng tiền dự thảo', 'Địa điểm'],
                              [50, 170, 115, 85, 155], gian=5)
