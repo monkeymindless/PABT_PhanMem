@@ -19,6 +19,9 @@ MUC = (
         'Bảng tổng hợp kinh phí: dòng Cộng bồi thường, Kinh phí tổ chức thực hiện và TỔNG KINH PHÍ DỰ ÁN tô nổi. Bảng giá đất NQ 28 và '
         'Hệ số K: cột Hệ số K và Giá × K in đậm, dễ dò.',
         'Khái toán: thanh nhập nền trắng, thẻ tổng cộng xanh nhạt chữ xanh đậm. Xuất hồ sơ & Bản in: khung tùy chọn dạng thẻ trắng.',
+        'Bàn giao mặt bằng: hộ chưa có quyết định phê duyệt thì hộp "Bàn giao mặt bằng các hộ đã chọn…" không tích sẵn "Đã bàn giao" '
+        'và nhắc rõ số hộ chưa phê duyệt (tránh đánh dấu nhầm cả dự án). Kiểm tra lỗi báo hộ đã đánh dấu bàn giao mà chưa có quyết '
+        'định phê duyệt, kèm cách bỏ đánh dấu.',
     )),
     ('1.0.01', '17/10/2026', (
         'Giao diện mới tông Navy: menu trái gọn (nút "Thu gọn menu" ở hàng riêng, không đè tiêu đề nhóm; mục đang chọn có vạch xanh '
