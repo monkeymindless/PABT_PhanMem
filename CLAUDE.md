@@ -1558,6 +1558,11 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     đậm #0284C7) và Giá × K (`kieu_o_gia_k`: phải, đậm navy) ở HopTraNQ28 + KhungHeSoK.
   - Sửa file CRLF bằng script: KHÔNG dùng `sed -i` của Git Bash (đổi cả file sang LF - đã gặp ở man_hinh.py). Test
     `tests/test_giao_dien_navy_con.py`; `test_yeu_cau_0978` theo màu nút Dán mới, cao 28.
+- Bàn giao mặt bằng khi hộ CHƯA có quyết định phê duyệt (người dùng 17/10/2026: ĐT762 cả 170 hộ "Đã bàn giao MB", thẻ 100% - nhật
+  ký file: 16/10/2026 11:30 "Bàn giao mặt bằng 170 hộ" = một lần chọn cả bảng, hộp tích sẵn): `theo_doi.ho_chua_phe_duyet`,
+  `HopBanGiao(so_chua_qd=)` - có hộ chưa phê duyệt thì KHÔNG tích sẵn "Đã bàn giao" + cảnh báo `lb_canh_bao`; Kiểm tra lỗi (Tiến độ) báo
+  "Đã đánh dấu bàn giao mặt bằng nhưng chưa có quyết định phê duyệt" (thay "chưa ghi chi trả" cho hộ đó). KHÔNG chặn cứng: bàn giao
+  trước khi phê duyệt là trường hợp có thật. Không tự sửa dữ liệu khi mở dự án. Test `tests/test_ban_giao_chua_qd.py`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

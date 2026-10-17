@@ -312,7 +312,10 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
         # tiến độ
         if h.get('da_chi_tra') and not h.get('da_phe_duyet'):
             them(LOI, 'Tiến độ', 'Đã chi trả nhưng chưa ghi phê duyệt phương án.', ma, ten)
-        if h.get('da_ban_giao') and not h.get('da_chi_tra'):
+        if h.get('da_ban_giao') and not h.get('da_phe_duyet'):
+            them(CANH_BAO, 'Tiến độ', 'Đã đánh dấu bàn giao mặt bằng nhưng chưa có quyết định phê duyệt. Nếu hộ chưa bàn giao thật: '
+                 'Tiến độ chi trả & Bàn giao, chọn hộ, "Bàn giao mặt bằng các hộ đã chọn…", bỏ tích "Đã bàn giao mặt bằng".', ma, ten)
+        elif h.get('da_ban_giao') and not h.get('da_chi_tra'):
             them(CANH_BAO, 'Tiến độ', 'Đã bàn giao mặt bằng nhưng chưa ghi chi trả.', ma, ten)
         if h.get('da_phe_duyet') and str(h.get('qd_so_tien') or '').strip() and D(h['qd_so_tien']) != k.tong:
             them(CANH_BAO, 'Tiến độ', f'Số tiền phê duyệt {vn(h["qd_so_tien"])} khác tổng phương án hiện tại {vn(k.tong)} '

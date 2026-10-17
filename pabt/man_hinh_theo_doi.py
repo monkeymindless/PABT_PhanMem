@@ -1280,7 +1280,7 @@ class KhungTienDo(_Khung):
             self.bao('Chọn các hộ trong bảng (giữ Ctrl / Shift để chọn nhiều).', loi=False)
             return 0
         if gia_tri is None:
-            dlg = HopBanGiao(self, len(ds_ma))
+            dlg = HopBanGiao(self, len(ds_ma), so_chua_qd=len(theo_doi.ho_chua_phe_duyet(self.con, ds_ma)))
             if not dlg.exec():
                 return 0
             gia_tri = dlg.gia_tri()
@@ -1639,12 +1639,22 @@ class HopNgayChiTra(_Hop):
 
 
 class HopBanGiao(_Hop):
-    def __init__(self, parent=None, so_ho: int = 1, x=None):
+    """so_chua_qd: số hộ (trong so_ho hộ đang chọn) chưa có quyết định phê duyệt. Có hộ như vậy thì hộp KHÔNG tích sẵn "Đã bàn giao
+    mặt bằng" và hiện cảnh báo (bàn giao trước khi phê duyệt là trường hợp riêng - người dùng tự tích)."""
+
+    def __init__(self, parent=None, so_ho: int = 1, x=None, so_chua_qd: int = 0):
         super().__init__(parent)
         self.setWindowTitle(f'Bàn giao mặt bằng - {so_ho} hộ')
         self.resize(560, 260)
         self.o_da = QCheckBox('Đã bàn giao mặt bằng')
-        self.o_da.setChecked(True if x is None else x.da_ban_giao)
+        self.o_da.setChecked(not so_chua_qd if x is None else x.da_ban_giao)
+        self.lb_canh_bao = QLabel('')
+        self.lb_canh_bao.setWordWrap(True)
+        self.lb_canh_bao.setVisible(bool(so_chua_qd))
+        if so_chua_qd:
+            dat_trang_thai(self.lb_canh_bao, 'canh_bao',
+                           f'{so_chua_qd}/{so_ho} hộ chưa có quyết định phê duyệt (chưa chi trả). Chỉ tích "Đã bàn giao mặt bằng" khi '
+                           'các hộ này đã bàn giao thật (bàn giao trước khi phê duyệt); bỏ tích = ghi "chưa bàn giao".')
         from datetime import date
         self.o_ngay = QLineEdit(x.ban_giao_ngay if x is not None else date.today().strftime('%d/%m/%Y'))
         self.o_ly_do = QPlainTextEdit(x.ly_do_ban_giao if x is not None else '')
@@ -1652,6 +1662,7 @@ class HopBanGiao(_Hop):
         self.o_file = QLineEdit(x.bien_ban_ban_giao if x is not None else '')
         self.o_da.toggled.connect(lambda d: (self.o_ngay.setEnabled(d), self.o_ly_do.setEnabled(not d)))
         f = QFormLayout(self)
+        f.addRow(self.lb_canh_bao)
         f.addRow(self.o_da)
         f.addRow('Ngày bàn giao:', self.o_ngay)
         f.addRow('Biên bản bàn giao:', _o_chon_file(self.o_file, self, 'Chọn biên bản bàn giao'))

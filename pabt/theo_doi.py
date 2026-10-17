@@ -329,6 +329,13 @@ def ghi_ban_giao(con, ds_ma_ho: list, gia_tri: dict) -> int:
     return len(ds_ma_ho)
 
 
+def ho_chua_phe_duyet(con, ds_ma_ho: list) -> list:
+    """Các hộ trong ds_ma_ho chưa có quyết định phê duyệt (ho.da_phe_duyet = 0) - hộp Bàn giao mặt bằng cảnh báo trước khi đánh dấu
+    "đã bàn giao" (17/10/2026: một lần chọn cả 170 hộ, hộp tích sẵn -> cả dự án "Đã bàn giao MB" khi chưa hộ nào được phê duyệt)."""
+    da = {m for (m,) in con.execute('SELECT ma_ho FROM ho WHERE da_phe_duyet = 1')}
+    return [m for m in ds_ma_ho if m not in da]
+
+
 def dong_bo_ho(con, ma_ho: int) -> None:
     """Tính lại phần tóm tắt trên bảng ho từ các quyết định của hộ (không mở giao dịch riêng)."""
     ds = doc_qd_ho(con, ma_ho)
