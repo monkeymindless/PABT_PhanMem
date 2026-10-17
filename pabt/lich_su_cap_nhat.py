@@ -22,6 +22,11 @@ MUC = (
         'Bàn giao mặt bằng: hộ chưa có quyết định phê duyệt thì hộp "Bàn giao mặt bằng các hộ đã chọn…" không tích sẵn "Đã bàn giao" '
         'và nhắc rõ số hộ chưa phê duyệt (tránh đánh dấu nhầm cả dự án). Kiểm tra lỗi báo hộ đã đánh dấu bàn giao mà chưa có quyết '
         'định phê duyệt, kèm cách bỏ đánh dấu.',
+        'Tiến độ tự động: thanh 4 nấc ở cột Trạng thái và các thẻ Đã phê duyệt / Đã chi trả / Đã bàn giao tự tính lại mỗi lần mở theo '
+        'đúng thứ tự - có quyết định phê duyệt mới lên nấc phê duyệt, mọi quyết định đã nhận tiền mới lên nấc chi trả, đã tích bàn giao '
+        'và có ngày biên bản mới lên nấc bàn giao. Đánh dấu thiếu bước / thiếu ngày không làm tăng nấc, ô Trạng thái ghi rõ điểm cần xem lại.',
+        'Hộp Bàn giao mặt bằng: không còn điền sẵn ngày hôm nay - nhập ngày ký biên bản bàn giao (biên bản không cần số); file scan '
+        'biên bản không bắt buộc, chọn một lần dùng chung cho nhiều hộ (chỉ ghi đường dẫn, không chép file).',
     )),
     ('1.0.01', '17/10/2026', (
         'Giao diện mới tông Navy: menu trái gọn (nút "Thu gọn menu" ở hàng riêng, không đè tiêu đề nhóm; mục đang chọn có vạch xanh '

@@ -6,7 +6,10 @@
 > được tô nổi, nút chế độ **Theo hộ / Thửa còn vướng** dạng viên thuốc. Bảng tổng hợp kinh phí tô nổi dòng Cộng, Kinh phí tổ chức thực hiện,
 > TỔNG KINH PHÍ; bảng giá đất: cột **Hệ số K** và **Giá × K** in đậm. **Bàn giao mặt bằng**: hộ chưa có quyết định phê duyệt thì hộp
 > bàn giao không tích sẵn "Đã bàn giao" (có nhắc); đánh dấu nhầm thì chọn hộ, mở lại hộp, bỏ tích rồi Lưu. **Kiểm tra lỗi** báo hộ đã
-> đánh dấu bàn giao mà chưa có quyết định phê duyệt.
+> đánh dấu bàn giao mà chưa có quyết định phê duyệt. **Tiến độ tự động**: thanh 4 nấc và các thẻ Đã phê duyệt / Đã chi trả / Đã bàn giao
+> tự tính theo thứ tự (có quyết định → nhận đủ tiền → đã tích bàn giao có **ngày biên bản**); đánh dấu thiếu bước / thiếu ngày không tăng
+> nấc, ô Trạng thái ghi điểm cần xem lại. Hộp bàn giao không điền sẵn ngày; file scan biên bản không bắt buộc, một file dùng chung cho
+> nhiều hộ.
 
 > **1.0.01**: giao diện tông **Navy**: menu trái gọn (nút Thu gọn menu ở hàng riêng), tiêu đề bảng nền xanh đậm, 6 thẻ số liệu có
 > **tỷ lệ %**, hàng lọc một dòng ("Đợt: Tất cả", "Trạng thái: Tất cả", tìm theo họ tên / CCCD / tờ/thửa như `12/45`, huy hiệu
