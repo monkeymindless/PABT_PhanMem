@@ -1584,6 +1584,41 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   biểu tượng 0xE74D giữa ô, rê chuột đỏ, Win7 không phông: ký tự ×, không mở khung sửa), `RONG_COT_XOA` 34 cố định, `_bam_o` bấm ô
   thùng rác -> `man.xoa_dong(muc, r)` (đúng dòng đó, kể cả đang chọn nhiều dòng); phím Delete (`_phim_xoa`, WidgetShortcut trên bảng)
   và menu chuột phải vẫn xóa dòng đang chọn. Test `tests/test_xoa_dong_thung_rac.py`.
+- 1.0.03 "Enterprise Financial Desktop" (người dùng 18/10/2026, 8 hạng mục; GIỮ tên hàm / thuộc tính / khóa self.lenh / item.text()):
+  - `bang_ao._MoHinhAo` ForegroundRole (ô không có mau_chu riêng): chữ trong `SO_KHONG` ('0', '0,0', '0,0%', '-'…) xám `MAU_SO_KHONG`;
+    cột tiêu đề có "tổng" / "thành tiền" (`la_cot_tien`, `cot_tien`) chữ số navy. Chỉ BangAo (QTableWidget không đổi).
+  - `giao_dien.VeOBangChuyenNghiep` (QStyledItemDelegate, KHÔNG đổi DisplayRole): kieu 'vien_thuoc' (viên thuốc màu `MAU_VIEN_THUOC`
+    theo chữ bỏ dấu - THỨ TỰ quan trọng: "khong dong y"/"chua dong thuan" trước "dong y"; thanh nấc "■□" đầu chữ -> 4 vạch; "●" bỏ),
+    kieu 'ty_le' (thanh 3 px dưới ô theo `so_ty_le`). Gắn: `gan_vien_thuoc(bang, *cot)` (danh sách hộ cột 5, Niêm yết bang_yk 2 /
+    bang_vm 3), `gan_thanh_ty_le` (KhungCoCau cột 6, bang_th cột 4). `gan_chu_khi_trong(bang, chính, phụ)` = lớp phủ `_ChuKhiTrong` trong
+    suốt chuột trên viewport + bộ lọc Resize / Show / Paint; tín hiệu mô hình nối PHƯƠNG THỨC `phu.cap_nhat` (lambda giữ bảng -> "already
+    deleted" khi bảng bị hủy). Dùng ở BangMuc, KhungDuToan, KhungHoSo, Niêm yết, Quyết định, Tổng hợp tiền, Cơ cấu, Tiến độ.
+  - `TheKpiGon` / `HangKpi([(khóa, tên, màu[, gợi ý])])` (54 px, 2 tầng, vạch trái 3 px bo 3) + `DaiCongBang` (32 px; `dat(phan, tong,
+    phan_gon, tong_gon)` - 3 mức chữ theo bề rộng: đủ / gọn / chỉ tổng). KhungBangTongHop `hang_kpi` (quy_mo, cong, kinh_phi, tong) dùng
+    `_lay_cc` (co_cau tính MỘT lần, KhungCoCau.nguon_cc), KhungQuyetDinh `hang_kpi` (so_qd, luot_ho, tien_qd, chenh = tổng QĐ - PA hiện tại
+    qua `nghiep_vu.ket_qua_ho`) + `dai_cong`; KhungTongHopTien tiêu đề 2 dòng, `_vua_cot_tien` (số dài nhất / dòng tiêu đề dài nhất + 18 -
+    ResizeToContents tính cả mũi tên sắp xếp, tràn), Họ tên Stretch, `dai_cong`; KhungTienDo chân trang QHBoxLayout `dai_cong_td` (giãn) +
+    4 nút Maximum; Mốc / Vận động 155 / 160 px.
+  - Bàn giao THỐNG NHẤT với danh sách hộ: `theo_doi._dieu_kien` (chua_bg / da_nhan_chua_bg / da_bg) và `bao_cao_gpmb.tong_quan` (dt_ban_giao,
+    so_ho_ban_giao, thửa còn vướng, tờ đã giải tỏa) dùng `x.tien_do.da_bg` (QĐ + nhận đủ + ngày biên bản), không ô tích.
+  - Menu trái: `LENH_DANH_DAU_PHU` checkable; `_dong_bo_menu_trai(khoa=None)` (None: `_lenh_dang_xem` suy từ ngan_lv / stack_phu / thẻ dự
+    toán) gọi ở `_danh_dau_trang`, `_danh_dau_trang_chu`, `_dam_bao_tab`, `_tab_doi_khoa`, `so_sanh_du_toan`, tab dự toán currentChanged,
+    và SAU MỌI LỆNH (`_chay_lenh` - QAction checkable tự đảo dấu khi bấm mà không mở gì).
+  - QSS: QGroupBox phẳng (margin-top 6, padding-top 26, title subcontrol-origin border, không viền "tai"), QTableCornerButton navy, header
+    dọc slate, `QTableView { outline: 0 }`, menu trái `outline: none`, `QSS_O_TIM_CHON` (OTimChon spacing 0, nút ▼ `nut_xo_tim_chon`
+    `RONG_NUT_XO` x `CAO_NUT_XO`, icon 0xE70D).
+  - Danh sách hộ: `COT_GIUA` {0, 3} căn giữa (tiêu đề qua headerData), `RONG_COT_DS`, `COT_GIAN_DS` (1, 2) Stretch, stretchLast False -
+    cỡ chữ 110-125% vẫn không cuộn ngang. HopDuAn `KICH_THUOC_HOP_DU_AN` 1180 x 535, `_dau_dong_va_goi_y`. CuaSoLapPA `NhanTongPA` +
+    `chu_tong_pa(kq)` (4 mức; `text()` trả chữ ĐẦY ĐỦ), cột phụ tiêu đề 2 dòng ('Nguồn\ngiá', 'Quy\ncách', 'Ghi chú (quy định,\ncách
+    tính)', 'Căn cứ\ngiá'). KhungHoSo `the_chu_ho` + `lb_tom_tat_thua` (`tom_tat_thua`: số thửa, số tờ, DT thu hồi Decimal).
+  - Niêm yết `_The` 2 tầng `CAO_THE_NY` 54 (QSS_THE_NY ở man_hinh_du_thao - góc trái bo 3), `_pt` (% dấu phẩy), hàng đợt `XepDong`.
+    KhungDuToan: thanh nhập gọn (`RONG_LOAI_DAT_KY_TU` 9, `RONG_O_CHON_TOI_THIEU` 100, `CACH_THANH_NHAP` 4, nhãn Mục ẩn, nút padding 7) -
+    `can_mot_hang` bỏ widget ẩn; một hàng ở ~1.180 px (Full HD 125%); kiểu Đường kính vẫn có thể xuống hàng. `chu_the_tong` 2 dòng
+    (`CAO_THE_TONG_KT` 48). HopDotTrinh `HUY_HIEU_KIEM`; HopBoDonGia `lb_loc` + đổi thẻ lọc lại.
+  - Ảnh nghiệm thu: `ket_qua_kiem_tra/thu_that/chup_giao_dien.py [--ty-le 1.25] [--co 1536x824]` (QT_QPA_PLATFORM=windows, dự án GIẢ
+    LẬP, PABT_THU_MUC_MAY tạm; QSettings cỡ chữ 110% của máy vẫn áp) -> `ket_qua_kiem_tra/anh_<ver>_<cỡ>_<tỷ lệ>/`.
+  - Heredoc của Bash trong phiên Claude NUỐT dấu "\" kể cả với <<'EOF' (đã làm hỏng '\n' thành xuống dòng thật 3 lần): script Python sửa
+    file PHẢI ghi bằng Write rồi chạy, hoặc dùng Edit.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

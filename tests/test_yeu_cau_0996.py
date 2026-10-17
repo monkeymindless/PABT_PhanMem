@@ -89,7 +89,7 @@ class TestChieuCaoDong(_CoCuaSo):
         f = QFont(bm.bang.horizontalHeader().font())
         f.setBold(True)
         cg = k.index('ghi_chu')
-        self.assertGreaterEqual(bm.bang.columnWidth(cg), QFontMetrics(f).horizontalAdvance('Ghi chú (quy định, cách tính)'))
+        self.assertGreaterEqual(bm.bang.columnWidth(cg), QFontMetrics(f).horizontalAdvance('Ghi chú (quy định,'))   # 1.0.03: 2 dòng
 
     def test_vua_dong_bang_thuong(self):
         from PySide6.QtWidgets import QTableWidget, QTableWidgetItem

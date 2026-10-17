@@ -129,10 +129,10 @@ class TestNiemYet(_Co):
         self.assertEqual(k.bang_dt.rowCount(), 2)                      # chỉ hộ Không đồng ý / Ý kiến khác
         # thẻ 4: tỷ lệ đồng thuận theo nhóm lý do
         t = {k.bang_th.item(r, 0).text(): [k.bang_th.item(r, c).text() for c in range(1, 5)] for r in range(k.bang_th.rowCount())}
-        self.assertEqual(t['Đơn giá đất'], ['2', '1', '1', '50.0%'])
-        self.assertEqual(t['Cây trồng, mật độ'], ['1', '0', '1', '0.0%'])
+        self.assertEqual(t['Đơn giá đất'], ['2', '1', '1', '50,0%'])
+        self.assertEqual(t['Cây trồng, mật độ'], ['1', '0', '1', '0,0%'])
         self.assertEqual(t['Nhà, công trình'], ['0', '0', '0', '-'])
-        self.assertEqual(t['Toàn đợt'], ['4', '1', '3', '25.0%'])
+        self.assertEqual(t['Toàn đợt'], ['4', '1', '3', '25,0%'])
         self.assertTrue(all(b.isEnabled() for n, b in k._nut.items() if n.startswith('Xuất')))
         # biên bản đối thoại: từng lần đối thoại của hộ chưa đồng thuận
         f = du_thao.xuat_doi_thoai(self.con, dot, self.td / 'dt.xlsx')

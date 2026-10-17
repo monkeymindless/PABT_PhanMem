@@ -7,6 +7,34 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.03', '18/10/2026', (
+        'Bảng dữ liệu dễ đọc hơn: ô bằng 0 hoặc "-" chữ xám nhạt (mắt lướt qua khoản trống), số tiền ở cột Tổng / Thành tiền chữ xanh '
+        'đậm; bấm một ô là tô sáng cả dòng.',
+        'Cột Trạng thái danh sách hộ: thanh 4 vạch tiến độ + nhãn màu bo tròn (xanh lá: đã bàn giao; xanh ngọc: đã chi trả / phê duyệt; '
+        'xanh dương: đã lập; vàng: tự lập, cần xem lại; xám: chưa lập). Cột Ý kiến, Nhóm vướng của Niêm yết cũng dùng nhãn màu.',
+        'Cột tỷ lệ % (Cơ cấu kinh phí, Tổng hợp kết quả ý kiến) có thanh tỷ trọng mảnh dưới số. Bảng chưa có dòng nào hiện lời hướng dẫn '
+        'nhẹ ở giữa (phương án hộ, khái toán, niêm yết, quyết định, tổng hợp tiền, tiến độ).',
+        'Menu trái luôn sáng đúng mục đang xem, kể cả khi mở Lập phương án chi tiết, Niêm yết & Lấy ý kiến, Đơn giá bồi thường hay So '
+        'sánh với thực tế. Khung nhóm (Thông tin dự án…) phẳng, không còn "tai hộp" trên tiêu đề; góc trên trái bảng cùng màu xanh đậm.',
+        'Danh sách hộ: STT, Số thửa căn giữa, Diện tích căn phải; 7 cột vừa khung nhìn, không còn thanh cuộn ngang thừa. Thông tin dự án: '
+        'hộp rộng hơn, tên đơn vị / cơ quan thẩm định dài hiện từ đầu, đủ chữ khi rê chuột.',
+        'Lập phương án: ô chọn tài sản / cây trồng và nút ▼ liền một khối; cột Nguồn giá, Quy cách, Căn cứ giá gọn - nhường chỗ cho tên '
+        'và cột tiền; dải tổng dưới đáy ghi tên từng mục (1. Đất, 2. Nhà, 3. Cây, 4. Vật nuôi, 5. Hỗ trợ, 6. Thưởng; mục 0 đồng chữ xám, '
+        'cửa sổ hẹp tự viết gọn "1,2 tỷ"). Thẻ Thông tin hộ: khung thông tin chủ hộ dạng thẻ trắng, dưới bảng thửa có dòng cộng số thửa, '
+        'số tờ, diện tích thu hồi.',
+        'Niêm yết & Lấy ý kiến: 6 thẻ số liệu 2 tầng (tên trên, số lớn + tỷ lệ dưới), vạch màu bên trái thẳng; tỷ lệ % dùng dấu phẩy '
+        '(25,0%), các cột số của thẻ Tổng hợp kết quả ý kiến căn giữa.',
+        'Bảng tổng hợp kinh phí: 4 thẻ đầu trang (Quy mô & đã lập PA, Cộng bồi thường hỗ trợ 100%, Kinh phí tổ chức QĐ 08, TỔNG KINH PHÍ '
+        'DỰ ÁN); cột Tỷ lệ không còn bị cắt chữ; thẻ Bảng kinh phí chi tiết vừa khung (không cuộn ngang để thấy TỔNG PHƯƠNG ÁN) và có '
+        'dòng cộng chân bảng.',
+        'Quyết định phê duyệt: 4 thẻ đầu trang (số quyết định, lượt hộ đã phê duyệt, tổng kinh phí đã duyệt, chênh lệch so với phương '
+        'án) và dòng cộng chân bảng của quyết định đang chọn.',
+        'Tiến độ chi trả & Bàn giao: dòng cộng giải ngân của các hộ đang lọc (tổng duyệt, đã nhận, chưa nhận) bên trái, 4 nút vừa chữ bên '
+        'phải; cột Mốc thu hồi đất / Vận động gọn để thấy cột tiền. Bộ lọc và thẻ "mặt bằng sạch" tính bàn giao theo cùng quy tắc với danh '
+        'sách hộ (có quyết định, đã nhận đủ tiền, có ngày biên bản).',
+        'Khái toán: thanh nhập (ô và 4 nút) một hàng từ màn hình 1.020 px; thẻ tổng ghi cả cơ cấu 6 mục. Đợt trình: danh sách kiểm tra '
+        'hồ sơ có huy hiệu màu Đạt / Xem lại / Thiếu. Đơn giá bồi thường: huy hiệu "Đang lọc: a / b mục" cạnh ô tìm, đổi thẻ vẫn giữ lọc.',
+    )),
     ('1.0.02', '17/10/2026', (
         'Các cửa sổ và trang làm việc cùng tông Navy với màn hình chính: nút chính (Lưu, Thực hiện, Xuất bản hồ sơ đợt này, Thêm vào '
         'bảng) nền xanh đậm chữ trắng; nút Xóa viền đỏ nhạt chữ đỏ; các nút khác nền trắng viền xám - không còn nút màu cam, tím, xanh lá.',

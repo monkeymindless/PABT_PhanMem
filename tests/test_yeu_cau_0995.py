@@ -168,9 +168,9 @@ class TestKhaiToanNiemYet(Co0995):
         k = w.du_toan(cho=False)
         from PySide6.QtWidgets import QHBoxLayout
         self.assertTrue(any(h.indexOf(k.lb_tong) >= 0 and h.indexOf(k.b_luu) >= 0 for h in k.findChildren(QHBoxLayout)))
-        self.assertEqual(k.lb_tong.height() or k.lb_tong.minimumHeight(), mdt.CAO_HANG_DAY)
-        self.assertGreaterEqual(k.o_dt_dat.minimumWidth(), 105)
-        self.assertGreaterEqual(k.o_gia_dat.minimumWidth(), 115)
+        self.assertEqual(k.lb_tong.height() or k.lb_tong.minimumHeight(), mdt.CAO_THE_TONG_KT)   # 1.0.03: 2 dòng (tổng + cơ cấu)
+        self.assertGreaterEqual(k.o_dt_dat.minimumWidth(), 90)          # 1.0.03: gọn để thanh nhập một hàng
+        self.assertGreaterEqual(k.o_gia_dat.minimumWidth(), 95)
         k.an_thong_tin_chung(True)
         self.assertFalse(k._than_chuan_bi[0].isVisibleTo(k))
         self.assertEqual(k.b_an_tt.text(), 'Hiện thông tin chung')
@@ -187,7 +187,7 @@ class TestKhaiToanNiemYet(Co0995):
         w.mo_du_thao()
         k = w.khung_tab.widget['du_thao']
         for t in k.the.values():
-            self.assertLessEqual(t.maximumHeight(), 32)
+            self.assertLessEqual(t.maximumHeight(), 60)       # 1.0.03: thẻ KPI 2 tầng 54 px
         k.tabs.setCurrentIndex(3)
         self.assertTrue(k._nut['Xuất báo cáo tổng hợp ý kiến'].isVisibleTo(k))
         self.assertFalse(k._nut['Xuất biên bản đối thoại'].isVisibleTo(k))

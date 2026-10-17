@@ -164,6 +164,23 @@ def _co_theo_ky_tu(cb: QComboBox, n: int) -> None:
 
 
 CAO_O_NHAP = 30                    # 1.0.02: ô / nút thanh nhập nhanh (như HangNhapNhanh.CAO_HANG)
+RONG_LOAI_DAT_KY_TU = 9            # 1.0.03: ô Loại đất của thanh nhập (số ký tự; danh sách xổ vẫn đủ tên)
+RONG_O_CHON_TOI_THIEU = 100        # 1.0.03: ô tên tài sản / cây trồng của thanh nhập co tối thiểu (px)
+CACH_THANH_NHAP = 4                # 1.0.03: khoảng cách các ô / nút của thanh nhập (px)
+CAO_THE_TONG_KT = 48               # 1.0.03: thẻ tổng khái toán 2 dòng (tổng + bằng chữ; cơ cấu 6 mục)
+TEN_MUC_THE_TONG = {1: 'Đất', 2: 'Nhà', 3: 'Cây, vật nuôi', 4: 'Hỗ trợ', 5: 'Thưởng', 6: 'Chi phí khác'}
+
+
+def chu_the_tong(dt) -> str:
+    """1.0.03 (Ảnh 5): mặt thẻ tổng khái toán - dòng 1 TỔNG CỘNG + bằng chữ, dòng 2 cơ cấu 6 mục (mục 0 đồng chữ xám)."""
+    muc = []
+    for m, ten in TEN_MUC_THE_TONG.items():
+        x = dt.tong_muc(m)
+        mau = '#0F172A' if x else '#94A3B8'
+        muc.append(f'<span style="color:{mau}; font-weight:{600 if x else 400}">{m}. {ten}: {vn(x)}</span>')
+    return (f'<span style="font-size: 14px; font-weight: bold;">TỔNG CỘNG KHÁI TOÁN: {vn(dt.tong)} đồng</span>'
+            f'&nbsp;&nbsp;·&nbsp;&nbsp;<i style="font-weight:400">Bằng chữ: {tien_bang_chu(dt.tong)}.</i><br>'
+            + '&nbsp;&nbsp;·&nbsp;&nbsp;'.join(muc))
 CAO_HANG_DAY = 34                  # 0.9.95: dải tổng cộng + 4 nút đáy MỘT hàng
 
 
@@ -210,25 +227,28 @@ class KhungDuToan(QWidget):
                      (5, '6. Thưởng')):
             self.cb_muc_nhap.addItem(t, k)
         self.cb_muc_nhap.setToolTip('Mục của hạng mục cần thêm (số in trên bảng khái toán)')
-        _co_theo_ky_tu(self.cb_muc_nhap, 11)
+        _co_theo_ky_tu(self.cb_muc_nhap, 8)
         self.cb_muc_nhap.setProperty('nhap', '1')
         # đất (mục 1): loại đất xổ xuống (dùng chung danh sách loại đất của phương án hộ), diện tích, đơn giá
         self.cb_loai_dat = QComboBox()
         self.cb_loai_dat.setEditable(True)
         self.cb_loai_dat.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.cb_loai_dat.setMaxVisibleItems(20)
-        _co_theo_ky_tu(self.cb_loai_dat, 20)          # không rộng theo tên loại đất dài nhất (trang vừa màn hình 1366)
+        # 1.0.03 (Ảnh 5): 12 ký tự (trước 20) - cả ô nhập lẫn 4 nút một hàng từ ~1.020 px; danh sách xổ vẫn đủ tên loại đất
+        _co_theo_ky_tu(self.cb_loai_dat, RONG_LOAI_DAT_KY_TU)
         for ma, nhan in ds_chon(con):
             self.cb_loai_dat.addItem(nhan, ma)
         self.cb_loai_dat.setCurrentIndex(-1)
         self.cb_loai_dat.lineEdit().setPlaceholderText('Loại đất (▼ chọn, hoặc gõ mã: CLN, ONT…)')
         self.o_dt_dat = QLineEdit()
         self.o_dt_dat.setPlaceholderText('Diện tích (m²), =12*30')
-        self.o_dt_dat.setMinimumWidth(105)             # 0.9.95: chữ gợi ý không bị cắt
+        self.o_dt_dat.setMinimumWidth(90)              # 1.0.03: gọn (chữ gợi ý đủ ở chú thích)
+        self.o_dt_dat.setToolTip('Diện tích (m²) - gõ số hoặc phép tính, vd =12*30')
         self.o_dt_dat.setMaximumWidth(190)
         self.o_gia_dat = QLineEdit()
         self.o_gia_dat.setPlaceholderText('Đơn giá (đ/m²)')
-        self.o_gia_dat.setMinimumWidth(115)
+        self.o_gia_dat.setMinimumWidth(95)
+        self.o_gia_dat.setToolTip('Đơn giá (đ/m²) - Enter: thêm vào bảng')
         self.o_gia_dat.setMaximumWidth(190)
         self.o_gia_dat.returnPressed.connect(lambda: self.them_dat())
         self.o_dt_dat.returnPressed.connect(lambda: self.them_dat())
@@ -276,15 +296,17 @@ class KhungDuToan(QWidget):
         dock.setStyleSheet('QFrame#thanh_nhap_nhanh { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; }'
                            'QFrame#thanh_nhap_nhanh QLineEdit, QFrame#thanh_nhap_nhanh QComboBox { border: 1px solid #CBD5E1; '
                            'border-radius: 5px; background: #FFFFFF; }'
-                           'QFrame#thanh_nhap_nhanh QLineEdit:focus, QFrame#thanh_nhap_nhanh QComboBox:focus { border-color: #0F3866; }')
+                           'QFrame#thanh_nhap_nhanh QLineEdit:focus, QFrame#thanh_nhap_nhanh QComboBox:focus { border-color: #0F3866; }'
+                           'QFrame#thanh_nhap_nhanh QPushButton { padding: 4px 7px; }')
         v_dock = QVBoxLayout(dock)
         v_dock.setContentsMargins(8, 5, 8, 5)
         v_dock.setSpacing(4)
         h_d1 = QHBoxLayout()
-        h_d1.setSpacing(6)
+        h_d1.setSpacing(CACH_THANH_NHAP)
         h_d1.addWidget(self.b_lay)
         self.nhan_muc = QLabel('Mục:')
         self.nhan_muc.setProperty('vai', 'nhan')
+        self.nhan_muc.setVisible(False)                 # 1.0.03: ô chọn đã ghi số + tên mục; nhường chỗ cho thanh một hàng
         h_d1.addWidget(self.nhan_muc)
         h_d1.addWidget(self.cb_muc_nhap)
         h_d1.addWidget(self.ngan_nhap, 1)
@@ -293,7 +315,7 @@ class KhungDuToan(QWidget):
         self.khoi_nut_nhap = QWidget()
         h_nut = QHBoxLayout(self.khoi_nut_nhap)
         h_nut.setContentsMargins(0, 0, 0, 0)
-        h_nut.setSpacing(6)
+        h_nut.setSpacing(CACH_THANH_NHAP)
         for b in (self.b_tra_nq28, b_dan, self.b_ocr, self.b_them):
             h_nut.addWidget(b)
             b.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)    # không co nhỏ hơn chữ (sizeHint)
@@ -301,21 +323,23 @@ class KhungDuToan(QWidget):
         self._h_d1 = h_d1
         self._h_d2 = QHBoxLayout()                      # hàng dự phòng: nút xuống đây khi cửa sổ hẹp
         self._h_d2.addStretch(1)
-        self.hang.layout().setSpacing(6)
+        self.hang.layout().setSpacing(CACH_THANH_NHAP)
         # kiểu ô gọn (đặc tả: thanh cao ~38 px) thay kiểu ô nhập lớn [nhap="1"] (chữ 14 px, lề 11 px) - vừa một hàng ở 1366
         for w in (self.cb_muc_nhap, self.cb_loai_dat, self.o_dt_dat, self.o_gia_dat, self.hang.o_chon.o, self.hang.cb_kieu,
                   self.hang.o_do, self.hang.o_sl, self.hang.o_tl, self.hang.o_gc):
             if w is not None:
                 w.setProperty('nhap', '0')
         self.hang.o_sl.setFixedWidth(90)
+        self.hang.o_chon.setMinimumWidth(RONG_O_CHON_TOI_THIEU)        # ô tên tài sản co được (Expanding - giãn khi còn chỗ)
+        self.hang.o_chon.o.setMinimumWidth(0)
         if self.hang.cb_kieu is not None:
-            _co_theo_ky_tu(self.hang.cb_kieu, 10)
+            _co_theo_ky_tu(self.hang.cb_kieu, 8)
             self.hang.cb_kieu.currentIndexChanged.connect(lambda *_: QTimer.singleShot(0, self._xep_thanh_nhap))
         self.hang.o_tl.setFixedWidth(60)
         self.hang.o_tl.setPlaceholderText('Tỷ lệ')
         for o in (self.hang.o_sl, self.hang.o_tl):     # ô hẹp: lề trong nhỏ để chữ gợi ý không bị cắt "Khối lượ…"
             o.setStyleSheet('QLineEdit { padding-left: 4px; padding-right: 4px; }')
-        self.hang.o_gc.setMinimumWidth(120)
+        self.hang.o_gc.setMinimumWidth(90)
         self.hang.o_gc.setMaximumWidth(180)
         for w in (self.b_lay, self.cb_muc_nhap, self.cb_loai_dat, self.o_dt_dat, self.o_gia_dat, self.b_tra_nq28, b_dan, self.b_ocr,
                   self.b_them):
@@ -334,6 +358,9 @@ class KhungDuToan(QWidget):
         # ---- bảng dự toán
         self.bang = QTableWidget(0, len(COT))
         self.bang.setHorizontalHeaderLabels([c[1] for c in COT])
+        from .giao_dien import gan_chu_khi_trong
+        gan_chu_khi_trong(self.bang, 'Bảng khái toán chưa có dòng nào',
+                          'Chọn Mục ở thanh nhập nhanh rồi "Thêm vào bảng", "Dán danh sách…", hoặc "Lấy khối lượng" từ dự án / file.')
         for i, c in enumerate(COT):
             self.bang.setColumnWidth(i, c[2])
         self.bang.horizontalHeader().setSectionResizeMode(len(COT) - 1, QHeaderView.ResizeMode.Stretch)
@@ -360,7 +387,7 @@ class KhungDuToan(QWidget):
         self.lb_tong.setWordWrap(False)                 # 0.9.95: một dòng cùng hàng nút đáy (chi tiết từng mục ở chú thích)
         self.lb_tong.setTextFormat(Qt.TextFormat.RichText)
         self.lb_tong.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-        self.lb_tong.setFixedHeight(CAO_HANG_DAY)
+        self.lb_tong.setFixedHeight(CAO_THE_TONG_KT)    # 1.0.03: 2 dòng - tổng + bằng chữ; cơ cấu 6 mục
         self.lb_tong.setStyleSheet('QLabel#the_tong_khai_toan { background: #F0F6FF; border: 1px solid #BAE6FD; '
                                    'border-left: 4px solid #0F3866; border-radius: 5px; padding: 2px 8px; color: #0F3866; '
                                    'font-weight: 700; }')
@@ -522,8 +549,9 @@ class KhungDuToan(QWidget):
         """Bề rộng thanh nhập nhanh cần để mọi ô + nút nằm trên một hàng (theo mục / kiểu số đo đang chọn). Mỗi nút của cụm nút
         (Tra NQ 28, Dán danh sách, Quét giấy tờ, Thêm vào bảng) tính đủ chữ + 8 px - hẹp hơn thì cụm xuống hàng 2, không cắt chữ."""
         for b in (self.b_tra_nq28, self.b_dan, self.b_ocr, self.b_them):
-            b.setMinimumWidth(b.sizeHint().width() + 8)
-        ds = [self.b_lay, self.nhan_muc, self.cb_muc_nhap, self.ngan_nhap.currentWidget(), self.khoi_nut_nhap]
+            b.setMinimumWidth(b.sizeHint().width())
+        ds = [w for w in (self.b_lay, self.nhan_muc, self.cb_muc_nhap, self.ngan_nhap.currentWidget(), self.khoi_nut_nhap)
+              if not w.isHidden()]
         m = self.thanh_nhap.layout().contentsMargins()
         return sum(max(w.minimumWidth(), w.minimumSizeHint().width()) for w in ds) + \
             self._h_d1.spacing() * (len(ds) - 1) + m.left() + m.right() + 2
@@ -726,8 +754,7 @@ class KhungDuToan(QWidget):
         i = self.cb_kp.findData(self.dt.loai_kinh_phi or '')
         if self.cb_kp.currentIndex() != max(i, 0):
             self.cb_kp.setCurrentIndex(max(i, 0))
-        self.lb_tong.setText(f'<span style="font-size: 14px; font-weight: bold;">TỔNG CỘNG KHÁI TOÁN: {vn(self.dt.tong)} đồng'
-                             f'</span>&nbsp;&nbsp;·&nbsp;&nbsp;<i>Bằng chữ: {tien_bang_chu(self.dt.tong)}.</i>')
+        self.lb_tong.setText(chu_the_tong(self.dt))
         self.lb_tong.setToolTip(f'{du_toan.mo_ta_tong(self.dt)}\n\n' + (f'Nguồn khối lượng: {self.dt.nguon}\n\n' if self.dt.nguon
                                                                           else '') + self._cach_tinh)
 

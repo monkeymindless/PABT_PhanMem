@@ -22,10 +22,11 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
 
 from . import ho_so_scan, kinh_phi_du_an, thoi_han, theo_doi, van_dong
 from .bang_ao import BangAo
-from .giao_dien import XepDong, dat_trang_thai, vua_dong, loc_khi_ngung_go
+from .giao_dien import (DaiCongBang, HangKpi, XepDong, dat_trang_thai, gan_chu_khi_trong, gan_thanh_ty_le,
+                        vua_dong, loc_khi_ngung_go)
 from .lap_pa import LoiNhap, bo_dau
 from .thong_bao import THE_TONG_HOP, chu_loi
-from .tien import D, KHONG, so_vn, vn
+from .tien import D, KHONG, so_vn, vn, vn_gon
 
 TIEU_DE = 'Theo dõi phê duyệt, chi trả, bàn giao'
 XANH, VANG, DO, XAM = QColor('#E2EFDA'), QColor('#FFF2CC'), QColor('#F8CBAD'), QColor('#F2F4F7')
@@ -286,7 +287,17 @@ class KhungQuyetDinh(_Khung):
         for c, w in enumerate((44, 190, 190, 110, 86, 110, 86, 56, 56, 92, 70, 110, 110, 100, 110, 120, 200, 130)):
             self.bang.setColumnWidth(c, w)
         self.bang.cellDoubleClicked.connect(lambda r, c: self.sua_ho(self.bang.ma_dong(r)))
-        from .giao_dien import XepDong
+        gan_chu_khi_trong(self.bang, 'Chưa có hộ nào trong quyết định đang chọn',
+                          'Chọn một quyết định bên trái, hoặc bấm "Nhập từ file…" / "Thêm…" để tạo quyết định.')
+        self.dai_cong = DaiCongBang('dai_cong_qd')       # 1.0.03: cộng DT, tiền từng hạng mục, tổng phê duyệt của quyết định đang chọn
+        # 1.0.03: dải 4 thẻ KPI đầu trang (số quyết định, lượt hộ, tiền đã duyệt, chênh lệch so với phương án)
+        self.hang_kpi = HangKpi([
+            ('so_qd', 'Tổng số quyết định', '#0F3866'),
+            ('luot_ho', 'Số lượt hộ đã phê duyệt', '#0284C7', 'Lượt hộ = cộng số hộ của từng quyết định (một hộ phê duyệt bổ sung '
+                                                             'tính nhiều lượt); chữ phụ: số hộ khác nhau / tổng số hộ dự án'),
+            ('tien_qd', 'Tổng kinh phí đã duyệt QĐ', '#0F766E'),
+            ('chenh', 'Chênh lệch QĐ so với PA', '#15803D', 'Tổng tiền các quyết định - tổng phương án hiện tại của các hộ đã có '
+                                                           'quyết định (âm: phương án hiện tại cao hơn số đã duyệt)')])
         h_ho = XepDong(cach=6)          # hết chỗ thì xuống dòng (trước 0.9.18: một hàng 932 px ép cửa sổ rộng hơn màn hình 1366)
         _nut([('Thêm hộ vào quyết định…', lambda: self.them_ho()), ('Sửa hộ đang chọn…', lambda: self.sua_ho()),
               ('Ghi nhận đã nhận tiền…', lambda: self.ghi_chi_tra()), ('Bỏ hộ khỏi quyết định', lambda: self.bo_ho()),
@@ -296,7 +307,11 @@ class KhungQuyetDinh(_Khung):
         lp.setContentsMargins(0, 0, 0, 0)
         lp.addWidget(self.lb_qd)
         lp.addWidget(self.lb_khop)
-        lp.addWidget(self.bang, 1)
+        khoi = QVBoxLayout()
+        khoi.setSpacing(0)
+        khoi.addWidget(self.bang, 1)
+        khoi.addWidget(self.dai_cong)
+        lp.addLayout(khoi, 1)
         lp.addLayout(h_ho)
         tach = QSplitter()
         tach.addWidget(trai)
@@ -305,12 +320,51 @@ class KhungQuyetDinh(_Khung):
         tach.setSizes([300, 1100])
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
-        lo.addWidget(tach)
+        lo.addWidget(self.hang_kpi)
+        lo.addWidget(tach, 1)
 
     def showEvent(self, e):
         super().showEvent(e)
         if self._can_nap:
             self.nap()
+
+    def _ve_kpi(self) -> None:
+        """Dải 4 thẻ: số quyết định, lượt hộ (số hộ khác nhau / tổng hộ), tổng tiền đã duyệt, chênh lệch QĐ - phương án."""
+        k = self.hang_kpi
+        if self.con is None:
+            for khoa in k.the:
+                k.dat(khoa, '—')
+            return
+        ds = self.ds_qd
+        n = self.con.execute('SELECT COUNT(*) FROM ho').fetchone()[0]
+        ma = [r[0] for r in self.con.execute('SELECT DISTINCT ma_ho FROM qd_ho')]
+        tong_qd = sum((q.tong_ho for q in ds), KHONG)
+        k.dat('so_qd', f'{len(ds)} quyết định', f'{sum(1 for q in ds if q.so_ho)} có hộ' if ds else '')
+        k.dat('luot_ho', f'{sum(q.so_ho for q in ds)} lượt', f'{len(ma)} / {n} hộ')
+        k.dat('tien_qd', f'{vn(tong_qd)} đ')
+        if not ma:
+            k.dat('chenh', '—', 'chưa có quyết định')
+            return
+        from .nghiep_vu import ket_qua_ho
+        kq = ket_qua_ho(self.con)
+        pa = sum((kq[m][0].tong for m in ma if m in kq), KHONG)
+        chenh = tong_qd - pa
+        k.dat('chenh', ('+' if chenh > 0 else '') + f'{vn(chenh)} đ', 'khớp' if not chenh else f'PA: {vn(pa)} đ')
+
+    def _ve_dai_cong(self, dong: list) -> None:
+        """Cộng các dòng của quyết định đang chọn: DT thu hồi (mọi thửa), tiền từng hạng mục (dòng đầu mỗi hộ)."""
+        if not dong:
+            self.dai_cong.setVisible(False)
+            return
+        dt = sum((D(gt[9]) for _, _, gt, _ in dong if gt[9] not in (None, '')), KHONG)
+        tien = [sum((D(gt[c]) for _, _, gt, n in dong if n and gt[c] not in (None, '')), KHONG) for c in self.COT_TIEN]
+        so_ho = sum(1 for *_, n in dong if n)
+        nhan = ('Đất', 'Tài sản', 'Cây trồng', 'Hỗ trợ')
+        self.dai_cong.dat([('Số hộ', str(so_ho)), ('DT thu hồi', f'{so_vn(dt)} m²'),
+                           *((t, vn(x)) for t, x in zip(nhan, tien[:4]))], ('TỔNG PHÊ DUYỆT', f'{vn(tien[4])} đ'),
+                          [('Hộ', str(so_ho)), ('DT', so_vn(dt)), *((t, vn_gon(x)) for t, x in zip(nhan, tien[:4]))],
+                          ('TỔNG', vn_gon(tien[4])))
+        self.dai_cong.setVisible(True)
 
     def _qd(self, qd_id):
         return next((x for x in self.ds_qd if x.id == qd_id), None)
@@ -338,6 +392,7 @@ class KhungQuyetDinh(_Khung):
         # chọn lại khi tín hiệu đang chặn: chon() chạy MỘT lần (trước 0.9.22 currentRowChanged + gọi thẳng = dựng bảng 2 lần)
         w.blockSignals(False)
         self.chon(self.ds_qd[i].id if i >= 0 else None)
+        self._ve_kpi()
         sua = self.con is not None and not self.chi_doc
         for ten, b in self.nut.items():
             if ten != 'Xuất Excel…':
@@ -350,6 +405,7 @@ class KhungQuyetDinh(_Khung):
             self.lb_qd.setText('Chưa có quyết định nào. Bấm "Nhập từ file…" (quyết định có danh sách hộ đính kèm) hoặc "Thêm…".'
                                if self.con is not None else '')
             self.bang.dat_du_lieu([])
+            self._ve_dai_cong([])
             self._cap_khop(None)
             return
         tep = ' · <a href="mo">mở file quyết định</a>' if q.file else ''
@@ -408,7 +464,9 @@ class KhungQuyetDinh(_Khung):
 
     def ve(self):
         hien, ma, kieu, gop = [], [], {}, []
-        for r, (x, q, gt, n) in enumerate(self.dong()):
+        dong = self.dong()
+        self._ve_dai_cong(dong)
+        for r, (x, q, gt, n) in enumerate(dong):
             hien.append(_chu(gt, so=(9,), tien=self.COT_TIEN))
             ma.append(x.ma_ho)
             if n:
@@ -553,8 +611,10 @@ class KhungTongHopTien(_Khung):
     """Tổng hợp tiền theo phương án hiện tại (từng hạng mục), so với phê duyệt và file Excel; bấm tiêu đề cột để sắp xếp."""
     # hạng mục KHÔNG đánh số: bản in đánh 1 Đất, 2 Nhà, 3 Cây, 4 Vật nuôi, 5 Hỗ trợ, 6 Thưởng - bảng 5 cột gộp cây + vật nuôi
     # (nghiep_vu.muc_5_cot) nên số "4. Hỗ trợ" cũ lệch với bản in
-    COT = ['STT', 'Mã hộ', 'Họ và tên', 'Số thửa', 'DT thu hồi (m²)', 'Đất', 'Nhà, công trình', 'Cây trồng, vật nuôi', 'Hỗ trợ',
-           'Thưởng', 'TỔNG PHƯƠNG ÁN', 'Tổng phê duyệt', 'Chênh lệch PA - phê duyệt', 'Đối chiếu Excel']
+    # 1.0.03: tiêu đề 2 dòng - cột tiền hẹp theo SỐ (không theo chữ tiêu đề dài), cả 14 cột vừa khung 1.366 px
+    COT = ['STT', 'Mã hộ', 'Họ và tên', 'Số thửa', 'DT thu hồi\n(m²)', 'Đất', 'Nhà,\ncông trình', 'Cây trồng,\nvật nuôi', 'Hỗ trợ',
+           'Thưởng', 'TỔNG\nPHƯƠNG ÁN', 'Tổng\nphê duyệt', 'Chênh lệch\nPA - phê duyệt', 'Đối chiếu\nExcel']
+    RONG_CO_DINH = {0: 50, 1: 60, 3: 65, 4: 95}           # STT, Mã hộ, Số thửa, DT thu hồi (px)
 
     def __init__(self, con=None, parent=None, chi_doc: bool = False):
         super().__init__(con, parent, chi_doc)
@@ -562,6 +622,19 @@ class KhungTongHopTien(_Khung):
         # sắp theo giá trị số (QTableWidget cũ sắp cột tiền theo chữ); không chữ xuống dòng: không đo chiều cao dòng
         self.bang = BangAo(self.COT, can_phai=(0, 1, *range(3, 13)), sap_xep=True, tu_cao=False)
         self.bang.cellDoubleClicked.connect(self._mo_ho_dong)
+        # 1.0.03 (Ảnh 10): cột nhỏ cố định, cột tiền vừa số, Họ và tên giãn - cả TỔNG PHƯƠNG ÁN luôn trong khung, không cuộn ngang
+        dau = self.bang.horizontalHeader()
+        dau.setStretchLastSection(False)
+        for c in range(len(self.COT)):
+            if c in self.RONG_CO_DINH:
+                dau.setSectionResizeMode(c, QHeaderView.ResizeMode.Interactive)
+                self.bang.setColumnWidth(c, self.RONG_CO_DINH[c])
+            elif c == 2:
+                dau.setSectionResizeMode(c, QHeaderView.ResizeMode.Stretch)
+            else:                                       # cột tiền: đo theo số dài nhất / dòng tiêu đề dài nhất (_vua_cot_tien)
+                dau.setSectionResizeMode(c, QHeaderView.ResizeMode.Interactive)
+        gan_chu_khi_trong(self.bang, 'Chưa có hộ nào trong dự án', 'Nhập danh sách hộ hoặc lập phương án để xem tổng hợp tiền.')
+        self.dai_cong = DaiCongBang('dai_cong_tien')
         self.lb = QLabel('')
         h = QHBoxLayout()
         h.addWidget(self.lb, 1)
@@ -569,7 +642,11 @@ class KhungTongHopTien(_Khung):
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
         lo.addLayout(h)
-        lo.addWidget(self.bang, 1)
+        khoi = QVBoxLayout()
+        khoi.setSpacing(0)
+        khoi.addWidget(self.bang, 1)
+        khoi.addWidget(self.dai_cong)
+        lo.addLayout(khoi, 1)
 
     def dong(self) -> list:
         if self.con is None:
@@ -599,16 +676,53 @@ class KhungTongHopTien(_Khung):
                 kieu[(r, 13)] = dict(nen=DO if d[13] == 'LỆCH' else XANH)
         b = self.bang
         b.dat_du_lieu(hien, ma, kieu, khoa=ds)
-        b.resizeColumnsToContents()
-        b.setColumnWidth(2, min(max(b.columnWidth(2), 200), 300))
+        self._vua_cot_tien(hien)
+        self._ve_dai_cong(ds)
         self.lb.setText(f'{len(ds)} hộ · tổng phương án {vn(sum((d[10] for d in ds), KHONG))} đ · tổng phê duyệt '
                         f'{vn(sum((d[11] or KHONG for d in ds), KHONG))} đ')
+
+    RONG_TOI_DA_DOI_CHIEU = 90                          # "Sửa trong phần mềm": đủ chữ ở chú thích
+
+    def _vua_cot_tien(self, hien: list) -> None:
+        """Cột số = max(chuỗi dài nhất của cột, dòng tiêu đề dài nhất) + đệm - không tính chỗ mũi tên sắp xếp / tiêu đề một dòng
+        như ResizeToContents (cả 14 cột vừa khung 1.536 px ở 125%)."""
+        from PySide6.QtGui import QFontMetrics
+        b = self.bang
+        fm = b.fontMetrics()
+        f = QFont(b.horizontalHeader().font())
+        f.setBold(True)
+        fm_dau = QFontMetrics(f)
+        mau = hien[:2000]
+        for c in range(len(self.COT)):
+            if c in self.RONG_CO_DINH or c == 2:
+                continue
+            so = max((fm.horizontalAdvance(d[c]) for d in mau), default=0)
+            dau = max(fm_dau.horizontalAdvance(t) for t in self.COT[c].split('\n'))
+            rong = max(so, dau) + 18
+            if c == len(self.COT) - 1:
+                rong = min(rong, max(dau + 18, self.RONG_TOI_DA_DOI_CHIEU))
+            b.setColumnWidth(c, rong)
+
+    def _ve_dai_cong(self, ds: list) -> None:
+        """Dải cộng chân bảng: tổng DT thu hồi, từng hạng mục, TỔNG PHƯƠNG ÁN của các hộ trên bảng."""
+        if not ds:
+            self.dai_cong.setVisible(False)
+            return
+        dt = sum((d[4] for d in ds if d[4] is not None), KHONG)
+        muc = [sum((d[c] for d in ds), KHONG) for c in range(5, 10)]
+        nhan = ('Đất', 'Nhà', 'Cây, vật nuôi', 'Hỗ trợ', 'Thưởng')
+        pd = sum((d[11] or KHONG for d in ds), KHONG)
+        self.dai_cong.dat([('Hộ', str(len(ds))), ('DT thu hồi', f'{so_vn(dt)} m²'), *((t, vn(x)) for t, x in zip(nhan, muc)),
+                           ('Phê duyệt', vn(pd))], ('TỔNG PHƯƠNG ÁN', f'{vn(sum((d[10] for d in ds), KHONG))} đ'),
+                          [('Hộ', str(len(ds))), ('DT', so_vn(dt)), *((t, vn_gon(x)) for t, x in zip(nhan, muc))],
+                          ('TỔNG PA', vn_gon(sum((d[10] for d in ds), KHONG))))
+        self.dai_cong.setVisible(True)
 
     def xuat(self, file=None):
         if self.con is None:
             return None
         return self._xuat(file, 'Lưu tổng hợp tiền theo phương án', 'TongHopTien.xlsx', lambda f: theo_doi.xuat_excel(
-            f, 'TỔNG HỢP TIỀN BỒI THƯỜNG, HỖ TRỢ THEO PHƯƠNG ÁN', self.COT, self.dong(),
+            f, 'TỔNG HỢP TIỀN BỒI THƯỜNG, HỖ TRỢ THEO PHƯƠNG ÁN', [x.replace('\n', ' ') for x in self.COT], self.dong(),
             [6, 8, 26, 8, 12, 15, 15, 15, 15, 13, 17, 17, 17, 16], None, self._ten_du_an()))
 
 
@@ -627,7 +741,8 @@ class KhungCoCau(_Khung):
     hỗ trợ, tái định cư; kinh phí tổ chức thực hiện bồi thường (QĐ 08/2025/QĐ-UBND); tổng kinh phí. Số theo phương án, đối chiếu số
     đã phê duyệt trong các quyết định (kinh_phi_du_an.co_cau)."""
     COT = ['Nhóm khoản', 'Số hộ', 'Theo phương án\ncả dự án (đ)', 'Đã phê duyệt\ntrong quyết định (đ)',
-           'Chưa phê duyệt\n(hộ chưa có QĐ) (đ)', 'Lệch PA - QĐ (đ)\n(hộ đã có QĐ)', 'Tỷ lệ (%)\ngốc 100% = cộng BT', 'Ghi chú']
+           'Chưa phê duyệt\n(hộ chưa có QĐ) (đ)', 'Lệch PA - QĐ (đ)\n(hộ đã có QĐ)', 'Tỷ lệ (%)\n(100% = cộng)', 'Ghi chú']
+    RONG_TY_LE = 115                                       # 1.0.03 (Ảnh 1): cột tỷ lệ đủ chữ tiêu đề
 
     def __init__(self, con=None, parent=None, chi_doc: bool = False):
         super().__init__(con, parent, chi_doc)
@@ -636,8 +751,14 @@ class KhungCoCau(_Khung):
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
         self.bang = BangAo(self.COT, can_phai=(1, 2, 3, 4, 5, 6), tu_cao=True)
-        for c, w in enumerate((240, 50, 125, 130, 125, 120, 95, 320)):
+        for c, w in enumerate((240, 50, 125, 130, 125, 120, self.RONG_TY_LE, 200)):
             self.bang.setColumnWidth(c, w)
+        dau = self.bang.horizontalHeader()
+        for c in range(1, 7):                               # 1.0.03 (Ảnh 1): cột số đủ chữ tiêu đề 2 dòng, không cắt
+            dau.setSectionResizeMode(c, QHeaderView.ResizeMode.ResizeToContents)
+        dau.setMinimumSectionSize(50)
+        gan_thanh_ty_le(self.bang, 6)                       # thanh tỷ trọng mảnh dưới số %
+        gan_chu_khi_trong(self.bang, 'Chưa có số liệu kinh phí', 'Mở dự án đã có hộ để xem cơ cấu kinh phí.')
         h = QHBoxLayout()
         h.addWidget(self.lb, 1)
         _nut([('Xuất Excel…', lambda: self.xuat())], h, self.nut)
@@ -646,8 +767,13 @@ class KhungCoCau(_Khung):
         lo.addLayout(h)
         lo.addWidget(self.bang, 1)
 
+    nguon_cc = None                     # hàm () -> cơ cấu kinh phí dùng chung (KhungBangTongHop gắn); None: tự tính
+
     def nap(self):
-        self.cc = kinh_phi_du_an.co_cau(self.con) if self.con is not None else None
+        if self.con is None:
+            self.cc = None
+        else:
+            self.cc = self.nguon_cc() if self.nguon_cc is not None else kinh_phi_du_an.co_cau(self.con)
         self.ve()
 
     def dong(self) -> list:
@@ -674,7 +800,7 @@ class KhungCoCau(_Khung):
             f = QFont(self.bang.font())
             f.setBold(True)
             rong = max(QFontMetrics(f).horizontalAdvance(str(gt[0])) for _, gt in dong) + 2 * LE_THE + 8
-            self.bang.setColumnWidth(0, max(240, min(rong, 420)))
+            self.bang.setColumnWidth(0, max(220, min(rong, 340)))
         if self.cc is None:
             self.lb.setText('')
             return
@@ -817,6 +943,16 @@ class KhungBangTongHop(_Khung):
         self.co_cau = KhungCoCau(con, self, chi_doc)
         self.tien = KhungTongHopTien(con, self, chi_doc)
         self.doi_soat = KhungDoiSoat(con, self, chi_doc)
+        self._cc = None                                     # kinh_phi_du_an.co_cau dùng chung cho hàng KPI + thẻ Cơ cấu
+        self.co_cau.nguon_cc = self._lay_cc
+        # 1.0.03 (Ảnh 1, 8, 10): dải 4 thẻ KPI kinh phí trên đầu cả 3 thẻ
+        self.hang_kpi = HangKpi([
+            ('quy_mo', 'Quy mô & Đã lập PA', '#0F3866'),
+            ('cong', 'Cộng bồi thường, hỗ trợ (100%)', '#0284C7', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
+                                                                  'thưởng = gốc 100%'),
+            ('kinh_phi', 'Kinh phí tổ chức (QĐ 08)', '#0F766E', 'Kinh phí tổ chức thực hiện bồi thường theo QĐ 08/2025/QĐ-UBND = '
+                                                              'tỷ lệ % của cộng bồi thường, hỗ trợ'),
+            ('tong', 'TỔNG KINH PHÍ DỰ ÁN', '#15803D')])
         self.tab = QTabWidget()
         from .giao_dien import TOKEN, icon_ky_hieu
         for w, t, ma in zip(self.cac_the, self.THE, self.KY_HIEU_THE):
@@ -835,14 +971,38 @@ class KhungBangTongHop(_Khung):
         self._can_nap = set(range(3))
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
-        lo.addWidget(self.tab)
+        lo.setSpacing(8)
+        lo.addWidget(self.hang_kpi)
+        lo.addWidget(self.tab, 1)
 
     @property
     def cac_the(self) -> tuple:
         return self.co_cau, self.tien, self.doi_soat
 
+    def _lay_cc(self):
+        """Cơ cấu kinh phí (tính một lần cho hàng KPI và thẻ Cơ cấu; nạp lại / ghi dữ liệu thì tính lại)."""
+        if self.con is None:
+            return None
+        if self._cc is None:
+            self._cc = kinh_phi_du_an.co_cau(self.con)
+        return self._cc
+
+    def _ve_kpi(self) -> None:
+        k = self.hang_kpi
+        c = self._lay_cc()
+        if c is None:
+            for khoa in k.the:
+                k.dat(khoa, '—')
+            return
+        k.dat('quy_mo', f'{c["so_ho_da_lap"]} / {c["so_ho"]} hộ', f'{c["so_ho_phe_duyet"]} hộ có QĐ')
+        k.dat('cong', f'{vn(c["cong"])} đ')
+        k.dat('kinh_phi', f'{vn(c["kinh_phi"])} đ', f'{_ty_le(float(c["tl_kp"]))}%')
+        k.dat('tong', f'{vn(c["tong"])} đ')
+
     def _doi(self):
+        self._cc = None
         self._can_nap = set(range(3)) - {self.tab.currentIndex()}
+        self._ve_kpi()
         self.da_doi.emit()
 
     def dat_du_an(self, con, chi_doc: bool = False):
@@ -854,11 +1014,14 @@ class KhungBangTongHop(_Khung):
     def nap(self):
         """Đánh dấu cần nạp lại; chỉ nạp thẻ đang xem (thẻ khác nạp khi chuyển sang - đỡ chậm)."""
         self._can_nap = set(range(3))
+        self._cc = None
         if self.isVisible() or self.im_lang:
+            self._ve_kpi()
             self._nap_the(self.tab.currentIndex())
 
     def showEvent(self, e):
         super().showEvent(e)
+        self._ve_kpi()
         self._nap_the(self.tab.currentIndex())
 
     def _nap_the(self, i: int):
@@ -984,9 +1147,11 @@ class KhungTienDo(_Khung):
         self.ds_qd_w.itemChanged.connect(lambda *_: self._doi_qd())
         self.o_tim = _o_tim('Tìm họ tên, mã hộ, lý do… (không cần dấu)', self)
         self.bang = BangAo(self.COT, can_phai=(0, 1, self.C_TONG, self.C_NHAN))     # 5.000 hộ x 15 cột -> bảng ảo
-        for c, w in enumerate((40, 50, 160, 120, 230, 250, 190, 115, 115, 100, 220, 140, 130, 170, 170, 150, 80)):
+        # 1.0.03 (Ảnh 2): Mốc thu hồi / Vận động gọn 155-160 px (đủ chữ ở chú thích) - Quyết định, Tổng phê duyệt, Đã nhận thấy ngay
+        for c, w in enumerate((40, 50, 160, 120, 155, 160, 190, 115, 115, 100, 220, 140, 130, 170, 170, 150, 80)):
             self.bang.setColumnWidth(c, w)
         self.bang.cellDoubleClicked.connect(self._nhap_dup)
+        gan_chu_khi_trong(self.bang, 'Không có hộ nào khớp bộ lọc', 'Đổi ô Lọc / Tìm, hoặc đánh dấu quyết định khác.')
         h_loc = QHBoxLayout()
         h_loc.setContentsMargins(0, 0, 0, 0)
         h_loc.addWidget(QLabel('Lọc:'))
@@ -1010,8 +1175,13 @@ class KhungTienDo(_Khung):
         self.ngan_xem = QStackedWidget()
         self.ngan_xem.addWidget(self.w_ho)
         self.ngan_xem.addWidget(self.thua)
-        # ---- nút thao tác + MỘT nút Xuất (menu)
-        h_nut = XepDong(cach=6)                              # hẹp thì xuống dòng (cửa sổ 1366)
+        # ---- chân trang: dải cộng giải ngân (giãn) | nút thao tác + MỘT nút Xuất (menu) vừa chữ (1.0.03 - trước: XepDong kéo giãn
+        # 4 nút bè ~400 px mỗi nút, Ảnh 2)
+        h_nut = QHBoxLayout()
+        h_nut.setSpacing(6)
+        self.dai_cong_td = DaiCongBang('dai_cong_td')
+        self.dai_cong_td.setFixedHeight(CAO_O_CONG_CU)
+        h_nut.addWidget(self.dai_cong_td, 1)
         # quyết định, chi trả, bàn giao của MỘT hộ: bấm đúp dòng, hoặc "Trạng thái hộ…" (menu Dữ liệu / chuột phải)
         _nut([('Bàn giao mặt bằng các hộ đã chọn…', lambda: self.ban_giao()),
               ('Sổ nhật ký vận động…', lambda: self.so_van_dong()),
@@ -1024,6 +1194,11 @@ class KhungTienDo(_Khung):
             self.hanh_dong_xuat[chu] = a
         self.nut['Xuất'].setMenu(self.menu_xuat)
         self.nut['Xuất'].setToolTip('Bảng theo dõi chi trả & bàn giao, báo cáo tiến độ GPMB, danh sách đề nghị cưỡng chế (Excel)')
+        from PySide6.QtWidgets import QSizePolicy
+        for ten in ('Bàn giao mặt bằng các hộ đã chọn…', 'Sổ nhật ký vận động…', 'Hộ hoàn tất CTBT…', 'Xuất'):
+            b = self.nut[ten]
+            b.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+            b.setStyleSheet('QPushButton { padding: 5px 12px; }')
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
         lo.addWidget(self.kpi)
@@ -1214,7 +1389,8 @@ class KhungTienDo(_Khung):
         self._danh_dau_kpi()
         # chuỗi hiển thị + kiểu riêng của các ô cần tô (bảng ảo: chỉ vẽ ô đang hiện, không dựng 65.000 QTableWidgetItem)
         hien, ma, kieu = [], [], {}
-        for r, (x, qd, gt) in enumerate(self.dong()):
+        dong = self.dong()
+        for r, (x, qd, gt) in enumerate(dong):
             hien.append(_chu(gt, tien=(self.C_TONG, self.C_NHAN)))
             ma.append(x.ma_ho)
             if gt[self.C_CHUA]:
@@ -1241,6 +1417,17 @@ class KhungTienDo(_Khung):
                                             dam=ma_vd == 'du_dk_cuong_che')
         self.bang.dat_du_lieu(hien, ma, kieu)
         self.dang_hien = ma
+        self._ve_dai_cong(dong)
+
+    def _ve_dai_cong(self, dong: list) -> None:
+        """Dải cộng giải ngân của các hộ đang lọc: số hộ, tổng phê duyệt, đã nhận, chưa nhận."""
+        tong = sum((D(gt[self.C_TONG]) for _, _, gt in dong if gt[self.C_TONG] not in (None, '')), KHONG)
+        nhan = sum((D(gt[self.C_NHAN]) for _, _, gt in dong if gt[self.C_NHAN] not in (None, '')), KHONG)
+        n = len(self.ds)
+        self.dai_cong_td.dat([('Đang lọc', f'{len(dong)}/{n} hộ'), ('Tổng QĐ duyệt', f'{vn(tong)} đ'), ('Đã nhận', f'{vn(nhan)} đ')],
+                             ('Chưa nhận', f'{vn(tong - nhan)} đ'),
+                             [('Lọc', f'{len(dong)}/{n}'), ('QĐ', vn_gon(tong)), ('Nhận', vn_gon(nhan))],
+                             ('Chưa nhận', vn_gon(tong - nhan)))
 
     def _nhap_dup(self, r, c):
         ma = self.bang.ma_dong(r)

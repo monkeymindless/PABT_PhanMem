@@ -38,17 +38,20 @@ def tong_quan(con, hom_nay=None, ds=None, tt=None, moc=None) -> dict:
     tong_pd = sum((x.tong_phe_duyet for x in ds), KHONG)
     da_chi = sum((x.da_nhan for x in ds), KHONG)
     dt_tong = sum((x.dt for x in ds), KHONG)
-    dt_bg = sum((x.dt for x in ds if x.da_ban_giao), KHONG)
+    # 1.0.03: "đã bàn giao" theo kết quả phân tích tiến độ tự động (theo_doi.phan_tich_tien_do: đã có QĐ + nhận đủ tiền + ngày biên bản)
+    # - cùng một nguồn với danh sách hộ (trước: theo ô tích, hộ tích bàn giao mà chưa phê duyệt / thiếu ngày vẫn tính mặt bằng sạch)
+    bg = {x.ma_ho for x in ds if x.tien_do.da_bg}
+    dt_bg = sum((x.dt for x in ds if x.ma_ho in bg), KHONG)
     # theo tờ bản đồ: (số thửa đã giải tỏa, tổng số thửa) - thửa chưa bàn giao nằm trong tờ đã giải tỏa phần lớn là thửa còn vướng mắc xen kẹt
     to = {}
     for x in ds:
         for t in x.thua:
             k = to.setdefault(t['so_to'] or '', [0, 0])
             k[1] += 1
-            k[0] += bool(x.da_ban_giao)
+            k[0] += x.ma_ho in bg
     thua = []
     for x in ds:
-        if not x.qd or x.da_ban_giao:
+        if not x.qd or x.ma_ho in bg:
             continue
         nhan_du = not x.qd_chua_nhan
         ma_tt, chu_tt = van_dong.trang_thai_chung(tt.get(x.ma_ho, []))
@@ -76,7 +79,7 @@ def tong_quan(con, hom_nay=None, ds=None, tt=None, moc=None) -> dict:
     cuong_che = {r['ma_ho'] for r in thua if r['ma_van_dong'] == 'du_dk_cuong_che'}
     return dict(
         hom_nay=nay, so_ho=len(ds), so_ho_phe_duyet=sum(1 for x in ds if x.qd), so_ho_chua_pd=sum(1 for x in ds if not x.qd),
-        so_ho_nhan_du=sum(1 for x in ds if x.qd and not x.qd_chua_nhan), so_ho_ban_giao=sum(1 for x in ds if x.da_ban_giao),
+        so_ho_nhan_du=sum(1 for x in ds if x.qd and not x.qd_chua_nhan), so_ho_ban_giao=len(bg),
         tong_pd=tong_pd, da_chi=da_chi, con_lai=tong_pd - da_chi, pt_giai_ngan=_pt(da_chi, tong_pd),
         dt_tong=dt_tong, dt_ban_giao=dt_bg, pt_mat_bang=_pt(dt_bg, dt_tong),
         thua=thua, dem={m: sum(1 for r in thua if r['muc'] == m) for m in MUC}, so_ho_cuong_che=len(cuong_che))

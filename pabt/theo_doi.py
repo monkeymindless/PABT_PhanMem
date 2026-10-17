@@ -522,10 +522,13 @@ def _dieu_kien(x: TongHopHo, ds_qd: set | None) -> dict:
     if ds_qd and not qd:
         return {}
     chua = [q for q in qd if not q['da_chi_tra']]
+    # 1.0.03: bàn giao theo phân tích tiến độ tự động (phan_tich_tien_do: QĐ + nhận đủ tiền + ngày biên bản) - thống nhất với danh
+    # sách hộ / thẻ số liệu; ô tích thiếu bước không tính là đã bàn giao
+    bg = x.tien_do.da_bg
     return {
         '': True, 'chua_pd': not x.qd, 'da_pd': bool(qd), 'nhieu_qd': len(x.qd) >= 2,
         'chua_nhan': bool(chua), 'da_nhan_het': bool(qd) and not chua,
-        'chua_bg': not x.da_ban_giao, 'da_nhan_chua_bg': bool(qd) and not chua and not x.da_ban_giao, 'da_bg': x.da_ban_giao,
+        'chua_bg': not bg, 'da_nhan_chua_bg': bool(qd) and not chua and not bg, 'da_bg': bg,
     }
 
 

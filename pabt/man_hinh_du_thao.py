@@ -17,6 +17,7 @@ def _o(chu, mau=None) -> QTableWidgetItem:
     return it
 
 
+CAN_GIUA = Qt.AlignmentFlag.AlignCenter
 RONG_TOI_THIEU_COT = 60      # cột không hẹp hơn (kéo tay cũng vậy)
 
 
@@ -56,11 +57,20 @@ MAU_Y_KIEN = {'dong_y': '#15803D', 'khong_dong_y': '#B91C1C', 'y_kien_khac': '#B
 # thẻ KPI trang Niêm yết (1.0.02, như thẻ số màn hình chính): màu vạch trái + màu số. Navy = tổng; xanh trời / xanh dương = đủ điều kiện /
 # đã niêm yết; teal / xanh lá = phê duyệt / bàn giao (đã đồng thuận); hổ phách = vướng (cần xử lý)
 MAU_THE_NY = {'tong': '#0F3866', 'du': '#0284C7', 'vuong': '#B45309', 'dt': '#2563EB', 'pd': '#0F766E', 'bg': '#15803D'}
+# 1.0.03: góc trái bo 3 px (bằng bề dày vạch) - vạch màu bên trái thẳng đứng, không cong thành dấu "(" như bo 6 px (Ảnh 7)
 QSS_THE_NY = ('QFrame[vai="the_ny"] {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid {m}; '
-              'border-radius: 6px; }}'
+              'border-radius: 6px; border-top-left-radius: 3px; border-bottom-left-radius: 3px; }}'
               'QFrame[vai="the_ny"]:hover {{ background: #F8FAFC; border-color: {m}; }}'
-              'QLabel#the_ny_tieu {{ color: #475569; font-size: 11px; font-weight: 600; border: 0; background: transparent; }}'
-              'QLabel#the_ny_so {{ color: {m}; font-size: 15px; font-weight: 700; border: 0; background: transparent; }}')
+              'QLabel#the_ny_tieu {{ color: #475569; font-size: 12px; font-weight: 600; border: 0; background: transparent; }}'
+              'QLabel#the_ny_so {{ color: {m}; font-size: 16px; font-weight: 700; border: 0; background: transparent; }}'
+              'QLabel#the_ny_phu {{ color: #64748B; font-size: 12px; border: 0; background: transparent; }}')
+CAO_THE_NY = 54
+RONG_O_DOT = 300            # ô chọn đợt (chữ dài đủ ở chú thích)
+
+
+def _pt(x) -> str:
+    """Phần trăm kiểu VN, 1 chữ số lẻ: 12.5 -> "12,5" (dấu phẩy thập phân)."""
+    return f'{float(x):.1f}'.replace('.', ',')
 
 
 class _The(QFrame):
@@ -71,19 +81,24 @@ class _The(QFrame):
         self.mau = mau
         self.setStyleSheet(QSS_THE_NY.format(m=mau))    # bộ chọn theo vai: không truyền sang nhãn con (QLabel cũng là QFrame)
         self._bam = bam
-        lo = QHBoxLayout(self)
-        lo.setContentsMargins(8, 2, 8, 2)               # 0.9.95: MỘT dòng cao 32 px - nhãn | số đậm (chữ phụ ở chú thích thẻ)
-        lo.setSpacing(6)
-        self.setMaximumHeight(32)
+        # 1.0.03: thẻ KPI 2 tầng cao 54 px như thẻ số màn hình chính - tên trên; số lớn + chữ phụ dưới (đủ chữ ở chú thích)
+        lo = QVBoxLayout(self)
+        lo.setContentsMargins(10, 6, 10, 6)
+        lo.setSpacing(2)
+        self.setFixedHeight(CAO_THE_NY)
         from .giao_dien import NhanRutGon
         self.tieu = NhanRutGon(tieu_de)                 # hẹp thì rút "…" (đủ ở chú thích), không đẩy cửa sổ rộng ra
         self.tieu.setObjectName('the_ny_tieu')
         self.gia = QLabel('0')
         self.gia.setObjectName('the_ny_so')
-        self.phu = QLabel('')                           # giữ đối tượng (dat / test); không xếp - chữ phụ hiện ở chú thích
-        self.phu.setVisible(False)
-        lo.addWidget(self.tieu, 1)
-        lo.addWidget(self.gia)
+        self.phu = NhanRutGon('')
+        self.phu.setObjectName('the_ny_phu')
+        lo.addWidget(self.tieu)
+        duoi = QHBoxLayout()
+        duoi.setSpacing(6)
+        duoi.addWidget(self.gia)
+        duoi.addWidget(self.phu, 1, Qt.AlignmentFlag.AlignBottom)
+        lo.addLayout(duoi)
 
     def dat(self, gia, phu):
         self.gia.setText(gia)
@@ -284,22 +299,32 @@ class KhungDuThao(QWidget):
         hud.setSpacing(6)                               # 6 thẻ KPI cách nhau 6 px
         hud.setProperty('giu_khoang_cach', True)        # giao_dien.gian_cach không nâng lên 10 px
         self.the = {
-            'tong': _The('TỔNG SỐ HỘ', MAU_THE_NY['tong'], lambda: None),
-            'du': _The('ĐỦ ĐIỀU KIỆN LẬP PA', MAU_THE_NY['du'], lambda: self.tabs.setCurrentIndex(0)),
-            'vuong': _The('VƯỚNG PHÁP LÝ', MAU_THE_NY['vuong'], lambda: self.tabs.setCurrentIndex(0)),
-            'dt': _The('ĐÃ DỰ THẢO (NIÊM YẾT)', MAU_THE_NY['dt'], lambda: self.tabs.setCurrentIndex(0)),
-            'pd': _The('ĐÃ PHÊ DUYỆT QĐ', MAU_THE_NY['pd'], self._mo_tien_do),
-            'bg': _The('ĐÃ BÀN GIAO MẶT BẰNG', MAU_THE_NY['bg'], self._mo_tien_do),
+            'tong': _The('Tổng số hộ', MAU_THE_NY['tong'], lambda: None),
+            'du': _The('Đủ điều kiện lập PA', MAU_THE_NY['du'], lambda: self.tabs.setCurrentIndex(0)),
+            'vuong': _The('Vướng pháp lý', MAU_THE_NY['vuong'], lambda: self.tabs.setCurrentIndex(0)),
+            'dt': _The('Đã dự thảo (niêm yết)', MAU_THE_NY['dt'], lambda: self.tabs.setCurrentIndex(0)),
+            'pd': _The('Đã phê duyệt QĐ', MAU_THE_NY['pd'], self._mo_tien_do),
+            'bg': _The('Đã bàn giao mặt bằng', MAU_THE_NY['bg'], self._mo_tien_do),
         }
         for t in self.the.values():
             hud.addWidget(t, 1)
         lo.addLayout(hud)
-        hang = QHBoxLayout()
-        hang.addWidget(QLabel('Đợt:'))
+        # 1.0.03 (Ảnh 7): ô đợt + 7 nút xếp nối tiếp, hẹp thì xuống dòng - trước đây một hàng cứng (ô đợt tối thiểu 360 px) ép nút
+        # nhỏ hơn chữ ("Gợi ý đủ điều kiệ", "uất bảng niêm yế")
+        from .giao_dien import XepDong
+        hang = XepDong(cach=6)
+        khoi_dot = QWidget()
+        h_dot = QHBoxLayout(khoi_dot)
+        h_dot.setContentsMargins(0, 0, 0, 0)
+        h_dot.setSpacing(6)
+        h_dot.addWidget(QLabel('Đợt:'))
         self.cb = QComboBox()
-        self.cb.setMinimumWidth(360)
+        self.cb.setMinimumWidth(RONG_O_DOT)
+        self.cb.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.cb.currentIndexChanged.connect(self._doi_dot)
-        hang.addWidget(self.cb, 1)
+        self.cb.currentIndexChanged.connect(lambda *_: self.cb.setToolTip(self.cb.currentText()))
+        h_dot.addWidget(self.cb, 1)
+        hang.addWidget(khoi_dot)
         self.b_tao = QPushButton('Tạo đợt')
         self.b_xoa_dot = QPushButton('Xóa đợt')
         self.b_xoa_dot.setToolTip('Xóa đợt đang chọn: các hộ trở về danh sách chờ, phương án và hồ sơ hộ giữ nguyên. Mờ khi chọn "Lũy kế".')
@@ -365,6 +390,16 @@ class KhungDuThao(QWidget):
                               'Nội dung tiêu biểu'], [200, 80, 90, 90, 90], gian=5)
         self.bang_th.setProperty('the_tong_hop', True)
         self.bang_vm = _bang(['Mã hộ', 'Chủ hộ', 'Thửa', 'Nhóm vướng', 'Ghi chú pháp lý'], [70, 160, 85, 185], gian=4)
+        # 1.0.03: Ý kiến / Nhóm vướng vẽ viên thuốc màu, Tỷ lệ đồng thuận có thanh tỷ trọng; bảng trống có lời hướng dẫn
+        from .giao_dien import gan_chu_khi_trong, gan_thanh_ty_le, gan_vien_thuoc
+        gan_vien_thuoc(self.bang_yk, 2)
+        gan_vien_thuoc(self.bang_vm, 3)
+        gan_thanh_ty_le(self.bang_th, 4, mau='#0F766E')
+        gan_chu_khi_trong(self.bang_ny, 'Chưa có hộ trong đợt niêm yết',
+                          'Tạo đợt rồi bấm "Đưa hộ vào đợt" để thêm các hộ đủ điều kiện.')
+        gan_chu_khi_trong(self.bang_vm, 'Không có hộ vướng pháp lý', 'Hộ đánh dấu V1-V5 (chưa đủ điều kiện) hiện ở đây.')
+        gan_chu_khi_trong(self.bang_yk, 'Chưa có hộ để lấy ý kiến', 'Chọn đợt niêm yết đã có hộ.')
+        gan_chu_khi_trong(self.bang_th, 'Chưa có kiến nghị nào được tổng hợp')
         # 0.9.70 (đặc tả ARCH-PABT-2026-V7 phần V): 4 thẻ con, tên không ghi cứng số ngày. Thẻ 1 gồm hộ đang niêm yết và (khung
         # dưới) hộ vướng / chưa đủ điều kiện - trước là thẻ 5 riêng: người niêm yết cần thấy ngay hộ nào chưa đưa vào được
         from PySide6.QtWidgets import QSplitter
@@ -501,18 +536,18 @@ class KhungDuThao(QWidget):
     def _ve(self):
         p = du_thao.thong_ke_phieu(self.con)
         self.the['tong'].dat(f'{p["tong"]} hộ', '100% quy mô dự án')
-        self.the['du'].dat(f'{p["du_dieu_kien"]} hộ', f'{p["pt_du"]:.1f}% đã đánh dấu đủ điều kiện')
-        self.the['vuong'].dat(f'{p["vuong"]} hộ', f'{p["pt_vuong"]:.1f}% chờ xử lý, chưa đưa vào đợt')
-        self.the['dt'].dat(f'{p["da_du_thao"]} hộ', f'{p["pt_du_thao"]:.1f}% đã đưa ra niêm yết')
-        self.the['pd'].dat(f'{p["phe_duyet"]} hộ', f'{p["pt_phe_duyet"]:.1f}% có quyết định')
-        self.the['bg'].dat(f'{p["ban_giao"]} hộ', f'{p["pt_ban_giao"]:.1f}% đã bàn giao')
+        self.the['du'].dat(f'{p["du_dieu_kien"]} hộ', f'{_pt(p["pt_du"])}% đã đánh dấu đủ điều kiện')
+        self.the['vuong'].dat(f'{p["vuong"]} hộ', f'{_pt(p["pt_vuong"])}% chờ xử lý, chưa đưa vào đợt')
+        self.the['dt'].dat(f'{p["da_du_thao"]} hộ', f'{_pt(p["pt_du_thao"])}% đã đưa ra niêm yết')
+        self.the['pd'].dat(f'{p["phe_duyet"]} hộ', f'{_pt(p["pt_phe_duyet"])}% có quyết định')
+        self.the['bg'].dat(f'{p["ban_giao"]} hộ', f'{_pt(p["pt_ban_giao"])}% đã bàn giao')
         dot = self._dot_id()
         tk = du_thao.thong_ke_y_kien(self.con, dot)
         self.lb_dot.setText(
             f'Tiến độ {"đợt" if dot else "lũy kế"}: Đồng thuận {tk["dong_y"]}/{tk["so_ho_dot"]} ({tk["pt_dot"]:.0f}%)'
             f' · Không đồng ý: {tk["khong_dong_y"]} · Ý kiến khác: {tk["y_kien_khac"]} · Chưa lấy ý kiến: {tk["chua"]}')
-        self.lb_luy.setText(f'Lũy kế niêm yết: {tk["luy_dong"]}/{tk["luy_ny"]} hộ đồng ý ({tk["pt_luy"]:.1f}%)')
-        self.lb_phu.setText(f'Bao phủ dự án: {tk["luy_dong"]}/{tk["tong_du_an"]} hộ ({tk["pt_bao_phu"]:.1f}%)')
+        self.lb_luy.setText(f'Lũy kế niêm yết: {tk["luy_dong"]}/{tk["luy_ny"]} hộ đồng ý ({_pt(tk["pt_luy"])}%)')
+        self.lb_phu.setText(f'Bao phủ dự án: {tk["luy_dong"]}/{tk["tong_du_an"]} hộ ({_pt(tk["pt_bao_phu"])}%)')
         self.lb_dot.setToolTip('Tỷ lệ đồng thuận của đợt đang chọn (số hộ đồng ý / số hộ của đợt). Chọn "Lũy kế" để xem mọi đợt.')
         self.lb_luy.setToolTip('Hộ đồng ý / số hộ đã đưa ra niêm yết, lấy ý kiến (mọi đợt)')
         self.lb_phu.setToolTip('Hộ đã đồng ý / tổng số hộ của dự án')
@@ -552,8 +587,10 @@ class KhungDuThao(QWidget):
         self.bang_th.setRowCount(len(nhom))
         for i, x in enumerate(nhom):
             for c, v in enumerate((x['ten'], x['so_ho'], x['dong_y'], x['chua_dong_y'],
-                                   f'{x["pt_dong_y"]:.1f}%' if x['so_ho'] else '-', x['noi_dung'])):
+                                   f'{_pt(x["pt_dong_y"])}%' if x['so_ho'] else '-', x['noi_dung'])):
                 it = _o(v)
+                if c in (1, 2, 3, 4):                                   # 1.0.03: cột số căn giữa (kể cả dòng "Toàn bộ các đợt")
+                    it.setTextAlignment(CAN_GIUA)
                 if not x['nhom']:                                       # dòng tổng: đậm
                     f = it.font()
                     f.setBold(True)

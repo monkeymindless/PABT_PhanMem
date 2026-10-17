@@ -1,4 +1,14 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.02 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.03 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **1.0.03**: bảng dễ đọc hơn - ô bằng **0** chữ xám nhạt, số tiền cột Tổng / Thành tiền chữ xanh đậm; cột **Trạng thái** danh sách hộ có
+> 4 vạch tiến độ + nhãn màu (xanh lá đã bàn giao, xanh ngọc đã chi trả / phê duyệt, xanh dương đã lập, vàng cần xem lại, xám chưa lập);
+> cột tỷ lệ % có thanh tỷ trọng; bảng trống có lời hướng dẫn ở giữa. Menu trái luôn sáng đúng mục đang xem (cả Lập phương án chi tiết,
+> Niêm yết, Đơn giá, So sánh). Danh sách hộ vừa khung (Họ tên, Địa chỉ co giãn). Lập phương án: ô chọn tài sản liền nút ▼; dải tổng ghi
+> tên từng mục (hẹp thì viết gọn, **TỔNG CỘNG** luôn đủ số); thẻ Thông tin hộ có dòng cộng số thửa / diện tích thu hồi. **Bảng tổng hợp
+> kinh phí** và **Quyết định phê duyệt**: 4 thẻ số liệu đầu trang + dòng cộng chân bảng. **Tiến độ**: dòng cộng giải ngân (đang lọc, tổng
+> duyệt, đã nhận, chưa nhận); bộ lọc "Đã bàn giao" và thẻ mặt bằng sạch chỉ tính hộ **có quyết định, đã nhận đủ tiền và có ngày biên bản**
+> (như danh sách hộ). **Niêm yết**: thẻ số liệu 2 tầng, tỷ lệ % dấu phẩy. **Khái toán**: thanh nhập một hàng (Full HD 125%), thẻ tổng có
+> cơ cấu 6 mục. **Đơn giá**: huy hiệu "Đang lọc: a / b mục". **Đợt trình**: danh sách kiểm tra có huy hiệu Đạt / Xem lại / Thiếu.
 
 > **1.0.02**: mọi cửa sổ và trang làm việc cùng tông **Navy** với màn hình chính. Nút chính (**Lưu**, **Thực hiện**, **Xuất bản hồ sơ đợt
 > này**, **Thêm vào bảng**) nền xanh đậm; nút **Xóa** viền đỏ; nút khác nền trắng. Cửa sổ lập phương án: thanh trên cùng gọn, thẻ mục kiểu

@@ -34,8 +34,9 @@ COT_GD = {
 for _m in (2, 3, MUC_VN):
     COT_GD[_m] = [('ma', 'Mã', 60), ('ten', {2: 'Tên nhà, công trình, tài sản', 3: 'Tên cây trồng', MUC_VN: 'Tên vật nuôi'}[_m], 340),
                   ('dvt', 'ĐVT', 70), ('so_luong', 'Số lượng', 85), ('don_gia', 'Đơn giá (đ)', 110), ('ty_le', 'Tỷ lệ %', 60),
-                  ('thanh_tien', 'Thành tiền (đ)', 120), ('nguon', 'Nguồn giá', 110), ('quy_cach', 'Quy cách', 170),
-                  ('ghi_chu', 'Ghi chú (quy định, cách tính)', 240), ('can_cu_gia', 'Căn cứ giá', 200)]
+                  ('thanh_tien', 'Thành tiền (đ)', 120), ('nguon', 'Nguồn\ngiá', 110), ('quy_cach', 'Quy\ncách', 170),
+                  ('ghi_chu', 'Ghi chú (quy định,\ncách tính)', 240), ('can_cu_gia', 'Căn cứ\ngiá', 200)]
+# 1.0.03: tiêu đề cột phụ 2 dòng - sàn tiêu đề (san_tieu_de) đo dòng dài nhất: cột gọn 80-95 px nhường chỗ Tên và cột tiền
 COT_GD[4] = [('ma', 'Mã', 60), ('ten', 'Chính sách hỗ trợ', 300), ('cach_tinh', 'Cách tính', 280), ('dvt', 'ĐVT', 70),
              ('so_luong', 'Số lượng', 80), ('don_gia', 'Đơn giá (đ)', 110), ('ty_le', 'Tỷ lệ %', 60),
              ('thanh_tien', 'Thành tiền (đ)', 120), ('ghi_chu', 'Ghi chú (căn cứ)', 280)]
@@ -44,8 +45,9 @@ COT_GD[4] = [('ma', 'Mã', 60), ('ten', 'Chính sách hỗ trợ', 300), ('cach_
 # hết thanh cuộn ngang thừa. Cột vẫn không hẹp hơn chữ tiêu đề (giao_dien.san_tieu_de)
 # 0.9.96: Ghi chú / Quy cách thường trống -> bề rộng gọn (không giãn, tiêu đề vẫn đủ chữ nhờ san_tieu_de); phần còn lại giãn cho
 # Tên / Vị trí / Chính sách / Cách tính
-RONG_COT_GON = {'ma': 52, 'dvt': 55, 'so_luong': 72, 'don_gia': 92, 'ty_le': 54, 'thanh_tien': 105, 'nguon': 68,
-                'quy_cach': 110, 'ghi_chu': 150, 'can_cu_gia': 150}
+# 1.0.03 (Ảnh 6): cột phụ Nguồn giá / Quy cách / Căn cứ giá gọn 80-95 px - nhường chỗ cho Tên tài sản / cây trồng và cột tiền
+RONG_COT_GON = {'ma': 52, 'dvt': 55, 'so_luong': 72, 'don_gia': 92, 'ty_le': 54, 'thanh_tien': 105, 'nguon': 80,
+                'quy_cach': 90, 'ghi_chu': 150, 'can_cu_gia': 95}
 COT_GIAN = ('ten', 'cach_tinh', 'vi_tri')
 CAO_NUT_DONG = 24                  # nút thao tác dòng (Xóa dòng, Lên, Xuống…) gọn
 THE_MUC = (0, 1, 2, 3, MUC_VN, 4)
@@ -419,6 +421,10 @@ AP_NHIEU_DONG = {'loai_dat', 'vi_tri', 'gia_bang_gia', 'he_so_k', 'ty_le', 'ghi_
 from .hang_nhap_nhanh import KIEU_SL, HangNhapNhanh, ds_chon_nhanh, lam_san  # noqa: E402,F401
 
 
+CHU_TRONG_MUC = {1: 'Chưa có dòng bồi thường đất', 2: 'Chưa có nhà, công trình', 3: 'Chưa có cây trồng',
+                 MUC_VN: 'Chưa có vật nuôi', 4: 'Chưa có khoản hỗ trợ'}    # 1.0.03: chữ giữa bảng mục khi chưa có dòng
+
+
 class BangMuc(QWidget):
     """Một thẻ mục: hàng nhập nhanh (chọn / gõ tên → số lượng → Thêm), bảng dòng phương án, nút Trở lại / Tiếp theo."""
 
@@ -467,6 +473,10 @@ class BangMuc(QWidget):
         self.bang.setItemDelegateForColumn(self.c_xoa, nut_xoa)
         self.bang.setMouseTracking(True)                # rê chuột lên thùng rác: đổi màu đỏ
         self.bang.cellClicked.connect(self._bam_o)
+        from .giao_dien import gan_chu_khi_trong
+        gan_chu_khi_trong(self._bang, CHU_TRONG_MUC.get(muc, 'Chưa có dòng nào'),
+                          'Gõ tên vào ô nhập nhanh phía trên rồi bấm "Thêm vào bảng", hoặc "Dán tài sản" từ Excel / Word.' if muc != 1
+                          else 'Bấm "Thêm thửa vào mục 1" (hoặc thêm tất cả / chọn nhiều thửa) để lập dòng bồi thường đất.')
         # phím Delete trên bảng (không đang sửa ô): xóa dòng / các dòng đang chọn
         self._phim_xoa = QShortcut(QKeySequence(QKeySequence.StandardKey.Delete), self.bang)
         self._phim_xoa.setContext(Qt.ShortcutContext.WidgetShortcut)
@@ -1059,6 +1069,74 @@ QSS_DAI_DIEU_HUONG = ('QFrame#dai_dieu_huong { background: #F1F5F9; border: 0; b
 CAO_NUT_TREN = 28                  # hàng trên cùng cửa sổ lập phương án (chọn hộ + nút lệnh) một hàng (0.9.95: 27; 1.0.02: 28)
 
 
+TEN_MUC_TONG = {1: 'Đất', 2: 'Nhà', 3: 'Cây', MUC_VN: 'Vật nuôi', 4: 'Hỗ trợ', 5: 'Thưởng'}   # dải tổng cửa sổ lập PA
+MAU_MUC_KHONG, MAU_MUC_CO = '#64748B', '#0F172A'
+
+
+def chu_tong_pa(kq) -> tuple:
+    """1.0.03 (Ảnh 6): chữ dải tổng cửa sổ lập phương án có TÊN mục - (đầy đủ, gọn). Mục 0 đồng chữ xám, mục có tiền chữ đậm;
+    bản gọn (cửa sổ hẹp) ghi số tiền từng mục kiểu "1,2 tỷ" / "23,5 triệu" (tien.vn_gon); TỔNG CỘNG luôn đủ số."""
+    from .tien import vn_gon
+    cach = '&nbsp;·&nbsp;'
+    tong = f'<span style="color:#0F3866">TỔNG CỘNG: <b>{vn(kq.tong)} đồng</b></span>'
+    ra = []
+    # mức: đầy đủ; gọn (vn_gon); chỉ mục có tiền (gọn); chỉ TỔNG CỘNG - hẹp tới đâu thì TỔNG CỘNG vẫn hiện đủ
+    for gon, bo_khong in ((False, False), (True, False), (True, True)):
+        muc = []
+        for m in (*THE_MUC[1:], 5):
+            x = kq.muc[m]
+            if bo_khong and not x:
+                continue
+            so = (vn_gon(x) if gon else vn(x)) if x else '0'
+            mau = MAU_MUC_CO if x else MAU_MUC_KHONG
+            muc.append(f'<span style="color:{mau}">{so_muc(m)}. {TEN_MUC_TONG[m]}: '
+                       + (f'<b>{so}</b>' if x else so) + '</span>')
+        ra.append(cach.join(muc) + ('&nbsp;&nbsp;|&nbsp;&nbsp;' if muc else '') + tong)
+    ra.append(tong)
+    return tuple(ra)
+
+
+class NhanTongPA(QLabel):
+    """Dải tổng một dòng: đủ chỗ thì chữ đầy đủ, hẹp thì chữ gọn (vn_gon từng mục). Bề rộng ngang Ignored - chữ dài không đẩy cửa sổ
+    rộng hơn màn hình; đủ số ở chú thích."""
+
+    def __init__(self):
+        super().__init__('')
+        from PySide6.QtWidgets import QSizePolicy
+        self.setTextFormat(Qt.TextFormat.RichText)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self._chu = ('', '')
+
+    def dat(self, du: str, *gon: str) -> None:
+        """du: chữ đầy đủ; gon: các mức gọn dần (chọn mức đầu tiên vừa bề rộng; không mức nào vừa: mức gọn nhất)."""
+        self._chu = (du, *gon)
+        self._chon()
+
+    def _chon(self) -> None:
+        du = self._chu[0]
+        from PySide6.QtGui import QTextDocument
+        doc = QTextDocument()
+        doc.setDefaultFont(self.font())
+        rong = max(1, self.width() - 4)
+        for chu in self._chu:
+            doc.setHtml(chu)
+            if doc.idealWidth() <= rong:
+                break
+        if chu != QLabel.text(self):
+            self.setText(chu)
+        doc.setHtml(du)
+        self.setToolTip(doc.toPlainText().replace('\xa0·\xa0', '\n').replace('\xa0\xa0|\xa0\xa0', '\n'))
+
+    def text(self) -> str:
+        """Chữ ĐẦY ĐỦ (như NhanRutGon) - chữ đang vẽ có thể là bản gọn."""
+        return self._chu[0] if self._chu[0] else QLabel.text(self)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if self._chu[0]:
+            self._chon()
+
+
 class CuaSoLapPA(QDialog):
     """Hồ sơ và phương án một hộ trong một cửa sổ: thẻ 0 thông tin hộ, thửa đất → 1 đất → 2 nhà, công trình → 3 cây trồng →
     4 vật nuôi → 5 hỗ trợ (Tiếp theo / Trở lại). self.bang theo MỤC (bang[4] = hỗ trợ, bang[MUC_VN] = vật nuôi), thẻ: the_cua."""
@@ -1192,9 +1270,8 @@ class CuaSoLapPA(QDialog):
             self.bang[m] = BangMuc(self, m)
             self.tab.addTab(self.bang[m], TEN_TAB[the])
         # ---- tổng + cảnh báo
-        self.lb_tong = QLabel('')
+        self.lb_tong = NhanTongPA()
         self.lb_tong.setObjectName('tong_pa')                # kiểu: QSS_DAI_DIEU_HUONG (dải đáy cửa sổ)
-        self.lb_tong.setWordWrap(True)
         self.lb_tb = QLabel('')
         self.lb_tb.setWordWrap(True)
         self.lb_tb.setStyleSheet('QLabel { color: #1F4E78; padding: 2px 6px; }')
@@ -1347,10 +1424,7 @@ class CuaSoLapPA(QDialog):
             self.bang[m].lb_tong.setText(f'Cộng mục {so_muc(m)}: {vn(kq.muc[m])} đ')
             self.tab.setTabText(the, f'{TEN_TAB[the]} ({len(self.bo.ds(m))})')
         self.tab.setTabText(0, f'{TEN_TAB[0]} ({self.ho_so.bang.rowCount()} thửa)')
-        cach = '&nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;'
-        self.lb_tong.setText(
-            cach.join([f'{so_muc(m)}. {vn(kq.muc[m])}' for m in THE_MUC[1:]] + [f'{so_muc(5)}. Thưởng {vn(kq.muc[5])}']) +
-            f'{cach}<b>TỔNG CỘNG: {vn(kq.tong)} đồng</b>')
+        self.lb_tong.dat(*chu_tong_pa(kq))
         from .nghiep_vu import dt_nn_thu_hoi
         dt_nn = dt_nn_thu_hoi(self.bo.pa)
         self.o_dt_nn.setPlaceholderText(f'tự lấy: {so_vn(dt_nn)}')     # để trống = DT đất NN đã nhập ở mục 1
@@ -2077,12 +2151,15 @@ class CuaSoLapPA(QDialog):
 
 
 # ---------------------------------------------------------------- thông tin dự án
+KICH_THUOC_HOP_DU_AN = (1180, 535)
+
+
 class HopDuAn(QDialog):
     def __init__(self, con, parent=None):
         super().__init__(parent)
         self.con = con
         self.setWindowTitle('Thông tin dự án')
-        self.resize(1080, 500)                          # 0.9.95: đủ cao, ô tên đơn vị bên phải không bị cắt (rộng >= 920)
+        self.resize(*KICH_THUOC_HOP_DU_AN)              # 1.0.03: 1180 x 535 - tên đơn vị / cơ quan thẩm định dài không bị cắt
         gt = lap_pa.doc_du_an(con)
         self.o = {}
         from . import csdl
@@ -2121,6 +2198,7 @@ class HopDuAn(QDialog):
             w = self.o[k]
             (w.currentTextChanged if isinstance(w, QComboBox) else w.textChanged).connect(lambda _=None: self._goi_y_tham_dinh())
         self._goi_y_tham_dinh()
+        self._dau_dong_va_goi_y()
         # 0.9.69 (người dùng 12/10/2026): chỉ chọn loại dự án - tỷ lệ tự lấy mức tối đa của loại (bỏ ô Tỷ lệ cho đỡ rối)
         kp = the_form('Kinh phí tổ chức thực hiện bồi thường (bảng tổng hợp, dự toán)',
                       [('Loại dự án:', self.o_loai_kp)], 110)
@@ -2142,6 +2220,18 @@ class HopDuAn(QDialog):
         lo.addLayout(form)
         lo.addWidget(ghi)
         lo.addWidget(nut)
+
+    def _dau_dong_va_goi_y(self):
+        """1.0.03 (Ảnh 4): chữ dài ("TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT…", "Phòng Kinh tế, Hạ tầng và Đô thị phường…") hiện TỪ ĐẦU (ô sửa
+        được mặc định cuộn về cuối - mất chữ đầu) và đủ chữ ở chú thích; chú thích đi theo khi sửa."""
+        for w in self.o.values():
+            o = w.lineEdit() if isinstance(w, QComboBox) else w
+            if o is None:
+                continue
+            o.setCursorPosition(0)
+            if not w.toolTip():
+                o.setToolTip(o.text())
+                o.textChanged.connect(lambda t, o=o: o.setToolTip(t))
 
     def _kp_theo_ten(self):
         """Đang tự chọn: loại kinh phí theo tên dự án đang gõ (lap_pa.loai_kinh_phi_tu_ten)."""

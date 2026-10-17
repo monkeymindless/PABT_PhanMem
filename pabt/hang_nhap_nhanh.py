@@ -88,7 +88,7 @@ class HangNhapNhanh(QWidget):
 
     def __init__(self, them, muc: int | None = None, chon_muc: list | None = None, parent=None):
         super().__init__(parent)
-        from .giao_dien import OTimChon
+        from .giao_dien import OTimChon, RONG_NUT_XO
         self._them = them
         self._muc = muc
         self._dm = None
@@ -108,7 +108,7 @@ class HangNhapNhanh(QWidget):
         self.o_chon = OTimChon(GOI_Y.get(self.muc(), GOI_Y[2]))
         self.o_chon.khi_chon = lambda m: self._da_chon(m)
         self.o_chon.o.setProperty('nhap', '1')
-        self.o_chon.nut.setMinimumSize(CAO_HANG, CAO_HANG)
+        self.o_chon.nut.setFixedSize(RONG_NUT_XO, CAO_HANG)     # nút ▼ liền ô chữ (1.0.03)
         self.o_chon.nut.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         lo.addWidget(self.o_chon, 5)
         # kiểu số đo của cây (đường kính / chu vi thân): chỉ tạo khi hàng có mục 3 (thẻ Nhà / Vật nuôi / Hỗ trợ của hộ không cần -

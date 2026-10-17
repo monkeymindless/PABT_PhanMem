@@ -337,7 +337,7 @@ class TestBaoCaoGPMB(_Co):
         q = self.qd()                                                                    # 4 hộ đã phê duyệt
         a, b, c = self.ma[0], self.ma[1], self.ma[2]
         theo_doi.ghi_chi_tra(self.con, [(q, a), (q, b)], _ngay(-1))                      # a, b nhận đủ tiền
-        theo_doi.ghi_ban_giao(self.con, [a], dict(da_ban_giao=1))                        # a đã bàn giao
+        theo_doi.ghi_ban_giao(self.con, [a], dict(da_ban_giao=1, ban_giao_ngay=_ngay(-1)))   # a đã bàn giao (có ngày biên bản)
         van_dong.ghi_buoi(self.con, c, 'tien', _ngay(-12))                               # c: vận động quá 10 ngày
         with self.con:                                                                   # b cùng tờ bản đồ với a (thửa bị bao quanh)
             self.con.execute('UPDATE thua SET so_to = (SELECT so_to FROM thua WHERE ma_ho = ? LIMIT 1) WHERE ma_ho = ?', (a, b))
@@ -655,7 +655,7 @@ class TestBangTongHopVaBaoCaoGiaoDien(_Co):
         self.assertEqual(k.tq['dem'], dict(gap=0, cao=0, theo_doi=so_thua_4_ho))        # đều "theo dõi"
         self.assertIsNone(k.xuat_cuong_che(self.td / 'x.xlsx'))             # chưa hộ nào đủ điều kiện cưỡng chế
         theo_doi.ghi_chi_tra(self.con, [(q, self.ma[0]), (q, self.ma[1])], _hn(-1))
-        theo_doi.ghi_ban_giao(self.con, [self.ma[0]], dict(da_ban_giao=1))
+        theo_doi.ghi_ban_giao(self.con, [self.ma[0]], dict(da_ban_giao=1, ban_giao_ngay=_hn(-1)))
         van_dong.ghi_buoi(self.con, self.ma[2], 'tien', _hn(-20))
         k.nap()
         self.assertEqual(k.kpi.the['giai_ngan'].lb_so.text()[-1], '%')

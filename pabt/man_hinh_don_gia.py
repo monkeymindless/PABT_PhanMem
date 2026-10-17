@@ -77,6 +77,8 @@ class HopBoDonGia(QDialog):
         self.o_tim.setPlaceholderText('Tìm trong thẻ đang xem (không cần dấu): xoai, nha cap 4, CS9…')
         loc_khi_ngung_go(self.o_tim, self.loc)
         self.the = QTabWidget()
+        # đổi thẻ: lọc thẻ mới theo chữ đang tìm (trước chỉ lọc thẻ đang xem lúc gõ) + đếm lại huy hiệu
+        self.the.currentChanged.connect(lambda *_: self.loc(self.o_tim.text()) if self.o_tim.text().strip() else self._dem_loc())
         # hàng nút gọn (trước 0.9.17: 7 nút một hàng, chật ở màn hình 1366): lệnh cùng việc gom vào nút xổ, việc chính ở bên phải
         nut = QHBoxLayout()
         # 0.9.73: bỏ Giá đất / Đơn giá riêng (đã có ở menu trái: Bảng giá đất, Đơn giá đặc biệt) và cập nhật từ web, tra cứu
@@ -109,7 +111,16 @@ class HopBoDonGia(QDialog):
         self.b_ap.setEnabled(con_du_an is not None and not chi_doc)
         lo = QVBoxLayout(self)
         lo.addWidget(self.lb)
-        lo.addWidget(self.o_tim)
+        # 1.0.03: ô tìm + huy hiệu "Đang lọc: a / b mục" của thẻ đang xem (cuối thanh tìm)
+        self.lb_loc = QLabel('')
+        self.lb_loc.setProperty('vai', 'huy_hieu_loc')
+        self.lb_loc.setFixedHeight(28)
+        self.lb_loc.setTextFormat(Qt.TextFormat.RichText)
+        h_tim = QHBoxLayout()
+        h_tim.setSpacing(8)
+        h_tim.addWidget(self.o_tim, 1)
+        h_tim.addWidget(self.lb_loc)
+        lo.addLayout(h_tim)
         lo.addWidget(self.the, 1)
         lo.addLayout(nut)
         # dán bảng / chữ đơn giá đã chép (Excel, Word, Snipping Tool "Chép văn bản", Zalo OCR) hoặc ảnh chụp màn hình (nhận dạng chữ)
@@ -250,6 +261,16 @@ class HopBoDonGia(QDialog):
             con.close()
         if 0 <= i_giu < self.the.count():
             self.the.setCurrentIndex(i_giu)
+        self._dem_loc()
+
+    def _dem_loc(self, *_):
+        """Huy hiệu "Đang lọc: a / b mục" (a = dòng đang hiện của thẻ đang xem)."""
+        b = self.the.currentWidget()
+        if b is None or not hasattr(self, 'lb_loc'):
+            return
+        n = b.rowCount()
+        hien = n - sum(self._khoa_the.get(self.the.currentIndex(), ([], []))[1])
+        self.lb_loc.setText(f'Đang lọc: <b>{hien}</b> / {n} mục')
 
     def nap_quy_uoc(self):
         """Chỉ dựng lại thẻ quy ước (sau Đơn giá riêng) — không đọc lại 5.500 dòng nhà / cây. Không còn thẻ quy ước: bỏ qua."""
@@ -466,6 +487,7 @@ class HopBoDonGia(QDialog):
                     an[r] = h
         finally:
             b.setUpdatesEnabled(True)
+        self._dem_loc()
 
     def cap_nhat_file(self, p=None, mat_khau=None):
         if not self._can_sua(mat_khau):

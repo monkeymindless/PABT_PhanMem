@@ -210,6 +210,12 @@ class TestManHinh(CoSo):
         td.dat_loc('', set(), '')
         self.assertEqual(td.ban_giao([b], dict(da_ban_giao=True, ban_giao_ngay='01/11/2026')), 1)
         td.dat_loc('da_bg')
+        # 1.0.03: bàn giao theo phân tích tiến độ tự động (tuần tự) - b còn quyết định chưa nhận tiền: chưa tính đã bàn giao
+        self.assertEqual(td.dang_hien, [])
+        qd_b = [r[0] for r in self.con.execute('SELECT qd_id FROM qd_ho WHERE ma_ho = ?', (b,))]
+        theo_doi.ghi_chi_tra(self.con, [(q, b) for q in qd_b], '01/11/2026')
+        td.nap()
+        td.dat_loc('da_bg')
         self.assertEqual(td.dang_hien, [b])
         f = td.xuat(self.td / 'td.xlsx')
         self.assertIn('ĐÃ BÀN GIAO', openpyxl.load_workbook(f).active['A1'].value)

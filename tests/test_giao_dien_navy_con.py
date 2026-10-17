@@ -68,8 +68,9 @@ class TestQssChung(unittest.TestCase):
         nhom = _quy_tac(qss, 'QGroupBox')
         self.assertIn('border: 1px solid #E2E8F0', nhom)
         self.assertIn('border-radius: 6px', nhom)
-        self.assertIn('margin-top: 22px', nhom)                          # chỗ cho tiêu đề (0.9.38: không bị khung cắt)
-        self.assertIn('subcontrol-origin: margin', _quy_tac(qss, 'QGroupBox::title'))
+        self.assertIn('margin-top: 6px', nhom)                           # 1.0.03: thẻ phẳng - tiêu đề nằm TRONG khung
+        self.assertIn('padding: 26px', nhom)                             # chỗ cho tiêu đề (0.9.38: không bị khung cắt)
+        self.assertIn('subcontrol-origin: border', _quy_tac(qss, 'QGroupBox::title'))    # 1.0.03: thẻ phẳng
         self.assertIn('#E2E8F0', _quy_tac(qss, 'QSplitter::handle'))
         self.assertIn('#94A3B8', _quy_tac(qss, 'QSplitter::handle:hover'))
 

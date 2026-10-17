@@ -152,7 +152,7 @@ class TestThanhMotHang(_Co):
         self.assertEqual(k.b_dan.text(), 'Dán danh sách…')
         self.assertEqual((h.o_sl.minimumWidth(), h.o_sl.maximumWidth(), h.o_tl.minimumWidth(), h.o_tl.maximumWidth()),
                          (90, 90, 60, 60))
-        self.assertEqual((h.o_gc.minimumWidth(), h.o_gc.maximumWidth()), (120, 180))
+        self.assertEqual((h.o_gc.minimumWidth(), h.o_gc.maximumWidth()), (90, 180))      # 1.0.03: gọn để thanh một hàng
         self.assertEqual((k.o_quy_mo.minimumWidth(), k.o_so_thua.minimumWidth(), k.o_so_ho.minimumWidth()), (130, 75, 75))
         k.cb_muc_nhap.setCurrentIndex(k.cb_muc_nhap.findData(3))
         for du, mot in ((60, True), (-60, False)):

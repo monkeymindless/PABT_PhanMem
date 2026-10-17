@@ -2,6 +2,7 @@
 Logic ở quan_ly.py, kiem_loi.py; hàm thao tác nhận tham số để kiểm thử (im_lang = True: không hiện hộp thông báo).
 """
 from __future__ import annotations
+import html
 
 from pathlib import Path
 
@@ -19,6 +20,8 @@ from .giao_dien import KieuNut, XepDong, ap_kieu_nut, con_tro_cho, dat_trang_tha
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Quản lý hồ sơ trình phương án'
+# huy hiệu danh sách kiểm tra hồ sơ đợt trình (1.0.03): {đạt?: (nền, chữ)} - True đạt, None xem lại, False thiếu
+HUY_HIEU_KIEM = {True: ('#DCFCE7', '#15803D'), None: ('#FEF3C7', '#B45309'), False: ('#FEE2E2', '#B91C1C')}
 SO_CHU_SO_PA = 2                    # số PA chi tiết đánh ở hộp "Đánh số": 01, 02, 03… (NĐ 30/2020/NĐ-CP); 0 = không thêm số 0
 DO, VANG, XANH = QColor('#F8CBAD'), QColor('#FFF2CC'), QColor('#E2EFDA')
 
@@ -327,6 +330,7 @@ class HopDotTrinh(_Hop):
         # cao; in / xuất file ở đúng một nơi là Xuất hồ sơ & Bản in)
         self.lb_kiem = QLabel('')                          # tóm tắt hồ sơ Bước 8 của đợt đã đủ chưa (chỉ nhắc, không chặn xuất)
         self.lb_kiem.setWordWrap(True)
+        self.lb_kiem.setTextFormat(Qt.TextFormat.RichText)
         self.b_xuat = QPushButton('Xuất bản hồ sơ đợt này  →')
         self.b_xuat.setToolTip('Mở Xuất hồ sơ & Bản in với đợt này (bản chính thức): tờ trình, bảng tổng hợp, phương án chi tiết từng '
                                'hộ, báo cáo tiếp thu ý kiến; chọn Excel / PDF / gộp PDF / in máy in')
@@ -471,7 +475,12 @@ class HopDotTrinh(_Hop):
             dat = sum(1 for ok, _ in self.kiem if ok is True)
             muc = 'dat' if dat == len(self.kiem) else 'loi' if any(ok is False for ok, _ in self.kiem) else 'canh_bao'
             xem = [chu for ok, chu in self.kiem if ok is not True]
-            dat_trang_thai(self.lb_kiem, muc, f'Hồ sơ Bước 8: đạt {dat}/{len(self.kiem)} điều kiện' + (f' - {xem[0]}' if xem else ''))
+            # 1.0.03: huy hiệu màu theo từng loại (Đạt / Xem lại / Thiếu) - đủ từng điều kiện ở chú thích
+            huy = ''.join(f'&nbsp;<span style="background-color:{nen}; color:{chu_mau}; font-weight:600">&nbsp;{ten[ok]} {n}&nbsp;</span>'
+                          for ok, (nen, chu_mau) in HUY_HIEU_KIEM.items()
+                          for n in [sum(1 for x, _ in self.kiem if x is ok)] if n)
+            dat_trang_thai(self.lb_kiem, muc, f'Hồ sơ Bước 8: <b>đạt {dat}/{len(self.kiem)}</b> điều kiện&nbsp;{huy}'
+                           + (f'&nbsp;&nbsp;- {html.escape(xem[0])}' if xem else ''))
         self.b_xuat.setEnabled(dot is not None)
 
     def _sua_so_pa(self, it):

@@ -33,6 +33,11 @@ MAU_NAC = ('#64748B', '#0284C7', '#0F3866', '#0F766E', '#15803D')
 MAU_MA_HO = '#0284C7'                    # cột STT (định danh hộ trên danh sách)
 CAN_PHAI = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 CAN_TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+CAN_GIUA = int(Qt.AlignmentFlag.AlignCenter)
+COT_GIUA = {0, 3}             # 1.0.03: STT, Số thửa căn giữa (tiêu đề + dữ liệu); DT thu hồi căn phải
+# bề rộng cột danh sách hộ sau khi tự canh: {cột: (tối thiểu, tối đa)} - Ghi chú (cột cuối) giãn lấp phần còn lại
+RONG_COT_DS = {0: (56, 72), 3: (80, 100), 4: (120, 150), 5: (220, 290), 6: (140, 220)}
+COT_GIAN_DS = (1, 2)          # Họ và tên, Địa chỉ: giãn / co theo khung nhìn
 TAT_CA_DOT, TAT_CA_TRANG_THAI = 'Đợt: Tất cả', 'Trạng thái: Tất cả'     # mục đầu ô lọc (thay nhãn "Đợt:" riêng)
 CAO_DAI_CONG_CU = 32                    # hàng công cụ + lọc danh sách hộ, dải cộng dưới bảng
 # nút "Mở" của bảng dự án gần đây: viền + chữ navy, rê chuột nền navy chữ trắng (bộ chọn #id thắng tô màu theo chữ "Mở" của _BoToMau)
@@ -191,6 +196,8 @@ GOI_Y_MENU = {'Bộ đơn giá…': 'Đơn giá bồi thường (bộ đơn giá
               'Theo dõi tiến độ': 'Tiến độ chi trả & bàn giao: tỷ lệ giải ngân, mặt bằng sạch, thửa còn vướng, mốc thu hồi đất, vận '
                                   'động và cưỡng chế; báo cáo tiến độ GPMB',
               'Quyết định phê duyệt': 'Quản lý quyết định phê duyệt phương án và các hộ của từng quyết định'}
+# 1.0.03: lệnh menu trái mở trang nhúng / chế độ - đánh dấu khi đang xem (cùng TRANG và 'Màn hình chính'; app._dong_bo_menu_trai)
+LENH_DANH_DAU_PHU = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Bộ đơn giá…', 'So sánh với thực tế')
 TEN_TAB = {'don_gia': 'Đơn giá bồi thường', 'du_thao': 'Niêm yết && Lấy ý kiến'}   # "&&": QTabBar hiện "&"
 
 
@@ -451,8 +458,11 @@ class BangHo(QAbstractTableModel):
         return 0 if parent.isValid() else len(COT)
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
-            return COT[section]
+        if orientation == Qt.Orientation.Horizontal:
+            if role == Qt.ItemDataRole.DisplayRole:
+                return COT[section]
+            if role == Qt.ItemDataRole.TextAlignmentRole:
+                return CAN_GIUA if section in COT_GIUA else None
         return None
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
@@ -491,7 +501,7 @@ class BangHo(QAbstractTableModel):
             return float(v) if c in COT_SO or c in (0, 3) else str(v)
         if role == Qt.ItemDataRole.TextAlignmentRole:
             # số nguyên (như bang_ao): Qt5 / PySide2 bỏ qua cờ ghép kiểu enum -> cột số canh trái-trên (17/10/2026)
-            return CAN_PHAI if c in COT_SO or c in (0, 3) else CAN_TRAI
+            return CAN_GIUA if c in COT_GIUA else CAN_PHAI if c in COT_SO else CAN_TRAI
         if role == Qt.ItemDataRole.BackgroundRole and c == 6 and d.get('mau_gc') is not None:
             return QBrush(d['mau_gc'])
         return None
@@ -636,6 +646,10 @@ class CuaSoChinh(QMainWindow):
             self.lenh[t].setShortcut(QKeySequence(f'Ctrl+{k + 1}'))
             self.addAction(self.lenh[t])
         self.lenh['Màn hình chính'].setCheckable(True)
+        # 1.0.03: mục menu trái mở TRANG NHÚNG / chế độ (hộ đang soạn, Niêm yết, Đơn giá, So sánh) cũng đánh dấu khi đang xem -
+        # trước đây mở tab hộ / Niêm yết mà menu trái vẫn sáng mục trang cũ (Ảnh 6, 7, 9). Một nguồn: _dong_bo_menu_trai
+        for t in LENH_DANH_DAU_PHU:
+            self.lenh[t].setCheckable(True)
         self.lenh['Màn hình chính'].setToolTip('Về màn hình bắt đầu (dự án mới, mở dự án, nhập Excel, dự án gần đây)')
         for ten, phim in (('Dự án mới…', 'Ctrl+N'), ('Mở dự án…', 'Ctrl+O'), ('Dự án trên máy chủ…', 'Ctrl+Shift+O'),
                           ('Lưu dự án', 'Ctrl+S'),
@@ -684,6 +698,10 @@ class CuaSoChinh(QMainWindow):
         self.bang.verticalHeader().setMinimumSectionSize(CAO_DONG_BANG - 4)
         self.bang.verticalHeader().setDefaultSectionSize(CAO_DONG_BANG)       # dòng 30 px (Hybrid Enterprise Navy)
         self.bang.horizontalHeader().setResizeContentsPrecision(300)    # tự canh cột: đo 300 dòng mẫu, không đo hết (3.000 hộ)
+        self.bang.horizontalHeader().setStretchLastSection(True)
+        # 1.0.03: cột Trạng thái vẽ thanh 4 nấc + viên thuốc màu (QPainter - chữ của mô hình giữ nguyên: lọc, tìm, kiểm thử)
+        from .giao_dien import gan_vien_thuoc
+        gan_vien_thuoc(self.bang, 5)
         self.bang.sortByColumn(0, Qt.SortOrder.AscendingOrder)
         self.bang.doubleClicked.connect(lambda idx: self._chay_lenh(lambda: self.mo_chi_tiet(idx)))
         self.bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -1246,12 +1264,16 @@ class CuaSoChinh(QMainWindow):
         dau = self.bang.horizontalHeader()
         dau.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.bang.resizeColumnsToContents()
-        self.bang.setColumnWidth(1, min(max(int(self.bang.columnWidth(1)), 240), 340))   # họ tên dài: xem đủ khi rê chuột
-        self.bang.setColumnWidth(2, min(max(int(self.bang.columnWidth(2)), 240), 420))   # địa chỉ
-        self.bang.setColumnWidth(5, max(int(self.bang.columnWidth(5)), 220))              # trạng thái
-        self.bang.setColumnWidth(6, min(max(int(self.bang.columnWidth(6)), 220), 480))    # ghi chú lệch Excel
-        dau.setStretchLastSection(True)
+        # 1.0.03 (Ảnh 3): 7 cột vừa khít khung nhìn - họ tên / địa chỉ co nhẹ (đủ chữ ở chú thích), Ghi chú (cột cuối) giãn lấp chỗ
+        # còn lại, không còn thanh cuộn ngang thừa
+        for c, (thap, cao) in RONG_COT_DS.items():
+            self.bang.setColumnWidth(c, min(max(int(self.bang.columnWidth(c)), thap), cao))
         self._vua_tieu_de()
+        # Họ và tên + Địa chỉ co / giãn theo khung nhìn (chia đều phần còn lại): tổng bề rộng luôn bằng khung - kể cả cỡ chữ 110-125%
+        # (kéo giãn cột theo tỷ lệ chữ) - không thanh cuộn ngang; Ghi chú (cột cuối) bề rộng gọn, kéo được
+        for c in COT_GIAN_DS:
+            dau.setSectionResizeMode(c, QHeaderView.ResizeMode.Stretch)
+        dau.setStretchLastSection(False)
         self.bang.sortByColumn(0, Qt.SortOrder.AscendingOrder)
 
     def _tai_lai_ho(self, doi: set) -> bool:
@@ -1959,9 +1981,36 @@ class CuaSoChinh(QMainWindow):
         self._cap_nhat_hien_hang_the()
 
     def _danh_dau_trang_chu(self):
-        for t in TRANG:
-            self.lenh[t].setChecked(False)
-        self.lenh['Màn hình chính'].setChecked(True)
+        self._dong_bo_menu_trai('Màn hình chính')
+
+    def _lenh_dang_xem(self) -> str | None:
+        """Khóa self.lenh của mục menu trái ứng với màn hình đang hiện (trang chính / trang nhúng / thẻ So sánh)."""
+        if not hasattr(self, 'ngan_lv'):
+            return None
+        if hasattr(self, 'khung_tab') and self.ngan_lv.currentWidget() is self.khung_tab.stack_phu:
+            w = self.khung_tab.stack_phu.currentWidget()
+            khoa = next((k for k, x in self.khung_tab.widget.items() if x is w), None)
+            if isinstance(khoa, tuple) and khoa and khoa[0] == 'ho':
+                return 'Lập phương án hộ…'
+            return {'du_thao': 'Dự thảo PABT…', 'don_gia': 'Bộ đơn giá…'}.get(khoa)
+        i = self.trang.currentIndex()
+        if i == TRANG_CHAO:
+            return 'Màn hình chính'
+        if i == STACK_DU_TOAN:
+            k = self.khung_du_toan
+            return 'So sánh với thực tế' if k is not None and k.tab.currentIndex() == 1 else TRANG[TRANG_DU_TOAN]
+        return TRANG[self._i_trang] if 0 <= self._i_trang < len(TRANG) else None
+
+    def _dong_bo_menu_trai(self, khoa_active: str | None = None) -> None:
+        """1.0.03: CHỈ mục menu trái của màn hình đang hiện được đánh dấu (trang chính, Màn hình chính, Lập phương án chi tiết, Niêm
+        yết, Đơn giá bồi thường, So sánh với thực tế). khoa_active None: suy từ màn hình đang hiện. Lệnh bấm mà không mở được gì
+        (QAction checkable tự đảo dấu) cũng được đặt lại vì _chay_lenh gọi hàm này sau mỗi lệnh."""
+        if khoa_active is None:
+            khoa_active = self._lenh_dang_xem()
+        for t in (*TRANG, 'Màn hình chính', *LENH_DANH_DAU_PHU):
+            a = self.lenh.get(t)
+            if a is not None and a.isCheckable() and a.isChecked() != (t == khoa_active):
+                a.setChecked(t == khoa_active)
 
     def luu_du_an_lenh(self):
         """Tệp tin → Lưu dự án (Ctrl+S). Mọi thao tác đã ghi ngay vào file dự án (SQLite, từng giao dịch); lệnh này ép ghi hẳn xuống
@@ -2066,6 +2115,10 @@ class CuaSoChinh(QMainWindow):
             ham()
         finally:
             self.don_hop_da_dong()
+            try:
+                self._dong_bo_menu_trai()
+            except RuntimeError:                         # cửa sổ đang đóng
+                pass
 
     def don_hop_da_dong(self) -> int:
         """Hộp thoại tạo với cha là cửa sổ chính / trang bên phải không tự xóa khi đóng: mở cửa sổ lập phương án 20 lần để lại
@@ -2245,9 +2298,7 @@ class CuaSoChinh(QMainWindow):
         # không hiện tiêu đề trang ở trang nào: trùng mục menu trái đang chọn và tiêu đề khung của trang (người dùng 15-16/10/2026:
         # Dự toán, Quyết định phê duyệt "bị trùng tiêu đề mục"). lb_trang vẫn giữ chữ (test, tên trang hiện tại)
         self.lb_trang.setVisible(False)
-        for k, t in enumerate(TRANG):
-            self.lenh[t].setChecked(k == i)
-        self.lenh['Màn hình chính'].setChecked(False)
+        self._dong_bo_menu_trai()
 
     def _ten_tab(self, khoa) -> str:
         if isinstance(khoa, int):
@@ -2270,6 +2321,7 @@ class CuaSoChinh(QMainWindow):
         elif isinstance(khoa, int):
             self.ngan_lv.setCurrentWidget(self.trang)
         self._cap_nhat_hien_hang_the()
+        self._dong_bo_menu_trai()
 
     def _cap_nhat_hien_hang_the(self):
         """0.9.95 (đặc tả "Ultra-Compact"): hàng thẻ số liệu CHỈ ở trang Danh sách hộ khi đã mở dự án - ẩn ở mọi trang khác (hộ đang
@@ -2305,6 +2357,7 @@ class CuaSoChinh(QMainWindow):
             self.khung_tab.stack_phu.setCurrentWidget(w)
         self.lb_trang.setVisible(False)
         self._cap_nhat_hien_hang_the()
+        self._dong_bo_menu_trai()
 
     def _tab_dong(self, i: int):
         if i < 0 or i >= len(self._tab_khoa):
@@ -2415,6 +2468,7 @@ class CuaSoChinh(QMainWindow):
             from .man_hinh_du_toan import KhungDuToan
             self.khung_du_toan = KhungDuToan(self.trang_dt, self.con, self.file if self.con is not None else None)
             self.trang_dt.layout().addWidget(self.khung_du_toan)
+            self.khung_du_toan.tab.currentChanged.connect(lambda _i: self._dong_bo_menu_trai())   # nút chế độ Khái toán / So sánh
             if self.isVisible():                        # tạo sau khi cửa sổ đã hiện: áp kiểu như lúc hiện
                 from .giao_dien import ap_kieu_cay
                 ap_kieu_cay(self.khung_du_toan)
@@ -2933,6 +2987,7 @@ class CuaSoChinh(QMainWindow):
         k = self.du_toan(cho=False)
         if k is not None:
             k.tab.setCurrentIndex(1)
+        self._dong_bo_menu_trai()
         return k
 
     def mo_du_thao(self, cho: bool = True):

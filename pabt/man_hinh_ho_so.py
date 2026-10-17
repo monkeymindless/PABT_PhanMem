@@ -6,7 +6,7 @@ thoại riêng dùng khung này. Quy tắc nằm trong ho_so; các hàm thao tá
 from __future__ import annotations
 from PySide6.QtCore import QEvent, QRectF, Qt, QTimer
 from PySide6.QtGui import QFont, QFontMetricsF, QTextLayout, QTextOption
-from PySide6.QtWidgets import (QAbstractItemView, QDialog, QDialogButtonBox, QGridLayout, QHBoxLayout, QHeaderView,
+from PySide6.QtWidgets import (QAbstractItemView, QDialog, QDialogButtonBox, QFrame, QGridLayout, QHBoxLayout, QHeaderView,
                                QInputDialog, QLabel, QLineEdit, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QStyle,
                                QStyledItemDelegate, QStyleOptionViewItem, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
@@ -189,6 +189,11 @@ class ONguonGoc(QStyledItemDelegate):
         return kq
 
 
+CAO_TOM_TAT_THUA = 28
+# kiểu thẻ chủ hộ / dải cộng thửa: ở QSS chung (giao_dien.QSS_HO_SO_HO) - setStyleSheet trên khung chứa bắt Qt tính lại kiểu
+# cả cây con (mở cửa sổ lập PA chậm 20%, đo 1.0.03)
+
+
 class KhungHoSo(QWidget):
     """Thông tin hộ + bảng thửa + các thao tác gộp / chuyển / xóa. an: các trường thông tin hộ không hiện (giữ nguyên khi lưu).
     Gọi lại: khi_thay_doi_csdl() sau khi ghi CSDL (lưu, gộp, chuyển); khi_xoa_ho(thông báo) sau khi xóa hộ."""
@@ -270,7 +275,13 @@ class KhungHoSo(QWidget):
         self.lb.setWordWrap(True)
         lo = QVBoxLayout(self)
         lo.setSpacing(8)
-        lo.addLayout(luoi)
+        # 1.0.03: thông tin chủ hộ trong thẻ trắng viền slate bo 6 px (cùng kiểu the_form)
+        self.the_chu_ho = QFrame()
+        self.the_chu_ho.setObjectName('the_chu_ho')
+        self.the_chu_ho.setProperty('vai', 'the_form')
+        luoi.setContentsMargins(12, 10, 12, 10)
+        self.the_chu_ho.setLayout(luoi)
+        lo.addWidget(self.the_chu_ho)
         hang_td = QHBoxLayout()
         hang_td.setSpacing(8)
         tieu_de = QLabel('CÁC THỬA ĐẤT THU HỒI')
@@ -283,7 +294,24 @@ class KhungHoSo(QWidget):
         hang_td.addWidget(b_them)
         hang_td.addWidget(self.b_thao_tac)
         lo.addLayout(hang_td)
-        lo.addWidget(self.bang, 1)
+        # bảng thửa + dải cộng chân bảng (1.0.03): số thửa, số tờ, tổng diện tích thu hồi - cập nhật khi thêm / xóa / sửa thửa
+        khoi = QVBoxLayout()
+        khoi.setSpacing(0)
+        khoi.addWidget(self.bang, 1)
+        self.lb_tom_tat_thua = QLabel('')
+        self.lb_tom_tat_thua.setObjectName('tom_tat_thua')
+        self.lb_tom_tat_thua.setFixedHeight(CAO_TOM_TAT_THUA)
+        khoi.addWidget(self.lb_tom_tat_thua)
+        lo.addLayout(khoi, 1)
+        from .giao_dien import gan_chu_khi_trong
+        gan_chu_khi_trong(self.bang, 'Hộ chưa có thửa đất thu hồi', 'Bấm "+ Thêm thửa" để nhập tờ, thửa, loại đất, diện tích.')
+        self._hen_tom_tat = QTimer(self)
+        self._hen_tom_tat.setSingleShot(True)
+        self._hen_tom_tat.setInterval(0)
+        self._hen_tom_tat.timeout.connect(self.cap_nhat_tom_tat_thua)
+        m = self.bang.model()
+        for tin in (m.rowsInserted, m.rowsRemoved, m.modelReset, m.dataChanged):
+            tin.connect(lambda *_: self._hen_tom_tat.start())
         from .giao_dien import BangHoanTac
         self._ht_bang = None
         self.nap()
@@ -310,9 +338,35 @@ class KhungHoSo(QWidget):
         self.nut_scan.dat(self.con, self.ma_ho, bool(getattr(self, 'chi_doc', False)))
         self.lb.setText(f'Hộ đã có {ho["so_dong_pa"]} dòng phương án. ' if ho['so_dong_pa'] else '')
         self.chinh_cao_dong()
+        self.cap_nhat_tom_tat_thua()
         self.ban_dau = self.thu_thap()
         if getattr(self, '_ht_bang', None) is not None:
             self._ht_bang.ghi_nho()
+
+    def tom_tat_thua(self) -> tuple:
+        """(số thửa, số tờ, tổng DT thu hồi Decimal) theo các dòng đang có trên bảng (kể cả chưa lưu). Ô diện tích là công thức /
+        chữ lạ: không cộng."""
+        from .tien import D, doc_so_vn
+        c_to, c_dt = self.cot.index('so_to'), self.cot.index('dt_thu_hoi')
+        tong, to = D(0), set()
+        n = self.bang.rowCount()
+        for r in range(n):
+            it = self.bang.item(r, c_to)
+            if it is not None and it.text().strip():
+                to.add(it.text().strip())
+            it = self.bang.item(r, c_dt)
+            chu = it.text().strip() if it is not None else ''
+            if chu:
+                try:
+                    tong += D(doc_so_vn(chu))
+                except Exception:                        # công thức / chữ lạ: tính khi lưu
+                    pass
+        return n, len(to), tong
+
+    def cap_nhat_tom_tat_thua(self) -> None:
+        n, so_to, dt = self.tom_tat_thua()
+        self.lb_tom_tat_thua.setText(f'Tổng số thửa: <b>{n}</b> thửa  ·  Số tờ bản đồ: <b>{so_to}</b>  ·  '
+                                     f'Diện tích thu hồi: <b>{so_vn(dt)}</b> m²')
 
     def hoan_tac_phim(self, lam_lai: bool) -> bool:
         """Ô đang chọn trong bảng thửa: hoàn tác sửa ô; hết bước thì để cửa sổ cha xử lý."""

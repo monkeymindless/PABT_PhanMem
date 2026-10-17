@@ -13,7 +13,7 @@ Sắp xếp (sap_xep=True, bấm tiêu đề cột): theo GIÁ TRỊ từng ô t
 from __future__ import annotations
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
-from PySide6.QtGui import QBrush, QFont
+from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTableView
 
 DO_MAU = 300                    # số dòng Qt đo khi tự canh bề rộng cột
@@ -25,12 +25,26 @@ _TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 _HIEN, _CAN, _DU_LIEU = Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.TextAlignmentRole, Qt.ItemDataRole.UserRole
 _NEN, _MAU_CHU, _CHU, _GOI_Y = (Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.ForegroundRole, Qt.ItemDataRole.FontRole,
                                 Qt.ItemDataRole.ToolTipRole)
+# 1.0.03 "làm mờ số 0 - tôn vinh số thực": ô có giá trị bằng 0 / gạch chữ xám nhạt (mắt lướt qua khoản trống); ô số của cột tổng /
+# thành tiền chữ navy đậm. Chỉ ô chưa có màu chữ riêng (kieu['mau_chu'])
+SO_KHONG = frozenset(('0', '0,0', '0,00', '0,0%', '0.0%', '0%', '-', '—'))
+MAU_SO_KHONG = '#94A3B8'
+MAU_SO_TIEN = '#0F3866'
+_BUT_SO_KHONG = QBrush(QColor(MAU_SO_KHONG))
+_BUT_SO_TIEN = QBrush(QColor(MAU_SO_TIEN))
+
+
+def la_cot_tien(tieu_de: str) -> bool:
+    """Cột tổng / thành tiền (chữ navy cho số khác 0)."""
+    t = (tieu_de or '').casefold()
+    return 'tổng' in t or 'thành tiền' in t
 
 
 class _MoHinhAo(QAbstractTableModel):
     def __init__(self, cot: list, can_phai: set, parent=None):
         super().__init__(parent)
         self.cot, self.can_phai = list(cot), set(can_phai)
+        self.cot_tien = {c for c, t in enumerate(self.cot) if la_cot_tien(t)}
         self.dong: list = []            # [[chuỗi hiển thị của từng cột]]
         self.du_lieu: list = []         # giá trị UserRole của từng dòng (mã hộ...)
         self.kieu: dict = {}            # {(dòng, cột): dict(nen=QColor, mau_chu=QColor, dam=True, goi_y=str)} - chỉ ô có kiểu riêng
@@ -87,12 +101,19 @@ class _MoHinhAo(QAbstractTableModel):
                 return k['goi_y']
             v = self.dong[r][c]
             return v if len(v) > GOI_Y_TU else None
+        if role == _MAU_CHU:
+            if k is not None and k.get('mau_chu') is not None:
+                return QBrush(k['mau_chu'])
+            v = self.dong[r][c].strip()
+            if v in SO_KHONG:
+                return _BUT_SO_KHONG
+            if c in self.cot_tien and v and (v[0].isdigit() or v[0] == '-'):
+                return _BUT_SO_TIEN
+            return None
         if k is None:
             return None
         if role == _NEN and k.get('nen') is not None:
             return QBrush(k['nen'])
-        if role == _MAU_CHU and k.get('mau_chu') is not None:
-            return QBrush(k['mau_chu'])
         if role == _CHU and k.get('dam'):
             return self._dam
         return None
