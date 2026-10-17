@@ -1484,14 +1484,14 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   MỘT nút "Xuất" (`menu_xuat`, `hanh_dong_xuat`, `XUAT`: xuat / xuat_bao_cao / xuat_cuong_che). `nap` tính tong_hop + van_dong + mốc
   MỘT lần -> `_ve_tong_quan` -> `bao_cao_gpmb.tong_quan(con, ds=, tt=, moc=)`. `ma_da_chon` theo chế độ đang xem. Test
   `tests/test_yeu_cau_1000.py` (cả bài chặn cùng chữ nút ở 2 trang trở lên, trừ "Xuất Excel…" - mỗi trang xuất bảng riêng).
-- Sau 1.0.00 (người dùng 16/10/2026, CHƯA tăng phiên bản) QUY ƯỚC TƯƠNG ĐƯƠNG ĐỂ TRỐNG ("xóa toàn bộ, để máy trắng - khi nào có tài
+- 1.0.01 (người dùng 16/10/2026) QUY ƯỚC TƯƠNG ĐƯƠNG ĐỂ TRỐNG ("xóa toàn bộ, để máy trắng - khi nào có tài
   sản thì nhập bổ sung sau"): `don_gia_rieng.bo_quy_uoc_cu(con)` bỏ dòng id < ID_RIENG (mẫu của bộ đơn giá trước 0.9.69 / sheet
   QUY_UOC_TUONG_DUONG của Excel PABT; nhật ký "Bỏ quy ước tương đương mẫu", hoàn tác được) - gọi trong `app.mo` khi mở để sửa (chỉ xem:
   không ghi). `nhap_excel` KHÔNG nhập sheet QUY_UOC_TUONG_DUONG (bỏ khỏi `so_danh_muc`); `nhap_tho.nap_danh_muc` giữ dòng riêng
   (`doc_rieng` / `tra_rieng` như `don_gia.ap_vao_du_an` - trước đây nạp danh mục từ Excel xóa luôn quy ước riêng của dự án). Phương án
   đã lập không đổi (dòng lưu sẵn tên / giá / căn cứ). Đã xóa 5 dòng trong NGHĨA TRANG PHÚ LÝ.pabt (sao lưu
   `ket_qua_kiem_tra\sao_luu\`). Test `tests/test_quy_uoc_trong.py`, `test_lap_pa.test_quy_uoc_tuong_duong` (tự thêm dòng riêng).
-- Sau 1.0.00 GIAO DIỆN "Hybrid Enterprise Navy" (người dùng 17/10/2026, đặc tả 6 bước; CHƯA tăng phiên bản):
+- 1.0.01 GIAO DIỆN "Hybrid Enterprise Navy" (người dùng 17/10/2026, đặc tả 6 bước):
   - Menu trái (`giao_dien.menu_trai`, `_qss_menu_trai`): khung `vai="menu_trai"` sát mép trái cửa sổ (nền #F8FAFC, viền phải 1 px;
     lề nội dung chuyển sang `phai` của app), nút "Thu gọn menu" (`khung.nut_thu_gon`, `#nut_thu_gon`) ở HÀNG RIÊNG `khung.hang_gon`
     (`#hang_gon_menu`, cao `CAO_HANG_GON` 32, vạch dưới) TRÊN vùng cuộn `khung.vung_cuon` (`#cuon_menu`, thanh cuộn 6 px) - người

@@ -1,4 +1,10 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.00 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.01 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **1.0.01**: giao diện tông **Navy**: menu trái gọn (nút Thu gọn menu ở hàng riêng), tiêu đề bảng nền xanh đậm, 6 thẻ số liệu có
+> **tỷ lệ %**, hàng lọc một dòng ("Đợt: Tất cả", "Trạng thái: Tất cả", tìm theo họ tên / CCCD / tờ/thửa như `12/45`, huy hiệu
+> "Đang lọc: k / N hộ"); cột Trạng thái có **thanh tiến độ 4 nấc** (□□□□ chưa lập PA → ■■■■ đã bàn giao); **dòng CỘNG** dưới danh sách
+> hộ (diện tích, bồi thường đất, tài sản & cây, hỗ trợ & thưởng, tổng cộng của các hộ đang hiện). Quy ước giá tương đương để trống
+> (dòng mẫu cũ tự bỏ khi mở dự án; tự thêm ở **Đơn giá đặc biệt** khi cần).
 
 > **1.0.00**: **Tiến độ chi trả & Bàn giao** - một trang thay hai mục "Theo dõi chi trả & Bàn giao" và "Báo cáo tiến độ GPMB" (trùng phần
 > lớn số liệu): 4 thẻ chỉ số bấm để lọc, hai chế độ xem **Theo hộ** / **Thửa còn vướng**, một nút **Xuất ▾** (bảng theo dõi, báo cáo tiến độ

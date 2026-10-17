@@ -7,6 +7,18 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.01', '17/10/2026', (
+        'Giao diện mới tông Navy: menu trái gọn (nút "Thu gọn menu" ở hàng riêng, không đè tiêu đề nhóm; mục đang chọn có vạch xanh '
+        'bên trái); tiêu đề bảng nền xanh đậm chữ trắng, dòng xen kẽ dễ đọc.',
+        '6 thẻ số liệu cao gọn, có tỷ lệ % so với tổng số hộ (đã lập PA, đã phê duyệt, đã chi trả, đã bàn giao); thẻ đang lọc được tô '
+        'nổi. Hàng lọc một dòng: "Đợt: Tất cả", "Trạng thái: Tất cả", ô tìm theo họ tên, CCCD, tờ/thửa (ví dụ 12/45); huy hiệu "Đang '
+        'lọc: k / N hộ".',
+        'Danh sách hộ: cột Trạng thái có thanh tiến độ 4 nấc (□□□□ chưa lập PA → ■■■■ đã bàn giao); dòng CỘNG dưới bảng tự cộng diện '
+        'tích, bồi thường đất, tài sản & cây, hỗ trợ & thưởng, tổng cộng của các hộ đang hiện.',
+        'Màn hình chào tông Navy - Slate; bảng dự án gần đây đủ chữ tiêu đề; phần đầu cửa sổ thấp hơn, nhường chỗ cho bảng.',
+        'Quy ước giá tương đương để trống: phần mềm bỏ các dòng mẫu cũ khi mở dự án (dòng bạn tự nhập giữ nguyên), nhập file Excel '
+        'không còn chép quy ước mẫu, nạp danh mục từ Excel không làm mất quy ước riêng của dự án.',
+    )),
     ('1.0.00', '16/10/2026', (
         'Mục "Tiến độ chi trả & Bàn giao" thay hai mục "Theo dõi chi trả & Bàn giao" và "Báo cáo tiến độ GPMB" (trùng phần lớn số '
         'liệu và nút lệnh): 4 thẻ chỉ số ở trên cùng (giải ngân, mặt bằng sạch, thửa chưa bàn giao, hộ đủ điều kiện cưỡng chế) - bấm '
