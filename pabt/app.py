@@ -734,8 +734,8 @@ class CuaSoChinh(QMainWindow):
             (None, [L['Màn hình chính']]),
             ('1. Khái toán & dự toán', [L['Dự toán & khái toán'], L['So sánh với thực tế']]),
             ('2. Dự án triển khai', [L['Thông tin dự án…'], L['Danh sách hộ']]),
-            ('3. Lập phương án', [L['Lập phương án hộ…'], L['Dự thảo PABT…'], L['Bản đồ thửa đất'], L['Kiểm tra lỗi…'],
-                                  L['Xuất báo cáo đối chiếu…']]),
+            # 18/10/2026 (người dùng): "Bản đồ thửa đất" rời menu trái -> menu Dữ liệu, cạnh Nhập bản vẽ CAD (menu trái gọn)
+            ('3. Lập phương án', [L['Lập phương án hộ…'], L['Dự thảo PABT…'], L['Kiểm tra lỗi…'], L['Xuất báo cáo đối chiếu…']]),
             ('4. Tổng hợp & trình duyệt', [L['Tổng hợp tiền theo phương án'], L['Đợt trình…'], L['In / Xuất…']]),
             # mọi việc về quyết định ở MỘT chỗ: trang "Quyết định phê duyệt" (Thêm / Nhập từ file / Sửa / Xóa)
             # 1.0.00: "Báo cáo tiến độ GPMB" gộp vào "Tiến độ chi trả & Bàn giao" (thẻ chỉ số, chế độ Thửa còn vướng, Xuất báo cáo)
@@ -2011,7 +2011,8 @@ class CuaSoChinh(QMainWindow):
                         ('Chỉnh &sửa', [self.nut_ht['lui'], self.nut_ht['toi']]),
                         # 0.9.66 (người dùng 12/10/2026 - mỗi lệnh một chỗ): lệnh đã có ở menu trái không lặp ở đây - Báo cáo
                         # tổng hợp, Xuất báo cáo đối chiếu, Bộ đơn giá, Thông tin dự án (KIEM_TRA test_khong_trung_menu_trai)
-                        ('&Dữ liệu', ['Nhập file Excel…', 'Nhập phương án chi tiết…', 'Nhập bản vẽ CAD (.dxf)…', None, 'Trạng thái hộ…',
+                        ('&Dữ liệu', ['Nhập file Excel…', 'Nhập phương án chi tiết…', 'Nhập bản vẽ CAD (.dxf)…', 'Bản đồ thửa đất',
+                                      None, 'Trạng thái hộ…',
                                       'Xuất danh sách hộ…', None, 'Nhật ký kiểm toán…']),
                         ('&Công cụ', ['Cập nhật mẫu in…', 'Rà soát giá…', 'Cập nhật bảng giá đất…', None,
                                       'Phiếu kiểm đếm thực địa…', None,

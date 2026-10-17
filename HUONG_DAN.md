@@ -445,7 +445,7 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   thảo, thông tin cơ quan. Bấm Lưu là áp dụng ngay; "Khôi phục mặc định…" bỏ mọi sửa đổi. Quy trình 16 bước hiện thời hạn theo cấu hình.
 - **Dữ liệu → Nhập bản vẽ CAD (.dxf)…**: chọn lớp ranh thửa, lớp ranh thu hồi (nếu có), số tờ; phần mềm đọc số thửa / diện tích /
   loại đất trong nhãn, đo diện tích hình và phần nằm trong ranh thu hồi, đối chiếu với hồ sơ; đánh dấu thửa nào cập nhật diện tích
-  thu hồi theo bản vẽ. **Bản đồ thửa đất** (nhóm Lập phương án): tô xanh thửa hộ đã đồng thuận, đỏ chưa đồng thuận, vàng chưa lấy ý
+  thu hồi theo bản vẽ. **Dữ liệu → Bản đồ thửa đất**: tô xanh thửa hộ đã đồng thuận, đỏ chưa đồng thuận, vàng chưa lấy ý
   kiến, xám thửa không có trong hồ sơ; bấm (không kéo) vào thửa mở hồ sơ hộ, ô "Số thửa → Enter" nhảy tới thửa, cuộn chuột phóng to.
 - **Quét giấy tờ (OCR)…** (cửa sổ lập phương án, trang Dự toán): chọn ảnh chụp / PDF scan giấy chứng nhận, biên bản kiểm kê (cần
   Tesseract như đọc quyết định scan). Soát lại các ô rồi "Điền thông tin hộ & thửa" (trang Dự toán: "Thêm dòng đất") / "Đưa tài sản vào phương án…".
@@ -606,7 +606,7 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
 Dưới băng tiêu đề (từ 0.9.23): **thanh menu** Tệp tin / Dữ liệu / Công cụ / Trợ giúp (tạo, mở, lưu, đóng dự án; nhập dữ liệu;
 mẫu in, bộ đơn giá; hướng dẫn F1, cập nhật phần mềm, giới thiệu) và **menu bên trái** theo 16 bước của Mục IV QĐ 18/2026: nút
 **Màn hình chính** riêng, rồi 6 nhóm - **1. Khái toán & dự toán**, **2. Dự án triển khai** (Thông tin dự án, Danh sách hộ và Thửa),
-**3. Lập phương án** (Lập phương án chi tiết, Niêm yết & Lấy ý kiến, Bản đồ thửa đất, Kiểm tra lỗi pháp lý, Đối chiếu số liệu),
+**3. Lập phương án** (Lập phương án chi tiết, Niêm yết & Lấy ý kiến, Kiểm tra lỗi pháp lý, Đối chiếu số liệu),
 **4. Tổng hợp & trình duyệt** (Bảng tổng hợp kinh phí, Đợt trình thẩm định, Xuất hồ sơ & Bản in), **5. Phê duyệt & bàn giao**
 (Quyết định phê duyệt, Tiến độ chi trả & Bàn giao), **6. Đơn giá & bảng giá** (Đơn giá bồi thường, Đơn giá
 đặc biệt, Bảng giá đất - 0.9.88 chuyển xuống cuối: các nhóm làm hằng ngày lên trên). Lần đầu mở, nhóm 2, 3, 4 mở sẵn; nhóm 1, 5, 6

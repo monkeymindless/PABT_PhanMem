@@ -1574,6 +1574,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `HopBanGiao`: KHÔNG điền sẵn ngày hôm nay (nhãn "Ngày biên bản bàn giao", tích mà trống ngày -> `accept` báo, không đóng); "File biên
   bản" không bắt buộc, nhiều hộ (`nhieu_ho`) dùng chung MỘT đường dẫn (không chép file), ô trống = giữ file đã ghi của từng hộ.
   Trang Tiến độ (KPI mặt bằng sạch, bộ lọc da_bg của trang đó) CHƯA chuyển sang kết quả phân tích - vẫn theo cột tích.
+- Menu (người dùng 18/10/2026): "Bản đồ thửa đất" bỏ khỏi menu trái, nằm ở thanh menu Dữ liệu sau "Nhập bản vẽ CAD (.dxf)…" (bỏ hẳn tính
+  năng chỉ bớt ~42 KB mỗi bản - ezdxf / numpy đã loại khỏi bản dựng từ 0.9.99).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

@@ -90,7 +90,7 @@ class TestMenuTrai(_Co):
                                                 '6. Đơn giá & bảng giá'])
         self.assertEqual(nut[1:], [L[k] for k in (
             'Dự toán & khái toán', 'So sánh với thực tế', 'Thông tin dự án…', 'Danh sách hộ',
-            'Lập phương án hộ…', 'Dự thảo PABT…', 'Bản đồ thửa đất', 'Kiểm tra lỗi…',
+            'Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…',          # Bản đồ thửa đất: menu Dữ liệu (18/10)
             'Xuất báo cáo đối chiếu…', 'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…', 'Quyết định phê duyệt',
             'Theo dõi tiến độ',                                   # 1.0.00: Báo cáo tiến độ GPMB gộp vào đây
             'Bộ đơn giá…', 'Đơn giá riêng dự án…', 'Bảng giá đất NQ 28…')])     # 0.9.88: nhóm Đơn giá & bảng giá ở cuối
