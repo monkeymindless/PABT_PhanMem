@@ -38,24 +38,32 @@ RONG_MENU_TOI_DA = 248        # lệnh dài ("Bảng tổng hợp kinh phí" ~18
 CAO_DONG_BANG = 30            # chiều cao dòng bảng dữ liệu (17/10/2026 Hybrid Enterprise Navy: 32 -> 30)
 CAO_TIEU_DE_BANG = 34         # hàng tiêu đề cột bảng (nền navy, chữ trắng)
 CHINH = TOKEN['chinh']       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
+# thẻ (QTabBar) cửa sổ con / trang nhúng (1.0.02): chưa chọn nền slate nhạt chữ slate; đang chọn nền trắng chữ navy đậm + vạch trên navy
+THE_TAB = dict(nen='#F1F5F9', chu='#475569', vien='#E2E8F0', nen_re='#E2E8F0', chu_re='#0F172A')
 # nhóm nút: (nền, chữ, nền khi rê chuột)
-MAU = {                                            # tông dịu kiểu phần mềm quản lý: chỉ nút Lưu nền đặc, nút khác nền nhạt
-    'luu':    ('#107C41', '#FFFFFF', '#0D6B37'),   # Lưu, Áp dụng (Secondary - Forest Green)
-    'them':   ('#1D7A6C', '#FFFFFF', '#17675B'),   # Thêm…
-    'xoa':    ('#D83B01', '#FFFFFF', '#B83201'),   # Xóa… (Danger - Crimson)
-    'sua':    ('#B8651F', '#FFFFFF', '#9C551A'),   # Gộp, Chuyển, Tách, Bỏ thay đổi
-    'in':     ('#6950A1', '#FFFFFF', '#594389'),   # In / Xuất, PDF
-    'nhap':   ('#2D64A6', '#FFFFFF', '#26558D'),   # Nhập, Mở, Nạp, Cập nhật
-    'hoso':   ('#1F7A86', '#FFFFFF', '#1A6872'),   # Hồ sơ hộ
-    'pa':     ('#2F7A4F', '#FFFFFF', '#27673F'),   # Lập phương án
-    'tra':    ('#4E5D6C', '#FFFFFF', '#424F5C'),   # Thông tin, Rà soát, Đối chiếu, Gợi ý, Chọn, Hộ trước / sau
+MAU = {                                            # (màu biểu tượng / nền đặc, chữ, nền rê chuột) theo nhóm nút
+    # 1.0.02 (người dùng 17/10/2026, Hybrid Enterprise Navy cho cửa sổ con): bỏ nền / biểu tượng cam, tím, vàng, xanh lá. Chỉ
+    # nhóm DAC nền navy đặc; nhóm 'xoa' viền đỏ nhạt chữ đỏ; các nhóm khác nền trắng viền slate, biểu tượng navy / slate / teal
+    'luu':    ('#0F3866', '#FFFFFF', '#1A4C85'),   # Lưu, Áp dụng, Thực hiện, Tạo dự án: hành động chính
+    'them':   ('#0F3866', '#FFFFFF', '#1A4C85'),   # Thêm…
+    'xoa':    ('#B91C1C', '#FFFFFF', '#991B1B'),   # Xóa…
+    'sua':    ('#334155', '#FFFFFF', '#1E293B'),   # Gộp, Chuyển, Tách, Bỏ thay đổi
+    'in':     ('#0F3866', '#FFFFFF', '#1A4C85'),   # In / Xuất, PDF
+    'nhap':   ('#0F3866', '#FFFFFF', '#1A4C85'),   # Nhập, Mở, Nạp, Cập nhật
+    'hoso':   ('#0F766E', '#FFFFFF', '#115E59'),   # Hồ sơ hộ
+    'pa':     ('#0F3866', '#FFFFFF', '#1A4C85'),   # Lập phương án
+    'tra':    ('#475569', '#FFFFFF', '#334155'),   # Thông tin, Rà soát, Đối chiếu, Gợi ý, Chọn, Hộ trước / sau
     'nhat':   ('#ECEFF1', '#263238', '#CFD8DC'),   # Hủy, Đóng, Giới thiệu
 }
-DAC = ('luu',)                                     # nhóm nút nền đặc (thao tác chính); các nhóm khác nền nhạt, chữ màu
+DAC = ('luu',)                                     # nhóm nút nền đặc (thao tác chính); các nhóm khác nền trắng viền slate
+# nút phụ / nút viền (1.0.02): (nền, chữ, viền, nền rê chuột, viền rê chuột, nền khi bấm); nút xóa: viền đỏ nhạt chữ đỏ
+NUT_PHU = ('#FFFFFF', '#0F172A', '#CBD5E1', '#F1F5F9', '#94A3B8', '#E2E8F0')
+NUT_XOA = ('#FFFFFF', '#B91C1C', '#FECACA', '#FEF2F2', '#FCA5A5', '#FEE2E2')
+NUT_TAT = ('#94A3B8', '#F8FAFC', '#E2E8F0')        # (chữ, nền, viền) nút đang tắt
 # (mẫu trên chữ đã bỏ dấu, nhóm) - xét theo thứ tự
 LUAT = [
     (r'^xoa|xoa ho|xoa thua|xoa dong|^go ban cap nhat', 'xoa'),
-    (r'^(luu|ap dung|save|thuc hien)', 'luu'),
+    (r'^(luu|ap dung|save|thuc hien|tao du an|xuat ban ho so)', 'luu'),
     (r'^(huy|dong|cancel|close|khong luu|bo qua|gioi thieu)', 'nhat'),
     (r'^them', 'them'),
     (r'^(gop|chuyen|tach|bo thay doi|sua|ap bo|ap don gia|dua |bo ho)', 'sua'),
@@ -76,8 +84,8 @@ class KieuNut(Enum):
     """Biến thể nút KHAI BÁO TƯỜNG MINH (đặc tả mục 6.1) - ưu tiên hơn màu đoán theo chữ (LUAT, giữ cho các nút chưa khai báo)."""
     CHINH = 'primary'          # nền Primary đặc, chữ trắng: thao tác chính của màn hình
     PHU = 'secondary'          # nền trắng, viền xám, chữ đen
-    LUU = 'success'            # nền xanh lá: Lưu, Duyệt, Thêm
-    NGUY_HIEM = 'danger'       # nền đỏ nhạt: Xóa
+    LUU = 'success'            # Lưu, Duyệt: 1.0.02 nền navy đặc như CHINH (trước: xanh lá)
+    NGUY_HIEM = 'danger'       # nền trắng, viền đỏ nhạt, chữ đỏ: Xóa
 
 
 def ap_kieu_nut(w, kieu: KieuNut) -> None:
@@ -109,9 +117,9 @@ def _qss_kieu_nut() -> str:
     # chữ #0F172A; nút xóa viền mảnh đỏ nhạt chữ đỏ, tắt thì mờ hẳn (không còn nền cam nhạt gây chú ý khi chưa chọn hộ)
     tat = ('#9AA0A6', '#F1F3F4', t['vach'])
     kieu = {'primary': (t['chinh'], '#FFFFFF', t['chinh'], '#1A4C85', tat),
-            'success': (t['phu'], '#FFFFFF', t['phu'], '#0D6B37', tat),
-            'danger': ('#FFFFFF', '#B91C1C', '#FECACA', '#FEF2F2', ('#94A3B8', '#FFFFFF', '#E2E8F0')),
-            'secondary': ('#FFFFFF', '#0F172A', '#CBD5E1', '#F1F5F9', ('#94A3B8', '#FFFFFF', '#E2E8F0'))}
+            'success': (t['chinh'], '#FFFFFF', t['chinh'], '#1A4C85', tat),     # 1.0.02: Lưu navy (đặc tả Navy cửa sổ con)
+            'danger': (NUT_XOA[0], NUT_XOA[1], NUT_XOA[2], NUT_XOA[3], ('#94A3B8', '#FFFFFF', '#E2E8F0')),
+            'secondary': (NUT_PHU[0], NUT_PHU[1], NUT_PHU[2], NUT_PHU[3], ('#94A3B8', '#FFFFFF', '#E2E8F0'))}
     qss = ''
     for k, (nen, chu, vien, re_, (chu_tat, nen_tat, vien_tat)) in kieu.items():
         for loai in ('QPushButton', 'QToolButton'):
@@ -238,16 +246,23 @@ def _nut_qss(n: str, nen: str, chu: str, re_: str) -> str:
     """QSS nút QPushButton theo nhóm: nhóm DAC nền đặc; nhóm khác nền nhạt + chữ, viền cùng màu (dịu mắt, tập trung dữ liệu)."""
     if n == 'nhat':
         return ''
+    return _qss_nut_loai('QPushButton', n, nen, re_)
+
+
+def _qss_nut_loai(loai: str, n: str, nen: str, re_: str, them: str = '') -> str:
+    """QSS một nhóm nút cho một loại nút (QPushButton / QToolButton, them = bộ chọn thêm vd. '[ribbon="1"]'). 1.0.02: nhóm DAC
+    nền navy đặc chữ trắng; 'xoa' nền trắng viền đỏ nhạt chữ đỏ; nhóm khác nền trắng viền slate chữ #0F172A, rê chuột #F1F5F9."""
+    s = f'{loai}{them}[nhom="{n}"]'
     if n in DAC:
-        return f'''QPushButton[nhom="{n}"] {{ color: {chu}; background: {nen}; border: 1px solid {re_}; border-radius: 5px;
-            padding: 4px 10px; font-weight: 600; }}
-        QPushButton[nhom="{n}"]:hover {{ background: {re_}; }}
-        QPushButton[nhom="{n}"]:pressed {{ background: {_tron(re_, 0.12, '#000000')}; }}'''
-    # nút viền (outline): nền trắng, chữ trung tính, chỉ biểu tượng mang màu nhóm; rê chuột mới hiện nền nhạt cùng màu
-    return f'''QPushButton[nhom="{n}"] {{ color: #253545; background: #FFFFFF; border: 1px solid #CDD6E0; border-radius: 5px;
-            padding: 4px 10px; font-weight: 600; }}
-        QPushButton[nhom="{n}"]:hover {{ background: {_tron(nen, 0.93)}; border-color: {_tron(nen, 0.55)}; color: {_tron(nen, 0.15, '#000000')}; }}
-        QPushButton[nhom="{n}"]:pressed {{ background: {_tron(nen, 0.86)}; }}'''
+        return f'''{s} {{ color: #FFFFFF; background: {nen}; border: 1px solid {nen}; border-radius: 5px; padding: 4px 10px;
+            font-weight: 600; }}
+        {s}:hover {{ background: {re_}; border-color: {re_}; }}
+        {s}:pressed {{ background: {_tron(nen, 0.12, '#000000')}; }}'''
+    nen_, chu, vien, nen_re, vien_re, nen_bam = NUT_XOA if n == 'xoa' else NUT_PHU
+    return f'''{s} {{ color: {chu}; background: {nen_}; border: 1px solid {vien}; border-radius: 5px; padding: 4px 10px;
+            font-weight: 600; }}
+        {s}:hover {{ background: {nen_re}; border-color: {vien_re}; }}
+        {s}:pressed {{ background: {nen_bam}; }}'''
 
 
 def mau_chu_nut(n: str | None) -> str:
@@ -347,28 +362,25 @@ def _qss_day_du() -> str:
 
 
 def _qss() -> str:
+    chu_tat, nen_tat, vien_tat = NUT_TAT
+    # 1.0.02: QToolButton (thường / ribbon) cùng bộ màu với QPushButton - không còn nền đặc / nền nhạt cam, tím, vàng theo nhóm
     nut = '\n'.join(
         f'''{_nut_qss(n, nen, chu, re_)}
-        QToolButton[nhom="{n}"] {{ background: {nen}; color: {chu}; border: 1px solid {re_}; border-radius: 5px; padding: 4px 10px;
-            font-weight: 600; }}
-        QToolButton[nhom="{n}"]:hover {{ background: {re_}; }}
-        QToolButton[ribbon="1"][nhom="{n}"] {{ background: {_tron(nen, 0.9) if n != 'nhat' else '#F3F6F9'};
-            color: {nen if n != 'nhat' else CHINH}; border: 1px solid {_tron(nen, 0.72) if n != 'nhat' else '#D5DEE7'};
-            border-radius: 5px; padding: 4px 10px; font-weight: 600; text-align: left; }}
-        QToolButton[ribbon="1"][nhom="{n}"]:hover {{ background: {_tron(nen, 0.8) if n != 'nhat' else '#E7EDF3'};
-            border-color: {nen if n != 'nhat' else '#9FB3C8'}; }}
-        QToolButton[ribbon="1"][nhom="{n}"]:pressed {{ background: {_tron(nen, 0.68) if n != 'nhat' else '#DCE5EE'}; }}
-        QPushButton[nhom="{n}"]:disabled, QToolButton[nhom="{n}"]:disabled {{ background: #ECEFF3; color: #A0AAB4;
-            border-color: #DDE3EA; }}'''
+        {_qss_nut_loai('QToolButton', n, nen, re_) if n != 'nhat' else ''}
+        {_qss_nut_loai('QToolButton', n, nen, re_, '[ribbon="1"]') if n != 'nhat' else ''}
+        QToolButton[ribbon="1"][nhom="{n}"] {{ text-align: left; }}
+        QPushButton[nhom="{n}"]:disabled, QToolButton[nhom="{n}"]:disabled {{ background: {nen_tat}; color: {chu_tat};
+            border-color: {vien_tat}; }}'''
         for n, (nen, chu, re_) in MAU.items())
     return nut + f'''
     QMainWindow {{ background: #EEF2F7; }}
-    QDialog {{ background: #F4F7FB; }}
+    QDialog {{ background: #F8FAFC; }}
     QToolBar {{ background: #FFFFFF; border-bottom: 2px solid {CHINH}; spacing: 4px; padding: 5px; }}
-    QPushButton {{ border-radius: 5px; padding: 4px 10px; border: 1px solid #CBD5E0; background: #FFFFFF; color: #1F2D3A; }}
-    QPushButton:hover {{ background: #F1F5FA; border-color: #A9BCD0; }}
-    QPushButton:pressed {{ background: #E4ECF5; }}
-    QPushButton:disabled {{ color: #A0AAB4; background: #F4F6F8; border-color: #E3E8EE; }}
+    QPushButton {{ border-radius: 5px; padding: 4px 10px; border: 1px solid {NUT_PHU[2]}; background: {NUT_PHU[0]};
+        color: {NUT_PHU[1]}; }}
+    QPushButton:hover {{ background: {NUT_PHU[3]}; border-color: {NUT_PHU[4]}; }}
+    QPushButton:pressed {{ background: {NUT_PHU[5]}; }}
+    QPushButton:disabled {{ color: {chu_tat}; background: {nen_tat}; border-color: {vien_tat}; }}
     QHeaderView::section {{ background: #EEF3F8; color: #24415E; font-weight: 600; padding: 7px 6px; border: 0;
         border-right: 1px solid #DDE5EE; border-bottom: 2px solid #C9D6E3; }}
     QHeaderView::section:horizontal {{ background: {CHINH}; color: #FFFFFF; font-weight: 600; padding: 4px 8px;
@@ -382,16 +394,16 @@ def _qss() -> str:
     QLineEdit[nhap="1"], QComboBox[nhap="1"], QSpinBox[nhap="1"] {{ min-height: 24px; font-size: 13px; padding: 4px 10px; }}
     QTableView QLineEdit, QTableView QComboBox, QTableView QPlainTextEdit {{ font-size: 13px; padding: 2px 6px;
         border: 2px solid #2E75B6; border-radius: 3px; background: #FFFFFF; }}
-    QTabBar::tab {{ background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F4F7FB, stop:1 #E3EAF2); color: #33495F;
-        padding: 9px 22px; margin-right: 6px; margin-top: 3px; font-weight: 600; font-size: 13px; min-height: 18px;
-        border: 1px solid #C6D2DF; border-bottom: 1px solid #C6D2DF; border-top-left-radius: 8px; border-top-right-radius: 8px; }}
-    QTabBar::tab:hover {{ color: {CHINH}; background: #EAF2FB; border-color: #9FB9D4; }}
-    QTabBar::tab:selected {{ color: #FFFFFF; background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2E75B6, stop:1 {CHINH});
-        border: 1px solid {CHINH}; margin-top: 0px; }}
-    QTabWidget::pane {{ border: 1px solid #D5DEE7; border-radius: 0 8px 8px 8px; background: #FFFFFF; top: -1px; }}
+    QTabBar::tab {{ background: {THE_TAB['nen']}; color: {THE_TAB['chu']}; padding: 5px 14px; margin-right: 2px; margin-top: 2px;
+        font-weight: 600; font-size: 13px; border: 1px solid {THE_TAB['vien']}; border-bottom: 0;
+        border-top-left-radius: 5px; border-top-right-radius: 5px; }}
+    QTabBar::tab:hover:!selected {{ background: {THE_TAB['nen_re']}; color: {THE_TAB['chu_re']}; }}
+    QTabBar::tab:selected {{ background: #FFFFFF; color: {CHINH}; font-weight: 700; border: 1px solid {THE_TAB['vien']};
+        border-bottom: 0; border-top: 2px solid {CHINH}; margin-top: 0px; }}
+    QTabWidget::pane {{ border: 1px solid {THE_TAB['vien']}; border-radius: 0 6px 6px 6px; background: #FFFFFF; top: -1px; }}
     QLabel[vai="nhan"] {{ color: {CHINH}; font-weight: 600; }}
-    QLabel[vai="tieu_de"] {{ color: {CHINH}; background: #EEF3F8; font-weight: 600; padding: 7px 10px; border-radius: 6px;
-        border-left: 3px solid #2E75B6; }}
+    QLabel[vai="tieu_de"] {{ color: {CHINH}; background: #F1F5F9; font-weight: 700; padding: 6px 10px; border-radius: 5px;
+        border-left: 3px solid {CHINH}; }}
     QLabel[vai="bang_ten"] {{ color: #0F3A63; background: #FFFFFF; font-size: 13px; padding: 8px 12px; border-radius: 8px;
         border: 1px solid #D5E1ED; border-left: 4px solid {TOKEN['nhan']}; }}
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit, QPlainTextEdit, QTextEdit {{ background: #FFFFFF;
@@ -431,7 +443,8 @@ def _qss() -> str:
     QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
     QProgressBar {{ border: 1px solid #C9D3DD; border-radius: 6px; background: #FFFFFF; text-align: center; height: 16px; }}
     QProgressBar::chunk {{ background: #2E75B6; border-radius: 5px; }}
-    QSplitter::handle {{ background: #DCE4EC; }}
+    QSplitter::handle {{ background: #E2E8F0; }}
+    QSplitter::handle:hover {{ background: #94A3B8; }}
     QComboBox QAbstractItemView, QListView, QListWidget, QTreeView {{ background: #FFFFFF; color: #1A1A1A;
         selection-background-color: #BBDEFB; selection-color: #0B2E4F; outline: 0; }}
     QComboBox QAbstractItemView::item {{ min-height: 24px; padding: 2px 6px; color: #1A1A1A; }}
@@ -444,10 +457,11 @@ def _qss() -> str:
     QMenu::item {{ padding: 6px 24px 6px 12px; }}
     QMenu::item:selected {{ background: #DCEBFA; color: #0B2E4F; }}
     QToolTip {{ background: #FFFFFF; color: #1F2D3A; border: 1px solid #C9D3DD; padding: 4px 6px; }}
-    QGroupBox {{ font-weight: 600; color: {CHINH}; background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px;
+    QGroupBox {{ font-weight: 600; color: {CHINH}; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px;
         margin-top: 22px; padding: 16px 8px 8px 8px; }}
     QGroupBox::title {{ subcontrol-origin: margin; subcontrol-position: top left; left: 10px; padding: 4px 8px;
-        background: #FFFFFF; }}
+        color: {CHINH}; background: #FFFFFF; border: 1px solid #E2E8F0; border-bottom: 0; border-top-left-radius: 5px;
+        border-top-right-radius: 5px; }}
     QStatusBar {{ background: #FFFFFF; color: {CHINH}; border-top: 1px solid #DCE4EC; }}
     QStatusBar QToolButton {{ border-radius: 6px; padding: 3px 10px; }}
     QFrame[vai="bang_to_chuc"] {{ background: transparent; border: 0; }}
@@ -629,10 +643,33 @@ def to_mau(goc: QWidget) -> None:
 # Trạng thái của băng / nhãn thông báo: (chữ, nền, viền) - một bảng màu cho cả phần mềm (trước: chuỗi QSS chép tay từng nơi)
 MAU_TRANG_THAI = {
     'dat': ('#1E6B34', '#EAF6EC', '#CDE8D2'),          # xong, khớp
-    'tin': ('#1F4E79', '#EAF2FB', '#C9DCF2'),          # thông tin trung tính
+    'tin': ('#0C4A6E', '#F0F9FF', '#BAE6FD'),          # thông tin trung tính (1.0.02: thanh thông báo xanh trời nhạt)
     'canh_bao': ('#7A4B00', '#FFF4DB', '#F1D9A0'),     # cần xem lại (không phải lỗi của người dùng)
     'loi': ('#A12A1F', '#FCEDEB', '#F3CFCA'),          # lỗi phải xử lý mới làm tiếp được
 }
+
+
+MAU_HE_SO_K = '#0284C7'                                  # cột Hệ số K (bảng giá NQ 28, bảng hệ số K): căn giữa, đậm, xanh trời
+MAU_GIA_K = TOKEN['chinh']                               # cột Giá × K: căn phải, đậm, navy
+
+
+def _o_dam(it, mau: str, can) -> None:
+    from PySide6.QtGui import QBrush
+    f = it.font()
+    f.setBold(True)
+    it.setFont(f)
+    it.setForeground(QBrush(QColor(mau)))
+    it.setTextAlignment(can)
+
+
+def kieu_o_he_so_k(it) -> None:
+    """Ô Hệ số K (QTableWidgetItem): căn giữa, chữ đậm xanh trời (1.0.02 - nổi giữa các cột giá)."""
+    _o_dam(it, MAU_HE_SO_K, Qt.AlignmentFlag.AlignCenter)
+
+
+def kieu_o_gia_k(it) -> None:
+    """Ô Giá × K: căn phải, chữ đậm navy (giá dùng để lập phương án)."""
+    _o_dam(it, MAU_GIA_K, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
 
 def kieu_trang_thai(muc: str, loai: str = 'QLabel', dam: bool = True) -> str:

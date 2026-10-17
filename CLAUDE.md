@@ -1523,6 +1523,38 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     dùng biểu tượng MDL2 0xE841 / 0xE718 (bỏ emoji ghim - Win7 ô vuông). `thanh_tieu_de.CAO` 38 -> 34, `CAO_BANNER` 48 -> 42 (chữ 14 / 11 px).
   - Ảnh thật (QT_QPA_PLATFORM=windows, 125%): 1366x728 và 1916x1020, Qt6 + Qt5 (Qt5: ký tự ■ □ hiện đúng). Test
     `tests/test_giao_dien_navy.py`; sửa theo đặc tả mới `test_yeu_cau_0979` (màu thẻ chào đọc từ MAU_THE_CHAO), `0994`, `0995`.
+- 1.0.02 CỬA SỔ CON / TRANG NHÚNG theo chuẩn Hybrid Enterprise Navy (người dùng 17/10/2026, 7 hạng mục + ẢNH MẪU cửa sổ lập phương án):
+  - QSS chung (`giao_dien._qss`): màu nút theo VAI TRÒ - `MAU` không còn cam / tím / xanh lá (MAU[n][0] = màu biểu tượng: navy / slate
+    / teal; xóa #B91C1C); `_qss_nut_loai(loại, nhóm…)` dùng chung QPushButton / QToolButton / ribbon: nhóm DAC ('luu') nền navy chữ
+    trắng, 'xoa' = `NUT_XOA` (trắng, viền #FECACA, chữ #B91C1C), nhóm khác = `NUT_PHU` (trắng, viền #CBD5E1, chữ #0F172A, rê chuột
+    #F1F5F9), tắt `NUT_TAT`. LUAT 'luu' thêm "tao du an", "xuat ban ho so". KieuNut.LUU ('success') = navy như CHINH (bỏ xanh lá).
+    QTabBar::tab theo `THE_TAB` (nền #F1F5F9 chữ #475569, chọn nền trắng chữ navy 700 + vạch TRÊN 2 px navy, rê chuột #E2E8F0), QGroupBox
+    viền #E2E8F0 bo 6 (tiêu đề kiểu thẻ trong vùng margin-top 22px - không bị cắt), QSplitter::handle #E2E8F0 / hover #94A3B8, QDialog
+    nền #F8FAFC, `QLabel[vai="tieu_de"]` slate + vạch navy, MAU_TRANG_THAI['tin'] = thanh thông báo #F0F9FF viền #BAE6FD.
+    CỠ CHỮ THẺ (::tab) PHẢI LÀ px NGUYÊN: "12.5px" làm Qt5 tính sai bề rộng thẻ, cắt chữ hai đầu (đã thấy ở bản Win7).
+  - CuaSoLapPA (theo ảnh mẫu người dùng gửi trong phiên): `thanh_tren` objectName 'thanh_tren_lap_pa' (`QSS_THANH_TREN`: nền #F8FAFC,
+    vạch dưới, lề 8,4,8,4), `cb_ho` #o_chon_ho chữ đậm, ◀ ▶ #nut_ho_truoc / #nut_ho_sau, `CAO_NUT_TREN` 28; Dán tài sản nền trắng viền
+    slate (rê chuột xanh băng / #0284C7); Lưu ap_kieu_nut LUU (navy); Xem trước (F4) tắt = trắng chữ navy, BẬT = nền #EFF6FF viền
+    navy (ảnh mẫu - không nền navy đặc); thẻ mục `QSS_THE_LAP_PA` kiểu gạch chân (documentMode); `hang_dieu_huong()` dựng khung
+    `dai_dieu_huong` (QSS_DAI_DIEU_HUONG: nền #F1F5F9, vạch trên 2 px #CBD5E1, lb_tong #tong_pa navy đậm) - trả layout của khung, nơi
+    gọi xếp `self.dai_dieu_huong`. Nút "Thêm thửa vào mục 1" và `HangNhapNhanh.nut_them` = KieuNut.CHINH. `HangNhapNhanh`: `CAO_HANG`
+    30 cho mọi ô + nút, `QSS_HANG` (viền slate, đang gõ viền navy - kiểu của widget cha thắng `QLineEdit[nhap="1"]` cao 34).
+    `KhungXemTruocTaiLieu`: `MAU_NEN` #334155 (vùng trang), thanh `xt_thanh` nền #F8FAFC vạch dưới #CBD5E1, nút sáng cao `CAO_NUT_XT` 28,
+    biểu tượng `MAU_ICON_XT` navy.
+  - Niêm yết: `_The` property vai="the_ny" + `QSS_THE_NY` (trắng, viền, vạch trái 3 px `MAU_THE_NY`, số #the_ny_so), dai_tien_do_ny bo 5,
+    thanh tiến độ navy. Bảng tổng hợp: `man_hinh_theo_doi.DONG_NOI` {cong, kinh_phi, tong: (nền, chữ)} cho KhungCoCau và dòng TỔNG CỘNG
+    KhungDoiSoat (BangAo kiểu `mau_chu`); `CAO_O_CONG_CU` 30 cho `_nut` / `_o_tim` / cb_loc / lb_moc. HopDotTrinh: b_xuat KieuNut.CHINH,
+    splitter handle 6. HopIn: khung tùy chọn #the_tuy_chon_in (thẻ trắng), Thực hiện KieuNut.CHINH.
+  - Tiến độ: `man_hinh_bao_cao._TheKPI` cao `CAO_THE_KPI` 58, vạch trái `MAU_THE` (navy / teal / slate / đỏ trầm), `dat_dang_loc` /
+    `dang_loc` (property dang_loc, nền #EFF6FF viền navy); `DaiKPI.dat_loc(khóa)`; `KhungTienDo.the_kpi_dang_loc()` (KPI_LOC khớp chế
+    độ + cb_loc) -> `_danh_dau_kpi` gọi ở `ve()` và `dat_che_do`. Nút chế độ = viên thuốc: `khung_che_do` (QFrame #khung_che_do nền
+    #E2E8F0 bo 6) chứa hai nút, `QSS_CHE_DO` (chọn navy chữ trắng, không chọn trong suốt). lb_moc #lb_moc nền #F8FAFC viền. HopNhatKyVanDong
+    1000 x 640 (<= 1024 x 680).
+  - Khái toán: thanh_nhap_nhanh nền trắng viền #CBD5E1, ô / nút `CAO_O_NHAP` 30; lb_tong #the_tong_khai_toan nền #F0F6FF viền #BAE6FD
+    chữ navy đậm; b_an_tt #nut_an_tt phẳng. #dai_bo_don_gia nền #F1F5F9 viền #CBD5E1. Cột Hệ số K (`giao_dien.kieu_o_he_so_k`: giữa,
+    đậm #0284C7) và Giá × K (`kieu_o_gia_k`: phải, đậm navy) ở HopTraNQ28 + KhungHeSoK.
+  - Sửa file CRLF bằng script: KHÔNG dùng `sed -i` của Git Bash (đổi cả file sang LF - đã gặp ở man_hinh.py). Test
+    `tests/test_giao_dien_navy_con.py`; `test_yeu_cau_0978` theo màu nút Dán mới, cao 28.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

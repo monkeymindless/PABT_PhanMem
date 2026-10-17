@@ -71,8 +71,8 @@ class HopBoDonGia(QDialog):
         self.lb = QLabel()
         self.lb.setObjectName('dai_bo_don_gia')
         self.lb.setFixedHeight(28)
-        self.lb.setStyleSheet('QLabel#dai_bo_don_gia { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; '
-                              'padding: 0 10px; color: #334155; }')
+        self.lb.setStyleSheet('QLabel#dai_bo_don_gia { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; '
+                              'padding: 0 10px; color: #0F172A; }')
         self.o_tim = QLineEdit()
         self.o_tim.setPlaceholderText('Tìm trong thẻ đang xem (không cần dấu): xoai, nha cap 4, CS9…')
         loc_khi_ngung_go(self.o_tim, self.loc)

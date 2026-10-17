@@ -20,15 +20,20 @@ from .giao_dien import NhanRutGon
 from .man_hinh_theo_doi import DO, VANG, XAM, _chu
 from .tien import so_vn, vn
 
+# 1.0.02 (Hybrid Enterprise Navy, như thẻ số màn hình chính): nền trắng, viền slate, bo 6, vạch trái 3 px màu thẻ; thẻ đang lọc
+# (KhungTienDo.KPI_LOC khớp bộ lọc / chế độ đang xem) nền xanh băng viền navy
 _QSS_THE = '''
-QFrame#the_kpi { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; }
-QFrame#the_kpi:hover { border-color: #93C5FD; background: #F8FAFC; }
-QLabel#kpi_tieu_de { color: #64748B; font-size: 11px; font-weight: 600; background: transparent; }
-QLabel#kpi_so { color: #0F3866; font-size: 20px; font-weight: 700; background: transparent; }
-QLabel#kpi_phu { color: #475569; font-size: 11px; background: transparent; }
-QProgressBar { background: #E2E8F0; border: 0; border-radius: 2px; }
+QFrame#the_kpi {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid {m}; border-radius: 6px; }}
+QFrame#the_kpi:hover {{ background: #F8FAFC; border-color: #94A3B8; border-left-color: {m}; }}
+QFrame#the_kpi[dang_loc="1"] {{ background: #EFF6FF; border: 1px solid #0F3866; border-left: 3px solid {m}; }}
+QLabel#kpi_tieu_de {{ color: #475569; font-size: 11px; font-weight: 600; background: transparent; border: 0; }}
+QLabel#kpi_so {{ color: {m}; font-size: 18px; font-weight: 700; background: transparent; border: 0; }}
+QLabel#kpi_phu {{ color: #475569; font-size: 11px; background: transparent; border: 0; }}
+QProgressBar {{ background: #E2E8F0; border: 0; border-radius: 2px; }}
 '''
-MAU_THE = dict(giai_ngan='#107C41', mat_bang='#2563EB', con_vuong='#D97706', cuong_che='#DC2626')   # màu thanh / chữ từng thẻ
+CAO_THE_KPI = 58                         # thẻ chỉ số (px): như thẻ số 56 px màn hình chính, thêm thanh tiến độ mảnh
+# màu vạch trái / số / thanh từng thẻ: navy (giải ngân), teal (mặt bằng sạch), slate (thửa còn vướng), đỏ trầm (cưỡng chế)
+MAU_THE = dict(giai_ngan='#0F3866', mat_bang='#0F766E', con_vuong='#475569', cuong_che='#B91C1C')
 NEN_MUC = {'gap': DO, 'cao': VANG, 'theo_doi': XAM}
 TIEU_DE_THE = dict(giai_ngan='GIẢI NGÂN TIỀN BỒI THƯỜNG', mat_bang='MẶT BẰNG SẠCH ĐÃ BÀN GIAO',
                    con_vuong='THỬA CHƯA BÀN GIAO MẶT BẰNG', cuong_che='HỘ ĐỦ ĐIỀU KIỆN CƯỠNG CHẾ')
@@ -48,7 +53,9 @@ class _TheKPI(QFrame):
     def __init__(self, tieu_de: str, mau: str, goi_y: str = '', parent=None):
         super().__init__(parent)
         self.setObjectName('the_kpi')
-        self.setStyleSheet(_QSS_THE)
+        self.setStyleSheet(_QSS_THE.format(m=mau))
+        self.setProperty('dang_loc', '0')
+        self.setFixedHeight(CAO_THE_KPI)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.goi_y = goi_y
         self.mau = mau
@@ -67,8 +74,8 @@ class _TheKPI(QFrame):
         h.addWidget(self.lb_so)
         h.addWidget(self.lb_phu, 1, Qt.AlignmentFlag.AlignVCenter)
         lo = QVBoxLayout(self)
-        lo.setContentsMargins(10, 6, 10, 6)
-        lo.setSpacing(2)
+        lo.setContentsMargins(10, 4, 10, 4)
+        lo.setSpacing(1)
         lo.addWidget(self.lb_td)
         lo.addLayout(h)
         lo.addWidget(self.thanh)
@@ -83,6 +90,18 @@ class _TheKPI(QFrame):
         if ty_le is not None:
             self.thanh.setValue(int(min(100.0, max(0.0, ty_le)) * 10))
             self.thanh.setStyleSheet(f'QProgressBar::chunk {{ background: {self.mau}; border-radius: 2px; }}')
+
+    def dat_dang_loc(self, co: bool) -> None:
+        """Đánh dấu thẻ đang là bộ lọc / chế độ xem của bảng (nền xanh băng, viền navy)."""
+        gt = '1' if co else '0'
+        if self.property('dang_loc') != gt:
+            self.setProperty('dang_loc', gt)
+            self.style().unpolish(self)
+            self.style().polish(self)
+            self.update()
+
+    def dang_loc(self) -> bool:
+        return self.property('dang_loc') == '1'
 
     def mouseReleaseEvent(self, e):
         super().mouseReleaseEvent(e)
@@ -106,6 +125,11 @@ class DaiKPI(QWidget):
             t.bam.connect(lambda k=k: self.bam.emit(k))
             self.the[k] = t
             h.addWidget(t, 1)
+
+    def dat_loc(self, khoa: str | None) -> None:
+        """Thẻ khoa (giai_ngan / mat_bang / con_vuong / cuong_che) đang là bộ lọc của bảng; None = không thẻ nào."""
+        for k, t in self.the.items():
+            t.dat_dang_loc(k == khoa)
 
     def dat(self, tq: dict | None, so_ngay_van_dong: int = 0) -> None:
         if tq is None:

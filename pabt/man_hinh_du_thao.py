@@ -53,15 +53,23 @@ def san_tieu_de(b) -> None:
 
 
 MAU_Y_KIEN = {'dong_y': '#15803D', 'khong_dong_y': '#B91C1C', 'y_kien_khac': '#B45309', 'chua': '#64748B'}
+# thẻ KPI trang Niêm yết (1.0.02, như thẻ số màn hình chính): màu vạch trái + màu số. Navy = tổng; xanh trời / xanh dương = đủ điều kiện /
+# đã niêm yết; teal / xanh lá = phê duyệt / bàn giao (đã đồng thuận); hổ phách = vướng (cần xử lý)
+MAU_THE_NY = {'tong': '#0F3866', 'du': '#0284C7', 'vuong': '#B45309', 'dt': '#2563EB', 'pd': '#0F766E', 'bg': '#15803D'}
+QSS_THE_NY = ('QFrame[vai="the_ny"] {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid {m}; '
+              'border-radius: 6px; }}'
+              'QFrame[vai="the_ny"]:hover {{ background: #F8FAFC; border-color: {m}; }}'
+              'QLabel#the_ny_tieu {{ color: #475569; font-size: 11px; font-weight: 600; border: 0; background: transparent; }}'
+              'QLabel#the_ny_so {{ color: {m}; font-size: 15px; font-weight: 700; border: 0; background: transparent; }}')
 
 
 class _The(QFrame):
     def __init__(self, tieu_de, mau, bam):
         super().__init__()
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setStyleSheet(
-            'QFrame { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }'
-            f'QFrame:hover {{ border-color: {mau}; }}')
+        self.setProperty('vai', 'the_ny')
+        self.mau = mau
+        self.setStyleSheet(QSS_THE_NY.format(m=mau))    # bộ chọn theo vai: không truyền sang nhãn con (QLabel cũng là QFrame)
         self._bam = bam
         lo = QHBoxLayout(self)
         lo.setContentsMargins(8, 2, 8, 2)               # 0.9.95: MỘT dòng cao 32 px - nhãn | số đậm (chữ phụ ở chú thích thẻ)
@@ -69,9 +77,9 @@ class _The(QFrame):
         self.setMaximumHeight(32)
         from .giao_dien import NhanRutGon
         self.tieu = NhanRutGon(tieu_de)                 # hẹp thì rút "…" (đủ ở chú thích), không đẩy cửa sổ rộng ra
-        self.tieu.setStyleSheet('color: #64748B; font-size: 8pt; border: none; background: transparent;')
+        self.tieu.setObjectName('the_ny_tieu')
         self.gia = QLabel('0')
-        self.gia.setStyleSheet(f'color: {mau}; font-size: 11pt; font-weight: 700; border: none; background: transparent;')
+        self.gia.setObjectName('the_ny_so')
         self.phu = QLabel('')                           # giữ đối tượng (dat / test); không xếp - chữ phụ hiện ở chú thích
         self.phu.setVisible(False)
         lo.addWidget(self.tieu, 1)
@@ -276,12 +284,12 @@ class KhungDuThao(QWidget):
         hud.setSpacing(6)                               # 6 thẻ KPI cách nhau 6 px
         hud.setProperty('giu_khoang_cach', True)        # giao_dien.gian_cach không nâng lên 10 px
         self.the = {
-            'tong': _The('TỔNG SỐ HỘ', '#0F3866', lambda: None),
-            'du': _The('ĐỦ ĐIỀU KIỆN LẬP PA', '#2563EB', lambda: self.tabs.setCurrentIndex(0)),
-            'vuong': _The('VƯỚNG PHÁP LÝ', '#D97706', lambda: self.tabs.setCurrentIndex(0)),
-            'dt': _The('ĐÃ DỰ THẢO (NIÊM YẾT)', '#0284C7', lambda: self.tabs.setCurrentIndex(0)),
-            'pd': _The('ĐÃ PHÊ DUYỆT QĐ', '#16A34A', self._mo_tien_do),
-            'bg': _The('ĐÃ BÀN GIAO MẶT BẰNG', '#059669', self._mo_tien_do),
+            'tong': _The('TỔNG SỐ HỘ', MAU_THE_NY['tong'], lambda: None),
+            'du': _The('ĐỦ ĐIỀU KIỆN LẬP PA', MAU_THE_NY['du'], lambda: self.tabs.setCurrentIndex(0)),
+            'vuong': _The('VƯỚNG PHÁP LÝ', MAU_THE_NY['vuong'], lambda: self.tabs.setCurrentIndex(0)),
+            'dt': _The('ĐÃ DỰ THẢO (NIÊM YẾT)', MAU_THE_NY['dt'], lambda: self.tabs.setCurrentIndex(0)),
+            'pd': _The('ĐÃ PHÊ DUYỆT QĐ', MAU_THE_NY['pd'], self._mo_tien_do),
+            'bg': _The('ĐÃ BÀN GIAO MẶT BẰNG', MAU_THE_NY['bg'], self._mo_tien_do),
         }
         for t in self.the.values():
             hud.addWidget(t, 1)
@@ -326,7 +334,8 @@ class KhungDuThao(QWidget):
         self.lb_dot, self.lb_luy, self.lb_phu = NhanRutGon(''), NhanRutGon(''), NhanRutGon('')
         dai = QFrame()
         dai.setObjectName('dai_tien_do_ny')
-        dai.setStyleSheet('QFrame#dai_tien_do_ny { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; }')
+        dai.setStyleSheet('QFrame#dai_tien_do_ny { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; }'
+                          'QFrame#dai_tien_do_ny QLabel { color: #334155; background: transparent; border: 0; }')
         so = QHBoxLayout(dai)
         so.setContentsMargins(10, 3, 10, 3)
         so.setSpacing(14)
@@ -338,7 +347,7 @@ class KhungDuThao(QWidget):
         self.thanh.setFixedHeight(8)
         self.thanh.setTextVisible(False)
         self.thanh.setStyleSheet('QProgressBar { background: #E2E8F0; border: none; border-radius: 4px; }'
-                                 'QProgressBar::chunk { background: #2563EB; border-radius: 4px; }')
+                                 'QProgressBar::chunk { background: #0F3866; border-radius: 4px; }')
         lo.addWidget(self.thanh)
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
@@ -368,7 +377,7 @@ class KhungDuThao(QWidget):
         tach.setChildrenCollapsible(False)
         tach.setHandleWidth(10)
         tach.setStyleSheet('QSplitter::handle:vertical { background: #CBD5E1; margin: 3px 38%; border-radius: 2px; }'
-                           'QSplitter::handle:vertical:hover { background: #2563EB; }')
+                           'QSplitter::handle:vertical:hover { background: #94A3B8; }')
         tach.addWidget(self._trang(self.bang_ny, []))   # nút "Xuất bảng niêm yết": hàng nút đợt phía trên (15/10/2026)
         tach.addWidget(self._trang(self.bang_vm, [
             ('Đánh dấu pháp lý hộ đang chọn', self._phap_ly),

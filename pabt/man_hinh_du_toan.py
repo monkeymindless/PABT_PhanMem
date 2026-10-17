@@ -18,7 +18,7 @@ from . import csdl, du_toan
 from .du_toan import DongDT, DuToan
 from .lap_pa import DanhMuc, LoiNhap, doc_so
 from .tien import D, KHONG, so_luong_vn, so_vn, tien_bang_chu, vn
-from .giao_dien import con_tro_cho
+from .giao_dien import con_tro_cho, kieu_o_gia_k, kieu_o_he_so_k
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Dự toán & khái toán'
@@ -122,7 +122,11 @@ class HopTraNQ28(QDialog):
                                    so_vn(k) if k is not None else '', vn(D(g) * k) if k is not None else '')):
                 it = QTableWidgetItem(str(v))
                 it.setToolTip(nq.mo_ta_vi_tri(x) if c == 4 else cc if c >= 6 and k is not None else str(v))
-                if c >= 5:
+                if c == 6:
+                    kieu_o_he_so_k(it)
+                elif c == 7:
+                    kieu_o_gia_k(it)
+                elif c >= 5:
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(r, c, it)
 
@@ -159,6 +163,7 @@ def _co_theo_ky_tu(cb: QComboBox, n: int) -> None:
     cb.view().setMinimumWidth(cb.view().sizeHintForColumn(0) + 24)
 
 
+CAO_O_NHAP = 30                    # 1.0.02: ô / nút thanh nhập nhanh (như HangNhapNhanh.CAO_HANG)
 CAO_HANG_DAY = 34                  # 0.9.95: dải tổng cộng + 4 nút đáy MỘT hàng
 
 
@@ -267,7 +272,11 @@ class KhungDuToan(QWidget):
         # không ép bề rộng tối thiểu của trang (như NhanRutGon): hẹp thì nút xuống dòng (_xep_thanh_nhap), cửa sổ không bị đẩy
         # rộng hơn màn hình 1366 (lỗi phóng to 0.9.26)
         dock.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        dock.setStyleSheet('QFrame#thanh_nhap_nhanh { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; }')
+        # 1.0.02 (Hybrid Enterprise Navy): thanh nhập nền trắng viền slate; ô / nút cao CAO_O_NHAP, ô đang gõ viền navy
+        dock.setStyleSheet('QFrame#thanh_nhap_nhanh { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; }'
+                           'QFrame#thanh_nhap_nhanh QLineEdit, QFrame#thanh_nhap_nhanh QComboBox { border: 1px solid #CBD5E1; '
+                           'border-radius: 5px; background: #FFFFFF; }'
+                           'QFrame#thanh_nhap_nhanh QLineEdit:focus, QFrame#thanh_nhap_nhanh QComboBox:focus { border-color: #0F3866; }')
         v_dock = QVBoxLayout(dock)
         v_dock.setContentsMargins(8, 5, 8, 5)
         v_dock.setSpacing(4)
@@ -308,6 +317,9 @@ class KhungDuToan(QWidget):
             o.setStyleSheet('QLineEdit { padding-left: 4px; padding-right: 4px; }')
         self.hang.o_gc.setMinimumWidth(120)
         self.hang.o_gc.setMaximumWidth(180)
+        for w in (self.b_lay, self.cb_muc_nhap, self.cb_loai_dat, self.o_dt_dat, self.o_gia_dat, self.b_tra_nq28, b_dan, self.b_ocr,
+                  self.b_them):
+            w.setFixedHeight(CAO_O_NHAP)
         if self.hang.o_do is not None:
             self.hang.o_do.setMinimumWidth(100)
             self.hang.o_do.setMaximumWidth(150)
@@ -349,8 +361,9 @@ class KhungDuToan(QWidget):
         self.lb_tong.setTextFormat(Qt.TextFormat.RichText)
         self.lb_tong.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.lb_tong.setFixedHeight(CAO_HANG_DAY)
-        self.lb_tong.setStyleSheet('QLabel#the_tong_khai_toan { background: #ECFDF5; border-left: 4px solid #107C41; '
-                                   'border-radius: 4px; padding: 2px 8px; color: #065F46; }')
+        self.lb_tong.setStyleSheet('QLabel#the_tong_khai_toan { background: #F0F6FF; border: 1px solid #BAE6FD; '
+                                   'border-left: 4px solid #0F3866; border-radius: 5px; padding: 2px 8px; color: #0F3866; '
+                                   'font-weight: 700; }')
         b_mo = QPushButton('Mở tệp (.pabtdt)…')
         b_mo.clicked.connect(lambda: self.mo())
         b_moi = QPushButton('Tạo mới')
@@ -424,6 +437,10 @@ class KhungDuToan(QWidget):
         self.b_an_tt.setText('Ẩn thông tin chung')
         self.b_an_tt.setCheckable(True)
         self.b_an_tt.setAutoRaise(True)
+        self.b_an_tt.setObjectName('nut_an_tt')                # phẳng: chữ navy, rê chuột mới hiện nền (kiểu cục bộ thắng tô theo chữ)
+        self.b_an_tt.setStyleSheet('QToolButton#nut_an_tt { background: transparent; border: 0; color: #0F3866; font-weight: 600; '
+                                   'padding: 2px 6px; border-radius: 4px; }'
+                                   'QToolButton#nut_an_tt:hover { background: #E2E8F0; }')
         self.b_an_tt.setToolTip('Ẩn / hiện thông tin chung (tên dự án, chủ đầu tư, nguồn vốn, địa bàn, quy mô, kinh phí QĐ08)')
         h_tieu = QHBoxLayout()
         h_tieu.setContentsMargins(0, 0, 0, 0)

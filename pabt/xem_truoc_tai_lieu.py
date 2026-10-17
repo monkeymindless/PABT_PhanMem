@@ -27,7 +27,10 @@ from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QPushB
                                QStackedWidget, QVBoxLayout, QWidget)
 
 THU_MUC_GOC = Path(tempfile.gettempdir()) / 'pabt_preview'
-MAU_NEN = '#1E293B'
+MAU_NEN = '#334155'             # vùng trang (1.0.02: slate 700 - trước #1E293B quá tối cạnh giao diện sáng)
+MAU_THANH = '#F8FAFC'           # thanh công cụ xem trước (nền slate nhạt, vạch dưới #CBD5E1)
+MAU_ICON_XT = '#0F3866'         # biểu tượng nút thanh công cụ
+CAO_NUT_XT = 28
 MAU_GIAY = '#FFFFFF'
 CHO_MS = 250                    # chờ ngừng bấm (đổi hộ bằng phím mũi tên) rồi mới lập bản xem trước
 NHIP_MS = 150                   # nhịp kiểm tra luồng nền đã xuất PDF xong chưa
@@ -293,14 +296,20 @@ class KhungXemTruocTaiLieu(QFrame):
         super().__init__(parent)
         self.setObjectName('khung_xem_truoc')
         self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setStyleSheet(f'QFrame#khung_xem_truoc {{ background: {MAU_NEN}; border-radius: 6px; }}'
+        self.setStyleSheet(f'QFrame#khung_xem_truoc {{ background: {MAU_NEN}; border: 1px solid #CBD5E1; border-radius: 6px; }}'
+                           f'QWidget#xt_thanh {{ background: {MAU_THANH}; border: 0; border-bottom: 1px solid #CBD5E1; '
+                           'border-top-left-radius: 6px; border-top-right-radius: 6px; }'
                            f'QLabel#xt_thong_bao {{ color: #E2E8F0; font-size: 13px; padding: 24px; }}'
-                           f'QLabel#xt_trang {{ color: #F8FAFC; padding: 0 6px; }}'
-                           'QLabel#xt_gan_dung { color: #1E293B; background: #FCD34D; border-radius: 4px; padding: 1px 6px; }'
-                           'QPushButton[xem_truoc="1"] { color: #F8FAFC; background: #334155; border: 1px solid #475569; '
-                           'border-radius: 4px; padding: 3px 8px; min-height: 22px; }'
-                           'QPushButton[xem_truoc="1"]:hover { background: #475569; }'
-                           'QPushButton[xem_truoc="1"]:disabled { color: #64748B; background: #1F2A3C; }')
+                           'QLabel#xt_trang { color: #334155; font-weight: 600; padding: 0 6px; background: transparent; }'
+                           'QLabel#xt_gan_dung { color: #78350F; background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 4px; '
+                           'padding: 1px 6px; }'
+                           'QPushButton[xem_truoc="1"] { color: #0F172A; background: #FFFFFF; border: 1px solid #CBD5E1; '
+                           'border-radius: 5px; padding: 0 8px; font-weight: 600; }'
+                           'QPushButton[xem_truoc="1"]:hover { background: #F1F5F9; border-color: #94A3B8; }'
+                           'QPushButton[xem_truoc="1"]:pressed { background: #E2E8F0; }'
+                           'QPushButton[xem_truoc="1"]:disabled { color: #94A3B8; background: #F8FAFC; border-color: #E2E8F0; }'
+                           # nút "Mở bằng trình xem PDF" nằm giữa vùng trang tối: nền trắng, chữ navy
+                           'QPushButton#xt_mo_ngoai { color: #0F3866; }')
         self.ham_in = ham_in
         self._vua = True                       # đang ở chế độ vừa trang: đổi cỡ khung thì vừa lại
         self.pdf: Path | None = None
@@ -326,7 +335,8 @@ class KhungXemTruocTaiLieu(QFrame):
             b.setProperty('khong_icon', True)
             b.setToolTip(goi_y)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
-            ic = icon_ky_hieu(ma, '#F8FAFC', 14)       # Segoe MDL2 (Win 7 không có phông: chỉ chữ, không emoji)
+            b.setFixedHeight(CAO_NUT_XT)
+            ic = icon_ky_hieu(ma, MAU_ICON_XT, 14)     # Segoe MDL2 (Win 7 không có phông: chỉ chữ, không emoji)
             if ic is not None:
                 b.setIcon(ic)
                 if chu in ('+', '−', '◀', '▶'):        # có biểu tượng: nút gọn chỉ biểu tượng (khung hẹp 520 điểm)
@@ -362,8 +372,10 @@ class KhungXemTruocTaiLieu(QFrame):
         # thanh công cụ: 3 cụm trong XepDong - khung hẹp (màn hình nhỏ) thì cụm sau xuống dòng, không cắt chữ nút
         from .giao_dien import XepDong
         self.thanh = QWidget()
+        self.thanh.setObjectName('xt_thanh')
+        self.thanh.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         h = XepDong(self.thanh, 10)
-        h.setContentsMargins(8, 6, 8, 6)
+        h.setContentsMargins(8, 4, 8, 4)
         nhan = QLabel('Trang')
         nhan.setObjectName('xt_trang')
         for nhom, phai in (((self.b_phong, self.b_thu, self.b_vua), False), ((nhan, self.b_truoc, self.lb_trang, self.b_sau), False),
@@ -386,6 +398,8 @@ class KhungXemTruocTaiLieu(QFrame):
         self.lb_tb.setWordWrap(True)
         self.b_mo_ngoai = QPushButton('Mở bằng trình xem PDF của Windows')
         self.b_mo_ngoai.setProperty('xem_truoc', '1')
+        self.b_mo_ngoai.setObjectName('xt_mo_ngoai')
+        self.b_mo_ngoai.setMinimumHeight(CAO_NUT_XT)
         self.b_mo_ngoai.clicked.connect(lambda: self.mo_ngoai())
         self.b_mo_ngoai.setVisible(False)
         tb = QWidget()

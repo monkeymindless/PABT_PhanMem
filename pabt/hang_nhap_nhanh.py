@@ -77,6 +77,13 @@ def lam_san(dm: DanhMuc) -> None:
         ds_chon_nhanh(dm, m)
 
 
+CAO_HANG = 30                 # ô nhập / nút của hàng nhập nhanh (1.0.02; trước: ô kiểu nhap="1" ~34 px)
+QSS_HANG = ('QLineEdit, QComboBox { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; '
+            'min-height: 0; }'
+            'QLineEdit:hover, QComboBox:hover { border-color: #94A3B8; }'
+            'QLineEdit:focus, QComboBox:focus { border: 1px solid #0F3866; background: #FFFFFF; }')
+
+
 class HangNhapNhanh(QWidget):
     """muc: mục cố định (thẻ mục của phương án hộ); chon_muc [(mục, nhãn)]: có ô chọn mục (dự toán - một bảng mọi mục).
     them(): hàm thêm của màn hình chủ (Enter / nút Thêm vào bảng). sau_chon(m) -> True nếu đã tự đặt con trỏ (mục 4 hộ)."""
@@ -103,7 +110,7 @@ class HangNhapNhanh(QWidget):
         self.o_chon = OTimChon(GOI_Y.get(self.muc(), GOI_Y[2]))
         self.o_chon.khi_chon = lambda m: self._da_chon(m)
         self.o_chon.o.setProperty('nhap', '1')
-        self.o_chon.nut.setMinimumSize(34, 34)
+        self.o_chon.nut.setMinimumSize(CAO_HANG, CAO_HANG)
         self.o_chon.nut.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         lo.addWidget(self.o_chon, 5)
         # kiểu số đo của cây (đường kính / chu vi thân): chỉ tạo khi hàng có mục 3 (thẻ Nhà / Vật nuôi / Hỗ trợ của hộ không cần -
@@ -147,7 +154,7 @@ class HangNhapNhanh(QWidget):
             o.returnPressed.connect(lambda: self._them())
             lo.addWidget(o, k)
         self.nut_them = QPushButton('Thêm vào bảng')
-        self.nut_them.setMinimumHeight(34)
+        self.nut_them.setMinimumHeight(CAO_HANG)
         self.nut_them.setAutoDefault(True)             # Enter khi đang ở nút cũng thêm (ngoài hộp thoại Qt chỉ nhận Space)
         self.nut_them.clicked.connect(lambda: self._them())
         lo.addWidget(self.nut_them)
@@ -158,6 +165,15 @@ class HangNhapNhanh(QWidget):
             QWidget.setTabOrder(a, b)
         if self.cb_kieu is not None:
             self.cb_kieu.setVisible(self.muc() == 3)
+        # 1.0.02 (Hybrid Enterprise Navy): mọi ô + nút cao CAO_HANG, viền slate, đang gõ viền navy (kiểu của hàng thắng kiểu chung
+        # QLineEdit[nhap="1"] cao 34 px - kiểu đặt trên widget cha luôn được ưu tiên hơn kiểu toàn ứng dụng)
+        self.setStyleSheet(QSS_HANG)
+        for w in chuoi:
+            if w is not self.nut_them:
+                w.setFixedHeight(CAO_HANG)
+        self.nut_them.setFixedHeight(CAO_HANG)
+        from .giao_dien import KieuNut, ap_kieu_nut
+        ap_kieu_nut(self.nut_them, KieuNut.CHINH)       # thao tác chính của hàng: nền navy chữ trắng
 
     # ---------------------------------------------- mục, danh sách chọn
     def muc(self) -> int:

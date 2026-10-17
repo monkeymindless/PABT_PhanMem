@@ -15,7 +15,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QIcon
-from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QFrame,
                                QButtonGroup, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QMenu, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QSplitter, QStackedWidget, QTableWidget,
                                QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
@@ -33,6 +33,11 @@ MAU_LIEN_KET = QColor('#0B5CAD')                          # chữ ô bấm đúp
 CHO_GO_MS = 200                                           # ô tìm: chờ ngừng gõ bấy nhiêu ms mới lọc (như OTimKiemThongMinh)
 DO_MAU = 300                                              # số dòng Qt đo khi tự canh bề rộng cột (bảng QTableWidget của hộp thoại)
 THUA_TRONG = dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')     # hộ chưa có thửa: vẫn một dòng
+# 1.0.02 (Hybrid Enterprise Navy): dòng nổi của Cơ cấu kinh phí / Đối soát - (nền, chữ). Cộng bồi thường = slate; kinh phí tổ chức
+# thực hiện = hổ phách nhạt; TỔNG KINH PHÍ = xanh băng chữ navy đậm (như dải cộng danh sách hộ)
+DONG_NOI = {'cong': (QColor('#F1F5F9'), QColor('#0F172A')), 'kinh_phi': (QColor('#FFFBEB'), QColor('#92400E')),
+            'tong': (QColor('#F0F6FF'), QColor('#0F3866'))}
+CAO_O_CONG_CU = 30                                       # ô tìm / nút Xuất / Mốc pháp lý của các trang theo dõi
 _DAM = dict(dam=True)                                     # kiểu ô chữ đậm (bảng ảo, dùng chung - chỉ đọc)
 
 
@@ -155,6 +160,7 @@ def _o_tim(chu: str, khung: _Khung) -> QLineEdit:
     o = QLineEdit()
     o.setPlaceholderText(chu)
     o.setClearButtonEnabled(True)
+    o.setMinimumHeight(CAO_O_CONG_CU)
     o.textChanged.connect(lambda *_: khung._tim_khi_go())
     return o
 
@@ -164,6 +170,7 @@ def _nut(ds: list, lo, nut: dict) -> None:
     for ten, ham in ds:
         b = QPushButton(ten)
         b.clicked.connect(ham)
+        b.setMinimumHeight(CAO_O_CONG_CU)
         lo.addWidget(b)
         nut[ten] = b
 
@@ -655,10 +662,10 @@ class KhungCoCau(_Khung):
         kieu = {}
         co_qd = bool(self.cc and self.cc['so_ho_phe_duyet'])
         for r, (loai, gt) in enumerate(dong):
-            nen = {'cong': XAM, 'kinh_phi': VANG, 'tong': XANH}.get(loai)
-            if nen is not None:
+            if loai in DONG_NOI:
+                nen, chu = DONG_NOI[loai]
                 for c in range(len(self.COT)):
-                    kieu[(r, c)] = dict(nen=nen, dam=loai in ('cong', 'tong'))
+                    kieu[(r, c)] = dict(nen=nen, mau_chu=chu, dam=True)
             if loai in ('nhom', 'cong') and co_qd and gt[5] is not None:        # có quyết định: lệch số phương án so với phê duyệt
                 kieu[(r, 5)] = dict(nen=DO if gt[5] else XANH, dam=loai == 'cong')
         self.bang.dat_du_lieu([_chu(gt, tien=(2, 3, 4, 5)) for _, gt in dong], [], kieu)
@@ -769,8 +776,9 @@ class KhungDoiSoat(_Khung):
         dong = self.dong()
         kieu = {}
         for r, d in enumerate(dong):
-            if r == len(dong) - 1:
-                kieu.update({(r, c): dict(nen=XAM, dam=True) for c in range(len(self.COT))})
+            if r == len(dong) - 1:                     # TỔNG CỘNG: như dòng tổng kinh phí của thẻ Cơ cấu
+                nen, chu = DONG_NOI['tong']
+                kieu.update({(r, c): dict(nen=nen, mau_chu=chu, dam=True) for c in range(len(self.COT))})
             elif d[4] is not None and d[4] > 0:
                 kieu[(r, 4)] = dict(nen=DO)
         self.bang.dat_du_lieu([_chu(d, tien=(2, 3, 4)) for d in dong], [], kieu)
@@ -874,13 +882,15 @@ class KhungBangTongHop(_Khung):
 
 
 # ---------------------------------------------------------------- Theo dõi tiến độ
-# hai nút chế độ xem ghép đôi (Theo hộ | Thửa còn vướng): nút đang chọn nền xanh đậm - kiểu cục bộ thắng kiểu tô theo chữ của
-# giao_dien (_BoToMau), không thì hai nút giống hệt nhau, không biết đang xem chế độ nào
-QSS_CHE_DO = ('QPushButton { border: 1px solid #CBD5E1; background: #FFFFFF; color: #334155; padding: 4px 14px; border-radius: 0; }'
-              'QPushButton:hover { background: #F1F5F9; }'
-              'QPushButton:checked { background: #0F3866; border-color: #0F3866; color: #FFFFFF; font-weight: 600; }'
-              'QPushButton[che_do="ho"] { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }'
-              'QPushButton[che_do="thua"] { border-top-right-radius: 5px; border-bottom-right-radius: 5px; border-left: 0; }')
+# hai nút chế độ xem ghép đôi (Theo hộ | Thửa còn vướng) kiểu "viên thuốc" (segmented pill, 1.0.02): khung ngoài nền slate bo 6,
+# nút đang chọn nền navy chữ trắng đậm, nút không chọn trong suốt chữ slate. Kiểu cục bộ thắng kiểu tô theo chữ của giao_dien
+QSS_CHE_DO = ('QPushButton { border: 0; background: transparent; color: #475569; padding: 0 14px; border-radius: 5px; '
+              'font-weight: 600; }'
+              'QPushButton:hover:!checked { background: #CBD5E1; color: #0F172A; }'
+              'QPushButton:checked { background: #0F3866; color: #FFFFFF; font-weight: 700; }')
+QSS_KHUNG_CHE_DO = 'QFrame#khung_che_do { background: #E2E8F0; border: 0; border-radius: 6px; }'
+QSS_MOC = ('QLabel#lb_moc { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 0 8px; '
+           'color: #334155; }')
 
 
 class KhungTienDo(_Khung):
@@ -926,22 +936,36 @@ class KhungTienDo(_Khung):
         self.nhom_che_do = QButtonGroup(self)
         self.nhom_che_do.setExclusive(True)
         h_dk = QHBoxLayout()
-        h_dk.setSpacing(0)
+        h_dk.setSpacing(6)
+        self.khung_che_do = QFrame()                        # khung "viên thuốc" chứa hai nút chế độ
+        self.khung_che_do.setObjectName('khung_che_do')
+        self.khung_che_do.setStyleSheet(QSS_KHUNG_CHE_DO)
+        h_pill = QHBoxLayout(self.khung_che_do)
+        h_pill.setContentsMargins(3, 3, 3, 3)
+        h_pill.setSpacing(2)
+        self.khung_che_do.setFixedHeight(CAO_O_CONG_CU + 2)
         for i, (k, chu) in enumerate(self.CHE_DO):
             b = QPushButton(chu)
             b.setCheckable(True)
             b.setProperty('che_do', k)
+            b.setProperty('khong_icon', True)
+            b.setFixedHeight(CAO_O_CONG_CU - 4)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip('Từng hộ: quyết định, chi trả, bàn giao, vận động (bấm đúp dòng để cập nhật)' if k == 'ho' else
                          'Thửa của hộ đã phê duyệt mà chưa bàn giao mặt bằng, xếp theo mức ưu tiên giải tỏa')
             b.setStyleSheet(QSS_CHE_DO)
             self.nhom_che_do.addButton(b, i)
             self.nut_che_do[k] = b
-            h_dk.addWidget(b)
+            h_pill.addWidget(b)
+        h_dk.addWidget(self.khung_che_do)
         self.nut_che_do['ho'].setChecked(True)
         self.nhom_che_do.idClicked.connect(lambda i: self.dat_che_do(self.CHE_DO[i][0]))
         self.lb_moc = QLabel('')
         self.lb_moc.setWordWrap(True)
-        h_dk.addSpacing(14)
+        self.lb_moc.setObjectName('lb_moc')
+        self.lb_moc.setStyleSheet(QSS_MOC)
+        self.lb_moc.setMinimumHeight(CAO_O_CONG_CU)
+        h_dk.addSpacing(8)
         h_dk.addWidget(self.lb_moc, 1)
         self.nut = {}
         _nut([('Mốc pháp lý…', lambda: self.mo_moc())], h_dk, self.nut)
@@ -953,6 +977,7 @@ class KhungTienDo(_Khung):
             self.cb_loc.addItem(t, k)
         self.cb_loc.setToolTip('Số trong ngoặc: số hộ thỏa điều kiện (theo các quyết định đang đánh dấu)')
         self.cb_loc.currentIndexChanged.connect(lambda *_: self.ve())
+        self.cb_loc.setMinimumHeight(CAO_O_CONG_CU)
         self.ds_qd_w = QListWidget()
         self.ds_qd_w.setMaximumHeight(72)
         self.ds_qd_w.setToolTip('Đánh dấu một hoặc nhiều quyết định; bỏ trống = tất cả')
@@ -1014,6 +1039,15 @@ class KhungTienDo(_Khung):
         i = next(i for i, (x, _) in enumerate(self.CHE_DO) if x == k)
         self.ngan_xem.setCurrentIndex(i)
         self.nut_che_do[k].setChecked(True)
+        self._danh_dau_kpi()
+
+    def the_kpi_dang_loc(self) -> str | None:
+        """Thẻ chỉ số khớp chế độ xem + bộ lọc đang dùng (KPI_LOC), None nếu không thẻ nào."""
+        che_do, loc = self.che_do(), self.cb_loc.currentData()
+        return next((k for k, (cd, lc) in self.KPI_LOC.items() if cd == che_do and (lc is None or lc == loc)), None)
+
+    def _danh_dau_kpi(self):
+        self.kpi.dat_loc(self.the_kpi_dang_loc())
 
     def bam_kpi(self, k: str):
         """Bấm thẻ chỉ số: chuyển chế độ xem + lọc (KPI_LOC)."""
@@ -1176,6 +1210,7 @@ class KhungTienDo(_Khung):
         return kq
 
     def ve(self):
+        self._danh_dau_kpi()
         # chuỗi hiển thị + kiểu riêng của các ô cần tô (bảng ảo: chỉ vẽ ô đang hiện, không dựng 65.000 QTableWidgetItem)
         hien, ma, kieu = [], [], {}
         for r, (x, qd, gt) in enumerate(self.dong()):
@@ -1678,7 +1713,7 @@ class HopNhatKyVanDong(_Hop):
         super().__init__(parent)
         self.con, self.chi_doc, self.thay_doi = con, chi_doc, False
         self.setWindowTitle('Sổ nhật ký vận động - Bước 14, 15 Mục IV QĐ 18/2026/QĐ-UBND')
-        self.resize(1060, 680)
+        self.resize(1000, 640)                             # 1.0.02: không vượt 1024 x 680 (màn hình 1366 @125%)
         self.ds = theo_doi.tong_hop(con, tinh_pa=False)
         self.cb_ho = QComboBox()
         self.cb_ho.setMinimumWidth(360)

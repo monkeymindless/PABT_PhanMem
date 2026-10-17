@@ -450,6 +450,8 @@ class BangMuc(QWidget):
             nhap.addWidget(nhan)
             nhap.addWidget(self.cb_thua, 1)
             b = QPushButton('Thêm thửa vào mục 1')
+            from .giao_dien import KieuNut, ap_kieu_nut
+            ap_kieu_nut(b, KieuNut.CHINH)            # 1.0.02 (ảnh mẫu): thao tác chính của hàng nhập - nền navy
             b.clicked.connect(lambda: man.them_thua(self.cb_thua.currentData()) if self.cb_thua.count() else man.them_thua())
             nhap.addWidget(b)
             self.nut['Thêm thửa…'] = b
@@ -502,7 +504,7 @@ class BangMuc(QWidget):
             self.nut[ten] = b
         nut.addStretch(1)
         self.lb_tong = QLabel('')
-        self.lb_tong.setStyleSheet('QLabel { font-weight: bold; color: #1F4E79; }')
+        self.lb_tong.setStyleSheet('QLabel { font-weight: bold; color: #0F3866; }')
         nut.addWidget(self.lb_tong)
         nut.setContentsMargins(0, 0, 0, 0)
         lo = QVBoxLayout(self)
@@ -962,21 +964,49 @@ class BangMuc(QWidget):
 # (16/10/2026, người dùng: bỏ nút SCAN, mọi nút lên một dòng) - màn hình 1366 ở 125% còn ~1.090 điểm
 RONG_O_HO = (160, 560)
 CLIP_TOI_DA = 200_000        # clipboard dài hơn (cả một tài liệu) không tự điền vào hộp Dán danh sách: phân loại sẽ đơ
-QSS_NUT_DAN_TS = ('QPushButton#btn_dan_ts { background: #0284C7; color: #FFFFFF; font-weight: 700; border: none; '
+# 1.0.02 (Hybrid Enterprise Navy cửa sổ con, theo ảnh mẫu người dùng 17/10/2026): nút Dán tài sản nền trắng viền slate chữ đậm,
+# biểu tượng xanh trời; rê chuột nền xanh băng viền xanh trời
+QSS_NUT_DAN_TS = ('QPushButton#btn_dan_ts { background: #FFFFFF; color: #0F172A; font-weight: 700; border: 1px solid #CBD5E1; '
                   'border-radius: 6px; padding: 0 14px; }'
-                  'QPushButton#btn_dan_ts:hover { background: #0369A1; }'
-                  'QPushButton#btn_dan_ts:pressed { background: #075985; }')
+                  'QPushButton#btn_dan_ts:hover { background: #F0F9FF; border-color: #0284C7; color: #0369A1; }'
+                  'QPushButton#btn_dan_ts:pressed { background: #E0F2FE; }')
+MAU_ICON_DAN_TS = '#0284C7'
 
 
 RONG_XEM_TOI_THIEU = 320          # màn hình hẹp: khung xem trước CuaSoLapPA không hẹp hơn chừng này
 CHO_XEM_SAU_SUA_MS = 1500          # khung xem trước đang hiện: sửa số liệu xong chừng này mới nhờ Excel lập lại bản in
-QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #FFFFFF; background: #0F3866; border: 1px solid #2563EB; '
-                     'border-radius: 6px; padding: 4px 12px; font-weight: 600; }'
-                     'QPushButton#btn_toggle_preview:hover { background: #16467E; }'
-                     'QPushButton#btn_toggle_preview:checked { background: #2563EB; border-color: #93C5FD; }')
+# 1.0.02 (ảnh mẫu): tắt = nền trắng viền slate chữ navy; bật (đang xem) = nền xanh băng, viền navy, chữ navy đậm
+QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #0F3866; background: #FFFFFF; border: 1px solid #CBD5E1; '
+                     'border-radius: 6px; padding: 0 12px; font-weight: 600; }'
+                     'QPushButton#btn_toggle_preview:hover { background: #F1F5F9; border-color: #2563EB; }'
+                     'QPushButton#btn_toggle_preview:checked { color: #0F3866; background: #EFF6FF; border: 1px solid #0F3866; '
+                     'font-weight: 700; }'
+                     'QPushButton#btn_toggle_preview:checked:hover { background: #DBEAFE; }')
+# thẻ Hồ sơ / Đất / Nhà… của cửa sổ lập phương án (ảnh mẫu): kiểu gạch chân - chưa chọn chữ slate, đang chọn chữ navy đậm + vạch
+# dưới 2 px navy; tiết kiệm chiều cao hơn thẻ hộp. Cỡ chữ thẻ phải là số px NGUYÊN: Qt5 tính bề rộng thẻ sai với '12.5px' (cắt chữ)
+QSS_THE_LAP_PA = ('QTabBar::tab { background: transparent; color: #475569; border: 1px solid transparent; '
+                  'border-bottom: 2px solid transparent; padding: 5px 14px; margin-right: 2px; font-weight: 600; font-size: 13px; }'
+                  'QTabBar::tab:hover:!selected { background: #F1F5F9; color: #0F172A; }'
+                  'QTabBar::tab:selected { background: transparent; color: #0F3866; font-weight: 700; '
+                  'border-bottom: 2px solid #0F3866; }'
+                  'QTabWidget::pane { border: 0; border-top: 1px solid #E2E8F0; background: #FFFFFF; top: -1px; }')
+# thanh trên cùng (chọn hộ + lệnh): nền slate nhạt, vạch dưới; ô chọn hộ nền trắng chữ đậm; nút ◀ ▶ nền trắng viền slate
+QSS_THANH_TREN = ('QWidget#thanh_tren_lap_pa { background: #F8FAFC; border: 0; border-bottom: 1px solid #E2E8F0; }'
+                  'QComboBox#o_chon_ho { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; '
+                  'font-weight: 700; color: #0F172A; }'
+                  'QComboBox#o_chon_ho:hover { border-color: #94A3B8; }'
+                  'QComboBox#o_chon_ho:focus { border-color: #0F3866; }'
+                  'QPushButton#nut_ho_truoc, QPushButton#nut_ho_sau { background: #FFFFFF; border: 1px solid #CBD5E1; '
+                  'border-radius: 5px; padding: 0; color: #0F3866; font-weight: 700; }'
+                  'QPushButton#nut_ho_truoc:hover, QPushButton#nut_ho_sau:hover { background: #F1F5F9; border-color: #94A3B8; }'
+                  'QPushButton#nut_ho_truoc:disabled, QPushButton#nut_ho_sau:disabled { color: #CBD5E1; border-color: #E2E8F0; }')
+# dải tổng cộng + ◀ Trở lại / Tiếp theo ▶ dưới đáy: nền slate, vạch trên 2 px, tổng chữ navy đậm
+QSS_DAI_DIEU_HUONG = ('QFrame#dai_dieu_huong { background: #F1F5F9; border: 0; border-top: 2px solid #CBD5E1; }'
+                      'QLabel#tong_pa { font-size: 13px; font-weight: 700; color: #0F3866; background: transparent; border: 0; '
+                      'padding: 2px 4px; }')
 
 
-CAO_NUT_TREN = 27                  # 0.9.95: hàng trên cùng cửa sổ lập phương án (chọn hộ + nút lệnh) một hàng 27 px
+CAO_NUT_TREN = 28                  # hàng trên cùng cửa sổ lập phương án (chọn hộ + nút lệnh) một hàng (0.9.95: 27; 1.0.02: 28)
 
 
 class CuaSoLapPA(QDialog):
@@ -1003,6 +1033,8 @@ class CuaSoLapPA(QDialog):
         self.cb_ho.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.cb_ho.setEditable(True)
         self.cb_ho.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.cb_ho.setObjectName('o_chon_ho')
+        self.cb_ho.setFixedHeight(CAO_NUT_TREN)
         self.cb_ho.currentIndexChanged.connect(lambda *_: self._hien_ten_ho())
         self._nap_ds_ho()
         self.cb_ho.activated.connect(self._chon_ho_tu_hop)
@@ -1012,8 +1044,10 @@ class CuaSoLapPA(QDialog):
         self.b_sau.clicked.connect(lambda: self.sang_ho(1))
         self.b_truoc.setToolTip('Hộ trước (Ctrl+Left, Ctrl+PgUp)')
         self.b_sau.setToolTip('Hộ sau (Ctrl+Right, Ctrl+PgDn)')
-        for b in (self.b_truoc, self.b_sau):
+        for b, ten in ((self.b_truoc, 'nut_ho_truoc'), (self.b_sau, 'nut_ho_sau')):
             b.setFixedWidth(32)
+            b.setObjectName(ten)
+            b.setProperty('khong_icon', True)
         # 16/10/2026: bỏ nút "Gợi ý hỗ trợ…" (người dùng - thu gọn hàng nút); chữ nút ngắn
         self.b_dan = self.btn_dan_ts = QPushButton('Dán tài sản')   # phím tắt Ctrl+Shift+V ở chú thích
         self.b_dan.setObjectName('btn_dan_ts')
@@ -1025,12 +1059,14 @@ class CuaSoLapPA(QDialog):
         self.b_dan.setStyleSheet(QSS_NUT_DAN_TS)        # có bộ chọn #btn_dan_ts: không truyền sang tooltip của nút
         self.b_dan.setProperty('khong_icon', True)      # to_mau không gắn biểu tượng màu nhóm đè lên nền xanh
         from .giao_dien import icon_ky_hieu
-        ic = icon_ky_hieu(0xE77F, '#FFFFFF', 16)        # Paste (Segoe MDL2); máy không có phông (Win 7): chỉ chữ
+        ic = icon_ky_hieu(0xE77F, MAU_ICON_DAN_TS, 16)  # Paste (Segoe MDL2); máy không có phông (Win 7): chỉ chữ
         if ic is not None:
             self.b_dan.setIcon(ic)
         self.b_dan.clicked.connect(lambda: self.mo_dan_tai_san())
         self.b_luu = QPushButton('Lưu (Ctrl+S)')
         self.b_luu.clicked.connect(lambda: self.luu())
+        from .giao_dien import KieuNut, ap_kieu_nut
+        ap_kieu_nut(self.b_luu, KieuNut.LUU)            # 1.0.02: hành động chính - nền navy đặc
         self.b_bo = QPushButton('Bỏ thay đổi')
         self.b_bo.clicked.connect(lambda: self.bo_thay_doi())
         self.b_in = QPushButton('In / Xuất…')
@@ -1045,7 +1081,8 @@ class CuaSoLapPA(QDialog):
                                            'chưa lưu; cần Microsoft Excel.')
         self.btn_toggle_preview.setStyleSheet(QSS_NUT_XEM_TRUOC)
         self.btn_toggle_preview.setProperty('khong_icon', True)
-        ic = icon_ky_hieu(0xE890, '#FFFFFF', 16)        # View (Segoe MDL2); Win 7 không có phông: chỉ chữ (không emoji)
+        # View (Segoe MDL2): tắt biểu tượng navy, bật (đang xem, nền navy) biểu tượng trắng; Win 7 không có phông: chỉ chữ
+        ic = icon_ky_hieu(0xE890, '#0F3866', 16)
         if ic is not None:
             self.btn_toggle_preview.setIcon(ic)
         self.btn_toggle_preview.clicked.connect(lambda: self.bat_tat_xem_truoc())
@@ -1054,8 +1091,11 @@ class CuaSoLapPA(QDialog):
         # 16/10/2026 (người dùng): bỏ nút SCAN, mọi nút MỘT hàng trên cùng: Hộ [ô chọn hộ] ◀ ▶ | Dán tài sản ... Lưu, Bỏ thay đổi |
         # Xem trước, In / Xuất, Đóng. Ô chọn hộ giãn / co (200 - 560 px) nhận phần chỗ thừa / thiếu thay cho xuống dòng
         self.thanh_tren = QWidget()
+        self.thanh_tren.setObjectName('thanh_tren_lap_pa')
+        self.thanh_tren.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.thanh_tren.setStyleSheet(QSS_THANH_TREN)
         h1 = QHBoxLayout(self.thanh_tren)
-        h1.setContentsMargins(0, 0, 0, 0)
+        h1.setContentsMargins(8, 4, 8, 4)
         h1.setSpacing(6)
         for b in (self.b_truoc, self.b_sau, self.b_luu, self.b_bo, self.b_in, self.b_dong):
             b.setFixedHeight(CAO_NUT_TREN)
@@ -1088,6 +1128,8 @@ class CuaSoLapPA(QDialog):
         # ---- thẻ 0 hồ sơ hộ + 5 mục
         from .man_hinh_ho_so import KhungHoSo
         self.tab = QTabWidget()
+        self.tab.setDocumentMode(True)
+        self.tab.setStyleSheet(QSS_THE_LAP_PA)
         the0 = QWidget()
         lo0 = QVBoxLayout(the0)
         lo0.setContentsMargins(6, 4, 6, 4)
@@ -1101,9 +1143,7 @@ class CuaSoLapPA(QDialog):
             self.tab.addTab(self.bang[m], TEN_TAB[the])
         # ---- tổng + cảnh báo
         self.lb_tong = QLabel('')
-        self.lb_tong.setObjectName('tong_pa')
-        self.lb_tong.setStyleSheet('QLabel#tong_pa { font-size: 13px; padding: 3px 8px; background: #EAF2FB; '
-                                   'border: 1px solid #D3E2F1; border-radius: 5px; }')
+        self.lb_tong.setObjectName('tong_pa')                # kiểu: QSS_DAI_DIEU_HUONG (dải đáy cửa sổ)
         self.lb_tong.setWordWrap(True)
         self.lb_tb = QLabel('')
         self.lb_tb.setWordWrap(True)
@@ -1121,7 +1161,8 @@ class CuaSoLapPA(QDialog):
         lo_trai.setSpacing(4)
         lo_trai.addWidget(self.tab, 1)
         lo_trai.addWidget(self.lb_tb)
-        lo_trai.addLayout(self.hang_dieu_huong())       # dải tổng cộng + ◀ Trở lại / Tiếp theo ▶ một hàng (0.9.95)
+        self.hang_dieu_huong()                          # dải tổng cộng + ◀ Trở lại / Tiếp theo ▶ một hàng (0.9.95) -> dai_dieu_huong
+        lo_trai.addWidget(self.dai_dieu_huong)
         lo_trai.addWidget(self.o_cb)
         self._w_preview = None
         self.tach = QSplitter(Qt.Orientation.Horizontal)
@@ -1132,10 +1173,13 @@ class CuaSoLapPA(QDialog):
         self._hen_xem.setSingleShot(True)
         self._hen_xem.timeout.connect(lambda: self.lam_moi_xem_truoc())
         lo = QVBoxLayout(self)
-        lo.setContentsMargins(6, 4, 6, 4)
+        lo.setContentsMargins(0, 0, 0, 4)
         lo.setSpacing(4)
         lo.addWidget(self.thanh_tren)
-        lo.addWidget(self.tach, 1)
+        lo_tach = QVBoxLayout()
+        lo_tach.setContentsMargins(6, 0, 6, 0)
+        lo_tach.addWidget(self.tach)
+        lo.addLayout(lo_tach, 1)
         self._phim = []
         for phim, ham in ((QKeySequence(QKeySequence.StandardKey.Save), lambda: self.luu()),
                           (QKeySequence('Ctrl+PgDown'), lambda: self.sang_ho(1)),
@@ -1175,9 +1219,13 @@ class CuaSoLapPA(QDialog):
 
     def hang_dieu_huong(self, the: int | None = None) -> QHBoxLayout:
         """0.9.95: MỘT hàng dưới đáy cửa sổ (28 px) = dải tổng cộng `lb_tong` + ◀ Trở lại / Tiếp theo ▶ theo thẻ đang xem (trước
-        0.9.95 mỗi thẻ một hàng nút riêng cao 40 px). Thẻ cuối không có nút lưu riêng: "Lưu (Ctrl+S)" ở thanh trên."""
-        h = QHBoxLayout()
-        h.setContentsMargins(0, 0, 0, 0)
+        0.9.95 mỗi thẻ một hàng nút riêng cao 40 px). Thẻ cuối không có nút lưu riêng: "Lưu (Ctrl+S)" ở thanh trên.
+        1.0.02: hàng nằm trong khung `dai_dieu_huong` (nền slate, vạch trên) - trả về layout của khung."""
+        self.dai_dieu_huong = QFrame()
+        self.dai_dieu_huong.setObjectName('dai_dieu_huong')
+        self.dai_dieu_huong.setStyleSheet(QSS_DAI_DIEU_HUONG)
+        h = QHBoxLayout(self.dai_dieu_huong)
+        h.setContentsMargins(8, 3, 6, 3)
         h.setSpacing(6)
         self.b_tro_lai = QPushButton('◀ Trở lại')
         self.b_tiep_theo = QPushButton('Tiếp theo ▶')
@@ -2315,6 +2363,8 @@ class HopIn(QDialog):
         nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         nut.button(QDialogButtonBox.StandardButton.Ok).setText('Thực hiện')
         nut.button(QDialogButtonBox.StandardButton.Cancel).setText('Đóng')
+        from .giao_dien import KieuNut, ap_kieu_nut
+        ap_kieu_nut(nut.button(QDialogButtonBox.StandardButton.Ok), KieuNut.CHINH)   # 1.0.02: xuất / in - hành động chính, navy
         nut.accepted.connect(lambda: self.thuc_hien())
         nut.rejected.connect(self.reject)
         self.lb = QLabel('Bản in lấy đúng mẫu IN_CHITIET / IN_BANGTONGHOP của file PABT Excel (thư mục mau_in); tờ trình theo mẫu ở '
@@ -2338,8 +2388,12 @@ class HopIn(QDialog):
         # độ Dự thảo / Chính thức, che CCCD, mẫu -> lập lại (yeu_cau: Excel xuất PDF ở nền, chỉ giữ yêu cầu mới nhất)
         from .xem_truoc_tai_lieu import KhungXemTruocTaiLieu, in_qua_excel
         trai = QWidget()
+        # 1.0.02 (Hybrid Enterprise Navy): khung tùy chọn là thẻ trắng viền slate bo 6 (cạnh khung xem trước A4)
+        trai.setObjectName('the_tuy_chon_in')
+        trai.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        trai.setStyleSheet('QWidget#the_tuy_chon_in { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }')
         lo_trai = QVBoxLayout(trai)
-        lo_trai.setContentsMargins(0, 0, 6, 0)
+        lo_trai.setContentsMargins(10, 8, 10, 8)
         lo_trai.addLayout(form)
         lo_trai.addLayout(hang_mau)
         lo_trai.addWidget(self.lb)
@@ -2347,6 +2401,8 @@ class HopIn(QDialog):
         cuon = QScrollArea()
         cuon.setWidgetResizable(True)
         cuon.setFrameShape(QFrame.Shape.NoFrame)
+        cuon.setStyleSheet('QScrollArea { background: transparent; border: 0; }')
+        cuon.viewport().setAutoFillBackground(False)
         cuon.setWidget(trai)
         self.w_preview = KhungXemTruocTaiLieu(self, ham_in=lambda pdf, xlsx: in_qua_excel(self, pdf, xlsx))
         self.w_preview.setMinimumWidth(520)

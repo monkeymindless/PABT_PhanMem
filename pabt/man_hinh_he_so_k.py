@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QFileDialog, QHB
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import he_so_k as hk
+from .giao_dien import kieu_o_he_so_k
 
 COT = [('chon', 'Lấy', 40), ('dia_ban', 'Địa bàn', 130), ('tt', 'TT', 45), ('loai_dat', 'Loại đất', 190), ('vi_tri', 'Vị trí', 55),
        ('he_so', 'Hệ số K', 70), ('tuyen_duong', 'Tuyến đường / khu vực', 220), ('diem_dau', 'Từ', 170), ('diem_cuoi', 'Đến', 170),
@@ -139,7 +140,9 @@ class KhungHeSoK(QWidget):
             elif k == 'he_so' and v:
                 v = str(v).replace('.', ',')
             o = QTableWidgetItem(str(v or ''))
-            if k in ('he_so', 'tt'):
+            if k == 'he_so':
+                kieu_o_he_so_k(o)                           # 1.0.02: căn giữa, đậm, xanh trời
+            elif k == 'tt':
                 o.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.bang.setItem(i, c, o)
 

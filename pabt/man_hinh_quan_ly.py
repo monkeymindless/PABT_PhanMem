@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import csdl, du_thao, kiem_loi, quan_ly, thoi_han
 from .lap_pa import LoiNhap
 from .tien import D, vn
-from .giao_dien import XepDong, con_tro_cho, dat_trang_thai
+from .giao_dien import KieuNut, XepDong, ap_kieu_nut, con_tro_cho, dat_trang_thai
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Quản lý hồ sơ trình phương án'
@@ -321,6 +321,8 @@ class HopDotTrinh(_Hop):
         tach.setStretchFactor(0, 1)
         tach.setStretchFactor(1, 1)
         tach.setSizes([620, 600])
+        tach.setHandleWidth(6)
+        tach.setChildrenCollapsible(False)
         # ================= CHÂN TRANG: MỘT nút mở Trung tâm Xuất bản (đặc tả V10 phần V: bỏ khối xuất file dưới đáy - giải phóng chiều
         # cao; in / xuất file ở đúng một nơi là Xuất hồ sơ & Bản in)
         self.lb_kiem = QLabel('')                          # tóm tắt hồ sơ Bước 8 của đợt đã đủ chưa (chỉ nhắc, không chặn xuất)
@@ -329,6 +331,8 @@ class HopDotTrinh(_Hop):
         self.b_xuat.setToolTip('Mở Xuất hồ sơ & Bản in với đợt này (bản chính thức): tờ trình, bảng tổng hợp, phương án chi tiết từng '
                                'hộ, báo cáo tiếp thu ý kiến; chọn Excel / PDF / gộp PDF / in máy in')
         self.b_xuat.clicked.connect(lambda: self.xuat_ban())
+        self.b_xuat.setMinimumHeight(32)
+        ap_kieu_nut(self.b_xuat, KieuNut.CHINH)            # 1.0.02: hành động chính của hộp - nền navy
         b_dong = QPushButton('Đóng')
         b_dong.clicked.connect(self.accept)
         chan = QHBoxLayout()
