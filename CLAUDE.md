@@ -1535,10 +1535,13 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - CuaSoLapPA (theo ảnh mẫu người dùng gửi trong phiên): `thanh_tren` objectName 'thanh_tren_lap_pa' (`QSS_THANH_TREN`: nền #F8FAFC,
     vạch dưới, lề 8,4,8,4), `cb_ho` #o_chon_ho chữ đậm, ◀ ▶ #nut_ho_truoc / #nut_ho_sau, `CAO_NUT_TREN` 28; Dán tài sản nền trắng viền
     slate (rê chuột xanh băng / #0284C7); Lưu ap_kieu_nut LUU (navy); Xem trước (F4) tắt = trắng chữ navy, BẬT = nền #EFF6FF viền
-    navy (ảnh mẫu - không nền navy đặc); thẻ mục `QSS_THE_LAP_PA` kiểu gạch chân (documentMode); `hang_dieu_huong()` dựng khung
+    navy (ảnh mẫu - không nền navy đặc); thẻ mục `QSS_THE_LAP_PA` kiểu gạch chân (documentMode) đặt trên `tab.tabBar()`; `hang_dieu_huong()` dựng khung
     `dai_dieu_huong` (QSS_DAI_DIEU_HUONG: nền #F1F5F9, vạch trên 2 px #CBD5E1, lb_tong #tong_pa navy đậm) - trả layout của khung, nơi
     gọi xếp `self.dai_dieu_huong`. Nút "Thêm thửa vào mục 1" và `HangNhapNhanh.nut_them` = KieuNut.CHINH. `HangNhapNhanh`: `CAO_HANG`
-    30 cho mọi ô + nút, `QSS_HANG` (viền slate, đang gõ viền navy - kiểu của widget cha thắng `QLineEdit[nhap="1"]` cao 34).
+    30 cho mọi ô + nút, property hang_nhap="1" + `giao_dien.QSS_HANG_NHAP` trong QSS chung (bộ chọn con cháu thắng `QLineEdit[nhap="1"]`).
+    HIỆU NĂNG: KHÔNG setStyleSheet trên KHUNG CHỨA (QTabWidget, hàng nhập, khung tùy chọn HopIn): Qt tính lại kiểu cả cây con - kiểu
+    thẻ đặt trên QTabWidget + kiểu 4 hàng nhập làm mở cửa sổ lập PA 340 -> 505 ms (phan_tich_phien_ban: +36% / +78%); đưa vào QSS
+    chung theo property / objectName (HopIn #the_tuy_chon_in) hoặc đặt trên widget lá -> ~355 ms. Đo: mở CuaSoLapPA 6 lần, offscreen.
     `KhungXemTruocTaiLieu`: `MAU_NEN` #334155 (vùng trang), thanh `xt_thanh` nền #F8FAFC vạch dưới #CBD5E1, nút sáng cao `CAO_NUT_XT` 28,
     biểu tượng `MAU_ICON_XT` navy.
   - Niêm yết: `_The` property vai="the_ny" + `QSS_THE_NY` (trắng, viền, vạch trái 3 px `MAU_THE_NY`, số #the_ny_so), dai_tien_do_ny bo 5,

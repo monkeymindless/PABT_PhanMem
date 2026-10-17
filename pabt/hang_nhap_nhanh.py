@@ -78,10 +78,8 @@ def lam_san(dm: DanhMuc) -> None:
 
 
 CAO_HANG = 30                 # ô nhập / nút của hàng nhập nhanh (1.0.02; trước: ô kiểu nhap="1" ~34 px)
-QSS_HANG = ('QLineEdit, QComboBox { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; '
-            'min-height: 0; }'
-            'QLineEdit:hover, QComboBox:hover { border-color: #94A3B8; }'
-            'QLineEdit:focus, QComboBox:focus { border: 1px solid #0F3866; background: #FFFFFF; }')
+# kiểu ô của hàng: giao_dien.QSS_HANG_NHAP trong bảng kiểu chung (chọn theo property hang_nhap="1") - KHÔNG setStyleSheet trên hàng:
+# kiểu cục bộ bắt Qt tính lại kiểu cả cây con, 4 hàng làm mở cửa sổ lập phương án chậm thêm ~60 ms (đo 1.0.02)
 
 
 class HangNhapNhanh(QWidget):
@@ -165,9 +163,9 @@ class HangNhapNhanh(QWidget):
             QWidget.setTabOrder(a, b)
         if self.cb_kieu is not None:
             self.cb_kieu.setVisible(self.muc() == 3)
-        # 1.0.02 (Hybrid Enterprise Navy): mọi ô + nút cao CAO_HANG, viền slate, đang gõ viền navy (kiểu của hàng thắng kiểu chung
-        # QLineEdit[nhap="1"] cao 34 px - kiểu đặt trên widget cha luôn được ưu tiên hơn kiểu toàn ứng dụng)
-        self.setStyleSheet(QSS_HANG)
+        # 1.0.02 (Hybrid Enterprise Navy): mọi ô + nút cao CAO_HANG, viền slate, đang gõ viền navy (QSS chung, bộ chọn
+        # QWidget[hang_nhap="1"] QLineEdit cụ thể hơn QLineEdit[nhap="1"] cao 34 px)
+        self.setProperty('hang_nhap', '1')
         for w in chuoi:
             if w is not self.nut_them:
                 w.setFixedHeight(CAO_HANG)

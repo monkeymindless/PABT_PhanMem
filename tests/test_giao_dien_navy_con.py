@@ -123,7 +123,7 @@ class TestCuaSoLapPA(_Co):
         self.assertIn('#EFF6FF', _quy_tac(w.btn_toggle_preview.styleSheet(), 'QPushButton#btn_toggle_preview:checked'))
         self.assertIn('background: #FFFFFF', _quy_tac(w.btn_toggle_preview.styleSheet(), 'QPushButton#btn_toggle_preview'))
         self.assertTrue(w.tab.documentMode())
-        self.assertIn(f'border-bottom: 2px solid {NAVY}', _quy_tac(w.tab.styleSheet(), 'QTabBar::tab:selected'))
+        self.assertIn(f'border-bottom: 2px solid {NAVY}', _quy_tac(w.tab.tabBar().styleSheet(), 'QTabBar::tab:selected'))
         d = w.dai_dieu_huong
         self.assertIs(w.lb_tong.parentWidget(), d)
         self.assertIs(w.b_tiep_theo.parentWidget(), d)
@@ -136,7 +136,10 @@ class TestCuaSoLapPA(_Co):
         for o in (h.o_chon.o, h.o_sl, h.o_tl, h.o_gc, h.nut_them):
             self.assertEqual(o.maximumHeight(), CAO_HANG)
         self.assertEqual(h.nut_them.property('bien_the'), giao_dien.KieuNut.CHINH.value)
-        self.assertIn(NAVY, h.styleSheet())                               # ô đang gõ viền navy
+        self.assertEqual(h.property('hang_nhap'), '1')                    # kiểu ô ở QSS chung (không kiểu cục bộ - chậm)
+        self.assertEqual(h.styleSheet(), '')
+        self.assertIn(NAVY, _quy_tac(giao_dien._qss_day_du(), 'QWidget[hang_nhap="1"] QLineEdit:focus'))
+        self.assertEqual(w.tab.styleSheet(), '')                         # kiểu thẻ đặt trên thanh thẻ, không trên cả QTabWidget
         b1 = w.bang[1].nut['Thêm thửa…']
         self.assertIsInstance(b1, QPushButton)
         self.assertEqual(b1.property('bien_the'), giao_dien.KieuNut.CHINH.value)

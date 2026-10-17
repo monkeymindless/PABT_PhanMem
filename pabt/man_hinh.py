@@ -988,8 +988,7 @@ QSS_THE_LAP_PA = ('QTabBar::tab { background: transparent; color: #475569; borde
                   'border-bottom: 2px solid transparent; padding: 5px 14px; margin-right: 2px; font-weight: 600; font-size: 13px; }'
                   'QTabBar::tab:hover:!selected { background: #F1F5F9; color: #0F172A; }'
                   'QTabBar::tab:selected { background: transparent; color: #0F3866; font-weight: 700; '
-                  'border-bottom: 2px solid #0F3866; }'
-                  'QTabWidget::pane { border: 0; border-top: 1px solid #E2E8F0; background: #FFFFFF; top: -1px; }')
+                  'border-bottom: 2px solid #0F3866; }')
 # thanh trên cùng (chọn hộ + lệnh): nền slate nhạt, vạch dưới; ô chọn hộ nền trắng chữ đậm; nút ◀ ▶ nền trắng viền slate
 QSS_THANH_TREN = ('QWidget#thanh_tren_lap_pa { background: #F8FAFC; border: 0; border-bottom: 1px solid #E2E8F0; }'
                   'QComboBox#o_chon_ho { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; '
@@ -1093,7 +1092,7 @@ class CuaSoLapPA(QDialog):
         self.thanh_tren = QWidget()
         self.thanh_tren.setObjectName('thanh_tren_lap_pa')
         self.thanh_tren.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.thanh_tren.setStyleSheet(QSS_THANH_TREN)
+        self.thanh_tren.setStyleSheet(QSS_THANH_TREN)       # khung ít widget con: kiểu cục bộ không làm chậm (đã đo)
         h1 = QHBoxLayout(self.thanh_tren)
         h1.setContentsMargins(8, 4, 8, 4)
         h1.setSpacing(6)
@@ -1129,7 +1128,9 @@ class CuaSoLapPA(QDialog):
         from .man_hinh_ho_so import KhungHoSo
         self.tab = QTabWidget()
         self.tab.setDocumentMode(True)
-        self.tab.setStyleSheet(QSS_THE_LAP_PA)
+        # kiểu đặt trên THANH THẺ, không trên QTabWidget: kiểu cục bộ của khung chứa bắt Qt tính lại kiểu cho mọi widget con (mọi
+        # bảng mục) - mở cửa sổ chậm thêm ~170 ms (đo 1.0.02)
+        self.tab.tabBar().setStyleSheet(QSS_THE_LAP_PA)
         the0 = QWidget()
         lo0 = QVBoxLayout(the0)
         lo0.setContentsMargins(6, 4, 6, 4)
@@ -2391,7 +2392,7 @@ class HopIn(QDialog):
         # 1.0.02 (Hybrid Enterprise Navy): khung tùy chọn là thẻ trắng viền slate bo 6 (cạnh khung xem trước A4)
         trai.setObjectName('the_tuy_chon_in')
         trai.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        trai.setStyleSheet('QWidget#the_tuy_chon_in { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }')
+        # kiểu ở QSS chung (giao_dien): kiểu cục bộ trên khung chứa bắt Qt tính lại kiểu cho cả cây con
         lo_trai = QVBoxLayout(trai)
         lo_trai.setContentsMargins(10, 8, 10, 8)
         lo_trai.addLayout(form)

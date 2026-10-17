@@ -1,4 +1,10 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.01 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.02 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **1.0.02**: mọi cửa sổ và trang làm việc cùng tông **Navy** với màn hình chính. Nút chính (**Lưu**, **Thực hiện**, **Xuất bản hồ sơ đợt
+> này**, **Thêm vào bảng**) nền xanh đậm; nút **Xóa** viền đỏ; nút khác nền trắng. Cửa sổ lập phương án: thanh trên cùng gọn, thẻ mục kiểu
+> gạch chân, dải tổng cộng dưới đáy; **Xem trước (F4)** đang bật thì nút nền xanh nhạt. Tiến độ chi trả & Bàn giao: thẻ chỉ số đang lọc
+> được tô nổi, nút chế độ **Theo hộ / Thửa còn vướng** dạng viên thuốc. Bảng tổng hợp kinh phí tô nổi dòng Cộng, Kinh phí tổ chức thực hiện,
+> TỔNG KINH PHÍ; bảng giá đất: cột **Hệ số K** và **Giá × K** in đậm.
 
 > **1.0.01**: giao diện tông **Navy**: menu trái gọn (nút Thu gọn menu ở hàng riêng), tiêu đề bảng nền xanh đậm, 6 thẻ số liệu có
 > **tỷ lệ %**, hàng lọc một dòng ("Đợt: Tất cả", "Trạng thái: Tất cả", tìm theo họ tên / CCCD / tờ/thửa như `12/45`, huy hiệu

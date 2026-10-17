@@ -355,6 +355,20 @@ def _qss_the_so() -> str:
     QFrame#dai_cong_ds QLabel[vai="o_cong_tong"] {{ color: {c}; font-weight: 800; }}'''
 
 
+# ô của hàng nhập nhanh (hang_nhap_nhanh.HangNhapNhanh, property hang_nhap="1"): viền slate, đang gõ viền navy; thắng kiểu ô lớn
+# QLineEdit[nhap="1"] (bộ chọn con cháu có thêm tên lớp)
+QSS_HANG_NHAP = '''
+    QWidget[hang_nhap="1"] QLineEdit, QWidget[hang_nhap="1"] QComboBox { background: #FFFFFF; border: 1px solid #CBD5E1;
+        border-radius: 5px; padding: 0 8px; min-height: 0; }
+    QWidget[hang_nhap="1"] QLineEdit:hover, QWidget[hang_nhap="1"] QComboBox:hover { border-color: #94A3B8; }
+    QWidget[hang_nhap="1"] QLineEdit:focus, QWidget[hang_nhap="1"] QComboBox:focus { border: 1px solid #0F3866;
+        background: #FFFFFF; }'''
+# khung tùy chọn của Xuất hồ sơ & Bản in (man_hinh.HopIn): thẻ trắng viền slate. Ở QSS chung theo objectName - setStyleSheet trên khung
+# chứa bắt Qt tính lại kiểu cả cây con (chậm; đo 1.0.02 ở cửa sổ lập phương án)
+QSS_THE_TUY_CHON_IN = '''
+    QWidget#the_tuy_chon_in { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }'''
+
+
 def _qss_day_du() -> str:
     """Bảng kiểu cả phần mềm: kiểu chung + biến thể nút KieuNut (đặt cuối). Mọi chỗ đặt / dựng lại bảng kiểu (phóng to, thu
     nhỏ) dùng hàm này - trước đây phong_to dựng lại thiếu phần biến thể."""
@@ -490,7 +504,7 @@ def _qss() -> str:
     QLabel[vai="nhan_ribbon"] {{ color: #4A6785; font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
         background: transparent; border: 0; }}
     QLabel[vai="dong_phu"] {{ color: #DCEBFA; font-size: 12px; }}
-    ''' + _qss_the_so()
+    ''' + _qss_the_so() + QSS_HANG_NHAP + QSS_THE_TUY_CHON_IN
 
 
 _BIEU_TUONG = []

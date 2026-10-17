@@ -7,6 +7,19 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.02', '17/10/2026', (
+        'Các cửa sổ và trang làm việc cùng tông Navy với màn hình chính: nút chính (Lưu, Thực hiện, Xuất bản hồ sơ đợt này, Thêm vào '
+        'bảng) nền xanh đậm chữ trắng; nút Xóa viền đỏ nhạt chữ đỏ; các nút khác nền trắng viền xám - không còn nút màu cam, tím, xanh lá.',
+        'Thẻ (tab), khung nhóm, thanh chia, thanh thông báo dùng chung một kiểu: thẻ đang chọn nền trắng chữ xanh đậm có vạch xanh.',
+        'Cửa sổ lập phương án: thanh trên cùng gọn (Hộ, ◀ ▶, Dán tài sản, Lưu, Bỏ thay đổi, Xem trước, In / Xuất, Đóng); thẻ mục kiểu '
+        'gạch chân; dải tổng cộng dưới đáy chữ xanh đậm; hàng nhập nhanh các ô cùng chiều cao. Khung xem trước A4: thanh công cụ sáng, '
+        'nền trang xám xanh dịu mắt.',
+        'Tiến độ chi trả & Bàn giao: 4 thẻ chỉ số có vạch màu, thẻ đang lọc được tô nổi; nút chế độ "Theo hộ / Thửa còn vướng" dạng '
+        'viên thuốc; dòng Mốc pháp lý dạng thẻ. Niêm yết & Lấy ý kiến: 6 thẻ số liệu có vạch màu.',
+        'Bảng tổng hợp kinh phí: dòng Cộng bồi thường, Kinh phí tổ chức thực hiện và TỔNG KINH PHÍ DỰ ÁN tô nổi. Bảng giá đất NQ 28 và '
+        'Hệ số K: cột Hệ số K và Giá × K in đậm, dễ dò.',
+        'Khái toán: thanh nhập nền trắng, thẻ tổng cộng xanh nhạt chữ xanh đậm. Xuất hồ sơ & Bản in: khung tùy chọn dạng thẻ trắng.',
+    )),
     ('1.0.01', '17/10/2026', (
         'Giao diện mới tông Navy: menu trái gọn (nút "Thu gọn menu" ở hàng riêng, không đè tiêu đề nhóm; mục đang chọn có vạch xanh '
         'bên trái); tiêu đề bảng nền xanh đậm chữ trắng, dòng xen kẽ dễ đọc.',
