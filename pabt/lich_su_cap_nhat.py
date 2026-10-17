@@ -27,6 +27,10 @@ MUC = (
         'và có ngày biên bản mới lên nấc bàn giao. Đánh dấu thiếu bước / thiếu ngày không làm tăng nấc, ô Trạng thái ghi rõ điểm cần xem lại.',
         'Hộp Bàn giao mặt bằng: không còn điền sẵn ngày hôm nay - nhập ngày ký biên bản bàn giao (biên bản không cần số); file scan '
         'biên bản không bắt buộc, chọn một lần dùng chung cho nhiều hộ (chỉ ghi đường dẫn, không chép file).',
+        'Cửa sổ lập phương án: mỗi dòng ở các thẻ Đất, Nhà, Cây trồng, Vật nuôi, Hỗ trợ có biểu tượng thùng rác ở cột cuối - bấm là xóa '
+        'đúng dòng đó (thay nút "Xóa dòng"); phím Delete và menu chuột phải vẫn xóa dòng đang chọn.',
+        'Bản cho Windows 7: chữ trên các thẻ không còn bị cắt mất ký tự đầu / cuối.',
+        '"Bản đồ thửa đất" chuyển từ menu bên trái sang menu Dữ liệu (cạnh "Nhập bản vẽ CAD"), menu trái gọn hơn.',
     )),
     ('1.0.01', '17/10/2026', (
         'Giao diện mới tông Navy: menu trái gọn (nút "Thu gọn menu" ở hàng riêng, không đè tiêu đề nhóm; mục đang chọn có vạch xanh '
