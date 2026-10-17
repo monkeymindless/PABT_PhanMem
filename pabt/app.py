@@ -1199,23 +1199,36 @@ class CuaSoChinh(QMainWindow):
         st, dt, to_thua = so_thua.get(h['ma_ho'], (0, D(0), ''))
         x = tt.get(h['ma_ho'], {})
         t = th.get(h['ma_ho'])
+        td = None
         if t is not None:
             t.tong_pa = h['tong']
+            td = t.tien_do                              # tiến độ phân tích tự động, tuần tự (theo_doi.phan_tich_tien_do)
             trang_thai = t.trang_thai
             goi_y = '\n'.join([f'QĐ {q["so_qd"]} ({q["ngay_qd"]}): {vn(q["so_tien"]) if q["so_tien"] else "?"} đ - '
                                + (f'đã nhận {q["chi_tra_ngay"]}' if q['da_chi_tra'] else 'chưa nhận') for q in t.qd]
                               + [f'Bàn giao: {t.ban_giao_ngay or "đã"}' if t.da_ban_giao else '',
                                  f'Đợt trình: {ten_dot[x["dot_id"]]}' if x.get('dot_id') in ten_dot else '']).strip()
-            mau = MAU_XANH if t.da_ban_giao else (MAU_VANG if t.qd else None)
+            mau = MAU_XANH if td.da_bg else (MAU_VANG if t.qd else None)
             if t.qd and t.qd_chua_nhan and len(t.qd_chua_nhan) == len(t.qd):
                 mau = None
+            if td.canh_bao:                             # dữ liệu nhập tay chưa khớp thứ tự / thiếu biên bản: nền vàng + giải thích
+                mau = MAU_VANG
+                goi_y = (goi_y + '\n' if goi_y else '') + (
+                    f'Cần xem lại: {td.canh_bao}. Nấc tiến độ chỉ tăng khi đủ bước trước (phê duyệt -> nhận đủ tiền) và bàn giao '
+                    'có ngày biên bản (Tiến độ chi trả & Bàn giao, bấm đúp hộ).')
         else:
             trang_thai, goi_y, mau = x.get('trang_thai', ''), '', None
         gc = h.get('ghi_chu_dc') or ''
         da_lap = bool(getattr(t, 'da_lap', False) or (t is not None and t.tong_pa > 0))
-        # nấc tiến độ (cột Trạng thái, thanh 4 ô): theo cùng các cờ mà bộ lọc trạng thái dùng (quan_ly.hop_trang_thai)
-        nac = (4 if x.get('da_ban_giao') else 3 if x.get('da_chi_tra') else 2 if x.get('da_phe_duyet') else
-               1 if da_lap or h['tong'] > 0 else 0)
+        # nấc tiến độ (cột Trạng thái, thanh 4 ô) = phân tích TỰ ĐỘNG, tuần tự (17/10/2026): phê duyệt theo quyết định, chi trả khi
+        # mọi quyết định đã nhận tiền, bàn giao khi có ngày biên bản. Các cờ phê duyệt / chi trả / bàn giao của dòng (bộ lọc trạng
+        # thái quan_ly.hop_trang_thai, thẻ số liệu) lấy CÙNG kết quả này - tích tay "đã bàn giao" không làm thẻ / nấc tăng
+        if td is not None:
+            nac = td.nac
+            x = dict(x, da_phe_duyet=td.da_pd, da_chi_tra=td.da_ct, da_ban_giao=td.da_bg)
+        else:
+            nac = (4 if x.get('da_ban_giao') else 3 if x.get('da_chi_tra') else 2 if x.get('da_phe_duyet') else
+                   1 if da_lap or h['tong'] > 0 else 0)
         return dict(ma_ho=h['ma_ho'], tong=h['tong'], lech=h['lech'], da_lap=da_lap, nac=nac, muc=h.get('muc') or {}, dt=dt,
                     **{k: x.get(k) for k in TRUONG_TT},
                     dot_id=x.get('dot_id'), goi_y_tt=goi_y, mau_tt=mau, mau_gc=MAU_LECH if gc else None,

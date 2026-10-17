@@ -76,5 +76,65 @@ class TestBanGiaoChuaQD(unittest.TestCase):
         self.assertEqual(nhan, dict(so_ho=4, so_chua_qd=4))
 
 
+class TestPhanTichTienDo(TestBanGiaoChuaQD):
+    """Thanh 4 nấc tự động, tuần tự (theo_doi.phan_tich_tien_do): phê duyệt theo quyết định, chi trả khi mọi QĐ đã nhận tiền, bàn
+    giao khi có NGÀY biên bản (biên bản không có số; file scan không bắt buộc); tích tay thiếu bước / thiếu ngày không tăng nấc mà ghi
+    điểm cần xem lại."""
+
+    def _x(self, ma):
+        return next(x for x in theo_doi.tong_hop(self.con, tinh_pa=False) if x.ma_ho == ma)
+
+    def test_tung_buoc(self):
+        a, b = self.ma[:2]
+        theo_doi.ghi_ban_giao(self.con, [a], dict(da_ban_giao=True))                   # tích, không ngày biên bản
+        td = self._x(a).tien_do
+        self.assertEqual((td.nac, td.da_pd, td.da_bg), (1, False, False))              # tích tay khi chưa phê duyệt: nấc lập PA
+        self.assertIn('chưa phê duyệt', td.canh_bao)
+        self.assertIn('chưa có ngày biên bản', td.canh_bao)
+        theo_doi.ghi_ban_giao(self.con, [b], dict(da_ban_giao=True, ban_giao_ngay='16/10/2026'))   # có ngày nhưng chưa phê duyệt
+        self.assertEqual(self._x(b).tien_do.nac, 1)
+        self.assertEqual(self._x(b).tien_do.canh_bao, 'đã tích bàn giao, chưa phê duyệt')
+        theo_doi.ghi_ban_giao(self.con, [b], dict(da_ban_giao=False))
+        self.assertIn('đã tích bàn giao', self._x(a).trang_thai)
+        q = theo_doi.luu_qd(self.con, None, '9/QĐ-UBND', '01/10/2026', 'Phê duyệt thử')
+        theo_doi.them_ho_theo_pa(self.con, q, [a, b])
+        self.assertEqual(self._x(b).tien_do.nac, 2)                                     # có quyết định -> nấc phê duyệt
+        self.assertTrue(self._x(b).trang_thai.startswith('Đã phê duyệt'))
+        theo_doi.ghi_chi_tra(self.con, [(q, a), (q, b)], '05/10/2026', '')
+        self.assertEqual(self._x(b).tien_do.nac, 3)                                     # nhận đủ tiền -> nấc chi trả
+        td = self._x(a).tien_do
+        self.assertEqual(td.nac, 3)                                                     # đã tích nhưng chưa có ngày biên bản
+        self.assertEqual(td.canh_bao, 'đã tích bàn giao, chưa có ngày biên bản')
+        theo_doi.ghi_ban_giao(self.con, [a], dict(da_ban_giao=True, ban_giao_ngay='16/10/2026'))   # ngày biên bản, không file
+        td = self._x(a).tien_do
+        self.assertEqual((td.nac, td.da_bg, td.canh_bao), (4, True, ''))
+        self.assertEqual(self._x(a).trang_thai, 'Đã bàn giao MB')
+
+    def test_bien_ban_chung_nhieu_ho(self):
+        _qt()
+        from pabt.man_hinh_theo_doi import HopBanGiao
+        d = HopBanGiao(None, 3)
+        self.addCleanup(d.deleteLater)
+        self.assertTrue(d.nhieu_ho)
+        self.assertFalse(d.lb_chung.isHidden())                                        # nhắc: một file cho cả 3 hộ
+        self.assertNotIn('bien_ban_ban_giao', d.gia_tri())                               # để trống: giữ file riêng từng hộ
+        self.assertEqual(d.o_ngay.text(), '')                                           # không điền sẵn ngày hôm nay
+        d.o_da.setChecked(True)
+        d.accept()                                                                      # tích mà chưa có ngày biên bản: không đóng
+        self.assertIn('ngày biên bản', d.lb_canh_bao.text())
+        self.assertNotEqual(d.result(), 1)
+        a, b = self.ma[:2]
+        theo_doi.ghi_ban_giao(self.con, [a], dict(bien_ban_ban_giao='C:/BB/ho_a.pdf'))
+        theo_doi.ghi_ban_giao(self.con, [a, b], d.gia_tri())
+        self.assertEqual(self._x(a).bien_ban_ban_giao, 'C:/BB/ho_a.pdf')
+        d.o_file.setText('C:/BB/bien_ban_chung.pdf')
+        theo_doi.ghi_ban_giao(self.con, [a, b], d.gia_tri())                             # một đường dẫn cho mọi hộ, không chép file
+        self.assertEqual({self._x(m).bien_ban_ban_giao for m in (a, b)}, {'C:/BB/bien_ban_chung.pdf'})
+        d1 = HopBanGiao(None, 1)
+        self.addCleanup(d1.deleteLater)
+        self.assertFalse(d1.nhieu_ho)
+        self.assertIn('bien_ban_ban_giao', d1.gia_tri())
+
+
 if __name__ == '__main__':
     unittest.main()

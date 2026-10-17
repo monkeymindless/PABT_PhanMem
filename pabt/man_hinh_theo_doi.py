@@ -1203,7 +1203,8 @@ class KhungTienDo(_Khung):
                           if q['chi_tra_ngay']),
                 '\n'.join(f'QĐ {q["so_qd"]}' + (f': {q["ly_do_chua_nhan"]}' if q['ly_do_chua_nhan'] else '') for q in chua),
                 '\n'.join(Path(q['chung_tu']).name for q in nhan if q['chung_tu']),
-                ('Đã bàn giao' + (f' {x.ban_giao_ngay}' if x.ban_giao_ngay else '')) if x.da_ban_giao else 'Chưa',
+                ('Đã bàn giao' + (f' {x.ban_giao_ngay}' if x.ban_giao_ngay else '')
+                 + ('' if theo_doi.co_bien_ban_ban_giao(x) else ' (chưa có ngày biên bản)')) if x.da_ban_giao else 'Chưa',
                 x.ly_do_ban_giao if not x.da_ban_giao else '', x.theo_doi,
                 ho_so_scan.chu_hoan_tat(x, self.dot_ho.get(x.ma_ho, '')),
                 f'{self.scan[x.ma_ho]} file' if self.scan.get(x.ma_ho) else '']))
@@ -1220,7 +1221,8 @@ class KhungTienDo(_Khung):
                 kieu[(r, self.C_CHUA)] = dict(nen=DO)
             if gt[self.C_NGAY]:
                 kieu[(r, self.C_NGAY)] = dict(nen=XANH)
-            nen_bg = XANH if x.da_ban_giao else VANG if qd else None
+            # xanh: bàn giao có ngày biên bản (nấc bàn giao danh sách hộ); tích thiếu ngày / chưa bàn giao mà có QĐ: vàng
+            nen_bg = XANH if theo_doi.co_bien_ban_ban_giao(x) else VANG if qd or x.da_ban_giao else None
             if nen_bg is not None:
                 kieu[(r, self.C_BG)] = dict(nen=nen_bg)
             if gt[self.C_BIEN_LAI]:
@@ -1655,26 +1657,50 @@ class HopBanGiao(_Hop):
             dat_trang_thai(self.lb_canh_bao, 'canh_bao',
                            f'{so_chua_qd}/{so_ho} hộ chưa có quyết định phê duyệt (chưa chi trả). Chỉ tích "Đã bàn giao mặt bằng" khi '
                            'các hộ này đã bàn giao thật (bàn giao trước khi phê duyệt); bỏ tích = ghi "chưa bàn giao".')
-        from datetime import date
-        self.o_ngay = QLineEdit(x.ban_giao_ngay if x is not None else date.today().strftime('%d/%m/%Y'))
+        # biên bản bàn giao KHÔNG có số, chỉ có ngày (người dùng 17/10/2026): ngày ký biên bản là chứng cứ bàn giao - KHÔNG điền sẵn
+        # ngày hôm nay (trước đây điền sẵn: một lần bấm Lưu cả bảng thành "đã bàn giao" đúng ngày bấm)
+        self.o_ngay = QLineEdit(x.ban_giao_ngay if x is not None else '')
+        self.o_ngay.setPlaceholderText('dd/mm/yyyy - ngày ký biên bản bàn giao')
         self.o_ly_do = QPlainTextEdit(x.ly_do_ban_giao if x is not None else '')
         self.o_ly_do.setMaximumHeight(60)
         self.o_file = QLineEdit(x.bien_ban_ban_giao if x is not None else '')
+        # file scan biên bản: KHÔNG bắt buộc; một biên bản cho nhiều hộ (người dùng 17/10/2026): chỉ ghi ĐƯỜNG DẪN cho mọi hộ đang
+        # chọn - KHÔNG chép file vào từng hộ; để trống khi chọn nhiều hộ = giữ file đã ghi của từng hộ (gia_tri bỏ trường này)
+        self.nhieu_ho = so_ho > 1 and x is None
+        self.o_file.setPlaceholderText('File scan biên bản (không bắt buộc)' +
+                                       (' - dùng chung cho các hộ đang chọn' if self.nhieu_ho else ''))
+        self.lb_chung = QLabel(f'Một biên bản cho nhiều hộ: nhập ngày biên bản và (nếu có) chọn file scan MỘT lần cho cả {so_ho} hộ - '
+                               'phần mềm chỉ ghi đường dẫn, không chép file. Ô file để trống: giữ file đã ghi của từng hộ.')
+        self.lb_chung.setWordWrap(True)
+        self.lb_chung.setProperty('vai', 'phu')
+        self.lb_chung.setVisible(self.nhieu_ho)
         self.o_da.toggled.connect(lambda d: (self.o_ngay.setEnabled(d), self.o_ly_do.setEnabled(not d)))
         f = QFormLayout(self)
         f.addRow(self.lb_canh_bao)
         f.addRow(self.o_da)
-        f.addRow('Ngày bàn giao:', self.o_ngay)
-        f.addRow('Biên bản bàn giao:', _o_chon_file(self.o_file, self, 'Chọn biên bản bàn giao'))
+        f.addRow('Ngày biên bản bàn giao:', self.o_ngay)
+        f.addRow('File biên bản:', _o_chon_file(self.o_file, self, 'Chọn file scan biên bản bàn giao'))
+        f.addRow('', self.lb_chung)
         f.addRow('Lý do chưa bàn giao:', self.o_ly_do)
         f.addRow(_nut_luu(self))
         self.o_ngay.setEnabled(self.o_da.isChecked())
         self.o_ly_do.setEnabled(not self.o_da.isChecked())
 
+    def accept(self):
+        if self.o_da.isChecked() and not self.o_ngay.text().strip():   # bàn giao phải có ngày biên bản (chứng cứ của nấc bàn giao)
+            dat_trang_thai(self.lb_canh_bao, 'loi', 'Nhập ngày biên bản bàn giao (dd/mm/yyyy) - hoặc bỏ tích "Đã bàn giao mặt bằng".')
+            self.lb_canh_bao.setVisible(True)
+            self.o_ngay.setFocus()
+            return
+        super().accept()
+
     def gia_tri(self) -> dict:
         da = self.o_da.isChecked()
-        return dict(da_ban_giao=da, ban_giao_ngay=self.o_ngay.text() if da else '', ly_do_ban_giao=self.o_ly_do.toPlainText(),
-                    bien_ban_ban_giao=self.o_file.text().strip())
+        gt = dict(da_ban_giao=da, ban_giao_ngay=self.o_ngay.text() if da else '', ly_do_ban_giao=self.o_ly_do.toPlainText(),
+                  bien_ban_ban_giao=self.o_file.text().strip())
+        if self.nhieu_ho and not gt['bien_ban_ban_giao']:
+            del gt['bien_ban_ban_giao']                 # nhiều hộ, ô trống: không xóa biên bản riêng đã ghi của từng hộ
+        return gt
 
 
 class HopMocThoiHan(_Hop):

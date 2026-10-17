@@ -112,9 +112,8 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertRegex(w.the_so['tong'].text(), r'^[0-9.,]+ (tỷ|triệu)$')
         self.assertEqual(w.the_phu['da_pd'].text(), '0%')
         ds = [r[0] for r in w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 3')]
-        with w.con:
-            for m in ds:
-                w.con.execute('UPDATE ho SET da_phe_duyet = 1 WHERE ma_ho = ?', (m,))
+        from pabt import theo_doi                       # 1.0.02: phê duyệt = hộ có trong quyết định (phân tích tự động)
+        theo_doi.them_ho_theo_pa(w.con, theo_doi.luu_qd(w.con, None, '9/QĐ-UBND', '01/10/2026', 'Phê duyệt thử'), ds)
         w.tai_lai()
         self.assertEqual(w.the_so['da_pd'].text(), '3')
         self.assertEqual(w.the_phu['da_pd'].text(), '50%')                # 3 / 6 hộ
@@ -141,8 +140,18 @@ class TestTheSoVaDanhSach(CoNavy):
             self.assertEqual(m.data(m.index(r, 5), Qt.ItemDataRole.ForegroundRole).color().name().upper(),
                              ud.MAU_NAC[d['nac']])
         ma = m.dong[0]['ma_ho']
+        # 1.0.02: nấc phân tích tự động, tuần tự - cờ tích tay (không quyết định, không biên bản) không làm nấc tăng
         with w.con:
             w.con.execute('UPDATE ho SET da_phe_duyet = 1, da_chi_tra = 1, da_ban_giao = 1 WHERE ma_ho = ?', (ma,))
+        w.tai_lai()
+        d0 = next(d for d in m.dong if d['ma_ho'] == ma)
+        self.assertLess(d0['nac'], 2)
+        self.assertIn('đã tích bàn giao', d0['o'][5])
+        from pabt import theo_doi
+        q = theo_doi.luu_qd(w.con, None, '9/QĐ-UBND', '01/10/2026', 'Phê duyệt thử')
+        theo_doi.them_ho_theo_pa(w.con, q, [ma])
+        theo_doi.ghi_chi_tra(w.con, [(q, ma)], '05/10/2026', '')
+        theo_doi.ghi_ban_giao(w.con, [ma], dict(da_ban_giao=True, ban_giao_ngay='10/10/2026'))   # ngày biên bản
         w.tai_lai()
         d0 = next(d for d in m.dong if d['ma_ho'] == ma)
         self.assertEqual(d0['nac'], 4)

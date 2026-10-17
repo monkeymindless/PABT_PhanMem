@@ -395,19 +395,67 @@ class TongHopHo:
         return sum((_so(t['dt_thu_hoi']) or KHONG for t in self.thua), KHONG)
 
     @property
+    def tien_do(self) -> 'TienDoHo':
+        """Tiến độ phân tích TỰ ĐỘNG từ dữ liệu (phan_tich_tien_do) - tính lại mỗi lần đọc, không lưu."""
+        return phan_tich_tien_do(self)
+
+    @property
     def trang_thai(self) -> str:
-        """Trạng thái ngắn gọn cho danh sách hộ."""
-        if self.da_ban_giao:
-            return 'Đã bàn giao MB'
-        if self.qd and not self.qd_chua_nhan:
-            return 'Đã nhận tiền, chưa bàn giao'
-        if self.qd and len(self.qd_chua_nhan) < len(self.qd):
-            return f'Đã nhận {len(self.qd) - len(self.qd_chua_nhan)}/{len(self.qd)} QĐ'
-        if self.qd:
-            return 'Đã phê duyệt' + (f' ({len(self.qd)} QĐ)' if len(self.qd) > 1 else '') + ', chưa nhận tiền'
-        if self.da_lap or self.tong_pa > 0:
-            return 'Đã lập phương án'
-        return 'Chưa lập phương án'
+        """Trạng thái ngắn gọn cho danh sách hộ - theo tiến độ phân tích tuần tự (+ điểm cần xem lại)."""
+        td = self.tien_do
+        if td.nac == 4:
+            chu = 'Đã bàn giao MB'
+        elif td.nac == 3:
+            chu = 'Đã nhận tiền, chưa bàn giao'
+        elif td.nac == 2 and len(self.qd_chua_nhan) < len(self.qd):
+            chu = f'Đã nhận {len(self.qd) - len(self.qd_chua_nhan)}/{len(self.qd)} QĐ'
+        elif td.nac == 2:
+            chu = 'Đã phê duyệt' + (f' ({len(self.qd)} QĐ)' if len(self.qd) > 1 else '') + ', chưa nhận tiền'
+        elif td.nac == 1:
+            chu = 'Đã lập phương án'
+        else:
+            chu = 'Chưa lập phương án'
+        return chu + (f' · {td.canh_bao}' if td.canh_bao else '')
+
+
+# ---------------------------------------------------------------- phân tích tiến độ TỰ ĐỘNG (thanh 4 nấc danh sách hộ)
+@dataclass
+class TienDoHo:
+    """nac 0-4 (□□□□ chưa lập PA … ■■■■ đã bàn giao); da_pd / da_ct / da_bg: từng bước ĐÃ ĐỦ theo thứ tự; canh_bao: dữ liệu
+    nhập tay chưa khớp thứ tự / chứng cứ (vd. tích "đã bàn giao" khi chưa có quyết định, chưa có biên bản)."""
+    nac: int
+    da_lap: bool
+    da_pd: bool
+    da_ct: bool
+    da_bg: bool
+    canh_bao: str = ''
+
+
+def co_bien_ban_ban_giao(x) -> bool:
+    """Bàn giao có chứng cứ: đã tích + có NGÀY biên bản bàn giao (biên bản không có số, chỉ có ngày - người dùng 17/10/2026; file
+    scan biên bản không bắt buộc, nhiều hộ dùng chung một file)."""
+    return bool(x.da_ban_giao and str(x.ban_giao_ngay or '').strip())
+
+
+def phan_tich_tien_do(x) -> TienDoHo:
+    """Tiến độ một hộ (TongHopHo) TUẦN TỰ từ dữ liệu thật (người dùng 17/10/2026 - "khi đã phê duyệt tăng nấc phê duyệt, đã bàn giao
+    tăng nấc bàn giao, tự động chạy"; chọn: tuần tự, bàn giao cần biên bản):
+      nấc 1 Lập PA: đã lưu phương án / có tiền phương án;
+      nấc 2 Phê duyệt: hộ có trong ít nhất một quyết định phê duyệt (qd_ho);
+      nấc 3 Chi trả: đã phê duyệt và MỌI quyết định của hộ đã ghi nhận tiền;
+      nấc 4 Bàn giao: đã chi trả + đã tích bàn giao có ngày biên bản (co_bien_ban_ban_giao).
+    Tích "đã bàn giao" mà thiếu ngày biên bản / chưa đủ bước trước: KHÔNG tăng nấc, ghi canh_bao (bàn giao trước, thiếu ngày)."""
+    da_lap = bool(x.da_lap or x.tong_pa > 0)
+    da_pd = bool(x.qd)
+    da_ct = da_pd and not x.qd_chua_nhan
+    bien_ban = co_bien_ban_ban_giao(x)
+    da_bg = da_ct and bien_ban
+    nac = 4 if da_bg else 3 if da_ct else 2 if da_pd else 1 if da_lap else 0
+    canh_bao = ''
+    if x.da_ban_giao and not da_bg:
+        thieu = ([] if da_ct else ['chưa ' + ('nhận đủ tiền' if da_pd else 'phê duyệt')]) + ([] if bien_ban else ['chưa có ngày biên bản'])
+        canh_bao = 'đã tích bàn giao, ' + ', '.join(thieu)
+    return TienDoHo(nac, da_lap, da_pd, da_ct, da_bg, canh_bao)
 
 
 LOC_SQL_TOI_DA = 400         # tong_hop(ds_ma_ho) lọc bằng IN (?, …) khi danh sách không quá chừng này (giới hạn tham số SQLite cũ 999)

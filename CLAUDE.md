@@ -1563,6 +1563,17 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `HopBanGiao(so_chua_qd=)` - có hộ chưa phê duyệt thì KHÔNG tích sẵn "Đã bàn giao" + cảnh báo `lb_canh_bao`; Kiểm tra lỗi (Tiến độ) báo
   "Đã đánh dấu bàn giao mặt bằng nhưng chưa có quyết định phê duyệt" (thay "chưa ghi chi trả" cho hộ đó). KHÔNG chặn cứng: bàn giao
   trước khi phê duyệt là trường hợp có thật. Không tự sửa dữ liệu khi mở dự án. Test `tests/test_ban_giao_chua_qd.py`.
+- TIẾN ĐỘ PHÂN TÍCH TỰ ĐỘNG (người dùng 17/10/2026: "đã phê duyệt tăng nấc phê duyệt, đã bàn giao tăng nấc bàn giao, tự động chạy";
+  chọn TUẦN TỰ, bàn giao cần chứng cứ; "biên bản không có số, chỉ có ngày"): `theo_doi.phan_tich_tien_do(x)` -> `TienDoHo(nac, da_lap,
+  da_pd, da_ct, da_bg, canh_bao)`, `TongHopHo.tien_do` (tính mỗi lần đọc, không lưu): nấc 2 = hộ có trong quyết định (qd_ho), 3 = mọi QĐ
+  đã nhận tiền, 4 = đã chi trả + `co_bien_ban_ban_giao` (đã tích + có NGÀY biên bản; file scan không bắt buộc). Tích tay thiếu bước /
+  thiếu ngày: không tăng nấc, `canh_bao` ("đã tích bàn giao, chưa phê duyệt / chưa có ngày biên bản") nối vào `TongHopHo.trang_thai`.
+  `app._dong_ho` lấy nac + GHI ĐÈ da_phe_duyet / da_chi_tra / da_ban_giao của dòng bằng kết quả phân tích -> thẻ số liệu, bộ lọc trạng thái
+  (quan_ly.hop_trang_thai) cùng một nguồn; ô Trạng thái nền vàng + chú thích khi có canh_bao. Cột ho.da_phe_duyet / da_chi_tra /
+  da_ban_giao vẫn là dữ liệu nhập (trang Tiến độ nhập / lọc theo cột thật; cột Bàn giao ghi "(chưa có ngày biên bản)", nền vàng).
+  `HopBanGiao`: KHÔNG điền sẵn ngày hôm nay (nhãn "Ngày biên bản bàn giao", tích mà trống ngày -> `accept` báo, không đóng); "File biên
+  bản" không bắt buộc, nhiều hộ (`nhieu_ho`) dùng chung MỘT đường dẫn (không chép file), ô trống = giữ file đã ghi của từng hộ.
+  Trang Tiến độ (KPI mặt bằng sạch, bộ lọc da_bg của trang đó) CHƯA chuyển sang kết quả phân tích - vẫn theo cột tích.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.
