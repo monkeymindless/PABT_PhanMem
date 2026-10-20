@@ -7,6 +7,16 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.09', '20/10/2026', (
+        'Sửa lỗi: ở một số máy, xem trước / in phương án chi tiết mất toàn bộ khung bảng mục III và số không định dạng (Tỷ lệ 0,8 thay '
+        'vì 80%, Đơn giá 720000 thay vì 720.000). Bảng mục III nay luôn được kẻ khung đầy đủ và định dạng số chuẩn, dù mẫu in trên máy '
+        'là mẫu cũ thiếu khung.',
+        'Mẫu in cũ trong %APPDATA%\\PABT\\mau_in bị thiếu khung / định dạng (thường lấy từ file Excel PABT cũ) được tự bỏ qua - in theo '
+        'mẫu chuẩn. Mẫu anh / chị chủ động thay qua Công cụ → Quản lý Mẫu in & Bản in vẫn được dùng.',
+        'Bản xem trước gần đúng (máy không có Microsoft Excel): khung bảng rõ nét, không còn hiện mã hộ ẩn dưới dòng dự án.',
+        'Sửa lỗi: thêm hộ (kể cả hộ chỉ có tài sản, không có tờ thửa), lưu phương án rồi chuyển sang Danh sách hộ / Màn hình chính mà '
+        'chưa bấm Đóng cửa sổ hộ thì danh sách không hiện hộ mới. Nay chuyển trang là cập nhật ngay.',
+    )),
     ('1.0.08', '20/10/2026', (
         'Máy cấu hình yếu (RAM dưới 4 GB hoặc CPU 2 nhân) được tự nhận ra: tắt hiệu ứng đổ bóng, nhận dạng chữ (OCR) chỉ dùng một luồng '
         'để chuột và giao diện không bị đơ, ảnh xem trước bản in tối đa 120 dpi, tự trả bộ nhớ sau khi đóng cửa sổ lập phương án hoặc '

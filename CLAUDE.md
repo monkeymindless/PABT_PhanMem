@@ -1871,6 +1871,25 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     xem) hẹn `SAO_LUU_SAU_MS` 1500 ms -> `_sao_luu_tu_dong` (lỗi chỉ báo thanh trạng thái).
   - `in_an.ap_chuan_trang_mau` áp cả cỡ chữ (`chuan_co_chu_ct` / `chuan_co_chu_bth`). `logo_PABT.png` ở gốc repo (làm hỏng test biểu tượng)
     đã đưa vào Thùng rác theo yêu cầu người dùng.
+- 1.0.09 (người dùng 20/10/2026: "máy cá nhân khác xem trước / in chi tiết mất toàn bộ khung bảng mục III, Tỷ lệ 0,8, Đơn giá
+  720000"; test `tests/test_yeu_cau_1008.TestKhungBangMucIII`): NGUYÊN NHÂN = mẫu IN_CHITIET cũ trong thư mục máy (%APPDATA%\PABT\mau_in -
+  thường từ file Excel PABT: khung / định dạng số do định dạng có điều kiện hoặc dòng mẫu dưới STT không viền + General); PDF dự phòng
+  (máy không Excel) không đọc định dạng có điều kiện. Đã tái hiện (mẫu chuẩn: đủ khung). Sửa: `in_an.dam_bao_khung_bang_ct(ws, dòng
+  STT, dòng TỔNG CỘNG, cot, loai_dong)` gọi CUỐI `lap_chi_tiet` (sau ngat_trang_ct): viền thin mọi ô, hàng tiêu đề trên / dưới medium, bao
+  ngoài medium; ô số mất định dạng -> `DINH_DANG_TIEN_CT` '#,##0' / `DINH_DANG_TY_LE_CT` '0%' / số lượng General -> dinh_dang_so_luong (giữ
+  định dạng có sẵn như '[=0]0;[<10]0.0##;#,##0'). Ô gộp: Excel / openpyxl chỉ giữ CẠNH NGOÀI vùng gộp (test kiểm theo vùng gộp).
+  `chuan_muc_i`: chặn xóa viền tại dòng STT (`min(r_ii, den_dong)` - mẫu thiếu dòng "II." trước đây xóa tới I + 6). Mẫu thư mục máy:
+  `dung_mau_may(file, ten)` (nhớ theo mtime / cỡ) = người dùng thay qua HopQuanLyMauIn (`FILE_DANH_DAU_MAU` '.quan_ly_mau.json' {tên:
+  SHA-256} - `ghi_danh_dau_mau` ở thay_mau / khoi_phuc_mau) HOẶC `mau_bang_hop_le` (dòng dưới STT >= 6 / 8 ô có viền + Thành tiền không
+  General; mẫu bảng tổng hợp luôn hợp lệ); không -> `thu_muc_mau` bỏ qua (cả nhánh PABT_CHI_MAU_NHUNG và mẫu dự thảo riêng). Gói .pabtcfg /
+  mau_de_sua không ghi dấu: mẫu đủ khung vẫn dùng. `pdf_du_phong`: `_chuan_bang_qt` (QTextTableFormat cellSpacing 0, border 0, borderCollapse,
+  bút đen - KHÔNG border="1" cả bảng: cả trang là MỘT bảng HTML, lưới sẽ trùm quốc hiệu / mục I), khung = CSS viền từng ô (Qt 5.14+ vẽ;
+  test đếm leftBorder ô cả Qt5), `_chu_trang` (rgb FFFFFF / theme 0 - ô {ma_ho} chữ màu nền, trước hiện "2" dưới dòng dự án).
+  Cùng 1.0.09 (người dùng: "nhập thêm hộ - chỉ tài sản, không tờ thửa - nhưng dự án không cập nhật hộ đó"): lõi (ho_so.luu_ho,
+  nhap_chi_tiet.ghi, nhap_tho) ĐỀU tạo hộ không thửa; lỗi là giao diện - CuaSoLapPA nhúng tab, danh sách hộ chỉ tải lại khi ĐÓNG cửa sổ
+  hộ (`_tab_dong`; tham số `truoc` của mo_lap_pa không dùng). `CuaSoChinh._tai_lai_neu_doi` (so `con.total_changes` với `_tc_nap` đặt cuối
+  `tai_lai`) gọi đầu `mo_trang` (trừ Dự toán) và `ve_trang_chu`. Nhập chi tiết: hộ TRÙNG họ tên / CCCD mặc định 'bo_qua' (báo trong hộp kết
+  quả) - chọn "thêm thành hộ mới" nếu là hộ khác. Test `test_yeu_cau_1008.TestThemHoCapNhatDanhSach`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

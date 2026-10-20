@@ -76,7 +76,7 @@ def thu_muc_mau(ten: str = TEN_CT) -> Path:
     if os.environ.get('PABT_CHI_MAU_NHUNG') == '1':      # giả lập máy trắng (tu-kiem, kiểm thử): không thư mục mẫu cài đặt / mã nguồn
         from . import mau_in_nhung                       # - mẫu người dùng đã thay (thư mục tùy chỉnh) vẫn dùng trước
         for tc in ([thu_muc_mau_ghi()] if getattr(sys, 'frozen', False) else []) + [thu_muc_mau_tuy_chinh()]:
-            if (tc / f'{ten}.xlsx').exists():
+            if (tc / f'{ten}.xlsx').exists() and dung_mau_may(tc / f'{ten}.xlsx', ten):
                 return tc
         if mau_in_nhung.co_mau(ten):
             return THU_MUC_NHUNG
@@ -87,13 +87,93 @@ def thu_muc_mau(ten: str = TEN_CT) -> Path:
     else:
         ung_vien.append(thu_muc_mau_tuy_chinh())     # 1.0.07: mẫu thay bằng hộp Quản lý Mẫu in (không ghi đè mau_in mã nguồn)
     ung_vien.append(Path(__file__).resolve().parents[1] / 'mau_in')
+    may = {thu_muc_mau_tuy_chinh()} | ({thu_muc_mau_ghi()} if getattr(sys, 'frozen', False) else set())
     for p in ung_vien:
         if (p / f'{ten}.xlsx').exists():
+            if p in may and not dung_mau_may(p / f'{ten}.xlsx', ten):     # 1.0.09: mẫu cũ hỏng trong thư mục máy -> bỏ qua
+                continue
             return p
     from . import mau_in_nhung
     if mau_in_nhung.co_mau(ten):            # máy trắng / bản cài thiếu mau_in\: bộ mẫu chuẩn nhúng trong mã (1.0.07)
         return THU_MUC_NHUNG
     raise LoiIn(f'Không tìm thấy thư mục mẫu in (mau_in\\{ten}.xlsx). Dùng lệnh "Công cụ → Mẫu in" trên thanh menu.')
+
+
+# ---- mẫu trong thư mục máy (%APPDATA%\\PABT\\mau_in) có dùng được không (1.0.09)
+FILE_DANH_DAU_MAU = '.quan_ly_mau.json'      # {tên mẫu: SHA-256} - mẫu người dùng CHỦ ĐỘNG thay qua hộp Quản lý Mẫu in
+_KIEM_MAU = {}
+
+
+def _danh_dau_mau(thu_muc) -> dict:
+    import json
+    try:
+        return json.loads((Path(thu_muc) / FILE_DANH_DAU_MAU).read_text(encoding='utf-8')) or {}
+    except (OSError, ValueError):
+        return {}
+
+
+def ghi_danh_dau_mau(thu_muc, ten: str, file=None) -> None:
+    """Ghi / bỏ (file None) dấu "mẫu người dùng chủ động thay" của ten trong thư mục mẫu máy."""
+    import hashlib
+    import json
+    d = _danh_dau_mau(thu_muc)
+    if file is None:
+        d.pop(ten, None)
+    else:
+        d[ten] = hashlib.sha256(Path(file).read_bytes()).hexdigest()
+    f = Path(thu_muc) / FILE_DANH_DAU_MAU
+    tam = f.with_name(f.name + '.tmp')
+    tam.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding='utf-8')
+    os.replace(tam, f)
+    _KIEM_MAU.clear()
+
+
+def mau_bang_hop_le(file, ten: str = TEN_CT) -> bool:
+    """Mẫu phương án chi tiết dùng được: dòng mẫu ngay dưới "STT" có khung (>= 6 / 8 ô có viền) và cột Thành tiền không General.
+    Mẫu khác (bảng tổng hợp) / không tìm được STT: coi là dùng được."""
+    if not str(ten).startswith(TEN_CT):
+        return True
+    wb = openpyxl.load_workbook(file, read_only=True)
+    try:
+        ws = wb.worksheets[0]
+        cot, _, chu_dau = _cot_ct()
+        dau = None
+        for i, hang in enumerate(ws.iter_rows(min_row=1, max_row=120, max_col=max(cot))):
+            if hang and str(getattr(hang[cot[0] - 1], 'value', '') or '').strip().upper() == chu_dau:
+                dau = i + 1
+                break
+        if dau is None:
+            return True
+        hang = next(ws.iter_rows(min_row=dau + 1, max_row=dau + 1, max_col=max(cot)), ())
+        o_bang = [hang[c - 1] for c in cot if c - 1 < len(hang)]
+        co_vien = sum(1 for o in o_bang if getattr(o, 'border', None) is not None and any(
+            getattr(getattr(o.border, k), 'style', None) for k in ('left', 'right', 'top', 'bottom')))
+        tt = hang[cot[6] - 1] if cot[6] - 1 < len(hang) else None
+        return co_vien >= 6 and tt is not None and (getattr(tt, 'number_format', 'General') or 'General') != 'General'
+    finally:
+        wb.close()
+
+
+def dung_mau_may(file, ten: str) -> bool:
+    """Mẫu ten trong thư mục máy: dùng nếu người dùng chủ động thay qua hộp Quản lý Mẫu in (dấu khớp SHA-256) hoặc mẫu còn đủ khung
+    / định dạng bảng (mau_bang_hop_le). Không -> bỏ qua, in theo mẫu đóng kèm / nhúng. Nhớ theo (đường dẫn, mtime, cỡ)."""
+    p = Path(file)
+    try:
+        st = p.stat()
+    except OSError:
+        return False
+    k = (str(p), ten, st.st_mtime_ns, st.st_size)
+    if k not in _KIEM_MAU:
+        import hashlib
+        dd = _danh_dau_mau(p.parent).get(ten)
+        try:
+            ok = (dd is not None and dd == hashlib.sha256(p.read_bytes()).hexdigest()) or mau_bang_hop_le(p, ten)
+        except Exception:                               # file hỏng / không đọc được: bỏ qua
+            ok = False
+        if len(_KIEM_MAU) > 32:
+            _KIEM_MAU.clear()
+        _KIEM_MAU[k] = ok
+    return _KIEM_MAU[k]
 
 
 def thu_muc_mau_tuy_chinh() -> Path:
@@ -681,6 +761,7 @@ def thay_mau(ten: str, file_excel) -> Path:
                 shutil.copy2(x, tm / x.name)
     finally:
         shutil.rmtree(tam, ignore_errors=True)
+    ghi_danh_dau_mau(tm, ten, dich)                 # 1.0.09: mẫu người dùng chủ động thay - luôn dùng (khung do lap_chi_tiet bảo đảm)
     xoa_bo_nho_mau()
     return dich
 
@@ -699,6 +780,7 @@ def khoi_phuc_mau(ten: str) -> bool:
     if not f.exists():
         return False
     _sao_luu_mau(f)
+    ghi_danh_dau_mau(f.parent, ten, None)
     xoa_bo_nho_mau()
     return True
 
@@ -2098,7 +2180,9 @@ def chuan_muc_i(ws, den_dong: int) -> list:
             break
     if r_i is None:
         return []
-    r_ii = r_ii or r_i + 6
+    # 1.0.09: chặn ở dòng tiêu đề bảng ("STT", den_dong) - mẫu không có tiêu đề "II." trước đây lấy r_i + 6, có thể trùm hàng tiêu đề /
+    # dòng số liệu mục III (mất viền cả bảng)
+    r_ii = min(r_ii or r_i + 6, den_dong)
     for (r, c), o in list(ws._cells.items()):
         if r_i <= r < r_ii and o.has_style and o.border is not None and any(
                 getattr(o.border, k).style for k in ('left', 'right', 'top', 'bottom')):
@@ -2118,6 +2202,55 @@ def chuan_muc_i(ws, den_dong: int) -> list:
             o.number_format = '@'
             chu.append(o.coordinate)
     return chu
+
+
+DINH_DANG_TIEN_CT = '#,##0'          # đơn giá, thành tiền bảng mục III khi ô mất định dạng (mẫu ngoài / General)
+DINH_DANG_TY_LE_CT = '0%'           # tỷ lệ: 0,8 -> 80%
+
+
+def _vien(trai='thin', phai='thin', tren='thin', duoi='thin'):
+    from openpyxl.styles import Border, Side
+    return Border(left=Side(style=trai), right=Side(style=phai), top=Side(style=tren), bottom=Side(style=duoi))
+
+
+def dam_bao_khung_bang_ct(ws, dong_tieu_de: int, cuoi: int, cot: list, loai_dong: list | None = None) -> int:
+    """Bảng mục III phương án chi tiết (1.0.09, người dùng 20/10/2026 - máy khác "mất toàn bộ khung viền, Tỷ lệ 0,8, Đơn giá 720000"):
+    mẫu ngoài (%APPDATA%\\PABT\\mau_in) lấy từ file Excel PABT vẽ khung / định dạng số bằng định dạng có điều kiện hoặc dòng mẫu dưới
+    "STT" không có viền + General -> bản in / PDF dự phòng mất khung, số không định dạng. Cưỡng bức SAU khi điền, gộp ô, dàn trang:
+    hàng tiêu đề (dong_tieu_de) trên / dưới medium; dòng dong_tieu_de + 1..cuoi lưới thin; bao ngoài (trái cột đầu, phải cột cuối,
+    đáy dòng cuoi) medium - mọi ô kể cả ô gộp (TỔNG CỘNG, cách tính C:F, ghi chú gộp dọc). Ô số: đơn giá / thành tiền mất định dạng
+    -> DINH_DANG_TIEN_CT, tỷ lệ -> DINH_DANG_TY_LE_CT, số lượng General -> tien.dinh_dang_so_luong theo mục (loai_dong: 'H' tiêu đề
+    mục, số mục ở cột STT). cot = vị trí cột TRUONG_CT. Trả số ô đã sửa định dạng số."""
+    from .tien import dinh_dang_so_luong
+    k_stt, _, _, k_sl, k_dg, k_tl, k_tt, _ = cot
+    c1, c2 = min(cot), max(cot)
+    for r in range(dong_tieu_de, cuoi + 1):
+        tieu_de = r == dong_tieu_de
+        for c in range(c1, c2 + 1):
+            ws.cell(r, c).border = _vien('medium' if c == c1 else 'thin', 'medium' if c == c2 else 'thin',
+                                         'medium' if tieu_de else 'thin',
+                                         'medium' if tieu_de or r == cuoi else 'thin')
+    n = 0
+    muc = None
+    for i, r in enumerate(range(dong_tieu_de + 1, cuoi + 1)):
+        loai = loai_dong[i] if loai_dong and i < len(loai_dong) else None
+        if loai == 'H':
+            from . import nghiep_vu
+            muc = 2 if str(ws.cell(r, k_stt).value or '').strip() == str(nghiep_vu.so_muc(2)) else None
+        for c, can, dung in ((k_dg, '#,##0', DINH_DANG_TIEN_CT), (k_tt, '#,##0', DINH_DANG_TIEN_CT),
+                             (k_tl, '%', DINH_DANG_TY_LE_CT), (k_sl, '0', None)):
+            o = ws.cell(r, c)
+            if not isinstance(o.value, (int, float)) or isinstance(o.value, bool):
+                continue
+            fmt = o.number_format or 'General'
+            if c == k_sl:
+                if fmt == 'General' or '0' not in fmt:
+                    o.number_format = dinh_dang_so_luong(muc)
+                    n += 1
+            elif can not in fmt:
+                o.number_format = dung
+                n += 1
+    return n
 
 
 def chuan_tieu_de_muc_ii(ws, den_dong: int) -> int:
@@ -2292,7 +2425,7 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
     che_cccd: giữ cho mã gọi cũ - từ 1.0.04 BỎ QUA (luôn in đủ số CCCD). Cột bảng: hồ sơ địa phương mau_in.IN_CHITIET (_cot_ct)."""
     if mau is None and du_thao:                       # 1.0.07: người dùng đã thay "Mẫu chi tiết dự thảo" -> bản dự thảo in theo mẫu đó
         rieng = thu_muc_mau_tuy_chinh() / f'{TEN_DT_QL}.xlsx'
-        mau = rieng if rieng.exists() else None
+        mau = rieng if rieng.exists() and dung_mau_may(rieng, TEN_DT_QL) else None
     mau = file_mau(mau, TEN_CT)
     du_thao = la_mau_du_thao(mau) if du_thao is None else bool(du_thao)
     duong_ke = duong_ke_cua_mau(mau, TEN_CT)
@@ -2483,6 +2616,7 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
     wb.defined_names[TEN_CAO] = DefinedName(TEN_CAO, attr_text=f"'{ws.title}'!$A${dau}:${cl}${dau + n - 1}")
     # dàn trang (16/10/2026): lề, tỷ lệ vừa ngang, cụm không tách, nén khít / giãn cân đối, ngắt trang tay, tách ô gộp ghi chú
     ngat_trang_ct(ws, dau, [x[0] for x in dong], cuoi_bang, san, san_khoi, nhom_gc, k_gc, co)
+    dam_bao_khung_bang_ct(ws, dau - 1, dau + n - 1, cot, [x[0] for x in dong])     # 1.0.09: khung + định dạng số mục III
     wb.defined_names[TEN_GIU_TI_LE] = DefinedName(TEN_GIU_TI_LE, attr_text=str(TI_LE_CT_MIN))   # VBS: không thu dưới 70%
     wb.calculation.fullCalcOnLoad = True
     file_ra = Path(file_ra)

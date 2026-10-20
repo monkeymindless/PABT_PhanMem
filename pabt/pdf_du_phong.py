@@ -89,6 +89,17 @@ def _gia_tri(ws, o) -> str:
     return str(v)
 
 
+def _chu_trang(f) -> bool:
+    """Chữ màu trắng: rgb FFFFFF hoặc màu theme 0 (nền - trắng ở theme Office; ô mã hộ {ma_ho} của mẫu chi tiết)."""
+    mau = getattr(f, 'color', None)
+    if mau is None:
+        return False
+    rgb = getattr(mau, 'rgb', None)
+    if isinstance(rgb, str) and len(rgb) >= 6 and rgb[-6:].upper() == 'FFFFFF':
+        return True
+    return getattr(mau, 'type', None) == 'theme' and getattr(mau, 'theme', None) == 0
+
+
 def _vung_in(ws):
     """(dòng đầu, cột đầu, dòng cuối, cột cuối) của vùng in (không có: vùng có chữ)."""
     from openpyxl.utils.cell import range_boundaries
@@ -156,7 +167,11 @@ def html_tu_xlsx(xlsx) -> tuple:
                     phu.add((r, c))
     # cột loại dòng (ẩn / ngoài vùng in) của mẫu chi tiết (H mục / T tổng): in đậm cả dòng (định dạng có điều kiện của Excel không đọc được)
     dam_dong = {r for (r, c), o in ws._cells.items() if (c in cot_an or c > c2) and r1 <= r <= r2 and o.value in ('H', 'T')}
-    ds = ['<table width="100%" cellspacing="0" cellpadding="2" style="border-collapse: collapse;">']
+    # 1.0.09: thẻ bảng đặt cellspacing 0 + border-collapse; khung từng ô theo viền của chính ô Excel (border-left / right / top / bottom
+    # trên <td>) - KHÔNG border="1" cho cả bảng: cả trang là MỘT bảng HTML (quốc hiệu, mục I, II cũng nằm trong) - lưới sẽ trùm cả
+    # phần đầu văn bản. QTextTableFormat đặt lại sau setHtml (_chuan_bang_qt)
+    ds = ['<table width="100%" border="0" cellspacing="0" cellpadding="2" '
+          'style="border-collapse: collapse; border-color: #000000;">']
     # hàng định cỡ (cao 0): Qt chỉ lấy bề rộng cột từ ô KHÔNG gộp - phần đầu mẫu toàn ô gộp nên thiếu hàng này cột chia đều
     ds.append('<tr>' + ''.join(f'<td width="{max(1, round(rong[c] / tong_rong * 100))}%" style="font-size: 1pt;"></td>'
                                for c in range(c1, c2 + 1) if c in rong) + '</tr>')
@@ -188,6 +203,8 @@ def html_tu_xlsx(xlsx) -> tuple:
                     kieu.append('font-style: italic')
                 if f.u:
                     kieu.append('text-decoration: underline')
+                if _chu_trang(f):
+                    kieu.append('color: #FFFFFF')               # chữ trắng của mẫu (mã hộ ẩn): Excel không in, bản gần đúng cũng vậy
                 ngang = a.horizontal or ('right' if isinstance(o.value, (int, float, Decimal)) else 'left')
                 ngang = {'centerContinuous': 'center', 'distributed': 'left', 'general': 'left', 'fill': 'left'}.get(ngang, ngang)
                 the.append(f'align="{ngang}"')
@@ -202,6 +219,26 @@ def html_tu_xlsx(xlsx) -> tuple:
     noi_dung = ('<html><head><meta charset="utf-8"/></head><body style="font-family: \'Times New Roman\', serif;">'
                 + ''.join(ds) + '</body></html>')
     return noi_dung, dict(kho=kho, ngang=giay_ngang, le=le, he_so=he_so)
+
+
+def _chuan_bang_qt(doc) -> int:
+    """Mọi QTextTable của tài liệu (1.0.09): ô sát nhau (cellSpacing 0), gộp đường viền (borderCollapse - Qt 5.14+), khung ngoài bảng
+    0 (khung của bảng mục III là viền từng ô, lấy theo ô Excel), bút viền đen liền. Trả số bảng."""
+    from PySide6.QtGui import QBrush, QColor, QTextFrameFormat, QTextTable
+    n = 0
+    for f in doc.rootFrame().childFrames():
+        if not isinstance(f, QTextTable):
+            continue
+        fmt = f.format()
+        fmt.setCellSpacing(0)
+        fmt.setBorder(0)
+        fmt.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
+        fmt.setBorderBrush(QBrush(QColor('#000000')))
+        if hasattr(fmt, 'setBorderCollapse'):
+            fmt.setBorderCollapse(True)
+        f.setFormat(fmt)
+        n += 1
+    return n
 
 
 def xuat_pdf_du_phong_qt(xlsx, pdf) -> Path:
@@ -222,6 +259,7 @@ def xuat_pdf_du_phong_qt(xlsx, pdf) -> Path:
     doc = QTextDocument()
     doc.setDocumentMargin(0)
     doc.setHtml(noi_dung)
+    _chuan_bang_qt(doc)
     # khổ giấy theo điểm ảnh 96 dpi (đơn vị bố cục của QTextDocument); print_ phóng theo độ phân giải của QPdfWriter
     vung = hl.paintRect(QPageLayout.Unit.Point)
     doc.setPageSize(QSizeF(vung.width() * 96 / 72, vung.height() * 96 / 72))

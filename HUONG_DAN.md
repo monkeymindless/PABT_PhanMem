@@ -477,6 +477,9 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   không in khối chữ ký** (Lập biểu - Kiểm tra - Phó Giám đốc), ghi "(DỰ THẢO)" dưới dòng số, để trống số / ngày. **Bảng tổng hợp: A3 ngang, tỷ lệ in cố định 55%**
   - cột chữ (họ tên, địa chỉ, nguồn gốc…) tự co / giãn cho bảng vừa đúng bề ngang A3; chỉ khi số tiền quá lớn không vừa thì in
   nhỏ hơn 55% (không để Excel tách cột sang trang riêng).
+- **Khung bảng và định dạng số (1.0.09)**: bảng mục III của phương án chi tiết luôn được kẻ khung đầy đủ (hàng tiêu đề và viền ngoài
+  đậm) và định dạng số chuẩn (đơn giá / thành tiền 720.000, tỷ lệ 80%) - kể cả khi mẫu in trên máy là mẫu cũ thiếu khung. Mẫu cũ thiếu
+  khung / định dạng trong `%APPDATA%\PABT\mau_in` tự được bỏ qua (in theo mẫu chuẩn), trừ mẫu đã thay qua **Quản lý Mẫu in & Bản in**.
 - **Máy chưa có thư mục mẫu in (1.0.07)**: bộ mẫu chuẩn (phương án chi tiết, bảng tổng hợp, đường kẻ) nhúng sẵn trong phần mềm -
   in được ngay. Mẫu đã sửa (Quản lý Mẫu in, gói .pabtcfg) vẫn được dùng trước.
 - **Công cụ → Quản lý Mẫu in & Bản in… (Ctrl+Shift+M)**: 3 mẫu - chi tiết chính thức, chi tiết dự thảo (bản niêm yết; chưa thay

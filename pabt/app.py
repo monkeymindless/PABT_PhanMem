@@ -1269,8 +1269,25 @@ class CuaSoChinh(QMainWindow):
             if not xong:
                 self._tai_lai_toan_bo()
             self._sau_tai_lai(giu_trang)
+            self._tc_nap = self.con.total_changes if self.con is not None else None
         finally:
             QApplication.restoreOverrideCursor()
+
+    def _tai_lai_neu_doi(self) -> bool:
+        """1.0.09 (người dùng 20/10/2026: "nhập thêm hộ nhưng dự án không cập nhật hộ đó"): cửa sổ lập phương án là TRANG NHÚNG - thêm hộ /
+        lưu phương án rồi chuyển trang bằng menu (không bấm Đóng) thì danh sách hộ, thẻ số, màn hình chính còn số cũ (trước chỉ tải lại khi
+        đóng cửa sổ hộ). Về trang chính mà file đã ghi kể từ lần tải trước (total_changes của kết nối) thì tải lại - DauVetHo: chỉ tính lại
+        hộ đổi, thêm / xóa hộ thì toàn bộ. Trả True nếu đã tải lại."""
+        if self.con is None or getattr(self, '_tc_nap', None) is None:
+            return False
+        try:
+            tc = self.con.total_changes
+        except sqlite3.ProgrammingError:                # kết nối đã đóng
+            return False
+        if tc == self._tc_nap:
+            return False
+        self.tai_lai()
+        return True
 
     def _so_lieu_dong(self, ds_ma_ho=None) -> tuple:
         """(số thửa + DT, trường trạng thái trên bảng ho, TongHopHo, tên đợt) để dựng dòng danh sách; ds_ma_ho: chỉ các hộ này."""
@@ -2148,6 +2165,7 @@ class CuaSoChinh(QMainWindow):
     def ve_trang_chu(self):
         """Nút "Màn hình chính" (menu trái): về màn hình bắt đầu như lúc mở phần mềm - Dự án mới, Mở dự án,
         Nhập Excel, dự án gần đây. Dự án đang mở vẫn mở: bấm một trang ở menu trái để quay lại."""
+        self._tai_lai_neu_doi()                         # 1.0.09: tổng quan dự án tính cả hộ vừa thêm ở cửa sổ hộ
         self.trang.setCurrentIndex(TRANG_CHAO)
         if hasattr(self, 'ngan_lv'):
             self.ngan_lv.setCurrentWidget(self.trang)
@@ -2458,6 +2476,8 @@ class CuaSoChinh(QMainWindow):
         """Trang bên phải (chỉ số TRANG): 0 danh sách hộ, 1 bảng tổng hợp kinh phí (3 thẻ), 2 quyết định phê duyệt, 3 theo dõi chi
         trả & bàn giao (gộp báo cáo tiến độ GPMB từ 1.0.00), 4 dự toán & khái toán. Chưa mở dự án: trang 0-3 hiện màn hình chào (trang Dự toán dùng
         được cả khi chưa mở dự án)."""
+        if i != TRANG_DU_TOAN:
+            self._tai_lai_neu_doi()                     # 1.0.09: hộ vừa thêm / lưu ở cửa sổ hộ (chưa đóng) hiện ngay
         if i == TRANG_DU_TOAN:
             self._dam_bao_du_toan()
             self.khung_du_toan.tab.setCurrentIndex(0)   # menu trái "Lập khái toán & Dự toán" (So sánh: so_sanh_du_toan chọn thẻ 1)
