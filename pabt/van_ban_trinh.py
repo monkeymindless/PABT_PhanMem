@@ -438,6 +438,8 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
             viec = [((f'in:{so_ban}' if in_may else 'pdf'), p, p.with_suffix('.pdf') if pdf else None) for p in kq['word']]
             kq['loi'] += chay_word(viec)
             kq['pdf'] += [c for _, _, c in viec if c and Path(c).exists()]
+    from .csdl import giai_phong_bo_nho
+    giai_phong_bo_nho()                                 # 1.0.08: máy yếu - trả RAM các Workbook vừa lập
     return kq
 
 

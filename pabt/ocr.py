@@ -72,10 +72,22 @@ def windows_64bit() -> bool:
             or bool(os.environ.get('PROCESSOR_ARCHITEW6432')))      # tiến trình 32-bit (bản Win7) trên Windows 64-bit
 
 
+LUONG_OCR_MAY_YEU = '1'         # máy yếu (CPU 2 nhân): Tesseract chỉ dùng 1 luồng - chuột / giao diện vẫn mượt khi quét
+
+
+def moi_truong_ocr() -> dict:
+    """Biến môi trường cho tiến trình Tesseract: máy cấu hình yếu (csdl.la_may_yeu) giới hạn OMP_THREAD_LIMIT."""
+    env = dict(os.environ)
+    from .csdl import la_may_yeu
+    if la_may_yeu():
+        env['OMP_THREAD_LIMIT'] = LUONG_OCR_MAY_YEU
+    return env
+
+
 def _chay(lenh: list, cho=None, gioi_han: float = 300) -> subprocess.CompletedProcess:
     """Chạy lệnh; trong lúc chờ gọi cho() (giữ giao diện không treo, trả True = người dùng hủy)."""
     import threading
-    pr = subprocess.Popen(lenh, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    pr = subprocess.Popen(lenh, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=moi_truong_ocr(),
                           creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     # đọc stdout / stderr SONG SONG (0.9.95): trước đây chỉ chờ tiến trình kết thúc rồi mới đọc - trang scan nhiều chữ (bảng giá,
     # bảng phương án: > ~64 KB kết quả) làm đầy ống, Tesseract chặn ghi, hai bên chờ nhau tới hết giờ ("quá lâu")

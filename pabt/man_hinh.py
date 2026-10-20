@@ -2512,6 +2512,8 @@ class CuaSoLapPA(QDialog):
                 self._w_preview.don_dep()
             e.accept()
             super().closeEvent(e)
+            from .csdl import giai_phong_bo_nho
+            QTimer.singleShot(0, giai_phong_bo_nho)
         else:
             e.ignore()
 
@@ -2519,6 +2521,8 @@ class CuaSoLapPA(QDialog):
         if self._w_preview is not None:
             self._w_preview.don_dep()                   # xóa file xem trước tạm
         super().done(r)
+        from .csdl import giai_phong_bo_nho
+        QTimer.singleShot(0, giai_phong_bo_nho)         # 1.0.08: máy yếu - trả RAM của phương án / bảng vừa đóng
 
 
 # ---------------------------------------------------------------- thông tin dự án

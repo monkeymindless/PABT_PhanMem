@@ -140,6 +140,8 @@ class DaiCong(QFrame):
 TRANG = ['Danh sách hộ', 'Tổng hợp tiền theo phương án', 'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Dự toán & khái toán']
 TRANG_DS, TRANG_TONG_HOP, TRANG_QUYET_DINH, TRANG_THEO_DOI, TRANG_DU_TOAN = range(5)
 TRANG_CHAO = 4                     # chỉ số trong self.trang (QStackedWidget) của màn hình chào khi chưa mở dự án
+SAO_LUU_SAU_MS = 1500             # 1.0.08: sao lưu tự động dự án vừa mở để sửa - sau khi cửa sổ đã vẽ xong
+DUOI_KEO_THA = ('.larc', '.pabt', '.larcud', '.pabtcn', '.pabtcfg', '.xlsx', '.xlsm')   # file kéo thả nhận được
 # chỉ số TRANG -> chỉ số trong self.trang (QStackedWidget): 0 danh sách, 1 bảng tổng hợp, 2 theo dõi, 3 dự toán, 4 chào, 5 quyết định
 # (các trang mới thêm cuối để giữ nguyên chỉ số cũ)
 STACK_CUA_TRANG = (0, 1, 5, 2, 3)
@@ -893,6 +895,9 @@ class CuaSoChinh(QMainWindow):
         self._hien_ty_le(TY_LE[0])
         KHI_DOI_TY_LE.append(self._hien_ty_le)
         XU_LY_HOAN_TAC.append(self.hoan_tac_phim)
+        self.setAcceptDrops(True)                        # 1.0.08: kéo thả .larc / .pabt / .larcud / .pabtcfg / .xlsx từ Explorer
+        from .giao_dien import TRUOC_DOI_TY_LE
+        TRUOC_DOI_TY_LE.append(self._bo_trang_an)        # 1.0.08: đổi cỡ chữ nhanh hơn - trang ẩn tạo lại khi mở tới
         self._cap_nhat_nut_ht()
         self.nut_tk = QToolButton()                            # tài khoản / máy chủ LAN
         self.nut_tk.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -1119,6 +1124,9 @@ class CuaSoChinh(QMainWindow):
             # mở / nhập dự án: luôn vào Danh sách hộ (người dùng 12/10/2026 - trước: về trang chọn lần trước, ví dụ Dự toán)
             self.mo_trang(0)
             ghi_gan_day(self.file)
+            if not chi_doc:                                 # 1.0.08: bản sao lưu tự động (máy HDD cũ, mất điện) - sau khi cửa sổ đã vẽ
+                c, f = self.con, self.file
+                QTimer.singleShot(SAO_LUU_SAU_MS, lambda: c is self.con and self._sao_luu_tu_dong(c, f))
             from .man_hinh import lam_san                 # lúc rảnh: dựng sẵn danh sách chọn của cửa sổ lập phương án
             dm = self.dm
             QTimer.singleShot(400, lambda: dm is self.dm and lam_san(dm))
@@ -1128,6 +1136,62 @@ class CuaSoChinh(QMainWindow):
         except Exception as e:
             self.dong_du_an()
             QMessageBox.critical(self, TEN_UD, chu_loi('Không mở được dự án', e))
+
+    def _sao_luu_tu_dong(self, con=None, file=None):
+        """Sao lưu tự động dự án vừa mở để sửa (csdl.sao_luu_tu_dong). Lỗi (đầy đĩa, thư mục máy không ghi được): chỉ báo ở thanh
+        trạng thái - không chặn làm việc."""
+        con, file = con or self.con, file or self.file
+        if con is None or file is None:
+            return None
+        try:
+            return csdl.sao_luu_tu_dong(con, file)
+        except (OSError, sqlite3.Error) as e:
+            self.statusBar().showMessage(chu_loi('Không tạo được bản sao lưu tự động', e), 8000)
+            return None
+
+    # ---- kéo - thả file từ Windows Explorer (1.0.08)
+    def _file_keo(self, ev) -> list:
+        md = ev.mimeData()
+        if md is None or not md.hasUrls():
+            return []
+        return [u.toLocalFile() for u in md.urls() if u.isLocalFile() and u.toLocalFile().lower().endswith(DUOI_KEO_THA)]
+
+    def dragEnterEvent(self, e):
+        if self._file_keo(e):
+            e.acceptProposedAction()
+        else:
+            super().dragEnterEvent(e)
+
+    def dragMoveEvent(self, e):
+        if self._file_keo(e):
+            e.acceptProposedAction()
+        else:
+            super().dragMoveEvent(e)
+
+    def dropEvent(self, e):
+        ds = self._file_keo(e)
+        if not ds:
+            return super().dropEvent(e)
+        e.acceptProposedAction()
+        QTimer.singleShot(0, lambda p=ds[0]: self.mo_file_keo(p))      # chạy sau khi Explorer đã nhả chuột
+
+    def mo_file_keo(self, p: str):
+        """File kéo thả vào cửa sổ: dự án (.larc / .pabt) -> mở; gói cập nhật (.larcud / .pabtcn) -> cài; gói mẫu in & cấu hình
+        (.pabtcfg) -> cài; Excel (.xlsx / .xlsm) -> nhập (file phương án chi tiết tự nhận ra). Trả loại đã xử lý ('' nếu không nhận)."""
+        d = p.lower()
+        if d.endswith(csdl.DUOI_MO):
+            self._chay_lenh(lambda: self.mo(p))
+            return 'du_an'
+        if d.endswith(('.larcud', '.pabtcn')):
+            self._chay_lenh(lambda: self.cap_nhat_phan_mem(p))
+            return 'cap_nhat'
+        if d.endswith('.pabtcfg'):
+            self._chay_lenh(lambda: self.nhap_goi_mau(p))
+            return 'goi_mau'
+        if d.endswith(('.xlsx', '.xlsm')):
+            self._chay_lenh(lambda: self.nhap_excel(p))
+            return 'excel'
+        return ''
 
     def _cap_nhat_lenh_theo_du_an(self):
         """Chưa mở dự án: tắt các lệnh của nhóm 3, 4, 5 + Đơn giá đặc biệt (LENH_CAN_DU_AN); có dự án: bật (riêng Lập phương án hộ vẫn tắt khi chỉ xem)."""
@@ -2543,6 +2607,30 @@ class CuaSoChinh(QMainWindow):
         if hasattr(self, 'ngan_lv'):
             self.ngan_lv.setCurrentWidget(self.trang)
         return True
+
+    def _bo_trang_an(self) -> int:
+        """1.0.08 (A+ / A−): Qt áp lại bảng kiểu cho MỌI widget còn sống kể cả trang đang ẩn (~1,2 ms / widget: 1.300 widget ~1,7 s).
+        Trước khi đổi cỡ chữ bỏ các trang đang ẩn có thể dựng lại: Bảng tổng hợp / Tiến độ / Quyết định (khung_trang - tạo lại ở
+        _dam_bao_trang khi mở tới) và tab phụ đang ẩn KHÔNG có thay đổi chưa lưu (hộ, Niêm yết, Đơn giá - lệnh mở tạo lại). Giữ: trang
+        đang xem, Danh sách hộ, Khái toán (số liệu đang soạn), tab hộ còn sửa dở. Trả số trang đã bỏ."""
+        n = 0
+        dang = self.trang.currentIndex()
+        for i in [i for i in list(self.khung_trang) if i != dang or self.ngan_lv.currentWidget() is not self.trang]:
+            k = self.khung_trang.pop(i)
+            k.setParent(None)
+            k.deleteLater()
+            n += 1
+        if hasattr(self, 'khung_tab'):
+            hien = self.khung_tab.stack_phu.currentWidget() if self.ngan_lv.currentWidget() is self.khung_tab.stack_phu else None
+            for khoa in [k for k in list(self.khung_tab.khoa) if not isinstance(k, int)]:
+                w = self.khung_tab.widget.get(khoa)
+                if w is None or w is hien:
+                    continue
+                if isinstance(khoa, tuple) and khoa[0] == 'ho' and (w.bo.co_thay_doi or w.ho_so.co_thay_doi()):
+                    continue
+                self.khung_tab.bo(self.khung_tab.khoa.index(khoa))
+                n += 1
+        return n
 
     # ---- trang bên phải tạo khi mở lần đầu
     def _dam_bao_trang(self, i: int):

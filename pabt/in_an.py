@@ -73,8 +73,11 @@ def thu_muc_mau(ten: str = TEN_CT) -> Path:
     """Thư mục có mẫu ten: mau_in cạnh PABT.exe (người dùng sửa được) > mau_in đóng gói kèm > mau_in của mã nguồn.
     Tìm theo từng mẫu: thư mục ghi có thể chỉ có một trong hai mẫu (Cập nhật mẫu in từ file một sheet)."""
     ung_vien = []
-    if os.environ.get('PABT_CHI_MAU_NHUNG') == '1':      # giả lập máy trắng (tu-kiem, kiểm thử): chỉ dùng mẫu nhúng
-        from . import mau_in_nhung
+    if os.environ.get('PABT_CHI_MAU_NHUNG') == '1':      # giả lập máy trắng (tu-kiem, kiểm thử): không thư mục mẫu cài đặt / mã nguồn
+        from . import mau_in_nhung                       # - mẫu người dùng đã thay (thư mục tùy chỉnh) vẫn dùng trước
+        for tc in ([thu_muc_mau_ghi()] if getattr(sys, 'frozen', False) else []) + [thu_muc_mau_tuy_chinh()]:
+            if (tc / f'{ten}.xlsx').exists():
+                return tc
         if mau_in_nhung.co_mau(ten):
             return THU_MUC_NHUNG
     elif getattr(sys, 'frozen', False):
@@ -600,7 +603,8 @@ def bytes_mau_hien_tai(ten: str) -> bytes:
 
 
 def ap_chuan_trang_mau(file, loai: str) -> None:
-    """Bộ lọc áp chuẩn khi thay mẫu: chi tiết = A4 dọc 72% lề 0,8 / 0,3 / 1,0 / 0,8 cm; tổng hợp = A3 ngang 55%; tắt "vừa N trang".
+    """Bộ lọc áp chuẩn khi thay mẫu: chi tiết = A4 dọc 72% lề 0,8 / 0,3 / 1,0 / 0,8 cm; tổng hợp = A3 ngang 55%; tắt "vừa N trang";
+    cỡ chữ tiêu đề 16 pt đậm / nội dung 14 pt (1.0.08).
     Đường kẻ (hình vẽ - openpyxl làm mất) được lưu riêng <mẫu>.duong_ke.xml TRƯỚC khi ghi lại file."""
     file = Path(file)
     ten = TEN_BTH if loai == 'tong_hop' else TEN_CT
@@ -618,9 +622,15 @@ def ap_chuan_trang_mau(file, loai: str) -> None:
     wb = openpyxl.load_workbook(file)
     ws = wb.worksheets[0]
     if loai == 'tong_hop':
+        from . import dia_phuong
         chuan_le_trang(ws, 'tong_hop')
         dat_kho_a3(ws)
+        chuan_co_chu_bth(ws, int(dia_phuong.lay('mau_in.IN_BANGTONGHOP.dong_du_lieu_dau', DONG_DAU_BTH)))   # 1.0.08: chữ 14 / 16 pt
     else:
+        cot, _, chu_dau = _cot_ct()
+        r_td = next((r for r in range(1, 300) if str(ws.cell(r, cot[0]).value or '').strip().upper() == chu_dau), None)
+        if r_td is not None:
+            chuan_co_chu_ct(ws, r_td)                    # 1.0.08: tiêu đề 16 pt đậm, nội dung 14 pt (như lúc in)
         from openpyxl.worksheet.properties import PageSetupProperties
         chuan_le_trang(ws, 'chi_tiet')
         ws.page_setup.paperSize = ws.PAPERSIZE_A4
@@ -3811,6 +3821,8 @@ def xuat_hang_loat(con, ds_ma_ho: list, thu_muc, pdf: bool = False, in_may: bool
         kq['loi'] = chay_excel(cap, 'in' if in_may else 'pdf', bao=bao_excel, so_ban=so_ban)
         if pdf:
             kq['pdf'] = [b for _, b in cap if b and Path(b).exists()]
+    from .csdl import giai_phong_bo_nho
+    giai_phong_bo_nho()                                 # 1.0.08: máy yếu - trả RAM các Workbook vừa lập
     return kq
 
 

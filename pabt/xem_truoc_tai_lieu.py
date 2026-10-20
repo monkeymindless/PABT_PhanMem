@@ -93,7 +93,23 @@ def co_hop_in() -> bool:
         return False
 
 
+DPI_XEM_MAY_YEU = 120           # 1.0.08: máy cấu hình yếu - ảnh trang xem trước tối đa 120 dpi (in thật vẫn DPI_IN_TOI_DA)
 DPI_IN_TOI_DA = 300             # ảnh trang gửi máy in: đủ nét cho chữ, không dựng ảnh 600 dpi (A4 ngang ~140 MB)
+
+
+def la_may_yeu() -> bool:
+    from .csdl import la_may_yeu as f
+    return f()
+
+
+def he_so_xem_toi_da() -> float:
+    """Hệ số phóng tối đa của khung xem trước: máy yếu = ảnh trang <= DPI_XEM_MAY_YEU (QPdfView: hệ số 1 = dpi logic màn hình)."""
+    if not la_may_yeu():
+        return 100.0
+    man = QGuiApplication.primaryScreen()
+    dpi = man.logicalDotsPerInch() if man is not None else 96
+    return max(0.25, DPI_XEM_MAY_YEU / max(1.0, dpi))
+
 
 
 def in_tai_lieu(doc, printer, tu: int = 0, den: int = 0) -> int:
@@ -266,6 +282,8 @@ class _TrangAnh(QScrollArea):
                              (vung.height() - 2 * self.LE) / max(1.0, co.height())))
         else:
             k = self.he_so * self.logicalDpiX() / 72
+        if la_may_yeu():                                 # máy yếu: ảnh trang không quá DPI_XEM_MAY_YEU (tiết kiệm RAM đồ họa)
+            k = min(k, DPI_XEM_MAY_YEU / 72)
         rong, cao = max(1, int(co.width() * k)), max(1, int(co.height() * k))
         anh = self.doc.render(self.trang, QSize(rong, cao))
         pm = QPixmap(rong + 2 * self.LE, cao + 2 * self.LE)
@@ -548,6 +566,7 @@ class KhungXemTruocTaiLieu(QFrame):
         hien = self._he_so_vua() if self._vua else self.he_so()
         ds = [k for k in PHONG_TO if (k > hien + 1e-3 if buoc > 0 else k < hien - 1e-3)]
         moi = (min(ds) if buoc > 0 else max(ds)) if ds else hien
+        moi = min(moi, he_so_xem_toi_da())
         self._vua = False
         if self.kieu == 'qpdfview':
             self.view.setZoomFactor(moi)
@@ -555,7 +574,7 @@ class KhungXemTruocTaiLieu(QFrame):
             self.view.vua_trang, self.view.he_so = False, moi
             self.view.ve()
 
-    def _he_so_vua(self) -> float:
+    def _he_so_vua_goc(self) -> float:
         """Hệ số phóng để trọn MỘT trang nằm trong khung (cả bề ngang lẫn bề cao). QPdfView: hệ số 1 = cỡ giấy (pt) x dpi
         logic màn hình / 72; trừ lề tài liệu và chỗ thanh cuộn."""
         if self.doc is None or self.doc.pageCount() <= 0:
@@ -566,6 +585,9 @@ class KhungXemTruocTaiLieu(QFrame):
         dpi = (man.logicalDotsPerInch() if man is not None else 96) / 72
         le = 2 * 12 + 20
         return max(0.1, min((vung.width() - le) / max(1.0, co.width() * dpi), (vung.height() - le) / max(1.0, co.height() * dpi)))
+
+    def _he_so_vua(self) -> float:
+        return min(self._he_so_vua_goc(), he_so_xem_toi_da())
 
     def vua_trang(self) -> None:
         if self.view is None:

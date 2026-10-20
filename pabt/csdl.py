@@ -17,6 +17,112 @@ LOC_LUU = 'Dự án LARC (*.larc)'                          # hộp lưu: luôn 
 LOC_MO = 'Dự án LARC (*.larc *.pabt)'                    # hộp mở: cả file .pabt cũ
 
 
+# ---------------------------------------------------------------- máy cấu hình yếu (1.0.08)
+NGUONG_RAM_MAY_YEU_MB = 4200    # RAM vật lý dưới chừng này (máy 4 GB báo ~3.9 GB) hoặc CPU <= 2 nhân = máy yếu
+NGUONG_NHAN_MAY_YEU = 2
+_MAY_YEU = {}
+
+
+def ram_vat_ly_mb() -> int | None:
+    """RAM vật lý (MB) qua GlobalMemoryStatusEx (Windows); không đọc được -> None."""
+    try:
+        import ctypes
+
+        class _MS(ctypes.Structure):
+            _fields_ = [('dwLength', ctypes.c_ulong), ('dwMemoryLoad', ctypes.c_ulong), ('ullTotalPhys', ctypes.c_ulonglong),
+                        ('ullAvailPhys', ctypes.c_ulonglong), ('ullTotalPageFile', ctypes.c_ulonglong),
+                        ('ullAvailPageFile', ctypes.c_ulonglong), ('ullTotalVirtual', ctypes.c_ulonglong),
+                        ('ullAvailVirtual', ctypes.c_ulonglong), ('ullAvailExtendedVirtual', ctypes.c_ulonglong)]
+        m = _MS()
+        m.dwLength = ctypes.sizeof(_MS)
+        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m)):
+            return None
+        return int(m.ullTotalPhys // (1024 * 1024))
+    except Exception:                                   # không phải Windows / ctypes lỗi
+        return None
+
+
+def la_may_yeu() -> bool:
+    """Máy cấu hình yếu: RAM vật lý < NGUONG_RAM_MAY_YEU_MB hoặc <= NGUONG_NHAN_MAY_YEU nhân CPU. PABT_MAY_YEU=1 / 0 ép (kiểm thử,
+    người dùng). Kết quả nhớ trong tiến trình (biến môi trường đọc lại mỗi lần)."""
+    ep = os.environ.get('PABT_MAY_YEU')
+    if ep in ('0', '1'):
+        return ep == '1'
+    if 'kq' not in _MAY_YEU:
+        ram = ram_vat_ly_mb()
+        nhan = os.cpu_count() or 1
+        _MAY_YEU['kq'] = bool((ram is not None and ram < NGUONG_RAM_MAY_YEU_MB) or nhan <= NGUONG_NHAN_MAY_YEU)
+    return _MAY_YEU['kq']
+
+
+def giai_phong_bo_nho(luon: bool = False) -> int:
+    """Máy yếu (hoặc luon): gc.collect() ngay - Workbook openpyxl / cửa sổ vừa đóng trả RAM sớm (bản 32-bit). Trả số đối tượng thu."""
+    if not (luon or la_may_yeu()):
+        return 0
+    import gc
+    return gc.collect()
+
+
+# ---------------------------------------------------------------- sao lưu tự động khi mở dự án để sửa (1.0.08)
+THU_MUC_SAO_LUU_TU_DONG = 'sao_luu_tu_dong'
+SAO_LUU_GIU = 5                 # mỗi dự án giữ chừng này bản gần nhất
+
+
+def thu_muc_sao_luu_tu_dong() -> Path:
+    from .dia_phuong import thu_muc_may
+    return thu_muc_may() / THU_MUC_SAO_LUU_TU_DONG
+
+
+def _goc_sao_luu(file) -> str:
+    """Tiền tố tên bản sao lưu: tên file + 6 ký tự băm đường dẫn đầy đủ (hai dự án cùng tên ở hai thư mục không lẫn)."""
+    import hashlib
+    p = Path(file)
+    try:
+        dd = str(p.resolve()).lower()
+    except OSError:
+        dd = str(p).lower()
+    return f'{p.stem}_{hashlib.sha1(dd.encode("utf-8")).hexdigest()[:6]}'
+
+
+def ds_sao_luu_tu_dong(file) -> list:
+    """Các bản sao lưu tự động của dự án file, mới nhất trước."""
+    tm = thu_muc_sao_luu_tu_dong()
+    if not tm.is_dir():
+        return []
+    goc = _goc_sao_luu(file)
+    return sorted((f for f in tm.iterdir() if f.is_file() and f.name.startswith(goc + '_') and not f.name.endswith('.tmp')),
+                  key=lambda f: f.name, reverse=True)
+
+
+def sao_luu_tu_dong(con, file, giu: int = SAO_LUU_GIU) -> Path | None:
+    """Bản sao nguyên tử file dự án đang mở (SQLite backup API trên chính kết nối - không tranh khóa với kết nối khác) vào
+    <thư mục máy>\\sao_luu_tu_dong\\<tên>_<băm>_<giờ><đuôi>; giữ giu bản gần nhất. Bỏ qua khi đang giữa giao dịch hoặc file nằm
+    sẵn trong thư mục sao lưu. Trả file đã ghi (None nếu bỏ qua)."""
+    file = Path(file)
+    tm = thu_muc_sao_luu_tu_dong()
+    try:
+        if con.in_transaction or file.resolve().parent == tm.resolve():
+            return None
+    except OSError:
+        return None
+    tm.mkdir(parents=True, exist_ok=True)
+    dich = tm / f'{_goc_sao_luu(file)}_{datetime.now():%Y%m%d_%H%M%S}{file.suffix or DUOI_DU_AN}'
+    tam = dich.with_name(dich.name + '.tmp')
+    dc = sqlite3.connect(str(tam))
+    try:
+        con.backup(dc)
+        dc.commit()
+    finally:
+        dc.close()
+    os.replace(tam, dich)
+    for cu in ds_sao_luu_tu_dong(file)[max(1, giu):]:
+        try:
+            cu.unlink()
+        except OSError:
+            pass
+    return dich
+
+
 def la_file_du_an(p) -> bool:
     return Path(str(p)).suffix.lower() in DUOI_MO
 

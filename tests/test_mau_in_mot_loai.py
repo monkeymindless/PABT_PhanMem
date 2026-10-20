@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 import sys
 import tempfile
+import os
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -14,6 +15,8 @@ from pabt import in_an
 GOC = Path(__file__).resolve().parents[1]
 
 
+@unittest.skipIf(os.environ.get('PABT_CHI_MAU_NHUNG') == '1',
+                 'giả lập máy trắng (1.0.07): bài này giả lập bản cài CÓ thư mục mau_in cạnh PABT.exe')
 class TestMauInMotLoai(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

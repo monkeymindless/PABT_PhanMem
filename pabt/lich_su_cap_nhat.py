@@ -7,6 +7,17 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.08', '20/10/2026', (
+        'Máy cấu hình yếu (RAM dưới 4 GB hoặc CPU 2 nhân) được tự nhận ra: tắt hiệu ứng đổ bóng, nhận dạng chữ (OCR) chỉ dùng một luồng '
+        'để chuột và giao diện không bị đơ, ảnh xem trước bản in tối đa 120 dpi, tự trả bộ nhớ sau khi đóng cửa sổ lập phương án hoặc '
+        'xuất bản in hàng loạt.',
+        'Phóng to / thu nhỏ cỡ chữ (A+ / A−) nhanh hơn khoảng 3 lần: các trang đang ẩn được dựng lại khi mở tới.',
+        'Kéo thả file từ Windows Explorer vào cửa sổ: dự án .larc / .pabt (mở), gói cập nhật .larcud (cài), gói mẫu in .pabtcfg (cài), '
+        'Excel .xlsx / .xlsm (nhập).',
+        'Mỗi lần mở dự án để sửa, phần mềm tự sao lưu một bản vào thư mục sao_luu_tu_dong (giữ 5 bản gần nhất mỗi dự án) - phòng mất '
+        'điện, ổ cứng cũ hỏng file.',
+        'Thay mẫu in bằng file Excel khác: tự áp cả cỡ chữ chuẩn (tiêu đề 16 pt đậm, nội dung 14 pt) cùng khổ giấy, tỷ lệ, lề.',
+    )),
     ('1.0.07', '20/10/2026', (
         'Bộ mẫu in chuẩn nhúng sẵn trong phần mềm: máy mới cài, chưa có thư mục mẫu in vẫn xuất phương án chi tiết và bảng tổng hợp '
         'đủ đường kẻ. Mẫu đã sửa trong %APPDATA%\\PABT\\mau_in vẫn được ưu tiên.',

@@ -1853,6 +1853,24 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - Test cũ sửa theo: test_in_vua_chu (16 pt), test_yeu_cau_1004 (8 NBSP), test_in_16_10 (dò mốc trang rộng hơn; gom 1 trang offscreen ngưỡng
     400), test_khong_trung_lenh (thẻ tổng quan). `test_giao_dien.test_bieu_tuong_duy_nhat_co_vien` lỗi vì `logo_PABT.png` (file của người dùng,
     chưa theo dõi git) lại nằm ở gốc repo - không phải lỗi mã.
+- 1.0.08 (người dùng 20/10/2026, máy cấu hình yếu; test `tests/test_yeu_cau_1008.py`):
+  - `csdl.la_may_yeu()` (RAM vật lý `ram_vat_ly_mb` qua GlobalMemoryStatusEx < `NGUONG_RAM_MAY_YEU_MB` 4200 hoặc cpu_count <= 2; nhớ trong
+    tiến trình `_MAY_YEU`; PABT_MAY_YEU=1 / 0 ép), giao_dien xuất lại tên. Máy yếu: `do_bong` không bật dù PABT_HIEU_UNG_BONG=1; `ocr._chay`
+    env `moi_truong_ocr()` (OMP_THREAD_LIMIT `LUONG_OCR_MAY_YEU` '1'); xem trước `xem_truoc_tai_lieu.he_so_xem_toi_da()` (QPdfView: phóng / vừa
+    trang không quá `DPI_XEM_MAY_YEU` 120 dpi; `_TrangAnh` cũng chặn) - in vẫn DPI_IN_TOI_DA; `csdl.giai_phong_bo_nho()` (gc.collect CHỈ máy
+    yếu, `luon=True` ép) sau CuaSoLapPA.done / closeEvent (QTimer 0), cuối `in_an.xuat_hang_loat`, `van_ban_trinh.xuat_bo_ho_so`.
+  - A+ / A−: chi phí là `app.setStyleSheet` áp lại MỌI widget còn sống (~1,2 ms / widget, cả trang ẩn - không hoãn được trong Qt). Nay
+    `giao_dien.TRUOC_DOI_TY_LE` (hàm gọi trước khi áp kiểu, rồi sendPostedEvents DeferredDelete) -> `CuaSoChinh._bo_trang_an`: bỏ khung
+    khung_trang không đang xem (tạo lại ở `_dam_bao_trang`) và tab phụ ẩn không có thay đổi chưa lưu (khung_tab.bo; lệnh mở tạo lại). GIỮ
+    danh sách hộ, Khái toán, tab hộ sửa dở. 300 hộ / 1.331 widget: 1,70 -> ~0,46 - 0,52 s mỗi nấc (offscreen).
+  - Kéo thả: `CuaSoChinh.setAcceptDrops(True)`, `_file_keo` (đuôi `DUOI_KEO_THA`), dropEvent -> QTimer 0 -> `mo_file_keo(p)` (mo /
+    cap_nhat_phan_mem / nhap_goi_mau / nhap_excel qua `_chay_lenh`).
+  - Sao lưu tự động: `csdl.sao_luu_tu_dong(con, file)` - `con.backup` trên CHÍNH kết nối đang mở (kết nối thứ hai đọc sẽ giữ khóa SHARED,
+    journal DELETE làm lần ghi của phần mềm báo "database is locked"), ghi .tmp + os.replace, tên `<stem>_<sha1 đường dẫn 6>_<giờ><đuôi>`
+    ở `<thư mục máy>\sao_luu_tu_dong`, giữ `SAO_LUU_GIU` 5; bỏ qua khi in_transaction / file nằm sẵn trong thư mục đó. `app.mo` (không chỉ
+    xem) hẹn `SAO_LUU_SAU_MS` 1500 ms -> `_sao_luu_tu_dong` (lỗi chỉ báo thanh trạng thái).
+  - `in_an.ap_chuan_trang_mau` áp cả cỡ chữ (`chuan_co_chu_ct` / `chuan_co_chu_bth`). `logo_PABT.png` ở gốc repo (làm hỏng test biểu tượng)
+    đã đưa vào Thùng rác theo yêu cầu người dùng.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

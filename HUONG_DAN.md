@@ -485,6 +485,18 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   chỗ trống {…}; tự áp chuẩn (chi tiết A4 72% lề chuẩn, tổng hợp A3 55%) và dùng ngay lần in sau. **Xuất mẫu hiện tại ra Excel để
   chỉnh sửa…**, **Khôi phục mẫu chuẩn gốc** (mẫu tùy chỉnh cũ chuyển vào `mau_in\cu\`, không xóa).
 
+## Máy cấu hình yếu, kéo thả file, sao lưu tự động (1.0.08)
+
+- **Máy cấu hình yếu** (RAM dưới 4 GB hoặc CPU 2 nhân - phần mềm tự nhận ra): tắt hiệu ứng đổ bóng; nhận dạng chữ bản scan (OCR) chỉ
+  dùng một luồng CPU để chuột / bàn phím không bị đơ; ảnh xem trước bản in tối đa 120 dpi (in thật vẫn đủ nét); tự trả bộ nhớ sau khi
+  đóng cửa sổ lập phương án, sau khi xuất bản in hàng loạt.
+- **Phóng to / thu nhỏ chữ (A+ / A−)**: các trang đang ẩn (Bảng tổng hợp, Tiến độ, Quyết định, cửa sổ hộ không có thay đổi chưa lưu,
+  Niêm yết, Đơn giá) được đóng và dựng lại khi mở tới - đổi cỡ chữ nhanh hơn. Hộ đang sửa dở và trang Khái toán giữ nguyên.
+- **Kéo thả từ Windows Explorer** vào cửa sổ phần mềm: file dự án `.larc` / `.pabt` (mở), gói cập nhật `.larcud` (cài), gói mẫu in &
+  cấu hình `.pabtcfg` (cài), Excel `.xlsx` / `.xlsm` (nhập - file phương án chi tiết tự nhận ra).
+- **Sao lưu tự động**: mỗi lần mở dự án để sửa, một bản sao được ghi vào `%APPDATA%\PABT\sao_luu_tu_dong\` (giữ 5 bản gần nhất
+  mỗi dự án, tên file kèm ngày giờ). Cần khôi phục: mở bản sao đó rồi **Lưu dự án thành…**. Mở chỉ xem không sao lưu.
+
 ## Màn hình chính khi đã mở dự án - tổng quan dự án (1.0.07)
 
 Bấm **Màn hình chính** (đầu menu trái) khi đang mở dự án: dải tên dự án / địa bàn / chủ đầu tư; 4 thẻ **Dự án mới**, **Mở dự án

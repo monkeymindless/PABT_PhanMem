@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QApplication,
                                QLineEdit, QSpinBox, QStyledItemDelegate, QToolButton, QVBoxLayout, QWidget)
 
 from .lap_pa import bo_dau
+from .csdl import giai_phong_bo_nho, la_may_yeu  # noqa: F401  (1.0.08: máy cấu hình yếu)
 
 # Hệ thống thiết kế (đặc tả ARCH-PABT-2026-V4 mục 3, người dùng 11/10/2026): MỘT nguồn màu cho cả phần mềm
 TOKEN = dict(
@@ -1380,7 +1381,7 @@ def do_bong(w: QWidget, mo: int = 18, lech: int = 3, dam: int = 38) -> QWidget:
     Qt5 trên màn hình phóng to làm mờ chữ trong khung)."""
     import os
     import pabt
-    if os.environ.get('PABT_HIEU_UNG_BONG') == '1' and not getattr(pabt, 'QT5', False):
+    if os.environ.get('PABT_HIEU_UNG_BONG') == '1' and not getattr(pabt, 'QT5', False) and not la_may_yeu():
         from PySide6.QtWidgets import QGraphicsDropShadowEffect
         e = QGraphicsDropShadowEffect(w)
         e.setBlurRadius(mo)
@@ -2977,6 +2978,9 @@ def _co_gian_widget(w, t: float) -> None:
         w.setStyleSheet(moi)
 
 
+TRUOC_DOI_TY_LE = []            # 1.0.08: hàm gọi TRƯỚC khi áp kiểu mới - cửa sổ chính bỏ các trang ẩn (tạo lại khi mở tới)
+
+
 def dat_ty_le(t: float, luu: bool = True) -> float:
     """Đổi tỷ lệ giao diện (cỡ chữ, khoảng đệm) cho mọi cửa sổ; luu: nhớ cho lần mở sau.
     Việc tốn nhất là Qt áp lại kiểu (QSS) cho mọi widget: tắt vẽ lại các cửa sổ trong lúc đổi (không chớp, không vẽ dở),
@@ -2991,6 +2995,13 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
         _bao_ty_le(t)
         return t
     TY_LE[0] = t
+    for ham in list(TRUOC_DOI_TY_LE):                   # 1.0.08: Qt áp lại kiểu cho MỌI widget (~1,2 ms / widget): bớt trang ẩn trước
+        try:
+            ham()
+        except RuntimeError:                            # cửa sổ đã hủy
+            TRUOC_DOI_TY_LE.remove(ham)
+    if TRUOC_DOI_TY_LE:
+        app.sendPostedEvents(None, QEvent.Type.DeferredDelete)     # hủy ngay các trang vừa bỏ (deleteLater), không chờ vòng sự kiện
     cua_so = [w for w in app.topLevelWidgets() if w.isVisible()]
     for w in cua_so:
         w.setUpdatesEnabled(False)
