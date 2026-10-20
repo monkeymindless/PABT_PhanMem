@@ -26,13 +26,13 @@ class TestKinhPhi(unittest.TestCase):
         self.td.cleanup()
 
     def test_loai_theo_ten(self):
-        for ten, loai in (('Xây dựng đường ĐT762 đoạn qua xã Trị An', 'tuyen'), ('Nạo vét kênh tiêu', 'tuyen'),
+        for ten, loai in (('Xây dựng đường số 9 đoạn qua xã Trị An', 'tuyen'), ('Nạo vét kênh tiêu', 'tuyen'),
                           ('Đường dây 110kV', 'tuyen'), ('Khu tái định cư đường ĐT768', 'khac'),
                           ('Cụm công nghiệp Thạnh Phú', 'khac'), ('Xây dựng khu dân cư', 'khac'), ('Trường tiểu học', 'khac')):
             self.assertEqual(lap_pa.loai_kinh_phi_tu_ten(ten), loai, ten)
 
     def test_luu_va_gioi_han(self):
-        self.con.execute("UPDATE du_an SET ten = 'Xây dựng đường ĐT762' WHERE id = 1")
+        self.con.execute("UPDATE du_an SET ten = 'Xây dựng đường số 9' WHERE id = 1")
         self.con.commit()
         self.assertEqual(lap_pa.kinh_phi_to_chuc(self.con), ('tuyen', D('3.5'), True))
         lap_pa.luu_kinh_phi_to_chuc(self.con, 'khac', '')
@@ -43,7 +43,7 @@ class TestKinhPhi(unittest.TestCase):
         self.assertEqual(lap_pa.kinh_phi_to_chuc(self.con)[1], D('3.2'))
 
     def test_bang_tong_hop_theo_ty_le(self):
-        self.con.execute("UPDATE du_an SET ten = 'Xây dựng đường ĐT762' WHERE id = 1")
+        self.con.execute("UPDATE du_an SET ten = 'Xây dựng đường số 9' WHERE id = 1")
         self.con.commit()
         p = in_an.lap_bang_tong_hop(self.con, Path(self.td.name) / 'bth.xlsx')
         ws = openpyxl.load_workbook(p).worksheets[0]

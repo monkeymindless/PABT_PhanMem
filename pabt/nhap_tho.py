@@ -354,7 +354,7 @@ def mo_ta_cot(bo: BoCot) -> str:
 
 
 def dia_ban_tu_ten(ten: str) -> tuple:
-    """'Dự án ĐT762 đoạn qua xã Bàu Hàm' -> ('Xã', 'Bàu Hàm'); không thấy thì ('Phường', '')."""
+    """'Dự án đường số 9 đoạn qua xã Bàu Hàm' -> ('Xã', 'Bàu Hàm'); không thấy thì ('Phường', '')."""
     m = re.search(r'\b(xã|phường|thị trấn)\s+([^,;()\n]+)', ten, re.I)
     if not m:
         return 'Phường', ''

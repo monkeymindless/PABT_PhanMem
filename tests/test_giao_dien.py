@@ -39,7 +39,7 @@ class TestMauIn(unittest.TestCase):
         for ten in ('IN_CHITIET', 'IN_BANGTONGHOP'):
             ws = openpyxl.load_workbook(in_an.thu_muc_mau() / f'{ten}.xlsx').active
             chu = '\n'.join(c.value for r in ws.iter_rows() for c in r if isinstance(c.value, str))
-            self.assertIsNone(re.search(r'Vĩnh Cửu|Đồng Nai|Phan Tuấn|Đinh Công|Phạm Xuân|CNVC', chu), ten)
+            self.assertIsNone(re.search(r'Vĩnh Cửu|Đồng Nai|CNVC', chu), ten)
             for k in ('{DON_VI_CAP_TREN', '{DON_VI_TIEU_DE}', '{nguoi_lap}', '{nguoi_ky}', '{CHUC_VU_KY}'):
                 self.assertIn(k, chu, ten)
 
@@ -52,7 +52,7 @@ class TestBanInMau(unittest.TestCase):
             td = Path(td)
             p = td / 'a.pabt'
             du_an_moi.tao_du_an(p, dict(ten='Dự án X', cap_dia_ban='Xã', ten_dia_ban='Bàu Hàm', nam='2026'),
-                                [dict(ho_ten='A', so_to='74', so_thua='362', loai_dat='ONT', dt_thu_hoi='43,7', vi_tri='1')],
+                                [dict(ho_ten='A', so_to='3', so_thua='12', loai_dat='ONT', dt_thu_hoi='43,7', vi_tri='1')],
                                 [dict(loai_dat='ONT', vi_tri='1', gia='1000000')])
             con = csdl.mo(p)
             try:
@@ -66,7 +66,7 @@ class TestBanInMau(unittest.TestCase):
                 con.close()
             ws = openpyxl.load_workbook(f).active                 # file vẫn mở được sau khi chèn hình
             self.assertEqual((ws['A2'].value, ws['B19'].value),
-                             ('CHI NHÁNH VĨNH CỬU', 'Thửa đất số 362, tờ bản đồ số 74, loại đất ONT, xã Bàu Hàm (Vị trí 1)'))
+                             ('CHI NHÁNH VĨNH CỬU', 'Thửa đất số 12, tờ bản đồ số 3, loại đất ONT, xã Bàu Hàm (Vị trí 1)'))
             self.assertIn('PHÓ GIÁM ĐỐC', [c.value for r in ws.iter_rows() for c in r])
             with zipfile.ZipFile(f) as z:
                 dr = [n for n in z.namelist() if n.startswith('xl/drawings/drawing')]

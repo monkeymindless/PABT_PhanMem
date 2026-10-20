@@ -46,11 +46,11 @@ Eo)
 2. Phương án chỉ tiết bồi thường, hỗ trợ, tái định cư đối với 07 trường hà
 Z Í (+ — `, thủ 1 €(jVèm theo Quyết định số 777/QĐ-UBND ngày 25 tháng 12 năm 2024 của Ủy ban nhân dân
 2 |TrầnThỉ Í vnh Cmu(áp 1.1827| — 11827 đn ỜNg, 900.000.000 25.000.000 150.000.000| 28800.000|  12.000000| 1.115.800.000 trường
-Hải 2, xã Hiểu nhóm còn lại hợp tái
+Hảo 2, xã Mẫu nhóm còn lại hợp tái
 3 Khi mi. Huyện Mẫu (ấp 300.000.000 40.000.000 60000000Ì  7200000| 12.000000 419.200.000 | trường
 ấp 3, xã Mẫu Không
-Đặng tà ng 1957| 19517 $2 Đuỳng 217750 | — 400.000.000 20.000.000 70000000Ì  4320000| 12.000000 506.320.000 xẻ
-Minh Hải 2, xã Hiểu nhóm còn lại =
+Đặng tà ng 1960| 19601 $2 Đuỳng 217750 | — 400.000.000 20.000.000 70000000Ì  4320000| 12.000000 506.320.000 xẻ
+Minh Hảo 2, xã Mẫu nhóm còn lại =
 cũ) định cư
 '''
 
@@ -71,12 +71,12 @@ class TestChuQuyetDinh(unittest.TestCase):
 
     def test_dong_ho_ban_scan(self):
         dong = QD_SCAN.splitlines()
-        vt, diem = quan_ly._tim_dong_ho(dong, 'Đặng Minh Hải')
+        vt, diem = quan_ly._tim_dong_ho(dong, 'Đặng Minh Hảo')
         tien, chac, _ = quan_ly._tien_dong(dong, vt)
         self.assertEqual((tien, chac), (D(506320000), True))           # 400.000.000 + … + 12.000.000 = 506.320.000
-        vt, _ = quan_ly._tim_dong_ho(dong, 'Trần Thị Hải')             # tên dính liền "TrầnThỉ"
+        vt, _ = quan_ly._tim_dong_ho(dong, 'Trần Thị Hảo')             # tên dính liền "TrầnThỉ"
         self.assertEqual(quan_ly._tien_dong(dong, vt)[:2], (D(1115800000), True))
-        self.assertEqual(quan_ly._tim_dong_ho(dong, 'Nguyễn Văn Khải'), (None, 0))   # không nhầm sang "Hải"
+        self.assertEqual(quan_ly._tim_dong_ho(dong, 'Nguyễn Văn Khảo'), (None, 0))   # không nhầm sang "Hảo"
 
     def test_cong_khop(self):
         self.assertTrue(quan_ly._cong_khop([D(5), D(1), D(2), D(3)]))
@@ -127,7 +127,7 @@ class TestDocQDMotHo(unittest.TestCase):
     def test_ban_scan_da_nhan_dang(self):
         """Như PDF scan: các dòng do OCR đọc ra (thay doc_van_ban để không cần Tesseract)."""
         with self.con:
-            self.con.execute("UPDATE ho SET ho_ten = 'Đặng Minh Hải' WHERE ma_ho = 2")
+            self.con.execute("UPDATE ho SET ho_ten = 'Đặng Minh Hảo' WHERE ma_ho = 2")
         goc = quan_ly.doc_van_ban
         quan_ly.doc_van_ban = lambda f, *a, **k: ([[x] for x in QD_SCAN.splitlines()], True)
         try:
@@ -218,25 +218,25 @@ T        Họ và tên                Địa chỉ                              
 1             2                      3                 4              5           6              7                  8                    9                   10                   11
                             Số 1, Khu phố
  1  Bà Lê Thị               2, Phường A,                  500,0          500,0                                                          351.000.000                        -          351.000.000
-    Mai                    thành phố     
+    Mận                    thành phố     
                            Mẫu    
-    Ông Hà Văn             phường B,  
- 2  Tâm                    thành phố                   5.000,0        5.000,0                                                        1.200.000.000                 5.000.000       1.205.000.000
+    Ông Vũ Văn             phường B,  
+ 2  Tám                    thành phố                   5.000,0        5.000,0                                                        1.200.000.000                 5.000.000       1.205.000.000
                            Mẫu    
                                                         Diện tích đất hỗ trợ (m2)               Giá trị bồi                            Hỗ trợ đào tạo,
 ST                                                               Nông nghiệp                    thường, hỗ           Hỗ trợ ổn         chuyển đổi nghề           Thưởng di         Tổng cộng giá trị
 T         Họ và tên                 Địa chỉ                                                   trợ nhà ở, vật       định đời sống       và tìm kiếm việc               dời           bồi thường, hỗ
 1              2                       3                   4              5            6               7                   8                     9                    10                     11
      Ông Đỗ    
-     Minh Khoa và ông        Ấp Một,       
+     Minh Kiên và ông        Ấp Một,       
      Đỗ Minh                 xã Mẫu,   
- 3   Quân (nhận thừa         tỉnh Thử                     4.000,0         4.000,0                                         6.000.000          1.500.000.000                           -       1.506.000.000
+ 3   Quốc (nhận thừa         tỉnh Thử                     4.000,0         4.000,0                                         6.000.000          1.500.000.000                           -       1.506.000.000
      kế của hộ ông           Mẫu.
      Đỗ Văn    
-     Lộc) 
+     Lực) 
      Ông Phan An             ấp Hai,       
- 4   Bình; bà Lý             xã Mẫu,                               -                               12.000.000                                                                       -            12.000.000
-     Thị Hoa                 tỉnh Thử      
+ 4   Bích; bà Lý             xã Mẫu,                               -                               12.000.000                                                                       -            12.000.000
+     Thị Huệ                 tỉnh Thử      
                              Mẫu
      Cộng (I+II):                                     12.000,0                                       12.000.000         6.000.000       3.051.000.000             5.000.000     3.074.000.000
  1. Tiền bồi thường, hỗ trợ                                                                                                                                                     3.074.000.000
@@ -255,9 +255,9 @@ class TestBangPDF(unittest.TestCase):
         from pabt.pdf_bang import tach_bang
         ds = tach_bang(BANG_PDF.splitlines())
         self.assertEqual([d.stt for d in ds], [1, 2, 3, 4])                       # dòng "Cộng", "1. Tiền…" không phải hộ
-        self.assertEqual([d.ten for d in ds], ['Bà Lê Thị Mai', 'Ông Hà Văn Tâm',
-                                               'Ông Đỗ Minh Khoa và ông Đỗ Minh Quân (nhận thừa kế của hộ ông Đỗ Văn Lộc)',
-                                               'Ông Phan An Bình; bà Lý Thị Hoa'])
+        self.assertEqual([d.ten for d in ds], ['Bà Lê Thị Mận', 'Ông Vũ Văn Tám',
+                                               'Ông Đỗ Minh Kiên và ông Đỗ Minh Quốc (nhận thừa kế của hộ ông Đỗ Văn Lực)',
+                                               'Ông Phan An Bích; bà Lý Thị Huệ'])
         self.assertEqual(ds[1].tien, {'tien_ho_tro': D(1200000000), 'tien_thuong': D(5000000), 'so_tien': D(1205000000)})
         self.assertEqual(ds[2].tien['tien_ho_tro'], D(6000000 + 1500000000))          # ổn định + đào tạo
         self.assertEqual(ds[3].tien, {'tien_tai_san': D(12000000), 'so_tien': D(12000000)})
@@ -273,7 +273,7 @@ class TestBangPDF(unittest.TestCase):
             p = Path(td) / 'da.pabt'
             nhap_tho.nhap(xl, p, 'Thử')
             con = csdl.mo(p)
-            for t in ('Lê Thị Mai', 'Hà Văn Tâm', 'Đỗ Văn Lộc', 'Phan An Bình'):
+            for t in ('Lê Thị Mận', 'Vũ Văn Tám', 'Đỗ Văn Lực', 'Phan An Bích'):
                 con.execute("INSERT INTO ho (ma_ho, thu_tu, ho_ten) VALUES ((SELECT MAX(ma_ho) + 1 FROM ho), 99, ?)", (t,))
             con.commit()
             f = Path(td) / 'bth.pdf'
@@ -285,12 +285,12 @@ class TestBangPDF(unittest.TestCase):
                 kq = quan_ly.doc_quyet_dinh_nhieu(con, [f])
             self.assertEqual((kq.so_qd, kq.ngay), ('555/QĐ-UBND', '29/09/2026'))
             ten = {d.ho_ten: d for d in kq.dong}
-            self.assertEqual(sorted(ten), sorted(['Lê Thị Mai', 'Hà Văn Tâm', 'Đỗ Văn Lộc', 'Phan An Bình']))
-            self.assertEqual(ten['Đỗ Văn Lộc'].so_tien, D(1506000000))
-            self.assertIn('nhiều người', ten['Phan An Bình'].cach_khop)
-            self.assertEqual(ten['Phan An Bình'].chi_tiet, {'tien_tai_san': D(12000000)})
+            self.assertEqual(sorted(ten), sorted(['Lê Thị Mận', 'Vũ Văn Tám', 'Đỗ Văn Lực', 'Phan An Bích']))
+            self.assertEqual(ten['Đỗ Văn Lực'].so_tien, D(1506000000))
+            self.assertIn('nhiều người', ten['Phan An Bích'].cach_khop)
+            self.assertEqual(ten['Phan An Bích'].chi_tiet, {'tien_tai_san': D(12000000)})
             r = quan_ly.ap_quyet_dinh(con, 'pd', kq.dong, kq.so_qd, kq.ngay)
-            x = theo_doi.doc_qd_ho(con, ten['Phan An Bình'].ma_ho)[0]
+            x = theo_doi.doc_qd_ho(con, ten['Phan An Bích'].ma_ho)[0]
             self.assertEqual((x['so_tien'], x['tien_tai_san'], x['tien_ho_tro']), ('12000000', '12000000', ''))
             self.assertEqual(r['so_ho'], 4)
             con.close()

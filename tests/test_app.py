@@ -10,7 +10,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from pabt.tien import D, vn
+from pabt import nghiep_vu
+from pabt.tien import vn
 
 from tests.test_nghiep_vu import FILE_EXCEL
 
@@ -70,9 +71,10 @@ class TestCuaSo(unittest.TestCase):
                 from pabt import app as ud
                 w = ud.CuaSoChinh()
                 w.mo(str(p))
-                self.assertEqual(w.mo_hinh.rowCount(), 116)
-                self.assertEqual(w.mo_hinh.dong[0]['tong'], D('812506000'))
-                self.assertEqual(vn(w.bang_tong_hop.tien.dong()[0][10]), '812.506.000')     # tiền từng mục: Bảng tổng hợp
+                self.assertEqual(w.mo_hinh.rowCount(), w.con.execute('SELECT COUNT(*) FROM ho').fetchone()[0])
+                tong = nghiep_vu.tinh_ho(w.con, w.mo_hinh.dong[0]['ma_ho']).tong
+                self.assertEqual(w.mo_hinh.dong[0]['tong'], tong)
+                self.assertEqual(vn(w.bang_tong_hop.tien.dong()[0][10]), vn(tong))     # tiền từng mục: Bảng tổng hợp
                 ud.ChiTietHo(w.con, 1, w)
                 w.close()
             else:

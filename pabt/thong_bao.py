@@ -49,7 +49,7 @@ def chu_loi(viec: str, e: BaseException) -> str:
         Lý do: File đang được chương trình khác mở (Excel, Word, Google Drive đang đồng bộ…) hoặc không có quyền ghi.
         Cách xử lý: Đóng file đó (hoặc chờ đồng bộ xong) rồi làm lại; …
 
-        Chi tiết kỹ thuật: PermissionError: [Errno 13] Permission denied: 'D:\\\\…\\\\DT762.pabt'
+        Chi tiết kỹ thuật: PermissionError: [Errno 13] Permission denied: 'D:\\\\…\\\\DuAn.larc'
     """
     ly_do, cach = giai_thich(e)
     viec = viec.rstrip(' .:')

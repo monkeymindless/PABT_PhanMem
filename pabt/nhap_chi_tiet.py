@@ -182,7 +182,7 @@ def _gia_tri_sau(r: list, c: int) -> str:
 
 def _doc_cccd(s: str) -> tuple:
     """'092075012345 - ngày 29/9/2021 - Nơi cấp: Cục CS QLHC về TTXH.' -> (số, ngày cấp, nơi cấp)."""
-    # ô có hai người (chồng / vợ): "030056005715\n030158008419" hoặc "… ; …" -> số đầu (ghép lại thành 24 chữ số là sai)
+    # ô có hai người (chồng / vợ): "001001000001\n001001000002" hoặc "… ; …" -> số đầu (ghép lại thành 24 chữ số là sai)
     s = re.split(r'\n|;|\s-\s(?=\d)|\svà\s', _nfc(s).strip())[0]
     s = _txt(s).rstrip('.')
     m = re.match(r'([\d\s.]{9,20})', s)

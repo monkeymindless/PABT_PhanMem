@@ -85,7 +85,7 @@ def tao_file(p: Path) -> dict:
     ], tdc='Sau khi UBND xã xác nhận điều kiện tái định cư (nếu có).')
     dat = thanh_tien_khoan(D('120'), 2000000, 1)
     con1, con2 = thanh_tien_khoan(4, 100000, 1), thanh_tien_khoan(6, 100000, 1)
-    _sheet(wb.create_sheet('2'), 'Trần Thị B', '079 057 018657', [
+    _sheet(wb.create_sheet('2'), 'Trần Thị B', '079 001 000002', [
         (1, 'Bồi thường đất', None, 120, None, None, int(dat)),
         ('1.1', 'Thửa đất số 9, tờ bản đồ số 7, loại đất CLN, xã Phú Lý', 'm²', 120, 2000000, 1, int(dat)),
         (2, 'Hỗ trợ về nhà và công trình xây dựng', None, None, None, None, int(con1 + con2)),
@@ -128,7 +128,7 @@ class TestNhapChiTiet(unittest.TestCase):
         self.assertEqual(h.khoan[2][1].so_luong, D(3))                  # 2,9999999999999996 -> 3
         self.assertEqual(h.khoan[2][2].ty_le, None)
         self.assertEqual(h.tong['tong'], self.so['k1'] + self.so['k2'] + self.so['k3'])
-        self.assertEqual(kq.ho[1].so_cccd, '079057018657')
+        self.assertEqual(kq.ho[1].so_cccd, '079001000002')
         self.assertEqual([d.ten for d in kq.ho[1].khoan[2]], ['Hàng rào tạm - Đoạn phía trước', 'Hàng rào tạm - Đoạn phía sau'])
         self.assertTrue(kq.ho[3].loi)
         self.assertEqual(kq.du_an['ten'], 'Đường thử nghiệm')

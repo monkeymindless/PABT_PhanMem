@@ -206,7 +206,7 @@ class TestBoDauNhanh(unittest.TestCase):
         from pabt import don_gia
         from pabt.lap_pa import _bo_dau
         mau = [chr(i) for i in range(0x20, 0x3000)]                     # từng ký tự: Latin, dấu rời, khoảng trắng lạ...
-        mau += ['Nhà cấp 4 - Tường gạch, mái tôn', 'ĐƯỜNG  ĐT762 đoạn', 'Cây Xoài (Đk thân > 20-30 cm)', 'Æsir ǼĲ ﬁ',
+        mau += ['Nhà cấp 4 - Tường gạch, mái tôn', 'ĐƯỜNG  SỐ 9 đoạn', 'Cây Xoài (Đk thân > 20-30 cm)', 'Æsir ǼĲ ﬁ',
                 unicodedata.normalize('NFD', 'Bàu Hàm, Trảng Bom'), 'İstanbul ŉ ẞ', '  ', '',
                 'Sân bê tông – 120 m² × 2 ≥ Ø 30 …', 'Cà phế ²̀', 'Ω Å K (ký hiệu dạng tách khác)']
         con = csdl.mo(don_gia.file_goc(), chi_doc=True)

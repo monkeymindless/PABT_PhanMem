@@ -64,7 +64,7 @@ class TestMayChu(_Nen):
 
     def test_sai_mat_khau_khoa_tai_khoan(self):
         qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
-        may_chu.them_nguoi_dung(qt, 'vinh.pt', 'Phan Tuấn Vinh', 'abc123')
+        may_chu.them_nguoi_dung(qt, 'vinh.pt', 'Nguyễn Văn Thử', 'abc123')
         for _ in range(4):
             with self.assertRaises(LoiMayChu):
                 may_chu.dang_nhap(self.goc, 'vinh.pt', 'sai')

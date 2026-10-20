@@ -11,6 +11,7 @@ import openpyxl
 
 from pabt import csdl, in_an, nghiep_vu, nhap_excel
 from pabt.lap_pa import BoSoan
+from pabt.tien import D
 from tests.test_nghiep_vu import FILE_EXCEL
 
 
@@ -68,21 +69,25 @@ class TestBanIn(unittest.TestCase):
         self.assertEqual(''.join(loai[:n]), 'HII' + 'H' + 'I' * 9 + 'H' + 'III' + 'H' + 'H' + 'II' + 'RT')
         tong_r = 18 + n - 1
         self.assertEqual(ws.cell(tong_r, 1).value, 'TỔNG CỘNG')                 # 0.9.88: ô gộp từ cột STT, căn giữa
-        self.assertEqual(ws.cell(tong_r, 7).value, 812506000)
-        self.assertEqual(ws['G18'].value, 153108000)                    # dòng mục 1: tổng thành tiền
-        self.assertEqual(ws['D18'].value, 625.7)                        # và tổng diện tích
+        pa = nghiep_vu.doc_phuong_an(self.con, 1)
+        self.assertEqual(ws.cell(tong_r, 7).value, int(kq.tong))
+        self.assertEqual(ws['G18'].value, int(kq.muc[1]))               # dòng mục 1: tổng thành tiền
+        self.assertEqual(D(str(ws['D18'].value)), sum(d.dien_tich for d in pa.dat))   # và tổng diện tích
         self.assertEqual(ws['A19'].value, '1.1')
-        self.assertTrue(ws['B19'].value.startswith('Thửa đất số 394, tờ bản đồ số 35, loại đất ODT, phường Trị An'), ws['B19'].value)
+        to, so = self.con.execute('SELECT so_to, so_thua FROM thua WHERE ma_thua = ?', (pa.dat[0].ma_thua,)).fetchone()
+        self.assertTrue(ws['B19'].value.startswith(f'Thửa đất số {so}, tờ bản đồ số {to}, '), ws['B19'].value)
         self.assertEqual(ws.cell(tong_r - 1, 7).value, int(kq.muc[5]))  # thưởng
-        self.assertEqual(ws['C8'].value, 'Nguyễn Văn Tiệp')
-        self.assertTrue(ws['A5'].value.startswith('DỰ ÁN Xây dựng đường Quang Trung'))
+        ho_ten, ten_da = self.con.execute('SELECT ho.ho_ten, du_an.ten FROM ho, du_an WHERE ho.ma_ho = 1').fetchone()
+        self.assertEqual(ws['C8'].value, ho_ten)
+        self.assertTrue(ws['A5'].value.startswith('DỰ ÁN ' + ten_da))
         self.assertTrue(ws['E3'].value.startswith('Trị An, ngày'))
         self.assertFalse([v for v in _o_chu(ws) if '{' in v])          # không còn chỗ trống chưa điền
         # phần cuối dời xuống đúng chỗ, vùng in và định dạng có điều kiện phủ đủ dòng
         iv = tong_r + 1
         self.assertEqual(ws.cell(iv, 1).value, 'IV')
         self.assertEqual(_gop(ws, f'B{iv}'), f'B{iv}:H{iv}')
-        r_ky = next(r for r in range(iv, iv + 12) if ws.cell(r, 1).value == 'Phan Tuấn Vĩnh')
+        r_cd = next(r for r in range(iv, iv + 12) if str(ws.cell(r, 1).value or '').strip() == 'LẬP BIỂU')   # dòng chức danh
+        r_ky = next(r for r in range(r_cd + 1, r_cd + 12) if str(ws.cell(r, 1).value or '').strip())   # họ tên người lập (theo mẫu)
         self.assertEqual(_gop(ws, f'A{r_ky}'), f'A{r_ky}:B{r_ky}')
         self.assertEqual(ws.print_area, f"'IN_CHITIET'!$A$1:$H${r_ky + 1}")
         self.assertIn(f'A18:H{tong_r}', ' '.join(str(cf.sqref) for cf in ws.conditional_formatting))
@@ -93,7 +98,9 @@ class TestBanIn(unittest.TestCase):
         ws = openpyxl.load_workbook(f).active
         self.assertEqual(ws['A19'].value, '1.1')
         self.assertTrue(ws['B19'].value.startswith('Thửa đất số'))
-        self.assertIsNone(ws['D18'].value)        # 0.9.69: mục đất không có tiền -> bỏ số lượng, đơn giá, tỷ lệ
+        # 1.0.04: diện tích > 0 luôn in số lượng (kể cả không có tiền đất)
+        dt = sum(D(x) for (x,) in self.con.execute('SELECT dt_thu_hoi FROM thua WHERE ma_ho = 3'))   # hộ chưa lập: liệt kê thửa
+        self.assertEqual(D(str(ws['D18'].value)), dt)
         tong_r = next(r for r in range(18, 40) if 'TỔNG CỘNG' in (ws.cell(r, 1).value, ws.cell(r, 2).value))   # 0.9.88: gộp từ cột STT
         self.assertEqual(ws.cell(tong_r, 7).value, 0)
         self.assertIsNone(ws.cell(tong_r - 1, 4).value)                # không có đất: không thưởng -> trống (0.9.69)
@@ -116,16 +123,23 @@ class TestBanIn(unittest.TestCase):
     def test_bang_tong_hop(self):
         f = in_an.lap_bang_tong_hop(self.con, self.td / 'bth.xlsx', mau=self.mau)
         ws = openpyxl.load_workbook(f).active
-        self.assertEqual([ws.cell(r, 5).value for r in range(13, 17)], ['394', '80', '395', '396'])
-        self.assertEqual(_gop(ws, 'A13'), 'A13:A14')
+        pa1, pa2 = nghiep_vu.doc_phuong_an(self.con, 1), nghiep_vu.doc_phuong_an(self.con, 2)
+        so_thua = [self.con.execute('SELECT so_thua FROM thua WHERE ma_thua = ?', (d.ma_thua,)).fetchone()[0]
+                   for d in pa1.dat + pa2.dat]
+        self.assertEqual([ws.cell(r, 5).value for r in range(13, 17)], so_thua)
+        kq1, kq2 = nghiep_vu.tinh_ho(self.con, 1), nghiep_vu.tinh_ho(self.con, 2)
+        self.assertIsNone(_gop(ws, 'A13'))                              # 1.0.04: STT / họ tên lặp mỗi dòng thửa
+        self.assertEqual(ws['A14'].value, ws['A13'].value)
         self.assertEqual(_gop(ws, 'V15'), 'V15:V16')
-        self.assertEqual(ws['P13'].value, 153108000)
-        self.assertEqual(ws['V13'].value, 812506000)
-        self.assertEqual(ws['V15'].value, 474130000)
-        self.assertEqual(ws['S13'].value, 36954000)                     # đào tạo CS9
-        self.assertEqual(ws['T13'].value, 7403000)                      # ổn định đời sống
-        self.assertEqual(ws['H13'].value, 0)                            # thửa 394 ở mục 1 là ODT
-        self.assertEqual(ws['J13'].value, 215.1)
+        self.assertEqual(ws['P13'].value, int(kq1.muc[1]))
+        self.assertEqual(ws['V13'].value, int(kq1.tong))
+        self.assertEqual(ws['V15'].value, int(kq2.tong))
+        bc = nghiep_vu.BoiCanh.tu(self.con)
+        self.assertEqual(ws['S13'].value, int(sum(nghiep_vu.thanh_tien_dong(d, bc) for d in pa1.dong_ho_tro('CS9'))))   # đào tạo CS9
+        self.assertEqual(ws['T13'].value, int(sum(nghiep_vu.thanh_tien_dong(d, bc) for d in pa1.khoan[4]
+                                                  if d.ma in nghiep_vu.MA_ON_DINH)))                 # ổn định đời sống
+        self.assertEqual(ws['H13'].value, 0)                            # thửa đầu của hộ 1 ở mục 1 là ODT
+        self.assertEqual(D(str(ws['J13'].value)), pa1.dat[0].dien_tich)
         self.assertEqual(ws['A17'].value, 'TỔNG CỘNG')
         self.assertEqual(ws['V17'].value, '=SUM(V13:V16)')
         self.assertEqual(ws['V18'].value, '=ROUND(V17*3.5%, -3)')       # dự án "Xây dựng đường…": theo tuyến 3,5% (QĐ 08/2025)
@@ -139,7 +153,8 @@ class TestBanIn(unittest.TestCase):
         kq = in_an.xuat_hang_loat(self.con, [1, 2], self.td / 'loat', bang_tong_hop=True)
         self.assertEqual(len(kq['excel']), 3)
         self.assertTrue(all(p.exists() for p in kq['excel']))
-        self.assertTrue(kq['excel'][0].name.startswith('PA_001_ma1_Nguyễn Văn Tiệp'))
+        ho_ten = self.con.execute('SELECT ho_ten FROM ho WHERE ma_ho = 1').fetchone()[0]
+        self.assertTrue(kq['excel'][0].name.startswith('PA_001_ma1_' + ho_ten))
 
     @unittest.skipUnless(sys.platform == 'win32' and os.environ.get('PABT_THU_EXCEL', '1') != '0', 'cần Microsoft Excel (Windows)')
     def test_xuat_pdf_bang_excel_that(self):

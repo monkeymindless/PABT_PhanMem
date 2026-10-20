@@ -37,8 +37,8 @@ class TestQuyTac(unittest.TestCase):
         self.assertEqual(nghiep_vu.don_gia_on_dinh(30, 16450, 24), 11844000)
 
     def test_mo_ta_thua(self):
-        s = nghiep_vu.mo_ta_thua('35', '394', 'ODT', 'Phường', 'Trị An', 'ONT/VT 2: Đường A,\n đoạn B')
-        self.assertEqual(s, 'Thửa đất số 394, tờ bản đồ số 35, loại đất ODT, phường Trị An (Vị trí: ONT/VT 2: Đường A, đoạn B)')
+        s = nghiep_vu.mo_ta_thua('3', '12', 'ODT', 'Phường', 'Trị An', 'ONT/VT 2: Đường A,\n đoạn B')
+        self.assertEqual(s, 'Thửa đất số 12, tờ bản đồ số 3, loại đất ODT, phường Trị An (Vị trí: ONT/VT 2: Đường A, đoạn B)')
         self.assertEqual(nghiep_vu.mo_ta_thua('35', '10', 'CLN', 'Xã', 'Bàu Hàm', '2'),
                          'Thửa đất số 10, tờ bản đồ số 35, loại đất CLN, xã Bàu Hàm (Vị trí 2)')
         self.assertEqual(nghiep_vu.mo_ta_thua('35', '10', 'CLN', '', '', 'VT1'),

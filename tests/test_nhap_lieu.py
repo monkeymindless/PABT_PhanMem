@@ -313,11 +313,12 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         self.assertGreaterEqual(b.verticalHeader().minimumSectionSize(), 30)       # 0.9.96: dòng gọn 30-32 (trước 34)
         c_sl = [k for k, _, _ in w.bang[2].cot].index('so_luong')
         b.setCurrentCell(0, c_sl)
-        giao_dien.o_ke(b)                                                   # Enter sau khi sửa: sang ô sửa được kế tiếp
-        self.assertEqual(b.currentColumn(), [k for k, _, _ in w.bang[2].cot].index('don_gia'))
-        b.setCurrentCell(0, 0)                                              # ô Mã (tự điền): Enter sang ô kế, không mở sửa
+        self.assertGreater(b.rowCount(), 1)
+        giao_dien.o_duoi(b)                                                 # 1.0.07: Enter sau khi sửa xuống ô dưới (kiểu Excel)
+        self.assertEqual((b.currentRow(), b.currentColumn()), (1, c_sl))
+        b.setCurrentCell(0, 0)                                              # ô Mã (tự điền): Enter xuống ô dưới, không mở sửa
         QApplication.sendEvent(b, QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Return, Qt.KeyboardModifier.NoModifier))
-        self.assertEqual(b.currentColumn(), 1)
+        self.assertEqual((b.currentRow(), b.currentColumn()), (1, 0))
         w.close()
         # cỡ giao diện: phóng to / thu nhỏ có giới hạn, về 100%
         app = QApplication.instance()

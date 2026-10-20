@@ -161,7 +161,7 @@ class HopNguonGoc(QDialog):
             nhan.setProperty('vai', 'nhan')
             h.addWidget(nhan)
             self.o_vi_tri = QLineEdit(str(vi_tri or ''))
-            self.o_vi_tri.setPlaceholderText('Ví dụ: mặt tiền đường ĐT 762, cách ngã ba … khoảng … m')
+            self.o_vi_tri.setPlaceholderText('Ví dụ: mặt tiền đường số 9, cách ngã ba … khoảng … m')
             h.addWidget(self.o_vi_tri, 1)
             lo.addLayout(h)
         self.o = QPlainTextEdit(ho_so.chuan_nguon_goc(chu))

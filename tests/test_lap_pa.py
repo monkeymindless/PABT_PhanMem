@@ -36,7 +36,7 @@ class TestLapPA(unittest.TestCase):
         self.con.close()
 
     # ------------------------------------------------------------ lưu lại không đổi số liệu
-    def test_luu_lai_ca_116_ho_khong_doi_tong(self):
+    def test_luu_lai_moi_ho_khong_doi_tong(self):
         truoc = {k.ma_ho: (k.tong, dict(k.muc)) for k in nghiep_vu.tinh_tat_ca(self.con)}
         bo = BoSoan(self.con, 1, self.dm)
         for ma in list(truoc):
@@ -47,30 +47,34 @@ class TestLapPA(unittest.TestCase):
         self.assertEqual(truoc, sau)
         kq = doi_chieu.doi_chieu(self.con)
         self.assertEqual(kq.dong_lech, [])          # dòng không sửa vẫn giữ thành tiền Excel và khớp
-        self.assertEqual(kq.so_ho_sua, 116)
+        self.assertEqual(kq.so_ho_sua, len(truoc))
         self.assertTrue(kq.khop_het)
-        self.assertEqual(self.con.execute("SELECT COUNT(*) FROM nhat_ky WHERE viec = 'Lưu phương án hộ'").fetchone()[0], 116)
+        self.assertEqual(self.con.execute("SELECT COUNT(*) FROM nhat_ky WHERE viec = 'Lưu phương án hộ'").fetchone()[0], len(truoc))
 
     def test_co_thay_doi_va_hoan_tac(self):
         bo = BoSoan(self.con, 1, self.dm)
-        bo.sua_khoan(2, 0, 'so_luong', '130')
+        sl = bo.pa.khoan[2][0].so_luong
+        bo.sua_khoan(2, 0, 'so_luong', vn(sl + 5))
         self.assertTrue(bo.co_thay_doi)
         bo.mo(1)                                     # bỏ thay đổi
         self.assertFalse(bo.co_thay_doi)
-        self.assertEqual(bo.pa.khoan[2][0].so_luong, D('124.7'))
+        self.assertEqual(bo.pa.khoan[2][0].so_luong, sl)
 
     # ------------------------------------------------------------ gợi ý hỗ trợ
     def test_goi_y_sua_ht09_ho_1(self):
         bo = BoSoan(self.con, 1, self.dm)
+        dt_nn = sum(d.dien_tich for d in bo.pa.dat if d.nhom_dat == 'Nông nghiệp')
+        cu = bo.pa.dong_ho_tro('CS9')[0]
+        tt_cu, muc4_cu = nghiep_vu.thanh_tien_dong(cu, bo.bc), bo.ket_qua.muc[4]
         dx, _ = bo.goi_y()
         ht09 = [x for x in dx if x.ma == 'CS9']
         self.assertEqual(len(ht09), 1)
-        self.assertEqual((ht09[0].viec, ht09[0].so_luong, ht09[0].don_gia), ('sửa', D('410.6'), 135000))
+        self.assertEqual((ht09[0].viec, ht09[0].so_luong, ht09[0].don_gia), ('sửa', dt_nn, 135000))
         tong_cu = bo.ket_qua.tong
         bo.ap_dung_goi_y(ht09)
         d = bo.pa.dong_ho_tro('CS9')[0]
-        self.assertEqual((d.so_luong, d.don_gia), (D('410.6'), 135000))
-        self.assertEqual(bo.ket_qua.muc[4], D('44357000') - D('36954000') + D('55431000'))
+        self.assertEqual((d.so_luong, d.don_gia), (dt_nn, 135000))
+        self.assertEqual(bo.ket_qua.muc[4], muc4_cu - tt_cu + nghiep_vu.thanh_tien_dong(d, bo.bc))
         self.assertGreater(bo.ket_qua.tong, tong_cu)
         self.assertFalse(any(x.startswith('CS9') for x in bo.canh_bao))
         bo.luu()
@@ -84,7 +88,7 @@ class TestLapPA(unittest.TestCase):
         bo = BoSoan(self.con, 2, self.dm)
         bo.dat_nhan_khau('6')                        # dòng ổn định đời sống tự cập nhật số lượng = số nhân khẩu
         self.assertEqual(bo.pa.dong_ho_tro('CS1')[0].so_luong, 6)
-        bo.dat_dt_nn_dang_dung('1.000')              # thu hồi 123,2 / 1000 = 12,3% < 30%
+        bo.dat_dt_nn_dang_dung('1.000')              # thu hồi dưới 30% của 1.000 m² đang sử dụng
         dx, _ = bo.goi_y()
         od = [x for x in dx if x.ma in nghiep_vu.MA_ON_DINH]
         self.assertEqual(od, [])
@@ -153,13 +157,14 @@ class TestLapPA(unittest.TestCase):
 
     def test_nhap_tay_can_can_cu(self):
         bo = BoSoan(self.con, 1, self.dm)
+        muc3 = bo.ket_qua.muc[3]
         i = bo.them_hang_muc_khac(3, 'Cây cóc ăn quả (5 năm)')
         bo.sua_khoan(3, i, 'so_luong', '3')
         bo.sua_khoan(3, i, 'don_gia', '150.000')
         self.assertTrue(any('chưa ghi căn cứ' in x for x in bo.canh_bao))
         bo.sua_khoan(3, i, 'can_cu_gia', 'Chứng thư thẩm định giá số 12/2026')
         self.assertFalse(any('chưa ghi căn cứ' in x for x in bo.canh_bao))
-        self.assertEqual(bo.ket_qua.muc[3], D('52210000') + D('450000'))
+        self.assertEqual(bo.ket_qua.muc[3], muc3 + D('450000'))
 
     def test_don_gia_danh_muc_sua_tay(self):
         bo = BoSoan(self.con, 1, self.dm)
@@ -211,15 +216,16 @@ class TestLapPA(unittest.TestCase):
     def test_muc_1_them_thua_va_gia(self):
         bo = BoSoan(self.con, 1, self.dm)
         self.assertEqual(lap_pa.tra_gia_dat(self.con, bo.bc, 'CLN', '1')[:2], (D('90000'), D(1)))
-        bo.xoa(1, 1)                                         # bỏ dòng CLN thửa 80 rồi thêm lại từ hồ sơ kiểm kê
-        mt = next(x[0] for x in bo.thua_cua_ho() if '80' in x[1])
-        i, tb = bo.them_thua(mt)
+        muc1, cu = bo.ket_qua.muc[1], bo.pa.dat[1]
+        self.assertEqual(cu.loai_dat, 'CLN')
+        bo.xoa(1, 1)                                         # bỏ dòng CLN rồi thêm lại từ hồ sơ kiểm kê
+        i, tb = bo.them_thua(cu.ma_thua)
         d = bo.pa.dat[i]
-        self.assertEqual((d.loai_dat, d.nhom_dat, d.dien_tich), ('CLN', 'Nông nghiệp', D('410.6')))
+        self.assertEqual((d.loai_dat, d.nhom_dat, d.dien_tich), ('CLN', 'Nông nghiệp', cu.dien_tich))
         self.assertEqual(d.gia_bang_gia, 0)                  # kiểm kê chưa ghi vị trí: chưa tra được giá
         bo.sua_dat(i, 'vi_tri', '1')
         self.assertEqual(d.gia_bang_gia, 90000)
-        self.assertEqual(bo.ket_qua.muc[1], D('153108000'))
+        self.assertEqual(bo.ket_qua.muc[1], muc1)
         with self.assertRaises(LoiNhap):
             bo.sua_dat(i, 'loai_dat', 'XYZ')
         with self.assertRaises(LoiNhap):

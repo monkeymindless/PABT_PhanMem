@@ -624,7 +624,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     dùng), mẫu bảng tổng hợp đã sửa bị bỏ qua. `xuat_hang_loat` bảng tổng hợp truyền mau=None. Test `tests/test_mau_in_mot_loai.py`.
   - Vật nuôi: dự án lập trước bộ đơn giá có vật nuôi (QĐ 31/2025) không có dòng nào -> thẻ Vật nuôi trống. `don_gia.bo_sung_vat_nuoi`
     (chỉ thêm mã còn thiếu, mo_khoa_danh_muc + ghi_nhat_ky), thẻ Vật nuôi `khung_thieu_vn` + nút "Bổ sung vật nuôi từ bộ đơn giá"
-    (`CuaSoLapPA.bo_sung_vat_nuoi`, cập nhật `bo.dm` và `dm` cửa sổ chính). ĐT762 Trị An: 0 -> 17 mục.
+    (`CuaSoLapPA.bo_sung_vat_nuoi`, cập nhật `bo.dm` và `dm` cửa sổ chính). dự án thật lập trước đó: 0 -> 17 mục.
   - Ô Nhân khẩu: `giao_dien.OSoChuaNhap` (QSpinBox có specialValueText "chưa nhập": bấm / Tab / gõ phím thì chữ mất - trước đây
     gõ số dính vào chữ "ch1ưa nhập"). Test `tests/test_vat_nuoi_nhan_khau.py`.
   - Test chạy với file Excel mẫu (`PABT_EXCEL` = `PABT_CHUAN_06-10-2026_QD42.xlsm` NẰM TRONG thư mục dự án, `kiem_tra_toan_bo.py
@@ -1290,7 +1290,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     ho.phap_ly - phap_ly vẫn ghi như cũ); `tach_phuong_an` (sheet nhiều phương án nối tiếp: mỗi bảng STT một phương án, ranh = dòng quốc
     hiệu / "PHƯƠNG ÁN CHI TIẾT" / "Số:" sau TỔNG CỘNG của bảng trước; tên "<sheet> - PA <số>"), `doc_sheet(…, lech)` giữ số dòng Excel
     thật; `_thua_tu_ten` gộp khoảng trắng, `_so_hieu` ('--', '-', trống -> ''), loại đất chữ thường / "ONT, CLN". `_tim_tieu_de(hang, tu,
-    den)`. File thật: sheet "144 thửa" -> PA 1278 (37 thửa) + PA 1209 (142 thửa), đọc 0,13 s.
+    den)`. File thật: một sheet -> hai phương án (37 + 142 thửa), đọc 0,13 s.
   - `nhap_tho`: `_gia_tri_luoi` dừng sau `TRONG_LIEN_TIEP` 100 dòng trống, bỏ cột trống bên phải (bề rộng = cột có chữ cuối trong
     `DONG_TIM_COT` 40 dòng đầu - sheet TỔNG 237 cột); DT thu hồi ưu tiên "… trong dự án / ranh / phạm vi" (10 điểm), loại "Tổng diện tích
     thửa", "diện tích thửa"; dòng đánh số cột cho thiếu số; ô 'NaN' / '--' = trống (`_khong_gia_tri`) -> dòng tiếp của hộ trên; tiêu đề lặp
@@ -1347,7 +1347,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - Còn ẩn / chờ quyết định: nút "Quét hồ sơ…" (TB_QUET_HO_SO), `man_hinh_quet_web.HopQuetWeb` (không còn đường mở từ 0.9.73, chỉ test),
     `CuaSoChinh.quy_chuan` (lệnh bỏ 0.9.47, giữ cho test), `bang_tieu_de` / `KhungLamViecDaTab` (ẩn, trong suốt chuột - còn dùng làm
     nơi giữ dữ liệu).
-- Khối chữ ký bản in (người dùng 16/10/2026, ảnh PDF "Đinh Công Thiện" lệch dưới "KIỂM TRA"): `in_an.can_khoi_ky(ws)` gọi TRƯỚC
+- Khối chữ ký bản in (người dùng 16/10/2026, ảnh PDF: họ tên người kiểm tra lệch dưới "KIỂM TRA"): `in_an.can_khoi_ky(ws)` gọi TRƯỚC
   `_thay_cho_trong` ở `lap_chi_tiet` / `lap_bang_tong_hop` - ô `{nguoi_lap}` / `{nguoi_kiem_tra}` / `{nguoi_ky}` tìm chức danh gần nhất
   phía trên phủ cột giữa, bỏ dấu cách thừa của chức danh (mẫu IN_CHITIET ghi "   KIỂM TRA     " - Excel căn giữa tính cả dấu cách),
   ô họ tên gộp đúng các cột của chức danh (mẫu người dùng sửa lệch), căn giữa indent 0; ô khác có chữ trong vùng thì chỉ căn giữa.
@@ -1489,7 +1489,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   QUY_UOC_TUONG_DUONG của Excel PABT; nhật ký "Bỏ quy ước tương đương mẫu", hoàn tác được) - gọi trong `app.mo` khi mở để sửa (chỉ xem:
   không ghi). `nhap_excel` KHÔNG nhập sheet QUY_UOC_TUONG_DUONG (bỏ khỏi `so_danh_muc`); `nhap_tho.nap_danh_muc` giữ dòng riêng
   (`doc_rieng` / `tra_rieng` như `don_gia.ap_vao_du_an` - trước đây nạp danh mục từ Excel xóa luôn quy ước riêng của dự án). Phương án
-  đã lập không đổi (dòng lưu sẵn tên / giá / căn cứ). Đã xóa 5 dòng trong NGHĨA TRANG PHÚ LÝ.pabt (sao lưu
+  đã lập không đổi (dòng lưu sẵn tên / giá / căn cứ). Đã xóa 5 dòng trong một dự án thật của người dùng (sao lưu
   `ket_qua_kiem_tra\sao_luu\`). Test `tests/test_quy_uoc_trong.py`, `test_lap_pa.test_quy_uoc_tuong_duong` (tự thêm dòng riêng).
 - 1.0.01 GIAO DIỆN "Hybrid Enterprise Navy" (người dùng 17/10/2026, đặc tả 6 bước):
   - Menu trái (`giao_dien.menu_trai`, `_qss_menu_trai`): khung `vai="menu_trai"` sát mép trái cửa sổ (nền #F8FAFC, viền phải 1 px;
@@ -1561,7 +1561,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     đậm #0284C7) và Giá × K (`kieu_o_gia_k`: phải, đậm navy) ở HopTraNQ28 + KhungHeSoK.
   - Sửa file CRLF bằng script: KHÔNG dùng `sed -i` của Git Bash (đổi cả file sang LF - đã gặp ở man_hinh.py). Test
     `tests/test_giao_dien_navy_con.py`; `test_yeu_cau_0978` theo màu nút Dán mới, cao 28.
-- Bàn giao mặt bằng khi hộ CHƯA có quyết định phê duyệt (người dùng 17/10/2026: ĐT762 cả 170 hộ "Đã bàn giao MB", thẻ 100% - nhật
+- Bàn giao mặt bằng khi hộ CHƯA có quyết định phê duyệt (người dùng 17/10/2026: một dự án thật cả 170 hộ "Đã bàn giao MB", thẻ 100% - nhật
   ký file: 16/10/2026 11:30 "Bàn giao mặt bằng 170 hộ" = một lần chọn cả bảng, hộp tích sẵn): `theo_doi.ho_chua_phe_duyet`,
   `HopBanGiao(so_chua_qd=)` - có hộ chưa phê duyệt thì KHÔNG tích sẵn "Đã bàn giao" + cảnh báo `lb_canh_bao`; Kiểm tra lỗi (Tiến độ) báo
   "Đã đánh dấu bàn giao mặt bằng nhưng chưa có quyết định phê duyệt" (thay "chưa ghi chi trả" cho hộ đó). KHÔNG chặn cứng: bàn giao
@@ -1785,8 +1785,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   lap_chi_tiet sau dat_nhan_chu_su_dung): dòng "Số CCCD:" / "Số điện thoại:" trống -> ẩn (cả hộ gia đình). Lề chi tiết 0,35 / 0,35 / 0,55
   / 0,40" (`LE_TRANG` VÀ `pabt_profile.json` ban_in.le_trang - hồ sơ đóng gói ghi đè LE_TRANG). Đệm dòng bảng `DEM_DONG` 8 -> 4 pt, tối
   thiểu 24 -> 20 (VBS xuất PDF `dem` / `cmin` cùng số; NEN_DEM = DEM / 2, CAO_NEN_TOI_THIEU 19): người dùng yêu cầu +2 nhưng ĐO xuất PDF
-  bằng Excel: 2 pt làm dòng chữ đầu chạm đường kẻ ô (lỗi 14/10) - chọn 4. ĐT762 (170 hộ, Excel thật): 209 -> 202 trang, 7 hộ bớt trang
-  (trang cuối ~32% -> gom), hộ 1 Nguyễn Văn Khải vẫn 2 trang (nội dung ~1,6 trang: mục 5 có 3 chính sách) - trang 2 bắt đầu trọn mục 5.
+  bằng Excel: 2 pt làm dòng chữ đầu chạm đường kẻ ô (lỗi 14/10) - chọn 4. dự án thật 170 hộ (Excel thật): 209 -> 202 trang, 7 hộ bớt trang
+  (trang cuối ~32% -> gom), hộ 1 vẫn 2 trang (nội dung ~1,6 trang: mục 5 có 3 chính sách) - trang 2 bắt đầu trọn mục 5.
   Script đo: scratchpad (không trong repo). Test `tests/test_canh_trang_in_an.py`, `test_in_16_10.test_gom_mot_trang_khi_tran_it`; `_trang`
   của test_in_16_10 hết ở dòng cuối VÙNG IN (dòng trống khối chữ ký mẫu ngoài vùng in).
 - 1.0.06 tìm nhanh / cảnh báo tức thời / phông số (người dùng 20/10/2026; test `tests/test_tim_nhanh_2010.py`):
@@ -1902,5 +1902,5 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 
 ## Môi trường làm việc
 - Dự án ở `D:\APP AI PABT\PABT_PhanMem` (đường dẫn không dấu; trước 07/10/2026 là `D:\Thư mục mới\…` dạng NFD). File thật của người
-  dùng (`DT762.pabt`, `PABT_CHUAN_06-10-2026_QD42.xlsm` – dùng cho `PABT_EXCEL`) ở thư mục cha: chỉ đọc / thử trên bản sao.
+  dùng (file dự án `.pabt` thật, `PABT_CHUAN_06-10-2026_QD42.xlsm` – dùng cho `PABT_EXCEL`) ở thư mục cha: chỉ đọc / thử trên bản sao.
 - Windows PowerShell 5.1; `.venv` dùng Python 3.14. `build/`, `dist/`, `bo_cai/` là sản phẩm dựng.

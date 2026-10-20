@@ -112,7 +112,7 @@ class TestNhapTho(unittest.TestCase):
                           (2, '72', '5', '12', 'BHK'), (2, '72', '6', '8', 'BHK')])
 
     def test_dia_ban_tu_ten(self):
-        self.assertEqual(nhap_tho.dia_ban_tu_ten('Dự án ĐT762 đoạn qua xã Bàu Hàm'), ('Xã', 'Bàu Hàm'))
+        self.assertEqual(nhap_tho.dia_ban_tu_ten('Dự án đường số 9 đoạn qua xã Bàu Hàm'), ('Xã', 'Bàu Hàm'))
         self.assertEqual(nhap_tho.dia_ban_tu_ten('Đường ABC, phường Hố Nai (giai đoạn 2)'), ('Phường', 'Hố Nai'))
         self.assertEqual(nhap_tho.dia_ban_tu_ten('Dự án X'), ('Phường', ''))
 

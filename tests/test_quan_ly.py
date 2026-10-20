@@ -79,7 +79,7 @@ class TestKhongCanDuAn(unittest.TestCase):
             con.commit()
             self.assertFalse(any('chữ số' in x.noi_dung for x in kiem_loi.kiem_tra(con)))
             con.close()
-        self.assertFalse(kiem_loi.la_ho_ten_don('Phạm Văn Thoa được cấp giấy - Bùi Văn Hữu (đã chết)'))
+        self.assertFalse(kiem_loi.la_ho_ten_don('Phạm Văn A được cấp giấy - Bùi Văn B (đã chết)'))
 
     def test_chuan_ngay(self):
         self.assertEqual(quan_ly.chuan_ngay('5/3/2026'), '05/03/2026')

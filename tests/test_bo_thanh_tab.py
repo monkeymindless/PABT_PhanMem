@@ -88,9 +88,9 @@ class TestBoThanhTab(CoSo):
         self.assertTrue(w.windowTitle().endswith(f'({w.file.name})'))
         self.assertFalse(hasattr(w.banner_ten, 'lb_du_an'))
         from pabt import lap_pa
-        lap_pa.luu_du_an(w.con, dict(lap_pa.doc_du_an(w.con), ten='Đường ĐT 762'))   # sửa Thông tin dự án -> tiêu đề đổi theo
+        lap_pa.luu_du_an(w.con, dict(lap_pa.doc_du_an(w.con), ten='Đường số 9'))   # sửa Thông tin dự án -> tiêu đề đổi theo
         w.tai_lai()
-        self.assertIn('LARC - Đường ĐT 762 · ', w.windowTitle())
+        self.assertIn('LARC - Đường số 9 · ', w.windowTitle())
         if w.thanh_td is not None:
             self.assertEqual(w.thanh_td.tieu_de(), w.windowTitle())
         w.dong_du_an_lenh()                                             # Tệp tin -> Đóng dự án
