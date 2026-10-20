@@ -13,14 +13,16 @@ from tests.test_in_vua_chu import NGUON_GOC, CoSo, _vung
 class TestHangSo(unittest.TestCase):
     def test_cao_dong_bang(self):
         self.assertEqual(in_an.DK_CACH, 5.0)
-        self.assertEqual(in_an.cao_dong_bang(0), 24.0)
+        self.assertEqual(in_an.cao_dong_bang(0), 20.0)                       # 20/10/2026: tối thiểu 24 -> 20 pt
         # 16,5 pt / dòng ở cỡ 14 là mức sàn; khoảng dòng Excel đo ở màn hình 125% (~1,3 cỡ chữ) lớn hơn thì theo Excel
         self.assertEqual(in_an.dong_chu_bang(14), max(16.5, 14 * in_an.HE_SO_DONG_EXCEL))
         self.assertGreaterEqual(in_an.dong_chu_bang(14), 18.0)                # Excel: Times New Roman 14 = 18 pt / dòng
         self.assertGreaterEqual(in_an.dong_chu_bang(20), 25.2)                # Excel: Times New Roman 20 = 25,2 pt / dòng
-        self.assertAlmostEqual(in_an.cao_dong_bang(1), max(24.0, in_an.dong_chu_bang(14) + 8))
-        self.assertAlmostEqual(in_an.cao_dong_bang(3), 3 * in_an.dong_chu_bang(14) + 8)    # đệm 4 pt trên / dưới
-        self.assertEqual(in_an.cao_dong_bang(30, 20, None), 30 * in_an.dong_chu_bang(20) + 8)  # không chặn: biết cần thêm dòng
+        # 20/10/2026: đệm 8 -> 4 pt (2 trên / 2 dưới - đo xuất PDF: 2 pt làm dòng chữ đầu chạm đường kẻ ô như lỗi 14/10)
+        self.assertEqual(in_an.DEM_DONG, 4.0)
+        self.assertAlmostEqual(in_an.cao_dong_bang(1), max(20.0, in_an.dong_chu_bang(14) + in_an.DEM_DONG))
+        self.assertAlmostEqual(in_an.cao_dong_bang(3), 3 * in_an.dong_chu_bang(14) + in_an.DEM_DONG)
+        self.assertEqual(in_an.cao_dong_bang(30, 20, None), 30 * in_an.dong_chu_bang(20) + in_an.DEM_DONG)  # không chặn
         self.assertEqual(in_an.cao_dong_bang(100), in_an.CAO_TOI_DA)
         self.assertEqual(in_an.so_dong_o(1234567, 10), 1)                  # ô số không ngắt dòng
 
@@ -113,7 +115,7 @@ class TestBangChiTiet(CoSo):
             m = _vung(ws, r, 1)
             self.assertEqual((m.min_row, m.max_row, m.min_col, m.max_col), (r, r, 1, 8))    # dòng mới gộp cùng dải cột
             al = ws.cell(r, 1).alignment
-            self.assertEqual((al.horizontal, al.vertical, al.wrap_text), ('justify', 'top', True))   # 0.9.85: canh trên (hồ sơ)
+            self.assertEqual((al.horizontal, al.vertical, al.wrap_text), ('justify', 'center', True))   # 1.0.04: giữa dọc (hồ sơ)
             for c in range(1, 9):                                           # dòng mới chép kiểu (viền ô) của dòng đầu
                 vien = [tuple(getattr(ws.cell(rr, c).border, k).style for k in ('left', 'right', 'top', 'bottom'))
                         for rr in (r, ds[0][0])]

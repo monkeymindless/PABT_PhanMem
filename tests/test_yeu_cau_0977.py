@@ -238,14 +238,17 @@ class TestHopInCheDo(_Co):
         h = self._hop()
         self.assertTrue(h.r_chinh_thuc.isChecked())
         self.assertFalse(h.o_tt.isChecked())                # như trước 0.9.77: không tự chọn mẫu khi chưa chọn đợt / chế độ
-        # 16/10/2026: bỏ ô Báo cáo tiếp thu ý kiến, ô chọn mẫu từng bản in, dòng ghi chú chế độ (chữ DỰ THẢO do Chế độ phát hành)
-        for ten in ('o_bc', 'cb_mau_ct', 'cb_mau_bth', 'lb_che_do'):
+        # 16/10/2026: bỏ ô chọn mẫu từng bản in, dòng ghi chú chế độ (chữ DỰ THẢO do Chế độ phát hành); 20/10/2026: ô Báo cáo
+        # tiếp thu ý kiến trở lại (chỉ chế độ chính thức - "trọn bộ 4 tài liệu"), chưa chọn sẵn khi chưa chọn đợt / chế độ
+        for ten in ('cb_mau_ct', 'cb_mau_bth', 'lb_che_do'):
             self.assertFalse(hasattr(h, ten), ten)
+        self.assertTrue(h.o_bc.isEnabled())
+        self.assertFalse(h.o_bc.isChecked())
 
     def test_che_do_du_thao(self):
         h = self._hop(che_do='du_thao', ma_ho_chon=self.ma[:2])
         self.assertTrue(h.r_du_thao.isChecked())
-        self.assertTrue(h.o_che_cccd.isChecked())                                # tự che CCCD (NĐ 13/2023)
+        self.assertFalse(h.o_che_cccd.isChecked())                               # 1.0.04: không che CCCD
         self.assertTrue(h.o_ct.isChecked() and h.o_bth.isChecked())
         self.assertFalse(h.o_tt.isChecked())                                     # dự thảo: chưa tờ trình
         self.assertIn('DỰ THẢO', h.r_du_thao.toolTip())
@@ -279,7 +282,7 @@ class TestHopInCheDo(_Co):
         self.assertEqual(h2.o_thu_muc.text(), str(self.td / 'hso' / 'Đợt A - 2 hộ'))
         h2.r_excel.setChecked(True)
         kq = h2.thuc_hien(xac_nhan=False)
-        self.assertEqual(sorted(p.name for p in kq['word']), ['TO_TRINH.docx'])
+        self.assertEqual(sorted(p.name for p in kq['word']), ['BAO_CAO_TIEP_THU_Y_KIEN.docx', 'TO_TRINH.docx'])   # trọn bộ 4
         self.assertEqual(quan_ly.lay_dot(self.con, d).thu_muc, str(self.td / 'hso' / 'Đợt A - 2 hộ'))
 
     def test_doi_ten_thu_muc_dot_khi_so_ho_doi(self):

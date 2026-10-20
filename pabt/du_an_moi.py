@@ -237,7 +237,7 @@ def tu_lap_phuong_an(con, ds_ma_ho: list | None = None) -> list:
     cb = []
     ds = ds_ma_ho or [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho')]
     for ma in ds:
-        bo = BoSoan(con, ma, dm, bc)
+        bo = BoSoan(con, ma, dm, bc, mot_lan=True)      # file vừa tạo: mỗi hộ chỉ lần 1, chưa quyết định
         if bo.pa.dat or any(bo.pa.khoan[m] for m in MUC_KHOAN):
             continue
         ten = f'Hộ {ma} {bo.pa.ho.ho_ten}'

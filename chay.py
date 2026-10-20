@@ -256,7 +256,8 @@ def tu_kiem(file_ra=None) -> int:
                 cc = kinh_phi_du_an.co_cau(con)
                 tq = bao_cao_gpmb.tong_quan(con)
                 ds_cc = van_dong.ds_cuong_che(con)
-                assert cc['tong'] > 0 and len(cc['dong']) == 8, cc['dong']
+                loai = [d['loai'] for d in cc['dong']]          # 5 nhóm + cộng + kinh phí + 2 dòng phân bổ 85/15 (1.0.04) + tổng
+                assert cc['tong'] > 0 and loai.count('nhom') == 5 and loai.count('phan_bo') == 2 and loai[-1] == 'tong', loai
                 assert tq['so_ho_phe_duyet'] == 3 and tq['so_ho_cuong_che'] == 1 and len(ds_cc) == 1, (tq['so_ho_cuong_che'], ds_cc)
                 assert all(m['du'] for m in thoi_han.moc_thu_hoi_tat_ca(con).values()), 'mốc thu hồi 130 ngày phải đủ'
                 van_dong.xuat_ds_cuong_che(con, td / 'cuong_che.xlsx')

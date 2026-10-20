@@ -27,20 +27,25 @@ QFrame#the_kpi {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3
 QFrame#the_kpi:hover {{ background: #F8FAFC; border-color: #94A3B8; border-left-color: {m}; }}
 QFrame#the_kpi[dang_loc="1"] {{ background: #EFF6FF; border: 1px solid #0F3866; border-left: 3px solid {m}; }}
 QLabel#kpi_tieu_de {{ color: #475569; font-size: 11px; font-weight: 600; background: transparent; border: 0; }}
-QLabel#kpi_so {{ color: {m}; font-size: 18px; font-weight: 700; background: transparent; border: 0; }}
+QLabel#kpi_so {{ color: {m}; font-size: 16px; font-weight: 700; background: transparent; border: 0; }}
 QLabel#kpi_phu {{ color: #475569; font-size: 11px; background: transparent; border: 0; }}
 QProgressBar {{ background: #E2E8F0; border: 0; border-radius: 2px; }}
 '''
 CAO_THE_KPI = 58                         # thẻ chỉ số (px): như thẻ số 56 px màn hình chính, thêm thanh tiến độ mảnh
 # màu vạch trái / số / thanh từng thẻ: navy (giải ngân), teal (mặt bằng sạch), slate (thửa còn vướng), đỏ trầm (cưỡng chế)
-MAU_THE = dict(giai_ngan='#0F3866', mat_bang='#0F766E', con_vuong='#475569', cuong_che='#B91C1C')
+# 20/10/2026 (ảnh mẫu): 6 thẻ - tổng hộ, đã phê duyệt, đã chi trả (giai_ngan), đã bàn giao (mat_bang), đang vận động, đủ ĐK cưỡng chế.
+# Thẻ "Thửa còn vướng" bỏ khỏi dải (chế độ xem có nút riêng "Thửa còn vướng")
+MAU_THE = dict(tong_ho='#0F3866', phe_duyet='#0284C7', giai_ngan='#15803D', mat_bang='#0F766E', van_dong='#D97706',
+               cuong_che='#B91C1C')
 NEN_MUC = {'gap': DO, 'cao': VANG, 'theo_doi': XAM}
-TIEU_DE_THE = dict(giai_ngan='GIẢI NGÂN TIỀN BỒI THƯỜNG', mat_bang='MẶT BẰNG SẠCH ĐÃ BÀN GIAO',
-                   con_vuong='THỬA CHƯA BÀN GIAO MẶT BẰNG', cuong_che='HỘ ĐỦ ĐIỀU KIỆN CƯỠNG CHẾ')
+TIEU_DE_THE = dict(tong_ho='TỔNG SỐ HỘ DỰ ÁN', phe_duyet='ĐÃ PHÊ DUYỆT QĐ', giai_ngan='ĐÃ CHI TRẢ TIỀN',
+                   mat_bang='ĐÃ BÀN GIAO MB', van_dong='ĐANG VẬN ĐỘNG', cuong_che='ĐỦ ĐK CƯỠNG CHẾ (Đ89)')
 # bấm thẻ làm gì (chú thích) - KhungTienDo.bam_kpi làm đúng việc này
-GOI_Y_THE = dict(giai_ngan='Bấm để lọc các hộ còn quyết định chưa nhận tiền',
-                 mat_bang='Bấm để lọc các hộ chưa bàn giao mặt bằng',
-                 con_vuong='Bấm để xem danh sách thửa còn vướng (xếp Gấp / Cao / Theo dõi)',
+GOI_Y_THE = dict(tong_ho='Bấm để xem tất cả hộ',
+                 phe_duyet='Bấm để lọc các hộ đã có quyết định phê duyệt',
+                 giai_ngan='Bấm để lọc các hộ đã nhận tiền đủ các quyết định',
+                 mat_bang='Bấm để lọc các hộ đã bàn giao mặt bằng',
+                 van_dong='Bấm để lọc các hộ đang trong thời hạn vận động',
                  cuong_che='Bấm để lọc các hộ đủ điều kiện cưỡng chế thu hồi đất')
 KHONG_SO = '—'                          # chưa có cơ sở để tính tỷ lệ (chưa có quyết định / chưa có diện tích)
 
@@ -59,7 +64,7 @@ class _TheKPI(QFrame):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.goi_y = goi_y
         self.mau = mau
-        self.lb_td = QLabel(tieu_de)
+        self.lb_td = NhanRutGon(tieu_de)              # 6 thẻ ở màn hình 1366 @125%: tiêu đề dài rút "…" (đủ chữ ở chú thích)
         self.lb_td.setObjectName('kpi_tieu_de')
         self.lb_so = QLabel('–')
         self.lb_so.setObjectName('kpi_so')
@@ -79,17 +84,29 @@ class _TheKPI(QFrame):
         lo.addWidget(self.lb_td)
         lo.addLayout(h)
         lo.addWidget(self.thanh)
-        self.setMinimumWidth(170)
+        self.setMinimumWidth(118)                       # 20/10/2026: 6 thẻ (trước 4 thẻ x 170) - số "n hộ (x%)" luôn đọc được
         self.setToolTip(goi_y)
 
     def dat(self, so: str, ty_le: float | None, phu: str, chu_thich: str = '') -> None:
         self.lb_so.setText(so)
         self.lb_phu.setText(phu)
         self.setToolTip('\n'.join(x for x in (chu_thich or phu, self.goi_y) if x))
+        self._vua_phu()
         self.thanh.setVisible(ty_le is not None)
         if ty_le is not None:
             self.thanh.setValue(int(min(100.0, max(0.0, ty_le)) * 10))
             self.thanh.setStyleSheet(f'QProgressBar::chunk {{ background: {self.mau}; border-radius: 2px; }}')
+
+    def _vua_phu(self) -> None:
+        """Thẻ hẹp (6 thẻ ở màn hình 1366 @125%): ẩn chữ phụ để số "n hộ (x%)" đọc đủ - chữ phụ vẫn ở chú thích thẻ."""
+        can = self.lb_so.sizeHint().width() + 40 + (self.lb_phu.fontMetrics().horizontalAdvance('Giải ngân') if self.lb_phu.text() else 0)
+        hien = bool(self.lb_phu.text()) and self.width() >= can + 20
+        if self.lb_phu.isVisibleTo(self) != hien:
+            self.lb_phu.setVisible(hien)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._vua_phu()
 
     def dat_dang_loc(self, co: bool) -> None:
         """Đánh dấu thẻ đang là bộ lọc / chế độ xem của bảng (nền xanh băng, viền navy)."""
@@ -110,8 +127,13 @@ class _TheKPI(QFrame):
             self.bam.emit()
 
 
+def _pt_chu(n: int, tong: int) -> str:
+    return f'{n:,} hộ'.replace(',', '.') + (f' ({n * 100 / tong:.1f}%)'.replace('.', ',') if tong else '')
+
+
 class DaiKPI(QWidget):
-    """Dải 4 thẻ chỉ số của trang Tiến độ chi trả & Bàn giao. bam(khóa thẻ): giai_ngan / mat_bang / con_vuong / cuong_che."""
+    """Dải 6 thẻ chỉ số của trang Tiến độ chi trả & Bàn giao. bam(khóa thẻ): tong_ho / phe_duyet / giai_ngan / mat_bang /
+    van_dong / cuong_che."""
     bam = Signal(str)
 
     def __init__(self, parent=None):
@@ -127,37 +149,46 @@ class DaiKPI(QWidget):
             h.addWidget(t, 1)
 
     def dat_loc(self, khoa: str | None) -> None:
-        """Thẻ khoa (giai_ngan / mat_bang / con_vuong / cuong_che) đang là bộ lọc của bảng; None = không thẻ nào."""
+        """Thẻ khoa (TIEU_DE_THE) đang là bộ lọc của bảng; None = không thẻ nào."""
         for k, t in self.the.items():
             t.dat_dang_loc(k == khoa)
 
-    def dat(self, tq: dict | None, so_ngay_van_dong: int = 0) -> None:
+    def dat(self, tq: dict | None, so_ngay_van_dong: int = 0, so_dang_vd: int = 0) -> None:
+        """tq: bao_cao_gpmb.tong_quan; so_dang_vd: số hộ đang trong thời hạn vận động (KhungTienDo đếm). Tỷ lệ % trên tổng số hộ."""
         if tq is None:
             for t in self.the.values():
                 t.dat('–', None, '')
             return
+        n = tq['so_ho']
+        ha = tq['dt_tong'] / 10000 if tq['dt_tong'] else None
+
+        def pt(k):
+            return k * 100 / n if n else None
+        self.the['tong_ho'].dat(f'{n:,} hộ'.replace(',', '.'), None,
+                                f'Diện tích thu hồi: {so_vn(round(ha, 2))} ha' if ha is not None else 'Chưa có diện tích thu hồi')
+        pd = tq['so_ho_phe_duyet']
+        self.the['phe_duyet'].dat(_pt_chu(pd, n), pt(pd), f'{tq["so_ho_chua_pd"]} hộ chưa có quyết định',
+                                  f'{pd}/{n} hộ đã có quyết định phê duyệt · tổng phê duyệt {vn(tq["tong_pd"])} đ')
         if tq['tong_pd']:
-            self.the['giai_ngan'].dat(f'{tq["pt_giai_ngan"]:.1f}%'.replace('.', ','), tq['pt_giai_ngan'],
-                                      f'{tq["so_ho_nhan_du"]}/{tq["so_ho_phe_duyet"]} hộ nhận đủ · còn {vn(tq["con_lai"])} đ',
+            k = tq['so_ho_nhan_du']
+            self.the['giai_ngan'].dat(_pt_chu(k, n), pt(k), f'Giải ngân {vn(tq["da_chi"])} đ ({tq["pt_giai_ngan"]:.1f}%)'.replace('.', ','),
                                       f'Đã chi {vn(tq["da_chi"])} / {vn(tq["tong_pd"])} đ đã phê duyệt · còn {vn(tq["con_lai"])} đ · '
-                                      f'{tq["so_ho_nhan_du"]}/{tq["so_ho_phe_duyet"]} hộ đã nhận đủ tiền')
+                                      f'{k}/{tq["so_ho_phe_duyet"]} hộ đã nhận đủ tiền')
         else:
             self.the['giai_ngan'].dat(KHONG_SO, None, 'Chưa có quyết định phê duyệt',
                                       'Chưa có quyết định phê duyệt nào: chưa có số tiền để tính tỷ lệ giải ngân.')
         if tq['dt_tong']:
-            self.the['mat_bang'].dat(f'{tq["pt_mat_bang"]:.1f}%'.replace('.', ','), tq['pt_mat_bang'],
-                                     f'{tq["so_ho_ban_giao"]}/{tq["so_ho"]} hộ · {so_vn(tq["dt_ban_giao"])} m²',
+            k = tq['so_ho_ban_giao']
+            self.the['mat_bang'].dat(_pt_chu(k, n), pt(k), f'Bàn giao {so_vn(round(tq["dt_ban_giao"] / 10000, 2))} ha',
                                      f'{so_vn(tq["dt_ban_giao"])} / {so_vn(tq["dt_tong"])} m² thu hồi đã bàn giao · '
-                                     f'{tq["so_ho_ban_giao"]}/{tq["so_ho"]} hộ đã bàn giao')
+                                     f'{k}/{n} hộ đã bàn giao')
         else:
             self.the['mat_bang'].dat(KHONG_SO, None, 'Chưa có diện tích thu hồi', 'Các thửa chưa có diện tích thu hồi.')
-        d = tq['dem']
-        if tq['so_ho_phe_duyet']:
-            self.the['con_vuong'].dat(str(len(tq['thua'])), None, f'Gấp {d["gap"]} · Cao {d["cao"]} · Theo dõi {d["theo_doi"]}')
-        else:
-            self.the['con_vuong'].dat(KHONG_SO, None, 'Chưa có hộ được phê duyệt',
-                                      'Chỉ tính thửa của hộ ĐÃ có quyết định phê duyệt mà chưa bàn giao mặt bằng.')
-        self.the['cuong_che'].dat(str(tq['so_ho_cuong_che']), None, f'Vận động quá {so_ngay_van_dong} ngày chưa thành',
+        self.the['van_dong'].lb_td.setText(f'ĐANG VẬN ĐỘNG ({so_ngay_van_dong} NGÀY)')
+        self.the['van_dong'].dat(_pt_chu(so_dang_vd, n), pt(so_dang_vd), f'Chưa quá hạn {so_ngay_van_dong} ngày',
+                                 f'Hộ đang trong thời hạn vận động {so_ngay_van_dong} ngày kể từ buổi vận động đầu tiên')
+        k = tq['so_ho_cuong_che']
+        self.the['cuong_che'].dat(_pt_chu(k, n), pt(k), f'Quá hạn {so_ngay_van_dong} ngày vận động',
                                   f'Vận động quá {so_ngay_van_dong} ngày mà hộ vẫn chưa nhận tiền / chưa bàn giao - '
                                   f'{van_dong.CAN_CU_CUONG_CHE}')
 

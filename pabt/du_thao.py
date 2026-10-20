@@ -420,7 +420,7 @@ def xuat_niem_yet(con, dot_id: int, file) -> 'Path':
         })
     tieu = (f'DỰ THẢO PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ — {dot["ten"]}. '
             f'Niêm yết {hien_ngay(dot["ngay_bat_dau"])} đến {hien_ngay(dot["ngay_ket_thuc"])} '
-            f'({SO_NGAY_NIEM_YET} ngày). CCCD đã che theo Nghị định 13/2023/NĐ-CP.')
+            f'({SO_NGAY_NIEM_YET} ngày).')
     return _ghi_excel(file, [('Niêm yết', tieu, dong)])
 
 

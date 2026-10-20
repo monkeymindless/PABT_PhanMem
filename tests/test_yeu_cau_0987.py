@@ -178,8 +178,8 @@ class TestOcrBocTach(unittest.TestCase):
 # ---------------------------------------------------------------- CSDL v16
 class TestCsdlV16(CoSoMay):
     def test_phien_ban_va_bang_phu(self):
-        self.assertEqual(csdl.PHIEN_BAN_CSDL, 16)
-        self.assertEqual(self.con.execute('PRAGMA user_version').fetchone()[0], 16)
+        self.assertGreaterEqual(csdl.PHIEN_BAN_CSDL, 16)                    # 1.0.05: v17
+        self.assertEqual(self.con.execute('PRAGMA user_version').fetchone()[0], csdl.PHIEN_BAN_CSDL)
         bang = {r[0] for r in self.con.execute("SELECT name FROM sqlite_master")}
         for t in ('nhat_ky_van_dong', 'audit_logs', 'thua_ban_do', 'anh_hien_trang', 'ix_ctdat_thua', 'audit_logs_khong_sua',
                   'audit_logs_khong_xoa'):
@@ -196,7 +196,7 @@ class TestCsdlV16(CoSoMay):
             self.con.execute('PRAGMA user_version = 15')
         self.con.close()
         self.con = csdl.mo(self.p)
-        self.assertEqual(self.con.execute('PRAGMA user_version').fetchone()[0], 16)
+        self.assertEqual(self.con.execute('PRAGMA user_version').fetchone()[0], csdl.PHIEN_BAN_CSDL)
         bang = {r[0] for r in self.con.execute("SELECT name FROM sqlite_master")}
         self.assertTrue({'nhat_ky_van_dong', 'audit_logs', 'thua_ban_do', 'anh_hien_trang', 'ix_ctdat_thua'} <= bang)
         with self.con:
@@ -212,7 +212,7 @@ class TestCsdlV16(CoSoMay):
         truoc = hashlib.sha256(f.read_bytes()).hexdigest()
         con = csdl.mo(f)
         try:
-            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0], 16)
+            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0], csdl.PHIEN_BAN_CSDL)
             self.assertIsNone(con.execute("SELECT 1 FROM sqlite_master WHERE name = 'audit_logs'").fetchone())
         finally:
             con.close()
@@ -349,7 +349,7 @@ class TestChuaBenh(CoSoMay):
         self.so_ho = self.con.execute('SELECT COUNT(*) FROM ho').fetchone()[0]
         kt = cb.kiem_tra_tep_pabt(self.p)
         self.assertTrue(kt['hop_le'])
-        self.assertEqual(kt['phien_ban'], 16)
+        self.assertEqual(kt['phien_ban'], csdl.PHIEN_BAN_CSDL)
         self.con.close()
         k = khoa.KhoaFile(self.p)
         k.p.write_text(json.dumps(dict(may='MAY_KHAC', nguoi='x', pid=1, mo_luc=1, cap_nhat=__import__('time').time())),

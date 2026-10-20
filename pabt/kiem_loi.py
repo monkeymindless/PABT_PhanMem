@@ -92,6 +92,68 @@ def la_ho_ten_don(s) -> bool:
     return bool(re.fullmatch(r"[^\W\d_]+(?: [^\W\d_]+){1,5}", t))
 
 
+# ---------------------------------------------------------------- tài sản trên đất của tổ chức / hộ khác (1.0.04)
+# từ khóa (so không dấu, chữ thường) cho biết hồ sơ chỉ có tài sản / cây trồng trên đất người khác quản lý / sử dụng
+TU_KHOA_TAI_SAN_TREN_DAT = ('chu so huu tai san', 'tai san gan lien voi', 'tren dat', 'dat do ubnd', 'ubnd xa', 'lam truong',
+                            'khu bao ton', 'quan ly', 'giao khoan', 'nhan khoan', 'hop dong khoan', 'muon dat', 'thue dat',
+                            'tao lap tai san')
+
+
+def _gia_tri(x, k, mac=''):
+    try:
+        return x[k]
+    except (KeyError, IndexError, TypeError):
+        return getattr(x, k, mac)
+
+
+def tien_dat_cua(pa, ma_thua=None) -> bool:
+    """Phương án có tiền bồi thường đất (> 0) - cả hộ, hoặc chỉ thửa ma_thua. Không cần bối cảnh: dấu của tích DT x giá x K x tỷ lệ."""
+    if pa is None:
+        return False
+    for d in getattr(pa, 'dat', ()) or ():
+        if ma_thua is not None and d.ma_thua != ma_thua:
+            continue
+        if d.dien_tich > 0 and d.gia_bang_gia > 0 and d.he_so_k > 0 and d.ty_le > 0:
+            return True
+    return False
+
+
+def la_ho_tai_san_tren_dat(ho, thua, pa, map_thua_du_an) -> bool:
+    """Thửa có dt_thu_hoi = 0 của hồ sơ chỉ có tài sản / cây trồng trên đất của tổ chức / hộ khác (1.0.04 - người dùng 19/10/2026)
+    khi có ÍT NHẤT MỘT trong ba dấu hiệu: (a) cùng (tờ, thửa) có hồ sơ khác khai dt_thu_hoi > 0 (chủ đất / UBND xã quản lý);
+    (b) phương án có dòng tài sản / cây / vật nuôi / hỗ trợ và tiền đất bằng 0; (c) họ tên, pháp lý, nguồn gốc thửa hoặc ghi chú
+    dòng đất có từ khóa TU_KHOA_TAI_SAN_TREN_DAT. map_thua_du_an: {(tờ, thửa): [thửa dict]} cả dự án."""
+    to, so = str(_gia_tri(thua, 'so_to') or '').strip(), str(_gia_tri(thua, 'so_thua') or '').strip()
+    mt = _gia_tri(thua, 'ma_thua', None)
+    if to and so:
+        for t in (map_thua_du_an or {}).get((to, so), ()):
+            if _gia_tri(t, 'ma_thua', None) != mt and _gia_tri(t, 'ma_ho', None) != _gia_tri(thua, 'ma_ho', None) \
+                    and D(_gia_tri(t, 'dt_thu_hoi') or 0) > 0:
+                return True
+    if pa is not None and any(pa.khoan.get(m) for m in MUC_KHOAN) and not tien_dat_cua(pa):
+        return True
+    chu = [_gia_tri(ho, 'ho_ten'), _gia_tri(ho, 'phap_ly'), _gia_tri(thua, 'nguon_goc')]
+    if pa is not None:
+        chu += [d.ghi_chu for d in pa.dat if mt is None or d.ma_thua == mt]
+    s = ' '.join(bo_dau(str(x or '')).lower() for x in chu)
+    s = ' '.join(s.split())
+    return any(k in s for k in TU_KHOA_TAI_SAN_TREN_DAT)
+
+
+def la_quan_he_chu_dat_va_tai_san(ds_ho_thua_cung_cap) -> bool:
+    """Một (tờ, thửa) có ở >= 2 hồ sơ: True khi TỐI ĐA MỘT hồ sơ có dt_thu_hoi > 0 hoặc tiền đất > 0 (chủ đất / UBND xã quản lý) và
+    mọi hồ sơ còn lại đều dt_thu_hoi = 0 và tiền đất = 0 (chỉ tài sản / cây trên đất) - không phải đồng sử dụng / trùng hồ sơ.
+    ds: [{'dt_thu_hoi': …, 'tien_dat': bool / số}] mỗi hồ sơ (1.0.04)."""
+    co_dat = 0
+    for x in ds_ho_thua_cung_cap:
+        dt = D(_gia_tri(x, 'dt_thu_hoi') or 0)
+        td = _gia_tri(x, 'tien_dat') or 0
+        td = td if isinstance(td, bool) else D(td) > 0
+        if dt > 0 or td:
+            co_dat += 1
+    return co_dat <= 1
+
+
 # ---------------------------------------------------------------- kiểm tra
 def kiem_tra(con, dm: DanhMuc | None = None) -> list:
     """Toàn bộ lỗi / cảnh báo của dự án (danh sách Loi), sắp theo hộ."""
@@ -170,12 +232,22 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
                 them(CANH_BAO, 'Thông tin hộ', 'Trùng họ tên và địa chỉ với hộ ' +
                      ', '.join(f'{x["thu_tu"]}. {x["ho_ten"]}' for x in ds if x is not h) + '.', h['ma_ho'], h['ho_ten'])
     ten_ho = {h['ma_ho']: h['ho_ten'] for h in ho}
+    ho_theo_ma = {h['ma_ho']: h for h in ho}
+    # đọc phương án cả dự án một lần (3 truy vấn) - trước đây doc_phuong_an mỗi hộ: 5.000 hộ = 15.000 truy vấn. 1.0.04: đọc TRƯỚC
+    # phần thửa (quy tắc tài sản trên đất của tổ chức / hộ khác cần phương án)
+    tat_ca = doc_tat_ca_phuong_an(con)
     # ---- thửa
     vi_tri_thua = {}
+    thua_theo_vi_tri = {}
+    for t in bc.thua.values():
+        if str(t['so_thua'] or '').strip() and str(t['so_to'] or '').strip():
+            thua_theo_vi_tri.setdefault((str(t['so_to']).strip(), str(t['so_thua']).strip()), []).append(t)
     for mt, t in bc.thua.items():
         ma, ten = t['ma_ho'], ten_ho.get(t['ma_ho'], '')
         mo_ta = f'Thửa {t["so_thua"] or "?"} tờ {t["so_to"] or "?"}'
-        if D(t['dt_thu_hoi'] or 0) <= 0:
+        # QUY TẮC 1 (1.0.04): hồ sơ chỉ có tài sản / cây trên đất của tổ chức / hộ khác - DT thu hồi 0 là đúng, không báo lỗi
+        if D(t['dt_thu_hoi'] or 0) <= 0 and \
+                not la_ho_tai_san_tren_dat(ho_theo_ma.get(ma, {}), t, tat_ca.get(ma), thua_theo_vi_tri):
             them(LOI, 'Thửa đất', f'{mo_ta}: diện tích thu hồi bằng 0.', ma, ten)
         if not str(t['so_thua'] or '').strip() or not str(t['so_to'] or '').strip():
             them(CANH_BAO, 'Thửa đất', f'{mo_ta}: thiếu số thửa / số tờ.', ma, ten)
@@ -188,13 +260,20 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
             vi_tri_thua.setdefault((str(t['so_to']).strip(), str(t['so_thua']).strip()), set()).add(ma)
     for (to, so), ds in vi_tri_thua.items():
         if len(ds) > 1:
+            # QUY TẮC 2 (1.0.04): chủ đất (tối đa một hồ sơ có DT thu hồi / tiền đất) + các hồ sơ chỉ có tài sản trên đất -> không
+            # phải đồng sử dụng / trùng hồ sơ: không cảnh báo cho hồ sơ nào trong nhóm
+            nhom = [dict(dt_thu_hoi=sum((D(t['dt_thu_hoi'] or 0) for t in thua_theo_vi_tri.get((to, so), ()) if t['ma_ho'] == m),
+                                        KHONG),
+                         tien_dat=any(tien_dat_cua(tat_ca.get(m), t['ma_thua']) for t in thua_theo_vi_tri.get((to, so), ())
+                                      if t['ma_ho'] == m)) for m in ds]
+            if la_quan_he_chu_dat_va_tai_san(nhom):
+                continue
             for ma in ds:
                 them(CANH_BAO, 'Thửa đất', f'Thửa {so} tờ {to} cũng có ở hộ khác ({", ".join(ten_ho.get(x, "") for x in ds if x != ma)}): '
                      'kiểm tra đồng sử dụng / trùng hồ sơ.', ma, ten_ho.get(ma, ''))
     # ---- phương án từng hộ
     da_sua = {r[0] for r in con.execute('SELECT ma_ho FROM ho WHERE luu_luc IS NOT NULL')}
-    # đọc phương án cả dự án một lần (3 truy vấn) - trước đây doc_phuong_an mỗi hộ: 5.000 hộ = 15.000 truy vấn
-    tat_ca = doc_tat_ca_phuong_an(con)
+    # phương án cả dự án đã đọc một lần ở trên (tat_ca)
     # kết quả tính + kiểm tra đang nhớ (dùng chung) nếu còn đúng; không thì tính ngay trên phương án vừa đọc (không đọc lại lần 2)
     kqh = (ket_qua_ho_san(con) or {}) if type(bc) is BoiCanh else {}
     mat_do = {}                                         # quy chuẩn mật độ theo loại cây: tra một lần

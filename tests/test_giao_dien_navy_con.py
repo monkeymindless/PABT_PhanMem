@@ -177,14 +177,14 @@ class TestTienDoKPI(_Co):
             self.assertEqual(t.maximumHeight(), bc.CAO_THE_KPI)
             self.assertIn(f'border-left: 3px solid {bc.MAU_THE[khoa]}', t.styleSheet())
             self.assertIn('[dang_loc="1"]', t.styleSheet())
-        self.assertEqual(set(bc.MAU_THE.values()), {NAVY, '#0F766E', '#475569', '#B91C1C'})
+        self.assertEqual(set(bc.MAU_THE.values()), {NAVY, '#0284C7', '#15803D', '#0F766E', '#D97706', '#B91C1C'})   # 6 thẻ (20/10/2026)
         self.assertIsNone(k.the_kpi_dang_loc())                          # tất cả hộ: không thẻ nào đang lọc
         self.assertFalse(any(t.dang_loc() for t in k.kpi.the.values()))
         k.bam_kpi('mat_bang')
         self.assertEqual(k.the_kpi_dang_loc(), 'mat_bang')
         self.assertEqual([x for x, t in k.kpi.the.items() if t.dang_loc()], ['mat_bang'])
         k.dat_che_do('thua')
-        self.assertEqual([x for x, t in k.kpi.the.items() if t.dang_loc()], ['con_vuong'])
+        self.assertEqual([x for x, t in k.kpi.the.items() if t.dang_loc()], [])      # Thửa còn vướng: nút chế độ, không phải thẻ
         k.dat_che_do('ho')
         k.cb_loc.setCurrentIndex(0)                                      # mục đầu: tất cả hộ
         self.assertFalse(any(t.dang_loc() for t in k.kpi.the.values()))

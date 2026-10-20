@@ -186,8 +186,9 @@ def doc_qd_ho(con, ma_ho: int) -> list:
     return sorted(kq, key=khoa)
 
 
-def ghi_qd_ho(con, qd_id: int, ma_ho: int, gia_tri: dict, ghi_nhat_ky: bool = True) -> None:
-    """Thêm hộ vào quyết định hoặc sửa dòng đã có: chỉ ghi các trường có trong gia_tri."""
+def ghi_qd_ho(con, qd_id: int, ma_ho: int, gia_tri: dict, ghi_nhat_ky: bool = True, lan: int | None = None) -> None:
+    """Thêm hộ vào quyết định hoặc sửa dòng đã có: chỉ ghi các trường có trong gia_tri. lan (1.0.05): quyết định phê duyệt lần
+    phương án thứ mấy của hộ (None = lần chưa duyệt sớm nhất); lần đó khóa bảo vệ."""
     gt = {}
     for k, v in gia_tri.items():
         if k not in TRUONG_QD_HO:
@@ -197,7 +198,17 @@ def ghi_qd_ho(con, qd_id: int, ma_ho: int, gia_tri: dict, ghi_nhat_ky: bool = Tr
         gt.setdefault('chi_tra_ngay', '')
         gt.setdefault('chi_tra_so_tien', '')
     with csdl.giao_dich(con):
+        from . import lan_pa
+        # 1.0.05: hộ mới vào quyết định -> quyết định phê duyệt LẦN chưa duyệt sớm nhất của hộ (lần đầu / bổ sung); lần đó khóa
+        if lan is None and lan_pa.co_bang(con):
+            lan = lan_pa.lan_chua_duyet(con, ma_ho)
         moi = con.execute('INSERT OR IGNORE INTO qd_ho (qd_id, ma_ho) VALUES (?, ?)', (qd_id, ma_ho)).rowcount
+        if moi and lan:
+            lan_pa.gan_qd(con, qd_id, ma_ho, lan)
+            if lan > 1 and 'so_pa' not in gt:              # số / ngày phương án của lần bổ sung
+                x = lan_pa.lan_cua(con, ma_ho, lan)
+                gt.setdefault('so_pa', x.so_pa)
+                gt.setdefault('ngay_pa', x.ngay_pa)
         if moi and 'so_pa' not in gt:                   # hộ mới vào quyết định: lấy số / ngày PA chi tiết đã đánh ở đợt trình
             try:
                 con.execute('''UPDATE qd_ho SET so_pa = (SELECT so_pa FROM ho WHERE ma_ho = ?),
@@ -213,30 +224,65 @@ def ghi_qd_ho(con, qd_id: int, ma_ho: int, gia_tri: dict, ghi_nhat_ky: bool = Tr
             csdl.ghi_nhat_ky(con, 'Quyết định - hộ', f'QĐ {qd_id}, hộ {ma_ho}: ' + ', '.join(f'{k}={v}' for k, v in gt.items())[:300])
 
 
+def _lan_cua_qd_ho(con, qd_id: int, ma_ho: int) -> int:
+    try:
+        r = con.execute('SELECT lan FROM qd_ho WHERE qd_id = ? AND ma_ho = ?', (qd_id, ma_ho)).fetchone()
+    except sqlite3.OperationalError:
+        return 0
+    return max(1, int(r[0] or 0)) if r is not None else 0
+
+
 def bo_ho_khoi_qd(con, qd_id: int, ma_ho: int) -> None:
+    from . import lan_pa
     with csdl.giao_dich(con):
+        lan = _lan_cua_qd_ho(con, qd_id, ma_ho)
         con.execute('DELETE FROM qd_ho WHERE qd_id = ? AND ma_ho = ?', (qd_id, ma_ho))
+        lan_pa.bo_qd(con, ma_ho, lan)                  # lần không còn quyết định nào: về đang lập, mở khóa
         dong_bo_ho(con, ma_ho)
         csdl.ghi_nhat_ky(con, 'Bỏ hộ khỏi quyết định', f'QĐ {qd_id}, hộ {ma_ho}')
 
 
-def them_ho_theo_pa(con, qd_id: int, ds_ma: list) -> int:
-    """Thêm các hộ vào quyết định, tiền từng hạng mục theo phương án hiện tại: đọc phương án một lượt, một giao dịch."""
-    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_pa
+def them_ho_theo_pa(con, qd_id: int, ds_ma: list, lan: int | None = None) -> int:
+    """Thêm các hộ vào quyết định, tiền từng hạng mục theo phương án: đọc phương án một lượt, một giao dịch. 1.0.05: hộ có nhiều
+    lần lập phương án -> tiền của LẦN chưa duyệt sớm nhất (lần bổ sung không cộng lại tiền các lần đã có quyết định). lan: chọn rõ
+    lần phương án được phê duyệt (hộ không có lần đó / lần đó đã có quyết định khác: bỏ qua hộ). Trả số hộ đã thêm."""
+    from . import lan_pa
+    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_lan, tinh_pa
     bc = BoiCanh.tu(con)
     pas = doc_tat_ca_phuong_an(con, list(ds_ma))
+    nhieu = lan_pa.ho_nhieu_lan(con) if lan_pa.co_bang(con) else set()
+    co_qd = {r[0] for r in con.execute('SELECT DISTINCT ma_ho FROM qd_ho')}
+    them = 0
     with csdl.giao_dich(con):
         for m in ds_ma:
-            ct = _chi_tiet_kq(tinh_pa(pas[m], bc)) if m in pas else chi_tiet_tu_phuong_an(con, m, bc)
-            ghi_qd_ho(con, qd_id, m, ct, ghi_nhat_ky=False)
-        csdl.ghi_nhat_ky(con, 'Quyết định - thêm hộ', f'QĐ {qd_id}: {len(ds_ma)} hộ')
-    return len(ds_ma)
+            if con.execute('SELECT 1 FROM qd_ho WHERE qd_id = ? AND ma_ho = ?', (qd_id, m)).fetchone():
+                continue                                # đã có trong quyết định này: giữ số liệu đã ghi
+            ln = lan
+            if ln is not None:
+                x = next((y for y in lan_pa.ds_lan(con, m) if y.lan == int(ln)), None)
+                if x is None or x.qd:
+                    continue                            # hộ không có lần này / lần này đã có quyết định khác
+                ct = _chi_tiet_kq(tinh_lan(con, m, int(ln), bc))
+            elif m in nhieu or m in co_qd:
+                ln = lan_pa.lan_chua_duyet(con, m)
+                if ln is None:
+                    continue                            # mọi lần đã có quyết định: không thêm trùng tiền
+                ct = _chi_tiet_kq(tinh_lan(con, m, ln, bc))
+            else:
+                ct = _chi_tiet_kq(tinh_pa(pas[m], bc)) if m in pas else chi_tiet_tu_phuong_an(con, m, bc)
+            ghi_qd_ho(con, qd_id, m, ct, ghi_nhat_ky=False, lan=ln)
+            them += 1
+        csdl.ghi_nhat_ky(con, 'Quyết định - thêm hộ', f'QĐ {qd_id}: {them} hộ' + (f' (lần phương án {lan})' if lan else ''))
+    return them
 
 
 def bo_cac_ho_khoi_qd(con, qd_id: int, ds_ma: list) -> int:
+    from . import lan_pa
     with csdl.giao_dich(con):
         for m in ds_ma:
+            lan = _lan_cua_qd_ho(con, qd_id, m)
             con.execute('DELETE FROM qd_ho WHERE qd_id = ? AND ma_ho = ?', (qd_id, m))
+            lan_pa.bo_qd(con, m, lan)
             dong_bo_ho(con, m)
         csdl.ghi_nhat_ky(con, 'Bỏ hộ khỏi quyết định', f'QĐ {qd_id}: {len(ds_ma)} hộ')
     return len(ds_ma)
@@ -377,6 +423,10 @@ class TongHopHo:
     theo_doi: str = ''
     muc_pa: dict = field(default_factory=dict)
     da_lap: bool = False              # đã lưu phương án, kể cả mọi mục 0 đồng / ô bỏ trống
+    # 1.0.05 - nhiều lần lập phương án: số lần (có dòng), các lần chưa có quyết định, tiền phương án của các lần ĐÃ duyệt (5 cột)
+    so_lan: int = 1
+    lan_chua_duyet: list = field(default_factory=list)
+    muc_pa_duyet: dict | None = None
 
     @property
     def tong_phe_duyet(self):
@@ -455,6 +505,9 @@ def phan_tich_tien_do(x) -> TienDoHo:
     if x.da_ban_giao and not da_bg:
         thieu = ([] if da_ct else ['chưa ' + ('nhận đủ tiền' if da_pd else 'phê duyệt')]) + ([] if bien_ban else ['chưa có ngày biên bản'])
         canh_bao = 'đã tích bàn giao, ' + ', '.join(thieu)
+    cho = [n for n in getattr(x, 'lan_chua_duyet', []) if n > 1] if da_pd else []
+    if cho:                                             # 1.0.05: đã có quyết định, còn phương án bổ sung chưa phê duyệt
+        canh_bao = '; '.join(c for c in (canh_bao, 'PA bổ sung lần ' + ', '.join(map(str, cho)) + ' chưa phê duyệt') if c)
     return TienDoHo(nac, da_lap, da_pd, da_ct, da_bg, canh_bao)
 
 
@@ -486,6 +539,13 @@ def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
     for v in qd.values():
         v.sort(key=lambda x: (_khoa_ngay(x['ngay_qd']), x['id']))
     chon = set(ds_ma_ho) if ds_ma_ho is not None else None
+    from . import lan_pa
+    nhieu = lan_pa.ho_nhieu_lan(con) if lan_pa.co_bang(con) else set()
+    if nhieu:
+        from .nghiep_vu import BoiCanh
+        bc_lan = BoiCanh.tu(con)
+    else:
+        bc_lan = None
     if it:
         co_dong = {r[0] for r in con.execute(f'SELECT DISTINCT ma_ho FROM ct_dat WHERE {loc} UNION '
                                              f'SELECT DISTINCT ma_ho FROM ct_khoan WHERE {loc}', ts + ts)}
@@ -503,8 +563,24 @@ def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
         if tinh_pa and h['ma_ho'] in kqh:
             k = kqh[h['ma_ho']][0]
             x.tong_pa, x.muc_pa = k.tong, muc_5_cot(k.muc)
+        if h['ma_ho'] in nhieu:
+            _lan_cua_ho(con, x, bc_lan)
         kq.append(x)
     return kq
+
+
+def _lan_cua_ho(con, x: 'TongHopHo', bc) -> None:
+    """Hộ có nhiều lần lập phương án: số lần, lần chưa duyệt, tiền phương án của các lần đã duyệt (lan_pa.tong_hop_ho)."""
+    from . import lan_pa
+    th = lan_pa.tong_hop_ho(con, x.ma_ho, bc)
+    x.so_lan = max(1, th['so_lan_co_dong'])
+    x.lan_chua_duyet = th['chua_duyet']
+    duyet = {m: KHONG for m in range(1, 6)}
+    for t in th['lan']:
+        if t.lan.qd:
+            for m, v in muc_5_cot(t.ket_qua.muc).items():
+                duyet[m] = duyet.get(m, KHONG) + v
+    x.muc_pa_duyet = duyet
 
 
 # ---------------------------------------------------------------- lọc tiến độ

@@ -18,7 +18,7 @@ from . import csdl, du_toan
 from .du_toan import DongDT, DuToan
 from .lap_pa import DanhMuc, LoiNhap, doc_so
 from .tien import D, KHONG, so_luong_vn, so_vn, tien_bang_chu, vn
-from .giao_dien import con_tro_cho, kieu_o_gia_k, kieu_o_he_so_k
+from .giao_dien import con_tro_cho, kieu_o_gia_k, kieu_o_he_so_k, kieu_o_so
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Dự toán & khái toán'
@@ -606,6 +606,8 @@ class KhungDuToan(QWidget):
         m.addAction('Áp đơn giá hiện hành', lambda: self.ap_gia_hien_hanh())
         m.addSeparator()
         m.addAction('Xóa dòng', lambda: self.xoa_dong())
+        from .giao_dien import them_muc_sao_chep
+        them_muc_sao_chep(m, self.bang, pos)             # 1.0.04: sao chép ô / dòng đứng đầu menu
         m.exec(self.bang.viewport().mapToGlobal(pos))
         m.deleteLater()
 
@@ -700,15 +702,11 @@ class KhungDuToan(QWidget):
         for c, (k, _, _) in enumerate(COT):
             it = QTableWidgetItem(gt[k])
             it.setToolTip(gt[k])
-            if k in SO:
-                it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            if k in SO:                                 # 20/10/2026: phông / màu số dùng chung (giao_dien.kieu_o_so)
+                kieu_o_so(it, tien=k == 'thanh_tien', goc=self.bang.font())
             if k == 'thanh_tien' or (pt and k in ('don_gia', 'he_so', 'dvt')):
                 it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 it.setBackground(QBrush(XAM))
-            if k == 'thanh_tien':
-                f = QFont()
-                f.setBold(True)
-                it.setFont(f)
             self.bang.setItem(r, c, it)
 
     def ve(self, chon: int | None = None):
@@ -893,11 +891,14 @@ class KhungDuToan(QWidget):
                  '' if tl is None else f'{"+" if tl > 0 else ""}{so_vn(tl.quantize(D("0.1")))}%']
             for c, v in enumerate(o):
                 it = QTableWidgetItem(v)
-                if c != 1:
+                if c >= 2:                              # số: phông / màu dùng chung; chênh dương (vượt khái toán) đỏ
+                    kieu_o_so(it, tien=c in (2, 3), vuot=c in (4, 5) and bool(kt) and chenh > 0, goc=self.bang_ss.font(),
+                              dam=r == len(dong) - 1)
+                elif c != 1:
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 if c in (4, 5) and kt:                  # 0.9.95: khái toán chưa có (0) -> không tô cảnh báo vượt
                     it.setBackground(QBrush(DO_NHAT if chenh > 0 else XANH_LA))
-                if r == len(dong) - 1:
+                if r == len(dong) - 1 and c < 2:
                     it.setFont(dam)
                 self.bang_ss.setItem(r, c, it)
         kt, tt, chenh, tl = self.ss['tong']

@@ -8,13 +8,14 @@ from datetime import datetime
 
 from . import csdl
 from .lap_pa import LoiNhap, bo_dau, doc_so
-from .tien import chuoi, so_vn
+from .tien import D, chuoi, so_vn
 
 TRUONG_HO = [('ho_ten', 'Họ và tên'), ('so_cccd', 'Số CCCD'), ('ngay_cap', 'Ngày cấp'), ('noi_cap', 'Nơi cấp'),
              ('dia_chi', 'Địa chỉ'), ('dien_thoai', 'Điện thoại'), ('phap_ly', 'Pháp lý'), ('tranh_chap', 'Tranh chấp'),
              ('tai_dinh_cu', 'Tái định cư'), ('trang_thai', 'Trạng thái'), ('ghi_chu', 'Ghi chú')]
 TRUONG_THUA = [('so_to', 'Tờ'), ('so_thua', 'Thửa'), ('loai_dat', 'Loại đất'), ('dt_thu_hoi', 'DT thu hồi (m²)'),
-               ('nguon_goc', 'Nguồn gốc'), ('vi_tri', 'Vị trí')]
+               ('nguon_goc', 'Nguồn gốc'), ('vi_tri', 'Vị trí'),
+               ('dt_nguyen_thua', 'DT nguyên thửa (m²)'), ('so_gcn', 'Giấy chứng nhận')]      # 2 trường cuối: 20/10/2026
 
 
 def _gon(v) -> str:
@@ -144,6 +145,11 @@ def chuan_hoa_thua(ds: list) -> list:
         if not g['so_to'] and not g['so_thua']:
             raise LoiNhap(f'Dòng thửa {i}: chưa nhập số tờ, số thửa.')
         g['dt_thu_hoi'] = chuoi(doc_so(g['dt_thu_hoi'], f'{ten}: DT thu hồi'))
+        if g['dt_nguyen_thua']:                             # trống = chưa nhập (không phải 0)
+            nguyen = doc_so(g['dt_nguyen_thua'], f'{ten}: DT nguyên thửa')
+            if nguyen < D(g['dt_thu_hoi']):
+                raise LoiNhap(f'{ten}: DT thu hồi ({so_vn(g["dt_thu_hoi"])} m²) lớn hơn DT nguyên thửa ({so_vn(nguyen)} m²).')
+            g['dt_nguyen_thua'] = chuoi(nguyen)
         khoa = (g['so_to'], g['so_thua'], g['loai_dat'])
         if khoa in da_co:
             raise LoiNhap(f'{ten} ({g["loai_dat"] or "chưa có loại đất"}) bị nhập hai lần.')
@@ -186,16 +192,19 @@ def luu_ho(con, ma_ho, thong_tin: dict, ds_thua: list) -> int:
             con.execute(f'''UPDATE ho SET {', '.join(k + ' = ?' for k in tt)} WHERE ma_ho = ?''', (*tt.values(), ma_ho))
         cu = {r[0] for r in con.execute('SELECT ma_thua FROM thua WHERE ma_ho = ?', (ma_ho,))}
         giu = set()
+        cot = ['so_to', 'so_thua', 'loai_dat', 'dt_thu_hoi', 'nguon_goc', 'vi_tri']
+        if csdl.dam_bao_cot_thua(con):                      # file cũ chưa có cột DT nguyên thửa / số GCN: thêm khi ghi
+            cot += [k for k, _ in csdl.COT_THUA_THEM]
         for i, t in enumerate(ds, start=1):
-            gt = (t['so_to'], t['so_thua'], t['loai_dat'], t['dt_thu_hoi'], t['nguon_goc'], t['vi_tri'], i)
+            gt = (*(t.get(k, '') for k in cot), i)
             if t['ma_thua'] in cu:
-                con.execute('''UPDATE thua SET so_to=?, so_thua=?, loai_dat=?, dt_thu_hoi=?, nguon_goc=?, vi_tri=?, thu_tu=?
-                               WHERE ma_thua = ?''', (*gt, t['ma_thua']))
+                con.execute(f'''UPDATE thua SET {', '.join(k + '=?' for k in cot)}, thu_tu=? WHERE ma_thua = ?''',
+                            (*gt, t['ma_thua']))
                 giu.add(t['ma_thua'])
             else:
                 mt = con.execute('SELECT COALESCE(MAX(ma_thua), 0) + 1 FROM thua').fetchone()[0]
-                con.execute('''INSERT INTO thua (ma_thua, ma_ho, so_to, so_thua, loai_dat, dt_thu_hoi, nguon_goc, vi_tri, thu_tu)
-                               VALUES (?,?,?,?,?,?,?,?,?)''', (mt, ma_ho, *gt))
+                con.execute(f'''INSERT INTO thua (ma_thua, ma_ho, {', '.join(cot)}, thu_tu) VALUES ({', '.join('?' * (len(cot) + 3))})''',
+                            (mt, ma_ho, *gt))
                 t['ma_thua'] = mt
         bo = cu - giu
         for mt in bo:

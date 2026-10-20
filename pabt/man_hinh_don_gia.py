@@ -206,6 +206,8 @@ class HopBoDonGia(QDialog):
         if not self._da_mo_khoa:
             m.addSeparator()
             m.addAction('Mở khóa quản trị…', lambda: self.mo_khoa_quan_tri())
+        from .giao_dien import them_muc_sao_chep
+        them_muc_sao_chep(m, b, pos)                     # 1.0.04: sao chép ô / dòng đứng đầu menu
         m.exec(b.viewport().mapToGlobal(pos))
         m.deleteLater()
 

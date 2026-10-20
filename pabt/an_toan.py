@@ -21,24 +21,14 @@ KHOA_CHE_CCCD = 'CHE_CCCD'          # cai_dat của dự án: '1' = bản in / v
 
 
 def che_cccd(chu: str) -> str:
-    """Che số định danh trong chuỗi khi niêm yết công khai tại UBND xã: CCCD 12 số giữ 6 số đầu (075092******), số khác từ 9
-    chữ số (CMND cũ...) giữ nửa đầu. Chữ khác giữ nguyên."""
-    import re
-
-    def thay(m):
-        x = m.group(0)
-        giu = 6 if len(x) >= 12 else len(x) // 2
-        return x[:giu] + '*' * (len(x) - giu)
-    return re.sub(r'\d{9,}', thay, chu or '')
+    """1.0.04 (người dùng 19/10/2026): BỎ che số CCCD trên toàn hệ thống - luôn trả nguyên chuỗi (giữ tên hàm cho mã gọi cũ:
+    bản in, văn bản trình, Niêm yết, phiếu kiểm đếm)."""
+    return chu or ''
 
 
 def can_che_cccd(con) -> bool:
-    """Dự án đang đặt chế độ che CCCD (ô "Che số CCCD" trong hộp In / Xuất)."""
-    try:
-        from .csdl import doc_cai_dat
-        return doc_cai_dat(con, KHOA_CHE_CCCD) == '1'
-    except Exception:                                   # file chỉ xem phiên bản cũ / kết nối lạ: không che
-        return False
+    """1.0.04: không còn chế độ che CCCD - luôn False (khóa cai_dat CHE_CCCD của dự án cũ bỏ qua)."""
+    return False
 
 
 # ---------------------------------------------------------------- mạng: HTTPS kiểm tra chứng chỉ, TLS >= 1.2

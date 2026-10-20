@@ -114,20 +114,20 @@ class TestBanInTheoHoSo(CoSoMay):
 
         def chu(f):
             return ' '.join(str(c.value) for r in openpyxl.load_workbook(f).active.iter_rows() for c in r if c.value is not None)
-        self.assertIn('075092******', chu(in_an.lap_chi_tiet(self.con, 1, self.td / 'dt.xlsx', du_thao=True)))
+        self.assertIn('075092001234', chu(in_an.lap_chi_tiet(self.con, 1, self.td / 'dt.xlsx', du_thao=True)))   # 1.0.04
         self.assertIn('075092001234', chu(in_an.lap_chi_tiet(self.con, 1, self.td / 'ct.xlsx', du_thao=False)))
-        self.ghi_ho_so({'ban_in': {'che_cccd_ban_du_thao': False}})
+        self.ghi_ho_so({'ban_in': {'che_cccd_ban_du_thao': True}})     # khóa cũ: bỏ qua
         self.assertIn('075092001234', chu(in_an.lap_chi_tiet(self.con, 1, self.td / 'dt2.xlsx', du_thao=True)))
 
     def test_nguon_goc_canh_tren(self):
         ws = self.in_ho('Đất khai phá năm 1995.')
         r = next(r for r, x, _ in self.dong_nguon_goc(ws) if x)
         al = ws.cell(r, 1).alignment
-        self.assertEqual((al.horizontal, al.vertical), ('justify', 'top'))
-        self.ghi_ho_so({'ban_in': {'nguon_goc': {'can_ngang': 'justify', 'can_doc': 'center'}}})
+        self.assertEqual((al.horizontal, al.vertical), ('justify', 'center'))     # 1.0.04: mặc định giữa dọc
+        self.ghi_ho_so({'ban_in': {'nguon_goc': {'can_ngang': 'justify', 'can_doc': 'top'}}})
         ws = self.in_ho('Đất khai phá năm 1995.')
         r = next(r for r, x, _ in self.dong_nguon_goc(ws) if x)
-        self.assertEqual(ws.cell(r, 1).alignment.vertical, 'center')
+        self.assertEqual(ws.cell(r, 1).alignment.vertical, 'top')
 
     def test_to_trinh_can_cu_theo_ho_so(self):
         from pabt import van_ban_trinh as vb

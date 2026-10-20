@@ -330,7 +330,7 @@ class KhungDuThao(QWidget):
         self.b_xoa_dot.setToolTip('Xóa đợt đang chọn: các hộ trở về danh sách chờ, phương án và hồ sơ hộ giữ nguyên. Mờ khi chọn "Lũy kế".')
         self.b_xoa_dot.clicked.connect(lambda: self._xoa_dot())
         self.b_in_du_thao = QPushButton('In PA Dự thảo gửi dân')
-        self.b_in_du_thao.setToolTip('Mở Xuất hồ sơ & Bản in ở chế độ Dự thảo cho các hộ của đợt: mẫu có chữ DỰ THẢO, che số CCCD (NĐ 13/2023)')
+        self.b_in_du_thao.setToolTip('Mở Xuất hồ sơ & Bản in ở chế độ Dự thảo cho các hộ của đợt: mẫu có chữ DỰ THẢO, in đủ số CCCD')
         self.b_in_du_thao.clicked.connect(lambda: self._in_du_thao())
         # 0.9.75: hai nút "Đưa hộ đủ điều kiện vào đợt" / "Thêm hộ vào đợt…" gộp một nút xổ
         self.b_dua = QPushButton('Đưa hộ vào đợt')
@@ -345,10 +345,10 @@ class KhungDuThao(QWidget):
         self.b_hop.setToolTip('Ngày họp lấy ý kiến người dân: tự tính hạn đối thoại')
         for b, ham in ((self.b_tao, self._tao), (self.b_goi, self._goi_y), (self.b_hop, self._ngay_hop)):
             b.clicked.connect(ham)
-        # "Xuất bảng niêm yết" (CCCD tự che - NĐ 13/2023) cùng hàng nút đợt, không chiếm một hàng riêng trên bảng (15/10/2026)
+        # "Xuất bảng niêm yết" cùng hàng nút đợt, không chiếm một hàng riêng trên bảng (15/10/2026)
         self._nut = {}
         self.b_xuat_ny = QPushButton('Xuất bảng niêm yết')
-        self.b_xuat_ny.setToolTip('Xuất Excel bảng niêm yết công khai của đợt đang chọn; số CCCD tự che (Nghị định 13/2023/NĐ-CP)')
+        self.b_xuat_ny.setToolTip('Xuất Excel bảng niêm yết công khai của đợt đang chọn')
         self.b_xuat_ny.clicked.connect(lambda: self._xuat_ny())
         self._nut['Xuất bảng niêm yết'] = self.b_xuat_ny
         for b in (self.b_tao, self.b_xoa_dot, self.b_dua, self.b_goi, self.b_hop, self.b_in_du_thao, self.b_xuat_ny):
@@ -379,7 +379,7 @@ class KhungDuThao(QWidget):
         # 4 thẻ gọn (15/10/2026, người dùng): cao 28-30 px, chữ 12 px - nhường chiều cao cho bảng
         # phông ở mức QTabBar (Qt5 đo bề rộng thẻ theo phông thanh thẻ - xem giao_dien.THE_TAB)
         self.tabs.setStyleSheet('QTabBar { font-size: 12px; } QTabBar::tab { min-height: 16px; padding: 4px 12px; margin-top: 0px; }')
-        # CCCD hiển thị đã che (an_toan.che_cccd, NĐ 13/2023) - tiêu đề chỉ "CCCD"; bề rộng chuẩn từng cột + một cột giãn
+        # CCCD hiển thị đủ số (1.0.04 bỏ che) - tiêu đề chỉ "CCCD"; bề rộng chuẩn từng cột + một cột giãn
         self.bang_ny = _bang(['STT', 'Họ và tên', 'CCCD', 'Thửa', 'Tổng tiền dự thảo', 'Địa điểm'],
                              [50, 170, 115, 85, 155], gian=5)
         self.bang_yk = _bang(['Mã hộ', 'Họ và tên', 'Ý kiến', 'Nhóm kiến nghị', 'Nội dung', 'Chênh lệch'],

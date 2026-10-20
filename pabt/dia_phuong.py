@@ -167,6 +167,9 @@ def kiem_tra(hs: dict) -> list:
         td = ng.get('thut_dau_cm', 0)
         if isinstance(td, bool) or not isinstance(td, (int, float)) or not 0 <= td <= 5:
             loi.append('ban_in.nguon_goc.thut_dau_cm: số cm từ 0 đến 5 (0 = không thụt đầu dòng).')
+        nb = ng.get('thut_dau_nbsp', 8)
+        if isinstance(nb, bool) or not isinstance(nb, int) or not 0 <= nb <= 20:
+            loi.append('ban_in.nguon_goc.thut_dau_nbsp: số khoảng trắng không ngắt từ 0 đến 20 (0 = theo thut_dau_cm).')
         for loai, le in (bi.get('le_trang') or {}).items():
             if loai not in ('chi_tiet', 'tong_hop') or not isinstance(le, dict):
                 loi.append('ban_in.le_trang: chỉ có "chi_tiet" / "tong_hop", mỗi mục là các lề top / bottom / left / right / '

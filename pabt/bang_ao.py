@@ -22,14 +22,14 @@ DU_RONG = 1.15                  # chữ xuống dòng theo từ: ước dài hơ
 GOI_Y_TU = 15                   # ô có chữ dài hơn bấy nhiêu ký tự: chú thích (tooltip) = nội dung ô
 _PHAI = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 _TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+_GIUA = int(Qt.AlignmentFlag.AlignCenter)
 _HIEN, _CAN, _DU_LIEU = Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.TextAlignmentRole, Qt.ItemDataRole.UserRole
 _NEN, _MAU_CHU, _CHU, _GOI_Y = (Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.ForegroundRole, Qt.ItemDataRole.FontRole,
                                 Qt.ItemDataRole.ToolTipRole)
 # 1.0.03 "làm mờ số 0 - tôn vinh số thực": ô có giá trị bằng 0 / gạch chữ xám nhạt (mắt lướt qua khoản trống); ô số của cột tổng /
 # thành tiền chữ navy đậm. Chỉ ô chưa có màu chữ riêng (kieu['mau_chu'])
-SO_KHONG = frozenset(('0', '0,0', '0,00', '0,0%', '0.0%', '0%', '-', '—'))
-MAU_SO_KHONG = '#94A3B8'
-MAU_SO_TIEN = '#0F3866'
+# 20/10/2026: hằng / phông số dùng chung ở giao_dien (một nguồn cho BangHo, BangMuc, Khái toán) - cột canh phải dùng phông số
+from .giao_dien import MAU_SO_KHONG, MAU_SO_TIEN, SO_KHONG, cuon_muot, phong_so  # noqa: E402
 _BUT_SO_KHONG = QBrush(QColor(MAU_SO_KHONG))
 _BUT_SO_TIEN = QBrush(QColor(MAU_SO_TIEN))
 
@@ -92,6 +92,9 @@ class _MoHinhAo(QAbstractTableModel):
         if role == _HIEN:
             return self.dong[r][c]
         if role == _CAN:
+            k = self.kieu.get((r, c))
+            if k is not None and k.get('can_giua'):         # 20/10/2026: ô căn giữa (STT, đánh giá)
+                return _GIUA
             return _PHAI if c in self.can_phai else _TRAI
         if role == _DU_LIEU:
             return self.du_lieu[r] if r < len(self.du_lieu) else None
@@ -110,6 +113,8 @@ class _MoHinhAo(QAbstractTableModel):
             if c in self.cot_tien and v and (v[0].isdigit() or v[0] == '-'):
                 return _BUT_SO_TIEN
             return None
+        if role == _CHU and c in self.can_phai:          # cột số: phông số (Consolas) cùng cỡ phông ứng dụng
+            return phong_so(None, dam=bool(k and k.get('dam')))
         if k is None:
             return None
         if role == _NEN and k.get('nen') is not None:
@@ -157,6 +162,7 @@ class BangAo(QTableView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setWordWrap(True)
+        cuon_muot(self)                                 # 1.0.07: cuộn từng điểm ảnh, bước lăn chuột 20 px
         self.verticalHeader().setVisible(False)
         dau = self.horizontalHeader()
         dau.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)

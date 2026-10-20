@@ -240,10 +240,10 @@ class TestManHinh(_DuAn):
         h.o_thu_muc.setText(h.o_thu_muc.text())
         kq = h.thuc_hien(xac_nhan=False)
         tm = self.td / 'hs' / 'Đợt 1 - 3 hộ'
-        # 3 phương án chi tiết + bảng tổng hợp + tờ trình (16/10/2026: Xuất hồ sơ & Bản in không còn báo cáo tiếp thu ý kiến)
-        self.assertEqual(len(kq['excel']) + len(kq['word']), 3 + 1 + 1)
+        # 3 phương án chi tiết + bảng tổng hợp + tờ trình + báo cáo tiếp thu ý kiến (20/10/2026: chính thức = trọn bộ 4 tài liệu)
+        self.assertEqual(len(kq['excel']) + len(kq['word']), 3 + 1 + 1 + 1)
         self.assertEqual(sorted(p.name for p in (tm / 'PA TONG').iterdir()),
-                         ['BANG_TONG_HOP.xlsx', 'TO_TRINH.docx'])
+                         ['BANG_TONG_HOP.xlsx', 'BAO_CAO_TIEP_THU_Y_KIEN.docx', 'TO_TRINH.docx'])
         self.assertEqual(quan_ly.lay_dot(self.con, i).thu_muc, str(tm))      # cột "Thư mục đã xuất" của đợt
         self.assertFalse((tm / 'PA TONG' / 'PHUONG_AN_TONG.docx').exists())
 
@@ -269,8 +269,9 @@ class TestManHinh(_DuAn):
         self.assertFalse(h.o_tt.isChecked())                           # không theo đợt: tờ trình, PA tổng không chọn sẵn
         h.cb_dot.setCurrentIndex(h.cb_dot.findData(i))                  # chọn đợt: đánh dấu hộ của đợt + chọn mọi mẫu
         self.assertEqual(h.ds_ho(), self.ma[:2])
-        self.assertTrue(all(o.isChecked() for o in (h.o_ct, h.o_bth, h.o_tt)))
+        self.assertTrue(all(o.isChecked() for o in (h.o_ct, h.o_bth, h.o_tt, h.o_bc)))
         self.assertFalse(hasattr(h, 'o_pat'))
+        h.o_bc.setChecked(False)                                        # bỏ báo cáo tiếp thu: đúng 2 file PA TONG
         h.o_thu_muc.setText(str(self.td / 'in'))
         h.r_excel.setChecked(True)
         kq = h.thuc_hien(xac_nhan=False)

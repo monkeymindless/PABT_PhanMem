@@ -138,8 +138,8 @@ class TestLapPhuongAn(Co0995):
         # mục 1: nút thao tác dòng + "Cộng mục 1" cùng hàng chọn thửa
         b1 = c.bang[1]
         self.assertIs(b1.nut['▲ Lên'].parentWidget().parentWidget(), b1.cb_thua.parentWidget().parentWidget())
-        # 0.9.96: hàng nhập mục 1 = các khối XepDong trong cùng khung_nhap (hẹp thì xuống dòng)
-        self.assertIs(b1.lb_tong.parentWidget().parentWidget(), b1.cb_thua.parentWidget().parentWidget())
+        # 20/10/2026 (ảnh mẫu): "CỘNG MỤC k" ở dải chân bảng (mọi mục), không còn trên hàng chọn thửa
+        self.assertIs(b1.lb_tong.parentWidget(), b1.dai_cong)
         for ten in ('▲ Lên', '▼ Xuống'):                                 # Xóa dòng: thùng rác cột cuối (18/10/2026)
             self.assertEqual(c.bang[2].nut[ten].height() or c.bang[2].nut[ten].minimumHeight(), man_hinh.CAO_NUT_DONG)
 

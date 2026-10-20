@@ -9,7 +9,7 @@ BUOC = (
     (3, 'Thông báo thu hồi đất, gửi thông báo', '2. Dự án triển khai', 'Danh sách trích xuất thông báo thu hồi'),
     (4, 'Điều tra, khảo sát, đo đạc, kiểm đếm', '2. Dự án triển khai', 'Danh sách hộ và thửa đất kiểm kê'),
     (5, 'Lập phương án bồi thường, hỗ trợ', '3. Lập phương án', 'Phương án chi tiết từng hộ, bảng áp giá'),
-    (6, 'Niêm yết công khai phương án', '3. Lập phương án - Niêm yết & Lấy ý kiến (thẻ 1)', 'Bản dự thảo niêm yết (che CCCD theo NĐ 13/2023)'),
+    (6, 'Niêm yết công khai phương án', '3. Lập phương án - Niêm yết & Lấy ý kiến (thẻ 1)', 'Bản dự thảo niêm yết'),
     (7, 'Lấy ý kiến phương án, tổ chức đối thoại', '3. Lập phương án - Niêm yết & Lấy ý kiến (thẻ 2, 3, 4)',
      'Phiếu lấy ý kiến từng hộ, biên bản đối thoại, tổng hợp ý kiến'),
     (8, 'Thẩm định phương án bồi thường', '4. Tổng hợp & trình duyệt', 'Tờ trình thẩm định, bảng tổng hợp kinh phí'),

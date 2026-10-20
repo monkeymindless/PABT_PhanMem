@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-PHIEN_BAN_CSDL = 16
+PHIEN_BAN_CSDL = 17
 # đuôi file dự án (người dùng 15/10/2026: ".larc"); file .pabt của các bản trước vẫn mở / nhận như cũ (cùng CSDL SQLite)
 DUOI_DU_AN = '.larc'
 DUOI_DU_AN_CU = ('.pabt',)
@@ -80,6 +80,12 @@ _NANG_CAP = {
     # v16 (0.9.87): sổ nhật ký vận động, nhật ký kiểm toán (+ trigger chặn sửa / xóa), bản đồ thửa CAD, chỉ mục ct_dat(ma_thua)
     # - trước đây tạo khi mở file không đổi phiên bản; nay là bước nâng cấp chính thức (chỉ file có hộ: _tao_bang_phu)
     15: ["@bang_phu_v16"],
+    # v17 (1.0.05): nhiều lần lập phương án / hộ - ct_dat, ct_khoan cột lan (dòng cũ = lần 1), qd_ho.lan (0 = cả hộ, trước v17),
+    # bảng pa_lan (lan_pa.py); hộ đã có quyết định: lần 1 khóa
+    16: ["ALTER TABLE ct_dat ADD COLUMN lan INTEGER NOT NULL DEFAULT 1",
+         "ALTER TABLE ct_khoan ADD COLUMN lan INTEGER NOT NULL DEFAULT 1",
+         "ALTER TABLE qd_ho ADD COLUMN lan INTEGER NOT NULL DEFAULT 0",
+         "@pa_lan_v17"],
     # v14 (0.9.69): chủ đầu tư; mã tài sản mới TS / CT / VN / CS (ma_tai_san.chuyen_csdl - bỏ dòng HT / TH trùng của dm_taisan)
     14: ["ALTER TABLE du_an ADD COLUMN co_quan_tham_dinh TEXT NOT NULL DEFAULT ''",
          "ALTER TABLE dot_trinh ADD COLUMN ky_hieu_so TEXT NOT NULL DEFAULT ''"],
@@ -318,6 +324,9 @@ def _mo_tiep(con, tao: bool):
                     if lenh == '@bang_phu_v16':
                         _tao_bang_phu(con)
                         continue
+                    if lenh == '@pa_lan_v17':
+                        _tao_pa_lan(con)
+                        continue
                     if lenh == '@doi_ma_tai_san':
                         from .ma_tai_san import chuyen_csdl
                         chuyen_csdl(con)
@@ -336,7 +345,65 @@ def _mo_tiep(con, tao: bool):
                 _tao_bang_phu(con)
         except sqlite3.OperationalError:                # file đang bị khóa: các hàm dùng bảng phụ tự tạo khi ghi
             pass
+    if not co_cot_thua(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
+        try:
+            with con:
+                dam_bao_cot_thua(con)
+        except sqlite3.OperationalError:                # chỉ xem / file khóa: ho_so.luu_ho thêm khi ghi
+            pass
     return con
+
+
+# cột thêm vào bảng thua KHÔNG đổi PHIEN_BAN_CSDL (20/10/2026 - thẻ Thông tin hộ, thửa đất): file mới có sẵn (schema.sql); file cũ
+# thêm ở csdl.mo khi đã có hộ (trước khi Hoàn tác liệt kê cột) hoặc lúc ghi thửa (ho_so.luu_ho). Bản cũ mở file vẫn được (cột thừa)
+COT_THUA_THEM = (('dt_nguyen_thua', "TEXT NOT NULL DEFAULT ''"), ('so_gcn', "TEXT NOT NULL DEFAULT ''"))
+
+
+def co_cot_thua(con) -> bool:
+    """Bảng thua đã có các cột COT_THUA_THEM (nhớ trên kết nối khi đã có)."""
+    if getattr(con, '_co_cot_thua', False):
+        return True
+    co = {r[1] for r in con.execute('PRAGMA table_info(thua)')}
+    kq = all(k in co for k, _ in COT_THUA_THEM)
+    if kq:
+        try:
+            con._co_cot_thua = True
+        except AttributeError:                          # sqlite3.Connection thường (không phải KetNoi)
+            pass
+    return kq
+
+
+def dam_bao_cot_thua(con) -> bool:
+    """Thêm các cột COT_THUA_THEM còn thiếu (trong giao dịch của nơi gọi nếu có). Trả True khi bảng có đủ cột."""
+    if co_cot_thua(con):
+        return True
+    co = {r[1] for r in con.execute('PRAGMA table_info(thua)')}
+    if not co:
+        return False
+    for k, kieu in COT_THUA_THEM:
+        if k not in co:
+            con.execute(f'ALTER TABLE thua ADD COLUMN {k} {kieu}')
+    return co_cot_thua(con)
+
+
+def _tao_pa_lan(con) -> None:
+    """Nâng cấp v16 -> v17: bảng pa_lan (theo schema.sql) + lần 1 cho mọi hộ đã có dòng phương án / quyết định; hộ đã có quyết
+    định phê duyệt: lần 1 khóa (đã phê duyệt), quyết định cũ (lan 0) coi là phê duyệt lần 1. Bộ đơn giá (không hộ): chỉ tạo bảng."""
+    s = _SCHEMA.read_text(encoding='utf-8')
+    i = s.index('CREATE TABLE IF NOT EXISTS pa_lan')
+    con.execute(s[i:s.index('\n);', i) + 3])
+    con.execute('CREATE INDEX IF NOT EXISTS ix_ctdat_lan ON ct_dat(ma_ho, lan)')
+    con.execute('CREATE INDEX IF NOT EXISTS ix_ctkhoan_lan ON ct_khoan(ma_ho, lan)')
+    if not con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
+        return
+    con.execute("""INSERT OR IGNORE INTO pa_lan (ma_ho, lan, ten, ngay_lap, so_pa, ngay_pa, trang_thai, khoa)
+                   SELECT h.ma_ho, 1, 'Phương án gốc', COALESCE(substr(h.luu_luc, 1, 10), ''), h.so_pa, h.ngay_pa,
+                          CASE WHEN EXISTS (SELECT 1 FROM qd_ho q WHERE q.ma_ho = h.ma_ho) THEN 'da_phe_duyet' ELSE 'dang_lap' END,
+                          CASE WHEN EXISTS (SELECT 1 FROM qd_ho q WHERE q.ma_ho = h.ma_ho) THEN 1 ELSE 0 END
+                   FROM ho h
+                   WHERE EXISTS (SELECT 1 FROM ct_dat d WHERE d.ma_ho = h.ma_ho)
+                      OR EXISTS (SELECT 1 FROM ct_khoan k WHERE k.ma_ho = h.ma_ho)
+                      OR EXISTS (SELECT 1 FROM qd_ho q WHERE q.ma_ho = h.ma_ho)""")
 
 
 def _tao_bang_phu(con) -> bool:

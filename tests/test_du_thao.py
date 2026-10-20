@@ -34,7 +34,7 @@ class TestDuThao(unittest.TestCase):
         them, bo = du_thao.dua_ho_vao_dot(self.con, dot)
         self.assertEqual(them, 1)
         self.assertEqual([h['ma_ho'] for h in du_thao.ds_ho_dot(self.con, dot)], [1])
-        self.assertEqual(du_thao.ds_ho_dot(self.con, dot)[0]['cccd_che'], '075092******')
+        self.assertEqual(du_thao.ds_ho_dot(self.con, dot)[0]['cccd_che'], '075092000001')   # 1.0.04: không che
         du_thao.ghi_y_kien(self.con, dot, 1, 'dong_y', '', 'Đồng ý phương án')
         tk = du_thao.thong_ke_y_kien(self.con, dot)
         self.assertEqual((tk['dong_y'], tk['so_ho_dot'], tk['pt_dot']), (1, 1, 100.0))

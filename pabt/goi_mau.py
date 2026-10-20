@@ -16,6 +16,7 @@ import os
 import re
 import shutil
 import socket
+import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -71,6 +72,10 @@ def ds_mau_hien_hanh() -> list:
             tm = in_an.thu_muc_mau(ten)
         except in_an.LoiIn:
             continue
+        if tm == in_an.THU_MUC_NHUNG:               # máy trắng: mẫu nhúng ghi ra thư mục tạm để đóng gói
+            tm = Path(tempfile.gettempdir()) / 'PABT_mau_nhung'
+            tm.mkdir(parents=True, exist_ok=True)
+            in_an.ghi_mau_nhung(ten, tm, ghi_de=True)
         for f in (tm / f'{ten}.xlsx', tm / f'{ten}.duong_ke.xml'):
             if f.is_file():
                 kq.setdefault(f.name, f)

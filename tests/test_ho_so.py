@@ -167,7 +167,7 @@ class TestManHinhHoSo(CoSo):
         d.o['ho_ten'].setText('Hộ thêm từ màn hình')
         r = d.them_dong(dict(so_to='75', so_thua='1', loai_dat='ONT+CLN', dt_thu_hoi='300'))
         self.assertEqual(d.tach_dong(r), 2)
-        d.bang.item(1, 3).setText('120,5')
+        d.bang.item(1, d.cot.index('dt_thu_hoi')).setText('120,5')
         self.assertTrue(d.co_thay_doi())
         self.assertTrue(d.luu())
         ho = ho_so.doc_ho(self.con, d.ma_ho)
@@ -187,7 +187,7 @@ class TestManHinhHoSo(CoSo):
             self.con.execute("UPDATE thua SET vi_tri = 'Vị trí 2', nguon_goc = ? WHERE ma_ho = 1", ('Giao khoán năm 2002. ' * 60,))
         d = HopHoSo(self.con, 1)
         d.resize(1000, 640)
-        cot = [k for k, _ in ho_so.TRUONG_THUA]
+        cot = d.cot                                         # 20/10/2026: cột bảng thửa theo man_hinh_ho_so.COT_THUA
         self.assertTrue(d.bang.isColumnHidden(cot.index('vi_tri')))
         self.assertFalse(d.bang.isColumnHidden(cot.index('nguon_goc')))
         self.assertTrue(all(d.bang.rowHeight(r) <= CAO_DONG_TOI_DA for r in range(d.bang.rowCount())))

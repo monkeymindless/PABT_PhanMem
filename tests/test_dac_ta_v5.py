@@ -60,7 +60,7 @@ class TestDacTaV5(CoSo):
         self.assertIsInstance(w.khung_tab, giao_dien.KhungLamViecDaTab)
         self.assertEqual(w.thanh_tab.count(), 1)
         self.assertEqual(w._tab_khoa, [-1])
-        self.assertEqual(set(w.nut_chao), {'Dự án mới…', 'Mở dự án…', 'Nhập file Excel…'})
+        self.assertEqual(set(w.nut_chao), {'Dự án mới…', 'Mở dự án…', 'Nhập file Excel…', 'Tiếp nhận & Kiểm tra pháp lý dự án…'})
         self.assertEqual(w.ds_gan_day.columnCount(), 6)
         self.assertEqual(w.lk_huong_dan.text(), 'Lịch sử cập nhật phần mềm')
         from pabt.lich_su_cap_nhat import MUC

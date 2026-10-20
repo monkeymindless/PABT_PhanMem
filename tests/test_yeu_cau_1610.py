@@ -67,8 +67,9 @@ class TestMenuChuotPhai(_Co):
         chu = lambda m: [a.text() for a in m.actions() if a.text()]    # noqa: E731
         m1 = chu(c.bang[1].menu_dong())
         for t in ('Thêm thửa vào mục 1…', 'Thêm tất cả thửa', 'Chọn nhiều thửa…', 'Nhân bản dòng', 'Xóa dòng', '▲ Lên', '▼ Xuống',
-                  'Chép nội dung ô', 'Chọn mọi dòng (Ctrl+A)', 'Tra giá đất NQ 28…'):
+                  'Sao chép cả dòng\tCtrl+Shift+C', 'Chọn mọi dòng (Ctrl+A)', 'Tra giá đất NQ 28…'):
             self.assertIn(t, m1)
+        self.assertTrue(m1[0].startswith('Sao chép'))            # 1.0.04: sao chép ô / dòng đứng đầu menu
         self.assertIn('Kiểm tra DT xây dựng…', chu(c.bang[2].menu_dong()))
         self.assertIn('Tính mật độ…', chu(c.bang[3].menu_dong()))
         n = len(c.bo.pa.dat)
@@ -116,7 +117,8 @@ class TestBanIn(_Co):
     def test_ho_gia_dinh_giu_cccd_va_ngay_da_dien(self):
         con = self._con()
         with con:
-            con.execute("UPDATE ho SET so_pa = '12', ngay_pa = '05/10/2026' WHERE ma_ho = 2")
+            # 20/10/2026: dòng "Số CCCD:" TRỐNG thì ẩn (canh_trang_in_an) - hộ gia đình có số CCCD thì dòng phải hiện
+            con.execute("UPDATE ho SET so_pa = '12', ngay_pa = '05/10/2026', so_cccd = '079123456789' WHERE ma_ho = 2")
         ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 2, self.td / 'ho.xlsx')).active
         chu = {c.coordinate: c.value for r in ws.iter_rows(max_row=16) for c in r if isinstance(c.value, str)}
         self.assertIn('Trị An, ngày 05 tháng 10 năm 2026', chu.values())

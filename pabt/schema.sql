@@ -80,7 +80,9 @@ CREATE TABLE IF NOT EXISTS thua (
     dt_thu_hoi   TEXT NOT NULL DEFAULT '0',
     nguon_goc    TEXT NOT NULL DEFAULT '',
     vi_tri       TEXT NOT NULL DEFAULT '',             -- mô tả vị trí đầy đủ
-    thu_tu       INTEGER NOT NULL DEFAULT 0
+    thu_tu       INTEGER NOT NULL DEFAULT 0,
+    dt_nguyen_thua TEXT NOT NULL DEFAULT '',           -- DT nguyên thửa (m²; trống = chưa nhập) - thêm 20/10/2026, không đổi phiên bản
+    so_gcn       TEXT NOT NULL DEFAULT ''              -- số Giấy chứng nhận / số phát hành
 );
 CREATE INDEX IF NOT EXISTS ix_thua_ho ON thua(ma_ho);
 
@@ -100,7 +102,8 @@ CREATE TABLE IF NOT EXISTS ct_dat (
     ty_le        TEXT NOT NULL DEFAULT '1',
     ghi_chu      TEXT NOT NULL DEFAULT '',
     thanh_tien_excel TEXT,                             -- thành tiền đọc từ file Excel (để đối chiếu)
-    cong_thuc    TEXT NOT NULL DEFAULT ''              -- công thức đã gõ ra diện tích
+    cong_thuc    TEXT NOT NULL DEFAULT '',             -- công thức đã gõ ra diện tích
+    lan          INTEGER NOT NULL DEFAULT 1            -- v17: lần lập phương án của hộ (1 = lần đầu, 2.. = bổ sung) - pa_lan
 );
 CREATE INDEX IF NOT EXISTS ix_ctdat_ho ON ct_dat(ma_ho);
 CREATE INDEX IF NOT EXISTS ix_ctdat_thua ON ct_dat(ma_thua);
@@ -124,9 +127,12 @@ CREATE TABLE IF NOT EXISTS ct_khoan (
     can_cu_gia   TEXT NOT NULL DEFAULT '',             -- căn cứ đơn giá khi áp giá tương đương / nhập tay
     thanh_tien_excel TEXT,
     cach_tinh    TEXT NOT NULL DEFAULT '',             -- mô tả cách tính (in thay ĐVT / SL / ĐG / tỷ lệ), vd khoản hỗ trợ
-    cong_thuc    TEXT NOT NULL DEFAULT ''              -- công thức đã gõ ra số lượng (=4,2*5,7), hiện lại khi sửa ô
+    cong_thuc    TEXT NOT NULL DEFAULT '',             -- công thức đã gõ ra số lượng (=4,2*5,7), hiện lại khi sửa ô
+    lan          INTEGER NOT NULL DEFAULT 1            -- v17: lần lập phương án của hộ
 );
 CREATE INDEX IF NOT EXISTS ix_ctkhoan_ho ON ct_khoan(ma_ho, muc);
+CREATE INDEX IF NOT EXISTS ix_ctdat_lan ON ct_dat(ma_ho, lan);
+CREATE INDEX IF NOT EXISTS ix_ctkhoan_lan ON ct_khoan(ma_ho, lan);
 
 -- ---------------------------------------------------------------- danh mục, tham số
 CREATE TABLE IF NOT EXISTS dm_taisan (
@@ -235,9 +241,24 @@ CREATE TABLE IF NOT EXISTS qd_ho (
     da_chi_tra INTEGER NOT NULL DEFAULT 0, chi_tra_ngay TEXT NOT NULL DEFAULT '', chi_tra_so_tien TEXT NOT NULL DEFAULT '',
     chung_tu TEXT NOT NULL DEFAULT '',                -- file biên lai / biên bản chi trả
     ly_do_chua_nhan TEXT NOT NULL DEFAULT '', ghi_chu TEXT NOT NULL DEFAULT '',
+    lan INTEGER NOT NULL DEFAULT 0,                   -- v17: lần phương án được quyết định này phê duyệt (0 = trước v17: cả hộ)
     UNIQUE (qd_id, ma_ho)
 );
 CREATE INDEX IF NOT EXISTS qd_ho_ma_ho ON qd_ho (ma_ho);
+-- v17: các lần lập phương án chi tiết của một hộ (lần đầu + bổ sung) - mỗi lần một bộ dòng ct_dat / ct_khoan (cột lan), số / ngày
+-- phương án riêng, khóa sau khi có quyết định phê duyệt (sửa lần đã duyệt làm sai quyết định cũ)
+CREATE TABLE IF NOT EXISTS pa_lan (
+    id INTEGER PRIMARY KEY,
+    ma_ho INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE,
+    lan INTEGER NOT NULL,
+    ten TEXT NOT NULL DEFAULT '',
+    ngay_lap TEXT NOT NULL DEFAULT '',
+    so_pa TEXT NOT NULL DEFAULT '', ngay_pa TEXT NOT NULL DEFAULT '',
+    trang_thai TEXT NOT NULL DEFAULT 'dang_lap',      -- dang_lap / da_phe_duyet
+    khoa INTEGER NOT NULL DEFAULT 0,                  -- 1: chỉ xem (đã có quyết định)
+    ghi_chu TEXT NOT NULL DEFAULT '',
+    UNIQUE (ma_ho, lan)
+);
 
 -- ---------------------------------------------------------------- dự thảo phương án, niêm yết, lấy ý kiến (v13)
 -- Niêm yết 10 ngày, đối thoại không quá 30 ngày. Hộ vướng pháp lý không đưa vào đợt.

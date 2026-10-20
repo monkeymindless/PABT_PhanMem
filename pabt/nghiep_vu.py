@@ -303,16 +303,76 @@ def _dong_khoan(r) -> DongKhoan:
         cong_thuc=(r['cong_thuc'] or '') if 'cong_thuc' in kk else '')
 
 
-def doc_phuong_an(con, ma_ho: int) -> PhuongAn:
+def co_cot_lan(con) -> bool:
+    """File có cột ct_dat.lan (CSDL v17 - nhiều lần lập phương án / hộ). File chỉ xem bản cũ: không (mọi dòng là lần 1)."""
+    co = getattr(con, '_co_cot_lan', None)
+    if co is not None:
+        return co
+    co = 'lan' in [r[1] for r in con.execute('PRAGMA table_info(ct_dat)')]
+    try:
+        con._co_cot_lan = co                        # csdl.KetNoi (lớp con Python) nhận thuộc tính; sqlite3.Connection thường thì không
+    except AttributeError:
+        pass
+    return co
+
+
+def doc_phuong_an(con, ma_ho: int, lan: int | None = None, den_lan: int | None = None,
+                  ngoai_lan: int | None = None) -> PhuongAn:
+    """Phương án của hộ. Mặc định CỘNG DỒN mọi lần lập phương án (v17: lần đầu + các lần bổ sung - tổng của hộ, danh sách hộ, đối
+    chiếu, kiểm tra lỗi). lan: chỉ dòng của lần đó (soạn / in / quyết định của một lần); den_lan: các lần <= den_lan (lũy kế);
+    ngoai_lan: mọi lần TRỪ lần đó (cộng dồn khi đang soạn một lần)."""
     h = con.execute('SELECT * FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
     if h is None:
         raise KeyError(f'không có hộ mã {ma_ho}')
     pa = PhuongAn(ho=_tao_ho(h))
-    for r in con.execute('SELECT * FROM ct_dat WHERE ma_ho = ? ORDER BY thu_tu, id', (ma_ho,)):
+    loc, ts = '', (ma_ho,)
+    if co_cot_lan(con):
+        if lan is not None:
+            loc, ts = ' AND lan = ?', (ma_ho, int(lan))
+        elif den_lan is not None:
+            loc, ts = ' AND lan <= ?', (ma_ho, int(den_lan))
+        elif ngoai_lan is not None:
+            loc, ts = ' AND lan <> ?', (ma_ho, int(ngoai_lan))
+    elif lan is not None and int(lan) != 1 or den_lan is not None and int(den_lan) < 1 or ngoai_lan == 1:
+        return pa                                   # file chưa có cột lan: chỉ có lần 1
+    for r in con.execute(f'SELECT * FROM ct_dat WHERE ma_ho = ?{loc} ORDER BY thu_tu, id', ts):
         pa.dat.append(_dong_dat(r))
-    for r in con.execute('SELECT * FROM ct_khoan WHERE ma_ho = ? ORDER BY muc, thu_tu, id', (ma_ho,)):
+    for r in con.execute(f'SELECT * FROM ct_khoan WHERE ma_ho = ?{loc} ORDER BY muc, thu_tu, id', ts):
         pa.khoan[r['muc']].append(_dong_khoan(r))
     return pa
+
+
+def gop_phuong_an(*ds: PhuongAn) -> PhuongAn:
+    """Ghép các phương án (các lần) của CÙNG một hộ: thông tin hộ của phương án cuối, dòng nối theo thứ tự."""
+    pa = PhuongAn(ho=ds[-1].ho)
+    for x in ds:
+        pa.dat.extend(x.dat)
+        for m in MUC_KHOAN:
+            pa.khoan[m].extend(x.khoan.get(m, []))
+    return pa
+
+
+def tinh_pa_lan(pa_lan, pa_truoc, bc, bc_lan=None) -> KetQuaHo:
+    """Hai cách gọi: tinh_pa_lan(pa_lan, pa_truoc, bc) (phương án trong bộ nhớ) hoặc tinh_pa_lan(con, ma_ho, lan, bc) (đọc CSDL - như
+    tinh_lan). Xem _tinh_pa_lan."""
+    if isinstance(pa_lan, PhuongAn):
+        return _tinh_pa_lan(pa_lan, pa_truoc, bc)
+    return tinh_lan(pa_lan, pa_truoc, bc, bc_lan)
+
+
+def _tinh_pa_lan(pa_lan: PhuongAn, pa_truoc: PhuongAn, bc: BoiCanh) -> KetQuaHo:
+    """Kết quả RIÊNG một lần lập phương án: mục 1-4 theo dòng của lần đó; thưởng bàn giao mặt bằng (theo bậc trên tổng của hộ, chỉ
+    một lần cho hộ) = thưởng của lũy kế tới lần này - thưởng của các lần trước. Cộng các lần = đúng tổng cộng dồn của hộ.
+    pa_truoc: các lần trước (doc_phuong_an(den_lan=lan - 1)); lần đầu: phương án rỗng."""
+    kq = tinh_pa(pa_lan, bc)
+    if pa_truoc.dat or any(pa_truoc.khoan[m] for m in MUC_KHOAN):
+        kq.muc[5] = tinh_pa(gop_phuong_an(pa_truoc, pa_lan), bc).muc[5] - tinh_pa(pa_truoc, bc).muc[5]
+    return kq
+
+
+def tinh_lan(con, ma_ho: int, lan: int, bc: BoiCanh | None = None) -> KetQuaHo:
+    bc = bc or BoiCanh.tu(con)
+    return _tinh_pa_lan(doc_phuong_an(con, ma_ho, lan=lan), doc_phuong_an(con, ma_ho, den_lan=lan - 1), bc)
 
 
 def doc_tat_ca_phuong_an(con, ds_ma_ho=None) -> dict:

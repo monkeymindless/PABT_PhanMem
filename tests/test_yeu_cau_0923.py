@@ -76,7 +76,7 @@ class TestCuaSoChinh(CoSoCuaSo):
         w.show()
         self.assertEqual(w.trang.currentIndex(), ud.TRANG_CHAO)             # chưa mở dự án: màn hình chào
         self.assertFalse(w.hang_the.isVisible())
-        self.assertEqual(set(w.nut_chao), {'Dự án mới…', 'Mở dự án…', 'Nhập file Excel…'})
+        self.assertEqual(set(w.nut_chao), {'Dự án mới…', 'Mở dự án…', 'Nhập file Excel…', 'Tiếp nhận & Kiểm tra pháp lý dự án…'})
         self.assertEqual(w.lk_huong_dan.text(), 'Lịch sử cập nhật phần mềm')
         from PySide6.QtWidgets import QAbstractButton
         self.assertNotIn(w.lk_huong_dan, w.findChildren(QAbstractButton))   # liên kết chữ, không phải nút cạnh 3 lệnh

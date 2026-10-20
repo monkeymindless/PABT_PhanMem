@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QDialog, QHBoxLayout, QHeaderView, QLabel, QPushButton,
-                               QRadioButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
+                               QRadioButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QLineEdit)
 
 from . import nhap_chi_tiet
 from .tien import vn
@@ -65,6 +65,25 @@ class HopNhapChiTiet(QDialog):
         hd.setSectionResizeMode(len(COT) - 1, QHeaderView.ResizeMode.Stretch)
         self.bang.resizeRowsToContents()
         self.bang.itemChanged.connect(lambda *_: self._dem())
+        # 1.0.04: tô dòng lỗi (đỏ) / cần xem lại (vàng), ô lọc nhanh trên bảng xem trước
+        from .giao_dien import gan_o_loc_bang, to_dong_bang
+        self.bang.blockSignals(True)
+        try:
+            for i, h in enumerate(kq.ho):
+                if h.loi or not h.ho_ten:
+                    to_dong_bang(self.bang, i, h.loi or ['không có họ tên'], 'loi')
+                elif h.canh_bao or self.trung.get(i) is not None:
+                    to_dong_bang(self.bang, i, h.canh_bao + ([f'trùng hộ {self.trung[i]} đã có'] if self.trung.get(i) else []))
+        finally:
+            self.bang.blockSignals(False)
+        h_loc = QHBoxLayout()
+        h_loc.addStretch(1)
+        self.o_tim = QLineEdit()
+        self.o_tim.setPlaceholderText('Lọc nhanh: tên sheet, họ tên, ghi chú…')
+        self.o_tim.setMaximumWidth(300)
+        h_loc.addWidget(self.o_tim)
+        lo.addLayout(h_loc)
+        gan_o_loc_bang(self.bang, self.o_tim)
         lo.addWidget(self.bang, 1)
         h = QHBoxLayout()
         for chu, gt_chon in (('Chọn tất cả', True), ('Bỏ chọn tất cả', False)):

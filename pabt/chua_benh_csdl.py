@@ -106,11 +106,19 @@ def sao_luu(p: Path, thu_muc=None) -> Path:
     return dich
 
 
-def sua_tep_pabt(file_pabt, thu_muc_sao_luu=None) -> dict:
+VIEC_SUA = ('tat_ca', 'go_khoa', 'toi_uu', 'cuu', 'nang_cap')
+
+
+def sua_tep_pabt(file_pabt, thu_muc_sao_luu=None, viec: str = 'tat_ca') -> dict:
     """Sao lưu rồi sửa file (đã ĐÓNG ở phần mềm). Trả {'thanh_cong', 'ban_sao_luu', 'hanh_dong' [..], 'kiem_tra_sau'}.
     Khóa còn hiệu lực (máy khác đang sửa) -> LoiSuaTep. Lỗi liên kết (dòng phương án trỏ tới hộ / thửa đã xóa) chỉ báo, không
-    tự xóa dòng (người dùng xem rồi quyết định); lỗi toàn vẹn trang -> cứu dữ liệu sang file mới."""
+    tự xóa dòng (người dùng xem rồi quyết định); lỗi toàn vẹn trang -> cứu dữ liệu sang file mới.
+    viec (20/10/2026 - nút 1-click của Bác sĩ CSDL, cùng các bước sẵn có): 'tat_ca' (mọi bước như trước), 'go_khoa' (chỉ gỡ file khóa
+    HẾT HẠN, không sao lưu - không đụng dữ liệu), 'toi_uu' (REINDEX + VACUUM; trang hỏng -> LoiSuaTep, dùng 'cuu'), 'cuu' (chép dữ liệu
+    đọc được sang file mới; file tốt -> LoiSuaTep), 'nang_cap' (mở bằng phần mềm một lần - nâng cấp lược đồ lên PHIEN_BAN_CSDL)."""
     from . import csdl
+    if viec not in VIEC_SUA:
+        raise ValueError(viec)
     p = Path(file_pabt).resolve()
     if not p.is_file():
         raise LoiSuaTep(f'Không tìm thấy file: {p}')
@@ -120,9 +128,32 @@ def sua_tep_pabt(file_pabt, thu_muc_sao_luu=None) -> dict:
     truoc = kiem_tra_tep_pabt(p)
     if truoc['phien_ban'] > csdl.PHIEN_BAN_CSDL:
         raise LoiSuaTep('File tạo bằng phiên bản phần mềm mới hơn: hãy cập nhật phần mềm, không sửa bằng bản này.')
+    if viec == 'go_khoa':
+        if not k:
+            raise LoiSuaTep('File không có tệp khóa (.khoa) bị kẹt - không cần gỡ.')
+        try:
+            Path(k['file']).unlink()
+        except OSError as e:
+            raise LoiSuaTep(f'Không gỡ được tệp khóa: {e}') from e
+        return dict(thanh_cong=True, ban_sao_luu='', hanh_dong=['Đã gỡ tệp khóa cũ (.khoa) của lần mở trước bị tắt đột ngột.'],
+                    kiem_tra_sau=kiem_tra_tep_pabt(p))
+    if viec == 'toi_uu' and truoc['loi_toan_ven']:
+        raise LoiSuaTep('File có trang dữ liệu hỏng: dùng "Cứu hộ CSDL hỏng" (chép dữ liệu đọc được sang file mới) thay vì tối ưu.')
+    if viec == 'cuu' and not truoc['loi_toan_ven']:
+        raise LoiSuaTep('File không có trang dữ liệu hỏng (integrity_check: ok) - không cần cứu hộ.')
+    if viec == 'nang_cap' and truoc['phien_ban'] >= csdl.PHIEN_BAN_CSDL:
+        raise LoiSuaTep(f'File đã ở lược đồ mới nhất (v{csdl.PHIEN_BAN_CSDL}) - không cần nâng cấp.')
     bs = sao_luu(p, thu_muc_sao_luu)
     hanh_dong = [f'Đã sao lưu bản gốc: {bs}']
-    if k:
+    if viec == 'nang_cap':
+        try:
+            csdl.mo(p).close()
+            hanh_dong.append(f'Đã nâng cấp lược đồ v{truoc["phien_ban"]} -> v{csdl.PHIEN_BAN_CSDL}.')
+        except (sqlite3.DatabaseError, RuntimeError) as e:
+            raise LoiSuaTep(f'Không nâng cấp được: {e}') from e
+        sau = kiem_tra_tep_pabt(p)
+        return dict(thanh_cong=not sau['loi_toan_ven'], ban_sao_luu=str(bs), hanh_dong=hanh_dong, kiem_tra_sau=sau)
+    if k and viec == 'tat_ca':
         try:
             Path(k['file']).unlink()
             hanh_dong.append('Đã gỡ file khóa cũ (.pabt.khoa) của lần mở trước bị tắt đột ngột.')

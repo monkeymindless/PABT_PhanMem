@@ -77,7 +77,7 @@ def lam_san(dm: DanhMuc) -> None:
         ds_chon_nhanh(dm, m)
 
 
-CAO_HANG = 30                 # ô nhập / nút của hàng nhập nhanh (1.0.02; trước: ô kiểu nhap="1" ~34 px)
+CAO_HANG = 29                 # ô nhập / nút của hàng nhập nhanh (20/10/2026: 29 px; 1.0.02: 30; trước: ô kiểu nhap="1" ~34 px)
 # kiểu ô của hàng: giao_dien.QSS_HANG_NHAP trong bảng kiểu chung (chọn theo property hang_nhap="1") - KHÔNG setStyleSheet trên hàng:
 # kiểu cục bộ bắt Qt tính lại kiểu cả cây con, 4 hàng làm mở cửa sổ lập phương án chậm thêm ~60 ms (đo 1.0.02)
 

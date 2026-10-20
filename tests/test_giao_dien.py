@@ -219,7 +219,9 @@ class TestMau(unittest.TestCase):
             bang = next(f for f in w2.findChildren(giao_dien.QFrame) if f.property('vai') == 'bang_to_chuc')
             # 11/10/2026: Hoàn tác / Làm lại ở menu Chỉnh sửa trên thanh menu (không còn nút trên băng tiêu đề)
             self.assertEqual(list(w2.menu_tren)[:2], ['Tệp tin', 'Chỉnh sửa'])
-            self.assertEqual(w2.menu_tren['Chỉnh sửa'].actions(), [w2.nut_ht['lui'], w2.nut_ht['toi']])
+            # 20/10/2026: + vạch ngăn + Tìm nhanh (Ctrl+K)
+            ds = [a for a in w2.menu_tren['Chỉnh sửa'].actions() if not a.isSeparator()]
+            self.assertEqual(ds, [w2.nut_ht['lui'], w2.nut_ht['toi'], w2.lenh['Tìm nhanh…']])
             self.assertFalse([b for b in bang.findChildren(giao_dien.QToolButton) if b.property('vai') == 'nut_bang'])
             self.assertTrue(w2.nut_ht['lui'].shortcut().isEmpty())   # Ctrl+Z do xu_ly_hoan_tac (theo khung đang làm việc)
             self.assertIn('\tCtrl+Z', w2.nut_ht['lui'].text())

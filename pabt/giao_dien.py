@@ -287,6 +287,7 @@ MAU_THE_CHAO = {
     'moi': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0F3866', '#0F3866'),
     'mo': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0284C7', '#0284C7'),
     'excel': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0F766E', '#0F766E'),
+    'phap_ly': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#B45309', '#B45309'),     # 1.0.04: tiếp nhận hồ sơ pháp lý
 }
 QSS_THE_CHAO = (
     f'QFrame[vai="the_chao"] {{ background: {TOKEN["khung"]}; border: 2px solid {TOKEN["vach"]}; border-radius: 12px; }}'
@@ -380,10 +381,71 @@ QSS_THE_GACH_CHAN = '''
 # khung tùy chọn của Xuất hồ sơ & Bản in (man_hinh.HopIn): thẻ trắng viền slate. Ở QSS chung theo objectName - setStyleSheet trên khung
 # chứa bắt Qt tính lại kiểu cả cây con (chậm; đo 1.0.02 ở cửa sổ lập phương án)
 # thẻ thông tin chủ hộ + dải cộng bảng thửa (man_hinh_ho_so.KhungHoSo, 1.0.03)
+# 20/10/2026: khối I #khung_chu_ho (lưới 3 cột), thẻ nhỏ [the_nho], ô tên / CCCD / pháp lý, dải tổng hợp địa chính #thanh_tom_tat_thua
 QSS_HO_SO_HO = '''
-    QFrame#the_chu_ho { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
-    QLabel#tom_tat_thua { background: #F1F5F9; border: 1px solid #E2E8F0; border-top: 1px solid #CBD5E1;
-        border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; padding: 0 10px; color: #0F172A; }'''
+    QFrame#khung_chu_ho, QFrame#the_chu_ho { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
+    QLineEdit#o_ten { font-weight: 700; color: #0F3866; }
+    QLineEdit#o_cccd { font-family: Consolas, "Courier New", monospace; letter-spacing: 1px; }
+    QLineEdit#o_cccd[hop_le="0"] { border: 1px solid #DC2626; background: #FEF2F2; }
+    QLineEdit#o_phap_ly { color: #15803D; font-weight: 600; }
+    QLabel[the_nho] { border-radius: 9px; padding: 2px 9px; font-size: 11px; font-weight: 600; }
+    QLabel[the_nho="vang"] { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    QLabel[the_nho="xanh"] { background: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; }
+    QLabel[the_nho="do"] { background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA; }
+    QLabel[the_nho="lam"] { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+    QLabel[the_nho="xam"] { background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }
+    QLabel[the_nho="loai"] { border: 1px solid #E2E8F0; }
+    QFrame#thanh_tom_tat_thua { background: #F1F5F9; border: 1px solid #E2E8F0; border-top: 1px solid #CBD5E1;
+        border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+    QLabel#tom_tat_thua { background: transparent; border: none; color: #0F172A; }'''
+# cửa sổ lập phương án (20/10/2026, ảnh mẫu): dải định danh hộ #dai_dinh_danh (38 px, nền #F1F5F9), tổng kinh phí khung vàng,
+# dải chân bảng mục #dai_cong_muc
+QSS_LAP_PA_DAI = '''
+    QFrame#dai_dinh_danh { background: #F1F5F9; border: 0; border-bottom: 1px solid #E2E8F0; }
+    QLabel[vai_dd="nhan"] { color: #64748B; }
+    QLabel[vai_dd="ten"] { color: #0F3866; font-weight: 700; }
+    QLabel[vai_dd="cccd"] { font-family: Consolas, "Courier New", monospace; font-weight: 600; color: #0F172A; }
+    QLabel[vai_dd="dia_chi"] { color: #0F172A; font-weight: 600; }
+    QLabel[vai_dd="dot"] { color: #0284C7; font-weight: 700; }
+    QLabel#tong_dinh_danh { background: #FEF9C3; border: 1px solid #FDE047; border-radius: 5px; padding: 2px 10px;
+        color: #92400E; font-family: Consolas, "Courier New", monospace; font-weight: 700; }
+    QFrame#dai_cong_muc { background: #F0FDF4; border: 1px solid #BBF7D0; border-top: 0;
+        border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+    QLabel#dem_muc { color: #166534; }
+    QLabel#cong_muc { color: #0F3866; font-weight: 700; }'''
+# bảng tổng hợp kinh phí (20/10/2026): khung an toàn nguồn vốn cạnh cơ cấu, dòng chân "Lần tính toán gần nhất"
+QSS_TONG_HOP_KP = '''
+    QFrame#khung_an_toan_von { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
+    QLabel#tom_tat_an_toan_von { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 5px; padding: 8px 10px;
+        color: #14532D; }
+    QLabel#chan_tong_hop { color: #475569; padding: 2px 4px; }
+    QLabel#quy_tac_che_do { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 5px; padding: 6px 10px; color: #075985; }
+    QFrame#khung_tai_lieu { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 5px; }
+    QTabBar#the_che_do_in::tab { padding: 6px 12px; }
+    QFrame#khung_chi_so_cd { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
+    QFrame#khung_hop_den { background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 6px; }
+    QLabel#tieu_de_hop_den { color: #B45309; font-weight: 700; }
+    QLabel#mo_ta_hop_den { color: #78350F; }
+    QPushButton#nut_goi_chan_doan { background: #0284C7; color: #FFFFFF; border: 1px solid #0369A1; font-weight: 700; }
+    QPushButton#nut_goi_chan_doan:hover { background: #0369A1; }
+    QFrame#khung_so_vd { background: #FFFFFF; border: 1px solid #0F3866; border-radius: 6px; }
+    QFrame#dau_so_vd { background: #0F3866; border: 0; border-top-left-radius: 5px; border-top-right-radius: 5px; }
+    QLabel#tieu_de_so_vd { color: #FFFFFF; font-weight: 700; background: transparent; }
+    QLabel#the_ho_vd { background: #F59E0B; color: #0F172A; font-weight: 700; border-radius: 4px; padding: 1px 8px; }
+    QLabel#thong_tin_ho_vd { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 6px 8px; color: #0F172A; }
+    QLabel#ket_luan_vd { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 5px; padding: 6px 8px; color: #075985; }
+    QLabel#ket_luan_vd[du="1"] { background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; }
+    QFrame#chan_so_vd { background: #F8FAFC; border: 0; border-top: 1px solid #E2E8F0; }'''
+
+
+def dat_the_nho(lb, loai: str) -> None:
+    """Đổi màu thẻ nhỏ QLabel[the_nho] (vang / xanh / do / lam / xam - QSS_HO_SO_HO) và vẽ lại kiểu."""
+    if lb.property('the_nho') != loai:
+        lb.setProperty('the_nho', loai)
+        lb.style().unpolish(lb)
+        lb.style().polish(lb)
+
+
 QSS_THE_TUY_CHON_IN = '''
     QWidget#the_tuy_chon_in { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }'''
 
@@ -526,7 +588,7 @@ def _qss() -> str:
     QLabel[vai="nhan_ribbon"] {{ color: #4A6785; font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
         background: transparent; border: 0; }}
     QLabel[vai="dong_phu"] {{ color: #DCEBFA; font-size: 12px; }}
-    ''' + _qss_the_so() + QSS_HANG_NHAP + QSS_THE_TUY_CHON_IN + QSS_THE_GACH_CHAN + QSS_O_TIM_CHON + QSS_HO_SO_HO
+    ''' + _qss_the_so() + QSS_HANG_NHAP + QSS_THE_TUY_CHON_IN + QSS_THE_GACH_CHAN + QSS_O_TIM_CHON + QSS_HO_SO_HO + QSS_LAP_PA_DAI + QSS_TONG_HOP_KP
 
 
 _BIEU_TUONG = []
@@ -574,6 +636,7 @@ class KhungLogo(QWidget):
 # ---------------------------------------------------------------- biểu tượng nút (ký hiệu Segoe Fluent Icons / MDL2 Assets)
 # (mẫu trên chữ đã bỏ dấu, mã ký hiệu) - xét theo thứ tự; Windows 7 không có các phông này thì nút chỉ hiện chữ
 KY_HIEU = [
+    (r'tiep nhan', 0xE8F0),               # 1.0.04: Tiếp nhận hồ sơ pháp lý
     (r'^danh sach ho', 0xE716), (r'tong quat ho', 0xE8FD), (r'^quyet dinh( phe duyet)?$', 0xE8A5), (r'tong hop tien', 0xE9F9),
     (r'theo doi tien do|^tien do|theo doi chi tra', 0xE9D2), (r'^mau in', 0xE72C), (r'^bang tong hop', 0xE80A), (r'^hoan tac', 0xE7A7), (r'^lam lai', 0xE7A6),
     (r'du an tren may chu', 0xE839), (r'mang ve lam offline', 0xE896), (r'dua len may chu', 0xE898),
@@ -706,6 +769,88 @@ def kieu_o_he_so_k(it) -> None:
 def kieu_o_gia_k(it) -> None:
     """Ô Giá × K: căn phải, chữ đậm navy (giá dùng để lập phương án)."""
     _o_dam(it, MAU_GIA_K, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+
+# --------------------------------------------------------------------- phông số đồng bộ (người dùng 20/10/2026)
+# MỘT nguồn cho mọi ô số tiền / diện tích / khối lượng (danh sách hộ BangHo, BangAo các trang tổng hợp, BangMuc, Khái toán): phông
+# Consolas (chữ số cùng bề rộng - cột thẳng hàng), máy thiếu Consolas -> Segoe UI Semibold; canh phải; số 0 xám nhạt, tiền dương navy,
+# vượt / cảnh báo đỏ. Phông nhớ theo phông gốc (QFont.key): Phóng to / Thu nhỏ đổi cỡ thì tự dựng lại.
+PHONG_SO = 'Consolas'
+PHONG_SO_DU_PHONG = 'Segoe UI Semibold'
+MAU_SO_KHONG = '#94A3B8'
+MAU_SO_TIEN = '#0F3866'
+MAU_SO_VUOT = '#B91C1C'
+SO_KHONG = frozenset(('0', '0,0', '0,00', '0,0%', '0.0%', '0%', '-', '—'))
+CAN_SO = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)     # số nguyên: PySide2 bỏ qua cờ ghép kiểu enum
+# cảnh báo tức thời KHÔNG chặn (diện tích dòng đất vượt DT thu hồi / nguyên thửa, DT còn lại âm, bàn giao thiếu ngày biên bản): hổ phách
+MAU_CANH_BAO_NEN = '#FEF3C7'
+MAU_CANH_BAO_VIEN = '#F59E0B'
+MAU_CANH_BAO_CHU = '#92400E'
+_NHO_PHONG_SO: dict = {}
+_NHO_BUT_SO: dict = {}
+
+
+def phong_so(goc=None, dam: bool = False):
+    """QFont số (Consolas, dự phòng Segoe UI Semibold) cùng cỡ với phông goc (mặc định phông ứng dụng); dam = đậm (thành tiền)."""
+    goc = QFont(goc) if goc is not None else QApplication.font()
+    khoa = (goc.key(), dam)
+    f = _NHO_PHONG_SO.get(khoa)
+    if f is None:
+        f = QFont(goc)
+        if hasattr(f, 'setFamilies'):
+            f.setFamilies([PHONG_SO, PHONG_SO_DU_PHONG])
+        else:                                           # Qt < 5.13
+            f.setFamily(PHONG_SO)
+        f.setStyleHint(QFont.StyleHint.Monospace)
+        f.setBold(dam)
+        if len(_NHO_PHONG_SO) > 64:
+            _NHO_PHONG_SO.clear()
+        _NHO_PHONG_SO[khoa] = f
+    return f
+
+
+def mau_so(chu, tien: bool = False, vuot: bool = False):
+    """Màu chữ (hex) của một ô số: vượt -> đỏ; số 0 / gạch -> xám nhạt; cột tiền có số -> navy; còn lại None (màu mặc định)."""
+    if vuot:
+        return MAU_SO_VUOT
+    v = str(chu if chu is not None else '').strip()
+    if v in SO_KHONG:
+        return MAU_SO_KHONG
+    if tien and v and (v[0].isdigit() or (v[0] in '+-' and v[1:2].isdigit())):
+        return MAU_SO_TIEN
+    return None
+
+
+def but_so(mau: str):
+    """QBrush theo màu hex (nhớ - data() của mô hình gọi mỗi ô mỗi lần vẽ)."""
+    from PySide6.QtGui import QBrush
+    b = _NHO_BUT_SO.get(mau)
+    if b is None:
+        b = _NHO_BUT_SO[mau] = QBrush(QColor(mau))
+    return b
+
+
+def kieu_o_so(it, tien: bool = False, vuot: bool = False, goc=None, dam: bool | None = None) -> None:
+    """QTableWidgetItem số: phông số, canh phải, màu theo giá trị (mau_so). dam None = đậm khi là cột tiền."""
+    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)   # CAN_SO (số nguyên) cho mô hình
+    it.setFont(phong_so(goc, dam=tien if dam is None else dam))
+    m = mau_so(it.text(), tien, vuot)
+    if m is not None:
+        it.setForeground(but_so(m))
+
+
+def kieu_o_canh_bao(it, chu: str) -> None:
+    """Ô có cảnh báo tức thời (không chặn gõ): nền hổ phách, chữ nâu đậm, chú thích = lý do."""
+    it.setBackground(but_so(MAU_CANH_BAO_NEN))
+    it.setForeground(but_so(MAU_CANH_BAO_CHU))
+    it.setToolTip(chu)
+    it.setData(Qt.ItemDataRole.UserRole + 2, chu)
+
+
+def qss_canh_bao(loai: str = 'QLabel') -> str:
+    """QSS ô / nhãn cảnh báo hổ phách (viền + nền) - cùng màu với kieu_o_canh_bao."""
+    return (f'{loai} {{ color: {MAU_CANH_BAO_CHU}; background: {MAU_CANH_BAO_NEN}; border: 1px solid {MAU_CANH_BAO_VIEN}; '
+            'border-radius: 6px; padding: 5px 8px; font-weight: 600; }')
 
 
 def kieu_trang_thai(muc: str, loai: str = 'QLabel', dam: bool = True) -> str:
@@ -2530,6 +2675,158 @@ def hop_ket_qua(cha, tom_tat: str, chi_tiet: list | None = None, tieu_de_ds: str
     return d
 
 
+# ---------------------------------------------------------------- hộp thoại cao hơn màn hình (1.0.07: laptop 1366 x 768 @ 125%)
+QSS_THAN_CUON = (
+    'QScrollArea#than_cuon_hop { background: transparent; border: 0; }'
+    'QScrollArea#than_cuon_hop > QWidget > QWidget { background: transparent; }'
+    'QScrollArea#than_cuon_hop QScrollBar:vertical { width: 6px; background: transparent; margin: 0; }'
+    'QScrollArea#than_cuon_hop QScrollBar::handle:vertical { background: #CBD5E1; border-radius: 3px; min-height: 30px; }'
+    'QScrollArea#than_cuon_hop QScrollBar::handle:vertical:hover { background: #94A3B8; }'
+    'QScrollArea#than_cuon_hop QScrollBar::add-line:vertical, QScrollArea#than_cuon_hop QScrollBar::sub-line:vertical '
+    '{ height: 0; }')
+CHUA_TIEU_DE_HOP = 48           # chừa thanh tiêu đề + khung cửa sổ (px) khi so chiều cao hộp với vùng làm việc màn hình
+
+
+def _co_nut(item) -> bool:
+    """Mục bố cục (hàng cuối của hộp thoại) là hàng nút lệnh: có nút, không có bảng / ô chữ nhiều dòng."""
+    from PySide6.QtWidgets import QAbstractButton as N, QPlainTextEdit, QTextEdit
+    ds = []
+    w, lo = item.widget(), item.layout()
+    if w is not None:
+        ds = [w, *w.findChildren(QWidget)]
+    elif lo is not None:
+        def gom(l):
+            for i in range(l.count()):
+                it = l.itemAt(i)
+                if it.widget() is not None:
+                    ds.extend([it.widget(), *it.widget().findChildren(QWidget)])
+                elif it.layout() is not None:
+                    gom(it.layout())
+        gom(lo)
+    return any(isinstance(x, N) for x in ds) and not any(isinstance(x, (QAbstractItemView, QTextEdit, QPlainTextEdit)) for x in ds)
+
+
+def cuon_than_hop(dlg, cao_toi_da: int | None = None) -> bool:
+    """Hộp thoại cao hơn vùng làm việc màn hình (cao_toi_da, mặc định theo màn hình): đưa phần thân (mọi mục bố cục trừ hàng nút cuối)
+    vào QScrollArea thanh cuộn mảnh 6 px, kẹp chiều cao hộp - hàng nút lệnh luôn nằm trọn trên màn hình. Chỉ bố cục dọc có hàng nút
+    ở cuối; đã làm thì không làm lại. Trả True nếu đã bọc."""
+    from PySide6.QtWidgets import QBoxLayout, QScrollArea, QVBoxLayout as V
+    lo = dlg.layout()
+    if dlg.property('_than_cuon') or not isinstance(lo, QBoxLayout) or lo.count() < 2 \
+            or lo.direction() != QBoxLayout.Direction.TopToBottom:
+        return False
+    if cao_toi_da is None:
+        man = dlg.screen() or QApplication.primaryScreen()
+        if man is None:
+            return False
+        cao_toi_da = man.availableGeometry().height() - CHUA_TIEU_DE_HOP
+    if max(dlg.minimumSizeHint().height(), dlg.minimumHeight()) <= cao_toi_da or not _co_nut(lo.itemAt(lo.count() - 1)):
+        return False
+    dlg.setProperty('_than_cuon', True)
+    than = QWidget()
+    tv = V(than)
+    tv.setContentsMargins(0, 0, 0, 0)
+    tv.setSpacing(lo.spacing())
+    while lo.count() > 1:
+        st = lo.stretch(0)
+        it = lo.takeAt(0)
+        if it.widget() is not None:
+            tv.addWidget(it.widget(), st, it.alignment())
+        elif it.layout() is not None:
+            tv.addLayout(it.layout(), st)
+        else:
+            tv.addItem(it)
+    sc = QScrollArea()
+    sc.setObjectName('than_cuon_hop')
+    sc.setWidgetResizable(True)
+    sc.setFrameShape(QFrame.Shape.NoFrame)
+    sc.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    sc.setStyleSheet(QSS_THAN_CUON)
+    sc.setWidget(than)
+    lo.insertWidget(0, sc, 1)
+    dlg.setMinimumHeight(0)
+    dlg.setMaximumHeight(max(200, cao_toi_da))
+    if dlg.height() > cao_toi_da:
+        dlg.resize(dlg.width(), cao_toi_da)
+    return True
+
+
+def _nen_cuon_hop() -> bool:
+    """Kiểm thử chạy offscreen (màn hình ảo 800 x 600): không tự bọc - trừ khi đặt PABT_CUON_HOP=1 (kiểm thử riêng tính năng này)."""
+    import os
+    if os.environ.get('PABT_CUON_HOP') == '1':
+        return True
+    return QApplication.platformName() != 'offscreen'
+
+
+# ---------------------------------------------------------------- thông báo nổi (HUD) góc dưới phải (1.0.07)
+MAU_HUD = {'tin': ('#0F172A', '#FFFFFF', '#38BDF8'), 'dat': ('#0F3866', '#FFFFFF', '#34D399'),
+           'canh_bao': ('#78350F', '#FFFFFF', '#FBBF24')}
+HUD_MS = 2200                   # thời gian hiện (ms)
+LE_HUD = 18                     # cách mép phải / đáy cửa sổ (px)
+
+
+class ThongBaoNoiHUD(QLabel):
+    """Thông báo nổi ngắn ở góc dưới phải cửa sổ (Ctrl+S lưu, Ctrl+Z hoàn tác): tự ẩn sau HUD_MS, không nhận chuột, không lấy tiêu
+    điểm bàn phím. Dùng qua thong_bao_noi(cửa sổ, chữ)."""
+
+    def __init__(self, cha: QWidget):
+        super().__init__(cha)
+        self.setObjectName('thong_bao_noi')
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setWordWrap(False)
+        self.hide()
+        self._hen = QTimer(self)
+        self._hen.setSingleShot(True)
+        self._hen.timeout.connect(self.hide)
+        cha.installEventFilter(self)
+
+    def hien(self, chu: str, loai: str = 'tin', ms: int = HUD_MS) -> None:
+        nen, mau, vach = MAU_HUD.get(loai, MAU_HUD['tin'])
+        self.setStyleSheet(f'QLabel#thong_bao_noi {{ background: {nen}; color: {mau}; border-left: 4px solid {vach}; '
+                           'border-radius: 6px; padding: 9px 16px; font-size: 13px; font-weight: 600; }')
+        self.setText(chu)
+        self.adjustSize()
+        self._dat_vi_tri()
+        self.raise_()
+        self.show()
+        self._hen.start(max(300, int(ms)))
+
+    def _dat_vi_tri(self) -> None:
+        cha = self.parentWidget()
+        if cha is None:
+            return
+        day = cha.height()
+        sb = cha.statusBar() if hasattr(cha, 'statusBar') and callable(cha.statusBar) else None
+        if sb is not None and sb.isVisible():
+            day -= sb.height()
+        self.move(max(0, cha.width() - self.width() - LE_HUD), max(0, day - self.height() - LE_HUD))
+
+    def eventFilter(self, obj, ev):
+        if obj is self.parentWidget() and ev.type() == QEvent.Type.Resize and self.isVisible():
+            self._dat_vi_tri()
+        return False
+
+
+def thong_bao_noi(cua_so: QWidget | None, chu: str, loai: str = 'tin', ms: int = HUD_MS):
+    """Hiện thông báo nổi trên cửa sổ cấp cao nhất chứa cua_so. Trả ThongBaoNoiHUD (None nếu không có cửa sổ)."""
+    if cua_so is None:
+        return None
+    w = cua_so.window()
+    hud = getattr(w, '_hud', None)
+    try:
+        if hud is None or hud.parentWidget() is not w:
+            hud = ThongBaoNoiHUD(w)
+            w._hud = hud
+    except RuntimeError:
+        hud = ThongBaoNoiHUD(w)
+        w._hud = hud
+    hud.hien(chu, loai, ms)
+    return hud
+
+
 def vua_man_hinh(w: QWidget) -> None:
     """Cửa sổ / hộp thoại lớn hơn màn hình đang dùng (laptop nhỏ, phóng to 125-150%): thu vừa 94% màn hình và canh giữa."""
     from PySide6.QtWidgets import QApplication
@@ -2545,8 +2842,8 @@ def vua_man_hinh(w: QWidget) -> None:
 
 # ---------------------------------------------------------------- nhập liệu bằng bàn phím trong bảng
 class _PhimBang(QObject):
-    """Enter ở ô đang đứng: mở sửa ô (ô tự tính: sang ô kế). Sửa xong bấm Enter: ghi và sang ô nhập kế tiếp (hết dòng thì
-    xuống dòng dưới). Tab / Shift+Tab: sang ô kế / ô trước như bình thường."""
+    """Enter ở ô đang đứng: mở sửa ô (ô tự tính: xuống ô dưới). Sửa xong bấm Enter: ghi và XUỐNG Ô DƯỚI cùng cột (như Excel - 1.0.07;
+    trước: sang ô kế bên phải). Tab / Shift+Tab: sang ô kế / ô trước như bình thường."""
 
     def __init__(self, bang):
         super().__init__(bang)
@@ -2563,46 +2860,93 @@ class _PhimBang(QObject):
             if idx.flags() & Qt.ItemFlag.ItemIsEditable:
                 b.edit(idx)
             else:
-                o_ke(b)
+                o_duoi(b)
             return True
         return False
 
 
-def o_ke(bang) -> None:
-    """Chuyển tới ô sửa được kế tiếp bên phải (hết dòng: ô sửa được đầu tiên của dòng dưới)."""
-    idx = bang.currentIndex()
+def o_duoi(bang) -> bool:
+    """Chuyển xuống ô cùng cột của dòng hiện kế tiếp (bỏ dòng ẩn) - Enter kiểu Excel. Trả True nếu đã chuyển."""
+    try:
+        idx = bang.currentIndex()
+    except RuntimeError:                                  # bảng đã hủy
+        return False
     if not idx.isValid():
-        return
+        return False
     m = bang.model()
-    r, c = idx.row(), idx.column() + 1
-    while r < m.rowCount():
-        while c < m.columnCount():
-            j = m.index(r, c)
-            if not bang.isColumnHidden(c) and j.flags() & Qt.ItemFlag.ItemIsEditable:
-                bang.setCurrentIndex(j)
-                return
-            c += 1
-        r, c = r + 1, 0
+    r = idx.row() + 1
+    while r < m.rowCount() and bang.isRowHidden(r):
+        r += 1
+    if r >= m.rowCount():
+        return False
+    bang.setCurrentIndex(m.index(r, idx.column()))
+    return True
+
+
+def gan_enter_xuong(bang) -> None:
+    """Sửa ô xong bấm Enter (ô sửa đóng với gợi ý SubmitModelCache): ghi rồi xuống ô dưới cùng cột. Gọi lại không gắn thêm."""
+    from PySide6.QtWidgets import QAbstractItemDelegate
+    if bang.property('_enter_xuong'):
+        return
+    bang.setProperty('_enter_xuong', True)
+    m = bang.model()
+    ds = {bang.itemDelegate()} | {bang.itemDelegateForColumn(c) for c in range(m.columnCount() if m is not None else 0)}
+
+    def sau_khi_sua(*a):
+        hint = a[1] if len(a) > 1 else QAbstractItemDelegate.EndEditHint.SubmitModelCache
+        if hint == QAbstractItemDelegate.EndEditHint.SubmitModelCache:
+            QTimer.singleShot(0, lambda: o_duoi(bang))
+    for d in ds:
+        if d is not None:
+            d.closeEditor.connect(sau_khi_sua)
+
+
+def dien_xuong(bang) -> int:
+    """Ctrl+D kiểu Excel: chép giá trị ô TRÊN CÙNG của vùng chọn (mỗi cột) xuống các ô chọn bên dưới; chọn một ô thì chép ô ngay
+    phía trên xuống. Chỉ ô sửa được (bảng chỉ xem không đổi). Trả số ô đã điền."""
+    sm = bang.selectionModel()
+    m = bang.model()
+    if sm is None or m is None:
+        return 0
+    chon = [i for i in sm.selectedIndexes() if i.isValid()] or ([bang.currentIndex()] if bang.currentIndex().isValid() else [])
+    theo_cot = {}
+    for i in chon:
+        if not bang.isRowHidden(i.row()):
+            theo_cot.setdefault(i.column(), set()).add(i.row())
+    viec = []
+    for c, dong in theo_cot.items():
+        dong = sorted(dong)
+        if len(dong) == 1:
+            nguon = dong[0] - 1
+            while nguon >= 0 and bang.isRowHidden(nguon):
+                nguon -= 1
+            dich = dong
+        else:
+            nguon, dich = dong[0], dong[1:]
+        if nguon < 0:
+            continue
+        j = m.index(nguon, c)
+        v = m.data(j, Qt.ItemDataRole.EditRole)
+        if v is None:
+            v = m.data(j, Qt.ItemDataRole.DisplayRole)
+        viec += [(m.index(r, c), v) for r in dich]
+    n = 0
+    for idx, v in viec:                                   # đọc hết giá trị trước khi ghi (bảng có thể vẽ lại dòng khi ghi)
+        if idx.isValid() and idx.flags() & Qt.ItemFlag.ItemIsEditable and m.setData(idx, '' if v is None else v,
+                                                                                      Qt.ItemDataRole.EditRole):
+            n += 1
+    return n
 
 
 def nhap_bang_phim(bang) -> None:
-    """Bảng nhập số liệu: dòng cao, dễ nhìn; Tab / Enter để đi giữa các ô, không cần chuột."""
-    from PySide6.QtWidgets import QAbstractItemDelegate
+    """Bảng nhập số liệu: dòng cao, dễ nhìn; Tab sang ngang, Enter xuống ô dưới (kiểu Excel), không cần chuột."""
     vh = bang.verticalHeader()
     vh.setMinimumSectionSize(34)
     vh.setDefaultSectionSize(36)
     bang.setTabKeyNavigation(True)
     bang._phim = _PhimBang(bang)
     bang.installEventFilter(bang._phim)
-    ds = {bang.itemDelegate()} | {bang.itemDelegateForColumn(c) for c in range(bang.columnCount())}
-
-    def sau_khi_sua(*a):
-        hint = a[1] if len(a) > 1 else QAbstractItemDelegate.EndEditHint.SubmitModelCache
-        if hint == QAbstractItemDelegate.EndEditHint.SubmitModelCache:
-            QTimer.singleShot(0, lambda: o_ke(bang))
-    for d in ds:
-        if d is not None:
-            d.closeEditor.connect(sau_khi_sua)
+    gan_enter_xuong(bang)                               # sửa xong Enter: ghi + xuống ô dưới (1.0.07; trước: sang ô kế bên phải)
 
 
 # ---------------------------------------------------------------- phóng to / thu nhỏ giao diện (màn hình độ phân giải khác nhau)
@@ -3016,6 +3360,233 @@ def _tieu_diem():
     return app.focusWidget() or app.activeWindow()
 
 
+# ---------------------------------------------------------------- sao chép ô / dòng trên MỌI bảng (1.0.04 - người dùng 19/10/2026)
+# Nhấp MỘT lần vào ô rồi Ctrl+C: chép chữ hiển thị (DisplayRole) của ô; chọn nhiều ô / dòng: ghép Tab + xuống dòng (dán thẳng vào
+# Excel); Ctrl+Shift+C: cả dòng hiện tại. Menu chuột phải có "Sao chép ô" / "Sao chép cả dòng" đứng đầu. Gắn tự động cho mọi QTableView
+# khi cửa sổ hiện (ap_kieu_cay); bảng tự dựng menu chuột phải gọi them_muc_sao_chep(menu, bang, pos) ở đầu menu.
+def _chu_o_bang(bang, idx) -> str:
+    if idx is None or not idx.isValid():
+        return ''
+    v = idx.data(Qt.ItemDataRole.DisplayRole)
+    if v is None:
+        if idx.data(Qt.ItemDataRole.CheckStateRole) is not None:
+            c = idx.data(Qt.ItemDataRole.CheckStateRole)
+            return 'x' if c in (Qt.CheckState.Checked, 2) or getattr(c, 'value', None) == 2 else ''
+        return ''
+    return str(v).replace(' ', ' ').replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
+
+
+def _cot_hien(bang) -> list:
+    m = bang.model()
+    return [c for c in range(m.columnCount()) if not bang.isColumnHidden(c)] if m is not None else []
+
+
+def chu_sao_chep_bang(bang) -> str:
+    """Chữ sẽ chép khi Ctrl+C: một ô (ô hiện tại khi vùng chọn chỉ một dòng / một ô), nhiều ô -> Tab giữa ô, xuống dòng giữa dòng."""
+    sm, m = bang.selectionModel(), bang.model()
+    if m is None:
+        return ''
+    chon = sm.selectedIndexes() if sm is not None else []
+    hang = sorted({i.row() for i in chon})
+    cot = sorted({i.column() for i in chon if not bang.isColumnHidden(i.column())})
+    hien_tai = bang.currentIndex()
+    if len(hang) <= 1 and (bang.selectionBehavior() == QAbstractItemView.SelectionBehavior.SelectRows or len(cot) <= 1):
+        idx = hien_tai if hien_tai.isValid() else (chon[0] if chon else None)
+        return _chu_o_bang(bang, idx)
+    co = {(i.row(), i.column()) for i in chon}
+    dong = []
+    for r in hang:
+        dong.append('\t'.join(_chu_o_bang(bang, m.index(r, c)) if (r, c) in co else '' for c in cot))
+    return '\n'.join(dong)
+
+
+def chu_dong_bang(bang, r: int | None = None) -> str:
+    """Cả dòng r (mặc định dòng hiện tại), các cột đang hiện, ghép Tab."""
+    m = bang.model()
+    if m is None:
+        return ''
+    if r is None:
+        r = bang.currentIndex().row()
+    if r < 0:
+        return ''
+    return '\t'.join(_chu_o_bang(bang, m.index(r, c)) for c in _cot_hien(bang))
+
+
+def _ghi_clipboard(chu: str) -> None:
+    QApplication.clipboard().setText(chu)
+
+
+def sao_chep_bang(bang, ca_dong: bool = False) -> str:
+    chu = chu_dong_bang(bang) if ca_dong else chu_sao_chep_bang(bang)
+    _ghi_clipboard(chu)
+    return chu
+
+
+def them_muc_sao_chep(menu, bang, pos=None) -> list:
+    """Hai mục đầu menu chuột phải: 'Sao chép ô: "<giá trị>" (Ctrl+C)', 'Sao chép cả dòng (Ctrl+Shift+C)'. pos: điểm bấm (tọa độ
+    viewport) - ô dưới chuột thành ô hiện tại. Trả [QAction]."""
+    if pos is not None:
+        idx = bang.indexAt(pos)
+        if idx.isValid() and idx != bang.currentIndex():
+            sm = bang.selectionModel()
+            if sm is None or not sm.isSelected(idx):
+                bang.setCurrentIndex(idx)
+            else:                                         # bấm trong vùng đang chọn: giữ vùng chọn, chỉ đổi ô hiện tại
+                sm.setCurrentIndex(idx, sm.SelectionFlag.NoUpdate)
+    gt = chu_sao_chep_bang(bang)
+    ngan = gt if len(gt) <= 40 else gt[:38] + '…'
+    ngan = ngan.replace('\t', ' ').replace('\n', ' ').replace('&', '&&')
+    from PySide6.QtWidgets import QMenu
+    if not isinstance(menu, QMenu):                     # menu giả của kiểm thử
+        return []
+    cu = menu.actions()
+    dau = cu[0] if cu else None
+    a1 = menu.addAction(f'Sao chép ô: "{ngan}"\tCtrl+C' if '\n' not in gt else 'Sao chép các ô đã chọn\tCtrl+C')
+    a1.triggered.connect(lambda _=False, b=bang: sao_chep_bang(b))
+    a2 = menu.addAction('Sao chép cả dòng\tCtrl+Shift+C')
+    a2.triggered.connect(lambda _=False, b=bang: sao_chep_bang(b, True))
+    a1.setEnabled(bool(gt))
+    a2.setEnabled(bang.currentIndex().isValid())
+    if dau is not None:                                   # đưa lên đầu menu đã có mục
+        menu.removeAction(a1)
+        menu.removeAction(a2)
+        menu.insertAction(dau, a1)
+        menu.insertAction(dau, a2)
+        menu.insertSeparator(dau)
+    return [a1, a2]
+
+
+def menu_sao_chep(bang, pos, hien: bool = True):
+    """Menu chuột phải mặc định của bảng không có menu riêng."""
+    from PySide6.QtWidgets import QMenu
+    menu = QMenu(bang)
+    them_muc_sao_chep(menu, bang, pos)
+    if hien:
+        menu.exec(bang.viewport().mapToGlobal(pos))
+        menu.deleteLater()
+    return menu
+
+
+class _BoSaoChep(QObject):
+    """Ctrl+C / Ctrl+Shift+C trên bảng, Ctrl+D chép ô trên xuống (1.0.07); mở ô sửa (QLineEdit) bằng chuột / F2 thì bôi đen sẵn cả
+    chữ."""
+
+    def eventFilter(self, obj, ev):
+        t = ev.type()
+        if t in (QEvent.Type.ShortcutOverride, QEvent.Type.KeyPress) and isinstance(obj, QAbstractItemView):
+            k, md = ev.key(), ev.modifiers()
+            ctrl = bool(md & Qt.KeyboardModifier.ControlModifier)
+            if ctrl and k == Qt.Key.Key_C and not (md & Qt.KeyboardModifier.AltModifier):
+                if t == QEvent.Type.ShortcutOverride:
+                    ev.accept()                           # bảng nhận phím trước phím tắt của cửa sổ
+                    return False
+                sao_chep_bang(obj, bool(md & Qt.KeyboardModifier.ShiftModifier))
+                return True
+            if ctrl and k == Qt.Key.Key_D and not (md & (Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.ShiftModifier)) \
+                    and obj.state() != QAbstractItemView.State.EditingState:
+                if t == QEvent.Type.ShortcutOverride:     # 1.0.07: Ctrl+D chép ô trên xuống (Excel)
+                    ev.accept()
+                    return False
+                dien_xuong(obj)
+                return True
+            if t == QEvent.Type.KeyPress and ev.text() and ev.text().isprintable() and not ctrl:
+                obj.setProperty('_go_phim', True)         # mở ô sửa bằng gõ phím: không bôi đen (chữ gõ thay chữ cũ)
+                QTimer.singleShot(0, lambda o=obj: _xoa_co_phim(o))
+            return False
+        if t == QEvent.Type.ChildAdded and obj.property('_bang_sao_chep'):
+            from PySide6.QtWidgets import QLineEdit
+            w = ev.child()
+            if isinstance(w, QLineEdit):
+                bang = obj.parent()
+                if not (bang is not None and bang.property('_go_phim')):
+                    QTimer.singleShot(0, w.selectAll)
+        return False
+
+
+def _xoa_co_phim(o) -> None:
+    try:
+        o.setProperty('_go_phim', False)
+    except RuntimeError:                                  # bảng đã hủy
+        pass
+
+
+_BO_SAO_CHEP = []
+
+
+BUOC_CUON = 20                  # bước cuộn (px) mỗi nấc lăn chuột / mũi tên thanh cuộn
+
+
+def cuon_muot(bang, buoc: int = BUOC_CUON) -> None:
+    """Bảng cuộn từng điểm ảnh (không nhảy cả dòng - dòng cao nhiều dòng chữ không bị "giật"), bước cuộn buoc px."""
+    from PySide6.QtWidgets import QAbstractItemView as V
+    bang.setVerticalScrollMode(V.ScrollMode.ScrollPerPixel)
+    bang.setHorizontalScrollMode(V.ScrollMode.ScrollPerPixel)
+    bang.verticalScrollBar().setSingleStep(buoc)
+    bang.horizontalScrollBar().setSingleStep(buoc)
+
+
+def cho_phep_sao_chep_bang(bang) -> None:
+    """Gắn sao chép ô / dòng cho một bảng (QTableView / QTableWidget / BangAo). Gọi lại không gắn thêm."""
+    from PySide6.QtWidgets import QTableView
+    if not isinstance(bang, QTableView) or bang.property('_co_sao_chep'):
+        return
+    bang.setProperty('_co_sao_chep', True)
+    cuon_muot(bang)                                       # 1.0.07: cuộn từng điểm ảnh, bước lăn chuột 20 px
+    gan_enter_xuong(bang)                                 # 1.0.07: sửa ô xong Enter -> xuống ô dưới cùng cột
+    if not _BO_SAO_CHEP:
+        _BO_SAO_CHEP.append(_BoSaoChep())
+    bo = _BO_SAO_CHEP[0]
+    bang.installEventFilter(bo)
+    bang.viewport().setProperty('_bang_sao_chep', True)
+    bang.viewport().installEventFilter(bo)
+    if bang.contextMenuPolicy() == Qt.ContextMenuPolicy.DefaultContextMenu:
+        bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        bang.customContextMenuRequested.connect(lambda p, b=bang: menu_sao_chep(b, p))
+
+
+# ---------------------------------------------------------------- bảng xem trước dữ liệu thô (1.0.04): lọc nhanh + tô dòng lỗi
+MAU_DONG_CANH_BAO = '#FEF3C7'          # vàng nhạt: dòng thiếu tờ / thửa, sai loại đất
+MAU_DONG_LOI = '#FEE2E2'               # đỏ nhạt: dòng lỗi không nhập được
+
+
+def loc_dong_bang(bang, chu: str) -> int:
+    """Ẩn các dòng QTableWidget không chứa chu (so không dấu, mọi cột). Trả số dòng còn hiện."""
+    k = ' '.join(bo_dau(chu or '').lower().split())
+    n = 0
+    for r in range(bang.rowCount()):
+        if not k:
+            bang.setRowHidden(r, False)
+            n += 1
+            continue
+        co = any(k in bo_dau(bang.item(r, c).text() if bang.item(r, c) else '').lower() for c in range(bang.columnCount()))
+        bang.setRowHidden(r, not co)
+        n += co
+    return n
+
+
+def gan_o_loc_bang(bang, o_tim, khi_loc=None) -> None:
+    """Ô tìm QLineEdit lọc dòng của bảng (chờ ngừng gõ như các ô tìm khác - loc_khi_ngung_go). khi_loc(số dòng hiện)."""
+    def loc(chu=None):
+        n = loc_dong_bang(bang, o_tim.text())
+        if khi_loc is not None:
+            khi_loc(n)
+    loc_khi_ngung_go(o_tim, loc)
+
+
+def to_dong_bang(bang, r: int, loi: list, muc: str = 'canh_bao') -> None:
+    """Tô nền cả dòng r (vàng: cảnh báo, đỏ: lỗi) + chú thích danh sách vấn đề; loi rỗng = bỏ tô."""
+    from PySide6.QtGui import QBrush
+    mau = QBrush(QColor(MAU_DONG_LOI if muc == 'loi' else MAU_DONG_CANH_BAO)) if loi else QBrush()
+    goi_y = '\n'.join(loi)
+    for c in range(bang.columnCount()):
+        it = bang.item(r, c)
+        if it is None:
+            continue
+        it.setBackground(mau)
+        if loi or it.toolTip().startswith('Cần xem lại:'):
+            it.setToolTip(('Cần xem lại:\n' + goi_y) if loi else '')
+
+
 class _BoToMau(QObject):
     def eventFilter(self, obj, ev):
         t = ev.type()
@@ -3060,6 +3631,8 @@ class _BoToMau(QObject):
             obj.setProperty('_da_to_mau', True)
             from PySide6.QtWidgets import QDialog, QMessageBox
             if isinstance(obj, QDialog) and not isinstance(obj, QMessageBox):
+                if la_cua_so_con_pabt(obj) and _nen_cuon_hop():
+                    cuon_than_hop(obj)                     # 1.0.07: hộp cao hơn màn hình - thân cuộn, hàng nút luôn hiện
                 vua_man_hinh(obj)
         return False
 
@@ -3070,6 +3643,7 @@ def ap_kieu_cay(obj: QWidget) -> None:
     tạo khi mở lần đầu - 16/10/2026)."""
     to_mau(obj)
     for bang in obj.findChildren(QAbstractItemView):    # dòng bảng dữ liệu 32 px (đặc tả mục 3.3)
+        cho_phep_sao_chep_bang(bang)                    # 1.0.04: nhấp một lần + Ctrl+C chép ô; menu chuột phải sao chép
         vh = getattr(bang, 'verticalHeader', None)
         if vh is not None and vh().defaultSectionSize() < CAO_DONG_BANG:
             vh().setDefaultSectionSize(CAO_DONG_BANG)

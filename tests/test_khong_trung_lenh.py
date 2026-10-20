@@ -55,6 +55,8 @@ class TestKhongTrungLenh(unittest.TestCase):
         trai = {b.defaultAction() for b in w.khung_menu.findChildren(QToolButton) if b.defaultAction() is not None}
         tren = {a for m in w.menu_tren.values() for a in m.actions() if not a.isSeparator()}
         the_chao = set(w.nut_chao.values())                              # thẻ bắt đầu: giữ (màn hình chưa mở dự án)
+        w.ve_trang_chu()                                                 # 1.0.07: tổng quan dự án - thẻ khởi tạo cũng là thẻ bắt đầu
+        the_chao |= set(w.tong_quan.the_khoi_tao.values())
         for b in w.findChildren(QToolButton):
             a = b.defaultAction()
             if a is None or b in the_chao or w.khung_menu.isAncestorOf(b):

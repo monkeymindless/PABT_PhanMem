@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import functools
 import re
+import sqlite3
 import unicodedata
 from dataclasses import dataclass, replace
 from datetime import datetime
@@ -298,21 +299,73 @@ def _dang_luu(pa: PhuongAn):
             {m: [replace(d, id=None, thanh_tien_excel=None) for d in ds] for m, ds in pa.khoan.items()})
 
 
+def _mot_lan_chua_duyet(con, ma_ho: int) -> bool:
+    """Hộ chỉ có lần 1, chưa có quyết định, lần 1 không khóa tay (một câu truy vấn)."""
+    try:
+        r = con.execute('''SELECT (SELECT COUNT(*) FROM qd_ho WHERE ma_ho = ?),
+                                  (SELECT COUNT(*) FROM pa_lan WHERE ma_ho = ? AND (lan > 1 OR khoa = 1 OR trang_thai <> 'dang_lap')),
+                                  (SELECT COUNT(*) FROM ct_dat WHERE ma_ho = ? AND lan > 1),
+                                  (SELECT COUNT(*) FROM ct_khoan WHERE ma_ho = ? AND lan > 1)''', (ma_ho,) * 4).fetchone()
+    except sqlite3.OperationalError:                    # file chỉ xem bản cũ: không có pa_lan / cột lan
+        return not con.execute('SELECT 1 FROM qd_ho WHERE ma_ho = ? LIMIT 1', (ma_ho,)).fetchone()
+    return not any(r)
+
+
 class BoSoan:
-    def __init__(self, con, ma_ho: int, danh_muc: DanhMuc | None = None, bc: BoiCanh | None = None):
+    """Soạn phương án MỘT LẦN của một hộ (1.0.05: hộ có nhiều lần lập phương án - lần đầu + bổ sung, lan_pa). self.pa = dòng của lần
+    đang soạn; các lần khác giữ nguyên khi lưu. Lần đã có quyết định phê duyệt: self.khoa (chỉ xem - lưu báo LoiNhap)."""
+
+    def __init__(self, con, ma_ho: int, danh_muc: DanhMuc | None = None, bc: BoiCanh | None = None, lan: int | None = None,
+                 mot_lan: bool = False):
         self.con = con
+        self._mot_lan = mot_lan     # nơi gọi biết hộ chỉ có lần 1, chưa quyết định (dự án vừa tạo) - bỏ truy vấn kiểm tra
         self.dm = danh_muc or DanhMuc(con)
         # bc: bối cảnh dùng chung cả loạt hộ (tự lập phương án Dự án mới - lưu phương án không đổi thửa / danh mục nên bối cảnh còn
         # đúng); không truyền: lấy theo csdl.nho (mỗi lần mở 1 truy vấn PRAGMA data_version - 3.000 hộ ~0,25 s)
         self._bc_chung = bc
-        self.mo(ma_ho)
+        self.mo(ma_ho, lan)
 
     # ---------------------------------------------- mở / trạng thái
-    def mo(self, ma_ho: int):
+    def mo(self, ma_ho: int, lan: int | None = None):
+        from . import lan_pa
         self.bc = self._bc_chung if self._bc_chung is not None else BoiCanh.tu(self.con)
-        self.pa = doc_phuong_an(self.con, ma_ho)
+        if lan in (None, 1) and (getattr(self, '_mot_lan', False) or _mot_lan_chua_duyet(self.con, ma_ho)):
+            # đường tắt (hầu hết các hộ - tự lập Dự án mới 3.000 hộ): một lần, chưa quyết định -> một lần đọc như trước 1.0.05
+            self.lan, self.khoa = 1, False
+            self.pa = doc_phuong_an(self.con, ma_ho)
+            self.pa_truoc = PhuongAn(ho=self.pa.ho)
+            self.pa_khac = PhuongAn(ho=self.pa.ho)
+        else:
+            self.lan = int(lan) if lan else lan_pa.lan_mac_dinh(self.con, ma_ho)
+            self.khoa = lan_pa.dang_khoa(self.con, ma_ho, self.lan)
+            self.pa = doc_phuong_an(self.con, ma_ho, lan=self.lan)
+            self.pa_truoc = doc_phuong_an(self.con, ma_ho, den_lan=self.lan - 1)     # các lần trước (thưởng lũy kế)
+            self.pa_khac = doc_phuong_an(self.con, ma_ho, ngoai_lan=self.lan)        # mọi lần khác (cộng dồn, DT đã dùng)
         self._pa_goc = copy.deepcopy(self.pa)           # bản lúc mở: so thay đổi, tổng cũ khi lưu (không đọc lại CSDL)
         self._goc = _dang_luu(self._pa_goc)
+
+    def ds_lan(self) -> list:
+        from . import lan_pa
+        return lan_pa.ds_lan(self.con, self.ma_ho)
+
+    def lap_bo_sung(self, ten: str = '', ghi_chu: str = '') -> int:
+        """Lập phương án BỔ SUNG cho hộ (lần mới, rỗng) rồi mở lần đó. Phương án đang soạn còn thay đổi chưa lưu: LoiNhap."""
+        if self.co_thay_doi:
+            raise LoiNhap('Lưu hoặc bỏ thay đổi của lần đang soạn trước khi lập phương án bổ sung.')
+        from . import lan_pa
+        lan = lan_pa.tao_lan_moi(self.con, self.ma_ho, ten, ghi_chu)
+        self.mo(self.ma_ho, lan)
+        return lan
+
+    @property
+    def ket_qua_cong_don(self):
+        """Kết quả CỘNG DỒN mọi lần của hộ (lần đang soạn lấy số liệu chưa lưu)."""
+        from .nghiep_vu import gop_phuong_an
+        return tinh_pa(gop_phuong_an(self.pa_khac, self.pa), self.bc)
+
+    def tinh_cong_don(self):
+        """KetQuaHo cộng dồn mọi lần của hộ (= ket_qua_cong_don)."""
+        return self.ket_qua_cong_don
 
     @property
     def ma_ho(self) -> int:
@@ -324,7 +377,9 @@ class BoSoan:
 
     @property
     def ket_qua(self):
-        return tinh_pa(self.pa, self.bc)
+        """Kết quả của LẦN đang soạn (thưởng = phần tăng thêm so với các lần trước - nghiep_vu.tinh_pa_lan)."""
+        from .nghiep_vu import tinh_pa_lan
+        return tinh_pa_lan(self.pa, self.pa_truoc, self.bc)
 
     @property
     def canh_bao(self) -> list:
@@ -343,11 +398,40 @@ class BoSoan:
         kq = []
         for t in self.bc.thua_cua(self.ma_ho):
             mt = t['ma_thua']
-            da_dung = sum((d.dien_tich for d in self.pa.dat if d.ma_thua == mt), KHONG)
+            # DT đã đưa vào mục 1 ở MỌI lần (lần bổ sung không bồi thường lại phần đất đã có ở lần trước)
+            da_dung = sum((d.dien_tich for d in self.pa.dat + self.pa_khac.dat if d.ma_thua == mt), KHONG)
             con_lai = max(D(t['dt_thu_hoi']) - da_dung, KHONG)
             kq.append((mt, f'Thửa {t["so_thua"]} tờ {t["so_to"]} – {t["loai_dat"] or "?"} – {so_vn(t["dt_thu_hoi"])} m²',
                        con_lai))
         return kq
+
+    def canh_bao_dien_tich(self, i: int) -> str:
+        """Cảnh báo tức thời KHÔNG chặn (20/10/2026) cho diện tích dòng đất i: tổng DT mục 1 của thửa (mọi lần lập) lớn hơn DT thu
+        hồi, hoặc DT dòng lớn hơn DT nguyên thửa (thua.dt_nguyen_thua - cột có thể chưa có ở file cũ). '' = không có gì."""
+        if not 0 <= i < len(self.pa.dat):
+            return ''
+        d = self.pa.dat[i]
+        t = self.bc.thua.get(d.ma_thua) if d.ma_thua is not None else None
+        if t is None or not d.dien_tich:
+            return ''
+
+        def so(x):
+            try:
+                return D(x) if x not in (None, '') else None
+            except (ArithmeticError, ValueError):
+                return None
+        loi = []
+        th = so(t.get('dt_thu_hoi'))
+        if th:
+            tong = sum((x.dien_tich for x in self.pa.dat + self.pa_khac.dat if x.ma_thua == d.ma_thua), KHONG)
+            if tong > th:
+                con = max(th - (tong - d.dien_tich), KHONG)
+                loi.append(f'Tổng DT mục 1 của thửa ({so_vn(tong)} m²) lớn hơn DT thu hồi ({so_vn(th)} m²) - dòng này chỉ còn '
+                           f'{so_vn(con)} m²')
+        ng = so(t.get('dt_nguyen_thua'))
+        if ng and d.dien_tich > ng:
+            loi.append(f'DT dòng ({so_vn(d.dien_tich)} m²) lớn hơn DT nguyên thửa ({so_vn(ng)} m²)')
+        return '; '.join(loi)
 
     def ten_thua(self, ma_thua) -> str:
         t = self.bc.thua.get(ma_thua)
@@ -785,12 +869,19 @@ class BoSoan:
         """Lưu phương án đang soạn (một giao dịch). Trả mô tả để hiện cho người dùng.
         tu_dong: phương án phần mềm tự lập (Dự án mới) - trạng thái TU_LAP, chỉ thành "Đã lập" khi người dùng mở ra soát và Lưu.
         mo_lai=False: không đọc lại phương án vừa lưu (bộ soạn bỏ đi ngay - tự lập hàng loạt)."""
+        if self.khoa:
+            raise LoiNhap(f'Phương án lần {self.lan} đã có Quyết định phê duyệt và đã được khóa bảo vệ. Không thể chỉnh sửa trực '
+                          'tiếp (sửa sẽ làm sai quyết định đã ban hành).\nBổ sung tài sản / chính sách mới: bấm "+ Lập phương án bổ '
+                          'sung". Cần điều chỉnh lần này: "Mở khóa sửa…".')
         loi = self.loi_chan_luu()
         if loi:
             raise LoiNhap('Chưa lưu được:\n' + '\n'.join('- ' + x for x in loi))
         con, pa = self.con, self.pa
-        san = ket_qua_ho_san(con)
-        cu = san[self.ma_ho][0].tong if san and self.ma_ho in san else tinh_pa(self._pa_goc, self.bc).tong
+        from . import lan_pa
+        from .nghiep_vu import co_cot_lan, tinh_pa_lan
+        co_lan = co_cot_lan(con)
+        san = ket_qua_ho_san(con) if not (self.pa_khac.dat or any(self.pa_khac.khoan[m] for m in MUC_KHOAN)) else None
+        cu = san[self.ma_ho][0].tong if san and self.ma_ho in san else tinh_pa_lan(self._pa_goc, self.pa_truoc, self.bc).tong
         moi = self.ket_qua
         co_dong = any(pa.dat) or any(pa.khoan[m] for m in MUC_KHOAN)
         luc = datetime.now()
@@ -803,26 +894,36 @@ class BoSoan:
                         (pa.ho.nhan_khau, int(pa.ho.phai_di_chuyen),
                          chuoi(pa.ho.dt_nn_dang_dung) if pa.ho.dt_nn_dang_dung is not None else None,
                          trang_thai, luc.isoformat(timespec='seconds'), pa.ho.tai_dinh_cu, self.ma_ho))
-            con.execute('DELETE FROM ct_dat WHERE ma_ho = ?', (self.ma_ho,))
-            con.execute('DELETE FROM ct_khoan WHERE ma_ho = ?', (self.ma_ho,))
+            # 1.0.05: chỉ xóa / ghi lại dòng của LẦN đang soạn - các lần khác (đã phê duyệt) giữ nguyên
+            loc, ts = (' AND lan = ?', (self.ma_ho, self.lan)) if co_lan else ('', (self.ma_ho,))
+            con.execute(f'DELETE FROM ct_dat WHERE ma_ho = ?{loc}', ts)
+            con.execute(f'DELETE FROM ct_khoan WHERE ma_ho = ?{loc}', ts)
+            cot_lan, gt_lan = (', lan', (self.lan,)) if co_lan else ('', ())
             for k, d in enumerate(pa.dat, start=1):
-                con.execute('''INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia,
-                               he_so_k, ty_le, ghi_chu, thanh_tien_excel, cong_thuc) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                con.execute(f'''INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia,
+                               he_so_k, ty_le, ghi_chu, thanh_tien_excel, cong_thuc{cot_lan})
+                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?{",?" if co_lan else ""})''',
                             (self.ma_ho, d.ma_thua, k, d.loai_dat, d.nhom_dat, chuoi(d.dien_tich), d.vi_tri, chuoi(d.gia_bang_gia),
                              chuoi(d.he_so_k), '' if d.ty_le is None else chuoi(d.ty_le), d.ghi_chu,
-                             chuoi(d.thanh_tien_excel) if d.thanh_tien_excel is not None else None, d.cong_thuc))
+                             chuoi(d.thanh_tien_excel) if d.thanh_tien_excel is not None else None, d.cong_thuc, *gt_lan))
             for muc in MUC_KHOAN:
                 for k, d in enumerate(pa.khoan[muc], start=1):
-                    con.execute('''INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia, ty_le, quy_cach, ghi_chu,
-                                   nguon_gia, ma_tuong_duong, can_cu_gia, thanh_tien_excel, cach_tinh, cong_thuc)
-                                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    con.execute(f'''INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia, ty_le, quy_cach, ghi_chu,
+                                   nguon_gia, ma_tuong_duong, can_cu_gia, thanh_tien_excel, cach_tinh, cong_thuc{cot_lan})
+                                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?{",?" if co_lan else ""})''',
                                 (muc, self.ma_ho, k, d.ma, d.ten, d.dvt, chuoi(d.so_luong), chuoi(d.don_gia),
                                  '' if d.ty_le is None else chuoi(d.ty_le),
                                  d.quy_cach, d.ghi_chu, d.nguon_gia, d.ma_tuong_duong, d.can_cu_gia,
                                  chuoi(d.thanh_tien_excel) if d.thanh_tien_excel is not None else None, d.cach_tinh,
-                                 d.cong_thuc))
+                                 d.cong_thuc, *gt_lan))
+            # tự lập lần 1 (Dự án mới, hàng nghìn hộ): không ghi pa_lan - ds_lan trả lần 1 ảo; dòng tạo khi người dùng Lưu
+            if (not tu_dong or self.lan > 1) and lan_pa.co_bang(con):
+                lan_pa._dam_bao_dong(con, self.ma_ho, self.lan)   # ngày lập của lần = lần lưu gần nhất
+                con.execute('UPDATE pa_lan SET ngay_lap = ? WHERE ma_ho = ? AND lan = ?',
+                            (luc.strftime('%d/%m/%Y'), self.ma_ho, self.lan))
             csdl.ghi_nhat_ky(con, 'Lưu phương án hộ',
-                             f'Hộ {self.ma_ho} {pa.ho.ho_ten}: tổng {vn(cu)} -> {vn(moi.tong)} đ; '
+                             f'Hộ {self.ma_ho} {pa.ho.ho_ten}' + (f' (lần {self.lan})' if self.lan > 1 else '') +
+                             f': tổng {vn(cu)} -> {vn(moi.tong)} đ; '
                              f'{len(pa.dat)} dòng đất, {sum(len(pa.khoan[m]) for m in MUC_KHOAN)} dòng khoản')
             if not tu_dong:                             # nhật ký kiểm toán: từng dòng / trường cũ -> mới (phần mềm tự lập: số liệu gốc)
                 from .kiem_toan import ghi_thay_doi_pa
@@ -832,7 +933,10 @@ class BoSoan:
         if type(self.bc) is BoiCanh:
             giu_ket_qua_ho(con, [self.ma_ho], truoc)            # kết quả cả dự án: chỉ tính lại hộ vừa lưu
         if mo_lai:
-            self.mo(self.ma_ho)
+            self.mo(self.ma_ho, self.lan)
+        if self.lan > 1 or self.pa_khac.dat or any(self.pa_khac.khoan[m] for m in MUC_KHOAN):
+            return (f'Đã lưu hộ {self.ma_ho} – {pa.ho.ho_ten}, lần {self.lan}: {vn(moi.tong)} đồng (cộng dồn mọi lần: '
+                    f'{vn(self.ket_qua_cong_don.tong)} đồng).')
         return f'Đã lưu hộ {self.ma_ho} – {pa.ho.ho_ten}: tổng {vn(moi.tong)} đồng.'
 
 

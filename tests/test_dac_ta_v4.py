@@ -21,8 +21,10 @@ class TestBanQuyenVaCCCD(unittest.TestCase):
         self.assertIn('Tiêu chuẩn', ban_quyen.mo_ta())
 
     def test_che_cccd(self):
-        self.assertEqual(an_toan.che_cccd('075092001234'), '075092******')
-        self.assertEqual(an_toan.che_cccd('CMND 271234567 - Ngày cấp: 01/01/2010'), 'CMND 2712***** - Ngày cấp: 01/01/2010')
+        # 1.0.04: bỏ che CCCD - luôn trả nguyên chuỗi
+        self.assertEqual(an_toan.che_cccd('075092001234'), '075092001234')
+        self.assertEqual(an_toan.che_cccd('CMND 271234567 - Ngày cấp: 01/01/2010'), 'CMND 271234567 - Ngày cấp: 01/01/2010')
+        self.assertFalse(an_toan.can_che_cccd(None))
         self.assertEqual(an_toan.che_cccd(''), '')
         self.assertEqual(an_toan.che_cccd('Ấp 1, số 12'), 'Ấp 1, số 12')            # số ngắn (không phải số định danh): giữ
 
@@ -175,7 +177,7 @@ class TestGiaoDien(CoSo):
         w.bang.selectRow(0)
         self.assertIn('Tổng cộng: 4 hộ | Đã chọn: 1 hộ', w.lb_tom_tat.text())
         self.assertEqual(w.nut_ds['Xóa hộ…'].property('bien_the'), 'danger')
-        # che CCCD: hộp In / Xuất lưu chế độ vào dự án; phương án chi tiết in số CCCD dạng che
+        # 1.0.04: bỏ che CCCD - ô ẩn, bản in / văn bản trình in đủ số + ngày cấp
         with w.con:
             w.con.execute("UPDATE ho SET so_cccd = '075092001234', ngay_cap = '01/01/2021' WHERE thu_tu = 1")
         ma = w.con.execute('SELECT ma_ho FROM ho WHERE thu_tu = 1').fetchone()[0]
@@ -183,15 +185,13 @@ class TestGiaoDien(CoSo):
         d = HopIn(w.con, w, [ma])
         self.addCleanup(d.close)
         self.assertFalse(d.o_che_cccd.isChecked())
-        d.o_che_cccd.setChecked(True)
-        self.assertTrue(d._luu_che_cccd())
-        self.assertTrue(an_toan.can_che_cccd(w.con))
-        tt = in_an._thong_tin_ho(w.con, ma, in_an._thong_tin_du_an(w.con))
-        self.assertEqual(tt['cccd'], '075092******')                          # bỏ cả ngày / nơi cấp
+        self.assertTrue(d.o_che_cccd.isHidden())
+        self.assertFalse(hasattr(d, '_luu_che_cccd'))
+        tt = in_an._thong_tin_ho(w.con, ma, in_an._thong_tin_du_an(w.con), True)    # che=True cũ: bỏ qua
+        self.assertEqual(tt['cccd'], '075092001234 - Ngày cấp: 01/01/2021')
         from pabt import van_ban_trinh
         _, dong = van_ban_trinh.du_lieu(w.con, [ma])
-        self.assertEqual(dong[0]['ho.cccd'], '075092******')
-        self.assertEqual(w.con.execute("SELECT COUNT(*) FROM nhat_ky WHERE viec = 'Đổi chế độ che số CCCD'").fetchone()[0], 1)
+        self.assertIn('075092001234', dong[0]['ho.cccd'])
 
 
 class TestBoCaiPhoQuat(unittest.TestCase):

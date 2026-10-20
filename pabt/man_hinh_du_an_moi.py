@@ -106,6 +106,28 @@ class HopDuAnMoi(QDialog):
         lo.addStretch(1)
         return w
 
+    def dien_san(self, gt: dict) -> None:
+        """1.0.04: điền sẵn bước 1 từ hồ sơ Tiếp nhận pháp lý (tên dự án, chủ đầu tư, địa bàn, đơn vị lập) - chỉ ô có giá trị."""
+        gt = dict(gt or {})
+        db = ' '.join(str(gt.pop('dia_ban', '') or '').split())
+        if db:
+            for cap in ('Thị trấn', 'Phường', 'Xã', 'Đặc khu'):
+                if db.lower().startswith(cap.lower() + ' '):
+                    if 'cap_dia_ban' in self.o:
+                        self.o['cap_dia_ban'].setCurrentText(cap)
+                    db = db[len(cap):].strip()
+                    break
+            gt['ten_dia_ban'] = db
+        for k, v in gt.items():
+            o = self.o.get(k)
+            if o is None or not str(v or '').strip():
+                continue
+            if isinstance(o, QComboBox):
+                o.setCurrentText(str(v))
+            else:
+                o.setText(str(v))
+                o.setCursorPosition(0)
+
     # ---------------------------------------------- bước 2
     def _trang_2(self):
         w = QWidget()
@@ -117,6 +139,14 @@ class HopDuAnMoi(QDialog):
             b.clicked.connect(ham)
             hang.addWidget(b)
         hang.addStretch(1)
+        # 1.0.04: ô lọc nhanh + đếm dòng cần xem lại (thiếu tờ / thửa, sai loại đất - tô vàng ngay trên bảng)
+        self.lb_kiem_tho = QLabel('')
+        self.lb_kiem_tho.setProperty('vai', 'nhan')
+        hang.addWidget(self.lb_kiem_tho)
+        self.o_tim_tho = QLineEdit()
+        self.o_tim_tho.setPlaceholderText('Lọc nhanh: họ tên, tờ, thửa, loại đất…')
+        self.o_tim_tho.setMaximumWidth(280)
+        hang.addWidget(self.o_tim_tho)
         lo.addLayout(hang)
         self.bang_tho = QTableWidget(0, len(du_an_moi.COT_THO))
         self.bang_tho.setHorizontalHeaderLabels([t + (' ▾' if k in ('loai_dat', 'vi_tri') else '') for k, t in du_an_moi.COT_THO])
@@ -132,6 +162,9 @@ class HopDuAnMoi(QDialog):
         self.bang_tho.setItemDelegateForColumn(cot['loai_dat'], self.xo_loai_dat)
         self.bang_tho.setItemDelegateForColumn(cot['vi_tri'], self.xo_vi_tri)
         lo.addWidget(self.bang_tho, 1)
+        from .giao_dien import gan_o_loc_bang
+        gan_o_loc_bang(self.bang_tho, self.o_tim_tho)
+        self.bang_tho.itemChanged.connect(lambda it: self.kiem_tra_dong_tho(it.row()))
         self.lb_tho = QLabel('Vùng dữ liệu thô (riêng, không thuộc vùng đơn giá): họ tên, địa chỉ, CCCD, diện tích… lấy từ file Excel '
                              'và sửa được ngay trên bảng. Loại đất, vị trí: nhấp đúp để chọn trong danh sách xổ xuống (hoặc gõ tay). '
                              'Mỗi dòng một thửa; họ tên để trống = thửa tiếp của hộ phía trên. Thửa nhiều loại đất (ONT+CLN): tách '
@@ -163,9 +196,68 @@ class HopDuAnMoi(QDialog):
         return dong
 
     def dat_dong(self, dong):
-        self.bang_tho.setRowCount(0)
-        for r in dong:
-            self.them_dong(r)
+        self.bang_tho.blockSignals(True)
+        try:
+            self.bang_tho.setRowCount(0)
+            for r in dong:
+                self.them_dong(r)
+        finally:
+            self.bang_tho.blockSignals(False)
+        self.kiem_tra_bang_tho()
+
+    def loi_dong_tho(self, r: int) -> list:
+        """Vấn đề của dòng r bảng thô (1.0.04): có họ tên / diện tích mà thiếu tờ / thửa; loại đất không đúng ký hiệu TT 08/2024."""
+        from .loai_dat import LOAI_DAT, chuan_ma_loai_dat
+        c = {k: i for i, (k, _) in enumerate(du_an_moi.COT_THO)}
+
+        def g(k):
+            it = self.bang_tho.item(r, c[k])
+            return ' '.join((it.text() if it is not None else '').split())
+        if not any(g(k) for k in c):
+            return []
+        loi = []
+        if not g('so_to'):
+            loi.append('thiếu số tờ bản đồ')
+        if not g('so_thua'):
+            loi.append('thiếu số thửa')
+        ld = g('loai_dat')
+        if ld:
+            hop_le = {m for m, _, _ in LOAI_DAT} | {m for m, _, _ in du_an_moi.ds_loai_dat()}
+            ma = chuan_ma_loai_dat(ld)
+            if not ma or any(x not in hop_le for x in ma.split('+')):
+                loi.append(f'loại đất "{ld}" không đúng ký hiệu Thông tư 08/2024')
+        else:
+            loi.append('chưa có loại đất')
+        return loi
+
+    def kiem_tra_dong_tho(self, r: int) -> list:
+        from .giao_dien import to_dong_bang
+        loi = self.loi_dong_tho(r)
+        self.bang_tho.blockSignals(True)
+        try:
+            to_dong_bang(self.bang_tho, r, loi)
+        finally:
+            self.bang_tho.blockSignals(False)
+        self._dem_loi_tho()
+        return loi
+
+    def kiem_tra_bang_tho(self) -> int:
+        """Tô vàng mọi dòng cần xem lại; trả số dòng."""
+        from .giao_dien import to_dong_bang
+        self.bang_tho.blockSignals(True)
+        try:
+            for r in range(self.bang_tho.rowCount()):
+                to_dong_bang(self.bang_tho, r, self.loi_dong_tho(r))
+        finally:
+            self.bang_tho.blockSignals(False)
+        return self._dem_loi_tho()
+
+    def _dem_loi_tho(self) -> int:
+        from .giao_dien import MAU_DONG_CANH_BAO
+        n = sum(1 for r in range(self.bang_tho.rowCount()) if self.bang_tho.item(r, 0) is not None
+                and self.bang_tho.item(r, 0).background().color().name().upper() == MAU_DONG_CANH_BAO.upper())
+        self.lb_kiem_tho.setText(f'{n} dòng cần xem lại (tô vàng)' if n else '')
+        return n
 
     def them_dong(self, r=None):
         i = self.bang_tho.rowCount() if r is not None or self.bang_tho.currentRow() < 0 else self.bang_tho.currentRow() + 1

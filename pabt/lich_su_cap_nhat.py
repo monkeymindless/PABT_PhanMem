@@ -7,6 +7,84 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.07', '20/10/2026', (
+        'Bộ mẫu in chuẩn nhúng sẵn trong phần mềm: máy mới cài, chưa có thư mục mẫu in vẫn xuất phương án chi tiết và bảng tổng hợp '
+        'đủ đường kẻ. Mẫu đã sửa trong %APPDATA%\\PABT\\mau_in vẫn được ưu tiên.',
+        'Bảng tổng hợp in khổ A3 ngang, tỷ lệ cố định 55% (trước: A4 co còn 20-27%, chữ rất nhỏ); chữ nội dung 14 pt, tiêu đề 16 pt '
+        'đậm; cột chữ tự chia lại cho vừa đúng khổ giấy, tiêu đề cột không bị cắt đôi từ.',
+        'Phương án chi tiết A4 dọc, tỷ lệ in cố định 72% (chỉ tràn vài dòng thì thu tới 70% cho vừa 1 trang), lề trái 0,8 cm, phải '
+        '0,3 cm, trên 1,0 cm, dưới 0,8 cm; quốc hiệu, tên cơ quan, tên phương án, dự án, tiêu đề mục I-IV và hàng tiêu đề bảng 16 pt '
+        'đậm, nội dung 14 pt, cột Ghi chú 11,5 pt; mục I không kẻ viền, nhãn đậm - nội dung thường, số CCCD / điện thoại không còn tam '
+        'giác xanh của Excel; nguồn gốc đất thụt đầu dòng 8 khoảng trắng, bỏ dấu cách thừa trước gạch đầu dòng; tiêu đề "II. Thông tin '
+        'vị trí, nguồn gốc đất:". Bản dự thảo không in khối chữ ký (Lập biểu - Kiểm tra - Lãnh đạo).',
+        'Công cụ → Quản lý Mẫu in & Bản in (Ctrl+Shift+M): 3 mẫu (chi tiết chính thức, chi tiết dự thảo, bảng tổng hợp) - xem mẫu đang '
+        'dùng là mẫu nhúng chuẩn hay mẫu tùy chỉnh, thay bằng file Excel khác (tự áp chuẩn khổ giấy, tỷ lệ, lề), xuất mẫu ra Excel để '
+        'sửa, khôi phục mẫu chuẩn gốc (mẫu cũ giữ bản sao). Thay chỗ lệnh "Cập nhật mẫu in…".',
+        'Màn hình chính khi đã mở dự án là bảng tổng quan: 4 thẻ khởi tạo / nhập dự án, 4 chỉ số (quy mô, tổng kinh phí tách đất / '
+        'tài sản, tiến độ phê duyệt, bàn giao mặt bằng), danh sách hộ đang làm dở có nút "Lập PA →" mở thẳng hộ, đồng hồ pháp lý '
+        '(hạn niêm yết, hộ vướng V1-V5, vận động / cưỡng chế).',
+        'Bảng: cuộn mượt từng điểm ảnh; sửa ô xong Enter ghi và xuống ô dưới cùng cột (như Excel), Tab sang ngang; Ctrl+D chép giá '
+        'trị ô trên xuống các ô đang chọn. Hộp thoại cao hơn màn hình (laptop 1366 x 768) có thân cuộn, hàng nút luôn hiện. Ctrl+S / '
+        'Ctrl+Z hiện thông báo nổi ở góc dưới phải.',
+    )),
+    ('1.0.06', '20/10/2026', (
+        'Thẻ "Thông tin hộ, thửa đất": khối định danh chủ sử dụng đất lưới 3 cột (tự đổi nhãn khi là tổ chức, kiểm tra CCCD đủ 12 số / '
+        'trùng hộ khác); bảng thửa 11 cột có DT nguyên thửa, DT còn lại, vị trí đất, Giấy chứng nhận; nguồn gốc & vị trí rút gọn 2 dòng '
+        '- bấm đúp hoặc "Xem/Sửa đủ" để mở hộp soạn; dải tổng hợp địa chính và cơ cấu loại đất dưới bảng.',
+        'Cửa sổ Lập phương án: dải định danh hộ (chủ hộ, CCCD, địa chỉ, đợt trình, tổng kinh phí); tên thẻ ghi số dòng và số tiền; bảng '
+        'chọn từng ô (Ctrl+C sao chép), số liệu phông Consolas; dải "Tổng số hạng mục · CỘNG MỤC" dưới bảng; cảnh báo màu hổ phách khi '
+        'diện tích dòng đất vượt DT thu hồi / DT nguyên thửa (không chặn).',
+        'Bảng tổng hợp kinh phí: 5 thẻ (cộng bồi thường 100%, kinh phí tổ chức QĐ 08/2025, hai phần phân bổ, tổng mức); cơ cấu có STT I-VI, '
+        'dòng con đất ở / đất nông nghiệp, cột căn cứ pháp lý; khung "An toàn nguồn vốn" và cột Đánh giá ở đối soát khái toán.',
+        'Tiến độ chi trả & Bàn giao: 6 thẻ chỉ số; khung Sổ nhật ký vận động của hộ đang chọn bên phải bảng, ô đánh giá điều kiện cưỡng '
+        'chế thu hồi đất (chỉ nhắc, không chặn); hộp Bàn giao nhắc ngay khi tích mà chưa có ngày biên bản.',
+        'Xuất hồ sơ & Bản in: hai thẻ Dự thảo niêm yết / Hồ sơ chính thức, danh sách tài liệu cấu thành (chính thức có lại Báo cáo tiếp '
+        'thu, giải trình ý kiến). Bác sĩ CSDL: 5 chỉ số kiểm tra và 4 nút bảo trì một lần bấm, gói chẩn đoán ẩn danh.',
+        'Tìm nhanh Ctrl+K: gõ họ tên, mã hộ, CCCD, tờ/thửa hoặc tên chức năng rồi Enter. Phím Ctrl+1 Danh sách hộ, Ctrl+2 Khái toán, '
+        'Ctrl+3 Đơn giá bồi thường, Ctrl+4 Niêm yết & Lấy ý kiến, Ctrl+5 Tiến độ & Bàn giao.',
+        'Bản in phương án chi tiết: hết "trang 2 mồ côi" - nội dung chỉ tràn vài dòng thì tự vừa 1 trang A4; in 2 trang thì trang 2 bắt '
+        'đầu trọn một mục; ẩn dòng CCCD / số điện thoại trống; lề và đệm dòng gọn hơn.',
+        'File dự án cũ được bổ sung cột DT nguyên thửa, số Giấy chứng nhận khi mở (không đổi phiên bản CSDL - bản cũ vẫn mở được).',
+    )),
+    ('1.0.05', '19/10/2026', (
+        'MỘT HỘ NHIỀU LẦN LẬP PHƯƠNG ÁN: cửa sổ Lập phương án chi tiết có dải "Lần lập PA:" - Lần 1 (Phương án gốc) và các lần bổ '
+        'sung, mỗi lần có dòng tài sản / chính sách, số - ngày phương án và quyết định phê duyệt riêng; dải ghi trạng thái lần '
+        '("ĐÃ PHÊ DUYỆT (QĐ số … ngày …) - CHỈ XEM" / "ĐANG LẬP DỰ THẢO") và "Tổng tiền lần này | TỔNG CỘNG DỒN CẢ HỘ (N LẦN)".',
+        'Lần đã có quyết định phê duyệt tự KHÓA (chỉ xem): bổ sung tài sản / chính sách mới thì bấm "+ Lập phương án bổ sung" - dữ liệu '
+        'và quyết định của các lần trước giữ nguyên. Cần điều chỉnh lần đã duyệt: "Mở khóa sửa…" (ghi lý do vào nhật ký). Lần bổ sung chưa duyệt xóa được ("Xóa lần này").',
+        'Tổng của hộ (danh sách hộ, bảng tổng hợp kinh phí, đối chiếu, kiểm tra lỗi) CỘNG DỒN mọi lần - vẫn là MỘT hộ. Thưởng bàn giao mặt bằng chỉ tính một lần cho hộ (lần bổ sung chỉ thêm phần chênh).',
+        'Quyết định phê duyệt: thêm hộ vào quyết định hỏi phê duyệt LẦN nào (mặc định lần chưa duyệt sớm nhất; không cộng lại tiền '
+        'đã duyệt), lần đó tự khóa; cột '
+        'Số PA ghi "PA bổ sung lần k"; bỏ hộ khỏi quyết định thì lần đó mở khóa lại. Hộ còn phương án bổ sung chưa duyệt: trạng thái '
+        'ghi "PA bổ sung lần k chưa phê duyệt"; cơ cấu kinh phí tách đúng phần chưa phê duyệt.',
+        'Bản in: phương án của lần bổ sung có tiêu đề "PHƯƠNG ÁN CHI TIẾT BỔ SUNG (LẦN k)" và số phương án của lần; hộp Xuất hồ sơ & Bản '
+        'in chọn "Lần phương án mới nhất" (trình bổ sung) hoặc "Cộng dồn mọi lần".',
+        'File dự án nâng cấp lên CSDL v17 khi mở: dòng phương án cũ là lần 1; hộ đã có quyết định thì lần 1 khóa. Bản phần mềm cũ '
+        'không mở được file đã nâng cấp.',
+    )),
+    ('1.0.04', '19/10/2026', (
+        'Bỏ hẳn chức năng che số CCCD: bản Dự thảo và bản Chính thức, tờ trình, bảng niêm yết đều in đủ số CCCD (ô "Che số CCCD" '
+        'trong Xuất hồ sơ & Bản in đã bỏ).',
+        'Phương án chi tiết: chủ sử dụng là tổ chức thì nhãn "Tổ chức:", "Địa chỉ:", ẩn dòng Số CCCD và Số điện thoại. Mục II nguồn gốc '
+        'đất: mỗi đoạn một dòng, căn đều hai bên, giữa theo chiều dọc, thụt đầu dòng; tự bỏ cụm mở đầu bị lặp hai lần.',
+        'Mục 1 Bồi thường về đất: thửa có diện tích luôn in "m²" và diện tích kể cả khi không tính tiền đất (đơn giá, tỷ lệ để trống, '
+        'thành tiền 0); tài sản trên đất người khác (diện tích 0) để trống ĐVT, số lượng. Tên thửa không giá in gọn, không kèm vị trí '
+        'dài; ô Ghi chú các thửa cùng nội dung gộp, căn giữa.',
+        'Bảng tổng hợp: bản Dự thảo ghi "(DỰ THẢO)" ngay dưới tên đơn vị, ẩn dòng "(Đính kèm Phương án số …)"; ẩn cột Vị trí đất, cột '
+        'tiền rộng hơn; nguồn gốc căn đều, họ tên / địa chỉ / TĐC / ghi chú căn giữa; hộ nhiều thửa: mỗi thửa một dòng, lặp STT, họ tên, '
+        'địa chỉ, nguồn gốc riêng từng thửa; số 0 ở dòng hộ hiện "-", ở dòng tổng hiện "0"; dòng 85% ghi gọn tên đơn vị.',
+        'Kiểm tra lỗi: hồ sơ chỉ có tài sản / cây trồng trên đất của tổ chức, UBND xã hoặc hộ khác không còn bị báo "diện tích thu hồi '
+        'bằng 0"; chủ đất + các hộ có tài sản trên cùng thửa không còn bị cảnh báo trùng thửa.',
+        'Thông tin dự án: hộp giãn hết bề ngang (tên dài không bị cắt), thêm khung Tóm tắt quy mô & trạng thái hồ sơ pháp lý. Bảng tổng '
+        'hợp kinh phí: hai dòng phân bổ kinh phí tổ chức thực hiện 85% / 15% với số tiền theo phương án, đã phê duyệt, chưa phê duyệt.',
+        'Mọi bảng: bấm một ô rồi Ctrl+C để chép (nhiều ô: dán thẳng vào Excel), Ctrl+Shift+C chép cả dòng; chuột phải có "Sao chép ô", '
+        '"Sao chép cả dòng". Mở ô sửa bằng chuột thì chữ được bôi đen sẵn.',
+        'Thẻ Thông tin hộ: tự đổi nhãn khi chủ sử dụng là tổ chức, dải chân bảng thửa có diện tích theo từng loại đất; hộp sửa nguồn gốc '
+        'có mẫu câu chèn nhanh. Dự án mới / Nhập phương án chi tiết: ô lọc nhanh, dòng thiếu tờ / thửa / sai loại đất tô vàng.',
+        'Mới: "Tiếp nhận hồ sơ pháp lý" (menu trái nhóm 1, màn hình chào, Ctrl+Shift+L) - dùng được khi chưa có dự án: loại chủ đầu tư, '
+        'căn cứ thu hồi, thời hạn chủ trương / Nghị quyết HĐND, 32 mục hồ sơ, 10 tiêu chí kỹ thuật địa chính, quét bảng kê thửa Excel, '
+        'tổng hợp có / thiếu / cần bổ sung; xuất Phiếu tiếp nhận (.xlsx), Công văn đề nghị bổ sung (.docx); khởi tạo dự án mới từ hồ sơ.',
+    )),
     ('1.0.03', '18/10/2026', (
         'Bảng dữ liệu dễ đọc hơn: ô bằng 0 hoặc "-" chữ xám nhạt (mắt lướt qua khoản trống), số tiền ở cột Tổng / Thành tiền chữ xanh '
         'đậm; bấm một ô là tô sáng cả dòng.',

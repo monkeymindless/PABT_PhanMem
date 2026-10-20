@@ -55,7 +55,7 @@ class _CoCuaSo(_Co):
 # ---------------------------------------------------------------- 1. chiều cao dòng
 class TestChieuCaoDong(_CoCuaSo):
     def test_dong_gon_khi_ghi_chu_trong_va_cao_theo_chu(self):
-        from pabt import giao_dien
+        from pabt import giao_dien, man_hinh
         from pabt.man_hinh import the_cua
         con, c = self._mo()
         c.resize(1300, 760)
@@ -65,13 +65,13 @@ class TestChieuCaoDong(_CoCuaSo):
         bm = c.bang[2]
         vh = bm.bang.verticalHeader()
         self.assertFalse(vh.stretchLastSection())
-        self.assertEqual((vh.minimumSectionSize(), vh.defaultSectionSize()), (30, 32))
+        self.assertEqual((vh.minimumSectionSize(), vh.defaultSectionSize()), (30, man_hinh.CAO_DONG_MUC))   # 20/10/2026: 36
         i = c.bo.them_hang_muc_khac(2, 'Mái che tạm')                     # ghi chú / quy cách trống
         bm.ve(chon=i)
         QTest = _Cho                                                    # đo lại sau khi cột giãn xếp xong (hẹn 50 ms)
         bm.vua_dong()                                                       # (= hẹn 50 ms sau khi cột xếp xong)
         h0 = bm.bang.rowHeight(i)                                           # ghi chú trống: chỉ cao theo các ô có chữ
-        self.assertEqual(h0, giao_dien.cao_can_dong(bm.bang, i))
+        self.assertEqual(h0, giao_dien.cao_can_dong(bm.bang, i, man_hinh.CAO_DONG_MUC))
         self.assertTrue(30 <= h0 <= giao_dien.CAO_DONG_TOI_DA, h0)
         k = [x[0] for x in bm.cot]
         dai = 'Theo quy định tại khoản 3 Điều 102 Luật Đất đai năm 2024, tính theo diện tích xây dựng thực tế đo đạc. ' * 6
@@ -82,7 +82,7 @@ class TestChieuCaoDong(_CoCuaSo):
         c.sua_o(2, i, 'ghi_chu', '')
         QTest.qWait(120)
         bm.vua_dong()
-        self.assertEqual(bm.bang.rowHeight(i), giao_dien.cao_can_dong(bm.bang, i))
+        self.assertEqual(bm.bang.rowHeight(i), giao_dien.cao_can_dong(bm.bang, i, man_hinh.CAO_DONG_MUC))
         self.assertLessEqual(bm.bang.rowHeight(i), h)
         # tiêu đề "Ghi chú (quy định, cách tính)" không bị cắt; cột thường trống không giãn
         from PySide6.QtGui import QFont, QFontMetrics

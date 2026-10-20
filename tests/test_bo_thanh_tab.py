@@ -48,9 +48,11 @@ class TestBoThanhTab(CoSo):
     def test_ctrl_so_chuyen_trang(self):
         ud, w = self._cua_so()
         from PySide6.QtGui import QKeySequence
-        for i, t in enumerate(ud.TRANG):
-            self.assertEqual(w.lenh[t].shortcut(), QKeySequence(f'Ctrl+{i + 1}'))
+        # 20/10/2026: Ctrl+1 Danh sách hộ, 2 Khái toán, 3 Đơn giá bồi thường, 4 Niêm yết, 5 Tiến độ; Ctrl+K Tìm nhanh
+        for t, phim in ud.PHIM_NHANH:
+            self.assertEqual(w.lenh[t].shortcut(), QKeySequence(phim))
             self.assertIn(w.lenh[t], w.actions())
+        self.assertEqual([p for _t, p in ud.PHIM_NHANH], [f'Ctrl+{i}' for i in range(1, 6)] + ['Ctrl+K'])
         phim = [a.shortcut().toString() for a in w.findChildren(type(w.lenh[ud.TRANG[0]])) if not a.shortcut().isEmpty()]
         self.assertEqual(len(phim), len(set(phim)), phim)               # không trùng phím (Qt bỏ qua cả hai)
 

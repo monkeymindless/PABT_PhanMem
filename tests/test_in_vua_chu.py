@@ -156,7 +156,7 @@ class TestDuongKe(CoSo):
         ws, bc, bd, kq = self.duong_ke(in_an.lap_chi_tiet(self.con, 1, self.td / 'ct2.xlsx'))
         e1 = in_an._dong_chu_o(ws, 1, 5, bc, bd, self.do)
         giua, dai, y = min(kq, key=lambda k: abs(k[0] - (e1['x1'] + e1['x2']) / 2))     # đường dưới "Độc lập - Tự do - Hạnh phúc"
-        rong = self.do('Độc lập - Tự do - Hạnh phúc', 'Times New Roman', 14, True) * in_an.EMU_PT
+        rong = self.do('Độc lập - Tự do - Hạnh phúc', 'Times New Roman', in_an.CO_TIEU_DE, True) * in_an.EMU_PT  # 1.0.07: 16 pt
         self.assertAlmostEqual(dai, rong, delta=2 * in_an.EMU_PX)
 
 
@@ -214,8 +214,8 @@ class TestNguonGoc(CoSo):
             self.con.execute("UPDATE thua SET nguon_goc = 'Nhận chuyển nhượng năm 2001.' WHERE ma_thua = ?", (t[-1],))
         f = in_an.lap_chi_tiet(self.con, 1, self.td / 'ct2.xlsx')
         ws = openpyxl.load_workbook(f).active
-        x = next(d[1] for d in self.dong_nguon_goc(ws) if d[1])
-        self.assertEqual(x, 'Đất khai phá năm 1995.\nNhận chuyển nhượng năm 2001.')
+        x = [d[1] for d in self.dong_nguon_goc(ws) if d[1]]
+        self.assertEqual(x, ['Đất khai phá năm 1995.', 'Nhận chuyển nhượng năm 2001.'])     # 1.0.04: mỗi đoạn một dòng Excel
 
     def test_nguon_goc_rat_dai_chia_nhieu_dong(self):
         dai = '\n'.join([NGUON_GOC] * 7)
@@ -235,7 +235,9 @@ class TestTenDuAn(CoSo):
     def test_ten_ngan_mot_dong(self):
         r, cao, o = self._dong_du_an(self.in_ho('x'))
         self.assertEqual(o.value, f'DỰ ÁN {self.TEN}')
-        self.assertAlmostEqual(cao, in_an.cao_dong_chu(1, 14) + in_an.DK_CACH + 3, places=1)    # sát chữ, không còn 38,4 pt cố định
+        # sát chữ, không còn 38,4 pt cố định; 1.0.07: chữ 16 pt (phông offscreen rộng - có thể 2 dòng: đếm bằng ngat_dong)
+        so = len(in_an.ngat_dong(o.value, in_an._rong_vung(self.in_ho('x'), 1, 8), co=in_an.CO_TIEU_DE, dam=True))
+        self.assertAlmostEqual(cao, in_an.cao_dong_chu(so, in_an.CO_TIEU_DE) + in_an.DK_CACH + 3, places=1)
         self.assertEqual(o.alignment.vertical, 'top')
         self.assertTrue(o.alignment.wrap_text)
 
@@ -243,9 +245,9 @@ class TestTenDuAn(CoSo):
         ten = ('Thành phần 1: Đầu tư xây dựng đoạn từ cầu A đến ngã ba B (giai đoạn 1) theo phương thức đối tác công tư (PPP), '
                'hợp đồng BOT, đợt 2')
         r, cao, o = self._dong_du_an(self.in_ho('x', ten))
-        so = len(in_an.ngat_dong(o.value, in_an._rong_vung(self.in_ho('x', ten), 1, 8), dam=True))
+        so = len(in_an.ngat_dong(o.value, in_an._rong_vung(self.in_ho('x', ten), 1, 8), co=in_an.CO_TIEU_DE, dam=True))
         self.assertGreaterEqual(so, 2)
-        self.assertAlmostEqual(cao, in_an.cao_dong_chu(so, 14) + in_an.DK_CACH + 3, places=1)
+        self.assertAlmostEqual(cao, in_an.cao_dong_chu(so, in_an.CO_TIEU_DE) + in_an.DK_CACH + 3, places=1)
 
 
 class TestMauIn(CoSo):

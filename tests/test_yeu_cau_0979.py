@@ -61,12 +61,14 @@ class TestTheChao(unittest.TestCase):
         self.assertEqual(lo.spacing(), 20)
         x = [t.mapTo(trang, t.rect().topLeft()).x() for t in the]
         self.assertEqual([x[1] - x[0] - 210, x[2] - x[1] - 210], [20, 20])                   # đúng 20 px giữa các thẻ
-        tam = (x[0] + x[2] + 210) / 2
+        x_cuoi = max(t.mapTo(trang, t.rect().topLeft()).x() for t in self.w.the_chao.values())     # 1.0.04: 4 thẻ
+        tam = (x[0] + x_cuoi + 210) / 2
         self.assertLessEqual(abs(tam - trang.width() / 2), 2)                                # cân giữa vùng nội dung
         self.w.resize(1920, 1080)
         self.app.processEvents()
         x = [t.mapTo(trang, t.rect().topLeft()).x() for t in the]
-        self.assertLessEqual(abs((x[0] + x[2] + 210) / 2 - trang.width() / 2), 2)
+        x_cuoi = max(t.mapTo(trang, t.rect().topLeft()).x() for t in self.w.the_chao.values())
+        self.assertLessEqual(abs((x[0] + x_cuoi + 210) / 2 - trang.width() / 2), 2)
         self.assertEqual([t.width() for t in the], [210, 210, 210])                          # cỡ thẻ không đổi theo cửa sổ
 
     def test_mau_theo_loai_va_hover(self):

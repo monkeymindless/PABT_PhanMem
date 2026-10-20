@@ -56,7 +56,8 @@ class _Co(unittest.TestCase):
 class TestTrangGop(_Co):
     def test_bo_cuc_mot_trang(self):
         k = self.khung()
-        self.assertEqual(list(k.kpi.the), ['giai_ngan', 'mat_bang', 'con_vuong', 'cuong_che'])
+        # 20/10/2026 (ảnh mẫu): 6 thẻ; "Thửa còn vướng" là nút chế độ xem, không còn là thẻ
+        self.assertEqual(list(k.kpi.the), ['tong_ho', 'phe_duyet', 'giai_ngan', 'mat_bang', 'van_dong', 'cuong_che'])
         self.assertEqual(list(k.nut_che_do), ['ho', 'thua'])
         self.assertEqual(k.che_do(), 'ho')
         # nút: không còn các nút trùng lệnh của trang Báo cáo cũ; xuất gom vào MỘT nút có menu
@@ -81,14 +82,17 @@ class TestTrangGop(_Co):
             self.assertTrue(k.nut_che_do[che_do].isChecked())
             if loc is not None:
                 self.assertEqual(k.cb_loc.currentData(), loc, the)
+        k.bam_kpi('phe_duyet')
+        self.assertEqual(sorted(k.dang_hien), sorted(self.ma[:4]))        # 4 hộ có QĐ
         k.bam_kpi('giai_ngan')
-        self.assertEqual(sorted(k.dang_hien), sorted(self.ma[:4]))        # 4 hộ có QĐ chưa nhận tiền
+        self.assertEqual(k.dang_hien, [])                                 # chưa hộ nào nhận tiền đủ
 
     def test_the_khi_chua_co_quyet_dinh(self):
         from pabt.man_hinh_bao_cao import KHONG_SO
         k = self.khung()
         self.assertEqual(k.kpi.the['giai_ngan'].lb_so.text(), KHONG_SO)
-        self.assertEqual(k.kpi.the['con_vuong'].lb_so.text(), KHONG_SO)
+        self.assertEqual(k.kpi.the['phe_duyet'].lb_so.text(), '0 hộ (0,0%)')
+        self.assertEqual(k.kpi.the['tong_ho'].lb_so.text(), '6 hộ')
         self.assertFalse(k.kpi.the['giai_ngan'].thanh.isVisibleTo(k))     # không có thanh tiến độ 0% gây hiểu nhầm
         k.dat_che_do('thua')
         self.assertIs(k.thua.ngan.currentWidget(), k.thua.lb_trong)

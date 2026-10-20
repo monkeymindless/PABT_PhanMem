@@ -1,4 +1,25 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.03 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.06 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **1.0.06 - giao diện chuẩn hóa & bản in gọn trang**: thẻ hồ sơ hộ lưới 3 cột, bảng thửa có DT nguyên thửa / còn lại / Giấy
+> chứng nhận; **Ctrl+K** tìm nhanh hộ hoặc chức năng; Ctrl+1 Danh sách hộ, Ctrl+2 Khái toán, Ctrl+3 Đơn giá, Ctrl+4 Niêm yết, Ctrl+5
+> Tiến độ. Bản in chi tiết tràn vài dòng tự vừa 1 trang A4 (hết trang 2 mồ côi).
+>
+> **1.0.05 - một hộ nhiều lần lập phương án**: cửa sổ Lập phương án chi tiết có dải **Lần phương án** (lần đầu, bổ sung lần 1, 2…).
+> Lần đã có quyết định phê duyệt **tự khóa** (chỉ xem); muốn bổ sung tài sản / chính sách thì bấm **+ Lập phương án bổ sung** - lần
+> mới rỗng, các lần trước và quyết định cũ giữ nguyên. Mỗi lần có **Tên, số PA…** riêng; thêm hộ vào quyết định mới tự lấy tiền của
+> lần chưa duyệt. Tổng của hộ luôn **cộng dồn** mọi lần (thưởng bàn giao chỉ tính một lần). Bản in lần bổ sung ghi "PHƯƠNG ÁN CHI TIẾT
+> BỔ SUNG LẦN k"; Xuất hồ sơ & Bản in chọn **Lần mới nhất** hoặc **Cộng dồn**. Điều chỉnh lần đã duyệt: **Mở khóa sửa…**.
+
+> **1.0.04**: **không còn che số CCCD** (bản dự thảo, chính thức, tờ trình, bảng niêm yết đều in đủ số). Phương án chi tiết: chủ sử
+> dụng là tổ chức ghi **Tổ chức:** / **Địa chỉ:**, ẩn dòng CCCD và điện thoại; nguồn gốc đất mỗi đoạn một dòng, căn đều, thụt đầu
+> dòng; mục 1 luôn in diện tích (m²) của thửa kể cả khi không tính tiền đất. Bảng tổng hợp: bản dự thảo ghi **(DỰ THẢO)** dưới tên
+> đơn vị, ẩn cột Vị trí đất, hộ nhiều thửa mỗi thửa một dòng (lặp STT, họ tên, địa chỉ), số 0 ở dòng hộ hiện "-". **Kiểm tra lỗi**
+> không còn báo nhầm hộ chỉ có tài sản trên đất của tổ chức / UBND xã / hộ khác. **Bảng tổng hợp kinh phí** có hai dòng phân bổ 85% /
+> 15%. **Mọi bảng**: bấm một ô rồi **Ctrl+C** để chép (nhiều ô dán thẳng vào Excel), **Ctrl+Shift+C** chép cả dòng, chuột phải "Sao
+> chép ô". Mới: **Tiếp nhận hồ sơ pháp lý** (menu trái nhóm 1, màn hình chào, **Ctrl+Shift+L**) - dùng được khi chưa có dự án: loại
+> chủ đầu tư, căn cứ thu hồi (Điều 78 / 79 / 122 / 127), thời hạn chủ trương và Nghị quyết HĐND, 32 mục hồ sơ (5 nhóm), 10 tiêu chí kỹ
+> thuật địa chính, quét bảng kê thửa Excel, tổng hợp có / thiếu / cần bổ sung; xuất **Phiếu tiếp nhận** (.xlsx), **Công văn đề nghị
+> bổ sung** (.docx); lưu file `.pabtpl` hoặc vào dự án; nút **Khởi tạo Dự án Mới (.pabt) từ Hồ sơ này →**.
 
 > **1.0.03**: bảng dễ đọc hơn - ô bằng **0** chữ xám nhạt, số tiền cột Tổng / Thành tiền chữ xanh đậm; cột **Trạng thái** danh sách hộ có
 > 4 vạch tiến độ + nhãn màu (xanh lá đã bàn giao, xanh ngọc đã chi trả / phê duyệt, xanh dương đã lập, vàng cần xem lại, xám chưa lập);
@@ -448,7 +469,33 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   vẽ và ngắt trang của Excel. In / xuất PDF chính thức vẫn cần Excel.
 - Chủ sử dụng là **tổ chức** (tên bắt đầu bằng Công ty, UBND / Ủy ban nhân dân, Ban quản lý, Hợp tác xã, Trung tâm, Nhà thờ, Chùa,
   Trường tiểu học…, hoặc có TNHH / cổ phần): bản in ghi **"Tổ chức:"** thay "Họ và tên:". Ghi chú của các thửa đất **liền nhau
-  giống nhau** ở mục 1 gộp thành một ô. Tiêu đề mục II luôn là "II. Thông tin vị trí, nguồn gốc đất".
+  giống nhau** ở mục 1 gộp thành một ô. Tiêu đề mục II luôn là "II. Thông tin vị trí, nguồn gốc đất:".
+- **Cỡ chữ và khổ giấy (1.0.07)**: tiêu đề (quốc hiệu, tiêu ngữ, tên cơ quan, tên văn bản, dự án, tiêu đề mục I-IV, hàng tiêu đề
+  bảng) 16 pt đậm, nội dung 14 pt. Phương án chi tiết: A4 dọc, tỷ lệ in 72% (chỉ tràn vài dòng thì thu tới 70% cho vừa 1 trang),
+  lề trái 0,8 cm, phải 0,3 cm, trên 1,0 cm, dưới 0,8 cm; cột Ghi chú 11,5 pt; mục I không kẻ viền, nhãn đậm, nội dung thường; số CCCD,
+  số điện thoại lưu dạng chữ (Excel không gắn tam giác xanh); mỗi đoạn nguồn gốc đất thụt đầu dòng 8 khoảng trắng. **Bản dự thảo
+  không in khối chữ ký** (Lập biểu - Kiểm tra - Phó Giám đốc), ghi "(DỰ THẢO)" dưới dòng số, để trống số / ngày. **Bảng tổng hợp: A3 ngang, tỷ lệ in cố định 55%**
+  - cột chữ (họ tên, địa chỉ, nguồn gốc…) tự co / giãn cho bảng vừa đúng bề ngang A3; chỉ khi số tiền quá lớn không vừa thì in
+  nhỏ hơn 55% (không để Excel tách cột sang trang riêng).
+- **Máy chưa có thư mục mẫu in (1.0.07)**: bộ mẫu chuẩn (phương án chi tiết, bảng tổng hợp, đường kẻ) nhúng sẵn trong phần mềm -
+  in được ngay. Mẫu đã sửa (Quản lý Mẫu in, gói .pabtcfg) vẫn được dùng trước.
+- **Công cụ → Quản lý Mẫu in & Bản in… (Ctrl+Shift+M)**: 3 mẫu - chi tiết chính thức, chi tiết dự thảo (bản niêm yết; chưa thay
+  thì dùng mẫu chi tiết chính thức + chữ DỰ THẢO), bảng tổng hợp - kèm trạng thái "Mẫu nhúng chuẩn trong RAM" / "Mẫu tùy chỉnh
+  người dùng". **Thay thế bằng file Excel khác…**: nhận file PABT Excel (sheet IN_CHITIET / IN_BANGTONGHOP) hoặc mẫu một sheet có
+  chỗ trống {…}; tự áp chuẩn (chi tiết A4 72% lề chuẩn, tổng hợp A3 55%) và dùng ngay lần in sau. **Xuất mẫu hiện tại ra Excel để
+  chỉnh sửa…**, **Khôi phục mẫu chuẩn gốc** (mẫu tùy chỉnh cũ chuyển vào `mau_in\cu\`, không xóa).
+
+## Màn hình chính khi đã mở dự án - tổng quan dự án (1.0.07)
+
+Bấm **Màn hình chính** (đầu menu trái) khi đang mở dự án: dải tên dự án / địa bàn / chủ đầu tư; 4 thẻ **Dự án mới**, **Mở dự án
+(Ctrl+O)**, **Nhập file Excel**, **Nhập PA chi tiết từ Excel**; 4 chỉ số (quy mô: số hộ, số thửa, ha; tổng kinh phí - đất và tài
+sản, hỗ trợ; tiến độ phê duyệt; bàn giao mặt bằng - cùng cách đếm với thẻ số liệu danh sách hộ); bên trái **hộ đang làm dở / chưa
+phê duyệt** (nút **Lập PA →** hoặc bấm đúp mở thẳng hộ), bên phải **Đồng hồ pháp lý**: số ngày niêm yết còn lại của đợt đang niêm
+yết, hạn đối thoại, số hộ vướng V1-V5, số hộ đang vận động / đủ điều kiện đề nghị cưỡng chế. Chưa mở dự án: màn hình chào như cũ.
+
+**Thao tác bảng (1.0.07)**: cuộn mượt; sửa ô xong **Enter** ghi và xuống ô dưới, **Tab** sang ô bên phải; **Ctrl+D** chép giá trị ô
+trên cùng của vùng chọn xuống các ô chọn bên dưới (chọn một ô: chép ô ngay trên). **Ctrl+S** / **Ctrl+Z** hiện thông báo nổi góc
+dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn mảnh, hàng nút luôn nằm trong màn hình.
 
 ## Công cụ thực địa, chẩn đoán và cấu hình nghiệp vụ (0.9.87)
 - **Cài đặt → Cấu hình nghiệp vụ…**: số ngày (niêm yết, đối thoại, thẩm định, thông báo thu hồi đất nông nghiệp / phi nông nghiệp,

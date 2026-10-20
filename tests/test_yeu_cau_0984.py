@@ -171,8 +171,7 @@ class TestLapChiTietBanDangSoan(CoSoXem):
         f = in_an.lap_chi_tiet(self.con, 1, self.td / 'dang_soan.xlsx', bc=bo.bc, pa=bo.pa, che_cccd=True)
         chu = ' '.join(str(c.value) for r in openpyxl.load_workbook(f).active.iter_rows() for c in r if c.value is not None)
         self.assertIn(m.ten, chu)                               # dòng chưa lưu có trong bản in
-        self.assertIn('075092******', chu)
-        self.assertNotIn('075092001234', chu)
+        self.assertIn('075092001234', chu)                      # 1.0.04: che_cccd=True cũ bỏ qua - in đủ số
         f2 = in_an.lap_chi_tiet(self.con, 1, self.td / 'da_luu.xlsx', che_cccd=False)    # số liệu đã lưu, không che
         chu2 = ' '.join(str(c.value) for r in openpyxl.load_workbook(f2).active.iter_rows() for c in r if c.value is not None)
         self.assertIn('075092001234', chu2)
@@ -204,7 +203,7 @@ class TestHopIn(CoSoXem):
         self.assertFalse(in_an.co_dau_du_thao(ws))              # chính thức
         h.r_du_thao.setChecked(True)                             # đổi chế độ -> lập lại bản dự thảo, che CCCD
         self.assertTrue(h.w_preview.cho_xong(30))
-        self.assertEqual(h.khoa_xem_truoc()[1:2] + h.khoa_xem_truoc()[3:], (True, True))
+        self.assertEqual(h.khoa_xem_truoc()[1:2] + h.khoa_xem_truoc()[3:4], (True, False))     # 1.0.04: không che CCCD
         self.assertNotEqual(self.excel.da_nhan[-1], xlsx)
         self.assertTrue(in_an.co_dau_du_thao(openpyxl.load_workbook(self.excel.da_nhan[-1]).active))
         d = h.w_preview.thu_muc

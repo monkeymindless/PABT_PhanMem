@@ -75,7 +75,7 @@ class TestNiemYet(_Co):
         k.tach.setSizes([k.tach.height() - 120, 100])
         self.app.processEvents()
         self.assertGreater(k.tach.sizes()[0], k.tach.sizes()[1])
-        self.assertEqual(k.bang_ny.horizontalHeaderItem(2).text(), 'CCCD')      # 15/10/2026: số vẫn che (an_toan.che_cccd)
+        self.assertEqual(k.bang_ny.horizontalHeaderItem(2).text(), 'CCCD')      # 1.0.04: số đầy đủ (bỏ che)
         self.assertIn('Xuất bảng niêm yết', k._nut)
 
     def test_mot_cham_doi_y_kien(self):

@@ -89,7 +89,8 @@ class TestMenuTrai(_Co):
                                                 '4. Tổng hợp & trình duyệt', '5. Phê duyệt & bàn giao',
                                                 '6. Đơn giá & bảng giá'])
         self.assertEqual(nut[1:], [L[k] for k in (
-            'Dự toán & khái toán', 'So sánh với thực tế', 'Thông tin dự án…', 'Danh sách hộ',
+            'Dự toán & khái toán', 'So sánh với thực tế', 'Tiếp nhận & Kiểm tra pháp lý dự án…',   # 1.0.04
+            'Thông tin dự án…', 'Danh sách hộ',
             'Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…',          # Bản đồ thửa đất: menu Dữ liệu (18/10)
             'Xuất báo cáo đối chiếu…', 'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…', 'Quyết định phê duyệt',
             'Theo dõi tiến độ',                                   # 1.0.00: Báo cáo tiến độ GPMB gộp vào đây

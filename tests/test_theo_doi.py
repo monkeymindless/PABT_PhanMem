@@ -159,8 +159,16 @@ class TestManHinh(CoSo):
         self.assertEqual(bth.tab.count(), 3)
         self.assertFalse(hasattr(bth, 'quyet_dinh'))
         bth.mo_the(0)
-        self.assertEqual([d['loai'] for d in bth.co_cau.cc['dong']], ['nhom'] * 5 + ['cong', 'kinh_phi', 'tong'])
-        self.assertEqual(bth.co_cau.bang.rowCount(), 8)
+        loai = [d['loai'] for d in bth.co_cau.cc['dong']]
+        # 20/10/2026: dòng con tiền đất (đất ở / đất nông nghiệp, đất khác chỉ khi có tiền) ngay sau nhóm I
+        self.assertEqual([x for x in loai if x != 'nhom_con'], ['nhom'] * 5 + ['cong', 'kinh_phi', 'phan_bo', 'phan_bo', 'tong'])
+        self.assertEqual(loai[0], 'nhom')
+        self.assertIn(loai.count('nhom_con'), (2, 3))
+        self.assertEqual(bth.co_cau.bang.rowCount(), len(loai))
+        self.assertEqual([d['stt'] for d in bth.co_cau.cc['dong'] if d['loai'] == 'nhom'], ['I', 'II', 'III', 'IV', 'V'])
+        self.assertTrue(all(d.get('can_cu') for d in bth.co_cau.cc['dong']))
+        self.assertEqual(sum((d['tien_pa'] for d in bth.co_cau.cc['dong'] if d['loai'] == 'nhom_con'), D(0)),
+                         bth.co_cau.cc['dong'][0]['tien_pa'])                # dòng con cộng đúng tiền đất
         f = bth.co_cau.xuat(self.td / 'cc.xlsx')
         self.assertEqual(openpyxl.load_workbook(f).active['A1'].value, 'CƠ CẤU KINH PHÍ DỰ ÁN')
         bth.mo_the(1)

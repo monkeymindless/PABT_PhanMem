@@ -177,6 +177,44 @@ def tinh_trang_ho(x, buoi: list, n_van_dong: int, hom_nay: date) -> list:
     return kq
 
 
+def danh_gia_cuong_che(x, buoi: list, n_van_dong: int, hom_nay: date, moc_ho: dict | None = None) -> dict:
+    """Đánh giá điều kiện lập hồ sơ ban hành quyết định cưỡng chế thu hồi đất của hộ x (theo_doi.TongHopHo) - ô kết luận của Sổ nhật
+    ký vận động (20/10/2026). dict(du, dong=[(đạt?, chữ)], ket_luan). Các điều kiện (theo dữ liệu phần mềm có):
+      1. đã có quyết định phê duyệt phương án;
+      2. đã vận động và đã qua thời hạn vận động (n_van_dong ngày) kể từ buổi đầu tiên;
+      3. đủ mốc thời gian thông báo thu hồi đất (thoi_han.moc_thu_hoi_tat_ca - None: chưa có ngày thông báo thì chưa kiểm được);
+      4. hộ vẫn chưa nhận tiền / chưa bàn giao mặt bằng.
+    Không chặn - chỉ hiện (căn cứ: CAN_CU_CUONG_CHE)."""
+    from .thoi_han import hien_ngay
+    dong = []
+    co_qd = bool(x.qd)
+    dong.append((co_qd, 'Đã có quyết định phê duyệt phương án' + (f' ({"; ".join(q["so_qd"] for q in x.qd)})' if co_qd else '')
+                 if co_qd else 'Chưa có quyết định phê duyệt phương án'))
+    dau = thoi_han.doc_ngay(buoi[0]['ngay']) if buoi else None
+    if dau is None:
+        dong.append((False, 'Chưa có buổi vận động nào'))
+        qua = False
+    else:
+        da_qua = max(0, (hom_nay - dau).days)
+        qua = da_qua > n_van_dong
+        dong.append((qua, f'Buổi vận động đầu tiên: {hien_ngay(dau)} (đã qua {da_qua} ngày ' +
+                     (f'> {n_van_dong} ngày theo thời hạn vận động)' if qua else f'- chưa quá {n_van_dong} ngày)')))
+    if moc_ho is None:
+        dong.append((False, 'Chưa kiểm được mốc thông báo thu hồi đất (chưa nhập ngày thông báo - nút "Mốc pháp lý…")'))
+        du_moc = False
+    else:
+        du_moc = bool(moc_ho.get('du'))
+        dong.append((du_moc, ('Đã đủ thời gian thông báo thu hồi đất' if du_moc else 'Chưa đủ thời gian thông báo thu hồi đất') +
+                     (f' ({moc_ho["chu"]})' if moc_ho.get('chu') else '')))
+    ap = viec_ap_dung(x)
+    dong.append((bool(ap), ('Hộ vẫn ' + ' và '.join(VIEC[v].lower() for v in ap)) if ap
+                 else 'Hộ đã nhận tiền và đã bàn giao mặt bằng - không cần cưỡng chế'))
+    du = co_qd and qua and du_moc and bool(ap)
+    kl = ('ĐỦ ĐIỀU KIỆN LẬP HỒ SƠ BAN HÀNH QUYẾT ĐỊNH CƯỠNG CHẾ THU HỒI ĐẤT' if du else
+          'CHƯA ĐỦ ĐIỀU KIỆN CƯỠNG CHẾ - tiếp tục vận động / bổ sung điều kiện còn thiếu')
+    return dict(du=du, dong=dong, ket_luan=kl, can_cu=CAN_CU_CUONG_CHE)
+
+
 def tinh_trang_tat_ca(con, ds_tong_hop: list | None = None, hom_nay=None) -> dict:
     """{ma_ho: [TinhTrang]} của các hộ đã có buổi vận động. ds_tong_hop: kết quả theo_doi.tong_hop (tránh đọc lại)."""
     buoi = ds_buoi(con)

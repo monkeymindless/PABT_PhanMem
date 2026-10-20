@@ -246,7 +246,7 @@ class TestKinhPhi(_Co):
         self.qd()
         cc = kinh_phi_du_an.co_cau(self.con)
         dong = {d['loai'] + str(d['ma']): d for d in cc['dong']}
-        self.assertEqual([d['loai'] for d in cc['dong']], ['nhom'] * 5 + ['cong', 'kinh_phi', 'tong'])
+        self.assertEqual([d['loai'] for d in cc['dong']], ['nhom'] * 5 + ['cong', 'kinh_phi', 'phan_bo', 'phan_bo', 'tong'])   # 1.0.04: 85% / 15%
         ds = theo_doi.tong_hop(self.con)
         for m in range(1, 6):
             self.assertEqual(dong[f'nhom{m}']['tien_pa'], sum((x.muc_pa.get(m, KHONG) for x in ds), KHONG))
@@ -648,7 +648,7 @@ class TestBangTongHopVaBaoCaoGiaoDien(_Co):
         self.assertIs(k.thua.ngan.currentWidget(), k.thua.lb_trong)         # bảng trống: lời giải thích thay chỗ bảng
         q = self.qd()
         k.nap()
-        self.assertEqual(k.kpi.the['giai_ngan'].lb_so.text(), '0,0%')
+        self.assertEqual(k.kpi.the['giai_ngan'].lb_so.text(), '0 hộ (0,0%)')     # 20/10/2026: "n hộ (x%)" trên tổng số hộ
         b = k.thua.bang
         so_thua_4_ho = sum(self.con.execute('SELECT COUNT(*) FROM thua WHERE ma_ho = ?', (m,)).fetchone()[0] for m in self.ma[:4])
         self.assertEqual(b.rowCount(), so_thua_4_ho)                        # mỗi THỬA một dòng: 4 hộ đã phê duyệt, chưa nhận tiền
@@ -658,11 +658,12 @@ class TestBangTongHopVaBaoCaoGiaoDien(_Co):
         theo_doi.ghi_ban_giao(self.con, [self.ma[0]], dict(da_ban_giao=1, ban_giao_ngay=_hn(-1)))
         van_dong.ghi_buoi(self.con, self.ma[2], 'tien', _hn(-20))
         k.nap()
-        self.assertEqual(k.kpi.the['giai_ngan'].lb_so.text()[-1], '%')
-        self.assertNotEqual(k.kpi.the['giai_ngan'].lb_so.text(), '0,0%')
-        self.assertNotEqual(k.kpi.the['mat_bang'].lb_so.text(), '0,0%')
-        self.assertEqual(k.kpi.the['cuong_che'].lb_so.text(), '1')
-        self.assertEqual(k.kpi.the['giai_ngan'].thanh.value(), int(k.tq['pt_giai_ngan'] * 10))
+        self.assertTrue(k.kpi.the['giai_ngan'].lb_so.text().endswith('%)'))
+        self.assertNotEqual(k.kpi.the['giai_ngan'].lb_so.text(), '0 hộ (0,0%)')
+        self.assertNotEqual(k.kpi.the['mat_bang'].lb_so.text(), '0 hộ (0,0%)')
+        self.assertTrue(k.kpi.the['cuong_che'].lb_so.text().startswith('1 hộ'))
+        self.assertIn('Giải ngân', k.kpi.the['giai_ngan'].lb_phu.text())
+        self.assertEqual(k.kpi.the['giai_ngan'].thanh.value(), int(k.tq['so_ho_nhan_du'] * 100 / k.tq['so_ho'] * 10))
         tong_thua = len(k.tq['thua'])
         self.assertEqual(b.rowCount(), tong_thua)
         self.assertEqual(b.item(0, 0).text(), 'Gấp')                        # gấp lên đầu
@@ -789,7 +790,8 @@ class TestCuaSoChinhNhom56(_Co):
             _qt().processEvents()
             self.assertEqual(w.trang.currentIndex(), ud.STACK_CUA_TRANG[i], t)
             self.assertEqual([k for k, x in enumerate(ud.TRANG) if w.lenh[x].isChecked()], [i])
-            self.assertEqual(w.lenh[t].shortcut().toString(), f'Ctrl+{i + 1}')
+            # 20/10/2026: phím số theo PHIM_NHANH (Tổng hợp tiền / Quyết định không có phím số)
+            self.assertEqual(w.lenh[t].shortcut().toString(), dict(ud.PHIM_NHANH).get(t, ''))
         self.assertIs(w._khung_dang_xem(), w.tien_do)
         self.assertEqual(w.lb_trang.text(), 'TIẾN ĐỘ CHI TRẢ & BÀN GIAO')
         from pabt.man_hinh_bao_cao import KHONG_SO
@@ -798,7 +800,7 @@ class TestCuaSoChinhNhom56(_Co):
     def test_lien_ket_giua_cac_trang_va_dong_du_an(self):
         ud, w = self._cua_so()
         w.mo_trang(ud.TRANG_THEO_DOI)
-        w.tien_do.bam_kpi('con_vuong')                                      # thẻ "Thửa chưa bàn giao": chế độ Thửa còn vướng
+        w.tien_do.dat_che_do('thua')                                        # nút chế độ "Thửa còn vướng"
         self.assertEqual(w.tien_do.che_do(), 'thua')
         w.tien_do.bam_kpi('cuong_che')                                      # thẻ cưỡng chế: về Theo hộ, lọc hộ đủ điều kiện
         self.assertEqual((w.tien_do.che_do(), w.tien_do.cb_loc.currentData()), ('ho', 'du_cuong_che'))

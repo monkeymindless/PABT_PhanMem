@@ -54,7 +54,8 @@ class TestBanInChiTiet(unittest.TestCase):
         for rr in co_chu:                               # 16/10/2026: đệm 1,5 pt giữa các dòng, dòng cuối (trước III) thêm 4 pt
             so = len(in_an._ngat(ws.cell(rr, 1).value, rong, *phong, treo=False))
             self.assertAlmostEqual(ws.row_dimensions[rr].height, in_an.cao_doan_van(so, 14, cuoi=rr == co_chu[-1]), places=2)
-            self.assertLess(ws.row_dimensions[rr].height, in_an.cao_dong_bang(so, 14))   # đệm nhỏ hơn ô bảng (8 pt)
+            # đệm nhỏ (1,5 pt; dòng cuối thêm DEM_DOAN_CUOI cho khe trước mục III) - không quá ô bảng cùng số dòng + khe đó
+            self.assertLessEqual(ws.row_dimensions[rr].height, in_an.cao_dong_bang(so, 14) + in_an.DEM_DOAN_CUOI)
 
     def test_dong_ten_dao_tao_khong_lap_so(self):
         ws = self.ws
