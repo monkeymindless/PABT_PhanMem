@@ -1890,6 +1890,12 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   hộ (`_tab_dong`; tham số `truoc` của mo_lap_pa không dùng). `CuaSoChinh._tai_lai_neu_doi` (so `con.total_changes` với `_tc_nap` đặt cuối
   `tai_lai`) gọi đầu `mo_trang` (trừ Dự toán) và `ve_trang_chu`. Nhập chi tiết: hộ TRÙNG họ tên / CCCD mặc định 'bo_qua' (báo trong hộp kết
   quả) - chọn "thêm thành hộ mới" nếu là hộ khác. Test `test_yeu_cau_1008.TestThemHoCapNhatDanhSach`.
+- 1.0.10 Dán tài sản - kích thước = diện tích (người dùng 20/10/2026; test `tests/test_hieu_tai_san.TestKichThuocDienTich`):
+  `hieu_tai_san._RE_KICH_THUOC` (phần 'kt' của `_PHAN`, trước 'sl'): "4,7x3,0" / "4,7*3,0" / "3,7m x 4,3m" / "3,7mx4,3m" / "3,7 x 4,3 m2"
+  -> số lượng = phép tính (dấu nhân như người gõ; doc_danh_sach tính 15,91, giữ `cong_thuc`), ĐVT m2 (không ghi đơn vị: `dvt_ngam` - tên
+  có đơn vị cuối "Nhà tạm m2 4x5" / cột ĐVT thắng); ba thừa số hoặc đơn vị khác sau ("2x3x1,5 m3", "3x4 cây") để quy tắc số lượng cũ.
+  Phần 'ngoac' "42m2 (thửa 123)": ngoặc SAU số liệu -> ghi chú (ngoặc trong tên giữ). `_RE_TU_NHIEN` nhận "số x số"; `tach_dong` không tách
+  ở số đứng sau toán tử / số ("Sân m2 3+2*4" vẫn đi quy tắc cũ). Ô Excel: `doc_kich_thuoc(o)` ("3,7m x 4,3m", "42m2").
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

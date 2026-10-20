@@ -131,5 +131,46 @@ class TestPhieuKiemDem(CoSo):
         self.assertTrue(any(d.ten.startswith('Keo lá tràm') and d.so_luong == 10 for d in pa.khoan[3]))
 
 
+class TestKichThuocDienTich(CoSo):
+    """Người dùng 20/10/2026: "4,7x3,0", "4,7*3,0", "Nhà tạm 42m2 (thửa 123)", "Nhà tạm 3,7m x 4,3m", "Nhà tạm 3,7 * 4,3" đều là diện
+    tích - dài x rộng tính thành m², giữ phép tính ở chú thích ô."""
+
+    def d(self, dong):
+        ds = doc_danh_sach(dong)
+        self.assertEqual(len(ds), 1, dong)
+        x = ds[0]
+        return x['ten'], x['dvt'], x['so_luong'], x.get('cong_thuc', ''), x['ghi_chu']
+
+    def test_vi_du_nguoi_dung(self):
+        self.assertEqual(self.d('Nhà tạm 42m2 (thửa 123)'), ('Nhà tạm', 'm2', '42', '', 'thửa 123'))
+        for dong, ct in (('Nhà tạm 3,7m x 4,3m', '3,7x4,3'), ('Nhà tạm 3,7 * 4,3', '3,7*4,3'), ('Nhà tạm 3,7mx4,3m', '3,7x4,3'),
+                         ('Nhà tạm: 3,7m x 4,3m', '3,7x4,3'), ('Nhà tạm 3,7 x 4,3 m2', '3,7x4,3'), ('Nhà tạm 3,7 × 4,3', '3,7×4,3')):
+            self.assertEqual(self.d(dong), ('Nhà tạm', 'm2', '15,91', ct, ''), dong)
+        for dong, ct in (('Nhà tạm 4,7x3,0', '4,7x3,0'), ('Nhà tạm 4,7*3,0', '4,7*3,0'), ('Nhà tạm 4,7 x 3,0', '4,7x3,0')):
+            self.assertEqual(self.d(dong), ('Nhà tạm', 'm2', '14,1', ct, ''), dong)
+
+    def test_o_bang_excel(self):
+        self.assertEqual(self.d('Nhà tạm	3,7m x 4,3m'), ('Nhà tạm', 'm2', '15,91', '3,7x4,3', ''))
+        self.assertEqual(self.d('Nhà tạm	4,7*3,0'), ('Nhà tạm', 'm2', '14,1', '4,7*3,0', ''))
+        self.assertEqual(self.d('Nhà tạm	42m2'), ('Nhà tạm', 'm2', '42', '', ''))
+        self.assertEqual(self.d('Tràm	3x4	cây'), ('Tràm', 'cây', '12', '3x4', ''))        # cột ĐVT có sẵn thắng m2 tự suy
+
+    def test_khong_doan_sai(self):
+        self.assertEqual(self.d('Nhà cấp 4')[:3], ('Nhà cấp 4', '', ''))
+        self.assertEqual(self.d('Nhà cấp 4 3x5')[:3], ('Nhà cấp 4', 'm2', '15'))
+        self.assertEqual(self.d('Đường ống D110 md 12,5')[:3], ('Đường ống D110', 'md', '12,5'))
+        self.assertEqual(self.d('Nhà tạm m2 4x5')[:3], ('Nhà tạm', 'm2', '20'))
+        self.assertEqual(self.d('Sân m2 3+2*4')[:4], ('Sân', 'm2', '11', '3+2*4'))
+        self.assertEqual(self.d('Bể nước 2x3x1,5 m3')[:3], ('Bể nước', 'm3', '9'))           # ba thừa số + m3: thể tích
+        self.assertEqual(self.d('Tràm 3x4 cây')[:3], ('Tràm', 'cây', '12'))
+        self.assertEqual(self.d('Mái che (tôn) 20m2')[:3], ('Mái che (tôn)', 'm2', '20'))   # ngoặc thuộc tên giữ trong tên
+        self.assertEqual(h.doc_kich_thuoc('2,5x3,5x1'), None)
+
+    def test_them_vao_phuong_an_la_nha(self):
+        d = doc_danh_sach('Nhà tạm 3,7m x 4,3m')[0]
+        k = h.bo_sung(self.bo, self.dm, d, self.bo.phan_loai(d['ten'], d['dvt']))
+        self.assertEqual((k.loai, k.khop.ten), (NHA, 'Nhà tạm'))
+
+
 if __name__ == '__main__':
     unittest.main()

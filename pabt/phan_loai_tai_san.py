@@ -304,7 +304,7 @@ def doc_danh_sach(chu: str) -> list:
     = tỷ lệ, ô chữ ngắn khớp đơn vị tính = ĐVT). Dòng tiêu đề (Tên / Hạng mục / ĐVT / Số lượng), dòng trống, cột STT bỏ qua.
     Trả [dict(ten, dvt, so_luong, ty_le, ghi_chu)] (số giữ dạng chữ như người dùng gõ)."""
     from .nhap_don_gia import DVT as _MAU_DVT
-    from .hieu_tai_san import la_dong_tu_nhien, tach_dong
+    from .hieu_tai_san import doc_kich_thuoc, la_dong_tu_nhien, tach_dong
     re_dvt = re.compile(rf'^({_MAU_DVT}|ha/vụ|ha/ vụ|100m3/vụ|nhân khẩu|khẩu|tháng|hộ|người|trụ|cánh|chậu|cây|con|kg)$', re.I)
     kq = []
     for dong in str(chu or '').splitlines():
@@ -339,8 +339,17 @@ def doc_danh_sach(chu: str) -> list:
         if bo_dau(ten).rstrip(':') in ('ten', 'ten tai san', 'hang muc', 'noi dung', 'stt', 'ten tai san, vat kien truc'):
             continue
         d = dict(ten=ten, dvt='', so_luong='', ty_le='', ghi_chu='')
+        dvt_kt = ''                                       # ô số lượng dài x rộng không ghi đơn vị -> m2 khi không có cột ĐVT
         for x in o[1:]:
             if not x:
+                continue
+            kt = None if d['so_luong'] else doc_kich_thuoc(x)
+            if kt:                                        # "3,7m x 4,3m", "4,7*3,0", "42m2": diện tích
+                d['so_luong'] = kt[0]
+                if kt[2]:
+                    dvt_kt = kt[1]
+                elif not d['dvt']:
+                    d['dvt'] = kt[1]
                 continue
             so = x.rstrip('%').strip()
             if _RE_SO.match(so) or (not d['so_luong'] and not x.endswith('%') and _la_so_hoac_phep_tinh(x)):
@@ -353,6 +362,8 @@ def doc_danh_sach(chu: str) -> list:
                 d['dvt'] = x
             elif not d['ghi_chu']:
                 d['ghi_chu'] = x
+        if not d['dvt'] and dvt_kt:
+            d['dvt'] = dvt_kt
         _tinh_so_luong(d)
         kq.append(d)
     return kq

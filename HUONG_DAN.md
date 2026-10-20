@@ -1,5 +1,9 @@
 # Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.06 – Bản Tiêu chuẩn · Sử dụng nội bộ)
 
+> **1.0.10**: **Dán danh sách tài sản** hiểu kích thước là diện tích - `Nhà tạm 4,7x3,0`, `Nhà tạm 4,7*3,0`, `Nhà tạm 3,7m x 4,3m`,
+> `Nhà tạm 3,7 * 4,3` đều thành **m²** (khối lượng = dài × rộng, phép tính hiện ở chú thích ô Số lượng). `Nhà tạm 42m2 (thửa 123)`:
+> 42 m², phần trong ngoặc vào Ghi chú. Ba số nhân nhau cần ghi đơn vị (`Bể nước 2x3x1,5 m3`); có cột ĐVT khác (`cây`) thì theo ĐVT đó.
+
 > **1.0.06 - giao diện chuẩn hóa & bản in gọn trang**: thẻ hồ sơ hộ lưới 3 cột, bảng thửa có DT nguyên thửa / còn lại / Giấy
 > chứng nhận; **Ctrl+K** tìm nhanh hộ hoặc chức năng; Ctrl+1 Danh sách hộ, Ctrl+2 Khái toán, Ctrl+3 Đơn giá, Ctrl+4 Niêm yết, Ctrl+5
 > Tiến độ. Bản in chi tiết tràn vài dòng tự vừa 1 trang A4 (hết trang 2 mồ côi).

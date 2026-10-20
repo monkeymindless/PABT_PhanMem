@@ -25,6 +25,13 @@ DON_VI = (r'100\s?m3\s?/\s?vụ|100\s?m³\s?/\s?vụ|ha\s?/\s?vụ|m2\s?sàn|m²
           r'm2|m²|m3|m³|md|ha|cây|bụi|khóm|gốc|chậu|con|kg|cái|chiếc|bộ|trụ|cột|ngôi|mộ|hộ|khẩu|tháng|tấn|lít|m')
 _SAU_CHU = r'(?![^\W\d_])'                          # sau đơn vị không còn chữ cái ("m" không ăn "mái")
 _SO = r'\d[\d.,]*(?:\s*[*x×]\s*\d[\d.,]*)*'
+# kích thước dài x rộng = diện tích (người dùng 20/10/2026): "4,7x3,0", "4,7*3,0", "3,7m x 4,3m", "3,7 * 4,3", "3,7 x 4,3 m2" -> m²;
+# số không bị cắt giữa chừng ("2,5x3,5x1" không khớp "2,5x3,"), ba thừa số / đơn vị khác sau ("3x4 cây", "2x3 m3") để quy tắc số lượng
+_SO_KT = r'(\d+(?:[.,]\d+)*)(?![.,]?\d)'
+_RE_KICH_THUOC = re.compile(_SO_KT + r'\s*(?:m(?=\s*[x×*])\s*)?([x×*])\s*' + _SO_KT +
+                            r'(?:\s*(m2|m²|m(?![23²³]))' + _SAU_CHU + r'|(?!\s*[x×*]\s*\d)(?!\s*(?:' + DON_VI + r')' + _SAU_CHU + r'))',
+                            re.I)
+_RE_DIEN_TICH_O = re.compile(_SO_KT + r'\s*(m2|m²)$', re.I)       # một ô "42m2" / "42 m²"
 _DAU_TACH = re.compile(r'^[\s,;:.+-]+|^(?:và|gồm|có|khoảng|diện\s+tích|dt|số\s+lượng|sl|khối\s+lượng|kl|dài|chiều\s+dài)(?![^\W\d_])\s*[:=]?\s*', re.I)
 # (khóa, mẫu) - xét từ đầu phần số liệu còn lại; thứ tự quan trọng: năm tuổi trước số lượng ("17 năm tuổi" không phải 17 đơn vị)
 _PHAN = [
@@ -33,13 +40,15 @@ _PHAN = [
     ('cv', re.compile(r'(?:chu\s+vi|cv)\s*(?:thân|gốc)?\s*[:=]?\s*(\d[\d.,]*)\s*(?:cm)?' + _SAU_CHU, re.I)),
     ('vu', re.compile(r'(\d+\s*năm\s*\d+\s*vụ|\d+\s*vụ\s*/\s*năm|\d+\s*vụ)' + _SAU_CHU, re.I)),
     ('tuoi', re.compile(r'(?:(\d+)\s*(?:năm\s+tuổi|tuổi|năm)|(?:năm\s+thứ|tuổi)\s*(\d+))' + _SAU_CHU, re.I)),
+    ('kt', _RE_KICH_THUOC),
+    ('ngoac', re.compile(r'\(([^()]*)\)')),            # "42m2 (thửa 123)": phần trong ngoặc sau số liệu -> ghi chú
     ('sl', re.compile(r'(' + _SO + r')\s*(' + DON_VI + r')?' + _SAU_CHU, re.I)),
     ('dvt', re.compile(r'(' + DON_VI + r')' + _SAU_CHU, re.I)),
 ]
 _RE_DON_VI_CUOI = re.compile(r'\s+(' + DON_VI + r')$', re.I)
 # dòng viết tự nhiên (dùng bộ đọc này thay quy tắc "Tên ␣ ĐVT ␣ Số lượng"): có ":" hoặc có số đo / tuổi / số dính đơn vị
 _RE_TU_NHIEN = re.compile(r':|\d\s*(?:m2|m²|m3|m³|ha|cm)(?![^\W\d_])|đường\s+kính|chu\s+vi|\bđk\s*\d|(?<![^\W\d_])d\s*\d|'
-                          r'tuổi|năm\s+thứ|\d\s*vụ', re.I)
+                          r'tuổi|năm\s+thứ|\d\s*vụ|\d\s*(?:m\s*)?[x×*]\s*\d', re.I)
 _RE_TINH_BANG = re.compile(r'\s*[,(]?\s*(?:tính\s+bằng|tính\s+theo|tương\s+đương(?:\s+với)?|áp\s+(?:giá|dụng)(?:\s+theo)?|'
                            r'theo\s+đơn\s+giá)\s+', re.I)
 
@@ -50,6 +59,24 @@ def _thuong(s: str) -> str:
 
 def la_dong_tu_nhien(dong: str) -> bool:
     return bool(_RE_TU_NHIEN.search(str(dong or '')))
+
+
+def doc_kich_thuoc(o: str) -> tuple | None:
+    """Một ô số lượng viết kiểu kích thước / diện tích -> (số lượng, ĐVT, ĐVT tự suy?): '3,7m x 4,3m' -> ('3,7x4,3', 'm2', False),
+    '4,7*3,0' -> ('4,7*3,0', 'm2', True) (không ghi đơn vị: dài x rộng là diện tích), '42m2' -> ('42', 'm2', False); khác -> None."""
+    s = ' '.join(unicodedata.normalize('NFC', str(o or '')).split())
+    m = _RE_KICH_THUOC.fullmatch(s)
+    if m:
+        return m.group(1) + m.group(2).lower() + m.group(3), _dvt_kich_thuoc(m.group(4)), not m.group(4)
+    m = _RE_DIEN_TICH_O.fullmatch(s)
+    if m:
+        return m.group(1), m.group(2), False
+    return None
+
+
+def _dvt_kich_thuoc(dv: str | None) -> str:
+    """Đơn vị viết sau kích thước: "m" (3,7m x 4,3m) / không ghi -> m2; m2 / m² giữ như người dùng gõ."""
+    return dv if dv and dv.lower() != 'm' else 'm2'
 
 
 def _bo_tach(s: str) -> str:
@@ -79,6 +106,15 @@ def _ghi(kq: dict, k: str, m) -> bool:
         if kq['tuoi']:
             return False
         kq['tuoi'] = m.group(1) or m.group(2)
+    elif k == 'kt':
+        if kq['so_luong']:
+            return False
+        kq['so_luong'] = m.group(1) + m.group(2).lower() + m.group(3)   # công thức (dấu nhân như người dùng gõ): doc_danh_sach tính thành diện tích, giữ ở chú thích ô
+        if not kq['dvt']:
+            kq['dvt'] = _dvt_kich_thuoc(m.group(4))
+            kq['dvt_ngam'] = not m.group(4)
+    elif k == 'ngoac':
+        kq['ghi_chu'].append(m.group(1).strip())
     elif k == 'sl':
         if kq['so_luong']:
             return False
@@ -135,6 +171,8 @@ def tach_dong(dong: str) -> dict | None:
         for m in re.finditer(r'(?<![^\W\d_])(?:\d|(?:đường\s+kính|chu\s+vi|đk|d)\s*\d)', s, re.I):
             if m.start() == 0:
                 continue
+            if re.search(r'(?:[\d.,]|[+\-*/×(=]\s*|(?<![^\W\d_])x\s*)$', s[:m.start()], re.I):   # giữa phép tính ("Sân m2 3+2*4"): không tách ở đây
+                continue
             kq = _doc_phan(s[m.start():], chat=True)
             # không có ":" - số trơn cuối tên chưa chắc là số lượng ("Nhà cấp 4"): phải kèm đơn vị / số đo / tuổi
             if kq is not None and not (kq['dvt'] or kq['so_do'] or kq['tuoi']) and not _RE_DON_VI_CUOI.search(s[:m.start()].strip()):
@@ -146,8 +184,9 @@ def tach_dong(dong: str) -> dict | None:
         return None
     ten = ten.strip(' ,;-')
     m = _RE_DON_VI_CUOI.search(ten)                     # "Tràm cây" / "Nhà tạm m2": đơn vị viết ngay sau tên
-    if m and not kq['dvt'] and len(ten[:m.start()].split()) >= 1:
+    if m and (not kq['dvt'] or kq.pop('dvt_ngam', False)) and len(ten[:m.start()].split()) >= 1:
         kq['dvt'], ten = m.group(1), ten[:m.start()].strip()
+    kq.pop('dvt_ngam', None)
     if not ten or not (kq['so_luong'] or kq['so_do'] or kq['tuoi']):
         return None
     kq['ten'] = ten

@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 20/10/2026 16:14. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 20/10/2026 17:27. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -39,7 +39,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 20/10/2026 16:14. Kiểm tra tĩnh: 0 cảnh
 | `goi_mau.py` | 266 | 1 | 11 | __version__, dia_phuong |
 | `hang_nhap_nhanh.py` | 238 | 1 | 2 | lap_pa, nghiep_vu, tien |
 | `he_so_k.py` | 873 | 2 | 49 | lap_pa |
-| `hieu_tai_san.py` | 308 | 0 | 14 | lap_pa |
+| `hieu_tai_san.py` | 347 | 0 | 16 | lap_pa |
 | `ho_so.py` | 338 | 0 | 18 | csdl, lap_pa, tien |
 | `ho_so_scan.py` | 164 | 0 | 10 | csdl |
 | `hoan_tac.py` | 221 | 2 | 1 | csdl |
@@ -50,7 +50,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 20/10/2026 16:14. Kiểm tra tĩnh: 0 cảnh
 | `kinh_phi_du_an.py` | 250 | 0 | 13 | csdl, theo_doi, tien |
 | `lan_pa.py` | 286 | 2 | 22 | csdl, tien |
 | `lap_pa.py` | 1096 | 4 | 24 | csdl, loai_dat, nghiep_vu, tien |
-| `lich_su_cap_nhat.py` | 592 | 0 | 1 | - |
+| `lich_su_cap_nhat.py` | 598 | 0 | 1 | - |
 | `loai_dat.py` | 137 | 0 | 6 | - |
 | `ma_tai_san.py` | 142 | 0 | 8 | - |
 | `man_hinh.py` | 3420 | 14 | 3 | giao_dien, hang_nhap_nhanh, lap_pa, nghiep_vu, thong_bao, tien |
@@ -97,7 +97,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 20/10/2026 16:14. Kiểm tra tĩnh: 0 cảnh
 | `ocr_ho_so.py` | 472 | 1 | 20 | - |
 | `pdf_bang.py` | 348 | 1 | 17 | lap_pa, tien |
 | `pdf_du_phong.py` | 269 | 0 | 8 | - |
-| `phan_loai_tai_san.py` | 359 | 2 | 10 | lap_pa, nghiep_vu |
+| `phan_loai_tai_san.py` | 370 | 2 | 10 | lap_pa, nghiep_vu |
 | `phieu_kiem_dem.py` | 352 | 0 | 10 | csdl, lap_pa |
 | `quan_ly.py` | 1172 | 4 | 52 | csdl, lap_pa, nghiep_vu, pdf_bang, thong_bao, tien |
 | `quan_tri_bo.py` | 94 | 0 | 9 | lap_pa |
@@ -115,7 +115,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 20/10/2026 16:14. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 763 | 2 | 14 | - |
 
-Tổng: 56031 dòng mã trong pabt/.
+Tổng: 56087 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -277,7 +277,7 @@ Tổng: 56031 dòng mã trong pabt/.
 - hàm: `file_he_so`, `file_gan_san`, `_nguon`, `_mo_rong`, `_gon`, `_doc`, `_da_doc`, `_quen`, `tat_ca`, `co_du_lieu`, `dang_thay`, `van_ban`, `van_ban_ngan`, `can_cu`, `tom_tat`, `ghi`, `xoa`, `doc_he_so`, `nhom_tu_chu`, `chuan_loai_dat`, `chuan_vi_tri`, `_so_tt`, `chuan_dong`, `nhom_cho_ma`, `ten_loai_dat`, `_ten_xa`, `khop_dia_ban`, `_chi_muc`, `_diem_loai`, `_co_doan`, `tra`, `_o`, `_tieu_de_xa`, `_vai_cot`, `_tim_tieu_de`, `_dong_tu_bang`, `_so_cuoi`, `_dong_tu_chu`, `phan_tich`, `tach_o`, `tim_van_ban`, `doc_chu`, `la_phu_luc`, `_cot_bang`, `_hang_bang`, `doc_phu_luc`, `noi_bang_gia`, `_chu_trang_pdf`, `doc_file`
 
 ### `hieu_tai_san.py`
-- hàm: `_thuong`, `la_dong_tu_nhien`, `_bo_tach`, `_ghi`, `_doc_phan`, `tach_dong`, `ten_ap_gia`, `_chuan_loai`, `loai_cay_dk`, `khoang_tuoi`, `chon_theo_tuoi`, `_tu`, `khop_theo_tu`, `bo_sung`
+- hàm: `_thuong`, `la_dong_tu_nhien`, `doc_kich_thuoc`, `_dvt_kich_thuoc`, `_bo_tach`, `_ghi`, `_doc_phan`, `tach_dong`, `ten_ap_gia`, `_chuan_loai`, `loai_cay_dk`, `khoang_tuoi`, `chon_theo_tuoi`, `_tu`, `khop_theo_tu`, `bo_sung`
 
 ### `ho_so.py`
 - hàm: `_gon`, `_tach_ds_ngan`, `chuan_nguon_goc`, `rut_gon_dia_chi`, `la_to_chuc`, `dau_dong`, `chuan_loai_dat`, `doc_ho`, `chuan_hoa_thua`, `thua_trung_ho_khac`, `luu_ho`, `_danh_lai`, `xoa_ho`, `thong_tin_xoa`, `xoa_nhieu_ho`, `gop_ho`, `chuyen_thua`, `goi_y_gop`

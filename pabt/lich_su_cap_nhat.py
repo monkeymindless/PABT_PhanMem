@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.10', '20/10/2026', (
+        'Dán danh sách tài sản hiểu kích thước là diện tích: "Nhà tạm 4,7x3,0", "Nhà tạm 4,7*3,0", "Nhà tạm 3,7m x 4,3m", '
+        '"Nhà tạm 3,7 * 4,3" đều thành m² (khối lượng = dài × rộng, phép tính hiện ở chú thích ô Số lượng) và xếp vào mục Nhà, '
+        'công trình. Dán từ Excel cũng nhận ô "3,7m x 4,3m" hoặc "42m2".',
+        'Chữ trong ngoặc sau số liệu được đưa vào ghi chú: "Nhà tạm 42m2 (thửa 123)" -> 42 m², ghi chú "thửa 123".',
+    )),
     ('1.0.09', '20/10/2026', (
         'Sửa lỗi: ở một số máy, xem trước / in phương án chi tiết mất toàn bộ khung bảng mục III và số không định dạng (Tỷ lệ 0,8 thay '
         'vì 80%, Đơn giá 720000 thay vì 720.000). Bảng mục III nay luôn được kẻ khung đầy đủ và định dạng số chuẩn, dù mẫu in trên máy '
