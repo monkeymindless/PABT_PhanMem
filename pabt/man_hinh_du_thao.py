@@ -56,7 +56,7 @@ def san_tieu_de(b) -> None:
 MAU_Y_KIEN = {'dong_y': '#15803D', 'khong_dong_y': '#B91C1C', 'y_kien_khac': '#B45309', 'chua': '#64748B'}
 # thẻ KPI trang Niêm yết (1.0.02, như thẻ số màn hình chính): màu vạch trái + màu số. Navy = tổng; xanh trời / xanh dương = đủ điều kiện /
 # đã niêm yết; teal / xanh lá = phê duyệt / bàn giao (đã đồng thuận); hổ phách = vướng (cần xử lý)
-MAU_THE_NY = {'tong': '#0F3866', 'du': '#0284C7', 'vuong': '#B45309', 'dt': '#2563EB', 'pd': '#0F766E', 'bg': '#15803D'}
+MAU_THE_NY = {'tong': '#0F294A', 'du': '#0284C7', 'vuong': '#B45309', 'dt': '#2563EB', 'pd': '#0F766E', 'bg': '#15803D'}
 # 1.0.03: góc trái bo 3 px (bằng bề dày vạch) - vạch màu bên trái thẳng đứng, không cong thành dấu "(" như bo 6 px (Ảnh 7)
 QSS_THE_NY = ('QFrame[vai="the_ny"] {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid {m}; '
               'border-radius: 6px; border-top-left-radius: 3px; border-bottom-left-radius: 3px; }}'
@@ -372,7 +372,7 @@ class KhungDuThao(QWidget):
         self.thanh.setFixedHeight(8)
         self.thanh.setTextVisible(False)
         self.thanh.setStyleSheet('QProgressBar { background: #E2E8F0; border: none; border-radius: 4px; }'
-                                 'QProgressBar::chunk { background: #0F3866; border-radius: 4px; }')
+                                 'QProgressBar::chunk { background: #0F294A; border-radius: 4px; }')
         lo.addWidget(self.thanh)
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)

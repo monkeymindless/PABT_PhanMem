@@ -1978,6 +1978,12 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     công thức (trước: cột STT nới theo tổng các số thứ tự -> bảng quá khổ, tỷ lệ tụt 54%). `chuan_trich_yeu` cả bảng tổng hợp.
     `lam_sach_doan_van`: hết đoạn chỉ sau . ! ? (dòng kết thúc ; : mà dòng sau không phải mục -> nối), gộp khoảng trắng. PDF dự phòng
     phương án chi tiết `xuat_pdf_du_phong_qt(le_mm=)` lề NĐ 30 (`in_word.LE_MM`). Test `test_in_an_2110.TestLeA3VaLapDayNgang`.
+- 1.0.12 (22/10/2026) "Ultra-Compact + UI/UX Pro Max" (người dùng; bố cục / chiều cao KHÔNG đổi): navy `TOKEN['chinh']`
+  '#0F294A' (thay '#0F3866' ở MỌI file pabt/ - kể cả màu viết thẳng), rê chuột `CHINH_RE` '#1E3A5F'; chinh_nhat #EFF6FF, phu #059669
+  (= `MAU_VIEN_CHON` viền vùng chọn), chu #0F172A, chu_phu #475569. Vòng focus ô nhập: thường 1px #CBD5E1, `:focus` 2px #2563EB + padding
+  BỚT 1 px (3px 7px; `[nhap="1"]` 3px 9px; hàng nhập / loc_ds / o_chon_ho / o_tim_gan cùng quy tắc) - chữ không nhảy. Tiêu đề bảng ngang:
+  vạch phải #1E3A5F, vạch dưới 2px #2563EB. Thẻ gạch chân chọn: chữ / vạch dưới 3px #2563EB nền trắng (thẻ thường vạch 3px trong suốt,
+  padding dưới 4 px - không đổi cao). `#tong_dinh_danh` nền #FEF3C7 viền #F59E0B. Logo / biểu tượng không đổi. Test `tests/test_giao_dien_pro_max.py`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

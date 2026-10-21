@@ -38,7 +38,7 @@ THUA_TRONG = dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')     # hộ c
 # 1.0.02 (Hybrid Enterprise Navy): dòng nổi của Cơ cấu kinh phí / Đối soát - (nền, chữ). Cộng bồi thường = slate; kinh phí tổ chức
 # thực hiện = hổ phách nhạt; TỔNG KINH PHÍ = xanh băng chữ navy đậm (như dải cộng danh sách hộ)
 DONG_NOI = {'cong': (QColor('#F1F5F9'), QColor('#0F172A')), 'kinh_phi': (QColor('#FFFBEB'), QColor('#92400E')),
-            'tong': (QColor('#F0F6FF'), QColor('#0F3866'))}
+            'tong': (QColor('#F0F6FF'), QColor('#0F294A'))}
 CAO_O_CONG_CU = 30                                       # ô tìm / nút Xuất / Mốc pháp lý của các trang theo dõi
 _DAM = dict(dam=True)                                     # kiểu ô chữ đậm (bảng ảo, dùng chung - chỉ đọc)
 
@@ -300,7 +300,7 @@ class KhungQuyetDinh(_Khung):
         self.dai_cong = DaiCongBang('dai_cong_qd')       # 1.0.03: cộng DT, tiền từng hạng mục, tổng phê duyệt của quyết định đang chọn
         # 1.0.03: dải 4 thẻ KPI đầu trang (số quyết định, lượt hộ, tiền đã duyệt, chênh lệch so với phương án)
         self.hang_kpi = HangKpi([
-            ('so_qd', 'Tổng số quyết định', '#0F3866'),
+            ('so_qd', 'Tổng số quyết định', '#0F294A'),
             ('luot_ho', 'Số lượt hộ đã phê duyệt', '#0284C7', 'Lượt hộ = cộng số hộ của từng quyết định (một hộ phê duyệt bổ sung '
                                                              'tính nhiều lượt); chữ phụ: số hộ khác nhau / tổng số hộ dự án'),
             ('tien_qd', 'Tổng kinh phí đã duyệt QĐ', '#0F766E'),
@@ -1065,7 +1065,7 @@ class KhungBangTongHop(_Khung):
         # 20/10/2026 (ảnh mẫu): 5 thẻ KPI - cộng bồi thường (100%), kinh phí tổ chức (QĐ 08/2025), hai phần phân bổ (hồ sơ địa phương,
         # mặc định 85% / 15%), tổng mức GPMB dự án. Tên thẻ phân bổ đặt lại ở _ve_kpi theo dia_phuong.phan_bo_kinh_phi()
         self.hang_kpi = HangKpi([
-            ('cong', 'Tổng bồi thường & hỗ trợ', '#0F3866', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
+            ('cong', 'Tổng bồi thường & hỗ trợ', '#0F294A', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
                                                             'thưởng = gốc 100%'),
             ('kinh_phi', 'KP tổ chức GPMB', '#0284C7', 'Kinh phí tổ chức thực hiện bồi thường theo QĐ 08/2025/QĐ-UBND = '
                                                        'tỷ lệ % của cộng bồi thường, hỗ trợ'),
@@ -1209,7 +1209,7 @@ class KhungBangTongHop(_Khung):
 QSS_CHE_DO = ('QPushButton { border: 0; background: transparent; color: #475569; padding: 0 14px; border-radius: 5px; '
               'font-weight: 600; }'
               'QPushButton:hover:!checked { background: #CBD5E1; color: #0F172A; }'
-              'QPushButton:checked { background: #0F3866; color: #FFFFFF; font-weight: 700; }')
+              'QPushButton:checked { background: #0F294A; color: #FFFFFF; font-weight: 700; }')
 QSS_KHUNG_CHE_DO = 'QFrame#khung_che_do { background: #E2E8F0; border: 0; border-radius: 6px; }'
 QSS_MOC = ('QLabel#lb_moc { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 0 8px; '
            'color: #334155; }')
@@ -2236,7 +2236,7 @@ class KhungSoVanDong(QFrame):
             ds = []
             for i, b in enumerate(buoi, start=1):
                 kq = van_dong.TEN_KET_QUA.get(b['ket_qua'], b['ket_qua'])
-                mau = '#B91C1C' if b['ket_qua'] == 'chua_dong_y' else '#0F3866'
+                mau = '#B91C1C' if b['ket_qua'] == 'chua_dong_y' else '#0F294A'
                 ds.append(f'<div style="margin-bottom:6px;"><span style="color:{mau};"><b>● Buổi {i}: '
                           f'{van_dong.VIEC.get(b["viec"], b["viec"])}</b></span> <span style="color:#64748B;">{b["ngay"]}</span><br>'
                           + (f'• Hình thức: {b["hinh_thuc"]}<br>' if b['hinh_thuc'] else '')

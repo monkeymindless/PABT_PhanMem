@@ -129,7 +129,7 @@ class HopChanDoanHeThong(QDialog):
         for i, (viec, chu, ky) in enumerate(NUT_BAO_TRI):
             b = QPushButton(chu.format(v=_csdl.PHIEN_BAN_CSDL))
             b.setProperty('khong_icon', True)
-            ic = icon_ky_hieu(ky, '#0F3866', 16)
+            ic = icon_ky_hieu(ky, '#0F294A', 16)
             if ic is not None:
                 b.setIcon(ic)
             b.setMinimumHeight(34)

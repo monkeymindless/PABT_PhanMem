@@ -100,7 +100,7 @@ class TestMenuTrai(CoNavy):
             self.assertEqual((b.minimumHeight(), b.maximumHeight()), (giao_dien.CAO_NUT_MENU, giao_dien.CAO_NUT_MENU))
         qss = giao_dien._qss_day_du()
         for chu in ('QFrame[vai="menu_trai"] { background: #F8FAFC', 'border-right: 1px solid #E2E8F0', 'width: 6px',
-                    'border-left: 3px solid #0F3866', 'background: #EFF6FF', 'color: #64748B'):
+                    'border-left: 3px solid #0F294A', 'background: #EFF6FF', 'color: #64748B'):
             self.assertIn(chu, qss)
 
 
@@ -192,7 +192,7 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertEqual(w.dai_cong_ds.chu['so_ho'][0], f'CỘNG ({n} HỘ · {t} THỬA)')
         tong = sum((d['tong'] for d in w.mo_hinh.dong), D(0))
         self.assertEqual(w.dai_cong_ds.chu['tong'][0], f'TỔNG CỘNG: {vn(tong)} đ')
-        self.assertIn(f'<b style="color:#0F3866">{n}</b>/{n} hộ', w.lb_loc.text())
+        self.assertIn(f'<b style="color:#0F294A">{n}</b>/{n} hộ', w.lb_loc.text())
         # lọc còn một hộ: dải cộng và huy hiệu theo các hộ đang hiện
         with w.con:
             for i, m in enumerate(r[0] for r in w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 2').fetchall()):
@@ -225,7 +225,7 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertEqual(w.cb_tt.itemText(0), ud.TAT_CA_TRANG_THAI)
         from pabt import giao_dien
         qss = giao_dien._qss_day_du()
-        self.assertIn('QHeaderView::section:horizontal { background: #0F3866; color: #FFFFFF', qss)
+        self.assertIn('QHeaderView::section:horizontal { background: #0F294A; color: #FFFFFF', qss)
         self.assertIn('selection-background-color: #DBEAFE', qss)
         self.assertEqual(giao_dien.CAO_DONG_BANG, 30)
         self.assertEqual(w.bang.verticalHeader().defaultSectionSize(), 30)
@@ -238,7 +238,7 @@ class TestManHinhChao(CoNavy):
         self.assertEqual(giao_dien.CAO_BANNER, 42)
         for nen, vien, _nr, _vr, _ic in giao_dien.MAU_THE_CHAO.values():
             self.assertEqual((nen, vien), ('#FFFFFF', '#E2E8F0'))
-        self.assertIn('QPushButton#nut_mo_gan:hover { background: #0F3866; color: #FFFFFF; }', ud.QSS_NUT_MO_GAN)
+        self.assertIn('QPushButton#nut_mo_gan:hover { background: #0F294A; color: #FFFFFF; }', ud.QSS_NUT_MO_GAN)
 
 
 if __name__ == '__main__':

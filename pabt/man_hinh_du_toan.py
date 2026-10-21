@@ -296,7 +296,7 @@ class KhungDuToan(QWidget):
         dock.setStyleSheet('QFrame#thanh_nhap_nhanh { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; }'
                            'QFrame#thanh_nhap_nhanh QLineEdit, QFrame#thanh_nhap_nhanh QComboBox { border: 1px solid #CBD5E1; '
                            'border-radius: 5px; background: #FFFFFF; }'
-                           'QFrame#thanh_nhap_nhanh QLineEdit:focus, QFrame#thanh_nhap_nhanh QComboBox:focus { border-color: #0F3866; }'
+                           'QFrame#thanh_nhap_nhanh QLineEdit:focus, QFrame#thanh_nhap_nhanh QComboBox:focus { border: 2px solid #2563EB; }'
                            'QFrame#thanh_nhap_nhanh QPushButton { padding: 4px 7px; }')
         v_dock = QVBoxLayout(dock)
         v_dock.setContentsMargins(8, 5, 8, 5)
@@ -390,7 +390,7 @@ class KhungDuToan(QWidget):
         self.lb_tong.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.lb_tong.setFixedHeight(CAO_THE_TONG_KT)    # 1.0.03: 2 dòng - tổng + bằng chữ; cơ cấu 6 mục
         self.lb_tong.setStyleSheet('QLabel#the_tong_khai_toan { background: #F0F6FF; border: 1px solid #BAE6FD; '
-                                   'border-left: 4px solid #0F3866; border-radius: 5px; padding: 2px 8px; color: #0F3866; '
+                                   'border-left: 4px solid #0F294A; border-radius: 5px; padding: 2px 8px; color: #0F294A; '
                                    'font-weight: 700; }')
         b_mo = QPushButton('Mở tệp (.pabtdt)…')
         b_mo.clicked.connect(lambda: self.mo())
@@ -466,7 +466,7 @@ class KhungDuToan(QWidget):
         self.b_an_tt.setCheckable(True)
         self.b_an_tt.setAutoRaise(True)
         self.b_an_tt.setObjectName('nut_an_tt')                # phẳng: chữ navy, rê chuột mới hiện nền (kiểu cục bộ thắng tô theo chữ)
-        self.b_an_tt.setStyleSheet('QToolButton#nut_an_tt { background: transparent; border: 0; color: #0F3866; font-weight: 600; '
+        self.b_an_tt.setStyleSheet('QToolButton#nut_an_tt { background: transparent; border: 0; color: #0F294A; font-weight: 600; '
                                    'padding: 2px 6px; border-radius: 4px; }'
                                    'QToolButton#nut_an_tt:hover { background: #E2E8F0; }')
         self.b_an_tt.setToolTip('Ẩn / hiện thông tin chung (tên dự án, chủ đầu tư, nguồn vốn, địa bàn, quy mô, kinh phí QĐ08)')

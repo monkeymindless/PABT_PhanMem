@@ -25,7 +25,7 @@ from .tien import so_vn, vn
 _QSS_THE = '''
 QFrame#the_kpi {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid {m}; border-radius: 6px; }}
 QFrame#the_kpi:hover {{ background: #F8FAFC; border-color: #94A3B8; border-left-color: {m}; }}
-QFrame#the_kpi[dang_loc="1"] {{ background: #EFF6FF; border: 1px solid #0F3866; border-left: 3px solid {m}; }}
+QFrame#the_kpi[dang_loc="1"] {{ background: #EFF6FF; border: 1px solid #0F294A; border-left: 3px solid {m}; }}
 QLabel#kpi_tieu_de {{ color: #475569; font-size: 11px; font-weight: 600; background: transparent; border: 0; }}
 QLabel#kpi_so {{ color: {m}; font-size: 16px; font-weight: 700; background: transparent; border: 0; }}
 QLabel#kpi_phu {{ color: #475569; font-size: 11px; background: transparent; border: 0; }}
@@ -35,7 +35,7 @@ CAO_THE_KPI = 58                         # thẻ chỉ số (px): như thẻ s�
 # màu vạch trái / số / thanh từng thẻ: navy (giải ngân), teal (mặt bằng sạch), slate (thửa còn vướng), đỏ trầm (cưỡng chế)
 # 20/10/2026 (ảnh mẫu): 6 thẻ - tổng hộ, đã phê duyệt, đã chi trả (giai_ngan), đã bàn giao (mat_bang), đang vận động, đủ ĐK cưỡng chế.
 # Thẻ "Thửa còn vướng" bỏ khỏi dải (chế độ xem có nút riêng "Thửa còn vướng")
-MAU_THE = dict(tong_ho='#0F3866', phe_duyet='#0284C7', giai_ngan='#15803D', mat_bang='#0F766E', van_dong='#D97706',
+MAU_THE = dict(tong_ho='#0F294A', phe_duyet='#0284C7', giai_ngan='#15803D', mat_bang='#0F766E', van_dong='#D97706',
                cuong_che='#B91C1C')
 NEN_MUC = {'gap': DO, 'cao': VANG, 'theo_doi': XAM}
 TIEU_DE_THE = dict(tong_ho='TỔNG SỐ HỘ DỰ ÁN', phe_duyet='ĐÃ PHÊ DUYỆT QĐ', giai_ngan='ĐÃ CHI TRẢ TIỀN',

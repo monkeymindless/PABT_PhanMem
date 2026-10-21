@@ -29,7 +29,7 @@ COT_SO = {4}
 # Segoe UI / Arial của Windows 7, KHÔNG phải emoji) + màu theo nấc. Chữ trạng thái và giá trị lọc giữ nguyên (BangHo.dong[r]['o'][5])
 THANH_NAC = ('□□□□', '■□□□', '■■□□', '■■■□', '■■■■')
 NHAN_NAC = ('Chưa lập PA', 'Đã lập PA', 'Đã phê duyệt', 'Đã chi trả', 'Đã bàn giao')
-MAU_NAC = ('#64748B', '#0284C7', '#0F3866', '#0F766E', '#15803D')
+MAU_NAC = ('#64748B', '#0284C7', '#0F294A', '#0F766E', '#15803D')
 MAU_MA_HO = '#0284C7'                    # cột STT (định danh hộ trên danh sách)
 CAN_PHAI = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 CAN_TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -41,9 +41,9 @@ COT_GIAN_DS = (1, 2)          # Họ và tên, Địa chỉ: giãn / co theo khu
 TAT_CA_DOT, TAT_CA_TRANG_THAI = 'Đợt: Tất cả', 'Trạng thái: Tất cả'     # mục đầu ô lọc (thay nhãn "Đợt:" riêng)
 CAO_DAI_CONG_CU = 32                    # hàng công cụ + lọc danh sách hộ, dải cộng dưới bảng
 # nút "Mở" của bảng dự án gần đây: viền + chữ navy, rê chuột nền navy chữ trắng (bộ chọn #id thắng tô màu theo chữ "Mở" của _BoToMau)
-QSS_NUT_MO_GAN = ('QPushButton#nut_mo_gan { padding: 2px 14px; border: 1px solid #0F3866; border-radius: 4px; color: #0F3866; '
+QSS_NUT_MO_GAN = ('QPushButton#nut_mo_gan { padding: 2px 14px; border: 1px solid #0F294A; border-radius: 4px; color: #0F294A; '
                   'background: #FFFFFF; font-weight: 600; } '
-                  'QPushButton#nut_mo_gan:hover { background: #0F3866; color: #FFFFFF; } '
+                  'QPushButton#nut_mo_gan:hover { background: #0F294A; color: #FFFFFF; } '
                   'QPushButton#nut_mo_gan:pressed { background: #092240; color: #FFFFFF; }')
 # dải cộng dưới danh sách hộ: (khóa, nhãn). Tài sản & Cây = mục 2 nhà + 3 cây + vật nuôi (MUC_VN 7); Hỗ trợ & Thưởng = mục 4 + 5
 O_DAI_CONG = (('so_ho', 'CỘNG'), ('dt', 'Tổng DT'), ('dat', 'Đất'), ('tai_san', 'Tài sản & Cây'),
@@ -1527,8 +1527,8 @@ class CuaSoChinh(QMainWindow):
         ds = self.mo_hinh.dong
         hien = [ds[self.loc.mapToSource(self.loc.index(r, 0)).row()] for r in range(n)]
         tong_muc = cong_dai_cong(hien)
-        self.lb_loc.setText(f'Lọc: <b style="color:#0F3866">{n}</b>/{len(ds)} hộ · '
-                            f'<b style="color:#0F3866">{tong_muc["so_thua"]}</b> thửa ↗' if ds else '')
+        self.lb_loc.setText(f'Lọc: <b style="color:#0F294A">{n}</b>/{len(ds)} hộ · '
+                            f'<b style="color:#0F294A">{tong_muc["so_thua"]}</b> thửa ↗' if ds else '')
         self.lb_loc.setVisible(bool(ds))
         self._ve_dai_cong(n, tong_muc, co_du_lieu=bool(ds))
         self._cap_nhat_loc_the()
@@ -1977,7 +1977,7 @@ class CuaSoChinh(QMainWindow):
         self.o_tim_gan.setMinimumWidth(240)
         self.o_tim_gan.setMaximumWidth(300)
         self.o_tim_gan.setStyleSheet('QLineEdit { border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px 8px; background: #FFFFFF; }'
-                                     'QLineEdit:focus { border-color: #2563EB; }')
+                                     'QLineEdit:focus { border: 2px solid #2563EB; padding: 3px 7px; }')
         self.o_tim_gan.chuoi_da_doi.connect(self._loc_gan_day)
         hang_gd.addWidget(self.o_tim_gan)
         lo.addSpacing(8)

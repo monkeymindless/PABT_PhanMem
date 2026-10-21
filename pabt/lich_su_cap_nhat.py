@@ -7,6 +7,14 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.12', '22/10/2026', (
+        'Giao diện đổi sang tông xanh navy đậm hơn, chữ tương phản cao (dễ đọc trên màn hình độ sáng thấp, máy chiếu); bố cục, '
+        'số dòng bảng nhìn thấy giữ nguyên.',
+        'Ô đang nhập có viền xanh 2 px nổi rõ - biết ngay con trỏ đang ở ô nào; chữ trong ô không xê dịch khi bấm vào.',
+        'Tiêu đề cột bảng có vạch xanh phía dưới; thẻ mục đang mở trong cửa sổ lập phương án (Đất, Nhà, Cây trồng…) chữ xanh, gạch '
+        'chân đậm; ô Tổng kinh phí phương án trên dải chủ hộ nền vàng hổ phách.',
+        'Viền vùng ô đang chọn (kiểu Excel) đổi sang xanh ngọc lục bảo.',
+    )),
     ('1.0.11', '21/10/2026', (
         'Bảng trên mọi màn hình chọn ô như Excel: kéo chuột bôi đen một vùng, Ctrl / Shift chọn thêm; bấm ô STT chọn cả dòng. '
         'Vùng chọn có viền xanh; góc dưới hiện Trung bình · Tổng số đếm · Tổng của các ô số (bấm vào để chép Tổng).',

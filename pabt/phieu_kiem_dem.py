@@ -82,7 +82,7 @@ _HTML = '''<!DOCTYPE html>
 <style>
 *{box-sizing:border-box;font-family:"Segoe UI",Roboto,Arial,sans-serif}
 body{margin:0;background:#F8FAFC;color:#0F172A}
-header{background:#0F3866;color:#fff;padding:12px 14px;border-bottom:3px solid #F59E0B}
+header{background:#0F294A;color:#fff;padding:12px 14px;border-bottom:3px solid #F59E0B}
 header h1{margin:0;font-size:16px}header p{margin:4px 0 0;font-size:12px;color:#E2E8F0}
 .khung{max-width:760px;margin:10px auto;padding:0 10px 80px}
 .the{background:#fff;border:1px solid #CBD5E1;border-radius:10px;padding:12px;margin-bottom:10px}
