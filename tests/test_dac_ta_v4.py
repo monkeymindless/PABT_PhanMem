@@ -175,7 +175,8 @@ class TestGiaoDien(CoSo):
         w.mo(str(p))
         self.assertTrue(w.luu_du_an_lenh())
         w.bang.selectRow(0)
-        self.assertIn('Tổng cộng: 4 hộ | Đã chọn: 1 hộ', w.lb_tom_tat.text())
+        self.assertIn('Dự án: 4 hộ', w.lb_tom_tat.text())                   # 21/10/2026: kèm số thửa / DT
+        self.assertIn('Đang chọn: 1 hộ', w.lb_tom_tat.text())
         self.assertEqual(w.nut_ds['Xóa hộ…'].property('bien_the'), 'danger')
         # 1.0.04: bỏ che CCCD - ô ẩn, bản in / văn bản trình in đủ số + ngày cấp
         with w.con:

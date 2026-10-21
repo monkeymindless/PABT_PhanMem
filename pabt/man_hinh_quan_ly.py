@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import csdl, du_thao, kiem_loi, quan_ly, thoi_han
 from .lap_pa import LoiNhap
 from .tien import D, vn
-from .giao_dien import KieuNut, XepDong, ap_kieu_nut, con_tro_cho, dat_trang_thai
+from .giao_dien import KieuNut, XepDong, ap_kieu_nut, cac_dong_da_chon, con_tro_cho, dat_trang_thai
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Quản lý hồ sơ trình phương án'
@@ -427,8 +427,7 @@ class HopDotTrinh(_Hop):
     def dot_chon(self):
         """Đợt của dòng đang chọn (dòng "(Chưa xếp đợt)" / chưa chọn: None). Ưu tiên dòng đang tô chọn, rồi tới ô đang đứng."""
         ds = getattr(self, 'ds', [])
-        sm = self.bang_dot.selectionModel()
-        hang = [i.row() for i in sm.selectedRows()] if sm is not None else []
+        hang = cac_dong_da_chon(self.bang_dot)          # chọn từng ô (21/10/2026): dòng có ô đang chọn
         r = hang[0] if hang else self.bang_dot.currentRow()
         return ds[r].id if 0 <= r < len(ds) else None
 
@@ -525,8 +524,7 @@ class HopDotTrinh(_Hop):
         if dot is None or not self.ho_hien:
             self.bao('Chọn một đợt đã có hộ (dòng "Đợt …" trong bảng bên trái).', loi=False)
             return None
-        sm = self.bang_ho.selectionModel()
-        ds = sorted({self.ho_hien[i.row()] for i in sm.selectedRows()}) if sm is not None else []
+        ds = sorted({self.ho_hien[r] for r in cac_dong_da_chon(self.bang_ho, hien_tai=False) if r < len(self.ho_hien)})
         ds = ds or list(self.ho_hien)
         co = [m for m, (so, ngay) in quan_ly.so_pa_cua_ho(self.con, ds).items() if (so or ngay)]
         if not co:
@@ -720,7 +718,7 @@ class HopDotTrinh(_Hop):
 
     def bo_ra(self, ds: list | None = None):
         if ds is None:
-            ds = sorted({self.ho_hien[i.row()] for i in self.bang_ho.selectionModel().selectedRows()})
+            ds = sorted({self.ho_hien[r] for r in cac_dong_da_chon(self.bang_ho, hien_tai=False) if r < len(self.ho_hien)})
         if not ds:
             self.bao('Chọn hộ trong bảng bên phải.', loi=False)
             return 0

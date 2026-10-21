@@ -46,16 +46,53 @@ QSS_NUT_MO_GAN = ('QPushButton#nut_mo_gan { padding: 2px 14px; border: 1px solid
                   'QPushButton#nut_mo_gan:hover { background: #0F3866; color: #FFFFFF; } '
                   'QPushButton#nut_mo_gan:pressed { background: #092240; color: #FFFFFF; }')
 # dải cộng dưới danh sách hộ: (khóa, nhãn). Tài sản & Cây = mục 2 nhà + 3 cây + vật nuôi (MUC_VN 7); Hỗ trợ & Thưởng = mục 4 + 5
-O_DAI_CONG = (('so_ho', 'CỘNG'), ('dt', 'Tổng diện tích'), ('dat', 'Bồi thường đất'), ('tai_san', 'Tài sản & Cây'),
-              ('ho_tro', 'Hỗ trợ & Thưởng'), ('tong', 'TỔNG CỘNG'))
+O_DAI_CONG = (('so_ho', 'CỘNG'), ('dt', 'Tổng DT'), ('dat', 'Đất'), ('tai_san', 'Tài sản & Cây'),
+              ('ho_tro', 'HT & Thưởng'), ('tong', 'TỔNG CỘNG'))
+
+
+def so_thua_dong(d: dict) -> int:
+    """Số thửa của một dòng danh sách hộ (dòng cũ / dựng tay chưa có khóa so_thua: cột Số thửa)."""
+    v = d.get('so_thua')
+    if v is None:
+        o = d.get('o') or ()
+        v = o[3] if len(o) > 3 else 0
+    try:
+        return int(v or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def dia_chinh(dong: list) -> tuple:
+    """(số hộ, số thửa, tổng DT thu hồi Decimal) của các dòng danh sách hộ (21/10/2026: thẻ KPI, thanh trạng thái, thống kê)."""
+    return len(dong), sum(so_thua_dong(d) for d in dong), sum((D(d.get('dt') or 0) for d in dong), D(0))
+
+
+def so_ha(dt) -> str:
+    """m² -> chữ héc-ta: "14,64 ha" (từ 1 ha: 2 chữ số lẻ; nhỏ hơn: 4 chữ số lẻ - "0,0325 ha")."""
+    ha = D(dt) / 10000
+    return f'{vn(ha, 2 if abs(ha) >= 1 else 4)} ha'
+
+
+# nhóm hộ của 6 thẻ KPI (cùng cờ với bộ lọc trạng thái): (số hộ, số thửa, DT) - Tổng kinh phí = toàn dự án
+def nhom_dia_chinh(dong: list, lap: dict | None = None) -> dict:
+    """{khóa thẻ: (số hộ, số thửa, DT)}; lap = lap_pa.phan_loai_lap (đã lập = 'da_lap'; không có: tổng > 0)."""
+    if lap:
+        da_pa = [d for d in dong if lap.get(d['ma_ho']) == 'da_lap']
+    else:
+        da_pa = [d for d in dong if d.get('tong', 0) > 0]
+    return dict(so_ho=dia_chinh(dong), da_pa=dia_chinh(da_pa),
+                da_pd=dia_chinh([d for d in dong if d.get('da_phe_duyet')]),
+                da_ct=dia_chinh([d for d in dong if d.get('da_chi_tra')]),
+                da_bg=dia_chinh([d for d in dong if d.get('da_ban_giao')]), tong=dia_chinh(dong))
 
 
 def cong_dai_cong(dong: list) -> dict:
     """Cộng các dòng danh sách hộ (BangHo.dong) cho dải cộng - Decimal (tien.D), không float. Mục theo nghiep_vu (1 đất, 2 nhà,
     3 cây, 7 vật nuôi, 4 hỗ trợ, 5 thưởng); TỔNG CỘNG = cộng tổng từng hộ (đã làm tròn như cột tổng phương án)."""
-    kq = dict(dt=D(0), dat=D(0), tai_san=D(0), ho_tro=D(0), tong=D(0))
+    kq = dict(dt=D(0), dat=D(0), tai_san=D(0), ho_tro=D(0), tong=D(0), so_thua=0)
     for d in dong:
         m = d.get('muc') or {}
+        kq['so_thua'] += so_thua_dong(d)
         kq['dt'] += D(d.get('dt') or 0)
         kq['dat'] += D(m.get(1) or 0)
         kq['tai_san'] += D(m.get(2) or 0) + D(m.get(3) or 0) + D(m.get(nghiep_vu.MUC_VN) or 0)
@@ -70,11 +107,12 @@ def chu_dai_cong(n: int, tong: dict | None) -> dict:
     kq = {}
     for k, ten in O_DAI_CONG:
         if k == 'so_ho':
-            kq[k] = (f'CỘNG ({n} HỘ ĐANG HIỂN THỊ)', f'CỘNG {n} HỘ') if tong is not None else ('CỘNG', 'CỘNG')
+            t = tong.get('so_thua', 0) if tong is not None else 0
+            kq[k] = (f'CỘNG ({n} HỘ · {t} THỬA)', f'CỘNG {n} HỘ · {t} THỬA') if tong is not None else ('CỘNG', 'CỘNG')
         elif tong is None:
             kq[k] = (f'{ten}: –', f'{NHAN_GON_CONG[k]}: –')
         elif k == 'dt':
-            kq[k] = (f'{ten}: {vn(tong["dt"], 1)} m²', f'{NHAN_GON_CONG[k]}: {vn(tong["dt"], 1)} m²')
+            kq[k] = (f'{ten}: {vn(tong["dt"], 1)} m² ({so_ha(tong["dt"])})', f'{NHAN_GON_CONG[k]}: {vn(tong["dt"], 1)} m²')
         else:
             kq[k] = (f'{ten}: {vn(tong[k])} đ', f'{NHAN_GON_CONG[k]}: {vn_gon(tong[k])}')
     return kq
@@ -165,7 +203,10 @@ LENH_CAN_DU_AN = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm t
                   'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Nhật ký kiểm toán…', 'Bản đồ thửa đất',
                   # nhóm 6 Đơn giá & bảng giá: Đơn giá đặc biệt là của DỰ ÁN (tắt khi chưa mở); Đơn giá bồi thường, Bảng giá đất vẫn
                   # bật (liên kết chân màn hình chào, tra cứu khi chưa có dự án)
-                  'Đơn giá riêng dự án…')
+                  'Đơn giá riêng dự án…',
+                  # 21/10/2026: thống kê Hộ · Thửa · Diện tích (menu Dữ liệu + huy hiệu "Lọc:" cuối hàng lọc danh sách hộ)
+                  'Thống kê Hộ · Thửa · Diện tích…')
+LENH_THONG_KE = 'Thống kê Hộ · Thửa · Diện tích…'
 # Nhập bản vẽ CAD, Phiếu kiểm đếm (menu Dữ liệu / Công cụ, 0.9.87): KHÔNG tắt khi chưa mở dự án - mục menu mờ bấm không có phản
 # ứng, người dùng tưởng hỏng; bấm thì báo "mở dự án trước" (_can_du_an).
 # nút A− / A+ trên thanh trạng thái: khung nút nhỏ, viền nhẹ, bo 4px
@@ -658,6 +699,7 @@ class CuaSoChinh(QMainWindow):
                          ('Tiếp nhận & Kiểm tra pháp lý dự án…', lambda: self.tiep_nhan_phap_ly()),
                          # 20/10/2026: Tìm nhanh Ctrl+K (menu Chỉnh sửa) - hộ theo CCCD / mã / tên / tờ-thửa và mọi chức năng
                          ('Tìm nhanh…', lambda: self.tim_nhanh()),
+                         (LENH_THONG_KE, lambda: self.thong_ke_dia_chinh()),
                          *((t, lambda _=False, i=i: self.mo_trang(i)) for i, t in enumerate(TRANG))):
             a = QAction(ten, self)
             a.triggered.connect(lambda _=False, ham=ham: self._chay_lenh(ham))
@@ -679,7 +721,8 @@ class CuaSoChinh(QMainWindow):
         for ten, phim in (('Dự án mới…', 'Ctrl+N'), ('Mở dự án…', 'Ctrl+O'), ('Dự án trên máy chủ…', 'Ctrl+Shift+O'),
                           ('Lưu dự án', 'Ctrl+S'),
                           ('Lưu dự án thành…', 'Ctrl+Shift+S'), ('Hướng dẫn sử dụng', 'F1'),
-                          ('Tiếp nhận & Kiểm tra pháp lý dự án…', 'Ctrl+Shift+L'), ('Quản lý Mẫu in & Bản in…', 'Ctrl+Shift+M')):
+                          ('Tiếp nhận & Kiểm tra pháp lý dự án…', 'Ctrl+Shift+L'), ('Quản lý Mẫu in & Bản in…', 'Ctrl+Shift+M'),
+                          (LENH_THONG_KE, 'Ctrl+Shift+T')):
             self.lenh[ten].setShortcut(QKeySequence(phim))
         self._i_trang = 0                                # trang (chỉ số TRANG) đang chọn - mở lại dự án thì về trang này
         self.khung_du_toan = None                        # trang Dự toán: tạo khi mở lần đầu (không làm chậm lúc khởi động)
@@ -709,7 +752,10 @@ class CuaSoChinh(QMainWindow):
         for k, t in TRANG_THAI:
             self.cb_tt.addItem(t, k)
         self.cb_tt.currentIndexChanged.connect(lambda *_: self._loc(trang_thai=self.cb_tt.currentData()))
-        self.lb_loc = QLabel('')
+        from .giao_dien import NhanBam
+        self.lb_loc = NhanBam('')                        # 21/10/2026: "Lọc: k/N hộ · t thửa ↗" - bấm mở Thống kê Hộ · Thửa · Diện tích
+        self.lb_loc.bam = lambda: self.lenh[LENH_THONG_KE].trigger()      # cùng QAction với menu Dữ liệu (tắt khi chưa mở dự án)
+        self.lb_loc.setToolTip('Bấm để xem bảng thống kê Hộ · Thửa · Diện tích (Ctrl+Shift+T)')
         self.bang = QTableView()
         self.bang.setModel(self.loc)
         self.bang.setSortingEnabled(True)
@@ -717,7 +763,10 @@ class CuaSoChinh(QMainWindow):
         # dòng một hàng chữ 30 px (17/10/2026): không xuống dòng - giao_dien._gian_bang (đổi cỡ chữ) giãn dòng bảng có xuống dòng
         # thành ~41 px; chữ dài rút "…", đủ ở chú thích (họ tên, địa chỉ, trạng thái, ghi chú)
         self.bang.setWordWrap(False)
-        self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        # 21/10/2026: bôi đen vùng ô kiểu Excel (chọn 1 ô của 3 hộ = 3 hộ cho Xóa hộ / Chọn hộ niêm yết - ho_da_chon); bấm ô STT
+        # chọn cả dòng; bộ đếm Trung bình / Tổng số đếm / Tổng ở thanh trạng thái (giao_dien.cho_phep_sao_chep_bang)
+        self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+        self.bang.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.bang.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked | QAbstractItemView.EditTrigger.EditKeyPressed)
         self.bang.verticalHeader().setVisible(False)
         from .giao_dien import CAO_DONG_BANG
@@ -736,6 +785,8 @@ class CuaSoChinh(QMainWindow):
         phim_xoa = QShortcut(QKeySequence(QKeySequence.StandardKey.Delete), self.bang)    # phím Delete trên danh sách hộ
         phim_xoa.setContext(Qt.ShortcutContext.WidgetShortcut)                            # (không áp khi đang sửa ô ghi chú)
         phim_xoa.activated.connect(lambda: self.lenh['Xóa hộ…'].isEnabled() and self._chay_lenh(self.xoa_ho))
+        from .giao_dien import cho_phep_sao_chep_bang
+        cho_phep_sao_chep_bang(self.bang)                # gắn ngay (không chờ cửa sổ hiện): bộ đếm, viền vùng chọn, Ctrl+C
         self._vua_tieu_de()
         # trang bên phải: danh sách hộ / bảng tổng hợp (3 mục) / theo dõi tiến độ - chọn ở menu trái. Bảng tổng hợp, theo dõi tiến độ,
         # quyết định TẠO KHI MỞ LẦN ĐẦU (máy yếu - 16/10/2026: mở phần mềm không dựng ~200 thành phần và nạp ~10
@@ -879,6 +930,12 @@ class CuaSoChinh(QMainWindow):
         # cỡ giao diện: nút − / + , bấm vào % để về 100%; phím Ctrl + con lăn chuột, Ctrl + "+" / "-" / "0"
         from .giao_dien import KHI_DOI_TY_LE, TY_LE, phong_to
         goi_y = 'Cỡ giao diện: Ctrl + con lăn chuột, hoặc Ctrl + "+" / Ctrl + "-"; Ctrl + 0 về 100%'
+        # 21/10/2026: bộ đếm kiểu Excel (Trung bình / Tổng số đếm / Tổng) của vùng đang chọn ở MỌI bảng trong cửa sổ chính - ngay trái
+        # cụm A− / A+; bấm = chép Tổng. Bảng gọi cap_nhat_bo_dem qua giao_dien._BoChonVung
+        from .giao_dien import NhanBoDem
+        self.lb_bo_dem_excel = NhanBoDem()
+        self._bang_bo_dem = None
+        self.statusBar().addPermanentWidget(self.lb_bo_dem_excel)
         self.nut_ty_le = {}
         for k, chu, buoc in (('nho', 'A−', -1), ('ty_le', '', 0), ('to', 'A+', 1)):
             b = QToolButton()
@@ -1354,6 +1411,7 @@ class CuaSoChinh(QMainWindow):
             nac = (4 if x.get('da_ban_giao') else 3 if x.get('da_chi_tra') else 2 if x.get('da_phe_duyet') else
                    1 if da_lap or h['tong'] > 0 else 0)
         return dict(ma_ho=h['ma_ho'], tong=h['tong'], lech=h['lech'], da_lap=da_lap, nac=nac, muc=h.get('muc') or {}, dt=dt,
+                    so_thua=st,
                     **{k: x.get(k) for k in TRUONG_TT},
                     dot_id=x.get('dot_id'), goi_y_tt=goi_y, mau_tt=mau, mau_gc=MAU_LECH if gc else None,
                     tim=f'{h["ma_ho"]} {x.get("theo_doi") or ""} {ten_dot.get(x.get("dot_id"), "")} '
@@ -1468,9 +1526,10 @@ class CuaSoChinh(QMainWindow):
         n = self.loc.rowCount()
         ds = self.mo_hinh.dong
         hien = [ds[self.loc.mapToSource(self.loc.index(r, 0)).row()] for r in range(n)]
-        self.lb_loc.setText(f'Đang lọc: <b style="color:#0F3866">{n}</b> / {len(ds)} hộ' if ds else '')
-        self.lb_loc.setVisible(bool(ds))
         tong_muc = cong_dai_cong(hien)
+        self.lb_loc.setText(f'Lọc: <b style="color:#0F3866">{n}</b>/{len(ds)} hộ · '
+                            f'<b style="color:#0F3866">{tong_muc["so_thua"]}</b> thửa ↗' if ds else '')
+        self.lb_loc.setVisible(bool(ds))
         self._ve_dai_cong(n, tong_muc, co_du_lieu=bool(ds))
         self._cap_nhat_loc_the()
 
@@ -1504,9 +1563,18 @@ class CuaSoChinh(QMainWindow):
         k = self._khung_dang_xem()
         if k is not None and hasattr(k, 'ma_da_chon'):
             return sorted(k.ma_da_chon())
-        if self.bang.selectionModel() is None:
+        return self._ho_chon_ds()
+
+    def _dong_chon_ds(self) -> list:
+        """Các dòng (BangHo.dong) có ô đang chọn trên danh sách hộ - chọn 1 ô của 3 hộ = 3 hộ (giao_dien.cac_dong_da_chon)."""
+        from .giao_dien import cac_dong_da_chon
+        if self.con is None:
             return []
-        return sorted({self.mo_hinh.dong[self.loc.mapToSource(i).row()]['ma_ho'] for i in self.bang.selectionModel().selectedRows()})
+        ds = self.mo_hinh.dong
+        return [ds[self.loc.mapToSource(self.loc.index(r, 0)).row()] for r in cac_dong_da_chon(self.bang)]
+
+    def _ho_chon_ds(self) -> list:
+        return sorted({d['ma_ho'] for d in self._dong_chon_ds()})
 
     def mo_ta_loc(self) -> str:
         t = [x for x in (self.cb_dot.currentText() if self.cb_dot.currentData() else '',
@@ -1600,7 +1668,9 @@ class CuaSoChinh(QMainWindow):
         h = QHBoxLayout()
         h.setSpacing(8)                                  # 17/10/2026: thẻ cách 8 px (0.9.95: 4 px, thẻ một dòng 32 px)
         h.setProperty('giu_khoang_cach', True)          # giao_dien.gian_cach không nâng lên 10 px
-        self.the_so, self.the_phu, self.the_khung = {}, {}, {}
+        # 21/10/2026 (ảnh mẫu người dùng): hàng trên = tên + huy hiệu tỷ lệ % (Tổng kinh phí: tổng ha); hàng dưới = số hộ lớn + đơn
+        # vị | vạch dọc | the_dia_chinh 2 dòng (số thửa / DT m²) - cùng chiều cao 56 px. the_so[k].text() vẫn CHỈ là số
+        self.the_so, self.the_phu, self.the_khung, self.the_don_vi, self.the_dia_chinh = {}, {}, {}, {}, {}
         for k, ten in self.THE_SO:
             khung = TheSo()
             khung.setObjectName('the_so')
@@ -1612,28 +1682,48 @@ class CuaSoChinh(QMainWindow):
             khung.setProperty('dang_loc', '0')
             khung.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)    # QWidget thường: cần để QSS vẽ nền / viền
             o = QVBoxLayout(khung)
-            o.setContentsMargins(12, 5, 12, 5)
-            o.setSpacing(1)
+            o.setContentsMargins(10, 3, 10, 2)
+            o.setSpacing(0)
             o.setProperty('giu_khoang_cach', True)
             khung.setFixedHeight(self.CAO_THE_SO)
             nhan = NhanRutGon(ten)                       # hẹp (màn hình 1366): rút "…", không ép cửa sổ rộng ra
             nhan.setProperty('vai', 'nhan_the')
+            phu = QLabel('')                             # huy hiệu: tỷ lệ % số hộ (Tổng kinh phí: tổng ha)
+            phu.setProperty('vai', 'huy_hieu_the')
+            phu.setProperty('co', '')
+            phu.setVisible(False)
             so = QLabel('–')
             so.setProperty('vai', 'so_the')
-            phu = QLabel('')
-            phu.setProperty('vai', 'phu_the')
-            for x in (nhan, so, phu):                    # bấm vào chữ = bấm thẻ
+            don_vi = QLabel('')
+            don_vi.setProperty('vai', 'phu_the')
+            vach = QLabel('')
+            vach.setProperty('vai', 'vach_the')
+            vach.setFixedSize(1, 26)
+            dc = QLabel('')
+            dc.setProperty('vai', 'dia_chinh_the')
+            dc.setTextFormat(Qt.TextFormat.RichText)
+            for x in (nhan, so, phu, don_vi, vach, dc):  # bấm vào chữ = bấm thẻ
                 x.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            tren = QHBoxLayout()
+            tren.setContentsMargins(0, 0, 0, 0)
+            tren.setSpacing(4)
+            tren.setProperty('giu_khoang_cach', True)
+            tren.addWidget(nhan, 1)
+            tren.addWidget(phu)
             hang = QHBoxLayout()
             hang.setContentsMargins(0, 0, 0, 0)
             hang.setSpacing(5)
             hang.setProperty('giu_khoang_cach', True)
             hang.addWidget(so, 0, Qt.AlignmentFlag.AlignBaseline)
-            hang.addWidget(phu, 0, Qt.AlignmentFlag.AlignBaseline)
+            hang.addWidget(don_vi, 0, Qt.AlignmentFlag.AlignBaseline)
+            hang.addSpacing(4)
+            hang.addWidget(vach, 0, Qt.AlignmentFlag.AlignVCenter)
+            hang.addWidget(dc, 0, Qt.AlignmentFlag.AlignVCenter)
             hang.addStretch(1)
-            o.addWidget(nhan)
+            o.addLayout(tren)
             o.addLayout(hang)
             self.the_so[k], self.the_phu[k], self.the_khung[k] = so, phu, khung
+            self.the_don_vi[k], self.the_dia_chinh[k] = don_vi, dc
             h.addWidget(khung, 1)
         return h
 
@@ -1664,19 +1754,34 @@ class CuaSoChinh(QMainWindow):
                   da_bg=sum(1 for d in ds if d.get('da_ban_giao')))
         from .tien import phan_tram
         n = len(ds)
+        nhom = nhom_dia_chinh(ds, lap)
         for k, o in self.the_so.items():
             v = gt[k]
             o.setText(str(v) if ds else '–')
+            if k in getattr(self, 'the_don_vi', {}):
+                self.the_don_vi[k].setText(('VNĐ' if k == 'tong' else 'hộ') if ds else '')
+            if k in getattr(self, 'the_dia_chinh', {}):
+                _h, t, dt = nhom[k]
+                dc = self.the_dia_chinh[k]
+                dc.setText(f'<span style="font-weight:700; color:#1E293B">{t} thửa</span><br>'
+                           f'<span style="color:#0369A1">{vn(dt, 1)} m²</span>' if ds else '')
+                dc.setToolTip(f'{_h} hộ · {t} thửa · {vn(dt, 1)} m² ({so_ha(dt)})' if ds else '')
             phu = self.the_phu.get(k) if hasattr(self, 'the_phu') else None
             if phu is None:
                 continue
-            if k == 'so_ho':
-                phu.setText('hộ' if ds else '')
-            elif k == 'tong':
-                phu.setText('VNĐ' if ds else '')
+            if k == 'tong':                              # huy hiệu thẻ Tổng kinh phí: tổng DT thu hồi quy đổi ha
+                chu, co = (so_ha(nhom['tong'][2]), 'ha') if ds else ('', '')
             else:                                        # tỷ lệ so với tổng số hộ (Decimal) - số hộ đủ ở chú thích của số
-                phu.setText(phan_tram(v, n) if ds else '')
-                o.setToolTip(f'{v} / {n} hộ' if ds else '')
+                chu = phan_tram(v, n) if ds else ''
+                co = '1' if ds and v and k != 'so_ho' else ''
+                if k != 'so_ho':
+                    o.setToolTip(f'{v} / {n} hộ' if ds else '')
+            phu.setText(chu)
+            phu.setVisible(bool(chu))
+            if phu.property('co') != co:
+                phu.setProperty('co', co)
+                phu.style().unpolish(phu)
+                phu.style().polish(phu)
         if 'tong' in self.the_so:
             self.the_so['tong'].setToolTip(f'{vn(tong)} đồng' if ds else '')
         if tu_lap and 'da_pa' in self.the_so:
@@ -1753,11 +1858,15 @@ class CuaSoChinh(QMainWindow):
 
     def _cap_nhat_chon(self):
         """Xóa hộ chỉ sáng khi đang chọn hộ trên danh sách; số hộ đang chọn ở thanh trạng thái."""
-        sm = self.bang.selectionModel()
-        n = len(sm.selectedRows()) if sm is not None and self.con is not None else 0
-        self.lenh['Xóa hộ…'].setEnabled(n > 0 and not self.chi_doc)
-        self.lb_tom_tat.setText(f'Sẵn sàng · Tổng cộng: {len(self.mo_hinh.dong)} hộ | Đã chọn: {n} hộ' if self.con is not None
-                                else 'Sẵn sàng · Chưa mở dự án')
+        chon = self._dong_chon_ds()
+        self.lenh['Xóa hộ…'].setEnabled(bool(chon) and not self.chi_doc)
+        if self.con is None:
+            self.lb_tom_tat.setText('Sẵn sàng · Chưa mở dự án')
+            return
+        n, t, dt = dia_chinh(self.mo_hinh.dong)
+        k, tk, dtk = dia_chinh(chon)
+        self.lb_tom_tat.setText(f'Sẵn sàng · Dự án: {n} hộ · {t} thửa · {vn(dt, 1)} m² | '
+                                f'Đang chọn: {k} hộ ({tk} thửa · {vn(dtk, 1)} m²)')
 
     def _trang_chao(self) -> QWidget:
         """Màn hình chính (ô TRANG_CHAO của self.trang) = ngan_chao: ô 0 màn hình chào khi chưa mở dự án (0.9.23: thẻ bắt đầu + dự
@@ -2259,7 +2368,7 @@ class CuaSoChinh(QMainWindow):
                         # tổng hợp, Xuất báo cáo đối chiếu, Bộ đơn giá, Thông tin dự án (KIEM_TRA test_khong_trung_menu_trai)
                         ('&Dữ liệu', ['Nhập file Excel…', 'Nhập phương án chi tiết…', 'Nhập bản vẽ CAD (.dxf)…', 'Bản đồ thửa đất',
                                       None, 'Trạng thái hộ…',
-                                      'Xuất danh sách hộ…', None, 'Nhật ký kiểm toán…']),
+                                      'Xuất danh sách hộ…', LENH_THONG_KE, None, 'Nhật ký kiểm toán…']),
                         ('&Công cụ', ['Quản lý Mẫu in & Bản in…', 'Rà soát giá…', 'Cập nhật bảng giá đất…', None,
                                       'Phiếu kiểm đếm thực địa…', None,
                                       'Xuất gói mẫu in & cấu hình…', 'Nhập gói mẫu in & cấu hình…']),
@@ -2332,8 +2441,9 @@ class CuaSoChinh(QMainWindow):
         idx = view.indexAt(pos)
         if self.con is None or not idx.isValid():
             return
-        if view.currentIndex().row() != idx.row():     # chuột phải lên dòng khác dòng đang chọn: thao tác trên dòng đó
-            view.setCurrentIndex(idx)
+        sm = view.selectionModel()
+        if view.currentIndex().row() != idx.row() and not (sm is not None and sm.isSelected(idx)):
+            view.setCurrentIndex(idx)                   # chuột phải ngoài vùng đang chọn: thao tác trên dòng đó (trong vùng: giữ vùng)
         m = QMenu(self)
         # lệnh của menu trái dùng lại đúng QAction (cùng tên, cùng trạng thái bật / tắt khi chỉ xem); chỉ "Xem chi tiết tính
         # tiền…" là riêng của chuột phải
@@ -2410,6 +2520,25 @@ class CuaSoChinh(QMainWindow):
             d.exec()
             if d.da_ghi:
                 self.tai_lai()
+        return d
+
+    def thong_ke_dia_chinh(self, cho: bool = True):
+        """Hộp Thống kê Hộ · Thửa · Diện tích (21/10/2026): theo 7 trạng thái thực hiện và theo đợt trình - số liệu của danh sách hộ
+        đang nạp (cùng cờ với thẻ KPI / bộ lọc). cho=False: chỉ tạo hộp (kiểm thử)."""
+        if self.con is None:
+            QMessageBox.information(self, TEN_UD, 'Mở dự án trước để xem thống kê.')
+            return None
+        from .man_hinh_thong_ke import HopThongKeDiaChinh
+        from .quan_ly import ds_dot
+        da = self.con.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
+        try:
+            lap = lap_pa.phan_loai_lap(self.con)        # "đã lập" như thẻ KPI (tự lập chưa soát = chưa lập)
+        except Exception:                               # noqa: BLE001 - file chỉ xem phiên bản cũ: đã lập = tổng > 0
+            lap = None
+        d = HopThongKeDiaChinh(self.mo_hinh.dong, {x.id: x.ten for x in ds_dot(self.con)}, (da['ten'] or '') if da else '', self,
+                               im_lang=not cho, lap=lap)
+        if cho:
+            d.exec()
         return d
 
     def nhat_ky_kiem_toan(self, ma_ho=None, cho: bool = True):
@@ -2534,11 +2663,39 @@ class CuaSoChinh(QMainWindow):
         đổi trang của `trang` / `ngan_lv` nên đúng dù trang đổi theo đường nào."""
         if not hasattr(self, 'ngan_lv') or not hasattr(self, 'hang_the'):
             return
+        self._xoa_bo_dem_neu_an()
         o_trang = self.ngan_lv.currentWidget() is self.trang
         chao = o_trang and self.trang.currentIndex() == TRANG_CHAO
         self.hang_the.setVisible(self.con is not None and o_trang and self.trang.currentIndex() == STACK_CUA_TRANG[TRANG_DS])
         if hasattr(self, 'banner_ten'):
             self.banner_ten.setVisible(self.con is None or chao)
+
+    def cap_nhat_bo_dem(self, bang, tk: dict) -> None:
+        """Vùng chọn của một bảng trong cửa sổ chính đổi (giao_dien._BoChonVung): bộ đếm thanh trạng thái theo bảng đó. Bảng đang ẩn
+        (trang khác nạp lại / chọn sẵn dòng) không ghi đè bộ đếm của bảng người dùng đang xem."""
+        if not hasattr(self, 'lb_bo_dem_excel'):
+            return
+        try:
+            hien = bang.isVisibleTo(self)
+        except RuntimeError:
+            return
+        if not hien and bang is not self._bang_bo_dem:
+            return
+        self._bang_bo_dem = bang
+        self.lb_bo_dem_excel.dat(tk if hien else None)
+
+    def _xoa_bo_dem_neu_an(self) -> None:
+        """Đổi trang / tab: bảng của bộ đếm không còn hiện thì xóa bộ đếm."""
+        b = getattr(self, '_bang_bo_dem', None)
+        if b is None or not hasattr(self, 'lb_bo_dem_excel'):
+            return
+        try:
+            an = not b.isVisibleTo(self)
+        except RuntimeError:
+            an = True
+        if an:
+            self._bang_bo_dem = None
+            self.lb_bo_dem_excel.dat(None)
 
     def _tab_doi(self, i: int):
         if i < 0 or i >= len(self._tab_khoa):
@@ -2871,9 +3028,7 @@ class CuaSoChinh(QMainWindow):
             QMessageBox.information(self, TEN_UD, 'Hãy nhập hoặc mở một dự án trước.')
             return None
         from .man_hinh import HopIn
-        chon = sorted(ma_ho) if ma_ho is not None else (
-            sorted({self.mo_hinh.dong[self.loc.mapToSource(i).row()]['ma_ho']
-                    for i in self.bang.selectionModel().selectedRows()}) if self.bang.selectionModel() else [])
+        chon = sorted(ma_ho) if ma_ho is not None else self._ho_chon_ds()
         dlg = HopIn(self.con, self, ma_ho_chon=chon, file_du_an=self.file, che_do=che_do, dot_id=dot_id)
         if cho:
             dlg.exec()

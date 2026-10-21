@@ -637,6 +637,7 @@ class KhungHoSo(QWidget):
         # chọn TỪNG Ô (nhấp một lần -> Ctrl+C chép ô); Shift / Ctrl chọn nhiều ô - xóa thửa lấy mọi dòng có ô được chọn
         b.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
         b.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        b.setProperty('cot_dinh_danh', [self.cot.index('so_thua')])   # "Số thửa" ở đây là số hiệu thửa: bộ đếm không cộng
         b.setAlternatingRowColors(True)
         b.setWordWrap(False)
         b.setMinimumHeight(170)

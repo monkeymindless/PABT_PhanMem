@@ -29,7 +29,7 @@ _NEN, _MAU_CHU, _CHU, _GOI_Y = (Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.
 # 1.0.03 "làm mờ số 0 - tôn vinh số thực": ô có giá trị bằng 0 / gạch chữ xám nhạt (mắt lướt qua khoản trống); ô số của cột tổng /
 # thành tiền chữ navy đậm. Chỉ ô chưa có màu chữ riêng (kieu['mau_chu'])
 # 20/10/2026: hằng / phông số dùng chung ở giao_dien (một nguồn cho BangHo, BangMuc, Khái toán) - cột canh phải dùng phông số
-from .giao_dien import MAU_SO_KHONG, MAU_SO_TIEN, SO_KHONG, cuon_muot, phong_so  # noqa: E402
+from .giao_dien import MAU_SO_KHONG, MAU_SO_TIEN, SO_KHONG, cac_dong_da_chon, cho_phep_sao_chep_bang, phong_so  # noqa: E402
 _BUT_SO_KHONG = QBrush(QColor(MAU_SO_KHONG))
 _BUT_SO_TIEN = QBrush(QColor(MAU_SO_TIEN))
 
@@ -160,9 +160,9 @@ class BangAo(QTableView):
         self.mo_hinh = _MoHinhAo(cot, set(can_phai), self)
         self.setModel(self.mo_hinh)
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)     # 21/10/2026: bôi đen vùng ô kiểu Excel
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setWordWrap(True)
-        cuon_muot(self)                                 # 1.0.07: cuộn từng điểm ảnh, bước lăn chuột 20 px
         self.verticalHeader().setVisible(False)
         dau = self.horizontalHeader()
         dau.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
@@ -174,6 +174,7 @@ class BangAo(QTableView):
             dau.setSortIndicator(0, Qt.SortOrder.AscendingOrder)    # mặc định Qt: cột 0 GIẢM dần (STT ngược)
             self.setSortingEnabled(True)
         self.doubleClicked.connect(lambda i: self.cellDoubleClicked.emit(i.row(), i.column()))
+        cho_phep_sao_chep_bang(self)                    # cuộn mượt, Ctrl+C, chọn vùng ô, bộ đếm (giao_dien)
 
     def dat_du_lieu(self, dong: list, du_lieu: list | None = None, kieu: dict | None = None, gop=(),
                     khoa: list | None = None) -> None:
@@ -212,10 +213,9 @@ class BangAo(QTableView):
         return dl[r] if 0 <= r < len(dl) else None
 
     def ma_da_chon(self) -> list:
-        """Mã của các dòng đang chọn (không trùng, theo thứ tự dòng)."""
-        sm = self.selectionModel()
+        """Mã của các dòng có ô đang chọn (chọn 1 ô của 3 dòng = 3 mã; không trùng, theo thứ tự dòng)."""
         ds = []
-        for r in sorted(i.row() for i in sm.selectedRows()) if sm is not None else []:
+        for r in cac_dong_da_chon(self):
             m = self.ma_dong(r)
             if m is not None and m not in ds:
                 ds.append(m)

@@ -364,7 +364,8 @@ class KhungDuToan(QWidget):
         for i, c in enumerate(COT):
             self.bang.setColumnWidth(i, c[2])
         self.bang.horizontalHeader().setSectionResizeMode(len(COT) - 1, QHeaderView.ResizeMode.Stretch)
-        self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)    # 21/10/2026: bôi đen vùng ô + bộ đếm
+        self.bang.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.bang.verticalHeader().setVisible(False)
         self.bang.setWordWrap(True)
         self.bang.setAlternatingRowColors(True)

@@ -1896,6 +1896,26 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   có đơn vị cuối "Nhà tạm m2 4x5" / cột ĐVT thắng); ba thừa số hoặc đơn vị khác sau ("2x3x1,5 m3", "3x4 cây") để quy tắc số lượng cũ.
   Phần 'ngoac' "42m2 (thửa 123)": ngoặc SAU số liệu -> ghi chú (ngoặc trong tên giữ). `_RE_TU_NHIEN` nhận "số x số"; `tach_dong` không tách
   ở số đứng sau toán tử / số ("Sân m2 3+2*4" vẫn đi quy tắc cũ). Ô Excel: `doc_kich_thuoc(o)` ("3,7m x 4,3m", "42m2").
+- Chọn vùng ô + bộ đếm kiểu Excel (người dùng 21/10/2026, kèm ảnh mẫu; CHƯA tăng phiên bản; test `tests/test_yeu_cau_2110.py`):
+  - `giao_dien.cho_phep_sao_chep_bang` (mọi bảng qua `ap_kieu_cay`, `BangAo.__init__`, `app.bang` trong `__init__`) -> `cho_chon_vung_o`
+    (SelectItems + ExtendedSelection; NoSelection giữ; bảng SingleSelection cũng thành Extended khi hiện - trước khi hiện vẫn kiểu cũ: Qt
+    `selectRow` KHÔNG chạy với SingleSelection + SelectItems) + `gan_bo_dem` -> `_BoChonVung` (con của bảng): bấm ô cột STT chọn cả dòng
+    (Ctrl / Shift), `_VienVungChon` (viền xanh lá quanh từng vùng chọn - con của BẢNG phủ viewport, không phải con viewport:
+    viewport.scroll dời widget con), bộ đếm. Lệnh theo hộ đọc dòng bằng `giao_dien.cac_dong_da_chon(bang, hien_tai=True)` (dòng có ô
+    chọn; trống -> dòng ô hiện tại; hien_tai=False cho lệnh "không chọn thì cả đợt") - ĐỪNG dùng `selectedRows()` (chỉ dòng chọn trọn).
+  - `thong_ke_vung_chon(bang)` -> so_dem / so_so / tong / trung_binh (Decimal) / so_le / chuoi ("Trung bình: …     Tổng số đếm: n     Tổng:
+    …"; dưới 2 ô có chữ: ''): `doc_so_o` (tien.doc_so_vn, bỏ hậu tố đ / đồng / m² / ha / % / cây / hộ / thửa, '-' = 0), cột định danh
+    `COT_DINH_DANH` / `TU_DAU_DINH_DANH` hoặc property `cot_dinh_danh` = [cột] chỉ đếm không cộng ("Số thửa" của danh sách hộ là SỐ
+    LƯỢNG - cộng), ô gộp một lần (`_goc_gop` theo visualRect), `so_bo_dem` giữ số chữ số lẻ của dữ liệu ("1.128,0"). Cửa sổ có hàm
+    `cap_nhat_bo_dem(bang, tk)` tự hiện (CuaSoChinh: `lb_bo_dem_excel` = `NhanBoDem` trái A− / A+, chỉ bảng đang hiện, đổi trang xóa -
+    `_xoa_bo_dem_neu_an`; HopThongKeDiaChinh: góc dưới trái); hộp khác: `NhanBoDem` nổi góc dưới phải BẢNG (không đè hàng nút của hộp).
+    Bấm nhãn = chép Tổng + thong_bao_noi.
+  - Thẻ KPI: `the_phu` = huy hiệu (% số hộ; Tổng kinh phí: tổng ha - property co ''/'1'/'ha'), `the_don_vi` (hộ / VNĐ), `the_dia_chinh`
+    (rich text "n thửa" / "dt m²") theo `app.nhom_dia_chinh(dong, lap)`; dòng BangHo có `so_thua` (`so_thua_dong`, `dia_chinh`, `so_ha`).
+    `lb_loc` = NhanBam "Lọc: k/N hộ · t thửa ↗" -> QAction `LENH_THONG_KE` 'Thống kê Hộ · Thửa · Diện tích…' (Ctrl+Shift+T, menu Dữ liệu,
+    LENH_CAN_DU_AN) -> `man_hinh_thong_ke.HopThongKeDiaChinh(dong, ten_dot, ten, parent, im_lang, lap)` (7 trạng thái `thong_ke_trang_thai`,
+    đợt `thong_ke_dot`, "Sao chép tóm tắt báo cáo"). Dải cộng "CỘNG (n HỘ · t THỬA) | Tổng DT: … m² (… ha) | Đất | Tài sản & Cây | HT &
+    Thưởng | TỔNG CỘNG"; `lb_tom_tat` "Sẵn sàng · Dự án: N hộ · T thửa · DT m² | Đang chọn: k hộ (t thửa · dt m²)".
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

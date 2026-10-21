@@ -29,11 +29,12 @@ class TestHamThuan(unittest.TestCase):
         kq = ud.cong_dai_cong(dong)
         self.assertEqual(kq['dt'], Decimal('0.3'))                      # Decimal: 0,1 + 0,2 đúng 0,3 (float ra 0,30000000000000004)
         self.assertEqual((kq['dat'], kq['tai_san'], kq['ho_tro'], kq['tong']), (47, 20, 40, 107))
-        self.assertTrue(all(isinstance(v, Decimal) for v in kq.values()))
+        self.assertTrue(all(isinstance(v, Decimal) for k, v in kq.items() if k != 'so_thua'))
+        self.assertEqual(kq['so_thua'], 0)                              # dòng không có số thửa
         chu = ud.chu_dai_cong(2, kq)
-        self.assertEqual(chu['so_ho'][0], 'CỘNG (2 HỘ ĐANG HIỂN THỊ)')
+        self.assertEqual(chu['so_ho'][0], 'CỘNG (2 HỘ · 0 THỬA)')         # 21/10/2026: kèm số thửa, DT quy đổi ha
         self.assertEqual(chu['tong'][0], 'TỔNG CỘNG: 107 đ')
-        self.assertEqual(chu['dt'][0], 'Tổng diện tích: 0,3 m²')
+        self.assertEqual(chu['dt'][0], 'Tổng DT: 0,3 m² (0,0000 ha)')
         self.assertIn('–', ud.chu_dai_cong(0, None)['tong'][0])        # chưa có dữ liệu
 
     def test_thanh_nac_khong_emoji(self):
@@ -107,8 +108,10 @@ class TestTheSoVaDanhSach(CoNavy):
     def test_the_kpi_ty_le_va_dang_loc(self):
         _ud, w = self._cua_so(6)
         self.assertEqual(w.the_so['so_ho'].text(), '6')
-        self.assertEqual(w.the_phu['so_ho'].text(), 'hộ')
-        self.assertEqual(w.the_phu['tong'].text(), 'VNĐ')
+        self.assertEqual(w.the_don_vi['so_ho'].text(), 'hộ')             # 21/10/2026: the_phu = huy hiệu %, đơn vị riêng
+        self.assertEqual(w.the_don_vi['tong'].text(), 'VNĐ')
+        self.assertEqual(w.the_phu['so_ho'].text(), '100%')
+        self.assertTrue(w.the_phu['tong'].text().endswith(' ha'))
         self.assertRegex(w.the_so['tong'].text(), r'^[0-9.,]+ (tỷ|triệu)$')
         self.assertEqual(w.the_phu['da_pd'].text(), '0%')
         ds = [r[0] for r in w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 3')]
@@ -185,10 +188,11 @@ class TestTheSoVaDanhSach(CoNavy):
         n = len(w.mo_hinh.dong)
         self.assertTrue(w.dai_cong_ds.isVisibleTo(w))
         self.assertEqual(w.dai_cong_ds.height(), ud.CAO_DAI_CONG_CU)
-        self.assertEqual(w.dai_cong_ds.chu['so_ho'][0], f'CỘNG ({n} HỘ ĐANG HIỂN THỊ)')
+        t = sum(d['so_thua'] for d in w.mo_hinh.dong)
+        self.assertEqual(w.dai_cong_ds.chu['so_ho'][0], f'CỘNG ({n} HỘ · {t} THỬA)')
         tong = sum((d['tong'] for d in w.mo_hinh.dong), D(0))
         self.assertEqual(w.dai_cong_ds.chu['tong'][0], f'TỔNG CỘNG: {vn(tong)} đ')
-        self.assertIn(f'<b style="color:#0F3866">{n}</b> / {n} hộ', w.lb_loc.text())
+        self.assertIn(f'<b style="color:#0F3866">{n}</b>/{n} hộ', w.lb_loc.text())
         # lọc còn một hộ: dải cộng và huy hiệu theo các hộ đang hiện
         with w.con:
             for i, m in enumerate(r[0] for r in w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 2').fetchall()):
@@ -198,10 +202,10 @@ class TestTheSoVaDanhSach(CoNavy):
         w.o_tim.phat_ngay()
         k = w.loc.rowCount()
         self.assertEqual(k, 2)
-        self.assertEqual(w.dai_cong_ds.chu['so_ho'][0], f'CỘNG ({k} HỘ ĐANG HIỂN THỊ)')
         hien = [d for d in w.mo_hinh.dong if d['ma_ho'] in w.ho_dang_loc()]
+        self.assertEqual(w.dai_cong_ds.chu['so_ho'][0], f'CỘNG ({k} HỘ · {sum(d["so_thua"] for d in hien)} THỬA)')
         self.assertEqual(w.dai_cong_ds.chu['tong'][0], f'TỔNG CỘNG: {vn(sum((d["tong"] for d in hien), D(0)))} đ')
-        self.assertIn(f'>{k}</b> / {n} hộ', w.lb_loc.text())
+        self.assertIn(f'>{k}</b>/{n} hộ', w.lb_loc.text())
         # hẹp: chữ gọn, chú thích vẫn đủ
         w.dai_cong_ds.resize(300, w.dai_cong_ds.height())
         w.dai_cong_ds._chon()

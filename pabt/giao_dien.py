@@ -342,13 +342,24 @@ def _qss_the_so() -> str:
     QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
     QLabel[vai="so_the"] { font-size: 17px; font-weight: 700; color: #0F172A; }
     QLabel[vai="nhan_the"] { color: #475569; font-size: 11.5px; font-weight: 600; }
-    QLabel[vai="phu_the"] { color: #64748B; font-size: 11px; font-weight: 700; }''' + ''.join(
+    QLabel[vai="phu_the"] { color: #64748B; font-size: 11px; font-weight: 700; }
+    QLabel[vai="huy_hieu_the"] { background: #F1F5F9; color: #64748B; border-radius: 4px; padding: 0 6px; font-size: 10.5px;
+        font-weight: 700; }
+    QWidget[vai="the_so"] QLabel[vai="huy_hieu_the"][co="1"] { background: #DBEAFE; color: #1D4ED8; }
+    QWidget[vai="the_so"] QLabel[vai="huy_hieu_the"][co="ha"] { background: #FEF3C7; color: #92400E; }
+    QLabel[vai="vach_the"] { background: #E2E8F0; }
+    QWidget[vai="the_so"] QLabel[vai="vach_the"] { background: #E2E8F0; }
+    QLabel[vai="dia_chinh_the"] { font-size: 10px; margin: 0; padding: 0; }
+    QLabel#lb_bo_dem_excel { background: #F0FDF4; border: 1px solid #16A34A; color: #166534; font-weight: 700;
+        border-radius: 4px; padding: 2px 10px; }
+    QLabel#lb_bo_dem_excel:hover { background: #DCFCE7; }''' + ''.join(
         f'''
     QWidget[vai="the_so"][the="{k}"] {{ border-left-color: {m}; }}
     QWidget[vai="the_so"][the="{k}"] QLabel[vai="so_the"] {{ color: {m}; }}''' for k, m in MAU_THE_SO.items()) + f'''
     QWidget[vai="the_so"][dang_loc="1"] {{ background: #F0F6FF; border: 1px solid {c}; border-left: 4px solid {c}; }}
     QLabel[vai="huy_hieu_loc"] {{ background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 10px;
         color: #334155; font-size: 12px; }}
+    QLabel[vai="huy_hieu_loc"]:hover {{ background: #EFF6FF; border-color: {c}; }}
     QComboBox[loc_ds="1"] {{ background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; }}
     QLineEdit[loc_ds="1"] {{ background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 6px; }}
     QComboBox[loc_ds="1"]:hover, QLineEdit[loc_ds="1"]:hover {{ border-color: #94A3B8; }}
@@ -3504,6 +3515,9 @@ class _BoSaoChep(QObject):
                 obj.setProperty('_go_phim', True)         # mở ô sửa bằng gõ phím: không bôi đen (chữ gõ thay chữ cũ)
                 QTimer.singleShot(0, lambda o=obj: _xoa_co_phim(o))
             return False
+        if t == QEvent.Type.MouseButtonPress and obj.property('_bang_sao_chep'):
+            gan_bo_dem(obj.parent())                      # bảng đổi mô hình (selectionModel mới) sau khi gắn: gắn lại bộ đếm
+            return False
         if t == QEvent.Type.ChildAdded and obj.property('_bang_sao_chep'):
             from PySide6.QtWidgets import QLineEdit
             w = ev.child()
@@ -3544,6 +3558,8 @@ def cho_phep_sao_chep_bang(bang) -> None:
     bang.setProperty('_co_sao_chep', True)
     cuon_muot(bang)                                       # 1.0.07: cuộn từng điểm ảnh, bước lăn chuột 20 px
     gan_enter_xuong(bang)                                 # 1.0.07: sửa ô xong Enter -> xuống ô dưới cùng cột
+    cho_chon_vung_o(bang)                                 # 21/10/2026: bôi đen vùng ô kiểu Excel + bộ đếm
+    gan_bo_dem(bang)
     if not _BO_SAO_CHEP:
         _BO_SAO_CHEP.append(_BoSaoChep())
     bo = _BO_SAO_CHEP[0]
@@ -3553,6 +3569,352 @@ def cho_phep_sao_chep_bang(bang) -> None:
     if bang.contextMenuPolicy() == Qt.ContextMenuPolicy.DefaultContextMenu:
         bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         bang.customContextMenuRequested.connect(lambda p, b=bang: menu_sao_chep(b, p))
+
+
+# ---------------------------------------------------------------- bôi đen vùng ô + bộ đếm kiểu Excel (người dùng 21/10/2026)
+# Mọi bảng chọn TỪNG Ô (SelectItems) + nhiều vùng (ExtendedSelection): kéo chuột / Shift / Ctrl như Excel; bấm tiêu đề hàng dọc hoặc
+# ô cột STT chọn nguyên dòng. Vùng chọn có viền xanh lá (lớp phủ _VienVungChon). Lệnh theo hộ đọc DÒNG qua cac_dong_da_chon (chọn
+# 1 ô của 3 hộ = 3 hộ) - KHÔNG dùng selectionModel().selectedRows() (chỉ trả dòng chọn trọn mọi cột).
+# Bộ đếm (thong_ke_vung_chon): Trung bình / Tổng số đếm / Tổng của vùng chọn - cửa sổ có hàm cap_nhat_bo_dem(bảng, tk) (cửa sổ
+# chính, hộp Thống kê) tự hiện; hộp thoại khác: nhãn nổi góc dưới phải bảng.
+MAU_VIEN_CHON = '#16A34A'
+CHON_TOI_DA_NGAY = 3000          # vùng chọn tới bấy nhiêu ô: đếm ngay; lớn hơn (Ctrl+A bảng 5.000 hộ): chờ CHO_BO_DEM_MS
+CHO_BO_DEM_MS = 120
+VUNG_VE_TOI_DA = 200             # số vùng chọn (Ctrl + bấm từng ô) vẽ viền tối đa
+SO_LE_DEM_TOI_DA = 4
+# cột định danh (tiêu đề so không dấu, chữ thường): có số nhưng KHÔNG cộng (vẫn tính vào "Tổng số đếm"). "Số thửa" của danh sách
+# hộ là SỐ LƯỢNG thửa (cộng được); bảng có cột số hiệu thửa tên "Số thửa" đặt property cot_dinh_danh = [cột]
+COT_DINH_DANH = frozenset((
+    'stt', 'tt', '#', 'ma ho', 'so cccd', 'cccd', 'cmnd', 'so cmnd', 'cccd/cmnd', 'so cccd/cmnd', 'dien thoai', 'so dien thoai', 'sdt',
+    'to', 'to bd', 'so to', 'to ban do', 'so to ban do', 'thua', 'thua so', 'so hieu thua', 'so thua hieu', 'ma thua', 'to/thua',
+    'nam', 'ngay'))
+TU_DAU_DINH_DANH = ('ngay', 'nam')          # tiêu đề bắt đầu bằng từ này: "Ngày PA", "Ngày ban hành", "Năm sinh"
+COT_CHON_DONG = ('stt', 'tt', '#')           # bấm ô cột này = chọn cả dòng
+_RE_SO_O = re.compile(r'([-+−]?\d[\d.,]*)\s*(đồng|đ|m²|m2|ha|%|cây|hộ|thửa)?', re.IGNORECASE)
+
+
+def cac_dong_da_chon(bang, hien_tai: bool = True) -> list:
+    """Các dòng (của mô hình bảng - với bảng lọc / sắp xếp là dòng proxy) có ít nhất một ô đang chọn, tăng dần, bỏ dòng ẩn. Không
+    có vùng chọn mà ô hiện tại hợp lệ: dòng của ô hiện tại (hien_tai=False: [] - lệnh "không chọn thì cả đợt")."""
+    try:
+        sm = bang.selectionModel() if bang is not None else None
+    except RuntimeError:
+        return []
+    if sm is None:
+        return []
+    dong = {i.row() for i in sm.selectedIndexes() if i.isValid()}
+    if not dong and hien_tai:
+        idx = bang.currentIndex()
+        if idx.isValid():
+            dong = {idx.row()}
+    return sorted(r for r in dong if not bang.isRowHidden(r))
+
+
+def _ten_cot_chuan(bang, c: int) -> str:
+    m = bang.model()
+    h = m.headerData(c, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole) if m is not None else None
+    return ' '.join(bo_dau(str(h or '')).lower().replace('\n', ' ').split())
+
+
+def la_cot_dinh_danh(bang, c: int) -> bool:
+    """Cột định danh (STT, mã hộ, CCCD, điện thoại, tờ, thửa, ngày, năm): bộ đếm không cộng."""
+    rieng = bang.property('cot_dinh_danh')
+    if rieng and c in [int(x) for x in rieng]:
+        return True
+    t = _ten_cot_chuan(bang, c)
+    return t in COT_DINH_DANH or (t.split()[0] in TU_DAU_DINH_DANH if t else False)
+
+
+def doc_so_o(chu):
+    """Chữ hiển thị của ô -> (Decimal, số chữ số lẻ) hoặc None (không phải số). Kiểu VN (tien.doc_so_vn); bỏ hậu tố đ / đồng / m² /
+    ha / % / cây / hộ / thửa; ô gạch '-' = 0."""
+    from .tien import D, doc_so_vn
+    s = str(chu).replace(' ', ' ').strip()
+    if s in ('-', '–', '—'):
+        return D(0), 0
+    mt = _RE_SO_O.fullmatch(s)
+    if not mt:
+        return None
+    try:
+        x = doc_so_vn(mt.group(1).replace('−', '-'))
+    except (ValueError, ArithmeticError):
+        return None
+    return x, max(0, -x.as_tuple().exponent) if x.is_finite() else 0
+
+
+def _goc_gop(bang, r: int, c: int) -> tuple:
+    """Ô trên cùng bên trái của vùng gộp chứa ô (r, c)."""
+    m = bang.model()
+    vung = bang.visualRect(m.index(r, c))
+    while r > 0 and bang.visualRect(m.index(r - 1, c)) == vung:
+        r -= 1
+    while c > 0 and bang.visualRect(m.index(r, c - 1)) == vung:
+        c -= 1
+    return r, c
+
+
+def thong_ke_vung_chon(bang) -> dict:
+    """Bộ đếm kiểu Excel của vùng đang chọn: so_dem (ô có chữ hiển thị), so_so (ô số được cộng), tong, trung_binh (Decimal / None),
+    so_le (chữ số lẻ nhiều nhất của các số), chuoi ("Trung bình: …     Tổng số đếm: n     Tổng: …"; chỉ chữ: "Tổng số đếm: n"; dưới
+    2 ô có chữ: ''). Bỏ dòng / cột ẩn; ô gộp tính một lần (ô trên trái); cột định danh (la_cot_dinh_danh) chỉ đếm, không cộng."""
+    from .tien import D
+    kq = dict(so_dem=0, so_so=0, tong=D(0), trung_binh=None, so_le=0, chuoi='')
+    try:
+        sm, m = bang.selectionModel(), bang.model()
+    except RuntimeError:
+        return kq
+    if sm is None or m is None:
+        return kq
+    dinh_danh, da_gop = {}, set()
+    for i in sm.selectedIndexes():
+        r, c = i.row(), i.column()
+        if bang.isRowHidden(r) or bang.isColumnHidden(c):
+            continue
+        if bang.rowSpan(r, c) > 1 or bang.columnSpan(r, c) > 1:
+            r, c = _goc_gop(bang, r, c)
+            if (r, c) in da_gop:
+                continue
+            da_gop.add((r, c))
+            i = m.index(r, c)
+        v = i.data(Qt.ItemDataRole.DisplayRole)
+        chu = '' if v is None else str(v).strip()
+        if not chu:
+            continue
+        kq['so_dem'] += 1
+        if c not in dinh_danh:
+            dinh_danh[c] = la_cot_dinh_danh(bang, c)
+        if dinh_danh[c]:
+            continue
+        so = doc_so_o(chu)
+        if so is None:
+            continue
+        kq['so_so'] += 1
+        kq['tong'] += so[0]
+        kq['so_le'] = max(kq['so_le'], min(so[1], SO_LE_DEM_TOI_DA))
+    if kq['so_so']:
+        kq['trung_binh'] = kq['tong'] / kq['so_so']
+    kq['chuoi'] = chu_thong_ke(kq)
+    return kq
+
+
+def so_bo_dem(x, so_le: int) -> str:
+    """Số trên bộ đếm: theo số chữ số lẻ của dữ liệu (215,1 + 459,4 -> "674,5"; số nguyên -> không lẻ); số lẻ hơn mà dữ liệu nguyên
+    (trung bình 7 / 2) -> 1 chữ số lẻ."""
+    from .tien import lam_tron, vn
+    if not so_le and x != x.to_integral_value():
+        so_le = 1
+    return vn(lam_tron(x, so_le), so_le) if so_le else vn(x)
+
+
+def chu_thong_ke(kq: dict) -> str:
+    n = kq['so_dem']
+    if n < 2:
+        return ''
+    if not kq['so_so']:
+        return f'Tổng số đếm: {n}'
+    return (f'Trung bình: {so_bo_dem(kq["trung_binh"], kq["so_le"])}     Tổng số đếm: {n}     '
+            f'Tổng: {so_bo_dem(kq["tong"], kq["so_le"])}')
+
+
+class NhanBoDem(QLabel):
+    """Nhãn bộ đếm (nền xanh lá nhạt): bấm -> chép Tổng vào clipboard + thông báo nổi. Ẩn khi không có gì để đếm."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName('lb_bo_dem_excel')
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip('Bộ đếm vùng chọn (như thanh trạng thái Excel). Bấm để sao chép Tổng')
+        self.tk = None
+        self.hide()
+
+    def dat(self, tk: dict | None) -> None:
+        self.tk = tk
+        chu = (tk or {}).get('chuoi') or ''
+        self.setText(chu)
+        self.setVisible(bool(chu))
+
+    def chu_tong(self) -> str:
+        tk = self.tk or {}
+        return so_bo_dem(tk['tong'], tk['so_le']) if tk.get('so_so') else ''
+
+    def sao_chep_tong(self) -> str:
+        chu = self.chu_tong()
+        if chu:
+            _ghi_clipboard(chu)
+            thong_bao_noi(self, f'Đã sao chép tổng: {chu}')
+        return chu
+
+    def mouseReleaseEvent(self, e):
+        if e.button() == Qt.MouseButton.LeftButton and self.rect().contains(e.pos()):
+            self.sao_chep_tong()
+        super().mouseReleaseEvent(e)
+
+
+class _VienVungChon(QWidget):
+    """Viền xanh lá quanh từng vùng chọn (kiểu Excel). Con của BẢNG (không phải viewport: viewport.scroll dời cả widget con), phủ
+    đúng vùng viewport, trong suốt với chuột; vẽ lại khi vùng chọn / cuộn / đổi cỡ cột, dòng."""
+
+    def __init__(self, bang):
+        super().__init__(bang)
+        self.bang = bang
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.vua()
+        self.show()
+
+    def vua(self, *a) -> None:
+        try:
+            self.setGeometry(self.bang.viewport().geometry())
+        except RuntimeError:
+            pass
+
+    def ve_lai(self, *a) -> None:
+        self.update()
+
+    def paintEvent(self, e):
+        b = self.bang
+        sm = b.selectionModel()
+        if sm is None or not sm.hasSelection():
+            return
+        from PySide6.QtGui import QPen
+        p = QPainter(self)
+        p.setPen(QPen(QColor(MAU_VIEN_CHON), 2))
+        for vung in list(sm.selection())[:VUNG_VE_TOI_DA]:
+            tren, duoi, trai, phai = vung.top(), vung.bottom(), vung.left(), vung.right()
+            x0, y0 = b.columnViewportPosition(trai), b.rowViewportPosition(tren)
+            x1 = b.columnViewportPosition(phai) + b.columnWidth(phai)
+            y1 = b.rowViewportPosition(duoi) + b.rowHeight(duoi)
+            if x1 <= x0 or y1 <= y0 or x0 < -100000:
+                continue
+            p.drawRect(QRect(x0 + 1, y0 + 1, x1 - x0 - 2, y1 - y0 - 2))
+        p.end()
+
+
+class _BoChonVung(QObject):
+    """Gắn trên mỗi bảng (con của bảng - hủy cùng bảng, tín hiệu tự ngắt): bấm cột STT chọn cả dòng, viền vùng chọn, bộ đếm."""
+
+    def __init__(self, bang):
+        super().__init__(bang)
+        self.bang = bang
+        self.sm = None
+        self.neo = -1
+        self.vien = _VienVungChon(bang)
+        self.nhan_noi = None
+        self.hen = QTimer(self)
+        self.hen.setSingleShot(True)
+        self.hen.setInterval(CHO_BO_DEM_MS)
+        self.hen.timeout.connect(self.dem)
+        bang.pressed.connect(self.bam)
+        for sb in (bang.verticalScrollBar(), bang.horizontalScrollBar()):
+            sb.valueChanged.connect(self.vien.ve_lai)
+        for h in (bang.horizontalHeader(), bang.verticalHeader()):
+            h.sectionResized.connect(self.vien.ve_lai)
+            h.sectionMoved.connect(self.vien.ve_lai)
+        bang.installEventFilter(self)
+
+    def gan_sm(self) -> None:
+        sm = self.bang.selectionModel()
+        if sm is None or sm is self.sm:
+            return
+        self.sm = sm
+        sm.selectionChanged.connect(self.doi)
+        m = sm.model()
+        if m is not None:
+            m.modelReset.connect(self.doi)
+            m.layoutChanged.connect(self.doi)
+
+    def eventFilter(self, obj, ev):
+        if obj is self.bang and ev.type() in (QEvent.Type.Resize, QEvent.Type.Show, QEvent.Type.LayoutRequest):
+            self.vien.vua()
+            self._dat_nhan_noi()
+        return False
+
+    def bam(self, idx) -> None:
+        """Bấm ô cột STT: chọn nguyên dòng (Ctrl: thêm dòng, Shift: dải dòng từ dòng bấm trước)."""
+        b = self.bang
+        if not idx.isValid() or _ten_cot_chuan(b, idx.column()) not in COT_CHON_DONG:
+            return
+        from PySide6.QtCore import QItemSelection, QItemSelectionModel
+        md = QApplication.keyboardModifiers()
+        m, sm = b.model(), b.selectionModel()
+        if sm is None or m is None or m.columnCount() == 0:
+            return
+        r = idx.row()
+        r0 = r
+        if md & Qt.KeyboardModifier.ShiftModifier and 0 <= self.neo < m.rowCount():
+            r0 = self.neo
+        else:
+            self.neo = r
+        F = QItemSelectionModel.SelectionFlag
+        co = F.Select if md & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier) else F.ClearAndSelect
+        sm.select(QItemSelection(m.index(min(r0, r), 0), m.index(max(r0, r), m.columnCount() - 1)), co | F.Rows)
+
+    def doi(self, *a) -> None:
+        self.vien.ve_lai()
+        sm = self.sm
+        try:
+            n = len(sm.selectedIndexes()) if sm is not None else 0
+        except RuntimeError:
+            return
+        if n <= CHON_TOI_DA_NGAY:
+            self.hen.stop()
+            self.dem()
+        else:
+            self.hen.start()
+
+    def dem(self) -> None:
+        b = self.bang
+        try:
+            w = b.window()
+        except RuntimeError:
+            return
+        tk = thong_ke_vung_chon(b)
+        ham = getattr(w, 'cap_nhat_bo_dem', None)
+        if callable(ham):
+            ham(b, tk)
+            return
+        if self.nhan_noi is None:
+            if not tk['chuoi']:
+                return
+            self.nhan_noi = NhanBoDem(b)
+        self.nhan_noi.dat(tk)
+        self._dat_nhan_noi()
+
+    def _dat_nhan_noi(self) -> None:
+        n = self.nhan_noi
+        if n is None or not n.isVisible():
+            return
+        n.adjustSize()
+        vp = self.bang.viewport().geometry()
+        n.move(max(0, vp.right() - n.width() - 6), max(0, vp.bottom() - n.height() - 6))
+        n.raise_()
+
+
+def cho_chon_vung_o(bang) -> None:
+    """Bảng chọn từng ô + nhiều vùng (Excel); tiêu đề hàng dọc bấm được. Gọi lại không làm gì."""
+    from PySide6.QtWidgets import QTableView
+    if not isinstance(bang, QTableView) or bang.property('_chon_vung'):
+        return
+    bang.setProperty('_chon_vung', True)
+    V = QAbstractItemView
+    bang.setSelectionBehavior(V.SelectionBehavior.SelectItems)
+    if bang.selectionMode() != V.SelectionMode.NoSelection:
+        bang.setSelectionMode(V.SelectionMode.ExtendedSelection)
+    vh = bang.verticalHeader()
+    vh.setSectionsClickable(True)                       # QTableView tự nối sectionPressed -> selectRow
+    vh.setHighlightSections(True)
+
+
+def gan_bo_dem(bang) -> None:
+    """Gắn bộ đếm + viền vùng chọn + bấm STT chọn dòng cho bảng (gọi lại: chỉ nối lại khi bảng đã đổi selectionModel)."""
+    from PySide6.QtWidgets import QTableView
+    if not isinstance(bang, QTableView):
+        return
+    bo = next((x for x in bang.children() if isinstance(x, _BoChonVung)), None)
+    if bo is None:
+        bo = _BoChonVung(bang)
+    bo.gan_sm()
 
 
 # ---------------------------------------------------------------- bảng xem trước dữ liệu thô (1.0.04): lọc nhanh + tô dòng lỗi

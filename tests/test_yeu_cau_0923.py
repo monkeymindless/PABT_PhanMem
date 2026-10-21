@@ -114,7 +114,7 @@ class TestCuaSoChinh(CoSoCuaSo):
         from PySide6.QtCore import QItemSelectionModel
         w.bang.selectionModel().select(w.loc.index(1, 0), QItemSelectionModel.SelectionFlag.Select |
                                        QItemSelectionModel.SelectionFlag.Rows)
-        self.assertIn('Đã chọn: 2 hộ', w.lb_tom_tat.text())                 # số hộ chọn ở thanh trạng thái
+        self.assertIn('Đang chọn: 2 hộ', w.lb_tom_tat.text())                 # số hộ chọn ở thanh trạng thái
         # thẻ số liệu bấm để lọc; Số hộ = bỏ lọc
         n = w.loc.rowCount()
         w.mo_trang(4)
