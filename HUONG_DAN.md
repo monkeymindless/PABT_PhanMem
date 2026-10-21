@@ -1,5 +1,11 @@
 # Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.06 – Bản Tiêu chuẩn · Sử dụng nội bộ)
 
+> **1.0.11**: bảng chọn ô kiểu **Excel** (kéo bôi đen vùng, góc dưới hiện Trung bình · Tổng số đếm · Tổng); thẻ số liệu ghi thêm
+> số thửa / diện tích, **Ctrl+Shift+T** mở Thống kê Hộ · Thửa · Diện tích. Bản in chi tiết không còn hở cuối trang 1; bảng tổng hợp A3
+> lấp đầy trang; **Xuất hồ sơ & Bản in** có thêm bản **Word (.docx)** phương án chi tiết theo Nghị định 30 (tích sẵn, nhớ lựa
+> chọn); chọn thêm **Xuất PDF + Gộp PDF** thì được một file `PHUONG_AN_CHI_TIET.pdf` cho cả đợt. Hộ Word xuất quá 15 giây được bỏ
+> qua để lô chạy tiếp; hộ không có PDF từ Word được dựng PDF gần đúng từ bản Excel.
+
 > **1.0.10**: **Dán danh sách tài sản** hiểu kích thước là diện tích - `Nhà tạm 4,7x3,0`, `Nhà tạm 4,7*3,0`, `Nhà tạm 3,7m x 4,3m`,
 > `Nhà tạm 3,7 * 4,3` đều thành **m²** (khối lượng = dài × rộng, phép tính hiện ở chú thích ô Số lượng). `Nhà tạm 42m2 (thửa 123)`:
 > 42 m², phần trong ngoặc vào Ghi chú. Ba số nhân nhau cần ghi đơn vị (`Bể nước 2x3x1,5 m3`); có cột ĐVT khác (`cây`) thì theo ĐVT đó.

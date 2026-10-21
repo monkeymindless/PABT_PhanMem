@@ -269,7 +269,9 @@ class TestHopInCheDo(_Co):
         h.o_thu_muc.setText(str(self.td / 'dt'))
         kq = h.thuc_hien(xac_nhan=False)
         self.assertEqual(len(kq['excel']), 2 + 1)                                # 2 hộ + bảng tổng hợp; không tờ trình / báo cáo
-        self.assertEqual(kq['word'], [])
+        # Word chỉ có bản phương án chi tiết từng hộ (21/10/2026: tích sẵn) - dự thảo không tờ trình / báo cáo
+        self.assertEqual(len(kq['word']), 2)
+        self.assertTrue(all(p.name.startswith('PA_') for p in kq['word']))
         chu = ' '.join(str(c.value) for f in kq['excel'] for ws in openpyxl.load_workbook(f).worksheets for r in ws.iter_rows()
                        for c in r if isinstance(c.value, str))
         self.assertIn('DỰ THẢO', chu.upper())
@@ -282,7 +284,8 @@ class TestHopInCheDo(_Co):
         self.assertEqual(h2.o_thu_muc.text(), str(self.td / 'hso' / 'Đợt A - 2 hộ'))
         h2.r_excel.setChecked(True)
         kq = h2.thuc_hien(xac_nhan=False)
-        self.assertEqual(sorted(p.name for p in kq['word']), ['BAO_CAO_TIEP_THU_Y_KIEN.docx', 'TO_TRINH.docx'])   # trọn bộ 4
+        self.assertEqual(sorted(p.name for p in kq['word'] if not p.name.startswith('PA_')),
+                         ['BAO_CAO_TIEP_THU_Y_KIEN.docx', 'TO_TRINH.docx'])   # trọn bộ 4
         self.assertEqual(quan_ly.lay_dot(self.con, d).thu_muc, str(self.td / 'hso' / 'Đợt A - 2 hộ'))
 
     def test_doi_ten_thu_muc_dot_khi_so_ho_doi(self):

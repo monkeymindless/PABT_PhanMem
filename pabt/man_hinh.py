@@ -2741,6 +2741,7 @@ class HopRaSoat(QDialog):
 
 # ---------------------------------------------------------------- in / xuất
 # mô tả hai chế độ phát hành (chú thích nút chọn - 16/10/2026 bỏ dòng ghi chú dưới nút cho gọn cửa sổ)
+KHOA_WORD_CT = 'in_an/dung_word_chi_tiet'           # QSettings: nhớ ô "Xuất bản Word (.docx)" của Xuất hồ sơ & Bản in
 MO_TA_CHE_DO = {
     'du_thao': 'In bằng mẫu chính, CÓ chữ "(DỰ THẢO)" (mẫu chưa có thì phần mềm tự thêm dưới dòng "Số:" và vào tiêu đề bảng '
                'tổng hợp), chưa ghi số phương án, in đủ số CCCD; dùng khi niêm yết và họp dân lấy ý kiến.',
@@ -2836,6 +2837,18 @@ class HopIn(QDialog):
         self.o_ct = QCheckBox('Phương án chi tiết từng hộ (.xlsx / .pdf)')
         self.o_ct.setToolTip('Mẫu IN_CHITIET, A4 dọc - sửa ở "Sửa mẫu in trong Excel…"')
         self.o_ct.setChecked(True)
+        # 21/10/2026 (người dùng): phương án chi tiết bản Word thể thức NĐ 30 - Word cắt được dòng ghi chú / nguồn gốc dài qua trang
+        # (Excel không); có bản Word thì PDF / in lấy từ bản Word, file Excel vẫn lưu cạnh để sửa
+        self.o_word = QCheckBox('Xuất bản Word (.docx) chuẩn Nghị định 30')
+        self.o_word.setToolTip('Phương án chi tiết từng hộ thêm bản Word: A4, lề trái 30 mm, phải 15 mm, trên / dưới 20 mm; hàng '
+                               'tiêu đề bảng lặp mỗi trang, dòng dài tự chuyển trang không để trang trước hở. Có bản Word thì PDF / '
+                               'in ra máy lấy từ bản Word.')
+        # 21/10/2026 (người dùng): tích sẵn, nhớ lựa chọn lần trước (QSettings KHOA_WORD_CT)
+        from .giao_dien import cai_dat_nho, doc_bool
+        cai = cai_dat_nho()
+        self.o_word.setChecked(doc_bool(cai.value(KHOA_WORD_CT) if cai is not None else None, True))
+        self.o_word.toggled.connect(self._nho_word)
+        self.o_ct.toggled.connect(lambda co: self.o_word.setEnabled(co))
         self.o_bth = QCheckBox('Bảng tổng hợp kinh phí phương án (.xlsx)')
         self.o_bth.setToolTip('Mẫu IN_BANGTONGHOP, A3 ngang')
         self.o_bth.setChecked(not self.ma_ho_chon)
@@ -2966,6 +2979,7 @@ class HopIn(QDialog):
         self.b_xem_bth.clicked.connect(lambda: self.xem_truoc_bang_tong_hop())
         self.the_tai_lieu = {}
         for r, (o, chu, loai) in enumerate(((self.o_ct, 'Mẫu chuẩn', 'lam'),
+                                            (self.o_word, 'NĐ 30/2020', 'lam'),          # ngay dưới phương án chi tiết, lùi vào
                                             (self.o_bth, f'Tách {chu_pb} QĐ 08' if chu_pb else 'Kinh phí QĐ 08', 'xanh'),
                                             (self.o_tt, 'Chỉ mở ở Chính thức', 'xam'),
                                             (self.o_bc, 'Chỉ mở ở Chính thức', 'xam'))):
@@ -2976,6 +2990,7 @@ class HopIn(QDialog):
             dat_the_nho(t, loai)
             luoi.addWidget(t, r, 2, Qt.AlignmentFlag.AlignRight)
             self.the_tai_lieu[o] = t
+        self.o_word.setStyleSheet('QCheckBox { margin-left: 22px; }')
         luoi.setColumnStretch(0, 1)
         form.addRow('Tài liệu xuất bản:', self.khung_tai_lieu)
         form.addRow('', hang_mau_in)
@@ -3229,6 +3244,12 @@ class HopIn(QDialog):
                              (f' — trong đó {tu_lap} hộ phương án tự lập CHƯA SOÁT' if tu_lap else '') +
                              (f', {chua} hộ chưa có phương án' if chua else '') + '.')
 
+    def _nho_word(self, co: bool):
+        from .giao_dien import cai_dat_nho
+        cai = cai_dat_nho()
+        if cai is not None:
+            cai.setValue(KHOA_WORD_CT, bool(co))
+
     def _bat_tuy_chon(self):
         self.o_gop.setEnabled(self.r_pdf.isChecked())
         self.o_so_ban.setEnabled(self.r_in.isChecked())
@@ -3361,7 +3382,7 @@ class HopIn(QDialog):
             if tien.maximum() != n:
                 tien.setMaximum(n)
             tien.setValue(min(i, n))
-            tien.setLabelText(f'Microsoft Excel đang {viec}: xong {i}/{n} file…' +
+            tien.setLabelText(f'Microsoft Excel / Word đang {viec}: xong {i}/{n} file…' +
                               ('\n(Đang dừng sau file hiện tại…)' if tien.wasCanceled() else ''))
             QApplication.processEvents()
             return tien.wasCanceled()
@@ -3370,6 +3391,7 @@ class HopIn(QDialog):
                 # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
                 kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=dot, pdf=self.r_pdf.isChecked(), in_may=in_may,
                                       mau_ct=None, mau_bth=None, lan=self.lan_in(),
+                                      chi_tiet_word=self.o_word.isChecked() and self.o_word.isEnabled(),
                                       du_thao=self.che_do() == 'du_thao', so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
                                       **chon)
                 ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]
@@ -3405,6 +3427,8 @@ class HopIn(QDialog):
              (f', {len(kq["pdf"])} file PDF' if kq['pdf'] else '') + \
              (f' (gộp: {kq["gop"].name})' if kq.get('gop') else '') + \
              (' và gửi tới máy in' if in_may and not kq['loi'] else '') + f'.\nThư mục: {thu_muc}'
+        if kq.get('du_phong'):                          # Word treo / không có Word: PDF hộ đó dựng từ bản Excel
+            tb += f'\n\n{len(kq["du_phong"])} hộ Word không xuất được PDF: đã dựng PDF gần đúng từ bản Excel.'
         if kq['loi']:
             tb += ('\n\nChưa xong:' if dung else '\n\nLỗi:') + '\n' + \
                 '\n'.join(x.replace('\t\t', ' – ').replace('\t', ' – ') for x in kq['loi'][:10])

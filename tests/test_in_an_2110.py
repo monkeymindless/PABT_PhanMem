@@ -1,0 +1,413 @@
+"""Bản in 21/10/2026 (người dùng: "bảng tổng hợp A3 / phương án chi tiết tràn trang, trang trước còn trống nhiều"). Số liệu GIẢ LẬP.
+- Bảng tổng hợp: cột số toàn 0 thu hẹp nhường cột nguồn gốc; dòng thửa cao chia nhiều dòng Excel; xếp trang theo từng dòng - mọi trang
+  trừ trang cuối lấp >= 85%; tổ chức có Thửa 16 + 17 nguồn gốc dài.
+- Phương án chi tiết bản Word (in_word): lề NĐ 30, hàng tiêu đề lặp (tblHeader), dòng dài được cắt qua trang, khối cuối không tách.
+"""
+from __future__ import annotations
+
+import os
+import re
+import tempfile
+import unittest
+import zipfile
+from pathlib import Path
+from unittest import mock
+from xml.etree import ElementTree as ET
+
+os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+
+import openpyxl                                                                  # noqa: E402
+from PySide6.QtWidgets import QApplication                                       # noqa: E402
+
+from pabt import csdl, dia_phuong, in_an, in_word                                # noqa: E402
+
+CAU = 'Đất giả lập do Ủy ban nhân dân xã quản lý, sử dụng ổn định từ năm 1995, không tranh chấp, phù hợp quy hoạch sử dụng đất. '
+W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+
+
+def _du_an(td: Path, n_truoc: int, k: int, n_sau: int = 6) -> Path:
+    """n_truoc hộ một thửa, tổ chức "UBND xã Mẫu" có Thửa 16 và 17 (nguồn gốc riêng từng thửa, k câu), n_sau hộ."""
+    from pabt import du_an_moi
+    dong = [dict(ho_ten=f'Hộ trước {i}', dia_chi='Ấp 1', so_to='3', so_thua=str(200 + i), loai_dat='CLN', dt_thu_hoi=str(100 + i),
+                 vi_tri='1') for i in range(n_truoc)]
+    dong += [dict(ho_ten='UBND xã Mẫu', dia_chi='Ấp 2', so_to='9', so_thua=so, loai_dat='CLN', dt_thu_hoi='350', vi_tri='1')
+             for so in ('16', '17')]
+    dong += [dict(ho_ten=f'Hộ sau {i}', dia_chi='Ấp 3', so_to='4', so_thua=str(300 + i), loai_dat='CLN', dt_thu_hoi=str(80 + i),
+                  vi_tri='1') for i in range(n_sau)]
+    p = td / f'bth_{n_truoc}_{k}.pabt'
+    du_an_moi.tao_du_an(p, dict(ten='Thử', cap_dia_ban='Xã', ten_dia_ban='Mẫu', nam='2026'), dong,
+                        [dict(loai_dat='CLN', vi_tri='1', gia='250000')])
+    con = csdl.mo(p)
+    try:
+        with con:
+            for so in ('16', '17'):
+                con.execute('UPDATE thua SET nguon_goc = ? WHERE so_thua = ?', (f'Thửa {so}: ' + CAU * k, so))
+    finally:
+        con.close()
+    return p
+
+
+def _trang(ws) -> list:
+    ngat = sorted(b.id for b in ws.row_breaks.brk)
+    m = re.search(r'\$?(\d+)$', str(ws.print_area or '').split(',')[0])
+    dau, kq = 1, []
+    for e in ngat + [int(m.group(1)) if m else ws.max_row]:
+        kq.append((dau, e))
+        dau = e + 1
+    return kq
+
+
+class _Co(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.td = Path(self.tmp.name)
+        # đo chữ cố định (như test_in_vua_chu): offscreen không có phông Windows
+        do = lambda s, ten, co, dam: len(s) * co * (0.52 if dam else 0.47)      # noqa: E731
+        self._vo = mock.patch.object(in_an, '_ham_do_chu', lambda: do)
+        self._vo.start()
+
+    def tearDown(self):
+        self._vo.stop()
+        self.doCleanups()
+        self.tmp.cleanup()
+
+    def mo(self, p):
+        con = csdl.mo(p)
+        self.addCleanup(con.close)
+        return con
+
+
+class TestBangTongHopA3(_Co):
+    def test_cot_khong_nhuong_cho_nguon_goc(self):
+        con = self.mo(_du_an(self.td, 10, 14))
+        from openpyxl.utils import get_column_letter as g
+        K = dia_phuong.cot_mau(in_an.TEN_BTH)
+        ws = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / 'moi.xlsx')).active
+        with mock.patch.object(in_an, 'thu_cot_khong_bth', lambda *a, **k: 0.0):
+            ws0 = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / 'cu.xlsx')).active
+
+        def rong(w, k):
+            return float(w.column_dimensions[g(K[k])].width)
+        # dự án chỉ có đất: tài sản, cây trồng, ổn định đời sống, diện tích đất ở... toàn 0 -> thu hẹp
+        for k in ('tien_tai_san', 'tien_cay_vat_nuoi', 'ho_tro_on_dinh', 'dt_o'):
+            self.assertLess(rong(ws, k), rong(ws0, k), k)
+            self.assertGreaterEqual(rong(ws, k), in_an.RONG_COT_KHONG_BTH - 0.01, k)
+        self.assertGreater(rong(ws, 'nguon_goc'), rong(ws0, 'nguon_goc') * 1.3)        # nguồn gốc rộng hơn rõ rệt
+        self.assertEqual(int(ws.page_setup.scale), int(ws0.page_setup.scale))          # tổng bề rộng (tỷ lệ in) không đổi
+        self.assertFalse(ws.sheet_properties.pageSetUpPr.fitToPage)                     # ngắt tay giữ hiệu lực
+        chu_16 = con.execute("SELECT nguon_goc FROM thua WHERE so_thua = '16'").fetchone()[0]
+
+        def so_dong_16(w):                              # số dòng chữ nguồn gốc Thửa 16 ở bề rộng cột nguồn gốc của bảng
+            r = next(r for r in range(13, w.max_row + 1) if str(w.cell(r, K['so_thua']).value) == '16')
+            ten, co, dam = in_an._phong(w.cell(r, K['nguon_goc']))
+            return in_an.so_dong_o(chu_16, in_an._rong_vung(w, K['nguon_goc'], K['nguon_goc']), ten, co, dam)
+        self.assertLess(so_dong_16(ws), so_dong_16(ws0) * 0.8)                           # ít dòng chữ hơn rõ rệt
+        # chữ dài hơn 409 pt: chia nhiều dòng Excel gộp ô, đủ cao cho chữ (trước đây một dòng bị chặn 409 pt - mất chữ)
+        cao = in_an._ham_cao(ws)
+        r16 = next(r for r in range(13, ws.max_row + 1) if str(ws.cell(r, K['so_thua']).value) == '16')
+        r17 = next(r for r in range(r16 + 1, ws.max_row + 1) if ws.cell(r, K['so_thua']).value)
+        self.assertGreaterEqual(sum(cao(r) for r in range(r16, r17)),
+                                in_an.cao_dong_bang(so_dong_16(ws), in_an._phong(ws.cell(r16, K['nguon_goc']))[1], None) - 0.5)
+
+    def test_trang_lap_85_va_khong_dong_qua_409(self):
+        gap_tach = 0
+        for n in range(4, 40, 3):
+            con = csdl.mo(_du_an(self.td, n, 18))
+            ws = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / f'b{n}.xlsx')).active
+            con.close()
+            cao = in_an._ham_cao(ws)
+            cap = in_an.cao_trang_in(ws)
+            td = sum(cao(r) for r in range(9, 13))                 # hàng tiêu đề cột lặp đầu các trang sau
+            trang = _trang(ws)
+            for i, (a, b) in enumerate(trang[:-1]):
+                dung = sum(cao(r) for r in range(a, b + 1)) + (td if a > 12 else 0)
+                self.assertGreaterEqual(dung, 0.85 * cap, f'n={n} trang {i + 1}: {dung / cap:.0%}')
+            self.assertTrue(all(cao(r) <= in_an.CAO_TOI_DA for r in range(13, ws.max_row + 1)), n)
+            for a, b in trang[1:]:                                   # trang sau bắt đầu giữa hộ: lặp STT, họ tên
+                if ws.cell(a, 2).value is None and a < trang[-1][1]:
+                    continue
+                if ws.cell(a, 2).value == 'UBND xã Mẫu':
+                    gap_tach += 1
+                    self.assertIsNotNone(ws.cell(a, 1).value)
+            for m in ws.merged_cells.ranges:                         # không vùng gộp nào vắt qua ranh trang
+                if m.min_row >= 13:
+                    self.assertFalse(any(m.min_row <= e < m.max_row for _, e in trang[:-1]), f'n={n} {m}')
+        self.assertGreater(gap_tach, 0)
+
+    def test_hai_thua_cung_trang_khi_vua(self):
+        # còn đủ chỗ: Thửa 16 và 17 cùng trang 1 với các hộ trước (không đẩy cả tổ chức sang trang sau)
+        con = self.mo(_du_an(self.td, 3, 6, 2))
+        ws = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / 'b.xlsx')).active
+        K = dia_phuong.cot_mau(in_an.TEN_BTH)
+        r16 = next(r for r in range(13, ws.max_row + 1) if str(ws.cell(r, K['so_thua']).value) == '16')
+        r17 = next(r for r in range(13, ws.max_row + 1) if str(ws.cell(r, K['so_thua']).value) == '17')
+        t = _trang(ws)
+        trang_cua = lambda r: next(i for i, (a, b) in enumerate(t) if a <= r <= b)      # noqa: E731
+        self.assertEqual(trang_cua(r16), 0)
+        self.assertEqual(trang_cua(r17), 0)
+
+
+def _xml(p: Path) -> ET.Element:
+    with zipfile.ZipFile(p) as z:
+        return ET.fromstring(z.read('word/document.xml'))
+
+
+class TestWordNghiDinh30(_Co):
+    def setUp(self):
+        super().setUp()
+        from tests.test_trang_1_khong_ho import _du_an as du_an_1_ho, GHI_CHU, NGUON
+        self.con = self.mo(du_an_1_ho(self.td))
+        with self.con:
+            self.con.execute('UPDATE thua SET nguon_goc = ?', (NGUON * 20,))
+            self.con.execute('UPDATE ct_dat SET ghi_chu = ?', (GHI_CHU * 2,))
+
+    def test_le_va_bang(self):
+        p = in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx')
+        x = _xml(p)
+        mar = x.find(f'.//{W}sectPr/{W}pgMar')
+        mm = {k: round(int(mar.get(W + k)) / 1440 * 25.4) for k in ('left', 'right', 'top', 'bottom')}
+        self.assertEqual(mm, dict(left=30, right=15, top=20, bottom=20))
+        sz = x.find(f'.//{W}sectPr/{W}pgSz')
+        self.assertEqual((sz.get(W + 'w'), sz.get(W + 'h')), ('11906', '16838'))          # A4 dọc
+        bang = [t for t in x.iter(W + 'tbl') if any(r.find(f'{W}trPr/{W}tblHeader') is not None for r in t.iter(W + 'tr'))]
+        self.assertEqual(len(bang), 1)                                                    # bảng mục III
+        hang = list(bang[0].iter(W + 'tr'))
+        self.assertIsNotNone(hang[0].find(f'{W}trPr/{W}tblHeader'))                      # hàng tiêu đề cột lặp mỗi trang
+        self.assertTrue(all(h.find(f'{W}trPr/{W}tblHeader') is None for h in hang[1:]))
+
+        def chu(h):
+            return ''.join(t.text or '' for t in h.iter(W + 't'))
+
+        def tach(h):
+            return h.find(f'{W}trPr/{W}cantSplit').get(W + 'val')
+        dong_11 = next(h for h in hang if chu(h).startswith('1.1'))
+        self.assertEqual(tach(dong_11), '0')                    # ghi chú dài: Word được cắt qua trang
+        tong = next(h for h in hang if 'TỔNG CỘNG' in chu(h))
+        self.assertEqual(tach(tong), '1')
+        self.assertIn('LẬP BIỂU', chu(x))
+        ky = [t for t in x.iter(W + 'tbl') if 'LẬP BIỂU' in chu(t)][0]
+        self.assertTrue(all(tach(h) == '1' for h in ky.iter(W + 'tr')))                 # chữ ký không tách khỏi họ tên
+        self.assertIn('120,0', chu(dong_11))
+        self.assertIn('40.000.000', chu(tong))                 # đất 30 triệu + thưởng + hỗ trợ
+        self.assertNotIn('DỰ THẢO', chu(x))
+
+    def test_du_thao_khong_chu_ky(self):
+        x = _xml(in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'dt.docx', du_thao=True))
+        s = ''.join(t.text or '' for t in x.iter(W + 't'))
+        self.assertIn('(DỰ THẢO)', s)
+        self.assertNotIn('LẬP BIỂU', s)
+
+    def test_xuat_bo_ho_so_va_hop_in(self):
+        from pabt import van_ban_trinh as vb
+        kq = vb.xuat_bo_ho_so(self.con, [1], self.td / 'hs', bang_tong_hop=False, chi_tiet_word=True)
+        self.assertEqual([p.suffix for p in kq['word']], ['.docx'])
+        self.assertEqual([p.suffix for p in kq['excel']], ['.xlsx'])                   # bản Excel vẫn lưu cạnh
+        self.assertEqual(kq['word'][0].stem, kq['excel'][0].stem)
+        from pabt.man_hinh import HopIn
+        h = HopIn(self.con, None, ma_ho_chon=[1], file_du_an=str(self.td / 'x.pabt'), che_do='chinh_thuc')
+        self.addCleanup(h.close)
+        self.assertTrue(h.o_word.isChecked())                                           # 21/10/2026: tích sẵn
+        h.o_ct.setChecked(False)
+        self.assertFalse(h.o_word.isEnabled())                                          # chỉ đi kèm phương án chi tiết
+        h.o_ct.setChecked(True)
+        h.o_word.setChecked(True)
+        for o in (h.o_bth, h.o_tt, h.o_bc):
+            o.setChecked(False)
+        h.r_excel.setChecked(True)
+        h.o_thu_muc.setText(str(self.td / 'hop'))
+        kq = h.thuc_hien(xac_nhan=False)
+        self.assertEqual(len(kq['word']), 1)
+        self.assertTrue(kq['word'][0].exists())
+
+    def test_1000_ho_nhanh(self):
+        # 1.000 file .docx: chỉ dựng chuỗi XML (không Word) - mỗi hộ vài ms
+        import time
+        t = time.perf_counter()
+        for i in range(50):
+            in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'nhieu' / f'{i}.docx')
+        self.assertLess((time.perf_counter() - t) / 50 * 1000, 60.0)                 # < 60 s cho 1.000 hộ
+
+
+class TestLamSachDoanVan(unittest.TestCase):
+    """Xuống dòng cứng giữa câu (ô Excel nhập vào: "Đoàn / Thanh niên", "chủ hợp / đồng") nối lại; đoạn mới chỉ ở gạch đầu dòng /
+    hết câu / dòng trống."""
+
+    def test_noi_giua_cau_giu_doan(self):
+        from pabt.ho_so import lam_sach_doan_van
+        chu = ('Căn cứ Giấy xác nhận của Đoàn\nThanh niên xã, đất do ông A nhận chuyển nhượng theo chủ hợp\nđồng năm 1995 được UBND '
+               'tỉnh\r\nĐồng Nai công nhận.\nĐất sử dụng gồm:\n- đất ở\n- đất trồng cây\nlâu năm\n\nGhi chú khác\u2028tiếp theo.')
+        self.assertEqual(lam_sach_doan_van(chu), [
+            'Căn cứ Giấy xác nhận của Đoàn Thanh niên xã, đất do ông A nhận chuyển nhượng theo chủ hợp đồng năm 1995 được UBND tỉnh '
+            'Đồng Nai công nhận.',
+            'Đất sử dụng gồm:', '- đất ở', '- đất trồng cây lâu năm', 'Ghi chú khác tiếp theo.'])
+        self.assertEqual(lam_sach_doan_van(''), [])
+
+    def test_excel_chi_cat_o_het_cau(self):
+        """Đoạn dài hơn toi_da dòng: khối cắt sau dòng hết câu; không có thì kéo dài tới chỗ hết câu (trần toi_da_cung)."""
+        do = lambda s, ten, co, dam: len(s) * 6.0                                    # noqa: E731
+        cau = 'aa bb cc dd ee ff gg hh ii kk ll mm nn oo pp qq rr ss tt uu vv xx yy zz.'
+        khoi = in_an._chia_doan_van(cau * 3, 60, 'T', 14, False, do, 2, treo=False, toi_da_cung=40)
+        for k in khoi[:-1]:
+            self.assertTrue(k[-1][0].rstrip().endswith('.'), k)                      # mọi khối (trừ cuối) hết ở dấu chấm
+        self.assertEqual(' '.join(x for k in khoi for x, _ in k).split(), (cau * 3).split())   # không mất chữ
+
+
+class TestNghiDinh30CoChu(_Co):
+    """Phương án chi tiết bản Word: Mục II không cụt chữ giữa câu; trích yếu "VÀ"; cỡ chữ Phụ lục I NĐ 30 (w:sz = 2 x pt)."""
+
+    def setUp(self):
+        super().setUp()
+        from tests.test_trang_1_khong_ho import _du_an as du_an_1_ho
+        self.con = self.mo(du_an_1_ho(self.td))
+        with self.con:
+            self.con.execute('UPDATE thua SET nguon_goc = ?', (
+                'Căn cứ Giấy xác nhận của Đoàn\nThanh niên xã giả lập, đất do hộ nhận chuyển nhượng theo chủ hợp\nđồng năm 1995, '
+                'được UBND tỉnh\nĐồng Nai công nhận.\nĐất sử dụng gồm:\n- đất ở\n- đất trồng cây lâu năm',))
+
+    def _cac_doan(self, x) -> list:
+        """[(chữ, w:p)] các đoạn ngoài bảng."""
+        than = x.find(f'{W}body')
+        return [(''.join(t.text or '' for t in p.iter(W + 't')), p) for p in than.findall(f'{W}p')]
+
+    def _sz(self, x, chu) -> tuple:
+        """(cỡ w:sz, đậm, nghiêng, gạch chân) của w:r đầu tiên có chữ đúng bằng chu."""
+        for r in x.iter(W + 'r'):
+            if ''.join(t.text or '' for t in r.iter(W + 't')) == chu:
+                pr = r.find(W + 'rPr')
+                return (pr.find(W + 'sz').get(W + 'val'), pr.find(W + 'b') is not None, pr.find(W + 'i') is not None,
+                        pr.find(W + 'u') is not None)
+        self.fail(f'không thấy "{chu}"')
+
+    def test_muc_ii_khong_cut_giua_cau(self):
+        p = in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx')
+        x = _xml(p)
+        self.assertEqual(list(x.iter(W + 'br')), [])                                 # không ngắt dòng cứng nào
+        doan = self._cac_doan(x)
+        i = next(k for k, (c, _) in enumerate(doan) if c.startswith('II.'))
+        ii = [(c, p) for c, p in doan[i + 1:i + 4]]
+        self.assertEqual([c for c, _ in ii], [
+            'Căn cứ Giấy xác nhận của Đoàn Thanh niên xã giả lập, đất do hộ nhận chuyển nhượng theo chủ hợp đồng năm 1995, được '
+            'UBND tỉnh Đồng Nai công nhận.', 'Đất sử dụng gồm:', '- đất ở'])
+        for c, pp in ii:
+            self.assertNotIn('\n', c)
+            pr = pp.find(W + 'pPr')
+            self.assertEqual(pr.find(W + 'jc').get(W + 'val'), 'both')
+            sp = pr.find(W + 'spacing')
+            self.assertEqual((sp.get(W + 'line'), sp.get(W + 'after')), ('276', '100'))
+            ind = pr.find(W + 'ind')
+            if c.startswith('- '):
+                self.assertEqual((ind.get(W + 'left'), ind.get(W + 'hanging')), ('360', '360'))   # thụt lề treo
+            else:
+                self.assertEqual(ind.get(W + 'firstLine'), '567')                                   # thụt đầu dòng 1 cm
+
+    def test_trich_yeu_va_va_co_chu(self):
+        x = _xml(in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx', du_thao=True))
+        chu = ''.join(t.text or '' for t in x.iter(W + 't'))
+        self.assertIn('BỒI THƯỜNG, HỖ TRỢ VÀ TÁI ĐỊNH CƯ KHI NHÀ NƯỚC THU HỒI ĐẤT', chu)
+        self.assertNotIn('&', chu)
+        da = in_an._thong_tin_du_an(self.con)
+        cq = str(da['DON_VI_TIEU_DE']).upper()
+        self.assertEqual(self._sz(x, 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'), ('24', True, False, False))   # 12 pt đậm
+        self.assertEqual(self._sz(x, 'Độc lập - Tự do - Hạnh phúc'), ('26', True, False, True))       # 13 pt đậm, gạch dưới
+        self.assertEqual(self._sz(x, cq), ('24', True, False, False))                                   # cơ quan ban hành
+        for d in (da['DON_VI_CAP_TREN_2DONG'] or '').split('\n'):
+            if d.strip():
+                self.assertEqual(self._sz(x, d.upper()), ('24', False, False, False))                   # cơ quan chủ quản
+        self.assertEqual(self._sz(x, '(DỰ THẢO)'), ('24', False, False, False))
+        ngay =next(t.text for t in x.iter(W + 't') if (t.text or '').find(' tháng ') > 0)
+        self.assertEqual(self._sz(x, ngay), ('26', False, True, False))                                # địa danh, ngày nghiêng
+        self.assertEqual(self._sz(x, 'PHƯƠNG ÁN CHI TIẾT'), ('28', True, False, False))                # 14 pt
+        self.assertEqual(self._sz(x, in_word.TRICH_YEU), ('26', True, False, False))
+        self.assertEqual(self._sz(x, f'DỰ ÁN {str(da["du_an"]).upper()}'), ('26', True, False, False))
+        for tieu_de in ('I. Tổ chức và hộ gia đình, cá nhân bị thu hồi đất, tài sản gắn liền với đất', in_an.TIEU_DE_MUC_II,
+                        'III. Bảng tính toán bồi thường, hỗ trợ'):
+            self.assertEqual(self._sz(x, tieu_de)[:2], ('26', True))
+        self.assertEqual(self._sz(x, 'STT'), ('24', True, False, False))                              # tiêu đề bảng 12 pt
+        so_r = next(t.text for t in x.iter(W + 't') if (t.text or '').startswith('Số:'))
+        self.assertEqual(self._sz(x, so_r), ('24', False, False, False))                              # số ký hiệu 12 pt
+
+    def test_ban_excel_cung_sua(self):
+        f = in_an.lap_chi_tiet(self.con, 1, self.td / 'ct.xlsx')
+        ws = openpyxl.load_workbook(f).active
+        chu = [c.value for row in ws.iter_rows(max_row=40) for c in row if isinstance(c.value, str)]
+        self.assertTrue(any('HỖ TRỢ VÀ TÁI ĐỊNH CƯ' in c for c in chu))
+        self.assertFalse(any('&' in c for c in chu))
+        ng = [c for c in chu if 'Đoàn' in c]
+        self.assertEqual(len(ng), 1)
+        self.assertIn('Đoàn Thanh niên', ng[0])
+        self.assertIn('chủ hợp đồng', ng[0])
+        self.assertNotIn('\n', ng[0].strip())
+
+
+class TestLeA3VaLapDayNgang(_Co):
+    """22/10/2026: bảng tổng hợp A3 lề trái 2,0 cm / phải 1,0 cm / trên, dưới 1,5 cm; cột lấp sát lề phải (phần hụt 70% nguồn gốc,
+    15% họ tên, 15% địa chỉ); trích yếu "VÀ"; lam_sach_doan_van nối sau ; :; PDF dự phòng chi tiết lề NĐ 30."""
+
+    def test_le_va_lap_day_ngang(self):
+        con = self.mo(_du_an(self.td, 10, 3))
+        ws = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / 'bth.xlsx')).active
+        m = ws.page_margins
+        cm = {k: round(getattr(m, k) * 2.54, 2) for k in ('left', 'right', 'top', 'bottom')}
+        self.assertEqual(cm, dict(left=2.0, right=1.0, top=1.5, bottom=1.5))
+        self.assertAlmostEqual(cm['left'] - cm['right'], 1.0)                    # lề phải nhỏ hơn lề trái đúng 1 cm
+        n_cot = max(dia_phuong.cot_mau(in_an.TEN_BTH).values())
+        tong = sum(in_an._px_cot(ws, n_cot + 1)[:n_cot]) * 0.75              # cột hiện (cột ẩn = 0)
+        ti_le = int(ws.page_setup.scale)
+        vung = in_an.rong_in_a3(ws, ti_le, in_an.RONG_DU_PHONG_BTH)
+        self.assertLessEqual(tong, vung + 0.5)                                    # không vượt khổ (Excel không tách cột)
+        self.assertGreaterEqual(tong, vung - in_an.CHUA_SAU_BTH - 6)            # sát lề phải (trước: ~95% bề ngang)
+
+    def test_chia_phan_hut_70_15_15(self):
+        from openpyxl import Workbook
+        from openpyxl.utils import get_column_letter as g
+        ws = Workbook().active
+        ws.page_setup.paperSize, ws.page_setup.orientation = in_an.KHO_GIAY_BTH, 'landscape'
+        in_an.chuan_le_trang(ws, 'tong_hop')
+        K = dict(stt=1, ho_ten=2, dia_chi=3, nguon_goc=4)
+        for c in range(1, 5):
+            ws.column_dimensions[g(c)].width = 20
+        ws.parent.save(self.td / 'a3.xlsx')                                       # đọc lại như bản in (khai báo cột có min / max)
+        ws = openpyxl.load_workbook(self.td / 'a3.xlsx').active
+        cong = in_an.lap_day_ngang_a3_bth(ws, 4, K)
+        self.assertGreater(cong, 0)
+        w = [float(ws.column_dimensions[g(c)].width) - 20 for c in range(1, 5)]
+        self.assertEqual(w[0], 0)                                                 # STT không đổi
+        self.assertAlmostEqual(w[3] / sum(w[1:]), 0.70, places=2)
+        self.assertAlmostEqual(w[1] / sum(w[1:]), 0.15, places=2)
+        self.assertAlmostEqual(w[2] / sum(w[1:]), 0.15, places=2)
+        tong = sum(in_an._px_cot(ws, 5)[:4]) * 0.75
+        self.assertAlmostEqual(tong, in_an.rong_in_a3(ws, in_an.TI_LE_BTH, in_an.RONG_DU_PHONG_BTH) - in_an.CHUA_SAU_BTH, delta=3)
+
+    def test_trich_yeu_va_bang_tong_hop(self):
+        from openpyxl import Workbook
+        ws = Workbook().active
+        ws['A5'] = 'BẢNG TỔNG HỢP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ & TÁI ĐỊNH CƯ'
+        self.assertEqual(in_an.chuan_trich_yeu(ws), 1)
+        self.assertEqual(ws['A5'].value, 'BẢNG TỔNG HỢP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ VÀ TÁI ĐỊNH CƯ')
+
+    def test_noi_sau_cham_phay_hai_cham(self):
+        from pabt.ho_so import lam_sach_doan_van
+        self.assertEqual(lam_sach_doan_van('Đất nhận chuyển nhượng theo hợp đồng;\nsau đó tặng cho con là:\nông A  sử dụng   tới nay.'),
+                         ['Đất nhận chuyển nhượng theo hợp đồng; sau đó tặng cho con là: ông A sử dụng tới nay.'])
+        self.assertEqual(lam_sach_doan_van('Gồm các loại đất:\n- đất ở;\n- đất lúa.'), ['Gồm các loại đất:', '- đất ở;', '- đất lúa.'])
+
+    def test_pdf_du_phong_le_nghi_dinh_30(self):
+        from pabt import pdf_du_phong
+        from pabt import van_ban_trinh as vb
+        a = self.td / 'PA_001.docx'
+        a.write_bytes(b'')
+        a.with_suffix('.xlsx').write_bytes(b'')
+        goi = []
+        with mock.patch.object(pdf_du_phong, 'xuat_pdf_du_phong_qt',
+                               lambda x, p, le_mm=None: (goi.append(le_mm), Path(p).write_bytes(b'%PDF'))):
+            loi, du = vb.pdf_du_phong_chi_tiet([('pdf', a, a.with_suffix('.pdf'))], [])
+        self.assertEqual(goi, [(30, 20, 15, 20)])                                 # (trái, trên, phải, dưới) mm như bản Word
+        self.assertEqual(du, [a.with_suffix('.pdf')])
+
+
+if __name__ == '__main__':
+    unittest.main()

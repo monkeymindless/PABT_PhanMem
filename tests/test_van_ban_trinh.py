@@ -241,7 +241,8 @@ class TestManHinh(_DuAn):
         kq = h.thuc_hien(xac_nhan=False)
         tm = self.td / 'hs' / 'Đợt 1 - 3 hộ'
         # 3 phương án chi tiết + bảng tổng hợp + tờ trình + báo cáo tiếp thu ý kiến (20/10/2026: chính thức = trọn bộ 4 tài liệu)
-        self.assertEqual(len(kq['excel']) + len(kq['word']), 3 + 1 + 1 + 1)
+        # + 3 bản Word phương án chi tiết (21/10/2026: ô "Xuất bản Word (.docx)" tích sẵn)
+        self.assertEqual(len(kq['excel']) + len(kq['word']), 3 + 1 + 1 + 1 + 3)
         self.assertEqual(sorted(p.name for p in (tm / 'PA TONG').iterdir()),
                          ['BANG_TONG_HOP.xlsx', 'BAO_CAO_TIEP_THU_Y_KIEN.docx', 'TO_TRINH.docx'])
         self.assertEqual(quan_ly.lay_dot(self.con, i).thu_muc, str(tm))      # cột "Thư mục đã xuất" của đợt

@@ -381,7 +381,7 @@ def lap_van_ban(con, loai: str, ds_ma_ho: list, thu_muc, dot=None) -> Path:
 def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True, bang_tong_hop: bool = True,
                   to_trinh: bool = False, pdf: bool = False, in_may: bool = False, so_ban: int = 1,
                   chia_thu_muc: bool = True, bao_tien_do=None, bao_excel=None, mau_ct=None, mau_bth=None,
-                  bao_cao_y_kien: bool = False, du_thao: bool | None = None, lan='moi_nhat') -> dict:
+                  bao_cao_y_kien: bool = False, du_thao: bool | None = None, lan='moi_nhat', chi_tiet_word: bool = False) -> dict:
     """Bộ hồ sơ trình: PA CHI TIET\\ (phương án chi tiết từng hộ) + PA TONG\\ (bảng tổng hợp có số / ngày phương án tổng, tờ
     trình / văn bản trình). pdf: kèm PDF (Excel / Word xuất); in_may: in ra máy in mặc định. Mỗi mẫu chọn riêng
     hoặc tất cả. Trả dict(excel, word, pdf, loi, thu_muc_ct, thu_muc_tong). bao_tien_do(i, n) / bao_excel(i, n): trả True = dừng.
@@ -389,7 +389,10 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
     giải trình (.docx, thư mục PA TONG, file BAO_CAO_TIEP_THU_Y_KIEN.docx - bao_cao_y_kien.ghi_docx).
     du_thao: chế độ phát hành của bản in (True dự thảo / False chính thức / None theo tên mẫu - in_an.lap_chi_tiet).
     lan (1.0.05 - hộ nhiều lần lập phương án): 'moi_nhat' (mặc định: lần muộn nhất có dòng - phương án / bảng tổng hợp của đợt
-    trình bổ sung) / 'cong_don' (mọi lần) - in_an.chon_lan_in."""
+    trình bổ sung) / 'cong_don' (mọi lần) - in_an.chon_lan_in.
+    chi_tiet_word (21/10/2026): kèm phương án chi tiết bản Word (.docx, thể thức NĐ 30 - in_word) cạnh bản Excel; PDF / in lấy từ
+    bản Word (Word cắt được dòng dài qua trang), file Excel giữ để sửa. Word xuất PDF hạn CHO_WORD_MOI_HO giây / hộ (hộ treo bỏ
+    qua); hộ Word không xuất được (treo / lỗi / máy không có Word) -> PDF dựng gần đúng từ bản Excel (kq['du_phong'])."""
     from . import in_an
     thu_muc = Path(thu_muc)
     tm_ct = thu_muc / THU_MUC_CT if chia_thu_muc else thu_muc
@@ -406,11 +409,20 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
         tm_ct.mkdir(parents=True, exist_ok=True)
         mau = mau_ct or in_an.thu_muc_mau()
         bc = in_an.BoiCanh.tu(con)
+        if chi_tiet_word:
+            from . import in_word
         for i, ma in enumerate(ds_ma_ho, start=1):
-            kq['excel'].append(in_an.lap_chi_tiet(con, ma, tm_ct / f'{in_an.ten_file_ho(con, ma)}.xlsx', mau, bc, du_thao=du_thao,
-                                                  lan=lan))
+            ten = in_an.ten_file_ho(con, ma)
+            p = in_an.lap_chi_tiet(con, ma, tm_ct / f'{ten}.xlsx', mau, bc, du_thao=du_thao, lan=lan)
+            if chi_tiet_word:
+                kq.setdefault('excel_giu', []).append(p)       # Excel giữ để sửa - không xuất PDF / in (bản Word thay)
+                kq['word'].append(in_word.xuat_chi_tiet_docx(con, ma, tm_ct / f'{ten}.docx', bc, du_thao=bool(du_thao),
+                                                             lan=lan))
+            else:
+                kq['excel'].append(p)
             if bao():
                 kq['loi'].append(f'DA_DUNG\t\tĐã dừng theo yêu cầu sau {i}/{len(ds_ma_ho)} hộ (chưa xuất PDF / in)')
+                kq['excel'] = kq.pop('excel_giu', []) + kq['excel']
                 return kq
     if bang_tong_hop or to_trinh or bao_cao_y_kien:
         tm_tong.mkdir(parents=True, exist_ok=True)
@@ -435,9 +447,29 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
             kq['loi'] += in_an.chay_excel(cap, 'in' if in_may else 'pdf', bao=bao_excel, so_ban=so_ban)
             kq['pdf'] += [b for _, b in cap if b and Path(b).exists()]
         if kq['word']:
-            viec = [((f'in:{so_ban}' if in_may else 'pdf'), p, p.with_suffix('.pdf') if pdf else None) for p in kq['word']]
-            kq['loi'] += chay_word(viec)
-            kq['pdf'] += [c for _, _, c in viec if c and Path(c).exists()]
+            # 21/10/2026: phương án chi tiết bản Word (lô hàng trăm hộ) hạn 15 giây / hộ, hộ treo bỏ qua; Word không xuất được ->
+            # PDF dựng dự phòng từ bản Excel (không để cả lô dừng / thiếu hộ khi gộp PDF); văn bản khác (tờ trình…) hạn 180 giây
+            che_do = f'in:{so_ban}' if in_may else 'pdf'
+            ten_ct = {p.stem for p in kq.get('excel_giu', [])}
+            for nhom, cho in (([p for p in kq['word'] if p.stem in ten_ct],
+                               CHO_WORD_IN_MOI_HO if in_may else CHO_WORD_MOI_HO),
+                              ([p for p in kq['word'] if p.stem not in ten_ct], 180)):
+                viec = [(che_do, p, p.with_suffix('.pdf') if pdf else None) for p in nhom]
+                if not viec:
+                    continue
+                try:
+                    loi = chay_word(viec, cho_moi_file=cho, bao=bao_excel)
+                except LoiNhap as e:
+                    loi = [f'LOI_MO\t\t{e}']
+                if pdf and nhom and nhom[0].stem in ten_ct and not any(x.startswith('DA_DUNG') for x in loi):
+                    loi, du = pdf_du_phong_chi_tiet(viec, loi)
+                    if du:
+                        kq.setdefault('du_phong', []).extend(du)
+                        loi = [x for x in loi if not x.startswith('LOI_MO\t\t') or
+                               any(not Path(c).exists() for _, _, c in viec)]
+                kq['loi'] += loi
+                kq['pdf'] += [c for _, _, c in viec if c and Path(c).exists()]
+    kq['excel'] = kq.pop('excel_giu', []) + kq['excel']          # bản Excel của phương án chi tiết (khi xuất bản Word) vẫn báo đủ
     from .csdl import giai_phong_bo_nho
     giai_phong_bo_nho()                                 # 1.0.08: máy yếu - trả RAM các Workbook vừa lập
     return kq
@@ -446,8 +478,11 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
 # ---------------------------------------------------------------- Microsoft Word (chuyển .doc / PDF -> .docx, xuất PDF, in)
 _VBS_WORD = r'''
 On Error Resume Next
-Dim w, d, f, ds, che_do, ban
-Set f = CreateObject("Scripting.FileSystemObject").OpenTextFile(WScript.Arguments(0), 1, False, -1)
+Dim w, d, f, ds, che_do, ban, fso, dung
+Set fso = CreateObject("Scripting.FileSystemObject")
+Set f = fso.OpenTextFile(WScript.Arguments(0), 1, False, -1)
+dung = ""
+If WScript.Arguments.Count > 1 Then dung = WScript.Arguments(1)
 Set w = CreateObject("Word.Application")
 If Err.Number <> 0 Then
     WScript.StdErr.WriteLine "KHONG_CO_WORD"
@@ -459,6 +494,9 @@ w.AutomationSecurity = 3
 w.Options.ConfirmConversions = False
 Err.Clear
 Do While Not f.AtEndOfStream
+    If dung <> "" Then
+        If fso.FileExists(dung) Then Exit Do
+    End If
     ds = Split(f.ReadLine, vbTab)
     che_do = ds(0)
     Err.Clear
@@ -490,39 +528,137 @@ def co_word() -> bool:
     return sys.platform == 'win32'
 
 
-def chay_word(viec: list, cho_moi_file: int = 180) -> list:
-    """Nhờ Microsoft Word làm từng việc [(che_do, file vào, file ra)]: 'docx' (lưu .docx - mở được .doc), 'docx_hien' (như
-    docx nhưng Word HIỆN lên: mở PDF Word luôn hỏi "chuyển PDF thành văn bản sửa được" - hộp thoại này không tắt được qua tự
-    động hóa, người dùng bấm OK), 'pdf' (xuất PDF), 'in:N' (in N bản ra máy in mặc định). Macro tắt (AutomationSecurity = 3).
-    Trả danh sách lỗi (rỗng = thành công)."""
-    if not viec:
-        return []
-    if not co_word():
-        raise LoiNhap('Chuyển / xuất PDF / in văn bản Word cần Microsoft Word trên máy Windows.')
+CHO_WORD_MOI_HO = 15        # giây / hộ: Word xuất PDF phương án chi tiết hàng loạt (người dùng 21/10/2026 - lô 1.000 hộ)
+CHO_WORD_IN_MOI_HO = 60     # giây / hộ khi in ra máy in (chờ đẩy vào hàng đợi máy in)
+CHO_KHOI_DONG_WORD = 45     # giây cộng thêm cho file đầu mỗi lần mở Word (khởi động Word chậm)
+TREO_LIEN_TOI_DA = 2        # Word treo liên tiếp chừng này lần mà không xong file nào -> bỏ các file còn lại (Word hỏng)
+KHONG_CO_WORD = 'Không mở được Microsoft Word trên máy này: chỉ tạo được file Word (.docx), chưa xuất PDF / in được.'
+
+
+def _lenh_word(vbs, ds, dung) -> list:
+    """Dòng lệnh chạy trình điều khiển Word (kiểm thử thay bằng chương trình giả lập Word)."""
+    return ['cscript', '//nologo', str(vbs), str(ds), str(dung)]
+
+
+def _chay_word_mot_lan(viec: list, cho_moi_file: int, bao, da: int, n: int) -> dict:
+    """Một lần mở Word làm lần lượt các việc; theo dõi dòng "XONG" từng file: một file quá hạn -> tắt Word (chỉ Word chạy ngầm do
+    lần này mở), trả treo=True (xong = số file đã xong trước file treo). bao(da + xong, n) trả True -> dừng sau file đang làm."""
+    from .in_an import _doc_luong, _tat_excel_tu_dong
+    import threading
+    out, err = [], []
+    kq = dict(xong=0, loi=[], treo=False, dung=False, khong_word=False, gioi_han=0)
     with tempfile.TemporaryDirectory() as td:
         vbs = Path(td) / 'word.vbs'
         vbs.write_text(_VBS_WORD, encoding='utf-16')
         ds = Path(td) / 'ds.txt'
         ds.write_text('\n'.join(f'{che_do}\t{Path(a).resolve()}\t{Path(b).resolve() if b else ""}' for che_do, a, b in viec),
                       encoding='utf-16')
+        dung = Path(td) / 'dung.txt'
         bat_dau = time.time()
         try:
-            r = subprocess.run(['cscript', '//nologo', str(vbs), str(ds)], capture_output=True,
-                               timeout=60 + cho_moi_file * len(viec), creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-        except subprocess.TimeoutExpired:
-            from .in_an import _tat_excel_tu_dong
-            _tat_excel_tu_dong(bat_dau, 'WINWORD.EXE')
-            return [f'LOI_TREO\t\tMicrosoft Word không làm xong sau {60 + cho_moi_file * len(viec)} giây (kẹt hộp thoại ẩn / máy in?)']
+            pr = subprocess.Popen(_lenh_word(vbs, ds, dung), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         except OSError as e:
             raise LoiNhap(f'Không chạy được trình điều khiển Word (cscript): {e}') from e
-    loi = r.stderr.decode('oem' if sys.platform == 'win32' else 'utf-8', 'replace')
-    if r.returncode == 3 or 'KHONG_CO_WORD' in loi:
-        raise LoiNhap('Không mở được Microsoft Word trên máy này: chỉ tạo được file Word (.docx), chưa xuất PDF / in được.')
-    ds_loi = [x for x in loi.splitlines() if x.startswith(('LOI_MO', 'LOI_XUAT'))]
-    for che_do, a, b in viec:
-        if che_do in ('docx', 'pdf') and b and not Path(b).exists() and not any(str(Path(a).resolve()) in x for x in ds_loi):
-            ds_loi.append(f'LOI_XUAT\t{a}\tWord không tạo được file {Path(b).suffix}')
-    return ds_loi
+        luong = [threading.Thread(target=_doc_luong, args=(lu, ra), daemon=True) for lu, ra in ((pr.stdout, out), (pr.stderr, err))]
+        for t in luong:
+            t.start()
+        xong, moc, xin_dung = 0, time.time(), None
+        while pr.poll() is None:
+            so = sum(1 for x in out if x.startswith('XONG'))
+            if so != xong:
+                xong, moc = so, time.time()
+            if bao is not None and xin_dung is None and bao(da + xong, n):
+                dung.write_text('1', encoding='ascii')
+                xin_dung, kq['dung'] = time.time(), True
+            gioi_han = cho_moi_file + (CHO_KHOI_DONG_WORD if xong == 0 else 0)
+            if xin_dung is None and time.time() - moc > gioi_han:
+                kq['treo'], kq['gioi_han'] = True, gioi_han
+                pr.kill()
+                _tat_excel_tu_dong(bat_dau, 'WINWORD.EXE')
+                break
+            if xin_dung is not None and time.time() - xin_dung > cho_moi_file + 5:
+                pr.kill()
+                _tat_excel_tu_dong(bat_dau, 'WINWORD.EXE')
+                break
+            time.sleep(0.1)
+        pr.wait()
+        for t in luong:
+            t.join(5)
+    kq['xong'] = sum(1 for x in out if x.startswith('XONG'))
+    chu_loi = '\n'.join(err)
+    kq['khong_word'] = pr.returncode == 3 or 'KHONG_CO_WORD' in chu_loi
+    kq['loi'] = [x for x in err if x.startswith(('LOI_MO', 'LOI_XUAT'))]
+    return kq
+
+
+def chay_word(viec: list, cho_moi_file: int = 180, bao=None) -> list:
+    """Nhờ Microsoft Word làm từng việc [(che_do, file vào, file ra)]: 'docx' (lưu .docx - mở được .doc), 'docx_hien' (như
+    docx nhưng Word HIỆN lên: mở PDF Word luôn hỏi "chuyển PDF thành văn bản sửa được" - hộp thoại này không tắt được qua tự
+    động hóa, người dùng bấm OK), 'pdf' (xuất PDF), 'in:N' (in N bản ra máy in mặc định). Macro tắt (AutomationSecurity = 3).
+    Mỗi file có hạn cho_moi_file giây (file đầu mỗi lần mở Word thêm CHO_KHOI_DONG_WORD): quá hạn (Word kẹt hộp thoại ẩn, máy in)
+    -> tắt Word chạy ngầm, BỎ QUA file đó, mở lại Word làm tiếp các file sau (21/10/2026: trước đây một file treo làm hỏng cả lô);
+    treo liên tiếp TREO_LIEN_TOI_DA lần mà không xong file nào -> bỏ các file còn lại. bao(i, n): tiến độ, trả True = dừng.
+    Trả danh sách lỗi (rỗng = thành công); không có Word -> LoiNhap(KHONG_CO_WORD)."""
+    if not viec:
+        return []
+    if not co_word():
+        raise LoiNhap('Chuyển / xuất PDF / in văn bản Word cần Microsoft Word trên máy Windows.')
+    n, da, con_lai, loi, treo_lien, bo_het = len(viec), 0, list(viec), [], 0, False
+    while con_lai:
+        kq = _chay_word_mot_lan(con_lai, cho_moi_file, bao, da, n)
+        if kq['khong_word']:
+            if da == 0:
+                raise LoiNhap(KHONG_CO_WORD)
+            loi.append(f'LOI_MO\t\tKhông mở lại được Microsoft Word: bỏ {len(con_lai)} file còn lại')
+            bo_het = True
+            break
+        loi += kq['loi']
+        da += kq['xong']
+        if kq['dung']:
+            loi.append(f'DA_DUNG\t\tĐã dừng theo yêu cầu: xong {da}/{n} file')
+            bo_het = True
+            break
+        if not kq['treo']:
+            break
+        i = min(kq['xong'], len(con_lai) - 1)
+        loi.append(f'LOI_TREO\t{con_lai[i][1]}\tMicrosoft Word không xong file sau {kq["gioi_han"]} giây (kẹt hộp thoại ẩn / máy '
+                   'in?): đã bỏ qua file này')
+        treo_lien = treo_lien + 1 if kq['xong'] == 0 else 1
+        da += 1
+        con_lai = con_lai[i + 1:]
+        if con_lai and treo_lien >= TREO_LIEN_TOI_DA:
+            loi.append(f'LOI_TREO\t\tMicrosoft Word treo {treo_lien} lần liên tiếp: bỏ {len(con_lai)} file còn lại')
+            bo_het = True
+            break
+    if not bo_het:
+        for che_do, a, b in viec:
+            if che_do in ('docx', 'pdf') and b and not Path(b).exists() and \
+                    not any(str(Path(a).resolve()) in x or str(a) in x for x in loi):
+                loi.append(f'LOI_XUAT\t{a}\tWord không tạo được file {Path(b).suffix}')
+    return loi
+
+
+def pdf_du_phong_chi_tiet(viec: list, loi: list) -> tuple:
+    """Phương án chi tiết bản Word chưa có PDF (Word treo / lỗi / không có Word): dựng PDF gần đúng bằng Qt từ bản Excel cùng tên
+    cạnh file Word (pdf_du_phong - không cần Office) để lô in hàng loạt không thiếu hộ. Trả (lỗi còn lại, [PDF dựng dự phòng])."""
+    from .in_word import LE_MM
+    le = (LE_MM['trai'], LE_MM['tren'], LE_MM['phai'], LE_MM['duoi'])    # lề NĐ 30 như bản Word (22/10/2026)
+    du = []
+    for _, a, b in viec:
+        b = Path(b) if b else None
+        xlsx = Path(a).with_suffix('.xlsx')
+        if b is None or b.exists() or not xlsx.exists():
+            continue
+        try:
+            from . import pdf_du_phong
+            pdf_du_phong.xuat_pdf_du_phong_qt(xlsx, b, le_mm=le)
+        except Exception:                               # noqa: BLE001 - không dựng được: giữ lỗi của Word để báo
+            continue
+        if b.exists():
+            du.append(b)
+            loi = [x for x in loi if str(a) not in x and str(Path(a).resolve()) not in x]
+    return loi, du
 
 
 # ---------------------------------------------------------------- mẫu mặc định (Word) - không ghi cố định tên đơn vị, người ký
@@ -624,9 +760,9 @@ def _noi_dung_to_trinh() -> str:
     return ''.join(t)
 
 
-def _goi_docx(than: str) -> bytes:
+def _goi_docx(than: str, sect: str | None = None) -> bytes:
     """Gói .docx tối thiểu (nội dung, kiểu chữ Times New Roman 13, A4) - giống hệt từng byte mỗi lần tạo (ngày giờ cố định) để
-    nhận ra mẫu mặc định chưa sửa."""
+    nhận ra mẫu mặc định chưa sửa. sect: w:sectPr riêng (khổ / lề - in_word); None = A4, lề mẫu tờ trình."""
     import io
     loai = 'application/vnd.openxmlformats-officedocument.wordprocessingml'
     tep = {
@@ -649,8 +785,9 @@ def _goi_docx(than: str) -> bytes:
         'w:eastAsia="Times New Roman"/><w:sz w:val="26"/><w:szCs w:val="26"/><w:lang w:val="vi-VN"/></w:rPr></w:rPrDefault>'
         '<w:pPrDefault><w:pPr><w:spacing w:after="60"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>',
         'word/document.xml': f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="{_W}"><w:body>'
-        f'{than}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" '
-        'w:left="1701" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>',
+        f'{than}' + (sect or '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" '
+                        'w:bottom="1134" w:left="1701" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr>') +
+        '</w:body></w:document>',
     }
     b = io.BytesIO()
     with zipfile.ZipFile(b, 'w', zipfile.ZIP_DEFLATED) as z:

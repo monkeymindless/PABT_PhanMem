@@ -23,7 +23,8 @@ DU_LIEU = ('pabt/schema.sql', 'pabt/bo_don_gia.sqlite', 'pabt/bang_gia_nq28.json
 # cập nhật đơn giá từ trang web phát hành riêng bằng gói .pabtcn: không đóng vào exe, nhưng giữ thư viện chuẩn nó cần
 # cap_nhat_web đóng trong bản cài từ 0.9.49. Màn hình quét web đầy đủ vẫn để gói .pabtcn.
 LOAI_TRU_WEB = ['--exclude-module', 'pabt.man_hinh_quet_web',
-                '--hidden-import', 'html.parser', '--hidden-import', 'urllib.request', '--hidden-import', 'difflib', '--hidden-import', 'pabt.mau_in_nhung']
+                '--hidden-import', 'html.parser', '--hidden-import', 'urllib.request', '--hidden-import', 'difflib', '--hidden-import', 'pabt.mau_in_nhung',
+                '--hidden-import', 'pabt.in_word']
 
 
 def main() -> int:

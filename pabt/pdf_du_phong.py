@@ -241,8 +241,9 @@ def _chuan_bang_qt(doc) -> int:
     return n
 
 
-def xuat_pdf_du_phong_qt(xlsx, pdf) -> Path:
-    """Dựng PDF (khổ giấy của mẫu) từ file bản in .xlsx bằng Qt (QTextDocument + QPdfWriter). Trả đường dẫn PDF. Lỗi -> ném lại (nơi gọi báo)."""
+def xuat_pdf_du_phong_qt(xlsx, pdf, le_mm: tuple | None = None) -> Path:
+    """Dựng PDF (khổ giấy của mẫu) từ file bản in .xlsx bằng Qt (QTextDocument + QPdfWriter). Trả đường dẫn PDF. Lỗi -> ném lại (nơi gọi báo).
+    le_mm (trái, trên, phải, dưới) mm: lề trang thay lề của mẫu (22/10/2026: PDF dự phòng của bản Word phương án chi tiết theo lề NĐ 30)."""
     from PySide6.QtCore import QMarginsF, QSizeF
     from PySide6.QtGui import QPageLayout, QPageSize, QPdfWriter, QTextDocument
     noi_dung, trang = html_tu_xlsx(xlsx)
@@ -254,7 +255,7 @@ def xuat_pdf_du_phong_qt(xlsx, pdf) -> Path:
     w.setCreator('LARC')
     kho = QPageSize.PageSizeId.A3 if trang['kho'] == 'A3' else QPageSize.PageSizeId.A4
     hl = QPageLayout(QPageSize(kho), QPageLayout.Orientation.Landscape if trang['ngang'] else QPageLayout.Orientation.Portrait,
-                     QMarginsF(*trang['le']), QPageLayout.Unit.Millimeter)
+                     QMarginsF(*(le_mm or trang['le'])), QPageLayout.Unit.Millimeter)
     w.setPageLayout(hl)
     doc = QTextDocument()
     doc.setDocumentMargin(0)

@@ -102,15 +102,16 @@ class TestBangChiTiet(CoSo):
         ws = self.in_ho(dai)
         ds = [d for d in self.dong_nguon_goc(ws) if d[1]]
         self.assertGreater(len(ds), 1)
-        self.assertTrue(all(h <= in_an.CAO_DOAN_TOI_DA for _, _, h in ds))
+        # 21/10/2026: khối kéo dài tới chỗ hết câu, tối đa CAO_DOAN_CAU_TOI_DA (không tới trần 409 pt)
+        self.assertTrue(all(h <= in_an.CAO_DOAN_CAU_TOI_DA for _, _, h in ds))
         self.assertEqual(' '.join(' '.join(x for _, x, _ in ds).split()), ' '.join(dai.split()))   # không mất chữ
-        toi_da = int((in_an.CAO_DOAN_TOI_DA - in_an.DEM_DONG) // in_an.dong_chu_bang(14))
+        toi_da = int((in_an.CAO_DOAN_CAU_TOI_DA - in_an.DEM_DONG) // in_an.dong_chu_bang(14))
         rong = in_an._rong_vung(ws, 1, 8)
         for (r, x, _), (_, sau, _) in zip(ds, ds[1:]):
-            # 16/10/2026: tách ở ranh giới dòng đã ngắt - hết đoạn (chuan_nguon_goc đưa " - " thành đoạn "- " mới), dòng kết thúc
-            # bằng dấu hết câu, hoặc đủ khối toi_da dòng (không xuống dòng sớm giữa đoạn)
-            self.assertTrue(x.rstrip().endswith(('.', ';', ':')) or sau.startswith('- ')
-                            or len(in_an.ngat_dong(x, rong)) == toi_da, (x[-40:], sau[:20]))
+            # 16/10/2026: tách ở ranh giới dòng đã ngắt - hết đoạn (chuan_nguon_goc đưa " - " thành đoạn "- " mới); 21/10/2026: trong
+            # một đoạn chỉ sau dấu hết câu (. ! ?), câu dài hơn CAO_DOAN_CAU_TOI_DA mới cắt ở ranh giới dòng
+            self.assertTrue(x.rstrip().endswith(('.', '!', '?')) or sau.startswith('- ')
+                            or len(in_an.ngat_dong(x, rong)) >= toi_da, (x[-40:], sau[:20]))
         for r, _, _ in ds:
             m = _vung(ws, r, 1)
             self.assertEqual((m.min_row, m.max_row, m.min_col, m.max_col), (r, r, 1, 8))    # dòng mới gộp cùng dải cột

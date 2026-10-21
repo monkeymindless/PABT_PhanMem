@@ -306,12 +306,12 @@ class TestDanTrangThichUng(unittest.TestCase):
         self.assertAlmostEqual(ws.page_margins.bottom, in_an.LE_TRANG['chi_tiet']['bottom'])
         r_iii = next(r for r in range(1, ws.max_row + 1) if str(ws.cell(r, 1).value or '').startswith('III'))
         self.assertEqual(ws.print_title_rows, f'${r_iii + 1}:${r_iii + 1}')
-        # nguồn gốc: các dòng Excel <= 90 pt (+ 4 pt dòng cuối)
+        # nguồn gốc: các dòng Excel <= 180 pt (+ 4 pt dòng cuối) - 21/10/2026: khối kéo dài tới chỗ hết câu (CAO_DOAN_CAU_TOI_DA)
         cao = in_an._ham_cao(ws)
         r_ng = [r for r in range(1, r_iii) if isinstance(ws.cell(r, 1).value, str) and 'Căn cứ Giấy xác nhận' in ws.cell(r, 1).value]
         self.assertGreater(len(r_ng), 3)
         for r in range(r_ng[0], r_iii):
-            self.assertLessEqual(cao(r), in_an.CAO_DOAN_TOI_DA + in_an.DEM_DOAN_CUOI)
+            self.assertLessEqual(cao(r), in_an.CAO_DOAN_CAU_TOI_DA + in_an.DEM_DOAN_CUOI)
         trang = _trang(ws)
         self.assertGreater(len(trang), 1)
         cap = in_an.cao_trang_in(ws)
@@ -451,18 +451,23 @@ class TestDanTrangThichUng(unittest.TestCase):
         self.assertLess(trang[-1][0], tong)
 
     def test_bth_nen_khit_bot_trang(self):
-        from unittest import mock
-        con = self._mo(_du_an(self.td, 80))        # 1.0.04: cột tiền rộng hơn, cột vị trí ẩn - mốc nén khít dời tới ~64 hộ
+        # 21/10/2026 (người dùng: không ngắt khi trang chưa đầy 85%): bảng xếp theo từng dòng Excel nên các trang đã lấp sát; phần cuối
+        # nhỏ nhất (TỔNG CỘNG + chữ ký) lớn hơn ngưỡng nén khít (NEN_TOI_DA) - nén khít không còn bớt trang. Kiểm thay bằng: mọi trang
+        # trừ trang cuối lấp >= TRANG_DAY (dòng tiêu đề cột lặp tính vào trang sau). Nén khít ở mức hàm: test_co_gian_vua_trang_keo_35_pt
+        con = self._mo(_du_an(self.td, 80))
         ma = [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho')]
-        gap = 0
-        for n in range(4, 80):                     # 1.0.07: A3 55% - mốc nén khít dời (dò từng hộ)
+        nhieu_trang = 0
+        for n in range(4, 80, 5):
             ws = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / f'b{n}.xlsx', ma[:n])).active
-            with mock.patch.object(in_an, 'NEN_TOI_DA', 0.0), mock.patch.object(canh_trang_in_an, 'NGUONG_DU_1_TRANG_PT', -1.0):
-                ws0 = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / f'k{n}.xlsx', ma[:n])).active
-            if len(_trang(ws)) < len(_trang(ws0)):
-                gap += 1
-                break
-        self.assertGreater(gap, 0)
+            cao = in_an._ham_cao(ws)
+            cap = in_an.cao_trang_in(ws)
+            td = sum(cao(r) for r in range(9, 13))
+            trang = _trang(ws)
+            nhieu_trang += len(trang) > 1
+            for a, b in trang[:-1]:
+                self.assertGreaterEqual(sum(cao(r) for r in range(a, b + 1)) + (td if a > 12 else 0), in_an.TRANG_DAY * cap - 0.5,
+                                        (n, a, b))
+        self.assertGreater(nhieu_trang, 0)
 
 
 class TestGiaoDien(unittest.TestCase):

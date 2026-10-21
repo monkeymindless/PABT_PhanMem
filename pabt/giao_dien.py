@@ -3203,12 +3203,27 @@ def dat_toi_thieu_cua_so(w) -> None:
                      min(TOI_THIEU_CUA_SO[1], vung.height()) if vung else TOI_THIEU_CUA_SO[1])
 
 
-def _cai_dat_cua_so():
-    """QSettings nhớ kích thước cửa sổ con; chạy không màn hình (offscreen - kiểm thử) thì không đọc / ghi."""
+def cai_dat_nho():
+    """QSettings('PABT', 'PABT') nhớ lựa chọn của người dùng (kích thước cửa sổ con, tùy chọn xuất bản…); chạy không màn hình
+    (offscreen - kiểm thử) thì None: không đọc / ghi máy thật."""
     app = QApplication.instance()
     if app is None or app.platformName() == 'offscreen':
         return None
     return QSettings('PABT', 'PABT')
+
+
+def doc_bool(gia_tri, mac_dinh: bool) -> bool:
+    """Giá trị QSettings -> bool (Qt5 / registry trả chuỗi 'true' / 'false')."""
+    if gia_tri is None:
+        return mac_dinh
+    if isinstance(gia_tri, str):
+        return gia_tri.strip().lower() in ('1', 'true', 'yes')
+    return bool(gia_tri)
+
+
+def _cai_dat_cua_so():
+    """QSettings nhớ kích thước cửa sổ con (cai_dat_nho)."""
+    return cai_dat_nho()
 
 
 def khoa_kich_thuoc(dlg) -> str:

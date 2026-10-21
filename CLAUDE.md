@@ -1896,7 +1896,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   có đơn vị cuối "Nhà tạm m2 4x5" / cột ĐVT thắng); ba thừa số hoặc đơn vị khác sau ("2x3x1,5 m3", "3x4 cây") để quy tắc số lượng cũ.
   Phần 'ngoac' "42m2 (thửa 123)": ngoặc SAU số liệu -> ghi chú (ngoặc trong tên giữ). `_RE_TU_NHIEN` nhận "số x số"; `tach_dong` không tách
   ở số đứng sau toán tử / số ("Sân m2 3+2*4" vẫn đi quy tắc cũ). Ô Excel: `doc_kich_thuoc(o)` ("3,7m x 4,3m", "42m2").
-- Chọn vùng ô + bộ đếm kiểu Excel (người dùng 21/10/2026, kèm ảnh mẫu; CHƯA tăng phiên bản; test `tests/test_yeu_cau_2110.py`):
+- 1.0.11 Chọn vùng ô + bộ đếm kiểu Excel (người dùng 21/10/2026, kèm ảnh mẫu; test `tests/test_yeu_cau_2110.py`):
   - `giao_dien.cho_phep_sao_chep_bang` (mọi bảng qua `ap_kieu_cay`, `BangAo.__init__`, `app.bang` trong `__init__`) -> `cho_chon_vung_o`
     (SelectItems + ExtendedSelection; NoSelection giữ; bảng SingleSelection cũng thành Extended khi hiện - trước khi hiện vẫn kiểu cũ: Qt
     `selectRow` KHÔNG chạy với SingleSelection + SelectItems) + `gan_bo_dem` -> `_BoChonVung` (con của bảng): bấm ô cột STT chọn cả dòng
@@ -1916,6 +1916,68 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     LENH_CAN_DU_AN) -> `man_hinh_thong_ke.HopThongKeDiaChinh(dong, ten_dot, ten, parent, im_lang, lap)` (7 trạng thái `thong_ke_trang_thai`,
     đợt `thong_ke_dot`, "Sao chép tóm tắt báo cáo"). Dải cộng "CỘNG (n HỘ · t THỬA) | Tổng DT: … m² (… ha) | Đất | Tài sản & Cây | HT &
     Thưởng | TỔNG CỘNG"; `lb_tom_tat` "Sẵn sàng · Dự án: N hộ · T thửa · DT m² | Đang chọn: k hộ (t thửa · dt m²)".
+- 1.0.11 Trang 1 bản in chi tiết không hở (người dùng 21/10/2026: ngắt ngay sau 1.1, mục 2-6 dồn sang trang 2; test
+  `tests/test_trang_1_khong_ho.py` - đo chữ cố định như test_in_vua_chu): `ngat_trang_ct` dòng 'H' chỉ dính dòng kế khi đó là 'I' (mục
+  không dòng con = 'tu_do' - trước ghép "mục 2 + mục 3"…); cụm cuối 'lien' từ TỔNG CỘNG tới HẾT VÙNG IN (vùng in thừa một dòng sau chữ
+  ký), chỉ khi TỔNG CỘNG rơi đầu trang cuối mới kèm dòng trước (thưởng); `dong_muc` của canh trang gồm 'R'. `canh_trang_in_an`:
+  `TRANG_1_TOI_THIEU` 0,5 -> 0,85, `NGUONG_DU_1_TRANG_PT` 120 -> 160, `gom_mot_trang(dong_nen, san, san_khoi)`: chỉ thu tỷ lệ chưa đủ
+  thì `thay_nen_gom` (dòng bảng = chữ + `DEM_GOM` 2,5 pt, >= CAO_NEN_TOI_THIEU) + tỷ lệ >= 70%, `_dat_ten_vbs(ws, True, DEM_GOM)` (VBS
+  PABT_DEM_DONG = 25); `tong_noi_dung` tới hết vùng in. Ẩn chữ ký dự thảo / dòng trống mục I vốn đã TRƯỚC ngat_trang_ct. Đã xuất PDF bằng
+  Excel: đệm 2,5 pt chữ không chạm viền. Còn lại (không thuộc lỗi này): nguồn gốc dài làm cụm "III." + tiêu đề + 1.1 (ghi chú dài) sang
+  trang 2 thì trang 1 có thể ~78-85% - bản Word (dưới) cắt được dòng qua trang.
+- 1.0.11 Bảng tổng hợp A3 + bản Word chi tiết (người dùng 21/10/2026; test `tests/test_in_an_2110.py`):
+  - Cột số toàn 0 (`COT_THU_BTH`, `tong_cot_bth`) -> `thu_cot_khong_bth`: thu tới `RONG_COT_KHONG_BTH` 7 nhưng không hẹp hơn số 0 dòng tổng
+    (`_rong_can_so`), từ dài nhất tiêu đề x `HE_SO_TU_TIEU_DE` (rong_td - không bẻ từ), không thêm dòng chữ tiêu đề; phần thu được cộng HẾT
+    vào cột nguồn gốc, trả lại phần nhích do làm tròn px (tỷ lệ in giữ 55). Gọi sau vua_ngang_a3_bth, trước vua_cao_chu.
+  - KẾ HOẠCH DÒNG trong `lap_bang_tong_hop`: nội dung từng hộ / thửa tính trước (`_tien_ho_bth`, `_dt_thua_bth`), chữ riêng thửa / chữ
+    gộp hộ cao hơn `CAO_KHOI_BTH` 180 pt chia nhiều dòng Excel gộp ô, cấp phát dòng MỘT lần (_doi_dong từng hộ là O(n²)). Trước đây
+    dòng thửa vượt 409 pt bị Excel chặn - mất chữ (`cao_dong_bang(..., None)` để không chặn khi tính). `_vua_cao_ho_bth(nhom=)`.
+  - `ngat_trang_bth`: MỖI DÒNG là đơn vị tự do (bỏ 'lien' theo hộ, bỏ HO_LON); ngắt giữa hộ -> tach_ho (lặp STT / họ tên, chia
+    chữ nguồn gốc). Chữ ký liền dòng TỔNG CỘNG cuối (`r_tc`); kéo dòng hộ vào trang cuối chỉ khi trang trước vẫn >= `TRANG_DAY` 85%.
+    Nén khít bảng tổng hợp gần như không còn bớt trang (trang đã sát) - test_in_16_10.test_bth_nen_khit_bot_trang đổi thành kiểm 85%.
+    KHÔNG bật fitToWidth / fitToPage (Excel bỏ ngắt tay): bề ngang vừa A3 nhờ tỷ lệ cố định (dat_ti_le_co_dinh) như cũ.
+  - `pabt/in_word.py` `xuat_chi_tiet_docx(con, ma_ho, file, bc, du_thao, pa, lan)`: XML thuần qua `van_ban_trinh._goi_docx(than, sect)`
+    (KHÔNG python-docx - không có trong môi trường / bộ cài): A4, lề `LE_MM` 30/15/20/20 mm, bảng mục III tblHeader, cantSplit 0 cho
+    dòng chữ dài (`DAI_CHO_TACH`), 1 cho đề mục / thưởng / TỔNG CỘNG / IV / chữ ký (+ keepNext), ghi chú mục 1 trùng gộp vMerge. Cùng
+    số liệu với lap_chi_tiet (dong_chi_tiet, _thong_tin_ho, lần PA, dự thảo: "(DỰ THẢO)", không chữ ký). ~6 ms / hộ.
+    `xuat_bo_ho_so(chi_tiet_word=)`: lưu .docx cạnh .xlsx, PDF / in lấy từ bản Word (Excel chi tiết vào kq['excel'] sau bước PDF).
+    HopIn `o_word` "Xuất bản Word (.docx) chuẩn Nghị định 30" (dưới o_ct, chỉ bật khi o_ct). PABT.spec / dung_exe38 hidden-import.
+  - Tốc độ (phân tích phiên bản 1.0.11: bảng tổng hợp 3.000 hộ 5,5 -> 21,6 s): tach_ho mỗi ranh trang dò vùng gộp từng cột qua
+    `_vung_tron` không chỉ mục + `ws.unmerge_cells` (openpyxl kiểm "đã gộp" bằng duyệt ~20.000 vùng). Nay `in_an._bo_gop(ws, m)` (bỏ
+    thẳng khỏi tập ranges + ô MergedCell) và tach_ho dựng chỉ mục vùng phủ dòng e MỘT lượt -> 5,8 s, file ra giống hệt (so từng ô,
+    vùng gộp, cao dòng, ngắt trang). ĐỪNG gọi `ws.unmerge_cells` / `_vung_tron` không chỉ mục trong vòng lặp trên bảng tổng hợp.
+  - Lô Word (người dùng 21/10/2026, "1.000 hộ không thao tác tay"): HopIn `o_word` TÍCH SẴN, nhớ ở QSettings `KHOA_WORD_CT`
+    'in_an/dung_word_chi_tiet' qua `giao_dien.cai_dat_nho()` (offscreen -> None: kiểm thử không ghi máy thật; `doc_bool` đọc 'true'
+    của Qt5). Mã chạy Word ở `van_ban_trinh` (không phải in_word / in_an): `chay_word(viec, cho_moi_file, bao)` = Popen + theo dõi "XONG"
+    từng file (`_chay_word_mot_lan`, VBS có file cờ dừng - đối số 2), quá hạn -> kill + `in_an._tat_excel_tu_dong(…, 'WINWORD.EXE')`,
+    BỎ QUA file đó, mở lại Word làm tiếp; `TREO_LIEN_TOI_DA` 2 lần liên tiếp không xong file nào -> bỏ phần còn lại. xuat_bo_ho_so:
+    phương án chi tiết `CHO_WORD_MOI_HO` 15 s / hộ (in ra máy `CHO_WORD_IN_MOI_HO` 60), file đầu mỗi lần mở Word + `CHO_KHOI_DONG_WORD`
+    45; tờ trình / báo cáo 180 s; không có Word không còn ném LoiNhap (thành dòng lỗi); hộ thiếu PDF -> `pdf_du_phong_chi_tiet` (Qt từ
+    bản .xlsx cùng tên - lề theo mẫu Excel, không phải NĐ 30) -> `kq['du_phong']`, HopIn báo số hộ dự phòng. Gộp vẫn ở
+    `HopIn.thuc_hien` (`in_an.gop_pdf` các PDF 'PA_*' theo thứ tự hộ). Test `tests/test_xuat_word_lo.py` (Word GIẢ LẬP = chương trình
+    Python thay `_lenh_word`, đọc khổ / lề từ .docx; `TestWordThat` chạy Word thật khi có).
+  - Mục II cụt chữ giữa câu + cỡ chữ NĐ 30 (người dùng 21/10/2026): nguyên nhân = xuống dòng cứng GIỮA CÂU trong dữ liệu nguồn gốc (ô
+    Excel Alt+Enter, chữ dán) - bản Word mỗi "\n" một đoạn, bản Excel mỗi đoạn một dòng Excel. `ho_so.lam_sach_doan_van` (nối dòng khi
+    dòng trước chưa hết câu . ; : ! ? và dòng sau không là mục `dau_dong`; dòng trống / U+2028 = đoạn mới) gọi trong
+    `in_an._thong_tin_ho` TỪNG THỬA (đừng làm sạch lại chữ đã nối các thửa: đoạn cuối thửa trước không dấu chấm sẽ dính thửa sau) -
+    dùng chung Word / Excel; dữ liệu đã lưu không đổi. in_word: mỗi đoạn một w:p (both, line 276 after 100, firstLine 567 / gạch đầu
+    dòng left 360 hanging 360), không w:br; cỡ chữ `CO_CO_QUAN` 12 (cơ quan, quốc hiệu, số, "(DỰ THẢO)" không đậm), tiêu ngữ 13 đậm
+    `w:u` (gạch đúng độ dài chữ - bỏ dòng "____"), ngày 13 nghiêng, `CO_TEN_LOAI` 14, `TRICH_YEU` "… HỖ TRỢ VÀ TÁI ĐỊNH CƯ …",
+    `CO_GHI_CHU` 11,5. Excel: `in_an.chuan_trich_yeu` (lap_chi_tiet; mẫu chuẩn A4 có "&", mẫu nhúng KHÔNG sửa); `_chia_doan_van(
+    toi_da_cung=)` (dat_doan_van): đoạn quá `CAO_DOAN_TOI_DA` chỉ cắt sau dấu hết câu `_RE_HET_CAU_CHAM` (. ! ? - KHÔNG ; :) ở cuối
+    dòng hoặc GIỮA dòng (`_RE_CAU_GIUA_DONG`: cắt chữ, phần còn lại ngắt lại `_ngat(noi_tiep=True)` không thụt), tìm trong nửa sau
+    khối, rồi câu kế tiếp tới `CAO_DOAN_CAU_TOI_DA` 180 pt (không tới trần 409: dòng Excel không cắt qua trang -> hở trang), rồi bất
+    kỳ trong khối; câu dài hơn mới cắt ở ranh giới dòng. Test `tests/test_in_an_2110.TestLamSachDoanVan / TestNghiDinh30CoChu`; sửa
+    theo quy tắc mới test_yeu_cau_0983, test_in_16_10 (<= 180 pt), test_ban_in_15_10 (đếm dòng có NBSP thụt đầu).
+  - 22/10/2026 (người dùng): bảng tổng hợp A3 lề trái 2,0 / phải 1,0 / trên, dưới 1,5 cm (`LE_TRANG['tong_hop']` VÀ pabt_profile.json
+    ban_in.le_trang.tong_hop - hồ sơ đóng gói ghi đè). `lap_day_ngang_a3_bth` (sau thu_cot_khong_bth, TRƯỚC khi tính chiều cao dòng):
+    phần hụt so với vùng in ở tỷ lệ sẽ dùng (55, hoặc nhỏ hơn khi bảng vốn quá khổ) cộng 70% nguồn gốc / 15% họ tên / 15% địa chỉ
+    (`CHIA_BU_NGANG_BTH`), chừa `CHUA_SAU_BTH` 3 pt; `RONG_DU_PHONG_BTH` 0,97 (ĐO bằng Excel xuất PDF: 0,99 / 0,98 -> Excel tách cột
+    sang trang riêng, 4 trang thay 2; 0,975 vừa đủ) - KHÔNG đặt 100% dù người dùng yêu cầu. `dat_ti_le_co_dinh / dat_ti_le_vua_ngang(
+    du_phong=)` (ngat_trang_bth dùng RONG_DU_PHONG_BTH, chi tiết giữ 0,96). `vua_cot_so_bth` chỉ đo số tổng khi dòng TỔNG CỘNG có số /
+    công thức (trước: cột STT nới theo tổng các số thứ tự -> bảng quá khổ, tỷ lệ tụt 54%). `chuan_trich_yeu` cả bảng tổng hợp.
+    `lam_sach_doan_van`: hết đoạn chỉ sau . ! ? (dòng kết thúc ; : mà dòng sau không phải mục -> nối), gộp khoảng trắng. PDF dự phòng
+    phương án chi tiết `xuat_pdf_du_phong_qt(le_mm=)` lề NĐ 30 (`in_word.LE_MM`). Test `test_in_an_2110.TestLeA3VaLapDayNgang`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

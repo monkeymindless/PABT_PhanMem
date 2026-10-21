@@ -7,6 +7,30 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.11', '21/10/2026', (
+        'Bảng trên mọi màn hình chọn ô như Excel: kéo chuột bôi đen một vùng, Ctrl / Shift chọn thêm; bấm ô STT chọn cả dòng. '
+        'Vùng chọn có viền xanh; góc dưới hiện Trung bình · Tổng số đếm · Tổng của các ô số (bấm vào để chép Tổng).',
+        'Thẻ số liệu Danh sách hộ ghi thêm số thửa và diện tích; bấm "Lọc: … hộ · … thửa" (hoặc Ctrl+Shift+T, menu Dữ liệu) mở hộp '
+        'Thống kê Hộ · Thửa · Diện tích theo trạng thái và theo đợt.',
+        'Bản in phương án chi tiết không còn hở trắng cuối trang 1: các mục không có dòng (0 đồng) được xếp tiếp ngay dưới mục 1, '
+        'chỉ dòng TỔNG CỘNG và chữ ký giữ liền nhau; nội dung tràn ít được gom gọn vào một trang A4.',
+        'Bảng tổng hợp A3: cột tiền toàn số 0 thu hẹp, nhường chỗ cho nguồn gốc đất; dòng thửa có nguồn gốc dài không còn mất chữ; '
+        'mỗi trang được lấp đầy trước khi sang trang mới.',
+        'Xuất hồ sơ & Bản in: thêm tùy chọn "Xuất bản Word (.docx) chuẩn Nghị định 30" cho phương án chi tiết (A4, lề trái 30 mm, '
+        'phải 15 mm, trên / dưới 20 mm; hàng tiêu đề bảng lặp mỗi trang). Ô này tích sẵn và nhớ lựa chọn lần trước; chọn thêm '
+        '"Gộp PDF" thì Word chuyển từng hộ sang PDF rồi gộp thành một file PHUONG_AN_CHI_TIET.pdf trong thư mục đợt, in một lần.',
+        'Xuất hàng loạt bằng Word không còn bị kẹt: một hộ Word không xong sau 15 giây (kẹt hộp thoại ẩn, máy in) được bỏ qua, '
+        'Word mở lại làm tiếp các hộ sau; hộ Word không xuất được (hoặc máy không có Word) được dựng PDF gần đúng từ bản Excel, '
+        'tệp gộp vẫn đủ hộ.',
+        'Bản in phương án chi tiết (Word và Excel): nguồn gốc đất không còn cụt chữ giữa câu - các chỗ xuống dòng giữa câu trong dữ '
+        'liệu (ô Excel nhập vào, chữ dán) được nối lại; đoạn mới chỉ ở gạch đầu dòng hoặc sau dấu hết câu. Bản Excel chia đoạn dài '
+        'sang dòng mới đúng chỗ hết câu.',
+        'Bản Word theo đúng cỡ chữ Nghị định 30/2020: tên cơ quan, quốc hiệu, số ký hiệu 12; tiêu ngữ (gạch dưới đúng độ dài chữ), '
+        'địa danh - ngày, trích yếu, nội dung 13; "PHƯƠNG ÁN CHI TIẾT" 14; bảng 12. Trích yếu ghi "HỖ TRỢ VÀ TÁI ĐỊNH CƯ" (bỏ ký '
+        'tự "&") ở cả bản Word và Excel.',
+        'Bảng tổng hợp A3: lề trái 2,0 cm, phải 1,0 cm, trên / dưới 1,5 cm; bảng kéo rộng sát lề phải (phần thêm chủ yếu cho cột '
+        'nguồn gốc đất, rồi họ tên, địa chỉ) - hết khoảng trắng rộng bên phải.',
+    )),
     ('1.0.10', '20/10/2026', (
         'Dán danh sách tài sản hiểu kích thước là diện tích: "Nhà tạm 4,7x3,0", "Nhà tạm 4,7*3,0", "Nhà tạm 3,7m x 4,3m", '
         '"Nhà tạm 3,7 * 4,3" đều thành m² (khối lượng = dài × rộng, phép tính hiện ở chú thích ô Số lượng) và xếp vào mục Nhà, '

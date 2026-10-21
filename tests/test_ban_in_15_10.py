@@ -52,7 +52,10 @@ class TestBanInChiTiet(unittest.TestCase):
         self.assertEqual(co_chu, list(range(r, co_chu[-1] + 1)))                     # các dòng nguồn gốc liền nhau
         rong, phong = in_an._rong_vung(ws, 1, 8), in_an._phong(ws.cell(r, 1))
         for rr in co_chu:                               # 16/10/2026: đệm 1,5 pt giữa các dòng, dòng cuối (trước III) thêm 4 pt
-            so = len(in_an._ngat(ws.cell(rr, 1).value, rong, *phong, treo=False))
+            # đếm như dat_doan_van: đầu đoạn thụt NBSP (so_nbsp) - str.split() coi NBSP là khoảng trắng, đếm thẳng chữ ô sẽ mất phần thụt
+            v = ws.cell(rr, 1).value
+            nb = in_an.so_nbsp_nguon_goc() if v.startswith(in_an.NBSP) else 0
+            so = len(in_an._ngat(v.lstrip(in_an.NBSP), rong, *phong, treo=False, so_nbsp=nb))
             self.assertAlmostEqual(ws.row_dimensions[rr].height, in_an.cao_doan_van(so, 14, cuoi=rr == co_chu[-1]), places=2)
             # đệm nhỏ (1,5 pt; dòng cuối thêm DEM_DOAN_CUOI cho khe trước mục III) - không quá ô bảng cùng số dòng + khe đó
             self.assertLessEqual(ws.row_dimensions[rr].height, in_an.cao_dong_bang(so, 14) + in_an.DEM_DOAN_CUOI)

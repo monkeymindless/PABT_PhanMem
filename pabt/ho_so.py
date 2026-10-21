@@ -61,6 +61,28 @@ def chuan_nguon_goc(v) -> str:
 
 # ký hiệu đầu dòng của một đoạn nguồn gốc: "- ", "– ", "+ ", "• ", "* ", "a) ", "1. ", "1) "
 _RE_DAU_DONG = re.compile(r'^\s*(?:[-–+•*]|[a-zđ]\)|\d{1,2}[.)])\s+', re.I)
+_RE_HET_CAU_DONG = re.compile(r'[.!?…]["”’\')\]]?$')       # 22/10/2026: chỉ dấu hết câu thật (không ; :)
+
+
+def lam_sach_doan_van(van_ban) -> list:
+    """Chữ nhiều dòng (nguồn gốc đất) -> các đoạn logic để in (người dùng 21/10/2026: bản in cụt chữ giữa câu "Đoàn / Thanh niên",
+    "chủ hợp / đồng" - xuống dòng cứng của ô Excel nhập vào / chữ dán từ PDF). Xuống dòng giữa câu nối lại bằng MỘT dấu cách; đoạn
+    mới chỉ khi dòng mới là mục (gạch đầu dòng - + • *, a), 1.), dòng trước đã hết câu (. ! ? - 22/10/2026: dòng kết thúc ";" / ":"
+    mà dòng sau không phải mục vẫn nối, không tách đoạn vụn) hoặc có dòng trống xen giữa. Khoảng trắng liên tiếp gộp thành một dấu cách
+    (căn đều không hở khe). U+2028 (xuống dòng của ô màn hình) như xuống dòng thường. Dữ liệu đã lưu không đổi - chỉ chữ đưa ra bản in."""
+    s = str(van_ban or '').replace('\r\n', '\n').replace('\r', '\n').replace(' ', '\n')
+    doan, moi = [], True
+    for dong in s.split('\n'):
+        dong = ' '.join(dong.split())
+        if not dong:
+            moi = True
+            continue
+        if doan and not moi and not dau_dong(dong) and not _RE_HET_CAU_DONG.search(doan[-1]):
+            doan[-1] += ' ' + dong
+        else:
+            doan.append(dong)
+        moi = False
+    return [re.sub(r'[ \t]{2,}', ' ', d) for d in doan]
 
 
 _RE_CAP_XA = re.compile(r'^(xa|phuong|thi tran|dac khu|p\.?|x\.?|tt\.?)\s+')

@@ -121,7 +121,11 @@ class TestBanIn(unittest.TestCase):
         self.assertEqual(ws.cell(tong_r + 1, 1).value, 'IV')
 
     def test_bang_tong_hop(self):
-        f = in_an.lap_bang_tong_hop(self.con, self.td / 'bth.xlsx', mau=self.mau)
+        # bài này kiểm nội dung / công thức theo vị trí ô (mỗi thửa một dòng): 21/10/2026 chữ cao hơn CAO_KHOI_BTH được chia nhiều dòng
+        # Excel (phông offscreen chữ rộng gấp đôi) - tắt chia dòng ở đây; chia dòng kiểm ở tests/test_in_an_2110.py
+        from unittest import mock
+        with mock.patch.object(in_an, 'CAO_KHOI_BTH', 1e9):
+            f = in_an.lap_bang_tong_hop(self.con, self.td / 'bth.xlsx', mau=self.mau)
         ws = openpyxl.load_workbook(f).active
         pa1, pa2 = nghiep_vu.doc_phuong_an(self.con, 1), nghiep_vu.doc_phuong_an(self.con, 2)
         so_thua = [self.con.execute('SELECT so_thua FROM thua WHERE ma_thua = ?', (d.ma_thua,)).fetchone()[0]
