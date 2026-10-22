@@ -323,7 +323,7 @@ class TestNghiDinh30CoChu(_Co):
         self.assertEqual(self._sz(x, 'PHƯƠNG ÁN CHI TIẾT'), ('28', True, False, False))                # 14 pt
         self.assertEqual(self._sz(x, in_word.TRICH_YEU), ('26', True, False, False))
         self.assertEqual(self._sz(x, f'DỰ ÁN {str(da["du_an"]).upper()}'), ('26', True, False, False))
-        for tieu_de in ('I. Tổ chức và hộ gia đình, cá nhân bị thu hồi đất, tài sản gắn liền với đất', in_an.TIEU_DE_MUC_II,
+        for tieu_de in (in_an.TIEU_DE_MUC_I_HO, in_an.TIEU_DE_MUC_II,
                         'III. Bảng tính toán bồi thường, hỗ trợ'):
             self.assertEqual(self._sz(x, tieu_de)[:2], ('26', True))
         self.assertEqual(self._sz(x, 'STT'), ('24', True, False, False))                              # tiêu đề bảng 12 pt
@@ -407,6 +407,99 @@ class TestLeA3VaLapDayNgang(_Co):
             loi, du = vb.pdf_du_phong_chi_tiet([('pdf', a, a.with_suffix('.pdf'))], [])
         self.assertEqual(goi, [(30, 20, 15, 20)])                                 # (trái, trên, phải, dưới) mm như bản Word
         self.assertEqual(du, [a.with_suffix('.pdf')])
+
+
+class TestTieuDeMucI(_Co):
+    """22/10/2026 (Phương án 2): tiêu đề mục I theo chủ sử dụng - hộ / cá nhân "I. Thông tin hộ gia đình, cá nhân" với Họ và tên,
+    Số CCCD (kèm ngày cấp, nơi cấp), Địa chỉ thường trú, Số điện thoại; tổ chức "I. Thông tin tổ chức" chỉ Tổ chức + Địa chỉ (không
+    CCCD / điện thoại). Cả bản .xlsx lẫn .docx. Tên, số GIẢ LẬP."""
+
+    def _con(self, ho_ten: str):
+        from tests.test_trang_1_khong_ho import _du_an as du_an_1_ho
+        con = self.mo(du_an_1_ho(self.td))
+        with con:
+            con.execute("UPDATE ho SET ho_ten = ?, so_cccd = '075000000001', ngay_cap = '01/01/2021', noi_cap = 'Cục CS QLHC', "
+                        "dien_thoai = '0900000001', dia_chi = 'Ấp 1, xã Mẫu'", (ho_ten,))
+        return con
+
+    def _excel(self, con) -> list:
+        """[(dòng, chữ, đậm)] các ô chữ còn hiện (dòng không ẩn) phía trên bảng mục III."""
+        ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 1, self.td / 'ct.xlsx')).active
+        r_stt = next(r for r in range(1, 200) if str(ws.cell(r, 1).value or '').strip() == 'STT')
+        return [(o.row, o.value.strip(), bool(o.font.b)) for row in ws.iter_rows(max_row=r_stt - 1) for o in row
+                if isinstance(o.value, str) and o.value.strip() and not ws.row_dimensions[o.row].hidden]
+
+    def _word(self, con) -> tuple:
+        """(tiêu đề mục I (w:p), [chữ từng dòng bảng mục I])."""
+        x = _xml(in_word.xuat_chi_tiet_docx(con, 1, self.td / 'ct.docx'))
+        than = x.find(f'{W}body')
+        con_cua = list(than)
+        i = next(k for k, e in enumerate(con_cua)
+                 if e.tag == W + 'p' and ''.join(t.text or '' for t in e.iter(W + 't')).startswith('I.'))
+        bang = con_cua[i + 1]
+        self.assertEqual(bang.tag, W + 'tbl')
+        return con_cua[i], [''.join(t.text or '' for t in h.iter(W + 't')) for h in bang.iter(W + 'tr')]
+
+    def _kiem_tieu_de_word(self, p, chu):
+        self.assertEqual(''.join(t.text or '' for t in p.iter(W + 't')), chu)
+        r = p.find(f'{W}r/{W}rPr')
+        self.assertIsNotNone(r.find(W + 'b'))
+        self.assertEqual(r.find(W + 'sz').get(W + 'val'), '26')                         # 13 pt
+        sp = p.find(f'{W}pPr/{W}spacing')
+        self.assertGreater(int(sp.get(W + 'before')), 0)
+        self.assertGreater(int(sp.get(W + 'after')), 0)
+
+    def test_ho_gia_dinh_ca_nhan(self):
+        con = self._con('Phan Văn Minh')
+        o = self._excel(con)
+        chu = [c for _, c, _ in o]
+        self.assertIn(in_an.TIEU_DE_MUC_I_HO, chu)
+        self.assertTrue(next(d for _, c, d in o if c == in_an.TIEU_DE_MUC_I_HO))          # in đậm
+        self.assertFalse(any(c.startswith('I. Tổ chức') for c in chu))
+        for nhan in ('Họ và tên:', 'Số CCCD:', 'Địa chỉ thường trú:', 'Số điện thoại:'):
+            self.assertIn(nhan, chu)
+        self.assertNotIn('Tổ chức:', chu)
+        self.assertTrue(any('075000000001 - Ngày cấp: 01/01/2021 - Nơi cấp: Cục CS QLHC' in c for c in chu))
+        self.assertTrue(any('BỒI THƯỜNG, HỖ TRỢ VÀ TÁI ĐỊNH CƯ KHI NHÀ NƯỚC THU HỒI ĐẤT' in c for c in chu))
+        p, hang = self._word(con)
+        self._kiem_tieu_de_word(p, in_an.TIEU_DE_MUC_I_HO)
+        self.assertEqual([h.split(':')[0] + ':' for h in hang],
+                         ['Họ và tên:', 'Số CCCD:', 'Địa chỉ thường trú:', 'Số điện thoại:'])
+        self.assertIn('075000000001', hang[1])
+
+    def test_to_chuc(self):
+        con = self._con('UBND xã Phú Lý')
+        o = self._excel(con)
+        chu = [c for _, c, _ in o]
+        self.assertIn(in_an.TIEU_DE_MUC_I_TO_CHUC, chu)
+        self.assertNotIn(in_an.TIEU_DE_MUC_I_HO, chu)
+        self.assertIn('Tổ chức:', chu)
+        self.assertIn('Địa chỉ:', chu)
+        for nhan in ('Họ và tên:', 'Số CCCD:', 'Địa chỉ thường trú:', 'Số điện thoại:'):
+            self.assertNotIn(nhan, chu)
+        self.assertFalse(any('075000000001' in c or '0900000001' in c for c in chu))
+        p, hang = self._word(con)
+        self._kiem_tieu_de_word(p, in_an.TIEU_DE_MUC_I_TO_CHUC)
+        self.assertEqual(hang, ['Tổ chức:UBND xã Phú Lý', 'Địa chỉ:Ấp 1, xã Mẫu'])
+
+    def test_do_o_tieu_de_khi_mau_doi_dong(self):
+        """Mẫu người dùng: tiêu đề không có "I." và nằm dòng khác - dò theo từ khóa, giữa dòng "Dự án" và nhãn "Họ và tên:"."""
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws['A3'] = 'Tổ chức làm nhiệm vụ bồi thường'                    # trên dòng Dự án: không phải tiêu đề mục I
+        ws['A5'] = 'Dự án: {du_an}'
+        ws['A9'] = 'Hộ gia đình, cá nhân có đất thu hồi'
+        ws['B10'] = 'Họ và tên:'
+        ws['A14'] = 'II. Thông tin nguồn gốc đất:'
+        ws['A17'] = 'STT'
+        self.assertEqual(in_an.dat_tieu_de_muc_i(ws, 17, True), 1)
+        self.assertEqual(ws['A9'].value, in_an.TIEU_DE_MUC_I_TO_CHUC)
+        self.assertTrue(ws['A9'].font.b)
+        self.assertEqual(ws['A3'].value, 'Tổ chức làm nhiệm vụ bồi thường')
+        self.assertEqual(in_an.dat_tieu_de_muc_i(ws, 17, False), 1)         # ô đã là "I. …" - đổi theo chủ sử dụng
+        self.assertEqual(ws['A9'].value, in_an.TIEU_DE_MUC_I_HO)
+        self.assertEqual(in_an.dat_tieu_de_muc_i(ws, 17, False), 0)
 
 
 if __name__ == '__main__':

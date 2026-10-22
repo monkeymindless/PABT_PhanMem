@@ -1984,6 +1984,13 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   BỚT 1 px (3px 7px; `[nhap="1"]` 3px 9px; hàng nhập / loc_ds / o_chon_ho / o_tim_gan cùng quy tắc) - chữ không nhảy. Tiêu đề bảng ngang:
   vạch phải #1E3A5F, vạch dưới 2px #2563EB. Thẻ gạch chân chọn: chữ / vạch dưới 3px #2563EB nền trắng (thẻ thường vạch 3px trong suốt,
   padding dưới 4 px - không đổi cao). `#tong_dinh_danh` nền #FEF3C7 viền #F59E0B. Logo / biểu tượng không đổi. Test `tests/test_giao_dien_pro_max.py`.
+- 1.0.13 Tiêu đề Mục I phương án chi tiết (người dùng 22/10/2026, Phương án 2): `in_an.tieu_de_muc_i(to_chuc)` =
+  `TIEU_DE_MUC_I_TO_CHUC` "I. Thông tin tổ chức" / `TIEU_DE_MUC_I_HO` "I. Thông tin hộ gia đình, cá nhân" (theo `ho_so.la_to_chuc`; thay
+  "I. Tổ chức và hộ gia đình, cá nhân bị thu hồi đất…" của mẫu - mẫu mau_in\ không đổi). Excel: `dat_tieu_de_muc_i(ws, dòng STT, to_chuc)`
+  gọi đầu `lap_chi_tiet` TRƯỚC chuan_co_chu_ct / chuan_muc_i (chúng dò mục I theo "I. "); DÒ ô (trên "II.": bắt đầu "I.", không có thì ô
+  chữ chứa từ khóa `_TU_KHOA_MUC_I` giữa dòng "Dự án" và nhãn "Họ và tên:") - không viết số dòng; in đậm. Nhãn / ẩn dòng CCCD, SĐT vẫn ở
+  `dat_nhan_chu_su_dung` + `an_dong_trong_khoi_i`. Word: cùng chữ, 13 pt đậm, cách trên 120 / dưới 60 twip; tổ chức 2 dòng (Tổ chức,
+  Địa chỉ), hộ 4 dòng (dòng CCCD / SĐT trống thì bỏ như bản Excel ẩn). Test `test_in_an_2110.TestTieuDeMucI`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

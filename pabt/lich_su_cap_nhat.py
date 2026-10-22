@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.13', '22/10/2026', (
+        'Phương án chi tiết (bản Excel và bản Word): tiêu đề mục I theo chủ sử dụng - "I. Thông tin tổ chức" khi chủ sử dụng là tổ '
+        'chức (chỉ ghi Tổ chức, Địa chỉ; không có dòng CCCD, điện thoại), "I. Thông tin hộ gia đình, cá nhân" với hộ / cá nhân '
+        '(Họ và tên, Số CCCD, Địa chỉ thường trú, Số điện thoại - dòng trống được bỏ).',
+    )),
     ('1.0.12', '22/10/2026', (
         'Giao diện đổi sang tông xanh navy đậm hơn, chữ tương phản cao (dễ đọc trên màn hình độ sáng thấp, máy chiếu); bố cục, '
         'số dòng bảng nhìn thấy giữ nguyên.',

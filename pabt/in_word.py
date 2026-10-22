@@ -166,8 +166,8 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
           _p(_r(f'DỰ ÁN {str(da["du_an"] or "").upper()}', dam=True, co=co), can='center', sau=240)]
     # ---- I. chủ sử dụng (bảng ẩn viền: nhãn đậm | nội dung)
     to_chuc = la_to_chuc(ttho['ho_ten'])
-    t.append(_p(_r('I. Tổ chức và hộ gia đình, cá nhân bị thu hồi đất, tài sản gắn liền với đất', dam=True, co=co),
-                truoc=60, sau=60, giu_sau=True))
+    # 22/10/2026: tiêu đề mục I theo chủ sử dụng (in_an.tieu_de_muc_i - cùng bản Excel); tổ chức chỉ "Tổ chức:" / "Địa chỉ:"
+    t.append(_p(_r(in_an.tieu_de_muc_i(to_chuc), dam=True, co=co), truoc=120, sau=60, giu_sau=True))
     hang_i = [(in_an.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten'])]
     if not to_chuc and ttho['cccd']:
         hang_i.append(('Số CCCD:', ttho['cccd']))

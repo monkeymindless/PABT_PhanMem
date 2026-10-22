@@ -2177,6 +2177,40 @@ def _thong_tin_ho(con, ma_ho: int, da: dict, che: bool | None = None) -> dict:
 TIEU_DE_MUC_II = 'II. Thông tin vị trí, nguồn gốc đất:'      # 0.9.87: tiêu đề mục II thống nhất (1.0.07: có dấu hai chấm)
 NHAN_TO_CHUC = 'Tổ chức:'                                  # chủ sử dụng là tổ chức: thay nhãn "Họ và tên:"
 NHAN_DIA_CHI_TO_CHUC = 'Địa chỉ:'                          # 1.0.04: tổ chức thay nhãn "Địa chỉ thường trú:"
+TIEU_DE_MUC_I_HO = 'I. Thông tin hộ gia đình, cá nhân'     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (thay "I. Tổ chức và hộ…")
+TIEU_DE_MUC_I_TO_CHUC = 'I. Thông tin tổ chức'
+_TU_KHOA_MUC_I = ('chu so huu tai san', 'co dat thu hoi', 'ho gia dinh', 'to chuc')
+
+
+def tieu_de_muc_i(to_chuc: bool) -> str:
+    return TIEU_DE_MUC_I_TO_CHUC if to_chuc else TIEU_DE_MUC_I_HO
+
+
+def dat_tieu_de_muc_i(ws, den_dong: int, to_chuc: bool) -> int:
+    """Ô tiêu đề mục I (phía trên mục II, mẫu chuẩn A7 - nguồn gốc dài / mẫu người dùng có thể dời dòng nên DÒ, không viết số dòng) ->
+    tieu_de_muc_i(to_chuc), in đậm. Ô bắt đầu "I." trước; không có thì ô chữ (không phải nhãn "…:") chứa từ khóa _TU_KHOA_MUC_I nằm
+    dưới dòng "Dự án" và trên nhãn "Họ và tên:" đầu tiên. Gọi TRƯỚC chuan_co_chu_ct / chuan_muc_i (chúng dò mục I theo "I. "). Trả số ô
+    đã đổi (0 / 1)."""
+    from .lap_pa import bo_dau
+    o_chu = [(o, bo_dau(o.value.strip()).lower()) for o in _o_chu(ws, den_dong)]
+    r_ii = next((o.row for o, s in o_chu if s.startswith('ii.')), den_dong)
+    o = next((o for o, s in o_chu if o.row < r_ii and s.startswith('i.')), None)
+    if o is None:
+        r_da = next((o.row for o, s in o_chu if '{du_an}' in s or s.startswith('du an')), 0)
+        r_nhan = next((o.row for o, s in o_chu if o.row > r_da and s.rstrip(': ') in ('ho va ten', 'to chuc')
+                       and s.endswith(':')), r_ii)
+        o = next((o for o, s in o_chu if r_da < o.row < r_nhan and not s.endswith(':') and '{' not in s
+                  and any(k in s for k in _TU_KHOA_MUC_I)), None)
+    if o is None:
+        return 0
+    moi = tieu_de_muc_i(to_chuc)
+    doi = o.value != moi or not (o.font and o.font.b)
+    o.value = moi
+    if o.font is not None and not o.font.b:
+        f = copy(o.font)
+        f.b = True
+        o.font = f
+    return int(doi)
 
 
 _RE_TIEU_DE_MUC = re.compile(r'^(I|II|III|IV|V|VI)\.?(\s|$)')
@@ -2526,6 +2560,9 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
     # 1.0.07: tiêu đề 16 pt đậm, nội dung 14 pt; mục I không viền, CCCD / điện thoại dạng chữ (trước khi điền, trước khi chèn dòng)
     _cot0, _, _chu_dau0 = _cot_ct()
     r_td0 = next((r for r in range(1, 300) if str(ws.cell(r, _cot0[0]).value or '').strip().upper() == _chu_dau0), 17)
+    from .ho_so import la_to_chuc
+    to_chuc = la_to_chuc(ttho['ho_ten'])
+    dat_tieu_de_muc_i(ws, r_td0, to_chuc)                       # 22/10/2026: "I. Thông tin tổ chức" / "… hộ gia đình, cá nhân"
     chuan_co_chu_ct(ws, r_td0)
     o_chu_so = chuan_muc_i(ws, r_td0)
     vua_cot_theo_tieu_de(ws, r_td0, r_td0, max(_cot0), do, lay_tu=_cot0[7])    # "STT" 16 pt không bị cắt đôi (bớt cột Ghi chú)
@@ -2654,8 +2691,7 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
             cao = [h + thieu / len(cao) for h in cao]
         for r, h in zip(range(r1, r2 + 1), cao):
             ws.row_dimensions[r].height = min(409, h)
-    from .ho_so import la_to_chuc
-    dat_nhan_chu_su_dung(ws, dau - 1, la_to_chuc(ttho['ho_ten']))
+    dat_nhan_chu_su_dung(ws, dau - 1, to_chuc)
     from .canh_trang_in_an import BoCanhTrangInAn                # 20/10/2026: dòng "Số CCCD:" / "Số điện thoại:" trống -> ẩn
     BoCanhTrangInAn.an_dong_trong_khoi_i(ws, dau - 1, ttho)
     viet_hoa_du_an(ws, dau - 1)
