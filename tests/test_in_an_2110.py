@@ -165,12 +165,38 @@ class TestWordNghiDinh30(_Co):
             self.con.execute('UPDATE thua SET nguon_goc = ?', (NGUON * 20,))
             self.con.execute('UPDATE ct_dat SET ghi_chu = ?', (GHI_CHU * 2,))
 
+    def test_khung_suon_mau_pa_01(self):
+        """22/10/2026 (PDF mẫu PA_01): "Số: …" và "địa danh, ngày …" CÙNG MỘT HÀNG bảng đầu, cùng cỡ chữ và khoảng cách (hai dòng
+        ngang nhau); dòng 3 tên đơn vị gạch chân thật (không còn "____"); đường kẻ ngắn căn giữa ngay dưới tên dự án."""
+        x = _xml(in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx'))
+        dau = next(iter(x.iter(W + 'tbl')))
+        hang = list(dau.iter(W + 'tr'))
+        self.assertEqual(len(hang), 2)
+        o_so, o_ngay = [''.join(t.text or '' for t in c.iter(W + 't')) for c in hang[1].iter(W + 'tc')]
+        self.assertTrue(o_so.startswith('Số:'))
+        self.assertIn(' tháng ', o_ngay)
+        cao = []
+        for c in hang[1].iter(W + 'tc'):
+            p0 = next(c.iter(W + 'p'))
+            sp = p0.find(f'{W}pPr/{W}spacing')
+            cao.append((sp.get(W + 'before'), sp.get(W + 'line'), p0.find(f'{W}r/{W}rPr/{W}sz').get(W + 'val')))
+        self.assertEqual(cao[0], cao[1])                                             # cùng giãn, cùng cỡ chữ
+        chu = ''.join(t.text or '' for t in x.iter(W + 't'))
+        self.assertNotIn('____', chu)
+        ps = list(x.iter(W + 'p'))
+        i = next(k for k, p in enumerate(ps) if ''.join(t.text or '' for t in p.iter(W + 't')).startswith('DỰ ÁN'))
+        vien = ps[i + 1].find(f'{W}pPr/{W}pBdr/{W}bottom')
+        self.assertIsNotNone(vien)
+        ind = ps[i + 1].find(f'{W}pPr/{W}ind')
+        self.assertEqual(ind.get(W + 'left'), ind.get(W + 'right'))                  # căn giữa
+        self.assertAlmostEqual((in_word.rong_trang() - 2 * int(ind.get(W + 'left'))) / in_word.twip(10), 7.0, delta=0.05)
+
     def test_le_va_bang(self):
         p = in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx')
         x = _xml(p)
         mar = x.find(f'.//{W}sectPr/{W}pgMar')
         mm = {k: round(int(mar.get(W + k)) / 1440 * 25.4) for k in ('left', 'right', 'top', 'bottom')}
-        self.assertEqual(mm, dict(left=30, right=15, top=20, bottom=20))
+        self.assertEqual(mm, dict(left=15, right=10, top=10, bottom=10))
         sz = x.find(f'.//{W}sectPr/{W}pgSz')
         self.assertEqual((sz.get(W + 'w'), sz.get(W + 'h')), ('11906', '16838'))          # A4 dọc
         bang = [t for t in x.iter(W + 'tbl') if any(r.find(f'{W}trPr/{W}tblHeader') is not None for r in t.iter(W + 'tr'))]
@@ -282,6 +308,14 @@ class TestNghiDinh30CoChu(_Co):
         than = x.find(f'{W}body')
         return [(''.join(t.text or '' for t in p.iter(W + 't')), p) for p in than.findall(f'{W}p')]
 
+    def _co_gach_ho(self, x, chu) -> bool:
+        """Đoạn chứa đúng chữ chu có viền dưới cách chữ >= 1 pt (w:space) - gạch chân hở, không dùng gạch chân sát chữ của Word."""
+        for p in x.iter(W + 'p'):
+            if ''.join(t.text or '' for t in p.iter(W + 't')) == chu:
+                b = p.find(f'{W}pPr/{W}pBdr/{W}bottom')
+                return b is not None and int(b.get(W + 'space')) >= 1
+        return False
+
     def _sz(self, x, chu) -> tuple:
         """(cỡ w:sz, đậm, nghiêng, gạch chân) của w:r đầu tiên có chữ đúng bằng chu."""
         for r in x.iter(W + 'r'):
@@ -308,21 +342,17 @@ class TestNghiDinh30CoChu(_Co):
             sp = pr.find(W + 'spacing')
             self.assertEqual((sp.get(W + 'before'), sp.get(W + 'line'), sp.get(W + 'after')), ('0', '240', '120'))  # đơn, cách 6 pt
             ind = pr.find(W + 'ind')
-            if c.startswith('- '):
-                self.assertEqual((ind.get(W + 'left'), ind.get(W + 'hanging')), ('360', '360'))   # thụt lề treo
-            else:
-                self.assertEqual(ind.get(W + 'firstLine'), '567')                                   # thụt đầu dòng 1 cm
+            # 22/10/2026 (PDF mẫu PA_01): MỌI đoạn, kể cả gạch đầu dòng, thụt dòng đầu 1 cm, dòng sau về sát lề trái
+            self.assertEqual((ind.get(W + 'firstLine'), ind.get(W + 'left'), ind.get(W + 'hanging')), ('567', None, None))
 
     def test_dau_van_ban_lan_le_va_cot_theo_noi_dung(self):
         """22/10/2026 (xuất thử dự án thật so với mẫu PA_01): bảng đầu văn bản lấn lề để "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT" 13 pt một dòng
         (trước bẻ 3 dòng); cột bảng mục III theo nội dung - ghi chú dài được rộng hơn tỷ lệ cố định 14%, cột số vừa số dài nhất."""
         x = _xml(in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx'))
         dau = next(iter(x.iter(W + 'tbl')))
-        lui = dau.find(f'{W}tblPr/{W}tblInd')
-        self.assertEqual(int(lui.get(W + 'w')), -in_word.twip(in_word.LAN_LE_DAU_MM[0]))
+        self.assertEqual(in_word.LAN_LE_DAU_MM, (0, 0))                              # lề 1,5 / 1 cm đã hẹp: không lấn nữa
         rong = sum(int(c.get(W + 'w')) for c in dau.iter(W + 'gridCol'))
-        self.assertGreater(rong, in_word.rong_trang())
-        self.assertLessEqual(rong - in_word.twip(in_word.LAN_LE_DAU_MM[0]), in_word.KHO_A4[0] - in_word.twip(5))  # chừa >= 5 mm
+        self.assertEqual(rong, in_word.rong_trang())
         r1 = in_word.rong_cot_dau()[0]
         self.assertGreaterEqual((r1 - 2 * 57) / 20, in_word._rong_uoc('TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT', 13))
         # cột theo nội dung
@@ -345,22 +375,24 @@ class TestNghiDinh30CoChu(_Co):
         x = _xml(in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx', du_thao=True))
         chu = ''.join(t.text or '' for t in x.iter(W + 't'))
         self.assertEqual(' '.join(in_word.TRICH_YEU_DONG), in_word.TRICH_YEU)
-        self.assertIn(''.join(in_word.TRICH_YEU_DONG), chu)                          # hai dòng ngắt đúng nghĩa
-        self.assertNotIn('&', chu)
+        self.assertEqual(len(in_word.TRICH_YEU_DONG), 1)                             # PDF mẫu PA_01: một dòng, chữ "&"
+        self.assertIn('HỖ TRỢ & TÁI ĐỊNH CƯ', chu)
         da = in_an._thong_tin_du_an(self.con)
         cq = str(da['DON_VI_TIEU_DE']).upper()
         # 22/10/2026 (người dùng): cơ quan, quốc hiệu, số 13; tiêu ngữ, ngày, trích yếu, dự án, nội dung, bảng 14; tên loại 15
         self.assertEqual(self._sz(x, 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'), ('26', True, False, False))   # 13 pt đậm
-        self.assertEqual(self._sz(x, 'Độc lập - Tự do - Hạnh phúc'), ('28', True, False, True))       # 14 pt đậm, gạch dưới
-        self.assertEqual(self._sz(x, cq), ('26', True, False, False))                                   # cơ quan ban hành
+        self.assertEqual(self._sz(x, 'Độc lập - Tự do - Hạnh phúc'), ('28', True, False, False))      # 14 pt đậm
+        self.assertTrue(self._co_gach_ho(x, 'Độc lập - Tự do - Hạnh phúc'))                          # gạch chân HỞ (viền đoạn), không sát chữ
+        self.assertEqual(self._sz(x, cq), ('26', True, False, False))                                   # dòng 3 đậm 13 pt
+        self.assertTrue(self._co_gach_ho(x, cq))                                                     # gạch chân hở, không sát chữ
         vua = (in_word.rong_cot_dau()[0] - 2 * 57) / 20
         for d in (da['DON_VI_CAP_TREN_2DONG'] or '').split('\n'):
             for p in in_word._ngat_can_bang(d.strip().upper(), vua, in_word.CO_CO_QUAN) if d.strip() else ():
                 self.assertEqual(self._sz(x, p), ('26', False, False, False))                           # cơ quan chủ quản
-        self.assertEqual(self._sz(x, '(DỰ THẢO)'), ('26', False, False, False))
+        self.assertEqual(self._sz(x, '(DỰ THẢO)'), ('26', False, False, False))                         # 13 pt cùng dòng Số / ngày
         ngay = next(t.text for t in x.iter(W + 't') if (t.text or '').find(' tháng ') > 0)
-        self.assertEqual(self._sz(x, ngay), ('28', False, True, False))                                # địa danh, ngày nghiêng
-        self.assertEqual(self._sz(x, 'PHƯƠNG ÁN CHI TIẾT'), ('30', True, False, False))                # 15 pt
+        self.assertEqual(self._sz(x, ngay), ('26', False, True, False))                                # địa danh, ngày nghiêng 13 pt
+        self.assertEqual(self._sz(x, 'PHƯƠNG ÁN CHI TIẾT'), ('28', True, False, False))                # 14 pt
         for d in in_word.TRICH_YEU_DONG:
             self.assertEqual(self._sz(x, d), ('28', True, False, False))
         self.assertEqual(in_word._ngat_can_bang('TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT', 176, 13),
@@ -370,14 +402,14 @@ class TestNghiDinh30CoChu(_Co):
         for tieu_de in (in_an.TIEU_DE_MUC_I_HO, in_an.TIEU_DE_MUC_II,
                         'III. Bảng tính toán bồi thường, hỗ trợ'):
             self.assertEqual(self._sz(x, tieu_de)[:2], ('28', True))
-        self.assertEqual(self._sz(x, 'STT'), ('28', True, False, False))                              # bảng 14 pt
+        self.assertEqual(self._sz(x, 'STT'), ('26', True, False, False))                              # bảng 13 pt
         so_r = next(t.text for t in x.iter(W + 't') if (t.text or '').startswith('Số:'))
-        self.assertEqual(self._sz(x, so_r), ('26', False, False, False))                              # số ký hiệu 13 pt
+        self.assertEqual(self._sz(x, so_r), ('26', False, False, False))                              # số ký hiệu 13 pt, cùng cỡ dòng ngày
 
     def test_noi_dung_va_chu_ky_14_khong_doan_rong(self):
         x = _xml(in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx'))
-        self.assertEqual(self._sz(x, 'LẬP BIỂU'), ('28', True, False, False))                         # khối chữ ký 14 pt
-        self.assertEqual(self._sz(x, 'Đất sử dụng gồm:'), ('28', False, False, False))               # nội dung mục II 14 pt
+        self.assertEqual(self._sz(x, 'LẬP BIỂU'), ('30', True, False, False))                         # khối chữ ký 15 pt
+        self.assertEqual(self._sz(x, 'Đất sử dụng gồm:'), ('26', False, False, False))               # nguồn gốc mục II 13 pt
         self.assertEqual(self._sz(x, 'Họ và tên:')[:2], ('28', False))                                 # mục I 14 pt, nhãn thường
         ten = in_an._thong_tin_ho(self.con, 1, in_an._thong_tin_du_an(self.con))['ho_ten']
         self.assertEqual(self._sz(x, ten)[:2], ('28', True))                                         # tên chủ hộ đậm (mẫu PA_01)
@@ -495,7 +527,7 @@ class TestLeA3VaLapDayNgang(_Co):
         with mock.patch.object(pdf_du_phong, 'xuat_pdf_du_phong_qt',
                                lambda x, p, le_mm=None: (goi.append(le_mm), Path(p).write_bytes(b'%PDF'))):
             loi, du = vb.pdf_du_phong_chi_tiet([('pdf', a, a.with_suffix('.pdf'))], [])
-        self.assertEqual(goi, [(30, 20, 15, 20)])                                 # (trái, trên, phải, dưới) mm như bản Word
+        self.assertEqual(goi, [(15, 10, 10, 10)])                                 # (trái, trên, phải, dưới) mm như bản Word
         self.assertEqual(du, [a.with_suffix('.pdf')])
 
 

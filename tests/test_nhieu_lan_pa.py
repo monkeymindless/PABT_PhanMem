@@ -271,8 +271,8 @@ class TestGiaoDien(_Co):
         self.assertTrue(c.bo.khoa)
         self.assertFalse(c.b_luu.isEnabled())
         self.assertFalse(c.bang[2].hang.o_sl.isEnabled())
-        self.assertIn('CHỈ XEM', c.lb_trang_thai_lan.text())
-        self.assertIn('ĐÃ PHÊ DUYỆT', c.lb_trang_thai_lan.text())
+        self.assertIn('CHỈ XEM', c.lb_trang_thai_lan.toolTip())          # thẻ gọn "ĐÃ DUYỆT"; câu đủ ở chú thích
+        self.assertIn('ĐÃ DUYỆT', c.lb_trang_thai_lan.text())
         self.assertEqual(c.lap_bo_sung('Bổ sung cây'), 2)
         self.assertEqual(c.cb_lan.count(), 2)
         self.assertTrue(c.bang[2].hang.o_sl.isEnabled())

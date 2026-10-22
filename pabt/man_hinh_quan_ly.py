@@ -21,7 +21,7 @@ from .thong_bao import chu_loi
 
 TIEU_DE = 'Quản lý hồ sơ trình phương án'
 # huy hiệu danh sách kiểm tra hồ sơ đợt trình (1.0.03): {đạt?: (nền, chữ)} - True đạt, None xem lại, False thiếu
-HUY_HIEU_KIEM = {True: ('#DCFCE7', '#15803D'), None: ('#FEF3C7', '#B45309'), False: ('#FEE2E2', '#B91C1C')}
+HUY_HIEU_KIEM = {True: ('#DCFCE7', '#2F7D54'), None: ('#FEF3C7', '#9A5A12'), False: ('#FEE2E2', '#B83A3A')}
 SO_CHU_SO_PA = 2                    # số PA chi tiết đánh ở hộp "Đánh số": 01, 02, 03… (NĐ 30/2020/NĐ-CP); 0 = không thêm số 0
 DO, VANG, XANH = QColor('#F8CBAD'), QColor('#FFF2CC'), QColor('#E2EFDA')
 

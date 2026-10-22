@@ -12,7 +12,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QHBoxLayout, QHeaderView, QLabel, QMessageBox, QPushButton,
                                QTableWidget, QTableWidgetItem, QVBoxLayout)
 
-from . import in_an
+from . import dia_phuong, in_an, in_word
 from .thong_bao import TEN_UD, chu_loi
 
 MO_TA = {in_an.TEN_CT: 'A4 dọc, tỷ lệ 72%, chữ 14 / tiêu đề 16 pt',
@@ -43,6 +43,21 @@ class HopQuanLyMauIn(QDialog):
         hh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.bang.itemSelectionChanged.connect(self._cap_nhat_nut)
         lo.addWidget(self.bang, 1)
+        # mẫu Word phương án chi tiết / bổ sung / điều chỉnh: nhúng sẵn, đổi quy cách bằng file thông số (không cần bản cập nhật)
+        self.lb_word = QLabel()
+        self.lb_word.setWordWrap(True)
+        lo.addWidget(self.lb_word)
+        hw = QHBoxLayout()
+        self.b_w_xuat = QPushButton('Xuất thông số mẫu Word…')
+        self.b_w_nhap = QPushButton('Nhập thông số mẫu Word…')
+        self.b_w_khoi_phuc = QPushButton('Khôi phục thông số chuẩn')
+        self.b_w_xuat.clicked.connect(lambda: self.xuat_word())
+        self.b_w_nhap.clicked.connect(lambda: self.nhap_word())
+        self.b_w_khoi_phuc.clicked.connect(lambda: self.khoi_phuc_word())
+        for b in (self.b_w_xuat, self.b_w_nhap, self.b_w_khoi_phuc):
+            hw.addWidget(b)
+        hw.addStretch(1)
+        lo.addLayout(hw)
         h = QHBoxLayout()
         self.b_thay = QPushButton('Thay thế bằng file Excel khác…')
         self.b_xuat = QPushButton('Xuất mẫu hiện tại ra Excel để chỉnh sửa…')
@@ -76,6 +91,11 @@ class HopQuanLyMauIn(QDialog):
             o.setForeground(Qt.GlobalColor.darkBlue if f is None else Qt.GlobalColor.darkYellow)
             self.bang.setItem(r, 2, o)
         self._cap_nhat_nut()
+        tt = in_word.trang_thai_thong_so()
+        self.lb_word.setText(f'Mẫu Word (phương án chi tiết, bổ sung, điều chỉnh): {tt}. Bố cục nhúng trong phần mềm; lề, cỡ chữ, trích yếu, '
+                             f'thụt đầu dòng, độ hở gạch chân là thông số - đổi khi có quy định mới bằng "Nhập thông số mẫu Word…" '
+                             f'hoặc gói .pabtcfg (Công cụ), không cần cập nhật phần mềm.')
+        self.b_w_khoi_phuc.setEnabled(tt != 'Nhúng chuẩn')
 
     def ten_chon(self) -> str | None:
         r = self.bang.currentRow()
@@ -126,6 +146,43 @@ class HopQuanLyMauIn(QDialog):
             return None
         self._bao(f'Đã xuất mẫu ra:\n{p}\n\nSửa trong Excel (giữ các chỗ trống {{…}}) rồi bấm "Thay thế bằng file Excel khác…".')
         return p
+
+    def xuat_word(self, file=None):
+        if file is None:
+            file, _ = QFileDialog.getSaveFileName(self, 'Lưu thông số mẫu Word', str(Path.home() / 'Documents' / 'mau_word.json'),
+                                                  'Thông số mẫu Word (*.json)')
+            if not file:
+                return None
+        try:
+            p = in_word.xuat_thong_so(file)
+        except OSError as e:
+            self._bao(chu_loi('Không xuất được thông số mẫu Word', e), True)
+            return None
+        self._bao(f'Đã xuất thông số mẫu Word:\n{p}\n\nSửa các giá trị cần đổi (lề mm, cỡ chữ pt, trích yếu…) rồi bấm "Nhập thông số mẫu Word…".')
+        return p
+
+    def nhap_word(self, file=None):
+        if file is None:
+            file, _ = QFileDialog.getOpenFileName(self, 'Chọn file thông số mẫu Word', str(Path.home()), 'Thông số mẫu Word (*.json)')
+            if not file:
+                return None
+        try:
+            doi = in_word.nhap_thong_so(file)
+        except (dia_phuong.LoiHoSo, OSError) as e:
+            self._bao(chu_loi('Không nhập được thông số mẫu Word', e), True)
+            return None
+        self.nap()
+        self._bao('Đã áp thông số mẫu Word - dùng ngay lần xuất / xem trước sau.\nMục đổi: ' + (', '.join(doi) or '(không có gì khác trước)'))
+        return doi
+
+    def khoi_phuc_word(self, xac_nhan=None) -> bool:
+        if xac_nhan is None and not self.im_lang:
+            xac_nhan = QMessageBox.question(self, TEN_UD, 'Bỏ thông số mẫu Word tùy chỉnh, dùng lại thông số chuẩn nhúng?') ==                 QMessageBox.StandardButton.Yes
+        if xac_nhan is False:
+            return False
+        in_word.khoi_phuc_thong_so()
+        self.nap()
+        return True
 
     def khoi_phuc(self, xac_nhan=None) -> bool:
         ten = self.ten_chon()

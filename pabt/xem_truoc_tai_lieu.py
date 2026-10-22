@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QPushB
 THU_MUC_GOC = Path(tempfile.gettempdir()) / 'pabt_preview'
 MAU_NEN = '#334155'             # vùng trang (1.0.02: slate 700 - trước #1E293B quá tối cạnh giao diện sáng)
 MAU_THANH = '#F8FAFC'           # thanh công cụ xem trước (nền slate nhạt, vạch dưới #CBD5E1)
-MAU_ICON_XT = '#0F294A'         # biểu tượng nút thanh công cụ
+MAU_ICON_XT = '#2F5F9E'         # biểu tượng nút thanh công cụ
 CAO_NUT_XT = 28
 MAU_GIAY = '#FFFFFF'
 CHO_MS = 250                    # chờ ngừng bấm (đổi hộ bằng phím mũi tên) rồi mới lập bản xem trước
@@ -364,7 +364,7 @@ class KhungXemTruocTaiLieu(QFrame):
                            'QPushButton[xem_truoc="1"]:pressed { background: #E2E8F0; }'
                            'QPushButton[xem_truoc="1"]:disabled { color: #94A3B8; background: #F8FAFC; border-color: #E2E8F0; }'
                            # nút "Mở bằng trình xem PDF" nằm giữa vùng trang tối: nền trắng, chữ navy
-                           'QPushButton#xt_mo_ngoai { color: #0F294A; }')
+                           'QPushButton#xt_mo_ngoai { color: #2F5F9E; }')
         self.ham_in = ham_in
         self._vua = True                       # đang ở chế độ vừa trang: đổi cỡ khung thì vừa lại
         self.pdf: Path | None = None
@@ -416,11 +416,9 @@ class KhungXemTruocTaiLieu(QFrame):
         self.ly_do_gan_dung = ''
         self.b_in = nut('In nhanh', 0xE749, 'In bản đang xem ra máy in mặc định (qua Microsoft Word / Excel)',
                         lambda: self.in_nhanh())
-        self.b_in.setVisible(ham_in is not None)
         # 16/10/2026: hộp chọn máy in như Word / Excel (máy in, số bản, trang in) - bản Qt 6 (vẽ trang bằng QtPdf)
         self.b_in_hop = nut('In…', 0xE749, 'Chọn máy in, số bản, trang cần in rồi in bản đang xem (Ctrl+P)',
                             lambda: self.in_hop_thoai())
-        self.b_in_hop.setVisible(co_hop_in())
         from PySide6.QtGui import QKeySequence, QShortcut
         self._phim_in = QShortcut(QKeySequence('Ctrl+P'), self)
         self._phim_in.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -447,6 +445,10 @@ class KhungXemTruocTaiLieu(QFrame):
             if not phai:
                 hc.addStretch(1)
             h.addWidget(cum)
+        # 1.0.16: ẩn / hiện nút SAU khi đã đặt vào bố cục - setVisible(True) lên widget CHƯA có cha làm nó hiện thành cửa sổ riêng rỗng
+        # (nút thu nhỏ / phóng to / đóng, tiêu đề "PABT") nhấp nháy mỗi lần mở khung xem trước F4
+        self.b_in.setVisible(ham_in is not None)
+        self.b_in_hop.setVisible(co_hop_in())
         # ---- vùng xem
         self.lb_tb = QLabel('Chọn một hộ để xem trước bản in A4.')
         self.lb_tb.setObjectName('xt_thong_bao')

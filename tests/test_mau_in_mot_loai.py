@@ -1,5 +1,5 @@
-"""Bản cài: %APPDATA%\\PABT\\mau_in chỉ có MỘT trong hai mẫu (Cập nhật mẫu in từ file một sheet) - mẫu còn lại lấy ở mau_in
-đóng gói kèm. Trước đây thư mục chọn theo IN_CHITIET -> bảng tổng hợp FileNotFoundError (tu-kiem "Lập và in thử" LOI), mẫu
+"""Bản cài: %APPDATA%\\PABT\\mau_in chỉ có MỘT trong hai mẫu (Cập nhật mẫu in từ file một sheet) - mẫu còn lại lấy từ bộ mẫu NHÚNG
+(1.0.16: bản cài không còn thư mục mau_in đóng gói kèm). Trước đây thư mục chọn theo IN_CHITIET -> bảng tổng hợp FileNotFoundError (tu-kiem "Lập và in thử" LOI), mẫu
 bảng tổng hợp đã sửa (thư mục không có IN_CHITIET) bị bỏ qua. Số liệu GIẢ LẬP."""
 from __future__ import annotations
 import shutil
@@ -31,13 +31,13 @@ class TestMauInMotLoai(unittest.TestCase):
     def test_chi_co_mau_chi_tiet(self):
         shutil.copy(GOC / 'mau_in' / 'IN_CHITIET.xlsx', self.ghi)
         self.assertEqual(in_an.file_mau(None, in_an.TEN_CT).parent, self.ghi)
-        self.assertTrue(in_an.file_mau(None, in_an.TEN_BTH).exists())
+        self.assertTrue(in_an.la_mau_nhung(in_an.file_mau(None, in_an.TEN_BTH)))    # 1.0.16: bản cài không đóng mau_in - mẫu còn lại là mẫu NHÚNG
         self.assertNotEqual(in_an.file_mau(None, in_an.TEN_BTH).parent, self.ghi)
 
     def test_chi_co_mau_bang_tong_hop(self):
         shutil.copy(GOC / 'mau_in' / 'IN_BANGTONGHOP.xlsx', self.ghi)
         self.assertEqual(in_an.file_mau(None, in_an.TEN_BTH).parent, self.ghi)       # mẫu đã sửa được dùng
-        self.assertTrue(in_an.file_mau(None, in_an.TEN_CT).exists())
+        self.assertTrue(in_an.la_mau_nhung(in_an.file_mau(None, in_an.TEN_CT)))
         self.assertEqual([t for t, _ in in_an.ds_mau(in_an.TEN_BTH)][:1], ['Mẫu chính'])
 
     def test_mau_de_sua_chep_mau_con_thieu(self):

@@ -373,8 +373,8 @@ def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool 
 
 
 # trạng thái đồng thuận của hộ (ý kiến ở đợt niêm yết gần nhất) -> màu trên bản đồ
-TRANG_THAI = {'dong_y': ('Đã đồng thuận', '#16A34A'), 'khong': ('Chưa đồng thuận', '#DC2626'),
-              'chua': ('Chưa lấy ý kiến', '#F59E0B'), 'khong_gan': ('Chưa gắn hộ (không có trong hồ sơ)', '#94A3B8')}
+TRANG_THAI = {'dong_y': ('Đã đồng thuận', '#2F7D54'), 'khong': ('Chưa đồng thuận', '#C94545'),
+              'chua': ('Chưa lấy ý kiến', '#E5A93A'), 'khong_gan': ('Chưa gắn hộ (không có trong hồ sơ)', '#94A3B8')}
 
 
 def trang_thai_ho(con) -> dict:

@@ -53,10 +53,10 @@ def san_tieu_de(b) -> None:
     san(b, {0: 185} if b.property('the_tong_hop') else None)
 
 
-MAU_Y_KIEN = {'dong_y': '#15803D', 'khong_dong_y': '#B91C1C', 'y_kien_khac': '#B45309', 'chua': '#64748B'}
+MAU_Y_KIEN = {'dong_y': '#2F7D54', 'khong_dong_y': '#B83A3A', 'y_kien_khac': '#9A5A12', 'chua': '#64748B'}
 # thẻ KPI trang Niêm yết (1.0.02, như thẻ số màn hình chính): màu vạch trái + màu số. Navy = tổng; xanh trời / xanh dương = đủ điều kiện /
 # đã niêm yết; teal / xanh lá = phê duyệt / bàn giao (đã đồng thuận); hổ phách = vướng (cần xử lý)
-MAU_THE_NY = {'tong': '#0F294A', 'du': '#0284C7', 'vuong': '#B45309', 'dt': '#2563EB', 'pd': '#0F766E', 'bg': '#15803D'}
+MAU_THE_NY = {'tong': '#2F5F9E', 'du': '#1F76A6', 'vuong': '#9A5A12', 'dt': '#3B6FCE', 'pd': '#1F6F66', 'bg': '#2F7D54'}
 # 1.0.03: góc trái bo 3 px (bằng bề dày vạch) - vạch màu bên trái thẳng đứng, không cong thành dấu "(" như bo 6 px (Ảnh 7)
 QSS_THE_NY = ('QFrame[vai="the_ny"] {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid {m}; '
               'border-radius: 6px; border-top-left-radius: 3px; border-bottom-left-radius: 3px; }}'
@@ -375,7 +375,7 @@ class KhungDuThao(QWidget):
         self.thanh.setFixedHeight(8)
         self.thanh.setTextVisible(False)
         self.thanh.setStyleSheet('QProgressBar { background: #E2E8F0; border: none; border-radius: 4px; }'
-                                 'QProgressBar::chunk { background: #0F294A; border-radius: 4px; }')
+                                 'QProgressBar::chunk { background: #2F5F9E; border-radius: 4px; }')
         lo.addWidget(self.thanh)
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
@@ -397,7 +397,7 @@ class KhungDuThao(QWidget):
         from .giao_dien import gan_chu_khi_trong, gan_thanh_ty_le, gan_vien_thuoc
         gan_vien_thuoc(self.bang_yk, 2)
         gan_vien_thuoc(self.bang_vm, 3)
-        gan_thanh_ty_le(self.bang_th, 4, mau='#0F766E')
+        gan_thanh_ty_le(self.bang_th, 4, mau='#1F6F66')
         gan_chu_khi_trong(self.bang_ny, 'Chưa có hộ trong đợt niêm yết',
                           'Tạo đợt rồi bấm "Đưa hộ vào đợt" để thêm các hộ đủ điều kiện.')
         gan_chu_khi_trong(self.bang_vm, 'Không có hộ vướng pháp lý', 'Hộ đánh dấu V1-V5 (chưa đủ điều kiện) hiện ở đây.')

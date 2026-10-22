@@ -13,10 +13,10 @@ a = Analysis(
     ['chay.py'],
     pathex=[],
     binaries=[],
-    # mau_in: chỉ mẫu .xlsx / đường kẻ .xml (0.9.85 - thư mục còn file người dùng để tham khảo, vd PDF phương án thật: KHÔNG đóng gói)
+    # 1.0.16: KHÔNG đóng thư mục mau_in - mẫu in chuẩn nhúng trong pabt/mau_in_nhung.py, mẫu Word (chi tiết / bổ sung / điều chỉnh) dựng bằng
+    # mã + thông số ban_in.mau_word của pabt_profile.json
     datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/he_so_k_qd03.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'),
-           ('pabt/pabt_profile.json', 'pabt'), ('HUONG_DAN.md', '.')] +
-          [(str(f), 'mau_in') for f in sorted(__import__('pathlib').Path('mau_in').glob('*')) if f.suffix.lower() in ('.xlsx', '.xml')],
+           ('pabt/pabt_profile.json', 'pabt'), ('HUONG_DAN.md', '.')],
     hiddenimports=['pabt.mau_in_nhung', 'pabt.in_word', 'html.parser','urllib.request', 'difflib', 'PySide6.QtPdfWidgets', 'PySide6.QtPrintSupport'],
     hookspath=[],
     hooksconfig={},

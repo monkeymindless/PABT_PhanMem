@@ -89,7 +89,7 @@ class HopDangNhap(_Hop):
         f.addRow('Mật khẩu:', self.o_mk)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
-        self.lb.setStyleSheet('color: #C62828;')
+        self.lb.setStyleSheet('color: #B83A3A;')
         b_dn = QPushButton('Đăng nhập')
         b_dn.setDefault(True)
         b_dn.setProperty('nhom', 'luu')

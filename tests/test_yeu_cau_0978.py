@@ -53,7 +53,7 @@ class TestDanTaiSanTuClipboard(unittest.TestCase):
         self.assertEqual(b.height() or b.minimumHeight(), 28)     # hàng trên cùng gọn (0.9.95: 27 px; 1.0.02: 28 px)
         qss = b.styleSheet()
         # 1.0.02 (ảnh mẫu Hybrid Enterprise Navy): nền trắng viền slate chữ đậm, rê chuột nền xanh băng viền xanh trời
-        for mau in ('#0284C7', '#0369A1', '#FFFFFF', '#CBD5E1', '#F0F9FF', 'border-radius: 6px', 'font-weight: 700'):
+        for mau in ('#1F76A6', '#1A5C85', '#FFFFFF', '#CBD5E1', '#F0F9FF', 'border-radius: 6px', 'font-weight: 700'):
             self.assertIn(mau, qss)
         # phím tắt Ctrl+Shift+V gọi mo_dan_tai_san
         phim = [s for s in self.lp.findChildren(QShortcut) if s.key() == QKeySequence('Ctrl+Shift+V')]

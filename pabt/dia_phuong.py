@@ -85,6 +85,39 @@ def _so(v, ten: str, loi: list, toi_thieu=None, toi_da=None):
 _RE_COT = re.compile(r'^[A-Z]{1,3}$')
 
 
+CO_CHU_WORD = ('co_quan', 'quoc_hieu', 'tieu_ngu', 'so_ngay', 'du_thao', 'ten_loai', 'trich_yeu', 'du_an', 'thong_tin', 'de_muc',
+               'nguon_goc', 'bang', 'ghi_chu', 'chu_ky')
+
+
+def kiem_tra_mau_word(mw) -> list:
+    """Lỗi của mục ban_in.mau_word (thông số mẫu Word phương án chi tiết / bổ sung / điều chỉnh)."""
+    loi = []
+    if not isinstance(mw, dict):
+        return ['ban_in.mau_word: thiếu (lề, cỡ chữ, trích yếu của mẫu Word).']
+
+    def so(v, ten, lo, hi):
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not lo <= v <= hi:
+            loi.append(f'ban_in.mau_word.{ten}: số từ {lo} đến {hi}.')
+    le = mw.get('le_mm')
+    if not isinstance(le, dict) or set(le) != {'trai', 'phai', 'tren', 'duoi'}:
+        loi.append('ban_in.mau_word.le_mm: đủ bốn lề trai / phai / tren / duoi (mm).')
+    else:
+        for k, v in le.items():
+            so(v, f'le_mm.{k}', 0, 60)
+    co = mw.get('co_chu')
+    if not isinstance(co, dict) or set(co) != set(CO_CHU_WORD):
+        loi.append('ban_in.mau_word.co_chu: đủ các cỡ chữ ' + ', '.join(CO_CHU_WORD) + ' (pt).')
+    else:
+        for k, v in co.items():
+            so(v, f'co_chu.{k}', 8, 24)
+    if not isinstance(mw.get('trich_yeu'), str) or not mw['trich_yeu'].strip():
+        loi.append('ban_in.mau_word.trich_yeu: chữ trích yếu văn bản (in hoa).')
+    so(mw.get('thut_dau_dong_mm'), 'thut_dau_dong_mm', 0, 30)
+    so(mw.get('gach_chan_ho_pt'), 'gach_chan_ho_pt', 0, 8)
+    so(mw.get('duong_ke_du_an_mm'), 'duong_ke_du_an_mm', 0, 180)
+    return loi
+
+
 def kiem_tra(hs: dict) -> list:
     """Danh sách lỗi của hồ sơ ĐÃ TRỘN (rỗng = hợp lệ)."""
     loi = []
@@ -170,6 +203,7 @@ def kiem_tra(hs: dict) -> list:
         nb = ng.get('thut_dau_nbsp', 8)
         if isinstance(nb, bool) or not isinstance(nb, int) or not 0 <= nb <= 20:
             loi.append('ban_in.nguon_goc.thut_dau_nbsp: số khoảng trắng không ngắt từ 0 đến 20 (0 = theo thut_dau_cm).')
+        loi.extend(kiem_tra_mau_word(bi.get('mau_word')))
         for loai, le in (bi.get('le_trang') or {}).items():
             if loai not in ('chi_tiet', 'tong_hop') or not isinstance(le, dict):
                 loi.append('ban_in.le_trang: chỉ có "chi_tiet" / "tong_hop", mỗi mục là các lề top / bottom / left / right / '
@@ -328,6 +362,31 @@ def luu_cau_hinh(hs: dict) -> Path | None:
         khoi_phuc_mac_dinh()
         return None
     return ghi_may(khac)
+
+
+def dat_muc_may(khoa: tuple, gia_tri) -> Path | None:
+    """Đặt (gia_tri) hoặc bỏ (None) MỘT mục của file hồ sơ máy theo đường khoa = ('ban_in', 'mau_word'): đọc file máy hiện có, sửa
+    đúng mục đó, kiểm tra cả hồ sơ rồi ghi (các mục khác của file máy giữ nguyên). Mục rỗng sau khi bỏ -> xóa nhánh; file máy rỗng ->
+    đổi tên .bak. Trả file máy hoặc None."""
+    p = file_may()
+    cu = _doc_json(p) if p.exists() else {}
+    cur = cu
+    for k in khoa[:-1]:
+        cur = cur.setdefault(k, {})
+    if gia_tri is None:
+        cur.pop(khoa[-1], None)
+        for i in range(len(khoa) - 1, 0, -1):               # bỏ các nhánh cha đã rỗng
+            x = cu
+            for k in khoa[:i - 1]:
+                x = x[k]
+            if not x.get(khoa[i - 1]):
+                x.pop(khoa[i - 1], None)
+    else:
+        cur[khoa[-1]] = copy.deepcopy(gia_tri)
+    if not cu:
+        khoi_phuc_mac_dinh()
+        return None
+    return ghi_may(cu)
 
 
 def khoi_phuc_mac_dinh() -> None:

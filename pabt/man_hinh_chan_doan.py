@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QFrame, 
 
 from . import chua_benh_csdl, csdl
 
-MAU_MUC = {'dat': '#047857', 'canh_bao': '#B45309', 'loi': '#B91C1C'}
+MAU_MUC = {'dat': '#047857', 'canh_bao': '#9A5A12', 'loi': '#B83A3A'}
 CHU_MUC = {'dat': 'Đạt', 'canh_bao': 'Lưu ý', 'loi': 'Lỗi'}
 NUT_GOI = 'Xuất gói chẩn đoán ẩn danh gửi tác giả (.zip)…'
 # 20/10/2026 (ảnh mẫu người dùng): 5 chỉ số kiểm toán kỹ thuật (khóa, mã chỉ số, nhãn) + 4 nút bảo trì 1-click (việc chua_benh_csdl.
@@ -129,7 +129,7 @@ class HopChanDoanHeThong(QDialog):
         for i, (viec, chu, ky) in enumerate(NUT_BAO_TRI):
             b = QPushButton(chu.format(v=_csdl.PHIEN_BAN_CSDL))
             b.setProperty('khong_icon', True)
-            ic = icon_ky_hieu(ky, '#0F294A', 16)
+            ic = icon_ky_hieu(ky, '#2F5F9E', 16)
             if ic is not None:
                 b.setIcon(ic)
             b.setMinimumHeight(34)

@@ -7,6 +7,23 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.16', '22/10/2026', (
+        'Bản in Word phương án chi tiết, bổ sung, điều chỉnh theo đúng khung sườn mẫu PA_01: lề trái 1,5 cm, phải / trên / dưới 1 cm; '
+        'đầu văn bản thêm dòng "CHI NHÁNH …" (lấy từ Thông tin dự án) đậm, gạch chân; "Số: …" và "địa danh, ngày …" nằm cùng một '
+        'hàng, ngang nhau.',
+        'Trích yếu một dòng "BỒI THƯỜNG, HỖ TRỢ & TÁI ĐỊNH CƯ KHI NHÀ NƯỚC THU HỒI ĐẤT"; có đường kẻ ngang ngắn ngay dưới tên dự án; mục '
+        'II mọi đoạn (kể cả gạch đầu dòng) thụt dòng đầu 1 cm, dòng sau về sát lề trái.',
+        'Cỡ chữ: cơ quan, quốc hiệu, "Số:", ngày, "(DỰ THẢO)", nguồn gốc, bảng 13; tiêu ngữ, tên văn bản, trích yếu, dự án, mục I - IV 14; '
+        'ghi chú 11; LẬP BIỂU / KIỂM TRA / chữ ký 15. Đường gạch chân dưới tên đơn vị, tiêu ngữ có khe hở, không sát chữ (khỏi mất dấu). '
+        'Cột bảng tự thu vừa chữ, nhường chỗ cho Tên tài sản / Ghi chú.',
+        'Mẫu Word nhúng sẵn trong phần mềm, bản cài không còn thư mục mau_in. Đổi quy cách khi có quy định mới: Công cụ > Quản lý Mẫu in '
+        '& Bản in > Nhập thông số mẫu Word (hoặc nhập gói .pabtcfg) - áp ngay, không cần cập nhật phần mềm.',
+        'Màu chủ đạo dịu hơn: thanh tiêu đề bảng, nút chính, banner đổi từ xanh navy rất đậm sang xanh cobalt dịu (#2F5F9E, chữ trắng '
+        'tương phản 6,5:1). Các màu xanh / đỏ / lá / cam gom về một tông dịu mỗi loại, bớt chói.',
+        'Màn lập phương án và danh sách hộ ở màn hình 1366 phóng 125%: nút, nhãn, tên thẻ không còn bị cắt chữ; vùng bấm tối thiểu 24 px.',
+        'Sửa lỗi: cửa sổ rỗng (chỉ có nút thu nhỏ / phóng to / đóng) nhấp nháy khi bật xem trước F4, mở Bàn giao mặt bằng và Bản đồ thửa '
+        'đất - do nút / nhãn bị hiện trước khi vào bố cục. Kiểm tra giao diện nay báo mục "Cửa sổ lạ".',
+    )),
     ('1.0.15', '22/10/2026', (
         'Phương án ĐIỀU CHỈNH: sửa phương án đã lập / đã phê duyệt bị sai bằng nút "+ Lập PA điều chỉnh" trong cửa sổ lập phương án. '
         'Lần gốc giữ nguyên để in; tổng của hộ tính theo lần điều chỉnh (không cộng đôi), quyết định điều chỉnh ghi số chênh lệch.',

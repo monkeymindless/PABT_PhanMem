@@ -20,28 +20,28 @@ LENH_KHOI_TAO = (                    # (khóa self.lenh, chữ trên thẻ, mô 
     ('Nhập file Excel…', 'Nhập file Excel', 'Bảng kiểm đếm, đo đạc thô'),
     ('Nhập phương án chi tiết…', 'Nhập PA chi tiết từ Excel', 'Mỗi sheet một phương án'),
 )
-MAU_KPI = (('quy_mo', 'Quy mô dự án', '#0F294A'), ('kinh_phi', 'Tổng kinh phí phương án', '#0284C7'),
-           ('phe_duyet', 'Tiến độ phê duyệt', '#0F766E'), ('ban_giao', 'Bàn giao mặt bằng', '#475569'))
+MAU_KPI = (('quy_mo', 'Quy mô dự án', '#2F5F9E'), ('kinh_phi', 'Tổng kinh phí phương án', '#1F76A6'),
+           ('phe_duyet', 'Tiến độ phê duyệt', '#1F6F66'), ('ban_giao', 'Bàn giao mặt bằng', '#475569'))
 TI_LE_CHIA = (65, 35)                # bên trái : bên phải
 
 QSS_TONG_QUAN = '''
-QFrame#dai_tong_thuat { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 4px solid #0F294A; border-radius: 6px; }
+QFrame#dai_tong_thuat { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 4px solid #2F5F9E; border-radius: 6px; }
 QLabel#tq_ten { font-size: 16px; font-weight: 700; color: #0F172A; background: transparent; border: 0; }
 QLabel#tq_phu { font-size: 12px; color: #64748B; background: transparent; border: 0; }
 QToolButton#the_khoi_tao { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px;
     text-align: left; font-size: 13px; font-weight: 600; color: #0F172A; }
-QToolButton#the_khoi_tao:hover { background: #F0F6FF; border-color: #0F294A; }
+QToolButton#the_khoi_tao:hover { background: #F0F6FF; border-color: #2F5F9E; }
 QToolButton#the_khoi_tao:disabled { color: #94A3B8; }
 QFrame#khung_tq { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
-QLabel#tq_tieu_de { font-size: 13px; font-weight: 700; color: #0F294A; background: transparent; border: 0; }
-QFrame#the_phap_ly { background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 3px solid #0F294A; border-radius: 3px; }
-QFrame#the_phap_ly[muc="canh_bao"] { border-left-color: #D97706; background: #FFFBEB; }
-QFrame#the_phap_ly[muc="nguy"] { border-left-color: #B91C1C; background: #FEF2F2; }
-QFrame#the_phap_ly[muc="dat"] { border-left-color: #0F766E; }
+QLabel#tq_tieu_de { font-size: 13px; font-weight: 700; color: #2F5F9E; background: transparent; border: 0; }
+QFrame#the_phap_ly { background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 3px solid #2F5F9E; border-radius: 3px; }
+QFrame#the_phap_ly[muc="canh_bao"] { border-left-color: #C98A22; background: #FFFBEB; }
+QFrame#the_phap_ly[muc="nguy"] { border-left-color: #B83A3A; background: #FEF2F2; }
+QFrame#the_phap_ly[muc="dat"] { border-left-color: #1F6F66; }
 QLabel#tq_dong_ho { font-size: 12px; color: #0F172A; background: transparent; border: 0; }
-QPushButton#nut_lap_pa { background: transparent; color: #0F294A; border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 10px;
+QPushButton#nut_lap_pa { background: transparent; color: #2F5F9E; border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 10px;
     margin: 3px 6px; font-weight: 600; }
-QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #0F294A; }
+QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #2F5F9E; }
 '''
 
 

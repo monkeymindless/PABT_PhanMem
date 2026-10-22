@@ -2046,6 +2046,33 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     "Xóa lần". Tổng quan: nút "Lập PA →" viền mảnh (không nền đặc).
   - CHƯA làm (còn thấy trên ảnh): HopIn khung tùy chọn bên trái cuộn ngang ở 1536 @125%; bảng Quyết định dòng cao không đều; thẻ KPI
     bảng tổng hợp tên dài vẫn rút "…"; tiêu đề bảng navy + vạch xanh 2 px giữ (quyết định 1.0.12).
+- 1.0.16 khung sườn Word theo PDF mẫu PA_01 (người dùng 22/10/2026; MỘT hàm `in_word.noi_dung_chi_tiet` dựng cả ba mẫu chi tiết / bổ sung / điều
+  chỉnh): `LE_MM` trái 15 / phải, trên, dưới 10 mm (`LAN_LE_DAU_MM` = (0, 0): bảng đầu không lấn lề nữa); bảng đầu 2 hàng - hàng 1 cơ quan (2 dòng
+  cấp trên thường + dòng 3 `DON_VI_TIEU_DE` đậm GẠCH CHÂN thật, bỏ dòng "____") | quốc hiệu + tiêu ngữ, hàng 2 "Số: …" | "địa danh, ngày …" cùng
+  cỡ 14, cùng `truoc`, canh trên (ngang nhau); `TRICH_YEU` một dòng, chữ "&" như mẫu (bản NĐ 30 "VÀ" của 1.0.14 bỏ); `_duong_ke_du_an()` = đoạn
+  rỗng viền dưới, thụt hai bên cho dài `DK_DU_AN_MM` 70; mục II mọi đoạn `firstLine` 567 (bỏ thụt lề treo gạch đầu dòng). Dòng "CHI NHÁNH …" lấy từ
+  dữ liệu `du_an.don_vi_tieu_de` (mặc định hồ sơ địa phương "Chi nhánh Vĩnh Cửu"), KHÔNG ghi cứng trong mã. Test `test_in_an_2110.test_khung_suon_mau_pa_01`.
+  - THÔNG SỐ MẪU WORD nhúng trong hồ sơ địa phương `ban_in.mau_word` (`pabt_profile.json`; `dia_phuong.kiem_tra_mau_word`): `le_mm`, `co_chu`
+    (co_quan / quoc_hieu 13, tieu_ngu 14, so_ngay + du_thao 13, ten_loai / trich_yeu / du_an 14, thong_tin + de_muc 14, nguon_goc 13, bang 13,
+    ghi_chu 11, chu_ky 15), `trich_yeu`, `thut_dau_dong_mm`, `gach_chan_ho_pt`, `duong_ke_du_an_mm`. `in_word._ap_mau` (đăng ký `dia_phuong.dang_ky`)
+    đặt biến module LE_MM / CO_* / TRICH_YEU / THUT_DAU / HO_GACH_PT lúc nạp và sau mỗi `nap_lai` - nơi dùng đọc `in_word.CO_BANG`… LÚC GỌI
+    (đừng `from .in_word import CO_BANG` ở cấp module). Đổi quy cách khi có quy định mới KHÔNG cần bản cập nhật: `in_word.xuat_thong_so` /
+    `nhap_thong_so` / `khoi_phuc_thong_so` / `trang_thai_thong_so` (hộp Quản lý Mẫu in & Bản in: 3 nút "… thông số mẫu Word"), gói `.pabtcfg`
+    (mang cả hồ sơ), hoặc sửa pabt_profile.json của máy; `dia_phuong.dat_muc_may(('ban_in','mau_word'), giá trị | None)` chỉ ghi phần khác mặc định.
+  - Gạch chân HỞ: `in_word._p_gach` = viền dưới của đoạn (`w:space` = `HO_GACH_PT`, khe giữa chân chữ và gạch), thụt hai bên cho dài bằng chữ
+    (đo bằng Qt `in_an._ham_do_chu` khi có, không thì ước `_rong_chu`; `KHE_GACH_PT` chừa 4 pt kẻo Word bẻ dòng) - KHÔNG dùng gạch chân chữ
+    (`w:u`) sát nét chữ. Cột bảng: `rong_cot(chu_cot, do=)` đo chữ thật (cột số thu vừa chữ + `KHE_COT_PT`, không có ghi chú -> cột Ghi chú vừa tiêu đề).
+  - BẢN CÀI KHÔNG ĐÓNG thư mục `mau_in` (PABT.spec / dung_exe38 bỏ): mẫu in Excel chuẩn nhúng ở `pabt/mau_in_nhung.py` (sinh bằng
+    `tao_mau_nhung.py` từ `mau_in/` của mã nguồn - đó chỉ là NGUỒN để sinh), `in_an.thu_muc_mau` bản cài chỉ tìm mẫu người dùng chủ động thay
+    (%APPDATA%\PABT\mau_in) rồi mẫu nhúng. Test `tests/test_mau_word.py`.
+  - MÀU CHỦ ĐẠO (người dùng 22/10/2026 "navy quá đậm", ảnh thử `ket_qua_kiem_tra/thu_mau/`): `TOKEN['chinh']` navy #0F294A -> cobalt dịu #2F5F9E
+    (hover / vạch cột `CHINH_RE` #264E83; banner `MAU_BANG` #2F5F9E / #3A6FB0 / #4A82C2), thay bằng script ở MỌI file pabt/ + tests/ (trừ
+    ve_bieu_tuong.py, phieu_kiem_dem.py); gộp màu bão hòa: xanh #3B6FCE / #2F5DB5 / #1F76A6 / #1A5C85, đỏ #B83A3A / #C94545, lá #2F7D54 / #276348,
+    teal #1F6F66, hổ phách #9A5A12 / #7C4A12 / #E5A93A. Bộ đo `ket_qua_kiem_tra/thu_that/danh_gia_ui.py` (chữ cắt, vùng bấm, Tab, tương phản QSS, màu bão hòa).
+  - CỬA SỔ LẠ (người dùng 22/10/2026: cửa sổ rỗng có nút thu nhỏ / phóng to / đóng, tiêu đề "PABT", nhấp nháy khi lập PA): widget CHƯA CÓ CHA mà
+    `setVisible(True)` / `show()` hiện thành cửa sổ cấp cao riêng. Gặp ở `xem_truoc_tai_lieu` (b_in, b_in_hop), `HopBanGiao` (lb_canh_bao, lb_chung),
+    `HopBanDo` (b_nhap): gọi setVisible SAU khi đã addWidget / addRow. `kiem_tra_giao_dien.py` có bộ dò (mục "Cửa sổ lạ", mã thoát 1) + test
+    `tests/test_cua_so_la.py`. Thêm widget mới: ẩn / hiện SAU khi vào bố cục.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

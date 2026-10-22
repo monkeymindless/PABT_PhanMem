@@ -35,19 +35,19 @@ CAO_DONG_THUA = 44                      # cao_chuan: mọi dòng thửa cao bằ
 CAO_DONG_TOI_DA = 104                   # (giữ tên cũ) dòng thửa không cao quá mức này
 CO_CHU_NHO_NHAT = 0.78
 LIEN_KET_XEM = '[Xem/Sửa đủ ↗]'
-MAU_LIEN_KET = '#2563EB'
+MAU_LIEN_KET = '#3B6FCE'
 CAN_GIUA = Qt.AlignmentFlag.AlignCenter
 CAN_PHAI = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
 # viên màu loại đất (nền, chữ) theo nhóm ký hiệu TT 08/2024 - mã đầu của loại ghép
 MAU_LOAI_DAT = (
-    (('ONT', 'ODT'), ('#FEF3C7', '#92400E')),
+    (('ONT', 'ODT'), ('#FEF3C7', '#7C4A12')),
     (('LUC', 'LUK', 'LUN'), ('#ECFCCB', '#3F6212')),
-    (('CLN', 'HNK', 'BHK', 'NHK', 'LNK', 'LNC', 'LNQ'), ('#DCFCE7', '#166534')),
+    (('CLN', 'HNK', 'BHK', 'NHK', 'LNK', 'LNC', 'LNQ'), ('#DCFCE7', '#276348')),
     (('RSX', 'RPH', 'RDD', 'RST', 'RTS'), ('#D1FAE5', '#065F46')),
     (('NTS', 'NKH', 'LMU'), ('#E0F2FE', '#075985')),
 )
 MAU_LOAI_KHAC = ('#F1F5F9', '#334155')
-MAU_VI_TRI_GIA = ('#EFF6FF', '#1D4ED8', '#BFDBFE')
+MAU_VI_TRI_GIA = ('#EFF6FF', '#2F5DB5', '#BFDBFE')
 # thẻ cơ cấu loại đất ở dải tổng hợp chân bảng (tên, các mã)
 NHOM_THE_LOAI = (('ONT (Đất ở)', ('ONT', 'ODT')), ('LUK (Đất lúa)', ('LUC', 'LUK', 'LUN')),
                  ('CLN / HNK', ('CLN', 'HNK', 'BHK', 'NHK', 'LNK')))
@@ -402,14 +402,14 @@ class OThaoTac(QStyledItemDelegate):
         f = QFont(option.font)
         f.setBold(True)
         p.setFont(f)
-        p.setPen(QColor('#94A3B8' if tat else '#0F294A'))
+        p.setPen(QColor('#94A3B8' if tat else '#2F5F9E'))
         p.drawText(sua, CAN_GIUA, 'Sửa')
         from .giao_dien import icon_ky_hieu
-        ic = icon_ky_hieu(0xE74D, '#94A3B8' if tat else '#B91C1C', 16)
+        ic = icon_ky_hieu(0xE74D, '#94A3B8' if tat else '#B83A3A', 16)
         if ic is not None:
             p.drawPixmap(int(xoa.center().x() - 8), int(xoa.center().y() - 8), ic.pixmap(16, 16))
         else:
-            p.setPen(QColor('#94A3B8' if tat else '#B91C1C'))
+            p.setPen(QColor('#94A3B8' if tat else '#B83A3A'))
             p.drawText(xoa, CAN_GIUA, '×')
         p.restore()
 

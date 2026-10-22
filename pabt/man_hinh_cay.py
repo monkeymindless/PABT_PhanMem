@@ -127,7 +127,7 @@ class HopCayChuVi(_Hop):
         if loi:
             tb = f'Chu vi không thuộc khoảng nào của {ten}: ' + ', '.join(so_vn(x) for x in loi)
         if tb:
-            self.lb.setText(f'<span style="color:#C62828">{tb}</span>')
+            self.lb.setText(f'<span style="color:#B83A3A">{tb}</span>')
         else:
             tong = sum(so for _, so, _, _ in self.nhom)
             self.lb.setText(f'{tong} cây, {len(self.nhom)} quy cách. Chu vi = π × đường kính (π ≈ {ct.pi_chuoi()}).')
@@ -153,7 +153,7 @@ class HopCayChuVi(_Hop):
             self.bao('Chọn loại cây và nhập ít nhất một chu vi hợp lệ.')
             return
         if loi and not self.im_lang and QMessageBox.question(
-                self, TIEU_DE, self.lb.text().replace('<span style="color:#C62828">', '').replace('</span>', '') +
+                self, TIEU_DE, self.lb.text().replace('<span style="color:#B83A3A">', '').replace('</span>', '') +
                 '\n\nVẫn thêm các cây còn lại?') != QMessageBox.StandardButton.Yes:
             return
         self.dong_moi = self.them()
@@ -249,14 +249,14 @@ class HopMatDo(_Hop):
         try:
             dt, so, md, tl = self._doc()
         except LoiNhap as e:
-            self.lb.setText(f'<span style="color:#C62828">{e}</span>')
+            self.lb.setText(f'<span style="color:#B83A3A">{e}</span>')
             return None
         if md is None:
             self.lb.setText('Chưa có mật độ quy chuẩn: nhập mật độ (cây/ha).')
             return None
         trong, ngoai = ct.tach_mat_do(so, dt, md)
         p = ct.phan_tich_mat_do(so, dt, md)
-        do = '#C62828'
+        do = '#B83A3A'
         dong = [
             ('Mật độ quy định', f'{so_vn(md)} cây/ha (= {so_vn(p["m2_moi_cay"])} m²/cây)' +
                                 (f' - <i>{self.q.can_cu}</i>' if self.q.nguon == 'gần đúng' else '')),
@@ -351,7 +351,7 @@ class HopRanh(_Hop):
             tong, trong, tl = self._doc()
             r = ct.tach_ranh(tong, trong, self.o_kc.isChecked(), tl)
         except (LoiNhap, ValueError) as e:
-            self.lb.setText(f'<span style="color:#C62828">{e}</span>')
+            self.lb.setText(f'<span style="color:#B83A3A">{e}</span>')
             return None
         s = f'Tính 100%: <b>{so_vn(r["trong"])}</b>'
         if r['ngoai'] > 0:

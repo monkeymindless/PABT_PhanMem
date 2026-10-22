@@ -258,7 +258,7 @@ class XoXuongDong(QStyledItemDelegate):
 
 
 RONG_COT_XOA = 34                  # cột thùng rác cuối bảng mục (px)
-MAU_XOA = ('#94A3B8', '#DC2626')   # biểu tượng thùng rác: thường (slate) / rê chuột (đỏ)
+MAU_XOA = ('#94A3B8', '#C94545')   # biểu tượng thùng rác: thường (slate) / rê chuột (đỏ)
 
 
 class NutXoaDong(QStyledItemDelegate):
@@ -573,6 +573,7 @@ class BangMuc(QWidget):
         hd.setSpacing(8)
         self.lb_dem = QLabel('')
         self.lb_dem.setObjectName('dem_muc')
+        self.lb_dem.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)   # chữ phụ: co theo chỗ, không đẩy bề rộng tối thiểu
         self.lb_tong = QLabel('')
         self.lb_tong.setObjectName('cong_muc')
         hd.addWidget(self.lb_dem, 1)
@@ -582,14 +583,25 @@ class BangMuc(QWidget):
         lo.setSpacing(4)
         if muc == 4:
             # một hàng: thông tin hộ dùng tính hỗ trợ + tình trạng tái định cư (gọn 26 px, lề 0)
-            h = QHBoxLayout()
+            # 1.0.16: ba khối xếp bằng XepDong - màn hình hẹp (1366 @125%: vùng chữ ~840 điểm, một hàng cứng cần ~955) xuống dòng,
+            # không đẩy bề rộng tối thiểu của cả cửa sổ
+            from .giao_dien import XepDong
+            h = XepDong(None, 14)
             h.setContentsMargins(0, 0, 0, 0)
-            h.setSpacing(6)
-            for w in (QLabel('Nhân khẩu:'), man.o_nk, man.o_di_chuyen, QLabel('DT đất NN đang dùng (m²):'),
-                      man.o_dt_nn, man.lb_tl):
-                if isinstance(w, QLabel) and w is not man.lb_tl:
-                    w.setProperty('vai', 'nhan')
-                h.addWidget(w)
+
+            def khoi(*ws):
+                k = QWidget()
+                hk = QHBoxLayout(k)
+                hk.setContentsMargins(0, 0, 0, 0)
+                hk.setSpacing(6)
+                for w in ws:
+                    if isinstance(w, QLabel) and w is not man.lb_tl:
+                        w.setProperty('vai', 'nhan')
+                    hk.addWidget(w)
+                    w.setMaximumHeight(26)
+                return k
+            h.addWidget(khoi(QLabel('Nhân khẩu:'), man.o_nk, man.o_di_chuyen))
+            h.addWidget(khoi(QLabel('DT đất NN đang dùng (m²):'), man.o_dt_nn, man.lb_tl))
             for w in (man.o_nk, man.o_dt_nn):
                 w.setProperty('nhap', '1')
             nhan = QLabel('Tái định cư:')
@@ -602,13 +614,8 @@ class BangMuc(QWidget):
                                    'kiện, đủ điều kiện theo khoản 4 / khoản 5 Điều 111 Luật Đất đai năm 2024, hoặc không có.')
             self.cb_tdc.currentTextChanged.connect(lambda t: man.doi_tai_dinh_cu(t))
             self.cb_tdc.setProperty('nhap', '1')
-            h.addSpacing(10)
-            h.addWidget(nhan)
-            h.addWidget(self.cb_tdc, 1)
-            for i in range(h.count()):
-                w = h.itemAt(i).widget()
-                if w is not None:
-                    w.setMaximumHeight(26)
+            h.addWidget(khoi(nhan, self.cb_tdc))
+            self.cb_tdc.setMinimumWidth(200)
             lo.addLayout(h)
         # 0.9.95: bỏ khung viền bao hàng nhập (lề 0); mục 1: nút thao tác dòng + "Cộng mục 1" lên CÙNG hàng chọn thửa
         khung_nhap = QWidget()
@@ -1068,24 +1075,24 @@ class BangMuc(QWidget):
 # ---------------------------------------------------------------- màn hình lập phương án hộ
 # ô chọn hộ của cửa sổ lập phương án (px): rộng tới 560 cho đủ tên hộ / tổ chức; hẹp được tới 160 để hàng nút trên cùng luôn MỘT hàng
 # (16/10/2026, người dùng: bỏ nút SCAN, mọi nút lên một dòng) - màn hình 1366 ở 125% còn ~1.090 điểm
-RONG_O_HO = (160, 560)
+RONG_O_HO = (130, 560)
 CLIP_TOI_DA = 200_000        # clipboard dài hơn (cả một tài liệu) không tự điền vào hộp Dán danh sách: phân loại sẽ đơ
 # 1.0.02 (Hybrid Enterprise Navy cửa sổ con, theo ảnh mẫu người dùng 17/10/2026): nút Dán tài sản nền trắng viền slate chữ đậm,
 # biểu tượng xanh trời; rê chuột nền xanh băng viền xanh trời
 QSS_NUT_DAN_TS = ('QPushButton#btn_dan_ts { background: #FFFFFF; color: #0F172A; font-weight: 700; border: 1px solid #CBD5E1; '
                   'border-radius: 6px; padding: 0 14px; }'
-                  'QPushButton#btn_dan_ts:hover { background: #F0F9FF; border-color: #0284C7; color: #0369A1; }'
+                  'QPushButton#btn_dan_ts:hover { background: #F0F9FF; border-color: #1F76A6; color: #1A5C85; }'
                   'QPushButton#btn_dan_ts:pressed { background: #E0F2FE; }')
-MAU_ICON_DAN_TS = '#0284C7'
+MAU_ICON_DAN_TS = '#1F76A6'
 
 
 RONG_XEM_TOI_THIEU = 320          # màn hình hẹp: khung xem trước CuaSoLapPA không hẹp hơn chừng này
 CHO_XEM_SAU_SUA_MS = 1500          # khung xem trước đang hiện: sửa số liệu xong chừng này mới nhờ Excel lập lại bản in
 # 1.0.02 (ảnh mẫu): tắt = nền trắng viền slate chữ navy; bật (đang xem) = nền xanh băng, viền navy, chữ navy đậm
-QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #0F294A; background: #FFFFFF; border: 1px solid #CBD5E1; '
+QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #2F5F9E; background: #FFFFFF; border: 1px solid #CBD5E1; '
                      'border-radius: 6px; padding: 0 12px; font-weight: 600; }'
-                     'QPushButton#btn_toggle_preview:hover { background: #F1F5F9; border-color: #2563EB; }'
-                     'QPushButton#btn_toggle_preview:checked { color: #0F294A; background: #EFF6FF; border: 1px solid #0F294A; '
+                     'QPushButton#btn_toggle_preview:hover { background: #F1F5F9; border-color: #3B6FCE; }'
+                     'QPushButton#btn_toggle_preview:checked { color: #2F5F9E; background: #EFF6FF; border: 1px solid #2F5F9E; '
                      'font-weight: 700; }'
                      'QPushButton#btn_toggle_preview:checked:hover { background: #DBEAFE; }')
 # thẻ Hồ sơ / Đất / Nhà… của cửa sổ lập phương án (ảnh mẫu): kiểu gạch chân giao_dien.QSS_THE_GACH_CHAN (QSS chung, thanh thẻ có
@@ -1097,14 +1104,14 @@ QSS_THANH_TREN = ('QWidget#thanh_tren_lap_pa { background: #F8FAFC; border: 0; b
                   'QComboBox#o_chon_ho { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; '
                   'font-weight: 700; color: #0F172A; }'
                   'QComboBox#o_chon_ho:hover { border-color: #94A3B8; }'
-                  'QComboBox#o_chon_ho:focus { border: 2px solid #2563EB; padding: 0 7px; }'
+                  'QComboBox#o_chon_ho:focus { border: 2px solid #3B6FCE; padding: 0 7px; }'
                   'QPushButton#nut_ho_truoc, QPushButton#nut_ho_sau { background: #FFFFFF; border: 1px solid #CBD5E1; '
-                  'border-radius: 5px; padding: 0; color: #0F294A; font-weight: 700; }'
+                  'border-radius: 5px; padding: 0; color: #2F5F9E; font-weight: 700; }'
                   'QPushButton#nut_ho_truoc:hover, QPushButton#nut_ho_sau:hover { background: #F1F5F9; border-color: #94A3B8; }'
                   'QPushButton#nut_ho_truoc:disabled, QPushButton#nut_ho_sau:disabled { color: #CBD5E1; border-color: #E2E8F0; }')
 # dải tổng cộng + ◀ Trở lại / Tiếp theo ▶ dưới đáy: nền slate, vạch trên 2 px, tổng chữ navy đậm
 QSS_DAI_DIEU_HUONG = ('QFrame#dai_dieu_huong { background: #F1F5F9; border: 0; border-top: 2px solid #CBD5E1; }'
-                      'QLabel#tong_pa { font-size: 13px; font-weight: 700; color: #0F294A; background: transparent; border: 0; '
+                      'QLabel#tong_pa { font-size: 13px; font-weight: 700; color: #2F5F9E; background: transparent; border: 0; '
                       'padding: 2px 4px; }')
 
 
@@ -1152,7 +1159,7 @@ def chu_tong_pa(kq) -> tuple:
     bản gọn (cửa sổ hẹp) ghi số tiền từng mục kiểu "1,2 tỷ" / "23,5 triệu" (tien.vn_gon); TỔNG CỘNG luôn đủ số."""
     from .tien import vn_gon
     cach = '&nbsp;·&nbsp;'
-    tong = f'<span style="color:#0F294A">TỔNG CỘNG: <b>{vn(kq.tong)} đồng</b></span>'
+    tong = f'<span style="color:#2F5F9E">TỔNG CỘNG: <b>{vn(kq.tong)} đồng</b></span>'
     ra = []
     # mức: đầy đủ; gọn (vn_gon); chỉ mục có tiền (gọn); chỉ TỔNG CỘNG - hẹp tới đâu thì TỔNG CỘNG vẫn hiện đủ
     for gon, bo_khong in ((False, False), (True, False), (True, True)):
@@ -1265,7 +1272,8 @@ class CuaSoLapPA(QDialog):
         if ic is not None:
             self.b_dan.setIcon(ic)
         self.b_dan.clicked.connect(lambda: self.mo_dan_tai_san())
-        self.b_luu = QPushButton('Lưu (Ctrl+S)')
+        self.b_luu = QPushButton('Lưu')                  # 1.0.16: chữ ngắn (màn hình 1366 @125%: nút bị cắt chữ); phím Ctrl+S ở chú thích
+        self.b_luu.setToolTip('Lưu phương án của hộ (Ctrl+S)')
         self.b_luu.clicked.connect(lambda: self.luu())
         from .giao_dien import KieuNut, ap_kieu_nut
         ap_kieu_nut(self.b_luu, KieuNut.LUU)            # 1.0.02: hành động chính - nền navy đặc
@@ -1274,17 +1282,17 @@ class CuaSoLapPA(QDialog):
         self.b_in = QPushButton('In / Xuất…')
         self.b_in.clicked.connect(lambda: self.in_xuat())
         # 0.9.84 (người dùng 14/10/2026): bật / tắt khung xem trước A4 bên phải (phím F4) - bản in của phương án ĐANG SOẠN
-        self.btn_toggle_preview = QPushButton('Xem trước (F4)')
+        self.btn_toggle_preview = QPushButton('Xem trước')   # phím F4 ở chú thích
         self.btn_toggle_preview.setObjectName('btn_toggle_preview')
         self.btn_toggle_preview.setCheckable(True)
         self.btn_toggle_preview.setFixedHeight(CAO_NUT_TREN)
         self.btn_toggle_preview.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_toggle_preview.setToolTip('Hiện / ẩn bản in A4 của hộ đang mở ở nửa phải cửa sổ (F4). Bản xem trước lấy cả số liệu '
+        self.btn_toggle_preview.setToolTip('Xem trước (F4): hiện / ẩn bản in A4 của hộ đang mở ở nửa phải cửa sổ. Bản xem trước lấy cả số liệu '
                                            'chưa lưu; cần Microsoft Excel.')
         self.btn_toggle_preview.setStyleSheet(QSS_NUT_XEM_TRUOC)
         self.btn_toggle_preview.setProperty('khong_icon', True)
         # View (Segoe MDL2): tắt biểu tượng navy, bật (đang xem, nền navy) biểu tượng trắng; Win 7 không có phông: chỉ chữ
-        ic = icon_ky_hieu(0xE890, '#0F294A', 16)
+        ic = icon_ky_hieu(0xE890, '#2F5F9E', 16)
         if ic is not None:
             self.btn_toggle_preview.setIcon(ic)
         self.btn_toggle_preview.clicked.connect(lambda: self.bat_tat_xem_truoc())
@@ -1298,7 +1306,7 @@ class CuaSoLapPA(QDialog):
         self.thanh_tren.setStyleSheet(QSS_THANH_TREN)       # khung ít widget con: kiểu cục bộ không làm chậm (đã đo)
         h1 = QHBoxLayout(self.thanh_tren)
         h1.setContentsMargins(8, 4, 8, 4)
-        h1.setSpacing(6)
+        h1.setSpacing(4)
         for b in (self.b_truoc, self.b_sau, self.b_luu, self.b_bo, self.b_in, self.b_dong):
             b.setFixedHeight(CAO_NUT_TREN)
         nhan = QLabel('Hộ:')
@@ -1441,8 +1449,8 @@ class CuaSoLapPA(QDialog):
         dc = NhanRutGon('')
         dc.setMinimumWidth(120)
         cap('dia_chi', 'Địa chỉ:', dc, 1)
-        cap('dot', 'Đợt trình:', QLabel(''))
-        lb = QLabel('Tổng kinh phí phương án:')
+        cap('dot', 'Đợt:', QLabel(''))
+        lb = QLabel('Tổng kinh phí:')
         lb.setProperty('vai_dd', 'nhan')
         h.addWidget(lb)
         self.lb_tong_dd = QLabel('')
@@ -1489,12 +1497,12 @@ class CuaSoLapPA(QDialog):
         f.setStyleSheet(QSS_DAI_LAN)
         h = QHBoxLayout(f)
         h.setContentsMargins(8, 2, 8, 2)
-        h.setSpacing(6)
+        h.setSpacing(4)
         nhan = QLabel('Lần lập PA:')
         nhan.setProperty('vai', 'nhan')
         self.cb_lan = QComboBox()
         self.cb_lan.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self.cb_lan.setMinimumContentsLength(20)
+        self.cb_lan.setMinimumContentsLength(14)
         self.cb_lan.setToolTip('Mỗi lần lập phương án (lần đầu, bổ sung lần 1, 2…) có dòng tài sản / chính sách, số phương án và '
                                'quyết định phê duyệt riêng. Lần đã có quyết định chỉ xem - không làm sai quyết định cũ.')
         self.cb_lan.activated.connect(lambda i: self.chon_lan(self.cb_lan.itemData(i)))
@@ -1504,25 +1512,25 @@ class CuaSoLapPA(QDialog):
         self.lb_trang_thai_lan.setObjectName('lb_trang_thai_lan')
         self.lb_lan = self.lb_tong_cong_don = NhanRutGon('')
         self.lb_lan.setObjectName('lb_lan_pa')
-        self.b_lan_moi = QPushButton('+ Lập PA bổ sung')
+        self.b_lan_moi = QPushButton('+ PA bổ sung')
         ap_kieu_nut(self.b_lan_moi, KieuNut.CHINH)
         self.b_lan_moi.setToolTip('Lập thêm một phương án cho hộ (tài sản, chính sách bổ sung) - các lần trước và quyết định đã '
                                   'phê duyệt giữ nguyên; tổng của hộ cộng dồn mọi lần')
         self.b_lan_moi.clicked.connect(lambda: self.lap_bo_sung())
-        self.b_dieu_chinh = QPushButton('+ Lập PA điều chỉnh')
+        self.b_dieu_chinh = QPushButton('+ PA điều chỉnh')
         ap_kieu_nut(self.b_dieu_chinh, KieuNut.PHU)
         self.b_dieu_chinh.setToolTip('Sửa phương án đã lập / đã phê duyệt bị sai: chép lần đang xem sang lần điều chỉnh để sửa. '
                                      'Lần gốc giữ nguyên để in; tổng của hộ tính theo lần điều chỉnh, tiền quyết định = chênh lệch.')
         self.b_dieu_chinh.clicked.connect(lambda: self.lap_dieu_chinh())
-        self.b_sua_lan = QPushButton('Sửa lần…')
-        self.b_sua_lan.setToolTip('Tên lần phương án, số / ngày phương án chi tiết của lần này')
+        self.b_sua_lan = QPushButton('Sửa')
+        self.b_sua_lan.setToolTip('Sửa lần: tên lần phương án, số / ngày phương án chi tiết của lần này')
         self.b_sua_lan.clicked.connect(lambda: self.sua_lan())
-        self.b_mo_khoa = QPushButton('Mở khóa…')
+        self.b_mo_khoa = QPushButton('Mở khóa')
         self.b_mo_khoa.setToolTip('Lần đã có quyết định phê duyệt: cho sửa lại (điều chỉnh quyết định). Số liệu quyết định đã ghi '
                                   'giữ nguyên - cần ban hành quyết định điều chỉnh.')
         self.b_mo_khoa.clicked.connect(lambda: self.mo_khoa_lan())
-        self.b_xoa_lan = QPushButton('Xóa lần')
-        self.b_xoa_lan.setToolTip('Chỉ xóa được lần bổ sung chưa có quyết định phê duyệt (cùng mọi dòng của lần đó)')
+        self.b_xoa_lan = QPushButton('Xóa')
+        self.b_xoa_lan.setToolTip('Xóa lần: chỉ xóa được lần bổ sung chưa có quyết định phê duyệt (cùng mọi dòng của lần đó)')
         self.b_xoa_lan.clicked.connect(lambda: self.xoa_lan())
         for b in (self.b_lan_moi, self.b_dieu_chinh, self.b_sua_lan, self.b_mo_khoa, self.b_xoa_lan):
             b.setFixedHeight(26)
@@ -1557,7 +1565,7 @@ class CuaSoLapPA(QDialog):
             # - số, ngày quyết định ở chú thích; màu: đã duyệt chỉ xem xanh lá, đang mở khóa vàng, đang lập lam
             import re
             day_du = x.nhan_trang_thai
-            self.lb_trang_thai_lan.setText(re.sub(r'\s*\(QĐ[^)]*\)', '', day_du))
+            self.lb_trang_thai_lan.setText(re.sub(r'\s*\(QĐ[^)]*\)', '', day_du).replace('ĐÃ PHÊ DUYỆT - CHỈ XEM', 'ĐÃ DUYỆT'))
             self.lb_trang_thai_lan.setToolTip(day_du)
             from .giao_dien import dat_the_nho
             dat_the_nho(self.lb_trang_thai_lan, 'vang' if x.trang_thai == 'mo_khoa' else ('xanh' if self.bo.khoa else 'lam'))
@@ -1806,7 +1814,7 @@ class CuaSoLapPA(QDialog):
         self._nap_lan()
         self._ap_khoa()
         self.thong_bao(f'Lần {self.bo.lan} đã có quyết định phê duyệt - chỉ xem. Bổ sung tài sản / chính sách: "+ Lập PA '
-                           'bổ sung"; điều chỉnh lần này: "Mở khóa…".' if self.bo.khoa else '')
+                           'bổ sung"; điều chỉnh lần này: "Mở khóa".' if self.bo.khoa else '')
         if not getattr(self, '_dang_ht', False):
             self._lich_su, self._vi_tri = [], -1             # hộ mới mở / vừa lưu: bắt đầu lịch sử hoàn tác mới
         self.cap_nhat()
@@ -1819,8 +1827,8 @@ class CuaSoLapPA(QDialog):
             n = len(self.bo.ds(m))
             bm = self.bang[m]
             bm.lb_tong.setText(f'CỘNG MỤC {so_muc(m)} ({TEN_TAB[the].split(". ", 1)[-1].upper()}): {vn(kq.muc[m])} đồng')
-            bm.lb_dem.setText(f'Tổng số: <b>{n:02d}</b> {"dòng đất" if m == 1 else "hạng mục"}  ·  Chọn ô bấm Ctrl+C sao chép giá trị'
-                              '  ·  Ctrl+Shift+C / chuột phải: sao chép cả dòng')
+            bm.lb_dem.setText(f'Tổng số: <b>{n:02d}</b> {"dòng đất" if m == 1 else "hạng mục"}  ·  Ctrl+C: sao chép ô')
+            bm.lb_dem.setToolTip('Chọn ô rồi bấm Ctrl+C sao chép giá trị; Ctrl+Shift+C hoặc chuột phải: sao chép cả dòng')
             # tên thẻ kèm số dòng và số tiền của mục (20/10/2026, ảnh mẫu)
             self.tab.setTabText(the, f'{TEN_TAB[the]} ({n}' + (f' · {vn_gon(kq.muc[m])}' if kq.muc[m] else '') + ')')
         self._dat_tong_dinh_danh()

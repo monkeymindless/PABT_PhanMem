@@ -335,7 +335,7 @@ class HopTiepNhanPhapLy(QDialog):
         th = tn.tong_hop(d)
         dong = ['<b>Trách nhiệm của Tổ chức làm nhiệm vụ bồi thường:</b>'] + [f'• {x}' for x in th['trach_nhiem']]
         if th['thoi_han']:
-            mau = dict(loi='#B91C1C', canh_bao='#B45309', tin='#0F766E')
+            mau = dict(loi='#B83A3A', canh_bao='#9A5A12', tin='#1F6F66')
             dong += ['', '<b>Thời hạn chủ trương / Nghị quyết HĐND:</b>'] + \
                 [f'<span style="color:{mau[m]}">• {x}</span>' for m, x in th['thoi_han']]
         self.lb_phan_tich.setText('<br>'.join(dong))

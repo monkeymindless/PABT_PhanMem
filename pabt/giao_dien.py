@@ -20,18 +20,18 @@ from .csdl import giai_phong_bo_nho, la_may_yeu  # noqa: F401  (1.0.08: máy c�
 # Hệ thống thiết kế (đặc tả ARCH-PABT-2026-V4 mục 3, người dùng 11/10/2026): MỘT nguồn màu cho cả phần mềm.
 # 22/10/2026 "Ultra-Compact + UI/UX Pro Max": bảng màu tương phản WCAG AAA (chữ chính / navy trên nền trắng >= 7:1)
 TOKEN = dict(
-    chinh='#0F294A',          # Primary - Deep Enterprise Navy (trước 22/10/2026: #0F3866)
+    chinh='#2F5F9E',          # Primary - Deep Enterprise Navy (trước 22/10/2026: #0F3866)
     chinh_nhat='#EFF6FF',     # Primary Light: nền mục đang chọn
-    nhan='#2563EB',           # Accent - Electric Royal Blue: thẻ chọn, vòng focus, link, vạch chỉ thị
+    nhan='#3B6FCE',           # Accent - Electric Royal Blue: thẻ chọn, vòng focus, link, vạch chỉ thị
     phu='#059669',            # Success - Emerald Teal: viền vùng chọn kiểu Excel, trạng thái hoàn thành
-    nguy_hiem='#DC2626',      # Danger - Vivid Red
+    nguy_hiem='#C94545',      # Danger - Vivid Red
     chu='#0F172A',            # Neutral Dark: chữ chính
     chu_phu='#475569',        # Neutral Medium: chữ phụ
     vach='#E2E8F0',           # Divider
     nen='#F8FAFC',            # Surface
     khung='#FFFFFF',          # Panel
 )
-CHINH_RE = '#1E3A5F'          # navy khi rê chuột (nút nền navy, tiêu đề bảng) - cũng là vạch ngăn cột tiêu đề bảng
+CHINH_RE = '#264E83'          # navy khi rê chuột (nút nền navy, tiêu đề bảng) - cũng là vạch ngăn cột tiêu đề bảng
 CAO_NUT_MENU = 32             # nút điều hướng menu trái (0.9.95: 27; 17/10/2026 Hybrid Enterprise Navy: 32 - vùng cuộn có thanh 6 px)
 CAO_HANG_GON = 32             # hàng nút "Thu gọn menu" trên đỉnh menu trái (ngoài vùng cuộn, vạch ngăn dưới)
 MAU_ICON_MENU = '#475569'     # biểu tượng menu trái chưa chọn (slate); đang chọn: TOKEN['chinh']
@@ -49,21 +49,21 @@ THE_TAB = dict(nen='#F1F5F9', chu='#475569', vien='#E2E8F0', nen_re='#E2E8F0', c
 MAU = {                                            # (màu biểu tượng / nền đặc, chữ, nền rê chuột) theo nhóm nút
     # 1.0.02 (người dùng 17/10/2026, Hybrid Enterprise Navy cho cửa sổ con): bỏ nền / biểu tượng cam, tím, vàng, xanh lá. Chỉ
     # nhóm DAC nền navy đặc; nhóm 'xoa' viền đỏ nhạt chữ đỏ; các nhóm khác nền trắng viền slate, biểu tượng navy / slate / teal
-    'luu':    ('#0F294A', '#FFFFFF', '#1E3A5F'),   # Lưu, Áp dụng, Thực hiện, Tạo dự án: hành động chính
-    'them':   ('#0F294A', '#FFFFFF', '#1E3A5F'),   # Thêm…
-    'xoa':    ('#B91C1C', '#FFFFFF', '#991B1B'),   # Xóa…
+    'luu':    ('#2F5F9E', '#FFFFFF', '#264E83'),   # Lưu, Áp dụng, Thực hiện, Tạo dự án: hành động chính
+    'them':   ('#2F5F9E', '#FFFFFF', '#264E83'),   # Thêm…
+    'xoa':    ('#B83A3A', '#FFFFFF', '#991B1B'),   # Xóa…
     'sua':    ('#334155', '#FFFFFF', '#1E293B'),   # Gộp, Chuyển, Tách, Bỏ thay đổi
-    'in':     ('#0F294A', '#FFFFFF', '#1E3A5F'),   # In / Xuất, PDF
-    'nhap':   ('#0F294A', '#FFFFFF', '#1E3A5F'),   # Nhập, Mở, Nạp, Cập nhật
-    'hoso':   ('#0F766E', '#FFFFFF', '#115E59'),   # Hồ sơ hộ
-    'pa':     ('#0F294A', '#FFFFFF', '#1E3A5F'),   # Lập phương án
+    'in':     ('#2F5F9E', '#FFFFFF', '#264E83'),   # In / Xuất, PDF
+    'nhap':   ('#2F5F9E', '#FFFFFF', '#264E83'),   # Nhập, Mở, Nạp, Cập nhật
+    'hoso':   ('#1F6F66', '#FFFFFF', '#115E59'),   # Hồ sơ hộ
+    'pa':     ('#2F5F9E', '#FFFFFF', '#264E83'),   # Lập phương án
     'tra':    ('#475569', '#FFFFFF', '#334155'),   # Thông tin, Rà soát, Đối chiếu, Gợi ý, Chọn, Hộ trước / sau
     'nhat':   ('#ECEFF1', '#263238', '#CFD8DC'),   # Hủy, Đóng, Giới thiệu
 }
 DAC = ('luu',)                                     # nhóm nút nền đặc (thao tác chính); các nhóm khác nền trắng viền slate
 # nút phụ / nút viền (1.0.02): (nền, chữ, viền, nền rê chuột, viền rê chuột, nền khi bấm); nút xóa: viền đỏ nhạt chữ đỏ
 NUT_PHU = ('#FFFFFF', '#0F172A', '#CBD5E1', '#F1F5F9', '#94A3B8', '#E2E8F0')
-NUT_XOA = ('#FFFFFF', '#B91C1C', '#FECACA', '#FEF2F2', '#FCA5A5', '#FEE2E2')
+NUT_XOA = ('#FFFFFF', '#B83A3A', '#FECACA', '#FEF2F2', '#FCA5A5', '#FEE2E2')
 NUT_TAT = ('#94A3B8', '#F8FAFC', '#E2E8F0')        # (chữ, nền, viền) nút đang tắt
 # (mẫu trên chữ đã bỏ dấu, nhóm) - xét theo thứ tự
 LUAT = [
@@ -121,8 +121,8 @@ def _qss_kieu_nut() -> str:
     # (nền, chữ, viền, nền rê chuột, (chữ, nền, viền khi tắt)). Hybrid Enterprise Navy (17/10/2026): nút phụ nền trắng viền #CBD5E1
     # chữ #0F172A; nút xóa viền mảnh đỏ nhạt chữ đỏ, tắt thì mờ hẳn (không còn nền cam nhạt gây chú ý khi chưa chọn hộ)
     tat = ('#9AA0A6', '#F1F3F4', t['vach'])
-    kieu = {'primary': (t['chinh'], '#FFFFFF', t['chinh'], '#1E3A5F', tat),
-            'success': (t['chinh'], '#FFFFFF', t['chinh'], '#1E3A5F', tat),     # 1.0.02: Lưu navy (đặc tả Navy cửa sổ con)
+    kieu = {'primary': (t['chinh'], '#FFFFFF', t['chinh'], '#264E83', tat),
+            'success': (t['chinh'], '#FFFFFF', t['chinh'], '#264E83', tat),     # 1.0.02: Lưu navy (đặc tả Navy cửa sổ con)
             'danger': (NUT_XOA[0], NUT_XOA[1], NUT_XOA[2], NUT_XOA[3], ('#94A3B8', '#FFFFFF', '#E2E8F0')),
             'secondary': (NUT_PHU[0], NUT_PHU[1], NUT_PHU[2], NUT_PHU[3], ('#94A3B8', '#FFFFFF', '#E2E8F0'))}
     qss = ''
@@ -166,6 +166,7 @@ class OTimKiemThongMinh(QLineEdit):
         if ic is not None:
             self.addAction(ic, QLineEdit.ActionPosition.LeadingPosition)
         self.setClearButtonEnabled(True)
+        dat_ten_nut_xoa(self)
 
     def phat_ngay(self) -> None:
         self._hen.stop()
@@ -202,6 +203,7 @@ def loc_khi_ngung_go(o: QLineEdit, ham, ms: int = OTimKiemThongMinh.CHO_MS, kinh
         if ic is not None:
             o.addAction(ic, QLineEdit.ActionPosition.LeadingPosition)
         o.setClearButtonEnabled(True)
+        dat_ten_nut_xoa(o)
     o._hen_loc = hen
     return hen
 
@@ -279,7 +281,7 @@ def mau_chu_nut(n: str | None) -> str:
 
 # thẻ số liệu màn hình chính (app.CuaSoChinh.THE_SO): màu viền trái + màu số. Kiểu nằm trong QSS chung (trước 0.9.18: mỗi
 # thẻ 3 lần setStyleSheet riêng = 18 kiểu cục bộ, phóng to / thu nhỏ phải co giãn lại từng cái)
-MAU_THE_SO = {'so_ho': '#0F294A', 'da_pa': '#0284C7', 'da_pd': '#0F766E', 'da_ct': '#2563EB', 'da_bg': '#15803D', 'tong': '#0F294A'}
+MAU_THE_SO = {'so_ho': '#2F5F9E', 'da_pa': '#1F76A6', 'da_pd': '#1F6F66', 'da_ct': '#3B6FCE', 'da_bg': '#2F7D54', 'tong': '#2F5F9E'}
 # QSS thẻ Card màn hình chào (ARCH-PABT-2026-V5; 0.9.79: thẻ 210 x 135, bo 12px, mỗi thẻ một màu, mô tả nằm TRONG thẻ).
 # loại -> (nền, viền, nền khi rê chuột, viền khi rê chuột, màu biểu tượng). Qt làm tròn viền 1,5px lên 2px: ghi 2px cho đúng thực tế.
 KICH_THE_CHAO = (210, 135)
@@ -287,10 +289,10 @@ CO_ICON_THE_CHAO = 38
 # 17/10/2026 (Hybrid Enterprise Navy): cả 3 thẻ nền trắng viền slate, rê chuột nền xanh băng + viền màu biểu tượng của thẻ
 # (bỏ nền xanh lá / xanh dương tươi của 0.9.79)
 MAU_THE_CHAO = {
-    'moi': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0F294A', '#0F294A'),
-    'mo': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0284C7', '#0284C7'),
-    'excel': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0F766E', '#0F766E'),
-    'phap_ly': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#B45309', '#B45309'),     # 1.0.04: tiếp nhận hồ sơ pháp lý
+    'moi': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#2F5F9E', '#2F5F9E'),
+    'mo': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#1F76A6', '#1F76A6'),
+    'excel': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#1F6F66', '#1F6F66'),
+    'phap_ly': ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#9A5A12', '#9A5A12'),     # 1.0.04: tiếp nhận hồ sơ pháp lý
 }
 QSS_THE_CHAO = (
     f'QFrame[vai="the_chao"] {{ background: {TOKEN["khung"]}; border: 2px solid {TOKEN["vach"]}; border-radius: 12px; }}'
@@ -332,27 +334,27 @@ def _qss_menu_trai() -> str:
     QLabel[vai="nhom_menu"] {{ color: #64748B; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; background: transparent;
         border: 0; border-radius: 4px; margin: 10px 0 4px 0; padding: 2px 4px; }}
     QLabel[vai="nhom_menu"]:hover {{ color: {c}; background: #EEF2F7; }}
-    QLabel[vai="nhom_menu"][dong="1"] {{ color: #7C8CA1; }}'''
+    QLabel[vai="nhom_menu"][dong="1"] {{ color: #5F6F86; }}'''
 
 
 def _qss_the_so() -> str:
     """Thẻ KPI cửa sổ chính + hàng công cụ / dải cộng danh sách hộ (Hybrid Enterprise Navy, 17/10/2026)."""
     c = TOKEN['chinh']
     return '''
-    QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #0F294A; border-radius: 6px; }
+    QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #2F5F9E; border-radius: 6px; }
     QWidget[vai="the_so"]:hover { background: #F8FAFC; }
     QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
     QLabel[vai="so_the"] { font-size: 17px; font-weight: 700; color: #0F172A; }
     QLabel[vai="nhan_the"] { color: #475569; font-size: 11.5px; font-weight: 600; }
     QLabel[vai="phu_the"] { color: #64748B; font-size: 11px; font-weight: 700; }
-    QLabel[vai="huy_hieu_the"] { background: #F1F5F9; color: #64748B; border-radius: 4px; padding: 0 6px; font-size: 10.5px;
+    QLabel[vai="huy_hieu_the"] { background: #F1F5F9; color: #5B6B82; border-radius: 4px; padding: 0 6px; font-size: 10.5px;
         font-weight: 700; }
-    QWidget[vai="the_so"] QLabel[vai="huy_hieu_the"][co="1"] { background: #DBEAFE; color: #1D4ED8; }
-    QWidget[vai="the_so"] QLabel[vai="huy_hieu_the"][co="ha"] { background: #FEF3C7; color: #92400E; }
+    QWidget[vai="the_so"] QLabel[vai="huy_hieu_the"][co="1"] { background: #DBEAFE; color: #2F5DB5; }
+    QWidget[vai="the_so"] QLabel[vai="huy_hieu_the"][co="ha"] { background: #FEF3C7; color: #7C4A12; }
     QLabel[vai="vach_the"] { background: #E2E8F0; }
     QWidget[vai="the_so"] QLabel[vai="vach_the"] { background: #E2E8F0; }
     QLabel[vai="dia_chinh_the"] { font-size: 10px; margin: 0; padding: 0; }
-    QLabel#lb_bo_dem_excel { background: #F0FDF4; border: 1px solid #16A34A; color: #166534; font-weight: 700;
+    QLabel#lb_bo_dem_excel { background: #F0FDF4; border: 1px solid #2F7D54; color: #276348; font-weight: 700;
         border-radius: 4px; padding: 2px 10px; }
     QLabel#lb_bo_dem_excel:hover { background: #DCFCE7; }''' + ''.join(
         f'''
@@ -379,7 +381,7 @@ QSS_HANG_NHAP = '''
     QWidget[hang_nhap="1"] QLineEdit, QWidget[hang_nhap="1"] QComboBox { background: #FFFFFF; border: 1px solid #CBD5E1;
         border-radius: 5px; padding: 0 8px; min-height: 0; }
     QWidget[hang_nhap="1"] QLineEdit:hover, QWidget[hang_nhap="1"] QComboBox:hover { border-color: #94A3B8; }
-    QWidget[hang_nhap="1"] QLineEdit:focus, QWidget[hang_nhap="1"] QComboBox:focus { border: 2px solid #2563EB;
+    QWidget[hang_nhap="1"] QLineEdit:focus, QWidget[hang_nhap="1"] QComboBox:focus { border: 2px solid #3B6FCE;
         padding: 0 7px; background: #FFFFFF; }'''
 # thẻ kiểu gạch chân (cửa sổ lập phương án - ảnh mẫu 17/10/2026): QTabBar có property vai="gach_chan". Ở QSS chung: kiểu cục bộ trên
 # QTabWidget làm chậm (tính lại kiểu cả cây con). Phông (cỡ, độ đậm) khai ở MỨC QTabBar, không ở ::tab: Qt5 đo bề rộng thẻ theo phông
@@ -391,23 +393,23 @@ QSS_THE_GACH_CHAN = '''
     QTabBar[vai="gach_chan"]::tab { background: transparent; color: #475569; border: 1px solid transparent;
         border-bottom: 3px solid transparent; padding: 5px 14px 4px 14px; margin-right: 2px; }
     QTabBar[vai="gach_chan"]::tab:hover:!selected { background: #F1F5F9; color: #0F172A; }
-    QTabBar[vai="gach_chan"]::tab:selected { background: #FFFFFF; color: #2563EB;
-        border: 1px solid transparent; border-bottom: 3px solid #2563EB; }'''
+    QTabBar[vai="gach_chan"]::tab:selected { background: #FFFFFF; color: #3B6FCE;
+        border: 1px solid transparent; border-bottom: 3px solid #3B6FCE; }'''
 # khung tùy chọn của Xuất hồ sơ & Bản in (man_hinh.HopIn): thẻ trắng viền slate. Ở QSS chung theo objectName - setStyleSheet trên khung
 # chứa bắt Qt tính lại kiểu cả cây con (chậm; đo 1.0.02 ở cửa sổ lập phương án)
 # thẻ thông tin chủ hộ + dải cộng bảng thửa (man_hinh_ho_so.KhungHoSo, 1.0.03)
 # 20/10/2026: khối I #khung_chu_ho (lưới 3 cột), thẻ nhỏ [the_nho], ô tên / CCCD / pháp lý, dải tổng hợp địa chính #thanh_tom_tat_thua
 QSS_HO_SO_HO = '''
     QFrame#khung_chu_ho, QFrame#the_chu_ho { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
-    QLineEdit#o_ten { font-weight: 700; color: #0F294A; }
+    QLineEdit#o_ten { font-weight: 700; color: #2F5F9E; }
     QLineEdit#o_cccd { font-family: Consolas, "Courier New", monospace; letter-spacing: 1px; }
-    QLineEdit#o_cccd[hop_le="0"] { border: 1px solid #DC2626; background: #FEF2F2; }
-    QLineEdit#o_phap_ly { color: #15803D; font-weight: 600; }
+    QLineEdit#o_cccd[hop_le="0"] { border: 1px solid #C94545; background: #FEF2F2; }
+    QLineEdit#o_phap_ly { color: #2F7D54; font-weight: 600; }
     QLabel[the_nho] { border-radius: 9px; padding: 2px 9px; font-size: 11px; font-weight: 600; }
-    QLabel[the_nho="vang"] { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
-    QLabel[the_nho="xanh"] { background: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; }
-    QLabel[the_nho="do"] { background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA; }
-    QLabel[the_nho="lam"] { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+    QLabel[the_nho="vang"] { background: #FEF3C7; color: #7C4A12; border: 1px solid #FDE68A; }
+    QLabel[the_nho="xanh"] { background: #DCFCE7; color: #276348; border: 1px solid #BBF7D0; }
+    QLabel[the_nho="do"] { background: #FEE2E2; color: #B83A3A; border: 1px solid #FECACA; }
+    QLabel[the_nho="lam"] { background: #EFF6FF; color: #2F5DB5; border: 1px solid #BFDBFE; }
     QLabel[the_nho="xam"] { background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }
     QLabel[the_nho="loai"] { border: 1px solid #E2E8F0; }
     QFrame#thanh_tom_tat_thua { background: #F1F5F9; border: 1px solid #E2E8F0; border-top: 1px solid #CBD5E1;
@@ -418,16 +420,16 @@ QSS_HO_SO_HO = '''
 QSS_LAP_PA_DAI = '''
     QFrame#dai_dinh_danh { background: #F1F5F9; border: 0; border-bottom: 1px solid #E2E8F0; }
     QLabel[vai_dd="nhan"] { color: #64748B; }
-    QLabel[vai_dd="ten"] { color: #0F294A; font-weight: 700; }
+    QLabel[vai_dd="ten"] { color: #2F5F9E; font-weight: 700; }
     QLabel[vai_dd="cccd"] { font-family: Consolas, "Courier New", monospace; font-weight: 600; color: #0F172A; }
     QLabel[vai_dd="dia_chi"] { color: #0F172A; font-weight: 600; }
-    QLabel[vai_dd="dot"] { color: #0284C7; font-weight: 700; }
-    QLabel#tong_dinh_danh { background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 5px; padding: 2px 10px;
-        color: #92400E; font-family: Consolas, "Courier New", monospace; font-weight: 700; }
+    QLabel[vai_dd="dot"] { color: #1F76A6; font-weight: 700; }
+    QLabel#tong_dinh_danh { background: #FEF3C7; border: 1px solid #E5A93A; border-radius: 5px; padding: 2px 10px;
+        color: #7C4A12; font-family: Consolas, "Courier New", monospace; font-weight: 700; }
     QFrame#dai_cong_muc { background: #F0FDF4; border: 1px solid #BBF7D0; border-top: 0;
         border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
-    QLabel#dem_muc { color: #166534; }
-    QLabel#cong_muc { color: #0F294A; font-weight: 700; }'''
+    QLabel#dem_muc { color: #276348; }
+    QLabel#cong_muc { color: #2F5F9E; font-weight: 700; }'''
 # bảng tổng hợp kinh phí (20/10/2026): khung an toàn nguồn vốn cạnh cơ cấu, dòng chân "Lần tính toán gần nhất"
 QSS_TONG_HOP_KP = '''
     QFrame#khung_an_toan_von { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
@@ -439,14 +441,14 @@ QSS_TONG_HOP_KP = '''
     QTabBar#the_che_do_in::tab { padding: 6px 12px; }
     QFrame#khung_chi_so_cd { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
     QFrame#khung_hop_den { background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 6px; }
-    QLabel#tieu_de_hop_den { color: #B45309; font-weight: 700; }
+    QLabel#tieu_de_hop_den { color: #9A5A12; font-weight: 700; }
     QLabel#mo_ta_hop_den { color: #78350F; }
-    QPushButton#nut_goi_chan_doan { background: #0284C7; color: #FFFFFF; border: 1px solid #0369A1; font-weight: 700; }
-    QPushButton#nut_goi_chan_doan:hover { background: #0369A1; }
-    QFrame#khung_so_vd { background: #FFFFFF; border: 1px solid #0F294A; border-radius: 6px; }
-    QFrame#dau_so_vd { background: #0F294A; border: 0; border-top-left-radius: 5px; border-top-right-radius: 5px; }
+    QPushButton#nut_goi_chan_doan { background: #1F76A6; color: #FFFFFF; border: 1px solid #1A5C85; font-weight: 700; }
+    QPushButton#nut_goi_chan_doan:hover { background: #1A5C85; }
+    QFrame#khung_so_vd { background: #FFFFFF; border: 1px solid #2F5F9E; border-radius: 6px; }
+    QFrame#dau_so_vd { background: #2F5F9E; border: 0; border-top-left-radius: 5px; border-top-right-radius: 5px; }
     QLabel#tieu_de_so_vd { color: #FFFFFF; font-weight: 700; background: transparent; }
-    QLabel#the_ho_vd { background: #F59E0B; color: #0F172A; font-weight: 700; border-radius: 4px; padding: 1px 8px; }
+    QLabel#the_ho_vd { background: #E5A93A; color: #0F172A; font-weight: 700; border-radius: 4px; padding: 1px 8px; }
     QLabel#thong_tin_ho_vd { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 6px 8px; color: #0F172A; }
     QLabel#ket_luan_vd { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 5px; padding: 6px 8px; color: #075985; }
     QLabel#ket_luan_vd[du="1"] { background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; }
@@ -561,7 +563,7 @@ def _qss() -> str:
     QTableView, QTableWidget {{ outline: 0; }}
     QLineEdit[nhap="1"], QComboBox[nhap="1"], QSpinBox[nhap="1"] {{ min-height: 24px; font-size: 13px; padding: 4px 10px; }}
     QTableView QLineEdit, QTableView QComboBox, QTableView QPlainTextEdit {{ font-size: 13px; padding: 2px 6px;
-        border: 2px solid #2563EB; border-radius: 3px; background: #FFFFFF; }}
+        border: 2px solid #3B6FCE; border-radius: 3px; background: #FFFFFF; }}
     QTabBar {{ font-weight: 600; font-size: 13px; }}
     QTabBar::tab {{ background: {THE_TAB['nen']}; color: {THE_TAB['chu']}; padding: 5px 14px; margin-right: 2px; margin-top: 2px;
         border: 1px solid {THE_TAB['vien']}; border-bottom: 0;
@@ -603,7 +605,7 @@ def _qss() -> str:
         border-color: {TOKEN['nhan']}; }}
     QToolButton[xo="1"]:pressed {{ background: #0A2747; }}
     QToolButton[xo="1"]::menu-indicator {{ image: none; width: 0; }}
-    QCheckBox, QRadioButton {{ spacing: 7px; }}
+    QCheckBox, QRadioButton {{ spacing: 7px; min-height: 24px; }}      /* 1.0.16: vùng bấm >= 24 px (WCAG 2.2) */
     QScrollBar:vertical {{ background: transparent; width: 11px; margin: 2px; }}
     QScrollBar::handle:vertical {{ background: #C3CFDB; border-radius: 4px; min-height: 28px; }}
     QScrollBar::handle:vertical:hover {{ background: #9FB3C8; }}
@@ -613,7 +615,7 @@ def _qss() -> str:
     QScrollBar::add-line, QScrollBar::sub-line {{ width: 0; height: 0; }}
     QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
     QProgressBar {{ border: 1px solid #C9D3DD; border-radius: 6px; background: #FFFFFF; text-align: center; height: 16px; }}
-    QProgressBar::chunk {{ background: #2563EB; border-radius: 5px; }}
+    QProgressBar::chunk {{ background: #3B6FCE; border-radius: 5px; }}
     QSplitter::handle {{ background: #E2E8F0; }}
     QSplitter::handle:hover {{ background: #94A3B8; }}
     QComboBox QAbstractItemView, QListView, QListWidget, QTreeView {{ background: #FFFFFF; color: #1A1A1A;
@@ -820,7 +822,7 @@ MAU_TRANG_THAI = {
 }
 
 
-MAU_HE_SO_K = '#0284C7'                                  # cột Hệ số K (bảng giá NQ 28, bảng hệ số K): căn giữa, đậm, xanh trời
+MAU_HE_SO_K = '#1F76A6'                                  # cột Hệ số K (bảng giá NQ 28, bảng hệ số K): căn giữa, đậm, xanh trời
 MAU_GIA_K = TOKEN['chinh']                               # cột Giá × K: căn phải, đậm, navy
 
 
@@ -850,14 +852,14 @@ def kieu_o_gia_k(it) -> None:
 PHONG_SO = 'Consolas'
 PHONG_SO_DU_PHONG = 'Segoe UI Semibold'
 MAU_SO_KHONG = '#94A3B8'
-MAU_SO_TIEN = '#0F294A'
-MAU_SO_VUOT = '#B91C1C'
+MAU_SO_TIEN = '#2F5F9E'
+MAU_SO_VUOT = '#B83A3A'
 SO_KHONG = frozenset(('0', '0,0', '0,00', '0,0%', '0.0%', '0%', '-', '—'))
 CAN_SO = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)     # số nguyên: PySide2 bỏ qua cờ ghép kiểu enum
 # cảnh báo tức thời KHÔNG chặn (diện tích dòng đất vượt DT thu hồi / nguyên thửa, DT còn lại âm, bàn giao thiếu ngày biên bản): hổ phách
 MAU_CANH_BAO_NEN = '#FEF3C7'
-MAU_CANH_BAO_VIEN = '#F59E0B'
-MAU_CANH_BAO_CHU = '#92400E'
+MAU_CANH_BAO_VIEN = '#E5A93A'
+MAU_CANH_BAO_CHU = '#7C4A12'
 _NHO_PHONG_SO: dict = {}
 _NHO_BUT_SO: dict = {}
 
@@ -1040,7 +1042,7 @@ class KhungCao(QFrame):
         self._cao()
 
 
-MAU_BANG = ('#0F294A', '#154D8C', '#1A5FA6')   # banner: xanh sapphire
+MAU_BANG = ('#2F5F9E', '#3A6FB0', '#4A82C2')   # banner: xanh sapphire
 VIEN_DAY = '#38BDF8'                           # viền đáy banner, 2px
 MAU_PHU_DE = '#E0F2FE'                         # dòng cơ quan: xanh băng trắng sáng
 MAU_DON_VI_BANNER = '#FCD34D'                  # 0.9.80: tên đơn vị trên banner navy - vàng kim nhạt (đọc rõ hơn xanh băng)
@@ -1172,7 +1174,7 @@ class TheKpiGon(QFrame):
     """Thẻ chỉ số 2 tầng cao 54 px (cùng kiểu thẻ số màn hình chính / Niêm yết): tên trên; số lớn + chữ phụ dưới. Vạch trái 3 px
     màu `mau`, góc trái bo 3 px (vạch thẳng). Chữ dài rút "…", đủ ở chú thích."""
 
-    def __init__(self, ten: str, mau: str = '#0F294A', goi_y: str = ''):
+    def __init__(self, ten: str, mau: str = '#2F5F9E', goi_y: str = ''):
         super().__init__()
         self.setObjectName('the_kpi_gon')
         self.setStyleSheet(QSS_THE_KPI_GON.format(m=mau))
@@ -1248,7 +1250,7 @@ class DaiCongBang(QFrame):
         chu = '&nbsp;&nbsp;·&nbsp;&nbsp;'.join(f'<span style="color:#475569">{n}:</span> <b>{v}</b>' for n, v in phan)
         if tong:
             chu += ('&nbsp;&nbsp;|&nbsp;&nbsp;' if chu else '') + \
-                f'<span style="color:#0F294A; font-weight:800">{tong[0]}: {tong[1]}</span>'
+                f'<span style="color:#2F5F9E; font-weight:800">{tong[0]}: {tong[1]}</span>'
         return chu
 
     def dat(self, phan: list, tong=None, phan_gon: list | None = None, tong_gon=None) -> None:
@@ -1350,6 +1352,14 @@ def dat_to_chuc(khung, ten: str = '', phu: str = '') -> None:
     from . import to_chuc
     khung.nhan_to_chuc.setText(ten or to_chuc.TEN)
     khung.nhan_phu.setText(phu or f'Trực thuộc {to_chuc.TRUC_THUOC}   •   {to_chuc.DIA_CHI}')
+
+
+def dat_ten_nut_xoa(o) -> None:
+    """Nút xóa chữ (dấu x) tự có của QLineEdit là một QToolButton không tên: đặt chú thích + tên cho người dùng bàn phím / trình đọc màn hình."""
+    for b in o.findChildren(QToolButton):
+        if not b.toolTip():
+            b.setToolTip('Xóa chữ đã gõ')
+            b.setAccessibleName('Xóa chữ đã gõ')
 
 
 class XepDong(QLayout):
@@ -2058,6 +2068,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     khung._vua_rong = _VuaRongMenu(khung)
     khung.installEventFilter(khung._vua_rong)
     b_gon.clicked.connect(lambda: dat(not khung.thu_gon))
+    khung.dat_thu_gon = dat                                  # 1.0.16: app tự thu gọn / mở lại menu theo trang (màn hình hẹp)
     khung.nut_thu_gon, khung.hang_gon, khung.vung_cuon = b_gon, hang_gon, cuon
     dat(thu_gon_luc_dau)
     return khung
@@ -2154,19 +2165,19 @@ class _VuaRongMenu(QObject):
 # Viên thuốc (pill badge) cho ô trạng thái / ý kiến / nhóm vướng: (mẫu trên chữ đã bỏ dấu, (nền, viền, chữ)) - xét theo thứ tự.
 # "chua dong thuan" / "khong dong y" trước "dong thuan" / "dong y"; "tu lap" trước "da lap"; ô có "chua" mà không khớp mẫu nào -> xám.
 MAU_VIEN_THUOC = (
-    (('khong dong y', 'cuong che'), ('#FEE2E2', '#FECACA', '#B91C1C')),
+    (('khong dong y', 'cuong che'), ('#FEE2E2', '#FECACA', '#B83A3A')),
     (('chua dong thuan',), ('#F1F5F9', '#E2E8F0', '#64748B')),
-    (('da ban giao', 'hoan thanh', 'hoan tat', 'dong thuan', 'dong y'), ('#DCFCE7', '#86EFAC', '#15803D')),
-    (('da chi tra', 'da nhan tien', 'da phe duyet'), ('#F0FDFA', '#99F6E4', '#0F766E')),
-    (('tu lap', 'y kien khac', 'v1', 'v2', 'v3', 'v4', 'v5', 'dang van dong'), ('#FEF3C7', '#FDE68A', '#B45309')),
-    (('da lap',), ('#EFF6FF', '#BFDBFE', '#1D4ED8')),
+    (('da ban giao', 'hoan thanh', 'hoan tat', 'dong thuan', 'dong y'), ('#DCFCE7', '#86EFAC', '#2F7D54')),
+    (('da chi tra', 'da nhan tien', 'da phe duyet'), ('#F0FDFA', '#99F6E4', '#1F6F66')),
+    (('tu lap', 'y kien khac', 'v1', 'v2', 'v3', 'v4', 'v5', 'dang van dong'), ('#FEF3C7', '#FDE68A', '#9A5A12')),
+    (('da lap',), ('#EFF6FF', '#BFDBFE', '#2F5DB5')),
 )
 MAU_VIEN_THUOC_XAM = ('#F1F5F9', '#E2E8F0', '#64748B')
 CAO_VIEN_THUOC = 22             # chiều cao viên thuốc (px, kẹp theo chiều cao dòng)
 BO_VIEN_THUOC = 10
 LE_VIEN_THUOC = 8               # lề ngang trong viên thuốc
 DAU_THANH_NAC = '■□'            # ô Trạng thái danh sách hộ bắt đầu bằng thanh 4 nấc "■■□□"
-MAU_THANH_TY_LE = '#0284C7'
+MAU_THANH_TY_LE = '#1F76A6'
 MAU_RANH_TY_LE = '#E2E8F0'
 _RE_SO_TY_LE = re.compile(r'-?\d+(?:[.,]\d+)?')
 _RE_NHOM_VUONG = re.compile(r'^v\d$')
@@ -2559,6 +2570,7 @@ class OTimChon(QWidget):
         self.o = QLineEdit()
         self.o.setPlaceholderText(goi_y)
         self.o.setClearButtonEnabled(True)
+        dat_ten_nut_xoa(self.o)
         self.nut = QToolButton()
         self.nut.setText('▼')
         self.nut.setToolTip('Xem cả danh sách')
@@ -2891,7 +2903,7 @@ def _nen_cuon_hop() -> bool:
 
 
 # ---------------------------------------------------------------- thông báo nổi (HUD) góc dưới phải (1.0.07)
-MAU_HUD = {'tin': ('#0F172A', '#FFFFFF', '#38BDF8'), 'dat': ('#0F294A', '#FFFFFF', '#34D399'),
+MAU_HUD = {'tin': ('#0F172A', '#FFFFFF', '#38BDF8'), 'dat': ('#2F5F9E', '#FFFFFF', '#34D399'),
            'canh_bao': ('#78350F', '#FFFFFF', '#FBBF24')}
 HUD_MS = 2200                   # thời gian hiện (ms)
 LE_HUD = 18                     # cách mép phải / đáy cửa sổ (px)
@@ -3702,7 +3714,7 @@ def cho_phep_sao_chep_bang(bang) -> None:
 # 1 ô của 3 hộ = 3 hộ) - KHÔNG dùng selectionModel().selectedRows() (chỉ trả dòng chọn trọn mọi cột).
 # Bộ đếm (thong_ke_vung_chon): Trung bình / Tổng số đếm / Tổng của vùng chọn - cửa sổ có hàm cap_nhat_bo_dem(bảng, tk) (cửa sổ
 # chính, hộp Thống kê) tự hiện; hộp thoại khác: nhãn nổi góc dưới phải bảng.
-MAU_VIEN_CHON = TOKEN['phu']    # Emerald Teal (22/10/2026; trước #16A34A)
+MAU_VIEN_CHON = TOKEN['phu']    # Emerald Teal (22/10/2026; trước #2F7D54)
 CHON_TOI_DA_NGAY = 3000          # vùng chọn tới bấy nhiêu ô: đếm ngay; lớn hơn (Ctrl+A bảng 5.000 hộ): chờ CHO_BO_DEM_MS
 CHO_BO_DEM_MS = 120
 VUNG_VE_TOI_DA = 200             # số vùng chọn (Ctrl + bấm từng ô) vẽ viền tối đa
@@ -4153,6 +4165,29 @@ def ap_kieu_cay(obj: QWidget) -> None:
     for o in obj.findChildren(QLineEdit):                # chữ dài: hiện từ đầu chữ thay vì phần cuối
         if not o.hasFocus() and o.text():
             o.setCursorPosition(0)
+    dat_ten_truy_cap(obj)
+
+
+def dat_ten_truy_cap(obj: QWidget) -> None:
+    """Tên truy cập (trình đọc màn hình / Narrator / phím tắt giọng nói) cho mọi nút và ô nhập CHƯA có tên: nút = chữ hiện trên nút, nút chỉ
+    có biểu tượng = dòng đầu chú thích; ô nhập = chữ gợi ý hoặc chú thích. Không ghi đè tên đã đặt tay. Ô sửa bên trong QComboBox / QSpinBox
+    bỏ qua (ô tổ hợp đã có tên của nó)."""
+    from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QSpinBox
+    for b in obj.findChildren(QAbstractButton):
+        if not b.accessibleName():
+            chu = (b.text() or '').replace('&&', '\x01').replace('&', '').replace('\x01', '&').strip() or \
+                (b.toolTip() or '').split('\n')[0].strip()
+            if chu:
+                b.setAccessibleName(chu[:120])
+    for o in obj.findChildren(QLineEdit):
+        if o.accessibleName() or isinstance(o.parentWidget(), (QComboBox, QSpinBox, QDoubleSpinBox)):
+            continue
+        chu = (o.placeholderText() or o.toolTip() or '').split('\n')[0].strip()
+        if chu:
+            o.setAccessibleName(chu[:120])
+    for c in obj.findChildren(QComboBox):
+        if not c.accessibleName() and c.toolTip():
+            c.setAccessibleName(c.toolTip().split('\n')[0].strip()[:120])
 
 
 _BAO_LOI = {'dang': False, 'luc': 0.0}
@@ -4233,7 +4268,7 @@ def ap_dung(app) -> None:
     for vai_, mau in ((QPalette.ColorRole.Window, TOKEN['nen']), (QPalette.ColorRole.Base, TOKEN['khung']),
                       (QPalette.ColorRole.AlternateBase, '#F8FAFC'), (QPalette.ColorRole.Text, TOKEN['chu']),
                       (QPalette.ColorRole.WindowText, TOKEN['chu']), (QPalette.ColorRole.ButtonText, TOKEN['chu']),
-                      (QPalette.ColorRole.Button, '#FFFFFF'), (QPalette.ColorRole.Highlight, '#2563EB'),
+                      (QPalette.ColorRole.Button, '#FFFFFF'), (QPalette.ColorRole.Highlight, '#3B6FCE'),
                       (QPalette.ColorRole.HighlightedText, '#FFFFFF'), (QPalette.ColorRole.ToolTipBase, '#FFFDE7'),
                       (QPalette.ColorRole.ToolTipText, '#1A1A1A')):
         p.setColor(vai_, QColor(mau))

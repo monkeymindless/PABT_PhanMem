@@ -31,14 +31,14 @@ from .tien import D, KHONG, so_vn, vn, vn_gon
 
 TIEU_DE = 'Theo dõi phê duyệt, chi trả, bàn giao'
 XANH, VANG, DO, XAM = QColor('#E2EFDA'), QColor('#FFF2CC'), QColor('#F8CBAD'), QColor('#F2F4F7')
-MAU_LIEN_KET = QColor('#0B5CAD')                          # chữ ô bấm đúp mở được file (biên lai, chứng từ)
+MAU_LIEN_KET = QColor('#2F5DB5')                          # chữ ô bấm đúp mở được file (biên lai, chứng từ)
 CHO_GO_MS = 200                                           # ô tìm: chờ ngừng gõ bấy nhiêu ms mới lọc (như OTimKiemThongMinh)
 DO_MAU = 300                                              # số dòng Qt đo khi tự canh bề rộng cột (bảng QTableWidget của hộp thoại)
 THUA_TRONG = dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')     # hộ chưa có thửa: vẫn một dòng
 # 1.0.02 (Hybrid Enterprise Navy): dòng nổi của Cơ cấu kinh phí / Đối soát - (nền, chữ). Cộng bồi thường = slate; kinh phí tổ chức
 # thực hiện = hổ phách nhạt; TỔNG KINH PHÍ = xanh băng chữ navy đậm (như dải cộng danh sách hộ)
-DONG_NOI = {'cong': (QColor('#F1F5F9'), QColor('#0F172A')), 'kinh_phi': (QColor('#FFFBEB'), QColor('#92400E')),
-            'tong': (QColor('#F0F6FF'), QColor('#0F294A'))}
+DONG_NOI = {'cong': (QColor('#F1F5F9'), QColor('#0F172A')), 'kinh_phi': (QColor('#FFFBEB'), QColor('#7C4A12')),
+            'tong': (QColor('#F0F6FF'), QColor('#2F5F9E'))}
 CAO_O_CONG_CU = 30                                       # ô tìm / nút Xuất / Mốc pháp lý của các trang theo dõi
 _DAM = dict(dam=True)                                     # kiểu ô chữ đậm (bảng ảo, dùng chung - chỉ đọc)
 
@@ -270,7 +270,7 @@ class KhungQuyetDinh(_Khung):
         self.ds_qd_w = QListWidget()
         self.ds_qd_w.setMinimumWidth(260)
         self.ds_qd_w.currentRowChanged.connect(lambda i: self.chon(self.ds_qd[i].id if 0 <= i < len(self.ds_qd) else None))
-        self.ds_qd_w.setStyleSheet('QListWidget::item { padding: 6px 4px; color: #0B5CAD; } '
+        self.ds_qd_w.setStyleSheet('QListWidget::item { padding: 6px 4px; color: #2F5DB5; } '
                                    'QListWidget::item:selected { background: #DCEBFA; color: #08345F; }')
         self.nut = {}
         cot_trai = QVBoxLayout()
@@ -300,11 +300,11 @@ class KhungQuyetDinh(_Khung):
         self.dai_cong = DaiCongBang('dai_cong_qd')       # 1.0.03: cộng DT, tiền từng hạng mục, tổng phê duyệt của quyết định đang chọn
         # 1.0.03: dải 4 thẻ KPI đầu trang (số quyết định, lượt hộ, tiền đã duyệt, chênh lệch so với phương án)
         self.hang_kpi = HangKpi([
-            ('so_qd', 'Tổng số quyết định', '#0F294A'),
-            ('luot_ho', 'Số lượt hộ đã phê duyệt', '#0284C7', 'Lượt hộ = cộng số hộ của từng quyết định (một hộ phê duyệt bổ sung '
+            ('so_qd', 'Tổng số quyết định', '#2F5F9E'),
+            ('luot_ho', 'Số lượt hộ đã phê duyệt', '#1F76A6', 'Lượt hộ = cộng số hộ của từng quyết định (một hộ phê duyệt bổ sung '
                                                              'tính nhiều lượt); chữ phụ: số hộ khác nhau / tổng số hộ dự án'),
-            ('tien_qd', 'Tổng kinh phí đã duyệt QĐ', '#0F766E'),
-            ('chenh', 'Chênh lệch QĐ so với PA', '#15803D', 'Tổng tiền các quyết định - tổng phương án hiện tại của các hộ đã có '
+            ('tien_qd', 'Tổng kinh phí đã duyệt QĐ', '#1F6F66'),
+            ('chenh', 'Chênh lệch QĐ so với PA', '#2F7D54', 'Tổng tiền các quyết định - tổng phương án hiện tại của các hộ đã có '
                                                            'quyết định (âm: phương án hiện tại cao hơn số đã duyệt)')])
         h_ho = XepDong(cach=6)          # hết chỗ thì xuống dòng (trước 0.9.18: một hàng 932 px ép cửa sổ rộng hơn màn hình 1366)
         _nut([('Thêm hộ vào quyết định…', lambda: self.them_ho()), ('Sửa hộ đang chọn…', lambda: self.sua_ho()),
@@ -1080,13 +1080,13 @@ class KhungBangTongHop(_Khung):
         # 20/10/2026 (ảnh mẫu): 5 thẻ KPI - cộng bồi thường (100%), kinh phí tổ chức (QĐ 08/2025), hai phần phân bổ (hồ sơ địa phương,
         # mặc định 85% / 15%), tổng mức GPMB dự án. Tên thẻ phân bổ đặt lại ở _ve_kpi theo dia_phuong.phan_bo_kinh_phi()
         self.hang_kpi = HangKpi([
-            ('cong', 'Tổng bồi thường & hỗ trợ', '#0F294A', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
+            ('cong', 'Tổng bồi thường & hỗ trợ', '#2F5F9E', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
                                                             'thưởng = gốc 100%'),
-            ('kinh_phi', 'KP tổ chức GPMB', '#0284C7', 'Kinh phí tổ chức thực hiện bồi thường theo QĐ 08/2025/QĐ-UBND = '
+            ('kinh_phi', 'KP tổ chức GPMB', '#1F76A6', 'Kinh phí tổ chức thực hiện bồi thường theo QĐ 08/2025/QĐ-UBND = '
                                                        'tỷ lệ % của cộng bồi thường, hỗ trợ'),
-            ('pb_0', 'Phần 85%', '#15803D'),
-            ('pb_1', 'Phần 15%', '#D97706'),
-            ('tong', 'Tổng mức GPMB dự án', '#7C3AED')])
+            ('pb_0', 'Phần 85%', '#2F7D54'),
+            ('pb_1', 'Phần 15%', '#C98A22'),
+            ('tong', 'Tổng mức GPMB dự án', '#5568B8')])
         self.an_toan = KhungAnToanVon(self.doi_soat, self)
         self.an_toan.xem_chi_tiet.connect(lambda: self.mo_the(2))
         from PySide6.QtWidgets import QSplitter
@@ -1224,7 +1224,7 @@ class KhungBangTongHop(_Khung):
 QSS_CHE_DO = ('QPushButton { border: 0; background: transparent; color: #475569; padding: 0 14px; border-radius: 5px; '
               'font-weight: 600; }'
               'QPushButton:hover:!checked { background: #CBD5E1; color: #0F172A; }'
-              'QPushButton:checked { background: #0F294A; color: #FFFFFF; font-weight: 700; }')
+              'QPushButton:checked { background: #2F5F9E; color: #FFFFFF; font-weight: 700; }')
 QSS_KHUNG_CHE_DO = 'QFrame#khung_che_do { background: #E2E8F0; border: 0; border-radius: 6px; }'
 QSS_MOC = ('QLabel#lb_moc { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 0 8px; '
            'color: #334155; }')
@@ -2052,7 +2052,6 @@ class HopBanGiao(_Hop):
         self.o_da.setChecked(not so_chua_qd if x is None else x.da_ban_giao)
         self.lb_canh_bao = QLabel('')
         self.lb_canh_bao.setWordWrap(True)
-        self.lb_canh_bao.setVisible(bool(so_chua_qd))
         if so_chua_qd:
             dat_trang_thai(self.lb_canh_bao, 'canh_bao',
                            f'{so_chua_qd}/{so_ho} hộ chưa có quyết định phê duyệt (chưa chi trả). Chỉ tích "Đã bàn giao mặt bằng" khi '
@@ -2073,7 +2072,6 @@ class HopBanGiao(_Hop):
                                'phần mềm chỉ ghi đường dẫn, không chép file. Ô file để trống: giữ file đã ghi của từng hộ.')
         self.lb_chung.setWordWrap(True)
         self.lb_chung.setProperty('vai', 'phu')
-        self.lb_chung.setVisible(self.nhieu_ho)
         self.o_da.toggled.connect(lambda d: (self.o_ngay.setEnabled(d), self.o_ly_do.setEnabled(not d)))
         # 20/10/2026: tích "Đã bàn giao" mà ngày biên bản trống -> nhắc NGAY (vàng, không chặn tới khi bấm Lưu) - lý do pháp lý
         self.lb_nhac_ngay = QLabel(NHAC_NGAY_BAN_GIAO)
@@ -2091,6 +2089,9 @@ class HopBanGiao(_Hop):
         f.addRow('', self.lb_chung)
         f.addRow('Lý do chưa bàn giao:', self.o_ly_do)
         f.addRow(_nut_luu(self))
+        # ẩn / hiện nhãn SAU khi đã vào bố cục: setVisible(True) lên widget chưa có cha hiện thành cửa sổ rỗng nhấp nháy (1.0.16)
+        self.lb_canh_bao.setVisible(bool(so_chua_qd))
+        self.lb_chung.setVisible(self.nhieu_ho)
         self.o_ngay.setEnabled(self.o_da.isChecked())
         self.o_ly_do.setEnabled(not self.o_da.isChecked())
         self._nhac_ngay()
@@ -2253,7 +2254,7 @@ class KhungSoVanDong(QFrame):
             ds = []
             for i, b in enumerate(buoi, start=1):
                 kq = van_dong.TEN_KET_QUA.get(b['ket_qua'], b['ket_qua'])
-                mau = '#B91C1C' if b['ket_qua'] == 'chua_dong_y' else '#0F294A'
+                mau = '#B83A3A' if b['ket_qua'] == 'chua_dong_y' else '#2F5F9E'
                 ds.append(f'<div style="margin-bottom:6px;"><span style="color:{mau};"><b>● Buổi {i}: '
                           f'{van_dong.VIEC.get(b["viec"], b["viec"])}</b></span> <span style="color:#64748B;">{b["ngay"]}</span><br>'
                           + (f'• Hình thức: {b["hinh_thuc"]}<br>' if b['hinh_thuc'] else '')

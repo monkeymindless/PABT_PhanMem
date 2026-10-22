@@ -133,7 +133,7 @@ class TestGiaoDien(CoSo):
             cb.setCurrentIndex(1)
         self.assertEqual(doi, [])
         self.assertFalse(cb.signalsBlocked())                                # trả lại trạng thái cũ
-        self.assertEqual(giao_dien.TOKEN['chinh'], '#0F294A')
+        self.assertEqual(giao_dien.TOKEN['chinh'], '#2F5F9E')
 
     def test_o_tim_cho_ngung_go(self):
         from PySide6.QtCore import QEventLoop, QTimer

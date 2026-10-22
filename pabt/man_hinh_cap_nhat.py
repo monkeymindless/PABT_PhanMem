@@ -51,11 +51,11 @@ class HopCapNhat(QDialog):
             if tt['mo_ta']:
                 dong.append('Nội dung: ' + tt['mo_ta'])
             if tt['da_cai'] != tt['dang_chay'] and not tt['loi']:
-                dong.append('<span style="color:#E65100">Mở lại phần mềm để dùng bản cập nhật này.</span>')
+                dong.append('<span style="color:#9A5A12">Mở lại phần mềm để dùng bản cập nhật này.</span>')
         else:
             dong.append('Chưa cài bản cập nhật nào.')
         if tt['loi']:
-            dong.append('<span style="color:#C62828">Bản cập nhật bị tắt do lỗi: ' + tt['loi'].splitlines()[0] + '</span>')
+            dong.append('<span style="color:#B83A3A">Bản cập nhật bị tắt do lỗi: ' + tt['loi'].splitlines()[0] + '</span>')
         self.lb.setText('<br>'.join(dong))
         self.b_go.setEnabled(bool(tt['da_cai']))
 

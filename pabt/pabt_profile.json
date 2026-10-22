@@ -53,6 +53,16 @@
   "ban_in": {
     "che_cccd_ban_du_thao": false,
     "dia_danh_ngay": "Trị An",
+    "mau_word": {
+      "ghi_chu": "Thông số ba mẫu Word phương án chi tiết / bổ sung / điều chỉnh (nhúng trong phần mềm). Đổi quy cách khi có quy định mới: chỉ cần ghi mục khác mặc định vào pabt_profile.json của máy hoặc nhập gói .pabtcfg - không cần bản cập nhật phần mềm.",
+      "le_mm": {"trai": 15, "phai": 10, "tren": 10, "duoi": 10},
+      "co_chu": {"co_quan": 13, "quoc_hieu": 13, "tieu_ngu": 14, "so_ngay": 13, "du_thao": 13, "ten_loai": 14, "trich_yeu": 14,
+                 "du_an": 14, "thong_tin": 14, "de_muc": 14, "nguon_goc": 13, "bang": 13, "ghi_chu": 11, "chu_ky": 15},
+      "trich_yeu": "BỒI THƯỜNG, HỖ TRỢ & TÁI ĐỊNH CƯ KHI NHÀ NƯỚC THU HỒI ĐẤT",
+      "thut_dau_dong_mm": 10,
+      "gach_chan_ho_pt": 2,
+      "duong_ke_du_an_mm": 70
+    },
     "nguon_goc": {"can_ngang": "justify", "can_doc": "center", "thut_dau_cm": 1.0, "thut_dau_nbsp": 8},
     "le_trang": {
       "chi_tiet": {"top": 0.394, "bottom": 0.315, "left": 0.315, "right": 0.118, "header": 0.20, "footer": 0.20},

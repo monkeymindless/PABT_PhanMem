@@ -69,8 +69,8 @@ class TestDacTaV5(CoSo):
         self.assertEqual(MUC[-1][0], '0.9.53')
         self.assertFalse(hasattr(w, 'lk_cai_dat'))                      # 0.9.66: liên kết "Cài đặt" trùng menu trái: bỏ
         self.assertTrue(w.thanh_tab.isMovable())
-        self.assertEqual(giao_dien.TOKEN['nhan'], '#2563EB')
-        self.assertEqual(giao_dien.VANG, '#2563EB')
+        self.assertEqual(giao_dien.TOKEN['nhan'], '#3B6FCE')
+        self.assertEqual(giao_dien.VANG, '#3B6FCE')
         self.assertNotIn('#F2B705', giao_dien.QSS_THE_CHAO)
         p = _du_an(self.td, 4)
         w.mo(str(p))

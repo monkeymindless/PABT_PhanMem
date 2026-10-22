@@ -17,7 +17,7 @@ COT_DOT = ['Đợt trình thẩm định', 'Số hộ', 'Số thửa', 'DT thu h
 CHUA_XEP_DOT = 'Chưa xếp đợt trình'
 MAU_DONG_TONG = '#F1F5F9'               # dòng 1 (toàn dự án): nền xám nhạt, chữ đậm
 MAU_DONG_VUONG = '#FEF2F2'              # dòng 7 (còn vướng mặt bằng): nền đỏ nhạt
-QSS_DAI_THONG_TIN = ('QLabel#dai_thong_ke { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 4px; color: #0F294A; '
+QSS_DAI_THONG_TIN = ('QLabel#dai_thong_ke { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 4px; color: #2F5F9E; '
                      'padding: 6px 10px; font-weight: 600; }')
 KICH_THUOC = (1000, 600)
 DONG_DOT_TOI_DA = 8                    # bảng đợt cao tối đa bấy nhiêu dòng (nhiều đợt hơn: cuộn)

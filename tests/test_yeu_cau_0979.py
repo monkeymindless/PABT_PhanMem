@@ -79,10 +79,10 @@ class TestTheChao(unittest.TestCase):
         qss = giao_dien.QSS_THE_CHAO
         # 17/10/2026 (Hybrid Enterprise Navy): màu theo giao_dien.MAU_THE_CHAO - nền trắng, rê chuột #F0F6FF, viền / biểu tượng
         # navy / xanh băng đậm / xanh ngọc (không còn xanh lá tươi)
-        for chu in ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#0F294A', '#0284C7', '#0F766E', 'border-radius: 12px', 'font-size: 14.5pt',
+        for chu in ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#2F5F9E', '#1F76A6', '#1F6F66', 'border-radius: 12px', 'font-size: 14.5pt',
                     '#0F172A'):
             self.assertIn(chu, qss)
-        for bo in ('#F0FDF4', '#16A34A', '#BBF7D0'):
+        for bo in ('#F0FDF4', '#2F7D54', '#BBF7D0'):
             self.assertNotIn(bo, qss)
         self.assertIn('#64748B', self.app.styleSheet())                                      # mô tả phụ 10,5pt xám than
         self.assertIn('font-size: 10.5pt', self.app.styleSheet())

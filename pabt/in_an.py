@@ -70,8 +70,9 @@ def la_mau_nhung(p) -> bool:
 
 
 def thu_muc_mau(ten: str = TEN_CT) -> Path:
-    """Thư mục có mẫu ten: mau_in cạnh PABT.exe (người dùng sửa được) > mau_in đóng gói kèm > mau_in của mã nguồn.
-    Tìm theo từng mẫu: thư mục ghi có thể chỉ có một trong hai mẫu (Cập nhật mẫu in từ file một sheet)."""
+    """Thư mục có mẫu ten. Bản cài: mẫu CHUẨN NHÚNG trong phần mềm (pabt/mau_in_nhung.py) - không có thư mục mau_in nào đi kèm bản
+    cài (1.0.16); mẫu người dùng CHỦ ĐỘNG thay (hộp Quản lý Mẫu in / gói .pabtcfg, lưu ở %APPDATA%/PABT/mau_in) được ưu tiên. Mã nguồn:
+    thêm mau_in của mã nguồn (nguồn để sinh bản nhúng). Tìm theo từng mẫu: thư mục ghi có thể chỉ có một trong hai mẫu."""
     ung_vien = []
     if os.environ.get('PABT_CHI_MAU_NHUNG') == '1':      # giả lập máy trắng (tu-kiem, kiểm thử): không thư mục mẫu cài đặt / mã nguồn
         from . import mau_in_nhung                       # - mẫu người dùng đã thay (thư mục tùy chỉnh) vẫn dùng trước
@@ -82,11 +83,10 @@ def thu_muc_mau(ten: str = TEN_CT) -> Path:
             return THU_MUC_NHUNG
     elif getattr(sys, 'frozen', False):
         ung_vien.append(thu_muc_mau_ghi())
-        ung_vien.append(Path(sys.executable).parent / 'mau_in')
-        ung_vien.append(Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent)) / 'mau_in')
     else:
         ung_vien.append(thu_muc_mau_tuy_chinh())     # 1.0.07: mẫu thay bằng hộp Quản lý Mẫu in (không ghi đè mau_in mã nguồn)
-    ung_vien.append(Path(__file__).resolve().parents[1] / 'mau_in')
+    if not getattr(sys, 'frozen', False):
+        ung_vien.append(Path(__file__).resolve().parents[1] / 'mau_in')
     may = {thu_muc_mau_tuy_chinh()} | ({thu_muc_mau_ghi()} if getattr(sys, 'frozen', False) else set())
     for p in ung_vien:
         if (p / f'{ten}.xlsx').exists():

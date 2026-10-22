@@ -29,21 +29,21 @@ COT_SO = {4}
 # Segoe UI / Arial của Windows 7, KHÔNG phải emoji) + màu theo nấc. Chữ trạng thái và giá trị lọc giữ nguyên (BangHo.dong[r]['o'][5])
 THANH_NAC = ('□□□□', '■□□□', '■■□□', '■■■□', '■■■■')
 NHAN_NAC = ('Chưa lập PA', 'Đã lập PA', 'Đã phê duyệt', 'Đã chi trả', 'Đã bàn giao')
-MAU_NAC = ('#64748B', '#0284C7', '#0F294A', '#0F766E', '#15803D')
-MAU_MA_HO = '#0284C7'                    # cột STT (định danh hộ trên danh sách)
+MAU_NAC = ('#64748B', '#1F76A6', '#2F5F9E', '#1F6F66', '#2F7D54')
+MAU_MA_HO = '#1F76A6'                    # cột STT (định danh hộ trên danh sách)
 CAN_PHAI = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 CAN_TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 CAN_GIUA = int(Qt.AlignmentFlag.AlignCenter)
 COT_GIUA = {0, 3}             # 1.0.03: STT, Số thửa căn giữa (tiêu đề + dữ liệu); DT thu hồi căn phải
 # bề rộng cột danh sách hộ sau khi tự canh: {cột: (tối thiểu, tối đa)} - Ghi chú (cột cuối) giãn lấp phần còn lại
-RONG_COT_DS = {0: (56, 72), 3: (80, 100), 4: (120, 150), 5: (220, 290), 6: (140, 220)}
+RONG_COT_DS = {0: (48, 64), 3: (64, 80), 4: (100, 120), 5: (200, 250), 6: (90, 150)}      # 1.0.16: hẹp hơn - Họ và tên / Địa chỉ (giãn) nhận thêm chỗ trên 1366 @125%
 COT_GIAN_DS = (1, 2)          # Họ và tên, Địa chỉ: giãn / co theo khung nhìn
 TAT_CA_DOT, TAT_CA_TRANG_THAI = 'Đợt: Tất cả', 'Trạng thái: Tất cả'     # mục đầu ô lọc (thay nhãn "Đợt:" riêng)
 CAO_DAI_CONG_CU = 32                    # hàng công cụ + lọc danh sách hộ, dải cộng dưới bảng
 # nút "Mở" của bảng dự án gần đây: viền + chữ navy, rê chuột nền navy chữ trắng (bộ chọn #id thắng tô màu theo chữ "Mở" của _BoToMau)
-QSS_NUT_MO_GAN = ('QPushButton#nut_mo_gan { padding: 2px 14px; border: 1px solid #0F294A; border-radius: 4px; color: #0F294A; '
+QSS_NUT_MO_GAN = ('QPushButton#nut_mo_gan { padding: 2px 14px; border: 1px solid #2F5F9E; border-radius: 4px; color: #2F5F9E; '
                   'background: #FFFFFF; font-weight: 600; } '
-                  'QPushButton#nut_mo_gan:hover { background: #0F294A; color: #FFFFFF; } '
+                  'QPushButton#nut_mo_gan:hover { background: #2F5F9E; color: #FFFFFF; } '
                   'QPushButton#nut_mo_gan:pressed { background: #092240; color: #FFFFFF; }')
 # dải cộng dưới danh sách hộ: (khóa, nhãn). Tài sản & Cây = mục 2 nhà + 3 cây + vật nuôi (MUC_VN 7); Hỗ trợ & Thưởng = mục 4 + 5
 O_DAI_CONG = (('so_ho', 'CỘNG'), ('dt', 'Tổng DT'), ('dat', 'Đất'), ('tai_san', 'Tài sản & Cây'),
@@ -863,6 +863,7 @@ class CuaSoChinh(QMainWindow):
             ngang.setSpacing(0)
             # bấm tiêu đề nhóm để đóng / mở - menu không tràn màn hình 1366x768
             self.khung_menu = tao_menu_trai(nhom, dong_mac_dinh=NHOM_DONG_MAC_DINH)
+            self.khung_menu.nut_thu_gon.clicked.connect(lambda: setattr(self, '_menu_tu_thu_gon', False))   # người dùng tự chọn: không tự mở lại
             ngang.addWidget(self.khung_menu)
             phai = QVBoxLayout()
             phai.setContentsMargins(10, 8, 10, 6)
@@ -1527,8 +1528,8 @@ class CuaSoChinh(QMainWindow):
         ds = self.mo_hinh.dong
         hien = [ds[self.loc.mapToSource(self.loc.index(r, 0)).row()] for r in range(n)]
         tong_muc = cong_dai_cong(hien)
-        self.lb_loc.setText(f'Lọc: <b style="color:#0F294A">{n}</b>/{len(ds)} hộ · '
-                            f'<b style="color:#0F294A">{tong_muc["so_thua"]}</b> thửa ↗' if ds else '')
+        self.lb_loc.setText(f'Lọc: <b style="color:#2F5F9E">{n}</b>/{len(ds)} hộ · '
+                            f'<b style="color:#2F5F9E">{tong_muc["so_thua"]}</b> thửa ↗' if ds else '')
         self.lb_loc.setVisible(bool(ds))
         self._ve_dai_cong(n, tong_muc, co_du_lieu=bool(ds))
         self._cap_nhat_loc_the()
@@ -1645,7 +1646,7 @@ class CuaSoChinh(QMainWindow):
     # bấm thẻ: lọc danh sách hộ theo trạng thái (quan_ly.TRANG_THAI); '' = bỏ lọc trạng thái
     LOC_THE = {'so_ho': '', 'da_pa': 'co_pa', 'tong': '', 'da_pd': 'da_pd', 'da_ct': 'da_ct', 'da_bg': 'da_bg'}
     # 22/10/2026 (nâng cấp giao diện): tên hiện trên thẻ gọn để 6 thẻ không cắt chữ ở 1366 - 1536 px; tên đủ ở chú thích
-    TEN_THE_GON = {'da_pa': 'Đã lập PA', 'da_bg': 'Đã bàn giao'}
+    TEN_THE_GON = {'da_pa': 'Lập PA', 'da_pd': 'Phê duyệt', 'da_ct': 'Chi trả', 'da_bg': 'Bàn giao', 'tong': 'Kinh phí'}   # tên đủ ở chú thích
 
     def _hien_ty_le(self, t: float):
         self.nut_ty_le['ty_le'].setText(f'{round(t * 100)}%')
@@ -1690,6 +1691,7 @@ class CuaSoChinh(QMainWindow):
             khung.setFixedHeight(self.CAO_THE_SO)
             nhan = NhanRutGon(self.TEN_THE_GON.get(k, ten))     # hẹp (màn hình 1366): rút "…", không ép cửa sổ rộng ra
             nhan.setProperty('vai', 'nhan_the')
+            nhan.setToolTip(ten)                         # tên đủ ('Đã phê duyệt', 'Tổng kinh phí'…) khi tên hiện trên thẻ đã rút gọn
             phu = QLabel('')                             # huy hiệu: tỷ lệ % số hộ (Tổng kinh phí: tổng ha)
             phu.setProperty('vai', 'huy_hieu_the')
             phu.setProperty('co', '')
@@ -1766,7 +1768,7 @@ class CuaSoChinh(QMainWindow):
                 _h, t, dt = nhom[k]
                 dc = self.the_dia_chinh[k]
                 dc.setText(f'<span style="font-weight:700; color:#1E293B">{t} thửa</span><br>'
-                           f'<span style="color:#0369A1">{vn(dt, 1)} m²</span>' if ds else '')
+                           f'<span style="color:#1A5C85">{vn(dt, 1)} m²</span>' if ds else '')
                 dc.setToolTip(f'{_h} hộ · {t} thửa · {vn(dt, 1)} m² ({so_ha(dt)})' if ds else '')
             phu = self.the_phu.get(k) if hasattr(self, 'the_phu') else None
             if phu is None:
@@ -1979,7 +1981,7 @@ class CuaSoChinh(QMainWindow):
         self.o_tim_gan.setMinimumWidth(240)
         self.o_tim_gan.setMaximumWidth(300)
         self.o_tim_gan.setStyleSheet('QLineEdit { border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px 8px; background: #FFFFFF; }'
-                                     'QLineEdit:focus { border: 2px solid #2563EB; padding: 3px 7px; }')
+                                     'QLineEdit:focus { border: 2px solid #3B6FCE; padding: 3px 7px; }')
         self.o_tim_gan.chuoi_da_doi.connect(self._loc_gan_day)
         hang_gd.addWidget(self.o_tim_gan)
         lo.addSpacing(8)
@@ -2666,11 +2668,31 @@ class CuaSoChinh(QMainWindow):
         if not hasattr(self, 'ngan_lv') or not hasattr(self, 'hang_the'):
             return
         self._xoa_bo_dem_neu_an()
+        self._tu_thu_gon_menu()
         o_trang = self.ngan_lv.currentWidget() is self.trang
         chao = o_trang and self.trang.currentIndex() == TRANG_CHAO
         self.hang_the.setVisible(self.con is not None and o_trang and self.trang.currentIndex() == STACK_CUA_TRANG[TRANG_DS])
         if hasattr(self, 'banner_ten'):
             self.banner_ten.setVisible(self.con is None or chao)
+
+    RONG_CUA_SO_HEP = 1280                              # điểm logic: cửa sổ hẹp hơn thì menu trái tự thu gọn khi soạn phương án hộ
+
+    def _tu_thu_gon_menu(self) -> None:
+        """1.0.16 (màn hình 1366 @125% = 1093 điểm: menu mở chiếm ~255, cửa sổ lập phương án cần ~840): mở cửa sổ lập phương án mà
+        cửa sổ hẹp -> thu gọn menu trái (chỉ biểu tượng); rời trang đó thì mở lại. Người dùng tự bấm Thu gọn / Mở rộng thì app không can
+        thiệp nữa (tới lần mở lập phương án kế tiếp)."""
+        khung = getattr(self, 'khung_menu', None)
+        if khung is None or not hasattr(khung, 'dat_thu_gon') or not hasattr(self, 'khung_tab'):
+            return
+        w = self.khung_tab.stack_phu.currentWidget() if self.ngan_lv.currentWidget() is self.khung_tab.stack_phu else None
+        la_lap_pa = w is not None and type(w).__name__ == 'CuaSoLapPA'
+        if la_lap_pa and self.width() < self.RONG_CUA_SO_HEP and not khung.thu_gon:
+            self._menu_tu_thu_gon = True
+            khung.dat_thu_gon(True)
+        elif not la_lap_pa and getattr(self, '_menu_tu_thu_gon', False):
+            self._menu_tu_thu_gon = False
+            if khung.thu_gon:
+                khung.dat_thu_gon(False)
 
     def cap_nhat_bo_dem(self, bang, tk: dict) -> None:
         """Vùng chọn của một bảng trong cửa sổ chính đổi (giao_dien._BoChonVung): bộ đếm thanh trạng thái theo bảng đó. Bảng đang ẩn
@@ -3578,7 +3600,7 @@ class CuaSoChinh(QMainWindow):
         elif may_chu.doc_cau_hinh().get('may_chu'):
             self.nut_tk.setText('● LAN: Ngoại tuyến (Offline) · Đăng nhập máy chủ')
             self.nut_tk.setToolTip('Đang làm việc offline với file trên máy này')
-            mau = '#B86E00'
+            mau = '#9A5A12'
         else:
             self.nut_tk.setText('● Máy đơn · Máy chủ LAN')
             self.nut_tk.setToolTip('Không dùng máy chủ trong mạng nội bộ. Bấm để thiết lập (không bắt buộc).')

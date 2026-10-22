@@ -3,13 +3,15 @@ bảng qua hai trang - dòng ghi chú / nguồn gốc dài đẩy cả dòng san
 
 Cùng số liệu với bản Excel (in_an.dong_chi_tiet, _thong_tin_du_an, _thong_tin_ho, lần phương án, chế độ dự thảo / chính thức), dựng
 bằng XML thuần (van_ban_trinh._goi_docx - không cần python-docx, không cần Word để tạo file):
-  - A4 dọc, lề trái 30 mm, phải 15 mm, trên 20 mm, dưới 20 mm (LE_MM); Times New Roman.
+  - A4 dọc, lề trái 15 mm, phải 10 mm, trên 10 mm, dưới 10 mm (LE_MM); Times New Roman.
   - Quốc hiệu, tiêu ngữ, tên cơ quan, số, địa danh / ngày: bảng ẩn viền hai cột; thông tin chủ sử dụng: bảng ẩn viền.
   - Bảng mục III: hàng tiêu đề cột w:tblHeader (Word lặp đầu mọi trang); dòng số liệu có chữ dài (ghi chú, tên > DAI_CHO_TACH ký
     tự) w:cantSplit = 0 (Word cắt đôi qua trang - trang trước lấp đầy), dòng ngắn / đề mục = 1; dòng thưởng, TỔNG CỘNG, mục IV, khối
     chữ ký (dòng cuối của chính bảng này, ẩn viền) cantSplit = 1 và keepNext (không tách rời, chữ ký không đứng trơ một trang).
-  - Cỡ chữ (22/10/2026): cơ quan, quốc hiệu, số 13; tiêu ngữ, ngày, trích yếu (hai dòng), dự án, nội dung, bảng, chữ ký 14; tên
-    loại 15. Mục II giãn dòng đơn, cách đoạn 6 pt; tiêu đề mục III không keepNext - in tiếp ngay dưới mục II khi còn chỗ.
+  - Lề, cỡ chữ, trích yếu, độ hở gạch chân là THÔNG SỐ MẪU nhúng trong hồ sơ địa phương (pabt_profile.json, mục ban_in.mau_word): đổi
+    mẫu theo quy định mới = nhập gói .pabtcfg / ghi file máy, không cần bản cập nhật phần mềm. Cỡ chữ mặc định (22/10/2026): cơ quan,
+    quốc hiệu, số / ngày, "(DỰ THẢO)", nguồn gốc, bảng 13; tiêu ngữ, tên văn bản, trích yếu, dự án, mục I - IV 14; ghi chú 11; khối
+    chữ ký 15. Mục II giãn dòng đơn, cách đoạn 6 pt, chỉ DÒNG ĐẦU mỗi đoạn thụt 1 cm.
   - Bản dự thảo: "(DỰ THẢO)" dưới số, không số / ngày phương án, không khối chữ ký.
 Không ghi cố định tên đơn vị / người ký: lấy từ Thông tin dự án (to_chuc.MAC_DINH khi trống) như bản Excel.
 """
@@ -19,31 +21,28 @@ import math
 import re
 from pathlib import Path
 
-from .ho_so import dau_dong
+from . import dia_phuong
 from .van_ban_trinh import _goi_docx, _xml
 
-LE_MM = dict(trai=30, phai=15, tren=20, duoi=20)        # lề A4 theo NĐ 30/2020/NĐ-CP (mm)
+# thông số mẫu (lề, cỡ chữ, trích yếu, thụt, độ hở gạch chân, đường kẻ dưới dự án): giá trị đặt ở _ap_mau() từ hồ sơ địa phương
+# (ban_in.mau_word) - nơi dùng đọc in_word.LE_MM / CO_BANG… LÚC GỌI, đừng `from .in_word import CO_BANG` ở cấp module
+LE_MM: dict = {}                                        # mm: trai / phai / tren / duoi
+CO_CO_QUAN = CO_QUOC_HIEU = CO_TIEU_NGU = CO_SO_NGAY = CO_DU_THAO = CO_TEN_LOAI = CO_TRICH_YEU = CO_DU_AN = 0.0
+CO_THONG_TIN = CO_DE_MUC = CO_NGUON_GOC = CO_BANG = CO_GHI_CHU = CO_CHU_KY = 0.0
+TRICH_YEU = ''
+TRICH_YEU_DONG: tuple = ()                              # vùng chữ rộng 524 pt: trích yếu 14 pt đậm (~480 pt) vừa MỘT dòng
+THUT_DAU = 0                                            # twip: thụt dòng đầu của đoạn
+HO_GACH_PT = 2                                          # pt: khe giữa chân chữ và đường gạch (không sát chữ - khỏi mất dấu dưới)
+DK_DU_AN_MM = 70                                        # đường kẻ dưới tên dự án (mm)
+KHE_GACH_PT = 4                                         # pt: đường gạch dài hơn chữ chừng này (Word bẻ dòng nếu hẹp hơn chữ một chút)
+KHE_COT_PT = 2                                          # pt chừa thêm cho mỗi cột thu vừa chữ (Word đo chữ rộng hơn Qt chút ít)
 KHO_A4 = (11906, 16838)                                 # twip
-# cỡ chữ (người dùng 22/10/2026, theo NĐ 30/2020 cỡ 13 - 14): tên cơ quan, quốc hiệu, số ký hiệu 13; tiêu ngữ, địa danh / ngày,
-# trích yếu, tên dự án, nội dung (mục I, II, bảng mục III), khối chữ ký 14; tên loại văn bản 15
-CO_CHU = 14                                             # cỡ chữ văn bản
-CO_CO_QUAN = 13                                         # tên cơ quan chủ quản / ban hành, quốc hiệu, số ký hiệu
-CO_TEN_LOAI = 15                                        # "PHƯƠNG ÁN CHI TIẾT"
-CO_BANG = 14                                            # chữ trong bảng mục III
-CO_GHI_CHU = 14                                         # cột ghi chú (cùng cỡ nội dung)
-TRICH_YEU = 'BỒI THƯỜNG, HỖ TRỢ VÀ TÁI ĐỊNH CƯ KHI NHÀ NƯỚC THU HỒI ĐẤT'   # NĐ 30: chữ "VÀ", không ký tự "&"
-# trích yếu 14 pt đậm rộng ~480 pt > vùng chữ 468 pt: hai dòng ngắt đúng nghĩa (Word tự ngắt để "ĐẤT" trơ một dòng)
-TRICH_YEU_DONG = ('BỒI THƯỜNG, HỖ TRỢ VÀ TÁI ĐỊNH CƯ', 'KHI NHÀ NƯỚC THU HỒI ĐẤT')
-# bảng đầu văn bản (cơ quan | quốc hiệu) rộng hơn vùng chữ, lấn vào lề trái / phải (22/10/2026, mẫu PA_01 người dùng gửi): 13 pt
-# vùng chữ 468 pt không đủ cho "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT" (~225 pt) một dòng cạnh quốc hiệu "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM"
-# đậm (~269 pt) - trước đây tên cơ quan bẻ 3 dòng. Lề giấy còn 30 - 12 = 18 mm trái, 15 - 8 = 7 mm phải (máy in để >= 5 mm)
-LAN_LE_DAU_MM = (12, 8)                                 # (trái, phải) mm bảng đầu lấn vào lề
+# bảng đầu văn bản (cơ quan | quốc hiệu): từng lấn lề ở lề cũ 30 / 15 mm; lề 15 / 10 mm không cần
+LAN_LE_DAU_MM = (0, 0)                                  # (trái, phải) mm bảng đầu lấn vào lề
 RONG_QUOC_HIEU = 5700                                   # twip (285 pt) cột quốc hiệu: 269 pt chữ + lề ô; còn lại cho cột cơ quan
 RONG_KY_TU = 0.6                                        # ước bề rộng một ký tự in hoa Times New Roman (x cỡ chữ; đậm x 1,05)
 DONG_DOAN = 240                                         # đoạn Mục II: giãn dòng đơn
 SAU_DOAN = 120                                          # cách đoạn / gạch đầu dòng 6 pt
-THUT_DAU = 567                                          # thụt đầu dòng 1 cm
-THUT_TREO = 360                                         # đoạn gạch đầu dòng: thụt lề treo
 # bề rộng 8 cột bảng mục III (phần nghìn) - STT, tên, ĐVT, số lượng, đơn giá, tỷ lệ, thành tiền, ghi chú: chỉ dùng khi không có số
 # liệu (rong_cot() không đối số). Bản in thật: rong_cot(chu_cot) theo NỘI DUNG từng hộ (22/10/2026 - cột ghi chú cố định 14% làm ô
 # ghi chú "Đất do UBND xã … Điều 101 Luật Đất đai" cao nửa trang): cột STT / ĐVT / số lượng / đơn giá / tỷ lệ / thành tiền vừa số dài
@@ -61,6 +60,80 @@ TIEU_DE_COT_BS = ('STT', 'Tên tài sản', 'ĐVT', 'Số lượng', 'Đơn giá
 
 def twip(mm: float) -> int:
     return int(round(mm / 25.4 * 1440))
+
+
+def _ap_mau(hs: dict) -> None:
+    """Đặt thông số mẫu từ hồ sơ địa phương (chạy lúc nạp module và sau mỗi lần nạp lại hồ sơ / nhập gói .pabtcfg)."""
+    global LE_MM, TRICH_YEU, TRICH_YEU_DONG, THUT_DAU, HO_GACH_PT, DK_DU_AN_MM
+    global CO_CO_QUAN, CO_QUOC_HIEU, CO_TIEU_NGU, CO_SO_NGAY, CO_DU_THAO, CO_TEN_LOAI, CO_TRICH_YEU, CO_DU_AN
+    global CO_THONG_TIN, CO_DE_MUC, CO_NGUON_GOC, CO_BANG, CO_GHI_CHU, CO_CHU_KY
+    mw = hs['ban_in']['mau_word']
+    LE_MM = dict(mw['le_mm'])
+    c = mw['co_chu']
+    CO_CO_QUAN, CO_QUOC_HIEU, CO_TIEU_NGU, CO_SO_NGAY, CO_DU_THAO = c['co_quan'], c['quoc_hieu'], c['tieu_ngu'], c['so_ngay'], c['du_thao']
+    CO_TEN_LOAI, CO_TRICH_YEU, CO_DU_AN, CO_THONG_TIN, CO_DE_MUC = c['ten_loai'], c['trich_yeu'], c['du_an'], c['thong_tin'], c['de_muc']
+    CO_NGUON_GOC, CO_BANG, CO_GHI_CHU, CO_CHU_KY = c['nguon_goc'], c['bang'], c['ghi_chu'], c['chu_ky']
+    TRICH_YEU = ' '.join(str(mw['trich_yeu']).split())
+    TRICH_YEU_DONG = (TRICH_YEU,)
+    THUT_DAU = twip(mw['thut_dau_dong_mm'])
+    HO_GACH_PT = max(0, min(31, int(round(mw['gach_chan_ho_pt']))))
+    DK_DU_AN_MM = mw['duong_ke_du_an_mm']
+
+
+dia_phuong.dang_ky(_ap_mau)
+
+
+# ---------------------------------------------------------------- cập nhật mẫu Word không cần bản cập nhật phần mềm
+# Mẫu Word (chi tiết / bổ sung / điều chỉnh) NHÚNG trong phần mềm: bố cục do mã dựng, thông số (lề, cỡ chữ, trích yếu, thụt, độ hở gạch
+# chân) ở hồ sơ địa phương mục ban_in.mau_word. Quy định mới đổi quy cách -> thay thông số bằng MỘT trong ba cách (đều không đổi phiên bản
+# phần mềm, không đụng dữ liệu dự án): (1) hộp Công cụ > Quản lý Mẫu in & Bản in: Nhập / Xuất thông số mẫu Word; (2) nhập gói .pabtcfg
+# (Công cụ > Nhập gói mẫu in & cấu hình); (3) sửa pabt_profile.json của máy. Chỉ ghi các mục KHÁC mặc định vào file máy.
+LOAI_THONG_SO = 'pabt_mau_word'
+
+
+def thong_so_mau() -> dict:
+    """Thông số mẫu Word đang dùng (bản sao)."""
+    import copy
+    return copy.deepcopy(dia_phuong.lay('ban_in.mau_word'))
+
+
+def trang_thai_thong_so() -> str:
+    """'Nhúng chuẩn' khi giống mặc định đóng kèm, 'Tùy chỉnh' khi khác (file máy / gói .pabtcfg)."""
+    return 'Nhúng chuẩn' if thong_so_mau() == dia_phuong.mac_dinh()['ban_in']['mau_word'] else 'Tùy chỉnh'
+
+
+def xuat_thong_so(file) -> Path:
+    """Ghi thông số mẫu Word đang dùng ra file JSON để chỉnh sửa (cùng file đưa cho máy khác nhập)."""
+    import json
+    file = Path(file)
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(json.dumps({'loai': LOAI_THONG_SO, 'mau_word': thong_so_mau()}, ensure_ascii=False, indent=2), encoding='utf-8')
+    return file
+
+
+def nhap_thong_so(file) -> list:
+    """Nhập file thông số mẫu Word (do xuat_thong_so tạo, đã sửa; chỉ cần các mục muốn đổi): kiểm tra, ghi vào hồ sơ máy, áp dụng ngay.
+    Trả danh sách mục đã đổi. Sai -> dia_phuong.LoiHoSo (chưa ghi gì)."""
+    import json
+    try:
+        x = json.loads(Path(file).read_text(encoding='utf-8-sig'))
+    except (OSError, ValueError) as e:
+        raise dia_phuong.LoiHoSo(f'Không đọc được file thông số mẫu Word: {e}') from None
+    if not isinstance(x, dict) or x.get('loai') != LOAI_THONG_SO or not isinstance(x.get('mau_word'), dict):
+        raise dia_phuong.LoiHoSo(f'File không phải thông số mẫu Word (cần "loai": "{LOAI_THONG_SO}" và mục "mau_word").')
+    cu = thong_so_mau()
+    moi = dia_phuong.tron(cu, x['mau_word'])
+    loi = dia_phuong.kiem_tra_mau_word(moi)
+    if loi:
+        raise dia_phuong.LoiHoSo('Thông số mẫu Word chưa hợp lệ:' + chr(10) + '- ' + (chr(10) + '- ').join(loi))
+    khac = dia_phuong.khac_mac_dinh(moi, dia_phuong.mac_dinh()['ban_in']['mau_word'])
+    dia_phuong.dat_muc_may(('ban_in', 'mau_word'), khac or None)
+    return sorted(k for k in moi if moi[k] != cu.get(k))
+
+
+def khoi_phuc_thong_so() -> None:
+    """Bỏ thông số mẫu Word tùy chỉnh của máy, dùng lại bộ nhúng chuẩn."""
+    dia_phuong.dat_muc_may(('ban_in', 'mau_word'), None)
 
 
 def rong_trang() -> int:
@@ -84,6 +157,15 @@ def _p(*chay, can: str = 'both', truoc: int = 0, sau: int = 0, dau_dong: int = 0
     giu = ('<w:keepNext/>' if giu_sau else '') + ('<w:keepLines/>' if giu_dong else '')
     return (f'<w:p><w:pPr>{giu}<w:spacing w:before="{truoc}" w:after="{sau}" w:line="{dong}" w:lineRule="auto"/>{thut}'
             f'<w:jc w:val="{can}"/></w:pPr>{"".join(chay)}</w:p>')
+
+
+def _duong_ke_du_an() -> str:
+    """Đường kẻ ngang ngắn (DK_DU_AN_MM) căn giữa ngay dưới tên dự án: viền dưới của một đoạn rỗng thụt hai bên (Word vẽ viền đoạn
+    suốt bề rộng giữa hai lề thụt)."""
+    ben = (rong_trang() - twip(DK_DU_AN_MM)) // 2
+    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>'
+            f'<w:spacing w:before="0" w:after="200" w:line="120" w:lineRule="exact"/><w:ind w:left="{ben}" w:right="{ben}"/>'
+            f'<w:rPr><w:sz w:val="4"/></w:rPr></w:pPr></w:p>')
 
 
 def _o(noi_dung: str, rong: int, nhap: int = 1, doc: str = 'center', dong_doc: str | None = None, vien: bool = True,
@@ -145,7 +227,32 @@ def _rong_chu(chu: str, co: float, dam: bool = False) -> float:
     return w * co * (1.06 if dam else 1.0)
 
 
-def rong_cot(chu_cot: dict | None = None) -> list:
+def _ham_do():
+    """Hàm đo bề rộng chữ thật (chữ, phông, cỡ pt, đậm) -> pt bằng Qt khi có giao diện, không thì None (dùng ước _rong_chu)."""
+    try:
+        from . import in_an
+        return in_an._ham_do_chu()
+    except Exception:                                   # noqa: BLE001 - thiếu Qt / giao diện: dùng ước lượng
+        return None
+
+
+def _rong_do(chu: str, co: float, dam: bool = False, do=None) -> float:
+    """Bề rộng (pt) của chữ Times New Roman: đo thật khi có Qt (do = hàm của _ham_do), không thì ước."""
+    if do:
+        return do(str(chu), 'Times New Roman', co, dam)
+    return _rong_chu(chu, co, dam)
+
+
+def _p_gach(chu: str, co: float, dam: bool, rong_o: int, do=None) -> str:
+    """Dòng chữ căn giữa có đường GẠCH CHÂN HỞ: viền dưới của đoạn, cách chân chữ HO_GACH_PT pt (gạch chân chữ của Word sát nét chữ,
+    mất dấu dưới "Ị Ộ…"); thụt hai bên để đường kẻ dài đúng bằng chữ. rong_o = bề rộng chữ của ô (twip)."""
+    ben = max(0, int((rong_o - (_rong_do(chu, co, dam, do) + KHE_GACH_PT) * 20) // 2))
+    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="{HO_GACH_PT}" w:color="000000"/></w:pBdr>'
+            f'<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="{ben}" w:right="{ben}"/>'
+            f'<w:jc w:val="center"/></w:pPr>{_r(chu, dam=dam, co=co)}</w:p>')
+
+
+def rong_cot(chu_cot: dict | None = None, do=None) -> list:
     """Bề rộng 8 cột bảng mục III (twip). chu_cot {cột: [(chữ, đậm)]}: theo nội dung (cột số vừa chữ dài nhất, còn lại chia tên /
     ghi chú); None: tỷ lệ cố định TY_LE_COT."""
     tong = rong_trang()
@@ -155,28 +262,36 @@ def rong_cot(chu_cot: dict | None = None) -> list:
         return ds
     le = 2 * LE_O / 20                                  # pt lề ô hai bên
     ds = [0] * len(TIEU_DE_COT)
+    if do is None:
+        do = _ham_do()
+    du = 1.03 if do else DU_RONG                        # đo thật chỉ chừa sai số nhỏ; ước lượng chừa nhiều hơn
+
+    def w(chu, co, dam=False):
+        return _rong_do(chu, co, dam, do)
+    # cột số (STT, ĐVT, số lượng, đơn giá, tỷ lệ, thành tiền): TỰ THU VỪA CHỮ - vừa từ dài nhất của tiêu đề và số dài nhất; phần
+    # thừa nhường cho cột Tên tài sản / Ghi chú
     for k in COT_SO:
-        can = max([COT_TOI_THIEU[k]] + [_rong_chu(t, CO_BANG, True) for t in TIEU_DE_COT[k].split()] +
-                  [_rong_chu(c, CO_BANG, d) * DU_RONG for c, d in chu_cot.get(k, ()) if c])
-        ds[k] = int(round((can + le) * 20))
+        can = max([COT_TOI_THIEU[k]] + [w(t, CO_BANG, True) for t in TIEU_DE_COT[k].split()] +
+                  [w(c, CO_BANG, d) * du for c, d in chu_cot.get(k, ()) if c])
+        ds[k] = int(round((can + le + KHE_COT_PT) * 20))
     con = tong - sum(ds)
     co_gc = any(c for c, _ in chu_cot.get(7, ()))
-    toi_thieu_gc = int(round((_rong_chu('Ghi chú', CO_BANG, True) + le) * 20))
-    toi_thieu_ten = int(round((max([_rong_chu(t, CO_BANG, True) for c, _ in chu_cot.get(1, ()) for t in str(c).split()] or [0])
+    toi_thieu_gc = int(round((w('Ghi chú', CO_BANG, True) + le) * 20))
+    toi_thieu_ten = int(round((max([w(t, CO_BANG, True) for c, _ in chu_cot.get(1, ()) for t in str(c).split()] or [0])
                                + le) * 20))
     if co_gc:
         # chia tên : ghi chú sao cho các dòng bảng (cao theo ô nhiều dòng chữ hơn) thấp và đều: tổng BÌNH PHƯƠNG số dòng ước
         # nhỏ nhất - chỉ cộng số dòng thì ô ghi chú dài bị dồn thành một dòng bảng cao nửa trang
-        def so_dong(chu, d, rong):
-            return math.ceil(_rong_chu(chu, CO_BANG, d) * DU_RONG / max(1.0, rong / 20 - le)) if chu else 1
+        def so_dong(chu, d, rong, co):
+            return math.ceil(w(chu, co, d) * du / max(1.0, rong / 20 - le)) if chu else 1
         cap = list(zip(chu_cot.get(1, ()), chu_cot.get(7, ())))
 
         def tong_dong(gc_):
-            return sum(max(so_dong(a[0], a[1], con - gc_), so_dong(b[0], False, gc_)) ** 2 for a, b in cap)
+            return sum(max(so_dong(a[0], a[1], con - gc_, CO_BANG), so_dong(b[0], False, gc_, CO_GHI_CHU)) ** 2 for a, b in cap)
         gc = con * CHIA_TEN_GHI_CHU[1] // sum(CHIA_TEN_GHI_CHU)
         gc = min((con * k // 100 for k in range(30, 71, 5)), key=lambda x: (tong_dong(x), abs(x - gc)))
     else:
-        gc = max(toi_thieu_gc, con * 15 // 100)
+        gc = int(toi_thieu_gc * 1.3)                    # không có ghi chú nào: cột Ghi chú thu vừa tiêu đề, nhường chỗ cho Tên tài sản
     gc = min(max(gc, toi_thieu_gc), con - toi_thieu_ten)
     ds[7], ds[1] = gc, con - gc
     if min(ds) <= 0:                                    # số quá dài so với khổ giấy: về tỷ lệ cố định
@@ -387,37 +502,40 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     if du_thao:
         ttho['so_pa'], ttho['ngay_pa'] = '', ''
     w = rong_trang()
-    co = CO_CHU
     # ---- quốc hiệu, tiêu ngữ, cơ quan, số, ngày (bảng ẩn viền 2 cột)
     dia_danh = str(dia_phuong.lay('ban_in.dia_danh_ngay', in_an.DIA_DANH_NGAY_MAC_DINH) or da['ten_dia_ban'] or '').strip()
     so = f'Số: {ttho["so_pa"]}/{da["ky_hieu_so"]}' if ttho['so_pa'] else f'Số:          /{da["ky_hieu_so"]}'
-    # cơ quan chủ quản 13 in hoa đứng; cơ quan ban hành 13 in hoa đứng đậm, đường kẻ dưới 1/3 - 1/2 dòng chữ; số, "(DỰ THẢO)" 13
+    # cơ quan chủ quản 13 in hoa đứng (2 dòng); dòng 3 = cơ quan ban hành / chi nhánh 13 in hoa đậm GẠCH CHÂN đúng độ dài chữ
+    # (PDF mẫu PA_01: "CHI NHÁNH VĨNH CỬU"; không còn dòng "____"); số, "(DỰ THẢO)" 13
     # đứng; quốc hiệu 13 in hoa đậm; tiêu ngữ 14 đậm, gạch dưới đúng độ dài chữ; địa danh / ngày 14 nghiêng (22/10/2026)
     ten_cq = str(da['DON_VI_TIEU_DE'] or '').upper()
-    ke = '_' * max(6, min(20, len(ten_cq) // 2 + 2))     # gạch dưới ~ nửa dòng tên cơ quan
     r1, r2 = rong_cot_dau()
     vua_trai = (r1 - 2 * 57) / 20                        # pt chữ trong cột cơ quan (trừ lề ô)
+    do = _ham_do()
     trai = ''.join(_p(_r(d, co=CO_CO_QUAN), can='center')
                    for x in (da['DON_VI_CAP_TREN_2DONG'] or '').split('\n') if x.strip()
                    for d in _ngat_can_bang(x.strip().upper(), vua_trai, CO_CO_QUAN)) + \
-        ''.join(_p(_r(d, dam=True, co=CO_CO_QUAN), can='center') for d in _ngat_can_bang(ten_cq, vua_trai, CO_CO_QUAN, True)) + \
-        _p(_r(ke, co=CO_CO_QUAN), can='center', dong=200) + \
-        _p(_r(so, co=CO_CO_QUAN), can='center', truoc=60) + (_p(_r('(DỰ THẢO)', co=CO_CO_QUAN), can='center') if du_thao else '')
-    phai = _p(_r('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', dam=True, co=CO_CO_QUAN), can='center') + \
-        _p(_r('Độc lập - Tự do - Hạnh phúc', dam=True, co=co, gach=True), can='center') + \
-        _p(_r(f'{dia_danh}, {_ngay_chu(ttho["ngay_pa"], da["nam"])}', nghieng=True, co=co), can='center', truoc=200)
-    t = [_bang([_hang([_o(trai, r1, doc='top', vien=False), _o(phai, r2, doc='top', vien=False)])], [r1, r2], vien=False,
+        ''.join(_p_gach(d, CO_CO_QUAN, True, r1 - 2 * 57, do) for d in _ngat_can_bang(ten_cq, vua_trai, CO_CO_QUAN, True))
+    phai = _p(_r('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', dam=True, co=CO_QUOC_HIEU), can='center') + \
+        _p_gach('Độc lập - Tự do - Hạnh phúc', CO_TIEU_NGU, True, r2 - 2 * 57, do)
+    # "Số: …/…" và "địa danh, ngày … tháng … năm …" là HAI Ô CÙNG MỘT HÀNG của bảng đầu: cùng cỡ chữ, cùng giãn dòng và khoảng
+    # cách trước, canh trên -> hai dòng luôn ngang nhau (người dùng 22/10/2026: không được chênh cao thấp)
+    so_o = _p(_r(so, co=CO_SO_NGAY), can='center', truoc=120) + (_p(_r('(DỰ THẢO)', co=CO_DU_THAO), can='center') if du_thao else '')
+    ngay_o = _p(_r(f'{dia_danh}, {_ngay_chu(ttho["ngay_pa"], da["nam"])}', nghieng=True, co=CO_SO_NGAY), can='center', truoc=120)
+    t = [_bang([_hang([_o(trai, r1, doc='top', vien=False), _o(phai, r2, doc='top', vien=False)]),
+                _hang([_o(so_o, r1, doc='top', vien=False), _o(ngay_o, r2, doc='top', vien=False)])], [r1, r2], vien=False,
                lui=twip(LAN_LE_DAU_MM[0]))]
     # ---- tên văn bản
     ten = ('PHƯƠNG ÁN ĐIỀU CHỈNH' if dieu_chinh else 'PHƯƠNG ÁN CHI TIẾT' +
            (f' BỔ SUNG (LẦN {lan})' if lan is not None and lan > 1 else ''))
     t += [_p(_r(ten, dam=True, co=CO_TEN_LOAI), can='center', truoc=240, dong=240)]
-    t += [_p(_r(x, dam=True, co=co), can='center', dong=240) for x in TRICH_YEU_DONG]
-    t += [_p(_r(f'DỰ ÁN {str(da["du_an"] or "").upper()}', dam=True, co=co), can='center', sau=240, dong=240)]
+    t += [_p(_r(x, dam=True, co=CO_TRICH_YEU), can='center', dong=240) for x in TRICH_YEU_DONG]
+    t += [_p(_r(f'DỰ ÁN {str(da["du_an"] or "").upper()}', dam=True, co=CO_DU_AN), can='center', sau=0, dong=240),
+          _duong_ke_du_an()]
     # ---- I. chủ sử dụng (bảng ẩn viền: nhãn đậm | nội dung)
     to_chuc = la_to_chuc(ttho['ho_ten'])
     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (in_an.tieu_de_muc_i - cùng bản Excel); tổ chức chỉ "Tổ chức:" / "Địa chỉ:"
-    t.append(_p(_r(in_an.tieu_de_muc_i(to_chuc), dam=True, co=co), truoc=120, sau=60, giu_sau=True))
+    t.append(_p(_r(in_an.tieu_de_muc_i(to_chuc), dam=True, co=CO_DE_MUC), truoc=120, sau=60, giu_sau=True))
     hang_i = [(in_an.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten'])]
     if not to_chuc and ttho['cccd']:
         hang_i.append(('Số CCCD:', ttho['cccd']))
@@ -426,41 +544,38 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
         hang_i.append(('Số điện thoại:', ttho['dien_thoai']))
     # 22/10/2026 (mẫu PA_01 / PA_003 người dùng gửi): nhãn chữ thường, tên chủ sử dụng (hàng đầu) in đậm, nội dung khác thường
     c1, c0 = w * 28 // 100, w * 5 // 100
-    t.append(_bang([_hang([_o(_p(), c0, vien=False, doc='top'), _o(_p(_r(n, co=co), can='left'), c1, vien=False, doc='top'),
-                           _o(_p(_r(v, dam=k == 0, co=co), can='left'), w - c0 - c1, vien=False, doc='top')])
+    t.append(_bang([_hang([_o(_p(), c0, vien=False, doc='top'), _o(_p(_r(n, co=CO_THONG_TIN), can='left'), c1, vien=False, doc='top'),
+                           _o(_p(_r(v, dam=k == 0, co=CO_THONG_TIN), can='left'), w - c0 - c1, vien=False, doc='top')])
                     for k, (n, v) in enumerate(hang_i)],
                    [c0, c1, w - c0 - c1], vien=False))
     # ---- II. nguồn gốc: mỗi đoạn logic MỘT w:p (in_an._thong_tin_ho đã nối xuống dòng cứng giữa câu từng thửa - ho_so.
-    # lam_sach_doan_van), căn đều, giãn dòng đơn, cách đoạn 6 pt (w:after 120); đoạn thường thụt đầu dòng 1 cm, đoạn gạch đầu dòng
-    # thụt lề treo; không w:br, không đoạn rỗng - Word tự bẻ dòng theo lề
-    t.append(_p(_r(in_an.TIEU_DE_MUC_II, dam=True, co=co), truoc=120, sau=60, giu_sau=True))
+    # lam_sach_doan_van), căn đều, giãn dòng đơn, cách đoạn 6 pt (w:after 120); MỌI đoạn (kể cả gạch đầu dòng "- Thửa đất…")
+    # thụt dòng đầu 1 cm, dòng sau về sát lề trái như PDF mẫu PA_01; không w:br, không đoạn rỗng - Word tự bẻ dòng theo lề
+    t.append(_p(_r(in_an.TIEU_DE_MUC_II, dam=True, co=CO_DE_MUC), truoc=120, sau=60, giu_sau=True))
     for doan in (x for x in str(ttho['nguon_goc'] or '').split('\n') if x.strip()):
-        if dau_dong(doan):
-            t.append(_p(_r(doan, co=co), dong=DONG_DOAN, sau=SAU_DOAN, trai=THUT_TREO, treo=THUT_TREO))
-        else:
-            t.append(_p(_r(doan, co=co), dong=DONG_DOAN, sau=SAU_DOAN, dau_dong=THUT_DAU))
+        t.append(_p(_r(doan, co=CO_NGUON_GOC), dong=DONG_DOAN, sau=SAU_DOAN, dau_dong=THUT_DAU))
     # ---- III. bảng tính toán: tiêu đề KHÔNG keepNext / pageBreakBefore (22/10/2026) - mục III in tiếp ngay dưới mục II ở cuối
     # trang 1 khi còn chỗ; dòng tiêu đề cột lặp ở đầu trang sau (w:tblHeader)
     if dieu_chinh and str(x_lan.ghi_chu or '').strip():
-        t.append(_p(_r('Lý do điều chỉnh: ', dam=True, co=co), _r(' '.join(x_lan.ghi_chu.split()), co=co), dong=DONG_DOAN,
+        t.append(_p(_r('Lý do điều chỉnh: ', dam=True, co=CO_NGUON_GOC), _r(' '.join(x_lan.ghi_chu.split()), co=CO_NGUON_GOC), dong=DONG_DOAN,
                     sau=SAU_DOAN, dau_dong=THUT_DAU))
-    t.append(_p(_r('III. Bảng tính toán bồi thường, hỗ trợ', dam=True, co=co), truoc=120, sau=60))
-    rong = rong_cot(_chu_cac_cot(dong, nghiep_vu.so_muc(2)))
+    t.append(_p(_r('III. Bảng tính toán bồi thường, hỗ trợ', dam=True, co=CO_DE_MUC), truoc=120, sau=60))
+    rong = rong_cot(_chu_cac_cot(dong, nghiep_vu.so_muc(2)), do)
     tieu_de = tuple(TIEU_DE_COT_BS if kieu != lan_pa.CHINH else TIEU_DE_COT)
     hang = [_hang([_o(_p(_r(x, dam=True, co=CO_BANG), can='center'), rong[i]) for i, x in enumerate(tieu_de)], tieu_de=True)]
     hang += _hang_tu_dong(dong, rong, nghiep_vu.so_muc(2))
     # IV. tái định cư (dòng cuối bảng)
-    hang.append(_hang([_o(_p(_r(nhan_tdc, dam=True, co=CO_BANG), can='center', giu_sau=True), rong[0]),
-                       _o(_p(_r(in_an.NHAN_TDC, dam=True, co=CO_BANG),
-                             _r(' ' + str(ttho['tai_dinh_cu'] or '').strip(), co=CO_BANG), can='both', giu_sau=not du_thao),
+    hang.append(_hang([_o(_p(_r(nhan_tdc, dam=True, co=CO_DE_MUC), can='center', giu_sau=True), rong[0]),
+                       _o(_p(_r(in_an.NHAN_TDC, dam=True, co=CO_DE_MUC),
+                             _r(' ' + str(ttho['tai_dinh_cu'] or '').strip(), co=CO_DE_MUC), can='both', giu_sau=not du_thao),
                           sum(rong[1:]), nhap=7)], khong_tach=True))
     # ---- chữ ký: DÒNG CUỐI của bảng mục III, ẩn viền trái / phải / dưới và vạch giữa (22/10/2026). Word giữ liền dòng TỔNG CỘNG
     # + IV + chữ ký (keepNext giữa các dòng cùng bảng); bảng chữ ký riêng sau bảng thì Word bỏ qua keepNext -> chữ ký trơ một trang.
     # Bản dự thảo không có
     if not du_thao:
         def ky(chuc_vu, ten):                           # giãn dòng đơn: khối cuối gọn
-            return _p(_r(chuc_vu, dam=True, co=co), can='center', truoc=240, dong=240) + \
-                ''.join(_p(can='center', dong=240) for _ in range(4)) + _p(_r(ten or '', dam=True, co=co), can='center', dong=240)
+            return _p(_r(chuc_vu, dam=True, co=CO_CHU_KY), can='center', truoc=240, dong=240) + \
+                ''.join(_p(can='center', dong=240) for _ in range(4)) + _p(_r(ten or '', dam=True, co=CO_CHU_KY), can='center', dong=240)
         an = ('left', 'bottom', 'right')
         hang.append(_hang([_o(ky('LẬP BIỂU', da['nguoi_lap']), sum(rong[:3]), nhap=3, doc='top', an_vien=an),
                            _o(ky('KIỂM TRA', da['nguoi_kiem_tra']), sum(rong[3:6]), nhap=3, doc='top', an_vien=an),
@@ -495,8 +610,8 @@ def _chu_cac_cot(dong: list, so_muc_nha) -> dict:
 def sect_pr() -> str:
     """Khổ A4 dọc, lề NĐ 30 (LE_MM)."""
     return (f'<w:sectPr><w:pgSz w:w="{KHO_A4[0]}" w:h="{KHO_A4[1]}"/><w:pgMar w:top="{twip(LE_MM["tren"])}" '
-            f'w:right="{twip(LE_MM["phai"])}" w:bottom="{twip(LE_MM["duoi"])}" w:left="{twip(LE_MM["trai"])}" w:header="567" '
-            f'w:footer="567" w:gutter="0"/></w:sectPr>')
+            f'w:right="{twip(LE_MM["phai"])}" w:bottom="{twip(LE_MM["duoi"])}" w:left="{twip(LE_MM["trai"])}" w:header="284" '
+            f'w:footer="284" w:gutter="0"/></w:sectPr>')
 
 
 def xuat_chi_tiet_docx(con, ma_ho: int, file_ra, bc=None, du_thao: bool = False, pa=None, lan=None) -> Path:

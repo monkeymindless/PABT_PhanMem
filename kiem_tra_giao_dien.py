@@ -43,6 +43,7 @@ class KiemTra:
         self.gio_con = []
         self.sau = 0
         self.da_thu = set()
+        self.cua_so_la = []                                 # cửa sổ cấp cao "lạ" (nút / nhãn / khung KHÔNG có cha mà hiện ra): lỗi
         self.da_xoa = []                                    # nút bị xóa bởi thao tác trước trong cùng lượt thử (không phải lỗi)
 
     # ------------------------------------------------ một thao tác: đo giờ, bắt lỗi
@@ -235,10 +236,19 @@ def chan_tac_dong(kt: KiemTra) -> None:
         # exec của menu chờ tới sự kiện kế tiếp (người dùng thật luôn có sự kiện chuột) - tạo một sự kiện để không đo nhầm 28 giây
         QTimer.singleShot(0, lambda: None)
 
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QMainWindow, QWidget as QW
+
     class BatMenu(QObject):
         def eventFilter(self, obj, ev):
-            if ev.type() == QEvent.Type.Show and isinstance(obj, QMenu):
-                QTimer.singleShot(0, lambda m=obj: chay_menu(m))
+            if ev.type() == QEvent.Type.Show:
+                if isinstance(obj, QMenu):
+                    QTimer.singleShot(0, lambda m=obj: chay_menu(m))
+                elif isinstance(obj, QW) and obj.isWindow() and not isinstance(obj, (QDialog, QMainWindow)) and \
+                        obj.windowType() == Qt.WindowType.Window:
+                    # 1.0.16: widget không cha bị setVisible(True) / show() trước khi đặt vào bố cục = cửa sổ rỗng nhấp nháy (người dùng
+                    # thấy cửa sổ lạ có nút thu nhỏ / phóng to / đóng khi mở xem trước F4)
+                    kt.cua_so_la.append((' > '.join(kt.duong), type(obj).__name__, obj.objectName(), obj.width(), obj.height()))
             return False
     kt.bat_menu = BatMenu()
     from PySide6.QtWidgets import QApplication
@@ -412,7 +422,7 @@ def main(argv) -> int:
     print(bc)
     print(f'Đã lưu: {ra}')
     shutil.rmtree(td, ignore_errors=True)
-    return 1 if kt.loi else 0
+    return 1 if (kt.loi or kt.cua_so_la) else 0
 
 
 def bao_cao(kt: KiemTra, phien_ban: str, phut: float, du_an: str) -> str:
@@ -430,6 +440,8 @@ def bao_cao(kt: KiemTra, phien_ban: str, phut: float, du_an: str) -> str:
     for duong, vet in kt.loi:
         dong_cuoi = [x for x in vet.strip().splitlines() if x.strip()][-1]
         t += [f'- **{duong}**', f'  - `{dong_cuoi}`', '```', vet.strip()[-1800:], '```']
+    t += ['', f'## CỬA SỔ LẠ - widget không cha hiện ra thành cửa sổ riêng ({len(kt.cua_so_la)})', '']
+    t += [f'- {duong}: {lop} {ten!r} {rong}x{cao}' for duong, lop, ten, rong, cao in kt.cua_so_la[:60]] or ['Không có.']
     t += ['', f'## CHẬM / ĐƠ (một thao tác > {NGUONG_CHAM:.0f} giây) ({len(kt.cham)})', '']
     t += [f'- {duong}: {dt:.1f} giây' for duong, dt in sorted(kt.cham, key=lambda x: -x[1])] or ['Không có thao tác nào chậm.']
     if kt.da_xoa:

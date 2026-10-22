@@ -149,7 +149,7 @@ class TestMau(unittest.TestCase):
 
     def test_nhom_nut(self):
         from pabt.giao_dien import nhom_nut
-        for chu, nhom in (('Lưu (Ctrl+S)', 'luu'), ('Thêm thửa', 'them'), ('Xóa hộ…', 'xoa'), ('Gộp hộ khác vào hộ này…', 'sua'),
+        for chu, nhom in (('Lưu', 'luu'), ('Thêm thửa', 'them'), ('Xóa hộ…', 'xoa'), ('Gộp hộ khác vào hộ này…', 'sua'),
                           ('In / Xuất…', 'in'), ('Nhập file Excel…', 'nhap'), ('Hồ sơ hộ…', 'hoso'),
                           ('Lập phương án hộ…', 'pa'), ('Rà soát giá…', 'tra'), ('◀ Hộ trước', 'tra'), ('Đóng', 'nhat'),
                           ('Nạp danh mục đơn giá…', 'nhap'), ('Tách theo loại đất', 'sua'), ('Mở chỉ xem', None),

@@ -18,7 +18,7 @@ DEV = Path(os.environ['LOCALAPPDATA']) / 'PABT_dev'
 PY38 = DEV / 'venv38_32' / 'Scripts' / 'python.exe'
 TAM = DEV / 'nguon38'
 RA = GOC / 'dist' / 'PABT_Win7'
-CHEP = ('chay.py', 'nap_cap_nhat.py', 'pabt', 'mau_in', 'HUONG_DAN.md')
+CHEP = ('chay.py', 'nap_cap_nhat.py', 'pabt', 'HUONG_DAN.md')      # 1.0.16: không đóng mau_in (mẫu nhúng trong pabt/mau_in_nhung.py)
 DU_LIEU = ('pabt/schema.sql', 'pabt/bo_don_gia.sqlite', 'pabt/bang_gia_nq28.json', 'pabt/he_so_k_qd03.json', 'pabt/bieu_tuong.png', 'pabt/pabt_profile.json')
 # cập nhật đơn giá từ trang web phát hành riêng bằng gói .pabtcn: không đóng vào exe, nhưng giữ thư viện chuẩn nó cần
 # cap_nhat_web đóng trong bản cài từ 0.9.49. Màn hình quét web đầy đủ vẫn để gói .pabtcn.
@@ -36,12 +36,7 @@ def main() -> int:
     TAM.mkdir(parents=True)
     for x in CHEP:
         nguon = GOC / x
-        if x == 'mau_in':                               # chỉ mẫu .xlsx / .xml (không đóng PDF tham khảo, file khác người dùng để)
-            (TAM / x).mkdir(parents=True, exist_ok=True)
-            for f in nguon.iterdir():
-                if f.is_file() and f.suffix.lower() in ('.xlsx', '.xml'):
-                    shutil.copy2(f, TAM / x / f.name)
-        elif nguon.is_dir():
+        if nguon.is_dir():
             shutil.copytree(nguon, TAM / x, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
         else:
             shutil.copy2(nguon, TAM / x)
@@ -55,7 +50,7 @@ def main() -> int:
     for f in DU_LIEU:
         lenh += ['--add-data', f'{TAM / f};pabt']
     # HUONG_DAN.md: Trợ giúp -> Hướng dẫn sử dụng (F1) đọc trong _internal (0.9.23)
-    lenh += ['--add-data', f'{TAM / "mau_in"};mau_in', '--add-data', f'{TAM / "HUONG_DAN.md"};.', str(TAM / 'chay.py')]
+    lenh += ['--add-data', f'{TAM / "HUONG_DAN.md"};.', str(TAM / 'chay.py')]
     # PATH của máy dựng có thư mục Git / mingw (dựng trong Git Bash): PyInstaller lấy nhầm DLL OpenSSL... của Git vào bản dựng
     env = dict(os.environ, PATH=os.pathsep.join(x for x in os.environ.get('PATH', '').split(os.pathsep)
                                                 if not any(k in x.lower() for k in ('\\git\\', 'mingw', 'msys'))))

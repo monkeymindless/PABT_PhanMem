@@ -15,7 +15,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pabt import csdl, giao_dien  # noqa: E402
 from tests.test_toc_do import _du_an  # noqa: E402
 
-NAVY = '#0F294A'
+NAVY = '#2F5F9E'
 CAM_TIM_XANH_LA = ('#6950A1', '#594389', '#B8651F', '#9C551A', '#D83B01', '#B83201', '#107C41', '#0D6B37', '#1D7A6C', '#2F7A4F')
 
 
@@ -45,7 +45,7 @@ class TestQssChung(unittest.TestCase):
         xoa = _quy_tac(qss, 'QPushButton[nhom="xoa"]')
         self.assertIn('background: #FFFFFF', xoa)
         self.assertIn('#FECACA', xoa)
-        self.assertIn('#B91C1C', xoa)
+        self.assertIn('#B83A3A', xoa)
         phu = _quy_tac(qss, 'QPushButton[nhom="in"]')                  # nút phụ: trắng, viền slate, chữ #0F172A
         for x in ('background: #FFFFFF', '#CBD5E1', 'color: #0F172A'):
             self.assertIn(x, phu)
@@ -127,7 +127,7 @@ class TestCuaSoLapPA(_Co):
         self.assertTrue(w.tab.documentMode())
         self.assertEqual(w.tab.tabBar().property('vai'), 'gach_chan')         # kiểu ở QSS chung (Qt5 cắt chữ khi đặt trên QTabBar)
         self.assertEqual(w.tab.tabBar().styleSheet(), '')
-        self.assertIn('border-bottom: 3px solid #2563EB',                 # 22/10/2026: gạch chân xanh hoàng gia 3 px
+        self.assertIn('border-bottom: 3px solid #3B6FCE',                 # 22/10/2026: gạch chân xanh hoàng gia 3 px
                       _quy_tac(giao_dien._qss_day_du(), 'QTabBar[vai="gach_chan"]::tab:selected'))
         d = w.dai_dieu_huong
         self.assertIs(w.lb_tong.parentWidget(), d)
@@ -143,7 +143,7 @@ class TestCuaSoLapPA(_Co):
         self.assertEqual(h.nut_them.property('bien_the'), giao_dien.KieuNut.CHINH.value)
         self.assertEqual(h.property('hang_nhap'), '1')                    # kiểu ô ở QSS chung (không kiểu cục bộ - chậm)
         self.assertEqual(h.styleSheet(), '')
-        self.assertIn('2px solid #2563EB', _quy_tac(giao_dien._qss_day_du(), 'QWidget[hang_nhap="1"] QLineEdit:focus'))  # vòng focus
+        self.assertIn('2px solid #3B6FCE', _quy_tac(giao_dien._qss_day_du(), 'QWidget[hang_nhap="1"] QLineEdit:focus'))  # vòng focus
         self.assertEqual(w.tab.styleSheet(), '')                         # kiểu thẻ đặt trên thanh thẻ, không trên cả QTabWidget
         b1 = w.bang[1].nut['Thêm thửa…']
         self.assertIsInstance(b1, QPushButton)
@@ -177,7 +177,7 @@ class TestTienDoKPI(_Co):
             self.assertEqual(t.maximumHeight(), bc.CAO_THE_KPI)
             self.assertIn(f'border-left: 3px solid {bc.MAU_THE[khoa]}', t.styleSheet())
             self.assertIn('[dang_loc="1"]', t.styleSheet())
-        self.assertEqual(set(bc.MAU_THE.values()), {NAVY, '#0284C7', '#15803D', '#0F766E', '#D97706', '#B91C1C'})   # 6 thẻ (20/10/2026)
+        self.assertEqual(set(bc.MAU_THE.values()), {NAVY, '#1F76A6', '#2F7D54', '#1F6F66', '#C98A22', '#B83A3A'})   # 6 thẻ (20/10/2026)
         self.assertIsNone(k.the_kpi_dang_loc())                          # tất cả hộ: không thẻ nào đang lọc
         self.assertFalse(any(t.dang_loc() for t in k.kpi.the.values()))
         k.bam_kpi('mat_bang')

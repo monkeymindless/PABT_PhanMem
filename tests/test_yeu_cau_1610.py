@@ -202,7 +202,7 @@ class TestHangNutLapPhuongAn(_Co):
             con.close()
         self.addCleanup(don)
         self.assertFalse(hasattr(c, 'b_goi_y'))                            # bỏ nút "Gợi ý hỗ trợ…"
-        self.assertEqual((c.b_dan.text(), c.btn_toggle_preview.text()), ('Dán tài sản', 'Xem trước (F4)'))
+        self.assertEqual((c.b_dan.text(), c.btn_toggle_preview.text()), ('Dán tài sản', 'Xem trước'))
         self.assertTrue(c.cb_ho.currentText().endswith(dai))
         self.assertEqual(c.cb_ho.lineEdit().cursorPosition(), 0)            # chữ hiện từ đầu tên
         self.assertEqual(c.cb_ho.toolTip(), c.cb_ho.currentText())

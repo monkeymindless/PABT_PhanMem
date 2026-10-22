@@ -170,7 +170,8 @@ def tu_kiem(file_ra=None) -> int:
 
     def mau_in():
         from pabt import in_an
-        return str(in_an.thu_muc_mau())
+        d = in_an.thu_muc_mau()
+        return 'mẫu chuẩn nhúng trong phần mềm' if d == in_an.THU_MUC_NHUNG else f'mẫu người dùng thay: {d}'
 
     def gia_dat():
         from pabt import gia_dat_nq28
