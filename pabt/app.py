@@ -3073,8 +3073,9 @@ class CuaSoChinh(QMainWindow):
         tb = (f'Đã tạo dự án: {kq["so_ho"]} hộ, {kq["so_thua"]} thửa; {kq["so_ho_co_pa"]} hộ đã có phương án, '
               f'tổng {vn(kq["tong"])} đồng.')
         if kq.get('in'):
-            tb += f'\n\nĐã xuất {len(kq["in"]["excel"])} file Excel' + (f', {len(kq["in"]["pdf"])} file PDF' if kq['in']['pdf'] else '') \
-                  + f' vào:\n{kq["thu_muc_in"]}'
+            x = kq['in']
+            tb += f'\n\nĐã xuất {len(x.get("word", []))} file Word, {len(x["excel"])} file Excel' + \
+                (f', {len(x["pdf"])} file PDF' if x['pdf'] else '') + f' vào:\n{kq["thu_muc_in"]}'
         from .giao_dien import hop_ket_qua                  # ô cuộn: đủ mọi điểm cần xem lại, nút Đóng luôn trong màn hình
         hop_ket_qua(self, tb, kq['canh_bao'], tieu_de=TEN_UD)
 

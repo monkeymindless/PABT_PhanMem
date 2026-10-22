@@ -3218,15 +3218,6 @@ def cai_dat_nho():
     return QSettings('PABT', 'PABT')
 
 
-def doc_bool(gia_tri, mac_dinh: bool) -> bool:
-    """Giá trị QSettings -> bool (Qt5 / registry trả chuỗi 'true' / 'false')."""
-    if gia_tri is None:
-        return mac_dinh
-    if isinstance(gia_tri, str):
-        return gia_tri.strip().lower() in ('1', 'true', 'yes')
-    return bool(gia_tri)
-
-
 def _cai_dat_cua_so():
     """QSettings nhớ kích thước cửa sổ con (cai_dat_nho)."""
     return cai_dat_nho()

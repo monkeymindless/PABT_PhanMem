@@ -262,7 +262,7 @@ def tu_lap_phuong_an(con, ds_ma_ho: list | None = None) -> list:
 
 
 def xuat_2_bang(con, thu_muc, pdf: bool = False, bao_tien_do=None, bao_excel=None) -> dict:
-    """Xuất phương án chi tiết từng hộ (IN_CHITIET) và bảng tổng hợp (IN_BANGTONGHOP). bao_tien_do(i, n) / bao_excel(i, n):
+    """Xuất phương án chi tiết từng hộ (bản Word NĐ 30 - in_word) và bảng tổng hợp (IN_BANGTONGHOP). bao_tien_do(i, n) / bao_excel(i, n):
     báo tiến độ, trả True để dừng (như in_an.xuat_hang_loat)."""
     ds = in_an.ho_co_phuong_an(con)
     if not ds:

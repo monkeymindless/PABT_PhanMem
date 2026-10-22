@@ -200,7 +200,8 @@ class TestDuAnMoi(CoSo):
                 con.execute("UPDATE tho_nhap SET ghi_chu = 'sửa được' WHERE dong = 1")
             self.assertGreater(con.execute('SELECT COUNT(*) FROM dm_taisan').fetchone()[0], 5000)
             kq_in = du_an_moi.xuat_2_bang(con, self.td / 'in')
-            self.assertEqual(len(kq_in['excel']), 3)                                 # 2 hộ + bảng tổng hợp
+            self.assertEqual(len(kq_in['word']), 2)                                  # 22/10/2026: phương án chi tiết bản Word
+            self.assertEqual([p.name for p in kq_in['excel']], ['BANG_TONG_HOP.xlsx'])
         finally:
             con.close()
         with self.assertRaises(LoiNhap):

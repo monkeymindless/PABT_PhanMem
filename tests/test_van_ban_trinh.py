@@ -123,13 +123,14 @@ class TestDotTrinh(_DuAn):
         tm = kq['thu_muc']
         self.assertEqual(tm.name, 'Đợt 1 - 2 hộ')
         self.assertEqual(sorted(p.name for p in (tm / 'PA CHI TIET').iterdir())[0][:3], 'PA_')
-        self.assertEqual(len(list((tm / 'PA CHI TIET').glob('*.xlsx'))), 2)
+        self.assertEqual(len(list((tm / 'PA CHI TIET').glob('*.docx'))), 2)      # 22/10/2026: phương án chi tiết = bản Word
+        self.assertEqual(list((tm / 'PA CHI TIET').glob('*.xlsx')), [])
         self.assertEqual(sorted(p.name for p in (tm / 'PA TONG').iterdir()),
                          ['BANG_TONG_HOP.xlsx', 'TO_TRINH.docx'])              # 0.9.69: bỏ mẫu phương án tổng
-        # số PA chi tiết của hộ vào chỗ "Số:      /…" của mẫu; số / ngày PA tổng vào dòng "Đính kèm Phương án số …"
-        ct = openpyxl.load_workbook(sorted((tm / 'PA CHI TIET').glob('*.xlsx'))[0]).worksheets[0]
-        self.assertTrue(str(ct['A3'].value).startswith('Số: 101/'))
-        self.assertIn('ngày 09 tháng 10 năm 2026', str(ct['E3'].value))
+        # số PA chi tiết của hộ vào dòng "Số: …/…"; số / ngày PA tổng vào dòng "Đính kèm Phương án số …"
+        ct = _chu_docx(sorted((tm / 'PA CHI TIET').glob('*.docx'))[0])
+        self.assertIn('Số: 101/', ct)
+        self.assertIn('ngày 09 tháng 10 năm 2026', ct)
         bth = openpyxl.load_workbook(tm / 'PA TONG' / 'BANG_TONG_HOP.xlsx').worksheets[0]
         self.assertIn('Phương án số 30/', str(bth['A7'].value))
         self.assertIn('ngày 09 tháng 10 năm 2026', str(bth['A7'].value))
@@ -240,9 +241,9 @@ class TestManHinh(_DuAn):
         h.o_thu_muc.setText(h.o_thu_muc.text())
         kq = h.thuc_hien(xac_nhan=False)
         tm = self.td / 'hs' / 'Đợt 1 - 3 hộ'
-        # 3 phương án chi tiết + bảng tổng hợp + tờ trình + báo cáo tiếp thu ý kiến (20/10/2026: chính thức = trọn bộ 4 tài liệu)
-        # + 3 bản Word phương án chi tiết (21/10/2026: ô "Xuất bản Word (.docx)" tích sẵn)
-        self.assertEqual(len(kq['excel']) + len(kq['word']), 3 + 1 + 1 + 1 + 3)
+        # 3 phương án chi tiết (bản Word - 22/10/2026 không còn bản Excel) + bảng tổng hợp + tờ trình + báo cáo tiếp thu ý kiến
+        # (20/10/2026: chính thức = trọn bộ 4 tài liệu)
+        self.assertEqual(len(kq['excel']) + len(kq['word']), 3 + 1 + 1 + 1)
         self.assertEqual(sorted(p.name for p in (tm / 'PA TONG').iterdir()),
                          ['BANG_TONG_HOP.xlsx', 'BAO_CAO_TIEP_THU_Y_KIEN.docx', 'TO_TRINH.docx'])
         self.assertEqual(quan_ly.lay_dot(self.con, i).thu_muc, str(tm))      # cột "Thư mục đã xuất" của đợt
@@ -278,7 +279,7 @@ class TestManHinh(_DuAn):
         kq = h.thuc_hien(xac_nhan=False)
         self.assertEqual(sorted(p.name for p in (self.td / 'in' / 'PA TONG').iterdir()),
                          ['BANG_TONG_HOP.xlsx', 'TO_TRINH.docx'])
-        self.assertEqual(len(list((self.td / 'in' / 'PA CHI TIET').glob('PA_*.xlsx'))), 2)
+        self.assertEqual(len(list((self.td / 'in' / 'PA CHI TIET').glob('PA_*.docx'))), 2)
         self.assertIn('Phương án số 30/', str(openpyxl.load_workbook(self.td / 'in' / 'PA TONG' / 'BANG_TONG_HOP.xlsx')
                                               .worksheets[0]['A7'].value))
         h.chon_mau(False)
@@ -286,8 +287,8 @@ class TestManHinh(_DuAn):
         h.o_chia.setChecked(False)                                       # một thư mục như trước
         h.o_thu_muc.setText(str(self.td / 'in2'))
         kq = h.thuc_hien(xac_nhan=False)
-        self.assertEqual(len(kq['excel']), 2)
-        self.assertEqual(len(list((self.td / 'in2').glob('PA_*.xlsx'))), 2)
+        self.assertEqual(len(kq['word']), 2)
+        self.assertEqual(len(list((self.td / 'in2').glob('PA_*.docx'))), 2)
 
 
 @unittest.skipUnless(_co_word(), 'cần Microsoft Word (đặt PABT_THU_WORD=0 để bỏ qua)')

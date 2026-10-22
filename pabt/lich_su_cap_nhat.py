@@ -7,6 +7,19 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.14', '22/10/2026', (
+        'Phương án chi tiết từng hộ xuất bằng bản Word (.docx) theo Nghị định 30 ở MỌI nơi: xem trước F4 trong cửa sổ lập phương án, '
+        'khung xem trước của Xuất hồ sơ & Bản in, xuất hồ sơ đợt, Dự án mới. Không còn bản Excel phương án chi tiết; PDF, in ra máy '
+        'và file PDF gộp cả đợt lấy từ bản Word. Máy không có Microsoft Word: xem trước / PDF là bản gần đúng phần mềm tự dựng.',
+        'Bản Word: tên cơ quan "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT" một dòng như mẫu; tên chủ hộ / tổ chức in đậm, nhãn chữ thường; cột Ghi '
+        'chú, Tên tài sản rộng theo nội dung từng hộ (ghi chú dài không còn kéo dòng cao nửa trang).',
+        'Bảng tổng hợp A3: hộ có nhiều thửa ghi STT, họ tên, địa chỉ, tổng cộng, phương án tái định cư, ghi chú trong MỘT ô gộp cho '
+        'cả hộ (không lặp lại từng dòng); mỗi thửa một dòng với tờ, thửa, loại đất, diện tích, tiền đất và nguồn gốc riêng của thửa.',
+        'Phương án chi tiết bản Word: cơ quan, quốc hiệu 13; tiêu ngữ, ngày, trích yếu, tên dự án, nội dung, bảng và khối chữ ký 14; '
+        '"PHƯƠNG ÁN CHI TIẾT" 15. Nguồn gốc đất giãn dòng đơn, các đoạn / gạch đầu dòng cách nhau 6 pt.',
+        'Bản Word: mục III in tiếp ngay dưới mục II khi trang còn chỗ; khối chữ ký luôn đi liền dòng TỔNG CỘNG (không còn trang chỉ có '
+        'chữ ký); quốc hiệu một dòng, trích yếu ngắt hai dòng đúng nghĩa, tên cơ quan dài ngắt hai dòng cân nhau.',
+    )),
     ('1.0.13', '22/10/2026', (
         'Phương án chi tiết (bản Excel và bản Word): tiêu đề mục I theo chủ sử dụng - "I. Thông tin tổ chức" khi chủ sử dụng là tổ '
         'chức (chỉ ghi Tổ chức, Địa chỉ; không có dòng CCCD, điện thoại), "I. Thông tin hộ gia đình, cá nhân" với hộ / cá nhân '

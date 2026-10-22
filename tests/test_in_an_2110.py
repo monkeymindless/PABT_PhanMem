@@ -189,8 +189,17 @@ class TestWordNghiDinh30(_Co):
         tong = next(h for h in hang if 'TỔNG CỘNG' in chu(h))
         self.assertEqual(tach(tong), '1')
         self.assertIn('LẬP BIỂU', chu(x))
-        ky = [t for t in x.iter(W + 'tbl') if 'LẬP BIỂU' in chu(t)][0]
-        self.assertTrue(all(tach(h) == '1' for h in ky.iter(W + 'tr')))                 # chữ ký không tách khỏi họ tên
+        # 22/10/2026: chữ ký là dòng cuối của bảng mục III (Word giữ liền TỔNG CỘNG + IV + chữ ký - bảng chữ ký riêng thì Word bỏ
+        # qua keepNext, chữ ký trơ một trang); dòng không tách, ẩn viền trái / phải / dưới
+        ky = hang[-1]
+        self.assertIn('LẬP BIỂU', chu(ky))
+        self.assertEqual(tach(ky), '1')
+        iv = hang[-2]
+        self.assertTrue(chu(iv).startswith('IV'))
+        self.assertTrue(all(p.find(f'{W}pPr/{W}keepNext') is not None for p in iv.iter(W + 'p')))   # IV đi liền chữ ký
+        for tc in ky.iter(W + 'tc'):
+            b = tc.find(f'{W}tcPr/{W}tcBorders')
+            self.assertEqual({e.tag.split('}')[1] for e in b}, {'left', 'bottom', 'right'})
         self.assertIn('120,0', chu(dong_11))
         self.assertIn('40.000.000', chu(tong))                 # đất 30 triệu + thưởng + hỗ trợ
         self.assertNotIn('DỰ THẢO', chu(x))
@@ -203,18 +212,18 @@ class TestWordNghiDinh30(_Co):
 
     def test_xuat_bo_ho_so_va_hop_in(self):
         from pabt import van_ban_trinh as vb
-        kq = vb.xuat_bo_ho_so(self.con, [1], self.td / 'hs', bang_tong_hop=False, chi_tiet_word=True)
-        self.assertEqual([p.suffix for p in kq['word']], ['.docx'])
-        self.assertEqual([p.suffix for p in kq['excel']], ['.xlsx'])                   # bản Excel vẫn lưu cạnh
-        self.assertEqual(kq['word'][0].stem, kq['excel'][0].stem)
+        kq = vb.xuat_bo_ho_so(self.con, [1], self.td / 'hs', bang_tong_hop=False)
+        self.assertEqual([p.suffix for p in kq['word']], ['.docx'])                    # 22/10/2026: mặc định bản Word
+        self.assertEqual(kq['excel'], [])                                              # không còn bản Excel chi tiết
+        self.assertEqual(list((self.td / 'hs').rglob('*.xlsx')), [])
+        kq = vb.xuat_bo_ho_so(self.con, [1], self.td / 'hs_x', bang_tong_hop=False, chi_tiet_word=False)
+        self.assertEqual([p.suffix for p in kq['excel']], ['.xlsx'])                   # đường Excel cũ (dự phòng) vẫn gọi được
         from pabt.man_hinh import HopIn
         h = HopIn(self.con, None, ma_ho_chon=[1], file_du_an=str(self.td / 'x.pabt'), che_do='chinh_thuc')
         self.addCleanup(h.close)
-        self.assertTrue(h.o_word.isChecked())                                           # 21/10/2026: tích sẵn
-        h.o_ct.setChecked(False)
-        self.assertFalse(h.o_word.isEnabled())                                          # chỉ đi kèm phương án chi tiết
-        h.o_ct.setChecked(True)
-        h.o_word.setChecked(True)
+        self.assertTrue(h.o_word.isChecked())                                           # luôn Word, ô ẩn
+        self.assertFalse(h.o_word.isVisibleTo(h))
+        self.assertIn('Word', h.o_ct.text())
         for o in (h.o_bth, h.o_tt, h.o_bc):
             o.setChecked(False)
         h.r_excel.setChecked(True)
@@ -297,38 +306,90 @@ class TestNghiDinh30CoChu(_Co):
             pr = pp.find(W + 'pPr')
             self.assertEqual(pr.find(W + 'jc').get(W + 'val'), 'both')
             sp = pr.find(W + 'spacing')
-            self.assertEqual((sp.get(W + 'line'), sp.get(W + 'after')), ('276', '100'))
+            self.assertEqual((sp.get(W + 'before'), sp.get(W + 'line'), sp.get(W + 'after')), ('0', '240', '120'))  # đơn, cách 6 pt
             ind = pr.find(W + 'ind')
             if c.startswith('- '):
                 self.assertEqual((ind.get(W + 'left'), ind.get(W + 'hanging')), ('360', '360'))   # thụt lề treo
             else:
                 self.assertEqual(ind.get(W + 'firstLine'), '567')                                   # thụt đầu dòng 1 cm
 
+    def test_dau_van_ban_lan_le_va_cot_theo_noi_dung(self):
+        """22/10/2026 (xuất thử dự án thật so với mẫu PA_01): bảng đầu văn bản lấn lề để "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT" 13 pt một dòng
+        (trước bẻ 3 dòng); cột bảng mục III theo nội dung - ghi chú dài được rộng hơn tỷ lệ cố định 14%, cột số vừa số dài nhất."""
+        x = _xml(in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx'))
+        dau = next(iter(x.iter(W + 'tbl')))
+        lui = dau.find(f'{W}tblPr/{W}tblInd')
+        self.assertEqual(int(lui.get(W + 'w')), -in_word.twip(in_word.LAN_LE_DAU_MM[0]))
+        rong = sum(int(c.get(W + 'w')) for c in dau.iter(W + 'gridCol'))
+        self.assertGreater(rong, in_word.rong_trang())
+        self.assertLessEqual(rong - in_word.twip(in_word.LAN_LE_DAU_MM[0]), in_word.KHO_A4[0] - in_word.twip(5))  # chừa >= 5 mm
+        r1 = in_word.rong_cot_dau()[0]
+        self.assertGreaterEqual((r1 - 2 * 57) / 20, in_word._rong_uoc('TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT', 13))
+        # cột theo nội dung
+        co_dinh = in_word.rong_cot()
+        chu = {0: [('1', True), ('1.1', False)], 1: [('Bồi thường đất', True), ('Thửa đất số 17, tờ bản đồ số 39', False)],
+               2: [('m²', False)], 3: [('120,0', False)], 4: [('250.000', False)], 5: [('100%', False)],
+               6: [('30.000.000', False), ('40.000.000', True)], 7: [('', True), ('Đất do UBND xã quản lý theo nội dung xác nhận '
+                                                                            'nguồn gốc đất, không tính bồi thường về đất ' * 2, False)]}
+        ds = in_word.rong_cot(chu)
+        self.assertEqual(sum(ds), in_word.rong_trang())
+        self.assertGreater(ds[7], co_dinh[7])
+        for k, (c, d) in ((6, ('40.000.000', True)), (4, ('250.000', False)), (3, ('120,0', False))):
+            self.assertGreaterEqual(ds[k] / 20 - 2 * in_word.LE_O / 20, in_word._rong_chu(c, in_word.CO_BANG, d))
+        bang = [t for t in x.iter(W + 'tbl') if any(r.find(f'{W}trPr/{W}tblHeader') is not None for r in t.iter(W + 'tr'))][0]
+        luoi = [int(c.get(W + 'w')) for c in bang.iter(W + 'gridCol')]
+        self.assertEqual(sum(luoi), in_word.rong_trang())
+        self.assertNotEqual(luoi, co_dinh)                                           # bản in thật dùng bề rộng theo nội dung
+
     def test_trich_yeu_va_va_co_chu(self):
         x = _xml(in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx', du_thao=True))
         chu = ''.join(t.text or '' for t in x.iter(W + 't'))
-        self.assertIn('BỒI THƯỜNG, HỖ TRỢ VÀ TÁI ĐỊNH CƯ KHI NHÀ NƯỚC THU HỒI ĐẤT', chu)
+        self.assertEqual(' '.join(in_word.TRICH_YEU_DONG), in_word.TRICH_YEU)
+        self.assertIn(''.join(in_word.TRICH_YEU_DONG), chu)                          # hai dòng ngắt đúng nghĩa
         self.assertNotIn('&', chu)
         da = in_an._thong_tin_du_an(self.con)
         cq = str(da['DON_VI_TIEU_DE']).upper()
-        self.assertEqual(self._sz(x, 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'), ('24', True, False, False))   # 12 pt đậm
-        self.assertEqual(self._sz(x, 'Độc lập - Tự do - Hạnh phúc'), ('26', True, False, True))       # 13 pt đậm, gạch dưới
-        self.assertEqual(self._sz(x, cq), ('24', True, False, False))                                   # cơ quan ban hành
+        # 22/10/2026 (người dùng): cơ quan, quốc hiệu, số 13; tiêu ngữ, ngày, trích yếu, dự án, nội dung, bảng 14; tên loại 15
+        self.assertEqual(self._sz(x, 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'), ('26', True, False, False))   # 13 pt đậm
+        self.assertEqual(self._sz(x, 'Độc lập - Tự do - Hạnh phúc'), ('28', True, False, True))       # 14 pt đậm, gạch dưới
+        self.assertEqual(self._sz(x, cq), ('26', True, False, False))                                   # cơ quan ban hành
+        vua = (in_word.rong_cot_dau()[0] - 2 * 57) / 20
         for d in (da['DON_VI_CAP_TREN_2DONG'] or '').split('\n'):
-            if d.strip():
-                self.assertEqual(self._sz(x, d.upper()), ('24', False, False, False))                   # cơ quan chủ quản
-        self.assertEqual(self._sz(x, '(DỰ THẢO)'), ('24', False, False, False))
-        ngay =next(t.text for t in x.iter(W + 't') if (t.text or '').find(' tháng ') > 0)
-        self.assertEqual(self._sz(x, ngay), ('26', False, True, False))                                # địa danh, ngày nghiêng
-        self.assertEqual(self._sz(x, 'PHƯƠNG ÁN CHI TIẾT'), ('28', True, False, False))                # 14 pt
-        self.assertEqual(self._sz(x, in_word.TRICH_YEU), ('26', True, False, False))
-        self.assertEqual(self._sz(x, f'DỰ ÁN {str(da["du_an"]).upper()}'), ('26', True, False, False))
+            for p in in_word._ngat_can_bang(d.strip().upper(), vua, in_word.CO_CO_QUAN) if d.strip() else ():
+                self.assertEqual(self._sz(x, p), ('26', False, False, False))                           # cơ quan chủ quản
+        self.assertEqual(self._sz(x, '(DỰ THẢO)'), ('26', False, False, False))
+        ngay = next(t.text for t in x.iter(W + 't') if (t.text or '').find(' tháng ') > 0)
+        self.assertEqual(self._sz(x, ngay), ('28', False, True, False))                                # địa danh, ngày nghiêng
+        self.assertEqual(self._sz(x, 'PHƯƠNG ÁN CHI TIẾT'), ('30', True, False, False))                # 15 pt
+        for d in in_word.TRICH_YEU_DONG:
+            self.assertEqual(self._sz(x, d), ('28', True, False, False))
+        self.assertEqual(in_word._ngat_can_bang('TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT', 176, 13),
+                         ['TRUNG TÂM PHÁT', 'TRIỂN QUỸ ĐẤT'])                         # không để "ĐẤT" trơ một dòng
+        self.assertEqual(in_word._ngat_can_bang('CHI NHÁNH VĨNH CỬU', 176, 13, True), ['CHI NHÁNH VĨNH CỬU'])
+        self.assertEqual(self._sz(x, f'DỰ ÁN {str(da["du_an"]).upper()}'), ('28', True, False, False))
         for tieu_de in (in_an.TIEU_DE_MUC_I_HO, in_an.TIEU_DE_MUC_II,
                         'III. Bảng tính toán bồi thường, hỗ trợ'):
-            self.assertEqual(self._sz(x, tieu_de)[:2], ('26', True))
-        self.assertEqual(self._sz(x, 'STT'), ('24', True, False, False))                              # tiêu đề bảng 12 pt
+            self.assertEqual(self._sz(x, tieu_de)[:2], ('28', True))
+        self.assertEqual(self._sz(x, 'STT'), ('28', True, False, False))                              # bảng 14 pt
         so_r = next(t.text for t in x.iter(W + 't') if (t.text or '').startswith('Số:'))
-        self.assertEqual(self._sz(x, so_r), ('24', False, False, False))                              # số ký hiệu 12 pt
+        self.assertEqual(self._sz(x, so_r), ('26', False, False, False))                              # số ký hiệu 13 pt
+
+    def test_noi_dung_va_chu_ky_14_khong_doan_rong(self):
+        x = _xml(in_word.xuat_chi_tiet_docx(self.con, 1, self.td / 'ct.docx'))
+        self.assertEqual(self._sz(x, 'LẬP BIỂU'), ('28', True, False, False))                         # khối chữ ký 14 pt
+        self.assertEqual(self._sz(x, 'Đất sử dụng gồm:'), ('28', False, False, False))               # nội dung mục II 14 pt
+        self.assertEqual(self._sz(x, 'Họ và tên:')[:2], ('28', False))                                 # mục I 14 pt, nhãn thường
+        ten = in_an._thong_tin_ho(self.con, 1, in_an._thong_tin_du_an(self.con))['ho_ten']
+        self.assertEqual(self._sz(x, ten)[:2], ('28', True))                                         # tên chủ hộ đậm (mẫu PA_01)
+        self.assertEqual(self._sz(x, 'Địa chỉ thường trú:')[:2], ('28', False))
+        doan = self._cac_doan(x)
+        i2 = next(k for k, (c, _) in enumerate(doan) if c.startswith('II.'))
+        i3 = next(k for k, (c, _) in enumerate(doan) if c.startswith('III.'))
+        self.assertTrue(all(c.strip() for c, _ in doan[i2:i3]))                                      # không đoạn rỗng giữa mục II
+        p3 = doan[i3][1].find(W + 'pPr')
+        self.assertIsNone(p3.find(W + 'keepNext'))                                                   # mục III in tiếp ngay dưới II
+        self.assertIsNone(p3.find(W + 'pageBreakBefore'))
+        self.assertEqual(list(x.iter(W + 'pageBreakBefore')), [])
 
     def test_ban_excel_cung_sua(self):
         f = in_an.lap_chi_tiet(self.con, 1, self.td / 'ct.xlsx')
@@ -360,6 +421,35 @@ class TestLeA3VaLapDayNgang(_Co):
         vung = in_an.rong_in_a3(ws, ti_le, in_an.RONG_DU_PHONG_BTH)
         self.assertLessEqual(tong, vung + 0.5)                                    # không vượt khổ (Excel không tách cột)
         self.assertGreaterEqual(tong, vung - in_an.CHUA_SAU_BTH - 6)            # sát lề phải (trước: ~95% bề ngang)
+
+    def test_ho_nhieu_thua_gop_doc(self):
+        """Hộ 2 thửa (tổ chức "UBND xã Mẫu", Thửa 16 + 17): STT, họ tên, địa chỉ, tổng cộng, TĐC, ghi chú MỘT ô gộp dọc cả hộ (không
+        lặp từng dòng); tờ, thửa, diện tích, tiền đất, nguồn gốc riêng từng dòng thửa."""
+        con = self.mo(_du_an(self.td, 2, 1, 2))
+        ws = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / 'bth.xlsx')).active
+        K = dia_phuong.cot_mau(in_an.TEN_BTH)
+        d0 = in_an.DONG_DAU_BTH
+        r = [x for x in range(d0, d0 + 20) if str(ws.cell(x, K['so_thua']).value) in ('16', '17')]
+        self.assertEqual(len(r), 2)
+        r_dau, r_cuoi = r[0], r[-1]
+
+        def vung(c):
+            return next((m for m in ws.merged_cells.ranges if m.min_col == m.max_col == c and m.min_row <= r_dau <= m.max_row), None)
+        for k in ('stt', 'ho_ten', 'dia_chi', 'tong', 'tai_dinh_cu', 'ghi_chu'):
+            m = vung(K[k])
+            self.assertIsNotNone(m, k)
+            self.assertEqual((m.min_row, m.max_row), (r_dau, r_cuoi), k)
+        self.assertEqual(ws.cell(r_dau, K['ho_ten']).value, 'UBND xã Mẫu')
+        self.assertEqual(ws.cell(r_dau, K['stt']).alignment.horizontal, 'center')
+        for k in ('stt', 'ho_ten', 'dia_chi', 'tong'):
+            self.assertEqual(ws.cell(r_dau, K[k]).alignment.vertical, 'center', k)
+        for k in ('so_to', 'so_thua', 'loai_dat', 'dt_thu_hoi', 'dt_nong_nghiep', 'tien_dat', 'nguon_goc'):
+            self.assertIsNone(vung(K[k]), k)                                       # riêng từng thửa
+        self.assertTrue(str(ws.cell(r_dau, K['nguon_goc']).value).startswith('Thửa 16'))
+        self.assertTrue(str(ws.cell(r_cuoi, K['nguon_goc']).value).startswith('Thửa 17'))
+        tien = [ws.cell(x, K['tien_dat']).value for x in (r_dau, r_cuoi)]
+        self.assertEqual(tien, [350 * 250000, 350 * 250000])                     # tiền đất từng thửa
+        self.assertGreaterEqual(ws.cell(r_dau, K['tong']).value, sum(tien))        # tổng cả hộ (đất + hỗ trợ, thưởng)
 
     def test_chia_phan_hut_70_15_15(self):
         from openpyxl import Workbook
@@ -444,7 +534,7 @@ class TestTieuDeMucI(_Co):
         self.assertEqual(''.join(t.text or '' for t in p.iter(W + 't')), chu)
         r = p.find(f'{W}r/{W}rPr')
         self.assertIsNotNone(r.find(W + 'b'))
-        self.assertEqual(r.find(W + 'sz').get(W + 'val'), '26')                         # 13 pt
+        self.assertEqual(r.find(W + 'sz').get(W + 'val'), '28')                         # 14 pt (nội dung, 22/10/2026)
         sp = p.find(f'{W}pPr/{W}spacing')
         self.assertGreater(int(sp.get(W + 'before')), 0)
         self.assertGreater(int(sp.get(W + 'after')), 0)

@@ -1,4 +1,11 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.06 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.14 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **1.0.14**: **phương án chi tiết chỉ còn bản Word (.docx) theo Nghị định 30** - xem trước **F4**, khung xem trước của **Xuất
+> hồ sơ & Bản in**, xuất hồ sơ đợt, **Dự án mới** đều dùng bản Word (A4 dọc, lề trái 30 mm, phải 15 mm, trên / dưới 20 mm; cơ quan,
+> quốc hiệu 13; nội dung, bảng 14; mục III in tiếp ngay dưới mục II). PDF, in ra máy, gộp PDF lấy từ bản Word; máy không có
+> Microsoft Word thì xem trước / PDF là **bản gần đúng** (phần mềm dựng từ mẫu Excel IN_CHITIET). Mẫu Excel phương án chi tiết sửa
+> trong **Quản lý Mẫu in** nay chỉ dùng cho bản gần đúng đó. **Bảng tổng hợp** vẫn là Excel A3 ngang: hộ nhiều thửa gộp một ô STT, họ
+> tên, địa chỉ, tổng cộng, tái định cư, ghi chú; mỗi thửa một dòng.
 
 > **1.0.11**: bảng chọn ô kiểu **Excel** (kéo bôi đen vùng, góc dưới hiện Trung bình · Tổng số đếm · Tổng); thẻ số liệu ghi thêm
 > số thửa / diện tích, **Ctrl+Shift+T** mở Thống kê Hộ · Thửa · Diện tích. Bản in chi tiết không còn hở cuối trang 1; bảng tổng hợp A3

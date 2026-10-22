@@ -132,10 +132,11 @@ class TestBanIn(unittest.TestCase):
                    for d in pa1.dat + pa2.dat]
         self.assertEqual([ws.cell(r, 5).value for r in range(13, 17)], so_thua)
         kq1, kq2 = nghiep_vu.tinh_ho(self.con, 1), nghiep_vu.tinh_ho(self.con, 2)
-        self.assertIsNone(_gop(ws, 'A13'))                              # 1.0.04: STT / họ tên lặp mỗi dòng thửa
-        self.assertEqual(ws['A14'].value, ws['A13'].value)
+        for c in 'ABCV':                                                # 22/10/2026: STT / họ tên / địa chỉ / tổng gộp dọc theo hộ
+            self.assertEqual(_gop(ws, f'{c}13'), f'{c}13:{c}14')
         self.assertEqual(_gop(ws, 'V15'), 'V15:V16')
-        self.assertEqual(ws['P13'].value, int(kq1.muc[1]))
+        self.assertIsNone(_gop(ws, 'P13'))                              # tiền đất từng thửa (cộng lại = tiền đất của hộ)
+        self.assertEqual(ws['P13'].value + ws['P14'].value, int(kq1.muc[1]))
         self.assertEqual(ws['V13'].value, int(kq1.tong))
         self.assertEqual(ws['V15'].value, int(kq2.tong))
         bc = nghiep_vu.BoiCanh.tu(self.con)

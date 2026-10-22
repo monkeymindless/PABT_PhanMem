@@ -374,7 +374,7 @@ class HopDuAnMoi(QDialog):
         self.c_tu_lap.setChecked(True)
         self.c_in = QCheckBox('Xuất 2 bảng in chuẩn (phương án chi tiết từng hộ, bảng tổng hợp) vào thư mục cạnh file dự án')
         self.c_in.setChecked(True)
-        self.c_pdf = QCheckBox('Kèm PDF (cần Microsoft Excel)')
+        self.c_pdf = QCheckBox('Kèm PDF (cần Microsoft Word / Excel)')
         self.c_pdf.setChecked(in_an.co_excel())
         self.c_pdf.setEnabled(in_an.co_excel())
         for c in (self.c_tu_lap, self.c_in, self.c_pdf):
@@ -452,7 +452,7 @@ class HopDuAnMoi(QDialog):
                     con = csdl.mo(p)
                     # in từng hộ dùng Qt đo chữ (phải ở luồng giao diện): hộp tiến trình có nút Dừng, vẽ lại sau mỗi hộ / mỗi file
                     from PySide6.QtWidgets import QApplication, QProgressDialog
-                    tien = QProgressDialog('Đang tạo file Excel từng hộ…', 'Dừng', 0, 0, self)
+                    tien = QProgressDialog('Đang tạo bản in từng hộ…', 'Dừng', 0, 0, self)
                     tien.setWindowTitle(TEN_UD)
                     tien.setWindowModality(Qt.WindowModality.WindowModal)
                     tien.setMinimumDuration(300)
@@ -470,8 +470,8 @@ class HopDuAnMoi(QDialog):
                     try:
                         thu_muc = p.with_name(f'BanIn_{p.stem}_{datetime.now():%Y%m%d_%H%M}')
                         kq['in'] = du_an_moi.xuat_2_bang(con, thu_muc, pdf=self.c_pdf.isChecked(),
-                                                         bao_tien_do=bao('Đang tạo file Excel: {i}/{n}…'),
-                                                         bao_excel=bao('Microsoft Excel đang xuất PDF: xong {i}/{n} file…'))
+                                                         bao_tien_do=bao('Đang tạo bản in: {i}/{n}…'),
+                                                         bao_excel=bao('Microsoft Word / Excel đang xuất PDF: xong {i}/{n} file…'))
                         kq['thu_muc_in'] = str(thu_muc)
                     finally:
                         con.close()

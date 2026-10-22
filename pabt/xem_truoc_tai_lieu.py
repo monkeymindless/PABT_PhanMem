@@ -5,6 +5,9 @@ Bản xem trước là ĐÚNG bản in: phần mềm lập file Excel theo mẫu
 Microsoft Excel xuất PDF (in_an.chay_excel - chỉ là tiến trình con, chạy ở LUỒNG NỀN, giao diện không đứng). Excel mất vài giây
 mỗi lần: yêu cầu mới trong lúc đang xuất thì chỉ giữ yêu cầu MỚI NHẤT; bấm liên tục (mũi tên lên / xuống trong danh sách) chờ
 ngừng tay CHO_MS mới lập. Kết quả nhớ theo khóa (hộ, chế độ, mẫu…) trong phiên.
+Từ 22/10/2026 (1.0.14) phương án chi tiết là bản WORD (in_word.xuat_chi_tiet_docx - mẫu chuẩn duy nhất): hàm lập trả file .docx,
+Microsoft Word xuất PDF (van_ban_trinh.chay_word, luồng nền); máy không dùng được Word -> bản gần đúng bằng Qt từ file Excel do
+tao_du_phong lập (pdf_du_phong, lề NĐ 30). Bảng tổng hợp vẫn là file Excel.
 
 Hiển thị: QPdfView (PySide6.QtPdfWidgets) trên nền tối; máy không có QtPdfWidgets thì vẽ từng trang bằng QPdfDocument (ảnh trang
 trắng giữa nền tối, có bóng đổ); bản Qt5 (Win 7/8, không có QtPdf) chỉ báo và mở PDF bằng trình xem của Windows.
@@ -211,9 +214,36 @@ def dung_duoc_excel() -> str:
     return ''
 
 
+def dung_duoc_word() -> str:
+    """'' nếu tạo được bản xem trước bằng Microsoft Word, không thì lý do (như dung_duoc_excel: không màn hình thì không tự mở
+    Word - PABT_XEM_TRUOC_EXCEL=1 cho phép cả Word). Gọi ở luồng giao diện."""
+    from .van_ban_trinh import co_word
+    if not co_word():
+        return 'Xem trước A4 cần Microsoft Word trên máy Windows.'
+    if QGuiApplication.platformName() in ('offscreen', 'minimal') and os.environ.get('PABT_XEM_TRUOC_EXCEL') != '1':
+        return 'Xem trước A4 không mở Word khi chạy không có màn hình (kiểm thử).'
+    return ''
+
+
+def la_word(f) -> bool:
+    return f is not None and Path(f).suffix.lower() == '.docx'
+
+
 def chuyen_pdf(xlsx: Path, pdf: Path) -> str:
-    """Excel xuất PDF - CHẠY Ở LUỒNG NỀN (chỉ gọi tiến trình con, không đụng Qt). Trả '' khi đã có PDF, không thì lý do."""
+    """Excel (file .xlsx) / Word (file .docx) xuất PDF - CHẠY Ở LUỒNG NỀN (chỉ gọi tiến trình con, không đụng Qt). Trả '' khi đã
+    có PDF, không thì lý do."""
     from . import in_an
+    if la_word(xlsx):
+        from .van_ban_trinh import LoiNhap, chay_word
+        try:
+            loi = chay_word([('pdf', Path(xlsx), Path(pdf))], cho_moi_file=CHO_EXCEL_GIAY)
+        except LoiNhap as e:
+            return str(e)
+        except OSError as e:
+            return f'Không chạy được Microsoft Word: {e}'
+        if Path(pdf).exists():
+            return ''
+        return 'Word không xuất được PDF: ' + ('; '.join(x.replace('\t', ' – ') for x in loi[:2]) or 'không rõ lý do')
     try:
         loi = in_an.chay_excel([(xlsx, pdf)], 'pdf', cho_moi_file=CHO_EXCEL_GIAY)
     except in_an.LoiIn as e:
@@ -228,11 +258,12 @@ def chuyen_pdf(xlsx: Path, pdf: Path) -> str:
 
 
 def in_qua_excel(cha, pdf, xlsx, hoi: bool = True) -> bool:
-    """Nút "In nhanh": gửi bản đang xem (file Excel của bản in - Excel in đúng lề / khổ giấy của mẫu) tới máy in mặc định.
-    Hỏi trước (gửi máy in là việc không rút lại được). True nếu đã gửi."""
+    """Nút "In nhanh": gửi bản đang xem (file của bản in - .xlsx: Excel in, .docx: Word in - đúng lề / khổ giấy) tới máy in
+    mặc định. Hỏi trước (gửi máy in là việc không rút lại được). True nếu đã gửi."""
     from PySide6.QtWidgets import QMessageBox
     from . import in_an
     from .giao_dien import chay_nen
+    from .lap_pa import LoiNhap
     from .thong_bao import TEN_UD
     if xlsx is None or not Path(xlsx).exists():
         return False
@@ -240,8 +271,13 @@ def in_qua_excel(cha, pdf, xlsx, hoi: bool = True) -> bool:
             != QMessageBox.StandardButton.Yes:
         return False
     try:
-        loi = chay_nen(cha, lambda: in_an.chay_excel([(Path(xlsx), '')], 'in'), 'Microsoft Excel đang gửi bản in tới máy in…')
-    except in_an.LoiIn as e:
+        if la_word(xlsx):
+            from .van_ban_trinh import chay_word
+            loi = chay_nen(cha, lambda: chay_word([('in:1', Path(xlsx), None)], cho_moi_file=CHO_EXCEL_GIAY),
+                           'Microsoft Word đang gửi bản in tới máy in…')
+        else:
+            loi = chay_nen(cha, lambda: in_an.chay_excel([(Path(xlsx), '')], 'in'), 'Microsoft Excel đang gửi bản in tới máy in…')
+    except (in_an.LoiIn, LoiNhap) as e:
         QMessageBox.warning(cha, TEN_UD, str(e))
         return False
     if loi:
@@ -306,9 +342,10 @@ class _TrangAnh(QScrollArea):
 class KhungXemTruocTaiLieu(QFrame):
     """Thanh công cụ (phóng to / thu nhỏ / vừa trang | trang ◀ k / N ▶ | In nhanh) + vùng xem PDF nền tối.
 
-    nap_tai_lieu(pdf): mở PDF, về trang 1. yeu_cau(khoa, tao_xlsx, ten): lập bản xem trước ở nền (tao_xlsx(thu_muc) -> file
-    .xlsx, gọi ở luồng giao diện; Excel xuất PDF ở luồng nền). ham_in(pdf, xlsx): nút In nhanh (None: nút ẩn). don_dep(): đóng
-    tài liệu, xóa file tạm."""
+    nap_tai_lieu(pdf): mở PDF, về trang 1. yeu_cau(khoa, tao_xlsx, ten, tao_du_phong=): lập bản xem trước ở nền (tao_xlsx(thu_muc)
+    -> file .xlsx / .docx, gọi ở luồng giao diện; Excel / Word xuất PDF ở luồng nền; tao_du_phong(thu_muc) -> .xlsx cho bản gần
+    đúng khi file .docx mà Word không dùng được). self.xlsx = file bản in đang xem (.xlsx hoặc .docx). ham_in(pdf, xlsx): nút In
+    nhanh (None: nút ẩn). don_dep(): đóng tài liệu, xóa file tạm."""
 
     def __init__(self, parent=None, ham_in=None):
         super().__init__(parent)
@@ -372,12 +409,13 @@ class KhungXemTruocTaiLieu(QFrame):
         from .pdf_du_phong import NHAN_GAN_DUNG
         self.lb_gan_dung = QLabel('Bản gần đúng')
         self.lb_gan_dung.setObjectName('xt_gan_dung')
-        self.lb_gan_dung.setToolTip(NHAN_GAN_DUNG + ': đường kẻ vẽ, định dạng có điều kiện và ngắt trang của Excel không có. '
-                                    'In / xuất PDF chính thức vẫn cần Microsoft Excel.')
+        self.lb_gan_dung.setToolTip(NHAN_GAN_DUNG + ': dựng bằng phần mềm khi máy không dùng được Microsoft Word / Excel - ngắt '
+                                    'trang có thể khác bản in chính thức. In / xuất PDF chính thức cần Microsoft Office.')
         self.lb_gan_dung.setVisible(False)
         self.gan_dung = False
         self.ly_do_gan_dung = ''
-        self.b_in = nut('In nhanh', 0xE749, 'In bản đang xem ra máy in mặc định (qua Microsoft Excel)', lambda: self.in_nhanh())
+        self.b_in = nut('In nhanh', 0xE749, 'In bản đang xem ra máy in mặc định (qua Microsoft Word / Excel)',
+                        lambda: self.in_nhanh())
         self.b_in.setVisible(ham_in is not None)
         # 16/10/2026: hộp chọn máy in như Word / Excel (máy in, số bản, trang in) - bản Qt 6 (vẽ trang bằng QtPdf)
         self.b_in_hop = nut('In…', 0xE749, 'Chọn máy in, số bản, trang cần in rồi in bản đang xem (Ctrl+P)',
@@ -618,10 +656,11 @@ class KhungXemTruocTaiLieu(QFrame):
         self._bat_nut()
 
     # ---- lập bản xem trước ở nền
-    def yeu_cau(self, khoa, tao_xlsx, ten: str = '', ngay: bool = False) -> None:
-        """Lập bản xem trước: tao_xlsx(thu_muc) -> file .xlsx (luồng giao diện), Excel xuất PDF ở luồng nền. khoa: bản đã lập
-        trong phiên dùng lại (None: luôn lập lại - phương án đang soạn). ngay: không chờ ngừng bấm."""
-        self._cho = (khoa, tao_xlsx, ten)
+    def yeu_cau(self, khoa, tao_xlsx, ten: str = '', ngay: bool = False, tao_du_phong=None) -> None:
+        """Lập bản xem trước: tao_xlsx(thu_muc) -> file .xlsx / .docx (luồng giao diện), Excel / Word xuất PDF ở luồng nền. khoa:
+        bản đã lập trong phiên dùng lại (None: luôn lập lại - phương án đang soạn). ngay: không chờ ngừng bấm. tao_du_phong(thu_muc)
+        -> .xlsx: bản gần đúng (Qt) khi file là .docx mà Word không dùng được / lỗi."""
+        self._cho = (khoa, tao_xlsx, ten, tao_du_phong)
         if khoa is not None and khoa in self._nho and Path(self._nho[khoa][0]).exists():
             self._cho = None
             self._hen.stop()
@@ -647,7 +686,7 @@ class KhungXemTruocTaiLieu(QFrame):
     def _bat_dau(self) -> None:
         if self._dang is not None or self._cho is None:
             return                                      # đang xuất: lập tiếp khi xong (_kiem_nen)
-        khoa, tao, ten = self._cho
+        khoa, tao, ten, tao_dp = self._cho
         self._cho = None
         if self.thu_muc is None:
             self.thu_muc = thu_muc_moi()
@@ -661,17 +700,18 @@ class KhungXemTruocTaiLieu(QFrame):
             self.bao(chu_loi('Không lập được bản xem trước', e))
             return
         self.xlsx = xlsx
-        ly_do = dung_duoc_excel()
+        word = la_word(xlsx)
+        ly_do = dung_duoc_word() if word else dung_duoc_excel()
         if ly_do:
-            self._du_phong(khoa, xlsx, ly_do)
+            self._du_phong(khoa, xlsx, ly_do, tao_dp, d)
             return
         pdf = xlsx.with_suffix('.pdf')
-        viec = dict(khoa=khoa, xlsx=xlsx, pdf=pdf, ten=ten, ket_qua=None)
+        viec = dict(khoa=khoa, xlsx=xlsx, pdf=pdf, ten=ten, ket_qua=None, tao_dp=tao_dp, d=d)
 
         def chay():
             viec['ket_qua'] = chuyen_pdf(xlsx, pdf)
         self._dang = viec
-        self.bao(f'Microsoft Excel đang tạo bản xem trước A4{": " + ten if ten else ""}…\n(vài giây)')
+        self.bao(f'Microsoft {"Word" if word else "Excel"} đang tạo bản xem trước A4{": " + ten if ten else ""}…\n(vài giây)')
         threading.Thread(target=chay, daemon=True).start()
         self._nhip.start()
 
@@ -687,8 +727,8 @@ class KhungXemTruocTaiLieu(QFrame):
             self._bat_dau()
             return
         self.xlsx = viec['xlsx']
-        if viec['ket_qua']:                             # Excel lỗi / treo: dựng bản gần đúng bằng Qt
-            self._du_phong(viec['khoa'], viec['xlsx'], viec['ket_qua'])
+        if viec['ket_qua']:                             # Excel / Word lỗi / treo: dựng bản gần đúng bằng Qt
+            self._du_phong(viec['khoa'], viec['xlsx'], viec['ket_qua'], viec['tao_dp'], viec['d'])
         else:
             self._dat_gan_dung(False)
             self.nap_tai_lieu(viec['pdf'])
@@ -697,17 +737,26 @@ class KhungXemTruocTaiLieu(QFrame):
         self.gan_dung = co
         self.lb_gan_dung.setVisible(co)
 
-    def _du_phong(self, khoa, xlsx: Path, ly_do: str) -> None:
-        """Không dùng được Excel: PDF gần đúng bằng Qt (pdf_du_phong) từ chính file bản in. Lỗi nữa thì báo lý do + mở ngoài."""
+    def _du_phong(self, khoa, xlsx: Path, ly_do: str, tao_dp=None, d=None) -> None:
+        """Không dùng được Excel / Word: PDF gần đúng bằng Qt (pdf_du_phong) từ file Excel của bản in (file .docx: Excel do
+        tao_dp(thư mục) lập, lề NĐ 30 như bản Word). Lỗi nữa thì báo lý do + mở ngoài."""
         from .pdf_du_phong import xuat_pdf_du_phong_qt
         pdf = xlsx.with_name(xlsx.stem + '_gan_dung.pdf')
         try:
-            xuat_pdf_du_phong_qt(xlsx, pdf)
+            if la_word(xlsx):
+                if tao_dp is None:
+                    raise FileNotFoundError('chưa có bản Excel để dựng bản gần đúng')
+                from .in_word import LE_MM
+                d = Path(d or xlsx.parent) / 'du_phong'
+                d.mkdir(parents=True, exist_ok=True)
+                xuat_pdf_du_phong_qt(Path(tao_dp(d)), pdf, le_mm=(LE_MM['trai'], LE_MM['tren'], LE_MM['phai'], LE_MM['duoi']))
+            else:
+                xuat_pdf_du_phong_qt(xlsx, pdf)
         except Exception as e:                          # noqa: BLE001 - báo trong khung
             from .thong_bao import chu_loi
             self._dat_gan_dung(False)
-            self.bao(f'{ly_do}\n\n{chu_loi("Không dựng được bản xem trước gần đúng", e)}\n\nĐã lập file Excel của bản in: '
-                     f'{xlsx.name}', mo_ngoai=True)
+            self.bao(f'{ly_do}\n\n{chu_loi("Không dựng được bản xem trước gần đúng", e)}\n\nĐã lập file '
+                     f'{"Word" if la_word(xlsx) else "Excel"} của bản in: {xlsx.name}', mo_ngoai=True)
             return
         if khoa is not None:
             self._nho[khoa] = (pdf, xlsx)

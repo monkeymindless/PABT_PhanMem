@@ -2452,19 +2452,24 @@ class CuaSoLapPA(QDialog):
         self.w_preview.setMinimumWidth(max(RONG_XEM_TOI_THIEU, min(520, con)))
 
     def lam_moi_xem_truoc(self, ngay: bool = False) -> None:
-        """Bản in A4 (mẫu IN_CHITIET) của hộ đang mở theo phương án ĐANG SOẠN trong bộ nhớ (chưa lưu cũng hiện); thông tin hộ,
-        nguồn gốc theo hồ sơ đã lưu."""
+        """Bản in A4 (bản Word thể thức NĐ 30 - in_word, mẫu chuẩn duy nhất của phương án chi tiết từ 22/10/2026) của hộ đang mở
+        theo phương án ĐANG SOẠN trong bộ nhớ (chưa lưu cũng hiện); thông tin hộ, nguồn gốc theo hồ sơ đã lưu. Máy không dùng được
+        Word: bản gần đúng dựng từ bản Excel (mẫu IN_CHITIET)."""
         if not self._dang_xem_truoc():
             return
         self._hen_xem.stop()
-        from . import in_an
+        from . import in_an, in_word
         bo, ma = self.bo, self.bo.ma_ho
 
-        def tao(thu_muc):
+        def tao(thu_muc):                                       # 1.0.05: bản in của LẦN đang soạn
+            return in_word.xuat_chi_tiet_docx(bo.con, ma, Path(thu_muc) / f'{in_an.ten_file_ho(bo.con, ma)}.docx', bc=bo.bc,
+                                              pa=bo.pa, lan=bo.lan)
+
+        def du_phong(thu_muc):
             return in_an.lap_chi_tiet(bo.con, ma, Path(thu_muc) / f'{in_an.ten_file_ho(bo.con, ma)}.xlsx', bc=bo.bc, pa=bo.pa,
-                                      lan=bo.lan)                 # 1.0.05: bản in của LẦN đang soạn
+                                      lan=bo.lan)
         ten = f'{bo.pa.ho.ho_ten}' + (' (chưa lưu)' if bo.co_thay_doi else '')
-        self.w_preview.yeu_cau(None, tao, ten, ngay)
+        self.w_preview.yeu_cau(None, tao, ten, ngay, tao_du_phong=du_phong)
 
     def hoi_luu(self) -> bool:
         """True nếu được phép rời hộ đang soạn."""
@@ -2741,7 +2746,6 @@ class HopRaSoat(QDialog):
 
 # ---------------------------------------------------------------- in / xuất
 # mô tả hai chế độ phát hành (chú thích nút chọn - 16/10/2026 bỏ dòng ghi chú dưới nút cho gọn cửa sổ)
-KHOA_WORD_CT = 'in_an/dung_word_chi_tiet'           # QSettings: nhớ ô "Xuất bản Word (.docx)" của Xuất hồ sơ & Bản in
 MO_TA_CHE_DO = {
     'du_thao': 'In bằng mẫu chính, CÓ chữ "(DỰ THẢO)" (mẫu chưa có thì phần mềm tự thêm dưới dòng "Số:" và vào tiêu đề bảng '
                'tổng hợp), chưa ghi số phương án, in đủ số CCCD; dùng khi niêm yết và họp dân lấy ý kiến.',
@@ -2834,21 +2838,16 @@ class HopIn(QDialog):
             b = QPushButton(chu)
             b.clicked.connect(ham)
             hang_chon.addWidget(b)
-        self.o_ct = QCheckBox('Phương án chi tiết từng hộ (.xlsx / .pdf)')
-        self.o_ct.setToolTip('Mẫu IN_CHITIET, A4 dọc - sửa ở "Sửa mẫu in trong Excel…"')
+        # 22/10/2026 (người dùng - chỉ thị tái cấu trúc bản in): phương án chi tiết CHỈ xuất bản Word (.docx, thể thức NĐ 30 -
+        # in_word, mẫu chuẩn duy nhất); PDF / in / gộp PDF lấy từ bản Word, không còn bản Excel (mẫu IN_CHITIET chỉ dùng dựng PDF
+        # gần đúng khi máy không có Word). o_word giữ làm thuộc tính (luôn tích, ẩn) cho mã cũ / kiểm thử.
+        self.o_ct = QCheckBox('Phương án chi tiết từng hộ (Word .docx / .pdf)')
+        self.o_ct.setToolTip('Bản Word thể thức Nghị định 30/2020: A4 dọc, lề trái 30 mm, phải 15 mm, trên / dưới 20 mm; hàng '
+                             'tiêu đề bảng lặp mỗi trang, mục III in tiếp ngay dưới mục II. PDF / in ra máy lấy từ bản Word.')
         self.o_ct.setChecked(True)
-        # 21/10/2026 (người dùng): phương án chi tiết bản Word thể thức NĐ 30 - Word cắt được dòng ghi chú / nguồn gốc dài qua trang
-        # (Excel không); có bản Word thì PDF / in lấy từ bản Word, file Excel vẫn lưu cạnh để sửa
-        self.o_word = QCheckBox('Xuất bản Word (.docx) chuẩn Nghị định 30')
-        self.o_word.setToolTip('Phương án chi tiết từng hộ thêm bản Word: A4, lề trái 30 mm, phải 15 mm, trên / dưới 20 mm; hàng '
-                               'tiêu đề bảng lặp mỗi trang, dòng dài tự chuyển trang không để trang trước hở. Có bản Word thì PDF / '
-                               'in ra máy lấy từ bản Word.')
-        # 21/10/2026 (người dùng): tích sẵn, nhớ lựa chọn lần trước (QSettings KHOA_WORD_CT)
-        from .giao_dien import cai_dat_nho, doc_bool
-        cai = cai_dat_nho()
-        self.o_word.setChecked(doc_bool(cai.value(KHOA_WORD_CT) if cai is not None else None, True))
-        self.o_word.toggled.connect(self._nho_word)
-        self.o_ct.toggled.connect(lambda co: self.o_word.setEnabled(co))
+        self.o_word = QCheckBox('Xuất bản Word (.docx) chuẩn Nghị định 30', self)
+        self.o_word.setChecked(True)
+        self.o_word.setVisible(False)
         self.o_bth = QCheckBox('Bảng tổng hợp kinh phí phương án (.xlsx)')
         self.o_bth.setToolTip('Mẫu IN_BANGTONGHOP, A3 ngang')
         self.o_bth.setChecked(not self.ma_ho_chon)
@@ -2978,8 +2977,7 @@ class HopIn(QDialog):
                                   'và hiện ở khung xem trước bên phải')
         self.b_xem_bth.clicked.connect(lambda: self.xem_truoc_bang_tong_hop())
         self.the_tai_lieu = {}
-        for r, (o, chu, loai) in enumerate(((self.o_ct, 'Mẫu chuẩn', 'lam'),
-                                            (self.o_word, 'NĐ 30/2020', 'lam'),          # ngay dưới phương án chi tiết, lùi vào
+        for r, (o, chu, loai) in enumerate(((self.o_ct, 'Word · NĐ 30/2020', 'lam'),
                                             (self.o_bth, f'Tách {chu_pb} QĐ 08' if chu_pb else 'Kinh phí QĐ 08', 'xanh'),
                                             (self.o_tt, 'Chỉ mở ở Chính thức', 'xam'),
                                             (self.o_bc, 'Chỉ mở ở Chính thức', 'xam'))):
@@ -2990,7 +2988,6 @@ class HopIn(QDialog):
             dat_the_nho(t, loai)
             luoi.addWidget(t, r, 2, Qt.AlignmentFlag.AlignRight)
             self.the_tai_lieu[o] = t
-        self.o_word.setStyleSheet('QCheckBox { margin-left: 22px; }')
         luoi.setColumnStretch(0, 1)
         form.addRow('Tài liệu xuất bản:', self.khung_tai_lieu)
         form.addRow('', hang_mau_in)
@@ -3117,14 +3114,19 @@ class HopIn(QDialog):
     def _lam_moi_xem_truoc(self, ngay: bool = False) -> None:
         if self._ma_xem is None:
             return
-        from . import in_an
+        from . import in_an, in_word
         ma, du_thao, mau, che, lan = self.khoa_xem_truoc()
         ten = next((h['ho_ten'] for h in self.ho if h['ma_ho'] == ma), '')
 
-        def tao(thu_muc):
+        def tao(thu_muc):                       # 22/10/2026: phương án chi tiết = bản Word (in_word) - như file xuất ra
+            return in_word.xuat_chi_tiet_docx(self.con, ma, Path(thu_muc) / f'{in_an.ten_file_ho(self.con, ma)}.docx',
+                                              du_thao=du_thao, lan=lan)
+
+        def du_phong(thu_muc):                  # máy không dùng được Word: bản gần đúng từ bản Excel
             return in_an.lap_chi_tiet(self.con, ma, Path(thu_muc) / f'{in_an.ten_file_ho(self.con, ma)}.xlsx', mau,
                                       du_thao=du_thao, che_cccd=che, lan=lan)
-        self.w_preview.yeu_cau(self.khoa_xem_truoc(), tao, f'{ten} ({"dự thảo" if du_thao else "chính thức"})', ngay)
+        self.w_preview.yeu_cau(self.khoa_xem_truoc(), tao, f'{ten} ({"dự thảo" if du_thao else "chính thức"})', ngay,
+                               tao_du_phong=du_phong)
 
     def xem_truoc_bang_tong_hop(self, ngay: bool = False):
         """Xem trước bảng tổng hợp các hộ đang đánh dấu (khóa: danh sách hộ, dự thảo?, mẫu - cùng khóa thì dùng lại bản đã lập).
@@ -3243,12 +3245,6 @@ class HopIn(QDialog):
         self.lb_chon.setText(f'Đã chọn {len(ds)} hộ, tổng {vn(tong)} đồng' +
                              (f' — trong đó {tu_lap} hộ phương án tự lập CHƯA SOÁT' if tu_lap else '') +
                              (f', {chua} hộ chưa có phương án' if chua else '') + '.')
-
-    def _nho_word(self, co: bool):
-        from .giao_dien import cai_dat_nho
-        cai = cai_dat_nho()
-        if cai is not None:
-            cai.setValue(KHOA_WORD_CT, bool(co))
 
     def _bat_tuy_chon(self):
         self.o_gop.setEnabled(self.r_pdf.isChecked())
@@ -3391,7 +3387,7 @@ class HopIn(QDialog):
                 # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
                 kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=dot, pdf=self.r_pdf.isChecked(), in_may=in_may,
                                       mau_ct=None, mau_bth=None, lan=self.lan_in(),
-                                      chi_tiet_word=self.o_word.isChecked() and self.o_word.isEnabled(),
+                                      chi_tiet_word=True,
                                       du_thao=self.che_do() == 'du_thao', so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
                                       **chon)
                 ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]
@@ -3423,12 +3419,14 @@ class HopIn(QDialog):
                 pass
         self.ket_qua = kq
         dung = any(x.startswith(('DA_DUNG', 'LOI_TREO')) for x in kq['loi'])
-        tb = f'Đã tạo {len(kq["excel"])} file Excel' + (f', {len(kq["word"])} file Word' if kq.get('word') else '') + \
-             (f', {len(kq["pdf"])} file PDF' if kq['pdf'] else '') + \
+        tep = [f'{len(kq["word"])} file Word'] if kq.get('word') else []
+        tep += [f'{len(kq["excel"])} file Excel'] if kq['excel'] else []
+        tb = f'Đã tạo {", ".join(tep) or "0 file"}' + (f', {len(kq["pdf"])} file PDF' if kq['pdf'] else '') + \
              (f' (gộp: {kq["gop"].name})' if kq.get('gop') else '') + \
              (' và gửi tới máy in' if in_may and not kq['loi'] else '') + f'.\nThư mục: {thu_muc}'
-        if kq.get('du_phong'):                          # Word treo / không có Word: PDF hộ đó dựng từ bản Excel
-            tb += f'\n\n{len(kq["du_phong"])} hộ Word không xuất được PDF: đã dựng PDF gần đúng từ bản Excel.'
+        if kq.get('du_phong'):                          # Word treo / không có Word: hộ đó dựng PDF / in từ bản Excel lập tạm
+            tb += f'\n\n{len(kq["du_phong"])} hộ Microsoft Word không xuất được: đã ' + \
+                  ('in bản Excel thay.' if in_may else 'dựng PDF gần đúng từ bản Excel.')
         if kq['loi']:
             tb += ('\n\nChưa xong:' if dung else '\n\nLỗi:') + '\n' + \
                 '\n'.join(x.replace('\t\t', ' – ').replace('\t', ' – ') for x in kq['loi'][:10])

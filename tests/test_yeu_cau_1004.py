@@ -121,11 +121,13 @@ class TestNhom2(_Co):
         self.assertEqual(ws.cell(d0, 23).alignment.horizontal, 'justify')
         for c in (2, 3, 24, 25):
             self.assertEqual(ws.cell(d0, c).alignment.horizontal, 'center')
-        # hộ nhiều thửa: STT / họ tên lặp từng dòng
-        thua = [(r, ws.cell(r, 1).value, ws.cell(r, 2).value) for r in range(d0, d0 + 12) if ws.cell(r, 5).value]
-        stt = [x[1] for x in thua]
-        self.assertTrue(any(stt.count(s) > 1 for s in set(stt) if s))
-        self.assertTrue(all(x[2] for x in thua))
+        # hộ nhiều thửa (22/10/2026): STT / họ tên / địa chỉ một ô gộp dọc cho cả hộ, không lặp từng dòng
+        gop = [m for m in ws.merged_cells.ranges if m.min_col == 1 and m.max_col == 1 and m.min_row >= d0 and m.max_row > m.min_row]
+        self.assertTrue(gop)
+        for m in gop:
+            for c in (2, 3):
+                self.assertTrue(any(x.min_col == x.max_col == c and x.min_row == m.min_row and x.max_row == m.max_row
+                                    for x in ws.merged_cells.ranges))
         self.assertIn('"-"', ws.cell(d0, 16).number_format + ws.cell(d0, 8).number_format)
 
     def test_ham_phu(self):

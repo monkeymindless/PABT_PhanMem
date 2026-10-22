@@ -3,6 +3,7 @@ phải luôn hiện, bấm hộ / đổi chế độ thì lập lại), CuaSoLap
 Excel xuất PDF thay bằng hàm chép một PDF giả lập (dữ liệu giả)."""
 from __future__ import annotations
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -35,6 +36,13 @@ def _pdf_nhieu_trang(p: Path, so: int = 3) -> Path:
     return p
 
 
+def _chu_docx(f) -> str:
+    import zipfile
+    with zipfile.ZipFile(f) as z:
+        x = z.read('word/document.xml').decode('utf-8')
+    return ''.join(re.findall(r'<w:t[^>]*>([^<]*)</w:t>', x))
+
+
 class GiaExcel:
     """Thay Excel: 'xuất PDF' = chép PDF mẫu sang chỗ PDF cần tạo; ghi lại các file Excel đã nhận."""
 
@@ -54,7 +62,8 @@ class CoSoXem(CoSo):
         giao_dien.ap_dung(APP)
         self.mau_pdf = _pdf_nhieu_trang(self.td / 'mau.pdf', 3)
         self.excel = GiaExcel(self.mau_pdf)
-        self._vo = [mock.patch.object(xt, 'chuyen_pdf', self.excel), mock.patch.object(xt, 'dung_duoc_excel', lambda: '')]
+        self._vo = [mock.patch.object(xt, 'chuyen_pdf', self.excel), mock.patch.object(xt, 'dung_duoc_excel', lambda: ''),
+                    mock.patch.object(xt, 'dung_duoc_word', lambda: '')]
         for v in self._vo:
             v.start()
 
@@ -138,6 +147,29 @@ class TestKhung(CoSoXem):
         k.don_dep()
         self.assertFalse(d.exists())                           # file tạm xóa khi đóng
 
+    @unittest.skipUnless(xt.co_qtpdf(), 'Qt5: không có QtPdf')
+    def test_ban_word_khong_co_word_dung_ban_gan_dung(self):
+        """22/10/2026: xem trước phương án chi tiết = file .docx; máy không dùng được Word -> PDF gần đúng dựng từ bản Excel do
+        tao_du_phong lập (không gọi Word / Excel)."""
+        from pabt import in_word
+        k = xt.KhungXemTruocTaiLieu()
+        self.addCleanup(k.don_dep)
+        goi = []
+
+        def du_phong(d):
+            goi.append(d)
+            return in_an.lap_chi_tiet(self.con, 1, Path(d) / 'ct.xlsx')
+        with mock.patch.object(xt, 'dung_duoc_word', lambda: 'Máy chưa có Microsoft Word.'):
+            k.yeu_cau(('w', 1), lambda d: in_word.xuat_chi_tiet_docx(self.con, 1, Path(d) / 'ct.docx'), 'thử', ngay=True,
+                      tao_du_phong=du_phong)
+        self.assertTrue(k.cho_xong(30))
+        self.assertEqual(self.excel.da_nhan, [])                # không nhờ Excel / Word
+        self.assertEqual(len(goi), 1)
+        self.assertTrue(k.gan_dung)
+        self.assertEqual(k.xlsx.suffix, '.docx')                # In nhanh / mở ngoài vẫn theo bản Word
+        self.assertGreaterEqual(k.so_trang(), 1)
+        self.assertEqual(k.ly_do_gan_dung, 'Máy chưa có Microsoft Word.')
+
     def test_loi_lap_bao_trong_khung(self):
         k = xt.KhungXemTruocTaiLieu()
 
@@ -198,14 +230,14 @@ class TestHopIn(CoSoXem):
         self.assertEqual(h.khoa_xem_truoc()[:2], (ma, False))
         self.assertEqual(h.w_preview.so_trang(), TRANG)
         self.assertTrue(h.w_preview.b_in.isEnabled())
-        xlsx = self.excel.da_nhan[-1]
-        ws = openpyxl.load_workbook(xlsx).active
-        self.assertFalse(in_an.co_dau_du_thao(ws))              # chính thức
-        h.r_du_thao.setChecked(True)                             # đổi chế độ -> lập lại bản dự thảo, che CCCD
+        docx = self.excel.da_nhan[-1]
+        self.assertEqual(docx.suffix, '.docx')                  # 22/10/2026: xem trước = bản Word (mẫu chuẩn duy nhất)
+        self.assertNotIn('(DỰ THẢO)', _chu_docx(docx))          # chính thức
+        h.r_du_thao.setChecked(True)                             # đổi chế độ -> lập lại bản dự thảo
         self.assertTrue(h.w_preview.cho_xong(30))
         self.assertEqual(h.khoa_xem_truoc()[1:2] + h.khoa_xem_truoc()[3:4], (True, False))     # 1.0.04: không che CCCD
-        self.assertNotEqual(self.excel.da_nhan[-1], xlsx)
-        self.assertTrue(in_an.co_dau_du_thao(openpyxl.load_workbook(self.excel.da_nhan[-1]).active))
+        self.assertNotEqual(self.excel.da_nhan[-1], docx)
+        self.assertIn('(DỰ THẢO)', _chu_docx(self.excel.da_nhan[-1]))
         d = h.w_preview.thu_muc
         h.reject()                                               # đóng: xóa thư mục tạm
         self.assertFalse(d.exists())
@@ -254,6 +286,8 @@ class TestCuaSoLapPA(CoSoXem):
         w.lam_moi_xem_truoc(ngay=True)
         self.assertTrue(w.w_preview.cho_xong(30))
         self.assertEqual(len(self.excel.da_nhan), n + 1)
+        self.assertEqual(self.excel.da_nhan[-1].suffix, '.docx')
+        self.assertIn(m.ten, _chu_docx(self.excel.da_nhan[-1]))   # dòng chưa lưu có trong bản Word đang xem
         self.assertEqual(len(w.bo.pa.khoan[2]), 1)
         d = w.w_preview.thu_muc
         b.click()                                                # nút bật / tắt

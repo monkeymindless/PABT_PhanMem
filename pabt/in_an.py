@@ -3427,9 +3427,16 @@ def dat_ti_le_co_dinh(ws, n_cot: int, ti_le: int = TI_LE_BTH, du_phong: float = 
     return int(ws.page_setup.scale)
 
 
-def cot_lap_thua_bth(K: dict) -> tuple:
-    """Cột lặp lại / riêng từng dòng thửa của hộ nhiều thửa (1.0.04): STT, họ tên, địa chỉ, nguồn gốc."""
-    return tuple(K[k] for k in ('stt', 'ho_ten', 'dia_chi', 'nguon_goc'))
+def tien_dat_theo_thua_bth(pa, thua: list, kq, bc) -> dict | None:
+    """{mã thửa: tiền đất} của hộ nhiều thửa - cột tiền đất in riêng từng dòng thửa (22/10/2026). None khi không chia được đúng:
+    có dòng đất không thuộc thửa nào của hộ, hoặc cộng các thửa khác tiền đất của hộ (cột giữ một ô gộp theo hộ như cũ)."""
+    ma = {t['ma_thua'] for t in thua}
+    tien = {m: KHONG for m in ma}
+    for d in pa.dat:
+        if d.ma_thua not in ma:
+            return None
+        tien[d.ma_thua] += nghiep_vu.thanh_tien_dong_dat(d, bc)
+    return tien if sum(tien.values(), KHONG) == kq.muc[1] else None
 
 
 def _chia_dinh_dang(fmt: str) -> list:
@@ -3736,7 +3743,7 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
     for c in range(1, n_cot + 1):               # mọi ô dữ liệu (chữ và số tiền): căn giữa dọc, tự xuống dòng - chép theo dòng mẫu
         _can_giua_doc(ws.cell(d0, c))
     # 1.0.04 (người dùng 19/10/2026): căn lề từng cột - nguồn gốc căn đều; họ tên, địa chỉ, TĐC, ghi chú căn giữa; số 0 hiện "-"
-    for k in ('ho_ten', 'dia_chi', 'tai_dinh_cu', 'ghi_chu'):
+    for k in ('stt', 'ho_ten', 'dia_chi', 'tai_dinh_cu', 'ghi_chu'):
         ws.cell(d0, K[k]).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
     ws.cell(d0, K['nguon_goc']).alignment = Alignment(horizontal='justify', vertical='center', wrap_text=True)
     cot_so_cong = [dia_phuong.so_cot(cl) for cl in dia_phuong.lay('mau_in.IN_BANGTONGHOP.cot_cong')]
@@ -3799,13 +3806,19 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
             bao_tien_do(stt, len(khoi))
         h = ho[ma]
         nhieu_thua = len(thua) > 1
-        # 1.0.04: hộ nhiều thửa - mỗi thửa một dòng, lặp STT / họ tên / địa chỉ; nguồn gốc riêng từng thửa khi tách được
-        # (tach_nguon_goc_theo_thua: các thửa ghi khác nhau, hoặc chữ chung có đoạn riêng cho MỌI thửa) - không thì gộp như cũ
+        # hộ nhiều thửa (22/10/2026 - thay cách lặp mỗi dòng của 1.0.04): STT, họ tên, địa chỉ, tổng cộng, TĐC, ghi chú GỘP DỌC một
+        # ô cho cả hộ (tach_ho lặp lại ở đầu trang sau khi hộ vắt qua ranh trang); mỗi thửa một dòng: tờ, thửa, loại đất, diện tích,
+        # tiền đất của thửa (khi chia được - tien_dat_theo_thua_bth), nguồn gốc riêng từng thửa khi tách được
+        # (tach_nguon_goc_theo_thua: các thửa ghi khác nhau, hoặc chữ chung có đoạn riêng cho MỌI thửa) - không thì gộp như cũ.
+        # Tài sản, cây trồng, hỗ trợ, thưởng không gắn với thửa (ct_khoan không có mã thửa): một ô gộp theo hộ
         ng_thua = tach_nguon_goc_theo_thua([(chuan_nguon_goc(t['nguon_goc']), t['so_thua'], t['so_to']) for t in thua]) \
             if nhieu_thua else None
-        lap = set(cot_lap_thua_bth(K)) if nhieu_thua else set()
-        if ng_thua is None:
-            lap.discard(K['nguon_goc'])
+        tien_thua = tien_dat_theo_thua_bth(pa, thua, kq, bc) if nhieu_thua else None
+        lap = set()
+        if ng_thua is not None:
+            lap.add(K['nguon_goc'])
+        if tien_thua is not None:
+            lap.add(K['tien_dat'])
         gop = gop_ho - lap
         c_ho = tuple(c for c in cot_ho if c in gop) or (K['tai_dinh_cu'],)
         c_thua = cot_thua + tuple(c for c in cot_ho if c not in gop)
@@ -3813,7 +3826,8 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
         o_ho = {K['stt']: stt, K['ho_ten']: h['ho_ten'], K['dia_chi']: h['dia_chi'], K['tai_dinh_cu']: h['tai_dinh_cu'] or None,
                 K['ghi_chu']: f'Hỗ trợ khác: {format(int(tien["khac"]), ",").replace(",", ".")} đ' if tien['khac'] > 0 else None}
         for k in COT_TIEN_BTH:
-            o_ho[K[k]] = _so(tien[k])
+            if K[k] not in lap:
+                o_ho[K[k]] = _so(tien[k])
         if ng_thua is None:
             t_ng = next((t for t in thua if t['nguon_goc']), None)
             o_ho[K['nguon_goc']] = '\n'.join(bo_lap_mo_dau(x) for x in chuan_nguon_goc(t_ng['nguon_goc']).split('\n')) \
@@ -3821,10 +3835,10 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
         dong_thua = []
         for i_t, t in enumerate(thua):
             o = {}
-            if nhieu_thua:
-                o.update({K['stt']: stt, K['ho_ten']: h['ho_ten'], K['dia_chi']: h['dia_chi']})
-                if ng_thua is not None:
-                    o[K['nguon_goc']] = ng_thua[i_t] or None
+            if ng_thua is not None:
+                o[K['nguon_goc']] = ng_thua[i_t] or None
+            if tien_thua is not None:
+                o[K['tien_dat']] = _so(tien_thua[t['ma_thua']])
             nn, lua, dat_o, pnn = _dt_thua_bth(pa, t['ma_thua'])
             dat_thua = [d for d in pa.dat if d.ma_thua == t['ma_thua']]
             o.update({K['so_to']: t['so_to'], K['so_thua']: t['so_thua'], K['loai_dat']: t['loai_dat'],
@@ -4226,33 +4240,15 @@ def ten_file_ho(con, ma_ho: int) -> str:
 
 
 def xuat_hang_loat(con, ds_ma_ho: list, thu_muc, pdf: bool = False, in_may: bool = False, bang_tong_hop: bool = False,
-                   bao_tien_do=None, bao_excel=None, so_ban: int = 1) -> dict:
-    """Xuất phương án chi tiết từng hộ (+ bảng tổng hợp) ra thư mục. Trả dict(excel=[...], pdf=[...], loi=[...]).
-    bao_tien_do(i, n) sau mỗi file Excel, bao_excel(i, n) trong lúc Excel xuất PDF / in: trả True = dừng."""
-    thu_muc = Path(thu_muc)
-    thu_muc.mkdir(parents=True, exist_ok=True)
-    mau = thu_muc_mau()
-    bc = BoiCanh.tu(con)
-    kq = dict(excel=[], pdf=[], loi=[])
-    for i, ma in enumerate(ds_ma_ho, start=1):
-        p = lap_chi_tiet(con, ma, thu_muc / f'{ten_file_ho(con, ma)}.xlsx', mau, bc)
-        kq['excel'].append(p)
-        if bao_tien_do and bao_tien_do(i, len(ds_ma_ho) + (1 if bang_tong_hop else 0)):
-            kq['loi'].append(f'DA_DUNG\t\tĐã dừng theo yêu cầu sau {i}/{len(ds_ma_ho)} hộ (chưa xuất PDF / in)')
-            return kq
-    if bang_tong_hop:
-        n = len(ds_ma_ho) + 1
-        p = lap_bang_tong_hop(con, thu_muc / 'BANG_TONG_HOP.xlsx', ds_ma_ho, None,
-                              bao_tien_do=(lambda i, m: bao_tien_do(n - 1, n)) if bao_tien_do else None)
-        kq['excel'].append(p)
-    if pdf or in_may:
-        cap = [(p, p.with_suffix('.pdf') if pdf else None) for p in kq['excel']]
-        kq['loi'] = chay_excel(cap, 'in' if in_may else 'pdf', bao=bao_excel, so_ban=so_ban)
-        if pdf:
-            kq['pdf'] = [b for _, b in cap if b and Path(b).exists()]
-    from .csdl import giai_phong_bo_nho
-    giai_phong_bo_nho()                                 # 1.0.08: máy yếu - trả RAM các Workbook vừa lập
-    return kq
+                   bao_tien_do=None, bao_excel=None, so_ban: int = 1, word: bool = True) -> dict:
+    """Xuất phương án chi tiết từng hộ (+ bảng tổng hợp) ra MỘT thư mục. Trả dict(word=[...], excel=[...], pdf=[...], loi=[...]).
+    bao_tien_do(i, n) sau mỗi file, bao_excel(i, n) trong lúc Word / Excel xuất PDF / in: trả True = dừng.
+    word (22/10/2026 - bản Word là mẫu chuẩn duy nhất của phương án chi tiết): phương án chi tiết = bản Word NĐ 30 (in_word), PDF /
+    in qua Word, Word lỗi thì PDF gần đúng (van_ban_trinh.xuat_bo_ho_so - cùng đường với Xuất hồ sơ & Bản in); False: bản Excel."""
+    from . import van_ban_trinh
+    return van_ban_trinh.xuat_bo_ho_so(con, ds_ma_ho, thu_muc, chi_tiet=True, bang_tong_hop=bang_tong_hop, pdf=pdf,
+                                       in_may=in_may, so_ban=so_ban, chia_thu_muc=False, bao_tien_do=bao_tien_do,
+                                       bao_excel=bao_excel, lan=None, chi_tiet_word=word)
 
 
 def mo_file(p) -> None:

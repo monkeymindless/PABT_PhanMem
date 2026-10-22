@@ -1991,6 +1991,40 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   chữ chứa từ khóa `_TU_KHOA_MUC_I` giữa dòng "Dự án" và nhãn "Họ và tên:") - không viết số dòng; in đậm. Nhãn / ẩn dòng CCCD, SĐT vẫn ở
   `dat_nhan_chu_su_dung` + `an_dong_trong_khoi_i`. Word: cùng chữ, 13 pt đậm, cách trên 120 / dưới 60 twip; tổ chức 2 dòng (Tổ chức,
   Địa chỉ), hộ 4 dòng (dòng CCCD / SĐT trống thì bỏ như bản Excel ẩn). Test `test_in_an_2110.TestTieuDeMucI`.
+- 1.0.14 (người dùng 22/10/2026):
+  - Bảng tổng hợp hộ nhiều thửa GỘP DỌC (thay cách lặp mỗi dòng của 1.0.04, `cot_lap_thua_bth` đã bỏ): STT / họ tên / địa chỉ / tổng /
+    TĐC / ghi chú một ô cả hộ (STT căn giữa hai chiều); riêng từng dòng thửa: tờ, thửa, loại đất, diện tích, nguồn gốc (khi
+    `tach_nguon_goc_theo_thua` tách được), TIỀN ĐẤT (`tien_dat_theo_thua_bth`: None - giữ ô gộp hộ - khi có dòng đất không thuộc thửa
+    nào của hộ / cộng các thửa khác `kq.muc[1]`). Tài sản, cây, hỗ trợ, thưởng: ô gộp hộ (ct_khoan KHÔNG có mã thửa - không chia theo
+    thửa được). Hộ vắt qua ranh trang: tach_ho lặp STT / họ tên / địa chỉ như cũ. Lề A3 2 / 1 / 1,5 cm, `RONG_DU_PHONG_BTH` 0,97 GIỮ
+    (người dùng lại yêu cầu khít 100% - Excel tách cột sang trang riêng, đã đo).
+  - Bản Word chi tiết: cơ quan / quốc hiệu / số 13 (`CO_CO_QUAN`), tiêu ngữ / ngày / trích yếu / dự án / nội dung / bảng / ghi chú / chữ
+    ký 14 (`CO_CHU`, `CO_BANG`, `CO_GHI_CHU`), tên loại 15; Mục II `DONG_DOAN` 240 + `SAU_DOAN` 120 (6 pt); tiêu đề Mục III bỏ keepNext.
+    Đo Times New Roman (Word xuất PDF): quốc hiệu 13 đậm ~269 pt -> cột `TY_LE_COT_QUOC_HIEU` 61% (59% vẫn "VIỆT / NAM"), dòng tên cơ quan
+    dài hơn cột -> `_ngat_can_bang` (hai dòng cân nhau, ước bề rộng `_rong_uoc` - không cần Qt); trích yếu 14 đậm ~480 pt > vùng chữ 468
+    -> `TRICH_YEU_DONG` hai dòng; bảng 14 pt: `TY_LE_COT` phần nghìn (70, 205, 75, 100, 145, 80, 185, 140), lề ô `LE_O` 2 pt - "STT",
+    "ĐVT", "25.000.000", "1.234.567.890" một dòng. KHỐI CHỮ KÝ = DÒNG CUỐI của bảng mục III (ẩn viền trái / phải / dưới, `_o(an_vien=)`):
+    bảng chữ ký riêng sau bảng thì Word BỎ QUA keepNext - chữ ký trơ một trang (đã thấy trên PDF). Xem thật: script scratchpad
+    `thu_in.py` (QT_QPA_PLATFORM=windows, Excel / Word xuất PDF, QtPdf dựng ảnh).
+  - BẢN WORD LÀ MẪU CHUẨN DUY NHẤT của phương án chi tiết (người dùng 22/10/2026 - chỉ thị 4 giai đoạn + PDF mẫu PA_01 / PA_002 /
+    PA_003): `van_ban_trinh.xuat_bo_ho_so(chi_tiet_word=True)` MẶC ĐỊNH, KHÔNG ghi bản Excel chi tiết (kq['excel'] chỉ còn bảng tổng
+    hợp); Word lỗi / không có Word -> `pdf_du_phong_chi_tiet(viec, loi, tao_xlsx)` lập Excel TẠM (thư mục tạm, xóa sau) dựng PDF gần
+    đúng; in ra máy không có Word mà có Excel -> in bản Excel tạm (kq['du_phong']). `in_an.xuat_hang_loat` (Dự án mới) ủy quyền
+    xuat_bo_ho_so(chia_thu_muc=False, chi_tiet_word=word). `chi_tiet_word=False` / `in_an.lap_chi_tiet` còn (dự phòng, test, tu-kiem).
+    Xem trước: `xem_truoc_tai_lieu` nhận file .docx (`la_word`, `dung_duoc_word` - offscreen không mở Word trừ PABT_XEM_TRUOC_EXCEL=1,
+    `chuyen_pdf` -> `chay_word`, In nhanh .docx qua Word), `yeu_cau(..., tao_du_phong=)` -> `_du_phong` dựng từ Excel (lề NĐ 30);
+    CuaSoLapPA.lam_moi_xem_truoc / HopIn._lam_moi_xem_truoc tạo .docx (bảng tổng hợp vẫn .xlsx). HopIn: `o_word` luôn tích + ẨN (thuộc
+    tính giữ cho mã cũ), bỏ QSettings KHOA_WORD_CT / `giao_dien.doc_bool`. Test mock preview phải patch CẢ `dung_duoc_excel` và
+    `dung_duoc_word`. Mẫu Excel IN_CHITIET tùy chỉnh (HopQuanLyMauIn) chỉ còn ảnh hưởng bản gần đúng. Đo dự án thật (3 hộ): lập bản Word
+    7 ms / hộ (Excel lap_chi_tiet 276 ms), Word xuất PDF một hộ 1,8 s (Excel 2,2 s) - xem trước F4 không chậm hơn.
+  - in_word sau xuất thử dự án thật: bảng đầu văn bản LẤN LỀ (`LAN_LE_DAU_MM` 12 / 8 mm, `_bang(lui=)` -> tblInd âm + jc left,
+    `rong_bang_dau`, cột quốc hiệu cố định `RONG_QUOC_HIEU` 5700 twip) - 13 pt trong vùng chữ 468 pt thì "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT"
+    bẻ 3 dòng; Mục I nhãn thường, giá trị hàng đầu (tên) đậm, ô canh trên. Bảng mục III `rong_cot(_chu_cac_cot(dong, …))` THEO NỘI DUNG:
+    cột STT / ĐVT / SL / ĐG / tỷ lệ / thành tiền = max(`COT_TOI_THIEU`, từ dài nhất tiêu đề, chữ dài nhất x `DU_RONG`) (`_rong_chu`:
+    chữ số 0,5 em…), phần còn lại tên : ghi chú chọn trong 30-70% cho TỔNG BÌNH PHƯƠNG số dòng ước nhỏ nhất (chỉ tổng số dòng thì ô ghi
+    chú dài bị dồn 19 dòng); rong_cot() không đối số = `TY_LE_COT` cũ. Chữ 14 pt GIỮ - bảng 8 cột A4 vẫn chật (ghi chú dài ~11 dòng).
+    Chưa làm: STT hộ không hiện (mẫu không hiện); bảng tổng hợp chia nguồn gốc theo thửa còn lệch khi một đoạn nhắc nhiều thửa (dữ liệu
+    nguồn gốc ghép "1. Thửa 17 … 2. Thửa 16" trong một đoạn).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

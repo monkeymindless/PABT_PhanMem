@@ -1,5 +1,5 @@
 """Xuất lô phương án chi tiết bản Word + gộp một PDF (người dùng 21/10/2026: "chạy thực tế 1.000 hộ, cán bộ không thao tác tay").
-- HopIn: ô "Xuất bản Word (.docx) chuẩn Nghị định 30" tích sẵn, nhớ lựa chọn (QSettings in_an/dung_word_chi_tiet).
+- HopIn: phương án chi tiết luôn xuất bản Word (.docx) chuẩn Nghị định 30 (22/10/2026 - không còn lựa chọn Excel).
 - o_word + PDF + o_gop: Word chuyển từng hộ sang PDF rồi gộp thành MỘT file PHUONG_AN_CHI_TIET.pdf, đủ trang, khổ A4, lề NĐ 30.
 - Word treo một hộ (quá hạn / hộ): bỏ qua hộ đó, làm tiếp các hộ sau; hộ không có PDF / máy không có Word: PDF dự phòng (Qt) từ
   bản Excel - lô không dừng, không thiếu hộ khi gộp.
@@ -20,10 +20,9 @@ from xml.etree import ElementTree as ET
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-from PySide6.QtCore import QSettings                                              # noqa: E402
 from PySide6.QtWidgets import QApplication                                       # noqa: E402
 
-from pabt import csdl, giao_dien, in_an                                          # noqa: E402
+from pabt import csdl, in_an                                          # noqa: E402
 from pabt import van_ban_trinh as vb                                             # noqa: E402
 from tests.test_van_ban_trinh import _co_word                                    # noqa: E402
 
@@ -169,17 +168,30 @@ class TestLoWordGopPdf(_Co):
         self.assertEqual(len(kq['du_phong']), SO_HO)
         self.assertTrue(kq['gop'].exists())
 
-    def test_nho_lua_chon_word(self):
-        cai = QSettings(str(self.td / 'cai.ini'), QSettings.Format.IniFormat)
-        with mock.patch.object(giao_dien, 'cai_dat_nho', lambda: cai):
-            h = self.hop_in()
-            self.assertTrue(h.o_word.isChecked())
-            h.o_word.setChecked(False)
-            self.assertFalse(self.hop_in().o_word.isChecked())                  # lần mở sau giữ lựa chọn
-            h.o_word.setChecked(True)
-            self.assertTrue(self.hop_in().o_word.isChecked())
-        from pabt.man_hinh import KHOA_WORD_CT
-        self.assertEqual(KHOA_WORD_CT, 'in_an/dung_word_chi_tiet')
+    def test_luon_xuat_word_khong_con_lua_chon_excel(self):
+        """22/10/2026 (chỉ thị tái cấu trúc bản in): phương án chi tiết luôn là bản Word - ô chọn ẩn, không có file Excel."""
+        h = self.hop_in()
+        self.assertTrue(h.o_word.isChecked())
+        self.assertFalse(h.o_word.isVisibleTo(h))
+        kq = self.xuat_gop(h)
+        self.assertEqual(kq['loi'], [])
+        self.assertEqual(list(kq['thu_muc_ct'].glob('*.xlsx')), [])
+        self.assertEqual(len(list(kq['thu_muc_ct'].glob('PA_*.docx'))), SO_HO)
+
+    def test_in_may_khong_co_word_in_ban_excel(self):
+        """Máy không có Word mà có Excel: in ra máy bằng bản Excel lập tạm (không bỏ trống lô in)."""
+        da_in = []
+
+        def gia_excel(cap, che_do, **k):
+            da_in.extend((Path(a).suffix, che_do) for a, _ in cap)
+            return []
+        with mock.patch.dict(os.environ, {'GIA_WORD_KHONG_CO': '1'}), \
+                mock.patch.object(in_an, 'chay_excel', gia_excel), mock.patch.object(in_an, 'co_excel', lambda: True):
+            kq = vb.xuat_bo_ho_so(self.con, self.ds, self.td / 'in_may', bang_tong_hop=False, in_may=True)
+        self.assertEqual(da_in, [('.xlsx', 'in')] * SO_HO)
+        self.assertEqual(len(kq['du_phong']), SO_HO)
+        self.assertEqual(kq['loi'], [])
+        self.assertEqual(list((self.td / 'in_may').rglob('*.xlsx')), [])         # bản Excel tạm đã xóa
 
 
 @unittest.skipUnless(_co_word(), 'cần Microsoft Word (đặt PABT_THU_WORD=0 để bỏ qua)')
@@ -198,6 +210,24 @@ class TestWordThat(_Co):
         with zipfile.ZipFile(kq['word'][0]) as z:
             mar = ET.fromstring(z.read('word/document.xml')).find(f'.//{W}sectPr/{W}pgMar')
         self.assertEqual(round(int(mar.get(W + 'left')) / 1440 * 25.4), 30)
+
+    def test_muc_iii_bat_dau_ngay_trang_1(self):
+        """22/10/2026 (mẫu PA_01 người dùng gửi): mục II dài nửa trang - mục III + tiêu đề bảng + dòng đầu in tiếp ở cuối trang 1,
+        không bị đẩy sang trang 2."""
+        from pypdf import PdfReader
+        from pabt import in_word
+        ma = self.ds[0]
+        doan = ('Thửa đất có nguồn gốc do hộ gia đình tự khai phá sử dụng ổn định từ năm 1995, không tranh chấp, phù hợp quy '
+                'hoạch sử dụng đất tại thời điểm sử dụng và được Ủy ban nhân dân xã xác nhận theo hồ sơ kê khai. ') * 3
+        with self.con:
+            self.con.execute('UPDATE thua SET nguon_goc = ? WHERE ma_ho = ?', ('- ' + doan + '\n- ' + doan, ma))
+        f = in_word.xuat_chi_tiet_docx(self.con, ma, self.td / 'trang1.docx')
+        pdf = f.with_suffix('.pdf')
+        self.assertEqual(vb.chay_word([('pdf', f, pdf)], cho_moi_file=120), [])
+        trang = [p.extract_text() or '' for p in PdfReader(str(pdf)).pages]
+        self.assertIn('III. Bảng tính toán', trang[0])
+        self.assertIn('STT', trang[0])                                         # tiêu đề bảng cùng trang với tiêu đề mục III
+        self.assertIn('Bồi thường đất', trang[0].replace('\n', ' '))           # có dòng số liệu đầu ở trang 1
 
 
 if __name__ == '__main__':

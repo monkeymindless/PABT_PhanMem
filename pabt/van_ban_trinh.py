@@ -381,7 +381,7 @@ def lap_van_ban(con, loai: str, ds_ma_ho: list, thu_muc, dot=None) -> Path:
 def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True, bang_tong_hop: bool = True,
                   to_trinh: bool = False, pdf: bool = False, in_may: bool = False, so_ban: int = 1,
                   chia_thu_muc: bool = True, bao_tien_do=None, bao_excel=None, mau_ct=None, mau_bth=None,
-                  bao_cao_y_kien: bool = False, du_thao: bool | None = None, lan='moi_nhat', chi_tiet_word: bool = False) -> dict:
+                  bao_cao_y_kien: bool = False, du_thao: bool | None = None, lan='moi_nhat', chi_tiet_word: bool = True) -> dict:
     """Bộ hồ sơ trình: PA CHI TIET\\ (phương án chi tiết từng hộ) + PA TONG\\ (bảng tổng hợp có số / ngày phương án tổng, tờ
     trình / văn bản trình). pdf: kèm PDF (Excel / Word xuất); in_may: in ra máy in mặc định. Mỗi mẫu chọn riêng
     hoặc tất cả. Trả dict(excel, word, pdf, loi, thu_muc_ct, thu_muc_tong). bao_tien_do(i, n) / bao_excel(i, n): trả True = dừng.
@@ -390,9 +390,11 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
     du_thao: chế độ phát hành của bản in (True dự thảo / False chính thức / None theo tên mẫu - in_an.lap_chi_tiet).
     lan (1.0.05 - hộ nhiều lần lập phương án): 'moi_nhat' (mặc định: lần muộn nhất có dòng - phương án / bảng tổng hợp của đợt
     trình bổ sung) / 'cong_don' (mọi lần) - in_an.chon_lan_in.
-    chi_tiet_word (21/10/2026): kèm phương án chi tiết bản Word (.docx, thể thức NĐ 30 - in_word) cạnh bản Excel; PDF / in lấy từ
-    bản Word (Word cắt được dòng dài qua trang), file Excel giữ để sửa. Word xuất PDF hạn CHO_WORD_MOI_HO giây / hộ (hộ treo bỏ
-    qua); hộ Word không xuất được (treo / lỗi / máy không có Word) -> PDF dựng gần đúng từ bản Excel (kq['du_phong'])."""
+    chi_tiet_word (mặc định từ 22/10/2026 - bản Word là mẫu chuẩn DUY NHẤT của phương án chi tiết): phương án chi tiết xuất bản
+    Word (.docx, thể thức NĐ 30 - in_word), KHÔNG kèm bản Excel; PDF / in lấy từ bản Word. Word xuất PDF hạn CHO_WORD_MOI_HO giây /
+    hộ (hộ treo bỏ qua); hộ Word không xuất được (treo / lỗi / máy không có Word) -> PDF dựng gần đúng (kq['du_phong']) từ bản Excel
+    lập TẠM (thư mục tạm, xóa sau); in ra máy mà không có Word -> in bản Excel tạm qua Excel. False: bản Excel (mẫu IN_CHITIET) như
+    trước 22/10/2026."""
     from . import in_an
     thu_muc = Path(thu_muc)
     tm_ct = thu_muc / THU_MUC_CT if chia_thu_muc else thu_muc
@@ -405,24 +407,25 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
         nonlocal da
         da += 1
         return bool(bao_tien_do and bao_tien_do(da, so_viec))
+    ma_word = {}                                        # tên file bản Word phương án chi tiết -> mã hộ
+    bc = None
     if chi_tiet:
         tm_ct.mkdir(parents=True, exist_ok=True)
-        mau = mau_ct or in_an.thu_muc_mau()
         bc = in_an.BoiCanh.tu(con)
         if chi_tiet_word:
             from . import in_word
+        else:
+            mau = mau_ct or in_an.thu_muc_mau()
         for i, ma in enumerate(ds_ma_ho, start=1):
             ten = in_an.ten_file_ho(con, ma)
-            p = in_an.lap_chi_tiet(con, ma, tm_ct / f'{ten}.xlsx', mau, bc, du_thao=du_thao, lan=lan)
             if chi_tiet_word:
-                kq.setdefault('excel_giu', []).append(p)       # Excel giữ để sửa - không xuất PDF / in (bản Word thay)
                 kq['word'].append(in_word.xuat_chi_tiet_docx(con, ma, tm_ct / f'{ten}.docx', bc, du_thao=bool(du_thao),
                                                              lan=lan))
+                ma_word[ten] = ma
             else:
-                kq['excel'].append(p)
+                kq['excel'].append(in_an.lap_chi_tiet(con, ma, tm_ct / f'{ten}.xlsx', mau, bc, du_thao=du_thao, lan=lan))
             if bao():
                 kq['loi'].append(f'DA_DUNG\t\tĐã dừng theo yêu cầu sau {i}/{len(ds_ma_ho)} hộ (chưa xuất PDF / in)')
-                kq['excel'] = kq.pop('excel_giu', []) + kq['excel']
                 return kq
     if bang_tong_hop or to_trinh or bao_cao_y_kien:
         tm_tong.mkdir(parents=True, exist_ok=True)
@@ -448,28 +451,43 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
             kq['pdf'] += [b for _, b in cap if b and Path(b).exists()]
         if kq['word']:
             # 21/10/2026: phương án chi tiết bản Word (lô hàng trăm hộ) hạn 15 giây / hộ, hộ treo bỏ qua; Word không xuất được ->
-            # PDF dựng dự phòng từ bản Excel (không để cả lô dừng / thiếu hộ khi gộp PDF); văn bản khác (tờ trình…) hạn 180 giây
+            # PDF dựng dự phòng từ bản Excel lập tạm (không để cả lô dừng / thiếu hộ khi gộp PDF); văn bản khác (tờ trình…) 180 giây
             che_do = f'in:{so_ban}' if in_may else 'pdf'
-            ten_ct = {p.stem for p in kq.get('excel_giu', [])}
-            for nhom, cho in (([p for p in kq['word'] if p.stem in ten_ct],
-                               CHO_WORD_IN_MOI_HO if in_may else CHO_WORD_MOI_HO),
-                              ([p for p in kq['word'] if p.stem not in ten_ct], 180)):
-                viec = [(che_do, p, p.with_suffix('.pdf') if pdf else None) for p in nhom]
-                if not viec:
-                    continue
-                try:
-                    loi = chay_word(viec, cho_moi_file=cho, bao=bao_excel)
-                except LoiNhap as e:
-                    loi = [f'LOI_MO\t\t{e}']
-                if pdf and nhom and nhom[0].stem in ten_ct and not any(x.startswith('DA_DUNG') for x in loi):
-                    loi, du = pdf_du_phong_chi_tiet(viec, loi)
-                    if du:
-                        kq.setdefault('du_phong', []).extend(du)
-                        loi = [x for x in loi if not x.startswith('LOI_MO\t\t') or
-                               any(not Path(c).exists() for _, _, c in viec)]
-                kq['loi'] += loi
-                kq['pdf'] += [c for _, _, c in viec if c and Path(c).exists()]
-    kq['excel'] = kq.pop('excel_giu', []) + kq['excel']          # bản Excel của phương án chi tiết (khi xuất bản Word) vẫn báo đủ
+            tam = []                                    # thư mục tạm của bản Excel dự phòng
+
+            def tao_xlsx(docx: Path):
+                if not tam:
+                    tam.append(Path(tempfile.mkdtemp(prefix='PABT_du_phong_')))
+                return in_an.lap_chi_tiet(con, ma_word[docx.stem], tam[0] / f'{docx.stem}.xlsx', bc=bc, du_thao=du_thao, lan=lan)
+            try:
+                for nhom, cho in (([p for p in kq['word'] if p.stem in ma_word],
+                                   CHO_WORD_IN_MOI_HO if in_may else CHO_WORD_MOI_HO),
+                                  ([p for p in kq['word'] if p.stem not in ma_word], 180)):
+                    viec = [(che_do, p, p.with_suffix('.pdf') if pdf else None) for p in nhom]
+                    if not viec:
+                        continue
+                    la_ct = nhom[0].stem in ma_word
+                    khong_word = False
+                    try:
+                        loi = chay_word(viec, cho_moi_file=cho, bao=bao_excel)
+                    except LoiNhap as e:
+                        loi, khong_word = [f'LOI_MO\t\t{e}'], True
+                    if pdf and la_ct and not any(x.startswith('DA_DUNG') for x in loi):
+                        loi, du = pdf_du_phong_chi_tiet(viec, loi, tao_xlsx)
+                        if du:
+                            kq.setdefault('du_phong', []).extend(du)
+                            loi = [x for x in loi if not x.startswith('LOI_MO\t\t') or
+                                   any(not Path(c).exists() for _, _, c in viec)]
+                    elif in_may and la_ct and khong_word and in_an.co_excel():
+                        # máy không có Word mà có Excel: in bản Excel lập tạm (mẫu IN_CHITIET) thay bản Word
+                        loi = in_an.chay_excel([(tao_xlsx(p), None) for p in nhom], 'in', bao=bao_excel, so_ban=so_ban)
+                        if not loi:
+                            kq.setdefault('du_phong', []).extend(nhom)
+                    kq['loi'] += loi
+                    kq['pdf'] += [c for _, _, c in viec if c and Path(c).exists()]
+            finally:
+                for d in tam:
+                    shutil.rmtree(d, ignore_errors=True)
     from .csdl import giai_phong_bo_nho
     giai_phong_bo_nho()                                 # 1.0.08: máy yếu - trả RAM các Workbook vừa lập
     return kq
@@ -639,18 +657,21 @@ def chay_word(viec: list, cho_moi_file: int = 180, bao=None) -> list:
     return loi
 
 
-def pdf_du_phong_chi_tiet(viec: list, loi: list) -> tuple:
+def pdf_du_phong_chi_tiet(viec: list, loi: list, tao_xlsx=None) -> tuple:
     """Phương án chi tiết bản Word chưa có PDF (Word treo / lỗi / không có Word): dựng PDF gần đúng bằng Qt từ bản Excel cùng tên
-    cạnh file Word (pdf_du_phong - không cần Office) để lô in hàng loạt không thiếu hộ. Trả (lỗi còn lại, [PDF dựng dự phòng])."""
+    cạnh file Word, không có thì tao_xlsx(file Word) lập (pdf_du_phong - không cần Office) để lô in hàng loạt không thiếu hộ.
+    Trả (lỗi còn lại, [PDF dựng dự phòng])."""
     from .in_word import LE_MM
     le = (LE_MM['trai'], LE_MM['tren'], LE_MM['phai'], LE_MM['duoi'])    # lề NĐ 30 như bản Word (22/10/2026)
     du = []
     for _, a, b in viec:
         b = Path(b) if b else None
         xlsx = Path(a).with_suffix('.xlsx')
-        if b is None or b.exists() or not xlsx.exists():
+        if b is None or b.exists() or (not xlsx.exists() and tao_xlsx is None):
             continue
         try:
+            if not xlsx.exists():
+                xlsx = Path(tao_xlsx(Path(a)))
             from . import pdf_du_phong
             pdf_du_phong.xuat_pdf_du_phong_qt(xlsx, b, le_mm=le)
         except Exception:                               # noqa: BLE001 - không dựng được: giữ lỗi của Word để báo

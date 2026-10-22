@@ -226,6 +226,13 @@ class TestXoaDotVaInDuThao(_Co):
         ix.assert_called_once_with(dot_id=7, che_do='chinh_thuc')
 
 
+def _chu_word(f) -> str:
+    import re
+    import zipfile
+    with zipfile.ZipFile(f) as z:
+        return ''.join(re.findall(r'<w:t[^>]*>([^<]*)</w:t>', z.read('word/document.xml').decode('utf-8')))
+
+
 class TestHopInCheDo(_Co):
     def _hop(self, **kw):
         _qt()
@@ -268,10 +275,11 @@ class TestHopInCheDo(_Co):
         h.r_excel.setChecked(True)
         h.o_thu_muc.setText(str(self.td / 'dt'))
         kq = h.thuc_hien(xac_nhan=False)
-        self.assertEqual(len(kq['excel']), 2 + 1)                                # 2 hộ + bảng tổng hợp; không tờ trình / báo cáo
-        # Word chỉ có bản phương án chi tiết từng hộ (21/10/2026: tích sẵn) - dự thảo không tờ trình / báo cáo
+        self.assertEqual(len(kq['excel']), 1)                                    # bảng tổng hợp; không tờ trình / báo cáo
+        # Word chỉ có bản phương án chi tiết từng hộ (22/10/2026: luôn Word) - dự thảo không tờ trình / báo cáo
         self.assertEqual(len(kq['word']), 2)
         self.assertTrue(all(p.name.startswith('PA_') for p in kq['word']))
+        self.assertTrue(all('(DỰ THẢO)' in _chu_word(p) for p in kq['word']))
         chu = ' '.join(str(c.value) for f in kq['excel'] for ws in openpyxl.load_workbook(f).worksheets for r in ws.iter_rows()
                        for c in r if isinstance(c.value, str))
         self.assertIn('DỰ THẢO', chu.upper())
