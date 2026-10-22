@@ -2025,6 +2025,27 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     chú dài bị dồn 19 dòng); rong_cot() không đối số = `TY_LE_COT` cũ. Chữ 14 pt GIỮ - bảng 8 cột A4 vẫn chật (ghi chú dài ~11 dòng).
     Chưa làm: STT hộ không hiện (mẫu không hiện); bảng tổng hợp chia nguồn gốc theo thửa còn lệch khi một đoạn nhắc nhiều thửa (dữ liệu
     nguồn gốc ghép "1. Thửa 17 … 2. Thửa 16" trong một đoạn).
+- 1.0.14 giao diện (người dùng 22/10/2026: hero màn hình chào; "nâng cấp toàn bộ giao diện - đơn giản, không lòe loẹt, không nhợt
+  nhạt"; ảnh trước / sau bằng `ket_qua_kiem_tra/thu_that/chup_giao_dien.py`). Nguyên tắc: MỘT kiểu cho một loại thành phần, KHÔNG cắt
+  chữ, bớt điểm nhấn thừa.
+  - Màn hình chào: dải hero (HeroChao) đã làm rồi BỎ theo yêu cầu người dùng (cùng ngày) - giữ tiêu đề + `lb_chao` căn giữa như cũ;
+    ĐỪNG thêm lại. Giữ: `TheChao` rộng `RONG_THE_CHAO_TOI_THIEU` 168 - 210 (trước cố định 210: 1366 @125% 4 thẻ chồng nhau), cao cố định.
+  - Ô chọn: `_qss_o_chon` - ::drop-down trong suốt, chevron vẽ bằng QPainter `_anh_mui_ten` (PNG 1x / @2x ở %TEMP%\pabt_qss; đặt kiểu
+    ::drop-down thì Qt BỎ mũi tên gốc của Fusion - cần ảnh). Không tạo được ảnh thì giữ kiểu cũ.
+  - Thẻ số liệu (4 loại: TheSo, TheKpiGon, _The niêm yết, _TheKPI tiến độ): số MỘT màu `MAU_SO_THE` #0F172A, màu nhận diện chỉ ở vạch
+    trái / thanh tiến độ; tên thẻ chữ thường kiểu câu (`TIEU_DE_THE` tiến độ). Danh sách hộ: `TEN_THE_GON` (Đã lập PA, Đã bàn giao; tên
+    đủ ở chú thích), thẻ Tổng kinh phí co giãn 7 : 6. Niêm yết: chữ phụ chỉ tỷ lệ "75,0%" (câu đủ ở chú thích).
+  - Tiêu đề khung / mục chữ thường kiểu câu (sổ vận động, đối soát, "Các quyết định phê duyệt", mục I / II thẻ hồ sơ - test đọc
+    "(3 thửa)"); QGroupBox có "&" phải viết "&&" (lộ "_").
+  - Bảng: `giao_dien.giu_cot_gian(bang, cot, toi_thieu)` - cột Stretch không bị bóp dưới `RONG_GIAN_TOI_THIEU` 150 (chuyển Interactive,
+    cuộn ngang); chỉ tác động khi bảng ĐÃ HIỆN (lúc tạo vẫn Stretch). BangMuc (cột Vị trí / Tên), bảng thửa KhungHoSo (Nguồn gốc 220).
+    Cơ cấu kinh phí `tu_cao=False` (căn cứ pháp lý một dòng, đủ ở chú thích), cột số đo bằng `phong_so` đậm. Tiến độ cột mốc thu hồi
+    `chu_gon` (thoi_han.moc_thu_hoi_ho; file xuất `dong(day_du=True)` vẫn chữ đủ).
+  - Cửa sổ lập PA: thẻ "Thông tin hộ, thửa đất" trong QScrollArea `cuon_ho_so` (cửa sổ thấp cuộn, không ép bẹp ô nhập / bảng thửa);
+    dải lần PA: trạng thái là thẻ nhỏ không kèm số QĐ (đủ ở chú thích), chữ nút gọn "+ Lập PA bổ sung" / "Sửa lần…" / "Mở khóa…" /
+    "Xóa lần". Tổng quan: nút "Lập PA →" viền mảnh (không nền đặc).
+  - CHƯA làm (còn thấy trên ảnh): HopIn khung tùy chọn bên trái cuộn ngang ở 1536 @125%; bảng Quyết định dòng cao không đều; thẻ KPI
+    bảng tổng hợp tên dài vẫn rút "…"; tiêu đề bảng navy + vạch xanh 2 px giữ (quyết định 1.0.12).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.
@@ -2033,3 +2054,4 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 - Dự án ở `D:\APP AI PABT\PABT_PhanMem` (đường dẫn không dấu; trước 07/10/2026 là `D:\Thư mục mới\…` dạng NFD). File thật của người
   dùng (file dự án `.pabt` thật, `PABT_CHUAN_06-10-2026_QD42.xlsm` – dùng cho `PABT_EXCEL`) ở thư mục cha: chỉ đọc / thử trên bản sao.
 - Windows PowerShell 5.1; `.venv` dùng Python 3.14. `build/`, `dist/`, `bo_cai/` là sản phẩm dựng.
+- 1.0.15 (chưa tăng `__version__`, chưa commit) PHƯƠNG ÁN ĐIỀU CHỈNH (người dùng 22/10/2026): `pa_lan.loai` ('chinh' / 'bo_sung' / 'dieu_chinh') + `thay_the` (lần bị thay) thêm bằng `csdl.dam_bao_cot_pa_lan` (KHÔNG đổi PHIEN_BAN_CSDL). `lan_pa.tao_lan_dieu_chinh` chép lần gốc sang lần mới; `nghiep_vu.doc_phuong_an` / `doc_tat_ca_phuong_an` bỏ lần bị thay khỏi tổng hộ, `tinh_chenh_lech_lan` = QĐ điều chỉnh ghi CHÊNH LỆCH (`theo_doi.them_ho_theo_pa`). `BoSoan.lap_dieu_chinh` / `CuaSoLapPA.lap_dieu_chinh` (nút "+ Lập PA điều chỉnh"). Mẫu in tạo bằng mã (không file mẫu): `in_word.noi_dung_chi_tiet` chọn mẫu chi tiết / bổ sung / điều chỉnh (A đã duyệt, B đề nghị, C chênh lệch) theo `pa_lan.loai`; `bang_dieu_chinh.lap` bảng tổng hợp điều chỉnh A3 (`xuat_bo_ho_so(bang_dieu_chinh=True)`, ô `HopIn.o_bth_dc` chỉ hiện khi dự án có hộ điều chỉnh). Test `tests/test_dieu_chinh.py`.

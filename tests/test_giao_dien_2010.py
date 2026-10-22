@@ -179,7 +179,7 @@ class TestTienDo(_Co):
         self.assertEqual(k.kpi.the['tong_ho'].lb_so.text(), '6 hộ')
         self.assertEqual(k.kpi.the['phe_duyet'].lb_so.text(), '3 hộ (50,0%)')
         self.assertTrue(k.kpi.the['van_dong'].lb_so.text().startswith('1 hộ'))
-        self.assertIn('NGÀY', k.kpi.the['van_dong'].lb_td.text())
+        self.assertIn('ngày', k.kpi.the['van_dong'].lb_td.text())      # 22/10/2026: tên thẻ chữ thường kiểu câu
         self.assertIs(k.nut['Sổ nhật ký vận động…'], k.so_vd.b_mo)
         self.assertIs(k.tach_vd.widget(1), k.so_vd)
         i = next(r for r in range(k.bang.rowCount()) if k.bang.ma_dong(r) == self.ma[0])

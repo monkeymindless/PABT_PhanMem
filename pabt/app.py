@@ -1644,6 +1644,8 @@ class CuaSoChinh(QMainWindow):
               ('da_ct', 'Đã chi trả'), ('da_bg', 'Đã bàn giao mặt bằng'), ('tong', 'Tổng kinh phí')]
     # bấm thẻ: lọc danh sách hộ theo trạng thái (quan_ly.TRANG_THAI); '' = bỏ lọc trạng thái
     LOC_THE = {'so_ho': '', 'da_pa': 'co_pa', 'tong': '', 'da_pd': 'da_pd', 'da_ct': 'da_ct', 'da_bg': 'da_bg'}
+    # 22/10/2026 (nâng cấp giao diện): tên hiện trên thẻ gọn để 6 thẻ không cắt chữ ở 1366 - 1536 px; tên đủ ở chú thích
+    TEN_THE_GON = {'da_pa': 'Đã lập PA', 'da_bg': 'Đã bàn giao'}
 
     def _hien_ty_le(self, t: float):
         self.nut_ty_le['ty_le'].setText(f'{round(t * 100)}%')
@@ -1675,7 +1677,7 @@ class CuaSoChinh(QMainWindow):
             khung = TheSo()
             khung.setObjectName('the_so')
             khung.setCursor(Qt.CursorShape.PointingHandCursor)
-            khung.setToolTip('Bấm để xem tất cả hộ' if not self.LOC_THE[k] else f'Bấm để lọc danh sách hộ: {ten.lower()}')
+            khung.setToolTip(f'{ten} - ' + ('bấm để xem tất cả hộ' if not self.LOC_THE[k] else f'bấm để lọc danh sách hộ: {ten.lower()}'))
             khung.bam.connect(lambda k=k: self.bam_the_so(k))
             khung.setProperty('vai', 'the_so')
             khung.setProperty('the', k)
@@ -1686,7 +1688,7 @@ class CuaSoChinh(QMainWindow):
             o.setSpacing(0)
             o.setProperty('giu_khoang_cach', True)
             khung.setFixedHeight(self.CAO_THE_SO)
-            nhan = NhanRutGon(ten)                       # hẹp (màn hình 1366): rút "…", không ép cửa sổ rộng ra
+            nhan = NhanRutGon(self.TEN_THE_GON.get(k, ten))     # hẹp (màn hình 1366): rút "…", không ép cửa sổ rộng ra
             nhan.setProperty('vai', 'nhan_the')
             phu = QLabel('')                             # huy hiệu: tỷ lệ % số hộ (Tổng kinh phí: tổng ha)
             phu.setProperty('vai', 'huy_hieu_the')
@@ -1724,7 +1726,7 @@ class CuaSoChinh(QMainWindow):
             o.addLayout(hang)
             self.the_so[k], self.the_phu[k], self.the_khung[k] = so, phu, khung
             self.the_don_vi[k], self.the_dia_chinh[k] = don_vi, dc
-            h.addWidget(khung, 1)
+            h.addWidget(khung, 7 if k == 'tong' else 6)     # thẻ Tổng kinh phí (số tiền + huy hiệu ha) rộng hơn: không cắt tên
         return h
 
     def _cap_nhat_loc_the(self):
@@ -1911,7 +1913,7 @@ class CuaSoChinh(QMainWindow):
         from .giao_dien import OTimKiemThongMinh
         w = QWidget()
         lo = QVBoxLayout(w)
-        lo.setContentsMargins(40, 20, 40, 16)
+        lo.setContentsMargins(32, 20, 32, 16)
         lo.addStretch(1)
         tieu = QLabel('HỆ THỐNG QUẢN LÝ BỒI THƯỜNG & GPMB')
         tieu.setStyleSheet(f'QLabel {{ font-size: 20px; font-weight: 700; color: {TOKEN["chinh"]}; letter-spacing: 0.4px; }}')

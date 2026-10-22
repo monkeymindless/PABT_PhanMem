@@ -443,7 +443,7 @@ O_HO_SO_DINH_KEM = (2, 2)
 BI_DANH_O = {'ho_ten': ('lb_ten', 'o_ten'), 'so_cccd': ('lb_cccd', 'o_cccd'), 'ngay_cap': ('lb_ngay_cap', 'o_ngay_cap'),
              'dia_chi': ('lb_dia_chi', 'o_dia_chi'), 'dien_thoai': ('lb_sdt', 'o_sdt'), 'ghi_chu': ('lb_ghi_chu', 'o_ghi_chu'),
              'phap_ly': ('lb_tinh_trang', 'o_phap_ly')}
-GOI_Y_SAO_CHEP = 'Nhấp 1 lần chọn ô · Ctrl+C sao chép'
+GOI_Y_SAO_CHEP = 'Ctrl+C: sao chép ô'
 # mẫu câu nguồn gốc đất (HopNguonGoc - chèn tại con trỏ; '…' là chỗ điền). Không ghi số liệu thật.
 MAU_CAU_NGUON_GOC = (
     ('Mở đầu thửa', 'Thửa đất số …, tờ bản đồ số …, xã …: '),
@@ -527,7 +527,7 @@ class KhungHoSo(QWidget):
         lo.setSpacing(6)
         h = QHBoxLayout()
         h.setSpacing(6)
-        td = QLabel('I. ĐỊNH DANH CHỦ SỬ DỤNG ĐẤT / CHỦ SỞ HỮU TÀI SẢN')
+        td = QLabel('I. Chủ sử dụng đất, chủ sở hữu tài sản')
         td.setProperty('vai', 'tieu_de')
         h.addWidget(td)
         h.addStretch(1)
@@ -612,15 +612,15 @@ class KhungHoSo(QWidget):
         self.b_thao_tac = QPushButton('Tách / Chuyển thửa')
         self.b_thao_tac.setMenu(menu)
         self.b_thao_tac.setToolTip('Tách thửa theo loại đất, xóa thửa, chuyển thửa sang hộ khác, gộp hộ, xóa hộ')
-        self.lb = QLabel('')
-        self.lb.setWordWrap(True)
+        from .giao_dien import NhanRutGon
+        self.lb = NhanRutGon('')                    # một dòng, rút "…" (chữ đủ ở chú thích) - trước: xuống dòng dựng đứng từng chữ
         h = QHBoxLayout()
         h.setSpacing(8)
         self.lb_tieu_de_thua = QLabel('')
         self.lb_tieu_de_thua.setProperty('vai', 'tieu_de')
         h.addWidget(self.lb_tieu_de_thua)
         h.addWidget(self.lb, 1)
-        self.the_goi_y_bang = _the_nho('Bấm đúp ô Nguồn gốc để xem / sửa đủ', 'lam')
+        self.the_goi_y_bang = _the_nho('Bấm đúp Nguồn gốc: xem / sửa đủ', 'lam')
         h.addWidget(self.the_goi_y_bang)
         h.addWidget(b_them)
         h.addWidget(self.b_thao_tac)
@@ -649,6 +649,8 @@ class KhungHoSo(QWidget):
         tieu.setSectionResizeMode(self.cot.index('nguon_goc'), QHeaderView.ResizeMode.Stretch)   # hết bề rộng còn lại
         for k in COT_AN:
             b.setColumnHidden(self.cot.index(k), True)
+        from .giao_dien import giu_cot_gian
+        self._giu_gian = giu_cot_gian(b, [self.cot.index('nguon_goc')], 220)   # 22/10/2026: không bóp nát cột Nguồn gốc
         from .giao_dien import cho_phep_sao_chep_bang, nhap_bang_phim
         from .loai_dat import ds_chon
         # loại đất: danh mục theo Luật Đất đai 2024, ký hiệu TT 08/2024 (gõ tay được loại ghép, vd ONT+CLN); hiện viên màu theo nhóm
@@ -853,7 +855,7 @@ class KhungHoSo(QWidget):
 
         def m2(v):
             return '—' if v is None else f'{so_vn(v)} m²'
-        self.lb_tieu_de_thua.setText(f'II. DANH SÁCH CÁC THỬA ĐẤT THU HỒI & NGUỒN GỐC SỬ DỤNG ĐẤT ({tt["so_thua"]} THỬA)')
+        self.lb_tieu_de_thua.setText(f'II. Thửa đất thu hồi & nguồn gốc ({tt["so_thua"]} thửa)')
         self.lb_tom_tat_thua.setText(
             f'<b>Tổng hợp địa chính hộ:</b> Tổng số thửa: <b>{tt["so_thua"]}</b> thửa  ·  Số tờ bản đồ: <b>{tt["so_to"]}</b> tờ  ·  '
             f'Tổng DT nguyên thửa: <b>{m2(tt["dt_nguyen_thua"])}</b>  ·  Tổng DT thu hồi: <b>{m2(tt["dt_thu_hoi"])}</b>  ·  '

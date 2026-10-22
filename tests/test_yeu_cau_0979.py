@@ -38,8 +38,10 @@ class TestTheChao(unittest.TestCase):
         self.assertEqual(giao_dien.KICH_THE_CHAO, (210, 135))
         for ten in TEN:
             the = self.w.the_chao[ten]
-            self.assertEqual((the.width(), the.height()), (210, 135))
-            self.assertEqual((the.minimumWidth(), the.maximumHeight()), (210, 135))          # kích thước cố định
+            # 22/10/2026 (dải hero): cao cố định 135, rộng 210 - co tới RONG_THE_CHAO_TOI_THIEU khi cửa sổ hẹp (không chồng nhau)
+            self.assertEqual(the.height(), 135)
+            self.assertTrue(giao_dien.RONG_THE_CHAO_TOI_THIEU <= the.width() <= 210)
+            self.assertEqual((the.maximumWidth(), the.minimumHeight(), the.maximumHeight()), (210, 135, 135))
             self.assertEqual(the.property('loai'), LOAI[ten])
             b = self.w.nut_chao[ten]
             self.assertIs(b.parentWidget(), the)                                             # nút (biểu tượng + tên) trong thẻ

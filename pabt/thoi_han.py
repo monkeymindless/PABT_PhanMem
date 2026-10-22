@@ -193,17 +193,21 @@ def nhom_dat_ho(ds_loai_dat: list) -> str:
 
 
 def moc_thu_hoi_ho(nhom: str, tb: date | None, n_nn: int, n_pnn: int, hom_nay: date) -> dict:
-    """Kiểm tra mốc cho một hộ: du True / False / None (chưa có ngày thông báo). chu: chữ hiển thị trong cột."""
+    """Kiểm tra mốc cho một hộ: du True / False / None (chưa có ngày thông báo). chu: chữ đầy đủ (chú thích, file xuất); chu_gon:
+    chữ ngắn trong ô bảng Tiến độ (22/10/2026 - câu dài làm mỗi dòng bảng cao 4 dòng chữ)."""
     yeu_cau = n_nn if nhom == 'nn' else n_pnn
     ten = 'đất nông nghiệp' if nhom == 'nn' else 'đất phi nông nghiệp' if nhom == 'pnn' else 'chưa rõ loại đất - tính như đất phi nông nghiệp'
     kq = dict(nhom=nhom, yeu_cau=yeu_cau, ngay_tb=tb, da_qua=None, du=None, con_lai=None)
     if tb is None:
         kq['chu'] = f'Chưa có ngày thông báo thu hồi đất (cần {yeu_cau} ngày - {ten})'
+        kq['chu_gon'] = 'Chưa có ngày TB'
         return kq
     da_qua = (hom_nay - tb).days
     kq.update(da_qua=da_qua, du=da_qua >= yeu_cau, con_lai=max(0, yeu_cau - da_qua))
     kq['chu'] = (f'Đủ mốc: đã thông báo {da_qua}/{yeu_cau} ngày ({ten})' if kq['du'] else
                  f'Chưa đủ mốc: mới {max(da_qua, 0)}/{yeu_cau} ngày, còn {kq["con_lai"]} ngày ({ten})')
+    kq['chu_gon'] = (f'Đủ mốc · {da_qua}/{yeu_cau} ngày' if kq['du'] else
+                     f'Chưa đủ mốc · {max(da_qua, 0)}/{yeu_cau} ngày')
     return kq
 
 

@@ -247,7 +247,7 @@ def them_ho_theo_pa(con, qd_id: int, ds_ma: list, lan: int | None = None) -> int
     lần lập phương án -> tiền của LẦN chưa duyệt sớm nhất (lần bổ sung không cộng lại tiền các lần đã có quyết định). lan: chọn rõ
     lần phương án được phê duyệt (hộ không có lần đó / lần đó đã có quyết định khác: bỏ qua hộ). Trả số hộ đã thêm."""
     from . import lan_pa
-    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_lan, tinh_pa
+    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_chenh_lech_lan, tinh_pa
     bc = BoiCanh.tu(con)
     pas = doc_tat_ca_phuong_an(con, list(ds_ma))
     nhieu = lan_pa.ho_nhieu_lan(con) if lan_pa.co_bang(con) else set()
@@ -262,12 +262,12 @@ def them_ho_theo_pa(con, qd_id: int, ds_ma: list, lan: int | None = None) -> int
                 x = next((y for y in lan_pa.ds_lan(con, m) if y.lan == int(ln)), None)
                 if x is None or x.qd:
                     continue                            # hộ không có lần này / lần này đã có quyết định khác
-                ct = _chi_tiet_kq(tinh_lan(con, m, int(ln), bc))
+                ct = _chi_tiet_kq(tinh_chenh_lech_lan(con, m, int(ln), bc))
             elif m in nhieu or m in co_qd:
                 ln = lan_pa.lan_chua_duyet(con, m)
                 if ln is None:
                     continue                            # mọi lần đã có quyết định: không thêm trùng tiền
-                ct = _chi_tiet_kq(tinh_lan(con, m, ln, bc))
+                ct = _chi_tiet_kq(tinh_chenh_lech_lan(con, m, ln, bc))     # lần điều chỉnh: số tiền = chênh lệch so với QĐ cũ
             else:
                 ct = _chi_tiet_kq(tinh_pa(pas[m], bc)) if m in pas else chi_tiet_tu_phuong_an(con, m, bc)
             ghi_qd_ho(con, qd_id, m, ct, ghi_nhat_ky=False, lan=ln)

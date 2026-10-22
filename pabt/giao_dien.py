@@ -356,8 +356,7 @@ def _qss_the_so() -> str:
         border-radius: 4px; padding: 2px 10px; }
     QLabel#lb_bo_dem_excel:hover { background: #DCFCE7; }''' + ''.join(
         f'''
-    QWidget[vai="the_so"][the="{k}"] {{ border-left-color: {m}; }}
-    QWidget[vai="the_so"][the="{k}"] QLabel[vai="so_the"] {{ color: {m}; }}''' for k, m in MAU_THE_SO.items()) + f'''
+    QWidget[vai="the_so"][the="{k}"] {{ border-left-color: {m}; }}''' for k, m in MAU_THE_SO.items()) + f'''
     QWidget[vai="the_so"][dang_loc="1"] {{ background: #F0F6FF; border: 1px solid {c}; border-left: 4px solid {c}; }}
     QLabel[vai="huy_hieu_loc"] {{ background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 10px;
         color: #334155; font-size: 12px; }}
@@ -470,6 +469,61 @@ def _qss_day_du() -> str:
     """Bảng kiểu cả phần mềm: kiểu chung + biến thể nút KieuNut (đặt cuối). Mọi chỗ đặt / dựng lại bảng kiểu (phóng to, thu
     nhỏ) dùng hàm này - trước đây phong_to dựng lại thiếu phần biến thể."""
     return _qss() + _qss_kieu_nut()
+
+
+_MUI_TEN = {}
+
+
+def _anh_mui_ten(mau: str) -> str:
+    """Ảnh mũi tên xuống (chevron) cho ô chọn - đường dẫn dạng '/' dùng trong url() của QSS; '' nếu không tạo được. Vẽ một lần mỗi
+    phiên bằng QPainter (2 cỡ: tên@2x.png cho màn hình phóng to) vào thư mục tạm: đặt kiểu ::drop-down thì Qt bỏ mũi tên gốc của
+    Fusion (kèm vạch đen dày cạnh mũi tên - 22/10/2026 người dùng: giao diện tinh gọn)."""
+    if mau in _MUI_TEN:
+        return _MUI_TEN[mau]
+    duong = ''
+    try:
+        import tempfile
+        from pathlib import Path
+        from PySide6.QtCore import QPointF
+        from PySide6.QtGui import QPen, QPixmap, QPolygonF
+        if QApplication.instance() is None:
+            return ''
+        d = Path(tempfile.gettempdir()) / 'pabt_qss'
+        d.mkdir(parents=True, exist_ok=True)
+        ten = 'mui_ten_' + mau.lstrip('#')
+        if all((d / f'{ten}{h}.png').exists() for h in ('', '@2x')):
+            _MUI_TEN[mau] = str(d / f'{ten}.png').replace('\\', '/')    # đã vẽ ở lần chạy trước: bỏ qua (khởi động nhanh hơn)
+            return _MUI_TEN[mau]
+        for he_so, hau_to in ((1, ''), (2, '@2x')):
+            n = 12 * he_so
+            pm = QPixmap(n, n)
+            pm.fill(Qt.GlobalColor.transparent)
+            p = QPainter(pm)
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            p.setPen(QPen(QColor(mau), 1.6 * he_so, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+            p.drawPolyline(QPolygonF([QPointF(3 * he_so, 4.5 * he_so), QPointF(6 * he_so, 7.5 * he_so), QPointF(9 * he_so, 4.5 * he_so)]))
+            p.end()
+            f = d / f'{ten}{hau_to}.png'
+            pm.save(str(f), 'PNG')
+        duong = str(d / f'{ten}.png').replace('\\', '/')
+    except Exception:                                   # noqa: BLE001 - không tạo được ảnh: ô chọn giữ mũi tên gốc của Qt
+        duong = ''
+    _MUI_TEN[mau] = duong
+    return duong
+
+
+def _qss_o_chon() -> str:
+    """Ô chọn (QComboBox) tinh gọn: phần mũi tên trong suốt, không vạch ngăn, chevron slate (tắt: nhạt hơn)."""
+    thuong, tat = _anh_mui_ten('#64748B'), _anh_mui_ten('#CBD5E1')
+    if not thuong:
+        return ''
+    return f'''
+    QComboBox::drop-down {{ subcontrol-origin: padding; subcontrol-position: center right; width: 24px; border: 0;
+        background: transparent; }}
+    QComboBox::down-arrow {{ image: url({thuong}); width: 12px; height: 12px; }}
+    QComboBox::down-arrow:disabled {{ image: url({tat or thuong}); }}
+    QComboBox::down-arrow:on {{ top: 1px; }}
+    '''
 
 
 def _qss() -> str:
@@ -606,7 +660,7 @@ def _qss() -> str:
     QLabel[vai="nhan_ribbon"] {{ color: #4A6785; font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
         background: transparent; border: 0; }}
     QLabel[vai="dong_phu"] {{ color: #DCEBFA; font-size: 12px; }}
-    ''' + _qss_the_so() + QSS_HANG_NHAP + QSS_THE_TUY_CHON_IN + QSS_THE_GACH_CHAN + QSS_O_TIM_CHON + QSS_HO_SO_HO + QSS_LAP_PA_DAI + QSS_TONG_HOP_KP
+    ''' + _qss_o_chon() + _qss_the_so() + QSS_HANG_NHAP + QSS_THE_TUY_CHON_IN + QSS_THE_GACH_CHAN + QSS_O_TIM_CHON + QSS_HO_SO_HO + QSS_LAP_PA_DAI + QSS_TONG_HOP_KP
 
 
 _BIEU_TUONG = []
@@ -660,7 +714,7 @@ KY_HIEU = [
     (r'du an tren may chu', 0xE839), (r'mang ve lam offline', 0xE896), (r'dua len may chu', 0xE898),
     (r'^dang nhap', 0xE77B), (r'du an moi', 0xE710), (r'^mo du an|^mo du toan', 0xE8E5), (r'luu du an thanh', 0xE792), (r'^(luu|save)', 0xE74E),
     (r'^thuc hien', 0xE768),
-    (r'nhap file excel|^nhap tu|^tu file|^tu danh sach|^tu du an', 0xE8B5), (r'thong tin du an|gioi thieu', 0xE946),
+    (r'nhap file excel|nhap phuong an chi tiet|^nhap tu|^tu file|^tu danh sach|^tu du an', 0xE8B5), (r'thong tin du an|gioi thieu', 0xE946),
     (r'^ho so ho', 0xE77B), (r'^them ho', 0xE8FA), (r'lap phuong an', 0xE70F), (r'kiem tra loi|kiem tra lai', 0xE9D5),
     (r'bo don gia|don gia boi thuong', 0xE8FD), (r'don gia rieng|don gia dac biet', 0xE8EC), (r'ra soat', 0xE721), (r'quy chuan|tinh mat do', 0xE8F1), (r'du toan', 0xE8EF),
     (r'^xuat danh sach', 0xEDE1), (r'^trang chu|^man hinh chinh', 0xE80F),
@@ -1019,6 +1073,9 @@ _THUA = _luoi_thua()
 _THUA_THU_HOI = 9                                       # thửa tô vàng nét đứt: thửa đất thu hồi
 
 
+RONG_THE_CHAO_TOI_THIEU = 168                           # thẻ bắt đầu co tới đây khi cửa sổ hẹp (không chồng lên nhau)
+
+
 class BangToChuc(KhungCao):
     """Băng tiêu đề nền xanh đậm, họa tiết thửa đất địa chính mờ bên phải (một thửa viền vàng: đất thu hồi), vạch vàng chân băng."""
 
@@ -1098,11 +1155,12 @@ class NhanRutGon(QLabel):
 
 # ---------------------------------------------------------------- 1.0.03: thẻ KPI 2 tầng + dải cộng chân bảng (trang nhúng)
 CAO_THE_KPI_GON = 54
+MAU_SO_THE = '#0F172A'      # số trên mọi thẻ số liệu (22/10/2026): một màu; màu riêng của thẻ chỉ ở vạch trái / thanh tiến độ
 QSS_THE_KPI_GON = ('QFrame#the_kpi_gon {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid {m}; '
                    'border-radius: 6px; border-top-left-radius: 3px; border-bottom-left-radius: 3px; }}'
                    'QFrame#the_kpi_gon QLabel {{ background: transparent; border: 0; }}'
                    'QLabel#kpi_ten {{ color: #475569; font-size: 12px; font-weight: 600; }}'
-                   'QLabel#kpi_so {{ color: {m}; font-size: 16px; font-weight: 700; }}'
+                   'QLabel#kpi_so {{ color: ' + MAU_SO_THE + '; font-size: 16px; font-weight: 700; }}'
                    'QLabel#kpi_phu {{ color: #64748B; font-size: 12px; }}')
 CAO_DAI_CONG_BANG = 32
 QSS_DAI_CONG_BANG = ('QFrame#dai_cong_bang { background: #F1F5F9; border: 1px solid #DCE3EA; border-top: 2px solid #CBD5E1; '
@@ -1420,7 +1478,10 @@ class TheChao(QFrame):
             self.setProperty('loai', loai)
         self._loai = loai
         self._nut = None
-        self.setFixedSize(*KICH_THE_CHAO)
+        # 22/10/2026: rộng co được tới RONG_THE_CHAO_TOI_THIEU (cửa sổ hẹp 1366 @125%: 4 thẻ 210 px chồng lên nhau), cao cố định
+        self.setMinimumWidth(RONG_THE_CHAO_TOI_THIEU)
+        self.setMaximumWidth(KICH_THE_CHAO[0])
+        self.setFixedHeight(KICH_THE_CHAO[1])
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         do_bong(self, 22, 3, 42)
@@ -2025,6 +2086,58 @@ def san_tieu_de(b, rieng: dict | None = None) -> None:
         can = max(can, (rieng or {}).get(c, 0))
         if b.columnWidth(c) < can:
             b.setColumnWidth(c, can)
+
+
+RONG_GIAN_TOI_THIEU = 150       # cột giãn (Stretch) không bóp dưới mức này (22/10/2026 - cột "Vị trí" mục 1 từng còn ~40 px)
+
+
+class _GiuCotGian(QObject):
+    """Bảng có cột giãn: khi các cột cố định (đã nới theo chữ tiêu đề) chiếm gần hết bề rộng, Qt bóp cột giãn tới mức tối thiểu
+    của tiêu đề -> chữ nát. Thiếu chỗ thì cột giãn chuyển Interactive với bề rộng RONG_GIAN_TOI_THIEU (bảng cuộn ngang); đủ chỗ
+    thì lại Stretch."""
+
+    def __init__(self, bang, cot: list, toi_thieu: int):
+        super().__init__(bang)
+        self.bang, self.cot, self.toi_thieu = bang, list(cot), toi_thieu
+        self._dang = False
+        bang.viewport().installEventFilter(self)
+
+    def ap(self) -> None:
+        from PySide6.QtWidgets import QHeaderView
+        if self._dang or not self.cot or not self.bang.isVisible():
+            return                                      # chưa hiện: bề rộng chưa đúng - giữ Stretch, đo lại khi hiện / đổi cỡ
+        self._dang = True
+        try:
+            b, hd = self.bang, self.bang.horizontalHeader()
+            co_dinh = sum(b.columnWidth(c) for c in range(b.columnCount()) if c not in self.cot and not b.isColumnHidden(c))
+            # bề rộng nhìn thấy của bảng (không trừ thanh cuộn dọc - tránh dao động khi thanh cuộn hiện / ẩn)
+            con = b.width() - b.verticalHeader().width() - 2 * b.frameWidth() - co_dinh
+            du = con >= self.toi_thieu * len(self.cot) + 24
+            for c in self.cot:
+                mode = QHeaderView.ResizeMode.Stretch if du else QHeaderView.ResizeMode.Interactive
+                if hd.sectionResizeMode(c) != mode:
+                    hd.setSectionResizeMode(c, mode)
+                    if not du:
+                        b.setColumnWidth(c, self.toi_thieu)
+        finally:
+            self._dang = False
+
+    def eventFilter(self, o, e):
+        if e.type() == QEvent.Type.Resize:
+            self.ap()
+        return False
+
+
+def giu_cot_gian(bang, cot=None, toi_thieu: int = RONG_GIAN_TOI_THIEU):
+    """Gắn _GiuCotGian cho bảng: cot = các cột giãn (None: mọi cột đang Stretch). Trả bộ giữ (gọi .ap() sau khi đổi bề rộng cột)."""
+    from PySide6.QtWidgets import QHeaderView
+    hd = bang.horizontalHeader()
+    if cot is None:
+        cot = [c for c in range(bang.columnCount()) if hd.sectionResizeMode(c) == QHeaderView.ResizeMode.Stretch]
+    g = _GiuCotGian(bang, cot, toi_thieu)
+    g.ap()
+    return g
+
 
 class _VuaRongMenu(QObject):
     """Đo lại bề rộng menu trái khi hiện / đổi kiểu / đổi phông (phóng to): sizeHint của nút chỉ đúng sau khi áp QSS."""

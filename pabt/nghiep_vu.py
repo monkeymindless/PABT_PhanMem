@@ -316,11 +316,28 @@ def co_cot_lan(con) -> bool:
     return co
 
 
+def lan_bi_thay(con, ma_ho: int | None = None) -> dict:
+    """{ma_ho: {lần bị THAY THẾ bởi một lần điều chỉnh}} (pa_lan.thay_the > 0). Lần bị thay giữ nguyên dòng + quyết định (tra cứu,
+    in "phương án đã phê duyệt") nhưng KHÔNG cộng vào tổng của hộ - chỉ lần điều chỉnh tính."""
+    try:
+        if ma_ho is None:
+            ds = con.execute('SELECT ma_ho, thay_the FROM pa_lan WHERE thay_the > 0').fetchall()
+        else:
+            ds = con.execute('SELECT ma_ho, thay_the FROM pa_lan WHERE ma_ho = ? AND thay_the > 0', (ma_ho,)).fetchall()
+    except Exception:                                   # chưa có bảng / cột (file cũ, bộ đơn giá)
+        return {}
+    kq = {}
+    for r in ds:
+        kq.setdefault(r[0], set()).add(int(r[1]))
+    return kq
+
+
 def doc_phuong_an(con, ma_ho: int, lan: int | None = None, den_lan: int | None = None,
                   ngoai_lan: int | None = None) -> PhuongAn:
     """Phương án của hộ. Mặc định CỘNG DỒN mọi lần lập phương án (v17: lần đầu + các lần bổ sung - tổng của hộ, danh sách hộ, đối
     chiếu, kiểm tra lỗi). lan: chỉ dòng của lần đó (soạn / in / quyết định của một lần); den_lan: các lần <= den_lan (lũy kế);
-    ngoai_lan: mọi lần TRỪ lần đó (cộng dồn khi đang soạn một lần)."""
+    ngoai_lan: mọi lần TRỪ lần đó (cộng dồn khi đang soạn một lần). Lần đã bị lần ĐIỀU CHỈNH thay thế (lan_bi_thay) không được cộng
+    (trừ khi chọn đúng lan=)."""
     h = con.execute('SELECT * FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
     if h is None:
         raise KeyError(f'không có hộ mã {ma_ho}')
@@ -335,10 +352,13 @@ def doc_phuong_an(con, ma_ho: int, lan: int | None = None, den_lan: int | None =
             loc, ts = ' AND lan <> ?', (ma_ho, int(ngoai_lan))
     elif lan is not None and int(lan) != 1 or den_lan is not None and int(den_lan) < 1 or ngoai_lan == 1:
         return pa                                   # file chưa có cột lan: chỉ có lần 1
+    bo = set() if lan is not None else lan_bi_thay(con, ma_ho).get(ma_ho, set())
     for r in con.execute(f'SELECT * FROM ct_dat WHERE ma_ho = ?{loc} ORDER BY thu_tu, id', ts):
-        pa.dat.append(_dong_dat(r))
+        if not bo or r['lan'] not in bo:
+            pa.dat.append(_dong_dat(r))
     for r in con.execute(f'SELECT * FROM ct_khoan WHERE ma_ho = ?{loc} ORDER BY muc, thu_tu, id', ts):
-        pa.khoan[r['muc']].append(_dong_khoan(r))
+        if not bo or r['lan'] not in bo:
+            pa.khoan[r['muc']].append(_dong_khoan(r))
     return pa
 
 
@@ -375,6 +395,25 @@ def tinh_lan(con, ma_ho: int, lan: int, bc: BoiCanh | None = None) -> KetQuaHo:
     return _tinh_pa_lan(doc_phuong_an(con, ma_ho, lan=lan), doc_phuong_an(con, ma_ho, den_lan=lan - 1), bc)
 
 
+def tinh_chenh_lech_lan(con, ma_ho: int, lan: int, bc: BoiCanh | None = None) -> KetQuaHo:
+    """Kết quả của lần ĐIỀU CHỈNH tính theo CHÊNH LỆCH so với lần bị thay (từng mục: mới - cũ, có thể âm) - số tiền ghi vào quyết
+    định điều chỉnh (cộng quyết định cũ + quyết định điều chỉnh = tổng sau điều chỉnh). Lần không phải điều chỉnh: như tinh_lan."""
+    bc = bc or BoiCanh.tu(con)
+    moi = tinh_lan(con, ma_ho, lan, bc)
+    try:
+        r = con.execute('SELECT thay_the FROM pa_lan WHERE ma_ho = ? AND lan = ?', (ma_ho, lan)).fetchone()
+    except Exception:
+        r = None
+    cu_lan = int(r[0] or 0) if r else 0
+    if not cu_lan:
+        return moi
+    cu = tinh_lan(con, ma_ho, cu_lan, bc)
+    kq = KetQuaHo(ma_ho=moi.ma_ho, ho_ten=moi.ho_ten, dong=moi.dong, da_luu=moi.da_luu)
+    for m in kq.muc:
+        kq.muc[m] = moi.muc.get(m, KHONG) - cu.muc.get(m, KHONG)
+    return kq
+
+
 def doc_tat_ca_phuong_an(con, ds_ma_ho=None) -> dict:
     """{ma_ho: PhuongAn} theo thứ tự hộ (thu_tu, ma_ho) - 3 câu truy vấn cho cả dự án thay vì 3 câu mỗi hộ (3.000 hộ: 9.000 câu).
     Cùng thứ tự dòng như doc_phuong_an. ds_ma_ho: chỉ các hộ này (None = tất cả)."""
@@ -383,13 +422,15 @@ def doc_tat_ca_phuong_an(con, ds_ma_ho=None) -> dict:
     for h in con.execute('SELECT * FROM ho ORDER BY thu_tu, ma_ho'):
         if chon is None or h['ma_ho'] in chon:
             kq[h['ma_ho']] = PhuongAn(ho=_tao_ho(h))
+    bo = lan_bi_thay(con)
+    cot_lan = co_cot_lan(con)
     for r in con.execute('SELECT * FROM ct_dat ORDER BY ma_ho, thu_tu, id'):
         pa = kq.get(r['ma_ho'])
-        if pa is not None:
+        if pa is not None and not (bo and cot_lan and r['lan'] in bo.get(r['ma_ho'], ())):
             pa.dat.append(_dong_dat(r))
     for r in con.execute('SELECT * FROM ct_khoan ORDER BY ma_ho, muc, thu_tu, id'):
         pa = kq.get(r['ma_ho'])
-        if pa is not None:
+        if pa is not None and not (bo and cot_lan and r['lan'] in bo.get(r['ma_ho'], ())):
             pa.khoan[r['muc']].append(_dong_khoan(r))
     return kq
 

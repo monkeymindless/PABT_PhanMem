@@ -381,7 +381,8 @@ def lap_van_ban(con, loai: str, ds_ma_ho: list, thu_muc, dot=None) -> Path:
 def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True, bang_tong_hop: bool = True,
                   to_trinh: bool = False, pdf: bool = False, in_may: bool = False, so_ban: int = 1,
                   chia_thu_muc: bool = True, bao_tien_do=None, bao_excel=None, mau_ct=None, mau_bth=None,
-                  bao_cao_y_kien: bool = False, du_thao: bool | None = None, lan='moi_nhat', chi_tiet_word: bool = True) -> dict:
+                  bao_cao_y_kien: bool = False, du_thao: bool | None = None, lan='moi_nhat', chi_tiet_word: bool = True,
+                  bang_dieu_chinh: bool = False) -> dict:
     """Bộ hồ sơ trình: PA CHI TIET\\ (phương án chi tiết từng hộ) + PA TONG\\ (bảng tổng hợp có số / ngày phương án tổng, tờ
     trình / văn bản trình). pdf: kèm PDF (Excel / Word xuất); in_may: in ra máy in mặc định. Mỗi mẫu chọn riêng
     hoặc tất cả. Trả dict(excel, word, pdf, loi, thu_muc_ct, thu_muc_tong). bao_tien_do(i, n) / bao_excel(i, n): trả True = dừng.
@@ -400,7 +401,10 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
     tm_ct = thu_muc / THU_MUC_CT if chia_thu_muc else thu_muc
     tm_tong = thu_muc / THU_MUC_TONG if chia_thu_muc else thu_muc
     kq = dict(excel=[], word=[], pdf=[], loi=[], thu_muc_ct=tm_ct, thu_muc_tong=tm_tong)
-    so_viec = (len(ds_ma_ho) if chi_tiet else 0) + int(bang_tong_hop) + int(to_trinh) + int(bao_cao_y_kien)
+    if bang_dieu_chinh:                                 # chỉ khi trong các hộ chọn có hộ đã lập phương án điều chỉnh
+        from . import bang_dieu_chinh as bdc
+        bang_dieu_chinh = bool(bdc.ho_dieu_chinh(con, ds_ma_ho))
+    so_viec = (len(ds_ma_ho) if chi_tiet else 0) + int(bang_tong_hop) + int(to_trinh) + int(bao_cao_y_kien) + int(bang_dieu_chinh)
     da = 0
 
     def bao():
@@ -427,7 +431,7 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
             if bao():
                 kq['loi'].append(f'DA_DUNG\t\tĐã dừng theo yêu cầu sau {i}/{len(ds_ma_ho)} hộ (chưa xuất PDF / in)')
                 return kq
-    if bang_tong_hop or to_trinh or bao_cao_y_kien:
+    if bang_tong_hop or to_trinh or bao_cao_y_kien or bang_dieu_chinh:
         tm_tong.mkdir(parents=True, exist_ok=True)
     if bang_tong_hop:
         kq['excel'].append(in_an.lap_bang_tong_hop(con, tm_tong / 'BANG_TONG_HOP.xlsx', ds_ma_ho, mau_bth,
@@ -435,6 +439,11 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
                                                    ngay_pa_tong=getattr(dot, 'ngay_pa_tong', '') or '',
                                                    ky_hieu_so=getattr(dot, 'ky_hieu_so', '') or '', du_thao=du_thao, lan=lan,
                                                    bao_tien_do=(lambda i, n: bao_tien_do(da, so_viec)) if bao_tien_do else None))
+        bao()
+    if bang_dieu_chinh:
+        from . import bang_dieu_chinh as bdc
+        kq['excel'].append(bdc.lap(con, tm_tong / 'BANG_TONG_HOP_DIEU_CHINH.xlsx', ds_ma_ho, du_thao=du_thao,
+                                   so_pa=getattr(dot, 'so_pa_tong', '') or '', ngay_pa=getattr(dot, 'ngay_pa_tong', '') or ''))
         bao()
     if to_trinh:
         p = lap_van_ban(con, 'to_trinh', ds_ma_ho, tm_tong, dot)

@@ -293,14 +293,14 @@ class TestDaiTongHop(_Co):
         self.assertEqual(k.thanh_tom_tat_thua.objectName(), 'thanh_tom_tat_thua')
         self.assertEqual([t.text() for t in k.the_loai],
                          ['ONT (Đất ở): 80 m² (1 thửa)', 'LUK (Đất lúa): 300,5 m² (1 thửa)', 'CLN / HNK: 150 m² (1 thửa)'])
-        self.assertIn('(3 THỬA)', k.lb_tieu_de_thua.text())
+        self.assertIn('(3 thửa)', k.lb_tieu_de_thua.text())
         k.them_dong(dict(so_to='40', so_thua='1', loai_dat='SKC', dt_thu_hoi='10'))
         self.app.processEvents()
-        self.assertIn('(4 THỬA)', k.lb_tieu_de_thua.text())
+        self.assertIn('(4 thửa)', k.lb_tieu_de_thua.text())
         self.assertEqual(k.the_loai[-1].text(), 'Loại khác: 10 m² (1 thửa)')
         k.xoa_dong(0, xac_nhan=True)
         self.app.processEvents()
-        self.assertIn('(3 THỬA)', k.lb_tieu_de_thua.text())
+        self.assertIn('(3 thửa)', k.lb_tieu_de_thua.text())
 
     def test_cua_so_lap_pa_dung_khung_moi(self):
         from pabt.man_hinh import CuaSoLapPA

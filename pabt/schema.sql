@@ -257,6 +257,8 @@ CREATE TABLE IF NOT EXISTS pa_lan (
     trang_thai TEXT NOT NULL DEFAULT 'dang_lap',      -- dang_lap / da_phe_duyet
     khoa INTEGER NOT NULL DEFAULT 0,                  -- 1: chỉ xem (đã có quyết định)
     ghi_chu TEXT NOT NULL DEFAULT '',
+    loai TEXT NOT NULL DEFAULT 'bo_sung',             -- 1.0.15: chinh (lần đầu) / bo_sung / dieu_chinh (sửa sai lần đã duyệt)
+    thay_the INTEGER NOT NULL DEFAULT 0,              -- lần điều chỉnh: số lần bị thay thế (0 = không thay lần nào)
     UNIQUE (ma_ho, lan)
 );
 

@@ -62,7 +62,7 @@ QSS_THE_NY = ('QFrame[vai="the_ny"] {{ background: #FFFFFF; border: 1px solid #E
               'border-radius: 6px; border-top-left-radius: 3px; border-bottom-left-radius: 3px; }}'
               'QFrame[vai="the_ny"]:hover {{ background: #F8FAFC; border-color: {m}; }}'
               'QLabel#the_ny_tieu {{ color: #475569; font-size: 12px; font-weight: 600; border: 0; background: transparent; }}'
-              'QLabel#the_ny_so {{ color: {m}; font-size: 16px; font-weight: 700; border: 0; background: transparent; }}'
+              'QLabel#the_ny_so {{ color: #0F172A; font-size: 16px; font-weight: 700; border: 0; background: transparent; }}'
               'QLabel#the_ny_phu {{ color: #64748B; font-size: 12px; border: 0; background: transparent; }}')
 CAO_THE_NY = 54
 RONG_O_DOT = 300            # ô chọn đợt (chữ dài đủ ở chú thích)
@@ -102,7 +102,10 @@ class _The(QFrame):
 
     def dat(self, gia, phu):
         self.gia.setText(gia)
-        self.phu.setText(phu)
+        # 22/10/2026 (nâng cấp giao diện): trên thẻ chỉ tỷ lệ "75,0%" (chữ diễn giải dài bị cắt "75,0% đã đánh …") - câu đủ ở chú thích
+        import re
+        m = re.match(r'\s*(\d[\d.,]*\s*%)', phu or '')
+        self.phu.setText(m.group(1) if m else phu)
         self.setToolTip(f'{self.tieu.text()}: {gia}' + (f' - {phu}' if phu else ''))
 
     def mousePressEvent(self, e):

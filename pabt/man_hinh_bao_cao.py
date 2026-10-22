@@ -27,7 +27,7 @@ QFrame#the_kpi {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3
 QFrame#the_kpi:hover {{ background: #F8FAFC; border-color: #94A3B8; border-left-color: {m}; }}
 QFrame#the_kpi[dang_loc="1"] {{ background: #EFF6FF; border: 1px solid #0F294A; border-left: 3px solid {m}; }}
 QLabel#kpi_tieu_de {{ color: #475569; font-size: 11px; font-weight: 600; background: transparent; border: 0; }}
-QLabel#kpi_so {{ color: {m}; font-size: 16px; font-weight: 700; background: transparent; border: 0; }}
+QLabel#kpi_so {{ color: #0F172A; font-size: 16px; font-weight: 700; background: transparent; border: 0; }}
 QLabel#kpi_phu {{ color: #475569; font-size: 11px; background: transparent; border: 0; }}
 QProgressBar {{ background: #E2E8F0; border: 0; border-radius: 2px; }}
 '''
@@ -38,8 +38,9 @@ CAO_THE_KPI = 58                         # thẻ chỉ số (px): như thẻ s�
 MAU_THE = dict(tong_ho='#0F294A', phe_duyet='#0284C7', giai_ngan='#15803D', mat_bang='#0F766E', van_dong='#D97706',
                cuong_che='#B91C1C')
 NEN_MUC = {'gap': DO, 'cao': VANG, 'theo_doi': XAM}
-TIEU_DE_THE = dict(tong_ho='TỔNG SỐ HỘ DỰ ÁN', phe_duyet='ĐÃ PHÊ DUYỆT QĐ', giai_ngan='ĐÃ CHI TRẢ TIỀN',
-                   mat_bang='ĐÃ BÀN GIAO MB', van_dong='ĐANG VẬN ĐỘNG', cuong_che='ĐỦ ĐK CƯỠNG CHẾ (Đ89)')
+# 22/10/2026 (nâng cấp giao diện): tên thẻ chữ thường kiểu câu - cùng kiểu thẻ số liệu các trang khác (trước: chữ HOA)
+TIEU_DE_THE = dict(tong_ho='Tổng số hộ dự án', phe_duyet='Đã phê duyệt QĐ', giai_ngan='Đã chi trả tiền',
+                   mat_bang='Đã bàn giao MB', van_dong='Đang vận động', cuong_che='Đủ ĐK cưỡng chế (Đ89)')
 # bấm thẻ làm gì (chú thích) - KhungTienDo.bam_kpi làm đúng việc này
 GOI_Y_THE = dict(tong_ho='Bấm để xem tất cả hộ',
                  phe_duyet='Bấm để lọc các hộ đã có quyết định phê duyệt',
@@ -184,7 +185,7 @@ class DaiKPI(QWidget):
                                      f'{k}/{n} hộ đã bàn giao')
         else:
             self.the['mat_bang'].dat(KHONG_SO, None, 'Chưa có diện tích thu hồi', 'Các thửa chưa có diện tích thu hồi.')
-        self.the['van_dong'].lb_td.setText(f'ĐANG VẬN ĐỘNG ({so_ngay_van_dong} NGÀY)')
+        self.the['van_dong'].lb_td.setText(f'Đang vận động ({so_ngay_van_dong} ngày)')
         self.the['van_dong'].dat(_pt_chu(so_dang_vd, n), pt(so_dang_vd), f'Chưa quá hạn {so_ngay_van_dong} ngày',
                                  f'Hộ đang trong thời hạn vận động {so_ngay_van_dong} ngày kể từ buổi vận động đầu tiên')
         k = tq['so_ho_cuong_che']

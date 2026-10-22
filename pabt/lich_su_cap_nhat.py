@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.15', '22/10/2026', (
+        'Phương án ĐIỀU CHỈNH: sửa phương án đã lập / đã phê duyệt bị sai bằng nút "+ Lập PA điều chỉnh" trong cửa sổ lập phương án. '
+        'Lần gốc giữ nguyên để in; tổng của hộ tính theo lần điều chỉnh (không cộng đôi), quyết định điều chỉnh ghi số chênh lệch.',
+        'Bản in Word có ba mẫu nhúng sẵn trong phần mềm (chi tiết, bổ sung, điều chỉnh) tự chọn theo loại lần; mẫu điều chỉnh gồm '
+        'A. đã phê duyệt, B. đề nghị điều chỉnh, C. chênh lệch. Thêm bảng tổng hợp phương án điều chỉnh (A3, .xlsx) trong Xuất hồ sơ & Bản in.',
+    )),
     ('1.0.14', '22/10/2026', (
         'Phương án chi tiết từng hộ xuất bằng bản Word (.docx) theo Nghị định 30 ở MỌI nơi: xem trước F4 trong cửa sổ lập phương án, '
         'khung xem trước của Xuất hồ sơ & Bản in, xuất hồ sơ đợt, Dự án mới. Không còn bản Excel phương án chi tiết; PDF, in ra máy '
@@ -19,6 +25,12 @@ MUC = (
         '"PHƯƠNG ÁN CHI TIẾT" 15. Nguồn gốc đất giãn dòng đơn, các đoạn / gạch đầu dòng cách nhau 6 pt.',
         'Bản Word: mục III in tiếp ngay dưới mục II khi trang còn chỗ; khối chữ ký luôn đi liền dòng TỔNG CỘNG (không còn trang chỉ có '
         'chữ ký); quốc hiệu một dòng, trích yếu ngắt hai dòng đúng nghĩa, tên cơ quan dài ngắt hai dòng cân nhau.',
+        'Giao diện gọn và đồng nhất hơn: ô chọn có mũi tên mảnh (bỏ vạch đen); mọi thẻ số liệu dùng một kiểu (số cùng màu chữ chính, '
+        'màu nhận diện chỉ ở vạch trái); tên thẻ, tiêu đề khung viết thường; không còn chữ bị cắt trên thẻ số liệu, dải lần lập phương '
+        'án, cột Vị trí / Nguồn gốc.',
+        'Cửa sổ lập phương án: thẻ Thông tin hộ, thửa đất cuộn dọc khi màn hình thấp (không còn ép bẹp ô nhập và bảng thửa). Bảng cơ '
+        'cấu kinh phí mỗi khoản một dòng; bảng Tiến độ cột mốc thu hồi ghi gọn (đủ chữ khi rê chuột). Màn hình 1366: 4 thẻ bắt đầu '
+        'không còn chồng lên nhau.',
     )),
     ('1.0.13', '22/10/2026', (
         'Phương án chi tiết (bản Excel và bản Word): tiêu đề mục I theo chủ sử dụng - "I. Thông tin tổ chức" khi chủ sử dụng là tổ '

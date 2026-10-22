@@ -39,8 +39,9 @@ QFrame#the_phap_ly[muc="canh_bao"] { border-left-color: #D97706; background: #FF
 QFrame#the_phap_ly[muc="nguy"] { border-left-color: #B91C1C; background: #FEF2F2; }
 QFrame#the_phap_ly[muc="dat"] { border-left-color: #0F766E; }
 QLabel#tq_dong_ho { font-size: 12px; color: #0F172A; background: transparent; border: 0; }
-QPushButton#nut_lap_pa { background: #0F294A; color: #FFFFFF; border: 0; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
-QPushButton#nut_lap_pa:hover { background: #1E4E8C; }
+QPushButton#nut_lap_pa { background: transparent; color: #0F294A; border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 10px;
+    margin: 3px 6px; font-weight: 600; }
+QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #0F294A; }
 '''
 
 

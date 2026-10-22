@@ -357,6 +357,16 @@ class BoSoan:
         self.mo(self.ma_ho, lan)
         return lan
 
+    def lap_dieu_chinh(self, lan_goc: int | None = None, ten: str = '', ghi_chu: str = '') -> int:
+        """Lập phương án ĐIỀU CHỈNH (sửa phương án đã sai): chép lần `lan_goc` (mặc định lần đang mở) sang lần mới để sửa,
+        lần gốc giữ nguyên để in / đối chiếu và bị lần mới thay thế khi tính tổng; tiền quyết định = chênh lệch."""
+        if self.co_thay_doi:
+            raise LoiNhap('Lưu hoặc bỏ thay đổi của lần đang soạn trước khi lập phương án điều chỉnh.')
+        from . import lan_pa
+        lan = lan_pa.tao_lan_dieu_chinh(self.con, self.ma_ho, lan_goc or self.lan, ten, ghi_chu)
+        self.mo(self.ma_ho, lan)
+        return lan
+
     @property
     def ket_qua_cong_don(self):
         """Kết quả CỘNG DỒN mọi lần của hộ (lần đang soạn lấy số liệu chưa lưu)."""
@@ -871,8 +881,8 @@ class BoSoan:
         mo_lai=False: không đọc lại phương án vừa lưu (bộ soạn bỏ đi ngay - tự lập hàng loạt)."""
         if self.khoa:
             raise LoiNhap(f'Phương án lần {self.lan} đã có Quyết định phê duyệt và đã được khóa bảo vệ. Không thể chỉnh sửa trực '
-                          'tiếp (sửa sẽ làm sai quyết định đã ban hành).\nBổ sung tài sản / chính sách mới: bấm "+ Lập phương án bổ '
-                          'sung". Cần điều chỉnh lần này: "Mở khóa sửa…".')
+                          'tiếp (sửa sẽ làm sai quyết định đã ban hành).\nBổ sung tài sản / chính sách mới: bấm "+ Lập PA bổ '
+                          'sung". Cần điều chỉnh lần này: "Mở khóa…".')
         loi = self.loi_chan_luu()
         if loi:
             raise LoiNhap('Chưa lưu được:\n' + '\n'.join('- ' + x for x in loi))

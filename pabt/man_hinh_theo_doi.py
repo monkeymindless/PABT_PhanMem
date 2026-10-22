@@ -274,7 +274,7 @@ class KhungQuyetDinh(_Khung):
                                    'QListWidget::item:selected { background: #DCEBFA; color: #08345F; }')
         self.nut = {}
         cot_trai = QVBoxLayout()
-        nhan = QLabel('CÁC QUYẾT ĐỊNH PHÊ DUYỆT')
+        nhan = QLabel('Các quyết định phê duyệt')
         nhan.setProperty('vai', 'tieu_de')
         cot_trai.addWidget(nhan)
         cot_trai.addWidget(self.ds_qd_w, 1)
@@ -786,7 +786,9 @@ class KhungCoCau(_Khung):
         self.nut = {}
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
-        self.bang = BangAo(self.COT, can_phai=(2, 3, 4, 5, 6, 7), tu_cao=True)
+        # 22/10/2026 (nâng cấp giao diện): dòng một dòng chữ (tu_cao=False) - cột Căn cứ pháp lý xuống nhiều dòng làm mọi dòng cao
+        # 70-100 px dù cột này nằm khuất bên phải; chữ căn cứ đủ ở chú thích ô và file Excel xuất
+        self.bang = BangAo(self.COT, can_phai=(2, 3, 4, 5, 6, 7), tu_cao=False)
         for c, w in enumerate((44, 240, 50, 125, 130, 125, 120, self.RONG_TY_LE, 260)):
             self.bang.setColumnWidth(c, w)
         dau = self.bang.horizontalHeader()
@@ -840,6 +842,9 @@ class KhungCoCau(_Khung):
                 kieu.update({(r, c): dict(dam=True) for c in (0, 1, 3)})
             elif loai == 'nhom_con':                                         # dòng con tiền đất: chữ phụ
                 kieu.update({(r, c): dict(mau_chu=QColor('#475569')) for c in range(len(self.COT))})
+            c_cc = len(self.COT) - 1
+            if gt[c_cc]:                                                     # căn cứ pháp lý: một dòng, đủ chữ khi rê chuột
+                kieu[(r, c_cc)] = dict(kieu.get((r, c_cc), {}), goi_y=str(gt[c_cc]))
             kieu[(r, 0)] = dict(kieu.get((r, 0), {}), can_giua=True)
             c = self.C_CHENH
             if loai in ('nhom', 'cong') and co_qd and gt[c] is not None:     # có quyết định: lệch số phương án so với phê duyệt
@@ -851,6 +856,16 @@ class KhungCoCau(_Khung):
             f.setBold(True)
             rong = max(QFontMetrics(f).horizontalAdvance(str(gt[self.C_TEN])) for _, gt in dong) + 2 * LE_THE + 8
             self.bang.setColumnWidth(self.C_TEN, max(220, min(rong, 380)))
+            # 22/10/2026: cột số đo bằng PHÔNG SỐ ĐẬM đang vẽ (ResizeToContents đo phông thường -> "2.930.800.(" bị cắt)
+            from .giao_dien import phong_so
+            fm_so, fm_dau = QFontMetrics(phong_so(self.bang.font(), True)), QFontMetrics(f)
+            chu = [_chu(gt, tien=(3, 4, 5, 6)) for _, gt in dong]
+            dau = self.bang.horizontalHeader()
+            for c in range(2, 8):
+                rong = max(max(fm_so.horizontalAdvance(str(d[c] or '')) for d in chu),
+                           max(fm_dau.horizontalAdvance(t) for t in self.COT[c].split('\n'))) + 22
+                dau.setSectionResizeMode(c, QHeaderView.ResizeMode.Interactive)
+                self.bang.setColumnWidth(c, rong)
         if self.cc is None:
             self.lb.setText('')
             return
@@ -992,7 +1007,7 @@ class KhungAnToanVon(QFrame):
         lo.setContentsMargins(10, 8, 10, 8)
         lo.setSpacing(6)
         h = QHBoxLayout()
-        td = QLabel('ĐỐI SOÁT KHÁI TOÁN PRE-F/S & CẢNH BÁO AN TOÀN NGUỒN VỐN')
+        td = QLabel('Đối soát khái toán Pre-F/S & an toàn nguồn vốn')
         td.setProperty('vai', 'tieu_de')
         td.setWordWrap(True)
         h.addWidget(td, 1)
@@ -1551,7 +1566,8 @@ class KhungTienDo(_Khung):
             return kq
         return self._loc_nho((k, tuple(sorted(qd, key=str)), tuple(tk)), tim)
 
-    def dong(self) -> list:
+    def dong(self, day_du: bool = False) -> list:
+        """day_du: cột mốc thu hồi chữ đầy đủ (file xuất) - bảng dùng chữ gọn, chữ đủ ở chú thích."""
         qd_loc = self.qd_chon()
         kq = []
         for stt, x in enumerate(self.loc(), start=1):
@@ -1559,7 +1575,7 @@ class KhungTienDo(_Khung):
             nhan = [q for q in qd if q['da_chi_tra']]
             chua = [q for q in qd if not q['da_chi_tra']]
             kq.append((x, qd, [
-                stt, x.ma_ho, x.ho_ten, x.dia_chi, self.moc.get(x.ma_ho, {}).get('chu', '') if x.qd else '', self._vd(x)[1],
+                stt, x.ma_ho, x.ho_ten, x.dia_chi, self.moc.get(x.ma_ho, {}).get('chu' if day_du else 'chu_gon', '') if x.qd else '', self._vd(x)[1],
                 '\n'.join(f'{q["so_qd"]}' + (f' ({q["ngay_qd"]})' if q['ngay_qd'] else '') for q in qd),
                 sum((_so(q['so_tien']) for q in qd), KHONG) if qd else None,
                 sum((_so(q['chi_tra_so_tien']) or _so(q['so_tien']) for q in nhan), KHONG) if nhan else None,
@@ -1595,7 +1611,8 @@ class KhungTienDo(_Khung):
                                                   '\n'.join(q['chung_tu'] for q in qd if q['chung_tu']))
             if gt[self.C_MOC]:                            # mốc thu hồi đất: xanh đủ mốc, vàng chưa đủ, xám chưa có ngày thông báo
                 du = self.moc.get(x.ma_ho, {}).get('du')
-                kieu[(r, self.C_MOC)] = dict(nen=XAM if du is None else XANH if du else VANG)
+                kieu[(r, self.C_MOC)] = dict(nen=XAM if du is None else XANH if du else VANG,
+                                             goi_y=self.moc.get(x.ma_ho, {}).get('chu', ''))     # chữ đủ khi rê chuột
             if gt[self.C_HOAN_TAT]:
                 kieu[(r, self.C_HOAN_TAT)] = dict(nen=XANH, dam=True)
             if gt[self.C_SCAN]:
@@ -1750,7 +1767,7 @@ class KhungTienDo(_Khung):
         k = self.cb_loc.currentData()
         tieu = 'THEO DÕI TIẾN ĐỘ CHI TRẢ, BÀN GIAO MẶT BẰNG' + (f' - {self.TEN_LOC[k].upper()}' if k else '')
         return self._xuat(file, 'Lưu danh sách theo dõi tiến độ', 'TheoDoiTienDo.xlsx', lambda f: theo_doi.xuat_excel(
-            f, tieu, self.COT, [d for _, _, d in self.dong()], [5, 7, 24, 24, 40, 44, 22, 15, 15, 14, 28, 22, 16, 22, 22], None,
+            f, tieu, self.COT, [d for _, _, d in self.dong(day_du=True)], [5, 7, 24, 24, 40, 44, 22, 15, 15, 14, 28, 22, 16, 22, 22], None,
             self._ten_du_an()))
 
 
@@ -2165,7 +2182,7 @@ class KhungSoVanDong(QFrame):
         dau.setObjectName('dau_so_vd')
         h = QHBoxLayout(dau)
         h.setContentsMargins(10, 6, 10, 6)
-        td = QLabel('SỔ NHẬT KÝ VẬN ĐỘNG TUYÊN TRUYỀN (ĐIỀU 89 LĐĐ 2024)')
+        td = QLabel('Sổ nhật ký vận động (Điều 89 LĐĐ 2024)')
         td.setObjectName('tieu_de_so_vd')
         td.setWordWrap(True)
         h.addWidget(td, 1)
@@ -2181,7 +2198,7 @@ class KhungSoVanDong(QFrame):
         self.lb_ho.setObjectName('thong_tin_ho_vd')
         self.lb_ho.setWordWrap(True)
         lt.addWidget(self.lb_ho)
-        nhan = QLabel('LỊCH SỬ CÁC BUỔI VẬN ĐỘNG TRỰC TIẾP:')
+        nhan = QLabel('Lịch sử các buổi vận động trực tiếp')
         nhan.setProperty('vai', 'nhan')
         lt.addWidget(nhan)
         self.lb_buoi = QLabel('')

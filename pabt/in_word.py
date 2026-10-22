@@ -56,6 +56,7 @@ DU_RONG = 1.06                                          # chừa sai số ước
 LE_O = 40                                               # lề trái / phải trong ô bảng mục III (twip = 2 pt)
 DAI_CHO_TACH = 80                                       # dòng số liệu có tên / ghi chú dài hơn (ký tự): cho Word cắt đôi qua trang
 TIEU_DE_COT = ('STT', 'Tên tài sản', 'ĐVT', 'Số lượng', 'Đơn giá', 'Tỷ lệ (%)', 'Thành tiền (đồng)', 'Ghi chú')
+TIEU_DE_COT_BS = ('STT', 'Tên tài sản', 'ĐVT', 'Số lượng', 'Đơn giá bổ sung', 'Tỷ lệ (%)', 'Thành tiền (đồng)', 'Ghi chú')   # bổ sung / điều chỉnh
 
 
 def twip(mm: float) -> int:
@@ -86,14 +87,14 @@ def _p(*chay, can: str = 'both', truoc: int = 0, sau: int = 0, dau_dong: int = 0
 
 
 def _o(noi_dung: str, rong: int, nhap: int = 1, doc: str = 'center', dong_doc: str | None = None, vien: bool = True,
-       an_vien: tuple = ()) -> str:
+       an_vien: tuple = (), nen: str | None = None) -> str:
     """Ô bảng: noi_dung = các w:p; nhap = số cột gộp ngang (gridSpan); dong_doc 'restart' / 'continue' = gộp dọc (vMerge);
     vien=False ẩn cả bốn cạnh, an_vien = các cạnh ẩn ('top', 'left', 'bottom', 'right')."""
     an = ('top', 'left', 'bottom', 'right') if not vien else tuple(an_vien)
     pr = f'<w:tcW w:w="{rong}" w:type="dxa"/>' + (f'<w:gridSpan w:val="{nhap}"/>' if nhap > 1 else '') + \
         ('<w:vMerge w:val="restart"/>' if dong_doc == 'restart' else '<w:vMerge/>' if dong_doc == 'continue' else '') + \
         ('<w:tcBorders>' + ''.join(f'<w:{k} w:val="nil"/>' for k in an) + '</w:tcBorders>' if an else '') + \
-        f'<w:vAlign w:val="{doc}"/>'
+        (f'<w:shd w:val="clear" w:color="auto" w:fill="{nen}"/>' if nen else '') + f'<w:vAlign w:val="{doc}"/>'
     return f'<w:tc><w:tcPr>{pr}</w:tcPr>{noi_dung or _p()}</w:tc>'
 
 
@@ -216,6 +217,149 @@ def _ngay_chu(ngay: str, nam) -> str:
     return f'ngày ...... tháng ..... năm {nam}'
 
 
+MUC_TT = (1, 2, 3, 7, 4, 5)                             # thứ tự mục tóm tắt (7 = vật nuôi, in là mục 4; xem nghiep_vu.MUC_VN)
+TEN_MUC_NGAN = {1: 'đất', 2: 'nhà và công trình xây dựng', 3: 'cây trồng', 7: 'vật nuôi', 4: 'các chính sách hỗ trợ khác'}
+LA_MA = ('I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII')
+
+
+def _la_ma(n: int) -> str:
+    return LA_MA[n - 1] if 1 <= n <= len(LA_MA) else str(n)
+
+
+def _theo_muc(dong: list) -> dict:
+    """{mục: [dòng 'I' của mục]} từ danh sách dòng in_an.dong_chi_tiet (tách theo dòng đề mục 'H')."""
+    from . import nghiep_vu
+    ma = {str(nghiep_vu.so_muc(m)): m for m in (1, 2, 3, nghiep_vu.MUC_VN, 4)}
+    kq = {m: [] for m in ma.values()}
+    hien = None
+    for x in dong:
+        if x[0] == 'H':
+            hien = ma.get(str(x[1][0]))
+        elif x[0] == 'I' and hien is not None:
+            kq[hien].append(x)
+    return kq
+
+
+def _chu_ky(rows: list) -> tuple:
+    """Dấu vân tay các dòng (bỏ STT) - so sánh mục có thay đổi giữa phương án cũ và mới."""
+    return tuple(tuple(str(v) for v in (x[1][1:] + list(x[2:]))) for x in rows)
+
+
+def dong_dieu_chinh(con, ma_ho: int, bc, lan_dc, dong_moi: list, kq_moi, da: dict) -> tuple:
+    """Danh sách dòng bảng mục III của PHƯƠNG ÁN ĐIỀU CHỈNH (theo mẫu "Phương án điều chỉnh cây trồng của ông Nguyễn Tô"):
+      A. Phương án đã được phê duyệt tại QĐ … (lần bị thay): tổng + tóm tắt I-V
+      B. Phương án điều chỉnh = chênh lệch (mới - cũ); với mỗi mục có thay đổi: "I. <mục> đã được phê duyệt tại QĐ …" (dòng cũ) rồi
+         "II. Điều chỉnh về <mục>" (dòng mới)
+      C. Tổng giá trị sau điều chỉnh (A+B): tóm tắt I-V + TỔNG CỘNG; dòng tái định cư đánh số tiếp.
+    lan_dc: LanPA của lần điều chỉnh; dong_moi / kq_moi: dòng + kết quả của lần đó (in_an.dong_chi_tiet). Trả (dòng, nhãn dòng tái
+    định cư)."""
+    from . import in_an, lan_pa, nghiep_vu
+    bc = bc or in_an.BoiCanh.tu(con)
+    goc = lan_pa.lan_cua(con, ma_ho, lan_dc.thay_the)
+    pa_cu = nghiep_vu.doc_phuong_an(con, ma_ho, lan=goc.lan)
+    dong_cu, kq_cu = in_an.dong_chi_tiet(con, ma_ho, bc, pa_cu, nghiep_vu.doc_phuong_an(con, ma_ho, den_lan=goc.lan - 1))
+    qd = goc.qd[-1] if goc.qd else {}
+    so_qd = str(qd.get('so') or '').strip()
+    ngay_qd = str(qd.get('ngay') or '').strip()
+    cap = str(da.get('cap_dia_ban_thuong') or '').strip()
+    ten_db = str(da.get('ten_dia_ban') or '').strip()
+    co_quan = f'UBND {cap} {ten_db}'.replace('  ', ' ').strip() if (cap and ten_db) else ''
+    tai = ('Quyết định số ' + (so_qd or '……') + ' ngày ' + (ngay_qd or '……') + (f' của {co_quan}' if co_quan else ''))
+    cu, moi = _theo_muc(dong_cu), _theo_muc(dong_moi)
+    muc_ts = [m for m in MUC_TT if m != 7 or kq_cu.muc.get(7) or kq_moi.muc.get(7)]
+
+    def tom_tat(kq):
+        return [['S', [_la_ma(k), nghiep_vu.TEN_MUC[m], None, None, None, None, kq.muc.get(m, 0), None]]
+                for k, m in enumerate(muc_ts, start=1)]
+    out = [['G', ['A', 'PHƯƠNG ÁN ĐÃ ĐƯỢC PHÊ DUYỆT TẠI ' + tai.upper().replace('QUYẾT ĐỊNH SỐ', 'QUYẾT ĐỊNH SỐ'), None, None, None,
+                  None, kq_cu.tong, None]]]
+    out += tom_tat(kq_cu)
+    out.append(['G', ['B', 'PHƯƠNG ÁN ĐIỀU CHỈNH', None, None, None, None, kq_moi.tong - kq_cu.tong, None]])
+    n = 0
+    for m in (1, 2, 3, 7, 4):
+        if _chu_ky(cu[m]) == _chu_ky(moi[m]) and kq_cu.muc.get(m) == kq_moi.muc.get(m):
+            continue
+        ten = nghiep_vu.TEN_MUC[m]
+        n += 1
+        out.append(['G', [_la_ma(n), f'{ten} đã được phê duyệt tại {tai}', None, None, None, None, kq_cu.muc.get(m, 0), None], m])
+        out += [['I'] + x[1:] for x in cu[m]]
+        n += 1
+        out.append(['G', [_la_ma(n), f'Điều chỉnh về {TEN_MUC_NGAN[m]}', None, None, None, None, kq_moi.muc.get(m, 0), None], m])
+        out += [['I'] + x[1:] for x in moi[m]]
+    out.append(['G', ['C', 'TỔNG GIÁ TRỊ SAU ĐIỀU CHỈNH (A+B)', None, None, None, None, kq_moi.tong, None]])
+    out += tom_tat(kq_moi)
+    out.append(['T', [None, 'TỔNG CỘNG', None, None, None, None, kq_moi.tong, None]])
+    return out, _la_ma(len(muc_ts) + 1)
+
+
+def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
+    """Các dòng bảng mục III (w:tr) từ danh sách dòng của in_an.dong_chi_tiet (H / I / R / T) + G / S của phương án điều chỉnh."""
+    hang = []
+    # ghi chú mục 1 trùng nhau ở các dòng đất liền nhau: gộp dọc (như in_an.gop_ghi_chu_dat)
+    gop_gc = {}
+    i = 1 if dong and dong[0][0] == 'H' else 0
+    nhom = []
+    while i <= len(dong):
+        x = dong[i] if i < len(dong) else None
+        chu = (x[1][7] or '') if x is not None and x[0] == 'I' else None
+        if nhom and (chu is None or chu != dong[nhom[0]][1][7] or not chu):
+            if len(nhom) > 1:
+                gop_gc[nhom[0]] = 'restart'
+                for k in nhom[1:]:
+                    gop_gc[k] = 'continue'
+            nhom = []
+        if x is None or x[0] == 'H':
+            break
+        if chu:
+            nhom.append(i)
+        i += 1
+    muc_sl = muc_sl_dau
+    for i, x in enumerate(dong):
+        loai, gt = x[0], x[1]
+        cach_tinh = x[2] if len(x) > 2 else ''
+        if loai == 'H':
+            muc_sl = 2 if str(gt[0]) == str(so_muc_nha) else None
+        dam = loai in ('H', 'T')
+        if loai == 'G' and len(x) > 2 and isinstance(x[2], int):
+            muc_sl = 2 if x[2] == 2 else None           # tiêu đề khối của một mục: số lượng mục 2 (nhà) kiểu kế toán 2 chữ số lẻ
+        if loai in ('G', 'S'):
+            # 1.0.15 (mẫu phương án điều chỉnh): G = tiêu đề khối nền xám đậm (A / B / C / I / II…), S = dòng tổng hợp (I-V); tên gộp
+            # ô STT.. Tỷ lệ (cột 1-5)
+            nen = 'D9D9D9' if loai == 'G' else None
+            tong = _so(gt[6]) if gt[6] else '-'
+            hang.append(_hang([
+                _o(_p(_r(str(gt[0] or ''), dam=loai == 'G', co=CO_BANG), can='center', giu_sau=True), rong[0], nen=nen),
+                _o(_p(_r(gt[1] or '', dam=loai == 'G', co=CO_BANG), can='left', giu_sau=True), sum(rong[1:6]), nhap=5, nen=nen),
+                _o(_p(_r(tong, dam=loai == 'G', co=CO_BANG), can='right', giu_sau=True), rong[6], nen=nen),
+                _o(_p(_r(gt[7] or '', co=CO_GHI_CHU), can='center') if gt[7] else _p(), rong[7], nen=nen)], khong_tach=True))
+            continue
+        if loai == 'T':
+            o = [_o(_p(_r(gt[1], dam=True, co=CO_BANG), can='center', giu_sau=True), sum(rong[:6]), nhap=6),
+                 _o(_p(_r(_so(gt[6]), dam=True, co=CO_BANG), can='right', giu_sau=True), rong[6]),
+                 _o(_p(giu_sau=True), rong[7])]
+            hang.append(_hang(o, khong_tach=True))
+            continue
+
+        giu = loai == 'R'                               # dòng ngay trước TỔNG CỘNG đi liền khối cuối (không để tổng + chữ ký trơ)
+
+        def oc(chu, k, can, dam_o=dam, co_o=CO_BANG):
+            return _o(_p(_r(chu, dam=dam_o, co=co_o), can=can, giu_sau=giu) if chu else _p(giu_sau=giu), rong[k])
+        o = [oc('' if gt[0] is None else str(gt[0]), 0, 'center'), oc(gt[1] or '', 1, 'left')]
+        if cach_tinh:
+            o.append(_o(_p(_r(cach_tinh, dam=dam, co=CO_BANG), can='center', giu_sau=giu), sum(rong[2:6]), nhap=4))
+        else:
+            o += [oc(gt[2] or '', 2, 'center'), oc(_so(gt[3], muc_sl, 'sl'), 3, 'right'), oc(_so(gt[4]), 4, 'right'),
+                  oc(_so(gt[5], loai='ty_le'), 5, 'center')]
+        o.append(oc(_so(gt[6]), 6, 'right', dam_o=dam or loai == 'R'))
+        gd = gop_gc.get(i)
+        o.append(_o(_p(_r(gt[7] or '', co=CO_GHI_CHU), can='center', giu_sau=giu) if gd != 'continue' and gt[7]
+                    else _p(giu_sau=giu), rong[7], dong_doc=gd))
+        # dòng ngắn (đề mục, tên / ghi chú vài dòng) không cắt đôi; dòng có chữ dài (ghi chú, tên thửa…) Word được cắt qua trang
+        dai = loai == 'I' and max(len(str(gt[1] or '')), len(str(gt[7] or '')), len(cach_tinh or '')) > DAI_CHO_TACH
+        hang.append(_hang(o, khong_tach=not dai))
+    return hang
+
+
 def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None) -> str:
     """XML thân văn bản (w:body không sectPr) phương án chi tiết một hộ."""
     from . import dia_phuong, in_an, nghiep_vu
@@ -228,12 +372,18 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
         if pa is None:
             pa = nghiep_vu.doc_phuong_an(con, ma_ho, lan=lan)
         pa_truoc = nghiep_vu.doc_phuong_an(con, ma_ho, den_lan=lan - 1)
-    dong, _ = in_an.dong_chi_tiet(con, ma_ho, bc, pa, pa_truoc)
+    dong, kq_lan = in_an.dong_chi_tiet(con, ma_ho, bc, pa, pa_truoc)
     ttho = in_an._thong_tin_ho(con, ma_ho, da)
+    from . import lan_pa
+    kieu = lan_pa.loai_lan(con, ma_ho, lan)             # 1.0.15: MẪU IN theo loại lần - chi tiết / bổ sung / điều chỉnh
+    x_lan = None
     if lan is not None and lan > 1:
-        from .lan_pa import lan_cua
-        x = lan_cua(con, ma_ho, lan)
-        ttho['so_pa'], ttho['ngay_pa'] = x.so_pa, x.ngay_pa
+        x_lan = lan_pa.lan_cua(con, ma_ho, lan)
+        ttho['so_pa'], ttho['ngay_pa'] = x_lan.so_pa, x_lan.ngay_pa
+    nhan_tdc = 'IV'
+    dieu_chinh = kieu == lan_pa.DIEU_CHINH and x_lan is not None and x_lan.la_dieu_chinh
+    if dieu_chinh:
+        dong, nhan_tdc = dong_dieu_chinh(con, ma_ho, bc, x_lan, dong, kq_lan, da)
     if du_thao:
         ttho['so_pa'], ttho['ngay_pa'] = '', ''
     w = rong_trang()
@@ -259,7 +409,8 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     t = [_bang([_hang([_o(trai, r1, doc='top', vien=False), _o(phai, r2, doc='top', vien=False)])], [r1, r2], vien=False,
                lui=twip(LAN_LE_DAU_MM[0]))]
     # ---- tên văn bản
-    ten = 'PHƯƠNG ÁN CHI TIẾT' + (f' BỔ SUNG (LẦN {lan})' if lan is not None and lan > 1 else '')
+    ten = ('PHƯƠNG ÁN ĐIỀU CHỈNH' if dieu_chinh else 'PHƯƠNG ÁN CHI TIẾT' +
+           (f' BỔ SUNG (LẦN {lan})' if lan is not None and lan > 1 else ''))
     t += [_p(_r(ten, dam=True, co=CO_TEN_LOAI), can='center', truoc=240, dong=240)]
     t += [_p(_r(x, dam=True, co=co), can='center', dong=240) for x in TRICH_YEU_DONG]
     t += [_p(_r(f'DỰ ÁN {str(da["du_an"] or "").upper()}', dam=True, co=co), can='center', sau=240, dong=240)]
@@ -290,60 +441,16 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
             t.append(_p(_r(doan, co=co), dong=DONG_DOAN, sau=SAU_DOAN, dau_dong=THUT_DAU))
     # ---- III. bảng tính toán: tiêu đề KHÔNG keepNext / pageBreakBefore (22/10/2026) - mục III in tiếp ngay dưới mục II ở cuối
     # trang 1 khi còn chỗ; dòng tiêu đề cột lặp ở đầu trang sau (w:tblHeader)
+    if dieu_chinh and str(x_lan.ghi_chu or '').strip():
+        t.append(_p(_r('Lý do điều chỉnh: ', dam=True, co=co), _r(' '.join(x_lan.ghi_chu.split()), co=co), dong=DONG_DOAN,
+                    sau=SAU_DOAN, dau_dong=THUT_DAU))
     t.append(_p(_r('III. Bảng tính toán bồi thường, hỗ trợ', dam=True, co=co), truoc=120, sau=60))
     rong = rong_cot(_chu_cac_cot(dong, nghiep_vu.so_muc(2)))
-    hang = [_hang([_o(_p(_r(x, dam=True, co=CO_BANG), can='center'), rong[i]) for i, x in enumerate(TIEU_DE_COT)], tieu_de=True)]
-    # ghi chú mục 1 trùng nhau ở các dòng đất liền nhau: gộp dọc (như in_an.gop_ghi_chu_dat)
-    gop_gc = {}
-    i = 1 if dong and dong[0][0] == 'H' else 0
-    nhom = []
-    while i <= len(dong):
-        x = dong[i] if i < len(dong) else None
-        chu = (x[1][7] or '') if x is not None and x[0] == 'I' else None
-        if nhom and (chu is None or chu != dong[nhom[0]][1][7] or not chu):
-            if len(nhom) > 1:
-                gop_gc[nhom[0]] = 'restart'
-                for k in nhom[1:]:
-                    gop_gc[k] = 'continue'
-            nhom = []
-        if x is None or x[0] == 'H':
-            break
-        if chu:
-            nhom.append(i)
-        i += 1
-    muc_sl = None
-    for i, x in enumerate(dong):
-        loai, gt = x[0], x[1]
-        cach_tinh = x[2] if len(x) > 2 else ''
-        if loai == 'H':
-            muc_sl = 2 if str(gt[0]) == str(nghiep_vu.so_muc(2)) else None
-        dam = loai in ('H', 'T')
-        if loai == 'T':
-            o = [_o(_p(_r(gt[1], dam=True, co=CO_BANG), can='center', giu_sau=True), sum(rong[:6]), nhap=6),
-                 _o(_p(_r(_so(gt[6]), dam=True, co=CO_BANG), can='right', giu_sau=True), rong[6]),
-                 _o(_p(giu_sau=True), rong[7])]
-            hang.append(_hang(o, khong_tach=True))
-            continue
-
-        giu = loai == 'R'                               # dòng ngay trước TỔNG CỘNG đi liền khối cuối (không để tổng + chữ ký trơ)
-
-        def oc(chu, k, can, dam_o=dam, co_o=CO_BANG):
-            return _o(_p(_r(chu, dam=dam_o, co=co_o), can=can, giu_sau=giu) if chu else _p(giu_sau=giu), rong[k])
-        o = [oc('' if gt[0] is None else str(gt[0]), 0, 'center'), oc(gt[1] or '', 1, 'left')]
-        if cach_tinh:
-            o.append(_o(_p(_r(cach_tinh, dam=dam, co=CO_BANG), can='center', giu_sau=giu), sum(rong[2:6]), nhap=4))
-        else:
-            o += [oc(gt[2] or '', 2, 'center'), oc(_so(gt[3], muc_sl, 'sl'), 3, 'right'), oc(_so(gt[4]), 4, 'right'),
-                  oc(_so(gt[5], loai='ty_le'), 5, 'center')]
-        o.append(oc(_so(gt[6]), 6, 'right', dam_o=dam or loai == 'R'))
-        gd = gop_gc.get(i)
-        o.append(_o(_p(_r(gt[7] or '', co=CO_GHI_CHU), can='center', giu_sau=giu) if gd != 'continue' and gt[7]
-                    else _p(giu_sau=giu), rong[7], dong_doc=gd))
-        # dòng ngắn (đề mục, tên / ghi chú vài dòng) không cắt đôi; dòng có chữ dài (ghi chú, tên thửa…) Word được cắt qua trang
-        dai = loai == 'I' and max(len(str(gt[1] or '')), len(str(gt[7] or '')), len(cach_tinh or '')) > DAI_CHO_TACH
-        hang.append(_hang(o, khong_tach=not dai))
+    tieu_de = tuple(TIEU_DE_COT_BS if kieu != lan_pa.CHINH else TIEU_DE_COT)
+    hang = [_hang([_o(_p(_r(x, dam=True, co=CO_BANG), can='center'), rong[i]) for i, x in enumerate(tieu_de)], tieu_de=True)]
+    hang += _hang_tu_dong(dong, rong, nghiep_vu.so_muc(2))
     # IV. tái định cư (dòng cuối bảng)
-    hang.append(_hang([_o(_p(_r('IV', dam=True, co=CO_BANG), can='center', giu_sau=True), rong[0]),
+    hang.append(_hang([_o(_p(_r(nhan_tdc, dam=True, co=CO_BANG), can='center', giu_sau=True), rong[0]),
                        _o(_p(_r(in_an.NHAN_TDC, dam=True, co=CO_BANG),
                              _r(' ' + str(ttho['tai_dinh_cu'] or '').strip(), co=CO_BANG), can='both', giu_sau=not du_thao),
                           sum(rong[1:]), nhap=7)], khong_tach=True))
@@ -371,9 +478,11 @@ def _chu_cac_cot(dong: list, so_muc_nha) -> dict:
         cach_tinh = x[2] if len(x) > 2 else ''
         if loai == 'H':
             muc_sl = 2 if str(gt[0]) == str(so_muc_nha) else None
-        dam = loai in ('H', 'T')
-        if loai == 'T':
-            chu.setdefault(6, []).append((_so(gt[6]), True))
+        dam = loai in ('H', 'T', 'G')
+        if loai == 'T' or loai in ('G', 'S'):
+            chu.setdefault(6, []).append((_so(gt[6]) if gt[6] else '-', True))
+            if loai != 'T' and gt[7]:
+                chu.setdefault(7, []).append((str(gt[7]), False))
             continue
         o = {0: '' if gt[0] is None else str(gt[0]), 1: gt[1] or '', 6: _so(gt[6]), 7: gt[7] or ''}
         if not cach_tinh:

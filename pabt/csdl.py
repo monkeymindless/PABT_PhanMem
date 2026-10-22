@@ -451,6 +451,12 @@ def _mo_tiep(con, tao: bool):
                 _tao_bang_phu(con)
         except sqlite3.OperationalError:                # file đang bị khóa: các hàm dùng bảng phụ tự tạo khi ghi
             pass
+    if not co_cot_pa_lan(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
+        try:
+            with con:
+                dam_bao_cot_pa_lan(con)
+        except sqlite3.OperationalError:                # chỉ xem / file khóa: lan_pa tự thêm khi ghi
+            pass
     if not co_cot_thua(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
         try:
             with con:
@@ -490,6 +496,26 @@ def dam_bao_cot_thua(con) -> bool:
         if k not in co:
             con.execute(f'ALTER TABLE thua ADD COLUMN {k} {kieu}')
     return co_cot_thua(con)
+
+
+# 1.0.15 (phương án ĐIỀU CHỈNH): pa_lan thêm loai / thay_the - KHÔNG đổi PHIEN_BAN_CSDL (như cột thua): file mới có sẵn (schema.sql),
+# file cũ thêm ở csdl.mo khi đã có hộ hoặc lúc ghi lần (lan_pa). Bản cũ mở file vẫn được (cột thừa).
+COT_PA_LAN_THEM = (('loai', "TEXT NOT NULL DEFAULT 'bo_sung'"), ('thay_the', 'INTEGER NOT NULL DEFAULT 0'))
+
+
+def co_cot_pa_lan(con) -> bool:
+    """pa_lan chưa có (bộ đơn giá, file cũ chưa nâng) hoặc đã có đủ cột COT_PA_LAN_THEM: True (không cần thêm)."""
+    co = {r[1] for r in con.execute('PRAGMA table_info(pa_lan)')}
+    return not co or all(k in co for k, _ in COT_PA_LAN_THEM)
+
+
+def dam_bao_cot_pa_lan(con) -> None:
+    """Thêm cột loai / thay_the cho pa_lan; lần 1 của mọi hộ là 'chinh'. Trong giao dịch của nơi gọi."""
+    co = {r[1] for r in con.execute('PRAGMA table_info(pa_lan)')}
+    for k, kieu in COT_PA_LAN_THEM:
+        if k not in co:
+            con.execute(f'ALTER TABLE pa_lan ADD COLUMN {k} {kieu}')
+    con.execute("UPDATE pa_lan SET loai = 'chinh' WHERE lan = 1 AND loai = 'bo_sung'")
 
 
 def _tao_pa_lan(con) -> None:
