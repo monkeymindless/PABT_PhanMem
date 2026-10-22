@@ -1080,13 +1080,13 @@ class KhungBangTongHop(_Khung):
         # 20/10/2026 (ảnh mẫu): 5 thẻ KPI - cộng bồi thường (100%), kinh phí tổ chức (QĐ 08/2025), hai phần phân bổ (hồ sơ địa phương,
         # mặc định 85% / 15%), tổng mức GPMB dự án. Tên thẻ phân bổ đặt lại ở _ve_kpi theo dia_phuong.phan_bo_kinh_phi()
         self.hang_kpi = HangKpi([
-            ('cong', 'Tổng bồi thường & hỗ trợ', '#2F5F9E', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
+            ('cong', 'Bồi thường, hỗ trợ', '#2F5F9E', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
                                                             'thưởng = gốc 100%'),
-            ('kinh_phi', 'KP tổ chức GPMB', '#1F76A6', 'Kinh phí tổ chức thực hiện bồi thường theo QĐ 08/2025/QĐ-UBND = '
+            ('kinh_phi', 'KP tổ chức', '#1F76A6', 'Kinh phí tổ chức thực hiện bồi thường theo QĐ 08/2025/QĐ-UBND = '
                                                        'tỷ lệ % của cộng bồi thường, hỗ trợ'),
             ('pb_0', 'Phần 85%', '#2F7D54'),
             ('pb_1', 'Phần 15%', '#C98A22'),
-            ('tong', 'Tổng mức GPMB dự án', '#5568B8')])
+            ('tong', 'Tổng mức GPMB', '#5568B8')])
         self.an_toan = KhungAnToanVon(self.doi_soat, self)
         self.an_toan.xem_chi_tiet.connect(lambda: self.mo_the(2))
         from PySide6.QtWidgets import QSplitter
@@ -1148,8 +1148,7 @@ class KhungBangTongHop(_Khung):
         # số tiền là thông tin chính: không đặt chữ phụ cùng hàng (5 thẻ ở màn hình 1366 cắt số) - giải thích ở chú thích thẻ
         k.dat('cong', f'{vn(c["cong"])} đ', '', f'Gốc 100% · {c["so_ho_da_lap"]} / {c["so_ho"]} hộ đã lập PA, '
                                                  f'{c["so_ho_phe_duyet"]} hộ có quyết định')
-        loai = 'tuyến' if c['loai_kp'] == 'tuyen' else 'cụm, vùng, khu'
-        k.the['kinh_phi'].lb_ten.setText(f'KP tổ chức GPMB ({tl}% - {loai})')
+        k.the['kinh_phi'].lb_ten.setText(f'KP tổ chức ({tl}%)')      # loại (tuyến / cụm, vùng, khu) ở chú thích thẻ
         k.dat('kinh_phi', f'{vn(c["kinh_phi"])} đ', '', f'{LOAI_KINH_PHI[c["loai_kp"]][0]} - '
                                                                                        f'{CAN_CU_KINH_PHI}')
         pb = [d for d in c['dong'] if d['loai'] == 'phan_bo']
@@ -1158,7 +1157,7 @@ class KhungBangTongHop(_Khung):
             if j < len(pb):
                 d = pb[j]
                 so = str(d['ty_le_phan_bo']).replace('.', ',')
-                k.the[khoa].lb_ten.setText(f'Phần {so}% cho {d["ten_phan_bo"]}')
+                k.the[khoa].lb_ten.setText(f'Phần {so}%')                     # đơn vị nhận ở chú thích thẻ
                 k.dat(khoa, f'{vn(d["tien_pa"])} đ', '', f'{d["ten"].strip(" -:")}\n{d["ghi_chu"]}')
             else:
                 k.dat(khoa, '—')

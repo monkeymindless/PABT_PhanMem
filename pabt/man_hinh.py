@@ -1574,13 +1574,22 @@ class CuaSoLapPA(QDialog):
         self.dai_lan.style().polish(self.dai_lan)
         self._ds_lan = ds
 
+    def _dat_chu_lan(self) -> None:
+        """Chữ tổng ở dải lần: bản gọn hiện trên dải, bản đầy đủ ở chú thích."""
+        self.lb_lan.setText(self._chu_lan())
+        ds = getattr(self, '_ds_lan', None) or self.bo.ds_lan()
+        co = [x for x in ds if x.so_dong or x.lan == self.bo.lan]
+        self.lb_lan.setToolTip(f'Tổng tiền lần này: {vn(self.bo.ket_qua.tong)} đ  |  TỔNG CỘNG DỒN CẢ HỘ ({len(co)} LẦN): '
+                               f'{vn(self.bo.ket_qua_cong_don.tong)} đ · đã phê duyệt {sum(1 for x in co if x.qd)}/{len(co)} lần')
+
     def _chu_lan(self) -> str:
         """Chữ tổng: "Tổng tiền lần này: X đ  |  TỔNG CỘNG DỒN CẢ HỘ (N LẦN): Y đ · đã phê duyệt k/N lần"."""
         ds = getattr(self, '_ds_lan', None) or self.bo.ds_lan()
         co = [x for x in ds if x.so_dong or x.lan == self.bo.lan]
         duyet = sum(1 for x in co if x.qd)
-        return (f'Tổng tiền lần này: {vn(self.bo.ket_qua.tong)} đ  |  TỔNG CỘNG DỒN CẢ HỘ ({len(co)} LẦN): '
-                f'{vn(self.bo.ket_qua_cong_don.tong)} đ · đã phê duyệt {duyet}/{len(co)} lần')
+        # 1.0.16: ngắn (dải lần ở cửa sổ 1366 chỉ còn ~240 điểm): số liệu đủ ở chú thích (NhanRutGon)
+        from .tien import vn_gon
+        return (f'Lần này {vn_gon(self.bo.ket_qua.tong)} · Cả hộ ({len(co)} lần) {vn_gon(self.bo.ket_qua_cong_don.tong)} · duyệt {duyet}/{len(co)}')
 
     def _ap_khoa(self) -> None:
         """Lần đang khóa: bảng mục chỉ xem, tắt ô / nút nhập; lần đang lập: như cũ."""
@@ -1681,7 +1690,7 @@ class CuaSoLapPA(QDialog):
             return False
         self.thay_doi_csdl = True
         self._nap_lan()
-        self.lb_lan.setText(self._chu_lan())
+        self._dat_chu_lan()
         return True
 
     def mo_khoa_lan(self, xac_nhan: bool | None = None, ly_do: str | None = None) -> bool:
@@ -1853,7 +1862,7 @@ class CuaSoLapPA(QDialog):
         self.b_luu.setEnabled((thay or self.ho_so.co_thay_doi() or chua_lap) and not (self.bo.khoa and not self.ho_so.co_thay_doi()))
         self.b_bo.setEnabled(thay)
         if hasattr(self, 'lb_lan'):
-            self.lb_lan.setText(self._chu_lan())
+            self._dat_chu_lan()
         lan = f'  ·  lần {self.bo.lan}' if self.cb_lan.count() > 1 else ''
         self.setWindowTitle(f'{"* " if thay else ""}Hồ sơ, phương án – hộ {h.ma_ho}: {h.ho_ten}{lan}  ·  {h.trang_thai}')
         if getattr(self, '_w_preview', None) is not None and self._w_preview.isVisible() and not self._dang_nap:

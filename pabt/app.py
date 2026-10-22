@@ -689,6 +689,8 @@ class CuaSoChinh(QMainWindow):
                          # 0.9.86: nhật ký kiểm toán (ai sửa, cũ -> mới) - menu Dữ liệu + chuột phải danh sách hộ (cùng QAction)
                          ('Nhật ký kiểm toán…', lambda: self.nhat_ky_kiem_toan()),
                          ('Cấu hình nghiệp vụ…', lambda: self.cau_hinh_nghiep_vu()),
+                         # 1.0.17 (nền tảng giao diện 2.0): mật độ bảng + tương phản cao - menu Cài đặt
+                         ('Giao diện…', lambda: self.giao_dien_tuy_chinh()),
                          # 0.9.87: bản đồ thửa đất (menu trái nhóm 4) + nhập bản vẽ CAD .dxf (menu Dữ liệu)
                          ('Bản đồ thửa đất', lambda: self.ban_do_thua()),
                          ('Nhập bản vẽ CAD (.dxf)…', lambda: self.nhap_ban_ve_cad()),
@@ -2376,7 +2378,7 @@ class CuaSoChinh(QMainWindow):
                         ('&Công cụ', ['Quản lý Mẫu in & Bản in…', 'Rà soát giá…', 'Cập nhật bảng giá đất…', None,
                                       'Phiếu kiểm đếm thực địa…', None,
                                       'Xuất gói mẫu in & cấu hình…', 'Nhập gói mẫu in & cấu hình…']),
-                        ('C&ài đặt', ['Cấu hình nghiệp vụ…', None, 'Kết nối máy chủ LAN…', None, 'Phóng to chữ', 'Thu nhỏ chữ',
+                        ('C&ài đặt', ['Cấu hình nghiệp vụ…', 'Giao diện…', None, 'Kết nối máy chủ LAN…', None, 'Phóng to chữ', 'Thu nhỏ chữ',
                                       'Cỡ chữ 100%']),
                         ('Trợ &giúp', ['Hướng dẫn sử dụng', 'Cập nhật phần mềm…', None, 'Chẩn đoán & sửa lỗi hệ thống…',
                                        None, 'Giới thiệu'])):
@@ -2488,6 +2490,14 @@ class CuaSoChinh(QMainWindow):
         d.setWindowModality(Qt.WindowModality.NonModal)
         if cho:
             d.show()
+        return d
+
+    def giao_dien_tuy_chinh(self, cho: bool = True):
+        """Cài đặt > Giao diện: mật độ bảng (áp ngay), tương phản cao (áp khi mở lại)."""
+        from .man_hinh_giao_dien import HopGiaoDien
+        d = HopGiaoDien(self)
+        if cho:
+            d.exec()
         return d
 
     def cau_hinh_nghiep_vu(self, cho: bool = True):

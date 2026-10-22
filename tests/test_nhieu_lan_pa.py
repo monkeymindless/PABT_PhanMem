@@ -279,7 +279,8 @@ class TestGiaoDien(_Co):
         self._them(c.bo, 2, 3)
         c.cap_nhat()
         self.assertTrue(c.luu())
-        self.assertIn('TỔNG CỘNG DỒN CẢ HỘ (2 LẦN)', c.lb_tong_cong_don.text())
+        self.assertIn('Cả hộ (2 lần)', c.lb_tong_cong_don.text())                              # chữ gọn trên dải (1.0.16)
+        self.assertIn('TỔNG CỘNG DỒN CẢ HỘ (2 LẦN)', c.lb_tong_cong_don.toolTip())               # câu đủ ở chú thích
         self.assertIn('ĐANG LẬP DỰ THẢO', c.lb_trang_thai_lan.text())
         self.assertEqual(c.bo.tinh_cong_don().tong, c.bo.ket_qua_cong_don.tong)
         self.assertTrue(c.chuyen_lan(1))   # tên trong đặc tả = chon_lan

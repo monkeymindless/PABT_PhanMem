@@ -305,9 +305,9 @@ class KhungDuThao(QWidget):
             'tong': _The('Tổng số hộ', MAU_THE_NY['tong'], lambda: None),
             'du': _The('Đủ điều kiện lập PA', MAU_THE_NY['du'], lambda: self.tabs.setCurrentIndex(0)),
             'vuong': _The('Vướng pháp lý', MAU_THE_NY['vuong'], lambda: self.tabs.setCurrentIndex(0)),
-            'dt': _The('Đã dự thảo (niêm yết)', MAU_THE_NY['dt'], lambda: self.tabs.setCurrentIndex(0)),
+            'dt': _The('Đã niêm yết', MAU_THE_NY['dt'], lambda: self.tabs.setCurrentIndex(0)),
             'pd': _The('Đã phê duyệt QĐ', MAU_THE_NY['pd'], self._mo_tien_do),
-            'bg': _The('Đã bàn giao mặt bằng', MAU_THE_NY['bg'], self._mo_tien_do),
+            'bg': _The('Đã bàn giao', MAU_THE_NY['bg'], self._mo_tien_do),
         }
         for t in self.the.values():
             hud.addWidget(t, 1)

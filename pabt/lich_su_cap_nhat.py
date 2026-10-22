@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.17', '23/10/2026', (
+        'Giao diện 2.0 - nền tảng: Cài đặt > Giao diện… chọn mật độ bảng Gọn / Chuẩn / Thoáng (áp ngay cho mọi bảng đang mở, '
+        'màn hình 1366 x 768 chọn Gọn thấy thêm ~4 dòng).',
+        'Hỗ trợ chế độ tương phản cao của Windows: phần mềm dùng bảng màu hệ thống thay cho màu riêng (Theo Windows / Luôn bật / Tắt, '
+        'đổi có hiệu lực khi mở lại). Chưa có giao diện nền tối.',
+    )),
     ('1.0.16', '22/10/2026', (
         'Bản in Word phương án chi tiết, bổ sung, điều chỉnh theo đúng khung sườn mẫu PA_01: lề trái 1,5 cm, phải / trên / dưới 1 cm; '
         'đầu văn bản thêm dòng "CHI NHÁNH …" (lấy từ Thông tin dự án) đậm, gạch chân; "Số: …" và "địa danh, ngày …" nằm cùng một '

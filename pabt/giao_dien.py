@@ -40,6 +40,7 @@ RONG_MENU_GON = 44
 RONG_MENU_TOI_DA = 248        # lệnh dài ("Bảng tổng hợp kinh phí" ~189 px ở 125%) nới menu tới mức này - không cắt chữ
 CAO_DONG_BANG = 30            # chiều cao dòng bảng dữ liệu (17/10/2026 Hybrid Enterprise Navy: 32 -> 30)
 CAO_TIEU_DE_BANG = 34         # hàng tiêu đề cột bảng (nền navy, chữ trắng)
+MAT_DO = ['chuan']            # 1.0.17: mật độ bảng đang dùng (chu_de.MAT_DO): gon / chuan / thoang - dat_mat_do()
 CHINH = TOKEN['chinh']       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
 # thẻ (QTabBar) cửa sổ con / trang nhúng (1.0.02): chưa chọn nền slate nhạt chữ slate; đang chọn nền trắng chữ navy + vạch trên navy.
 # PHÔNG THẺ (cỡ, độ đậm) khai ở mức QTabBar, KHÔNG trong ::tab: Qt5 đo bề rộng thẻ theo phông của thanh thẻ, phông trong ::tab chỉ dùng
@@ -465,6 +466,44 @@ def dat_the_nho(lb, loai: str) -> None:
 
 QSS_THE_TUY_CHON_IN = '''
     QWidget#the_tuy_chon_in { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }'''
+
+
+_CAO_DONG_MAC_DINH = {26, 30, 32}                          # (36 = bảng mục của CuaSoLapPA tự đặt - không đụng)                    # cỡ dòng mặc định của Qt / của các mật độ: bảng chưa chỉnh riêng thì theo mật độ
+
+
+def dat_mat_do(ten: str, ap_lai: bool = True, luu: bool = False) -> str:
+    """Đặt mật độ bảng (chu_de.MAT_DO: gon / chuan / thoang): cao dòng + hàng tiêu đề; ap_lai -> áp ngay cho bảng đang mở (bảng đã chỉnh
+    cỡ dòng riêng - chữ nhiều dòng, bảng nhập phương án - giữ nguyên) và dựng lại bảng kiểu. luu: nhớ cho lần mở sau."""
+    global CAO_DONG_BANG, CAO_TIEU_DE_BANG
+    from . import chu_de
+    ten = ten if ten in chu_de.MAT_DO else chu_de.MAC_DINH_MAT_DO
+    cu = CAO_DONG_BANG
+    MAT_DO[0] = ten
+    CAO_DONG_BANG, CAO_TIEU_DE_BANG = chu_de.cao_dong(ten), chu_de.cao_tieu_de(ten)
+    if luu:
+        chu_de.ghi(cai_dat_nho(), mat_do=ten)
+    app = QApplication.instance()
+    if ap_lai and app is not None:
+        for w in app.allWidgets():
+            if isinstance(w, QAbstractItemView) and hasattr(w, 'verticalHeader'):
+                vh = w.verticalHeader()
+                if vh.defaultSectionSize() in (cu, CAO_DONG_BANG):
+                    vh.setMinimumSectionSize(CAO_DONG_BANG - 4)
+                    vh.setDefaultSectionSize(CAO_DONG_BANG)
+        if not getattr(app, '_tuong_phan_cao', False):
+            app.setStyleSheet(_co_gian(_qss_day_du(), TY_LE[0]) if TY_LE[0] != 1 else _qss_day_du())
+    return ten
+
+
+def _qss_tuong_phan_cao() -> str:
+    """Windows tương phản cao: KHÔNG đặt màu (bảng màu hệ thống), chỉ kích thước / khoảng đệm / phông đậm tiêu đề để bố cục giữ nguyên."""
+    return f'''
+    QPushButton, QToolButton {{ padding: 4px 10px; }}
+    QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit {{ padding: 4px 8px; min-height: 20px; }}
+    QHeaderView::section {{ padding: 4px 8px; font-weight: 600; min-height: {CAO_TIEU_DE_BANG - 10}px; }}
+    QTabBar::tab {{ padding: 5px 14px; }}
+    QMenu::item {{ padding: 5px 24px 5px 12px; }}
+    '''
 
 
 def _qss_day_du() -> str:
@@ -2574,6 +2613,7 @@ class OTimChon(QWidget):
         self.nut = QToolButton()
         self.nut.setText('▼')
         self.nut.setToolTip('Xem cả danh sách')
+        self.nut.setAccessibleName('Xem cả danh sách')
         self.nut.setCursor(Qt.CursorShape.PointingHandCursor)
         # 1.0.03 (Ảnh 6): ô chữ + nút ▼ liền một khối như ô chọn - ô bo góc trái, nút bo góc phải, không khe; mũi tên mảnh MDL2
         self.setProperty('o_tim_chon', '1')
@@ -4155,8 +4195,8 @@ def ap_kieu_cay(obj: QWidget) -> None:
     for bang in obj.findChildren(QAbstractItemView):    # dòng bảng dữ liệu 32 px (đặc tả mục 3.3)
         cho_phep_sao_chep_bang(bang)                    # 1.0.04: nhấp một lần + Ctrl+C chép ô; menu chuột phải sao chép
         vh = getattr(bang, 'verticalHeader', None)
-        if vh is not None and vh().defaultSectionSize() < CAO_DONG_BANG:
-            vh().setDefaultSectionSize(CAO_DONG_BANG)
+        if vh is not None and (vh().defaultSectionSize() < CAO_DONG_BANG or vh().defaultSectionSize() in _CAO_DONG_MAC_DINH):
+            vh().setDefaultSectionSize(CAO_DONG_BANG)          # 1.0.17: bảng để cỡ mặc định (hoặc cỡ của một mật độ) theo mật độ đang dùng
     gian_cach(obj)
     if TY_LE[0] != 1:
         for w in [obj, *obj.findChildren(QWidget)]:
@@ -4272,8 +4312,16 @@ def ap_dung(app) -> None:
                       (QPalette.ColorRole.HighlightedText, '#FFFFFF'), (QPalette.ColorRole.ToolTipBase, '#FFFDE7'),
                       (QPalette.ColorRole.ToolTipText, '#1A1A1A')):
         p.setColor(vai_, QColor(mau))
-    app.setPalette(p)
-    app.setStyleSheet(_qss_day_du())
+    from . import chu_de
+    ct = chu_de.doc(cai_dat_nho())
+    dat_mat_do(ct['mat_do'], ap_lai=False)
+    app._tuong_phan_cao = chu_de.dang_tuong_phan_cao(ct['tuong_phan'])
+    if app._tuong_phan_cao:                              # Windows tương phản cao: bảng màu hệ thống, chỉ giữ kích thước / khoảng đệm
+        app.setPalette(app.style().standardPalette())
+        app.setStyleSheet(_qss_tuong_phan_cao())
+    else:
+        app.setPalette(p)
+        app.setStyleSheet(_qss_day_du())
     tr = QTranslator(app)
     if tr.load(QLocale('vi'), 'qtbase', '_', QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
         app.installTranslator(tr)
