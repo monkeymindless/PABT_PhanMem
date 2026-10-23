@@ -2090,6 +2090,11 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   (không Qt: mật độ bảng gon / chuan / thoang, tương phản cao theo Windows, `PABT_MAT_DO` / `PABT_TUONG_PHAN_CAO`) + `giao_dien.dat_mat_do`
   + `man_hinh_giao_dien.HopGiaoDien` (Cài đặt > Giao diện…). CHƯA có nền tối (màu còn viết cứng ở nhiều nơi). KHÔNG dùng `sed -i` (đổi
   CRLF sang LF) - đã lặp lại nhiều lần.
+  `pabt/openxml_word.py` (1.0.19): BỘ CÔNG CỤ dựng .docx bằng mã (chỉ thư viện chuẩn, Python 3.8): `chay` / `doan` / `doan_gach_ho` /
+  `bang` + `hang` + `o` (gộp ô) / `sect_pr` / `dien_cho_trong` (một lượt, thoát XML) / `goi_docx` / `luu` / `doc_than`, mẫu khung
+  `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
+  bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
+  Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.
