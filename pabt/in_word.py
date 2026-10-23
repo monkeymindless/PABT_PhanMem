@@ -475,6 +475,33 @@ def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
     return hang
 
 
+_RE_CHI_NHANH = re.compile(r'CHI NHÁNH\s+.+$')
+
+
+def dong_co_quan(da: dict) -> tuple[str, str]:
+    """(các dòng cơ quan chủ quản - tự xuống dòng, dòng 3 gạch chân) của bảng đầu văn bản (người dùng 23/10/2026: mất chữ "CHI NHÁNH
+    VĨNH CỬU"): dòng gạch chân phải là "CHI NHÁNH …". Ô tên đơn vị trên tiêu đề của dự án cũ có thể ghi tên thành phố ("Thành phố Đồng
+    Nai" - cách điền của file Excel cũ) hoặc trống: khi đó lấy phần "Chi nhánh …" của đơn vị lập, rồi của hồ sơ địa phương; chữ cũ
+    (không phải chi nhánh) vẫn giữ làm dòng thường nếu chưa có trong tên cơ quan chủ quản."""
+    cap = str(da['DON_VI_CAP_TREN_2DONG'] or '').strip()
+    tieu = ' '.join(str(da['DON_VI_TIEU_DE'] or '').upper().split())
+    if _RE_CHI_NHANH.match(tieu):
+        return cap, tieu
+    from .to_chuc import MAC_DINH
+    cn = None
+    for nguon in (str(da.get('DON_VI_LAP') or '').upper(), str(MAC_DINH.get('don_vi_tieu_de') or '').upper(),
+                  str(MAC_DINH.get('don_vi_lap') or '').upper()):
+        m = _RE_CHI_NHANH.search(' '.join(nguon.split()))
+        if m:
+            cn = m.group(0)
+            break
+    if not cn:
+        return cap, tieu
+    if tieu and tieu not in ' '.join(cap.upper().split()):
+        cap = (cap + '\n' if cap else '') + tieu
+    return cap, cn
+
+
 def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None) -> str:
     """XML thân văn bản (w:body không sectPr) phương án chi tiết một hộ."""
     from . import dia_phuong, in_an, nghiep_vu
@@ -508,12 +535,12 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     # cơ quan chủ quản 13 in hoa đứng (2 dòng); dòng 3 = cơ quan ban hành / chi nhánh 13 in hoa đậm GẠCH CHÂN đúng độ dài chữ
     # (PDF mẫu PA_01: "CHI NHÁNH VĨNH CỬU"; không còn dòng "____"); số, "(DỰ THẢO)" 13
     # đứng; quốc hiệu 13 in hoa đậm; tiêu ngữ 14 đậm, gạch dưới đúng độ dài chữ; địa danh / ngày 14 nghiêng (22/10/2026)
-    ten_cq = str(da['DON_VI_TIEU_DE'] or '').upper()
+    cap_tren, ten_cq = dong_co_quan(da)
     r1, r2 = rong_cot_dau()
     vua_trai = (r1 - 2 * 57) / 20                        # pt chữ trong cột cơ quan (trừ lề ô)
     do = _ham_do()
     trai = ''.join(_p(_r(d, co=CO_CO_QUAN), can='center')
-                   for x in (da['DON_VI_CAP_TREN_2DONG'] or '').split('\n') if x.strip()
+                   for x in cap_tren.split('\n') if x.strip()
                    for d in _ngat_can_bang(x.strip().upper(), vua_trai, CO_CO_QUAN)) + \
         ''.join(_p_gach(d, CO_CO_QUAN, True, r1 - 2 * 57, do) for d in _ngat_can_bang(ten_cq, vua_trai, CO_CO_QUAN, True))
     phai = _p(_r('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', dam=True, co=CO_QUOC_HIEU), can='center') + \

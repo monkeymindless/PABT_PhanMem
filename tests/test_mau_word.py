@@ -107,3 +107,23 @@ class TestKhongThuMucMau(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestDongCoQuan(unittest.TestCase):
+    """23/10/2026: dự án cũ ghi 'Thành phố Đồng Nai' ở ô tên đơn vị trên tiêu đề -> mất dòng gạch chân 'CHI NHÁNH …'."""
+
+    def test_o_tieu_de_la_ten_thanh_pho(self):
+        from pabt import in_word
+        cap, cn = in_word.dong_co_quan({'DON_VI_CAP_TREN_2DONG': 'TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT', 'DON_VI_TIEU_DE': 'THÀNH PHỐ ĐỒNG NAI',
+                                        'DON_VI_LAP': 'TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT CHI NHÁNH VĨNH CỬU'})
+        self.assertEqual(cn, 'CHI NHÁNH VĨNH CỬU')
+        self.assertEqual(cap.split('\n'), ['TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT', 'THÀNH PHỐ ĐỒNG NAI'])
+
+    def test_o_tieu_de_da_la_chi_nhanh_hoac_trung_voi_cap_tren(self):
+        from pabt import in_word
+        cap, cn = in_word.dong_co_quan({'DON_VI_CAP_TREN_2DONG': 'TRUNG TÂM\nTHÀNH PHỐ ĐỒNG NAI', 'DON_VI_TIEU_DE': 'CHI NHÁNH A', 'DON_VI_LAP': ''})
+        self.assertEqual((cap, cn), ('TRUNG TÂM\nTHÀNH PHỐ ĐỒNG NAI', 'CHI NHÁNH A'))
+        cap, cn = in_word.dong_co_quan({'DON_VI_CAP_TREN_2DONG': 'TRUNG TÂM\nTHÀNH PHỐ ĐỒNG NAI', 'DON_VI_TIEU_DE': 'THÀNH PHỐ ĐỒNG NAI',
+                                        'DON_VI_LAP': ''})
+        self.assertEqual(cn, 'CHI NHÁNH VĨNH CỬU')          # lấy từ hồ sơ địa phương
+        self.assertEqual(cap, 'TRUNG TÂM\nTHÀNH PHỐ ĐỒNG NAI')
