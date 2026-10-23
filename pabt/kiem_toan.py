@@ -17,6 +17,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
+from . import an_toan as _an_toan
 from . import csdl
 
 BANG = 'audit_logs'
@@ -316,4 +317,4 @@ def xuat_excel(ds: list, file_ra, ten_du_an: str = '') -> None:
     ws.page_setup.paperSize = 9
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
-    wb.save(file_ra)
+    _an_toan.luu_xlsx(wb, file_ra)

@@ -11,6 +11,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from . import an_toan as _an_toan
 from .lap_pa import bo_dau
 
 VAN_BAN = 'Nghị quyết 28/2025/NQ-HĐND ngày 10/12/2025 của HĐND tỉnh Đồng Nai (bảng giá đất áp dụng từ 01/01/2026)'
@@ -204,7 +205,7 @@ def xuat_excel(file_ra) -> Path:
             ws.column_dimensions[col].width = w
         ws.freeze_panes = 'C5'
     file_ra = Path(file_ra)
-    wb.save(file_ra)
+    _an_toan.luu_xlsx(wb, file_ra)
     return file_ra
 
 

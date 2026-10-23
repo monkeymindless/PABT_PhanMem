@@ -9,6 +9,7 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 
+from . import an_toan as _an_toan
 from . import csdl
 from .lap_pa import DanhMuc, bo_dau, ra_soat_gia
 from .nghiep_vu import (MA_ON_DINH, MA_THEO_NK, MUC_KHOAN, MUC_VN, BoiCanh, doc_phuong_an, doc_tat_ca_phuong_an, dong_bang_0,
@@ -467,4 +468,4 @@ def xuat_excel(ds: list, file_ra, ten_du_an: str = '') -> None:
         ws.column_dimensions[c].width = w
     ws.freeze_panes = 'A5'
     ws.auto_filter.ref = f'A4:F{4 + len(ds)}'
-    wb.save(file_ra)
+    _an_toan.luu_xlsx(wb, file_ra)

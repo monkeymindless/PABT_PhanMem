@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from . import an_toan as _an_toan
 from . import csdl
 from .lap_pa import LoiNhap, bo_dau
 from .nghiep_vu import muc_5_cot
@@ -709,6 +710,6 @@ def xuat_excel(file, tieu_de_bang: str, tieu_de: list, dong: list, rong: list | 
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     p = Path(file)
     p.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(p)
+    _an_toan.luu_xlsx(wb, p)
     return p
 

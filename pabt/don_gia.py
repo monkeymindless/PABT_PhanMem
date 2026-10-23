@@ -16,7 +16,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from . import csdl, nhap_excel
+from . import an_toan, csdl, nhap_excel
 from .lap_pa import LoiNhap
 
 TEN_FILE = 'bo_don_gia.sqlite'
@@ -224,7 +224,7 @@ def sao_luu_bo(dich) -> Path:
                 for r in cur:
                     ws.append(list(r))
             tam = dich.with_name(dich.name + '.tmp')
-            wb.save(tam)
+            an_toan.luu_xlsx(wb, tam)
             os.replace(tam, dich)
         finally:
             con.close()

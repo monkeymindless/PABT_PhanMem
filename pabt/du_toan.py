@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from . import an_toan as _an_toan
 from .lap_pa import DanhMuc, bo_dau
 from .tien import D, KHONG, chuoi, dinh_dang_so_luong, lam_tron, so_vn, tien_bang_chu, vn
 
@@ -342,7 +343,7 @@ def xuat_excel(dt: DuToan, file_ra) -> Path:
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     p = Path(file_ra)
     p.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(p)
+    _an_toan.luu_xlsx(wb, p)
     return p
 
 
@@ -471,7 +472,7 @@ def xuat_khai_toan(dt: DuToan, file_ra, pdf: bool = False) -> dict:
     ws.page_margins.left = ws.page_margins.right = 0.4
     p = Path(file_ra)
     p.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(p)
+    _an_toan.luu_xlsx(wb, p)
     kq = dict(excel=p, pdf=None, loi=[])
     if pdf:
         from .in_an import chay_excel

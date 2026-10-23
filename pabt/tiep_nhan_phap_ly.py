@@ -15,6 +15,7 @@ import json
 from datetime import date, datetime
 from pathlib import Path
 
+from . import an_toan as _an_toan
 from .tien import D, KHONG, so_vn
 
 DUOI = '.pabtpl'
@@ -529,7 +530,7 @@ def xuat_phieu_xlsx(d: dict, file) -> Path:
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     p = Path(file)
     p.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(p)
+    _an_toan.luu_xlsx(wb, p)
     return p
 
 

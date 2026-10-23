@@ -14,6 +14,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
+from . import an_toan as _an_toan
 from . import lan_pa, nghiep_vu
 from .tien import D, KHONG, lam_tron
 
@@ -340,7 +341,7 @@ def lap(con, file_ra, ds_ma_ho=None, du_thao: bool | None = None, so_pa: str = '
     file_ra = Path(file_ra)
     file_ra.parent.mkdir(parents=True, exist_ok=True)
     tam = file_ra.with_name(file_ra.name + '.tmp')
-    wb.save(tam)
+    _an_toan.luu_xlsx(wb, tam)
     tam.replace(file_ra)
     return file_ra
 

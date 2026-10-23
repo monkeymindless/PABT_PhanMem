@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from . import an_toan as _an_toan
 from . import csdl
 from .lap_pa import LoiNhap, bo_dau
 from .pdf_bang import loai_cot
@@ -1166,6 +1167,6 @@ def ghi_bao_cao_tong_hop(so_lieu: dict, file_ra, tieu_de: str = '', dieu_kien: s
         t2.column_dimensions[get_column_letter(c)].width = w
     p = Path(file_ra)
     p.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(p)
+    _an_toan.luu_xlsx(wb, p)
     return p
 

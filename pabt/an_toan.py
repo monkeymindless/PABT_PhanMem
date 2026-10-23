@@ -7,6 +7,7 @@ Tắt macro khi tự động hóa Word / Excel nằm ngay trong mã VBS (Automat
 Chỉ dùng thư viện chuẩn (chạy cả Python 3.8 bản Windows 7/8).
 """
 from __future__ import annotations
+import re
 import ssl
 import zipfile
 from pathlib import Path
@@ -14,6 +15,50 @@ from pathlib import Path
 
 class LoiAnToan(Exception):
     pass
+
+
+# ---------------------------------------------------------------- Excel xuất ra: chặn công thức do dữ liệu người dùng gõ (1.0.19)
+# Họ tên / địa chỉ / ghi chú bắt đầu bằng "=" mà ghi vào ô thì openpyxl lưu thành CÔNG THỨC (vd =HYPERLINK(...)). Phần mềm tự ghi
+# công thức chỉ gồm SUM / ROUND trên ô và số; mọi công thức khác trong file xuất ra bị ép về chữ (quotePrefix) ở MỘT cổng: luu_xlsx.
+CONG_THUC_CHO_PHEP = ('SUM', 'ROUND')
+_RE_O_THAM_CHIEU = re.compile(r'\$?[A-Z]{1,3}\$?\d+')
+_RE_KY_TU_CONG_THUC = re.compile(r'^[A-Z0-9$:.,%*+\-/() ]*$')
+
+
+def la_cong_thuc_an_toan(s) -> bool:
+    """Công thức chỉ gồm SUM / ROUND, tham chiếu ô, số và phép tính - đúng loại phần mềm tự ghi."""
+    s = str(s)
+    if not s.startswith('=') or len(s) > 200:
+        return False
+    than = s[1:].upper()
+    if not _RE_KY_TU_CONG_THUC.match(than):          # không có " ! | [ ] { } ; @ ' & < > _ hay chữ thường
+        return False
+    con_lai = _RE_O_THAM_CHIEU.sub('', than)
+    return all(t in CONG_THUC_CHO_PHEP for t in re.findall(r'[A-Z]+', con_lai))
+
+
+def khu_cong_thuc(wb) -> int:
+    """Ép mọi ô công thức KHÔNG an toàn của workbook thành chữ thường (không còn là công thức); trả số ô đã ép."""
+    so = 0
+    for ws in wb.worksheets:
+        for c in list(ws._cells.values()):
+            if c.data_type == 'f' and not la_cong_thuc_an_toan(c.value):
+                chu = str(c.value)
+                c.value = chu
+                c.data_type = 's'
+                try:
+                    c.quotePrefix = True
+                except (AttributeError, TypeError):
+                    pass
+                so += 1
+    return so
+
+
+def luu_xlsx(wb, duong_dan) -> int:
+    """Lưu workbook xuất ra cho người dùng: khu_cong_thuc rồi wb.save. MỌI file Excel xuất ra đi qua đây."""
+    so = khu_cong_thuc(wb)
+    wb.save(str(duong_dan))
+    return so
 
 
 # ---------------------------------------------------------------- dữ liệu cá nhân (Nghị định 13/2023/NĐ-CP)

@@ -30,6 +30,7 @@ from openpyxl.styles import Alignment
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.cell_range import CellRange, MultiCellRange
 
+from . import an_toan as _an_toan
 from . import nghiep_vu
 from .nghiep_vu import MA_ON_DINH, BoiCanh, doc_phuong_an, tinh_pa
 from .tien import D, KHONG, dinh_dang_so_luong
@@ -1140,14 +1141,14 @@ def can_khoi_ky(ws, tim_tren: int = 12) -> int:
     return so
 
 
+_RE_CHO_TRONG = re.compile(r'\{([^{}]+)\}')
+
+
 def _thay_cho_trong(ws, gia_tri: dict):
     """Thay {ten} trong mọi ô chữ của sheet."""
     for c in _o_chu(ws):
         if '{' in c.value:
-            s = c.value
-            for k, v in gia_tri.items():
-                s = s.replace('{' + k + '}', str(v))
-            c.value = s
+            c.value = _RE_CHO_TRONG.sub(lambda m: str(gia_tri[m.group(1)]) if m.group(1) in gia_tri else m.group(0), c.value)
 
 
 def _uoc_cao(text, rong_cot: float, co_chu: float, toi_thieu: float = 26) -> float:
@@ -2733,7 +2734,7 @@ def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh 
     file_ra = Path(file_ra)
     file_ra.parent.mkdir(parents=True, exist_ok=True)
     dk = _dat_duong_ke(ws, vt_dk, duong_ke)       # sát chân chữ, căn giữa từng dòng (tên đơn vị, tiêu ngữ, dự án)
-    wb.save(file_ra)
+    _an_toan.luu_xlsx(wb, file_ra)
     chen_duong_ke(file_ra, duong_ke, dk, bo_qua=' '.join(o_chu_so))    # đường kẻ (openpyxl không giữ hình vẽ) + bỏ cờ số dạng chữ
     return file_ra
 
@@ -4022,7 +4023,7 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
     # dự thảo: "(DỰ THẢO)" dưới đường kẻ tên đơn vị; chính thức: xóa. SAU đường kẻ (1.0.04): chữ mới dưới tên đơn vị không làm
     # đường kẻ neo nhầm vào nó
     ap_che_do_du_thao(ws, du_thao, TEN_BTH)
-    wb.save(file_ra)
+    _an_toan.luu_xlsx(wb, file_ra)
     chen_duong_ke(file_ra, duong_ke, dk)          # đường kẻ của mẫu (openpyxl không giữ hình vẽ)
     return file_ra
 

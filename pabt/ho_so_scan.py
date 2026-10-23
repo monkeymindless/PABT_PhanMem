@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from . import an_toan as _an_toan
 from . import csdl
 
 KHOP = 'ho_so_scan'
@@ -159,5 +160,5 @@ def xuat_excel_hoan_tat_ctbt(con, file_ra, ds=None, ten_du_an: str = '') -> int:
     ws.freeze_panes = 'A4'
     file_ra = Path(file_ra)
     file_ra.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(file_ra)
+    _an_toan.luu_xlsx(wb, file_ra)
     return n

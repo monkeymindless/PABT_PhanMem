@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from . import an_toan as _an_toan
 from .lap_pa import LoiNhap
 from .tien import vn
 
@@ -401,7 +402,7 @@ def _ghi_excel(file, sheets: list) -> 'Path':
             ws.append(list(r.values()))
         ws.freeze_panes = 'A4'
     p = Path(file)
-    wb.save(p)
+    _an_toan.luu_xlsx(wb, p)
     return p
 
 

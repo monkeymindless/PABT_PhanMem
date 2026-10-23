@@ -354,7 +354,8 @@ def dien_xlsx(mau, ra, chung: dict, ds_ho: list) -> Path:
                     o.value = _gia_tri_o(o.value, chung)
     ra = Path(ra)
     ra.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(ra)
+    from . import an_toan
+    an_toan.luu_xlsx(wb, ra)             # chữ người dùng gõ không thành công thức
     return ra
 
 

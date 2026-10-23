@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 
+from . import an_toan as _an_toan
 from . import nghiep_vu
 from .tien import D, dinh_dang_so_luong
 
@@ -237,4 +238,4 @@ def xuat_bao_cao(kq: KetQuaDoiChieu, duong_dan, ten_du_an: str = '', nguon: str 
                 ws4.cell(i, 10).fill = _DO
         if not ra_soat:
             ws4.cell(2, 1, 'Không có dòng áp giá tương đương, nhập tay hoặc đơn giá khác danh mục.')
-    wb.save(str(duong_dan))
+    _an_toan.luu_xlsx(wb, str(duong_dan))
