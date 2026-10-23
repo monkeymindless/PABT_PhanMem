@@ -39,8 +39,6 @@ def main() -> int:
             shutil.copytree(nguon, TAM / x, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
         else:
             shutil.copy2(nguon, TAM / x)
-    if os.environ.get('PABT_BAN_TRUNG_TINH') == '1':               # bản bán: hồ sơ địa phương trung tính (xem DUNG_BAN_TRUNG_TINH.bat)
-        shutil.copy2(GOC / 'pabt' / 'pabt_profile_trung_tinh.json', TAM / 'pabt' / 'pabt_profile.json')
     lenh = [str(PY38), '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir', '--windowed', '--name', 'PABT',
             '--distpath', str(TAM / 'dist'), '--workpath', str(TAM / 'build'), '--specpath', str(TAM),
             '--icon', str(TAM / 'pabt' / 'bieu_tuong.ico'), '--log-level', 'WARN',

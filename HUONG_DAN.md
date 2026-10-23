@@ -1,8 +1,8 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.26 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.27 – Bản Tiêu chuẩn · Sử dụng nội bộ)
 
-> **1.0.26**: **dùng cho đơn vị khác** - đổi **tên phần mềm** ở băng tiêu đề (Cài đặt → Cấu hình nghiệp vụ → Cơ quan → "Tên phần mềm"), đổi
-> **tên đơn vị** (cùng thẻ) hoặc nhập **gói .pabtcfg** do nhà cung cấp cấu hình sẵn. Bản bán cho đơn vị khác dựng bằng `DUNG_BAN_TRUNG_TINH.bat`
-> (hồ sơ địa phương trung tính: chưa có tên đơn vị / địa phương / căn cứ pháp lý nào; đơn vị tự điền).
+> **1.0.27**: **bản thương mại** - phần mềm không còn ghi sẵn tên cơ quan nào. Nhập tên tổ chức, cơ quan cấp trên, địa chỉ ở Cài đặt → Cấu hình
+> nghiệp vụ → Cơ quan (ô còn trống có chữ gợi ý mờ), hoặc nhập **gói .pabtcfg** do nhà cung cấp cấu hình sẵn; tên phần mềm ở dòng 1 băng tiêu đề
+> đổi được ở cùng thẻ. Căn cứ pháp lý, mốc thời hạn là chỗ trống nhắc điền. Cửa sổ cài đặt được thiết kế lại.
 >
 > **1.0.25**: đổi tên tổ chức trong Cấu hình nghiệp vụ → Cơ quan hiện ngay trên băng tiêu đề.
 >
@@ -496,8 +496,7 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
 
 - Đầu trang: tiêu đề cơ quan 2 dòng ("TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT / THÀNH PHỐ ĐỒNG NAI", "CHI NHÁNH VĨNH CỬU"), quốc hiệu, số
   phương án "Số: …/PA-TTPTQĐ.CNVC", chức vụ người ký "PHÓ GIÁM ĐỐC" — lấy từ **Thông tin dự án** (Đơn vị cấp trên, Tên đơn vị trên
-  tiêu đề bản in, Ký hiệu số phương án, Chức vụ người ký…); ô nào để trống thì dùng thông tin mặc định của Chi nhánh Vĩnh Cửu
-  (`pabt/to_chuc.py`).
+  tiêu đề bản in, Ký hiệu số phương án, Chức vụ người ký…); ô nào để trống thì dùng thông tin đơn vị khai ở Cài đặt → Cấu hình nghiệp vụ → Cơ quan.
 - Các đường kẻ ngang của mẫu cũ (dưới tên cơ quan, dưới "Độc lập - Tự do - Hạnh phúc", dưới tên dự án) được giữ: lưu ở
   `mau_in\IN_CHITIET.duong_ke.xml` và chèn vào từng file bản in; **Cập nhật mẫu in…** từ file Excel lấy lại cả đường kẻ.
 - Dòng 1.x (bồi thường đất): "Thửa đất số …, tờ bản đồ số …, loại đất …, xã (phường) … (Vị trí 1 / 2 / 3 / 4)"; thiếu thông tin
@@ -716,8 +715,8 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
 ## Giao diện và màu
 
 Đầu cửa sổ chính là **băng tiêu đề** (bo góc, đổ bóng): biểu tượng, dòng "PHẦN MỀM LẬP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ", tên đơn vị
-(**Trung tâm Phát triển quỹ đất Chi nhánh Vĩnh Cửu**), dòng trực thuộc và địa chỉ, cùng phiên bản đang chạy ở góc phải (sửa ở
-`pabt/to_chuc.py`; tên đơn vị, ký hiệu số phương án cũng được điền sẵn khi lập dự án mới). Màn hình Dự án mới có băng tổ chức tương tự.
+(tên đơn vị khai ở Cài đặt → Cấu hình nghiệp vụ → Cơ quan; để trống thì không hiện), dòng trực thuộc và địa chỉ, cùng phiên bản đang chạy ở góc phải
+(tên đơn vị, ký hiệu số phương án cũng được điền sẵn khi lập dự án mới). Màn hình Dự án mới có băng tổ chức tương tự.
 
 Dưới băng tiêu đề (từ 0.9.23): **thanh menu** Tệp tin / Dữ liệu / Công cụ / Trợ giúp (tạo, mở, lưu, đóng dự án; nhập dữ liệu;
 mẫu in, bộ đơn giá; hướng dẫn F1, cập nhật phần mềm, giới thiệu) và **menu bên trái** theo 16 bước của Mục IV QĐ 18/2026: nút

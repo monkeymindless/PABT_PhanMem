@@ -24,6 +24,14 @@ CO_QUAN = [('ten_phan_mem', 'Tên phần mềm (dòng 1 băng tiêu đề)'), ('
 BAN_IN_MAC_DINH = [('don_vi_cap_tren', 'Đơn vị cấp trên (bản in)'), ('don_vi_tieu_de', 'Tên đơn vị trên tiêu đề bản in'),
                    ('don_vi_lap', 'Đơn vị lập phương án'), ('ky_hieu_so', 'Ký hiệu số phương án'), ('chuc_vu_ky', 'Chức vụ người ký')]
 
+# chữ gợi ý (mờ) trong ô còn trống: hồ sơ mặc định không có tên đơn vị nào, người dùng tự nhập
+GOI_Y_CO_QUAN = {
+    'ten': 'Nhập tên tổ chức làm nhiệm vụ bồi thường', 'truc_thuoc': 'Nhập tên cơ quan cấp trên (nếu có)', 'dia_chi': 'Nhập địa chỉ đơn vị',
+    'vai_tro': 'Ví dụ: TỔ CHỨC LÀM NHIỆM VỤ BỒI THƯỜNG', 'ten_phan_mem': 'Để trống: dùng tên phần mềm mặc định',
+    'don_vi_cap_tren': 'Dòng cơ quan cấp trên trên tiêu đề bản in', 'don_vi_tieu_de': 'Dòng tên đơn vị (đậm) trên tiêu đề bản in',
+    'don_vi_lap': 'Tên đơn vị lập phương án (chữ ký, phần cuối)', 'ky_hieu_so': 'Ký hiệu số văn bản, ví dụ PA-TTPTQĐ', 'chuc_vu_ky': 'Chức vụ người ký',
+}
+
 
 def _so(x) -> str:
     """'2.5' -> '2,5' (hiện kiểu Việt Nam)."""
@@ -232,10 +240,12 @@ class HopCauHinhNghiepVu(QDialog):
         self.o_cq = {}
         for k, nhan in CO_QUAN:
             self.o_cq[k] = QLineEdit(cq[k])
+            self.o_cq[k].setPlaceholderText(GOI_Y_CO_QUAN.get(k, ''))
             f.addRow(f'{nhan}:', self.o_cq[k])
         self.o_bm = {}
         for k, nhan in BAN_IN_MAC_DINH:
             self.o_bm[k] = QLineEdit(cq['ban_in_mac_dinh'].get(k, ''))
+            self.o_bm[k].setPlaceholderText(GOI_Y_CO_QUAN.get(k, ''))
             f.addRow(f'{nhan}:', self.o_bm[k])
         return w
 

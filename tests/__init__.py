@@ -14,6 +14,14 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 if not os.environ.get('PABT_THU_MUC_MAY'):
     import tempfile
     os.environ['PABT_THU_MUC_MAY'] = tempfile.mkdtemp(prefix='pabt_test_may_')
+# hồ sơ mặc định đóng kèm phần mềm KHÔNG có tên đơn vị / địa phương nào (bản thương mại): phần lớn bài kiểm thử đã viết theo hồ sơ Đồng Nai -> trong
+# lượt kiểm thử, "hồ sơ đóng kèm" (dia_phuong.file_goc) trỏ tới ho_so_don_vi/pabt_profile_dong_nai_vinh_cuu.json. Bài kiểm hồ sơ mặc định thật
+# (test_yeu_cau_2413) đọc thẳng pabt/pabt_profile.json hoặc đặt file máy đầy đủ riêng.
+from pathlib import Path as _Path
+
+from pabt import dia_phuong as _dp
+_HO_SO_DONG_NAI = _Path(__file__).resolve().parents[1] / 'ho_so_don_vi' / 'pabt_profile_dong_nai_vinh_cuu.json'
+_dp.file_goc = lambda: _HO_SO_DONG_NAI
 try:
     from PySide6.QtWidgets import QApplication
 except ImportError:                                     # máy không có Qt: các bài giao diện tự bỏ qua

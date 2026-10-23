@@ -2103,6 +2103,25 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.27 BỎ TÊN CƠ QUAN KHỎI MẶC ĐỊNH + CỬA SỔ CÀI ĐẶT MỚI (người dùng 24/10/2026: "bỏ luôn tên cơ quan, chuẩn thị trường thương mại"):
+  - `pabt/pabt_profile.json` (hồ sơ địa phương MẶC ĐỊNH, đóng gói) nay TRUNG TÍNH: `co_quan.ten / truc_thuoc / dia_chi` và `ban_in_mac_dinh` (don_vi_cap_tren, don_vi_tieu_de,
+    don_vi_lap, ky_hieu_so) = '', `ban_in.dia_danh_ngay` = '', căn cứ pháp lý + `thoi_han.*.can_cu` là chỗ trống nhắc điền (số ngày, tỷ lệ kinh phí, Luật Đất đai 2024 giữ).
+    Hồ sơ Đồng Nai / Chi nhánh Vĩnh Cửu cũ -> `ho_so_don_vi/pabt_profile_dong_nai_vinh_cuu.json` (KHÔNG đóng gói; muốn dùng: chép thành %APPDATA%\PABT\pabt_profile.json
+    hoặc nhập qua Cấu hình nghiệp vụ). `tests/__init__.py` đặt `dia_phuong.file_goc` trỏ tới hồ sơ đó trong cả lượt kiểm thử (các bài cũ viết theo Đồng Nai); bài cần hồ sơ mặc định thật
+    (`test_yeu_cau_2413`) tự đặt thư mục máy riêng. ĐÃ GỠ cơ chế bản trung tính 1.0.26 (PABT_BAN_TRUNG_TINH, pabt_profile_trung_tinh.json, tao_ho_so_trung_tinh.py,
+    dung_ban_trung_tinh.py, DUNG_BAN_TRUNG_TINH.bat): bản mặc định chính là bản trung tính; DUNG_BO_CAI.bat dựng ra bản không tên đơn vị.
+  - `to_chuc.TAC_GIA` = "Thiết kế và phát triển bởi Phan Tuấn Vĩnh" (không kèm cơ quan); `to_chuc.dong_phu()` ghép dòng "Trực thuộc … • địa chỉ" chỉ từ phần có chữ
+    (giao_dien.bang_to_chuc / dat_to_chuc); ô Cơ quan ở `man_hinh_cau_hinh` có chữ gợi ý (`GOI_Y_CO_QUAN`, placeholderText). Xóa `man_hinh_quet_web.py` (+ 2 bài test).
+  - CỬA SỔ CÀI ĐẶT (`bo_cai_win/cai_dat.ps1`, phần "cửa sổ cài đặt" cuối file) viết lại: không còn dòng tên cơ quan ở banner; tiến trình tự khai DPI-aware
+    (`SetProcessDPIAware` qua Add-Type, `Px()` nhân kích thước theo DPI; GÁN `$script:E` - chạy qua scriptblock (CAI_DAT.cmd) thì `$E = …` thường chỉ ở phạm vi con, Px ra 0);
+    bố cục: banner (logo 72, tên, chip phiên bản / hệ điều hành) | thân (Vị trí cài đặt + dung lượng cần / ổ còn trống, Tùy chọn, thẻ trạng thái, tiến trình, dòng bảo vệ dữ liệu) |
+    chân (nút chính xanh `Chinh` #2F5F9E "Cài đặt" / "Nâng cấp lên <ver>" / "Mở LARC", nút phụ trắng "Hủy bỏ" / "Đóng", "Gỡ cài đặt…" là liên kết chữ đỏ, "Xem nhật ký cài đặt").
+    `DatThe(loai, tieu_de, noi_dung)` (loai: thong_tin / thanh_cong / luu_y / loi; biểu tượng vẽ GDI+ `HinhTrangThai`, không emoji) thay RichTextBox `$tt`; `BoCuc` đặt lại vị trí
+    / chiều cao (cao thẻ tối thiểu 3 dòng: cửa sổ không nhảy); Visible của control con trả False trước khi cửa sổ hiện -> dùng cờ `$script:HIEN_PB / HIEN_VC`. Tên hiển thị
+    cho người dùng là LARC (không "PABT"). Giữ nguyên tên biến `$bCai $bHuy $bChon $oThu $bXoa $cDesk $cLk $cVc` (test_bo_cai đọc chuỗi). Chụp ảnh để duyệt:
+    đặt `PABT_GOC` (thư mục có phien_ban.txt, ban.txt, PABT.ico, bieu_tuong.png) + `PABT_CHUP_CUA_SO=<file.png>` (+ `PABT_CHUP_TRANG_THAI=tien_do|xong|loi|lai`) rồi chạy
+    `powershell -STA -Command "& ([scriptblock]::Create([IO.File]::ReadAllText('...cai_dat.ps1',[Text.Encoding]::UTF8)))"` - cửa sổ tự lưu PNG rồi thoát. PowerShell 2.0
+    (Windows 7) chưa thử thật: chỉ dùng lệnh của PS 2.0 (test_bo_cai chặn lệnh PS 3+).
 - 1.0.27 RÚT GỌN BẢN DỰNG (người dùng 24/10/2026, báo cáo `ket_qua_kiem_tra/RaSoat_DungLuong_1.0.27.md`): bộ cài Universal 76,7 -> 72,5 MB (zip 112,9 -> 107,8), dist\PABT 121 -> 76 MB,
   dist\PABT_Win7 93 -> 53 MB sau rut_gon. `rut_gon.GIU_MODULE` (Qt6) bỏ Svg; `GIU_MODULE_QT5` = Core, Gui, Widgets, Network, Qml (bỏ Pdf - PySide2 không có QtPdf, Svg, PrintSupport);
   Qt5Network.dll / Qt6Network.dll GIỮ (Qt5Qml / QtPdf liên kết tới - bỏ thì `kiem_dll` báo thiếu), nhưng binding `QtNetwork.pyd` bỏ (`giu_pyd`). `GIU_PLUGIN` chỉ còn `platforms` (qwindows, qoffscreen) +
@@ -2128,7 +2147,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - Chưa tái hiện được file thật gây lỗi "TỔNG CẬP NHẬT: không có dòng hộ nào dưới tiêu đề (dòng 2)": đã xử lý các nguyên nhân có thể (công thức chưa tính,
     nhiều bảng / sheet, cột trống, dòng tiêu đề đứng một mình) và thông báo chẩn đoán chỉ rõ sheet / dòng / lý do; người dùng thử lại bằng "Chỉnh cột…".
   - Test đo bằng phông offscreen: ảnh scan giả lập dựng bằng Qt từ PDF tay (`pdf_tay.bang_pdf`), cần Tesseract đóng kèm (không có -> bỏ qua TestScan).
-- 1.0.26 BÁN CHO ĐƠN VỊ KHÁC (người dùng 24/10/2026): (1) `co_quan.ten_phan_mem` (hồ sơ; `to_chuc.TEN_PHAN_MEM`; dòng 1 băng tiêu đề `banner_ten.lb_ten`,
+- 1.0.26 BÁN CHO ĐƠN VỊ KHÁC (người dùng 24/10/2026; cơ chế bản trung tính dưới đây ĐÃ GỠ ở 1.0.27 - hồ sơ mặc định nay chính là hồ sơ trung tính): (1) `co_quan.ten_phan_mem` (hồ sơ; `to_chuc.TEN_PHAN_MEM`; dòng 1 băng tiêu đề `banner_ten.lb_ten`,
   `giao_dien.TEN_PHAN_MEM` chỉ còn là mặc định; ô ở Cấu hình nghiệp vụ > Cơ quan; `_lam_moi_don_vi` đặt lại chữ); `thong_bao.TEN_UD` "LARC" / tiêu đề cửa sổ / hộp thoại VẪN cố
   định trong mã. (2) Hồ sơ TRUNG TÍNH `pabt/pabt_profile_trung_tinh.json` do `tao_ho_so_trung_tinh.py` sinh từ pabt_profile.json (xóa tên cơ quan / cấp trên / địa chỉ / ký hiệu
   số / địa danh dòng ngày, thay căn cứ pháp lý Đồng Nai + `can_cu` mốc thời hạn bằng chỗ trống nhắc điền; GIỮ số ngày, tỷ lệ kinh phí, Luật Đất đai 2024) - test

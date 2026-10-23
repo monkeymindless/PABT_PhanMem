@@ -13,6 +13,10 @@ MUC = (
         'cột nào phần mềm có mà file không có thì bỏ qua. Ô xuống nhiều dòng, tiêu đề lặp lại ở trang sau, chữ ký cuối bảng được xử lý.',
         'Không nhận được cột: hộp "Chỉnh cột…" cho chọn cột nào là họ tên, tờ, thửa, diện tích… và cho biết đã bỏ những dòng nào; '
         'file chỉ có tờ, thửa (không có họ tên) vẫn nhập được thành hộ tạm.',
+        'Bản thương mại: phần mềm không còn ghi sẵn tên cơ quan nào (băng tiêu đề, bản in, Giới thiệu, cửa sổ cài đặt); nhập tên đơn vị ở Cài đặt > '
+        'Cấu hình nghiệp vụ > Cơ quan (ô còn trống có chữ gợi ý) hoặc ở Thông tin dự án.',
+        'Cửa sổ cài đặt thiết kế lại: banner gọn, thẻ trạng thái 4 loại, dung lượng cần / ổ còn trống, thanh tiến trình có phần trăm, Gỡ cài đặt thành '
+        'liên kết, nút Mở LARC sau khi cài, xem nhật ký; chữ sắc nét ở màn hình 125% / 150%.',
     )),
     ('1.0.26', '24/10/2026', (
         'Dùng cho nhiều đơn vị: tên phần mềm ở dòng 1 băng tiêu đề đổi được (Cài đặt > Cấu hình nghiệp vụ > Cơ quan > "Tên phần mềm"); có bản hồ sơ địa '

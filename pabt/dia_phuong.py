@@ -2,7 +2,7 @@
 phí tổ chức thực hiện (mức tối đa theo loại dự án, làm tròn, phân bổ 85 / 15), quy tắc bản in và vị trí cột của mẫu in - đưa ra một
 file JSON để dùng phần mềm ở địa phương khác (TP.HCM, Bình Dương, Long An…) mà không sửa mã nguồn.
 
-Nguồn: pabt/pabt_profile.json đóng kèm (mặc định Đồng Nai, đi theo gói .pabtcn) <- ghi đè bởi <thư mục máy>/pabt_profile.json
+Nguồn: pabt/pabt_profile.json đóng kèm (mặc định TRUNG TÍNH: không tên đơn vị / địa phương; hồ sơ Đồng Nai cũ ở ho_so_don_vi/, đi theo gói .larcud) <- ghi đè bởi <thư mục máy>/pabt_profile.json
 (%APPDATA%\\PABT; chỉ cần các mục khác mặc định - trộn sâu theo khóa; danh sách thay nguyên). File máy sai (JSON hỏng, thiếu / sai
 kiểu, tỷ lệ phân bổ không đủ 100%…) -> bỏ qua, dùng mặc định, lỗi ghi ở loi() để màn hình báo.
 

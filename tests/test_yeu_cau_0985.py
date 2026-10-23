@@ -229,7 +229,7 @@ class TestDongGoi(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:                # file máy chỉ ghi một mục: trộn với mặc định vẫn hợp lệ
             f = Path(td) / 'pabt_profile.json'
             f.write_text(json.dumps({'ten_ho_so': 'Một mục'}), encoding='utf-8')
-            self.assertEqual(dia_phuong.kiem_tra_file(f)['co_quan']['ten'], hs['co_quan']['ten'])
+            self.assertEqual(dia_phuong.kiem_tra_file(f)['co_quan']['ten'], dia_phuong.mac_dinh()['co_quan']['ten'])
 
 
 if __name__ == '__main__':

@@ -10,17 +10,7 @@
 LOAI_TRU = ['numpy', 'scipy', 'matplotlib', 'PIL', 'tkinter', 'unittest', 'pydoc', 'doctest', 'ezdxf', 'fontTools', 'asyncio', 'multiprocessing', 'concurrent', 'xmlrpc', 'compression.zstd', '_wmi']
 # 1.0.27: asyncio / multiprocessing / concurrent / xmlrpc / zstd / wmi: mã LARC không dùng (~0,8 MB nén); rut_gon.py bỏ thêm module Qt, plugin thừa
 
-# BẢN BÁN cho đơn vị khác (24/10/2026): biến môi trường PABT_BAN_TRUNG_TINH=1 -> đóng hồ sơ địa phương TRUNG TÍNH (pabt_profile_trung_tinh.json,
-# chép sang build\\ho_so_trung_tinh\\pabt_profile.json) thay hồ sơ của đơn vị đang dùng - xem DUNG_BAN_TRUNG_TINH.bat
-import os
-import shutil
-from pathlib import Path as _P
-HO_SO = 'pabt/pabt_profile.json'
-if os.environ.get('PABT_BAN_TRUNG_TINH') == '1':
-    _d = _P('build') / 'ho_so_trung_tinh'
-    _d.mkdir(parents=True, exist_ok=True)
-    shutil.copy2('pabt/pabt_profile_trung_tinh.json', _d / 'pabt_profile.json')
-    HO_SO = str(_d / 'pabt_profile.json')
+HO_SO = 'pabt/pabt_profile.json'      # hồ sơ địa phương mặc định (trung tính: không tên đơn vị / địa phương); đơn vị khác nhập gói .pabtcfg
 
 a = Analysis(
     ['chay.py'],

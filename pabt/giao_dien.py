@@ -1351,7 +1351,7 @@ def bang_to_chuc(phai: str = '', nut: tuple = ()) -> QFrame:
     ten = QLabel(f'{to_chuc.TEN}')
     ten.setProperty('vai', 'ten_to_chuc')
     dong2.addWidget(ten)
-    phu = NhanRutGon(f'Trực thuộc {to_chuc.TRUC_THUOC}   •   {to_chuc.DIA_CHI}')
+    phu = NhanRutGon(to_chuc.dong_phu())
     phu.setProperty('vai', 'dong_phu')
     dong2.addWidget(phu, 1)
     khung.nhan_to_chuc, khung.nhan_phu = ten, phu       # dat_to_chuc: đơn vị của dự án đang mở
@@ -1390,7 +1390,7 @@ def dat_to_chuc(khung, ten: str = '', phu: str = '') -> None:
     định một đơn vị); trống = đơn vị mặc định của máy (to_chuc.py)."""
     from . import to_chuc
     khung.nhan_to_chuc.setText(ten or to_chuc.TEN)
-    khung.nhan_phu.setText(phu or f'Trực thuộc {to_chuc.TRUC_THUOC}   •   {to_chuc.DIA_CHI}')
+    khung.nhan_phu.setText(phu or to_chuc.dong_phu())
 
 
 def dat_ten_nut_xoa(o) -> None:

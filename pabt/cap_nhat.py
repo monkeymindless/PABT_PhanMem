@@ -81,8 +81,6 @@ def tao_goi(goc, file_ra, mo_ta: str = '', toi_thieu: str = BAN_GOC_TOI_THIEU) -
     with zipfile.ZipFile(file_ra, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for f in ds:
             du = f.read_bytes()
-            if f.name == 'pabt_profile.json' and os.environ.get('PABT_BAN_TRUNG_TINH') == '1' and (th / 'pabt_profile_trung_tinh.json').exists():
-                du = (th / 'pabt_profile_trung_tinh.json').read_bytes()           # bản bán: hồ sơ địa phương trung tính
             tt['file']['pabt/' + f.name] = _bam(du)
             z.writestr('pabt/' + f.name, du)
         z.writestr('cap_nhat.json', json.dumps(tt, ensure_ascii=False, indent=1).encode('utf-8'))

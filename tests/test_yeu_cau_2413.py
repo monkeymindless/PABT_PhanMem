@@ -1,11 +1,10 @@
-"""24/10/2026: bản bán cho đơn vị khác - tên phần mềm theo hồ sơ (co_quan.ten_phan_mem), hồ sơ địa phương TRUNG TÍNH
-(pabt_profile_trung_tinh.json, tao_ho_so_trung_tinh.py), công tắc PABT_BAN_TRUNG_TINH ở PABT.spec / dung_exe38 / cap_nhat.tao_goi. Dữ liệu GIẢ LẬP."""
+"""24/10/2026: bản thương mại - tên phần mềm theo hồ sơ (co_quan.ten_phan_mem); từ 1.0.27 hồ sơ địa phương MẶC ĐỊNH (pabt/pabt_profile.json) là hồ sơ
+TRUNG TÍNH: không có tên đơn vị / địa phương nào (hồ sơ Đồng Nai cũ ở ho_so_don_vi/). Dữ liệu GIẢ LẬP."""
 from __future__ import annotations
 
 import json
 import os
 import re
-import sys
 import tempfile
 import unittest
 import zipfile
@@ -14,7 +13,7 @@ from pathlib import Path
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 GOC = Path(__file__).resolve().parents[1]
-TRUNG_TINH = GOC / 'pabt' / 'pabt_profile_trung_tinh.json'
+TRUNG_TINH = GOC / 'pabt' / 'pabt_profile.json'
 RIENG = ('Vĩnh Cửu', 'Đồng Nai', 'Trị An', 'VĨNH CỬU', 'ĐỒNG NAI', 'TTPTQĐ', 'QĐ 18', 'QĐ-UBND')
 
 
@@ -29,38 +28,12 @@ class TestHoSoTrungTinh(unittest.TestCase):
         self.assertEqual(hs['ban_in']['dia_danh_ngay'], '')
         self.assertEqual(hs['co_quan']['ban_in_mac_dinh']['ky_hieu_so'], '')
 
-    def test_khop_script_tao(self):
-        """File trung tính = đúng kết quả tao_ho_so_trung_tinh.tao() từ hồ sơ mặc định hiện tại (nhắc chạy lại script khi pabt_profile.json đổi)."""
-        sys.path.insert(0, str(GOC))
-        import tao_ho_so_trung_tinh as t
-        self.assertEqual(json.loads(TRUNG_TINH.read_text(encoding='utf-8-sig')), t.tao(),
-                         'chạy lại .venv\\Scripts\\python tao_ho_so_trung_tinh.py')
-
-    def test_cong_tac_dong_goi(self):
-        spec = (GOC / 'PABT.spec').read_text(encoding='utf-8')
-        self.assertIn('PABT_BAN_TRUNG_TINH', spec)
-        self.assertIn("(HO_SO, 'pabt')", spec)
-        self.assertIn('PABT_BAN_TRUNG_TINH', (GOC / 'bo_cai_win' / 'dung_exe38.py').read_text(encoding='utf-8'))
-
-    def test_goi_cap_nhat_dung_ho_so_trung_tinh_khi_bat_cong_tac(self):
-        from pabt import cap_nhat
-        with tempfile.TemporaryDirectory() as td:
-            ra = Path(td) / 'a.larcud'
-            cu = os.environ.pop('PABT_BAN_TRUNG_TINH', None)
-            try:
-                cap_nhat.tao_goi(GOC, ra)
-                with zipfile.ZipFile(ra) as z:
-                    mac_dinh = z.read('pabt/pabt_profile.json')
-                os.environ['PABT_BAN_TRUNG_TINH'] = '1'
-                cap_nhat.tao_goi(GOC, ra)
-                with zipfile.ZipFile(ra) as z:
-                    trung_tinh = z.read('pabt/pabt_profile.json')
-            finally:
-                os.environ.pop('PABT_BAN_TRUNG_TINH', None)
-                if cu is not None:
-                    os.environ['PABT_BAN_TRUNG_TINH'] = cu
-            self.assertEqual(mac_dinh, (GOC / 'pabt' / 'pabt_profile.json').read_bytes())
-            self.assertEqual(trung_tinh, TRUNG_TINH.read_bytes())
+    def test_tien_to_o_cai_dat_trong_va_co_chu_goi_y(self):
+        from pabt import dia_phuong
+        hs = json.loads(TRUNG_TINH.read_text(encoding='utf-8-sig'))
+        for k in ('ten', 'truc_thuoc', 'dia_chi'):
+            self.assertEqual(hs['co_quan'][k], '', k)
+        self.assertEqual(dia_phuong.kiem_tra(dia_phuong.tron(dia_phuong.mac_dinh(), hs)), [])
 
 
 class TestBanTrungTinhChay(unittest.TestCase):
@@ -90,7 +63,8 @@ class TestBanTrungTinhChay(unittest.TestCase):
 
         from pabt import csdl, in_an, in_word, to_chuc
         from tests.test_toc_do import _du_an
-        self.assertEqual(to_chuc.TEN, 'TÊN ĐƠN VỊ CỦA BẠN')
+        self.assertEqual(to_chuc.TEN, '')
+        self.assertEqual(to_chuc.dong_phu(), '')
         self.assertEqual(to_chuc.MAC_DINH['ky_hieu_so'], '')
         con = csdl.mo(_du_an(self.td, 2))
         self.addCleanup(con.close)
