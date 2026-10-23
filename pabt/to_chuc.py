@@ -9,13 +9,15 @@ TAC_GIA = 'Thiết kế và phát triển bởi Phan Tuấn Vĩnh - Trung tâm P
 
 # các giá trị dưới đây do _ap_ho_so đặt (lúc nạp module và sau mỗi lần nạp lại hồ sơ); nơi dùng đọc to_chuc.TEN… lúc gọi
 VAI_TRO = TEN = TRUC_THUOC = DIA_CHI = ''
+TEN_PHAN_MEM = 'PHẦN MỀM LẬP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ'      # dòng 1 băng tiêu đề (hồ sơ co_quan.ten_phan_mem - đơn vị khác đặt tên riêng)
 # điền sẵn ở bước 1 "Dự án mới" (khi máy chưa lưu thông tin đơn vị lần trước) và dùng trên bản in khi ô của dự án còn trống
 MAC_DINH: dict = {}
 
 
 def _ap_ho_so(hs: dict) -> None:
-    global VAI_TRO, TEN, TRUC_THUOC, DIA_CHI, MAC_DINH
+    global VAI_TRO, TEN, TRUC_THUOC, DIA_CHI, MAC_DINH, TEN_PHAN_MEM
     cq = hs['co_quan']
+    TEN_PHAN_MEM = str(cq.get('ten_phan_mem') or '').strip() or TEN_PHAN_MEM
     VAI_TRO, TEN, TRUC_THUOC, DIA_CHI = cq['vai_tro'], cq['ten'], cq['truc_thuoc'], cq['dia_chi']
     MAC_DINH = dict(cq['ban_in_mac_dinh'])
 

@@ -7,6 +7,10 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.26', '24/10/2026', (
+        'Dùng cho nhiều đơn vị: tên phần mềm ở dòng 1 băng tiêu đề đổi được (Cài đặt > Cấu hình nghiệp vụ > Cơ quan > "Tên phần mềm"); có bản hồ sơ địa '
+        'phương TRUNG TÍNH (không có tên đơn vị, địa phương, căn cứ pháp lý của nơi nào) để đóng vào bộ cài bán cho đơn vị khác (DUNG_BAN_TRUNG_TINH.bat).',
+    )),
     ('1.0.25', '24/10/2026', (
         'Đổi tên tổ chức ở Cài đặt > Cấu hình nghiệp vụ > Cơ quan: dòng tên đơn vị trên băng tiêu đề đổi ngay cả khi chưa mở dự án (trước đó phải mở dự án mới thấy).',
     )),

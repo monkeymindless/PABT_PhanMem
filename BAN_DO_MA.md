@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 15:47. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 16:06. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -19,7 +19,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 15:47. Kiểm tra tĩnh: 0 cảnh
 | `bang_dieu_chinh.py` | 372 | 1 | 6 | an_toan, du_lieu_in, lan_pa, nghiep_vu, tien |
 | `bao_cao_gpmb.py` | 101 | 0 | 4 | thoi_han, tien, van_dong |
 | `bao_cao_y_kien.py` | 131 | 0 | 4 | du_thao, van_ban_trinh |
-| `cap_nhat.py` | 197 | 1 | 13 | __version__, an_toan |
+| `cap_nhat.py` | 199 | 1 | 13 | __version__, an_toan |
 | `cap_nhat_gia_dat.py` | 550 | 1 | 23 | gia_dat_nq28, lap_pa |
 | `cap_nhat_web.py` | 426 | 2 | 15 | lap_pa, nhap_don_gia |
 | `cay_trong.py` | 412 | 3 | 26 | csdl, lap_pa, tien |
@@ -27,7 +27,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 15:47. Kiểm tra tĩnh: 0 cảnh
 | `chu_de.py` | 85 | 0 | 7 | - |
 | `chua_benh_csdl.py` | 429 | 1 | 14 | - |
 | `csdl.py` | 752 | 2 | 41 | - |
-| `dia_phuong.py` | 421 | 1 | 26 | - |
+| `dia_phuong.py` | 423 | 1 | 26 | - |
 | `docx_sang_pdf.py` | 219 | 0 | 7 | an_toan |
 | `doi_chieu.py` | 242 | 1 | 4 | an_toan, nghiep_vu, tien |
 | `don_gia.py` | 480 | 0 | 26 | an_toan, csdl, lap_pa, nhap_excel |
@@ -54,7 +54,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 15:47. Kiểm tra tĩnh: 0 cảnh
 | `kinh_phi_du_an.py` | 250 | 0 | 13 | csdl, theo_doi, tien |
 | `lan_pa.py` | 351 | 2 | 24 | csdl, tien |
 | `lap_pa.py` | 1106 | 4 | 24 | csdl, loai_dat, nghiep_vu, tien |
-| `lich_su_cap_nhat.py` | 731 | 0 | 1 | - |
+| `lich_su_cap_nhat.py` | 735 | 0 | 1 | - |
 | `loai_dat.py` | 137 | 0 | 6 | - |
 | `ma_tai_san.py` | 142 | 0 | 8 | - |
 | `man_hinh.py` | 3629 | 15 | 3 | du_lieu_in, giao_dien, hang_nhap_nhanh, lap_pa, nghiep_vu, thong_bao, tien |
@@ -115,14 +115,14 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 15:47. Kiểm tra tĩnh: 0 cảnh
 | `thong_bao.py` | 74 | 0 | 2 | - |
 | `tien.py` | 306 | 0 | 19 | - |
 | `tiep_nhan_phap_ly.py` | 586 | 0 | 20 | an_toan, tien |
-| `to_chuc.py` | 24 | 0 | 1 | dia_phuong |
+| `to_chuc.py` | 26 | 0 | 1 | dia_phuong |
 | `tong_quan_du_an.py` | 107 | 0 | 9 | tien |
 | `van_ban_trinh.py` | 823 | 0 | 35 | du_lieu_in, lap_pa |
 | `van_dong.py` | 290 | 1 | 13 | csdl, lap_pa, quan_ly, thoi_han |
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 942 | 2 | 18 | - |
 
-Tổng: 58689 dòng mã trong pabt/.
+Tổng: 58699 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -130,7 +130,7 @@ Tổng: 58689 dòng mã trong pabt/.
 - `in_word`: CO_BANG, CO_CHU_KY, CO_CO_QUAN, CO_DE_MUC, CO_DU_AN, CO_DU_THAO, CO_GHI_CHU, CO_NGUON_GOC, CO_QUOC_HIEU, CO_SO_NGAY, CO_TEN_LOAI, CO_THONG_TIN, CO_TIEU_NGU, CO_TRICH_YEU, DK_DU_AN_MM, HO_GACH_PT, LE_MM, THUT_DAU, TRICH_YEU, TRICH_YEU_DONG - đọc `in_word.<tên>` lúc gọi
 - `lap_pa`: CAN_CU_KINH_PHI, LOAI_KINH_PHI - đọc `lap_pa.<tên>` lúc gọi
 - `thoi_han`: CAN_CU_THAM_DINH - đọc `thoi_han.<tên>` lúc gọi
-- `to_chuc`: DIA_CHI, MAC_DINH, TEN, TRUC_THUOC, VAI_TRO - đọc `to_chuc.<tên>` lúc gọi
+- `to_chuc`: DIA_CHI, MAC_DINH, TEN, TEN_PHAN_MEM, TRUC_THUOC, VAI_TRO - đọc `to_chuc.<tên>` lúc gọi
 
 ## Lớp và hàm
 

@@ -9,6 +9,18 @@
 # PIL kéo theo: ~35 MB); thư viện chỉ dùng lúc phát triển / kiểm thử cũng loại
 LOAI_TRU = ['numpy', 'scipy', 'matplotlib', 'PIL', 'tkinter', 'unittest', 'pydoc', 'doctest', 'ezdxf', 'fontTools']
 
+# BẢN BÁN cho đơn vị khác (24/10/2026): biến môi trường PABT_BAN_TRUNG_TINH=1 -> đóng hồ sơ địa phương TRUNG TÍNH (pabt_profile_trung_tinh.json,
+# chép sang build\\ho_so_trung_tinh\\pabt_profile.json) thay hồ sơ của đơn vị đang dùng - xem DUNG_BAN_TRUNG_TINH.bat
+import os
+import shutil
+from pathlib import Path as _P
+HO_SO = 'pabt/pabt_profile.json'
+if os.environ.get('PABT_BAN_TRUNG_TINH') == '1':
+    _d = _P('build') / 'ho_so_trung_tinh'
+    _d.mkdir(parents=True, exist_ok=True)
+    shutil.copy2('pabt/pabt_profile_trung_tinh.json', _d / 'pabt_profile.json')
+    HO_SO = str(_d / 'pabt_profile.json')
+
 a = Analysis(
     ['chay.py'],
     pathex=[],
@@ -16,7 +28,7 @@ a = Analysis(
     # 1.0.20: KHÔNG đóng thư mục mau_in - bảng tổng hợp dựng bằng mã (pabt/mau_bang_tong_hop.py), mẫu Word (chi tiết / bổ sung / điều chỉnh) dựng bằng
     # mã + thông số ban_in.mau_word của pabt_profile.json
     datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/he_so_k_qd03.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'),
-           ('pabt/pabt_profile.json', 'pabt'), ('HUONG_DAN.md', '.')],
+           (HO_SO, 'pabt'), ('HUONG_DAN.md', '.')],
     hiddenimports=['pabt.mau_bang_tong_hop', 'pabt.in_word', 'html.parser','urllib.request', 'difflib', 'PySide6.QtPdfWidgets', 'PySide6.QtPrintSupport'],
     hookspath=[],
     hooksconfig={},

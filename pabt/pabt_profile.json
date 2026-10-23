@@ -4,6 +4,7 @@
   "ten_ho_so": "Tỉnh Đồng Nai - Trung tâm Phát triển quỹ đất Chi nhánh Vĩnh Cửu (mặc định)",
   "ghi_chu": "Hồ sơ địa phương mặc định đóng kèm phần mềm. Máy dùng ở địa phương khác: đặt %APPDATA%\\PABT\\pabt_profile.json (chỉ cần các mục khác mặc định) hoặc nhập gói .pabtcfg. Số tiền / tỷ lệ ghi dạng chuỗi (\"3.5\") để đọc bằng Decimal, không sai số.",
   "co_quan": {
+    "ten_phan_mem": "PHẦN MỀM LẬP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ",
     "vai_tro": "TỔ CHỨC LÀM NHIỆM VỤ BỒI THƯỜNG",
     "ten": "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT CHI NHÁNH VĨNH CỬU",
     "truc_thuoc": "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT THÀNH PHỐ ĐỒNG NAI",

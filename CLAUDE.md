@@ -2103,6 +2103,14 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.26 BÁN CHO ĐƠN VỊ KHÁC (người dùng 24/10/2026): (1) `co_quan.ten_phan_mem` (hồ sơ; `to_chuc.TEN_PHAN_MEM`; dòng 1 băng tiêu đề `banner_ten.lb_ten`,
+  `giao_dien.TEN_PHAN_MEM` chỉ còn là mặc định; ô ở Cấu hình nghiệp vụ > Cơ quan; `_lam_moi_don_vi` đặt lại chữ); `thong_bao.TEN_UD` "LARC" / tiêu đề cửa sổ / hộp thoại VẪN cố
+  định trong mã. (2) Hồ sơ TRUNG TÍNH `pabt/pabt_profile_trung_tinh.json` do `tao_ho_so_trung_tinh.py` sinh từ pabt_profile.json (xóa tên cơ quan / cấp trên / địa chỉ / ký hiệu
+  số / địa danh dòng ngày, thay căn cứ pháp lý Đồng Nai + `can_cu` mốc thời hạn bằng chỗ trống nhắc điền; GIỮ số ngày, tỷ lệ kinh phí, Luật Đất đai 2024) - test
+  `test_khop_script_tao` nhắc chạy lại khi pabt_profile.json đổi. (3) Công tắc dựng `PABT_BAN_TRUNG_TINH=1`: `PABT.spec` (HO_SO chép sang build\ho_so_trung_tinh),
+  `bo_cai_win/dung_exe38.py`, `cap_nhat.tao_goi` thay pabt_profile.json; `DUNG_BAN_TRUNG_TINH.bat` -> `dung_ban_trung_tinh.py` (cất bộ cài cùng phiên bản của bạn, dựng,
+  đưa kết quả vào bo_cai	rung_tinh\*_TrungTinh.*, trả bản của bạn). Bản trung tính vẫn kèm DỮ LIỆU ĐỒNG NAI: bộ đơn giá QĐ 42/2025, bảng giá đất NQ 28 (4 xã), hệ số K QĐ 03 -
+  khách ở tỉnh khác phải nạp bộ đơn giá / bảng giá của mình (Bộ đơn giá, Cập nhật bảng giá đất). Test `tests/test_yeu_cau_2413.py`.
 - 1.0.25: `app._lam_moi_don_vi` (sau Cấu hình nghiệp vụ: dự án mở -> tai_lai, chưa mở -> _hien_trang_chao) - đổi `co_quan.ten` hiện ngay trên băng tiêu đề.
   TÊN ĐƠN VỊ TRÊN BĂNG TIÊU ĐỀ: dòng 1 `giao_dien.TEN_PHAN_MEM` (cố định trong mã), dòng 2 (vàng) `lb_don_vi` = `don_vi_lap` của DỰ ÁN đang mở, chưa mở dự án = hồ sơ địa phương
   `co_quan.ten` (Cài đặt > Cấu hình nghiệp vụ > thẻ Cơ quan; hoặc gói .pabtcfg); `to_chuc.TAC_GIA` (Giới thiệu) và `thong_bao.TEN_UD` "LARC" cố định trong mã.

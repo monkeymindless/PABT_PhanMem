@@ -19,7 +19,7 @@ from .thong_bao import TEN_UD
 THU_TU_MOC = ('niem_yet', 'doi_thoai', 'tham_dinh', 'thu_hoi_nn', 'thu_hoi_pnn', 'van_dong')
 LAM_TRON = [('Đến đồng', 0), ('Đến nghìn đồng', -3), ('Đến triệu đồng', -6)]
 CAN_DOC = [('Canh trên', 'top'), ('Giữa', 'center'), ('Canh dưới', 'bottom')]
-CO_QUAN = [('vai_tro', 'Vai trò (băng tiêu đề)'), ('ten', 'Tên tổ chức làm nhiệm vụ bồi thường'), ('truc_thuoc', 'Trực thuộc'),
+CO_QUAN = [('ten_phan_mem', 'Tên phần mềm (dòng 1 băng tiêu đề)'), ('vai_tro', 'Vai trò (băng tiêu đề)'), ('ten', 'Tên tổ chức làm nhiệm vụ bồi thường'), ('truc_thuoc', 'Trực thuộc'),
            ('dia_chi', 'Địa chỉ')]
 BAN_IN_MAC_DINH = [('don_vi_cap_tren', 'Đơn vị cấp trên (bản in)'), ('don_vi_tieu_de', 'Tên đơn vị trên tiêu đề bản in'),
                    ('don_vi_lap', 'Đơn vị lập phương án'), ('ky_hieu_so', 'Ký hiệu số phương án'), ('chuc_vu_ky', 'Chức vụ người ký')]

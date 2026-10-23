@@ -132,6 +132,8 @@ def kiem_tra(hs: dict) -> list:
         for k in ('vai_tro', 'ten', 'truc_thuoc', 'dia_chi'):
             if not isinstance(cq.get(k), str):
                 loi.append(f'co_quan.{k}: phải là chữ.')
+        if 'ten_phan_mem' in cq and not isinstance(cq['ten_phan_mem'], str):
+            loi.append('co_quan.ten_phan_mem: phải là chữ.')
         bm = cq.get('ban_in_mac_dinh')
         if not isinstance(bm, dict) or not all(isinstance(v, str) for v in bm.values()):
             loi.append('co_quan.ban_in_mac_dinh: các giá trị phải là chữ.')

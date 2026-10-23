@@ -2510,6 +2510,9 @@ class CuaSoChinh(QMainWindow):
 
     def _lam_moi_don_vi(self) -> None:
         """Sau khi đổi hồ sơ địa phương / cấu hình: băng tiêu đề lấy tên đơn vị mới (dự án đang mở: tải lại; chưa mở: màn hình chào)."""
+        from . import to_chuc
+        if hasattr(self, 'banner_ten'):
+            self.banner_ten.lb_ten.setText(to_chuc.TEN_PHAN_MEM)
         if self.con is not None:
             self.tai_lai()
         else:
@@ -3565,10 +3568,7 @@ class CuaSoChinh(QMainWindow):
         except goi_mau.LoiGoiMau as e:
             QMessageBox.warning(self, TEN_UD, str(e))
             return None
-        if self.con is not None:
-            self.tai_lai()                              # băng tiêu đề lấy tên đơn vị mặc định mới khi dự án để trống
-        else:
-            self._hien_trang_chao()
+        self._lam_moi_don_vi()                          # băng tiêu đề lấy tên phần mềm / đơn vị mặc định mới khi dự án để trống
         if xac_nhan:
             QMessageBox.information(self, TEN_UD, f'Đã cài {len(kq["mau"])} mẫu' + (' và hồ sơ địa phương' if kq['ho_so'] else '') +
                                     f'.\nHồ sơ địa phương đang dùng: {kq["ten_ho_so"]}' +

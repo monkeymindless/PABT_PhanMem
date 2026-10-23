@@ -1,5 +1,9 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.25 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.26 – Bản Tiêu chuẩn · Sử dụng nội bộ)
 
+> **1.0.26**: **dùng cho đơn vị khác** - đổi **tên phần mềm** ở băng tiêu đề (Cài đặt → Cấu hình nghiệp vụ → Cơ quan → "Tên phần mềm"), đổi
+> **tên đơn vị** (cùng thẻ) hoặc nhập **gói .pabtcfg** do nhà cung cấp cấu hình sẵn. Bản bán cho đơn vị khác dựng bằng `DUNG_BAN_TRUNG_TINH.bat`
+> (hồ sơ địa phương trung tính: chưa có tên đơn vị / địa phương / căn cứ pháp lý nào; đơn vị tự điền).
+>
 > **1.0.25**: đổi tên tổ chức trong Cấu hình nghiệp vụ → Cơ quan hiện ngay trên băng tiêu đề.
 >
 > **1.0.24**: sửa lỗi 1.0.23 (cửa sổ trống nhấp nháy khi mở hộp Xuất hồ sơ & Bản in).

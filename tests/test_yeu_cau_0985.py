@@ -215,7 +215,8 @@ class TestDongGoi(unittest.TestCase):
         from pabt import cap_nhat
         self.assertIn('pabt_profile.json', cap_nhat.DU_LIEU)
         spec = (GOC / 'PABT.spec').read_text(encoding='utf-8')
-        self.assertIn("('pabt/pabt_profile.json', 'pabt')", spec)
+        self.assertIn("HO_SO = 'pabt/pabt_profile.json'", spec)                    # 1.0.26: biến HO_SO (bản trung tính đổi sang file khác)
+        self.assertIn("(HO_SO, 'pabt')", spec)
         self.assertNotIn("('mau_in', 'mau_in')", spec)                              # không đóng cả thư mục (PDF tham khảo)
         self.assertIn("'pabt/pabt_profile.json'", (GOC / 'bo_cai_win' / 'dung_exe38.py').read_text(encoding='utf-8'))
         ps = (GOC / 'bo_cai_win' / 'cai_dat.ps1').read_text(encoding='utf-8-sig')

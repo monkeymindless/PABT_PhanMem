@@ -1334,7 +1334,7 @@ def bang_to_chuc(phai: str = '', nut: tuple = ()) -> QFrame:
     lo.addWidget(KhungLogo(), 0, Qt.AlignmentFlag.AlignVCenter)
     cot = QVBoxLayout()
     cot.setSpacing(1)
-    tieu_de = NhanRutGon(TEN_PHAN_MEM)
+    tieu_de = NhanRutGon(to_chuc.TEN_PHAN_MEM or TEN_PHAN_MEM)
     tieu_de.setProperty('vai', 'ten_phan_mem')
     dong_dau = QHBoxLayout()
     dong_dau.setSpacing(6)
@@ -1626,7 +1626,7 @@ def tao_banner_ten():
     cot = QVBoxLayout()
     cot.setSpacing(1)
     cot.setContentsMargins(0, 0, 0, 0)
-    ten = NhanRutGon(TEN_PHAN_MEM)                  # sizePolicy Ignored: chữ dài không ép cửa sổ rộng ra
+    ten = NhanRutGon(to_chuc.TEN_PHAN_MEM or TEN_PHAN_MEM)    # sizePolicy Ignored: chữ dài không ép cửa sổ rộng ra
     ten.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
     ten.setStyleSheet(
         'QLabel { color: #FFFFFF; font-size: 14px; font-weight: 700; letter-spacing: 0.4px; '
