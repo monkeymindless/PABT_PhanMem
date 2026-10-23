@@ -257,6 +257,48 @@ def chuyen_pdf(xlsx: Path, pdf: Path) -> str:
     return 'Excel không xuất được PDF: ' + ('; '.join(x.replace('\t', ' – ') for x in loi[:2]) or 'không rõ lý do')
 
 
+def gop_pdf_muc(ds_pdf: list, pdf: Path) -> list:
+    """Gộp các PDF (theo thứ tự [(file pdf, nhãn)]) thành một file; trả mục lục [(nhãn, trang đầu - 0 là trang 1)]. Không đụng Qt."""
+    from pypdf import PdfReader, PdfWriter
+    w, muc_luc, trang = PdfWriter(), [], 0
+    for f, nhan in ds_pdf:
+        n = len(PdfReader(str(f)).pages)
+        w.append(str(f))
+        muc_luc.append((nhan, trang))
+        trang += n
+    with open(pdf, 'wb') as h:
+        w.write(h)
+    return muc_luc
+
+
+def chuyen_pdf_nhieu(muc: list, pdf: Path) -> tuple:
+    """Xem trước NHIỀU HỘ trên một bản (24/10/2026): muc = [(file .docx / .xlsx, nhãn)] -> (lý do lỗi hoặc '', mục lục [(nhãn, trang đầu)]).
+    Word / Excel xuất PDF từng file trong MỘT lần mở ứng dụng, rồi gộp theo thứ tự. Một số file lỗi: vẫn gộp phần còn lại, báo số file thiếu.
+    CHẠY Ở LUỒNG NỀN (không đụng Qt)."""
+    from . import in_an
+    from .van_ban_trinh import LoiNhap, chay_word
+    word = [(Path(f), t) for f, t in muc if la_word(f)]
+    excel = [(Path(f), t) for f, t in muc if not la_word(f)]
+    loi = []
+    try:
+        if word:
+            loi += chay_word([('pdf', f, f.with_suffix('.pdf')) for f, _ in word], cho_moi_file=CHO_EXCEL_GIAY)
+        if excel:
+            loi += in_an.chay_excel([(f, f.with_suffix('.pdf')) for f, _ in excel], 'pdf', cho_moi_file=CHO_EXCEL_GIAY)
+    except (LoiNhap, in_an.LoiIn) as e:
+        return str(e), []
+    except OSError as e:
+        return f'Không chạy được Microsoft Word / Excel: {e}', []
+    co = [(Path(f).with_suffix('.pdf'), t) for f, t in muc if Path(f).with_suffix('.pdf').exists()]
+    if not co:
+        return 'Word / Excel không xuất được PDF: ' + ('; '.join(x.replace('\t', ' - ') for x in loi[:2]) or 'không rõ lý do'), []
+    try:
+        muc_luc = gop_pdf_muc(co, Path(pdf))
+    except Exception as e:                              # noqa: BLE001 - pypdf báo nhiều loại lỗi
+        return f'Không gộp được các bản xem trước: {e}', []
+    return '', muc_luc
+
+
 def in_qua_excel(cha, pdf, xlsx, hoi: bool = True) -> bool:
     """Nút "In nhanh": gửi bản đang xem (file của bản in - .xlsx: Excel in, .docx: Word in - đúng lề / khổ giấy) tới máy in
     mặc định. Hỏi trước (gửi máy in là việc không rút lại được). True nếu đã gửi."""
@@ -370,7 +412,9 @@ class KhungXemTruocTaiLieu(QFrame):
         self.pdf: Path | None = None
         self.xlsx: Path | None = None
         self.thu_muc: Path | None = None
-        self._nho: dict = {}                   # khóa -> (pdf, xlsx) đã lập trong phiên
+        self._nho: dict = {}                   # khóa -> (pdf, xlsx) đã lập trong phiên (xem nhiều hộ: xlsx = None)
+        self._nho_muc: dict = {}               # khóa -> mục lục [(nhãn hộ, trang đầu)] của bản xem nhiều hộ
+        self.muc_luc: list = []                # mục lục của bản đang xem (rỗng: bản một hộ)
         self._cho = None                       # yêu cầu chờ lập: (khóa, tao_xlsx, tên)
         self._dang = None                      # đang xuất ở nền: dict(khoa, xlsx, pdf, ten, ket_qua)
         self._so = itertools.count(1)
@@ -405,6 +449,11 @@ class KhungXemTruocTaiLieu(QFrame):
         self.b_sau = nut('▶', 0xE76C, 'Trang sau', lambda: self.sang_trang(1))
         self.lb_trang = QLabel('0 / 0')
         self.lb_trang.setObjectName('xt_trang')
+        from PySide6.QtWidgets import QComboBox
+        self.cb_muc = QComboBox()                # xem nhiều hộ: nhảy tới hộ (trang đầu của hộ)
+        self.cb_muc.setToolTip('Nhảy tới phương án của hộ trong bản xem trước gộp nhiều hộ')
+        self.cb_muc.setMinimumWidth(180)
+        self.cb_muc.activated.connect(lambda i: self.den_muc(i))
         # bản dựng dự phòng bằng Qt (không có Excel / Excel lỗi): nhắc là bản gần đúng
         from .pdf_du_phong import NHAN_GAN_DUNG
         self.lb_gan_dung = QLabel('Bản gần đúng')
@@ -432,7 +481,7 @@ class KhungXemTruocTaiLieu(QFrame):
         h.setContentsMargins(8, 4, 8, 4)
         nhan = QLabel('Trang')
         nhan.setObjectName('xt_trang')
-        for nhom, phai in (((self.b_phong, self.b_thu, self.b_vua), False), ((nhan, self.b_truoc, self.lb_trang, self.b_sau), False),
+        for nhom, phai in (((self.b_phong, self.b_thu, self.b_vua), False), ((nhan, self.b_truoc, self.lb_trang, self.b_sau, self.cb_muc), False),
                            ((self.lb_gan_dung, self.b_in_hop, self.b_in), True)):
             cum = QWidget()
             hc = QHBoxLayout(cum)
@@ -448,6 +497,7 @@ class KhungXemTruocTaiLieu(QFrame):
         # 1.0.16: ẩn / hiện nút SAU khi đã đặt vào bố cục - setVisible(True) lên widget CHƯA có cha làm nó hiện thành cửa sổ riêng rỗng
         # (nút thu nhỏ / phóng to / đóng, tiêu đề "PABT") nhấp nháy mỗi lần mở khung xem trước F4
         self.b_in.setVisible(ham_in is not None)
+        self.cb_muc.setVisible(False)
         self.b_in_hop.setVisible(co_hop_in())
         # ---- vùng xem
         self.lb_tb = QLabel('Chọn một hộ để xem trước bản in A4.')
@@ -591,6 +641,12 @@ class KhungXemTruocTaiLieu(QFrame):
         self.b_truoc.setEnabled(dang_xem and i > 0)
         self.b_sau.setEnabled(dang_xem and i < n - 1)
         self.lb_trang.setText(f'{i + 1 if n else 0} / {n}')
+        if self.muc_luc and not self.cb_muc.view().isVisible():      # combo theo hộ đang ở trang i
+            k = max((j for j, (_, t) in enumerate(self.muc_luc) if t <= i), default=0)
+            if self.cb_muc.currentIndex() != k:
+                self.cb_muc.blockSignals(True)
+                self.cb_muc.setCurrentIndex(k)
+                self.cb_muc.blockSignals(False)
         self.b_in.setEnabled(self.pdf is not None and self.xlsx is not None and self._dang is None)
         self.b_in_hop.setEnabled(self.pdf is not None and self.doc is not None and n > 0 and self._dang is None)
 
@@ -645,11 +701,25 @@ class KhungXemTruocTaiLieu(QFrame):
             QTimer.singleShot(0, lambda: self._vua and self.so_trang() and self.view.setZoomFactor(self._he_so_vua()))
         return super().eventFilter(o, e)
 
-    def sang_trang(self, buoc: int) -> None:
+    def den_muc(self, k: int) -> None:
+        """Nhảy tới trang đầu của hộ thứ k trong mục lục (bản xem nhiều hộ)."""
+        if 0 <= k < len(self.muc_luc):
+            self.sang_trang(0, tuyet_doi=self.muc_luc[k][1])
+
+    def _dat_muc_luc(self, ds: list) -> None:
+        self.muc_luc = list(ds or [])
+        self.cb_muc.blockSignals(True)
+        self.cb_muc.clear()
+        for nhan, trang in self.muc_luc:
+            self.cb_muc.addItem(nhan, trang)
+        self.cb_muc.blockSignals(False)
+        self.cb_muc.setVisible(bool(self.muc_luc))
+
+    def sang_trang(self, buoc: int, tuyet_doi: int | None = None) -> None:
         n = self.so_trang()
         if n == 0:
             return
-        i = max(0, min(n - 1, self.trang_hien_tai() + buoc))
+        i = max(0, min(n - 1, self.trang_hien_tai() + buoc if tuyet_doi is None else tuyet_doi))
         if self.kieu == 'qpdfview':
             self.view.pageNavigator().jump(i, QPointF(), self.view.zoomFactor())
         else:
@@ -666,8 +736,9 @@ class KhungXemTruocTaiLieu(QFrame):
         if khoa is not None and khoa in self._nho and Path(self._nho[khoa][0]).exists():
             self._cho = None
             self._hen.stop()
-            self.xlsx = Path(self._nho[khoa][1])
+            self.xlsx = Path(self._nho[khoa][1]) if self._nho[khoa][1] else None
             self._dat_gan_dung(Path(self._nho[khoa][0]).stem.endswith('_gan_dung'))
+            self._dat_muc_luc(self._nho_muc.get(khoa, []))
             self.nap_tai_lieu(self._nho[khoa][0])
             return
         if self._dang is None:
@@ -692,22 +763,32 @@ class KhungXemTruocTaiLieu(QFrame):
         d = self.thu_muc / f'{next(self._so):03d}'      # mỗi lần một thư mục: không ghi đè PDF đang mở (Windows khóa file)
         try:
             d.mkdir(parents=True, exist_ok=True)
-            xlsx = Path(tao(d))
+            tra = tao(d)
+            muc = [(Path(f), t) for f, t in tra] if isinstance(tra, (list, tuple)) else None     # nhiều hộ: [(file, nhãn)]
+            xlsx = None if muc is not None else Path(tra)
         except Exception as e:                          # noqa: BLE001 - lỗi mẫu in / dữ liệu: báo trong khung, không bật hộp
             from .thong_bao import chu_loi
             self.bao(chu_loi('Không lập được bản xem trước', e))
             return
-        self.xlsx = xlsx
-        word = la_word(xlsx)
-        ly_do = dung_duoc_word() if word else dung_duoc_excel()
-        if ly_do:
-            self._du_phong(khoa, xlsx, ly_do)
+        if muc is not None and not muc:
+            self.bao('Chưa có hộ nào để xem trước.')
             return
-        pdf = xlsx.with_suffix('.pdf')
-        viec = dict(khoa=khoa, xlsx=xlsx, pdf=pdf, ten=ten, ket_qua=None)
+        self.xlsx = xlsx                                # nhiều hộ: None (nút In nhanh qua Word / Excel tắt - dùng "In…")
+        word = all(la_word(f) for f, _ in muc) if muc is not None else la_word(xlsx)
+        ly_do = (dung_duoc_word() if word else dung_duoc_excel()) if muc is None else \
+            (dung_duoc_word() if any(la_word(f) for f, _ in muc) else '') or \
+            (dung_duoc_excel() if any(not la_word(f) for f, _ in muc) else '')
+        if ly_do:
+            self._du_phong(khoa, xlsx, ly_do, muc)
+            return
+        pdf = (d / 'xem_nhieu_ho.pdf') if muc is not None else xlsx.with_suffix('.pdf')
+        viec = dict(khoa=khoa, xlsx=xlsx, pdf=pdf, ten=ten, ket_qua=None, muc=muc, muc_luc=[])
 
         def chay():
-            viec['ket_qua'] = chuyen_pdf(xlsx, pdf)
+            if muc is not None:
+                viec['ket_qua'], viec['muc_luc'] = chuyen_pdf_nhieu(muc, pdf)
+            else:
+                viec['ket_qua'] = chuyen_pdf(xlsx, pdf)
         self._dang = viec
         self.bao(f'Microsoft {"Word" if word else "Excel"} đang tạo bản xem trước A4{": " + ten if ten else ""}…\n(vài giây)')
         threading.Thread(target=chay, daemon=True).start()
@@ -721,23 +802,54 @@ class KhungXemTruocTaiLieu(QFrame):
         self._dang = None
         if not viec['ket_qua'] and viec['khoa'] is not None:
             self._nho[viec['khoa']] = (viec['pdf'], viec['xlsx'])
+            if viec.get('muc') is not None:
+                self._nho_muc[viec['khoa']] = viec['muc_luc']
         if self._cho is not None:                       # đã có yêu cầu mới hơn: bỏ kết quả này, lập yêu cầu mới
             self._bat_dau()
             return
         self.xlsx = viec['xlsx']
         if viec['ket_qua']:                             # Excel / Word lỗi / treo: dựng bản gần đúng bằng Qt
-            self._du_phong(viec['khoa'], viec['xlsx'], viec['ket_qua'])
+            self._du_phong(viec['khoa'], viec['xlsx'], viec['ket_qua'], viec.get('muc'))
         else:
             self._dat_gan_dung(False)
+            self._dat_muc_luc(viec['muc_luc'] if viec.get('muc') is not None else [])
             self.nap_tai_lieu(viec['pdf'])
 
     def _dat_gan_dung(self, co: bool) -> None:
         self.gan_dung = co
         self.lb_gan_dung.setVisible(co)
 
-    def _du_phong(self, khoa, xlsx: Path, ly_do: str) -> None:
+    def _du_phong(self, khoa, xlsx: Path | None, ly_do: str, muc: list | None = None) -> None:
         """Không dùng được Excel / Word: PDF gần đúng bằng Qt - file .docx dựng từ chính file Word (docx_sang_pdf), file Excel (bảng
         tổng hợp) từ bản Excel (pdf_du_phong). Lỗi nữa thì báo lý do + mở ngoài."""
+        muc_luc: list = []
+        if muc is not None:                              # nhiều hộ: PDF gần đúng từng file rồi gộp
+            pdf = muc[0][0].with_name('xem_nhieu_ho_gan_dung.pdf')
+            try:
+                con_lai = []
+                for f, t in muc:
+                    g = f.with_name(f.stem + '_gan_dung.pdf')
+                    if la_word(f):
+                        from .docx_sang_pdf import xuat_pdf_tu_docx
+                        xuat_pdf_tu_docx(f, g)
+                    else:
+                        from .pdf_du_phong import xuat_pdf_du_phong_qt
+                        xuat_pdf_du_phong_qt(f, g)
+                    con_lai.append((g, t))
+                muc_luc = gop_pdf_muc(con_lai, pdf)
+            except Exception as e:                      # noqa: BLE001 - báo trong khung
+                from .thong_bao import chu_loi
+                self._dat_gan_dung(False)
+                self.bao(f'{ly_do}\n\n{chu_loi("Không dựng được bản xem trước gần đúng", e)}')
+                return
+            if khoa is not None:
+                self._nho[khoa] = (pdf, None)
+                self._nho_muc[khoa] = muc_luc
+            self.ly_do_gan_dung = ly_do
+            self._dat_gan_dung(True)
+            self._dat_muc_luc(muc_luc)
+            self.nap_tai_lieu(pdf)
+            return
         pdf = xlsx.with_name(xlsx.stem + '_gan_dung.pdf')
         try:
             if la_word(xlsx):
@@ -756,6 +868,7 @@ class KhungXemTruocTaiLieu(QFrame):
             self._nho[khoa] = (pdf, xlsx)
         self.ly_do_gan_dung = ly_do
         self._dat_gan_dung(True)
+        self._dat_muc_luc([])
         self.nap_tai_lieu(pdf)
 
     def cho_xong(self, giay: float = 120) -> bool:
@@ -797,6 +910,8 @@ class KhungXemTruocTaiLieu(QFrame):
         self._tha_buf()
         self.pdf = self.xlsx = None
         self._nho.clear()
+        self._nho_muc.clear()
+        self._dat_muc_luc([])
         if self.thu_muc is not None:
             _xoa(self.thu_muc)
             if self._dang is not None:

@@ -2103,6 +2103,14 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.22 (người dùng 24/10/2026): XEM TRƯỚC GỘP NHIỀU HỘ ở `HopIn` - nút `b_xem_nhieu` (hàng "Phương án chi tiết" của khung tài liệu) ->
+  `xem_truoc_nhieu_ho` (hộ đang đánh dấu, tối đa `man_hinh.XEM_NHIEU_TOI_DA` 30; khóa ('nhieu', hộ, dự thảo, lần)); `xem_truoc_tai_lieu`:
+  `yeu_cau(khoa, tao, ...)` nhận `tao(thu_muc)` trả LIST [(file .docx / .xlsx, nhãn)] -> `chuyen_pdf_nhieu` (luồng nền: Word / Excel xuất PDF từng
+  file trong MỘT lần mở ứng dụng rồi `gop_pdf_muc` pypdf), mục lục `muc_luc` [(nhãn, trang đầu)], ô `cb_muc` "Nhảy tới hộ" (`den_muc`, `sang_trang(
+  tuyet_doi=)`), `xlsx` = None khi xem nhiều hộ (nút In nhanh tắt, dùng "In…" in cả bản), cache `_nho_muc`; không có Word: `_du_phong(muc=)` dựng PDF
+  gần đúng từng file bằng Qt rồi gộp. Đo Word thật: 4 hộ 3,9 s. Test `tests/test_yeu_cau_2411.py`. Đã sửa luôn `xem_truoc_bang_tong_hop` (còn truyền
+  tham số `mau` thừa từ 1.0.20). Phân tích giao diện in (24/10): xem báo cáo trong phiên - đề xuất chưa làm: bỏ "Chọn tất cả mẫu / Bỏ chọn mẫu", gộp
+  3 cách chọn phạm vi, đưa bảng hộ giãn cao, bộ đếm nổi che cột tiền, nhớ lựa chọn đầu ra, ô nhập lề bảng tổng hợp trong Cài đặt.
 - 1.0.21 (người dùng 24/10/2026, ảnh PDF Word chi tiết + bảng tổng hợp):
   - TIÊU ĐỀ MỤC I THEO CHỦ SỬ DỤNG LÀ YÊU CẦU CỦA NGƯỜI DÙNG (22/10: Phương án 2): `du_lieu_in.TIEU_DE_MUC_I_TO_CHUC` "I. Thông tin về tổ chức" /
     `TIEU_DE_MUC_I_HO` "I. Thông tin về hộ gia đình, cá nhân" (người dùng 24/10 viết "về"; bản 1.0.13 ghi không có "về"). 1.0.19 từng ghi đè bằng tiêu đề

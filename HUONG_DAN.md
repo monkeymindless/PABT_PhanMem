@@ -1,5 +1,8 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.21 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.22 – Bản Tiêu chuẩn · Sử dụng nội bộ)
 
+> **1.0.22**: **Xuất hồ sơ & Bản in → Xem trước gộp các hộ đã chọn**: xem phương án chi tiết của nhiều hộ (đánh dấu cột Chọn, tối đa 30 hộ
+> một lần) trên cùng một bản PDF; ô **Nhảy tới hộ** trên thanh xem trước, **In…** in cả bản.
+>
 > **1.0.21**: tiêu đề mục I phương án chi tiết theo chủ sử dụng (**"I. Thông tin về tổ chức"** / **"I. Thông tin về hộ gia đình, cá nhân"**);
 > chữ ký dịch sang trái cho cân lề; đường kẻ dưới tên dự án gần chữ; đường kẻ dưới **CHI NHÁNH** ngắn hơn chữ 1 cm; **DỰ ÁN** in hoa khi tên
 > dự án in hoa; bảng tổng hợp có dòng **CHI NHÁNH …** dưới tên cơ quan. Lề bảng tổng hợp A3: trái 2,0 / phải 1,0 / trên 1,5 / dưới 1,5 cm

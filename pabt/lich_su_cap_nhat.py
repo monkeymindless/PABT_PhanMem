@@ -7,6 +7,10 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.22', '24/10/2026', (
+        'Xuất hồ sơ & Bản in: nút "Xem trước gộp các hộ đã chọn" - lập phương án chi tiết của nhiều hộ đang đánh dấu (tối đa 30 hộ một lần) '
+        'thành MỘT bản PDF ở khung xem trước, có ô "Nhảy tới hộ" và in cả bản bằng nút "In…". Máy không có Word: bản gần đúng dựng bằng Qt.',
+    )),
     ('1.0.21', '24/10/2026', (
         'Mục I của phương án chi tiết trở lại đúng yêu cầu: chủ sử dụng là tổ chức -> "I. Thông tin về tổ chức"; hộ gia đình, cá nhân -> '
         '"I. Thông tin về hộ gia đình, cá nhân" (bản 1.0.19 đã ghi đè bằng tiêu đề chung của mẫu PDF).',

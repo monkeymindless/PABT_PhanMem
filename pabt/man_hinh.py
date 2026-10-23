@@ -2824,6 +2824,9 @@ QUY_TAC_CHE_DO = {
 }
 
 
+XEM_NHIEU_TOI_DA = 30           # xem trước gộp nhiều hộ: tối đa chừng này hộ một lần (mỗi hộ Word xuất PDF ~1-2 s)
+
+
 class HopIn(QDialog):
     """Chọn hộ, loại bản in, đầu ra (Excel / Excel + PDF / máy in) và thư mục."""
 
@@ -3044,6 +3047,12 @@ class HopIn(QDialog):
         self.b_xem_bth.setToolTip('Lập bảng tổng hợp các hộ đang đánh dấu (theo mẫu, chế độ dự thảo / chính thức đang chọn) '
                                   'và hiện ở khung xem trước bên phải')
         self.b_xem_bth.clicked.connect(lambda: self.xem_truoc_bang_tong_hop())
+        # 24/10/2026 (người dùng): xem trước NHIỀU HỘ trên cùng một bản (như nhiều hộ trong một file PDF) - các hộ đang đánh dấu
+        self.b_xem_nhieu = QPushButton('Xem trước gộp các hộ đã chọn')
+        self.b_xem_nhieu.setToolTip(f'Lập phương án chi tiết của các hộ đang đánh dấu (tối đa {XEM_NHIEU_TOI_DA} hộ một lần, theo chế độ '
+                                    'dự thảo / chính thức đang chọn), gộp thành MỘT bản PDF ở khung bên phải; chọn hộ ở ô "Nhảy tới hộ" trên '
+                                    'thanh xem trước, in cả bản bằng nút "In…".')
+        self.b_xem_nhieu.clicked.connect(lambda: self.xem_truoc_nhieu_ho())
         self.the_tai_lieu = {}
         for r, (o, chu, loai) in enumerate(((self.o_ct, 'Word · NĐ 30/2020', 'lam'),
                                             (self.o_bth, f'Tách {chu_pb} QĐ 08' if chu_pb else 'Kinh phí QĐ 08', 'xanh'),
@@ -3051,6 +3060,8 @@ class HopIn(QDialog):
                                             (self.o_tt, 'Chỉ mở ở Chính thức', 'xam'),
                                             (self.o_bc, 'Chỉ mở ở Chính thức', 'xam'))):
             luoi.addWidget(o, r, 0)
+            if o is self.o_ct:
+                luoi.addWidget(self.b_xem_nhieu, r, 1)
             if o is self.o_bth:
                 luoi.addWidget(self.b_xem_bth, r, 1)
             t = QLabel(chu)
@@ -3205,8 +3216,31 @@ class HopIn(QDialog):
         lan = self.lan_in()
 
         def tao(thu_muc):
-            return in_an.lap_bang_tong_hop(self.con, Path(thu_muc) / 'BangTongHop.xlsx', ds, mau, du_thao=du_thao, lan=lan)
+            return in_an.lap_bang_tong_hop(self.con, Path(thu_muc) / 'BangTongHop.xlsx', ds, du_thao=du_thao, lan=lan)
         self.w_preview.yeu_cau(khoa, tao, f'Bảng tổng hợp {len(ds)} hộ ({"dự thảo" if du_thao else "chính thức"})', ngay)
+        return khoa
+
+    def xem_truoc_nhieu_ho(self, ngay: bool = False):
+        """Xem trước phương án chi tiết của NHIỀU HỘ đang đánh dấu trên một bản (gộp PDF, có ô nhảy tới hộ). Tối đa XEM_NHIEU_TOI_DA hộ
+        đầu danh sách đánh dấu. Trả khóa đã yêu cầu (None: chưa đánh dấu hộ nào)."""
+        from . import in_word
+        ds = list(self.ds_ho())
+        if not ds:
+            if not getattr(self, 'im_lang', False):
+                QMessageBox.information(self, TEN_UD, 'Đánh dấu ít nhất một hộ (cột "Chọn") để xem trước gộp.')
+            return None
+        tong = len(ds)
+        ds = ds[:XEM_NHIEU_TOI_DA]
+        du_thao, lan = self.che_do() == 'du_thao', self.lan_in()
+        khoa = ('nhieu', tuple(ds), du_thao, lan)
+        ten_ho = {h['ma_ho']: f'{h["thu_tu"]}. {h["ho_ten"]}' for h in self.ho}
+        self._ma_xem = None                         # bấm lại một dòng hộ thì xem lại phương án của riêng hộ đó
+
+        def tao(thu_muc):
+            return [(in_word.xuat_chi_tiet_docx(self.con, m, Path(thu_muc) / f'{k:03d}_{du_lieu_in.ten_file_ho(self.con, m)}.docx',
+                                                du_thao=du_thao, lan=lan), ten_ho.get(m, str(m))) for k, m in enumerate(ds, 1)]
+        gioi_han = f' (hiện {len(ds)}/{tong} hộ đầu)' if tong > len(ds) else ''
+        self.w_preview.yeu_cau(khoa, tao, f'{len(ds)} hộ gộp ({"dự thảo" if du_thao else "chính thức"}){gioi_han}', ngay)
         return khoa
 
     def done(self, r):
