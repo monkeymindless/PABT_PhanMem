@@ -149,22 +149,15 @@ class TestKhung(CoSoXem):
 
     @unittest.skipUnless(xt.co_qtpdf(), 'Qt5: không có QtPdf')
     def test_ban_word_khong_co_word_dung_ban_gan_dung(self):
-        """22/10/2026: xem trước phương án chi tiết = file .docx; máy không dùng được Word -> PDF gần đúng dựng từ bản Excel do
-        tao_du_phong lập (không gọi Word / Excel)."""
+        """Xem trước phương án chi tiết = file .docx; máy không dùng được Word -> PDF gần đúng dựng bằng Qt từ chính file .docx
+        (docx_sang_pdf - không gọi Word / Excel, không lập bản Excel)."""
         from pabt import in_word
         k = xt.KhungXemTruocTaiLieu()
         self.addCleanup(k.don_dep)
-        goi = []
-
-        def du_phong(d):
-            goi.append(d)
-            return in_an.lap_chi_tiet(self.con, 1, Path(d) / 'ct.xlsx')
         with mock.patch.object(xt, 'dung_duoc_word', lambda: 'Máy chưa có Microsoft Word.'):
-            k.yeu_cau(('w', 1), lambda d: in_word.xuat_chi_tiet_docx(self.con, 1, Path(d) / 'ct.docx'), 'thử', ngay=True,
-                      tao_du_phong=du_phong)
+            k.yeu_cau(('w', 1), lambda d: in_word.xuat_chi_tiet_docx(self.con, 1, Path(d) / 'ct.docx'), 'thử', ngay=True)
         self.assertTrue(k.cho_xong(30))
         self.assertEqual(self.excel.da_nhan, [])                # không nhờ Excel / Word
-        self.assertEqual(len(goi), 1)
         self.assertTrue(k.gan_dung)
         self.assertEqual(k.xlsx.suffix, '.docx')                # In nhanh / mở ngoài vẫn theo bản Word
         self.assertGreaterEqual(k.so_trang(), 1)
@@ -189,24 +182,6 @@ class TestKhung(CoSoXem):
         finally:
             for v in self._vo:
                 v.start()
-
-
-class TestLapChiTietBanDangSoan(CoSoXem):
-    def test_pa_trong_bo_nho_va_che_cccd(self):
-        from pabt.lap_pa import BoSoan
-        with self.con:
-            self.con.execute("UPDATE ho SET so_cccd = '075092001234' WHERE ma_ho = 1")
-        bo = BoSoan(self.con, 1)
-        m = next(x for x in bo.dm.muc[2])
-        bo.them_tu_danh_muc(2, m)
-        self.assertTrue(bo.co_thay_doi)
-        f = in_an.lap_chi_tiet(self.con, 1, self.td / 'dang_soan.xlsx', bc=bo.bc, pa=bo.pa, che_cccd=True)
-        chu = ' '.join(str(c.value) for r in openpyxl.load_workbook(f).active.iter_rows() for c in r if c.value is not None)
-        self.assertIn(m.ten, chu)                               # dòng chưa lưu có trong bản in
-        self.assertIn('075092001234', chu)                      # 1.0.04: che_cccd=True cũ bỏ qua - in đủ số
-        f2 = in_an.lap_chi_tiet(self.con, 1, self.td / 'da_luu.xlsx', che_cccd=False)    # số liệu đã lưu, không che
-        chu2 = ' '.join(str(c.value) for r in openpyxl.load_workbook(f2).active.iter_rows() for c in r if c.value is not None)
-        self.assertIn('075092001234', chu2)
 
 
 class TestHopIn(CoSoXem):

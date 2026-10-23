@@ -6,6 +6,7 @@ from pathlib import Path
 
 import openpyxl
 
+from pabt import du_lieu_in
 from pabt import csdl, don_gia, doi_chieu, in_an, nhap_chi_tiet
 from pabt.nghiep_vu import NGUON_DM, NGUON_TAY, thanh_tien_khoan
 from pabt.tien import D
@@ -171,7 +172,7 @@ class TestNhapChiTiet(unittest.TestCase):
             thuong = tinh_ho(con, 2).muc[5]                             # có tiền đất: phần mềm tự tính thưởng (mục 5)
             self.assertEqual(kq.ho[1]['tong'], self.so['dat'] + D(1000000) + thuong)
             # bản in: hộ không tính tiền đất liệt kê thửa, dòng đầu ghi pháp lý
-            dong, _ = in_an.dong_chi_tiet(con, 1)
+            dong, _ = du_lieu_in.dong_chi_tiet(con, 1)
             self.assertEqual(dong[1][1][7], GHI_CHU_DAT)
             self.assertEqual(dong[2][1][7], '')
             self.assertEqual(in_an.phan_loai_lap(con), {1: 'da_lap', 2: 'da_lap'})

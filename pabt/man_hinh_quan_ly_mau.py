@@ -15,9 +15,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QHBoxLay
 from . import dia_phuong, in_an, in_word
 from .thong_bao import TEN_UD, chu_loi
 
-MO_TA = {in_an.TEN_CT: 'A4 dọc, tỷ lệ 72%, chữ 14 / tiêu đề 16 pt',
-         in_an.TEN_DT_QL: 'Bản niêm yết: chữ DỰ THẢO, không khối chữ ký',
-         in_an.TEN_BTH: 'A3 ngang, tỷ lệ 55%, chữ 14 / tiêu đề 16 pt'}
+MO_TA = {in_an.TEN_BTH: 'A3 ngang, tỷ lệ 55%, chữ 14 / tiêu đề 16 pt'}
 
 
 class HopQuanLyMauIn(QDialog):

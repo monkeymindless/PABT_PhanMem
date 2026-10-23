@@ -2073,6 +2073,23 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     `setVisible(True)` / `show()` hiện thành cửa sổ cấp cao riêng. Gặp ở `xem_truoc_tai_lieu` (b_in, b_in_hop), `HopBanGiao` (lb_canh_bao, lb_chung),
     `HopBanDo` (b_nhap): gọi setVisible SAU khi đã addWidget / addRow. `kiem_tra_giao_dien.py` có bộ dò (mục "Cửa sổ lạ", mã thoát 1) + test
     `tests/test_cua_so_la.py`. Thêm widget mới: ẩn / hiện SAU khi vào bố cục.
+- 1.0.19 (người dùng 23/10/2026; test `tests/test_an_toan_excel_1019.py`, `test_in_an_2110.TestDocxSangPdf`, `test_chu_de_1017.py`): PHƯƠNG ÁN
+  CHI TIẾT CHỈ CÒN BẢN WORD - đã BỎ HẲN mẫu Excel IN_CHITIET: `in_an.lap_chi_tiet` + ~1.200 dòng hàm phụ (dàn trang, đường kẻ, nguồn gốc),
+  `canh_trang_in_an.py`, `mau_in\IN_CHITIET*.xlsx` / `.duong_ke.xml`, mẫu nhúng chi tiết (`tao_mau_nhung.DS` chỉ còn IN_BANGTONGHOP),
+  mục `mau_in.IN_CHITIET` của hồ sơ địa phương (hồ sơ cũ còn mục này vẫn hợp lệ - bỏ qua), mục chi tiết trong `in_an.MAU_QUAN_LY` / gói mẫu.
+  Mọi ghi chú cũ ở trên nhắc `in_an.lap_chi_tiet`, IN_CHITIET Excel, dàn trang chi tiết Excel là LỊCH SỬ (không còn mã). Bảng tổng hợp
+  VẪN là Excel (IN_BANGTONGHOP, người dùng chọn). `pabt/du_lieu_in.py` (không Excel / Word / Qt): `dong_chi_tiet`, `_thong_tin_ho`,
+  `_thong_tin_du_an`, tiêu đề mục, `ten_file_ho`, `chon_lan_in`... - `in_word`, `bang_dieu_chinh`, `van_ban_trinh`, `man_hinh` gọi trực
+  tiếp `du_lieu_in.X`; `in_an` chỉ nhập lại vài tên cho bảng tổng hợp. `pabt/docx_sang_pdf.py`: PDF dự phòng khi máy không có Word =
+  QTextDocument từ chính file .docx (hiểu phần OpenXML do in_word / van_ban_trinh sinh: đoạn, chạy chữ, bảng gộp ô, viền ô, viền dưới đoạn
+  = bảng một ô); `van_ban_trinh.pdf_du_phong_chi_tiet(viec, loi)` và `xem_truoc_tai_lieu._du_phong` dùng nó; `xuat_bo_ho_so` không còn
+  tham số `chi_tiet_word`; in ra máy khi không có Word -> PDF dự phòng + lỗi 'KHONG_CO_WORD'. AN TOÀN EXCEL: mọi file xuất cho người
+  dùng lưu bằng `an_toan.luu_xlsx(wb, đường dẫn)` (`khu_cong_thuc`: công thức không thuộc dạng SUM / ROUND + ô / số bị ép thành chữ,
+  quotePrefix) - ĐỪNG gọi `wb.save` trực tiếp ở nơi xuất file (`test_an_toan_excel_1019.TestMotCongLuu` chặn; chỉ in_an lưu lại file MẪU).
+  `in_an._thay_cho_trong`: thay `{trường}` MỘT lượt (giá trị chứa `{khác}` không bị thay tiếp). Giao diện 2.0 nền tảng: `pabt/chu_de.py`
+  (không Qt: mật độ bảng gon / chuan / thoang, tương phản cao theo Windows, `PABT_MAT_DO` / `PABT_TUONG_PHAN_CAO`) + `giao_dien.dat_mat_do`
+  + `man_hinh_giao_dien.HopGiaoDien` (Cài đặt > Giao diện…). CHƯA có nền tối (màu còn viết cứng ở nhiều nơi). KHÔNG dùng `sed -i` (đổi
+  CRLF sang LF) - đã lặp lại nhiều lần.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

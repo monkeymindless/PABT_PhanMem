@@ -1,13 +1,11 @@
 """Khối chữ ký bản in: họ tên người ký căn giữa ngay dưới chức danh (in_an.can_khoi_ky) - người dùng 16/10/2026."""
 from __future__ import annotations
 
-import tempfile
 import unittest
-from pathlib import Path
 
 import openpyxl
 
-from pabt import csdl, in_an
+from pabt import in_an
 
 
 def _sheet():
@@ -50,34 +48,6 @@ class TestKhoiKy(unittest.TestCase):
         self.assertEqual(ws['D6'].value, '{nguoi_kiem_tra}')
         self.assertEqual(ws['F6'].value, 'chữ khác')
         self.assertEqual(ws['D6'].alignment.horizontal, 'center')
-
-    def test_ban_in_chi_tiet_va_tong_hop(self):
-        from tests.test_toc_do import _du_an
-        with tempfile.TemporaryDirectory() as td:
-            p = _du_an(Path(td), 2)
-            con = csdl.mo(p)
-            try:
-                with con:
-                    con.execute("UPDATE du_an SET nguoi_lap = 'Người Lập', nguoi_kiem_tra = 'Người Kiểm', nguoi_ky = 'Người Ký', "
-                                "chuc_vu_ky = 'Phó Giám đốc'")
-                ct, bth = Path(td) / 'ct.xlsx', Path(td) / 'bth.xlsx'
-                in_an.lap_chi_tiet(con, 1, ct)
-                in_an.lap_bang_tong_hop(con, bth)
-            finally:
-                con.close()
-            for f, ds in ((ct, ('Người Lập', 'Người Kiểm', 'Người Ký')), (bth, ('Người Lập', 'Người Kiểm', 'Người Ký'))):
-                ws = openpyxl.load_workbook(f).active
-                o_ten = {c.value: c for row in ws.iter_rows() for c in row if c.value in ds}
-                self.assertEqual(set(o_ten), set(ds), f)
-                for ten, o in o_ten.items():
-                    self.assertEqual(o.alignment.horizontal, 'center', (f.name, ten))
-                    vt = _vung(ws, o.coordinate)
-                    cot = vt.split(':') if ':' in vt else [vt, vt]
-                    # chức danh phía trên cùng cột, không còn dấu cách thừa
-                    td_o = [c for r in range(o.row - 1, o.row - 12, -1) for c in ws[r]
-                            if isinstance(c.value, str) and c.value.strip() and c.column_letter == ''.join(filter(str.isalpha, cot[0]))]
-                    self.assertTrue(td_o, (f.name, ten))
-                    self.assertEqual(td_o[0].value, td_o[0].value.strip())
 
 
 if __name__ == '__main__':

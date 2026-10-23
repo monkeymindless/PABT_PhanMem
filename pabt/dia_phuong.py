@@ -214,8 +214,8 @@ def kiem_tra(hs: dict) -> list:
                 if sai or not isinstance(v, (int, float)) or not 0 <= v <= 3:
                     loi.append(f'ban_in.le_trang.{loai}.{k}: lề tính bằng inch, từ 0 đến 3.')
     mi = hs.get('mau_in')
-    can = {'IN_CHITIET': ('stt', 'ten', 'dvt', 'so_luong', 'don_gia', 'ty_le', 'thanh_tien', 'ghi_chu'),
-           'IN_BANGTONGHOP': ('stt', 'ho_ten', 'dia_chi', 'so_to', 'so_thua', 'loai_dat', 'dt_thu_hoi', 'dt_nong_nghiep', 'dt_lua',
+    # 1.0.19: phương án chi tiết chỉ còn bản Word - mục mau_in.IN_CHITIET (cột mẫu Excel) của hồ sơ cũ được bỏ qua
+    can = {'IN_BANGTONGHOP': ('stt', 'ho_ten', 'dia_chi', 'so_to', 'so_thua', 'loai_dat', 'dt_thu_hoi', 'dt_nong_nghiep', 'dt_lua',
                               'dt_phi_nong_nghiep', 'dt_o', 'vi_tri', 'tien_dat', 'tien_tai_san', 'tien_cay_vat_nuoi',
                               'ho_tro_dao_tao', 'ho_tro_on_dinh', 'thuong', 'tong', 'nguon_goc', 'tai_dinh_cu', 'ghi_chu')}
     for mau, khoa in can.items():
@@ -239,12 +239,6 @@ def kiem_tra(hs: dict) -> list:
             loi.append('mau_in.IN_BANGTONGHOP.cot_cong: danh sách chữ cột.')
         if not isinstance(bth.get('cot_cuoi'), str) or not _RE_COT.match(bth['cot_cuoi']):
             loi.append('mau_in.IN_BANGTONGHOP.cot_cuoi: chữ cột cuối vùng in (vd "Y").')
-    ct = mi.get('IN_CHITIET') if isinstance(mi, dict) else None
-    if isinstance(ct, dict):
-        if not isinstance(ct.get('chu_dau_bang'), str) or not ct['chu_dau_bang'].strip():
-            loi.append('mau_in.IN_CHITIET.chu_dau_bang: chữ ở ô đầu hàng tiêu đề bảng (vd "STT").')
-        if not isinstance(ct.get('cot_loai_dong'), str) or not _RE_COT.match(ct['cot_loai_dong']):
-            loi.append('mau_in.IN_CHITIET.cot_loai_dong: chữ cột (ngoài vùng in) ghi loại dòng cho định dạng có điều kiện.')
     return loi
 
 
@@ -325,7 +319,7 @@ def so_cot(chu: str) -> int:
 
 
 def cot_mau(mau: str) -> dict:
-    """{trường: số cột (1 = A)} của mẫu in (IN_CHITIET / IN_BANGTONGHOP)."""
+    """{trường: số cột (1 = A)} của mẫu in (IN_BANGTONGHOP)."""
     return {k: so_cot(v) for k, v in lay(f'mau_in.{mau}.cot').items()}
 
 

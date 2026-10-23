@@ -7,7 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pabt import csdl, gia_dat_nq28, in_an, lap_pa, nghiep_vu, nhap_chi_tiet, phan_loai_tai_san
+from pabt import du_lieu_in
+from pabt import csdl, gia_dat_nq28, lap_pa, nghiep_vu, nhap_chi_tiet, phan_loai_tai_san
 from pabt.lap_pa import BoSoan
 from pabt.nghiep_vu import MUC_VN
 from tests.test_toc_do import _du_an
@@ -42,7 +43,7 @@ class TestVatNuoi(_CoDuAn):
         self.assertEqual([d.stt for d in kq.dong if d.muc == 4], ['5.1'])
         self.assertEqual(kq.muc[MUC_VN], m.don_gia * 2)
         self.assertEqual(nghiep_vu.muc_5_cot(kq.muc)[3], kq.muc[3] + kq.muc[MUC_VN])     # bảng 5 cột: cây gồm vật nuôi
-        dong, _ = in_an.dong_chi_tiet(self.con, self.ma[0])
+        dong, _ = du_lieu_in.dong_chi_tiet(self.con, self.ma[0])
         tieu_de = [(x[1][0], x[1][1]) for x in dong if x[0] in ('H', 'R')]
         self.assertEqual([s for s, _ in tieu_de], ['1', '2', '3', '4', '5', '6'])
         self.assertEqual(tieu_de[3][1], 'Bồi thường, hỗ trợ về vật nuôi')

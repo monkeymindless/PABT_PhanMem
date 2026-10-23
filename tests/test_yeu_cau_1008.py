@@ -186,7 +186,6 @@ class TestBoLocMau(_Co):
         self.assertEqual((ws.page_setup.paperSize, int(ws.page_setup.scale)), (8, in_an.TI_LE_BTH))
 
 
-
 def _mau_hong(f: Path) -> Path:
     """Mẫu chi tiết "rác" (như mẫu cũ lấy từ file Excel PABT ở %APPDATA%): hàng tiêu đề + dòng mẫu dưới STT không viền, định dạng General."""
     from openpyxl.styles import Border
@@ -214,103 +213,6 @@ class TestKhungBangMucIII(_Co):
         con = csdl.mo(_du_an(self.td, 3))
         self.addCleanup(con.close)
         return con
-
-    def test_xlsx_du_khung_va_dinh_dang_so_khi_mau_hong(self):
-        from pabt import in_an
-        con = self._con()
-        p = in_an.lap_chi_tiet(con, 2, self.td / 'ct.xlsx', _mau_hong(self.td / 'mau' / 'IN_CHITIET.xlsx'))
-        ws = openpyxl.load_workbook(p).active
-        dau = next(o.row for o in ws._cells.values() if str(o.value or '').strip() == 'STT')
-        tong = next(o.row for o in ws._cells.values() if str(o.value or '').strip() == 'TỔNG CỘNG')
-        gop = {}
-        for m in ws.merged_cells.ranges:
-            for rr in range(m.min_row, m.max_row + 1):
-                for cc in range(m.min_col, m.max_col + 1):
-                    gop[(rr, cc)] = m
-        for r in range(dau, tong + 1):
-            for c in range(1, 9):
-                b = ws.cell(r, c).border
-                m = gop.get((r, c))                     # ô gộp: Excel chỉ vẽ cạnh ngoài của vùng gộp
-                can = [k for k, tren_canh in (('left', c == m.min_col), ('right', c == m.max_col), ('top', r == m.min_row),
-                                              ('bottom', r == m.max_row))
-                       if tren_canh] if m is not None else ['left', 'right', 'top', 'bottom']
-                self.assertTrue(all(getattr(b, k).style for k in can), (ws.cell(r, c).coordinate, can))
-        self.assertEqual(ws.cell(dau, 1).border.left.style, 'medium')
-        self.assertEqual(ws.cell(dau, 8).border.right.style, 'medium')
-        self.assertEqual(ws.cell(tong, 1).border.bottom.style, 'medium')
-        so = 0
-        for r in range(dau + 1, tong + 1):
-            for c, fmt in ((5, '#,##0'), (7, '#,##0'), (6, '%')):
-                o = ws.cell(r, c)
-                if isinstance(o.value, (int, float)):
-                    self.assertIn(fmt, o.number_format, o.coordinate)
-                    so += 1
-            o = ws.cell(r, 4)
-            if isinstance(o.value, (int, float)):
-                self.assertNotEqual(o.number_format, 'General', o.coordinate)
-        self.assertGreater(so, 3)
-
-    def test_muc_i_khong_xoa_vien_bang_khi_mau_thieu_tieu_de_ii(self):
-        """Mẫu không có dòng "II." (trước đây xóa viền từ "I." tới I + 6 dòng - trùm hàng tiêu đề bảng)."""
-        from pabt import in_an
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws['A1'] = 'I. Tổ chức và hộ gia đình'
-        ws['B2'] = 'Họ và tên:'
-        ws['A4'] = 'STT'
-        from openpyxl.styles import Border, Side
-        for c in range(1, 9):
-            ws.cell(4, c).border = Border(*(Side(style='thin'),) * 4)
-        in_an.chuan_muc_i(ws, 4)
-        self.assertTrue(ws['A4'].border.left.style)
-
-    def test_bo_qua_mau_rac_trong_thu_muc_may(self):
-        from pabt import in_an
-        tm = in_an.thu_muc_mau_tuy_chinh()
-        _mau_hong(tm / 'IN_CHITIET.xlsx')
-        self.assertNotEqual(in_an.thu_muc_mau(in_an.TEN_CT), tm)          # mẫu rác: in theo mẫu đóng kèm / nhúng
-        self.assertFalse(in_an.dung_mau_may(tm / 'IN_CHITIET.xlsx', in_an.TEN_CT))
-        f = _mau_hong(self.td / 'nguon' / 'IN_CHITIET.xlsx')            # người dùng CHỦ ĐỘNG thay qua hộp Quản lý Mẫu in: dùng
-        in_an.thay_mau(in_an.TEN_CT, f)
-        self.assertEqual(in_an.thu_muc_mau(in_an.TEN_CT), tm)
-        in_an.khoi_phuc_mau(in_an.TEN_CT)
-        self.assertNotIn(in_an.TEN_CT, in_an._danh_dau_mau(tm))
-        b = openpyxl.Workbook()                                            # mẫu bảng tổng hợp: không kiểm khung chi tiết
-        b.save(tm / 'IN_BANGTONGHOP.xlsx')
-        self.assertTrue(in_an.dung_mau_may(tm / 'IN_BANGTONGHOP.xlsx', in_an.TEN_BTH))
-
-    def test_pdf_du_phong_dinh_dang_so_va_khung(self):
-        from PySide6.QtWidgets import QApplication
-        QApplication.instance() or QApplication([])
-        from pabt import in_an, pdf_du_phong as dp
-        self.assertEqual(dp._so_vn(0.8, '0%'), '80%')
-        self.assertEqual(dp._so_vn(720000, '#,##0'), '720.000')
-        self.assertEqual(dp._so_vn(20759000, '_-* #,##0\\ _₫_-;\\-* #,##0\\ _₫_-;_-* "-"??\\ _₫_-;_-@_-'), '20.759.000')
-        self.assertEqual(dp._so_vn(36.04, '#,##0.00'), '36,04')
-        con = self._con()
-        p = in_an.lap_chi_tiet(con, 2, self.td / 'ct.xlsx', _mau_hong(self.td / 'mau' / 'IN_CHITIET.xlsx'))
-        noi_dung, _ = dp.html_tu_xlsx(p)
-        self.assertIn('100%', noi_dung)
-        self.assertIn('250.000', noi_dung)
-        self.assertNotIn('>250000<', noi_dung)
-        self.assertIn('border-left', noi_dung)
-        from PySide6.QtGui import QTextDocument, QTextTable
-        doc = QTextDocument()
-        doc.setHtml(noi_dung)
-        self.assertEqual(dp._chuan_bang_qt(doc), 1)
-        bang = next(f for f in doc.rootFrame().childFrames() if isinstance(f, QTextTable))
-        self.assertEqual(bang.format().cellSpacing(), 0)
-        vien = 0
-        for r in range(bang.rows()):
-            for c in range(bang.columns()):
-                f = bang.cellAt(r, c).format().toTableCellFormat()
-                if hasattr(f, 'leftBorder') and f.leftBorder() > 0:
-                    vien += 1
-        if hasattr(bang.cellAt(0, 0).format().toTableCellFormat(), 'leftBorder'):     # Qt 5.14+: viền từng ô
-            self.assertGreater(vien, 30)
-        pdf = dp.xuat_pdf_du_phong_qt(p, self.td / 'ct.pdf')
-        self.assertGreater(pdf.stat().st_size, 1000)
-
 
 
 class TestThemHoCapNhatDanhSach(_Co):

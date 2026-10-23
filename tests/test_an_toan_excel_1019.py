@@ -70,9 +70,6 @@ class TestXuatDuLieuDoc(unittest.TestCase):
     def test_bang_tong_hop(self):
         self.assertEqual(cong_thuc_la(in_an.lap_bang_tong_hop(self.con, self.t / 'b.xlsx')), [])
 
-    def test_chi_tiet_excel_du_phong(self):
-        ma = self.con.execute('SELECT MIN(ma_ho) FROM ho').fetchone()[0]
-        self.assertEqual(cong_thuc_la(in_an.lap_chi_tiet(self.con, ma, self.t / 'c.xlsx')), [])
 
     def test_doi_chieu(self):
         kq = doi_chieu.doi_chieu(self.con)

@@ -6,7 +6,6 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
-import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -46,23 +45,8 @@ class TestMauNhung(_Co):
         for ten_hang, f, _ in __import__('tao_mau_nhung').DS:
             self.assertEqual(mau_in_nhung.SHA256[ten_hang], hashlib.sha256((goc / f).read_bytes()).hexdigest(),
                              f'{f} đã đổi - chạy tao_mau_nhung.py')
-        self.assertEqual(mau_in_nhung.lay_bytes_mau('IN_CHITIET.xlsx'), (goc / 'IN_CHITIET.xlsx').read_bytes())
+        self.assertFalse(mau_in_nhung.co_mau('IN_CHITIET'))                  # 1.0.19: không còn mẫu Excel chi tiết
         self.assertTrue(mau_in_nhung.lay_duong_ke('IN_BANGTONGHOP'))
-
-    def test_may_trang_in_duoc_tu_ram(self):
-        from pabt import in_an
-        con = self._con(4)
-        with mock.patch.dict(os.environ, {'PABT_CHI_MAU_NHUNG': '1'}):
-            self.assertEqual(in_an.thu_muc_mau(), in_an.THU_MUC_NHUNG)
-            self.assertFalse(in_an.THU_MUC_NHUNG.exists())          # thư mục ảo: không bao giờ tạo trên đĩa
-            p1 = in_an.lap_chi_tiet(con, 1, self.td / 'ct.xlsx')
-            p2 = in_an.lap_bang_tong_hop(con, self.td / 'bth.xlsx')
-            self.assertFalse(in_an.THU_MUC_NHUNG.exists())
-            sua = in_an.mau_de_sua()                                 # mở mẫu sửa trên máy trắng: chép mẫu nhúng ra thư mục ghi
-            self.assertTrue(sua.exists())
-        for p in (p1, p2):
-            with zipfile.ZipFile(p) as z:
-                self.assertTrue(any(n.startswith('xl/drawings/') for n in z.namelist()), p)     # đường kẻ nhúng đã chèn
 
 
 class TestBangTongHopA3(_Co):
@@ -113,48 +97,6 @@ class TestChiTiet(_Co):
                 con.execute(f'UPDATE {bang} SET {k} = ? WHERE ma_ho = 1', (v,))
         p = in_an.lap_chi_tiet(con, 1, self.td / 'ct.xlsx')
         return p, openpyxl.load_workbook(p).active
-
-    def test_muc_i_khong_vien_va_so_dang_chu(self):
-        from pabt import in_an
-        con = self._con(2)
-        p, ws = self._in(con, dien_thoai='0912345678', so_cccd='075092001234')
-        r_i = next(o.row for o in in_an._o_chu(ws) if o.value.startswith('I. '))
-        r_ii = next(o.row for o in in_an._o_chu(ws) if o.value.startswith('II.'))
-        for (r, c), o in ws._cells.items():
-            if r_i <= r < r_ii:
-                self.assertFalse(any(getattr(o.border, k).style for k in ('left', 'right', 'top', 'bottom')), o.coordinate)
-        sdt = next(o for o in ws._cells.values() if o.value == '0912345678')
-        self.assertEqual(sdt.number_format, '@')
-        with zipfile.ZipFile(p) as z:
-            x = z.read('xl/worksheets/sheet1.xml').decode('utf-8')
-        self.assertIn('numberStoredAsText="1"', x)
-        self.assertIn(sdt.coordinate, x[x.index('<ignoredErrors'):])
-        self.assertEqual(ws.cell(r_ii, 1).value, in_an.TIEU_DE_MUC_II)
-        self.assertTrue(in_an.TIEU_DE_MUC_II.endswith(':'))
-
-    def test_co_chu_tieu_de_16_noi_dung_14(self):
-        from pabt import in_an
-        con = self._con(2)
-        _, ws = self._in(con)
-        hang_td = next(o.row for o in ws._cells.values() if str(o.value or '').strip().upper() == 'STT')
-        for o in ws._cells.values():
-            if not (isinstance(o.value, str) and o.value.strip()) or o.column > 8:     # cột loại dòng (AD) ẩn: bỏ qua
-                continue
-            v = o.value.strip()
-            if o.row == hang_td or in_an._RE_TIEU_DE_MUC.match(v) or v.startswith('CỘNG HÒA') or v.startswith('DỰ ÁN'):
-                self.assertEqual((float(o.font.sz), bool(o.font.b)), (in_an.CO_TIEU_DE, True), v[:30])
-        o_ten = next(o for o in ws._cells.values() if o.value == 'Họ và tên:')
-        self.assertEqual(float(o_ten.font.sz), in_an.CO_NOI_DUNG)
-
-    def test_nguon_goc_8_nbsp_bo_cach_thua(self):
-        from pabt import in_an
-        con = self._con(2)
-        _, ws = self._in(con, nguon_goc='Đất do ông bà để lại sử dụng ổn định.\n    -   Phần đất ở: 300 m2.')
-        dong = [o.value for o in ws._cells.values() if isinstance(o.value, str) and o.value.startswith(in_an.NBSP)]
-        self.assertTrue(dong)
-        for x in dong:
-            self.assertTrue(x.startswith(in_an.NBSP * 8) and not x.startswith(in_an.NBSP * 9), repr(x[:12]))
-        self.assertTrue(any(x.lstrip(in_an.NBSP).startswith('- Phần đất ở') for x in dong), dong)
 
 
 class TestTongQuan(_Co):
@@ -294,9 +236,9 @@ class TestQuanLyMau(_Co):
         from pabt.man_hinh_quan_ly_mau import HopQuanLyMauIn
         hop = HopQuanLyMauIn(im_lang=True)
         self.addCleanup(hop.deleteLater)
-        self.assertEqual(hop.bang.rowCount(), 3)
-        self.assertEqual({hop.bang.item(r, 2).text() for r in range(3)}, {in_an.NHUNG})
-        hop.bang.selectRow(2)                                           # bảng tổng hợp
+        self.assertEqual(hop.bang.rowCount(), 1)                        # từ 1.0.19 chỉ còn mẫu bảng tổng hợp (chi tiết = Word)
+        self.assertEqual({hop.bang.item(r, 2).text() for r in range(1)}, {in_an.NHUNG})
+        hop.bang.selectRow(0)                                           # bảng tổng hợp
         f = hop.xuat(self.td / 'xuat' / 'BTH.xlsx')
         wb = openpyxl.load_workbook(f)
         wb.active.page_setup.paperSize = 9                              # người dùng sửa: A4, tỷ lệ 20%
@@ -305,7 +247,7 @@ class TestQuanLyMau(_Co):
         wb.save(f)
         p = hop.thay(f)
         self.assertEqual(p, in_an.thu_muc_mau_tuy_chinh() / 'IN_BANGTONGHOP.xlsx')
-        self.assertEqual(hop.bang.item(2, 2).text(), in_an.TUY_CHINH)
+        self.assertEqual(hop.bang.item(0, 2).text(), in_an.TUY_CHINH)
         ws = openpyxl.load_workbook(p).active                           # bộ lọc áp chuẩn: A3 55%
         self.assertEqual((ws.page_setup.paperSize, int(ws.page_setup.scale)), (8, 55))
         self.assertEqual(in_an.thu_muc_mau(in_an.TEN_BTH), in_an.thu_muc_mau_tuy_chinh())     # in dùng ngay mẫu mới
@@ -313,45 +255,5 @@ class TestQuanLyMau(_Co):
         b = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / 'b.xlsx')).active
         self.assertTrue(any(isinstance(o.value, str) and 'ĐÃ SỬA' in o.value for o in b._cells.values()))
         self.assertTrue(hop.khoi_phuc(xac_nhan=True))
-        self.assertEqual(hop.bang.item(2, 2).text(), in_an.NHUNG)
+        self.assertEqual(hop.bang.item(0, 2).text(), in_an.NHUNG)
         self.assertTrue(list((in_an.thu_muc_mau_tuy_chinh() / 'cu').glob('*IN_BANGTONGHOP.xlsx')))   # mẫu cũ giữ bản sao
-
-    def test_mau_du_thao_tuy_chinh_dung_cho_ban_du_thao(self):
-        from pabt import in_an
-        f = in_an.xuat_mau(in_an.TEN_DT_QL, self.td / 'dt.xlsx')
-        wb = openpyxl.load_workbook(f)
-        wb.active['J1'] = 'MẪU DỰ THẢO RIÊNG'
-        wb.save(f)
-        in_an.thay_mau(in_an.TEN_DT_QL, f)
-        ws = openpyxl.load_workbook(in_an.thu_muc_mau_tuy_chinh() / f'{in_an.TEN_DT_QL}.xlsx').active
-        self.assertEqual((ws.page_setup.paperSize, int(ws.page_setup.scale)), (9, in_an.TI_LE_CT))
-        con = self._con(2)
-        dt = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 1, self.td / 'a.xlsx', du_thao=True)).active
-        ct = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 1, self.td / 'b.xlsx', du_thao=False)).active
-        self.assertEqual(dt['J1'].value, 'MẪU DỰ THẢO RIÊNG')
-        self.assertNotEqual(ct['J1'].value, 'MẪU DỰ THẢO RIÊNG')
-
-
-class TestChiTietA4(_Co):
-    def test_a4_72_le_cm_ghi_chu_115_chu_ky(self):
-        from pabt import in_an
-        con = self._con(2)
-        for du_thao in (False, True):
-            p = in_an.lap_chi_tiet(con, 1, self.td / f'ct{du_thao}.xlsx', du_thao=du_thao)
-            wb = openpyxl.load_workbook(p)
-            ws = wb.active
-            self.assertEqual((ws.page_setup.paperSize, ws.page_setup.orientation), (9, 'portrait'))
-            self.assertFalse(ws.sheet_properties.pageSetUpPr.fitToPage)
-            self.assertTrue(in_an.TI_LE_CT_MIN <= int(ws.page_setup.scale) <= in_an.TI_LE_CT)
-            m = ws.page_margins
-            self.assertEqual([round(x * 2.54, 2) for x in (m.left, m.right, m.top, m.bottom)], [0.8, 0.3, 1.0, 0.8])
-            dau = next(o.row for o in ws._cells.values() if str(o.value or '').strip().upper() == 'STT') + 1
-            self.assertEqual(float(ws.cell(dau, 8).font.sz), in_an.CO_GHI_CHU_CT)
-            self.assertEqual(float(ws.cell(dau, 2).font.sz), in_an.CO_NOI_DUNG)
-            ky = [o for o in ws._cells.values() if isinstance(o.value, str) and o.value.strip() in ('LẬP BIỂU', 'KIỂM TRA')]
-            self.assertTrue(ky)
-            self.assertEqual(all(ws.row_dimensions[o.row].hidden for o in ky), du_thao)    # dự thảo: ẩn khối chữ ký
-            nhan = next(o for o in ws._cells.values() if o.value == 'Họ và tên:')
-            ten = ws.cell(nhan.row, 3)
-            self.assertTrue(nhan.font.b)
-            self.assertFalse(ten.font.b)                                     # mục I: nhãn đậm, nội dung thường

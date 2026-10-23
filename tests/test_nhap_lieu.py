@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from pabt import du_lieu_in
 from pabt import cay_trong as ct
 from pabt.lap_pa import LoiNhap, doc_so, doc_so_luong
 from pabt.tien import D, la_cong_thuc, tinh_cong_thuc
@@ -259,7 +260,7 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         w.bo.sua_khoan(4, k, 'don_gia', '2.000.000')
         w.bang[4].cb_tdc.setCurrentIndex(2)
         self.assertTrue(w.luu())
-        dong, _ = in_an.dong_chi_tiet(self.con, 1)
+        dong, _ = du_lieu_in.dong_chi_tiet(self.con, 1)
         gop = [x for x in dong if len(x) > 2]
         self.assertTrue(any('30kg gạo' in x[2] for x in gop))                    # cách tính in gộp ô
         self.assertTrue(any(x[1][0] == '-' and x[1][1].startswith('Thửa đất') for x in dong))   # dòng thửa dưới tên chính sách

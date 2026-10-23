@@ -1,10 +1,14 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.14 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.19 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **1.0.19**: **bỏ hẳn mẫu Excel phương án chi tiết** - mẫu Word nhúng trong phần mềm là mẫu duy nhất (thông số quy cách đổi trong
+> **Quản lý Mẫu in & Bản in → Nhập thông số mẫu Word**, không cần bản cập nhật). Máy không có Microsoft Word: PDF / xem trước là bản
+> gần đúng dựng bằng Qt **từ chính file Word**, không còn đọc Excel. **Bảng tổng hợp** vẫn là mẫu Excel. Mọi file Excel xuất ra đi qua
+> một cổng lưu: chữ do người dùng gõ bắt đầu bằng dấu "=" không còn trở thành công thức (chặn lệnh độc như `=HYPERLINK(...)`).
 
 > **1.0.14**: **phương án chi tiết chỉ còn bản Word (.docx) theo Nghị định 30** - xem trước **F4**, khung xem trước của **Xuất
 > hồ sơ & Bản in**, xuất hồ sơ đợt, **Dự án mới** đều dùng bản Word (A4 dọc, lề trái 30 mm, phải 15 mm, trên / dưới 20 mm; cơ quan,
 > quốc hiệu 13; nội dung, bảng 14; mục III in tiếp ngay dưới mục II). PDF, in ra máy, gộp PDF lấy từ bản Word; máy không có
-> Microsoft Word thì xem trước / PDF là **bản gần đúng** (phần mềm dựng từ mẫu Excel IN_CHITIET). Mẫu Excel phương án chi tiết sửa
-> trong **Quản lý Mẫu in** nay chỉ dùng cho bản gần đúng đó. **Bảng tổng hợp** vẫn là Excel A3 ngang: hộ nhiều thửa gộp một ô STT, họ
+> Microsoft Word thì xem trước / PDF là **bản gần đúng** (dựng bằng Qt từ file Word; từ 1.0.19 không còn mẫu Excel chi tiết). **Bảng tổng hợp** vẫn là Excel A3 ngang: hộ nhiều thửa gộp một ô STT, họ
 > tên, địa chỉ, tổng cộng, tái định cư, ghi chú; mỗi thửa một dòng.
 
 > **1.0.11**: bảng chọn ô kiểu **Excel** (kéo bôi đen vùng, góc dưới hiện Trung bình · Tổng số đếm · Tổng); thẻ số liệu ghi thêm
@@ -1222,7 +1226,9 @@ Bộ kiểm thử so khớp với file Excel thật nếu đặt file ở `du_li
 | `pabt/nghiep_vu.py` | Quy tắc tính: thành tiền, làm tròn như ROUND của Excel, thưởng theo tổng mục 1–4, hỗ trợ ổn định đời sống, gợi ý HT09/HT10 theo hạn mức; kiểm tra quy tắc từng hộ |
 | `pabt/doi_chieu.py` | So từng hộ, từng dòng với Excel; xuất báo cáo `.xlsx` (TONG_HO, DONG_LECH, CAN_XEM_LAI) |
 | `pabt/lap_pa.py` | Soạn phương án một hộ: thêm / sửa / xóa dòng, danh mục, giá tương đương, gợi ý hỗ trợ, lưu một giao dịch; thông tin dự án; rà soát giá |
-| `pabt/in_an.py` | Bản in theo mẫu `mau_in\IN_CHITIET.xlsx`, `IN_BANGTONGHOP.xlsx`; xuất PDF / in qua Excel |
+| `pabt/in_an.py` | Bảng tổng hợp theo mẫu `IN_BANGTONGHOP.xlsx`; xuất PDF / in qua Excel |
+| `pabt/du_lieu_in.py` | Dữ liệu bản in (dòng bảng, thông tin hộ / dự án, tiêu đề) - không Excel / Word |
+| `pabt/in_word.py`, `pabt/docx_sang_pdf.py` | Phương án chi tiết bản Word (.docx) và PDF dự phòng dựng từ file Word |
 | `pabt/giao_dien.py` | Màu giao diện: nút theo nhóm chức năng, tiêu đề bảng, nhãn thuộc tính; nút chuẩn tiếng Việt |
 | `pabt/app.py`, `pabt/man_hinh.py`, `pabt/man_hinh_ho_so.py` | Cửa sổ chính; màn hình Lập phương án hộ và các hộp chọn danh mục, gợi ý, dự án, rà soát, in; màn hình Hồ sơ hộ |
 | `pabt/quan_ly.py`, `pabt/man_hinh_quan_ly.py` | Đợt trình, thư mục hồ sơ, lưu dự án thành, trạng thái phê duyệt / chi trả / bàn giao, nhập quyết định từ file, báo cáo tổng hợp; màn hình Đợt trình, Trạng thái hộ, Nhập quyết định, Kiểm tra lỗi |

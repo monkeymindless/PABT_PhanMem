@@ -246,59 +246,6 @@ class TestBanIn(CoSoMay):
             self.assertFalse(la_to_chuc(ten), ten)
         self.assertTrue(la_to_chuc('Nguyễn Văn A', 'to_chuc'))
 
-    def test_nhan_to_chuc_va_tieu_de_muc_ii(self):
-        ma = self.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 1').fetchone()[0]
-        chu = [str(o.value) for row in self._ws(ma).iter_rows(max_row=20) for o in row if isinstance(o.value, str)]
-        self.assertIn(in_an.TIEU_DE_MUC_II, chu)
-        self.assertIn('Họ và tên:', chu)
-        with self.con:
-            self.con.execute("UPDATE ho SET ho_ten = 'Công ty TNHH Mẫu' WHERE ma_ho = ?", (ma,))
-        chu = [str(o.value) for row in self._ws(ma).iter_rows(max_row=20) for o in row if isinstance(o.value, str)]
-        self.assertIn('Tổ chức:', chu)
-        self.assertNotIn('Họ và tên:', chu)
-
-    def test_gop_ghi_chu_dat(self):
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        dong = [['H', []], ['I', []], ['I', []], ['I', []], ['I', []], ['H', []], ['I', []]]
-        for r, gc in zip(range(11, 18), (None, 'Đất đủ điều kiện', 'Đất đủ điều kiện', 'Hành lang', 'Hành lang', 'Mục 2', 'Mục 2')):
-            ws.cell(r, 8, gc)
-        self.assertEqual(in_an.gop_ghi_chu_dat(ws, dong, 11, 8), [(12, 13), (14, 15)])
-        vung = {str(m) for m in ws.merged_cells.ranges}
-        self.assertEqual(vung, {'H12:H13', 'H14:H15'})            # mục 2 (sau dòng H) không gộp
-        self.assertEqual(ws.cell(12, 8).alignment.vertical, 'center')
-
-    def test_ghi_chu_gop_khong_nhan_chieu_cao(self):
-        # ghi chú đất trùng nhau gộp một ô: khối đủ cao cho chữ ghi chú, nhưng KHÔNG mỗi dòng cao bằng cả ghi chú (trước đây 3 x 299 pt)
-        from tests.test_toc_do import _du_an
-        (self.td / 'gc').mkdir()
-        con = csdl.mo(_du_an(self.td / 'gc', 3))                         # hộ 3 có 3 thửa, mỗi thửa một dòng đất
-        try:
-            gc = ' '.join(['Đất nông nghiệp đủ điều kiện bồi thường theo Điều 95 Luật Đất đai năm 2024'] * 2)
-            with con:
-                con.execute('UPDATE ct_dat SET ghi_chu = ? WHERE ma_ho = 3', (gc,))
-            ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 3, self.td / 'gc.xlsx')).active
-        finally:
-            con.close()
-        vung = next(m for m in ws.merged_cells.ranges if m.min_col == m.max_col == 8 and m.max_row > m.min_row)
-        cao = [ws.row_dimensions[r].height for r in range(vung.min_row, vung.max_row + 1)]
-        can = in_an.cao_dong_bang(in_an.so_dong_o(gc, in_an._px_cot(ws, 9)[7] * 0.75 - 6))
-        self.assertGreaterEqual(sum(cao), can - 0.01)
-        self.assertLess(min(cao), can)
-
-    def test_dem_mau_trong_ram(self):
-        in_an.xoa_bo_nho_mau()
-        mau = in_an.file_mau(None, in_an.TEN_CT)
-        a = in_an.mo_mau(mau)
-        a.worksheets[0]['A1'] = 'đã sửa'
-        a.worksheets[0].row_dimensions[40].height = 30
-        b = in_an.mo_mau(mau)
-        self.assertNotEqual(b.worksheets[0]['A1'].value, 'đã sửa')    # mỗi lần một workbook độc lập
-        b.worksheets[0].row_dimensions[50].height = 31
-        self.assertEqual(len(in_an._BO_NHO_MAU), 1)
-        in_an.xoa_bo_nho_mau()
-        self.assertEqual(len(in_an._BO_NHO_MAU), 0)
-
 
 class TestPdfDuPhong(CoSoMay):
     def test_dinh_dang_so(self):
@@ -307,33 +254,14 @@ class TestPdfDuPhong(CoSoMay):
                          (1, '0%', '100%'), (-1234.5, '#,##0.00', '-1.234,50'), (1.25, 'General', '1,25')):
             self.assertEqual(_so_vn(v, f), kq)
 
-    def test_chi_tiet_va_tong_hop(self):
-        _app()
-        from pabt import pdf_du_phong
-        try:
-            from PySide6.QtPdf import QPdfDocument
-        except ImportError:                                         # Qt5 (bản Windows 7): không có QtPdf để đọc lại
-            QPdfDocument = None
-        ma = self.con.execute('SELECT ma_ho FROM ho LIMIT 1').fetchone()[0]
-        for x in (in_an.lap_chi_tiet(self.con, ma, self.td / 'ct.xlsx'), in_an.lap_bang_tong_hop(self.con, self.td / 'bth.xlsx')):
-            h, trang = pdf_du_phong.html_tu_xlsx(x)
-            self.assertIn('<table', h)
-            self.assertGreater(trang['he_so'], 0)
-            pdf = pdf_du_phong.xuat_pdf_du_phong_qt(x, x.with_suffix('.pdf'))
-            self.assertTrue(pdf.read_bytes().startswith(b'%PDF'))
-            if QPdfDocument is None:
-                continue
-            d = QPdfDocument()
-            d.load(str(pdf))
-            self.assertGreaterEqual(d.pageCount(), 1)
-            d.close()
 
     def test_khung_xem_truoc_dung_ban_gan_dung(self):
         _app()
         from pabt.xem_truoc_tai_lieu import KhungXemTruocTaiLieu
         k = KhungXemTruocTaiLieu()
         ma = self.con.execute('SELECT ma_ho FROM ho LIMIT 1').fetchone()[0]
-        k.yeu_cau(('t', ma), lambda d: in_an.lap_chi_tiet(self.con, ma, Path(d) / 'ct.xlsx'), 'thử', ngay=True)
+        from pabt import in_word
+        k.yeu_cau(('t', ma), lambda d: in_word.xuat_chi_tiet_docx(self.con, ma, Path(d) / 'ct.docx'), 'thử', ngay=True)
         self.assertTrue(k.cho_xong(30))
         if k.doc is not None:                                       # Qt6 có QtPdf
             self.assertTrue(k.gan_dung)

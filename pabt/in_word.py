@@ -1,7 +1,7 @@
 """Phương án chi tiết bản Word (.docx) theo thể thức Nghị định 30/2020/NĐ-CP (người dùng 21/10/2026: Excel không cắt đôi được một dòng
 bảng qua hai trang - dòng ghi chú / nguồn gốc dài đẩy cả dòng sang trang sau, trang trước hở).
 
-Cùng số liệu với bản Excel (in_an.dong_chi_tiet, _thong_tin_du_an, _thong_tin_ho, lần phương án, chế độ dự thảo / chính thức), dựng
+Cùng số liệu với bản Excel (du_lieu_in.dong_chi_tiet, _thong_tin_du_an, _thong_tin_ho, lần phương án, chế độ dự thảo / chính thức), dựng
 bằng XML thuần (van_ban_trinh._goi_docx - không cần python-docx, không cần Word để tạo file):
   - A4 dọc, lề trái 15 mm, phải 10 mm, trên 10 mm, dưới 10 mm (LE_MM); Times New Roman.
   - Quốc hiệu, tiêu ngữ, tên cơ quan, số, địa danh / ngày: bảng ẩn viền hai cột; thông tin chủ sử dụng: bảng ẩn viền.
@@ -21,6 +21,7 @@ import math
 import re
 from pathlib import Path
 
+from . import du_lieu_in
 from . import dia_phuong
 from .van_ban_trinh import _goi_docx, _xml
 
@@ -342,7 +343,7 @@ def _la_ma(n: int) -> str:
 
 
 def _theo_muc(dong: list) -> dict:
-    """{mục: [dòng 'I' của mục]} từ danh sách dòng in_an.dong_chi_tiet (tách theo dòng đề mục 'H')."""
+    """{mục: [dòng 'I' của mục]} từ danh sách dòng du_lieu_in.dong_chi_tiet (tách theo dòng đề mục 'H')."""
     from . import nghiep_vu
     ma = {str(nghiep_vu.so_muc(m)): m for m in (1, 2, 3, nghiep_vu.MUC_VN, 4)}
     kq = {m: [] for m in ma.values()}
@@ -366,13 +367,13 @@ def dong_dieu_chinh(con, ma_ho: int, bc, lan_dc, dong_moi: list, kq_moi, da: dic
       B. Phương án điều chỉnh = chênh lệch (mới - cũ); với mỗi mục có thay đổi: "I. <mục> đã được phê duyệt tại QĐ …" (dòng cũ) rồi
          "II. Điều chỉnh về <mục>" (dòng mới)
       C. Tổng giá trị sau điều chỉnh (A+B): tóm tắt I-V + TỔNG CỘNG; dòng tái định cư đánh số tiếp.
-    lan_dc: LanPA của lần điều chỉnh; dong_moi / kq_moi: dòng + kết quả của lần đó (in_an.dong_chi_tiet). Trả (dòng, nhãn dòng tái
+    lan_dc: LanPA của lần điều chỉnh; dong_moi / kq_moi: dòng + kết quả của lần đó (du_lieu_in.dong_chi_tiet). Trả (dòng, nhãn dòng tái
     định cư)."""
     from . import in_an, lan_pa, nghiep_vu
     bc = bc or in_an.BoiCanh.tu(con)
     goc = lan_pa.lan_cua(con, ma_ho, lan_dc.thay_the)
     pa_cu = nghiep_vu.doc_phuong_an(con, ma_ho, lan=goc.lan)
-    dong_cu, kq_cu = in_an.dong_chi_tiet(con, ma_ho, bc, pa_cu, nghiep_vu.doc_phuong_an(con, ma_ho, den_lan=goc.lan - 1))
+    dong_cu, kq_cu = du_lieu_in.dong_chi_tiet(con, ma_ho, bc, pa_cu, nghiep_vu.doc_phuong_an(con, ma_ho, den_lan=goc.lan - 1))
     qd = goc.qd[-1] if goc.qd else {}
     so_qd = str(qd.get('so') or '').strip()
     ngay_qd = str(qd.get('ngay') or '').strip()
@@ -408,7 +409,7 @@ def dong_dieu_chinh(con, ma_ho: int, bc, lan_dc, dong_moi: list, kq_moi, da: dic
 
 
 def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
-    """Các dòng bảng mục III (w:tr) từ danh sách dòng của in_an.dong_chi_tiet (H / I / R / T) + G / S của phương án điều chỉnh."""
+    """Các dòng bảng mục III (w:tr) từ danh sách dòng của du_lieu_in.dong_chi_tiet (H / I / R / T) + G / S của phương án điều chỉnh."""
     hang = []
     # ghi chú mục 1 trùng nhau ở các dòng đất liền nhau: gộp dọc (như in_an.gop_ghi_chu_dat)
     gop_gc = {}
@@ -506,16 +507,16 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     """XML thân văn bản (w:body không sectPr) phương án chi tiết một hộ."""
     from . import dia_phuong, in_an, nghiep_vu
     from .ho_so import la_to_chuc
-    da = in_an._thong_tin_du_an(con)
-    da['ky_hieu_so'] = in_an.ky_hieu_cua_ho(con, ma_ho, da['ky_hieu_so'])
-    lan = in_an.chon_lan_in(con, ma_ho, lan)
+    da = du_lieu_in._thong_tin_du_an(con)
+    da['ky_hieu_so'] = du_lieu_in.ky_hieu_cua_ho(con, ma_ho, da['ky_hieu_so'])
+    lan = du_lieu_in.chon_lan_in(con, ma_ho, lan)
     pa_truoc = None
     if lan is not None:
         if pa is None:
             pa = nghiep_vu.doc_phuong_an(con, ma_ho, lan=lan)
         pa_truoc = nghiep_vu.doc_phuong_an(con, ma_ho, den_lan=lan - 1)
-    dong, kq_lan = in_an.dong_chi_tiet(con, ma_ho, bc, pa, pa_truoc)
-    ttho = in_an._thong_tin_ho(con, ma_ho, da)
+    dong, kq_lan = du_lieu_in.dong_chi_tiet(con, ma_ho, bc, pa, pa_truoc)
+    ttho = du_lieu_in._thong_tin_ho(con, ma_ho, da)
     from . import lan_pa
     kieu = lan_pa.loai_lan(con, ma_ho, lan)             # 1.0.15: MẪU IN theo loại lần - chi tiết / bổ sung / điều chỉnh
     x_lan = None
@@ -561,12 +562,12 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
           _duong_ke_du_an()]
     # ---- I. chủ sử dụng (bảng ẩn viền: nhãn đậm | nội dung)
     to_chuc = la_to_chuc(ttho['ho_ten'])
-    # 22/10/2026: tiêu đề mục I theo chủ sử dụng (in_an.tieu_de_muc_i - cùng bản Excel); tổ chức chỉ "Tổ chức:" / "Địa chỉ:"
-    t.append(_p(_r(in_an.tieu_de_muc_i(to_chuc), dam=True, co=CO_DE_MUC), truoc=120, sau=60, giu_sau=True))
-    hang_i = [(in_an.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten'])]
+    # 22/10/2026: tiêu đề mục I theo chủ sử dụng (du_lieu_in.tieu_de_muc_i - cùng bản Excel); tổ chức chỉ "Tổ chức:" / "Địa chỉ:"
+    t.append(_p(_r(du_lieu_in.tieu_de_muc_i(to_chuc), dam=True, co=CO_DE_MUC), truoc=120, sau=60, giu_sau=True))
+    hang_i = [(du_lieu_in.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten'])]
     if not to_chuc and ttho['cccd']:
         hang_i.append(('Số CCCD:', ttho['cccd']))
-    hang_i.append((in_an.NHAN_DIA_CHI_TO_CHUC if to_chuc else 'Địa chỉ thường trú:', ttho['dia_chi']))
+    hang_i.append((du_lieu_in.NHAN_DIA_CHI_TO_CHUC if to_chuc else 'Địa chỉ thường trú:', ttho['dia_chi']))
     if not to_chuc and ttho['dien_thoai']:
         hang_i.append(('Số điện thoại:', ttho['dien_thoai']))
     # 22/10/2026 (mẫu PA_01 / PA_003 người dùng gửi): nhãn chữ thường, tên chủ sử dụng (hàng đầu) in đậm, nội dung khác thường
@@ -575,10 +576,10 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
                            _o(_p(_r(v, dam=k == 0, co=CO_THONG_TIN), can='left'), w - c0 - c1, vien=False, doc='top')])
                     for k, (n, v) in enumerate(hang_i)],
                    [c0, c1, w - c0 - c1], vien=False))
-    # ---- II. nguồn gốc: mỗi đoạn logic MỘT w:p (in_an._thong_tin_ho đã nối xuống dòng cứng giữa câu từng thửa - ho_so.
+    # ---- II. nguồn gốc: mỗi đoạn logic MỘT w:p (du_lieu_in._thong_tin_ho đã nối xuống dòng cứng giữa câu từng thửa - ho_so.
     # lam_sach_doan_van), căn đều, giãn dòng đơn, cách đoạn 6 pt (w:after 120); MỌI đoạn (kể cả gạch đầu dòng "- Thửa đất…")
     # thụt dòng đầu 1 cm, dòng sau về sát lề trái như PDF mẫu PA_01; không w:br, không đoạn rỗng - Word tự bẻ dòng theo lề
-    t.append(_p(_r(in_an.TIEU_DE_MUC_II, dam=True, co=CO_DE_MUC), truoc=120, sau=60, giu_sau=True))
+    t.append(_p(_r(du_lieu_in.TIEU_DE_MUC_II, dam=True, co=CO_DE_MUC), truoc=120, sau=60, giu_sau=True))
     for doan in (x for x in str(ttho['nguon_goc'] or '').split('\n') if x.strip()):
         t.append(_p(_r(doan, co=CO_NGUON_GOC), dong=DONG_DOAN, sau=SAU_DOAN, dau_dong=THUT_DAU))
     # ---- III. bảng tính toán: tiêu đề KHÔNG keepNext / pageBreakBefore (22/10/2026) - mục III in tiếp ngay dưới mục II ở cuối
@@ -593,7 +594,7 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     hang += _hang_tu_dong(dong, rong, nghiep_vu.so_muc(2))
     # IV. tái định cư (dòng cuối bảng)
     hang.append(_hang([_o(_p(_r(nhan_tdc, dam=True, co=CO_DE_MUC), can='center', giu_sau=True), rong[0]),
-                       _o(_p(_r(in_an.NHAN_TDC, dam=True, co=CO_DE_MUC),
+                       _o(_p(_r(du_lieu_in.NHAN_TDC, dam=True, co=CO_DE_MUC),
                              _r(' ' + str(ttho['tai_dinh_cu'] or '').strip(), co=CO_DE_MUC), can='both', giu_sau=not du_thao),
                           sum(rong[1:]), nhap=7)], khong_tach=True))
     # ---- chữ ký: DÒNG CUỐI của bảng mục III, ẩn viền trái / phải / dưới và vạch giữa (22/10/2026). Word giữ liền dòng TỔNG CỘNG

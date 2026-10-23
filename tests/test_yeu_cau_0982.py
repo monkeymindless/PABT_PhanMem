@@ -49,37 +49,6 @@ class TestMotBoMau(unittest.TestCase):
         self.assertFalse(in_an.la_mau_du_thao(f))
         return f
 
-    def test_mau_chinh_co_dong_du_thao_giu_o_ban_du_thao_xoa_o_ban_chinh_thuc(self):
-        f = self._mau_co_dong_du_thao()
-        dt = in_an.lap_chi_tiet(self.con, self.ma[0], self.d / 'dt.xlsx', f, du_thao=True)
-        ct = in_an.lap_chi_tiet(self.con, self.ma[0], self.d / 'ct.xlsx', f, du_thao=False)
-        self.assertEqual(_chu(dt).count('DỰ THẢO'), 1)                         # giữ đúng một dòng của mẫu (không thêm trùng)
-        self.assertNotIn('DỰ THẢO', _chu(ct).upper())
-        # trước 0.9.82 (theo tên file): mẫu chính có dòng DỰ THẢO bị xóa cả khi in dự thảo
-        self.assertNotIn('DỰ THẢO', _chu(in_an.lap_chi_tiet(self.con, self.ma[0], self.d / 'cu.xlsx', f)).upper())
-
-    def test_mau_chinh_khong_co_chu_thi_tu_them_dung_cho(self):
-        dt = in_an.lap_chi_tiet(self.con, self.ma[1], self.d / 'dt.xlsx', MAU / 'IN_CHITIET.xlsx', du_thao=True)
-        a3 = str(openpyxl.load_workbook(dt).worksheets[0]['A3'].value)
-        self.assertTrue(a3.startswith('Số:'))
-        self.assertTrue(a3.rstrip().endswith(in_an.DAU_DU_THAO), a3)            # dòng dưới "Số: …/…" như mẫu IN_CHITIET_DT
-        bth = in_an.lap_bang_tong_hop(self.con, self.d / 'bth_dt.xlsx', self.ma, MAU / 'IN_BANGTONGHOP.xlsx', du_thao=True)
-        ws_b = openpyxl.load_workbook(bth).worksheets[0]
-        self.assertEqual(str(ws_b['A3'].value).strip(), in_an.DAU_DU_THAO)     # 1.0.04: dưới tên đơn vị (góc trái trên)
-        self.assertNotIn('DỰ THẢO', str(ws_b['A5'].value))
-        bth_ct = in_an.lap_bang_tong_hop(self.con, self.d / 'bth_ct.xlsx', self.ma, MAU / 'IN_BANGTONGHOP.xlsx', du_thao=False)
-        self.assertNotIn('DỰ THẢO', _chu(bth_ct).upper())
-
-    def test_du_thao_chua_ghi_so_phuong_an(self):
-        dt = in_an.lap_chi_tiet(self.con, self.ma[0], self.d / 'dt.xlsx', MAU / 'IN_CHITIET.xlsx', du_thao=True)
-        ct = in_an.lap_chi_tiet(self.con, self.ma[0], self.d / 'ct.xlsx', MAU / 'IN_CHITIET.xlsx', du_thao=False)
-        self.assertNotIn('07', str(openpyxl.load_workbook(dt).worksheets[0]['A3'].value))
-        self.assertIn('07', str(openpyxl.load_workbook(ct).worksheets[0]['A3'].value))   # số PA chính thức 2 chữ số
-
-    def test_mau_du_thao_chon_tay_van_theo_che_do(self):
-        dt_mau = MAU / 'IN_CHITIET_DT.xlsx'
-        ct = in_an.lap_chi_tiet(self.con, self.ma[1], self.d / 'ct.xlsx', dt_mau, du_thao=False)
-        self.assertNotIn('DỰ THẢO', _chu(ct).upper())                           # chế độ thắng tên file
 
     def test_hop_in_khong_con_bao_thieu_mau_du_thao(self):
         from pabt.man_hinh import HopIn

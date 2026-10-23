@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QC
                                QHeaderView, QSplitter, QStyledItemDelegate, QTableWidget, QTableWidgetItem, QTabWidget,
                                QVBoxLayout, QWidget, QGridLayout, QGroupBox)
 
+from . import du_lieu_in
 from . import lap_pa, nghiep_vu
 from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
 # in_an (kéo theo openpyxl ~0,2 giây) chỉ nạp trong hộp In / Xuất: mở dự án, cửa sổ lập phương án không phải chờ
@@ -2516,22 +2517,19 @@ class CuaSoLapPA(QDialog):
     def lam_moi_xem_truoc(self, ngay: bool = False) -> None:
         """Bản in A4 (bản Word thể thức NĐ 30 - in_word, mẫu chuẩn duy nhất của phương án chi tiết từ 22/10/2026) của hộ đang mở
         theo phương án ĐANG SOẠN trong bộ nhớ (chưa lưu cũng hiện); thông tin hộ, nguồn gốc theo hồ sơ đã lưu. Máy không dùng được
-        Word: bản gần đúng dựng từ bản Excel (mẫu IN_CHITIET)."""
+        Word: bản gần đúng dựng bằng Qt từ chính file Word (docx_sang_pdf)."""
         if not self._dang_xem_truoc():
             return
         self._hen_xem.stop()
-        from . import in_an, in_word
+        from . import in_word
         bo, ma = self.bo, self.bo.ma_ho
 
         def tao(thu_muc):                                       # 1.0.05: bản in của LẦN đang soạn
-            return in_word.xuat_chi_tiet_docx(bo.con, ma, Path(thu_muc) / f'{in_an.ten_file_ho(bo.con, ma)}.docx', bc=bo.bc,
+            return in_word.xuat_chi_tiet_docx(bo.con, ma, Path(thu_muc) / f'{du_lieu_in.ten_file_ho(bo.con, ma)}.docx', bc=bo.bc,
                                               pa=bo.pa, lan=bo.lan)
 
-        def du_phong(thu_muc):
-            return in_an.lap_chi_tiet(bo.con, ma, Path(thu_muc) / f'{in_an.ten_file_ho(bo.con, ma)}.xlsx', bc=bo.bc, pa=bo.pa,
-                                      lan=bo.lan)
         ten = f'{bo.pa.ho.ho_ten}' + (' (chưa lưu)' if bo.co_thay_doi else '')
-        self.w_preview.yeu_cau(None, tao, ten, ngay, tao_du_phong=du_phong)
+        self.w_preview.yeu_cau(None, tao, ten, ngay)
 
     def hoi_luu(self) -> bool:
         """True nếu được phép rời hộ đang soạn."""
@@ -3078,9 +3076,10 @@ class HopIn(QDialog):
         ap_kieu_nut(nut.button(QDialogButtonBox.StandardButton.Ok), KieuNut.CHINH)   # 1.0.02: xuất / in - hành động chính, navy
         nut.accepted.connect(lambda: self.thuc_hien())
         nut.rejected.connect(self.reject)
-        self.lb = QLabel('Bản in lấy đúng mẫu IN_CHITIET / IN_BANGTONGHOP của file PABT Excel (thư mục mau_in); tờ trình theo mẫu ở '
-                         'cửa sổ "Trình phê duyệt" (số văn bản, số phương án tổng lấy theo đợt đã chọn). PDF và máy in '
-                         'cần Microsoft Excel (văn bản Word: Microsoft Word) trên máy.')
+        self.lb = QLabel('Phương án chi tiết xuất bản Word (mẫu nhúng trong phần mềm); bảng tổng hợp theo mẫu Excel IN_BANGTONGHOP; tờ '
+                         'trình theo mẫu ở cửa sổ "Trình phê duyệt" (số văn bản, số phương án tổng lấy theo đợt đã chọn). PDF và '
+                         'máy in cần Microsoft Word (phương án chi tiết, tờ trình) và Microsoft Excel (bảng tổng hợp) trên máy; '
+                         'không có Word vẫn dựng được PDF gần đúng.')
         self.lb.setWordWrap(True)
         b_mau = QPushButton('Sửa mẫu in trong Excel…')
         b_mau.setToolTip('Mở mẫu phương án chi tiết bằng Excel: sửa chữ, phông, lề, độ rộng cột, kéo đường kẻ... rồi Lưu. '
@@ -3180,25 +3179,21 @@ class HopIn(QDialog):
         return (self._ma_xem, self.che_do() == 'du_thao', None, self.o_che_cccd.isChecked(), self.lan_in())
 
     def lan_in(self) -> str:
-        """'moi_nhat' / 'cong_don' (in_an.chon_lan_in)."""
+        """'moi_nhat' / 'cong_don' (du_lieu_in.chon_lan_in)."""
         return self.cb_lan.currentData() or 'moi_nhat'
 
     def _lam_moi_xem_truoc(self, ngay: bool = False) -> None:
         if self._ma_xem is None:
             return
-        from . import in_an, in_word
+        from . import in_word
         ma, du_thao, mau, che, lan = self.khoa_xem_truoc()
         ten = next((h['ho_ten'] for h in self.ho if h['ma_ho'] == ma), '')
 
         def tao(thu_muc):                       # 22/10/2026: phương án chi tiết = bản Word (in_word) - như file xuất ra
-            return in_word.xuat_chi_tiet_docx(self.con, ma, Path(thu_muc) / f'{in_an.ten_file_ho(self.con, ma)}.docx',
+            return in_word.xuat_chi_tiet_docx(self.con, ma, Path(thu_muc) / f'{du_lieu_in.ten_file_ho(self.con, ma)}.docx',
                                               du_thao=du_thao, lan=lan)
 
-        def du_phong(thu_muc):                  # máy không dùng được Word: bản gần đúng từ bản Excel
-            return in_an.lap_chi_tiet(self.con, ma, Path(thu_muc) / f'{in_an.ten_file_ho(self.con, ma)}.xlsx', mau,
-                                      du_thao=du_thao, che_cccd=che, lan=lan)
-        self.w_preview.yeu_cau(self.khoa_xem_truoc(), tao, f'{ten} ({"dự thảo" if du_thao else "chính thức"})', ngay,
-                               tao_du_phong=du_phong)
+        self.w_preview.yeu_cau(self.khoa_xem_truoc(), tao, f'{ten} ({"dự thảo" if du_thao else "chính thức"})', ngay)
 
     def xem_truoc_bang_tong_hop(self, ngay: bool = False):
         """Xem trước bảng tổng hợp các hộ đang đánh dấu (khóa: danh sách hộ, dự thảo?, mẫu - cùng khóa thì dùng lại bản đã lập).
@@ -3460,7 +3455,6 @@ class HopIn(QDialog):
                 # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
                 kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=dot, pdf=self.r_pdf.isChecked(), in_may=in_may,
                                       mau_ct=None, mau_bth=None, lan=self.lan_in(),
-                                      chi_tiet_word=True,
                                       du_thao=self.che_do() == 'du_thao', so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
                                       **chon)
                 ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]

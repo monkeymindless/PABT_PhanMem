@@ -10,7 +10,8 @@ from pathlib import Path
 
 import openpyxl
 
-from pabt import an_toan, csdl, in_an, kiem_loi, tiep_nhan_phap_ly as tn
+from pabt import du_lieu_in
+from pabt import csdl, in_an, kiem_loi, tiep_nhan_phap_ly as tn
 from pabt.tien import D
 from tests.test_dac_ta_v5 import CoSo
 from tests.test_toc_do import _du_an
@@ -33,55 +34,13 @@ def _chu(f) -> str:
 
 # ---------------------------------------------------------------- nhóm 1
 class TestNhom1(_Co):
-    def test_khong_che_cccd(self):
-        self.assertEqual(an_toan.che_cccd('075092001234'), '075092001234')
-        con = self._con()
-        with con:
-            con.execute("UPDATE ho SET so_cccd = '075092001234', ngay_cap = '01/01/2021' WHERE ma_ho = 1")
-            csdl.ghi_cai_dat(con, 'CHE_CCCD', '1')                      # cài đặt cũ của dự án: bỏ qua
-        for du_thao in (True, False):
-            chu = _chu(in_an.lap_chi_tiet(con, 1, self.td / f'ct{du_thao}.xlsx', du_thao=du_thao))
-            self.assertIn('075092001234 - Ngày cấp: 01/01/2021', chu)
-            self.assertNotIn('******', chu)
 
-    def test_to_chuc_doi_nhan_va_an_cccd_sdt(self):
-        con = self._con()
-        with con:
-            con.execute("UPDATE ho SET ho_ten = 'Công ty TNHH Thử Nghiệm', dien_thoai = '0900000000' WHERE ma_ho = 1")
-        ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 1, self.td / 'tc.xlsx')).active
-        nhan = {str(c.value).strip(): c.row for r in ws.iter_rows(max_row=20) for c in r if isinstance(c.value, str)}
-        self.assertIn('Tổ chức:', nhan)
-        self.assertIn('Địa chỉ:', nhan)
-        self.assertNotIn('Họ và tên:', nhan)
-        self.assertTrue(ws.row_dimensions[nhan['Số CCCD:']].hidden)
-        self.assertTrue(ws.row_dimensions[nhan['Số điện thoại:']].hidden)
-
-    def test_bo_lap_mo_dau_va_moi_doan_mot_dong(self):
-        s = in_an.bo_lap_mo_dau('1. Thửa đất số 17, tờ bản đồ số 39, xã Phú Lý: Thửa đất số 17, tờ bản đồ số 39, xã Phú Lý: '
-                                'Đất do UBND xã quản lý.')
-        self.assertEqual(s, '1. Thửa đất số 17, tờ bản đồ số 39, xã Phú Lý: Đất do UBND xã quản lý.')
-        self.assertEqual(in_an.bo_lap_mo_dau('Nguồn gốc: khai phá'), 'Nguồn gốc: khai phá')
-        con = self._con()
-        dai = 'Đoạn thứ nhất dài vừa phải về nguồn gốc khai phá năm 1990.\nĐoạn thứ hai: nhận chuyển nhượng năm 2005.'
-        with con:
-            con.execute('UPDATE thua SET nguon_goc = ? WHERE ma_ho = 1', (dai,))
-        ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 1, self.td / 'ng.xlsx')).active
-        r = next(r for r in range(1, 40) if str(ws.cell(r, 1).value or '').startswith('II.'))
-        self.assertEqual(ws.cell(r, 1).value, in_an.TIEU_DE_MUC_II)
-        het = next(rr for rr in range(r + 1, r + 20) if str(ws.cell(rr, 1).value or '').startswith('III'))
-        doan = [ws.cell(rr, 1).value for rr in range(r + 1, het) if isinstance(ws.cell(rr, 1).value, str)]
-        self.assertEqual(len(doan), 2)                                     # mỗi đoạn một dòng Excel
-        for x in doan:
-            self.assertTrue(x.startswith(in_an.NBSP * 8) and not x.startswith(in_an.NBSP * 9))
-            self.assertNotIn('\n', x)                                       # không xuống dòng cứng giữa câu
-        o = ws.cell(r + 1, 1)
-        self.assertEqual((o.alignment.horizontal, o.alignment.vertical, o.alignment.wrap_text), ('justify', 'center', True))
 
     def test_muc_1_dien_tich_khi_don_gia_0(self):
         con = self._con()
         with con:
             con.execute("UPDATE ct_dat SET gia_bang_gia = '0' WHERE ma_ho = 1")
-        dong, _ = in_an.dong_chi_tiet(con, 1)
+        dong, _ = du_lieu_in.dong_chi_tiet(con, 1)
         dat = [x for x in dong[1:] if x[0] == 'I' and x[1][0].startswith('1.')]
         self.assertTrue(dat)
         for _, gt, *_ in dat:
@@ -95,14 +54,14 @@ class TestNhom1(_Co):
         with con:
             con.execute("UPDATE ct_dat SET dien_tich = '0' WHERE ma_ho = 1")
             con.execute("UPDATE thua SET dt_thu_hoi = '0' WHERE ma_ho = 1")
-        dong, _ = in_an.dong_chi_tiet(con, 1)
+        dong, _ = du_lieu_in.dong_chi_tiet(con, 1)
         gt = next(x[1] for x in dong[1:] if x[0] == 'I')
         self.assertEqual((gt[2], gt[3], gt[6]), (None, None, 0))
 
     def test_dien_tich_dong_dat_lay_theo_thua(self):
-        self.assertEqual(in_an.dien_tich_dong_dat(D(0), {'dt_thu_hoi': '21243'}), D('21243'))
-        self.assertEqual(in_an.dien_tich_dong_dat(D(5), {'dt_thu_hoi': '9'}), D(5))
-        self.assertEqual(in_an.dien_tich_dong_dat(D(0), {'dt_boi_thuong': '7', 'dt_thu_hoi': '9'}), D(7))
+        self.assertEqual(du_lieu_in.dien_tich_dong_dat(D(0), {'dt_thu_hoi': '21243'}), D('21243'))
+        self.assertEqual(du_lieu_in.dien_tich_dong_dat(D(5), {'dt_thu_hoi': '9'}), D(5))
+        self.assertEqual(du_lieu_in.dien_tich_dong_dat(D(0), {'dt_boi_thuong': '7', 'dt_thu_hoi': '9'}), D(7))
 
 
 # ---------------------------------------------------------------- nhóm 2

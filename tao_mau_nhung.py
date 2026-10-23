@@ -18,10 +18,7 @@ RA = GOC / 'pabt' / 'mau_in_nhung.py'
 
 # (tên hằng, file trong mau_in\, tên mẫu dùng khi tra)
 DS = (
-    ('BYTES_MAU_CHI_TIET', 'IN_CHITIET.xlsx', 'IN_CHITIET'),
-    ('BYTES_MAU_DU_THAO', 'IN_CHITIET__Du thao.xlsx', 'IN_CHITIET__Du thao'),
     ('BYTES_MAU_TONG_HOP', 'IN_BANGTONGHOP.xlsx', 'IN_BANGTONGHOP'),
-    ('XML_DUONG_KE_CT', 'IN_CHITIET.duong_ke.xml', 'IN_CHITIET'),
     ('XML_DUONG_KE_BTH', 'IN_BANGTONGHOP.duong_ke.xml', 'IN_BANGTONGHOP'),
 )
 RONG = 100

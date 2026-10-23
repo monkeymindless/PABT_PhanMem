@@ -178,20 +178,15 @@ class TestLoWordGopPdf(_Co):
         self.assertEqual(list(kq['thu_muc_ct'].glob('*.xlsx')), [])
         self.assertEqual(len(list(kq['thu_muc_ct'].glob('PA_*.docx'))), SO_HO)
 
-    def test_in_may_khong_co_word_in_ban_excel(self):
-        """Máy không có Word mà có Excel: in ra máy bằng bản Excel lập tạm (không bỏ trống lô in)."""
-        da_in = []
-
-        def gia_excel(cap, che_do, **k):
-            da_in.extend((Path(a).suffix, che_do) for a, _ in cap)
-            return []
-        with mock.patch.dict(os.environ, {'GIA_WORD_KHONG_CO': '1'}), \
-                mock.patch.object(in_an, 'chay_excel', gia_excel), mock.patch.object(in_an, 'co_excel', lambda: True):
+    def test_in_may_khong_co_word_dung_pdf_tu_file_word(self):
+        """Máy không có Word: không in thẳng được - dựng PDF gần đúng từ CHÍNH file Word (không Excel) và báo người dùng mở PDF để in."""
+        with mock.patch.dict(os.environ, {'GIA_WORD_KHONG_CO': '1'}):
             kq = vb.xuat_bo_ho_so(self.con, self.ds, self.td / 'in_may', bang_tong_hop=False, in_may=True)
-        self.assertEqual(da_in, [('.xlsx', 'in')] * SO_HO)
         self.assertEqual(len(kq['du_phong']), SO_HO)
-        self.assertEqual(kq['loi'], [])
-        self.assertEqual(list((self.td / 'in_may').rglob('*.xlsx')), [])         # bản Excel tạm đã xóa
+        self.assertTrue(all(Path(p).read_bytes().startswith(b'%PDF') for p in kq['du_phong']))
+        self.assertEqual(len(kq['loi']), 1)
+        self.assertTrue(kq['loi'][0].startswith('KHONG_CO_WORD'))
+        self.assertEqual(list((self.td / 'in_may').rglob('*.xlsx')), [])         # không còn bản Excel chi tiết
 
 
 @unittest.skipUnless(_co_word(), 'cần Microsoft Word (đặt PABT_THU_WORD=0 để bỏ qua)')

@@ -99,11 +99,6 @@ class TestKhongThuMucMau(unittest.TestCase):
         dung = (goc / 'bo_cai_win' / 'dung_exe38.py').read_text(encoding='utf-8')
         self.assertNotRegex(re.sub(r'#[^\n]*', '', dung), r"'mau_in'|\"mau_in\"")
 
-    def test_mau_nhung_co_du_ba_mau_in_excel(self):
-        from pabt import in_an, mau_in_nhung
-        for ten in (in_an.TEN_CT, in_an.TEN_BTH):
-            self.assertTrue(mau_in_nhung.co_mau(ten), ten)
-
 
 if __name__ == '__main__':
     unittest.main()

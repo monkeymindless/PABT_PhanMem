@@ -26,18 +26,6 @@ class TestHangSo(unittest.TestCase):
         self.assertEqual(in_an.cao_dong_bang(100), in_an.CAO_TOI_DA)
         self.assertEqual(in_an.so_dong_o(1234567, 10), 1)                  # ô số không ngắt dòng
 
-    def test_chia_doan_van_o_cho_het_cau(self):
-        do = lambda s, *_: len(s) * 5.0                       # noqa: E731  mỗi ký tự 5 pt: 10 ký tự / dòng
-        rong = 50 / 0.97
-        chu = 'aa bb cc. dd ee ff gg hh ii kk ll'
-        k = in_an._chia_doan_van(chu, rong, 'T', 14, False, do, 3)
-        self.assertEqual([x for x, _ in k[0]], ['aa bb cc.'])    # khối 3 dòng sẽ cắt giữa câu: cắt ngay sau dấu chấm
-        self.assertTrue(all(len(x) <= 3 for x in k))
-        self.assertEqual(' '.join(x for kh in k for x, _ in kh).split(), chu.split())       # không mất chữ
-        k = in_an._chia_doan_van('aa bb cc dd ee ff gg hh', rong, 'T', 14, False, do, 2)    # không có chỗ hết câu: đủ khối
-        self.assertEqual([len(x) for x in k], [2, 1])
-        self.assertEqual(in_an._chia_doan_van('ngắn', rong, 'T', 14, False, do, 3), [[('ngắn', True)]])
-
 
 class TestBangChiTiet(CoSo):
     def setUp(self):
@@ -55,72 +43,6 @@ class TestBangChiTiet(CoSo):
         stt = next(r for r in range(1, 200) if str(ws.cell(r, 1).value or '').strip().upper() == 'STT')
         cuoi = next(r for r in range(stt + 1, 300) if 'TỔNG CỘNG' in (ws.cell(r, 1).value, ws.cell(r, 2).value))   # 0.9.88: gộp từ cột STT
         return stt, cuoi
-
-    def test_can_giua_doc_va_chieu_cao(self):
-        ws = self.in_ho('Đất khai phá năm 1995.')
-        stt, cuoi = self._bang(ws)
-        for r in range(stt, cuoi + 1):
-            for c in range(1, 9):
-                if type(ws.cell(r, c)).__name__ == 'MergedCell':      # ô bị gộp (thưởng, tổng cộng - 0.9.88): kiểu ở ô đầu vùng
-                    continue
-                al = ws.cell(r, c).alignment
-                self.assertEqual(al.vertical, 'center', (r, c))
-                self.assertTrue(al.wrap_text, (r, c))
-        # tiêu đề "Thành tiền\n(đồng)" hai dòng: >= 28 pt, đủ cho hai dòng chữ
-        self.assertGreaterEqual(ws.row_dimensions[stt].height, in_an.CAO_TIEU_DE_BANG)
-        self.assertGreaterEqual(ws.row_dimensions[stt].height, in_an.cao_dong_bang(2))
-        px = in_an._px_cot(ws, 9)
-        for r in range(stt + 1, cuoi + 1):
-            h = ws.row_dimensions[r].height
-            self.assertGreaterEqual(h, in_an.CAO_DONG_BANG_TOI_THIEU, r)
-            dam = ws.cell(r, in_an.COT_KIND).value != 'I'                     # dòng mục / tổng in đậm
-            gop = next((m for m in ws.merged_cells.ranges if m.min_row == r and m.min_col <= 2 <= m.max_col), None)
-            c1, c2 = (gop.min_col, gop.max_col) if gop else (2, 2)          # thưởng / tổng cộng gộp ô (0.9.88): đo cả vùng
-            chu = ws.cell(r, c1).value
-            so = in_an.so_dong_o(chu, sum(px[c1 - 1:c2]) * 0.75 - 6, dam=dam)
-            self.assertGreaterEqual(h, in_an.cao_dong_bang(so) - 0.01, r)     # đủ chỗ cho mọi dòng chữ + đệm
-
-    def test_tieu_de_mot_dong_28pt(self):
-        import shutil
-        mau = self.td / 'mau'
-        mau.mkdir()
-        wb = openpyxl.load_workbook(in_an.file_mau(None, in_an.TEN_CT))
-        ws = wb.worksheets[0]
-        stt = next(r for r in range(1, 200) if str(ws.cell(r, 1).value or '').strip().upper() == 'STT')
-        for c in range(1, 9):
-            if isinstance(ws.cell(stt, c).value, str):
-                ws.cell(stt, c).value = ws.cell(stt, c).value.split('\n')[0].split()[0]   # mỗi tiêu đề một từ
-        wb.save(mau / 'IN_CHITIET.xlsx')
-        shutil.copy2(in_an.duong_ke_cua_mau(in_an.file_mau(None, in_an.TEN_CT), in_an.TEN_CT), mau / 'IN_CHITIET.duong_ke.xml')
-        f = in_an.lap_chi_tiet(self.con, 1, self.td / 'ct1.xlsx', mau=mau / 'IN_CHITIET.xlsx')
-        ws = openpyxl.load_workbook(f).active
-        stt, _ = self._bang(ws)
-        self.assertEqual(ws.row_dimensions[stt].height, in_an.CAO_TIEU_DE_BANG)
-
-    def test_nguon_goc_qua_350pt_tach_o_cho_het_cau(self):
-        dai = ' '.join([NGUON_GOC] * 6)                                    # một đoạn rất dài: vượt 350 pt
-        ws = self.in_ho(dai)
-        ds = [d for d in self.dong_nguon_goc(ws) if d[1]]
-        self.assertGreater(len(ds), 1)
-        # 21/10/2026: khối kéo dài tới chỗ hết câu, tối đa CAO_DOAN_CAU_TOI_DA (không tới trần 409 pt)
-        self.assertTrue(all(h <= in_an.CAO_DOAN_CAU_TOI_DA for _, _, h in ds))
-        self.assertEqual(' '.join(' '.join(x for _, x, _ in ds).split()), ' '.join(dai.split()))   # không mất chữ
-        toi_da = int((in_an.CAO_DOAN_CAU_TOI_DA - in_an.DEM_DONG) // in_an.dong_chu_bang(14))
-        rong = in_an._rong_vung(ws, 1, 8)
-        for (r, x, _), (_, sau, _) in zip(ds, ds[1:]):
-            # 16/10/2026: tách ở ranh giới dòng đã ngắt - hết đoạn (chuan_nguon_goc đưa " - " thành đoạn "- " mới); 21/10/2026: trong
-            # một đoạn chỉ sau dấu hết câu (. ! ?), câu dài hơn CAO_DOAN_CAU_TOI_DA mới cắt ở ranh giới dòng
-            self.assertTrue(x.rstrip().endswith(('.', '!', '?')) or sau.startswith('- ')
-                            or len(in_an.ngat_dong(x, rong)) >= toi_da, (x[-40:], sau[:20]))
-        for r, _, _ in ds:
-            m = _vung(ws, r, 1)
-            self.assertEqual((m.min_row, m.max_row, m.min_col, m.max_col), (r, r, 1, 8))    # dòng mới gộp cùng dải cột
-            al = ws.cell(r, 1).alignment
-            self.assertEqual((al.horizontal, al.vertical, al.wrap_text), ('justify', 'center', True))   # 1.0.04: giữa dọc (hồ sơ)
-            for c in range(1, 9):                                           # dòng mới chép kiểu (viền ô) của dòng đầu
-                vien = [tuple(getattr(ws.cell(rr, c).border, k).style for k in ('left', 'right', 'top', 'bottom'))
-                        for rr in (r, ds[0][0])]
-                self.assertEqual(vien[0], vien[1], (r, c))
 
 
 class TestBangTongHop(CoSo):

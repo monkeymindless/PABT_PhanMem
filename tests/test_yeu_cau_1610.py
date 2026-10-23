@@ -99,31 +99,6 @@ class TestBanIn(_Co):
         self.addCleanup(con.close)
         return con
 
-    def test_chi_tiet_to_chuc_ngay_du_an(self):
-        con = self._con()
-        with con:
-            con.execute("UPDATE ho SET ho_ten = 'UBND xã Phú Lý quản lý.' WHERE ma_ho = 1")
-        ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 1, self.td / 'tc.xlsx')).active
-        chu = {c.coordinate: c.value for r in ws.iter_rows(max_row=16) for c in r if isinstance(c.value, str)}
-        ngay = next(v for v in chu.values() if 'ngày' in v and 'tháng' in v)
-        self.assertEqual(ngay, f'Trị An, ngày ...... tháng ..... năm {__import__("datetime").date.today().year}'
-                         if '2026' not in ngay else 'Trị An, ngày ...... tháng ..... năm 2026')
-        self.assertTrue(any(v.startswith('DỰ ÁN Thử') for v in chu.values()))
-        self.assertFalse(any(v.startswith('Dự án:') for v in chu.values()))
-        hang_cccd = next(int(''.join(filter(str.isdigit, k))) for k, v in chu.items() if v.strip().startswith('Số CCCD'))
-        self.assertTrue(ws.row_dimensions[hang_cccd].hidden)                     # tổ chức: ẩn dòng CCCD
-        self.assertTrue(any(v.strip() == 'Tổ chức:' for v in chu.values()))
-
-    def test_ho_gia_dinh_giu_cccd_va_ngay_da_dien(self):
-        con = self._con()
-        with con:
-            # 20/10/2026: dòng "Số CCCD:" TRỐNG thì ẩn (canh_trang_in_an) - hộ gia đình có số CCCD thì dòng phải hiện
-            con.execute("UPDATE ho SET so_pa = '12', ngay_pa = '05/10/2026', so_cccd = '079123456789' WHERE ma_ho = 2")
-        ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 2, self.td / 'ho.xlsx')).active
-        chu = {c.coordinate: c.value for r in ws.iter_rows(max_row=16) for c in r if isinstance(c.value, str)}
-        self.assertIn('Trị An, ngày 05 tháng 10 năm 2026', chu.values())
-        hang_cccd = next(int(''.join(filter(str.isdigit, k))) for k, v in chu.items() if v.strip().startswith('Số CCCD'))
-        self.assertFalse(ws.row_dimensions[hang_cccd].hidden)
 
     def test_bang_tong_hop_ngay(self):
         con = self._con()

@@ -19,6 +19,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 import openpyxl                                                                  # noqa: E402
 from PySide6.QtWidgets import QApplication                                       # noqa: E402
 
+from pabt import du_lieu_in
 from pabt import csdl, dia_phuong, in_an, in_word                                # noqa: E402
 
 CAU = 'Đất giả lập do Ủy ban nhân dân xã quản lý, sử dụng ổn định từ năm 1995, không tranh chấp, phù hợp quy hoạch sử dụng đất. '
@@ -242,8 +243,6 @@ class TestWordNghiDinh30(_Co):
         self.assertEqual([p.suffix for p in kq['word']], ['.docx'])                    # 22/10/2026: mặc định bản Word
         self.assertEqual(kq['excel'], [])                                              # không còn bản Excel chi tiết
         self.assertEqual(list((self.td / 'hs').rglob('*.xlsx')), [])
-        kq = vb.xuat_bo_ho_so(self.con, [1], self.td / 'hs_x', bang_tong_hop=False, chi_tiet_word=False)
-        self.assertEqual([p.suffix for p in kq['excel']], ['.xlsx'])                   # đường Excel cũ (dự phòng) vẫn gọi được
         from pabt.man_hinh import HopIn
         h = HopIn(self.con, None, ma_ho_chon=[1], file_du_an=str(self.td / 'x.pabt'), che_do='chinh_thuc')
         self.addCleanup(h.close)
@@ -280,15 +279,6 @@ class TestLamSachDoanVan(unittest.TestCase):
             'Đồng Nai công nhận.',
             'Đất sử dụng gồm:', '- đất ở', '- đất trồng cây lâu năm', 'Ghi chú khác tiếp theo.'])
         self.assertEqual(lam_sach_doan_van(''), [])
-
-    def test_excel_chi_cat_o_het_cau(self):
-        """Đoạn dài hơn toi_da dòng: khối cắt sau dòng hết câu; không có thì kéo dài tới chỗ hết câu (trần toi_da_cung)."""
-        do = lambda s, ten, co, dam: len(s) * 6.0                                    # noqa: E731
-        cau = 'aa bb cc dd ee ff gg hh ii kk ll mm nn oo pp qq rr ss tt uu vv xx yy zz.'
-        khoi = in_an._chia_doan_van(cau * 3, 60, 'T', 14, False, do, 2, treo=False, toi_da_cung=40)
-        for k in khoi[:-1]:
-            self.assertTrue(k[-1][0].rstrip().endswith('.'), k)                      # mọi khối (trừ cuối) hết ở dấu chấm
-        self.assertEqual(' '.join(x for k in khoi for x, _ in k).split(), (cau * 3).split())   # không mất chữ
 
 
 class TestNghiDinh30CoChu(_Co):
@@ -377,7 +367,7 @@ class TestNghiDinh30CoChu(_Co):
         self.assertEqual(' '.join(in_word.TRICH_YEU_DONG), in_word.TRICH_YEU)
         self.assertEqual(len(in_word.TRICH_YEU_DONG), 1)                             # PDF mẫu PA_01: một dòng, chữ "&"
         self.assertIn('HỖ TRỢ & TÁI ĐỊNH CƯ', chu)
-        da = in_an._thong_tin_du_an(self.con)
+        da = du_lieu_in._thong_tin_du_an(self.con)
         cq = str(da['DON_VI_TIEU_DE']).upper()
         # 22/10/2026 (người dùng): cơ quan, quốc hiệu, số 13; tiêu ngữ, ngày, trích yếu, dự án, nội dung, bảng 14; tên loại 15
         self.assertEqual(self._sz(x, 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'), ('26', True, False, False))   # 13 pt đậm
@@ -399,7 +389,7 @@ class TestNghiDinh30CoChu(_Co):
                          ['TRUNG TÂM PHÁT', 'TRIỂN QUỸ ĐẤT'])                         # không để "ĐẤT" trơ một dòng
         self.assertEqual(in_word._ngat_can_bang('CHI NHÁNH VĨNH CỬU', 176, 13, True), ['CHI NHÁNH VĨNH CỬU'])
         self.assertEqual(self._sz(x, f'DỰ ÁN {str(da["du_an"]).upper()}'), ('28', True, False, False))
-        for tieu_de in (in_an.TIEU_DE_MUC_I_HO, in_an.TIEU_DE_MUC_II,
+        for tieu_de in (du_lieu_in.TIEU_DE_MUC_I_HO, du_lieu_in.TIEU_DE_MUC_II,
                         'III. Bảng tính toán bồi thường, hỗ trợ'):
             self.assertEqual(self._sz(x, tieu_de)[:2], ('28', True))
         self.assertEqual(self._sz(x, 'STT'), ('26', True, False, False))                              # bảng 13 pt
@@ -411,7 +401,7 @@ class TestNghiDinh30CoChu(_Co):
         self.assertEqual(self._sz(x, 'LẬP BIỂU'), ('30', True, False, False))                         # khối chữ ký 15 pt
         self.assertEqual(self._sz(x, 'Đất sử dụng gồm:'), ('26', False, False, False))               # nguồn gốc mục II 13 pt
         self.assertEqual(self._sz(x, 'Họ và tên:')[:2], ('28', False))                                 # mục I 14 pt, nhãn thường
-        ten = in_an._thong_tin_ho(self.con, 1, in_an._thong_tin_du_an(self.con))['ho_ten']
+        ten = du_lieu_in._thong_tin_ho(self.con, 1, du_lieu_in._thong_tin_du_an(self.con))['ho_ten']
         self.assertEqual(self._sz(x, ten)[:2], ('28', True))                                         # tên chủ hộ đậm (mẫu PA_01)
         self.assertEqual(self._sz(x, 'Địa chỉ thường trú:')[:2], ('28', False))
         doan = self._cac_doan(x)
@@ -422,18 +412,6 @@ class TestNghiDinh30CoChu(_Co):
         self.assertIsNone(p3.find(W + 'keepNext'))                                                   # mục III in tiếp ngay dưới II
         self.assertIsNone(p3.find(W + 'pageBreakBefore'))
         self.assertEqual(list(x.iter(W + 'pageBreakBefore')), [])
-
-    def test_ban_excel_cung_sua(self):
-        f = in_an.lap_chi_tiet(self.con, 1, self.td / 'ct.xlsx')
-        ws = openpyxl.load_workbook(f).active
-        chu = [c.value for row in ws.iter_rows(max_row=40) for c in row if isinstance(c.value, str)]
-        self.assertTrue(any('HỖ TRỢ VÀ TÁI ĐỊNH CƯ' in c for c in chu))
-        self.assertFalse(any('&' in c for c in chu))
-        ng = [c for c in chu if 'Đoàn' in c]
-        self.assertEqual(len(ng), 1)
-        self.assertIn('Đoàn Thanh niên', ng[0])
-        self.assertIn('chủ hợp đồng', ng[0])
-        self.assertNotIn('\n', ng[0].strip())
 
 
 class TestLeA3VaLapDayNgang(_Co):
@@ -517,18 +495,30 @@ class TestLeA3VaLapDayNgang(_Co):
                          ['Đất nhận chuyển nhượng theo hợp đồng; sau đó tặng cho con là: ông A sử dụng tới nay.'])
         self.assertEqual(lam_sach_doan_van('Gồm các loại đất:\n- đất ở;\n- đất lúa.'), ['Gồm các loại đất:', '- đất ở;', '- đất lúa.'])
 
-    def test_pdf_du_phong_le_nghi_dinh_30(self):
-        from pabt import pdf_du_phong
+
+class TestDocxSangPdf(_Co):
+    """1.0.19: PDF dự phòng (máy không có Word) dựng bằng Qt từ CHÍNH file .docx - không đọc Excel."""
+
+    def test_pdf_du_phong_tu_chinh_file_docx(self):
         from pabt import van_ban_trinh as vb
-        a = self.td / 'PA_001.docx'
-        a.write_bytes(b'')
-        a.with_suffix('.xlsx').write_bytes(b'')
-        goi = []
-        with mock.patch.object(pdf_du_phong, 'xuat_pdf_du_phong_qt',
-                               lambda x, p, le_mm=None: (goi.append(le_mm), Path(p).write_bytes(b'%PDF'))):
-            loi, du = vb.pdf_du_phong_chi_tiet([('pdf', a, a.with_suffix('.pdf'))], [])
-        self.assertEqual(goi, [(15, 10, 10, 10)])                                 # (trái, trên, phải, dưới) mm như bản Word
+        from tests.test_trang_1_khong_ho import _du_an as du_an_1_ho
+        con = self.mo(du_an_1_ho(self.td))
+        a = in_word.xuat_chi_tiet_docx(con, 1, self.td / 'PA_001.docx')
+        loi, du = vb.pdf_du_phong_chi_tiet([('pdf', a, a.with_suffix('.pdf'))], [])
         self.assertEqual(du, [a.with_suffix('.pdf')])
+        self.assertTrue(du[0].read_bytes().startswith(b'%PDF'))
+        self.assertEqual(loi, [])
+        self.assertEqual(list(self.td.rglob('*.xlsx')), [])                      # không lập file Excel nào
+
+    def test_html_tu_docx_co_dong_chi_nhanh_va_bang(self):
+        from pabt import docx_sang_pdf
+        from tests.test_trang_1_khong_ho import _du_an as du_an_1_ho
+        con = self.mo(du_an_1_ho(self.td))
+        html, trang = docx_sang_pdf.html_tu_docx(in_word.xuat_chi_tiet_docx(con, 1, self.td / 'ct.docx'))
+        self.assertIn('CHI NHÁNH', html)
+        self.assertIn('<table', html)
+        self.assertAlmostEqual(trang['rong_mm'], 210, delta=1)
+        self.assertEqual(tuple(round(x) for x in trang['le']), (15, 10, 10, 10))
 
 
 class TestTieuDeMucI(_Co):
@@ -570,58 +560,6 @@ class TestTieuDeMucI(_Co):
         sp = p.find(f'{W}pPr/{W}spacing')
         self.assertGreater(int(sp.get(W + 'before')), 0)
         self.assertGreater(int(sp.get(W + 'after')), 0)
-
-    def test_ho_gia_dinh_ca_nhan(self):
-        con = self._con('Phan Văn Minh')
-        o = self._excel(con)
-        chu = [c for _, c, _ in o]
-        self.assertIn(in_an.TIEU_DE_MUC_I_HO, chu)
-        self.assertTrue(next(d for _, c, d in o if c == in_an.TIEU_DE_MUC_I_HO))          # in đậm
-        self.assertFalse(any(c.startswith('I. Tổ chức') for c in chu))
-        for nhan in ('Họ và tên:', 'Số CCCD:', 'Địa chỉ thường trú:', 'Số điện thoại:'):
-            self.assertIn(nhan, chu)
-        self.assertNotIn('Tổ chức:', chu)
-        self.assertTrue(any('075000000001 - Ngày cấp: 01/01/2021 - Nơi cấp: Cục CS QLHC' in c for c in chu))
-        self.assertTrue(any('BỒI THƯỜNG, HỖ TRỢ VÀ TÁI ĐỊNH CƯ KHI NHÀ NƯỚC THU HỒI ĐẤT' in c for c in chu))
-        p, hang = self._word(con)
-        self._kiem_tieu_de_word(p, in_an.TIEU_DE_MUC_I_HO)
-        self.assertEqual([h.split(':')[0] + ':' for h in hang],
-                         ['Họ và tên:', 'Số CCCD:', 'Địa chỉ thường trú:', 'Số điện thoại:'])
-        self.assertIn('075000000001', hang[1])
-
-    def test_to_chuc(self):
-        con = self._con('UBND xã Phú Lý')
-        o = self._excel(con)
-        chu = [c for _, c, _ in o]
-        self.assertIn(in_an.TIEU_DE_MUC_I_TO_CHUC, chu)
-        self.assertNotIn(in_an.TIEU_DE_MUC_I_HO, chu)
-        self.assertIn('Tổ chức:', chu)
-        self.assertIn('Địa chỉ:', chu)
-        for nhan in ('Họ và tên:', 'Số CCCD:', 'Địa chỉ thường trú:', 'Số điện thoại:'):
-            self.assertNotIn(nhan, chu)
-        self.assertFalse(any('075000000001' in c or '0900000001' in c for c in chu))
-        p, hang = self._word(con)
-        self._kiem_tieu_de_word(p, in_an.TIEU_DE_MUC_I_TO_CHUC)
-        self.assertEqual(hang, ['Tổ chức:UBND xã Phú Lý', 'Địa chỉ:Ấp 1, xã Mẫu'])
-
-    def test_do_o_tieu_de_khi_mau_doi_dong(self):
-        """Mẫu người dùng: tiêu đề không có "I." và nằm dòng khác - dò theo từ khóa, giữa dòng "Dự án" và nhãn "Họ và tên:"."""
-        from openpyxl import Workbook
-        wb = Workbook()
-        ws = wb.active
-        ws['A3'] = 'Tổ chức làm nhiệm vụ bồi thường'                    # trên dòng Dự án: không phải tiêu đề mục I
-        ws['A5'] = 'Dự án: {du_an}'
-        ws['A9'] = 'Hộ gia đình, cá nhân có đất thu hồi'
-        ws['B10'] = 'Họ và tên:'
-        ws['A14'] = 'II. Thông tin nguồn gốc đất:'
-        ws['A17'] = 'STT'
-        self.assertEqual(in_an.dat_tieu_de_muc_i(ws, 17, True), 1)
-        self.assertEqual(ws['A9'].value, in_an.TIEU_DE_MUC_I_TO_CHUC)
-        self.assertTrue(ws['A9'].font.b)
-        self.assertEqual(ws['A3'].value, 'Tổ chức làm nhiệm vụ bồi thường')
-        self.assertEqual(in_an.dat_tieu_de_muc_i(ws, 17, False), 1)         # ô đã là "I. …" - đổi theo chủ sử dụng
-        self.assertEqual(ws['A9'].value, in_an.TIEU_DE_MUC_I_HO)
-        self.assertEqual(in_an.dat_tieu_de_muc_i(ws, 17, False), 0)
 
 
 if __name__ == '__main__':

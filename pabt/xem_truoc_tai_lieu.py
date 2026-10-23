@@ -658,11 +658,11 @@ class KhungXemTruocTaiLieu(QFrame):
         self._bat_nut()
 
     # ---- lập bản xem trước ở nền
-    def yeu_cau(self, khoa, tao_xlsx, ten: str = '', ngay: bool = False, tao_du_phong=None) -> None:
+    def yeu_cau(self, khoa, tao_xlsx, ten: str = '', ngay: bool = False) -> None:
         """Lập bản xem trước: tao_xlsx(thu_muc) -> file .xlsx / .docx (luồng giao diện), Excel / Word xuất PDF ở luồng nền. khoa:
-        bản đã lập trong phiên dùng lại (None: luôn lập lại - phương án đang soạn). ngay: không chờ ngừng bấm. tao_du_phong(thu_muc)
-        -> .xlsx: bản gần đúng (Qt) khi file là .docx mà Word không dùng được / lỗi."""
-        self._cho = (khoa, tao_xlsx, ten, tao_du_phong)
+        bản đã lập trong phiên dùng lại (None: luôn lập lại - phương án đang soạn). ngay: không chờ ngừng bấm. File .docx mà Word không
+        dùng được / lỗi: bản gần đúng dựng bằng Qt từ chính file .docx (docx_sang_pdf)."""
+        self._cho = (khoa, tao_xlsx, ten)
         if khoa is not None and khoa in self._nho and Path(self._nho[khoa][0]).exists():
             self._cho = None
             self._hen.stop()
@@ -688,7 +688,7 @@ class KhungXemTruocTaiLieu(QFrame):
     def _bat_dau(self) -> None:
         if self._dang is not None or self._cho is None:
             return                                      # đang xuất: lập tiếp khi xong (_kiem_nen)
-        khoa, tao, ten, tao_dp = self._cho
+        khoa, tao, ten = self._cho
         self._cho = None
         if self.thu_muc is None:
             self.thu_muc = thu_muc_moi()
@@ -705,10 +705,10 @@ class KhungXemTruocTaiLieu(QFrame):
         word = la_word(xlsx)
         ly_do = dung_duoc_word() if word else dung_duoc_excel()
         if ly_do:
-            self._du_phong(khoa, xlsx, ly_do, tao_dp, d)
+            self._du_phong(khoa, xlsx, ly_do)
             return
         pdf = xlsx.with_suffix('.pdf')
-        viec = dict(khoa=khoa, xlsx=xlsx, pdf=pdf, ten=ten, ket_qua=None, tao_dp=tao_dp, d=d)
+        viec = dict(khoa=khoa, xlsx=xlsx, pdf=pdf, ten=ten, ket_qua=None)
 
         def chay():
             viec['ket_qua'] = chuyen_pdf(xlsx, pdf)
@@ -730,7 +730,7 @@ class KhungXemTruocTaiLieu(QFrame):
             return
         self.xlsx = viec['xlsx']
         if viec['ket_qua']:                             # Excel / Word lỗi / treo: dựng bản gần đúng bằng Qt
-            self._du_phong(viec['khoa'], viec['xlsx'], viec['ket_qua'], viec['tao_dp'], viec['d'])
+            self._du_phong(viec['khoa'], viec['xlsx'], viec['ket_qua'])
         else:
             self._dat_gan_dung(False)
             self.nap_tai_lieu(viec['pdf'])
@@ -739,20 +739,16 @@ class KhungXemTruocTaiLieu(QFrame):
         self.gan_dung = co
         self.lb_gan_dung.setVisible(co)
 
-    def _du_phong(self, khoa, xlsx: Path, ly_do: str, tao_dp=None, d=None) -> None:
-        """Không dùng được Excel / Word: PDF gần đúng bằng Qt (pdf_du_phong) từ file Excel của bản in (file .docx: Excel do
-        tao_dp(thư mục) lập, lề NĐ 30 như bản Word). Lỗi nữa thì báo lý do + mở ngoài."""
-        from .pdf_du_phong import xuat_pdf_du_phong_qt
+    def _du_phong(self, khoa, xlsx: Path, ly_do: str) -> None:
+        """Không dùng được Excel / Word: PDF gần đúng bằng Qt - file .docx dựng từ chính file Word (docx_sang_pdf), file Excel (bảng
+        tổng hợp) từ bản Excel (pdf_du_phong). Lỗi nữa thì báo lý do + mở ngoài."""
         pdf = xlsx.with_name(xlsx.stem + '_gan_dung.pdf')
         try:
             if la_word(xlsx):
-                if tao_dp is None:
-                    raise FileNotFoundError('chưa có bản Excel để dựng bản gần đúng')
-                from .in_word import LE_MM
-                d = Path(d or xlsx.parent) / 'du_phong'
-                d.mkdir(parents=True, exist_ok=True)
-                xuat_pdf_du_phong_qt(Path(tao_dp(d)), pdf, le_mm=(LE_MM['trai'], LE_MM['tren'], LE_MM['phai'], LE_MM['duoi']))
+                from .docx_sang_pdf import xuat_pdf_tu_docx
+                xuat_pdf_tu_docx(xlsx, pdf)
             else:
+                from .pdf_du_phong import xuat_pdf_du_phong_qt
                 xuat_pdf_du_phong_qt(xlsx, pdf)
         except Exception as e:                          # noqa: BLE001 - báo trong khung
             from .thong_bao import chu_loi

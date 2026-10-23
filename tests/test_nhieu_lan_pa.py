@@ -5,9 +5,8 @@ from __future__ import annotations
 import sqlite3
 import unittest
 
-import openpyxl
 
-from pabt import csdl, in_an, kinh_phi_du_an, lan_pa, nghiep_vu, theo_doi
+from pabt import csdl, kinh_phi_du_an, lan_pa, nghiep_vu, theo_doi
 from pabt.lap_pa import BoSoan, LoiNhap
 from pabt.tien import D
 from tests.test_dac_ta_v5 import CoSo
@@ -135,28 +134,6 @@ class TestNhieuLan(_Co):
         tong = nghiep_vu.tinh_ho(con, ma)
         self.assertEqual(k1.muc[5] + k2.muc[5], tong.muc[5])
 
-    def test_ban_in_lan_bo_sung(self):
-        con = self._con()
-        ma = 1
-        bo = BoSoan(con, ma)
-        bo.luu()
-        lan_pa.sua_lan(con, ma, 1, so_pa='05', ngay_pa='01/10/2026')
-        bo.lap_bo_sung('Bổ sung nhà')
-        self._them(bo, 2, 2)
-        bo.luu()
-        lan_pa.sua_lan(con, ma, 2, so_pa='77')
-        ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, ma, self.td / 'bs.xlsx')).active
-        chu = ' | '.join(str(c.value) for r in ws.iter_rows(max_row=8) for c in r if c.value)
-        self.assertIn('BỔ SUNG (LẦN 2)', chu)
-        self.assertIn('77/', chu)
-        dong, kq = in_an.dong_chi_tiet(con, ma, pa=nghiep_vu.doc_phuong_an(con, ma, lan=2),
-                                       pa_truoc=nghiep_vu.doc_phuong_an(con, ma, den_lan=1))
-        self.assertEqual(kq.muc[1], 0)                                     # bổ sung không lặp tiền đất của lần đầu
-        ws1 = openpyxl.load_workbook(in_an.lap_chi_tiet(con, ma, self.td / 'l1.xlsx', lan=1)).active
-        self.assertNotIn('BỔ SUNG', ' '.join(str(c.value) for r in ws1.iter_rows(max_row=8) for c in r if c.value))
-        bth = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / 'bth.xlsx', [ma], lan='moi_nhat')).active
-        tong_bth = next(bth.cell(r, 22).value for r in range(13, 30) if isinstance(bth.cell(r, 22).value, (int, float)))
-        self.assertEqual(D(tong_bth), nghiep_vu.tinh_lan(con, ma, 2).tong)
 
     def test_nang_cap_tu_v16(self):
         """File v16 có hộ đã có quyết định: lần 1 khóa, mọi dòng cũ là lần 1."""

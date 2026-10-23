@@ -206,36 +206,6 @@ class TestKhaiToanNiemYet(Co0995):
 
 
 class TestQuetGiayTo(Co0995):
-    def test_boc_tach_phuong_an_chi_tiet(self):
-        from pabt import csdl, ocr_ho_so
-        from pabt.lap_pa import BoSoan, DanhMuc
-        from pabt.nhap_tai_san import DichPhuongAn, them_mot
-        con = csdl.mo(str(_du_an(self.td, 2)))
-        try:
-            ma = con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 1').fetchone()[0]
-            bo = BoSoan(con, ma, DanhMuc(con))
-            d = DichPhuongAn(bo)
-            for muc, ten, sl in ((2, 'Nhà tạm', '46'), (3, 'xoài', '16'), (4, 'Hỗ trợ ổn định đời sống', '5')):
-                m = next(x for x in bo.dm.muc[muc] if ten.lower() in x.ten.lower())
-                them_mot(d, muc, m, m.ten, sl, '', '', '')
-            bo.dat_nhan_khau('5')
-            bo.luu()
-            for tab in (True, False):
-                kq = ocr_ho_so.boc_tach(_chu_ban_in(con, ma, self.td, tab))
-                self.assertEqual(kq.loai, 'pa_chi_tiet')
-                self.assertTrue(kq.ho_ten)
-                self.assertEqual(kq.nhan_khau, 5)
-                self.assertTrue(kq.tai_dinh_cu)
-                self.assertEqual(len(kq.thua), 1)
-                self.assertEqual(kq.thua[0]['loai_dat'], 'ONT')
-                self.assertIsNotNone(kq.thua[0]['dt_thu_hoi'])
-                ts = kq.dong_tai_san
-                self.assertTrue(any(x.startswith('Nhà tạm\tm²\t46') for x in ts), ts)
-                self.assertTrue(any('xoài' in x.lower() and '\t16' in x for x in ts), ts)
-                self.assertTrue(any(x.startswith('Hỗ trợ ổn định đời sống') for x in ts), ts)
-                self.assertFalse([x for x in ts if 'Thưởng' in x or 'TỔNG' in x])
-        finally:
-            con.close()
 
     def test_nguon_goc_cccd_ocr_va_tab_cot(self):
         from pabt import ocr, ocr_ho_so

@@ -131,11 +131,6 @@ class TestDuongKe(CoSo):
                             (o, khe))                    # hở >= DK_CACH (5 pt): không chạm chân chữ / dấu nặng
             self.assertGreater(dai, 0)
 
-    def test_chi_tiet(self):
-        with self.con:
-            self.con.execute("UPDATE du_an SET ten = 'Xây dựng đường liên xã đoạn qua xã Mẫu' WHERE id = 1")
-        f = in_an.lap_chi_tiet(self.con, 1, self.td / 'ct.xlsx')
-        self.kiem(f, ['E1', 'A2', 'A5'])                     # tiêu ngữ (dòng 1), tên đơn vị (dòng 2), Dự án
 
     def test_bang_tong_hop_cot_an(self):
         f = in_an.lap_bang_tong_hop(self.con, self.td / 'bth.xlsx')
@@ -151,125 +146,6 @@ class TestDuongKe(CoSo):
         shutil.copy2(MAU / 'IN_BANGTONGHOP.xlsx', mau / 'IN_BANGTONGHOP.xlsx')
         f = in_an.lap_bang_tong_hop(self.con, self.td / 'bth3.xlsx', mau=mau / 'IN_BANGTONGHOP.xlsx')
         self.kiem(f, ['A2', 'S2', 'A6'])
-
-    def test_tieu_ngu_dai_bang_chu(self):
-        ws, bc, bd, kq = self.duong_ke(in_an.lap_chi_tiet(self.con, 1, self.td / 'ct2.xlsx'))
-        e1 = in_an._dong_chu_o(ws, 1, 5, bc, bd, self.do)
-        giua, dai, y = min(kq, key=lambda k: abs(k[0] - (e1['x1'] + e1['x2']) / 2))     # đường dưới "Độc lập - Tự do - Hạnh phúc"
-        rong = self.do('Độc lập - Tự do - Hạnh phúc', 'Times New Roman', in_an.CO_TIEU_DE, True) * in_an.EMU_PT  # 1.0.07: 16 pt
-        self.assertAlmostEqual(dai, rong, delta=2 * in_an.EMU_PX)
-
-
-class TestNguonGoc(CoSo):
-    def test_gach_dau_dong_in_thut_le(self):
-        ng = ('Căn cứ các Giấy xác nhận nguồn gốc đất số 01/UBND ngày 24/8/2026 của UBND phường Mẫu, cụ thể như sau:\n'
-              '- Một phần thửa đất số 11, tờ bản đồ số 159, phường Mẫu: Bưu điện Văn hóa Thử (thuộc Bưu điện phường Mẫu) là '
-              'chủ sở hữu tài sản trên một phần thửa đất do Khu Bảo tồn Thử quản lý.\n'
-              '- Bưu điện Văn hóa Thử đang sử dụng đất, là chủ sở hữu tài sản: Phòng giao dịch, mái che, cửa cổng.')
-        ws = self.in_ho(ng)
-        ds = [(r, x) for r, x, _ in self.dong_nguon_goc(ws) if x]
-        # 0.9.88 (người dùng 15/10/2026): căn đều hai bên như văn bản Word - không xuống dòng cứng + thụt lề treo ở dòng tràn.
-        # 16/10/2026: chia mịn - mỗi dòng Excel <= CAO_DOAN_TOI_DA (cắt ở chỗ hết câu), các đoạn vẫn xuống dòng cứng giữa đoạn
-        doan = [d for _, x in ds for d in x.split('\n')]
-        self.assertTrue(doan[0].startswith('Căn cứ'))
-        self.assertEqual(sum(d.startswith('- ') for d in doan), 2, doan)
-        self.assertFalse(any(d.startswith(' ') for d in doan))
-        self.assertEqual(' '.join(' '.join(x for _, x in ds).split()), ' '.join(ng.split()))     # không mất chữ
-        for r, _ in ds:
-            self.assertEqual(ws.cell(r, 1).alignment.horizontal, 'justify')
-            self.assertLessEqual(ws.row_dimensions[r].height, in_an.CAO_DOAN_TOI_DA + in_an.DEM_DOAN_CUOI)
-        # 16/10/2026 (người dùng): mỗi đoạn thụt đầu dòng bằng NBSP (Excel căn đều không giãn chỗ này)
-        tho = [d for r, _ in ds for d in str(ws.cell(r, 1).value).split('\n')]
-        self.assertEqual(sum(d.startswith(in_an.NBSP) for d in tho), 3)
-        self.assertFalse(any(d.startswith(in_an.NBSP + ' ') for d in tho))
-
-    def test_nguon_goc_dai_hien_du(self):
-        ws = self.in_ho(NGUON_GOC)
-        ds = self.dong_nguon_goc(ws)
-        chu = [x for _, x, _ in ds if x]
-        # 16/10/2026: chia mịn <= CAO_DOAN_TOI_DA (90 pt) mỗi dòng Excel - lấp sát đáy trang 1, không đẩy cả khối sang trang 2
-        self.assertGreater(len(chu), 1)
-        self.assertEqual(' '.join(' '.join(chu).split()), ' '.join(NGUON_GOC.split()))     # không mất chữ
-        rong = in_an._rong_vung(ws, 1, 8)
-        co_chu = [x for x in ds if x[1]]
-        for i, (r, x, cao) in enumerate(co_chu):
-            so_dong = len(in_an.ngat_dong(x, rong))
-            self.assertGreaterEqual(cao, in_an.cao_dong_chu(so_dong, 14))          # đủ cao cho mọi dòng chữ
-            self.assertLessEqual(cao, in_an.CAO_DOAN_TOI_DA + in_an.DEM_DOAN_CUOI)
-            m = _vung(ws, r, 1)
-            self.assertEqual((m.min_row, m.max_row, m.min_col, m.max_col), (r, r, 1, 8))  # gộp ngang 1 dòng (Excel ngắt dòng)
-            self.assertTrue(ws.cell(r, 1).alignment.wrap_text)
-        self.assertEqual([r for r, _, _ in co_chu], list(range(co_chu[0][0], co_chu[-1][0] + 1)))     # liền nhau, không khe
-        self.assertTrue(all(h <= 6 for _, x, h in ds if not x))                     # dòng thừa của vùng gộp cũ: khoảng cách nhỏ
-
-    def test_nguon_goc_ngan_va_nhieu_thua(self):
-        ws = self.in_ho('Đất khai phá năm 1995.')
-        ds = self.dong_nguon_goc(ws)
-        r, x, cao = next(d for d in ds if d[1])
-        self.assertEqual(x, 'Đất khai phá năm 1995.')
-        self.assertLess(cao, 30)
-        # các thửa có nguồn gốc khác nhau: in đủ, mỗi nội dung một đoạn
-        with self.con:
-            t = [r[0] for r in self.con.execute('SELECT ma_thua FROM thua WHERE ma_ho = 1 ORDER BY thu_tu, ma_thua')]
-            self.con.execute("UPDATE thua SET nguon_goc = 'Nhận chuyển nhượng năm 2001.' WHERE ma_thua = ?", (t[-1],))
-        f = in_an.lap_chi_tiet(self.con, 1, self.td / 'ct2.xlsx')
-        ws = openpyxl.load_workbook(f).active
-        x = [d[1] for d in self.dong_nguon_goc(ws) if d[1]]
-        self.assertEqual(x, ['Đất khai phá năm 1995.', 'Nhận chuyển nhượng năm 2001.'])     # 1.0.04: mỗi đoạn một dòng Excel
-
-    def test_nguon_goc_rat_dai_chia_nhieu_dong(self):
-        dai = '\n'.join([NGUON_GOC] * 7)
-        ws = self.in_ho(dai)
-        ds = [d for d in self.dong_nguon_goc(ws) if d[1]]
-        self.assertGreater(len(ds), 1)                                           # vượt 409 pt: sang dòng Excel kế tiếp
-        self.assertTrue(all(h <= in_an.CAO_TOI_DA for _, _, h in ds))
-        self.assertEqual(' '.join(' '.join(x for _, x, _ in ds).split()), ' '.join(dai.split()))
-        self.assertEqual(ws.cell(next(r for r in range(1, 200) if ws.cell(r, 1).value == 'STT'), 2).value, 'Tên tài sản')
-
-
-class TestTenDuAn(CoSo):
-    def _dong_du_an(self, ws):
-        r = next(r for r in range(1, 20) if str(ws.cell(r, 1).value or '').startswith('DỰ ÁN '))     # 16/10/2026: "DỰ ÁN <tên>"
-        return r, ws.row_dimensions[r].height, ws.cell(r, 1)
-
-    def test_ten_ngan_mot_dong(self):
-        r, cao, o = self._dong_du_an(self.in_ho('x'))
-        self.assertEqual(o.value, f'DỰ ÁN {self.TEN}')
-        # sát chữ, không còn 38,4 pt cố định; 1.0.07: chữ 16 pt (phông offscreen rộng - có thể 2 dòng: đếm bằng ngat_dong)
-        so = len(in_an.ngat_dong(o.value, in_an._rong_vung(self.in_ho('x'), 1, 8), co=in_an.CO_TIEU_DE, dam=True))
-        self.assertAlmostEqual(cao, in_an.cao_dong_chu(so, in_an.CO_TIEU_DE) + in_an.DK_CACH + 3, places=1)
-        self.assertEqual(o.alignment.vertical, 'top')
-        self.assertTrue(o.alignment.wrap_text)
-
-    def test_ten_dai_xuong_dong(self):
-        ten = ('Thành phần 1: Đầu tư xây dựng đoạn từ cầu A đến ngã ba B (giai đoạn 1) theo phương thức đối tác công tư (PPP), '
-               'hợp đồng BOT, đợt 2')
-        r, cao, o = self._dong_du_an(self.in_ho('x', ten))
-        so = len(in_an.ngat_dong(o.value, in_an._rong_vung(self.in_ho('x', ten), 1, 8), co=in_an.CO_TIEU_DE, dam=True))
-        self.assertGreaterEqual(so, 2)
-        self.assertAlmostEqual(cao, in_an.cao_dong_chu(so, in_an.CO_TIEU_DE) + in_an.DK_CACH + 3, places=1)
-
-
-class TestMauIn(CoSo):
-    def test_xem_truoc_va_mau_de_sua(self):
-        f = in_an.xem_truoc(self.con, 1, self.td / 'xem')
-        self.assertTrue(f.exists())
-        p = in_an.mau_de_sua()
-        self.assertTrue(p.exists())
-        self.assertEqual(p.name, 'IN_CHITIET.xlsx')
-
-    def test_duong_ke_lay_tu_mau_da_sua(self):
-        """Mẫu đã sửa trong Excel (còn hình vẽ đường kẻ): lấy đường kẻ ngay trong mẫu."""
-        import shutil
-        import zipfile
-        tm = self.td / 'mau'
-        shutil.copytree(in_an.thu_muc_mau(), tm)
-        xml = (tm / 'IN_CHITIET.duong_ke.xml').read_text(encoding='utf-8')
-        f = in_an.lap_chi_tiet(self.con, 1, tm / 'IN_CHITIET.xlsx', tm)        # file có hình vẽ (giống Excel lưu)
-        (tm / 'IN_CHITIET.duong_ke.xml').write_text('', encoding='utf-8')
-        self.assertTrue(zipfile.is_zipfile(f))
-        p = in_an.duong_ke_cua_mau(f, 'IN_CHITIET')
-        self.assertEqual(p.read_text(encoding='utf-8').count('prst="line"'), xml.count('prst="line"'))
 
 
 if __name__ == '__main__':

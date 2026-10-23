@@ -12,7 +12,6 @@ import math
 import os
 import re
 import shutil
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -20,8 +19,7 @@ import threading
 import unicodedata
 import time
 from copy import copy
-from datetime import date, datetime
-from decimal import Decimal
+from datetime import datetime
 from pathlib import Path
 
 import openpyxl
@@ -32,27 +30,12 @@ from openpyxl.worksheet.cell_range import CellRange, MultiCellRange
 
 from . import an_toan as _an_toan
 from . import nghiep_vu
+from .du_lieu_in import (_thong_tin_du_an, bo_lap_mo_dau, chon_lan_in, ghi_chu_in, ky_hieu_cua_ho, tieu_de_muc_i, ten_file_ho)  # noqa: F401 - tên cũ của in_an (mã gọi cũ, test)
 from .nghiep_vu import MA_ON_DINH, BoiCanh, doc_phuong_an, tinh_pa
-from .tien import D, KHONG, dinh_dang_so_luong
+from .tien import D, KHONG
 
-TEN_CT, TEN_BTH = 'IN_CHITIET', 'IN_BANGTONGHOP'
-COT_KIND = 30          # cột AD (ngoài vùng in): loại dòng H / I / R / T cho định dạng có điều kiện của mẫu (mặc định hồ sơ)
-DONG_DAU_CT = 18       # IN_CHITIET: dòng đầu bảng (dưới hàng tiêu đề STT)
+TEN_BTH = 'IN_BANGTONGHOP'
 DONG_DAU_BTH = 13      # IN_BANGTONGHOP: dòng dữ liệu đầu (mặc định hồ sơ: mau_in.IN_BANGTONGHOP.dong_du_lieu_dau)
-# 0.9.85: vị trí cột của hai mẫu đọc từ hồ sơ địa phương (pabt_profile.json mục mau_in - dia_phuong.cot_mau), mặc định đúng mẫu
-# Đồng Nai; mẫu địa phương khác sắp cột khác thì sửa hồ sơ, không sửa mã. Thứ tự giá trị một dòng bảng chi tiết (dong_chi_tiet):
-TRUONG_CT = ('stt', 'ten', 'dvt', 'so_luong', 'don_gia', 'ty_le', 'thanh_tien', 'ghi_chu')
-
-
-def _cot_ct() -> tuple:
-    """(số cột của từng trường TRUONG_CT, cột loại dòng, chữ ô đầu hàng tiêu đề bảng) theo hồ sơ địa phương."""
-    from . import dia_phuong
-    cot = dia_phuong.cot_mau(TEN_CT)
-    return ([cot[k] for k in TRUONG_CT], dia_phuong.so_cot(dia_phuong.lay('mau_in.IN_CHITIET.cot_loai_dong')),
-            str(dia_phuong.lay('mau_in.IN_CHITIET.chu_dau_bang')).strip().upper())
-TEN_CAO = 'PABT_TU_GIAN_DONG'   # tên vùng các dòng cần Excel tự giãn chiều cao khi xuất PDF
-
-
 class LoiIn(RuntimeError):
     pass
 
@@ -70,7 +53,7 @@ def la_mau_nhung(p) -> bool:
         return False
 
 
-def thu_muc_mau(ten: str = TEN_CT) -> Path:
+def thu_muc_mau(ten: str = TEN_BTH) -> Path:
     """Thư mục có mẫu ten. Bản cài: mẫu CHUẨN NHÚNG trong phần mềm (pabt/mau_in_nhung.py) - không có thư mục mau_in nào đi kèm bản
     cài (1.0.16); mẫu người dùng CHỦ ĐỘNG thay (hộp Quản lý Mẫu in / gói .pabtcfg, lưu ở %APPDATA%/PABT/mau_in) được ưu tiên. Mã nguồn:
     thêm mau_in của mã nguồn (nguồn để sinh bản nhúng). Tìm theo từng mẫu: thư mục ghi có thể chỉ có một trong hai mẫu."""
@@ -129,35 +112,9 @@ def ghi_danh_dau_mau(thu_muc, ten: str, file=None) -> None:
     _KIEM_MAU.clear()
 
 
-def mau_bang_hop_le(file, ten: str = TEN_CT) -> bool:
-    """Mẫu phương án chi tiết dùng được: dòng mẫu ngay dưới "STT" có khung (>= 6 / 8 ô có viền) và cột Thành tiền không General.
-    Mẫu khác (bảng tổng hợp) / không tìm được STT: coi là dùng được."""
-    if not str(ten).startswith(TEN_CT):
-        return True
-    wb = openpyxl.load_workbook(file, read_only=True)
-    try:
-        ws = wb.worksheets[0]
-        cot, _, chu_dau = _cot_ct()
-        dau = None
-        for i, hang in enumerate(ws.iter_rows(min_row=1, max_row=120, max_col=max(cot))):
-            if hang and str(getattr(hang[cot[0] - 1], 'value', '') or '').strip().upper() == chu_dau:
-                dau = i + 1
-                break
-        if dau is None:
-            return True
-        hang = next(ws.iter_rows(min_row=dau + 1, max_row=dau + 1, max_col=max(cot)), ())
-        o_bang = [hang[c - 1] for c in cot if c - 1 < len(hang)]
-        co_vien = sum(1 for o in o_bang if getattr(o, 'border', None) is not None and any(
-            getattr(getattr(o.border, k), 'style', None) for k in ('left', 'right', 'top', 'bottom')))
-        tt = hang[cot[6] - 1] if cot[6] - 1 < len(hang) else None
-        return co_vien >= 6 and tt is not None and (getattr(tt, 'number_format', 'General') or 'General') != 'General'
-    finally:
-        wb.close()
-
-
 def dung_mau_may(file, ten: str) -> bool:
-    """Mẫu ten trong thư mục máy: dùng nếu người dùng chủ động thay qua hộp Quản lý Mẫu in (dấu khớp SHA-256) hoặc mẫu còn đủ khung
-    / định dạng bảng (mau_bang_hop_le). Không -> bỏ qua, in theo mẫu đóng kèm / nhúng. Nhớ theo (đường dẫn, mtime, cỡ)."""
+    """Mẫu ten trong thư mục máy dùng được: file đọc được. (Trước 1.0.19 còn kiểm khung bảng của mẫu phương án chi tiết - mẫu đó
+    nay là bản Word nhúng.) Nhớ theo (đường dẫn, mtime, cỡ)."""
     p = Path(file)
     try:
         st = p.stat()
@@ -165,10 +122,8 @@ def dung_mau_may(file, ten: str) -> bool:
         return False
     k = (str(p), ten, st.st_mtime_ns, st.st_size)
     if k not in _KIEM_MAU:
-        import hashlib
-        dd = _danh_dau_mau(p.parent).get(ten)
         try:
-            ok = (dd is not None and dd == hashlib.sha256(p.read_bytes()).hexdigest()) or mau_bang_hop_le(p, ten)
+            ok = bool(p.read_bytes())
         except Exception:                               # file hỏng / không đọc được: bỏ qua
             ok = False
         if len(_KIEM_MAU) > 32:
@@ -510,7 +465,7 @@ def duong_ke_cua_mau(mau_xlsx, ten: str) -> Path:
 TACH_MAU = '__'                 # mẫu riêng: <TEN>__<tên mẫu>.xlsx (vd. IN_CHITIET__Duthao.xlsx) cạnh mẫu chính
 
 
-MAU_DU_THAO = {TEN_CT: 'IN_CHITIET_DT', TEN_BTH: 'IN_TONGHOP_DT'}
+MAU_DU_THAO = {TEN_BTH: 'IN_TONGHOP_DT'}
 
 
 def la_mau_du_thao(mau) -> bool:
@@ -530,7 +485,7 @@ def co_dau_du_thao(ws) -> bool:
     return any(isinstance(o.value, str) and _RE_DU_THAO.search(o.value) for o in getattr(ws, '_cells', {}).values())
 
 
-def dat_dau_du_thao(ws, ten: str = TEN_CT) -> None:
+def dat_dau_du_thao(ws, ten: str = TEN_BTH) -> None:
     """Bản DỰ THẢO in bằng MẪU CHÍNH (0.9.82 - người dùng 14/10/2026: một mẫu cho cả hai chế độ, không phải giữ hai bộ mẫu):
     mẫu đã có chữ DỰ THẢO -> giữ nguyên; chưa có -> thêm "(DỰ THẢO)" đúng chỗ của mẫu dự thảo gốc: phương án chi tiết = dòng dưới
     "Số: …/…" (cùng ô, như IN_CHITIET_DT); bảng tổng hợp = cuối tiêu đề "BẢNG TỔNG HỢP …". Không tìm được chỗ -> ô "Số:"."""
@@ -584,7 +539,7 @@ def dat_dau_du_thao(ws, ten: str = TEN_CT) -> None:
         so.alignment = a
 
 
-def ap_che_do_du_thao(ws, du_thao: bool, ten: str = TEN_CT) -> None:
+def ap_che_do_du_thao(ws, du_thao: bool, ten: str = TEN_BTH) -> None:
     """Chế độ phát hành quyết định chữ DỰ THẢO (không phụ thuộc tên file mẫu): dự thảo -> giữ / thêm; chính thức -> xóa."""
     if du_thao:
         dat_dau_du_thao(ws, ten)
@@ -641,16 +596,13 @@ def ds_mau(ten: str) -> list:
 
 
 # ---------------------------------------------------------------- quản lý mẫu in (1.0.07, hộp Quản lý Mẫu in & Bản in)
-TEN_DT_QL = f'{TEN_CT}{"__"}Du thao'           # mẫu chi tiết dự thảo (mẫu riêng của IN_CHITIET)
-MAU_QUAN_LY = ((TEN_CT, '1. Mẫu chi tiết chính thức', 'chi_tiet'),
-               (TEN_DT_QL, '2. Mẫu chi tiết dự thảo', 'chi_tiet'),
-               (TEN_BTH, '3. Mẫu bảng tổng hợp', 'tong_hop'))
+MAU_QUAN_LY = ((TEN_BTH, 'Mẫu bảng tổng hợp', 'tong_hop'),)       # từ 1.0.19 phương án chi tiết chỉ còn bản Word (không mẫu Excel)
 NHUNG = 'Mẫu nhúng chuẩn trong RAM'
 TUY_CHINH = 'Mẫu tùy chỉnh người dùng'
 
 
 def _loai_ql(ten: str) -> str:
-    return next((l for t, _, l in MAU_QUAN_LY if t == ten), 'chi_tiet')
+    return next((l for t, _, l in MAU_QUAN_LY if t == ten), 'tong_hop')
 
 
 def trang_thai_mau(ten: str) -> tuple:
@@ -675,8 +627,6 @@ def bytes_mau_hien_tai(ten: str) -> bytes:
     _, f = trang_thai_mau(ten)
     if f is not None:
         return f.read_bytes()
-    if ten == TEN_DT_QL:
-        return nap_mau_bytes(file_mau(None, TEN_CT))
     try:
         return nap_mau_bytes(file_mau(None, ten))
     except (LoiIn, OSError):
@@ -688,7 +638,7 @@ def ap_chuan_trang_mau(file, loai: str) -> None:
     cỡ chữ tiêu đề 16 pt đậm / nội dung 14 pt (1.0.08).
     Đường kẻ (hình vẽ - openpyxl làm mất) được lưu riêng <mẫu>.duong_ke.xml TRƯỚC khi ghi lại file."""
     file = Path(file)
-    ten = TEN_BTH if loai == 'tong_hop' else TEN_CT
+    ten = TEN_BTH
     try:
         doc = openpyxl.load_workbook(file, read_only=True)       # chế độ chỉ đọc giữ file mở: đóng trước khi ghi lại
         try:
@@ -702,26 +652,10 @@ def ap_chuan_trang_mau(file, loai: str) -> None:
         file.with_name(f'{file.stem}.duong_ke.xml').write_text(x, encoding='utf-8')
     wb = openpyxl.load_workbook(file)
     ws = wb.worksheets[0]
-    if loai == 'tong_hop':
-        from . import dia_phuong
-        chuan_le_trang(ws, 'tong_hop')
-        dat_kho_a3(ws)
-        chuan_co_chu_bth(ws, int(dia_phuong.lay('mau_in.IN_BANGTONGHOP.dong_du_lieu_dau', DONG_DAU_BTH)))   # 1.0.08: chữ 14 / 16 pt
-    else:
-        cot, _, chu_dau = _cot_ct()
-        r_td = next((r for r in range(1, 300) if str(ws.cell(r, cot[0]).value or '').strip().upper() == chu_dau), None)
-        if r_td is not None:
-            chuan_co_chu_ct(ws, r_td)                    # 1.0.08: tiêu đề 16 pt đậm, nội dung 14 pt (như lúc in)
-        from openpyxl.worksheet.properties import PageSetupProperties
-        chuan_le_trang(ws, 'chi_tiet')
-        ws.page_setup.paperSize = ws.PAPERSIZE_A4
-        ws.page_setup.orientation = 'portrait'
-        if ws.sheet_properties.pageSetUpPr is None:
-            ws.sheet_properties.pageSetUpPr = PageSetupProperties()
-        ws.sheet_properties.pageSetUpPr.fitToPage = False
-        ws.page_setup.fitToWidth = None
-        ws.page_setup.fitToHeight = None
-        ws.page_setup.scale = TI_LE_CT
+    from . import dia_phuong
+    chuan_le_trang(ws, 'tong_hop')
+    dat_kho_a3(ws)
+    chuan_co_chu_bth(ws, int(dia_phuong.lay('mau_in.IN_BANGTONGHOP.dong_du_lieu_dau', DONG_DAU_BTH)))   # 1.0.08: chữ 14 / 16 pt
     if ws.title != ten:
         ws.title = ten
     tam = file.with_name(file.name + '.tmp')
@@ -743,7 +677,7 @@ def thay_mau(ten: str, file_excel) -> Path:
     """Thay mẫu ten (MAU_QUAN_LY) bằng file Excel: lấy mẫu (tao_mau_tu_excel - file PABT Excel nhiều sheet hoặc mẫu một sheet có chỗ
     trống {…}), áp chuẩn khổ / tỷ lệ / lề, lưu vào thư mục mẫu tùy chỉnh (mẫu cũ -> cu\\), làm mới đệm RAM ngay. Trả file mẫu mới."""
     loai = _loai_ql(ten)
-    goc = TEN_BTH if loai == 'tong_hop' else TEN_CT
+    goc = TEN_BTH
     ten_mau = ten[len(goc) + len(TACH_MAU):] if ten.startswith(goc + TACH_MAU) else ''
     tm = thu_muc_mau_tuy_chinh()
     tm.mkdir(parents=True, exist_ok=True)
@@ -801,12 +735,12 @@ def ghi_mau_nhung(ten: str, thu_muc, ghi_de: bool = False) -> list:
     return kq
 
 
-def mau_de_sua(ten: str = TEN_CT) -> Path:
+def mau_de_sua(ten: str = TEN_BTH) -> Path:
     """File mẫu in để mở bằng Excel sửa trực tiếp (chữ, phông, lề, độ rộng cột, đường kẻ...). Bản cài: chép mẫu đang dùng
     sang %APPDATA%\\PABT\\mau_in (thư mục cài không ghi được) - từ đó phần mềm in theo mẫu đã sửa."""
     import shutil
     ghi = thu_muc_mau_ghi()
-    for t in (TEN_CT, TEN_BTH):
+    for t in (TEN_BTH,):
         try:
             goc = thu_muc_mau(t)
         except LoiIn:
@@ -817,39 +751,10 @@ def mau_de_sua(ten: str = TEN_CT) -> Path:
             continue
         if goc.resolve() != ghi.resolve():
             ghi.mkdir(parents=True, exist_ok=True)
-            for f in (f'{t}.xlsx', f'{t}.duong_ke.xml', 'IN_CHITIET_DT.xlsx', 'IN_TONGHOP_DT.xlsx',
-                      'IN_CHITIET_DT.duong_ke.xml', 'IN_TONGHOP_DT.duong_ke.xml'):
+            for f in (f'{t}.xlsx', f'{t}.duong_ke.xml', 'IN_TONGHOP_DT.xlsx', 'IN_TONGHOP_DT.duong_ke.xml'):
                 if (goc / f).exists() and not (ghi / f).exists():
                     shutil.copy2(goc / f, ghi / f)
     return ghi / f'{ten}.xlsx'
-
-
-def _don_xem_truoc_cu(giu_gio: float = 12) -> None:
-    """Xóa các thư mục in thử cũ (quá giu_gio giờ) trong %TEMP% - mỗi lần xem trước để lại một file xlsx / pdf."""
-    han = time.time() - giu_gio * 3600
-    try:
-        for d in Path(tempfile.gettempdir()).glob('PABT_xem_truoc_*'):
-            try:
-                if d.is_dir() and d.stat().st_mtime < han:
-                    shutil.rmtree(d, ignore_errors=True)
-            except OSError:
-                pass
-    except OSError:
-        pass
-
-
-def xem_truoc(con, ma_ho: int, thu_muc=None, mau=None, du_thao: bool | None = None) -> Path:
-    """Bản in thử phương án chi tiết của một hộ (PDF nếu máy có Excel, không thì .xlsx) trong thư mục tạm. Trả file.
-    mau: file mẫu riêng (None = mẫu chính); du_thao: chế độ phát hành (lap_chi_tiet)."""
-    if thu_muc is None:
-        _don_xem_truoc_cu()
-    td = Path(thu_muc or tempfile.mkdtemp(prefix='PABT_xem_truoc_'))
-    f = lap_chi_tiet(con, ma_ho, td / f'{ten_file_ho(con, ma_ho)}.xlsx', mau, du_thao=du_thao)
-    if co_excel():
-        pdf = f.with_suffix('.pdf')
-        if not chay_excel([(f, pdf)], 'pdf') and pdf.exists():
-            return pdf
-    return f
 
 
 # ---------------------------------------------------------------- chèn / xóa dòng giữ định dạng
@@ -1151,17 +1056,6 @@ def _thay_cho_trong(ws, gia_tri: dict):
             c.value = _RE_CHO_TRONG.sub(lambda m: str(gia_tri[m.group(1)]) if m.group(1) in gia_tri else m.group(0), c.value)
 
 
-def _uoc_cao(text, rong_cot: float, co_chu: float, toi_thieu: float = 26) -> float:
-    """Ước chiều cao dòng cho ô tự ngắt dòng (Excel sẽ tự giãn lại khi xuất PDF)."""
-    s = str(text or '')
-    if not s:
-        return toi_thieu
-    # số ký tự / dòng ước theo bề rộng cột; nhân 0,9 để dư một chút (chữ đậm, chữ hoa rộng hơn) - thà cao dư hơn mất chữ
-    ky_tu_dong = max(1, int(rong_cot * 1.2 * 11 / co_chu * 0.9))
-    so_dong = sum(max(1, math.ceil(len(doan) / ky_tu_dong)) for doan in s.split('\n'))
-    return min(409, max(toi_thieu, so_dong * co_chu * 1.32 + 8))
-
-
 COT_CHU_HO_BTH = (2, 3, 23, 24, 25)     # bảng tổng hợp: họ tên, địa chỉ, nguồn gốc, tái định cư, ghi chú (gộp theo số thửa)
 COT_CHU_THUA_BTH = (6, 14)              # loại đất, vị trí (mỗi thửa một dòng)
 
@@ -1217,44 +1111,6 @@ def _vua_cao_ho_bth(ws, r0: int, r: int, px: list | None = None, do=None, can: f
             ds[i] = min(CAO_TOI_DA, ds[i] + thieu / len(con))
     for i, cao in enumerate(ds):
         ws.row_dimensions[r0 + i].height = cao
-
-
-NHAN_TDC = 'Tái định cư:'
-
-
-def _nhan_dam(o, nhan: str) -> None:
-    """Ô chữ "<nhãn> <nội dung>": nhãn in đậm, nội dung chữ thường (không đậm / nghiêng) - người dùng 15/10/2026 dòng IV "Tái định
-    cư: Đủ điều kiện…" (mẫu cả dòng in đậm). Chữ nhiều định dạng trong một ô (openpyxl >= 3.1); thiếu thì giữ nguyên."""
-    try:
-        from openpyxl.cell.rich_text import CellRichText, TextBlock
-        from openpyxl.cell.text import InlineFont
-    except ImportError:
-        return
-    f = o.font
-    kieu = dict(rFont=f.name, sz=f.sz, color=f.color, u=f.u)
-    con_lai = str(o.value)[len(nhan):]
-    o.value = CellRichText([TextBlock(InlineFont(b=True, **kieu), nhan)] +
-                           ([TextBlock(InlineFont(b=False, i=False, **kieu), con_lai)] if con_lai else []))
-
-
-def _gian_dong(ws, r: int, c: int, co_chu: float) -> None:
-    """Ô chữ dài (kể cả ô gộp nhiều cột): bật xuống dòng và tăng chiều cao dòng cho đủ chữ."""
-    from openpyxl.utils import get_column_letter
-    o = ws.cell(r, c)
-    c1, c2 = c, c
-    for m in ws.merged_cells.ranges:
-        if m.min_row <= r <= m.max_row and m.min_col <= c <= m.max_col:
-            c1, c2 = m.min_col, m.max_col
-            break
-    rong = sum((ws.column_dimensions[get_column_letter(x)].width or 9) for x in range(c1, c2 + 1))
-    co = (o.font.sz if o.font is not None and o.font.sz else co_chu) * (1.08 if o.font is not None and o.font.b else 1)
-    al = copy(o.alignment)
-    al.wrap_text = True
-    al.vertical = al.vertical or 'center'
-    o.alignment = al
-    can = _uoc_cao(o.value, rong, co)
-    if (ws.row_dimensions[r].height or 15) < can:
-        ws.row_dimensions[r].height = can
 
 
 # ---------------------------------------------------------------- đo chữ để đặt chiều cao dòng vừa khít
@@ -1396,23 +1252,6 @@ CAO_DONG_BANG_TOI_THIEU = 20.0
 DONG_CHU_14 = 16.5
 HE_SO_DONG_EXCEL = 1.3
 DEM_DONG = 4.0
-CAO_TIEU_DE_BANG = 28.0         # hàng tiêu đề cột (STT, Tên tài sản, ĐVT…) một dòng chữ; tiêu đề nhiều dòng cao theo chữ
-# nguồn gốc đất: một dòng Excel không cao quá chừng này - dư thì tách sang dòng kế ở chỗ hết câu. 16/10/2026: 350 -> 90 pt (4 - 5 dòng
-# chữ): Excel không cắt đôi một dòng qua hai trang - khối nhỏ lấp sát đáy trang 1 thay vì đẩy cả khối 350 pt sang trang 2 (hở 1/3 trang)
-CAO_DOAN_TOI_DA = 90
-# 21/10/2026 (người dùng: "chỉ cắt tại điểm kết thúc câu"): khối không có chỗ hết câu được kéo dài tới chừng này để gặp dấu chấm;
-# không tới trần 409 pt của Excel - một dòng Excel không cắt được qua trang, dòng quá cao để hở lớn cuối trang
-CAO_DOAN_CAU_TOI_DA = 180
-# nguồn gốc đất (đoạn văn, chữ canh trên): đệm dưới chữ nhỏ - người dùng 15/10/2026: khoảng hở tới dòng "III. Bảng tính toán…"
-# quá xa (trước đây đệm 8 pt như ô bảng + 2 dòng thừa của vùng gộp mẫu A13:H15 cao 4 pt mỗi dòng)
-DEM_DOAN_VAN = 1.5              # 16/10/2026: các dòng nguồn gốc nối tiếp sát nhau (trước 3 pt) - không khe trắng giữa đoạn
-DEM_DOAN_CUOI = 4.0             # dòng nguồn gốc cuối (trước mục III) thêm chừng này
-
-
-def cao_doan_van(so_dong: int, co: float = 14, cuoi: bool = False) -> float:
-    """Chiều cao (pt) dòng Excel chứa so_dong dòng chữ của đoạn văn nguồn gốc đất: cùng khoảng dòng với ô bảng (dong_chu_bang - Excel
-    125% không cắt dòng cuối), chỉ thêm DEM_DOAN_VAN cho chân chữ; không chặn tối thiểu 24 pt như ô bảng."""
-    return min(CAO_TOI_DA, so_dong * dong_chu_bang(co) + DEM_DOAN_VAN + (DEM_DOAN_CUOI if cuoi else 0.0))
 
 
 def dong_chu_bang(co: float = 14) -> float:
@@ -1435,71 +1274,6 @@ def so_dong_o(chu, rong: float, ten: str = 'Times New Roman', co: float = 14, da
     if do is not None and '\n' not in chu and do(chu, ten, co, dam) <= rong * 0.97:     # vừa một dòng: đo một lần (như _ngat)
         return 1
     return max(1, len(_ngat(chu, rong, ten, co, dam, do)))
-
-
-
-
-_RE_HET_CAU_CUOI = re.compile(r'[.;:!?]\s*$')
-_RE_HET_CAU_CHAM = re.compile(r'[.!?…]["”’)\]]?\s*$')        # hết câu hoàn chỉnh (21/10/2026)
-_RE_CAU_GIUA_DONG = re.compile(r'(?<=\w)[.!?…]["”’)\]]?(?=\s+[^\W\d_])')   # hết câu giữa dòng: "đất. Căn" (không "1.000", "1. ")
-
-
-def _chia_doan_van(chu: str, rong: float, ten: str, co: float, dam: bool, do, toi_da: int, treo: bool = True,
-                   thut_dau: float = 0, so_nbsp: int = 0, moi_doan: bool = False, toi_da_cung: int | None = None) -> list:
-    """Chia chữ thành các khối <= toi_da dòng (mỗi khối một dòng Excel), mỗi khối là các dòng đã ngắt (_ngat). 16/10/2026: cắt ở
-    RANH GIỚI DÒNG đã ngắt (Excel ngắt lại đúng chỗ cũ vì cùng bề rộng - chữ chảy liền, không xuống dòng sớm giữa đoạn như khi cắt
-    ngay sau dấu chấm giữa dòng): ưu tiên hết đoạn muộn nhất; không có thì dòng kết thúc bằng dấu hết câu (. ; : ! ?) muộn nhất mà
-    khối không ngắn hơn nửa khối; không có thì đủ toi_da dòng. Phần tiếp của một đoạn (khối sau) không thụt đầu dòng. Không mất chữ.
-    toi_da_cung (21/10/2026 - người dùng: "chỉ cắt tại điểm kết thúc câu"): chỉ cắt sau dòng hết câu (. ! ?) muộn nhất trong khối;
-    khối không có chỗ hết câu thì kéo dài tới chỗ hết câu kế tiếp, tối đa toi_da_cung dòng (trần chiều cao dòng Excel); câu dài hơn
-    nữa mới cắt ở ranh giới dòng (giữa hai từ, không bao giờ giữa một từ)."""
-    do = do or _ham_do_chu()
-    dong = _ngat(str(chu or ''), rong, ten, co, dam, do, treo, thut_dau, so_nbsp=so_nbsp)
-    kq, i = [], 0
-    while i < len(dong):
-        j = i + toi_da
-        if moi_doan:                             # 1.0.04: mỗi đoạn một dòng Excel (đoạn dài quá toi_da mới chia tiếp)
-            moi = next((k for k in range(i + 1, min(j, len(dong))) if dong[k][1] is True), None)
-            if moi is not None:
-                kq.append(dong[i:moi])
-                i = moi
-                continue
-        if j < len(dong):
-            doan = [k for k in range(i + 1, j + 1) if dong[k][1] is True]           # dòng k mở đoạn mới
-            if toi_da_cung and not doan:
-                het = next((k for k in range(i + 1, len(dong)) if dong[k][1] is True), len(dong))     # hết đoạn đang chia
-
-                def cho_cat(tu, den, muon):
-                    """Chỗ hết câu trong các dòng [tu, den): ('dong', k + 1) = sau dòng k (dòng kết thúc bằng dấu chấm), ('giua',
-                    (k, m)) = giữa dòng k (treo=False mới cắt giữa dòng). muon: chỗ muộn nhất, không thì sớm nhất."""
-                    ds = []
-                    for k in range(max(i, tu), min(den, het)):
-                        if not treo:
-                            ds += [('giua', (k, m)) for m in _RE_CAU_GIUA_DONG.finditer(dong[k][0])]
-                        if k + 1 > i and _RE_HET_CAU_CHAM.search(dong[k][0]):
-                            ds.append(('dong', k + 1))
-                    return (ds[-1] if muon else ds[0]) if ds else None
-                # ưu tiên: hết câu muộn nhất trong nửa sau khối; không có thì câu kế tiếp (kéo dài tới toi_da_cung dòng); không có
-                # nữa thì hết câu bất kỳ trong khối; câu dài quá mới cắt ở ranh giới dòng (giữa hai từ)
-                chon = (cho_cat(i + max(0, toi_da // 2 - 1), j, True) or cho_cat(j, i + toi_da_cung, False)
-                        or cho_cat(i, j, True))
-                cau, cat = ([chon[1]], None) if chon and chon[0] == 'dong' else ([], chon[1] if chon else None)
-                if cat is not None:
-                    k, m = cat
-                    con_lai = ' '.join([dong[k][0][m.end():].strip()] + [x.strip() for x, _ in dong[k + 1:het]]).strip()
-                    dong[k:het] = [(dong[k][0][:m.end()].rstrip(), dong[k][1])] + \
-                        _ngat(con_lai, rong, ten, co, dam, do, False, thut_dau, noi_tiep=True, so_nbsp=so_nbsp)
-                    j = k + 1
-                elif cau:
-                    j = cau[-1]
-                kq.append(dong[i:j])
-                i = j
-                continue
-            cau = [k for k in range(i + max(1, toi_da // 2), j + 1) if _RE_HET_CAU_CUOI.search(dong[k - 1][0])]
-            j = doan[-1] if doan else (cau[-1] if cau else j)
-        kq.append(dong[i:j])
-        i = j
-    return [k for k in kq if k] or [[('', True)]]
 
 
 def _can_giua_doc(o) -> None:
@@ -1556,102 +1330,6 @@ def _phong(o) -> tuple:
         bool(f is not None and f.b)
 
 
-THUT_DAU_CM = 1.0               # thụt đầu dòng mỗi đoạn nguồn gốc đất (người dùng 16/10/2026) - đổi ở ban_in.nguon_goc.thut_dau_cm
-
-
-def thut_dau_nguon_goc() -> float:
-    """Thụt đầu dòng đoạn nguồn gốc đất (pt) theo hồ sơ địa phương ban_in.nguon_goc.thut_dau_cm (0 = không thụt)."""
-    from . import dia_phuong
-    ng = dia_phuong.lay('ban_in.nguon_goc') or {}
-    try:
-        cm = float(ng.get('thut_dau_cm', THUT_DAU_CM))
-    except (TypeError, ValueError):
-        cm = THUT_DAU_CM
-    return max(0.0, cm) * 72 / 2.54
-
-
-SO_NBSP_NGUON_GOC = 8          # 1.0.07 (người dùng 20/10/2026): thụt đầu đoạn nguồn gốc = 8 NBSP (1.0.04: 4) - ban_in.nguon_goc.thut_dau_nbsp
-
-
-def so_nbsp_nguon_goc() -> int:
-    """Số NBSP thụt đầu mỗi đoạn nguồn gốc đất (hồ sơ địa phương ban_in.nguon_goc.thut_dau_nbsp, mặc định 8; 0 = theo thut_dau_cm)."""
-    from . import dia_phuong
-    ng = dia_phuong.lay('ban_in.nguon_goc') or {}
-    try:
-        return max(0, int(ng.get('thut_dau_nbsp', SO_NBSP_NGUON_GOC)))
-    except (TypeError, ValueError):
-        return SO_NBSP_NGUON_GOC
-
-
-def _can_nguon_goc() -> tuple:
-    """(căn ngang, căn dọc) ô nguồn gốc đất theo hồ sơ địa phương (mặc định 'justify', 'top')."""
-    from . import dia_phuong
-    ng = dia_phuong.lay('ban_in.nguon_goc') or {}
-    return ng.get('can_ngang', 'justify'), ng.get('can_doc', 'center')
-
-
-def dat_doan_van(ws, cho: str, chu: str, do=None) -> int:
-    """Ô có chỗ trống cho (vd '{nguon_goc}', gộp ngang hết bảng, có thể gộp vài dòng): điền chữ, chiều cao vừa đủ số dòng
-    chữ (cao_dong_bang: đệm 4 pt trên / dưới). Chữ cao quá CAO_DOAN_TOI_DA (350 pt, trần Excel 409) thì chia sang các dòng kế
-    tiếp, cắt ở chỗ hết đoạn / hết câu (_chia_doan_van; thiếu dòng thì chèn thêm, mỗi dòng mới gộp cùng dải cột, chép viền, căn
-    đều + giữa); dòng thừa của vùng gộp cũ thu nhỏ thành khoảng cách. Trả số dòng đã chèn thêm."""
-    vt = vi_tri_cho(ws, cho)
-    if vt is None:
-        return 0
-    r, c1, c2, r2 = vt
-    o = ws.cell(r, c1)
-    # đoạn thật = xuống dòng hoặc U+2028 (ô màn hình) - 1.0.04
-    chu = o.value.replace(cho, str(chu or '').replace('\u2028', '\n'))
-    # 1.0.07: bỏ khoảng trắng thừa đầu đoạn (trước gạch đầu dòng "- ") và dấu cách lặp - thụt đầu dòng do NBSP lo
-    chu = '\n'.join(re.sub(r'[ \t]{2,}', ' ', x).strip(' \t\xa0') for x in chu.split('\n'))
-    ten, co, dam = _phong(o)
-    toi_da = max(1, int((CAO_DOAN_TOI_DA - DEM_DONG) // dong_chu_bang(co)))
-    # căn đều hai bên (mặc định - người dùng 15/10/2026, như văn bản Word): KHÔNG thụt lề treo gạch đầu dòng - thụt lề treo cần
-    # xuống dòng cứng mỗi dòng tràn, mà dòng kết thúc bằng xuống dòng cứng thì Excel canh trái (bên phải lởm chởm)
-    ngang = _can_nguon_goc()[0]
-    # mỗi đoạn thụt đầu dòng (người dùng 16/10/2026), căn chỉnh giữ nguyên
-    # 1.0.04: mỗi đoạn một dòng Excel gộp A:H (moi_doan), thụt 8 NBSP (1.0.07); trong đoạn không xuống dòng cứng (Excel tự ngắt, căn đều)
-    nb = so_nbsp_nguon_goc()
-    # 21/10/2026: đoạn dài chỉ cắt ở chỗ hết câu - kéo dài dòng Excel tới CAO_DOAN_CAU_TOI_DA trước khi phải cắt giữa câu
-    toi_da_cung = max(toi_da, int((CAO_DOAN_CAU_TOI_DA - DEM_DONG) // dong_chu_bang(co)))
-    khoi = _chia_doan_van(chu, _rong_vung(ws, c1, c2), ten, co, dam, do, toi_da, treo=ngang != 'justify',
-                          thut_dau=0 if nb else thut_dau_nguon_goc(), so_nbsp=nb, moi_doan=True, toi_da_cung=toi_da_cung)
-    m = _vung_tron(ws, r, c1)
-    if m:
-        ws.unmerge_cells(m.coord)
-    co_san = r2 - r + 1
-    chen = max(0, len(khoi) - co_san)
-    if chen:
-        _doi_dong(ws, r2 + 1, chen)
-        for rr in range(r2 + 1, r2 + 1 + chen):
-            _chep_kieu_dong(ws, r, rr, max(c2, 8))
-    kieu = copy(o._style)
-    for i in range(max(co_san, len(khoi))):
-        rr = r + i
-        for cc in range(c1, c2 + 1):
-            ws.cell(rr, cc).value = None
-        if i >= len(khoi):
-            # dòng thừa của vùng gộp mẫu: ẩn hẳn (trước 15/10/2026 cao 4 pt mỗi dòng - cộng vào khoảng hở trước mục III)
-            ws.row_dimensions[rr].height = 1
-            ws.row_dimensions[rr].hidden = True
-            continue
-        oo = ws.cell(rr, c1)
-        oo._style = copy(kieu)
-        # nối lại các dòng đã ngắt (Excel ngắt lại đúng chỗ cũ vì cùng bề rộng): đầu đoạn và dòng tràn của gạch đầu dòng
-        # (TREO - đã có khoảng trắng thụt vào) thì xuống dòng cứng
-        oo.value = ''.join(('\n' if dau and j else ' ' if j else '') + x for j, (x, dau) in enumerate(khoi[i])) or None
-        al = copy(oo.alignment)
-        al.wrap_text = True
-        # nguồn gốc đất: ngang căn đều (NĐ 30/2020), dọc theo hồ sơ địa phương ban_in.nguon_goc - mặc định TRÊN (người dùng
-        # 14/10/2026; 0.9.69 - 0.9.84: giữa) - mỗi dòng Excel cao vừa đúng số dòng chữ của nó
-        al.horizontal, al.vertical = _can_nguon_goc()
-        oo.alignment = al
-        if c2 > c1:
-            _gop_o(ws, rr, c1, rr, c2)
-        ws.row_dimensions[rr].height = cao_doan_van(len(khoi[i]), co, cuoi=i == len(khoi) - 1)
-    return chen
-
-
 def vua_chu(ws, vt, do=None, them: float | None = None) -> None:
     """Dòng vt (từ vi_tri_cho) cao vừa đủ các dòng chữ (sau khi đã điền), chữ canh trên: sát dòng phía trên. Dùng cho
     'Dự án: …' (tên ngắn 1 dòng, dài tự xuống dòng); đường kẻ dưới tên dự án neo ở dòng kế tiếp nên kéo sát lên theo.
@@ -1671,16 +1349,10 @@ def vua_chu(ws, vt, do=None, them: float | None = None) -> None:
     ws.row_dimensions[r].height = cao_dong_chu(max(1, len(dong)), co) + them
 
 
-# ---------------------------------------------------------------- tạo mẫu in từ file PABT Excel
-_O_CT = {'E3': '{ten_dia_ban}, ngày       tháng        năm {nam}', 'A5': 'Dự án: {du_an}', 'C6': '{ma_ho}',
-         'C8': '{ho_ten}', 'C9': '{cccd}', 'C10': '{dia_chi}', 'C11': '{dien_thoai}', 'A13': '{nguon_goc}'}
-
-
 class LoiChuaRoMau(LoiIn):
     """File không có sheet IN_CHITIET / IN_BANGTONGHOP và không nhận ra theo nội dung: hỏi người dùng là mẫu loại nào."""
 
 
-_CHO_CT = ('{ho_ten}', '{nguon_goc}', '{ma_ho}', '{cccd}', '{tai_dinh_cu}')
 _CHO_BTH = ('BẢNG TỔNG HỢP', '{so_pa_tong}')
 
 
@@ -1690,12 +1362,10 @@ def _chu_sheet(ws, so_dong: int = 40) -> str:
 
 
 def nhan_loai_mau(ws) -> str | None:
-    """TEN_CT / TEN_BTH theo tên sheet, rồi theo nội dung (chỗ trống {ho_ten}… / chữ "BẢNG TỔNG HỢP"); không rõ: None."""
-    if ws.title in (TEN_CT, TEN_BTH):
+    """TEN_BTH theo tên sheet, rồi theo nội dung (chữ "BẢNG TỔNG HỢP" / {so_pa_tong}); không rõ: None."""
+    if ws.title == TEN_BTH:
         return ws.title
-    chu = _chu_sheet(ws)
-    ct, bth = any(x in chu for x in _CHO_CT), any(x in chu.upper() for x in _CHO_BTH)
-    return TEN_CT if ct and not bth else TEN_BTH if bth and not ct else None
+    return TEN_BTH if any(x in _chu_sheet(ws).upper() for x in _CHO_BTH) else None
 
 
 def ten_mau_hop_le(ten: str) -> str:
@@ -1708,7 +1378,7 @@ def tao_mau_tu_excel(file_excel, thu_muc, loai: str | None = None, ten_mau: str 
     - File PABT Excel (.xlsm / .xlsx có sheet IN_CHITIET và / hoặc IN_BANGTONGHOP): sheet nào có thì lấy sheet đó (trước đây
       đòi đủ cả hai sheet -> file chỉ có một mẫu báo "không có sheet …").
     - File mẫu đã sửa sẵn (đã có chỗ trống {ho_ten}, {du_an}…, sheet tên bất kỳ): nhận loại theo tên sheet / nội dung, không
-      rõ thì LoiChuaRoMau (gọi lại với loai=TEN_CT / TEN_BTH). Chép nguyên file (giữ đường kẻ, hình), chỉ đổi tên sheet.
+      rõ thì LoiChuaRoMau (gọi lại với loai=TEN_BTH). Chép nguyên file (giữ đường kẻ, hình), chỉ đổi tên sheet.
     ten_mau: '' = thay mẫu chính; có tên = thêm mẫu riêng <TEN>__<tên>.xlsx (chọn khi In / Xuất). Mẫu cũ cùng tên được chép
     vào <thư mục mẫu>\\cu\\ trước khi ghi đè."""
     import shutil
@@ -1720,25 +1390,17 @@ def tao_mau_tu_excel(file_excel, thu_muc, loai: str | None = None, ten_mau: str 
     wb0 = openpyxl.load_workbook(file_excel, read_only=True)
     try:
         ten_sheet = list(wb0.sheetnames)
-        lay = {t: t for t in (TEN_CT, TEN_BTH) if t in ten_sheet}            # loại mẫu -> sheet trong file
+        lay = {t: t for t in (TEN_BTH,) if t in ten_sheet}                   # loại mẫu -> sheet trong file
         if not lay:
             hien = [s for s in ten_sheet if wb0[s].sheet_state == 'visible'] or ten_sheet
             for s in hien:
                 k = nhan_loai_mau(wb0[s])
                 if k and k not in lay:
                     lay[k] = s
-            if loai in (TEN_CT, TEN_BTH):
+            if loai == TEN_BTH:
                 lay = {loai: lay.get(loai) or hien[0]}
-            elif not lay:
-                # không nhận ra loại: sheet rộng là bảng tổng hợp, sheet còn lại là phương án chi tiết — không chặn người dùng
-                for s in hien:
-                    try:
-                        rong = wb0[s].max_column or 0
-                    except Exception:
-                        rong = 0
-                    lay.setdefault(TEN_BTH if rong >= 12 else TEN_CT, s)
-                if not lay and hien:
-                    lay[TEN_CT] = hien[0]
+            elif not lay and hien:
+                lay[TEN_BTH] = hien[0]
         da_la_mau = {k: '{' in _chu_sheet(wb0[s], 60) and '}' in _chu_sheet(wb0[s], 60) for k, s in lay.items()}
     finally:
         wb0.close()
@@ -1774,7 +1436,7 @@ def tao_mau_tu_excel(file_excel, thu_muc, loai: str | None = None, ten_mau: str 
         ws.data_validations.dataValidation = []
         ws.title = ten
         if not da_la_mau[ten]:                          # sheet của file PABT Excel (công thức) -> chỗ trống {ten}
-            (_lam_mau_ct if ten == TEN_CT else _lam_mau_bth)(ws)
+            _lam_mau_bth(ws)
         ws.sheet_view.selection[0].activeCell = 'A1'
         ws.sheet_view.selection[0].sqref = 'A1'
         wb.save(p)
@@ -1798,7 +1460,7 @@ def _xlsx_tu_pdf(p: Path) -> Path:
     import openpyxl
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = TEN_BTH if 'TỔNG HỢP' in chu.upper() else TEN_CT
+    ws.title = TEN_BTH
     ws['A1'] = ((chu.split('\n') or [''])[0] or p.stem)[:120]
     ws['A5'] = 'Dự án: {du_an}'
     ws['C8'] = '{ho_ten}'
@@ -1839,7 +1501,7 @@ def _nhan_mau_mac_dinh(thu_muc, ten_mau: str = '') -> list:
     kq = []
     thu_muc = Path(thu_muc)
     thu_muc.mkdir(parents=True, exist_ok=True)
-    for ten in (TEN_CT, TEN_BTH):
+    for ten in (TEN_BTH,):
         try:
             src = file_mau(None, ten)
         except Exception:
@@ -1884,51 +1546,11 @@ def _xml_attr(s: str) -> str:
     return s.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
 
 
-def _lam_mau_ct(ws):
-    dau = next((r for r in range(1, 300) if str(ws.cell(r, 1).value or '').strip().upper() == 'STT'), 17) + 1
-    iv = next((r for r in range(dau, dau + 5000) if str(ws.cell(r, 1).value or '').strip() == 'IV'), None)
-    if iv is None:
-        iv = ws.max_row + 1
-        ws.cell(iv, 1).value = 'IV'
-        ws.cell(iv, 2).value = 'Tái định cư: {tai_dinh_cu}'
-    # ô công thức / ô phụ -> chỗ trống {ten}
-    for o, v in _O_CT.items():
-        ws[o] = v
-    for r in range(1, iv + 30):
-        for c in range(9, ws.max_column + 1):
-            if c != COT_KIND and ws.cell(r, c).value is not None:
-                ws.cell(r, c).value = None
-    # khung bảng chỉ giữ 1 dòng mẫu (định dạng), phần mềm chèn đủ dòng khi in
-    for c in list(range(1, 9)) + [COT_KIND]:
-        ws.cell(dau, c).value = None
-    if iv - dau > 1:
-        _doi_dong(ws, dau + 1, -(iv - dau - 1))
-    iv = dau + 1
-    ws.row_dimensions[dau].hidden = False
-    ws.cell(iv, 2).value = 'Tái định cư: {tai_dinh_cu}'
-    _vung_cf(ws, dau, dau)
-    ws.print_area = f'A1:H{_dong_cuoi(ws, 8) + 1}'
-
-
 def _dong_cuoi(ws, so_cot: int) -> int:
     for r in range(ws.max_row, 0, -1):
         if any(ws.cell(r, c).value not in (None, '', ' ') for c in range(1, so_cot + 1)):
             return r
     return 1
-
-
-def _vung_cf(ws, dau: int, cuoi: int):
-    """Định dạng có điều kiện của khung bảng (dòng tiêu đề mục / tổng in đậm) phủ đúng các dòng dữ liệu."""
-    cf_moi = ConditionalFormattingList()
-    for cf in ws.conditional_formatting:
-        vung = []
-        for cr in cf.sqref.ranges:
-            cr = CellRange(cr.coord)
-            if cr.min_row >= dau - 1 and cr.min_row <= dau + 200:
-                cr = CellRange(min_col=cr.min_col, max_col=cr.max_col, min_row=dau, max_row=cuoi)
-            vung.append(cr)
-        _them_cf(cf_moi, cf, vung)
-    ws.conditional_formatting = cf_moi
 
 
 def _lam_mau_bth(ws):
@@ -1964,419 +1586,6 @@ def _lam_mau_bth(ws):
 
 
 # ---------------------------------------------------------------- dữ liệu chung
-def _hai_dong(s: str) -> str:
-    """'TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT THÀNH PHỐ ĐỒNG NAI' -> xuống dòng trước 'THÀNH PHỐ' / 'TỈNH' (tiêu đề cơ quan 2 dòng)."""
-    return re.sub(r'\s+((THÀNH PHỐ|TỈNH|HUYỆN|QUẬN|THỊ XÃ) .+)$', r'\n\1', s) if len(s) > 30 else s
-
-
-def _thong_tin_du_an(con) -> dict:
-    from .to_chuc import MAC_DINH
-    goc = con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()
-    da = {k: goc[k] for k in goc.keys()}
-    for k, v in MAC_DINH.items():                  # ô thông tin đơn vị còn trống: dùng thông tin tổ chức mặc định
-        if not (da.get(k) or '').strip():
-            da[k] = v
-    cap = (da['cap_dia_ban'] or '').strip()
-    return dict(du_an=' '.join(str(da['ten'] or '').split()), ten_day_du=da['ten_day_du'] or '', cap_dia_ban=cap,
-                cap_dia_ban_thuong=cap.lower(), ten_dia_ban=(da['ten_dia_ban'] or '').strip(),
-                nam=da['nam'] or date.today().year, so_phuong_an=da['so_phuong_an'] or '', don_vi_lap=da['don_vi_lap'] or '',
-                don_vi_cap_tren=da['don_vi_cap_tren'] or '', DON_VI_CAP_TREN=(da['don_vi_cap_tren'] or '').upper(),
-                DON_VI_CAP_TREN_2DONG=_hai_dong((da['don_vi_cap_tren'] or '').upper()),
-                DON_VI_TIEU_DE=(da['don_vi_tieu_de'] or da['don_vi_lap'] or '').upper(),
-                DON_VI_LAP=(da['don_vi_lap'] or '').upper(), ky_hieu_so=da['ky_hieu_so'] or '', nguoi_lap=da['nguoi_lap'] or '',
-                nguoi_kiem_tra=da['nguoi_kiem_tra'] or '', nguoi_ky=da['nguoi_ky'] or '',
-                CHUC_VU_KY=(da['chuc_vu_ky'] or '').upper())
-
-
-def ky_hieu_cua_ho(con, ma_ho: int, mac_dinh: str = '') -> str:
-    """Ký hiệu số phương án của hộ: theo đợt trình của hộ (v15), đợt chưa đặt / hộ chưa vào đợt -> mac_dinh (của dự án)."""
-    try:
-        r = con.execute('''SELECT d.ky_hieu_so FROM ho h JOIN dot_trinh d ON d.id = h.dot_id WHERE h.ma_ho = ?''',
-                        (ma_ho,)).fetchone()
-    except sqlite3.OperationalError:                     # file chỉ xem phiên bản cũ (< v15)
-        return mac_dinh
-    return ((r[0] or '').strip() if r else '') or mac_dinh
-
-
-def ghi_chu_in(con, ma, gc) -> str:
-    """Ghi chú in ra phương án: bỏ các câu giải thích tự động (giống bản Excel)."""
-    s = str(gc or '').strip()
-    if not s or s.startswith(('SL = ', 'ĐG = ', 'T = đ')) or 'chưa có dòng đất nông nghiệp' in s:
-        return ''
-    if ma:
-        r = con.execute('SELECT cach_tinh FROM dm_hotro WHERE ma = ?', (ma,)).fetchone()
-        if r and s == (r['cach_tinh'] or ''):
-            return ''
-    return s
-
-
-def dien_tich_dong_dat(dt_dong, thua) -> Decimal:
-    """Diện tích in ở dòng đất mục 1 (1.0.04): diện tích của dòng phương án (> 0), không thì dt_boi_thuong (> 0) rồi dt_thu_hoi
-    của thửa. thua: dict / sqlite3.Row của bảng thua (hoặc rỗng)."""
-    def _gt(k):
-        try:
-            return D(thua[k] or 0)
-        except (KeyError, IndexError, TypeError, ArithmeticError, ValueError):
-            return KHONG
-    dt = dt_dong if dt_dong is not None else KHONG
-    if dt > 0:
-        return dt
-    bt = _gt('dt_boi_thuong')
-    return bt if bt > 0 else max(_gt('dt_thu_hoi'), KHONG)
-
-
-def dong_chi_tiet(con, ma_ho: int, bc: BoiCanh | None = None, pa=None, pa_truoc=None) -> tuple:
-    """Các dòng bảng in của một hộ: (danh sách (loại, [A..H]), KetQuaHo). Loại: H mục, I dòng, R thưởng, T tổng.
-    pa: phương án đang soạn trong bộ nhớ (BoSoan.pa - xem trước khi chưa lưu); None = đọc từ CSDL (cộng dồn mọi lần).
-    pa_truoc (1.0.05): các lần lập phương án trước của hộ - pa là MỘT lần, thưởng = phần tăng thêm (nghiep_vu.tinh_pa_lan)."""
-    bc = bc or BoiCanh.tu(con)
-    pa = pa if pa is not None else doc_phuong_an(con, ma_ho)
-    kq = tinh_pa(pa, bc) if pa_truoc is None else nghiep_vu.tinh_pa_lan(pa, pa_truoc, bc)
-    dong = []
-    # 1. đất
-    d1 = [d for d in kq.dong if d.muc == 1]
-    dong.append(['H', ['1', 'Bồi thường đất', None, None, None, None, None, None]])
-    hdr = dong[-1][1]
-    if d1:
-        # 1.0.04 (người dùng 19/10/2026): mỗi dòng in diện tích thật của thửa (ct_dat -> dt_boi_thuong -> dt_thu_hoi); đơn giá 0 thì
-        # tên gọn (bỏ "(Vị trí: …)" dài), để trống Đơn giá / Tỷ lệ; DT 0 (tài sản trên đất người khác) thì trống cả ĐVT / Số lượng
-        tong_dt = KHONG
-        for d, r in zip(d1, pa.dat):
-            t = bc.thua.get(r.ma_thua) or {}
-            dt = dien_tich_dong_dat(d.so_luong, t)
-            ten = d.ten
-            if d.don_gia == 0:
-                ten = nghiep_vu.mo_ta_thua(t.get('so_to', ''), t.get('so_thua', ''), r.loai_dat, bc.cap_dia_ban,
-                                           bc.ten_dia_ban, None)
-            gt = [d.stt, ten, 'm²' if dt > 0 else None, dt if dt > 0 else None, d.don_gia if d.don_gia else None,
-                  d.ty_le if d.don_gia else None, d.thanh_tien, ghi_chu_in(con, '', d.ghi_chu)]
-            dong.append(['I', gt])
-            tong_dt += dt
-        hdr[3] = tong_dt if tong_dt > 0 else None
-        hdr[6] = kq.muc[1]
-    else:
-        # hộ chưa lập giá đất: liệt kê các thửa thu hồi theo hồ sơ kiểm kê; dòng đầu ghi pháp lý của hộ (vd "Đất do … quản lý,
-        # không tính toán bồi thường về đất…" khi nhập phương án chi tiết từ Excel)
-        k = 0
-        tong_dt = KHONG
-        r = con.execute('SELECT phap_ly FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
-        phap_ly = ' '.join(str(r['phap_ly'] or '').split()) if r else ''
-        for t in bc.thua_cua(ma_ho):
-            k += 1
-            # chưa lập giá: tên gọn (không vị trí), diện tích > 0 vẫn in m² + số lượng; trống đơn giá / tỷ lệ (1.0.04)
-            mo_ta = nghiep_vu.mo_ta_thua(t['so_to'], t['so_thua'], t['loai_dat'], bc.cap_dia_ban, bc.ten_dia_ban, None)
-            dt = dien_tich_dong_dat(KHONG, t)
-            dong.append(['I', [f'1.{k}', mo_ta, 'm²' if dt > 0 else None, dt if dt > 0 else None, None, None, KHONG,
-                               phap_ly if k == 1 else '']])
-            tong_dt += dt
-        hdr[3] = tong_dt if tong_dt > 0 else None
-        hdr[6] = KHONG
-    # 2 nhà, 3 cây trồng, 4 vật nuôi (0.9.20: mục riêng, in dưới cây trồng - mã bên trong MUC_VN)
-    for muc in (2, 3, nghiep_vu.MUC_VN):
-        dong.append(['H', [str(nghiep_vu.so_muc(muc)), nghiep_vu.TEN_MUC[muc], None, None, None, None, kq.muc[muc], None]])
-        for d in (x for x in kq.dong if x.muc == muc):
-            dong.append(['I', [d.stt, d.ten, d.dvt, d.so_luong, d.don_gia, d.ty_le, d.thanh_tien, ghi_chu_in(con, d.ma, d.ghi_chu)]])
-    # 5 các chính sách hỗ trợ: dòng có cách tính in gộp ô ĐVT..tỷ lệ; hỗ trợ đào tạo nhập theo từng thửa có dòng tên chính sách
-    # đứng đầu nhóm
-    from .chinh_sach import ten_ngan
-    s4 = nghiep_vu.so_muc(4)
-    dong.append(['H', [str(s4), nghiep_vu.TEN_MUC[4], None, None, None, None, kq.muc[4], None]])
-    ds4 = [x for x in kq.dong if x.muc == 4]
-    k = i = 0
-    while i < len(ds4):
-        d = ds4[i]
-        k += 1
-        if d.ma in ('CS9', 'CS10') and d.ten.startswith('Thửa đất'):
-            j = i
-            while j < len(ds4) and ds4[j].ma == d.ma and ds4[j].ten.startswith('Thửa đất'):
-                j += 1
-            nhom = ds4[i:j]
-            ten = ten_ngan((bc.hotro.get(d.ma) or {}).get('ten', ''), d.ma) or 'Hỗ trợ đào tạo, chuyển đổi nghề và tìm kiếm việc làm'
-            # dòng tên chính sách chỉ ghi tên + căn cứ; diện tích, đơn giá, tỷ lệ, thành tiền ở các dòng thửa bên dưới (người dùng
-            # 15/10/2026: trước đây dòng tên lặp lại diện tích + thành tiền của dòng thửa - một thửa thì hai ô trùng số)
-            dong.append(['I', [f'{s4}.{k}', ten, None, None, None, None, None, ghi_chu_in(con, d.ma, d.ghi_chu)]])
-            for x in nhom:
-                dong.append(['I', ['-', x.ten, x.dvt, x.so_luong, x.don_gia, x.ty_le, x.thanh_tien, None]])
-            i = j
-            continue
-        gt = [f'{s4}.{k}', d.ten, d.dvt, d.so_luong, d.don_gia, d.ty_le, d.thanh_tien, ghi_chu_in(con, d.ma, d.ghi_chu)]
-        dong.append(['I', gt, d.cach_tinh] if d.cach_tinh else ['I', gt])
-        i += 1
-    # 6. thưởng (chỉ khi có bồi thường về đất): chỉ tên + thành tiền - bỏ ĐVT, số lượng, đơn giá, tỷ lệ (người dùng 15/10/2026: tên
-    # gộp ô sang hết các cột đó trong lap_chi_tiet; trước đây "1,0 | 20.000.000 | 100%"); thành tiền in đậm
-    dong.append(['R', [str(nghiep_vu.so_muc(5)), nghiep_vu.TEN_MUC[5], None, None, None, None, kq.muc[5], None]])
-    dong.append(['T', [None, 'TỔNG CỘNG', None, None, None, None, kq.tong, None]])
-    return dong, kq
-
-
-_RE_SO_DAU_DOAN = re.compile(r'^(\s*(?:\d+|[a-zđ])[.)]\s*)?')
-
-
-def bo_lap_mo_dau(doan: str) -> str:
-    """Đoạn nguồn gốc mở đầu bằng một cụm kết thúc ":" lặp lại hai lần liền nhau (nhập từ Excel / dán: "1. Thửa đất số 17, tờ bản
-    đồ số 39, xã Phú Lý: Thửa đất số 17, tờ bản đồ số 39, xã Phú Lý: …") -> giữ một lần (1.0.04). So không dấu, bỏ khoảng trắng thừa."""
-    from .lap_pa import bo_dau
-    s = str(doan or '')
-    m = _RE_SO_DAU_DOAN.match(s)
-    so = m.group(0) if m else ''
-    con_lai = s[len(so):]
-
-    def chuan(x):
-        return ' '.join(bo_dau(x).lower().split())
-    while True:
-        i = con_lai.find(':')
-        if i <= 0:
-            break
-        cum = con_lai[:i + 1]
-        sau = con_lai[i + 1:].lstrip()
-        if not chuan(cum) or not chuan(sau).startswith(chuan(cum)):
-            break
-        # bỏ lần lặp đầu (giữ lần sau - đúng chữ / dấu của dữ liệu)
-        n = len(cum.strip())
-        k, dem = 0, 0
-        while k < len(sau) and dem < len(chuan(cum)):
-            k += 1
-            dem = len(chuan(sau[:k]))
-        if not chuan(sau[:k]) == chuan(cum):
-            break
-        con_lai = sau
-        if n == 0:
-            break
-    return so + con_lai
-
-
-def _thong_tin_ho(con, ma_ho: int, da: dict, che: bool | None = None) -> dict:
-    h = con.execute('SELECT * FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
-    ten = ' '.join(str(h['ho_ten'] or '').split())
-    if ' là ' in ten:
-        ten = ten.split(' là ')[0].strip()
-    cccd = (h['so_cccd'] or '').strip()
-    if (h['ngay_cap'] or '').strip() and h['ngay_cap'] != '0':
-        cccd += f' - Ngày cấp: {h["ngay_cap"].strip()}'
-    if (h['noi_cap'] or '').strip():
-        cccd += f' - Nơi cấp: {h["noi_cap"].strip()}'
-    # 1.0.04: luôn in đủ số CCCD + ngày / nơi cấp (bỏ che CCCD; tham số che giữ cho mã gọi cũ)
-    from .ho_so import chuan_nguon_goc, lam_sach_doan_van
-    ng = []                                     # nguồn gốc các thửa (bỏ trùng, giữ thứ tự): mỗi nội dung một đoạn
-    for r in con.execute("SELECT nguon_goc FROM thua WHERE ma_ho = ? AND TRIM(nguon_goc) <> '' ORDER BY thu_tu, ma_thua",
-                         (ma_ho,)):
-        # 21/10/2026: xuống dòng cứng giữa câu (ô Excel nhập vào, chữ dán) nối lại - bản in Word / Excel không cụt chữ giữa câu
-        chu = '\n'.join(bo_lap_mo_dau(x) for x in lam_sach_doan_van(chuan_nguon_goc(r['nguon_goc'])))
-        if chu and chu not in ng:
-            ng.append(chu)
-    from .lap_pa import cau_tai_dinh_cu
-    tdc = cau_tai_dinh_cu(h['tai_dinh_cu']) or \
-        f'Sau khi UBND {da["cap_dia_ban_thuong"] or "xã, phường"} xác nhận điều kiện tái định cư (nếu có).'
-    dt = (h['dien_thoai'] or '').strip()
-    k = h.keys()
-    return dict(ma_ho=ma_ho, ho_ten=ten, cccd=cccd.strip(' -'), dia_chi=(h['dia_chi'] or '').strip(),
-                dien_thoai='' if dt == '0' else dt, nguon_goc='\n'.join(ng), tai_dinh_cu=tdc,
-                so_pa=(h['so_pa'] or '').strip() if 'so_pa' in k else '', ngay_pa=(h['ngay_pa'] or '') if 'ngay_pa' in k else '')
-
-
-# ---------------------------------------------------------------- phương án chi tiết (A4 dọc)
-TIEU_DE_MUC_II = 'II. Thông tin vị trí, nguồn gốc đất:'      # 0.9.87: tiêu đề mục II thống nhất (1.0.07: có dấu hai chấm)
-NHAN_TO_CHUC = 'Tổ chức:'                                  # chủ sử dụng là tổ chức: thay nhãn "Họ và tên:"
-NHAN_DIA_CHI_TO_CHUC = 'Địa chỉ:'                          # 1.0.04: tổ chức thay nhãn "Địa chỉ thường trú:"
-TIEU_DE_MUC_I_HO = 'I. Thông tin hộ gia đình, cá nhân'     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (thay "I. Tổ chức và hộ…")
-TIEU_DE_MUC_I_TO_CHUC = 'I. Thông tin tổ chức'
-_TU_KHOA_MUC_I = ('chu so huu tai san', 'co dat thu hoi', 'ho gia dinh', 'to chuc')
-
-
-def tieu_de_muc_i(to_chuc: bool) -> str:
-    return TIEU_DE_MUC_I_TO_CHUC if to_chuc else TIEU_DE_MUC_I_HO
-
-
-def dat_tieu_de_muc_i(ws, den_dong: int, to_chuc: bool) -> int:
-    """Ô tiêu đề mục I (phía trên mục II, mẫu chuẩn A7 - nguồn gốc dài / mẫu người dùng có thể dời dòng nên DÒ, không viết số dòng) ->
-    tieu_de_muc_i(to_chuc), in đậm. Ô bắt đầu "I." trước; không có thì ô chữ (không phải nhãn "…:") chứa từ khóa _TU_KHOA_MUC_I nằm
-    dưới dòng "Dự án" và trên nhãn "Họ và tên:" đầu tiên. Gọi TRƯỚC chuan_co_chu_ct / chuan_muc_i (chúng dò mục I theo "I. "). Trả số ô
-    đã đổi (0 / 1)."""
-    from .lap_pa import bo_dau
-    o_chu = [(o, bo_dau(o.value.strip()).lower()) for o in _o_chu(ws, den_dong)]
-    r_ii = next((o.row for o, s in o_chu if s.startswith('ii.')), den_dong)
-    o = next((o for o, s in o_chu if o.row < r_ii and s.startswith('i.')), None)
-    if o is None:
-        r_da = next((o.row for o, s in o_chu if '{du_an}' in s or s.startswith('du an')), 0)
-        r_nhan = next((o.row for o, s in o_chu if o.row > r_da and s.rstrip(': ') in ('ho va ten', 'to chuc')
-                       and s.endswith(':')), r_ii)
-        o = next((o for o, s in o_chu if r_da < o.row < r_nhan and not s.endswith(':') and '{' not in s
-                  and any(k in s for k in _TU_KHOA_MUC_I)), None)
-    if o is None:
-        return 0
-    moi = tieu_de_muc_i(to_chuc)
-    doi = o.value != moi or not (o.font and o.font.b)
-    o.value = moi
-    if o.font is not None and not o.font.b:
-        f = copy(o.font)
-        f.b = True
-        o.font = f
-    return int(doi)
-
-
-_RE_TIEU_DE_MUC = re.compile(r'^(I|II|III|IV|V|VI)\.?(\s|$)')
-
-
-def chuan_co_chu_ct(ws, dong_tieu_de_bang: int) -> int:
-    """Phương án chi tiết (1.0.07): tiêu đề 16 pt đậm - phần đầu văn bản (quốc hiệu, tiêu ngữ, tên cơ quan, tên phương án, dự án: các ô
-    ĐẬM phía trên mục I), tiêu đề mục I, II, III, IV, hàng tiêu đề cột bảng (dong_tieu_de_bang); còn lại 14 pt. Giữ đậm / nghiêng. Trả số
-    ô đã đổi cỡ chữ."""
-    from .lap_pa import bo_dau
-    r_i = next((o.row for o in _o_chu(ws, dong_tieu_de_bang) if bo_dau(o.value.strip()).lower().startswith('i. ')), 0)
-    n = 0
-    for o in list(ws._cells.values()):
-        if not o.has_style or not o.font or not o.font.sz:
-            continue
-        v = o.value.strip() if isinstance(o.value, str) else ''
-        if o.row == dong_tieu_de_bang:
-            moi, dam = CO_TIEU_DE, True
-        elif v and _RE_TIEU_DE_MUC.match(v) and (o.font.b or o.row <= dong_tieu_de_bang):
-            moi, dam = CO_TIEU_DE, True
-        elif o.row < r_i and o.font.b:
-            moi, dam = CO_TIEU_DE, True
-        else:
-            moi, dam = CO_NOI_DUNG, bool(o.font.b)
-        if float(o.font.sz) != moi or bool(o.font.b) != dam:
-            f = copy(o.font)
-            f.sz, f.b = moi, dam
-            o.font = f
-            n += 1
-    return n
-
-
-_RE_CHUC_DANH_KY = re.compile(r'^(LẬP BIỂU|NGƯỜI LẬP|KIỂM TRA|NGƯỜI KIỂM TRA|(KT\.\s*)?(PHÓ\s+)?GIÁM ĐỐC|THỦ TRƯỞNG)\b')
-
-
-def an_khoi_ky(ws, tu_dong: int) -> list:
-    """Ẩn khối chữ ký cuối văn bản (dòng chức danh LẬP BIỂU / KIỂM TRA / (PHÓ) GIÁM ĐỐC và các dòng dưới - họ tên người ký) từ
-    tu_dong trở xuống: bản dự thảo chưa ký duyệt (1.0.07). Trả các dòng đã ẩn."""
-    r0 = next((o.row for o in _o_chu(ws) if o.row >= tu_dong and _RE_CHUC_DANH_KY.match(o.value.strip().upper())), None)
-    if r0 is None:
-        return []
-    cuoi = max(r0, max((r for r, _ in ws._cells), default=r0))
-    for r in range(r0, cuoi + 1):
-        ws.row_dimensions[r].hidden = True
-    return list(range(r0, cuoi + 1))
-
-
-def chuan_muc_i(ws, den_dong: int) -> list:
-    """Mục I (thông tin chủ sử dụng, 1.0.07): không kẻ viền ô; ô CCCD / số điện thoại định dạng chữ '@' (Excel không gắn cờ tam giác
-    xanh "số lưu dạng chữ" - kèm ignoredErrors khi lưu: chen_duong_ke(bo_qua=)). Trả các ô (tọa độ) đã đặt dạng chữ."""
-    from openpyxl.styles import Border
-    from .lap_pa import bo_dau
-    r_i = r_ii = None
-    for o in _o_chu(ws, den_dong):
-        s = bo_dau(o.value.strip()).lower()
-        if r_i is None and s.startswith('i. '):
-            r_i = o.row
-        elif r_i is not None and s.startswith('ii.'):
-            r_ii = o.row
-            break
-    if r_i is None:
-        return []
-    # 1.0.09: chặn ở dòng tiêu đề bảng ("STT", den_dong) - mẫu không có tiêu đề "II." trước đây lấy r_i + 6, có thể trùm hàng tiêu đề /
-    # dòng số liệu mục III (mất viền cả bảng)
-    r_ii = min(r_ii or r_i + 6, den_dong)
-    for (r, c), o in list(ws._cells.items()):
-        if r_i <= r < r_ii and o.has_style and o.border is not None and any(
-                getattr(o.border, k).style for k in ('left', 'right', 'top', 'bottom')):
-            o.border = Border()
-        # nhãn ("Họ và tên:", "Số CCCD:"…) in đậm, nội dung in thường (người dùng 20/10/2026)
-        if r_i < r < r_ii and isinstance(o.value, str) and o.value.strip() and o.font is not None:
-            nhan = o.value.strip().endswith(':') and '{' not in o.value
-            if bool(o.font.b) != nhan:
-                f = copy(o.font)
-                f.b = nhan
-                o.font = f
-    chu = []
-    for cho in ('{cccd}', '{dien_thoai}', '{so_cccd}', '{sdt}'):
-        vt = vi_tri_cho(ws, cho, den_dong)
-        if vt:
-            o = ws.cell(vt[0], vt[1])
-            o.number_format = '@'
-            chu.append(o.coordinate)
-    return chu
-
-
-DINH_DANG_TIEN_CT = '#,##0'          # đơn giá, thành tiền bảng mục III khi ô mất định dạng (mẫu ngoài / General)
-DINH_DANG_TY_LE_CT = '0%'           # tỷ lệ: 0,8 -> 80%
-
-
-def _vien(trai='thin', phai='thin', tren='thin', duoi='thin'):
-    from openpyxl.styles import Border, Side
-    return Border(left=Side(style=trai), right=Side(style=phai), top=Side(style=tren), bottom=Side(style=duoi))
-
-
-def dam_bao_khung_bang_ct(ws, dong_tieu_de: int, cuoi: int, cot: list, loai_dong: list | None = None) -> int:
-    """Bảng mục III phương án chi tiết (1.0.09, người dùng 20/10/2026 - máy khác "mất toàn bộ khung viền, Tỷ lệ 0,8, Đơn giá 720000"):
-    mẫu ngoài (%APPDATA%\\PABT\\mau_in) lấy từ file Excel PABT vẽ khung / định dạng số bằng định dạng có điều kiện hoặc dòng mẫu dưới
-    "STT" không có viền + General -> bản in / PDF dự phòng mất khung, số không định dạng. Cưỡng bức SAU khi điền, gộp ô, dàn trang:
-    hàng tiêu đề (dong_tieu_de) trên / dưới medium; dòng dong_tieu_de + 1..cuoi lưới thin; bao ngoài (trái cột đầu, phải cột cuối,
-    đáy dòng cuoi) medium - mọi ô kể cả ô gộp (TỔNG CỘNG, cách tính C:F, ghi chú gộp dọc). Ô số: đơn giá / thành tiền mất định dạng
-    -> DINH_DANG_TIEN_CT, tỷ lệ -> DINH_DANG_TY_LE_CT, số lượng General -> tien.dinh_dang_so_luong theo mục (loai_dong: 'H' tiêu đề
-    mục, số mục ở cột STT). cot = vị trí cột TRUONG_CT. Trả số ô đã sửa định dạng số."""
-    from .tien import dinh_dang_so_luong
-    k_stt, _, _, k_sl, k_dg, k_tl, k_tt, _ = cot
-    c1, c2 = min(cot), max(cot)
-    for r in range(dong_tieu_de, cuoi + 1):
-        tieu_de = r == dong_tieu_de
-        for c in range(c1, c2 + 1):
-            ws.cell(r, c).border = _vien('medium' if c == c1 else 'thin', 'medium' if c == c2 else 'thin',
-                                         'medium' if tieu_de else 'thin',
-                                         'medium' if tieu_de or r == cuoi else 'thin')
-    n = 0
-    muc = None
-    for i, r in enumerate(range(dong_tieu_de + 1, cuoi + 1)):
-        loai = loai_dong[i] if loai_dong and i < len(loai_dong) else None
-        if loai == 'H':
-            from . import nghiep_vu
-            muc = 2 if str(ws.cell(r, k_stt).value or '').strip() == str(nghiep_vu.so_muc(2)) else None
-        for c, can, dung in ((k_dg, '#,##0', DINH_DANG_TIEN_CT), (k_tt, '#,##0', DINH_DANG_TIEN_CT),
-                             (k_tl, '%', DINH_DANG_TY_LE_CT), (k_sl, '0', None)):
-            o = ws.cell(r, c)
-            if not isinstance(o.value, (int, float)) or isinstance(o.value, bool):
-                continue
-            fmt = o.number_format or 'General'
-            if c == k_sl:
-                if fmt == 'General' or '0' not in fmt:
-                    o.number_format = dinh_dang_so_luong(muc)
-                    n += 1
-            elif can not in fmt:
-                o.number_format = dung
-                n += 1
-    return n
-
-
-def chuan_tieu_de_muc_ii(ws, den_dong: int) -> int:
-    """Ô tiêu đề "II. … nguồn gốc …" phía trên bảng -> TIEU_DE_MUC_II. Trả số ô đã đổi."""
-    from .lap_pa import bo_dau
-    n = 0
-    for o in list(_o_chu(ws, den_dong)):
-        chu = o.value.strip()
-        s = bo_dau(chu).lower()
-        if s.startswith('ii.') and 'nguon goc' in s and chu != TIEU_DE_MUC_II:
-            o.value = TIEU_DE_MUC_II
-            n += 1
-    return n
-
-
-def dat_nhan_chu_su_dung(ws, den_dong: int, to_chuc: bool) -> int:
-    """Nhãn "Họ và tên:" (mục I) -> "Tổ chức:" khi chủ sử dụng là tổ chức (ho_so.la_to_chuc); tổ chức không có CCCD: ẨN dòng "Số
-    CCCD:" (người dùng 16/10/2026 - ẩn, không xóa dòng: vị trí các ô phía dưới giữ nguyên). Trả số ô đã đổi."""
-    if not to_chuc:
-        return 0
-    n = 0
-    for o in list(_o_chu(ws, den_dong)):
-        k = o.value.strip().rstrip(':').strip().lower()
-        if k == 'họ và tên':
-            o.value = NHAN_TO_CHUC
-            n += 1
-        elif k in ('địa chỉ thường trú', 'địa chỉ thường trú/tạm trú', 'nơi thường trú'):   # 1.0.04: tổ chức -> "Địa chỉ:"
-            o.value = NHAN_DIA_CHI_TO_CHUC
-            n += 1
-        elif k in ('số cccd', 'cccd', 'số cccd/cmnd', 'số cmnd', 'số điện thoại', 'điện thoại', 'sđt'):   # 1.0.04: ẩn cả SĐT
-            ws.row_dimensions[o.row].hidden = True
-    return n
 
 
 DIA_DANH_NGAY_MAC_DINH = 'Trị An'
@@ -2429,41 +1638,6 @@ def viet_hoa_du_an(ws, den_dong: int | None = None) -> int:
     return n
 
 
-def gop_ghi_chu_dat(ws, dong: list, dau: int, cot_gc: int, toi_da: int | None = None) -> list:
-    """Mục 1 (đất): gộp dọc ô Ghi chú của các dòng đất LIỀN NHAU cùng nội dung (khác trống) - ghi chú một lần, căn giữa dọc.
-    dong: các dòng của dong_chi_tiet (dòng i ở hàng dau + i). Gộp bằng _gop_o (không ws.merge_cells - O(n²)). Trả [(r1, r2)].
-    toi_da (mặc định GHI_CHU_TOI_DA = 12): nhóm dài hơn thì mở vùng gộp mới (16/10/2026 - tổ chức 15-180 thửa cùng ghi chú: một ô
-    gộp dài hơn một trang giấy); ngat_trang_ct còn tách vùng gộp ở ranh trang."""
-    toi_da = toi_da or GHI_CHU_TOI_DA
-    kq = []
-    i = 1 if dong and dong[0][0] == 'H' else 0               # bỏ dòng tiêu đề mục 1
-    nhom = []                                               # [(hàng, chữ)] của nhóm đang xét
-
-    def dong_nhom():
-        if len(nhom) > 1:
-            r1, r2 = nhom[0][0], nhom[-1][0]
-            o = ws.cell(r1, cot_gc)
-            o.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)     # 1.0.04: giữa hai chiều
-            for r in range(r1 + 1, r2 + 1):
-                ws.cell(r, cot_gc).value = None
-            _gop_o(ws, r1, cot_gc, r2, cot_gc)
-            kq.append((r1, r2))
-        nhom.clear()
-
-    while i < len(dong) and dong[i][0] != 'H':
-        r = dau + i
-        chu = ' '.join(str(ws.cell(r, cot_gc).value or '').split())
-        if dong[i][0] != 'I' or not chu or (nhom and nhom[-1][1] != chu):
-            dong_nhom()
-        if dong[i][0] == 'I' and chu:
-            if len(nhom) >= toi_da:
-                dong_nhom()
-            nhom.append((r, chu))
-        i += 1
-    dong_nhom()
-    return kq
-
-
 # đệm mẫu in trong RAM (0.9.87): bytes của file mẫu theo (đường dẫn, mtime_ns, cỡ) - in hàng loạt không đọc lại đĩa mỗi hộ (thư mục
 # mẫu trên ổ mạng / %APPDATA% bị diệt virus quét). KHÔNG giữ Workbook đã nạp (pickle / deepcopy làm hỏng openpyxl - 0.9.22, 0.9.24):
 # mỗi hộ vẫn load_workbook từ BytesIO, workbook độc lập.
@@ -2499,244 +1673,6 @@ def mo_mau(duong_dan):
     """openpyxl.load_workbook(mẫu) qua đệm RAM."""
     import io
     return openpyxl.load_workbook(io.BytesIO(nap_mau_bytes(duong_dan)))
-
-
-def chon_lan_in(con, ma_ho: int, lan=None):
-    """Lần phương án sẽ in (1.0.05): None / 'moi_nhat' = lần muộn nhất có dòng; 'cong_don' = None (mọi lần cộng dồn); số = lần đó."""
-    if lan == 'cong_don':
-        return None
-    if lan is None or lan == 'moi_nhat':
-        from .lan_pa import lan_moi_nhat
-        return lan_moi_nhat(con, ma_ho)
-    return int(lan)
-
-
-def dat_tieu_de_bo_sung(ws, lan: int, den_dong: int = 10) -> int:
-    """Lần bổ sung (lan >= 2): "PHƯƠNG ÁN CHI TIẾT" của mẫu -> "PHƯƠNG ÁN CHI TIẾT BỔ SUNG (LẦN k)" (k = số lần lập phương án;
-    chữ in hoa đậm theo kiểu ô của mẫu). Trả số ô đổi."""
-    if lan is None or lan < 2:
-        return 0
-    for o in list(_o_chu(ws, den_dong)):
-        if 'PHƯƠNG ÁN CHI TIẾT' in o.value and 'BỔ SUNG' not in o.value:
-            o.value = o.value.replace('PHƯƠNG ÁN CHI TIẾT', f'PHƯƠNG ÁN CHI TIẾT BỔ SUNG (LẦN {lan})', 1)
-            f = copy(o.font)
-            f.b = True
-            o.font = f
-            return 1
-    return 0
-
-
-def lap_chi_tiet(con, ma_ho: int, file_ra, mau: Path | None = None, bc: BoiCanh | None = None,
-                 du_thao: bool | None = None, pa=None, che_cccd: bool | None = None, lan=None) -> Path:
-    """Điền mẫu IN_CHITIET cho một hộ, lưu thành file .xlsx. Trả đường dẫn file. mau: thư mục mẫu hoặc file mẫu riêng.
-    du_thao: True = bản DỰ THẢO (giữ / thêm chữ DỰ THẢO, chưa in số phương án), False = bản chính thức (xóa chữ DỰ THẢO của
-    mẫu), None = theo tên file mẫu như trước 0.9.82 (la_mau_du_thao). pa: phương án trong bộ nhớ (xem trước bản đang soạn);
-    che_cccd: giữ cho mã gọi cũ - từ 1.0.04 BỎ QUA (luôn in đủ số CCCD). Cột bảng: hồ sơ địa phương mau_in.IN_CHITIET (_cot_ct)."""
-    if mau is None and du_thao:                       # 1.0.07: người dùng đã thay "Mẫu chi tiết dự thảo" -> bản dự thảo in theo mẫu đó
-        rieng = thu_muc_mau_tuy_chinh() / f'{TEN_DT_QL}.xlsx'
-        mau = rieng if rieng.exists() and dung_mau_may(rieng, TEN_DT_QL) else None
-    mau = file_mau(mau, TEN_CT)
-    du_thao = la_mau_du_thao(mau) if du_thao is None else bool(du_thao)
-    duong_ke = duong_ke_cua_mau(mau, TEN_CT)
-    wb = mo_mau(mau)
-    ws = wb.worksheets[0]
-    da = _thong_tin_du_an(con)
-    da['ky_hieu_so'] = ky_hieu_cua_ho(con, ma_ho, da['ky_hieu_so'])       # 0.9.72: theo đợt trình của hộ
-    # 1.0.05: hộ có nhiều lần lập phương án - in MỘT lần (mặc định lần muộn nhất có dòng; 'cong_don' = mọi lần): bảng chỉ dòng của
-    # lần đó, tiêu đề "BỔ SUNG LẦN k", số / ngày phương án của lần
-    lan = chon_lan_in(con, ma_ho, lan)
-    pa_truoc = None
-    if lan is not None:
-        if pa is None:
-            pa = doc_phuong_an(con, ma_ho, lan=lan)
-        pa_truoc = doc_phuong_an(con, ma_ho, den_lan=lan - 1)
-    dong, kq = dong_chi_tiet(con, ma_ho, bc, pa, pa_truoc)
-    ttho = _thong_tin_ho(con, ma_ho, da, che_cccd)
-    if lan is not None and lan > 1:
-        from .lan_pa import lan_cua
-        x = lan_cua(con, ma_ho, lan)
-        ttho['so_pa'], ttho['ngay_pa'] = x.so_pa, x.ngay_pa
-        dat_tieu_de_bo_sung(ws, lan)
-    do = _ham_do_chu()
-    # 1.0.07: tiêu đề 16 pt đậm, nội dung 14 pt; mục I không viền, CCCD / điện thoại dạng chữ (trước khi điền, trước khi chèn dòng)
-    _cot0, _, _chu_dau0 = _cot_ct()
-    r_td0 = next((r for r in range(1, 300) if str(ws.cell(r, _cot0[0]).value or '').strip().upper() == _chu_dau0), 17)
-    from .ho_so import la_to_chuc
-    to_chuc = la_to_chuc(ttho['ho_ten'])
-    dat_tieu_de_muc_i(ws, r_td0, to_chuc)                       # 22/10/2026: "I. Thông tin tổ chức" / "… hộ gia đình, cá nhân"
-    chuan_co_chu_ct(ws, r_td0)
-    o_chu_so = chuan_muc_i(ws, r_td0)
-    vua_cot_theo_tieu_de(ws, r_td0, r_td0, max(_cot0), do, lay_tu=_cot0[7])    # "STT" 16 pt không bị cắt đôi (bớt cột Ghi chú)
-    dat_doan_van(ws, '{nguon_goc}', ttho['nguon_goc'], do)     # trước khi tìm dòng STT: có thể chèn thêm dòng
-    vt_du_an = vi_tri_cho(ws, '{du_an}', 20)
-    vt_dk = [(vi_tri_cho(ws, '{DON_VI_TIEU_DE}', 8), 1.0), (o_tieu_ngu(ws), 1.0), (vt_du_an, 1.0)]
-    cot, cot_loai, chu_dau = _cot_ct()
-    k_stt, k_ten, k_dvt, k_sl, k_dg, k_tl, k_tt, k_gc = cot
-    cuoi_bang = max(cot)                                # cột cuối của bảng (H)
-    dau = next((r for r in range(1, 300) if str(ws.cell(r, k_stt).value or '').strip().upper() == chu_dau), 17) + 1
-    n = len(dong)
-    # mục III (người dùng 14/10/2026): mọi cột STT … Ghi chú căn giữa theo chiều dọc - đặt ở dòng mẫu trước khi chép sang các dòng
-    for c in range(1, cuoi_bang + 1):
-        _can_giua_doc(ws.cell(dau, c))
-    o_gc = ws.cell(dau, k_gc)                          # 1.0.07: cột Ghi chú 11,5 pt (cột 1-7: 14 pt)
-    f_gc = copy(o_gc.font)
-    f_gc.sz = CO_GHI_CHU_CT
-    o_gc.font = f_gc
-    _doi_dong(ws, dau + 1, n - 1)
-    for r in range(dau + 1, dau + n):
-        _chep_kieu_dong(ws, dau, r, cuoi_bang)
-        ws.cell(r, cot_loai)._style = copy(ws.cell(dau, cot_loai)._style)
-    co = ws.cell(dau, k_ten).font.sz or 14
-    px = _px_cot(ws, cuoi_bang + 1)
-
-    def rong(c1: int, c2: int) -> float:                # bề rộng chỗ viết chữ (pt) của cột c1..c2
-        return sum(px[c1 - 1:c2]) * 0.75 - 6
-
-    # hàng tiêu đề cột (STT, Tên tài sản, ĐVT…): 28 pt; tiêu đề nhiều dòng ("Thành tiền\n(đồng)") cao theo số dòng chữ
-    if dau > 1:
-        so_td, co_hd = 1, co
-        for c in range(1, cuoi_bang + 1):
-            o = ws.cell(dau - 1, c)
-            _can_giua_doc(o)
-            if isinstance(o.value, str) and o.value.strip():
-                ten, co_td, dam = _phong(o)
-                co_hd = max(co_hd, co_td)
-                so_td = max(so_td, so_dong_o(o.value, rong(c, c), ten, co_td, dam, do))
-        ws.row_dimensions[dau - 1].height = CAO_TIEU_DE_BANG if so_td <= 1 and co_hd <= 14 else \
-            max(CAO_TIEU_DE_BANG, cao_dong_bang(so_td, co_hd))
-    ten_b, _, _ = _phong(ws.cell(dau, k_ten))
-    so_khac, so_gc = {}, {}                                      # hàng -> số dòng chữ (cột khác / cột ghi chú)
-    so_dong_r = {}                                                # hàng -> số dòng chữ của cả dòng (nén khít không cắt chữ)
-    muc_sl = None
-    for i, x in enumerate(dong):
-        loai, gt = x[0], x[1]
-        cach_tinh = x[2] if len(x) > 2 else ''
-        r = dau + i
-        if loai == 'H':                                 # tiêu đề mục: số lượng các dòng dưới theo mục (tài sản *,00, khác *,0)
-            muc_sl = 2 if str(gt[0]) == str(nghiep_vu.so_muc(2)) else None
-        for c, v in zip(cot, gt):
-            o = ws.cell(r, c)
-            if c == k_stt:
-                o.value = None if v is None else str(v)
-            elif c in (k_sl, k_dg, k_tl, k_tt):
-                o.value = _so(v)
-                if c == k_sl and o.value is not None:   # số lượng kiểu kế toán: tài sản 46,00 / 35,80, khác 16,0 / 0,0325
-                    o.number_format = dinh_dang_so_luong(muc_sl)
-            else:
-                o.value = v if v not in ('',) else None
-        ws.cell(r, cot_loai).value = loai
-        if loai == 'R':                                 # thành tiền thưởng bàn giao mặt bằng in đậm
-            ot = ws.cell(r, k_tt)
-            f = copy(ot.font)
-            f.b = True
-            ot.font = f
-        gop_ten = None
-        if loai == 'T':
-            # TỔNG CỘNG: gộp từ cột STT tới cột Tỷ lệ, căn giữa (người dùng 15/10/2026) - chỉ khi các cột liền nhau. Thưởng ('R'): KHÔNG
-            # gộp nữa (người dùng 16/10/2026) - tên xuống dòng trong cột Tên như các mục 2-5, ô ĐVT / SL / ĐG / tỷ lệ trống có kẻ ô
-            c1 = k_stt
-            c2 = max(k_dvt, k_sl, k_dg, k_tl)
-            if c2 > c1 and set(range(c1, c2 + 1)) <= {k_stt, k_ten, k_dvt, k_sl, k_dg, k_tl}:
-                chu_gop = ws.cell(r, k_ten).value
-                for c in range(c1, c2 + 1):
-                    ws.cell(r, c).value = None
-                o1 = ws.cell(r, c1)
-                o1.value = chu_gop
-                o1.alignment = Alignment(horizontal='left' if loai == 'R' else 'center', vertical='center', wrap_text=True)
-                if loai == 'T':
-                    f = copy(o1.font)
-                    f.b = True
-                    o1.font = f
-                _gop_o(ws, r, c1, r, c2)
-                gop_ten = (c1, c2)
-        # số dòng chữ đo theo phông thật (Excel ngắt dòng theo bề rộng cột): dòng mục / tổng in đậm (định dạng có điều kiện)
-        dam = loai != 'I'
-        so = 1
-        for c in (k_stt, k_ten, k_dvt, k_gc):
-            o = ws.cell(r, c)
-            if gop_ten is not None and gop_ten[0] <= c <= gop_ten[1]:
-                if c == gop_ten[0]:                     # ô gộp: đo trên bề rộng cả vùng
-                    so = max(so, so_dong_o(o.value, rong(*gop_ten), ten_b, float(o.font.sz or co), True, do))
-                continue
-            n_o = so_dong_o(o.value, rong(c, c), ten_b, float(o.font.sz or co), dam or bool(o.font.b), do)
-            if c == k_gc:                               # chữ ghi chú nhỏ hơn: quy về số dòng chữ cỡ co của bảng
-                n_o = max(1, math.ceil(n_o * dong_chu_bang(float(o.font.sz or co)) / dong_chu_bang(co) - 1e-9))
-                so_gc[r] = n_o
-            else:
-                so_khac[r] = max(so_khac.get(r, 1), n_o)
-            so = max(so, n_o)
-        if cach_tinh:                                   # cách tính in gộp ô ĐVT..tỷ lệ (thay số lượng, đơn giá)
-            c1, c2 = min(k_dvt, k_tl), max(k_dvt, k_tl)
-            for c in range(c1 + 1, c2 + 1):
-                ws.cell(r, c).value = None
-            ws.cell(r, c1).value = cach_tinh
-            ws.cell(r, c1).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-            _gop_o(ws, r, c1, r, c2)
-            n_ct = so_dong_o(cach_tinh, rong(c1, c2), ten_b, co, dam, do)
-            so_khac[r] = max(so_khac.get(r, 1), n_ct)
-            so = max(so, n_ct)
-        ws.row_dimensions[r].height = cao_dong_bang(so, co)
-        so_dong_r[r] = so
-    # 0.9.87: ghi chú đất trùng nhau gộp một ô. Chiều cao: mỗi dòng theo chữ các cột khác, ô ghi chú gộp chỉ cần đủ cao CẢ KHỐI -
-    # trước đây mỗi dòng vẫn cao theo chữ ghi chú lặp lại (3 dòng cùng ghi chú 4 dòng chữ = khối cao 12 dòng chữ)
-    dong_chu = dong_chu_bang(co)
-    nhom_gc = gop_ghi_chu_dat(ws, dong, dau, k_gc)
-    san_khoi = [(r1, r2, so_gc.get(r1, 1) * dong_chu + DEM_DONG - NEN_DEM) for r1, r2 in nhom_gc]
-    trong_nhom = {r for r1, r2 in nhom_gc for r in range(r1, r2 + 1)}
-    san = {r: max(CAO_NEN_TOI_THIEU, (so_khac.get(r, 1) if r in trong_nhom else s) * dong_chu + DEM_DONG - NEN_DEM)
-           for r, s in so_dong_r.items()}
-    for r1, r2 in nhom_gc:
-        cao = [cao_dong_bang(so_khac.get(r, 1), co) for r in range(r1, r2 + 1)]
-        thieu = cao_dong_bang(so_gc.get(r1, 1), co) - sum(cao)
-        if thieu > 0:
-            cao = [h + thieu / len(cao) for h in cao]
-        for r, h in zip(range(r1, r2 + 1), cao):
-            ws.row_dimensions[r].height = min(409, h)
-    dat_nhan_chu_su_dung(ws, dau - 1, to_chuc)
-    from .canh_trang_in_an import BoCanhTrangInAn                # 20/10/2026: dòng "Số CCCD:" / "Số điện thoại:" trống -> ẩn
-    BoCanhTrangInAn.an_dong_trong_khoi_i(ws, dau - 1, ttho)
-    viet_hoa_du_an(ws, dau - 1)
-    chuan_trich_yeu(ws, dau - 1)
-    chuan_tieu_de_muc_ii(ws, dau - 1)
-    _vung_cf(ws, dau, dau + n - 1)
-    if du_thao:                                                  # dự thảo chưa có số phương án chính thức (để trống chỗ số / ngày)
-        ttho['so_pa'], ttho['ngay_pa'] = '', ''
-    gia_tri = dict(da, **ttho)
-    dien_so_ngay(ws, ttho['so_pa'], ttho['ngay_pa'], 'Số:', dau - 1)      # số / ngày PA chi tiết (đợt trình) vào chỗ chừa trống
-    chuan_dong_ngay(ws, dau - 1)                                 # "Trị An, ngày ...... tháng ..... năm 2026"
-    can_khoi_ky(ws)                                              # họ tên người ký căn giữa dưới chức danh
-    _thay_cho_trong(ws, gia_tri)
-    ap_che_do_du_thao(ws, du_thao, TEN_CT)                       # dự thảo: giữ / thêm chữ DỰ THẢO; chính thức: xóa
-    if du_thao:                                                  # 1.0.07: bản dự thảo không có khối chữ ký (chưa ký duyệt)
-        an_khoi_ky(ws, dau + n)
-    vua_cao_chu(ws, 1, (vt_du_an[0] if vt_du_an else 6), cuoi_bang, do)    # 1.0.07: phần đầu văn bản đủ cao cho chữ 16 pt
-    for o in list(_o_chu(ws, dau - 2)):                         # … và dòng tiêu đề mục I, II, III phía trên bảng
-        if _RE_TIEU_DE_MUC.match(o.value.strip()) and float(o.font.sz or 0) >= CO_TIEU_DE and not ws.row_dimensions[o.row].hidden:
-            vua_cao_chu(ws, o.row, o.row, cuoi_bang, do, dem=4.0)
-    vua_chu(ws, vt_du_an, do)
-    for r in range(dau + n, min(dau + n + 6, ws.max_row + 1)):          # dòng IV: "Tái định cư: …" (mẫu cũ ghi "Phương án …")
-        o = ws.cell(r, k_ten)
-        if isinstance(o.value, str) and o.value.startswith('Phương án tái định cư:'):
-            o.value = 'Tái định cư:' + o.value[len('Phương án tái định cư:'):]
-        if isinstance(o.value, str) and len(o.value) > 40:
-            _gian_dong(ws, r, k_ten, co)
-        if isinstance(o.value, str) and o.value.startswith(NHAN_TDC):
-            _nhan_dam(o, NHAN_TDC)
-    from openpyxl.utils import get_column_letter
-    cl = get_column_letter(cuoi_bang)
-    ws.print_area = f'A1:{cl}{_dong_cuoi(ws, cuoi_bang) + 1}'
-    wb.defined_names[TEN_CAO] = DefinedName(TEN_CAO, attr_text=f"'{ws.title}'!$A${dau}:${cl}${dau + n - 1}")
-    # dàn trang (16/10/2026): lề, tỷ lệ vừa ngang, cụm không tách, nén khít / giãn cân đối, ngắt trang tay, tách ô gộp ghi chú
-    ngat_trang_ct(ws, dau, [x[0] for x in dong], cuoi_bang, san, san_khoi, nhom_gc, k_gc, co)
-    dam_bao_khung_bang_ct(ws, dau - 1, dau + n - 1, cot, [x[0] for x in dong])     # 1.0.09: khung + định dạng số mục III
-    wb.defined_names[TEN_GIU_TI_LE] = DefinedName(TEN_GIU_TI_LE, attr_text=str(TI_LE_CT_MIN))   # VBS: không thu dưới 70%
-    wb.calculation.fullCalcOnLoad = True
-    file_ra = Path(file_ra)
-    file_ra.parent.mkdir(parents=True, exist_ok=True)
-    dk = _dat_duong_ke(ws, vt_dk, duong_ke)       # sát chân chữ, căn giữa từng dòng (tên đơn vị, tiêu ngữ, dự án)
-    _an_toan.luu_xlsx(wb, file_ra)
-    chen_duong_ke(file_ra, duong_ke, dk, bo_qua=' '.join(o_chu_so))    # đường kẻ (openpyxl không giữ hình vẽ) + bỏ cờ số dạng chữ
-    return file_ra
 
 
 # ---------------------------------------------------------------- bảng tổng hợp (A3 ngang)
@@ -2840,7 +1776,6 @@ NEN_TOI_DA = 0.14               # chỉ nén khi phần tràn sang trang cuối 
 GIAN_TU, GIAN_DEN = 0.08, 0.22  # giãn cân đối khi đáy trang hở 8% - 22%
 GIAN_MOI_DONG = 3.0             # giãn tối đa mỗi dòng (pt)
 CON_CHO_HO_LON = 85.0           # hộ nhiều thửa: trang còn >= 85 pt (~3 dòng thửa) thì bắt đầu ngay, không đẩy cả hộ sang trang
-GHI_CHU_TOI_DA = 12             # phương án chi tiết: vùng gộp ô ghi chú đất không quá 12 dòng
 TEN_DEM = 'PABT_DEM_DONG'       # tên vùng báo VBS xuất PDF đệm dòng (phần mười pt) khi đã nén khít
 TEN_CAO_MIN = 'PABT_CAO_MIN'    # … và chiều cao tối thiểu (phần mười pt)
 
@@ -3024,18 +1959,6 @@ def ghi_ngat_trang(ws, trang: list, tu_dong: int = 1) -> list:
     return ngat
 
 
-def _dat_ten_vbs(ws, da_nen: bool, dem: float | None = None) -> None:
-    """Đã nén khít: báo VBS xuất PDF (AutoFit vùng PABT_TU_GIAN_DONG) dùng đệm dem (mặc định DEM_DONG - NEN_DEM) / tối thiểu
-    CAO_NEN_TOI_THIEU thay vì DEM_DONG / 20 pt - không giãn lại các dòng vừa nén làm tràn trang."""
-    wb = ws.parent
-    dem = DEM_DONG - NEN_DEM if dem is None else dem
-    for ten, gia_tri in ((TEN_DEM, int(round(dem * 10))), (TEN_CAO_MIN, int(round(CAO_NEN_TOI_THIEU * 10)))):
-        if da_nen:
-            wb.defined_names[ten] = DefinedName(ten, attr_text=str(gia_tri))
-        elif ten in wb.defined_names:
-            del wb.defined_names[ten]
-
-
 def _tach_gop_doc(ws, c: int, e: int, chi_muc: dict | None = None):
     """Vùng gộp dọc ở cột c phủ hai dòng e và e + 1: tách thành [đầu..e] và [e + 1..cuối] (gộp lại nếu > 1 dòng). Trả (đầu, cuối)
     của vùng cũ hoặc None."""
@@ -3052,104 +1975,6 @@ def _tach_gop_doc(ws, c: int, e: int, chi_muc: dict | None = None):
         else:
             ws.cell(r1, c)._style = copy(kieu)
     return a, b
-
-
-def ngat_trang_ct(ws, dau: int, loai: list, cuoi_bang: int, san: dict | None = None, san_khoi: tuple = (),
-                  nhom_gc: list | None = None, cot_gc: int | None = None, co: float = 14) -> list:
-    """Dàn trang phương án chi tiết (người dùng 16/10/2026). dau: dòng số liệu đầu của bảng III (dau - 1 hàng tiêu đề cột, dau - 2 dòng
-    "III."); loai: loại từng dòng bảng (dong_chi_tiet: 'H' tiêu đề mục, 'T' tổng cộng…). Lề chuẩn, tỷ lệ vừa ngang, hàng tiêu đề cột
-    lặp đầu trang; không tách: cụm "III." + tiêu đề cột + dòng mục 1. + dòng số liệu đầu (>= ~110 pt: còn chỗ thì bảng bắt đầu ngay
-    trang 1), dòng mục + dòng con đầu, cụm cuối (dòng số liệu cuối + TỔNG CỘNG + IV + ngày + chữ ký). Nén khít / giãn cân đối
-    (co_gian_vua_trang), ngắt trang tay mọi trang; vùng gộp ghi chú đất qua ranh trang tách đôi (chữ ghi chú lặp ở trang sau). Trả
-    các dòng đã ngắt."""
-    chuan_le_trang(ws, 'chi_tiet')
-    dat_ti_le_co_dinh(ws, cuoi_bang, TI_LE_CT)          # 1.0.07: A4 72% cố định (bảng rộng hơn khổ in mới in nhỏ hơn)
-    ws.print_title_rows = f'{dau - 1}:{dau - 1}'        # _doi_dong (nguồn gốc dài chèn dòng) không dời dòng tiêu đề lặp của mẫu
-    cap = cao_trang_in(ws)
-    n = len(loai)
-    r_iii = dau - 2
-    cuoi = max(_dong_cuoi(ws, cuoi_bang), dau + n - 1)
-    m_vi = re.search(r'\$?(\d+)$', str(ws.print_area or '').split(',')[0])
-    if m_vi:                                            # 21/10/2026: vùng in thừa một dòng sau chữ ký - Excel vẫn in dòng đó
-        cuoi = max(cuoi, int(m_vi.group(1)))
-    khoi = [('tu_do', [(r, r) for r in range(1, r_iii)])]
-    j = 1 if n and loai[0] == 'H' else 0                # dòng số liệu đầu
-    c_dau = dau + min(j, n - 1) if n else dau - 1
-    khoi.append(('lien', [(r_iii, c_dau)]))
-    i_t = next((k for k in range(n) if loai[k] == 'T'), n)
-    i = c_dau - dau + 1
-    while i < min(i_t, n):
-        r = dau + i
-        # 21/10/2026 (người dùng - trang 1 hở, mục 2-6 dồn sang trang 2): dòng mục chỉ dính dòng kế khi đó là dòng con THẬT của mục
-        # ('I': 5.1, "- Thửa đất…"); mục không có dòng con (kế là mục khác / thưởng / tổng cộng) là dòng tự do, được nằm cuối trang -
-        # trước đây ghép "mục 2 + mục 3", "mục 4 + mục 5"… thành cụm, cụm này nối cụm kia
-        if loai[i] == 'H' and i + 1 < min(i_t, n) and loai[i + 1] == 'I':
-            khoi.append(('lien', [(r, r + 1)]))
-            i += 2
-        else:
-            khoi.append(('tu_do', [(r, r)]))
-            i += 1
-    # cụm cuối: TỔNG CỘNG + IV + ngày tháng + chữ ký (21/10/2026: không kéo dòng thưởng / dòng số liệu cuối vào cụm cứng); chỉ khi
-    # TỔNG CỘNG rơi đúng đầu trang cuối (mồ côi) mới kèm thêm một dòng ngay trước
-    r_t = dau + (i_t if i_t < n else max(0, n - 1))
-
-    def cum_cuoi(bat_dau: int) -> list:
-        k = list(khoi)
-        while len(k) > 1 and k[-1][1] and k[-1][1][-1][1] >= bat_dau:
-            bat_dau = min(bat_dau, k[-1][1][0][0])
-            k.pop()
-        if bat_dau <= cuoi:
-            k.append(('lien', [(bat_dau, cuoi)]))
-        return k
-    tieu_de = (dau - 1, dau - 1)
-    khoi_t = cum_cuoi(r_t)
-    thu = xep_trang(ws, khoi_t, cap, tieu_de)
-    khoi = cum_cuoi(r_t - 1) if len(thu) > 1 and thu[-1][0] >= r_t and r_t - 1 > c_dau else khoi_t
-    dong_bang = [dau + k for k in range(n)]
-    trang, da_nen = co_gian_vua_trang(ws, khoi, cap, tieu_de, dong_bang, san, san_khoi,
-                                      {dau + k for k in range(n) if loai[k] != 'T'})
-    _dat_ten_vbs(ws, da_nen)
-    # 20/10/2026 (canh_trang_in_an): tràn ít -> vừa 1 trang (thu tỷ lệ + nén đệm, bỏ ngắt tay); 2 trang -> trang 2 bắt đầu trọn một mục
-    from .canh_trang_in_an import BoCanhTrangInAn
-    # dòng thưởng ('R', mục 6) cũng là đầu một mục: trang 2 bắt đầu ở đó là đã trọn mục, không lùi ngắt (21/10/2026)
-    kq = BoCanhTrangInAn.tu_dong_chinh_trang(ws, trang, cap, tieu_de, [dau + k for k in range(n) if loai[k] in ('H', 'R')],
-                                             dong_nen=dong_bang, san=san, san_khoi=san_khoi)
-    if kq['mot_trang']:
-        return []
-    trang = kq['trang']
-    # vùng gộp ghi chú đất qua ranh trang: tách ở ranh, lặp chữ ở đầu trang sau; phần nào thiếu cao cho chữ thì giãn rồi xếp lại
-    nhom_gc = list(nhom_gc or ())
-    for _ in range(3):
-        doi = False
-        ranh = sorted(c for _, c, _ in trang[:-1])
-        con_tach = True
-        while con_tach and cot_gc:
-            con_tach = False
-            for a, b in list(nhom_gc):
-                e = next((x for x in ranh if a <= x < b), None)
-                if e is None:
-                    continue
-                chu = ws.cell(a, cot_gc).value
-                nhom_gc.remove((a, b))
-                if _tach_gop_doc(ws, cot_gc, e) is None:
-                    continue
-                ws.cell(e + 1, cot_gc).value = chu
-                nhom_gc.extend([(a, e), (e + 1, b)])
-                for r1, r2 in ((a, e), (e + 1, b)):
-                    ten, co_o, dam = _phong(ws.cell(r1, cot_gc))
-                    can = cao_dong_bang(so_dong_o(chu, _rong_vung(ws, cot_gc, cot_gc), ten, co_o, dam), co_o)
-                    cao = _ham_cao(ws)
-                    co_san = sum(cao(r) for r in range(r1, r2 + 1))
-                    if co_san + 0.01 < can:
-                        for r in range(r1, r2 + 1):
-                            ws.row_dimensions[r].height = min(CAO_TOI_DA, cao(r) + (can - co_san) / (r2 - r1 + 1))
-                        doi = True
-                con_tach = True
-                break
-        if not doi:
-            break
-        trang = xep_trang(ws, khoi, cap, tieu_de)
-    return ghi_ngat_trang(ws, trang)
 
 
 def ngat_trang_bth(ws, khoi_ho: list, tong: int, n_cot: int, cuoi: int | None = None, dong_tieu_de: tuple = (9, 12),
@@ -3240,9 +2065,6 @@ COT_TIEN_BTH = ('tien_dat', 'tien_tai_san', 'tien_cay_vat_nuoi', 'ho_tro_dao_tao
 KHO_GIAY_BTH = 8                # mã paperSize Excel: 8 = A3 (297 x 420 mm)
 TI_LE_BTH = 55                  # tỷ lệ in (%)
 TI_LE_BTH_MIN = 50              # VBS xuất PDF / in được thu tỷ lệ tới mức này khi Excel tự ngắt trang (dải 50 - 55%)
-TI_LE_CT = 72                   # phương án chi tiết A4 dọc (người dùng 20/10/2026: 70 - 73%)
-TI_LE_CT_MIN = 70
-CO_GHI_CHU_CT = 11.5            # cột Ghi chú (cột 8) bảng mục III: chữ nhỏ cho ghi chú nhiều dòng
 CO_NOI_DUNG = 14.0              # cỡ chữ nội dung
 CO_TIEU_DE = 16.0               # cỡ chữ tiêu đề (đậm)
 TEN_GIU_TI_LE = 'PABT_GIU_TI_LE'     # VBS xuất PDF / in: không thu tỷ lệ in khi Excel tự ngắt trang
@@ -4231,13 +3053,6 @@ def chay_excel(cap_file: list, che_do: str = 'pdf', cho_moi_file: int = CHO_MOI_
 
 
 # ---------------------------------------------------------------- in hàng loạt
-def ten_file_ho(con, ma_ho: int) -> str:
-    h = con.execute('SELECT thu_tu, ho_ten FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
-    ten = ' '.join(str(h['ho_ten'] or '').split())
-    # "Nguyễn Văn A là chủ sở hữu tài sản gắn liền với thửa đất số…" (họ tên nhập kèm diễn giải): tên file chỉ lấy phần họ tên
-    ten = re.split(r'\s+là\s+(?:chủ|người|đại diện|đồng)\b', ten, maxsplit=1, flags=re.I)[0]
-    ten = re.sub(r'[\\/:*?"<>|\r\n\t]+', ' ', ten)[:60].strip()
-    return f'PA_{h["thu_tu"]:03d}_ma{ma_ho}_{ten}'
 
 
 def xuat_hang_loat(con, ds_ma_ho: list, thu_muc, pdf: bool = False, in_may: bool = False, bang_tong_hop: bool = False,
@@ -4249,7 +3064,7 @@ def xuat_hang_loat(con, ds_ma_ho: list, thu_muc, pdf: bool = False, in_may: bool
     from . import van_ban_trinh
     return van_ban_trinh.xuat_bo_ho_so(con, ds_ma_ho, thu_muc, chi_tiet=True, bang_tong_hop=bang_tong_hop, pdf=pdf,
                                        in_may=in_may, so_ban=so_ban, chia_thu_muc=False, bao_tien_do=bao_tien_do,
-                                       bao_excel=bao_excel, lan=None, chi_tiet_word=word)
+                                       bao_excel=bao_excel, lan=None)
 
 
 def mo_file(p) -> None:

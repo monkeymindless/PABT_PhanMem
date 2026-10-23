@@ -13,7 +13,8 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from PySide6.QtWidgets import QApplication
 
-from pabt import cay_trong as ct, csdl, in_an, lap_pa, quan_ly, van_ban_trinh as vb
+from pabt import du_lieu_in
+from pabt import cay_trong as ct, csdl, lap_pa, quan_ly, van_ban_trinh as vb
 from pabt.ho_so import rut_gon_dia_chi
 from tests.test_toc_do import _du_an
 
@@ -95,8 +96,8 @@ class TestKyHieuTheoDot(_Co):
         d2 = quan_ly.tao_dot(self.con)
         self.assertEqual(quan_ly.lay_dot(self.con, d2).ky_hieu_so, 'PA-DOT1')  # theo đợt gần nhất
         quan_ly.gan_dot(self.con, self.ma[:1], d1)
-        self.assertEqual(in_an.ky_hieu_cua_ho(self.con, self.ma[0], 'PA-CU'), 'PA-DOT1')
-        self.assertEqual(in_an.ky_hieu_cua_ho(self.con, self.ma[1], 'PA-CU'), 'PA-CU')     # chưa vào đợt: của dự án
+        self.assertEqual(du_lieu_in.ky_hieu_cua_ho(self.con, self.ma[0], 'PA-CU'), 'PA-DOT1')
+        self.assertEqual(du_lieu_in.ky_hieu_cua_ho(self.con, self.ma[1], 'PA-CU'), 'PA-CU')     # chưa vào đợt: của dự án
         chung, dong = vb.du_lieu(self.con, self.ma[:1], quan_ly.lay_dot(self.con, d1))
         self.assertEqual(chung['ky_hieu_so'], 'PA-DOT1')
         from pabt.man_hinh_quan_ly import HopSuaDot

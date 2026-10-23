@@ -9,9 +9,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import openpyxl
 
-from pabt import csdl, in_an, lap_pa, nhap_tho
+from pabt import du_lieu_in
+from pabt import csdl, lap_pa, nhap_tho
 from tests.test_nghiep_vu import FILE_EXCEL
 from tests.test_nhap_tho import _don_gian, _ghi
 
@@ -34,49 +34,6 @@ def _tra_thu_muc_may():
         os.environ.pop('PABT_THU_MUC_MAY', None)
 
 
-class TestMauIn(unittest.TestCase):
-    def test_mau_khong_chua_du_lieu_co_dinh(self):
-        for ten in ('IN_CHITIET', 'IN_BANGTONGHOP'):
-            ws = openpyxl.load_workbook(in_an.thu_muc_mau() / f'{ten}.xlsx').active
-            chu = '\n'.join(c.value for r in ws.iter_rows() for c in r if isinstance(c.value, str))
-            self.assertIsNone(re.search(r'Vĩnh Cửu|Đồng Nai|CNVC', chu), ten)
-            for k in ('{DON_VI_CAP_TREN', '{DON_VI_TIEU_DE}', '{nguoi_lap}', '{nguoi_ky}', '{CHUC_VU_KY}'):
-                self.assertIn(k, chu, ten)
-
-
-class TestBanInMau(unittest.TestCase):
-    def test_duong_ke_va_thong_tin_mac_dinh(self):
-        import zipfile
-        from pabt import du_an_moi, to_chuc
-        with tempfile.TemporaryDirectory() as td:
-            td = Path(td)
-            p = td / 'a.pabt'
-            du_an_moi.tao_du_an(p, dict(ten='Dự án X', cap_dia_ban='Xã', ten_dia_ban='Bàu Hàm', nam='2026'),
-                                [dict(ho_ten='A', so_to='3', so_thua='12', loai_dat='ONT', dt_thu_hoi='43,7', vi_tri='1')],
-                                [dict(loai_dat='ONT', vi_tri='1', gia='1000000')])
-            con = csdl.mo(p)
-            try:
-                with con:
-                    con.execute("UPDATE du_an SET don_vi_cap_tren = '', don_vi_tieu_de = '', chuc_vu_ky = ''")
-                da = in_an._thong_tin_du_an(con)              # ô trống: dùng thông tin tổ chức mặc định
-                self.assertEqual(da['DON_VI_CAP_TREN_2DONG'], 'TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT\nTHÀNH PHỐ ĐỒNG NAI')
-                self.assertEqual((da['DON_VI_TIEU_DE'], da['CHUC_VU_KY']), ('CHI NHÁNH VĨNH CỬU', 'PHÓ GIÁM ĐỐC'))
-                f = in_an.lap_chi_tiet(con, 1, td / 'ct.xlsx')
-            finally:
-                con.close()
-            ws = openpyxl.load_workbook(f).active                 # file vẫn mở được sau khi chèn hình
-            self.assertEqual((ws['A2'].value, ws['B19'].value),
-                             ('CHI NHÁNH VĨNH CỬU', 'Thửa đất số 12, tờ bản đồ số 3, loại đất ONT, xã Bàu Hàm (Vị trí 1)'))
-            self.assertIn('PHÓ GIÁM ĐỐC', [c.value for r in ws.iter_rows() for c in r])
-            with zipfile.ZipFile(f) as z:
-                dr = [n for n in z.namelist() if n.startswith('xl/drawings/drawing')]
-                self.assertEqual(len(dr), 1)
-                self.assertEqual(z.read(dr[0]).decode('utf-8').count('prst="line"'), 3)
-                self.assertIn('<drawing r:id=', z.read('xl/worksheets/sheet1.xml').decode('utf-8'))
-            self.assertFalse(in_an.chen_duong_ke(f, in_an.thu_muc_mau() / 'IN_CHITIET.duong_ke.xml'))   # không chèn 2 lần
-            self.assertEqual(to_chuc.MAC_DINH['chuc_vu_ky'], 'Phó Giám đốc')
-
-
 class TestDonVi(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -97,7 +54,7 @@ class TestDonVi(unittest.TestCase):
         lap_pa.luu_du_an(con, gt)
         with con:                                                # 0.9.72: ký hiệu theo đợt; cột cũ của dự án vẫn là dự phòng
             con.execute("UPDATE du_an SET ky_hieu_so = 'PA-ABC'")
-        da = in_an._thong_tin_du_an(con)
+        da = du_lieu_in._thong_tin_du_an(con)
         self.assertEqual((da['DON_VI_CAP_TREN'], da['DON_VI_LAP'], da['CHUC_VU_KY'], da['nguoi_ky'], da['ky_hieu_so']),
                          ('TRUNG TÂM X', 'CHI NHÁNH Y', 'PHÓ GIÁM ĐỐC', 'Người Ký', 'PA-ABC'))
         con.close()

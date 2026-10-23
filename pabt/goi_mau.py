@@ -67,7 +67,7 @@ def ds_mau_hien_hanh() -> list:
             for f in sorted(goc.iterdir()):
                 if f.is_file() and _la_mau(f.name):
                     kq.setdefault(f.name, f)
-    for ten in (in_an.TEN_CT, in_an.TEN_BTH):
+    for ten in (in_an.TEN_BTH,):
         try:
             tm = in_an.thu_muc_mau(ten)
         except in_an.LoiIn:

@@ -59,15 +59,6 @@ class TestLuuKhongDocLai(CoSo):
 
 
 class TestInKhongTaoORong(CoSo):
-    def test_do_cho_trong_khong_them_o(self):
-        wb = openpyxl.load_workbook(in_an.file_mau(None, in_an.TEN_CT))
-        ws = wb.worksheets[0]
-        n = len(ws._cells)
-        self.assertIsNotNone(in_an.vi_tri_cho(ws, '{du_an}'))
-        in_an.dien_so_ngay(ws, '12', '01/02/2026')
-        in_an._thay_cho_trong(ws, {'ho_ten': 'A'})
-        in_an.o_tieu_ngu(ws)
-        self.assertEqual(len(ws._cells), n)                          # ws.iter_rows cũ tạo ô rỗng cho mọi vị trí trong vùng sheet
 
     def test_vung_tron_chi_muc_nhu_duyet_het(self):
         f = in_an.lap_bang_tong_hop(self.con, self.td / 'bth.xlsx')

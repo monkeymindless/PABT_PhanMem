@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.19', '23/10/2026', (
+        'Phương án chi tiết CHỈ còn bản Word: bỏ hẳn mẫu Excel IN_CHITIET (mẫu in, mẫu nhúng, mã dựng bản Excel chi tiết). Máy không có '
+        'Microsoft Word: xem trước và PDF là bản gần đúng dựng bằng Qt từ chính file Word (không còn đọc Excel). Bảng tổng hợp vẫn là Excel.',
+        'An toàn dữ liệu in: mọi file Excel xuất ra đi qua một cổng lưu; chữ do người dùng gõ bắt đầu bằng dấu "=" (họ tên, địa chỉ, '
+        'ghi chú…) không còn trở thành công thức Excel (chặn lệnh độc như =HYPERLINK).',
+        'Cài đặt > Giao diện…: mật độ bảng Gọn / Chuẩn / Thoáng và tương phản cao theo Windows.',
+    )),
     ('1.0.18', '23/10/2026', (
         'Sửa mẫu Word phương án chi tiết, bổ sung, điều chỉnh: dòng "CHI NHÁNH …" (đậm, gạch chân) luôn có ở đầu văn bản, kể cả dự án lập '
         'từ file Excel cũ có ô tên đơn vị trên tiêu đề ghi "Thành phố Đồng Nai". Dòng "Số: …" và "địa danh, ngày …" vẫn ngang hàng nhau.',

@@ -108,26 +108,6 @@ class TestBanInTheoHoSo(CoSoMay):
                          [f'=ROUND(V{tong + 1}*85%, -3)', f'=ROUND(V{tong + 1}*15%, -3)'])
         self.assertTrue(str(ws[f'V{tong + 1}'].value).endswith(', -3)'))
 
-    def test_du_thao_tu_che_cccd(self):
-        with self.con:
-            self.con.execute("UPDATE ho SET so_cccd = '075092001234' WHERE ma_ho = 1")
-
-        def chu(f):
-            return ' '.join(str(c.value) for r in openpyxl.load_workbook(f).active.iter_rows() for c in r if c.value is not None)
-        self.assertIn('075092001234', chu(in_an.lap_chi_tiet(self.con, 1, self.td / 'dt.xlsx', du_thao=True)))   # 1.0.04
-        self.assertIn('075092001234', chu(in_an.lap_chi_tiet(self.con, 1, self.td / 'ct.xlsx', du_thao=False)))
-        self.ghi_ho_so({'ban_in': {'che_cccd_ban_du_thao': True}})     # khóa cũ: bỏ qua
-        self.assertIn('075092001234', chu(in_an.lap_chi_tiet(self.con, 1, self.td / 'dt2.xlsx', du_thao=True)))
-
-    def test_nguon_goc_canh_tren(self):
-        ws = self.in_ho('Đất khai phá năm 1995.')
-        r = next(r for r, x, _ in self.dong_nguon_goc(ws) if x)
-        al = ws.cell(r, 1).alignment
-        self.assertEqual((al.horizontal, al.vertical), ('justify', 'center'))     # 1.0.04: mặc định giữa dọc
-        self.ghi_ho_so({'ban_in': {'nguon_goc': {'can_ngang': 'justify', 'can_doc': 'top'}}})
-        ws = self.in_ho('Đất khai phá năm 1995.')
-        r = next(r for r, x, _ in self.dong_nguon_goc(ws) if x)
-        self.assertEqual(ws.cell(r, 1).alignment.vertical, 'top')
 
     def test_to_trinh_can_cu_theo_ho_so(self):
         from pabt import van_ban_trinh as vb
@@ -153,33 +133,6 @@ class TestGoiMau(CoSoMay):
         wb.save(f)
         return f
 
-    def test_xuat_nhap_tren_may_khac(self):
-        self._mau_rieng()
-        self.ghi_ho_so({'ten_ho_so': 'Máy nguồn', 'co_quan': {'ten': 'ĐƠN VỊ NGUỒN'}})
-        ds = goi_mau.tao_goi(self.td / 'goi', mo_ta='thử')
-        self.assertTrue(ds['file'].endswith('.pabtcfg'))
-        ten = {t['ten'] for t in ds['tep']}
-        self.assertIn('pabt_profile.json', ten)
-        self.assertIn('mau_in/IN_CHITIET__Thu nghiem.xlsx', ten)
-        self.assertIn('mau_in/IN_CHITIET.xlsx', ten)
-        self.assertIn('mau_in/IN_BANGTONGHOP.duong_ke.xml', ten)
-        # máy nhận: thư mục máy khác, đang có mẫu riêng cũ -> sao lưu trước khi thay
-        may2 = self.td / 'may2'
-        with mock.patch.dict(os.environ, {'PABT_THU_MUC_MAY': str(may2)}):
-            dia_phuong.nap_lai()
-            self.assertEqual(to_chuc.TEN, 'TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT CHI NHÁNH VĨNH CỬU')
-            cu = goi_mau.thu_muc_mau_cai() / 'IN_CHITIET__Thu nghiem.xlsx'
-            cu.parent.mkdir(parents=True)
-            cu.write_bytes(b'ban cu')
-            dong = goi_mau.mo_ta_goi(goi_mau.doc_goi(ds['file']))
-            self.assertTrue(any('Máy nguồn' in d for d in dong))
-            kq = goi_mau.cai(ds['file'])
-            self.assertTrue(kq['ho_so'])
-            self.assertEqual(to_chuc.TEN, 'ĐƠN VỊ NGUỒN')                            # hồ sơ áp dụng ngay, không mở lại phần mềm
-            self.assertEqual(openpyxl.load_workbook(cu).active['A1'].value, '{ho_ten}')
-            self.assertEqual((kq['sao_luu'] / 'mau_in' / cu.name).read_bytes(), b'ban cu')
-            self.assertTrue((may2 / 'pabt_profile.json').exists())
-        dia_phuong.nap_lai()
 
     def _goi_sua(self, sua) -> Path:
         ds = goi_mau.tao_goi(self.td / 'goc.pabtcfg')
@@ -210,7 +163,7 @@ class TestGoiMau(CoSoMay):
             goi_mau.doc_goi(self._goi_sua(them_exe))
 
         def co_macro(n, du, danh, zo):
-            if n == 'mau_in/IN_CHITIET.xlsx':
+            if n == 'mau_in/IN_BANGTONGHOP.xlsx':
                 import hashlib
                 b = io.BytesIO()
                 with zipfile.ZipFile(io.BytesIO(du)) as zi, zipfile.ZipFile(b, 'w') as zw:

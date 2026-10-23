@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from pabt import du_lieu_in
 from pabt import an_toan, ban_quyen, csdl
 from tests.test_toc_do import _du_an
 
@@ -159,7 +160,7 @@ class TestGiaoDien(CoSo):
 
     def test_cua_so_ban_quyen_luu_trang_thai_che_cccd(self):
         import pabt
-        from pabt import app as ud, in_an
+        from pabt import app as ud
         w = ud.CuaSoChinh(menu_trai=True)
         self.addCleanup(w.close)
         if not pabt.BAN_THU_NGHIEM:                                         # bản phát hành: nhãn gói bản quyền thay "BẢN THỬ NGHIỆM"
@@ -188,7 +189,7 @@ class TestGiaoDien(CoSo):
         self.assertFalse(d.o_che_cccd.isChecked())
         self.assertTrue(d.o_che_cccd.isHidden())
         self.assertFalse(hasattr(d, '_luu_che_cccd'))
-        tt = in_an._thong_tin_ho(w.con, ma, in_an._thong_tin_du_an(w.con), True)    # che=True cũ: bỏ qua
+        tt = du_lieu_in._thong_tin_ho(w.con, ma, du_lieu_in._thong_tin_du_an(w.con), True)    # che=True cũ: bỏ qua
         self.assertEqual(tt['cccd'], '075092001234 - Ngày cấp: 01/01/2021')
         from pabt import van_ban_trinh
         _, dong = van_ban_trinh.du_lieu(w.con, [ma])

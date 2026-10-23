@@ -65,16 +65,10 @@
     },
     "nguon_goc": {"can_ngang": "justify", "can_doc": "center", "thut_dau_cm": 1.0, "thut_dau_nbsp": 8},
     "le_trang": {
-      "chi_tiet": {"top": 0.394, "bottom": 0.315, "left": 0.315, "right": 0.118, "header": 0.20, "footer": 0.20},
       "tong_hop": {"top": 0.5906, "bottom": 0.5906, "left": 0.7874, "right": 0.3937, "header": 0.20, "footer": 0.20}
     }
   },
   "mau_in": {
-    "IN_CHITIET": {
-      "chu_dau_bang": "STT",
-      "cot": {"stt": "A", "ten": "B", "dvt": "C", "so_luong": "D", "don_gia": "E", "ty_le": "F", "thanh_tien": "G", "ghi_chu": "H"},
-      "cot_loai_dong": "AD"
-    },
     "IN_BANGTONGHOP": {
       "dong_du_lieu_dau": 13,
       "cot": {

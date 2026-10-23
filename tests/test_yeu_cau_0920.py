@@ -65,39 +65,6 @@ class TestMauIn(unittest.TestCase):
     def tearDown(self):
         self.td.cleanup()
 
-    def test_file_chi_mot_sheet(self):
-        # trước đây: "File Excel không có sheet IN_BANGTONGHOP" khi file chỉ có mẫu chi tiết
-        tao = in_an.tao_mau_tu_excel(MAU / 'IN_CHITIET.xlsx', self.d / 'ra')
-        self.assertEqual([p.name for p in tao if p.suffix == '.xlsx'], ['IN_CHITIET.xlsx'])
-        tao = in_an.tao_mau_tu_excel(MAU / 'IN_BANGTONGHOP.xlsx', self.d / 'ra')
-        self.assertEqual([p.name for p in tao if p.suffix == '.xlsx'], ['IN_BANGTONGHOP.xlsx'])
-        in_an.tao_mau_tu_excel(MAU / 'IN_CHITIET.xlsx', self.d / 'ra')                  # thay lần 2: mẫu cũ chép vào cu\
-        self.assertEqual(len(list((self.d / 'ra' / 'cu').glob('IN_CHITIET_*.xlsx'))), 1)
-
-    def test_mau_rieng_ten_sheet_khac_va_chon_khi_in(self):
-        wb = openpyxl.load_workbook(MAU / 'IN_CHITIET.xlsx')
-        wb.worksheets[0].title = 'Du thao'
-        wb.worksheets[0]['A3'] = 'Số:      /{ky_hieu_so}\n(DỰ THẢO)'
-        f = self.d / 'mau_du_thao.xlsx'
-        wb.save(f)
-        tao = in_an.tao_mau_tu_excel(f, self.d, ten_mau='Dự thảo')
-        rieng = self.d / 'IN_CHITIET__Dự thảo.xlsx'
-        self.assertIn(rieng, tao)
-        self.assertEqual(openpyxl.load_workbook(rieng).sheetnames, ['IN_CHITIET'])
-        con_td = tempfile.TemporaryDirectory()
-        con = csdl.mo(_du_an(Path(con_td.name), 3))
-        try:
-            from unittest import mock
-            with mock.patch.object(in_an, 'thu_muc_mau', return_value=self.d), \
-                    mock.patch.object(in_an, 'thu_muc_mau_ghi', return_value=self.d):
-                ds = in_an.ds_mau(in_an.TEN_CT)
-                self.assertEqual([t for t, _ in ds], ['Mẫu chính', 'Dự thảo'])
-                ma = con.execute('SELECT MIN(ma_ho) FROM ho').fetchone()[0]
-                p = in_an.lap_chi_tiet(con, ma, self.d / 'ra.xlsx', ds[1][1])
-            self.assertIn('DỰ THẢO', str(openpyxl.load_workbook(p).worksheets[0]['A3'].value))
-        finally:
-            con.close()
-            con_td.cleanup()
 
     def test_khong_nhan_ra_thi_hoi(self):
         wb = openpyxl.Workbook()                                          # mẫu đã sửa nhưng có dấu hiệu của cả hai loại

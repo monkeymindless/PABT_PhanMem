@@ -14,6 +14,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
+from . import du_lieu_in
 from . import an_toan as _an_toan
 from . import lan_pa, nghiep_vu
 from .tien import D, KHONG, lam_tron
@@ -63,15 +64,14 @@ class _SoLieuHo:
         self.thua = []
         for t in bc.thua_cua(ma_ho):
             nn, lua, o, pnn = in_an._dt_thua_bth(pa, t['ma_thua'])
-            dt = in_an.dien_tich_dong_dat(KHONG, t)
+            dt = du_lieu_in.dien_tich_dong_dat(KHONG, t)
             self.thua.append(dict(so_to=t.get('so_to', ''), so_thua=t.get('so_thua', ''), loai_dat=t.get('loai_dat', ''),
                                   dt=dt, nn=nn, lua=lua, o=o, pnn=pnn))
 
 
 def _ho_ten_dia_chi(con, ma_ho: int) -> tuple:
-    from . import in_an
-    da = in_an._thong_tin_du_an(con)
-    tt = in_an._thong_tin_ho(con, ma_ho, da)
+    da = du_lieu_in._thong_tin_du_an(con)
+    tt = du_lieu_in._thong_tin_ho(con, ma_ho, da)
     ten = ' '.join(str(tt.get('ho_ten') or '').split())
     dia_chi = ' '.join(str(tt.get('dia_chi') or '').split())
     return ten, dia_chi, str(tt.get('tai_dinh_cu') or '').strip()
@@ -96,7 +96,7 @@ def lap(con, file_ra, ds_ma_ho=None, du_thao: bool | None = None, so_pa: str = '
     if not ds:
         raise LoiNhap('Chưa có hộ nào có phương án điều chỉnh để lập bảng tổng hợp điều chỉnh.')
     bc = nghiep_vu.BoiCanh.tu(con)
-    da = in_an._thong_tin_du_an(con)
+    da = du_lieu_in._thong_tin_du_an(con)
     n_cot = len(TIEU_DE_COT)
 
     # ---- số liệu: lần cũ (bị thay) / lần điều chỉnh từng hộ + quyết định gốc

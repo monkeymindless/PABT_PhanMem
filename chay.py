@@ -205,7 +205,7 @@ def tu_kiem(file_ra=None) -> int:
         from PySide6.QtWidgets import QApplication
         QApplication.instance() or QApplication([])                 # in_an đo chữ bằng Qt
         import openpyxl
-        from pabt import du_an_moi, du_toan, in_an, nhap_tho, van_ban_trinh
+        from pabt import du_an_moi, du_toan, nhap_tho, van_ban_trinh
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
             dong = [dict(ho_ten=f'Nguyễn Văn Thử {i}', dia_chi='Ấp 1', so_to='10', so_thua=str(100 + i), loai_dat=l,
@@ -219,8 +219,9 @@ def tu_kiem(file_ra=None) -> int:
                 kq = van_ban_trinh.xuat_bo_ho_so(con, ds, td / 'ho_so', to_trinh=True)
                 if kq['loi']:
                     raise RuntimeError(f'xuất hồ sơ lỗi: {kq["loi"][:2]}')
-                # phương án chi tiết xuất bản Word (22/10/2026); bản Excel mẫu IN_CHITIET còn dùng dựng PDF dự phòng khi thiếu Word
-                kq['excel'].append(in_an.lap_chi_tiet(con, ds[0], td / 'du_phong.xlsx'))
+                # phương án chi tiết chỉ còn bản Word; PDF dự phòng (máy không có Word) dựng bằng Qt từ chính file .docx
+                from pabt import docx_sang_pdf
+                kq['pdf'].append(docx_sang_pdf.xuat_pdf_tu_docx(kq['word'][0], td / 'du_phong.pdf'))
                 du_toan.xuat_khai_toan(du_toan.tu_du_an(con), td / 'khai_toan.xlsx')
             finally:
                 con.close()
@@ -231,7 +232,7 @@ def tu_kiem(file_ra=None) -> int:
             nh = nhap_tho.nhap(td / 'tho.xlsx', td / 'nhap.pabt', 'Nhập thử')
             so_ho_nhap = getattr(nh, 'so_ho', None)
         return (f'dự án mới {bc["so_ho"]} hộ, {bc["so_ho_co_pa"]} hộ có phương án; {len(kq["excel"])} file Excel + '
-                f'{len(kq["word"])} file Word (chi tiết, bảng tổng hợp, tờ trình); khái toán; nhập Excel'
+                f'{len(kq["word"])} file Word (chi tiết, tờ trình) + PDF dự phòng từ Word; khái toán; nhập Excel'
                 + (f' {so_ho_nhap} hộ' if so_ho_nhap is not None else ''))
 
     def nhom_5_6():
