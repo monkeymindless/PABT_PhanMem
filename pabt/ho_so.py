@@ -90,7 +90,7 @@ _RE_CAP_XA = re.compile(r'^(xa|phuong|thi tran|dac khu|p\.?|x\.?|tt\.?)\s+')
 
 def rut_gon_dia_chi(dia_chi: str, ten_dia_ban: str) -> str:
     """Địa chỉ hiển thị gọn trên danh sách hộ (người dùng 13/10/2026): bỏ đoạn xã / phường trùng địa bàn dự án và các cấp sau nó
-    ("Ấp 1, xã Trị An, huyện Vĩnh Cửu, tỉnh Đồng Nai" + địa bàn "Trị An" -> "Ấp 1"). Xã / phường khác, hoặc chỉ có một đoạn: giữ
+    ("Ấp 1, xã A, huyện B, tỉnh C" + địa bàn "A" -> "Ấp 1"). Xã / phường khác, hoặc chỉ có một đoạn: giữ
     nguyên (địa chỉ đầy đủ ở chú thích của ô)."""
     chu = ' '.join(str(dia_chi or '').split())
     xa = _RE_CAP_XA.sub('', bo_dau(ten_dia_ban or '').strip())

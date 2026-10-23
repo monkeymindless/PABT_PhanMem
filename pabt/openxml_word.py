@@ -210,7 +210,7 @@ def mau_khung() -> tuple:
     w = rong_vung()
     r1, r2 = w * 45 // 100, w - w * 45 // 100
     dau = bang([
-        hang([o(doan(chay('{don_vi_cap_tren}', co=13), can='center') + doan_gach_ho('{don_vi_tieu_de}', rong_chu('CHI NHÁNH VĨNH CỬU', 13, True), r1), r1, doc='top', vien=False),
+        hang([o(doan(chay('{don_vi_cap_tren}', co=13), can='center') + doan_gach_ho('{don_vi_tieu_de}', rong_chu('CHI NHÁNH TÊN ĐƠN VỊ', 13, True), r1), r1, doc='top', vien=False),
               o(doan(chay('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', dam=True, co=13), can='center') +
                 doan_gach_ho('Độc lập - Tự do - Hạnh phúc', rong_chu('Độc lập - Tự do - Hạnh phúc', 14, True), r2, co=14), r2, doc='top', vien=False)]),
         hang([o(doan(chay('Số: {so_pa}/{ky_hieu_so}', co=13), can='center', truoc=120), r1, doc='top', vien=False),
