@@ -2103,6 +2103,24 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.27 NHẬP DANH SÁCH HỘ, THỬA TỪ EXCEL / PDF / ẢNH (người dùng 24/10/2026: file "TỔNG CẬP NHẬT" báo không có dòng hộ; muốn đọc .xls, PDF ký / chưa ký, ảnh;
+  test `tests/test_nhap_nhieu_loai.py`, `tests/mau_xls.py`, `tests/pdf_tay.py` tạo file giả lập - KHÔNG dùng số liệu thật):
+  - Đường ống mới: mọi file -> `nguon_luoi.Nguon` (lưới ô: sheet / trang) -> `nhap_tho.doc(file, bo_cot=None, nguons=None, bao_tien_do=None, cho=None, scan=False)`
+    (`doc_nguon`) tự nhận tiêu đề / cột (`ung_vien` nhiều ứng viên bảng; `suy_cot`: regex `MAU_COT` + so gần đúng cho chữ OCR + đoán theo nội dung ô;
+    chế độ nới lỏng `_phan_tich(long=True)`; hộ tạm "Hộ tờ X thửa Y" khi không có cột họ tên; cột Tờ/Thửa chung một ô; file không có dòng tiêu đề)
+    -> `KetQuaDoc` (ho, thua, loi, thong_bao, da_bo, bo_cot, loai) -> `du_an_moi.dong_tu_excel/dong_tu_ket_qua` -> bảng thô HopDuAnMoi (nút
+    "Nhập từ file (Excel, PDF, ảnh)…" + "Chỉnh cột…" = `man_hinh_ghep_cot.HopGhepCot`, tự mở khi không nhận được cột).
+  - `doc_xls.py`: đọc .xls (OLE2 / BIFF8) bằng Python thuần (SST + CONTINUE - chuỗi bị cắt giữa chừng đọc cờ mã hóa lại, ô gộp, định dạng ngày); lỗi / máy có
+    Excel -> `nhap_don_gia.chuyen_office(thu_muc=)` chuyển sang .xlsx. Công thức chưa có giá trị đã lưu: giải tham chiếu đơn giản, hoặc nhờ Excel tính lại.
+  - PDF có chữ: QtPdf `getAllText(page).bounds()` + `getSelection` lấy chữ từng ô theo VỊ TRÍ THẬT (~1 s / trang); ô MỘT ký tự (số thứ tự, thửa "7") chọn
+    theo vùng thường ra rỗng -> thử y khác rồi `_ky_tu_trang` (getSelectionAtIndex từng ký tự, chỉ dựng khi cần). Qt5: pypdf layout (`luoi_tu_layout`).
+    Scan / ảnh: `ocr` Tesseract `--psm 4` (bảng có khung) rồi psm 6, `ocr.gom_hang`, `_tu_ocr_sach` tách nét kẻ "|" / J khỏi chữ; ảnh PNG trong suốt dán lên nền trắng.
+  - Chia cột: khoảng trắng dọc chung của các hàng số liệu (`luoi_tu_doan`, `_ranh_cot`), `_hop_nhat_cot_thua` bỏ ranh cắt giữa ô chữ dài (đòi chữ thẳng hàng).
+    Ô xuống nhiều dòng: `nhap_tho._gom_nhom_stt` (cột STT làm điểm neo hộ; chế độ căn giữa / căn trên; dòng thửa thứ 2 trở đi nối chữ họ tên / địa chỉ về dòng
+    đầu của hộ), không có cột STT: `_dong_du_lieu` nhánh `ban_ghi` (tren / duoi). Tiêu đề lặp ở trang sau và chữ ký cuối bảng bị bỏ (`da_bo`).
+  - Chưa tái hiện được file thật gây lỗi "TỔNG CẬP NHẬT: không có dòng hộ nào dưới tiêu đề (dòng 2)": đã xử lý các nguyên nhân có thể (công thức chưa tính,
+    nhiều bảng / sheet, cột trống, dòng tiêu đề đứng một mình) và thông báo chẩn đoán chỉ rõ sheet / dòng / lý do; người dùng thử lại bằng "Chỉnh cột…".
+  - Test đo bằng phông offscreen: ảnh scan giả lập dựng bằng Qt từ PDF tay (`pdf_tay.bang_pdf`), cần Tesseract đóng kèm (không có -> bỏ qua TestScan).
 - 1.0.26 BÁN CHO ĐƠN VỊ KHÁC (người dùng 24/10/2026): (1) `co_quan.ten_phan_mem` (hồ sơ; `to_chuc.TEN_PHAN_MEM`; dòng 1 băng tiêu đề `banner_ten.lb_ten`,
   `giao_dien.TEN_PHAN_MEM` chỉ còn là mặc định; ô ở Cấu hình nghiệp vụ > Cơ quan; `_lam_moi_don_vi` đặt lại chữ); `thong_bao.TEN_UD` "LARC" / tiêu đề cửa sổ / hộp thoại VẪN cố
   định trong mã. (2) Hồ sơ TRUNG TÍNH `pabt/pabt_profile_trung_tinh.json` do `tao_ho_so_trung_tinh.py` sinh từ pabt_profile.json (xóa tên cơ quan / cấp trên / địa chỉ / ký hiệu

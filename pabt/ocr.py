@@ -162,9 +162,10 @@ def san_sang() -> str:
             'Excel, Word thay bản scan.')
 
 
-def gom_dong(tu: list, he_so: float = 0.6) -> list:
-    """[(x, y, rộng, cao, chữ)] các từ -> dòng chữ: từ có tâm dọc cách tâm hàng < he_so x chiều cao chữ là cùng hàng (bảng giá nhiều
-    cột), trong hàng xếp theo x."""
+def gom_hang(tu: list, he_so: float = 0.6) -> list:
+    """[(x, y, rộng, cao, chữ)] các từ -> các hàng ngang (từ trên xuống): mỗi hàng [(x, x cuối, cao, chữ)] xếp theo x. Từ có tâm dọc
+    cách tâm hàng < he_so x chiều cao chữ là cùng hàng (bảng giá nhiều cột). Dùng cho nhập danh sách hộ từ bản scan (vị trí từng từ
+    để chia cột bảng)."""
     hang = []                                           # [[tâm y, cao, [từ]]]
     for x, y, w, h, t in sorted(tu, key=lambda a: (a[1] + a[3] / 2, a[0])):
         tam = y + h / 2
@@ -175,16 +176,21 @@ def gom_dong(tu: list, he_so: float = 0.6) -> list:
                 break
         else:
             hang.append([tam, h, [(x, w, h, t)]])
+    return [[(x, x + w, h, t) for x, w, h, t in sorted(hg[2])] for hg in sorted(hang, key=lambda a: a[0])]
+
+
+def gom_dong(tu: list, he_so: float = 0.6) -> list:
+    """[(x, y, rộng, cao, chữ)] các từ -> dòng chữ (gom_hang), trong hàng xếp theo x."""
     kq = []
-    for hg in sorted(hang, key=lambda a: a[0]):
+    for hg in gom_hang(tu, he_so):
         # 0.9.95: khoảng trống ngang > CACH_COT x chiều cao chữ = sang cột kế của bảng -> nối bằng Tab (giữ cấu trúc cột "Tên \t ĐVT
         # \t Số lượng \t Đơn giá \t Tỷ lệ \t Thành tiền" cho bóc tách bảng phương án chi tiết / bảng giá)
         chu, cuoi = '', None
-        for x, w, h, t in sorted(hg[2]):
+        for x, x_cuoi, h, t in hg:
             if cuoi is not None:
                 chu += '\t' if x - cuoi > CACH_COT * max(h, 1) else ' '
             chu += t
-            cuoi = x + w
+            cuoi = x_cuoi
         kq.append(chu)
     return kq
 
@@ -290,6 +296,14 @@ def _chuan_bi(anh: Path, td: Path | None = None, he_so: float = 1.0) -> Path:
     im = QImage(str(anh))
     if im.isNull():
         return anh
+    if im.hasAlphaChannel():                                     # PNG nền trong suốt (ảnh xuất từ phần mềm): đặt lên nền trắng, không thì chữ đen trên đen
+        from PySide6.QtGui import QPainter
+        nen = QImage(im.size(), QImage.Format.Format_RGB32)
+        nen.fill(0xFFFFFFFF)
+        pt = QPainter(nen)
+        pt.drawImage(0, 0, im)
+        pt.end()
+        im = nen
     im = im.convertToFormat(QImage.Format.Format_Grayscale8)     # xám TRƯỚC khi phóng: 1 byte / điểm ảnh thay 4 (nhanh ~3 lần)
     if he_so > 1:
         im = im.scaled(int(im.width() * he_so), int(im.height() * he_so), Qt.AspectRatioMode.KeepAspectRatio,
@@ -327,9 +341,9 @@ def _xoay(anh: Path, do: int) -> None:
 
 
 # ---------------------------------------------------------------- nhận dạng
-def _doc_tsv(tess: Path, anh: Path, du_lieu: list, cho=None) -> list:
+def _doc_tsv(tess: Path, anh: Path, du_lieu: list, cho=None, psm: int = 6) -> list:
     try:
-        r = _chay([str(tess), str(anh), '-', *du_lieu, '-l', 'vie', '--psm', '6', 'tsv'], cho)
+        r = _chay([str(tess), str(anh), '-', *du_lieu, '-l', 'vie', '--psm', str(psm), 'tsv'], cho)
     except OSError as e:
         raise LoiOCR(san_sang() or f'Không chạy được Tesseract: {e}') from e
     if r.returncode != 0:
@@ -337,7 +351,7 @@ def _doc_tsv(tess: Path, anh: Path, du_lieu: list, cho=None) -> list:
     return tu_tsv(r.stdout.decode('utf-8', 'replace'))
 
 
-def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = None) -> str:
+def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = None, tra_ve: str = 'chu', psm: int = 6):
     """Chữ trên một ảnh trang bằng Tesseract (trang nằm ngang tự xoay lại trước khi đọc): mỗi hàng ngang một dòng, cột cách Tab.
     Đọc ảnh xám nguyên cỡ; chữ nhỏ thì phóng theo chiều cao chữ đo được (he_so_phong) rồi đọc lại."""
     tess = tess or tim_tesseract()
@@ -357,18 +371,20 @@ def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = Non
         raise
     except OSError:
         pass                                            # thiếu osd.traineddata: đọc nguyên chiều
-    tu = _doc_tsv(tess, anh, du_lieu, cho)
+    tu = _doc_tsv(tess, anh, du_lieu, cho, psm)
     k = he_so_phong(tu, _canh_ngan(anh))
     if k > 1.15 and anh != goc:
         lon = _chuan_bi(anh, td, k)
         if lon != anh:
-            tu_lon = _doc_tsv(tess, lon, du_lieu, cho)
+            tu_lon = _doc_tsv(tess, lon, du_lieu, cho, psm)
             if len(''.join(t[4] for t in tu_lon)) >= len(''.join(t[4] for t in tu)) * 0.8:   # phóng mà đọc được ít hơn hẳn: giữ lần đầu
                 tu = tu_lon
+    if tra_ve == 'hang':                                # từng từ kèm vị trí (nhập danh sách hộ từ bản scan: chia cột bảng)
+        return gom_hang(tu)
     return '\n'.join(gom_dong(tu))
 
 
-def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
+def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = 'chu', psm: int = 6):
     """Đọc từng trang rồi xóa ảnh trang (không dựng hết file trước — file lớn không chiếm bộ nhớ). Yield chữ từng trang."""
     may, tess = may_doc()
     if not may:
@@ -381,7 +397,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
                 bao_tien_do(1, 1)
             if cho and cho():
                 raise DaHuy()
-            yield doc_anh(file, tess, cho, td)
+            yield doc_anh(file, tess, cho, td, tra_ve, psm)
             return
         try:
             from PySide6.QtPdf import QPdfDocument
@@ -407,7 +423,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
                     if anh.isNull() or not anh.save(str(p)):
                         continue
                     try:
-                        yield doc_anh(p, tess, cho, td)
+                        yield doc_anh(p, tess, cho, td, tra_ve, psm)
                     finally:
                         try:
                             p.unlink()
@@ -424,7 +440,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI):
             if p is None:
                 continue
             try:
-                yield doc_anh(p, tess, cho, td)
+                yield doc_anh(p, tess, cho, td, tra_ve, psm)
             finally:
                 try:
                     p.unlink()

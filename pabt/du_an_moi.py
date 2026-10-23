@@ -38,9 +38,15 @@ def _gon(v) -> str:
     return ' '.join(str(v if v is not None else '').split())
 
 
-def dong_tu_excel(file_excel) -> tuple:
-    """Đọc file Excel bất kỳ (tự nhận cột) thành các dòng thô. Trả (dòng, KetQuaDoc)."""
-    kq = nhap_tho.doc(file_excel)
+def dong_tu_excel(file_excel, bo_cot=None, nguons=None, bao_tien_do=None, cho=None, scan: bool = False) -> tuple:
+    """Đọc file bất kỳ (Excel .xlsx / .xls, PDF, ảnh scan, Word, CSV; tự nhận cột) thành các dòng thô. Trả (dòng, KetQuaDoc).
+    bo_cot: cách ghép cột do người dùng chọn (hộp Chỉnh cột); nguons: các nguồn đã đọc sẵn (khỏi đọc / nhận dạng lại)."""
+    kq = nhap_tho.doc(file_excel, bo_cot, nguons, bao_tien_do, cho, scan)
+    return dong_tu_ket_qua(kq), kq
+
+
+def dong_tu_ket_qua(kq) -> list:
+    """KetQuaDoc (nhap_tho.doc) -> các dòng thô, mỗi dòng một thửa (hộ chưa có thửa: một dòng riêng)."""
     dong = []
     ho = {h['ma_ho']: h for h in kq.ho}
     co_thua = set()
@@ -58,7 +64,7 @@ def dong_tu_excel(file_excel) -> tuple:
             dong.append(dict(ho_ten=h['ho_ten'], dia_chi=h['dia_chi'], so_cccd=h['so_cccd'], ngay_cap=h['ngay_cap'],
                              noi_cap=h['noi_cap'], dien_thoai=h['dien_thoai'],
                              nhan_khau=h.get('nhan_khau', ''), ghi_chu='; '.join(h['ghi_chu'])))
-    return dong, kq
+    return dong
 
 
 def gom(dong: list) -> tuple:

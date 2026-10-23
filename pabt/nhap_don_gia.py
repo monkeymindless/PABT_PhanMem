@@ -198,11 +198,12 @@ End If
 '''
 
 
-def chuyen_office(p, loai: str = '') -> Path:
-    """File Word / Excel 97-2003 (.doc / .xls) -> .docx / .xlsx cạnh file gốc, nhờ Microsoft Word / Excel trên máy."""
+def chuyen_office(p, loai: str = '', thu_muc=None) -> Path:
+    """File Word / Excel 97-2003 (.doc / .xls) -> .docx / .xlsx cạnh file gốc (hoặc trong thu_muc), nhờ Microsoft Word / Excel trên
+    máy. Excel mở xong lưu lại nên công thức được tính lại (file .xlsx tạo bằng công cụ khác chưa có giá trị đã lưu)."""
     p = Path(p).resolve()
     loai = loai or loai_that(p) or p.suffix.lower()
-    dich = p.with_name(p.stem + ('_chuyen.docx' if loai == '.doc' else '_chuyen.xlsx'))
+    dich = (Path(thu_muc) if thu_muc else p.parent) / (p.stem + ('_chuyen.docx' if loai == '.doc' else '_chuyen.xlsx'))
     if dich.exists() and dich.stat().st_mtime >= p.stat().st_mtime:
         return dich
     ten = 'Word' if loai == '.doc' else 'Excel'

@@ -1083,6 +1083,19 @@ sửa theo quy định).
 
 Không cần mở cửa sổ: kéo file Excel thả vào **NHAP_EXCEL.bat**.
 
+### Dự án mới: nhập danh sách từ Excel, PDF, ảnh (từ 1.0.27)
+
+Bước 2 của **Dự án mới** có nút **Nhập từ file (Excel, PDF, ảnh)…**. Chọn một hoặc nhiều file:
+
+- **Excel** `.xlsx`, `.xlsm`, `.xls` (cả định dạng Excel 97-2003): đọc mọi sheet, chọn bảng có nhiều hộ thửa nhất. Ô công thức chưa có giá trị được tính lại.
+- **PDF có chữ** (văn bản đã ký hoặc chưa ký): chia cột theo vị trí thật của từng ô chữ; ô xuống nhiều dòng được nối về đúng hộ, tiêu đề lặp lại ở các trang sau và phần chữ ký cuối bảng được bỏ.
+- **PDF scan, ảnh** `.png`, `.jpg`, `.tif`, `.bmp`: nhận dạng chữ bằng Tesseract đóng kèm (chậm hơn, khoảng 1-3 giây mỗi trang), nét kẻ khung bảng không thành chữ.
+
+Phần mềm tự nhận cột theo tên (không phân biệt dấu, chịu được chữ nhận dạng sai nhẹ) hoặc theo nội dung ô (ví dụ cột toàn ký hiệu loại đất, cột có dạng "tờ/thửa"). Cột nào phần mềm có mà file không có thì bỏ qua; file không có họ tên thì mỗi tờ/thửa là một hộ tạm ("Hộ tờ X thửa Y") để sửa lại sau. Dòng nào bị bỏ (tiêu đề lặp, chữ ký, dòng tổng) được liệt kê trong thông báo.
+
+Nhận cột chưa đúng: bấm **Chỉnh cột…**, chọn lại cột nào là họ tên, địa chỉ, tờ, thửa, diện tích thu hồi, loại đất… rồi **Đọc lại**. Bản scan nên chụp thẳng, rõ nét; nếu kết quả sai nhiều, xuất lại PDF từ Excel gốc sẽ chính xác hơn.
+
+
 ### Nhập phương án chi tiết đã lập bằng Excel (mỗi sheet một hộ)
 
 Dùng khi đã có file Excel áp giá kiểu bản in **PHƯƠNG ÁN CHI TIẾT** (mỗi sheet một hộ: Họ và tên, Số CCCD, Địa chỉ, Số điện

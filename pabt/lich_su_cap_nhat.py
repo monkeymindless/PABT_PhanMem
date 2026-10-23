@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.27', '24/10/2026', (
+        'Dự án mới - nhập danh sách hộ, thửa: đọc được file Excel .xlsx và .xls (cũ), PDF có chữ (văn bản đã ký hay chưa ký), PDF scan và ảnh '
+        '(.png, .jpg…). Phần mềm tự tìm bảng, dòng tiêu đề, nhận cột theo tên (kể cả tên viết sai do nhận dạng chữ) hoặc theo nội dung ô; '
+        'cột nào phần mềm có mà file không có thì bỏ qua. Ô xuống nhiều dòng, tiêu đề lặp lại ở trang sau, chữ ký cuối bảng được xử lý.',
+        'Không nhận được cột: hộp "Chỉnh cột…" cho chọn cột nào là họ tên, tờ, thửa, diện tích… và cho biết đã bỏ những dòng nào; '
+        'file chỉ có tờ, thửa (không có họ tên) vẫn nhập được thành hộ tạm.',
+    )),
     ('1.0.26', '24/10/2026', (
         'Dùng cho nhiều đơn vị: tên phần mềm ở dòng 1 băng tiêu đề đổi được (Cài đặt > Cấu hình nghiệp vụ > Cơ quan > "Tên phần mềm"); có bản hồ sơ địa '
         'phương TRUNG TÍNH (không có tên đơn vị, địa phương, căn cứ pháp lý của nơi nào) để đóng vào bộ cài bán cho đơn vị khác (DUNG_BAN_TRUNG_TINH.bat).',

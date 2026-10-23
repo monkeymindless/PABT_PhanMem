@@ -133,11 +133,15 @@ class HopDuAnMoi(QDialog):
         w = QWidget()
         lo = QVBoxLayout(w)
         hang = QHBoxLayout()
-        for ten, ham in (('Nhập file Excel thô…', lambda: self.nap_excel()), ('Thêm dòng', lambda: self.them_dong()),
-                         ('Xóa dòng', lambda: self.xoa_dong())):
+        for ten, ham in (('Nhập từ file (Excel, PDF, ảnh)…', lambda: self.nap_excel()), ('Chỉnh cột…', lambda: self.chinh_cot()),
+                         ('Thêm dòng', lambda: self.them_dong()), ('Xóa dòng', lambda: self.xoa_dong())):
             b = QPushButton(ten)
             b.clicked.connect(ham)
             hang.addWidget(b)
+            if ten.startswith('Chỉnh cột'):
+                self.b_chinh_cot = b
+                b.setEnabled(False)
+                b.setToolTip('Chọn lại bảng, dòng bắt đầu và cột họ tên, tờ, thửa, diện tích… của file vừa nhập')
         hang.addStretch(1)
         # 1.0.04: ô lọc nhanh + đếm dòng cần xem lại (thiếu tờ / thửa, sai loại đất - tô vàng ngay trên bảng)
         self.lb_kiem_tho = QLabel('')
@@ -166,6 +170,7 @@ class HopDuAnMoi(QDialog):
         gan_o_loc_bang(self.bang_tho, self.o_tim_tho)
         self.bang_tho.itemChanged.connect(lambda it: self.kiem_tra_dong_tho(it.row()))
         self.lb_tho = QLabel('Vùng dữ liệu thô (riêng, không thuộc vùng đơn giá): họ tên, địa chỉ, CCCD, diện tích… lấy từ file Excel '
+                             '(.xlsx, .xls), PDF (văn bản ký hoặc chưa ký) hoặc ảnh scan - tự nhận cột theo tên cột và nội dung, cột file không có thì bỏ qua - '
                              'và sửa được ngay trên bảng. Loại đất, vị trí: nhấp đúp để chọn trong danh sách xổ xuống (hoặc gõ tay). '
                              'Mỗi dòng một thửa; họ tên để trống = thửa tiếp của hộ phía trên. Thửa nhiều loại đất (ONT+CLN): tách '
                              'thành nhiều dòng, mỗi loại một diện tích.')
@@ -173,27 +178,70 @@ class HopDuAnMoi(QDialog):
         lo.addWidget(self.lb_tho)
         return w
 
-    def nap_excel(self, file_excel=None):
+    def nap_excel(self, file_excel=None, bo_cot=None):
+        """Nhập danh sách hộ, thửa từ file Excel (.xlsx, .xls), PDF (có chữ hoặc ảnh scan), ảnh, Word, CSV. Không tự nhận được cột: mở
+        hộp Chỉnh cột để chọn bằng tay. Trả các dòng đã nạp (None: hủy / không đọc được)."""
+        from .nguon_luoi import LOC_MO_FILE
         if file_excel is None:
-            file_excel, _ = QFileDialog.getOpenFileName(self, 'Chọn file Excel danh sách hộ, thửa', '', 'File Excel (*.xlsx *.xlsm)')
+            file_excel, _ = QFileDialog.getOpenFileName(self, 'Chọn file danh sách hộ, thửa (Excel, PDF, ảnh)', '', LOC_MO_FILE)
             if not file_excel:
                 return None
+        from . import ocr
         try:
-            dong, kq = du_an_moi.dong_tu_excel(file_excel)
+            dong, kq = self._doc_file(file_excel, bo_cot)
+        except ocr.DaHuy:
+            return None
         except Exception as e:
             self._bao(QMessageBox.warning, chu_loi('Không đọc được file', e))
+            return None
+        if kq.loi and kq.nguons and not self.im_lang and bo_cot is None:      # không tự nhận được cột: để người dùng chọn bằng tay
+            dong2 = self._ghep_tay(file_excel, kq, ' '.join(kq.loi[:1]))
+            if dong2 is not None:
+                return dong2
             return None
         if kq.loi:
             self._bao(QMessageBox.warning, '\n'.join(kq.loi))
             return None
+        return self._da_doc(file_excel, dong, kq)
+
+    def _doc_file(self, file_excel, bo_cot=None, nguons=None):
+        """du_an_moi.dong_tu_excel; bản scan / PDF nhiều trang: hộp tiến trình có nút Hủy (nhận dạng chữ từng trang)."""
+        from .man_hinh_quan_ly import doc_co_tien_do
+        return doc_co_tien_do(self, du_an_moi.dong_tu_excel, file_excel, bo_cot, nguons)
+
+    def _da_doc(self, file_excel, dong, kq):
         self.dat_dong(dong)
         self.nguon = Path(file_excel).name
+        self._nguon_doc = (file_excel, kq)
+        self.b_chinh_cot.setEnabled(True)
         if not self.o['ten'].text() and kq.tieu_de_bang:
             self.o['ten'].setText(kq.tieu_de_bang)
         from .nhap_tho import mo_ta_cot
-        self.lb_tho.setText(f'Đã lấy {len(dong)} dòng từ {Path(file_excel).name} - nhận cột: {mo_ta_cot(kq.bo_cot)}. '
-                            f'{len(kq.canh_bao)} điểm cần xem lại (sửa ngay trên bảng).')
+        chu = (f'Đã lấy {len(dong)} dòng từ {Path(file_excel).name} - nhận cột: {mo_ta_cot(kq.bo_cot)}. '
+               f'{len(kq.canh_bao)} điểm cần xem lại (sửa ngay trên bảng; "Chỉnh cột…" nếu nhận cột chưa đúng).')
+        if kq.thong_bao:
+            chu += ' Lưu ý: ' + ' '.join(kq.thong_bao)
+        self.lb_tho.setText(chu)
         return dong
+
+    def chinh_cot(self):
+        """Mở hộp Chỉnh cột cho file vừa nhập (chọn lại sheet, dòng bắt đầu, cột)."""
+        if getattr(self, '_nguon_doc', None) is None:
+            return None
+        file_excel, kq = self._nguon_doc
+        return self._ghep_tay(file_excel, kq, '', kq.bo_cot)
+
+    def _ghep_tay(self, file_excel, kq, ly_do: str, bo_cot=None):
+        from .man_hinh_ghep_cot import HopGhepCot
+        hop = HopGhepCot(self, Path(file_excel).name, kq.nguons, bo_cot, ly_do)
+        hop.im_lang = self.im_lang
+        if self.im_lang or hop.exec() != QDialog.DialogCode.Accepted or hop.ket_qua is None:
+            hop.deleteLater()
+            return None
+        kq2 = hop.ket_qua
+        hop.deleteLater()
+        kq2.thong_bao = list(kq.thong_bao) + [x for x in kq2.thong_bao if x not in kq.thong_bao]
+        return self._da_doc(file_excel, du_an_moi.dong_tu_ket_qua(kq2), kq2)
 
     def dat_dong(self, dong):
         self.bang_tho.blockSignals(True)
