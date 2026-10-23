@@ -2103,6 +2103,16 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.23 (người dùng 24/10/2026, đề xuất A-D sau phân tích giao diện in; test `tests/test_yeu_cau_2412.py`): `HopIn` - bố cục trái dựng LẠI (QFormLayout
+  chỉ còn Đợt + Hộ cần in cùng một hàng + Lần PA; `bang_ho` stretch 1, min 200 px; `lb_chon` + `lb_bo_dem` (NhanBoDem, hộp có `cap_nhat_bo_dem` nên
+  `_BoChonVung` không tạo nhãn nổi) dưới bảng; `khung_tai_lieu`; `b_dau_ra` gấp `khung_dau_ra`); `bang_ho` 6 cột (thêm Đợt, Địa chỉ - LEFT JOIN dot_trinh, file cũ
+  thiếu thì dot None), `_MucSap` (UserRole+1 = khóa sắp: STT theo thứ tự dự án, tiền theo số), `_sap_xep(cot)` (tăng -> giảm -> gốc; cột Chọn không sắp),
+  `ds_ho()` LUÔN theo thứ tự dự án (`_stt`) dù bảng đang sắp khác; `_loc` tìm cột 1, 2, 4, 5. Bỏ: b_het / b_bo (`chon_mau` còn cho mã / test), nút
+  "Chọn hộ đã lập" (trùng `cb_pham_vi`), `hang_mau` (nay `b_sua_tt` cạnh ô Tờ trình). `r_in` "Gửi cả lô ra máy in mặc định"; thẻ "Chỉ mở ở Chính thức" của Báo cáo
+  tiếp thu ẩn ở chế độ dự thảo. Nhớ lựa chọn: `_nap_lua_chon` / `_luu_lua_chon` (khóa QSettings `in/…`; KHÔNG nhớ "in ra máy"); offscreen không đọc / ghi.
+  Xem trước: `b_ngang` / `vua_ngang()` / `_he_so_ngang`. Cấu hình nghiệp vụ > "Kiểm tra && bản in": `o_le` {left, right, top, bottom} cm -> `ban_in.le_trang.tong_hop`
+  (inch, 4 số lẻ; header / footer giữ). `in_an.gian_dong_dau_bth(ws)`: dòng 1 = chữ x 1,2 + 2 pt, dòng 2 = chữ x 1,2 + DK_CACH + 5 pt (trước ~26,8 pt mỗi dòng);
+  "(DỰ THẢO)" dòng 3 cao chữ x 1,4.
 - 1.0.22 (người dùng 24/10/2026): XEM TRƯỚC GỘP NHIỀU HỘ ở `HopIn` - nút `b_xem_nhieu` (hàng "Phương án chi tiết" của khung tài liệu) ->
   `xem_truoc_nhieu_ho` (hộ đang đánh dấu, tối đa `man_hinh.XEM_NHIEU_TOI_DA` 30; khóa ('nhieu', hộ, dự thảo, lần)); `xem_truoc_tai_lieu`:
   `yeu_cau(khoa, tao, ...)` nhận `tao(thu_muc)` trả LIST [(file .docx / .xlsx, nhãn)] -> `chuyen_pdf_nhieu` (luồng nền: Word / Excel xuất PDF từng

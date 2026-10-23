@@ -445,6 +445,7 @@ class KhungXemTruocTaiLieu(QFrame):
         self.b_phong = nut('+', 0xE8A3, 'Phóng to', lambda: self.phong_to(1))
         self.b_thu = nut('−', 0xE71F, 'Thu nhỏ', lambda: self.phong_to(-1))
         self.b_vua = nut('Vừa trang', 0xE9A6, 'Hiện trọn một trang trong khung', lambda: self.vua_trang())
+        self.b_ngang = nut('Vừa ngang', 0xE9A6, 'Hiện trang vừa bề ngang khung (chữ to, đọc được; cuộn xuống xem các trang sau)', lambda: self.vua_ngang())
         self.b_truoc = nut('◀', 0xE76B, 'Trang trước', lambda: self.sang_trang(-1))
         self.b_sau = nut('▶', 0xE76C, 'Trang sau', lambda: self.sang_trang(1))
         self.lb_trang = QLabel('0 / 0')
@@ -481,7 +482,7 @@ class KhungXemTruocTaiLieu(QFrame):
         h.setContentsMargins(8, 4, 8, 4)
         nhan = QLabel('Trang')
         nhan.setObjectName('xt_trang')
-        for nhom, phai in (((self.b_phong, self.b_thu, self.b_vua), False), ((nhan, self.b_truoc, self.lb_trang, self.b_sau, self.cb_muc), False),
+        for nhom, phai in (((self.b_phong, self.b_thu, self.b_vua, self.b_ngang), False), ((nhan, self.b_truoc, self.lb_trang, self.b_sau, self.cb_muc), False),
                            ((self.lb_gan_dung, self.b_in_hop, self.b_in), True)):
             cum = QWidget()
             hc = QHBoxLayout(cum)
@@ -635,7 +636,7 @@ class KhungXemTruocTaiLieu(QFrame):
     def _bat_nut(self) -> None:
         n = self.so_trang()
         dang_xem = n > 0 and self.ngan.currentIndex() != 0
-        for b in (self.b_phong, self.b_thu, self.b_vua):
+        for b in (self.b_phong, self.b_thu, self.b_vua, self.b_ngang):
             b.setEnabled(dang_xem)
         i = self.trang_hien_tai()
         self.b_truoc.setEnabled(dang_xem and i > 0)
@@ -684,6 +685,26 @@ class KhungXemTruocTaiLieu(QFrame):
 
     def _he_so_vua(self) -> float:
         return min(self._he_so_vua_goc(), he_so_xem_toi_da())
+
+    def _he_so_ngang(self) -> float:
+        """Hệ số phóng để bề ngang MỘT trang vừa bề ngang khung (như _he_so_vua_goc nhưng không xét bề cao)."""
+        if self.doc is None or self.doc.pageCount() <= 0:
+            return 1.0
+        co = self.doc.pagePointSize(max(0, min(self.trang_hien_tai(), self.doc.pageCount() - 1)))
+        man = QGuiApplication.primaryScreen()
+        dpi = (man.logicalDotsPerInch() if man is not None else 96) / 72
+        return max(0.1, min((self.view.viewport().size().width() - 2 * 12 - 20) / max(1.0, co.width() * dpi), he_so_xem_toi_da()))
+
+    def vua_ngang(self) -> None:
+        """Phóng trang vừa bề ngang khung (khung cao: chữ to hơn "Vừa trang"); đổi cỡ khung thì không tự vừa lại."""
+        if self.view is None or self.so_trang() == 0:
+            return
+        self._vua = False
+        if self.kieu == 'qpdfview':
+            self.view.setZoomFactor(self._he_so_ngang())
+        else:
+            self.view.vua_trang, self.view.he_so = False, self._he_so_ngang()
+            self.view.ve()
 
     def vua_trang(self) -> None:
         if self.view is None:

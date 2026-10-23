@@ -332,7 +332,7 @@ def dat_dau_du_thao(ws, ten: str = TEN_BTH) -> None:
                 if c2 > c1:
                     _gop_o(ws, r, c1, r, c2)
                 rd = ws.row_dimensions[r]
-                rd.height = max(float(rd.height or 15), _phong(goc)[1] * 1.6)
+                rd.height = max(float(rd.height or 15), _phong(goc)[1] * 1.4)
                 return
         tieu = next((o for o in o_list if 'BẢNG TỔNG HỢP' in o.value.upper()), None)
         if tieu is not None:
@@ -1442,6 +1442,14 @@ def dat_kho_a3(ws, ti_le: int = TI_LE_BTH) -> None:
     ws.page_setup.scale = int(ti_le)
 
 
+def gian_dong_dau_bth(ws) -> None:
+    """Giãn dòng phần đầu bảng tổng hợp (người dùng 24/10/2026: "kiểm tra lại độ giãn dòng"): dòng 1 (cơ quan chủ quản) sát chữ,
+    dòng 2 ("CHI NHÁNH …" + đường kẻ cách chữ DK_CACH) vừa đủ chỗ kẻ - trước đây cả hai cao ~1,9 lần cỡ chữ."""
+    co = _phong(ws.cell(1, 1))[1]
+    ws.row_dimensions[1].height = round(cao_dong_chu(1, co) + 2, 1)
+    ws.row_dimensions[2].height = round(cao_dong_chu(1, co) + DK_CACH + 5, 1)       # +5: đường kẻ + khe trước dòng "(DỰ THẢO)" / dòng kế
+
+
 def chuan_co_chu_bth(ws, d0: int) -> float:
     """Cỡ chữ bảng tổng hợp: phía trên dòng dữ liệu đầu d0 (tiêu đề văn bản + hàng tiêu đề cột) ô đậm 16 pt, ô thường 14 pt; từ d0 trở
     xuống 14 pt (giữ đậm / nghiêng). Mẫu chữ to (mẫu cũ 20 pt): thu bề rộng cột và chiều cao dòng theo cùng tỷ lệ 14 / cỡ cũ. Trả tỷ lệ."""
@@ -1879,6 +1887,7 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, so_pa_tong: st
     chuan_le_trang(ws, 'tong_hop')
     dat_kho_a3(ws)
     chuan_co_chu_bth(ws, d0)
+    gian_dong_dau_bth(ws)
     cot_ho = (K['ho_ten'], K['dia_chi'], K['nguon_goc'], K['tai_dinh_cu'], K['ghi_chu'])     # chữ gộp theo hộ
     cot_thua = (K['loai_dat'], K['vi_tri'])                                                   # chữ từng thửa
     gop_ho = {K[k] for k in ('stt', 'ho_ten', 'dia_chi', 'tien_dat', 'tien_tai_san', 'tien_cay_vat_nuoi', 'ho_tro_dao_tao',

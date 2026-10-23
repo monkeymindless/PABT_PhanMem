@@ -7,6 +7,15 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.23', '24/10/2026', (
+        'Xuất hồ sơ & Bản in gọn hơn: bảng hộ giãn theo chiều cao hộp, bấm tiêu đề cột để sắp xếp (tiền sắp theo số), thêm cột Đợt và Địa chỉ '
+        '(ô tìm cũng tìm theo hai cột này); bộ đếm vùng chọn nằm dưới bảng (không đè lên cột tiền); Đợt trình và Hộ cần in cùng một hàng; '
+        'bỏ nút "Chọn tất cả mẫu / Bỏ chọn mẫu" và "Chọn hộ đã lập" (trùng); "Sửa mẫu…" nằm cạnh ô Tờ trình; khung "Đầu ra và nơi lưu" gấp được; '
+        'nhớ đầu ra, gộp PDF, số bản, thư mục lần trước (không nhớ "in ra máy" để khỏi in nhầm).',
+        'Xem trước: nút "Vừa ngang" (trang vừa bề ngang khung, chữ to hơn "Vừa trang").',
+        'Cài đặt > Cấu hình nghiệp vụ > Kiểm tra & bản in: ô nhập lề trang in bảng tổng hợp A3 (trái / phải / trên / dưới, cm). Bảng tổng hợp: '
+        'dòng đầu (cơ quan, CHI NHÁNH) sát chữ hơn.',
+    )),
     ('1.0.22', '24/10/2026', (
         'Xuất hồ sơ & Bản in: nút "Xem trước gộp các hộ đã chọn" - lập phương án chi tiết của nhiều hộ đang đánh dấu (tối đa 30 hộ một lần) '
         'thành MỘT bản PDF ở khung xem trước, có ô "Nhảy tới hộ" và in cả bản bằng nút "In…". Máy không có Word: bản gần đúng dựng bằng Qt.',

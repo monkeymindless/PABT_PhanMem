@@ -8,7 +8,7 @@ import copy
 from decimal import Decimal
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFormLayout, QHBoxLayout, QHeaderView, QLabel,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QFormLayout, QHBoxLayout, QHeaderView, QLabel,
                                QLineEdit, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QTabWidget,
                                QVBoxLayout, QWidget)
 
@@ -201,6 +201,27 @@ class HopCauHinhNghiepVu(QDialog):
             self.cb_doc.addItem(t, v)
         self.cb_doc.setCurrentIndex(max(0, self.cb_doc.findData(bi['nguon_goc']['can_doc'])))
         f.addRow('Ô nguồn gốc đất (căn đều hai bên):', self.cb_doc)
+        # 24/10/2026: lề trang in bảng tổng hợp A3 ngang (trước chỉ sửa được trong file pabt_profile.json)
+        le = dict(dia_phuong.mac_dinh()['ban_in']['le_trang']['tong_hop'])
+        le.update((bi.get('le_trang') or {}).get('tong_hop') or {})
+        self.o_le = {}
+        hang_le = QHBoxLayout()
+        for k, nhan in (('left', 'Trái'), ('right', 'Phải'), ('top', 'Trên'), ('bottom', 'Dưới')):
+            o = QDoubleSpinBox()
+            o.setRange(0, 7.5)
+            o.setDecimals(2)
+            o.setSingleStep(0.1)
+            o.setSuffix(' cm')
+            o.setValue(round(float(le[k]) * 2.54, 2))
+            self.o_le[k] = o
+            hang_le.addWidget(QLabel(nhan + ':'))
+            hang_le.addWidget(o)
+        hang_le.addStretch(1)
+        f.addRow('Lề trang in bảng tổng hợp A3 ngang:', hang_le)
+        gc = QLabel('Bảng được thu vừa bề ngang khổ A3 và chừa khoảng 3% nên lề PHẢI thực tế rộng hơn lề đặt chừng 0,5 cm; '
+                    'lề trên thực tế cộng thêm khoảng trống trên dòng đầu (~0,2 cm). Áp dụng từ lần in sau.')
+        gc.setWordWrap(True)
+        f.addRow('', gc)
         return w
 
     # ---- thẻ 4: cơ quan
@@ -244,6 +265,9 @@ class HopCauHinhNghiepVu(QDialog):
             qt['han_muc_dat_o_m2'][k] = _doc_so(o.text(), f'Hạn mức đất ở ({k})') if o.text().strip() else None
         hs['ban_in']['che_cccd_ban_du_thao'] = False
         hs['ban_in']['nguon_goc']['can_doc'] = self.cb_doc.currentData()
+        tong_hop = hs['ban_in'].setdefault('le_trang', {}).setdefault('tong_hop', {})
+        for k, o in self.o_le.items():                    # cm -> inch (hồ sơ tính bằng inch, 0 - 3)
+            tong_hop[k] = round(o.value() / 2.54, 4)
         for k, o in self.o_cq.items():
             hs['co_quan'][k] = o.text().strip()
         for k, o in self.o_bm.items():
