@@ -2103,6 +2103,12 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.27 RÚT GỌN BẢN DỰNG (người dùng 24/10/2026, báo cáo `ket_qua_kiem_tra/RaSoat_DungLuong_1.0.27.md`): bộ cài Universal 76,7 -> 72,5 MB (zip 112,9 -> 107,8), dist\PABT 121 -> 76 MB,
+  dist\PABT_Win7 93 -> 53 MB sau rut_gon. `rut_gon.GIU_MODULE` (Qt6) bỏ Svg; `GIU_MODULE_QT5` = Core, Gui, Widgets, Network, Qml (bỏ Pdf - PySide2 không có QtPdf, Svg, PrintSupport);
+  Qt5Network.dll / Qt6Network.dll GIỮ (Qt5Qml / QtPdf liên kết tới - bỏ thì `kiem_dll` báo thiếu), nhưng binding `QtNetwork.pyd` bỏ (`giu_pyd`). `GIU_PLUGIN` chỉ còn `platforms` (qwindows, qoffscreen) +
+  `imageformats` (qjpeg, qtiff, qwebp, qgif, qico; png / bmp có sẵn trong QtGui) - bỏ tls, networkinformation, styles (ứng dụng ép Fusion), iconengines, generic, bearer. Thêm vào `LOAI_TRU` (spec) và
+  dung_exe38: asyncio, multiprocessing, concurrent, xmlrpc (+ compression.zstd, _wmi ở Python 3.14). Cần thêm module Qt / plugin mới: thêm vào danh sách giữ rồi chạy tự kiểm tra. Còn lại để làm tiếp (cần
+  quyết định): tách Tesseract thành gói cài thêm (~26 MB), tessdata `fast` thay `best` (~9 MB), bỏ osd.traineddata (~4 MB).
 - 1.0.27 NHẬP DANH SÁCH HỘ, THỬA TỪ EXCEL / PDF / ẢNH (người dùng 24/10/2026: file "TỔNG CẬP NHẬT" báo không có dòng hộ; muốn đọc .xls, PDF ký / chưa ký, ảnh;
   test `tests/test_nhap_nhieu_loai.py`, `tests/mau_xls.py`, `tests/pdf_tay.py` tạo file giả lập - KHÔNG dùng số liệu thật):
   - Đường ống mới: mọi file -> `nguon_luoi.Nguon` (lưới ô: sheet / trang) -> `nhap_tho.doc(file, bo_cot=None, nguons=None, bao_tien_do=None, cho=None, scan=False)`

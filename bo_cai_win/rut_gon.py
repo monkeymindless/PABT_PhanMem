@@ -4,7 +4,7 @@ bản dịch...), rồi chạy `PABT.exe tu-kiem` - phải ra `KET QUA: DAT`.
     python bo_cai_win\\rut_gon.py dist\\PABT
 
 Giữ theo danh sách (không theo danh sách bỏ): phiên bản Qt mới thêm thư viện thì tự bị bỏ, tự kiểm tra sẽ báo nếu thiếu.
-PABT dùng QtCore / QtGui / QtWidgets, QtPdf (Qt6: đọc PDF), QtSvg (biểu tượng), QtNetwork (QtPdf cần).
+PABT dùng QtCore / QtGui / QtWidgets, QtPdf (Qt6: đọc PDF), QtPrintSupport (Qt6: hộp in), QtNetwork (QtPdf cần, chỉ Qt6).
 Chỉ dùng thư viện chuẩn (chạy được bằng Python 3.8 lẫn 3.14).
 """
 from __future__ import annotations
@@ -17,19 +17,15 @@ import tempfile
 from pathlib import Path
 
 # PdfWidgets (0.9.84): QPdfView của khung xem trước tài liệu (xem_truoc_tai_lieu) - thiếu thì khung vẽ trang bằng QPdfDocument
-GIU_MODULE = ('Core', 'Gui', 'Widgets', 'Network', 'Pdf', 'PdfWidgets', 'PrintSupport', 'Svg')   # PrintSupport: hộp chọn máy in (16/10/2026)
-GIU_MODULE_QT5 = GIU_MODULE + ('Qml',)          # pyside2.abi3.dll (PySide2 5.15) liên kết cứng Qt5Qml: thiếu thì PABT.exe treo
-# thư mục plugin -> tên file giữ (None = giữ cả thư mục)
-GIU_PLUGIN = {
-    'platforms': ('qwindows', 'qoffscreen'),
-    'imageformats': None,
-    'iconengines': None,
-    'styles': None,
-    'generic': None,
-    'tls': None,
-    'networkinformation': None,
-    'bearer': None,                                 # Qt5: mạng
-}
+# 1.0.27 (rà soát dung lượng): PrintSupport = hộp chọn máy in (chỉ Qt 6); PDF / Svg của Qt 5 không dùng (PySide2 không có QtPdf, phần mềm không import
+# QtSvg). Qt5Network.dll / Qt6Network.dll GIỮ (Qt5Qml / QtPdf liên kết tới) nhưng không giữ QtNetwork.pyd (phần mềm không import). kiem_dll + tu-kiem báo nếu thiếu.
+GIU_MODULE = ('Core', 'Gui', 'Widgets', 'Network', 'Pdf', 'PdfWidgets', 'PrintSupport')
+GIU_MODULE_QT5 = ('Core', 'Gui', 'Widgets', 'Network', 'Qml')   # pyside2.abi3.dll (PySide2 5.15) liên kết cứng Qt5Qml: thiếu thì PABT.exe treo
+# thư mục plugin -> tên file giữ (None = giữ cả thư mục); thư mục không có trong danh sách bị bỏ
+# imageformats: ảnh người dùng chọn (jpg, tif, webp, gif, ico); png / bmp nằm sẵn trong QtGui. Không giữ svg / icns / tga / wbmp / pdf.
+# bỏ: tls, networkinformation (Qt không làm HTTPS - Python làm), styles (ứng dụng ép Fusion), iconengines (svg), generic (cảm ứng TUIO), bearer
+_ANH = ('qjpeg', 'qtiff', 'qwebp', 'qgif', 'qico')
+GIU_PLUGIN = {'platforms': ('qwindows', 'qoffscreen'), 'imageformats': _ANH}
 BO_FILE = ('opengl32sw.dll', 'd3dcompiler_47.dll', 'libEGL.dll', 'libGLESv2.dll')
 
 
@@ -51,9 +47,10 @@ def rut_gon(dist: Path) -> int:
     if qt is None:
         raise SystemExit(f'Không thấy thư mục PySide6 / PySide2 trong {noi}')
     giu = GIU_MODULE_QT5 if qt.name == 'PySide2' else GIU_MODULE
+    giu_pyd = tuple(x for x in giu if x != 'Network')       # binding Python QtNetwork không dùng
     bo = []
     for f in qt.iterdir():
-        if f.is_file() and (not _qt_dll_giu(f.name, giu) or not _qt_pyd_giu(f.name, giu) or f.name in BO_FILE):
+        if f.is_file() and (not _qt_dll_giu(f.name, giu) or not _qt_pyd_giu(f.name, giu_pyd) or f.name in BO_FILE):
             bo.append(f)
     for ten in ('translations', 'qml', 'resources', 'examples'):
         if (qt / ten).exists():

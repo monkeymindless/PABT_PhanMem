@@ -7,7 +7,8 @@
 
 # máy yếu (16/10/2026): bản vẽ CAD .dxf đọc bằng pabt.dxf_thuan (Python thuần) - KHÔNG đóng ezdxf và numpy (+ libopenblas, fontTools,
 # PIL kéo theo: ~35 MB); thư viện chỉ dùng lúc phát triển / kiểm thử cũng loại
-LOAI_TRU = ['numpy', 'scipy', 'matplotlib', 'PIL', 'tkinter', 'unittest', 'pydoc', 'doctest', 'ezdxf', 'fontTools']
+LOAI_TRU = ['numpy', 'scipy', 'matplotlib', 'PIL', 'tkinter', 'unittest', 'pydoc', 'doctest', 'ezdxf', 'fontTools', 'asyncio', 'multiprocessing', 'concurrent', 'xmlrpc', 'compression.zstd', '_wmi']
+# 1.0.27: asyncio / multiprocessing / concurrent / xmlrpc / zstd / wmi: mã LARC không dùng (~0,8 MB nén); rut_gon.py bỏ thêm module Qt, plugin thừa
 
 # BẢN BÁN cho đơn vị khác (24/10/2026): biến môi trường PABT_BAN_TRUNG_TINH=1 -> đóng hồ sơ địa phương TRUNG TÍNH (pabt_profile_trung_tinh.json,
 # chép sang build\\ho_so_trung_tinh\\pabt_profile.json) thay hồ sơ của đơn vị đang dùng - xem DUNG_BAN_TRUNG_TINH.bat
