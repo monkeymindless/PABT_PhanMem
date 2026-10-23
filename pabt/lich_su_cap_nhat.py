@@ -7,6 +7,9 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.24', '24/10/2026', (
+        'Sửa lỗi 1.0.23: mở hộp Xuất hồ sơ & Bản in hiện thêm một cửa sổ trống nhấp nháy (khung "Đầu ra và nơi lưu" chưa có cửa sổ cha khi gấp / mở).',
+    )),
     ('1.0.23', '24/10/2026', (
         'Xuất hồ sơ & Bản in gọn hơn: bảng hộ giãn theo chiều cao hộp, bấm tiêu đề cột để sắp xếp (tiền sắp theo số), thêm cột Đợt và Địa chỉ '
         '(ô tìm cũng tìm theo hai cột này); bộ đếm vùng chọn nằm dưới bảng (không đè lên cột tiền); Đợt trình và Hộ cần in cùng một hàng; '

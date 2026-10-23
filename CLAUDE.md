@@ -2103,6 +2103,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.24: sửa 1.0.23 - `HopIn._gap_dau_ra` gọi khi `khung_dau_ra` chưa vào bố cục -> hiện thành CỬA SỔ LẠ 1389x233 (kiem_tra_giao_dien bắt được 10 chỗ; gọi setVisible SAU khi addWidget);
+  test `test_yeu_cau_2412.test_khong_tao_cua_so_la`. Bài học: sau đổi bố cục hộp thoại luôn chạy `kiem_tra_giao_dien.py` (mục "Cửa sổ lạ") TRƯỚC khi dựng bộ cài.
 - 1.0.23 (người dùng 24/10/2026, đề xuất A-D sau phân tích giao diện in; test `tests/test_yeu_cau_2412.py`): `HopIn` - bố cục trái dựng LẠI (QFormLayout
   chỉ còn Đợt + Hộ cần in cùng một hàng + Lần PA; `bang_ho` stretch 1, min 200 px; `lb_chon` + `lb_bo_dem` (NhanBoDem, hộp có `cap_nhat_bo_dem` nên
   `_BoChonVung` không tạo nhãn nổi) dưới bảng; `khung_tai_lieu`; `b_dau_ra` gấp `khung_dau_ra`); `bang_ho` 6 cột (thêm Đợt, Địa chỉ - LEFT JOIN dot_trinh, file cũ

@@ -83,6 +83,17 @@ class TestHopIn(CoSoXem):
         h.dat_che_do('chinh_thuc')
         self.assertFalse(h.the_tai_lieu[h.o_bc].isHidden())
 
+    def test_khong_tao_cua_so_la(self):
+        """Widget chưa có cha mà setVisible -> hiện thành cửa sổ riêng (đã gặp ở khung "Đầu ra và nơi lưu" 1.0.23)."""
+        truoc = {w for w in APP.topLevelWidgets() if w.isVisible()}
+        h = self._hop()
+        h.show()
+        APP.processEvents()
+        la = [w for w in APP.topLevelWidgets() if w.isVisible() and w is not h and w not in truoc]
+        self.assertEqual(la, [])
+        self.assertFalse(h.khung_dau_ra.isWindow())
+        h.reject()
+
     def test_gap_khung_dau_ra(self):
         h = self._hop()
         h.show()
