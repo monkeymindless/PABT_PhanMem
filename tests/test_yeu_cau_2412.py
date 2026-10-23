@@ -177,6 +177,18 @@ class TestLeVaGianDong(unittest.TestCase):
         self.assertAlmostEqual(d2.o_le['left'].value(), 3.0, places=2)
         dia_phuong.khoi_phuc_mac_dinh()
 
+    def test_doi_ten_don_vi_hien_ngay_tren_bang_tieu_de(self):
+        """Đổi tên tổ chức ở Cấu hình nghiệp vụ > Cơ quan khi CHƯA mở dự án: dòng đơn vị trên băng tiêu đề đổi ngay (trước: chờ mở dự án)."""
+        from pabt import dia_phuong, giao_dien
+        from pabt.app import CuaSoChinh
+        giao_dien.ap_dung(APP)
+        w = CuaSoChinh()
+        self.addCleanup(w.close)
+        dia_phuong.dat_muc_may(('co_quan', 'ten'), 'CÔNG TY MẪU - CHI NHÁNH THỬ')
+        self.addCleanup(dia_phuong.khoi_phuc_mac_dinh)
+        w._lam_moi_don_vi()
+        self.assertEqual(w.lb_don_vi.text(), 'CÔNG TY MẪU - CHI NHÁNH THỬ')
+
     def test_gian_dong_dau_gon_hon(self):
         ws = openpyxl.Workbook().active
         ws['A1'].font = openpyxl.styles.Font(name='Times New Roman', sz=14)

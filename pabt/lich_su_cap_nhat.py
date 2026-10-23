@@ -7,6 +7,9 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.25', '24/10/2026', (
+        'Đổi tên tổ chức ở Cài đặt > Cấu hình nghiệp vụ > Cơ quan: dòng tên đơn vị trên băng tiêu đề đổi ngay cả khi chưa mở dự án (trước đó phải mở dự án mới thấy).',
+    )),
     ('1.0.24', '24/10/2026', (
         'Sửa lỗi 1.0.23: mở hộp Xuất hồ sơ & Bản in hiện thêm một cửa sổ trống nhấp nháy (khung "Đầu ra và nơi lưu" chưa có cửa sổ cha khi gấp / mở).',
     )),

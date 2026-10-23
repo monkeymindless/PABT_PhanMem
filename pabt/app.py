@@ -2504,9 +2504,16 @@ class CuaSoChinh(QMainWindow):
         """Cấu hình nghiệp vụ (hồ sơ địa phương): mốc thời hạn 16 bước, kinh phí, ngưỡng kiểm tra, bản in, cơ quan (0.9.87)."""
         from .man_hinh_cau_hinh import HopCauHinhNghiepVu
         d = HopCauHinhNghiepVu(self)
-        if cho and d.exec() == QDialog.DialogCode.Accepted and self.con is not None:
-            self.tai_lai()                              # băng tiêu đề, kinh phí, mốc thời hạn theo cấu hình mới
+        if cho and d.exec() == QDialog.DialogCode.Accepted:
+            self._lam_moi_don_vi()                      # băng tiêu đề, kinh phí, mốc thời hạn theo cấu hình mới
         return d
+
+    def _lam_moi_don_vi(self) -> None:
+        """Sau khi đổi hồ sơ địa phương / cấu hình: băng tiêu đề lấy tên đơn vị mới (dự án đang mở: tải lại; chưa mở: màn hình chào)."""
+        if self.con is not None:
+            self.tai_lai()
+        else:
+            self._hien_trang_chao()
 
     def chan_doan_he_thong(self, cho: bool = True):
         """Chẩn đoán máy, kiểm tra / sửa file dự án (đóng rồi mở lại dự án đang mở), xuất gói chẩn đoán ẩn danh (0.9.87)."""

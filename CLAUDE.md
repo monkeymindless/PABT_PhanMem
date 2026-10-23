@@ -2103,6 +2103,9 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.25: `app._lam_moi_don_vi` (sau Cấu hình nghiệp vụ: dự án mở -> tai_lai, chưa mở -> _hien_trang_chao) - đổi `co_quan.ten` hiện ngay trên băng tiêu đề.
+  TÊN ĐƠN VỊ TRÊN BĂNG TIÊU ĐỀ: dòng 1 `giao_dien.TEN_PHAN_MEM` (cố định trong mã), dòng 2 (vàng) `lb_don_vi` = `don_vi_lap` của DỰ ÁN đang mở, chưa mở dự án = hồ sơ địa phương
+  `co_quan.ten` (Cài đặt > Cấu hình nghiệp vụ > thẻ Cơ quan; hoặc gói .pabtcfg); `to_chuc.TAC_GIA` (Giới thiệu) và `thong_bao.TEN_UD` "LARC" cố định trong mã.
 - 1.0.24: sửa 1.0.23 - `HopIn._gap_dau_ra` gọi khi `khung_dau_ra` chưa vào bố cục -> hiện thành CỬA SỔ LẠ 1389x233 (kiem_tra_giao_dien bắt được 10 chỗ; gọi setVisible SAU khi addWidget);
   test `test_yeu_cau_2412.test_khong_tao_cua_so_la`. Bài học: sau đổi bố cục hộp thoại luôn chạy `kiem_tra_giao_dien.py` (mục "Cửa sổ lạ") TRƯỚC khi dựng bộ cài.
 - 1.0.23 (người dùng 24/10/2026, đề xuất A-D sau phân tích giao diện in; test `tests/test_yeu_cau_2412.py`): `HopIn` - bố cục trái dựng LẠI (QFormLayout

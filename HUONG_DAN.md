@@ -1,5 +1,7 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.24 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.25 – Bản Tiêu chuẩn · Sử dụng nội bộ)
 
+> **1.0.25**: đổi tên tổ chức trong Cấu hình nghiệp vụ → Cơ quan hiện ngay trên băng tiêu đề.
+>
 > **1.0.24**: sửa lỗi 1.0.23 (cửa sổ trống nhấp nháy khi mở hộp Xuất hồ sơ & Bản in).
 >
 > **1.0.23**: hộp **Xuất hồ sơ & Bản in** gọn hơn (bảng hộ giãn cao, sắp xếp theo cột, thêm cột Đợt / Địa chỉ, bộ đếm dưới bảng, bỏ nút trùng, nhớ
