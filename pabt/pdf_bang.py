@@ -43,10 +43,6 @@ def _nho(file, loai: str, tao):
     return muc[1][loai]
 
 
-def xoa_nho() -> None:
-    _NHO.clear()
-
-
 def _reader(file):
     from pypdf import PdfReader
     return _nho(file, 'reader', lambda: PdfReader(str(file)))

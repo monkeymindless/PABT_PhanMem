@@ -2103,6 +2103,16 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.20 (người dùng 23/10/2026, phương án B): BẢNG TỔNG HỢP cũng KHÔNG còn file mẫu Excel - `pabt/mau_bang_tong_hop.py` (TỰ SINH một lần từ
+  IN_BANGTONGHOP.xlsx rồi sửa tay được: `KIEU` / `CELLS` / `MERGES` / `RONG_COT` / `COT_AN` / `CAO_DONG` / `LE_TRANG`, `tao_workbook()`: cột có
+  `min = max` như mẫu đọc từ file - `in_an._px_cot` cần; phông mặc định Arial 11 qua `wb._fonts` - `_mdw` đo theo nó) thay file; `in_an.lap_bang_tong_hop(con,
+  file_ra, ds_ma_ho, so_pa_tong, ngay_pa_tong, ...)` bỏ tham số `mau`; `du_thao` là bool (không suy theo tên mẫu). Đã so từng ô / ô gộp / bề rộng /
+  cao dòng / tỷ lệ in / ngắt trang với bản đọc từ file: giống hệt. ĐÃ XÓA: `mau_in\IN_BANGTONGHOP.*`, `IN_TONGHOP_DT.*`, `mau_in_nhung.py`,
+  `tao_mau_nhung.py`, ~540 dòng quản lý mẫu Excel trong in_an (`thu_muc_mau*`, `file_mau`, `ds_mau`, `tao_mau_tu_excel`, `nap_mau_in`, `thay_mau`,
+  `xuat_mau`, `khoi_phuc_mau`, `nap_mau_bytes`, `la_mau_du_thao`, `duong_ke_cua_mau`...). `in_an.chen_duong_ke(file_xlsx, xml='', bo_qua='')` (đường kẻ
+  luôn do `dk_mac_dinh` tạo - không còn file .duong_ke.xml). `man_hinh_quan_ly_mau.HopQuanLyMauIn` chỉ còn thông số mẫu Word; HopIn bỏ nút "Sửa mẫu in
+  trong Excel…". `goi_mau.ds_mau_hien_hanh` chỉ còn mẫu tờ trình trong thư mục mẫu. Mọi ghi chú cũ ở trên nhắc mẫu Excel IN_BANGTONGHOP / IN_TONGHOP_DT /
+  mau_in_nhung / tao_mau_tu_excel / Quản lý Mẫu in thay mẫu Excel là LỊCH SỬ. Sửa bố cục bảng tổng hợp: sửa `mau_bang_tong_hop.py` (không còn file Excel để sửa).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

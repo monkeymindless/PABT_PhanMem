@@ -1,7 +1,6 @@
 """0.9.20: kinh phí tổ chức thực hiện theo QĐ 08/2025/QĐ-UBND (theo tuyến 3,5%, cụm / vùng 2,5%), lấy mẫu in từ file một sheet /
 mẫu riêng, chọn nhóm hộ đưa vào đợt trình."""
 from __future__ import annotations
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -52,32 +51,6 @@ class TestKinhPhi(unittest.TestCase):
         self.assertTrue(chu and '3,5%' in chu[0] and '08/2025/QĐ-UBND' not in chu[0], chu)
         cong_thuc = [c.value for r in ws.iter_rows() for c in r if isinstance(c.value, str) and c.value.startswith('=ROUND(')]
         self.assertTrue(any('*3.5%' in x for x in cong_thuc), cong_thuc)
-
-
-class TestMauIn(unittest.TestCase):
-    def setUp(self):
-        self.td = tempfile.TemporaryDirectory()
-        self.d = Path(self.td.name)
-        for f in MAU.glob('IN_*.xlsx'):
-            if '_' not in f.stem[3:]:                                     # IN_CHITIET / IN_BANGTONGHOP (mẫu chính)
-                shutil.copy2(f, self.d / f.name)
-
-    def tearDown(self):
-        self.td.cleanup()
-
-
-    def test_khong_nhan_ra_thi_hoi(self):
-        wb = openpyxl.Workbook()                                          # mẫu đã sửa nhưng có dấu hiệu của cả hai loại
-        wb.active['A1'] = 'BẢNG TỔNG HỢP {du_an}'
-        wb.active['A2'] = 'Họ và tên: {ho_ten}'
-        f = self.d / 'la.xlsx'
-        wb.save(f)
-        # không nhận ra loại: tự chọn theo bề rộng sheet, không chặn người dùng (0.9.46 - màn hình hỏi loại mẫu từ 0.9.51)
-        tu_chon = in_an.tao_mau_tu_excel(f, self.d / 'ra')
-        self.assertEqual(len(tu_chon), 1)
-        self.assertIn(tu_chon[0].name, ('IN_CHITIET.xlsx', 'IN_BANGTONGHOP.xlsx'))
-        tao = in_an.tao_mau_tu_excel(f, self.d / 'ra', loai=in_an.TEN_BTH)
-        self.assertEqual(tao[0].name, 'IN_BANGTONGHOP.xlsx')
 
 
 class TestNhomHoDot(unittest.TestCase):

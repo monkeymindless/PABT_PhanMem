@@ -169,9 +169,9 @@ def tu_kiem(file_ra=None) -> int:
         return f'phiên bản {tt["phien_ban"]}, {tt["dem"]["dm_taisan"]} tài sản'
 
     def mau_in():
-        from pabt import in_an
-        d = in_an.thu_muc_mau()
-        return 'mẫu chuẩn nhúng trong phần mềm' if d == in_an.THU_MUC_NHUNG else f'mẫu người dùng thay: {d}'
+        from pabt import mau_bang_tong_hop
+        wb = mau_bang_tong_hop.tao_workbook()
+        return f'bảng tổng hợp dựng bằng mã ({wb.active.max_row} dòng mẫu)'
 
     def gia_dat():
         from pabt import gia_dat_nq28

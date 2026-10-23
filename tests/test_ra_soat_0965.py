@@ -2,7 +2,6 @@
 và lỗi tên mẫu dự thảo có dấu."""
 from __future__ import annotations
 
-import os
 import random
 import tempfile
 import unittest
@@ -51,19 +50,3 @@ class TestBaoCaoDoiChieuKieu(unittest.TestCase):
             mau = ws.cell(r, 11).fill.fgColor.rgb
             self.assertIn(mau, ('00F8CBAD', '00E2EFDA', 'FFF8CBAD', 'FFE2EFDA'))
         self.assertEqual(ws.cell(5, 1).font.b, True)                    # tiêu đề cột không bị chép kiểu ô số liệu
-
-
-class TestMauDuThaoCoDau(unittest.TestCase):
-    def test_ten_mau_rieng_tieng_viet(self):
-        from pabt import in_an
-        self.assertTrue(in_an.la_mau_du_thao('IN_CHITIET__Dự thảo.xlsx'))     # trước 0.9.65: False -> chữ DỰ THẢO bị xóa
-        self.assertTrue(in_an.la_mau_du_thao('IN_CHITIET__Du thao.xlsx'))
-        self.assertTrue(in_an.la_mau_du_thao('IN_CHITIET_DT.xlsx'))
-        self.assertTrue(in_an.la_mau_du_thao('IN_TONGHOP_DT.xlsx'))
-        self.assertFalse(in_an.la_mau_du_thao('IN_CHITIET.xlsx'))
-        self.assertFalse(in_an.la_mau_du_thao('IN_CHITIET__Chính thức.xlsx'))
-
-
-if __name__ == '__main__':
-    os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-    unittest.main()

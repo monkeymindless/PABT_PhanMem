@@ -2909,7 +2909,7 @@ class HopIn(QDialog):
         self.o_word.setChecked(True)
         self.o_word.setVisible(False)
         self.o_bth = QCheckBox('Bảng tổng hợp kinh phí phương án (.xlsx)')
-        self.o_bth.setToolTip('Mẫu IN_BANGTONGHOP, A3 ngang')
+        self.o_bth.setToolTip('Bảng tổng hợp A3 ngang (Excel)')
         self.o_bth.setChecked(not self.ma_ho_chon)
         # 1.0.15: bảng tổng hợp ĐIỀU CHỈNH (mẫu riêng) - chỉ hiện khi dự án có hộ đã lập phương án điều chỉnh
         from . import bang_dieu_chinh as _bdc
@@ -3076,17 +3076,12 @@ class HopIn(QDialog):
         ap_kieu_nut(nut.button(QDialogButtonBox.StandardButton.Ok), KieuNut.CHINH)   # 1.0.02: xuất / in - hành động chính, navy
         nut.accepted.connect(lambda: self.thuc_hien())
         nut.rejected.connect(self.reject)
-        self.lb = QLabel('Phương án chi tiết xuất bản Word (mẫu nhúng trong phần mềm); bảng tổng hợp theo mẫu Excel IN_BANGTONGHOP; tờ '
+        self.lb = QLabel('Phương án chi tiết xuất bản Word (mẫu nhúng trong phần mềm); bảng tổng hợp xuất Excel (mẫu dựng bằng mã); tờ '
                          'trình theo mẫu ở cửa sổ "Trình phê duyệt" (số văn bản, số phương án tổng lấy theo đợt đã chọn). PDF và '
                          'máy in cần Microsoft Word (phương án chi tiết, tờ trình) và Microsoft Excel (bảng tổng hợp) trên máy; '
                          'không có Word vẫn dựng được PDF gần đúng.')
         self.lb.setWordWrap(True)
-        b_mau = QPushButton('Sửa mẫu in trong Excel…')
-        b_mau.setToolTip('Mở mẫu phương án chi tiết bằng Excel: sửa chữ, phông, lề, độ rộng cột, kéo đường kẻ... rồi Lưu. '
-                         'Giữ nguyên các chỗ trống {du_an}, {ho_ten}, {nguon_goc}...')
-        b_mau.clicked.connect(lambda: self.sua_mau())
         hang_mau = QHBoxLayout()
-        hang_mau.addWidget(b_mau)
         for chu, loai in (('Sửa mẫu tờ trình…', 'to_trinh'),):
             b = QPushButton(chu)
             b.setToolTip('Mở mẫu bằng Word / Excel để sửa; thêm mẫu từ file Word / Excel / PDF ở cửa sổ "Trình phê duyệt"')
@@ -3368,22 +3363,6 @@ class HopIn(QDialog):
         self._lam_moi_xem_truoc(ngay=True)
         return self.w_preview
 
-    def sua_mau(self, mo: bool = True):
-        from . import in_an
-        try:
-            f = in_an.mau_de_sua()
-        except (in_an.LoiIn, OSError) as e:
-            QMessageBox.warning(self, TEN_UD, str(e))
-            return None
-        if mo:
-            QMessageBox.information(self, TEN_UD, f'Mở mẫu in bằng Excel:\n{f}\n\nSửa xong bấm Lưu (giữ định dạng .xlsx) rồi đóng Excel; '
-                                    'lần in sau phần mềm dùng mẫu đã sửa. Giữ nguyên các chỗ trống trong ngoặc {…} '
-                                    '(tên dự án, họ tên, nguồn gốc…). Lưu mẫu xong, bấm lại một hộ trong danh sách để xem trước '
-                                    'ở khung bên phải.')
-            in_an.mo_file(f)
-        self.w_preview.xoa_nho()                    # mẫu sắp sửa: bản xem trước đã lập trong phiên không còn đúng
-        return f
-
     def _chon_thu_muc(self):
         p = QFileDialog.getExistingDirectory(self, 'Chọn thư mục lưu bản in', self.o_thu_muc.text())
         if p:
@@ -3454,7 +3433,7 @@ class HopIn(QDialog):
             with con_tro_cho():
                 # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
                 kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=dot, pdf=self.r_pdf.isChecked(), in_may=in_may,
-                                      mau_ct=None, mau_bth=None, lan=self.lan_in(),
+                                      lan=self.lan_in(),
                                       du_thao=self.che_do() == 'du_thao', so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
                                       **chon)
                 ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]

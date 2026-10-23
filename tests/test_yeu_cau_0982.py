@@ -10,7 +10,7 @@ from pathlib import Path
 
 import openpyxl
 
-from pabt import csdl, in_an
+from pabt import csdl
 from tests.test_toc_do import _du_an
 
 MAU = Path(__file__).resolve().parents[1] / 'mau_in'
@@ -37,18 +37,6 @@ class TestMotBoMau(unittest.TestCase):
         self.ma = [r[0] for r in self.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho')]
         with self.con:
             self.con.execute("UPDATE ho SET so_pa = '07' WHERE ma_ho = ?", (self.ma[0],))
-
-    def _mau_co_dong_du_thao(self) -> Path:
-        """Mẫu chính kiểu của người dùng: có sẵn dòng "(DỰ THẢO)" dưới "Số:" (tên file là mẫu chính, không phải mẫu dự thảo)."""
-        d = self.d / 'mau_nguoi_dung'
-        d.mkdir()
-        wb = openpyxl.load_workbook(MAU / 'IN_CHITIET.xlsx')
-        wb.worksheets[0]['A3'] = 'Số:            /{ky_hieu_so}\n(DỰ THẢO)'
-        f = d / 'IN_CHITIET.xlsx'
-        wb.save(f)
-        self.assertFalse(in_an.la_mau_du_thao(f))
-        return f
-
 
     def test_hop_in_khong_con_bao_thieu_mau_du_thao(self):
         from pabt.man_hinh import HopIn

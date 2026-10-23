@@ -10,7 +10,6 @@ from unittest import mock
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-import openpyxl  # noqa: E402
 
 from tests.test_toc_do import _du_an  # noqa: E402
 
@@ -172,37 +171,6 @@ class TestDoiTyLeNhanh(_Co):
         self.assertEqual(set(w.khung_trang), {ud.STACK_CUA_TRANG[ud.TRANG_THEO_DOI]})   # chỉ giữ trang đang xem
         w.mo_trang(ud.TRANG_TONG_HOP)                                   # mở lại: dựng lại trang
         self.assertIn(ud.STACK_CUA_TRANG[ud.TRANG_TONG_HOP], w.khung_trang)
-
-
-class TestBoLocMau(_Co):
-    def test_ap_chuan_co_chu(self):
-        from pabt import in_an, mau_in_nhung
-        f = self.td / 'BTH.xlsx'
-        f.write_bytes(mau_in_nhung.lay_bytes_mau('IN_BANGTONGHOP'))      # mẫu chuẩn cũ: chữ 20 pt
-        in_an.ap_chuan_trang_mau(f, 'tong_hop')
-        ws = openpyxl.load_workbook(f).active
-        co = {float(o.font.sz) for o in ws._cells.values() if isinstance(o.value, str) and o.value.strip()}
-        self.assertEqual(co, {in_an.CO_NOI_DUNG, in_an.CO_TIEU_DE})
-        self.assertEqual((ws.page_setup.paperSize, int(ws.page_setup.scale)), (8, in_an.TI_LE_BTH))
-
-
-def _mau_hong(f: Path) -> Path:
-    """Mẫu chi tiết "rác" (như mẫu cũ lấy từ file Excel PABT ở %APPDATA%): hàng tiêu đề + dòng mẫu dưới STT không viền, định dạng General."""
-    from openpyxl.styles import Border
-    from pabt import mau_in_nhung
-    f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_bytes(mau_in_nhung.lay_bytes_mau('IN_CHITIET'))
-    wb = openpyxl.load_workbook(f)
-    ws = wb.active
-    dau = next(o.row for o in ws._cells.values() if str(o.value or '').strip() == 'STT')
-    for r in (dau, dau + 1):
-        for c in range(1, 9):
-            o = ws.cell(r, c)
-            o.border = Border()
-            if r == dau + 1:
-                o.number_format = 'General'
-    wb.save(f)
-    return f
 
 
 class TestKhungBangMucIII(_Co):

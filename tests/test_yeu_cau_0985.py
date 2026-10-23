@@ -148,8 +148,9 @@ class TestGoiMau(CoSoMay):
         return f
 
     def test_tu_choi_goi_bi_sua_hoac_file_la(self):
+        self._mau_rieng()                                                   # 1.0.20: không còn mẫu Excel đóng kèm - gói chỉ có mẫu riêng này
         def doi_noi_dung(n, du, danh, zo):
-            return du + b' ' if n.endswith('.xml') else du
+            return du + b' ' if n.startswith('mau_in/') else du
         with self.assertRaisesRegex(goi_mau.LoiGoiMau, 'SHA-256'):
             goi_mau.doc_goi(self._goi_sua(doi_noi_dung))
 
@@ -163,7 +164,7 @@ class TestGoiMau(CoSoMay):
             goi_mau.doc_goi(self._goi_sua(them_exe))
 
         def co_macro(n, du, danh, zo):
-            if n == 'mau_in/IN_BANGTONGHOP.xlsx':
+            if n == 'mau_in/IN_CHITIET__Thu nghiem.xlsx':
                 import hashlib
                 b = io.BytesIO()
                 with zipfile.ZipFile(io.BytesIO(du)) as zi, zipfile.ZipFile(b, 'w') as zw:

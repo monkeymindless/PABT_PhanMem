@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.20', '23/10/2026', (
+        'Bảng tổng hợp kinh phí không còn đọc file mẫu Excel: bố cục, định dạng, khổ giấy A3 dựng hoàn toàn bằng mã trong phần mềm (kết quả '
+        'in giữ nguyên). Không còn thư mục mẫu in Excel, mẫu nhúng hay gói mẫu Excel - phần mềm không đọc lệnh nào từ file Excel mẫu bên ngoài.',
+        'Quản lý Mẫu in & Bản in chỉ còn quản lý thông số mẫu Word (xuất / nhập / khôi phục); gói .pabtcfg vẫn mang hồ sơ địa phương và mẫu tờ trình.',
+    )),
     ('1.0.19', '23/10/2026', (
         'Phương án chi tiết CHỈ còn bản Word: bỏ hẳn mẫu Excel IN_CHITIET (mẫu in, mẫu nhúng, mã dựng bản Excel chi tiết). Máy không có '
         'Microsoft Word: xem trước và PDF là bản gần đúng dựng bằng Qt từ chính file Word (không còn đọc Excel). Bảng tổng hợp vẫn là Excel.',

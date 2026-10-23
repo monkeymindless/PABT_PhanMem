@@ -1,5 +1,8 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.19 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.20 – Bản Tiêu chuẩn · Sử dụng nội bộ)
 
+> **1.0.20**: **bảng tổng hợp cũng không còn file mẫu Excel** - bố cục, định dạng và khổ giấy A3 dựng hoàn toàn bằng mã (kết quả in giữ
+> nguyên). Phần mềm không còn đọc bất kỳ file mẫu Excel nào; **Quản lý Mẫu in & Bản in** chỉ còn thông số mẫu Word (xuất / nhập / khôi phục).
+>
 > **1.0.19**: **bỏ hẳn mẫu Excel phương án chi tiết** - mẫu Word nhúng trong phần mềm là mẫu duy nhất (thông số quy cách đổi trong
 > **Quản lý Mẫu in & Bản in → Nhập thông số mẫu Word**, không cần bản cập nhật). Máy không có Microsoft Word: PDF / xem trước là bản
 > gần đúng dựng bằng Qt **từ chính file Word**, không còn đọc Excel. **Bảng tổng hợp** vẫn là mẫu Excel. Mọi file Excel xuất ra đi qua

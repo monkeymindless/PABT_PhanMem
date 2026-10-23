@@ -382,13 +382,13 @@ def lap_van_ban(con, loai: str, ds_ma_ho: list, thu_muc, dot=None) -> Path:
 
 def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True, bang_tong_hop: bool = True,
                   to_trinh: bool = False, pdf: bool = False, in_may: bool = False, so_ban: int = 1,
-                  chia_thu_muc: bool = True, bao_tien_do=None, bao_excel=None, mau_ct=None, mau_bth=None,
+                  chia_thu_muc: bool = True, bao_tien_do=None, bao_excel=None,
                   bao_cao_y_kien: bool = False, du_thao: bool | None = None, lan='moi_nhat',
                   bang_dieu_chinh: bool = False) -> dict:
     """Bộ hồ sơ trình: PA CHI TIET\\ (phương án chi tiết từng hộ) + PA TONG\\ (bảng tổng hợp có số / ngày phương án tổng, tờ
     trình / văn bản trình). pdf: kèm PDF (Excel / Word xuất); in_may: in ra máy in mặc định. Mỗi mẫu chọn riêng
     hoặc tất cả. Trả dict(excel, word, pdf, loi, thu_muc_ct, thu_muc_tong). bao_tien_do(i, n) / bao_excel(i, n): trả True = dừng.
-    mau_ct / mau_bth: file mẫu riêng (in_an.ds_mau), None = mẫu chính. bao_cao_y_kien: kèm báo cáo tổng hợp ý kiến, tiếp thu,
+    bao_cao_y_kien: kèm báo cáo tổng hợp ý kiến, tiếp thu,
     giải trình (.docx, thư mục PA TONG, file BAO_CAO_TIEP_THU_Y_KIEN.docx - bao_cao_y_kien.ghi_docx).
     du_thao: chế độ phát hành của bản in (True dự thảo / False chính thức / None theo tên mẫu - in_an.lap_chi_tiet).
     lan (1.0.05 - hộ nhiều lần lập phương án): 'moi_nhat' (mặc định: lần muộn nhất có dòng - phương án / bảng tổng hợp của đợt
@@ -427,7 +427,7 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
     if bang_tong_hop or to_trinh or bao_cao_y_kien or bang_dieu_chinh:
         tm_tong.mkdir(parents=True, exist_ok=True)
     if bang_tong_hop:
-        kq['excel'].append(in_an.lap_bang_tong_hop(con, tm_tong / 'BANG_TONG_HOP.xlsx', ds_ma_ho, mau_bth,
+        kq['excel'].append(in_an.lap_bang_tong_hop(con, tm_tong / 'BANG_TONG_HOP.xlsx', ds_ma_ho,
                                                    so_pa_tong=getattr(dot, 'so_pa_tong', '') or '',
                                                    ngay_pa_tong=getattr(dot, 'ngay_pa_tong', '') or '',
                                                    ky_hieu_so=getattr(dot, 'ky_hieu_so', '') or '', du_thao=du_thao, lan=lan,

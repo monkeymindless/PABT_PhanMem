@@ -1,8 +1,8 @@
-"""Bản in (giai đoạn 3): phương án chi tiết từng hộ (mẫu IN_CHITIET, A4 dọc) và bảng tổng hợp (mẫu IN_BANGTONGHOP, A3 ngang).
+"""Bản in (giai đoạn 3): bảng tổng hợp kinh phí (A3 ngang, Excel) và các hàm dùng chung cho xuất PDF / in qua Excel.
 
-Mẫu in là chính hai sheet IN_CHITIET / IN_BANGTONGHOP của file PABT Excel, tách thành hai file .xlsx trong thư mục mau_in
-(lệnh tao_mau_tu_excel). Ô có {ten} trong mẫu được thay bằng dữ liệu (tên dự án, xã/phường, họ tên...), nên sửa chữ,
-người ký, cơ quan... chỉ cần mở file mẫu bằng Excel sửa rồi lưu, không cần sửa phần mềm.
+Từ 1.0.20 KHÔNG còn file mẫu Excel nào: bảng tổng hợp dựng hoàn toàn bằng mã (mau_bang_tong_hop.tao_workbook), phương án chi tiết là
+bản Word (in_word). Ô có {ten} trong bảng được thay bằng dữ liệu (tên dự án, xã/phường...) ở lap_bang_tong_hop; đổi quy cách in bằng hồ sơ
+địa phương (dia_phuong), không đọc lệnh từ file Excel bên ngoài.
 
 Bảng tính được điền bằng openpyxl (số liệu từ nghiep_vu, cùng hàm tính với màn hình); PDF và in ra máy in nhờ
 Microsoft Excel trên máy (VBScript gọi Excel, không cần cài thêm thư viện).
@@ -11,7 +11,6 @@ from __future__ import annotations
 import math
 import os
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -19,10 +18,8 @@ import threading
 import unicodedata
 import time
 from copy import copy
-from datetime import datetime
 from pathlib import Path
 
-import openpyxl
 from openpyxl.formatting.formatting import ConditionalFormattingList
 from openpyxl.styles import Alignment
 from openpyxl.workbook.defined_name import DefinedName
@@ -40,115 +37,6 @@ class LoiIn(RuntimeError):
     pass
 
 
-# ---------------------------------------------------------------- thư mục mẫu in
-# 1.0.07: thư mục ẢO của bộ mẫu chuẩn nhúng trong mã (pabt/mau_in_nhung.py, tạo bằng tao_mau_nhung.py) - không bao giờ tạo trên
-# đĩa; nap_mau_bytes / _doc_dk / mau_de_sua nhận ra đường dẫn trong thư mục này và lấy bytes trong RAM
-THU_MUC_NHUNG = Path(__file__).resolve().parent / '_mau_in_nhung'
-
-
-def la_mau_nhung(p) -> bool:
-    try:
-        return Path(p).parent == THU_MUC_NHUNG
-    except TypeError:
-        return False
-
-
-def thu_muc_mau(ten: str = TEN_BTH) -> Path:
-    """Thư mục có mẫu ten. Bản cài: mẫu CHUẨN NHÚNG trong phần mềm (pabt/mau_in_nhung.py) - không có thư mục mau_in nào đi kèm bản
-    cài (1.0.16); mẫu người dùng CHỦ ĐỘNG thay (hộp Quản lý Mẫu in / gói .pabtcfg, lưu ở %APPDATA%/PABT/mau_in) được ưu tiên. Mã nguồn:
-    thêm mau_in của mã nguồn (nguồn để sinh bản nhúng). Tìm theo từng mẫu: thư mục ghi có thể chỉ có một trong hai mẫu."""
-    ung_vien = []
-    if os.environ.get('PABT_CHI_MAU_NHUNG') == '1':      # giả lập máy trắng (tu-kiem, kiểm thử): không thư mục mẫu cài đặt / mã nguồn
-        from . import mau_in_nhung                       # - mẫu người dùng đã thay (thư mục tùy chỉnh) vẫn dùng trước
-        for tc in ([thu_muc_mau_ghi()] if getattr(sys, 'frozen', False) else []) + [thu_muc_mau_tuy_chinh()]:
-            if (tc / f'{ten}.xlsx').exists() and dung_mau_may(tc / f'{ten}.xlsx', ten):
-                return tc
-        if mau_in_nhung.co_mau(ten):
-            return THU_MUC_NHUNG
-    elif getattr(sys, 'frozen', False):
-        ung_vien.append(thu_muc_mau_ghi())
-    else:
-        ung_vien.append(thu_muc_mau_tuy_chinh())     # 1.0.07: mẫu thay bằng hộp Quản lý Mẫu in (không ghi đè mau_in mã nguồn)
-    if not getattr(sys, 'frozen', False):
-        ung_vien.append(Path(__file__).resolve().parents[1] / 'mau_in')
-    may = {thu_muc_mau_tuy_chinh()} | ({thu_muc_mau_ghi()} if getattr(sys, 'frozen', False) else set())
-    for p in ung_vien:
-        if (p / f'{ten}.xlsx').exists():
-            if p in may and not dung_mau_may(p / f'{ten}.xlsx', ten):     # 1.0.09: mẫu cũ hỏng trong thư mục máy -> bỏ qua
-                continue
-            return p
-    from . import mau_in_nhung
-    if mau_in_nhung.co_mau(ten):            # máy trắng / bản cài thiếu mau_in\: bộ mẫu chuẩn nhúng trong mã (1.0.07)
-        return THU_MUC_NHUNG
-    raise LoiIn(f'Không tìm thấy thư mục mẫu in (mau_in\\{ten}.xlsx). Dùng lệnh "Công cụ → Mẫu in" trên thanh menu.')
-
-
-# ---- mẫu trong thư mục máy (%APPDATA%\\PABT\\mau_in) có dùng được không (1.0.09)
-FILE_DANH_DAU_MAU = '.quan_ly_mau.json'      # {tên mẫu: SHA-256} - mẫu người dùng CHỦ ĐỘNG thay qua hộp Quản lý Mẫu in
-_KIEM_MAU = {}
-
-
-def _danh_dau_mau(thu_muc) -> dict:
-    import json
-    try:
-        return json.loads((Path(thu_muc) / FILE_DANH_DAU_MAU).read_text(encoding='utf-8')) or {}
-    except (OSError, ValueError):
-        return {}
-
-
-def ghi_danh_dau_mau(thu_muc, ten: str, file=None) -> None:
-    """Ghi / bỏ (file None) dấu "mẫu người dùng chủ động thay" của ten trong thư mục mẫu máy."""
-    import hashlib
-    import json
-    d = _danh_dau_mau(thu_muc)
-    if file is None:
-        d.pop(ten, None)
-    else:
-        d[ten] = hashlib.sha256(Path(file).read_bytes()).hexdigest()
-    f = Path(thu_muc) / FILE_DANH_DAU_MAU
-    tam = f.with_name(f.name + '.tmp')
-    tam.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding='utf-8')
-    os.replace(tam, f)
-    _KIEM_MAU.clear()
-
-
-def dung_mau_may(file, ten: str) -> bool:
-    """Mẫu ten trong thư mục máy dùng được: file đọc được. (Trước 1.0.19 còn kiểm khung bảng của mẫu phương án chi tiết - mẫu đó
-    nay là bản Word nhúng.) Nhớ theo (đường dẫn, mtime, cỡ)."""
-    p = Path(file)
-    try:
-        st = p.stat()
-    except OSError:
-        return False
-    k = (str(p), ten, st.st_mtime_ns, st.st_size)
-    if k not in _KIEM_MAU:
-        try:
-            ok = bool(p.read_bytes())
-        except Exception:                               # file hỏng / không đọc được: bỏ qua
-            ok = False
-        if len(_KIEM_MAU) > 32:
-            _KIEM_MAU.clear()
-        _KIEM_MAU[k] = ok
-    return _KIEM_MAU[k]
-
-
-def thu_muc_mau_tuy_chinh() -> Path:
-    """Nơi lưu mẫu người dùng thay (hộp Quản lý Mẫu in, gói .pabtcfg): bản cài = %APPDATA%\\PABT\\mau_in; chạy từ mã nguồn / kiểm thử =
-    <thư mục máy>\\mau_in (PABT_THU_MUC_MAY) - không ghi đè mẫu chuẩn mau_in\\ của mã nguồn."""
-    if getattr(sys, 'frozen', False) and not os.environ.get('PABT_THU_MUC_MAY'):
-        return thu_muc_mau_ghi()
-    from .dia_phuong import thu_muc_may
-    return thu_muc_may() / 'mau_in'
-
-
-def thu_muc_mau_ghi() -> Path:
-    """Nơi ghi mẫu in khi cập nhật từ file Excel: %APPDATA%\\PABT\\mau_in (bản cài: thư mục cài không ghi được)
-    hoặc mau_in của mã nguồn."""
-    if getattr(sys, 'frozen', False):
-        return Path(os.environ.get('APPDATA') or Path.home()) / 'PABT' / 'mau_in'
-    return Path(__file__).resolve().parents[1] / 'mau_in'
-
-
 # ---------------------------------------------------------------- đường kẻ (hình vẽ) của mẫu
 # openpyxl làm mất hình vẽ khi đọc / ghi: đường kẻ dưới tên cơ quan, dưới quốc hiệu, dưới tên dự án được lưu riêng
 # (mau_in/<mẫu>.duong_ke.xml, lấy từ file PABT Excel) và chèn lại vào file bản in sau khi lưu.
@@ -156,28 +44,6 @@ _DS_DR = 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'
 _DS_A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
 _DS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 _NET = '<a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>'
-
-
-def doc_duong_ke(file_excel, ten_sheet: str) -> str:
-    """Các đường kẻ thẳng (twoCellAnchor có prstGeom line) trên một sheet của file Excel -> chuỗi XML."""
-    import zipfile
-    with zipfile.ZipFile(file_excel) as z:
-        wbx = z.read('xl/workbook.xml').decode('utf-8')
-        m = re.search(r'<sheet [^>]*name="%s"[^>]*r:id="([^"]+)"' % re.escape(ten_sheet), wbx)
-        if not m:
-            return ''
-        rels = z.read('xl/_rels/workbook.xml.rels').decode('utf-8')
-        t = re.search(r'<Relationship [^>]*Id="%s"[^>]*>' % m.group(1), rels)
-        sheet = 'xl/' + re.search(r'Target="([^"]+)"', t.group(0)).group(1).replace('/xl/', '').lstrip('/')
-        srel = sheet.replace('worksheets/', 'worksheets/_rels/') + '.rels'
-        if srel not in z.namelist():
-            return ''
-        kq = []
-        for d in re.findall(r'Target="([^"]*drawings/[^"]+)"', z.read(srel).decode('utf-8')):
-            x = z.read('xl/drawings/' + d.split('/')[-1]).decode('utf-8')
-            kq += [a for a in re.findall(r'<xdr:twoCellAnchor.*?</xdr:twoCellAnchor>', x, re.S) if 'prst="line"' in a]
-    # nét đen mảnh rõ ràng, không phụ thuộc theme của file đích
-    return ''.join(re.sub(r'(<a:prstGeom prst="line">.*?</a:prstGeom>)(?!<a:ln)', r'\1' + _NET, a, flags=re.S) for a in kq)
 
 
 def _them_bo_qua_loi(sx: str, bo_qua: str) -> str:
@@ -190,13 +56,11 @@ def _them_bo_qua_loi(sx: str, bo_qua: str) -> str:
     return sx[:vi] + f'<ignoredErrors><ignoredError sqref="{bo_qua.strip()}" numberStoredAsText="1"/></ignoredErrors>' + sx[vi:]
 
 
-def chen_duong_ke(file_xlsx, file_duong_ke, xml: str | None = None, bo_qua: str = '') -> bool:
+def chen_duong_ke(file_xlsx, xml: str = '', bo_qua: str = '') -> bool:
     """Chèn các đường kẻ (XML) vào sheet đầu của file .xlsx do openpyxl lưu. Trả True nếu đã chèn. xml: nội dung đã canh lại
-    (can_duong_ke) thay cho nội dung file. bo_qua (1.0.07): các ô Excel không gắn cờ "số lưu dạng chữ" (CCCD, điện thoại)."""
+    (can_duong_ke; từ 1.0.20 không còn file .duong_ke.xml). bo_qua (1.0.07): các ô Excel không gắn cờ "số lưu dạng chữ" (CCCD, điện thoại)."""
     import zipfile
     p = Path(file_xlsx)
-    if xml is None:
-        xml = _doc_dk(file_duong_ke)
     if not xml.strip() and not bo_qua.strip():
         return False
     with zipfile.ZipFile(p) as zi:
@@ -427,55 +291,6 @@ def o_tieu_ngu(ws, den_dong: int = 8):
     return None
 
 
-def _doc_dk(file_dk) -> str:
-    if la_mau_nhung(file_dk):
-        from . import mau_in_nhung
-        return mau_in_nhung.lay_duong_ke(Path(file_dk).name)
-    try:
-        return Path(file_dk).read_text(encoding='utf-8')
-    except OSError:
-        return ''
-
-
-def duong_ke_cua_mau(mau_xlsx, ten: str) -> Path:
-    """File đường kẻ dùng khi in. Mẫu đã mở sửa trong Excel (còn hình vẽ, có thể đã kéo đường kẻ) thì lấy đường kẻ ngay
-    trong mẫu và ghi lại <mẫu>.duong_ke.xml; không thì dùng file .duong_ke.xml sẵn có."""
-    import zipfile
-    mau_xlsx = Path(mau_xlsx)
-    if la_mau_nhung(mau_xlsx):                                    # mẫu nhúng: đường kẻ nhúng (_doc_dk), không ghi đĩa
-        return mau_xlsx.with_name(f'{ten}.duong_ke.xml')
-    p = mau_xlsx.with_name(f'{mau_xlsx.stem}.duong_ke.xml')      # mẫu riêng (IN_CHITIET__Duthao) có đường kẻ riêng
-    if mau_xlsx.stem != ten and not p.exists():
-        p = mau_xlsx.with_name(f'{ten}.duong_ke.xml')             # chưa có: dùng đường kẻ của mẫu chính
-    try:
-        x = doc_duong_ke(mau_xlsx, ten)
-    except (KeyError, OSError, AttributeError, zipfile.BadZipFile):
-        x = ''
-    if x:
-        p = mau_xlsx.with_name(f'{mau_xlsx.stem}.duong_ke.xml')
-        try:
-            if not p.exists() or p.read_text(encoding='utf-8') != x:
-                p.write_text(x, encoding='utf-8')
-        except OSError:                             # thư mục mẫu chỉ đọc: dùng bản tạm
-            p = Path(tempfile.gettempdir()) / f'PABT_{ten}.duong_ke.xml'
-            p.write_text(x, encoding='utf-8')
-    return p
-
-
-TACH_MAU = '__'                 # mẫu riêng: <TEN>__<tên mẫu>.xlsx (vd. IN_CHITIET__Duthao.xlsx) cạnh mẫu chính
-
-
-MAU_DU_THAO = {TEN_BTH: 'IN_TONGHOP_DT'}
-
-
-def la_mau_du_thao(mau) -> bool:
-    """Mẫu dự thảo (IN_CHITIET_DT, IN_TONGHOP_DT, hoặc mẫu riêng tên có 'duthao' - kể cả có dấu "IN_CHITIET__Dự thảo": trước
-    0.9.65 không bỏ dấu nên mẫu riêng người dùng đặt tên tiếng Việt bị coi là bản chính thức, chữ DỰ THẢO bị xóa khi in)."""
-    from .lap_pa import bo_dau
-    s = bo_dau(Path(mau).stem).upper().replace(' ', '').replace('_', '')
-    return s.endswith('DT') and ('CHITIET' in s or 'TONGHOP' in s or 'BANGTONGHOP' in s) or 'DUTHAO' in s
-
-
 DAU_DU_THAO = '(DỰ THẢO)'
 _RE_DU_THAO = re.compile(r'DỰ\s*THẢO', re.I)
 
@@ -557,204 +372,10 @@ def _an_du_thao(ws) -> None:
         o.value = v or None
 
 
-def _dat_duong_ke(ws, vt_dk, file_dk) -> str:
+def _dat_duong_ke(ws, vt_dk) -> str:
     """Đường kẻ dưới tên đơn vị, tiêu ngữ và dòng dự án: sát chân dòng chữ cuối, căn giữa đoạn chữ đó."""
     dk = dk_mac_dinh(ws, vt_dk)
-    if not (dk or '').strip():
-        dk = _doc_dk(file_dk)
-    return can_duong_ke(ws, dk) if dk else ''
-
-
-def file_mau(mau, ten: str) -> Path:
-    """mau: thư mục mẫu (None = thu_muc_mau()) hoặc chính file mẫu .xlsx (mẫu riêng chọn khi In / Xuất)."""
-    if mau is not None and str(mau).lower().endswith('.xlsx'):
-        return Path(mau)
-    return Path(mau or thu_muc_mau(ten)) / f'{ten}.xlsx'
-
-
-def ds_mau(ten: str) -> list:
-    """[(tên hiển thị, file)] các mẫu của loại ten: mẫu chính trước, rồi các mẫu riêng (thư mục mẫu đang dùng + thư mục ghi)."""
-    try:
-        chinh = thu_muc_mau(ten) / f'{ten}.xlsx'
-    except LoiIn:
-        return []
-    kq, da = [('Mẫu chính', chinh)], set()
-    for d in dict.fromkeys([chinh.parent, thu_muc_mau_ghi()]):
-        for f in sorted(Path(d).glob(f'{ten}{TACH_MAU}*.xlsx')):
-            t = f.stem[len(ten) + len(TACH_MAU):]
-            if t and t.lower() not in da and not f.name.startswith('~$'):
-                da.add(t.lower())
-                kq.append((t, f))
-    ten_dt = MAU_DU_THAO.get(ten)
-    if ten_dt:
-        for d in dict.fromkeys([chinh.parent, thu_muc_mau_ghi()]):
-            f = Path(d) / f'{ten_dt}.xlsx'
-            if f.exists() and f.resolve() not in {x.resolve() for _, x in kq}:
-                kq.append(('Dự thảo (áp giá trước niêm yết)', f))
-                break
-    return kq
-
-
-# ---------------------------------------------------------------- quản lý mẫu in (1.0.07, hộp Quản lý Mẫu in & Bản in)
-MAU_QUAN_LY = ((TEN_BTH, 'Mẫu bảng tổng hợp', 'tong_hop'),)       # từ 1.0.19 phương án chi tiết chỉ còn bản Word (không mẫu Excel)
-NHUNG = 'Mẫu nhúng chuẩn trong RAM'
-TUY_CHINH = 'Mẫu tùy chỉnh người dùng'
-
-
-def _loai_ql(ten: str) -> str:
-    return next((l for t, _, l in MAU_QUAN_LY if t == ten), 'tong_hop')
-
-
-def trang_thai_mau(ten: str) -> tuple:
-    """(chữ trạng thái, file mẫu tùy chỉnh hoặc None). Tùy chỉnh = có file trong thư mục mẫu tùy chỉnh khác bản nhúng."""
-    import hashlib
-    from . import mau_in_nhung
-    f = thu_muc_mau_tuy_chinh() / f'{ten}.xlsx'
-    if f.exists():
-        try:
-            khac = not mau_in_nhung.co_mau(ten) or hashlib.sha256(f.read_bytes()).hexdigest() != \
-                hashlib.sha256(mau_in_nhung.lay_bytes_mau(ten)).hexdigest()
-        except OSError:
-            khac = True
-        if khac:
-            return TUY_CHINH, f
-    return NHUNG, None
-
-
-def bytes_mau_hien_tai(ten: str) -> bytes:
-    """Bytes mẫu đang dùng: tùy chỉnh nếu có, không thì bản nhúng (mẫu dự thảo chưa thay: mẫu chi tiết chính thức đang dùng)."""
-    from . import mau_in_nhung
-    _, f = trang_thai_mau(ten)
-    if f is not None:
-        return f.read_bytes()
-    try:
-        return nap_mau_bytes(file_mau(None, ten))
-    except (LoiIn, OSError):
-        return mau_in_nhung.lay_bytes_mau(ten)
-
-
-def ap_chuan_trang_mau(file, loai: str) -> None:
-    """Bộ lọc áp chuẩn khi thay mẫu: chi tiết = A4 dọc 72% lề 0,8 / 0,3 / 1,0 / 0,8 cm; tổng hợp = A3 ngang 55%; tắt "vừa N trang";
-    cỡ chữ tiêu đề 16 pt đậm / nội dung 14 pt (1.0.08).
-    Đường kẻ (hình vẽ - openpyxl làm mất) được lưu riêng <mẫu>.duong_ke.xml TRƯỚC khi ghi lại file."""
-    file = Path(file)
-    ten = TEN_BTH
-    try:
-        doc = openpyxl.load_workbook(file, read_only=True)       # chế độ chỉ đọc giữ file mở: đóng trước khi ghi lại
-        try:
-            ten_sheet = doc.sheetnames[0]
-        finally:
-            doc.close()
-        x = doc_duong_ke(file, ten_sheet)
-    except Exception:
-        x = ''
-    if x:
-        file.with_name(f'{file.stem}.duong_ke.xml').write_text(x, encoding='utf-8')
-    wb = openpyxl.load_workbook(file)
-    ws = wb.worksheets[0]
-    from . import dia_phuong
-    chuan_le_trang(ws, 'tong_hop')
-    dat_kho_a3(ws)
-    chuan_co_chu_bth(ws, int(dia_phuong.lay('mau_in.IN_BANGTONGHOP.dong_du_lieu_dau', DONG_DAU_BTH)))   # 1.0.08: chữ 14 / 16 pt
-    if ws.title != ten:
-        ws.title = ten
-    tam = file.with_name(file.name + '.tmp')
-    wb.save(tam)
-    os.replace(tam, file)
-
-
-def _sao_luu_mau(f: Path) -> None:
-    """Mẫu tùy chỉnh cũ (cùng .duong_ke.xml) chuyển vào <thư mục mẫu>\\cu\\<giờ>_<tên> - không xóa."""
-    cu = f.parent / 'cu'
-    cu.mkdir(parents=True, exist_ok=True)
-    gio = time.strftime('%Y%m%d_%H%M%S')
-    for x in (f, f.with_name(f'{f.stem}.duong_ke.xml')):
-        if x.exists():
-            os.replace(x, cu / f'{gio}_{x.name}')
-
-
-def thay_mau(ten: str, file_excel) -> Path:
-    """Thay mẫu ten (MAU_QUAN_LY) bằng file Excel: lấy mẫu (tao_mau_tu_excel - file PABT Excel nhiều sheet hoặc mẫu một sheet có chỗ
-    trống {…}), áp chuẩn khổ / tỷ lệ / lề, lưu vào thư mục mẫu tùy chỉnh (mẫu cũ -> cu\\), làm mới đệm RAM ngay. Trả file mẫu mới."""
-    loai = _loai_ql(ten)
-    goc = TEN_BTH
-    ten_mau = ten[len(goc) + len(TACH_MAU):] if ten.startswith(goc + TACH_MAU) else ''
-    tm = thu_muc_mau_tuy_chinh()
-    tm.mkdir(parents=True, exist_ok=True)
-    dich = tm / f'{ten}.xlsx'
-    tam = Path(tempfile.mkdtemp(prefix='PABT_thay_mau_'))
-    try:
-        ds = tao_mau_tu_excel(file_excel, tam, loai=goc, ten_mau=ten_mau)
-        moi = next((p for p in ds if Path(p).name == dich.name), None)
-        if moi is None:
-            raise LoiIn(f'File {Path(file_excel).name} không có mẫu {goc}.')
-        ap_chuan_trang_mau(moi, loai)
-        if dich.exists():
-            _sao_luu_mau(dich)
-        for x in (Path(moi), Path(moi).with_name(f'{Path(moi).stem}.duong_ke.xml')):
-            if x.exists():
-                shutil.copy2(x, tm / x.name)
-    finally:
-        shutil.rmtree(tam, ignore_errors=True)
-    ghi_danh_dau_mau(tm, ten, dich)                 # 1.0.09: mẫu người dùng chủ động thay - luôn dùng (khung do lap_chi_tiet bảo đảm)
-    xoa_bo_nho_mau()
-    return dich
-
-
-def xuat_mau(ten: str, file_ra) -> Path:
-    """Ghi mẫu đang dùng của ten ra file Excel (người dùng mở sửa rồi Thay thế lại)."""
-    file_ra = Path(file_ra)
-    file_ra.parent.mkdir(parents=True, exist_ok=True)
-    file_ra.write_bytes(bytes_mau_hien_tai(ten))
-    return file_ra
-
-
-def khoi_phuc_mau(ten: str) -> bool:
-    """Bỏ mẫu tùy chỉnh của ten (chuyển vào cu\\) - in lại theo mẫu chuẩn nhúng. Trả True nếu đã có mẫu tùy chỉnh."""
-    f = thu_muc_mau_tuy_chinh() / f'{ten}.xlsx'
-    if not f.exists():
-        return False
-    _sao_luu_mau(f)
-    ghi_danh_dau_mau(f.parent, ten, None)
-    xoa_bo_nho_mau()
-    return True
-
-
-def ghi_mau_nhung(ten: str, thu_muc, ghi_de: bool = False) -> list:
-    """Ghi mẫu nhúng ten (.xlsx + .duong_ke.xml) ra thu_muc (không ghi đè file đã có, trừ ghi_de). Trả các file đã ghi."""
-    from . import mau_in_nhung
-    thu_muc = Path(thu_muc)
-    kq = []
-    for f, du_lieu in ((thu_muc / f'{ten}.xlsx', mau_in_nhung.lay_bytes_mau(ten)),
-                       (thu_muc / f'{ten}.duong_ke.xml', mau_in_nhung.lay_duong_ke(ten).encode('utf-8'))):
-        if du_lieu and (ghi_de or not f.exists()):
-            tam = f.with_name(f.name + '.tmp')
-            tam.write_bytes(du_lieu)
-            os.replace(tam, f)
-            kq.append(f)
-    return kq
-
-
-def mau_de_sua(ten: str = TEN_BTH) -> Path:
-    """File mẫu in để mở bằng Excel sửa trực tiếp (chữ, phông, lề, độ rộng cột, đường kẻ...). Bản cài: chép mẫu đang dùng
-    sang %APPDATA%\\PABT\\mau_in (thư mục cài không ghi được) - từ đó phần mềm in theo mẫu đã sửa."""
-    import shutil
-    ghi = thu_muc_mau_ghi()
-    for t in (TEN_BTH,):
-        try:
-            goc = thu_muc_mau(t)
-        except LoiIn:
-            continue
-        if goc == THU_MUC_NHUNG:                     # máy trắng: chép mẫu nhúng ra thư mục ghi để mở bằng Excel
-            ghi.mkdir(parents=True, exist_ok=True)
-            ghi_mau_nhung(t, ghi)
-            continue
-        if goc.resolve() != ghi.resolve():
-            ghi.mkdir(parents=True, exist_ok=True)
-            for f in (f'{t}.xlsx', f'{t}.duong_ke.xml', 'IN_TONGHOP_DT.xlsx', 'IN_TONGHOP_DT.duong_ke.xml'):
-                if (goc / f).exists() and not (ghi / f).exists():
-                    shutil.copy2(goc / f, ghi / f)
-    return ghi / f'{ten}.xlsx'
+    return can_duong_ke(ws, dk) if (dk or '').strip() else ''
 
 
 # ---------------------------------------------------------------- chèn / xóa dòng giữ định dạng
@@ -1349,240 +970,11 @@ def vua_chu(ws, vt, do=None, them: float | None = None) -> None:
     ws.row_dimensions[r].height = cao_dong_chu(max(1, len(dong)), co) + them
 
 
-class LoiChuaRoMau(LoiIn):
-    """File không có sheet IN_CHITIET / IN_BANGTONGHOP và không nhận ra theo nội dung: hỏi người dùng là mẫu loại nào."""
-
-
-_CHO_BTH = ('BẢNG TỔNG HỢP', '{so_pa_tong}')
-
-
-def _chu_sheet(ws, so_dong: int = 40) -> str:
-    return '\n'.join(str(v) for r in ws.iter_rows(max_row=so_dong, max_col=30, values_only=True) for v in r
-                     if isinstance(v, str))
-
-
-def nhan_loai_mau(ws) -> str | None:
-    """TEN_BTH theo tên sheet, rồi theo nội dung (chữ "BẢNG TỔNG HỢP" / {so_pa_tong}); không rõ: None."""
-    if ws.title == TEN_BTH:
-        return ws.title
-    return TEN_BTH if any(x in _chu_sheet(ws).upper() for x in _CHO_BTH) else None
-
-
-def ten_mau_hop_le(ten: str) -> str:
-    """Tên mẫu riêng dùng trong tên file: bỏ ký tự cấm, khoảng trắng gọn."""
-    return re.sub(r'[\\/:*?"<>|]+', ' ', ' '.join(str(ten or '').split())).strip()[:40]
-
-
-def tao_mau_tu_excel(file_excel, thu_muc, loai: str | None = None, ten_mau: str = '') -> list:
-    """Lấy mẫu in từ file Excel. Trả danh sách file đã tạo.
-    - File PABT Excel (.xlsm / .xlsx có sheet IN_CHITIET và / hoặc IN_BANGTONGHOP): sheet nào có thì lấy sheet đó (trước đây
-      đòi đủ cả hai sheet -> file chỉ có một mẫu báo "không có sheet …").
-    - File mẫu đã sửa sẵn (đã có chỗ trống {ho_ten}, {du_an}…, sheet tên bất kỳ): nhận loại theo tên sheet / nội dung, không
-      rõ thì LoiChuaRoMau (gọi lại với loai=TEN_BTH). Chép nguyên file (giữ đường kẻ, hình), chỉ đổi tên sheet.
-    ten_mau: '' = thay mẫu chính; có tên = thêm mẫu riêng <TEN>__<tên>.xlsx (chọn khi In / Xuất). Mẫu cũ cùng tên được chép
-    vào <thư mục mẫu>\\cu\\ trước khi ghi đè."""
-    import shutil
-    import zipfile
-    thu_muc = Path(thu_muc)
-    thu_muc.mkdir(parents=True, exist_ok=True)
-    ten_mau = ten_mau_hop_le(ten_mau)
-    duoi = f'{TACH_MAU}{ten_mau}' if ten_mau else ''
-    wb0 = openpyxl.load_workbook(file_excel, read_only=True)
-    try:
-        ten_sheet = list(wb0.sheetnames)
-        lay = {t: t for t in (TEN_BTH,) if t in ten_sheet}                   # loại mẫu -> sheet trong file
-        if not lay:
-            hien = [s for s in ten_sheet if wb0[s].sheet_state == 'visible'] or ten_sheet
-            for s in hien:
-                k = nhan_loai_mau(wb0[s])
-                if k and k not in lay:
-                    lay[k] = s
-            if loai == TEN_BTH:
-                lay = {loai: lay.get(loai) or hien[0]}
-            elif not lay and hien:
-                lay[TEN_BTH] = hien[0]
-        da_la_mau = {k: '{' in _chu_sheet(wb0[s], 60) and '}' in _chu_sheet(wb0[s], 60) for k, s in lay.items()}
-    finally:
-        wb0.close()
-    tao = []
-    for ten, s in lay.items():
-        p = thu_muc / f'{ten}{duoi}.xlsx'
-        if p.exists():                                  # giữ bản cũ (đổi mẫu nhầm thì lấy lại)
-            cu = thu_muc / 'cu'
-            cu.mkdir(exist_ok=True)
-            shutil.copy2(p, cu / f'{p.stem}_{datetime.now():%Y%m%d_%H%M%S}.xlsx')
-        if da_la_mau[ten] and len(ten_sheet) == 1 and str(file_excel).lower().endswith('.xlsx'):
-            # mẫu đã sửa sẵn, một sheet: chép nguyên file (openpyxl làm mất hình vẽ / đường kẻ), đổi tên sheet trong workbook.xml
-            tam = p.with_name(p.name + '.tmp')
-            with zipfile.ZipFile(file_excel) as zi, zipfile.ZipFile(tam, 'w', zipfile.ZIP_DEFLATED) as zo:
-                for it in zi.infolist():
-                    du = zi.read(it.filename)
-                    if it.filename == 'xl/workbook.xml' and s != ten:
-                        du = du.replace(f'name="{_xml_attr(s)}"'.encode('utf-8'), f'name="{ten}"'.encode('utf-8'), 1)
-                    zo.writestr(it, du)
-            os.replace(tam, p)
-            tao.append(p)
-            x = doc_duong_ke(p, ten)
-            if x:
-                (thu_muc / f'{p.stem}.duong_ke.xml').write_text(x, encoding='utf-8')
-            continue
-        wb = openpyxl.load_workbook(file_excel, keep_vba=False)
-        for s2 in list(wb.sheetnames):
-            if s2 != s:
-                del wb[s2]
-        for n in list(wb.defined_names):
-            del wb.defined_names[n]
-        ws = wb[s]
-        ws.data_validations.dataValidation = []
-        ws.title = ten
-        if not da_la_mau[ten]:                          # sheet của file PABT Excel (công thức) -> chỗ trống {ten}
-            _lam_mau_bth(ws)
-        ws.sheet_view.selection[0].activeCell = 'A1'
-        ws.sheet_view.selection[0].sqref = 'A1'
-        wb.save(p)
-        tao.append(p)
-        x = doc_duong_ke(file_excel, s)
-        dk = thu_muc / f'{p.stem}.duong_ke.xml'
-        if x:
-            dk.write_text(x, encoding='utf-8')
-            tao.append(dk)
-    return tao
-
-
-def _xlsx_tu_pdf(p: Path) -> Path:
-    """PDF không có lớp bảng: lấy chữ rồi dựng khung mẫu (chi tiết hoặc bảng tổng hợp) để vẫn in được."""
-    chu = ''
-    try:
-        from pypdf import PdfReader
-        chu = '\n'.join((page.extract_text() or '') for page in PdfReader(str(p)).pages[:6])
-    except Exception:
-        chu = ''
-    import openpyxl
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = TEN_BTH
-    ws['A1'] = ((chu.split('\n') or [''])[0] or p.stem)[:120]
-    ws['A5'] = 'Dự án: {du_an}'
-    ws['C8'] = '{ho_ten}'
-    ws['A13'] = '{nguon_goc}'
-    ws['A17'] = 'STT'
-    ws['A18'] = 'IV'
-    ws['B18'] = 'Tái định cư: {tai_dinh_cu}'
-    if ws.title == TEN_BTH:
-        ws['A6'] = 'Dự án: {du_an}'
-        ws.cell(DONG_DAU_BTH + 1, 1).value = 'TỔNG CỘNG'
-    ra = p.with_name(p.stem + '_mau.xlsx')
-    wb.save(ra)
-    return ra
-
-
-def _mau_thanh_xlsx(file) -> Path | None:
-    p = Path(file)
-    if not p.is_file():
-        return None
-    suf = p.suffix.lower()
-    if suf in ('.xlsx', '.xlsm'):
-        return p
-    if suf == '.pdf':
-        return _xlsx_tu_pdf(p)
-    if suf in ('.xls', '.doc', '.docx'):
-        try:
-            from .nhap_don_gia import chuyen_office
-            return chuyen_office(p)
-        except Exception:
-            return None
-    return None
-
-
-def _nhan_mau_mac_dinh(thu_muc, ten_mau: str = '') -> list:
-    """Chép mẫu chuẩn đóng kèm — in vẫn chạy khi file người chọn không đọc được."""
-    import shutil
-    duoi = f'{TACH_MAU}{ten_mau_hop_le(ten_mau)}' if ten_mau else ''
-    kq = []
-    thu_muc = Path(thu_muc)
-    thu_muc.mkdir(parents=True, exist_ok=True)
-    for ten in (TEN_BTH,):
-        try:
-            src = file_mau(None, ten)
-        except Exception:
-            continue
-        dich = thu_muc / f'{ten}{duoi}.xlsx'
-        if la_mau_nhung(src):                       # máy trắng: mẫu chuẩn nhúng trong mã
-            dich.write_bytes(nap_mau_bytes(src))
-            kq.append(dich)
-            continue
-        if not Path(src).is_file():
-            continue
-        shutil.copy2(src, dich)
-        kq.append(dich)
-    return kq
-
-
-def nap_mau_in(file, thu_muc, ten_mau: str = '') -> tuple:
-    """Đưa file Excel hoặc PDF vào mẫu in. Luôn trả (danh sách file, câu kết quả), không ném lỗi."""
-    import shutil
-    xoa_bo_nho_mau()
-    file, thu_muc = Path(file), Path(thu_muc)
-    try:
-        thu_muc.mkdir(parents=True, exist_ok=True)
-        (thu_muc / 'goc').mkdir(exist_ok=True)
-        if file.is_file():
-            shutil.copy2(file, thu_muc / 'goc' / file.name)
-    except OSError:
-        pass
-    nguon = _mau_thanh_xlsx(file)
-    if nguon is not None:
-        try:
-            ds = tao_mau_tu_excel(nguon, thu_muc, ten_mau=ten_mau)
-            if ds:
-                return ds, 'Đã phân tích cấu trúc file và đưa vào mẫu in.'
-        except Exception:
-            pass
-    ds = _nhan_mau_mac_dinh(thu_muc, ten_mau)
-    return ds, 'Đã lưu file gốc và dùng khung mẫu chuẩn của phần mềm để vẫn in được.'
-
-
-def _xml_attr(s: str) -> str:
-    return s.replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
-
-
 def _dong_cuoi(ws, so_cot: int) -> int:
     for r in range(ws.max_row, 0, -1):
         if any(ws.cell(r, c).value not in (None, '', ' ') for c in range(1, so_cot + 1)):
             return r
     return 1
-
-
-def _lam_mau_bth(ws):
-    tong = next((r for r in range(DONG_DAU_BTH, DONG_DAU_BTH + 3000) if str(ws.cell(r, 1).value or '').strip() == 'TỔNG CỘNG'), None)
-    if tong is None:
-        tong = max(DONG_DAU_BTH + 1, ws.max_row + 1)
-        ws.cell(tong, 1).value = 'TỔNG CỘNG'
-    for m in list(ws.merged_cells.ranges):
-        if DONG_DAU_BTH <= m.min_row < tong:
-            ws.merged_cells.remove(m)
-    for r in range(DONG_DAU_BTH, tong):
-        for c in range(1, 26):
-            o = ws.cell(r, c)
-            if o.__class__.__name__ == 'MergedCell':
-                ws._cells.pop((r, c), None)
-                o = ws.cell(r, c)
-            o.value = None
-    if tong - DONG_DAU_BTH > 1:
-        _doi_dong(ws, DONG_DAU_BTH + 1, -(tong - DONG_DAU_BTH - 1))
-    ws['A6'] = 'Dự án: {du_an}'
-    for row in ws.iter_rows(min_row=DONG_DAU_BTH + 1):
-        for c in row:
-            v = c.value
-            if isinstance(v, str) and v.startswith('='):
-                c.value = None                       # công thức tổng: phần mềm ghi lại theo số dòng thực tế
-            elif isinstance(v, str):
-                v = re.sub(r'UBND (xã|phường|thị trấn) [^0-9%]+? (\d+%)', r'UBND {cap_dia_ban_thuong} {ten_dia_ban} \2', v)
-                v = re.sub(r'^[^,]+, ngày (…|\.)', r'{ten_dia_ban}, ngày \1', v)
-                v = re.sub(r'năm 20\d\d', 'năm {nam}', v)
-                c.value = v
-    ws['A7'] = re.sub(r'năm 20\d\d', 'năm {nam}', str(ws['A7'].value or ''))
-    ws.print_area = f'A1:Y{_dong_cuoi(ws, 25) + 1}'
 
 
 # ---------------------------------------------------------------- dữ liệu chung
@@ -1636,43 +1028,6 @@ def viet_hoa_du_an(ws, den_dong: int | None = None) -> int:
             o.value = 'DỰ ÁN ' + o.value[m.end():]
             n += 1
     return n
-
-
-# đệm mẫu in trong RAM (0.9.87): bytes của file mẫu theo (đường dẫn, mtime_ns, cỡ) - in hàng loạt không đọc lại đĩa mỗi hộ (thư mục
-# mẫu trên ổ mạng / %APPDATA% bị diệt virus quét). KHÔNG giữ Workbook đã nạp (pickle / deepcopy làm hỏng openpyxl - 0.9.22, 0.9.24):
-# mỗi hộ vẫn load_workbook từ BytesIO, workbook độc lập.
-_BO_NHO_MAU = {}
-
-
-def nap_mau_bytes(duong_dan) -> bytes:
-    p = Path(duong_dan)
-    if la_mau_nhung(p):                         # 1.0.07: mẫu chuẩn nhúng trong mã (máy không có thư mục mẫu)
-        from . import mau_in_nhung
-        try:
-            return mau_in_nhung.lay_bytes_mau(p.name)
-        except KeyError:
-            raise LoiIn(f'Không có mẫu in {p.name} (máy chưa có thư mục mẫu in).') from None
-    st = p.stat()
-    k = str(p.resolve())
-    cu = _BO_NHO_MAU.get(k)
-    if cu is not None and cu[0] == (st.st_mtime_ns, st.st_size):
-        return cu[1]
-    du_lieu = p.read_bytes()
-    if len(_BO_NHO_MAU) > 16:
-        _BO_NHO_MAU.clear()
-    _BO_NHO_MAU[k] = ((st.st_mtime_ns, st.st_size), du_lieu)
-    return du_lieu
-
-
-def xoa_bo_nho_mau() -> None:
-    """Gọi khi mẫu in đổi (cập nhật mẫu in, cài gói .pabtcfg) - khóa mtime / cỡ đã tự nhận ra, gọi thêm cho chắc."""
-    _BO_NHO_MAU.clear()
-
-
-def mo_mau(duong_dan):
-    """openpyxl.load_workbook(mẫu) qua đệm RAM."""
-    import io
-    return openpyxl.load_workbook(io.BytesIO(nap_mau_bytes(duong_dan)))
 
 
 # ---------------------------------------------------------------- bảng tổng hợp (A3 ngang)
@@ -2499,7 +1854,7 @@ def thu_cot_khong_bth(ws, cot_khong, cot_nhan: int, r1: int, r2: int, n_cot: int
     return thu
 
 
-def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | None = None, so_pa_tong: str = '',
+def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, so_pa_tong: str = '',
                       ngay_pa_tong: str = '', bao_tien_do=None, ky_hieu_so: str = '', du_thao: bool | None = None,
                       lan='cong_don') -> Path:
     """Bảng tổng hợp các hộ. so_pa_tong / ngay_pa_tong (phương án tổng của đợt trình): điền vào "(Đính kèm Phương án số …/…
@@ -2508,12 +1863,11 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
     Vị trí cột, dòng dữ liệu đầu, cột cộng SUM, làm tròn và phân bổ kinh phí tổ chức thực hiện: hồ sơ địa phương (0.9.85)."""
     from . import dia_phuong
     from openpyxl.utils import get_column_letter
-    mau = file_mau(mau, TEN_BTH)
-    du_thao = la_mau_du_thao(mau) if du_thao is None else bool(du_thao)     # chế độ phát hành (xem lap_chi_tiet)
+    du_thao = bool(du_thao)                                             # chế độ phát hành: dự thảo (chữ DỰ THẢO, không số) / chính thức
     if du_thao:
         so_pa_tong, ngay_pa_tong = '', ''
-    duong_ke = duong_ke_cua_mau(mau, TEN_BTH)
-    wb = mo_mau(mau)
+    from . import mau_bang_tong_hop              # 1.0.20: mẫu dựng hoàn toàn bằng mã (không còn file IN_BANGTONGHOP.xlsx)
+    wb = mau_bang_tong_hop.tao_workbook()
     ws = wb.worksheets[0]
     K = dia_phuong.cot_mau(TEN_BTH)                                     # trường -> số cột
     d0 = int(dia_phuong.lay('mau_in.IN_BANGTONGHOP.dong_du_lieu_dau', DONG_DAU_BTH))
@@ -2841,12 +2195,12 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, mau: Path | No
     wb.calculation.fullCalcOnLoad = True
     file_ra = Path(file_ra)
     file_ra.parent.mkdir(parents=True, exist_ok=True)
-    dk = _dat_duong_ke(ws, vt_dk, duong_ke)       # sát chân chữ, căn giữa (tên đơn vị, tiêu ngữ, dòng dự án)
+    dk = _dat_duong_ke(ws, vt_dk)                 # sát chân chữ, căn giữa (tên đơn vị, tiêu ngữ, dòng dự án)
     # dự thảo: "(DỰ THẢO)" dưới đường kẻ tên đơn vị; chính thức: xóa. SAU đường kẻ (1.0.04): chữ mới dưới tên đơn vị không làm
     # đường kẻ neo nhầm vào nó
     ap_che_do_du_thao(ws, du_thao, TEN_BTH)
     _an_toan.luu_xlsx(wb, file_ra)
-    chen_duong_ke(file_ra, duong_ke, dk)          # đường kẻ của mẫu (openpyxl không giữ hình vẽ)
+    chen_duong_ke(file_ra, dk)                    # đường kẻ (openpyxl không giữ hình vẽ)
     return file_ra
 
 

@@ -139,12 +139,8 @@ class TestDuongKe(CoSo):
         self.kiem(f, ['A2', 'S2', 'A6'])
 
     def test_bang_tong_hop_khong_co_file_duong_ke(self):
-        # máy cập nhật bằng gói .pabtcn (không mang mau_in): mẫu không có .duong_ke.xml -> tự tạo 3 đường kẻ mặc định
-        import shutil
-        mau = self.td / 'mau'
-        mau.mkdir()
-        shutil.copy2(MAU / 'IN_BANGTONGHOP.xlsx', mau / 'IN_BANGTONGHOP.xlsx')
-        f = in_an.lap_bang_tong_hop(self.con, self.td / 'bth3.xlsx', mau=mau / 'IN_BANGTONGHOP.xlsx')
+        # 1.0.20: bảng tổng hợp dựng bằng mã, không file .duong_ke.xml -> luôn tự tạo 3 đường kẻ mặc định
+        f = in_an.lap_bang_tong_hop(self.con, self.td / 'bth3.xlsx')
         self.kiem(f, ['A2', 'S2', 'A6'])
 
 

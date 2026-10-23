@@ -16,7 +16,6 @@ import os
 import re
 import shutil
 import socket
-import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -39,12 +38,11 @@ class LoiGoiMau(ValueError):
 
 # ---------------------------------------------------------------- nơi đọc / ghi mẫu
 def thu_muc_mau_cai() -> Path:
-    """Nơi cài mẫu của gói: bản đóng gói = %APPDATA%\\PABT\\mau_in (in_an.thu_muc_mau đọc ở đây trước thư mục cài);
-    chạy từ mã nguồn = <thư mục máy>\\mau_in (KHÔNG ghi đè mau_in của mã nguồn - kiểm thử đặt PABT_THU_MUC_MAY)."""
-    from . import in_an
+    """Nơi cài mẫu của gói (mẫu tờ trình .docx / .xlsx): bản đóng gói = %APPDATA%\\PABT\\mau_in; chạy từ mã nguồn = <thư mục máy>\\mau_in
+    (kiểm thử đặt PABT_THU_MUC_MAY)."""
     import sys
     if getattr(sys, 'frozen', False) and not os.environ.get('PABT_THU_MUC_MAY'):
-        return in_an.thu_muc_mau_ghi()
+        return Path(os.environ.get('APPDATA') or Path.home()) / 'PABT' / 'mau_in'
     return dia_phuong.thu_muc_may() / 'mau_in'
 
 
@@ -58,27 +56,14 @@ def _la_mau(ten: str) -> bool:
 
 
 def ds_mau_hien_hanh() -> list:
-    """[(tên file, đường dẫn)] mẫu đang dùng trên máy: mọi mẫu trong thư mục mẫu của máy (mẫu đã sửa, mẫu riêng, mẫu tờ trình) +
-    hai mẫu chính và file đường kẻ (lấy ở nơi phần mềm đang đọc - in_an.thu_muc_mau). Bỏ thư mục con (cu\\, mac_dinh\\)."""
-    from . import in_an
+    """[(tên file, đường dẫn)] mẫu đang dùng trên máy: mọi mẫu trong thư mục mẫu của máy (mẫu tờ trình đã sửa, mẫu riêng). Từ 1.0.20
+    phần mềm không còn mẫu in Excel (bảng tổng hợp dựng bằng mã). Bỏ thư mục con (cu\\, mac_dinh\\)."""
     kq = {}
     for goc in (thu_muc_mau_cai(), dia_phuong.thu_muc_may() / 'mau_in'):
         if goc.is_dir():
             for f in sorted(goc.iterdir()):
                 if f.is_file() and _la_mau(f.name):
                     kq.setdefault(f.name, f)
-    for ten in (in_an.TEN_BTH,):
-        try:
-            tm = in_an.thu_muc_mau(ten)
-        except in_an.LoiIn:
-            continue
-        if tm == in_an.THU_MUC_NHUNG:               # máy trắng: mẫu nhúng ghi ra thư mục tạm để đóng gói
-            tm = Path(tempfile.gettempdir()) / 'PABT_mau_nhung'
-            tm.mkdir(parents=True, exist_ok=True)
-            in_an.ghi_mau_nhung(ten, tm, ghi_de=True)
-        for f in (tm / f'{ten}.xlsx', tm / f'{ten}.duong_ke.xml'):
-            if f.is_file():
-                kq.setdefault(f.name, f)
     return sorted(kq.items())
 
 
@@ -256,8 +241,6 @@ def cai(file) -> dict:
         raise LoiGoiMau(f'Không ghi được mẫu / hồ sơ: {e}\n(mẫu đang mở bằng Excel / Word? đóng file rồi nhập lại; bản cũ còn ở '
                         f'{sl if sl.exists() else goc_sl})') from None
     _don_sao_luu(goc_sl)
-    from .in_an import xoa_bo_nho_mau
-    xoa_bo_nho_mau()                                    # mẫu in đệm trong RAM (in_an.nap_mau_bytes)
     if dia_phuong.TEN_FILE in ds['noi_dung']:
         dia_phuong.nap_lai()
     return dict(mau=sorted(t[len('mau_in/'):] for t in ds['noi_dung'] if t.startswith('mau_in/')),

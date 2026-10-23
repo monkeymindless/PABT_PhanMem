@@ -678,10 +678,6 @@ class KhungXemTruocTaiLieu(QFrame):
         else:
             self._hen.start(CHO_MS)
 
-    def xoa_nho(self) -> None:
-        """Bỏ các bản đã lập trong phiên (mẫu in vừa sửa, số liệu đổi): lần xem sau lập lại."""
-        self._nho.clear()
-
     def dang_lap(self) -> bool:
         return self._dang is not None or self._cho is not None
 

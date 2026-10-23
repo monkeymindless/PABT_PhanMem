@@ -36,19 +36,6 @@ class _Co(unittest.TestCase):
         return con
 
 
-class TestMauNhung(_Co):
-    def test_ban_nhung_khop_file_mau(self):
-        """Bản nhúng = đúng các file trong mau_in\\ (sửa mẫu chuẩn thì chạy lại tao_mau_nhung.py)."""
-        import hashlib
-        from pabt import mau_in_nhung
-        goc = Path(__file__).resolve().parents[1] / 'mau_in'
-        for ten_hang, f, _ in __import__('tao_mau_nhung').DS:
-            self.assertEqual(mau_in_nhung.SHA256[ten_hang], hashlib.sha256((goc / f).read_bytes()).hexdigest(),
-                             f'{f} đã đổi - chạy tao_mau_nhung.py')
-        self.assertFalse(mau_in_nhung.co_mau('IN_CHITIET'))                  # 1.0.19: không còn mẫu Excel chi tiết
-        self.assertTrue(mau_in_nhung.lay_duong_ke('IN_BANGTONGHOP'))
-
-
 class TestBangTongHopA3(_Co):
     def test_a3_55_chu_14_16(self):
         from pabt import in_an
@@ -229,31 +216,25 @@ if __name__ == '__main__':
 
 
 class TestQuanLyMau(_Co):
-    def test_xuat_thay_khoi_phuc(self):
+    def test_thong_so_mau_word(self):
+        """1.0.20: hộp chỉ còn quản lý THÔNG SỐ mẫu Word (không còn mẫu Excel để thay)."""
         from PySide6.QtWidgets import QApplication
         QApplication.instance() or QApplication([])
-        from pabt import in_an
+        from pabt import in_word
         from pabt.man_hinh_quan_ly_mau import HopQuanLyMauIn
         hop = HopQuanLyMauIn(im_lang=True)
         self.addCleanup(hop.deleteLater)
-        self.assertEqual(hop.bang.rowCount(), 1)                        # từ 1.0.19 chỉ còn mẫu bảng tổng hợp (chi tiết = Word)
-        self.assertEqual({hop.bang.item(r, 2).text() for r in range(1)}, {in_an.NHUNG})
-        hop.bang.selectRow(0)                                           # bảng tổng hợp
-        f = hop.xuat(self.td / 'xuat' / 'BTH.xlsx')
-        wb = openpyxl.load_workbook(f)
-        wb.active.page_setup.paperSize = 9                              # người dùng sửa: A4, tỷ lệ 20%
-        wb.active.page_setup.scale = 20
-        wb.active['A5'] = 'BẢNG TỔNG HỢP ĐÃ SỬA {du_an}'
-        wb.save(f)
-        p = hop.thay(f)
-        self.assertEqual(p, in_an.thu_muc_mau_tuy_chinh() / 'IN_BANGTONGHOP.xlsx')
-        self.assertEqual(hop.bang.item(0, 2).text(), in_an.TUY_CHINH)
-        ws = openpyxl.load_workbook(p).active                           # bộ lọc áp chuẩn: A3 55%
-        self.assertEqual((ws.page_setup.paperSize, int(ws.page_setup.scale)), (8, 55))
-        self.assertEqual(in_an.thu_muc_mau(in_an.TEN_BTH), in_an.thu_muc_mau_tuy_chinh())     # in dùng ngay mẫu mới
-        con = self._con(3)
-        b = openpyxl.load_workbook(in_an.lap_bang_tong_hop(con, self.td / 'b.xlsx')).active
-        self.assertTrue(any(isinstance(o.value, str) and 'ĐÃ SỬA' in o.value for o in b._cells.values()))
-        self.assertTrue(hop.khoi_phuc(xac_nhan=True))
-        self.assertEqual(hop.bang.item(0, 2).text(), in_an.NHUNG)
-        self.assertTrue(list((in_an.thu_muc_mau_tuy_chinh() / 'cu').glob('*IN_BANGTONGHOP.xlsx')))   # mẫu cũ giữ bản sao
+        self.assertEqual(in_word.trang_thai_thong_so(), 'Nhúng chuẩn')
+        self.assertFalse(hop.b_w_khoi_phuc.isEnabled())
+        f = hop.xuat_word(self.td / 'xuat' / 'mau_word.json')
+        self.assertTrue(f.exists())
+        import json
+        d = json.loads(f.read_text(encoding='utf-8'))
+        d['mau_word']['le_mm']['trai'] = 12
+        f.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+        self.addCleanup(in_word.khoi_phuc_thong_so)
+        self.assertIn('le_mm', hop.nhap_word(f))
+        self.assertEqual(in_word.trang_thai_thong_so(), 'Tùy chỉnh')
+        self.assertTrue(hop.khoi_phuc_word(xac_nhan=True))
+        self.assertEqual(in_word.trang_thai_thong_so(), 'Nhúng chuẩn')
+        self.assertFalse(hop.b_w_khoi_phuc.isEnabled())

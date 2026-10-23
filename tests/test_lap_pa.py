@@ -342,8 +342,8 @@ class TestTyLeTrongVaDaLap(unittest.TestCase):
         self.assertEqual(theo_doi.tong_hop(con, tinh_pa=False)[0].trang_thai, 'Đã lập phương án')
         self.assertEqual(lap_pa.phan_loai_lap(con)[ma], 'da_lap')
 
-    def test_nguon_goc_va_mau_in_khong_loi(self):
-        from pabt import ho_so, in_an
+    def test_nguon_goc_khong_loi(self):
+        from pabt import ho_so
         self.assertEqual(ho_so.chuan_nguon_goc('a: - b. – c'), 'a:\n- b.\n- c')
         # 0.9.88: gạch nối giữa tên (không sau dấu kết câu) giữ trên cùng dòng
         self.assertEqual(ho_so.chuan_nguon_goc('Khu Bảo tồn thiên nhiên - Văn hoá Đồng Nai; ông A (con bà B - đại diện) sử dụng'),
@@ -353,18 +353,6 @@ class TestTyLeTrongVaDaLap(unittest.TestCase):
         self.assertEqual(ho_so.chuan_nguon_goc('Ông A sử dụng 1975 - 1990, bà B 1990 - 2005 - nay'),
                          'Ông A sử dụng 1975 - 1990, bà B 1990 - 2005 - nay')
         self.assertEqual(ho_so.chuan_nguon_goc('đất ở - đất lúa - đất vườn'), 'đất ở\n- đất lúa\n- đất vườn')
-        with tempfile.TemporaryDirectory() as td:
-            td = Path(td)
-            import openpyxl
-            wb = openpyxl.Workbook()
-            wb.active['A1'] = 'Mau tuy y'
-            p = td / 'mau.xlsx'
-            wb.save(p)
-            ds, chu = in_an.nap_mau_in(p, td / 'ra')
-            self.assertTrue(ds)
-            self.assertIn('mẫu in', chu)
-            ds2, chu2 = in_an.nap_mau_in(td / 'khong_co.pdf', td / 'ra2')
-            self.assertTrue(chu2)
 
 
 class TestDocSo(unittest.TestCase):
