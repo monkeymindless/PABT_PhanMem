@@ -7,6 +7,10 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.18', '23/10/2026', (
+        'Sửa mẫu Word phương án chi tiết, bổ sung, điều chỉnh: dòng "CHI NHÁNH …" (đậm, gạch chân) luôn có ở đầu văn bản, kể cả dự án lập '
+        'từ file Excel cũ có ô tên đơn vị trên tiêu đề ghi "Thành phố Đồng Nai". Dòng "Số: …" và "địa danh, ngày …" vẫn ngang hàng nhau.',
+    )),
     ('1.0.17', '23/10/2026', (
         'Giao diện 2.0 - nền tảng: Cài đặt > Giao diện… chọn mật độ bảng Gọn / Chuẩn / Thoáng (áp ngay cho mọi bảng đang mở, '
         'màn hình 1366 x 768 chọn Gọn thấy thêm ~4 dòng).',
