@@ -10,7 +10,7 @@ from . import nghiep_vu
 from .nghiep_vu import BoiCanh, doc_phuong_an, tinh_pa
 from .tien import D, KHONG
 
-NHAN_TDC = 'Tái định cư:'
+NHAN_TDC = 'Phương án tái định cư:'
 
 
 def _hai_dong(s: str) -> str:
@@ -223,7 +223,7 @@ def _thong_tin_ho(con, ma_ho: int, da: dict, che: bool | None = None) -> dict:
                 so_pa=(h['so_pa'] or '').strip() if 'so_pa' in k else '', ngay_pa=(h['ngay_pa'] or '') if 'ngay_pa' in k else '')
 
 
-TIEU_DE_MUC_II = 'II. Thông tin vị trí, nguồn gốc đất:'      # 0.9.87: tiêu đề mục II thống nhất (1.0.07: có dấu hai chấm)
+TIEU_DE_MUC_II = 'II. Thông tin nguồn gốc đất:'      # 0.9.87: tiêu đề mục II thống nhất (1.0.07: có dấu hai chấm)
 
 
 NHAN_TO_CHUC = 'Tổ chức:'                                  # chủ sử dụng là tổ chức: thay nhãn "Họ và tên:"
@@ -232,10 +232,10 @@ NHAN_TO_CHUC = 'Tổ chức:'                                  # chủ sử dụ
 NHAN_DIA_CHI_TO_CHUC = 'Địa chỉ:'                          # 1.0.04: tổ chức thay nhãn "Địa chỉ thường trú:"
 
 
-TIEU_DE_MUC_I_HO = 'I. Thông tin hộ gia đình, cá nhân'     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (thay "I. Tổ chức và hộ…")
+TIEU_DE_MUC_I_HO = 'I. Tổ chức và hộ gia đình, cá nhân bị thu hồi đất, tài sản gắn liền với đất'     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (thay "I. Tổ chức và hộ…")
 
 
-TIEU_DE_MUC_I_TO_CHUC = 'I. Thông tin tổ chức'
+TIEU_DE_MUC_I_TO_CHUC = TIEU_DE_MUC_I_HO                   # mẫu PDF 23/10/2026: một tiêu đề cho cả hộ và tổ chức
 
 
 def tieu_de_muc_i(to_chuc: bool) -> str:

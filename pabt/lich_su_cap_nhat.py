@@ -12,6 +12,10 @@ MUC = (
         'Microsoft Word: xem trước và PDF là bản gần đúng dựng bằng Qt từ chính file Word (không còn đọc Excel). Bảng tổng hợp vẫn là Excel.',
         'An toàn dữ liệu in: mọi file Excel xuất ra đi qua một cổng lưu; chữ do người dùng gõ bắt đầu bằng dấu "=" (họ tên, địa chỉ, '
         'ghi chú…) không còn trở thành công thức Excel (chặn lệnh độc như =HYPERLINK).',
+        'Mẫu Word phương án chi tiết chỉnh theo mẫu PDF mới: lề trái 9 / phải 7 / trên, dưới 10 mm; chữ thân 10,5 pt, bảng 10 pt, ghi chú '
+        '7,5 pt; tiêu đề "I. Tổ chức và hộ gia đình, cá nhân bị thu hồi đất, tài sản gắn liền với đất", "II. Thông tin nguồn gốc đất:", '
+        '"Phương án tái định cư:"; tên dự án chữ thường, có đường kẻ ngắn CÁCH chữ (không sát, không mất dấu); bảng viền ngoài đậm; '
+        'khối LẬP BIỂU - KIỂM TRA - chức vụ ký chia đều ba phần bằng nhau, chữ ở giữa từng phần. Đổi cỡ chữ / lề trong Quản lý Mẫu in.',
         'Cài đặt > Giao diện…: mật độ bảng Gọn / Chuẩn / Thoáng và tương phản cao theo Windows.',
     )),
     ('1.0.18', '23/10/2026', (

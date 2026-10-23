@@ -132,7 +132,7 @@ class TestLoWordGopPdf(_Co):
             meta = PdfReader(str(p.with_suffix('.pdf'))).metadata
             self.assertEqual(meta['/Nguon'], p.name)
             tren, phai, duoi, trai = (round(int(v) / 1440 * 25.4) for v in meta['/LeTwip'].split(','))
-            self.assertEqual((trai, phai, tren, duoi), (15, 10, 10, 10))
+            self.assertEqual((trai, phai, tren, duoi), (9, 7, 10, 10))
 
     def test_word_treo_mot_ho_bo_qua_va_du_phong(self):
         treo = f'ma{self.ds[1]}_'
@@ -204,7 +204,7 @@ class TestWordThat(_Co):
             self.assertEqual((round(float(trang.mediabox.width)), round(float(trang.mediabox.height))), (595, 842))
         with zipfile.ZipFile(kq['word'][0]) as z:
             mar = ET.fromstring(z.read('word/document.xml')).find(f'.//{W}sectPr/{W}pgMar')
-        self.assertEqual(round(int(mar.get(W + 'left')) / 1440 * 25.4), 15)
+        self.assertEqual(round(int(mar.get(W + 'left')) / 1440 * 25.4), 9)
 
     def test_muc_iii_bat_dau_ngay_trang_1(self):
         """22/10/2026 (mẫu PA_01 người dùng gửi): mục II dài nửa trang - mục III + tiêu đề bảng + dòng đầu in tiếp ở cuối trang 1,

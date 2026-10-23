@@ -30,13 +30,14 @@ class TestThongSoMauWord(_Co):
         super().tearDown()
 
     def test_mac_dinh_theo_yeu_cau(self):
-        self.assertEqual(in_word.LE_MM, dict(trai=15, phai=10, tren=10, duoi=10))
+        self.assertEqual(in_word.LE_MM, dict(trai=9, phai=7, tren=10, duoi=10))
         c = dia_phuong.lay('ban_in.mau_word.co_chu')
-        self.assertEqual((c['co_quan'], c['quoc_hieu'], c['tieu_ngu']), (13, 13, 14))
-        self.assertEqual((c['so_ngay'], c['du_thao']), (13, 13))                         # "Số:", ngày, "(DỰ THẢO)" cùng 13
-        self.assertEqual((c['ten_loai'], c['trich_yeu'], c['du_an']), (14, 14, 14))
-        self.assertEqual((c['thong_tin'], c['de_muc'], c['nguon_goc']), (14, 14, 13))
-        self.assertEqual((c['bang'], c['ghi_chu'], c['chu_ky']), (13, 11, 15))
+        # mẫu PDF "MAU IN CHI TIET WORD" (23/10/2026): chữ thân 10,5 pt, bảng 10 pt, ghi chú 7,5 pt
+        self.assertEqual((c['co_quan'], c['quoc_hieu'], c['tieu_ngu']), (10.5, 10.5, 10.5))
+        self.assertEqual((c['so_ngay'], c['du_thao']), (10.5, 10.5))                     # "Số:", ngày, "(DỰ THẢO)" cùng cỡ
+        self.assertEqual((c['ten_loai'], c['trich_yeu'], c['du_an']), (10.5, 10.5, 10.5))
+        self.assertEqual((c['thong_tin'], c['de_muc'], c['nguon_goc']), (10.5, 10.5, 10.5))
+        self.assertEqual((c['bang'], c['ghi_chu'], c['chu_ky']), (10, 7.5, 10.5))
         self.assertEqual(in_word.trang_thai_thong_so(), 'Nhúng chuẩn')
 
     def test_xuat_sua_nhap_khoi_phuc(self):
@@ -59,7 +60,7 @@ class TestThongSoMauWord(_Co):
         stt = next(r for r in d.iter(W + 'r') if ''.join(t.text or '' for t in r.iter(W + 't')) == 'STT')
         self.assertEqual(stt.find(f'{W}rPr/{W}sz').get(W + 'val'), '24')                    # 12 pt
         in_word.khoi_phuc_thong_so()
-        self.assertEqual((in_word.CO_BANG, in_word.LE_MM['trai']), (13, 15))
+        self.assertEqual((in_word.CO_BANG, in_word.LE_MM['trai']), (10, 9))
         self.assertEqual(in_word.trang_thai_thong_so(), 'Nhúng chuẩn')
         self.assertFalse(dia_phuong.file_may().exists())
 

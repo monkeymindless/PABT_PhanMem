@@ -2090,6 +2090,14 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   (không Qt: mật độ bảng gon / chuan / thoang, tương phản cao theo Windows, `PABT_MAT_DO` / `PABT_TUONG_PHAN_CAO`) + `giao_dien.dat_mat_do`
   + `man_hinh_giao_dien.HopGiaoDien` (Cài đặt > Giao diện…). CHƯA có nền tối (màu còn viết cứng ở nhiều nơi). KHÔNG dùng `sed -i` (đổi
   CRLF sang LF) - đã lặp lại nhiều lần.
+  MẪU WORD CHI TIẾT theo PDF người dùng gửi `mau_in\MAU IN CHI TIET WORD.pdf` (23/10/2026; file PDF có dữ liệu thật - KHÔNG đóng gói / KHÔNG
+  vào git): `ban_in.mau_word` mặc định lề 9 / 7 / 10 / 10 mm, co_chu 10,5 (mọi chữ thân) / bảng 10 / ghi chú 7,5 (đo trực tiếp cỡ chữ trong PDF - nếu
+  file Word gốc dùng cỡ lớn hơn rồi thu nhỏ khi in PDF thì tăng lại bằng Quản lý Mẫu in > Nhập thông số mẫu Word); `du_lieu_in` tiêu đề mục I (một
+  tiêu đề cho hộ và tổ chức) / II / `NHAN_TDC` "Phương án tái định cư:"; tên dự án "Dự án <tên>" chữ thường đậm + `_duong_ke_du_an()` (đoạn rỗng
+  cao 6 pt có viền dưới, DK_DU_AN_MM 50 - GIỮ, người dùng yêu cầu cách chữ, không sát); (DỰ THẢO) đậm; bảng III `_bang(ngoai_sz=12)` viền ngoài đậm;
+  CHỮ KÝ = dòng cuối bảng III, MỘT ô gộp cả lưới chứa BẢNG LỒNG ba cột bằng nhau (`tong // 3`), chữ giữa từng cột - đọc bảng bằng
+  `findall(tr)` / `find(tblGrid)` (iter() lẫn bảng lồng). `docx_sang_pdf._bang`: dòng chỉ có bảng lồng dựng thành bảng SAU bảng ngoài (Qt nới đều
+  cột khi gặp bảng lồng cỡ cả bề rộng). Offscreen KHÔNG có phông thật: bề rộng cột đo ra sai - xem ảnh bằng QT_QPA_PLATFORM=windows.
   `pabt/openxml_word.py` (1.0.19): BỘ CÔNG CỤ dựng .docx bằng mã (chỉ thư viện chuẩn, Python 3.8): `chay` / `doan` / `doan_gach_ho` /
   `bang` + `hang` + `o` (gộp ô) / `sect_pr` / `dien_cho_trong` (một lượt, thoát XML) / `goi_docx` / `luu` / `doc_than`, mẫu khung
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng

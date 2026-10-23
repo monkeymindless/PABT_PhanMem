@@ -40,7 +40,7 @@ KHE_COT_PT = 2                                          # pt chừa thêm cho m�
 KHO_A4 = (11906, 16838)                                 # twip
 # bảng đầu văn bản (cơ quan | quốc hiệu): từng lấn lề ở lề cũ 30 / 15 mm; lề 15 / 10 mm không cần
 LAN_LE_DAU_MM = (0, 0)                                  # (trái, phải) mm bảng đầu lấn vào lề
-RONG_QUOC_HIEU = 5700                                   # twip (285 pt) cột quốc hiệu: 269 pt chữ + lề ô; còn lại cho cột cơ quan
+RONG_QUOC_HIEU = 5300                                   # twip (285 pt) cột quốc hiệu: 269 pt chữ + lề ô; còn lại cho cột cơ quan
 RONG_KY_TU = 0.6                                        # ước bề rộng một ký tự in hoa Times New Roman (x cỡ chữ; đậm x 1,05)
 DONG_DOAN = 240                                         # đoạn Mục II: giãn dòng đơn
 SAU_DOAN = 120                                          # cách đoạn / gạch đầu dòng 6 pt
@@ -50,7 +50,7 @@ SAU_DOAN = 120                                          # cách đoạn / gạch
 # nhất (và từ dài nhất của tiêu đề, không dưới COT_TOI_THIEU), phần còn lại chia tên : ghi chú theo CHIA_TEN_GHI_CHU
 TY_LE_COT = (70, 205, 75, 100, 145, 80, 185, 140)
 COT_SO = (0, 2, 3, 4, 5, 6)
-COT_TOI_THIEU = {0: 24, 2: 26, 3: 30, 4: 30, 5: 24, 6: 40}     # pt (từ dài nhất của tiêu đề thường rộng hơn)
+COT_TOI_THIEU = {0: 18, 2: 30, 3: 39, 4: 42, 5: 24, 6: 56}     # pt (từ dài nhất của tiêu đề thường rộng hơn)
 CHIA_TEN_GHI_CHU = (45, 55)
 DU_RONG = 1.06                                          # chừa sai số ước bề rộng chữ (Word xuất PDF bẻ dòng sớm hơn ước)
 LE_O = 40                                               # lề trái / phải trong ô bảng mục III (twip = 2 pt)
@@ -188,10 +188,10 @@ def _hang(o: list, tieu_de: bool = False, khong_tach: bool = False) -> str:
     return f'<w:tr><w:trPr>{pr}</w:trPr>{"".join(o)}</w:tr>'
 
 
-def _bang(hang: list, rong: list, vien: bool = True, le_o: int = 57, lui: int = 0) -> str:
+def _bang(hang: list, rong: list, vien: bool = True, le_o: int = 57, lui: int = 0, ngoai_sz: int = 4) -> str:
     """lui (twip): bảng bắt đầu lùi ra ngoài lề trái chừng này (w:tblInd âm, canh trái) - bảng đầu văn bản lấn lề."""
-    b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="4" w:space="0" w:color="000000"/>'
-                for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
+    b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="{ngoai_sz if k in ("top", "left", "bottom", "right") else 4}" '
+                f'w:space="0" w:color="000000"/>' for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
     luoi = ''.join(f'<w:gridCol w:w="{x}"/>' for x in rong)
     vi_tri = f'<w:jc w:val="left"/><w:tblInd w:w="{-lui}" w:type="dxa"/>' if lui else '<w:jc w:val="center"/>'
     return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong)}" w:type="dxa"/>{vi_tri}<w:tblBorders>{b}</w:tblBorders>'
@@ -460,7 +460,7 @@ def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
 
         def oc(chu, k, can, dam_o=dam, co_o=CO_BANG):
             return _o(_p(_r(chu, dam=dam_o, co=co_o), can=can, giu_sau=giu) if chu else _p(giu_sau=giu), rong[k])
-        o = [oc('' if gt[0] is None else str(gt[0]), 0, 'center'), oc(gt[1] or '', 1, 'left')]
+        o = [oc('' if gt[0] is None else str(gt[0]), 0, 'center' if loai in ('H', 'R') else 'left'), oc(gt[1] or '', 1, 'left')]
         if cach_tinh:
             o.append(_o(_p(_r(cach_tinh, dam=dam, co=CO_BANG), can='center', giu_sau=giu), sum(rong[2:6]), nhap=4))
         else:
@@ -468,7 +468,7 @@ def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
                   oc(_so(gt[5], loai='ty_le'), 5, 'center')]
         o.append(oc(_so(gt[6]), 6, 'right', dam_o=dam or loai == 'R'))
         gd = gop_gc.get(i)
-        o.append(_o(_p(_r(gt[7] or '', co=CO_GHI_CHU), can='center', giu_sau=giu) if gd != 'continue' and gt[7]
+        o.append(_o(_p(_r(gt[7] or '', co=CO_GHI_CHU), can='left', giu_sau=giu) if gd != 'continue' and gt[7]
                     else _p(giu_sau=giu), rong[7], dong_doc=gd))
         # dòng ngắn (đề mục, tên / ghi chú vài dòng) không cắt đôi; dòng có chữ dài (ghi chú, tên thửa…) Word được cắt qua trang
         dai = loai == 'I' and max(len(str(gt[1] or '')), len(str(gt[7] or '')), len(cach_tinh or '')) > DAI_CHO_TACH
@@ -548,7 +548,7 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
         _p_gach('Độc lập - Tự do - Hạnh phúc', CO_TIEU_NGU, True, r2 - 2 * 57, do)
     # "Số: …/…" và "địa danh, ngày … tháng … năm …" là HAI Ô CÙNG MỘT HÀNG của bảng đầu: cùng cỡ chữ, cùng giãn dòng và khoảng
     # cách trước, canh trên -> hai dòng luôn ngang nhau (người dùng 22/10/2026: không được chênh cao thấp)
-    so_o = _p(_r(so, co=CO_SO_NGAY), can='center', truoc=120) + (_p(_r('(DỰ THẢO)', co=CO_DU_THAO), can='center') if du_thao else '')
+    so_o = _p(_r(so, co=CO_SO_NGAY), can='center', truoc=120) + (_p(_r('(DỰ THẢO)', dam=True, co=CO_DU_THAO), can='center') if du_thao else '')
     ngay_o = _p(_r(f'{dia_danh}, {_ngay_chu(ttho["ngay_pa"], da["nam"])}', nghieng=True, co=CO_SO_NGAY), can='center', truoc=120)
     t = [_bang([_hang([_o(trai, r1, doc='top', vien=False), _o(phai, r2, doc='top', vien=False)]),
                 _hang([_o(so_o, r1, doc='top', vien=False), _o(ngay_o, r2, doc='top', vien=False)])], [r1, r2], vien=False,
@@ -558,8 +558,10 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
            (f' BỔ SUNG (LẦN {lan})' if lan is not None and lan > 1 else ''))
     t += [_p(_r(ten, dam=True, co=CO_TEN_LOAI), can='center', truoc=240, dong=240)]
     t += [_p(_r(x, dam=True, co=CO_TRICH_YEU), can='center', dong=240) for x in TRICH_YEU_DONG]
-    t += [_p(_r(f'DỰ ÁN {str(da["du_an"] or "").upper()}', dam=True, co=CO_DU_AN), can='center', sau=0, dong=240),
-          _duong_ke_du_an()]
+    ten_da = re.sub(r'^\s*dự\s+án\s+', '', ' '.join(str(da['du_an'] or '').split()), flags=re.I)
+    # 23/10/2026 (người dùng): GIỮ đường kẻ ngắn căn giữa dưới tên dự án, CÁCH chữ một khe (đoạn rỗng cao 6 pt có viền dưới - không sát
+    # chữ để khỏi mất dấu chấm / dấu dưới); độ dài theo mẫu PDF (~48 mm)
+    t += [_p(_r(f'Dự án {ten_da}', dam=True, co=CO_DU_AN), can='center', sau=0, dong=240), _duong_ke_du_an()]
     # ---- I. chủ sử dụng (bảng ẩn viền: nhãn đậm | nội dung)
     to_chuc = la_to_chuc(ttho['ho_ten'])
     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (du_lieu_in.tieu_de_muc_i - cùng bản Excel); tổ chức chỉ "Tổ chức:" / "Địa chỉ:"
@@ -605,11 +607,17 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
             return _p(_r(chuc_vu, dam=True, co=CO_CHU_KY), can='center', truoc=240, dong=240) + \
                 ''.join(_p(can='center', dong=240) for _ in range(4)) + _p(_r(ten or '', dam=True, co=CO_CHU_KY), can='center', dong=240)
         an = ('left', 'bottom', 'right')
-        hang.append(_hang([_o(ky('LẬP BIỂU', da['nguoi_lap']), sum(rong[:3]), nhap=3, doc='top', an_vien=an),
-                           _o(ky('KIỂM TRA', da['nguoi_kiem_tra']), sum(rong[3:6]), nhap=3, doc='top', an_vien=an),
-                           _o(ky(da['CHUC_VU_KY'], da['nguoi_ky']), sum(rong[6:]), nhap=2, doc='top', an_vien=an)],
-                          khong_tach=True))
-    t.append(_bang(hang, rong, le_o=LE_O))
+        # 23/10/2026 (người dùng): LẬP BIỂU - KIỂM TRA - chức vụ ký CĂN ĐỀU, CHIA ĐỀU ba phần bằng nhau, chữ nằm giữa từng phần. Lưới 8 cột
+        # của bảng không chia đều ba được -> MỘT ô gộp cả 8 cột chứa bảng ba cột bằng nhau, ẩn viền
+        tong = sum(rong)
+        a3 = tong // 3
+        cot3 = [a3, a3, tong - 2 * a3]
+        ky3 = _bang([_hang([_o(ky('LẬP BIỂU', da['nguoi_lap']), cot3[0], doc='top', vien=False),
+                            _o(ky('KIỂM TRA', da['nguoi_kiem_tra']), cot3[1], doc='top', vien=False),
+                            _o(ky(da['CHUC_VU_KY'], da['nguoi_ky']), cot3[2], doc='top', vien=False)], khong_tach=True)],
+                    cot3, vien=False, le_o=0)
+        hang.append(_hang([_o(ky3 + _p(dong=240), tong, nhap=len(rong), doc='top', an_vien=an)], khong_tach=True))
+    t.append(_bang(hang, rong, le_o=LE_O, ngoai_sz=12))
     return ''.join(t)
 
 

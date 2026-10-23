@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 12:08. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 12:45. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -28,7 +28,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 12:08. Kiểm tra tĩnh: 0 cảnh
 | `chua_benh_csdl.py` | 429 | 1 | 14 | - |
 | `csdl.py` | 752 | 2 | 41 | - |
 | `dia_phuong.py` | 421 | 1 | 26 | - |
-| `docx_sang_pdf.py` | 203 | 0 | 7 | an_toan |
+| `docx_sang_pdf.py` | 219 | 0 | 7 | an_toan |
 | `doi_chieu.py` | 242 | 1 | 4 | an_toan, nghiep_vu, tien |
 | `don_gia.py` | 480 | 0 | 26 | an_toan, csdl, lap_pa, nhap_excel |
 | `don_gia_rieng.py` | 226 | 0 | 12 | csdl, lap_pa, tien |
@@ -47,14 +47,14 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 12:08. Kiểm tra tĩnh: 0 cảnh
 | `ho_so_scan.py` | 165 | 0 | 10 | an_toan, csdl |
 | `hoan_tac.py` | 221 | 2 | 1 | csdl |
 | `in_an.py` | 3075 | 2 | 133 | an_toan, du_lieu_in, lap_pa, nghiep_vu, tien |
-| `in_word.py` | 654 | 0 | 35 | dia_phuong, du_lieu_in, van_ban_trinh |
+| `in_word.py` | 662 | 0 | 35 | dia_phuong, du_lieu_in, van_ban_trinh |
 | `khoa.py` | 108 | 1 | 2 | csdl |
 | `kiem_loi.py` | 472 | 1 | 13 | an_toan, csdl, lap_pa, nghiep_vu, tien |
 | `kiem_toan.py` | 321 | 0 | 14 | an_toan, csdl |
 | `kinh_phi_du_an.py` | 250 | 0 | 13 | csdl, theo_doi, tien |
 | `lan_pa.py` | 351 | 2 | 24 | csdl, tien |
 | `lap_pa.py` | 1106 | 4 | 24 | csdl, loai_dat, nghiep_vu, tien |
-| `lich_su_cap_nhat.py` | 694 | 0 | 1 | - |
+| `lich_su_cap_nhat.py` | 698 | 0 | 1 | - |
 | `loai_dat.py` | 137 | 0 | 6 | - |
 | `ma_tai_san.py` | 142 | 0 | 8 | - |
 | `man_hinh.py` | 3509 | 14 | 3 | du_lieu_in, giao_dien, hang_nhap_nhanh, lap_pa, nghiep_vu, thong_bao, tien |
@@ -101,6 +101,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 12:08. Kiểm tra tĩnh: 0 cảnh
 | `nhap_tho.py` | 460 | 2 | 17 | csdl, lap_pa, nhap_excel, tien |
 | `ocr.py` | 445 | 2 | 24 | - |
 | `ocr_ho_so.py` | 472 | 1 | 20 | - |
+| `openxml_word.py` | 249 | 0 | 20 | - |
 | `pdf_bang.py` | 348 | 1 | 17 | lap_pa, tien |
 | `pdf_du_phong.py` | 270 | 0 | 8 | - |
 | `phan_loai_tai_san.py` | 370 | 2 | 10 | lap_pa, nghiep_vu |
@@ -121,7 +122,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 12:08. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 810 | 2 | 16 | - |
 
-Tổng: 58122 dòng mã trong pabt/.
+Tổng: 58399 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -607,6 +608,9 @@ Tổng: 58122 dòng mã trong pabt/.
 ### `ocr_ho_so.py`
 - lớp `KetQuaOcr` (dòng 28): 
 - hàm: `doc_chu`, `_bo_dau`, `_vi_tri`, `_bo_dau_giu_do_dai`, `_sau_nhan`, `_chuan_ho_ten`, `_sua_so_ocr`, `_so_cccd`, `_so`, `ma_loai_dat`, `_thua`, `_dong_tai_san`, `_dong_logic`, `_o_dong`, `_muc_tieu_de`, `_bang_pa`, `_doan_sau_tieu_de`, `boc_tach`, `doc_va_boc_tach`, `gop`
+
+### `openxml_word.py`
+- hàm: `twip`, `pt`, `thoat`, `chay`, `doan`, `rong_chu`, `doan_gach_ho`, `doan_ke_ngang`, `o`, `hang`, `bang`, `sect_pr`, `rong_vung`, `cho_trong`, `dien_cho_trong`, `goi_docx`, `luu`, `doc_than`, `mau_khung`, `_main`
 
 ### `pdf_bang.py`
 - lớp `DongBang` (dòng 77): `khop_tong`

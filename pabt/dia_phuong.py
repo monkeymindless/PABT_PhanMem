@@ -109,7 +109,7 @@ def kiem_tra_mau_word(mw) -> list:
         loi.append('ban_in.mau_word.co_chu: đủ các cỡ chữ ' + ', '.join(CO_CHU_WORD) + ' (pt).')
     else:
         for k, v in co.items():
-            so(v, f'co_chu.{k}', 8, 24)
+            so(v, f'co_chu.{k}', 6, 24)
     if not isinstance(mw.get('trich_yeu'), str) or not mw['trich_yeu'].strip():
         loi.append('ban_in.mau_word.trich_yeu: chữ trích yếu văn bản (in hoa).')
     so(mw.get('thut_dau_dong_mm'), 'thut_dau_dong_mm', 0, 30)

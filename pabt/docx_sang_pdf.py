@@ -88,7 +88,9 @@ def _doan(p, rong_pt: float) -> str:
         khe = float(ben.find(W + 'bottom').get(W + 'space', '1')) * PX          # w:space của viền đoạn tính bằng pt
         rong = max(10.0, (rong_pt - trai - phai) * PX)
         cs2 = [c for c in cs if not c.startswith('text-indent')]
-        return (f'<table cellspacing="0" cellpadding="0" width="{rong:g}" align="center" style="margin-left:{trai * PX:g}px"><tr>'
+        can_bang = abs(trai - phai) < 1
+        kieu_bang = '' if can_bang else f' style="margin-left:{trai * PX:g}px"'
+        return (f'<table cellspacing="0" cellpadding="0" width="{rong:g}" align="{"center" if can_bang else "left"}"{kieu_bang}><tr>'
                 f'<td style="border-bottom:1px solid #000;padding-bottom:{khe:g}px;{";".join(cs2)}">{chu}</td></tr></table>')
     if trai:
         cs.append(f'margin-left:{trai * PX:g}px')
@@ -104,6 +106,17 @@ def _bang(t, rong_pt: float) -> str:
     co_vien = vien_bang is not None and _g(vien_bang, 'insideH', 'nil') == 'single' or \
         (vien_bang is not None and _g(vien_bang, 'top', 'nil') == 'single')
     hang = t.findall(W + 'tr')
+    # dòng chỉ có MỘT ô chứa bảng lồng (khối chữ ký ba cột đều nhau): Qt nới đều mọi cột của bảng ngoài khi gặp bảng lồng cỡ cả bề rộng ->
+    # dựng bảng lồng thành bảng ngay SAU bảng ngoài (bản dự phòng chỉ cần hiển thị đúng, không cần giữ liền trang)
+    long_sau = []
+    giu = []
+    for tr in hang:
+        o_ = tr.findall(W + 'tc')
+        if len(o_) == 1 and o_[0].find(W + 'tbl') is not None:
+            long_sau += [_bang(x, rong_pt) for x in o_[0].findall(W + 'tbl')]
+        else:
+            giu.append(tr)
+    hang = giu
     # vị trí cột lưới của từng ô, rồi gộp dọc: rowspan = số hàng liên tiếp có vMerge ở cùng cột bắt đầu
     ma_tran, goc = [], {}
     for i, tr in enumerate(hang):
@@ -123,6 +136,8 @@ def _bang(t, rong_pt: float) -> str:
                 dong.append((tc, c0, nhap, False))
             c0 += nhap
         ma_tran.append((dong, {x[1]: 1 for x in dong if not x[3]}))
+    he_so = min(1.0, max(10.0, rong_pt - 8) / (sum(luoi) or 1))                  # vừa vùng chứa, chừa lề ô
+    luoi = [x * he_so for x in luoi]
     ra = [f'<table cellspacing="0" cellpadding="2" width="{sum(luoi) * PX:g}" align="center">']
     for i, (dong, rs) in enumerate(ma_tran):
         ra.append('<tr>')
@@ -141,12 +156,13 @@ def _bang(t, rong_pt: float) -> str:
             shd = tpr.find(W + 'shd') if tpr is not None else None
             if shd is not None and shd.get(W + 'fill', 'auto') not in ('auto', 'FFFFFF'):
                 cs.append(f'background-color:#{shd.get(W + "fill")}')
-            noi = ''.join(_doan(p, rong - 4) if p.tag == W + 'p' else _bang(p, rong - 4)
+            noi = ''.join(_doan(p, rong - 4) if p.tag == W + 'p' else _bang(p, rong - 20)         # bảng lồng: chừa lề ô + viền (Qt nới cột đều nếu vượt)
+                          
                           for p in tc if p.tag in (W + 'p', W + 'tbl'))
             ra.append(f'<td width="{rong * PX:g}" colspan="{nhap}" rowspan="{rs.get(c0, 1)}" style="{";".join(cs)}">{noi}</td>')
         ra.append('</tr>')
     ra.append('</table>')
-    return ''.join(ra)
+    return ''.join(ra) + ''.join(long_sau)
 
 
 def html_tu_docx(docx) -> tuple:

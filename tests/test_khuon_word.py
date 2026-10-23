@@ -22,6 +22,7 @@ from pabt import van_ban_trinh as vb                                            
 from tests.test_van_ban_trinh import _co_word                                    # noqa: E402
 
 MM = 72 / 25.4
+LE_TRAI, LE_PHAI, LE_TREN, LE_DUOI = 9, 7, 10, 10             # mm, mẫu PDF 23/10/2026
 DUNG_SAI = 1.5                                  # pt
 CUOI_NGUON = 'CUỐI-NGUỒN-GỐC-ĐỦ-CHỮ'
 NGUON = ('Thửa đất giả lập do hộ gia đình khai phá, sử dụng ổn định từ năm 1990, không tranh chấp, đã kê khai đăng ký, '
@@ -93,10 +94,10 @@ class TestKhuonWord(unittest.TestCase):
         for (w, h), chu in zip(kich, trang):
             self.assertEqual((round(w), round(h)), (595, 842))                       # A4 dọc
             for t, x, y in chu:
-                self.assertGreaterEqual(x, 15 * MM - DUNG_SAI, f'{kieu}: "{t[:20]}" tràn lề trái (x={x:.1f})')
-                self.assertLessEqual(x, w - 10 * MM + DUNG_SAI, f'{kieu}: "{t[:20]}" tràn lề phải (x={x:.1f})')
-                self.assertGreaterEqual(y, 10 * MM - DUNG_SAI - 14, f'{kieu}: "{t[:20]}" tràn lề dưới (y={y:.1f})')
-                self.assertLessEqual(y, h - 10 * MM + DUNG_SAI, f'{kieu}: "{t[:20]}" tràn lề trên (y={y:.1f})')
+                self.assertGreaterEqual(x, LE_TRAI * MM - DUNG_SAI, f'{kieu}: "{t[:20]}" tràn lề trái (x={x:.1f})')
+                self.assertLessEqual(x, w - LE_PHAI * MM + DUNG_SAI, f'{kieu}: "{t[:20]}" tràn lề phải (x={x:.1f})')
+                self.assertGreaterEqual(y, LE_DUOI * MM - DUNG_SAI - 14, f'{kieu}: "{t[:20]}" tràn lề dưới (y={y:.1f})')
+                self.assertLessEqual(y, h - LE_TREN * MM + DUNG_SAI, f'{kieu}: "{t[:20]}" tràn lề trên (y={y:.1f})')
         # dòng "Số:" và "ngày" cùng hàng
         t1 = trang[0]
         so = [y for t, x, y in t1 if t.strip().startswith('Số:')]
