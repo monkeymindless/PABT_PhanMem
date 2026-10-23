@@ -2107,8 +2107,9 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   dist\PABT_Win7 93 -> 53 MB sau rut_gon. `rut_gon.GIU_MODULE` (Qt6) bỏ Svg; `GIU_MODULE_QT5` = Core, Gui, Widgets, Network, Qml (bỏ Pdf - PySide2 không có QtPdf, Svg, PrintSupport);
   Qt5Network.dll / Qt6Network.dll GIỮ (Qt5Qml / QtPdf liên kết tới - bỏ thì `kiem_dll` báo thiếu), nhưng binding `QtNetwork.pyd` bỏ (`giu_pyd`). `GIU_PLUGIN` chỉ còn `platforms` (qwindows, qoffscreen) +
   `imageformats` (qjpeg, qtiff, qwebp, qgif, qico; png / bmp có sẵn trong QtGui) - bỏ tls, networkinformation, styles (ứng dụng ép Fusion), iconengines, generic, bearer. Thêm vào `LOAI_TRU` (spec) và
-  dung_exe38: asyncio, multiprocessing, concurrent, xmlrpc (+ compression.zstd, _wmi ở Python 3.14). Cần thêm module Qt / plugin mới: thêm vào danh sách giữ rồi chạy tự kiểm tra. Còn lại để làm tiếp (cần
-  quyết định): tách Tesseract thành gói cài thêm (~26 MB), tessdata `fast` thay `best` (~9 MB), bỏ osd.traineddata (~4 MB).
+  dung_exe38: asyncio, multiprocessing, concurrent, xmlrpc (+ compression.zstd, _wmi ở Python 3.14). Cần thêm module Qt / plugin mới: thêm vào danh sách giữ rồi chạy tự kiểm tra. 
+  QUYẾT ĐỊNH 24/10/2026 (người dùng): GIỮ NGUYÊN TOÀN BỘ OCR - Tesseract đóng kèm, tessdata `vie` bản `best` và `osd.traineddata`;
+  KHÔNG tách thành gói cài thêm, KHÔNG đổi sang `fast`, KHÔNG bỏ osd. Đừng đề xuất lại để giảm dung lượng.
 - 1.0.27 NHẬP DANH SÁCH HỘ, THỬA TỪ EXCEL / PDF / ẢNH (người dùng 24/10/2026: file "TỔNG CẬP NHẬT" báo không có dòng hộ; muốn đọc .xls, PDF ký / chưa ký, ảnh;
   test `tests/test_nhap_nhieu_loai.py`, `tests/mau_xls.py`, `tests/pdf_tay.py` tạo file giả lập - KHÔNG dùng số liệu thật):
   - Đường ống mới: mọi file -> `nguon_luoi.Nguon` (lưới ô: sheet / trang) -> `nhap_tho.doc(file, bo_cot=None, nguons=None, bao_tien_do=None, cho=None, scan=False)`
