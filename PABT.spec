@@ -34,8 +34,8 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    # cap_nhat_web đi cùng bản cài từ 0.9.49 (nút Tải từ web của bảng giá đất). man_hinh_quet_web vẫn để gói .pabtcn.
-    excludes=['pabt.man_hinh_quet_web'] + LOAI_TRU,
+    # cap_nhat_web đi cùng bản cài từ 0.9.49 (nút Tải từ web của bảng giá đất). Màn hình quét web (man_hinh_quet_web) đã xóa ở 1.0.27.
+    excludes=LOAI_TRU,
     noarchive=False,
     optimize=0,
 )

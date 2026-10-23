@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 20:59. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 22:58. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -55,7 +55,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 20:59. Kiểm tra tĩnh: 0 cảnh
 | `kinh_phi_du_an.py` | 250 | 0 | 13 | csdl, theo_doi, tien |
 | `lan_pa.py` | 351 | 2 | 24 | csdl, tien |
 | `lap_pa.py` | 1106 | 4 | 24 | csdl, loai_dat, nghiep_vu, tien |
-| `lich_su_cap_nhat.py` | 735 | 0 | 1 | - |
+| `lich_su_cap_nhat.py` | 742 | 0 | 1 | - |
 | `loai_dat.py` | 137 | 0 | 6 | - |
 | `ma_tai_san.py` | 142 | 0 | 8 | - |
 | `man_hinh.py` | 3629 | 15 | 3 | du_lieu_in, giao_dien, hang_nhap_nhanh, lap_pa, nghiep_vu, thong_bao, tien |
@@ -85,7 +85,6 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 20:59. Kiểm tra tĩnh: 0 cảnh
 | `man_hinh_phan_loai.py` | 189 | 1 | 1 | lap_pa, phan_loai_tai_san, thong_bao |
 | `man_hinh_quan_ly.py` | 1184 | 7 | 4 | csdl, du_thao, giao_dien, kiem_loi, lap_pa, quan_ly, thoi_han, thong_bao, tien |
 | `man_hinh_quan_ly_mau.py` | 102 | 1 | 0 | dia_phuong, in_word, thong_bao |
-| `man_hinh_quet_web.py` | 269 | 1 | 1 | cap_nhat_web, giao_dien, lap_pa, nhap_don_gia, ocr, thong_bao |
 | `man_hinh_quy_trinh.py` | 52 | 1 | 0 | quy_trinh_qd18 |
 | `man_hinh_theo_doi.py` | 2683 | 18 | 19 | bang_ao, giao_dien, ho_so_scan, kinh_phi_du_an, lap_pa, theo_doi, thoi_han, thong_bao, tien, van_dong |
 | `man_hinh_thong_ke.py` | 238 | 1 | 8 | tien |
@@ -125,7 +124,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 23/10/2026 20:59. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 942 | 2 | 18 | - |
 
-Tổng: 60460 dòng mã trong pabt/.
+Tổng: 60198 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -514,10 +513,6 @@ Tổng: 60460 dòng mã trong pabt/.
 
 ### `man_hinh_quan_ly_mau.py`
 - lớp `HopQuanLyMauIn` (dòng 19): `__init__`, `nap`, `_bao`, `xuat_word`, `nhap_word`, `khoi_phuc_word`
-
-### `man_hinh_quet_web.py`
-- lớp `HopQuetWeb` (dòng 28): `__init__`, `_bao`, `_nguon`, `_doc_nho`, `_nho`, `quet`, `hien`, `chon_ds`, `tai_va_phan_tich`
-- hàm: `_ngay_sap_xep`
 
 ### `man_hinh_quy_trinh.py`
 - lớp `HopQuyTrinh` (dòng 12): `__init__`

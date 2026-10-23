@@ -369,27 +369,6 @@ class TestApDung(CoSo):
         vb = ndg.phan_tich_van_ban(ndg.doc_bang(kq['file']), ds[0].ten)
         self.assertEqual((vb['so_hieu'], vb['ngay'], vb['nhom']), ('99/2026/QĐ-UBND', '01/09/2026', 3))
 
-    @unittest.skipUnless(CO_QT, 'không có PySide6')
-    def test_man_hinh_quet_web(self):
-        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-        from PySide6.QtWidgets import QApplication
-        app = QApplication.instance() or QApplication([])  # noqa: F841
-        from pabt.man_hinh_quet_web import HopQuetWeb
-        goc = self._cong_bao()
-        h = HopQuetWeb()
-        h.im_lang = True
-        self.assertEqual(len(h.quet(goc + '/tim.html')), 2)
-        self.assertEqual([t.so_hieu for t in h.chon_ds()], ['99/2026/QĐ-UBND'])
-        h.tai_va_phan_tich(cho=False)
-        d = h.hop[0]
-        self.assertEqual(d.van_ban['so_hieu'], '99/2026/QĐ-UBND')
-        self.assertFalse(d.da_co)
-        d.accept()
-        self.assertEqual((d.ket_qua['so_moi'], d.ket_qua['so_cap_nhat']), (1, 1))
-        # văn bản vừa áp dụng được ghi vào danh mục văn bản căn cứ: lần quét sau là "đã có"
-        self.assertTrue(ndg.da_co('99/2026/QĐ-UBND'))
-        self.assertFalse(any(t.chon for t in cw.quet(goc + '/tim.html')))
-
     def test_nguon_trung_uong(self):
         # nơi tìm, nguồn gợi ý: Công báo Đồng Nai, CSDL quốc gia văn bản pháp luật, Chính phủ, Thư viện pháp luật
         goi_y = dict((v, t) for t, v in cw.nguon_goi_y())
@@ -435,23 +414,6 @@ class TestApDung(CoSo):
         ds = cw.quet(f'http://127.0.0.1:{sv.server_address[1]}/moi.html')
         self.assertEqual([(t.so_hieu, t.nhom, t.da_co, t.chon) for t in ds if t.diem > 0],
                          [('999/2026/NĐ-CP', 4, False, True), ('88/2024/NĐ-CP', 4, True, False)])
-
-    @unittest.skipUnless(CO_QT, 'không có PySide6')
-    def test_lich_su_khong_nho_may_noi_bo(self):
-        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-        from PySide6.QtWidgets import QApplication
-        app = QApplication.instance() or QApplication([])  # noqa: F841
-        from pabt.man_hinh_quet_web import _MAY_NOI_BO, HopQuetWeb
-        for u in ('http://127.0.0.1:60247/tim.html', 'http://localhost:8000/a', 'http://[::1]:80/'):
-            self.assertTrue(_MAY_NOI_BO.match(u), u)
-        self.assertFalse(_MAY_NOI_BO.match('https://vbpl.vn/'))
-        h = HopQuetWeb()
-        h.im_lang = True
-        self.assertFalse(any(_MAY_NOI_BO.match(h.o_nguon.itemText(i)) for i in range(h.o_nguon.count())))
-        self.assertGreaterEqual(h.cb_noi.count(), 3)
-        self.assertEqual([h.cb_noi.itemData(i) for i in range(3)], ['dongnai', 'vbpl', 'tvpl'])
-        h._nho('http://127.0.0.1:1/x.html')
-        self.assertNotIn('http://127.0.0.1:1/x.html', HopQuetWeb._doc_nho())
 
     @unittest.skipUnless(CO_QT, 'không có PySide6')
     def test_man_hinh(self):

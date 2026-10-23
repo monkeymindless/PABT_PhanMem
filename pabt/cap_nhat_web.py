@@ -1,5 +1,5 @@
 """Cập nhật đơn giá, chính sách bồi thường từ trang web. Từ 0.9.49 module này nằm trong bộ cài (nút Tải từ web của bảng giá đất).
-Màn hình quét web đầy đủ (man_hinh_quet_web) vẫn phát hành bằng gói .pabtcn.
+(Màn hình quét web riêng đã xóa ở 1.0.27: không còn đường mở từ 0.9.73.)
 
 Quét trang web / tìm trên Công báo thành phố Đồng Nai (quet -> [TaiLieu]: số hiệu, nhóm, đã có trong bộ đơn giá chưa), tải file
 (tai_ve: Google Drive / Sheets / Docs, trang HTML có liên kết, nút "Tải tập tin" không đuôi; loại file theo nội dung; quét mã độc).
