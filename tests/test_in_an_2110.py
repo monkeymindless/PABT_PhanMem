@@ -188,7 +188,7 @@ class TestWordNghiDinh30(_Co):
         i = next(k for k, p in enumerate(ps) if ''.join(t.text or '' for t in p.iter(W + 't')).startswith('Dự án'))
         vien = ps[i + 1].find(f'{W}pPr/{W}pBdr/{W}bottom')
         self.assertIsNotNone(vien)                                                   # GIỮ đường kẻ dưới tên dự án (23/10/2026)
-        self.assertEqual(ps[i + 1].find(f'{W}pPr/{W}spacing').get(W + 'line'), '120')   # đoạn rỗng 6 pt: đường kẻ CÁCH chữ một khe
+        self.assertEqual(ps[i + 1].find(f'{W}pPr/{W}spacing').get(W + 'line'), str(in_word.DK_DU_AN_KHE_PT * 20))   # đoạn rỗng: đường kẻ CÁCH chữ một khe nhỏ
         ind = ps[i + 1].find(f'{W}pPr/{W}ind')
         self.assertEqual(ind.get(W + 'left'), ind.get(W + 'right'))                  # căn giữa
         self.assertAlmostEqual((in_word.rong_trang() - 2 * int(ind.get(W + 'left'))) / in_word.twip(10), in_word.DK_DU_AN_MM / 10, delta=0.05)
@@ -228,11 +228,14 @@ class TestWordNghiDinh30(_Co):
         o_ky = ky.findall(W + 'tc')
         self.assertEqual(len(o_ky), 1)                                              # MỘT ô gộp cả lưới, chứa bảng chữ ký ba cột
         self.assertEqual({e.tag.split('}')[1] for e in o_ky[0].find(f'{W}tcPr/{W}tcBorders')}, {'left', 'bottom', 'right'})
-        ba = o_ky[0].find(W + 'tbl')                                                # LẬP BIỂU - KIỂM TRA - chức vụ ký: ba cột BẰNG NHAU
+        ba = o_ky[0].find(W + 'tbl')                                                # LẬP BIỂU - KIỂM TRA - chức vụ ký (24/10/2026: dịch sang trái)
         cot = [int(c.get(W + 'w')) for c in ba.find(W + 'tblGrid')]
-        self.assertEqual(len(cot), 3)
-        self.assertLessEqual(max(cot) - min(cot), 2)
+        self.assertEqual(len(cot), 4)                                               # ba phần + cột đệm bên phải
         self.assertEqual(sum(cot), in_word.rong_trang())
+        tam = [cot[0] / 2, cot[0] + cot[1] / 2, cot[0] + cot[1] + cot[2] / 2]
+        self.assertAlmostEqual(tam[1] - tam[0], tam[2] - tam[1], delta=2)           # ba tâm vẫn CÁCH ĐỀU nhau
+        self.assertAlmostEqual(tam[2] - tam[1], in_word.rong_trang() / 3, delta=2)
+        self.assertLess(tam[0], in_word.rong_trang() / 6)                           # và lệch về bên trái so với chia ba đều
         for tc in ba.iter(W + 'tc'):
             self.assertEqual({p.find(f'{W}pPr/{W}jc').get(W + 'val') for p in tc.iter(W + 'p')}, {'center'})   # chữ nằm giữa từng phần
         self.assertIn('120,0', chu(dong_11))
@@ -314,6 +317,16 @@ class TestNghiDinh30CoChu(_Co):
                 return b is not None and int(b.get(W + 'space')) >= 1
         return False
 
+    def _co_gach_ngan(self, x, chu) -> bool:
+        """24/10/2026: đường gạch dưới chữ chu là ĐOẠN RỖNG liền sau (viền dưới), thụt hai bên cho NGẮN hơn chữ (không làm chữ bẻ dòng)."""
+        ps = list(x.iter(W + 'p'))
+        for i, p in enumerate(ps[:-1]):
+            if ''.join(t.text or '' for t in p.iter(W + 't')) == chu:
+                q = ps[i + 1]
+                return (q.find(f'{W}pPr/{W}pBdr/{W}bottom') is not None and not any(True for _ in q.iter(W + 't'))
+                        and int(q.find(f'{W}pPr/{W}ind').get(W + 'left')) > 0)
+        return False
+
     def _sz(self, x, chu) -> tuple:
         """(cỡ w:sz, đậm, nghiêng, gạch chân) của w:r đầu tiên có chữ đúng bằng chu."""
         for r in x.iter(W + 'r'):
@@ -382,7 +395,7 @@ class TestNghiDinh30CoChu(_Co):
         self.assertEqual(self._sz(x, 'Độc lập - Tự do - Hạnh phúc'), ('21', True, False, False))      # 10,5 pt đậm
         self.assertTrue(self._co_gach_ho(x, 'Độc lập - Tự do - Hạnh phúc'))                          # gạch chân HỞ (viền đoạn), không sát chữ
         self.assertEqual(self._sz(x, cq), ('21', True, False, False))                                   # dòng 3 đậm
-        self.assertTrue(self._co_gach_ho(x, cq))                                                     # gạch chân hở, không sát chữ
+        self.assertTrue(self._co_gach_ngan(x, cq))                                                   # gạch dưới CHI NHÁNH: đoạn riêng, ngắn hơn chữ 1 cm
         vua = (in_word.rong_cot_dau()[0] - 2 * 57) / 20
         for d in (da['DON_VI_CAP_TREN_2DONG'] or '').split('\n'):
             for p in in_word._ngat_can_bang(d.strip().upper(), vua, in_word.CO_CO_QUAN) if d.strip() else ():
@@ -536,18 +549,13 @@ class TestTieuDeMucI(_Co):
 
     def _con(self, ho_ten: str):
         from tests.test_trang_1_khong_ho import _du_an as du_an_1_ho
-        con = self.mo(du_an_1_ho(self.td))
+        self._n = getattr(self, '_n', 0) + 1
+        (self.td / f'd{self._n}').mkdir()
+        con = self.mo(du_an_1_ho(self.td / f'd{self._n}'))
         with con:
             con.execute("UPDATE ho SET ho_ten = ?, so_cccd = '075000000001', ngay_cap = '01/01/2021', noi_cap = 'Cục CS QLHC', "
                         "dien_thoai = '0900000001', dia_chi = 'Ấp 1, xã Mẫu'", (ho_ten,))
         return con
-
-    def _excel(self, con) -> list:
-        """[(dòng, chữ, đậm)] các ô chữ còn hiện (dòng không ẩn) phía trên bảng mục III."""
-        ws = openpyxl.load_workbook(in_an.lap_chi_tiet(con, 1, self.td / 'ct.xlsx')).active
-        r_stt = next(r for r in range(1, 200) if str(ws.cell(r, 1).value or '').strip() == 'STT')
-        return [(o.row, o.value.strip(), bool(o.font.b)) for row in ws.iter_rows(max_row=r_stt - 1) for o in row
-                if isinstance(o.value, str) and o.value.strip() and not ws.row_dimensions[o.row].hidden]
 
     def _word(self, con) -> tuple:
         """(tiêu đề mục I (w:p), [chữ từng dòng bảng mục I])."""
@@ -560,14 +568,19 @@ class TestTieuDeMucI(_Co):
         self.assertEqual(bang.tag, W + 'tbl')
         return con_cua[i], [''.join(t.text or '' for t in h.iter(W + 't')) for h in bang.iter(W + 'tr')]
 
-    def _kiem_tieu_de_word(self, p, chu):
-        self.assertEqual(''.join(t.text or '' for t in p.iter(W + 't')), chu)
-        r = p.find(f'{W}r/{W}rPr')
-        self.assertIsNotNone(r.find(W + 'b'))
-        self.assertEqual(r.find(W + 'sz').get(W + 'val'), '28')                         # 14 pt (nội dung, 22/10/2026)
-        sp = p.find(f'{W}pPr/{W}spacing')
-        self.assertGreater(int(sp.get(W + 'before')), 0)
-        self.assertGreater(int(sp.get(W + 'after')), 0)
+    def test_tieu_de_theo_chu_su_dung(self):
+        """24/10/2026: hộ gia đình, cá nhân -> "I. Thông tin về hộ gia đình, cá nhân"; tổ chức -> "I. Thông tin về tổ chức"."""
+        for ho_ten, tieu_de in (('Nguyễn Văn Mẫu', 'I. Thông tin về hộ gia đình, cá nhân'),
+                                ('Công ty TNHH Mẫu', 'I. Thông tin về tổ chức')):
+            p, hang = self._word(self._con(ho_ten))
+            self.assertEqual(''.join(t.text or '' for t in p.iter(W + 't')), tieu_de)
+            self.assertIsNotNone(p.find(f'{W}r/{W}rPr').find(W + 'b'))
+            if 'tổ chức' in tieu_de:
+                self.assertTrue(hang[0].startswith('Tổ chức:'))
+                self.assertFalse(any('CCCD' in x or 'điện thoại' in x for x in hang))
+            else:
+                self.assertTrue(any('CCCD' in x for x in hang))
+        self.assertNotIn('thu hồi đất, tài sản', du_lieu_in.TIEU_DE_MUC_I_HO)
 
 
 if __name__ == '__main__':

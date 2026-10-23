@@ -7,6 +7,15 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.21', '24/10/2026', (
+        'Mục I của phương án chi tiết trở lại đúng yêu cầu: chủ sử dụng là tổ chức -> "I. Thông tin về tổ chức"; hộ gia đình, cá nhân -> '
+        '"I. Thông tin về hộ gia đình, cá nhân" (bản 1.0.19 đã ghi đè bằng tiêu đề chung của mẫu PDF).',
+        'Phương án chi tiết (Word): khối LẬP BIỂU - KIỂM TRA - chức vụ ký dịch sang trái (lề trái và lề phải cân nhau); đường kẻ dưới tên dự án '
+        'gần chữ hơn (vẫn có khe nhỏ); đường kẻ dưới "CHI NHÁNH …" ngắn hơn chữ 1 cm; đường kẻ dưới "Độc lập - Tự do - Hạnh phúc" bằng chữ; '
+        'nhãn "DỰ ÁN" in hoa khi tên dự án in hoa, ngược lại "Dự án".',
+        'Bảng tổng hợp: dòng 1 cơ quan chủ quản, dòng 2 "CHI NHÁNH …" (đậm, gạch chân ngắn hơn chữ 1 cm) - không còn mất chữ CHI NHÁNH; bản dự '
+        'thảo có "(DỰ THẢO)" ngay dưới, bản chính thức không có; nhãn "DỰ ÁN" / "Dự án" theo tên dự án; đường kẻ dưới tên dự án gần chữ hơn.',
+    )),
     ('1.0.20', '23/10/2026', (
         'Bảng tổng hợp kinh phí không còn đọc file mẫu Excel: bố cục, định dạng, khổ giấy A3 dựng hoàn toàn bằng mã trong phần mềm (kết quả '
         'in giữ nguyên). Không còn thư mục mẫu in Excel, mẫu nhúng hay gói mẫu Excel - phần mềm không đọc lệnh nào từ file Excel mẫu bên ngoài.',

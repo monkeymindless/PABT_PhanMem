@@ -35,6 +35,11 @@ TRICH_YEU_DONG: tuple = ()                              # vùng chữ rộng 524
 THUT_DAU = 0                                            # twip: thụt dòng đầu của đoạn
 HO_GACH_PT = 2                                          # pt: khe giữa chân chữ và đường gạch (không sát chữ - khỏi mất dấu dưới)
 DK_DU_AN_MM = 70                                        # đường kẻ dưới tên dự án (mm)
+CHU_KY_LECH_TRAI_MM = 3.4                               # khối LẬP BIỂU - KIỂM TRA - chức vụ ký dịch sang trái chừng này (24/10/2026: lề trái rộng hơn lề phải)
+CHI_NHANH_NGAN_MM = 10                                  # đường gạch dưới "CHI NHÁNH …" ngắn hơn chữ 1 cm (24/10/2026)
+KHE_TIEU_NGU_PT = 1.5                                   # đường gạch dưới tiêu ngữ ≈ bằng chữ (đã đo bằng Word thật: -2 làm tiêu ngữ bẻ dòng "Hạnh / phúc"; 1,5 vừa đủ, đường kẻ chỉ hơn mực chữ ~1 mm mỗi bên)
+HE_SO_DO_QT = 0.96                                      # bề rộng Qt đo so với Word (chữ in hoa đậm 13 pt) - tính đường gạch ngắn hơn chữ đúng số mm
+DK_DU_AN_KHE_PT = 3                                     # đoạn rỗng mang đường kẻ dưới tên dự án cao chừng này: đường kẻ gần chữ, vẫn hở nhỏ
 KHE_GACH_PT = 4                                         # pt: đường gạch dài hơn chữ chừng này (Word bẻ dòng nếu hẹp hơn chữ một chút)
 KHE_COT_PT = 2                                          # pt chừa thêm cho mỗi cột thu vừa chữ (Word đo chữ rộng hơn Qt chút ít)
 KHO_A4 = (11906, 16838)                                 # twip
@@ -165,7 +170,7 @@ def _duong_ke_du_an() -> str:
     suốt bề rộng giữa hai lề thụt)."""
     ben = (rong_trang() - twip(DK_DU_AN_MM)) // 2
     return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>'
-            f'<w:spacing w:before="0" w:after="200" w:line="120" w:lineRule="exact"/><w:ind w:left="{ben}" w:right="{ben}"/>'
+            f'<w:spacing w:before="0" w:after="200" w:line="{DK_DU_AN_KHE_PT * 20}" w:lineRule="exact"/><w:ind w:left="{ben}" w:right="{ben}"/>'
             f'<w:rPr><w:sz w:val="4"/></w:rPr></w:pPr></w:p>')
 
 
@@ -244,10 +249,18 @@ def _rong_do(chu: str, co: float, dam: bool = False, do=None) -> float:
     return _rong_chu(chu, co, dam)
 
 
-def _p_gach(chu: str, co: float, dam: bool, rong_o: int, do=None) -> str:
+def _p_gach(chu: str, co: float, dam: bool, rong_o: int, do=None, khe: float = KHE_GACH_PT, ngan_mm: float = 0) -> str:
     """Dòng chữ căn giữa có đường GẠCH CHÂN HỞ: viền dưới của đoạn, cách chân chữ HO_GACH_PT pt (gạch chân chữ của Word sát nét chữ,
     mất dấu dưới "Ị Ộ…"); thụt hai bên để đường kẻ dài đúng bằng chữ. rong_o = bề rộng chữ của ô (twip)."""
-    ben = max(0, int((rong_o - (_rong_do(chu, co, dam, do) + KHE_GACH_PT) * 20) // 2))
+    if ngan_mm:                                                  # đường gạch NGẮN hơn chữ: đoạn rỗng riêng (viền dưới của đoạn chữ thụt vào sẽ làm chữ bẻ dòng)
+        rong_chu = _rong_do(chu, co, dam, do) * 20 * (HE_SO_DO_QT if do else 1)
+        ben = max(0, int((rong_o - max(rong_chu * 0.3, rong_chu - twip(ngan_mm))) // 2))
+        return (f'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr>'
+                f'{_r(chu, dam=dam, co=co)}</w:p>'
+                f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:pBdr>'
+                f'<w:spacing w:before="0" w:after="0" w:line="{max(20, int(HO_GACH_PT * 20))}" w:lineRule="exact"/>'
+                f'<w:ind w:left="{ben}" w:right="{ben}"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p>')
+    ben = max(0, int((rong_o - (_rong_do(chu, co, dam, do) + khe) * 20) // 2))
     return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="{HO_GACH_PT}" w:color="000000"/></w:pBdr>'
             f'<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="{ben}" w:right="{ben}"/>'
             f'<w:jc w:val="center"/></w:pPr>{_r(chu, dam=dam, co=co)}</w:p>')
@@ -543,9 +556,10 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     trai = ''.join(_p(_r(d, co=CO_CO_QUAN), can='center')
                    for x in cap_tren.split('\n') if x.strip()
                    for d in _ngat_can_bang(x.strip().upper(), vua_trai, CO_CO_QUAN)) + \
-        ''.join(_p_gach(d, CO_CO_QUAN, True, r1 - 2 * 57, do) for d in _ngat_can_bang(ten_cq, vua_trai, CO_CO_QUAN, True))
+        ''.join(_p_gach(d, CO_CO_QUAN, True, r1 - 2 * 57, do, ngan_mm=CHI_NHANH_NGAN_MM)
+                for d in _ngat_can_bang(ten_cq, vua_trai, CO_CO_QUAN, True))
     phai = _p(_r('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', dam=True, co=CO_QUOC_HIEU), can='center') + \
-        _p_gach('Độc lập - Tự do - Hạnh phúc', CO_TIEU_NGU, True, r2 - 2 * 57, do)
+        _p_gach('Độc lập - Tự do - Hạnh phúc', CO_TIEU_NGU, True, r2 - 2 * 57, do, khe=KHE_TIEU_NGU_PT if do else KHE_GACH_PT)
     # "Số: …/…" và "địa danh, ngày … tháng … năm …" là HAI Ô CÙNG MỘT HÀNG của bảng đầu: cùng cỡ chữ, cùng giãn dòng và khoảng
     # cách trước, canh trên -> hai dòng luôn ngang nhau (người dùng 22/10/2026: không được chênh cao thấp)
     so_o = _p(_r(so, co=CO_SO_NGAY), can='center', truoc=120) + (_p(_r('(DỰ THẢO)', dam=True, co=CO_DU_THAO), can='center') if du_thao else '')
@@ -561,7 +575,7 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     ten_da = re.sub(r'^\s*dự\s+án\s+', '', ' '.join(str(da['du_an'] or '').split()), flags=re.I)
     # 23/10/2026 (người dùng): GIỮ đường kẻ ngắn căn giữa dưới tên dự án, CÁCH chữ một khe (đoạn rỗng cao 6 pt có viền dưới - không sát
     # chữ để khỏi mất dấu chấm / dấu dưới); độ dài theo mẫu PDF (~48 mm)
-    t += [_p(_r(f'Dự án {ten_da}', dam=True, co=CO_DU_AN), can='center', sau=0, dong=240), _duong_ke_du_an()]
+    t += [_p(_r(f'{du_lieu_in.nhan_du_an(ten_da)} {ten_da}', dam=True, co=CO_DU_AN), can='center', sau=0, dong=240), _duong_ke_du_an()]
     # ---- I. chủ sử dụng (bảng ẩn viền: nhãn đậm | nội dung)
     to_chuc = la_to_chuc(ttho['ho_ten'])
     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (du_lieu_in.tieu_de_muc_i - cùng bản Excel); tổ chức chỉ "Tổ chức:" / "Địa chỉ:"
@@ -610,11 +624,15 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
         # 23/10/2026 (người dùng): LẬP BIỂU - KIỂM TRA - chức vụ ký CĂN ĐỀU, CHIA ĐỀU ba phần bằng nhau, chữ nằm giữa từng phần. Lưới 8 cột
         # của bảng không chia đều ba được -> MỘT ô gộp cả 8 cột chứa bảng ba cột bằng nhau, ẩn viền
         tong = sum(rong)
+        # 24/10/2026: cả khối dịch sang TRÁI CHU_KY_LECH_TRAI_MM (lề trái rộng hơn lề phải): tâm ba phần cách đều nhau, mỗi tâm lùi s; cột
+        # thứ tư (trống) lấp phần dư bên phải. (Word không nhận tblInd âm của bảng lồng nên chia lại độ rộng cột)
+        s = twip(CHU_KY_LECH_TRAI_MM)
         a3 = tong // 3
-        cot3 = [a3, a3, tong - 2 * a3]
+        cot3 = [a3 - 2 * s, a3 + 2 * s, a3 - 2 * s, tong - (3 * a3 - 2 * s)]
         ky3 = _bang([_hang([_o(ky('LẬP BIỂU', da['nguoi_lap']), cot3[0], doc='top', vien=False),
                             _o(ky('KIỂM TRA', da['nguoi_kiem_tra']), cot3[1], doc='top', vien=False),
-                            _o(ky(da['CHUC_VU_KY'], da['nguoi_ky']), cot3[2], doc='top', vien=False)], khong_tach=True)],
+                            _o(ky(da['CHUC_VU_KY'], da['nguoi_ky']), cot3[2], doc='top', vien=False),
+                            _o(_p(can='center', dong=240), cot3[3], doc='top', vien=False)], khong_tach=True)],
                     cot3, vien=False, le_o=0)
         hang.append(_hang([_o(ky3 + _p(dong=240), tong, nhap=len(rong), doc='top', an_vien=an)], khong_tach=True))
     t.append(_bang(hang, rong, le_o=LE_O, ngoai_sz=12))

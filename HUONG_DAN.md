@@ -1,5 +1,10 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.20 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.21 – Bản Tiêu chuẩn · Sử dụng nội bộ)
 
+> **1.0.21**: tiêu đề mục I phương án chi tiết theo chủ sử dụng (**"I. Thông tin về tổ chức"** / **"I. Thông tin về hộ gia đình, cá nhân"**);
+> chữ ký dịch sang trái cho cân lề; đường kẻ dưới tên dự án gần chữ; đường kẻ dưới **CHI NHÁNH** ngắn hơn chữ 1 cm; **DỰ ÁN** in hoa khi tên
+> dự án in hoa; bảng tổng hợp có dòng **CHI NHÁNH …** dưới tên cơ quan. Lề bảng tổng hợp A3: trái 2,0 / phải 1,0 / trên 1,5 / dưới 1,5 cm
+> (đổi trong hồ sơ địa phương `ban_in.le_trang.tong_hop`).
+>
 > **1.0.20**: **bảng tổng hợp cũng không còn file mẫu Excel** - bố cục, định dạng và khổ giấy A3 dựng hoàn toàn bằng mã (kết quả in giữ
 > nguyên). Phần mềm không còn đọc bất kỳ file mẫu Excel nào; **Quản lý Mẫu in & Bản in** chỉ còn thông số mẫu Word (xuất / nhập / khôi phục).
 >

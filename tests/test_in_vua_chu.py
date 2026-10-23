@@ -127,7 +127,8 @@ class TestDuongKe(CoSo):
             giua, dai, y = min(kq, key=lambda k: abs(k[2] - t['chan'][-1]) + abs(k[0] - (t['x1'] + t['x2']) / 2))
             self.assertAlmostEqual(giua, (t['x1'] + t['x2']) / 2, delta=2 * in_an.EMU_PX, msg=o)       # căn giữa theo chữ
             khe = (y - t['chan'][-1]) / in_an.EMU_PT
-            self.assertTrue(in_an.DK_CACH - 0.01 <= khe <= max(in_an.DK_CACH, t['co'] * in_an.DK_CO_DAU_DUOI) + 0.01,
+            cach = in_an.DK_CACH_DU_AN if o == 'A6' else in_an.DK_CACH                        # dòng Dự án: gần chữ hơn (24/10/2026)
+            self.assertTrue(cach - 0.01 <= khe <= max(cach, t['co'] * in_an.DK_CO_DAU_DUOI) + 0.01,
                             (o, khe))                    # hở >= DK_CACH (5 pt): không chạm chân chữ / dấu nặng
             self.assertGreater(dai, 0)
 

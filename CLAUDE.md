@@ -2103,6 +2103,20 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `mau_khung()`; hướng dẫn `mau_word\HUONG_DAN.md` + `mau_word\MAU_KHUNG.docx` (thư mục KHÔNG đóng vào bộ cài). in_word / van_ban_trinh vẫn dùng
   bản trợ giúp riêng (chưa chuyển sang module này). `.doc` nhị phân không dựng được. `tests/test_khuon_word.py` = bộ kiểm KHUÔN bằng
   Microsoft Word thật (PDF -> đo vị trí chữ: lề, "Số" / "ngày" cùng hàng, CHI NHÁNH, không trang chỉ có chữ ký; bỏ qua khi không có Word).
+- 1.0.21 (người dùng 24/10/2026, ảnh PDF Word chi tiết + bảng tổng hợp):
+  - TIÊU ĐỀ MỤC I THEO CHỦ SỬ DỤNG LÀ YÊU CẦU CỦA NGƯỜI DÙNG (22/10: Phương án 2): `du_lieu_in.TIEU_DE_MUC_I_TO_CHUC` "I. Thông tin về tổ chức" /
+    `TIEU_DE_MUC_I_HO` "I. Thông tin về hộ gia đình, cá nhân" (người dùng 24/10 viết "về"; bản 1.0.13 ghi không có "về"). 1.0.19 từng ghi đè bằng tiêu đề
+    chung của PDF mẫu "I. Tổ chức và hộ gia đình, cá nhân bị thu hồi đất…" - LỖI: PDF mẫu chỉ cho quy cách (lề, cỡ chữ, bố cục), KHÔNG được đổi chữ
+    người dùng đã chỉ định bằng yêu cầu riêng; khi chỉnh theo mẫu mới, đối chiếu lại các yêu cầu chữ cũ (CLAUDE.md các mục trước) rồi mới sửa.
+  - Word: `in_word.CHU_KY_LECH_TRAI_MM` 3,4 (khối chữ ký: 4 cột [a-2s, a+2s, a-2s, đệm] - tâm ba phần cách đều nhau, lùi s; Word BỎ QUA tblInd âm của
+    bảng lồng); `_p_gach(..., ngan_mm=)` đường gạch NGẮN hơn chữ = đoạn rỗng riêng (viền dưới của đoạn chữ thụt vào làm chữ bẻ dòng "CHI NHÁNH VĨNH / CỬU") -
+    `CHI_NHANH_NGAN_MM` 10, `HE_SO_DO_QT` 0,96 (Qt đo rộng hơn Word); tiêu ngữ `KHE_TIEU_NGU_PT` 1,5 (đo bằng Word thật: -2 làm "Hạnh / phúc" bẻ dòng);
+    `DK_DU_AN_KHE_PT` 3 (đoạn rỗng mang đường kẻ dưới tên dự án; trước 6). `du_lieu_in.nhan_du_an(ten)`: tên dự án toàn chữ in hoa -> "DỰ ÁN", còn lại "Dự án"
+    (Word + bảng tổng hợp ô A6 `{nhan_du_an} {du_an}`).
+  - Bảng tổng hợp: `lap_bang_tong_hop` dùng `in_word.dong_co_quan(da)` -> A1 = cơ quan chủ quản (một dòng; thêm "THÀNH PHỐ …" của dự án cũ ghi vào ô tên đơn vị),
+    A2 = "CHI NHÁNH …"; `can_duong_ke`: đường kẻ dưới tên đơn vị = chữ - `DK_CHI_NHANH_NGAN_CM` 1 cm; dưới Dự án `DK_CACH_DU_AN` 3 pt (đường khác `DK_CACH` 5).
+    Lề A3 hiện hành (hồ sơ pabt_profile.json ban_in.le_trang.tong_hop): trên / dưới 0,5906 in (1,5 cm), trái 0,7874 in (2,0 cm), phải 0,3937 in (1,0 cm), header / footer 0,20 in.
+    Test `tests/test_yeu_cau_2410.py`.
 - 1.0.20 (người dùng 23/10/2026, phương án B): BẢNG TỔNG HỢP cũng KHÔNG còn file mẫu Excel - `pabt/mau_bang_tong_hop.py` (TỰ SINH một lần từ
   IN_BANGTONGHOP.xlsx rồi sửa tay được: `KIEU` / `CELLS` / `MERGES` / `RONG_COT` / `COT_AN` / `CAO_DONG` / `LE_TRANG`, `tao_workbook()`: cột có
   `min = max` như mẫu đọc từ file - `in_an._px_cot` cần; phông mặc định Arial 11 qua `wb._fonts` - `_mdw` đo theo nó) thay file; `in_an.lap_bang_tong_hop(con,

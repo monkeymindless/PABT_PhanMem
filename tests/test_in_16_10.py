@@ -134,7 +134,7 @@ class TestBangTongHop(unittest.TestCase):
         self.assertTrue(10 <= int(ws.page_setup.scale) <= 100)
         chu = [c.value for r in ws.iter_rows() for c in r if isinstance(c.value, str)]
         self.assertFalse(any('theo Quyết định số 08' in x for x in chu))
-        self.assertTrue(any(x.startswith('DỰ ÁN') for x in chu))
+        self.assertTrue(any(x.startswith(('DỰ ÁN', 'Dự án')) for x in chu))
         ngat = [b.id for b in ws.row_breaks.brk]
         self.assertTrue(ngat, 'dữ liệu nhiều trang phải có ngắt trang')
         for r in ngat:                                                          # ngắt ở ranh giới: dòng sau là đầu hộ (có STT)

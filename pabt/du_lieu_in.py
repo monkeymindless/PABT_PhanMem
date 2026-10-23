@@ -13,6 +13,12 @@ from .tien import D, KHONG
 NHAN_TDC = 'Phương án tái định cư:'
 
 
+def nhan_du_an(ten: str) -> str:
+    """Nhãn đứng trước tên dự án (24/10/2026): tên dự án gõ IN HOA -> "DỰ ÁN", còn lại (viết hoa chữ đầu / viết thường) -> "Dự án"."""
+    chu = [c for c in str(ten or '') if c.isalpha()]
+    return 'DỰ ÁN' if chu and all(c.isupper() for c in chu) else 'Dự án'
+
+
 def _hai_dong(s: str) -> str:
     """'TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT THÀNH PHỐ ĐỒNG NAI' -> xuống dòng trước 'THÀNH PHỐ' / 'TỈNH' (tiêu đề cơ quan 2 dòng)."""
     return re.sub(r'\s+((THÀNH PHỐ|TỈNH|HUYỆN|QUẬN|THỊ XÃ) .+)$', r'\n\1', s) if len(s) > 30 else s
@@ -232,10 +238,13 @@ NHAN_TO_CHUC = 'Tổ chức:'                                  # chủ sử dụ
 NHAN_DIA_CHI_TO_CHUC = 'Địa chỉ:'                          # 1.0.04: tổ chức thay nhãn "Địa chỉ thường trú:"
 
 
-TIEU_DE_MUC_I_HO = 'I. Tổ chức và hộ gia đình, cá nhân bị thu hồi đất, tài sản gắn liền với đất'     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (thay "I. Tổ chức và hộ…")
+# 24/10/2026 (người dùng nhắc lại yêu cầu 22/10): tiêu đề mục I THEO CHỦ SỬ DỤNG - tổ chức: "Thông tin về tổ chức"; hộ gia đình, cá nhân:
+# "Thông tin về hộ gia đình, cá nhân". 1.0.19 đã ghi đè bằng tiêu đề chung của PDF mẫu ("I. Tổ chức và hộ gia đình, cá nhân bị thu hồi đất…") - SAI,
+# mẫu PDF chỉ cho quy cách (lề, cỡ chữ), không đổi tiêu đề người dùng đã chỉ định.
+TIEU_DE_MUC_I_HO = 'I. Thông tin về hộ gia đình, cá nhân'
 
 
-TIEU_DE_MUC_I_TO_CHUC = TIEU_DE_MUC_I_HO                   # mẫu PDF 23/10/2026: một tiêu đề cho cả hộ và tổ chức
+TIEU_DE_MUC_I_TO_CHUC = 'I. Thông tin về tổ chức'
 
 
 def tieu_de_muc_i(to_chuc: bool) -> str:

@@ -27,7 +27,7 @@ from openpyxl.worksheet.cell_range import CellRange, MultiCellRange
 
 from . import an_toan as _an_toan
 from . import nghiep_vu
-from .du_lieu_in import (_thong_tin_du_an, bo_lap_mo_dau, chon_lan_in, ghi_chu_in, ky_hieu_cua_ho, tieu_de_muc_i, ten_file_ho)  # noqa: F401 - tên cũ của in_an (mã gọi cũ, test)
+from .du_lieu_in import (nhan_du_an, _thong_tin_du_an, bo_lap_mo_dau, chon_lan_in, ghi_chu_in, ky_hieu_cua_ho, tieu_de_muc_i, ten_file_ho)  # noqa: F401 - tên cũ của in_an (mã gọi cũ, test)
 from .nghiep_vu import MA_ON_DINH, BoiCanh, doc_phuong_an, tinh_pa
 from .tien import D, KHONG
 
@@ -118,6 +118,8 @@ DK_CO_DAU_DUOI = 0.20
 DK_KHONG_DAU_DUOI = 0.08
 DK_DU_AN_CM = 7.0             # đường kẻ dưới dòng "Dự án: …": dài 7 cm, căn giữa dòng chữ (người dùng 12/10/2026)
 EMU_CM = 360000
+DK_CACH_DU_AN = 3.0              # riêng đường kẻ dưới tên dự án: gần chữ hơn nhưng vẫn hở nhỏ (người dùng 24/10/2026)
+DK_CHI_NHANH_NGAN_CM = 1.0     # đường kẻ dưới "CHI NHÁNH …" ngắn hơn chữ 1 cm (người dùng 24/10/2026)
 DK_CACH = 5.0                  # tối thiểu (pt) từ chân dòng chữ tới đường kẻ: không chạm chân chữ / dấu nặng (người dùng 14/10/2026)
 _DAU_DUOI = set('gjpqyạặậẹệịọộợụựỵẠẶẬẸỆỊỌỘỢỤỰỴ,;')
 DK_LE_TREN = 1.0               # Excel chừa phía trên chữ (pt) khi canh trên
@@ -230,7 +232,7 @@ def can_duong_ke(ws, xml: str, do=None) -> str:
         elif bo_dau(chu).lower().startswith('du an'):     # "Dự án: …": 7 cm (không dài hơn chữ), giữa dòng chữ
             dai = min(DK_DU_AN_CM * EMU_CM, rong, tot['x2'] - tot['x1'])
         elif ':' not in chu and len(chu) <= 40:
-            dai = rong * 0.72                                 # tên đơn vị (CHI NHÁNH…): ngắn hơn chữ, căn giữa
+            dai = max(rong * 0.3, rong - DK_CHI_NHANH_NGAN_CM * EMU_CM)     # tên đơn vị (CHI NHÁNH…): ngắn hơn chữ 1 cm, căn giữa
         else:
             dai = min(x2 - x1, rong)
         if tot['ngang'] in ('left', 'general', 'justify'):
@@ -239,7 +241,8 @@ def can_duong_ke(ws, xml: str, do=None) -> str:
             giua = tot['x2'] - 2 * EMU_PX - rong / 2
         else:
             giua = (tot['x1'] + tot['x2']) / 2
-        nx1, nx2, ny = int(giua - dai / 2), int(giua + dai / 2), int(tot['chan'][-1] + max(DK_CACH, tot['co'] * (
+        cach = DK_CACH_DU_AN if bo_dau(chu).lower().startswith('du an') else DK_CACH
+        nx1, nx2, ny = int(giua - dai / 2), int(giua + dai / 2), int(tot['chan'][-1] + max(cach, tot['co'] * (
             DK_CO_DAU_DUOI if _DAU_DUOI & set(unicodedata.normalize('NFC', chu)) else DK_KHONG_DAU_DUOI)) * EMU_PT)
         (ca, oa), (cb, ob), (ra, qa) = _neo(nx1, bc), _neo(nx2, bc), _neo(ny, bd)
         a = _RE_NEO.sub(lambda m: (f'<xdr:{m.group(1)}><xdr:col>{ca if m.group(1) == "from" else cb}</xdr:col><xdr:colOff>'
@@ -1886,6 +1889,12 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, so_pa_tong: st
     if vt:                                        # dòng "Dự án" đủ cao cho đường kẻ dưới chữ (mẫu cũ 25,2 pt: đường kẻ chạm dòng dưới)
         ws.row_dimensions[vt[0]].height = max(float(ws.row_dimensions[vt[0]].height or 15), _phong(ws.cell(vt[0], vt[1]))[1] * 1.7)
     da = _thong_tin_du_an(con)
+    from .in_word import dong_co_quan                              # 24/10/2026: cùng cách chia dòng cơ quan với bản Word chi tiết
+    cap, chi_nhanh = dong_co_quan(da)
+    da['DON_VI_CAP_TREN'] = ' '.join(cap.split())                  # dòng 1: cơ quan chủ quản (một dòng, ô gộp rộng)
+    da['DON_VI_TIEU_DE'] = chi_nhanh                               # dòng 2: "CHI NHÁNH …" đậm, gạch chân
+    da['du_an'] = re.sub(r'^\s*dự\s+án\s+', '', da['du_an'], flags=re.I)
+    da['nhan_du_an'] = nhan_du_an(da['du_an'])                     # tên dự án in hoa -> "DỰ ÁN", còn lại "Dự án"
     bc = BoiCanh.tu(con)
     # phương án đọc MỘT lần (0.9.87): cả dự án -> đọc hết rồi tính kết quả dùng chung trên đó (trước: ho_co_phuong_an đọc cả dự
     # án trong ket_qua_ho rồi đọc lại các hộ có phương án); kết quả đã nhớ (ket_qua_ho_san) thì chỉ đọc các hộ cần in
