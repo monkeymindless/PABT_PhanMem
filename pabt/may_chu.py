@@ -44,6 +44,10 @@ CREATE TABLE IF NOT EXISTS gan_day (
 CREATE TABLE IF NOT EXISTS lay_ve (
     duong_dan TEXT PRIMARY KEY, tai_khoan TEXT NOT NULL, may TEXT NOT NULL DEFAULT '', luc TEXT NOT NULL DEFAULT '',
     sua_goc REAL NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS lay_ve_ho (
+    duong_dan TEXT NOT NULL, ma_ho INTEGER NOT NULL, tai_khoan TEXT NOT NULL,
+    may TEXT NOT NULL DEFAULT '', luc TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (duong_dan, ma_ho));
 CREATE TABLE IF NOT EXISTS nhat_ky (
     id INTEGER PRIMARY KEY, luc TEXT NOT NULL, tai_khoan TEXT NOT NULL DEFAULT '', may TEXT NOT NULL DEFAULT '',
     viec TEXT NOT NULL DEFAULT '', chi_tiet TEXT NOT NULL DEFAULT '');
@@ -548,6 +552,11 @@ def lay_ve(file, phien=None) -> Path:
         r = con.execute('SELECT * FROM lay_ve WHERE duong_dan = ?', (rel,)).fetchone()
         if r is not None and r['tai_khoan'] != phien.tai_khoan:
             raise LoiMayChu(f'Dự án đang được "{r["tai_khoan"]}" mang về máy {r["may"]} từ {r["luc"]}: chờ người đó đưa lên lại.')
+        khac = sorted({x['tai_khoan'] for x in con.execute('SELECT tai_khoan FROM lay_ve_ho WHERE duong_dan = ?', (rel,))
+                       if x['tai_khoan'] != phien.tai_khoan})
+        if khac:                                        # mang cả dự án về rồi đưa lên sẽ ghi đè các hộ người khác đang làm
+            raise LoiMayChu(f'Một số hộ của dự án đang được {", ".join(khac)} nhận làm offline: chờ gộp lên lại, hoặc chỉ nhận '
+                            'các hộ khác về làm.')
         k = khoa.KhoaFile(f).nguoi_khac()
         if k:
             raise LoiMayChu(f'Dự án đang được sửa trên {khoa.mo_ta(k)}: chờ đóng rồi mới mang về.')
@@ -582,6 +591,8 @@ def dua_len(ban_sao, phien=None, ep: bool = False) -> Path:
     if phien is None:
         raise LoiMayChu('Đăng nhập máy chủ trước khi đưa dự án lên.')
     x = _muc_cuc_bo(ban_sao)
+    if x.get('ds_ma_ho'):                               # bản nhận theo hộ: chỉ gộp các hộ đó, không ghi đè cả file
+        return gop_ho_tu_ban_offline(ban_sao, phien=phien, ep=ep)['file']
     goc, f = Path(x['goc']), Path(x['file_goc'])
     if not ket_noi_duoc(goc):
         raise LoiMayChu('Chưa kết nối được máy chủ: đưa lên sau khi có mạng.')
@@ -622,7 +633,12 @@ def huy_lay_ve(ban_sao, phien=None) -> None:
         con = _mo(goc)
         try:
             with con:
-                con.execute('DELETE FROM lay_ve WHERE duong_dan = ? AND tai_khoan = ?', (_tuong_doi(goc, x['file_goc']), x['tai_khoan']))
+                rel = _tuong_doi(goc, x['file_goc'])
+                if x.get('ds_ma_ho'):
+                    con.executemany('DELETE FROM lay_ve_ho WHERE duong_dan = ? AND ma_ho = ? AND tai_khoan = ?',
+                                    [(rel, int(m), x['tai_khoan']) for m in x['ds_ma_ho']])
+                else:
+                    con.execute('DELETE FROM lay_ve WHERE duong_dan = ? AND tai_khoan = ?', (rel, x['tai_khoan']))
                 _ghi_nhat_ky(con, x['tai_khoan'], 'Hủy mang về', x['file_goc'])
         finally:
             con.close()
@@ -637,6 +653,367 @@ def nhat_ky_may_chu(goc, so_dong: int = 300) -> list:
     con = _mo(goc)
     try:
         return [dict(r) for r in con.execute('SELECT * FROM nhat_ky ORDER BY id DESC LIMIT ?', (so_dong,))]
+    finally:
+        con.close()
+
+
+# ---------------------------------------------------------------- nhận / gộp THEO HỘ (nhiều chuyên viên cùng một dự án)
+# Mỗi chuyên viên nhận một NHÓM HỘ của dự án trên máy chủ về làm offline (bảng lay_ve_ho khóa từng mã hộ - không khóa cả dự án) rồi
+# gộp đúng các hộ đó lên lại: dòng của hộ ở bảng ho và các bảng theo hộ được thay bằng bản offline, hộ của người khác giữ nguyên.
+# Bảng chung của dự án (danh mục, quyết định, đợt trình, đợt niêm yết) KHÔNG gộp: dòng theo hộ trỏ tới quyết định / đợt chưa có trên
+# máy chủ bị bỏ qua (báo trong kết quả). Hộ bị sửa trên máy chủ sau lúc nhận về (so dấu vết nội dung) -> báo xung đột như dua_len.
+BANG_CON_HO = ('thua', 'ct_dat', 'ct_khoan', 'pa_lan', 'qd_ho', 'nhat_ky_van_dong', 'anh_hien_trang', 'y_kien_du_thao',
+               'doi_thoai_ho', 'tong_excel')
+# cột của bảng theo hộ trỏ tới bảng chung: dòng trỏ tới dòng chưa có trên máy chủ không gộp được
+_TRO_BANG_CHUNG = {'qd_ho': ('qd_id', 'quyet_dinh'), 'y_kien_du_thao': ('dot_id', 'dot_du_thao'),
+                   'doi_thoai_ho': ('dot_id', 'dot_du_thao')}
+_TRO_HO = (('dot_id', 'dot_trinh'), ('dot_du_thao_id', 'dot_du_thao'))      # cột của ho trỏ tới bảng chung
+NHOM_MA_HO = 400                     # số mã hộ mỗi câu IN (...) - giới hạn tham số của SQLite cũ là 999
+
+
+def _cot(con, bang: str) -> list:
+    try:
+        return [r[1] for r in con.execute(f'PRAGMA table_info({bang})')]
+    except sqlite3.Error:
+        return []
+
+
+def _nhom(ds: list):
+    for i in range(0, len(ds), NHOM_MA_HO):
+        yield ds[i:i + NHOM_MA_HO]
+
+
+def _cac_ma_ho(ds_ma_ho) -> list:
+    return sorted({int(m) for m in (ds_ma_ho or ()) if int(m) > 0})
+
+
+def dau_vet_ho(con, ds_ma_ho) -> dict:
+    """{ma_ho: chuỗi băm} nội dung hộ ở bảng ho và các bảng theo hộ (BANG_CON_HO). So lúc gộp: khác lúc nhận về = hộ đã bị sửa
+    trên máy chủ (mở trực tiếp file dự án) trong lúc chuyên viên làm offline."""
+    cac = _cac_ma_ho(ds_ma_ho)
+    bam = {m: hashlib.sha1() for m in cac}
+    for bang in ('ho',) + BANG_CON_HO:
+        cot = _cot(con, bang)
+        if 'ma_ho' not in cot:
+            continue
+        i = cot.index('ma_ho')
+        for nhom in _nhom(cac):
+            for r in con.execute(f'SELECT * FROM {bang} WHERE ma_ho IN ({",".join("?" * len(nhom))}) ORDER BY rowid', nhom):
+                bam[r[i]].update(repr((bang, tuple(r))).encode('utf-8'))
+    return {m: h.hexdigest() for m, h in bam.items()}
+
+
+def _mo_doc(f) -> sqlite3.Connection:
+    """Kết nối chỉ đọc thuần (không qua csdl.mo: không nâng cấp / không tạo bảng phụ - dấu vết hai phía đọc cùng một cách)."""
+    return sqlite3.connect(csdl.uri_chi_doc(f), uri=True, timeout=15)
+
+
+def _chep_nhat_quan(f: Path, dich: Path) -> None:
+    """Chép file dự án bằng sqlite backup (ảnh chụp nhất quán kể cả khi máy khác đang ghi - shutil.copy có thể chép giữa giao dịch)."""
+    tam = dich.with_name(dich.name + '.tam')
+    nguon = _mo_doc(f)
+    try:
+        dst = sqlite3.connect(str(tam))
+        try:
+            nguon.backup(dst)
+        finally:
+            dst.close()
+        os.replace(tam, dich)
+    finally:
+        nguon.close()
+        if tam.exists():
+            tam.unlink()
+
+
+def ds_ho_dang_lay_ve(file, goc=None) -> dict:
+    """{ma_ho: dict(tai_khoan, may, luc)} các hộ của dự án file đang được chuyên viên nhận làm offline."""
+    goc = Path(goc) if goc else (PHIEN.goc if PHIEN else None)
+    if goc is None:
+        return {}
+    rel = _tuong_doi(goc, Path(file))
+    con = _mo(goc)
+    try:
+        return {int(r['ma_ho']): dict(tai_khoan=r['tai_khoan'], may=r['may'], luc=r['luc'])
+                for r in con.execute('SELECT * FROM lay_ve_ho WHERE duong_dan = ?', (rel,))}
+    except sqlite3.Error:
+        return {}
+    finally:
+        con.close()
+
+
+def lay_ve_theo_ho(file, ds_ma_ho, phien=None) -> Path:
+    """Nhận các hộ ds_ma_ho của dự án trên máy chủ về làm offline: chỉ khóa các mã hộ này (lay_ve_ho) - chuyên viên khác vẫn nhận
+    và gộp được các hộ khác của cùng dự án. Bản offline là bản chép đủ dự án (để tính / in đúng bối cảnh) nhưng khi gộp chỉ các hộ đã
+    nhận được ghi lên. Mỗi lần nhận một bản offline riêng (nhận nhóm thứ hai không ghi đè bản của nhóm thứ nhất)."""
+    phien = phien or PHIEN
+    if phien is None:
+        raise LoiMayChu('Đăng nhập máy chủ trước khi nhận hộ về làm offline.')
+    cac_ho = _cac_ma_ho(ds_ma_ho)
+    if not cac_ho:
+        raise LoiMayChu('Chọn ít nhất một hộ để nhận về làm offline.')
+    f = Path(file)
+    rel = _tuong_doi(phien.goc, f)
+    luc, may = _bay_gio(), _may()
+    con = _mo(phien.goc)
+    try:
+        con.execute('BEGIN IMMEDIATE')                  # kiểm + ghi một giao dịch: hai người bấm cùng lúc không cùng nhận một hộ
+        try:
+            r = con.execute('SELECT * FROM lay_ve WHERE duong_dan = ?', (rel,)).fetchone()
+            if r is not None and r['tai_khoan'] != phien.tai_khoan:
+                raise LoiMayChu(f'Toàn bộ dự án đang được "{r["tai_khoan"]}" mang về máy {r["may"]} từ {r["luc"]}: chờ người đó '
+                                'đưa lên lại.')
+            giu = {int(x['ma_ho']): x['tai_khoan'] for x in con.execute('SELECT * FROM lay_ve_ho WHERE duong_dan = ?', (rel,))
+                   if x['tai_khoan'] != phien.tai_khoan}
+            trung = [m for m in cac_ho if m in giu]
+            if trung:
+                nguoi = ', '.join(f'"{x}"' for x in sorted({giu[m] for m in trung}))
+                raise LoiMayChu(f'{len(trung)} hộ (mã {", ".join(map(str, trung[:10]))}{"…" if len(trung) > 10 else ""}) đang được '
+                                f'{nguoi} nhận làm: chọn hộ khác.')
+            con.executemany('INSERT OR REPLACE INTO lay_ve_ho (duong_dan, ma_ho, tai_khoan, may, luc) VALUES (?,?,?,?,?)',
+                            [(rel, m, phien.tai_khoan, may, luc) for m in cac_ho])
+            _ghi_nhat_ky(con, phien.tai_khoan, 'Nhận hộ làm offline', f'{rel} ({len(cac_ho)} hộ)')
+            con.commit()
+        except BaseException:
+            con.rollback()
+            raise
+        # chép SAU khi đã giữ chỗ (chép qua mạng có thể lâu - không giữ khóa ghi CSDL máy chủ trong lúc đó)
+        try:
+            dich = thu_muc_offline() / f'{f.stem}__{phien.tai_khoan}_ho_{datetime.now():%Y%m%d_%H%M%S}{f.suffix}'
+            k = 2
+            while dich.exists():
+                dich = dich.with_name(f'{dich.stem.rsplit("~", 1)[0]}~{k}{f.suffix}')
+                k += 1
+            dich.parent.mkdir(parents=True, exist_ok=True)
+            _chep_nhat_quan(f, dich)
+            c = _mo_doc(dich)
+            try:
+                co = {x[0] for x in c.execute('SELECT ma_ho FROM ho')}
+                thieu = [m for m in cac_ho if m not in co]
+                if thieu:
+                    raise LoiMayChu(f'Dự án không có hộ mã {", ".join(map(str, thieu[:10]))}.')
+                dau_vet = dau_vet_ho(c, cac_ho)
+                audit = c.execute('SELECT MAX(id) FROM audit_logs').fetchone()[0] if 'id' in _cot(c, 'audit_logs') else None
+            finally:
+                c.close()
+        except BaseException:
+            with con:
+                con.executemany('DELETE FROM lay_ve_ho WHERE duong_dan = ? AND ma_ho = ? AND tai_khoan = ? AND luc = ?',
+                                [(rel, m, phien.tai_khoan, luc) for m in cac_ho])
+            try:
+                dich.unlink()
+            except (OSError, NameError):
+                pass
+            raise
+    finally:
+        con.close()
+    ds = ds_lay_ve_cuc_bo()
+    ds.append(dict(ban_sao=str(dich), goc=str(phien.goc), file_goc=str(f), tai_khoan=phien.tai_khoan, luc=luc,
+                   sua_goc=f.stat().st_mtime, ds_ma_ho=cac_ho, dau_vet={str(m): v for m, v in dau_vet.items()},
+                   audit_max=audit or 0))
+    _ghi_so(ds)
+    return dich
+
+
+def _gop_ho(con_n, con_d, cac_ho: list, audit_tu=None) -> dict:
+    """Ghi các hộ cac_ho từ bản offline (con_n) lên file máy chủ (con_d), trong giao dịch của nơi gọi. Thửa: giữ mã thửa nếu trên máy
+    chủ chưa dùng; trùng (máy khác đã cấp cùng mã cho thửa mới của hộ khác) -> cấp mã mới, dòng mục 1 trỏ theo mã mới.
+    audit_tu: mã dòng nhật ký kiểm toán lớn nhất lúc nhận về - các dòng sau đó của các hộ này được chép thêm (bảng chỉ cho thêm)."""
+    kq = dict(so_ho=0, khong_co=[], bo_dong=[])
+    cot_d = {b: set(_cot(con_d, b)) for b in ('ho',) + BANG_CON_HO}
+    cot_ho = [c for c in _cot(con_n, 'ho') if c in cot_d['ho']]
+    bang = {}
+    for b in BANG_CON_HO:
+        cn = _cot(con_n, b)
+        if 'ma_ho' not in cn:
+            continue
+        if 'ma_ho' not in cot_d[b]:
+            if any(con_n.execute(f'SELECT 1 FROM {b} WHERE ma_ho IN ({",".join("?" * len(nhom))}) LIMIT 1', nhom).fetchone()
+                   for nhom in _nhom(cac_ho)):
+                kq['bo_dong'].append(f'{b}: file trên máy chủ chưa có bảng này - không gộp được dòng của bảng')
+            continue
+        bang[b] = [c for c in cn if c in cot_d[b] and (c != 'id' or b == 'thua')]
+    nho_id = {}
+
+    def co_dong(bc: str, gt) -> bool:
+        if bc not in nho_id:
+            nho_id[bc] = {r[0] for r in con_d.execute(f'SELECT id FROM {bc}')} if 'id' in _cot(con_d, bc) else set()
+        return gt in nho_id[bc]
+
+    def chen(b: str, d: dict) -> None:
+        con_d.execute(f'INSERT INTO {b} ({", ".join(d)}) VALUES ({",".join("?" * len(d))})', tuple(d.values()))
+
+    dung_thua = {r[0] for r in con_d.execute('SELECT ma_thua FROM thua')} if 'thua' in bang else set()
+    doi_thua = {}
+    for ma_ho in cac_ho:
+        r = con_n.execute(f'SELECT {", ".join(cot_ho)} FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
+        if r is None:
+            kq['khong_co'].append(ma_ho)                # hộ đã xóa trên bản offline: không xóa trên máy chủ (báo để xử lý tay)
+            continue
+        gt = dict(zip(cot_ho, r))
+        giu = ['thu_tu'] + [c for c, _ in _TRO_HO if c in gt]
+        cu = con_d.execute(f'SELECT {", ".join(giu)} FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
+        cu = dict(zip(giu, cu)) if cu is not None else {}
+        for c, bc in _TRO_HO:
+            if c in gt and gt[c] is not None and not co_dong(bc, gt[c]):
+                kq['bo_dong'].append(f'hộ {ma_ho}: {c} = {gt[c]} chưa có trên máy chủ - giữ giá trị trên máy chủ')
+                gt[c] = cu.get(c)
+        if cu:
+            gt['thu_tu'] = cu['thu_tu']                 # số thứ tự hiển thị theo máy chủ (máy khác có thể đã đánh lại)
+            sua = [c for c in gt if c != 'ma_ho']
+            con_d.execute(f'UPDATE ho SET {", ".join(c + " = ?" for c in sua)} WHERE ma_ho = ?', (*[gt[c] for c in sua], ma_ho))
+        else:
+            chen('ho', gt)
+        for b in bang:                                  # dòng cũ của hộ: bảng trỏ tới thửa trước, thửa sau cùng
+            if b != 'thua':
+                con_d.execute(f'DELETE FROM {b} WHERE ma_ho = ?', (ma_ho,))
+        if 'thua' in bang:
+            for (m,) in con_d.execute('SELECT ma_thua FROM thua WHERE ma_ho = ?', (ma_ho,)).fetchall():
+                dung_thua.discard(m)
+            con_d.execute('DELETE FROM thua WHERE ma_ho = ?', (ma_ho,))
+            for x in con_n.execute(f'SELECT {", ".join(bang["thua"])} FROM thua WHERE ma_ho = ? ORDER BY rowid', (ma_ho,)).fetchall():
+                d = dict(zip(bang['thua'], x))
+                if d['ma_thua'] in dung_thua:
+                    moi = max(dung_thua) + 1
+                    doi_thua[d['ma_thua']] = moi
+                    d['ma_thua'] = moi
+                dung_thua.add(d['ma_thua'])
+                chen('thua', d)
+        for b, cot in bang.items():
+            if b == 'thua':
+                continue
+            tro = _TRO_BANG_CHUNG.get(b)
+            for x in con_n.execute(f'SELECT {", ".join(cot)} FROM {b} WHERE ma_ho = ? ORDER BY rowid', (ma_ho,)).fetchall():
+                d = dict(zip(cot, x))
+                if tro and tro[0] in d and not co_dong(tro[1], d[tro[0]]):
+                    kq['bo_dong'].append(f'hộ {ma_ho}: {b} trỏ tới {tro[1]} {d[tro[0]]} chưa có trên máy chủ - không gộp dòng này')
+                    continue
+                if b == 'ct_dat' and d.get('ma_thua') is not None:
+                    d['ma_thua'] = doi_thua.get(d['ma_thua'], d['ma_thua'])
+                    if d['ma_thua'] not in dung_thua:
+                        d['ma_thua'] = None
+                chen(b, d)
+        kq['so_ho'] += 1
+    if audit_tu is not None and 'id' in _cot(con_n, 'audit_logs'):
+        cot = [c for c in _cot(con_n, 'audit_logs') if c != 'id' and c in set(_cot(con_d, 'audit_logs'))]
+        if 'ma_ho' in cot:
+            for nhom in _nhom(cac_ho):
+                for x in con_n.execute(f'SELECT {", ".join(cot)} FROM audit_logs WHERE id > ? AND ma_ho IN '
+                                       f'({",".join("?" * len(nhom))}) ORDER BY id', (int(audit_tu), *nhom)).fetchall():
+                    d = dict(zip(cot, x))
+                    if d.get('ma_thua') in doi_thua:
+                        d['ma_thua'] = doi_thua[d['ma_thua']]
+                    chen('audit_logs', d)
+    kq['doi_ma_thua'] = doi_thua
+    return kq
+
+
+def gop_ho_tu_ban_offline(ban_sao, ds_ma_ho=None, phien=None, file_goc=None, ep: bool = False) -> dict:
+    """Gộp các hộ ds_ma_ho (mặc định: mọi hộ đã nhận cùng bản offline này) từ bản offline lên file dự án trên máy chủ, KHÔNG ghi đè
+    các hộ khác. Bản không có trong sổ nhận về của máy này: phải đưa file_goc (file trên máy chủ) và ds_ma_ho. Sao lưu file máy chủ
+    vào SaoLuu trước khi ghi; một giao dịch (lỗi giữa chừng -> file máy chủ như cũ). Hộ bị sửa trên máy chủ sau lúc nhận về -> báo
+    XUNG ĐỘT (ep=True: vẫn gộp). Gộp một phần: các hộ còn lại vẫn nhận, bản offline giữ lại.
+    Trả dict(file, so_ho, ma_ho, khong_co, bo_dong, doi_ma_thua, sao_luu)."""
+    from . import khoa
+    phien = phien or PHIEN
+    if phien is None:
+        raise LoiMayChu('Đăng nhập máy chủ trước khi gộp hộ lên.')
+    muc = next((x for x in ds_lay_ve_cuc_bo() if Path(x['ban_sao']) == Path(ban_sao)), None)
+    if muc is not None:
+        goc, f = Path(muc['goc']), Path(muc['file_goc'])
+        cac_ho = _cac_ma_ho(ds_ma_ho or muc.get('ds_ma_ho'))
+    else:
+        if not ds_ma_ho or not file_goc:
+            raise LoiMayChu('Bản này không có trong sổ nhận về của máy: cần chỉ rõ file dự án trên máy chủ và các hộ cần gộp.')
+        goc, f, cac_ho = phien.goc, Path(file_goc), _cac_ma_ho(ds_ma_ho)
+    if not cac_ho:
+        raise LoiMayChu('Không có hộ nào để gộp lên máy chủ.')
+    if Path(ban_sao).resolve() == f.resolve():
+        raise LoiMayChu('Bản offline trùng file dự án trên máy chủ.')
+    if not ket_noi_duoc(goc):
+        raise LoiMayChu('Chưa kết nối được máy chủ: gộp sau khi có mạng.')
+    tk = muc['tai_khoan'] if muc is not None else phien.tai_khoan
+    rel = _tuong_doi(goc, f)
+    con_mc = _mo(goc)
+    try:
+        r = con_mc.execute('SELECT * FROM lay_ve WHERE duong_dan = ?', (rel,)).fetchone()
+        if r is not None and r['tai_khoan'] != tk:
+            raise LoiMayChu(f'Toàn bộ dự án đang được "{r["tai_khoan"]}" mang về làm offline: chờ người đó đưa lên lại.')
+        giu = {int(x['ma_ho']): x['tai_khoan'] for x in con_mc.execute('SELECT * FROM lay_ve_ho WHERE duong_dan = ?', (rel,))
+               if x['tai_khoan'] != tk}
+    finally:
+        con_mc.close()
+    trung = [m for m in cac_ho if m in giu]
+    if trung:
+        raise LoiMayChu(f'{len(trung)} hộ (mã {", ".join(map(str, trung[:10]))}) đang được người khác nhận làm: không gộp đè.')
+    k = khoa.KhoaFile(f).nguoi_khac()
+    if k:
+        raise LoiMayChu(f'Dự án trên máy chủ đang được mở trực tiếp trên {khoa.mo_ta(k)}: chờ đóng rồi gộp.')
+    dv_cu = (muc or {}).get('dau_vet') or {}
+    if dv_cu and not ep:
+        c = _mo_doc(f)
+        try:
+            dv = dau_vet_ho(c, cac_ho)
+        finally:
+            c.close()
+        doi = [m for m in cac_ho if str(m) in dv_cu and dv.get(m) != dv_cu[str(m)]]
+        if doi:
+            raise LoiMayChu(f'XUNG ĐỘT: {len(doi)} hộ (mã {", ".join(map(str, doi[:10]))}) đã được sửa trên máy chủ sau lúc nhận về. '
+                            'Chọn "Vẫn gộp" để ghi đè các hộ này (file trên máy chủ được sao lưu vào thư mục SaoLuu), hoặc liên hệ '
+                            'người đã sửa.')
+    sl = goc / THU_MUC_SAO_LUU / f'{f.stem}_truoc_gop_{datetime.now():%Y%m%d_%H%M%S}{f.suffix}'
+    sl.parent.mkdir(parents=True, exist_ok=True)
+    _chep_nhat_quan(f, sl)
+    con_n = _mo_doc(ban_sao)
+    con_d = csdl.mo(f)
+    try:
+        with csdl.giao_dich(con_d):
+            kq = _gop_ho(con_n, con_d, cac_ho, (muc or {}).get('audit_max'))
+            csdl.ghi_nhat_ky(con_d, 'Gộp hộ từ bản offline',
+                             f'{kq["so_ho"]} hộ của {tk}: {", ".join(map(str, cac_ho[:15]))}{"…" if len(cac_ho) > 15 else ""}')
+    finally:
+        con_n.close()
+        con_d.close()
+    con_mc = _mo(goc)
+    try:
+        with con_mc:
+            con_mc.executemany('DELETE FROM lay_ve_ho WHERE duong_dan = ? AND ma_ho = ? AND tai_khoan = ?',
+                               [(rel, m, tk) for m in cac_ho])
+            _ghi_nhat_ky(con_mc, phien.tai_khoan, 'Gộp hộ offline lên máy chủ', f'{rel} ({kq["so_ho"]} hộ)')
+    finally:
+        con_mc.close()
+    if muc is not None:
+        con_lai = [m for m in _cac_ma_ho(muc.get('ds_ma_ho')) if m not in set(cac_ho)]
+        ds = [y for y in ds_lay_ve_cuc_bo() if Path(y['ban_sao']) != Path(ban_sao)]
+        if con_lai:                                     # gộp một phần: bản offline còn giữ các hộ chưa gộp
+            muc = dict(muc, ds_ma_ho=con_lai, dau_vet={k: v for k, v in (muc.get('dau_vet') or {}).items() if int(k) in con_lai})
+            ds.append(muc)
+        _ghi_so(ds)
+        if not con_lai:
+            try:
+                Path(ban_sao).unlink()
+            except OSError:
+                pass
+    return dict(file=f, ma_ho=cac_ho, sao_luu=sl, **kq)
+
+
+def huy_lay_ve_ho(file, ds_ma_ho=None, phien=None) -> int:
+    """Trả lại các hộ đã nhận làm offline trên máy chủ (ds_ma_ho None: mọi hộ của tài khoản này trên dự án file). Bản offline trên
+    máy (nếu có) không bị xóa - dùng huy_lay_ve(bản offline) để bỏ cả bản. Trả số hộ đã trả lại."""
+    phien = phien or PHIEN
+    if phien is None:
+        return 0
+    rel = _tuong_doi(phien.goc, Path(file))
+    con = _mo(phien.goc)
+    try:
+        with con:
+            if ds_ma_ho is None:
+                n = con.execute('DELETE FROM lay_ve_ho WHERE duong_dan = ? AND tai_khoan = ?', (rel, phien.tai_khoan)).rowcount
+            else:
+                n = sum(con.execute('DELETE FROM lay_ve_ho WHERE duong_dan = ? AND ma_ho = ? AND tai_khoan = ?',
+                                    (rel, m, phien.tai_khoan)).rowcount for m in _cac_ma_ho(ds_ma_ho))
+            if n:
+                _ghi_nhat_ky(con, phien.tai_khoan, 'Trả lại hộ đã nhận làm offline', f'{rel} ({n} hộ)')
+            return n
     finally:
         con.close()
 

@@ -22,17 +22,45 @@ MA_DAO_TAO = ('CS9', 'CS10')
 CHINH_SACH_KHAC = ['Hỗ trợ học phí', 'Hỗ trợ y tế', 'Hỗ trợ khác']
 
 
-def loai(ma: str) -> str:
-    """'od' ổn định đời sống, 'dt' đào tạo chuyển đổi nghề, 'tn' thuê nhà / tự lo chỗ ở, 'tdc' tái định cư, '' khoản khác."""
-    if ma in MA_ON_DINH:
+def loai_theo_ten(ten: str) -> str:
+    """Loại chính sách theo TÊN khoản hỗ trợ (bộ đơn giá tỉnh khác không dùng mã CSn của Đồng Nai): 'od' / 'dt' / 'tn' / 'tdc' / ''.
+    So không dấu, không phân biệt hoa thường; thứ tự quan trọng ("tự lo chỗ ở" trước "tái định cư": hỗ trợ tự lo chỗ ở thay tái định cư)."""
+    from .lap_pa import bo_dau
+    t = ' '.join(bo_dau(str(ten or '')).lower().split())
+    if not t:
+        return ''
+    if 'on dinh doi song' in t:
         return 'od'
-    if ma in MA_DAO_TAO:
+    if 'dao tao' in t and ('chuyen doi nghe' in t or 'viec lam' in t):
         return 'dt'
-    if ma in MA_THEO_NK:
+    if 'thue nha' in t or 'tam cu' in t or 'tu lo cho o' in t:
         return 'tn'
-    if ma in MA_TDC:
+    if 'tai dinh cu' in t:
         return 'tdc'
     return ''
+
+
+def _ma_hs(ch: dict, khoa: str, mac_dinh) -> tuple:
+    gt = ch.get(khoa)
+    return tuple(gt) if isinstance(gt, (list, tuple)) and gt else tuple(mac_dinh)
+
+
+def loai(ma: str, ten: str = '') -> str:
+    """'od' ổn định đời sống, 'dt' đào tạo chuyển đổi nghề, 'tn' thuê nhà / tự lo chỗ ở, 'tdc' tái định cư, '' khoản khác.
+    Theo mã (mặc định mã Đồng Nai; hồ sơ địa phương chinh_sach_ho_tro.ma_on_dinh / ma_dao_tao / ma_theo_nk / ma_tdc thay được), mã
+    không thuộc nhóm nào mà có ten thì nhận theo tên (loai_theo_ten). Gọi không có ten: như trước (chỉ theo mã)."""
+    from . import dia_phuong
+    ch = dia_phuong.lay('chinh_sach_ho_tro') or {}
+    ch = ch if isinstance(ch, dict) else {}
+    if ma in _ma_hs(ch, 'ma_on_dinh', MA_ON_DINH):
+        return 'od'
+    if ma in _ma_hs(ch, 'ma_dao_tao', MA_DAO_TAO):
+        return 'dt'
+    if ma in _ma_hs(ch, 'ma_theo_nk', MA_THEO_NK):
+        return 'tn'
+    if ma in _ma_hs(ch, 'ma_tdc', MA_TDC):
+        return 'tdc'
+    return loai_theo_ten(ten) if ten else ''
 
 
 def ten_ngan(ten: str, ma: str = '') -> str:

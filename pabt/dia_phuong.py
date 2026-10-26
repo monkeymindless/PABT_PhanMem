@@ -15,6 +15,7 @@ import copy
 import json
 import os
 import re
+import time
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -23,6 +24,8 @@ LOAI = 'pabt_profile'
 PHIEN_BAN_CAU_TRUC = 1
 
 _NHO: dict = {}                 # khóa (mtime gốc, mtime máy) -> hồ sơ đã trộn
+NHO_GIAY = 2.0                  # giây giữ kết quả doc() không stat lại file (xem doc)
+_NHO_NHANH: list = [0.0, None, None]     # [lúc đọc (monotonic), khóa nhanh (hàm file_goc, thư mục máy), hồ sơ]
 _LOI: list = []                 # lỗi của file máy lần đọc gần nhất
 _DANG_KY: list = []
 
@@ -83,6 +86,8 @@ def _so(v, ten: str, loi: list, toi_thieu=None, toi_da=None):
 
 
 _RE_COT = re.compile(r'^[A-Z]{1,3}$')
+# mô hình mã vị trí bảng giá đất (khóa của gia_dat_nq28.MO_HINH_VI_TRI - không nhập module đó: vòng nhập lúc khởi động)
+MO_HINH_VI_TRI = ('DONG_NAI_NQ28', 'VI_TRI_1_4', 'KHU_VUC_VI_TRI')
 
 
 CO_CHU_WORD = ('co_quan', 'quoc_hieu', 'tieu_ngu', 'so_ngay', 'du_thao', 'ten_loai', 'trich_yeu', 'du_an', 'thong_tin', 'de_muc',
@@ -241,6 +246,21 @@ def kiem_tra(hs: dict) -> list:
             loi.append('mau_in.IN_BANGTONGHOP.cot_cong: danh sách chữ cột.')
         if not isinstance(bth.get('cot_cuoi'), str) or not _RE_COT.match(bth['cot_cuoi']):
             loi.append('mau_in.IN_BANGTONGHOP.cot_cuoi: chữ cột cuối vùng in (vd "Y").')
+    # mục tùy chọn (1.0.28, dùng cho tỉnh khác): mô hình vị trí bảng giá đất, mã chính sách hỗ trợ theo bộ đơn giá của tỉnh
+    bgd = hs.get('bang_gia_dat')
+    if bgd is not None:
+        mh = bgd.get('mo_hinh_vi_tri') if isinstance(bgd, dict) else None
+        if not isinstance(bgd, dict) or mh is not None and str(mh).strip().upper() not in MO_HINH_VI_TRI:
+            loi.append(f'bang_gia_dat.mo_hinh_vi_tri: một trong {", ".join(MO_HINH_VI_TRI)}.')
+    cs = hs.get('chinh_sach_ho_tro')
+    if cs is not None:
+        if not isinstance(cs, dict):
+            loi.append('chinh_sach_ho_tro: phải là nhóm khóa (ma_on_dinh, ma_dao_tao, ma_theo_nk, ma_tdc).')
+        else:
+            for k in ('ma_on_dinh', 'ma_dao_tao', 'ma_theo_nk', 'ma_tdc'):
+                v = cs.get(k)
+                if v is not None and (not isinstance(v, list) or not all(isinstance(x, str) and x.strip() for x in v)):
+                    loi.append(f'chinh_sach_ho_tro.{k}: danh sách mã chính sách (vd ["CS1", "CS2"]).')
     return loi
 
 
@@ -264,7 +284,19 @@ def _moc(p: Path):
 
 def doc(lam_moi: bool = False) -> dict:
     """Hồ sơ địa phương đang dùng (mặc định trộn file máy). Nhớ theo mtime / cỡ của hai file - sửa file là đọc lại.
-    KHÔNG sửa đối tượng trả về (dùng chung)."""
+    KHÔNG sửa đối tượng trả về (dùng chung). Trong NHO_GIAY giây sau lần đọc trước không stat lại hai file (lay() được gọi hàng
+    nghìn lần khi in / tính - mỗi lần 2 lệnh stat); mọi lần ghi của phần mềm đi qua nap_lai() nên thấy ngay, chỉ sửa tay file JSON
+    bên ngoài mới chậm tối đa NHO_GIAY giây."""
+    bay_gio = time.monotonic()
+    khoa_nhanh = (file_goc, os.environ.get('PABT_THU_MUC_MAY', ''), os.environ.get('APPDATA', ''))
+    if not lam_moi and _NHO_NHANH[2] is not None and _NHO_NHANH[1] == khoa_nhanh and bay_gio - _NHO_NHANH[0] < NHO_GIAY:
+        return _NHO_NHANH[2]
+    hs = _doc_theo_moc(lam_moi)
+    _NHO_NHANH[:] = [bay_gio, khoa_nhanh, hs]
+    return hs
+
+
+def _doc_theo_moc(lam_moi: bool) -> dict:
     goc, may = file_goc(), file_may()
     khoa = (str(goc), _moc(goc), str(may), _moc(may))
     if not lam_moi and khoa in _NHO:
@@ -416,6 +448,7 @@ def dang_ky(ham) -> None:
 def nap_lai() -> dict:
     """Đọc lại hồ sơ (sau khi nhập gói / sửa file máy) và cập nhật các module đã đăng ký."""
     _NHO.clear()
+    _NHO_NHANH[2] = None
     hs = doc(lam_moi=True)
     for ham in list(_DANG_KY):
         ham(hs)

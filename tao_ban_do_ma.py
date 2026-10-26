@@ -43,6 +43,20 @@ QT_GHI_DE = {
 # giữ lại có chủ đích (API cho kiểm thử / gói cập nhật / dòng lệnh) - ghi lý do
 GIU_LAI = {
     'quy_chuan': 'app: lệnh cũ còn giữ cho test (0.9.47)',
+    # 1.0.28 API chưa có màn hình gọi (nhận / gộp theo hộ trên máy chủ LAN, PDF qua LibreOffice, bảng giá / chính sách tỉnh khác)
+    'ds_ho_dang_lay_ve': 'may_chu: hộ đang được nhận làm offline',
+    'lay_ve_theo_ho': 'may_chu: nhận một nhóm hộ về làm offline',
+    'gop_ho_tu_ban_offline': 'may_chu: gộp nhóm hộ lên máy chủ (dua_len gọi khi bản là bản theo hộ)',
+    'huy_lay_ve_ho': 'may_chu: trả lại hộ đã nhận',
+    'dau_vet_ho': 'may_chu: dấu vết nội dung hộ (phát hiện xung đột)',
+    'tim_libreoffice': 'van_ban_trinh: tìm soffice',
+    'chuyen_pdf_libreoffice': 'van_ban_trinh: tầng PDF dự phòng',
+    'mo_hinh_vi_tri': 'gia_dat_nq28: mô hình vị trí của hồ sơ địa phương',
+    'ds_ma_vi_tri': 'gia_dat_nq28: mã vị trí theo mô hình',
+    'ten_vi_tri': 'gia_dat_nq28: tên mã vị trí',
+    'loai_theo_ten': 'chinh_sach: loại chính sách theo tên khoản',
+    'doc_duong_ke': 'in_duong_ke: đọc đường kẻ đã chèn',
+    'ghi_zip_nguyen_tu': 'in_duong_ke: ghi zip nguyên tử',
 }
 # module cập nhật giá trị lúc chạy (dia_phuong.dang_ky) - tên biến toàn cục mà hàm đăng ký gán lại
 _RE_THONG_SO = re.compile(r'^[A-Z][A-Z0-9_]+$')

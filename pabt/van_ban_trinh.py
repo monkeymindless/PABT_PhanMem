@@ -10,6 +10,7 @@ chỗ trống {ho.ten} được nhân thành mỗi hộ một dòng. Không ph�
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -529,6 +530,7 @@ Do While Not f.AtEndOfStream
             d.PrintOut False, , , , , , , ban
         End If
         If Err.Number <> 0 Then WScript.StdErr.WriteLine "LOI_XUAT" & vbTab & ds(1) & vbTab & Err.Description
+        d.UndoClear
         d.Close 0
     End If
     WScript.StdOut.WriteLine "XONG"
@@ -653,10 +655,77 @@ def chay_word(viec: list, cho_moi_file: int = 180, bao=None) -> list:
     return loi
 
 
+LIBREOFFICE_DUOI_DAU = ('soffice.com', 'soffice.exe')   # soffice.com: bản dòng lệnh, CHỜ chuyển xong mới thoát
+
+
+def tim_libreoffice() -> Path | None:
+    """soffice của LibreOffice trên máy (PABT_LIBREOFFICE = file / thư mục program; Program Files; PATH) hoặc None."""
+    ung = []
+    tu_dat = os.environ.get('PABT_LIBREOFFICE', '').strip().strip('"')
+    if tu_dat:
+        p = Path(tu_dat)
+        ung += [p] if p.suffix else [p / x for x in LIBREOFFICE_DUOI_DAU] + [p / 'program' / x for x in LIBREOFFICE_DUOI_DAU]
+    for bien in ('ProgramFiles', 'ProgramW6432', 'ProgramFiles(x86)'):
+        g = os.environ.get(bien)
+        if g:
+            ung += [Path(g) / 'LibreOffice' / 'program' / x for x in LIBREOFFICE_DUOI_DAU]
+    for ten in ('soffice.com', 'soffice'):
+        w = shutil.which(ten)
+        if w:
+            ung.append(Path(w))
+    return next((p for p in ung if p.is_file()), None)
+
+
+def _lenh_libreoffice(soffice: Path, ho_so: Path, thu_muc_ra: Path, files: list) -> list:
+    """Dòng lệnh LibreOffice chuyển các file sang PDF (kiểm thử thay bằng chương trình giả lập). Hồ sơ người dùng RIÊNG (ho_so): đang
+    mở LibreOffice thì lệnh --headless dùng chung tiến trình đó và thoát ngay không chuyển gì."""
+    return [str(soffice), f'-env:UserInstallation={ho_so.resolve().as_uri()}', '--headless', '--invisible', '--norestore',
+            '--nologo', '--nodefault', '--nolockcheck', '--convert-to', 'pdf', '--outdir', str(thu_muc_ra), *[str(f) for f in files]]
+
+
+def chuyen_pdf_libreoffice(viec: list, cho_moi_file: int = 60) -> list:
+    """Tầng dự phòng thứ hai khi Word không xuất được PDF (máy không có Microsoft Word, Word treo): nhờ LibreOffice (nếu có trên máy)
+    chuyển các file Word sang PDF - đúng bố cục hơn bản dựng bằng Qt. viec: [(che_do, file .docx, file PDF ra)] như chay_word (chỉ
+    lấy việc có file ra chưa tồn tại). Một lần chạy LibreOffice cho cả lô, hạn cho_moi_file giây / file (+ khởi động); quá hạn thì tắt.
+    Trả [PDF đã tạo]; không có LibreOffice / lỗi: [] (nơi gọi dựng tiếp bằng Qt)."""
+    soffice = tim_libreoffice()
+    can = [(Path(a), Path(b)) for _, a, b in viec if b and not Path(b).exists() and Path(a).exists()]
+    if soffice is None or not can:
+        return []
+    ho_so = Path(tempfile.gettempdir()) / 'pabt_libreoffice_ho_so'
+    ra = []
+    with tempfile.TemporaryDirectory(prefix='pabt_lo_') as td:
+        td = Path(td)
+        # file đổi tên tạm theo thứ tự (LibreOffice ghi <tên>.pdf vào thư mục ra: hai hộ trùng tên ở hai thư mục không đè nhau)
+        vao = []
+        for i, (a, _) in enumerate(can):
+            f = td / f'f{i:05d}{a.suffix}'
+            shutil.copyfile(a, f)
+            vao.append(f)
+        thu_muc_ra = td / 'pdf'
+        thu_muc_ra.mkdir()
+        try:
+            subprocess.run(_lenh_libreoffice(soffice, ho_so, thu_muc_ra, vao), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=cho_moi_file * len(vao) + 60, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        except (OSError, subprocess.SubprocessError):
+            pass                                        # quá hạn / không chạy được: lấy các file đã kịp chuyển
+        for f, (_, b) in zip(vao, can):
+            pdf = thu_muc_ra / (f.stem + '.pdf')
+            if pdf.is_file() and pdf.stat().st_size > 0:
+                b.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(pdf), str(b))
+                ra.append(b)
+    return ra
+
+
 def pdf_du_phong_chi_tiet(viec: list, loi: list) -> tuple:
-    """Phương án chi tiết bản Word chưa có PDF (Word treo / lỗi / không có Word): dựng PDF gần đúng bằng Qt từ CHÍNH file .docx
-    (docx_sang_pdf - không cần Office, không đọc Excel) để lô in hàng loạt không thiếu hộ. Trả (lỗi còn lại, [PDF dựng dự phòng])."""
+    """Phương án chi tiết bản Word chưa có PDF (Word treo / lỗi / không có Word): LibreOffice nếu máy có (chuyen_pdf_libreoffice),
+    còn thiếu thì dựng PDF gần đúng bằng Qt từ CHÍNH file .docx (docx_sang_pdf - không cần Office, không đọc Excel) để lô in hàng
+    loạt không thiếu hộ. Trả (lỗi còn lại, [PDF dựng dự phòng])."""
     du = []
+    for b in chuyen_pdf_libreoffice(viec):
+        du.append(b)
+        loi = [x for x in loi if not any(str(a) in x or str(Path(a).resolve()) in x for _, a, c in viec if c and Path(c) == b)]
     for _, a, b in viec:
         b = Path(b) if b else None
         if b is None or b.exists():

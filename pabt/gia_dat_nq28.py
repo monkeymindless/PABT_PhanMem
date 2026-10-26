@@ -19,7 +19,39 @@ COT = [('dat_o', 'Đất ở'), ('tmdv', 'Đất thương mại, dịch vụ'), 
        ('nn_cay', 'Đất trồng cây lâu năm, cây hằng năm'), ('nn_rung_nts', 'Đất rừng sản xuất, nuôi trồng thủy sản')]
 TEN_VT = {'MT': 'Mặt tiền đường', 'T1': 'Đường đấu nối trực tiếp - mức 1', 'T2': 'Đường đấu nối trực tiếp - mức 2',
           'T3': 'Đường đấu nối trực tiếp - mức 3', 'K1': 'Đường không đấu nối trực tiếp - mức 1',
-          'K2': 'Đường không đấu nối trực tiếp - mức 2', 'K3': 'Đường không đấu nối trực tiếp - mức 3'}
+          'K2': 'Đường không đấu nối trực tiếp - mức 2', 'K3': 'Đường không đấu nối trực tiếp - mức 3',
+          'VT1': 'Vị trí 1', 'VT2': 'Vị trí 2', 'VT3': 'Vị trí 3', 'VT4': 'Vị trí 4',
+          'KV1': 'Khu vực 1', 'KV2': 'Khu vực 2', 'KV3': 'Khu vực 3'}
+# Mô hình mã vị trí của bảng giá đất từng địa phương (hồ sơ địa phương bang_gia_dat.mo_hinh_vi_tri): Đồng Nai NQ 28/2025 (mặt tiền /
+# đấu nối trực tiếp / không đấu nối, 7 mức), vị trí 1-4 theo tuyến đường (phần lớn các tỉnh), khu vực x vị trí (nông thôn theo khu vực)
+MO_HINH_VI_TRI = {
+    'DONG_NAI_NQ28': ('MT', 'T1', 'T2', 'T3', 'K1', 'K2', 'K3'),
+    'VI_TRI_1_4': ('VT1', 'VT2', 'VT3', 'VT4'),
+    'KHU_VUC_VI_TRI': tuple(f'KV{k}-VT{v}' for k in (1, 2, 3) for v in (1, 2, 3, 4)),
+}
+MO_HINH_MAC_DINH = 'DONG_NAI_NQ28'
+
+
+def mo_hinh_vi_tri() -> str:
+    """Mô hình vị trí bảng giá đất của địa phương (khóa của MO_HINH_VI_TRI); hồ sơ chưa ghi / ghi sai -> DONG_NAI_NQ28."""
+    from . import dia_phuong
+    mh = str(dia_phuong.lay('bang_gia_dat.mo_hinh_vi_tri', MO_HINH_MAC_DINH) or MO_HINH_MAC_DINH).strip().upper()
+    return mh if mh in MO_HINH_VI_TRI else MO_HINH_MAC_DINH
+
+
+def ds_ma_vi_tri(mo_hinh: str | None = None) -> tuple:
+    """Các mã vị trí chuẩn theo mô hình (None: mô hình của hồ sơ địa phương đang dùng)."""
+    mh = (mo_hinh or mo_hinh_vi_tri()).strip().upper()
+    return MO_HINH_VI_TRI.get(mh, MO_HINH_VI_TRI[MO_HINH_MAC_DINH])
+
+
+def ten_vi_tri(ma: str) -> str:
+    """Tên đọc được của mã vị trí ('T1' -> 'Đường đấu nối trực tiếp - mức 1', 'KV2-VT3' -> 'Khu vực 2, Vị trí 3'); mã lạ: giữ nguyên."""
+    ma = str(ma or '').strip().upper()
+    if ma in TEN_VT:
+        return TEN_VT[ma]
+    phan = ma.split('-')
+    return ', '.join(TEN_VT[x] for x in phan) if len(phan) > 1 and all(x in TEN_VT for x in phan) else ma
 # mã loại đất -> cột giá
 COT_LOAI = {'ONT': 'dat_o', 'ODT': 'dat_o', 'TMD': 'tmdv', 'SKC': 'sxkd', 'SKS': 'sxkd', 'SKN': 'sxkd',
             'CLN': 'nn_cay', 'HNK': 'nn_cay', 'BHK': 'nn_cay', 'LUC': 'nn_cay', 'LUK': 'nn_cay', 'LUA': 'nn_cay', 'CHN': 'nn_cay',
@@ -162,7 +194,7 @@ def gia_dong(r: dict, cot: str) -> int:
 
 def can_cu(r: dict, cot: str) -> str:
     vb = (r.get('van_ban') or van_ban_dang_dung()) if dang_thay() else 'NQ 28/2025/NQ-HĐND'
-    ten_vt = TEN_VT.get(r['vi_tri'], r['vi_tri'])
+    ten_vt = ten_vi_tri(r['vi_tri'])
     return (f'{vb}: {r["xa"]}, {r["ten_duong"]} (từ {r["diem_dau"]} đến {r["diem_cuoi"]}), '
             f'{ten_vt}, TT {r["tt"]}, {dict(COT)[cot]}')
 

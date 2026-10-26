@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 import re
+from functools import lru_cache
 from pathlib import Path
 
 from . import du_lieu_in
@@ -205,6 +206,7 @@ def _bang(hang: list, rong: list, vien: bool = True, le_o: int = 57, lui: int = 
             f'<w:tblGrid>{luoi}</w:tblGrid>{"".join(hang)}</w:tbl>')
 
 
+@lru_cache(maxsize=4096)
 def _rong_uoc(chu: str, co: float, dam: bool = False) -> float:
     """Bề rộng (pt) ước của dòng chữ in hoa Times New Roman - không cần Qt (bản Word dựng cả khi không có giao diện)."""
     return len(chu) * co * RONG_KY_TU * (1.05 if dam else 1.0)
@@ -224,6 +226,7 @@ def _ngat_can_bang(chu: str, rong_pt: float, co: float, dam: bool = False) -> li
 
 
 # bề rộng ký tự Times New Roman (phần cỡ chữ): chữ số 0,5; dấu chấm / phẩy 0,25; % 0,833; chữ hoa ~0,72; chữ thường ~0,5
+@lru_cache(maxsize=4096)
 def _rong_chu(chu: str, co: float, dam: bool = False) -> float:
     """Bề rộng (pt) ước của chữ thường lẫn số (cột số, tiêu đề cột bảng mục III)."""
     w = 0.0
@@ -516,6 +519,16 @@ def dong_co_quan(da: dict) -> tuple[str, str]:
     return cap, cn
 
 
+def _pa_lan_1_nho(con, ma_ho: int):
+    """Phương án lần 1 của hộ CHỈ có một lần lập (đa số hộ) lấy từ bảng phương án cả dự án đọc MỘT lần (csdl.nho - in hàng loạt
+    không đọc 3 câu SELECT mỗi hộ); hộ nhiều lần / đang giữa giao dịch / kết nối không có bộ nhớ đệm: None (nơi gọi đọc riêng hộ).
+    Dùng chung: không sửa đối tượng trả về."""
+    from . import csdl, lan_pa, nghiep_vu
+    if getattr(con, 'bo_nho', None) is None or con.in_transaction or ma_ho in lan_pa.ho_nhieu_lan(con):
+        return None
+    return csdl.nho(con, 'in.tat_ca_pa', lambda: nghiep_vu.doc_tat_ca_phuong_an(con)).get(ma_ho)
+
+
 def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None) -> str:
     """XML thân văn bản (w:body không sectPr) phương án chi tiết một hộ."""
     from . import dia_phuong, in_an, nghiep_vu
@@ -526,8 +539,11 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     pa_truoc = None
     if lan is not None:
         if pa is None:
+            pa = _pa_lan_1_nho(con, ma_ho) if lan == 1 else None
+        if pa is None:
             pa = nghiep_vu.doc_phuong_an(con, ma_ho, lan=lan)
-        pa_truoc = nghiep_vu.doc_phuong_an(con, ma_ho, den_lan=lan - 1)
+        # lần 1: không có lần nào trước (= doc_phuong_an(den_lan=0)) - khỏi đọc CSDL
+        pa_truoc = nghiep_vu.PhuongAn(ho=pa.ho) if lan == 1 else nghiep_vu.doc_phuong_an(con, ma_ho, den_lan=lan - 1)
     dong, kq_lan = du_lieu_in.dong_chi_tiet(con, ma_ho, bc, pa, pa_truoc)
     ttho = du_lieu_in._thong_tin_ho(con, ma_ho, da)
     from . import lan_pa

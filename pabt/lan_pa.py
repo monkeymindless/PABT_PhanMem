@@ -72,7 +72,16 @@ class LanPA:
 
 
 def co_bang(con) -> bool:
-    return bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'pa_lan'").fetchone())
+    """File có bảng pa_lan (v17). Nhớ trên kết nối khi ĐÃ có (bảng không bị xóa; chưa có thì hỏi lại - nâng cấp có thể tạo sau)."""
+    if getattr(con, '_co_bang_pa_lan', False):
+        return True
+    co = bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'pa_lan'").fetchone())
+    if co:
+        try:
+            con._co_bang_pa_lan = True               # csdl.KetNoi nhận thuộc tính; sqlite3.Connection thường thì không
+        except AttributeError:
+            pass
+    return co
 
 
 def _qd_cua_ho(con, ma_ho: int) -> dict:
@@ -145,6 +154,8 @@ def lan_mac_dinh(con, ma_ho: int) -> int:
 
 def lan_moi_nhat(con, ma_ho: int) -> int:
     """Lần muộn nhất CÓ dòng phương án (in mặc định); hộ chưa có dòng nào: lần 1."""
+    if not con.in_transaction and ma_ho not in ho_nhieu_lan(con):
+        return 1                                    # hộ chỉ một lần (đa số): không đọc từng lần (in hàng loạt: bớt 5 truy vấn / hộ)
     ds = [x.lan for x in ds_lan(con, ma_ho) if x.so_dong]
     return ds[-1] if ds else 1
 
@@ -338,8 +349,7 @@ def tong_hop_cac_lan(con, ma_ho: int, bc=None) -> dict:
                 tien_tung_lan={t.lan.lan: t.tong for t in th['lan']}, tong_cong_don=th['tong'], chua_duyet=th['chua_duyet'])
 
 
-def ho_nhieu_lan(con) -> set:
-    """Mã các hộ có từ 2 lần phương án trở lên (có dòng ở lần >= 2 hoặc dòng pa_lan lần >= 2)."""
+def _tinh_ho_nhieu_lan(con) -> frozenset:
     from .nghiep_vu import co_cot_lan
     kq = set()
     if co_cot_lan(con):
@@ -347,4 +357,10 @@ def ho_nhieu_lan(con) -> set:
             kq |= {r[0] for r in con.execute(f'SELECT DISTINCT ma_ho FROM {b} WHERE lan >= 2')}
     if co_bang(con):
         kq |= {r[0] for r in con.execute('SELECT DISTINCT ma_ho FROM pa_lan WHERE lan >= 2')}
-    return kq
+    return frozenset(kq)
+
+
+def ho_nhieu_lan(con) -> frozenset:
+    """Mã các hộ có từ 2 lần phương án trở lên (có dòng ở lần >= 2 hoặc dòng pa_lan lần >= 2). Nhớ trên kết nối (csdl.nho - tự đọc
+    lại khi dữ liệu đổi); frozenset: dùng chung, không sửa được."""
+    return csdl.nho(con, 'ho_nhieu_lan', lambda: _tinh_ho_nhieu_lan(con))

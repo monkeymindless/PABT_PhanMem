@@ -2202,6 +2202,34 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   luôn do `dk_mac_dinh` tạo - không còn file .duong_ke.xml). `man_hinh_quan_ly_mau.HopQuanLyMauIn` chỉ còn thông số mẫu Word; HopIn bỏ nút "Sửa mẫu in
   trong Excel…". `goi_mau.ds_mau_hien_hanh` chỉ còn mẫu tờ trình trong thư mục mẫu. Mọi ghi chú cũ ở trên nhắc mẫu Excel IN_BANGTONGHOP / IN_TONGHOP_DT /
   mau_in_nhung / tao_mau_tu_excel / Quản lý Mẫu in thay mẫu Excel là LỊCH SỬ. Sửa bố cục bảng tổng hợp: sửa `mau_bang_tong_hop.py` (không còn file Excel để sửa).
+- Sau 1.0.27 (chưa tăng `__version__`; người dùng 26/10/2026, chỉ thị "thương mại hóa & tối ưu lõi" GP2-GP5 - GP1 bản quyền / chữ ký / mã hóa
+  KHÔNG làm; test `tests/test_nang_cap_thuong_mai.py`):
+  - NHẬN / GỘP THEO HỘ trên máy chủ LAN (`may_chu`): bảng `lay_ve_ho` (khóa từng mã hộ trong pabt_may_chu.sqlite), `lay_ve_theo_ho(file, ds_ma_ho)`
+    (BEGIN IMMEDIATE giữ chỗ rồi mới chép bằng sqlite backup; mỗi lần nhận một bản offline riêng `<stem>__<tk>_ho_<giờ>`; sổ cục bộ thêm ds_ma_ho,
+    dau_vet, audit_max), `gop_ho_tu_ban_offline(ban_sao, ds_ma_ho=None, file_goc=None, ep=False)` (một giao dịch, sao lưu SaoLuu `_truoc_gop_`;
+    thay dòng của hộ ở `ho` + `BANG_CON_HO`; giữ thu_tu và dot_id / dot_du_thao_id của máy chủ khi đợt chưa có; dòng trỏ tới quyết định / đợt niêm
+    yết chưa có trên máy chủ -> bỏ, báo `bo_dong`; MÃ THỬA TRÙNG (hai bản offline cùng cấp max + 1) -> cấp mã mới + dòng ct_dat trỏ theo
+    `doi_ma_thua`; nhật ký kiểm toán offline sau `audit_max` được CHÉP THÊM; hộ bị sửa trên máy chủ sau lúc nhận (so `dau_vet_ho`) -> XUNG ĐỘT,
+    ep=True vẫn gộp; gộp một phần giữ bản offline cho hộ còn lại), `huy_lay_ve_ho`, `ds_ho_dang_lay_ve`. `lay_ve` (cả dự án) từ chối khi người khác
+    đang giữ hộ; `dua_len` bản theo hộ = gộp; `huy_lay_ve` bản theo hộ trả lại các hộ. CHƯA có màn hình chọn hộ (man_hinh_may_chu) - mới là API.
+    Bản offline là bản đủ dự án: sửa hộ KHÔNG nhận trong đó không được gộp (không báo).
+  - In Word hàng loạt không truy vấn từng hộ: `du_lieu_in._dung_nho` (kết nối csdl.KetNoi, ngoài giao dịch) -> csdl.nho các khóa 'in.du_an',
+    'in.ho', 'in.ky_hieu_dot', 'in.cach_tinh_ho_tro', 'in.nguon_goc_thua'; `in_word._pa_lan_1_nho` (khóa 'in.tat_ca_pa' = doc_tat_ca_phuong_an, chỉ hộ
+    MỘT lần), pa_truoc lần 1 = PhuongAn rỗng; `lan_pa.ho_nhieu_lan` nhớ (frozenset), `lan_moi_nhat` hộ một lần trả 1 ngay, `co_bang` nhớ khi đã có;
+    `nghiep_vu.doc_phuong_an(den_lan<=0)` trả sau khi đọc ho. 20 hộ in lại: 333 -> 0 câu SELECT. KHÔNG nhớ cả bảng ho trong nghiep_vu.doc_phuong_an
+    (lập PA một hộ sau mỗi lần lưu sẽ dựng lại 5.000 hộ). `in_an._ham_do_chu` nhớ theo QGuiApplication; `in_word._rong_uoc/_rong_chu` lru_cache.
+  - `dia_phuong.doc` không stat lại file trong `NHO_GIAY` 2 s (khóa: hàm file_goc, PABT_THU_MUC_MAY, APPDATA; `nap_lai` xóa) - 2.000 lay() ~3 ms.
+    Sửa tay file JSON bên ngoài thì chậm tối đa 2 s; ghi qua phần mềm (ghi_may / dat_muc_may / khoi_phuc) thấy ngay.
+  - PDF dự phòng 3 tầng: Word -> LibreOffice (`van_ban_trinh.tim_libreoffice`: PABT_LIBREOFFICE / Program Files / PATH, ưu tiên soffice.com;
+    `chuyen_pdf_libreoffice` một lần chạy cả lô, hồ sơ người dùng riêng %TEMP%\pabt_libreoffice_ho_so, file chép tạm tên f00000…; `_lenh_libreoffice`
+    test thay) -> Qt docx_sang_pdf. VBS Word `d.UndoClear` trước `d.Close 0`. Máy phát triển KHÔNG có LibreOffice: đường thật chưa chạy thử.
+  - Tỉnh khác: `gia_dat_nq28.MO_HINH_VI_TRI` (DONG_NAI_NQ28 / VI_TRI_1_4 / KHU_VUC_VI_TRI), `mo_hinh_vi_tri()` (hồ sơ `bang_gia_dat.mo_hinh_vi_tri`),
+    `ds_ma_vi_tri`, `ten_vi_tri` - CHƯA nối vào ô Vị trí / tra giá (bảng giá vẫn 7 mức NQ 28). `chinh_sach.loai(ma, ten='')`: mã theo hồ sơ
+    `chinh_sach_ho_tro.ma_on_dinh/ma_dao_tao/ma_theo_nk/ma_tdc` (mặc định mã Đồng Nai), mã lạ + tên -> `loai_theo_ten` (không dấu). Nơi gọi cũ
+    KHÔNG truyền tên (đổi sẽ làm khoản "…tái định cư" có mã riêng thành không ra tiền); mã trong hồ sơ chỉ loai() dùng - nghiep_vu vẫn MA_*.
+    `dia_phuong.kiem_tra` kiểm hai mục này (`dia_phuong.MO_HINH_VI_TRI` - không nhập gia_dat_nq28: vòng nhập lúc khởi động).
+  - `pabt/in_duong_ke.py` tách từ in_an (_DS_*, _NET, _them_bo_qua_loi, chen_duong_ke, ghi_zip_nguyen_tu = _ghi_zip cũ, doc_duong_ke mới) - in_an nhập
+    lại mọi tên. Dùng `str(b, 'utf-8')` thay `b.decode` (vermin không suy được kiểu bytes trong dict -> báo "str.decode !3").
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

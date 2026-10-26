@@ -342,6 +342,8 @@ def doc_phuong_an(con, ma_ho: int, lan: int | None = None, den_lan: int | None =
     if h is None:
         raise KeyError(f'không có hộ mã {ma_ho}')
     pa = PhuongAn(ho=_tao_ho(h))
+    if den_lan is not None and lan is None and int(den_lan) <= 0:
+        return pa                                   # "các lần trước lần 1": không có dòng nào (lần >= 1) - khỏi đọc ct_dat / ct_khoan
     loc, ts = '', (ma_ho,)
     if co_cot_lan(con):
         if lan is not None:

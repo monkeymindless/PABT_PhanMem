@@ -24,10 +24,25 @@ def _hai_dong(s: str) -> str:
     return re.sub(r'\s+((THÀNH PHỐ|TỈNH|HUYỆN|QUẬN|THỊ XÃ) .+)$', r'\n\1', s) if len(s) > 30 else s
 
 
+def _dung_nho(con) -> bool:
+    """In hàng loạt: bảng nhỏ đọc MỘT lần cho cả dự án (csdl.nho - tự đọc lại khi dữ liệu đổi) thay vì một câu SELECT mỗi hộ. Đang
+    giữa giao dịch / kết nối không có bộ nhớ đệm (sqlite3.Connection thường): đọc riêng từng hộ như cũ."""
+    return getattr(con, 'bo_nho', None) is not None and not con.in_transaction
+
+
+def _ho_dong(con, ma_ho: int):
+    """Dòng bảng ho của hộ (sqlite3.Row) hoặc None."""
+    if _dung_nho(con):
+        from .csdl import nho
+        return nho(con, 'in.ho', lambda: {r['ma_ho']: r for r in con.execute('SELECT * FROM ho')}).get(ma_ho)
+    return con.execute('SELECT * FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
+
+
 def _thong_tin_du_an(con) -> dict:
+    from .csdl import nho
     from .to_chuc import MAC_DINH
-    goc = con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()
-    da = {k: goc[k] for k in goc.keys()}
+    goc = nho(con, 'in.du_an', lambda: dict(con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()))
+    da = dict(goc)                                 # bản riêng: nơi gọi sửa (ky_hieu_so…) không đụng bản nhớ
     for k, v in MAC_DINH.items():                  # ô thông tin đơn vị còn trống: dùng thông tin tổ chức mặc định
         if not (da.get(k) or '').strip():
             da[k] = v
@@ -46,6 +61,11 @@ def _thong_tin_du_an(con) -> dict:
 def ky_hieu_cua_ho(con, ma_ho: int, mac_dinh: str = '') -> str:
     """Ký hiệu số phương án của hộ: theo đợt trình của hộ (v15), đợt chưa đặt / hộ chưa vào đợt -> mac_dinh (của dự án)."""
     try:
+        if _dung_nho(con):
+            from .csdl import nho
+            bang = nho(con, 'in.ky_hieu_dot', lambda: {r[0]: (r[1] or '').strip() for r in con.execute(
+                'SELECT h.ma_ho, d.ky_hieu_so FROM ho h JOIN dot_trinh d ON d.id = h.dot_id')})
+            return bang.get(ma_ho) or mac_dinh
         r = con.execute('''SELECT d.ky_hieu_so FROM ho h JOIN dot_trinh d ON d.id = h.dot_id WHERE h.ma_ho = ?''',
                         (ma_ho,)).fetchone()
     except sqlite3.OperationalError:                     # file chỉ xem phiên bản cũ (< v15)
@@ -59,6 +79,13 @@ def ghi_chu_in(con, ma, gc) -> str:
     if not s or s.startswith(('SL = ', 'ĐG = ', 'T = đ')) or 'chưa có dòng đất nông nghiệp' in s:
         return ''
     if ma:
+        if _dung_nho(con):
+            from .csdl import nho
+            cach = nho(con, 'in.cach_tinh_ho_tro', lambda: {r['ma']: (r['cach_tinh'] or '') for r in con.execute(
+                'SELECT ma, cach_tinh FROM dm_hotro')})
+            if ma in cach and s == cach[ma]:
+                return ''
+            return s
         r = con.execute('SELECT cach_tinh FROM dm_hotro WHERE ma = ?', (ma,)).fetchone()
         if r and s == (r['cach_tinh'] or ''):
             return ''
@@ -114,7 +141,7 @@ def dong_chi_tiet(con, ma_ho: int, bc: BoiCanh | None = None, pa=None, pa_truoc=
         # không tính toán bồi thường về đất…" khi nhập phương án chi tiết từ Excel)
         k = 0
         tong_dt = KHONG
-        r = con.execute('SELECT phap_ly FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
+        r = _ho_dong(con, ma_ho)
         phap_ly = ' '.join(str(r['phap_ly'] or '').split()) if r else ''
         for t in bc.thua_cua(ma_ho):
             k += 1
@@ -200,8 +227,23 @@ def bo_lap_mo_dau(doan: str) -> str:
     return so + con_lai
 
 
+def _nguon_goc_cac_thua(con, ma_ho: int) -> list:
+    """Chữ nguồn gốc các thửa có nguồn gốc của hộ, theo thứ tự thửa."""
+    sql = "SELECT {} nguon_goc FROM thua WHERE {} TRIM(nguon_goc) <> '' ORDER BY {} thu_tu, ma_thua"
+    if _dung_nho(con):
+        from .csdl import nho
+
+        def tao():
+            kq = {}
+            for r in con.execute(sql.format('ma_ho,', '', 'ma_ho,')):
+                kq.setdefault(r[0], []).append(r[1])
+            return kq
+        return nho(con, 'in.nguon_goc_thua', tao).get(ma_ho, [])
+    return [r[0] for r in con.execute(sql.format('', 'ma_ho = ? AND', ''), (ma_ho,))]
+
+
 def _thong_tin_ho(con, ma_ho: int, da: dict, che: bool | None = None) -> dict:
-    h = con.execute('SELECT * FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
+    h = _ho_dong(con, ma_ho)
     ten = ' '.join(str(h['ho_ten'] or '').split())
     if ' là ' in ten:
         ten = ten.split(' là ')[0].strip()
@@ -213,10 +255,9 @@ def _thong_tin_ho(con, ma_ho: int, da: dict, che: bool | None = None) -> dict:
     # 1.0.04: luôn in đủ số CCCD + ngày / nơi cấp (bỏ che CCCD; tham số che giữ cho mã gọi cũ)
     from .ho_so import chuan_nguon_goc, lam_sach_doan_van
     ng = []                                     # nguồn gốc các thửa (bỏ trùng, giữ thứ tự): mỗi nội dung một đoạn
-    for r in con.execute("SELECT nguon_goc FROM thua WHERE ma_ho = ? AND TRIM(nguon_goc) <> '' ORDER BY thu_tu, ma_thua",
-                         (ma_ho,)):
+    for nguon_goc in _nguon_goc_cac_thua(con, ma_ho):
         # 21/10/2026: xuống dòng cứng giữa câu (ô Excel nhập vào, chữ dán) nối lại - bản in Word / Excel không cụt chữ giữa câu
-        chu = '\n'.join(bo_lap_mo_dau(x) for x in lam_sach_doan_van(chuan_nguon_goc(r['nguon_goc'])))
+        chu = '\n'.join(bo_lap_mo_dau(x) for x in lam_sach_doan_van(chuan_nguon_goc(nguon_goc)))
         if chu and chu not in ng:
             ng.append(chu)
     from .lap_pa import cau_tai_dinh_cu
@@ -262,7 +303,7 @@ def chon_lan_in(con, ma_ho: int, lan=None):
 
 
 def ten_file_ho(con, ma_ho: int) -> str:
-    h = con.execute('SELECT thu_tu, ho_ten FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
+    h = _ho_dong(con, ma_ho)
     ten = ' '.join(str(h['ho_ten'] or '').split())
     # "Nguyễn Văn A là chủ sở hữu tài sản gắn liền với thửa đất số…" (họ tên nhập kèm diễn giải): tên file chỉ lấy phần họ tên
     ten = re.split(r'\s+là\s+(?:chủ|người|đại diện|đồng)\b', ten, maxsplit=1, flags=re.I)[0]

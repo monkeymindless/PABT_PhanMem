@@ -40,74 +40,9 @@ class LoiIn(RuntimeError):
 # ---------------------------------------------------------------- đường kẻ (hình vẽ) của mẫu
 # openpyxl làm mất hình vẽ khi đọc / ghi: đường kẻ dưới tên cơ quan, dưới quốc hiệu, dưới tên dự án được lưu riêng
 # (mau_in/<mẫu>.duong_ke.xml, lấy từ file PABT Excel) và chèn lại vào file bản in sau khi lưu.
-_DS_DR = 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'
-_DS_A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
-_DS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
-_NET = '<a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>'
-
-
-def _them_bo_qua_loi(sx: str, bo_qua: str) -> str:
-    """Chèn <ignoredErrors> (numberStoredAsText) cho các ô bo_qua ("C9 C11") vào XML sheet - đúng vị trí theo lược đồ: trước drawing /
-    legacyDrawing / … / extLst. openpyxl không ghi phần này."""
-    if not bo_qua.strip() or '<ignoredErrors' in sx:
-        return sx
-    vi = min((i for i in (sx.find(t) for t in ('<smartTags', '<drawing', '<legacyDrawing', '<picture', '<oleObjects', '<controls',
-                                                '<tableParts', '<extLst', '</worksheet>')) if i >= 0))
-    return sx[:vi] + f'<ignoredErrors><ignoredError sqref="{bo_qua.strip()}" numberStoredAsText="1"/></ignoredErrors>' + sx[vi:]
-
-
-def chen_duong_ke(file_xlsx, xml: str = '', bo_qua: str = '') -> bool:
-    """Chèn các đường kẻ (XML) vào sheet đầu của file .xlsx do openpyxl lưu. Trả True nếu đã chèn. xml: nội dung đã canh lại
-    (can_duong_ke; từ 1.0.20 không còn file .duong_ke.xml). bo_qua (1.0.07): các ô Excel không gắn cờ "số lưu dạng chữ" (CCCD, điện thoại)."""
-    import zipfile
-    p = Path(file_xlsx)
-    if not xml.strip() and not bo_qua.strip():
-        return False
-    with zipfile.ZipFile(p) as zi:
-        ten = zi.namelist()
-        tep = {n: zi.read(n) for n in ten}
-    sheet = 'xl/worksheets/sheet1.xml'
-    sx = _them_bo_qua_loi(tep[sheet].decode('utf-8'), bo_qua)
-    if not xml.strip() or '<drawing ' in sx:
-        if bo_qua.strip():
-            tep[sheet] = sx.encode('utf-8')
-            _ghi_zip(p, tep)
-        return False
-    n = 1
-    while f'xl/drawings/drawing{n}.xml' in tep:
-        n += 1
-    rid = 'rIdDuongKe1'
-    srel = 'xl/worksheets/_rels/sheet1.xml.rels'
-    rels = tep[srel].decode('utf-8') if srel in tep else \
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'
-    rels = rels.replace('</Relationships>', f'<Relationship Id="{rid}" Type="{_DS_R}/drawing" Target="../drawings/drawing{n}.xml"/></Relationships>')
-    if 'xmlns:r=' not in sx[:1000]:
-        sx = sx.replace('<worksheet ', f'<worksheet xmlns:r="{_DS_R}" ', 1)
-    vi = min((i for i in (sx.find(t) for t in ('<legacyDrawing', '<picture', '<oleObjects', '<controls', '<tableParts', '<extLst',
-                                                '</worksheet>')) if i >= 0))
-    sx = sx[:vi] + f'<drawing r:id="{rid}"/>' + sx[vi:]
-    ct = tep['[Content_Types].xml'].decode('utf-8').replace(
-        '</Types>', f'<Override PartName="/xl/drawings/drawing{n}.xml" '
-                    'ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>')
-    tep[sheet], tep[srel], tep['[Content_Types].xml'] = sx.encode('utf-8'), rels.encode('utf-8'), ct.encode('utf-8')
-    tep[f'xl/drawings/drawing{n}.xml'] = (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="{_DS_DR}" '
-                                          f'xmlns:a="{_DS_A}">' + xml + '</xdr:wsDr>').encode('utf-8')
-    _ghi_zip(p, tep)
-    return True
-
-
-def _ghi_zip(p: Path, tep: dict) -> None:
-    import zipfile
-    tam = p.with_name(p.name + '.tmp')
-    try:
-        with zipfile.ZipFile(tam, 'w', zipfile.ZIP_DEFLATED) as zo:
-            for k in ['[Content_Types].xml'] + [x for x in tep if x != '[Content_Types].xml']:
-                zo.writestr(k, tep[k])
-        os.replace(tam, p)
-    except BaseException:
-        if tam.exists():                                # ghi lỗi (đầy đĩa, file đang mở): không để lại file .tmp cạnh file in
-            tam.unlink()
-        raise
+# 1.0.28: phần ghi đường kẻ vào file .xlsx tách sang in_duong_ke.py - nhập lại ở đây cho mã gọi cũ (in_an.chen_duong_ke…)
+from .in_duong_ke import (_DS_A, _DS_DR, _DS_R, _NET, _ghi_zip, _them_bo_qua_loi, chen_duong_ke,  # noqa: F401
+                          doc_duong_ke, ghi_zip_nguyen_tu)
 
 
 # ---- canh đường kẻ theo chữ phía trên (người dùng yêu cầu 10/10/2026: "đường ngang dưới chữ gần sát, nằm giữa từng nội dung")
@@ -745,14 +680,24 @@ _MDW = {('Calibri', 11): 7, ('Arial', 10): 7, ('Arial', 11): 8, ('Times New Roma
 CAO_TOI_DA = 409                                # chiều cao dòng lớn nhất Excel cho phép (pt)
 
 
+_DO_CHU_NHANH = {'co_qt': True, 'app': None, 'ham': None}
+
+
 def _ham_do_chu():
-    """Hàm (chữ, tên phông, cỡ pt, đậm) -> bề rộng (pt), hoặc None khi không có giao diện Qt."""
+    """Hàm (chữ, tên phông, cỡ pt, đậm) -> bề rộng (pt), hoặc None khi không có giao diện Qt. Nhớ hàm (và các QFontMetricsF của
+    nó) theo đối tượng QGuiApplication đang chạy: in hàng loạt gọi hàng nghìn lần không nạp lại / dựng lại phông."""
+    if not _DO_CHU_NHANH['co_qt']:
+        return None
     try:
         from PySide6.QtGui import QFont, QFontMetricsF, QGuiApplication
     except ImportError:
+        _DO_CHU_NHANH['co_qt'] = False
         return None
-    if not isinstance(QGuiApplication.instance(), QGuiApplication):
+    app = QGuiApplication.instance()
+    if not isinstance(app, QGuiApplication):
         return None
+    if _DO_CHU_NHANH['ham'] is not None and _DO_CHU_NHANH['app'] is app:
+        return _DO_CHU_NHANH['ham']
     bo_dem = {}
 
     def do(chu: str, ten: str, co: float, dam: bool) -> float:
@@ -763,6 +708,7 @@ def _ham_do_chu():
             f.setBold(dam)
             bo_dem[k] = QFontMetricsF(f)
         return bo_dem[k].horizontalAdvance(chu) / 10
+    _DO_CHU_NHANH['app'], _DO_CHU_NHANH['ham'] = app, do
     return do
 
 
