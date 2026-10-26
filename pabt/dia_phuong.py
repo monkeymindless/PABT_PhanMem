@@ -363,6 +363,44 @@ def mac_dinh() -> dict:
     return _doc_json(file_goc())
 
 
+def mau_tinh_moi(mo_hinh: str = 'DONG_NAI_NQ28', ten_tinh: str = '') -> dict:
+    """Hồ sơ mẫu ĐẦY ĐỦ cho một tỉnh mới (1.0.29): dựng từ hồ sơ TRUNG TÍNH đóng kèm (không tên đơn vị), đặt mô hình vị trí bảng giá
+    đất, mục mã chính sách hỗ trợ để trống (đơn vị điền mã theo bộ đơn giá của tỉnh), xóa thông tin cơ quan. Đã kiểm tra hợp lệ."""
+    from . import tai_nguyen
+    mh = str(mo_hinh or '').strip().upper()
+    if mh not in MO_HINH_VI_TRI:
+        raise LoiHoSo(f'Mô hình vị trí "{mo_hinh}" không có - chọn một trong {", ".join(MO_HINH_VI_TRI)}.')
+    hs = _doc_json(tai_nguyen(TEN_FILE))
+    ten = ' '.join(str(ten_tinh or '').split())
+    hs['ten_ho_so'] = f'Hồ sơ {ten}' if ten else 'Hồ sơ tỉnh mới (chưa đặt tên)'
+    hs['ghi_chu'] = ('Hồ sơ mẫu cho tỉnh mới tạo bằng Cấu hình nghiệp vụ: điền tên đơn vị, căn cứ pháp lý, mốc thời hạn, tỷ lệ kinh phí '
+                     'theo quy định của tỉnh; ghi mã chính sách hỗ trợ (ổn định đời sống, đào tạo, thuê nhà / tự lo chỗ ở, tái định cư) '
+                     'theo bộ đơn giá của tỉnh vào chinh_sach_ho_tro; rồi Nhập gói / chép thành %APPDATA%\\PABT\\pabt_profile.json.')
+    cq = hs.get('co_quan') or {}
+    for k in ('ten', 'truc_thuoc', 'dia_chi'):
+        cq[k] = ''
+    for k in (cq.get('ban_in_mac_dinh') or {}):
+        if k != 'chuc_vu_ky':
+            cq['ban_in_mac_dinh'][k] = ''
+    hs['bang_gia_dat'] = dict(mo_hinh_vi_tri=mh)
+    hs['chinh_sach_ho_tro'] = dict(ma_on_dinh=[], ma_dao_tao=[], ma_theo_nk=[], ma_tdc=[])
+    loi = kiem_tra(hs)
+    if loi:
+        raise LoiHoSo('Hồ sơ mẫu chưa hợp lệ:\n- ' + '\n- '.join(loi))
+    return hs
+
+
+def ghi_mau_tinh_moi(p, mo_hinh: str = 'DONG_NAI_NQ28', ten_tinh: str = '') -> Path:
+    """Ghi hồ sơ mẫu tỉnh mới (mau_tinh_moi) ra file JSON p (ghi file tạm rồi thay). KHÔNG đổi hồ sơ đang dùng của máy."""
+    hs = mau_tinh_moi(mo_hinh, ten_tinh)
+    p = Path(p)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tam = p.with_name(p.name + '.tmp')
+    tam.write_text(json.dumps(hs, ensure_ascii=False, indent=2), encoding='utf-8')
+    os.replace(tam, p)
+    return p
+
+
 def khac_mac_dinh(hs: dict, goc: dict | None = None) -> dict:
     """Phần của hs KHÁC hồ sơ mặc định (đối tượng con so từng khóa, danh sách / giá trị so nguyên) - file máy chỉ ghi phần này:
     bản cập nhật sau đổi mặc định (vd thêm mục mới) vẫn có hiệu lực với các mục người dùng không sửa."""

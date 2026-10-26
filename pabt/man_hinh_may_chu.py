@@ -5,8 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
-                               QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QTableWidget,
+                               QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QSpinBox, QTableWidget,
                                QTableWidgetItem, QVBoxLayout)
 
 from . import may_chu
@@ -421,7 +422,7 @@ class HopTaiKhoan(_Hop):
 class HopDuAnMayChu(_Hop):
     """Dự án trên máy chủ (mở, mang về làm offline) và dự án đã mang về máy này (mở, đưa lên lại, hủy)."""
     COT = ['Dự án', 'File', 'Sửa lúc', 'Đang mở bởi', 'Đã mang về (offline)']
-    COT_OFF = ['Bản làm offline', 'Từ máy chủ', 'Mang về lúc', 'Tài khoản']
+    COT_OFF = ['Bản làm offline', 'Từ máy chủ', 'Mang về lúc', 'Tài khoản', 'Phạm vi']
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -434,6 +435,7 @@ class HopDuAnMayChu(_Hop):
         self.bang.doubleClicked.connect(lambda *_: self.mo())
         h1 = QHBoxLayout()
         for ten, ham in (('Mở dự án', lambda: self.mo()), ('Mang về làm offline', lambda: self.mang_ve()),
+                         ('Nhận theo hộ (Chia việc)', lambda: self.nhan_theo_ho()),
                          ('Mở thư mục máy chủ', lambda: self._mo_thu_muc()), ('Làm mới', lambda: self.ve())):
             b = QPushButton(ten)
             b.clicked.connect(ham)
@@ -441,7 +443,7 @@ class HopDuAnMayChu(_Hop):
         h1.addStretch(1)
         nhan = QLabel('Dự án đã mang về máy này (làm offline)')
         nhan.setProperty('vai', 'tieu_de')
-        self.bang_off = _bang(self.COT_OFF, [300, 480, 150, 120])
+        self.bang_off = _bang(self.COT_OFF, [300, 420, 150, 120, 110])
         self.bang_off.doubleClicked.connect(lambda *_: self.mo_offline())
         h2 = QHBoxLayout()
         for ten, ham in (('Mở bản offline', lambda: self.mo_offline()), ('Đưa lên máy chủ', lambda: self.dua_len()),
@@ -478,7 +480,8 @@ class HopDuAnMayChu(_Hop):
         self.ds_off = may_chu.ds_lay_ve_cuc_bo()
         self.bang_off.setRowCount(len(self.ds_off))
         for r, x in enumerate(self.ds_off):
-            _dien(self.bang_off, r, [Path(x['ban_sao']).name, x['file_goc'], x['luc'].replace('T', ' '), x['tai_khoan']])
+            _dien(self.bang_off, r, [Path(x['ban_sao']).name, x['file_goc'], x['luc'].replace('T', ' '), x['tai_khoan'],
+                                     f'{len(x["ds_ma_ho"])} hộ' if x.get('ds_ma_ho') else 'Cả dự án'])
 
     def _chon(self, bang, ds):
         r = bang.currentRow()
@@ -513,6 +516,30 @@ class HopDuAnMayChu(_Hop):
             self.accept()
         return dich
 
+    def nhan_theo_ho(self, x=None, ds_ma_ho=None):
+        """Chia việc: chọn một nhóm hộ của dự án (HopChonHoLayVe) rồi nhận về làm offline - chỉ khóa các hộ đó trên máy chủ.
+        ds_ma_ho (kiểm thử): bỏ qua hộp chọn."""
+        x = x or self._chon(self.bang, self.ds)
+        if x is None:
+            return None
+        if ds_ma_ho is None:
+            hop = HopChonHoLayVe(x['file'], self)
+            if hop.exec() != QDialog.DialogCode.Accepted:
+                return None
+            ds_ma_ho = hop.ds_chon()
+        try:
+            with con_tro_cho():
+                dich = may_chu.lay_ve_theo_ho(x['file'], ds_ma_ho)
+        except (LoiMayChu, OSError) as e:
+            self.bao(str(e))
+            return None
+        self.ve()
+        if self.hoi(f'Đã nhận {len(ds_ma_ho)} hộ về máy này:\n{dich}\n\nChỉ các hộ này được lưu và gộp lên máy chủ khi bấm "Đưa lên '
+                    'máy chủ". Mở bản offline để làm việc ngay?'):
+            self.mo_file = dich
+            self.accept()
+        return dich
+
     def mo_offline(self):
         x = self._chon(self.bang_off, self.ds_off)
         if x is None:
@@ -527,6 +554,16 @@ class HopDuAnMayChu(_Hop):
             return None
         try:
             f = may_chu.dua_len(x['ban_sao'], ep=bool(ep))
+        except may_chu.LoiXungDot as e:
+            # bản theo hộ: liệt kê các hộ đã bị sửa trên máy chủ trong lúc làm offline, hỏi ghi đè hay hủy để kiểm tra
+            ds = '\n'.join(f'  - Mã {m}: {ten}' for m, ten in e.ds[:SO_HO_XUNG_DOT_HIEN])
+            them = f'\n  … và {len(e.ds) - SO_HO_XUNG_DOT_HIEN} hộ khác' if len(e.ds) > SO_HO_XUNG_DOT_HIEN else ''
+            if ep is None and self.hoi(f'XUNG ĐỘT: {len(e.ds)} hộ đã được sửa trực tiếp trên máy chủ sau lúc bạn nhận về:\n{ds}{them}'
+                                       '\n\nGhi đè các hộ này bằng bản của bạn (file trên máy chủ được sao lưu vào thư mục SaoLuu)?\n'
+                                       'Chọn "No" để hủy và kiểm tra lại với người đã sửa.'):
+                return self.dua_len(x, ep=True)
+            self.bao(str(e))
+            return None
         except LoiMayChu as e:
             if 'XUNG ĐỘT' in str(e) and ep is None and self.hoi(str(e) + '\n\nVẫn đưa lên (ghi đè)?'):
                 return self.dua_len(x, ep=True)
@@ -557,4 +594,163 @@ class HopDuAnMayChu(_Hop):
         from .in_an import mo_file
         if may_chu.PHIEN is not None:
             mo_file(may_chu.thu_muc_du_an())
+
+
+SO_HO_XUNG_DOT_HIEN = 30          # số hộ xung đột liệt kê trong câu hỏi ghi đè (còn lại: "… và N hộ khác")
+
+
+class HopChonHoLayVe(_Hop):
+    """Chia việc trên máy chủ LAN (1.0.29): chọn các hộ của MỘT dự án để nhận về làm offline (may_chu.lay_ve_theo_ho). Tìm theo tên /
+    CCCD / tờ-thửa, lọc theo đợt / ấp, chọn nhanh theo khoảng STT. Hộ người khác đang nhận: hiện người / máy đang giữ, không chọn được."""
+    COT = ['', 'STT', 'Họ tên', 'CCCD', 'Địa chỉ', 'Tờ / thửa', 'Đợt', 'Đang nhận']
+
+    def __init__(self, file, parent=None, ds=None):
+        super().__init__(parent)
+        from .giao_dien import loc_khi_ngung_go
+        from .lap_pa import bo_dau
+        self.file = Path(file)
+        self._bo_dau = bo_dau
+        self.setWindowTitle(f'Nhận theo hộ (Chia việc) - {self.file.name}')
+        self.resize(1100, 640)
+        self.ds = ds if ds is not None else may_chu.ds_ho_de_chon(self.file)
+        for x in self.ds:
+            x['_tim'] = bo_dau(' '.join((x['ho_ten'], x['cccd'], x['to_thua'], x['dia_chi'])))
+        self.o_tim = QLineEdit()
+        self.o_tim.setPlaceholderText('Tìm theo họ tên, số CCCD, tờ/thửa (vd 12/45)')
+        self.cb_dot = QComboBox()
+        self.cb_dot.addItem('Đợt: Tất cả', '')
+        for d in dict.fromkeys(x['dot'] for x in self.ds if x['dot']):
+            self.cb_dot.addItem(d, d)
+        self.cb_ap = QComboBox()
+        self.cb_ap.addItem('Ấp / khu phố: Tất cả', '')
+        for a in sorted({x['ap'] for x in self.ds if x['ap']}, key=bo_dau):
+            self.cb_ap.addItem(a, a)
+        h_loc = QHBoxLayout()
+        h_loc.addWidget(self.o_tim, 1)
+        h_loc.addWidget(self.cb_dot)
+        h_loc.addWidget(self.cb_ap)
+        stt = [x['stt'] for x in self.ds] or [1]
+        self.o_tu, self.o_den = QSpinBox(), QSpinBox()
+        for o, v in ((self.o_tu, min(stt)), (self.o_den, max(stt))):
+            o.setRange(min(stt), max(stt))
+            o.setValue(v)
+        b_khoang = QPushButton('Chọn khoảng STT')
+        b_khoang.setToolTip('Đánh dấu các hộ (đang hiện, chưa ai nhận) có STT trong khoảng')
+        b_khoang.clicked.connect(lambda: self.chon_khoang())
+        b_hien = QPushButton('Chọn các hộ đang hiện')
+        b_hien.clicked.connect(lambda: self.chon_dang_hien(True))
+        b_bo = QPushButton('Bỏ chọn tất cả')
+        b_bo.clicked.connect(lambda: self.chon_dang_hien(False, tat_ca=True))
+        h_chon = QHBoxLayout()
+        for w in (QLabel('Từ STT'), self.o_tu, QLabel('đến'), self.o_den, b_khoang):
+            h_chon.addWidget(w)
+        h_chon.addStretch(1)
+        h_chon.addWidget(b_hien)
+        h_chon.addWidget(b_bo)
+        self.bang = _bang(self.COT, [36, 56, 230, 120, 240, 150, 110, 160])
+        self.bang.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.bang.itemChanged.connect(lambda *_: self._dem())
+        self.lb = QLabel('')
+        self.b_ok = QPushButton('Nhận về làm offline')
+        self.b_ok.clicked.connect(self.accept)
+        b_huy = QPushButton('Hủy')
+        b_huy.clicked.connect(self.reject)
+        h_nut = QHBoxLayout()
+        h_nut.addWidget(self.lb, 1)
+        h_nut.addWidget(self.b_ok)
+        h_nut.addWidget(b_huy)
+        nhac = QLabel('Chỉ các hộ được chọn bị khóa trên máy chủ: người khác vẫn nhận được các hộ còn lại. Khi làm xong bấm "Đưa lên '
+                      'máy chủ" để gộp đúng các hộ này lên.')
+        nhac.setWordWrap(True)
+        lo = QVBoxLayout(self)
+        lo.addWidget(nhac)
+        lo.addLayout(h_loc)
+        lo.addLayout(h_chon)
+        lo.addWidget(self.bang, 1)
+        lo.addLayout(h_nut)
+        self._ve()
+        loc_khi_ngung_go(self.o_tim, self.loc)
+        self.cb_dot.currentIndexChanged.connect(lambda *_: self.loc())
+        self.cb_ap.currentIndexChanged.connect(lambda *_: self.loc())
+        self.loc()
+
+    def _ve(self):
+        b = self.bang
+        b.blockSignals(True)
+        b.setRowCount(len(self.ds))
+        xam = QColor('#94A3B8')
+        for r, x in enumerate(self.ds):
+            g = x['giu']
+            khoa = bool(g) and not g.get('cua_toi')
+            it = QTableWidgetItem('')
+            if khoa:
+                it.setFlags(Qt.ItemFlag.ItemIsSelectable)               # người khác đang nhận: không đánh dấu được
+            else:
+                it.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsSelectable)
+                it.setCheckState(Qt.CheckState.Unchecked)
+            dang = (f'{g["tai_khoan"]} (máy {g["may"]})' + (' - bạn' if g.get('cua_toi') else '')) if g else ''
+            _dien(b, r, [None, x['stt'], x['ho_ten'], x['cccd'], x['dia_chi'], x['to_thua'], x['dot'], dang])
+            b.setItem(r, 0, it)
+            if khoa:
+                for c in range(1, len(self.COT)):
+                    b.item(r, c).setForeground(xam)
+                b.item(r, 7).setToolTip(f'Đang được "{g["tai_khoan"]}" nhận làm trên máy {g["may"]} từ {g["luc"].replace("T", " ")}')
+        b.blockSignals(False)
+        self._dem()
+
+    def la_khoa(self, r: int) -> bool:
+        g = self.ds[r]['giu']
+        return bool(g) and not g.get('cua_toi')
+
+    def loc(self):
+        k = self._bo_dau(self.o_tim.text()).split()
+        dot, ap = self.cb_dot.currentData() or '', self.cb_ap.currentData() or ''
+        for r, x in enumerate(self.ds):
+            an = (dot and x['dot'] != dot) or (ap and x['ap'] != ap) or not all(t in x['_tim'] for t in k)
+            self.bang.setRowHidden(r, bool(an))
+        self._dem()
+
+    def _dat(self, r: int, chon: bool) -> None:
+        if not self.la_khoa(r):
+            self.bang.item(r, 0).setCheckState(Qt.CheckState.Checked if chon else Qt.CheckState.Unchecked)
+
+    def chon_khoang(self, tu: int | None = None, den: int | None = None) -> int:
+        tu = self.o_tu.value() if tu is None else tu
+        den = self.o_den.value() if den is None else den
+        if tu > den:
+            tu, den = den, tu
+        n = 0
+        self.bang.blockSignals(True)
+        for r, x in enumerate(self.ds):
+            if tu <= x['stt'] <= den and not self.bang.isRowHidden(r) and not self.la_khoa(r):
+                self._dat(r, True)
+                n += 1
+        self.bang.blockSignals(False)
+        self._dem()
+        return n
+
+    def chon_dang_hien(self, chon: bool, tat_ca: bool = False) -> None:
+        self.bang.blockSignals(True)
+        for r in range(len(self.ds)):
+            if tat_ca or not self.bang.isRowHidden(r):
+                self._dat(r, chon)
+        self.bang.blockSignals(False)
+        self._dem()
+
+    def ds_chon(self) -> list:
+        return [x['ma_ho'] for r, x in enumerate(self.ds)
+                if not self.la_khoa(r) and self.bang.item(r, 0).checkState() == Qt.CheckState.Checked]
+
+    def _dem(self):
+        n = len(self.ds_chon())
+        khoa = sum(1 for r in range(len(self.ds)) if self.la_khoa(r))
+        self.lb.setText(f'Đã chọn {n} hộ · {khoa} hộ đang được người khác nhận (khóa)')
+        self.b_ok.setEnabled(n > 0)
+        self.b_ok.setText(f'Nhận {n} hộ về làm offline' if n else 'Nhận về làm offline')
+
+    def accept(self):
+        if not self.ds_chon():
+            self.bao('Chọn ít nhất một hộ (đánh dấu ô đầu dòng, hoặc Chọn khoảng STT).', loi=False)
+            return
+        super().accept()
 

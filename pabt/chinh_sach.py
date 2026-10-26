@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import re
 
-from .nghiep_vu import MA_ON_DINH, MA_TDC, MA_THEO_NK, NK_CO_BAN, NGUON_DM, DongKhoan, he_so
+from .nghiep_vu import (MA_ON_DINH, MA_TDC, MA_THEO_NK, NK_CO_BAN, NGUON_DM, DongKhoan, he_so,  # noqa: F401 - tap_ma_* xuất lại
+                        tap_ma_on_dinh, tap_ma_tdc, tap_ma_theo_nk)
 from .tien import D, lam_tron, so_vn
 
 MA_DAO_TAO = ('CS9', 'CS10')
@@ -40,25 +41,27 @@ def loai_theo_ten(ten: str) -> str:
     return ''
 
 
-def _ma_hs(ch: dict, khoa: str, mac_dinh) -> tuple:
-    gt = ch.get(khoa)
-    return tuple(gt) if isinstance(gt, (list, tuple)) and gt else tuple(mac_dinh)
+def tap_ma_dao_tao() -> tuple:
+    """Mã hỗ trợ đào tạo, chuyển đổi nghề: chuẩn (CS9, CS10) hợp mã khai báo thêm ở hồ sơ chinh_sach_ho_tro.ma_dao_tao."""
+    from . import dia_phuong
+    ch = dia_phuong.lay('chinh_sach_ho_tro') or {}
+    v = ch.get('ma_dao_tao') if isinstance(ch, dict) else None
+    them = tuple(str(x).strip() for x in v if str(x).strip()) if isinstance(v, list) else ()
+    return tuple(dict.fromkeys(MA_DAO_TAO + them))
 
 
 def loai(ma: str, ten: str = '') -> str:
     """'od' ổn định đời sống, 'dt' đào tạo chuyển đổi nghề, 'tn' thuê nhà / tự lo chỗ ở, 'tdc' tái định cư, '' khoản khác.
-    Theo mã (mặc định mã Đồng Nai; hồ sơ địa phương chinh_sach_ho_tro.ma_on_dinh / ma_dao_tao / ma_theo_nk / ma_tdc thay được), mã
-    không thuộc nhóm nào mà có ten thì nhận theo tên (loai_theo_ten). Gọi không có ten: như trước (chỉ theo mã)."""
-    from . import dia_phuong
-    ch = dia_phuong.lay('chinh_sach_ho_tro') or {}
-    ch = ch if isinstance(ch, dict) else {}
-    if ma in _ma_hs(ch, 'ma_on_dinh', MA_ON_DINH):
+    Theo MÃ trước (tap_ma_*: mã chuẩn HỢP mã khai báo ở hồ sơ địa phương), thứ tự ổn định -> đào tạo -> theo nhân khẩu -> tái định cư:
+    mã ổn định / theo nhân khẩu không bao giờ thành TĐC dù tên có chữ "tái định cư". Mã không thuộc nhóm nào mà có ten thì nhận theo
+    tên (loai_theo_ten). Gọi không có ten: chỉ theo mã."""
+    if ma in tap_ma_on_dinh():
         return 'od'
-    if ma in _ma_hs(ch, 'ma_dao_tao', MA_DAO_TAO):
+    if ma in tap_ma_dao_tao():
         return 'dt'
-    if ma in _ma_hs(ch, 'ma_theo_nk', MA_THEO_NK):
+    if ma in tap_ma_theo_nk():
         return 'tn'
-    if ma in _ma_hs(ch, 'ma_tdc', MA_TDC):
+    if ma in tap_ma_tdc():
         return 'tdc'
     return loai_theo_ten(ten) if ten else ''
 

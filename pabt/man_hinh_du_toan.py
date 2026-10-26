@@ -59,8 +59,16 @@ class HopTraNQ28(QDialog):
         cot = nq.cot_cua_loai(loai_dat)
         if cot:
             self.cb_cot.setCurrentIndex([k for k, _ in nq.COT].index(cot))
+        # 1.0.29: mô hình vị trí khác Đồng Nai NQ 28 (hồ sơ địa phương) -> thêm ô lọc theo mã vị trí của mô hình; Đồng Nai giữ như cũ
+        self.cb_vt = None
+        if not nq.la_mo_hinh_mac_dinh():
+            self.cb_vt = QComboBox()
+            self.cb_vt.addItem('Vị trí: Tất cả', '')
+            for m in nq.ds_ma_vi_tri():
+                self.cb_vt.addItem(f'{m} - {nq.ten_vi_tri(m)}', m)
         self.o_tim = QLineEdit()
-        self.o_tim.setPlaceholderText('Tên đường, điểm đầu / cuối, vị trí (MT, T1…K3)…')
+        self.o_tim.setPlaceholderText('Tên đường, điểm đầu / cuối, vị trí (MT, T1…K3)…' if self.cb_vt is None else
+                                      'Tên đường, điểm đầu / cuối…')
         self.bang = QTableWidget(0, 8)
         self.bang.setHorizontalHeaderLabels(['Địa bàn', 'Tên đường', 'Từ', 'Đến', 'Vị trí', 'Giá (đồng/m²)', 'Hệ số K',
                                              'Giá × K (đ/m²)'])
@@ -72,7 +80,8 @@ class HopTraNQ28(QDialog):
         if not xem:
             self.bang.doubleClicked.connect(lambda *_: self.accept())
         h = QHBoxLayout()
-        for w in (QLabel('Địa bàn:'), self.cb_xa, QLabel('Loại đất:'), self.cb_cot, self.o_tim):
+        for w in (QLabel('Địa bàn:'), self.cb_xa, QLabel('Loại đất:'), self.cb_cot) + ((self.cb_vt,) if self.cb_vt else ()) + \
+                (self.o_tim,):
             h.addWidget(w)
         if xem:
             nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
@@ -103,6 +112,8 @@ class HopTraNQ28(QDialog):
         lo.addWidget(nut)
         for s in (self.cb_xa.currentIndexChanged, self.cb_cot.currentIndexChanged, self.o_tim.textChanged):
             s.connect(lambda *_: self.loc())
+        if self.cb_vt is not None:
+            self.cb_vt.currentIndexChanged.connect(lambda *_: self.loc())
         self.loc()
 
     def _k(self, x: dict, cot: str):
@@ -111,14 +122,16 @@ class HopTraNQ28(QDialog):
     def loc(self):
         nq = self.nq
         self._ds_k = self.hk.tat_ca()
-        self.ds = nq.tim(self.cb_xa.currentData() or '', self.o_tim.text())[:500]
+        self.ds = nq.tim(self.cb_xa.currentData() or '', self.o_tim.text(),
+                         (self.cb_vt.currentData() or '') if self.cb_vt is not None else '')[:500]
         cot = self.cb_cot.currentData()
         self.bang.setRowCount(len(self.ds))
         cc = self.hk.can_cu() if self._ds_k else ''
         for r, x in enumerate(self.ds):
             g = nq.gia_dong(x, cot)
             k = self._k(x, cot)
-            for c, v in enumerate((x['xa'], x['ten_duong'], x['diem_dau'], x['diem_cuoi'], x['vi_tri'], vn(g),
+            for c, v in enumerate((x['xa'], x['ten_duong'], x['diem_dau'], x['diem_cuoi'],
+                                   x['vi_tri'] if self.cb_vt is None else nq.ten_vi_tri(x['vi_tri']), vn(g),
                                    so_vn(k) if k is not None else '', vn(D(g) * k) if k is not None else '')):
                 it = QTableWidgetItem(str(v))
                 it.setToolTip(nq.mo_ta_vi_tri(x) if c == 4 else cc if c >= 6 and k is not None else str(v))

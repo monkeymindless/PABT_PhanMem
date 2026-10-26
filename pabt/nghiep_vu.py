@@ -25,13 +25,47 @@ MA_TDC = ('CS11', 'CS12', 'CS13')               # tái định cư: là điều 
 MA_THEO_NK = {'CS17': ('THUENHA_XA', 'THUENHA_NK_XA'), 'CS18': ('THUENHA_PHUONG', 'THUENHA_NK_PHUONG'),
               'CS23': ('THUENHA_XA', 'THUENHA_NK_XA'), 'CS24': ('THUENHA_PHUONG', 'THUENHA_NK_PHUONG')}
 NK_CO_BAN = 4                                   # QĐ 42/2025: mức cơ bản cho hộ đến 4 nhân khẩu, cộng thêm từ khẩu thứ 5
+_TAP_MA: list = [None, None]                    # [hồ sơ địa phương đã đọc (đối tượng dia_phuong.doc()), (ổn định, theo NK, TĐC)]
+
+
+def _tap_ma() -> tuple:
+    """(mã ổn định đời sống, mã thuê nhà / tự lo chỗ ở, mã tái định cư) = mã chuẩn (Đồng Nai, QĐ 42/2025) HỢP với mã khai báo thêm ở
+    hồ sơ địa phương chinh_sach_ho_tro.ma_on_dinh / ma_theo_nk / ma_tdc (bộ đơn giá tỉnh khác). Mã ổn định / theo nhân khẩu KHÔNG BAO
+    GIỜ là tái định cư (ưu tiên mã; hồ sơ ghi trùng thì bỏ khỏi tập TĐC). Nhớ theo đối tượng hồ sơ (dia_phuong.doc đổi khi nạp lại)."""
+    from . import dia_phuong
+    hs = dia_phuong.doc()
+    if _TAP_MA[0] is not hs:
+        ch = hs.get('chinh_sach_ho_tro') if isinstance(hs, dict) else None
+        ch = ch if isinstance(ch, dict) else {}
+
+        def them(k):
+            v = ch.get(k)
+            return tuple(str(x).strip() for x in v if str(x).strip()) if isinstance(v, list) else ()
+        od = tuple(dict.fromkeys(MA_ON_DINH + them('ma_on_dinh')))
+        nk = tuple(x for x in dict.fromkeys(tuple(MA_THEO_NK) + them('ma_theo_nk')) if x not in od)
+        tdc = tuple(x for x in dict.fromkeys(MA_TDC + them('ma_tdc')) if x not in od and x not in nk)
+        _TAP_MA[:] = [hs, (od, nk, tdc)]
+    return _TAP_MA[1]
+
+
+def tap_ma_on_dinh() -> tuple:
+    return _tap_ma()[0]
+
+
+def tap_ma_theo_nk() -> tuple:
+    return _tap_ma()[1]
+
+
+def tap_ma_tdc() -> tuple:
+    return _tap_ma()[2]
 
 
 def don_gia_theo_nhan_khau(bc, ma: str, nhan_khau, nguong: int | None = None) -> tuple:
     """Đơn giá một tháng (gộp một dòng) của khoản thuê nhà / tự lo chỗ ở theo số nhân khẩu:
     (đơn giá, mô tả). Hộ đến `nguong` khẩu: mức cơ bản; vượt: cơ bản + số khẩu vượt × mức mỗi khẩu."""
-    co_ban_ma, them_ma = MA_THEO_NK[ma]
-    co_ban, them = bc.so_ts(co_ban_ma), bc.so_ts(them_ma)
+    co_ban_ma, them_ma = MA_THEO_NK.get(ma, (None, None))    # mã tỉnh khác (hồ sơ địa phương): mức cơ bản = đơn giá danh mục
+    co_ban = bc.so_ts(co_ban_ma) if co_ban_ma else KHONG
+    them = bc.so_ts(them_ma) if them_ma else KHONG
     if not co_ban:
         co_ban = D((bc.hotro.get(ma) or {}).get('don_gia') or 0)
     n = nguong or NK_CO_BAN
@@ -186,7 +220,7 @@ class PhuongAn:
         """Nhân khẩu của hộ; chưa nhập thì lấy Số lượng ở dòng ổn định đời sống (như bản Excel)."""
         if self.ho.nhan_khau:
             return self.ho.nhan_khau
-        for d in self.dong_ho_tro(*MA_ON_DINH):
+        for d in self.dong_ho_tro(*tap_ma_on_dinh()):
             if d.so_luong > 0:
                 return int(d.so_luong)
         return None
@@ -658,7 +692,7 @@ def goi_y_khoan(pa: PhuongAn, bc: BoiCanh, ma: str) -> GoiY:
                            'nguồn gốc đất của thửa hoặc ghi chú dòng mục 1.')
         else:
             g.thong_bao = 'Mục 1 chưa có dòng đất nông nghiệp có giá bảng giá: nhập xong mục 1 rồi chọn lại khoản này.'
-    elif ma in MA_ON_DINH:
+    elif ma in tap_ma_on_dinh():
         nk = pa.nhan_khau
         if nk:
             g.so_luong = D(nk)
@@ -749,7 +783,7 @@ def goi_y_ho_tro(pa: PhuongAn, bc: BoiCanh) -> tuple:
             dx.append(DeXuat(ma, sl, dg, f'đang ghi {so_vn(co[0].so_luong)} m² × {so_vn(co[0].don_gia)} đ; theo quy tắc '
                                          f'{so_vn(sl)} m² × {so_vn(dg)} đ', 'sửa', co[0]))
     # ổn định đời sống
-    od = pa.dong_ho_tro(*MA_ON_DINH)
+    od = pa.dong_ho_tro(*tap_ma_on_dinh())
     if dt_nn > 0 and nk:
         dung = pa.ho.dt_nn_dang_dung or dt_nn          # chưa nhập DT đang sử dụng: lấy DT đất NN ở mục 1
         if dung > 0:
@@ -771,7 +805,7 @@ def goi_y_ho_tro(pa: PhuongAn, bc: BoiCanh) -> tuple:
     # thuê nhà / tự lo chỗ ở: một dòng, đơn giá tháng gồm mức cơ bản + nhân khẩu vượt (bản cũ có dòng cộng thêm CS21/22/25/26:
     # giữ nguyên, không gộp lại)
     co_dong_them = bool(pa.dong_ho_tro('CS21', 'CS22', 'CS25', 'CS26'))
-    for d in pa.dong_ho_tro(*MA_THEO_NK):
+    for d in pa.dong_ho_tro(*tap_ma_theo_nk()):
         if co_dong_them or d.nguon_gia != NGUON_DM:
             continue
         dg, mo_ta = don_gia_theo_nhan_khau(bc, d.ma, nk, bc.nguong_nk)
@@ -829,7 +863,7 @@ def dong_bang_0(pa: PhuongAn) -> list:
                       f'{"diện tích" if r.dien_tich == 0 else "giá đất"} = 0, thành tiền 0 đồng.')
     for muc in MUC_KHOAN:
         for k, d in enumerate(pa.khoan[muc], start=1):
-            if muc == 4 and d.ma in MA_TDC:
+            if muc == 4 and d.ma in tap_ma_tdc():
                 continue                                # suất tái định cư: không có đơn giá tiền
             if d.so_luong == 0 or d.don_gia == 0:
                 ct.append(f'Dòng {so_muc(muc)}.{k} ({d.ten[:40]}): {"số lượng" if d.so_luong == 0 else "đơn giá"} = 0, '

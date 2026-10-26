@@ -3165,6 +3165,11 @@ class HopIn(QDialog):
         cuon.setStyleSheet('QScrollArea { background: transparent; border: 0; }')
         cuon.viewport().setAutoFillBackground(False)
         cuon.setWidget(trai)
+        # 1.0.29: khung tùy chọn KHÔNG cuộn ngang (1536 @125% từng hiện thanh cuộn ngang): tắt thanh ngang, bề rộng tối thiểu của vùng
+        # cuộn = bề rộng tối thiểu của nội dung + thanh cuộn dọc (_vua_trai) - vạch chia không kéo hẹp hơn được
+        cuon.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.cuon_trai = cuon
+        self._vua_trai()
         self.w_preview = KhungXemTruocTaiLieu(self, ham_in=lambda pdf, xlsx: in_qua_excel(self, pdf, xlsx))
         self.w_preview.setMinimumWidth(520)
         self.tach = QSplitter(Qt.Orientation.Horizontal)
@@ -3204,9 +3209,17 @@ class HopIn(QDialog):
             self._chia_doi = True
             QTimer.singleShot(0, self.chia_doi)
 
+    def _vua_trai(self) -> int:
+        """Bề rộng tối thiểu của khung tùy chọn bên trái = nội dung + thanh cuộn dọc (không còn cuộn ngang). Trả bề rộng đó."""
+        c = self.cuon_trai
+        w = c.widget().minimumSizeHint().width() + c.verticalScrollBar().sizeHint().width() + 2 * c.frameWidth() + 2
+        c.setMinimumWidth(w)
+        return w
+
     def chia_doi(self) -> None:
         w = max(2, self.tach.width() - self.tach.handleWidth())
-        self.tach.setSizes([w // 2, w - w // 2])
+        trai = max(w // 2, self._vua_trai())
+        self.tach.setSizes([trai, max(1, w - trai)])
 
     def resizeEvent(self, e):
         super().resizeEvent(e)

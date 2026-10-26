@@ -59,6 +59,14 @@ class LoiMayChu(Exception):
     pass
 
 
+class LoiXungDot(LoiMayChu):
+    """Gộp theo hộ: các hộ đã bị sửa trên máy chủ sau lúc nhận về. ds = [(mã hộ, họ tên)] để màn hình liệt kê và hỏi ghi đè."""
+
+    def __init__(self, chu: str, ds: list):
+        super().__init__(chu)
+        self.ds = list(ds)
+
+
 @dataclass
 class Phien:
     """Phiên đăng nhập đang dùng."""
@@ -957,9 +965,14 @@ def gop_ho_tu_ban_offline(ban_sao, ds_ma_ho=None, phien=None, file_goc=None, ep:
             c.close()
         doi = [m for m in cac_ho if str(m) in dv_cu and dv.get(m) != dv_cu[str(m)]]
         if doi:
-            raise LoiMayChu(f'XUNG ĐỘT: {len(doi)} hộ (mã {", ".join(map(str, doi[:10]))}) đã được sửa trên máy chủ sau lúc nhận về. '
-                            'Chọn "Vẫn gộp" để ghi đè các hộ này (file trên máy chủ được sao lưu vào thư mục SaoLuu), hoặc liên hệ '
-                            'người đã sửa.')
+            c = _mo_doc(f)
+            try:
+                ten = dict(c.execute('SELECT ma_ho, ho_ten FROM ho').fetchall())
+            finally:
+                c.close()
+            raise LoiXungDot(f'XUNG ĐỘT: {len(doi)} hộ (mã {", ".join(map(str, doi[:10]))}) đã được sửa trên máy chủ sau lúc nhận về. '
+                             'Chọn "Vẫn gộp" để ghi đè các hộ này (file trên máy chủ được sao lưu vào thư mục SaoLuu), hoặc liên hệ '
+                             'người đã sửa.', [(m, ten.get(m, '')) for m in doi])
     sl = goc / THU_MUC_SAO_LUU / f'{f.stem}_truoc_gop_{datetime.now():%Y%m%d_%H%M%S}{f.suffix}'
     sl.parent.mkdir(parents=True, exist_ok=True)
     _chep_nhat_quan(f, sl)
@@ -1018,3 +1031,61 @@ def huy_lay_ve_ho(file, ds_ma_ho=None, phien=None) -> int:
         con.close()
 
 
+
+
+def ban_theo_ho(file) -> dict | None:
+    """Mục sổ nhận về của bản offline THEO HỘ đang là file (None: không phải bản theo hộ của máy này)."""
+    try:
+        f = Path(file).resolve()
+    except OSError:
+        return None
+    for x in ds_lay_ve_cuc_bo():
+        try:
+            if x.get('ds_ma_ho') and Path(x['ban_sao']).resolve() == f:
+                return x
+        except OSError:
+            continue
+    return None
+
+
+def ho_nhan_viec(file) -> frozenset | None:
+    """Mã các hộ đã nhận làm offline nếu file là bản offline theo hộ - chỉ các hộ này được gộp lên máy chủ; None: file thường."""
+    x = ban_theo_ho(file)
+    return frozenset(int(m) for m in x['ds_ma_ho']) if x else None
+
+
+_RE_AP = re.compile(r'^\s*((?:ấp|khu phố|kp\.?|tổ|thôn|xóm|khu)\s*[^,;]+)', re.I)
+
+
+def ap_cua(dia_chi: str) -> str:
+    """Ấp / khu phố / tổ / thôn đầu địa chỉ ("Ấp 3, xã Trị An" -> "Ấp 3"); không có: ''."""
+    m = _RE_AP.match(str(dia_chi or ''))
+    return ' '.join(m.group(1).split()) if m else ''
+
+
+def ds_ho_de_chon(file, goc=None, tai_khoan: str | None = None) -> list:
+    """Các hộ của dự án trên máy chủ để chọn nhận theo hộ: dict(ma_ho, stt, ho_ten, cccd, dia_chi, ap, to_thua, dot, giu) - giu:
+    None (chưa ai nhận) / dict(tai_khoan, may, luc, cua_toi). Đọc file dự án chỉ đọc (không khóa)."""
+    goc = Path(goc) if goc else (PHIEN.goc if PHIEN else None)
+    tk = tai_khoan if tai_khoan is not None else (PHIEN.tai_khoan if PHIEN else '')
+    giu = ds_ho_dang_lay_ve(file, goc) if goc else {}
+    c = _mo_doc(file)
+    c.row_factory = sqlite3.Row
+    try:
+        dot = {}
+        if 'id' in _cot(c, 'dot_trinh'):
+            dot = {r['id']: (r['ten'] or f'Đợt {r["so"]}') for r in c.execute('SELECT id, so, ten FROM dot_trinh')}
+        thua = {}
+        for r in c.execute('SELECT ma_ho, so_to, so_thua FROM thua ORDER BY ma_ho, thu_tu, ma_thua'):
+            thua.setdefault(r[0], []).append(f'{r[1]}/{r[2]}')
+        co_dot = 'dot_id' in _cot(c, 'ho')
+        kq = []
+        for r in c.execute('SELECT * FROM ho ORDER BY thu_tu, ma_ho'):
+            g = giu.get(r['ma_ho'])
+            kq.append(dict(ma_ho=r['ma_ho'], stt=r['thu_tu'], ho_ten=r['ho_ten'] or '', cccd=r['so_cccd'] or '',
+                           dia_chi=r['dia_chi'] or '', ap=ap_cua(r['dia_chi']), to_thua=', '.join(thua.get(r['ma_ho'], [])),
+                           dot=dot.get(r['dot_id'], '') if co_dot else '',
+                           giu=dict(g, cua_toi=g['tai_khoan'] == tk) if g else None))
+        return kq
+    finally:
+        c.close()

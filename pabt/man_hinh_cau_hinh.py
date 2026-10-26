@@ -8,8 +8,8 @@ import copy
 from decimal import Decimal
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QFormLayout, QHBoxLayout, QHeaderView, QLabel,
-                               QLineEdit, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QTabWidget,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView,
+                               QInputDialog, QLabel, QLineEdit, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QTabWidget,
                                QVBoxLayout, QWidget)
 
 from . import dia_phuong
@@ -74,8 +74,13 @@ class HopCauHinhNghiepVu(QDialog):
         b_mac.clicked.connect(lambda: self.khoi_phuc())
         b_dong = QPushButton('Đóng')
         b_dong.clicked.connect(self.reject)
+        b_tinh = QPushButton('Khởi tạo danh mục mẫu cho tỉnh mới…')
+        b_tinh.setToolTip('Tạo file hồ sơ địa phương (pabt_profile.json) mẫu cho tỉnh khác theo mô hình vị trí bảng giá đất đã chọn: '
+                          'không tên đơn vị, mục mã chính sách hỗ trợ để trống. Không đổi hồ sơ đang dùng của máy này.')
+        b_tinh.clicked.connect(lambda: self.tao_mau_tinh_moi())
         hn = QHBoxLayout()
         hn.addWidget(b_mac)
+        hn.addWidget(b_tinh)
         hn.addStretch(1)
         hn.addWidget(b_luu)
         hn.addWidget(b_dong)
@@ -302,6 +307,36 @@ class HopCauHinhNghiepVu(QDialog):
         self._bao('Đã lưu cấu hình nghiệp vụ - áp dụng ngay.' + (f'\n{p}' if p else '\n(Giống hồ sơ mặc định: dùng mặc định.)'))
         self.accept()
         return True
+
+    def tao_mau_tinh_moi(self, file=None, mo_hinh: str | None = None, ten_tinh: str | None = None):
+        """Xuất hồ sơ mẫu cho tỉnh mới (dia_phuong.ghi_mau_tinh_moi). Tham số None: hỏi (kiểm thử truyền thẳng). Trả file hoặc None."""
+        from .gia_dat_nq28 import ds_ma_vi_tri, ten_vi_tri
+        ds = list(dia_phuong.MO_HINH_VI_TRI)
+        if mo_hinh is None:
+            nhan = [f'{m}: {", ".join(ten_vi_tri(x) for x in ds_ma_vi_tri(m)[:4])}{"…" if len(ds_ma_vi_tri(m)) > 4 else ""}' for m in ds]
+            chon, ok = QInputDialog.getItem(self, TEN_UD, 'Mô hình vị trí của bảng giá đất tỉnh mới:', nhan, 0, False)
+            if not ok:
+                return None
+            mo_hinh = ds[nhan.index(chon)]
+        if ten_tinh is None:
+            ten_tinh, ok = QInputDialog.getText(self, TEN_UD, 'Tên tỉnh / thành phố (để trống nếu chưa có):')
+            if not ok:
+                return None
+        if file is None:
+            from pathlib import Path
+            file, _ = QFileDialog.getSaveFileName(self, 'Lưu hồ sơ mẫu tỉnh mới', str(Path.home() / 'Documents' / 'pabt_profile.json'),
+                                                  'Hồ sơ địa phương (*.json)')
+            if not file:
+                return None
+        try:
+            p = dia_phuong.ghi_mau_tinh_moi(file, mo_hinh, ten_tinh)
+        except (dia_phuong.LoiHoSo, OSError) as e:
+            self._bao(f'Không tạo được hồ sơ mẫu: {e}', True)
+            return None
+        self._bao(f'Đã tạo hồ sơ mẫu cho tỉnh mới (mô hình vị trí {mo_hinh}):\n{p}\n\nĐiền tên đơn vị, căn cứ pháp lý, mã chính sách '
+                  'hỗ trợ theo bộ đơn giá của tỉnh rồi chép file này vào %APPDATA%\\PABT (hoặc đóng gói .pabtcfg) cho máy dùng. Hồ sơ '
+                  'đang dùng của máy này không đổi.')
+        return p
 
     def khoi_phuc(self, hoi: bool = True) -> bool:
         if hoi and not self.im_lang and QMessageBox.question(

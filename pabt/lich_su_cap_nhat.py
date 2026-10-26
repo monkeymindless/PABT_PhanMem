@@ -7,6 +7,17 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.29', '26/10/2026', (
+        'Máy chủ LAN - chia việc: nút "Nhận theo hộ (Chia việc)" ở Dự án trên máy chủ mở hộp chọn hộ (tìm theo tên, CCCD, tờ/thửa; lọc '
+        'theo đợt, ấp; chọn nhanh theo khoảng STT); hộ người khác đang nhận hiện tên người / máy và không chọn được. Đưa lên mà có hộ bị sửa '
+        'trên máy chủ: liệt kê từng hộ và hỏi ghi đè hay hủy để kiểm tra.',
+        'Mở bản offline theo hộ: thanh danh sách hộ ghi "Chế độ Nhận việc theo hộ (Đang nhận N hộ)" kèm ô "Chỉ hiện hộ tôi nhận"; hộ '
+        'không nhận vẫn xem được nhưng không lưu được (sẽ không được gộp lên máy chủ).',
+        'Dùng cho tỉnh khác: mã chính sách hỗ trợ khai báo trong hồ sơ địa phương được dùng khi tính (ổn định đời sống, thuê nhà / tự lo '
+        'chỗ ở, tái định cư); bảng giá đất theo mô hình Vị trí 1-4 hoặc Khu vực - Vị trí có ô lọc vị trí và tên vị trí đọc được. '
+        'Cấu hình nghiệp vụ có nút "Khởi tạo danh mục mẫu cho tỉnh mới…" tạo file hồ sơ mẫu.',
+        'Xuất hồ sơ & Bản in: khung tùy chọn bên trái không còn thanh cuộn ngang ở màn hình 1536 px, tỷ lệ 125%.',
+    )),
     ('1.0.28', '26/10/2026', (
         'Máy chủ LAN - nhiều chuyên viên cùng một dự án: mỗi người nhận một nhóm hộ về làm offline (chỉ khóa các hộ đó, không khóa cả dự án) rồi gộp '
         'đúng các hộ đó lên lại; hộ của người khác giữ nguyên. Thửa mới thêm ở hai máy trùng mã được tự đánh lại; hộ bị sửa trên máy chủ trong lúc làm '

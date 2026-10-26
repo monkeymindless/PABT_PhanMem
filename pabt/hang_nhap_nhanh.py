@@ -11,7 +11,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLineEdit, QPushButton, QWidget
 
 from .lap_pa import DanhMuc, bo_dau
-from .nghiep_vu import MA_TDC, MUC_KHOAN, MUC_VN
+from .nghiep_vu import MUC_KHOAN, MUC_VN, tap_ma_tdc
 from .tien import vn
 
 # chữ ngắn (ô số đo ghi đơn vị cm): ô kiểu hẹp, thanh nhập nhanh khái toán vừa một hàng ở màn hình 1366
@@ -40,7 +40,7 @@ def ds_chon_nhanh(dm: DanhMuc, muc: int) -> list:
         return nho[muc]
     ds = []
     for m in dm.muc[muc]:
-        if muc == 4 and m.ma in (MA_TDC + ('CS21', 'CS22', 'CS25', 'CS26')):
+        if muc == 4 and m.ma in (tap_ma_tdc() + ('CS21', 'CS22', 'CS25', 'CS26')):
             continue                    # tái định cư: chọn ở ô Tái định cư; cộng thêm nhân khẩu: đã gộp vào đơn giá tháng
         gia = f'{vn(m.don_gia)} đ/{m.dvt}' if m.don_gia is not None and not (muc == 4 and m.ma in lap_pa.MA_HE_SO) \
             else (m.dvt or '')

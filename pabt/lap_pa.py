@@ -14,16 +14,33 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 
 from . import csdl
-from .nghiep_vu import (DA_LAP_LUU, MA_ON_DINH, MA_TDC, MA_THEO_NK, MUC_KHOAN, MUC_VN, NGUON_DM, NGUON_TAY, NGUON_TD, BoiCanh,
+from .nghiep_vu import (DA_LAP_LUU, MA_ON_DINH, MUC_KHOAN, MUC_VN, NGUON_DM, NGUON_TAY, NGUON_TD, BoiCanh,
                         DongDat, DongKhoan, PhuongAn, la_vat_nuoi, so_muc,
                         de_xuat_dao_tao_pa, doc_phuong_an, giu_ket_qua_ho, goi_y_ho_tro, goi_y_khoan, ket_qua_ho_san,
-                        kiem_tra_pa, so_vi_tri, thanh_tien_dong, thanh_tien_dong_dat, tinh_pa)
+                        kiem_tra_pa, so_vi_tri, tap_ma_tdc, thanh_tien_dong, thanh_tien_dong_dat, tinh_pa)
 from .loai_dat import chuan_ma_loai_dat
 from .tien import D, KHONG, chuoi, so_luong_vn, so_vn, vn
 
 
 class LoiNhap(ValueError):
     """Giá trị người dùng nhập không hợp lệ (thông báo tiếng Việt, hiện nguyên cho người dùng)."""
+
+
+TB_HO_KHONG_NHAN = ('Hộ này không nằm trong danh sách nhận việc của bạn nên sẽ không được gộp lên máy chủ: không lưu được trên bản '
+                    'offline theo hộ. Nhận thêm hộ này ở Máy chủ → Dự án trên máy chủ → "Nhận theo hộ (Chia việc)".')
+
+
+def ho_nhan_viec(con) -> frozenset | None:
+    """Đang mở bản offline THEO HỘ (máy chủ LAN): mã các hộ đã nhận (app.mo gắn thuộc tính _ho_nhan_viec lên kết nối); None: file thường."""
+    return getattr(con, '_ho_nhan_viec', None)
+
+
+def kiem_ho_nhan_viec(con, ma_ho) -> None:
+    """Chặn ghi hộ KHÔNG thuộc danh sách nhận việc (sửa trên bản offline theo hộ mà không được gộp = mất việc). ma_ho None = hộ mới."""
+    ds = ho_nhan_viec(con)
+    if ds is not None and (ma_ho is None or int(ma_ho) not in ds):
+        raise LoiNhap(TB_HO_KHONG_NHAN if ma_ho is not None else
+                      'Bản offline theo hộ chỉ gộp các hộ đã nhận: hộ thêm mới ở đây sẽ không lên máy chủ. Thêm hộ trên máy chủ.')
 
 
 def bo_dau(s) -> str:
@@ -459,12 +476,12 @@ class BoSoan:
         nk = self.pa.ho.nhan_khau
         if not nk:
             return
-        for d in self.pa.dong_ho_tro(*MA_ON_DINH):
+        for d in self.pa.dong_ho_tro(*cs.tap_ma_on_dinh()):
             if d.nguon_gia == NGUON_DM and (not d.so_luong or d.so_luong == (cu or 0)):
                 cs.doi_nhan_khau_on_dinh(d, nk)
                 d.thanh_tien_excel = None
         if not self.pa.dong_ho_tro('CS21', 'CS22', 'CS25', 'CS26'):
-            for d in self.pa.dong_ho_tro(*MA_THEO_NK):
+            for d in self.pa.dong_ho_tro(*cs.tap_ma_theo_nk()):
                 if d.nguon_gia == NGUON_DM:
                     cs.tinh_lai_thue_nha(d, self.bc, nk)
                     d.thanh_tien_excel = None
@@ -618,8 +635,17 @@ class BoSoan:
         d = self.pa.dat[i]
         cot = nq.cot_cua_loai(d.loai_dat)
         kq = []
-        for r in nq.theo_dia_ban(self.bc.ten_dia_ban):
-            goc = (f'{nq.ten_ngan_xa(r["xa"])} · {r["vi_tri"]} · {r["ten_duong"]} '
+        # mô hình vị trí khác Đồng Nai NQ 28 (hồ sơ địa phương bang_gia_dat.mo_hinh_vi_tri): nhãn ghi tên vị trí ("Vị trí 2", "Khu vực 1,
+        # Vị trí 3") thay mã; vị trí xếp theo thứ tự của mô hình. Đồng Nai: giữ nguyên như trước
+        ds = nq.theo_dia_ban(self.bc.ten_dia_ban)
+        mac_dinh = nq.la_mo_hinh_mac_dinh()
+        if not mac_dinh:
+            thu_tu = {m: i for i, m in enumerate(nq.ds_ma_vi_tri())}
+            ds = sorted(ds, key=lambda r: (not nq.khop_xa(self.bc.ten_dia_ban, r['xa']), r['xa'], r['ten_duong'], r['diem_dau'],
+                                           thu_tu.get(str(r['vi_tri']).upper(), len(thu_tu))))
+        for r in ds:
+            vt = r['vi_tri'] if mac_dinh else nq.ten_vi_tri(r['vi_tri'])
+            goc = (f'{nq.ten_ngan_xa(r["xa"])} · {vt} · {r["ten_duong"]} '
                    f'(từ {r["diem_dau"]} đến {r["diem_cuoi"]})')
             if cot:
                 g = nq.gia_dong(r, cot)
@@ -633,7 +659,7 @@ class BoSoan:
         from . import gia_dat_nq28 as nq
         d = self.pa.dat[i]
         cot = nq.cot_cua_loai(d.loai_dat)
-        ten_vt = nq.TEN_VT.get(r['vi_tri'], r['vi_tri'])
+        ten_vt = nq.ten_vi_tri(r['vi_tri'])
         d.vi_tri = f'{ten_vt} {r["ten_duong"]} (đoạn từ {r["diem_dau"]} đến {r["diem_cuoi"]})' if r['vi_tri'] != 'MT' else \
             f'Mặt tiền {r["ten_duong"]} (đoạn từ {r["diem_dau"]} đến {r["diem_cuoi"]})'
         if not cot:
@@ -663,7 +689,7 @@ class BoSoan:
                       quy_cach=(m.can_cu if muc == 4 else ''), nguon_gia=NGUON_DM)
         tb = ''
         if muc == 4:
-            if m.ma in MA_TDC:
+            if m.ma in tap_ma_tdc():
                 raise LoiNhap('Tái định cư không phải khoản tiền: chọn tình trạng ở ô "Tái định cư" (đủ điều kiện theo khoản… '
                               'Điều 111 / không đủ điều kiện / không có).')
             # mã CS9/CS10, CS7: cột Đơn giá của danh mục là hệ số, không phải tiền
@@ -879,6 +905,7 @@ class BoSoan:
         """Lưu phương án đang soạn (một giao dịch). Trả mô tả để hiện cho người dùng.
         tu_dong: phương án phần mềm tự lập (Dự án mới) - trạng thái TU_LAP, chỉ thành "Đã lập" khi người dùng mở ra soát và Lưu.
         mo_lai=False: không đọc lại phương án vừa lưu (bộ soạn bỏ đi ngay - tự lập hàng loạt)."""
+        kiem_ho_nhan_viec(self.con, self.ma_ho)
         if self.khoa:
             raise LoiNhap(f'Phương án lần {self.lan} đã có Quyết định phê duyệt và đã được khóa bảo vệ. Không thể chỉnh sửa trực '
                           'tiếp (sửa sẽ làm sai quyết định đã ban hành).\nBổ sung tài sản / chính sách mới: bấm "+ Lập PA bổ '

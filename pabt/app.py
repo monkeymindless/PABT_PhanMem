@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QAbstractTableModel, QEvent, QModelIndex, QSortFilterProxyModel, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QFont, QKeySequence
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QHeaderView, QLabel,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QHeaderView, QLabel,
                                QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QSizePolicy,
                                QStackedWidget, QTableView, QTableWidget, QTableWidgetItem, QToolButton,
                                QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
@@ -444,9 +444,10 @@ class LocHo(QSortFilterProxyModel):
         self.dot = ''                  # '' tất cả / 'chua' chưa xếp đợt / id đợt
         self.trang_thai = ''           # khóa trong quan_ly.TRANG_THAI
         self.tu_khoa = []
+        self.chi_ma = None             # 1.0.29: tập mã hộ chỉ hiện (bản offline theo hộ - "Chỉ hiện hộ tôi nhận"); None = mọi hộ
         self._hop_tt = None            # quan_ly.hop_trang_thai - nạp khi lần đầu lọc theo trạng thái (không nạp lúc mở phần mềm)
 
-    def dat(self, dot=None, trang_thai=None, tu_khoa=None):
+    def dat(self, dot=None, trang_thai=None, tu_khoa=None, chi_ma=False):
         moi = hasattr(self, 'endFilterChange')          # Qt 6.10+: invalidateFilter() lỗi thời; Qt5 / Qt6 cũ chưa có begin/end
         if moi:
             self.beginFilterChange()
@@ -459,6 +460,8 @@ class LocHo(QSortFilterProxyModel):
                 self._hop_tt = hop_trang_thai
         if tu_khoa is not None:
             self.tu_khoa = lap_pa.bo_dau(tu_khoa).split()
+        if chi_ma is not False:                         # False = giữ nguyên; None = bỏ lọc theo mã hộ
+            self.chi_ma = chi_ma
         if moi:
             self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
         else:
@@ -467,6 +470,8 @@ class LocHo(QSortFilterProxyModel):
     def filterAcceptsRow(self, r, parent):
         # gọi cho TỪNG dòng mỗi lần lọc (5.000 hộ x mỗi phím gõ): không import / tra thuộc tính thừa ở đây
         d = self.sourceModel().dong[r]
+        if self.chi_ma is not None and d.get('ma_ho') not in self.chi_ma:
+            return False
         dot = self.dot
         if dot:
             if dot == 'chua':
@@ -641,6 +646,7 @@ class CuaSoChinh(QMainWindow):
         self.kq = None
         self.khoa = None
         self.chi_doc = False
+        self.nhan_viec = None                           # 1.0.29: bản offline theo hộ - frozenset mã hộ đã nhận (may_chu.ho_nhan_viec)
         self.dong_ho = QTimer(self)                      # làm mới khóa file mỗi phút
         self.dong_ho.setInterval(khoa.LAM_MOI * 1000)
         self.dong_ho.timeout.connect(self.lam_moi_khoa)
@@ -1148,6 +1154,9 @@ class CuaSoChinh(QMainWindow):
                 self.dong_ho.start()
             self.chi_doc = chi_doc
             self.con = csdl.mo(p, chi_doc=chi_doc)
+            # 1.0.29: bản offline THEO HỘ (máy chủ LAN): chỉ các hộ đã nhận được lưu (lap_pa.kiem_ho_nhan_viec đọc thuộc tính này)
+            self.nhan_viec = may_chu.ho_nhan_viec(p)
+            self.con._ho_nhan_viec = self.nhan_viec
             if not chi_doc:
                 from .hoan_tac import HoanTac
                 self.ht = HoanTac(self.con, hen=lambda ham: QTimer.singleShot(0, ham))
@@ -1180,6 +1189,7 @@ class CuaSoChinh(QMainWindow):
                 k.dat_du_an(self.con, chi_doc)
             if self.khung_du_toan is not None:
                 self.khung_du_toan.dat_du_an(self.con, self.file)
+            self._cap_nhat_nhan_viec()
             self.tai_lai()
             # mở / nhập dự án: luôn vào Danh sách hộ (người dùng 12/10/2026 - trước: về trang chọn lần trước, ví dụ Dự toán)
             self.mo_trang(0)
@@ -1293,6 +1303,8 @@ class CuaSoChinh(QMainWindow):
         if self.con is not None:
             self.con.close()
             self.con = None
+        self.nhan_viec = None
+        self._cap_nhat_nhan_viec()
         self._cap_nhat_lenh_theo_du_an()                # đóng dự án: làm mờ lại nhóm 3, 4, 5 (+ Đơn giá đặc biệt) của menu trái
         if hasattr(self, 'nut_ht'):
             self._cap_nhat_nut_ht()
@@ -1523,6 +1535,26 @@ class CuaSoChinh(QMainWindow):
     def _loc(self, **kw):
         self.loc.dat(**{k: ('' if v is None else v) for k, v in kw.items()})
         self._dem_loc()
+
+    def _cap_nhat_nhan_viec(self):
+        """Nhãn "Chế độ Nhận việc theo hộ (Đang nhận N hộ)" + ô lọc - chỉ hiện khi đang mở bản offline theo hộ."""
+        nv = self.nhan_viec
+        if not hasattr(self, 'w_nhan_viec'):
+            return
+        self.w_nhan_viec.setVisible(nv is not None)
+        self.lb_nhan_viec.setText(f'Chế độ Nhận việc theo hộ (Đang nhận {len(nv)} hộ)' if nv is not None else '')
+        if nv is None and self.o_chi_ho_toi.isChecked():
+            self.o_chi_ho_toi.blockSignals(True)
+            self.o_chi_ho_toi.setChecked(False)
+            self.o_chi_ho_toi.blockSignals(False)
+        self._loc_nhan_viec()
+
+    def _loc_nhan_viec(self):
+        chi = self.nhan_viec if self.nhan_viec is not None and self.o_chi_ho_toi.isChecked() else None
+        if chi is not self.loc.chi_ma:
+            self.loc.dat(chi_ma=chi)
+            if self.con is not None:
+                self._dem_loc()
 
     def _dem_loc(self):
         """Huy hiệu "Đang lọc: k / N hộ" + dải cộng dưới bảng (cộng các hộ ĐANG HIỆN, Decimal) + thẻ KPI đang lọc."""
@@ -1855,6 +1887,20 @@ class CuaSoChinh(QMainWindow):
         self.lb_loc.setFixedHeight(CAO_DAI_CONG_CU)
         self.lb_loc.setProperty('vai', 'huy_hieu_loc')
         self.lb_loc.setTextFormat(Qt.TextFormat.RichText)
+        # 1.0.29: đang mở bản offline THEO HỘ (máy chủ LAN, chia việc): nhãn chế độ + lọc nhanh hộ mình nhận - ẩn với file thường
+        self.w_nhan_viec = QWidget()
+        hv = QHBoxLayout(self.w_nhan_viec)
+        hv.setContentsMargins(0, 0, 0, 0)
+        hv.setSpacing(6)
+        self.lb_nhan_viec = QLabel('')
+        self.lb_nhan_viec.setProperty('vai', 'huy_hieu_loc')
+        self.lb_nhan_viec.setToolTip('Bản offline nhận theo hộ: chỉ các hộ đã nhận được lưu và gộp lên máy chủ')
+        self.o_chi_ho_toi = QCheckBox('Chỉ hiện hộ tôi nhận')
+        self.o_chi_ho_toi.toggled.connect(lambda b: self._loc_nhan_viec())
+        hv.addWidget(self.lb_nhan_viec)
+        hv.addWidget(self.o_chi_ho_toi)
+        hl.addWidget(self.w_nhan_viec)
+        self.w_nhan_viec.setVisible(False)
         hl.addWidget(self.lb_loc)
         h.addWidget(nhom_nut)
         h.addWidget(nhom_loc)
@@ -2927,6 +2973,9 @@ class CuaSoChinh(QMainWindow):
                 QMessageBox.information(self, TEN_UD, 'Dự án chưa có hộ nào.')
                 return None
             ma_ho = r[0]
+        if cho and self.nhan_viec is not None and int(ma_ho) not in self.nhan_viec:
+            # bản offline theo hộ: vẫn mở để xem, Lưu bị chặn (lap_pa.kiem_ho_nhan_viec) - báo trước để khỏi sửa mất công
+            QMessageBox.warning(self, TEN_UD, lap_pa.TB_HO_KHONG_NHAN)
         from .man_hinh import CuaSoLapPA
         khoa = ('ho', int(ma_ho))
         if cho and hasattr(self, 'khung_tab'):

@@ -2233,6 +2233,35 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     quan cụ thể (tiep_nhan_phap_ly, lịch sử cập nhật 1.0.14, HUONG_DAN bảng hồ sơ); dữ liệu kiểm thử (tests/) và văn bản pháp lý (QĐ của UBND tỉnh) giữ.
   - `pabt/in_duong_ke.py` tách từ in_an (_DS_*, _NET, _them_bo_qua_loi, chen_duong_ke, ghi_zip_nguyen_tu = _ghi_zip cũ, doc_duong_ke mới) - in_an nhập
     lại mọi tên. Dùng `str(b, 'utf-8')` thay `b.decode` (vermin không suy được kiểu bytes trong dict -> báo "str.decode !3").
+- 1.0.29 (người dùng 26/10/2026, chỉ thị Giai đoạn 2; test `tests/test_may_chu.TestChiaViecTheoHo`, `tests/test_dia_phuong.py`):
+  - CHIA VIỆC LAN: `man_hinh_may_chu.HopDuAnMayChu` nút "Nhận theo hộ (Chia việc)" -> `nhan_theo_ho(x, ds_ma_ho=)` -> `HopChonHoLayVe(file,
+    ds=)` (dữ liệu `may_chu.ds_ho_de_chon`: stt, họ tên, CCCD, địa chỉ, `ap_cua` (ấp / khu phố / tổ đầu địa chỉ), tờ/thửa, đợt, giu; tìm
+    `loc_khi_ngung_go`, lọc đợt / ấp, `chon_khoang(tu, den)`, `chon_dang_hien`; hộ người khác giữ: ô đánh dấu không bật, chữ xám). Bảng bản offline cột
+    "Phạm vi" (N hộ / Cả dự án). Xung đột: `may_chu.LoiXungDot(LoiMayChu)` có `.ds` [(mã, họ tên)] -> `dua_len` liệt kê tới `SO_HO_XUNG_DOT_HIEN`
+    hộ rồi hỏi ghi đè. KHÔNG dùng file `.offline_info.json` của chỉ thị: bản offline theo hộ nhận ra bằng sổ nhận về đã có (`may_chu.ban_theo_ho`
+    / `ho_nhan_viec(file)` - một nguồn, không thêm file cạnh dự án).
+  - KHÓA HỘ KHÔNG NHẬN: `app.mo` gắn `con._ho_nhan_viec` (frozenset / None) + `self.nhan_viec`; `lap_pa.kiem_ho_nhan_viec(con, ma_ho)` (LoiNhap
+    `TB_HO_KHONG_NHAN`; ma_ho None = hộ mới cũng chặn) gọi đầu `BoSoan.luu` và `ho_so.luu_ho`; `mo_lap_pa(cho=True)` cảnh báo trước khi mở.
+    Danh sách hộ: `w_nhan_viec` (nhãn "Chế độ Nhận việc theo hộ (Đang nhận N hộ)" + `o_chi_ho_toi`) ẩn với file thường; `LocHo.chi_ma`
+    (`dat(chi_ma=)`, False = giữ nguyên). Các lệnh ghi khác (xóa hộ, quyết định, chi trả…) CHƯA chặn theo hộ nhận.
+  - ĐA TỈNH: `nghiep_vu.tap_ma_on_dinh / tap_ma_theo_nk / tap_ma_tdc` (mã chuẩn HỢP mã hồ sơ `chinh_sach_ho_tro.*`; mã ổn định / theo nhân khẩu bị
+    loại khỏi TĐC; nhớ theo đối tượng `dia_phuong.doc()`) - định nghĩa ở nghiep_vu (chinh_sach nhập nghiep_vu: tránh vòng), `chinh_sach` xuất
+    lại + `tap_ma_dao_tao`; `loai()` đổi từ THAY sang HỢP. Dùng ở nghiep_vu (nhân khẩu, gợi ý, đề xuất, kiểm tra), lap_pa (nhân khẩu, chặn TĐC
+    thành dòng tiền), kiem_loi, in_an (cột ổn định bảng tổng hợp), hang_nhap_nhanh. Mã thuê nhà tỉnh khác không có tham số mức cơ bản / khẩu
+    (`don_gia_theo_nhan_khau` lấy đơn giá danh mục, không cộng khẩu vượt). Vị trí: `gia_dat_nq28.la_mo_hinh_mac_dinh`, `tim(xa, tu_khoa,
+    vi_tri)`, `_chuan_vi_tri` nhận "KV1-VT2" / "khu vực 1 vị trí 2"; `BoSoan.ds_vi_tri_nq28` mô hình khác: nhãn tên vị trí + xếp theo thứ tự
+    mô hình, `chon_vi_tri_nq28` dùng `ten_vi_tri`; `HopTraNQ28.cb_vt` chỉ khi mô hình khác Đồng Nai. Đồng Nai: giữ nguyên. nhap_tho KHÔNG đổi (cột
+    vị trí của thửa là chữ mô tả tự do). Tên mô hình trong chỉ thị ('NQ28_DONG_NAI', 'DON_GIAN_4_VT') KHÔNG dùng - giữ 'DONG_NAI_NQ28' / 'VI_TRI_1_4'.
+    `dia_phuong.mau_tinh_moi / ghi_mau_tinh_moi` (từ hồ sơ trung tính đóng kèm `tai_nguyen`, không theo file_goc) + nút "Khởi tạo danh mục mẫu cho
+    tỉnh mới…" ở `HopCauHinhNghiepVu.tao_mau_tinh_moi(file, mo_hinh, ten_tinh)` - chỉ xuất file, không đổi hồ sơ đang dùng.
+  - HopIn: vùng cuộn trái `cuon_trai` ScrollBarAlwaysOff + `_vua_trai` (bề rộng tối thiểu = nội dung + thanh cuộn dọc); `chia_doi` không chia
+    hẹp hơn. Đo thật 1229 điểm (1536 @125%): trước nội dung 719 > khung 592 (cuộn ngang), sau khung 721.
+  - ĐÃ ĐO, KHÔNG LÀM: A+ / A− đã gộp từ 0.9.12 (`giao_dien.phong_to` chờ 150 ms, áp kiểu MỘT lần - test `TestPhongToGop`); bảng tổng hợp 3.000 hộ
+    5,3 s: tạo đối tượng kiểu ~750 lần (không đáng kể), thời gian ở openpyxl ghi file ~38% + gộp ô ~25% - "dùng lại Font / Border tĩnh" không
+    có gì để dùng lại.
+  - `pabt/in_excel.py` tách từ in_an (LoiIn, _VBS, co_excel, CHO_MOI_FILE, CHO_KHOI_DONG, _doc_luong, _tat_excel_tu_dong, chay_excel, mo_file) -
+    in_an nhập lại (cùng đối tượng). Patch `in_an._tat_excel_tu_dong` vẫn tác dụng với van_ban_trinh (nhập lúc gọi) nhưng KHÔNG với
+    in_excel.chay_excel - kiểm thử Excel patch ở in_excel.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

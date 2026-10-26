@@ -45,6 +45,11 @@ def ds_ma_vi_tri(mo_hinh: str | None = None) -> tuple:
     return MO_HINH_VI_TRI.get(mh, MO_HINH_VI_TRI[MO_HINH_MAC_DINH])
 
 
+def la_mo_hinh_mac_dinh() -> bool:
+    """Hồ sơ địa phương dùng mô hình Đồng Nai NQ 28 (7 mức) - mọi màn hình giữ nguyên như trước 1.0.29."""
+    return mo_hinh_vi_tri() == MO_HINH_MAC_DINH
+
+
 def ten_vi_tri(ma: str) -> str:
     """Tên đọc được của mã vị trí ('T1' -> 'Đường đấu nối trực tiếp - mức 1', 'KV2-VT3' -> 'Khu vực 2, Vị trí 3'); mã lạ: giữ nguyên."""
     ma = str(ma or '').strip().upper()
@@ -163,12 +168,16 @@ def khop_xa(ten: str, r_xa: str) -> bool:
     return bool(t) and t in bo_dau(r_xa)
 
 
-def tim(xa: str = '', tu_khoa: str = '') -> list:
-    """Lọc theo địa bàn (bỏ qua nếu không khớp địa bàn nào) và từ khóa không dấu (tên đường, điểm đầu / cuối, mã vị trí)."""
+def tim(xa: str = '', tu_khoa: str = '', vi_tri: str = '') -> list:
+    """Lọc theo địa bàn (bỏ qua nếu không khớp địa bàn nào), mã vị trí (vi_tri: 'VT2', 'KV1-VT3'… - '' = mọi vị trí) và từ khóa
+    không dấu (tên đường, điểm đầu / cuối, mã vị trí)."""
     ds = tat_ca()
     theo_xa = [r for r in ds if khop_xa(xa, r['xa'])]
     if theo_xa:
         ds = theo_xa
+    if vi_tri:
+        vt = str(vi_tri).strip().upper()
+        ds = [r for r in ds if str(r.get('vi_tri') or '').upper() == vt]
     k = bo_dau(tu_khoa).split()
     if k:
         ds = [r for r in ds if all(x in bo_dau(' '.join((r['ten_duong'], r['diem_dau'], r['diem_cuoi'], r['vi_tri'])))
@@ -245,6 +254,9 @@ def _chuan_vi_tri(chu: str) -> str:
     t = bo_dau(chu or '').strip()
     if t in ('mt', 'mat tien', 'mat tien duong', 'm'):
         return 'MT'
+    m = re.fullmatch(r'(?:kv|khu vuc)\s*([1-3])\s*[-,;/ ]*\s*(?:vt|vi tri)\s*([1-5])', t)      # mô hình khu vực - vị trí (1.0.29)
+    if m:
+        return f'KV{m.group(1)}-VT{m.group(2)}'
     m = re.fullmatch(r'([tk])\s*([123])', t)
     if m:
         return m.group(1).upper() + m.group(2)

@@ -195,10 +195,11 @@ class TestHopIn(CoSoXem):
         APP.processEvents()
         APP.processEvents()
         a, b = h.tach.sizes()
-        if a + b >= 2 * 520:
+        trai = h.cuon_trai.minimumWidth()                      # 1.0.29: khung tùy chọn không hẹp hơn nội dung (không cuộn ngang)
+        if a + b >= 2 * max(520, trai):
             self.assertLessEqual(abs(a - b), 2)                 # 50/50
-        else:                                                    # màn hình nhỏ (offscreen): khung xem trước giữ tối thiểu 520
-            self.assertEqual(b, 520)
+        else:                                                    # màn hình nhỏ / phông offscreen rộng: trái đủ nội dung hoặc phải 520
+            self.assertTrue(a >= trai - 2 or b == 520, (a, b, trai))
         h.bang_ho.setCurrentCell(0, 1)                           # bấm hộ -> lập bản xem trước của hộ
         self.assertTrue(h.w_preview.cho_xong(30))
         ma = h.bang_ho.item(0, 0).data(256)

@@ -282,5 +282,142 @@ class TestHopMayChu(_Nen):
         w2.close()
 
 
+class TestChiaViecTheoHo(_Nen):
+    """1.0.29: chia việc trên máy chủ LAN - hộp chọn hộ, xung đột khi đưa lên, khóa hộ không nhận trên bản offline theo hộ."""
+
+    def setUp(self):
+        super().setUp()
+        from tests.test_toc_do import _du_an
+        tm = may_chu.thu_muc_du_an(self.goc)
+        tm.mkdir(parents=True, exist_ok=True)
+        self.f = Path(shutil.move(str(_du_an(self.td, 6)), str(tm / 'DA.pabt')))
+        con = csdl.mo(self.f)
+        with con:
+            con.execute("UPDATE ho SET dia_chi = 'Ấp 1, xã Thử' WHERE ma_ho IN (1, 2, 3)")
+            con.execute("UPDATE ho SET dia_chi = 'Ấp 2, xã Thử', so_cccd = '075000000999' WHERE ma_ho IN (4, 5, 6)")
+        con.close()
+        self.qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
+        may_chu.them_nguoi_dung(self.qt, 'nv1', 'Nhân viên 1', 'abc123')
+        self.nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        self.qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
+
+    def test_ds_ho_de_chon_va_hop_chon(self):
+        if not CO_QT:
+            self.skipTest('không có Qt')
+        from PySide6.QtCore import Qt
+        from pabt.man_hinh_may_chu import HopChonHoLayVe
+        may_chu.lay_ve_theo_ho(self.f, [2], self.nv)                # nv1 giữ hộ 2
+        ds = may_chu.ds_ho_de_chon(self.f, self.goc)
+        self.assertEqual([x['stt'] for x in ds], [1, 2, 3, 4, 5, 6])
+        self.assertEqual({x['ma_ho']: x['ap'] for x in ds}[4], 'Ấp 2')
+        g = next(x for x in ds if x['ma_ho'] == 2)['giu']
+        self.assertEqual((g['tai_khoan'], g['cua_toi']), ('nv1', False))
+        h = HopChonHoLayVe(self.f)
+        h.im_lang = True
+        r2 = next(i for i, x in enumerate(h.ds) if x['ma_ho'] == 2)
+        self.assertTrue(h.la_khoa(r2))
+        self.assertFalse(h.bang.item(r2, 0).flags() & Qt.ItemFlag.ItemIsUserCheckable)    # hộ người khác giữ: không chọn được
+        self.assertIn('nv1', h.bang.item(r2, 7).text())
+        self.assertEqual(h.chon_khoang(1, 3), 2)                    # STT 1-3 trừ hộ 2 đang bị giữ
+        self.assertEqual(h.ds_chon(), [1, 3])
+        h.chon_dang_hien(False, tat_ca=True)
+        h.cb_ap.setCurrentIndex(h.cb_ap.findData('Ấp 2'))           # lọc ấp -> chọn các hộ đang hiện
+        h.chon_dang_hien(True)
+        self.assertEqual(h.ds_chon(), [4, 5, 6])
+        h.chon_dang_hien(False, tat_ca=True)
+        h.cb_ap.setCurrentIndex(0)
+        h.o_tim.setText('075000000999')                             # tìm theo CCCD
+        self.assertEqual(sum(1 for r in range(len(h.ds)) if not h.bang.isRowHidden(r)), 3)
+        h.o_tim.setText('')
+        h.chon_khoang(5, 6)
+        self.assertEqual(h.ds_chon(), [5, 6])
+        h.close()
+
+    def test_nhan_theo_ho_va_xung_dot_tren_man_hinh(self):
+        if not CO_QT:
+            self.skipTest('không có Qt')
+        from pabt.man_hinh_may_chu import HopDuAnMayChu
+        d = HopDuAnMayChu()
+        d.im_lang = True
+        x = next(y for y in d.ds if Path(y['file']) == self.f)
+        bs = d.nhan_theo_ho(x, ds_ma_ho=[1, 3])
+        self.assertEqual(d.mo_file, bs)
+        self.assertEqual(d.bang_off.item(0, 4).text(), '2 hộ')
+        con = csdl.mo(self.f)
+        with con:
+            con.execute("UPDATE ho SET ghi_chu = 'sửa thẳng trên máy chủ' WHERE ma_ho = 3")
+        con.close()
+        con = csdl.mo(bs)
+        with con:
+            con.execute("UPDATE ho SET ghi_chu = 'sửa offline' WHERE ma_ho = 3")
+        con.close()
+        with self.assertRaises(may_chu.LoiXungDot) as e:
+            may_chu.dua_len(bs)
+        self.assertEqual([m for m, _ in e.exception.ds], [3])
+        self.assertTrue(e.exception.ds[0][1])                       # có họ tên để liệt kê
+        hoi = []
+        d2 = HopDuAnMayChu()
+        d2.im_lang = True
+        d2.hoi = lambda chu: hoi.append(chu) or True                # người dùng chọn ghi đè
+        self.assertEqual(d2.dua_len(d2.ds_off[0]), self.f)
+        self.assertIn('Mã 3:', hoi[0])
+        con = csdl.mo(self.f, chi_doc=True)
+        self.assertEqual(con.execute('SELECT ghi_chu FROM ho WHERE ma_ho = 3').fetchone()[0], 'sửa offline')
+        con.close()
+        d.close()
+        d2.close()
+
+    def test_khoa_ho_khong_nhan_tren_ban_offline(self):
+        from pabt import ho_so, lap_pa
+        bs = may_chu.lay_ve_theo_ho(self.f, [1, 2], self.qt)
+        self.assertEqual(may_chu.ho_nhan_viec(bs), frozenset({1, 2}))
+        self.assertIsNone(may_chu.ho_nhan_viec(self.f))
+        con = csdl.mo(bs)
+        con._ho_nhan_viec = may_chu.ho_nhan_viec(bs)                # như app.mo
+        try:
+            bo = lap_pa.BoSoan(con, 5)
+            with self.assertRaises(lap_pa.LoiNhap) as e:
+                bo.luu()
+            self.assertIn('không nằm trong danh sách nhận việc', str(e.exception))
+            with self.assertRaises(lap_pa.LoiNhap):
+                ho_so.luu_ho(con, 5, {'ho_ten': 'Đổi tên'}, [])
+            with self.assertRaises(lap_pa.LoiNhap):
+                ho_so.luu_ho(con, None, {'ho_ten': 'Hộ mới'}, [])  # hộ thêm mới không lên máy chủ
+            lap_pa.BoSoan(con, 1).luu()                             # hộ đã nhận: lưu bình thường
+        finally:
+            con.close()
+
+    def test_cua_so_chinh_che_do_nhan_viec(self):
+        if not CO_QT:
+            self.skipTest('không có Qt')
+        from unittest import mock
+        from PySide6.QtWidgets import QMessageBox
+        from pabt.app import CuaSoChinh
+        bs = may_chu.lay_ve_theo_ho(self.f, [2, 4], self.qt)
+        w = CuaSoChinh()
+        w.mo(bs, chi_doc=False)
+        try:
+            self.assertEqual(w.nhan_viec, frozenset({2, 4}))
+            self.assertFalse(w.w_nhan_viec.isHidden())
+            self.assertIn('Đang nhận 2 hộ', w.lb_nhan_viec.text())
+            self.assertEqual(w.loc.rowCount(), 6)
+            w.o_chi_ho_toi.setChecked(True)
+            self.assertEqual(w.loc.rowCount(), 2)
+            canh_bao = []
+            with mock.patch.object(QMessageBox, 'warning', lambda *a: canh_bao.append(a[2])):
+                w.mo_lap_pa(5, cho=True)
+            self.assertTrue(canh_bao and 'không nằm trong danh sách nhận việc' in canh_bao[0])
+            w.dong_du_an()
+            self.assertIsNone(w.nhan_viec)
+            self.assertTrue(w.w_nhan_viec.isHidden())
+            self.assertEqual(w.loc.chi_ma, None)
+        finally:
+            for t in list(getattr(w, 'khung_tab', None).widget.values()) if hasattr(w, 'khung_tab') else []:
+                if hasattr(t, 'bo_thay_doi'):
+                    t.bo_thay_doi()
+            w.dong_du_an()
+            w.close()
+
+
 if __name__ == '__main__':
     unittest.main()

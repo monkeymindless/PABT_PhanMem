@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 
 from . import csdl
-from .lap_pa import LoiNhap, bo_dau, doc_so
+from .lap_pa import LoiNhap, bo_dau, doc_so, kiem_ho_nhan_viec
 from .tien import D, chuoi, so_vn
 
 TRUONG_HO = [('ho_ten', 'Họ và tên'), ('so_cccd', 'Số CCCD'), ('ngay_cap', 'Ngày cấp'), ('noi_cap', 'Nơi cấp'),
@@ -192,6 +192,7 @@ def thua_trung_ho_khac(con, ma_ho: int) -> list:
 def luu_ho(con, ma_ho, thong_tin: dict, ds_thua: list) -> int:
     """Thêm hộ mới (ma_ho = None) hoặc sửa hộ: thông tin + toàn bộ danh sách thửa (thêm / sửa / xóa). Trả mã hộ."""
     moi = ma_ho is None
+    kiem_ho_nhan_viec(con, ma_ho)
     # sửa hộ: chỉ ghi các trường có trong thong_tin (màn hình không hiện trường nào thì giữ nguyên trường đó)
     tt = {k: _gon(thong_tin.get(k)) for k, _ in TRUONG_HO if moi or k in thong_tin}
     if not tt.get('ho_ten'):

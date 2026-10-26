@@ -12,8 +12,8 @@ from datetime import datetime
 from . import an_toan as _an_toan
 from . import csdl
 from .lap_pa import DanhMuc, bo_dau, ra_soat_gia
-from .nghiep_vu import (MA_ON_DINH, MA_THEO_NK, MUC_KHOAN, MUC_VN, BoiCanh, doc_phuong_an, doc_tat_ca_phuong_an, dong_bang_0,
-                        he_so, ket_qua_ho_san, kiem_tra_pa, so_muc, tinh_pa)
+from .nghiep_vu import (MUC_KHOAN, MUC_VN, BoiCanh, doc_phuong_an, doc_tat_ca_phuong_an, dong_bang_0,
+                        he_so, ket_qua_ho_san, kiem_tra_pa, so_muc, tap_ma_on_dinh, tap_ma_theo_nk, tinh_pa)
 from .tien import D, KHONG, so_vn, vn
 
 LOI, CANH_BAO = 'Lỗi', 'Cảnh báo'
@@ -328,12 +328,13 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
                          f'{so_vn(he_so(d.ty_le) * 100)}% vượt {so_vn(tl_toi_da * 100)}%.', ma, ten)
         # nhân khẩu: hỗ trợ tính theo nhân khẩu mà hộ chưa nhập / khác số nhân khẩu; số nhân khẩu bất thường
         nk = h['nhan_khau']
-        theo_nk = [d for d in pa.khoan[4] if d.ma in MA_ON_DINH or d.ma in MA_THEO_NK]
+        od, tnk = tap_ma_on_dinh(), tap_ma_theo_nk()
+        theo_nk = [d for d in pa.khoan[4] if d.ma in od or d.ma in tnk]
         if theo_nk and not nk:
             them(LOI, BAC_SI, f'Có hỗ trợ tính theo nhân khẩu ({theo_nk[0].ten[:40]}) nhưng hộ chưa nhập số nhân khẩu.', ma, ten)
         elif nk:
             for d in pa.khoan[4]:
-                if d.ma in MA_ON_DINH and d.so_luong != D(nk):
+                if d.ma in od and d.so_luong != D(nk):
                     them(CANH_BAO, BAC_SI, f'Hỗ trợ ổn định đời sống tính {so_vn(d.so_luong)} nhân khẩu, hồ sơ hộ ghi {nk} nhân '
                          'khẩu.', ma, ten)
             if int(nk) > nk_canh_bao:
