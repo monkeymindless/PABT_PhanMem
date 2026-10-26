@@ -230,7 +230,8 @@ NHAN_MENU = {'Lập phương án hộ…': 'Lập phương án chi tiết', 'Th�
              'Quyết định phê duyệt': 'Quyết định phê duyệt', 'Đợt trình…': 'Đợt trình thẩm định',
              'Trạng thái hộ…': 'Trạng thái hộ',
              'In / Xuất…': 'Xuất hồ sơ & Bản in', 'Quản lý Mẫu in & Bản in…': 'Quản lý Mẫu in & Bản in…',
-             'Xuất báo cáo đối chiếu…': 'Đối chiếu số liệu'}
+             'Xuất báo cáo đối chiếu…': 'Đối chiếu số liệu',
+             'Nhập bản vẽ CAD (.dxf)…': 'Nhập bản đồ (.dxf, .kml, .kmz)…'}      # 1.0.32: cả bản đồ KML / KMZ (Google Earth)
 # 0.9.69 (người dùng 12/10/2026 đổi tên): gợi ý khi rê chuột theo tên mới (khóa self.lenh giữ tên cũ - mã / test gọi theo khóa)
 GOI_Y_MENU = {'Bộ đơn giá…': 'Đơn giá bồi thường (bộ đơn giá nhà, cây, vật nuôi, chính sách hỗ trợ)',
               'Đơn giá riêng dự án…': 'Đơn giá đặc biệt của dự án (nhập tay, thẩm định giá)',

@@ -1,4 +1,5 @@
-"""Màn hình bản đồ thửa đất (0.9.87): HopNhapCad (nhập bản vẽ .dxf - ban_do_cad) và HopBanDo (bản đồ vẽ bằng QGraphicsView: phóng to bằng
+"""Màn hình bản đồ thửa đất (0.9.87): HopNhapCad (nhập bản vẽ .dxf - ban_do_cad; 1.0.32: cả bản đồ .kml / .kmz - ban_do_kml, tọa độ
+WGS84 đổi sang VN-2000 theo kinh tuyến trục) và HopBanDo (bản đồ vẽ bằng QGraphicsView: phóng to bằng
 con lăn, kéo để di chuyển, tô màu theo đồng thuận - xanh đã đồng thuận, đỏ chưa đồng thuận, vàng chưa lấy ý kiến, xám chưa gắn hộ;
 BẤM thửa -> mở hồ sơ, phương án của hộ). Vẽ bằng Qt có sẵn (người dùng chọn 14/10/2026 thay Leaflet / QWebEngine: bộ cài không tăng
 ~300 MB, chạy cả Win 7 32-bit, không cần mạng)."""
@@ -11,7 +12,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QGraphicsScene, QGraphicsSimpleTextItem, QGraphicsView, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
-from . import ban_do_cad
+from . import ban_do_cad, ban_do_kml, toa_do
 from .giao_dien import con_tro_cho
 from .thong_bao import TEN_UD, chu_loi
 from .tien import so_vn
@@ -21,22 +22,36 @@ KHONG_LOP = '(không có)'
 
 # ---------------------------------------------------------------- nhập bản vẽ
 class HopNhapCad(QDialog):
-    """Chọn file .dxf, lớp ranh thửa / ranh thu hồi, số tờ -> xem trước -> lưu vào dự án (tùy chọn cập nhật DT thu hồi)."""
+    """Chọn file .dxf / .kml / .kmz, lớp ranh thửa / ranh thu hồi (DXF) hoặc kinh tuyến trục (KML), số tờ -> xem trước -> lưu vào dự án
+    (tùy chọn cập nhật DT thu hồi)."""
     im_lang = False
 
     def __init__(self, con, parent=None, file=None):
         super().__init__(parent)
         self.con, self.kq, self.file = con, None, None
-        self.setWindowTitle('Nhập bản vẽ địa chính CAD (.dxf)')
+        self.setWindowTitle('Nhập bản đồ thửa đất (.dxf, .kml, .kmz)')
         self.resize(1100, 680)
         self.o_file = QLineEdit()
         self.o_file.setReadOnly(True)
-        b_chon = QPushButton('Chọn file .dxf…')
+        b_chon = QPushButton('Chọn file .dxf / .kml / .kmz…')
         b_chon.clicked.connect(lambda: self.chon_file())
         self.cb_thua, self.cb_ranh = QComboBox(), QComboBox()
         self.o_to = QLineEdit()
         self.o_to.setPlaceholderText('tự tìm trong bản vẽ / tên file')
         self.o_to.setMaximumWidth(160)
+        # kinh tuyến trục VN-2000 để đổi tọa độ GPS của file KML (bản vẽ .dxf vốn là VN-2000: không dùng)
+        self.cb_kt = QComboBox()
+        self.cb_kt.setEditable(True)
+        for v in toa_do.DS_KINH_TUYEN:
+            self.cb_kt.addItem(toa_do.chu_kinh_tuyen(v), v)
+        kt = toa_do.kinh_tuyen_truc()
+        i = self.cb_kt.findData(kt)
+        if i < 0:
+            self.cb_kt.addItem(toa_do.chu_kinh_tuyen(kt), kt)
+            i = self.cb_kt.count() - 1
+        self.cb_kt.setCurrentIndex(i)
+        self.cb_kt.setToolTip('Kinh tuyến trục VN-2000 của tỉnh (Đồng Nai 107°45\') - dùng khi đổi tọa độ GPS của file .kml / .kmz')
+        self.cb_kt.setEnabled(False)
         b_phan_tich = QPushButton('Phân tích')
         b_phan_tich.clicked.connect(lambda: self.phan_tich())
         h = QHBoxLayout()
@@ -45,9 +60,10 @@ class HopNhapCad(QDialog):
         f = QFormLayout()
         f.addRow('File bản vẽ:', h)
         h2 = QHBoxLayout()
-        for nhan, w in (('Lớp ranh thửa:', self.cb_thua), ('Lớp ranh thu hồi:', self.cb_ranh), ('Số tờ:', self.o_to)):
+        for nhan, w in (('Lớp ranh thửa:', self.cb_thua), ('Lớp ranh thu hồi:', self.cb_ranh), ('Số tờ:', self.o_to),
+                        ('Kinh tuyến trục:', self.cb_kt)):
             h2.addWidget(QLabel(nhan))
-            h2.addWidget(w, 1 if w is not self.o_to else 0)
+            h2.addWidget(w, 1 if w in (self.cb_thua, self.cb_ranh) else 0)
         h2.addWidget(b_phan_tich)
         f.addRow('', h2)
         self.bang = QTableWidget(0, 9)
@@ -56,7 +72,9 @@ class HopNhapCad(QDialog):
         self.bang.verticalHeader().setVisible(False)
         self.bang.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.bang.horizontalHeader().setStretchLastSection(True)
-        self.lb = QLabel('Ranh thửa phải là hình khép kín (polyline đóng); nhãn số thửa / diện tích / loại đất đặt bên trong thửa.')
+        self.lb = QLabel('Bản vẽ .dxf: ranh thửa là hình khép kín (polyline đóng), nhãn số thửa / diện tích / loại đất đặt bên trong thửa. '
+                         'Bản đồ .kml / .kmz: mỗi đa giác một thửa, số thửa / tờ (hoặc tiểu khu, khoảnh, lô) ở tên hay dữ liệu kèm; '
+                         'đa giác tên "ranh…" là ranh thu hồi.')
         self.lb.setWordWrap(True)
         self.o_loai = QCheckBox('Cập nhật cả loại đất theo bản vẽ (thửa được đánh dấu)')
         b_luu = QPushButton('Lưu vào dự án')
@@ -82,11 +100,27 @@ class HopNhapCad(QDialog):
         else:
             (QMessageBox.warning if loi else QMessageBox.information)(self, TEN_UD, chu)
 
+    def la_kml(self) -> bool:
+        return self.file is not None and self.file.suffix.lower() in ban_do_kml.DUOI_KML
+
     def chon_file(self, file=None) -> bool:
         if file is None:
-            file, _ = QFileDialog.getOpenFileName(self, 'Chọn bản vẽ địa chính', '', 'Bản vẽ CAD (*.dxf *.dwg)')
+            file, _ = QFileDialog.getOpenFileName(self, 'Chọn bản đồ thửa đất', '',
+                                                  'Bản đồ (*.dxf *.dwg *.kml *.kmz);;Bản vẽ CAD (*.dxf *.dwg);;Google Earth (*.kml *.kmz)')
             if not file:
                 return False
+        if Path(file).suffix.lower() in ban_do_kml.DUOI_KML:          # KML / KMZ: không có lớp; đổi tọa độ theo kinh tuyến trục
+            self.file = Path(file)
+            self.o_file.setText(str(file))
+            for cb in (self.cb_thua, self.cb_ranh):
+                cb.clear()
+                cb.addItem('(KML: đa giác)', None)
+                cb.setEnabled(False)
+            self.cb_kt.setEnabled(True)
+            return self.phan_tich()
+        for cb in (self.cb_thua, self.cb_ranh):
+            cb.setEnabled(True)
+        self.cb_kt.setEnabled(False)
         try:
             with con_tro_cho():
                 lop = ban_do_cad.doc_lop(file)
@@ -112,9 +146,12 @@ class HopNhapCad(QDialog):
             return False
         try:
             with con_tro_cho():
-                self.kq = ban_do_cad.phan_tich(self.file, self.cb_thua.currentData(), self.cb_ranh.currentData(),
-                                               self.o_to.text().strip() or None)
-        except ban_do_cad.LoiCad as e:
+                if self.la_kml():
+                    self.kq = ban_do_kml.phan_tich_kml(self.file, self.o_to.text().strip() or None, self.kinh_tuyen())
+                else:
+                    self.kq = ban_do_cad.phan_tich(self.file, self.cb_thua.currentData(), self.cb_ranh.currentData(),
+                                                   self.o_to.text().strip() or None)
+        except (ban_do_cad.LoiCad, ValueError) as e:
             self._bao(str(e), True)
             return False
         if not self.o_to.text().strip():
@@ -150,10 +187,17 @@ class HopNhapCad(QDialog):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(r, c, it)
         self.bang.resizeColumnsToContents()
-        self.lb.setText(f'{len(self.kq.thua)} thửa tờ {self.kq.so_to} (lớp "{self.kq.lop_thua}"), {so_khop} thửa khớp hồ sơ. '
+        self.lb.setText(f'{len(self.kq.thua)} thửa (tờ {self.kq.so_to or "?"} - {self.kq.lop_thua}), {so_khop} thửa khớp hồ sơ. '
                         'Đánh dấu cột đầu để cập nhật DT thu hồi theo bản vẽ (DT trong ranh nếu có lớp ranh thu hồi).' +
                         ('\n' + '\n'.join(self.kq.canh_bao[:6]) if self.kq.canh_bao else ''))
         return True
+
+    def kinh_tuyen(self) -> float:
+        """Kinh tuyến trục đang chọn / gõ ("107°45'", "107.75"). Sai -> ValueError (thông báo tiếng Việt)."""
+        i = self.cb_kt.currentIndex()
+        if i >= 0 and self.cb_kt.currentText() == self.cb_kt.itemText(i) and self.cb_kt.itemData(i) is not None:
+            return float(self.cb_kt.itemData(i))
+        return toa_do.doc_kinh_tuyen(self.cb_kt.currentText())
 
     def luu(self) -> dict | None:
         if not self.kq or not self.kq.thua:
@@ -207,9 +251,11 @@ class _Thua(QGraphicsPolygonItem):
 class KhungBanDo(QGraphicsView):
     """Khung vẽ thửa. Tọa độ bản vẽ (y hướng lên) -> cảnh Qt (y hướng xuống): lật y. Bấm thửa có hộ -> tín hiệu bam_ho(mã hộ)."""
     bam_ho = Signal(int)
+    toa_do_chuot = Signal(float, float)                  # (đông, bắc) VN-2000 dưới con trỏ (1.0.32)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setMouseTracking(True)
         self.setScene(QGraphicsScene(self))
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
@@ -264,6 +310,12 @@ class KhungBanDo(QGraphicsView):
         self._diem_bam = self._diem(e)
         super().mousePressEvent(e)
 
+    def mouseMoveEvent(self, e):
+        super().mouseMoveEvent(e)
+        if self.thua:
+            p = self.mapToScene(self._diem(e))
+            self.toa_do_chuot.emit(p.x(), -p.y())
+
     def bam_diem(self, diem) -> int | None:
         """Thửa tại điểm màn hình: phát bam_ho nếu thửa có hộ. Trả mã hộ."""
         for it in self.items(diem):
@@ -283,7 +335,9 @@ class KhungBanDo(QGraphicsView):
 
 
 class HopBanDo(QDialog):
-    """Cửa sổ bản đồ thửa đất (không chặn cửa sổ chính): lọc tờ, tìm thửa, chú giải màu, bấm thửa mở hồ sơ hộ (mo_ho(mã hộ))."""
+    """Cửa sổ bản đồ thửa đất (không chặn cửa sổ chính): lọc tờ, tìm thửa, chú giải màu, bấm thửa mở hồ sơ hộ (mo_ho(mã hộ)), tọa độ
+    con trỏ (VN-2000 + GPS), xuất bản đồ ra .kml / .kmz (Google Earth, điện thoại)."""
+    im_lang = False
 
     def __init__(self, con, parent=None, mo_ho=None, nhap=None):
         super().__init__(parent)
@@ -299,8 +353,11 @@ class HopBanDo(QDialog):
             f'Không có thửa {self.o_tim.text()} trên tờ đang xem.'))
         b_vua = QPushButton('Vừa khung')
         b_vua.clicked.connect(lambda: self.view.vua())
-        b_nhap = QPushButton('Nhập bản vẽ CAD (.dxf)…')
+        b_nhap = QPushButton('Nhập bản đồ (.dxf, .kml, .kmz)…')
         b_nhap.clicked.connect(lambda: self._nhap())
+        self.b_xuat = QPushButton('Xuất KML / KMZ…')
+        self.b_xuat.setToolTip('Ghi bản đồ thửa (tờ đang xem) ra file .kml / .kmz: mở bằng Google Earth hoặc điện thoại, màu theo đồng thuận')
+        self.b_xuat.clicked.connect(lambda: self.xuat_kml())
         h = QHBoxLayout()
         h.addWidget(QLabel('Tờ bản đồ:'))
         h.addWidget(self.cb_to)
@@ -308,6 +365,7 @@ class HopBanDo(QDialog):
         h.addWidget(self.o_tim)
         h.addWidget(b_vua)
         h.addStretch(1)
+        h.addWidget(self.b_xuat)
         h.addWidget(b_nhap)
         chu_giai = QHBoxLayout()
         self.lb_dem = {}
@@ -323,13 +381,19 @@ class HopBanDo(QDialog):
         chu_giai.addStretch(1)
         self.view = KhungBanDo(self)
         self.view.bam_ho.connect(self._bam_ho)
+        self.kt = toa_do.kinh_tuyen_truc()
+        self.lb_toa_do = QLabel('')
+        self.view.toa_do_chuot.connect(self._hien_toa_do)
         self.lb = QLabel('Lăn chuột để phóng to / thu nhỏ, kéo để di chuyển, bấm vào thửa để mở hồ sơ hộ.')
         lo = QVBoxLayout(self)
         lo.addLayout(h)
         b_nhap.setVisible(nhap is not None)      # SAU khi bố cục đã gắn vào hộp (1.0.16: nút chưa có cha hiện thành cửa sổ rỗng)
         lo.addLayout(chu_giai)
         lo.addWidget(self.view, 1)
-        lo.addWidget(self.lb)
+        hd = QHBoxLayout()
+        hd.addWidget(self.lb, 1)
+        hd.addWidget(self.lb_toa_do)
+        lo.addLayout(hd)
         self.nap_to()
 
     def nap_to(self) -> None:
@@ -350,12 +414,44 @@ class HopBanDo(QDialog):
             dem[t.trang_thai] += 1
         for k, lb in self.lb_dem.items():
             lb.setText(f'{ban_do_cad.TRANG_THAI[k][0]}: {dem[k]}')
+        self.b_xuat.setEnabled(bool(ds))
         if not ds:
-            self.lb.setText('Dự án chưa có bản đồ: bấm "Nhập bản vẽ CAD (.dxf)…" (hoặc menu Dữ liệu) để nhập ranh thửa từ bản vẽ địa chính.')
+            self.lb.setText('Dự án chưa có bản đồ: bấm "Nhập bản đồ (.dxf, .kml, .kmz)…" (hoặc menu Dữ liệu) để nhập ranh thửa từ bản vẽ '
+                            'địa chính hoặc file Google Earth.')
 
     def _bam_ho(self, ma: int) -> None:
         if self.mo_ho is not None:
             self.mo_ho(ma)
+
+    def _hien_toa_do(self, dong: float, bac: float) -> None:
+        try:
+            vd, kd = toa_do.vn2000_sang_wgs84(dong, bac, self.kt)
+        except (ValueError, ZeroDivisionError, OverflowError):
+            self.lb_toa_do.setText('')
+            return
+        self.lb_toa_do.setText(f'VN-2000 ({toa_do.chu_kinh_tuyen(self.kt)}): X {bac:,.2f}  Y {dong:,.2f}   ·   GPS {vd:.6f}, {kd:.6f}'
+                               .replace(',', ' '))
+
+    def xuat_kml(self, file=None):
+        """Bản đồ thửa (tờ đang xem; "Tất cả các tờ" = cả dự án) -> .kml / .kmz. Trả đường dẫn hoặc None."""
+        if file is None:
+            if self.im_lang:
+                return None
+            to = self.cb_to.currentData()
+            file, _ = QFileDialog.getSaveFileName(self, 'Xuất bản đồ thửa đất', f'BanDo_{"to_" + str(to) if to else "du_an"}.kmz',
+                                                  'Google Earth nén (*.kmz);;Google Earth (*.kml)')
+            if not file:
+                return None
+        try:
+            with con_tro_cho():
+                kq = ban_do_kml.xuat_kml(self.con, file, self.cb_to.currentData(), self.kt)
+        except (ban_do_cad.LoiCad, OSError) as e:
+            self.lb.setText(chu_loi('Không xuất được bản đồ', e))
+            if not self.im_lang:
+                QMessageBox.warning(self, TEN_UD, chu_loi('Không xuất được bản đồ', e))
+            return None
+        self.lb.setText(f'Đã xuất {kq["so_thua"]} thửa ra {kq["file"]}')
+        return kq['file']
 
     def _nhap(self) -> None:
         if self.nhap is not None and self.nhap():

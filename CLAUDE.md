@@ -2304,6 +2304,26 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     hỏi thêm hộ mới (hộ có nhiều ứng viên giống nhau: không tự tạo).
   - File LẠ của người dùng ở gốc repo (`Phuong an cap nhat gia dat.py`, .docx / .xlsx / .rar ngày 11/10) làm `test_yeu_cau_0987.
     test_tao_ban_do_ma_khong_canh_bao` lỗi (tao_ban_do_ma quét mọi .py ở gốc) - không phải lỗi mã; không tự xóa.
+- Sau 1.0.31 - ĐỢT 2 bản đồ KML / KMZ + VN-2000 trên máy tính (người dùng 26/10/2026; CHƯA tăng phiên bản; test `tests/test_ban_do_kml.py`):
+  - `pabt/toa_do.py` (thuần Python): `wgs84_sang_vn2000(vĩ độ, kinh độ, kinh_tuyen)` -> (ĐÔNG, BẮC) như bản vẽ DXF (sổ địa chính ghi X = Bắc -
+    đừng lẫn), `vn2000_sang_wgs84`, `khoang_cach_m`; Transverse Mercator chuỗi Krüger bậc 6, k0 0,9999, Đông giả 500.000; datum 7 tham số QĐ
+    05/2007 theo quy ước COORDINATE FRAME (= EPSG "VN-2000 to WGS 84 (2)" và VN2000.dty của Bentley - phương pháp 9). Chuỗi proj4 hay gặp
+    "+towgs84=…,-0.00928836,0.01975479,-0.00427372,…" hiểu NGƯỢC (position vector) - lệch ~0,5-1 m; bản đầu Đợt 2 từng theo chuỗi đó, đã sửa.
+    So PROJ (pyproj cài tạm ở thư mục nháp, KHÔNG thêm vào requirements): lệch ~2e-9 m. Kinh tuyến trục: hồ sơ `ban_do.kinh_tuyen_truc` (số
+    hoặc "107°45'", `doc_kinh_tuyen`; dia_phuong.kiem_tra kiểm), mặc định `KINH_TUYEN_MAC_DINH` 107.75; hồ sơ Đồng Nai (ho_so_don_vi) ghi sẵn.
+  - Nguồn tham số datum (người dùng: "có sẵn file VN2000.dty, dùng làm nguồn"): `tham_so_datum()` = `doc_file_datum` (thư viện datum CS-MAP
+    nhị phân: dấu 82 19 13 02, bản ghi cs_Dtdef_ - tên [0:24], elipxoit [24:48], 7 double từ byte 152 (tỷ lệ ghi dạng 1 + ppm), mã phương pháp
+    short ở 338: 9 = coordinate frame, 3 = position vector) của hồ sơ `ban_do.file_datum` rồi `FILE_DATUM_BENTLEY` (Program Files (x86) / Program
+    Files \Bentley\VN2000.dty), không có thì TOWGS84 gắn sẵn (cùng số). KHÔNG chép file Bentley vào repo / bộ cài (test dựng file giả lập).
+  - `pabt/ban_do_kml.py`: `doc_kml` (.kml / .kmz: kiem_tra_magic_bytes, kiem_tra_zip, kiem_tra_xml; Folder / Placemark / ExtendedData Data +
+    SimpleData / Polygon + lỗ / MultiGeometry / LineString / Point), `so_hieu` (dữ liệu kèm so_to / so_thua / loai_dat / dien_tich / tieu_khu /
+    khoanh / lo… khóa không dấu; tên "Thửa 12 tờ 5", "tờ 5 thửa 12", "5/12" = tờ / thửa, "TK126 K6 L34"; lô rừng -> `phieu_kiem_dem.
+    khoa_lo_rung`), `la_ranh` (tên / thư mục có chữ "ranh"), `phan_tich_kml(file, so_to, kinh_tuyen)` -> KetQuaCad (DT trên mặt chiếu VN-2000
+    trừ lỗ, DT trong ranh) -> lưu bằng `ban_do_cad.luu` (bảng thua_ban_do như DXF), `tao_kml` / `xuat_kml(con, file, so_to, kinh_tuyen)` (.kml /
+    .kmz theo đuôi, Style màu TRANG_THAI, ExtendedData ma_ho / chu_su_dung để nhập lại / điện thoại khớp). `ban_do_cad._khoa` chuẩn hóa chữ
+    ("TK126-K06" = "TK126/K6"). Màn hình: HopNhapCad nhận .kml / .kmz (`la_kml`, `cb_kt` kinh tuyến trục sửa được, `kinh_tuyen()`), HopBanDo
+    nút `b_xuat` "Xuất KML / KMZ…" (`xuat_kml(file)`), `KhungBanDo.toa_do_chuot` -> `lb_toa_do` (VN-2000 X Bắc / Y Đông + GPS). Menu: NHAN_MENU
+    'Nhập bản vẽ CAD (.dxf)…' hiện "Nhập bản đồ (.dxf, .kml, .kmz)…" (khóa self.lenh giữ). tu-kiem bước "Bản đồ KML / KMZ, VN-2000".
 - Sau 1.0.29 (người dùng 26/10/2026, ảnh dòng "Phú Lý, ngày 20 tháng 10 năm 2026"): địa danh đầu dòng ngày tháng của bản in = NƠI ĐƠN VỊ CÔNG TÁC,
   KHÔNG phải xã có đất của dự án. Cột `du_an.dia_danh_don_vi` (KHÔNG đổi PHIEN_BAN_CSDL: schema.sql file mới; `csdl.dam_bao_cot_du_an` /
   `COT_DU_AN_THEM` thêm ở csdl.mo khi file có hộ và ở `lap_pa.luu_du_an`; `doc_du_an` file cũ trả ''), trong `TRUONG_DU_AN` và

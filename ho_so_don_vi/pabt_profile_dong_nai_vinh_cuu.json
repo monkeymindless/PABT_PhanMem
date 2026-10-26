@@ -82,5 +82,8 @@
       "cot_cong": ["G", "H", "I", "J", "K", "L", "M", "P", "Q", "R", "S", "T", "U", "V"],
       "cot_cuoi": "Y"
     }
+  },
+  "ban_do": {
+    "kinh_tuyen_truc": "107°45'"
   }
 }

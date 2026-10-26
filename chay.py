@@ -292,6 +292,27 @@ def tu_kiem(file_ra=None) -> int:
         assert (t.so_to, t.so_thua, float(t.dt_hinh), float(t.dt_trong_ranh)) == ('3', '7', 200.0, 100.0), (t.so_to, t.so_thua, t.dt_hinh)
         return 'đọc DXF (Python thuần): thửa 7 tờ 3, DT 200 m², trong ranh 100 m²'
 
+    def ban_do_kml():
+        # 1.0.32: quy đổi WGS84 <-> VN-2000 (so số PROJ / EPSG) + đọc / ghi .kmz (xuất rồi đọc lại một thửa)
+        import zipfile
+        from pabt import ban_do_kml, toa_do
+        x, y = toa_do.wgs84_sang_vn2000(11.1234567, 106.9876543, 107.75)
+        ts, quy_uoc, nguon = toa_do.tham_so_datum()
+        if quy_uoc == 'coordinate_frame' and all(abs(a - b) < 1e-6 for a, b in zip(ts, toa_do.TOWGS84)):
+            assert abs(x - 416531.023) < 0.01 and abs(y - 1230219.402) < 0.01, (x, y)     # file datum của máy khác QĐ 05/2007: không so
+        vong = [toa_do.vn2000_sang_wgs84(e, n, 107.75) for e, n in ((420000, 1220000), (420100, 1220000), (420100, 1220100),
+                                                                      (420000, 1220100), (420000, 1220000))]
+        td_kml = ' '.join(f'{kd:.9f},{vd:.9f}' for vd, kd in vong)
+        with tempfile.TemporaryDirectory() as td:
+            f = Path(td) / 'thu.kmz'
+            with zipfile.ZipFile(f, 'w') as z:
+                z.writestr('doc.kml', '<kml xmlns="http://www.opengis.net/kml/2.2"><Document><Placemark><name>Thửa 7 tờ 3</name>'
+                                      f'<Polygon><outerBoundaryIs><LinearRing><coordinates>{td_kml}</coordinates></LinearRing>'
+                                      '</outerBoundaryIs></Polygon></Placemark></Document></kml>')
+            t = ban_do_kml.phan_tich_kml(f, kinh_tuyen=107.75).thua[0]
+        assert (t.so_to, t.so_thua) == ('3', '7') and abs(float(t.dt_hinh) - 10000) < 1, (t.so_to, t.so_thua, t.dt_hinh)
+        return f'KMZ thửa 7 tờ 3, DT 10.000 m²; VN-2000 khớp EPSG (tham số: {nguon})'
+
     def nhan_dang_chu():
         # Tesseract OCR đóng kèm (thư mục tesseract cạnh PABT.exe) chạy được + có tiếng Việt. Windows 32-bit không chạy được bản
         # 64-bit: không coi là lỗi cài (PDF có chữ / Word / Excel vẫn đọc; bản scan thì dán chữ)
@@ -313,7 +334,8 @@ def tu_kiem(file_ra=None) -> int:
 
     for ten, ham in (('Phiên bản', phien_ban), ('Giao diện', giao_dien), ('Đọc PDF', pdf), ('Bộ đơn giá', bo_don_gia), ('Mẫu in', mau_in),
                      ('Hướng dẫn sử dụng', huong_dan), ('Hồ sơ địa phương, gói mẫu in', ho_so_dia_phuong),
-                     ('Bản vẽ CAD (.dxf)', ban_ve_cad), ('Nhận dạng chữ bản scan', nhan_dang_chu),
+                     ('Bản vẽ CAD (.dxf)', ban_ve_cad), ('Bản đồ KML / KMZ, VN-2000', ban_do_kml),
+                     ('Nhận dạng chữ bản scan', nhan_dang_chu),
                      ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('HTTPS', https),
                      ('Lập và in thử (dữ liệu giả lập)', lap_in_thu), ('Nhóm 5 - 6: kinh phí, vận động, báo cáo tiến độ', nhom_5_6)):
         buoc(ten, ham)

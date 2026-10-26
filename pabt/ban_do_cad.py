@@ -328,8 +328,13 @@ def dam_bao_bang(con) -> bool:
 
 
 def _khoa(so) -> str:
+    """Số tờ / thửa so khớp: số bỏ 0 đầu; chữ (lô rừng "TK126/K6") viết hoa, bỏ khoảng trắng, "-" "_" "." -> "/", bỏ 0 đầu từng
+    nhóm số ("TK126-K06" = "TK126/K6") - 1.0.32."""
     s = str(so or '').strip()
-    return str(int(s)) if s.isdigit() else s.upper()
+    if s.isdigit():
+        return str(int(s))
+    s = re.sub(r'[-_.\\]', '/', re.sub(r'\s+', '', s).upper())
+    return re.sub(r'(?<![0-9])0+(?=[0-9])', '', s)
 
 
 def chi_muc_thua(con) -> dict:

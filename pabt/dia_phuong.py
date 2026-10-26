@@ -252,6 +252,20 @@ def kiem_tra(hs: dict) -> list:
         mh = bgd.get('mo_hinh_vi_tri') if isinstance(bgd, dict) else None
         if not isinstance(bgd, dict) or mh is not None and str(mh).strip().upper() not in MO_HINH_VI_TRI:
             loi.append(f'bang_gia_dat.mo_hinh_vi_tri: một trong {", ".join(MO_HINH_VI_TRI)}.')
+    bd = hs.get('ban_do')                               # 1.0.32: kinh tuyến trục VN-2000, file datum Bentley (.dty)
+    if bd is not None:
+        if not isinstance(bd, dict):
+            loi.append('ban_do: phải là nhóm khóa (kinh_tuyen_truc, file_datum).')
+        else:
+            kt = bd.get('kinh_tuyen_truc')
+            if kt not in (None, ''):
+                try:
+                    from .toa_do import doc_kinh_tuyen
+                    doc_kinh_tuyen(kt)
+                except (ValueError, TypeError):
+                    loi.append('ban_do.kinh_tuyen_truc: độ (vd 107.75 hoặc "107°45\'"), trong khoảng 100° - 115°.')
+            if bd.get('file_datum') is not None and not isinstance(bd.get('file_datum'), str):
+                loi.append('ban_do.file_datum: đường dẫn file datum (.dty) dạng chữ.')
     cs = hs.get('chinh_sach_ho_tro')
     if cs is not None:
         if not isinstance(cs, dict):
