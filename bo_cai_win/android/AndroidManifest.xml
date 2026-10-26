@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LARC Field Mobile (Android): vỏ WebView chạy ứng dụng kiểm đếm (pabt/phieu_kiem_dem.html, chế độ "android") từ assets.
+     Dựng bằng bo_cai_win/dung_di_dong.py (aapt2 + javac + d8 + apksigner, không Gradle). versionCode / versionName do script đặt. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="vn.larc.field">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <application android:label="@string/ten_ung_dung" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
+        android:allowBackup="false" android:supportsRtl="false" android:hardwareAccelerated="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|density"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <provider android:name=".CungCapTep" android:authorities="vn.larc.field.tep" android:exported="false"
+            android:grantUriPermissions="true"/>
+    </application>
+</manifest>

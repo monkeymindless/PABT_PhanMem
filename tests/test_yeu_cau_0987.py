@@ -373,8 +373,8 @@ class TestPhieuKiemDem(CoSoMay):
             self.con.execute("UPDATE ho SET ho_ten = 'Tên </script><b>' WHERE thu_tu = 1")
         f = pk.xuat_phieu_kiem_dem_html(self.con, self.td / 'phieu.html')
         s = f.read_text(encoding='utf-8')
-        self.assertIn('PHIẾU KIỂM ĐẾM', s)
-        self.assertEqual(s.count('</script>'), 1)                    # tên hộ có "</script>" không đóng thẻ sớm
+        self.assertIn('LARC Field Mobile', s)                        # 1.0.32: ứng dụng di động thay phiếu một trang
+        self.assertEqual(s.count('</script>'), 2)                    # tên hộ có "</script>" không đóng thẻ sớm
         du = pk.du_lieu_phieu(self.con)
         self.assertEqual(len(du['ho']), self.con.execute('SELECT COUNT(*) FROM ho').fetchone()[0])
         self.assertTrue(du['goi_y'][3])

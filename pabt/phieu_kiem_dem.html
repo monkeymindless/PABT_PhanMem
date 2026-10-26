@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#2F5F9E"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<link rel="icon" href="@@BIEU_TUONG@@"/>
+<link rel="apple-touch-icon" href="@@BIEU_TUONG@@"/>
+@@DAU_PWA@@
+<title>LARC Field Mobile - @@TIEU_DE@@</title>
+<!-- LARC Field Mobile (phiếu kiểm đếm thực địa, 1.0.32): một file, chạy không cần mạng; dữ liệu ghi lưu trên máy này (localStorage +
+     IndexedDB cho ảnh); xuất file .json về phần mềm LARC trên máy tính (Công cụ -> Phiếu kiểm đếm thực địa -> Nhập kết quả). -->
+<style>
+:root{--chinh:#2F5F9E;--chinh_re:#264E83;--chinh_nhat:#EFF6FF;--nhan:#3B6FCE;--phu:#059669;--hoso:#1F6F66;--nguy_hiem:#B83A3A;
+--canh_bao:#C97A1A;--chu:#0F172A;--chu_phu:#475569;--vach:#CBD5E1;--nen:#F8FAFC}
+*{box-sizing:border-box;font-family:"Segoe UI","Inter",Roboto,Arial,sans-serif}
+body{margin:0;background:var(--nen);color:var(--chu);font-size:15px}
+.so{font-family:Consolas,"Roboto Mono",monospace;font-variant-numeric:tabular-nums}
+header{background:linear-gradient(90deg,#1E3F6E,#2F5F9E);color:#fff;padding:7px 12px;display:flex;align-items:center;gap:10px}
+header img{width:34px;height:34px;border-radius:7px;background:#fff;flex:0 0 auto}
+header .chu{min-width:0}header .ten{font-weight:700;font-size:15px;line-height:1.2}
+header .phu{font-size:11px;color:#DBEAFE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .huy{margin-left:auto;background:rgba(255,255,255,.18);border-radius:10px;padding:2px 8px;font-size:11px;white-space:nowrap}
+.dieu_huong{display:flex;gap:6px;padding:8px 10px;background:#fff;border-bottom:1px solid var(--vach);align-items:center;flex-wrap:wrap}
+.dieu_huong select{flex:1 1 180px;min-width:0}.dieu_huong input{flex:1 1 140px;min-width:0}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px;padding:8px 10px}
+.the_so{background:#fff;border:1px solid var(--vach);border-left:4px solid var(--chinh);border-radius:6px;padding:4px 8px;min-height:44px}
+.the_so .nhan{font-size:11px;color:var(--chu_phu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.the_so .gt{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.the_so:last-child{grid-column:span 2}
+.thanh_the{display:flex;overflow-x:auto;background:#fff;border-bottom:1px solid var(--vach);position:sticky;top:0;z-index:15}
+.thanh_the button{flex:0 0 auto;background:none;border:0;border-bottom:3px solid transparent;color:var(--chu_phu);padding:10px 12px;
+font-size:13px;font-weight:600;margin:0;width:auto;border-radius:0}
+.thanh_the button.chon{color:var(--chinh);border-bottom-color:var(--nhan)}
+.trang{display:none;max-width:900px;margin:0 auto;padding:10px 10px 90px}.trang.hien{display:block}
+.khung{background:#fff;border:1px solid var(--vach);border-radius:8px;padding:10px;margin-bottom:10px}
+.khung h3{margin:0 0 6px;font-size:14px;color:var(--chinh)}
+label{display:block;font-size:12px;font-weight:600;color:var(--chu_phu);margin:7px 0 3px}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--vach);border-radius:6px;font-size:15px;background:#fff;color:var(--chu)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--nhan);outline-offset:-1px}
+.luoi{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+button{background:var(--chinh);color:#fff;border:0;border-radius:6px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer}
+button:active{background:var(--chinh_re)}button.phu{background:#fff;color:var(--chinh);border:1px solid var(--vach)}
+button.xoa{background:#fff;color:var(--nguy_hiem);border:1px solid #FECACA}button.xanh{background:var(--phu)}
+button.nho{padding:4px 8px;font-size:12px}.hang_nut{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.chip_nhom{display:flex;flex-wrap:wrap;gap:6px}.chip{background:#fff;color:var(--chu);border:1px solid var(--vach);border-radius:16px;
+padding:6px 11px;font-size:13px;font-weight:500}.chip.chon{background:var(--chinh_nhat);border-color:var(--chinh);color:var(--chinh);font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13px}th{background:var(--chinh);color:#fff;font-weight:600;height:34px;padding:4px 6px;
+text-align:left}td{padding:5px 6px;border-bottom:1px solid #E2E8F0;vertical-align:top}tr:nth-child(even) td{background:#F8FAFC}
+.ghi{font-size:12px;color:var(--chu_phu)}.canh_bao{color:var(--canh_bao)}.loi{color:var(--nguy_hiem)}
+.anh{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}.anh figure{margin:0;background:#fff;
+border:1px solid var(--vach);border-radius:6px;padding:4px}.anh img{width:100%;height:110px;object-fit:cover;border-radius:4px}
+.anh figcaption{font-size:11px;color:var(--chu_phu);word-break:break-all}
+#ban_do{width:100%;height:58vh;min-height:300px;background:#E2E8F0;border:1px solid var(--vach);border-radius:8px;touch-action:none;display:block}
+.chu_giai{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin-top:6px}.chu_giai i{display:inline-block;width:12px;height:12px;
+border-radius:3px;margin-right:4px;vertical-align:-2px}
+#tt_gps{font-size:13px;margin-top:6px}#tt_thua{margin-top:8px}
+body.chua_du_lieu>*:not(#man_chao):not(.thong_bao):not(script){display:none!important}
+#man_chao{display:none;max-width:640px;margin:0 auto;padding:16px 12px 40px}body.chua_du_lieu #man_chao{display:block}
+#man_chao .dau{display:flex;align-items:center;gap:12px;margin:8px 0 14px}#man_chao .dau img{width:56px;height:56px;border-radius:12px}
+#man_chao h1{font-size:19px;margin:0;color:var(--chinh)}#man_chao ol{padding-left:20px;font-size:14px;line-height:1.5}
+.nut_tep{display:block;text-align:center;background:var(--chinh);color:#fff;border-radius:8px;padding:14px;font-weight:700;font-size:15px;cursor:pointer}
+.nut_tep input{display:none}.du_an_luu{display:flex;gap:8px;align-items:center;border-bottom:1px solid #E2E8F0;padding:8px 0}
+.du_an_luu .ten{flex:1;min-width:0;font-weight:600}.du_an_luu .ghi{font-weight:400}
+header .doi{margin-left:6px;white-space:nowrap;flex:0 0 auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);padding:4px 8px;font-size:12px}
+@media (display-mode: standalone){header{padding-top:max(7px,env(safe-area-inset-top))}}
+.thong_bao{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0F172A;color:#fff;padding:9px 14px;border-radius:8px;
+font-size:13px;z-index:50;display:none;max-width:92vw}
+</style></head><body>
+<header><img alt="LARC" src="@@BIEU_TUONG@@"/><div class="chu"><div class="ten">LARC Field Mobile</div>
+<div class="phu" title="Phương án bồi thường, hỗ trợ, tái định cư · kiểm đếm thực địa, không cần mạng">@@TIEU_DE@@ · kiểm đếm thực địa</div></div>
+<div class="huy">v@@PHIEN_BAN@@</div><button class="doi" id="b_doi_du_an" type="button" style="display:none">Dự án</button></header>
+<div class="dieu_huong"><button class="phu nho" id="b_truoc" type="button" title="Hộ trước">◀</button>
+<select id="cb_ho" aria-label="Chọn hộ"></select><button class="phu nho" id="b_sau" type="button" title="Hộ sau">▶</button>
+<input id="o_tim" placeholder="Tìm hộ: tên, CCCD, tờ/thửa (không cần dấu)"/>
+<button class="phu nho" id="b_ho_moi" type="button">+ Hộ mới</button><button class="nho xanh" id="b_luu_nhanh" type="button">Lưu .json hộ này</button></div>
+<div class="kpi" id="kpi"></div>
+<nav class="thanh_the" id="thanh_the"></nav>
+
+<section class="trang" id="t0"><div class="khung"><h3>Chủ sử dụng</h3><div class="luoi">
+<div><label for="h_ten">Chủ hộ / người nhận khoán (trên sổ)</label><input id="h_ten"/></div>
+<div><label for="h_nsd">Người trực tiếp sử dụng, canh tác</label><input id="h_nsd"/></div>
+<div><label for="h_cccd">Số CCCD</label><input id="h_cccd" inputmode="numeric"/></div>
+<div><label for="h_nam_sinh">Năm sinh</label><input id="h_nam_sinh" inputmode="numeric"/></div>
+<div><label for="h_sdt">Điện thoại</label><input id="h_sdt" inputmode="tel"/></div>
+<div><label for="h_nam_tao_lap">Năm tạo lập tài sản</label><input id="h_nam_tao_lap" inputmode="numeric"/></div></div>
+<label for="h_dia_chi">Địa chỉ</label><input id="h_dia_chi"/><label for="h_ghi_chu">Ghi chú</label><input id="h_ghi_chu"/>
+<div class="hang_nut"><button class="phu" id="b_gps_ho" type="button">Lấy tọa độ tại chỗ (GPS)</button></div><div class="ghi so" id="gps_ho"></div></div>
+<div class="khung"><h3>Thửa của hộ trong dự án</h3><div id="thua_du_an" class="ghi"></div></div>
+<div class="khung"><h3>Đất kiểm đếm thực tế</h3><div class="chip_nhom" id="kieu_dat"></div>
+<div class="luoi" id="o_dc"><div><label for="d_to">Tờ bản đồ</label><input id="d_to" inputmode="numeric"/></div>
+<div><label for="d_thua">Thửa</label><input id="d_thua" inputmode="numeric"/></div>
+<div><label for="d_loai">Loại đất</label><input id="d_loai" placeholder="ONT, CLN, RSX…"/></div>
+<div><label for="d_dt">Diện tích (m²)</label><input id="d_dt" inputmode="decimal"/></div></div>
+<div class="luoi" id="o_ln" style="display:none"><div><label for="d_tk">Tiểu khu</label><input id="d_tk" inputmode="numeric"/></div>
+<div><label for="d_khoanh">Khoảnh</label><input id="d_khoanh" inputmode="numeric"/></div>
+<div><label for="d_lo">Lô</label><input id="d_lo"/></div><div><label for="d_ha">Diện tích (ha)</label><input id="d_ha" inputmode="decimal"/></div>
+<div><label for="d_loai2">Loại đất</label><input id="d_loai2" placeholder="RSX, RPH…"/></div></div>
+<div class="hang_nut"><button id="b_them_dat" type="button">Thêm đất</button></div><div id="bang_dat"></div></div></section>
+
+<section class="trang" id="t1"><div class="khung"><h3>Nhà ở (mẫu biên bản QĐ 42)</h3>
+<label for="n_loai">Loại nhà theo bộ đơn giá</label><select id="n_loai"></select><div id="n_ket_cau"></div>
+<div class="luoi"><div><label for="n_dt">Diện tích (m²) - được ghi 4 x 6,7 hoặc (a x b) + (c x d)</label><input id="n_dt" inputmode="decimal"/>
+<div class="ghi so" id="n_dt_kq"></div></div><div><label for="n_tl">Tỷ lệ %</label><input id="n_tl" inputmode="decimal" value="100"/></div></div>
+<label for="n_gc">Ghi chú</label><input id="n_gc"/><div class="hang_nut"><button id="b_them_nha" type="button">Thêm nhà vào hộ</button></div></div>
+<div class="khung"><h3>Nhà đã ghi</h3><div id="bang_nha"></div></div></section>
+
+<section class="trang" id="t2"><div class="khung"><h3>Vật kiến trúc, công trình</h3>
+<label for="v_ten">Tên (gõ vài chữ để chọn trong bộ đơn giá, hoặc ghi như biên bản)</label><input id="v_ten" list="ds_vkt"/>
+<datalist id="ds_vkt"></datalist><div class="luoi"><div><label for="v_sl">Khối lượng / kích thước</label>
+<input id="v_sl" placeholder="12,5 | 1,5 x 2,4 x 1,2 | (3,4 x 18) + (4,2 x 5)"/><div class="ghi so" id="v_sl_kq"></div></div>
+<div><label for="v_dvt">Đơn vị tính</label><input id="v_dvt"/></div><div><label for="v_tl">Tỷ lệ %</label><input id="v_tl" inputmode="decimal" value="100"/></div></div>
+<label for="v_gc">Ghi chú</label><input id="v_gc"/><p class="ghi">Dòng biên bản nhiều cỡ ống ("Ống nhựa: ϕ 114: 3300m; ϕ 90: 3400m") ghi cả vào ô Tên,
+để trống Khối lượng: phần mềm trên máy tính tách từng cỡ.</p><div class="hang_nut"><button id="b_them_vkt" type="button">Thêm vào hộ</button></div></div>
+<div class="khung"><h3>Vật kiến trúc đã ghi</h3><div id="bang_vkt"></div></div></section>
+
+<section class="trang" id="t3"><div class="khung"><h3>Cây trồng, vật nuôi</h3><div class="chip_nhom" id="kieu_cay"></div>
+<label for="c_ten">Loài cây / vật nuôi</label><input id="c_ten" list="ds_cay"/><datalist id="ds_cay"></datalist>
+<div class="luoi"><div><label for="c_sl">Số lượng</label><input id="c_sl" inputmode="decimal"/></div>
+<div><label for="c_nam">Năm trồng</label><input id="c_nam" inputmode="numeric" placeholder="vd 2012"/></div>
+<div><label for="c_kieu">Số đo</label><select id="c_kieu"><option value="">Không đo</option><option value="dk">Đường kính (cm)</option>
+<option value="cv">Chu vi (cm)</option></select></div><div><label for="c_do">Số đo (cm)</label><input id="c_do" placeholder="15 hoặc 10-15"/></div>
+<div><label for="c_tl">Tỷ lệ %</label><input id="c_tl" inputmode="decimal" value="100"/></div></div>
+<label for="c_gc">Ghi chú</label><input id="c_gc"/><label for="c_nhanh">Ghi nhanh kiểu biên bản (mỗi dòng một loại): Tràm 35c/15cm · Xoài trồng năm 2012: 650 cây</label>
+<textarea id="c_nhanh" rows="3"></textarea><div class="hang_nut"><button id="b_them_cay" type="button">Thêm vào hộ</button></div></div>
+<div class="khung"><h3>Cây trồng, vật nuôi đã ghi</h3><div id="bang_cay"></div></div></section>
+
+<section class="trang" id="t4"><div class="khung"><h3>Ảnh biên bản viết tay, hiện trạng</h3>
+<p class="ghi">Chụp từng trang biên bản. "Làm rõ chữ" xóa dòng kẻ chấm, làm đậm nét bút (lưu thêm một ảnh, giữ ảnh gốc). Ảnh lưu trên máy này,
+gửi kèm file .json.</p><input id="a_file" type="file" accept="image/*" capture="environment" multiple/>
+<div class="anh" id="ds_anh" style="margin-top:8px"></div></div>
+<div class="khung"><h3>Ghi lại nội dung biên bản</h3><p class="ghi">Mỗi tài sản / cây một dòng, ghi như trên biên bản (vd "Mái che kt: (11m x 3,8m) +
+(1,3 x 18m)", "Giếng đào ϕ 1m sâu 8m", "Tràm trồng năm 2023 ĐK gốc 10-15cm: 2700 cây"). Phần mềm trên máy tính tự đọc, phân loại, áp giá.</p>
+<textarea id="bb_chu" rows="7"></textarea><div class="hang_nut"><button id="b_bb_dua" type="button">Đưa các dòng vào hộ</button></div></div></section>
+
+<section class="trang" id="t5"><div class="khung"><h3>Bản đồ thửa đất, định vị GPS</h3>
+<div class="hang_nut" style="margin-top:0"><label class="phu" style="margin:0"><input id="m_file" type="file" accept=".kml,.kmz" multiple
+style="display:none"/><span class="chip">Nạp file KML / KMZ</span></label><button class="phu nho" id="b_gps" type="button">Bật định vị</button>
+<button class="phu nho" id="b_vua" type="button">Vừa khung</button></div>
+<canvas id="ban_do" style="margin-top:8px"></canvas><div class="chu_giai" id="chu_giai"></div><div id="tt_gps" class="so"></div>
+<div id="tt_thua" class="khung" style="display:none"></div></div></section>
+
+<section class="trang" id="t6"><div class="khung"><h3>Xuất kết quả về máy tính</h3>
+<label><input id="x_anh" type="checkbox" checked style="width:auto"/> Gửi kèm ảnh (file lớn hơn)</label>
+<div class="hang_nut"><button class="xanh" id="b_xuat_ho" type="button">Lưu phiếu hộ đang chọn</button>
+<button id="b_xuat_ca" type="button">Lưu cả dự án (mọi hộ đã ghi)</button></div>
+<p class="ghi">Gửi file .json qua Zalo / cáp USB / mạng nội bộ về máy tính, trong LARC chọn Công cụ → Phiếu kiểm đếm thực địa… → Nhập kết quả.
+Phần mềm tự tìm hộ theo CCCD, tờ / thửa (lô rừng), họ tên; hộ chưa có thì hỏi thêm hộ mới.</p></div>
+<div class="khung"><h3>Hộ đã ghi trên máy này</h3><div id="bang_xuat"></div>
+<div class="hang_nut"><button class="xoa" id="b_xoa_het" type="button">Xóa mọi dữ liệu đã ghi trên máy này</button></div></div></section>
+<div class="thong_bao" id="thong_bao"></div>
+
+<div id="man_chao"><div class="dau"><img alt="LARC" src="@@BIEU_TUONG@@"/><div><h1>LARC Field Mobile</h1>
+<div class="ghi">Kiểm đếm thực địa · phiên bản @@PHIEN_BAN@@ · chạy không cần mạng</div></div></div>
+<div class="khung"><h3>Mở dữ liệu dự án</h3>
+<ol><li>Trên máy tính: phần mềm LARC → Công cụ → Phiếu kiểm đếm thực địa → <b>Xuất dữ liệu cho ứng dụng điện thoại</b>.</li>
+<li>Gửi file dữ liệu (.json) sang điện thoại (Zalo, email, cáp USB…).</li><li>Bấm nút dưới đây, chọn file đó.</li></ol>
+<label class="nut_tep">Chọn file dữ liệu dự án…<input id="c_file" type="file"/></label>
+<p class="ghi" id="c_tb"></p></div>
+<div class="khung" id="c_khung_ds" style="display:none"><h3>Dự án đã mở trên điện thoại này</h3><div id="c_ds"></div>
+<p class="ghi">Số liệu đã ghi lưu trên điện thoại theo từng dự án; mở lại file dữ liệu mới của cùng dự án không mất số liệu đã ghi.</p></div>
+<div class="khung"><h3>Lưu ý</h3><p class="ghi">Số liệu ghi ở thực địa nằm trong bộ nhớ của ứng dụng trên điện thoại này. Xuất file .json gửi về
+máy tính thường xuyên; gỡ ứng dụng (hoặc xóa dữ liệu trang web) là mất số liệu chưa gửi.</p></div></div>
+
+<script id="vo_ung_dung">
+"use strict";
+// Vỏ ứng dụng (bản cài Android / PWA iPhone): dữ liệu dự án không nhúng sẵn mà mở từ file "larc_field_du_lieu" (LARC trên máy tính xuất ra),
+// cất ở IndexedDB "larc_field" (localStorage quá nhỏ cho bản đồ thửa). Bản một file (.html xuất từ LARC): CHE_DO "tep" - vỏ không làm gì.
+(function () {
+  const CHE_DO = "@@CHE_DO@@", LOAI = "larc_field_du_lieu", KHOA_HH = "larc_field_hien_hanh";
+  window.LARC_CHE_DO = CHE_DO;
+  if (CHE_DO === "tep") return;
+  const $ = id => document.getElementById(id);
+  const kho = () => new Promise(ok => { if (!window.indexedDB) { ok(null); return; } const r = indexedDB.open("larc_field", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("du_lieu", {keyPath: "du_an"}); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); });
+  const lam = (db, che, ham) => new Promise(ok => { const t = db.transaction("du_lieu", che), q = ham(t.objectStore("du_lieu"));
+    q.onsuccess = () => ok(q.result); q.onerror = () => ok(null); });
+  function tb(chu, loi) { $("c_tb").textContent = chu; $("c_tb").className = loi ? "ghi loi" : "ghi"; }
+  async function veDs(db) { const ds = db ? (await lam(db, "readonly", s => s.getAll())) || [] : [], hop = $("c_ds"); hop.textContent = "";
+    $("c_khung_ds").style.display = ds.length ? "" : "none";
+    for (const r of ds) { const d = document.createElement("div"); d.className = "du_an_luu";
+      const t = document.createElement("div"); t.className = "ten"; t.textContent = r.du_an || "(Dự án)";
+      const g = document.createElement("div"); g.className = "ghi"; g.textContent = (r.du_lieu.ho || []).length + " hộ · nhận lúc " + new Date(r.luc).toLocaleString("vi-VN");
+      t.appendChild(g); const mo = document.createElement("button"); mo.type = "button"; mo.className = "nho"; mo.textContent = "Mở";
+      mo.onclick = () => { localStorage.setItem(KHOA_HH, r.du_an); location.reload(); };
+      const xoa = document.createElement("button"); xoa.type = "button"; xoa.className = "xoa nho"; xoa.textContent = "Bỏ";
+      xoa.onclick = async () => { if (!confirm("Bỏ dữ liệu dự án \"" + r.du_an + "\" khỏi điện thoại? Số liệu đã ghi của dự án vẫn giữ (mở lại file dữ liệu để tiếp tục).")) return;
+        await lam(db, "readwrite", s => s.delete(r.du_an)); if (localStorage.getItem(KHOA_HH) === r.du_an) localStorage.removeItem(KHOA_HH); veDs(db); };
+      d.append(t, mo, xoa); hop.appendChild(d); } }
+  async function nhanFile(f, db) { let du;
+    try { du = JSON.parse((await f.text()).replace(/^﻿/, "")); } catch (e) { tb("File không đọc được (không phải file dữ liệu LARC).", 1); return; }
+    if (du && du.ket_qua && !du.loai) { tb("Đây là file KẾT QUẢ kiểm đếm (gửi về máy tính), không phải file dữ liệu dự án.", 1); return; }
+    if (!du || du.loai !== LOAI || !du.du_lieu || !Array.isArray(du.du_lieu.ho)) { tb("File không phải dữ liệu dự án do LARC xuất cho ứng dụng điện thoại.", 1); return; }
+    const ten = du.du_lieu.du_an || "Dự án";
+    if (!db) { tb("Trình duyệt không cho lưu dữ liệu (chế độ ẩn danh?). Mở bằng trình duyệt thường / ứng dụng đã cài.", 1); return; }
+    await lam(db, "readwrite", s => s.put({du_an: ten, luc: new Date().toISOString(), du_lieu: du.du_lieu}));
+    localStorage.setItem(KHOA_HH, ten); location.reload(); }
+  async function batDau() { const db = await kho(), hh = localStorage.getItem(KHOA_HH);
+    const r = db && hh ? await lam(db, "readonly", s => s.get(hh)) : null;
+    $("c_file").addEventListener("change", e => { const f = e.target.files[0]; e.target.value = ""; if (f) nhanFile(f, db); });
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    if (!r) { document.body.classList.add("chua_du_lieu"); veDs(db); return; }
+    window.LARC_DU_LIEU = r.du_lieu; const b = $("b_doi_du_an"); b.style.display = "";
+    const phu = document.querySelector("header .phu"); phu.textContent = (r.du_an || "Dự án") + " · kiểm đếm thực địa";
+    document.title = "LARC Field Mobile - " + (r.du_an || "Dự án");
+    b.addEventListener("click", () => { document.body.classList.add("chua_du_lieu"); veDs(db); window.scrollTo(0, 0); });
+    const ma = $("ma_chinh"), s = document.createElement("script"); s.textContent = ma.textContent; document.body.appendChild(s); }
+  if (CHE_DO === "pwa" && "serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
+  // iPhone / iPad: ô chọn file có đuôi lạ (.kml, .kmz) bị làm mờ - bỏ lọc đuôi, ứng dụng tự kiểm nội dung
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1))
+    document.addEventListener("DOMContentLoaded", () => { const m = $("m_file"); if (m) m.removeAttribute("accept"); });
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", batDau); else batDau();
+})();
+</script>
+
+<script id="ma_chinh">
+"use strict";
+const DU = window.LARC_DU_LIEU || @@DU_LIEU@@;
+const PHIEN_BAN_PHIEU = 2;
+const KHOA_LUU = "larc_kd_" + DU.du_an;
+const THE = ["0. Hồ sơ & Đất", "1. Nhà ở (QĐ 42)", "2. Vật KT", "3. Cây trồng", "4. Ảnh biên bản", "5. Bản đồ KML/GPS", "6. Xuất .JSON"];
+const KET_CAU = [["khung_cot", "Khung, cột", ["Gỗ", "Sắt", "Xây gạch", "BTCT"]],
+  ["tuong", "Tường", ["Gỗ + xây", "Xây tô sơn nước", "Ốp gạch men", "Vách tôn", "Giấy dầu"]],
+  ["mai", "Mái", ["Tôn", "Ngói", "Giấy dầu", "BTCT"]], ["tran", "Trần", ["Không trần", "Thạch cao", "Tôn lạnh", "Nhựa"]],
+  ["nen", "Nền", ["Xi măng", "Gạch men", "Đất"]], ["cua", "Cửa đi", ["Không", "Nhôm kính", "Sắt kính", "Gỗ tốt"]]];
+const $ = id => document.getElementById(id);
+let ST = {ho: {}, moi: 0, chon: "", the: 0};
+try { ST = Object.assign(ST, JSON.parse(localStorage.getItem(KHOA_LUU) || "{}") || {}); } catch (e) { /* lưu hỏng: bắt đầu lại */ }
+function luu() { try { localStorage.setItem(KHOA_LUU, JSON.stringify(ST)); } catch (e) { bao("Bộ nhớ trình duyệt đầy: xuất .json rồi xóa bớt.", 1); } }
+function boDau(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase(); }
+function bao(chu, loi) { const t = $("thong_bao"); t.textContent = chu; t.style.background = loi ? "#B83A3A" : "#0F172A"; t.style.display = "block";
+  clearTimeout(bao._h); bao._h = setTimeout(() => { t.style.display = "none"; }, 3200); }
+function soVN(x, le) { if (x === null || x === undefined || isNaN(x)) return ""; return Number(x).toLocaleString("vi-VN", {maximumFractionDigits: le === undefined ? 2 : le}); }
+function el(the, thuoc, con) { const e = document.createElement(the); if (thuoc) for (const k in thuoc) { if (k === "text") e.textContent = thuoc[k];
+  else if (k === "cls") e.className = thuoc[k]; else if (k.startsWith("on")) e.addEventListener(k.slice(2), thuoc[k]); else e.setAttribute(k, thuoc[k]); }
+  for (const c of (con || [])) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); return e; }
+
+// ---------------------------------------------------------------- hộ
+function dsHo() {
+  const ra = DU.ho.map(h => ({khoa: String(h.ma), stt: h.stt, ten: h.ten, cccd: h.cccd, dia_chi: h.dia_chi, sdt: h.sdt || "", thua: h.thua}));
+  for (const k of Object.keys(ST.ho)) if (k.startsWith("moi_")) { const t = ST.ho[k].tt || {};
+    ra.push({khoa: k, stt: "", ten: t.ho_ten || "(hộ mới)", cccd: t.so_cccd || "", dia_chi: t.dia_chi || "", sdt: t.sdt || "", thua: [], moi: true}); }
+  return ra;
+}
+function hoGoc(k) { return dsHo().find(h => h.khoa === k); }
+function hoST(k) { if (!k) return {tt: {}, dat: [], dong: []}; // chưa chọn hộ: không tạo mục rỗng
+  const h = ST.ho[k] || (ST.ho[k] = {}); h.tt = h.tt || {}; h.dat = h.dat || []; h.dong = h.dong || []; return h; }
+function coHo() { if (ST.chon) return true; bao("Chưa có hộ: bấm + Hộ mới hoặc chọn hộ.", 1); return false; }
+function coDuLieu(k) { const h = ST.ho[k]; return !!h && ((h.dong || []).length || (h.dat || []).length || Object.keys(h.tt || {}).length || h.gps || h.so_anh); }
+function locHo() {
+  const tk = boDau($("o_tim").value).trim(), cb = $("cb_ho"); cb.textContent = "";
+  for (const h of dsHo()) {
+    const chu = (h.stt ? h.stt + ". " : "") + h.ten + (h.dia_chi ? " - " + h.dia_chi : "");
+    if (tk && !boDau(chu + " " + h.cccd + " " + h.thua.map(t => t.to + "/" + t.thua).join(" ")).includes(tk)) continue;
+    const n = ST.ho[h.khoa] ? (ST.ho[h.khoa].dong || []).length : 0;
+    cb.appendChild(el("option", {value: h.khoa, text: chu + (n ? "  [" + n + "]" : "")}));
+  }
+  if (ST.chon && [...cb.options].some(o => o.value === ST.chon)) cb.value = ST.chon; else if (cb.options.length) ST.chon = cb.value;
+  veTatCa();
+}
+function chonHo(k) { ST.chon = k; luu(); $("cb_ho").value = k; veTatCa(); }
+function buocHo(d) { const cb = $("cb_ho"), i = cb.selectedIndex + d; if (i >= 0 && i < cb.options.length) chonHo(cb.options[i].value); }
+function hoMoi() { const ten = prompt("Họ tên chủ hộ / người sử dụng của hộ mới:"); if (!ten || !ten.trim()) return;
+  ST.moi = (ST.moi || 0) + 1; const k = "moi_" + ST.moi; hoST(k).tt.ho_ten = ten.trim(); ST.chon = k; luu(); $("o_tim").value = ""; locHo(); moThe(0); }
+
+// ---------------------------------------------------------------- số, biểu thức kích thước
+function docSo(s) { s = String(s || "").trim().replace(/\s/g, ""); if (!s) return NaN;
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, ""); return Number(s.replace(",", ".")); }
+function tinh(ct) { // + - * / ( ) trên số kiểu Việt Nam; sai -> NaN
+  const tok = String(ct).replace(/,/g, ".").match(/\d+(?:\.\d+)?|[-+*/()]/g) || []; let i = 0;
+  function nt() { let v = hs(); while (tok[i] === "+" || tok[i] === "-") { const o = tok[i++]; const b = hs(); v = o === "+" ? v + b : v - b; } return v; }
+  function hs() { let v = ns(); while (tok[i] === "*" || tok[i] === "/") { const o = tok[i++]; const b = ns(); v = o === "*" ? v * b : v / b; } return v; }
+  function ns() { const t = tok[i++]; if (t === "(") { const v = nt(); i++; return v; } if (t === "-") return -ns(); return Number(t); }
+  try { const v = nt(); return i === tok.length ? v : NaN; } catch (e) { return NaN; } }
+function bieuThuc(chu) { // như hieu_tai_san._phan_tich_bieu_thuc: {ct (gửi đi), dvt ('m2'/'m3'/''), gt}
+  let s = String(chu || "").trim().replace(/[×*]/g, "x"); if (!s) return null;
+  if (/^[\d.,]+$/.test(s.replace(/\s/g, ""))) return {ct: s.replace(/\s/g, ""), dvt: "", gt: docSo(s)};
+  const dv = (s.match(/\s*(m2|m²|m3|m³)\s*$/i) || [])[1] || ""; if (dv) s = s.slice(0, s.length - s.match(/\s*(m2|m²|m3|m³)\s*$/i)[0].length);
+  if (/cm/i.test(s)) return null;
+  const phan = s.split("+"), cong = [], loai = new Set(); let max = 0;
+  for (const p of phan) { const ts = [...p.replace(/[()]/g, "").matchAll(/(\d+(?:[.,]\d+)?)\s*(m)?(?![a-wyz0-9²³])/gi)].map(m => [m[1], m[2] || ""]);
+    if (ts.length < 1 || ts.length > 3) return null; max = Math.max(max, ts.length);
+    if (ts.length === 1) loai.add(1); else if (ts.length === 2 || (!ts[2][1] && (ts[0][1] || ts[1][1])) || /m2|m²/i.test(dv)) loai.add(2); else loai.add(3);
+    cong.push(ts.map(t => t[0]).join("x")); }
+  if (/m3|m³/i.test(dv)) { loai.clear(); loai.add(3); }
+  if (loai.size !== 1) return null;
+  const l = [...loai][0], ct = cong.length === 1 ? cong[0] : cong.map(x => "(" + x + ")").join("+");
+  return {ct: ct, dvt: l === 3 ? "m3" : l === 2 ? "m2" : "", gt: tinh(ct.replace(/x/g, "*"))};
+}
+function hienBieuThuc(o, kq) { const b = bieuThuc($(o).value); $(kq).textContent = b && !isNaN(b.gt) ? "= " + soVN(b.gt, 4) + " " + (b.dvt || "") : ($(o).value ? "chưa đọc được: ghi lại hoặc để máy tính đọc" : ""); }
+
+// ---------------------------------------------------------------- dòng kiểm đếm
+function themDong(d) { if (!coHo()) return; const h = hoST(ST.chon); d.luc = new Date().toISOString(); h.dong.push(d); luu(); veTatCa(); bao("Đã thêm: " + d.ten); }
+function bangDong(id, loc) {
+  const h = ST.ho[ST.chon], hop = $(id); hop.textContent = ""; const ds = ((h && h.dong) || []).map((d, i) => [d, i]).filter(x => loc(x[0]));
+  if (!ds.length) { hop.appendChild(el("p", {cls: "ghi", text: "Chưa có dòng nào."})); return; }
+  const tb = el("table", {}, [el("tr", {}, ["Tên", "SL", "ĐVT", "Ghi chú", ""].map(t => el("th", {text: t})))]);
+  for (const [d, i] of ds) {
+    const b = el("button", {cls: "xoa nho", type: "button", text: "Xóa", onclick: () => { h.dong.splice(i, 1); luu(); veTatCa(); }});
+    tb.appendChild(el("tr", {}, [el("td", {text: d.ten + (d.ma_dm ? " (" + d.ma_dm + ")" : "") + (d.so_do ? " · " + (d.kieu === "cv" ? "CV " : "ĐK ") + d.so_do + " cm" : "")}),
+      el("td", {cls: "so", text: d.so_luong || ""}), el("td", {text: d.dvt || ""}), el("td", {cls: "ghi", text: d.ghi_chu || ""}), el("td", {}, [b])]));
+  }
+  hop.appendChild(tb);
+}
+function laNha(d) { return d.nhom === "nha"; }
+function laCay(d) { return d.muc === 3 || d.muc === 7; }
+function laVkt(d) { return d.muc === 2 && d.nhom !== "nha"; }
+
+// ---------------------------------------------------------------- thẻ 0
+const O_HO = ["ten", "nsd", "cccd", "nam_sinh", "sdt", "dia_chi", "nam_tao_lap", "ghi_chu"];
+const K_HO = {ten: "ho_ten", nsd: "nguoi_su_dung", cccd: "so_cccd", nam_sinh: "nam_sinh", sdt: "sdt", dia_chi: "dia_chi", nam_tao_lap: "nam_tao_lap", ghi_chu: "ghi_chu"};
+function veHoSo() {
+  const g = hoGoc(ST.chon) || {}, h = hoST(ST.chon);
+  const goc = {ho_ten: g.ten, so_cccd: g.cccd, dia_chi: g.dia_chi, sdt: g.sdt};
+  for (const o of O_HO) { const k = K_HO[o]; $("h_" + o).value = h.tt[k] !== undefined ? h.tt[k] : (goc[k] || ""); }
+  $("gps_ho").textContent = h.gps ? "GPS " + h.gps.lat.toFixed(6) + ", " + h.gps.lon.toFixed(6) + " (±" + Math.round(h.gps.acc) + " m) · VN-2000 " + chuVN2000(h.gps.lat, h.gps.lon) : "";
+  $("thua_du_an").textContent = (g.thua || []).length ? g.thua.map(t => "Tờ " + t.to + " thửa " + t.thua + " " + (t.loai || "") + " " + (t.dt ? soVN(docSo(t.dt)) + " m²" : "")).join(" · ") : "Chưa có thửa trong dự án.";
+  const hop = $("bang_dat"); hop.textContent = "";
+  if (h.dat.length) { const tb = el("table", {}, [el("tr", {}, ["Đất", "Loại", "Diện tích (m²)", ""].map(t => el("th", {text: t})))]);
+    h.dat.forEach((d, i) => tb.appendChild(el("tr", {}, [el("td", {text: d.lo ? "TK " + d.tieu_khu + " - K " + d.khoanh + " - Lô " + d.lo : "Tờ " + d.so_to + " thửa " + d.so_thua}),
+      el("td", {text: d.loai_dat || ""}), el("td", {cls: "so", text: soVN(dtDat(d))}),
+      el("td", {}, [el("button", {cls: "xoa nho", type: "button", text: "Xóa", onclick: () => { h.dat.splice(i, 1); luu(); veTatCa(); }})])])));
+    hop.appendChild(tb); }
+}
+function dtDat(d) { return d.dt_ha ? docSo(d.dt_ha) * 10000 : docSo(d.dt_thu_hoi); }
+function luuHoSo() { if (!ST.chon) return; const h = hoST(ST.chon); for (const o of O_HO) h.tt[K_HO[o]] = $("h_" + o).value.trim(); luu(); veKpi(); }
+let KIEU_DAT = "dc";
+function veKieu(id, ds, gt, doi) { const hop = $(id); hop.textContent = "";
+  for (const [k, t] of ds) hop.appendChild(el("button", {cls: "chip" + (k === gt ? " chon" : ""), type: "button", text: t, onclick: () => doi(k)})); }
+function themDat() {
+  if (!coHo()) return;
+  const h = hoST(ST.chon); let d;
+  if (KIEU_DAT === "dc") { d = {so_to: $("d_to").value.trim(), so_thua: $("d_thua").value.trim(), loai_dat: $("d_loai").value.trim().toUpperCase(), dt_thu_hoi: $("d_dt").value.trim()};
+    if (!d.so_to || !d.so_thua) { bao("Ghi số tờ, số thửa.", 1); return; } }
+  else { d = {tieu_khu: $("d_tk").value.trim(), khoanh: $("d_khoanh").value.trim(), lo: $("d_lo").value.trim(), dt_ha: $("d_ha").value.trim(), loai_dat: $("d_loai2").value.trim().toUpperCase()};
+    if (!d.lo || !(d.tieu_khu || d.khoanh)) { bao("Ghi tiểu khu, khoảnh, lô.", 1); return; } }
+  h.dat.push(d); luu(); for (const o of ["d_to", "d_thua", "d_dt", "d_lo", "d_ha"]) $(o).value = ""; veTatCa();
+}
+
+// ---------------------------------------------------------------- thẻ 1 nhà
+let KC = {};
+function veKetCau() { const hop = $("n_ket_cau"); hop.textContent = "";
+  for (const [k, ten, ds] of KET_CAU) { hop.appendChild(el("label", {text: ten}));
+    const nhom = el("div", {cls: "chip_nhom"}); for (const x of ds) nhom.appendChild(el("button", {cls: "chip" + (KC[k] === x ? " chon" : ""), type: "button", text: x,
+      onclick: () => { KC[k] = KC[k] === x ? undefined : x; veKetCau(); }})); hop.appendChild(nhom); } }
+function themNha() {
+  if (!coHo()) return;
+  const m = DU.nha.find(x => x[0] === $("n_loai").value); const b = bieuThuc($("n_dt").value);
+  if (!m) { bao("Chọn loại nhà.", 1); return; } if (!b || isNaN(b.gt)) { bao("Diện tích chưa đọc được.", 1); return; }
+  const kc = KET_CAU.filter(x => KC[x[0]]).map(x => x[1].toLowerCase() + " " + KC[x[0]].toLowerCase());
+  const gc = [kc.length ? "Kết cấu: " + kc.join(", ") : "", $("n_gc").value.trim()].filter(x => x).join("; ");
+  themDong({muc: 2, nhom: "nha", ma_dm: m[0], ten: m[1], dvt: m[2], so_luong: b.ct, ty_le: $("n_tl").value.trim(), ghi_chu: gc});
+  $("n_dt").value = ""; $("n_gc").value = ""; $("n_dt_kq").textContent = ""; KC = {}; veKetCau();
+}
+
+// ---------------------------------------------------------------- thẻ 2 vật kiến trúc
+function mucVkt(ten) { return DU.dm2.find(x => x[1] === ten || x[0] + " — " + x[1] === ten); }
+function themVkt() {
+  if (!coHo()) return;
+  const ten0 = $("v_ten").value.trim(); if (!ten0) { bao("Ghi tên vật kiến trúc.", 1); return; }
+  const m = mucVkt(ten0), chu = $("v_sl").value.trim(), b = chu ? bieuThuc(chu) : null;
+  if (chu && (!b || isNaN(b.gt))) { bao("Khối lượng chưa đọc được (để trống nếu đã ghi trong tên).", 1); return; }
+  const dvt_m = m ? boDau(m[2]).replace("²", "2").replace("³", "3") : "";
+  if (m && b && b.dvt && !$("v_dvt").value.trim() && dvt_m !== b.dvt && !confirm("Mục \"" + m[1] + "\" tính theo " + m[2] + ", khối lượng ghi kiểu " +
+    b.dvt + ". Vẫn thêm?")) return;
+  themDong({muc: 2, ma_dm: m ? m[0] : "", ten: m ? m[1] : ten0, dvt: $("v_dvt").value.trim() || (m ? m[2] : (b && b.dvt) || ""), so_luong: b ? b.ct : "",
+    ty_le: $("v_tl").value.trim(), ghi_chu: $("v_gc").value.trim()});
+  for (const o of ["v_ten", "v_sl", "v_dvt", "v_gc"]) $(o).value = ""; $("v_sl_kq").textContent = "";
+}
+
+// ---------------------------------------------------------------- thẻ 3 cây
+let KIEU_CAY = "cay";
+function themCay() {
+  if (!coHo()) return;
+  const nhanh = $("c_nhanh").value.split(/\r?\n/).map(x => x.trim()).filter(x => x);
+  for (const x of nhanh) hoST(ST.chon).dong.push({muc: 0, ten: x, so_luong: "", luc: new Date().toISOString()});
+  const ten = $("c_ten").value.trim();
+  if (ten) {
+    if (KIEU_CAY === "vn") { const m = DU.vat_nuoi.find(x => x[1] === ten); hoST(ST.chon).dong.push({muc: 7, ma_dm: m ? m[0] : "", ten: ten, dvt: m ? m[2] : "",
+      so_luong: $("c_sl").value.trim(), ty_le: $("c_tl").value.trim(), ghi_chu: $("c_gc").value.trim(), luc: new Date().toISOString()}); }
+    else { const nam = $("c_nam").value.trim(), kieu = $("c_kieu").value; let doan = $("c_do").value.trim(), gc = $("c_gc").value.trim();
+      const kh = doan.match(/^(\d+(?:[.,]\d+)?)\s*-\s*(\d+(?:[.,]\d+)?)$/); if (kh) { gc = [gc, (kieu === "cv" ? "CV " : "ĐK ") + doan + " cm"].filter(x => x).join("; "); doan = kh[2]; }
+      if (nam && !/^\d{4}$/.test(nam)) { bao("Năm trồng ghi 4 chữ số (vd 2012).", 1); return; }
+      hoST(ST.chon).dong.push({muc: 3, ma_dm: "", ten: ten + (nam ? " trồng năm " + nam : ""), dvt: "cây", so_luong: $("c_sl").value.trim(),
+        so_do: kieu ? doan : "", kieu: kieu || "", ty_le: $("c_tl").value.trim(), ghi_chu: gc, luc: new Date().toISOString()}); }
+  }
+  if (!ten && !nhanh.length) { bao("Ghi loài cây hoặc dòng ghi nhanh.", 1); return; }
+  luu(); for (const o of ["c_ten", "c_sl", "c_nam", "c_do", "c_gc", "c_nhanh"]) $(o).value = ""; veTatCa(); bao("Đã thêm vào hộ.");
+}
+function goiYCay() { const dl = $("ds_cay"); dl.textContent = "";
+  for (const t of (KIEU_CAY === "vn" ? DU.vat_nuoi.map(x => x[1]) : DU.cay)) dl.appendChild(el("option", {value: t})); }
+
+// ---------------------------------------------------------------- thẻ 4 ảnh (IndexedDB - localStorage quá nhỏ cho ảnh)
+const IDB = {db: null, bo_nho: [],
+  async mo() { if (this.db || !window.indexedDB) return this.db; return new Promise(ok => { const r = indexedDB.open("larc_kd_anh", 1);
+    r.onupgradeneeded = () => { const s = r.result.createObjectStore("anh", {keyPath: "id", autoIncrement: true}); s.createIndex("khoa", "khoa"); };
+    r.onsuccess = () => { this.db = r.result; ok(this.db); }; r.onerror = () => ok(null); }); },
+  async them(rec) { const db = await this.mo(); rec.du_an = DU.du_an; if (!db) { rec.id = this.bo_nho.length + 1; this.bo_nho.push(rec); return rec.id; }
+    return new Promise(ok => { const t = db.transaction("anh", "readwrite").objectStore("anh").add(rec); t.onsuccess = () => ok(t.result); t.onerror = () => ok(null); }); },
+  async ds(khoa) { const db = await this.mo(); if (!db) return this.bo_nho.filter(r => r.khoa === khoa);
+    return new Promise(ok => { const t = db.transaction("anh").objectStore("anh").index("khoa").getAll(khoa);
+      t.onsuccess = () => ok((t.result || []).filter(r => r.du_an === DU.du_an)); t.onerror = () => ok([]); }); },
+  async xoa(id) { const db = await this.mo(); if (!db) { this.bo_nho = this.bo_nho.filter(r => r.id !== id); return; }
+    return new Promise(ok => { const t = db.transaction("anh", "readwrite").objectStore("anh").delete(id); t.onsuccess = () => ok(); t.onerror = () => ok(); }); },
+  async xoaHet() { const db = await this.mo(); if (!db) { this.bo_nho = []; return; }
+    return new Promise(ok => { const s = db.transaction("anh", "readwrite").objectStore("anh"), r = s.openCursor();
+      r.onsuccess = () => { const c = r.result; if (c) { if (c.value.du_an === DU.du_an) c.delete(); c.continue(); } else ok(); }; r.onerror = () => ok(); }); }};
+function docAnh(file) { return new Promise((ok, loi) => { const fr = new FileReader(); fr.onload = () => { const im = new Image();
+  im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)), cv = document.createElement("canvas");
+    cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+    ok(cv.toDataURL("image/jpeg", 0.82)); }; im.onerror = loi; im.src = fr.result; }; fr.onerror = loi; fr.readAsDataURL(file); }); }
+function lamRo(url) { // ngưỡng thích ứng (trung bình cục bộ) + xóa đốm nhỏ xếp hàng ngang (dòng kẻ chấm) -> chữ đen trên nền trắng
+  return new Promise(ok => { const im = new Image(); im.onload = () => {
+    const w = im.width, h = im.height, cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const g = cv.getContext("2d"); g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, w, h), p = d.data, x = new Float64Array(w * h);
+    for (let i = 0; i < w * h; i++) x[i] = 0.299 * p[4 * i] + 0.587 * p[4 * i + 1] + 0.114 * p[4 * i + 2];
+    const I = new Float64Array((w + 1) * (h + 1)); for (let r = 0; r < h; r++) { let s = 0; for (let c = 0; c < w; c++) { s += x[r * w + c]; I[(r + 1) * (w + 1) + c + 1] = I[r * (w + 1) + c + 1] + s; } }
+    const R = Math.max(8, Math.round(Math.min(w, h) / 60)), den = new Uint8Array(w * h);
+    for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) { const r0 = Math.max(0, r - R), r1 = Math.min(h, r + R + 1), c0 = Math.max(0, c - R), c1 = Math.min(w, c + R + 1);
+      const tb = (I[r1 * (w + 1) + c1] - I[r0 * (w + 1) + c1] - I[r1 * (w + 1) + c0] + I[r0 * (w + 1) + c0]) / ((r1 - r0) * (c1 - c0));
+      den[r * w + c] = x[r * w + c] < tb - 12 ? 1 : 0; }
+    const nhan = new Int32Array(w * h), dom = [], hang = new Map(); let so = 0; const st = [];
+    for (let i = 0; i < w * h; i++) { if (!den[i] || nhan[i]) continue; so++; nhan[i] = so; st.push(i); let n = 0, rmin = h, rmax = 0, cmin = w, cmax = 0;
+      while (st.length) { const j = st.pop(), r = (j / w) | 0, c = j % w; n++; if (r < rmin) rmin = r; if (r > rmax) rmax = r; if (c < cmin) cmin = c; if (c > cmax) cmax = c;
+        for (const k of [j - 1, j + 1, j - w, j + w]) if (k >= 0 && k < w * h && den[k] && !nhan[k] && Math.abs((k % w) - c) <= 1) { nhan[k] = so; st.push(k); } }
+      if (n <= 30 && rmax - rmin <= 4 && cmax - cmin <= 8) { const b = Math.round((rmin + rmax) / 6); dom[so] = b; hang.set(b, (hang.get(b) || 0) + 1); } }
+    const ke = new Set(); for (const [b, n] of hang) if (n >= Math.max(12, w / 60)) ke.add(b);
+    for (let i = 0; i < w * h; i++) { const v = den[i] && !(dom[nhan[i]] !== undefined && ke.has(dom[nhan[i]])) ? 0 : 255;
+      p[4 * i] = p[4 * i + 1] = p[4 * i + 2] = v; p[4 * i + 3] = 255; }
+    g.putImageData(d, 0, 0); ok(cv.toDataURL("image/jpeg", 0.85)); }; im.src = url; }); }
+async function themAnh(files) { if (!coHo()) return; let n = 0;
+  for (const f of files) { try { const url = await docAnh(f); await IDB.them({khoa: ST.chon, ten: (f.name || "anh.jpg").replace(/\.[^.]+$/, "") + ".jpg", du_lieu: url, luc: new Date().toISOString()}); n++; }
+    catch (e) { bao("Không đọc được ảnh " + f.name, 1); } }
+  hoST(ST.chon).so_anh = (await IDB.ds(ST.chon)).length; luu(); veAnh(); veKpi(); if (n) bao("Đã lưu " + n + " ảnh."); }
+async function veAnh() { const hop = $("ds_anh"); hop.textContent = ""; const ds = await IDB.ds(ST.chon);
+  if (!ds.length) { hop.appendChild(el("p", {cls: "ghi", text: "Chưa có ảnh."})); return; }
+  for (const r of ds) hop.appendChild(el("figure", {}, [el("img", {src: r.du_lieu, alt: r.ten}), el("figcaption", {text: r.ten}),
+    el("div", {cls: "hang_nut"}, [el("button", {cls: "phu nho", type: "button", text: "Làm rõ chữ", onclick: async () => { bao("Đang làm rõ…");
+      const url = await lamRo(r.du_lieu); await IDB.them({khoa: r.khoa, ten: r.ten.replace(/\.jpg$/, "") + "_lam_ro.jpg", du_lieu: url, luc: new Date().toISOString()});
+      hoST(ST.chon).so_anh = (await IDB.ds(ST.chon)).length; luu(); veAnh(); }}),
+      el("button", {cls: "xoa nho", type: "button", text: "Xóa", onclick: async () => { await IDB.xoa(r.id); hoST(ST.chon).so_anh = (await IDB.ds(ST.chon)).length; luu(); veAnh(); veKpi(); }})])])); }
+function duaBienBan() { if (!coHo()) return; const ds = $("bb_chu").value.split(/\r?\n/).map(x => x.trim()).filter(x => x);
+  if (!ds.length) { bao("Chưa ghi dòng nào.", 1); return; } const h = hoST(ST.chon);
+  for (const x of ds) h.dong.push({muc: 0, ten: x, so_luong: "", luc: new Date().toISOString()}); luu(); $("bb_chu").value = ""; veTatCa(); bao("Đã đưa " + ds.length + " dòng vào hộ."); }
+
+// ---------------------------------------------------------------- tọa độ VN-2000 (như pabt/toa_do.py: Krüger + 7 tham số)
+const VN = (function () { const A = 6378137, F = 1 / 298.257223563, E2 = F * (2 - F), N = F / (2 - F), K0 = 0.9999;
+  const AH = A / (1 + N) * (1 + N * N / 4 + N ** 4 / 64 + N ** 6 / 256);
+  const AL = [N / 2 - 2 / 3 * N ** 2 + 5 / 16 * N ** 3 + 41 / 180 * N ** 4 - 127 / 288 * N ** 5 + 7891 / 37800 * N ** 6,
+    13 / 48 * N ** 2 - 3 / 5 * N ** 3 + 557 / 1440 * N ** 4 + 281 / 630 * N ** 5 - 1983433 / 1935360 * N ** 6,
+    61 / 240 * N ** 3 - 103 / 140 * N ** 4 + 15061 / 26880 * N ** 5 + 167603 / 181440 * N ** 6,
+    49561 / 161280 * N ** 4 - 179 / 168 * N ** 5 + 6601661 / 7257600 * N ** 6, 34729 / 80640 * N ** 5 - 3418889 / 1995840 * N ** 6,
+    212378941 / 319334400 * N ** 6];
+  function tamDia(f, l) { const n = A / Math.sqrt(1 - E2 * Math.sin(f) ** 2); return [n * Math.cos(f) * Math.cos(l), n * Math.cos(f) * Math.sin(l), n * (1 - E2) * Math.sin(f)]; }
+  function tracDia(x, y, z) { const p = Math.hypot(x, y), l = Math.atan2(y, x); let f = Math.atan2(z, p * (1 - E2));
+    for (let i = 0; i < 10; i++) { const n = A / Math.sqrt(1 - E2 * Math.sin(f) ** 2), h = p / Math.cos(f) - n; f = Math.atan2(z, p * (1 - E2 * n / (n + h))); } return [f, l]; }
+  function veVN(x, y, z) { let [dx, dy, dz, rx, ry, rz, s] = DU.datum; const G = Math.PI / 648000;
+    if (DU.quy_uoc === "coordinate_frame") { rx = -rx; ry = -ry; rz = -rz; } rx *= G; ry *= G; rz *= G; const k = 1 + s * 1e-6;
+    x = (x - dx) / k; y = (y - dy) / k; z = (z - dz) / k; return [x + rz * y - ry * z, -rz * x + y + rx * z, ry * x - rx * y + z]; }
+  return function (lat, lon) { const [f, l] = tracDia(...veVN(...tamDia(lat * Math.PI / 180, lon * Math.PI / 180)));
+    const e = Math.sqrt(E2), t = Math.sinh(Math.atanh(Math.sin(f)) - e * Math.atanh(e * Math.sin(f))), dl = l - DU.kinh_tuyen * Math.PI / 180;
+    const xi = Math.atan2(t, Math.cos(dl)), eta = Math.atanh(Math.sin(dl) / Math.sqrt(1 + t * t)); let X = eta, Y = xi;
+    AL.forEach((a, j) => { X += a * Math.cos(2 * (j + 1) * xi) * Math.sinh(2 * (j + 1) * eta); Y += a * Math.sin(2 * (j + 1) * xi) * Math.cosh(2 * (j + 1) * eta); });
+    return [500000 + K0 * AH * X, K0 * AH * Y]; }; })();
+function chuVN2000(lat, lon) { const [d, b] = VN(lat, lon); return "X " + soVN(b, 2) + " · Y " + soVN(d, 2); }
+
+// ---------------------------------------------------------------- bản đồ: KML / KMZ, vẽ canvas (Web Mercator), GPS
+const MAU = DU.mau_trang_thai, LOP = []; // LOP: [{nguon, ten, thua:[{ten, so_to, so_thua, ma_ho, trang_thai, vong:[[lat,lon]...]}]}]
+let BD = {k: 1, cx: 0, cy: 0, gps: null, theo: null, chon: null};
+function mer(lat, lon) { const R = 6378137; return [R * lon * Math.PI / 180, R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360))]; }
+function khoaSo(s) { s = String(s || "").trim(); if (/^\d+$/.test(s)) return String(parseInt(s, 10));
+  return s.toUpperCase().replace(/\s+/g, "").replace(/[-_.\\]/g, "/").replace(/(^|[^0-9])0+(?=[0-9])/g, "$1"); }
+function soHieuPm(pm) { const d = pm.du_lieu, lay = ks => { for (const k of ks) if (d[k]) return d[k]; return ""; };
+  let to = lay(["so_to", "soto", "to", "to_bd", "to_ban_do", "shbando"]), th = lay(["so_thua", "sothua", "thua", "shthua"]);
+  const tk = lay(["tieu_khu", "tieukhu", "tk"]), kh = lay(["khoanh", "kh"]), lo = lay(["lo", "lo_kk", "lo_rung"]);
+  if (lo && (tk || kh)) { to = "TK" + tk + "/K" + kh; th = lo; }
+  if (!th) { let m = pm.ten.match(/(?:tiểu\s*khu|tk)\s*[:.]?\s*(\d+)\D{0,12}?(?:khoảnh|k)\s*[:.]?\s*(\d+)\D{0,12}?(?:lô|l)\s*[:.]?\s*(\w+)/i);
+    if (m) { to = "TK" + m[1] + "/K" + m[2]; th = m[3]; }
+    else if ((m = pm.ten.match(/thửa\s*(?:số)?\s*[:.]?\s*(\d+)\D{0,12}?tờ\s*(?:bản\s*đồ)?\s*(?:số)?\s*[:.]?\s*(\d+)/i))) { th = m[1]; to = to || m[2]; }
+    else if ((m = pm.ten.match(/^\s*(\d{1,4})\s*\/\s*(\d{1,5})\s*$/))) { to = to || m[1]; th = m[2]; } }
+  return [to, th]; }
+function hoChoThua(so_to, so_thua, ma_ho, ten) { // mã hộ có sẵn (bản đồ xuất từ LARC) -> tờ / thửa của hộ trong dự án -> tên
+  if (ma_ho && DU.ho.some(h => String(h.ma) === String(ma_ho))) return String(ma_ho);
+  const kt = khoaSo(so_to), kth = khoaSo(so_thua);
+  if (kth) for (const h of DU.ho) if (h.thua.some(t => khoaSo(t.to) === kt && khoaSo(t.thua) === kth)) return String(h.ma);
+  const bt = boDau(ten); if (bt.length > 5) for (const h of DU.ho) if (boDau(h.ten) && bt.includes(boDau(h.ten))) return String(h.ma);
+  return ""; }
+async function giaiNenKmz(b) { // ZIP: thư mục trung tâm -> doc.kml (lưu / deflate qua DecompressionStream)
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); let e = -1;
+  for (let i = b.length - 22; i >= Math.max(0, b.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  if (e < 0) throw new Error("File .kmz hỏng (không có thư mục ZIP)."); const so = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true), chon = null;
+  for (let i = 0; i < so; i++) { if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const pp = dv.getUint16(p + 10, true), nen = dv.getUint32(p + 20, true), goc = dv.getUint32(p + 24, true), nl = dv.getUint16(p + 28, true),
+      xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lh = dv.getUint32(p + 42, true), ten = new TextDecoder().decode(b.subarray(p + 46, p + 46 + nl));
+    if (/\.kml$/i.test(ten) && !ten.includes("..") && !/^[\/\\]/.test(ten) && goc < 200 * 1048576 && (!chon || ten === "doc.kml")) chon = {pp, nen, lh};
+    p += 46 + nl + xl + cl; }
+  if (!chon) throw new Error("File .kmz không có bản đồ .kml bên trong.");
+  const d0 = chon.lh + 30 + dv.getUint16(chon.lh + 26, true) + dv.getUint16(chon.lh + 28, true), du = b.subarray(d0, d0 + chon.nen);
+  if (chon.pp === 0) return new TextDecoder().decode(du);
+  if (chon.pp !== 8 || typeof DecompressionStream === "undefined") throw new Error("Trình duyệt này chưa giải nén được .kmz: dùng file .kml.");
+  const s = new Blob([du]).stream().pipeThrough(new DecompressionStream("deflate-raw")); return await new Response(s).text(); }
+async function docKmlBytes(b, ten) {
+  const xml = b[0] === 0x50 && b[1] === 0x4b ? await giaiNenKmz(b) : new TextDecoder("utf-8").decode(b);
+  if (/<!DOCTYPE|<!ENTITY/i.test(xml.slice(0, 4096))) throw new Error("File KML có khai báo DOCTYPE / ENTITY: không mở.");
+  const doc = new DOMParser().parseFromString(xml, "application/xml"); if (doc.getElementsByTagName("parsererror").length) throw new Error("File " + ten + " không phải KML hợp lệ.");
+  const lop = {nguon: ten, thua: []}, ten_the = e => e.localName;
+  function td(chu) { return String(chu || "").trim().split(/\s+/).map(c => c.split(",").map(Number)).filter(c => c.length >= 2 && !isNaN(c[0]) && !isNaN(c[1])).map(c => [c[1], c[0]]); }
+  for (const pm of doc.getElementsByTagNameNS("*", "Placemark")) {
+    const o = {ten: "", du_lieu: {}};
+    for (const c of pm.children) if (ten_the(c) === "name") o.ten = c.textContent.trim();
+    for (const d of pm.getElementsByTagNameNS("*", "Data")) { const v = d.getElementsByTagNameNS("*", "value")[0]; o.du_lieu[boDau(d.getAttribute("name")).replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")] = v ? v.textContent.trim() : ""; }
+    for (const d of pm.getElementsByTagNameNS("*", "SimpleData")) o.du_lieu[boDau(d.getAttribute("name")).replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")] = d.textContent.trim();
+    let thu_muc = ""; for (let p = pm.parentElement; p; p = p.parentElement) if (ten_the(p) === "Folder") { const n = [...p.children].find(x => ten_the(x) === "name"); if (n) thu_muc = n.textContent + " " + thu_muc; }
+    const ranh = /(^|[^a-z])ranh([^a-z]|$)/.test(boDau(o.ten + " " + thu_muc));
+    const [to, th] = soHieuPm(o);
+    for (const pg of pm.getElementsByTagNameNS("*", "Polygon")) { const ob = pg.getElementsByTagNameNS("*", "outerBoundaryIs")[0];
+      const cd = ob && ob.getElementsByTagNameNS("*", "coordinates")[0]; const v = cd ? td(cd.textContent) : []; if (v.length < 3) continue;
+      const ma = hoChoThua(to, th, o.du_lieu.ma_ho, o.ten + " " + (o.du_lieu.chu_su_dung || ""));
+      lop.thua.push({ten: o.ten || (th ? "Thửa " + th + " tờ " + to : ""), so_to: to, so_thua: th, ma_ho: ma, ranh: ranh,
+        trang_thai: ranh ? "ranh" : (ma ? (DU.trang_thai_ho[ma] || "chua") : "khong_gan"), vong: v}); } }
+  if (!lop.thua.length) throw new Error("File " + ten + " không có đa giác thửa nào."); return lop; }
+async function napBanDo(files) { for (const f of files) { try { const lop = await docKmlBytes(new Uint8Array(await f.arrayBuffer()), f.name);
+  LOP.push(lop); bao("Đã nạp " + lop.thua.length + " đa giác từ " + f.name); } catch (e) { bao(e.message, 1); } } vuaKhung(); veBanDo(); }
+function cacThua() { return LOP.flatMap(l => l.thua); }
+function canvasBD() { const cv = $("ban_do"), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  return [cv, r.width, r.height, dpr]; }
+function raMH(lat, lon, w, h) { const [x, y] = mer(lat, lon); return [w / 2 + (x - BD.cx) * BD.k, h / 2 - (y - BD.cy) * BD.k]; }
+function tuMH(px, py, w, h) { return [BD.cx + (px - w / 2) / BD.k, BD.cy - (py - h / 2) / BD.k]; }
+function vuaKhung() { const ds = cacThua(); const [, w, h] = canvasBD(); let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const t of ds) for (const [la, lo] of t.vong) { const [x, y] = mer(la, lo); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (BD.gps && !ds.length) { [x0, y0] = mer(BD.gps.lat, BD.gps.lon); x1 = x0 + 200; y1 = y0 + 200; x0 -= 200; y0 -= 200; }
+  if (!isFinite(x0)) return; BD.cx = (x0 + x1) / 2; BD.cy = (y0 + y1) / 2; BD.k = Math.min(w / Math.max(x1 - x0, 20), h / Math.max(y1 - y0, 20)) * 0.9; }
+function veBanDo() { const [cv, w, h, dpr] = canvasBD(), g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = "#F1F5F9"; g.fillRect(0, 0, w, h);
+  g.strokeStyle = "#E2E8F0"; g.lineWidth = 1; const buoc = Math.pow(10, Math.ceil(Math.log10(80 / BD.k)));
+  const [mx0, my1] = tuMH(0, 0, w, h), [mx1, my0] = tuMH(w, h, w, h);
+  for (let x = Math.floor(mx0 / buoc) * buoc; x <= mx1; x += buoc) { const px = w / 2 + (x - BD.cx) * BD.k; g.beginPath(); g.moveTo(px, 0); g.lineTo(px, h); g.stroke(); }
+  for (let y = Math.floor(my0 / buoc) * buoc; y <= my1; y += buoc) { const py = h / 2 - (y - BD.cy) * BD.k; g.beginPath(); g.moveTo(0, py); g.lineTo(w, py); g.stroke(); }
+  for (const t of cacThua()) { g.beginPath(); t.vong.forEach(([la, lo], i) => { const [x, y] = raMH(la, lo, w, h); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath();
+    const m = t.ranh ? "#B83A3A" : (MAU[t.trang_thai] || ["", "#3B6FCE"])[1];
+    if (!t.ranh) { g.fillStyle = m + "55"; g.fill(); } g.strokeStyle = t === BD.chon ? "#0F172A" : m; g.lineWidth = t === BD.chon ? 3 : (t.ranh ? 2 : 1.2);
+    g.setLineDash(t.ranh ? [6, 4] : []); g.stroke(); g.setLineDash([]);
+    if (!t.ranh && BD.k > 0.15 && t.so_thua) { let sx = 0, sy = 0; t.vong.forEach(([la, lo]) => { const [x, y] = raMH(la, lo, w, h); sx += x; sy += y; });
+      g.fillStyle = "#0F172A"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "center"; g.fillText(t.so_thua, sx / t.vong.length, sy / t.vong.length + 4); } }
+  if (BD.gps) { const [x, y] = raMH(BD.gps.lat, BD.gps.lon, w, h); g.beginPath(); g.arc(x, y, Math.max(6, BD.gps.acc * BD.k), 0, 7); g.fillStyle = "rgba(59,111,206,.15)"; g.fill();
+    g.beginPath(); g.arc(x, y, 7, 0, 7); g.fillStyle = "#3B6FCE"; g.fill(); g.lineWidth = 2; g.strokeStyle = "#fff"; g.stroke(); }
+  g.fillStyle = "#475569"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left"; g.fillText("lưới " + soVN(buoc, 0) + " m", 8, h - 8); }
+function trongVong(px, py, v) { let ok = false; for (let i = 0, j = v.length - 1; i < v.length; j = i++) { const [xi, yi] = v[i], [xj, yj] = v[j];
+  if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) ok = !ok; } return ok; }
+function thuaTai(lat, lon) { const [x, y] = mer(lat, lon); let tot = null;
+  for (const t of cacThua()) if (!t.ranh && trongVong(x, y, t.vong.map(([a, b]) => mer(a, b)))) tot = t; return tot; }
+function ganNhat(lat, lon) { const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540; let tot = null;
+  for (const t of cacThua()) { if (t.ranh) continue; const v = t.vong.map(([a, b]) => [(b - lon) * kx, (a - lat) * ky]);
+    for (let i = 0; i < v.length; i++) { const [ax, ay] = v[i], [bx, by] = v[(i + 1) % v.length], dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+      const u = L ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / L)) : 0, qx = ax + u * dx, qy = ay + u * dy, d = Math.hypot(qx, qy);
+      if (!tot || d < tot.d) tot = {t: t, d: d, huong: huong(Math.atan2(qx, qy) * 180 / Math.PI)}; } } return tot; }
+function huong(goc) { const ds = ["Bắc", "Đông Bắc", "Đông", "Đông Nam", "Nam", "Tây Nam", "Tây", "Tây Bắc"]; return ds[Math.round(((goc % 360) + 360) % 360 / 45) % 8]; }
+function hienThua(t) { BD.chon = t; const hop = $("tt_thua"); hop.textContent = ""; hop.style.display = t ? "block" : "none"; veBanDo(); if (!t) return;
+  const ho = t.ma_ho ? hoGoc(t.ma_ho) : null;
+  hop.appendChild(el("div", {}, [el("b", {text: t.ten || ("Thửa " + t.so_thua)}), el("div", {cls: "ghi", text: (t.so_to ? "Tờ " + t.so_to + " · thửa " + t.so_thua + " · " : "") +
+    (ho ? "Hộ " + ho.ten + " · " + ((MAU[t.trang_thai] || [""])[0] || "") : "Chưa gắn hộ trong dự án")})]));
+  if (ho) hop.appendChild(el("button", {type: "button", text: "Mở hồ sơ kiểm đếm hộ này", onclick: () => { chonHo(ho.khoa); moThe(0); }})); }
+function capNhatGPS() { const tt = $("tt_gps"); if (!BD.gps) { tt.textContent = ""; return; } const g = BD.gps;
+  let chu = "GPS " + g.lat.toFixed(6) + ", " + g.lon.toFixed(6) + " (±" + Math.round(g.acc) + " m) · VN-2000 " + chuVN2000(g.lat, g.lon);
+  const t = thuaTai(g.lat, g.lon); if (t) chu += " · ĐANG Ở: " + (t.ten || "thửa " + t.so_thua) + (t.ma_ho && hoGoc(t.ma_ho) ? " (hộ " + hoGoc(t.ma_ho).ten + ")" : "");
+  else { const n = ganNhat(g.lat, g.lon); if (n) chu += " · cách " + (n.t.ten || "thửa " + n.t.so_thua) + " " + soVN(n.d, 0) + " m về hướng " + n.huong; }
+  tt.textContent = chu; }
+function batGPS() { if (!navigator.geolocation) { bao("Thiết bị không hỗ trợ định vị.", 1); return; }
+  if (BD.theo !== null) { navigator.geolocation.clearWatch(BD.theo); BD.theo = null; $("b_gps").textContent = "Bật định vị"; return; }
+  BD.theo = navigator.geolocation.watchPosition(p => { const dau = !BD.gps; BD.gps = {lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy || 0};
+    if (dau && !cacThua().length) vuaKhung(); capNhatGPS(); veBanDo(); },
+    e => bao("Không lấy được vị trí: " + (e.message || "chưa cho phép định vị"), 1), {enableHighAccuracy: true, maximumAge: 5000, timeout: 20000});
+  $("b_gps").textContent = "Tắt định vị"; }
+function ganCuChi() { const cv = $("ban_do"), ngon = new Map(); let keo = null, nhip = null;
+  cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); ngon.set(e.pointerId, [e.offsetX, e.offsetY]); keo = {x: e.offsetX, y: e.offsetY, cx: BD.cx, cy: BD.cy, di: 0}; nhip = null; });
+  cv.addEventListener("pointermove", e => { if (!ngon.has(e.pointerId)) return; ngon.set(e.pointerId, [e.offsetX, e.offsetY]);
+    if (ngon.size === 2) { const [a, b] = [...ngon.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (nhip) BD.k *= d / nhip; nhip = d; keo = null; veBanDo(); return; }
+    if (keo) { keo.di = Math.max(keo.di, Math.hypot(e.offsetX - keo.x, e.offsetY - keo.y)); BD.cx = keo.cx - (e.offsetX - keo.x) / BD.k; BD.cy = keo.cy + (e.offsetY - keo.y) / BD.k; veBanDo(); } });
+  cv.addEventListener("pointerup", e => { ngon.delete(e.pointerId); if (keo && keo.di < 6) { const [, w, h] = canvasBD(), [x, y] = tuMH(e.offsetX, e.offsetY, w, h);
+    let t = null; for (const q of cacThua()) if (!q.ranh && trongVong(x, y, q.vong.map(([a, b]) => mer(a, b)))) t = q; hienThua(t); } keo = null; if (ngon.size < 2) nhip = null; });
+  cv.addEventListener("wheel", e => { e.preventDefault(); BD.k *= e.deltaY < 0 ? 1.25 : 0.8; veBanDo(); }, {passive: false}); }
+
+// ---------------------------------------------------------------- KPI, thẻ, xuất
+function veKpi() { const h = ST.ho[ST.chon] || {dong: [], dat: []}, g = hoGoc(ST.chon) || {thua: []}, dong = h.dong || [];
+  const dt = (h.dat || []).length ? h.dat.reduce((s, d) => s + (dtDat(d) || 0), 0) : g.thua.reduce((s, t) => s + (docSo(t.dt) || 0), 0);
+  const cay = dong.filter(d => d.muc === 3).reduce((s, d) => s + (docSo(d.so_luong) || 0), 0);
+  const ds = [["Diện tích thu hồi", soVN(dt) + " m²", "#2F5F9E"], ["Số nhà ở", String(dong.filter(laNha).length), "#1F76A6"],
+    ["Số vật kiến trúc", String(dong.filter(laVkt).length), "#1F6F66"], ["Tổng số cây", soVN(cay, 0), "#3B6FCE"],
+    ["Hồ sơ · GPS", dong.length + " dòng · " + (h.so_anh || 0) + " ảnh" + (h.gps ? " · GPS ✓" : ""), "#2F7D54"]];
+  const hop = $("kpi"); hop.textContent = ""; for (const [n, v, m] of ds) { const c = el("div", {cls: "the_so"}, [el("div", {cls: "nhan", text: n}), el("div", {cls: "gt so", text: v})]);
+    c.style.borderLeftColor = m; hop.appendChild(c); } }
+function moThe(i) { ST.the = i; luu(); document.querySelectorAll(".trang").forEach((t, j) => t.classList.toggle("hien", j === i));
+  [...$("thanh_the").children].forEach((b, j) => b.classList.toggle("chon", j === i)); if (i === 5) { setTimeout(() => { if (!BD.k || BD.k === 1) vuaKhung(); veBanDo(); }, 30); } if (i === 4) veAnh(); if (i === 6) veXuat(); }
+function veTatCa() { veKpi(); veHoSo(); bangDong("bang_nha", laNha); bangDong("bang_vkt", laVkt); bangDong("bang_cay", laCay); if (ST.the === 4) veAnh(); if (ST.the === 6) veXuat(); }
+function tenFile(t) { return (boDau(t).replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "ho") + ".json"; }
+async function taoKetQua(dsKhoa, kemAnh) {
+  const ra = {phien_ban: PHIEN_BAN_PHIEU, ung_dung: "LARC Field Mobile " + DU.phien_ban, du_an: DU.du_an, luc: new Date().toISOString(), kinh_tuyen: DU.kinh_tuyen,
+    ket_qua: {}, ho_dan: {}, dat_dai: {}, anh: {}};
+  for (const k of dsKhoa) { const h = hoST(k), g = hoGoc(k) || {};
+    ra.ket_qua[k] = h.dong.map(d => { const x = Object.assign({}, d); delete x.nhom; delete x.luc; return x; });
+    ra.ho_dan[k] = Object.assign({ma_ho: g.moi ? null : (/^\d+$/.test(k) ? Number(k) : null), ho_ten: g.ten || "", so_cccd: g.cccd || "", dia_chi: g.dia_chi || ""}, h.tt);
+    if (h.gps) ra.ho_dan[k].gps = h.gps; if (h.dat.length) ra.dat_dai[k] = h.dat;
+    if (kemAnh) { const a = await IDB.ds(k); if (a.length) ra.anh[k] = a.map(r => ({ten: r.ten, du_lieu: r.du_lieu, luc: r.luc})); } }
+  return ra; }
+function taiVe(obj, ten) { // bản cài Android: hộp Lưu / Gửi của máy; PWA (iPhone): bảng chia sẻ (Zalo, Lưu vào Tệp…); còn lại: tải về
+  if (window.LARCAndroid && window.LARCAndroid.luuFile) { window.LARCAndroid.luuFile(ten, JSON.stringify(obj)); return; }
+  if (window.LARC_CHE_DO === "pwa" && navigator.canShare && window.File) { const f = new File([JSON.stringify(obj)], ten, {type: "application/json"});
+    if (navigator.canShare({files: [f]})) { navigator.share({files: [f], title: ten}).then(() => bao("Đã gửi " + ten)).catch(e => {
+      if (!e || e.name !== "AbortError") taiVeTep(obj, ten); }); return; } }
+  taiVeTep(obj, ten); }
+function taiVeTep(obj, ten) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(obj)], {type: "application/json"}));
+  a.download = ten; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); bao("Đã lưu " + ten); }
+async function xuatHo() { if (!coHo()) return; const g = hoGoc(ST.chon) || {}; taiVe(await taoKetQua([ST.chon], $("x_anh").checked), tenFile((hoST(ST.chon).tt.ho_ten) || g.ten || ST.chon)); }
+async function xuatCa() { const ds = Object.keys(ST.ho).filter(coDuLieu); if (!ds.length) { bao("Chưa ghi hộ nào.", 1); return; }
+  taiVe(await taoKetQua(ds, $("x_anh").checked), "ket_qua_kiem_dem_" + tenFile(DU.du_an)); }
+function veXuat() { const hop = $("bang_xuat"); hop.textContent = ""; const ds = Object.keys(ST.ho).filter(coDuLieu);
+  if (!ds.length) { hop.appendChild(el("p", {cls: "ghi", text: "Chưa ghi hộ nào."})); return; }
+  const tb = el("table", {}, [el("tr", {}, ["Hộ", "Dòng", "Đất", "Ảnh", "GPS"].map(t => el("th", {text: t})))]);
+  for (const k of ds) { const h = ST.ho[k], g = hoGoc(k) || {}; tb.appendChild(el("tr", {}, [el("td", {text: (h.tt && h.tt.ho_ten) || g.ten || k}),
+    el("td", {cls: "so", text: String((h.dong || []).length)}), el("td", {cls: "so", text: String((h.dat || []).length)}), el("td", {cls: "so", text: String(h.so_anh || 0)}),
+    el("td", {text: h.gps ? "✓" : ""})])); } hop.appendChild(tb); }
+
+// ---------------------------------------------------------------- khởi động
+function khoiDong() {
+  THE.forEach((t, i) => $("thanh_the").appendChild(el("button", {type: "button", text: t, onclick: () => moThe(i)})));
+  for (const m of DU.nha) $("n_loai").appendChild(el("option", {value: m[0], text: m[1]}));
+  for (const m of DU.dm2) $("ds_vkt").appendChild(el("option", {value: m[1], label: m[0] + " · " + m[2]}));
+  const chu_giai = $("chu_giai"); for (const k in MAU) chu_giai.appendChild(el("span", {}, [el("i", {style: "background:" + MAU[k][1]}), MAU[k][0]]));
+  const doiDat = k => { KIEU_DAT = k; $("o_dc").style.display = k === "dc" ? "" : "none"; $("o_ln").style.display = k === "ln" ? "" : "none";
+    veKieu("kieu_dat", [["dc", "Địa chính (tờ / thửa)"], ["ln", "Lâm nghiệp (TK / khoảnh / lô)"]], k, doiDat); }; doiDat(KIEU_DAT);
+  const doiCay = k => { KIEU_CAY = k; veKieu("kieu_cay", [["cay", "Cây trồng"], ["vn", "Vật nuôi"]], k, doiCay); goiYCay(); }; doiCay("cay");
+  veKetCau();
+  if (DU.ban_do && DU.ban_do.length) LOP.push({nguon: "Bản đồ dự án (LARC)", thua: DU.ban_do.map(t => Object.assign({}, t, {ma_ho: t.ma_ho ? String(t.ma_ho) : "",
+    ten: "Thửa " + t.so_thua + " tờ " + t.so_to}))});
+  $("o_tim").addEventListener("input", locHo); $("cb_ho").addEventListener("change", e => chonHo(e.target.value));
+  $("b_truoc").addEventListener("click", () => buocHo(-1)); $("b_sau").addEventListener("click", () => buocHo(1));
+  $("b_ho_moi").addEventListener("click", hoMoi); $("b_luu_nhanh").addEventListener("click", xuatHo);
+  for (const o of O_HO) $("h_" + o).addEventListener("change", luuHoSo);
+  $("b_gps_ho").addEventListener("click", () => { if (!coHo()) return; if (!navigator.geolocation) { bao("Thiết bị không hỗ trợ định vị.", 1); return; } bao("Đang lấy vị trí…");
+    navigator.geolocation.getCurrentPosition(p => { hoST(ST.chon).gps = {lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy || 0, luc: new Date().toISOString()};
+      luu(); veTatCa(); bao("Đã ghi tọa độ."); }, e => bao("Không lấy được vị trí: " + (e.message || ""), 1), {enableHighAccuracy: true, timeout: 20000}); });
+  $("b_them_dat").addEventListener("click", themDat); $("b_them_nha").addEventListener("click", themNha);
+  $("n_dt").addEventListener("input", () => hienBieuThuc("n_dt", "n_dt_kq")); $("v_sl").addEventListener("input", () => hienBieuThuc("v_sl", "v_sl_kq"));
+  $("v_ten").addEventListener("change", () => { const m = mucVkt($("v_ten").value.trim()); if (m && !$("v_dvt").value) $("v_dvt").value = m[2]; });
+  $("b_them_vkt").addEventListener("click", themVkt); $("b_them_cay").addEventListener("click", themCay);
+  $("a_file").addEventListener("change", e => { themAnh([...e.target.files]); e.target.value = ""; }); $("b_bb_dua").addEventListener("click", duaBienBan);
+  $("m_file").addEventListener("change", e => { napBanDo([...e.target.files]); e.target.value = ""; });
+  $("b_gps").addEventListener("click", batGPS); $("b_vua").addEventListener("click", () => { vuaKhung(); veBanDo(); });
+  $("b_xuat_ho").addEventListener("click", xuatHo); $("b_xuat_ca").addEventListener("click", xuatCa);
+  $("b_xoa_het").addEventListener("click", async () => { if (!confirm("Xóa mọi dữ liệu đã ghi trên máy này (kể cả ảnh)? Xuất .json trước nếu chưa gửi.")) return;
+    await IDB.xoaHet(); ST = {ho: {}, moi: 0, chon: "", the: 6}; luu(); locHo(); veXuat(); });
+  window.addEventListener("resize", () => { if (ST.the === 5) veBanDo(); }); ganCuChi();
+  locHo(); moThe(ST.the || 0);
+}
+window.LARC = {DU, get ST() { return ST; }, bieuThuc, taoKetQua, docKmlBytes, VN, chonHo, themDong, cacThua, thuaTai, ganNhat, BD, veBanDo, vuaKhung, lamRo};
+khoiDong();
+</script></body></html>

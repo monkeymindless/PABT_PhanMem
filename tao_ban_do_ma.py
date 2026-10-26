@@ -64,7 +64,8 @@ _RE_THONG_SO = re.compile(r'^[A-Z][A-Z0-9_]+$')
 
 def _cac_file() -> list:
     ds = sorted((GOC / 'pabt').glob('*.py')) + sorted((GOC / 'tests').glob('*.py'))
-    ds += [p for p in sorted(GOC.glob('*.py')) if not p.name.startswith(('TU_DONG_',))]
+    # tên file không phải tên module (có dấu cách...) = file người dùng để tạm ở gốc repo, không thuộc chương trình
+    ds += [p for p in sorted(GOC.glob('*.py')) if not p.name.startswith(('TU_DONG_',)) and p.stem.isidentifier()]
     return ds
 
 

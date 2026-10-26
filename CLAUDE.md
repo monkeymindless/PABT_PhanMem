@@ -2324,6 +2324,52 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     ("TK126-K06" = "TK126/K6"). Màn hình: HopNhapCad nhận .kml / .kmz (`la_kml`, `cb_kt` kinh tuyến trục sửa được, `kinh_tuyen()`), HopBanDo
     nút `b_xuat` "Xuất KML / KMZ…" (`xuat_kml(file)`), `KhungBanDo.toa_do_chuot` -> `lb_toa_do` (VN-2000 X Bắc / Y Đông + GPS). Menu: NHAN_MENU
     'Nhập bản vẽ CAD (.dxf)…' hiện "Nhập bản đồ (.dxf, .kml, .kmz)…" (khóa self.lenh giữ). tu-kiem bước "Bản đồ KML / KMZ, VN-2000".
+- Sau 1.0.31 - ĐỢT 3 ứng dụng di động LARC Field Mobile (người dùng 26/10/2026; CHƯA tăng phiên bản; test `tests/test_field_mobile.py`):
+  - Mẫu `pabt/phieu_kiem_dem.html` (một file, JS thuần, không thư viện / không mạng; đóng gói: PABT.spec datas, dung_exe38.DU_LIEU,
+    cap_nhat.DU_LIEU - gói .larcud thay được) - `xuat_phieu_kiem_dem_html` điền @@TIEU_DE@@ / @@PHIEN_BAN@@ / @@BIEU_TUONG@@ (png thu 128 px
+    bằng Qt nếu có) / @@DU_LIEU@@ (`du_lieu_phieu`: ho [ma, stt, ten, cccd, dia_chi, sdt, thua [to, thua, loai, dt]], nha / dm2 / vat_nuoi
+    [mã, tên, ĐVT] (nhà = tên bắt đầu Nhà / Biệt thự / Gác lửng), cay (tên loài `cay_trong.ten_goc`, không trùng), goi_y (khóa số - JSON
+    thành chữ), kinh_tuyen, datum + quy_uoc (`toa_do.tham_so_datum`), ban_do (thua_ban_do đổi WGS84 7 chữ số lẻ), trang_thai_ho,
+    mau_trang_thai). 7 thẻ: Hồ sơ & Đất (địa chính / lâm nghiệp, GPS tại chỗ), Nhà ở (chip kết cấu -> ghi chú; KHÔNG tự đổi loại kết cấu),
+    Vật KT (datalist; ĐVT mục khác kiểu khối lượng -> hỏi), Cây (loài + năm trồng -> "X trồng năm Y", ĐK / CV khoảng "10-15" -> số đo cận
+    trên + ghi chú; vật nuôi), Ảnh biên bản (IndexedDB "larc_kd_anh" theo du_an; thu 1600 px JPEG; "Làm rõ chữ" = ngưỡng trung bình cục bộ
+    + xóa đốm nhỏ xếp hàng ngang -> ảnh thêm "_lam_ro"; dòng ghi lại biên bản muc 0), Bản đồ (canvas Web Mercator, kéo / chụm / lăn, KML +
+    KMZ - DecompressionStream('deflate-raw'), chặn DOCTYPE / ENTITY / tên ".."; GPS watchPosition, đang ở thửa nào / thửa gần nhất + hướng;
+    chạm thửa -> mở hộ; VN-2000 cùng công thức toa_do - đã so trong trình duyệt: khớp PROJ tới mm), Xuất .JSON (v2: ket_qua / ho_dan (+gps)
+    / dat_dai / anh [{ten, du_lieu data URI}]). localStorage "larc_kd_<dự án>"; `window.LARC` = API cho kiểm thử trong trình duyệt. Không
+    emoji trên nút. "use strict": KHÔNG dùng arguments.callee (đã lỗi một lần).
+  - Nhập (`nhap_ket_qua_kiem_dem`): muc 0 -> `bo_sung(pl.phan_loai)` chọn mục (hỗ trợ -> lỗi dòng), cây có số đo theo quy cách; `_luu_anh`
+    (data URI base64 validate, `kiem_tra_magic_bytes(LOAI_ANH)`, <= ANH_TOI_DA, tên không dấu + đuôi theo loại thật, trùng nội dung dùng lại)
+    -> `thu_muc_anh_du_an(con)` = <thư mục file dự án>/Anh_kiem_dem/<mã hộ> + anh_hien_trang khop_theo 'kiem_dem'; GPS (`_gps` kiểm số)
+    -> `_ghi_gps` thay đoạn "Tọa độ kiểm đếm (GPS): …" trong ho.ghi_chu (`chu_gps` KHÔNG có ";" - ghi chú ngăn đoạn bằng ";"), có
+    kiem_ho_nhan_viec; hộ mới: GPS + năm sinh + năm tạo lập vào ghi chú. Hộ chỉ có ảnh / GPS (không dòng) vẫn nhận. Kết quả thêm so_anh,
+    so_gps, thu_muc_anh (HopKiemDem báo + nạp lại bảng). tu-kiem bước "Phiếu kiểm đếm di động". Đã thử trọn vòng trong trình duyệt: ghi
+    hộ -> .json (ảnh JPEG thật) -> nhập máy tính: đúng mục / số lượng / ảnh.
+  - Thử trong khung trình duyệt của ứng dụng Claude: không mở được file:// -> máy chủ http.server qua .claude/launch.json + preview_start
+    (xóa launch.json sau khi thử); khung bị ẩn thì chụp ảnh lỗi / innerWidth = 0 - đo bằng JS.
+- Sau 1.0.31 - ỨNG DỤNG CÀI TRÊN ĐIỆN THOẠI (người dùng 26/10/2026 chọn: "bộ cài .apk cho Android và bản PWA cho iOS"; .ipa cần máy Mac +
+  Xcode + tài khoản Apple - không làm; test `tests/test_ung_dung_di_dong.py`):
+  - MỘT mẫu `pabt/phieu_kiem_dem.html`, 3 chế độ `@@CHE_DO@@`: 'tep' (file .html một file, dữ liệu nhúng - như Đợt 3), 'pwa', 'android' (VỎ không
+    dữ liệu). Mẫu có `<script id="vo_ung_dung">` (vỏ) + `<script id="ma_chinh">` (mã chính; `const DU = window.LARC_DU_LIEU || @@DU_LIEU@@`):
+    chế độ vỏ `_dien_mau` đổi mã chính thành type="text/plain", vỏ nạp dữ liệu từ IndexedDB "larc_field" (store du_lieu, khóa du_an; dự án
+    đang mở ở localStorage "larc_field_hien_hanh") rồi chèn mã chính; chưa có -> `#man_chao` (body.chua_du_lieu): chọn file dữ liệu, danh sách
+    dự án đã mở (Mở / Bỏ). Nút header `b_doi_du_an` "Dự án". Mẫu có HAI `</script>` (test đếm 2). `taiVe`: `window.LARCAndroid.luuFile` (bản
+    .apk) / navigator.share file (PWA - iPhone "Lưu vào Tệp") / tải về. iPhone: bỏ accept của ô KML (iOS làm mờ đuôi lạ).
+  - `phieu_kiem_dem`: `anh_bieu_tuong(co, le, nen)` (Qt), `html_ung_dung(che_do)`, `tep_ung_dung(che_do)` (pwa: index.html, manifest.webmanifest,
+    sw.js cache-first tên "larc-field-<ver>", icon-180/192/512/maskable-512; android: index.html + icon-180), `goi_du_lieu_di_dong` /
+    `xuat_du_lieu_di_dong` (file .json `loai` = LOAI_GOI_DU_LIEU 'larc_field_du_lieu', `du_lieu` = du_lieu_phieu), `ten_file_du_lieu`;
+    `_doc_file_phieu` nhập nhầm file dữ liệu -> LoiNhap rõ. HopKiemDem nút `b_du_lieu` "Xuất dữ liệu cho ứng dụng điện thoại…" (`xuat_du_lieu`).
+  - Android: nguồn `bo_cai_win/android/` (AndroidManifest.xml vn.larc.field, minSdk 24 / target 34, quyền INTERNET + vị trí, KHÔNG khai CAMERA -
+    khai thì ACTION_IMAGE_CAPTURE đòi xin quyền; MainActivity.java: WebView nạp assets qua https://appassets.androidplatform.net/ bằng
+    shouldInterceptRequest (ngữ cảnh an toàn cho GPS, không cần androidx), chọn file / chụp ảnh, xin quyền vị trí, cầu nối "LARCAndroid"
+    luuFile -> hộp Gửi đi / Lưu vào thư mục; CungCapTep.java = ContentProvider thay FileProvider (cache/anh, cache/xuat)). Dựng
+    `bo_cai_win/dung_di_dong.py` / DUNG_DI_DONG.bat (KHÔNG Gradle: aapt2 compile + link, javac -source 8 -bootclasspath android.jar, d8.jar,
+    zipalign, apksigner.jar - gọi java -jar, không .bat) -> bo_cai\LARC_FieldMobile_<ver>.apk (~200 KB) + LARC_FieldMobile_PWA_<ver>.zip
+    (+ HUONG_DAN_CAI_DAT.txt). versionCode `ma_phien_ban` (1.0.31 -> 10031). Công cụ ở `D:\APP AI PABT\cong_cu_android` (jdk17 Temurin
+    17.0.20.1, sdk\build-tools\34.0.0, sdk\platforms\android-34 - người dùng đồng ý tải 26/10/2026; biến PABT_ANDROID). KHÓA KÝ
+    `D:\APP AI PABT\khoa_android\larc_field.jks` + matkhau.txt (biến PABT_KHOA_APK; ngoài repo, KHÔNG đưa vào git) - mất khóa thì bản cập nhật
+    không cài đè được. Bài dựng thật: PABT_THU_DUNG_APK=1. CHƯA chạy thử trên máy Android / iPhone thật (máy dựng không có trình giả lập):
+    đã thử vỏ pwa / android trong trình duyệt (localhost) - màn hình chào, nạp file dữ liệu, ghi dòng, xuất qua share / cầu nối giả lập.
 - Sau 1.0.29 (người dùng 26/10/2026, ảnh dòng "Phú Lý, ngày 20 tháng 10 năm 2026"): địa danh đầu dòng ngày tháng của bản in = NƠI ĐƠN VỊ CÔNG TÁC,
   KHÔNG phải xã có đất của dự án. Cột `du_an.dia_danh_don_vi` (KHÔNG đổi PHIEN_BAN_CSDL: schema.sql file mới; `csdl.dam_bao_cot_du_an` /
   `COT_DU_AN_THEM` thêm ở csdl.mo khi file có hộ và ở `lap_pa.luu_du_an`; `doc_du_an` file cũ trả ''), trong `TRUONG_DU_AN` và

@@ -564,11 +564,30 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
   kiến, xám thửa không có trong hồ sơ; bấm (không kéo) vào thửa mở hồ sơ hộ, ô "Số thửa → Enter" nhảy tới thửa, cuộn chuột phóng to.
 - **Quét giấy tờ (OCR)…** (cửa sổ lập phương án, trang Dự toán): chọn ảnh chụp / PDF scan giấy chứng nhận, biên bản kiểm kê (cần
   Tesseract như đọc quyết định scan). Soát lại các ô rồi "Điền thông tin hộ & thửa" (trang Dự toán: "Thêm dòng đất") / "Đưa tài sản vào phương án…".
-- **Công cụ → Phiếu kiểm đếm thực địa…**: (1) **Xuất phiếu (.html)** - một file, chép sang điện thoại, mở bằng trình duyệt (không cần
-  mạng): chọn hộ, ghi tài sản / cây (được ghi phép tính 4x5, số đo đường kính / chu vi cây), phiếu tự lưu trên máy; bấm "Tải file
-  kết quả (.json)". (2) **Nhập kết quả** - các dòng thêm vào phương án từng hộ như "Dán danh sách tài sản" (khớp danh mục đơn giá;
-  không khớp thành hạng mục ngoài danh mục). (3) **Gắn ảnh hiện trạng** - chọn thư mục ảnh; ảnh đặt tên theo **số CCCD**, **họ tên**
+- **Công cụ → Phiếu kiểm đếm thực địa…**: (1) **Xuất phiếu (.html)** = ứng dụng **LARC Field Mobile**, một file: chép sang điện thoại
+  (Zalo, cáp USB), mở bằng trình duyệt (Chrome / Safari), không cần mạng; dữ liệu ghi lưu ngay trên máy đó. 7 thẻ: **Hồ sơ & Đất**
+  (chủ hộ / người nhận khoán, người sử dụng, CCCD, năm sinh, thửa địa chính hoặc tiểu khu / khoảnh / lô, nút lấy tọa độ GPS tại chỗ);
+  **Nhà ở** (chọn loại nhà theo bộ đơn giá, bấm chọn kết cấu khung / tường / mái / trần / nền / cửa, diện tích ghi được "(4 x 6,7) +
+  (2 x 3)"); **Vật KT** (gõ vài chữ để chọn mục bộ đơn giá; dòng nhiều cỡ ống ghi cả vào tên); **Cây trồng** (loài + năm trồng +
+  đường kính / chu vi, hoặc ghi nhanh "Tràm 35c/15cm"); **Ảnh biên bản** (chụp từng trang, "Làm rõ chữ" xóa dòng kẻ chấm; ô ghi lại
+  nội dung biên bản mỗi dòng một tài sản - máy tính tự phân loại); **Bản đồ** (thửa của dự án đã nhập bản vẽ, nạp thêm file KML / KMZ,
+  bật định vị: biết đang đứng trong thửa nào hoặc cách thửa gần nhất bao xa, hướng nào; chạm thửa mở hồ sơ hộ; tọa độ hiện cả VN-2000);
+  **Xuất .JSON** (một hộ hoặc cả dự án, có / không kèm ảnh). (2) **Nhập kết quả** - phần mềm tìm hộ theo CCCD, tờ / thửa (lô rừng), họ
+  tên; hộ chưa có thì hỏi thêm hộ mới; các dòng thêm vào phương án như "Dán danh sách tài sản" (khớp danh mục đơn giá; không khớp thành
+  hạng mục ngoài danh mục); ảnh gửi kèm lưu vào thư mục **Anh_kiem_dem\<mã hộ>** cạnh file dự án; tọa độ GPS ghi vào ghi chú hộ
+  (kèm X / Y VN-2000). (3) **Gắn ảnh hiện trạng** - chọn thư mục ảnh; ảnh đặt tên theo **số CCCD**, **họ tên**
   (Nguyen_Van_A_nha.jpg) hoặc **HO<số thứ tự>** (HO012_cay.jpg) được gắn vào hộ; bảng hiện số ảnh mỗi hộ, bấm đúp mở ảnh.
+- **Ứng dụng LARC Field Mobile cài trên điện thoại** (cùng 7 thẻ như trên, không cần mở file .html mỗi lần):
+  - **Android**: cài file `LARC_FieldMobile_<phiên bản>.apk` (Android 7.0 trở lên; máy hỏi "cho phép cài ứng dụng không rõ nguồn" thì
+    bật cho ứng dụng đang mở file - Zalo, Tệp…). Lần đầu bật định vị, máy hỏi quyền vị trí: chọn Cho phép. Ô ảnh biên bản cho chọn ảnh
+    hoặc chụp bằng máy ảnh. Xuất .JSON: chọn **Gửi đi** (Zalo, email, Drive) hoặc **Lưu vào thư mục**.
+  - **iPhone / iPad**: bản PWA `LARC_FieldMobile_PWA_<phiên bản>.zip` - đặt các file trong gói lên một địa chỉ **HTTPS** (xem
+    HUONG_DAN_CAI_DAT.txt trong gói), mở bằng **Safari** → Chia sẻ → **Thêm vào MH chính**; sau lần mở đầu chạy không cần mạng.
+    Xuất .JSON mở bảng chia sẻ (Zalo, **Lưu vào Tệp**…).
+  - Dùng: trên máy tính **Công cụ → Phiếu kiểm đếm thực địa… → Xuất dữ liệu cho ứng dụng điện thoại…** → gửi file `.json` sang điện
+    thoại → trong ứng dụng **Chọn file dữ liệu dự án…**. Mở được nhiều dự án (nút **Dự án** góc trên); mở file dữ liệu mới của cùng
+    dự án không mất số liệu đã ghi. Kết quả nhập về máy tính như mục (2) ở trên. Số liệu nằm trong ứng dụng trên điện thoại đó: gửi
+    về máy tính thường xuyên, gỡ ứng dụng là mất số liệu chưa gửi.
 - **Trợ giúp → Chẩn đoán & sửa lỗi hệ thống…**: bảng kiểm tra máy (thư mục dữ liệu, ổ đĩa, Microsoft Excel, Tesseract, chứng chỉ
   HTTPS). **Kiểm tra & sửa file dự án…**: sao lưu file vào thư mục `SaoLuu_SuaLoi` cạnh file, gỡ file khóa cũ (máy kia tắt đột ngột -
   khóa của máy ĐANG mở thì không gỡ), dựng lại chỉ mục, nén file; file hỏng trang dữ liệu thì chép mọi dòng đọc được sang file mới

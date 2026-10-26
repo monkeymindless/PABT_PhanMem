@@ -21,10 +21,14 @@ class HopKiemDem(QDialog):
         self.setWindowTitle('Phiếu kiểm đếm thực địa')
         self.resize(860, 560)
         lo = QVBoxLayout(self)
-        gt = QLabel('1. Xuất phiếu (một file .html) → chép sang điện thoại, mở bằng trình duyệt, ghi tài sản kiểm đếm ngoài thực địa '
-                    '(không cần mạng) → tải file kết quả .json.\n2. Nhập kết quả: các dòng được thêm vào phương án từng hộ như "Dán '
-                    'danh sách tài sản" (khớp danh mục đơn giá; cây có số đo xếp theo quy cách).\n3. Gắn ảnh: chọn thư mục ảnh chụp; '
-                    'ảnh đặt tên theo số CCCD, họ tên hoặc HO<số thứ tự> (vd HO012_nha.jpg) được gắn vào hộ.')
+        gt = QLabel('1. Xuất phiếu (ứng dụng LARC Field Mobile - một file .html) → chép sang điện thoại, mở bằng trình duyệt (không '
+                    'cần mạng): ghi nhà ở, vật kiến trúc, cây trồng, chụp ảnh biên bản, xem bản đồ thửa + định vị GPS → lưu file .json. '
+                    'Điện thoại đã cài ứng dụng LARC Field Mobile (Android .apk / iPhone "Thêm vào MH chính"): xuất dữ liệu dự án (.json) '
+                    'rồi mở file đó trong ứng dụng.'
+                    '\n2. Nhập kết quả: các dòng được thêm vào phương án từng hộ như "Dán danh sách tài sản" (khớp danh mục đơn giá; '
+                    'cây có số đo xếp theo quy cách); ảnh gửi kèm lưu vào thư mục Anh_kiem_dem cạnh file dự án; tọa độ GPS ghi vào '
+                    'ghi chú hộ.\n3. Gắn ảnh: chọn thư mục ảnh chụp; ảnh đặt tên theo số CCCD, họ tên hoặc HO<số thứ tự> (vd '
+                    'HO012_nha.jpg) được gắn vào hộ.')
         gt.setWordWrap(True)
         lo.addWidget(gt)
         from .giao_dien import XepDong
@@ -32,12 +36,15 @@ class HopKiemDem(QDialog):
         h = XepDong(hang, 8)                            # màn hình hẹp: nút xuống dòng, không ép hộp rộng hơn màn hình
         h.setContentsMargins(0, 0, 0, 0)
         self.b_xuat = QPushButton('Xuất phiếu kiểm đếm (.html)…')
+        self.b_du_lieu = QPushButton('Xuất dữ liệu cho ứng dụng điện thoại…')
+        self.b_du_lieu.setToolTip('File .json mở trong ứng dụng LARC Field Mobile đã cài (Android .apk, iPhone bản PWA).')
         self.b_nhap = QPushButton('Nhập kết quả kiểm đếm (.json)…')
         self.b_anh = QPushButton('Gắn ảnh hiện trạng từ thư mục…')
         self.b_xuat.clicked.connect(lambda: self.xuat())
+        self.b_du_lieu.clicked.connect(lambda: self.xuat_du_lieu())
         self.b_nhap.clicked.connect(lambda: self.nhap())
         self.b_anh.clicked.connect(lambda: self.gan_anh())
-        for b in (self.b_xuat, self.b_nhap, self.b_anh):
+        for b in (self.b_xuat, self.b_du_lieu, self.b_nhap, self.b_anh):
             h.addWidget(b)
         lo.addWidget(hang)
         if chi_doc:
@@ -104,6 +111,24 @@ class HopKiemDem(QDialog):
         self._ghi_kq(f'Đã xuất phiếu: {ra}')
         return ra
 
+    def xuat_du_lieu(self, file_ra=None):
+        """File dữ liệu dự án cho ứng dụng LARC Field Mobile đã cài trên điện thoại (Android / iPhone)."""
+        if file_ra is None:
+            if self.im_lang:
+                return None
+            file_ra, _ = QFileDialog.getSaveFileName(self, 'Lưu dữ liệu cho ứng dụng điện thoại',
+                                                     str(self.thu_muc / pk.ten_file_du_lieu(self.con)), 'Dữ liệu dự án (*.json)')
+            if not file_ra:
+                return None
+        try:
+            ra = pk.xuat_du_lieu_di_dong(self.con, file_ra)
+        except Exception as e:                          # noqa: BLE001
+            self._bao_loi(e)
+            return None
+        self._ghi_kq(f'Đã xuất dữ liệu cho ứng dụng điện thoại: {ra}\nGửi file này sang điện thoại, mở ứng dụng LARC Field Mobile -> '
+                     '"Chọn file dữ liệu dự án…".')
+        return ra
+
     def nhap(self, file=None, tao_ho_moi=None):
         """Nhập file .json của phiếu (một hộ "<Tên hộ>.json" hoặc cả dự án). Hộ của phiếu không khớp hộ nào của dự án (1.0.32: khớp theo
         CCCD -> tờ / thửa, lô rừng -> họ tên -> mã hộ): hỏi thêm thành hộ mới (tao_ho_moi None = hỏi; True / False cho kiểm thử)."""
@@ -129,8 +154,8 @@ class HopKiemDem(QDialog):
                 if tao_ho_moi:
                     with con_tro_cho():
                         k2 = pk.nhap_ket_qua_kiem_dem(self.con, file, self.dm, tao_ho_moi=True, chi={x['khoa'] for x in chua})
-                    kq['so_dong'] += k2['so_dong']
-                    kq['so_ho'] += k2['so_ho']
+                    for k in ('so_dong', 'so_ho', 'so_anh', 'so_gps'):
+                        kq[k] = kq.get(k, 0) + k2.get(k, 0)
                     kq['tao_moi'] = k2['tao_moi']
                     bo = {x['khoa'] for x in chua}
                     kq['loi'] = [x for x in kq['loi'] if not any(x.startswith(c['ten'] + ':') for c in kq['chua_khop']
@@ -138,10 +163,14 @@ class HopKiemDem(QDialog):
         except Exception as e:                          # noqa: BLE001
             self._bao_loi(e)
             return None
-        self.da_ghi = self.da_ghi or kq['so_dong'] > 0 or kq.get('tao_moi', 0) > 0
+        self.da_ghi = self.da_ghi or kq['so_dong'] > 0 or any(kq.get(k, 0) > 0 for k in ('tao_moi', 'so_anh', 'so_gps'))
         self._ghi_kq(f'Đã thêm {kq["so_dong"]} dòng vào phương án {kq["so_ho"]} hộ'
-                     + (f' (thêm {kq["tao_moi"]} hộ mới)' if kq.get('tao_moi') else '') + '.' +
+                     + (f' (thêm {kq["tao_moi"]} hộ mới)' if kq.get('tao_moi') else '')
+                     + (f'; {kq["so_anh"]} ảnh mới ({kq.get("thu_muc_anh", "")})' if kq.get('so_anh') else '')
+                     + (f'; tọa độ GPS {kq["so_gps"]} hộ (ghi chú hộ)' if kq.get('so_gps') else '') + '.' +
                      (f' {len(kq["loi"])} dòng chưa thêm được:\n- ' + '\n- '.join(kq['loi']) if kq['loi'] else ''))
+        if kq.get('so_anh'):
+            self.nap()
         return kq
 
     def gan_anh(self, thu_muc=None):

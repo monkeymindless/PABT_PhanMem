@@ -1,14 +1,19 @@
-"""Phiếu kiểm đếm thực địa không cần mạng (0.9.87).
+"""Phiếu kiểm đếm thực địa không cần mạng (0.9.87; ứng dụng di động LARC Field Mobile 1.0.32).
 
-1. xuat_phieu_kiem_dem_html: MỘT file .html (mở bằng trình duyệt điện thoại / máy tính bảng, không cần Internet): danh sách hộ +
-   thửa của dự án, gợi ý tên tài sản / cây / vật nuôi theo danh mục đơn giá; cán bộ ghi tài sản kiểm đếm (tự lưu trong trình duyệt)
-   rồi bấm tải file kết quả .json.
+1. xuat_phieu_kiem_dem_html: MỘT file .html (mẫu `phieu_kiem_dem.html` của gói, mở bằng trình duyệt điện thoại / máy tính bảng, không
+   cần Internet): 7 thẻ - hồ sơ & đất (thửa địa chính / lô rừng, GPS tại chỗ), nhà ở (QĐ 42), vật kiến trúc, cây trồng & vật nuôi,
+   ảnh biên bản viết tay (lưu IndexedDB, lọc dòng kẻ chấm), bản đồ (thửa của dự án + KML / KMZ nạp trên máy, GPS, chạm thửa mở hộ, tọa
+   độ VN-2000), xuất .json. Dữ liệu nhúng: hộ + thửa, danh mục có mã (nhà / vật kiến trúc / vật nuôi), tên loài cây, bản đồ thửa đổi
+   sang WGS84, tham số VN-2000 (toa_do.tham_so_datum), kinh tuyến trục, biểu tượng.
+1b. Ứng dụng cài trên điện thoại: CÙNG mẫu ở chế độ 'android' (bản .apk, bo_cai_win/dung_di_dong.py) / 'pwa' (iPhone, Thêm vào MH chính)
+   - tep_ung_dung: vỏ không chứa dữ liệu; dữ liệu dự án gửi sang bằng file .json (xuat_du_lieu_di_dong, loai "larc_field_du_lieu").
 2. nhap_ket_qua_kiem_dem: file .json -> phương án hộ (lap_pa.BoSoan) qua CÙNG đường "Dán danh sách tài sản" (khớp danh mục ->
-   dòng danh mục, không khớp -> hạng mục ngoài danh mục; cây có số đo đường kính / chu vi -> quy cách). Mỗi hộ lưu một lần (một
-   bước Hoàn tác), hộ đang mở chỉ xem / không tồn tại -> báo lỗi dòng.
+   dòng danh mục, không khớp -> hạng mục ngoài danh mục; cây có số đo đường kính / chu vi -> quy cách; dòng mục 0 = ghi lại biên bản,
+   tự phân loại). Ảnh gửi kèm -> thư mục "Anh_kiem_dem/<mã hộ>" cạnh file dự án + bảng anh_hien_trang; GPS -> ghi chú hộ. Mỗi hộ
+   lưu một lần (một bước Hoàn tác), hộ đang mở chỉ xem / không tồn tại -> báo lỗi dòng.
 3. gan_anh_hien_trang: quét thư mục ảnh, gắn ảnh vào hộ theo số CCCD / họ tên không dấu / "HO<stt>" trong tên file -> bảng
    anh_hien_trang (lược đồ v16). Tên trùng nhiều hộ: không gắn, báo lại.
-Không Qt."""
+Không Qt (trừ thu nhỏ biểu tượng khi có Qt - không có thì nhúng ảnh gốc)."""
 from __future__ import annotations
 import html
 import json
@@ -19,8 +24,12 @@ from pathlib import Path
 from . import csdl
 from .lap_pa import LoiNhap, bo_dau
 
-PHIEN_BAN_PHIEU = 1
+PHIEN_BAN_PHIEU = 2                 # phiên bản file .json phiếu ghi ra (1 = phiếu 0.9.87 - vẫn nhập được)
 MUC_PHIEU = ((2, 'Nhà, công trình'), (3, 'Cây trồng'), (7, 'Vật nuôi'))
+MAU_PHIEU = 'phieu_kiem_dem.html'   # mẫu ứng dụng di động (tai_nguyen; gói cập nhật thay được)
+THU_MUC_ANH = 'Anh_kiem_dem'        # ảnh gửi kèm phiếu lưu ở <thư mục file dự án>/Anh_kiem_dem/<mã hộ>/
+ANH_TOI_DA = 25 * 1024 * 1024       # một ảnh gửi kèm (byte) - lớn hơn: bỏ, báo lại
+CO_BIEU_TUONG = 128                 # px biểu tượng nhúng vào phiếu
 DUOI_ANH = ('.jpg', '.jpeg', '.png', '.webp', '.bmp', '.heic', '.tif', '.tiff')
 BANG_ANH = 'anh_hien_trang'
 SQL_BANG_ANH = f'''CREATE TABLE IF NOT EXISTS {BANG_ANH} (
@@ -35,24 +44,96 @@ SQL_BANG_ANH = f'''CREATE TABLE IF NOT EXISTS {BANG_ANH} (
 
 
 # ---------------------------------------------------------------- 1. xuất phiếu
+def _la_nha(ten: str, phan_loai: str) -> bool:
+    """Mục danh mục là nhà ở (thẻ "Nhà ở" của phiếu): tên bắt đầu bằng Nhà / Biệt thự / Gác lửng hoặc phân loại nhà ở."""
+    t = bo_dau(ten or '').lower().lstrip()
+    return t.startswith(('nha ', 'biet thu', 'gac lung')) or 'nha o' in bo_dau(phan_loai or '').lower()
+
+
+def _ban_do_wgs84(con, kinh_tuyen: float) -> list:
+    """Thửa đã nhập bản vẽ (.dxf / .kml) -> [{so_to, so_thua, loai, ma_ho, trang_thai, vong: [[vĩ độ, kinh độ]…]}] (6 chữ số lẻ ~ 0,1 m)."""
+    from . import ban_do_cad
+    from .toa_do import vn2000_sang_wgs84
+    ra = []
+    for t in ban_do_cad.doc_ban_do(con):
+        vong = [[round(vd, 7), round(kd, 7)] for vd, kd in (vn2000_sang_wgs84(x, y, kinh_tuyen) for x, y in t.toa_do)]
+        if len(vong) >= 3:
+            ra.append(dict(so_to=t.so_to, so_thua=t.so_thua, loai=t.loai_dat or '', ma_ho=t.ma_ho, trang_thai=t.trang_thai, vong=vong))
+    return ra
+
+
+def anh_bieu_tuong(co: int = CO_BIEU_TUONG, le: float = 0.0, nen: str = '') -> bytes:
+    """Biểu tượng phần mềm (png) cỡ `co` px bằng Qt (ảnh gốc ~350 KB); `le` = tỷ lệ lề mỗi bên, `nen` = màu nền (biểu tượng "maskable" của
+    PWA / Android cần nền kín, hình nằm trong vùng an toàn). Không có Qt / lỗi: ảnh gốc. Không đọc được ảnh: b''."""
+    from . import tai_nguyen
+    try:
+        goc = tai_nguyen('bieu_tuong.png').read_bytes()
+    except OSError:
+        return b''
+    try:
+        from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QRect, Qt
+        from PySide6.QtGui import QColor, QImage, QPainter
+        anh = QImage.fromData(goc)
+        if anh.isNull() or (max(anh.width(), anh.height()) <= co and not le and not nen):
+            return goc
+        ra = QImage(co, co, QImage.Format.Format_ARGB32)
+        ra.fill(QColor(nen) if nen else Qt.GlobalColor.transparent)
+        trong = max(1, round(co * (1 - 2 * le)))
+        hinh = anh.scaled(trong, trong, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        p = QPainter(ra)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        p.drawImage(QRect((co - hinh.width()) // 2, (co - hinh.height()) // 2, hinh.width(), hinh.height()), hinh)
+        p.end()
+        ba = QByteArray()
+        buf = QBuffer(ba)
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        ok = ra.save(buf, 'PNG')
+        buf.close()
+        return bytes(ba.data()) if ok else goc
+    except Exception:                                    # noqa: BLE001 - không có Qt / lỗi thu nhỏ: ảnh gốc
+        return goc
+
+
+def _bieu_tuong_data_uri() -> str:
+    """Biểu tượng nhúng vào phiếu một file: thu về CO_BIEU_TUONG px."""
+    import base64
+    du = anh_bieu_tuong(CO_BIEU_TUONG)
+    return 'data:image/png;base64,' + base64.b64encode(du).decode('ascii') if du else ''
+
+
 def du_lieu_phieu(con) -> dict:
-    """Dữ liệu nhúng vào phiếu: hộ (CCCD đã che - file nằm trên điện thoại), thửa, danh mục gợi ý theo mục."""
-    from .an_toan import che_cccd
+    """Dữ liệu nhúng vào phiếu (ứng dụng di động): hộ + thửa, danh mục có mã, loài cây, bản đồ (WGS84), tham số VN-2000."""
+    from . import ban_do_cad, __version__
+    from .cay_trong import ten_goc
+    from .toa_do import kinh_tuyen_truc, tham_so_datum
     thua = {}
     for r in con.execute('SELECT ma_ho, so_to, so_thua, loai_dat, dt_thu_hoi FROM thua ORDER BY thu_tu, ma_thua'):
-        thua.setdefault(r['ma_ho'], []).append(f'Tờ {r["so_to"]} thửa {r["so_thua"]} {r["loai_dat"] or ""} '
-                                               f'{r["dt_thu_hoi"] or ""} m²'.replace('  ', ' ').strip())
-    ho = [dict(ma=r['ma_ho'], stt=r['thu_tu'], ten=' '.join(str(r['ho_ten'] or '').split()),
-               cccd=che_cccd((r['so_cccd'] or '').strip()), dia_chi=' '.join(str(r['dia_chi'] or '').split()),
-               thua=thua.get(r['ma_ho'], []))
-          for r in con.execute('SELECT ma_ho, thu_tu, ho_ten, so_cccd, dia_chi FROM ho ORDER BY thu_tu, ma_ho')]
-    goi_y = {2: [], 3: [], 7: []}
-    for r in con.execute('SELECT nhom, phan_loai, ten, dvt FROM dm_taisan ORDER BY ma'):
-        muc = 7 if 'vat nuoi' in bo_dau(r['phan_loai'] or '') else (r['nhom'] if r['nhom'] in (2, 3) else None)
-        if muc is not None:
-            goi_y[muc].append([r['ten'], r['dvt'] or ''])
+        thua.setdefault(r['ma_ho'], []).append(dict(to=str(r['so_to'] or ''), thua=str(r['so_thua'] or ''),
+                                                    loai=str(r['loai_dat'] or ''), dt=str(r['dt_thu_hoi'] or '')))
+    cot_ho = {r[1] for r in con.execute('PRAGMA table_info(ho)')}
+    sdt = 'dien_thoai' if 'dien_thoai' in cot_ho else "''"
+    ho = [dict(ma=r['ma_ho'], stt=r['thu_tu'], ten=' '.join(str(r['ho_ten'] or '').split()), cccd=(r['so_cccd'] or '').strip(),
+               dia_chi=' '.join(str(r['dia_chi'] or '').split()), sdt=str(r['sdt'] or '').strip(), thua=thua.get(r['ma_ho'], []))
+          for r in con.execute(f'SELECT ma_ho, thu_tu, ho_ten, so_cccd, dia_chi, {sdt} AS sdt FROM ho ORDER BY thu_tu, ma_ho')]
+    nha, dm2, vat_nuoi, cay = [], [], [], {}
+    for r in con.execute('SELECT ma, nhom, phan_loai, ten, dvt FROM dm_taisan ORDER BY nhom, ma'):
+        muc = [str(r['ma'] or ''), r['ten'] or '', r['dvt'] or '']
+        if 'vat nuoi' in bo_dau(r['phan_loai'] or '').lower():
+            vat_nuoi.append(muc)
+        elif r['nhom'] == 2:
+            (nha if _la_nha(r['ten'], r['phan_loai']) else dm2).append(muc)
+        elif r['nhom'] == 3:
+            t = ten_goc(r['ten'] or '').strip()
+            if t:
+                cay.setdefault(bo_dau(t).lower(), t)
+    goi_y = {2: [[m[1], m[2]] for m in nha + dm2], 3: [[t, 'cây'] for t in cay.values()], 7: [[m[1], m[2]] for m in vat_nuoi]}
+    kt = kinh_tuyen_truc()
+    datum, quy_uoc, _ = tham_so_datum()
     da = con.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
-    return dict(du_an=(da['ten'] if da else '') or '', ho=ho, goi_y=goi_y)
+    return dict(du_an=(da['ten'] if da else '') or '', phien_ban=__version__, ho=ho, nha=nha, dm2=dm2, vat_nuoi=vat_nuoi,
+                cay=sorted(cay.values(), key=lambda x: bo_dau(x).lower()), goi_y=goi_y, kinh_tuyen=kt, datum=list(datum),
+                quy_uoc=quy_uoc, ban_do=_ban_do_wgs84(con, kt), trang_thai_ho={str(k): v for k, v in ban_do_cad.trang_thai_ho(con).items()},
+                mau_trang_thai={k: list(v) for k, v in ban_do_cad.TRANG_THAI.items()})
 
 
 def _json_trong_script(x) -> str:
@@ -60,138 +141,117 @@ def _json_trong_script(x) -> str:
     return json.dumps(x, ensure_ascii=False).replace('</', '<\\/').replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
 
 
-def xuat_phieu_kiem_dem_html(con, file_ra) -> Path:
-    """Ghi file .html phiếu kiểm đếm. Trả đường dẫn."""
-    du = du_lieu_phieu(con)
-    ra = Path(file_ra)
+def _mau_phieu() -> str:
+    from . import tai_nguyen
+    try:
+        return tai_nguyen(MAU_PHIEU).read_text(encoding='utf-8')
+    except OSError as e:
+        raise LoiNhap(f'Thiếu mẫu phiếu kiểm đếm ({MAU_PHIEU}): {e}. Cài lại phần mềm.') from None
+
+
+def _dien_mau(tieu: str, phien_ban: str, bieu_tuong: str, du_lieu_js: str, che_do: str, dau_pwa: str = '') -> str:
+    noi = _mau_phieu()
+    if che_do != 'tep':                 # vỏ ứng dụng: mã chính chạy sau khi vỏ nạp dữ liệu dự án (vo_ung_dung trong mẫu)
+        noi = noi.replace('<script id="ma_chinh">', '<script type="text/plain" id="ma_chinh">', 1)
+    return (noi.replace('@@DAU_PWA@@', dau_pwa).replace('@@CHE_DO@@', che_do).replace('@@TIEU_DE@@', tieu)
+            .replace('@@PHIEN_BAN@@', html.escape(phien_ban)).replace('@@BIEU_TUONG@@', bieu_tuong).replace('@@DU_LIEU@@', du_lieu_js))
+
+
+def _ghi_nguyen_tu(ra: Path, noi) -> Path:
     ra.parent.mkdir(parents=True, exist_ok=True)
-    tieu = html.escape(du['du_an'] or 'Dự án')
-    muc = ''.join(f'<option value="{m}">{html.escape(t)}</option>' for m, t in MUC_PHIEU)
-    noi = (_HTML.replace('@@TIEU_DE@@', tieu).replace('@@MUC@@', muc).replace('@@SO_HO@@', str(len(du['ho'])))
-           .replace('@@PHIEN_BAN@@', str(PHIEN_BAN_PHIEU)).replace('@@DU_LIEU@@', _json_trong_script(du)))
     tam = ra.with_name(ra.name + '.tmp')
-    tam.write_text(noi, encoding='utf-8')
+    if isinstance(noi, bytes):
+        tam.write_bytes(noi)
+    else:
+        tam.write_text(noi, encoding='utf-8')
     tam.replace(ra)
     return ra
 
 
-_HTML = '''<!DOCTYPE html>
-<html lang="vi"><head><meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Phiếu kiểm đếm - @@TIEU_DE@@</title>
-<style>
-*{box-sizing:border-box;font-family:"Segoe UI",Roboto,Arial,sans-serif}
-body{margin:0;background:#F8FAFC;color:#0F172A}
-header{background:#0F294A;color:#fff;padding:12px 14px;border-bottom:3px solid #F59E0B}
-header h1{margin:0;font-size:16px}header p{margin:4px 0 0;font-size:12px;color:#E2E8F0}
-.khung{max-width:760px;margin:10px auto;padding:0 10px 80px}
-.the{background:#fff;border:1px solid #CBD5E1;border-radius:10px;padding:12px;margin-bottom:10px}
-label{display:block;font-size:13px;font-weight:600;margin:6px 0 3px}
-input,select{width:100%;padding:9px;border:1px solid #94A3B8;border-radius:6px;font-size:15px}
-.hang{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-button{background:#2563EB;color:#fff;border:0;border-radius:6px;padding:11px 14px;font-size:15px;font-weight:600;margin-top:10px;width:100%}
-button.phu{background:#64748B}button.luu{background:#107C41}
-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
-th,td{border:1px solid #CBD5E1;padding:5px;text-align:left;vertical-align:top}th{background:#F1F5F9}
-.nho{font-size:12px;color:#475569}
-</style></head><body>
-<header><h1>PHIẾU KIỂM ĐẾM THỰC ĐỊA</h1><p>@@TIEU_DE@@ · @@SO_HO@@ hộ · tự lưu trên máy này</p></header>
-<div class="khung">
-<div class="the"><label for="o_tim">Tìm hộ (tên, số thứ tự, địa chỉ - không cần dấu)</label>
-<input id="o_tim" placeholder="Gõ để lọc…"/>
-<label for="cb_ho">Hộ</label><select id="cb_ho"></select>
-<div id="tt_ho" class="nho"></div></div>
-<div class="the"><div class="hang"><div><label for="cb_muc">Loại</label><select id="cb_muc">@@MUC@@</select></div>
-<div><label for="o_dvt">Đơn vị tính</label><input id="o_dvt" placeholder="m², cây, con…"/></div></div>
-<label for="o_ten">Tên tài sản / cây / vật nuôi</label><input id="o_ten" list="goi_y" placeholder="Gõ vài chữ để chọn gợi ý"/>
-<datalist id="goi_y"></datalist>
-<div class="hang"><div><label for="o_sl">Số lượng (được ghi phép tính 4x5)</label><input id="o_sl" inputmode="decimal"/></div>
-<div><label for="o_tl">Tỷ lệ %</label><input id="o_tl" inputmode="decimal" value="100"/></div></div>
-<div class="hang"><div><label for="o_do">Đường kính / chu vi (cm, cây)</label><input id="o_do" placeholder="15, 18x2, 22"/></div>
-<div><label for="cb_kieu">Số đo là</label><select id="cb_kieu"><option value="dk">Đường kính</option><option value="cv">Chu vi</option></select></div></div>
-<label for="o_gc">Ghi chú / tên ảnh</label><input id="o_gc"/>
-<button id="b_them" type="button">Thêm vào hộ đang chọn</button>
-<table><thead><tr><th>Loại</th><th>Tên</th><th>SL</th><th>ĐVT</th><th>Ghi chú</th><th></th></tr></thead><tbody id="bang"></tbody></table></div>
-<div class="the"><button class="luu" id="b_tai" type="button">Tải file kết quả (.json)</button>
-<p class="nho">Gửi file .json về máy tính, trong phần mềm PABT chọn Công cụ → Phiếu kiểm đếm thực địa… → Nhập kết quả.</p>
-<button class="phu" id="b_xoa" type="button">Xóa mọi kết quả đã ghi trên máy này</button></div>
-</div>
-<script>
-"use strict";
-const DU = @@DU_LIEU@@;
-const KHOA = "pabt_kiem_dem_" + DU.du_an;
-const TEN_MUC = {2: "Nhà", 3: "Cây", 7: "Vật nuôi"};
-let KQ = {};
-try { KQ = JSON.parse(localStorage.getItem(KHOA) || "{}") || {}; } catch (e) { KQ = {}; }
-function luu() { try { localStorage.setItem(KHOA, JSON.stringify(KQ)); } catch (e) {} }
-function boDau(s) { return (s || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase(); }
-const $ = id => document.getElementById(id);
-function locHo() {
-  const tk = boDau($("o_tim").value), cb = $("cb_ho"), cu = cb.value;
-  cb.textContent = "";
-  for (const h of DU.ho) {
-    const chu = h.stt + ". " + h.ten + (h.dia_chi ? " - " + h.dia_chi : "");
-    if (tk && !boDau(chu + " " + h.cccd).includes(tk)) continue;
-    const o = document.createElement("option");
-    o.value = String(h.ma); o.textContent = chu + (KQ[h.ma] && KQ[h.ma].length ? "  [" + KQ[h.ma].length + "]" : "");
-    cb.appendChild(o);
-  }
-  if (cu) cb.value = cu;
-  chonHo();
-}
-function hoDangChon() { const ma = $("cb_ho").value; return DU.ho.find(h => String(h.ma) === ma); }
-function chonHo() {
-  const h = hoDangChon();
-  $("tt_ho").textContent = h ? ("CCCD: " + (h.cccd || "-") + " · " + h.thua.join("; ")) : "";
-  veBang();
-}
-function goiY() {
-  const dl = $("goi_y"); dl.textContent = "";
-  for (const [ten, dvt] of (DU.goi_y[$("cb_muc").value] || [])) {
-    const o = document.createElement("option"); o.value = ten; o.label = dvt; dl.appendChild(o);
-  }
-}
-function them() {
-  const h = hoDangChon(), ten = $("o_ten").value.trim(), sl = $("o_sl").value.trim(), dk = $("o_do").value.trim();
-  if (!h || !ten || (!sl && !dk)) { alert("Chọn hộ, ghi tên và số lượng (hoặc số đo)."); return; }
-  const muc = parseInt($("cb_muc").value, 10);
-  let dvt = $("o_dvt").value.trim();
-  const gy = (DU.goi_y[muc] || []).find(x => x[0] === ten);
-  if (!dvt && gy) dvt = gy[1];
-  (KQ[h.ma] = KQ[h.ma] || []).push({muc: muc, ten: ten, dvt: dvt, so_luong: sl, ty_le: $("o_tl").value.trim(),
-    so_do: dk, kieu: $("cb_kieu").value, ghi_chu: $("o_gc").value.trim(), luc: new Date().toISOString()});
-  luu();
-  for (const id of ["o_ten", "o_sl", "o_do", "o_gc", "o_dvt"]) $(id).value = "";
-  locHo();
-}
-function veBang() {
-  const h = hoDangChon(), tb = $("bang"); tb.textContent = "";
-  ((h && KQ[h.ma]) || []).forEach((d, i) => {
-    const tr = document.createElement("tr");
-    for (const x of [TEN_MUC[d.muc] || d.muc, d.ten + (d.so_do ? " (" + d.so_do + " cm)" : ""), d.so_luong, d.dvt, d.ghi_chu]) {
-      const td = document.createElement("td"); td.textContent = x; tr.appendChild(td);
-    }
-    const td = document.createElement("td"), b = document.createElement("button");
-    b.textContent = "Xóa"; b.className = "phu"; b.style.margin = "0"; b.style.padding = "4px";
-    b.onclick = () => { KQ[h.ma].splice(i, 1); luu(); locHo(); };
-    td.appendChild(b); tr.appendChild(td); tb.appendChild(tr);
-  });
-}
-function taiVe() {
-  const ra = {phien_ban: @@PHIEN_BAN@@, du_an: DU.du_an, luc: new Date().toISOString(), ket_qua: KQ};
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(ra, null, 1)], {type: "application/json"}));
-  a.download = "ket_qua_kiem_dem.json"; document.body.appendChild(a); a.click(); a.remove();
-}
-$("o_tim").addEventListener("input", locHo);
-$("cb_ho").addEventListener("change", chonHo);
-$("cb_muc").addEventListener("change", goiY);
-$("b_them").addEventListener("click", them);
-$("b_tai").addEventListener("click", taiVe);
-$("b_xoa").addEventListener("click", () => { if (confirm("Xóa mọi kết quả đã ghi trên máy này?")) { KQ = {}; luu(); locHo(); } });
-goiY(); locHo();
-</script></body></html>
-'''
+def xuat_phieu_kiem_dem_html(con, file_ra) -> Path:
+    """Ghi file .html phiếu kiểm đếm (ứng dụng di động một file, dữ liệu dự án nhúng sẵn). Trả đường dẫn."""
+    du = du_lieu_phieu(con)
+    noi = _dien_mau(html.escape(du['du_an'] or 'Dự án'), du['phien_ban'], _bieu_tuong_data_uri(), _json_trong_script(du), 'tep')
+    return _ghi_nguyen_tu(Path(file_ra), noi)
+
+
+# ---------------------------------------------------------------- 1b. ứng dụng cài trên điện thoại (Android .apk / PWA iPhone)
+# Vỏ ứng dụng KHÔNG chứa dữ liệu (dựng một lần, cài một lần); dữ liệu từng dự án gửi sang bằng file .json "larc_field_du_lieu".
+LOAI_GOI_DU_LIEU = 'larc_field_du_lieu'
+CHE_DO_VO = ('pwa', 'android')
+BIEU_TUONG_PWA = (('icon-180.png', 180, 0.0, ''), ('icon-192.png', 192, 0.0, ''), ('icon-512.png', 512, 0.0, ''),
+                  ('icon-maskable-512.png', 512, 0.12, '#FFFFFF'))
+TEN_UNG_DUNG = 'LARC Field Mobile'
+TEN_NGAN = 'LARC Field'
+
+
+def _dau_pwa() -> str:
+    return ('<link rel="manifest" href="manifest.webmanifest"/>\n<meta name="apple-mobile-web-app-capable" content="yes"/>\n'
+            '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>\n'
+            f'<meta name="apple-mobile-web-app-title" content="{TEN_NGAN}"/>')
+
+
+def html_ung_dung(che_do: str) -> str:
+    """index.html của vỏ ứng dụng (che_do 'pwa' / 'android'): biểu tượng là file icon-180.png cạnh nó, dữ liệu mở từ file."""
+    from . import __version__
+    if che_do not in CHE_DO_VO:
+        raise ValueError(che_do)
+    return _dien_mau('Kiểm đếm thực địa', __version__, 'icon-180.png', 'null', che_do, _dau_pwa() if che_do == 'pwa' else '')
+
+
+def goi_du_lieu_di_dong(con) -> dict:
+    """File dữ liệu dự án cho ứng dụng đã cài: {"loai", "phien_ban", "luc", "du_lieu" (= dữ liệu nhúng của phiếu một file)}."""
+    return dict(loai=LOAI_GOI_DU_LIEU, phien_ban=1, luc=datetime.now().isoformat(timespec='seconds'), du_lieu=du_lieu_phieu(con))
+
+
+def ten_file_du_lieu(con) -> str:
+    """Tên file mặc định: LARC_DuLieu_<tên dự án không dấu>.json."""
+    da = con.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
+    ten = re.sub(r'[^A-Za-z0-9]+', '_', bo_dau((da['ten'] if da else '') or '')).strip('_')[:60] or 'du_an'
+    return f'LARC_DuLieu_{ten}.json'
+
+
+def xuat_du_lieu_di_dong(con, file_ra) -> Path:
+    """Ghi file .json dữ liệu dự án mở trong ứng dụng LARC Field Mobile (Android / iPhone)."""
+    return _ghi_nguyen_tu(Path(file_ra), json.dumps(goi_du_lieu_di_dong(con), ensure_ascii=False))
+
+
+def manifest_pwa() -> dict:
+    from . import __version__
+    return dict(name=TEN_UNG_DUNG, short_name=TEN_NGAN, description='Kiểm đếm thực địa bồi thường, hỗ trợ, tái định cư - chạy không cần mạng',
+                lang='vi', start_url='./', scope='./', display='standalone', orientation='any', background_color='#F8FAFC',
+                theme_color='#2F5F9E', version=__version__,
+                icons=[dict(src=t, sizes=f'{c}x{c}', type='image/png', purpose='maskable' if nen else 'any')
+                       for t, c, _, nen in BIEU_TUONG_PWA if c >= 192])
+
+
+def sw_pwa(ds_file) -> str:
+    """Service worker: lưu mọi file của ứng dụng vào bộ nhớ đệm khi cài (chạy không mạng), bản mới -> bộ nhớ đệm mới."""
+    from . import __version__
+    return ('"use strict";\n'
+            f'const BO = "larc-field-{__version__}", TEP = {json.dumps(["./"] + list(ds_file))};\n'
+            'self.addEventListener("install", e => { e.waitUntil(caches.open(BO).then(c => c.addAll(TEP)).then(() => self.skipWaiting())); });\n'
+            'self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ds => Promise.all(ds.filter(k => k.startsWith("larc-field-") '
+            '&& k !== BO).map(k => caches.delete(k)))).then(() => self.clients.claim())); });\n'
+            'self.addEventListener("fetch", e => { if (e.request.method !== "GET") return;\n'
+            '  e.respondWith(caches.match(e.request, {ignoreSearch: true}).then(r => r || fetch(e.request).catch(() =>\n'
+            '    e.request.mode === "navigate" ? caches.match("./index.html") : Response.error()))); });\n')
+
+
+def tep_ung_dung(che_do: str) -> dict:
+    """{tên file: bytes} của vỏ ứng dụng: index.html + biểu tượng (+ manifest, sw.js với PWA)."""
+    tep = {'index.html': html_ung_dung(che_do).encode('utf-8')}
+    for ten, co, le, nen in BIEU_TUONG_PWA:
+        if che_do == 'android' and ten != 'icon-180.png':   # biểu tượng trình khởi chạy Android nằm ở res/mipmap (dung_di_dong.py)
+            continue
+        du = anh_bieu_tuong(co, le, nen)
+        if not du:
+            raise LoiNhap('Thiếu biểu tượng phần mềm (bieu_tuong.png).')
+        tep[ten] = du
+    if che_do == 'pwa':
+        tep['manifest.webmanifest'] = json.dumps(manifest_pwa(), ensure_ascii=False, indent=1).encode('utf-8')
+        tep['sw.js'] = sw_pwa(sorted(tep)).encode('utf-8')
+    return tep
 
 
 # ---------------------------------------------------------------- 2. nhập kết quả
@@ -211,6 +271,9 @@ def _doc_file_phieu(file) -> dict:
         du = json.loads(Path(file).read_text(encoding='utf-8-sig'))
     except (OSError, ValueError) as e:
         raise LoiNhap(f'Không đọc được file kết quả kiểm đếm: {e}') from None
+    if isinstance(du, dict) and du.get('loai') == LOAI_GOI_DU_LIEU:
+        raise LoiNhap('Đây là file DỮ LIỆU DỰ ÁN gửi sang điện thoại, không phải kết quả kiểm đếm. Trên điện thoại: thẻ "6. Xuất .JSON" '
+                      '-> gửi file kết quả về máy tính rồi nhập file đó.')
     if not isinstance(du, dict) or not isinstance(du.get('ket_qua'), dict):
         raise LoiNhap('File không phải kết quả của Phiếu kiểm đếm LARC (thiếu "ket_qua").')
     return du
@@ -226,6 +289,7 @@ def doc_phieu(file) -> dict:
     du = _doc_file_phieu(file)
     ho_dan = du.get('ho_dan') if isinstance(du.get('ho_dan'), dict) else {}
     dat_dai = du.get('dat_dai') if isinstance(du.get('dat_dai'), dict) else {}
+    anh = du.get('anh') if isinstance(du.get('anh'), dict) else {}
     nam = None
     m = re.match(r'\s*(\d{4})-', str(du.get('luc') or ''))
     if m:
@@ -239,8 +303,105 @@ def doc_phieu(file) -> dict:
         except (TypeError, ValueError):
             ma = None
         thua = [t for t in (dat_dai.get(khoa) or []) if isinstance(t, dict)]
-        ho.append(dict(khoa=str(khoa), ma_ho=ma, thong_tin=tt, thua=thua, dong=_dong_hop_le(ds)))
+        a = [x for x in (anh.get(khoa) or []) if isinstance(x, dict) and isinstance(x.get('du_lieu'), str)] \
+            if isinstance(anh.get(khoa), list) else []
+        ho.append(dict(khoa=str(khoa), ma_ho=ma, thong_tin=tt, thua=thua, dong=_dong_hop_le(ds), anh=a, gps=_gps(tt.get('gps'))))
     return dict(du_an=str(du.get('du_an') or ''), nam=nam, ho=ho)
+
+
+def _gps(g) -> dict | None:
+    """{'lat', 'lon', 'acc'} của phiếu -> số kiểm tra trong vùng hợp lý (Việt Nam và lân cận), không thì None."""
+    if not isinstance(g, dict):
+        return None
+    try:
+        lat, lon, acc = float(g.get('lat')), float(g.get('lon')), float(g.get('acc') or 0)
+    except (TypeError, ValueError):
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180) or lat != lat or lon != lon:
+        return None
+    return dict(lat=lat, lon=lon, acc=max(0.0, acc), luc=str(g.get('luc') or ''))
+
+
+def chu_gps(g: dict, kinh_tuyen: float | None = None) -> str:
+    """'Tọa độ kiểm đếm (GPS): 10.9876543, 106.8765432 (±5 m), VN-2000 X 1.215.432,10 Y 432.109,87' (X = Bắc như sổ địa chính).
+    Không có dấu ";" - ghi chú hộ ngăn các đoạn bằng ";"."""
+    from .tien import vn
+    from .toa_do import wgs84_sang_vn2000
+    dong, bac = wgs84_sang_vn2000(g['lat'], g['lon'], kinh_tuyen)
+    return (f'{TIEN_TO_GPS} {g["lat"]:.7f}, {g["lon"]:.7f} (±{round(g["acc"])} m), VN-2000 X {vn(f"{bac:.2f}", 2)} '
+            f'Y {vn(f"{dong:.2f}", 2)}')
+
+
+TIEN_TO_GPS = 'Tọa độ kiểm đếm (GPS):'
+
+
+def _ghi_gps(con, ma_ho: int, g: dict) -> bool:
+    """Ghi tọa độ vào ghi chú hộ (thay đoạn "Tọa độ kiểm đếm (GPS): …" cũ, giữ phần ghi chú khác). Trả True khi ghi chú đổi."""
+    from .lap_pa import kiem_ho_nhan_viec
+    r = con.execute('SELECT ghi_chu FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
+    if r is None:
+        return False
+    cu = [x.strip() for x in str(r['ghi_chu'] or '').split(';') if x.strip()]
+    gc = '; '.join([x for x in cu if not x.startswith(TIEN_TO_GPS)] + [chu_gps(g)])
+    if gc == '; '.join(cu):
+        return False
+    kiem_ho_nhan_viec(con, ma_ho)
+    with csdl.giao_dich(con):
+        con.execute('UPDATE ho SET ghi_chu = ? WHERE ma_ho = ?', (gc, ma_ho))
+    return True
+
+
+def thu_muc_anh_du_an(con) -> Path:
+    """<thư mục file dự án>/Anh_kiem_dem (dự án chưa lưu thành file: thư mục máy)."""
+    try:
+        f = con.execute('PRAGMA database_list').fetchone()[2]
+    except Exception:                                    # noqa: BLE001
+        f = ''
+    if f:
+        return Path(f).parent / THU_MUC_ANH
+    from .dia_phuong import thu_muc_may
+    return Path(thu_muc_may()) / THU_MUC_ANH
+
+
+def _luu_anh(con, ma_ho: int, ds: list, thu_muc: Path, luc: str) -> tuple:
+    """Ảnh gửi kèm phiếu ("data:image/jpeg;base64,…") -> file trong thu_muc/<mã hộ>/ + dòng anh_hien_trang (khop_theo 'kiem_dem').
+    Ảnh trùng nội dung với file đã có cùng tên: dùng lại (nhập lại phiếu không nhân đôi). Trả (số ảnh mới, [lỗi])."""
+    import base64
+    import binascii
+    from .an_toan import LOAI_ANH, LoiAnToan, kiem_tra_magic_bytes
+    duoi = {'jpeg': '.jpg', 'png': '.png', 'webp': '.webp', 'gif': '.gif', 'bmp': '.bmp', 'tiff': '.tif', 'heic': '.heic'}
+    moi, loi = 0, []
+    tm = thu_muc / str(ma_ho)
+    for k, a in enumerate(ds, 1):
+        ten = str(a.get('ten') or f'anh_{k}')[:120]
+        chu = a['du_lieu']
+        m = re.match(r'data:[\w/+.-]*;base64,', chu[:64])
+        try:
+            if m is None or len(chu) > ANH_TOI_DA * 4 // 3 + 200:
+                raise ValueError('không phải ảnh nhúng hoặc quá lớn')
+            du = base64.b64decode(chu[m.end():], validate=True)
+            loai = kiem_tra_magic_bytes(du, LOAI_ANH, ten)
+        except (ValueError, binascii.Error) as e:
+            loi.append(f'ảnh "{ten}": {e}')
+            continue
+        except LoiAnToan as e:
+            loi.append(str(e))
+            continue
+        goc = re.sub(r'[^0-9a-z_-]+', '_', bo_dau(Path(ten).stem).lower()).strip('_') or f'anh_{k}'
+        tm.mkdir(parents=True, exist_ok=True)
+        f, i = tm / f'{goc}{duoi[loai]}', 1
+        while f.exists() and f.read_bytes() != du:
+            i += 1
+            f = tm / f'{goc}_{i}{duoi[loai]}'
+        if not f.exists():
+            tam = f.with_name(f.name + '.tmp')
+            tam.write_bytes(du)
+            tam.replace(f)
+        dam_bao_bang_anh(con)
+        with csdl.giao_dich(con):
+            moi += con.execute(f'INSERT OR IGNORE INTO {BANG_ANH} (ma_ho, duong_dan, ten_file, khop_theo, luc) VALUES (?, ?, ?, ?, ?)',
+                               (ma_ho, str(f.resolve()), f.name, 'kiem_dem', luc)).rowcount
+    return moi, loi
 
 
 def _so(x) -> str:
@@ -367,6 +528,11 @@ def _tao_ho(con, h: dict) -> int:
     gc = [str(tt.get('ghi_chu') or '').strip()]
     if tt.get('nguoi_su_dung') and str(tt['nguoi_su_dung']).strip() != ten:
         gc.append(f'Người sử dụng: {str(tt["nguoi_su_dung"]).strip()}')
+    for k, nhan in (('nam_sinh', 'Năm sinh'), ('nam_tao_lap', 'Năm tạo lập tài sản')):
+        if str(tt.get(k) or '').strip():
+            gc.append(f'{nhan}: {str(tt[k]).strip()}')
+    if h.get('gps'):
+        gc.append(chu_gps(h['gps']))
     thong_tin = dict(ho_ten=ten, so_cccd=re.sub(r'\D', '', str(tt.get('so_cccd') or '')), dia_chi=str(tt.get('dia_chi') or ''),
                      dien_thoai=str(tt.get('sdt') or tt.get('dien_thoai') or ''), ghi_chu='; '.join(x for x in gc if x))
     ds = []
@@ -414,13 +580,15 @@ def nhap_ket_qua_kiem_dem(con, file, dm=None, tao_ho_moi: bool = False, chi=None
     dm = dm or DanhMuc(con)
     pl = BoPhanLoai(dm)
     cm = ChiMucHo(con)
-    so_ho = so_dong = tao_moi = 0
+    so_ho = so_dong = tao_moi = so_anh = so_gps = 0
     loi, khop, chua = [], [], []
+    tm_anh = thu_muc_anh_du_an(con)
+    luc = datetime.now().isoformat(timespec='seconds')
     for h in phieu['ho']:
         if chi is not None and h['khoa'] not in chi:
             continue
         ds = _mo_rong_dong(h['dong'])
-        if not ds and not (tao_ho_moi and h['thong_tin']):
+        if not ds and not h['anh'] and not h['gps'] and not (tao_ho_moi and h['thong_tin']):
             continue
         # tên file ("Nguyen_Van_A.json") chỉ là tên hộ khi file có MỘT hộ (file cả dự án: tên file không nói hộ nào)
         ma_ho, tang, ung = tim_ho_khop_json(con, h, Path(file).name if len(phieu['ho']) == 1 else '', cm)
@@ -437,9 +605,20 @@ def nhap_ket_qua_kiem_dem(con, file, dm=None, tao_ho_moi: bool = False, chi=None
             else:
                 chua.append(dict(khoa=h['khoa'], ten=ten_ho, so_dong=len(ds), ung_vien=ung))
                 loi.append(f'{ten_ho}: không khớp hộ nào trong dự án' + (f' ({len(ung)} hộ giống nhau - chọn tay)' if ung else '')
-                           + f' ({len(ds)} dòng chưa nhập).')
+                           + f' ({len(ds)} dòng' + (f', {len(h["anh"])} ảnh' if h['anh'] else '') + ' chưa nhập).')
                 continue
         khop.append((h['khoa'], ma_ho, tang))
+        try:
+            if h['anh']:
+                a, la = _luu_anh(con, ma_ho, h['anh'], tm_anh, luc)
+                so_anh += a
+                loi.extend(f'{ten_ho} - {x}' for x in la)
+            if h['gps'] and tang != 'tao_moi' and _ghi_gps(con, ma_ho, h['gps']):
+                so_gps += 1
+        except (LoiNhap, OSError) as e:
+            loi.append(f'{ten_ho}: ảnh / tọa độ chưa ghi được - {e}')
+        if not ds:
+            continue
         bo = BoSoan(con, ma_ho, dm)
         dich = DichPhuongAn(bo)
         n = 0
@@ -449,10 +628,10 @@ def nhap_ket_qua_kiem_dem(con, file, dm=None, tao_ho_moi: bool = False, chi=None
             do, kieu = str(d.get('so_do') or '').strip(), str(d.get('kieu') or 'dk')
             tuoi = ''
             try:
-                muc = int(d.get('muc') or 2)
+                muc = int(d.get('muc') if d.get('muc') not in (None, '') else 2)
             except (TypeError, ValueError):
                 muc = 2
-            if muc not in (2, 3, 7):
+            if muc not in (0, 2, 3, 7):                 # 0 = dòng ghi lại biên bản (thẻ Ảnh biên bản / ghi nhanh): tự phân loại
                 muc = 2
             try:
                 tl = tl if tl and tl != '100' else ''
@@ -471,6 +650,18 @@ def nhap_ket_qua_kiem_dem(con, file, dm=None, tao_ho_moi: bool = False, chi=None
                     do, tuoi = do or t['so_do'], t['tuoi']
                     kieu = t['kieu'] or kieu
                     gc = '; '.join(x for x in (gc, t['ghi_chu']) if x)
+                if muc == 0:                            # cùng bộ hiểu với hộp Dán danh sách quyết định mục
+                    kq = bo_sung(pl, dm, dict(ten=ten, dvt=dvt, tuoi=tuoi, so_luong=sl, so_do=do, kieu=kieu if do else ''),
+                                 pl.phan_loai(ten, dvt))
+                    if kq.muc not in (2, 3, 7):
+                        raise LoiNhap('là chính sách hỗ trợ: lập trong phần mềm (thẻ hỗ trợ của phương án), không nhập từ phiếu')
+                    muc = kq.muc
+                    if muc != 3 or not (kq.so_do or do):
+                        them_dong_tho(dich, muc, kq.khop if kq.khop is not None and LOAI[kq.loai][0] == muc else None, ten, dvt,
+                                      sl, tl, '; '.join(x for x in (gc, kq.ghi_them) if x))
+                        n += 1
+                        continue
+                    do, kieu = kq.so_do or do, kq.kieu or kieu
                 if muc == 3 and do:                     # cây theo số đo: loại cây trong bảng quy cách ("Tràm" -> "Keo lá tràm")
                     loai_cay = loai_cay_dk(BangCayDK(dm.muc.get(3, [])), ten) or ten
                     them_mot(dich, 3, ('nhom', loai_cay), ten, sl, tl, 'cv' if kieu == 'cv' else 'dk', gc, do)
@@ -488,8 +679,10 @@ def nhap_ket_qua_kiem_dem(con, file, dm=None, tao_ho_moi: bool = False, chi=None
             so_dong += n
     with csdl.giao_dich(con):
         csdl.ghi_nhat_ky(con, 'Nhập kết quả kiểm đếm thực địa', f'{Path(file).name}: {so_ho} hộ, {so_dong} dòng'
-                         + (f', thêm {tao_moi} hộ mới' if tao_moi else ''))
-    return dict(so_ho=so_ho, so_dong=so_dong, loi=loi, khop=khop, chua_khop=chua, tao_moi=tao_moi)
+                         + (f', thêm {tao_moi} hộ mới' if tao_moi else '') + (f', {so_anh} ảnh' if so_anh else '')
+                         + (f', tọa độ {so_gps} hộ' if so_gps else ''))
+    return dict(so_ho=so_ho, so_dong=so_dong, loi=loi, khop=khop, chua_khop=chua, tao_moi=tao_moi, so_anh=so_anh, so_gps=so_gps,
+                thu_muc_anh=tm_anh)
 
 
 # ---------------------------------------------------------------- 3. ảnh hiện trạng

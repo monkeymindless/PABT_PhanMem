@@ -18,7 +18,7 @@ a = Analysis(
     binaries=[],
     # 1.0.20: KHÔNG đóng thư mục mau_in - bảng tổng hợp dựng bằng mã (pabt/mau_bang_tong_hop.py), mẫu Word (chi tiết / bổ sung / điều chỉnh) dựng bằng
     # mã + thông số ban_in.mau_word của pabt_profile.json
-    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/he_so_k_qd03.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'),
+    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/he_so_k_qd03.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'), ('pabt/phieu_kiem_dem.html', 'pabt'),
            (HO_SO, 'pabt'), ('HUONG_DAN.md', '.')],
     hiddenimports=['pabt.mau_bang_tong_hop', 'pabt.in_word', 'html.parser','urllib.request', 'difflib', 'PySide6.QtPdfWidgets', 'PySide6.QtPrintSupport'],
     hookspath=[],
