@@ -1,4 +1,4 @@
-"""Phần MÁY TÍNH của ứng dụng điện thoại LARC Field Mobile (người dùng 26/10/2026: tách ứng dụng thành dự án riêng ở di_dong/, "không liên
+"""Phần MÁY TÍNH của ứng dụng điện thoại LARC Mobile (người dùng 26/10/2026: tách ứng dụng thành dự án riêng ở di_dong/, "không liên
 quan đến mã nguồn của LARC bản máy tính"): bản máy tính chỉ xuất file dữ liệu dự án .json "larc_field_du_lieu" và nhập kết quả .json;
 không đóng gói, không đọc file nào của di_dong/. Kiểm thử của ứng dụng ở di_dong/tests. Dữ liệu GIẢ LẬP."""
 from __future__ import annotations

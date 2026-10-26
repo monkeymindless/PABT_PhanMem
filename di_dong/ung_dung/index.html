@@ -6,8 +6,8 @@
 <link rel="icon" href="icon-180.png"/>
 <link rel="apple-touch-icon" href="icon-180.png"/>
 @@DAU_PWA@@
-<title>LARC Field Mobile</title>
-<!-- LARC Field Mobile (ứng dụng kiểm đếm thực địa, dự án riêng - di_dong/README.md): chạy không cần mạng; dữ liệu ghi lưu trên máy này (localStorage +
+<title>LARC Mobile</title>
+<!-- LARC Mobile (ứng dụng kiểm đếm thực địa, dự án riêng - di_dong/README.md): chạy không cần mạng; dữ liệu ghi lưu trên máy này (localStorage +
      IndexedDB cho ảnh); xuất file .json về phần mềm LARC trên máy tính (Công cụ -> Phiếu kiểm đếm thực địa -> Nhập kết quả). -->
 <style>
 :root{--chinh:#2F5F9E;--chinh_re:#264E83;--chinh_nhat:#EFF6FF;--nhan:#3B6FCE;--phu:#059669;--hoso:#1F6F66;--nguy_hiem:#B83A3A;
@@ -140,7 +140,7 @@ font-size:12px;min-height:34px;box-shadow:0 1px 4px rgba(15,23,42,.25)}.chip_nen
 .m_mo{display:flex;align-items:center;gap:6px;margin:0;font-size:12px;flex:1 1 170px;white-space:nowrap}.m_mo input{flex:1;padding:0;min-width:80px}
 </style></head><body>
 <div id="app">
-<header><img alt="LARC" src="icon-180.png"/><div class="chu"><div class="ten">LARC Field Mobile</div>
+<header><img alt="LARC" src="icon-180.png"/><div class="chu"><div class="ten">LARC Mobile</div>
 <div class="phu" title="Phương án bồi thường, hỗ trợ, tái định cư · kiểm đếm thực địa, không cần mạng">Kiểm đếm thực địa</div></div>
 <span class="huy">v@@PHIEN_BAN@@</span><button class="doi" id="b_xoay" type="button" style="display:none">🔄 Xoay ngang</button>
 <button class="doi" id="b_doi_du_an" type="button" style="display:none">Dự án</button></header>
@@ -197,7 +197,7 @@ tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên 
 <div class="dang_sua" id="d_dang_sua" style="display:none"></div>
 <div class="hang_nut"><button id="b_them_dat" type="button">Thêm đất</button></div><div id="bang_dat"></div></div></section>
 
-<section class="trang" id="t1"><div class="khung"><h3>Nhà ở (mẫu biên bản QĐ 42)<button class="nut_doc" type="button" data-cat="nha">🎙️ Đọc</button></h3>
+<section class="trang" id="t1"><div class="khung"><h3><span>Nhà ở <span class="ghi">(đơn giá QĐ 18/2026/QĐ-UBND, sửa đổi bởi QĐ 53/2026)</span></span><button class="nut_doc" type="button" data-cat="nha">🎙️ Đọc</button></h3>
 <label for="n_loai">Loại nhà theo bộ đơn giá</label><select id="n_loai"></select><div id="n_ket_cau"></div>
 <div class="goi_y" id="n_goi_y_kc"></div>
 <div class="luoi"><div class="o_rong"><label for="n_dt">Diện tích (m²) - được ghi 4 x 6,7 hoặc (a x b) + (c x d) - (e x f)</label>
@@ -208,7 +208,7 @@ tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên 
 <div class="hang_nut"><button id="b_them_nha" type="button">Thêm nhà vào hộ</button></div></div>
 <div class="khung"><h3>Nhà đã ghi</h3><div id="bang_nha"></div></div></section>
 
-<section class="trang" id="t2"><div class="khung"><h3>Vật kiến trúc, công trình<button class="nut_doc" type="button" data-cat="vkt">🎙️ Đọc</button></h3>
+<section class="trang" id="t2"><div class="khung"><h3><span>Vật kiến trúc, công trình <span class="ghi">(đơn giá QĐ 18/2026/QĐ-UBND)</span></span><button class="nut_doc" type="button" data-cat="vkt">🎙️ Đọc</button></h3>
 <label for="v_ten">Tên (gõ vài chữ để chọn trong bộ đơn giá, hoặc ghi như biên bản)</label><input id="v_ten" list="ds_vkt"/>
 <datalist id="ds_vkt"></datalist><div class="luoi"><div class="o_rong"><label for="v_sl">Khối lượng / kích thước</label>
 <input id="v_sl" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="12,5 | 1,5 x 2,4 x 1,2 | (3,4 x 18) + (4,2 x 5)"/>
@@ -219,7 +219,7 @@ tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên 
 <div class="hang_nut"><button id="b_them_vkt" type="button">Thêm vào hộ</button></div></div>
 <div class="khung"><h3>Vật kiến trúc đã ghi</h3><div class="goi_y" id="v_bb_tb"></div><div id="bang_vkt"></div></div></section>
 
-<section class="trang" id="t3"><div class="khung"><h3>Cây trồng, vật nuôi<button class="nut_doc" type="button" data-cat="cay">🎙️ Đọc</button></h3>
+<section class="trang" id="t3"><div class="khung"><h3><span>Cây trồng, vật nuôi <span class="ghi">(cây: QĐ 48/2025, QĐ 66/2025 · vật nuôi: QĐ 31/2025)</span></span><button class="nut_doc" type="button" data-cat="cay">🎙️ Đọc</button></h3>
 <div class="chip_nhom" id="kieu_cay"></div>
 <label for="c_ten">Loài cây / vật nuôi</label><input id="c_ten" list="ds_cay"/><datalist id="ds_cay"></datalist>
 <div class="luoi"><div><label for="c_sl">Số lượng</label><input id="c_sl" inputmode="decimal"/></div>
@@ -278,7 +278,7 @@ Phần mềm tự tìm hộ theo CCCD, tờ / thửa (lô rừng), họ tên; h�
 <div class="hang_nut"><button class="phu" id="xa_noi" type="button">🎙️ Đọc</button><button id="xa_dua" type="button">✨ Phân tách &amp; xem trước</button></div></div></div>
 
 <div id="man_chao"><button class="phu" id="c_quay_lai" type="button" style="display:none;margin-bottom:8px">← Quay lại dự án đang mở</button>
-<div class="dau"><img alt="LARC" src="icon-180.png"/><div><h1>LARC Field Mobile</h1>
+<div class="dau"><img alt="LARC" src="icon-180.png"/><div><h1>LARC Mobile</h1>
 <div class="ghi">Kiểm đếm thực địa · phiên bản @@PHIEN_BAN@@ · chạy không cần mạng</div></div></div>
 <div class="khung" id="c_khung_doc_lap"><h3>Kiểm đếm độc lập ngay tại hiện trường (không cần file từ máy tính)</h3>
 <p class="ghi">Dùng bộ danh mục đơn giá nhúng sẵn trong ứng dụng; ghi hộ mới bằng nút "+ Hộ mới". Kết quả gửi về máy tính như bình thường
@@ -348,7 +348,7 @@ máy tính thường xuyên; gỡ ứng dụng (hoặc xóa dữ liệu trang we
   function chay(r) { DA_CHAY = true; window.LARC_DU_LIEU = r.du_lieu; document.body.classList.remove("chua_du_lieu");
     $("b_doi_du_an").style.display = "";
     document.querySelector("header .phu").textContent = (r.du_an || "Dự án") + " · kiểm đếm thực địa";
-    document.title = "LARC Field Mobile - " + (r.du_an || "Dự án");
+    document.title = "LARC Mobile - " + (r.du_an || "Dự án");
     const ma = $("ma_chinh"), s = document.createElement("script"); s.textContent = ma.textContent; document.body.appendChild(s); }
   // nút Back (bản .apk) / phím Esc: đóng màn hình dự án khi đang có dự án, rồi tới mã chính (hộp xem ảnh, về thẻ 0)
   window.LARC_quayLai = () => {
@@ -380,14 +380,10 @@ const DU = window.LARC_DU_LIEU;
 const PHIEN_BAN_PHIEU = 2;
 const KHOA_LUU = "larc_kd_" + DU.du_an;
 // trang: 7 = "AI Quét & Nói" (màn hình chính), 0-4 = các mục của "Hồ sơ & TS", 5 = bản đồ, 6 = xuất .json
-const THE = ["Hồ sơ & Đất", "Nhà ở (QĐ 42)", "Vật kiến trúc", "Cây trồng & vật nuôi", "Ảnh chụp", "Bản đồ KML/GPS", "Xuất .JSON"];
-const PHAN_DOAN = [[0, "👤 Hồ sơ & Đất"], [1, "🏠 Nhà QĐ 42"], [2, "🧱 Vật KT"], [3, "🌳 Cây & VN"], [4, "📷 Ảnh chụp"]];
+const THE = ["Hồ sơ & Đất", "Nhà ở (QĐ 18/2026)", "Vật kiến trúc", "Cây trồng & vật nuôi", "Ảnh chụp", "Bản đồ KML/GPS", "Xuất .JSON"];
+const PHAN_DOAN = [[0, "👤 Hồ sơ & Đất"], [1, "🏠 Nhà QĐ 18"], [2, "🧱 Vật KT"], [3, "🌳 Cây & VN"], [4, "📷 Ảnh chụp"]];
 const NAV = [["ai", "✨", "AI Quét & Nói"], ["ho", "📋", "Hồ sơ & TS"], ["bd", "🗺️", "Bản đồ GPS"], ["xuat", "📤", "Xuất .JSON"]];
 const TRANG_AI = 7;
-const KET_CAU = [["khung_cot", "Khung, cột", ["Gỗ", "Sắt", "Xây gạch", "BTCT"]],
-  ["tuong", "Tường", ["Gỗ + xây", "Xây tô sơn nước", "Ốp gạch men", "Vách tôn", "Giấy dầu"]],
-  ["mai", "Mái", ["Tôn", "Ngói", "Giấy dầu", "BTCT"]], ["tran", "Trần", ["Không trần", "Thạch cao", "Tôn lạnh", "Nhựa"]],
-  ["nen", "Nền", ["Xi măng", "Gạch men", "Đất"]], ["cua", "Cửa đi", ["Không", "Nhôm kính", "Sắt kính", "Gỗ tốt"]]];
 const $ = id => document.getElementById(id);
 let ST = {ho: {}, moi: 0, chon: "", the: TRANG_AI, the_ho: 0};
 try { ST = Object.assign(ST, JSON.parse(localStorage.getItem(KHOA_LUU) || "{}") || {}); } catch (e) { /* lưu hỏng: bắt đầu lại */ }
@@ -517,12 +513,12 @@ function laBienBan(d) { return d.muc === 0 || d.tu_bb; }       // dòng ghi lạ
 // dòng biên bản -> mục trên điện thoại (máy tính vẫn đọc lại cả câu khi nhập): Vật KT 2 / Cây 3 / chưa rõ 0
 const TU_VKT = /(^|[^a-z])(m2|m3|md|mai|san|tuong|hang rao|gieng|ong|be|ho nuoc|ho chua|chuong|mo|cong|tru|nen|ke|nha ve sinh|nha tam|mai che|mai hien|bon|o ga)([^a-z]|$)/;
 const TU_CAY = /(^|[^a-z])(cay|bui|khom|trong nam|dk|duong kinh|chu vi|goc)([^a-z]|$)|\d+\s*c\s*\/\s*\d+/;
-function tachDongQd42(dong) { // "Ống nhựa Bình Minh: ϕ 114: 3300m; ϕ 90: 3400m" -> mỗi cỡ một dòng (như hieu_tai_san.tach_dong_qd42)
+function tachDongNhieuCo(dong) { // "Ống nhựa Bình Minh: ϕ 114: 3300m; ϕ 90: 3400m" -> mỗi cỡ một dòng (như hieu_tai_san.tach_dong_qd42 trên máy tính)
   const s = String(dong || "").trim(), m = s.match(/^(.*?)[:\s]*(?=[ϕΦφØ⌀]\s*\d)/);
   if (!m || (s.match(/[ϕΦφØ⌀]\s*\d/g) || []).length < 2) return [s];
   const dau = m[1].replace(/[:\s]+$/, ""); return s.slice(m[0].length).split(/\s*;\s*/).filter(x => x.trim()).map(x => (dau ? dau + " " : "") + x.trim()); }
 function phanTichDongNhanhJS(dong) { const ra = [];
-  for (const x of tachDongQd42(dong)) { const b = boDau(x); let muc = 0;
+  for (const x of tachDongNhieuCo(dong)) { const b = boDau(x); let muc = 0;
     if (TU_VKT.test(b)) muc = 2;
     else if (TU_CAY.test(b) || (DU.cay || []).some(t => { const k = boDau(t).replace(/^cay /, ""); return k.length > 2 && b.startsWith(k); })) muc = 3;
     ra.push({muc: muc, ten: x, so_luong: "", tu_bb: true}); }
@@ -569,41 +565,71 @@ function themDat() {
 function doiDat(k) { KIEU_DAT = k; $("o_dc").style.display = k === "dc" ? "" : "none"; $("o_ln").style.display = k === "ln" ? "" : "none";
   veKieu("kieu_dat", [["dc", "Địa chính (tờ / thửa)"], ["ln", "Lâm nghiệp (TK / khoảnh / lô)"]], k, doiDat); }
 
-// ---------------------------------------------------------------- thẻ 1 nhà
+// ---------------------------------------------------------------- thẻ 1 nhà: phân loại theo Phụ lục Ia QĐ 18/2026/QĐ-UBND (đơn giá nhà, nhà ở)
+// KET_CAU: các thuộc tính kết cấu và lựa chọn đúng cách gọi của Phụ lục Ia (mỗi lựa chọn [mã, chữ hiện]); TIEU_CHI_QD18: bảng tiêu chí từng
+// "Nhà <nhóm tầng> - Kết cấu loại k" / Nhà bán kiên cố / Nhà tạm. Ứng dụng chọn mục KHỚP NHIỀU TIÊU CHÍ NHẤT - chỉ là GỢI Ý, cán bộ đối chiếu.
+const KET_CAU = [["tang", "Số tầng", [["1", "1 tầng"], ["2", "2 tầng"], ["34", "3 - 4 tầng"], ["5", "Từ 5 tầng"]]],
+  ["khung", "Khung, cột", [["btct", "Bê tông cốt thép"], ["thep", "Thép hình, sắt"], ["gach", "Gạch chịu lực"], ["go_tre", "Gỗ, tre"]]],
+  ["tuong", "Tường", [["son_op", "Sơn nước + ốp gạch"], ["son", "Sơn nước"], ["voi", "Quét vôi"], ["tho", "Gạch không tô / tôn / gỗ"], ["de_chay", "Vật liệu dễ cháy"]]],
+  ["mai", "Mái", [["btct", "Bê tông cốt thép"], ["ngoi", "Ngói"], ["ton", "Tôn"], ["fibro", "Tôn fibro xi măng"], ["la", "Tranh, tre, nứa, lá"]]],
+  ["tran", "Trần", [["go_cc", "Gỗ cao cấp"], ["thach_cao", "Thạch cao"], ["ton_lanh", "Tôn lạnh"], ["nhua", "Nhựa"], ["luoi", "Lưới thép tô vữa"],
+    ["van_ep", "Ván ép"], ["khong", "Không trần"]]],
+  ["nen", "Nền", [["granite", "Đá granite"], ["ceramic", "Gạch ceramic, men"], ["gach_bong", "Gạch bông"], ["gach_tau", "Gạch tàu"], ["lang", "Láng vữa xi măng"]]],
+  ["cua", "Cửa đi", [["cao_cap", "Gỗ / nhôm cao cấp"], ["go4", "Gỗ nhóm 4 trở lên"], ["go", "Gỗ thường"], ["nhom", "Nhôm kính"], ["sat_kinh", "Sắt kính"],
+    ["go_tap", "Sắt, gỗ tạp"]]]];
+// [đầu tên mục trong bộ đơn giá (không dấu), tầng hợp lệ, loại, {thuộc tính: [mã khớp]}] - chép từ Phụ lục Ia QĐ 18/2026 (mục 1-6)
+const TIEU_CHI_QD18 = (() => { const ds = [], T = (dau, tang, loai, tc) => ds.push({dau, tang, loai, tc});
+  for (const [dau, tang, nen3, nen4, tran2, mai2] of [["nha tu 05 tang", ["5"], ["ceramic"], ["gach_bong"], ["thach_cao"], ["btct"]],
+    ["nha tu 03 tang", ["34"], ["granite"], ["gach_bong", "ceramic"], null, ["btct", "ngoi", "ton"]]]) {
+    T(dau, tang, 1, {khung: ["btct"], tuong: ["son_op"], mai: ["btct"], tran: ["go_cc"], nen: ["granite"], cua: ["cao_cap"]});
+    T(dau, tang, 2, {khung: ["btct"], tuong: ["son"], mai: mai2, tran: tran2, nen: ["granite"], cua: ["go", "nhom", "sat_kinh"]});
+    T(dau, tang, 3, {khung: ["thep"], tuong: ["son", "voi"], mai: ["ngoi"], tran: ["luoi"], nen: nen3, cua: ["nhom"]});
+    T(dau, tang, 4, {khung: ["thep"], tuong: ["son", "voi"], mai: ["ton"], tran: ["ton_lanh"], nen: nen4, cua: ["sat_kinh"]}); }
+  const g12 = "nha 01 tang den 02 tang", t12 = ["1", "2"];
+  T(g12, t12, 1, {khung: ["btct"], tuong: ["son_op"], mai: ["ngoi", "ton"], tran: ["thach_cao"], nen: ["granite"], cua: ["go4"]});
+  T(g12, t12, 2, {khung: ["btct"], tuong: ["son"], mai: ["ngoi", "ton"], tran: ["ton_lanh", "thach_cao"], nen: ["ceramic"], cua: ["nhom"]});
+  T(g12, t12, 3, {khung: ["thep"], tuong: ["son", "voi"], mai: ["ngoi"], tran: ["luoi"], nen: ["gach_bong"], cua: ["sat_kinh"]});
+  T(g12, t12, 4, {khung: ["thep"], tuong: ["son", "voi"], mai: ["fibro", "ton"], tran: ["van_ep"], nen: ["gach_tau"], cua: ["sat_kinh"]});
+  const g1 = "nha 01 tang -", t1 = ["1"];
+  T(g1, t1, 1, {khung: ["gach"], tuong: ["son_op"], mai: ["ngoi", "ton", "fibro"], tran: ["ton_lanh", "thach_cao"], nen: ["ceramic"], cua: ["nhom"]});
+  T(g1, t1, 2, {khung: ["gach"], tuong: ["son"], mai: ["ngoi"], tran: ["nhua", "thach_cao"], nen: ["gach_bong"], cua: ["sat_kinh"]});
+  T(g1, t1, 3, {khung: ["gach"], tuong: ["son", "voi"], mai: ["ton"], tran: ["van_ep", "thach_cao", "ton_lanh"], nen: ["gach_tau"], cua: ["sat_kinh"]});
+  T(g1, t1, 4, {khung: ["gach"], tuong: ["voi"], mai: ["fibro", "ton"], tran: ["khong"], nen: ["lang"], cua: ["sat_kinh", "go_tap"]});
+  T("nha ban kien co", t1, 0, {khung: ["thep", "gach"], tuong: ["tho"], mai: ["ton", "fibro"], nen: ["gach_bong", "gach_tau", "lang"]});
+  T("nha tam", t1, 0, {khung: ["go_tre"], tuong: ["de_chay"], mai: ["la"]});
+  return ds; })();
+const NHAN_KC = k => { const x = KET_CAU.find(y => y[0] === k); return x ? x[1] : k; };
+const CHU_KC = (k, v) => { const x = KET_CAU.find(y => y[0] === k), o = x && x[2].find(y => y[0] === v); return o ? o[1] : v; };
+// -> {m (mục bộ đơn giá), khop: [thuộc tính khớp], lech: [thuộc tính lệch], so (số thuộc tính đã chọn)} hoặc null (chọn < 2 thuộc tính / không mục nào khớp)
+function khoaLoaiNha(kc) { const chon = KET_CAU.slice(1).map(x => x[0]).filter(k => kc[k]); if (chon.length < 2) return null;
+  const tang = kc.tang || "1"; let tot = null;
+  for (const tc of TIEU_CHI_QD18) { if (!tc.tang.includes(tang)) continue;
+    const khop = chon.filter(k => tc.tc[k] && tc.tc[k].includes(kc[k])), lech = chon.filter(k => tc.tc[k] && !tc.tc[k].includes(kc[k]));
+    const diem = khop.length - 0.75 * lech.length;
+    if (khop.length >= 2 && (!tot || diem > tot.diem)) tot = {tc, khop, lech, diem}; }
+  if (!tot) return null;
+  const m = DU.nha.find(x => { const b = boDau(x[1]); return b.startsWith(tot.tc.dau) && (!tot.tc.loai || b.includes("loai " + tot.tc.loai)); });
+  return m ? {m, khop: tot.khop, lech: tot.lech, so: chon.length} : null; }
+function chuKhopQd18(g) { return "khớp " + g.khop.length + "/" + g.so + " tiêu chí Phụ lục Ia QĐ 18/2026" +
+  (g.lech.length ? " (khác: " + g.lech.map(k => NHAN_KC(k).toLowerCase()).join(", ") + ")" : ""); }
 let KC = {}, NHA_TAY = false;          // NHA_TAY: người dùng vừa tự chọn loại nhà - gợi ý theo kết cấu chỉ hiện, không tự đổi
-let TANG_CHON = "";                    // nhóm số tầng người dùng đã chọn tay ("nha 01 tang den 02 tang"); chưa chọn: gợi ý "Nhà 01 tầng"
 function veKetCau() { const hop = $("n_ket_cau"); hop.textContent = "";
   for (const [k, ten, ds] of KET_CAU) { hop.appendChild(el("label", {text: ten}));
-    const nhom = el("div", {cls: "chip_nhom"}); for (const x of ds) nhom.appendChild(el("button", {cls: "chip" + (KC[k] === x ? " chon" : ""), type: "button", text: x,
-      onclick: () => { KC[k] = KC[k] === x ? undefined : x; veKetCau(); goiYLoaiNhaTheoKetCau(KC); }})); hop.appendChild(nhom); } }
-// GỢI Ý loại nhà theo 6 nhóm kết cấu (quy tắc thực địa - cán bộ đối chiếu biên bản / bộ đơn giá trước khi lưu). Nhà nhiều tầng: giữ nhóm
-// số tầng của mục đang chọn ("Nhà 01 tầng đến 02 tầng - Kết cấu loại k"), chưa chọn thì "Nhà 01 tầng".
-function khoaLoaiNha(kc) { const k = kc.khung_cot, t = kc.tuong, m = kc.mai, tr = kc.tran, n = kc.nen;
-  if (t === "Giấy dầu" || m === "Giấy dầu" || n === "Đất") return "nha tam";
-  if (t === "Vách tôn" || (k === "Gỗ" && n === "Xi măng")) return "ban kien co";
-  if (k === "BTCT" && m === "BTCT") return "loai 1";
-  if (k === "BTCT" && (m === "Ngói" || m === "Tôn") && (t === "Ốp gạch men" || tr === "Thạch cao")) return "loai 2";
-  if ((k === "BTCT" || k === "Xây gạch") && (t === "Xây tô sơn nước" || t === "Ốp gạch men") && (n === "Gạch men" || n === "Xi măng")) return "loai 3";
-  if ((k === "Xây gạch" || k === "Sắt") && (t === "Gỗ + xây" || t === "Xây tô sơn nước" || t === "Ốp gạch men") && (m === "Tôn" || m === "Ngói")) return "loai 4";
-  return ""; }
-function tangCua(ten) { const b = boDau(ten); return b.includes(" - ") ? b.split(" - ")[0] : ""; }
-function goiYLoaiNhaTheoKetCau(kc) { const khoa = khoaLoaiNha(kc), nhan = $("n_goi_y_kc"); if (!khoa) { nhan.textContent = ""; return null; }
-  const ds = DU.nha.filter(m => boDau(m[1]).includes(khoa)); if (!ds.length) { nhan.textContent = ""; return null; }
-  const dang = DU.nha.find(m => m[0] === $("n_loai").value), tang = TANG_CHON;
-  const m = ds.find(x => tang && tangCua(x[1]) === tang) || ds.find(x => boDau(x[1]).startsWith("nha 01 tang -")) || ds[0];
-  nhan.textContent = "";
-  if (NHA_TAY && dang && dang[0] !== m[0]) nhan.append("Gợi ý theo kết cấu: " + m[1] + (m[3] ? " · " + soVN(m[3], 0) + " đ/" + m[2] : "") + " ",
+    const nhom = el("div", {cls: "chip_nhom"}); for (const [ma, chu] of ds) nhom.appendChild(el("button", {cls: "chip" + (KC[k] === ma ? " chon" : ""), type: "button",
+      text: chu, onclick: () => { KC[k] = KC[k] === ma ? undefined : ma; veKetCau(); goiYLoaiNhaTheoKetCau(KC); }})); hop.appendChild(nhom); } }
+function goiYLoaiNhaTheoKetCau(kc) { const g = khoaLoaiNha(kc), nhan = $("n_goi_y_kc"); nhan.textContent = "";
+  if (!g) { if (KET_CAU.slice(1).some(x => kc[x[0]])) nhan.textContent = "Chọn thêm thuộc tính kết cấu để gợi ý loại nhà theo QĐ 18/2026."; return null; }
+  const m = g.m, dang = DU.nha.find(x => x[0] === $("n_loai").value), gia = m[3] ? " · " + soVN(m[3], 0) + " đ/" + m[2] : "";
+  if (NHA_TAY && dang && dang[0] !== m[0]) nhan.append("Gợi ý: " + m[1] + gia + " - " + chuKhopQd18(g) + " ",
     el("button", {cls: "phu nho", type: "button", text: "Dùng gợi ý", onclick: () => { $("n_loai").value = m[0]; NHA_TAY = false; goiYLoaiNhaTheoKetCau(KC); capNhatNha(); }}));
-  else { $("n_loai").value = m[0]; nhan.textContent = "Đã tự chọn theo kết cấu: " + m[1] + (m[3] ? " · Đơn giá: " + soVN(m[3], 0) + " đ/" + m[2] : "") +
-    " - kiểm tra lại theo biên bản."; capNhatNha(); }
+  else { $("n_loai").value = m[0]; nhan.textContent = "Đã chọn: " + m[1] + gia + " - " + chuKhopQd18(g) + ". Đối chiếu biên bản trước khi lưu."; capNhatNha(); }
   return m; }
 function capNhatNha() { const m = DU.nha.find(x => x[0] === $("n_loai").value); $("n_tam_tinh").textContent = chuTamTinh(m, bieuThuc($("n_dt").value), $("n_tl").value); }
 function themNha() {
   if (!coHo()) return;
   const m = DU.nha.find(x => x[0] === $("n_loai").value); const b = bieuThuc($("n_dt").value);
   if (!m) { bao("Chọn loại nhà.", 1); return; } if (!b || isNaN(b.gt)) { bao("Diện tích chưa đọc được.", 1); return; }
-  const kc = KET_CAU.filter(x => KC[x[0]]).map(x => x[1].toLowerCase() + " " + KC[x[0]].toLowerCase());
-  const gc = [kc.length ? "Kết cấu: " + kc.join(", ") : "", $("n_gc").value.trim()].filter(x => x).join("; ");
+  const gc = [chuKetCau(KC), $("n_gc").value.trim()].filter(x => x).join("; ");
   themDong({muc: 2, nhom: "nha", ma_dm: m[0], ten: m[1], dvt: m[2], so_luong: b.ct, ty_le: $("n_tl").value.trim(), ghi_chu: gc}, "nha");
   $("n_dt").value = ""; $("n_gc").value = ""; $("n_dt_kq").textContent = ""; $("n_tam_tinh").textContent = ""; $("n_goi_y_kc").textContent = "";
   KC = {}; NHA_TAY = false; veKetCau();
@@ -790,7 +816,7 @@ function xemAnhSangAI() { const chu = $("xa_chu").value.trim(); if (!chu) { bao(
   dongXemAnh(); $("xa_chu").value = ""; themVaoAI(chu); }
 
 // ---------------------------------------------------------------- giọng nói (Android: RecognizerIntent của máy; PWA: Web Speech - Chrome / Safari)
-const NOI = {rec: null, dich: null, chu: ""};
+const NOI = {rec: null, dich: null, chu: "", android: false};       // android: bản .apk đang nghe qua SpeechRecognizer
 const KHOA_DONG_Y = "larc_field_dong_y_giong_noi";
 function dongYGiongNoi() { try { if (localStorage.getItem(KHOA_DONG_Y)) return true; } catch (e) { /* bỏ qua */ }
   const ok = confirm("Nhập giọng nói dùng bộ nhận dạng giọng nói của điện thoại (Google trên Android, Apple / Siri trên iPhone).\n\n" +
@@ -799,10 +825,15 @@ function dongYGiongNoi() { try { if (localStorage.getItem(KHOA_DONG_Y)) return t
   if (ok) try { localStorage.setItem(KHOA_DONG_Y, "1"); } catch (e) { /* bỏ qua */ }
   return ok; }
 function hienSong(co, chu) { $("song_am").hidden = !co; if (chu) $("song_chu").textContent = chu; $("b_hero_noi").classList.toggle("dang_nghe", !!co); }
-function khongCoGiongNoi() { bao("Máy chưa có bộ nhận dạng giọng nói: chạm vào ô chữ rồi bấm micro 🎤 trên bàn phím (Gboard / bàn phím iPhone).", 1);
+function khongCoGiongNoi() { const adr = window.LARCAndroid && window.LARCAndroid.moCuaHang;
+  if (adr && confirm("Điện thoại này chưa có bộ nhận dạng giọng nói (thường gặp ở máy không có ứng dụng Google, máy giả lập).\n\n" +
+    "Cài \"Dịch vụ lời nói của Google\" (Speech Services by Google, miễn phí) trên CH Play rồi bấm 🎙️ lại? Sau khi cài, nên tải gói tiếng Việt " +
+    "ngoại tuyến: Cài đặt → Google → Giọng nói / Nhận dạng giọng nói ngoại tuyến.\n\nHủy = gõ / dán vào ô chữ (hoặc micro 🎤 trên bàn phím).")) {
+    window.LARCAndroid.moCuaHang("com.google.android.tts"); return; }
+  bao("Máy chưa có bộ nhận dạng giọng nói: chạm vào ô chữ rồi bấm micro 🎤 trên bàn phím (Gboard / bàn phím iPhone), hoặc gõ / dán.", 1);
   if (!dangNgang()) moThe(TRANG_AI); $("ai_chu").focus(); }
 // dich(chữ): nơi nhận chữ (mặc định đưa vào ô phân tách); bấm lần nữa khi đang nghe = dừng
-function batDauNoi(dich) { if (NOI.rec) { dungNoi(); return; } if (!dongYGiongNoi()) return; NOI.dich = dich || null;
+function batDauNoi(dich) { if (NOI.rec || NOI.android) { dungNoi(); return; } if (!dongYGiongNoi()) return; NOI.dich = dich || null;
   if (window.LARCAndroid && window.LARCAndroid.batDauGiongNoi) { window.LARCAndroid.batDauGiongNoi(); return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) { NOI.dich = null; khongCoGiongNoi(); return; }
   const r = new SR(); r.lang = "vi-VN"; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1; NOI.rec = r; NOI.chu = "";
@@ -815,10 +846,21 @@ function batDauNoi(dich) { if (NOI.rec) { dungNoi(); return; } if (!dongYGiongNo
     else if (ly !== "no-speech" && ly !== "aborted") bao("Lỗi nhận dạng giọng nói: " + ly, 1); };
   r.onend = () => { const chu = NOI.chu.trim(); NOI.rec = null; hienSong(false); if (chu) nhanGiongNoi(chu); else NOI.dich = null; };
   try { r.start(); } catch (e) { NOI.rec = null; hienSong(false); khongCoGiongNoi(); } }
-function dungNoi() { if (NOI.rec) try { NOI.rec.stop(); } catch (e) { /* đã dừng */ } }
+function dungNoi() { if (NOI.rec) try { NOI.rec.stop(); } catch (e) { /* đã dừng */ }
+  if (NOI.android && window.LARCAndroid && window.LARCAndroid.dungGiongNoi) window.LARCAndroid.dungGiongNoi(); }
 function nhanGiongNoi(chu) { const d = NOI.dich || (x => themVaoAI(x)); NOI.dich = null; d(String(chu || "")); }
-window.LARC_nhanGiongNoiAndroid = chu => nhanGiongNoi(chu);
-window.LARC_giongNoiLoi = ly => { NOI.dich = null; if (ly === "khong_co") khongCoGiongNoi(); };
+// bản .apk: màn hình nhập giọng nói của Google trả chữ về đây; máy không có màn hình đó: ứng dụng nghe thẳng qua dịch vụ nhận dạng
+// (SpeechRecognizer) - báo trạng thái (nghe / xu_ly) và chữ đang nghe để hiện sóng âm như bản PWA
+window.LARC_nhanGiongNoiAndroid = chu => { NOI.android = false; hienSong(false); nhanGiongNoi(chu); };
+window.LARC_giongNoiTrangThai = tt => { NOI.android = true; hienSong(true, tt === "xu_ly" ? "Đang nhận dạng…" : "Đang nghe… đọc liền một mạch, bấm Xong khi đọc hết"); };
+window.LARC_giongNoiTam = chu => { if (NOI.android) $("song_chu").textContent = chu; };
+const LOI_GIONG_NOI = {quyen: "Chưa cho phép dùng micro: Cài đặt → Ứng dụng → LARC Mobile → Quyền → Micro → Cho phép.",
+  mang: "Cần mạng, hoặc tải gói tiếng Việt ngoại tuyến: Cài đặt → Google → Giọng nói → Nhận dạng giọng nói ngoại tuyến → Tiếng Việt.",
+  ngon_ngu: "Bộ nhận dạng của máy chưa có tiếng Việt: tải gói Tiếng Việt (Cài đặt → Google → Giọng nói → Ngôn ngữ / Nhận dạng ngoại tuyến).",
+  khong_nghe: "Không nghe rõ: bấm 🎙️ rồi đọc lại, gần điện thoại hơn."};
+window.LARC_giongNoiLoi = ly => { NOI.dich = null; NOI.android = false; hienSong(false);
+  if (ly === "khong_co") khongCoGiongNoi(); else if (LOI_GIONG_NOI[ly]) bao(LOI_GIONG_NOI[ly], 1);
+  else if (ly && ly !== "huy") bao("Nhận dạng giọng nói lỗi (" + ly + "): thử lại, hoặc gõ / dán vào ô chữ.", 1); };
 
 // ---------------------------------------------------------------- chuẩn hóa lời đọc -> ký hiệu (nhân / cộng / trừ, phẩy, mét vuông, phi, đường kính)
 const CHU_SO = "\\p{L}\\p{N}";
@@ -847,7 +889,7 @@ function chuanHoaTiengNoi(s) {
 
 // ---------------------------------------------------------------- phân tách thông minh (chạy trên máy, không mạng): hộ / đất / nhà / vật KT / cây / vật nuôi
 const AI = {items: [], uu_tien: ""};
-const NHAN_AI = {ho: "👤 Hồ sơ hộ", dat: "📐 Đất thu hồi", nha: "🏠 Nhà ở QĐ 42", vkt: "🧱 Vật kiến trúc", cay: "🌳 Cây trồng", vn: "🐄 Vật nuôi", khac: "📝 Dòng biên bản"};
+const NHAN_AI = {ho: "👤 Hồ sơ hộ", dat: "📐 Đất thu hồi", nha: "🏠 Nhà ở QĐ 18", vkt: "🧱 Vật kiến trúc", cay: "🌳 Cây trồng", vn: "🐄 Vật nuôi", khac: "📝 Dòng biên bản"};
 const MAU_AI = {ho: "#2F5F9E", dat: "#1F6F66", nha: "#9A5A12", vkt: "#1F76A6", cay: "#2F7D54", vn: "#7C4A12", khac: "#64748B"};
 const NHAN_HO = {ho_ten: "Họ tên chủ hộ", nguoi_su_dung: "Người sử dụng", so_cccd: "Số CCCD", sdt: "Điện thoại", nam_sinh: "Năm sinh", dia_chi: "Địa chỉ"};
 const VKT_DAU = "mái che|mái hiên|sân|tường rào|hàng rào|tường|giếng|ống|bể|hồ chứa|hồ nước|hầm cầu|hố phân|chuồng|mộ|cổng|trụ|nền|bờ kè|kè|bồn hoa|bồn|" +
@@ -882,7 +924,6 @@ function tachCau(s) { // câu: xuống dòng, ". ", "; " (trừ "; ϕ 90" của 
     else ra.push(x); }
   return ra; }
 const SAU_SO_LUONG = /^[^\n]{0,40}?\d[\d.,]*\s*(?:cây|con|cái|bụi|khóm|kg|m2|m²|m3|m³|m(?![\p{L}])|c\s*\/)/iu;
-const SAU_VAT_LIEU = /^\s*(?:xây|gạch|tô|ốp|tôn|gỗ|xi măng|ciment|bê tông|btct|men|ceramic|đất|thạch cao|nhựa|sắt|láng|lát|đá|bao)/iu;
 const SAU_CAY_DEM = new Set(["trong", "tuoi", "nam", "dk", "duong", "chu", "goc", "co", "cac", "nay", "do", "con", "loai", "lau", "hang"]);
 function tachDoan(cau, uu) {
   const tim = [];
@@ -898,8 +939,9 @@ function tachDoan(cau, uu) {
     if (tach && !x.d.manh) { if (!/\d/.test(nd) && nd.split(/\s+/).length < 3 && x.d.truong !== "cay_tu") tach = false;   // "Chuồng heo", "Ống nhựa"
       if (tach && /\d\s*$/.test(truoc) && /^\s*(?:[,.;:]|$)/.test(cau.slice(het))) tach = false;    // "12 trụ", "3 bồn": đơn vị đếm cuối câu
       // địa chỉ "ấp Bàu Tràm", loại đất "cây lâu năm": chỉ tách khi sau là số lượng
-      if (tach && (cat_ht === "ho" || cat_ht === "dat") && !SAU_SO_LUONG.test(cau.slice(het))) tach = false;
-      if (tach && cat_ht === "nha" && KC_TU.has(boDau(x.chu)) && SAU_VAT_LIEU.test(cau.slice(het))) tach = false; }   // kết cấu nhà "tường xây", "nền gạch men"
+      // trong câu tả nhà: "tường sơn nước", "vách tre" - tên loài cây / vật KT chỉ tách khi sau là số lượng ("xoài 16 cây", "mái che (11m x 3,8m)")
+      if (tach && (cat_ht === "ho" || cat_ht === "dat" || cat_ht === "nha") && !SAU_SO_LUONG.test(cau.slice(het))) tach = false;
+      if (tach && cat_ht === "nha" && KC_TU.has(boDau(x.chu))) tach = false; }   // trong câu tả nhà: "tường quét vôi", "nền gạch men" là kết cấu ("tường rào" khớp riêng)
     if (tach && x.d.cat === "nha" && /(^|\s)số\s*$/iu.test(truoc)) tach = false;                     // "số nhà"
     if (tach) { doan.push({chu: nd, d: dau_ht}); bd = x.p; dau_ht = x.d; cat_ht = x.d.cat; }
     else if (!nd) { dau_ht = x.d; cat_ht = x.d.cat; } }
@@ -940,7 +982,8 @@ function datTuDoan(t) {
     du: {so_to: to, so_thua: th, loai_dat: loai, dt_thu_hoi: m2}}; }
 // biểu thức diện tích / khối lượng trong câu: "(5x12)-(2x3)", "3,7m x 4,3m", "54 m2", "diện tích 54", "3300m", "2 cái"
 function layBieuThuc(t) {
-  const s = String(t).replace(/(?:cấp|loại|tầng|năm|tờ|thửa|lô|khoảnh|tiểu khu|[ϕΦφØ⌀]|ĐK|đk|chu vi|D)\s*\d+(?:[.,]\d+)?/giu, m => " ".repeat(m.length))
+  // "nhà cấp 4", "loại 2", "ϕ 114"…: không phải kích thước - trừ khi số đó mở đầu phép nhân ("cao cấp 8x15")
+  const s = String(t).replace(/(?:cấp|loại|tầng|năm|tờ|thửa|lô|khoảnh|tiểu khu|[ϕΦφØ⌀]|ĐK|đk|chu vi|D)\s*\d+(?:[.,]\d+)?(?![\d.,]|\s*[x×*])/giu, m => " ".repeat(m.length))
     .replace(/\d+\s*(?:tầng|năm tuổi|cây|con|bụi|khóm|tuổi)(?![\p{L}])/giu, m => " ".repeat(m.length))
     .replace(/(\p{L})(\d+(?:[.,]\d+)?)/gu, (m, a, b) => /[xXmM×]/.test(a) ? m : a + " ".repeat(b.length));   // mã trong tên: "B40", "uPVC D114"
   let tot = null;
@@ -967,42 +1010,52 @@ function khopDanhMuc(t, ds) { const tu = boDau(t).replace(/[^a-z0-9 ]/g, " ").sp
   return tot && d_tot >= Math.max(1, Math.ceil(tu.length / 2)) - 0.5 ? tot : null; }
 function dvtKhop(b, m) { const a = (b && b.dvt) || "", c = boDau(m[2] || "").replace("²", "2").replace("³", "3");
   return !a || c.startsWith(a) || (a === "m2" && c === "m2") || (a === "m3" && c === "m3"); }
-// kết cấu nhà theo lời đọc: vật liệu chỉ xét trong phần ngay sau từ khóa, tới từ khóa kết cấu kế tiếp ("tường xây nền gạch men": tường = xây)
-const KC_KHOA = /(?:^|[^a-z])(khung|cot|tuong|vach|do mai|mai|tran|nen|cua)(?=[^a-z]|$)/g;
+// kết cấu nhà theo lời đọc -> mã thuộc tính của KET_CAU (Phụ lục Ia QĐ 18/2026); vật liệu chỉ xét trong phần ngay sau từ khóa, tới từ khóa kết cấu kế
+// tiếp ("tường sơn nước nền gạch men": tường = sơn nước, nền = gạch men)
+const KC_KHOA = /(?:^|[^a-z])(khung|cot|tuong|vach|do mai|mai|tran|nen|san|cua)(?=[^a-z]|$)/g;
 function kcTuChu(t) { const b = boDau(t), kc = {}, phan = {};
   const vt = [...b.matchAll(KC_KHOA)].map(m => ({k: m[1], p: m.index + m[0].length}));
   vt.forEach((x, i) => { const den = i + 1 < vt.length ? vt[i + 1].p - vt[i + 1].k.length : b.length;
-    const doan = b.slice(x.p, den).split(/[,.;(]/)[0], k = x.k === "cot" ? "khung" : x.k === "do mai" ? "mai" : x.k === "vach" ? "tuong" : x.k;
-    if (!phan[k]) phan[k] = (x.k === "vach" ? "ton " : "") + doan; });
+    const doan = b.slice(x.p, den).split(/[,.;(]/)[0];
+    const k = x.k === "cot" ? "khung" : x.k === "do mai" ? "mai" : x.k === "vach" ? "tuong" : x.k === "san" ? "nen" : x.k;
+    if (!phan[k]) phan[k] = doan; });
   const co = (k, re) => phan[k] !== undefined && re.test(phan[k]);
-  if (co("khung", /btct|be tong/)) kc.khung_cot = "BTCT"; else if (co("khung", /sat|thep/)) kc.khung_cot = "Sắt";
-  else if (co("khung", /go/)) kc.khung_cot = "Gỗ"; else if (co("khung", /gach|xay/)) kc.khung_cot = "Xây gạch";
-  if (co("tuong", /op|gach men/)) kc.tuong = "Ốp gạch men"; else if (co("tuong", /ton/)) kc.tuong = "Vách tôn";
-  else if (co("tuong", /giay dau/)) kc.tuong = "Giấy dầu"; else if (co("tuong", /go/)) kc.tuong = "Gỗ + xây"; else if (co("tuong", /xay|gach/)) kc.tuong = "Xây tô sơn nước";
-  if (co("mai", /btct|be tong|bang/)) kc.mai = "BTCT"; else if (co("mai", /ngoi/)) kc.mai = "Ngói"; else if (co("mai", /ton/)) kc.mai = "Tôn";
-  else if (co("mai", /giay dau|la/)) kc.mai = "Giấy dầu";
-  if (co("tran", /thach cao/)) kc.tran = "Thạch cao"; else if (co("tran", /ton/)) kc.tran = "Tôn lạnh"; else if (co("tran", /nhua/)) kc.tran = "Nhựa";
-  else if (/khong tran/.test(b)) kc.tran = "Không trần";
-  if (co("nen", /men|ceramic|gach bong/)) kc.nen = "Gạch men"; else if (co("nen", /dat/)) kc.nen = "Đất"; else if (co("nen", /xi mang|ciment|be tong|lang/)) kc.nen = "Xi măng";
-  if (co("cua", /nhom/)) kc.cua = "Nhôm kính"; else if (co("cua", /sat/)) kc.cua = "Sắt kính"; else if (co("cua", /go/)) kc.cua = "Gỗ tốt";
+  if (co("khung", /btct|be tong/)) kc.khung = "btct"; else if (co("khung", /thep|sat/)) kc.khung = "thep";
+  else if (co("khung", /gach|xay/)) kc.khung = "gach"; else if (co("khung", /go|tre/)) kc.khung = "go_tre";
+  if (co("tuong", /op/)) kc.tuong = "son_op"; else if (co("tuong", /de chay|tre|nua|la(\s|$)/)) kc.tuong = "de_chay";
+  else if (co("tuong", /khong to|ton|go/)) kc.tuong = "tho"; else if (co("tuong", /voi/)) kc.tuong = "voi"; else if (co("tuong", /son/)) kc.tuong = "son";
+  if (co("mai", /btct|be tong|bang/)) kc.mai = "btct"; else if (co("mai", /ngoi/)) kc.mai = "ngoi"; else if (co("mai", /fibro|fi bro|phi bro|xi mang/)) kc.mai = "fibro";
+  else if (co("mai", /ton/)) kc.mai = "ton"; else if (co("mai", /tranh|nua|tre|la(\s|$)/)) kc.mai = "la";
+  if (/khong (co )?tran/.test(b)) kc.tran = "khong"; else if (co("tran", /thach cao/)) kc.tran = "thach_cao"; else if (co("tran", /ton/)) kc.tran = "ton_lanh";
+  else if (co("tran", /nhua/)) kc.tran = "nhua"; else if (co("tran", /luoi/)) kc.tran = "luoi"; else if (co("tran", /van ep/)) kc.tran = "van_ep";
+  else if (co("tran", /go/)) kc.tran = "go_cc";
+  if (co("nen", /granit|da /)) kc.nen = "granite"; else if (co("nen", /gach bong/)) kc.nen = "gach_bong"; else if (co("nen", /gach tau/)) kc.nen = "gach_tau";
+  else if (co("nen", /ceramic|men/)) kc.nen = "ceramic"; else if (co("nen", /lang|xi mang|vua/)) kc.nen = "lang";
+  if (co("cua", /cao cap/)) kc.cua = "cao_cap"; else if (co("cua", /nhom 4|nhom bon|go tot/)) kc.cua = "go4"; else if (co("cua", /go tap/)) kc.cua = "go_tap";
+  else if (co("cua", /nhom/)) kc.cua = "nhom"; else if (co("cua", /sat/)) kc.cua = "sat_kinh"; else if (co("cua", /go/)) kc.cua = "go";
+  const so = {mot: 1, hai: 2, ba: 3, bon: 4, nam: 5}, mt = b.match(/(\d+|mot|hai|ba|bon|nam)\s*tang/);
+  if (mt) { const n = so[mt[1]] || Number(mt[1]); kc.tang = n >= 5 ? "5" : n >= 3 ? "34" : n === 2 ? "2" : "1"; }
   return kc; }
-function chuKetCau(kc) { const ds = KET_CAU.filter(x => kc[x[0]]).map(x => x[1].toLowerCase() + " " + kc[x[0]].toLowerCase()); return ds.length ? "Kết cấu: " + ds.join(", ") : ""; }
-function nhaTheoChu(t, kc) { const b = boDau(t), so_tang = {mot: 1, hai: 2, ba: 3, bon: 4, nam: 5};
-  const bt = b.match(/biet thu\s*(song lap|don lap|cao cap|du lich)/); if (bt) return DU.nha.find(m => boDau(m[1]) === "biet thu " + bt[1]) || null;
-  let khoa = /nha tam/.test(b) ? "nha tam" : /ban kien co/.test(b) ? "ban kien co" : "";
-  const lo = b.match(/loai\s*([1-4])/); if (!khoa && lo) khoa = "loai " + lo[1]; if (!khoa) khoa = khoaLoaiNha(kc);
-  if (!khoa) return null; if (khoa === "nha tam" || khoa === "ban kien co") return DU.nha.find(m => boDau(m[1]).includes(khoa)) || null;
-  const mt = b.match(/(\d+|mot|hai|ba|bon|nam)\s*tang/); const tang = mt ? (so_tang[mt[1]] || Number(mt[1])) : 1;
-  const dau = /gac lung/.test(b) ? "gac lung nha chinh" : tang >= 5 ? "nha tu 05 tang" : tang >= 3 ? "nha tu 03 tang" : tang === 2 ? "nha 01 tang den 02 tang" : "nha 01 tang -";
-  return DU.nha.find(m => boDau(m[1]).startsWith(dau) && boDau(m[1]).includes(khoa)) || null; }
+function chuKetCau(kc) { const ds = KET_CAU.filter(x => kc[x[0]] && x[0] !== "tang").map(x => x[1].toLowerCase() + " " + CHU_KC(x[0], kc[x[0]]).toLowerCase());
+  return ds.length ? "Kết cấu: " + ds.join(", ") : ""; }
+// loại nhà theo lời đọc: biệt thự / nhà tạm / bán kiên cố / "loại N" nói rõ -> theo đúng tên; còn lại so tiêu chí Phụ lục Ia QĐ 18/2026 -> {m, g}
+function nhaTheoChu(t, kc) { const b = boDau(t), tim = f => DU.nha.find(m => f(boDau(m[1])));
+  const bt = b.match(/biet thu\s*(song lap|don lap|cao cap|du lich)/); if (bt) return {m: tim(x => x === "biet thu " + bt[1]) || null};
+  if (/nha tam/.test(b)) return {m: tim(x => x === "nha tam") || null};
+  if (/ban kien co/.test(b)) return {m: tim(x => x === "nha ban kien co") || null};
+  const lo = b.match(/loai\s*([1-4])/);
+  if (lo) { const tang = kc.tang || "1", dau = /gac lung/.test(b) ? "gac lung nha chinh" : tang === "5" ? "nha tu 05 tang" : tang === "34" ? "nha tu 03 tang" :
+      tang === "2" ? "nha 01 tang den 02 tang" : "nha 01 tang -";
+    return {m: tim(x => x.startsWith(dau) && x.includes("loai " + lo[1])) || null}; }
+  const g = khoaLoaiNha(kc); return g ? {m: g.m, g: g} : {m: null}; }
 function apNha(x, ma) { const m = DU.nha.find(n => n[0] === ma); if (!m) return; const b = x.b;
   x.du = b ? {muc: 2, nhom: "nha", ma_dm: m[0], ten: m[1], dvt: m[2], so_luong: b.ct, ty_le: "100", ghi_chu: x.kc_chu} : {muc: 2, ten: x.goc, so_luong: "", tu_bb: true};
   x.ma = m[0]; x.chinh = m[1] + (b ? " · " + soVN(b.gt, 4) + " m²" : ""); x.gia = b && m[3] ? b.gt * m[3] : null;
   x.ct = [b ? "Diện tích: " + b.ct + (b.dvt ? " " + b.dvt : "") : "Chưa đọc được diện tích: sửa ở mục Nhà sau khi đưa vào", x.kc_chu].filter(y => y).join(" · ");
   x.loi = !b; }
-function nhaTuDoan(t) { const kc = kcTuChu(t), m = nhaTheoChu(t, kc), b = layBieuThuc(t);
+function nhaTuDoan(t) { const kc = kcTuChu(t), kq = nhaTheoChu(t, kc), m = kq.m, b = layBieuThuc(t);
   const x = {cat: "nha", goc: t, kc_chu: chuKetCau(kc), b: b && b.dvt !== "m3" ? b : null, chon: true, chon_loai: true};
-  if (m) apNha(x, m[0]);
+  if (m) { apNha(x, m[0]); if (kq.g) x.ct += " · Gợi ý " + chuKhopQd18(kq.g); }
   else { x.du = {muc: 2, ten: t, so_luong: "", tu_bb: true}; x.chinh = t; x.ct = "Chưa xác định loại nhà: chọn ở ô dưới (hoặc để máy tính phân loại khi nhập)"; }
   return x; }
 function vktTuDoan(t) { const m = khopDanhMuc(t, DU.dm2), b = layBieuThuc(t);
@@ -1038,7 +1091,7 @@ function phanLoaiDoan(x, uu) { const t = x.chu, d = x.d, b = boDau(t); let cat =
   if (cat === "dat") return [datTuDoan(t)];
   if (cat === "nha" && /^(nha ve sinh|nha tam|nha bep)/.test(b)) cat = "vkt";
   if (cat === "nha") return [nhaTuDoan(t)];
-  if (cat === "vkt") return tachDongQd42(t).map(vktTuDoan);
+  if (cat === "vkt") return tachDongNhieuCo(t).map(vktTuDoan);
   if (cat === "cay") return [cayTuDoan(t)];
   if (cat === "vn") return [vnTuDoan(t)];
   return [khacTuDoan(t)]; }
@@ -1395,12 +1448,12 @@ function veTatCa() { veKpi(); veThe(); veHoSo(); bangDong("bang_nha", laNha); ba
   const p = theHien(); if (p === 4) veAnh(); if (p === 6) veXuat(); }
 // nút Back (bản .apk) / Esc: đóng ảnh phóng to / ngăn tìm / dừng nghe -> về màn hình AI (dọc) hoặc mục Hồ sơ (ngang); đang ở đó: ứng dụng chạy nền
 window.LARC_quayLaiChinh = () => { if (dongXemAnh()) return true; if (!$("ngan_tim").hidden) { $("ngan_tim").hidden = true; return true; }
-  if (NOI.rec) { dungNoi(); return true; }
+  if (NOI.rec || NOI.android) { dungNoi(); return true; }
   if (dangNgang()) { if (thePhai() !== 0) { moThe(0); return true; } return false; }
   if (ST.the !== TRANG_AI) { moThe(TRANG_AI); return true; } return false; };
 function tenFile(t) { return (boDau(t).replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "ho") + ".json"; }
 async function taoKetQua(dsKhoa, kemAnh) {
-  const ra = {phien_ban: PHIEN_BAN_PHIEU, ung_dung: "LARC Field Mobile @@PHIEN_BAN@@", du_an: DU.du_an, luc: new Date().toISOString(), kinh_tuyen: DU.kinh_tuyen,
+  const ra = {phien_ban: PHIEN_BAN_PHIEU, ung_dung: "LARC Mobile @@PHIEN_BAN@@", du_an: DU.du_an, luc: new Date().toISOString(), kinh_tuyen: DU.kinh_tuyen,
     ket_qua: {}, ho_dan: {}, dat_dai: {}, anh: {}};
   for (const k of dsKhoa) { const h = hoST(k), g = hoGoc(k) || {};
     ra.ket_qua[k] = h.dong.map(d => { const x = Object.assign({}, d); delete x.nhom; delete x.luc; delete x.tu_bb; return x; });
@@ -1468,7 +1521,7 @@ function khoiDong() {
       luu(); veTatCa(); bao("Đã ghi tọa độ."); }, e => bao("Không lấy được vị trí: " + (e.message || ""), 1), {enableHighAccuracy: true, timeout: 20000}); });
   $("b_them_dat").addEventListener("click", themDat); $("b_them_nha").addEventListener("click", themNha);
   $("n_dt").addEventListener("input", () => { hienBieuThuc("n_dt", "n_dt_kq"); capNhatNha(); }); $("n_tl").addEventListener("input", capNhatNha);
-  $("n_loai").addEventListener("change", () => { NHA_TAY = true; const m = DU.nha.find(x => x[0] === $("n_loai").value); TANG_CHON = m ? tangCua(m[1]) : "";
+  $("n_loai").addEventListener("change", () => { NHA_TAY = true;
     $("n_goi_y_kc").textContent = ""; capNhatNha(); });
   $("v_sl").addEventListener("input", () => { hienBieuThuc("v_sl", "v_sl_kq"); capNhatVkt(); }); $("v_tl").addEventListener("input", capNhatVkt);
   for (const ev of ["input", "change"]) $("v_ten").addEventListener(ev, () => { const m = mucVkt($("v_ten").value.trim()); if (m && !$("v_dvt").value) $("v_dvt").value = m[2]; capNhatVkt(); });

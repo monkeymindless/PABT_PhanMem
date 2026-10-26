@@ -1,4 +1,4 @@
-"""1.0.32 Đợt 3 (người dùng 26/10/2026): phần MÁY TÍNH của ứng dụng điện thoại LARC Field Mobile (ứng dụng là dự án riêng ở di_dong/,
+"""1.0.32 Đợt 3 (người dùng 26/10/2026): phần MÁY TÍNH của ứng dụng điện thoại LARC Mobile (ứng dụng là dự án riêng ở di_dong/,
 kiểm thử ở di_dong/tests) - file dữ liệu dự án (hộ, danh mục có mã, loài cây, bản đồ thửa WGS84, tham số VN-2000) và nhập file .json
 phiên bản 2 về máy tính: dòng ghi lại biên bản (mục 0, tự phân
 loại), ảnh gửi kèm (lưu cạnh file dự án, chặn chương trình giả ảnh), GPS (ghi chú hộ). Họ tên, CCCD, bản đồ, ảnh đều GIẢ LẬP."""

@@ -1,9 +1,9 @@
-"""Dựng ứng dụng điện thoại LARC Field Mobile (dự án riêng, KHÔNG dùng mã của LARC bản máy tính - xem README.md) -> <repo>\\bo_cai\\:
+"""Dựng ứng dụng điện thoại LARC Mobile (dự án riêng, KHÔNG dùng mã của LARC bản máy tính - xem README.md) -> <repo>\\bo_cai\\:
 
-  LARC_FieldMobile_<ver>.apk          Android 7.0 (API 24) trở lên, cài trực tiếp (bật "Cho phép cài ứng dụng không rõ nguồn").
-  LARC_FieldMobile_PWA_<ver>.zip      iPhone / iPad (và Android không cài .apk): đặt các file lên một địa chỉ HTTPS, mở bằng Safari ->
+  LARC_Mobile_<ver>.apk          Android 7.0 (API 24) trở lên, cài trực tiếp (bật "Cho phép cài ứng dụng không rõ nguồn").
+  LARC_Mobile_PWA_<ver>.zip      iPhone / iPad (và Android không cài .apk): đặt các file lên một địa chỉ HTTPS, mở bằng Safari ->
                                       Chia sẻ -> "Thêm vào MH chính". Chạy không cần mạng sau lần mở đầu.
-  LARC_FieldMobile_Web_<ver>\\        gói đưa lên trang web miễn phí (GitHub Pages / Netlify / Cloudflare Pages): tai_len\\ = ứng dụng PWA +
+  LARC_Mobile_Web_<ver>\\        gói đưa lên trang web miễn phí (GitHub Pages / Netlify / Cloudflare Pages): tai_len\\ = ứng dụng PWA +
                                       cai-dat.html (trang cài đặt có mã QR của địa chỉ trang, hướng dẫn iPhone / Android) + file .apk;
                                       HUONG_DAN.txt = các bước đưa lên GitHub Pages. Địa chỉ trang: --url https://... (nhớ ở dia_chi_web.txt).
 
@@ -29,7 +29,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-PHIEN_BAN = '1.2.0'                 # phiên bản RIÊNG của ứng dụng điện thoại (tăng mỗi lần phát hành .apk / PWA)
+PHIEN_BAN = '1.2.1'                 # phiên bản RIÊNG của ứng dụng điện thoại (tăng mỗi lần phát hành .apk / PWA)
 DAY = Path(__file__).resolve().parent
 REPO = DAY.parent
 MAU = DAY / 'ung_dung' / 'index.html'
@@ -42,18 +42,18 @@ BIET_DANH = 'larc_field'
 RA = REPO / 'bo_cai'
 API_MIN, API_DICH, BUILD_TOOLS = 24, 34, '34.0.0'
 CHE_DO = ('pwa', 'android')
-TEN_UNG_DUNG, TEN_NGAN = 'LARC Field Mobile', 'LARC Field'
+TEN_UNG_DUNG, TEN_NGAN = 'LARC Mobile', 'LARC Mobile'
 # biểu tượng của vỏ ứng dụng: (tên file, cỡ px, lề mỗi bên, màu nền - "maskable" cần nền kín, hình trong vùng an toàn)
 BIEU_TUONG_PWA = (('icon-180.png', 180, 0.0, ''), ('icon-192.png', 192, 0.0, ''), ('icon-512.png', 512, 0.0, ''),
                   ('icon-maskable-512.png', 512, 0.12, '#FFFFFF'))
 # biểu tượng trình khởi chạy Android: (thư mục mipmap, cỡ px)
 MIPMAP = (('mipmap-mdpi', 48), ('mipmap-hdpi', 72), ('mipmap-xhdpi', 96), ('mipmap-xxhdpi', 144), ('mipmap-xxxhdpi', 192))
-HUONG_DAN_PWA = """LARC Field Mobile - bản cài cho iPhone / iPad (PWA)
+HUONG_DAN_PWA = """LARC Mobile - bản cài cho iPhone / iPad (PWA)
 
 1. Đặt TOÀN BỘ các file trong gói này (index.html, manifest.webmanifest, sw.js, icon-*.png) vào cùng một thư mục trên một
    địa chỉ HTTPS (ví dụ GitHub Pages, máy chủ web của đơn vị có chứng chỉ HTTPS). Không cần máy chủ chạy chương trình:
    chỉ là file tĩnh. Các file KHÔNG chứa dữ liệu dự án.
-2. Trên iPhone: mở địa chỉ đó bằng Safari -> nút Chia sẻ -> "Thêm vào MH chính". Mở ứng dụng từ biểu tượng LARC Field.
+2. Trên iPhone: mở địa chỉ đó bằng Safari -> nút Chia sẻ -> "Thêm vào MH chính". Mở ứng dụng từ biểu tượng LARC Mobile.
    Sau lần mở đầu ứng dụng chạy không cần mạng.
 3. Trên máy tính: LARC -> Công cụ -> Phiếu kiểm đếm thực địa -> "Xuất dữ liệu cho ứng dụng điện thoại…" -> gửi file .json sang
    iPhone (Zalo, email, AirDrop) -> trong ứng dụng bấm "Chọn file dữ liệu dự án…".
@@ -63,8 +63,8 @@ Lưu ý: số liệu ghi lưu trong ứng dụng trên iPhone; xóa ứng dụng
 file:// hoặc http:// (không HTTPS) thì không cài được và không định vị GPS được.
 """
 DIA_CHI_WEB = DAY / 'dia_chi_web.txt'   # địa chỉ trang web đã đặt ứng dụng (lần dựng sau dùng lại)
-TEP_APK_WEB = 'LARC_FieldMobile.apk'    # tên file .apk trên trang web (cố định: đường link / mã QR không đổi theo phiên bản)
-HUONG_DAN_WEB = """LARC Field Mobile - đưa ứng dụng lên trang web miễn phí để cài cho nhiều người (iPhone + Android)
+TEP_APK_WEB = 'LARC_Mobile.apk'    # tên file .apk trên trang web (cố định: đường link / mã QR không đổi theo phiên bản)
+HUONG_DAN_WEB = """LARC Mobile - đưa ứng dụng lên trang web miễn phí để cài cho nhiều người (iPhone + Android)
 
 Thư mục tai_len\\ chỉ chứa VỎ ứng dụng (trang web, biểu tượng, file .apk) - KHÔNG có họ tên, CCCD hay số liệu dự án nào.
 Dữ liệu dự án vẫn gửi riêng cho từng người (LARC -> Phiếu kiểm đếm thực địa -> Xuất dữ liệu cho ứng dụng điện thoại).
@@ -86,7 +86,7 @@ A. ĐƯA LÊN GITHUB PAGES (miễn phí, một lần)
 B. CÀI CHO TỪNG NGƯỜI
  - Gửi địa chỉ https://<tên tài khoản>.github.io/larc-field/cai-dat.html qua Zalo, hoặc in trang đó ra (có mã QR).
  - iPhone: quét mã QR bằng Camera (hoặc mở đường link) -> nếu đang trong Zalo / Facebook thì chọn "Mở bằng Safari" ->
-   bấm "Mở ứng dụng" -> nút Chia sẻ -> "Thêm vào MH chính" -> mở biểu tượng LARC Field một lần khi còn mạng.
+   bấm "Mở ứng dụng" -> nút Chia sẻ -> "Thêm vào MH chính" -> mở biểu tượng LARC Mobile một lần khi còn mạng.
  - Android: quét mã -> "Tải bản Android (.apk)" -> cài (cho phép cài ứng dụng không rõ nguồn khi máy hỏi);
    hoặc mở ứng dụng bằng Chrome -> menu ⋮ -> "Thêm vào màn hình chính".
 
@@ -225,14 +225,14 @@ def khoa_ky(cc: dict) -> tuple:
     mk = secrets.token_urlsafe(24)
     _chay([cc['keytool'], '-genkeypair', '-keystore', KHOA, '-alias', BIET_DANH, '-keyalg', 'RSA', '-keysize', '4096',
            '-validity', '10950', '-storetype', 'PKCS12', '-storepass', mk, '-keypass', mk,
-           '-dname', 'CN=LARC Field Mobile, O=LARC, C=VN'])
+           '-dname', 'CN=LARC Mobile, O=LARC, C=VN'])
     mk_file.write_text(mk + '\n', encoding='utf-8')
     print(f'Đã tạo khóa ký mới: {KHOA} (mật khẩu: {mk_file}) - GIỮ KỸ, sao lưu ra nơi khác.')
     return KHOA, mk
 
 
 def dung_pwa(ver: str = PHIEN_BAN) -> Path:
-    ra = RA / f'LARC_FieldMobile_PWA_{ver}.zip'
+    ra = RA / f'LARC_Mobile_PWA_{ver}.zip'
     RA.mkdir(parents=True, exist_ok=True)
     tam = ra.with_name(ra.name + '.tmp')
     with zipfile.ZipFile(tam, 'w', zipfile.ZIP_DEFLATED) as z:
@@ -248,7 +248,7 @@ def dung_apk(ver: str = PHIEN_BAN) -> Path:
     cc = cong_cu()
     khoa, mk = khoa_ky(cc)
     RA.mkdir(parents=True, exist_ok=True)
-    ra = RA / f'LARC_FieldMobile_{ver}.apk'
+    ra = RA / f'LARC_Mobile_{ver}.apk'
     with tempfile.TemporaryDirectory(prefix='larc_apk_') as td:
         t = Path(td)
         # tài nguyên: chuỗi + biểu tượng trình khởi chạy (nền trắng, lề vừa vùng bo tròn)
@@ -322,7 +322,7 @@ def trang_cai_dat(url: str, ver: str = PHIEN_BAN, co_apk: bool = True) -> str:
     apk = (f'<a class="nut phu" href="{TEP_APK_WEB}" download>Tải bản Android (.apk)</a>' if co_apk else '')
     return f'''<!DOCTYPE html>
 <html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Cài LARC Field Mobile</title><link rel="icon" href="icon-180.png"/>
+<title>Cài LARC Mobile</title><link rel="icon" href="icon-180.png"/>
 <style>
 *{{box-sizing:border-box;font-family:"Segoe UI",Roboto,Arial,sans-serif}}body{{margin:0;background:#F8FAFC;color:#0F172A}}
 main{{max-width:720px;margin:0 auto;padding:16px}}.dau{{display:flex;align-items:center;gap:12px}}.dau img{{width:56px;height:56px;border-radius:12px}}
@@ -334,14 +334,14 @@ h1{{font-size:20px;margin:0;color:#2F5F9E}}.ghi{{color:#475569;font-size:13px}}
 .canh{{background:#FEF3C7;border:1px solid #F59E0B;color:#7C4A12;border-radius:8px;padding:10px;display:none}}p.canh{{display:block}}
 @media print{{.nut,.khong_in{{display:none}}.khung{{border:0}}body{{background:#fff}}}}
 </style></head><body><main>
-<div class="dau"><img src="icon-180.png" alt="LARC"/><div><h1>LARC Field Mobile</h1>
+<div class="dau"><img src="icon-180.png" alt="LARC"/><div><h1>LARC Mobile</h1>
 <div class="ghi">Kiểm đếm thực địa · phiên bản {_h.escape(ver)} · chạy không cần mạng</div></div></div>
 <div class="canh" id="trong_ung_dung">Đang mở trong Zalo / Facebook: bấm nút ⋯ (hoặc ⋮) -> <b>Mở bằng trình duyệt</b> (iPhone: Safari) rồi làm tiếp.</div>
 <div class="khung">{o_qr}<p class="ghi" style="text-align:center">Quét bằng Camera của điện thoại để mở trang này.</p></div>
 <div class="khung khong_in"><a class="nut" href="./">Mở ứng dụng</a>{apk}</div>
 <div class="khung"><h2>iPhone / iPad</h2><ol><li>Mở trang này bằng <b>Safari</b>.</li><li>Bấm <b>Mở ứng dụng</b>.</li>
 <li>Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên lên) -> <b>Thêm vào MH chính</b> -> Thêm.</li>
-<li>Mở biểu tượng <b>LARC Field</b> trên màn hình chính một lần khi còn mạng. Từ đó dùng được ngoài thực địa không cần mạng.</li></ol></div>
+<li>Mở biểu tượng <b>LARC Mobile</b> trên màn hình chính một lần khi còn mạng. Từ đó dùng được ngoài thực địa không cần mạng.</li></ol></div>
 <div class="khung"><h2>Android</h2><ol><li>Bấm <b>Tải bản Android (.apk)</b>, mở file vừa tải, cho phép cài ứng dụng không rõ nguồn khi máy hỏi.</li>
 <li>Hoặc: mở ứng dụng bằng <b>Chrome</b> -> menu ⋮ -> <b>Thêm vào màn hình chính</b> / <b>Cài đặt ứng dụng</b>.</li></ol></div>
 <div class="khung"><h2>Dùng</h2><ol><li>Nhận file dữ liệu dự án (.json) từ người lập phương án (Zalo, email).</li>
@@ -357,8 +357,8 @@ if (/Zalo|FBAN|FBAV|FB_IAB|Instagram|Line\\//i.test(navigator.userAgent)) docume
 
 
 def dung_web(ver: str = PHIEN_BAN, url: str = '', apk: Path | None = None) -> Path:
-    """bo_cai\\LARC_FieldMobile_Web_<ver>\\ (tai_len\\ + HUONG_DAN.txt) và file .zip cùng tên."""
-    goc = RA / f'LARC_FieldMobile_Web_{ver}'
+    """bo_cai\\LARC_Mobile_Web_<ver>\\ (tai_len\\ + HUONG_DAN.txt) và file .zip cùng tên."""
+    goc = RA / f'LARC_Mobile_Web_{ver}'
     if goc.exists():
         shutil.rmtree(goc)
     tl = goc / 'tai_len'
@@ -398,7 +398,7 @@ def main(argv=None) -> int:
         apk = dung_apk()
     if '--chi-apk' not in argv:
         dung_pwa()
-        dung_web(url=url, apk=apk or RA / f'LARC_FieldMobile_{PHIEN_BAN}.apk')
+        dung_web(url=url, apk=apk or RA / f'LARC_Mobile_{PHIEN_BAN}.apk')
     return 0
 
 

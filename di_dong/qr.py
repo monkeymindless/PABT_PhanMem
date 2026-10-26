@@ -1,4 +1,4 @@
-"""Mã QR (ISO/IEC 18004) bằng Python thuần - cho trang cài đặt LARC Field Mobile (quét bằng camera để mở địa chỉ ứng dụng).
+"""Mã QR (ISO/IEC 18004) bằng Python thuần - cho trang cài đặt LARC Mobile (quét bằng camera để mở địa chỉ ứng dụng).
 
 Chế độ byte (UTF-8), mức sửa lỗi M (~15%), phiên bản 1-10 (tới 213 byte - đủ cho địa chỉ trang web), chọn mặt nạ theo điểm phạt
 chuẩn. Cách dựng theo thư viện QR Code generator của Project Nayuki (MIT). `ma_qr(chu)` -> lưới [hàng][cột] bool (True = ô đen, chưa

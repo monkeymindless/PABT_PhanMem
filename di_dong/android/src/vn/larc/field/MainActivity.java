@@ -18,7 +18,9 @@ import android.util.Base64;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -42,13 +44,13 @@ import java.util.ArrayList;
 
 import org.json.JSONObject;
 
-/** LARC Field Mobile: WebView chạy assets/index.html qua địa chỉ https://appassets.androidplatform.net/ (miền dành riêng cho nội dung
+/** LARC Mobile: WebView chạy assets/index.html qua địa chỉ https://appassets.androidplatform.net/ (miền dành riêng cho nội dung
  *  của ứng dụng - "ngữ cảnh an toàn": định vị GPS, IndexedDB chạy như trang https). Không tải gì từ mạng; liên kết ngoài mở trình duyệt.
  *  Cầu nối JS "LARCAndroid": luuFile(tên, nội dung) -> hộp Gửi (Zalo, email…) / Lưu vào thư mục. Ô chọn ảnh: chọn ảnh hoặc chụp ảnh. */
 public class MainActivity extends Activity {
     static final String MIEN = "appassets.androidplatform.net";
     static final String GOC = "https://" + MIEN + "/";
-    static final int MA_CHON = 11, MA_LUU = 12, MA_GPS = 13, MA_CHUP = 14, MA_NOI = 15;
+    static final int MA_CHON = 11, MA_LUU = 12, MA_GPS = 13, MA_CHUP = 14, MA_NOI = 15, MA_MIC = 16;
 
     WebView web;
     ValueCallback<Uri[]> choChon;
@@ -185,7 +187,83 @@ public class MainActivity extends Activity {
         try {
             startActivityForResult(noi, MA_NOI);
         } catch (ActivityNotFoundException e) {
-            web.evaluateJavascript("window.LARC_giongNoiLoi && window.LARC_giongNoiLoi('khong_co')", null);
+            ngheQuaDichVu();     // máy không có màn hình nhập giọng nói (không có ứng dụng Google, máy giả lập…): dùng thẳng dịch vụ nhận dạng
+        }
+    }
+
+    // ---- dự phòng: SpeechRecognizer (dịch vụ nhận dạng của máy, vd "Dịch vụ lời nói của Google", Samsung) - cần quyền micro, hỏi khi dùng lần đầu.
+    //      Trang hiện sóng âm + chữ đang nghe (LARC_giongNoiTrangThai / LARC_giongNoiTam), nút Xong = LARCAndroid.dungGiongNoi().
+    SpeechRecognizer nghe;
+
+    void js(String ham, String doi) {
+        web.evaluateJavascript("window." + ham + " && window." + ham + "(" + JSONObject.quote(doi == null ? "" : doi) + ")", null);
+    }
+
+    void ngheQuaDichVu() {
+        boolean dv = SpeechRecognizer.isRecognitionAvailable(this);
+        boolean tren_may = Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(this);
+        if (!dv && !tren_may) { js("LARC_giongNoiLoi", "khong_co"); return; }
+        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MA_MIC);
+            return;
+        }
+        huyNghe();
+        nghe = dv ? SpeechRecognizer.createSpeechRecognizer(this) : SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
+        nghe.setRecognitionListener(new RecognitionListener() {
+            @Override public void onReadyForSpeech(Bundle b) { js("LARC_giongNoiTrangThai", "nghe"); }
+            @Override public void onBeginningOfSpeech() { }
+            @Override public void onRmsChanged(float db) { }
+            @Override public void onBufferReceived(byte[] b) { }
+            @Override public void onEndOfSpeech() { js("LARC_giongNoiTrangThai", "xu_ly"); }
+            @Override public void onPartialResults(Bundle b) { String c = dauTien(b); if (c != null) js("LARC_giongNoiTam", c); }
+            @Override public void onEvent(int loai, Bundle b) { }
+            @Override public void onResults(Bundle b) {
+                String c = dauTien(b);
+                if (c != null && !c.isEmpty()) js("LARC_nhanGiongNoiAndroid", c); else js("LARC_giongNoiLoi", "khong_nghe");
+                huyNghe();
+            }
+            @Override public void onError(int ma) {
+                String ly = ma == SpeechRecognizer.ERROR_NO_MATCH || ma == SpeechRecognizer.ERROR_SPEECH_TIMEOUT ? "khong_nghe"
+                    : ma == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ? "quyen"
+                    : ma == SpeechRecognizer.ERROR_NETWORK || ma == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || ma == SpeechRecognizer.ERROR_SERVER ? "mang"
+                    : ma == 12 || ma == 13 ? "ngon_ngu"           // ERROR_LANGUAGE_NOT_SUPPORTED / _UNAVAILABLE (API 31)
+                    : "loi_" + ma;
+                js("LARC_giongNoiLoi", ly);
+                huyNghe();
+            }
+        });
+        Intent noi = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        noi.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        noi.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "vi-VN");
+        noi.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+        noi.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        noi.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L);   // đọc liền một mạch: nghỉ 2,5 s mới xong
+        if (Build.VERSION.SDK_INT >= 23) noi.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
+        try {
+            nghe.startListening(noi);
+        } catch (RuntimeException e) {
+            js("LARC_giongNoiLoi", "khong_co");
+            huyNghe();
+        }
+    }
+
+    static String dauTien(Bundle b) {
+        ArrayList<String> ds = b == null ? null : b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        return ds != null && !ds.isEmpty() ? ds.get(0) : null;
+    }
+
+    void huyNghe() {
+        if (nghe != null) { try { nghe.destroy(); } catch (RuntimeException e) { /* đã hủy */ } nghe = null; }
+    }
+
+    /** Mở trang cài đặt ứng dụng nhận dạng giọng nói trên CH Play (chỉ các gói được phép). */
+    void moCuaHang(String goi) {
+        if (!"com.google.android.tts".equals(goi) && !"com.google.android.googlequicksearchbox".equals(goi)) return;
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + goi)));
+        } catch (ActivityNotFoundException e) {
+            try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + goi))); }
+            catch (ActivityNotFoundException e2) { bao("Máy không có CH Play / trình duyệt."); }
         }
     }
 
@@ -282,6 +360,9 @@ public class MainActivity extends Activity {
             gpsCb.invoke(gpsNguon, coQuyenGps(), false);
             gpsCb = null;
         }
+        if (ma == MA_MIC) {
+            if (kq.length > 0 && kq[0] == PackageManager.PERMISSION_GRANTED) ngheQuaDichVu(); else js("LARC_giongNoiLoi", "quyen");
+        }
     }
 
     void bao(String chu) { Toast.makeText(this, chu, Toast.LENGTH_LONG).show(); }
@@ -337,6 +418,12 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void batDauGiongNoi() {
             runOnUiThread(new Runnable() { @Override public void run() { MainActivity.this.batDauGiongNoi(); } });
         }
+        @JavascriptInterface public void dungGiongNoi() {
+            runOnUiThread(new Runnable() { @Override public void run() { if (nghe != null) nghe.stopListening(); } });
+        }
+        @JavascriptInterface public void moCuaHang(final String goi) {
+            runOnUiThread(new Runnable() { @Override public void run() { MainActivity.this.moCuaHang(goi); } });
+        }
     }
 
     @Override public void onBackPressed() {
@@ -349,6 +436,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        huyNghe();
         if (web != null) web.destroy();
         super.onDestroy();
     }

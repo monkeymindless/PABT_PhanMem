@@ -102,8 +102,11 @@ class TestPhanTach(unittest.TestCase):
         self.assertEqual(dat, [{'so_to': '12', 'so_thua': '45', 'loai_dat': 'CLN', 'dt_thu_hoi': '1500'}])   # "cây lâu năm" là loại đất
         nha = [x for x in ds if x['cat'] == 'nha']
         self.assertEqual(len(nha), 1)
-        self.assertEqual((nha[0]['du']['ten'], nha[0]['du']['so_luong'], nha[0]['du']['nhom']), ('Nhà 01 tầng - Kết cấu loại 3', '(5x12)-(2x3)', 'nha'))
-        self.assertIn('tường xây tô sơn nước', nha[0]['du']['ghi_chu'])                                       # không lẫn "nền gạch men"
+        # khung BTCT + mái tôn + nền gạch men (ceramic): Phụ lục Ia QĐ 18/2026 mục 3.2 (nhà 01 - 02 tầng, kết cấu loại 2)
+        self.assertEqual((nha[0]['du']['ten'], nha[0]['du']['so_luong'], nha[0]['du']['nhom']),
+                         ('Nhà 01 tầng đến 02 tầng - Kết cấu loại 2', '(5x12)-(2x3)', 'nha'))
+        self.assertIn('nền gạch ceramic, men', nha[0]['du']['ghi_chu'])
+        self.assertIn('QĐ 18/2026', nha[0]['ct'])
         vkt = [x for x in ds if x['cat'] == 'vkt']
         self.assertEqual([x['du']['ten'] for x in vkt], ['ống nhựa ϕ 114: 3300m', 'ống nhựa ϕ 90: 3400m', 'bể nước 1,5 x 2,4 x 1,2',
                                                          'chuồng heo 20 m2'])
@@ -125,6 +128,23 @@ class TestPhanTach(unittest.TestCase):
         qr = self.tach('079200009999|201234567|Phạm Thị Dung|05061988|Nữ|Tổ 4, Ấp 1, Xã Phú Lý|01022022')
         self.assertEqual({x['du']['truong']: x['du']['gia_tri'] for x in qr},
                          {'ho_ten': 'Phạm Thị Dung', 'so_cccd': '079200009999', 'nam_sinh': '1988', 'dia_chi': 'Tổ 4, Ấp 1, Xã Phú Lý'})
+
+    def test_nha_theo_phu_luc_ia_qd18(self):
+        # câu đọc theo đúng chữ của Phụ lục Ia QĐ 18/2026/QĐ-UBND -> đúng mục bộ đơn giá
+        ten = lambda chu: self.tach(chu)[0]['du']['ten']   # noqa: E731
+        self.assertEqual(ten('nhà 1 tầng cột gạch, tường quét vôi, mái tôn fibro xi măng, không trần, nền láng xi măng, cửa sắt gỗ tạp 5x8'),
+                         'Nhà 01 tầng - Kết cấu loại 4')                                             # mục 4.4
+        self.assertEqual(ten('nhà cột gạch tường sơn nước mái tôn trần ván ép nền gạch tàu cửa sắt kính 6x10'), 'Nhà 01 tầng - Kết cấu loại 3')   # 4.3
+        self.assertEqual(ten('nhà 3 tầng khung bê tông tường sơn nước ốp gạch mái bê tông trần gỗ nền đá granite cửa gỗ cao cấp 8x15'),
+                         'Nhà từ 03 tầng đến 04 tầng - Kết cấu loại 1')                              # 2.1
+        self.assertEqual(ten('nhà 2 tầng khung thép tường quét vôi mái ngói trần lưới thép tô vữa nền gạch bông cửa sắt kính 5x12'),
+                         'Nhà 01 tầng đến 02 tầng - Kết cấu loại 3')                                 # 3.3
+        self.assertEqual(ten('nhà cột gỗ tre vách lá mái lá 4x5'), 'Nhà tạm')                       # 6
+        self.assertEqual(ten('nhà khung sắt tường tôn mái tôn nền gạch tàu 6x8'), 'Nhà bán kiên cố')  # 5
+        # chip kết cấu trên mục Nhà: cùng bảng tiêu chí
+        self.assertEqual(self.jsj('window.LARC.khoaLoaiNha({tang: "1", khung: "gach", tuong: "son", mai: "ngoi", tran: "nhua", nen: "gach_bong", '
+                                  'cua: "sat_kinh"}).m[1]'), 'Nhà 01 tầng - Kết cấu loại 2')       # 4.2
+        self.assertIsNone(self.jsj('window.LARC.khoaLoaiNha({mai: "ton"})'))                         # một thuộc tính: chưa đủ để gợi ý
 
     def test_doc_theo_muc_va_don_vi(self):
         ds = self.tach('mái ngói tường xây nền xi măng khung gạch 4 nhân 6 phẩy 7', 'nha')   # nút 🎙️ Đọc của mục Nhà: không cần nói "nhà"
@@ -149,7 +169,7 @@ class TestPhanTach(unittest.TestCase):
         self._doi(lambda: self.js('!!window.__kq'))
         ra = json.loads(self.js('window.__kq'))
         self.assertEqual(ra['phien_ban'], 2)
-        self.assertEqual(ra['ung_dung'], 'LARC Field Mobile ' + dung.PHIEN_BAN)
+        self.assertEqual(ra['ung_dung'], 'LARC Mobile ' + dung.PHIEN_BAN)
         dong = ra['ket_qua'][st['chon']]
         self.assertEqual([d['muc'] for d in dong], [2, 3])
         self.assertTrue(all('tu_bb' not in d and 'luc' not in d for d in dong))           # chỉ trường của giao ước
@@ -165,6 +185,25 @@ class TestPhanTach(unittest.TestCase):
         self.assertEqual(self.jsj('window.LARC.AI.items.map(x => [x.cat, x.du.ten, x.du.so_luong])'), [['cay', 'Cây xoài trồng năm 2018', '20']])
         self.assertEqual(self.js('window.LARC.AI.uu_tien'), 'cay')
         self.js('window.LARC_giongNoiLoi("khong_co"); delete window.LARCAndroid; 1')         # máy không có bộ nhận dạng: không lỗi JS
+
+    def test_giong_noi_du_phong_android(self):
+        # máy không có màn hình nhập giọng nói: vỏ Android nghe qua SpeechRecognizer, báo trạng thái + chữ tạm -> sóng âm; Xong = dungGiongNoi
+        self.js('window.__dung = 0; window.__ch = ""; window.confirm = () => true; localStorage.setItem("larc_field_dong_y_giong_noi", "1");'
+                'window.LARCAndroid = {batDauGiongNoi() { window.LARC_giongNoiTrangThai("nghe"); window.LARC_giongNoiTam("chủ hộ Lê"); },'
+                ' dungGiongNoi() { window.__dung++; window.LARC_nhanGiongNoiAndroid("chủ hộ Lê Văn Năm"); }, moCuaHang(g) { window.__ch = g; }};'
+                'document.getElementById("b_ai_xoa").click(); document.getElementById("b_hero_noi").click(); 1')
+        self.assertFalse(self.js('document.getElementById("song_am").hidden'))
+        self.assertEqual(self.js('document.getElementById("song_chu").textContent'), 'chủ hộ Lê')
+        self.js('document.getElementById("b_dung_noi").click(); 1')
+        self.assertEqual(self.js('window.__dung'), 1)
+        self.assertTrue(self.js('document.getElementById("song_am").hidden'))
+        self.assertEqual(self.jsj('window.LARC.AI.items.map(x => x.chinh)'), ['Lê Văn Năm'])
+        # không có bộ nhận dạng nào: mời cài "Dịch vụ lời nói của Google" trên CH Play
+        self.js('window.LARC_giongNoiLoi("khong_co"); 1')
+        self.assertEqual(self.js('window.__ch'), 'com.google.android.tts')
+        self.js('window.LARC_giongNoiLoi("quyen"); 1')
+        self.assertIn('Quyền → Micro', self.js('document.getElementById("thong_bao").textContent'))
+        self.js('delete window.LARCAndroid; document.getElementById("b_ai_xoa").click(); 1')
 
     def test_nen_ban_do(self):
         # có mạng mà chưa chọn: nền vệ tinh + tên đường (xem ảnh thực ngay); 4 nền + lưới trên thanh nút của bản đồ

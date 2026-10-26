@@ -1,4 +1,4 @@
-"""Hộp "Phiếu kiểm đếm thực địa" (0.9.87, menu Công cụ): xuất dữ liệu dự án cho ứng dụng điện thoại LARC Field Mobile (dự án riêng ở
+"""Hộp "Phiếu kiểm đếm thực địa" (0.9.87, menu Công cụ): xuất dữ liệu dự án cho ứng dụng điện thoại LARC Mobile (dự án riêng ở
 di_dong/), nhập kết quả .json vào phương án hộ, gắn ảnh hiện trạng; bảng số dòng đã ghi / số ảnh mỗi hộ (bấm đúp: mở ảnh đầu tiên của hộ). Logic ở phieu_kiem_dem."""
 from __future__ import annotations
 from pathlib import Path
@@ -21,7 +21,7 @@ class HopKiemDem(QDialog):
         self.setWindowTitle('Phiếu kiểm đếm thực địa')
         self.resize(860, 560)
         lo = QVBoxLayout(self)
-        gt = QLabel('1. Xuất dữ liệu dự án (.json) → gửi sang điện thoại đã cài ứng dụng LARC Field Mobile (Android .apk / iPhone '
+        gt = QLabel('1. Xuất dữ liệu dự án (.json) → gửi sang điện thoại đã cài ứng dụng LARC Mobile (Android .apk / iPhone '
                     '"Thêm vào MH chính") → mở file đó trong ứng dụng (không cần mạng): ghi nhà ở, vật kiến trúc, cây trồng, chụp ảnh '
                     'biên bản, xem bản đồ thửa + định vị GPS → xuất file kết quả .json gửi về máy tính.'
                     '\n2. Nhập kết quả: các dòng được thêm vào phương án từng hộ như "Dán danh sách tài sản" (khớp danh mục đơn giá; '
@@ -35,7 +35,7 @@ class HopKiemDem(QDialog):
         h = XepDong(hang, 8)                            # màn hình hẹp: nút xuống dòng, không ép hộp rộng hơn màn hình
         h.setContentsMargins(0, 0, 0, 0)
         self.b_du_lieu = QPushButton('Xuất dữ liệu cho ứng dụng điện thoại…')
-        self.b_du_lieu.setToolTip('File .json mở trong ứng dụng LARC Field Mobile đã cài (Android .apk, iPhone bản PWA).')
+        self.b_du_lieu.setToolTip('File .json mở trong ứng dụng LARC Mobile đã cài (Android .apk, iPhone bản PWA).')
         self.b_nhap = QPushButton('Nhập kết quả kiểm đếm (.json)…')
         self.b_anh = QPushButton('Gắn ảnh hiện trạng từ thư mục…')
         self.b_du_lieu.clicked.connect(lambda: self.xuat_du_lieu())
@@ -93,7 +93,7 @@ class HopKiemDem(QDialog):
             QMessageBox.warning(self, 'Phiếu kiểm đếm', chu)
 
     def xuat_du_lieu(self, file_ra=None):
-        """File dữ liệu dự án cho ứng dụng LARC Field Mobile đã cài trên điện thoại (Android / iPhone)."""
+        """File dữ liệu dự án cho ứng dụng LARC Mobile đã cài trên điện thoại (Android / iPhone)."""
         if file_ra is None:
             if self.im_lang:
                 return None
@@ -106,7 +106,7 @@ class HopKiemDem(QDialog):
         except Exception as e:                          # noqa: BLE001
             self._bao_loi(e)
             return None
-        self._ghi_kq(f'Đã xuất dữ liệu cho ứng dụng điện thoại: {ra}\nGửi file này sang điện thoại, mở ứng dụng LARC Field Mobile -> '
+        self._ghi_kq(f'Đã xuất dữ liệu cho ứng dụng điện thoại: {ra}\nGửi file này sang điện thoại, mở ứng dụng LARC Mobile -> '
                      '"Chọn file dữ liệu dự án…".')
         return ra
 

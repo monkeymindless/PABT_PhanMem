@@ -564,7 +564,7 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
   kiến, xám thửa không có trong hồ sơ; bấm (không kéo) vào thửa mở hồ sơ hộ, ô "Số thửa → Enter" nhảy tới thửa, cuộn chuột phóng to.
 - **Quét giấy tờ (OCR)…** (cửa sổ lập phương án, trang Dự toán): chọn ảnh chụp / PDF scan giấy chứng nhận, biên bản kiểm kê (cần
   Tesseract như đọc quyết định scan). Soát lại các ô rồi "Điền thông tin hộ & thửa" (trang Dự toán: "Thêm dòng đất") / "Đưa tài sản vào phương án…".
-- **Ứng dụng điện thoại LARC Field Mobile** (Android / iPhone, chạy không cần mạng; ứng dụng phát hành riêng, không nằm trong bộ cài
+- **Ứng dụng điện thoại LARC Mobile** (Android / iPhone, chạy không cần mạng; ứng dụng phát hành riêng, không nằm trong bộ cài
   máy tính). Từ bản 1.2.0 ứng dụng mở vào màn hình **✨ AI Quét & Nói**, thanh đáy 4 chế độ (AI Quét & Nói · Hồ sơ & TS · Bản đồ GPS ·
   Xuất .JSON):
   - **📷 CHỤP / QUÉT ẢNH**: chụp mặt sau thẻ CCCD (mã QR) - điện thoại Android tự điền họ tên, số CCCD, năm sinh, địa chỉ; chụp biên
@@ -577,6 +577,9 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
     cây (tính tuổi từ năm trồng), vật nuôi, kèm tạm tính tiền. Bỏ chọn mục sai rồi bấm **✔ Đưa vào Hồ sơ Hộ** (chưa chọn hộ thì tự tạo
     hộ mới theo họ tên đọc được). Lần đầu dùng giọng nói ứng dụng hỏi đồng ý: máy chưa có gói tiếng Việt ngoại tuyến thì tiếng nói được
     gửi tới máy chủ Google (Android) / Apple (iPhone, cần bật Siri và Đọc chính tả) để nhận dạng. Không muốn: gõ hoặc dán vào ô phân tách.
+    Điện thoại báo chưa có bộ nhận dạng giọng nói (máy không có ứng dụng Google, máy giả lập như LDPlayer): bấm OK để mở CH Play cài
+    **Dịch vụ lời nói của Google** (miễn phí), rồi tải gói tiếng Việt ngoại tuyến (Cài đặt → Google → Giọng nói); lần đầu ứng dụng hỏi
+    quyền **Micro** - chọn Cho phép. Máy không có CH Play: dùng micro trên bàn phím hoặc gõ.
   - **🗺️ Bản đồ GPS**: chọn nền ngay trên bản đồ - **Vệ tinh**, **Vệ tinh + tên** (tên đường, địa danh), **Đường phố**, **Địa hình**, **Lưới**
     (có mạng thì mặc định Vệ tinh + tên); thanh **Độ đậm thửa** chỉnh độ che của màu thửa trên ảnh. Trước khi ra hiện trường (có Wi-Fi):
     mở bản đồ, chọn Vệ tinh, bấm **💾 Lưu ảnh nền khu dự án** - ứng dụng lưu ảnh khu các thửa vào máy để xem khi mất sóng (**Xóa ảnh nền
@@ -586,7 +589,7 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
   Các mục của **Hồ sơ & TS**: **Hồ sơ & Đất** (chủ hộ / người nhận khoán, người sử dụng, CCCD, năm sinh, thửa địa chính hoặc tiểu khu / khoảnh /
   lô, nút lấy tọa độ GPS tại chỗ); **Nhà ở** (chọn loại nhà theo bộ đơn giá, bấm chọn kết cấu khung / tường / mái / trần / nền / cửa,
   diện tích ghi được "(4 x 6,7) + (2 x 3)", "(5x12)-(2x3)", "7m x 2m x 2" (dài x rộng x số cái) - hàng phím tắt x ( ) + - , dưới ô;
-  phần mềm GỢI Ý loại nhà theo kết cấu đã chọn, người kiểm đếm quyết định); **Vật KT** (gõ vài chữ để chọn mục bộ đơn giá; dòng nhiều cỡ ống ghi cả vào tên); **Cây
+  phần mềm GỢI Ý loại nhà theo tiêu chí kết cấu Phụ lục Ia QĐ 18/2026/QĐ-UBND - số tầng, khung, tường, mái, trần, nền, cửa; cần ít nhất 2 tiêu chí khớp, người kiểm đếm quyết định); **Vật KT** (gõ vài chữ để chọn mục bộ đơn giá; dòng nhiều cỡ ống ghi cả vào tên); **Cây
   trồng** (loài + năm trồng + đường kính / chu vi - nút chọn nhanh theo đúng khoảng đường kính / tuổi của bộ đơn giá, hoặc ghi nhanh
   "Tràm 35c/15cm"); **Ảnh biên bản** (nút **Chụp ảnh** / **Chọn ảnh trong máy**, chạm ảnh để phóng to và chép lại nội dung ngay cạnh
   ảnh, "Làm rõ chữ" xóa dòng kẻ chấm; dòng biên bản tự xếp vào nhà / vật KT / cây ngay trên điện thoại); **Bản đồ** (nền ảnh vệ tinh
@@ -597,13 +600,13 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
   giá lại khi nhập.
   - **Kiểm đếm ngay, chưa cần file dự án**: màn hình đầu → **Bắt đầu kiểm đếm ngay** (ứng dụng có sẵn danh mục đơn giá); hộ ghi mới
     được tạo thành hộ mới khi nhập vào dự án trên máy tính. Đang mở dự án mà bấm **Dự án**: **← Quay lại dự án đang mở**.
-  - **Android**: cài file `LARC_FieldMobile_<phiên bản>.apk` (Android 7.0 trở lên; máy hỏi "cho phép cài ứng dụng không rõ nguồn" thì
+  - **Android**: cài file `LARC_Mobile_<phiên bản>.apk` (Android 7.0 trở lên; máy hỏi "cho phép cài ứng dụng không rõ nguồn" thì
     bật cho ứng dụng đang mở file - Zalo, Tệp…). Lần đầu bật định vị, máy hỏi quyền vị trí: chọn Cho phép. Phím **Quay lại** của
     Android đóng ảnh đang xem / về thẻ đầu, không thoát mất số liệu. Xuất .JSON: chọn **Gửi đi** (Zalo, email, Drive) hoặc **Lưu vào thư mục**.
-  - **iPhone / iPad**: bản PWA `LARC_FieldMobile_PWA_<phiên bản>.zip` - đặt các file trong gói lên một địa chỉ **HTTPS** (xem
+  - **iPhone / iPad**: bản PWA `LARC_Mobile_PWA_<phiên bản>.zip` - đặt các file trong gói lên một địa chỉ **HTTPS** (xem
     HUONG_DAN_CAI_DAT.txt trong gói), mở bằng **Safari** → Chia sẻ → **Thêm vào MH chính**; sau lần mở đầu chạy không cần mạng.
     Xuất .JSON mở bảng chia sẻ (Zalo, **Lưu vào Tệp**…).
-  - **Cài cho nhiều người** (miễn phí, không qua App Store): gói `LARC_FieldMobile_Web_<phiên bản>.zip` - tải cả thư mục `tai_len` lên
+  - **Cài cho nhiều người** (miễn phí, không qua App Store): gói `LARC_Mobile_Web_<phiên bản>.zip` - tải cả thư mục `tai_len` lên
     GitHub Pages (hoặc Netlify / Cloudflare Pages) theo HUONG_DAN.txt trong gói, rồi gửi mọi người trang `cai-dat.html` có **mã QR**:
     quét bằng máy ảnh iPhone → mở Safari → Thêm vào MH chính; điện thoại Android tải file .apk ngay trên trang đó. Trang chỉ chứa ứng
     dụng trống và danh mục đơn giá, không có số liệu hộ dân.

@@ -1,4 +1,4 @@
-"""Kiểm thử ứng dụng điện thoại LARC Field Mobile (dự án riêng - không nhập module nào của LARC bản máy tính):
+"""Kiểm thử ứng dụng điện thoại LARC Mobile (dự án riêng - không nhập module nào của LARC bản máy tính):
 
     .venv\\Scripts\\python -m unittest discover -s di_dong\\tests
 
@@ -19,7 +19,7 @@ sys.path.insert(0, str(DAY))
 import dung  # noqa: E402
 
 # 1.2.0: thanh đáy 4 chế độ + 5 mục con của "Hồ sơ & TS" (thay 7 thẻ chữ nhỏ của 1.1.0)
-THE = ('"AI Quét & Nói"', '"Hồ sơ & TS"', '"Bản đồ GPS"', '"Xuất .JSON"', '"👤 Hồ sơ & Đất"', '"🏠 Nhà QĐ 42"', '"🧱 Vật KT"', '"🌳 Cây & VN"',
+THE = ('"AI Quét & Nói"', '"Hồ sơ & TS"', '"Bản đồ GPS"', '"Xuất .JSON"', '"👤 Hồ sơ & Đất"', '"🏠 Nhà QĐ 18"', '"🧱 Vật KT"', '"🌳 Cây & VN"',
        '"📷 Ảnh chụp"')
 
 
@@ -178,7 +178,7 @@ class TestTrangWeb(unittest.TestCase):
             ten = {p.name for p in (goc / 'tai_len').iterdir()}
             self.assertTrue({'index.html', 'manifest.webmanifest', 'sw.js', 'cai-dat.html', dung.TEP_APK_WEB} <= ten)
             self.assertTrue((goc / 'HUONG_DAN.txt').exists())
-            self.assertTrue(goc.with_name(f'LARC_FieldMobile_Web_{dung.PHIEN_BAN}.zip').exists())
+            self.assertTrue(goc.with_name(f'LARC_Mobile_Web_{dung.PHIEN_BAN}.zip').exists())
 
 
 class TestAndroid(unittest.TestCase):
@@ -207,7 +207,12 @@ class TestAndroid(unittest.TestCase):
         self.assertIn('android:screenOrientation="fullUser"', mf)
         self.assertIn('<action android:name="android.speech.RecognitionService"/>', mf)
         self.assertIn('<action android:name="android.speech.action.RECOGNIZE_SPEECH"/>', mf)
-        self.assertNotIn('android.permission.RECORD_AUDIO', mf)
+        # 1.2.1: máy không có màn hình nhập giọng nói (không có ứng dụng Google, máy giả lập) -> nghe thẳng qua SpeechRecognizer: cần quyền micro
+        self.assertIn('android.permission.RECORD_AUDIO', mf)
+        for chu in ('SpeechRecognizer.createSpeechRecognizer(this)', 'createOnDeviceSpeechRecognizer', 'onPartialResults', 'LARC_giongNoiTam',
+                    'LARC_giongNoiTrangThai', '@JavascriptInterface public void dungGiongNoi()', '@JavascriptInterface public void moCuaHang(',
+                    'requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MA_MIC)', '"com.google.android.tts"', 'huyNghe();'):
+            self.assertIn(chu, ma, chu)
         self.assertIn('MA_NOI = 15', ma)
         self.assertIn('@JavascriptInterface public void batDauGiongNoi()', ma)
         self.assertIn('RecognizerIntent.ACTION_RECOGNIZE_SPEECH', ma)

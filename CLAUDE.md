@@ -2294,7 +2294,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     'dk' nhận khoảng. `khop_duong_kinh(dm, ten, sâu)` (ống theo vật liệu + cỡ D / Φ trong TÊN mục; không có cỡ -> cỡ lớn kế tiếp, chắc = False,
     do_tin 0,55 + "Thực tế: …"; giếng: đào / khoan / công nghiệp / thả ống + khoảng Φ + "sâu < N m" của mục), `khop_tu_hiem` (từ dài chỉ có ở
     MỘT mục: "Terrazzo"), "hồ nước" = bể nước khi chưa khớp. `khop_theo_tu`: tên gõ CÓ DẤU so có dấu ("Cọ dầu" từng khớp "Cây đậu cô ve").
-    Nhà theo 6 thuộc tính kết cấu -> TS13-TS18: CHƯA làm (đặc tả không có tiêu chí phân loại kết cấu loại 1-4 - cần bảng tiêu chí QĐ 42/2025).
+    Nhà theo kết cấu: đơn giá nhà / vật kiến trúc là QĐ 18/2026/QĐ-UBND (KHÔNG phải QĐ 42/2025 - người dùng 27/10/2026); gợi ý loại nhà theo Phụ lục Ia làm ở ứng dụng điện thoại 1.2.1 (xem mục LARC Mobile 1.2.0).
   - `phieu_kiem_dem`: phiếu phiên bản 2 (`doc_phieu`: "ho_dan" / "dat_dai" theo khóa, khóa "moi_<n>" = hộ ghi mới; năm kiểm đếm theo "luc");
     `ChiMucHo` + `tim_ho_khop_json(con, h, ten_file, chi_muc)` 4 tầng THEO ĐẶC TẢ SAU: CCCD (chủ hộ / người sử dụng, chuan_cccd) -> tờ / thửa
     hoặc lô rừng (`_so` bỏ số 0 đầu; lô = tờ "TK<tk>/K<khoảnh>" `khoa_lo_rung` + thửa = lô) -> họ tên không dấu (bỏ "ông / bà / hộ" CÓ DẤU -
@@ -2398,7 +2398,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     `referrerPolicy no-referrer`; chỉ gửi tọa độ ô. "Thửa hộ này", "Tâm GPS", tìm "5/10". Tự lưu khi gõ, KPI ẩn ở thẻ ảnh / bản đồ, lọc hộ đã /
     chưa ghi, huy hiệu số dòng trên thẻ, thẻ 6 Mở / Lưu .json / Xóa từng hộ. `sw.js` cache theo PHIEN_BAN: phát hành phải tăng `dung.PHIEN_BAN`.
   - Chưa thử trên máy Android / iPhone thật (đã thử trong trình duyệt: vỏ pwa / android, cầu nối giả lập, nhập .json vào dự án thử).
-- LARC Field Mobile 1.2.0 "UI/UX Pro Max" (người dùng 27/10/2026, đặc tả 5 phần; test `di_dong/tests/test_phan_tach.py` = chạy THẬT mã JS trong
+- LARC Mobile (trước: LARC Field Mobile) 1.2.0 "UI/UX Pro Max" (người dùng 27/10/2026, đặc tả 5 phần; test `di_dong/tests/test_phan_tach.py` = chạy THẬT mã JS trong
   Chromium của Qt WebEngine (QWebEnginePage + profile tạm, `setHtml(html_ung_dung('android'), https://larc.thu/)`, bấm c_bat_dau rồi gọi
   `window.LARC`) - QJSEngine KHÔNG chạy được (thiếu `\p{L}`, `matchAll`); `test_ung_dung.py`):
   - GIỌNG NÓI CÓ (người dùng yêu cầu gỡ chặn của 1.1.0): Android `MainActivity.batDauGiongNoi` (`RecognizerIntent`, vi-VN, EXTRA_PREFER_OFFLINE,
@@ -2407,6 +2407,19 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     chữ tạm hiện ở `#song_am`). `dongYGiongNoi`: hỏi MỘT lần (localStorage `larc_field_dong_y_giong_noi`) - nói rõ tiếng nói (họ tên, CCCD) có thể
     qua máy chủ Google / Apple khi máy chưa có gói ngoại tuyến. Phân tách / tạm tính vẫn chạy trên máy, không gửi gì. ĐỪNG gọi dịch vụ AI / OCR
     trên mạng (Gemini…).
+    1.2.1 (người dùng 27/10/2026: máy báo không có tìm kiếm bằng giọng nói): RecognizerIntent ném ActivityNotFoundException (không có ứng dụng
+    Google / máy giả lập) -> `ngheQuaDichVu` = `SpeechRecognizer` (`isRecognitionAvailable`, API 31+ `createOnDeviceSpeechRecognizer`; quyền
+    RECORD_AUDIO khai trong manifest, hỏi lúc dùng - `MA_MIC` 16), báo trang `LARC_giongNoiTrangThai` (nghe / xu_ly), `LARC_giongNoiTam` (chữ
+    tạm), kết quả `LARC_nhanGiongNoiAndroid`, lỗi `LARC_giongNoiLoi` (khong_co / quyen / mang / ngon_ngu / khong_nghe / loi_<mã>); nút Xong ->
+    `LARCAndroid.dungGiongNoi`; không có dịch vụ nào -> hỏi mở CH Play `LARCAndroid.moCuaHang("com.google.android.tts")` (chỉ 2 gói được phép).
+  - TÊN "LARC Mobile" (người dùng 27/10/2026 "bỏ chữ field trên tên phần mềm"): chữ hiển thị, tên file phát hành `LARC_Mobile_<ver>.apk`,
+    `LARC_Mobile_PWA_<ver>.zip`, `LARC_Mobile_Web_<ver>`. GIỮ (đổi sẽ mất dữ liệu / không cài đè được bản cũ): gói Android `vn.larc.field`,
+    khóa localStorage `larc_field_*`, IndexedDB `larc_field` / `larc_kd_anh` / `larc_nen`, `loai` file dữ liệu 'larc_field_du_lieu', khóa ký larc_field.jks.
+  - NHÀ THEO QĐ 18/2026 (người dùng 27/10/2026: "Nhà theo QĐ 18 chứ không phải QĐ 42"): nhãn thẻ / mục "Nhà ở (QĐ 18/2026)", "Vật kiến trúc
+    (QĐ 18/2026)"; `TIEU_CHI_QD18` = bảng Phụ lục Ia (nhóm tầng >= 5 / 3-4 / 1-2 / 1 x kết cấu loại 1-4 + bán kiên cố, tạm; tiêu chí khung,
+    tường, mái, trần, nền, cửa - mã `KET_CAU`, chữ `CHU_KC`), `khoaLoaiNha(kc)` điểm = khớp - 0,75 x lệch, cần >= 2 tiêu chí khớp, tầng mặc định
+    1 -> {m (tên mục bộ đơn giá "Nhà 01 tầng - Kết cấu loại 4"…), khop, lech, so}; `chuKhopQd18`. Chip kết cấu và giọng nói (`kcTuChu`,
+    `nhaTheoChu`) dùng chung - CHỈ GỢI Ý, không tự đổi loại người dùng đã chọn (`NHA_TAY`). Đoạn nhà không tách ở từ kết cấu (`KC_TU`).
   - Bố cục: `#app` (dọc; `body.khung_dt` = màn hình >= 680px dọc: khung 430px), `body.bc_ngang` (>= 680px + ngang, hoặc nút `#b_xoay`, nhớ
     `larc_field_bo_cuc`) = `#khung_ud` lưới 38% `#cot_trai` (t7 AI luôn hiện) | 62% `#cot_phai`; `@media (max-height:540px)` thu gọn. Trang: 7 = AI
     (`TRANG_AI`, mở ứng dụng luôn vào đây), 0-4 mục con của "Hồ sơ & TS" (`#thanh_the` phan_doan, `PHAN_DOAN`), 5 bản đồ, 6 xuất; `moThe`, `hienThe`,

@@ -1,4 +1,4 @@
-# LARC Field Mobile - ứng dụng kiểm đếm thực địa (Android / iPhone)
+# LARC Mobile - ứng dụng kiểm đếm thực địa (Android / iPhone)
 
 Dự án RIÊNG, tách khỏi mã nguồn LARC bản máy tính (`pabt/`): không nhập module nào của `pabt/`, bản máy tính cũng không đóng
 gói gì trong thư mục này. Hai bên chỉ nối qua **hai định dạng file .json** (mục "Giao ước dữ liệu" dưới đây) - đổi định dạng thì
@@ -8,12 +8,12 @@ sửa cả hai bên và tăng số `phien_ban` của file.
 
 | Đường dẫn | Nội dung |
 |---|---|
-| `ung_dung/index.html` | Toàn bộ ứng dụng: một trang HTML + JavaScript thuần (không thư viện, không mạng). Thanh đáy 4 chế độ: ✨ AI Quét & Nói (màn hình chính), 📋 Hồ sơ & TS (5 mục: Hồ sơ & Đất, Nhà QĐ 42, Vật KT, Cây & VN, Ảnh chụp), 🗺️ Bản đồ GPS, 📤 Xuất .JSON. Chỗ trống `@@CHE_DO@@` (`pwa` / `android`), `@@PHIEN_BAN@@`, `@@DAU_PWA@@`, `@@DU_LIEU_MAC_DINH@@` do `dung.py` điền. |
+| `ung_dung/index.html` | Toàn bộ ứng dụng: một trang HTML + JavaScript thuần (không thư viện, không mạng). Thanh đáy 4 chế độ: ✨ AI Quét & Nói (màn hình chính), 📋 Hồ sơ & TS (5 mục: Hồ sơ & Đất, Nhà QĐ 18, Vật KT, Cây & VN, Ảnh chụp), 🗺️ Bản đồ GPS, 📤 Xuất .JSON. Chỗ trống `@@CHE_DO@@` (`pwa` / `android`), `@@PHIEN_BAN@@`, `@@DAU_PWA@@`, `@@DU_LIEU_MAC_DINH@@` do `dung.py` điền. |
 | `android/` | Vỏ Android: `AndroidManifest.xml` (gói `vn.larc.field`, API 24-34), `MainActivity.java` (WebView nạp `assets/index.html` qua `https://appassets.androidplatform.net/`, chọn / chụp ảnh, quyền vị trí, cầu nối JS `LARCAndroid.luuFile` / `chupAnhNgay` / `batDauGiongNoi`; dọc mặc định, xoay ngang theo cảm biến), `CungCapTep.java` (ContentProvider cấp file cho máy ảnh / ứng dụng gửi). |
 | `danh_muc_mac_dinh.json` | Danh mục đơn giá nhúng sẵn (nhà, vật kiến trúc, cây + quy cách đường kính / tuổi, vật nuôi; đơn giá đồng) để kiểm đếm ĐỘC LẬP khi chưa có file dữ liệu dự án. Sinh từ bộ đơn giá đóng gói của LARC: `.venv\Scripts\python chay.py xuat-danh-muc-di-dong di_dong\danh_muc_mac_dinh.json` (chạy lại khi bộ đơn giá đổi; kiểm thử `tests/test_du_lieu_di_dong` báo lệch). Thiếu file: ứng dụng vẫn dựng, chỉ không có nút kiểm đếm độc lập. |
 | `qr.py` | Mã QR thuần Python (ISO 18004, byte, mức M, phiên bản 1-10) cho trang cài đặt. |
 | `bieu_tuong.png` | Biểu tượng (512 px) - nguồn của icon PWA và icon trình khởi chạy Android. |
-| `dung.py`, `DUNG.bat` | Dựng `bo_cai\LARC_FieldMobile_<ver>.apk`, `bo_cai\LARC_FieldMobile_PWA_<ver>.zip` và gói web `bo_cai\LARC_FieldMobile_Web_<ver>.zip` (thư mục `tai_len\` + `HUONG_DAN.txt`, trang `cai-dat.html` có mã QR). Phiên bản riêng: `PHIEN_BAN` trong `dung.py` - TĂNG khi phát hành: bộ nhớ đệm PWA (`sw.js`) đặt tên theo phiên bản, cùng số thì iPhone giữ bản cũ. |
+| `dung.py`, `DUNG.bat` | Dựng `bo_cai\LARC_Mobile_<ver>.apk`, `bo_cai\LARC_Mobile_PWA_<ver>.zip` và gói web `bo_cai\LARC_Mobile_Web_<ver>.zip` (thư mục `tai_len\` + `HUONG_DAN.txt`, trang `cai-dat.html` có mã QR). Phiên bản riêng: `PHIEN_BAN` trong `dung.py` - TĂNG khi phát hành: bộ nhớ đệm PWA (`sw.js`) đặt tên theo phiên bản, cùng số thì iPhone giữ bản cũ. |
 | `tests/` | Kiểm thử riêng: `.venv\Scripts\python -m unittest discover -s di_dong\tests` (đặt `LARC_THU_DUNG_APK=1` để dựng .apk thật). `test_phan_tach.py` chạy THẬT mã JavaScript của ứng dụng trong Chromium của Qt WebEngine (bộ phân tách, giọng nói giả lập, xuất .json). |
 
 ## Dựng
@@ -31,7 +31,7 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
 - Cài cho nhiều người: `--url` = địa chỉ HTTPS sẽ tải lên (GitHub Pages / Netlify / Cloudflare Pages; nhớ ở `dia_chi_web.txt`) ->
   tải TOÀN BỘ `tai_len\` lên đó, gửi mã QR trên `cai-dat.html`. Không gửi dữ liệu hộ dân lên trang: chỉ là ứng dụng trống + danh mục đơn giá.
 
-## Tính năng chính (bản 1.2.0)
+## Tính năng chính (bản 1.2.0 - 1.2.1)
 
 - Mở ứng dụng vào màn hình **✨ AI Quét & Nói**: 2 nút lớn **📷 CHỤP / QUÉT ẢNH** (mã QR trên CCCD -> họ tên, số CCCD, năm sinh, địa chỉ;
   ảnh biên bản -> làm rõ chữ rồi mở xem để chép / đọc nội dung) và **🎙️ NHẬP GIỌNG NÓI**; ô **Phân tách dữ liệu thông minh**
@@ -40,7 +40,9 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
   (tách nhiều cỡ ống, thể tích 3 chiều, khớp danh mục để tạm tính), cây (loài, năm trồng -> tuổi, ĐK / CV, 35c/15cm), vật nuôi; xem trước
   có màu, bỏ / chọn từng mục, nhà chưa rõ loại chọn ngay trên thẻ; **✔ Đưa vào Hồ sơ Hộ** (chưa chọn hộ / họ tên khác: tạo hộ mới,
   CCCD trùng hộ có sẵn: chuyển sang hộ đó; ảnh chụp lúc chưa có hộ gắn theo).
-- Giọng nói: bản .apk dùng bộ nhận dạng của Android (`RecognizerIntent`, ưu tiên gói tiếng Việt ngoại tuyến, không xin quyền micro);
+- Giọng nói: bản .apk mở màn hình nhập giọng nói của Android (`RecognizerIntent`, ưu tiên gói tiếng Việt ngoại tuyến); máy KHÔNG có màn
+  hình đó (không có ứng dụng Google, máy giả lập - 1.2.1) thì nghe thẳng qua dịch vụ nhận dạng (`SpeechRecognizer`, hỏi quyền micro lần
+  đầu, sóng âm + chữ đang nghe trên trang); không có dịch vụ nào: mời cài "Dịch vụ lời nói của Google" trên CH Play;
   PWA dùng Web Speech (Chrome Android / Safari iPhone - cần bật Siri & Đọc chính tả). Lần đầu hỏi người dùng: chưa có gói ngoại tuyến thì
   tiếng nói (kể cả họ tên, CCCD) do máy chủ Google / Apple nhận dạng. `chuanHoaTiengNoi`: "nhân / cộng / trừ" giữa hai số, "phẩy", "mở /
   đóng ngoặc", "mét vuông / khối", "phi 114" -> ϕ 114, "đường kính" -> ĐK, "dài 25 mét cao 1 phẩy 5" -> 25m x 1,5m. Nút 🎙️ Đọc ở từng mục
@@ -89,7 +91,7 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
 **2. Kết quả kiểm đếm (điện thoại -> máy tính)**: thẻ "6. Xuất .JSON"; LARC nhập bằng "Nhập kết quả kiểm đếm (.json)…".
 
 ```json
-{"phien_ban": 2, "ung_dung": "LARC Field Mobile <ver>", "du_an": "", "luc": "ISO 8601", "kinh_tuyen": 107.75,
+{"phien_ban": 2, "ung_dung": "LARC Mobile <ver>", "du_an": "", "luc": "ISO 8601", "kinh_tuyen": 107.75,
  "ket_qua": {"<mã hộ | moi_<n>>": [{"muc": 2, "ma_dm": "", "ten": "", "dvt": "", "so_luong": "", "ty_le": "100",
                                     "so_do": "", "kieu": "dk|cv", "ghi_chu": ""}]},
  "ho_dan": {"<khóa>": {"ma_ho": 1, "ho_ten": "", "so_cccd": "", "nguoi_su_dung": "", "nam_sinh": "", "sdt": "", "dia_chi": "",

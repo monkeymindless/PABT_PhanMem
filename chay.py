@@ -314,7 +314,7 @@ def tu_kiem(file_ra=None) -> int:
         return f'KMZ thửa 7 tờ 3, DT 10.000 m²; VN-2000 khớp EPSG (tham số: {nguon})'
 
     def phieu_di_dong():
-        # 1.0.32: file dữ liệu cho ứng dụng điện thoại LARC Field Mobile (dự án riêng ở di_dong/) xuất được; kết quả .json có ảnh + GPS
+        # 1.0.32: file dữ liệu cho ứng dụng điện thoại LARC Mobile (dự án riêng ở di_dong/) xuất được; kết quả .json có ảnh + GPS
         # nhập lại được
         import base64
         import json

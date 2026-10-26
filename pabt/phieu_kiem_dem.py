@@ -1,4 +1,4 @@
-"""Kiểm đếm thực địa - phần máy tính (0.9.87; ứng dụng điện thoại LARC Field Mobile là dự án RIÊNG ở di_dong/, hai bên chỉ nối qua
+"""Kiểm đếm thực địa - phần máy tính (0.9.87; ứng dụng điện thoại LARC Mobile là dự án RIÊNG ở di_dong/, hai bên chỉ nối qua
 file .json - giao ước ở di_dong/README.md).
 
 1. xuat_du_lieu_di_dong: file .json "larc_field_du_lieu" mở trong ứng dụng điện thoại: hộ + thửa, danh mục có mã (nhà / vật kiến trúc /
@@ -169,7 +169,7 @@ def ten_file_du_lieu(con) -> str:
 
 
 def xuat_du_lieu_di_dong(con, file_ra) -> Path:
-    """Ghi file .json dữ liệu dự án mở trong ứng dụng LARC Field Mobile (Android / iPhone)."""
+    """Ghi file .json dữ liệu dự án mở trong ứng dụng LARC Mobile (Android / iPhone)."""
     return _ghi_nguyen_tu(Path(file_ra), json.dumps(goi_du_lieu_di_dong(con), ensure_ascii=False))
 
 

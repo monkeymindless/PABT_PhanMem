@@ -169,7 +169,7 @@ def _doc_phan(con: str, chat: bool) -> dict | None:
     return kq
 
 
-# ---------------------------------------------------------------- biên bản kiểm đếm thực địa (mẫu QĐ 42, 1.0.32)
+# ---------------------------------------------------------------- biên bản kiểm đếm thực địa (nhà, vật kiến trúc: đơn giá QĐ 18/2026, 1.0.32)
 _PHI = r'(?:ϕ|Φ|φ|ø|phi(?![^\W\d_]))'
 _SO_DO_M = r'\d+(?:[.,]\d+)?\s*(?:cm(?![^\W\d_])|m(?![23²³]|[^\W\d_]))?'
 _TICH = _SO_DO_M + r'(?:\s*[x×*]\s*' + _SO_DO_M + r')+'
@@ -583,7 +583,7 @@ def bo_sung(bo, dm, d: dict, kq):
         kq.ghi_them = f'Thực tế: {ten_tt}'
     if kq.khop is None or getattr(kq, 'ty_le_khop', 0) < 1:
         k = khop_duong_kinh(dm, ten_gia, d.get('so_luong', '') if bo_dau(d.get('dvt', '')).lower() in ('m', 'md') else '')
-        if k is not None:                               # ống / giếng theo đường kính (biên bản QĐ 42) - 1.0.32
+        if k is not None:                               # ống / giếng theo đường kính (đơn giá QĐ 18/2026) - 1.0.32
             m, chac, ly_do = k
             kq.khop, kq.loai, kq.ty_le_khop = m, NHA, (1.0 if chac else 0.7)
             kq.do_tin = 0.9 if chac else 0.55           # không chắc: nền vàng, nhắc xem lại
