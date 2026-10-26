@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 11:48. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 12:38. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -12,7 +12,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 11:48. Kiểm tra tĩnh: 0 cảnh
 |---|---:|---:|---:|---|
 | `__init__.py` | 78 | 0 | 2 | - |
 | `an_toan.py` | 155 | 1 | 10 | - |
-| `app.py` | 3876 | 6 | 22 | BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, giao_dien, khoa, lap_pa, may_chu, nghiep_vu, thong_bao, tien |
+| `app.py` | 3873 | 6 | 22 | BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, giao_dien, khoa, lap_pa, may_chu, nghiep_vu, thong_bao, tien |
 | `ban_do_cad.py` | 426 | 4 | 22 | csdl, tien |
 | `ban_quyen.py` | 23 | 0 | 2 | - |
 | `bang_ao.py` | 236 | 3 | 1 | giao_dien |
@@ -26,7 +26,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 11:48. Kiểm tra tĩnh: 0 cảnh
 | `chinh_sach.py` | 185 | 0 | 17 | nghiep_vu, tien |
 | `chu_de.py` | 85 | 0 | 7 | - |
 | `chua_benh_csdl.py` | 429 | 1 | 14 | - |
-| `csdl.py` | 770 | 2 | 42 | - |
+| `csdl.py` | 773 | 2 | 42 | - |
 | `dia_phuong.py` | 494 | 1 | 29 | - |
 | `doc_xls.py` | 361 | 3 | 8 | - |
 | `docx_sang_pdf.py` | 219 | 0 | 7 | an_toan |
@@ -57,7 +57,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 11:48. Kiểm tra tĩnh: 0 cảnh
 | `kinh_phi_du_an.py` | 250 | 0 | 13 | csdl, theo_doi, tien |
 | `lan_pa.py` | 367 | 2 | 25 | csdl, tien |
 | `lap_pa.py` | 1135 | 4 | 26 | csdl, loai_dat, nghiep_vu, tien |
-| `lich_su_cap_nhat.py` | 766 | 0 | 1 | - |
+| `lich_su_cap_nhat.py` | 771 | 0 | 1 | - |
 | `loai_dat.py` | 137 | 0 | 6 | - |
 | `ma_tai_san.py` | 142 | 0 | 8 | - |
 | `man_hinh.py` | 3646 | 15 | 3 | du_lieu_in, giao_dien, hang_nhap_nhanh, lap_pa, nghiep_vu, thong_bao, tien |
@@ -126,7 +126,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 11:48. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 942 | 2 | 18 | - |
 
-Tổng: 61450 dòng mã trong pabt/.
+Tổng: 61455 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -211,7 +211,7 @@ Tổng: 61450 dòng mã trong pabt/.
 
 ### `csdl.py`
 - lớp `KetNoi` (dòng 314): `__init__`
-- lớp `DauVetHo` (dòng 660): `__init__`, `_max`, `_data_version`, `lay`
+- lớp `DauVetHo` (dòng 663): `__init__`, `_max`, `_data_version`, `lay`
 - hàm: `ram_vat_ly_mb`, `la_may_yeu`, `giai_phong_bo_nho`, `thu_muc_sao_luu_tu_dong`, `_goc_sao_luu`, `ds_sao_luu_tu_dong`, `sao_luu_tu_dong`, `la_file_du_an`, `duoi_du_an`, `_bang_quyet_dinh`, `_dung_lai_ct_khoan`, `chuyen_vat_nuoi`, `tao_moi`, `tao_moi_tam`, `huy_tao_moi`, `hoan_tat_tao_moi`, `_trang_thai`, `nho`, `trang_thai_nho`, `giu_nho`, `giu_tat_ca`, `uri_chi_doc`, `mo`, `_mo_tiep`, `co_cot_thua`, `dam_bao_cot_thua`, `co_cot_pa_lan`, `dam_bao_cot_pa_lan`, `_tao_pa_lan`, `_tao_bang_phu`, `_dam_bao_khoa`, `giao_dich`, `mo_khoa_danh_muc`, `_cot`, `chep_danh_muc`, `dam_bao_cot_du_an`, `nguoi_dung`, `ghi_nhat_ky`, `ten_may`, `tham_so`, `doc_cai_dat`, `ghi_cai_dat`
 
 ### `dia_phuong.py`

@@ -383,11 +383,14 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
         raise FileNotFoundError(str(p))
     if chi_doc:
         con = sqlite3.connect(uri_chi_doc(p), uri=True, factory=KetNoi)
-        con.row_factory = sqlite3.Row
-        ver = con.execute('PRAGMA user_version').fetchone()[0]
-        if not 3 <= ver <= PHIEN_BAN_CSDL:
-            con.close()
-            raise RuntimeError(f'File dự án phiên bản CSDL v{ver} cần được mở để sửa một lần (nâng cấp) trước khi mở chỉ xem.')
+        try:
+            con.row_factory = sqlite3.Row
+            ver = con.execute('PRAGMA user_version').fetchone()[0]
+            if not 3 <= ver <= PHIEN_BAN_CSDL:
+                raise RuntimeError(f'File dự án phiên bản CSDL v{ver} cần được mở để sửa một lần (nâng cấp) trước khi mở chỉ xem.')
+        except BaseException:
+            con.close()                                 # file hỏng / không phải CSDL: không để Windows giữ khóa file (26/10/2026)
+            raise
         return con
     con = sqlite3.connect(str(p), factory=KetNoi)
     try:

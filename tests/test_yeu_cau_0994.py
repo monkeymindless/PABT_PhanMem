@@ -28,6 +28,42 @@ class TestGanDay(CoSo):
         for p in that:                                                   # dự án thật không còn bị đẩy ra khỏi danh sách
             self.assertIn(str(p), ds)
 
+    def test_bang_gan_day_gian_het_va_hien_nhieu_du_an(self):
+        """26/10/2026 (người dùng): màn hình chào sát lên trên, bảng dự án gần đây giãn hết phần dưới (không còn tối đa 220 px) và
+        hiện tới GAN_DAY_TOI_DA (30) dự án (trước: 8)."""
+        from pabt import app as ud
+        self.assertGreaterEqual(ud.GAN_DAY_TOI_DA, 30)
+        ds = []
+        for i in range(12):
+            p = self.td / f'da_{i}.larc'
+            p.write_bytes(b'x')
+            ds.append(str(p))
+        f = ud._file_gan_day()
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(ds), encoding='utf-8')
+        w = ud.CuaSoChinh(menu_trai=True)
+        try:
+            w._nap_gan_day()
+            self.assertEqual(w.ds_gan_day.rowCount(), 12)
+            self.assertGreater(w.ngan_gan_day.maximumHeight(), 10000)               # không giới hạn chiều cao
+            self.assertGreater(w.ds_gan_day.maximumHeight(), 10000)
+            lo = w.ngan_gan_day.parentWidget().layout()
+            self.assertEqual(lo.stretch(lo.indexOf(w.ngan_gan_day)), 1)             # vùng duy nhất giãn theo chiều cao
+            self.assertEqual([lo.stretch(i) for i in range(lo.count()) if lo.itemAt(i).spacerItem() is not None
+                              and lo.stretch(i) > 0], [])                           # không còn khoảng trống giãn đầu / cuối trang
+        finally:
+            w.close()
+
+    def test_mo_file_hong_khong_giu_khoa(self):
+        """csdl.mo file không phải CSDL (màn hình chào đọc tóm tắt dự án gần đây) - cả mở chỉ xem: đóng kết nối, Windows không giữ khóa file."""
+        from pabt import csdl
+        for chi_doc in (True, False):
+            p = self.td / f'hong_{chi_doc}.larc'
+            p.write_bytes(b'khong phai sqlite')
+            with self.assertRaises(Exception):
+                csdl.mo(p, chi_doc=chi_doc)
+            p.unlink()                                                   # còn kết nối mở: PermissionError trên Windows
+
     def test_thu_muc_may_test_khong_phai_appdata(self):
         """Bộ kiểm thử không ghi vào %APPDATA%\\PABT của người dùng (tests/__init__ + bài tự đặt thì trả lại giá trị cũ)."""
         from pabt import may_chu

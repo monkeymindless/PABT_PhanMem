@@ -194,7 +194,7 @@ XANH, DO, VANG = QColor('#E2EFDA'), QColor('#F8CBAD'), QColor('#FFF2CC')
 # 0.9.70 (6 nhóm): nhóm ít dùng hằng ngày đóng sẵn - Khái toán (giai đoạn chuẩn bị đầu tư), Đơn giá, Phê duyệt & bàn giao
 # 0.9.88 (người dùng 15/10/2026): nhóm Đơn giá & bảng giá xuống cuối (6); đóng sẵn 1, 5, 6 - mở sẵn 2, 3, 4 (thao tác hằng ngày)
 NHOM_DONG_MAC_DINH = ('1. Khái toán & dự toán', '5. Phê duyệt & bàn giao', '6. Đơn giá & bảng giá')
-GAN_DAY_TOI_DA = 8                 # số dự án nhớ trong danh sách "Dự án làm việc gần đây" (màn hình chào hiện 5)
+GAN_DAY_TOI_DA = 30                # số dự án nhớ trong danh sách "Dự án làm việc gần đây" (26/10/2026: 8 -> 30, bảng giãn hết màn hình chào)
 # 0.9.80: chưa mở dự án thì các lệnh của dự án bị làm mờ (QAction tắt); mở / đóng dự án thì bật / tắt lại. Từ 0.9.88 (thứ tự nhóm
 # mới): nhóm 3 (Lập phương án), 4 (Tổng hợp & trình duyệt), 5 (Phê duyệt & bàn giao) + Đơn giá đặc biệt của nhóm 6. Nhóm 1 (khái
 # toán), 2, Đơn giá bồi thường, Bảng giá đất và Màn hình chính vẫn dùng được khi chưa có dự án
@@ -1963,8 +1963,8 @@ class CuaSoChinh(QMainWindow):
         from .giao_dien import OTimKiemThongMinh
         w = QWidget()
         lo = QVBoxLayout(w)
-        lo.setContentsMargins(32, 20, 32, 16)
-        lo.addStretch(1)
+        # 26/10/2026 (người dùng): nội dung sát lên trên (bỏ khoảng trống đầu trang), bảng dự án gần đây giãn hết phần còn lại
+        lo.setContentsMargins(32, 12, 32, 12)
         tieu = QLabel('HỆ THỐNG QUẢN LÝ BỒI THƯỜNG & GPMB')
         tieu.setStyleSheet(f'QLabel {{ font-size: 20px; font-weight: 700; color: {TOKEN["chinh"]}; letter-spacing: 0.4px; }}')
         tieu.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -2045,16 +2045,13 @@ class CuaSoChinh(QMainWindow):
         self.ds_gan_day.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.ds_gan_day.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.ds_gan_day.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.ds_gan_day.setMaximumHeight(220)
         self.ds_gan_day.cellDoubleClicked.connect(lambda r, _c: self._mo_gan_day_dong(r))
         self.ds_gan_day.itemSelectionChanged.connect(self._cap_nhat_nut_gan_day)
         # trạng thái trống (0.9.80): không hiện lưới trắng trơ trọi - biểu tượng thư mục + hướng dẫn bắt đầu, ở giữa vùng bảng
         self.ngan_gan_day = QStackedWidget()
-        self.ngan_gan_day.setMaximumHeight(220)
         self.ngan_gan_day.addWidget(self.ds_gan_day)
         self.ngan_gan_day.addWidget(self._trang_trong_gan_day())
-        lo.addWidget(self.ngan_gan_day)
-        lo.addStretch(2)
+        lo.addWidget(self.ngan_gan_day, 1)                # giãn hết chiều cao còn lại (trước: tối đa 220 px, dưới trống)
         # chân trang 4 liên kết (0.9.80): Hướng dẫn · Bảng giá đất NQ 28 · Quy trình 16 bước · Lịch sử cập nhật
         chan = QHBoxLayout()
         chan.setContentsMargins(0, 10, 0, 0)
@@ -2220,7 +2217,7 @@ class CuaSoChinh(QMainWindow):
             hm.addStretch(1)
             self.ds_gan_day.setCellWidget(r, 5, hop_mo)
             n += 1
-            if n == 8:
+            if n >= GAN_DAY_TOI_DA:                       # trước 26/10/2026: tối đa 8 dòng
                 break
         dang_mo = self.con is not None and self.file is not None
         self.lenh['Đóng dự án'].setEnabled(dang_mo)

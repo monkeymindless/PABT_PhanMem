@@ -2270,6 +2270,10 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   chính là lỗi). `_thong_tin_du_an` có khóa `dia_danh_ngay`; dùng ở in_word (phương án chi tiết), `in_an.chuan_dong_ngay(ws, dia_danh=)`
   (bảng tổng hợp), tờ trình mặc định `{dia_danh_ngay}` (DS_CHO_TRONG; mẫu riêng của người dùng còn {ten_dia_ban} giữ nguyên). Khái toán
   `du_toan._noi_lap`: hồ sơ -> xã của dự toán -> trống. Bỏ "Trị An" ghi cứng (`in_an.DIA_DANH_NGAY_MAC_DINH` = ''). Test `TestDiaDanhNgay`.
+- Màn hình chào (người dùng 26/10/2026, ảnh): bỏ khoảng giãn đầu / cuối trang (lề trên 12), bảng dự án gần đây `ngan_gan_day` giãn hết phần còn
+  lại (stretch 1; bỏ setMaximumHeight 220), `GAN_DAY_TOI_DA` 8 -> 30 (cả giới hạn dòng của `_nap_gan_day` - trước ghi cứng 8). Kèm sửa
+  `csdl.mo(chi_doc=True)` file không phải CSDL: đóng kết nối khi lỗi (trước: Windows giữ khóa file tới khi Python dọn rác). Test
+  `test_yeu_cau_0994.TestGanDay`.
 - `tests/test_khuon_word.test_nguon_goc_rat_dai` lỗi trên venv38_32 (từ 1.0.19) KHÔNG phải lỗi bản in: pypdf 5.9 (bản cuối cho Python 3.8; 6.x cần
   3.9+) gọi visitor_text cho mẩu chữ cuối khối với cm = tm = ma trận đơn vị (tọa độ 0, 0); pypdf 6.19 báo đúng vị trí trên cùng file PDF.
   `_chu_co_vi_tri` nay tính vị trí = tm × cm và bỏ mẩu không có vị trí. Phần mềm không dùng visitor_text (nhập PDF dùng extract_text layout).
