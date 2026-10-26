@@ -2278,6 +2278,32 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     (`_tap_ma` 4 tập: od, nk, tdc, dt; tdc loại cả mã đào tạo), chinh_sach xuất lại.
   - `gia_dat_nq28._da_doc` nhớ `NHO_GIAY` 2 s theo PABT_THU_MUC_MAY (như he_so_k), `_quen()` ở cuối ghi_thay / xoa_thay; `tim` tính chuỗi tìm
     không dấu MỘT lần mỗi dòng. Ghi bang_gia_dat.json ở nơi khác (không qua ghi_thay) phải gọi `_quen()`.
+- Sau 1.0.31 - ĐỢT 1 "LARC Mobile Pro" (người dùng 26/10/2026, hai đặc tả dán trong phiên; CHƯA tăng phiên bản; test `tests/test_bien_ban_qd42.py`).
+  Người dùng CHỌN (hỏi trong phiên): khớp mã đơn giá THEO TÊN trong bộ đang dùng (không ghi cứng mã đặc tả - bản đầu ghi TS109-116 = ống nước,
+  thực tế là mộ); GIỮ công thức thuê nhà theo bộ đơn giá (đặc tả 3tr / 750k / trần 6tr sai so với QĐ 42/2025); CHỈ NGOẠI TUYẾN - KHÔNG gửi ảnh
+  biên bản (họ tên, CCCD) lên Gemini dù đặc tả sau ghi "khi có mạng"; làm THEO ĐỢT (1: bộ hiểu biên bản + nhập .json; 2: KML/KMZ + VN-2000
+  máy tính; 3: ứng dụng di động 7 thẻ). Kiểm thử KHÔNG dùng 3 hồ sơ thật đặc tả nêu tên (số liệu giả lập). Không dựng .apk / .ipa (chỉ PWA .html).
+  - `an_toan.nhan_dang_dau_tep` / `kiem_tra_magic_bytes(nguon, loai_cho_phep, ten)` (jpeg / png / webp / gif / bmp / tiff / heic / pdf / zip /
+    xml / json; "MZ" / ELF / "#!" và đuôi `DUOI_THUC_THI` -> LoiAnToan): phiếu .json (`phieu_kiem_dem._doc_file_phieu`), ảnh hiện trạng
+    (`gan_anh_hien_trang`: không phải ảnh -> chua_khop), đính kèm hồ sơ (`ho_so_scan.them_file`: chặn chương trình).
+  - `hieu_tai_san`: `tinh_bieu_thuc_kich_thuoc` / `_phan_tich_bieu_thuc` (nhiều cụm "(a x b) + (c x d)", 3 thừa số = m3 trừ "7m x 2m x 2" =
+    diện tích x số cái; "cm" / lẫn loại -> None; dòng hai thừa số đơn vẫn đi bộ đọc cũ), `tach_dong_qd42` (dòng gộp nhiều cỡ "ϕ 114: 3300m; ϕ
+    90: …" -> từng dòng; `phan_loai_tai_san.doc_danh_sach` gọi TRƯỚC khi chia ô theo ";"), `tach_dong(dong, nam=)` = `_rut_them` ("trồng năm
+    YYYY" -> tuổi = max(1, năm kiểm đếm - năm trồng), CHỈ khi có chữ "năm" - "trồng 2000 cây" không phải năm; "ĐK gốc a-b cm" -> số đo cận
+    trên; giếng "sâu N m" -> khối lượng m) + `_tach_bieu_thuc` + `_tach_dong_cu` (bộ đọc cũ); `_PHAN` thêm 'c_dk' ("35c/15cm" -> 35 cây, ĐK 15),
+    'dk' nhận khoảng. `khop_duong_kinh(dm, ten, sâu)` (ống theo vật liệu + cỡ D / Φ trong TÊN mục; không có cỡ -> cỡ lớn kế tiếp, chắc = False,
+    do_tin 0,55 + "Thực tế: …"; giếng: đào / khoan / công nghiệp / thả ống + khoảng Φ + "sâu < N m" của mục), `khop_tu_hiem` (từ dài chỉ có ở
+    MỘT mục: "Terrazzo"), "hồ nước" = bể nước khi chưa khớp. `khop_theo_tu`: tên gõ CÓ DẤU so có dấu ("Cọ dầu" từng khớp "Cây đậu cô ve").
+    Nhà theo 6 thuộc tính kết cấu -> TS13-TS18: CHƯA làm (đặc tả không có tiêu chí phân loại kết cấu loại 1-4 - cần bảng tiêu chí QĐ 42/2025).
+  - `phieu_kiem_dem`: phiếu phiên bản 2 (`doc_phieu`: "ho_dan" / "dat_dai" theo khóa, khóa "moi_<n>" = hộ ghi mới; năm kiểm đếm theo "luc");
+    `ChiMucHo` + `tim_ho_khop_json(con, h, ten_file, chi_muc)` 4 tầng THEO ĐẶC TẢ SAU: CCCD (chủ hộ / người sử dụng, chuan_cccd) -> tờ / thửa
+    hoặc lô rừng (`_so` bỏ số 0 đầu; lô = tờ "TK<tk>/K<khoảnh>" `khoa_lo_rung` + thửa = lô) -> họ tên không dấu (bỏ "ông / bà / hộ" CÓ DẤU -
+    "Hồ" là họ; giống >= `NGUONG_TEN` 0,88) -> mã hộ; tầng nhiều hộ thu hẹp bằng tầng sau. Tên file chỉ dùng khi phiếu có MỘT hộ.
+    `nhap_ket_qua_kiem_dem(con, file, dm, tao_ho_moi=False, chi=None)` -> thêm 'khop', 'chua_khop' (ung_vien), 'tao_moi'; `ma_dm` hợp lệ áp
+    thẳng; `_mo_rong_dong`; `_tao_ho` (người sử dụng -> ghi chú, DT ha -> m²). `doc_ket_qua` đã bỏ. HopKiemDem.nhap(file, tao_ho_moi=None)
+    hỏi thêm hộ mới (hộ có nhiều ứng viên giống nhau: không tự tạo).
+  - File LẠ của người dùng ở gốc repo (`Phuong an cap nhat gia dat.py`, .docx / .xlsx / .rar ngày 11/10) làm `test_yeu_cau_0987.
+    test_tao_ban_do_ma_khong_canh_bao` lỗi (tao_ban_do_ma quét mọi .py ở gốc) - không phải lỗi mã; không tự xóa.
 - Sau 1.0.29 (người dùng 26/10/2026, ảnh dòng "Phú Lý, ngày 20 tháng 10 năm 2026"): địa danh đầu dòng ngày tháng của bản in = NƠI ĐƠN VỊ CÔNG TÁC,
   KHÔNG phải xã có đất của dự án. Cột `du_an.dia_danh_don_vi` (KHÔNG đổi PHIEN_BAN_CSDL: schema.sql file mới; `csdl.dam_bao_cot_du_an` /
   `COT_DU_AN_THEM` thêm ở csdl.mo khi file có hộ và ở `lap_pa.luu_du_an`; `doc_du_an` file cũ trả ''), trong `TRUONG_DU_AN` và

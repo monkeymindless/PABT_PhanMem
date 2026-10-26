@@ -51,6 +51,13 @@ def them_file(con, ma_ho: int, files) -> int:
     ds = [Path(f) for f in files if str(f).strip()]
     if not ds:
         return 0
+    from .an_toan import LoiAnToan, kiem_tra_magic_bytes
+    from .lap_pa import LoiNhap
+    for f in ds:                                        # 1.0.32: không đính kèm chương trình (đuôi .exe / .bat… hoặc đổi đuôi giả dạng)
+        try:
+            kiem_tra_magic_bytes(f) if f.is_file() else kiem_tra_magic_bytes(b'', ten=f.name)
+        except LoiAnToan as e:
+            raise LoiNhap(str(e)) from None
     luc = datetime.now().strftime('%d/%m/%Y %H:%M')
     n = 0
     with csdl.giao_dich(con):

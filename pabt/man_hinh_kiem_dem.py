@@ -104,7 +104,9 @@ class HopKiemDem(QDialog):
         self._ghi_kq(f'Đã xuất phiếu: {ra}')
         return ra
 
-    def nhap(self, file=None):
+    def nhap(self, file=None, tao_ho_moi=None):
+        """Nhập file .json của phiếu (một hộ "<Tên hộ>.json" hoặc cả dự án). Hộ của phiếu không khớp hộ nào của dự án (1.0.32: khớp theo
+        CCCD -> tờ / thửa, lô rừng -> họ tên -> mã hộ): hỏi thêm thành hộ mới (tao_ho_moi None = hỏi; True / False cho kiểm thử)."""
         if self.chi_doc:
             return None
         if file is None:
@@ -117,11 +119,28 @@ class HopKiemDem(QDialog):
         try:
             with con_tro_cho():
                 kq = pk.nhap_ket_qua_kiem_dem(self.con, file, self.dm)
+            chua = [x for x in kq['chua_khop'] if not x['ung_vien']]     # nhiều hộ giống nhau: không tự tạo, người dùng chọn tay
+            if chua:
+                if tao_ho_moi is None:
+                    tao_ho_moi = not self.im_lang and QMessageBox.question(
+                        self, 'Phiếu kiểm đếm', f'{len(chua)} hộ trong phiếu chưa có trong dự án:\n- '
+                        + '\n- '.join(f'{x["ten"]} ({x["so_dong"]} dòng)' for x in chua[:15])
+                        + ('\n…' if len(chua) > 15 else '') + '\n\nThêm thành hộ mới của dự án?') == QMessageBox.StandardButton.Yes
+                if tao_ho_moi:
+                    with con_tro_cho():
+                        k2 = pk.nhap_ket_qua_kiem_dem(self.con, file, self.dm, tao_ho_moi=True, chi={x['khoa'] for x in chua})
+                    kq['so_dong'] += k2['so_dong']
+                    kq['so_ho'] += k2['so_ho']
+                    kq['tao_moi'] = k2['tao_moi']
+                    bo = {x['khoa'] for x in chua}
+                    kq['loi'] = [x for x in kq['loi'] if not any(x.startswith(c['ten'] + ':') for c in kq['chua_khop']
+                                                                 if c['khoa'] in bo)] + k2['loi']
         except Exception as e:                          # noqa: BLE001
             self._bao_loi(e)
             return None
-        self.da_ghi = self.da_ghi or kq['so_dong'] > 0
-        self._ghi_kq(f'Đã thêm {kq["so_dong"]} dòng vào phương án {kq["so_ho"]} hộ.' +
+        self.da_ghi = self.da_ghi or kq['so_dong'] > 0 or kq.get('tao_moi', 0) > 0
+        self._ghi_kq(f'Đã thêm {kq["so_dong"]} dòng vào phương án {kq["so_ho"]} hộ'
+                     + (f' (thêm {kq["tao_moi"]} hộ mới)' if kq.get('tao_moi') else '') + '.' +
                      (f' {len(kq["loi"])} dòng chưa thêm được:\n- ' + '\n- '.join(kq['loi']) if kq['loi'] else ''))
         return kq
 

@@ -152,3 +152,71 @@ def kiem_tra_xml(du: bytes, ten: str = '') -> None:
     dau = du[:4096].upper()
     if b'<!DOCTYPE' in dau or b'<!ENTITY' in du.upper():
         raise LoiAnToan(f'Nội dung XML {ten} có khai báo DOCTYPE / ENTITY: nghi file độc, không mở.')
+
+
+# ---------------------------------------------------------------- chữ ký đầu tệp (1.0.32): file nhận từ điện thoại / Zalo / USB
+# Đuôi file đổi được tùy ý: ảnh / .json / .kml đính kèm thật ra là chương trình (đầu "MZ") thì không nhận. Đọc 4 KB đầu tệp.
+TEN_LOAI_TEP = {'jpeg': 'ảnh JPEG', 'png': 'ảnh PNG', 'webp': 'ảnh WebP', 'gif': 'ảnh GIF', 'bmp': 'ảnh BMP', 'tiff': 'ảnh TIFF',
+                'heic': 'ảnh HEIC', 'pdf': 'PDF', 'zip': 'file nén ZIP (.kmz / .docx / .xlsx)', 'xml': 'XML / KML', 'json': 'JSON',
+                'thuc_thi': 'chương trình chạy được', '': 'không rõ loại'}
+LOAI_ANH = frozenset(('jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff', 'heic'))
+DUOI_THUC_THI = frozenset(('.exe', '.dll', '.com', '.scr', '.bat', '.cmd', '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh', '.ps1',
+                           '.psm1', '.msi', '.msp', '.lnk', '.hta', '.cpl', '.pif', '.reg', '.jar', '.sys', '.ocx'))
+_HEIC = (b'heic', b'heix', b'heim', b'heis', b'hevc', b'hevx', b'mif1', b'msf1', b'avif')
+
+
+def nhan_dang_dau_tep(dau: bytes) -> str:
+    """Loại tệp theo các byte đầu: jpeg / png / webp / gif / bmp / tiff / heic / pdf / zip / xml / json / thuc_thi / ''."""
+    dau = bytes(dau or b'')
+    if dau[:2] == b'MZ' or dau[:4] == b'\x7fELF' or dau[:2] == b'#!':
+        return 'thuc_thi'
+    if dau[:3] == b'\xff\xd8\xff':
+        return 'jpeg'
+    if dau[:8] == b'\x89PNG\r\n\x1a\n':
+        return 'png'
+    if dau[:4] == b'RIFF' and dau[8:12] == b'WEBP':
+        return 'webp'
+    if dau[:6] in (b'GIF87a', b'GIF89a'):
+        return 'gif'
+    if dau[:2] == b'BM':
+        return 'bmp'
+    if dau[:4] in (b'II*\x00', b'MM\x00*'):
+        return 'tiff'
+    if dau[4:8] == b'ftyp' and dau[8:12] in _HEIC:
+        return 'heic'
+    if dau[:5] == b'%PDF-':
+        return 'pdf'
+    if dau[:4] in (b'PK\x03\x04', b'PK\x05\x06'):         # PK\5\6 = file nén rỗng
+        return 'zip'
+    than = dau[3:] if dau[:3] == b'\xef\xbb\xbf' else dau
+    than = than.lstrip(b' \t\r\n')
+    if than[:1] in (b'{', b'['):
+        return 'json'
+    if than[:5].lower() == b'<?xml' or than[:4].lower() == b'<kml':
+        return 'xml'
+    return ''
+
+
+def kiem_tra_magic_bytes(nguon, loai_cho_phep=None, ten: str = '') -> str:
+    """Kiểm tra chữ ký đầu tệp của file / bytes nhận từ bên ngoài. nguon: đường dẫn hoặc bytes; loai_cho_phep: tập loại (xem
+    nhan_dang_dau_tep), None = mọi loại trừ chương trình. Đuôi chương trình (.exe, .bat, .vbs, .ps1…) hoặc nội dung là chương trình
+    -> LoiAnToan; loại không thuộc loai_cho_phep -> LoiAnToan. Trả loại nhận ra."""
+    if isinstance(nguon, (bytes, bytearray)):
+        dau, ten = bytes(nguon[:4096]), ten or 'dữ liệu'
+    else:
+        p = Path(nguon)
+        ten = ten or p.name
+        try:
+            with open(p, 'rb') as f:
+                dau = f.read(4096)
+        except OSError as e:
+            raise LoiAnToan(f'Không đọc được file "{ten}": {e}') from None
+    if Path(ten).suffix.lower() in DUOI_THUC_THI:
+        raise LoiAnToan(f'"{ten}" là file chương trình (đuôi {Path(ten).suffix}): không nhận.')
+    loai = nhan_dang_dau_tep(dau)
+    if loai == 'thuc_thi':
+        raise LoiAnToan(f'"{ten}" thật ra là chương trình chạy được (đổi đuôi giả dạng): không nhận.')
+    if loai_cho_phep is not None and loai not in loai_cho_phep:
+        can = ', '.join(TEN_LOAI_TEP.get(x, x) for x in sorted(loai_cho_phep))
+        raise LoiAnToan(f'"{ten}" không phải {can} (nội dung là {TEN_LOAI_TEP.get(loai, loai)}).')
+    return loai

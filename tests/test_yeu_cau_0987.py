@@ -17,6 +17,8 @@ import openpyxl
 from pabt import csdl, dia_phuong, in_an
 from tests.test_in_vua_chu import CoSo
 
+JPEG = b'\xff\xd8\xff\xe0'                         # đầu tệp ảnh thật (1.0.32: gắn ảnh kiểm chữ ký đầu tệp)
+PNG = b'\x89PNG\r\n\x1a\n'
 GOC = Path(__file__).resolve().parent.parent
 try:
     import ezdxf
@@ -402,9 +404,9 @@ class TestPhieuKiemDem(CoSoMay):
             self.con.execute("UPDATE ho SET so_cccd = '075070000123' WHERE ma_ho = ?", (r[0]['ma_ho'],))
         tm = self.td / 'anh'
         (tm / 'con').mkdir(parents=True)
-        (tm / '075070000123_nha.jpg').write_bytes(b'1')
-        (tm / 'con' / f'HO{r[1]["thu_tu"]:03d}_cay.png').write_bytes(b'2')
-        (tm / 'khong_ro.jpg').write_bytes(b'3')
+        (tm / '075070000123_nha.jpg').write_bytes(JPEG + b'1')            # đầu tệp JPEG / PNG (1.0.32 kiểm chữ ký)
+        (tm / 'con' / f'HO{r[1]["thu_tu"]:03d}_cay.png').write_bytes(PNG + b'2')
+        (tm / 'khong_ro.jpg').write_bytes(JPEG + b'3')
         (tm / 'ghi_chu.txt').write_text('x')
         kq = pk.gan_anh_hien_trang(self.con, tm)
         self.assertEqual((kq['so_anh'], kq['da_gan']), (3, 2))

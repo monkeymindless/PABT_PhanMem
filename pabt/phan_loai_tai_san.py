@@ -304,10 +304,11 @@ def doc_danh_sach(chu: str) -> list:
     = tỷ lệ, ô chữ ngắn khớp đơn vị tính = ĐVT). Dòng tiêu đề (Tên / Hạng mục / ĐVT / Số lượng), dòng trống, cột STT bỏ qua.
     Trả [dict(ten, dvt, so_luong, ty_le, ghi_chu)] (số giữ dạng chữ như người dùng gõ)."""
     from .nhap_don_gia import DVT as _MAU_DVT
-    from .hieu_tai_san import doc_kich_thuoc, la_dong_tu_nhien, tach_dong
+    from .hieu_tai_san import doc_kich_thuoc, la_dong_tu_nhien, tach_dong, tach_dong_qd42
     re_dvt = re.compile(rf'^({_MAU_DVT}|ha/vụ|ha/ vụ|100m3/vụ|nhân khẩu|khẩu|tháng|hộ|người|trụ|cánh|chậu|cây|con|kg)$', re.I)
     kq = []
-    for dong in str(chu or '').splitlines():
+    # 1.0.32: dòng biên bản ghi gộp nhiều cỡ ("Ống nhựa: ϕ 114: 3300m; ϕ 90: 3400m") tách thành từng dòng TRƯỚC khi chia ô theo ";"
+    for dong in (x for d0 in str(chu or '').splitlines() for x in tach_dong_qd42(d0)):
         if not dong.strip():
             continue
         o = [x.strip() for x in re.split(r'\t|;|\|', dong)]
