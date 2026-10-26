@@ -147,6 +147,75 @@ class TestHoSoTinhMoi(_HoSoMay):
         h.close()
 
 
+class TestDiaDanhNgay(_HoSoMay):
+    """Người dùng 26/10/2026: địa danh đầu dòng ngày tháng của bản in là NƠI ĐƠN VỊ CÔNG TÁC, không phải xã có đất của dự án."""
+
+    def setUp(self):
+        super().setUp()
+        from pabt import csdl
+        from tests.test_toc_do import _du_an
+        self.p = _du_an(Path(self.td.name), 2)                                 # dự án ở xã Bàu Hàm
+        self.con = csdl.mo(self.p)
+
+    def tearDown(self):
+        self.con.close()
+        super().tearDown()
+
+    def _dong_ngay_word(self) -> str:
+        import re
+        import zipfile
+        from pabt import in_word
+        f = in_word.xuat_chi_tiet_docx(self.con, 1, Path(self.td.name) / 'pa.docx')
+        chu = re.sub('<[^>]+>', '', zipfile.ZipFile(f).read('word/document.xml').decode('utf-8'))
+        i = chu.index(', ngày')
+        return chu[max(0, i - 20):i]
+
+    def test_khong_lay_xa_co_dat(self):
+        from pabt import du_lieu_in
+        dia_phuong.dat_muc_may(('ban_in', 'dia_danh_ngay'), '')                 # hồ sơ chưa ghi địa danh
+        self.assertTrue(self._dong_ngay_word().endswith(du_lieu_in.DIA_DANH_TRONG))
+        self.assertNotIn('Bàu Hàm', self._dong_ngay_word())
+
+    def test_dia_danh_cua_du_an_cho_moi_ban_in(self):
+        import openpyxl
+        from pabt import in_an, lap_pa, van_ban_trinh
+        gt = lap_pa.doc_du_an(self.con)
+        self.assertEqual(gt['dia_danh_don_vi'], '')
+        gt['dia_danh_don_vi'] = 'Vĩnh An'
+        lap_pa.luu_du_an(self.con, gt)
+        self.assertEqual(lap_pa.doc_du_an(self.con)['dia_danh_don_vi'], 'Vĩnh An')
+        self.assertTrue(self._dong_ngay_word().endswith('Vĩnh An'))           # phương án chi tiết (Word)
+        ws = openpyxl.load_workbook(in_an.lap_bang_tong_hop(self.con, Path(self.td.name) / 'bth.xlsx')).active
+        dong = [c.value for r in ws.iter_rows() for c in r if isinstance(c.value, str) and ', ngày' in c.value]
+        self.assertTrue(dong and dong[0].startswith('Vĩnh An, ngày'), dong)    # bảng tổng hợp
+        chung, _ = van_ban_trinh.du_lieu(self.con, [1, 2])
+        self.assertEqual(chung['dia_danh_ngay'], 'Vĩnh An')                     # tờ trình: chỗ trống {dia_danh_ngay}
+        self.assertIn('{dia_danh_ngay}, ', van_ban_trinh._dau_trang('Số: …', 'ngày …'))
+
+    def test_file_cu_thieu_cot(self):
+        import sqlite3
+        from pabt import csdl, lap_pa
+        con = sqlite3.connect(':memory:')
+        con.row_factory = sqlite3.Row
+        con.execute("CREATE TABLE du_an (id INTEGER PRIMARY KEY, ten TEXT NOT NULL DEFAULT '')")
+        con.execute("INSERT INTO du_an (id, ten) VALUES (1, 'Cũ')")
+        self.assertEqual(lap_pa.doc_du_an(con)['dia_danh_don_vi'], '')         # đọc file cũ: trống, không lỗi
+        csdl.dam_bao_cot_du_an(con)
+        self.assertIn('dia_danh_don_vi', [r[1] for r in con.execute('PRAGMA table_info(du_an)')])
+        con.close()
+
+    def test_o_thong_tin_du_an(self):
+        try:
+            from pabt.man_hinh import HopDuAn
+        except ImportError:
+            self.skipTest('không có Qt')
+        from pabt import csdl
+        self.assertIn('dia_danh_don_vi', csdl.TRUONG_DON_VI)                  # thuộc đơn vị: giữ khi xóa trắng, điền sẵn dự án mới
+        h = HopDuAn(self.con)
+        self.assertIn('dia_danh_don_vi', h.o)
+        h.close()
+
+
 class TestPhongToGop(unittest.TestCase):
     def test_bam_lien_tiep_chi_ap_kieu_mot_lan(self):
         try:

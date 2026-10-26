@@ -88,6 +88,8 @@ class HopDuAnMoi(QDialog):
                 o = QLineEdit()
                 if k == 'nam':
                     o.setText(str(datetime.now().year))
+                if k == 'dia_danh_don_vi':
+                    o.setPlaceholderText('Nơi đơn vị đặt trụ sở, in đầu dòng ngày tháng (vd: Trị An) - không phải xã có đất')
                 if k == 'co_quan_tham_dinh':
                     o.setPlaceholderText('Để trống: Phòng Kinh tế, Hạ tầng và Đô thị (phường) / Phòng Kinh tế (xã)')
                 if k in csdl.TRUONG_DON_VI:

@@ -531,7 +531,7 @@ def _pa_lan_1_nho(con, ma_ho: int):
 
 def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None) -> str:
     """XML thân văn bản (w:body không sectPr) phương án chi tiết một hộ."""
-    from . import dia_phuong, in_an, nghiep_vu
+    from . import nghiep_vu
     from .ho_so import la_to_chuc
     da = du_lieu_in._thong_tin_du_an(con)
     da['ky_hieu_so'] = du_lieu_in.ky_hieu_cua_ho(con, ma_ho, da['ky_hieu_so'])
@@ -560,7 +560,7 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
         ttho['so_pa'], ttho['ngay_pa'] = '', ''
     w = rong_trang()
     # ---- quốc hiệu, tiêu ngữ, cơ quan, số, ngày (bảng ẩn viền 2 cột)
-    dia_danh = str(dia_phuong.lay('ban_in.dia_danh_ngay', in_an.DIA_DANH_NGAY_MAC_DINH) or da['ten_dia_ban'] or '').strip()
+    dia_danh = da['dia_danh_ngay']                     # nơi đơn vị công tác (du_lieu_in.dia_danh_ngay) - KHÔNG phải xã có đất
     so = f'Số: {ttho["so_pa"]}/{da["ky_hieu_so"]}' if ttho['so_pa'] else f'Số:          /{da["ky_hieu_so"]}'
     # cơ quan chủ quản 13 in hoa đứng (2 dòng); dòng 3 = cơ quan ban hành / chi nhánh 13 in hoa đậm GẠCH CHÂN đúng độ dài chữ
     # (PDF mẫu PA_01: "CHI NHÁNH X"; không còn dòng "____"); số, "(DỰ THẢO)" 13

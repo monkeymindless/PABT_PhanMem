@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS du_an (
     nguoi_ky         TEXT NOT NULL DEFAULT '',
     don_vi_tieu_de   TEXT NOT NULL DEFAULT '',          -- dòng 2 tiêu đề cơ quan trên bản in, ví dụ CHI NHÁNH VĨNH CỬU
     chu_dau_tu       TEXT NOT NULL DEFAULT '',          -- v14: chủ đầu tư dự án (văn bản trình: nơi nhận)
-    co_quan_tham_dinh TEXT NOT NULL DEFAULT ''          -- v15: cơ quan thẩm định phương án (văn bản trình: kính gửi, đề nghị)
+    co_quan_tham_dinh TEXT NOT NULL DEFAULT '',         -- v15: cơ quan thẩm định phương án (văn bản trình: kính gửi, đề nghị)
+    dia_danh_don_vi  TEXT NOT NULL DEFAULT ''           -- 1.0.29: địa danh nơi đơn vị công tác ("Trị An, ngày … tháng …"), không phải xã có đất
 );
 
 -- ---------------------------------------------------------------- hồ sơ kiểm kê

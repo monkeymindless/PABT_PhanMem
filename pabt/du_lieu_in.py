@@ -38,6 +38,18 @@ def _ho_dong(con, ma_ho: int):
     return con.execute('SELECT * FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
 
 
+DIA_DANH_TRONG = '……………'          # chưa nhập địa danh nơi đơn vị công tác: để chỗ trống (KHÔNG lấy xã có đất của dự án)
+
+
+def dia_danh_ngay(dia_danh_don_vi: str = '') -> str:
+    """Địa danh đầu dòng ngày tháng của bản in ("<địa danh>, ngày … tháng … năm …") = NƠI ĐƠN VỊ CÔNG TÁC (người dùng 26/10/2026), không
+    phải xã / phường có đất của dự án: ô "Địa danh nơi đơn vị công tác" của Thông tin dự án -> hồ sơ địa phương ban_in.dia_danh_ngay ->
+    chỗ trống DIA_DANH_TRONG."""
+    from . import dia_phuong
+    return (' '.join(str(dia_danh_don_vi or '').split()) or str(dia_phuong.lay('ban_in.dia_danh_ngay', '') or '').strip()
+            or DIA_DANH_TRONG)
+
+
 def _thong_tin_du_an(con) -> dict:
     from .csdl import nho
     from .to_chuc import MAC_DINH
@@ -55,7 +67,7 @@ def _thong_tin_du_an(con) -> dict:
                 DON_VI_TIEU_DE=(da['don_vi_tieu_de'] or da['don_vi_lap'] or '').upper(),
                 DON_VI_LAP=(da['don_vi_lap'] or '').upper(), ky_hieu_so=da['ky_hieu_so'] or '', nguoi_lap=da['nguoi_lap'] or '',
                 nguoi_kiem_tra=da['nguoi_kiem_tra'] or '', nguoi_ky=da['nguoi_ky'] or '',
-                CHUC_VU_KY=(da['chuc_vu_ky'] or '').upper())
+                CHUC_VU_KY=(da['chuc_vu_ky'] or '').upper(), dia_danh_ngay=dia_danh_ngay(da.get('dia_danh_don_vi')))
 
 
 def ky_hieu_cua_ho(con, ma_ho: int, mac_dinh: str = '') -> str:

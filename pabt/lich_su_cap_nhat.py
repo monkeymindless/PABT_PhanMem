@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.30', '26/10/2026', (
+        'Dòng "<địa danh>, ngày … tháng … năm …" của phương án chi tiết, bảng tổng hợp, tờ trình ghi NƠI ĐƠN VỊ CÔNG TÁC, không còn lấy '
+        'xã / phường có đất của dự án. Nhập ở Thông tin dự án > "Địa danh nơi đơn vị công tác" (giữ cho dự án mới); để trống thì theo hồ sơ '
+        'địa phương, chưa có thì để chỗ trống.',
+    )),
     ('1.0.29', '26/10/2026', (
         'Máy chủ LAN - chia việc: nút "Nhận theo hộ (Chia việc)" ở Dự án trên máy chủ mở hộp chọn hộ (tìm theo tên, CCCD, tờ/thửa; lọc '
         'theo đợt, ấp; chọn nhanh theo khoảng STT); hộ người khác đang nhận hiện tên người / máy và không chọn được. Đưa lên mà có hộ bị sửa '

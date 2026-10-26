@@ -29,13 +29,23 @@ NGUON = ('Thửa đất giả lập do hộ gia đình khai phá, sử dụng �
          'được UBND xã xác nhận nguồn gốc theo biên bản kiểm tra thực địa. ')
 
 
+_DON_VI = (1, 0, 0, 1, 0, 0)
+
+
 def _chu_co_vi_tri(trang) -> list:
-    """[(chữ, x, y)] của một trang PDF (y tính từ đáy trang)."""
+    """[(chữ, x, y)] của một trang PDF (y tính từ đáy trang): vị trí = ma trận chữ tm nhân ma trận biến đổi cm.
+    pypdf < 6 (bản cuối cho Python 3.8 - môi trường Qt5 / Win7 là 5.9) gọi visitor cho mẩu chữ cuối khối (" ng ", "…kiểm tra") với
+    CẢ cm lẫn tm là ma trận đơn vị - không có vị trí, không phải chữ in ở góc (0, 0): bỏ qua (pypdf 6 báo đúng vị trí các mẩu đó)."""
     ra = []
 
     def dem(text, cm, tm, fd, fs):
-        if text and text.strip():
-            ra.append((text, tm[4], tm[5]))
+        if not text or not text.strip():
+            return
+        if tuple(round(float(v), 6) for v in cm) == _DON_VI and tuple(round(float(v), 6) for v in tm) == _DON_VI:
+            return
+        x = tm[4] * cm[0] + tm[5] * cm[2] + cm[4]
+        y = tm[4] * cm[1] + tm[5] * cm[3] + cm[5]
+        ra.append((text, x, y))
     trang.extract_text(visitor_text=dem)
     return ra
 

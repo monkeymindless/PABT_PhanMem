@@ -2625,6 +2625,10 @@ class HopDuAn(QDialog):
             else:
                 w = QLineEdit(gt[k])
                 w.setCursorPosition(0)
+                if k == 'dia_danh_don_vi':                  # 1.0.29: nơi đơn vị công tác (dòng ngày tháng), không phải xã có đất
+                    w.setPlaceholderText('Nơi đơn vị đặt trụ sở, in đầu dòng ngày tháng (vd: Trị An) - không phải xã có đất')
+                    w.setToolTip('Địa danh in ở dòng "<địa danh>, ngày … tháng … năm …" của phương án chi tiết, bảng tổng hợp, tờ trình: nơi đơn vị công tác. '
+                                 'Để trống: theo hồ sơ địa phương (Cấu hình nghiệp vụ), chưa có thì để chỗ trống.')
             self.o[k] = w
             (don_vi if k in csdl.TRUONG_DON_VI else du_an).append((ten + ':', w))
         # kinh phí tổ chức thực hiện bồi thường (QĐ 08/2025/QĐ-UBND): theo tuyến 3,5%, cụm / vùng / khác 2,5%. 0.9.72 (người dùng

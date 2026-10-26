@@ -463,6 +463,13 @@ def _mo_tiep(con, tao: bool):
                 dam_bao_cot_thua(con)
         except sqlite3.OperationalError:                # chỉ xem / file khóa: ho_so.luu_ho thêm khi ghi
             pass
+    if any(k not in {r[1] for r in con.execute('PRAGMA table_info(du_an)')} for k, _ in COT_DU_AN_THEM) and \
+            con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
+        try:
+            with con:
+                dam_bao_cot_du_an(con)
+        except sqlite3.OperationalError:                # chỉ xem / file khóa: lap_pa.luu_du_an thêm khi ghi
+            pass
     return con
 
 
@@ -635,8 +642,19 @@ def chep_danh_muc(con, file_nguon, don_vi: bool = True, bang=DANH_MUC) -> None:
 
 
 # thông tin đơn vị lập, người ký: thuộc về đơn vị chứ không thuộc dự án -> giữ khi xóa trắng, chép khi tạo dự án mới
-TRUONG_DON_VI = ('don_vi_cap_tren', 'don_vi_tieu_de', 'don_vi_lap', 'ky_hieu_so', 'nguoi_lap', 'nguoi_kiem_tra', 'chuc_vu_ky',
-                 'nguoi_ky')
+TRUONG_DON_VI = ('don_vi_cap_tren', 'don_vi_tieu_de', 'don_vi_lap', 'dia_danh_don_vi', 'ky_hieu_so', 'nguoi_lap', 'nguoi_kiem_tra',
+                 'chuc_vu_ky', 'nguoi_ky')
+# cột thêm vào du_an KHÔNG đổi PHIEN_BAN_CSDL (như cột thua): file mới có sẵn (schema.sql), file cũ thêm khi lưu Thông tin dự án (lap_pa.luu_du_an)
+# hoặc khi mở file có hộ (csdl.mo) - không ghi vào bộ đơn giá đóng gói (không có hộ). Bản cũ mở file vẫn được (cột thừa)
+COT_DU_AN_THEM = (('dia_danh_don_vi', "TEXT NOT NULL DEFAULT ''"),)
+
+
+def dam_bao_cot_du_an(con) -> None:
+    """Thêm các cột COT_DU_AN_THEM còn thiếu (trong giao dịch của nơi gọi nếu có)."""
+    co = {r[1] for r in con.execute('PRAGMA table_info(du_an)')}
+    for k, kieu in COT_DU_AN_THEM:
+        if co and k not in co:
+            con.execute(f'ALTER TABLE du_an ADD COLUMN {k} {kieu}')
 
 
 class DauVetHo:

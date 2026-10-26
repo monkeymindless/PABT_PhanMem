@@ -36,6 +36,7 @@ DS_CHO_TRONG = [
     ('du_an', 'Tên dự án'), ('chu_dau_tu', 'Chủ đầu tư'),
     ('co_quan_tham_dinh', 'Cơ quan thẩm định (trống: Phòng Kinh tế, Hạ tầng và Đô thị phường / Phòng Kinh tế xã)'),
     ('ten_dia_ban', 'Tên xã / phường'),
+    ('dia_danh_ngay', 'Địa danh nơi đơn vị công tác (đầu dòng ngày tháng: "<địa danh>, ngày … tháng … năm …")'),
     ('cap_dia_ban', 'Cấp địa bàn (Xã / Phường)'), ('cap_dia_ban_thuong', 'Cấp địa bàn viết thường (xã / phường)'),
     ('don_vi_cap_tren', 'Đơn vị cấp trên'), ('KY_THAY', 'Ký thay: "KT. GIÁM ĐỐC" khi người ký là phó (không thì trống)'),
     ('DON_VI_CAP_TREN', 'Đơn vị cấp trên (chữ hoa)'), ('DON_VI_CAP_TREN_2DONG', 'Đơn vị cấp trên, tự xuống dòng'),
@@ -782,7 +783,7 @@ def _dau_trang(so: str, ngay: str) -> str:
         _o(so, co=13)
     phai = _o('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', dam=True, co=12) + \
         _p(_r('Độc lập - Tự do - Hạnh phúc', dam=True, co=13), can='center', sau=0) + \
-        _o('______________________', co=12) + _o(f'{{ten_dia_ban}}, {ngay}', nghieng=True, co=13)
+        _o('______________________', co=12) + _o(f'{{dia_danh_ngay}}, {ngay}', nghieng=True, co=13)
     # như văn bản hành chính: khối tiêu đề lấn lề trái 1 cm (cột cơ quan đủ rộng cho tên đơn vị một dòng)
     return _bang([[trai, phai]], [_RONG_CO_QUAN, 9071 + 567 - _RONG_CO_QUAN], vien=False, doc='top', lech=-567)
 

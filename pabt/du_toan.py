@@ -348,11 +348,15 @@ def xuat_excel(dt: DuToan, file_ra) -> Path:
 
 
 def _noi_lap(dt: DuToan) -> str:
-    """Địa danh ở dòng 'Trị An, ngày … tháng … năm …': tên xã / phường của địa bàn dự toán (bỏ chữ Xã / Phường)."""
+    """Địa danh ở dòng '<địa danh>, ngày … tháng … năm …' của khái toán: nơi đơn vị công tác theo hồ sơ địa phương (ban_in.dia_danh_ngay -
+    1.0.29); hồ sơ chưa ghi thì tên xã / phường của địa bàn dự toán (bỏ chữ Xã / Phường) như trước, không có thì để chỗ trống."""
     import re
+    from . import dia_phuong
+    from .du_lieu_in import DIA_DANH_TRONG
+    hs = str(dia_phuong.lay('ban_in.dia_danh_ngay', '') or '').strip()
     t = ' '.join(str(dt.dia_ban or '').split())
     t = re.sub(r'(?i)^(xã|phường|thị trấn|đặc khu)\s+', '', t)
-    return t or 'Trị An'
+    return hs or t or DIA_DANH_TRONG
 
 
 def xuat_khai_toan(dt: DuToan, file_ra, pdf: bool = False) -> dict:

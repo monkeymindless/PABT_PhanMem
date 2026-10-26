@@ -2262,6 +2262,17 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - `pabt/in_excel.py` tách từ in_an (LoiIn, _VBS, co_excel, CHO_MOI_FILE, CHO_KHOI_DONG, _doc_luong, _tat_excel_tu_dong, chay_excel, mo_file) -
     in_an nhập lại (cùng đối tượng). Patch `in_an._tat_excel_tu_dong` vẫn tác dụng với van_ban_trinh (nhập lúc gọi) nhưng KHÔNG với
     in_excel.chay_excel - kiểm thử Excel patch ở in_excel.
+- Sau 1.0.29 (người dùng 26/10/2026, ảnh dòng "Phú Lý, ngày 20 tháng 10 năm 2026"): địa danh đầu dòng ngày tháng của bản in = NƠI ĐƠN VỊ CÔNG TÁC,
+  KHÔNG phải xã có đất của dự án. Cột `du_an.dia_danh_don_vi` (KHÔNG đổi PHIEN_BAN_CSDL: schema.sql file mới; `csdl.dam_bao_cot_du_an` /
+  `COT_DU_AN_THEM` thêm ở csdl.mo khi file có hộ và ở `lap_pa.luu_du_an`; `doc_du_an` file cũ trả ''), trong `TRUONG_DU_AN` và
+  `csdl.TRUONG_DON_VI` (nhóm Đơn vị lập, người ký; giữ khi xóa trắng; Dự án mới điền sẵn theo lần trước). Một nguồn
+  `du_lieu_in.dia_danh_ngay(da)`: ô của dự án -> hồ sơ `ban_in.dia_danh_ngay` -> `DIA_DANH_TRONG` "……………" (KHÔNG rơi về ten_dia_ban - đó
+  chính là lỗi). `_thong_tin_du_an` có khóa `dia_danh_ngay`; dùng ở in_word (phương án chi tiết), `in_an.chuan_dong_ngay(ws, dia_danh=)`
+  (bảng tổng hợp), tờ trình mặc định `{dia_danh_ngay}` (DS_CHO_TRONG; mẫu riêng của người dùng còn {ten_dia_ban} giữ nguyên). Khái toán
+  `du_toan._noi_lap`: hồ sơ -> xã của dự toán -> trống. Bỏ "Trị An" ghi cứng (`in_an.DIA_DANH_NGAY_MAC_DINH` = ''). Test `TestDiaDanhNgay`.
+- `tests/test_khuon_word.test_nguon_goc_rat_dai` lỗi trên venv38_32 (từ 1.0.19) KHÔNG phải lỗi bản in: pypdf 5.9 (bản cuối cho Python 3.8; 6.x cần
+  3.9+) gọi visitor_text cho mẩu chữ cuối khối với cm = tm = ma trận đơn vị (tọa độ 0, 0); pypdf 6.19 báo đúng vị trí trên cùng file PDF.
+  `_chu_co_vi_tri` nay tính vị trí = tm × cm và bỏ mẩu không có vị trí. Phần mềm không dùng visitor_text (nhập PDF dùng extract_text layout).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

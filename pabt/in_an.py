@@ -922,17 +922,18 @@ def _dong_cuoi(ws, so_cot: int) -> int:
 # ---------------------------------------------------------------- dữ liệu chung
 
 
-DIA_DANH_NGAY_MAC_DINH = 'Trị An'
+DIA_DANH_NGAY_MAC_DINH = ''              # 1.0.29: không ghi cứng địa danh nào (bản thương mại) - xem du_lieu_in.dia_danh_ngay
 _RE_DONG_NGAY = re.compile(r'^\s*(\{ten_dia_ban\}|[^,{}\n]{1,40}),(\s*ngày)')
 _RE_NGAY_TRONG = re.compile(r'ngày[\s….,_]*tháng[\s….,_]*năm')
 
 
-def chuan_dong_ngay(ws, den_dong: int | None = None) -> int:
+def chuan_dong_ngay(ws, den_dong: int | None = None, dia_danh: str | None = None) -> int:
     """Dòng "<địa danh>, ngày … tháng … năm 2026" (người dùng 16/10/2026): địa danh CỐ ĐỊNH theo nơi đặt cơ quan (hồ sơ địa phương
-    `ban_in.dia_danh_ngay`, mặc định "Trị An") - không theo xã của dự án; chỗ chưa có ngày ghi dấu chấm "ngày ...... tháng ..... năm".
+    `ban_in.dia_danh_ngay`; từ 1.0.29 nơi gọi đưa địa danh của dự án - du_lieu_in.dia_danh_ngay) - không theo xã của dự án; chỗ chưa có ngày ghi dấu chấm "ngày ...... tháng ..... năm".
     Gọi SAU dien_so_ngay (ngày đã điền giữ nguyên), TRƯỚC _thay_cho_trong. Trả số ô đã đổi."""
     from . import dia_phuong
-    dia_danh = str(dia_phuong.lay('ban_in.dia_danh_ngay', DIA_DANH_NGAY_MAC_DINH) or '').strip()
+    if dia_danh is None:                            # 1.0.29: nơi gọi đưa địa danh của dự án (du_lieu_in.dia_danh_ngay)
+        dia_danh = str(dia_phuong.lay('ban_in.dia_danh_ngay', DIA_DANH_NGAY_MAC_DINH) or '').strip()
     n = 0
     for o in list(_o_chu(ws, den_dong)):
         v = o.value
@@ -2088,7 +2089,7 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, so_pa_tong: st
         ws['A6'] = re.sub(r'\(Đối với .*?m2\)', f'(Đối với {len(khoi):02d} trường hợp/ {tong_thua} thửa đất/ '
                           f'{format(float(tong_dt), ",.1f").replace(",", "#").replace(".", ",").replace("#", ".")}m2)', a6)
     dien_so_ngay(ws, so_pa_tong, ngay_pa_tong, 'Phương án số')
-    chuan_dong_ngay(ws)
+    chuan_dong_ngay(ws, dia_danh=da['dia_danh_ngay'])          # nơi đơn vị công tác, không phải xã có đất
     viet_hoa_du_an(ws, d0)                                       # "DỰ ÁN <tên>" như phương án chi tiết
     chuan_trich_yeu(ws, d0)                                      # "HỖ TRỢ & TÁI ĐỊNH CƯ" -> "VÀ" (mẫu người dùng có thể ghi "&")
     can_khoi_ky(ws)

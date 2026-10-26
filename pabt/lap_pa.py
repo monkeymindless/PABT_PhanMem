@@ -983,6 +983,7 @@ class BoSoan:
 TRUONG_DU_AN = [('ten', 'Tên dự án'), ('chu_dau_tu', 'Chủ đầu tư'), ('co_quan_tham_dinh', 'Cơ quan thẩm định'),
                 ('don_vi_cap_tren', 'Đơn vị cấp trên'),
                 ('don_vi_tieu_de', 'Tên đơn vị trên tiêu đề bản in (dòng 2)'), ('don_vi_lap', 'Đơn vị lập phương án'),
+                ('dia_danh_don_vi', 'Địa danh nơi đơn vị công tác (dòng ngày tháng bản in)'),
                 ('cap_dia_ban', 'Cấp địa bàn (Xã / Phường)'), ('ten_dia_ban', 'Tên xã, phường'), ('nam', 'Năm'),
                 ('nguoi_lap', 'Người lập biểu'), ('nguoi_kiem_tra', 'Người kiểm tra'), ('chuc_vu_ky', 'Chức vụ người ký'),
                 ('nguoi_ky', 'Người ký')]
@@ -1014,6 +1015,7 @@ def luu_du_an(con, gia_tri: dict) -> None:
         nam = int(gt['nam'])
     cu = doc_du_an(con)
     with con:
+        csdl.dam_bao_cot_du_an(con)                     # file cũ chưa có cột dia_danh_don_vi (1.0.29)
         gt_ghi = dict(gt, nam=nam)
         # một tên dự án (0.9.72): ten_day_du (cột cũ, nhận loại kinh phí / kiểm lỗi) đi theo ten, trừ khi nơi gọi đưa riêng
         ten_day_du = ' '.join(str(gia_tri.get('ten_day_du') or '').split()) or gt['ten']
