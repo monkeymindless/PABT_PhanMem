@@ -1175,6 +1175,11 @@ class CuaSoChinh(QMainWindow):
                     bo_quy_uoc_cu(self.con)
                 except sqlite3.Error:
                     pass
+                try:                                   # 26/10/2026: tên khác cây lâm nghiệp (Phụ lục VI QĐ 48/2025) cho danh mục dự án
+                    from .ten_cay_lam_nghiep import ap_ten_khac
+                    ap_ten_khac(self.con)
+                except sqlite3.Error:
+                    pass
             self._cap_nhat_nut_ht()
             self.file = Path(p)
             self.dm = lap_pa.DanhMuc(self.con)

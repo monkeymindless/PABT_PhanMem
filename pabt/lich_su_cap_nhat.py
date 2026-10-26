@@ -7,6 +7,16 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.31', '26/10/2026', (
+        'Bộ đơn giá cây trồng: các loài cây lâm nghiệp ghi thêm tên Việt Nam khác theo Phụ lục VI QĐ 48/2025/QĐ-UBND (ví dụ "Bách xanh '
+        '(Tùng hương) (d >6-9 cm)") - tìm cây theo tên gọi nào cũng ra. Dự án đang có và bộ đơn giá đã cập nhật trên máy tự thêm khi mở; '
+        'phương án đã lập giữ nguyên tên cũ.',
+        'Máy chủ LAN - bản offline theo hộ: mọi thao tác ghi theo hộ (xóa / gộp hộ, chuyển thửa, lập PA bổ sung / điều chỉnh, quyết định, '
+        'chi trả, bàn giao, niêm yết, vận động, đợt trình, số PA, hồ sơ đính kèm) chỉ làm được trên hộ đã nhận; hộ không nhận mở ra chỉ xem.',
+        'Dùng cho tỉnh khác: khoản thuê nhà / tự lo chỗ ở khai báo mã riêng không còn báo lỗi khi chọn hoặc đổi nhân khẩu; mức cộng mỗi '
+        'khẩu vượt khai báo được trong hồ sơ địa phương (chinh_sach_ho_tro.muc_khau_vuot).',
+        'Tra bảng giá đất nhanh hơn khi tự lập phương án nhiều hộ.',
+    )),
     ('1.0.30', '26/10/2026', (
         'Dòng "<địa danh>, ngày … tháng … năm …" của phương án chi tiết, bảng tổng hợp, tờ trình ghi NƠI ĐƠN VỊ CÔNG TÁC, không còn lấy '
         'xã / phường có đất của dự án. Nhập ở Thông tin dự án > "Địa danh nơi đơn vị công tác" (giữ cho dự án mới); để trống thì theo hồ sơ '

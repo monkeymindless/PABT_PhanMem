@@ -102,14 +102,34 @@ def _doc(duong: str, mtime: int) -> tuple:
     return (), ''
 
 
+NHO_GIAY = 2.0              # kiểm lại file bảng giá (stat 2-3 file) tối đa mỗi chừng này giây - như he_so_k (1.0.31)
+_NHO_DOC = {'t': -1e9, 'khoa': None, 'gt': None}
+
+
+def _quen() -> None:
+    """Bỏ bộ nhớ: lần đọc sau kiểm lại file (gọi sau khi ghi / xóa bảng thay)."""
+    _NHO_DOC['t'] = -1e9
+
+
 def _da_doc() -> tuple:
+    """(dòng, văn bản, đã thay?) của bảng đang dùng. Nhớ NHO_GIAY giây theo thư mục máy (trước: mỗi lần tat_ca / tim / theo_dia_ban
+    stat 2-3 file)."""
+    import os
+    import time
+    khoa = os.environ.get('PABT_THU_MUC_MAY', '')
+    bay_gio = time.monotonic()
+    if _NHO_DOC['khoa'] == khoa and bay_gio - _NHO_DOC['t'] < NHO_GIAY:
+        return _NHO_DOC['gt']
     p, thay = _nguon()
     try:
         m = p.stat().st_mtime_ns
     except OSError:
-        return (), '', False
-    dong, vb = _doc(str(p), m)
-    return dong, vb, thay
+        gt = ((), '', False)
+    else:
+        dong, vb = _doc(str(p), m)
+        gt = (dong, vb, thay)
+    _NHO_DOC.update(t=bay_gio, khoa=khoa, gt=gt)
+    return gt
 
 
 def tat_ca() -> list:
@@ -180,8 +200,12 @@ def tim(xa: str = '', tu_khoa: str = '', vi_tri: str = '') -> list:
         ds = [r for r in ds if str(r.get('vi_tri') or '').upper() == vt]
     k = bo_dau(tu_khoa).split()
     if k:
-        ds = [r for r in ds if all(x in bo_dau(' '.join((r['ten_duong'], r['diem_dau'], r['diem_cuoi'], r['vi_tri'])))
-                                   for x in k)]
+        kq = []
+        for r in ds:
+            chu_tim = bo_dau(' '.join((r['ten_duong'], r['diem_dau'], r['diem_cuoi'], r['vi_tri'])))   # một lần mỗi dòng
+            if all(x in chu_tim for x in k):
+                kq.append(r)
+        ds = kq
     return ds
 
 
@@ -407,6 +431,7 @@ def ghi_thay(dong: list, van_ban: str = '', nguon: str = '') -> Path:
     tam.write_text(json.dumps({'van_ban': van_ban, 'nguon': str(nguon), 'dong': dong}, ensure_ascii=False),
                    encoding='utf-8')
     os.replace(tam, p)
+    _quen()
     return p
 
 
@@ -416,4 +441,5 @@ def xoa_thay() -> bool:
     if not p.is_file():
         return False
     p.unlink()
+    _quen()
     return True

@@ -627,10 +627,15 @@ class _KhopDanhMuc:
     def __init__(self, con):
         self.dm = DanhMuc(con)
         self.ten, self.gon = {}, {}
+        from .ten_cay_lam_nghiep import bo_ten_khac
         for nhom in (2, 3, MUC_VN):
             for m in self.dm.muc[nhom]:
                 self.ten.setdefault((nhom, bo_dau(m.ten)), []).append(m)
                 self.gon.setdefault((nhom, self._gon(m.ten)), []).append(m)
+                cu = bo_ten_khac(m.ten)         # bản in lập trước khi bộ đơn giá có tên khác của cây lâm nghiệp (26/10/2026)
+                if cu != m.ten:
+                    self.ten.setdefault((nhom, bo_dau(cu)), []).append(m)
+                    self.gon.setdefault((nhom, self._gon(cu)), []).append(m)
 
     @staticmethod
     def _gon(s) -> str:

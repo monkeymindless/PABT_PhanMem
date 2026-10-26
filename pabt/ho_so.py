@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 
 from . import csdl
-from .lap_pa import LoiNhap, bo_dau, doc_so, kiem_ho_nhan_viec
+from .lap_pa import LoiNhap, bo_dau, doc_so, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec
 from .tien import D, chuoi, so_vn
 
 TRUONG_HO = [('ho_ten', 'Họ và tên'), ('so_cccd', 'Số CCCD'), ('ngay_cap', 'Ngày cấp'), ('noi_cap', 'Nơi cấp'),
@@ -268,6 +268,7 @@ def thong_tin_xoa(con, ds_ma_ho) -> list:
 def xoa_nhieu_ho(con, ds_ma_ho) -> str:
     """Xóa các hộ cùng thửa, phương án, quyết định / chi trả của hộ (CASCADE) trong MỘT giao dịch - một bước hoàn tác; đánh
     lại số thứ tự một lần."""
+    kiem_ds_ho_nhan_viec(con, ds_ma_ho)
     ds = thong_tin_xoa(con, ds_ma_ho)
     if not ds:
         raise LoiNhap('Không có hộ nào để xóa (hộ đã bị xóa hoặc chưa chọn hộ).')
@@ -290,6 +291,7 @@ def gop_ho(con, giu: int, bo: int) -> str:
     """Gộp hộ `bo` vào hộ `giu`: chuyển thửa, dòng phương án; ô trống của hộ giữ lấy từ hộ bỏ; xóa hộ bỏ."""
     if giu == bo:
         raise LoiNhap('Chọn hai hộ khác nhau để gộp.')
+    kiem_ds_ho_nhan_viec(con, (giu, bo))
     a, b = doc_ho(con, giu), doc_ho(con, bo)
     with con:
         cap = {}
@@ -330,6 +332,7 @@ def chuyen_thua(con, ma_thua: int, ma_ho_moi: int) -> str:
     t = con.execute('SELECT * FROM thua WHERE ma_thua = ?', (ma_thua,)).fetchone()
     if t is None:
         raise LoiNhap(f'Không có thửa mã {ma_thua}.')
+    kiem_ds_ho_nhan_viec(con, (t['ma_ho'], ma_ho_moi))
     moi = doc_ho(con, ma_ho_moi)
     if t['ma_ho'] == ma_ho_moi:
         raise LoiNhap('Thửa đã thuộc hộ này.')

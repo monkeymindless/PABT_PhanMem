@@ -46,6 +46,8 @@ def dem_theo_ho(con) -> dict:
 
 def them_file(con, ma_ho: int, files) -> int:
     """Đính kèm các file (đường dẫn đầy đủ) vào hộ; file đã gắn bỏ qua. Trả số file thêm mới."""
+    from .lap_pa import kiem_ho_nhan_viec
+    kiem_ho_nhan_viec(con, ma_ho)
     ds = [Path(f) for f in files if str(f).strip()]
     if not ds:
         return 0
@@ -63,6 +65,8 @@ def them_file(con, ma_ho: int, files) -> int:
 
 def bo_file(con, ma_ho: int, ds_id) -> int:
     """Bỏ đính kèm (chỉ xóa liên kết, KHÔNG xóa file trên đĩa). Trả số liên kết đã bỏ."""
+    from .lap_pa import kiem_ho_nhan_viec
+    kiem_ho_nhan_viec(con, ma_ho)
     ds_id = [int(i) for i in ds_id]
     if not ds_id or not _co_bang(con):
         return 0

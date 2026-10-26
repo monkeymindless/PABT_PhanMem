@@ -87,6 +87,19 @@ def _nang_cap_ban_may(p: Path) -> None:
             c.close()
         if 0 < ver < csdl.PHIEN_BAN_CSDL:
             csdl.mo(p).close()
+        # 26/10/2026: bản máy (cập nhật / sửa trước bản này) chưa có tên khác của cây lâm nghiệp (Phụ lục VI QĐ 48/2025) - thêm một lần
+        from .ten_cay_lam_nghiep import ap_ten_khac, them_ten_khac
+        c = sqlite3.connect(k)
+        try:
+            can = any(them_ten_khac(r[0]) != r[0] for r in c.execute('SELECT ten FROM dm_taisan WHERE nhom = 3'))
+        finally:
+            c.close()
+        if can:
+            c = csdl.mo(p)
+            try:
+                ap_ten_khac(c)
+            finally:
+                c.close()
     except Exception:                                   # noqa: BLE001 - file khóa / hỏng: kiem_tra_bo xử lý tiếp như cũ
         pass
 

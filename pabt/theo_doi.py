@@ -20,7 +20,7 @@ from pathlib import Path
 
 from . import an_toan as _an_toan
 from . import csdl
-from .lap_pa import LoiNhap, bo_dau
+from .lap_pa import LoiNhap, bo_dau, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec
 from .nghiep_vu import muc_5_cot
 from .quan_ly import chuan_ngay
 from .tien import D, KHONG, chuoi, doc_so_vn
@@ -190,6 +190,7 @@ def doc_qd_ho(con, ma_ho: int) -> list:
 def ghi_qd_ho(con, qd_id: int, ma_ho: int, gia_tri: dict, ghi_nhat_ky: bool = True, lan: int | None = None) -> None:
     """Thêm hộ vào quyết định hoặc sửa dòng đã có: chỉ ghi các trường có trong gia_tri. lan (1.0.05): quyết định phê duyệt lần
     phương án thứ mấy của hộ (None = lần chưa duyệt sớm nhất); lần đó khóa bảo vệ."""
+    kiem_ho_nhan_viec(con, ma_ho)
     gt = {}
     for k, v in gia_tri.items():
         if k not in TRUONG_QD_HO:
@@ -235,6 +236,7 @@ def _lan_cua_qd_ho(con, qd_id: int, ma_ho: int) -> int:
 
 def bo_ho_khoi_qd(con, qd_id: int, ma_ho: int) -> None:
     from . import lan_pa
+    kiem_ho_nhan_viec(con, ma_ho)
     with csdl.giao_dich(con):
         lan = _lan_cua_qd_ho(con, qd_id, ma_ho)
         con.execute('DELETE FROM qd_ho WHERE qd_id = ? AND ma_ho = ?', (qd_id, ma_ho))
@@ -249,6 +251,7 @@ def them_ho_theo_pa(con, qd_id: int, ds_ma: list, lan: int | None = None) -> int
     lần phương án được phê duyệt (hộ không có lần đó / lần đó đã có quyết định khác: bỏ qua hộ). Trả số hộ đã thêm."""
     from . import lan_pa
     from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_chenh_lech_lan, tinh_pa
+    kiem_ds_ho_nhan_viec(con, ds_ma)
     bc = BoiCanh.tu(con)
     pas = doc_tat_ca_phuong_an(con, list(ds_ma))
     nhieu = lan_pa.ho_nhieu_lan(con) if lan_pa.co_bang(con) else set()
@@ -279,6 +282,7 @@ def them_ho_theo_pa(con, qd_id: int, ds_ma: list, lan: int | None = None) -> int
 
 def bo_cac_ho_khoi_qd(con, qd_id: int, ds_ma: list) -> int:
     from . import lan_pa
+    kiem_ds_ho_nhan_viec(con, ds_ma)
     with csdl.giao_dich(con):
         for m in ds_ma:
             lan = _lan_cua_qd_ho(con, qd_id, m)
@@ -303,6 +307,7 @@ def _chi_tiet_kq(k) -> dict:
 
 def ghi_chi_tra(con, ds: list, ngay: str = '', chung_tu: str = '', theo_qd: bool = True) -> int:
     """Ghi nhận đã nhận tiền cho các cặp (qd_id, ma_ho): số tiền nhận = số tiền phê duyệt (nếu chưa nhập). Trả số dòng."""
+    kiem_ds_ho_nhan_viec(con, [ma for _, ma in ds])
     n = 0
     with csdl.giao_dich(con):
         for qd_id, ma in ds:
@@ -367,6 +372,7 @@ def ghi_ban_giao(con, ds_ma_ho: list, gia_tri: dict) -> int:
         gt[k] = _chuan(k, v)
     if not gt or not ds_ma_ho:
         return 0
+    kiem_ds_ho_nhan_viec(con, ds_ma_ho)
     if gt.get('da_ban_giao') == 1:
         gt.setdefault('ly_do_ban_giao', '')
     with csdl.giao_dich(con):

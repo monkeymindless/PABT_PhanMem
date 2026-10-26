@@ -261,7 +261,27 @@ def kiem_tra(hs: dict) -> list:
                 v = cs.get(k)
                 if v is not None and (not isinstance(v, list) or not all(isinstance(x, str) and x.strip() for x in v)):
                     loi.append(f'chinh_sach_ho_tro.{k}: danh sách mã chính sách (vd ["CS1", "CS2"]).')
+            mk = cs.get('muc_khau_vuot')
+            if mk is not None and (not isinstance(mk, dict) or not all(
+                    isinstance(k, str) and k.strip() and _so_khong_am(v) for k, v in mk.items())):
+                loi.append('chinh_sach_ho_tro.muc_khau_vuot: {mã thuê nhà: số tiền mỗi khẩu vượt / tháng >= 0} '
+                           '(vd {"HT_THUE_NHA": 600000}).')
     return loi
+
+
+def _so_khong_am(v) -> bool:
+    """Số tiền >= 0: số (không phải True / False) hoặc chuỗi số kiểu Việt Nam ("600.000")."""
+    if isinstance(v, bool):
+        return False
+    if isinstance(v, (int, float)):
+        return v >= 0
+    if isinstance(v, str):
+        try:
+            from .tien import doc_so_vn
+            return doc_so_vn(v) >= 0
+        except (ValueError, ArithmeticError):
+            return False
+    return False
 
 
 def kiem_tra_file(p) -> dict:

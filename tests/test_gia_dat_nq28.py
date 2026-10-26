@@ -29,6 +29,25 @@ class TestBangGia(unittest.TestCase):
             os.environ['PABT_THU_MUC_MAY'] = self._cu
         self._td.cleanup()
 
+    def test_nho_giay_va_ghi_thay_co_hieu_luc_ngay(self):
+        """1.0.31: _da_doc nhớ NHO_GIAY giây (không stat file mỗi lần tra); ghi_thay / xoa_thay có hiệu lực ngay."""
+        from unittest import mock
+        nq._quen()
+        goc = nq._nguon
+        dem = []
+        with mock.patch.object(nq, '_nguon', lambda: dem.append(1) or goc()):
+            for _ in range(50):
+                nq.tat_ca()
+                nq.dang_thay()
+                nq.tim('Trị An', 'duong')
+        self.assertEqual(len(dem), 1)
+        self.assertFalse(nq.dang_thay())
+        nq.ghi_thay([dict(nq.tat_ca()[0], xa='Xã Thử')], 'Bảng thử')
+        self.assertTrue(nq.dang_thay())
+        self.assertEqual(nq.ds_xa(), ['Xã Thử'])
+        self.assertTrue(nq.xoa_thay())
+        self.assertFalse(nq.dang_thay())
+
     def test_du_lieu_day_du(self):
         ds = nq.tat_ca()
         self.assertEqual(nq.ds_xa(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều'])

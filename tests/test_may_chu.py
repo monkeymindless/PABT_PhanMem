@@ -387,6 +387,50 @@ class TestChiaViecTheoHo(_Nen):
         finally:
             con.close()
 
+    def test_khoa_moi_lenh_ghi_theo_ho(self):
+        """1.0.31: mọi lệnh ghi theo hộ (xóa / gộp hộ, chuyển thửa, lần PA, quyết định, chi trả, bàn giao, niêm yết, vận động,
+        trạng thái, đợt, số PA, hồ sơ đính kèm) chặn hộ không nhận trên bản offline theo hộ; hộ đã nhận làm bình thường."""
+        from pabt import du_thao, ho_so, ho_so_scan, lan_pa, lap_pa, quan_ly, theo_doi, van_dong
+        bs = may_chu.lay_ve_theo_ho(self.f, [1, 2], self.qt)
+        con = csdl.mo(bs)
+        con._ho_nhan_viec = frozenset({1, 2})
+        try:
+            thua_3 = con.execute('SELECT ma_thua FROM thua WHERE ma_ho = 3').fetchone()[0]
+            thua_2 = con.execute('SELECT ma_thua FROM thua WHERE ma_ho = 2').fetchone()[0]
+            qd = theo_doi.luu_qd(con, None, '12/QĐ-UBND', '01/10/2026')
+            chan = [
+                lambda: ho_so.xoa_nhieu_ho(con, [3]),
+                lambda: ho_so.gop_ho(con, 1, 3),
+                lambda: ho_so.chuyen_thua(con, thua_3, 1),
+                lambda: ho_so.chuyen_thua(con, thua_2, 3),
+                lambda: lan_pa.tao_lan_moi(con, 3),
+                lambda: lan_pa.sua_lan(con, 3, 1, ten='Đổi'),
+                lambda: theo_doi.ghi_ban_giao(con, [1, 3], {'da_ban_giao': 0}),
+                lambda: theo_doi.ghi_qd_ho(con, qd, 3, {}),
+                lambda: theo_doi.them_ho_theo_pa(con, qd, [3]),
+                lambda: theo_doi.ghi_chi_tra(con, [(qd, 3)], '02/10/2026'),
+                lambda: du_thao.ghi_phap_ly(con, 3, 1, '', ''),
+                lambda: du_thao.ghi_danh_dau(con, {3: True}),
+                lambda: van_dong.ghi_buoi(con, 3, next(iter(van_dong.VIEC)), '02/10/2026'),
+                lambda: quan_ly.gan_dot(con, [3], None),
+                lambda: quan_ly.dat_so_pa(con, [(3, '01', '')]),
+                lambda: ho_so_scan.them_file(con, 3, [str(bs)]),
+            ]
+            for i, f in enumerate(chan):
+                with self.subTest(i=i), self.assertRaises(lap_pa.LoiNhap) as e:
+                    f()
+                self.assertIn('không nằm trong danh sách nhận việc', str(e.exception))
+            self.assertEqual(con.execute('SELECT COUNT(*) FROM ho').fetchone()[0], 6)      # không ghi gì
+            # hộ đã nhận: bình thường
+            self.assertIn('Đã chuyển thửa', ho_so.chuyen_thua(con, thua_2, 1))
+            self.assertEqual(lan_pa.tao_lan_moi(con, 1), 2)
+            self.assertEqual(theo_doi.ghi_ban_giao(con, [1, 2], {'da_ban_giao': 0}), 2)
+            self.assertEqual(theo_doi.them_ho_theo_pa(con, qd, [1, 2]), 2)
+            self.assertEqual(du_thao.ghi_danh_dau(con, {1: True, 3: False}), (1, 0))     # hộ 3 không đổi: không chặn
+            self.assertIn('Đã xóa hộ', ho_so.xoa_nhieu_ho(con, [2]))
+        finally:
+            con.close()
+
     def test_cua_so_chinh_che_do_nhan_viec(self):
         if not CO_QT:
             self.skipTest('không có Qt')

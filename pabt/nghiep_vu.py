@@ -24,13 +24,14 @@ MA_TDC = ('CS11', 'CS12', 'CS13')               # tái định cư: là điều 
 # thuê nhà chờ TĐC / tự lo chỗ ở: mức cơ bản (hộ đến N nhân khẩu, đồng/tháng) + mỗi nhân khẩu vượt (đồng/khẩu/tháng)
 MA_THEO_NK = {'CS17': ('THUENHA_XA', 'THUENHA_NK_XA'), 'CS18': ('THUENHA_PHUONG', 'THUENHA_NK_PHUONG'),
               'CS23': ('THUENHA_XA', 'THUENHA_NK_XA'), 'CS24': ('THUENHA_PHUONG', 'THUENHA_NK_PHUONG')}
+MA_DAO_TAO = ('CS9', 'CS10')                   # hỗ trợ đào tạo, chuyển đổi nghề và tìm kiếm việc làm
 NK_CO_BAN = 4                                   # QĐ 42/2025: mức cơ bản cho hộ đến 4 nhân khẩu, cộng thêm từ khẩu thứ 5
-_TAP_MA: list = [None, None]                    # [hồ sơ địa phương đã đọc (đối tượng dia_phuong.doc()), (ổn định, theo NK, TĐC)]
+_TAP_MA: list = [None, None]                    # [hồ sơ địa phương đã đọc (đối tượng dia_phuong.doc()), (ổn định, theo NK, TĐC, đào tạo)]
 
 
 def _tap_ma() -> tuple:
-    """(mã ổn định đời sống, mã thuê nhà / tự lo chỗ ở, mã tái định cư) = mã chuẩn (Đồng Nai, QĐ 42/2025) HỢP với mã khai báo thêm ở
-    hồ sơ địa phương chinh_sach_ho_tro.ma_on_dinh / ma_theo_nk / ma_tdc (bộ đơn giá tỉnh khác). Mã ổn định / theo nhân khẩu KHÔNG BAO
+    """(mã ổn định đời sống, mã thuê nhà / tự lo chỗ ở, mã tái định cư, mã đào tạo) = mã chuẩn (Đồng Nai, QĐ 42/2025) HỢP với mã khai
+    báo thêm ở hồ sơ địa phương chinh_sach_ho_tro.ma_on_dinh / ma_theo_nk / ma_tdc / ma_dao_tao (bộ đơn giá tỉnh khác). Mã ổn định / theo nhân khẩu KHÔNG BAO
     GIỜ là tái định cư (ưu tiên mã; hồ sơ ghi trùng thì bỏ khỏi tập TĐC). Nhớ theo đối tượng hồ sơ (dia_phuong.doc đổi khi nạp lại)."""
     from . import dia_phuong
     hs = dia_phuong.doc()
@@ -43,8 +44,9 @@ def _tap_ma() -> tuple:
             return tuple(str(x).strip() for x in v if str(x).strip()) if isinstance(v, list) else ()
         od = tuple(dict.fromkeys(MA_ON_DINH + them('ma_on_dinh')))
         nk = tuple(x for x in dict.fromkeys(tuple(MA_THEO_NK) + them('ma_theo_nk')) if x not in od)
-        tdc = tuple(x for x in dict.fromkeys(MA_TDC + them('ma_tdc')) if x not in od and x not in nk)
-        _TAP_MA[:] = [hs, (od, nk, tdc)]
+        dt = tuple(x for x in dict.fromkeys(MA_DAO_TAO + them('ma_dao_tao')) if x not in od)
+        tdc = tuple(x for x in dict.fromkeys(MA_TDC + them('ma_tdc')) if x not in od and x not in nk and x not in dt)
+        _TAP_MA[:] = [hs, (od, nk, tdc, dt)]
     return _TAP_MA[1]
 
 
@@ -60,12 +62,34 @@ def tap_ma_tdc() -> tuple:
     return _tap_ma()[2]
 
 
+def tap_ma_dao_tao() -> tuple:
+    return _tap_ma()[3]
+
+
+def _muc_khau_vuot_tinh_khac(ma: str):
+    """Mức cộng mỗi khẩu vượt ngưỡng (đồng/khẩu/tháng) của mã thuê nhà / tự lo chỗ ở tỉnh khác: hồ sơ địa phương
+    chinh_sach_ho_tro.muc_khau_vuot {mã: số tiền} (tùy chọn; không khai báo = 0)."""
+    from . import dia_phuong
+    ch = dia_phuong.lay('chinh_sach_ho_tro')
+    bang = ch.get('muc_khau_vuot') if isinstance(ch, dict) else None
+    if not isinstance(bang, dict) or ma not in bang:
+        return KHONG
+    v = bang.get(ma)
+    try:
+        if isinstance(v, str):                       # "600.000" kiểu Việt Nam
+            from .tien import doc_so_vn
+            return doc_so_vn(v) if v.strip() else KHONG
+        return D(str(v or 0))
+    except (ValueError, ArithmeticError):
+        return KHONG
+
+
 def don_gia_theo_nhan_khau(bc, ma: str, nhan_khau, nguong: int | None = None) -> tuple:
     """Đơn giá một tháng (gộp một dòng) của khoản thuê nhà / tự lo chỗ ở theo số nhân khẩu:
     (đơn giá, mô tả). Hộ đến `nguong` khẩu: mức cơ bản; vượt: cơ bản + số khẩu vượt × mức mỗi khẩu."""
     co_ban_ma, them_ma = MA_THEO_NK.get(ma, (None, None))    # mã tỉnh khác (hồ sơ địa phương): mức cơ bản = đơn giá danh mục
     co_ban = bc.so_ts(co_ban_ma) if co_ban_ma else KHONG
-    them = bc.so_ts(them_ma) if them_ma else KHONG
+    them = bc.so_ts(them_ma) if them_ma else _muc_khau_vuot_tinh_khac(ma)
     if not co_ban:
         co_ban = D((bc.hotro.get(ma) or {}).get('don_gia') or 0)
     n = nguong or NK_CO_BAN

@@ -14,11 +14,10 @@ from __future__ import annotations
 
 import re
 
-from .nghiep_vu import (MA_ON_DINH, MA_TDC, MA_THEO_NK, NK_CO_BAN, NGUON_DM, DongKhoan, he_so,  # noqa: F401 - tap_ma_* xuất lại
-                        tap_ma_on_dinh, tap_ma_tdc, tap_ma_theo_nk)
+from .nghiep_vu import (MA_DAO_TAO, MA_ON_DINH, MA_TDC, MA_THEO_NK, NK_CO_BAN, NGUON_DM, DongKhoan,  # noqa: F401 - xuất lại
+                        _muc_khau_vuot_tinh_khac, he_so, tap_ma_dao_tao, tap_ma_on_dinh, tap_ma_tdc, tap_ma_theo_nk)
 from .tien import D, lam_tron, so_vn
 
-MA_DAO_TAO = ('CS9', 'CS10')
 # chính sách không có trong bộ đơn giá, người dùng nhập số tiền (tên theo câu chữ quy định)
 CHINH_SACH_KHAC = ['Hỗ trợ học phí', 'Hỗ trợ y tế', 'Hỗ trợ khác']
 
@@ -39,15 +38,6 @@ def loai_theo_ten(ten: str) -> str:
     if 'tai dinh cu' in t:
         return 'tdc'
     return ''
-
-
-def tap_ma_dao_tao() -> tuple:
-    """Mã hỗ trợ đào tạo, chuyển đổi nghề: chuẩn (CS9, CS10) hợp mã khai báo thêm ở hồ sơ chinh_sach_ho_tro.ma_dao_tao."""
-    from . import dia_phuong
-    ch = dia_phuong.lay('chinh_sach_ho_tro') or {}
-    v = ch.get('ma_dao_tao') if isinstance(ch, dict) else None
-    them = tuple(str(x).strip() for x in v if str(x).strip()) if isinstance(v, list) else ()
-    return tuple(dict.fromkeys(MA_DAO_TAO + them))
 
 
 def loai(ma: str, ten: str = '') -> str:
@@ -145,10 +135,13 @@ def dong_dao_tao(m, mo_ta: str, dien_tich, don_gia, ty_le) -> DongKhoan:
 
 # ---------------------------------------------------------------- thuê nhà, tự lo chỗ ở
 def gia_thue_nha(bc, ma: str) -> tuple:
-    """(mức hộ đến N khẩu / tháng, mức mỗi khẩu tăng thêm / tháng, N)."""
-    co_ban_ma, them_ma = MA_THEO_NK[ma]
-    co_ban = bc.so_ts(co_ban_ma) or D((bc.hotro.get(ma) or {}).get('don_gia') or 0)
-    return co_ban, bc.so_ts(them_ma), getattr(bc, 'nguong_nk', NK_CO_BAN) or NK_CO_BAN
+    """(mức hộ đến N khẩu / tháng, mức mỗi khẩu tăng thêm / tháng, N). Mã thuê nhà tỉnh khác (hồ sơ địa phương
+    chinh_sach_ho_tro.ma_theo_nk): mức cơ bản = đơn giá danh mục, mức khẩu vượt = chinh_sach_ho_tro.muc_khau_vuot (1.0.31 - trước
+    đây KeyError)."""
+    co_ban_ma, them_ma = MA_THEO_NK.get(ma, (None, None))
+    co_ban = (bc.so_ts(co_ban_ma) if co_ban_ma else D(0)) or D((bc.hotro.get(ma) or {}).get('don_gia') or 0)
+    them = bc.so_ts(them_ma) if them_ma else _muc_khau_vuot_tinh_khac(ma)
+    return co_ban, them, getattr(bc, 'nguong_nk', NK_CO_BAN) or NK_CO_BAN
 
 
 def cach_tinh_thue_nha(nk, thang, co_ban, them, nguong) -> str:

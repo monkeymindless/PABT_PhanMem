@@ -43,6 +43,17 @@ def kiem_ho_nhan_viec(con, ma_ho) -> None:
                       'Bản offline theo hộ chỉ gộp các hộ đã nhận: hộ thêm mới ở đây sẽ không lên máy chủ. Thêm hộ trên máy chủ.')
 
 
+def kiem_ds_ho_nhan_viec(con, ds_ma_ho) -> None:
+    """Chặn thao tác ghi hàng loạt nếu trong ds_ma_ho có hộ không thuộc danh sách nhận việc của bản offline theo hộ."""
+    ds = ho_nhan_viec(con)
+    if ds is None:
+        return
+    ngoai = [int(m) for m in (ds_ma_ho or ()) if m is not None and int(m) not in ds]
+    if ngoai:
+        raise LoiNhap(f'Có {len(ngoai)} hộ (mã {", ".join(map(str, ngoai[:10]))}) không nằm trong danh sách nhận việc của bạn: '
+                      'không thực hiện được trên bản offline theo hộ.')
+
+
 def bo_dau(s) -> str:
     return _bo_dau(str(s or ''))
 

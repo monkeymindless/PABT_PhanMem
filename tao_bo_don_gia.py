@@ -91,10 +91,11 @@ def bo_sung(file, phien_ban: str = '') -> dict:
 def chuan_hoa(file, phien_ban: str = '') -> dict:
     """0.9.69 (người dùng 12/10/2026): mã TS / CT / VN / CS (ma_tai_san - bỏ dòng HT / TH trùng của dm_taisan), bỏ quy ước giá
     tương đương gắn sẵn (quy ước tùy biến từng máy / dự án ở Đơn giá đặc biệt). csdl.mo (ghi) nâng lược đồ lên phiên bản mới."""
-    from pabt import ma_tai_san
+    from pabt import ma_tai_san, ten_cay_lam_nghiep
     con = csdl.mo(file)
     try:
         kq = ma_tai_san.chuyen_csdl(con)               # đã nâng cấp lúc mở thì không đổi thêm
+        kq['ten_khac'] = ten_cay_lam_nghiep.ap_ten_khac(con, ghi_nhat_ky=False)    # 26/10/2026: tên khác cây lâm nghiệp (Phụ lục VI QĐ 48)
         with con, csdl.mo_khoa_danh_muc(con):
             kq['bo_quy_uoc'] = con.execute('DELETE FROM quy_uoc').rowcount
             if phien_ban:

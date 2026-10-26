@@ -69,6 +69,58 @@ class TestMaChinhSach(_HoSoMay):
             dia_phuong.dat_muc_may(('chinh_sach_ho_tro',), dict(ma_on_dinh='OD01'))
 
 
+class TestThueNhaTinhKhac(_HoSoMay):
+    """1.0.31: mã thuê nhà / tự lo chỗ ở của tỉnh khác (chinh_sach_ho_tro.ma_theo_nk) - trước đây gia_thue_nha KeyError; mức cộng
+    mỗi khẩu vượt khai báo ở chinh_sach_ho_tro.muc_khau_vuot. Mã, số tiền GIẢ LẬP."""
+
+    def setUp(self):
+        super().setUp()
+        dia_phuong.dat_muc_may(('chinh_sach_ho_tro',), dict(ma_theo_nk=['HT_THUE_NHA'],
+                                                            muc_khau_vuot={'HT_THUE_NHA': 600000}))
+
+    def test_gia_thue_nha_khong_keyerror(self):
+        from types import SimpleNamespace
+        D = nghiep_vu.D
+        bc = SimpleNamespace(so_ts=lambda ma: nghiep_vu.KHONG, hotro={'HT_THUE_NHA': {'don_gia': '3000000'}}, nguong_nk=4)
+        self.assertEqual(chinh_sach.loai('HT_THUE_NHA'), 'tn')
+        self.assertEqual(chinh_sach.gia_thue_nha(bc, 'HT_THUE_NHA'), (D(3000000), D(600000), 4))
+        m = SimpleNamespace(ma='HT_THUE_NHA', ten='Hỗ trợ thuê nhà (tỉnh khác)', can_cu='')
+        d = chinh_sach.dong_thue_nha(m, bc, 6, 6)
+        self.assertEqual(d.don_gia, D(3000000) + 2 * D(600000))
+        self.assertIn('2 nhân khẩu tăng thêm', d.cach_tinh)
+        chinh_sach.tinh_lai_thue_nha(d, bc, 4)
+        self.assertEqual(d.don_gia, D(3000000))
+        dg, _ = nghiep_vu.don_gia_theo_nhan_khau(bc, 'HT_THUE_NHA', 5, 4)
+        self.assertEqual(dg, D(3600000))
+        self.assertEqual(chinh_sach.gia_thue_nha(bc, 'MA_LA')[:2], (nghiep_vu.KHONG, nghiep_vu.KHONG))   # mã lạ: 0, không lỗi
+
+    def test_bo_soan_doi_nhan_khau(self):
+        from types import SimpleNamespace
+        from pabt import csdl, lap_pa
+        from tests.test_toc_do import _du_an
+        con = csdl.mo(_du_an(Path(self.td.name), 2))
+        try:
+            with con, csdl.mo_khoa_danh_muc(con):
+                con.execute("INSERT INTO dm_hotro (ma, ten, dvt, don_gia) VALUES ('HT_THUE_NHA', 'Hỗ trợ thuê nhà', 'Tháng', "
+                            "'3000000')")
+            bo = lap_pa.BoSoan(con, 1)
+            m = SimpleNamespace(ma='HT_THUE_NHA', ten='Hỗ trợ thuê nhà', can_cu='')
+            bo.them_dong_ho_tro([chinh_sach.dong_thue_nha(m, bo.bc, 4, 6)])
+            bo.dat_nhan_khau('7')
+            d = bo.pa.dong_ho_tro('HT_THUE_NHA')[0]
+            self.assertEqual(d.don_gia, nghiep_vu.D(3000000 + 3 * 600000))
+            bo.luu()
+        finally:
+            con.close()
+
+    def test_muc_khau_vuot_sai_kieu_bi_chan(self):
+        for sai in ('600000', {'HT_THUE_NHA': -1}, {'HT_THUE_NHA': 'abc'}, {'HT_THUE_NHA': True}):
+            with self.subTest(sai=sai), self.assertRaises(dia_phuong.LoiHoSo):
+                dia_phuong.dat_muc_may(('chinh_sach_ho_tro', 'muc_khau_vuot'), sai)
+        dia_phuong.dat_muc_may(('chinh_sach_ho_tro', 'muc_khau_vuot'), {'HT_THUE_NHA': '650.000'})   # chữ kiểu Việt Nam
+        self.assertEqual(nghiep_vu._muc_khau_vuot_tinh_khac('HT_THUE_NHA'), nghiep_vu.D(650000))
+
+
 class TestViTri(_HoSoMay):
     def test_dong_nai_giu_nguyen(self):
         self.assertTrue(gia_dat_nq28.la_mo_hinh_mac_dinh())

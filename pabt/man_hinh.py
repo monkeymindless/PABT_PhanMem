@@ -1561,7 +1561,10 @@ class CuaSoLapPA(QDialog):
         self.cb_lan.setToolTip(self.cb_lan.currentText())
         x = next((y for y in ds if y.lan == self.bo.lan), None)
         self.b_mo_khoa.setVisible(bool(self.bo.khoa))
-        self.b_xoa_lan.setEnabled(self.bo.lan > 1 and not (x and x.qd))
+        khong_nhan = self._ho_khong_nhan()
+        self.b_xoa_lan.setEnabled(self.bo.lan > 1 and not (x and x.qd) and not khong_nhan)
+        for b in (self.b_lan_moi, self.b_dieu_chinh, self.b_sua_lan, self.b_mo_khoa):
+            b.setEnabled(not khong_nhan)       # 1.0.31: bản offline theo hộ - hộ không nhận việc chỉ xem
         if x is not None:
             # 22/10/2026 (nâng cấp giao diện): thẻ nhỏ gọn, KHÔNG kèm danh sách quyết định (chữ dài đẩy ô chọn lần / nút bị cắt)
             # - số, ngày quyết định ở chú thích; màu: đã duyệt chỉ xem xanh lá, đang mở khóa vàng, đang lập lam
@@ -1595,7 +1598,7 @@ class CuaSoLapPA(QDialog):
 
     def _ap_khoa(self) -> None:
         """Lần đang khóa: bảng mục chỉ xem, tắt ô / nút nhập; lần đang lập: như cũ."""
-        k = bool(self.bo.khoa)
+        k = bool(self.bo.khoa) or self._ho_khong_nhan()
         from PySide6.QtWidgets import QAbstractButton, QAbstractSpinBox
         for bm in self.bang.values():
             b = bm._bang                               # không đọc bm.bang: thuộc tính đó vẽ thẻ chưa hiện (vẽ lười)
@@ -1610,6 +1613,12 @@ class CuaSoLapPA(QDialog):
 
     def _ap_trang_thai_khoa(self) -> None:
         self._ap_khoa()
+
+    def _ho_khong_nhan(self) -> bool:
+        """Bản offline theo hộ (máy chủ LAN) mà hộ đang mở không thuộc danh sách nhận việc: chỉ xem (1.0.31)."""
+        from .lap_pa import ho_nhan_viec
+        ds = ho_nhan_viec(self.bo.con)
+        return ds is not None and self.bo.ma_ho is not None and int(self.bo.ma_ho) not in ds
 
     def chuyen_lan(self, lan) -> bool:
         return self.chon_lan(lan)
@@ -1861,7 +1870,8 @@ class CuaSoLapPA(QDialog):
         h = self.bo.pa.ho
         # hộ chưa lưu lần nào: Lưu vẫn bấm được - xác nhận đã lập phương án dù không có dòng nào (mọi mục 0 đồng)
         chua_lap = not str(h.trang_thai or '').startswith(DA_LAP_LUU)
-        self.b_luu.setEnabled((thay or self.ho_so.co_thay_doi() or chua_lap) and not (self.bo.khoa and not self.ho_so.co_thay_doi()))
+        self.b_luu.setEnabled((thay or self.ho_so.co_thay_doi() or chua_lap) and not (self.bo.khoa and not self.ho_so.co_thay_doi())
+                              and not self._ho_khong_nhan())
         self.b_bo.setEnabled(thay)
         if hasattr(self, 'lb_lan'):
             self._dat_chu_lan()

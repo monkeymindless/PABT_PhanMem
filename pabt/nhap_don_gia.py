@@ -846,6 +846,7 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
         hien[NHOM_VN] = [x for x in hien[3] if str(x['ma']).upper().startswith('VN') or la_vat_nuoi(x['phan_loai'])]
     finally:
         con.close()
+    from .ten_cay_lam_nghiep import bo_ten_khac
     bang = {}
     for n, ds_ in hien.items():
         theo_dvt, gon = {}, {}
@@ -853,7 +854,10 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
             theo_dvt.setdefault(bo_dau(x['dvt'] or ''), {})[_khoa(x['ten'])] = x
             gon.setdefault(_khoa_gon(x['ten']), []).append(x)
         gon = {k: v[0] for k, v in gon.items() if len(v) == 1}       # bỏ ngoặc mà trùng nhiều mục: không dùng
-        bang[n] = ({x['ma'].upper(): x for x in ds_}, {_khoa(x['ten']): x for x in ds_}, theo_dvt, gon)
+        theo_ten = {_khoa(x['ten']): x for x in ds_}
+        for x in ds_:                   # 26/10/2026: tên cây lâm nghiệp có tên khác ("Bách xanh (Tùng hương) (d …)") vẫn khớp tên văn bản
+            theo_ten.setdefault(_khoa(bo_ten_khac(x['ten'])), x)
+        bang[n] = ({x['ma'].upper(): x for x in ds_}, theo_ten, theo_dvt, gon)
     for m in ds:
         n = nhom or m.nhom or 3
         theo_ma, theo_ten, theo_dvt, gon = bang[n]

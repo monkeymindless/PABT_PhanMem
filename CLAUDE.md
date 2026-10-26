@@ -2243,7 +2243,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - KHÓA HỘ KHÔNG NHẬN: `app.mo` gắn `con._ho_nhan_viec` (frozenset / None) + `self.nhan_viec`; `lap_pa.kiem_ho_nhan_viec(con, ma_ho)` (LoiNhap
     `TB_HO_KHONG_NHAN`; ma_ho None = hộ mới cũng chặn) gọi đầu `BoSoan.luu` và `ho_so.luu_ho`; `mo_lap_pa(cho=True)` cảnh báo trước khi mở.
     Danh sách hộ: `w_nhan_viec` (nhãn "Chế độ Nhận việc theo hộ (Đang nhận N hộ)" + `o_chi_ho_toi`) ẩn với file thường; `LocHo.chi_ma`
-    (`dat(chi_ma=)`, False = giữ nguyên). Các lệnh ghi khác (xóa hộ, quyết định, chi trả…) CHƯA chặn theo hộ nhận.
+    (`dat(chi_ma=)`, False = giữ nguyên). Từ 1.0.31 mọi lệnh ghi theo hộ đều chặn (xem mục 1.0.31).
   - ĐA TỈNH: `nghiep_vu.tap_ma_on_dinh / tap_ma_theo_nk / tap_ma_tdc` (mã chuẩn HỢP mã hồ sơ `chinh_sach_ho_tro.*`; mã ổn định / theo nhân khẩu bị
     loại khỏi TĐC; nhớ theo đối tượng `dia_phuong.doc()`) - định nghĩa ở nghiep_vu (chinh_sach nhập nghiep_vu: tránh vòng), `chinh_sach` xuất
     lại + `tap_ma_dao_tao`; `loai()` đổi từ THAY sang HỢP. Dùng ở nghiep_vu (nhân khẩu, gợi ý, đề xuất, kiểm tra), lap_pa (nhân khẩu, chặn TĐC
@@ -2262,6 +2262,22 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - `pabt/in_excel.py` tách từ in_an (LoiIn, _VBS, co_excel, CHO_MOI_FILE, CHO_KHOI_DONG, _doc_luong, _tat_excel_tu_dong, chay_excel, mo_file) -
     in_an nhập lại (cùng đối tượng). Patch `in_an._tat_excel_tu_dong` vẫn tác dụng với van_ban_trinh (nhập lúc gọi) nhưng KHÔNG với
     in_excel.chay_excel - kiểm thử Excel patch ở in_excel.
+- 1.0.31 (người dùng 26/10/2026, chỉ thị Giai đoạn 3; test `tests/test_may_chu.TestChiaViecTheoHo.test_khoa_moi_lenh_ghi_theo_ho`,
+  `tests/test_dia_phuong.TestThueNhaTinhKhac`, `tests/test_gia_dat_nq28.test_nho_giay_va_ghi_thay_co_hieu_luc_ngay`):
+  - KHÓA GHI THEO HỘ NHẬN VIỆC (bản offline theo hộ): `lap_pa.kiem_ds_ho_nhan_viec(con, ds_ma_ho)` (bỏ qua None; LoiNhap "Có N hộ (mã …)…") +
+    `kiem_ho_nhan_viec` ở ĐẦU: ho_so.xoa_nhieu_ho / gop_ho / chuyen_thua (cả hộ cũ lẫn hộ mới của thửa); lan_pa (`_kiem_ho`, nhập trong hàm -
+    tránh vòng) tao_lan_moi / tao_lan_dieu_chinh / sua_lan / mo_khoa_lan (mo_khoa_sua gọi lại) / khoa_lai / xoa_lan; theo_doi ghi_qd_ho /
+    bo_ho_khoi_qd / them_ho_theo_pa / bo_cac_ho_khoi_qd / ghi_chi_tra (mã hộ lấy thẳng từ cặp (qd_id, ma_ho)) / ghi_ban_giao; du_thao ghi_phap_ly /
+    ghi_y_kien (cap_nhat_y_kien, doi_y_kien_nhanh đi qua) / ghi_doi_thoai / them_thu_cong / dua_ho_vao_dot (ds None = "toàn bộ hộ đủ điều kiện"
+    -> lọc còn hộ đã nhận, không báo lỗi) / chuyen_sang_dot / ghi_danh_dau (CHỈ hộ thật sự đổi đánh dấu - hộp chọn niêm yết gửi cả dự án);
+    van_dong ghi_buoi / xoa_buoi (mã hộ của buổi); quan_ly cap_nhat_trang_thai / gan_dot / dat_so_pa; ho_so_scan them_file / bo_file.
+    CuaSoLapPA `_ho_khong_nhan()` -> `_ap_khoa` coi như khóa, `_nap_lan` tắt nút lần PA (bổ sung, điều chỉnh, sửa, mở khóa, xóa), `cap_nhat` tắt Lưu.
+  - THUÊ NHÀ TỈNH KHÁC: `chinh_sach.gia_thue_nha` dùng `MA_THEO_NK.get` (trước KeyError khi chọn / đổi nhân khẩu dòng thuê nhà mã tỉnh khác);
+    mức khẩu vượt mã tỉnh khác = hồ sơ `chinh_sach_ho_tro.muc_khau_vuot` {mã: số >= 0 hoặc chữ "600.000"} (`nghiep_vu._muc_khau_vuot_tinh_khac`,
+    `dia_phuong.kiem_tra` + `_so_khong_am`), dùng cả ở `don_gia_theo_nhan_khau`. `MA_DAO_TAO` / `tap_ma_dao_tao` chuyển sang nghiep_vu
+    (`_tap_ma` 4 tập: od, nk, tdc, dt; tdc loại cả mã đào tạo), chinh_sach xuất lại.
+  - `gia_dat_nq28._da_doc` nhớ `NHO_GIAY` 2 s theo PABT_THU_MUC_MAY (như he_so_k), `_quen()` ở cuối ghi_thay / xoa_thay; `tim` tính chuỗi tìm
+    không dấu MỘT lần mỗi dòng. Ghi bang_gia_dat.json ở nơi khác (không qua ghi_thay) phải gọi `_quen()`.
 - Sau 1.0.29 (người dùng 26/10/2026, ảnh dòng "Phú Lý, ngày 20 tháng 10 năm 2026"): địa danh đầu dòng ngày tháng của bản in = NƠI ĐƠN VỊ CÔNG TÁC,
   KHÔNG phải xã có đất của dự án. Cột `du_an.dia_danh_don_vi` (KHÔNG đổi PHIEN_BAN_CSDL: schema.sql file mới; `csdl.dam_bao_cot_du_an` /
   `COT_DU_AN_THEM` thêm ở csdl.mo khi file có hộ và ở `lap_pa.luu_du_an`; `doc_du_an` file cũ trả ''), trong `TRUONG_DU_AN` và
@@ -2270,6 +2286,15 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   chính là lỗi). `_thong_tin_du_an` có khóa `dia_danh_ngay`; dùng ở in_word (phương án chi tiết), `in_an.chuan_dong_ngay(ws, dia_danh=)`
   (bảng tổng hợp), tờ trình mặc định `{dia_danh_ngay}` (DS_CHO_TRONG; mẫu riêng của người dùng còn {ten_dia_ban} giữ nguyên). Khái toán
   `du_toan._noi_lap`: hồ sơ -> xã của dự toán -> trống. Bỏ "Trị An" ghi cứng (`in_an.DIA_DANH_NGAY_MAC_DINH` = ''). Test `TestDiaDanhNgay`.
+- TÊN KHÁC CÂY LÂM NGHIỆP (người dùng 26/10/2026, ảnh Bảng 1 "Nhóm loài cây quý hiếm"): `pabt/ten_cay_lam_nghiep.py` - `TEN_KHAC` {tên Việt Nam:
+  (tên khác)} 176 loài, CHÉP TAY TỪ ẢNH Phụ lục VI QĐ 48/2025/QĐ-UBND (sửa đổi QĐ 66/2025), bản "VBHN cây trồng.pdf" xác thực 14/10/2026
+  (E:\DU LIEU DRIVE\…\1. VAN BAN PHAP LUAT\… - bản quét; OCR Tesseract đọc cột tên khác SAI nhiều - đừng dựng lại bằng OCR). `them_ten_khac`
+  "Bách xanh (d >6-9 cm)" -> "Bách xanh (Tùng hương) (d >6-9 cm)" (chỉ dòng có "(d …)"; khoảng đường kính giữ dạng cũ), `bo_ten_khac` ngược
+  lại, `ap_ten_khac(con)` (dm_taisan nhóm 3, mở khóa danh mục, nhật ký; ct_khoan đã lập KHÔNG đổi). Gọi ở: `tao_bo_don_gia.chuan_hoa` (bộ
+  đóng gói đã áp: 2.606 dòng, nhãn phiên bản bộ giữ 2026.10.12), `don_gia._nang_cap_ban_may` (bản máy %APPDATA%), `app.mo` (danh mục dự án
+  đang có, không chỉ xem). So khớp tên cũ: `nhap_don_gia.so_khop` (theo_ten thêm khóa bo_ten_khac), `nhap_chi_tiet._KhopDanhMuc`. Bộ có 3 loài
+  văn bản không khớp: Co kiêng (không có), Mít (bộ chỉ Mít cây ăn quả), "Gội nước.hoa to" (bộ ghi nhầm dấu chấm - them_ten_khac sửa thành
+  "Gội nước hoa to"). Tên khác viết hoa chữ đầu (văn bản có chỗ viết thường sau dấu phẩy). Test `tests/test_ten_cay_lam_nghiep.py`.
 - Phương án ĐIỀU CHỈNH khi lần gốc CHƯA phê duyệt (người dùng 26/10/2026: "kể cả không có quyết định phê duyệt vẫn lập được dự thảo phương án
   điều chỉnh" - trước báo "chưa có QĐ - sửa trực tiếp"): `lan_pa.tao_lan_dieu_chinh` bỏ chặn; gốc mặc định = lần đã duyệt muộn nhất chưa bị thay,
   không có thì lần có dòng muộn nhất chưa bị thay. Lần gốc chưa duyệt bị thay -> `khoa` (ds_lan; BoSoan.luu báo "sửa ở lần m"),

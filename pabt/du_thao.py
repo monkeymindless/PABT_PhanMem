@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import an_toan as _an_toan
-from .lap_pa import LoiNhap
+from .lap_pa import LoiNhap, ho_nhan_viec, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec
 from .tien import vn
 
 # số ngày niêm yết / đối thoại: hồ sơ địa phương (pabt_profile.json mục thoi_han.niem_yet / doi_thoai - mặc định 10 / 30)
@@ -153,6 +153,7 @@ def goi_y_du_dieu_kien(con) -> int:
 
 def ghi_phap_ly(con, ma_ho: int, du_dieu_kien: int, ma_vuong: str, ghi_chu: str) -> None:
     from . import csdl
+    kiem_ho_nhan_viec(con, ma_ho)
     ma_vuong = (ma_vuong or '').strip().upper()
     if ma_vuong and ma_vuong not in TEN_VUONG:
         raise LoiNhap('Nhóm vướng không đúng. Chọn V1 đến V5, hoặc để trống nếu hết vướng.')
@@ -236,6 +237,7 @@ def ds_de_them(con, dot_id: int, loc: str, dot_nguon: int | None = None) -> list
 def them_thu_cong(con, dot_id: int, ds_ma_ho: list) -> tuple:
     """Thêm đúng các hộ đã chọn vào đợt. Hộ đang vướng hoặc đã có trong đợt thì bỏ qua. Trả (thêm, bỏ qua)."""
     from . import csdl
+    kiem_ds_ho_nhan_viec(con, ds_ma_ho)
     them, bo = 0, 0
     gio = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with csdl.giao_dich(con):
@@ -260,6 +262,10 @@ def dua_ho_vao_dot(con, dot_id: int, ds_ma_ho=None) -> tuple:
     from . import csdl
     if ds_ma_ho is None:
         ds_ma_ho = [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho')]
+        nhan = ho_nhan_viec(con)            # bản offline theo hộ: "Thêm toàn bộ hộ đủ điều kiện" = các hộ đã nhận việc
+        if nhan is not None:
+            ds_ma_ho = [m for m in ds_ma_ho if m in nhan]
+    kiem_ds_ho_nhan_viec(con, ds_ma_ho)
     them, bo = 0, 0
     gio = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with csdl.giao_dich(con):
@@ -283,6 +289,7 @@ def ghi_y_kien(con, dot_id: int, ma_ho: int, loai: str, nhom: str, noi_dung: str
                huong: str = '', tien_chenh: str = '0', ket_qua: str = '') -> None:
     from . import csdl
     from .tien import doc_so_vn
+    kiem_ho_nhan_viec(con, ma_ho)
     if loai not in TEN_LOAI or loai == '':
         raise LoiNhap('Chọn loại ý kiến.')
     if nhom and nhom not in TEN_NHOM:
@@ -304,6 +311,7 @@ def ghi_y_kien(con, dot_id: int, ma_ho: int, loai: str, nhom: str, noi_dung: str
 
 def ghi_doi_thoai(con, dot_id: int, ma_ho: int, ngay: str, dia_diem: str, ket_luan: str, dien_bien: str = '') -> None:
     from . import csdl
+    kiem_ho_nhan_viec(con, ma_ho)
     n = ngay_iso(doc_ngay(ngay))
     lan = con.execute('SELECT COALESCE(MAX(lan), 0) + 1 FROM doi_thoai_ho WHERE dot_id = ? AND ma_ho = ?',
                       (dot_id, ma_ho)).fetchone()[0]
@@ -321,6 +329,7 @@ def chuyen_sang_dot(con, dot_id: int, ds_ma_ho: list, dot_moi: int) -> int:
     from . import csdl
     if dot_moi == dot_id:
         raise LoiNhap('Chọn một đợt khác đợt đang xem.')
+    kiem_ds_ho_nhan_viec(con, ds_ma_ho)
     gio = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     n = 0
     with csdl.giao_dich(con):
@@ -534,6 +543,7 @@ def ghi_danh_dau(con, danh_dau: dict) -> tuple:
             continue
         if bool(co) != cu:
             doi.append((1 if co else 0, m))
+    kiem_ds_ho_nhan_viec(con, [m for _, m in doi])         # chỉ hộ thật sự đổi đánh dấu (hộp chọn gửi cả dự án)
     if doi:
         with csdl.giao_dich(con):
             con.executemany('UPDATE ho SET du_dieu_kien = ? WHERE ma_ho = ?', doi)
@@ -569,6 +579,7 @@ def cap_nhat_y_kien(con, dot_id: int, ma_ho: int, **thay) -> str:
 
 def doi_y_kien_nhanh(con, dot_id: int, ma_ho: int) -> str:
     """Một chạm: chuyển ý kiến của hộ sang loại kế tiếp trong VONG_Y_KIEN. Trả loại mới."""
+    kiem_ho_nhan_viec(con, ma_ho)
     r = con.execute('SELECT loai FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_id, ma_ho)).fetchone()
     if r is None:
         raise LoiNhap('Hộ chưa nằm trong đợt dự thảo này.')
