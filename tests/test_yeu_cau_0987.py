@@ -367,14 +367,10 @@ class TestChuaBenh(CoSoMay):
 
 # ---------------------------------------------------------------- phiếu kiểm đếm thực địa
 class TestPhieuKiemDem(CoSoMay):
-    def test_xuat_html(self):
+    def test_xuat_du_lieu(self):
         from pabt import phieu_kiem_dem as pk
-        with self.con:
-            self.con.execute("UPDATE ho SET ho_ten = 'Tên </script><b>' WHERE thu_tu = 1")
-        f = pk.xuat_phieu_kiem_dem_html(self.con, self.td / 'phieu.html')
-        s = f.read_text(encoding='utf-8')
-        self.assertIn('LARC Field Mobile', s)                        # 1.0.32: ứng dụng di động thay phiếu một trang
-        self.assertEqual(s.count('</script>'), 2)                    # tên hộ có "</script>" không đóng thẻ sớm
+        f = pk.xuat_du_lieu_di_dong(self.con, self.td / 'du_lieu.json')   # 1.0.32: ứng dụng điện thoại riêng (di_dong/) thay phiếu .html
+        self.assertEqual(json.loads(f.read_text(encoding='utf-8'))['loai'], pk.LOAI_GOI_DU_LIEU)
         du = pk.du_lieu_phieu(self.con)
         self.assertEqual(len(du['ho']), self.con.execute('SELECT COUNT(*) FROM ho').fetchone()[0])
         self.assertTrue(du['goi_y'][3])
@@ -419,7 +415,7 @@ class TestPhieuKiemDem(CoSoMay):
         from pabt.man_hinh_kiem_dem import HopKiemDem
         h = HopKiemDem(None, self.con, self.p, im_lang=True)
         self.assertEqual(h.bang.rowCount(), self.con.execute('SELECT COUNT(*) FROM ho').fetchone()[0])
-        self.assertTrue(Path(h.xuat(self.td / 'p.html')).is_file())
+        self.assertTrue(Path(h.xuat_du_lieu(self.td / 'd.json')).is_file())
 
 
 # ---------------------------------------------------------------- lệnh, kiểm tra tĩnh

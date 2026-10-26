@@ -1,21 +1,16 @@
-"""Phiếu kiểm đếm thực địa không cần mạng (0.9.87; ứng dụng di động LARC Field Mobile 1.0.32).
+"""Kiểm đếm thực địa - phần máy tính (0.9.87; ứng dụng điện thoại LARC Field Mobile là dự án RIÊNG ở di_dong/, hai bên chỉ nối qua
+file .json - giao ước ở di_dong/README.md).
 
-1. xuat_phieu_kiem_dem_html: MỘT file .html (mẫu `phieu_kiem_dem.html` của gói, mở bằng trình duyệt điện thoại / máy tính bảng, không
-   cần Internet): 7 thẻ - hồ sơ & đất (thửa địa chính / lô rừng, GPS tại chỗ), nhà ở (QĐ 42), vật kiến trúc, cây trồng & vật nuôi,
-   ảnh biên bản viết tay (lưu IndexedDB, lọc dòng kẻ chấm), bản đồ (thửa của dự án + KML / KMZ nạp trên máy, GPS, chạm thửa mở hộ, tọa
-   độ VN-2000), xuất .json. Dữ liệu nhúng: hộ + thửa, danh mục có mã (nhà / vật kiến trúc / vật nuôi), tên loài cây, bản đồ thửa đổi
-   sang WGS84, tham số VN-2000 (toa_do.tham_so_datum), kinh tuyến trục, biểu tượng.
-1b. Ứng dụng cài trên điện thoại: CÙNG mẫu ở chế độ 'android' (bản .apk, bo_cai_win/dung_di_dong.py) / 'pwa' (iPhone, Thêm vào MH chính)
-   - tep_ung_dung: vỏ không chứa dữ liệu; dữ liệu dự án gửi sang bằng file .json (xuat_du_lieu_di_dong, loai "larc_field_du_lieu").
-2. nhap_ket_qua_kiem_dem: file .json -> phương án hộ (lap_pa.BoSoan) qua CÙNG đường "Dán danh sách tài sản" (khớp danh mục ->
+1. xuat_du_lieu_di_dong: file .json "larc_field_du_lieu" mở trong ứng dụng điện thoại: hộ + thửa, danh mục có mã (nhà / vật kiến trúc /
+   vật nuôi), tên loài cây, bản đồ thửa đổi sang WGS84, tham số VN-2000 (toa_do.tham_so_datum), kinh tuyến trục.
+2. nhap_ket_qua_kiem_dem: file .json kết quả -> phương án hộ (lap_pa.BoSoan) qua CÙNG đường "Dán danh sách tài sản" (khớp danh mục ->
    dòng danh mục, không khớp -> hạng mục ngoài danh mục; cây có số đo đường kính / chu vi -> quy cách; dòng mục 0 = ghi lại biên bản,
    tự phân loại). Ảnh gửi kèm -> thư mục "Anh_kiem_dem/<mã hộ>" cạnh file dự án + bảng anh_hien_trang; GPS -> ghi chú hộ. Mỗi hộ
    lưu một lần (một bước Hoàn tác), hộ đang mở chỉ xem / không tồn tại -> báo lỗi dòng.
 3. gan_anh_hien_trang: quét thư mục ảnh, gắn ảnh vào hộ theo số CCCD / họ tên không dấu / "HO<stt>" trong tên file -> bảng
    anh_hien_trang (lược đồ v16). Tên trùng nhiều hộ: không gắn, báo lại.
-Không Qt (trừ thu nhỏ biểu tượng khi có Qt - không có thì nhúng ảnh gốc)."""
+Không Qt."""
 from __future__ import annotations
-import html
 import json
 import re
 from datetime import datetime
@@ -25,11 +20,10 @@ from . import csdl
 from .lap_pa import LoiNhap, bo_dau
 
 PHIEN_BAN_PHIEU = 2                 # phiên bản file .json phiếu ghi ra (1 = phiếu 0.9.87 - vẫn nhập được)
+LOAI_GOI_DU_LIEU = 'larc_field_du_lieu'   # file dữ liệu dự án gửi sang ứng dụng điện thoại (di_dong/README.md mục 1)
 MUC_PHIEU = ((2, 'Nhà, công trình'), (3, 'Cây trồng'), (7, 'Vật nuôi'))
-MAU_PHIEU = 'phieu_kiem_dem.html'   # mẫu ứng dụng di động (tai_nguyen; gói cập nhật thay được)
 THU_MUC_ANH = 'Anh_kiem_dem'        # ảnh gửi kèm phiếu lưu ở <thư mục file dự án>/Anh_kiem_dem/<mã hộ>/
 ANH_TOI_DA = 25 * 1024 * 1024       # một ảnh gửi kèm (byte) - lớn hơn: bỏ, báo lại
-CO_BIEU_TUONG = 128                 # px biểu tượng nhúng vào phiếu
 DUOI_ANH = ('.jpg', '.jpeg', '.png', '.webp', '.bmp', '.heic', '.tif', '.tiff')
 BANG_ANH = 'anh_hien_trang'
 SQL_BANG_ANH = f'''CREATE TABLE IF NOT EXISTS {BANG_ANH} (
@@ -43,7 +37,7 @@ SQL_BANG_ANH = f'''CREATE TABLE IF NOT EXISTS {BANG_ANH} (
 )'''
 
 
-# ---------------------------------------------------------------- 1. xuất phiếu
+# ---------------------------------------------------------------- 1. dữ liệu dự án cho ứng dụng điện thoại
 def _la_nha(ten: str, phan_loai: str) -> bool:
     """Mục danh mục là nhà ở (thẻ "Nhà ở" của phiếu): tên bắt đầu bằng Nhà / Biệt thự / Gác lửng hoặc phân loại nhà ở."""
     t = bo_dau(ten or '').lower().lstrip()
@@ -62,47 +56,8 @@ def _ban_do_wgs84(con, kinh_tuyen: float) -> list:
     return ra
 
 
-def anh_bieu_tuong(co: int = CO_BIEU_TUONG, le: float = 0.0, nen: str = '') -> bytes:
-    """Biểu tượng phần mềm (png) cỡ `co` px bằng Qt (ảnh gốc ~350 KB); `le` = tỷ lệ lề mỗi bên, `nen` = màu nền (biểu tượng "maskable" của
-    PWA / Android cần nền kín, hình nằm trong vùng an toàn). Không có Qt / lỗi: ảnh gốc. Không đọc được ảnh: b''."""
-    from . import tai_nguyen
-    try:
-        goc = tai_nguyen('bieu_tuong.png').read_bytes()
-    except OSError:
-        return b''
-    try:
-        from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QRect, Qt
-        from PySide6.QtGui import QColor, QImage, QPainter
-        anh = QImage.fromData(goc)
-        if anh.isNull() or (max(anh.width(), anh.height()) <= co and not le and not nen):
-            return goc
-        ra = QImage(co, co, QImage.Format.Format_ARGB32)
-        ra.fill(QColor(nen) if nen else Qt.GlobalColor.transparent)
-        trong = max(1, round(co * (1 - 2 * le)))
-        hinh = anh.scaled(trong, trong, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        p = QPainter(ra)
-        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        p.drawImage(QRect((co - hinh.width()) // 2, (co - hinh.height()) // 2, hinh.width(), hinh.height()), hinh)
-        p.end()
-        ba = QByteArray()
-        buf = QBuffer(ba)
-        buf.open(QIODevice.OpenModeFlag.WriteOnly)
-        ok = ra.save(buf, 'PNG')
-        buf.close()
-        return bytes(ba.data()) if ok else goc
-    except Exception:                                    # noqa: BLE001 - không có Qt / lỗi thu nhỏ: ảnh gốc
-        return goc
-
-
-def _bieu_tuong_data_uri() -> str:
-    """Biểu tượng nhúng vào phiếu một file: thu về CO_BIEU_TUONG px."""
-    import base64
-    du = anh_bieu_tuong(CO_BIEU_TUONG)
-    return 'data:image/png;base64,' + base64.b64encode(du).decode('ascii') if du else ''
-
-
 def du_lieu_phieu(con) -> dict:
-    """Dữ liệu nhúng vào phiếu (ứng dụng di động): hộ + thửa, danh mục có mã, loài cây, bản đồ (WGS84), tham số VN-2000."""
+    """Phần "du_lieu" của file dữ liệu cho ứng dụng điện thoại: hộ + thửa, danh mục có mã, loài cây, bản đồ (WGS84), tham số VN-2000."""
     from . import ban_do_cad, __version__
     from .cay_trong import ten_goc
     from .toa_do import kinh_tuyen_truc, tham_so_datum
@@ -136,71 +91,16 @@ def du_lieu_phieu(con) -> dict:
                 mau_trang_thai={k: list(v) for k, v in ban_do_cad.TRANG_THAI.items()})
 
 
-def _json_trong_script(x) -> str:
-    """JSON an toàn trong <script> (tên có '</script>' không đóng thẻ)."""
-    return json.dumps(x, ensure_ascii=False).replace('</', '<\\/').replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
-
-
-def _mau_phieu() -> str:
-    from . import tai_nguyen
-    try:
-        return tai_nguyen(MAU_PHIEU).read_text(encoding='utf-8')
-    except OSError as e:
-        raise LoiNhap(f'Thiếu mẫu phiếu kiểm đếm ({MAU_PHIEU}): {e}. Cài lại phần mềm.') from None
-
-
-def _dien_mau(tieu: str, phien_ban: str, bieu_tuong: str, du_lieu_js: str, che_do: str, dau_pwa: str = '') -> str:
-    noi = _mau_phieu()
-    if che_do != 'tep':                 # vỏ ứng dụng: mã chính chạy sau khi vỏ nạp dữ liệu dự án (vo_ung_dung trong mẫu)
-        noi = noi.replace('<script id="ma_chinh">', '<script type="text/plain" id="ma_chinh">', 1)
-    return (noi.replace('@@DAU_PWA@@', dau_pwa).replace('@@CHE_DO@@', che_do).replace('@@TIEU_DE@@', tieu)
-            .replace('@@PHIEN_BAN@@', html.escape(phien_ban)).replace('@@BIEU_TUONG@@', bieu_tuong).replace('@@DU_LIEU@@', du_lieu_js))
-
-
-def _ghi_nguyen_tu(ra: Path, noi) -> Path:
+def _ghi_nguyen_tu(ra: Path, noi: str) -> Path:
     ra.parent.mkdir(parents=True, exist_ok=True)
     tam = ra.with_name(ra.name + '.tmp')
-    if isinstance(noi, bytes):
-        tam.write_bytes(noi)
-    else:
-        tam.write_text(noi, encoding='utf-8')
+    tam.write_text(noi, encoding='utf-8')
     tam.replace(ra)
     return ra
 
 
-def xuat_phieu_kiem_dem_html(con, file_ra) -> Path:
-    """Ghi file .html phiếu kiểm đếm (ứng dụng di động một file, dữ liệu dự án nhúng sẵn). Trả đường dẫn."""
-    du = du_lieu_phieu(con)
-    noi = _dien_mau(html.escape(du['du_an'] or 'Dự án'), du['phien_ban'], _bieu_tuong_data_uri(), _json_trong_script(du), 'tep')
-    return _ghi_nguyen_tu(Path(file_ra), noi)
-
-
-# ---------------------------------------------------------------- 1b. ứng dụng cài trên điện thoại (Android .apk / PWA iPhone)
-# Vỏ ứng dụng KHÔNG chứa dữ liệu (dựng một lần, cài một lần); dữ liệu từng dự án gửi sang bằng file .json "larc_field_du_lieu".
-LOAI_GOI_DU_LIEU = 'larc_field_du_lieu'
-CHE_DO_VO = ('pwa', 'android')
-BIEU_TUONG_PWA = (('icon-180.png', 180, 0.0, ''), ('icon-192.png', 192, 0.0, ''), ('icon-512.png', 512, 0.0, ''),
-                  ('icon-maskable-512.png', 512, 0.12, '#FFFFFF'))
-TEN_UNG_DUNG = 'LARC Field Mobile'
-TEN_NGAN = 'LARC Field'
-
-
-def _dau_pwa() -> str:
-    return ('<link rel="manifest" href="manifest.webmanifest"/>\n<meta name="apple-mobile-web-app-capable" content="yes"/>\n'
-            '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>\n'
-            f'<meta name="apple-mobile-web-app-title" content="{TEN_NGAN}"/>')
-
-
-def html_ung_dung(che_do: str) -> str:
-    """index.html của vỏ ứng dụng (che_do 'pwa' / 'android'): biểu tượng là file icon-180.png cạnh nó, dữ liệu mở từ file."""
-    from . import __version__
-    if che_do not in CHE_DO_VO:
-        raise ValueError(che_do)
-    return _dien_mau('Kiểm đếm thực địa', __version__, 'icon-180.png', 'null', che_do, _dau_pwa() if che_do == 'pwa' else '')
-
-
 def goi_du_lieu_di_dong(con) -> dict:
-    """File dữ liệu dự án cho ứng dụng đã cài: {"loai", "phien_ban", "luc", "du_lieu" (= dữ liệu nhúng của phiếu một file)}."""
+    """File dữ liệu dự án cho ứng dụng điện thoại (di_dong/README.md mục 1): {"loai", "phien_ban", "luc", "du_lieu" (= du_lieu_phieu)}."""
     return dict(loai=LOAI_GOI_DU_LIEU, phien_ban=1, luc=datetime.now().isoformat(timespec='seconds'), du_lieu=du_lieu_phieu(con))
 
 
@@ -214,44 +114,6 @@ def ten_file_du_lieu(con) -> str:
 def xuat_du_lieu_di_dong(con, file_ra) -> Path:
     """Ghi file .json dữ liệu dự án mở trong ứng dụng LARC Field Mobile (Android / iPhone)."""
     return _ghi_nguyen_tu(Path(file_ra), json.dumps(goi_du_lieu_di_dong(con), ensure_ascii=False))
-
-
-def manifest_pwa() -> dict:
-    from . import __version__
-    return dict(name=TEN_UNG_DUNG, short_name=TEN_NGAN, description='Kiểm đếm thực địa bồi thường, hỗ trợ, tái định cư - chạy không cần mạng',
-                lang='vi', start_url='./', scope='./', display='standalone', orientation='any', background_color='#F8FAFC',
-                theme_color='#2F5F9E', version=__version__,
-                icons=[dict(src=t, sizes=f'{c}x{c}', type='image/png', purpose='maskable' if nen else 'any')
-                       for t, c, _, nen in BIEU_TUONG_PWA if c >= 192])
-
-
-def sw_pwa(ds_file) -> str:
-    """Service worker: lưu mọi file của ứng dụng vào bộ nhớ đệm khi cài (chạy không mạng), bản mới -> bộ nhớ đệm mới."""
-    from . import __version__
-    return ('"use strict";\n'
-            f'const BO = "larc-field-{__version__}", TEP = {json.dumps(["./"] + list(ds_file))};\n'
-            'self.addEventListener("install", e => { e.waitUntil(caches.open(BO).then(c => c.addAll(TEP)).then(() => self.skipWaiting())); });\n'
-            'self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ds => Promise.all(ds.filter(k => k.startsWith("larc-field-") '
-            '&& k !== BO).map(k => caches.delete(k)))).then(() => self.clients.claim())); });\n'
-            'self.addEventListener("fetch", e => { if (e.request.method !== "GET") return;\n'
-            '  e.respondWith(caches.match(e.request, {ignoreSearch: true}).then(r => r || fetch(e.request).catch(() =>\n'
-            '    e.request.mode === "navigate" ? caches.match("./index.html") : Response.error()))); });\n')
-
-
-def tep_ung_dung(che_do: str) -> dict:
-    """{tên file: bytes} của vỏ ứng dụng: index.html + biểu tượng (+ manifest, sw.js với PWA)."""
-    tep = {'index.html': html_ung_dung(che_do).encode('utf-8')}
-    for ten, co, le, nen in BIEU_TUONG_PWA:
-        if che_do == 'android' and ten != 'icon-180.png':   # biểu tượng trình khởi chạy Android nằm ở res/mipmap (dung_di_dong.py)
-            continue
-        du = anh_bieu_tuong(co, le, nen)
-        if not du:
-            raise LoiNhap('Thiếu biểu tượng phần mềm (bieu_tuong.png).')
-        tep[ten] = du
-    if che_do == 'pwa':
-        tep['manifest.webmanifest'] = json.dumps(manifest_pwa(), ensure_ascii=False, indent=1).encode('utf-8')
-        tep['sw.js'] = sw_pwa(sorted(tep)).encode('utf-8')
-    return tep
 
 
 # ---------------------------------------------------------------- 2. nhập kết quả

@@ -1,10 +1,10 @@
-"""1.0.32 Đợt 3 (người dùng 26/10/2026): ứng dụng di động LARC Field Mobile (phiếu kiểm đếm .html 7 thẻ) - dữ liệu nhúng (hộ, danh mục
-có mã, loài cây, bản đồ thửa WGS84, tham số VN-2000) và nhập file .json phiên bản 2 về máy tính: dòng ghi lại biên bản (mục 0, tự phân
+"""1.0.32 Đợt 3 (người dùng 26/10/2026): phần MÁY TÍNH của ứng dụng điện thoại LARC Field Mobile (ứng dụng là dự án riêng ở di_dong/,
+kiểm thử ở di_dong/tests) - file dữ liệu dự án (hộ, danh mục có mã, loài cây, bản đồ thửa WGS84, tham số VN-2000) và nhập file .json
+phiên bản 2 về máy tính: dòng ghi lại biên bản (mục 0, tự phân
 loại), ảnh gửi kèm (lưu cạnh file dự án, chặn chương trình giả ảnh), GPS (ghi chú hộ). Họ tên, CCCD, bản đồ, ảnh đều GIẢ LẬP."""
 from __future__ import annotations
 import base64
 import json
-import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -44,27 +44,17 @@ class _CoDuAn(unittest.TestCase):
         return f
 
 
-class TestXuatPhieu(_CoDuAn):
-    def _du_nhung(self, s: str) -> dict:
-        m = re.search(r'const DU = window\.LARC_DU_LIEU \|\| (.*?);\nconst PHIEN_BAN_PHIEU', s, re.S)
-        return json.loads(m.group(1))
-
-    def test_html_7_the_va_du_lieu(self):
+class TestXuatDuLieu(_CoDuAn):
+    def test_file_du_lieu(self):
         kml = self.goc / 'bd.kml'
         kml.write_text(_kml(), encoding='utf-8')
         ban_do_cad.luu(self.con, ban_do_kml.phan_tich_kml(kml, kinh_tuyen=107.75))
         with self.con:
             self.con.execute("UPDATE ho SET ho_ten = 'Tên </script><b>' WHERE ma_ho = 1")
-        f = pk.xuat_phieu_kiem_dem_html(self.con, self.goc / 'phieu.html')
-        s = f.read_text(encoding='utf-8')
-        self.assertNotIn('@@', s)                                       # mọi chỗ trống của mẫu đã điền
-        self.assertEqual(s.count('</script>'), 2)
-        self.assertIn('LARC Field Mobile', s)
-        for the in ('0. Hồ sơ & Đất', '1. Nhà ở (QĐ 42)', '2. Vật KT', '3. Cây trồng', '4. Ảnh biên bản', '5. Bản đồ KML/GPS',
-                    '6. Xuất .JSON'):
-            self.assertIn(the, s)
-        self.assertNotIn('arguments.callee', s)                         # "use strict": arguments.callee là lỗi
-        du = self._du_nhung(s)
+        g = json.loads(pk.xuat_du_lieu_di_dong(self.con, self.goc / 'du_lieu.json').read_text(encoding='utf-8'))
+        self.assertEqual(g['loai'], pk.LOAI_GOI_DU_LIEU)
+        du = g['du_lieu']
+        self.assertEqual(du['ho'][0]['ten'], 'Tên </script><b>')        # giữ nguyên chữ (ứng dụng đọc file bằng JSON.parse)
         self.assertEqual(du, json.loads(json.dumps(pk.du_lieu_phieu(self.con))))
         self.assertEqual(len(du['ho']), 4)
         self.assertTrue(du['nha'] and du['dm2'] and du['vat_nuoi'] and du['cay'])
@@ -78,9 +68,6 @@ class TestXuatPhieu(_CoDuAn):
         vd, kd = toa_do.vn2000_sang_wgs84(420000.0, 1220000.0, 107.75)
         self.assertLess(toa_do.khoang_cach_m(vd, kd, *t['vong'][0]), 0.02)
         self.assertEqual(set(du['mau_trang_thai']), set(ban_do_cad.TRANG_THAI))
-        m = re.search(r'<img alt="LARC" src="data:image/png;base64,([^"]+)"', s)
-        self.assertTrue(m)
-        self.assertEqual(base64.b64decode(m.group(1))[:8], PNG[:8])
 
 
 class TestNhapPhieuV2(_CoDuAn):

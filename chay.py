@@ -314,7 +314,8 @@ def tu_kiem(file_ra=None) -> int:
         return f'KMZ thửa 7 tờ 3, DT 10.000 m²; VN-2000 khớp EPSG (tham số: {nguon})'
 
     def phieu_di_dong():
-        # 1.0.32: ứng dụng di động (mẫu phieu_kiem_dem.html đóng gói) xuất được, đủ dữ liệu nhúng; file .json có ảnh + GPS nhập lại được
+        # 1.0.32: file dữ liệu cho ứng dụng điện thoại LARC Field Mobile (dự án riêng ở di_dong/) xuất được; kết quả .json có ảnh + GPS
+        # nhập lại được
         import base64
         import json
         from pabt import phieu_kiem_dem as pk
@@ -324,8 +325,9 @@ def tu_kiem(file_ra=None) -> int:
             try:
                 ma = luu_ho(con, None, dict(ho_ten='Hộ giả lập'), [dict(ma_thua=None, so_to='3', so_thua='7', loai_dat='CLN',
                                                                        dt_thu_hoi='100')])
-                s = pk.xuat_phieu_kiem_dem_html(con, Path(td) / 'phieu.html').read_text(encoding='utf-8')
-                assert '@@' not in s and s.count('</script>') == 2 and 'LARC Field Mobile' in s
+                s = pk.xuat_du_lieu_di_dong(con, Path(td) / 'du_lieu.json').read_text(encoding='utf-8')
+                g = json.loads(s)
+                assert g['loai'] == pk.LOAI_GOI_DU_LIEU and len(g['du_lieu']['ho']) == 1, g['loai']
                 f = Path(td) / 'kq.json'
                 anh = 'data:image/png;base64,' + base64.b64encode(b'\x89PNG\r\n\x1a\n' + b'\x00' * 16).decode('ascii')
                 f.write_text(json.dumps(dict(phien_ban=2, ket_qua={str(ma): []}, anh={str(ma): [dict(ten='bb.png', du_lieu=anh)]},
@@ -334,7 +336,7 @@ def tu_kiem(file_ra=None) -> int:
                 assert (kq['so_anh'], kq['so_gps']) == (1, 1), kq
             finally:
                 con.close()
-        return f'phiếu {len(s) // 1024} KB, nhập lại ảnh + GPS'
+        return f'dữ liệu {max(1, len(s) // 1024)} KB, nhập lại ảnh + GPS'
 
     def nhan_dang_chu():
         # Tesseract OCR đóng kèm (thư mục tesseract cạnh PABT.exe) chạy được + có tiếng Việt. Windows 32-bit không chạy được bản
@@ -358,7 +360,7 @@ def tu_kiem(file_ra=None) -> int:
     for ten, ham in (('Phiên bản', phien_ban), ('Giao diện', giao_dien), ('Đọc PDF', pdf), ('Bộ đơn giá', bo_don_gia), ('Mẫu in', mau_in),
                      ('Hướng dẫn sử dụng', huong_dan), ('Hồ sơ địa phương, gói mẫu in', ho_so_dia_phuong),
                      ('Bản vẽ CAD (.dxf)', ban_ve_cad), ('Bản đồ KML / KMZ, VN-2000', ban_do_kml),
-                     ('Phiếu kiểm đếm di động', phieu_di_dong), ('Nhận dạng chữ bản scan', nhan_dang_chu),
+                     ('Dữ liệu cho ứng dụng điện thoại', phieu_di_dong), ('Nhận dạng chữ bản scan', nhan_dang_chu),
                      ('Bảng giá đất NQ 28', gia_dat), ('Tạo file dự án', csdl_moi), ('HTTPS', https),
                      ('Lập và in thử (dữ liệu giả lập)', lap_in_thu), ('Nhóm 5 - 6: kinh phí, vận động, báo cáo tiến độ', nhom_5_6)):
         buoc(ten, ham)

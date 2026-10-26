@@ -3,11 +3,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#2F5F9E"/>
 <meta name="mobile-web-app-capable" content="yes"/>
-<link rel="icon" href="@@BIEU_TUONG@@"/>
-<link rel="apple-touch-icon" href="@@BIEU_TUONG@@"/>
+<link rel="icon" href="icon-180.png"/>
+<link rel="apple-touch-icon" href="icon-180.png"/>
 @@DAU_PWA@@
-<title>LARC Field Mobile - @@TIEU_DE@@</title>
-<!-- LARC Field Mobile (phiếu kiểm đếm thực địa, 1.0.32): một file, chạy không cần mạng; dữ liệu ghi lưu trên máy này (localStorage +
+<title>LARC Field Mobile</title>
+<!-- LARC Field Mobile (ứng dụng kiểm đếm thực địa, dự án riêng - di_dong/README.md): chạy không cần mạng; dữ liệu ghi lưu trên máy này (localStorage +
      IndexedDB cho ảnh); xuất file .json về phần mềm LARC trên máy tính (Công cụ -> Phiếu kiểm đếm thực địa -> Nhập kết quả). -->
 <style>
 :root{--chinh:#2F5F9E;--chinh_re:#264E83;--chinh_nhat:#EFF6FF;--nhan:#3B6FCE;--phu:#059669;--hoso:#1F6F66;--nguy_hiem:#B83A3A;
@@ -66,8 +66,8 @@ header .doi{margin-left:6px;white-space:nowrap;flex:0 0 auto;background:rgba(255
 .thong_bao{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0F172A;color:#fff;padding:9px 14px;border-radius:8px;
 font-size:13px;z-index:50;display:none;max-width:92vw}
 </style></head><body>
-<header><img alt="LARC" src="@@BIEU_TUONG@@"/><div class="chu"><div class="ten">LARC Field Mobile</div>
-<div class="phu" title="Phương án bồi thường, hỗ trợ, tái định cư · kiểm đếm thực địa, không cần mạng">@@TIEU_DE@@ · kiểm đếm thực địa</div></div>
+<header><img alt="LARC" src="icon-180.png"/><div class="chu"><div class="ten">LARC Field Mobile</div>
+<div class="phu" title="Phương án bồi thường, hỗ trợ, tái định cư · kiểm đếm thực địa, không cần mạng">Kiểm đếm thực địa</div></div>
 <div class="huy">v@@PHIEN_BAN@@</div><button class="doi" id="b_doi_du_an" type="button" style="display:none">Dự án</button></header>
 <div class="dieu_huong"><button class="phu nho" id="b_truoc" type="button" title="Hộ trước">◀</button>
 <select id="cb_ho" aria-label="Chọn hộ"></select><button class="phu nho" id="b_sau" type="button" title="Hộ sau">▶</button>
@@ -149,7 +149,7 @@ Phần mềm tự tìm hộ theo CCCD, tờ / thửa (lô rừng), họ tên; h�
 <div class="hang_nut"><button class="xoa" id="b_xoa_het" type="button">Xóa mọi dữ liệu đã ghi trên máy này</button></div></div></section>
 <div class="thong_bao" id="thong_bao"></div>
 
-<div id="man_chao"><div class="dau"><img alt="LARC" src="@@BIEU_TUONG@@"/><div><h1>LARC Field Mobile</h1>
+<div id="man_chao"><div class="dau"><img alt="LARC" src="icon-180.png"/><div><h1>LARC Field Mobile</h1>
 <div class="ghi">Kiểm đếm thực địa · phiên bản @@PHIEN_BAN@@ · chạy không cần mạng</div></div></div>
 <div class="khung"><h3>Mở dữ liệu dự án</h3>
 <ol><li>Trên máy tính: phần mềm LARC → Công cụ → Phiếu kiểm đếm thực địa → <b>Xuất dữ liệu cho ứng dụng điện thoại</b>.</li>
@@ -164,11 +164,10 @@ máy tính thường xuyên; gỡ ứng dụng (hoặc xóa dữ liệu trang we
 <script id="vo_ung_dung">
 "use strict";
 // Vỏ ứng dụng (bản cài Android / PWA iPhone): dữ liệu dự án không nhúng sẵn mà mở từ file "larc_field_du_lieu" (LARC trên máy tính xuất ra),
-// cất ở IndexedDB "larc_field" (localStorage quá nhỏ cho bản đồ thửa). Bản một file (.html xuất từ LARC): CHE_DO "tep" - vỏ không làm gì.
+// cất ở IndexedDB "larc_field" (localStorage quá nhỏ cho bản đồ thửa); nạp xong mới chạy mã chính (script ma_chinh, type text/plain).
 (function () {
   const CHE_DO = "@@CHE_DO@@", LOAI = "larc_field_du_lieu", KHOA_HH = "larc_field_hien_hanh";
   window.LARC_CHE_DO = CHE_DO;
-  if (CHE_DO === "tep") return;
   const $ = id => document.getElementById(id);
   const kho = () => new Promise(ok => { if (!window.indexedDB) { ok(null); return; } const r = indexedDB.open("larc_field", 1);
     r.onupgradeneeded = () => r.result.createObjectStore("du_lieu", {keyPath: "du_an"}); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); });
@@ -212,9 +211,9 @@ máy tính thường xuyên; gỡ ứng dụng (hoặc xóa dữ liệu trang we
 })();
 </script>
 
-<script id="ma_chinh">
+<script type="text/plain" id="ma_chinh">
 "use strict";
-const DU = window.LARC_DU_LIEU || @@DU_LIEU@@;
+const DU = window.LARC_DU_LIEU;
 const PHIEN_BAN_PHIEU = 2;
 const KHOA_LUU = "larc_kd_" + DU.du_an;
 const THE = ["0. Hồ sơ & Đất", "1. Nhà ở (QĐ 42)", "2. Vật KT", "3. Cây trồng", "4. Ảnh biên bản", "5. Bản đồ KML/GPS", "6. Xuất .JSON"];
@@ -442,7 +441,7 @@ function duaBienBan() { if (!coHo()) return; const ds = $("bb_chu").value.split(
   if (!ds.length) { bao("Chưa ghi dòng nào.", 1); return; } const h = hoST(ST.chon);
   for (const x of ds) h.dong.push({muc: 0, ten: x, so_luong: "", luc: new Date().toISOString()}); luu(); $("bb_chu").value = ""; veTatCa(); bao("Đã đưa " + ds.length + " dòng vào hộ."); }
 
-// ---------------------------------------------------------------- tọa độ VN-2000 (như pabt/toa_do.py: Krüger + 7 tham số)
+// ---------------------------------------------------------------- tọa độ VN-2000 (Krüger bậc 6 + 7 tham số datum từ file dữ liệu; cùng công thức với LARC máy tính)
 const VN = (function () { const A = 6378137, F = 1 / 298.257223563, E2 = F * (2 - F), N = F / (2 - F), K0 = 0.9999;
   const AH = A / (1 + N) * (1 + N * N / 4 + N ** 4 / 64 + N ** 6 / 256);
   const AL = [N / 2 - 2 / 3 * N ** 2 + 5 / 16 * N ** 3 + 41 / 180 * N ** 4 - 127 / 288 * N ** 5 + 7891 / 37800 * N ** 6,

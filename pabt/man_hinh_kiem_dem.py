@@ -1,5 +1,5 @@
-"""Hộp "Phiếu kiểm đếm thực địa" (0.9.87, menu Công cụ): xuất phiếu HTML dùng trên điện thoại, nhập kết quả .json vào phương án
-hộ, gắn ảnh hiện trạng; bảng số dòng đã ghi / số ảnh mỗi hộ (bấm đúp: mở ảnh đầu tiên của hộ). Logic ở phieu_kiem_dem."""
+"""Hộp "Phiếu kiểm đếm thực địa" (0.9.87, menu Công cụ): xuất dữ liệu dự án cho ứng dụng điện thoại LARC Field Mobile (dự án riêng ở
+di_dong/), nhập kết quả .json vào phương án hộ, gắn ảnh hiện trạng; bảng số dòng đã ghi / số ảnh mỗi hộ (bấm đúp: mở ảnh đầu tiên của hộ). Logic ở phieu_kiem_dem."""
 from __future__ import annotations
 from pathlib import Path
 
@@ -21,10 +21,9 @@ class HopKiemDem(QDialog):
         self.setWindowTitle('Phiếu kiểm đếm thực địa')
         self.resize(860, 560)
         lo = QVBoxLayout(self)
-        gt = QLabel('1. Xuất phiếu (ứng dụng LARC Field Mobile - một file .html) → chép sang điện thoại, mở bằng trình duyệt (không '
-                    'cần mạng): ghi nhà ở, vật kiến trúc, cây trồng, chụp ảnh biên bản, xem bản đồ thửa + định vị GPS → lưu file .json. '
-                    'Điện thoại đã cài ứng dụng LARC Field Mobile (Android .apk / iPhone "Thêm vào MH chính"): xuất dữ liệu dự án (.json) '
-                    'rồi mở file đó trong ứng dụng.'
+        gt = QLabel('1. Xuất dữ liệu dự án (.json) → gửi sang điện thoại đã cài ứng dụng LARC Field Mobile (Android .apk / iPhone '
+                    '"Thêm vào MH chính") → mở file đó trong ứng dụng (không cần mạng): ghi nhà ở, vật kiến trúc, cây trồng, chụp ảnh '
+                    'biên bản, xem bản đồ thửa + định vị GPS → xuất file kết quả .json gửi về máy tính.'
                     '\n2. Nhập kết quả: các dòng được thêm vào phương án từng hộ như "Dán danh sách tài sản" (khớp danh mục đơn giá; '
                     'cây có số đo xếp theo quy cách); ảnh gửi kèm lưu vào thư mục Anh_kiem_dem cạnh file dự án; tọa độ GPS ghi vào '
                     'ghi chú hộ.\n3. Gắn ảnh: chọn thư mục ảnh chụp; ảnh đặt tên theo số CCCD, họ tên hoặc HO<số thứ tự> (vd '
@@ -35,16 +34,14 @@ class HopKiemDem(QDialog):
         hang = QWidget()
         h = XepDong(hang, 8)                            # màn hình hẹp: nút xuống dòng, không ép hộp rộng hơn màn hình
         h.setContentsMargins(0, 0, 0, 0)
-        self.b_xuat = QPushButton('Xuất phiếu kiểm đếm (.html)…')
         self.b_du_lieu = QPushButton('Xuất dữ liệu cho ứng dụng điện thoại…')
         self.b_du_lieu.setToolTip('File .json mở trong ứng dụng LARC Field Mobile đã cài (Android .apk, iPhone bản PWA).')
         self.b_nhap = QPushButton('Nhập kết quả kiểm đếm (.json)…')
         self.b_anh = QPushButton('Gắn ảnh hiện trạng từ thư mục…')
-        self.b_xuat.clicked.connect(lambda: self.xuat())
         self.b_du_lieu.clicked.connect(lambda: self.xuat_du_lieu())
         self.b_nhap.clicked.connect(lambda: self.nhap())
         self.b_anh.clicked.connect(lambda: self.gan_anh())
-        for b in (self.b_xuat, self.b_du_lieu, self.b_nhap, self.b_anh):
+        for b in (self.b_du_lieu, self.b_nhap, self.b_anh):
             h.addWidget(b)
         lo.addWidget(hang)
         if chi_doc:
@@ -94,22 +91,6 @@ class HopKiemDem(QDialog):
         self._ghi_kq(chu)
         if not self.im_lang:
             QMessageBox.warning(self, 'Phiếu kiểm đếm', chu)
-
-    def xuat(self, file_ra=None):
-        if file_ra is None:
-            if self.im_lang:
-                return None
-            file_ra, _ = QFileDialog.getSaveFileName(self, 'Lưu phiếu kiểm đếm', str(self.thu_muc / 'PhieuKiemDem.html'),
-                                                     'Trang web (*.html)')
-            if not file_ra:
-                return None
-        try:
-            ra = pk.xuat_phieu_kiem_dem_html(self.con, file_ra)
-        except Exception as e:                          # noqa: BLE001
-            self._bao_loi(e)
-            return None
-        self._ghi_kq(f'Đã xuất phiếu: {ra}')
-        return ra
 
     def xuat_du_lieu(self, file_ra=None):
         """File dữ liệu dự án cho ứng dụng LARC Field Mobile đã cài trên điện thoại (Android / iPhone)."""
