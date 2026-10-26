@@ -2392,12 +2392,48 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     -> nhà tạm / bán kiên cố / loại 1-4, nhóm tầng chỉ khi người dùng chọn tay) - GỢI Ý, không tự đổi khi người dùng đã chọn. Cây: `loaiCay`
     so CÓ DẤU trước ("Tràm" -> Keo lá tràm, không Trám đen), chip đường kính / tuổi theo khoảng mục. Dòng biên bản `phanTichDongNhanhJS` xếp mục
     2 / 3 trên điện thoại (`tu_bb`, so_luong trống - máy tính đọc lại chữ bằng hieu_tai_san), còn lại muc 0; mọi bảng có Sửa (`batSua` / `SUA`).
-  - Ảnh: nút Chụp (`capture`) / Chọn tách riêng, `#hop_xem_anh` phóng 1-3 lần + ô chép biên bản (`duaDong`), lamRo chờ 40 ms. KHÔNG nhận dạng giọng
-    nói (Web Speech gửi tiếng lên máy chủ hãng - trái quy tắc không gửi dữ liệu hộ dân; dùng micro bàn phím).
+  - Ảnh: nút Chụp (`capture`) / Chọn tách riêng, `#hop_xem_anh` phóng 1-3 lần + ô chép biên bản (`duaDong`), lamRo chờ 40 ms. (1.1.0 không có
+    giọng nói - từ 1.2.0 CÓ theo yêu cầu người dùng, xem mục 1.2.0.)
   - Bản đồ nền ô Web Mercator: Esri World_Imagery (tối đa z 17 - sâu hơn ảnh "Map data not yet available"), OSM (z 19), ghi nguồn; LRU 256 ô,
     `referrerPolicy no-referrer`; chỉ gửi tọa độ ô. "Thửa hộ này", "Tâm GPS", tìm "5/10". Tự lưu khi gõ, KPI ẩn ở thẻ ảnh / bản đồ, lọc hộ đã /
     chưa ghi, huy hiệu số dòng trên thẻ, thẻ 6 Mở / Lưu .json / Xóa từng hộ. `sw.js` cache theo PHIEN_BAN: phát hành phải tăng `dung.PHIEN_BAN`.
   - Chưa thử trên máy Android / iPhone thật (đã thử trong trình duyệt: vỏ pwa / android, cầu nối giả lập, nhập .json vào dự án thử).
+- LARC Field Mobile 1.2.0 "UI/UX Pro Max" (người dùng 27/10/2026, đặc tả 5 phần; test `di_dong/tests/test_phan_tach.py` = chạy THẬT mã JS trong
+  Chromium của Qt WebEngine (QWebEnginePage + profile tạm, `setHtml(html_ung_dung('android'), https://larc.thu/)`, bấm c_bat_dau rồi gọi
+  `window.LARC`) - QJSEngine KHÔNG chạy được (thiếu `\p{L}`, `matchAll`); `test_ung_dung.py`):
+  - GIỌNG NÓI CÓ (người dùng yêu cầu gỡ chặn của 1.1.0): Android `MainActivity.batDauGiongNoi` (`RecognizerIntent`, vi-VN, EXTRA_PREFER_OFFLINE,
+    không quyền RECORD_AUDIO, manifest `<queries>` RecognitionService + RECOGNIZE_SPEECH, `MA_NOI` 15, kết quả `JSONObject.quote` ->
+    `window.LARC_nhanGiongNoiAndroid`, lỗi -> `LARC_giongNoiLoi`), PWA Web Speech (`SpeechRecognition || webkitSpeechRecognition`, continuous,
+    chữ tạm hiện ở `#song_am`). `dongYGiongNoi`: hỏi MỘT lần (localStorage `larc_field_dong_y_giong_noi`) - nói rõ tiếng nói (họ tên, CCCD) có thể
+    qua máy chủ Google / Apple khi máy chưa có gói ngoại tuyến. Phân tách / tạm tính vẫn chạy trên máy, không gửi gì. ĐỪNG gọi dịch vụ AI / OCR
+    trên mạng (Gemini…).
+  - Bố cục: `#app` (dọc; `body.khung_dt` = màn hình >= 680px dọc: khung 430px), `body.bc_ngang` (>= 680px + ngang, hoặc nút `#b_xoay`, nhớ
+    `larc_field_bo_cuc`) = `#khung_ud` lưới 38% `#cot_trai` (t7 AI luôn hiện) | 62% `#cot_phai`; `@media (max-height:540px)` thu gọn. Trang: 7 = AI
+    (`TRANG_AI`, mở ứng dụng luôn vào đây), 0-4 mục con của "Hồ sơ & TS" (`#thanh_the` phan_doan, `PHAN_DOAN`), 5 bản đồ, 6 xuất; `moThe`, `hienThe`,
+    `theHien` (ngang + trang 7 -> `ST.the_phai`), `ST.the_ho`; thanh đáy `#nav_day` (`NAV`), thanh trạng thái `#kpi.status_strip` (pill, 💰 tạm tính =
+    `giaDong`), `.ho_bar` một hàng + `#ngan_tim` (🔍). Back: đóng ảnh / ngăn tìm / dừng nghe -> về AI (dọc) hoặc mục 0 (ngang). CSS `[hidden]{display:
+    none!important}` (lớp có display ghi đè thuộc tính hidden).
+  - Bộ phân tách (`phanTichThongMinhAI(chữ, {uu_tien})` -> [{cat ho|dat|nha|vkt|cay|vn|khac, chinh, ct, gia, du, chon}]): `chuanHoaTiengNoi` (phép tính
+    chỉ GIỮA hai số, "dài a cao b" -> "am x bm", phi -> ϕ chỉ khi trước số) -> dòng -> `tachCau` (". " ";" trừ "; ϕ 90", giữ "TP. X") -> `tachDoan`
+    theo `dauMuc()` (đầu mục mạnh: trường hộ, tờ / thửa / tiểu khu, nhà; yếu: vật KT, vật nuôi, "cây", tên loài từ DU.cay - chỉ tách khi đoạn trước có
+    số / >= 3 từ; trong đoạn hộ / đất chỉ tách khi sau là số lượng; trong đoạn nhà không tách "tường / nền / trụ" + vật liệu; "12 trụ" cuối câu là đơn
+    vị; "cây lâu năm" không phải đầu mục) -> `phanLoaiDoan`. Nhà: `kcTuChu` (vật liệu chỉ trong phần sau từ khóa tới từ khóa kết cấu kế) +
+    `nhaTheoChu` (khoaLoaiNha / "loại N" / tạm / bán kiên cố + số tầng) -> dòng có ma_dm; chưa rõ loại: thẻ có ô chọn (`apNha`). Vật KT / vật nuôi:
+    GỬI CÂU GỐC (tu_bb, so_luong trống - máy tính đọc lại, khớp danh mục); điện thoại chỉ `khopDanhMuc` để tạm tính. Cây: loài (`loaiCay`) + số cây
+    -> dòng có cấu trúc như themCay, không thì câu gốc. `layBieuThuc` (bỏ số sau cấp / loại / tầng / tờ / ϕ / mã chữ+số "B40"). `duaAI`: hộ khớp CCCD /
+    họ tên -> chọn hộ đó; chưa chọn / họ tên khác (hỏi) -> hộ `moi_<n>`; đất không trùng tờ / thửa; ảnh chờ `CHO_ANH` gắn theo.
+  - Ảnh nút lớn (`chupHero`, `CHUP_HERO`, `nhanAnhHero`): `docQR` (BarcodeDetector - Android Chrome / WebView có; iPhone Safari, Chrome Windows không) ->
+    `phanTichQRCCCD` ("CCCD|CMND|Họ tên|ddmmyyyy|giới tính|địa chỉ|ngày cấp") -> ô phân tách, ảnh chờ gắn vào hộ của người trên thẻ; không QR ->
+    lamRo + mở xem, `xa_dua` = "Phân tách & xem trước". KHÔNG nhận dạng chữ viết tay (không thư viện / dịch vụ ngoài).
+  - Xuất .json KHÔNG đổi (phien_ban 2; đã thử nhập vào dự án thử: 7 dòng đúng mã / giá như tạm tính trên điện thoại).
+  - Nền bản đồ (người dùng 27/10/2026 "thêm nền vệ tinh / map để xem hình ảnh thực" - chọn: chỉ ứng dụng điện thoại; bản đồ thửa trên máy
+    tính vẫn không nền): `NEN` {ve_tinh, ve_tinh_ten (World_Imagery + Reference/World_Transportation + World_Boundaries_and_Places), duong (OSM,
+    `khong_luu`), dia_hinh (World_Topo_Map)}, mỗi nền `lop` = [hàm url]; `NEN_MAC_DINH` 've_tinh_ten' khi có mạng và chưa chọn (`ST.nen`); nút
+    `#m_chip_nen` trên bản đồ (`doiNen`, `veChipNen`; `#m_nen` select ẩn giữ cho mã cũ); `ST.mo_thua` (`#m_mo`, 0-80%) + viền trắng / số thửa có
+    viền khi có nền. Lưu khi mất sóng: `luuNenKhu` (khung thửa + 10%, mức vừa khung (>= 10) tới `max`, giảm mức tối đa tới <= `O_TAI_TOI_DA` 2500 ô,
+    6 luồng fetch cors, bấm lần nữa = dừng) -> `NEN_DB` (IndexedDB "larc_nen", khóa = url, giá trị Blob), `NEN_LUU` (Set url, nạp lúc khởi động);
+    `oNen(url)` ô đã lưu đọc Blob -> object URL (thu hồi khi bỏ khỏi LRU `O_NEN_TOI_DA` 400), chưa lưu + mất mạng -> bỏ qua. OSM CẤM tải hàng loạt
+    (tile usage policy) - đừng bỏ `khong_luu`. Esri: dùng ô công khai kèm ghi nguồn; lưu sẵn giới hạn theo khu dự án.
 - Sau 1.0.29 (người dùng 26/10/2026, ảnh dòng "Phú Lý, ngày 20 tháng 10 năm 2026"): địa danh đầu dòng ngày tháng của bản in = NƠI ĐƠN VỊ CÔNG TÁC,
   KHÔNG phải xã có đất của dự án. Cột `du_an.dia_danh_don_vi` (KHÔNG đổi PHIEN_BAN_CSDL: schema.sql file mới; `csdl.dam_bao_cot_du_an` /
   `COT_DU_AN_THEM` thêm ở csdl.mo khi file có hộ và ở `lap_pa.luu_du_an`; `doc_du_an` file cũ trả ''), trong `TRUONG_DU_AN` và

@@ -18,7 +18,9 @@ DAY = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(DAY))
 import dung  # noqa: E402
 
-THE = ('0. Hồ sơ & Đất', '1. Nhà ở (QĐ 42)', '2. Vật KT', '3. Cây trồng', '4. Ảnh biên bản', '5. Bản đồ KML/GPS', '6. Xuất .JSON')
+# 1.2.0: thanh đáy 4 chế độ + 5 mục con của "Hồ sơ & TS" (thay 7 thẻ chữ nhỏ của 1.1.0)
+THE = ('"AI Quét & Nói"', '"Hồ sơ & TS"', '"Bản đồ GPS"', '"Xuất .JSON"', '"👤 Hồ sơ & Đất"', '"🏠 Nhà QĐ 42"', '"🧱 Vật KT"', '"🌳 Cây & VN"',
+       '"📷 Ảnh chụp"')
 
 
 class TestDocLap(unittest.TestCase):
@@ -89,7 +91,27 @@ class TestMau(unittest.TestCase):
                     'window.LARC_nhanAnhAndroid', 'window.LARC_quayLai', 'id="o_loc_ho"', 'xoaHo(k)', 'await new Promise(r => setTimeout(r, 40))',
                     'id="c_chip"', 'id="n_tam_tinh"', 'id="v_tam_tinh"'):
             self.assertIn(chu, s, chu)
-        self.assertNotIn('SpeechRecognition', s)            # không gửi giọng đọc (họ tên, CCCD) lên máy chủ nhận dạng
+
+    def test_bo_cuc_pro_max_va_giong_noi(self):
+        s = dung.MAU.read_text(encoding='utf-8')
+        # 1.2.0: thanh trạng thái gọn thay 5 thẻ số, thanh đáy 4 chế độ, màn hình AI mặc định, bố cục ngang 2 cột
+        self.assertIn('class="status_strip" id="kpi"', s)
+        self.assertNotIn('class="kpi"', s)
+        self.assertIn('<nav class="bottom_nav" id="nav_day">', s)
+        for chu in ('id="b_hero_chup"', 'id="b_hero_noi"', 'id="card_ai_splitter"', 'id="ai_preview_list"', 'id="b_bb_dua"', 'id="b_xoay"',
+                    'id="cot_trai"', 'id="cot_phai"', 'body.bc_ngang #khung_ud', 'body.khung_dt #app{max-width:430px', 'id="ngan_tim" hidden',
+                    'function phanTichThongMinhAI', 'function chuanHoaTiengNoi', 'function phanTichQRCCCD', 'BarcodeDetector',
+                    'window.LARC_nhanGiongNoiAndroid', 'window.LARC_giongNoiLoi', 'LARCAndroid.batDauGiongNoi', 'webkitSpeechRecognition',
+                    'r.lang = "vi-VN"', 'moThe(TRANG_AI)'):
+            self.assertIn(chu, s, chu)
+        self.assertEqual(s.count('class="nut_doc"'), 5)                    # nút 🎙️ Đọc trên từng mục: hộ, đất, nhà, vật KT, cây
+        # nền bản đồ: vệ tinh, vệ tinh + tên đường / địa danh, đường phố, địa hình; lưu ảnh nền khu dự án (không lưu OSM)
+        for chu in ('World_Imagery', 'Reference/World_Transportation', 'Reference/World_Boundaries_and_Places', 'World_Topo_Map',
+                    'id="m_chip_nen"', 'id="m_mo"', 'id="b_luu_nen"', 'id="b_xoa_nen"', 'indexedDB.open("larc_nen"', 'khong_luu: true'):
+            self.assertIn(chu, s, chu)
+        # giọng nói đi qua máy chủ Google / Apple khi máy chưa có gói ngoại tuyến: hỏi người dùng một lần trước khi dùng
+        self.assertIn('function dongYGiongNoi', s)
+        self.assertIn('máy chủ của hãng', s)
 
 
 class TestTep(unittest.TestCase):
@@ -181,6 +203,18 @@ class TestAndroid(unittest.TestCase):
         self.assertIn('LARC_quayLai', ma)
         self.assertNotIn('.restoreState(', ma)              # khôi phục WebView làm mất dữ liệu JS của dự án
         self.assertNotIn('resolveActivity', ma)
+        # 1.2.0: dọc mặc định, xoay ngang theo cảm biến; giọng nói hệ thống (RecognizerIntent) - không xin quyền micro
+        self.assertIn('android:screenOrientation="fullUser"', mf)
+        self.assertIn('<action android:name="android.speech.RecognitionService"/>', mf)
+        self.assertIn('<action android:name="android.speech.action.RECOGNIZE_SPEECH"/>', mf)
+        self.assertNotIn('android.permission.RECORD_AUDIO', mf)
+        self.assertIn('MA_NOI = 15', ma)
+        self.assertIn('@JavascriptInterface public void batDauGiongNoi()', ma)
+        self.assertIn('RecognizerIntent.ACTION_RECOGNIZE_SPEECH', ma)
+        self.assertIn('RecognizerIntent.EXTRA_PREFER_OFFLINE', ma)
+        self.assertIn('"vi-VN"', ma)
+        self.assertIn('LARC_nhanGiongNoiAndroid', ma)
+        self.assertIn('JSONObject.quote(', ma)                  # chữ đọc được đưa vào JS phải thoát nháy / xuống dòng
 
     @unittest.skipUnless((dung.CONG_CU / 'jdk17').exists() and os.environ.get('LARC_THU_DUNG_APK') == '1',
                          'Dựng .apk thật: đặt LARC_THU_DUNG_APK=1 (cần công cụ Android)')

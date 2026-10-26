@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- LARC Field Mobile (Android): vỏ WebView chạy ứng dụng kiểm đếm (pabt/phieu_kiem_dem.html, chế độ "android") từ assets.
-     Dựng bằng bo_cai_win/dung_di_dong.py (aapt2 + javac + d8 + apksigner, không Gradle). versionCode / versionName do script đặt. -->
+<!-- LARC Field Mobile (Android): vỏ WebView chạy ứng dụng kiểm đếm (di_dong/ung_dung/index.html, chế độ "android") từ assets.
+     Dựng bằng di_dong/dung.py (aapt2 + javac + d8 + apksigner, không Gradle). versionCode / versionName do script đặt.
+     screenOrientation fullUser: dọc mặc định, xoay ngang theo cảm biến (trang tự chuyển bố cục 2 cột). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="vn.larc.field">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
@@ -12,11 +13,18 @@
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE"/>
         </intent>
+        <!-- nhận dạng giọng nói của hệ thống (RecognizerIntent): không cần quyền RECORD_AUDIO, nhưng Android 11+ phải khai báo mới thấy -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH"/>
+        </intent>
     </queries>
     <application android:label="@string/ten_ung_dung" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false" android:supportsRtl="false" android:hardwareAccelerated="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask"
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:screenOrientation="fullUser"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|density"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

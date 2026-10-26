@@ -18,6 +18,7 @@ import android.util.Base64;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.speech.RecognizerIntent;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -37,6 +38,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+
+import org.json.JSONObject;
 
 /** LARC Field Mobile: WebView chạy assets/index.html qua địa chỉ https://appassets.androidplatform.net/ (miền dành riêng cho nội dung
  *  của ứng dụng - "ngữ cảnh an toàn": định vị GPS, IndexedDB chạy như trang https). Không tải gì từ mạng; liên kết ngoài mở trình duyệt.
@@ -44,7 +48,7 @@ import java.nio.charset.Charset;
 public class MainActivity extends Activity {
     static final String MIEN = "appassets.androidplatform.net";
     static final String GOC = "https://" + MIEN + "/";
-    static final int MA_CHON = 11, MA_LUU = 12, MA_GPS = 13, MA_CHUP = 14;
+    static final int MA_CHON = 11, MA_LUU = 12, MA_GPS = 13, MA_CHUP = 14, MA_NOI = 15;
 
     WebView web;
     ValueCallback<Uri[]> choChon;
@@ -167,6 +171,24 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** Nút "Nhập giọng nói": bộ nhận dạng giọng nói của Android (RecognizerIntent - không cần quyền RECORD_AUDIO), ưu tiên gói tiếng Việt
+     *  ngoại tuyến của máy (EXTRA_PREFER_OFFLINE); chữ nhận được gửi cho JS LARC_nhanGiongNoiAndroid(chữ). Máy không có bộ nhận dạng:
+     *  LARC_giongNoiLoi('khong_co') -> trang hướng dẫn dùng micro của bàn phím. */
+    void batDauGiongNoi() {
+        Intent noi = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        noi.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        noi.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "vi-VN");
+        noi.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "vi-VN");
+        noi.putExtra(RecognizerIntent.EXTRA_PROMPT, "Đọc thông tin hộ, nhà, vật kiến trúc, cây trồng...");
+        noi.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        if (Build.VERSION.SDK_INT >= 23) noi.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
+        try {
+            startActivityForResult(noi, MA_NOI);
+        } catch (ActivityNotFoundException e) {
+            web.evaluateJavascript("window.LARC_giongNoiLoi && window.LARC_giongNoiLoi('khong_co')", null);
+        }
+    }
+
     static final int CO_ANH = 1600;
 
     void guiAnhChoJs(final File f) {
@@ -207,6 +229,16 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onActivityResult(int ma, int kq, Intent du) {
+        if (ma == MA_NOI) {
+            ArrayList<String> ds = kq == RESULT_OK && du != null ? du.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS) : null;
+            if (ds != null && !ds.isEmpty() && ds.get(0) != null) {
+                // JSONObject.quote: chuỗi JS an toàn (nháy, xuống dòng, "</script>")
+                web.evaluateJavascript("window.LARC_nhanGiongNoiAndroid && window.LARC_nhanGiongNoiAndroid(" + JSONObject.quote(ds.get(0)) + ")", null);
+            } else {
+                web.evaluateJavascript("window.LARC_giongNoiLoi && window.LARC_giongNoiLoi('huy')", null);
+            }
+            return;
+        }
         if (ma == MA_CHUP) {
             if (kq == RESULT_OK && anhChup != null && anhChup.length() > 0) guiAnhChoJs(anhChup);
             return;
@@ -301,6 +333,9 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String phienBan() { return BuildConfigTen.PHIEN_BAN; }
         @JavascriptInterface public void chupAnhNgay() {
             runOnUiThread(new Runnable() { @Override public void run() { chupAnh(); } });
+        }
+        @JavascriptInterface public void batDauGiongNoi() {
+            runOnUiThread(new Runnable() { @Override public void run() { MainActivity.this.batDauGiongNoi(); } });
         }
     }
 

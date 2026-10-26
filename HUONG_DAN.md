@@ -565,7 +565,25 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
 - **Quét giấy tờ (OCR)…** (cửa sổ lập phương án, trang Dự toán): chọn ảnh chụp / PDF scan giấy chứng nhận, biên bản kiểm kê (cần
   Tesseract như đọc quyết định scan). Soát lại các ô rồi "Điền thông tin hộ & thửa" (trang Dự toán: "Thêm dòng đất") / "Đưa tài sản vào phương án…".
 - **Ứng dụng điện thoại LARC Field Mobile** (Android / iPhone, chạy không cần mạng; ứng dụng phát hành riêng, không nằm trong bộ cài
-  máy tính): 7 thẻ **Hồ sơ & Đất** (chủ hộ / người nhận khoán, người sử dụng, CCCD, năm sinh, thửa địa chính hoặc tiểu khu / khoảnh /
+  máy tính). Từ bản 1.2.0 ứng dụng mở vào màn hình **✨ AI Quét & Nói**, thanh đáy 4 chế độ (AI Quét & Nói · Hồ sơ & TS · Bản đồ GPS ·
+  Xuất .JSON):
+  - **📷 CHỤP / QUÉT ẢNH**: chụp mặt sau thẻ CCCD (mã QR) - điện thoại Android tự điền họ tên, số CCCD, năm sinh, địa chỉ; chụp biên
+    bản - ứng dụng làm rõ chữ rồi mở ảnh để bạn chép hoặc 🎙️ đọc nội dung ngay dưới ảnh. iPhone chưa đọc được mã QR trong ứng dụng:
+    giữ ngón tay trên chữ của ảnh để chép (Văn bản trực tiếp) hoặc đọc thông tin chủ hộ.
+  - **🎙️ NHẬP GIỌNG NÓI**: đọc liền một mạch, ví dụ "chủ hộ Nguyễn Văn An, căn cước 0750…, tờ 12 thửa 45 cây lâu năm 1500 mét vuông,
+    nhà 1 tầng khung bê tông mái tôn tường xây nền gạch men mở ngoặc 5 nhân 12 đóng ngoặc trừ mở ngoặc 2 nhân 3 đóng ngoặc, ống nhựa
+    phi 114: 3300 mét, xoài trồng năm 2012: 650 cây". Ô **Phân tách dữ liệu thông minh** (chạy trên điện thoại, không cần mạng) tách
+    thành từng mục có màu: hồ sơ hộ, đất, nhà (tự chọn loại theo kết cấu - chỉ là gợi ý, chọn lại được ngay trên thẻ), vật kiến trúc,
+    cây (tính tuổi từ năm trồng), vật nuôi, kèm tạm tính tiền. Bỏ chọn mục sai rồi bấm **✔ Đưa vào Hồ sơ Hộ** (chưa chọn hộ thì tự tạo
+    hộ mới theo họ tên đọc được). Lần đầu dùng giọng nói ứng dụng hỏi đồng ý: máy chưa có gói tiếng Việt ngoại tuyến thì tiếng nói được
+    gửi tới máy chủ Google (Android) / Apple (iPhone, cần bật Siri và Đọc chính tả) để nhận dạng. Không muốn: gõ hoặc dán vào ô phân tách.
+  - **🗺️ Bản đồ GPS**: chọn nền ngay trên bản đồ - **Vệ tinh**, **Vệ tinh + tên** (tên đường, địa danh), **Đường phố**, **Địa hình**, **Lưới**
+    (có mạng thì mặc định Vệ tinh + tên); thanh **Độ đậm thửa** chỉnh độ che của màu thửa trên ảnh. Trước khi ra hiện trường (có Wi-Fi):
+    mở bản đồ, chọn Vệ tinh, bấm **💾 Lưu ảnh nền khu dự án** - ứng dụng lưu ảnh khu các thửa vào máy để xem khi mất sóng (**Xóa ảnh nền
+    đã lưu** để giải phóng bộ nhớ). Nền Đường phố chỉ xem khi có mạng.
+  - Nút **🎙️ Đọc** ở từng mục của **Hồ sơ & TS**; xoay ngang điện thoại (hoặc bấm **🔄 Xoay ngang** trên máy tính bảng / giả lập) thì
+    màn hình chia 2 cột: công cụ AI bên trái, chi tiết bên phải.
+  Các mục của **Hồ sơ & TS**: **Hồ sơ & Đất** (chủ hộ / người nhận khoán, người sử dụng, CCCD, năm sinh, thửa địa chính hoặc tiểu khu / khoảnh /
   lô, nút lấy tọa độ GPS tại chỗ); **Nhà ở** (chọn loại nhà theo bộ đơn giá, bấm chọn kết cấu khung / tường / mái / trần / nền / cửa,
   diện tích ghi được "(4 x 6,7) + (2 x 3)", "(5x12)-(2x3)", "7m x 2m x 2" (dài x rộng x số cái) - hàng phím tắt x ( ) + - , dưới ô;
   phần mềm GỢI Ý loại nhà theo kết cấu đã chọn, người kiểm đếm quyết định); **Vật KT** (gõ vài chữ để chọn mục bộ đơn giá; dòng nhiều cỡ ống ghi cả vào tên); **Cây

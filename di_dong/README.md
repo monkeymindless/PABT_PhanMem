@@ -8,13 +8,13 @@ sửa cả hai bên và tăng số `phien_ban` của file.
 
 | Đường dẫn | Nội dung |
 |---|---|
-| `ung_dung/index.html` | Toàn bộ ứng dụng: một trang HTML + JavaScript thuần (không thư viện, không mạng). 7 thẻ: Hồ sơ & Đất, Nhà ở (QĐ 42), Vật KT, Cây trồng, Ảnh biên bản, Bản đồ KML/GPS, Xuất .JSON. Chỗ trống `@@CHE_DO@@` (`pwa` / `android`), `@@PHIEN_BAN@@`, `@@DAU_PWA@@`, `@@DU_LIEU_MAC_DINH@@` do `dung.py` điền. |
-| `android/` | Vỏ Android: `AndroidManifest.xml` (gói `vn.larc.field`, API 24-34), `MainActivity.java` (WebView nạp `assets/index.html` qua `https://appassets.androidplatform.net/`, chọn / chụp ảnh, quyền vị trí, cầu nối JS `LARCAndroid.luuFile`), `CungCapTep.java` (ContentProvider cấp file cho máy ảnh / ứng dụng gửi). |
+| `ung_dung/index.html` | Toàn bộ ứng dụng: một trang HTML + JavaScript thuần (không thư viện, không mạng). Thanh đáy 4 chế độ: ✨ AI Quét & Nói (màn hình chính), 📋 Hồ sơ & TS (5 mục: Hồ sơ & Đất, Nhà QĐ 42, Vật KT, Cây & VN, Ảnh chụp), 🗺️ Bản đồ GPS, 📤 Xuất .JSON. Chỗ trống `@@CHE_DO@@` (`pwa` / `android`), `@@PHIEN_BAN@@`, `@@DAU_PWA@@`, `@@DU_LIEU_MAC_DINH@@` do `dung.py` điền. |
+| `android/` | Vỏ Android: `AndroidManifest.xml` (gói `vn.larc.field`, API 24-34), `MainActivity.java` (WebView nạp `assets/index.html` qua `https://appassets.androidplatform.net/`, chọn / chụp ảnh, quyền vị trí, cầu nối JS `LARCAndroid.luuFile` / `chupAnhNgay` / `batDauGiongNoi`; dọc mặc định, xoay ngang theo cảm biến), `CungCapTep.java` (ContentProvider cấp file cho máy ảnh / ứng dụng gửi). |
 | `danh_muc_mac_dinh.json` | Danh mục đơn giá nhúng sẵn (nhà, vật kiến trúc, cây + quy cách đường kính / tuổi, vật nuôi; đơn giá đồng) để kiểm đếm ĐỘC LẬP khi chưa có file dữ liệu dự án. Sinh từ bộ đơn giá đóng gói của LARC: `.venv\Scripts\python chay.py xuat-danh-muc-di-dong di_dong\danh_muc_mac_dinh.json` (chạy lại khi bộ đơn giá đổi; kiểm thử `tests/test_du_lieu_di_dong` báo lệch). Thiếu file: ứng dụng vẫn dựng, chỉ không có nút kiểm đếm độc lập. |
 | `qr.py` | Mã QR thuần Python (ISO 18004, byte, mức M, phiên bản 1-10) cho trang cài đặt. |
 | `bieu_tuong.png` | Biểu tượng (512 px) - nguồn của icon PWA và icon trình khởi chạy Android. |
 | `dung.py`, `DUNG.bat` | Dựng `bo_cai\LARC_FieldMobile_<ver>.apk`, `bo_cai\LARC_FieldMobile_PWA_<ver>.zip` và gói web `bo_cai\LARC_FieldMobile_Web_<ver>.zip` (thư mục `tai_len\` + `HUONG_DAN.txt`, trang `cai-dat.html` có mã QR). Phiên bản riêng: `PHIEN_BAN` trong `dung.py` - TĂNG khi phát hành: bộ nhớ đệm PWA (`sw.js`) đặt tên theo phiên bản, cùng số thì iPhone giữ bản cũ. |
-| `tests/` | Kiểm thử riêng: `.venv\Scripts\python -m unittest discover -s di_dong\tests` (đặt `LARC_THU_DUNG_APK=1` để dựng .apk thật). |
+| `tests/` | Kiểm thử riêng: `.venv\Scripts\python -m unittest discover -s di_dong\tests` (đặt `LARC_THU_DUNG_APK=1` để dựng .apk thật). `test_phan_tach.py` chạy THẬT mã JavaScript của ứng dụng trong Chromium của Qt WebEngine (bộ phân tách, giọng nói giả lập, xuất .json). |
 
 ## Dựng
 
@@ -31,7 +31,33 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
 - Cài cho nhiều người: `--url` = địa chỉ HTTPS sẽ tải lên (GitHub Pages / Netlify / Cloudflare Pages; nhớ ở `dia_chi_web.txt`) ->
   tải TOÀN BỘ `tai_len\` lên đó, gửi mã QR trên `cai-dat.html`. Không gửi dữ liệu hộ dân lên trang: chỉ là ứng dụng trống + danh mục đơn giá.
 
-## Tính năng chính (bản 1.1.0)
+## Tính năng chính (bản 1.2.0)
+
+- Mở ứng dụng vào màn hình **✨ AI Quét & Nói**: 2 nút lớn **📷 CHỤP / QUÉT ẢNH** (mã QR trên CCCD -> họ tên, số CCCD, năm sinh, địa chỉ;
+  ảnh biên bản -> làm rõ chữ rồi mở xem để chép / đọc nội dung) và **🎙️ NHẬP GIỌNG NÓI**; ô **Phân tách dữ liệu thông minh**
+  (`phanTichThongMinhAI`, chạy trên máy, không mạng): đọc / gõ / dán liền một mạch -> từng mục hộ (họ tên, CCCD, điện thoại, năm sinh,
+  địa chỉ), đất (tờ / thửa / loại đất / m², tiểu khu / khoảnh / lô / ha), nhà (loại theo kết cấu + diện tích biểu thức), vật kiến trúc
+  (tách nhiều cỡ ống, thể tích 3 chiều, khớp danh mục để tạm tính), cây (loài, năm trồng -> tuổi, ĐK / CV, 35c/15cm), vật nuôi; xem trước
+  có màu, bỏ / chọn từng mục, nhà chưa rõ loại chọn ngay trên thẻ; **✔ Đưa vào Hồ sơ Hộ** (chưa chọn hộ / họ tên khác: tạo hộ mới,
+  CCCD trùng hộ có sẵn: chuyển sang hộ đó; ảnh chụp lúc chưa có hộ gắn theo).
+- Giọng nói: bản .apk dùng bộ nhận dạng của Android (`RecognizerIntent`, ưu tiên gói tiếng Việt ngoại tuyến, không xin quyền micro);
+  PWA dùng Web Speech (Chrome Android / Safari iPhone - cần bật Siri & Đọc chính tả). Lần đầu hỏi người dùng: chưa có gói ngoại tuyến thì
+  tiếng nói (kể cả họ tên, CCCD) do máy chủ Google / Apple nhận dạng. `chuanHoaTiengNoi`: "nhân / cộng / trừ" giữa hai số, "phẩy", "mở /
+  đóng ngoặc", "mét vuông / khối", "phi 114" -> ϕ 114, "đường kính" -> ĐK, "dài 25 mét cao 1 phẩy 5" -> 25m x 1,5m. Nút 🎙️ Đọc ở từng mục
+  (mục đang đọc làm mặc định cho câu không nói rõ loại).
+- Bản đồ GPS: nền ảnh thực chọn bằng nút ngay trên bản đồ - 🛰️ Vệ tinh (Esri World Imagery), 🏷️ Vệ tinh + tên đường / địa danh (thêm lớp
+  Esri Reference), 🗺️ Đường phố (OpenStreetMap), ⛰️ Địa hình (Esri World Topo), ▦ Lưới; chưa chọn lần nào mà có mạng: Vệ tinh + tên. Thanh
+  "Độ đậm thửa" (0-80%), viền trắng + số thửa có viền để nổi trên ảnh. **💾 Lưu ảnh nền khu dự án**: tải các ô ảnh phủ khung các thửa (chưa có
+  thửa: khung đang xem), từ mức vừa khung tới mức chi tiết nhất, tối đa 2.500 ô, vào IndexedDB "larc_nen" -> xem được khi mất sóng; nền Đường
+  phố KHÔNG lưu (chính sách OpenStreetMap cấm tải hàng loạt). Chỉ gửi vị trí ô ảnh tới máy chủ nền, không gửi dữ liệu hộ.
+- Gọn: 1 thanh trạng thái (Đất · Nhà · VKT · Cây · Ảnh · 💰 Tạm tính) thay 5 thẻ số; thanh chọn hộ một hàng (◀ hộ ▶ 🔍 + Hộ 💾 Lưu).
+- Bố cục: dọc mặc định (màn hình rộng hiện khung điện thoại 430px, nút 🔄 Xoay ngang); xoay ngang (>= 680px) = 2 cột: trái công cụ AI +
+  tóm tắt hộ, phải chi tiết; màn hình thấp (< 540px) thu gọn các thanh.
+- Không nhận dạng chữ viết tay trong ảnh (cần thư viện / dịch vụ ngoài): chép / đọc nội dung ngay cạnh ảnh; iPhone có thể giữ ngón tay
+  trên ảnh để chép chữ (Văn bản trực tiếp) rồi dán vào ô phân tách. Mã QR CCCD đọc được khi máy có `BarcodeDetector` (Chrome / WebView
+  Android); iPhone Safari chưa có - đọc / gõ thông tin chủ hộ.
+
+### Bản 1.1.0
 
 - Kiểm đếm độc lập không cần file dự án (danh mục nhúng sẵn); "← Quay lại dự án đang mở"; phím Back Android: đóng ảnh / về thẻ 0.
 - Ô khối lượng nhận biểu thức `(5x12)-(2x3)`, `7m x 2m x 2` (dài x rộng x số cái), `1,5x2,4x1,2` (m3) - bàn phím tắt `x ( ) + - ,`;
@@ -41,7 +67,6 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
   biên bản tự phân loại trên máy (nhà / vật KT / cây), sửa được mọi dòng của mọi bảng.
 - Bản đồ: nền ảnh vệ tinh (Esri) / đường (OpenStreetMap) - chỉ tải ô bản đồ theo tọa độ khung nhìn, không gửi dữ liệu hộ dân;
   "Thửa hộ này", "Tâm GPS", tìm tờ/thửa. Không có mạng: nền lưới như cũ.
-- Không nhận dạng giọng nói: Web Speech gửi tiếng nói (họ tên, CCCD) lên máy chủ của hãng - dùng micro của bàn phím điện thoại nếu cần.
 
 ## Giao ước dữ liệu
 
