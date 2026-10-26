@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 12:38. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 13:41. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -16,7 +16,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 12:38. Kiểm tra tĩnh: 0 cảnh
 | `ban_do_cad.py` | 426 | 4 | 22 | csdl, tien |
 | `ban_quyen.py` | 23 | 0 | 2 | - |
 | `bang_ao.py` | 236 | 3 | 1 | giao_dien |
-| `bang_dieu_chinh.py` | 372 | 1 | 6 | an_toan, du_lieu_in, lan_pa, nghiep_vu, tien |
+| `bang_dieu_chinh.py` | 385 | 1 | 6 | an_toan, du_lieu_in, lan_pa, nghiep_vu, tien |
 | `bao_cao_gpmb.py` | 101 | 0 | 4 | thoi_han, tien, van_dong |
 | `bao_cao_y_kien.py` | 131 | 0 | 4 | du_thao, van_ban_trinh |
 | `cap_nhat.py` | 197 | 1 | 13 | __version__, an_toan |
@@ -50,13 +50,13 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 12:38. Kiểm tra tĩnh: 0 cảnh
 | `in_an.py` | 2183 | 0 | 90 | an_toan, du_lieu_in, in_duong_ke, in_excel, lap_pa, nghiep_vu, tien |
 | `in_duong_ke.py` | 101 | 0 | 4 | - |
 | `in_excel.py` | 225 | 1 | 5 | - |
-| `in_word.py` | 696 | 0 | 36 | dia_phuong, du_lieu_in, van_ban_trinh |
+| `in_word.py` | 700 | 0 | 36 | dia_phuong, du_lieu_in, van_ban_trinh |
 | `khoa.py` | 108 | 1 | 2 | csdl |
 | `kiem_loi.py` | 473 | 1 | 13 | an_toan, csdl, lap_pa, nghiep_vu, tien |
 | `kiem_toan.py` | 321 | 0 | 14 | an_toan, csdl |
 | `kinh_phi_du_an.py` | 250 | 0 | 13 | csdl, theo_doi, tien |
-| `lan_pa.py` | 367 | 2 | 25 | csdl, tien |
-| `lap_pa.py` | 1135 | 4 | 26 | csdl, loai_dat, nghiep_vu, tien |
+| `lan_pa.py` | 389 | 2 | 26 | csdl, tien |
+| `lap_pa.py` | 1140 | 4 | 26 | csdl, loai_dat, nghiep_vu, tien |
 | `lich_su_cap_nhat.py` | 771 | 0 | 1 | - |
 | `loai_dat.py` | 137 | 0 | 6 | - |
 | `ma_tai_san.py` | 142 | 0 | 8 | - |
@@ -95,7 +95,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 12:38. Kiểm tra tĩnh: 0 cảnh
 | `man_hinh_tong_quan.py` | 231 | 1 | 0 | tien, tong_quan_du_an |
 | `mau_bang_tong_hop.py` | 951 | 0 | 2 | - |
 | `may_chu.py` | 1092 | 3 | 59 | csdl |
-| `nghiep_vu.py` | 876 | 9 | 51 | tien |
+| `nghiep_vu.py` | 877 | 9 | 51 | tien |
 | `nguon_gia_dat.py` | 254 | 0 | 14 | lap_pa |
 | `nguon_luoi.py` | 616 | 1 | 29 | lap_pa |
 | `nhap_chi_tiet.py` | 873 | 7 | 34 | csdl, lap_pa, loai_dat, nghiep_vu, nhap_excel, tien |
@@ -126,7 +126,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 12:38. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 942 | 2 | 18 | - |
 
-Tổng: 61455 dòng mã trong pabt/.
+Tổng: 61500 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -351,8 +351,8 @@ Tổng: 61455 dòng mã trong pabt/.
 
 ### `lan_pa.py`
 - lớp `LanPA` (dòng 34): `la_dieu_chinh`, `nhan`, `nhan_trang_thai`
-- lớp `TongLan` (dòng 315): `tong`
-- hàm: `ten_mac_dinh`, `co_bang`, `_qd_cua_ho`, `ds_lan`, `lan_cua`, `lan_hien_tai`, `lan_mac_dinh`, `lan_moi_nhat`, `lan_chua_duyet`, `_dam_bao_dong`, `tao_lan_moi`, `tao_lan_dieu_chinh`, `loai_lan`, `sua_lan`, `dang_khoa`, `mo_khoa_lan`, `mo_khoa_sua`, `khoa_lai`, `xoa_lan`, `gan_qd`, `bo_qd`, `tong_hop_ho`, `tong_hop_cac_lan`, `_tinh_ho_nhieu_lan`, `ho_nhieu_lan`
+- lớp `TongLan` (dòng 337): `tong`
+- hàm: `ten_mac_dinh`, `co_bang`, `_qd_cua_ho`, `ds_lan`, `lan_cua`, `lan_hien_tai`, `lan_mac_dinh`, `lan_moi_nhat`, `lan_chua_duyet`, `_dam_bao_dong`, `tao_lan_moi`, `tao_lan_dieu_chinh`, `lan_duyet_bi_thay`, `loai_lan`, `sua_lan`, `dang_khoa`, `mo_khoa_lan`, `mo_khoa_sua`, `khoa_lai`, `xoa_lan`, `gan_qd`, `bo_qd`, `tong_hop_ho`, `tong_hop_cac_lan`, `_tinh_ho_nhieu_lan`, `ho_nhieu_lan`
 
 ### `lap_pa.py`
 - lớp `LoiNhap` (dòng 25): 
@@ -577,10 +577,10 @@ Tổng: 61455 dòng mã trong pabt/.
 - lớp `ThongTinHo` (dòng 197): 
 - lớp `PhuongAn` (dòng 210): `dong_ho_tro`, `nhan_khau`
 - lớp `BoiCanh` (dòng 239): `tu`, `_doc`, `thua_cua`, `muc_thuong`, `so_ts`
-- lớp `Dong` (dòng 475): 
-- lớp `KetQuaHo` (dòng 496): `tong`, `co_phuong_an`
-- lớp `GoiY` (dòng 673): 
-- lớp `DeXuat` (dòng 754): 
+- lớp `Dong` (dòng 476): 
+- lớp `KetQuaHo` (dòng 497): `tong`, `co_phuong_an`
+- lớp `GoiY` (dòng 674): 
+- lớp `DeXuat` (dòng 755): 
 - hàm: `_tap_ma`, `tap_ma_on_dinh`, `tap_ma_theo_nk`, `tap_ma_tdc`, `don_gia_theo_nhan_khau`, `so_muc`, `muc_5_cot`, `la_vat_nuoi`, `he_so`, `thanh_tien_dat`, `thanh_tien_khoan`, `muc_thuong`, `don_gia_on_dinh`, `so_vi_tri`, `nhom_han_muc`, `_loai_dat_day_du`, `_dec_hoac_none`, `_tao_ho`, `_dong_dat`, `_dong_khoan`, `co_cot_lan`, `lan_bi_thay`, `doc_phuong_an`, `gop_phuong_an`, `tinh_pa_lan`, `_tinh_pa_lan`, `tinh_lan`, `tinh_chenh_lech_lan`, `doc_tat_ca_phuong_an`, `mo_ta_thua`, `thanh_tien_dong_dat`, `thanh_tien_dong`, `tinh_pa`, `tinh_ho`, `_tinh_kiem`, `ket_qua_ho`, `ket_qua_ho_san`, `giu_ket_qua_ho`, `tinh_tat_ca`, `bieu_thuong`, `la_giao_khoan`, `dt_nn_thu_hoi`, `_dao_tao_theo_thua`, `de_xuat_dao_tao_pa`, `de_xuat_dao_tao`, `goi_y_khoan`, `ma_on_dinh_doi_song`, `goi_y_ho_tro`, `kiem_tra_pa`, `dong_bang_0`, `kiem_tra_ho`
 
 ### `nguon_gia_dat.py`

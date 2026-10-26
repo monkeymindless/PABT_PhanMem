@@ -907,6 +907,11 @@ class BoSoan:
         mo_lai=False: không đọc lại phương án vừa lưu (bộ soạn bỏ đi ngay - tự lập hàng loạt)."""
         kiem_ho_nhan_viec(self.con, self.ma_ho)
         if self.khoa:
+            from . import lan_pa
+            x = lan_pa.lan_cua(self.con, self.ma_ho, self.lan)
+            if x.bi_thay_boi and not x.qd:
+                raise LoiNhap(f'Lần {self.lan} đã được thay bằng phương án điều chỉnh lần {x.bi_thay_boi}: sửa ở lần {x.bi_thay_boi} '
+                              '(lần này giữ nguyên để đối chiếu).')
             raise LoiNhap(f'Phương án lần {self.lan} đã có Quyết định phê duyệt và đã được khóa bảo vệ. Không thể chỉnh sửa trực '
                           'tiếp (sửa sẽ làm sai quyết định đã ban hành).\nBổ sung tài sản / chính sách mới: bấm "+ Lập PA bổ '
                           'sung". Cần điều chỉnh lần này: "Mở khóa…".')

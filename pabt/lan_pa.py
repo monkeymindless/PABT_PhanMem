@@ -68,6 +68,10 @@ class LanPA:
         if self.qd:
             qd = '; '.join(f'QĐ số {x["so"] or x["qd_id"]}' + (f' ngày {x["ngay"]}' if x.get('ngay') else '') for x in self.qd)
             return f'ĐÃ PHÊ DUYỆT ({qd}) - CHỈ XEM'
+        if self.bi_thay_boi:
+            return f'ĐÃ ĐƯỢC THAY BẰNG PHƯƠNG ÁN ĐIỀU CHỈNH LẦN {self.bi_thay_boi} - CHỈ XEM'
+        if self.la_dieu_chinh:
+            return 'ĐANG LẬP DỰ THẢO PHƯƠNG ÁN ĐIỀU CHỈNH'
         return 'ĐÃ KHÓA - CHỈ XEM' if self.khoa else 'ĐANG LẬP DỰ THẢO'
 
 
@@ -132,6 +136,8 @@ def ds_lan(con, ma_ho: int) -> list:
     for lan, x in kq.items():
         if x.thay_the and x.thay_the in kq:
             kq[x.thay_the].bi_thay_boi = lan
+            if not kq[x.thay_the].qd:                   # 26/10/2026: lần CHƯA duyệt đã bị điều chỉnh thay - chỉ xem (sửa ở lần điều chỉnh)
+                kq[x.thay_the].khoa = True
     return [kq[k] for k in sorted(kq)]
 
 
@@ -164,8 +170,10 @@ def lan_chua_duyet(con, ma_ho: int) -> int | None:
     """Lần sớm nhất CHƯA có quyết định phê duyệt mà có dòng phương án (hoặc lần 1 khi hộ chưa có quyết định nào); None: mọi lần đã
     duyệt."""
     ds = ds_lan(con, ma_ho)
-    if not any(x.qd for x in ds):
-        return 1
+    co_qd = any(x.qd for x in ds)
+    ds = [x for x in ds if not x.bi_thay_boi]           # lần đã bị điều chỉnh thay (kể cả chưa duyệt): không đưa vào quyết định
+    if not co_qd:
+        return next((x.lan for x in ds if x.so_dong), ds[0].lan if ds else 1)
     return next((x.lan for x in ds if not x.qd and x.so_dong), None)
 
 
@@ -192,24 +200,24 @@ def tao_lan_moi(con, ma_ho: int, ten: str | None = '', ghi_chu: str = '') -> int
 
 
 def tao_lan_dieu_chinh(con, ma_ho: int, lan_goc: int | None = None, ten: str | None = '', ghi_chu: str = '') -> int:
-    """Lập phương án ĐIỀU CHỈNH (sửa sai phương án đã phê duyệt): lần mới = lần lớn nhất + 1, SAO CHÉP đủ dòng của lần bị sửa
-    (lan_goc; mặc định lần đang áp dụng đã phê duyệt muộn nhất) để người dùng sửa cho đúng. Lần bị sửa giữ nguyên dòng + quyết định
-    (in "phương án đã phê duyệt") nhưng từ nay KHÔNG cộng vào tổng của hộ - lần điều chỉnh thay thế. Xóa lần điều chỉnh (chưa có quyết
-    định) thì lần cũ tính lại. Trả số lần mới. LoiNhap: chưa có lần nào đã phê duyệt / lần đã bị thay."""
+    """Lập phương án ĐIỀU CHỈNH: lần mới = lần lớn nhất + 1, SAO CHÉP đủ dòng của lần bị sửa (lan_goc; mặc định lần đã phê duyệt
+    muộn nhất chưa bị thay, không có thì lần có dòng muộn nhất chưa bị thay) để người dùng sửa cho đúng. Lần bị sửa giữ nguyên dòng +
+    quyết định (in "phương án đã phê duyệt" / "phương án đã lập") nhưng từ nay KHÔNG cộng vào tổng của hộ - lần điều chỉnh thay thế.
+    26/10/2026 (người dùng): lần gốc CHƯA có quyết định phê duyệt vẫn lập được (dự thảo phương án điều chỉnh) - lần gốc thành chỉ xem;
+    quyết định sau này phê duyệt TOÀN BỘ số tiền lần điều chỉnh (nghiep_vu.tinh_chenh_lech_lan: chưa có gì được duyệt để trừ).
+    Xóa lần điều chỉnh (chưa có quyết định) thì lần cũ tính lại. Trả số lần mới. LoiNhap: hộ chưa có phương án / lần đã bị thay."""
     from .lap_pa import LoiNhap
     ds = ds_lan(con, ma_ho)
-    ung = [x for x in ds if x.qd and not x.bi_thay_boi and x.so_dong]
+    ung = [x for x in ds if x.qd and not x.bi_thay_boi and x.so_dong] or [x for x in ds if not x.bi_thay_boi and x.so_dong]
     if lan_goc is None:
         if not ung:
-            raise LoiNhap('Hộ chưa có phương án nào đã được phê duyệt để điều chỉnh. Phương án chưa phê duyệt: sửa trực tiếp.')
+            raise LoiNhap('Hộ chưa có phương án nào để điều chỉnh: lập phương án trước.')
         lan_goc = ung[-1].lan
     goc = next((x for x in ds if x.lan == int(lan_goc)), None)
     if goc is None or not goc.so_dong:
         raise LoiNhap(f'Hộ không có phương án lần {lan_goc}.')
     if goc.bi_thay_boi:
         raise LoiNhap(f'Lần {goc.lan} đã được điều chỉnh bằng lần {goc.bi_thay_boi} - điều chỉnh tiếp lần {goc.bi_thay_boi}.')
-    if not goc.qd:
-        raise LoiNhap(f'Lần {goc.lan} chưa có quyết định phê duyệt - sửa trực tiếp, không cần phương án điều chỉnh.')
     lan = max(x.lan for x in ds) + 1
     ten = (ten or '').strip() or ten_mac_dinh(lan, DIEU_CHINH)
     with csdl.giao_dich(con):
@@ -221,8 +229,22 @@ def tao_lan_dieu_chinh(con, ma_ho: int, lan_goc: int | None = None, ten: str | N
             ds_cot = ', '.join(cot)
             con.execute(f'INSERT INTO {bang} ({ds_cot}, lan) SELECT {ds_cot}, ? FROM {bang} WHERE ma_ho = ? AND lan = ? '
                         'ORDER BY id', (lan, ma_ho, goc.lan))
-        csdl.ghi_nhat_ky(con, 'Tạo phương án điều chỉnh', f'Hộ {ma_ho}: lần {lan} thay lần {goc.lan} - {ten}')
+        csdl.ghi_nhat_ky(con, 'Tạo phương án điều chỉnh', f'Hộ {ma_ho}: lần {lan} thay lần {goc.lan}'
+                         + ('' if goc.qd else ' (lần gốc chưa phê duyệt - dự thảo điều chỉnh)') + f' - {ten}')
     return lan
+
+
+def lan_duyet_bi_thay(con, ma_ho: int, lan: int) -> int:
+    """Lần ĐÃ PHÊ DUYỆT mà lần điều chỉnh `lan` (trực tiếp hoặc qua chuỗi điều chỉnh chưa duyệt) thay thế; 0: chưa lần nào trong chuỗi
+    được duyệt (điều chỉnh từ dự thảo - quyết định phê duyệt toàn bộ số tiền lần điều chỉnh)."""
+    theo = {x.lan: x for x in ds_lan(con, ma_ho)}
+    x, da_qua = theo.get(int(lan)), set()
+    while x is not None and x.thay_the and x.thay_the not in da_qua:
+        da_qua.add(x.thay_the)
+        x = theo.get(x.thay_the)
+        if x is not None and x.qd:
+            return x.lan
+    return 0
 
 
 def loai_lan(con, ma_ho: int, lan: int | None) -> str:
@@ -339,7 +361,7 @@ def tong_hop_ho(con, ma_ho: int, bc=None) -> dict:
     da = [t for t in kq if t.lan.qd]
     return dict(lan=kq, tong=tong, so_lan=len(ds), so_lan_co_dong=sum(1 for t in kq if t.lan.so_dong),
                 so_da_duyet=len(da), tong_da_duyet=sum((t.tong for t in da), KHONG),
-                chua_duyet=[t.lan.lan for t in kq if not t.lan.qd and t.lan.so_dong])
+                chua_duyet=[t.lan.lan for t in kq if not t.lan.qd and t.lan.so_dong and not t.lan.bi_thay_boi])
 
 
 def tong_hop_cac_lan(con, ma_ho: int, bc=None) -> dict:

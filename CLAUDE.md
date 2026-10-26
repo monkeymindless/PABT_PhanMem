@@ -2270,6 +2270,15 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   chính là lỗi). `_thong_tin_du_an` có khóa `dia_danh_ngay`; dùng ở in_word (phương án chi tiết), `in_an.chuan_dong_ngay(ws, dia_danh=)`
   (bảng tổng hợp), tờ trình mặc định `{dia_danh_ngay}` (DS_CHO_TRONG; mẫu riêng của người dùng còn {ten_dia_ban} giữ nguyên). Khái toán
   `du_toan._noi_lap`: hồ sơ -> xã của dự toán -> trống. Bỏ "Trị An" ghi cứng (`in_an.DIA_DANH_NGAY_MAC_DINH` = ''). Test `TestDiaDanhNgay`.
+- Phương án ĐIỀU CHỈNH khi lần gốc CHƯA phê duyệt (người dùng 26/10/2026: "kể cả không có quyết định phê duyệt vẫn lập được dự thảo phương án
+  điều chỉnh" - trước báo "chưa có QĐ - sửa trực tiếp"): `lan_pa.tao_lan_dieu_chinh` bỏ chặn; gốc mặc định = lần đã duyệt muộn nhất chưa bị thay,
+  không có thì lần có dòng muộn nhất chưa bị thay. Lần gốc chưa duyệt bị thay -> `khoa` (ds_lan; BoSoan.luu báo "sửa ở lần m"),
+  `nhan_trang_thai` "ĐÃ ĐƯỢC THAY BẰNG PHƯƠNG ÁN ĐIỀU CHỈNH LẦN m" / lần điều chỉnh chưa duyệt "ĐANG LẬP DỰ THẢO PHƯƠNG ÁN ĐIỀU CHỈNH".
+  `lan_pa.lan_duyet_bi_thay(con, ma_ho, lan)` (lần ĐÃ DUYỆT theo chuỗi thay_the; 0 = chưa lần nào duyệt) -> `nghiep_vu.tinh_chenh_lech_lan`
+  trừ lần đó, 0 thì quyết định ghi TOÀN BỘ số tiền lần điều chỉnh. `lan_chua_duyet` / `tong_hop_ho.chua_duyet` bỏ lần đã bị thay (quyết
+  định gắn lần điều chỉnh, không báo nhầm "lần 1 chưa duyệt"). In: `in_word.dong_dieu_chinh` A = "PHƯƠNG ÁN ĐÃ LẬP (LẦN k, CHƯA PHÊ DUYỆT)",
+  mục "… theo phương án đã lập lần k (chưa phê duyệt)"; `bang_dieu_chinh` I / IV "Phương án đã lập (chưa phê duyệt)" (hộ chưa duyệt: số liệu
+  lần gốc cộng vào IV để V = IV + III đúng; trộn hộ đã / chưa duyệt ghi cả hai). Test `test_dieu_chinh.TestDuLieuDieuChinh`.
 - Màn hình chào (người dùng 26/10/2026, ảnh): bỏ khoảng giãn đầu / cuối trang (lề trên 12), bảng dự án gần đây `ngan_gan_day` giãn hết phần còn
   lại (stretch 1; bỏ setMaximumHeight 220), `GAN_DAY_TOI_DA` 8 -> 30 (cả giới hạn dòng của `_nap_gan_day` - trước ghi cứng 8). Kèm sửa
   `csdl.mo(chi_doc=True)` file không phải CSDL: đóng kết nối khi lỗi (trước: Windows giữ khóa file tới khi Python dọn rác). Test

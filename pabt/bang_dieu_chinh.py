@@ -108,8 +108,15 @@ def lap(con, file_ra, ds_ma_ho=None, du_thao: bool | None = None, so_pa: str = '
             qd_goc[q['qd_id']] = (q['so'], q['ngay'])
         ten, dia_chi, tdc = _ho_ten_dia_chi(con, m)
         du_lieu.append(dict(ma=m, ten=ten, dia_chi=dia_chi, tdc=tdc, cu=_SoLieuHo(con, bc, m, goc.lan),
-                            moi=_SoLieuHo(con, bc, m, dc.lan), ly_do=dc.ghi_chu))
+                            moi=_SoLieuHo(con, bc, m, dc.lan), ly_do=dc.ghi_chu, da_duyet=bool(goc.qd)))
     tong_qd = _tong_quyet_dinh(con, list(qd_goc))
+    # 26/10/2026: hộ điều chỉnh từ phương án CHƯA phê duyệt (dự thảo) - không có trong quyết định nào: cộng số liệu phương án đã lập
+    # của hộ đó vào mục IV (nền trước điều chỉnh), để V = IV + III vẫn đúng tổng sau điều chỉnh
+    chua = [x for x in du_lieu if not x['da_duyet']]
+    for x in chua:
+        for k in tong_qd['tien']:
+            tong_qd['tien'][k] += x['cu'].tien.get(k, KHONG)
+        tong_qd['dt'] += sum((t['dt'] for t in x['cu'].thua), KHONG)
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -307,8 +314,14 @@ def lap(con, file_ra, ds_ma_ho=None, du_thao: bool | None = None, so_pa: str = '
                 tong[k] += (moi - cu) if kieu == 'chenh' else (cu if kieu == 'cu' else moi)
         return tong
 
-    so_qd = '; '.join(f'Quyết định số {s or "……"} ngày {n or "……"}' for s, n in qd_goc.values()) or 'Quyết định đã phê duyệt'
-    for kieu, ten_khoi, nhan in (('cu', f'I. Phương án đã được phê duyệt tại {so_qd}', 'cu'),
+    so_qd = '; '.join(f'Quyết định số {s or "……"} ngày {n or "……"}' for s, n in qd_goc.values())
+    if so_qd and chua:
+        ten_cu = f'đã được phê duyệt tại {so_qd} và phương án đã lập chưa phê duyệt ({len(chua)} hộ)'
+    elif so_qd:
+        ten_cu = f'đã được phê duyệt tại {so_qd}'
+    else:
+        ten_cu = 'đã lập (chưa phê duyệt)'
+    for kieu, ten_khoi, nhan in (('cu', f'I. Phương án {ten_cu}', 'cu'),
                                  ('moi', 'II. Phương án đề nghị điều chỉnh', 'moi'),
                                  ('chenh', 'III. Chênh lệch sau điều chỉnh (II - I)', 'chenh')):
         dong_chu(ten_khoi)
@@ -317,7 +330,7 @@ def lap(con, file_ra, ds_ma_ho=None, du_thao: bool | None = None, so_pa: str = '
         tong_cong('TỔNG CỘNG ' + {'cu': 'I', 'moi': 'II', 'chenh': 'III'}[kieu], cong_khoi(kieu))
     # ---- IV. tổng đã phê duyệt cả quyết định, V. sau điều chỉnh
     chenh = cong_khoi('chenh')
-    dong_chu(f'IV. Tổng giá trị đã phê duyệt tại {so_qd}')
+    dong_chu(f'IV. Tổng giá trị {ten_cu}' if not so_qd or chua else f'IV. Tổng giá trị đã phê duyệt tại {so_qd}')
     tong_cong('TỔNG CỘNG', tong_qd['tien'], dt={7: tong_qd['dt']})
     dong_kinh_phi(tong_qd['tien']['tong'])
     dong_chu('V. Tổng giá trị sau khi điều chỉnh (IV + III)')

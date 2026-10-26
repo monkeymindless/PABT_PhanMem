@@ -432,15 +432,16 @@ def tinh_lan(con, ma_ho: int, lan: int, bc: BoiCanh | None = None) -> KetQuaHo:
 
 
 def tinh_chenh_lech_lan(con, ma_ho: int, lan: int, bc: BoiCanh | None = None) -> KetQuaHo:
-    """Kết quả của lần ĐIỀU CHỈNH tính theo CHÊNH LỆCH so với lần bị thay (từng mục: mới - cũ, có thể âm) - số tiền ghi vào quyết
-    định điều chỉnh (cộng quyết định cũ + quyết định điều chỉnh = tổng sau điều chỉnh). Lần không phải điều chỉnh: như tinh_lan."""
+    """Kết quả của lần ĐIỀU CHỈNH tính theo CHÊNH LỆCH so với lần ĐÃ PHÊ DUYỆT bị thay (từng mục: mới - cũ, có thể âm) - số tiền ghi
+    vào quyết định điều chỉnh (cộng quyết định cũ + quyết định điều chỉnh = tổng sau điều chỉnh). Lần không phải điều chỉnh, hoặc
+    điều chỉnh từ dự thảo chưa phê duyệt (26/10/2026 - chưa có gì được duyệt để trừ): toàn bộ số tiền của lần, như tinh_lan."""
+    from .lan_pa import co_bang, lan_duyet_bi_thay
     bc = bc or BoiCanh.tu(con)
     moi = tinh_lan(con, ma_ho, lan, bc)
     try:
-        r = con.execute('SELECT thay_the FROM pa_lan WHERE ma_ho = ? AND lan = ?', (ma_ho, lan)).fetchone()
+        cu_lan = lan_duyet_bi_thay(con, ma_ho, lan) if co_bang(con) else 0
     except Exception:
-        r = None
-    cu_lan = int(r[0] or 0) if r else 0
+        cu_lan = 0
     if not cu_lan:
         return moi
     cu = tinh_lan(con, ma_ho, cu_lan, bc)

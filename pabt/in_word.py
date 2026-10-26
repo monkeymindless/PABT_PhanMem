@@ -397,14 +397,18 @@ def dong_dieu_chinh(con, ma_ho: int, bc, lan_dc, dong_moi: list, kq_moi, da: dic
     ten_db = str(da.get('ten_dia_ban') or '').strip()
     co_quan = f'UBND {cap} {ten_db}'.replace('  ', ' ').strip() if (cap and ten_db) else ''
     tai = ('Quyết định số ' + (so_qd or '……') + ' ngày ' + (ngay_qd or '……') + (f' của {co_quan}' if co_quan else ''))
+    # 26/10/2026: điều chỉnh từ phương án CHƯA phê duyệt (dự thảo) - A là "phương án đã lập", không ghi quyết định
+    da_duyet = bool(goc.qd)
+    tieu_de_a = ('PHƯƠNG ÁN ĐÃ ĐƯỢC PHÊ DUYỆT TẠI ' + tai.upper()) if da_duyet else \
+        f'PHƯƠNG ÁN ĐÃ LẬP (LẦN {goc.lan}, CHƯA PHÊ DUYỆT)'
+    theo_a = f'đã được phê duyệt tại {tai}' if da_duyet else f'theo phương án đã lập lần {goc.lan} (chưa phê duyệt)'
     cu, moi = _theo_muc(dong_cu), _theo_muc(dong_moi)
     muc_ts = [m for m in MUC_TT if m != 7 or kq_cu.muc.get(7) or kq_moi.muc.get(7)]
 
     def tom_tat(kq):
         return [['S', [_la_ma(k), nghiep_vu.TEN_MUC[m], None, None, None, None, kq.muc.get(m, 0), None]]
                 for k, m in enumerate(muc_ts, start=1)]
-    out = [['G', ['A', 'PHƯƠNG ÁN ĐÃ ĐƯỢC PHÊ DUYỆT TẠI ' + tai.upper().replace('QUYẾT ĐỊNH SỐ', 'QUYẾT ĐỊNH SỐ'), None, None, None,
-                  None, kq_cu.tong, None]]]
+    out = [['G', ['A', tieu_de_a, None, None, None, None, kq_cu.tong, None]]]
     out += tom_tat(kq_cu)
     out.append(['G', ['B', 'PHƯƠNG ÁN ĐIỀU CHỈNH', None, None, None, None, kq_moi.tong - kq_cu.tong, None]])
     n = 0
@@ -413,7 +417,7 @@ def dong_dieu_chinh(con, ma_ho: int, bc, lan_dc, dong_moi: list, kq_moi, da: dic
             continue
         ten = nghiep_vu.TEN_MUC[m]
         n += 1
-        out.append(['G', [_la_ma(n), f'{ten} đã được phê duyệt tại {tai}', None, None, None, None, kq_cu.muc.get(m, 0), None], m])
+        out.append(['G', [_la_ma(n), f'{ten} {theo_a}', None, None, None, None, kq_cu.muc.get(m, 0), None], m])
         out += [['I'] + x[1:] for x in cu[m]]
         n += 1
         out.append(['G', [_la_ma(n), f'Điều chỉnh về {TEN_MUC_NGAN[m]}', None, None, None, None, kq_moi.muc.get(m, 0), None], m])

@@ -20,13 +20,57 @@ class TestDuLieuDieuChinh(_Co):
         theo_doi.them_ho_theo_pa(con, qd, [ma])
         return qd, nghiep_vu.tinh_lan(con, ma, 1).tong
 
-    def test_chua_duyet_khong_dieu_chinh_duoc(self):
+    def test_chua_duyet_van_lap_du_thao_dieu_chinh(self):
+        """26/10/2026 (người dùng): lần gốc CHƯA có quyết định phê duyệt vẫn lập được dự thảo phương án điều chỉnh."""
         con = self._con()
         bo = BoSoan(con, 1)
         self._them(bo, 3, 5)
         bo.luu()
-        with self.assertRaises(LoiNhap):
-            lan_pa.tao_lan_dieu_chinh(con, 1)
+        tong1 = nghiep_vu.tinh_lan(con, 1, 1).tong
+        lan = lan_pa.tao_lan_dieu_chinh(con, 1)
+        self.assertEqual(lan, 2)
+        ds = lan_pa.ds_lan(con, 1)
+        self.assertEqual((ds[0].bi_thay_boi, ds[0].khoa, ds[1].la_dieu_chinh, ds[1].khoa), (2, True, True, False))
+        self.assertIn('ĐIỀU CHỈNH LẦN 2', ds[0].nhan_trang_thai)
+        self.assertEqual(ds[1].nhan_trang_thai, 'ĐANG LẬP DỰ THẢO PHƯƠNG ÁN ĐIỀU CHỈNH')
+        with self.assertRaises(LoiNhap) as e:                                              # lần gốc bị thay: chỉ xem
+            BoSoan(con, 1, lan=1).luu()
+        self.assertIn('sửa ở lần 2', str(e.exception))
+        bo = BoSoan(con, 1, lan=2)
+        bo.pa.khoan[3][0].so_luong = D('30')
+        bo.luu()
+        moi = nghiep_vu.tinh_lan(con, 1, 2).tong
+        self.assertNotEqual(moi, tong1)
+        self.assertEqual(nghiep_vu.tinh_ho(con, 1).tong, moi)                               # tổng hộ = lần điều chỉnh
+        self.assertEqual(lan_pa.lan_duyet_bi_thay(con, 1, 2), 0)
+        self.assertEqual(nghiep_vu.tinh_chenh_lech_lan(con, 1, 2).tong, moi)                # chưa gì được duyệt: TOÀN BỘ, không trừ
+        self.assertEqual(lan_pa.lan_chua_duyet(con, 1), 2)                                  # quyết định gắn lần điều chỉnh, không gắn lần 1
+        self.assertEqual(lan_pa.tong_hop_ho(con, 1)['chua_duyet'], [2])
+        qd = theo_doi.luu_qd(con, None, '20/QĐ-UBND', '05/11/2026')
+        theo_doi.them_ho_theo_pa(con, qd, [1])
+        r = con.execute('SELECT lan, so_tien FROM qd_ho WHERE qd_id = ? AND ma_ho = 1', (qd,)).fetchone()
+        self.assertEqual((r[0], D(r[1])), (2, moi))
+        self.assertEqual(lan_pa.tong_hop_ho(con, 1)['chua_duyet'], [])
+        # bản in: A = phương án đã lập (chưa phê duyệt), không ghi quyết định
+        from pabt import du_lieu_in, in_word
+        dong, kq = du_lieu_in.dong_chi_tiet(con, 1, None, nghiep_vu.doc_phuong_an(con, 1, lan=2),
+                                            nghiep_vu.doc_phuong_an(con, 1, den_lan=1))
+        out, _ = in_word.dong_dieu_chinh(con, 1, None, lan_pa.lan_cua(con, 1, 2), dong, kq, du_lieu_in._thong_tin_du_an(con))
+        self.assertEqual(out[0][1][1], 'PHƯƠNG ÁN ĐÃ LẬP (LẦN 1, CHƯA PHÊ DUYỆT)')
+        self.assertFalse(any('Quyết định số' in str(x[1][1]) for x in out))
+
+    def test_dieu_chinh_tiep_ban_dieu_chinh_chua_duyet_tru_lan_da_duyet(self):
+        """Chuỗi: lần 1 đã duyệt -> lần 2 điều chỉnh (chưa duyệt) -> lần 3 điều chỉnh lần 2: chênh lệch so với lần 1 (lần đã duyệt)."""
+        con = self._con()
+        qd, tong1 = self._duyet_lan_1(con)
+        lan_pa.tao_lan_dieu_chinh(con, 1)
+        lan3 = lan_pa.tao_lan_dieu_chinh(con, 1, 2)
+        bo = BoSoan(con, 1, lan=lan3)
+        bo.pa.khoan[3][0].so_luong = D('40')
+        bo.luu()
+        self.assertEqual(lan_pa.lan_duyet_bi_thay(con, 1, lan3), 1)
+        moi = nghiep_vu.tinh_lan(con, 1, lan3).tong
+        self.assertEqual(nghiep_vu.tinh_chenh_lech_lan(con, 1, lan3).tong, moi - tong1)
 
     def test_lan_dieu_chinh_thay_lan_cu_trong_tong(self):
         con = self._con()
