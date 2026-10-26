@@ -1623,8 +1623,8 @@ def dinh_dang_so_khong(fmt: str) -> str:
 
 
 def rut_gon_don_vi(ten: str) -> str:
-    """Tên đơn vị dài có "Chi nhánh" -> chữ đầu phần trước + "Chi nhánh …" ("Trung tâm Phát triển quỹ đất tỉnh X - Chi nhánh Y"
-    -> "TTPTQĐ Chi nhánh Y"); không có "Chi nhánh" thì giữ nguyên. Không ghi cố định tên đơn vị nào (1.0.04)."""
+    """Tên đơn vị dài có "Chi nhánh" -> chữ đầu phần trước + "Chi nhánh …" ("Tên Đơn Vị Tỉnh X - Chi nhánh Y"
+    -> "TĐV Chi nhánh Y"); không có "Chi nhánh" thì giữ nguyên. Không ghi cố định tên đơn vị nào (1.0.04)."""
     s = ' '.join(str(ten or '').split())
     m = re.search(r'(?i)\bchi nhánh\b', s)
     if not m or m.start() == 0:

@@ -3509,14 +3509,14 @@ class CuaSoChinh(QMainWindow):
         h.exec()
 
     def gioi_thieu(self):
-        from . import dia_phuong, to_chuc
+        # 26/10/2026 (người dùng): Giới thiệu KHÔNG ghi tên cơ quan / hồ sơ địa phương nào - chỉ tên phần mềm, phiên bản, gói, tác giả
+        from . import to_chuc
         from .cap_nhat import ban_goc
         goc = ban_goc()
         pb = f'Phiên bản {__version__}' + (f' (bản cập nhật, bản cài gốc {goc})' if goc != __version__ else '') + \
             (f' - {NHAN_THU_NGHIEM}' if BAN_THU_NGHIEM else '') + '.'
         from .ban_quyen import mo_ta
-        QMessageBox.about(self, TEN_UD, f'{TEN_UD}\n{pb}\n{mo_ta()}.\nHồ sơ địa phương: {dia_phuong.ten_ho_so()}.\n'
-                                        f'{to_chuc.TAC_GIA}.')
+        QMessageBox.about(self, TEN_UD, f'{TEN_UD}\n{pb}\n{mo_ta()}.\n{to_chuc.TAC_GIA}.')
 
     # ------------------------------------------------ gói mẫu in & cấu hình (.pabtcfg, 0.9.85)
     def xuat_goi_mau(self, file=None, cho: bool = True):

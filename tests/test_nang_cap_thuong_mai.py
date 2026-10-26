@@ -299,5 +299,23 @@ class TestGiaiPhap5(unittest.TestCase):
             self.assertEqual(openpyxl.load_workbook(f).active['A1'].value, 'Thử')        # file vẫn mở được
 
 
+class TestGioiThieu(unittest.TestCase):
+    def test_gioi_thieu_khong_ten_co_quan(self):
+        """26/10/2026 (người dùng): Giới thiệu chỉ tên phần mềm, phiên bản, gói, tác giả - không tên cơ quan / hồ sơ địa phương."""
+        try:
+            from PySide6.QtWidgets import QMessageBox
+        except ImportError:
+            self.skipTest('không có Qt')
+        from pabt import app, to_chuc
+        chu = []
+        with mock.patch.object(QMessageBox, 'about', lambda *a: chu.append(a[2])), \
+                mock.patch.object(dia_phuong, 'ten_ho_so', lambda: 'TRUNG TÂM GIẢ LẬP CHI NHÁNH X'), \
+                mock.patch.object(to_chuc, 'TEN', 'TRUNG TÂM GIẢ LẬP CHI NHÁNH X'):
+            app.CuaSoChinh.gioi_thieu(None)
+        self.assertIn('Phan Tuấn Vĩnh', chu[0])
+        self.assertNotIn('GIẢ LẬP', chu[0])
+        self.assertNotIn('Hồ sơ địa phương', chu[0])
+
+
 if __name__ == '__main__':
     unittest.main()

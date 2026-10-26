@@ -2228,6 +2228,9 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     `chinh_sach_ho_tro.ma_on_dinh/ma_dao_tao/ma_theo_nk/ma_tdc` (mặc định mã Đồng Nai), mã lạ + tên -> `loai_theo_ten` (không dấu). Nơi gọi cũ
     KHÔNG truyền tên (đổi sẽ làm khoản "…tái định cư" có mã riêng thành không ra tiền); mã trong hồ sơ chỉ loai() dùng - nghiep_vu vẫn MA_*.
     `dia_phuong.kiem_tra` kiểm hai mục này (`dia_phuong.MO_HINH_VI_TRI` - không nhập gia_dat_nq28: vòng nhập lúc khởi động).
+  - Phát hành là 1.0.28. Giới thiệu (`app.gioi_thieu`) CHỈ tên phần mềm, phiên bản, gói bản quyền, `to_chuc.TAC_GIA` - KHÔNG tên cơ quan / hồ sơ địa
+    phương (người dùng 26/10/2026: "giữ lại tên tôi, các tên cơ quan xóa hết"; test `TestGioiThieu`). Chữ hiện ra / chú thích mã không ví dụ tên cơ
+    quan cụ thể (tiep_nhan_phap_ly, lịch sử cập nhật 1.0.14, HUONG_DAN bảng hồ sơ); dữ liệu kiểm thử (tests/) và văn bản pháp lý (QĐ của UBND tỉnh) giữ.
   - `pabt/in_duong_ke.py` tách từ in_an (_DS_*, _NET, _them_bo_qua_loi, chen_duong_ke, ghi_zip_nguyen_tu = _ghi_zip cũ, doc_duong_ke mới) - in_an nhập
     lại mọi tên. Dùng `str(b, 'utf-8')` thay `b.decode` (vermin không suy được kiểu bytes trong dict -> báo "str.decode !3").
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.

@@ -2716,7 +2716,7 @@ class HopDuAn(QDialog):
         return dlg
 
     def _dau_dong_va_goi_y(self):
-        """1.0.03 (Ảnh 4): chữ dài ("TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT…", "Phòng Kinh tế, Hạ tầng và Đô thị phường…") hiện TỪ ĐẦU (ô sửa
+        """1.0.03 (Ảnh 4): chữ dài (tên cơ quan, "Phòng Kinh tế, Hạ tầng và Đô thị phường…") hiện TỪ ĐẦU (ô sửa
         được mặc định cuộn về cuối - mất chữ đầu) và đủ chữ ở chú thích; chú thích đi theo khi sửa."""
         for w in self.o.values():
             o = w.lineEdit() if isinstance(w, QComboBox) else w

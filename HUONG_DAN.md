@@ -603,7 +603,7 @@ Những gì khác nhau giữa các địa phương / đơn vị nằm trong **m�
 
 | Mục | Nội dung | Mặc định đóng kèm |
 |---|---|---|
-| `co_quan` | Tên tổ chức làm nhiệm vụ bồi thường, đơn vị trực thuộc, địa chỉ; thông tin điền sẵn trên bản in (đơn vị cấp trên, tên trên tiêu đề, ký hiệu số phương án, chức vụ người ký) | Chi nhánh Vĩnh Cửu |
+| `co_quan` | Tên tổ chức làm nhiệm vụ bồi thường, đơn vị trực thuộc, địa chỉ; thông tin điền sẵn trên bản in (đơn vị cấp trên, tên trên tiêu đề, ký hiệu số phương án, chức vụ người ký) | Để trống (đơn vị tự nhập) |
 | `can_cu_phap_ly` | Căn cứ kinh phí tổ chức thực hiện, căn cứ hạn thẩm định, các dòng "Căn cứ …" chung của tờ trình mặc định | QĐ 08/2025, QĐ 30/2025, 42/2025, 18/2026 |
 | `thoi_han` | Số ngày mặc định: thẩm định 15, đã thông báo thu hồi đất NN 60 / PNN 120, vận động 10, niêm yết 10, đối thoại 30 (mỗi dự án vẫn sửa riêng được) | QĐ 18/2026 |
 | `kinh_phi_to_chuc` | Mức tối đa theo tuyến / dự án khác, làm tròn (`-3` = đến nghìn đồng), phân bổ (tên, %; tổng phải 100%) | 3,5% / 2,5%; 85% / 15% |

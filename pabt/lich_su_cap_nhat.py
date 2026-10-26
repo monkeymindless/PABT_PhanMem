@@ -7,6 +7,15 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.28', '26/10/2026', (
+        'Máy chủ LAN - nhiều chuyên viên cùng một dự án: mỗi người nhận một nhóm hộ về làm offline (chỉ khóa các hộ đó, không khóa cả dự án) rồi gộp '
+        'đúng các hộ đó lên lại; hộ của người khác giữ nguyên. Thửa mới thêm ở hai máy trùng mã được tự đánh lại; hộ bị sửa trên máy chủ trong lúc làm '
+        'offline thì báo xung đột trước khi ghi; file trên máy chủ được sao lưu trước mỗi lần gộp.',
+        'In phương án chi tiết hàng loạt nhanh hơn: số liệu dự án, hộ, nguồn gốc, phương án đọc một lần cho cả lô thay vì từng hộ.',
+        'Máy không có Microsoft Word: nếu máy có LibreOffice thì xuất PDF bằng LibreOffice (đúng bố cục hơn), không có mới dựng PDF gần đúng.',
+        'Chuẩn bị dùng cho tỉnh khác: hồ sơ địa phương ghi được mô hình vị trí bảng giá đất (Vị trí 1-4, Khu vực - Vị trí) và mã các chính sách hỗ trợ; '
+        'chính sách không theo mã Đồng Nai được nhận theo tên.',
+    )),
     ('1.0.27', '24/10/2026', (
         'Dự án mới - nhập danh sách hộ, thửa: đọc được file Excel .xlsx và .xls (cũ), PDF có chữ (văn bản đã ký hay chưa ký), PDF scan và ảnh '
         '(.png, .jpg…). Phần mềm tự tìm bảng, dòng tiêu đề, nhận cột theo tên (kể cả tên viết sai do nhận dạng chữ) hoặc theo nội dung ô; '
@@ -103,7 +112,7 @@ MUC = (
         'Phương án chi tiết từng hộ xuất bằng bản Word (.docx) theo Nghị định 30 ở MỌI nơi: xem trước F4 trong cửa sổ lập phương án, '
         'khung xem trước của Xuất hồ sơ & Bản in, xuất hồ sơ đợt, Dự án mới. Không còn bản Excel phương án chi tiết; PDF, in ra máy '
         'và file PDF gộp cả đợt lấy từ bản Word. Máy không có Microsoft Word: xem trước / PDF là bản gần đúng phần mềm tự dựng.',
-        'Bản Word: tên cơ quan "TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT" một dòng như mẫu; tên chủ hộ / tổ chức in đậm, nhãn chữ thường; cột Ghi '
+        'Bản Word: tên cơ quan một dòng như mẫu; tên chủ hộ / tổ chức in đậm, nhãn chữ thường; cột Ghi '
         'chú, Tên tài sản rộng theo nội dung từng hộ (ghi chú dài không còn kéo dòng cao nửa trang).',
         'Bảng tổng hợp A3: hộ có nhiều thửa ghi STT, họ tên, địa chỉ, tổng cộng, phương án tái định cư, ghi chú trong MỘT ô gộp cho '
         'cả hộ (không lặp lại từng dòng); mỗi thửa một dòng với tờ, thửa, loại đất, diện tích, tiền đất và nguồn gốc riêng của thửa.',

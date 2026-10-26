@@ -299,7 +299,7 @@ def trach_nhiem(d: dict) -> list:
                   'số người sử dụng đất (Điểm b Khoản 2 Điều 127 Luật Đất đai 2024, Điều 62 Nghị định 102/2024/NĐ-CP). Tổ chức làm '
                   'nhiệm vụ bồi thường lập phương án bồi thường, hỗ trợ, tái định cư cho phần còn lại; kinh phí do nhà đầu tư chi trả.')
     else:
-        kq.append('Nhà nước thu hồi đất; Tổ chức làm nhiệm vụ bồi thường (Trung tâm Phát triển quỹ đất) tổ chức điều tra, kiểm đếm, '
+        kq.append('Nhà nước thu hồi đất; Tổ chức làm nhiệm vụ bồi thường tổ chức điều tra, kiểm đếm, '
                   'lập, niêm yết, lấy ý kiến, trình thẩm định phương án bồi thường, hỗ trợ, tái định cư và tổ chức chi trả theo '
                   'trình tự Quyết định 18/2026/QĐ-UBND, Nghị định 88/2024/NĐ-CP.')
         if loai == 'cong':

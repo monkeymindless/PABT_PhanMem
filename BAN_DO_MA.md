@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 09:00. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 10:25. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -56,7 +56,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 09:00. Kiểm tra tĩnh: 0 cảnh
 | `kinh_phi_du_an.py` | 250 | 0 | 13 | csdl, theo_doi, tien |
 | `lan_pa.py` | 367 | 2 | 25 | csdl, tien |
 | `lap_pa.py` | 1106 | 4 | 24 | csdl, loai_dat, nghiep_vu, tien |
-| `lich_su_cap_nhat.py` | 746 | 0 | 1 | - |
+| `lich_su_cap_nhat.py` | 755 | 0 | 1 | - |
 | `loai_dat.py` | 137 | 0 | 6 | - |
 | `ma_tai_san.py` | 142 | 0 | 8 | - |
 | `man_hinh.py` | 3629 | 15 | 3 | du_lieu_in, giao_dien, hang_nhap_nhanh, lap_pa, nghiep_vu, thong_bao, tien |
@@ -125,7 +125,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 26/10/2026 09:00. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 942 | 2 | 18 | - |
 
-Tổng: 60879 dòng mã trong pabt/.
+Tổng: 60888 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
