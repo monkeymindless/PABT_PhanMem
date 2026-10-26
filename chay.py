@@ -401,6 +401,15 @@ def main(argv) -> int:
     lenh = argv[0]
     if lenh == 'go-cai-dat':
         return go_cai_dat('-Im' in argv[1:])
+    if lenh == 'xuat-danh-muc-di-dong':
+        # danh mục đơn giá (bộ đang dùng) nhúng sẵn vào ứng dụng điện thoại - dự án di_dong/ đọc file này khi dựng
+        if len(argv) < 2:
+            print('Cách dùng: chay.py xuat-danh-muc-di-dong <file.json>')
+            return 2
+        from pabt import phieu_kiem_dem as pk
+        ra = pk.xuat_du_lieu_mac_dinh(argv[1])
+        print(f'Đã ghi danh mục cho ứng dụng điện thoại -> {ra}')
+        return 0
     if lenh not in TUY_CHON:
         print(__doc__)
         return 2

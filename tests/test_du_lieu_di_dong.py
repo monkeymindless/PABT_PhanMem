@@ -38,6 +38,28 @@ class TestDuLieuDuAn(unittest.TestCase):
                          'trang_thai_ho', 'mau_trang_thai'} <= set(g['du_lieu']))      # giao ước di_dong/README.md mục 1
         self.assertRegex(pk.ten_file_du_lieu(self.con), r'^LARC_DuLieu_[A-Za-z0-9_]+\.json$')
 
+    def test_don_gia_va_quy_cach_cay(self):
+        du = pk.du_lieu_phieu(self.con)
+        for k in ('nha', 'dm2', 'vat_nuoi'):
+            self.assertTrue(all(len(m) == 4 and isinstance(m[3], int) for m in du[k]), k)    # [mã, tên, ĐVT, đơn giá]
+        ct = du['cay_chi_tiet']
+        self.assertEqual(set(ct), set(du['cay']))
+        dk = [v for v in ct.values() if v['dk']]
+        self.assertTrue(dk and all(len(m) == 8 for v in dk for m in v['muc']))
+        self.assertTrue(any(m[5] is not None for v in dk for m in v['muc']))                  # khoảng đường kính (đến cm)
+        self.assertTrue(any(m[6] is not None for v in ct.values() if v['tuoi'] for m in v['muc']))
+
+    def test_du_lieu_mac_dinh_va_file_nhung(self):
+        md = pk.du_lieu_mac_dinh()
+        self.assertEqual((md['ho'], md['du_an'], md['ban_do']), ([], '', []))
+        self.assertTrue(md['nha'] and md['cay_chi_tiet'] and md['datum'])
+        f = pk.xuat_du_lieu_mac_dinh(Path(self.td.name) / 'md.json')
+        self.assertEqual(json.loads(f.read_text(encoding='utf-8'))['nha'], md['nha'])
+        # file nhúng của dự án di_dong/ phải khớp bộ đơn giá đóng gói (chay.py xuat-danh-muc-di-dong di_dong/danh_muc_mac_dinh.json)
+        nhung = json.loads((GOC / 'di_dong' / 'danh_muc_mac_dinh.json').read_text(encoding='utf-8'))
+        for k in ('nha', 'dm2', 'vat_nuoi', 'cay'):
+            self.assertEqual(nhung[k], md[k], f'{k}: chạy lại chay.py xuat-danh-muc-di-dong')
+
     def test_nhap_nham_file_du_lieu_bao_ro(self):
         f = pk.xuat_du_lieu_di_dong(self.con, Path(self.td.name) / 'dl.json')
         with self.assertRaises(LoiNhap) as e:

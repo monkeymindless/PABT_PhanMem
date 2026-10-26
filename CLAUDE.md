@@ -2373,6 +2373,31 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     HopKiemDem nút `b_du_lieu` "Xuất dữ liệu cho ứng dụng điện thoại…" (`xuat_du_lieu`), BỎ `b_xuat` / `xuat`. Không đóng gói gì của di_dong/
     (PABT.spec, dung_exe38.DU_LIEU, cap_nhat.DU_LIEU như trước Đợt 3); tu-kiem bước "Dữ liệu cho ứng dụng điện thoại". Đổi định dạng file
     .json: sửa cả hai bên + README + tăng `phien_ban` của file. Test `tests/test_du_lieu_di_dong.py` (cả bài chặn pabt/ dùng mã di_dong/).
+- LARC Field Mobile 1.1.0 (người dùng 26/10/2026; cài nhiều iPhone miễn phí = "Gói GitHub Pages + mã QR", rồi đặc tả 12 hạng mục "Principal
+  Mobile & GIS Architect"; test `di_dong/tests/test_ung_dung.py`, `test_qr.py`, `tests/test_du_lieu_di_dong.py`):
+  - Gói web: `dung.py --url https://<tên>.github.io/<kho>/` (`chuan_dia_chi` chỉ https, nhớ `di_dong/dia_chi_web.txt`) -> `bo_cai\LARC_FieldMobile_Web_
+    <ver>.zip` (`tai_len\` = PWA + `cai-dat.html` (QR SVG `di_dong/qr.py` thuần Python ISO 18004 mức M, phiên bản 1-10 - test giải mã ngược độc lập;
+    cảnh báo trình duyệt trong Zalo / Facebook; nút tải .apk khi có) + `HUONG_DAN.txt`). Người dùng TỰ tải lên bằng tài khoản của mình.
+  - DANH MỤC NHÚNG: `di_dong/danh_muc_mac_dinh.json` (~0,55 MB) sinh bằng `chay.py xuat-danh-muc-di-dong <file>` = `phieu_kiem_dem.
+    xuat_du_lieu_mac_dinh` (`du_lieu_mac_dinh`, `danh_muc_di_dong(None)` đọc `don_gia.file_goc()` chỉ đọc - giống nhau mọi máy) -> chỗ trống
+    `@@DU_LIEU_MAC_DINH@@` (thiếu file = `null`, không có nút kiểm đếm độc lập). Bộ đơn giá đóng gói đổi -> CHẠY LẠI (test so khớp). Giao ước dữ liệu
+    nay: nha / dm2 / vat_nuoi `[mã, tên, ĐVT, đơn giá int]`, `cay_chi_tiet {loài: {dk, tuoi, dvt, muc: [mã, tên, ĐVT, giá, dk_từ, dk_đến, tuổi_từ,
+    tuổi_đến]}}` (cay_trong.khoang_duong_kinh, hieu_tai_san.khoang_tuoi). Kiểm đếm độc lập: `batDauDocLap` (du_an "Kiểm đếm thực địa <ngày>",
+    `doc_lap`), "← Quay lại dự án đang mở" (`#c_quay_lai`).
+  - Android: `<queries>` IMAGE_CAPTURE (Android 11+ thiếu thì hộp chọn không thấy máy ảnh), KHÔNG khai CAMERA; `CauNoi.chupAnhNgay` -> ảnh thu
+    <= 1600 px + xoay EXIF -> `window.LARC_nhanAnhAndroid(dataurl, tên)`; không `restoreState` (luôn nạp index.html - vỏ tự mở dự án từ IndexedDB);
+    Back = `window.LARC_quayLai()` (đóng ảnh / màn hình dự án / về thẻ 0), false -> moveTaskToBack.
+  - Ô số lượng `inputmode="text"` + hàng phím `.phim_tat_ct` (x ( ) + - ,; pointerdown preventDefault giữ con trỏ); `bieuThuc` có dấu trừ,
+    "7m x 2m x 2" = diện tích x số cái (như hieu_tai_san); thành tiền tạm tính `chuTamTinh` (chỉ xem). `goiYLoaiNhaTheoKetCau` (chip kết cấu
+    -> nhà tạm / bán kiên cố / loại 1-4, nhóm tầng chỉ khi người dùng chọn tay) - GỢI Ý, không tự đổi khi người dùng đã chọn. Cây: `loaiCay`
+    so CÓ DẤU trước ("Tràm" -> Keo lá tràm, không Trám đen), chip đường kính / tuổi theo khoảng mục. Dòng biên bản `phanTichDongNhanhJS` xếp mục
+    2 / 3 trên điện thoại (`tu_bb`, so_luong trống - máy tính đọc lại chữ bằng hieu_tai_san), còn lại muc 0; mọi bảng có Sửa (`batSua` / `SUA`).
+  - Ảnh: nút Chụp (`capture`) / Chọn tách riêng, `#hop_xem_anh` phóng 1-3 lần + ô chép biên bản (`duaDong`), lamRo chờ 40 ms. KHÔNG nhận dạng giọng
+    nói (Web Speech gửi tiếng lên máy chủ hãng - trái quy tắc không gửi dữ liệu hộ dân; dùng micro bàn phím).
+  - Bản đồ nền ô Web Mercator: Esri World_Imagery (tối đa z 17 - sâu hơn ảnh "Map data not yet available"), OSM (z 19), ghi nguồn; LRU 256 ô,
+    `referrerPolicy no-referrer`; chỉ gửi tọa độ ô. "Thửa hộ này", "Tâm GPS", tìm "5/10". Tự lưu khi gõ, KPI ẩn ở thẻ ảnh / bản đồ, lọc hộ đã /
+    chưa ghi, huy hiệu số dòng trên thẻ, thẻ 6 Mở / Lưu .json / Xóa từng hộ. `sw.js` cache theo PHIEN_BAN: phát hành phải tăng `dung.PHIEN_BAN`.
+  - Chưa thử trên máy Android / iPhone thật (đã thử trong trình duyệt: vỏ pwa / android, cầu nối giả lập, nhập .json vào dự án thử).
 - Sau 1.0.29 (người dùng 26/10/2026, ảnh dòng "Phú Lý, ngày 20 tháng 10 năm 2026"): địa danh đầu dòng ngày tháng của bản in = NƠI ĐƠN VỊ CÔNG TÁC,
   KHÔNG phải xã có đất của dự án. Cột `du_an.dia_danh_don_vi` (KHÔNG đổi PHIEN_BAN_CSDL: schema.sql file mới; `csdl.dam_bao_cot_du_an` /
   `COT_DU_AN_THEM` thêm ở csdl.mo khi file có hộ và ở `lap_pa.luu_du_an`; `doc_du_an` file cũ trả ''), trong `TRUONG_DU_AN` và

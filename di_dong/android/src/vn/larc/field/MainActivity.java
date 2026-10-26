@@ -9,7 +9,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.Uri;
+import android.util.Base64;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -24,6 +29,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -38,7 +44,7 @@ import java.nio.charset.Charset;
 public class MainActivity extends Activity {
     static final String MIEN = "appassets.androidplatform.net";
     static final String GOC = "https://" + MIEN + "/";
-    static final int MA_CHON = 11, MA_LUU = 12, MA_GPS = 13;
+    static final int MA_CHON = 11, MA_LUU = 12, MA_GPS = 13, MA_CHUP = 14;
 
     WebView web;
     ValueCallback<Uri[]> choChon;
@@ -83,8 +89,9 @@ public class MainActivity extends Activity {
             }
         });
         web.addJavascriptInterface(new CauNoi(), "LARCAndroid");
-        if (trangThai != null) web.restoreState(trangThai);
-        if (web.getUrl() == null) web.loadUrl(GOC + "index.html");
+        // không restoreState: Activity đã khai configChanges (xoay màn hình không dựng lại); khôi phục trạng thái WebView làm mất biến JS
+        // dữ liệu dự án (window.LARC_DU_LIEU) - luôn nạp lại trang, vỏ ứng dụng tự mở dự án đang dùng từ IndexedDB
+        web.loadUrl(GOC + "index.html");
         setContentView(web);
     }
 
@@ -127,15 +134,7 @@ public class MainActivity extends Activity {
         if (p.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) lay.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         Intent chon = Intent.createChooser(lay, anh ? "Chọn ảnh hoặc chụp ảnh" : "Chọn file");
         anhChup = null;
-        if (anh) {
-            File thu = new File(getCacheDir(), "anh");
-            thu.mkdirs();
-            anhChup = new File(thu, "chup_" + System.currentTimeMillis() + ".jpg");
-            Intent may = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            may.putExtra(MediaStore.EXTRA_OUTPUT, CungCapTep.uri(anhChup, getCacheDir()));
-            may.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            if (may.resolveActivity(getPackageManager()) != null) chon.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{may});
-        }
+        if (anh) chon.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{yDinhChup()});   // luôn có lựa chọn Máy ảnh (manifest <queries>)
         try {
             startActivityForResult(chon, MA_CHON);
             return true;
@@ -146,7 +145,72 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** Ý định mở máy ảnh ghi ảnh vào cache/anh/chup_<giờ>.jpg (qua CungCapTep - máy ảnh ghi được, không cần quyền bộ nhớ). */
+    Intent yDinhChup() {
+        File thu = new File(getCacheDir(), "anh");
+        thu.mkdirs();
+        anhChup = new File(thu, "chup_" + System.currentTimeMillis() + ".jpg");
+        Intent may = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        Uri u = CungCapTep.uri(anhChup, getCacheDir());
+        may.putExtra(MediaStore.EXTRA_OUTPUT, u);
+        may.setClipData(ClipData.newRawUri("anh", u));
+        may.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        return may;
+    }
+
+    /** Nút "Chụp ảnh biên bản": mở thẳng máy ảnh, ảnh thu về <= CO_ANH px (xoay theo EXIF) rồi gửi cho JS LARC_nhanAnhAndroid(dataUrl, tên). */
+    void chupAnh() {
+        try {
+            startActivityForResult(yDinhChup(), MA_CHUP);
+        } catch (ActivityNotFoundException e) {
+            bao("Máy không có ứng dụng máy ảnh.");
+        }
+    }
+
+    static final int CO_ANH = 1600;
+
+    void guiAnhChoJs(final File f) {
+        new Thread(new Runnable() { @Override public void run() {
+            final String url = docAnhThuNho(f);
+            runOnUiThread(new Runnable() { @Override public void run() {
+                if (url == null) { bao("Không đọc được ảnh vừa chụp."); return; }
+                web.evaluateJavascript("window.LARC_nhanAnhAndroid && window.LARC_nhanAnhAndroid('" + url + "', '" + f.getName() + "')", null);
+            } });
+        } }).start();
+    }
+
+    static String docAnhThuNho(File f) {
+        try {
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(f.getPath(), o);
+            int mau = 1;
+            while (Math.max(o.outWidth, o.outHeight) / (mau * 2) >= CO_ANH) mau *= 2;
+            BitmapFactory.Options o2 = new BitmapFactory.Options();
+            o2.inSampleSize = mau;
+            Bitmap b = BitmapFactory.decodeFile(f.getPath(), o2);
+            if (b == null) return null;
+            float k = Math.min(1f, (float) CO_ANH / Math.max(b.getWidth(), b.getHeight()));
+            Matrix m = new Matrix();
+            m.postScale(k, k);
+            int xoay = new ExifInterface(f.getPath()).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            if (xoay == ExifInterface.ORIENTATION_ROTATE_90) m.postRotate(90);
+            else if (xoay == ExifInterface.ORIENTATION_ROTATE_180) m.postRotate(180);
+            else if (xoay == ExifInterface.ORIENTATION_ROTATE_270) m.postRotate(270);
+            Bitmap r = Bitmap.createBitmap(b, 0, 0, b.getWidth(), b.getHeight(), m, true);
+            ByteArrayOutputStream ra = new ByteArrayOutputStream();
+            r.compress(Bitmap.CompressFormat.JPEG, 82, ra);
+            return "data:image/jpeg;base64," + Base64.encodeToString(ra.toByteArray(), Base64.NO_WRAP);
+        } catch (IOException | RuntimeException | OutOfMemoryError e) {
+            return null;
+        }
+    }
+
     @Override protected void onActivityResult(int ma, int kq, Intent du) {
+        if (ma == MA_CHUP) {
+            if (kq == RESULT_OK && anhChup != null && anhChup.length() > 0) guiAnhChoJs(anhChup);
+            return;
+        }
         if (ma == MA_CHON) {
             Uri[] ra = null;
             if (kq == RESULT_OK) {
@@ -235,15 +299,18 @@ public class MainActivity extends Activity {
             runOnUiThread(new Runnable() { @Override public void run() { hoiLuu(ten, noiDung); } });
         }
         @JavascriptInterface public String phienBan() { return BuildConfigTen.PHIEN_BAN; }
-    }
-
-    @Override protected void onSaveInstanceState(Bundle ra) {
-        super.onSaveInstanceState(ra);
-        web.saveState(ra);
+        @JavascriptInterface public void chupAnhNgay() {
+            runOnUiThread(new Runnable() { @Override public void run() { chupAnh(); } });
+        }
     }
 
     @Override public void onBackPressed() {
-        if (web.canGoBack()) web.goBack(); else moveTaskToBack(true);   // giữ ứng dụng (dữ liệu đã lưu liên tục), không thoát hẳn
+        // hỏi trang trước: LARC_quayLai() đóng hộp xem ảnh / màn hình dự án / về thẻ 0 -> true; đang ở thẻ 0 thì giữ ứng dụng chạy nền
+        web.evaluateJavascript("Boolean(window.LARC_quayLai && window.LARC_quayLai())", new ValueCallback<String>() {
+            @Override public void onReceiveValue(String v) {
+                if (!"true".equals(v)) moveTaskToBack(true);
+            }
+        });
     }
 
     @Override protected void onDestroy() {

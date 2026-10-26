@@ -56,11 +56,83 @@ def _ban_do_wgs84(con, kinh_tuyen: float) -> list:
     return ra
 
 
-def du_lieu_phieu(con) -> dict:
-    """Phần "du_lieu" của file dữ liệu cho ứng dụng điện thoại: hộ + thửa, danh mục có mã, loài cây, bản đồ (WGS84), tham số VN-2000."""
+def _gia(x) -> int:
+    """Đơn giá (TEXT Decimal trong CSDL) -> số nguyên đồng cho ứng dụng điện thoại (chỉ để hiện / tạm tính; máy tính tính lại khi nhập)."""
+    from .tien import D, lam_tron
+    try:
+        return int(lam_tron(D(x or 0), 0))
+    except (ArithmeticError, ValueError, TypeError):
+        return 0
+
+
+def _so_hoac_none(x):
+    return None if x is None else float(x)
+
+
+def danh_muc_di_dong(con=None) -> dict:
+    """Danh mục đơn giá cho ứng dụng điện thoại: nha / dm2 / vat_nuoi = [[mã, tên, ĐVT, đơn giá]], cay = tên loài, cay_chi_tiet = {loài:
+    {dk, tuoi, dvt, muc: [[mã, tên, ĐVT, đơn giá, đk từ, đk đến, tuổi từ, tuổi đến]]}} (dk: loài có mục theo đường kính thân - khoảng
+    (từ, đến] cm; tuoi: có mục theo năm tuổi), goi_y. con None = bộ đơn giá ĐÓNG GÓI (don_gia.file_goc, chỉ đọc) - file nhúng vào ứng
+    dụng điện thoại dựng lại giống nhau trên mọi máy."""
+    from .cay_trong import khoang_duong_kinh, ten_goc
+    from .hieu_tai_san import khoang_tuoi
+    dong_lai = con is None
+    if dong_lai:
+        import sqlite3
+        from . import don_gia
+        con = sqlite3.connect(csdl.uri_chi_doc(don_gia.file_goc()), uri=True)
+        con.row_factory = sqlite3.Row
+    try:
+        ds = con.execute('SELECT ma, nhom, phan_loai, ten, dvt, don_gia FROM dm_taisan ORDER BY nhom, LENGTH(ma), ma').fetchall()
+    finally:
+        if dong_lai:
+            con.close()
+    nha, dm2, vat_nuoi, cay = [], [], [], {}
+    for r in ds:
+        ten = r['ten'] or ''
+        muc = [str(r['ma'] or ''), ten, r['dvt'] or '', _gia(r['don_gia'])]
+        if 'vat nuoi' in bo_dau(r['phan_loai'] or '').lower():
+            vat_nuoi.append(muc)
+        elif r['nhom'] == 2:
+            (nha if _la_nha(ten, r['phan_loai']) else dm2).append(muc)
+        elif r['nhom'] == 3:
+            t = ten_goc(ten).strip()
+            if not t:
+                continue
+            ct = cay.setdefault(bo_dau(t).lower(), dict(ten=t, dk=False, tuoi=False, dvt=muc[2], muc=[]))
+            k, tu = khoang_duong_kinh(ten), khoang_tuoi(ten)
+            ct['dk'] = ct['dk'] or k is not None
+            ct['tuoi'] = ct['tuoi'] or tu is not None
+            ct['muc'].append(muc + [_so_hoac_none(k.tu) if k else None, _so_hoac_none(k.den) if k else None,
+                                    tu[0] if tu else None, tu[1] if tu else None])
+    ds_cay = sorted(cay.values(), key=lambda x: bo_dau(x['ten']).lower())
+    goi_y = {2: [[m[1], m[2]] for m in nha + dm2], 3: [[c['ten'], 'cây'] for c in ds_cay], 7: [[m[1], m[2]] for m in vat_nuoi]}
+    return dict(nha=nha, dm2=dm2, vat_nuoi=vat_nuoi, cay=[c['ten'] for c in ds_cay], goi_y=goi_y,
+                cay_chi_tiet={c['ten']: {k: v for k, v in c.items() if k != 'ten'} for c in ds_cay})
+
+
+def _ban_do_va_datum() -> dict:
     from . import ban_do_cad, __version__
-    from .cay_trong import ten_goc
     from .toa_do import kinh_tuyen_truc, tham_so_datum
+    datum, quy_uoc, _ = tham_so_datum()
+    return dict(phien_ban=__version__, kinh_tuyen=kinh_tuyen_truc(), datum=list(datum), quy_uoc=quy_uoc,
+                mau_trang_thai={k: list(v) for k, v in ban_do_cad.TRANG_THAI.items()})
+
+
+def du_lieu_mac_dinh() -> dict:
+    """Dữ liệu khung nhúng sẵn trong ứng dụng điện thoại (kiểm đếm độc lập, chưa có file dự án): không hộ, đủ danh mục đơn giá."""
+    return dict(du_an='', ho=[], ban_do=[], trang_thai_ho={}, **_ban_do_va_datum(), **danh_muc_di_dong(None))
+
+
+def xuat_du_lieu_mac_dinh(file_ra) -> Path:
+    """Ghi du_lieu_mac_dinh() ra file .json (CLI `chay.py xuat-danh-muc-di-dong`; dự án di_dong/ nhúng file này khi dựng)."""
+    return _ghi_nguyen_tu(Path(file_ra), json.dumps(du_lieu_mac_dinh(), ensure_ascii=False, separators=(',', ':')))
+
+
+def du_lieu_phieu(con) -> dict:
+    """Phần "du_lieu" của file dữ liệu cho ứng dụng điện thoại: hộ + thửa, danh mục có mã + đơn giá, loài cây (quy cách đường kính /
+    năm tuổi), bản đồ (WGS84), tham số VN-2000."""
+    from . import ban_do_cad
     thua = {}
     for r in con.execute('SELECT ma_ho, so_to, so_thua, loai_dat, dt_thu_hoi FROM thua ORDER BY thu_tu, ma_thua'):
         thua.setdefault(r['ma_ho'], []).append(dict(to=str(r['so_to'] or ''), thua=str(r['so_thua'] or ''),
@@ -70,25 +142,10 @@ def du_lieu_phieu(con) -> dict:
     ho = [dict(ma=r['ma_ho'], stt=r['thu_tu'], ten=' '.join(str(r['ho_ten'] or '').split()), cccd=(r['so_cccd'] or '').strip(),
                dia_chi=' '.join(str(r['dia_chi'] or '').split()), sdt=str(r['sdt'] or '').strip(), thua=thua.get(r['ma_ho'], []))
           for r in con.execute(f'SELECT ma_ho, thu_tu, ho_ten, so_cccd, dia_chi, {sdt} AS sdt FROM ho ORDER BY thu_tu, ma_ho')]
-    nha, dm2, vat_nuoi, cay = [], [], [], {}
-    for r in con.execute('SELECT ma, nhom, phan_loai, ten, dvt FROM dm_taisan ORDER BY nhom, ma'):
-        muc = [str(r['ma'] or ''), r['ten'] or '', r['dvt'] or '']
-        if 'vat nuoi' in bo_dau(r['phan_loai'] or '').lower():
-            vat_nuoi.append(muc)
-        elif r['nhom'] == 2:
-            (nha if _la_nha(r['ten'], r['phan_loai']) else dm2).append(muc)
-        elif r['nhom'] == 3:
-            t = ten_goc(r['ten'] or '').strip()
-            if t:
-                cay.setdefault(bo_dau(t).lower(), t)
-    goi_y = {2: [[m[1], m[2]] for m in nha + dm2], 3: [[t, 'cây'] for t in cay.values()], 7: [[m[1], m[2]] for m in vat_nuoi]}
-    kt = kinh_tuyen_truc()
-    datum, quy_uoc, _ = tham_so_datum()
+    chung = _ban_do_va_datum()
     da = con.execute('SELECT ten FROM du_an WHERE id = 1').fetchone()
-    return dict(du_an=(da['ten'] if da else '') or '', phien_ban=__version__, ho=ho, nha=nha, dm2=dm2, vat_nuoi=vat_nuoi,
-                cay=sorted(cay.values(), key=lambda x: bo_dau(x).lower()), goi_y=goi_y, kinh_tuyen=kt, datum=list(datum),
-                quy_uoc=quy_uoc, ban_do=_ban_do_wgs84(con, kt), trang_thai_ho={str(k): v for k, v in ban_do_cad.trang_thai_ho(con).items()},
-                mau_trang_thai={k: list(v) for k, v in ban_do_cad.TRANG_THAI.items()})
+    return dict(du_an=(da['ten'] if da else '') or '', ho=ho, ban_do=_ban_do_wgs84(con, chung['kinh_tuyen']),
+                trang_thai_ho={str(k): v for k, v in ban_do_cad.trang_thai_ho(con).items()}, **chung, **danh_muc_di_dong(con))
 
 
 def _ghi_nguyen_tu(ra: Path, noi: str) -> Path:

@@ -7,6 +7,12 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- Android 11+ (targetSdk >= 30): không khai báo thì resolveActivity / hộp chọn không thấy ứng dụng máy ảnh -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE"/>
+        </intent>
+    </queries>
     <application android:label="@string/ten_ung_dung" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false" android:supportsRtl="false" android:hardwareAccelerated="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">

@@ -567,17 +567,28 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
 - **Ứng dụng điện thoại LARC Field Mobile** (Android / iPhone, chạy không cần mạng; ứng dụng phát hành riêng, không nằm trong bộ cài
   máy tính): 7 thẻ **Hồ sơ & Đất** (chủ hộ / người nhận khoán, người sử dụng, CCCD, năm sinh, thửa địa chính hoặc tiểu khu / khoảnh /
   lô, nút lấy tọa độ GPS tại chỗ); **Nhà ở** (chọn loại nhà theo bộ đơn giá, bấm chọn kết cấu khung / tường / mái / trần / nền / cửa,
-  diện tích ghi được "(4 x 6,7) + (2 x 3)"); **Vật KT** (gõ vài chữ để chọn mục bộ đơn giá; dòng nhiều cỡ ống ghi cả vào tên); **Cây
-  trồng** (loài + năm trồng + đường kính / chu vi, hoặc ghi nhanh "Tràm 35c/15cm"); **Ảnh biên bản** (chụp từng trang, "Làm rõ chữ" xóa
-  dòng kẻ chấm; ô ghi lại nội dung biên bản mỗi dòng một tài sản - máy tính tự phân loại); **Bản đồ** (thửa của dự án đã nhập bản vẽ,
-  nạp thêm file KML / KMZ, bật định vị: biết đang đứng trong thửa nào hoặc cách thửa gần nhất bao xa, hướng nào; chạm thửa mở hồ sơ hộ;
-  tọa độ hiện cả VN-2000); **Xuất .JSON** (một hộ hoặc cả dự án, có / không kèm ảnh).
+  diện tích ghi được "(4 x 6,7) + (2 x 3)", "(5x12)-(2x3)", "7m x 2m x 2" (dài x rộng x số cái) - hàng phím tắt x ( ) + - , dưới ô;
+  phần mềm GỢI Ý loại nhà theo kết cấu đã chọn, người kiểm đếm quyết định); **Vật KT** (gõ vài chữ để chọn mục bộ đơn giá; dòng nhiều cỡ ống ghi cả vào tên); **Cây
+  trồng** (loài + năm trồng + đường kính / chu vi - nút chọn nhanh theo đúng khoảng đường kính / tuổi của bộ đơn giá, hoặc ghi nhanh
+  "Tràm 35c/15cm"); **Ảnh biên bản** (nút **Chụp ảnh** / **Chọn ảnh trong máy**, chạm ảnh để phóng to và chép lại nội dung ngay cạnh
+  ảnh, "Làm rõ chữ" xóa dòng kẻ chấm; dòng biên bản tự xếp vào nhà / vật KT / cây ngay trên điện thoại); **Bản đồ** (nền ảnh vệ tinh
+  hoặc bản đồ đường khi có mạng - chỉ tải ảnh nền theo vị trí đang xem, không gửi số liệu hộ dân; thửa của dự án đã nhập bản vẽ, nạp
+  thêm file KML / KMZ, nút **Thửa hộ này**, **Tâm GPS**, ô tìm tờ / thửa; bật định vị: biết đang đứng trong thửa nào hoặc cách thửa gần
+  nhất bao xa, hướng nào; chạm thửa mở hồ sơ hộ; tọa độ hiện cả VN-2000); **Xuất .JSON** (một hộ hoặc cả dự án, có / không kèm ảnh;
+  Mở / Lưu / Xóa từng hộ). Dòng nào trong mọi bảng cũng có nút **Sửa**. Thành tiền tạm tính trên điện thoại chỉ để xem - máy tính áp
+  giá lại khi nhập.
+  - **Kiểm đếm ngay, chưa cần file dự án**: màn hình đầu → **Bắt đầu kiểm đếm ngay** (ứng dụng có sẵn danh mục đơn giá); hộ ghi mới
+    được tạo thành hộ mới khi nhập vào dự án trên máy tính. Đang mở dự án mà bấm **Dự án**: **← Quay lại dự án đang mở**.
   - **Android**: cài file `LARC_FieldMobile_<phiên bản>.apk` (Android 7.0 trở lên; máy hỏi "cho phép cài ứng dụng không rõ nguồn" thì
-    bật cho ứng dụng đang mở file - Zalo, Tệp…). Lần đầu bật định vị, máy hỏi quyền vị trí: chọn Cho phép. Ô ảnh biên bản cho chọn ảnh
-    hoặc chụp bằng máy ảnh. Xuất .JSON: chọn **Gửi đi** (Zalo, email, Drive) hoặc **Lưu vào thư mục**.
+    bật cho ứng dụng đang mở file - Zalo, Tệp…). Lần đầu bật định vị, máy hỏi quyền vị trí: chọn Cho phép. Phím **Quay lại** của
+    Android đóng ảnh đang xem / về thẻ đầu, không thoát mất số liệu. Xuất .JSON: chọn **Gửi đi** (Zalo, email, Drive) hoặc **Lưu vào thư mục**.
   - **iPhone / iPad**: bản PWA `LARC_FieldMobile_PWA_<phiên bản>.zip` - đặt các file trong gói lên một địa chỉ **HTTPS** (xem
     HUONG_DAN_CAI_DAT.txt trong gói), mở bằng **Safari** → Chia sẻ → **Thêm vào MH chính**; sau lần mở đầu chạy không cần mạng.
     Xuất .JSON mở bảng chia sẻ (Zalo, **Lưu vào Tệp**…).
+  - **Cài cho nhiều người** (miễn phí, không qua App Store): gói `LARC_FieldMobile_Web_<phiên bản>.zip` - tải cả thư mục `tai_len` lên
+    GitHub Pages (hoặc Netlify / Cloudflare Pages) theo HUONG_DAN.txt trong gói, rồi gửi mọi người trang `cai-dat.html` có **mã QR**:
+    quét bằng máy ảnh iPhone → mở Safari → Thêm vào MH chính; điện thoại Android tải file .apk ngay trên trang đó. Trang chỉ chứa ứng
+    dụng trống và danh mục đơn giá, không có số liệu hộ dân.
   - Mở được nhiều dự án (nút **Dự án** góc trên); mở file dữ liệu mới của cùng dự án không mất số liệu đã ghi. Số liệu nằm trong ứng
     dụng trên điện thoại đó: gửi về máy tính thường xuyên, gỡ ứng dụng là mất số liệu chưa gửi.
 - **Công cụ → Phiếu kiểm đếm thực địa…** (phần máy tính): (1) **Xuất dữ liệu cho ứng dụng điện thoại…** - file `.json` (hộ, thửa,
