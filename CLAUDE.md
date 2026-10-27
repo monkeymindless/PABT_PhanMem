@@ -2415,6 +2415,12 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - TÊN "LARC Mobile" (người dùng 27/10/2026 "bỏ chữ field trên tên phần mềm"): chữ hiển thị, tên file phát hành `LARC_Mobile_<ver>.apk`,
     `LARC_Mobile_PWA_<ver>.zip`, `LARC_Mobile_Web_<ver>`. GIỮ (đổi sẽ mất dữ liệu / không cài đè được bản cũ): gói Android `vn.larc.field`,
     khóa localStorage `larc_field_*`, IndexedDB `larc_field` / `larc_kd_anh` / `larc_nen`, `loai` file dữ liệu 'larc_field_du_lieu', khóa ký larc_field.jks.
+  - 1.4.0 (người dùng 27/10/2026, đặc tả 6 hạng mục "Principal Mobile & GIS Architect"; di_dong/README.md mục KML + 1.4.0): sửa bộ phân tách
+    (tên loài một âm tiết, gác lửng, từ nối, cốt thép, tên giống cây, thửa nhiều loại đất, danh từ đầu câu), nhập hàng loạt (sang hộ kế, chép
+    mẫu, 📍, khẩu lệnh), KML lưu IndexedDB, baoBanMoi ở vỏ, gõ lưu chờ 250 ms. Khác đặc tả: số bản 1.4.0 (đặc tả ghi lẫn "1.3.2" với versionCode
+    10400 - 10400 = 1.4.0); hạng mục 5 (`onPermissionRequest`) đã có từ 1.3.1 (biến `ghiAmCho` / `MA_GHI_AM` 17, chỉ cấp micrô cho trang assets
+    - giữ, không cấp mọi tài nguyên trang xin); "chưa có dữ liệu" khi sang hộ kế = chưa có dòng / đất / ảnh (`coDuLieu` coi họ tên là dữ liệu -
+    hộ thêm tay luôn "đã ghi"). Thử câu nhanh: script scratchpad chạy `test_phan_tach.TestPhanTach.setUpClass()` rồi `tach(câu)`.
   - 1.3.1 (người dùng 27/10/2026, đặc tả "hộp thoại menu thu âm"): thay khung đọc chính tả bằng trung tâm thu âm `#hop_thu_am` (di_dong/README.md
     mục giọng nói). Đặc tả gọi hộp cũ là `#hop_doc` - trong mã là `#doc_ct` (đã bỏ). "Tự động bóc tách ra bảng" = đưa vào ô phân tách + bóc tách
     xem trước (người kiểm đếm vẫn bỏ chọn mục sai rồi bấm Đưa vào Hồ sơ Hộ) - không tự ghi dòng. File ghi âm chỉ lưu trên điện thoại (định dạng

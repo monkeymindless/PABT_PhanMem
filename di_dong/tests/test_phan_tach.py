@@ -453,6 +453,145 @@ class TestPhanTach(unittest.TestCase):
         self.assertEqual(self.js('window.__mo'), 1)
         self.assertIn('.kmz', self.js('document.getElementById("m_file").getAttribute("accept") || ".kmz"'))
 
+    # ------------------------------------------------ 1.4.0 (người dùng 27/10/2026): bộ phân tách, nhập hàng loạt, KML lưu trên máy
+    def test_nha_gac_lung_khong_tach_son(self):
+        ds = self.tach('Nhà gác lửng khung cột bê tông cốt thép tường sơn nước mái tôn nền gạch men 4,5m x 14m')
+        self.assertEqual([x['cat'] for x in ds], ['nha'])                   # "sơn" (Sơn rừng) không thành cây, "nền" không thành vật KT
+        self.assertTrue(ds[0]['chinh'].startswith('Gác lửng nhà chính (Nhà 01 tầng - Kết cấu loại 2)'), ds[0]['chinh'])
+        self.assertIn('63 m²', ds[0]['chinh'])
+        self.assertIn('khớp 4/4', ds[0]['ct'])                               # khung, tường, mái, nền
+        kc = self.jsj('window.LARC.kcTuChu("khung cột BTCT tường sơn nước mái tôn nền gạch men")')
+        self.assertEqual((kc.get('khung'), kc.get('tuong'), kc.get('mai'), kc.get('nen')), ('btct', 'son', 'ton', 'ceramic'))
+        self.assertEqual(self.jsj('window.LARC.kcTuChu("khung bê tông cốt thép mái tôn")').get('khung'), 'btct')   # "cốt thép" không phải "cột"
+
+    def test_cay_ten_giong(self):
+        ds = self.tach('Sầu riêng ghép trồng năm 2019: 35 cây; Bưởi da xanh trồng năm 2020: 50 cây; Cây tràm bông vàng 150c/12cm')
+        self.assertEqual([x['cat'] for x in ds], ['cay'] * 3)
+        self.assertEqual([x['du']['ten'] for x in ds], ['Cây sầu riêng trồng năm 2019', 'Cây bưởi trồng năm 2020', 'Keo lá tràm'])
+        self.assertTrue(all(x['gia'] > 0 for x in ds), ds)
+        self.assertEqual(self.jsj('["Xoài cát Hòa Lộc", "Mít Thái", "Dầu rái nước"].map(t => window.LARC.loaiCay(t)[0])'),
+                         ['Cây xoài', 'Cây mít', 'Dầu rái (Dầu nước)'])
+
+    def test_vkt_khong_cat_tu_noi(self):
+        ds = self.tach('Mộ xây gạch có mái che 2 ngôi')
+        self.assertEqual([x['cat'] for x in ds], ['vkt'])
+        self.assertIn('TS47', self.tach('Mái che khung sắt mái tôn 4 x 6')[0]['ct'])        # danh từ đầu câu: Mái che, không Chuồng trại
+        self.assertIn('TS42', self.tach('Sân xi măng 4 x 6')[0]['ct'])                      # sân xi măng = nền ciment
+        self.assertEqual([x['cat'] for x in self.tach('Nhà tạm tường tôn mái tôn xoài 20 cây')], ['nha', 'cay'])   # loài + số lượng vẫn tách
+
+    def test_dat_nhieu_loai_mot_thua(self):
+        ds = self.tach('tờ 5 thửa 108 đất ONT 120m2, đất CLN 850m2')
+        self.assertEqual([(x['du']['so_to'], x['du']['so_thua'], x['du']['loai_dat'], x['du']['dt_thu_hoi']) for x in ds],
+                         [('5', '108', 'ONT', '120'), ('5', '108', 'CLN', '850')])
+        self.js('window.prompt = () => "Hộ thử nhiều loại đất"; document.getElementById("b_ho_moi").click(); 1')
+        self.js('document.getElementById("ai_chu").value = "tờ 5 thửa 108 đất ONT 120m2, đất CLN 850m2"; document.getElementById("b_ai_tach").click(); 1')
+        self.js('window.__xong = 0; window.LARC.duaAI().then(() => window.__xong = 1); 1')
+        self._doi(lambda: self.js('window.__xong'))
+        self.assertEqual(self.jsj('window.LARC.ST.ho[window.LARC.ST.chon].dat.map(d => d.loai_dat)'), ['ONT', 'CLN'])   # thửa nhiều loại đất: đủ hai dòng
+
+    def _ho_thu(self, *ten):
+        for t in ten:
+            self.js('window.prompt = () => %s; document.getElementById("b_ho_moi").click(); 1' % json.dumps(t))
+        return self.jsj('[...document.getElementById("cb_ho").options].filter(o => %s.some(t => o.text.includes(t))).map(o => o.value)' % json.dumps(list(ten)))
+
+    def _dua(self, chu, nut='b_bb_dua'):
+        self.js('document.getElementById("ai_chu").value = %s; document.getElementById("b_ai_tach").click(); window.__n = window.LARC.ST.chon;'
+                'document.getElementById("%s").click(); 1' % (json.dumps(chu), nut))
+        self._doi(lambda: self.js('!document.getElementById("ai_chu").value'))
+
+    def test_dua_va_sang_ho_ke(self):
+        a, b, c = self._ho_thu('Hộ lô A', 'Hộ lô B', 'Hộ lô C')
+        self.js('window.LARC.chonHo(%s); 1' % json.dumps(b))
+        self._dua('Sân xi măng 4 x 6')                                          # hộ B đã ghi
+        self.js('window.LARC.chonHo(%s); window.LARC.BD.gps = {lat: 11.02, lon: 106.95, acc: 5, luc_ms: Date.now()}; 1' % json.dumps(a))
+        try:
+            self.assertTrue(self.js('!document.getElementById("b_bb_dua_tiep").hidden || true'))
+            self._dua('Nhà tạm 5 x 6', 'b_bb_dua_tiep')
+            self._doi(lambda: self.js('window.LARC.ST.chon') == c)            # bỏ qua hộ B đã ghi -> hộ C
+            self.assertEqual(self.jsj('window.LARC.ST.ho[%s].gps.lat' % json.dumps(a)), 11.02)   # hộ chưa có tọa độ: ghi vị trí đang theo dõi
+            self.assertIn('Chuyển sang hộ Hộ lô C', self.js('document.getElementById("thong_bao").textContent'))
+            self.assertEqual(self.js('document.getElementById("b_gps_nhanh").textContent'), '📍')   # hộ C chưa có tọa độ
+            self.js('window.LARC.chonHo(%s); 1' % json.dumps(a))
+            self.assertEqual(self.js('document.getElementById("b_gps_nhanh").textContent'), '📍✓')
+            # chép mẫu hộ trước: nhà / vật KT / cây của hộ vừa đưa (không họ tên, tờ thửa) -> ô phân tách, bóc tách sẵn
+            self.js('window.LARC.chonHo(%s); document.getElementById("b_ai_chep_mau").click(); 1' % json.dumps(c))
+            self.assertEqual(self.js('document.getElementById("ai_chu").value'), 'Nhà tạm 5 x 6')
+            self.assertEqual(self.jsj('window.LARC.AI.items.map(x => x.cat)'), ['nha'])
+        finally:
+            self.js('window.LARC.BD.gps = null; document.getElementById("b_ai_xoa").click(); 1')
+
+    def test_khau_lenh_giong_noi(self):
+        self.assertEqual(self.jsj('window.LARC.tachKhauLenh("sân xi măng 4 x 6, đưa vào hồ sơ hộ.")'), {'chu': 'sân xi măng 4 x 6', 'lenh': 'dua'})
+        self.assertEqual(self.jsj('window.LARC.tachKhauLenh("xoài 20 cây chốt hộ sang hộ kế")'), {'chu': 'xoài 20 cây', 'lenh': 'sang_ke'})
+        self.assertIsNone(self.jsj('window.LARC.tachKhauLenh("hồ sơ hộ đưa vào sau")'))
+        (k,) = self._ho_thu('Hộ khẩu lệnh')
+        self.js('window.LARC.chonHo(%s); document.getElementById("b_ai_xoa").click(); window.LARC_nhanGiongNoiAndroid("sân xi măng 4 x 6 đưa vào hồ sơ hộ"); 1' % json.dumps(k))
+        self._doi(lambda: self.js('(window.LARC.ST.ho[%s].dong || []).length' % json.dumps(k)) == 1)
+        self.assertEqual(self.js('document.getElementById("ai_chu").value'), '')
+
+    def test_kml_luu_tren_may(self):
+        import base64
+        import io
+        import zipfile
+        b = io.BytesIO()
+        with zipfile.ZipFile(b, 'w', zipfile.ZIP_DEFLATED) as z:
+            z.writestr('doc.kml', self._kml_cad())
+        self.js('window.LARC.LOP.length = 0; window.__xong = 0; (async () => { const f = new File([Uint8Array.from(atob(%s), c => c.charCodeAt(0))], "luu.kmz");'
+                ' await window.LARC.napBanDo([f]); window.__xong = 1; })(); 1' % json.dumps(base64.b64encode(b.getvalue()).decode()))
+        self._doi(lambda: self.js('window.__xong'))
+        try:
+            self.assertFalse(self.js('document.getElementById("b_xoa_kml").hidden'))
+            # thoát ứng dụng / đổi dự án: LOP trống -> khôi phục từ IndexedDB, đủ kiểu dữ liệu và liên kết cụm nhãn
+            self.js('window.LARC.LOP.length = 0; window.__xong = 0; window.LARC.khoiPhucKml().then(() => window.__xong = 1); 1')
+            self._doi(lambda: self.js('window.__xong'))
+            self.assertEqual(self.jsj('window.LARC.LOP.map(l => [l.ten, l.duong.length, l.duong[0].p instanceof Float64Array])'), [['luu.kmz', 2, True]])
+            self.assertTrue(self.js('{ const l = window.LARC.LOP[0], c = l.nhan_thua.find(x => x.so_thua === "549"); l.diem.includes(c.ld.d); }'))
+            # chạm chọn bỏ qua đường ngoài khung bao (đường cách xa vẫn không chọn nhầm)
+            self.js('document.getElementById("ban_do").getBoundingClientRect = () => ({width: 400, height: 300}); 1')
+            self.assertIsNone(self.jsj('(() => { const B = window.LARC.BD, l = window.LARC.LOP[0], d = l.duong[0];'
+                                       ' B.cx = (d.bb[0] + d.bb[2]) / 2; B.cy = d.bb[1] + 500; B.k = 2; return window.LARC.doiTuongTai(200, 150, 400, 300); })()'))
+            self.js('window.__xong = 0; window.LARC.xoaKmlDaNap(false).then(() => window.__xong = 1); 1')
+            self._doi(lambda: self.js('window.__xong'))
+            self.assertTrue(self.js('document.getElementById("b_xoa_kml").hidden'))
+            self.js('window.__xong = 0; window.LARC.KML_DB.doc().then(r => window.__xong = r ? 2 : 1); 1')
+            self._doi(lambda: self.js('window.__xong'))
+            self.assertEqual(self.js('window.__xong'), 1)                     # đã xóa khỏi máy
+        finally:
+            self.js('delete document.getElementById("ban_do").getBoundingClientRect; window.LARC.LOP.length = 0; 1')
+
+    def test_vo_bao_ban_moi_va_nut_xoay(self):
+        self.assertEqual(self.js('typeof window.baoBanMoi'), 'function')       # ở vỏ: có cả khi còn ở màn hình chọn dự án
+        self.js('window.baoBanMoi(); window.baoBanMoi(); 1')
+        self.assertEqual(self.js('document.querySelectorAll("#dai_ban_moi").length'), 1)
+        self.js('document.getElementById("dai_ban_moi").remove(); 1')
+        self.js('window.LARC.apBoCuc(); 1')
+        self.assertNotEqual(self.js('document.getElementById("b_xoay").style.display'), 'none')   # luôn hiện, cả điện thoại hẹp
+
+    def test_luu_ho_so_cho_ngung_go(self):
+        (k,) = self._ho_thu('Hộ gõ nhanh')
+        self.js('window.LARC.chonHo(%s); window.__dem = 0; window.__set = Storage.prototype.setItem;'
+                'Storage.prototype.setItem = function (a, b) { if (a.startsWith("larc_kd_")) window.__dem++; return window.__set.call(this, a, b); };'
+                'const o = document.getElementById("h_sdt"); for (const c of "0912345678") { o.value += c; o.dispatchEvent(new Event("input")); } 1' % json.dumps(k))
+        try:
+            self.assertEqual(self.js('window.__dem'), 0)                     # 10 phím: chưa ghi lần nào
+            self._doi(lambda: self.js('window.__dem') >= 1)
+            self.assertEqual(self.js('window.__dem'), 1)                     # ngừng gõ 250 ms: ghi một lần
+            self.assertEqual(self.js('JSON.parse(localStorage.getItem(Object.keys(localStorage).find(x => x.startsWith("larc_kd_")))).ho[%s].tt.sdt'
+                                     % json.dumps(k)), '0912345678')
+        finally:
+            self.js('Storage.prototype.setItem = window.__set; 1')
+
+    def test_lam_ro_chu(self):
+        self.js('window.__lr = null; { const c = document.createElement("canvas"); c.width = 120; c.height = 60; const g = c.getContext("2d");'
+                ' g.fillStyle = "#ddd"; g.fillRect(0, 0, 120, 60); g.fillStyle = "#222"; g.fillRect(20, 20, 40, 8);'
+                ' window.LARC.lamRo(c.toDataURL()).then(u => { const im = new Image(); im.onload = () => { const k = document.createElement("canvas");'
+                '  k.width = 120; k.height = 60; const h = k.getContext("2d"); h.drawImage(im, 0, 0);'
+                '  window.__lr = [h.getImageData(40, 24, 1, 1).data[0], h.getImageData(100, 50, 1, 1).data[0]]; }; im.src = u; }); } 1')
+        self._doi(lambda: self.js('!!window.__lr'))
+        den, trang = self.jsj('window.__lr')
+        self.assertLess(den, 60)                                             # nét chữ -> đen
+        self.assertGreater(trang, 200)                                       # nền -> trắng
+
     def test_khong_loi_js(self):
         self.assertFalse([m for m in self.loi if 'Uncaught' in m], self.loi)
 

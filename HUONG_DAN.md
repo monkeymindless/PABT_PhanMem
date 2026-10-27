@@ -586,15 +586,23 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
     kiến trúc QĐ 18/2026, Cây trồng QĐ 48/2025, Số & Toán); **⚡ Đưa vào ô nhập & Tự động bóc tách ra bảng**, **📋 Chỉ chèn vào ô nhập**,
     **🗑️ Xóa trắng**. iPhone báo chặn nhận dạng (Edge / Chrome / ứng dụng trên Màn hình chính): dòng cảnh báo hướng dẫn bật Cài đặt → Cài đặt
     chung → Bàn phím → Bật Đọc chính tả, hoặc dùng Ghi file âm thanh / bàn phím từ khóa.
+  - Làm nhiều hộ liền tay (từ bản 1.4.0): **⚡ Đưa vào Hộ & Sang hộ kế ▶** (cạnh ✔ Đưa vào Hồ sơ Hộ) lưu vào hộ đang chọn, ghi tọa độ GPS
+    nếu hộ chưa có, rồi chuyển sang hộ kế tiếp CHƯA kiểm đếm; **📋 Chép mẫu hộ trước** điền lại các mục nhà, vật kiến trúc, cây của hộ vừa
+    làm (không chép họ tên, tờ / thửa) - chỉ sửa kích thước / số lượng rồi đưa vào; nút **📍** trên thanh chọn hộ ghi ngay tọa độ GPS +
+    VN-2000 cho hộ đang chọn (**📍✓** = hộ đã có tọa độ). Đọc giọng nói kết thúc bằng **"đưa vào hồ sơ hộ"** hoặc **"chốt hộ sang hộ kế"**
+    thì ứng dụng tự bấm nút tương ứng (khi không còn mục nào cần xem lại). Máy tách đúng hơn các câu: "Nhà gác lửng khung cột bê tông cốt
+    thép tường sơn nước…" (một mục nhà, không tách chữ "sơn" thành cây), "Mộ xây gạch có mái che 2 ngôi", tên giống cây ("Sầu riêng ghép",
+    "Bưởi da xanh", "Xoài cát Hòa Lộc", "Tràm bông vàng" = Keo lá tràm), một thửa nhiều loại đất ("tờ 5 thửa 108 đất ONT 120m2, đất CLN 850m2").
   - **🗺️ Bản đồ GPS**: chọn nền ngay trên bản đồ - **Vệ tinh**, **Vệ tinh + tên** (tên đường, địa danh), **Đường phố**, **Địa hình**, **Lưới**
     (có mạng thì mặc định Vệ tinh + tên); thanh **Độ đậm thửa** chỉnh độ che của màu thửa trên ảnh. Trước khi ra hiện trường (có Wi-Fi):
     mở bản đồ, chọn Vệ tinh, bấm **💾 Lưu ảnh nền khu dự án** - ứng dụng lưu ảnh khu các thửa vào máy để xem khi mất sóng (**Xóa ảnh nền
     đã lưu** để giải phóng bộ nhớ). Nền Đường phố chỉ xem khi có mạng. Chưa có thửa nào (kiểm đếm độc lập): bản đồ mở toàn cảnh Việt Nam
     và tự xin vị trí rồi bay tới chỗ đang đứng; iPhone báo chưa cho phép định vị: Cài đặt → Quyền riêng tư & Bảo mật → Dịch vụ định vị →
     bật, chọn trình duyệt đang dùng → Khi dùng ứng dụng. Có bản mới trên mạng: ứng dụng hiện dải **🔄 Đã có bản LARC Mobile mới** - bấm để
-    cập nhật (dữ liệu đã ghi giữ nguyên).
-  - Nút **🎙️ Đọc** ở từng mục của **Hồ sơ & TS**; xoay ngang điện thoại (hoặc bấm **🔄 Xoay ngang** trên máy tính bảng / giả lập) thì
-    màn hình chia 2 cột: công cụ AI bên trái, chi tiết bên phải.
+    cập nhật (dữ liệu đã ghi giữ nguyên). File KML / KMZ đã nạp được lưu trên máy theo dự án (từ bản 1.4.0): thoát ứng dụng mở lại vẫn còn;
+    **🗑️ Xóa KML đã nạp** để thay bản đồ khác.
+  - Nút **🎙️ Đọc** ở từng mục của **Hồ sơ & TS**; xoay ngang điện thoại (hoặc bấm **🔄 Xoay ngang** - từ bản 1.4.0 có cả trên điện thoại)
+    thì màn hình chia 2 cột: công cụ AI bên trái, chi tiết bên phải.
   Các mục của **Hồ sơ & TS**: **Hồ sơ & Đất** (chủ hộ / người nhận khoán, người sử dụng, CCCD, năm sinh, thửa địa chính hoặc tiểu khu / khoảnh /
   lô, nút lấy tọa độ GPS tại chỗ); **Nhà ở** (chọn loại nhà theo bộ đơn giá, bấm chọn kết cấu khung / tường / mái / trần / nền / cửa,
   diện tích ghi được "(4 x 6,7) + (2 x 3)", "(5x12)-(2x3)", "7m x 2m x 2" (dài x rộng x số cái) - hàng phím tắt x ( ) + - , dưới ô;

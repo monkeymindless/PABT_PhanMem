@@ -68,9 +68,22 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
   TCVN3 đọc nhầm Latin-1 -> đổi chính xác; "�" -> từ điển + ngữ cảnh (cùng từ điển với `pabt/sua_font_kml.py` của bản máy tính - test hai bên
   cùng danh sách câu). Vẽ: đường gom theo màu (một stroke mỗi màu, chỉ đường trong khung), nhãn theo ưu tiên + tránh đè (lưới 24 px), mốc nhìn xa
   là chấm; `ST.lop_an` (công tắc 4 lớp), `doiTuongTai` / `hienDoiTuong` (chạm), `duaThuaVaoHo` / `duaMocVaoHo`, bảng `#bang_ds_kml`. Đo: file
-  6.081 đối tượng đọc 0,57 s (trước khi sửa dò tên thư mục là bậc hai: 11 s).
+  6.081 đối tượng đọc 0,57 s (trước khi sửa dò tên thư mục là bậc hai: 11 s). 1.4.0: lớp đã nạp lưu IndexedDB "larc_kml" (store "lop", khóa
+  `DU.du_an`, giá trị = mảng lớp - structured clone giữ Float64Array và liên kết cụm nhãn -> điểm), `KML_DB.luu` sau `napBanDo`, `khoiPhucKml`
+  lúc khởi động, `xoaKmlDaNap` (#b_xoa_kml); lớp bản đồ dự án `goc: true` không lưu. `doiTuongTai` bỏ đường có khung bao `d.bb` xa điểm chạm.
+- 1.4.0 nhập hàng loạt: `duaVaSangHoKe` (#b_bb_dua_tiep: `duaAI` trả true / false -> `layGPSNhanh(hộ, chỉ khi thiếu)` (BD.gps còn mới < 60 s
+  thì dùng, không thì getCurrentPosition không chặn) -> hộ kế CHƯA kiểm đếm theo thứ tự #cb_ho = chưa có dòng / đất / ảnh - họ tên, GPS không
+  tính), `ST.mau_ho_truoc` (đoạn chữ gốc `x.doan` của mục nhà / vật KT / cây đã đưa) + #b_ai_chep_mau `chepMauHoTruoc`, #b_gps_nhanh (`veNutGPS`
+  📍 / 📍✓), khẩu lệnh `RE_KHAU_LENH` / `tachKhauLenh` / `chayKhauLenh` (chỉ khi mọi mục chọn không `loi`; trong trung tâm thu âm
+  `xuLyKhauLenhStudio`). Bộ phân tách: `CAY_TRUNG` (loài một âm tiết trùng vật liệu không làm đầu mục), "nhà gác lửng" một đầu mục, không cắt sau
+  từ nối (có / và / kèm / với / lợp / bằng / gồm / trên / dưới), trong đoạn nhà / vật KT từ khóa yếu chỉ tách khi đoạn trước có số (trừ loài
+  cây / vật nuôi kèm số lượng), `KC_KHOA` cot(?!\s*thep) + gom đủ chữ giữa hai từ khóa, gác lửng -> TS19-22 cùng loại kết cấu, `loaiCay` (tràm =
+  Keo lá tràm, tên giống dài hơn tên loài), `datTuDoanNhieu`, `khopDanhMuc` (xi măng = ciment, sân ~ nền, hai từ đầu câu khớp đầu tên +2,5),
+  "nhà tạm" / "nhà tắm" so có dấu. `window.baoBanMoi` ở vỏ; `luuHoSo` gõ -> `luuNhanh` 250 ms (`luuNgay` khi pagehide / ẩn trang / đổi hộ);
+  `lamRo` độ sáng Uint8Array + tích phân Int32Array (ảnh quá ~8,4 triệu điểm dùng Float64Array); #b_xoay luôn hiện, bấm trên máy hẹp cũng sang
+  2 cột (thử `screen.orientation.lock`).
 - Gọn: 1 thanh trạng thái (Đất · Nhà · VKT · Cây · Ảnh · 💰 Tạm tính) thay 5 thẻ số; thanh chọn hộ một hàng (◀ hộ ▶ 🔍 + Hộ 💾 Lưu).
-- Bố cục: dọc mặc định (màn hình rộng hiện khung điện thoại 430px, nút 🔄 Xoay ngang); xoay ngang (>= 680px) = 2 cột: trái công cụ AI +
+- Bố cục: dọc mặc định (màn hình rộng hiện khung điện thoại 430px, nút 🔄 Xoay ngang - 1.4.0 hiện cả trên điện thoại); xoay ngang (>= 680px) = 2 cột: trái công cụ AI +
   tóm tắt hộ, phải chi tiết; màn hình thấp (< 540px) thu gọn các thanh.
 - Không nhận dạng chữ viết tay trong ảnh (cần thư viện / dịch vụ ngoài): chép / đọc nội dung ngay cạnh ảnh; iPhone có thể giữ ngón tay
   trên ảnh để chép chữ (Văn bản trực tiếp) rồi dán vào ô phân tách. Mã QR CCCD đọc được khi máy có `BarcodeDetector` (Chrome / WebView
