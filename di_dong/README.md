@@ -31,7 +31,7 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
 - Cài cho nhiều người: `--url` = địa chỉ HTTPS sẽ tải lên (GitHub Pages / Netlify / Cloudflare Pages; nhớ ở `dia_chi_web.txt`) ->
   tải TOÀN BỘ `tai_len\` lên đó, gửi mã QR trên `cai-dat.html`. Không gửi dữ liệu hộ dân lên trang: chỉ là ứng dụng trống + danh mục đơn giá.
 
-## Tính năng chính (bản 1.2.0 - 1.2.1)
+## Tính năng chính (bản 1.2.0 - 1.2.4)
 
 - Mở ứng dụng vào màn hình **✨ AI Quét & Nói**: 2 nút lớn **📷 CHỤP / QUÉT ẢNH** (mã QR trên CCCD -> họ tên, số CCCD, năm sinh, địa chỉ;
   ảnh biên bản -> làm rõ chữ rồi mở xem để chép / đọc nội dung) và **🎙️ NHẬP GIỌNG NÓI**; ô **Phân tách dữ liệu thông minh**
@@ -43,7 +43,9 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
 - Giọng nói: bản .apk mở màn hình nhập giọng nói của Android (`RecognizerIntent`, ưu tiên gói tiếng Việt ngoại tuyến); máy KHÔNG có màn
   hình đó (không có ứng dụng Google, máy giả lập - 1.2.1) thì nghe thẳng qua dịch vụ nhận dạng (`SpeechRecognizer`, hỏi quyền micro lần
   đầu, sóng âm + chữ đang nghe trên trang); không có dịch vụ nào: mời cài "Dịch vụ lời nói của Google" trên CH Play;
-  PWA dùng Web Speech (Chrome Android / Safari iPhone - cần bật Siri & Đọc chính tả). Lần đầu hỏi người dùng: chưa có gói ngoại tuyến thì
+  PWA dùng Web Speech (Chrome Android); iPhone / iPad (1.2.2) KHÔNG dùng Web Speech (chỉ tab Safari được phép - Edge / Chrome /
+  ứng dụng Màn hình chính báo service-not-allowed) mà mở khung đọc chính tả của bàn phím (`docChinhTa`, `#doc_ct`); trình duyệt khác bị chặn
+  (not-allowed / service-not-allowed) cũng tự chuyển sang khung này. Lần đầu hỏi người dùng: chưa có gói ngoại tuyến thì
   tiếng nói (kể cả họ tên, CCCD) do máy chủ Google / Apple nhận dạng. `chuanHoaTiengNoi`: "nhân / cộng / trừ" giữa hai số, "phẩy", "mở /
   đóng ngoặc", "mét vuông / khối", "phi 114" -> ϕ 114, "đường kính" -> ĐK, "dài 25 mét cao 1 phẩy 5" -> 25m x 1,5m. Nút 🎙️ Đọc ở từng mục
   (mục đang đọc làm mặc định cho câu không nói rõ loại).

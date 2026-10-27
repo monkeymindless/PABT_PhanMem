@@ -2415,6 +2415,17 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - TÊN "LARC Mobile" (người dùng 27/10/2026 "bỏ chữ field trên tên phần mềm"): chữ hiển thị, tên file phát hành `LARC_Mobile_<ver>.apk`,
     `LARC_Mobile_PWA_<ver>.zip`, `LARC_Mobile_Web_<ver>`. GIỮ (đổi sẽ mất dữ liệu / không cài đè được bản cũ): gói Android `vn.larc.field`,
     khóa localStorage `larc_field_*`, IndexedDB `larc_field` / `larc_kd_anh` / `larc_nen`, `loai` file dữ liệu 'larc_field_du_lieu', khóa ký larc_field.jks.
+  - 1.2.2 - 1.2.4 (người dùng 27/10/2026, thử trên iPhone - Edge): (1) nhãn nhà / vật kiến trúc "QĐ 18/2026, sửa đổi bởi QĐ 53/2026"; QĐ 53 thêm
+    Khoản 6 ghi chú Phụ lục I "bộ phận cấu tạo ở nhiều loại kết cấu -> xếp theo loại có các bộ phận chiếm tỷ lệ cao hơn" = cách `khoaLoaiNha` chấm
+    điểm (bộ đơn giá đóng gói đã có đơn giá QĐ 53). (2) Giọng nói iPhone: Web Speech chỉ chạy trong TAB SAFARI - Edge / Chrome (WKWebView) và ứng dụng
+    "Thêm vào Màn hình chính" báo service-not-allowed dù đã cho phép micrô -> `laIOS()` mở khung `#doc_ct` (đọc chính tả của bàn phím, focus NGAY trong
+    sự kiện bấm - iOS chỉ bật bàn phím trong cử chỉ người dùng; `docChinhTa(dich, ghi)` / `dongDocChinhTa`); máy khác bị chặn -> `NOI.bi_chan` ->
+    onend mở khung. (3) Bản đồ: BD mặc định k = 1, tâm 0, 0 (giữa Đại Tây Dương, mức sát đất) -> chưa có thửa / GPS thì `xemMacDinh` (khung Việt Nam
+    `KHUNG_MAC_DINH`, `BD.mac_dinh`; 1.2.4: thẻ vừa mở chưa bố cục xong -> khung căn theo cỡ sai, ảnh vệ tinh thành dải sọc mỏng -> `BD.tu_can`
+    {ds, w, h}: veBanDo thấy cỡ khung vẽ đổi thì căn lại, kéo / phóng / Tâm GPS thì thôi), mở thẻ bản đồ tự `batGPS` một lần (`BD.da_hoi_gps`), lỗi định vị code 1 báo cách bật trên iPhone / Android.
+    (4) sw.js tải bản mới `cache: "reload"` (GitHub Pages đệm HTTP 10 phút -> bộ đệm mới từng chứa index.html CŨ), trang đăng ký sw rồi `update()`,
+    `controllerchange` (đã có bộ chạy trước đó) -> `baoBanMoi` dải "Đã có bản mới" bấm = tải lại. Phát hành: tăng `dung.PHIEN_BAN`, dựng `--url`,
+    chép `tai_len\` vào bản sao kho larc-mobile (thư mục nháp), commit, push (GCM đã nhớ đăng nhập - push từ Bash chạy được).
   - NHÀ THEO QĐ 18/2026 (người dùng 27/10/2026: "Nhà theo QĐ 18 chứ không phải QĐ 42"): nhãn thẻ / mục "Nhà ở (QĐ 18/2026)", "Vật kiến trúc
     (QĐ 18/2026)"; `TIEU_CHI_QD18` = bảng Phụ lục Ia (nhóm tầng >= 5 / 3-4 / 1-2 / 1 x kết cấu loại 1-4 + bán kiên cố, tạm; tiêu chí khung,
     tường, mái, trần, nền, cửa - mã `KET_CAU`, chữ `CHU_KC`), `khoaLoaiNha(kc)` điểm = khớp - 0,75 x lệch, cần >= 2 tiêu chí khớp, tầng mặc định

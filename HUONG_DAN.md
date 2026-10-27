@@ -580,10 +580,16 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
     Điện thoại báo chưa có bộ nhận dạng giọng nói (máy không có ứng dụng Google, máy giả lập như LDPlayer): bấm OK để mở CH Play cài
     **Dịch vụ lời nói của Google** (miễn phí), rồi tải gói tiếng Việt ngoại tuyến (Cài đặt → Google → Giọng nói); lần đầu ứng dụng hỏi
     quyền **Micro** - chọn Cho phép. Máy không có CH Play: dùng micro trên bàn phím hoặc gõ.
+    **iPhone / iPad** (từ bản 1.2.2): nút giọng nói mở khung **Đọc chính tả bằng bàn phím** - bấm nút micrô 🎙 trên bàn phím iPhone, đọc liền
+    một mạch rồi bấm **✔ Xong** (chạy trong Safari, Edge, Chrome và cả ứng dụng đã thêm vào Màn hình chính; cần bật Cài đặt → Cài đặt chung →
+    Bàn phím → Bật Đọc chính tả). Máy khác mà trình duyệt chặn nhận dạng giọng nói cũng tự chuyển sang khung này.
   - **🗺️ Bản đồ GPS**: chọn nền ngay trên bản đồ - **Vệ tinh**, **Vệ tinh + tên** (tên đường, địa danh), **Đường phố**, **Địa hình**, **Lưới**
     (có mạng thì mặc định Vệ tinh + tên); thanh **Độ đậm thửa** chỉnh độ che của màu thửa trên ảnh. Trước khi ra hiện trường (có Wi-Fi):
     mở bản đồ, chọn Vệ tinh, bấm **💾 Lưu ảnh nền khu dự án** - ứng dụng lưu ảnh khu các thửa vào máy để xem khi mất sóng (**Xóa ảnh nền
-    đã lưu** để giải phóng bộ nhớ). Nền Đường phố chỉ xem khi có mạng.
+    đã lưu** để giải phóng bộ nhớ). Nền Đường phố chỉ xem khi có mạng. Chưa có thửa nào (kiểm đếm độc lập): bản đồ mở toàn cảnh Việt Nam
+    và tự xin vị trí rồi bay tới chỗ đang đứng; iPhone báo chưa cho phép định vị: Cài đặt → Quyền riêng tư & Bảo mật → Dịch vụ định vị →
+    bật, chọn trình duyệt đang dùng → Khi dùng ứng dụng. Có bản mới trên mạng: ứng dụng hiện dải **🔄 Đã có bản LARC Mobile mới** - bấm để
+    cập nhật (dữ liệu đã ghi giữ nguyên).
   - Nút **🎙️ Đọc** ở từng mục của **Hồ sơ & TS**; xoay ngang điện thoại (hoặc bấm **🔄 Xoay ngang** trên máy tính bảng / giả lập) thì
     màn hình chia 2 cột: công cụ AI bên trái, chi tiết bên phải.
   Các mục của **Hồ sơ & TS**: **Hồ sơ & Đất** (chủ hộ / người nhận khoán, người sử dụng, CCCD, năm sinh, thửa địa chính hoặc tiểu khu / khoảnh /

@@ -29,7 +29,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-PHIEN_BAN = '1.2.1'                 # phiên bản RIÊNG của ứng dụng điện thoại (tăng mỗi lần phát hành .apk / PWA)
+PHIEN_BAN = '1.2.4'                 # phiên bản RIÊNG của ứng dụng điện thoại (tăng mỗi lần phát hành .apk / PWA)
 DAY = Path(__file__).resolve().parent
 REPO = DAY.parent
 MAU = DAY / 'ung_dung' / 'index.html'
@@ -170,7 +170,7 @@ def sw_pwa(ds_file, ver: str = PHIEN_BAN) -> str:
     """Service worker: lưu mọi file của ứng dụng vào bộ nhớ đệm khi cài (chạy không mạng); bản mới (tên bộ nhớ đệm mới) thay bản cũ."""
     return ('"use strict";\n'
             f'const BO = "larc-field-{ver}", TEP = {json.dumps(["./"] + list(ds_file))};\n'
-            'self.addEventListener("install", e => { e.waitUntil(caches.open(BO).then(c => c.addAll(TEP)).then(() => self.skipWaiting())); });\n'
+            'self.addEventListener("install", e => { e.waitUntil(caches.open(BO).then(c => c.addAll(TEP.map(u => new Request(u, {cache: "reload"})))).then(() => self.skipWaiting())); });\n'
             'self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ds => Promise.all(ds.filter(k => k.startsWith("larc-field-") '
             '&& k !== BO).map(k => caches.delete(k)))).then(() => self.clients.claim())); });\n'
             'self.addEventListener("fetch", e => { if (e.request.method !== "GET") return;\n'

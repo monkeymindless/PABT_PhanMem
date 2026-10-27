@@ -205,6 +205,56 @@ class TestPhanTach(unittest.TestCase):
         self.assertIn('Quyền → Micro', self.js('document.getElementById("thong_bao").textContent'))
         self.js('delete window.LARCAndroid; document.getElementById("b_ai_xoa").click(); 1')
 
+    def test_giong_noi_iphone_doc_chinh_ta(self):
+        # iPhone (Safari / Edge / Chrome, ứng dụng trên Màn hình chính): không dùng Web Speech - mở khung đọc chính tả của bàn phím, ô chữ nhận focus
+        self.js('Object.defineProperty(navigator, "userAgent", {configurable: true, get: () => "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) EdgiOS/140"});'
+                'window.__sr = 0; window.webkitSpeechRecognition = function () { window.__sr++; };'
+                'document.getElementById("b_ai_xoa").click(); document.getElementById("b_hero_noi").click(); 1')
+        try:
+            self.assertFalse(self.js('document.getElementById("doc_ct").hidden'))
+            self.assertEqual(self.js('document.activeElement.id'), 'doc_ct_chu')
+            self.assertEqual(self.js('window.__sr'), 0)
+            self.js('document.getElementById("doc_ct_chu").value = "chủ hộ Trần Văn Bảy, căn cước 075092001234";'
+                    'document.getElementById("b_doc_ct_xong").click(); 1')
+            self.assertTrue(self.js('document.getElementById("doc_ct").hidden'))
+            self.assertIn('Trần Văn Bảy', self.jsj('window.LARC.AI.items.map(x => x.chinh)'))
+            # Hủy: không đưa chữ nào vào
+            self.js('document.getElementById("b_ai_xoa").click(); document.getElementById("b_hero_noi").click();'
+                    'document.getElementById("doc_ct_chu").value = "abc"; document.getElementById("b_doc_ct_huy").click(); 1')
+            self.assertEqual(self.js('document.getElementById("ai_chu").value'), '')
+        finally:
+            self.js('delete navigator.userAgent; delete window.webkitSpeechRecognition; document.getElementById("b_ai_xoa").click(); 1')
+
+    def test_giong_noi_bi_chan_chuyen_doc_chinh_ta(self):
+        # máy khác: trình duyệt chặn Web Speech (service-not-allowed dù đã cho phép micrô) -> tự mở khung đọc chính tả, không báo lỗi suông
+        self.js('window.confirm = () => true; localStorage.setItem("larc_field_dong_y_giong_noi", "1");'
+                'window.SpeechRecognition = function () { const r = this; r.start = () => setTimeout(() => { r.onerror({error: "service-not-allowed"}); r.onend(); }, 0);'
+                ' r.stop = () => {}; }; document.getElementById("b_hero_noi").click(); 1')
+        try:
+            self._doi(lambda: self.js('!document.getElementById("doc_ct").hidden'))
+            self.assertIn('chặn', self.js('document.getElementById("doc_ct_ghi").textContent'))
+        finally:
+            self.js('document.getElementById("b_doc_ct_huy").click(); delete window.SpeechRecognition; 1')
+
+    def test_ban_do_chua_co_thua_xem_viet_nam(self):
+        # chưa có thửa, chưa có GPS: khung cả nước (trước: tọa độ 0, 0 giữa biển ở mức sát đất -> không thấy ảnh vệ tinh)
+        self.js('window.__bd = [window.LARC.BD.k, window.LARC.BD.cx, window.LARC.BD.cy, window.LARC.BD.gps];'
+                'window.LARC.BD.gps = null; window.LARC.BD.k = 1; window.LARC.BD.cx = 0; window.LARC.BD.cy = 0; window.LARC.vuaKhung([]); 1')
+        try:
+            kinh_do = self.js('window.LARC.BD.cx / 6378137 * 180 / Math.PI')
+            self.assertTrue(102 < kinh_do < 110, kinh_do)
+            self.assertLess(self.js('window.LARC.BD.k'), 0.01)
+            # khung căn lúc thẻ chưa bố cục xong (cỡ sai) -> lần vẽ kế tiếp căn lại theo cỡ thật (trước: ảnh vệ tinh thành dải sọc mỏng)
+            self.js('document.getElementById("ban_do").getBoundingClientRect = () => ({width: 400, height: 300}); 1')   # trang thử không có cửa sổ
+            self.js('window.LARC.BD.tu_can.w = 3; window.LARC.BD.tu_can.h = 3; window.LARC.BD.k = 1e-7; window.LARC.veBanDo(); 1')
+            self.assertGreater(self.js('window.LARC.BD.k'), 1e-5)
+            # người dùng kéo / phóng: thôi tự căn
+            self.js('document.getElementById("ban_do").dispatchEvent(new PointerEvent("pointerdown", {pointerId: 1})); 1')
+            self.assertTrue(self.js('window.LARC.BD.tu_can === null'))
+        finally:
+            self.js('delete document.getElementById("ban_do").getBoundingClientRect; 1')
+            self.js('[window.LARC.BD.k, window.LARC.BD.cx, window.LARC.BD.cy, window.LARC.BD.gps] = window.__bd; 1')
+
     def test_nen_ban_do(self):
         # có mạng mà chưa chọn: nền vệ tinh + tên đường (xem ảnh thực ngay); 4 nền + lưới trên thanh nút của bản đồ
         self.assertEqual(self.js('window.LARC.BD.nen'), 've_tinh_ten')
