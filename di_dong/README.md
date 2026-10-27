@@ -33,8 +33,8 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
 
 ## Tính năng chính (bản 1.2.0 - 1.2.4)
 
-- Mở ứng dụng vào màn hình **✨ AI Quét & Nói**: 2 nút lớn **📷 CHỤP / QUÉT ẢNH** (mã QR trên CCCD -> họ tên, số CCCD, năm sinh, địa chỉ;
-  ảnh biên bản -> làm rõ chữ rồi mở xem để chép / đọc nội dung) và **🎙️ NHẬP GIỌNG NÓI**; ô **Phân tách dữ liệu thông minh**
+- Mở ứng dụng vào màn hình **✨ AI Quét & Nói**: 2 nút (một hàng gọn, 1.3.0) **📷 Chụp / Quét ảnh** (mã QR trên CCCD -> họ tên, số CCCD, năm sinh, địa chỉ;
+  ảnh biên bản -> làm rõ chữ rồi mở xem để chép / đọc nội dung) và **🎙️ Nhập giọng nói**; ô **Phân tách dữ liệu thông minh**
   (`phanTichThongMinhAI`, chạy trên máy, không mạng): đọc / gõ / dán liền một mạch -> từng mục hộ (họ tên, CCCD, điện thoại, năm sinh,
   địa chỉ), đất (tờ / thửa / loại đất / m², tiểu khu / khoảnh / lô / ha), nhà (loại theo kết cấu + diện tích biểu thức), vật kiến trúc
   (tách nhiều cỡ ống, thể tích 3 chiều, khớp danh mục để tạm tính), cây (loài, năm trồng -> tuổi, ĐK / CV, 35c/15cm), vật nuôi; xem trước
@@ -43,9 +43,14 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
 - Giọng nói: bản .apk mở màn hình nhập giọng nói của Android (`RecognizerIntent`, ưu tiên gói tiếng Việt ngoại tuyến); máy KHÔNG có màn
   hình đó (không có ứng dụng Google, máy giả lập - 1.2.1) thì nghe thẳng qua dịch vụ nhận dạng (`SpeechRecognizer`, hỏi quyền micro lần
   đầu, sóng âm + chữ đang nghe trên trang); không có dịch vụ nào: mời cài "Dịch vụ lời nói của Google" trên CH Play;
-  PWA dùng Web Speech (Chrome Android); iPhone / iPad (1.2.2) KHÔNG dùng Web Speech (chỉ tab Safari được phép - Edge / Chrome /
-  ứng dụng Màn hình chính báo service-not-allowed) mà mở khung đọc chính tả của bàn phím (`docChinhTa`, `#doc_ct`); trình duyệt khác bị chặn
-  (not-allowed / service-not-allowed) cũng tự chuyển sang khung này. Lần đầu hỏi người dùng: chưa có gói ngoại tuyến thì
+  PWA dùng Web Speech. 1.3.1: mọi nút 🎙 (`batDauNoi(dich)`) mở TRUNG TÂM THU ÂM `#hop_thu_am` (`moThuAm`, KHÔNG focus ô chữ - không bật bàn
+  phím; thay khung đọc chính tả `#doc_ct` của 1.2.2): `#b_studio_rec` (`batThuAm`: cầu nối Android -> `NOI.dich` nối chữ vào `#o_studio_text`;
+  Web Speech vi-VN, interimResults, `continuous = !laIOS()`; not-allowed / service-not-allowed -> `CANH_BAO_IPHONE` trên `#studio_status_line`),
+  `#b_studio_audio` (`batGhiAm`: getUserMedia + MediaRecorder audio/mp4 (iPhone) | webm -> IndexedDB "larc_kd_anh" khóa `"am|<hộ>"`, `veAmThanh`
+  `<audio controls>`; KHÔNG xuất kèm .json - máy tính chỉ nhận ảnh), `#b_studio_sample` (`MAU_DOC_CHUAN`, số liệu giả), bàn phím từ khóa
+  `TU_KHOA_STUDIO` 4 thẻ (`noiStudio` nối thẳng), `#b_studio_done` (`studioXong` -> `dich` hoặc `themVaoAI` = bóc tách xem trước), `#b_studio_insert`
+  (`studioChen`), `#b_studio_clear`. Android: `MainActivity.onPermissionRequest` cấp RESOURCE_AUDIO_CAPTURE CHỈ cho trang assets (`MIEN`), xin
+  RECORD_AUDIO lúc cần (`MA_GHI_AM` 17). Lần đầu hỏi người dùng: chưa có gói ngoại tuyến thì
   tiếng nói (kể cả họ tên, CCCD) do máy chủ Google / Apple nhận dạng. `chuanHoaTiengNoi`: "nhân / cộng / trừ" giữa hai số, "phẩy", "mở /
   đóng ngoặc", "mét vuông / khối", "phi 114" -> ϕ 114, "đường kính" -> ĐK, "dài 25 mét cao 1 phẩy 5" -> 25m x 1,5m. Nút 🎙️ Đọc ở từng mục
   (mục đang đọc làm mặc định cho câu không nói rõ loại).
@@ -54,6 +59,16 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
   "Độ đậm thửa" (0-80%), viền trắng + số thửa có viền để nổi trên ảnh. **💾 Lưu ảnh nền khu dự án**: tải các ô ảnh phủ khung các thửa (chưa có
   thửa: khung đang xem), từ mức vừa khung tới mức chi tiết nhất, tối đa 2.500 ô, vào IndexedDB "larc_nen" -> xem được khi mất sóng; nền Đường
   phố KHÔNG lưu (chính sách OpenStreetMap cấm tải hàng loạt). Chỉ gửi vị trí ô ảnh tới máy chủ nền, không gửi dữ liệu hộ.
+- KML / KMZ địa chính (1.3.0, file thật Vành đai 4 GĐ2 - Tân An): bản vẽ MicroStation / gCadas lưu lưới thửa + ranh ở `<LineString>` (đoạn 2 đỉnh,
+  màu theo `<Style>` / `<StyleMap>`, mô tả "bản vẽ|Level N"), chữ ở `<Point>` (tên điểm, màu LabelStyle; ảnh PNG đi kèm chỉ là chữ vẽ sẵn - không
+  dùng), `<Polygon>` là vòng tròn ~1 m quanh cọc mốc hoặc rỗng tọa độ. `docKmlBytes` -> lớp {thua, duong (Float64Array Mercator + khung),
+  diem (loai theo dạng chữ `loaiNhan`: thua, ld, dt, dt_th, moc, to, ghi_chu, ky_hieu), vong_moc, nhan_thua (`gomCumNhanThua`: loại đất <= 12 m,
+  DT <= 10 m, DT thu hồi <= 30 m về số thửa gần nhất - ngưỡng đo trên file thật; nhãn "Tờ số" gần nhất <= 400 m), bb}. `giaiNenKmz`: thư mục
+  trung tâm, mất thì quét đầu tệp cục bộ; `lamSachXml` (BOM, ký tự điều khiển, "&" trần) rồi DOMParser, vẫn lỗi thì đọc kiểu HTML. `suaFontKml`:
+  TCVN3 đọc nhầm Latin-1 -> đổi chính xác; "�" -> từ điển + ngữ cảnh (cùng từ điển với `pabt/sua_font_kml.py` của bản máy tính - test hai bên
+  cùng danh sách câu). Vẽ: đường gom theo màu (một stroke mỗi màu, chỉ đường trong khung), nhãn theo ưu tiên + tránh đè (lưới 24 px), mốc nhìn xa
+  là chấm; `ST.lop_an` (công tắc 4 lớp), `doiTuongTai` / `hienDoiTuong` (chạm), `duaThuaVaoHo` / `duaMocVaoHo`, bảng `#bang_ds_kml`. Đo: file
+  6.081 đối tượng đọc 0,57 s (trước khi sửa dò tên thư mục là bậc hai: 11 s).
 - Gọn: 1 thanh trạng thái (Đất · Nhà · VKT · Cây · Ảnh · 💰 Tạm tính) thay 5 thẻ số; thanh chọn hộ một hàng (◀ hộ ▶ 🔍 + Hộ 💾 Lưu).
 - Bố cục: dọc mặc định (màn hình rộng hiện khung điện thoại 430px, nút 🔄 Xoay ngang); xoay ngang (>= 680px) = 2 cột: trái công cụ AI +
   tóm tắt hộ, phải chi tiết; màn hình thấp (< 540px) thu gọn các thanh.

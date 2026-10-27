@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .ban_do_cad import KetQuaCad, LoiCad, ThuaCad, _cham_hop, _hop_bao, dien_tich, dien_tich_giao, tam_giac_hoa
+from .sua_font_kml import sua_font_kml
 from .tien import D
 
 DUOI_KML = ('.kml', '.kmz')
@@ -102,17 +103,17 @@ def _placemark(e, thu_muc: str) -> PlacemarkKml:
     for c in e:
         t = _the(c)
         if t == 'name':
-            pm.ten = ' '.join(str(c.text or '').split())
+            pm.ten = sua_font_kml(' '.join(str(c.text or '').split()))
         elif t == 'description':
-            pm.mo_ta = str(c.text or '').strip()
+            pm.mo_ta = sua_font_kml(str(c.text or '').strip())
         elif t == 'ExtendedData':
             for d in c.iter():
                 td = _the(d)
                 if td == 'Data' and d.get('name'):
                     v = next((str(x.text or '').strip() for x in d if _the(x) == 'value'), '')
-                    pm.du_lieu[_khoa(d.get('name'))] = v
+                    pm.du_lieu[_khoa(d.get('name'))] = sua_font_kml(v)
                 elif td == 'SimpleData' and d.get('name'):
-                    pm.du_lieu[_khoa(d.get('name'))] = str(d.text or '').strip()
+                    pm.du_lieu[_khoa(d.get('name'))] = sua_font_kml(str(d.text or '').strip())
         elif t in ('Polygon', 'LineString', 'Point', 'MultiGeometry'):
             _hinh(c, pm)
     return pm
@@ -151,13 +152,26 @@ def doc_byte_kml(file) -> bytes:
     return du
 
 
+_RE_DIEU_KHIEN = re.compile(rb'[\x00-\x08\x0b\x0c\x0e-\x1f]')
+_RE_AMP_TRAN = re.compile(rb'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)')
+
+
+def lam_sach_xml(du: bytes) -> bytes:
+    """XML xuất từ phần mềm CAD: ký tự điều khiển, "&" trần (chưa thành &amp;) làm cả file không đọc được -> làm sạch (giống lamSachXml của
+    ứng dụng điện thoại)."""
+    return _RE_AMP_TRAN.sub(b'&amp;', _RE_DIEU_KHIEN.sub(b'', du))
+
+
 def doc_kml(file) -> list:
-    """File .kml / .kmz -> [PlacemarkKml] theo thứ tự trong file."""
+    """File .kml / .kmz -> [PlacemarkKml] theo thứ tự trong file (XML lỗi nhẹ: làm sạch rồi đọc lại)."""
     du = doc_byte_kml(file)
     try:
         goc = ET.fromstring(du)
-    except ET.ParseError as e:
-        raise LoiCad(f'File "{Path(file).name}" không phải KML hợp lệ: {e}') from None
+    except ET.ParseError:
+        try:
+            goc = ET.fromstring(lam_sach_xml(du))
+        except ET.ParseError as e:
+            raise LoiCad(f'File "{Path(file).name}" không phải KML hợp lệ: {e}') from None
     ra = []
     _duyet([goc] if _the(goc) != 'kml' else goc, '', ra)
     return ra
@@ -170,6 +184,7 @@ _KHOA_LOAI = ('loai_dat', 'loaidat', 'mdsd', 'ma_loai_dat', 'kyhieumdsd', 'muc_d
 _KHOA_DT = ('dien_tich', 'dientich', 'dt', 'area', 'dtpl', 'dien_tich_m2')
 _KHOA_TK, _KHOA_KHOANH, _KHOA_LO = ('tieu_khu', 'tieukhu', 'tk'), ('khoanh', 'kh'), ('lo', 'lo_kk', 'lo_rung', 'lot')
 _RE_RANH = re.compile(r'(^|[^a-z])ranh([^a-z]|$)')
+SO_DINH_VONG_MOC, CO_VONG_MOC = 8, 3.8      # đa giác >= 8 đỉnh, cạnh khung < 3,8 m = vòng tròn quanh cọc mốc (file CAD thật: 50 đỉnh, ~1 m)
 _RE_LO_RUNG = re.compile(r'(?:tiểu\s*khu|tk)\s*[:.]?\s*(\d+)\D{0,12}?(?:khoảnh|k)\s*[:.]?\s*(\d+)\D{0,12}?(?:lô|l)\s*[:.]?\s*(\w+)', re.I)
 _RE_THUA_TO = re.compile(r'thửa\s*(?:số)?\s*[:.]?\s*(\d+)\D{0,12}?tờ\s*(?:bản\s*đồ)?\s*(?:số)?\s*[:.]?\s*(\d+)', re.I)
 _RE_TO_THUA = re.compile(r'tờ\s*(?:bản\s*đồ)?\s*(?:số)?\s*[:.]?\s*(\d+)\D{0,12}?thửa\s*(?:số)?\s*[:.]?\s*(\d+)', re.I)
@@ -244,9 +259,17 @@ def phan_tich_kml(file, so_to: str | None = None, kinh_tuyen: float | None = Non
         kq.lop_ranh = 'đa giác "ranh" trong KML'
     tam_giac = [tam_giac_hoa(r) for r in ranh]
     hop_ranh = [_hop_bao(r) for r in ranh]
-    da_co, khong_hinh = set(), 0
+    da_co, khong_hinh, vong_moc = set(), 0, 0
+
+    def la_vong_moc(ngoai):
+        v = doi(ngoai)
+        xs, ys = [x for x, _ in v], [y for _, y in v]
+        return len(v) >= SO_DINH_VONG_MOC and max(max(xs) - min(xs), max(ys) - min(ys)) < CO_VONG_MOC
     for pm in ds:
         if la_ranh(pm):
+            continue
+        if pm.da_giac and all(la_vong_moc(n) for n, _ in pm.da_giac):
+            vong_moc += 1
             continue
         if not pm.da_giac:
             khong_hinh += 1
@@ -273,10 +296,19 @@ def phan_tich_kml(file, so_to: str | None = None, kinh_tuyen: float | None = Non
         nhan = ' | '.join(x for x in (pm.ten, *(f'{k}={v}' for k, v in pm.du_lieu.items() if v)) if x)
         kq.thua.append(ThuaCad(to, thua, loai, dt_kem, D(f'{dt:.1f}'), None if trong is None else D(f'{max(trong, 0):.1f}'),
                                [[round(x, 3), round(y, 3)] for x, y in chinh], nhan[:500], 'KML'))
+    if vong_moc:
+        kq.canh_bao.append(f'{vong_moc} vòng tròn nhỏ (< {CO_VONG_MOC} m) quanh cọc mốc: không phải thửa, bỏ qua.')
     if khong_hinh:
         kq.canh_bao.append(f'{khong_hinh} mục chỉ có điểm / đường (không phải đa giác thửa): bỏ qua.')
     if not kq.thua:
-        kq.canh_bao.append('File không có đa giác thửa nào đọc được số thửa / lô.')
+        so_duong = sum(len(pm.duong) for pm in ds)
+        so_nhan = sum(1 for pm in ds if pm.diem and pm.ten)
+        if so_duong:
+            kq.canh_bao.append(f'File là bản vẽ đường của phần mềm CAD ({so_duong} đường lưới thửa / ranh, {so_nhan} nhãn số thửa, loại đất, mốc…): không '
+                               'có vùng thửa (đa giác) nên không tạo được thửa. Xem bản vẽ này bằng ứng dụng điện thoại (Bản đồ GPS); muốn nhập thửa vào '
+                               'dự án: xuất lại từ phần mềm địa chính dạng vùng (polygon) hoặc dùng bản vẽ .dxf.')
+        else:
+            kq.canh_bao.append('File không có đa giác thửa nào đọc được số thửa / lô.')
     kq.so_to = kq.so_to or (kq.thua[0].so_to if kq.thua else '')
     return kq
 

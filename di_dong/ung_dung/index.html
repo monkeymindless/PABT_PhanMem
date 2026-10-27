@@ -63,7 +63,7 @@ body.bc_ngang .phan_doan{top:0}body.bc_ngang .hero{grid-template-columns:1fr 1fr
 @media (max-height:540px){body.bc_ngang header{padding:3px 10px}body.bc_ngang header img{width:24px;height:24px}body.bc_ngang header .phu{display:none}
 body.bc_ngang .ho_bar{padding:3px 8px}body.bc_ngang .ho_bar button{min-height:36px}body.bc_ngang .status_strip{padding:3px 8px;min-height:28px}
 body.bc_ngang .bottom_nav button{min-height:40px;flex-direction:row;justify-content:center;gap:6px;padding:4px}body.bc_ngang .bottom_nav button .bt{font-size:17px}
-body.bc_ngang .hero_nut{min-height:78px;padding:6px}body.bc_ngang .hero_nut small{display:none}body.bc_ngang .hero_nut .bt{font-size:26px;line-height:30px}
+body.bc_ngang .hero_nut{min-height:42px;padding:4px 6px}
 body.bc_ngang .bottom_nav .dem{position:static}}
 .khung{background:#fff;border:1px solid var(--vach);border-radius:10px;padding:10px;margin-bottom:8px}
 .khung h3{margin:0 0 6px;font-size:14px;color:var(--chinh);display:flex;align-items:center;gap:8px}.khung h3 .nut_doc{margin-left:auto}
@@ -107,10 +107,10 @@ background:#fff;color:var(--chinh);border:1px solid var(--vach)}.phim_tat_ct but
 justify-content:center;margin:0}.nut_lon label input{display:none}
 /* màn hình AI: 2 nút lớn + công cụ phân tách */
 .hero{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-.hero_nut{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:118px;border-radius:14px;padding:10px 8px;
-background:linear-gradient(160deg,#2F5F9E,#1E3F6E);box-shadow:0 4px 14px rgba(30,63,110,.28);text-align:center}
-.hero_nut.noi{background:linear-gradient(160deg,#059669,#047857);box-shadow:0 4px 14px rgba(4,120,87,.28)}
-.hero_nut .bt{font-size:34px;line-height:40px}.hero_nut b{font-size:14px;letter-spacing:.3px}.hero_nut small{font-size:11px;font-weight:500;opacity:.9}
+.hero_nut{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;min-height:46px;border-radius:10px;padding:6px 8px;
+background:linear-gradient(160deg,#2F5F9E,#1E3F6E);box-shadow:0 2px 6px rgba(30,63,110,.22);text-align:left}
+.hero_nut.noi{background:linear-gradient(160deg,#059669,#047857);box-shadow:0 2px 6px rgba(4,120,87,.22)}
+.hero_nut .bt{font-size:20px;line-height:22px}.hero_nut b{font-size:13px;letter-spacing:.2px;white-space:nowrap}.hero_nut small{display:none}
 .hero_nut.dang_nghe{animation:nhip 1.2s ease-in-out infinite}@keyframes nhip{50%{transform:scale(.97);filter:brightness(1.15)}}
 .song_am{display:flex;align-items:center;gap:8px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:10px;padding:8px 10px;margin-bottom:8px}
 .song_am[hidden]{display:none}.song_am .vach_am{display:flex;align-items:center;gap:3px;height:28px}
@@ -118,7 +118,18 @@ background:linear-gradient(160deg,#2F5F9E,#1E3F6E);box-shadow:0 4px 14px rgba(30
 .song_am .vach_am i:nth-child(2){animation-delay:.1s}.song_am .vach_am i:nth-child(3){animation-delay:.2s}.song_am .vach_am i:nth-child(4){animation-delay:.3s}
 .song_am .vach_am i:nth-child(5){animation-delay:.4s}.song_am .vach_am i:nth-child(6){animation-delay:.5s}.song_am .vach_am i:nth-child(7){animation-delay:.6s}
 .dai_ban_moi{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 76px);z-index:80;background:#1E3A5F;color:#fff;border:0;border-radius:10px;padding:12px;font-size:14px;font-weight:600;box-shadow:0 6px 20px rgba(15,23,42,.3)}
-.doc_ct{position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 8px);z-index:70;background:#fff;border:2px solid #059669;border-radius:12px;padding:10px;box-shadow:0 8px 28px rgba(15,23,42,.28)}.doc_ct[hidden]{display:none}.doc_ct b{display:block;color:#065F46;font-size:14px;margin-bottom:4px}.doc_ct p{margin:0 0 6px;font-size:12.5px;color:#475569}.doc_ct textarea{width:100%;box-sizing:border-box;min-height:96px;font-size:16px}
+.hop_thu_am{position:fixed;left:6px;right:6px;top:calc(env(safe-area-inset-top) + 6px);max-height:calc(100dvh - 12px - env(safe-area-inset-top));overflow:auto;-webkit-overflow-scrolling:touch;z-index:70;background:#fff;border:2px solid #059669;border-radius:12px;padding:10px;box-shadow:0 8px 28px rgba(15,23,42,.3)}.hop_thu_am[hidden]{display:none}body.khung_dt .hop_thu_am{left:50%;right:auto;width:418px;margin-left:-209px}
+.ta_dau{display:flex;align-items:center;gap:8px;margin-bottom:8px}.ta_dau b{flex:1;color:#065F46;font-size:14px}.ta_dau button{min-height:36px;padding:2px 12px}
+.studio_nut{display:grid;grid-template-columns:1fr 1fr;gap:6px}.studio_nut button{min-height:48px;font-weight:700;color:#fff;border:0;border-radius:10px;font-size:14px}
+.studio_nut #b_studio_rec{grid-column:1/-1;background:#DC2626;font-size:15px}.studio_nut #b_studio_rec.dang{background:#7F1D1D}#b_studio_audio{background:#0284C7}#b_studio_audio.dang{background:#0C4A6E}#b_studio_sample{background:#7C3AED}
+.studio_wave{display:flex;align-items:center;justify-content:center;gap:4px;height:34px;margin-top:6px}.studio_wave[hidden]{display:none}.studio_wave i{display:block;width:5px;height:8px;border-radius:3px;background:#DC2626;animation:song .9s ease-in-out infinite}
+.studio_wave i:nth-child(2){animation-delay:0.1s}.studio_wave i:nth-child(3){animation-delay:0.2s}.studio_wave i:nth-child(4){animation-delay:0.3s}.studio_wave i:nth-child(5){animation-delay:0.4s}.studio_wave i:nth-child(6){animation-delay:0.5s}.studio_wave i:nth-child(7){animation-delay:0.6s}.studio_wave i:nth-child(8){animation-delay:0.7s}.studio_wave i:nth-child(9){animation-delay:0.8s}
+.studio_tt{font-size:13px;color:#334155;margin:6px 0;min-height:18px;white-space:pre-line}.studio_tt.loi{background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:8px;color:#78350F}
+.studio_am_ds .am{display:flex;align-items:center;gap:6px;margin:4px 0}.studio_am_ds audio{flex:1;min-width:0;height:36px}.studio_am_ds button{min-height:34px;padding:2px 8px}
+.studio_tab{display:flex;gap:4px;overflow-x:auto;margin:8px 0 6px;scrollbar-width:none}.studio_tab::-webkit-scrollbar{display:none}.studio_tab button{white-space:nowrap;min-height:36px;padding:3px 10px;font-size:13px;background:#F1F5F9;color:var(--chu);border:1px solid var(--vach);border-radius:999px}.studio_tab button.chon{background:#065F46;color:#fff;border-color:#065F46}
+.studio_chip{display:flex;flex-wrap:wrap;gap:5px;max-height:30vh;overflow:auto}.studio_chip button{min-height:38px;padding:4px 9px;font-size:13px;background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;border-radius:8px;text-align:left}.studio_chip.so button{min-width:46px;text-align:center;font-weight:700}
+#o_studio_text{width:100%;box-sizing:border-box;min-height:96px;font-size:16px;margin-top:8px}
+.studio_xong{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.studio_xong #b_studio_done{flex:1 1 100%;min-height:48px;background:#16A34A;color:#fff;border:0;border-radius:10px;font-weight:700;font-size:14px}.studio_xong button{flex:1;min-height:42px}
 @keyframes song{50%{height:26px}}.song_am #song_chu{flex:1;min-width:0;font-size:13px;color:#065F46}
 #card_ai_splitter{border-color:#BFDBFE;box-shadow:0 2px 10px rgba(47,95,158,.08)}#ai_chu{min-height:92px;font-size:15px;line-height:1.4}
 .ai_the{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--vach);border-left:4px solid var(--mau,#64748B);border-radius:8px;padding:7px 8px;
@@ -136,6 +147,11 @@ details.khung>summary{font-weight:700;color:var(--chinh);font-size:14px;cursor:p
 #hop_xem_anh .xa_duoi{background:#fff;padding:8px;max-height:42vh;overflow:auto}
 .ban_do_cong_cu{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ban_do_cong_cu select,.ban_do_cong_cu input{width:auto;flex:1 1 140px;padding:7px}
 .ban_quyen_nen{font-size:10px;color:var(--chu_phu);text-align:right}
+.lop_bd{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.lop_bd label{display:flex;align-items:center;gap:4px;font-size:12px;background:#F1F5F9;border:1px solid var(--vach);border-radius:999px;padding:3px 9px;min-height:32px}.lop_bd input{width:16px;height:16px;margin:0}
+.nut_zoom_bd{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:4px}.nut_zoom_bd button{width:40px;height:40px;padding:0;font-size:20px;font-weight:700;background:rgba(255,255,255,.95);color:var(--chu);border:1px solid var(--vach);border-radius:8px;box-shadow:0 1px 4px rgba(15,23,42,.25)}
+.the_kml{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}.the_kml button{min-height:32px;padding:3px 10px;font-size:12px;background:#F1F5F9;color:var(--chu);border:1px solid var(--vach);border-radius:999px}.the_kml button.chon{background:var(--chinh);color:#fff;border-color:var(--chinh)}
+.bang_kml{max-height:42vh;overflow:auto;margin-top:6px;border:1px solid var(--vach);border-radius:8px}.bang_kml .dong{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid #EEF2F7;font-size:13px}.bang_kml .dong .ch{flex:1;min-width:0}.bang_kml .dong small{color:var(--chu_phu)}.bang_kml .dong button{min-height:32px;padding:2px 10px;font-size:12px}
+.tt_kml{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px;margin:6px 0}.tt_kml b{color:var(--chu_phu);font-weight:600}
 .khung_bd{position:relative;margin-top:8px}.chip_nen{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:5px;flex-wrap:wrap;pointer-events:none}
 .chip_nen button{pointer-events:auto;background:rgba(255,255,255,.94);color:var(--chu);border:1px solid var(--vach);border-radius:999px;padding:4px 10px;
 font-size:12px;min-height:34px;box-shadow:0 1px 4px rgba(15,23,42,.25)}.chip_nen button.chon{background:var(--chinh);color:#fff;border-color:var(--chinh)}
@@ -156,12 +172,17 @@ font-size:12px;min-height:34px;box-shadow:0 1px 4px rgba(15,23,42,.25)}.chip_nen
 <div id="khung_ud"><div id="cot_trai">
 
 <section class="trang" id="t7"><div class="hero">
-<button class="hero_nut" id="b_hero_chup" type="button"><span class="bt">📷</span><b>CHỤP / QUÉT ẢNH</b><small>Biên bản · mã QR trên CCCD</small></button>
-<button class="hero_nut noi" id="b_hero_noi" type="button"><span class="bt">🎙️</span><b>NHẬP GIỌNG NÓI</b><small>Đọc liền một mạch, máy tự tách</small></button></div>
+<button class="hero_nut" id="b_hero_chup" type="button" title="Chụp biên bản hoặc mã QR trên CCCD"><span class="bt">📷</span><b>Chụp / Quét ảnh</b><small>Biên bản · mã QR trên CCCD</small></button>
+<button class="hero_nut noi" id="b_hero_noi" type="button" title="Đọc liền một mạch, máy tự tách"><span class="bt">🎙️</span><b>Nhập giọng nói</b><small>Đọc liền một mạch, máy tự tách</small></button></div>
 <input id="a_hero" type="file" accept="image/*" capture="environment" style="display:none"/>
 <div class="song_am" id="song_am" hidden><div class="vach_am"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 <div id="song_chu">Đang nghe… đọc liền một mạch</div><button class="phu nho" id="b_dung_noi" type="button">Xong</button></div>
-<div class="doc_ct" id="doc_ct" hidden><b>🎙️ Đọc chính tả bằng bàn phím</b><p id="doc_ct_ghi">Bấm nút micrô 🎙 trên bàn phím rồi đọc liền một mạch; đọc xong bấm Xong.</p><textarea id="doc_ct_chu" rows="4" autocomplete="off" placeholder="Chữ đọc được hiện ở đây…"></textarea><div class="hang_nut"><button id="b_doc_ct_xong" type="button">✔ Xong</button><button class="phu" id="b_doc_ct_huy" type="button">Hủy</button></div></div>
+<div class="hop_thu_am" id="hop_thu_am" hidden role="dialog" aria-label="Trung tâm thu âm và nhập nhanh kiểm đếm"><div class="ta_dau"><b>🎙️ TRUNG TÂM THU ÂM &amp; NHẬP NHANH KIỂM ĐẾM</b><button class="phu nho" id="b_studio_dong" type="button" aria-label="Đóng">✕</button></div>
+<div class="studio_nut"><button id="b_studio_rec" type="button">🔴 BẤM THU ÂM TRỰC TIẾP</button><button id="b_studio_audio" type="button">📼 Ghi file âm thanh</button><button id="b_studio_sample" type="button">✨ Chèn mẫu đọc chuẩn</button></div>
+<div class="studio_wave" id="studio_wave" hidden><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="studio_tt" id="studio_status_line"></div><div class="studio_am_ds" id="studio_am_ds"></div>
+<div class="studio_tab" id="studio_tab" role="tablist"></div><div class="studio_chip" id="studio_chip"></div>
+<textarea id="o_studio_text" rows="4" autocomplete="off" placeholder="Chữ thu âm / bấm từ khóa hiện ở đây (chạm vào ô để gõ thêm)…"></textarea>
+<div class="studio_xong"><button id="b_studio_done" type="button">⚡ Đưa vào ô nhập &amp; Tự động bóc tách ra bảng</button><button class="phu" id="b_studio_insert" type="button">📋 Chỉ chèn vào ô nhập</button><button class="xoa" id="b_studio_clear" type="button">🗑️ Xóa trắng</button></div></div>
 <div class="khung" id="card_ai_splitter"><h3>✨ Phân tách dữ liệu thông minh</h3>
 <p class="ghi" style="margin:0 0 6px">Đọc, gõ hoặc dán nội dung biên bản: chủ hộ, CCCD, tờ / thửa, nhà, vật kiến trúc, cây trồng… Máy tự tách từng mục,
 tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên điện thoại (không cần mạng).</p>
@@ -245,20 +266,24 @@ gửi kèm file .json. Chạm vào ảnh để xem phóng to và ghi / đọc n�
 <div class="anh" id="ds_anh" style="margin-top:8px"></div></div></section>
 
 <section class="trang" id="t5"><div class="khung"><h3>Bản đồ thửa đất, định vị GPS</h3>
-<div class="hang_nut" style="margin-top:0"><label class="phu" style="margin:0"><input id="m_file" type="file" accept=".kml,.kmz" multiple
-style="display:none"/><span class="chip">Nạp file KML / KMZ</span></label><button class="phu nho" id="b_gps" type="button">Bật định vị</button>
+<div class="hang_nut" style="margin-top:0"><button class="phu nho" id="b_nap_kml" type="button">📂 Nạp file KML / KMZ</button><input id="m_file" type="file" accept=".kml,.kmz,.xml,.zip,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/zip,text/xml,application/xml,application/octet-stream" multiple hidden/>
+<button class="phu nho" id="b_gps" type="button">Bật định vị</button>
 <button class="phu nho" id="b_vua" type="button">Vừa khung</button><button class="phu nho" id="b_thua_ho" type="button">Thửa hộ này</button>
 <button class="phu nho" id="b_tam_gps" type="button">Tâm GPS</button></div>
 <div class="ban_do_cong_cu" style="margin-top:6px"><input id="m_tim" placeholder="Tìm tờ/thửa (11/103) hoặc tên hộ" enterkeyhint="search"/>
 <label class="m_mo" for="m_mo">Độ đậm thửa <input id="m_mo" type="range" min="0" max="80" step="5" value="30"/></label></div>
 <select id="m_nen" aria-label="Nền bản đồ" hidden><option value="luoi">Lưới</option><option value="ve_tinh">Vệ tinh</option>
 <option value="ve_tinh_ten">Vệ tinh + tên đường</option><option value="duong">Đường phố</option><option value="dia_hinh">Địa hình</option></select>
-<div class="khung_bd"><canvas id="ban_do"></canvas><div class="chip_nen" id="m_chip_nen" role="group" aria-label="Nền bản đồ"></div></div>
+<div class="lop_bd" id="m_lop" role="group" aria-label="Lớp bản đồ"></div>
+<div class="khung_bd"><canvas id="ban_do"></canvas><div class="chip_nen" id="m_chip_nen" role="group" aria-label="Nền bản đồ"></div>
+<div class="nut_zoom_bd"><button type="button" id="b_zoom_cong" aria-label="Phóng to">+</button><button type="button" id="b_zoom_tru" aria-label="Thu nhỏ">−</button><button type="button" id="b_zoom_vua" aria-label="Vừa khung">⛶</button></div></div>
 <div class="ban_quyen_nen" id="ban_quyen_nen"></div>
 <div class="hang_nut" style="margin-top:4px"><button class="phu nho" id="b_luu_nen" type="button">💾 Lưu ảnh nền khu dự án (xem khi mất sóng)</button>
 <button class="xoa nho" id="b_xoa_nen" type="button">Xóa ảnh nền đã lưu</button><span class="ghi" id="m_tien_do"></span></div>
 <div class="chu_giai" id="chu_giai"></div><div id="tt_gps" class="so"></div>
-<div id="tt_thua" class="khung" style="display:none"></div></div></section>
+<div id="tt_thua" class="khung" style="display:none"></div>
+<div class="khung" id="khung_ds_kml" hidden><h3>Tra cứu đối tượng trên bản đồ</h3><div class="the_kml" id="the_kml" role="tablist"></div>
+<input id="o_tim_kml" placeholder="Lọc: số thửa, loại đất, mốc, ghi chú…" enterkeyhint="search"/><div id="bang_ds_kml" class="bang_kml"></div></div></div></section>
 
 <section class="trang" id="t6"><div class="khung"><h3>Xuất kết quả về máy tính</h3>
 <label><input id="x_anh" type="checkbox" checked style="width:auto"/> Gửi kèm ảnh (file lớn hơn)</label>
@@ -374,7 +399,7 @@ máy tính thường xuyên; gỡ ứng dụng (hoặc xóa dữ liệu trang we
     navigator.serviceWorker.addEventListener("controllerchange", () => { if (co_ban_cu) baoBanMoi(); });
     navigator.serviceWorker.register("sw.js").then(r => r.update()).catch(() => {}); }
   // iPhone / iPad: ô chọn file có đuôi lạ (.kml, .kmz) bị làm mờ - bỏ lọc đuôi, ứng dụng tự kiểm nội dung
-  if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1))
+  if (/iPad|iPhone|iPod|Android/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1))
     document.addEventListener("DOMContentLoaded", () => { const m = $("m_file"); if (m) m.removeAttribute("accept"); });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", batDau); else batDau();
 })();
@@ -736,7 +761,7 @@ const IDB = {db: null, bo_nho: [],
       t.onsuccess = () => ok((t.result || []).filter(r => r.du_an === DU.du_an)); t.onerror = () => ok([]); }); },
   async xoa(id) { const db = await this.mo(); if (!db) { this.bo_nho = this.bo_nho.filter(r => r.id !== id); return; }
     return new Promise(ok => { const t = db.transaction("anh", "readwrite").objectStore("anh").delete(id); t.onsuccess = () => ok(); t.onerror = () => ok(); }); },
-  async xoaHo(khoa) { for (const r of await this.ds(khoa)) await this.xoa(r.id); },
+  async xoaHo(khoa) { for (const r of [...await this.ds(khoa), ...await this.ds(KHOA_AM(khoa))]) await this.xoa(r.id); },
   async xoaHet() { const db = await this.mo(); if (!db) { this.bo_nho = []; return; }
     return new Promise(ok => { const s = db.transaction("anh", "readwrite").objectStore("anh"), r = s.openCursor();
       r.onsuccess = () => { const c = r.result; if (c) { if (c.value.du_an === DU.du_an) c.delete(); c.continue(); } else ok(); }; r.onerror = () => ok(); }); }};
@@ -833,13 +858,95 @@ function baoBanMoi() { if (document.getElementById("dai_ban_moi")) return;
     onclick: () => location.reload()}); d.id = "dai_ban_moi"; document.body.appendChild(d); }
 function laIOS() { const ua = navigator.userAgent || "";
   return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); }
-const DOC_CT = {dich: null};
-// phải gọi NGAY trong sự kiện bấm (iOS chỉ bật bàn phím khi focus() nằm trong cử chỉ người dùng); ghi: lời nhắc riêng
-function docChinhTa(dich, ghi) { DOC_CT.dich = dich || null; const o = $("doc_ct_chu"); o.value = "";
-  $("doc_ct_ghi").textContent = ghi || "Bấm nút micrô 🎙 trên bàn phím rồi đọc liền một mạch; đọc xong bấm Xong.";
-  $("doc_ct").hidden = false; o.focus(); }
-function dongDocChinhTa(lay) { const chu = $("doc_ct_chu").value.trim(), d = DOC_CT.dich; DOC_CT.dich = null;
-  $("doc_ct").hidden = true; $("doc_ct_chu").blur(); if (lay && chu) (d || (x => themVaoAI(x)))(chu); }
+// ---------------------------------------------------------------- trung tâm thu âm & nhập nhanh kiểm đếm (người dùng 27/10/2026: thay khung
+// đọc chính tả bằng bàn phím - iPhone tắt "Bật Đọc chính tả" thì bàn phím không có nút micrô). Mở hộp KHÔNG focus ô chữ (không bật bàn phím che
+// màn hình); bấm từ khóa nối thẳng vào ô. Thu âm trực tiếp: cầu nối Android (bản .apk) hoặc Web Speech (iPhone: continuous = false - phiên dài treo).
+// Ghi file âm thanh: getUserMedia + MediaRecorder, lưu trên máy theo hộ (IndexedDB, khóa "am|<hộ>"), nghe lại khi nhập biên bản - không gửi kèm .json.
+const STUDIO = {dich: null, rec: null, the: "nha", ghi: null};
+const KHOA_AM = k => "am|" + (k || "_chua_ho");
+const TU_KHOA_STUDIO = {
+  nha: ["🏠 Nhà (QĐ 18/2026)", ["Nhà 01 tầng kết cấu loại 3, mái ngói, tường gạch, nền gạch men: ", "Nhà 01 tầng kết cấu loại 4, mái tôn, tường gạch, nền gạch men: ",
+    "Nhà 01 tầng kết cấu loại 4, mái tôn, tường gạch, nền xi măng: ", "Nhà tạm, mái tôn, vách tôn, nền xi măng: ",
+    "Nhà 02 tầng móng cột BTCT, tường gạch, sàn BTCT, mái tôn: ", "trần thạch cao, ", "trần nhựa, "]],
+  vkt: ["🧱 Vật KT (QĐ 18/2026)", ["Mái che tôn khung sắt, nền xi măng: ", "Sân xi măng: ", "Sân gạch tàu: ", "Tường rào xây gạch dày 10cm, bổ trụ: ",
+    "Lưới B40 trụ bê tông: ", "Cổng sắt hộp: ", "Giếng khoan sâu ", "Bể nước xây gạch thể tích ", "Chuồng trại chăn nuôi xây gạch, mái tôn, nền xi măng: ",
+    "Ống nhựa ϕ 21: ", "Ống nhựa ϕ 27: ", "Ống nhựa ϕ 34: ", "Ống nhựa ϕ 42: ", "Ống nhựa ϕ 60: ", "Ống nhựa ϕ 90: ", "Ống nhựa ϕ 114: "]],
+  cay: ["🌳 Cây trồng (QĐ 48/2025)", ["Xoài trồng năm 2021 loại A: ", "Mít trồng năm 2022 loại A: ", "Bưởi trồng năm 2020 loại A: ",
+    "Sầu riêng trồng năm 2021 loại A: ", "Chuối bụi loại A: ", "Dừa trồng năm 2021 loại A: ", "Tràm (keo lá tràm) đường kính gốc > 10cm: ", "Tre gai bụi lớn: "]],
+  so: ["🔢 Số & Toán", ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ".", ",", " x ", " + ", " - ", " (", ") ", "m²; ", "m; ", "m³; ", "cây; ", "bụi; ", "\n- "]]};
+const MAU_DOC_CHUAN = "Chủ hộ Nguyễn Văn A, CCCD 075092000000, tờ 12 thửa 45 CLN 1.500 m2.\n" +
+  "Nhà 01 tầng kết cấu loại 4, mái tôn, tường gạch, nền gạch men: (5 x 12) - (2 x 3) m².\nSân xi măng: 4 x 6 m².\n" +
+  "Tường rào xây gạch dày 10cm, bổ trụ: 25 x 1,5 m².\nỐng nhựa ϕ 114: 30 m.\nXoài trồng năm 2021 loại A: 15 cây.";
+const CANH_BAO_IPHONE = "⚠️ iPhone đang tắt 'Bật Đọc chính tả'. Hãy bấm '📼 Ghi file âm thanh', dùng Bàn phím 1 chạm bên dưới, hoặc vào Cài đặt -> " +
+  "Cài đặt chung -> Bàn phím -> Bật Đọc chính tả (Tiếng Việt).";
+function sttStudio(chu, loi) { const o = $("studio_status_line"); o.textContent = chu || ""; o.classList.toggle("loi", !!loi); }
+function noiStudio(chu) { const o = $("o_studio_text"); o.value += String(chu || ""); }   // nối thẳng - KHÔNG focus (không bật bàn phím)
+function moThuAm(dich) { STUDIO.dich = dich || null; $("hop_thu_am").hidden = false; sttStudio(laIOS() && !window.LARCAndroid ?
+  "Bấm 🔴 rồi đọc (iPhone: đọc từng câu, mỗi câu bấm lại), hoặc dùng các nút từ khóa bên dưới." : "Bấm 🔴 rồi đọc liền một mạch, hoặc dùng các nút từ khóa bên dưới.");
+  veTheStudio(); veAmThanh(); }
+function dongThuAm() { dungThuAm(); dungGhiAm(); $("hop_thu_am").hidden = true; STUDIO.dich = null; NOI.dich = null; }
+function veTheStudio() { const tab = $("studio_tab"), hop = $("studio_chip"); tab.textContent = ""; hop.textContent = ""; hop.classList.toggle("so", STUDIO.the === "so");
+  for (const k in TU_KHOA_STUDIO) tab.appendChild(el("button", {type: "button", cls: k === STUDIO.the ? "chon" : "", text: TU_KHOA_STUDIO[k][0],
+    onclick: () => { STUDIO.the = k; veTheStudio(); }}));
+  for (const c of TU_KHOA_STUDIO[STUDIO.the][1]) hop.appendChild(el("button", {type: "button", text: c === "\n- " ? "↵ -" : c.trim() || c,
+    onclick: () => noiStudio(c)})); }
+function trangThaiThu(dang) { const b = $("b_studio_rec"); b.classList.toggle("dang", !!dang); b.textContent = dang ? "⏹ DỪNG THU ÂM" : "🔴 BẤM THU ÂM TRỰC TIẾP";
+  $("studio_wave").hidden = !dang; }
+// thu âm trực tiếp -> chữ nối vào ô của trung tâm
+function batThuAm() { if (STUDIO.rec || NOI.android) { dungThuAm(); return; }
+  if (!dongYGiongNoi()) return;
+  if (window.LARCAndroid && window.LARCAndroid.batDauGiongNoi) { NOI.dich = chu => noiStudio(chuanHoaTiengNoi(chu) + " "); trangThaiThu(true);
+    sttStudio("Đang nghe…"); window.LARCAndroid.batDauGiongNoi(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { sttStudio(laIOS() ? CANH_BAO_IPHONE : "Trình duyệt này không có nhận dạng giọng nói: dùng 📼 Ghi file âm thanh hoặc bàn phím từ khóa bên dưới.", 1); return; }
+  const r = new SR(); r.lang = "vi-VN"; r.interimResults = true; r.continuous = !laIOS(); r.maxAlternatives = 1; STUDIO.rec = r; STUDIO.chan = false;
+  trangThaiThu(true); sttStudio("Đang nghe…");
+  r.onresult = e => { let tam = ""; for (let i = e.resultIndex; i < e.results.length; i++) { const x = e.results[i];
+    if (x.isFinal) noiStudio(chuanHoaTiengNoi(x[0].transcript) + " "); else tam += x[0].transcript; } sttStudio(tam ? "… " + tam : "Đang nghe…"); };
+  r.onerror = e => { const ly = e.error;
+    if (ly === "not-allowed" || ly === "service-not-allowed") { STUDIO.chan = true; sttStudio(laIOS() ? CANH_BAO_IPHONE :
+      "⚠️ Trình duyệt chặn micrô / nhận dạng giọng nói: cho phép micrô cho trang này, hoặc dùng 📼 Ghi file âm thanh / bàn phím từ khóa.", 1); }
+    else if (ly === "network") sttStudio("⚠️ Máy chưa có gói tiếng Việt ngoại tuyến nên cần mạng: bật 4G / Wi-Fi, hoặc dùng 📼 Ghi file âm thanh.", 1);
+    else if (ly === "no-speech") sttStudio("Không nghe thấy tiếng: bấm 🔴 rồi đọc gần điện thoại hơn.");
+    else if (ly !== "aborted") sttStudio("⚠️ Lỗi nhận dạng giọng nói: " + ly, 1); };
+  r.onend = () => { STUDIO.rec = null; trangThaiThu(false); if (!STUDIO.chan && !$("studio_status_line").classList.contains("loi")) sttStudio("Đã dừng. Bấm 🔴 để đọc tiếp."); };
+  try { r.start(); } catch (e) { STUDIO.rec = null; trangThaiThu(false); sttStudio(laIOS() ? CANH_BAO_IPHONE : "⚠️ Không bắt đầu thu âm được: " + e.message, 1); } }
+function dungThuAm() { if (STUDIO.rec) try { STUDIO.rec.stop(); } catch (e) { /* đã dừng */ }
+  if (NOI.android && window.LARCAndroid && window.LARCAndroid.dungGiongNoi) window.LARCAndroid.dungGiongNoi(); }
+// ghi file âm thanh (chạy cả khi iPhone tắt Đọc chính tả): lưu trên máy theo hộ, nghe lại để chép biên bản
+async function batGhiAm() { if (STUDIO.ghi) { dungGhiAm(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === "undefined") {
+    sttStudio("⚠️ Trình duyệt này không ghi âm được (cần Safari / Chrome bản mới, trang https).", 1); return; }
+  let luong; try { luong = await navigator.mediaDevices.getUserMedia({audio: true}); }
+  catch (e) { sttStudio("⚠️ Chưa cho phép micrô: " + (laIOS() ? "Cài đặt → trình duyệt đang dùng → Micrô → Cho phép, rồi mở lại trang." :
+    "cho phép micrô cho trang / ứng dụng rồi bấm lại.") + " (" + (e.name || e.message) + ")", 1); return; }
+  const kieu = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg"].find(k => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(k)) || "";
+  const mr = kieu ? new MediaRecorder(luong, {mimeType: kieu}) : new MediaRecorder(luong), manh = [], bd = Date.now();
+  STUDIO.ghi = {mr, luong, bd, dem: setInterval(() => { const g = Math.round((Date.now() - bd) / 1000);
+    $("b_studio_audio").textContent = "⏹ Dừng ghi " + Math.floor(g / 60) + ":" + String(g % 60).padStart(2, "0"); }, 500)};
+  mr.ondataavailable = e => { if (e.data && e.data.size) manh.push(e.data); };
+  mr.onstop = async () => { const kt = mr.mimeType || kieu || "audio/webm", blob = new Blob(manh, {type: kt}), giay = Math.round((Date.now() - bd) / 1000);
+    if (!blob.size) { sttStudio("⚠️ Không ghi được âm thanh.", 1); return; }
+    const ho = ST.chon, ten = "ghi_am_" + (ho || "chua_ho") + "_" + new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14) + (/mp4/.test(kt) ? ".m4a" : /ogg/.test(kt) ? ".ogg" : ".webm");
+    await IDB.them({khoa: KHOA_AM(ho), ten, du_lieu: blob, kieu: kt, giay, luc: new Date().toISOString()});
+    sttStudio("Đã lưu " + ten + " (" + giay + " giây)" + (ho ? " vào hồ sơ hộ đang chọn." : " - chưa chọn hộ.")); veAmThanh(); };
+  mr.start(); $("b_studio_audio").classList.add("dang"); sttStudio("Đang ghi âm… đọc biên bản, bấm ⏹ khi xong."); }
+function dungGhiAm() { const g = STUDIO.ghi; if (!g) return; STUDIO.ghi = null; clearInterval(g.dem);
+  try { if (g.mr.state !== "inactive") g.mr.stop(); } catch (e) { /* đã dừng */ }
+  for (const t of g.luong.getTracks()) t.stop(); const b = $("b_studio_audio"); b.classList.remove("dang"); b.textContent = "📼 Ghi file âm thanh"; }
+async function veAmThanh() { const hop = $("studio_am_ds"); for (const a of hop.querySelectorAll("audio")) URL.revokeObjectURL(a.src); hop.textContent = "";
+  const ds = await IDB.ds(KHOA_AM(ST.chon)); if (!ds.length) return;
+  hop.appendChild(el("div", {cls: "ghi", text: "File ghi âm của " + (ST.chon ? "hộ đang chọn" : "chưa gắn hộ") + " (lưu trên điện thoại, nghe lại để chép biên bản):"}));
+  for (const r of ds.slice().reverse()) { const a = el("audio", {}); a.controls = true; a.preload = "metadata";
+    if (r.du_lieu instanceof Blob) a.src = URL.createObjectURL(r.du_lieu);
+    hop.appendChild(el("div", {cls: "am"}, [a, el("button", {cls: "xoa nho", type: "button", text: "🗑", title: "Xóa " + r.ten,
+      onclick: async () => { if (!confirm("Xóa file ghi âm " + r.ten + "?")) return; await IDB.xoa(r.id); veAmThanh(); }})])); } }
+// hoàn tất: chữ của trung tâm -> ô nhập chính (bóc tách tự động) / chỉ chèn / xóa trắng
+function studioXong() { const chu = $("o_studio_text").value.trim(); if (!chu) { sttStudio("Chưa có chữ: bấm 🔴 thu âm hoặc chọn từ khóa.", 1); return; }
+  const d = STUDIO.dich; $("o_studio_text").value = ""; dongThuAm(); (d || (x => themVaoAI(x)))(chu); }
+function studioChen() { const chu = $("o_studio_text").value.trim(); if (!chu) { sttStudio("Chưa có chữ để chèn.", 1); return; }
+  const o = $("ai_chu"); o.value = (o.value.trim() ? o.value.trim() + "\n" : "") + chu; $("o_studio_text").value = ""; dongThuAm();
+  if (!dangNgang() && ST.the !== TRANG_AI) moThe(TRANG_AI); bao("Đã chèn vào ô nhập - bấm ✨ Phân tách khi đọc xong."); }
 const KHOA_DONG_Y = "larc_field_dong_y_giong_noi";
 function dongYGiongNoi() { try { if (localStorage.getItem(KHOA_DONG_Y)) return true; } catch (e) { /* bỏ qua */ }
   const ok = confirm("Nhập giọng nói dùng bộ nhận dạng giọng nói của điện thoại (Google trên Android, Apple / Siri trên iPhone).\n\n" +
@@ -847,7 +954,8 @@ function dongYGiongNoi() { try { if (localStorage.getItem(KHOA_DONG_Y)) return t
     "kể cả họ tên, số CCCD bạn đọc. Ứng dụng LARC không gửi dữ liệu nào khác lên mạng.\n\nTiếp tục dùng giọng nói?");
   if (ok) try { localStorage.setItem(KHOA_DONG_Y, "1"); } catch (e) { /* bỏ qua */ }
   return ok; }
-function hienSong(co, chu) { $("song_am").hidden = !co; if (chu) $("song_chu").textContent = chu; $("b_hero_noi").classList.toggle("dang_nghe", !!co); }
+function hienSong(co, chu) { if (!$("hop_thu_am").hidden) { trangThaiThu(co); if (chu) sttStudio(chu); if (!co) NOI.android = false; return; }
+  $("song_am").hidden = !co; if (chu) $("song_chu").textContent = chu; $("b_hero_noi").classList.toggle("dang_nghe", !!co); }
 function khongCoGiongNoi() { const adr = window.LARCAndroid && window.LARCAndroid.moCuaHang;
   if (adr && confirm("Điện thoại này chưa có bộ nhận dạng giọng nói (thường gặp ở máy không có ứng dụng Google, máy giả lập).\n\n" +
     "Cài \"Dịch vụ lời nói của Google\" (Speech Services by Google, miễn phí) trên CH Play rồi bấm 🎙️ lại? Sau khi cài, nên tải gói tiếng Việt " +
@@ -855,38 +963,24 @@ function khongCoGiongNoi() { const adr = window.LARCAndroid && window.LARCAndroi
     window.LARCAndroid.moCuaHang("com.google.android.tts"); return; }
   bao("Máy chưa có bộ nhận dạng giọng nói: chạm vào ô chữ rồi bấm micro 🎤 trên bàn phím (Gboard / bàn phím iPhone), hoặc gõ / dán.", 1);
   if (!dangNgang()) moThe(TRANG_AI); $("ai_chu").focus(); }
-// dich(chữ): nơi nhận chữ (mặc định đưa vào ô phân tách); bấm lần nữa khi đang nghe = dừng
-function batDauNoi(dich) { if (NOI.rec || NOI.android) { dungNoi(); return; }
-  if (!window.LARCAndroid && laIOS()) { docChinhTa(dich); return; }
-  if (!dongYGiongNoi()) return; NOI.dich = dich || null; NOI.bi_chan = false;
-  if (window.LARCAndroid && window.LARCAndroid.batDauGiongNoi) { window.LARCAndroid.batDauGiongNoi(); return; }
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) { NOI.dich = null; khongCoGiongNoi(); return; }
-  const r = new SR(); r.lang = "vi-VN"; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1; NOI.rec = r; NOI.chu = "";
-  hienSong(true, "Đang nghe… đọc liền một mạch, bấm Xong khi đọc hết");
-  r.onresult = e => { let cuoi = "", tam = ""; for (let i = 0; i < e.results.length; i++) { const x = e.results[i];
-    if (x.isFinal) cuoi += x[0].transcript + " "; else tam += x[0].transcript; } NOI.chu = cuoi; $("song_chu").textContent = (cuoi + tam).trim() || "Đang nghe…"; };
-  r.onerror = e => { const ly = e.error;
-    if (ly === "not-allowed" || ly === "service-not-allowed") NOI.bi_chan = true;
-    else if (ly === "network") bao("Máy chưa có gói tiếng Việt ngoại tuyến nên cần mạng: dùng micro 🎤 trên bàn phím.", 1);
-    else if (ly !== "no-speech" && ly !== "aborted") bao("Lỗi nhận dạng giọng nói: " + ly, 1); };
-  r.onend = () => { const chu = NOI.chu.trim(); NOI.rec = null; hienSong(false);
-    if (NOI.bi_chan && !chu) { const d = NOI.dich; NOI.dich = null; NOI.bi_chan = false;
-      docChinhTa(d, "Trình duyệt này chặn nhận dạng giọng nói của trang web. Chạm vào ô dưới, bấm micrô 🎙 trên bàn phím rồi đọc; xong bấm Xong."); return; }
-    if (chu) nhanGiongNoi(chu); else NOI.dich = null; };
-  try { r.start(); } catch (e) { NOI.rec = null; hienSong(false); khongCoGiongNoi(); } }
+// dich(chữ): nơi nhận chữ khi bấm "Đưa vào ô nhập" (mặc định ô phân tách); mọi nút 🎙 mở trung tâm thu âm
+function batDauNoi(dich) { moThuAm(dich); }
 function dungNoi() { if (NOI.rec) try { NOI.rec.stop(); } catch (e) { /* đã dừng */ }
   if (NOI.android && window.LARCAndroid && window.LARCAndroid.dungGiongNoi) window.LARCAndroid.dungGiongNoi(); }
-function nhanGiongNoi(chu) { const d = NOI.dich || (x => themVaoAI(x)); NOI.dich = null; d(String(chu || "")); }
+function nhanGiongNoi(chu) { const d = NOI.dich || (x => themVaoAI(x)); if ($("hop_thu_am").hidden) NOI.dich = null; d(String(chu || ""));
+  if (!$("hop_thu_am").hidden) sttStudio("Đã nhận. Bấm 🔴 để đọc tiếp, hoặc ⚡ để bóc tách."); }
 // bản .apk: màn hình nhập giọng nói của Google trả chữ về đây; máy không có màn hình đó: ứng dụng nghe thẳng qua dịch vụ nhận dạng
 // (SpeechRecognizer) - báo trạng thái (nghe / xu_ly) và chữ đang nghe để hiện sóng âm như bản PWA
 window.LARC_nhanGiongNoiAndroid = chu => { NOI.android = false; hienSong(false); nhanGiongNoi(chu); };
 window.LARC_giongNoiTrangThai = tt => { NOI.android = true; hienSong(true, tt === "xu_ly" ? "Đang nhận dạng…" : "Đang nghe… đọc liền một mạch, bấm Xong khi đọc hết"); };
-window.LARC_giongNoiTam = chu => { if (NOI.android) $("song_chu").textContent = chu; };
+window.LARC_giongNoiTam = chu => { if (!NOI.android) return; if (!$("hop_thu_am").hidden) sttStudio("… " + chu); else $("song_chu").textContent = chu; };
 const LOI_GIONG_NOI = {quyen: "Chưa cho phép dùng micro: Cài đặt → Ứng dụng → LARC Mobile → Quyền → Micro → Cho phép.",
   mang: "Cần mạng, hoặc tải gói tiếng Việt ngoại tuyến: Cài đặt → Google → Giọng nói → Nhận dạng giọng nói ngoại tuyến → Tiếng Việt.",
   ngon_ngu: "Bộ nhận dạng của máy chưa có tiếng Việt: tải gói Tiếng Việt (Cài đặt → Google → Giọng nói → Ngôn ngữ / Nhận dạng ngoại tuyến).",
   khong_nghe: "Không nghe rõ: bấm 🎙️ rồi đọc lại, gần điện thoại hơn."};
-window.LARC_giongNoiLoi = ly => { NOI.dich = null; NOI.android = false; hienSong(false);
+window.LARC_giongNoiLoi = ly => { const mo = !$("hop_thu_am").hidden; if (!mo) NOI.dich = null; NOI.android = false; hienSong(false);
+  if (mo && ly !== "khong_co") { if (ly && ly !== "huy") sttStudio("⚠️ " + (LOI_GIONG_NOI[ly] || "Nhận dạng giọng nói lỗi (" + ly + ").") +
+    " Có thể dùng 📼 Ghi file âm thanh hoặc bàn phím từ khóa.", 1); return; }
   if (ly === "khong_co") khongCoGiongNoi(); else if (LOI_GIONG_NOI[ly]) bao(LOI_GIONG_NOI[ly], 1);
   else if (ly && ly !== "huy") bao("Nhận dạng giọng nói lỗi (" + ly + "): thử lại, hoặc gõ / dán vào ô chữ.", 1); };
 
@@ -1236,42 +1330,252 @@ function hoChoThua(so_to, so_thua, ma_ho, ten) { // mã hộ có sẵn (bản đ
   if (kth) for (const h of DU.ho) if (h.thua.some(t => khoaSo(t.to) === kt && khoaSo(t.thua) === kth)) return String(h.ma);
   const bt = boDau(ten); if (bt.length > 5) for (const h of DU.ho) if (boDau(h.ten) && bt.includes(boDau(h.ten))) return String(h.ma);
   return ""; }
-async function giaiNenKmz(b) { // ZIP: thư mục trung tâm -> doc.kml (lưu / deflate qua DecompressionStream)
-  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); let e = -1;
-  for (let i = b.length - 22; i >= Math.max(0, b.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
-  if (e < 0) throw new Error("File .kmz hỏng (không có thư mục ZIP)."); const so = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true), chon = null;
-  for (let i = 0; i < so; i++) { if (dv.getUint32(p, true) !== 0x02014b50) break;
-    const pp = dv.getUint16(p + 10, true), nen = dv.getUint32(p + 20, true), goc = dv.getUint32(p + 24, true), nl = dv.getUint16(p + 28, true),
-      xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lh = dv.getUint32(p + 42, true), ten = new TextDecoder().decode(b.subarray(p + 46, p + 46 + nl));
-    if (/\.kml$/i.test(ten) && !ten.includes("..") && !/^[\/\\]/.test(ten) && goc < 200 * 1048576 && (!chon || ten === "doc.kml")) chon = {pp, nen, lh};
-    p += 46 + nl + xl + cl; }
-  if (!chon) throw new Error("File .kmz không có bản đồ .kml bên trong.");
+// ---------------------------------------------------------------- KML / KMZ địa chính (người dùng 27/10/2026, file thật Vành đai 4 GĐ2 - Tân An):
+// bản vẽ xuất từ MicroStation / gCadas lưu LƯỚI THỬA + RANH ở <LineString> (đoạn 2 đỉnh), số thửa / loại đất / DT / mốc / ghi chú ở <Point>
+// (chữ = tên điểm, màu ở LabelStyle), <Polygon> chỉ là vòng tròn ~1 m quanh cọc mốc hoặc rỗng tọa độ. Đọc đủ 4 lớp, tọa độ Web Mercator tính
+// sẵn lúc nạp; chữ lỗi font khôi phục bằng suaFontKml (bản máy tính LARC có cùng từ điển - sửa thì sửa cả hai).
+const TCVN3 = {"µ": "à", "¸": "á", "¶": "ả", "·": "ã", "¹": "ạ", "¨": "ă", "»": "ằ", "¾": "ắ", "¼": "ẳ", "½": "ẵ", "Æ": "ặ", "©": "â", "Ç": "ầ", "Ê": "ấ", "È": "ẩ", "É": "ẫ", "Ë": "ậ", "®": "đ", "§": "Đ", "Ì": "è", "Ð": "é", "Î": "ẻ", "Ï": "ẽ", "Ñ": "ẹ", "ª": "ê", "Ò": "ề", "Õ": "ế", "Ó": "ể", "Ô": "ễ", "Ö": "ệ", "×": "ì", "Ý": "í", "Ø": "ỉ", "Ü": "ĩ", "Þ": "ị", "ß": "ò", "ã": "ó", "á": "ỏ", "â": "õ", "ä": "ọ", "«": "ô", "å": "ồ", "è": "ố", "æ": "ổ", "ç": "ỗ", "é": "ộ", "¬": "ơ", "ê": "ờ", "í": "ớ", "ë": "ở", "ì": "ỡ", "î": "ợ", "ï": "ù", "ó": "ú", "ñ": "ủ", "ò": "ũ", "ô": "ụ", "­": "ư", "õ": "ừ", "ø": "ứ", "ö": "ử", "÷": "ữ", "ù": "ự", "ú": "ỳ", "ý": "ý", "û": "ỷ", "ü": "ỹ", "þ": "ỵ", "¡": "Ă", "¢": "Â", "£": "Ê", "¤": "Ô", "¥": "Ơ", "¦": "Ư", "∅": "ỉ"};
+const DAU_TCVN3 = new Set("¡¢£¤¥¦§¨©ª«¬­®µ¶·¸¹»¼½¾ÆÇÈÉÊËÌÎÏÐÑÒÓÔÕÖ×ØÜÞß∅");
+const TU_LOI = {"���ng": "đường", "s�": "số", "S�": "Số", "T�": "Tờ", "M��ng": "Mương", "m��ng": "mương", "X�": "Xã", "��t": "đất", "T�n": "Tân", "m�p": "mép", "v�o": "vào", "c�ch": "cách", "C�ch": "Cách", "th�ng": "thông", "Su�i": "Suối", "H�nh": "Hành", "b�o": "bảo", "��nh": "định", "c�a": "của", "R�ch": "Rạch", "n��c": "nước", "Ng�y": "Ngày", "ng�y": "ngày", "Quy�t": "Quyết", "ngu�n": "nguồn", "c�ng": "công", "t�ng": "tông", "�n": "án", "V�nh": "Vành", "�ai": "đai", "�o�n": "đoạn", "D�": "Dự", "d�": "dự", "tuy�n": "tuyến", "B�n": "Bồn", "b�n": "bản", "Ch�nh": "Chính", "tr�nh": "trình", "l��i": "lưới", "�i�n": "điện", "d�y": "dây", "ngo�i": "ngoài", "Ngh�": "Nghị", "�p": "Ấp", "Nh�a": "Nhựa", "nh�a": "nhựa", "S�ng": "Sông", "Th�nh": "Thành", "th�nh": "thành", "�ng": "ống", "H�": "Hồ", "h�": "hồ", "ch�": "chí", "Ch�": "Chí", "d�n": "dẫn", "c�u": "cầu", "C�u": "Cầu", "Th�": "Thủ", "Bi�n": "Biên", "c�y": "cây", "Vi�t": "Việt", "k�nh": "kênh", "Th�c": "Thực", "hi�n": "hiện", "V�n": "Văn", "vi�c": "việc", "ch�p": "chấp", "thu�n": "thuận", "c�m": "cắm", "c�c": "cọc", "gi�i": "giải", "ph�ng": "phóng", "m�t": "mặt", "b�ng": "bằng", "C�p": "Cập", "nh�t": "nhật", "M�y": "Mây", "B�nh": "Bình", "ph�": "phố", "��NG": "ĐỒNG", "��ng": "Đông", "B�": "Bờ", "b�": "bờ", "L�": "Lề", "Th�ng": "Thăng"};
+const TRUOC_LOI = {"ngo�i|c�ng": "cùng", "Ch�nh|ph�": "phủ", "b�o|v�": "vệ", "h�|s�": "sơ"};
+const SAU_LOI = {"��ng|Nai": "Đồng", "��NG|NAI": "ĐỒNG", "b�|t�ng": "bê", "B�|t�ng": "Bê", "v�|vi�c": "về", "l�|than": null};
+const DOAN_LOI = [["UBNDng�y", "UBND ngày"], ["CPng�y", "CP ngày"], ["Q�-", "QĐ-"], ["Q�.", "QĐ."], ["N�-", "NĐ-"], ["�T.", "ĐT."], [".Ng�y", ".Ngày"], ["Nh�a", "Nhựa"], ["nh�a", "nhựa"], ["n��ctheo", "nước theo"]];
+const RE_VIET = /[\u0102\u0103\u0110\u0111\u01a0\u01a1\u01af\u01b0\u1ea0-\u1ef9]/, KY_LOI = "\uFFFD";
+function tuTcvn3(s) { if (!s || RE_VIET.test(s) || ![...s].some(c => DAU_TCVN3.has(c))) return s; return [...s].map(c => TCVN3[c] || c).join(""); }
+function suaFontKml(s) { s = tuTcvn3(String(s || "")); if (!s.includes(KY_LOI)) return s;
+  const phan = s.split(/(\s+)/), vt = [], goc = [];
+  phan.forEach((x, i) => { if (x && !/^\s+$/.test(x)) { vt.push(i); goc.push(x.match(/^([("'\[]*)([\s\S]*?)([)\]"'.,;:!?]*)$/).slice(1)); } });
+  vt.forEach((i, j) => { const [dau, tu, duoi] = goc[j]; if (!tu.includes(KY_LOI)) return;
+    const truoc = j ? goc[j - 1][1] : "", sau = j + 1 < goc.length ? goc[j + 1][1] : "";
+    let dung = (truoc + "|" + tu) in TRUOC_LOI ? TRUOC_LOI[truoc + "|" + tu] : (tu + "|" + sau) in SAU_LOI ? SAU_LOI[tu + "|" + sau] : (TU_LOI[tu] !== undefined ? TU_LOI[tu] : null);
+    if (dung === null) { dung = tu; for (const [a, b] of DOAN_LOI) dung = dung.split(a).join(b); }
+    if (j === 0 && tu.startsWith(KY_LOI) && dung[0] && dung[0] !== dung[0].toUpperCase()) dung = dung[0].toUpperCase() + dung.slice(1);
+    phan[i] = dau + dung + duoi; });
+  return phan.join(""); }
+// ZIP: thư mục trung tâm (chuẩn); hỏng / thiếu thì quét đầu tệp cục bộ (PK\3\4) - file .kmz chép dở, nén bằng công cụ lạ
+async function giaiNenKmz(b) {
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength), ds = [];
+  let e = -1; for (let i = b.length - 22; i >= Math.max(0, b.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  if (e >= 0) { const so = dv.getUint16(e + 10, true); let q = dv.getUint32(e + 16, true);
+    for (let i = 0; i < so && q + 46 <= b.length; i++) { if (dv.getUint32(q, true) !== 0x02014b50) break;
+      const nl = dv.getUint16(q + 28, true), xl = dv.getUint16(q + 30, true), cl = dv.getUint16(q + 32, true);
+      ds.push({pp: dv.getUint16(q + 10, true), nen: dv.getUint32(q + 20, true), goc: dv.getUint32(q + 24, true), lh: dv.getUint32(q + 42, true),
+        ten: new TextDecoder().decode(b.subarray(q + 46, q + 46 + nl))}); q += 46 + nl + xl + cl; } }
+  if (!ds.length) for (let q = 0; q + 30 <= b.length;) { if (dv.getUint32(q, true) !== 0x04034b50) { q++; continue; }
+    const nl = dv.getUint16(q + 26, true), xl = dv.getUint16(q + 28, true), nen = dv.getUint32(q + 18, true);
+    ds.push({pp: dv.getUint16(q + 8, true), nen, goc: dv.getUint32(q + 22, true), lh: q, ten: new TextDecoder().decode(b.subarray(q + 30, q + 30 + nl))});
+    q += 30 + nl + xl + Math.max(nen, 0); }
+  const kml = ds.filter(x => /\.kml$/i.test(x.ten) && !x.ten.includes("..") && !/^[\/\\]/.test(x.ten) && x.goc < 200 * 1048576);
+  if (!kml.length) throw new Error(ds.length ? "File .kmz không có bản đồ .kml bên trong." : "File .kmz hỏng (không đọc được nội dung nén).");
+  const chon = kml.find(x => /(^|\/)doc\.kml$/i.test(x.ten)) || kml.sort((a, c) => a.ten.split("/").length - c.ten.split("/").length)[0];
   const d0 = chon.lh + 30 + dv.getUint16(chon.lh + 26, true) + dv.getUint16(chon.lh + 28, true), du = b.subarray(d0, d0 + chon.nen);
   if (chon.pp === 0) return new TextDecoder().decode(du);
   if (chon.pp !== 8 || typeof DecompressionStream === "undefined") throw new Error("Trình duyệt này chưa giải nén được .kmz: dùng file .kml.");
-  const s = new Blob([du]).stream().pipeThrough(new DecompressionStream("deflate-raw")); return await new Response(s).text(); }
+  const st = new Blob([du]).stream().pipeThrough(new DecompressionStream("deflate-raw")); return await new Response(st).text(); }
+// XML từ phần mềm CAD: BOM, ký tự điều khiển, "&" trần làm DOMParser báo lỗi cả file -> làm sạch; vẫn lỗi thì đọc kiểu HTML (dễ dãi)
+function lamSachXml(x) { return String(x).replace(/^\uFEFF/, "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "")
+  .replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;"); }
+function mauKml(c) { c = String(c || "").trim().replace(/^#/, ""); if (!/^[0-9a-fA-F]{8}$/.test(c)) return null;   // aabbggrr -> #rrggbb
+  return parseInt(c.slice(0, 2), 16) < 16 ? null : "#" + c.slice(6, 8) + c.slice(4, 6) + c.slice(2, 4); }
+function dSang(hex) { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }
+// chữ của điểm -> loại nhãn địa chính (theo dạng chữ - cùng một lớp CAD mỗi file đánh số khác nhau)
+function loaiNhan(c, lop_cad) { c = String(c || "").trim();
+  if (!c) return "ky_hieu";
+  if (/^[A-Z]{1,3}\d?\.[A-Z]{1,2}\d+[A-Z]?$/.test(c) || (/^(Level 4[45])$/.test(lop_cad) && /^[A-Z0-9.\-]{2,12}$/.test(c))) return "moc";
+  if (/^\d{1,4}(\s*\/)?$/.test(c)) return "thua";
+  if (/^\(\s*\d+(?:[.,]\d+)?\s*\)$/.test(c)) return "dt_th";
+  if (/^\d+[.,]\d+$/.test(c)) return "dt";
+  if (/^[A-Z]{2,4}(?:\+[A-Z]{2,4})*$/.test(c)) return "ld";
+  if (/^tờ\s*(?:bản\s*đồ\s*)?(?:số)?\s*\d+/i.test(c)) return "to";
+  if (c.length <= 1) return "ky_hieu";
+  return "ghi_chu"; }
+// ghép nhãn thửa: mỗi loại đất / DT / DT thu hồi về SỐ THỬA gần nhất trong ngưỡng (m, đo trên file thật: loại đất 90% < 10 m, DT < 4,5 m,
+// DT thu hồi trong ngoặc 75% < 30 m); một số thửa nhận nhãn gần nhất của mỗi loại
+const NGUONG_NHAN = {ld: 12, dt: 10, dt_th: 30};
+function gomCumNhanThua(diem) { const neo = diem.filter(d => d.loai === "thua"), O = 40, luoi = new Map(), kx = d => Math.floor(d.x / O) + "," + Math.floor(d.y / O);
+  for (const a of neo) { const k = kx(a); (luoi.get(k) || luoi.set(k, []).get(k)).push(a); }
+  const ra = neo.map(a => ({kieu: "nhan_thua", neo: a, so_thua: a.chu.replace(/\s*\/\s*$/, ""), x: a.x, y: a.y, lat: a.lat, lon: a.lon, ld: null, dt: null, dt_th: null, to: null}));
+  const theo = new Map(neo.map((a, i) => [a, ra[i]]));
+  const ds_to = diem.filter(d => d.loai === "to");
+  for (const c of ra) { let tot = null, dm = 400; for (const d of ds_to) { const m = Math.hypot(d.x - c.x, d.y - c.y) / d.km; if (m < dm) { dm = m; tot = d; } }
+    if (tot) c.to = {d: tot, m: dm}; }
+  for (const d of diem) { const gh = NGUONG_NHAN[d.loai] || 0; if (!gh) continue;
+    const r = Math.ceil(gh * d.km / O), cx = Math.floor(d.x / O), cy = Math.floor(d.y / O); let tot = null, dm = gh;
+    for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) for (const a of luoi.get((cx + i) + "," + (cy + j)) || []) {
+      const m = Math.hypot(a.x - d.x, a.y - d.y) / d.km; if (m < dm) { dm = m; tot = a; } }
+    if (!tot) continue; const c = theo.get(tot), k = d.loai;
+    if (!c[k] || dm < c[k].m) c[k] = {d, m: dm}; }
+  for (const c of ra) { c.chu_ld = c.ld ? c.ld.d.chu : ""; c.chu_dt = c.dt ? c.dt.d.chu : ""; c.chu_dt_th = c.dt_th ? c.dt_th.d.chu.replace(/[()\s]/g, "") : "";
+    c.so_to = c.to ? (c.to.d.chu.match(/(\d+)/) || [])[1] || "" : ""; c.cach_to = c.to ? Math.round(c.to.m) : null; }
+  return ra; }
 async function docKmlBytes(b, ten) {
-  const xml = b[0] === 0x50 && b[1] === 0x4b ? await giaiNenKmz(b) : new TextDecoder("utf-8").decode(b);
+  let xml = b[0] === 0x50 && b[1] === 0x4b ? await giaiNenKmz(b) : new TextDecoder("utf-8").decode(b);
   if (/<!DOCTYPE|<!ENTITY/i.test(xml.slice(0, 4096))) throw new Error("File KML có khai báo DOCTYPE / ENTITY: không mở.");
-  const doc = new DOMParser().parseFromString(xml, "application/xml"); if (doc.getElementsByTagName("parsererror").length) throw new Error("File " + ten + " không phải KML hợp lệ.");
-  const lop = {nguon: ten, thua: []}, ten_the = e => e.localName;
-  function td(chu) { return String(chu || "").trim().split(/\s+/).map(c => c.split(",").map(Number)).filter(c => c.length >= 2 && !isNaN(c[0]) && !isNaN(c[1])).map(c => [c[1], c[0]]); }
-  for (const pm of doc.getElementsByTagNameNS("*", "Placemark")) {
-    const o = {ten: "", du_lieu: {}};
-    for (const c of pm.children) if (ten_the(c) === "name") o.ten = c.textContent.trim();
-    for (const d of pm.getElementsByTagNameNS("*", "Data")) { const v = d.getElementsByTagNameNS("*", "value")[0]; o.du_lieu[boDau(d.getAttribute("name")).replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")] = v ? v.textContent.trim() : ""; }
-    for (const d of pm.getElementsByTagNameNS("*", "SimpleData")) o.du_lieu[boDau(d.getAttribute("name")).replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")] = d.textContent.trim();
-    let thu_muc = ""; for (let p = pm.parentElement; p; p = p.parentElement) if (ten_the(p) === "Folder") { const n = [...p.children].find(x => ten_the(x) === "name"); if (n) thu_muc = n.textContent + " " + thu_muc; }
-    const ranh = /(^|[^a-z])ranh([^a-z]|$)/.test(boDau(o.ten + " " + thu_muc));
-    const [to, th] = soHieuPm(o);
-    for (const pg of pm.getElementsByTagNameNS("*", "Polygon")) { const ob = pg.getElementsByTagNameNS("*", "outerBoundaryIs")[0];
-      const cd = ob && ob.getElementsByTagNameNS("*", "coordinates")[0]; const v = cd ? td(cd.textContent) : []; if (v.length < 3) continue;
+  xml = lamSachXml(xml); let doc = new DOMParser().parseFromString(xml, "application/xml"), kieu_html = false;
+  if (doc.getElementsByTagName("parsererror").length) { doc = new DOMParser().parseFromString(xml, "text/html"); kieu_html = true; }
+  const tt = (e, n) => kieu_html ? e.getElementsByTagName(n.toLowerCase()) : e.getElementsByTagNameNS("*", n);
+  const la = (e, n) => e.localName && e.localName.toLowerCase() === n.toLowerCase(), con = (e, n) => [...e.children].find(x => la(x, n));
+  if (!tt(doc, "Placemark").length) throw new Error("File " + ten + " không phải KML hợp lệ (không có đối tượng bản đồ nào).");
+  // kiểu (Style / StyleMap): màu đường, bề rộng, màu chữ
+  const KIEU = {}, BAN_DO = {};
+  const docKieu = s => { const l = tt(s, "LineStyle")[0], lb = tt(s, "LabelStyle")[0], ic = tt(s, "IconStyle")[0], mc = x => x && con(x, "color") ? mauKml(con(x, "color").textContent) : null;
+    return {line: mc(l), w: l && con(l, "width") ? Number(con(l, "width").textContent) || 1 : 1, nhan: mc(lb) || mc(ic)}; };
+  for (const s of tt(doc, "Style")) if (s.getAttribute("id")) KIEU["#" + s.getAttribute("id")] = docKieu(s);
+  for (const m of tt(doc, "StyleMap")) for (const pr of tt(m, "Pair")) if (con(pr, "key") && con(pr, "key").textContent.trim() === "normal" && con(pr, "styleUrl"))
+    BAN_DO["#" + m.getAttribute("id")] = con(pr, "styleUrl").textContent.trim();
+  const kieuCua = pm => { const tr = con(pm, "Style"); if (tr) return docKieu(tr); const u = con(pm, "styleUrl"); let k = u ? u.textContent.trim() : "";
+    for (let i = 0; i < 4 && BAN_DO[k]; i++) k = BAN_DO[k]; return KIEU[k] || {}; };
+  // tên thư mục: nhớ theo thư mục - thư mục "Entity Features" của file CAD có hàng nghìn con, dò lại cho từng đối tượng là bậc hai (4 s)
+  const TEN_TM = new Map(), tenThuMuc = q => { if (!TEN_TM.has(q)) { let t = ""; for (let c = q.firstElementChild; c; c = c.nextElementSibling) if (la(c, "name")) { t = c.textContent; break; }
+    TEN_TM.set(q, t); } return TEN_TM.get(q); };
+  const lop = {nguon: ten, ten: ten, thua: [], duong: [], diem: [], vong_moc: [], nhan_thua: [], bb: [Infinity, Infinity, -Infinity, -Infinity], bo: 0};
+  const mo = (x, y) => { lop.bb[0] = Math.min(lop.bb[0], x); lop.bb[1] = Math.min(lop.bb[1], y); lop.bb[2] = Math.max(lop.bb[2], x); lop.bb[3] = Math.max(lop.bb[3], y); };
+  function td(chu) { return String(chu || "").trim().split(/\s+/).map(c => c.split(",").map(Number)).filter(c => c.length >= 2 && isFinite(c[0]) && isFinite(c[1]) &&
+    Math.abs(c[1]) <= 85 && Math.abs(c[0]) <= 180).map(c => [c[1], c[0]]); }
+  for (const pm of tt(doc, "Placemark")) {
+    const o = {ten: "", du_lieu: {}, mo_ta: ""}; const n = con(pm, "name"), ds = con(pm, "description");
+    o.ten = n ? suaFontKml(n.textContent.trim().replace(/\s+/g, " ")) : ""; o.mo_ta = ds ? suaFontKml(ds.textContent.trim()) : "";
+    for (const d of tt(pm, "Data")) { const v = tt(d, "value")[0]; o.du_lieu[boDau(d.getAttribute("name") || "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")] = v ? suaFontKml(v.textContent.trim()) : ""; }
+    for (const d of tt(pm, "SimpleData")) o.du_lieu[boDau(d.getAttribute("name") || "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")] = suaFontKml(d.textContent.trim());
+    // mô tả kiểu MicroStation "tanan2|Level 10": bản vẽ gốc | lớp CAD
+    const mm = o.mo_ta.match(/^(?:([^|\n]{1,40})\|)?\s*(Level\s*[\w-]+|ghichu)\s*$/i), lop_cad = mm ? mm[2] : "", ban_ve = mm && mm[1] ? mm[1] : "";
+    let thu_muc = ""; for (let q = pm.parentElement; q; q = q.parentElement) if (la(q, "Folder")) thu_muc = tenThuMuc(q) + " " + thu_muc;
+    const kieu = kieuCua(pm), ranh = /(^|[^a-z])ranh([^a-z]|$)/.test(boDau(o.ten + " " + thu_muc)), [to, th] = soHieuPm(o);
+    for (const pg of tt(pm, "Polygon")) { const ob = tt(pg, "outerBoundaryIs")[0], cd = ob && tt(ob, "coordinates")[0], v = cd ? td(cd.textContent) : [];
+      if (v.length < 3) { lop.bo++; continue; }
+      const xy = v.map(([a, c]) => mer(a, c)), km = 1 / Math.cos(v[0][0] * Math.PI / 180), xs = xy.map(q => q[0]), ys = xy.map(q => q[1]);
+      const co = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) / km;
+      if (co < 3.8 && v.length >= 8) {          // vòng tròn quanh cọc mốc (CAD vẽ ký hiệu mốc bằng đa giác nhỏ) - không phải thửa
+        const cx = xs.reduce((s2, q) => s2 + q, 0) / xs.length, cy = ys.reduce((s2, q) => s2 + q, 0) / ys.length; mo(cx, cy);
+        lop.vong_moc.push({kieu: "vong_moc", x: cx, y: cy, r: co / 2 * km, lat: v[0][0], lon: v[0][1], lop_cad, ban_ve, mau: kieu.line || "#FF3B30"}); continue; }
+      xy.forEach(([x, y]) => mo(x, y));
       const ma = hoChoThua(to, th, o.du_lieu.ma_ho, o.ten + " " + (o.du_lieu.chu_su_dung || ""));
       lop.thua.push({ten: o.ten || (th ? "Thửa " + th + " tờ " + to : ""), so_to: to, so_thua: th, ma_ho: ma, ranh: ranh,
-        trang_thai: ranh ? "ranh" : (ma ? (DU.trang_thai_ho[ma] || "chua") : "khong_gan"), vong: v}); } }
-  if (!lop.thua.length) throw new Error("File " + ten + " không có đa giác thửa nào."); return lop; }
-async function napBanDo(files) { for (const f of files) { try { const lop = await docKmlBytes(new Uint8Array(await f.arrayBuffer()), f.name);
-  LOP.push(lop); bao("Đã nạp " + lop.thua.length + " đa giác từ " + f.name); } catch (e) { bao(e.message, 1); } } vuaKhung(); veBanDo(); }
+        trang_thai: ranh ? "ranh" : (ma ? (DU.trang_thai_ho[ma] || "chua") : "khong_gan"), vong: v}); }
+    for (const ls of tt(pm, "LineString")) { const cd = tt(ls, "coordinates")[0], v = cd ? td(cd.textContent) : []; if (v.length < 2) { lop.bo++; continue; }
+      const p = new Float64Array(v.length * 2); let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      v.forEach(([a, c], i) => { const [x, y] = mer(a, c); p[2 * i] = x; p[2 * i + 1] = y; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
+      mo(x0, y0); mo(x1, y1);
+      lop.duong.push({kieu: "duong", p, bb: [x0, y0, x1, y1], mau: kieu.line || "#38BDF8", w: kieu.w || 1, lop_cad, ban_ve, ten: o.ten, mo_ta: o.mo_ta, du_lieu: o.du_lieu,
+        lat: v[0][0], lon: v[0][1], ranh: ranh}); }
+    for (const pt of tt(pm, "Point")) { const cd = tt(pt, "coordinates")[0], v = cd ? td(cd.textContent) : []; if (!v.length) { lop.bo++; continue; }
+      const [x, y] = mer(v[0][0], v[0][1]); mo(x, y);
+      lop.diem.push({kieu: "diem", chu: o.ten, loai: loaiNhan(o.ten, lop_cad), mau: kieu.nhan || null, x, y, lat: v[0][0], lon: v[0][1], km: 1 / Math.cos(v[0][0] * Math.PI / 180),
+        lop_cad, ban_ve, mo_ta: o.mo_ta, du_lieu: o.du_lieu}); } }
+  lop.nhan_thua = gomCumNhanThua(lop.diem);
+  if (!lop.thua.length && !lop.duong.length && !lop.diem.length) throw new Error("File " + ten + " không có đường, đa giác hay điểm nào đọc được.");
+  return lop; }
+function tomTatLop(l) { const n = (a, t) => a ? soVN(a, 0) + " " + t : ""; const moc = l.diem.filter(d => d.loai === "moc").length;
+  return [n(l.duong.length, "đường ranh / lưới thửa"), n(l.nhan_thua.length, "nhãn thửa"), n(moc, "mốc"), n(l.diem.filter(d => d.loai === "ghi_chu").length, "ghi chú"),
+    n(l.thua.length, "đa giác thửa"), n(l.vong_moc.length, "vòng mốc")].filter(x => x).join(", "); }
+async function napBanDo(files) { let co = false;
+  for (const f of files) { try { const lop = await docKmlBytes(new Uint8Array(await f.arrayBuffer()), f.name); LOP.push(lop); co = true;
+    bao("Đã nạp " + f.name + ": " + tomTatLop(lop) + "."); } catch (e) { bao((f && f.name ? f.name + ": " : "") + e.message, 1); } }
+  if (co) { BD.mac_dinh = false; vuaKhung(); veBanDo(); veBangKml(); } }
+// ---------------------------------------------------------------- vẽ các lớp CAD: đường (gom theo màu - một lệnh stroke mỗi màu), vòng mốc, mốc, nhãn
+const LOP_BD = [["duong", "Lưới thửa & ranh"], ["nhan", "Số thửa, loại đất, DT"], ["moc", "Ranh mốc"], ["ghi_chu", "Ghi chú quy hoạch"]];
+function lopHien(k) { return !ST.lop_an || !ST.lop_an[k]; }
+function mauVe(m, co_nen) { if (!m) return co_nen ? "#38BDF8" : "#2563EB"; const s = dSang(m);
+  if (!co_nen && s > 0.82) return "#475569"; if (co_nen && s < 0.3) return "#CBD5E1"; return m; }   // trắng trên nền lưới / xám đậm trên ảnh vệ tinh: đổi cho thấy
+function chuNhan(g, chu, x, y, mau, co, dam) { g.font = (dam ? "bold " : "") + co + "px Segoe UI, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  const sang = dSang(mau) > 0.55; g.lineWidth = 3; g.strokeStyle = sang ? "rgba(15,23,42,.85)" : "rgba(255,255,255,.92)"; g.strokeText(chu, x, y); g.fillStyle = mau; g.fillText(chu, x, y); }
+function veLopCad(g, w, h, co_nen) { if (!LOP.length) return;
+  const [mx0, my1] = tuMH(0, 0, w, h), [mx1, my0] = tuMH(w, h, w, h), trong = bb => bb[2] >= mx0 && bb[0] <= mx1 && bb[3] >= my0 && bb[1] <= my1;
+  const X = x => w / 2 + (x - BD.cx) * BD.k, Y = y => h / 2 - (y - BD.cy) * BD.k;
+  if (lopHien("duong")) { const nhom = new Map();
+    for (const l of LOP) for (const d of l.duong || []) if (trong(d.bb)) { const k = mauVe(d.mau, co_nen) + "|" + Math.min(4, d.w || 1); (nhom.get(k) || nhom.set(k, []).get(k)).push(d); }
+    g.setLineDash([]); for (const [k, ds] of nhom) { const [m, lw] = k.split("|"); g.beginPath();
+      for (const d of ds) { const p = d.p; g.moveTo(X(p[0]), Y(p[1])); for (let i = 2; i < p.length; i += 2) g.lineTo(X(p[i]), Y(p[i + 1])); }
+      g.strokeStyle = m; g.lineWidth = Number(lw) * (BD.chon && BD.chon.kieu === "duong" ? 1 : 1); g.stroke(); }
+    if (BD.chon && BD.chon.kieu === "duong") { const p = BD.chon.p; g.beginPath(); g.moveTo(X(p[0]), Y(p[1])); for (let i = 2; i < p.length; i += 2) g.lineTo(X(p[i]), Y(p[i + 1]));
+      g.strokeStyle = "#FACC15"; g.lineWidth = 4; g.stroke(); } }
+  if (lopHien("moc") && BD.k >= 1.2) { g.beginPath(); for (const l of LOP) for (const v of l.vong_moc || []) { const x = X(v.x), y = Y(v.y);
+      if (x < -20 || y < -20 || x > w + 20 || y > h + 20) continue; g.moveTo(x + Math.max(3, v.r * BD.k), y); g.arc(x, y, Math.max(3, v.r * BD.k), 0, 7); }
+    g.strokeStyle = "#FF3B30"; g.lineWidth = 1.5; g.stroke(); }
+  // nhãn: vẽ theo thứ tự ưu tiên, bỏ nhãn đè lên nhãn đã vẽ (lưới ô 24 px) - vùng thửa dày không thành một đám chữ
+  const UU_TIEN = {moc: 0, thua: 1, dt_th: 2, ld: 3, dt: 4, to: 5, ghi_chu: 6}, cho = [];
+  for (const l of LOP) for (const d of l.diem || []) { if (d.loai === "ky_hieu" || !(d.loai in UU_TIEN)) continue;
+    const x = X(d.x), y = Y(d.y); if (x < -80 || y < -20 || x > w + 80 || y > h + 20) continue;
+    if (d.loai === "moc") { if (!lopHien("moc")) continue;
+      if (BD.k < 0.25) { g.fillStyle = "#FF3B30"; g.fillRect(x - 1.5, y - 1.5, 3, 3); continue; }   // nhìn xa: chấm nhỏ (hình thoi đè kín tuyến)
+      g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 5, y); g.lineTo(x, y + 6); g.lineTo(x - 5, y); g.closePath(); g.fillStyle = "#FF3B30"; g.fill();
+      g.lineWidth = 1.5; g.strokeStyle = "#FACC15"; g.stroke(); if (BD.k >= 0.3) cho.push([0, d, x, y]); continue; }
+    const la_thua = d.loai !== "ghi_chu";
+    if (la_thua ? (!lopHien("nhan") || BD.k < 0.3) : (!lopHien("ghi_chu") || BD.k < 0.18)) continue;
+    cho.push([UU_TIEN[d.loai], d, x, y]); }
+  cho.sort((a, c) => a[0] - c[0]); const O = 24, dung = new Map(); let con = 900;
+  const trung = (x0, y0, x1, y1, dat) => { for (let i = Math.floor(x0 / O); i <= Math.floor(x1 / O); i++) for (let j = Math.floor(y0 / O); j <= Math.floor(y1 / O); j++) {
+      const k = i + "," + j, ds = dung.get(k); if (!dat) { if (ds) for (const r of ds) if (x0 < r[2] && x1 > r[0] && y0 < r[3] && y1 > r[1]) return true; }
+      else (ds || dung.set(k, []).get(k)).push([x0, y0, x1, y1]); } return false; };
+  for (const [ut, d, x, y] of cho) { if (con <= 0) break; const moc = ut === 0, co = d.loai === "thua" ? 12 : 11;
+    g.font = (moc || d.loai === "thua" ? "bold " : "") + co + "px Segoe UI, sans-serif"; const rw = g.measureText(d.chu).width;
+    const cx = moc ? x + 8 + rw / 2 : x, cy = moc ? y - 8 : y, x0 = cx - rw / 2 - 2, x1 = cx + rw / 2 + 2, y0 = cy - co / 2 - 2, y1 = cy + co / 2 + 2;
+    if (trung(x0, y0, x1, y1, false)) continue; trung(x0, y0, x1, y1, true); con--;
+    chuNhan(g, d.chu, cx, cy, moc ? "#FDE68A" : mauVe(d.mau || (d.loai !== "ghi_chu" ? "#FACC15" : "#E2E8F0"), co_nen), co, moc || d.loai === "thua"); }
+  if (BD.chon && (BD.chon.kieu === "nhan_thua" || BD.chon.kieu === "diem")) { const x = X(BD.chon.x), y = Y(BD.chon.y);
+    g.beginPath(); g.arc(x, y, 14, 0, 7); g.strokeStyle = "#FACC15"; g.lineWidth = 3; g.stroke(); } }
+// chạm: mốc / nhãn thửa / ghi chú (<= 16 px), đường (<= 8 px), đa giác thửa
+function doiTuongTai(px, py, w, h) { const X = x => w / 2 + (x - BD.cx) * BD.k, Y = y => h / 2 - (y - BD.cy) * BD.k; let tot = null, dm = 16;
+  for (const l of LOP) {
+    if (lopHien("nhan")) for (const c of l.nhan_thua || []) { const m = Math.hypot(X(c.x) - px, Y(c.y) - py); if (m < dm) { dm = m; tot = c; } }
+    for (const d of l.diem || []) { if (d.loai === "ky_hieu" || d.loai === "thua") continue;
+      if (d.loai === "moc" ? !lopHien("moc") : (d.loai === "ghi_chu" ? !lopHien("ghi_chu") : !lopHien("nhan"))) continue;
+      const m = Math.hypot(X(d.x) - px, Y(d.y) - py) + (d.loai === "moc" ? -4 : 0); if (m < dm) { dm = m; tot = d; } } }
+  if (tot) { if (tot.kieu === "diem" && /^(ld|dt|dt_th)$/.test(tot.loai)) { for (const l of LOP) for (const c of l.nhan_thua || [])   // nhãn phụ -> cả cụm thửa
+      if ((c.ld && c.ld.d === tot) || (c.dt && c.dt.d === tot) || (c.dt_th && c.dt_th.d === tot)) return c; }
+    return tot; }
+  if (lopHien("duong")) { let dd = 8; for (const l of LOP) for (const d of l.duong || []) { const p = d.p;
+      for (let i = 0; i + 3 < p.length; i += 2) { const ax = X(p[i]) - px, ay = Y(p[i + 1]) - py, bx = X(p[i + 2]) - px, by = Y(p[i + 3]) - py, dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+        const u = L ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / L)) : 0, m = Math.hypot(ax + u * dx, ay + u * dy); if (m < dd) { dd = m; tot = d; } } } }
+  return tot; }
+function dongTT(hop, ds) { const g = el("div", {cls: "tt_kml"}); for (const [k, v] of ds) if (v !== "" && v !== null && v !== undefined) g.append(el("b", {text: k}), el("span", {text: String(v)}));
+  hop.appendChild(g); }
+function toaDoTT(lat, lon) { return [["VN-2000", chuVN2000(lat, lon)], ["WGS84", lat.toFixed(7) + ", " + lon.toFixed(7)]]; }
+// hộp thuộc tính của đối tượng CAD + nút đưa vào hồ sơ hộ đang chọn
+function hienDoiTuong(o) { BD.chon = o; const hop = $("tt_thua"); hop.textContent = ""; hop.style.display = o ? "block" : "none"; veBanDo(); if (!o) return;
+  const lopCad = x => [x.lop_cad, x.ban_ve ? "bản vẽ " + x.ban_ve : ""].filter(Boolean).join(" · ");
+  if (o.kieu === "nhan_thua") { hop.appendChild(el("b", {text: "Thửa " + o.so_thua + (o.so_to ? " - tờ " + o.so_to : "")}));
+    dongTT(hop, [["Số thửa", o.so_thua], ["Số tờ", o.so_to ? o.so_to + " (nhãn \"Tờ số\" cách " + soVN(o.cach_to, 0) + " m - kiểm tra lại)" : "chưa có nhãn tờ gần - ghi theo hồ sơ"],
+      ["Loại đất", o.chu_ld], ["DT nguyên thửa", o.chu_dt ? o.chu_dt + " m²" : ""], ["DT thu hồi", o.chu_dt_th ? o.chu_dt_th + " m²" : ""], ["Lớp CAD", lopCad(o.neo)],
+      ...toaDoTT(o.lat, o.lon)]);
+    hop.appendChild(el("button", {type: "button", text: "➕ Đưa thửa đất này vào hồ sơ hộ đang chọn", onclick: () => duaThuaVaoHo(o)})); return; }
+  if (o.kieu === "diem") { const ten = {moc: "Mốc ranh", ghi_chu: "Ghi chú", ld: "Loại đất", dt: "Diện tích", dt_th: "Diện tích thu hồi", to: "Số tờ", thua: "Số thửa"}[o.loai] || "Nhãn";
+    hop.appendChild(el("b", {text: ten + ": " + o.chu})); dongTT(hop, [["Lớp CAD", lopCad(o)], ...toaDoTT(o.lat, o.lon), ...Object.entries(o.du_lieu || {})]);
+    if (o.loai === "moc") hop.appendChild(el("button", {type: "button", text: "➕ Đưa mốc ranh này vào ghi chú hộ đang chọn", onclick: () => duaMocVaoHo(o)})); return; }
+  if (o.kieu === "duong") { const p = o.p; let dai = 0; for (let i = 0; i + 3 < p.length; i += 2) dai += Math.hypot(p[i + 2] - p[i], p[i + 3] - p[i + 1]);
+    hop.appendChild(el("b", {text: "Đường " + (o.ranh ? "ranh" : "ranh giới / lưới thửa")}));
+    dongTT(hop, [["Lớp CAD", lopCad(o)], ["Màu", o.mau], ["Số đỉnh", p.length / 2], ["Chiều dài", soVN(dai * Math.cos(o.lat * Math.PI / 180), 1) + " m"], ["Tên", o.ten],
+      ...toaDoTT(o.lat, o.lon), ...Object.entries(o.du_lieu || {})]); return; }
+  hienThua(o); }
+function duaThuaVaoHo(o) { if (!coHo()) return; doiDat("dc"); $("d_to").value = o.so_to || ""; $("d_thua").value = o.so_thua; $("d_loai").value = o.chu_ld;
+  $("d_dt").value = (o.chu_dt_th || o.chu_dt || "").replace(".", ","); moThe(0);
+  bao("Đã điền thửa " + o.so_thua + " vào ô Đất: kiểm tra số tờ, diện tích thu hồi rồi bấm Thêm.");
+  setTimeout(() => { const t = $("d_to"); if (t) { t.scrollIntoView({block: "center"}); if (!o.so_to) t.focus(); } }, 60); }
+function duaMocVaoHo(o) { if (!coHo()) return; const h = hoST(ST.chon), cu = h.tt.ghi_chu || "", chu = "Mốc " + o.chu + " (VN-2000 " + chuVN2000(o.lat, o.lon) + ")";
+  if (cu.includes("Mốc " + o.chu + " ")) { bao("Mốc " + o.chu + " đã có trong ghi chú hộ."); return; }
+  h.tt.ghi_chu = (cu ? cu + "; " : "") + chu; luu(); veTatCa(); bao("Đã ghi " + chu + " vào ghi chú hộ."); }
+// bảng tra cứu đối tượng của các file KML / KMZ đã nạp
+const THE_KML = [["tat_ca", "Tất cả"], ["thua", "📐 Thửa & DT"], ["moc", "📍 Mốc ranh"], ["ghi_chu", "📝 Ghi chú"], ["duong", "📏 Đường ranh"]];
+function veBangKml() { const khung = $("khung_ds_kml"); khung.hidden = !LOP.some(l => (l.duong || []).length || (l.diem || []).length);
+  if (khung.hidden) return; const the = ST.the_kml || "tat_ca", hop = $("the_kml"); hop.textContent = "";
+  for (const [k, t] of THE_KML) hop.appendChild(el("button", {type: "button", cls: k === the ? "chon" : "", text: t, onclick: () => { ST.the_kml = k; veBangKml(); }}));
+  const q = boDau($("o_tim_kml").value.trim()), ds = [];
+  for (const l of LOP) {
+    if (the === "tat_ca" || the === "thua") for (const c of l.nhan_thua || []) ds.push([c, "Thửa " + c.so_thua + (c.so_to ? " · tờ " + c.so_to : ""), [c.chu_ld, c.chu_dt && c.chu_dt + " m²", c.chu_dt_th && "thu hồi " + c.chu_dt_th + " m²"].filter(Boolean).join(" · ")]);
+    if (the === "tat_ca" || the === "moc") for (const d of l.diem || []) if (d.loai === "moc") ds.push([d, "Mốc " + d.chu, chuVN2000(d.lat, d.lon)]);
+    if (the === "tat_ca" || the === "ghi_chu") for (const d of l.diem || []) if (d.loai === "ghi_chu") ds.push([d, d.chu, d.lop_cad]);
+    if (the === "duong") for (const d of l.duong || []) ds.push([d, "Đường " + (d.lop_cad || "") , d.mau + " · " + d.p.length / 2 + " đỉnh"]); }
+  const loc = q ? ds.filter(x => boDau(x[1] + " " + x[2]).includes(q)) : ds, bang = $("bang_ds_kml"); bang.textContent = "";
+  for (const [o, chinh, phu] of loc.slice(0, 300)) bang.appendChild(el("div", {cls: "dong"}, [el("div", {cls: "ch"}, [el("div", {text: chinh}), el("small", {text: phu || ""})]),
+    el("button", {cls: "phu", type: "button", text: "🎯 Xem", onclick: () => xemDoiTuong(o)})]));
+  if (loc.length > 300) bang.appendChild(el("div", {cls: "dong", text: "… còn " + soVN(loc.length - 300, 0) + " mục: gõ vào ô lọc để thu hẹp."}));
+  if (!loc.length) bang.appendChild(el("div", {cls: "dong", text: "Không có mục nào."})); }
+function xemDoiTuong(o) { BD.tu_can = null; if (o.kieu === "duong") { BD.cx = (o.bb[0] + o.bb[2]) / 2; BD.cy = (o.bb[1] + o.bb[3]) / 2; } else { BD.cx = o.x; BD.cy = o.y; }
+  BD.k = Math.max(BD.k, 2); hienDoiTuong(o); $("ban_do").scrollIntoView({block: "center", behavior: "smooth"}); }
+function veLopBD() { const hop = $("m_lop"); hop.textContent = "";
+  for (const [k, t] of LOP_BD) { const o = el("input", {type: "checkbox"}); o.checked = lopHien(k);
+    o.addEventListener("change", () => { ST.lop_an = ST.lop_an || {}; ST.lop_an[k] = !o.checked; luu(); veBanDo(); veBangKml(); }); hop.appendChild(el("label", {}, [o, t])); } }
+function zoomBD(he) { BD.tu_can = null; BD.k *= he; veBanDo(); }
 function cacThua() { return LOP.flatMap(l => l.thua); }
 function canvasBD() { const cv = $("ban_do"), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
@@ -1279,9 +1583,10 @@ function canvasBD() { const cv = $("ban_do"), r = cv.getBoundingClientRect(), dp
 function raMH(lat, lon, w, h) { const [x, y] = mer(lat, lon); return [w / 2 + (x - BD.cx) * BD.k, h / 2 - (y - BD.cy) * BD.k]; }
 function tuMH(px, py, w, h) { return [BD.cx + (px - w / 2) / BD.k, BD.cy - (py - h / 2) / BD.k]; }
 // khung tự căn (vừa thửa / GPS / cả nước) nhớ cỡ khung vẽ: cỡ đổi (thẻ vừa mở khi bố cục chưa xong, xoay máy) thì căn lại - tới khi người dùng kéo / phóng
-function vuaKhung(ds) { ds = ds || cacThua(); const [, w, h] = canvasBD(); BD.tu_can = {ds, w, h}; let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+function vuaKhung(ds) { const vua_ds = !!ds; ds = ds || cacThua(); const [, w, h] = canvasBD(); BD.tu_can = {ds, w, h}; let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   for (const t of ds) for (const [la, lo] of t.vong) { const [x, y] = mer(la, lo); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
-  if (BD.gps && !ds.length) { [x0, y0] = mer(BD.gps.lat, BD.gps.lon); x1 = x0 + 200; y1 = y0 + 200; x0 -= 200; y0 -= 200; }
+  if (!vua_ds) for (const l of LOP) if (l.bb && isFinite(l.bb[0])) { x0 = Math.min(x0, l.bb[0]); y0 = Math.min(y0, l.bb[1]); x1 = Math.max(x1, l.bb[2]); y1 = Math.max(y1, l.bb[3]); }
+  if (BD.gps && !ds.length && !isFinite(x0)) { [x0, y0] = mer(BD.gps.lat, BD.gps.lon); x1 = x0 + 200; y1 = y0 + 200; x0 -= 200; y0 -= 200; }
   if (!isFinite(x0)) { xemMacDinh(); return false; } BD.cx = (x0 + x1) / 2; BD.cy = (y0 + y1) / 2; BD.k = Math.min(w / Math.max(x1 - x0, 20), h / Math.max(y1 - y0, 20)) * 0.9; return true; }
 // khung mặc định khi chưa có thửa / GPS: cả nước Việt Nam (vừa màn hình, ảnh vệ tinh mức 5-6 - vài ô)
 const KHUNG_MAC_DINH = [8.4, 102.1, 23.4, 109.5];
@@ -1387,6 +1692,7 @@ function veBanDo() { let [cv, w, h, dpr] = canvasBD();
     if (!t.ranh && BD.k > 0.15 && t.so_thua) { let sx = 0, sy = 0; t.vong.forEach(([la, lo]) => { const [x, y] = raMH(la, lo, w, h); sx += x; sy += y; });
       const lx = sx / t.vong.length, ly = sy / t.vong.length + 4; g.font = "bold 11px Segoe UI, sans-serif"; g.textAlign = "center";
       g.lineWidth = 3; g.strokeStyle = "rgba(255,255,255,.9)"; g.strokeText(t.so_thua, lx, ly); g.fillStyle = "#0F172A"; g.fillText(t.so_thua, lx, ly); } }
+  veLopCad(g, w, h, co_nen);
   if (BD.gps) { const [x, y] = raMH(BD.gps.lat, BD.gps.lon, w, h); g.beginPath(); g.arc(x, y, Math.max(6, BD.gps.acc * BD.k), 0, 7); g.fillStyle = "rgba(59,111,206,.15)"; g.fill();
     g.beginPath(); g.arc(x, y, 7, 0, 7); g.fillStyle = "#3B6FCE"; g.fill(); g.lineWidth = 2; g.strokeStyle = "#fff"; g.stroke(); }
   g.fillStyle = "#475569"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left"; g.fillText("lưới " + soVN(buoc, 0) + " m", 8, h - 8); }
@@ -1438,7 +1744,8 @@ function ganCuChi() { const cv = $("ban_do"), ngon = new Map(); let keo = null, 
     if (ngon.size === 2) { const [a, b] = [...ngon.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (nhip) BD.k *= d / nhip; nhip = d; keo = null; veBanDo(); return; }
     if (keo) { keo.di = Math.max(keo.di, Math.hypot(e.offsetX - keo.x, e.offsetY - keo.y)); BD.cx = keo.cx - (e.offsetX - keo.x) / BD.k; BD.cy = keo.cy + (e.offsetY - keo.y) / BD.k; veBanDo(); } });
   cv.addEventListener("pointerup", e => { ngon.delete(e.pointerId); if (keo && keo.di < 6) { const [, w, h] = canvasBD(), [x, y] = tuMH(e.offsetX, e.offsetY, w, h);
-    let t = null; for (const q of cacThua()) if (!q.ranh && trongVong(x, y, q.vong.map(([a, b]) => mer(a, b)))) t = q; hienThua(t); } keo = null; if (ngon.size < 2) nhip = null; });
+    const o = doiTuongTai(e.offsetX, e.offsetY, w, h); if (o) { hienDoiTuong(o); } else {
+    let t = null; for (const q of cacThua()) if (!q.ranh && trongVong(x, y, q.vong.map(([a, b]) => mer(a, b)))) t = q; hienThua(t); } } keo = null; if (ngon.size < 2) nhip = null; });
   cv.addEventListener("wheel", e => { e.preventDefault(); BD.tu_can = null; BD.k *= e.deltaY < 0 ? 1.25 : 0.8; veBanDo(); }, {passive: false}); }
 
 // ---------------------------------------------------------------- thanh trạng thái, điều hướng, bố cục dọc / ngang, xuất
@@ -1489,7 +1796,7 @@ function veTatCa() { veKpi(); veThe(); veHoSo(); bangDong("bang_nha", laNha); ba
   const p = theHien(); if (p === 4) veAnh(); if (p === 6) veXuat(); }
 // nút Back (bản .apk) / Esc: đóng ảnh phóng to / ngăn tìm / dừng nghe -> về màn hình AI (dọc) hoặc mục Hồ sơ (ngang); đang ở đó: ứng dụng chạy nền
 window.LARC_quayLaiChinh = () => { if (dongXemAnh()) return true; if (!$("ngan_tim").hidden) { $("ngan_tim").hidden = true; return true; }
-  if (!$("doc_ct").hidden) { dongDocChinhTa(false); return true; }
+  if (!$("hop_thu_am").hidden) { dongThuAm(); return true; }
   if (NOI.rec || NOI.android) { dungNoi(); return true; }
   if (dangNgang()) { if (thePhai() !== 0) { moThe(0); return true; } return false; }
   if (ST.the !== TRANG_AI) { moThe(TRANG_AI); return true; } return false; };
@@ -1550,7 +1857,11 @@ function khoiDong() {
   $("a_hero").addEventListener("change", async e => { const fs = [...e.target.files]; e.target.value = ""; CHUP_HERO = false;
     for (const f of fs) { try { await nhanAnhHero(await docAnh(f), f.name); } catch (er) { bao("Không đọc được ảnh " + f.name, 1); } } });
   $("b_hero_noi").addEventListener("click", () => batDauNoi()); $("b_ai_noi").addEventListener("click", () => batDauNoi()); $("b_dung_noi").addEventListener("click", dungNoi);
-  $("b_doc_ct_xong").addEventListener("click", () => dongDocChinhTa(true)); $("b_doc_ct_huy").addEventListener("click", () => dongDocChinhTa(false));
+  $("b_studio_rec").addEventListener("click", batThuAm); $("b_studio_audio").addEventListener("click", batGhiAm);
+  $("b_studio_sample").addEventListener("click", () => noiStudio(($("o_studio_text").value.trim() ? "\n" : "") + MAU_DOC_CHUAN));
+  $("b_studio_done").addEventListener("click", studioXong); $("b_studio_insert").addEventListener("click", studioChen);
+  $("b_studio_clear").addEventListener("click", () => { $("o_studio_text").value = ""; sttStudio(""); });
+  $("b_studio_dong").addEventListener("click", dongThuAm);
   for (const b of document.querySelectorAll(".nut_doc")) b.addEventListener("click", () => batDauNoi(chu => themVaoAI(chu, b.dataset.cat)));
   $("b_ai_tach").addEventListener("click", () => { if (!$("ai_chu").value.trim()) { bao("Chưa có nội dung: đọc, gõ hoặc dán biên bản.", 1); return; } phanTichVaHien(); });
   $("b_ai_xoa").addEventListener("click", () => { $("ai_chu").value = ""; AI.items = []; AI.uu_tien = ""; if (dangSua("bb")) huySua(); veAI(); });
@@ -1577,7 +1888,11 @@ function khoiDong() {
   $("b_bb_dua").addEventListener("click", duaAI);
   for (const b of document.querySelectorAll("#hop_xem_anh [data-k]")) b.addEventListener("click", () => datXemK(Number(b.dataset.k)));
   $("xa_dong").addEventListener("click", dongXemAnh); $("xa_dua").addEventListener("click", xemAnhSangAI);
-  $("m_file").addEventListener("change", e => { napBanDo([...e.target.files]); e.target.value = ""; });
+  $("b_nap_kml").addEventListener("click", () => { const f = $("m_file"); f.value = ""; f.click(); });
+  $("m_file").addEventListener("change", e => { const ds = [...e.target.files]; if (ds.length) napBanDo(ds); });
+  $("b_zoom_cong").addEventListener("click", () => zoomBD(1.6)); $("b_zoom_tru").addEventListener("click", () => zoomBD(1 / 1.6));
+  $("b_zoom_vua").addEventListener("click", () => { BD.mac_dinh = false; vuaKhung(); veBanDo(); });
+  $("o_tim_kml").addEventListener("input", veBangKml); veLopBD();
   $("b_gps").addEventListener("click", batGPS); $("b_vua").addEventListener("click", () => { vuaKhung(); veBanDo(); });
   $("b_thua_ho").addEventListener("click", thuaHoNay); $("b_tam_gps").addEventListener("click", tamGPS);
   $("m_nen").addEventListener("change", e => doiNen(e.target.value));
@@ -1602,6 +1917,6 @@ function khoiDong() {
 window.LARC = {DU, get ST() { return ST; }, bieuThuc, taoKetQua, docKmlBytes, VN, chonHo, themDong, cacThua, thuaTai, ganNhat, BD, veBanDo, vuaKhung, lamRo,
   phanTichDongNhanhJS, phanTichThongMinhAI, chuanHoaTiengNoi, phanTichQRCCCD, duaAI, giaDong, themVaoAI, AI, apBoCuc, moThe, layBieuThuc,
   doiNen, luuNenKhu, NEN_DB, get NEN_LUU() { return NEN_LUU; }, O_NEN,
-  goiYLoaiNhaTheoKetCau, khoaLoaiNha, loaiCay, mucCay, mucCayTheo, chuTamTinh, suaDong, duaDong, thuaHoNay, timTrenBanDo, NEN};
+  goiYLoaiNhaTheoKetCau, khoaLoaiNha, STUDIO, TU_KHOA_STUDIO, IDB, suaFontKml, napBanDo, LOP, doiTuongTai, hienDoiTuong, veBangKml, loaiNhan, lamSachXml, loaiCay, mucCay, mucCayTheo, chuTamTinh, suaDong, duaDong, thuaHoNay, timTrenBanDo, NEN};
 khoiDong();
 </script></body></html>

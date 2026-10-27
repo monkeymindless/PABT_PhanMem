@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 27/10/2026 03:06. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 27/10/2026 18:00. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -14,7 +14,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 27/10/2026 03:06. Kiểm tra tĩnh: 0 cảnh
 | `an_toan.py` | 223 | 1 | 12 | - |
 | `app.py` | 3879 | 6 | 22 | BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, giao_dien, khoa, lap_pa, may_chu, nghiep_vu, thong_bao, tien |
 | `ban_do_cad.py` | 431 | 4 | 22 | csdl, tien |
-| `ban_do_kml.py` | 344 | 1 | 16 | ban_do_cad, tien |
+| `ban_do_kml.py` | 376 | 1 | 17 | ban_do_cad, sua_font_kml, tien |
 | `ban_quyen.py` | 23 | 0 | 2 | - |
 | `bang_ao.py` | 236 | 3 | 1 | giao_dien |
 | `bang_dieu_chinh.py` | 385 | 1 | 6 | an_toan, du_lieu_in, lan_pa, nghiep_vu, tien |
@@ -114,6 +114,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 27/10/2026 03:06. Kiểm tra tĩnh: 0 cảnh
 | `quan_ly.py` | 1176 | 4 | 52 | an_toan, csdl, lap_pa, nghiep_vu, pdf_bang, thong_bao, tien |
 | `quan_tri_bo.py` | 94 | 0 | 9 | lap_pa |
 | `quy_trinh_qd18.py` | 47 | 0 | 1 | - |
+| `sua_font_kml.py` | 92 | 0 | 2 | - |
 | `ten_cay_lam_nghiep.py` | 277 | 0 | 7 | - |
 | `thanh_tieu_de.py` | 368 | 3 | 3 | - |
 | `theo_doi.py` | 722 | 3 | 34 | an_toan, csdl, lap_pa, nghiep_vu, quan_ly, tien |
@@ -129,7 +130,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 27/10/2026 03:06. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 137 | 0 | 5 | - |
 | `xem_truoc_tai_lieu.py` | 942 | 2 | 18 | - |
 
-Tổng: 63354 dòng mã trong pabt/.
+Tổng: 63478 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -165,8 +166,8 @@ Tổng: 63354 dòng mã trong pabt/.
 - hàm: `dien_tich_co_dau`, `dien_tich`, `chua_diem`, `_cat_loi`, `tam_giac_hoa`, `dien_tich_giao`, `_hop_bao`, `_cham_hop`, `_mo`, `_hinh_kin`, `_chu`, `doc_lop`, `_ma_loai_dat`, `boc_nhan`, `phan_tich`, `dam_bao_bang`, `_khoa`, `chi_muc_thua`, `luu`, `trang_thai_ho`, `doc_ban_do`, `ds_to`
 
 ### `ban_do_kml.py`
-- lớp `PlacemarkKml` (dòng 31): 
-- hàm: `_the`, `_khoa`, `_toa_do`, `_vong`, `_hinh`, `_placemark`, `_duyet`, `doc_byte_kml`, `doc_kml`, `_lay`, `so_hieu`, `la_ranh`, `phan_tich_kml`, `_mau_kml`, `tao_kml`, `xuat_kml`
+- lớp `PlacemarkKml` (dòng 32): 
+- hàm: `_the`, `_khoa`, `_toa_do`, `_vong`, `_hinh`, `_placemark`, `_duyet`, `doc_byte_kml`, `lam_sach_xml`, `doc_kml`, `_lay`, `so_hieu`, `la_ranh`, `phan_tich_kml`, `_mau_kml`, `tao_kml`, `xuat_kml`
 
 ### `ban_quyen.py`
 - hàm: `kiem_tra_ban_quyen`, `mo_ta`
@@ -668,6 +669,9 @@ Tổng: 63354 dòng mã trong pabt/.
 
 ### `quy_trinh_qd18.py`
 - hàm: `sla_buoc`
+
+### `sua_font_kml.py`
+- hàm: `tu_tcvn3`, `sua_font_kml`
 
 ### `ten_cay_lam_nghiep.py`
 - hàm: `_khoa`, `ten_khac`, `_tach`, `chu_ten_khac`, `them_ten_khac`, `bo_ten_khac`, `ap_ten_khac`

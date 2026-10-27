@@ -175,66 +175,130 @@ class TestPhanTach(unittest.TestCase):
         self.assertTrue(all('tu_bb' not in d and 'luc' not in d for d in dong))           # chỉ trường của giao ước
         self.assertEqual(ra['ho_dan'][st['chon']]['ho_ten'], 'Lê Văn Thử')
 
+    # ------------------------------------------------ trung tâm thu âm & nhập nhanh kiểm đếm (#hop_thu_am, người dùng 27/10/2026)
+    def _mo_thu_am(self, nut='document.getElementById("b_hero_noi")'):
+        self.js('document.getElementById("b_ai_xoa").click(); document.getElementById("o_studio_text").value = ""; %s.click(); 1' % nut)
+        self.assertFalse(self.js('document.getElementById("hop_thu_am").hidden'))
+
+    def _dong_thu_am(self):
+        self.js('document.getElementById("b_studio_dong").click(); document.getElementById("b_ai_xoa").click(); 1')
+
+    def test_thu_am_mo_khong_bat_ban_phim(self):
+        self.js('document.activeElement && document.activeElement.blur(); 1')
+        self._mo_thu_am()
+        try:
+            self.assertNotEqual(self.js('document.activeElement.id'), 'o_studio_text')            # không focus -> không bật bàn phím che màn hình
+            for i in ('b_studio_rec', 'b_studio_audio', 'b_studio_sample', 'b_studio_done', 'b_studio_insert', 'b_studio_clear', 'studio_wave', 'studio_status_line'):
+                self.assertTrue(self.js('!!document.getElementById("%s")' % i), i)
+            self.assertFalse(self.js('!!document.getElementById("doc_ct")'))                       # hộp đọc chính tả cũ đã bỏ
+            self.assertEqual(self.js('document.querySelectorAll("#studio_wave i").length'), 9)
+            self.assertEqual(self.jsj('[...document.querySelectorAll("#studio_tab button")].map(b => b.textContent)'),
+                             ['🏠 Nhà (QĐ 18/2026)', '🧱 Vật KT (QĐ 18/2026)', '🌳 Cây trồng (QĐ 48/2025)', '🔢 Số & Toán'])
+            self.assertGreaterEqual(self.js('getComputedStyle(document.getElementById("b_studio_rec")).minHeight'), '48px')
+            # bàn phím từ khóa 1 chạm: nối vào ô, không focus
+            self.js('document.querySelectorAll("#studio_tab button")[1].click(); [...document.querySelectorAll("#studio_chip button")]'
+                    '.find(b => b.textContent === "Sân xi măng:").click(); document.querySelectorAll("#studio_tab button")[3].click();'
+                    '{ const c = t => [...document.querySelectorAll("#studio_chip button")].find(b => b.textContent.trim() === t).click();'
+                    'c("4"); c("x"); c("6"); c("m²;"); } 1')
+            self.assertEqual(self.js('document.getElementById("o_studio_text").value'), 'Sân xi măng: 4 x 6m²; ')
+            self.assertNotEqual(self.js('document.activeElement.id'), 'o_studio_text')
+            # Đưa vào ô nhập & bóc tách: ô phân tách nhận chữ, máy tách thành mục vật kiến trúc, hộp đóng
+            self.js('document.getElementById("b_studio_done").click(); 1')
+            self.assertTrue(self.js('document.getElementById("hop_thu_am").hidden'))
+            self.assertIn('Sân xi măng', self.js('document.getElementById("ai_chu").value'))
+            self.assertEqual(self.jsj('window.LARC.AI.items.map(x => x.cat)'), ['vkt'])
+            # chỉ chèn: không tách; xóa trắng
+            self._mo_thu_am()
+            self.js('document.getElementById("b_studio_sample").click(); 1')
+            self.assertIn('Nhà 01 tầng kết cấu loại 4', self.js('document.getElementById("o_studio_text").value'))
+            self.js('document.getElementById("b_studio_clear").click(); 1')
+            self.assertEqual(self.js('document.getElementById("o_studio_text").value'), '')
+            self.js('window.LARC.AI.items.length = 0; document.getElementById("o_studio_text").value = "Giếng khoan sâu 30 m";'
+                    'document.getElementById("b_studio_insert").click(); 1')
+            self.assertEqual(self.js('document.getElementById("ai_chu").value'), 'Giếng khoan sâu 30 m')
+            self.assertEqual(self.js('window.LARC.AI.items.length'), 0)
+        finally:
+            self._dong_thu_am()
+
     def test_giong_noi_qua_cau_noi_android(self):
         self.js('localStorage.removeItem("larc_field_dong_y_giong_noi"); window.__hoi = ""; window.confirm = m => { window.__hoi = m; return true; };'
                 'window.LARCAndroid = {batDauGiongNoi() { setTimeout(() => window.LARC_nhanGiongNoiAndroid("xoài 20 cây trồng năm 2018"), 10); }}; 1')
-        self.js('document.getElementById("b_ai_xoa").click(); document.querySelector(\'#t3 .nut_doc\').click(); 1')
-        self._doi(lambda: self.js('document.getElementById("ai_chu").value'))
-        self.assertIn('máy chủ của hãng', self.js('window.__hoi'))                          # báo trước: giọng nói do Google / Apple nhận dạng
-        self.assertEqual(self.js('localStorage.getItem("larc_field_dong_y_giong_noi")'), '1')
-        self.assertEqual(self.jsj('window.LARC.AI.items.map(x => [x.cat, x.du.ten, x.du.so_luong])'), [['cay', 'Cây xoài trồng năm 2018', '20']])
-        self.assertEqual(self.js('window.LARC.AI.uu_tien'), 'cay')
-        self.js('window.LARC_giongNoiLoi("khong_co"); delete window.LARCAndroid; 1')         # máy không có bộ nhận dạng: không lỗi JS
+        self._mo_thu_am('document.querySelector(\'#t3 .nut_doc\')')
+        try:
+            self.js('document.getElementById("b_studio_rec").click(); 1')
+            self._doi(lambda: self.js('document.getElementById("o_studio_text").value'))
+            self.assertIn('máy chủ của hãng', self.js('window.__hoi'))                          # báo trước: giọng nói do Google / Apple nhận dạng
+            self.assertEqual(self.js('localStorage.getItem("larc_field_dong_y_giong_noi")'), '1')
+            self.js('document.getElementById("b_studio_done").click(); 1')                      # nút 🎙 của mục Cây: ưu tiên mục cây
+            self._doi(lambda: self.js('document.getElementById("ai_chu").value'))
+            self.assertEqual(self.jsj('window.LARC.AI.items.map(x => [x.cat, x.du.ten, x.du.so_luong])'), [['cay', 'Cây xoài trồng năm 2018', '20']])
+            self.assertEqual(self.js('window.LARC.AI.uu_tien'), 'cay')
+            self.js('window.LARC_giongNoiLoi("khong_co"); 1')                                   # máy không có bộ nhận dạng: không lỗi JS
+        finally:
+            self.js('delete window.LARCAndroid; 1'); self._dong_thu_am()
 
     def test_giong_noi_du_phong_android(self):
-        # máy không có màn hình nhập giọng nói: vỏ Android nghe qua SpeechRecognizer, báo trạng thái + chữ tạm -> sóng âm; Xong = dungGiongNoi
+        # máy không có màn hình nhập giọng nói: vỏ Android nghe qua SpeechRecognizer, báo trạng thái + chữ tạm -> sóng âm 9 cột; Dừng = dungGiongNoi
         self.js('window.__dung = 0; window.__ch = ""; window.confirm = () => true; localStorage.setItem("larc_field_dong_y_giong_noi", "1");'
                 'window.LARCAndroid = {batDauGiongNoi() { window.LARC_giongNoiTrangThai("nghe"); window.LARC_giongNoiTam("chủ hộ Lê"); },'
-                ' dungGiongNoi() { window.__dung++; window.LARC_nhanGiongNoiAndroid("chủ hộ Lê Văn Năm"); }, moCuaHang(g) { window.__ch = g; }};'
-                'document.getElementById("b_ai_xoa").click(); document.getElementById("b_hero_noi").click(); 1')
-        self.assertFalse(self.js('document.getElementById("song_am").hidden'))
-        self.assertEqual(self.js('document.getElementById("song_chu").textContent'), 'chủ hộ Lê')
-        self.js('document.getElementById("b_dung_noi").click(); 1')
-        self.assertEqual(self.js('window.__dung'), 1)
-        self.assertTrue(self.js('document.getElementById("song_am").hidden'))
-        self.assertEqual(self.jsj('window.LARC.AI.items.map(x => x.chinh)'), ['Lê Văn Năm'])
-        # không có bộ nhận dạng nào: mời cài "Dịch vụ lời nói của Google" trên CH Play
-        self.js('window.LARC_giongNoiLoi("khong_co"); 1')
-        self.assertEqual(self.js('window.__ch'), 'com.google.android.tts')
-        self.js('window.LARC_giongNoiLoi("quyen"); 1')
-        self.assertIn('Quyền → Micro', self.js('document.getElementById("thong_bao").textContent'))
-        self.js('delete window.LARCAndroid; document.getElementById("b_ai_xoa").click(); 1')
+                ' dungGiongNoi() { window.__dung++; window.LARC_nhanGiongNoiAndroid("chủ hộ Lê Văn Năm"); }, moCuaHang(g) { window.__ch = g; }}; 1')
+        self._mo_thu_am()
+        try:
+            self.js('document.getElementById("b_studio_rec").click(); 1')
+            self.assertFalse(self.js('document.getElementById("studio_wave").hidden'))
+            self.assertIn('DỪNG THU ÂM', self.js('document.getElementById("b_studio_rec").textContent'))
+            self.assertIn('chủ hộ Lê', self.js('document.getElementById("studio_status_line").textContent'))
+            self.js('document.getElementById("b_studio_rec").click(); 1')
+            self.assertEqual(self.js('window.__dung'), 1)
+            self.assertTrue(self.js('document.getElementById("studio_wave").hidden'))
+            self.assertIn('chủ hộ Lê Văn Năm', self.js('document.getElementById("o_studio_text").value'))
+            self.js('document.getElementById("b_studio_done").click(); 1')
+            self.assertEqual(self.jsj('window.LARC.AI.items.map(x => x.chinh)'), ['Lê Văn Năm'])
+            # lỗi quyền khi trung tâm đang mở: hiện trên dòng trạng thái của trung tâm
+            self._mo_thu_am()
+            self.js('window.LARC_giongNoiLoi("quyen"); 1')
+            self.assertIn('Quyền → Micro', self.js('document.getElementById("studio_status_line").textContent'))
+            self.js('document.getElementById("b_studio_dong").click(); window.LARC_giongNoiLoi("khong_co"); 1')   # đóng: mời cài dịch vụ trên CH Play
+            self.assertEqual(self.js('window.__ch'), 'com.google.android.tts')
+        finally:
+            self.js('delete window.LARCAndroid; 1'); self._dong_thu_am()
 
-    def test_giong_noi_iphone_doc_chinh_ta(self):
-        # iPhone (Safari / Edge / Chrome, ứng dụng trên Màn hình chính): không dùng Web Speech - mở khung đọc chính tả của bàn phím, ô chữ nhận focus
+    def test_thu_am_iphone_bi_chan(self):
+        # iPhone (Edge / Chrome / ứng dụng Màn hình chính): Web Speech báo service-not-allowed -> cảnh báo rõ, gợi ý ghi file âm thanh / bàn phím
         self.js('Object.defineProperty(navigator, "userAgent", {configurable: true, get: () => "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) EdgiOS/140"});'
-                'window.__sr = 0; window.webkitSpeechRecognition = function () { window.__sr++; };'
-                'document.getElementById("b_ai_xoa").click(); document.getElementById("b_hero_noi").click(); 1')
+                'window.confirm = () => true; localStorage.setItem("larc_field_dong_y_giong_noi", "1"); window.__lt = null;'
+                'window.SpeechRecognition = window.webkitSpeechRecognition = function () { const r = this; window.__lt = r; r.start = () => setTimeout(() => {'
+                ' r.onerror({error: "service-not-allowed"}); r.onend(); }, 0); r.stop = () => {}; }; 1')
+        self._mo_thu_am()
         try:
-            self.assertFalse(self.js('document.getElementById("doc_ct").hidden'))
-            self.assertEqual(self.js('document.activeElement.id'), 'doc_ct_chu')
-            self.assertEqual(self.js('window.__sr'), 0)
-            self.js('document.getElementById("doc_ct_chu").value = "chủ hộ Trần Văn Bảy, căn cước 075092001234";'
-                    'document.getElementById("b_doc_ct_xong").click(); 1')
-            self.assertTrue(self.js('document.getElementById("doc_ct").hidden'))
-            self.assertIn('Trần Văn Bảy', self.jsj('window.LARC.AI.items.map(x => x.chinh)'))
-            # Hủy: không đưa chữ nào vào
-            self.js('document.getElementById("b_ai_xoa").click(); document.getElementById("b_hero_noi").click();'
-                    'document.getElementById("doc_ct_chu").value = "abc"; document.getElementById("b_doc_ct_huy").click(); 1')
-            self.assertEqual(self.js('document.getElementById("ai_chu").value'), '')
+            self.js('document.getElementById("b_studio_rec").click(); 1')
+            self._doi(lambda: 'Bật Đọc chính tả' in self.js('document.getElementById("studio_status_line").textContent'))
+            self.assertIn("📼 Ghi file âm thanh", self.js('document.getElementById("studio_status_line").textContent'))
+            self.assertFalse(self.js('window.__lt.continuous'))                                  # iPhone: phiên ngắn, không treo
+            self.assertEqual(self.js('window.__lt.lang'), 'vi-VN')
+            self.assertFalse(self.js('document.getElementById("hop_thu_am").hidden'))            # hộp vẫn mở - dùng cách khác ngay
         finally:
-            self.js('delete navigator.userAgent; delete window.webkitSpeechRecognition; document.getElementById("b_ai_xoa").click(); 1')
+            self.js('delete navigator.userAgent; delete window.webkitSpeechRecognition; delete window.SpeechRecognition; 1'); self._dong_thu_am()
 
-    def test_giong_noi_bi_chan_chuyen_doc_chinh_ta(self):
-        # máy khác: trình duyệt chặn Web Speech (service-not-allowed dù đã cho phép micrô) -> tự mở khung đọc chính tả, không báo lỗi suông
-        self.js('window.confirm = () => true; localStorage.setItem("larc_field_dong_y_giong_noi", "1");'
-                'window.SpeechRecognition = function () { const r = this; r.start = () => setTimeout(() => { r.onerror({error: "service-not-allowed"}); r.onend(); }, 0);'
-                ' r.stop = () => {}; }; document.getElementById("b_hero_noi").click(); 1')
+    def test_ghi_file_am_thanh(self):
+        # 📼 getUserMedia + MediaRecorder (giả lập): bấm ghi -> bấm dừng -> lưu theo hộ trên máy, hiện thanh nghe <audio controls>
+        self.js('window.__tat = 0; navigator.mediaDevices.getUserMedia = async () => ({getTracks: () => [{stop() { window.__tat++; }}]});'
+                'window.MediaRecorder = class { constructor(l, o) { this.mimeType = (o && o.mimeType) || "audio/webm"; this.state = "inactive"; }'
+                ' static isTypeSupported(k) { return k === "audio/webm"; } start() { this.state = "recording"; }'
+                ' stop() { this.state = "inactive"; this.ondataavailable({data: new Blob(["abc"], {type: this.mimeType})}); setTimeout(() => this.onstop(), 0); } };'
+                'window.prompt = () => "Hộ thử ghi âm"; document.getElementById("b_ho_moi").click(); 1')
+        self._doi(lambda: self.js('!!window.LARC.ST.chon'))
+        self._mo_thu_am()
         try:
-            self._doi(lambda: self.js('!document.getElementById("doc_ct").hidden'))
-            self.assertIn('chặn', self.js('document.getElementById("doc_ct_ghi").textContent'))
+            self.js('document.getElementById("b_studio_audio").click(); 1')
+            self._doi(lambda: 'Dừng ghi' in self.js('document.getElementById("b_studio_audio").textContent'))
+            self.js('document.getElementById("b_studio_audio").click(); 1')
+            self._doi(lambda: self.js('document.querySelectorAll("#studio_am_ds audio").length') == 1)
+            self.assertTrue(self.js('document.querySelector("#studio_am_ds audio").controls'))
+            self.assertEqual(self.js('window.__tat'), 1)                                         # tắt micrô sau khi ghi
+            self.assertIn('vào hồ sơ hộ đang chọn', self.js('document.getElementById("studio_status_line").textContent'))
         finally:
-            self.js('document.getElementById("b_doc_ct_huy").click(); delete window.SpeechRecognition; 1')
+            self._dong_thu_am()
 
     def test_ban_do_chua_co_thua_xem_viet_nam(self):
         # chưa có thửa, chưa có GPS: khung cả nước (trước: tọa độ 0, 0 giữa biển ở mức sát đất -> không thấy ảnh vệ tinh)
@@ -265,6 +329,129 @@ class TestPhanTach(unittest.TestCase):
         self.js('window.LARC.BD.nen = "duong"; window.LARC.luuNenKhu(); 1')
         self._doi(lambda: 'không cho tải lưu sẵn' in self.js('document.getElementById("thong_bao").textContent'))
         self.js('window.LARC.BD.nen = "ve_tinh_ten"; 1')
+
+    # ------------------------------------------------ bản đồ KML / KMZ địa chính (người dùng 27/10/2026, file thật Vành đai 4 GĐ2): lưới thửa là
+    # <LineString>, số thửa / loại đất / DT / mốc / ghi chú là <Point>, <Polygon> chỉ là vòng tròn quanh cọc mốc. Dữ liệu GIẢ LẬP cùng cấu trúc.
+    def _nap_kmz(self, kml, cat_thu_muc=False):
+        import base64
+        import io
+        import zipfile
+        b = io.BytesIO()
+        with zipfile.ZipFile(b, 'w', zipfile.ZIP_DEFLATED) as z:
+            z.writestr('doc.kml', kml)
+            z.writestr('1.png', b'\x89PNG')
+        du = b.getvalue()
+        if cat_thu_muc:                                     # .kmz chép dở: mất thư mục trung tâm -> đọc theo đầu tệp cục bộ
+            du = du[:du.index(b'PK\x01\x02')]
+        self.js('window.__kq = null; (async () => { try { const b = Uint8Array.from(atob(%s), c => c.charCodeAt(0));'
+                ' window.__kq = await window.LARC.docKmlBytes(b, "thu.kmz"); } catch (e) { window.__kq = {loi: e.message}; } })(); 1'
+                % json.dumps(base64.b64encode(du).decode()))
+        self._doi(lambda: self.js('!!window.__kq'))
+        self.assertFalse(self.js('window.__kq.loi || ""'))
+
+    @staticmethod
+    def _kml_cad():
+        import math
+        L = '�'
+        lat, lon, kx = 11.02, 106.95, 111320 * math.cos(math.radians(11.02))
+        d = lambda dx, dy: f'{lon + dx / kx:.9f},{lat + dy / 110540:.9f},0'                    # noqa: E731 - lệch dx, dy mét
+        tron = ' '.join(d(0.6 * math.cos(2 * math.pi * i / 50) + 40, 0.6 * math.sin(2 * math.pi * i / 50)) for i in range(51))
+        diem = lambda ten, mo_ta, dx, dy, kieu='': (f'<Placemark><name>{ten}</name><description>{mo_ta}</description>{kieu}'          # noqa: E731
+                                                     f'<Point><coordinates>{d(dx, dy)}</coordinates></Point></Placemark>')
+        return ('<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+                '<Style id="do"><LineStyle><color>ff0000ff</color><width>2</width></LineStyle></Style>'
+                '<Style id="trang"><LineStyle><color>ffffffff</color><width>1</width></LineStyle></Style>'
+                '<Style id="nhan"><LabelStyle><color>ffffff00</color></LabelStyle></Style>'
+                '<StyleMap id="m_do"><Pair><key>normal</key><styleUrl>#do</styleUrl></Pair></StyleMap>'
+                '<Folder><name>Entity Features</name>'
+                f'<Placemark><name>Polyline_001</name><description>Level 11</description><styleUrl>#m_do</styleUrl>'
+                f'<LineString><coordinates>{d(-50, -30)} {d(50, -30)}</coordinates></LineString></Placemark>'
+                f'<Placemark><name>Polyline_005</name><description>tanan2|Level 10</description><styleUrl>#trang</styleUrl>'
+                f'<LineString><coordinates>{d(-50, 30)} {d(50, 30)}</coordinates></LineString></Placemark>'
+                f'<Placemark><name>Polygon_001</name><description>Level 11</description><Polygon><outerBoundaryIs><LinearRing>'
+                f'<coordinates>{tron}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>'
+                '<Placemark><name>Polygon_002</name><Polygon><outerBoundaryIs><LinearRing><coordinates></coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>'
+                + diem('549', 'tanan2|Level 3', 0, 0, '<styleUrl>#nhan</styleUrl>') + diem('CLN', 'tanan2|Level 5', 0, -2)
+                + diem('7078.1', 'tanan2|Level 4', 0, -4) + diem('(3600.7)', 'tanan2|Level 47', 6, -12) + diem(f'T{L} s{L} 59', 'tanan2|Level 18', 0, 120)
+                + diem('550', 'tanan2|Level 3', 60, 0) + diem('DN.T737', 'Level 45', 40, 0)
+                + diem(f'H{L}nh lang b{L}o v{L} ngu{L}n n{L}{L}c', 'tanan2|Level 52', -30, 20)
+                + diem('ngµy 27/12/2022 cña UBND tØnh §ång Nai.', 'Level 52', -30, 15)
+                + diem('Mương & bờ', 'Level 39', -30, 10) + '</Folder></Document></kml>')
+
+    def test_kmz_dia_chinh_cad(self):
+        self._nap_kmz(self._kml_cad())
+        kq = self.jsj('(l => ({duong: l.duong.map(d => [d.lop_cad, d.ban_ve, d.mau, d.w]), thua: l.thua.length, vong: l.vong_moc.length, bo: l.bo,'
+                      ' loai: l.diem.map(d => [d.chu, d.loai]), cum: l.nhan_thua.map(c => [c.so_thua, c.chu_ld, c.chu_dt, c.chu_dt_th, c.so_to])}))(window.__kq)')
+        self.assertEqual(kq['duong'], [['Level 11', '', '#ff0000', 2], ['Level 10', 'tanan2', '#ffffff', 1]])   # màu aabbggrr -> #rrggbb
+        self.assertEqual((kq['thua'], kq['vong'], kq['bo']), (0, 1, 1))          # vòng tròn cọc mốc không phải thửa; đa giác rỗng bỏ
+        loai = dict(kq['loai'])
+        self.assertEqual(loai['DN.T737'], 'moc')
+        self.assertEqual(loai['Tờ số 59'], 'to')
+        self.assertEqual(loai['Hành lang bảo vệ nguồn nước'], 'ghi_chu')
+        self.assertEqual(loai['ngày 27/12/2022 của UBND tỉnh Đồng Nai.'], 'ghi_chu')       # TCVN3 đọc nhầm -> đổi đúng
+        self.assertEqual(loai['Mương & bờ'], 'ghi_chu')                                    # "&" trần: làm sạch XML rồi đọc
+        self.assertIn(['549', 'CLN', '7078.1', '3600.7', '59'], kq['cum'])                 # ghép nhãn thửa + nhãn tờ gần nhất
+        self.assertIn(['550', '', '', '', '59'], kq['cum'])
+
+    def test_kmz_mat_thu_muc_zip(self):
+        self._nap_kmz(self._kml_cad(), cat_thu_muc=True)
+        self.assertEqual(self.js('window.__kq.duong.length'), 2)
+
+    def test_sua_font_kml_giong_ban_may_tinh(self):
+        L = '�'
+        cau = [  # cùng danh sách với tests/test_sua_font_kml.py (bản máy tính)
+            (f'H{L}nh lang b{L}o v{L} ngu{L}n n{L}{L}c theo Quy{L}t {L}{L}nh', 'Hành lang bảo vệ nguồn nước theo Quyết định'),
+            (f'S{L} 60/2022/Q{L}-UBNDng{L}y 27/12/2022 c{L}a', 'Số 60/2022/QĐ-UBND ngày 27/12/2022 của'),
+            ('UBND t∅nh ' + L * 2 + 'ng Nai.', 'UBND tỉnh Đồng Nai.'), (f'T{L} s{L} 59', 'Tờ số 59'),
+            (f'{L}{L}{L}ng ranh c{L}ch m{L}p {L}{L}{L}ng giao th{L}ng v{L}o 100m', 'Đường ranh cách mép đường giao thông vào 100m'),
+            (f'B{L} m{L}{L}ng', 'Bờ mương'), (f'{L}{L}{L}ng b{L} t{L}ng', 'Đường bê tông'),
+            (f'C{L}ch m{L}p d{L}y ngo{L}i c{L}ng 6m theo Ngh{L} {L}{L}nh 14/2014/N{L}-CP', 'Cách mép dây ngoài cùng 6m theo Nghị định 14/2014/NĐ-CP'),
+            (f'Su{L}i R{L}ch {L}{L}ng', 'Suối Rạch Đông'), (f'{L}T.768.Nh{L}a', 'ĐT.768.Nhựa'), (f'X{L} B{L}nh Minh', 'Xã Bình Minh'),
+            ('ngµy 27/12/2022 cña UBND tØnh §ång Nai.', 'ngày 27/12/2022 của UBND tỉnh Đồng Nai.'), (f'S{L}ng L{L}nh', f'Sông L{L}nh')]
+        ra = self.jsj('%s.map(s => window.LARC.suaFontKml(s))' % json.dumps([a for a, _ in cau]))
+        self.assertEqual(ra, [b for _, b in cau])
+        for s in ('Hành lang bảo vệ', 'Café á Đông', 'DN.T737'):
+            self.assertEqual(self.js('window.LARC.suaFontKml(%s)' % json.dumps(s)), s)
+
+    def test_kml_cham_va_dua_vao_ho(self):
+        self._nap_kmz(self._kml_cad())
+        self.js('window.LARC.LOP.length = 0; window.LARC.LOP.push(window.__kq); window.LARC.veBangKml();'
+                'document.getElementById("ban_do").getBoundingClientRect = () => ({width: 400, height: 300});'
+                '{ const c = window.__kq.nhan_thua.find(x => x.so_thua === "549"); window.LARC.BD.cx = c.x; window.LARC.BD.cy = c.y; window.LARC.BD.k = 2; } 1')
+        try:
+            # chạm vào số thửa ở tâm khung -> cụm thửa; chạm vào nhãn loại đất cạnh đó -> cũng cụm thửa đó
+            self.assertEqual(self.js('window.LARC.doiTuongTai(200, 150, 400, 300).so_thua'), '549')
+            self.assertEqual(self.js('window.LARC.doiTuongTai(200, 154, 400, 300).so_thua'), '549')
+            self.assertEqual(self.js('window.LARC.doiTuongTai(280, 150, 400, 300).chu'), 'DN.T737')       # mốc cách 40 m (k = 2)
+            self.js('window.LARC.hienDoiTuong(window.LARC.doiTuongTai(200, 150, 400, 300)); 1')
+            chu = self.js('document.getElementById("tt_thua").textContent')
+            for x in ('Thửa 549', 'CLN', '7078.1 m²', '3600.7 m²', 'VN-2000', 'WGS84', 'Level 3'):
+                self.assertIn(x, chu)
+            # bảng tra cứu: có thửa, mốc, ghi chú; lọc theo chữ
+            self.assertFalse(self.js('document.getElementById("khung_ds_kml").hidden'))
+            self.js('document.getElementById("o_tim_kml").value = "DN.T"; window.LARC.veBangKml(); 1')
+            self.assertEqual(self.js('document.querySelectorAll("#bang_ds_kml .dong").length'), 1)
+            self.js('document.getElementById("o_tim_kml").value = ""; window.LARC.veBangKml(); 1')
+            # công tắc lớp: tắt mốc -> chạm vào mốc không ra mốc
+            self.assertEqual(self.js('document.querySelectorAll("#m_lop input").length'), 4)
+            self.js('{ const o = document.querySelectorAll("#m_lop input")[2]; o.checked = false; o.dispatchEvent(new Event("change")); } 1')
+            self.assertNotEqual(self.js('(window.LARC.doiTuongTai(280, 150, 400, 300) || {}).chu || ""'), 'DN.T737')
+            self.js('{ const o = document.querySelectorAll("#m_lop input")[2]; o.checked = true; o.dispatchEvent(new Event("change")); } 1')
+            # đưa thửa vào hồ sơ hộ: điền sẵn ô Đất (tờ từ nhãn tờ gần nhất, DT thu hồi) để người kiểm đếm xác nhận
+            self.js('window.prompt = () => "Hộ thử bản đồ"; document.getElementById("b_ho_moi").click(); 1')
+            self._doi(lambda: self.js('!!window.LARC.ST.chon'))
+            self.js('[...document.querySelectorAll("#tt_thua button")].find(b => b.textContent.includes("Đưa thửa")).click(); 1')
+            self.assertEqual(self.jsj('["d_to", "d_thua", "d_loai", "d_dt"].map(i => document.getElementById(i).value)'), ['59', '549', 'CLN', '3600,7'])
+        finally:
+            self.js('delete document.getElementById("ban_do").getBoundingClientRect; window.LARC.LOP.length = 0; window.LARC.veBangKml(); 1')
+
+    def test_nut_nap_kml(self):
+        # nút độc lập (không bọc label quanh ô file ẩn); đặt lại value TRƯỚC khi mở hộp chọn - chọn lại đúng file vẫn nhận
+        self.assertEqual(self.js('document.getElementById("m_file").closest("label") === null'), True)
+        self.js('{ const f = document.getElementById("m_file"); window.__mo = 0; f.click = () => { window.__mo++; window.__gt = f.value; }; }'
+                'document.getElementById("b_nap_kml").click(); 1')
+        self.assertEqual(self.js('window.__mo'), 1)
+        self.assertIn('.kmz', self.js('document.getElementById("m_file").getAttribute("accept") || ".kmz"'))
 
     def test_khong_loi_js(self):
         self.assertFalse([m for m in self.loi if 'Uncaught' in m], self.loi)

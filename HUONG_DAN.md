@@ -567,10 +567,10 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
 - **Ứng dụng điện thoại LARC Mobile** (Android / iPhone, chạy không cần mạng; ứng dụng phát hành riêng, không nằm trong bộ cài
   máy tính). Từ bản 1.2.0 ứng dụng mở vào màn hình **✨ AI Quét & Nói**, thanh đáy 4 chế độ (AI Quét & Nói · Hồ sơ & TS · Bản đồ GPS ·
   Xuất .JSON):
-  - **📷 CHỤP / QUÉT ẢNH**: chụp mặt sau thẻ CCCD (mã QR) - điện thoại Android tự điền họ tên, số CCCD, năm sinh, địa chỉ; chụp biên
+  - **📷 Chụp / Quét ảnh** (hai nút gọn một hàng từ bản 1.3.0): chụp mặt sau thẻ CCCD (mã QR) - điện thoại Android tự điền họ tên, số CCCD, năm sinh, địa chỉ; chụp biên
     bản - ứng dụng làm rõ chữ rồi mở ảnh để bạn chép hoặc 🎙️ đọc nội dung ngay dưới ảnh. iPhone chưa đọc được mã QR trong ứng dụng:
     giữ ngón tay trên chữ của ảnh để chép (Văn bản trực tiếp) hoặc đọc thông tin chủ hộ.
-  - **🎙️ NHẬP GIỌNG NÓI**: đọc liền một mạch, ví dụ "chủ hộ Nguyễn Văn An, căn cước 0750…, tờ 12 thửa 45 cây lâu năm 1500 mét vuông,
+  - **🎙️ Nhập giọng nói**: đọc liền một mạch, ví dụ "chủ hộ Nguyễn Văn An, căn cước 0750…, tờ 12 thửa 45 cây lâu năm 1500 mét vuông,
     nhà 1 tầng khung bê tông mái tôn tường xây nền gạch men mở ngoặc 5 nhân 12 đóng ngoặc trừ mở ngoặc 2 nhân 3 đóng ngoặc, ống nhựa
     phi 114: 3300 mét, xoài trồng năm 2012: 650 cây". Ô **Phân tách dữ liệu thông minh** (chạy trên điện thoại, không cần mạng) tách
     thành từng mục có màu: hồ sơ hộ, đất, nhà (tự chọn loại theo kết cấu - chỉ là gợi ý, chọn lại được ngay trên thẻ), vật kiến trúc,
@@ -580,9 +580,12 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
     Điện thoại báo chưa có bộ nhận dạng giọng nói (máy không có ứng dụng Google, máy giả lập như LDPlayer): bấm OK để mở CH Play cài
     **Dịch vụ lời nói của Google** (miễn phí), rồi tải gói tiếng Việt ngoại tuyến (Cài đặt → Google → Giọng nói); lần đầu ứng dụng hỏi
     quyền **Micro** - chọn Cho phép. Máy không có CH Play: dùng micro trên bàn phím hoặc gõ.
-    **iPhone / iPad** (từ bản 1.2.2): nút giọng nói mở khung **Đọc chính tả bằng bàn phím** - bấm nút micrô 🎙 trên bàn phím iPhone, đọc liền
-    một mạch rồi bấm **✔ Xong** (chạy trong Safari, Edge, Chrome và cả ứng dụng đã thêm vào Màn hình chính; cần bật Cài đặt → Cài đặt chung →
-    Bàn phím → Bật Đọc chính tả). Máy khác mà trình duyệt chặn nhận dạng giọng nói cũng tự chuyển sang khung này.
+    Từ bản 1.3.1 mọi nút 🎙 mở **Trung tâm thu âm & nhập nhanh kiểm đếm** (không bật bàn phím): **🔴 Bấm thu âm trực tiếp** (iPhone: đọc
+    từng câu, mỗi câu bấm lại), **📼 Ghi file âm thanh** (ghi giọng đọc lưu trên điện thoại theo hộ, nghe lại để chép biên bản - chạy cả khi
+    iPhone tắt Đọc chính tả; file ghi âm không gửi kèm .json), **✨ Chèn mẫu đọc chuẩn**; bàn phím từ khóa 1 chạm 4 thẻ (Nhà QĐ 18/2026, Vật
+    kiến trúc QĐ 18/2026, Cây trồng QĐ 48/2025, Số & Toán); **⚡ Đưa vào ô nhập & Tự động bóc tách ra bảng**, **📋 Chỉ chèn vào ô nhập**,
+    **🗑️ Xóa trắng**. iPhone báo chặn nhận dạng (Edge / Chrome / ứng dụng trên Màn hình chính): dòng cảnh báo hướng dẫn bật Cài đặt → Cài đặt
+    chung → Bàn phím → Bật Đọc chính tả, hoặc dùng Ghi file âm thanh / bàn phím từ khóa.
   - **🗺️ Bản đồ GPS**: chọn nền ngay trên bản đồ - **Vệ tinh**, **Vệ tinh + tên** (tên đường, địa danh), **Đường phố**, **Địa hình**, **Lưới**
     (có mạng thì mặc định Vệ tinh + tên); thanh **Độ đậm thửa** chỉnh độ che của màu thửa trên ảnh. Trước khi ra hiện trường (có Wi-Fi):
     mở bản đồ, chọn Vệ tinh, bấm **💾 Lưu ảnh nền khu dự án** - ứng dụng lưu ảnh khu các thửa vào máy để xem khi mất sóng (**Xóa ảnh nền
@@ -601,7 +604,12 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
   ảnh, "Làm rõ chữ" xóa dòng kẻ chấm; dòng biên bản tự xếp vào nhà / vật KT / cây ngay trên điện thoại); **Bản đồ** (nền ảnh vệ tinh
   hoặc bản đồ đường khi có mạng - chỉ tải ảnh nền theo vị trí đang xem, không gửi số liệu hộ dân; thửa của dự án đã nhập bản vẽ, nạp
   thêm file KML / KMZ, nút **Thửa hộ này**, **Tâm GPS**, ô tìm tờ / thửa; bật định vị: biết đang đứng trong thửa nào hoặc cách thửa gần
-  nhất bao xa, hướng nào; chạm thửa mở hồ sơ hộ; tọa độ hiện cả VN-2000); **Xuất .JSON** (một hộ hoặc cả dự án, có / không kèm ảnh;
+  nhất bao xa, hướng nào; chạm thửa mở hồ sơ hộ; tọa độ hiện cả VN-2000. Từ bản 1.3.0 đọc đủ bản vẽ KML / KMZ xuất từ MicroStation /
+  gCadas: lưới thửa và ranh (đường), số thửa, loại đất, diện tích, diện tích thu hồi, mốc ranh (DN.T…, DN.P…), ghi chú quy hoạch / hành lang,
+  đúng màu như Google Earth; chữ tiếng Việt lỗi font được khôi phục; vòng tròn nhỏ quanh cọc mốc chỉ hiện khi phóng gần. Công tắc bật / tắt
+  4 lớp, nút + / − / ⛶ trên bản đồ; chạm số thửa, mốc, ghi chú hay đường để xem thuộc tính (cả tọa độ VN-2000) - nút **➕ Đưa thửa đất này vào
+  hồ sơ hộ đang chọn** điền sẵn ô Đất (kiểm tra số tờ, bấm Thêm), mốc thì ghi vào ghi chú hộ; bảng **Tra cứu đối tượng** dưới bản đồ lọc thửa /
+  mốc / ghi chú / đường, nút **🎯 Xem** bay tới); **Xuất .JSON** (một hộ hoặc cả dự án, có / không kèm ảnh;
   Mở / Lưu / Xóa từng hộ). Dòng nào trong mọi bảng cũng có nút **Sửa**. Thành tiền tạm tính trên điện thoại chỉ để xem - máy tính áp
   giá lại khi nhập.
   - **Kiểm đếm ngay, chưa cần file dự án**: màn hình đầu → **Bắt đầu kiểm đếm ngay** (ứng dụng có sẵn danh mục đơn giá); hộ ghi mới

@@ -2415,6 +2415,21 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - TÊN "LARC Mobile" (người dùng 27/10/2026 "bỏ chữ field trên tên phần mềm"): chữ hiển thị, tên file phát hành `LARC_Mobile_<ver>.apk`,
     `LARC_Mobile_PWA_<ver>.zip`, `LARC_Mobile_Web_<ver>`. GIỮ (đổi sẽ mất dữ liệu / không cài đè được bản cũ): gói Android `vn.larc.field`,
     khóa localStorage `larc_field_*`, IndexedDB `larc_field` / `larc_kd_anh` / `larc_nen`, `loai` file dữ liệu 'larc_field_du_lieu', khóa ký larc_field.jks.
+  - 1.3.1 (người dùng 27/10/2026, đặc tả "hộp thoại menu thu âm"): thay khung đọc chính tả bằng trung tâm thu âm `#hop_thu_am` (di_dong/README.md
+    mục giọng nói). Đặc tả gọi hộp cũ là `#hop_doc` - trong mã là `#doc_ct` (đã bỏ). "Tự động bóc tách ra bảng" = đưa vào ô phân tách + bóc tách
+    xem trước (người kiểm đếm vẫn bỏ chọn mục sai rồi bấm Đưa vào Hồ sơ Hộ) - không tự ghi dòng. File ghi âm chỉ lưu trên điện thoại (định dạng
+    .json giữ nguyên). Không có Node.js trên máy dựng: cú pháp JS kiểm bằng Chromium của bộ thử (V8). Test `di_dong/tests/test_phan_tach.py`
+    (test_thu_am_*, test_ghi_file_am_thanh, test_giong_noi_*); trong bộ thử Chromium có sẵn `SpeechRecognition` thật - giả lập phải gán cả hai tên,
+    nút "+ Hộ" dùng `prompt` - gán `window.prompt`; đoạn JS thử khai báo `const` phải bọc `{ }` (phạm vi toàn cục dùng chung giữa các lần chạy).
+  - 1.3.0 (người dùng 27/10/2026, ảnh màn hình + đặc tả "Kiến trúc sư GIS"; file thật E:\…\VANH DAI 4\BAN DO VE TINH\…\dc3-8-gd2.kmz,
+    tanan2-3-4-2007.kmz - chỉ đọc thử, KHÔNG đưa vào repo / test): 2 nút lớn màn hình AI gọn một hàng (118 -> 46 px). KML / KMZ địa chính đọc đủ
+    đường / điểm / vòng mốc (di_dong/README.md mục KML). Khác đặc tả (đã đối chiếu file thật): Level của cùng một loại nhãn KHÁC NHAU giữa các
+    file (Level 3 / 34 / 2 đều là số thửa) -> phân loại theo DẠNG CHỮ, không theo Level; màu lấy từ Style của file thay màu ghi cứng; số tờ KHÔNG
+    suy từ tên bản vẽ ("tanan2") - chỉ từ nhãn "Tờ số N" gần nhất và ghi "kiểm tra lại"; ảnh PNG kèm điểm chỉ là chữ vẽ sẵn. Bản máy tính
+    `pabt/sua_font_kml.py` (sua_font_kml / tu_tcvn3, từ điển lấy từ 87 câu lỗi trong 21 file thật, từ không chắc giữ "�"), `ban_do_kml.lam_sach_xml`
+    + đọc lại khi ParseError, vòng tròn < `CO_VONG_MOC` 3,8 m >= 8 đỉnh không phải thửa, bản vẽ chỉ có đường -> cảnh báo rõ (không tạo thửa từ
+    đường). "Trung tâm thu âm 4 trong 1" / nút 🔴 Thu âm của đặc tả KHÔNG có trong mã (không làm). Test `tests/test_sua_font_kml.py`,
+    `di_dong/tests/test_phan_tach.py` (test_kmz_*, test_kml_cham_va_dua_vao_ho, test_nut_nap_kml).
   - 1.2.2 - 1.2.4 (người dùng 27/10/2026, thử trên iPhone - Edge): (1) nhãn nhà / vật kiến trúc "QĐ 18/2026, sửa đổi bởi QĐ 53/2026"; QĐ 53 thêm
     Khoản 6 ghi chú Phụ lục I "bộ phận cấu tạo ở nhiều loại kết cấu -> xếp theo loại có các bộ phận chiếm tỷ lệ cao hơn" = cách `khoaLoaiNha` chấm
     điểm (bộ đơn giá đóng gói đã có đơn giá QĐ 53). (2) Giọng nói iPhone: Web Speech chỉ chạy trong TAB SAFARI - Edge / Chrome (WKWebView) và ứng dụng

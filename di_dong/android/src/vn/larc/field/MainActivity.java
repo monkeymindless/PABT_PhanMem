@@ -23,6 +23,7 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -50,13 +51,14 @@ import org.json.JSONObject;
 public class MainActivity extends Activity {
     static final String MIEN = "appassets.androidplatform.net";
     static final String GOC = "https://" + MIEN + "/";
-    static final int MA_CHON = 11, MA_LUU = 12, MA_GPS = 13, MA_CHUP = 14, MA_NOI = 15, MA_MIC = 16;
+    static final int MA_CHON = 11, MA_LUU = 12, MA_GPS = 13, MA_CHUP = 14, MA_NOI = 15, MA_MIC = 16, MA_GHI_AM = 17;
 
     WebView web;
     ValueCallback<Uri[]> choChon;
     File anhChup;
     File tepLuu;
     GeolocationPermissions.Callback gpsCb;
+    PermissionRequest ghiAmCho;      // trang xin micrô (getUserMedia - "Ghi file âm thanh") đang chờ người dùng cho phép RECORD_AUDIO
     String gpsNguon;
 
     @Override protected void onCreate(Bundle trangThai) {
@@ -92,6 +94,25 @@ public class MainActivity extends Activity {
             }
             @Override public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
                 return moChonTep(cb, p);
+            }
+            // "Ghi file âm thanh" của trang (getUserMedia + MediaRecorder): chỉ cấp micrô cho chính trang ứng dụng (assets), xin quyền
+            // RECORD_AUDIO của Android lúc cần; mọi quyền khác (máy ảnh, MIDI...) từ chối
+            @Override public void onPermissionRequest(final PermissionRequest yc) {
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    boolean am = false;
+                    for (String r : yc.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) am = true;
+                    if (!am || yc.getOrigin() == null || !MIEN.equals(yc.getOrigin().getHost())) { yc.deny(); return; }
+                    if (Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        yc.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                        return;
+                    }
+                    if (ghiAmCho != null) ghiAmCho.deny();
+                    ghiAmCho = yc;
+                    requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MA_GHI_AM);
+                }});
+            }
+            @Override public void onPermissionRequestCanceled(PermissionRequest yc) {
+                if (yc == ghiAmCho) ghiAmCho = null;
             }
         });
         web.addJavascriptInterface(new CauNoi(), "LARCAndroid");
@@ -359,6 +380,11 @@ public class MainActivity extends Activity {
         if (ma == MA_GPS && gpsCb != null) {
             gpsCb.invoke(gpsNguon, coQuyenGps(), false);
             gpsCb = null;
+        }
+        if (ma == MA_GHI_AM && ghiAmCho != null) {
+            if (kq.length > 0 && kq[0] == PackageManager.PERMISSION_GRANTED) ghiAmCho.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+            else ghiAmCho.deny();
+            ghiAmCho = null;
         }
         if (ma == MA_MIC) {
             if (kq.length > 0 && kq[0] == PackageManager.PERMISSION_GRANTED) ngheQuaDichVu(); else js("LARC_giongNoiLoi", "quyen");
