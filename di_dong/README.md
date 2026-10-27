@@ -82,6 +82,11 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
   "nhà tạm" / "nhà tắm" so có dấu. `window.baoBanMoi` ở vỏ; `luuHoSo` gõ -> `luuNhanh` 250 ms (`luuNgay` khi pagehide / ẩn trang / đổi hộ);
   `lamRo` độ sáng Uint8Array + tích phân Int32Array (ảnh quá ~8,4 triệu điểm dùng Float64Array); #b_xoay luôn hiện, bấm trên máy hẹp cũng sang
   2 cột (thử `screen.orientation.lock`).
+- 1.4.2 bản đồ toàn màn hình (dọc): `hienThe` -> `apToanBD(trang 5 && !bc_ngang)` bật `body.toan_bd` (ẩn header, #ho_bar, #ngan_tim, #kpi; #t5
+  flex, canvas cao 100% phần còn lại trên thanh đáy) và CHUYỂN #ngan_bd_duoi (lưu ảnh nền, chú giải) + #khung_ds_kml vào ngăn #ngan_bd (ra khỏi chế
+  độ thì trả về trước #tt_thua / cuối #khung_t5). `moNganBD(mo)` (`body.mo_ngan_bd`; nút #b_cong_cu_bd ☰, #b_dong_ngan_bd, chạm bản đồ, Back,
+  lệnh di chuyển bản đồ, Enter ô tìm, 🎯 Xem đều đóng), #b_gps_bd ◎ = `tamGPS`; #tt_gps + bản quyền nền nổi góc dưới trái (#chan_bd), #tt_thua
+  nổi dưới bản đồ. Bố cục ngang 2 cột giữ như cũ.
 - 1.4.1 chụp liên tục (#b_chup = `chupAnh`): bản .apk `LARCAndroid.chupLienTuc` (MainActivity `lienTuc` / `soLienTuc`: ảnh RESULT_OK -> gửi JS rồi mở
   lại ACTION_IMAGE_CAPTURE; hủy -> `LARC_chupLienTucXong(n)` - không khai quyền CAMERA); trình duyệt / iPhone `#hop_may_anh` (getUserMedia
   facingMode environment, `chupKhung` vẽ khung hình <= 1600 px JPEG 0,82, lưu nối tiếp `MAY_ANH.cho` - bấm chụp không chờ lưu, `dongMayAnh` tắt

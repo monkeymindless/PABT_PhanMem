@@ -165,6 +165,29 @@ details.khung>summary{font-weight:700;color:var(--chinh);font-size:14px;cursor:p
 .chip_nen button{pointer-events:auto;background:rgba(255,255,255,.94);color:var(--chu);border:1px solid var(--vach);border-radius:999px;padding:4px 10px;
 font-size:12px;min-height:34px;box-shadow:0 1px 4px rgba(15,23,42,.25)}.chip_nen button.chon{background:var(--chinh);color:#fff;border-color:var(--chinh)}
 .m_mo{display:flex;align-items:center;gap:6px;margin:0;font-size:12px;flex:1 1 170px;white-space:nowrap}.m_mo input{flex:1;padding:0;min-width:80px}
+/* bản đồ toàn màn hình (màn hình dọc): ẩn tiêu đề, thanh chọn hộ, thanh số liệu; công cụ gom vào ngăn ☰ nổi trên bản đồ */
+.ngan_bd_dau,.nut_toan_bd{display:none}
+body.toan_bd #app{height:100vh;height:100dvh;min-height:0}
+body.toan_bd header,body.toan_bd #ho_bar,body.toan_bd #ngan_tim,body.toan_bd #kpi{display:none!important}
+body.toan_bd #khung_ud{display:flex;flex-direction:column;overflow:hidden}
+body.toan_bd #cot_phai{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+body.toan_bd #t5.hien{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding:0}
+body.toan_bd #khung_t5{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;position:relative;margin:0;padding:0;border:0;border-radius:0}
+body.toan_bd #khung_t5>h3{display:none}
+body.toan_bd .khung_bd{flex:1 1 auto;min-height:0;margin:0}
+body.toan_bd #ban_do{height:100%;min-height:0;border:0;border-radius:0}
+body.toan_bd .chip_nen{top:calc(env(safe-area-inset-top) + 8px)}
+body.toan_bd .nut_toan_bd{display:block}body.toan_bd #b_cong_cu_bd{background:var(--chinh);color:#fff;border-color:var(--chinh)}
+body.toan_bd #b_gps_bd.dang{color:#166534;background:#F0FDF4;border-color:#86EFAC}
+body.toan_bd .chan_bd{position:absolute;left:8px;right:58px;bottom:8px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;pointer-events:none;z-index:5}
+body.toan_bd .chan_bd>div{background:rgba(255,255,255,.88);border-radius:6px;padding:2px 7px;max-width:100%;margin:0}
+body.toan_bd .chan_bd>div:empty{display:none}body.toan_bd #tt_gps{font-size:11px}body.toan_bd .ban_quyen_nen{text-align:left}
+body.toan_bd .ngan_bd{display:none}
+body.toan_bd.mo_ngan_bd .ngan_bd{display:block;position:absolute;top:calc(env(safe-area-inset-top) + 6px);left:6px;right:6px;max-height:calc(100% - 64px);
+overflow:auto;-webkit-overflow-scrolling:touch;background:#fff;border:1px solid var(--vach);border-radius:12px;padding:8px 10px;z-index:30;box-shadow:0 8px 28px rgba(15,23,42,.3)}
+body.toan_bd .ngan_bd_dau{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--chinh)}body.toan_bd .ngan_bd_dau .ghi{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.toan_bd .ngan_bd .khung{border:0;padding:6px 0 0;margin:6px 0 0;border-top:1px solid var(--vach);border-radius:0}
+body.toan_bd #tt_thua{position:absolute;left:6px;right:56px;bottom:6px;max-height:45%;overflow:auto;margin:0;z-index:20;box-shadow:0 6px 20px rgba(15,23,42,.3)}
 </style></head><body>
 <div id="app">
 <header><img alt="LARC" src="icon-180.png"/><div class="chu"><div class="ten">LARC Mobile</div>
@@ -281,7 +304,8 @@ gửi kèm file .json. Chạm vào ảnh để xem phóng to và ghi / đọc n�
 <button id="b_ma_huy" type="button">Đóng</button></div><video id="ma_video" playsinline muted autoplay></video><div class="ma_loe" id="ma_loe"></div>
 <div class="ma_duoi"><div class="ma_anh" id="ma_anh"></div><button id="b_ma_chup" type="button" aria-label="Chụp"></button><button id="b_ma_xong" type="button">✔ Xong</button></div></div>
 
-<section class="trang" id="t5"><div class="khung"><h3>Bản đồ thửa đất, định vị GPS</h3>
+<section class="trang" id="t5"><div class="khung" id="khung_t5"><h3>Bản đồ thửa đất, định vị GPS</h3>
+<div class="ngan_bd" id="ngan_bd"><div class="ngan_bd_dau"><b>Công cụ bản đồ</b><span class="ghi" id="bd_ho"></span><button class="phu nho" id="b_dong_ngan_bd" type="button">✕ Đóng</button></div>
 <div class="hang_nut" style="margin-top:0"><button class="phu nho" id="b_nap_kml" type="button">📂 Nạp file KML / KMZ</button><button class="xoa nho" id="b_xoa_kml" type="button" hidden title="Bỏ các file đã nạp (bản đồ dự án giữ nguyên)">🗑️ Xóa KML đã nạp</button><input id="m_file" type="file" accept=".kml,.kmz,.xml,.zip,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/zip,text/xml,application/xml,application/octet-stream" multiple hidden/>
 <button class="phu nho" id="b_gps" type="button">Bật định vị</button>
 <button class="phu nho" id="b_vua" type="button">Vừa khung</button><button class="phu nho" id="b_thua_ho" type="button">Thửa hộ này</button>
@@ -290,13 +314,13 @@ gửi kèm file .json. Chạm vào ảnh để xem phóng to và ghi / đọc n�
 <label class="m_mo" for="m_mo">Độ đậm thửa <input id="m_mo" type="range" min="0" max="80" step="5" value="30"/></label></div>
 <select id="m_nen" aria-label="Nền bản đồ" hidden><option value="luoi">Lưới</option><option value="ve_tinh">Vệ tinh</option>
 <option value="ve_tinh_ten">Vệ tinh + tên đường</option><option value="duong">Đường phố</option><option value="dia_hinh">Địa hình</option></select>
-<div class="lop_bd" id="m_lop" role="group" aria-label="Lớp bản đồ"></div>
+<div class="lop_bd" id="m_lop" role="group" aria-label="Lớp bản đồ"></div></div>
 <div class="khung_bd"><canvas id="ban_do"></canvas><div class="chip_nen" id="m_chip_nen" role="group" aria-label="Nền bản đồ"></div>
-<div class="nut_zoom_bd"><button type="button" id="b_zoom_cong" aria-label="Phóng to">+</button><button type="button" id="b_zoom_tru" aria-label="Thu nhỏ">−</button><button type="button" id="b_zoom_vua" aria-label="Vừa khung">⛶</button></div></div>
-<div class="ban_quyen_nen" id="ban_quyen_nen"></div>
-<div class="hang_nut" style="margin-top:4px"><button class="phu nho" id="b_luu_nen" type="button">💾 Lưu ảnh nền khu dự án (xem khi mất sóng)</button>
+<div class="nut_zoom_bd"><button type="button" class="nut_toan_bd" id="b_cong_cu_bd" aria-label="Công cụ bản đồ" title="Công cụ bản đồ: KML, định vị, tìm thửa, lớp, lưu ảnh nền">☰</button><button type="button" class="nut_toan_bd" id="b_gps_bd" aria-label="Về vị trí GPS" title="Về vị trí đang đứng (bật định vị nếu chưa bật)">◎</button><button type="button" id="b_zoom_cong" aria-label="Phóng to">+</button><button type="button" id="b_zoom_tru" aria-label="Thu nhỏ">−</button><button type="button" id="b_zoom_vua" aria-label="Vừa khung">⛶</button></div></div>
+<div class="chan_bd" id="chan_bd"><div id="tt_gps" class="so"></div><div class="ban_quyen_nen" id="ban_quyen_nen"></div></div>
+<div id="ngan_bd_duoi"><div class="hang_nut" style="margin-top:4px"><button class="phu nho" id="b_luu_nen" type="button">💾 Lưu ảnh nền khu dự án (xem khi mất sóng)</button>
 <button class="xoa nho" id="b_xoa_nen" type="button">Xóa ảnh nền đã lưu</button><span class="ghi" id="m_tien_do"></span></div>
-<div class="chu_giai" id="chu_giai"></div><div id="tt_gps" class="so"></div>
+<div class="chu_giai" id="chu_giai"></div></div>
 <div id="tt_thua" class="khung" style="display:none"></div>
 <div class="khung" id="khung_ds_kml" hidden><h3>Tra cứu đối tượng trên bản đồ</h3><div class="the_kml" id="the_kml" role="tablist"></div>
 <input id="o_tim_kml" placeholder="Lọc: số thửa, loại đất, mốc, ghi chú…" enterkeyhint="search"/><div id="bang_ds_kml" class="bang_kml"></div></div></div></section>
@@ -1702,7 +1726,7 @@ function veBangKml() { const khung = $("khung_ds_kml"); khung.hidden = !LOP.some
   if (loc.length > 300) bang.appendChild(el("div", {cls: "dong", text: "… còn " + soVN(loc.length - 300, 0) + " mục: gõ vào ô lọc để thu hẹp."}));
   if (!loc.length) bang.appendChild(el("div", {cls: "dong", text: "Không có mục nào."})); }
 function xemDoiTuong(o) { BD.tu_can = null; if (o.kieu === "duong") { BD.cx = (o.bb[0] + o.bb[2]) / 2; BD.cy = (o.bb[1] + o.bb[3]) / 2; } else { BD.cx = o.x; BD.cy = o.y; }
-  BD.k = Math.max(BD.k, 2); hienDoiTuong(o); $("ban_do").scrollIntoView({block: "center", behavior: "smooth"}); }
+  BD.k = Math.max(BD.k, 2); moNganBD(false); hienDoiTuong(o); if (!document.body.classList.contains("toan_bd")) $("ban_do").scrollIntoView({block: "center", behavior: "smooth"}); }
 function veLopBD() { const hop = $("m_lop"); hop.textContent = "";
   for (const [k, t] of LOP_BD) { const o = el("input", {type: "checkbox"}); o.checked = lopHien(k);
     o.addEventListener("change", () => { ST.lop_an = ST.lop_an || {}; ST.lop_an[k] = !o.checked; luu(); veBanDo(); veBangKml(); }); hop.appendChild(el("label", {}, [o, t])); } }
@@ -1805,7 +1829,7 @@ async function luuNenKhu() {
 async function xoaNenLuu() { if (!NEN_LUU.size) { bao("Chưa lưu ảnh nền nào."); return; }
   if (!confirm("Xóa " + soVN(NEN_LUU.size, 0) + " ô ảnh nền đã lưu trên máy? (Số liệu kiểm đếm không bị ảnh hưởng.)")) return;
   await NEN_DB.xoa(); NEN_LUU = new Set(); bao("Đã xóa ảnh nền đã lưu."); veBanDo(); }
-function veBanDo() { let [cv, w, h, dpr] = canvasBD();
+function veBanDo() { $("b_gps_bd").classList.toggle("dang", BD.theo !== null); let [cv, w, h, dpr] = canvasBD();
   if (BD.tu_can && w > 40 && h > 40 && (Math.abs(w - BD.tu_can.w) > 2 || Math.abs(h - BD.tu_can.h) > 2)) { vuaKhung(BD.tu_can.ds); [cv, w, h, dpr] = canvasBD(); }
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = "#F1F5F9"; g.fillRect(0, 0, w, h);
   const co_nen = veNen(g, w, h, dpr);
@@ -1870,7 +1894,7 @@ function timTrenBanDo(q) { q = String(q || "").trim(); if (!q) return; const m =
   else { const b = boDau(q); ds = cacThua().filter(t => !t.ranh && (boDau(t.ten).includes(b) || (t.ma_ho && boDau((hoGoc(t.ma_ho) || {}).ten).includes(b)))); }
   bayToi(ds, "Không thấy \"" + q + "\" trên bản đồ."); }
 function ganCuChi() { const cv = $("ban_do"), ngon = new Map(); let keo = null, nhip = null;
-  cv.addEventListener("pointerdown", e => { BD.tu_can = null; cv.setPointerCapture(e.pointerId); ngon.set(e.pointerId, [e.offsetX, e.offsetY]); keo = {x: e.offsetX, y: e.offsetY, cx: BD.cx, cy: BD.cy, di: 0}; nhip = null; });
+  cv.addEventListener("pointerdown", e => { moNganBD(false); BD.tu_can = null; cv.setPointerCapture(e.pointerId); ngon.set(e.pointerId, [e.offsetX, e.offsetY]); keo = {x: e.offsetX, y: e.offsetY, cx: BD.cx, cy: BD.cy, di: 0}; nhip = null; });
   cv.addEventListener("pointermove", e => { if (!ngon.has(e.pointerId)) return; ngon.set(e.pointerId, [e.offsetX, e.offsetY]);
     if (ngon.size === 2) { const [a, b] = [...ngon.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (nhip) BD.k *= d / nhip; nhip = d; keo = null; veBanDo(); return; }
     if (keo) { keo.di = Math.max(keo.di, Math.hypot(e.offsetX - keo.x, e.offsetY - keo.y)); BD.cx = keo.cx - (e.offsetX - keo.x) / BD.k; BD.cy = keo.cy + (e.offsetY - keo.y) / BD.k; veBanDo(); } });
@@ -1908,7 +1932,13 @@ function doiBoCuc() { const ngang = !dangNgang(); try { localStorage.setItem(KHO
   apBoCuc(); }
 function hienThe() { const ngang = dangNgang(), hien = theHien();
   for (let j = 0; j <= 7; j++) { const t = $("t" + j); if (t) t.classList.toggle("hien", j === hien || (ngang && j === TRANG_AI)); }
-  $("thanh_the").hidden = !(hien >= 0 && hien <= 4); danhDauThe(); }
+  $("thanh_the").hidden = !(hien >= 0 && hien <= 4); apToanBD(hien === 5 && !ngang); danhDauThe(); }
+// bản đồ toàn màn hình (dọc): công cụ phía dưới bản đồ (lưu ảnh nền, chú giải, bảng tra cứu KML) chuyển vào ngăn ☰; ra khỏi chế độ thì trả chỗ cũ
+function apToanBD(bat) { const b = document.body, ngan = $("ngan_bd"), duoi = $("ngan_bd_duoi"), kml = $("khung_ds_kml"), k = $("khung_t5");
+  if (b.classList.contains("toan_bd") === bat) return; b.classList.toggle("toan_bd", bat);
+  if (bat) { ngan.append(duoi, kml); } else { b.classList.remove("mo_ngan_bd"); k.insertBefore(duoi, $("tt_thua")); k.appendChild(kml); } }
+function moNganBD(mo) { const b = document.body; mo = mo === undefined ? !b.classList.contains("mo_ngan_bd") : !!mo; b.classList.toggle("mo_ngan_bd", mo && b.classList.contains("toan_bd"));
+  if (mo) $("bd_ho").textContent = ST.chon ? "· hộ " + tenHo(ST.chon) : "· chưa chọn hộ"; }
 function danhDauThe() { const hien = theHien(), khoa = hien === TRANG_AI ? "ai" : hien <= 4 ? "ho" : hien === 5 ? "bd" : "xuat";
   for (const b of $("nav_day").children) b.classList.toggle("chon", b.dataset.k === khoa);
   for (const b of $("thanh_the").children) b.classList.toggle("chon", Number(b.dataset.i) === hien); }
@@ -1931,6 +1961,7 @@ function veTatCa() { veNutGPS(); veKpi(); veThe(); veHoSo(); bangDong("bang_nha"
 // nút Back (bản .apk) / Esc: đóng ảnh phóng to / ngăn tìm / dừng nghe -> về màn hình AI (dọc) hoặc mục Hồ sơ (ngang); đang ở đó: ứng dụng chạy nền
 window.LARC_quayLaiChinh = () => { if (!$("hop_may_anh").hidden) { dongMayAnh(); return true; } if (dongXemAnh()) return true; if (!$("ngan_tim").hidden) { $("ngan_tim").hidden = true; return true; }
   if (!$("hop_thu_am").hidden) { dongThuAm(); return true; }
+  if (document.body.classList.contains("mo_ngan_bd")) { moNganBD(false); return true; }
   if (NOI.rec || NOI.android) { dungNoi(); return true; }
   if (dangNgang()) { if (thePhai() !== 0) { moThe(0); return true; } return false; }
   if (ST.the !== TRANG_AI) { moThe(TRANG_AI); return true; } return false; };
@@ -2038,6 +2069,9 @@ function khoiDong() {
   $("o_tim_kml").addEventListener("input", veBangKml); veLopBD();
   $("b_gps").addEventListener("click", batGPS); $("b_vua").addEventListener("click", () => { vuaKhung(); veBanDo(); });
   $("b_thua_ho").addEventListener("click", thuaHoNay); $("b_tam_gps").addEventListener("click", tamGPS);
+  $("b_cong_cu_bd").addEventListener("click", () => moNganBD()); $("b_dong_ngan_bd").addEventListener("click", () => moNganBD(false));
+  $("b_gps_bd").addEventListener("click", () => { moNganBD(false); tamGPS(); });
+  for (const id of ["b_gps", "b_vua", "b_thua_ho", "b_tam_gps"]) $(id).addEventListener("click", () => moNganBD(false));   // lệnh di chuyển bản đồ: đóng ngăn để xem
   $("m_nen").addEventListener("change", e => doiNen(e.target.value));
   // nền: lựa chọn đã nhớ; chưa chọn bao giờ -> vệ tinh + tên đường (có mạng) hoặc lưới
   BD.nen = ST.nen && (ST.nen === "luoi" || NEN[ST.nen]) ? ST.nen : (navigator.onLine === false ? "luoi" : NEN_MAC_DINH); $("m_nen").value = BD.nen; veChipNen();
@@ -2047,7 +2081,7 @@ function khoiDong() {
   $("b_luu_nen").addEventListener("click", luuNenKhu); $("b_xoa_nen").addEventListener("click", xoaNenLuu);
   window.addEventListener("offline", () => { if (theHien() === 5) veBanDo(); });
   $("m_tim").addEventListener("change", e => timTrenBanDo(e.target.value));
-  $("m_tim").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); timTrenBanDo(e.target.value); } });
+  $("m_tim").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); e.target.blur(); moNganBD(false); timTrenBanDo(e.target.value); } });
   window.addEventListener("online", () => { if (theHien() === 5) veBanDo(); });
   $("b_xuat_ho").addEventListener("click", xuatHo); $("b_xuat_ca").addEventListener("click", xuatCa);
   $("b_xoa_het").addEventListener("click", async () => { if (!confirm("Xóa mọi dữ liệu đã ghi trên máy này (kể cả ảnh)? Xuất .json trước nếu chưa gửi.")) return;
@@ -2060,6 +2094,6 @@ function khoiDong() {
 window.LARC = {DU, get ST() { return ST; }, bieuThuc, taoKetQua, docKmlBytes, VN, chonHo, themDong, cacThua, thuaTai, ganNhat, BD, veBanDo, vuaKhung, lamRo,
   phanTichDongNhanhJS, phanTichThongMinhAI, chuanHoaTiengNoi, phanTichQRCCCD, duaAI, giaDong, themVaoAI, AI, apBoCuc, moThe, layBieuThuc,
   doiNen, luuNenKhu, NEN_DB, get NEN_LUU() { return NEN_LUU; }, O_NEN,
-  goiYLoaiNhaTheoKetCau, khoaLoaiNha, kcTuChu, chupAnh, chupKhung, dongMayAnh, MAY_ANH, khopDanhMuc, duaVaSangHoKe, chepMauHoTruoc, tachKhauLenh, KML_DB, xoaKmlDaNap, khoiPhucKml, STUDIO, TU_KHOA_STUDIO, IDB, suaFontKml, napBanDo, LOP, doiTuongTai, hienDoiTuong, veBangKml, loaiNhan, lamSachXml, loaiCay, mucCay, mucCayTheo, chuTamTinh, suaDong, duaDong, thuaHoNay, timTrenBanDo, NEN};
+  goiYLoaiNhaTheoKetCau, khoaLoaiNha, kcTuChu, chupAnh, chupKhung, dongMayAnh, MAY_ANH, khopDanhMuc, duaVaSangHoKe, chepMauHoTruoc, tachKhauLenh, KML_DB, xoaKmlDaNap, khoiPhucKml, STUDIO, TU_KHOA_STUDIO, IDB, suaFontKml, napBanDo, LOP, doiTuongTai, hienDoiTuong, veBangKml, loaiNhan, lamSachXml, loaiCay, mucCay, mucCayTheo, chuTamTinh, suaDong, duaDong, thuaHoNay, timTrenBanDo, NEN, moNganBD};
 khoiDong();
 </script></body></html>

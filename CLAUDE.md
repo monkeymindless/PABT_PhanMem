@@ -2415,6 +2415,8 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - TÊN "LARC Mobile" (người dùng 27/10/2026 "bỏ chữ field trên tên phần mềm"): chữ hiển thị, tên file phát hành `LARC_Mobile_<ver>.apk`,
     `LARC_Mobile_PWA_<ver>.zip`, `LARC_Mobile_Web_<ver>`. GIỮ (đổi sẽ mất dữ liệu / không cài đè được bản cũ): gói Android `vn.larc.field`,
     khóa localStorage `larc_field_*`, IndexedDB `larc_field` / `larc_kd_anh` / `larc_nen`, `loai` file dữ liệu 'larc_field_du_lieu', khóa ký larc_field.jks.
+  - 1.4.2 (người dùng 28/10/2026, ảnh thẻ Bản đồ: "ẩn bớt phần phía trên, toàn màn hình cho bản đồ"): di_dong/README.md mục 1.4.2. Chỉ màn hình
+    dọc; công cụ là CÙNG các nút / ô cũ (chuyển DOM, không nhân đôi id). Test `test_ban_do_toan_man_hinh`.
   - 1.4.1 (người dùng 27/10/2026, ảnh mục Ảnh chụp: "chụp liên tục nhiều hình trong 1 lần chụp ảnh"): di_dong/README.md mục 1.4.1. Bản .apk lặp ý định
     máy ảnh thay vì máy ảnh trong WebView (getUserMedia video trong WebView cần quyền CAMERA - khai CAMERA thì ACTION_IMAGE_CAPTURE đòi xin quyền).
     Test `test_chup_lien_tuc` giả lập máy ảnh bằng `canvas.captureStream()`.

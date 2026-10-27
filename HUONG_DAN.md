@@ -600,7 +600,10 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
     và tự xin vị trí rồi bay tới chỗ đang đứng; iPhone báo chưa cho phép định vị: Cài đặt → Quyền riêng tư & Bảo mật → Dịch vụ định vị →
     bật, chọn trình duyệt đang dùng → Khi dùng ứng dụng. Có bản mới trên mạng: ứng dụng hiện dải **🔄 Đã có bản LARC Mobile mới** - bấm để
     cập nhật (dữ liệu đã ghi giữ nguyên). File KML / KMZ đã nạp được lưu trên máy theo dự án (từ bản 1.4.0): thoát ứng dụng mở lại vẫn còn;
-    **🗑️ Xóa KML đã nạp** để thay bản đồ khác.
+    **🗑️ Xóa KML đã nạp** để thay bản đồ khác. Từ bản 1.4.2 (màn hình dọc) bản đồ chiếm trọn màn hình - ẩn tiêu đề, thanh chọn hộ, thanh
+    số liệu; các công cụ (nạp / xóa KML, bật định vị, vừa khung, thửa hộ này, tìm tờ/thửa, độ đậm, lớp, lưu ảnh nền, chú giải, bảng tra
+    cứu) nằm trong nút **☰** ở cột nút bên phải bản đồ; nút **◎** về vị trí đang đứng (bật định vị nếu chưa bật). Chạm vào bản đồ hoặc
+    bấm ✕ Đóng để đóng ngăn công cụ; sang thẻ khác thì các thanh hiện lại.
   - Mục **Ảnh chụp** (từ bản 1.4.1): bấm **📷 Chụp ảnh** một lần rồi chụp liên tiếp nhiều trang biên bản / hiện trạng - trên trình duyệt / iPhone
     máy ảnh mở ngay trong ứng dụng (nút chụp tròn, hiện số ảnh đã chụp), xong bấm **✔ Xong**; bản Android: chụp xong một ảnh máy ảnh tự mở lại,
     bấm Quay lại để dừng. Máy không mở được máy ảnh trong ứng dụng (chưa cho phép máy ảnh): dùng nút **📷 Chụp tiếp** - mỗi lần một ảnh.

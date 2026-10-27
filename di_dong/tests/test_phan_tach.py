@@ -453,6 +453,36 @@ class TestPhanTach(unittest.TestCase):
         self.assertEqual(self.js('window.__mo'), 1)
         self.assertIn('.kmz', self.js('document.getElementById("m_file").getAttribute("accept") || ".kmz"'))
 
+    def test_ban_do_toan_man_hinh(self):
+        # màn hình dọc: thẻ bản đồ ẩn tiêu đề / thanh chọn hộ / thanh số liệu, công cụ gom vào ngăn ☰ nổi trên bản đồ
+        an = 'getComputedStyle(document.querySelector("%s")).display === "none"'
+        cha = 'document.getElementById("%s").parentElement.id'
+        self.js('localStorage.setItem("larc_field_bo_cuc", "doc"); window.LARC.apBoCuc(); window.LARC.moThe(5); 1')
+        try:
+            self.assertTrue(self.js('document.body.classList.contains("toan_bd")'))
+            for s in ('header', '#ho_bar', '#kpi', '#khung_t5 > h3', '#ngan_bd'):
+                self.assertTrue(self.js(an % s), s)
+            self.assertFalse(self.js(an % '#b_cong_cu_bd'))
+            self.assertEqual(self.js(cha % 'ngan_bd_duoi'), 'ngan_bd')            # lưu ảnh nền, chú giải, bảng tra cứu KML vào ngăn
+            self.assertEqual(self.js(cha % 'khung_ds_kml'), 'ngan_bd')
+            self.js('document.getElementById("b_cong_cu_bd").click(); 1')
+            self.assertFalse(self.js(an % '#ngan_bd'))
+            self.js('document.getElementById("b_vua").click(); 1')                # lệnh di chuyển bản đồ đóng ngăn
+            self.assertTrue(self.js(an % '#ngan_bd'))
+            self.js('document.getElementById("b_cong_cu_bd").click(); 1')
+            self.assertTrue(self.js('window.LARC_quayLaiChinh()'))               # nút Back đóng ngăn trước
+            self.assertTrue(self.js(an % '#ngan_bd'))
+            self.js('window.LARC.moThe(0); 1')                                   # rời bản đồ: hiện lại, trả công cụ về chỗ cũ
+            self.assertFalse(self.js('document.body.classList.contains("toan_bd")'))
+            self.assertFalse(self.js(an % '#ho_bar'))
+            self.assertEqual(self.js(cha % 'ngan_bd_duoi'), 'khung_t5')
+            self.assertEqual(self.js('document.getElementById("ngan_bd_duoi").nextElementSibling.id'), 'tt_thua')
+            self.assertEqual(self.js(cha % 'khung_ds_kml'), 'khung_t5')
+            self.js('localStorage.setItem("larc_field_bo_cuc", "ngang"); window.LARC.apBoCuc(); window.LARC.moThe(5); 1')
+            self.assertFalse(self.js('document.body.classList.contains("toan_bd")'))   # ngang 2 cột: giữ bố cục cũ
+        finally:
+            self.js('localStorage.removeItem("larc_field_bo_cuc"); window.LARC.apBoCuc(); window.LARC.moThe(7); 1')
+
     # ------------------------------------------------ 1.4.0 (người dùng 27/10/2026): bộ phân tách, nhập hàng loạt, KML lưu trên máy
     def test_nha_gac_lung_khong_tach_son(self):
         ds = self.tach('Nhà gác lửng khung cột bê tông cốt thép tường sơn nước mái tôn nền gạch men 4,5m x 14m')

@@ -29,7 +29,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-PHIEN_BAN = '1.4.1'                 # phiên bản RIÊNG của ứng dụng điện thoại (tăng mỗi lần phát hành .apk / PWA)
+PHIEN_BAN = '1.4.2'                 # phiên bản RIÊNG của ứng dụng điện thoại (tăng mỗi lần phát hành .apk / PWA)
 DAY = Path(__file__).resolve().parent
 REPO = DAY.parent
 MAU = DAY / 'ung_dung' / 'index.html'
