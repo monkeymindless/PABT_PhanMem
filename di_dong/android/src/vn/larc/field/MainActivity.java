@@ -190,9 +190,14 @@ public class MainActivity extends Activity {
         try {
             startActivityForResult(yDinhChup(), MA_CHUP);
         } catch (ActivityNotFoundException e) {
+            lienTuc = false;
             bao("Máy không có ứng dụng máy ảnh.");
         }
     }
+
+    /** Chụp liên tục: sau mỗi ảnh mở lại máy ảnh; người dùng bấm Quay lại trong máy ảnh -> dừng, báo số ảnh cho JS (LARC_chupLienTucXong). */
+    boolean lienTuc = false;
+    int soLienTuc = 0;
 
     /** Nút "Nhập giọng nói": bộ nhận dạng giọng nói của Android (RecognizerIntent - không cần quyền RECORD_AUDIO), ưu tiên gói tiếng Việt
      *  ngoại tuyến của máy (EXTRA_PREFER_OFFLINE); chữ nhận được gửi cho JS LARC_nhanGiongNoiAndroid(chữ). Máy không có bộ nhận dạng:
@@ -339,7 +344,15 @@ public class MainActivity extends Activity {
             return;
         }
         if (ma == MA_CHUP) {
-            if (kq == RESULT_OK && anhChup != null && anhChup.length() > 0) guiAnhChoJs(anhChup);
+            if (kq == RESULT_OK && anhChup != null && anhChup.length() > 0) {
+                guiAnhChoJs(anhChup);
+                if (lienTuc) { soLienTuc++; chupAnh(); }
+                return;
+            }
+            if (lienTuc) {
+                lienTuc = false;
+                web.evaluateJavascript("window.LARC_chupLienTucXong && window.LARC_chupLienTucXong(" + soLienTuc + ")", null);
+            }
             return;
         }
         if (ma == MA_CHON) {
@@ -439,7 +452,10 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public String phienBan() { return BuildConfigTen.PHIEN_BAN; }
         @JavascriptInterface public void chupAnhNgay() {
-            runOnUiThread(new Runnable() { @Override public void run() { chupAnh(); } });
+            runOnUiThread(new Runnable() { @Override public void run() { lienTuc = false; chupAnh(); } });
+        }
+        @JavascriptInterface public void chupLienTuc() {
+            runOnUiThread(new Runnable() { @Override public void run() { lienTuc = true; soLienTuc = 0; chupAnh(); } });
         }
         @JavascriptInterface public void batDauGiongNoi() {
             runOnUiThread(new Runnable() { @Override public void run() { MainActivity.this.batDauGiongNoi(); } });

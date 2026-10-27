@@ -82,6 +82,11 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
   "nhà tạm" / "nhà tắm" so có dấu. `window.baoBanMoi` ở vỏ; `luuHoSo` gõ -> `luuNhanh` 250 ms (`luuNgay` khi pagehide / ẩn trang / đổi hộ);
   `lamRo` độ sáng Uint8Array + tích phân Int32Array (ảnh quá ~8,4 triệu điểm dùng Float64Array); #b_xoay luôn hiện, bấm trên máy hẹp cũng sang
   2 cột (thử `screen.orientation.lock`).
+- 1.4.1 chụp liên tục (#b_chup = `chupAnh`): bản .apk `LARCAndroid.chupLienTuc` (MainActivity `lienTuc` / `soLienTuc`: ảnh RESULT_OK -> gửi JS rồi mở
+  lại ACTION_IMAGE_CAPTURE; hủy -> `LARC_chupLienTucXong(n)` - không khai quyền CAMERA); trình duyệt / iPhone `#hop_may_anh` (getUserMedia
+  facingMode environment, `chupKhung` vẽ khung hình <= 1600 px JPEG 0,82, lưu nối tiếp `MAY_ANH.cho` - bấm chụp không chờ lưu, `dongMayAnh` tắt
+  luồng, cả khi ẩn trang / nút Back); không có / bị từ chối getUserMedia -> ô chọn máy ảnh của máy + nút `#b_chup_tiep` (cử chỉ người dùng mới
+  mở được ô chọn file). Nút lớn "Chụp / Quét ảnh" của màn hình AI vẫn chụp một ảnh (đọc QR CCCD, làm rõ chữ).
 - Gọn: 1 thanh trạng thái (Đất · Nhà · VKT · Cây · Ảnh · 💰 Tạm tính) thay 5 thẻ số; thanh chọn hộ một hàng (◀ hộ ▶ 🔍 + Hộ 💾 Lưu).
 - Bố cục: dọc mặc định (màn hình rộng hiện khung điện thoại 430px, nút 🔄 Xoay ngang - 1.4.0 hiện cả trên điện thoại); xoay ngang (>= 680px) = 2 cột: trái công cụ AI +
   tóm tắt hộ, phải chi tiết; màn hình thấp (< 540px) thu gọn các thanh.

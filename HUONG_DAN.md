@@ -601,6 +601,9 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
     bật, chọn trình duyệt đang dùng → Khi dùng ứng dụng. Có bản mới trên mạng: ứng dụng hiện dải **🔄 Đã có bản LARC Mobile mới** - bấm để
     cập nhật (dữ liệu đã ghi giữ nguyên). File KML / KMZ đã nạp được lưu trên máy theo dự án (từ bản 1.4.0): thoát ứng dụng mở lại vẫn còn;
     **🗑️ Xóa KML đã nạp** để thay bản đồ khác.
+  - Mục **Ảnh chụp** (từ bản 1.4.1): bấm **📷 Chụp ảnh** một lần rồi chụp liên tiếp nhiều trang biên bản / hiện trạng - trên trình duyệt / iPhone
+    máy ảnh mở ngay trong ứng dụng (nút chụp tròn, hiện số ảnh đã chụp), xong bấm **✔ Xong**; bản Android: chụp xong một ảnh máy ảnh tự mở lại,
+    bấm Quay lại để dừng. Máy không mở được máy ảnh trong ứng dụng (chưa cho phép máy ảnh): dùng nút **📷 Chụp tiếp** - mỗi lần một ảnh.
   - Nút **🎙️ Đọc** ở từng mục của **Hồ sơ & TS**; xoay ngang điện thoại (hoặc bấm **🔄 Xoay ngang** - từ bản 1.4.0 có cả trên điện thoại)
     thì màn hình chia 2 cột: công cụ AI bên trái, chi tiết bên phải.
   Các mục của **Hồ sơ & TS**: **Hồ sơ & Đất** (chủ hộ / người nhận khoán, người sử dụng, CCCD, năm sinh, thửa địa chính hoặc tiểu khu / khoảnh /

@@ -592,6 +592,40 @@ class TestPhanTach(unittest.TestCase):
         self.assertLess(den, 60)                                             # nét chữ -> đen
         self.assertGreater(trang, 200)                                       # nền -> trắng
 
+    def test_chup_lien_tuc(self):
+        # máy ảnh trong ứng dụng (getUserMedia giả lập bằng luồng hình của canvas): một lần mở chụp 3 ảnh, ✔ Xong -> 3 ảnh trong hộ, tắt máy ảnh
+        (k,) = self._ho_thu('Hộ chụp liên tục')
+        self.js('window.LARC.chonHo(%s); window.__goc = navigator.mediaDevices.getUserMedia; window.__tat = 0;'
+                'navigator.mediaDevices.getUserMedia = async () => { const c = document.createElement("canvas"); c.width = 640; c.height = 480;'
+                ' const g = c.getContext("2d"); window.__ve = setInterval(() => { g.fillStyle = "#" + Math.floor(Math.random() * 4095).toString(16).padStart(3, "0");'
+                ' g.fillRect(0, 0, 640, 480); }, 30); const l = c.captureStream(30); for (const t of l.getTracks()) { const s = t.stop.bind(t);'
+                ' t.stop = () => { window.__tat++; s(); }; } return l; };'
+                'document.getElementById("b_chup").click(); 1' % json.dumps(k))
+        try:
+            self.assertFalse(self.js('document.getElementById("hop_may_anh").hidden'))
+            self._doi(lambda: self.js('document.getElementById("ma_video").videoWidth') > 0)
+            for _ in range(3):
+                self.js('document.getElementById("b_ma_chup").click(); 1')
+            self.assertIn('Đã chụp 3 ảnh', self.js('document.getElementById("ma_dem").textContent'))
+            self.assertEqual(self.js('document.querySelectorAll("#ma_anh img").length'), 2)       # dải ảnh vừa chụp: 2 ảnh gần nhất
+            self.js('document.getElementById("b_ma_xong").click(); 1')
+            self._doi(lambda: self.js('window.LARC.ST.ho[%s].so_anh || 0' % json.dumps(k)) == 3)
+            self.assertTrue(self.js('document.getElementById("hop_may_anh").hidden'))
+            self.assertGreaterEqual(self.js('window.__tat'), 1)                                   # tắt máy ảnh khi xong
+            self.assertIn('Đã lưu 3 ảnh', self.js('document.getElementById("thong_bao").textContent'))
+            # bản .apk: gọi cầu nối chụp liên tục (máy ảnh của máy tự mở lại), mỗi ảnh về qua LARC_nhanAnhAndroid
+            self.js('window.__lt = 0; window.LARCAndroid = {chupLienTuc() { window.__lt++; }}; document.getElementById("b_chup").click(); 1')
+            self.assertEqual(self.js('window.__lt'), 1)
+            self.assertTrue(self.js('document.getElementById("hop_may_anh").hidden'))
+            # máy không mở được máy ảnh trong ứng dụng: hiện nút Chụp tiếp (máy ảnh của máy từng ảnh)
+            self.js('delete window.LARCAndroid; navigator.mediaDevices.getUserMedia = async () => { throw new DOMException("x", "NotAllowedError"); };'
+                    'document.getElementById("b_chup").click(); 1')
+            self._doi(lambda: not self.js('document.getElementById("hang_chup_tiep").hidden'))
+            self.assertTrue(self.js('document.getElementById("hop_may_anh").hidden'))
+        finally:
+            self.js('clearInterval(window.__ve); navigator.mediaDevices.getUserMedia = window.__goc; delete window.LARCAndroid;'
+                    'document.getElementById("hang_chup_tiep").hidden = true; 1')
+
     def test_khong_loi_js(self):
         self.assertFalse([m for m in self.loi if 'Uncaught' in m], self.loi)
 
