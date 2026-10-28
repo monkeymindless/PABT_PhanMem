@@ -1709,7 +1709,7 @@ class CuaSoChinh(QMainWindow):
     CAO_THE_SO = 56                                      # thẻ KPI (Hybrid Enterprise Navy, 17/10/2026): tên trên, số + chữ phụ dưới
 
     def _hang_the_so(self) -> QHBoxLayout:
-        from .giao_dien import NhanRutGon
+        from .giao_dien import NHOM_KPI_THE, NhanRutGon
         h = QHBoxLayout()
         h.setSpacing(8)                                  # 17/10/2026: thẻ cách 8 px (0.9.95: 4 px, thẻ một dòng 32 px)
         h.setProperty('giu_khoang_cach', True)          # giao_dien.gian_cach không nâng lên 10 px
@@ -1724,6 +1724,8 @@ class CuaSoChinh(QMainWindow):
             khung.bam.connect(lambda k=k: self.bam_the_so(k))
             khung.setProperty('vai', 'the_so')
             khung.setProperty('the', k)
+            if k in NHOM_KPI_THE:                            # 1.0.33: màu vạch theo nhóm ngữ nghĩa (tiền / đã xong)
+                khung.setProperty('nhom_kpi', NHOM_KPI_THE[k])
             khung.setProperty('dang_loc', '0')
             khung.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)    # QWidget thường: cần để QSS vẽ nền / viền
             o = QVBoxLayout(khung)

@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from . import ban_do_cad, ban_do_kml, toa_do
-from .giao_dien import con_tro_cho
+from .giao_dien import chan_tin_hieu, con_tro_cho
 from .thong_bao import TEN_UD, chu_loi
 from .tien import so_vn
 
@@ -113,8 +113,9 @@ class HopNhapCad(QDialog):
             self.file = Path(file)
             self.o_file.setText(str(file))
             for cb in (self.cb_thua, self.cb_ranh):
-                cb.clear()
-                cb.addItem('(KML: đa giác)', None)
+                with chan_tin_hieu(cb):
+                    cb.clear()
+                    cb.addItem('(KML: đa giác)', None)
                 cb.setEnabled(False)
             self.cb_kt.setEnabled(True)
             return self.phan_tich()
@@ -129,21 +130,34 @@ class HopNhapCad(QDialog):
             return False
         self.file = Path(file)
         self.o_file.setText(str(file))
-        for cb in (self.cb_thua, self.cb_ranh):
-            cb.clear()
-        self.cb_ranh.addItem(KHONG_LOP, None)
-        for ten, so_hinh, so_chu in lop:
-            if so_hinh:
-                self.cb_thua.addItem(f'{ten} ({so_hinh} hình)', ten)
-                self.cb_ranh.addItem(f'{ten} ({so_hinh} hình)', ten)
-        goi_y = next((i for i in range(self.cb_ranh.count()) if 'THU HOI' in str(self.cb_ranh.itemData(i) or '').upper()
-                      or 'QUY HOACH' in str(self.cb_ranh.itemData(i) or '').upper() or 'RANH GPMB' in str(self.cb_ranh.itemData(i) or '').upper()), 0)
-        self.cb_ranh.setCurrentIndex(goi_y)
+        with chan_tin_hieu(self.cb_thua), chan_tin_hieu(self.cb_ranh):     # nạp ô chọn một lượt, không phát tín hiệu từng mục
+            for cb in (self.cb_thua, self.cb_ranh):
+                cb.clear()
+            self.cb_ranh.addItem(KHONG_LOP, None)
+            for ten, so_hinh, so_chu in lop:
+                if so_hinh:
+                    self.cb_thua.addItem(f'{ten} ({so_hinh} hình)', ten)
+                    self.cb_ranh.addItem(f'{ten} ({so_hinh} hình)', ten)
+            goi_y = next((i for i in range(self.cb_ranh.count()) if 'THU HOI' in str(self.cb_ranh.itemData(i) or '').upper()
+                          or 'QUY HOACH' in str(self.cb_ranh.itemData(i) or '').upper() or 'RANH GPMB' in str(self.cb_ranh.itemData(i) or '').upper()), 0)
+            self.cb_ranh.setCurrentIndex(goi_y)
         return self.phan_tich()
+
+    def _khoa_tham_so(self) -> tuple:
+        """Tham số của một lần phân tích (file + mtime, lớp, số tờ, kinh tuyến trục) - trùng lần trước thì không phân tích lại."""
+        try:
+            mt = self.file.stat().st_mtime_ns
+        except OSError:
+            mt = None
+        return (str(self.file), mt, self.cb_thua.currentData(), self.cb_ranh.currentData(), self.o_to.text().strip(),
+                self.cb_kt.currentText() if self.la_kml() else '')
 
     def phan_tich(self) -> bool:
         if self.file is None:
             return False
+        khoa = self._khoa_tham_so()
+        if self.kq is not None and khoa == getattr(self, '_khoa_ts_cu', None):     # 1.0.33: bấm Phân tích lại với cùng tham số
+            return True
         try:
             with con_tro_cho():
                 if self.la_kml():
@@ -161,7 +175,16 @@ class HopNhapCad(QDialog):
             self.cb_thua.blockSignals(True)
             self.cb_thua.setCurrentIndex(i)
             self.cb_thua.blockSignals(False)
+        self._khoa_ts_cu = khoa
         cm = ban_do_cad.chi_muc_thua(self.con)
+        self.bang.setUpdatesEnabled(False)                     # đổ cả bảng rồi vẽ một lần
+        try:
+            self._do_bang(cm)
+        finally:
+            self.bang.setUpdatesEnabled(True)
+        return True
+
+    def _do_bang(self, cm: dict) -> None:
         self.bang.setRowCount(len(self.kq.thua))
         so_khop = 0
         for r, t in enumerate(self.kq.thua):
@@ -190,7 +213,6 @@ class HopNhapCad(QDialog):
         self.lb.setText(f'{len(self.kq.thua)} thửa (tờ {self.kq.so_to or "?"} - {self.kq.lop_thua}), {so_khop} thửa khớp hồ sơ. '
                         'Đánh dấu cột đầu để cập nhật DT thu hồi theo bản vẽ (DT trong ranh nếu có lớp ranh thu hồi).' +
                         ('\n' + '\n'.join(self.kq.canh_bao[:6]) if self.kq.canh_bao else ''))
-        return True
 
     def kinh_tuyen(self) -> float:
         """Kinh tuyến trục đang chọn / gõ ("107°45'", "107.75"). Sai -> ValueError (thông báo tiếng Việt)."""
@@ -378,6 +400,9 @@ class HopBanDo(QDialog):
             chu_giai.addWidget(o)
             chu_giai.addWidget(lb)
             chu_giai.addSpacing(14)
+        self.lb_tong = QLabel('')                       # 1.0.33: tổng số thửa + tỷ lệ đồng thuận (thửa đã gắn hộ)
+        self.lb_tong.setProperty('vai', 'nhan')
+        chu_giai.addWidget(self.lb_tong)
         chu_giai.addStretch(1)
         self.view = KhungBanDo(self)
         self.view.bam_ho.connect(self._bam_ho)
@@ -414,6 +439,9 @@ class HopBanDo(QDialog):
             dem[t.trang_thai] += 1
         for k, lb in self.lb_dem.items():
             lb.setText(f'{ban_do_cad.TRANG_THAI[k][0]}: {dem[k]}')
+        gan = len(ds) - dem.get('khong_gan', 0)
+        self.lb_tong.setText(f'Tổng {len(ds)} thửa' + (f' · đồng thuận {dem.get("dong_y", 0) * 100 / gan:.1f}%'.replace('.', ',')
+                                                         if gan else ''))
         self.b_xuat.setEnabled(bool(ds))
         if not ds:
             self.lb.setText('Dự án chưa có bản đồ: bấm "Nhập bản đồ (.dxf, .kml, .kmz)…" (hoặc menu Dữ liệu) để nhập ranh thửa từ bản vẽ '

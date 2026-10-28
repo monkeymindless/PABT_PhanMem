@@ -40,17 +40,17 @@ class TestGiaoDien(unittest.TestCase):
 
     @unittest.skipUnless(CO_QT, 'không có Qt')
     def test_kiem_thu_khong_doc_ty_le_cua_may(self):
+        # 1.0.33: kiểm hàm đọc / ghi - không bo_ap_dung / ap_dung lại cả ứng dụng (áp bảng kiểu cho mọi widget còn sống của lượt kiểm
+        # thử: lượt đầy đủ chậm hàng chục phút)
         from PySide6.QtCore import QSettings
-        cu = giao_dien.TY_LE[0]
-        self.addCleanup(lambda: giao_dien.dat_ty_le(cu, luu=False))
-        giao_dien.dat_ty_le(1.0, luu=False)
-        giao_dien.bo_ap_dung(APP)
         with mock.patch.object(QSettings, 'value', return_value='1.3'):
-            giao_dien.ap_dung(APP)
-        self.assertEqual(giao_dien.TY_LE[0], 1.0)            # máy đặt 130%: lượt kiểm thử (offscreen) vẫn 100%
+            self.assertEqual(giao_dien.ty_le_da_luu(), 1.0)        # máy đặt 130%: lượt kiểm thử (offscreen) vẫn 100%
         with mock.patch.object(QSettings, 'setValue') as ghi:
-            giao_dien.dat_ty_le(1.1)                           # luu=True mà offscreen: không ghi máy thật
+            self.assertFalse(giao_dien.luu_ty_le(1.1))              # offscreen: không ghi máy thật
         ghi.assert_not_called()
+        import inspect
+        self.assertIn('ty_le_da_luu()', inspect.getsource(giao_dien.ap_dung))
+        self.assertIn('luu_ty_le(t)', inspect.getsource(giao_dien.dat_ty_le))
 
     def test_khong_con_kieu_chu_khong_bo_chon(self):
         goc = Path(__file__).resolve().parents[1] / 'pabt'

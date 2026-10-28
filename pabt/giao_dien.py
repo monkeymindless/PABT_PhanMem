@@ -283,6 +283,9 @@ def mau_chu_nut(n: str | None) -> str:
 # thẻ số liệu màn hình chính (app.CuaSoChinh.THE_SO): màu viền trái + màu số. Kiểu nằm trong QSS chung (trước 0.9.18: mỗi
 # thẻ 3 lần setStyleSheet riêng = 18 kiểu cục bộ, phóng to / thu nhỏ phải co giãn lại từng cái)
 MAU_THE_SO = {'so_ho': '#2F5F9E', 'da_pa': '#1F76A6', 'da_pd': '#1F6F66', 'da_ct': '#3B6FCE', 'da_bg': '#2F7D54', 'tong': '#2F5F9E'}
+# 1.0.33: nhóm ngữ nghĩa của thẻ KPI (property nhom_kpi) - thắng màu theo thẻ: tiền / đã xong / đang chờ; thẻ không nhóm giữ MAU_THE_SO
+MAU_NHOM_KPI = {'tien': '#3B6FCE', 'xong': '#059669', 'cho': '#D97706'}
+NHOM_KPI_THE = {'tong': 'tien', 'da_bg': 'xong'}
 # QSS thẻ Card màn hình chào (ARCH-PABT-2026-V5; 0.9.79: thẻ 210 x 135, bo 12px, mỗi thẻ một màu, mô tả nằm TRONG thẻ).
 # loại -> (nền, viền, nền khi rê chuột, viền khi rê chuột, màu biểu tượng). Qt làm tròn viền 1,5px lên 2px: ghi 2px cho đúng thực tế.
 KICH_THE_CHAO = (210, 135)
@@ -343,7 +346,7 @@ def _qss_the_so() -> str:
     c = TOKEN['chinh']
     return '''
     QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #2F5F9E; border-radius: 6px; }
-    QWidget[vai="the_so"]:hover { background: #F8FAFC; }
+    QWidget[vai="the_so"]:hover { background: #F8FAFC; border-color: #CBD5E1; }
     QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
     QLabel[vai="so_the"] { font-size: 17px; font-weight: 700; color: #0F172A; }
     QLabel[vai="nhan_the"] { color: #475569; font-size: 11.5px; font-weight: 600; }
@@ -359,7 +362,9 @@ def _qss_the_so() -> str:
         border-radius: 4px; padding: 2px 10px; }
     QLabel#lb_bo_dem_excel:hover { background: #DCFCE7; }''' + ''.join(
         f'''
-    QWidget[vai="the_so"][the="{k}"] {{ border-left-color: {m}; }}''' for k, m in MAU_THE_SO.items()) + f'''
+    QWidget[vai="the_so"][the="{k}"] {{ border-left-color: {m}; }}''' for k, m in MAU_THE_SO.items()) + ''.join(
+        f'''
+    QWidget[vai="the_so"][nhom_kpi="{k}"] {{ border-left-color: {m}; }}''' for k, m in MAU_NHOM_KPI.items()) + f'''
     QWidget[vai="the_so"][dang_loc="1"] {{ background: #F0F6FF; border: 1px solid {c}; border-left: 4px solid {c}; }}
     QLabel[vai="huy_hieu_loc"] {{ background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 10px;
         color: #334155; font-size: 12px; }}
@@ -506,10 +511,88 @@ def _qss_tuong_phan_cao() -> str:
     '''
 
 
+TONG_NEN = ['sang']            # 1.0.33: tông nền bề mặt đang dùng (chu_de.TONG_NEN) - dat_tong_nen()
+_KHOA_MAU_NEN = ('nen', 'khung', 'vach', 'chu', 'chu_phu')
+_TOKEN_GOC = {k: TOKEN[k] for k in _KHOA_MAU_NEN}          # màu 'sang' - bảng kiểu dựng bằng màu gốc rồi mới đổi theo tông
+_RE_KHAI_BAO = re.compile(r'([A-Za-z-]+)(\s*:\s*)([^;{}]+)')
+_RE_MAU_HEX = re.compile(r'#[0-9A-Fa-f]{6}\b')
+
+
+def _bang_doi_mau(ten: str) -> dict:
+    """{'nen': {màu gốc: màu mới}, 'vien': {…}, 'chu': {…}} của một tông (tông 'sang' -> rỗng). Nền đổi cả nền cửa sổ lẫn nền khung;
+    viền đổi vạch ngăn; chữ chỉ đổi chữ chính / chữ phụ - chữ trắng trên nút xanh giữ nguyên."""
+    from . import chu_de
+    _, nen, khung, vach, chu, chu_phu = chu_de.TONG_NEN.get(ten, chu_de.TONG_NEN[chu_de.MAC_DINH_TONG_NEN])
+    g = _TOKEN_GOC
+    loc = lambda d: {k.upper(): v.upper() for k, v in d.items() if k.upper() != v.upper()}   # noqa: E731
+    return {'nen': loc({g['nen']: nen, g['khung']: khung}), 'vien': loc({g['vach']: vach}),
+            'chu': loc({g['chu']: chu, g['chu_phu']: chu_phu})}
+
+
+def ap_tong_nen(qss: str, ten: str | None = None) -> str:
+    """Đổi màu nền / viền / chữ của bảng kiểu theo tông (một lượt cho mỗi khai báo - màu đã đổi không đổi tiếp). Màu trong
+    setStyleSheet riêng của từng widget không đổi (giữ nguyên ý nghĩa: cảnh báo, trạng thái)."""
+    doi = _bang_doi_mau(TONG_NEN[0] if ten is None else ten)
+    if not any(doi.values()):
+        return qss
+
+    def khai_bao(m):
+        ten_tt = m.group(1).lower()
+        if ten_tt.startswith('background') or ten_tt in ('alternate-background-color', 'selection-background-color'):
+            bang = doi['nen']
+        elif ten_tt.startswith('border') or ten_tt == 'gridline-color' or ten_tt.startswith('outline'):
+            bang = doi['vien']
+        elif ten_tt in ('color', 'selection-color'):
+            bang = doi['chu']
+        else:
+            return m.group(0)
+        if not bang:
+            return m.group(0)
+        return m.group(1) + m.group(2) + _RE_MAU_HEX.sub(lambda h: bang.get(h.group(0).upper(), h.group(0)), m.group(3))
+    return _RE_KHAI_BAO.sub(khai_bao, qss)
+
+
 def _qss_day_du() -> str:
     """Bảng kiểu cả phần mềm: kiểu chung + biến thể nút KieuNut (đặt cuối). Mọi chỗ đặt / dựng lại bảng kiểu (phóng to, thu
-    nhỏ) dùng hàm này - trước đây phong_to dựng lại thiếu phần biến thể."""
-    return _qss() + _qss_kieu_nut()
+    nhỏ) dùng hàm này - trước đây phong_to dựng lại thiếu phần biến thể. 1.0.33: dựng bằng màu gốc rồi đổi theo tông nền."""
+    moi = {k: TOKEN[k] for k in _KHOA_MAU_NEN}
+    TOKEN.update(_TOKEN_GOC)
+    try:
+        qss = _qss() + _qss_kieu_nut()
+    finally:
+        TOKEN.update(moi)
+    return ap_tong_nen(qss)
+
+
+def bang_mau_ung_dung():
+    """QPalette của phần mềm theo TOKEN hiện tại (nền cửa sổ, nền ô, chữ) - ap_dung lúc mở, dat_tong_nen khi đổi tông."""
+    p = QPalette()
+    for vai_, mau in ((QPalette.ColorRole.Window, TOKEN['nen']), (QPalette.ColorRole.Base, TOKEN['khung']),
+                      (QPalette.ColorRole.AlternateBase, '#F8FAFC'), (QPalette.ColorRole.Text, TOKEN['chu']),
+                      (QPalette.ColorRole.WindowText, TOKEN['chu']), (QPalette.ColorRole.ButtonText, TOKEN['chu']),
+                      (QPalette.ColorRole.Button, '#FFFFFF'), (QPalette.ColorRole.Highlight, '#3B6FCE'),
+                      (QPalette.ColorRole.HighlightedText, '#FFFFFF'), (QPalette.ColorRole.ToolTipBase, '#FFFDE7'),
+                      (QPalette.ColorRole.ToolTipText, '#1A1A1A')):
+        p.setColor(vai_, QColor(mau))
+    return p
+
+
+def dat_tong_nen(ten: str, luu: bool = False, ap_lai: bool = True) -> str:
+    """Đặt tông nền bề mặt (chu_de.TONG_NEN: sang / diu / trang): TOKEN nen / khung / vach / chu / chu_phu, bảng màu và bảng kiểu chung
+    của mọi cửa sổ đang mở (ap_lai). luu: nhớ cho lần mở sau (chạy không màn hình - kiểm thử - không ghi máy thật). Windows tương
+    phản cao: chỉ nhớ, không áp (đang dùng màu hệ thống)."""
+    from . import chu_de
+    ten = ten if ten in chu_de.TONG_NEN else chu_de.MAC_DINH_TONG_NEN
+    TONG_NEN[0] = ten
+    _, nen, khung, vach, chu, chu_phu = chu_de.TONG_NEN[ten]
+    TOKEN.update(nen=nen, khung=khung, vach=vach, chu=chu, chu_phu=chu_phu)
+    if luu:
+        chu_de.ghi(cai_dat_nho(), tong_nen=ten)
+    app = QApplication.instance()
+    if ap_lai and app is not None and getattr(app, '_bo_to_mau', None) is not None and not getattr(app, '_tuong_phan_cao', False):
+        app.setPalette(bang_mau_ung_dung())
+        app.setStyleSheet(_co_gian(_qss_day_du(), TY_LE[0]) if TY_LE[0] != 1 else _qss_day_du())
+    return ten
 
 
 _MUI_TEN = {}
@@ -602,7 +685,7 @@ def _qss() -> str:
     QTableView, QTableWidget {{ outline: 0; }}
     QLineEdit[nhap="1"], QComboBox[nhap="1"], QSpinBox[nhap="1"] {{ min-height: 24px; font-size: 13px; padding: 4px 10px; }}
     QTableView QLineEdit, QTableView QComboBox, QTableView QPlainTextEdit {{ font-size: 13px; padding: 2px 6px;
-        border: 2px solid #3B6FCE; border-radius: 3px; background: #FFFFFF; }}
+        border: 2px solid #3B6FCE; border-radius: 3px; background: #FFFFFF; selection-background-color: #DBEAFE; selection-color: #0F172A; }}
     QTabBar {{ font-weight: 600; font-size: 13px; }}
     QTabBar::tab {{ background: {THE_TAB['nen']}; color: {THE_TAB['chu']}; padding: 5px 14px; margin-right: 2px; margin-top: 2px;
         border: 1px solid {THE_TAB['vien']}; border-bottom: 0;
@@ -3162,6 +3245,24 @@ def _co_gian_widget(w, t: float) -> None:
         w.setStyleSheet(moi)
 
 
+def ty_le_da_luu() -> float:
+    """Tỷ lệ cỡ chữ người dùng đã chọn (A+ / A−) trong QSettings; chạy không màn hình (kiểm thử): luôn 1.0 - không đọc máy thật."""
+    cd = cai_dat_nho()
+    try:
+        return float(cd.value('giao_dien/ty_le', 1.0) or 1.0) if cd is not None else 1.0
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def luu_ty_le(t: float) -> bool:
+    """Nhớ tỷ lệ cỡ chữ cho lần mở sau; chạy không màn hình (kiểm thử): không ghi máy thật (trả False)."""
+    cd = cai_dat_nho()
+    if cd is None:
+        return False
+    cd.setValue('giao_dien/ty_le', t)
+    return True
+
+
 TRUOC_DOI_TY_LE = []            # 1.0.08: hàm gọi TRƯỚC khi áp kiểu mới - cửa sổ chính bỏ các trang ẩn (tạo lại khi mở tới)
 
 
@@ -3209,9 +3310,8 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
         _gian_bang()
     else:
         QTimer.singleShot(0, _gian_bang)
-    cd = cai_dat_nho() if luu else None                  # chạy không màn hình (kiểm thử): không ghi tỷ lệ của máy thật
-    if cd is not None:
-        cd.setValue('giao_dien/ty_le', t)
+    if luu:
+        luu_ty_le(t)
     _bao_ty_le(t)
     return t
 
@@ -4307,17 +4407,11 @@ def ap_dung(app) -> None:
     f.setPointSizeF(9.5)
     f.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
     app.setFont(f)
-    p = QPalette()
-    for vai_, mau in ((QPalette.ColorRole.Window, TOKEN['nen']), (QPalette.ColorRole.Base, TOKEN['khung']),
-                      (QPalette.ColorRole.AlternateBase, '#F8FAFC'), (QPalette.ColorRole.Text, TOKEN['chu']),
-                      (QPalette.ColorRole.WindowText, TOKEN['chu']), (QPalette.ColorRole.ButtonText, TOKEN['chu']),
-                      (QPalette.ColorRole.Button, '#FFFFFF'), (QPalette.ColorRole.Highlight, '#3B6FCE'),
-                      (QPalette.ColorRole.HighlightedText, '#FFFFFF'), (QPalette.ColorRole.ToolTipBase, '#FFFDE7'),
-                      (QPalette.ColorRole.ToolTipText, '#1A1A1A')):
-        p.setColor(vai_, QColor(mau))
     from . import chu_de
     ct = chu_de.doc(cai_dat_nho())
     dat_mat_do(ct['mat_do'], ap_lai=False)
+    dat_tong_nen(ct['tong_nen'], ap_lai=False)          # 1.0.33: tông nền đã chọn (offscreen / kiểm thử: luôn 'sang')
+    p = bang_mau_ung_dung()
     app._tuong_phan_cao = chu_de.dang_tuong_phan_cao(ct['tuong_phan'])
     if app._tuong_phan_cao:                              # Windows tương phản cao: bảng màu hệ thống, chỉ giữ kích thước / khoảng đệm
         app.setPalette(app.style().standardPalette())
@@ -4332,10 +4426,6 @@ def ap_dung(app) -> None:
     app.installEventFilter(app._bo_to_mau)
     # tỷ lệ cỡ chữ người dùng đã chọn (A+ / A−). Chạy không màn hình (kiểm thử, 1.0.32): KHÔNG đọc của máy thật - trước đây lượt
     # kiểm thử chạy ở 110% khi máy phát triển đặt 110%, kết quả bài kiểm kiểu chữ phụ thuộc máy / thứ tự bài
-    cd = cai_dat_nho()
-    try:
-        t = float(cd.value('giao_dien/ty_le', 1.0) or 1.0) if cd is not None else 1.0
-    except (TypeError, ValueError):
-        t = 1.0
+    t = ty_le_da_luu()
     if abs(t - 1) > 0.001:
         dat_ty_le(t, luu=False)

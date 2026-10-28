@@ -19,6 +19,15 @@ TUONG_PHAN = {'theo_windows': 'Theo Windows', 'bat': 'Luôn bật', 'tat': 'Tắ
 MAC_DINH_TUONG_PHAN = 'theo_windows'
 KHOA_MAT_DO = 'giao_dien/mat_do'
 KHOA_TUONG_PHAN = 'giao_dien/tuong_phan_cao'
+# 1.0.33 TÔNG NỀN bề mặt: tên -> (nhãn, nền cửa sổ, nền khung / ô, vạch ngăn, chữ chính, chữ phụ). 'sang' = màu của 1.0.32 (TOKEN gốc).
+# giao_dien đổi các màu này trên bảng kiểu chung (dat_tong_nen); áp ngay, nhớ cho lần mở sau.
+TONG_NEN = {
+    'sang': ('Sáng chuẩn (Enterprise Navy)', '#F8FAFC', '#FFFFFF', '#E2E8F0', '#0F172A', '#475569'),
+    'diu': ('Dịu mắt (làm việc lâu / ban đêm)', '#F1F5F9', '#F8FAFC', '#CBD5E1', '#0F172A', '#334155'),
+    'trang': ('Trắng tương phản (máy chiếu / ngoài trời)', '#FFFFFF', '#FFFFFF', '#94A3B8', '#000000', '#1E293B'),
+}
+MAC_DINH_TONG_NEN = 'sang'
+KHOA_TONG_NEN = 'giao_dien/tong_nen'
 
 
 def cao_dong(ten: str) -> int:
@@ -53,7 +62,8 @@ def _chon(gia_tri, hop_le: dict, mac_dinh: str) -> str:
 
 
 def doc(cai_dat=None) -> dict:
-    """{'mat_do': …, 'tuong_phan': …}: biến môi trường > QSettings (cai_dat, có thể None) > mặc định; giá trị lạ bỏ qua."""
+    """{'mat_do': …, 'tuong_phan': …, 'tong_nen': …}: biến môi trường (PABT_MAT_DO / PABT_TUONG_PHAN_CAO / PABT_TONG_NEN) > QSettings
+    (cai_dat, có thể None) > mặc định; giá trị lạ bỏ qua."""
     def lay(khoa):
         try:
             return cai_dat.value(khoa) if cai_dat is not None else None
@@ -61,10 +71,12 @@ def doc(cai_dat=None) -> dict:
             return None
     md = os.environ.get('PABT_MAT_DO') or lay(KHOA_MAT_DO)
     tp = os.environ.get('PABT_TUONG_PHAN_CAO') or lay(KHOA_TUONG_PHAN)
-    return {'mat_do': _chon(md, MAT_DO, MAC_DINH_MAT_DO), 'tuong_phan': _chon(tp, TUONG_PHAN, MAC_DINH_TUONG_PHAN)}
+    tn = os.environ.get('PABT_TONG_NEN') or lay(KHOA_TONG_NEN)
+    return {'mat_do': _chon(md, MAT_DO, MAC_DINH_MAT_DO), 'tuong_phan': _chon(tp, TUONG_PHAN, MAC_DINH_TUONG_PHAN),
+            'tong_nen': _chon(tn, TONG_NEN, MAC_DINH_TONG_NEN)}
 
 
-def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None) -> None:
+def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_nen: str | None = None) -> None:
     """Ghi lựa chọn (chỉ phần được đưa vào) vào cai_dat (QSettings); không có cai_dat thì bỏ qua."""
     if cai_dat is None:
         return
@@ -72,6 +84,8 @@ def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None) -> No
         cai_dat.setValue(KHOA_MAT_DO, _chon(mat_do, MAT_DO, MAC_DINH_MAT_DO))
     if tuong_phan is not None:
         cai_dat.setValue(KHOA_TUONG_PHAN, _chon(tuong_phan, TUONG_PHAN, MAC_DINH_TUONG_PHAN))
+    if tong_nen is not None:
+        cai_dat.setValue(KHOA_TONG_NEN, _chon(tong_nen, TONG_NEN, MAC_DINH_TONG_NEN))
 
 
 def dang_tuong_phan_cao(tuong_phan: str = MAC_DINH_TUONG_PHAN) -> bool:

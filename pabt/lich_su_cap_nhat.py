@@ -7,6 +7,17 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.33', '28/10/2026', (
+        'Cài đặt > Giao diện: chọn TÔNG NỀN bề mặt - Sáng chuẩn, Dịu mắt (làm việc lâu / ban đêm), Trắng tương phản (máy chiếu / ngoài '
+        'trời); áp ngay cho mọi cửa sổ đang mở, nhớ cho lần sau.',
+        'Nhập bản đồ (.dxf, .kml, .kmz): file chỉ đọc / giải nén một lần (đọc danh sách lớp rồi phân tích dùng chung); bấm Phân tích lại '
+        'với cùng lớp / số tờ / kinh tuyến trục không phân tích lại (giữ các ô đã đánh dấu); bảng thửa vẽ một lần.',
+        'Bản đồ thửa đất: thêm tổng số thửa và tỷ lệ đồng thuận cạnh chú giải. Thẻ số liệu: Tổng kinh phí vạch xanh, Đã bàn giao vạch xanh '
+        'lá; rê chuột viền rõ hơn. Ô đang sửa trong bảng: chữ chọn nền xanh nhạt dễ đọc. Mật độ bảng Gọn: đầu cửa sổ lập phương án sát hơn.',
+        'LARC Mobile 1.0.33: trung tâm thu âm trượt lên từ đáy màn hình (bấm một tay), bàn phím ảo mở thì hộp nằm trên bàn phím; thanh mục '
+        'con dạng viên, mục đang chọn nổi bật; thẻ nổi nhẹ; thẻ thông tin thửa trên bản đồ toàn màn hình rõ hơn; chế độ ☀️ Nắng: tiền '
+        'tạm tính nền vàng chữ đen.',
+    )),
     ('1.0.32', '28/10/2026', (
         'Công cụ > Tạo gói cấu hình cho nhiều đơn vị: điền file Excel mẫu (mỗi dòng một chi nhánh / đơn vị: tên cơ quan, đơn vị lập, '
         'địa danh, người ký…), phần mềm tạo mỗi đơn vị một gói .pabtcfg - máy của đơn vị bấm đúp gói là có đủ thông tin cơ quan. Cấu hình '

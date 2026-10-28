@@ -209,6 +209,25 @@ body.tuong_phan_cao button.chon,body.tuong_phan_cao .chip.chon,body.tuong_phan_c
 body.tuong_phan_cao .bottom_nav button.chon{background:#000;color:#fff}
 body.tuong_phan_cao button.xoa{background:#fff;color:#8B0000;border:2px solid #8B0000}
 body.tuong_phan_cao header .doi.bat{background:#FACC15;color:#000;border-color:#FACC15}
+body.tuong_phan_cao .tam_tinh_ho,body.tuong_phan_cao .gia{background:#FEF08A;color:#000;border:2px solid #000;font-weight:800}
+/* 1.0.33 B4: ô chọn hộ nổi rõ (chữ đậm, viền đậm hơn), thanh chọn hộ có bóng nhẹ - vẫn MỘT hàng (1.4.3: người dùng cần thanh gọn) */
+.ho_bar{box-shadow:0 2px 6px rgba(15,23,42,.04)}
+.ho_bar #cb_ho{font-weight:700;color:#0F172A;background-color:#F8FAFC;border:1.5px solid #94A3B8}
+.tam_tinh_ho{font-size:12.5px;font-weight:800;border:1.5px solid #6EE7B7;padding:3px 10px}
+/* 1.0.33 B7: thanh mục con dạng viên (nền xám, mục chọn nền xanh chuyển màu), thẻ nổi nhẹ, thẻ thông tin thửa trên bản đồ toàn màn hình */
+.phan_doan{gap:3px;padding:4px;background:#E2E8F0;border-radius:12px;margin:4px 6px}
+.phan_doan button{gap:2px;min-height:46px;padding:5px 2px 4px;font-size:11.5px;font-weight:700;line-height:1.15;border-radius:9px;transition:background .15s ease,color .15s ease}
+.phan_doan button.chon{background:linear-gradient(135deg,#1E3A8A,#2563EB);color:#fff;border-color:#1E3A8A;box-shadow:0 2px 6px rgba(30,58,138,.28)}
+.khung{box-shadow:0 2px 8px rgba(15,23,42,.06);border-radius:12px}
+body.toan_bd #tt_thua{left:8px;right:58px;bottom:10px;border-left:4px solid #1E3A8A;border-radius:14px;background:rgba(255,255,255,.96);
+-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 10px 28px rgba(15,23,42,.32)}
+/* 1.0.33 B5: trung tâm thu âm = bảng trượt từ đáy (bấm một tay); bàn phím ảo mở thì đẩy lên trên bàn phím (--ban_phim do canBanPhim đặt
+   theo visualViewport - không thì bàn phím che ô chữ thu âm) */
+.hop_thu_am{top:auto;bottom:var(--ban_phim,0px);left:0;right:0;max-height:min(calc(var(--vv_cao,100dvh) * .86),680px);border:0;
+border-top:2.5px solid #1E3A8A;border-radius:20px 20px 0 0;padding:10px 12px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -12px 42px rgba(15,23,42,.42)}
+.hop_thu_am::before{content:"";display:block;width:42px;height:4px;background:#CBD5E1;border-radius:99px;margin:0 auto 8px}
+body.khung_dt .hop_thu_am,body.bc_ngang .hop_thu_am{left:50%;right:auto;width:min(640px,94vw);margin-left:0;transform:translateX(-50%);
+bottom:calc(var(--ban_phim,0px) + 14px);border-radius:16px;border:2px solid #1E3A8A}
 </style></head><body>
 <div id="app">
 <header><img alt="LARC" src="icon-180.png"/><div class="chu"><div class="ten">LARC Mobile</div>
@@ -1945,6 +1964,10 @@ function apBoCuc() { const rong = window.innerWidth >= 680, ngang_may = window.m
   const b = $("b_xoay"); b.style.display = ""; b.textContent = "";
   b.append(ngang ? "📱" : "🔄", el("span", {cls: "chu_nut", text: ngang ? " Dọc" : " Xoay ngang"})); b.title = ngang ? "Về bố cục dọc" : "Xoay ngang: 2 cột";
   hienThe(); if (cu !== ngang || theHien() === 5) setTimeout(() => { if (theHien() === 5) veBanDo(); }, 30); }
+// 1.0.33 B5: bàn phím ảo (visualViewport) -> --ban_phim (khoảng bàn phím che đáy màn hình), --vv_cao (chiều cao còn thấy)
+function canBanPhim() { const v = window.visualViewport; if (!v) return; const de = document.documentElement;
+  de.style.setProperty("--ban_phim", Math.max(0, Math.round(window.innerHeight - v.height - v.offsetTop)) + "px");
+  de.style.setProperty("--vv_cao", Math.round(v.height) + "px"); }
 // 1.0.32 B4: chế độ ngoài trời nắng (tương phản cao) - lớp body.tuong_phan_cao, nhớ trên máy
 const KHOA_TP = "larc_field_tuong_phan";
 function apTuongPhan(bat) { document.body.classList.toggle("tuong_phan_cao", bat); const b = $("b_tuong_phan"); if (!b) return;
@@ -2056,6 +2079,7 @@ function khoiDong() {
   $("b_tim_mo").addEventListener("click", () => { const n = $("ngan_tim"); n.hidden = !n.hidden; if (!n.hidden) $("o_tim").focus(); });
   $("b_xoay").addEventListener("click", doiBoCuc);
   $("b_tuong_phan").addEventListener("click", batTatTuongPhan); veGhiChuNhanh();
+  if (window.visualViewport) { visualViewport.addEventListener("resize", canBanPhim); visualViewport.addEventListener("scroll", canBanPhim); canBanPhim(); }
   { let tp = ""; try { tp = localStorage.getItem(KHOA_TP) || ""; } catch (e) { /* bỏ qua */ } apTuongPhan(tp === "1"); }
   // màn hình AI: chụp / quét, giọng nói, phân tách
   $("b_hero_chup").addEventListener("click", chupHero);

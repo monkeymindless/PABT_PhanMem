@@ -1,4 +1,5 @@
-"""Hộp Cài đặt > Giao diện (1.0.17, nền tảng giao diện 2.0): MẬT ĐỘ BẢNG (Gọn / Chuẩn / Thoáng - áp ngay) và TƯƠNG PHẢN CAO (theo Windows /
+"""Hộp Cài đặt > Giao diện (1.0.17, nền tảng giao diện 2.0): MẬT ĐỘ BẢNG (Gọn / Chuẩn / Thoáng - áp ngay), TÔNG NỀN (1.0.33: Sáng chuẩn /
+Dịu mắt / Trắng tương phản - áp ngay) và TƯƠNG PHẢN CAO (theo Windows /
 luôn bật / tắt - áp khi mở lại phần mềm). Logic ở chu_de (không Qt) và giao_dien.dat_mat_do."""
 from __future__ import annotations
 
@@ -31,6 +32,18 @@ class HopGiaoDien(QDialog):
             r.toggled.connect(lambda dung, t=ten: dung and self.doi_mat_do(t))
             hn.addWidget(r)
         lo.addWidget(nhom)
+        nhom_tn = QGroupBox('Tông nền bề mặt')                 # 1.0.33: áp ngay cho mọi cửa sổ đang mở
+        hn = QVBoxLayout(nhom_tn)
+        self.nhom_tong_nen = QButtonGroup(self)
+        self.r_tong_nen = {}
+        for ten, (nhan, *_m) in chu_de.TONG_NEN.items():
+            r = QRadioButton(nhan)
+            r.setChecked(ten == giao_dien.TONG_NEN[0])
+            self.nhom_tong_nen.addButton(r)
+            self.r_tong_nen[ten] = r
+            r.toggled.connect(lambda dung, t=ten: dung and self.doi_tong_nen(t))
+            hn.addWidget(r)
+        lo.addWidget(nhom_tn)
         f = QFormLayout()
         self.cb_tuong_phan = QComboBox()
         cd = chu_de.doc(giao_dien.cai_dat_nho())
@@ -61,6 +74,11 @@ class HopGiaoDien(QDialog):
         """Áp ngay mật độ cho mọi bảng đang mở và nhớ cho lần sau."""
         giao_dien.dat_mat_do(ten, ap_lai=True, luu=True)
         self._thong_bao('Đã áp mật độ bảng.')
+
+    def doi_tong_nen(self, ten: str) -> None:
+        """Áp ngay tông nền cho mọi cửa sổ đang mở và nhớ cho lần sau."""
+        giao_dien.dat_tong_nen(ten, luu=True)
+        self._thong_bao('Đã áp tông nền.')
 
     def doi_tuong_phan(self, khoa: str) -> None:
         chu_de.ghi(giao_dien.cai_dat_nho(), tuong_phan=khoa)

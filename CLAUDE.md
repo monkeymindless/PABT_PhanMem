@@ -2547,6 +2547,29 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `di_dong/dung.py` `PHIEN_BAN` đọc `__version__` của `pabt/__init__.py` như chữ (không nhập pabt); versionCode `ma_phien_ban` =
   `DONG_BO_TU` 10000 + số cũ (1.0.32 -> 20032 > 10404 của 1.4.4, cùng khóa ký - cài đè được). Tăng `__version__` = phát hành lại
   .apk / PWA / Pages.
+- 1.0.33 (người dùng 28/10/2026, "UI/UX Pro Max 3.0" 10 bước; test `tests/test_yeu_cau_1033.py`, `di_dong/tests/test_phan_tach.py`):
+  - `ban_do_cad.doc_co_nho(file, ham)` nhớ kết quả đọc theo (đường dẫn, mtime_ns, cỡ, tên hàm), tối đa `NHO_DOC_TOI_DA` 2 file - `_mo` (DXF)
+    và `ban_do_kml.doc_kml` (trả bản sao danh sách) dùng chung; KHÔNG sửa đối tượng trả về. `HopNhapCad._khoa_tham_so` (file + mtime, lớp,
+    số tờ, kinh tuyến trục) trùng lần trước và đã có kq -> phân tích bỏ qua (giữ ô đã đánh dấu); `_do_bang` trong setUpdatesEnabled(False);
+    nạp ô chọn lớp trong `chan_tin_hieu`. 26,6 s "trả ô chọn" ở báo cáo GiaoDien 1.0.32 là do chạy CÙNG LÚC bộ test (chạy riêng 0 chậm) -
+    ô chọn lớp không nối tín hiệu nào; chạy kiểm tra giao diện một mình.
+  - TÔNG NỀN: `chu_de.TONG_NEN` (sang = màu 1.0.32 / diu / trang), `KHOA_TONG_NEN`, `doc()['tong_nen']` (PABT_TONG_NEN > QSettings),
+    `ghi(tong_nen=)`. `giao_dien.TONG_NEN`, `dat_tong_nen(ten, luu, ap_lai)` (TOKEN nen/khung/vach/chu/chu_phu + bảng màu `bang_mau_ung_dung` +
+    bảng kiểu), `ap_tong_nen(qss, ten)`: màu trong QSS phần lớn VIẾT THẲNG (#F8FAFC, #0F172A…) nên đổi theo THUỘC TÍNH trên bảng kiểu cuối:
+    background* -> nền / khung, border* / gridline / outline -> vạch, color / selection-color -> chữ chính / phụ (chữ trắng trên nút giữ);
+    `_qss_day_du` dựng bằng `_TOKEN_GOC` rồi mới đổi (không đổi hai lần). setStyleSheet riêng của widget KHÔNG đổi. `HopGiaoDien.r_tong_nen`.
+  - Thẻ KPI: `MAU_NHOM_KPI` / `NHOM_KPI_THE` (tong = tien, da_bg = xong) property `nhom_kpi` (QSS đặt SAU màu theo thẻ); hover viền #CBD5E1.
+    Ô sửa trong bảng selection #DBEAFE. CuaSoLapPA spacing 2 khi mật độ Gọn (vốn đã 4). HopBanDo `lb_tong` "Tổng N thửa · đồng thuận p%"
+    (đếm theo trạng thái đã có từ trước ở chú giải).
+  - LARC Mobile: hộp thu âm = bảng trượt đáy (`bottom: var(--ban_phim)`, `canBanPhim` theo visualViewport - không thì bàn phím che ô chữ),
+    khung_dt / bc_ngang canh giữa 640 px; thanh mục con dạng viên (gradient mục chọn); `.khung` bóng nhẹ; `#tt_thua` bản đồ toàn màn hình;
+    `body.tuong_phan_cao` tạm tính nền vàng. KHÔNG làm theo đặc tả: nút `#b_ngoai_troi` / `body.ngoai_troi` / khóa `larc_ngoai_troi` (trùng
+    nút ☀️ `b_tuong_phan` 1.0.32, khóa phải `larc_field_*`); thanh chọn hộ xuống dòng (`#tam_tinh_ho` không nằm trên thanh từ 1.4.3; ô chọn
+    hộ 116 px ở 360 px - xuống dòng làm thanh cao thêm ~44 px, trái yêu cầu 1.4.3 "gọn").
+  - KIỂM THỬ: bài test KHÔNG được đổi bảng kiểu / bảng màu của QApplication thật (bo_ap_dung + ap_dung, dat_tong_nen / dat_ty_le áp thật):
+    Qt áp lại cho mọi widget còn sống của lượt kiểm thử - mỗi lần hàng chục giây, và các bài chạy sau chậm theo (lượt đầy đủ 527 s -> 2.613 s;
+    tìm bằng `unittest discover … --durations 30`). Kiểm hàm nhỏ (`giao_dien.ty_le_da_luu`, `luu_ty_le`) hoặc thay `QApplication.instance`
+    bằng đối tượng giả (`tests/test_yeu_cau_1033._UngDungGia`); widget tạo trong test: close + deleteLater + processEvents.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

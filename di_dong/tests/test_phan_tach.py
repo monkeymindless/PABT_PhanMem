@@ -707,6 +707,21 @@ class TestPhanTach(unittest.TestCase):
         self.assertEqual(self.js('getComputedStyle(document.getElementById("b_xoay"), "::after").content'), '""')   # vùng chạm mở rộng
         self.assertLessEqual(self.js('document.querySelector("header").offsetHeight'), 53)                         # thanh tiêu đề không cao thêm
 
+    def test_thu_am_bang_truot_day(self):
+        # 1.0.33: trung tâm thu âm neo đáy màn hình (bấm một tay), bàn phím ảo mở thì nằm trên bàn phím (--ban_phim)
+        self.js('document.getElementById("hop_thu_am").hidden = false; 1')
+        try:
+            cs = self.jsj('(() => { const c = getComputedStyle(document.getElementById("hop_thu_am")); '
+                          'return {top: c.top, bottom: c.bottom, bo: c.borderTopLeftRadius, bo_duoi: c.borderBottomLeftRadius}; })()')
+            self.assertEqual((cs['bottom'], cs['bo'], cs['bo_duoi']), ('0px', '20px', '0px'))
+            self.js('document.documentElement.style.setProperty("--ban_phim", "300px"); 1')
+            self.assertEqual(self.js('getComputedStyle(document.getElementById("hop_thu_am")).bottom'), '300px')
+        finally:
+            self.js('document.documentElement.style.removeProperty("--ban_phim"); document.getElementById("hop_thu_am").hidden = true; 1')
+        self.assertIn('linear-gradient', self.js('(() => { const b = document.querySelector(".phan_doan button.chon") || '
+                                                 'document.querySelector(".phan_doan button"); b.classList.add("chon"); '
+                                                 'return getComputedStyle(b).backgroundImage; })()'))
+
     def test_khong_loi_js(self):
         self.assertFalse([m for m in self.loi if 'Uncaught' in m], self.loi)
 

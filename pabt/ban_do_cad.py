@@ -171,16 +171,42 @@ class KetQuaCad:
     nguon: str = ''
 
 
-def _mo(file) -> list:
-    """Thực thể của bản vẽ (pabt.dxf_thuan - Python thuần, 16/10/2026: bỏ ezdxf + numpy khỏi bản cài, máy yếu nhẹ ~30 MB)."""
+NHO_DOC_TOI_DA = 2              # 1.0.33: số file bản đồ giữ kết quả đọc trong RAM (đọc danh sách lớp rồi phân tích = cùng một file)
+_NHO_DOC: dict = {}
+
+
+def doc_co_nho(file, ham):
+    """ham(file) nhớ theo (đường dẫn, mtime_ns, cỡ, tên hàm): hộp Nhập bản đồ đọc danh sách lớp rồi phân tích, đổi lớp / số tờ / kinh tuyến
+    rồi phân tích lại - cùng một file chỉ đọc + giải nén một lần. File sửa (mtime / cỡ đổi) thì đọc lại. KHÔNG sửa đối tượng trả về."""
     p = Path(file)
-    if p.suffix.lower() == '.dwg':
-        raise LoiCad('File .dwg chưa đọc được trực tiếp: mở bằng AutoCAD / MicroStation, Lưu thành (Save As) dạng DXF rồi nhập.')
+    try:
+        st = p.stat()
+        khoa = (str(p.resolve()), st.st_mtime_ns, st.st_size, ham.__name__)
+    except OSError:
+        return ham(p)
+    if khoa in _NHO_DOC:
+        return _NHO_DOC[khoa]
+    kq = ham(p)
+    while len(_NHO_DOC) >= NHO_DOC_TOI_DA:
+        _NHO_DOC.pop(next(iter(_NHO_DOC)))
+    _NHO_DOC[khoa] = kq
+    return kq
+
+
+def _doc_dxf(p: Path) -> list:
     from .dxf_thuan import LoiDxf, doc
     try:
         return doc(p)
     except LoiDxf as e:
         raise LoiCad(str(e)) from None
+
+
+def _mo(file) -> list:
+    """Thực thể của bản vẽ (pabt.dxf_thuan - Python thuần, 16/10/2026: bỏ ezdxf + numpy khỏi bản cài, máy yếu nhẹ ~30 MB)."""
+    p = Path(file)
+    if p.suffix.lower() == '.dwg':
+        raise LoiCad('File .dwg chưa đọc được trực tiếp: mở bằng AutoCAD / MicroStation, Lưu thành (Save As) dạng DXF rồi nhập.')
+    return doc_co_nho(p, _doc_dxf)
 
 
 def _hinh_kin(e) -> list | None:

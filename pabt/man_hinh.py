@@ -1395,7 +1395,8 @@ class CuaSoLapPA(QDialog):
         self._hen_xem.timeout.connect(lambda: self.lam_moi_xem_truoc())
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 4)
-        lo.setSpacing(4)
+        from . import giao_dien
+        lo.setSpacing(2 if giao_dien.MAT_DO[0] == 'gon' else 4)      # 1.0.33: mật độ Gọn - đầu cửa sổ sát hơn, bảng thêm dòng
         lo.addWidget(self.thanh_tren)
         lo.addWidget(self._tao_dai_dinh_danh())        # 20/10/2026: chủ hộ, CCCD, địa chỉ, đợt trình, tổng kinh phí - một hàng 38 px
         lo.addWidget(self._tao_dai_lan())              # 1.0.05: lần phương án (lần đầu + bổ sung)

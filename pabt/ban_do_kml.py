@@ -21,7 +21,7 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .ban_do_cad import KetQuaCad, LoiCad, ThuaCad, _cham_hop, _hop_bao, dien_tich, dien_tich_giao, tam_giac_hoa
+from .ban_do_cad import KetQuaCad, LoiCad, ThuaCad, _cham_hop, _hop_bao, dien_tich, dien_tich_giao, doc_co_nho, tam_giac_hoa
 from .sua_font_kml import sua_font_kml
 from .tien import D
 
@@ -163,7 +163,12 @@ def lam_sach_xml(du: bytes) -> bytes:
 
 
 def doc_kml(file) -> list:
-    """File .kml / .kmz -> [PlacemarkKml] theo thứ tự trong file (XML lỗi nhẹ: làm sạch rồi đọc lại)."""
+    """File .kml / .kmz -> [PlacemarkKml] theo thứ tự trong file (XML lỗi nhẹ: làm sạch rồi đọc lại). 1.0.33: nhớ theo file (mtime / cỡ) -
+    hộp Nhập bản đồ phân tích lại khi đổi số tờ / kinh tuyến trục không giải nén + đọc XML lại. Trả bản sao danh sách (không sửa phần tử)."""
+    return list(doc_co_nho(file, _doc_kml))
+
+
+def _doc_kml(file) -> list:
     du = doc_byte_kml(file)
     try:
         goc = ET.fromstring(du)
