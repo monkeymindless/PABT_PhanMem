@@ -428,7 +428,9 @@ def _goi_don_vi(lenh: str, argv) -> int:
 
 
 def main(argv) -> int:
-    if not argv or argv[0].lower().endswith(('.pabt', '.larc', '.larcud', '.pabtcn', '.pabtcfg')) or argv[0] in ('--menu-trai', '--menu-tren'):
+    # --khung-windows: mở cửa sổ có khung Windows (thanh_tieu_de đọc sys.argv) - trước 1.0.32 rơi vào nhánh lệnh, in hướng dẫn rồi thoát
+    if not argv or argv[0].lower().endswith(('.pabt', '.larc', '.larcud', '.pabtcn', '.pabtcfg')) or argv[0] in ('--menu-trai', '--menu-tren',
+                                                                                                             '--khung-windows'):
         from pabt.app import main as mo_cua_so
         return mo_cua_so()
     lenh = argv[0]

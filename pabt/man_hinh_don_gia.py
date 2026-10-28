@@ -677,7 +677,7 @@ class HopXacThucBo(QDialog):
         lo.addLayout(f)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
-        self.lb.setStyleSheet('color: #B83A3A;')
+        self.lb.setStyleSheet('QLabel { color: #B83A3A; }')
         lo.addWidget(self.lb)
         nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         nut.accepted.connect(self.thu)

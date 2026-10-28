@@ -78,15 +78,21 @@ class HopTraGiaDat(QDialog):
         self.bang.setRowCount(len(self.ds))
         dam = QFont()
         dam.setBold(True)
+        # 1.0.32: tỉnh dùng mô hình vị trí khác Đồng Nai (VT1-VT4, KV1-VT1…): cột Vị trí ghi tên vị trí, tô đậm vị trí đầu của mô hình
+        mac_dinh = nq.la_mo_hinh_mac_dinh()
+        dau = nq.ds_ma_vi_tri()[0]
+        if not mac_dinh and self.bang.columnWidth(4) < 150:
+            self.bang.setColumnWidth(4, 150)
         for i, r in enumerate(self.ds):
-            o = [r['xa'], str(r['tt']), r['ten_duong'], f'{r["diem_dau"]} → {r["diem_cuoi"]}', r['vi_tri'],
+            vt = r['vi_tri']
+            o = [r['xa'], str(r['tt']), r['ten_duong'], f'{r["diem_dau"]} → {r["diem_cuoi"]}', vt if mac_dinh else nq.ten_vi_tri(vt),
                  nq.mo_ta_vi_tri(r), vn(nq.gia_dong(r, cot))]
             for c, v in enumerate(o):
                 it = QTableWidgetItem(v)
-                it.setToolTip(v)
+                it.setToolTip(nq.ten_vi_tri(vt) if c == 4 else v)
                 if c in (1, 6):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                if r['vi_tri'] == 'MT':
+                if str(vt).strip().upper() == dau:
                     it.setBackground(QBrush(XANH))
                     it.setFont(dam)
                 self.bang.setItem(i, c, it)

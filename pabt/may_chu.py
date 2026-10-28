@@ -1065,8 +1065,9 @@ def ap_cua(dia_chi: str) -> str:
 
 def ds_ho_de_chon(file, goc=None, tai_khoan: str | None = None) -> list:
     """Các hộ của dự án trên máy chủ để chọn nhận theo hộ: dict(ma_ho, stt, ho_ten, cccd, dia_chi, ap, to_thua, dot, giu) - giu:
-    None (chưa ai nhận) / dict(tai_khoan, may, luc, cua_toi). Đọc file dự án chỉ đọc (không khóa)."""
-    goc = Path(goc) if goc else (PHIEN.goc if PHIEN else None)
+    None (chưa ai nhận) / dict(tai_khoan, may, luc, cua_toi). Đọc file dự án chỉ đọc (không khóa). goc=False: không hỏi máy chủ (đọc
+    bản offline trên máy - giu luôn None)."""
+    goc = None if goc is False else (Path(goc) if goc else (PHIEN.goc if PHIEN else None))
     tk = tai_khoan if tai_khoan is not None else (PHIEN.tai_khoan if PHIEN else '')
     giu = ds_ho_dang_lay_ve(file, goc) if goc else {}
     c = _mo_doc(file)

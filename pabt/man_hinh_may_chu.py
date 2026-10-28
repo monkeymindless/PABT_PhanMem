@@ -90,7 +90,7 @@ class HopDangNhap(_Hop):
         f.addRow('Mật khẩu:', self.o_mk)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
-        self.lb.setStyleSheet('color: #B83A3A;')
+        self.lb.setStyleSheet('QLabel { color: #B83A3A; }')
         b_dn = QPushButton('Đăng nhập')
         b_dn.setDefault(True)
         b_dn.setProperty('nhom', 'luu')
@@ -107,7 +107,7 @@ class HopDangNhap(_Hop):
         ghi = QLabel('Đăng nhập ở máy bất kỳ trong mạng nội bộ: phần mềm mở lại dự án đang làm dở. Không có máy chủ (mất mạng, '
                      'đi hiện trường) thì chọn "Làm việc offline" - mọi chức năng nhập liệu vẫn dùng bình thường.')
         ghi.setWordWrap(True)
-        ghi.setStyleSheet('color: #5B6B7A;')
+        ghi.setStyleSheet('QLabel { color: #5B6B7A; }')
         lo = QVBoxLayout(self)
         lo.addWidget(tieu)
         lo.addWidget(self.lb_may_chu)
@@ -436,7 +436,8 @@ class HopDuAnMayChu(_Hop):
         h1 = QHBoxLayout()
         for ten, ham in (('Mở dự án', lambda: self.mo()), ('Mang về làm offline', lambda: self.mang_ve()),
                          ('Nhận theo hộ (Chia việc)', lambda: self.nhan_theo_ho()),
-                         ('Mở thư mục máy chủ', lambda: self._mo_thu_muc()), ('Làm mới', lambda: self.ve())):
+                         ('Mở thư mục máy chủ', lambda: self._mo_thu_muc()), ('Nhật ký máy chủ…', lambda: self.nhat_ky()),
+                         ('Làm mới', lambda: self.ve())):
             b = QPushButton(ten)
             b.clicked.connect(ham)
             h1.addWidget(b)
@@ -447,7 +448,7 @@ class HopDuAnMayChu(_Hop):
         self.bang_off.doubleClicked.connect(lambda *_: self.mo_offline())
         h2 = QHBoxLayout()
         for ten, ham in (('Mở bản offline', lambda: self.mo_offline()), ('Đưa lên máy chủ', lambda: self.dua_len()),
-                         ('Hủy bản offline', lambda: self.huy())):
+                         ('Trả bớt hộ đã nhận…', lambda: self.tra_bot_ho()), ('Hủy bản offline', lambda: self.huy())):
             b = QPushButton(ten)
             b.clicked.connect(ham)
             h2.addWidget(b)
@@ -590,6 +591,85 @@ class HopDuAnMayChu(_Hop):
         self.ve()
         return True
 
+    def tra_bot_ho(self, x=None, ds_ma_ho=None, ep: bool | None = None):
+        """1.0.32: bản offline THEO HỘ - gộp số liệu của một số hộ lên máy chủ rồi trả các hộ đó (may_chu.gop_ho_tu_ban_offline với
+        một phần hộ: bỏ khóa trên máy chủ, sổ nhận về chỉ còn các hộ khác). Bản offline đang mở ở cửa sổ chính: khóa ghi các hộ vừa trả.
+        ds_ma_ho (kiểm thử): bỏ qua hộp chọn. Trả kết quả gộp hoặc None."""
+        x = x or self._chon(self.bang_off, self.ds_off)
+        if x is None:
+            return None
+        giu = {int(m) for m in (x.get('ds_ma_ho') or [])}
+        if not giu:
+            self.bao('Bản này mang về CẢ dự án (không nhận theo hộ): dùng "Đưa lên máy chủ" hoặc "Hủy bản offline".', loi=False)
+            return None
+        if ds_ma_ho is None:
+            nhan = dict(tai_khoan=x.get('tai_khoan', ''), may='máy này', luc=x.get('luc', ''), cua_toi=True)
+            try:
+                ds = [dict(h, giu=nhan) for h in may_chu.ds_ho_de_chon(x['ban_sao'], goc=False) if h['ma_ho'] in giu]
+            except Exception as e:                               # noqa: BLE001 - bản offline hỏng / đã bị xóa
+                self.bao(chu_loi('Không đọc được bản offline', e))
+                return None
+            hop = HopChonHoLayVe(x['ban_sao'], self, ds=ds, tra=True)
+            if hop.exec() != QDialog.DialogCode.Accepted:
+                return None
+            ds_ma_ho = hop.ds_chon()
+        ds_ma_ho = [int(m) for m in ds_ma_ho if int(m) in giu]  # chỉ hộ của bản này (hộ chưa nhận không được gộp đè)
+        if not ds_ma_ho:
+            return None
+        try:
+            with con_tro_cho():
+                kq = may_chu.gop_ho_tu_ban_offline(x['ban_sao'], ds_ma_ho, ep=bool(ep))
+        except may_chu.LoiXungDot as e:
+            ds = '\n'.join(f'  - Mã {m}: {ten}' for m, ten in e.ds[:SO_HO_XUNG_DOT_HIEN])
+            if ep is None and self.hoi(f'XUNG ĐỘT: {len(e.ds)} hộ đã được sửa trực tiếp trên máy chủ sau lúc bạn nhận về:\n{ds}\n\n'
+                                       'Vẫn ghi đè các hộ này bằng bản của bạn (file trên máy chủ được sao lưu vào thư mục SaoLuu)?'):
+                return self.tra_bot_ho(x, ds_ma_ho, ep=True)
+            self.bao(str(e))
+            return None
+        except LoiMayChu as e:
+            self.bao(str(e))
+            return None
+        except OSError as e:
+            self.bao(chu_loi('Không trả được hộ', e))
+            return None
+        con_lai = may_chu.ho_nhan_viec(x['ban_sao'])
+        cs = self.parent()
+        if cs is not None and getattr(cs, 'file', None) is not None and getattr(cs, 'con', None) is not None:
+            try:
+                dang_mo = Path(cs.file).resolve() == Path(x['ban_sao']).resolve()
+            except OSError:
+                dang_mo = False
+            if dang_mo:                                  # cửa sổ chính đang mở bản này: hộ vừa trả không được sửa tiếp
+                cs.nhan_viec = con_lai if con_lai is not None else frozenset()
+                cs.con._ho_nhan_viec = cs.nhan_viec
+                if hasattr(cs, '_cap_nhat_nhan_viec'):
+                    cs._cap_nhat_nhan_viec()
+        self.ve()
+        them = (f'Bản offline còn giữ {len(con_lai)} hộ.' if con_lai else
+                'Bản offline không còn hộ nào: đóng dự án trên máy này (bản sao không còn dùng).')
+        bo = f'\nBỏ qua {len(kq["bo_dong"])} dòng trỏ tới quyết định / đợt chưa có trên máy chủ.' if kq.get('bo_dong') else ''
+        self.bao(f'Đã gộp số liệu và trả {kq["so_ho"]} hộ về máy chủ.\n{them}{bo}', loi=False)
+        return kq
+
+    def nhat_ky(self, so_dong: int = 300, hien: bool = True):
+        """1.0.32: nhật ký hoạt động của máy chủ (đăng nhập, mang về, nhận / trả hộ, đưa lên…), mới nhất trước. Trả hộp kết quả."""
+        p = may_chu.PHIEN
+        if p is None or not ket_noi_duoc(self, p.goc):
+            self.bao('Chưa đăng nhập / không kết nối được máy chủ.', loi=False)
+            return None
+        try:
+            ds = may_chu.nhat_ky_may_chu(p.goc, so_dong)
+        except Exception as e:                                   # noqa: BLE001 - CSDL máy chủ khóa / hỏng
+            self.bao(chu_loi('Không đọc được nhật ký máy chủ', e))
+            return None
+        from .giao_dien import hop_ket_qua
+        dong = ['Thời gian\tTài khoản\tMáy\tViệc\tChi tiết'] + [
+            '\t'.join((str(r.get('luc', '')).replace('T', ' '), str(r.get('tai_khoan', '')), str(r.get('may', '')),
+                       str(r.get('viec', '')), str(r.get('chi_tiet', '')))) for r in ds]
+        tom = f'Máy chủ {p.goc}: {len(ds)} thao tác gần nhất (mới nhất trước).' if ds else 'Máy chủ chưa có thao tác nào trong nhật ký.'
+        return hop_ket_qua(self, tom, dong if ds else [], 'Nhật ký (chép dán sang Excel được)', hien=hien and not self.im_lang,
+                           tieu_de='Nhật ký máy chủ')
+
     def _mo_thu_muc(self):
         from .in_an import mo_file
         if may_chu.PHIEN is not None:
@@ -604,13 +684,14 @@ class HopChonHoLayVe(_Hop):
     CCCD / tờ-thửa, lọc theo đợt / ấp, chọn nhanh theo khoảng STT. Hộ người khác đang nhận: hiện người / máy đang giữ, không chọn được."""
     COT = ['', 'STT', 'Họ tên', 'CCCD', 'Địa chỉ', 'Tờ / thửa', 'Đợt', 'Đang nhận']
 
-    def __init__(self, file, parent=None, ds=None):
+    def __init__(self, file, parent=None, ds=None, tra: bool = False):
         super().__init__(parent)
         from .giao_dien import loc_khi_ngung_go
         from .lap_pa import bo_dau
         self.file = Path(file)
+        self.tra = tra                           # 1.0.32: chọn hộ để TRẢ BỚT (gộp lên + bỏ nhận) từ bản offline theo hộ
         self._bo_dau = bo_dau
-        self.setWindowTitle(f'Nhận theo hộ (Chia việc) - {self.file.name}')
+        self.setWindowTitle(f'{"Trả bớt hộ đã nhận" if tra else "Nhận theo hộ (Chia việc)"} - {self.file.name}')
         self.resize(1100, 640)
         self.ds = ds if ds is not None else may_chu.ds_ho_de_chon(self.file)
         for x in self.ds:
@@ -659,7 +740,9 @@ class HopChonHoLayVe(_Hop):
         h_nut.addWidget(self.lb, 1)
         h_nut.addWidget(self.b_ok)
         h_nut.addWidget(b_huy)
-        nhac = QLabel('Chỉ các hộ được chọn bị khóa trên máy chủ: người khác vẫn nhận được các hộ còn lại. Khi làm xong bấm "Đưa lên '
+        nhac = QLabel('Các hộ được chọn: số liệu trên bản offline được gộp lên máy chủ rồi trả lại (người khác nhận làm được); bản '
+                      'offline chỉ còn giữ các hộ không chọn.' if tra else
+                      'Chỉ các hộ được chọn bị khóa trên máy chủ: người khác vẫn nhận được các hộ còn lại. Khi làm xong bấm "Đưa lên '
                       'máy chủ" để gộp đúng các hộ này lên.')
         nhac.setWordWrap(True)
         lo = QVBoxLayout(self)
@@ -744,9 +827,13 @@ class HopChonHoLayVe(_Hop):
     def _dem(self):
         n = len(self.ds_chon())
         khoa = sum(1 for r in range(len(self.ds)) if self.la_khoa(r))
-        self.lb.setText(f'Đã chọn {n} hộ · {khoa} hộ đang được người khác nhận (khóa)')
+        if self.tra:
+            self.lb.setText(f'Đã chọn {n} / {len(self.ds)} hộ')
+            self.b_ok.setText(f'Gộp lên và trả {n} hộ' if n else 'Gộp lên và trả hộ')
+        else:
+            self.lb.setText(f'Đã chọn {n} hộ · {khoa} hộ đang được người khác nhận (khóa)')
+            self.b_ok.setText(f'Nhận {n} hộ về làm offline' if n else 'Nhận về làm offline')
         self.b_ok.setEnabled(n > 0)
-        self.b_ok.setText(f'Nhận {n} hộ về làm offline' if n else 'Nhận về làm offline')
 
     def accept(self):
         if not self.ds_chon():

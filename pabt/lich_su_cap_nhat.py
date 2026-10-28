@@ -7,6 +7,28 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.32', '28/10/2026', (
+        'Công cụ > Tạo gói cấu hình cho nhiều đơn vị: điền file Excel mẫu (mỗi dòng một chi nhánh / đơn vị: tên cơ quan, đơn vị lập, '
+        'địa danh, người ký…), phần mềm tạo mỗi đơn vị một gói .pabtcfg - máy của đơn vị bấm đúp gói là có đủ thông tin cơ quan. Cấu hình '
+        'của máy tạo gói không đổi.',
+        'Bản đồ: Dữ liệu > Nhập bản đồ nhận thêm file Google Earth .kml / .kmz (bản đồ địa chính xuất ra KMZ: đọc số tờ, số thửa, loại '
+        'đất; chữ lỗi phông TCVN3 tự sửa), quy đổi tọa độ GPS sang VN-2000 (kinh tuyến trục theo hồ sơ địa phương); bản đồ thửa hiện tọa '
+        'độ VN-2000 / GPS khi rê chuột, nút "Xuất KML / KMZ…" để mở trên điện thoại / Google Earth.',
+        'Ứng dụng điện thoại LARC Mobile: Phiếu kiểm đếm thực địa > "Xuất dữ liệu cho ứng dụng điện thoại…"; nhập kết quả .json khớp hộ '
+        'theo CCCD, rồi tờ / thửa (hoặc lô rừng), rồi họ tên; hộ ghi mới ngoài hiện trường thêm được; ảnh hiện trạng lưu vào thư mục '
+        'Anh_kiem_dem cạnh file dự án, tọa độ GPS ghi vào ghi chú hộ.',
+        'Dán danh sách tài sản hiểu biên bản kiểm đếm viết tự nhiên: kích thước "4,7 x 3,0 m" = diện tích, nhiều cụm "(a x b) + (c x d)", '
+        'dòng gộp nhiều cỡ ống ("ϕ 114: 3300m; ϕ 90: …"), "trồng năm 2015" -> tuổi cây, "ĐK gốc 10-15 cm", giếng "sâu 20 m"; ống / giếng '
+        'khớp mục đơn giá theo vật liệu và cỡ.',
+        'Gắn ảnh hiện trạng, hồ sơ đính kèm, nhập phiếu .json: kiểm tra loại file thật theo nội dung (chặn chương trình đổi đuôi thành ảnh).',
+        'Máy chủ LAN: nút "Trả bớt hộ đã nhận…" (bản offline theo hộ: gộp số liệu một số hộ lên máy chủ rồi trả để người khác làm tiếp) '
+        'và "Nhật ký máy chủ…" (ai làm gì, lúc nào trên máy chủ; chép dán sang Excel được).',
+        'Tra bảng giá đất: tỉnh dùng vị trí VT1-VT4 hoặc Khu vực - Vị trí thì cột Vị trí ghi tên vị trí đầy đủ.',
+        'Phóng to chữ (A+): chữ trên các thẻ của màn hình chào cũng to theo. Lệnh menu trái đang tắt dễ đọc hơn. Ctrl+Tab báo tên màn '
+        'hình vừa chuyển tới.',
+        'Mở phần mềm bằng "PABT.exe --khung-windows" (dùng khung cửa sổ Windows) chạy đúng - trước đây chỉ in hướng dẫn dòng lệnh. '
+        'Văn bản Word xuất ra bỏ ký tự điều khiển lẫn trong chữ (Word báo file hỏng).',
+    )),
     ('1.0.31', '26/10/2026', (
         'Bộ đơn giá cây trồng: các loài cây lâm nghiệp ghi thêm tên Việt Nam khác theo Phụ lục VI QĐ 48/2025/QĐ-UBND (ví dụ "Bách xanh '
         '(Tùng hương) (d >6-9 cm)") - tìm cây theo tên gọi nào cũng ra. Dự án đang có và bộ đơn giá đã cập nhật trên máy tự thêm khi mở; '

@@ -905,7 +905,8 @@ class CuaSoChinh(QMainWindow):
         khoi_bang.addWidget(self.bang, 1)
         khoi_bang.addWidget(self._dai_cong())
         lo_ds.addLayout(khoi_bang, 1)
-        self.lb_trang = QLabel('')
+        # tiêu đề trang: luôn ẩn (16/10/2026), chỉ giữ chữ tên trang hiện tại - con của cửa sổ, KHÔNG xếp vào bố cục (1.0.32)
+        self.lb_trang = QLabel('', self)
         self.lb_trang.setProperty('vai', 'tieu_de')
         self.lb_trang.setVisible(False)
         from .giao_dien import KhungLamViecDaTab
@@ -932,7 +933,6 @@ class CuaSoChinh(QMainWindow):
         self.ngan_lv.currentChanged.connect(lambda *_: self._cap_nhat_hien_hang_the())
         self.ngan_lv.addWidget(self.trang)
         self.ngan_lv.addWidget(self.khung_tab.stack_phu)
-        phai.addWidget(self.lb_trang)
         phai.addWidget(self.ngan_lv, 1)
         self.bang.selectionModel().selectionChanged.connect(lambda *_: self._cap_nhat_chon())
         self.setCentralWidget(nen)
@@ -2841,6 +2841,11 @@ class CuaSoChinh(QMainWindow):
     def _tab_ke(self, buoc: int):
         if hasattr(self, 'khung_tab'):
             self.khung_tab.ke(buoc)
+            n, i = self.thanh_tab.count(), self.thanh_tab.currentIndex()
+            ten = self.thanh_tab.tabText(i).replace('&&', '&').strip() if 0 <= i < n else ''
+            if n > 1 and ten:                       # thanh tab ẩn (15/10/2026): báo nổi màn hình vừa chuyển tới
+                from .giao_dien import thong_bao_noi
+                thong_bao_noi(self, f'{ten}  ·  màn hình {i + 1}/{n} (Ctrl+Tab / Ctrl+Shift+Tab để chuyển)')
 
     def _nhung_hop(self, hop):
         """Đưa hộp thoại thành trang tab: giữ nguyên widget / dữ liệu đang nhập, không exec().

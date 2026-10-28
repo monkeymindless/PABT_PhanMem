@@ -22,6 +22,7 @@ from datetime import date
 from pathlib import Path
 
 from . import du_lieu_in
+from . import openxml_word as ox
 from .lap_pa import LoiNhap
 
 THU_MUC_CT, THU_MUC_TONG = 'PA CHI TIET', 'PA TONG'
@@ -299,9 +300,9 @@ def _gom_cho_trong(xml: str) -> str:
     return _RE_P.sub(lambda m: _gom_doan(m.group(0)), xml)
 
 
-def _xml(s: str) -> str:
-    s = str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    return s.replace('\r\n', '\n').replace('\n', '</w:t><w:br/><w:t xml:space="preserve">')   # xuống dòng trong ô chữ Word
+# thoát ký tự XML trong một w:t (xuống dòng -> w:br): MỘT nguồn ở openxml_word (1.0.32). Bản này bỏ thêm ký tự điều khiển (XML không
+# cho phép - Word báo file hỏng); chữ thường giống hệt bản cũ
+_xml = ox.thoat
 
 
 def _thay(xml: str, gia_tri: dict) -> str:

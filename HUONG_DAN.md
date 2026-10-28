@@ -926,6 +926,11 @@ mạng lại: đăng nhập → Dự án trên máy chủ… → **Đưa lên m�
 Nếu trong lúc đó bản trên máy chủ đã bị người khác sửa, phần mềm báo **XUNG ĐỘT** và hỏi có vẫn đưa lên không (bản kia vẫn còn
 trong `SaoLuu\`). **Hủy bản offline** để bỏ bản mang về mà không đưa lên.
 
+**Chia việc theo hộ:** **Nhận theo hộ (Chia việc)** chỉ khóa các hộ được chọn trên máy chủ. Làm xong một phần: chọn bản offline →
+**Trả bớt hộ đã nhận…** → đánh dấu các hộ đã làm xong → số liệu các hộ đó được gộp lên máy chủ rồi trả lại (người khác nhận làm được),
+bản offline chỉ còn giữ các hộ chưa trả. **Nhật ký máy chủ…** (phần trên của hộp) liệt kê ai làm gì, lúc nào trên máy chủ (đăng nhập,
+mang về, nhận / trả hộ, đưa lên) - chép dán sang Excel được.
+
 Lưu ý: quyền truy cập file thật sự do quyền chia sẻ thư mục của Windows quyết định; tài khoản PABT để biết ai làm gì và nối tiếp công
 việc ở máy bất kỳ. Nên sao lưu định kỳ thư mục máy chủ.
 

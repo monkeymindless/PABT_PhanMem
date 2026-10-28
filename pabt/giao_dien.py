@@ -329,7 +329,7 @@ def _qss_menu_trai() -> str:
     QToolButton[menu="1"], QToolButton[menu="1"]:focus {{ outline: none; }}
     QToolButton[menu="1"]:hover {{ background: #EEF2F7; border-color: #E2E8F0; }}
     QToolButton[menu="1"]:pressed {{ background: #E2E8F0; }}
-    QToolButton[menu="1"]:disabled {{ color: #A8B3BF; background: transparent; border-color: transparent; }}
+    QToolButton[menu="1"]:disabled {{ color: #758499; background: transparent; border-color: transparent; }}
     QToolButton[menu="1"]:checked {{ background: #EFF6FF; color: {c}; font-weight: 600; border: 0; border-left: 3px solid {c};
         border-radius: 0 6px 6px 0; padding-left: 10px; }}
     QLabel[vai="nhom_menu"] {{ color: #64748B; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; background: transparent;
@@ -3139,16 +3139,18 @@ _CO_CHU_GOC = 9.5
 
 
 def _co_gian(qss: str, t: float) -> str:
-    """Nhân các kích thước 'px' trong QSS (cỡ chữ, khoảng đệm, bo góc) theo tỷ lệ."""
+    """Nhân các kích thước 'px' và 'pt' trong QSS (cỡ chữ, khoảng đệm, bo góc) theo tỷ lệ. 1.0.32: cả 'pt' - trước đây chữ viết
+    bằng pt (thẻ màn hình chào 14,5 / 10,5 pt) không to lên khi bấm A+ trong khi chữ px và phông ứng dụng đều to lên."""
     if t == 1:
         return qss
-    return re.sub(r'(\d+(?:\.\d+)?)px', lambda m: f'{max(1, round(float(m.group(1)) * t))}px', qss)
+    s = re.sub(r'(\d+(?:\.\d+)?)px', lambda m: f'{max(1, round(float(m.group(1)) * t))}px', qss)
+    return re.sub(r'(?<![\w.])(\d+(?:\.\d+)?)pt\b', lambda m: f'{round(float(m.group(1)) * t, 1):g}pt', s)
 
 
 def _co_gian_widget(w, t: float) -> None:
     """Kiểu riêng của từng widget (setStyleSheet có 'px'): co giãn theo tỷ lệ, giữ bản gốc để đổi tỷ lệ nhiều lần."""
     s = w.styleSheet()
-    if not s or 'px' not in s:
+    if not s or ('px' not in s and 'pt' not in s):
         return
     goc = w.property('qss_goc')
     if goc is None or w.property('qss_da') != s:          # chưa co giãn, hoặc mã vừa đặt kiểu mới
@@ -3167,7 +3169,7 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
     """Đổi tỷ lệ giao diện (cỡ chữ, khoảng đệm) cho mọi cửa sổ; luu: nhớ cho lần mở sau.
     Việc tốn nhất là Qt áp lại kiểu (QSS) cho mọi widget: tắt vẽ lại các cửa sổ trong lúc đổi (không chớp, không vẽ dở),
     bảng chỉ giãn lại dòng cho bảng đang hiện, làm sau khi đã vẽ xong (_gian_bang)."""
-    from PySide6.QtCore import QSettings, QTimer
+    from PySide6.QtCore import QTimer
     from PySide6.QtGui import QFont
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance()
@@ -3207,8 +3209,9 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
         _gian_bang()
     else:
         QTimer.singleShot(0, _gian_bang)
-    if luu:
-        QSettings('PABT', 'PABT').setValue('giao_dien/ty_le', t)
+    cd = cai_dat_nho() if luu else None                  # chạy không màn hình (kiểm thử): không ghi tỷ lệ của máy thật
+    if cd is not None:
+        cd.setValue('giao_dien/ty_le', t)
     _bao_ty_le(t)
     return t
 
@@ -4327,9 +4330,11 @@ def ap_dung(app) -> None:
         app.installTranslator(tr)
     app._bo_to_mau = _BoToMau(app)
     app.installEventFilter(app._bo_to_mau)
-    from PySide6.QtCore import QSettings
+    # tỷ lệ cỡ chữ người dùng đã chọn (A+ / A−). Chạy không màn hình (kiểm thử, 1.0.32): KHÔNG đọc của máy thật - trước đây lượt
+    # kiểm thử chạy ở 110% khi máy phát triển đặt 110%, kết quả bài kiểm kiểu chữ phụ thuộc máy / thứ tự bài
+    cd = cai_dat_nho()
     try:
-        t = float(QSettings('PABT', 'PABT').value('giao_dien/ty_le', 1.0) or 1.0)
+        t = float(cd.value('giao_dien/ty_le', 1.0) or 1.0) if cd is not None else 1.0
     except (TypeError, ValueError):
         t = 1.0
     if abs(t - 1) > 0.001:

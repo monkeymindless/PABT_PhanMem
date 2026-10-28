@@ -2530,6 +2530,19 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   dừng dòng khác; tên trùng _2, _3; KHÔNG ghi file máy), `tom_tat`. `goi_mau.tao_goi(ho_so=)` đóng hồ sơ truyền vào thay hồ sơ máy. Màn
   hình `man_hinh_goi_don_vi.HopGoiDonVi` (lệnh 'Tạo gói cấu hình cho nhiều đơn vị…' CHỈ menu Công cụ); CLI `chay.py mau-goi-don-vi` /
   `tao-goi-don-vi <ds> [<ra>] [--nen …] [--kem-mau]` (cờ không giá trị tách trước `_tach`).
+- 1.0.32 (người dùng 28/10/2026, "Giai đoạn A" A1-A8 - bản đặc tả viết theo mã KHÔNG khớp kho: tên hàm / file / dòng sai; làm theo
+  ý từng mục trên mã thật; test `tests/test_yeu_cau_1032.py`): `chay.main` nhận `--khung-windows` (trước in hướng dẫn rồi thoát);
+  menu trái tắt `#758499` (3,64:1 trên `#F8FAFC`); `giao_dien._co_gian` nhân cả `pt` (regex `(?<![\w.])…pt\b`) - ở 100% chuỗi giữ
+  nguyên; `ap_dung` / `dat_ty_le(luu=True)` đọc / ghi tỷ lệ cỡ chữ qua `cai_dat_nho()` - offscreen KHÔNG đọc / ghi QSettings của máy
+  thật (trước: máy phát triển đặt 110% -> lượt kiểm thử chạy 110%, bài kiểm chữ "10.5pt" lỗi tùy thứ tự bài); `lb_trang` con của cửa sổ,
+  không trong bố cục; `_tab_ke` báo `thong_bao_noi` (không dùng `lb_tom_tat` - dòng tóm tắt bị ghi đè khi đổi chọn); `in_word.twip` =
+  `openxml_word.twip`, `van_ban_trinh._xml` = `openxml_word.thoat` (bỏ ký tự điều khiển); `HopTraGiaDat.ve` mô hình vị trí khác Đồng Nai
+  -> `ten_vi_tri`, tô đậm `ds_ma_vi_tri()[0]`. Máy chủ LAN `HopDuAnMayChu`: "Trả bớt hộ đã nhận…" = `tra_bot_ho` ->
+  `may_chu.gop_ho_tu_ban_offline(ban_sao, một phần hộ)` (GỘP rồi trả - KHÔNG dùng `huy_lay_ve_ho` một mình: chỉ bỏ khóa, số liệu
+  offline của hộ đó mất không báo); chỉ hộ của bản đó; bản đang mở ở cửa sổ chính -> cập nhật `nhan_viec` / `con._ho_nhan_viec`
+  (trả hết -> frozenset() khóa mọi hộ); `HopChonHoLayVe(tra=True)`, `may_chu.ds_ho_de_chon(file, goc=False)` (không hỏi máy chủ);
+  "Nhật ký máy chủ…" = `nhat_ky` (hop_ket_qua, mọi tài khoản đã đăng nhập). A7 (tách `HopTraNQ28` / `HopLanPA` khỏi man_hinh.py) KHÔNG
+  làm: `HopTraNQ28` ở man_hinh_du_toan.py, `HopLanPA` 25 dòng giữa file. `tao_ban_do_ma.py` không có `--kiem-tra` (chạy thường đã kiểm).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

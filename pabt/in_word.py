@@ -24,6 +24,7 @@ from pathlib import Path
 
 from . import du_lieu_in
 from . import dia_phuong
+from . import openxml_word as ox
 from .van_ban_trinh import _goi_docx, _xml
 
 # thông số mẫu (lề, cỡ chữ, trích yếu, thụt, độ hở gạch chân, đường kẻ dưới dự án): giá trị đặt ở _ap_mau() từ hồ sơ địa phương
@@ -65,8 +66,7 @@ TIEU_DE_COT = ('STT', 'Tên tài sản', 'ĐVT', 'Số lượng', 'Đơn giá', 
 TIEU_DE_COT_BS = ('STT', 'Tên tài sản', 'ĐVT', 'Số lượng', 'Đơn giá bổ sung', 'Tỷ lệ (%)', 'Thành tiền (đồng)', 'Ghi chú')   # bổ sung / điều chỉnh
 
 
-def twip(mm: float) -> int:
-    return int(round(mm / 25.4 * 1440))
+twip = ox.twip                                          # mm -> twip: một nguồn ở openxml_word (1.0.32)
 
 
 def _ap_mau(hs: dict) -> None:
