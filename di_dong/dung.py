@@ -29,9 +29,23 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-PHIEN_BAN = '1.4.4'                 # phiên bản RIÊNG của ứng dụng điện thoại (tăng mỗi lần phát hành .apk / PWA)
 DAY = Path(__file__).resolve().parent
 REPO = DAY.parent
+
+
+def _phien_ban_may_tinh() -> str:
+    """Số phiên bản LARC máy tính (__version__ trong pabt/__init__.py, đọc như chữ - dự án này không nhập mã pabt)."""
+    import re
+    m = re.search(r"__version__\s*=\s*'([0-9.]+)'", (REPO / 'pabt' / '__init__.py').read_text(encoding='utf-8'))
+    if not m:
+        raise SystemExit('Không đọc được __version__ trong pabt/__init__.py.')
+    return m.group(1)
+
+
+# 28/10/2026 (người dùng): ĐỒNG BỘ phiên bản với LARC máy tính - máy tính tăng bản nào, ứng dụng điện thoại lấy đúng số đó (trước:
+# số riêng 1.1.0 - 1.4.4). Tăng __version__ của máy tính là tăng luôn bản này (bộ nhớ đệm PWA sw.js đặt tên theo phiên bản).
+PHIEN_BAN = _phien_ban_may_tinh()
+DONG_BO_TU = 10000                  # versionCode Android từ lúc đồng bộ: cộng thêm để luôn lớn hơn 10404 của bản 1.4.4 đã phát hành
 MAU = DAY / 'ung_dung' / 'index.html'
 BIEU_TUONG = DAY / 'bieu_tuong.png'
 DANH_MUC_MAC_DINH = DAY / 'danh_muc_mac_dinh.json'
@@ -192,9 +206,10 @@ def tep_ung_dung(che_do: str, ver: str = PHIEN_BAN) -> dict:
 
 # ---------------------------------------------------------------- dựng
 def ma_phien_ban(ver: str) -> int:
-    """'1.1.0' -> 10100 (versionCode Android tăng dần: 1.9.99 -> 10999, 2.0.0 -> 20000)."""
+    """versionCode Android (luôn tăng): '1.0.32' -> 20032, '1.9.99' -> 20999, '2.0.0' -> 30000. Bản đánh số riêng trước khi đồng bộ
+    (1.0.31 -> 10031, 1.1.0 -> 10100 … 1.4.4 -> 10404) không cộng DONG_BO_TU - Android không cài đè bản có mã nhỏ hơn."""
     so = [int(x) for x in ver.split('.')[:3]] + [0, 0, 0]
-    return so[0] * 10000 + so[1] * 100 + so[2]
+    return DONG_BO_TU + so[0] * 10000 + so[1] * 100 + so[2]
 
 
 def _chay(lenh, **kw) -> None:

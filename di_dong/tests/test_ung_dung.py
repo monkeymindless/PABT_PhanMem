@@ -184,9 +184,15 @@ class TestTrangWeb(unittest.TestCase):
 
 class TestAndroid(unittest.TestCase):
     def test_ma_phien_ban(self):
-        self.assertEqual(dung.ma_phien_ban('1.0.31'), 10031)
-        self.assertGreater(dung.ma_phien_ban(dung.PHIEN_BAN), 10031)     # lớn hơn bản .apk đầu tiên (dựng theo số 1.0.31)
+        self.assertEqual(dung.ma_phien_ban('1.0.32'), 20032)
+        self.assertGreater(dung.ma_phien_ban(dung.PHIEN_BAN), 10404)     # lớn hơn 1.4.4 - bản đánh số riêng cuối cùng đã phát hành
+        self.assertLess(dung.ma_phien_ban('1.0.99'), dung.ma_phien_ban('1.1.00'))
         self.assertLess(dung.ma_phien_ban('1.9.99'), dung.ma_phien_ban('2.0.0'))
+
+    def test_dong_bo_phien_ban_may_tinh(self):
+        import re
+        goc = (Path(__file__).resolve().parents[2] / 'pabt' / '__init__.py').read_text(encoding='utf-8')
+        self.assertEqual(dung.PHIEN_BAN, re.search(r"__version__\s*=\s*'([0-9.]+)'", goc).group(1))
 
     def test_nguon_khop(self):
         mf = (dung.NGUON_ANDROID / 'AndroidManifest.xml').read_text(encoding='utf-8')
