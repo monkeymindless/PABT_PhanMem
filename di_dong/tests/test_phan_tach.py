@@ -655,6 +655,58 @@ class TestPhanTach(unittest.TestCase):
             self.js('clearInterval(window.__ve); navigator.mediaDevices.getUserMedia = window.__goc; delete window.LARCAndroid;'
                     'document.getElementById("hang_chup_tiep").hidden = true; 1')
 
+    # ---------------------------------------------------------------- 1.0.32 (B1, B4 - B7)
+    def test_cong_quy_doi_m2(self):
+        c = lambda s: self.js('window.LARC.chuanHoaTiengNoi(%s)' % json.dumps(s))   # noqa: E731
+        self.assertEqual(c('tờ 5 thửa 9 LUC 1,5 công'), 'tờ 5 thửa 9 LUC 1.500 m2 (1,5 công)')
+        self.assertEqual(c('nửa công đất'), '500 m2 (nửa công)')
+        for giu in ('2 công trình phụ', 'giếng công nghiệp sâu 20m', 'ruộng 3 sào', 'Cộng hòa'):     # "công" của chữ khác; sào tùy vùng: không đổi
+            self.assertEqual(c(giu), giu)
+        for cau, dt in (('tờ 5 thửa 9 LUC 1,5 công', '1500'), ('tờ 12 thửa 45 CLN nửa công', '500')):
+            dat = [x['du'] for x in self.tach(cau) if x['cat'] == 'dat']
+            self.assertEqual(dat[0]['dt_thu_hoi'], dt, cau)
+
+    def test_ghi_chu_nhanh_va_ghi_am_trong_json(self):
+        (k,) = self._ho_thu('Hộ ghi chú nhanh')
+        self.js('window.LARC.chonHo(%s); 1' % json.dumps(k))
+        nut = '[...document.querySelectorAll("#gc_nhanh button")]'
+        self.assertEqual(self.js(nut + '.length'), 5)
+        self.js(nut + '[0].click(); ' + nut + '[0].click(); ' + nut + '[3].click(); 1')      # bấm lại câu đã có: không lặp
+        self.assertEqual(self.js('document.getElementById("h_ghi_chu").value'), 'Không tranh chấp, ranh rõ; Đang canh tác ổn định')
+        self.assertEqual(self.js('window.LARC.ST.ho[%s].tt.ghi_chu' % json.dumps(k)), 'Không tranh chấp, ranh rõ; Đang canh tác ổn định')
+        self.page.runJavaScript('window.__am = 0; window.LARC.IDB.them({khoa: "am|" + %s, ten: "ghi_am_1.webm", du_lieu: "data:audio/webm;base64,AA==",'
+                                ' luc: ""}).then(() => { window.__am = 1; })' % json.dumps(k), 0, lambda r: None)
+        self._doi(lambda: self.js('window.__am') == 1)
+        self.page.runJavaScript('window.__kq = ""; window.LARC.taoKetQua([%s], false).then(r => { window.__kq = JSON.stringify(r); })' % json.dumps(k),
+                                0, lambda r: None)
+        self._doi(lambda: self.js('window.__kq'))
+        hd = json.loads(self.js('window.__kq'))['ho_dan'][k]
+        self.assertEqual(hd['so_ghi_am'], 1)
+        self.assertEqual(hd['ghi_chu'], 'Không tranh chấp, ranh rõ; Đang canh tác ổn định; [Có 1 tệp ghi âm thực địa trên điện thoại]')
+        self.assertNotIn('ghi âm', self.js('window.LARC.ST.ho[%s].tt.ghi_chu' % json.dumps(k)))   # chỉ trong file xuất, ô ghi chú giữ nguyên
+
+    def test_tuong_phan_cao_ngoai_troi(self):
+        b = 'document.getElementById("b_tuong_phan")'
+        try:
+            self.js(b + '.click(); 1')
+            self.assertTrue(self.js('document.body.classList.contains("tuong_phan_cao")'))
+            self.assertEqual(self.js('localStorage.getItem("larc_field_tuong_phan")'), '1')
+            self.assertIn('Dịu', self.js(b + '.textContent'))
+            self.assertEqual(self.js('getComputedStyle(document.body).backgroundColor'), 'rgb(255, 255, 255)')
+            # nút chính: nền xanh rất đậm, chữ trắng (không phải chữ đen trên nền xanh)
+            self.assertEqual(self.js('getComputedStyle(document.getElementById("b_ai_tach")).color'), 'rgb(255, 255, 255)')
+        finally:
+            self.js('if (document.body.classList.contains("tuong_phan_cao")) ' + b + '.click(); 1')
+        self.assertFalse(self.js('document.body.classList.contains("tuong_phan_cao")'))
+        self.assertEqual(self.js('localStorage.getItem("larc_field_tuong_phan")'), '0')
+
+    def test_vung_cham_44(self):
+        cao = lambda sel: self.js('parseFloat(getComputedStyle(document.querySelector(%s)).minHeight)' % json.dumps(sel))   # noqa: E731
+        self.assertGreaterEqual(cao('#h_ghi_chu'), 44)
+        self.assertGreaterEqual(cao('#gc_nhanh .chip'), 42)
+        self.assertEqual(self.js('getComputedStyle(document.getElementById("b_xoay"), "::after").content'), '""')   # vùng chạm mở rộng
+        self.assertLessEqual(self.js('document.querySelector("header").offsetHeight'), 53)                         # thanh tiêu đề không cao thêm
+
     def test_khong_loi_js(self):
         self.assertFalse([m for m in self.loi if 'Uncaught' in m], self.loi)
 

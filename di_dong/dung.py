@@ -180,10 +180,13 @@ def manifest_pwa(ver: str = PHIEN_BAN) -> dict:
                        for t, c, _, nen in BIEU_TUONG_PWA if c >= 192])
 
 
-def sw_pwa(ds_file, ver: str = PHIEN_BAN) -> str:
-    """Service worker: lưu mọi file của ứng dụng vào bộ nhớ đệm khi cài (chạy không mạng); bản mới (tên bộ nhớ đệm mới) thay bản cũ."""
+def sw_pwa(ds_file, ver: str = PHIEN_BAN, dau: str = '') -> str:
+    """Service worker: lưu mọi file của ứng dụng vào bộ nhớ đệm khi cài (chạy không mạng); bản mới (tên bộ nhớ đệm mới) thay bản cũ.
+    dau: dấu nội dung (tep_ung_dung) - từ 1.0.32 số phiên bản đi theo LARC máy tính, sửa riêng ứng dụng điện thoại mà giữ số thì tên bộ
+    nhớ đệm vẫn đổi theo nội dung (không thì iPhone giữ bản cũ)."""
+    bo = f'larc-field-{ver}' + (f'-{dau}' if dau else '')
     return ('"use strict";\n'
-            f'const BO = "larc-field-{ver}", TEP = {json.dumps(["./"] + list(ds_file))};\n'
+            f'const BO = "{bo}", TEP = {json.dumps(["./"] + list(ds_file))};\n'
             'self.addEventListener("install", e => { e.waitUntil(caches.open(BO).then(c => c.addAll(TEP.map(u => new Request(u, {cache: "reload"})))).then(() => self.skipWaiting())); });\n'
             'self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ds => Promise.all(ds.filter(k => k.startsWith("larc-field-") '
             '&& k !== BO).map(k => caches.delete(k)))).then(() => self.clients.claim())); });\n'
@@ -200,7 +203,9 @@ def tep_ung_dung(che_do: str, ver: str = PHIEN_BAN) -> dict:
             tep[ten] = anh_bieu_tuong(co, le, nen)
     if che_do == 'pwa':
         tep['manifest.webmanifest'] = json.dumps(manifest_pwa(ver), ensure_ascii=False, indent=1).encode('utf-8')
-        tep['sw.js'] = sw_pwa(sorted(tep), ver).encode('utf-8')
+        import hashlib
+        dau = hashlib.sha256(tep['index.html'] + tep['manifest.webmanifest']).hexdigest()[:10]
+        tep['sw.js'] = sw_pwa(sorted(tep), ver, dau).encode('utf-8')
     return tep
 
 

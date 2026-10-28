@@ -61,8 +61,36 @@ public class MainActivity extends Activity {
     PermissionRequest ghiAmCho;      // trang xin micrô (getUserMedia - "Ghi file âm thanh") đang chờ người dùng cho phép RECORD_AUDIO
     String gpsNguon;
 
+    // 1.0.32 B3: Android tắt ứng dụng để lấy bộ nhớ trong lúc máy ảnh / hộp Lưu đang mở (máy RAM ít) -> lúc quay về Activity tạo lại,
+    // mất đường dẫn ảnh vừa chụp và cờ chụp liên tục. Giữ các biến này qua Bundle; ảnh gửi vào trang khi trang đã nạp xong (guiJsKhiSan).
+    @Override protected void onSaveInstanceState(Bundle ra) {
+        super.onSaveInstanceState(ra);
+        ra.putBoolean("larc_lienTuc", lienTuc);
+        ra.putInt("larc_soLienTuc", soLienTuc);
+        if (anhChup != null) ra.putString("larc_anhChup", anhChup.getAbsolutePath());
+        if (tepLuu != null) ra.putString("larc_tepLuu", tepLuu.getAbsolutePath());
+    }
+
+    void khoiPhucTrangThai(Bundle b) {
+        if (b == null) return;
+        lienTuc = b.getBoolean("larc_lienTuc", false);
+        soLienTuc = b.getInt("larc_soLienTuc", 0);
+        String a = b.getString("larc_anhChup"), t = b.getString("larc_tepLuu");
+        if (a != null && a.length() > 0) anhChup = new File(a);
+        if (t != null && t.length() > 0) tepLuu = new File(t);
+    }
+
+    // gọi hàm JS khi trang đã có hàm đó (sau khi tạo lại Activity, vỏ ứng dụng còn đang nạp dự án từ IndexedDB): thử lại mỗi 400 ms, tối đa ~20 s
+    void guiJsKhiSan(final String ham, final String doiSo, final int lan) {
+        web.evaluateJavascript("(typeof window." + ham + " === 'function') ? (window." + ham + "(" + doiSo + "), true) : false",
+            new ValueCallback<String>() { @Override public void onReceiveValue(String kq) {
+                if (!"true".equals(kq) && lan < 50) web.postDelayed(new Runnable() { @Override public void run() { guiJsKhiSan(ham, doiSo, lan + 1); } }, 400);
+            } });
+    }
+
     @Override protected void onCreate(Bundle trangThai) {
         super.onCreate(trangThai);
+        khoiPhucTrangThai(trangThai);
         if (Build.VERSION.SDK_INT >= 21) getWindow().setStatusBarColor(0xFF1E3F6E);
         web = new WebView(this);
         WebSettings s = web.getSettings();
@@ -300,7 +328,7 @@ public class MainActivity extends Activity {
             final String url = docAnhThuNho(f);
             runOnUiThread(new Runnable() { @Override public void run() {
                 if (url == null) { bao("Không đọc được ảnh vừa chụp."); return; }
-                web.evaluateJavascript("window.LARC_nhanAnhAndroid && window.LARC_nhanAnhAndroid('" + url + "', '" + f.getName() + "')", null);
+                guiJsKhiSan("LARC_nhanAnhAndroid", "'" + url + "', " + JSONObject.quote(f.getName()), 0);
             } });
         } }).start();
     }
@@ -351,7 +379,7 @@ public class MainActivity extends Activity {
             }
             if (lienTuc) {
                 lienTuc = false;
-                web.evaluateJavascript("window.LARC_chupLienTucXong && window.LARC_chupLienTucXong(" + soLienTuc + ")", null);
+                guiJsKhiSan("LARC_chupLienTucXong", String.valueOf(soLienTuc), 0);
             }
             return;
         }

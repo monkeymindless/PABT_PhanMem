@@ -191,11 +191,30 @@ overflow:auto;-webkit-overflow-scrolling:touch;background:#fff;border:1px solid 
 body.toan_bd .ngan_bd_dau{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--chinh)}body.toan_bd .ngan_bd_dau .ghi{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.toan_bd .ngan_bd .khung{border:0;padding:6px 0 0;margin:6px 0 0;border-top:1px solid var(--vach);border-radius:0}
 body.toan_bd #tt_thua{position:absolute;left:6px;right:56px;bottom:6px;max-height:45%;overflow:auto;margin:0;z-index:20;box-shadow:0 6px 20px rgba(15,23,42,.3)}
+/* 1.0.32 B1: vùng chạm tối thiểu ~44 px (Apple HIG 44 pt, Material 48 dp): nút nhỏ trong dòng, ô nhập, chip 42 px. Nút thanh tiêu đề
+   mở rộng VÙNG CHẠM bằng ::after - không đổi chiều cao thanh (thanh mục con dính top:53px) */
+button.nho{min-height:44px}.chip{min-height:42px}.lop_bd label{min-height:40px}
+input:not([type]),input[type=text],input[type=number],input[type=search],input[type=tel],select{min-height:44px}
+header .doi{position:relative}header .doi::after{content:"";position:absolute;left:-3px;right:-3px;top:-7px;bottom:-7px}
+/* 1.0.32 B4: chế độ ngoài trời nắng (nút ☀️ trên thanh tiêu đề, nhớ ở larc_field_tuong_phan): nền trắng, chữ đen, viền đen đậm;
+   nút chính nền xanh rất đậm chữ trắng (không đặt chữ đen lên nền xanh) */
+body.tuong_phan_cao{--chinh:#002F6C;--chinh_re:#00214D;--chinh_nhat:#DCE7F5;--chu:#000;--chu_phu:#000;--vach:#000;--nen:#fff;background:#fff;color:#000}
+body.tuong_phan_cao #app{background:#fff}body.tuong_phan_cao .khung{border:2px solid #000}
+body.tuong_phan_cao input,body.tuong_phan_cao select,body.tuong_phan_cao textarea{border:2px solid #000;color:#000;font-weight:600}
+body.tuong_phan_cao label,body.tuong_phan_cao .ghi,body.tuong_phan_cao td,body.tuong_phan_cao th{color:#000;font-weight:600}
+body.tuong_phan_cao button{font-weight:700}
+body.tuong_phan_cao button.phu,body.tuong_phan_cao .chip,body.tuong_phan_cao .phim_tat_ct button,body.tuong_phan_cao .phan_doan button,
+body.tuong_phan_cao .bottom_nav button{background:#fff;color:#000;border:2px solid #000}
+body.tuong_phan_cao button.chon,body.tuong_phan_cao .chip.chon,body.tuong_phan_cao .phan_doan button.chon{background:#000;color:#fff;border-color:#000}
+body.tuong_phan_cao .bottom_nav button.chon{background:#000;color:#fff}
+body.tuong_phan_cao button.xoa{background:#fff;color:#8B0000;border:2px solid #8B0000}
+body.tuong_phan_cao header .doi.bat{background:#FACC15;color:#000;border-color:#FACC15}
 </style></head><body>
 <div id="app">
 <header><img alt="LARC" src="icon-180.png"/><div class="chu"><div class="ten">LARC Mobile</div>
 <div class="phu" title="Phương án bồi thường, hỗ trợ, tái định cư · kiểm đếm thực địa, không cần mạng">Kiểm đếm thực địa</div></div>
-<span class="huy">v@@PHIEN_BAN@@</span><button class="doi" id="b_xoay" type="button">🔄 Xoay ngang</button>
+<span class="huy">v@@PHIEN_BAN@@</span><button class="doi" id="b_xoay" type="button">🔄 Xoay ngang</button><button class="doi" id="b_tuong_phan" type="button"
+ title="Chế độ ngoài trời nắng: chữ đen, viền đậm (tương phản cao)">☀️<span class="chu_nut"> Nắng</span></button>
 <button class="doi" id="b_doi_du_an" type="button" style="display:none">Dự án</button></header>
 <div class="ho_bar" id="ho_bar"><button class="phu" id="b_truoc" type="button" title="Hộ trước">◀</button>
 <select id="cb_ho" aria-label="Chọn hộ"></select><button class="phu" id="b_sau" type="button" title="Hộ sau">▶</button>
@@ -240,7 +259,7 @@ body.toan_bd #tt_thua{position:absolute;left:6px;right:56px;bottom:6px;max-heigh
 <div><label for="h_nam_sinh">Năm sinh</label><input id="h_nam_sinh" inputmode="numeric"/></div>
 <div><label for="h_sdt">Điện thoại</label><input id="h_sdt" inputmode="tel"/></div>
 <div><label for="h_nam_tao_lap">Năm tạo lập tài sản</label><input id="h_nam_tao_lap" inputmode="numeric"/></div></div>
-<label for="h_dia_chi">Địa chỉ</label><input id="h_dia_chi"/><label for="h_ghi_chu">Ghi chú</label><input id="h_ghi_chu"/>
+<label for="h_dia_chi">Địa chỉ</label><input id="h_dia_chi"/><label for="h_ghi_chu">Ghi chú</label><input id="h_ghi_chu"/><div class="chip_nhom" id="gc_nhanh" style="margin-top:6px"></div>
 <div class="hang_nut"><button class="phu" id="b_gps_ho" type="button">📍 Lấy tọa độ tại chỗ (GPS)</button></div><div class="ghi so" id="gps_ho"></div></div>
 <div class="khung"><h3>Thửa của hộ trong dự án</h3><div id="thua_du_an" class="ghi"></div></div>
 <div class="khung"><h3>Đất kiểm đếm thực tế</h3><div class="chip_nhom" id="kieu_dat"></div>
@@ -1076,6 +1095,9 @@ window.LARC_giongNoiLoi = ly => { const mo = !$("hop_thu_am").hidden; if (!mo) N
 
 // ---------------------------------------------------------------- chuẩn hóa lời đọc -> ký hiệu (nhân / cộng / trừ, phẩy, mét vuông, phi, đường kính)
 const CHU_SO = "\\p{L}\\p{N}";
+const M2_MOI_CONG = 1000;               // 1.0.32 B5: 1 công (tầm nhỏ, Nam Bộ) = 1.000 m²
+// "2 công trình phụ", "3 công nhân"… không phải diện tích: từ ghép đứng sau chữ "công"
+const CONG_KHONG_PHAI_DT = "(?!\\s*(?:trình|nghiệp|nhân|cộng|an|ty|suất|việc|tác|đoạn|dụng|chức|cụ|nghệ|thức|lao|văn|khai|ích|bố|ước|xuất)(?![\\p{L}]))";
 function chuanHoaTiengNoi(s) {
   s = String(s || "").normalize("NFC").replace(/\r/g, "");
   const ranh = "(?=[^" + CHU_SO + "]|$)", dau = "(^|[^" + CHU_SO + "])";
@@ -1085,6 +1107,10 @@ function chuanHoaTiengNoi(s) {
   s = s.replace(new RegExp("(\\d)\\s*(?:xăng ti mét|xen ti mét|xăng-ti-mét|xentimet|centimet|cen ti mét|phân)" + ranh, "giu"), "$1 cm");
   s = s.replace(new RegExp("(\\d)\\s*(?:héc ta|héc-ta|hecta|hec ta)" + ranh, "giu"), "$1 ha");
   s = s.replace(new RegExp("(\\d)\\s*(?:mét|met)" + ranh, "giu"), "$1m");
+  // 1.0.32 B5: diện tích "N công" (công tầm nhỏ Nam Bộ = 1.000 m²) -> m², ghi lại số công trong ghi chú; "sào" KHÔNG đổi (360 / 500 m² tùy vùng)
+  s = s.replace(new RegExp(dau + "(nửa|\\d+(?:[.,]\\d+)?)\\s*công(?:\\s+đất)?(?![\\p{L}\\d])" + CONG_KHONG_PHAI_DT, "giu"), (m, a, so) => {
+    const v = so.toLowerCase() === "nửa" ? 0.5 : Number(so.replace(",", ".")); if (!isFinite(v) || v <= 0) return m;
+    return a + soVN(v * M2_MOI_CONG, 0) + " m2 (" + (so.toLowerCase() === "nửa" ? "nửa" : so) + " công)"; });
   const so = "(\\d(?:[\\d.,]*\\d)?\\s*m?\\s*\\)?)";
   for (let i = 0; i < 6; i++) { const cu = s;           // phép tính chỉ giữa hai số ("nhân khẩu", "Cộng hòa" giữ nguyên)
     s = s.replace(new RegExp(so + "\\s*(?:nhân với|nhân)\\s*(?=\\(?\\s*\\d)", "giu"), "$1 x ")
@@ -1919,6 +1945,20 @@ function apBoCuc() { const rong = window.innerWidth >= 680, ngang_may = window.m
   const b = $("b_xoay"); b.style.display = ""; b.textContent = "";
   b.append(ngang ? "📱" : "🔄", el("span", {cls: "chu_nut", text: ngang ? " Dọc" : " Xoay ngang"})); b.title = ngang ? "Về bố cục dọc" : "Xoay ngang: 2 cột";
   hienThe(); if (cu !== ngang || theHien() === 5) setTimeout(() => { if (theHien() === 5) veBanDo(); }, 30); }
+// 1.0.32 B4: chế độ ngoài trời nắng (tương phản cao) - lớp body.tuong_phan_cao, nhớ trên máy
+const KHOA_TP = "larc_field_tuong_phan";
+function apTuongPhan(bat) { document.body.classList.toggle("tuong_phan_cao", bat); const b = $("b_tuong_phan"); if (!b) return;
+  b.classList.toggle("bat", bat); b.textContent = ""; b.append(bat ? "🌙" : "☀️", el("span", {cls: "chu_nut", text: bat ? " Dịu" : " Nắng"}));
+  b.title = bat ? "Về giao diện thường" : "Chế độ ngoài trời nắng: chữ đen, viền đậm (tương phản cao)"; }
+function batTatTuongPhan() { const bat = !document.body.classList.contains("tuong_phan_cao");
+  try { localStorage.setItem(KHOA_TP, bat ? "1" : "0"); } catch (e) { /* bỏ qua */ } apTuongPhan(bat); }
+// 1.0.32 B6: ghi chú nhanh một chạm cho hồ sơ hộ (nối vào ô Ghi chú, ngăn bằng "; ", không lặp câu đã có)
+const MAU_GHI_CHU_NHANH = ["Không tranh chấp, ranh rõ", "Có nhà ở trên đất", "Tạo lập sau thông báo thu hồi", "Đang canh tác ổn định",
+  "Chưa rõ nguồn gốc đất"];
+function themGhiChuNhanh(gc) { if (!ST.chon) { bao("Chọn hộ trước.", 1); return; } const o = $("h_ghi_chu"), cu = o.value.trim();
+  const ds = cu.split(";").map(x => x.trim()).filter(x => x); if (ds.includes(gc)) return; ds.push(gc); o.value = ds.join("; "); luuHoSo(); }
+function veGhiChuNhanh() { const hop = $("gc_nhanh"); if (!hop) return; hop.textContent = "";
+  for (const gc of MAU_GHI_CHU_NHANH) hop.appendChild(el("button", {cls: "chip", type: "button", text: "+ " + gc, onclick: () => themGhiChuNhanh(gc)})); }
 function doiBoCuc() { const ngang = !dangNgang(); try { localStorage.setItem(KHOA_BC, ngang ? "ngang" : "doc"); } catch (e) { /* bỏ qua */ }
   const o = screen.orientation;                                              // điện thoại: thử xoay màn hình theo (trình duyệt không cho thì vẫn đổi bố cục)
   if (o) try { if (ngang && o.lock) o.lock("landscape").catch(() => {}); else if (!ngang && o.unlock) o.unlock(); } catch (e) { /* bỏ qua */ }
@@ -1967,6 +2007,10 @@ async function taoKetQua(dsKhoa, kemAnh) {
     ra.ket_qua[k] = h.dong.map(d => { const x = Object.assign({}, d); delete x.nhom; delete x.luc; delete x.tu_bb; return x; });
     ra.ho_dan[k] = Object.assign({ma_ho: g.moi ? null : (/^\d+$/.test(k) ? Number(k) : null), ho_ten: g.ten || "", so_cccd: g.cccd || "", dia_chi: g.dia_chi || ""}, h.tt);
     if (h.gps) ra.ho_dan[k].gps = h.gps; if (h.dat.length) ra.dat_dai[k] = h.dat;
+    // 1.0.32 B7: file ghi âm ở lại điện thoại (không gửi kèm) - ghi số file + dòng nhắc trong ghi chú để cán bộ biết hỏi lại người kiểm đếm
+    const am = (await IDB.ds(KHOA_AM(k))).length;
+    if (am) { const hd = ra.ho_dan[k], nhac = "[Có " + am + " tệp ghi âm thực địa trên điện thoại]", cu = String(hd.ghi_chu || "").trim();
+      hd.so_ghi_am = am; if (!cu.includes("tệp ghi âm thực địa")) hd.ghi_chu = cu ? cu.replace(/;\s*$/, "") + "; " + nhac : nhac; }
     if (kemAnh) { const a = await IDB.ds(k); if (a.length) ra.anh[k] = a.map(r => ({ten: r.ten, du_lieu: r.du_lieu, luc: r.luc})); } }
   return ra; }
 function taiVe(obj, ten) { // bản cài Android: hộp Lưu / Gửi của máy; PWA (iPhone): bảng chia sẻ (Zalo, Lưu vào Tệp…); còn lại: tải về
@@ -2011,6 +2055,8 @@ function khoiDong() {
   $("o_tim").addEventListener("input", locHo); $("o_loc_ho").addEventListener("change", locHo); $("cb_ho").addEventListener("change", e => chonHo(e.target.value));
   $("b_tim_mo").addEventListener("click", () => { const n = $("ngan_tim"); n.hidden = !n.hidden; if (!n.hidden) $("o_tim").focus(); });
   $("b_xoay").addEventListener("click", doiBoCuc);
+  $("b_tuong_phan").addEventListener("click", batTatTuongPhan); veGhiChuNhanh();
+  { let tp = ""; try { tp = localStorage.getItem(KHOA_TP) || ""; } catch (e) { /* bỏ qua */ } apTuongPhan(tp === "1"); }
   // màn hình AI: chụp / quét, giọng nói, phân tách
   $("b_hero_chup").addEventListener("click", chupHero);
   $("a_hero").addEventListener("change", async e => { const fs = [...e.target.files]; e.target.value = ""; CHUP_HERO = false;

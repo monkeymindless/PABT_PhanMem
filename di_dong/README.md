@@ -31,6 +31,24 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
 - Cài cho nhiều người: `--url` = địa chỉ HTTPS sẽ tải lên (GitHub Pages / Netlify / Cloudflare Pages; nhớ ở `dia_chi_web.txt`) ->
   tải TOÀN BỘ `tai_len\` lên đó, gửi mã QR trên `cai-dat.html`. Không gửi dữ liệu hộ dân lên trang: chỉ là ứng dụng trống + danh mục đơn giá.
 
+## Bản 1.0.32 (28/10/2026 - đồng bộ số phiên bản với LARC máy tính)
+
+- Vùng chạm: nút nhỏ trong dòng, ô nhập >= 44 px, chip 42 px; nút thanh tiêu đề mở rộng vùng chạm bằng `::after` (thanh tiêu đề không cao thêm -
+  thanh mục con dính `top:53px`).
+- Nút **☀️ Nắng** trên thanh tiêu đề: `body.tuong_phan_cao` (nền trắng, chữ đen, viền đen 2 px; nút chính nền xanh rất đậm chữ trắng),
+  nhớ ở `localStorage` `larc_field_tuong_phan`.
+- Ghi chú nhanh một chạm dưới ô Ghi chú của hộ (`MAU_GHI_CHU_NHANH`, `themGhiChuNhanh`: nối bằng "; ", không lặp).
+- `chuanHoaTiengNoi`: "N công" / "nửa công" -> m² (`M2_MOI_CONG` 1.000 - công tầm nhỏ Nam Bộ), giữ "(N công)" để kiểm tra; từ ghép
+  ("công trình", "công nhân"… `CONG_KHONG_PHAI_DT`) không đổi; **sào KHÔNG đổi** (360 / 500 m² tùy vùng).
+- Xuất `.json`: `so_ghi_am` + dòng nhắc trong `ghi_chu` (xem Giao ước).
+- Android `MainActivity`: `onSaveInstanceState` giữ `anhChup`, `lienTuc`, `soLienTuc`, `tepLuu` khi Android thu hồi bộ nhớ lúc máy ảnh /
+  hộp Lưu đang mở; ảnh gửi vào trang qua `guiJsKhiSan` (thử lại tới khi trang đã nạp xong hàm JS).
+- `sw.js`: tên bộ nhớ đệm `larc-field-<phiên bản>-<dấu nội dung>` - sửa ứng dụng mà giữ số phiên bản (theo máy tính) iPhone vẫn nhận bản mới.
+- KHÔNG làm theo đặc tả: B2 (gom nét / lọc nhãn bản đồ - đã có; đặc tả hạ ngưỡng vẽ vòng mốc 1,2 -> 0,2 và bỏ chấm mốc khi nhìn xa),
+  B5.2 (ống "phi / D" - đã chuẩn về "ϕ"; đặc tả bỏ chữ PVC / HDPE mà máy tính dùng để khớp vật liệu), B5.3 (năm tuổi - bản xem trước đã ghi;
+  thêm "(n năm tuổi)" vào tên làm hỏng chỗ đọc "X trồng năm Y"), B8 versionCode `10500 + số cuối` (nhỏ hơn 20032 đã phát hành, không
+  tăng đều - Android từ chối cài đè).
+
 ## Tính năng chính (bản 1.2.0 - 1.2.4)
 
 - Mở ứng dụng vào màn hình **✨ AI Quét & Nói**: 2 nút (một hàng gọn, 1.3.0) **📷 Chụp / Quét ảnh** (mã QR trên CCCD -> họ tên, số CCCD, năm sinh, địa chỉ;
@@ -138,11 +156,13 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
  "ket_qua": {"<mã hộ | moi_<n>>": [{"muc": 2, "ma_dm": "", "ten": "", "dvt": "", "so_luong": "", "ty_le": "100",
                                     "so_do": "", "kieu": "dk|cv", "ghi_chu": ""}]},
  "ho_dan": {"<khóa>": {"ma_ho": 1, "ho_ten": "", "so_cccd": "", "nguoi_su_dung": "", "nam_sinh": "", "sdt": "", "dia_chi": "",
-                       "nam_tao_lap": "", "ghi_chu": "", "gps": {"lat": 0, "lon": 0, "acc": 0, "luc": ""}}},
+                       "nam_tao_lap": "", "ghi_chu": "", "gps": {"lat": 0, "lon": 0, "acc": 0, "luc": ""}, "so_ghi_am": 0}},
  "dat_dai": {"<khóa>": [{"so_to": "", "so_thua": "", "loai_dat": "", "dt_thu_hoi": "m²"},
                          {"tieu_khu": "", "khoanh": "", "lo": "", "loai_dat": "", "dt_ha": "ha"}]},
  "anh": {"<khóa>": [{"ten": "bien_ban.jpg", "du_lieu": "data:image/jpeg;base64,…"}]}}
 ```
+
+`so_ghi_am` (1.0.32, chỉ khi có): số file ghi âm của hộ - file ở lại điện thoại, ghi_chu thêm "[Có N tệp ghi âm thực địa trên điện thoại]". Trường thêm vào, `phien_ban` vẫn 2 (máy tính bỏ qua trường lạ).
 
 `muc`: 2 nhà / công trình, 3 cây trồng, 7 vật nuôi, 0 = dòng ghi lại biên bản chưa phân loại được (máy tính tự phân loại).
 Dòng biên bản đã phân loại trên điện thoại giữ chữ gốc trong `ten`, `so_luong` trống: máy tính đọc lại bằng `hieu_tai_san.tach_dong`. Phía máy tính đọc ở
