@@ -2415,6 +2415,9 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - TÊN "LARC Mobile" (người dùng 27/10/2026 "bỏ chữ field trên tên phần mềm"): chữ hiển thị, tên file phát hành `LARC_Mobile_<ver>.apk`,
     `LARC_Mobile_PWA_<ver>.zip`, `LARC_Mobile_Web_<ver>`. GIỮ (đổi sẽ mất dữ liệu / không cài đè được bản cũ): gói Android `vn.larc.field`,
     khóa localStorage `larc_field_*`, IndexedDB `larc_field` / `larc_kd_anh` / `larc_nen`, `loai` file dữ liệu 'larc_field_du_lieu', khóa ký larc_field.jks.
+  - 1.4.3 (người dùng 28/10/2026, ảnh thanh số liệu / thanh mục con / nút Đọc: "quá vướng, bị che mất các mục, nút Đọc không hoạt động"): di_dong/README.md
+    mục 1.4.3. Nguyên nhân nút Đọc hỏng: #hop_thu_am nằm trong #t7, màn hình dọc #t7 ẩn khi đang ở mục Hồ sơ & TS. Mở hộp thu âm từ trang khác thì
+    phải đưa hộp ra ngoài #t7.
   - 1.4.2 (người dùng 28/10/2026, ảnh thẻ Bản đồ: "ẩn bớt phần phía trên, toàn màn hình cho bản đồ"): di_dong/README.md mục 1.4.2. Chỉ màn hình
     dọc; công cụ là CÙNG các nút / ô cũ (chuyển DOM, không nhân đôi id). Test `test_ban_do_toan_man_hinh`.
   - 1.4.1 (người dùng 27/10/2026, ảnh mục Ảnh chụp: "chụp liên tục nhiều hình trong 1 lần chụp ảnh"): di_dong/README.md mục 1.4.1. Bản .apk lặp ý định

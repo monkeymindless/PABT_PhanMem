@@ -19,8 +19,8 @@ sys.path.insert(0, str(DAY))
 import dung  # noqa: E402
 
 # 1.2.0: thanh đáy 4 chế độ + 5 mục con của "Hồ sơ & TS" (thay 7 thẻ chữ nhỏ của 1.1.0)
-THE = ('"AI Quét & Nói"', '"Hồ sơ & TS"', '"Bản đồ GPS"', '"Xuất .JSON"', '"👤 Hồ sơ & Đất"', '"🏠 Nhà QĐ 18"', '"🧱 Vật KT"', '"🌳 Cây & VN"',
-       '"📷 Ảnh chụp"')
+THE = ('"AI Quét & Nói"', '"Hồ sơ & TS"', '"Bản đồ GPS"', '"Xuất .JSON"', '[0, "👤", "Hồ sơ"]', '[1, "🏠", "Nhà"]', '[2, "🧱", "Vật KT"]',
+       '[3, "🌳", "Cây, VN"]', '[4, "📷", "Ảnh"]')
 
 
 class TestDocLap(unittest.TestCase):
@@ -95,8 +95,9 @@ class TestMau(unittest.TestCase):
     def test_bo_cuc_pro_max_va_giong_noi(self):
         s = dung.MAU.read_text(encoding='utf-8')
         # 1.2.0: thanh trạng thái gọn thay 5 thẻ số, thanh đáy 4 chế độ, màn hình AI mặc định, bố cục ngang 2 cột
-        self.assertIn('class="status_strip" id="kpi"', s)
-        self.assertNotIn('class="kpi"', s)
+        # 1.4.3: bỏ thanh số liệu (số dòng hiện trên thẻ mục con, tạm tính trên "Tóm tắt hộ đang chọn")
+        self.assertNotIn('id="kpi"', s)
+        self.assertIn('id="tam_tinh_ho"', s)
         self.assertIn('<nav class="bottom_nav" id="nav_day">', s)
         for chu in ('id="b_hero_chup"', 'id="b_hero_noi"', 'id="card_ai_splitter"', 'id="ai_preview_list"', 'id="b_bb_dua"', 'id="b_xoay"',
                     'id="cot_trai"', 'id="cot_phai"', 'body.bc_ngang #khung_ud', 'body.khung_dt #app{max-width:430px', 'id="ngan_tim" hidden',
@@ -104,7 +105,7 @@ class TestMau(unittest.TestCase):
                     'window.LARC_nhanGiongNoiAndroid', 'window.LARC_giongNoiLoi', 'LARCAndroid.batDauGiongNoi', 'webkitSpeechRecognition',
                     'r.lang = "vi-VN"', 'moThe(TRANG_AI)'):
             self.assertIn(chu, s, chu)
-        self.assertEqual(s.count('class="nut_doc"'), 5)                    # nút 🎙️ Đọc trên từng mục: hộ, đất, nhà, vật KT, cây
+        self.assertNotIn('nut_doc', s)                                     # 1.4.3: bỏ nút 🎙️ Đọc từng mục - giọng nói ở màn hình AI Quét & Nói
         # nền bản đồ: vệ tinh, vệ tinh + tên đường / địa danh, đường phố, địa hình; lưu ảnh nền khu dự án (không lưu OSM)
         for chu in ('World_Imagery', 'Reference/World_Transportation', 'Reference/World_Boundaries_and_Places', 'World_Topo_Map',
                     'id="m_chip_nen"', 'id="m_mo"', 'id="b_luu_nen"', 'id="b_xoa_nen"', 'indexedDB.open("larc_nen"', 'khong_luu: true'):

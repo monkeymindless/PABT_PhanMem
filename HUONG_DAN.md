@@ -607,7 +607,11 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
   - Mục **Ảnh chụp** (từ bản 1.4.1): bấm **📷 Chụp ảnh** một lần rồi chụp liên tiếp nhiều trang biên bản / hiện trạng - trên trình duyệt / iPhone
     máy ảnh mở ngay trong ứng dụng (nút chụp tròn, hiện số ảnh đã chụp), xong bấm **✔ Xong**; bản Android: chụp xong một ảnh máy ảnh tự mở lại,
     bấm Quay lại để dừng. Máy không mở được máy ảnh trong ứng dụng (chưa cho phép máy ảnh): dùng nút **📷 Chụp tiếp** - mỗi lần một ảnh.
-  - Nút **🎙️ Đọc** ở từng mục của **Hồ sơ & TS**; xoay ngang điện thoại (hoặc bấm **🔄 Xoay ngang** - từ bản 1.4.0 có cả trên điện thoại)
+  - Từ bản 1.4.3 (gọn màn hình điện thoại): bỏ thanh số liệu (Đất / Nhà / VKT / Cây / Ảnh / Tạm tính) - số dòng từng mục hiện trên ô mục
+    con (**Hồ sơ · Nhà · Vật KT · Cây, VN · Ảnh**, 5 ô vừa một hàng), tạm tính tiền ở góc "Tóm tắt hộ đang chọn"; bỏ nút **🎙️ Đọc** ở từng
+    mục - đọc giọng nói ở màn hình **AI Quét & Nói** (🎙️ Nhập giọng nói / Đọc thêm). Điện thoại hẹp: nút trên thanh chọn hộ chỉ còn biểu
+    tượng (+ thêm hộ, 💾 lưu) để ô chọn hộ hiện được tên.
+  - Xoay ngang điện thoại (hoặc bấm **🔄 Xoay ngang** - từ bản 1.4.0 có cả trên điện thoại)
     thì màn hình chia 2 cột: công cụ AI bên trái, chi tiết bên phải.
   Các mục của **Hồ sơ & TS**: **Hồ sơ & Đất** (chủ hộ / người nhận khoán, người sử dụng, CCCD, năm sinh, thửa địa chính hoặc tiểu khu / khoảnh /
   lô, nút lấy tọa độ GPS tại chỗ); **Nhà ở** (chọn loại nhà theo bộ đơn giá, bấm chọn kết cấu khung / tường / mái / trần / nền / cửa,

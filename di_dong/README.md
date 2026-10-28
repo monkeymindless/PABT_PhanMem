@@ -82,6 +82,9 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
   "nhà tạm" / "nhà tắm" so có dấu. `window.baoBanMoi` ở vỏ; `luuHoSo` gõ -> `luuNhanh` 250 ms (`luuNgay` khi pagehide / ẩn trang / đổi hộ);
   `lamRo` độ sáng Uint8Array + tích phân Int32Array (ảnh quá ~8,4 triệu điểm dùng Float64Array); #b_xoay luôn hiện, bấm trên máy hẹp cũng sang
   2 cột (thử `screen.orientation.lock`).
+- 1.4.3 gọn: bỏ #kpi (`veKpi` chỉ điền #tam_tinh_ho trong "Tóm tắt hộ đang chọn"), bỏ nút .nut_doc (hộp thu âm nằm trong #t7 -
+  ở trang 0-4 màn hình dọc #t7 ẩn nên hộp không hiện: nút "Đọc" không chạy); thanh #thanh_the lưới 5 ô (`PHAN_DOAN` [i, biểu tượng, chữ ngắn], tên đủ
+  ở title); `@media (max-width:420px)` ẩn .huy, .chu_nut của header / #ho_bar (đặt SAU quy tắc .ho_bar gốc - trước nó thì bị đè).
 - 1.4.2 bản đồ toàn màn hình (dọc): `hienThe` -> `apToanBD(trang 5 && !bc_ngang)` bật `body.toan_bd` (ẩn header, #ho_bar, #ngan_tim, #kpi; #t5
   flex, canvas cao 100% phần còn lại trên thanh đáy) và CHUYỂN #ngan_bd_duoi (lưu ảnh nền, chú giải) + #khung_ds_kml vào ngăn #ngan_bd (ra khỏi chế
   độ thì trả về trước #tt_thua / cuối #khung_t5). `moNganBD(mo)` (`body.mo_ngan_bd`; nút #b_cong_cu_bd ☰, #b_dong_ngan_bd, chạm bản đồ, Back,

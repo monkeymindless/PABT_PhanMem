@@ -223,16 +223,15 @@ class TestPhanTach(unittest.TestCase):
     def test_giong_noi_qua_cau_noi_android(self):
         self.js('localStorage.removeItem("larc_field_dong_y_giong_noi"); window.__hoi = ""; window.confirm = m => { window.__hoi = m; return true; };'
                 'window.LARCAndroid = {batDauGiongNoi() { setTimeout(() => window.LARC_nhanGiongNoiAndroid("xoài 20 cây trồng năm 2018"), 10); }}; 1')
-        self._mo_thu_am('document.querySelector(\'#t3 .nut_doc\')')
+        self._mo_thu_am('document.getElementById("b_ai_noi")')
         try:
             self.js('document.getElementById("b_studio_rec").click(); 1')
             self._doi(lambda: self.js('document.getElementById("o_studio_text").value'))
             self.assertIn('máy chủ của hãng', self.js('window.__hoi'))                          # báo trước: giọng nói do Google / Apple nhận dạng
             self.assertEqual(self.js('localStorage.getItem("larc_field_dong_y_giong_noi")'), '1')
-            self.js('document.getElementById("b_studio_done").click(); 1')                      # nút 🎙 của mục Cây: ưu tiên mục cây
+            self.js('document.getElementById("b_studio_done").click(); 1')
             self._doi(lambda: self.js('document.getElementById("ai_chu").value'))
             self.assertEqual(self.jsj('window.LARC.AI.items.map(x => [x.cat, x.du.ten, x.du.so_luong])'), [['cay', 'Cây xoài trồng năm 2018', '20']])
-            self.assertEqual(self.js('window.LARC.AI.uu_tien'), 'cay')
             self.js('window.LARC_giongNoiLoi("khong_co"); 1')                                   # máy không có bộ nhận dạng: không lỗi JS
         finally:
             self.js('delete window.LARCAndroid; 1'); self._dong_thu_am()
@@ -460,7 +459,7 @@ class TestPhanTach(unittest.TestCase):
         self.js('localStorage.setItem("larc_field_bo_cuc", "doc"); window.LARC.apBoCuc(); window.LARC.moThe(5); 1')
         try:
             self.assertTrue(self.js('document.body.classList.contains("toan_bd")'))
-            for s in ('header', '#ho_bar', '#kpi', '#khung_t5 > h3', '#ngan_bd'):
+            for s in ('header', '#ho_bar', '#khung_t5 > h3', '#ngan_bd'):
                 self.assertTrue(self.js(an % s), s)
             self.assertFalse(self.js(an % '#b_cong_cu_bd'))
             self.assertEqual(self.js(cha % 'ngan_bd_duoi'), 'ngan_bd')            # lưu ảnh nền, chú giải, bảng tra cứu KML vào ngăn

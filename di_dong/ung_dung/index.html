@@ -25,24 +25,26 @@ header .phu{font-size:11px;color:#DBEAFE;white-space:nowrap;overflow:hidden;text
 header .huy{background:rgba(255,255,255,.18);border-radius:10px;padding:2px 7px;font-size:11px;white-space:nowrap}
 header .doi{white-space:nowrap;flex:0 0 auto;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);padding:5px 8px;font-size:12px;min-height:32px}
 @media (display-mode: standalone){header{padding-top:max(6px,env(safe-area-inset-top))}}
+header .ten,header .huy{white-space:nowrap}
+@media (max-width:420px){header{gap:6px;padding:5px 8px}header .huy{display:none}header .chu_nut{display:none}header .doi{padding:4px 8px}}
 /* thanh chọn hộ: một hàng */
 .ho_bar{display:flex;gap:5px;padding:6px 8px;background:#fff;border-bottom:1px solid var(--vach);align-items:center;position:sticky;top:0;z-index:20}
 .ho_bar select{flex:1 1 auto;min-width:0;padding:8px 6px;font-weight:600}
 .ho_bar button{flex:0 0 auto;min-height:40px;min-width:40px;padding:6px 9px}#b_gps_nhanh.co{color:#166534;border-color:#86EFAC;background:#F0FDF4}
 #b_tim_mo.co_loc{box-shadow:inset 0 0 0 2px var(--nhan)}
+@media (max-width:420px){.ho_bar{gap:3px;padding:5px}.ho_bar button{min-width:36px;padding:4px}.ho_bar .chu_nut{display:none}.ho_bar select{font-size:14px;padding:8px 4px}}
 [hidden]{display:none!important}.ngan_tim{display:flex;gap:6px;padding:6px 8px;background:#fff;border-bottom:1px solid var(--vach)}.ngan_tim[hidden]{display:none}
 .ngan_tim input{flex:1}.ngan_tim select{width:auto;flex:0 0 auto}
-/* thanh trạng thái gọn (thay 5 thẻ số lớn) */
-.status_strip{display:flex;gap:5px;padding:5px 8px;overflow-x:auto;white-space:nowrap;background:#fff;border-bottom:1px solid var(--vach);
-scrollbar-width:none;min-height:32px;align-items:center}.status_strip::-webkit-scrollbar{display:none}
-.pill{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--vach);border-radius:999px;padding:2px 9px;font-size:12px;background:#F8FAFC;
-color:var(--chu_phu);flex:0 0 auto}.pill b{color:var(--chu);font-weight:700}.pill.tien{background:#ECFDF5;border-color:#A7F3D0}.pill.tien b{color:#047857}
+.tam_tinh_ho{margin-left:auto;font-size:12px;font-weight:600;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.tam_tinh_ho:empty{display:none}
 #khung_ud{flex:1 1 auto;min-height:0}
 /* chọn mục con của "Hồ sơ & TS" */
-.phan_doan{display:flex;gap:5px;overflow-x:auto;padding:7px 8px;background:var(--nen);position:sticky;top:53px;z-index:15;scrollbar-width:none}
-.phan_doan::-webkit-scrollbar{display:none}.phan_doan[hidden]{display:none}
-.phan_doan button{flex:0 0 auto;background:#fff;color:var(--chu_phu);border:1px solid var(--vach);border-radius:999px;padding:7px 12px;font-size:13px;
-font-weight:600;margin:0;min-height:36px}.phan_doan button.chon{background:var(--chinh);color:#fff;border-color:var(--chinh)}
+.phan_doan{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:5px 6px;background:var(--nen);position:sticky;top:53px;z-index:15}
+.phan_doan[hidden]{display:none}
+.phan_doan button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-width:0;background:#fff;
+color:var(--chu_phu);border:1px solid var(--vach);border-radius:8px;padding:3px 2px;font-size:12px;font-weight:600;line-height:1.2;margin:0;min-height:44px;
+white-space:nowrap}.phan_doan button .bt{font-size:16px;line-height:19px}.phan_doan button.chon{background:var(--chinh);color:#fff;border-color:var(--chinh)}
+.phan_doan button .dem{position:absolute;top:2px;right:2px;margin:0;min-width:16px;padding:0 4px;font-size:10px;line-height:15px}
 .dem{display:inline-block;min-width:18px;margin-left:4px;padding:0 5px;border-radius:9px;background:var(--chinh_nhat);color:var(--chinh);font-size:11px;
 line-height:17px;text-align:center}.phan_doan button.chon .dem{background:rgba(255,255,255,.25);color:#fff}
 .trang{display:none;padding:8px 8px 16px}.trang.hien{display:block}
@@ -61,13 +63,12 @@ body.bc_ngang #cot_trai{border-right:1px solid var(--vach);background:#E8EEF7}
 body.bc_ngang #t7{display:block}body.bc_ngang .bottom_nav{grid-template-columns:repeat(3,1fr)}body.bc_ngang .bottom_nav .nav_ai{display:none}
 body.bc_ngang .phan_doan{top:0}body.bc_ngang .hero{grid-template-columns:1fr 1fr}
 @media (max-height:540px){body.bc_ngang header{padding:3px 10px}body.bc_ngang header img{width:24px;height:24px}body.bc_ngang header .phu{display:none}
-body.bc_ngang .ho_bar{padding:3px 8px}body.bc_ngang .ho_bar button{min-height:36px}body.bc_ngang .status_strip{padding:3px 8px;min-height:28px}
+body.bc_ngang .ho_bar{padding:3px 8px}body.bc_ngang .ho_bar button{min-height:36px}
 body.bc_ngang .bottom_nav button{min-height:40px;flex-direction:row;justify-content:center;gap:6px;padding:4px}body.bc_ngang .bottom_nav button .bt{font-size:17px}
 body.bc_ngang .hero_nut{min-height:42px;padding:4px 6px}
 body.bc_ngang .bottom_nav .dem{position:static}}
 .khung{background:#fff;border:1px solid var(--vach);border-radius:10px;padding:10px;margin-bottom:8px}
-.khung h3{margin:0 0 6px;font-size:14px;color:var(--chinh);display:flex;align-items:center;gap:8px}.khung h3 .nut_doc{margin-left:auto}
-.nut_doc{background:#fff;color:var(--chinh);border:1px solid var(--vach);border-radius:999px;padding:4px 10px;font-size:12px;min-height:32px}
+.khung h3{margin:0 0 6px;font-size:14px;color:var(--chinh);display:flex;align-items:center;gap:8px}
 label{display:block;font-size:12px;font-weight:600;color:var(--chu_phu);margin:7px 0 3px}
 input,select,textarea{width:100%;padding:9px;border:1px solid var(--vach);border-radius:7px;font-size:15px;background:#fff;color:var(--chu)}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--nhan);outline-offset:-1px}
@@ -168,7 +169,7 @@ font-size:12px;min-height:34px;box-shadow:0 1px 4px rgba(15,23,42,.25)}.chip_nen
 /* bản đồ toàn màn hình (màn hình dọc): ẩn tiêu đề, thanh chọn hộ, thanh số liệu; công cụ gom vào ngăn ☰ nổi trên bản đồ */
 .ngan_bd_dau,.nut_toan_bd{display:none}
 body.toan_bd #app{height:100vh;height:100dvh;min-height:0}
-body.toan_bd header,body.toan_bd #ho_bar,body.toan_bd #ngan_tim,body.toan_bd #kpi{display:none!important}
+body.toan_bd header,body.toan_bd #ho_bar,body.toan_bd #ngan_tim{display:none!important}
 body.toan_bd #khung_ud{display:flex;flex-direction:column;overflow:hidden}
 body.toan_bd #cot_phai{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 body.toan_bd #t5.hien{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding:0}
@@ -196,12 +197,11 @@ body.toan_bd #tt_thua{position:absolute;left:6px;right:56px;bottom:6px;max-heigh
 <button class="doi" id="b_doi_du_an" type="button" style="display:none">Dự án</button></header>
 <div class="ho_bar" id="ho_bar"><button class="phu" id="b_truoc" type="button" title="Hộ trước">◀</button>
 <select id="cb_ho" aria-label="Chọn hộ"></select><button class="phu" id="b_sau" type="button" title="Hộ sau">▶</button>
-<button class="phu" id="b_tim_mo" type="button" title="Tìm / lọc hộ">🔍</button><button class="phu" id="b_ho_moi" type="button" title="Thêm hộ mới">+ Hộ</button>
-<button class="xanh" id="b_luu_nhanh" type="button" title="Lưu phiếu .json hộ đang chọn">💾 Lưu</button>
+<button class="phu" id="b_tim_mo" type="button" title="Tìm / lọc hộ">🔍</button><button class="phu" id="b_ho_moi" type="button" title="Thêm hộ mới" aria-label="Thêm hộ mới">+<span class="chu_nut"> Hộ</span></button>
+<button class="xanh" id="b_luu_nhanh" type="button" title="Lưu phiếu .json hộ đang chọn" aria-label="Lưu phiếu hộ">💾<span class="chu_nut"> Lưu</span></button>
 <button class="phu" id="b_gps_nhanh" type="button" title="Ghi tọa độ GPS + VN-2000 cho hộ đang chọn">📍</button></div>
 <div class="ngan_tim" id="ngan_tim" hidden><input id="o_tim" placeholder="Tìm: tên, CCCD, tờ/thửa (không cần dấu)" enterkeyhint="search"/>
 <select id="o_loc_ho" aria-label="Lọc hộ"><option value="">Tất cả</option><option value="chua">Chưa ghi</option><option value="da">Đã ghi</option></select></div>
-<div class="status_strip" id="kpi"></div>
 <div id="khung_ud"><div id="cot_trai">
 
 <section class="trang" id="t7"><div class="hero">
@@ -227,13 +227,13 @@ tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên 
 <div class="hang_nut" id="hang_ai_dua" hidden><button class="xanh" id="b_bb_dua" type="button">✔ Đưa vào Hồ sơ Hộ</button>
 <button class="xanh" id="b_bb_dua_tiep" type="button" title="Lưu vào hộ đang chọn, ghi GPS nếu hộ chưa có, rồi sang hộ kế tiếp chưa ghi">⚡ Đưa vào Hộ &amp; Sang hộ kế ▶</button><span id="ai_tong"></span></div>
 <div class="goi_y" id="ai_cho_anh"></div></div>
-<div class="khung tom_tat"><h3>Tóm tắt hộ đang chọn</h3><div id="tom_tat_ho"></div></div>
+<div class="khung tom_tat"><h3>Tóm tắt hộ đang chọn<span class="tam_tinh_ho so" id="tam_tinh_ho" title="Tạm tính theo đơn giá nhúng trong ứng dụng (máy tính tính lại khi nhập)"></span></h3><div id="tom_tat_ho"></div></div>
 <details class="khung"><summary>Các dòng biên bản đã đưa vào hộ</summary><div id="bang_bb"></div></details>
 </section></div>
 
 <div id="cot_phai"><nav class="phan_doan" id="thanh_the"></nav>
 
-<section class="trang" id="t0"><div class="khung"><h3>Chủ sử dụng<button class="nut_doc" type="button" data-cat="ho">🎙️ Đọc</button></h3><div class="luoi">
+<section class="trang" id="t0"><div class="khung"><h3>Chủ sử dụng</h3><div class="luoi">
 <div><label for="h_ten">Chủ hộ / người nhận khoán (trên sổ)</label><input id="h_ten"/></div>
 <div><label for="h_nsd">Người trực tiếp sử dụng, canh tác</label><input id="h_nsd"/></div>
 <div><label for="h_cccd">Số CCCD</label><input id="h_cccd" inputmode="numeric"/></div>
@@ -243,7 +243,7 @@ tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên 
 <label for="h_dia_chi">Địa chỉ</label><input id="h_dia_chi"/><label for="h_ghi_chu">Ghi chú</label><input id="h_ghi_chu"/>
 <div class="hang_nut"><button class="phu" id="b_gps_ho" type="button">📍 Lấy tọa độ tại chỗ (GPS)</button></div><div class="ghi so" id="gps_ho"></div></div>
 <div class="khung"><h3>Thửa của hộ trong dự án</h3><div id="thua_du_an" class="ghi"></div></div>
-<div class="khung"><h3>Đất kiểm đếm thực tế<button class="nut_doc" type="button" data-cat="dat">🎙️ Đọc</button></h3><div class="chip_nhom" id="kieu_dat"></div>
+<div class="khung"><h3>Đất kiểm đếm thực tế</h3><div class="chip_nhom" id="kieu_dat"></div>
 <div class="luoi" id="o_dc"><div><label for="d_to">Tờ bản đồ</label><input id="d_to" inputmode="numeric"/></div>
 <div><label for="d_thua">Thửa</label><input id="d_thua" inputmode="numeric"/></div>
 <div><label for="d_loai">Loại đất</label><input id="d_loai" placeholder="ONT, CLN, RSX…"/></div>
@@ -255,7 +255,7 @@ tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên 
 <div class="dang_sua" id="d_dang_sua" style="display:none"></div>
 <div class="hang_nut"><button id="b_them_dat" type="button">Thêm đất</button></div><div id="bang_dat"></div></div></section>
 
-<section class="trang" id="t1"><div class="khung"><h3><span>Nhà ở <span class="ghi">(đơn giá QĐ 18/2026/QĐ-UBND, sửa đổi bởi QĐ 53/2026)</span></span><button class="nut_doc" type="button" data-cat="nha">🎙️ Đọc</button></h3>
+<section class="trang" id="t1"><div class="khung"><h3><span>Nhà ở <span class="ghi">(đơn giá QĐ 18/2026/QĐ-UBND, sửa đổi bởi QĐ 53/2026)</span></span></h3>
 <label for="n_loai">Loại nhà theo bộ đơn giá</label><select id="n_loai"></select><div id="n_ket_cau"></div>
 <div class="goi_y" id="n_goi_y_kc"></div>
 <div class="luoi"><div class="o_rong"><label for="n_dt">Diện tích (m²) - được ghi 4 x 6,7 hoặc (a x b) + (c x d) - (e x f)</label>
@@ -266,7 +266,7 @@ tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên 
 <div class="hang_nut"><button id="b_them_nha" type="button">Thêm nhà vào hộ</button></div></div>
 <div class="khung"><h3>Nhà đã ghi</h3><div id="bang_nha"></div></div></section>
 
-<section class="trang" id="t2"><div class="khung"><h3><span>Vật kiến trúc, công trình <span class="ghi">(đơn giá QĐ 18/2026/QĐ-UBND, sửa đổi bởi QĐ 53/2026)</span></span><button class="nut_doc" type="button" data-cat="vkt">🎙️ Đọc</button></h3>
+<section class="trang" id="t2"><div class="khung"><h3><span>Vật kiến trúc, công trình <span class="ghi">(đơn giá QĐ 18/2026/QĐ-UBND, sửa đổi bởi QĐ 53/2026)</span></span></h3>
 <label for="v_ten">Tên (gõ vài chữ để chọn trong bộ đơn giá, hoặc ghi như biên bản)</label><input id="v_ten" list="ds_vkt"/>
 <datalist id="ds_vkt"></datalist><div class="luoi"><div class="o_rong"><label for="v_sl">Khối lượng / kích thước</label>
 <input id="v_sl" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="12,5 | 1,5 x 2,4 x 1,2 | (3,4 x 18) + (4,2 x 5)"/>
@@ -277,7 +277,7 @@ tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên 
 <div class="hang_nut"><button id="b_them_vkt" type="button">Thêm vào hộ</button></div></div>
 <div class="khung"><h3>Vật kiến trúc đã ghi</h3><div class="goi_y" id="v_bb_tb"></div><div id="bang_vkt"></div></div></section>
 
-<section class="trang" id="t3"><div class="khung"><h3><span>Cây trồng, vật nuôi <span class="ghi">(cây: QĐ 48/2025, QĐ 66/2025 · vật nuôi: QĐ 31/2025)</span></span><button class="nut_doc" type="button" data-cat="cay">🎙️ Đọc</button></h3>
+<section class="trang" id="t3"><div class="khung"><h3><span>Cây trồng, vật nuôi <span class="ghi">(cây: QĐ 48/2025, QĐ 66/2025 · vật nuôi: QĐ 31/2025)</span></span></h3>
 <div class="chip_nhom" id="kieu_cay"></div>
 <label for="c_ten">Loài cây / vật nuôi</label><input id="c_ten" list="ds_cay"/><datalist id="ds_cay"></datalist>
 <div class="luoi"><div><label for="c_sl">Số lượng</label><input id="c_sl" inputmode="decimal"/></div>
@@ -458,7 +458,7 @@ const PHIEN_BAN_PHIEU = 2;
 const KHOA_LUU = "larc_kd_" + DU.du_an;
 // trang: 7 = "AI Quét & Nói" (màn hình chính), 0-4 = các mục của "Hồ sơ & TS", 5 = bản đồ, 6 = xuất .json
 const THE = ["Hồ sơ & Đất", "Nhà ở (QĐ 18/2026, QĐ 53/2026)", "Vật kiến trúc (QĐ 18/2026, QĐ 53/2026)", "Cây trồng & vật nuôi", "Ảnh chụp", "Bản đồ KML/GPS", "Xuất .JSON"];
-const PHAN_DOAN = [[0, "👤 Hồ sơ & Đất"], [1, "🏠 Nhà QĐ 18"], [2, "🧱 Vật KT"], [3, "🌳 Cây & VN"], [4, "📷 Ảnh chụp"]];
+const PHAN_DOAN = [[0, "👤", "Hồ sơ"], [1, "🏠", "Nhà"], [2, "🧱", "Vật KT"], [3, "🌳", "Cây, VN"], [4, "📷", "Ảnh"]];
 const NAV = [["ai", "✨", "AI Quét & Nói"], ["ho", "📋", "Hồ sơ & TS"], ["bd", "🗺️", "Bản đồ GPS"], ["xuat", "📤", "Xuất .JSON"]];
 const TRANG_AI = 7;
 const $ = id => document.getElementById(id);
@@ -1904,17 +1904,9 @@ function ganCuChi() { const cv = $("ban_do"), ngon = new Map(); let keo = null, 
   cv.addEventListener("wheel", e => { e.preventDefault(); BD.tu_can = null; BD.k *= e.deltaY < 0 ? 1.25 : 0.8; veBanDo(); }, {passive: false}); }
 
 // ---------------------------------------------------------------- thanh trạng thái, điều hướng, bố cục dọc / ngang, xuất
-function veKpi() { const h = ST.ho[ST.chon] || {dong: [], dat: []}, g = hoGoc(ST.chon) || {thua: []}, dong = h.dong || [];
-  const dt = (h.dat || []).length ? h.dat.reduce((s, d) => s + (dtDat(d) || 0), 0) : g.thua.reduce((s, t) => s + (docSo(t.dt) || 0), 0);
-  const cay = dong.filter(d => d.muc === 3).reduce((s, d) => s + (docSo(d.so_luong) || 0), 0);
-  const tien = dong.reduce((s, d) => s + (giaDong(d) || 0), 0);
-  const ds = [["📐", "Đất", soVN(dt) + " m²"], ["🏠", "Nhà", String(dong.filter(laNha).length)], ["🧱", "VKT", String(dong.filter(laVkt).length)],
-    ["🌳", "Cây", soVN(cay, 0)], ["📷", "Ảnh", String(h.so_anh || 0)]];
-  if (h.gps) ds.push(["📍", "GPS", "✓"]);
-  const hop = $("kpi"); hop.textContent = "";
-  for (const [b, n, v] of ds) hop.appendChild(el("span", {cls: "pill"}, [b + " " + n + ": ", el("b", {cls: "so", text: v})]));
-  hop.appendChild(el("span", {cls: "pill tien", title: "Tạm tính theo đơn giá nhúng trong ứng dụng (máy tính tính lại khi nhập)"},
-    ["💰 Tạm tính: ", el("b", {cls: "so", text: soVN(Math.round(tien), 0) + " đ"})])); }
+// tạm tính tiền hộ đang chọn (ô nhỏ trên "Tóm tắt hộ đang chọn"; số dòng từng mục hiện trên thẻ mục con)
+function veKpi() { const dong = (ST.ho[ST.chon] || {}).dong || [], tien = dong.reduce((s, d) => s + (giaDong(d) || 0), 0);
+  $("tam_tinh_ho").textContent = ST.chon && tien ? "≈ " + soVN(Math.round(tien), 0) + " đ" : ""; }
 const KHOA_BC = "larc_field_bo_cuc";
 function dangNgang() { return document.body.classList.contains("bc_ngang"); }
 function thePhai() { if (ST.the !== TRANG_AI) return ST.the; return typeof ST.the_phai === "number" ? ST.the_phai : 0; }
@@ -1924,7 +1916,8 @@ function apBoCuc() { const rong = window.innerWidth >= 680, ngang_may = window.m
   let chon = ""; try { chon = localStorage.getItem(KHOA_BC) || ""; } catch (e) { /* bỏ qua */ }
   const ngang = chon ? chon === "ngang" : rong && ngang_may, cu = dangNgang();
   document.body.classList.toggle("bc_ngang", ngang); document.body.classList.toggle("khung_dt", rong && !ngang);
-  const b = $("b_xoay"); b.style.display = ""; b.textContent = ngang ? "📱 Dọc" : "🔄 Xoay ngang";
+  const b = $("b_xoay"); b.style.display = ""; b.textContent = "";
+  b.append(ngang ? "📱" : "🔄", el("span", {cls: "chu_nut", text: ngang ? " Dọc" : " Xoay ngang"})); b.title = ngang ? "Về bố cục dọc" : "Xoay ngang: 2 cột";
   hienThe(); if (cu !== ngang || theHien() === 5) setTimeout(() => { if (theHien() === 5) veBanDo(); }, 30); }
 function doiBoCuc() { const ngang = !dangNgang(); try { localStorage.setItem(KHOA_BC, ngang ? "ngang" : "doc"); } catch (e) { /* bỏ qua */ }
   const o = screen.orientation;                                              // điện thoại: thử xoay màn hình theo (trình duyệt không cho thì vẫn đổi bố cục)
@@ -1950,7 +1943,8 @@ function moThe(i) { const cu = theHien(); ST.the = i; if (i >= 0 && i <= 4) ST.t
 function veThe() { const h = ST.ho[ST.chon] || {}, dong = h.dong || [];
   const dem = [(h.dat || []).length, dong.filter(laNha).length, dong.filter(laVkt).length, dong.filter(laCay).length, h.so_anh || 0];
   const tt = $("thanh_the"); tt.textContent = "";
-  for (const [i, t] of PHAN_DOAN) { const b = el("button", {type: "button", text: t, title: THE[i], "data-i": String(i), onclick: () => moThe(i)});
+  for (const [i, bt, t] of PHAN_DOAN) { const b = el("button", {type: "button", title: THE[i], "aria-label": THE[i], "data-i": String(i), onclick: () => moThe(i)},
+    [el("span", {cls: "bt", text: bt}), el("span", {text: t})]);
     if (dem[i]) b.appendChild(el("span", {cls: "dem", text: String(dem[i])})); tt.appendChild(b); }
   const so = {ho: dong.length, xuat: Object.keys(ST.ho).filter(coDuLieu).length};
   for (const b of $("nav_day").children) { const d = b.querySelector(".dem"); if (d) d.remove();
@@ -2027,7 +2021,6 @@ function khoiDong() {
   $("b_studio_done").addEventListener("click", studioXong); $("b_studio_insert").addEventListener("click", studioChen);
   $("b_studio_clear").addEventListener("click", () => { $("o_studio_text").value = ""; sttStudio(""); });
   $("b_studio_dong").addEventListener("click", dongThuAm);
-  for (const b of document.querySelectorAll(".nut_doc")) b.addEventListener("click", () => batDauNoi(chu => themVaoAI(chu, b.dataset.cat)));
   $("b_ai_tach").addEventListener("click", () => { if (!$("ai_chu").value.trim()) { bao("Chưa có nội dung: đọc, gõ hoặc dán biên bản.", 1); return; } phanTichVaHien(); });
   $("b_ai_xoa").addEventListener("click", () => { $("ai_chu").value = ""; AI.items = []; AI.uu_tien = ""; if (dangSua("bb")) huySua(); veAI(); });
   let hen_ai = 0; $("ai_chu").addEventListener("input", () => { clearTimeout(hen_ai); hen_ai = setTimeout(() => { if ($("ai_chu").value.trim()) phanTichVaHien(); else { AI.items = []; veAI(); } }, 700); });
