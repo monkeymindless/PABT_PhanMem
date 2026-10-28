@@ -141,7 +141,9 @@ background:linear-gradient(160deg,#2F5F9E,#1E3F6E);box-shadow:0 2px 6px rgba(30,
 #o_studio_text{width:100%;box-sizing:border-box;min-height:96px;font-size:16px;margin-top:8px}
 .studio_xong{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.studio_xong #b_studio_done{flex:1 1 100%;min-height:48px;background:#16A34A;color:#fff;border:0;border-radius:10px;font-weight:700;font-size:14px}.studio_xong button{flex:1;min-height:42px}
 @keyframes song{50%{height:26px}}.song_am #song_chu{flex:1;min-width:0;font-size:13px;color:#065F46}
-#card_ai_splitter{border-color:#BFDBFE;box-shadow:0 2px 10px rgba(47,95,158,.08)}#ai_chu{min-height:92px;font-size:15px;line-height:1.4}
+#card_ai_splitter{border-color:#BFDBFE;box-shadow:0 2px 10px rgba(47,95,158,.08)}
+.hang_ai_nut{gap:5px;margin-top:6px;flex-wrap:nowrap}.hang_ai_nut button{flex:1 1 auto;min-width:0;min-height:36px;padding:5px 6px;font-size:13px;white-space:nowrap}
+.hang_ai_nut #b_ai_xoa{flex:0 0 auto}#ai_chu{min-height:92px;font-size:15px;line-height:1.4}
 .ai_the{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--vach);border-left:4px solid var(--mau,#64748B);border-radius:8px;padding:7px 8px;
 margin-top:6px;background:#fff}.ai_the.bo{opacity:.45}.ai_the input[type=checkbox]{width:20px;height:20px;margin:2px 0 0;flex:0 0 auto}
 .ai_the .nd{flex:1;min-width:0}.ai_the .loai{font-size:11px;font-weight:700;color:var(--mau,#64748B);text-transform:uppercase;letter-spacing:.3px}
@@ -217,11 +219,9 @@ body.toan_bd #tt_thua{position:absolute;left:6px;right:56px;bottom:6px;max-heigh
 <textarea id="o_studio_text" rows="4" autocomplete="off" placeholder="Chữ thu âm / bấm từ khóa hiện ở đây (chạm vào ô để gõ thêm)…"></textarea>
 <div class="studio_xong"><button id="b_studio_done" type="button">⚡ Đưa vào ô nhập &amp; Tự động bóc tách ra bảng</button><button class="phu" id="b_studio_insert" type="button">📋 Chỉ chèn vào ô nhập</button><button class="xoa" id="b_studio_clear" type="button">🗑️ Xóa trắng</button></div></div>
 <div class="khung" id="card_ai_splitter"><h3>✨ Phân tách dữ liệu thông minh</h3>
-<p class="ghi" style="margin:0 0 6px">Đọc, gõ hoặc dán nội dung biên bản: chủ hộ, CCCD, tờ / thửa, nhà, vật kiến trúc, cây trồng… Máy tự tách từng mục,
-tính diện tích / thể tích, tuổi cây và tạm tính tiền ngay trên điện thoại (không cần mạng).</p>
 <textarea id="ai_chu" rows="4" placeholder="Vd: Chủ hộ Nguyễn Văn An, CCCD 075092001234, tờ 12 thửa 45 CLN 1.500 m2. Nhà 1 tầng khung BTCT mái tôn tường xây nền gạch men (5x12)-(2x3). Ống nhựa ϕ 114: 3300m; ϕ 90: 3400m. Xoài trồng năm 2012: 650 cây"></textarea>
-<div class="hang_nut"><button id="b_ai_tach" type="button">✨ Phân tách</button><button class="phu" id="b_ai_noi" type="button">🎙️ Đọc thêm</button>
-<button class="phu" id="b_ai_xoa" type="button">Xóa</button><button class="phu" id="b_ai_chep_mau" type="button" title="Điền các mục nhà, vật kiến trúc, cây của hộ vừa đưa vào - chỉ sửa kích thước / số lượng">📋 Chép mẫu hộ trước</button></div>
+<div class="hang_nut hang_ai_nut"><button id="b_ai_tach" type="button">✨ Phân tách</button><button class="phu" id="b_ai_noi" type="button">🎙️ Đọc thêm</button>
+<button class="phu" id="b_ai_xoa" type="button">Xóa</button><button class="phu" id="b_ai_chep_mau" type="button" title="Chép mẫu hộ trước: điền các mục nhà, vật kiến trúc, cây của hộ vừa đưa vào - chỉ sửa kích thước / số lượng">📋 Chép mẫu</button></div>
 <div class="dang_sua" id="b_dang_sua" style="display:none"></div>
 <div id="ai_preview_list"></div>
 <div class="hang_nut" id="hang_ai_dua" hidden><button class="xanh" id="b_bb_dua" type="button">✔ Đưa vào Hồ sơ Hộ</button>
