@@ -2543,6 +2543,10 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   (trả hết -> frozenset() khóa mọi hộ); `HopChonHoLayVe(tra=True)`, `may_chu.ds_ho_de_chon(file, goc=False)` (không hỏi máy chủ);
   "Nhật ký máy chủ…" = `nhat_ky` (hop_ket_qua, mọi tài khoản đã đăng nhập). A7 (tách `HopTraNQ28` / `HopLanPA` khỏi man_hinh.py) KHÔNG
   làm: `HopTraNQ28` ở man_hinh_du_toan.py, `HopLanPA` 25 dòng giữa file. `tao_ban_do_ma.py` không có `--kiem-tra` (chạy thường đã kiểm).
+  LARC Mobile ĐỒNG BỘ số phiên bản với máy tính (người dùng 28/10/2026; thay "PHIEN_BAN RIÊNG" ghi ở mục LARC Field Mobile 1.1.0):
+  `di_dong/dung.py` `PHIEN_BAN` đọc `__version__` của `pabt/__init__.py` như chữ (không nhập pabt); versionCode `ma_phien_ban` =
+  `DONG_BO_TU` 10000 + số cũ (1.0.32 -> 20032 > 10404 của 1.4.4, cùng khóa ký - cài đè được). Tăng `__version__` = phát hành lại
+  .apk / PWA / Pages.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.
