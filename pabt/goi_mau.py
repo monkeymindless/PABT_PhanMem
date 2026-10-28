@@ -68,16 +68,18 @@ def ds_mau_hien_hanh() -> list:
 
 
 # ---------------------------------------------------------------- tạo gói
-def tao_goi(file_ra, mo_ta: str = '', co_ho_so: bool = True, co_mau: bool = True) -> dict:
-    """Đóng gói hồ sơ địa phương đang dùng (đầy đủ, đã trộn) + mẫu đang dùng thành file .pabtcfg. Trả danh sách (goi_mau.json)."""
+def tao_goi(file_ra, mo_ta: str = '', co_ho_so: bool = True, co_mau: bool = True, ho_so: dict | None = None) -> dict:
+    """Đóng gói hồ sơ địa phương đang dùng (đầy đủ, đã trộn) + mẫu đang dùng thành file .pabtcfg. Trả danh sách (goi_mau.json).
+    ho_so: hồ sơ ĐẦY ĐỦ đóng vào gói thay cho hồ sơ của máy (tạo gói hàng loạt cho đơn vị khác - goi_don_vi; nơi gọi đã kiểm tra)."""
     if not co_ho_so and not co_mau:
         raise LoiGoiMau('Chọn ít nhất hồ sơ địa phương hoặc mẫu in để đóng gói.')
     file_ra = Path(file_ra)
     if file_ra.suffix.lower() != DUOI:
         file_ra = file_ra.with_name(file_ra.name + DUOI)
+    hs = dia_phuong.doc() if ho_so is None else ho_so
     tep = []                                            # (tên trong gói, nội dung)
     if co_ho_so:
-        tep.append((dia_phuong.TEN_FILE, json.dumps(dia_phuong.doc(), ensure_ascii=False, indent=2).encode('utf-8')))
+        tep.append((dia_phuong.TEN_FILE, json.dumps(hs, ensure_ascii=False, indent=2).encode('utf-8')))
     if co_mau:
         for ten, f in ds_mau_hien_hanh():
             try:
@@ -88,7 +90,8 @@ def tao_goi(file_ra, mo_ta: str = '', co_ho_so: bool = True, co_mau: bool = True
     if not tep:
         raise LoiGoiMau('Không có mẫu nào để đóng gói.')
     ds = dict(loai=LOAI, phien_ban_cau_truc=PHIEN_BAN_CAU_TRUC, mo_ta=mo_ta or '', tao_luc=datetime.now().isoformat(timespec='seconds'),
-              may=socket.gethostname(), phan_mem=__version__, ho_so=dia_phuong.ten_ho_so() if co_ho_so else '',
+              may=socket.gethostname(), phan_mem=__version__,
+              ho_so=(dia_phuong.ten_ho_so() if ho_so is None else str(ho_so.get('ten_ho_so') or '')) if co_ho_so else '',
               tep=[dict(ten=t, sha256=_bam(du), kich_thuoc=len(du)) for t, du in tep])
     file_ra.parent.mkdir(parents=True, exist_ok=True)
     tam = file_ra.with_name(file_ra.name + '.tmp')

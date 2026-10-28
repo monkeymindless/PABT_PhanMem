@@ -701,6 +701,17 @@ Những gì khác nhau giữa các địa phương / đơn vị nằm trong **m�
 - Máy nhận: **bấm đúp file `.pabtcfg`** (bộ cài từ 0.9.85 đăng ký đuôi file) hoặc **Công cụ → Nhập gói mẫu in & cấu hình…** → xem danh sách
   → Có. Phần mềm kiểm tra gói (mã SHA-256 từng file, chỉ nhận mẫu .xlsx / .docx / .xml không có macro và hồ sơ hợp lệ), sao lưu mẫu cũ vào
   `%APPDATA%\PABT\sao_luu_mau\<giờ>` (giữ 10 lần gần nhất) rồi thay - dùng ngay, không cài lại phần mềm.
+- **Công cụ → Tạo gói cấu hình cho nhiều đơn vị…** (cài phần mềm cho chi nhánh / đơn vị tỉnh khác, không phải nhập tay trên từng máy):
+  1. Bấm **Tạo file Excel mẫu…** → điền sheet `Don_vi`, **mỗi dòng một đơn vị**: tên tổ chức (bắt buộc), trực thuộc, địa chỉ, đơn vị cấp
+     trên, tên đơn vị trên tiêu đề bản in, đơn vị lập phương án, địa danh dòng ngày tháng, ký hiệu số, chức vụ / họ tên người ký, người
+     lập, người kiểm tra (sheet `Huong_dan` giải thích từng cột). Có thể dùng file `.json` thay Excel.
+  2. Chọn **Hồ sơ nền**: cấu hình nghiệp vụ của máy này (chi nhánh cùng tỉnh: dùng chung căn cứ pháp lý, mốc thời hạn, tỷ lệ kinh phí),
+     hồ sơ mặc định (trung tính), hoặc file hồ sơ `.json` của tỉnh khác. Thông tin cơ quan luôn lấy theo từng dòng - ô để trống không mang
+     tên đơn vị của máy bạn sang.
+  3. Bảng xem trước ghi **Đạt / Lưu ý / Thiếu** từng dòng → **Tạo gói**: mỗi đơn vị một file `LARC_CauHinh_<tên>.pabtcfg` trong thư mục
+     `Goi_cau_hinh` cạnh file danh sách. Cấu hình máy bạn **không đổi**. Gửi đúng gói cho đúng đơn vị; máy nhận bấm đúp gói như trên.
+  - Dòng lệnh: `PABT.exe mau-goi-don-vi <file.xlsx>` (file mẫu) và `PABT.exe tao-goi-don-vi <danh_sach.xlsx> [<thư mục ra>]
+    [--nen may|mac_dinh|<hồ sơ.json>] [--kem-mau]`.
 
 ## Bảng giá đất NQ 28/2025/NQ-HĐND (tích hợp)
 

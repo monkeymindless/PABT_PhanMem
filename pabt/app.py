@@ -693,6 +693,8 @@ class CuaSoChinh(QMainWindow):
                          # 0.9.85: gói mẫu in & cấu hình .pabtcfg (máy đơn, gửi qua Zalo / email) - chỉ ở menu Công cụ
                          ('Xuất gói mẫu in & cấu hình…', lambda: self.xuat_goi_mau()),
                          ('Nhập gói mẫu in & cấu hình…', lambda: self.nhap_goi_mau()),
+                         # 28/10/2026: gói cấu hình hàng loạt từ danh sách đơn vị (Excel / .json) - chỉ ở menu Công cụ
+                         ('Tạo gói cấu hình cho nhiều đơn vị…', lambda: self.tao_goi_don_vi()),
                          # 0.9.86: nhật ký kiểm toán (ai sửa, cũ -> mới) - menu Dữ liệu + chuột phải danh sách hộ (cùng QAction)
                          ('Nhật ký kiểm toán…', lambda: self.nhat_ky_kiem_toan()),
                          ('Cấu hình nghiệp vụ…', lambda: self.cau_hinh_nghiep_vu()),
@@ -2426,7 +2428,8 @@ class CuaSoChinh(QMainWindow):
                                       'Xuất danh sách hộ…', LENH_THONG_KE, None, 'Nhật ký kiểm toán…']),
                         ('&Công cụ', ['Quản lý Mẫu in & Bản in…', 'Rà soát giá…', 'Cập nhật bảng giá đất…', None,
                                       'Phiếu kiểm đếm thực địa…', None,
-                                      'Xuất gói mẫu in & cấu hình…', 'Nhập gói mẫu in & cấu hình…']),
+                                      'Xuất gói mẫu in & cấu hình…', 'Nhập gói mẫu in & cấu hình…',
+                                      'Tạo gói cấu hình cho nhiều đơn vị…']),
                         ('C&ài đặt', ['Cấu hình nghiệp vụ…', 'Giao diện…', None, 'Kết nối máy chủ LAN…', None, 'Phóng to chữ', 'Thu nhỏ chữ',
                                       'Cỡ chữ 100%']),
                         ('Trợ &giúp', ['Hướng dẫn sử dụng', 'Cập nhật phần mềm…', None, 'Chẩn đoán & sửa lỗi hệ thống…',
@@ -3596,6 +3599,14 @@ class CuaSoChinh(QMainWindow):
                                     f'{ds["file"]}\n\nGửi file này qua Zalo / email; máy nhận bấm đúp file (hoặc Công cụ → Nhập '
                                     'gói mẫu in & cấu hình…) là cập nhật, không cần cài lại phần mềm.')
         return ds
+
+    def tao_goi_don_vi(self, cho: bool = True):
+        """Tạo gói .pabtcfg hàng loạt: mỗi đơn vị (dòng của file Excel / .json) một gói, không đổi cấu hình máy này. Trả hộp."""
+        from .man_hinh_goi_don_vi import HopGoiDonVi
+        d = HopGoiDonVi(self)
+        if cho:
+            d.exec()
+        return d
 
     def nhap_goi_mau(self, file=None, xac_nhan: bool = True):
         """Cài gói .pabtcfg: kiểm tra, hỏi, sao lưu mẫu cũ, thay mẫu + hồ sơ địa phương. Trả kết quả goi_mau.cai hoặc None."""

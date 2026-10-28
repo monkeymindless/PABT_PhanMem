@@ -12,6 +12,11 @@
   python chay.py doi-chieu <file.pabt>             tính lại và đối chiếu một file dự án đã nhập
   python chay.py tu-kiem <file_ket_qua.txt>         tự kiểm tra bản cài (giao diện, PDF, bộ đơn giá, mẫu in, bảng giá đất)
   PABT.exe go-cai-dat [-Im]                         gỡ cài đặt (mục "Gỡ" của Windows) - không mở cửa sổ PowerShell
+  python chay.py mau-goi-don-vi <file.xlsx>        ghi file Excel mẫu danh sách đơn vị (mỗi dòng một đơn vị)
+  python chay.py tao-goi-don-vi <danh_sach.xlsx|.json> [<thư mục ra>] [--nen may|mac_dinh|<hồ sơ.json>] [--kem-mau]
+      Tạo mỗi đơn vị một gói cấu hình .pabtcfg (tên cơ quan, đơn vị lập, người ký…) - không đổi cấu hình máy này. Thư mục ra mặc
+      định: Goi_cau_hinh cạnh file danh sách. --nen: căn cứ pháp lý / thời hạn / kinh phí lấy theo máy này (mặc định), hồ sơ trung
+      tính đóng kèm, hoặc file hồ sơ địa phương của tỉnh.
 """
 from __future__ import annotations
 import sys
@@ -394,6 +399,34 @@ def go_cai_dat(im: bool = False) -> int:
     return 0
 
 
+def _goi_don_vi(lenh: str, argv) -> int:
+    """mau-goi-don-vi / tao-goi-don-vi: file Excel mẫu danh sách đơn vị; tạo gói .pabtcfg hàng loạt (pabt.goi_don_vi)."""
+    from pabt import goi_don_vi as gd
+    kem_mau = '--kem-mau' in argv and lenh == 'tao-goi-don-vi'          # cờ không có giá trị
+    try:
+        so, tc = _tach([x for x in argv if x != '--kem-mau' or not kem_mau], ('nen',) if lenh == 'tao-goi-don-vi' else ())
+        if not so or len(so) > (2 if lenh == 'tao-goi-don-vi' else 1):
+            raise LoiDoiSo('chưa chỉ file.' if not so else f'thừa đối số: {" ".join(so[1:])}')
+    except LoiDoiSo as e:
+        print(f'LỖI ĐỐI SỐ: {e}\n')
+        print(__doc__)
+        return 2
+    if lenh == 'mau-goi-don-vi':
+        print(f'Đã ghi file Excel mẫu -> {gd.tao_file_mau(so[0])}')
+        return 0
+    ra = Path(so[1]) if len(so) > 1 else Path(so[0]).resolve().parent / 'Goi_cau_hinh'
+    try:
+        kq = gd.tao_hang_loat(so[0], ra, nen=tc.get('nen', gd.NEN_MAY), kem_mau=kem_mau)
+    except gd.LoiDonVi as e:
+        print(f'KHÔNG TẠO ĐƯỢC: {e}')
+        return 1
+    tom, dong = gd.tom_tat(kq)
+    print(tom + f' -> {ra}')
+    for x in dong:
+        print('  ' + x)
+    return 0 if kq and all(x['file'] for x in kq) else 1
+
+
 def main(argv) -> int:
     if not argv or argv[0].lower().endswith(('.pabt', '.larc', '.larcud', '.pabtcn', '.pabtcfg')) or argv[0] in ('--menu-trai', '--menu-tren'):
         from pabt.app import main as mo_cua_so
@@ -410,6 +443,8 @@ def main(argv) -> int:
         ra = pk.xuat_du_lieu_mac_dinh(argv[1])
         print(f'Đã ghi danh mục cho ứng dụng điện thoại -> {ra}')
         return 0
+    if lenh in ('mau-goi-don-vi', 'tao-goi-don-vi'):
+        return _goi_don_vi(lenh, argv[1:])
     if lenh not in TUY_CHON:
         print(__doc__)
         return 2

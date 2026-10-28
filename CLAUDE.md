@@ -2520,6 +2520,16 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 - `tests/test_khuon_word.test_nguon_goc_rat_dai` lỗi trên venv38_32 (từ 1.0.19) KHÔNG phải lỗi bản in: pypdf 5.9 (bản cuối cho Python 3.8; 6.x cần
   3.9+) gọi visitor_text cho mẩu chữ cuối khối với cm = tm = ma trận đơn vị (tọa độ 0, 0); pypdf 6.19 báo đúng vị trí trên cùng file PDF.
   `_chu_co_vi_tri` nay tính vị trí = tm × cm và bỏ mẩu không có vị trí. Phần mềm không dùng visitor_text (nhập PDF dùng extract_text layout).
+- Sau 1.0.31 GÓI CẤU HÌNH HÀNG LOẠT (người dùng 28/10/2026; chưa tăng phiên bản; test `tests/test_goi_don_vi.py`): `pabt/goi_don_vi.py`
+  (không Qt) - `COT` (khóa, tiêu đề cột Excel, nơi ghi co_quan / ban_in_mac_dinh / dia_danh / ho_so, bắt buộc, giải thích; chỉ `ten` bắt
+  buộc), `tao_file_mau` (sheet `Don_vi` chỉ dòng tiêu đề - KHÔNG dòng ví dụ, + `Huong_dan`; lưu bằng an_toan.luu_xlsx), `doc_danh_sach`
+  (.xlsx / .xlsm: dòng tiêu đề = dòng có cột Tên tổ chức, nhận tiêu đề hoặc khóa không dấu; .json: hồ sơ địa phương = một đơn vị, hoặc danh
+  sách / {"don_vi": [...]}), `ho_so_nen(nen)` ('may' = dia_phuong.doc(), 'mac_dinh', file .json) LUÔN xóa ten / truc_thuoc / dia_chi /
+  ban_in_mac_dinh / ban_in.dia_danh_ngay của nền (ô trống không mang tên đơn vị máy tạo gói sang), `ho_so_don_vi` (don_vi_lap trống = ten;
+  "dia_danh" ghi cả ban_in_mac_dinh.dia_danh_don_vi lẫn ban_in.dia_danh_ngay; dia_phuong.kiem_tra), `tao_hang_loat` (lỗi từng dòng không
+  dừng dòng khác; tên trùng _2, _3; KHÔNG ghi file máy), `tom_tat`. `goi_mau.tao_goi(ho_so=)` đóng hồ sơ truyền vào thay hồ sơ máy. Màn
+  hình `man_hinh_goi_don_vi.HopGoiDonVi` (lệnh 'Tạo gói cấu hình cho nhiều đơn vị…' CHỈ menu Công cụ); CLI `chay.py mau-goi-don-vi` /
+  `tao-goi-don-vi <ds> [<ra>] [--nen …] [--kem-mau]` (cờ không giá trị tách trước `_tach`).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.
