@@ -124,7 +124,7 @@ class TestTep(unittest.TestCase):
             if ten.endswith('.png'):
                 self.assertTrue(du.startswith(b'\x89PNG'), ten)
         mf = json.loads(tep['manifest.webmanifest'])
-        self.assertEqual((mf['display'], mf['start_url'], mf['theme_color']), ('standalone', './', '#2F5F9E'))
+        self.assertEqual((mf['display'], mf['start_url'], mf['theme_color']), ('standalone', './', '#1E3A8A'))
         self.assertEqual({i['sizes'] for i in mf['icons']}, {'192x192', '512x512'})
         self.assertIn('maskable', {i['purpose'] for i in mf['icons']})
         sw = tep['sw.js'].decode('utf-8')
@@ -241,6 +241,24 @@ class TestAndroid(unittest.TestCase):
             with zipfile.ZipFile(ra) as z:
                 ten = set(z.namelist())
             self.assertTrue({'classes.dex', 'AndroidManifest.xml', 'assets/index.html', 'assets/icon-180.png'} <= ten)
+
+
+
+class TestGiaoDien1034(unittest.TestCase):
+    """1.0.34 Flagship Sapphire: màu, chế độ ban đêm, thẻ Bento, hoạt ảnh (chỉ đọc mã nguồn trang)."""
+    @classmethod
+    def setUpClass(cls):
+        cls.html = (Path(__file__).resolve().parents[1] / 'ung_dung' / 'index.html').read_text(encoding='utf-8')
+
+    def test_mau_va_hoat_anh(self):
+        h = self.html
+        for chu in ('<meta name="theme-color" content="#1E3A8A"/>', '--chinh:#1E3A8A', '--nhan:#2563EB', '--hoso:#0D9488',
+                    'body.che_do_toi', 'id="b_ban_dem"', '@keyframes trangHien', '@keyframes theNoi', '@keyframes sheetLen',
+                    '.hero_nut small{display:block!important', 'larc_field_ban_dem', 'linear-gradient(125deg,#0B192C 0%,#1E3A8A 55%,#0F766E 100%)',
+                    'prefers-reduced-motion'):
+            self.assertIn(chu, h)
+        for cu in ('#2F5F9E', '#3B6FCE', '#264E83'):
+            self.assertNotIn(cu.lower(), h.lower())
 
 
 if __name__ == '__main__':

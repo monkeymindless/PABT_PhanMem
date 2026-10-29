@@ -19,11 +19,14 @@ TUONG_PHAN = {'theo_windows': 'Theo Windows', 'bat': 'Luôn bật', 'tat': 'Tắ
 MAC_DINH_TUONG_PHAN = 'theo_windows'
 KHOA_MAT_DO = 'giao_dien/mat_do'
 KHOA_TUONG_PHAN = 'giao_dien/tuong_phan_cao'
-# 1.0.33 TÔNG NỀN bề mặt: tên -> (nhãn, nền cửa sổ, nền khung / ô, vạch ngăn, chữ chính, chữ phụ). 'sang' = màu của 1.0.32 (TOKEN gốc).
-# giao_dien đổi các màu này trên bảng kiểu chung (dat_tong_nen); áp ngay, nhớ cho lần mở sau.
+# 1.0.33 TÔNG NỀN bề mặt: tên -> (nhãn, nền cửa sổ, nền khung / ô, vạch ngăn, chữ chính, chữ phụ). giao_dien đổi các màu này trên bảng
+# kiểu chung (dat_tong_nen); áp ngay, nhớ cho lần mở sau. 1.0.34: mặc định Sáng Sapphire (nền #F1F5F9 - khác màu gốc 1.0.33), thêm Ấm
+# áp và Tối chuyên gia (Dark Studio).
 TONG_NEN = {
-    'sang': ('Sáng chuẩn (Enterprise Navy)', '#F8FAFC', '#FFFFFF', '#E2E8F0', '#0F172A', '#475569'),
-    'diu': ('Dịu mắt (làm việc lâu / ban đêm)', '#F1F5F9', '#F8FAFC', '#CBD5E1', '#0F172A', '#334155'),
+    'sang': ('Sáng Sapphire (Flagship Pro)', '#F1F5F9', '#FFFFFF', '#CBD5E1', '#0F172A', '#475569'),
+    'diu': ('Dịu mắt (Slate Studio)', '#E2E8F0', '#F8FAFC', '#94A3B8', '#0F172A', '#334155'),
+    'am': ('Ấm áp (Ivory Paper)', '#F5F2EB', '#FFFDF9', '#D6CFC2', '#1C1917', '#57534E'),
+    'toi': ('Tối chuyên gia (Dark Studio)', '#0B1120', '#1E293B', '#334155', '#F1F5F9', '#94A3B8'),
     'trang': ('Trắng tương phản (máy chiếu / ngoài trời)', '#FFFFFF', '#FFFFFF', '#94A3B8', '#000000', '#1E293B'),
 }
 MAC_DINH_TONG_NEN = 'sang'
@@ -86,6 +89,11 @@ def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_
         cai_dat.setValue(KHOA_TUONG_PHAN, _chon(tuong_phan, TUONG_PHAN, MAC_DINH_TUONG_PHAN))
     if tong_nen is not None:
         cai_dat.setValue(KHOA_TONG_NEN, _chon(tong_nen, TONG_NEN, MAC_DINH_TONG_NEN))
+
+
+def dao_nhanh_tong_nen(hien_tai: str = MAC_DINH_TONG_NEN) -> str:
+    """1.0.34: tông kế tiếp khi bấm nút đổi nhanh (banner): đang Tối -> Sáng Sapphire; tông khác -> Tối chuyên gia."""
+    return MAC_DINH_TONG_NEN if hien_tai == 'toi' else 'toi'
 
 
 def dang_tuong_phan_cao(tuong_phan: str = MAC_DINH_TUONG_PHAN) -> bool:

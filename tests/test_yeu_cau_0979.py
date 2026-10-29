@@ -46,7 +46,7 @@ class TestTheChao(unittest.TestCase):
             b = self.w.nut_chao[ten]
             self.assertIs(b.parentWidget(), the)                                             # nút (biểu tượng + tên) trong thẻ
             self.assertEqual(b.objectName(), 'the_chao_nut')
-            self.assertEqual((b.iconSize().width(), b.iconSize().height()), (38, 38))
+            self.assertEqual((b.iconSize().width(), b.iconSize().height()), (44, 44))                    # 1.0.34: huy hiệu 44 px
             self.assertIs(b.defaultAction(), self.w.lenh[ten])                               # vẫn là lệnh chung (trạng thái bật / tắt)
             nhan = [x for x in the.findChildren(QLabel) if x.property('vai') == 'the_chao_phu']
             self.assertEqual([x.text() for x in nhan], [PHU[ten]])                           # mô tả phụ NẰM TRONG thẻ
@@ -79,8 +79,9 @@ class TestTheChao(unittest.TestCase):
         qss = giao_dien.QSS_THE_CHAO
         # 17/10/2026 (Hybrid Enterprise Navy): màu theo giao_dien.MAU_THE_CHAO - nền trắng, rê chuột #F0F6FF, viền / biểu tượng
         # navy / xanh băng đậm / xanh ngọc (không còn xanh lá tươi)
-        for chu in ('#FFFFFF', '#E2E8F0', '#F0F6FF', '#2F5F9E', '#1F76A6', '#1F6F66', 'border-radius: 12px', 'font-size: 14.5pt',
-                    '#0F172A'):
+        # 1.0.34: mỗi thẻ một màu điểm nhấn (dải 4 px trên + rê chuột), lấy từ MAU_THE_CHAO
+        for chu in ('#FFFFFF', '#E2E8F0', 'border-radius: 12px', 'font-size: 14.5pt', '#0F172A',
+                    *(f'border-top: 4px solid {v[3]}' for v in giao_dien.MAU_THE_CHAO.values())):
             self.assertIn(chu, qss)
         for bo in ('#F0FDF4', '#2F7D54', '#BBF7D0'):
             self.assertNotIn(bo, qss)
@@ -93,7 +94,8 @@ class TestTheChao(unittest.TestCase):
         for ten in TEN:
             the = self.w.the_chao[ten]
             anh = the.grab().toImage()
-            self.assertEqual(QColor(anh.pixel(14, 70)).name().upper(), mau_nen[LOAI[ten]], ten)       # nền thẻ
+            c, m = QColor(anh.pixel(14, 12)), QColor(mau_nen[LOAI[ten]])                        # nền thẻ (đầu dải chuyển sắc)
+            self.assertLess(abs(c.red() - m.red()) + abs(c.green() - m.green()) + abs(c.blue() - m.blue()), 30, ten)
             the.enterEvent(None) if False else None
             the.setProperty('hover', '1')                                                    # như enterEvent
             the.style().unpolish(the)

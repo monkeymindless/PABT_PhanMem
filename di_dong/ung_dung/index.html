@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="theme-color" content="#2F5F9E"/>
+<meta name="theme-color" content="#1E3A8A"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <link rel="icon" href="icon-180.png"/>
 <link rel="apple-touch-icon" href="icon-180.png"/>
@@ -10,15 +10,15 @@
 <!-- LARC Mobile (ứng dụng kiểm đếm thực địa, dự án riêng - di_dong/README.md): chạy không cần mạng; dữ liệu ghi lưu trên máy này (localStorage +
      IndexedDB cho ảnh); xuất file .json về phần mềm LARC trên máy tính (Công cụ -> Phiếu kiểm đếm thực địa -> Nhập kết quả). -->
 <style>
-:root{--chinh:#2F5F9E;--chinh_re:#264E83;--chinh_nhat:#EFF6FF;--nhan:#3B6FCE;--phu:#059669;--hoso:#1F6F66;--nguy_hiem:#B83A3A;
---canh_bao:#C97A1A;--chu:#0F172A;--chu_phu:#475569;--vach:#CBD5E1;--nen:#F1F5F9;--trang:#fff}
+:root{--chinh:#1E3A8A;--chinh_re:#172554;--chinh_nhat:#EFF6FF;--nhan:#2563EB;--phu:#059669;--hoso:#0D9488;--nguy_hiem:#DC2626;
+--canh_bao:#D97706;--chu:#0F172A;--chu_phu:#475569;--vach:#CBD5E1;--nen:#F1F5F9;--trang:#fff}
 *{box-sizing:border-box;font-family:"Segoe UI","Inter",Roboto,Arial,sans-serif}
 html,body{margin:0}body{background:var(--nen);color:var(--chu);font-size:15px;-webkit-tap-highlight-color:transparent}
 .so{font-family:Consolas,"Roboto Mono",monospace;font-variant-numeric:tabular-nums}
 /* khung ứng dụng: dọc = một cột (màn hình rộng: khung điện thoại 430px giữa màn hình); ngang = 2 cột (công cụ AI | chi tiết) */
 #app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;background:var(--nen)}
 body.khung_dt{background:#CBD5E1}body.khung_dt #app{max-width:430px;margin:0 auto;box-shadow:0 0 0 1px #94A3B8,0 10px 40px rgba(15,23,42,.25)}
-header{background:linear-gradient(90deg,#1E3F6E,#2F5F9E);color:#fff;padding:6px 10px;display:flex;align-items:center;gap:8px;flex:0 0 auto}
+header{background:linear-gradient(90deg,#172554,#1E3A8A);color:#fff;padding:6px 10px;display:flex;align-items:center;gap:8px;flex:0 0 auto}
 header img{width:30px;height:30px;border-radius:7px;background:#fff;flex:0 0 auto}
 header .chu{min-width:0;flex:1}header .ten{font-weight:700;font-size:14px;line-height:1.15}
 header .phu{font-size:11px;color:#DBEAFE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -118,7 +118,7 @@ justify-content:center;margin:0}.nut_lon label input{display:none}
 /* màn hình AI: 2 nút lớn + công cụ phân tách */
 .hero{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .hero_nut{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;min-height:46px;border-radius:10px;padding:6px 8px;
-background:linear-gradient(160deg,#2F5F9E,#1E3F6E);box-shadow:0 2px 6px rgba(30,63,110,.22);text-align:left}
+background:linear-gradient(160deg,#1E3A8A,#172554);box-shadow:0 2px 6px rgba(30,63,110,.22);text-align:left}
 .hero_nut.noi{background:linear-gradient(160deg,#059669,#047857);box-shadow:0 2px 6px rgba(4,120,87,.22)}
 .hero_nut .bt{font-size:20px;line-height:22px}.hero_nut b{font-size:13px;letter-spacing:.2px;white-space:nowrap}.hero_nut small{display:none}
 .hero_nut.dang_nghe{animation:nhip 1.2s ease-in-out infinite}@keyframes nhip{50%{transform:scale(.97);filter:brightness(1.15)}}
@@ -228,12 +228,73 @@ border-top:2.5px solid #1E3A8A;border-radius:20px 20px 0 0;padding:10px 12px cal
 .hop_thu_am::before{content:"";display:block;width:42px;height:4px;background:#CBD5E1;border-radius:99px;margin:0 auto 8px}
 body.khung_dt .hop_thu_am,body.bc_ngang .hop_thu_am{left:50%;right:auto;width:min(640px,94vw);margin-left:0;transform:translateX(-50%);
 bottom:calc(var(--ban_phim,0px) + 14px);border-radius:16px;border:2px solid #1E3A8A}
+
+/* 1.0.34 "Flagship Sapphire" (người dùng 29/10/2026): header chuyển sắc nhiều tầng, thẻ Bento cho 2 nút lớn, thanh mục con / thanh đáy dạng
+   viên kính mờ, hoạt ảnh nhẹ (trang, thẻ kết quả, bảng thu âm), màn hình chào dạng banner. Chế độ Ban đêm: body.che_do_toi */
+header{background:radial-gradient(120% 140% at 100% 0%,rgba(56,189,248,.28) 0%,rgba(56,189,248,0) 55%),
+linear-gradient(125deg,#0B192C 0%,#1E3A8A 55%,#0F766E 100%)}
+header .huy{background:rgba(255,255,255,.16);border:1px solid rgba(186,230,253,.45);box-shadow:0 0 10px rgba(56,189,248,.45);font-weight:700}
+header .doi.bat{background:rgba(255,255,255,.3)}
+.hero{gap:10px}
+.hero_nut{min-height:82px;border-radius:16px;padding:10px 12px;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;
+background:linear-gradient(145deg,#2563EB 0%,#1E3A8A 70%);box-shadow:0 10px 22px rgba(30,58,138,.32),inset 0 1px 0 rgba(255,255,255,.22);
+transition:transform .18s cubic-bezier(.22,1,.36,1),box-shadow .18s cubic-bezier(.22,1,.36,1)}
+.hero_nut.noi{background:linear-gradient(145deg,#10B981 0%,#047857 75%);box-shadow:0 10px 22px rgba(4,120,87,.32),inset 0 1px 0 rgba(255,255,255,.22)}
+.hero_nut:active{transform:translateY(1px) scale(.97);box-shadow:0 4px 10px rgba(15,23,42,.25)}
+.hero_nut .bt{width:34px;height:34px;flex:0 0 34px;display:flex;align-items:center;justify-content:center;border-radius:10px;
+background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);font-size:19px}
+.hero_nut b{display:block;font-size:14px;white-space:normal;line-height:1.2}
+.hero_nut small{display:block!important;font-size:11px;font-weight:500;opacity:.88;white-space:normal;line-height:1.25;margin-top:2px}
+.hero_nut .chu_hero{display:flex;flex-direction:column;min-width:0}
+.phan_doan{background:rgba(241,245,249,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.phan_doan button{border-radius:12px;transition:transform .16s cubic-bezier(.22,1,.36,1)}
+.phan_doan button.chon{background:linear-gradient(135deg,#1E3A8A 0%,#2563EB 100%);border-color:#1E3A8A;
+box-shadow:0 6px 14px rgba(37,99,235,.32),inset 0 1px 0 rgba(255,255,255,.25);transform:translateY(-1px)}
+.bottom_nav{background:rgba(255,255,255,.86);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 -6px 20px rgba(15,23,42,.08)}
+.bottom_nav button .bt{transition:transform .18s cubic-bezier(.22,1,.36,1)}
+.bottom_nav button.chon .bt{transform:translateY(-2px) scale(1.08);background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:0 10px}
+.bottom_nav button.chon::before{left:26%;right:26%;background:linear-gradient(90deg,#2563EB,#0284C7,#059669)}
+@keyframes trangHien{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes theNoi{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes sheetLen{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.trang.hien{animation:trangHien .2s ease-out}
+.ai_the{animation:theNoi .22s cubic-bezier(.22,1,.36,1) both}
+.hop_thu_am:not([hidden]){animation:sheetLen .24s cubic-bezier(.22,1,.36,1)}
+body.khung_dt .hop_thu_am:not([hidden]),body.bc_ngang .hop_thu_am:not([hidden]){animation:none}
+@media (prefers-reduced-motion:reduce){.trang.hien,.ai_the,.hop_thu_am:not([hidden]){animation:none}.hero_nut,.phan_doan button{transition:none}}
+#man_chao .dau{padding:16px 14px;border-radius:16px;color:#fff;margin:8px 0 16px;
+background:radial-gradient(120% 140% at 100% 0%,rgba(56,189,248,.3) 0%,rgba(56,189,248,0) 55%),linear-gradient(125deg,#0B192C 0%,#1E3A8A 55%,#0F766E 100%);
+box-shadow:0 12px 28px rgba(30,58,138,.3)}
+#man_chao .dau h1{color:#fff}#man_chao .dau img{box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+/* Ban đêm chuyên gia (Dark Studio): nhớ ở larc_field_ban_dem; bật thì tắt chế độ nắng và ngược lại */
+body.che_do_toi{--chinh:#60A5FA;--chinh_re:#3B82F6;--chinh_nhat:#1E3A5F;--chu:#F1F5F9;--chu_phu:#94A3B8;--vach:#334155;--nen:#0B1120;--trang:#1E293B;
+background:#0B1120;color:#F1F5F9;color-scheme:dark}
+body.che_do_toi #app,body.che_do_toi.khung_dt{background:#0B1120}
+body.che_do_toi .ho_bar,body.che_do_toi .ngan_tim,body.che_do_toi .khung,body.che_do_toi .ai_the,body.che_do_toi .hop_thu_am,
+body.che_do_toi details.khung,body.che_do_toi #hop_xem_anh .xa_duoi{background:#1E293B;color:#F1F5F9;border-color:#334155}
+body.che_do_toi input,body.che_do_toi select,body.che_do_toi textarea{background:#0F172A;color:#F8FAFC;border-color:#475569}
+body.che_do_toi button{background:#2563EB;color:#fff}
+body.che_do_toi button.phu,body.che_do_toi .chip,body.che_do_toi .phim_tat_ct button,body.che_do_toi .the_kml button{background:#0F172A;color:#E2E8F0;
+border-color:#475569}
+body.che_do_toi .chip.chon,body.che_do_toi .the_kml button.chon{background:#1E3A5F;color:#BFDBFE;border-color:#60A5FA}
+body.che_do_toi .phan_doan{background:rgba(11,17,32,.82)}body.che_do_toi .phan_doan button{background:#1E293B;color:#CBD5E1;border-color:#334155}
+body.che_do_toi .phan_doan button.chon{background:linear-gradient(135deg,#1E3A8A 0%,#2563EB 100%);color:#fff;border-color:#2563EB}
+body.che_do_toi .bottom_nav{background:rgba(15,23,42,.9);border-top-color:#334155}body.che_do_toi .bottom_nav button{background:none;color:#94A3B8}
+body.che_do_toi .bottom_nav button.chon{color:#93C5FD}body.che_do_toi .bottom_nav button.chon .bt{background:#1E3A5F;border-color:#2563EB}
+body.che_do_toi table td{border-color:#334155;color:#E2E8F0}body.che_do_toi th{background:#0F172A;color:#93C5FD}
+body.che_do_toi tr:nth-child(even) td{background:#162033}
+body.che_do_toi .goi_y{background:#1E3A5F;border-color:#2563EB;color:#BFDBFE}body.che_do_toi .tam_tinh{color:#93C5FD}
+body.che_do_toi .dem{background:#1E3A5F;color:#BFDBFE}body.che_do_toi .tam_tinh_ho{background:#064E3B;color:#A7F3D0;border-color:#047857}
+body.che_do_toi .hero_nut{box-shadow:0 10px 22px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.18)}
+body.che_do_toi .khung h3,body.che_do_toi details.khung>summary{color:#93C5FD}
+body.che_do_toi .hop_thu_am::before{background:#475569}
 </style></head><body>
 <div id="app">
 <header><img alt="LARC" src="icon-180.png"/><div class="chu"><div class="ten">LARC Mobile</div>
 <div class="phu" title="Phương án bồi thường, hỗ trợ, tái định cư · kiểm đếm thực địa, không cần mạng">Kiểm đếm thực địa</div></div>
 <span class="huy">v@@PHIEN_BAN@@</span><button class="doi" id="b_xoay" type="button">🔄 Xoay ngang</button><button class="doi" id="b_tuong_phan" type="button"
- title="Chế độ ngoài trời nắng: chữ đen, viền đậm (tương phản cao)">☀️<span class="chu_nut"> Nắng</span></button>
+ title="Chế độ ngoài trời nắng: chữ đen, viền đậm (tương phản cao)">☀️<span class="chu_nut"> Nắng</span></button><button class="doi" id="b_ban_dem" type="button"
+ title="Chế độ ban đêm chuyên gia: nền tối, đỡ chói mắt">🌙<span class="chu_nut"> Đêm</span></button>
 <button class="doi" id="b_doi_du_an" type="button" style="display:none">Dự án</button></header>
 <div class="ho_bar" id="ho_bar"><button class="phu" id="b_truoc" type="button" title="Hộ trước">◀</button>
 <select id="cb_ho" aria-label="Chọn hộ"></select><button class="phu" id="b_sau" type="button" title="Hộ sau">▶</button>
@@ -245,8 +306,8 @@ bottom:calc(var(--ban_phim,0px) + 14px);border-radius:16px;border:2px solid #1E3
 <div id="khung_ud"><div id="cot_trai">
 
 <section class="trang" id="t7"><div class="hero">
-<button class="hero_nut" id="b_hero_chup" type="button" title="Chụp biên bản hoặc mã QR trên CCCD"><span class="bt">📷</span><b>Chụp / Quét ảnh</b><small>Biên bản · mã QR trên CCCD</small></button>
-<button class="hero_nut noi" id="b_hero_noi" type="button" title="Đọc liền một mạch, máy tự tách"><span class="bt">🎙️</span><b>Nhập giọng nói</b><small>Đọc liền một mạch, máy tự tách</small></button></div>
+<button class="hero_nut" id="b_hero_chup" type="button" title="Chụp biên bản hoặc mã QR trên CCCD"><span class="bt">📷</span><span class="chu_hero"><b>Chụp / Quét ảnh</b><small>Biên bản · mã QR trên CCCD</small></span></button>
+<button class="hero_nut noi" id="b_hero_noi" type="button" title="Đọc liền một mạch, máy tự tách"><span class="bt">🎙️</span><span class="chu_hero"><b>Nhập giọng nói</b><small>Đọc liền một mạch, máy tự tách</small></span></button></div>
 <input id="a_hero" type="file" accept="image/*" capture="environment" style="display:none"/>
 <div class="song_am" id="song_am" hidden><div class="vach_am"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 <div id="song_chu">Đang nghe… đọc liền một mạch</div><button class="phu nho" id="b_dung_noi" type="button">Xong</button></div>
@@ -1147,7 +1208,7 @@ function chuanHoaTiengNoi(s) {
 // ---------------------------------------------------------------- phân tách thông minh (chạy trên máy, không mạng): hộ / đất / nhà / vật KT / cây / vật nuôi
 const AI = {items: [], uu_tien: ""};
 const NHAN_AI = {ho: "👤 Hồ sơ hộ", dat: "📐 Đất thu hồi", nha: "🏠 Nhà ở QĐ 18", vkt: "🧱 Vật kiến trúc", cay: "🌳 Cây trồng", vn: "🐄 Vật nuôi", khac: "📝 Dòng biên bản"};
-const MAU_AI = {ho: "#2F5F9E", dat: "#1F6F66", nha: "#9A5A12", vkt: "#1F76A6", cay: "#2F7D54", vn: "#7C4A12", khac: "#64748B"};
+const MAU_AI = {ho: "#1E3A8A", dat: "#1F6F66", nha: "#9A5A12", vkt: "#1F76A6", cay: "#2F7D54", vn: "#7C4A12", khac: "#64748B"};
 const NHAN_HO = {ho_ten: "Họ tên chủ hộ", nguoi_su_dung: "Người sử dụng", so_cccd: "Số CCCD", sdt: "Điện thoại", nam_sinh: "Năm sinh", dia_chi: "Địa chỉ"};
 const VKT_DAU = "mái che|mái hiên|sân|tường rào|hàng rào|tường|giếng|ống|bể|hồ chứa|hồ nước|hầm cầu|hố phân|chuồng|mộ|cổng|trụ|nền|bờ kè|kè|bồn hoa|bồn|" +
   "đồng hồ|tấm đan|hòn non bộ|khung đỡ|dây điện|cáp điện|miếu|lán|chòi|công trình phụ";
@@ -1884,7 +1945,7 @@ function veBanDo() { $("b_gps_bd").classList.toggle("dang", BD.theo !== null); l
   for (let y = Math.floor(my0 / buoc) * buoc; y <= my1; y += buoc) { const py = h / 2 - (y - BD.cy) * BD.k; g.beginPath(); g.moveTo(0, py); g.lineTo(w, py); g.stroke(); }
   const md = typeof ST.mo_thua === "number" ? ST.mo_thua : 30, mo_thua = md ? Math.round(md * 2.55).toString(16).padStart(2, "0") : "";   // độ đậm tô thửa
   for (const t of cacThua()) { g.beginPath(); t.vong.forEach(([la, lo], i) => { const [x, y] = raMH(la, lo, w, h); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath();
-    const m = t.ranh ? "#B83A3A" : (MAU[t.trang_thai] || ["", "#3B6FCE"])[1];
+    const m = t.ranh ? "#B83A3A" : (MAU[t.trang_thai] || ["", "#2563EB"])[1];
     if (!t.ranh && mo_thua) { g.fillStyle = m + mo_thua; g.fill(); }
     if (co_nen && t !== BD.chon) { g.strokeStyle = "rgba(255,255,255,.85)"; g.lineWidth = t.ranh ? 4 : 3; g.setLineDash(t.ranh ? [6, 4] : []); g.stroke(); }   // viền trắng: nổi trên ảnh vệ tinh
     g.strokeStyle = t === BD.chon ? "#0F172A" : m; g.lineWidth = t === BD.chon ? 3 : (t.ranh ? 2 : 1.4);
@@ -1894,7 +1955,7 @@ function veBanDo() { $("b_gps_bd").classList.toggle("dang", BD.theo !== null); l
       g.lineWidth = 3; g.strokeStyle = "rgba(255,255,255,.9)"; g.strokeText(t.so_thua, lx, ly); g.fillStyle = "#0F172A"; g.fillText(t.so_thua, lx, ly); } }
   veLopCad(g, w, h, co_nen);
   if (BD.gps) { const [x, y] = raMH(BD.gps.lat, BD.gps.lon, w, h); g.beginPath(); g.arc(x, y, Math.max(6, BD.gps.acc * BD.k), 0, 7); g.fillStyle = "rgba(59,111,206,.15)"; g.fill();
-    g.beginPath(); g.arc(x, y, 7, 0, 7); g.fillStyle = "#3B6FCE"; g.fill(); g.lineWidth = 2; g.strokeStyle = "#fff"; g.stroke(); }
+    g.beginPath(); g.arc(x, y, 7, 0, 7); g.fillStyle = "#2563EB"; g.fill(); g.lineWidth = 2; g.strokeStyle = "#fff"; g.stroke(); }
   g.fillStyle = "#475569"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left"; g.fillText("lưới " + soVN(buoc, 0) + " m", 8, h - 8); }
 function trongVong(px, py, v) { let ok = false; for (let i = 0, j = v.length - 1; i < v.length; j = i++) { const [xi, yi] = v[i], [xj, yj] = v[j];
   if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) ok = !ok; } return ok; }
@@ -1974,7 +2035,19 @@ function apTuongPhan(bat) { document.body.classList.toggle("tuong_phan_cao", bat
   b.classList.toggle("bat", bat); b.textContent = ""; b.append(bat ? "🌙" : "☀️", el("span", {cls: "chu_nut", text: bat ? " Dịu" : " Nắng"}));
   b.title = bat ? "Về giao diện thường" : "Chế độ ngoài trời nắng: chữ đen, viền đậm (tương phản cao)"; }
 function batTatTuongPhan() { const bat = !document.body.classList.contains("tuong_phan_cao");
-  try { localStorage.setItem(KHOA_TP, bat ? "1" : "0"); } catch (e) { /* bỏ qua */ } apTuongPhan(bat); }
+  try { localStorage.setItem(KHOA_TP, bat ? "1" : "0"); } catch (e) { /* bỏ qua */ } apTuongPhan(bat);
+  if (bat && document.body.classList.contains("che_do_toi")) { luuBanDem(false); apBanDem(false); } }
+// 1.0.34: chế độ Ban đêm chuyên gia (Dark Studio) - lớp body.che_do_toi, nhớ trên máy; loại trừ chế độ nắng (tương phản cao)
+const KHOA_BAN_DEM = "larc_field_ban_dem";
+function luuBanDem(bat) { try { localStorage.setItem(KHOA_BAN_DEM, bat ? "1" : "0"); } catch (e) { /* bỏ qua */ } }
+function apBanDem(bat) { document.body.classList.toggle("che_do_toi", bat); const b = $("b_ban_dem");
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", bat ? "#0B1120" : "#1E3A8A");
+  if (!b) return; b.classList.toggle("bat", bat); b.textContent = "";
+  b.append(bat ? "☀️" : "🌙", el("span", {cls: "chu_nut", text: bat ? " Ngày" : " Đêm"}));
+  b.title = bat ? "Về giao diện ban ngày" : "Chế độ ban đêm chuyên gia: nền tối, đỡ chói mắt"; }
+function batTatBanDem() { const bat = !document.body.classList.contains("che_do_toi"); luuBanDem(bat); apBanDem(bat);
+  if (bat && document.body.classList.contains("tuong_phan_cao")) {
+    try { localStorage.setItem(KHOA_TP, "0"); } catch (e) { /* bỏ qua */ } apTuongPhan(false); } }
 // 1.0.32 B6: ghi chú nhanh một chạm cho hồ sơ hộ (nối vào ô Ghi chú, ngăn bằng "; ", không lặp câu đã có)
 const MAU_GHI_CHU_NHANH = ["Không tranh chấp, ranh rõ", "Có nhà ở trên đất", "Tạo lập sau thông báo thu hồi", "Đang canh tác ổn định",
   "Chưa rõ nguồn gốc đất"];
@@ -2078,9 +2151,10 @@ function khoiDong() {
   $("o_tim").addEventListener("input", locHo); $("o_loc_ho").addEventListener("change", locHo); $("cb_ho").addEventListener("change", e => chonHo(e.target.value));
   $("b_tim_mo").addEventListener("click", () => { const n = $("ngan_tim"); n.hidden = !n.hidden; if (!n.hidden) $("o_tim").focus(); });
   $("b_xoay").addEventListener("click", doiBoCuc);
-  $("b_tuong_phan").addEventListener("click", batTatTuongPhan); veGhiChuNhanh();
+  $("b_tuong_phan").addEventListener("click", batTatTuongPhan); $("b_ban_dem").addEventListener("click", batTatBanDem); veGhiChuNhanh();
   if (window.visualViewport) { visualViewport.addEventListener("resize", canBanPhim); visualViewport.addEventListener("scroll", canBanPhim); canBanPhim(); }
   { let tp = ""; try { tp = localStorage.getItem(KHOA_TP) || ""; } catch (e) { /* bỏ qua */ } apTuongPhan(tp === "1"); }
+  { let bd = ""; try { bd = localStorage.getItem(KHOA_BAN_DEM) || ""; } catch (e) { /* bỏ qua */ } apBanDem(bd === "1" && !document.body.classList.contains("tuong_phan_cao")); }
   // màn hình AI: chụp / quét, giọng nói, phân tách
   $("b_hero_chup").addEventListener("click", chupHero);
   $("a_hero").addEventListener("change", async e => { const fs = [...e.target.files]; e.target.value = ""; CHUP_HERO = false;

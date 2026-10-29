@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QFrame, QHBoxLayout, QHeaderVi
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import tong_quan_du_an as tq
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 from .tien import so_luong_vn, vn, vn_gon
 
 LENH_KHOI_TAO = (                    # (khóa self.lenh, chữ trên thẻ, mô tả)
@@ -20,28 +21,28 @@ LENH_KHOI_TAO = (                    # (khóa self.lenh, chữ trên thẻ, mô 
     ('Nhập file Excel…', 'Nhập file Excel', 'Bảng kiểm đếm, đo đạc thô'),
     ('Nhập phương án chi tiết…', 'Nhập PA chi tiết từ Excel', 'Mỗi sheet một phương án'),
 )
-MAU_KPI = (('quy_mo', 'Quy mô dự án', '#2F5F9E'), ('kinh_phi', 'Tổng kinh phí phương án', '#1F76A6'),
-           ('phe_duyet', 'Tiến độ phê duyệt', '#1F6F66'), ('ban_giao', 'Bàn giao mặt bằng', '#475569'))
+MAU_KPI = (('quy_mo', 'Quy mô dự án', '#2563EB'), ('kinh_phi', 'Tổng kinh phí phương án', '#D97706'),
+           ('phe_duyet', 'Tiến độ phê duyệt', '#059669'), ('ban_giao', 'Bàn giao mặt bằng', '#0D9488'))
 TI_LE_CHIA = (65, 35)                # bên trái : bên phải
 
 QSS_TONG_QUAN = '''
-QFrame#dai_tong_thuat { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 4px solid #2F5F9E; border-radius: 6px; }
+QFrame#dai_tong_thuat { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 4px solid #1E3A8A; border-radius: 6px; }
 QLabel#tq_ten { font-size: 16px; font-weight: 700; color: #0F172A; background: transparent; border: 0; }
 QLabel#tq_phu { font-size: 12px; color: #64748B; background: transparent; border: 0; }
 QToolButton#the_khoi_tao { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px;
     text-align: left; font-size: 13px; font-weight: 600; color: #0F172A; }
-QToolButton#the_khoi_tao:hover { background: #F0F6FF; border-color: #2F5F9E; }
+QToolButton#the_khoi_tao:hover { background: #F0F6FF; border-color: #1E3A8A; }
 QToolButton#the_khoi_tao:disabled { color: #94A3B8; }
 QFrame#khung_tq { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
-QLabel#tq_tieu_de { font-size: 13px; font-weight: 700; color: #2F5F9E; background: transparent; border: 0; }
-QFrame#the_phap_ly { background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 3px solid #2F5F9E; border-radius: 3px; }
+QLabel#tq_tieu_de { font-size: 13px; font-weight: 700; color: #1E3A8A; background: transparent; border: 0; }
+QFrame#the_phap_ly { background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 3px solid #1E3A8A; border-radius: 3px; }
 QFrame#the_phap_ly[muc="canh_bao"] { border-left-color: #C98A22; background: #FFFBEB; }
 QFrame#the_phap_ly[muc="nguy"] { border-left-color: #B83A3A; background: #FEF2F2; }
 QFrame#the_phap_ly[muc="dat"] { border-left-color: #1F6F66; }
 QLabel#tq_dong_ho { font-size: 12px; color: #0F172A; background: transparent; border: 0; }
-QPushButton#nut_lap_pa { background: transparent; color: #2F5F9E; border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 10px;
+QPushButton#nut_lap_pa { background: transparent; color: #1E3A8A; border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 10px;
     margin: 3px 6px; font-weight: 600; }
-QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #2F5F9E; }
+QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #1E3A8A; }
 '''
 
 
@@ -52,7 +53,7 @@ class KhungTongQuanDuAn(QWidget):
         super().__init__(parent)
         from .giao_dien import HangKpi, nut_lenh
         self.setObjectName('tong_quan_du_an')
-        self.setStyleSheet(QSS_TONG_QUAN)
+        dat_kieu_theo_tong(self, QSS_TONG_QUAN)
         lo = QVBoxLayout(self)
         lo.setContentsMargins(16, 12, 16, 12)
         lo.setSpacing(10)
@@ -154,9 +155,12 @@ class KhungTongQuanDuAn(QWidget):
         self.kpi.dat('kinh_phi', vn_gon(kp['tong']), f'Đất {vn_gon(kp["dat"])} · Tài sản, hỗ trợ {vn_gon(kp["con_lai"])}',
                      f'Tổng {vn(kp["tong"])} đồng\nĐất: {vn(kp["dat"])} đồng\nTài sản, cây, vật nuôi, hỗ trợ, thưởng: '
                      f'{vn(kp["con_lai"])} đồng')
-        self.kpi.dat('phe_duyet', f'{td["da_pd"]}/{td["n"]} hộ', td['pt_pd'], f'Đã lập phương án: {td["da_lap"]}/{td["n"]} hộ')
+        n = td['n'] or 0
+        self.kpi.dat('phe_duyet', f'{td["da_pd"]}/{td["n"]} hộ', td['pt_pd'], f'Đã lập phương án: {td["da_lap"]}/{td["n"]} hộ',
+                     tien_do=td['da_pd'] * 100 / n if n else 0)
         self.kpi.dat('ban_giao', f'{td["da_bg"]}/{td["n"]} hộ', td['pt_bg'],
-                     'Bàn giao mặt bằng: đã có quyết định, nhận đủ tiền và ngày biên bản (phân tích tiến độ tự động)')
+                     'Bàn giao mặt bằng: đã có quyết định, nhận đủ tiền và ngày biên bản (phân tích tiến độ tự động)',
+                     tien_do=td['da_bg'] * 100 / n if n else 0)
         self._ve_bang(kq)
         self._ve_dong_ho(kq)
         return kq

@@ -32,6 +32,9 @@ def _cho(ms):
     v.exec()
 
 
+MAU_THEME = 'document.querySelector("meta[name=theme-color]").content'
+
+
 @unittest.skipIf(QWebEnginePage is None, 'thiếu PySide6.QtWebEngine')
 @unittest.skipIf(dung.du_lieu_mac_dinh() is None, 'thiếu danh_muc_mac_dinh.json')
 class TestPhanTach(unittest.TestCase):
@@ -698,6 +701,35 @@ class TestPhanTach(unittest.TestCase):
         finally:
             self.js('if (document.body.classList.contains("tuong_phan_cao")) ' + b + '.click(); 1')
         self.assertFalse(self.js('document.body.classList.contains("tuong_phan_cao")'))
+
+    def test_ban_dem_va_loai_tru_che_do_nang(self):
+        # 1.0.34: nút 🌙 Đêm (body.che_do_toi, nhớ larc_field_ban_dem); bật Đêm thì tắt Nắng và ngược lại
+        d, n = 'document.getElementById("b_ban_dem")', 'document.getElementById("b_tuong_phan")'
+        co = lambda lop: self.js('document.body.classList.contains("%s")' % lop)       # noqa: E731
+        try:
+            self.js(d + '.click(); 1')
+            self.assertTrue(co('che_do_toi'))
+            self.assertEqual(self.js('localStorage.getItem("larc_field_ban_dem")'), '1')
+            self.assertIn('Ngày', self.js(d + '.textContent'))
+            self.assertEqual(self.js('getComputedStyle(document.body).backgroundColor'), 'rgb(11, 17, 32)')
+            self.assertEqual(self.js(MAU_THEME), '#0B1120')
+            self.js(n + '.click(); 1')                                                 # bật Nắng: tắt Đêm
+            self.assertTrue(co('tuong_phan_cao'))
+            self.assertFalse(co('che_do_toi'))
+            self.assertEqual(self.js('localStorage.getItem("larc_field_ban_dem")'), '0')
+            self.js(d + '.click(); 1')                                                 # bật Đêm: tắt Nắng
+            self.assertTrue(co('che_do_toi'))
+            self.assertFalse(co('tuong_phan_cao'))
+        finally:
+            self.js('if (document.body.classList.contains("che_do_toi")) ' + d + '.click(); '
+                    'if (document.body.classList.contains("tuong_phan_cao")) ' + n + '.click(); 1')
+        self.assertFalse(co('che_do_toi'))
+        self.assertEqual(self.js(MAU_THEME), '#1E3A8A')
+
+    def test_the_bento_hien_dong_mo_ta(self):
+        h = self.js('getComputedStyle(document.getElementById("b_hero_chup")).minHeight')
+        self.assertEqual(h, '82px')
+        self.assertEqual(self.js('getComputedStyle(document.querySelector("#b_hero_chup small")).display'), 'block')
         self.assertEqual(self.js('localStorage.getItem("larc_field_tuong_phan")'), '0')
 
     def test_vung_cham_44(self):

@@ -99,8 +99,8 @@ class TestTongNen(unittest.TestCase):
         giao_dien.dat_tong_nen('sang', ap_lai=False)
 
     def test_cau_hinh_khong_qt(self):
-        self.assertEqual(set(chu_de.TONG_NEN), {'sang', 'diu', 'trang'})
-        self.assertEqual(chu_de.TONG_NEN['sang'][1:], ('#F8FAFC', '#FFFFFF', '#E2E8F0', '#0F172A', '#475569'))   # = màu 1.0.32
+        self.assertEqual(set(chu_de.TONG_NEN), {'sang', 'diu', 'am', 'toi', 'trang'})                      # 1.0.34: thêm Ấm, Tối
+        self.assertEqual(chu_de.TONG_NEN['sang'][1:], ('#F1F5F9', '#FFFFFF', '#CBD5E1', '#0F172A', '#475569'))   # Sáng Sapphire
         self.assertEqual(chu_de.doc(None)['tong_nen'], 'sang')
         with mock.patch.dict(os.environ, {'PABT_TONG_NEN': 'diu'}):
             self.assertEqual(chu_de.doc(None)['tong_nen'], 'diu')
@@ -122,12 +122,13 @@ class TestTongNen(unittest.TestCase):
 
     def test_doi_mau_bang_kieu(self):
         goc = giao_dien._qss_day_du()
-        self.assertEqual(giao_dien.ap_tong_nen(goc, 'sang'), goc)                  # tông mặc định: bảng kiểu như 1.0.32
+        self.assertEqual(giao_dien.ap_tong_nen(goc, 'sang'), goc)                  # áp lại tông đang dùng: không đổi thêm
+        self.assertIn('background: #F1F5F9', goc)                                   # 1.0.34: mặc định Sáng Sapphire khác màu gốc
         diu = giao_dien.ap_tong_nen(goc, 'diu')
         self.assertNotEqual(diu, goc)
         trang_chu = re.compile(r'(?<![\w-])color\s*:\s*#FFFFFF', re.I)
         self.assertEqual(len(trang_chu.findall(diu)), len(trang_chu.findall(goc)))      # chữ trắng trên nút xanh giữ nguyên
-        self.assertIn('background: #F1F5F9', diu)
+        self.assertIn('background: #E2E8F0', diu)
         self.assertNotIn('color: #0F172A', giao_dien.ap_tong_nen(goc, 'trang'))       # chữ chính đen hẳn
         self.assertIn('color: #000000', giao_dien.ap_tong_nen(goc, 'trang'))
 
@@ -137,13 +138,12 @@ class TestTongNen(unittest.TestCase):
         ud = _UngDungGia()
         with mock.patch.object(giao_dien.QApplication, 'instance', return_value=ud):
             self.assertEqual(giao_dien.dat_tong_nen('diu'), 'diu')
-            self.assertEqual((giao_dien.TOKEN['nen'], giao_dien.TOKEN['vach']), ('#F1F5F9', '#CBD5E1'))
-            self.assertIn('background: #F1F5F9', ud.kieu)
-            self.assertEqual(ud.mau.window().color().name().upper(), '#F1F5F9')
+            self.assertEqual((giao_dien.TOKEN['nen'], giao_dien.TOKEN['vach']), ('#E2E8F0', '#94A3B8'))
+            self.assertIn('background: #E2E8F0', ud.kieu)
+            self.assertEqual(ud.mau.window().color().name().upper(), '#E2E8F0')
             giao_dien.dat_tong_nen('sang')
-            self.assertEqual(giao_dien.TOKEN['nen'], '#F8FAFC')
-            self.assertEqual(ud.kieu, giao_dien._qss_day_du())                       # về đúng bảng kiểu sáng chuẩn
-            self.assertNotIn('#F1F5F9;', ud.kieu.replace('background: #F1F5F9', ''))
+            self.assertEqual(giao_dien.TOKEN['nen'], '#F1F5F9')
+            self.assertEqual(ud.kieu, giao_dien._qss_day_du())                       # về đúng bảng kiểu Sáng Sapphire
             h = HopGiaoDien(im_lang=True)
             self.assertEqual(set(h.r_tong_nen), set(chu_de.TONG_NEN))
             self.assertTrue(h.r_tong_nen['sang'].isChecked())

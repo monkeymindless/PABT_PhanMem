@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QHBoxLa
                                QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from .tien import D, lam_tron, so_luong_vn, vn
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 
 TIEU_DE = 'Bảng thống kê nhanh Hộ · Thửa · Diện tích toàn dự án (Ctrl+Shift+T)'
 COT_TRANG_THAI = ['Hạng mục trạng thái', 'Số hộ', 'Tỷ lệ hộ', 'Số thửa', 'Tỷ lệ thửa', 'DT thu hồi (m²)', 'Quy đổi (ha)',
@@ -17,7 +18,7 @@ COT_DOT = ['Đợt trình thẩm định', 'Số hộ', 'Số thửa', 'DT thu h
 CHUA_XEP_DOT = 'Chưa xếp đợt trình'
 MAU_DONG_TONG = '#F1F5F9'               # dòng 1 (toàn dự án): nền xám nhạt, chữ đậm
 MAU_DONG_VUONG = '#FEF2F2'              # dòng 7 (còn vướng mặt bằng): nền đỏ nhạt
-QSS_DAI_THONG_TIN = ('QLabel#dai_thong_ke { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 4px; color: #2F5F9E; '
+QSS_DAI_THONG_TIN = ('QLabel#dai_thong_ke { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 4px; color: #1E3A8A; '
                      'padding: 6px 10px; font-weight: 600; }')
 KICH_THUOC = (1000, 600)
 DONG_DOT_TOI_DA = 8                    # bảng đợt cao tối đa bấy nhiêu dòng (nhiều đợt hơn: cuộn)
@@ -105,7 +106,7 @@ class HopThongKeDiaChinh(QDialog):
         lo.setSpacing(8)
         self.lb_quy_mo = QLabel(f'Dự án: {self.ten_du_an or "(chưa đặt tên)"}  |  Quy mô: {chu_quy_mo(self.tt[0][1])}')
         self.lb_quy_mo.setObjectName('dai_thong_ke')
-        self.lb_quy_mo.setStyleSheet(QSS_DAI_THONG_TIN)       # nhãn lá (không phải khung chứa)
+        dat_kieu_theo_tong(self.lb_quy_mo, QSS_DAI_THONG_TIN)       # nhãn lá (không phải khung chứa)
         self.lb_quy_mo.setWordWrap(True)
         lo.addWidget(self.lb_quy_mo)
         lo.addWidget(self._tieu_de('1. Tổng hợp Hộ · Thửa · Diện tích · Kinh phí theo Trạng thái thực hiện '

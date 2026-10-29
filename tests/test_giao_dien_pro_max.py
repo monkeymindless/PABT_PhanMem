@@ -29,9 +29,9 @@ class TestBangMau(unittest.TestCase):
     def test_token(self):
         t = giao_dien.TOKEN
         self.assertEqual((t['chinh'], t['chinh_nhat'], t['nhan'], t['phu'], t['nguy_hiem']),
-                         ('#2F5F9E', '#EFF6FF', '#3B6FCE', '#059669', '#C94545'))
+                         ('#1E3A8A', '#EFF6FF', '#2563EB', '#059669', '#DC2626'))       # 1.0.34 Flagship Sapphire
         self.assertEqual((t['chu'], t['chu_phu'], t['nen'], t['khung'], t['vach']),
-                         ('#0F172A', '#475569', '#F8FAFC', '#FFFFFF', '#E2E8F0'))
+                         ('#0F172A', '#475569', '#F1F5F9', '#FFFFFF', '#CBD5E1'))
         self.assertEqual(giao_dien.MAU_SO_KHONG, '#94A3B8')
         self.assertEqual(giao_dien.MAU_VIEN_CHON, '#059669')            # viền vùng chọn kiểu Excel: Emerald Teal
         for mau, toi_thieu in ((t['chinh'], 6), (t['chu'], 7)):         # chữ chính: AAA (>= 7:1); xanh cobalt dịu (1.0.16): >= 6:1 (AA là 4,5)
@@ -46,19 +46,19 @@ class TestBangMau(unittest.TestCase):
         for chu in ('border: 1px solid #CBD5E1', 'border-radius: 6px', 'padding: 4px 8px', 'background: #FFFFFF', 'color: #0F172A'):
             self.assertIn(chu, thuong)
         focus = _quy_tac(qss, 'QLineEdit:focus')
-        self.assertIn('border: 2px solid #3B6FCE', focus)
+        self.assertIn('border: 2px solid #2563EB', focus)
         self.assertIn('background: #FFFFFF', focus)
         self.assertIn('padding: 3px 7px', focus)                          # viền dày thêm 1 px: chữ không nhảy
         for bo_chon in ('QComboBox:focus', 'QSpinBox:focus', 'QPlainTextEdit:focus'):
             self.assertIn(bo_chon, qss)
-        self.assertIn('2px solid #3B6FCE', _quy_tac(qss, 'QWidget[hang_nhap="1"] QLineEdit:focus'))
-        self.assertIn('2px solid #3B6FCE', _quy_tac(qss, 'QComboBox[loc_ds="1"]:focus'))
+        self.assertIn('2px solid #2563EB', _quy_tac(qss, 'QWidget[hang_nhap="1"] QLineEdit:focus'))
+        self.assertIn('2px solid #2563EB', _quy_tac(qss, 'QComboBox[loc_ds="1"]:focus'))
 
     def test_tieu_de_bang(self):
         qss = giao_dien._qss_day_du()
         td = _quy_tac(qss, 'QHeaderView::section:horizontal')
-        for chu in ('background: #2F5F9E', 'color: #FFFFFF', 'font-weight: 600', 'border-right: 1px solid #264E83',
-                    'border-bottom: 2px solid #3B6FCE'):
+        for chu in ('background: #1E3A8A', 'color: #FFFFFF', 'font-weight: 600', 'border-right: 1px solid #172554',
+                    'border-bottom: 2px solid #2563EB'):
             self.assertIn(chu, td)
         self.assertIn(f'min-height: {giao_dien.CAO_TIEU_DE_BANG - 10}px', td)    # chiều cao tiêu đề giữ nguyên
         chon = _quy_tac(qss, 'QTableView::item:selected')
@@ -69,7 +69,7 @@ class TestBangMau(unittest.TestCase):
         qss = giao_dien._qss_day_du()
         self.assertIn('font-weight: 600; font-size: 13px', _quy_tac(qss, 'QTabBar[vai="gach_chan"]'))
         chon = _quy_tac(qss, 'QTabBar[vai="gach_chan"]::tab:selected')
-        for chu in ('color: #3B6FCE', 'border-bottom: 3px solid #3B6FCE', 'background: #FFFFFF'):
+        for chu in ('color: #2563EB', 'border-bottom: 3px solid #2563EB', 'background: #FFFFFF'):
             self.assertIn(chu, chon)
         self.assertNotIn('font', chon)                                    # phông chỉ ở mức QTabBar (Qt5 cắt chữ)
         self.assertIn('border-bottom: 3px solid transparent', _quy_tac(qss, 'QTabBar[vai="gach_chan"]::tab'))  # không đổi cao
@@ -80,7 +80,7 @@ class TestBangMau(unittest.TestCase):
 
     def test_bo_cuc_giu_nguyen(self):
         from pabt import app, man_hinh
-        self.assertEqual(app.CuaSoChinh.CAO_THE_SO, 56)
+        self.assertEqual(app.CuaSoChinh.CAO_THE_SO, 62)                  # 1.0.34: thêm thanh tiến độ 5 px
         self.assertEqual(app.CAO_DAI_CONG_CU, 32)
         self.assertEqual(man_hinh.CAO_DAI_DINH_DANH, 38)
         self.assertEqual(man_hinh.CAO_DONG_MUC, 36)

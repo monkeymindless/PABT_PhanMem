@@ -134,3 +134,68 @@ def icon():
     for s in (*CO_ICO, 512):
         ic.addPixmap(QPixmap.fromImage(ve(s)))
     return ic
+
+
+# ---------------------------------------------------------------- 1.0.34: hình minh họa vector hai tông (bảng / bản đồ chưa có dữ liệu)
+LOAI_MINH_HOA = ('bang', 'ban_do', 'ho', 'tai_lieu')
+MAU_MINH_HOA = '#2563EB'
+
+
+def ve_minh_hoa_trong(loai: str, co: int = 96, mau: str = MAU_MINH_HOA):
+    """QPixmap co x co: hình nền mờ (alpha 42) + nét chính 2 px + chấm sáng điểm nhấn. loai: 'bang' (bảng dữ liệu), 'ban_do' (bản đồ
+    thửa), 'ho' (hộ dân), 'tai_lieu' (văn bản); loại lạ = 'bang'. Vẽ bằng QPainter (không cần phông biểu tượng - chạy cả Windows 7)."""
+    from PySide6.QtGui import QPixmap
+    pm = QPixmap(co, co)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    k = co / 96.0
+    nen = QColor(mau)
+    nen.setAlpha(42)
+    net = QPen(QColor(mau), 2.0 * k)
+    net.setCapStyle(Qt.PenCapStyle.RoundCap)
+    net.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(nen)
+    p.drawEllipse(QRectF(8 * k, 8 * k, 80 * k, 80 * k))              # nền tròn mờ
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.setPen(net)
+    if loai == 'ban_do':
+        thua = [[(24, 30), (50, 24), (54, 50), (28, 56)], [(50, 24), (74, 32), (70, 58), (54, 50)],
+                [(28, 56), (54, 50), (58, 74), (32, 72)]]
+        for d in thua:
+            path = QPainterPath(QPointF(d[0][0] * k, d[0][1] * k))
+            for x, y in d[1:]:
+                path.lineTo(x * k, y * k)
+            path.closeSubpath()
+            p.drawPath(path)
+        cham = (54, 50)
+    elif loai == 'ho':
+        p.drawEllipse(QRectF(38 * k, 24 * k, 20 * k, 20 * k))
+        path = QPainterPath(QPointF(28 * k, 72 * k))
+        path.cubicTo(28 * k, 52 * k, 68 * k, 52 * k, 68 * k, 72 * k)
+        p.drawPath(path)
+        cham = (64, 30)
+    elif loai == 'tai_lieu':
+        path = QPainterPath(QPointF(30 * k, 20 * k))
+        for x, y in ((58, 20), (68, 30), (68, 76), (30, 76)):
+            path.lineTo(x * k, y * k)
+        path.closeSubpath()
+        p.drawPath(path)
+        for y in (40, 50, 60):
+            p.drawLine(QPointF(38 * k, y * k), QPointF(60 * k, y * k))
+        cham = (58, 20)
+    else:                                                             # bảng
+        p.drawRoundedRect(QRectF(22 * k, 26 * k, 52 * k, 44 * k), 5 * k, 5 * k)
+        p.drawLine(QPointF(22 * k, 38 * k), QPointF(74 * k, 38 * k))
+        for y in (50, 60):
+            p.drawLine(QPointF(30 * k, y * k), QPointF(66 * k, y * k))
+        p.drawLine(QPointF(40 * k, 38 * k), QPointF(40 * k, 70 * k))
+        cham = (74, 26)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor('#38BDF8'))                                      # chấm sáng điểm nhấn
+    p.drawEllipse(QPointF(cham[0] * k, cham[1] * k), 4.5 * k, 4.5 * k)
+    p.setBrush(QColor(255, 255, 255, 220))
+    p.drawEllipse(QPointF(cham[0] * k - 1.2 * k, cham[1] * k - 1.2 * k), 1.5 * k, 1.5 * k)
+    p.end()
+    return pm

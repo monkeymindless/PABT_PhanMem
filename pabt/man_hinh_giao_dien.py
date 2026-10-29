@@ -3,6 +3,7 @@ Dịu mắt / Trắng tương phản - áp ngay) và TƯƠNG PHẢN CAO (theo Wi
 luôn bật / tắt - áp khi mở lại phần mềm). Logic ở chu_de (không Qt) và giao_dien.dat_mat_do."""
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QButtonGroup, QComboBox, QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton, QRadioButton,
                                QVBoxLayout)
 
@@ -36,13 +37,24 @@ class HopGiaoDien(QDialog):
         hn = QVBoxLayout(nhom_tn)
         self.nhom_tong_nen = QButtonGroup(self)
         self.r_tong_nen = {}
-        for ten, (nhan, *_m) in chu_de.TONG_NEN.items():
+        self.mau_xem = {}
+        for ten, (nhan, nen, khung, vach, chu, _phu) in chu_de.TONG_NEN.items():
             r = QRadioButton(nhan)
             r.setChecked(ten == giao_dien.TONG_NEN[0])
             self.nhom_tong_nen.addButton(r)
             self.r_tong_nen[ten] = r
             r.toggled.connect(lambda dung, t=ten: dung and self.doi_tong_nen(t))
-            hn.addWidget(r)
+            xem = QLabel('Aa')                                   # 1.0.34: ô xem trước màu của tông (nền cửa sổ -> thẻ, chữ chính)
+            xem.setFixedSize(44, 22)
+            xem.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            xem.setStyleSheet(f'QLabel {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {nen}, stop:0.5 {nen}, '
+                              f'stop:0.51 {khung}, stop:1 {khung}); color: {chu}; border: 1px solid {vach}; border-radius: 5px; '
+                              'font-weight: 700; }')
+            self.mau_xem[ten] = xem
+            dong = QHBoxLayout()
+            dong.addWidget(xem)
+            dong.addWidget(r, 1)
+            hn.addLayout(dong)
         lo.addWidget(nhom_tn)
         f = QFormLayout()
         self.cb_tuong_phan = QComboBox()

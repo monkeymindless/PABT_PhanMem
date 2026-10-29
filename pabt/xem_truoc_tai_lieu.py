@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QPushB
 THU_MUC_GOC = Path(tempfile.gettempdir()) / 'pabt_preview'
 MAU_NEN = '#334155'             # vùng trang (1.0.02: slate 700 - trước #1E293B quá tối cạnh giao diện sáng)
 MAU_THANH = '#F8FAFC'           # thanh công cụ xem trước (nền slate nhạt, vạch dưới #CBD5E1)
-MAU_ICON_XT = '#2F5F9E'         # biểu tượng nút thanh công cụ
+MAU_ICON_XT = '#1E3A8A'         # biểu tượng nút thanh công cụ
 CAO_NUT_XT = 28
 MAU_GIAY = '#FFFFFF'
 CHO_MS = 250                    # chờ ngừng bấm (đổi hộ bằng phím mũi tên) rồi mới lập bản xem trước
@@ -406,7 +406,7 @@ class KhungXemTruocTaiLieu(QFrame):
                            'QPushButton[xem_truoc="1"]:pressed { background: #E2E8F0; }'
                            'QPushButton[xem_truoc="1"]:disabled { color: #94A3B8; background: #F8FAFC; border-color: #E2E8F0; }'
                            # nút "Mở bằng trình xem PDF" nằm giữa vùng trang tối: nền trắng, chữ navy
-                           'QPushButton#xt_mo_ngoai { color: #2F5F9E; }')
+                           'QPushButton#xt_mo_ngoai { color: #1E3A8A; }')
         self.ham_in = ham_in
         self._vua = True                       # đang ở chế độ vừa trang: đổi cỡ khung thì vừa lại
         self.pdf: Path | None = None

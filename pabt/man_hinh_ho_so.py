@@ -35,7 +35,7 @@ CAO_DONG_THUA = 44                      # cao_chuan: mọi dòng thửa cao bằ
 CAO_DONG_TOI_DA = 104                   # (giữ tên cũ) dòng thửa không cao quá mức này
 CO_CHU_NHO_NHAT = 0.78
 LIEN_KET_XEM = '[Xem/Sửa đủ ↗]'
-MAU_LIEN_KET = '#3B6FCE'
+MAU_LIEN_KET = '#2563EB'
 CAN_GIUA = Qt.AlignmentFlag.AlignCenter
 CAN_PHAI = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
 # viên màu loại đất (nền, chữ) theo nhóm ký hiệu TT 08/2024 - mã đầu của loại ghép
@@ -402,7 +402,7 @@ class OThaoTac(QStyledItemDelegate):
         f = QFont(option.font)
         f.setBold(True)
         p.setFont(f)
-        p.setPen(QColor('#94A3B8' if tat else '#2F5F9E'))
+        p.setPen(QColor('#94A3B8' if tat else '#1E3A8A'))
         p.drawText(sua, CAN_GIUA, 'Sửa')
         from .giao_dien import icon_ky_hieu
         ic = icon_ky_hieu(0xE74D, '#94A3B8' if tat else '#B83A3A', 16)

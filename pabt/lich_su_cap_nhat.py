@@ -7,6 +7,18 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.34', '29/10/2026', (
+        'Giao diện mới "Flagship Sapphire" ngay khi mở phần mềm: màu chủ đạo Royal Sapphire, nền xám sứ làm nổi các thẻ trắng; menu trái '
+        'nền tối, mỗi lệnh một viên bo tròn, lệnh đang chọn nổi bật màu xanh; thu gọn / mở rộng menu và chuyển trang có hiệu ứng trượt nhẹ.',
+        'Thêm tông nền Tối chuyên gia (Dark Studio) và Ấm áp; nút "Tối / Sáng" trên băng tiêu đề màn hình chào đổi giao diện bằng một cú '
+        'bấm (Cài đặt > Giao diện có ô xem trước màu từng tông).',
+        'Thẻ màn hình chào mỗi thẻ một màu, có huy hiệu biểu tượng và phím tắt; thẻ số liệu có thanh tiến độ; bảng chưa có dữ liệu có '
+        'hình minh họa.',
+        'Số lượng / diện tích: số gõ trực tiếp giữ nguyên (28,35 m² không còn bị làm tròn thành 28,4); kết quả công thức (3 x 4,1…) làm '
+        'tròn 2 chữ số lẻ (ha: 4); mở dự án tự tính lại các dòng đã nhập bằng công thức (lần phương án đã phê duyệt giữ nguyên).',
+        'LARC Mobile 1.0.34: màu Sapphire, nút 🌙 Đêm (chế độ ban đêm, nhớ trên máy), hai nút lớn dạng thẻ có dòng mô tả, thanh mục con / '
+        'thanh đáy dạng kính mờ, hiệu ứng chuyển trang và thẻ kết quả.',
+    )),
     ('1.0.33', '28/10/2026', (
         'Cài đặt > Giao diện: chọn TÔNG NỀN bề mặt - Sáng chuẩn, Dịu mắt (làm việc lâu / ban đêm), Trắng tương phản (máy chiếu / ngoài '
         'trời); áp ngay cho mọi cửa sổ đang mở, nhớ cho lần sau.',
@@ -155,7 +167,7 @@ MUC = (
         'Cột bảng tự thu vừa chữ, nhường chỗ cho Tên tài sản / Ghi chú.',
         'Mẫu Word nhúng sẵn trong phần mềm, bản cài không còn thư mục mau_in. Đổi quy cách khi có quy định mới: Công cụ > Quản lý Mẫu in '
         '& Bản in > Nhập thông số mẫu Word (hoặc nhập gói .pabtcfg) - áp ngay, không cần cập nhật phần mềm.',
-        'Màu chủ đạo dịu hơn: thanh tiêu đề bảng, nút chính, banner đổi từ xanh navy rất đậm sang xanh cobalt dịu (#2F5F9E, chữ trắng '
+        'Màu chủ đạo dịu hơn: thanh tiêu đề bảng, nút chính, banner đổi từ xanh navy rất đậm sang xanh cobalt dịu (#1E3A8A, chữ trắng '
         'tương phản 6,5:1). Các màu xanh / đỏ / lá / cam gom về một tông dịu mỗi loại, bớt chói.',
         'Màn lập phương án và danh sách hộ ở màn hình 1366 phóng 125%: nút, nhãn, tên thẻ không còn bị cắt chữ; vùng bấm tối thiểu 24 px.',
         'Sửa lỗi: cửa sổ rỗng (chỉ có nút thu nhỏ / phóng to / đóng) nhấp nháy khi bật xem trước F4, mở Bàn giao mặt bằng và Bản đồ thửa '

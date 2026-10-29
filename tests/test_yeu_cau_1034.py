@@ -1,0 +1,163 @@
+"""1.0.34 (người dùng 29/10/2026) "Flagship Sapphire": bảng màu mới mặc định, tông Tối chuyên gia / Ấm áp, menu trái tối dạng viên, banner đồ
+họa + nút đổi nhanh Sáng / Tối, thẻ chào mỗi thẻ một màu (huy hiệu biểu tượng, phím tắt), thẻ KPI có thanh tiến độ, hình minh họa khi bảng
+trống, hoạt ảnh chuyển trang / thu gọn menu (tắt khi không màn hình). Bài kiểm KHÔNG áp lại bảng kiểu cho QApplication thật (_UngDungGia)."""
+from __future__ import annotations
+import os
+import unittest
+from unittest import mock
+
+from pabt import chu_de, giao_dien
+from tests import APP
+from tests.test_yeu_cau_1033 import _UngDungGia
+
+CO_QT = APP is not None
+
+
+class TestBangMau(unittest.TestCase):
+    def tearDown(self):
+        giao_dien.dat_tong_nen('sang', ap_lai=False)
+
+    def test_token_flagship(self):
+        t = giao_dien.TOKEN
+        self.assertEqual((t['chinh'], t['chinh_re'], t['nhan'], t['thanh_cong'], t['canh_bao'], t['nguy_hiem']),
+                         ('#1E3A8A', '#172554', '#2563EB', '#059669', '#D97706', '#DC2626'))
+        self.assertEqual((t['nen'], t['nen_the'], t['vien']), ('#F1F5F9', '#FFFFFF', '#CBD5E1'))
+        qss = giao_dien._qss_day_du()
+        for cu in ('#2F5F9E', '#3B6FCE', '#264E83'):
+            self.assertNotIn(cu, qss.upper())
+        self.assertIn('background: #F1F5F9', qss)                       # mặc định đã khác màu gốc 1.0.33 (#F8FAFC)
+
+    def test_tong_nen_bon_che_do_va_toi(self):
+        self.assertTrue({'sang', 'diu', 'am', 'toi'} <= set(chu_de.TONG_NEN))
+        self.assertEqual(chu_de.TONG_NEN['toi'][1:], ('#0B1120', '#1E293B', '#334155', '#F1F5F9', '#94A3B8'))
+        giao_dien.TONG_NEN[0] = 'toi'
+        try:
+            day_du = giao_dien._qss_day_du()                             # dựng từ màu gốc rồi đổi theo tông Tối
+            self.assertIn('background: #0B1120', day_du)
+            self.assertIn('background: #1E293B', day_du)
+            self.assertNotRegex(day_du, r'(?<![\w-])color: #0F172A')     # chữ chính sáng (dòng xen kẽ nền tối thì được)
+            self.assertTrue(day_du.endswith(giao_dien.QSS_TOI))          # khối bảng / ô nhập / menu tối đặt cuối
+            self.assertIn('QFrame[vai="menu_trai"] { background: #090D16; }', day_du)
+        finally:
+            giao_dien.TONG_NEN[0] = 'sang'
+
+    def test_dao_nhanh(self):
+        self.assertEqual(chu_de.dao_nhanh_tong_nen('sang'), 'toi')
+        self.assertEqual(chu_de.dao_nhanh_tong_nen('am'), 'toi')
+        self.assertEqual(chu_de.dao_nhanh_tong_nen('toi'), 'sang')
+
+    def test_menu_trai_vien_thuoc_toi(self):
+        q = giao_dien._qss_menu_trai()
+        for chu in ('stop:0 #0F172A, stop:0.55 #1E293B, stop:1 #0F172A', 'border-right: 1px solid #334155', 'border-radius: 8px',
+                    'rgba(59, 130, 246, 0.16)', 'stop:0 #2563EB, stop:1 #0284C7', 'border-left: 4px solid #38BDF8', 'color: #60A5FA',
+                    'letter-spacing: 0.8px'):
+            self.assertIn(chu, q)
+        self.assertEqual((giao_dien.MAU_ICON_MENU, giao_dien.MAU_ICON_MENU_CHON), ('#CBD5E1', '#FFFFFF'))
+
+    def test_mau_the_chao_bon_mau(self):
+        nhan = [v[3] for v in giao_dien.MAU_THE_CHAO.values()]
+        self.assertEqual(nhan, ['#2563EB', '#059669', '#D97706', '#7C3AED'])
+        self.assertEqual(len(set(v[2] for v in giao_dien.MAU_THE_CHAO.values())), 4)
+        for k, v in giao_dien.MAU_THE_CHAO.items():
+            self.assertIn(f'QFrame[vai="the_chao"][loai="{k}"] {{ background: qlineargradient', giao_dien.QSS_THE_CHAO)
+            self.assertIn(f'border-top: 4px solid {v[3]}', giao_dien.QSS_THE_CHAO)
+
+    def test_bong_do_va_hoat_anh_tat_khi_khong_man_hinh(self):
+        with mock.patch.dict(os.environ, {'QT_QPA_PLATFORM': 'offscreen'}):
+            self.assertFalse(giao_dien.co_bong_do())
+            self.assertFalse(giao_dien.co_hoat_anh())
+        with mock.patch.dict(os.environ, {'QT_QPA_PLATFORM': 'windows', 'PABT_HIEU_UNG_BONG': '0', 'PABT_HOAT_ANH': '0'}):
+            self.assertFalse(giao_dien.co_bong_do())
+            self.assertFalse(giao_dien.co_hoat_anh())
+
+
+@unittest.skipUnless(CO_QT, 'không có Qt')
+class TestThanhPhan(unittest.TestCase):
+    def tearDown(self):
+        giao_dien.dat_tong_nen('sang', ap_lai=False)
+
+    def test_the_kpi_co_thanh_tien_do(self):
+        from PySide6.QtWidgets import QProgressBar
+        t = giao_dien.TheKpiGon('Tiến độ phê duyệt', '#059669')
+        self.assertIsInstance(t.thanh_tien_do, QProgressBar)
+        self.assertEqual(t.height(), giao_dien.CAO_THE_KPI_GON)
+        t.dat('3/6 hộ', '50%', tien_do=50)
+        self.assertEqual(t.thanh_tien_do.value(), 50)
+        self.assertFalse(t.thanh_tien_do.isHidden())
+        t.dat('—')
+        self.assertTrue(t.thanh_tien_do.isHidden())
+        t.dat('x', tien_do=140)
+        self.assertEqual(t.thanh_tien_do.value(), 100)
+        self.assertEqual(t.thanh_tien_do.property('mau'), '#059669')
+        self.assertIn('QProgressBar[vai="thanh_tien_do"][mau="#059669"]::chunk', giao_dien._qss_day_du())
+        t.deleteLater()
+
+    def test_the_so_cua_so_chinh(self):
+        from pabt.app import CuaSoChinh
+        w = CuaSoChinh()
+        try:
+            self.assertEqual(set(w.the_tien_do), set(w.the_so))
+            self.assertTrue(all(t.isHidden() for t in w.the_tien_do.values()))       # chưa mở dự án
+            self.assertEqual(w.the_tien_do['tong'].property('mau'), giao_dien.MAU_NHOM_KPI['tien'])
+            banner = w.banner_ten
+            self.assertIsInstance(banner, giao_dien.KhungBanner)
+            self.assertIsInstance(banner.btn_doi_giao_dien, giao_dien.NutDoiGiaoDien)
+            self.assertEqual(banner.btn_doi_giao_dien.text(), 'Tối')
+            anh = banner.grab().toImage()                                              # vẽ được (lưới, vòng cung, viền đáy)
+            self.assertFalse(anh.isNull())
+            ud = _UngDungGia()
+            with mock.patch.object(giao_dien.QApplication, 'instance', return_value=ud), \
+                    mock.patch.object(giao_dien, 'cai_dat_nho', return_value=None):
+                banner.btn_doi_giao_dien.click()
+                self.assertEqual(giao_dien.TONG_NEN[0], 'toi')
+                self.assertEqual(banner.btn_doi_giao_dien.text(), 'Sáng')
+                self.assertIn('#0B1120', ud.kieu)
+                banner.btn_doi_giao_dien.click()
+                self.assertEqual(giao_dien.TONG_NEN[0], 'sang')
+                self.assertEqual(banner.btn_doi_giao_dien.text(), 'Tối')
+            the = w.the_chao['Dự án mới…']
+            b = w.nut_chao['Dự án mới…']
+            self.assertEqual((b.iconSize().width(), b.iconSize().height()), (44, 44))
+            if the.lb_phim is not None:                                                # phím tắt THẬT của lệnh
+                self.assertEqual(the.lb_phim.text(), w.lenh['Dự án mới…'].shortcut().toString())
+                self.assertIs(the.lb_phim.parentWidget(), the)
+        finally:
+            w.close()
+            w.deleteLater()
+            APP.processEvents()
+
+    def test_chuyen_trang_muot_va_rong_muot(self):
+        from PySide6.QtWidgets import QLabel, QStackedWidget, QWidget
+        st = QStackedWidget()
+        for i in range(3):
+            st.addWidget(QLabel(str(i)))
+        giao_dien.chuyen_trang_muot(st, 2)
+        self.assertEqual(st.currentIndex(), 2)                                         # không màn hình: đổi ngay
+        giao_dien.chuyen_trang_muot(st, 2)
+        self.assertEqual(st.currentIndex(), 2)
+        w = QWidget()
+        giao_dien.dat_rong_muot(w, 120)
+        self.assertEqual((w.minimumWidth(), w.maximumWidth()), (120, 120))
+        st.deleteLater()
+        w.deleteLater()
+
+    def test_minh_hoa_trong(self):
+        from pabt.ve_bieu_tuong import LOAI_MINH_HOA, ve_minh_hoa_trong
+        for loai in LOAI_MINH_HOA + ('la',):
+            pm = ve_minh_hoa_trong(loai, 96)
+            self.assertEqual((pm.width(), pm.height()), (96, 96))
+            anh = pm.toImage()
+            self.assertGreater(anh.pixelColor(48, 48).alpha(), 0)                      # nền tròn mờ
+            self.assertEqual(anh.pixelColor(1, 1).alpha(), 0)                           # góc trong suốt
+
+    def test_hop_giao_dien_co_xem_truoc(self):
+        from pabt.man_hinh_giao_dien import HopGiaoDien
+        h = HopGiaoDien(im_lang=True)
+        self.assertEqual(set(h.mau_xem), set(chu_de.TONG_NEN))
+        self.assertIn('#0B1120', h.mau_xem['toi'].styleSheet())
+        h.close()
+        h.deleteLater()
+
+
+if __name__ == '__main__':
+    unittest.main()

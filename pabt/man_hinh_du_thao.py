@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialo
                                QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget)
 
 from . import du_thao
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 from .thong_bao import TEN_UD, chu_loi
 from .tien import vn
 
@@ -56,7 +57,7 @@ def san_tieu_de(b) -> None:
 MAU_Y_KIEN = {'dong_y': '#2F7D54', 'khong_dong_y': '#B83A3A', 'y_kien_khac': '#9A5A12', 'chua': '#64748B'}
 # thẻ KPI trang Niêm yết (1.0.02, như thẻ số màn hình chính): màu vạch trái + màu số. Navy = tổng; xanh trời / xanh dương = đủ điều kiện /
 # đã niêm yết; teal / xanh lá = phê duyệt / bàn giao (đã đồng thuận); hổ phách = vướng (cần xử lý)
-MAU_THE_NY = {'tong': '#2F5F9E', 'du': '#1F76A6', 'vuong': '#9A5A12', 'dt': '#3B6FCE', 'pd': '#1F6F66', 'bg': '#2F7D54'}
+MAU_THE_NY = {'tong': '#1E3A8A', 'du': '#1F76A6', 'vuong': '#9A5A12', 'dt': '#2563EB', 'pd': '#1F6F66', 'bg': '#2F7D54'}
 # 1.0.03: góc trái bo 3 px (bằng bề dày vạch) - vạch màu bên trái thẳng đứng, không cong thành dấu "(" như bo 6 px (Ảnh 7)
 QSS_THE_NY = ('QFrame[vai="the_ny"] {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid {m}; '
               'border-radius: 6px; border-top-left-radius: 3px; border-bottom-left-radius: 3px; }}'
@@ -79,7 +80,7 @@ class _The(QFrame):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setProperty('vai', 'the_ny')
         self.mau = mau
-        self.setStyleSheet(QSS_THE_NY.format(m=mau))    # bộ chọn theo vai: không truyền sang nhãn con (QLabel cũng là QFrame)
+        dat_kieu_theo_tong(self, QSS_THE_NY.format(m=mau))    # bộ chọn theo vai: không truyền sang nhãn con (QLabel cũng là QFrame)
         self._bam = bam
         # 1.0.03: thẻ KPI 2 tầng cao 54 px như thẻ số màn hình chính - tên trên; số lớn + chữ phụ dưới (đủ chữ ở chú thích)
         lo = QVBoxLayout(self)
@@ -375,7 +376,7 @@ class KhungDuThao(QWidget):
         self.thanh.setFixedHeight(8)
         self.thanh.setTextVisible(False)
         self.thanh.setStyleSheet('QProgressBar { background: #E2E8F0; border: none; border-radius: 4px; }'
-                                 'QProgressBar::chunk { background: #2F5F9E; border-radius: 4px; }')
+                                 'QProgressBar::chunk { background: #1E3A8A; border-radius: 4px; }')
         lo.addWidget(self.thanh)
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)

@@ -2551,8 +2551,10 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - `ban_do_cad.doc_co_nho(file, ham)` nhớ kết quả đọc theo (đường dẫn, mtime_ns, cỡ, tên hàm), tối đa `NHO_DOC_TOI_DA` 2 file - `_mo` (DXF)
     và `ban_do_kml.doc_kml` (trả bản sao danh sách) dùng chung; KHÔNG sửa đối tượng trả về. `HopNhapCad._khoa_tham_so` (file + mtime, lớp,
     số tờ, kinh tuyến trục) trùng lần trước và đã có kq -> phân tích bỏ qua (giữ ô đã đánh dấu); `_do_bang` trong setUpdatesEnabled(False);
-    nạp ô chọn lớp trong `chan_tin_hieu`. 26,6 s "trả ô chọn" ở báo cáo GiaoDien 1.0.32 là do chạy CÙNG LÚC bộ test (chạy riêng 0 chậm) -
-    ô chọn lớp không nối tín hiệu nào; chạy kiểm tra giao diện một mình.
+    nạp ô chọn lớp trong `chan_tin_hieu`. "trả ô chọn" 26,6 s (1.0.32) / 36 s (1.0.34, chạy MỘT MÌNH) ở pha "Cửa sổ chính" của
+    kiem_tra_giao_dien KHÔNG phải của hộp: hai ô chọn trống nên đó là processEvents ĐẦU TIÊN trong hộp, nhận việc đang chờ (lần áp lại kiểu
+    hẹn giờ của A+ / A− trên rất nhiều widget còn sống sau 4 trạng thái). Đo riêng: hộp 0,003 s; riêng pha cửa sổ chính 2 s. (Ghi chú cũ "do chạy
+    cùng lúc bộ test" là sai.)
   - TÔNG NỀN: `chu_de.TONG_NEN` (sang = màu 1.0.32 / diu / trang), `KHOA_TONG_NEN`, `doc()['tong_nen']` (PABT_TONG_NEN > QSettings),
     `ghi(tong_nen=)`. `giao_dien.TONG_NEN`, `dat_tong_nen(ten, luu, ap_lai)` (TOKEN nen/khung/vach/chu/chu_phu + bảng màu `bang_mau_ung_dung` +
     bảng kiểu), `ap_tong_nen(qss, ten)`: màu trong QSS phần lớn VIẾT THẲNG (#F8FAFC, #0F172A…) nên đổi theo THUỘC TÍNH trên bảng kiểu cuối:
@@ -2580,6 +2582,37 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   bằng `lam_tron_cong_thuc` (một nguồn với doc_so_luong); dòng gõ số thường KHÔNG đổi; bỏ qua lần đã phê duyệt / bị thay (`lan_pa.ds_lan` khoa),
   hộ không nhận việc, công thức lỗi; một giao dịch + nhật ký (Hoàn tác được) -> thông báo nổi `chu_tinh_lai_cong_thuc`. Dòng đào tạo chép diện
   tích từ mục 1 không có công thức: không tự đổi.
+- 1.0.34 "Flagship Sapphire" (người dùng 29/10/2026, đặc tả 6 bước; test `tests/test_yeu_cau_1034.py`, `di_dong/tests` test_ban_dem / bento /
+  TestGiaoDien1034). Đặc tả nêu `pabt/qt.py`, `KhungBanner` ở thanh_tieu_de, `dist/LARC_Field_Mobile_QD42.html`, Ctrl+1..4 trên thẻ chào - KHÔNG
+  khớp kho: làm theo ý trên mã thật (banner ở `giao_dien.tao_banner_ten`, thẻ chào hiện PHÍM TẮT THẬT của lệnh, Ctrl+1..5 vẫn là chuyển trang).
+  - Màu: #2F5F9E -> #1E3A8A (Royal Sapphire), #264E83 -> #172554, #3B6FCE -> #2563EB ở MỌI file pabt/ + tests/ (trừ ve_bieu_tuong / phieu_kiem_dem);
+    TOKEN thêm chinh_re, thanh_cong(_nhat), canh_bao(_nhat), nguy_hiem #DC2626 (_nhat), vien, nen_the. `_TOKEN_GOC` = màu GỐC viết thẳng trong
+    QSS (#F8FAFC / #FFFFFF / #E2E8F0 / #0F172A / #475569) - KHÁC tông mặc định từ 1.0.34: 'sang' = Sáng Sapphire nền #F1F5F9, viền #CBD5E1 (mở
+    phần mềm là thấy giao diện mới). chu_de.TONG_NEN: sang / diu / am (Ấm áp) / toi (Tối chuyên gia - Dark Studio) / trang; `dao_nhanh_tong_nen`.
+    Tông 'toi': `_bang_doi_mau` thêm TOI_NEN / TOI_VIEN / TOI_CHU (màu sáng viết thẳng khác + màu ngữ nghĩa xanh lá / hổ phách / đỏ nhạt) và
+    `_qss_day_du` nối `QSS_TOI` (bảng, tiêu đề bảng, ô nhập, menu, chú thích) CUỐI bảng kiểu; bảng màu QPalette tối. Kiểu riêng của widget viết
+    bằng màu gốc: `giao_dien.dat_kieu_theo_tong(w, qss)` (đổi theo tông lúc đặt và mỗi lần dat_tong_nen) - dùng cho thanh trên / dải lần PA / dải
+    điều hướng CuaSoLapPA, TheKpiGon, DaiCongBang, thẻ Niêm yết, Tiến độ, Thống kê, Tổng quan. CÒN SÁNG ở tông Tối: màu nền / chữ đặt trong MÔ HÌNH
+    bảng (BackgroundRole / ForegroundRole: DONG_NOI bảng tổng hợp, ô tiền…), chữ màu viết sẵn trong rich text, setStyleSheet thẳng còn lại.
+  - Menu trái "Executive Dark-Indigo": nền tối chuyển sắc, lệnh = viên bo 8 px lề `LE_VIEN_MENU` 6 (rong_mo cộng 2 x lề), đang chọn gradient
+    #2563EB -> #0284C7 + vạch trái 4 px #38BDF8; biểu tượng `MAU_ICON_MENU` #CBD5E1 / `MAU_ICON_MENU_CHON` trắng, lệnh tắt `MAU_MENU_TAT` #8391A7;
+    thu gọn `RONG_MENU_GON` 60, `dat_rong_muot` (QVariantAnimation OutCubic `THOI_GIAN_MENU_MS` 160). `chuyen_trang_muot(stack, i)` (dời widget
+    trang 14 px -> 0, KHÔNG hiệu ứng mờ - QGraphicsOpacityEffect vẽ bảng lớn qua ảnh đệm) ở `CuaSoChinh.mo_trang`. `co_hoat_anh()` /
+    `co_bong_do()`: tắt khi offscreen / máy yếu / PABT_HOAT_ANH=0 / PABT_HIEU_UNG_BONG=0 (bóng: cả Qt5); bóng đổ nay BẬT mặc định trên màn hình thật
+    nhưng CHỈ đặt cho thẻ nhỏ (TheChao, TheSo, TheKpiGon) - đừng đặt cho khung chứa bảng.
+  - Banner `KhungBanner` (paintEvent: MAU_BANG 3 tầng #0B192C / #1E3A8A / #0F766E, lưới tọa độ, vòng cung đồng mức, dải sáng, viền đáy) +
+    `NutDoiGiaoDien` (`banner.btn_doi_giao_dien`, "Tối" / "Sáng", biểu tượng MDL2 - không emoji, Win 7) -> `doi_nhanh_tong_nen`; `KHI_DOI_TONG_NEN`
+    (hàm gọi sau mỗi lần đổi tông). Banner chỉ hiện ở màn hình chào: khi đã mở dự án đổi tông ở Cài đặt > Giao diện (có ô xem trước `mau_xem`).
+  - Thẻ chào: `MAU_THE_CHAO` mỗi thẻ một màu điểm nhấn (moi #2563EB, mo #059669, excel #D97706, phap_ly #7C3AED), dải 4 px trên + nền chuyển sắc,
+    `huy_hieu_bieu_tuong` 44 px (icon 26), `the.lb_phim` = phím tắt THẬT của QAction (con của thẻ, ngoài bố cục), rê chuột bóng sâu hơn.
+    Thẻ KPI: `tao_thanh_tien_do(mau)` (QProgressBar 5 px, vai="thanh_tien_do", mau=…, gradient trong QSS chung); `TheKpiGon.thanh_tien_do` ẩn tới
+    khi `dat(..., tien_do=0..100)` (Tổng quan: phê duyệt, bàn giao), `CuaSoChinh.the_tien_do` (tỷ lệ số hộ; ẩn ở Số hộ / Tổng kinh phí);
+    `CAO_THE_KPI_GON` 60, `CAO_THE_SO` 62. `MAU_THE_SO` / `MAU_NHOM_KPI['tien']` #D97706. Bảng trống: `ve_bieu_tuong.ve_minh_hoa_trong(loai, co)`
+    (bang / ban_do / ho / tai_lieu) trên lời hướng dẫn khi vùng bảng >= `CAO_TOI_THIEU_MINH_HOA`; `gan_chu_khi_trong(..., loai=)`.
+  - LARC Mobile 1.0.34 (versionCode 20034 tự tính): màu Sapphire (`--chinh` #1E3A8A…, theme-color #1E3A8A), header chuyển sắc, nút `#b_ban_dem`
+    (body.che_do_toi, localStorage `larc_field_ban_dem`, loại trừ `tuong_phan_cao`, theme-color #0B1120 khi bật), 2 nút lớn = thẻ Bento 82 px có dòng
+    mô tả (`.chu_hero`; ngang vẫn 42 px), thanh mục con / thanh đáy kính mờ, `@keyframes trangHien / theNoi / sheetLen` (tắt khi prefers-reduced-
+    motion). Ghi chú 1.3.0 "2 nút lớn gọn một hàng 46 px" được thay bằng yêu cầu Bento của người dùng 29/10/2026.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

@@ -26,7 +26,7 @@ class TestDongLenh(unittest.TestCase):
 class TestGiaoDien(unittest.TestCase):
     def test_nut_menu_tat_du_tuong_phan(self):
         qss = giao_dien._qss_menu_trai()
-        self.assertIn('QToolButton[menu="1"]:disabled { color: #758499;', qss)
+        self.assertIn(f'QToolButton[menu="1"]:disabled {{ color: {giao_dien.MAU_MENU_TAT};', qss)     # 1.0.34: menu nền tối
         self.assertNotIn('#A8B3BF', qss)
 
     def test_co_gian_px_va_pt(self):

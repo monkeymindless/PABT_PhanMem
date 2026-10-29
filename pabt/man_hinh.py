@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QC
                                QVBoxLayout, QWidget, QGridLayout, QGroupBox)
 
 from . import du_lieu_in
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 from . import lap_pa, nghiep_vu
 from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
 # in_an (kéo theo openpyxl ~0,2 giây) chỉ nạp trong hộp In / Xuất: mở dự án, cửa sổ lập phương án không phải chờ
@@ -1091,10 +1092,10 @@ MAU_ICON_DAN_TS = '#1F76A6'
 RONG_XEM_TOI_THIEU = 320          # màn hình hẹp: khung xem trước CuaSoLapPA không hẹp hơn chừng này
 CHO_XEM_SAU_SUA_MS = 1500          # khung xem trước đang hiện: sửa số liệu xong chừng này mới nhờ Excel lập lại bản in
 # 1.0.02 (ảnh mẫu): tắt = nền trắng viền slate chữ navy; bật (đang xem) = nền xanh băng, viền navy, chữ navy đậm
-QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #2F5F9E; background: #FFFFFF; border: 1px solid #CBD5E1; '
+QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #1E3A8A; background: #FFFFFF; border: 1px solid #CBD5E1; '
                      'border-radius: 6px; padding: 0 12px; font-weight: 600; }'
-                     'QPushButton#btn_toggle_preview:hover { background: #F1F5F9; border-color: #3B6FCE; }'
-                     'QPushButton#btn_toggle_preview:checked { color: #2F5F9E; background: #EFF6FF; border: 1px solid #2F5F9E; '
+                     'QPushButton#btn_toggle_preview:hover { background: #F1F5F9; border-color: #2563EB; }'
+                     'QPushButton#btn_toggle_preview:checked { color: #1E3A8A; background: #EFF6FF; border: 1px solid #1E3A8A; '
                      'font-weight: 700; }'
                      'QPushButton#btn_toggle_preview:checked:hover { background: #DBEAFE; }')
 # thẻ Hồ sơ / Đất / Nhà… của cửa sổ lập phương án (ảnh mẫu): kiểu gạch chân giao_dien.QSS_THE_GACH_CHAN (QSS chung, thanh thẻ có
@@ -1106,14 +1107,14 @@ QSS_THANH_TREN = ('QWidget#thanh_tren_lap_pa { background: #F8FAFC; border: 0; b
                   'QComboBox#o_chon_ho { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; '
                   'font-weight: 700; color: #0F172A; }'
                   'QComboBox#o_chon_ho:hover { border-color: #94A3B8; }'
-                  'QComboBox#o_chon_ho:focus { border: 2px solid #3B6FCE; padding: 0 7px; }'
+                  'QComboBox#o_chon_ho:focus { border: 2px solid #2563EB; padding: 0 7px; }'
                   'QPushButton#nut_ho_truoc, QPushButton#nut_ho_sau { background: #FFFFFF; border: 1px solid #CBD5E1; '
-                  'border-radius: 5px; padding: 0; color: #2F5F9E; font-weight: 700; }'
+                  'border-radius: 5px; padding: 0; color: #1E3A8A; font-weight: 700; }'
                   'QPushButton#nut_ho_truoc:hover, QPushButton#nut_ho_sau:hover { background: #F1F5F9; border-color: #94A3B8; }'
                   'QPushButton#nut_ho_truoc:disabled, QPushButton#nut_ho_sau:disabled { color: #CBD5E1; border-color: #E2E8F0; }')
 # dải tổng cộng + ◀ Trở lại / Tiếp theo ▶ dưới đáy: nền slate, vạch trên 2 px, tổng chữ navy đậm
 QSS_DAI_DIEU_HUONG = ('QFrame#dai_dieu_huong { background: #F1F5F9; border: 0; border-top: 2px solid #CBD5E1; }'
-                      'QLabel#tong_pa { font-size: 13px; font-weight: 700; color: #2F5F9E; background: transparent; border: 0; '
+                      'QLabel#tong_pa { font-size: 13px; font-weight: 700; color: #1E3A8A; background: transparent; border: 0; '
                       'padding: 2px 4px; }')
 
 
@@ -1161,7 +1162,7 @@ def chu_tong_pa(kq) -> tuple:
     bản gọn (cửa sổ hẹp) ghi số tiền từng mục kiểu "1,2 tỷ" / "23,5 triệu" (tien.vn_gon); TỔNG CỘNG luôn đủ số."""
     from .tien import vn_gon
     cach = '&nbsp;·&nbsp;'
-    tong = f'<span style="color:#2F5F9E">TỔNG CỘNG: <b>{vn(kq.tong)} đồng</b></span>'
+    tong = f'<span style="color:#1E3A8A">TỔNG CỘNG: <b>{vn(kq.tong)} đồng</b></span>'
     ra = []
     # mức: đầy đủ; gọn (vn_gon); chỉ mục có tiền (gọn); chỉ TỔNG CỘNG - hẹp tới đâu thì TỔNG CỘNG vẫn hiện đủ
     for gon, bo_khong in ((False, False), (True, False), (True, True)):
@@ -1294,7 +1295,7 @@ class CuaSoLapPA(QDialog):
         self.btn_toggle_preview.setStyleSheet(QSS_NUT_XEM_TRUOC)
         self.btn_toggle_preview.setProperty('khong_icon', True)
         # View (Segoe MDL2): tắt biểu tượng navy, bật (đang xem, nền navy) biểu tượng trắng; Win 7 không có phông: chỉ chữ
-        ic = icon_ky_hieu(0xE890, '#2F5F9E', 16)
+        ic = icon_ky_hieu(0xE890, '#1E3A8A', 16)
         if ic is not None:
             self.btn_toggle_preview.setIcon(ic)
         self.btn_toggle_preview.clicked.connect(lambda: self.bat_tat_xem_truoc())
@@ -1305,7 +1306,7 @@ class CuaSoLapPA(QDialog):
         self.thanh_tren = QWidget()
         self.thanh_tren.setObjectName('thanh_tren_lap_pa')
         self.thanh_tren.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.thanh_tren.setStyleSheet(QSS_THANH_TREN)       # khung ít widget con: kiểu cục bộ không làm chậm (đã đo)
+        dat_kieu_theo_tong(self.thanh_tren, QSS_THANH_TREN)       # khung ít widget con: kiểu cục bộ không làm chậm (đã đo)
         h1 = QHBoxLayout(self.thanh_tren)
         h1.setContentsMargins(8, 4, 8, 4)
         h1.setSpacing(4)
@@ -1497,7 +1498,7 @@ class CuaSoLapPA(QDialog):
         f = QFrame()
         f.setObjectName('dai_lan_pa')
         f.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        f.setStyleSheet(QSS_DAI_LAN)
+        dat_kieu_theo_tong(f, QSS_DAI_LAN)
         h = QHBoxLayout(f)
         h.setContentsMargins(8, 2, 8, 2)
         h.setSpacing(4)
@@ -1769,7 +1770,7 @@ class CuaSoLapPA(QDialog):
         1.0.02: hàng nằm trong khung `dai_dieu_huong` (nền slate, vạch trên) - trả về layout của khung."""
         self.dai_dieu_huong = QFrame()
         self.dai_dieu_huong.setObjectName('dai_dieu_huong')
-        self.dai_dieu_huong.setStyleSheet(QSS_DAI_DIEU_HUONG)
+        dat_kieu_theo_tong(self.dai_dieu_huong, QSS_DAI_DIEU_HUONG)
         h = QHBoxLayout(self.dai_dieu_huong)
         h.setContentsMargins(8, 3, 6, 3)
         h.setSpacing(6)

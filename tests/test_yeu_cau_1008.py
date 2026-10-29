@@ -81,7 +81,10 @@ class TestMayYeu(_Co):
             giao_dien.do_bong(f)
         self.assertIsNone(f.graphicsEffect())
         if not getattr(pabt, 'QT5', False):
-            with mock.patch.dict(os.environ, {'PABT_HIEU_UNG_BONG': '1', 'PABT_MAY_YEU': '0'}):
+            # 1.0.34: bóng BẬT mặc định trên màn hình thật (offscreen luôn tắt) - giả lập màn hình thật
+            app = QApplication.instance()
+            with mock.patch.dict(os.environ, {'PABT_HIEU_UNG_BONG': '1', 'PABT_MAY_YEU': '0', 'QT_QPA_PLATFORM': 'windows'}), \
+                    mock.patch.object(type(app), 'platformName', staticmethod(lambda: 'windows')):
                 giao_dien.do_bong(f)
             self.assertIsNotNone(f.graphicsEffect())
 

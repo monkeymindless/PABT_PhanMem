@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from . import ho_so_scan, kinh_phi_du_an, thoi_han, theo_doi, van_dong
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 from .bang_ao import BangAo
 from .giao_dien import (MAU_CANH_BAO_NEN, MAU_CANH_BAO_VIEN, qss_canh_bao)  # noqa: E402  (20/10/2026: cảnh báo hổ phách)
 from .giao_dien import (DaiCongBang, HangKpi, XepDong, dat_trang_thai, gan_chu_khi_trong, gan_thanh_ty_le,
@@ -38,7 +39,7 @@ THUA_TRONG = dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')     # hộ c
 # 1.0.02 (Hybrid Enterprise Navy): dòng nổi của Cơ cấu kinh phí / Đối soát - (nền, chữ). Cộng bồi thường = slate; kinh phí tổ chức
 # thực hiện = hổ phách nhạt; TỔNG KINH PHÍ = xanh băng chữ navy đậm (như dải cộng danh sách hộ)
 DONG_NOI = {'cong': (QColor('#F1F5F9'), QColor('#0F172A')), 'kinh_phi': (QColor('#FFFBEB'), QColor('#7C4A12')),
-            'tong': (QColor('#F0F6FF'), QColor('#2F5F9E'))}
+            'tong': (QColor('#F0F6FF'), QColor('#1E3A8A'))}
 CAO_O_CONG_CU = 30                                       # ô tìm / nút Xuất / Mốc pháp lý của các trang theo dõi
 _DAM = dict(dam=True)                                     # kiểu ô chữ đậm (bảng ảo, dùng chung - chỉ đọc)
 
@@ -300,7 +301,7 @@ class KhungQuyetDinh(_Khung):
         self.dai_cong = DaiCongBang('dai_cong_qd')       # 1.0.03: cộng DT, tiền từng hạng mục, tổng phê duyệt của quyết định đang chọn
         # 1.0.03: dải 4 thẻ KPI đầu trang (số quyết định, lượt hộ, tiền đã duyệt, chênh lệch so với phương án)
         self.hang_kpi = HangKpi([
-            ('so_qd', 'Tổng số quyết định', '#2F5F9E'),
+            ('so_qd', 'Tổng số quyết định', '#1E3A8A'),
             ('luot_ho', 'Số lượt hộ đã phê duyệt', '#1F76A6', 'Lượt hộ = cộng số hộ của từng quyết định (một hộ phê duyệt bổ sung '
                                                              'tính nhiều lượt); chữ phụ: số hộ khác nhau / tổng số hộ dự án'),
             ('tien_qd', 'Tổng kinh phí đã duyệt QĐ', '#1F6F66'),
@@ -1080,7 +1081,7 @@ class KhungBangTongHop(_Khung):
         # 20/10/2026 (ảnh mẫu): 5 thẻ KPI - cộng bồi thường (100%), kinh phí tổ chức (QĐ 08/2025), hai phần phân bổ (hồ sơ địa phương,
         # mặc định 85% / 15%), tổng mức GPMB dự án. Tên thẻ phân bổ đặt lại ở _ve_kpi theo dia_phuong.phan_bo_kinh_phi()
         self.hang_kpi = HangKpi([
-            ('cong', 'Bồi thường, hỗ trợ', '#2F5F9E', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
+            ('cong', 'Bồi thường, hỗ trợ', '#1E3A8A', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
                                                             'thưởng = gốc 100%'),
             ('kinh_phi', 'KP tổ chức', '#1F76A6', 'Kinh phí tổ chức thực hiện bồi thường theo QĐ 08/2025/QĐ-UBND = '
                                                        'tỷ lệ % của cộng bồi thường, hỗ trợ'),
@@ -1223,7 +1224,7 @@ class KhungBangTongHop(_Khung):
 QSS_CHE_DO = ('QPushButton { border: 0; background: transparent; color: #475569; padding: 0 14px; border-radius: 5px; '
               'font-weight: 600; }'
               'QPushButton:hover:!checked { background: #CBD5E1; color: #0F172A; }'
-              'QPushButton:checked { background: #2F5F9E; color: #FFFFFF; font-weight: 700; }')
+              'QPushButton:checked { background: #1E3A8A; color: #FFFFFF; font-weight: 700; }')
 QSS_KHUNG_CHE_DO = 'QFrame#khung_che_do { background: #E2E8F0; border: 0; border-radius: 6px; }'
 QSS_MOC = ('QLabel#lb_moc { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 0 8px; '
            'color: #334155; }')
@@ -1276,7 +1277,7 @@ class KhungTienDo(_Khung):
         h_dk.setSpacing(6)
         self.khung_che_do = QFrame()                        # khung "viên thuốc" chứa hai nút chế độ
         self.khung_che_do.setObjectName('khung_che_do')
-        self.khung_che_do.setStyleSheet(QSS_KHUNG_CHE_DO)
+        dat_kieu_theo_tong(self.khung_che_do, QSS_KHUNG_CHE_DO)
         h_pill = QHBoxLayout(self.khung_che_do)
         h_pill.setContentsMargins(3, 3, 3, 3)
         h_pill.setSpacing(2)
@@ -1300,7 +1301,7 @@ class KhungTienDo(_Khung):
         self.lb_moc = QLabel('')
         self.lb_moc.setWordWrap(True)
         self.lb_moc.setObjectName('lb_moc')
-        self.lb_moc.setStyleSheet(QSS_MOC)
+        dat_kieu_theo_tong(self.lb_moc, QSS_MOC)
         self.lb_moc.setMinimumHeight(CAO_O_CONG_CU)
         h_dk.addSpacing(8)
         h_dk.addWidget(self.lb_moc, 1)
@@ -2253,7 +2254,7 @@ class KhungSoVanDong(QFrame):
             ds = []
             for i, b in enumerate(buoi, start=1):
                 kq = van_dong.TEN_KET_QUA.get(b['ket_qua'], b['ket_qua'])
-                mau = '#B83A3A' if b['ket_qua'] == 'chua_dong_y' else '#2F5F9E'
+                mau = '#B83A3A' if b['ket_qua'] == 'chua_dong_y' else '#1E3A8A'
                 ds.append(f'<div style="margin-bottom:6px;"><span style="color:{mau};"><b>● Buổi {i}: '
                           f'{van_dong.VIEC.get(b["viec"], b["viec"])}</b></span> <span style="color:#64748B;">{b["ngay"]}</span><br>'
                           + (f'• Hình thức: {b["hinh_thuc"]}<br>' if b['hinh_thuc'] else '')

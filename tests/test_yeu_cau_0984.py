@@ -237,8 +237,8 @@ class TestCuaSoLapPA(CoSoXem):
         b = w.btn_toggle_preview
         self.assertEqual(b.objectName(), 'btn_toggle_preview')
         self.assertEqual(b.text(), 'Xem trước')
-        self.assertIn('#2F5F9E', b.styleSheet())
-        self.assertIn('#3B6FCE', b.styleSheet())
+        self.assertIn('#1E3A8A', b.styleSheet())
+        self.assertIn('#2563EB', b.styleSheet())
         # 16/10/2026 (máy yếu): khung xem trước tạo khi bật lần đầu - mở cửa sổ chưa có khung
         self.assertIsNone(w._w_preview)
         self.assertEqual(w.tach.count(), 1)

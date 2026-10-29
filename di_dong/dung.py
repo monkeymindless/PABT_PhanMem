@@ -175,7 +175,7 @@ def html_ung_dung(che_do: str, ver: str = PHIEN_BAN) -> str:
 def manifest_pwa(ver: str = PHIEN_BAN) -> dict:
     return dict(name=TEN_UNG_DUNG, short_name=TEN_NGAN, description='Kiểm đếm thực địa bồi thường, hỗ trợ, tái định cư - chạy không cần mạng',
                 lang='vi', start_url='./', scope='./', display='standalone', orientation='any', background_color='#F8FAFC',
-                theme_color='#2F5F9E', version=ver,
+                theme_color='#1E3A8A', version=ver,
                 icons=[dict(src=t, sizes=f'{c}x{c}', type='image/png', purpose='maskable' if nen else 'any')
                        for t, c, _, nen in BIEU_TUONG_PWA if c >= 192])
 
@@ -346,11 +346,11 @@ def trang_cai_dat(url: str, ver: str = PHIEN_BAN, co_apk: bool = True) -> str:
 <style>
 *{{box-sizing:border-box;font-family:"Segoe UI",Roboto,Arial,sans-serif}}body{{margin:0;background:#F8FAFC;color:#0F172A}}
 main{{max-width:720px;margin:0 auto;padding:16px}}.dau{{display:flex;align-items:center;gap:12px}}.dau img{{width:56px;height:56px;border-radius:12px}}
-h1{{font-size:20px;margin:0;color:#2F5F9E}}.ghi{{color:#475569;font-size:13px}}
-.khung{{background:#fff;border:1px solid #CBD5E1;border-radius:10px;padding:14px;margin:12px 0}}h2{{font-size:16px;margin:0 0 8px;color:#2F5F9E}}
+h1{{font-size:20px;margin:0;color:#1E3A8A}}.ghi{{color:#475569;font-size:13px}}
+.khung{{background:#fff;border:1px solid #CBD5E1;border-radius:10px;padding:14px;margin:12px 0}}h2{{font-size:16px;margin:0 0 8px;color:#1E3A8A}}
 .qr{{text-align:center}}.qr svg{{width:260px;height:260px;max-width:80vw}}.dc{{text-align:center;word-break:break-all;font-size:13px;color:#475569}}
-.nut{{display:inline-block;background:#2F5F9E;color:#fff;text-decoration:none;font-weight:700;border-radius:8px;padding:12px 18px;margin:4px 6px 4px 0}}
-.nut.phu{{background:#fff;color:#2F5F9E;border:1px solid #CBD5E1}}ol{{padding-left:22px;line-height:1.6;margin:6px 0}}
+.nut{{display:inline-block;background:#1E3A8A;color:#fff;text-decoration:none;font-weight:700;border-radius:8px;padding:12px 18px;margin:4px 6px 4px 0}}
+.nut.phu{{background:#fff;color:#1E3A8A;border:1px solid #CBD5E1}}ol{{padding-left:22px;line-height:1.6;margin:6px 0}}
 .canh{{background:#FEF3C7;border:1px solid #F59E0B;color:#7C4A12;border-radius:8px;padding:10px;display:none}}p.canh{{display:block}}
 @media print{{.nut,.khong_in{{display:none}}.khung{{border:0}}body{{background:#fff}}}}
 </style></head><body><main>
