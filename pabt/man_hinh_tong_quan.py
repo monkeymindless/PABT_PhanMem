@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QFrame, QHBoxLayout, QHeaderVi
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import tong_quan_du_an as tq
-from .tien import vn, vn_gon
+from .tien import so_luong_vn, vn, vn_gon
 
 LENH_KHOI_TAO = (                    # (khóa self.lenh, chữ trên thẻ, mô tả)
     ('Dự án mới…', 'Dự án mới', 'Khởi tạo CSDL .larc mới'),
@@ -150,7 +150,7 @@ class KhungTongQuanDuAn(QWidget):
         self.lb_phu.setText(' · '.join(x for x in ((f'Chủ đầu tư: {chu_dau_tu}' if chu_dau_tu else ''), file) if x))
         qm, kp, td = kq['quy_mo'], kq['kinh_phi'], kq['tien_do']
         self.kpi.dat('quy_mo', f'{qm["so_ho"]} hộ', f'{qm["so_thua"]} thửa · {vn(qm["dt_ha"], 2)} ha',
-                     f'{qm["so_ho"]} hộ / {qm["so_thua"]} thửa / diện tích thu hồi {vn(qm["dt_m2"], 1)} m² ({vn(qm["dt_ha"], 4)} ha)')
+                     f'{qm["so_ho"]} hộ / {qm["so_thua"]} thửa / diện tích thu hồi {so_luong_vn(qm["dt_m2"])} m² ({vn(qm["dt_ha"], 4)} ha)')
         self.kpi.dat('kinh_phi', vn_gon(kp['tong']), f'Đất {vn_gon(kp["dat"])} · Tài sản, hỗ trợ {vn_gon(kp["con_lai"])}',
                      f'Tổng {vn(kp["tong"])} đồng\nĐất: {vn(kp["dat"])} đồng\nTài sản, cây, vật nuôi, hỗ trợ, thưởng: '
                      f'{vn(kp["con_lai"])} đồng')

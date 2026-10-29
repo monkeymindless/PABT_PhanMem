@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
                                QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
-from .tien import D, so_vn, vn, vn_gon
+from .tien import D, so_luong_vn, so_vn, vn, vn_gon
 from .giao_dien import con_tro_cho
 from .thong_bao import TEN_UD, chu_loi
 
@@ -67,6 +67,17 @@ def dia_chinh(dong: list) -> tuple:
     return len(dong), sum(so_thua_dong(d) for d in dong), sum((D(d.get('dt') or 0) for d in dong), D(0))
 
 
+def chu_tinh_lai_cong_thuc(kq: dict) -> str:
+    """Câu báo sau khi mở dự án đã tính lại số lượng nhập bằng công thức (lap_pa.tinh_lai_cong_thuc)."""
+    chu = []
+    if kq.get('so_dong'):
+        chu.append(f"Đã tính lại {kq['so_dong']} số lượng / diện tích nhập bằng công thức ({kq['so_ho']} hộ) theo 2 chữ số lẻ; "
+                   'thành tiền đã cập nhật (Hoàn tác được: Ctrl+Z).')
+    if kq.get('bo_qua_khoa'):
+        chu.append(f"{kq['bo_qua_khoa']} dòng thuộc lần phương án đã phê duyệt: giữ nguyên số đã trình.")
+    return ' '.join(chu)
+
+
 def so_ha(dt) -> str:
     """m² -> chữ héc-ta: "14,64 ha" (từ 1 ha: 2 chữ số lẻ; nhỏ hơn: 4 chữ số lẻ - "0,0325 ha")."""
     ha = D(dt) / 10000
@@ -112,7 +123,7 @@ def chu_dai_cong(n: int, tong: dict | None) -> dict:
         elif tong is None:
             kq[k] = (f'{ten}: –', f'{NHAN_GON_CONG[k]}: –')
         elif k == 'dt':
-            kq[k] = (f'{ten}: {vn(tong["dt"], 1)} m² ({so_ha(tong["dt"])})', f'{NHAN_GON_CONG[k]}: {vn(tong["dt"], 1)} m²')
+            kq[k] = (f'{ten}: {so_luong_vn(tong["dt"])} m² ({so_ha(tong["dt"])})', f'{NHAN_GON_CONG[k]}: {so_luong_vn(tong["dt"])} m²')
         else:
             kq[k] = (f'{ten}: {vn(tong[k])} đ', f'{NHAN_GON_CONG[k]}: {vn_gon(tong[k])}')
     return kq
@@ -1156,6 +1167,7 @@ class CuaSoChinh(QMainWindow):
                 self.khoa = kf
                 self.dong_ho.start()
             self.chi_doc = chi_doc
+            tinh_lai = None
             self.con = csdl.mo(p, chi_doc=chi_doc)
             # 1.0.29: bản offline THEO HỘ (máy chủ LAN): chỉ các hộ đã nhận được lưu (lap_pa.kiem_ho_nhan_viec đọc thuộc tính này)
             self.nhan_viec = may_chu.ho_nhan_viec(p)
@@ -1183,6 +1195,10 @@ class CuaSoChinh(QMainWindow):
                     ap_ten_khac(self.con)
                 except sqlite3.Error:
                     pass
+                try:                                   # 29/10/2026: số lượng / diện tích nhập bằng công thức tính lại (2 chữ số lẻ)
+                    tinh_lai = lap_pa.tinh_lai_cong_thuc(self.con)
+                except sqlite3.Error:
+                    pass
             self._cap_nhat_nut_ht()
             self.file = Path(p)
             self.dm = lap_pa.DanhMuc(self.con)
@@ -1202,6 +1218,9 @@ class CuaSoChinh(QMainWindow):
             # mở / nhập dự án: luôn vào Danh sách hộ (người dùng 12/10/2026 - trước: về trang chọn lần trước, ví dụ Dự toán)
             self.mo_trang(0)
             ghi_gan_day(self.file)
+            if tinh_lai and (tinh_lai['so_dong'] or tinh_lai['bo_qua_khoa']):
+                from .giao_dien import thong_bao_noi
+                thong_bao_noi(self, chu_tinh_lai_cong_thuc(tinh_lai), 'canh_bao' if tinh_lai['bo_qua_khoa'] else 'tin', 12000)
             if not chi_doc:                                 # 1.0.08: bản sao lưu tự động (máy HDD cũ, mất điện) - sau khi cửa sổ đã vẽ
                 c, f = self.con, self.file
                 QTimer.singleShot(SAO_LUU_SAU_MS, lambda: c is self.con and self._sao_luu_tu_dong(c, f))
@@ -1440,7 +1459,7 @@ class CuaSoChinh(QMainWindow):
                     tim=f'{h["ma_ho"]} {x.get("theo_doi") or ""} {ten_dot.get(x.get("dot_id"), "")} '
                         f'{x.get("qd_so") or ""} {x.get("dia_chi") or ""} {x.get("so_cccd") or ""} {to_thua}',
                     dia_chi=x.get('dia_chi') or '',          # đầy đủ (chú thích); cột hiện bản gọn theo địa bàn dự án
-                    o=[i, h['ho_ten'], rut_gon_dia_chi(x.get('dia_chi'), dia_ban), st, dt.quantize(D('0.1')), trang_thai, gc])
+                    o=[i, h['ho_ten'], rut_gon_dia_chi(x.get('dia_chi'), dia_ban), st, dt, trang_thai, gc])
 
     def _tai_lai_toan_bo(self):
         from . import doi_chieu
@@ -1812,8 +1831,8 @@ class CuaSoChinh(QMainWindow):
                 _h, t, dt = nhom[k]
                 dc = self.the_dia_chinh[k]
                 dc.setText(f'<span style="font-weight:700; color:#1E293B">{t} thửa</span><br>'
-                           f'<span style="color:#1A5C85">{vn(dt, 1)} m²</span>' if ds else '')
-                dc.setToolTip(f'{_h} hộ · {t} thửa · {vn(dt, 1)} m² ({so_ha(dt)})' if ds else '')
+                           f'<span style="color:#1A5C85">{so_luong_vn(dt)} m²</span>' if ds else '')
+                dc.setToolTip(f'{_h} hộ · {t} thửa · {so_luong_vn(dt)} m² ({so_ha(dt)})' if ds else '')
             phu = self.the_phu.get(k) if hasattr(self, 'the_phu') else None
             if phu is None:
                 continue
@@ -1927,8 +1946,8 @@ class CuaSoChinh(QMainWindow):
             return
         n, t, dt = dia_chinh(self.mo_hinh.dong)
         k, tk, dtk = dia_chinh(chon)
-        self.lb_tom_tat.setText(f'Sẵn sàng · Dự án: {n} hộ · {t} thửa · {vn(dt, 1)} m² | '
-                                f'Đang chọn: {k} hộ ({tk} thửa · {vn(dtk, 1)} m²)')
+        self.lb_tom_tat.setText(f'Sẵn sàng · Dự án: {n} hộ · {t} thửa · {so_luong_vn(dt)} m² | '
+                                f'Đang chọn: {k} hộ ({tk} thửa · {so_luong_vn(dtk)} m²)')
 
     def _trang_chao(self) -> QWidget:
         """Màn hình chính (ô TRANG_CHAO của self.trang) = ngan_chao: ô 0 màn hình chào khi chưa mở dự án (0.9.23: thẻ bắt đầu + dự

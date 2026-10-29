@@ -41,12 +41,12 @@ class TestCongThuc(unittest.TestCase):
     def test_doc_so(self):
         self.assertEqual(doc_so('=4,2*5,7', 'SL'), D('23.94'))
         self.assertEqual(doc_so('143,8', 'SL'), D('143.8'))
-        self.assertEqual(doc_so_luong('=4,2*5,7'), D('23.9'))             # làm tròn 1 chữ số thập phân
+        self.assertEqual(doc_so_luong('=4,2*5,7'), D('23.94'))            # công thức: làm tròn 2 chữ số (29/10/2026)
         self.assertEqual(doc_so_luong('=0,12345*2', 'ha'), D('0.2469'))   # ha: 4 chữ số
         # vật nuôi QĐ 31/2025: ao 0,25 ha (ĐVT ha/vụ), lồng 25 m³ (ĐVT 100m3/vụ) - trước đây làm tròn thành 0,3 (trả thừa 20%)
         self.assertEqual(doc_so_luong('0,25', 'ha/vụ'), D('0.25'))
         self.assertEqual(doc_so_luong('0,25', '100m3/vụ'), D('0.25'))
-        self.assertEqual(doc_so_luong('0,25', 'm²'), D('0.3'))
+        self.assertEqual(doc_so_luong('0,25', 'm²'), D('0.25'))           # số gõ trực tiếp giữ nguyên (29/10/2026)
         with self.assertRaises(LoiNhap) as cm:
             doc_so('=4,2*', 'Số lượng')
         self.assertIn('công thức', str(cm.exception))
@@ -196,7 +196,7 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         self.assertTrue(b2.o_chon.chon_du_lieu(m))
         i = w.them_nhanh(2, so_luong='=4,2*5,7', ty_le='80')
         d = w.bo.pa.khoan[2][i]
-        self.assertEqual((d.ma, d.so_luong, d.ty_le), (m.ma, D('23.9'), D('0.8')))
+        self.assertEqual((d.ma, d.so_luong, d.ty_le), (m.ma, D('23.94'), D('0.8')))
         self.assertEqual(b2.bang.rowCount(), n2 + 1)
         self.assertEqual(b2.o_chon.text(), '')                           # thêm xong: xóa ô nhập
         # gõ tên không có trong danh mục: dòng nhập tay, đơn giá gõ ngay
@@ -355,7 +355,7 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         self.assertEqual(bo.pa.dat[0].cong_thuc, '=200,5+15')
         bo.luu()
         bo2 = BoSoan(self.con, 1)
-        self.assertEqual((bo2.pa.khoan[2][0].cong_thuc, bo2.pa.khoan[2][0].so_luong), ('=4,2*5,7', D('23.9')))
+        self.assertEqual((bo2.pa.khoan[2][0].cong_thuc, bo2.pa.khoan[2][0].so_luong), ('=4,2*5,7', D('23.94')))
         bo2.sua_khoan(2, 0, 'so_luong', '30')                              # gõ số thường: bỏ công thức
         self.assertEqual(bo2.pa.khoan[2][0].cong_thuc, '')
         w = CuaSoLapPA(self.con, 1)
@@ -363,7 +363,7 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         c = [k for k, _, _ in b2.cot].index('so_luong')
         self.assertEqual(b2.bang.item(0, c).data(Qt.ItemDataRole.UserRole), '=4,2*5,7')
         b2.bang.setCurrentCell(0, c)
-        self.assertIn('=4,2*5,7 = 23,9', w.lb_tb.text())
+        self.assertIn('=4,2*5,7 = 23,94', w.lb_tb.text())
         # tổng diện tích xây dựng so với diện tích thu hồi
         dlg = w.kiem_tra_dt_xay_dung(cho=False)
         kq = dlg.kq

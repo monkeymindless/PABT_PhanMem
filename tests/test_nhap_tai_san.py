@@ -51,7 +51,7 @@ class TestCungMotLenh(CoSo):
         k, d = bo.pa.khoan[2][i], dt.dong[j]
         self.assertEqual((k.ten, k.dvt, k.so_luong, k.don_gia, k.ty_le, k.ghi_chu),
                          (d.ten, d.dvt, d.khoi_luong, d.don_gia, d.he_so, d.ghi_chu))
-        self.assertEqual(d.khoi_luong, D('23.9'))                     # =4,2*5,7 = 23,94 -> 1 chữ số như phương án
+        self.assertEqual(d.khoi_luong, D('23.94'))                    # =4,2*5,7 = 23,94 (2 chữ số như phương án)
 
     def test_ten_tu_do_va_loi_tieng_viet(self):
         from pabt.lap_pa import LoiNhap

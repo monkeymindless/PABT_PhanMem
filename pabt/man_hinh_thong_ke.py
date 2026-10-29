@@ -8,7 +8,7 @@ from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QHBoxLayout, QHeaderView, QLabel, QPushButton,
                                QTableWidget, QTableWidgetItem, QVBoxLayout)
 
-from .tien import D, lam_tron, vn
+from .tien import D, lam_tron, so_luong_vn, vn
 
 TIEU_DE = 'Bảng thống kê nhanh Hộ · Thửa · Diện tích toàn dự án (Ctrl+Shift+T)'
 COT_TRANG_THAI = ['Hạng mục trạng thái', 'Số hộ', 'Tỷ lệ hộ', 'Số thửa', 'Tỷ lệ thửa', 'DT thu hồi (m²)', 'Quy đổi (ha)',
@@ -85,7 +85,7 @@ def thong_ke_dot(dong: list, ten_dot: dict) -> list:
 
 
 def chu_quy_mo(n: dict) -> str:
-    return (f'{n["so_ho"]} hộ · {n["so_thua"]} thửa · {vn(n["dt"], 1)} m² ({so_ha_bang(n["dt"])}) · {vn(n["tong"])} đ')
+    return (f'{n["so_ho"]} hộ · {n["so_thua"]} thửa · {so_luong_vn(n["dt"])} m² ({so_ha_bang(n["dt"])}) · {vn(n["tong"])} đ')
 
 
 class HopThongKeDiaChinh(QDialog):
@@ -197,7 +197,7 @@ class HopThongKeDiaChinh(QDialog):
             nen = MAU_DONG_TONG if r == 0 else MAU_DONG_VUONG if r == len(self.tt) - 1 else None
             for c, (chu, so) in enumerate(((nhan, False), (str(n['so_ho']), True), (ty_le(n['so_ho'], toan['so_ho']), True),
                                            (str(n['so_thua']), True), (ty_le(n['so_thua'], toan['so_thua']), True),
-                                           (vn(n['dt'], 1), True), (so_ha_bang(n['dt']), True), (vn(n['tong']), True))):
+                                           (so_luong_vn(n['dt']), True), (so_ha_bang(n['dt']), True), (vn(n['tong']), True))):
                 self._o(b, r, c, chu, so, dam, nen)
         self._vua(b)
 
@@ -206,7 +206,7 @@ class HopThongKeDiaChinh(QDialog):
         b.setRowCount(len(self.dot))
         for r, (ten, n, bg) in enumerate(self.dot):
             for c, (chu, so) in enumerate(((ten, False), (f'{n["so_ho"]} hộ', True), (f'{n["so_thua"]} thửa', True),
-                                           (f'{vn(n["dt"], 1)} m²', True), (so_ha_bang(n['dt']), True),
+                                           (f'{so_luong_vn(n["dt"])} m²', True), (so_ha_bang(n['dt']), True),
                                            (f'{bg["so_ho"]}/{n["so_ho"]} hộ ({bg["so_thua"]} thửa)', True), (vn(n['tong']), True))):
                 self._o(b, r, c, chu, so, dam=c == 0)
         self._vua(b)
@@ -222,10 +222,10 @@ class HopThongKeDiaChinh(QDialog):
         toan = self.tt[0][1]
         for nhan, n in self.tt:
             dong.append(f'{nhan}: {n["so_ho"]} hộ ({ty_le(n["so_ho"], toan["so_ho"])}) · {n["so_thua"]} thửa · '
-                        f'{vn(n["dt"], 1)} m² ({so_ha_bang(n["dt"])}) · {vn(n["tong"])} đ')
+                        f'{so_luong_vn(n["dt"])} m² ({so_ha_bang(n["dt"])}) · {vn(n["tong"])} đ')
         dong += ['', 'II. Theo đợt trình thẩm định:']
         for ten, n, bg in self.dot:
-            dong.append(f'- {ten}: {n["so_ho"]} hộ · {n["so_thua"]} thửa · {vn(n["dt"], 1)} m² ({so_ha_bang(n["dt"])}) · '
+            dong.append(f'- {ten}: {n["so_ho"]} hộ · {n["so_thua"]} thửa · {so_luong_vn(n["dt"])} m² ({so_ha_bang(n["dt"])}) · '
                         f'đã bàn giao {bg["so_ho"]}/{n["so_ho"]} hộ · {vn(n["tong"])} đ')
         return '\n'.join(dong)
 

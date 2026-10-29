@@ -16,7 +16,7 @@ import re
 
 from .nghiep_vu import (MA_DAO_TAO, MA_ON_DINH, MA_TDC, MA_THEO_NK, NK_CO_BAN, NGUON_DM, DongKhoan,  # noqa: F401 - xuất lại
                         _muc_khau_vuot_tinh_khac, he_so, tap_ma_dao_tao, tap_ma_on_dinh, tap_ma_tdc, tap_ma_theo_nk)
-from .tien import D, lam_tron, so_vn
+from .tien import D, so_vn
 
 # chính sách không có trong bộ đơn giá, người dùng nhập số tiền (tên theo câu chữ quy định)
 CHINH_SACH_KHAC = ['Hỗ trợ học phí', 'Hỗ trợ y tế', 'Hỗ trợ khác']
@@ -129,7 +129,7 @@ def ty_le_dao_tao(bc, ma: str):
 
 def dong_dao_tao(m, mo_ta: str, dien_tich, don_gia, ty_le) -> DongKhoan:
     """Một dòng đào tạo, chuyển đổi nghề cho một thửa: 'Thửa đất số …' × m² × đơn giá đất × tỷ lệ."""
-    return DongKhoan(muc=4, ma=m.ma, ten=mo_ta, dvt='m²', so_luong=lam_tron(D(dien_tich), 1), don_gia=D(don_gia),
+    return DongKhoan(muc=4, ma=m.ma, ten=mo_ta, dvt='m²', so_luong=D(dien_tich), don_gia=D(don_gia),
                      ty_le=he_so(ty_le), nguon_gia=NGUON_DM, ghi_chu=can_cu_ghi_chu(m.can_cu), quy_cach=ten_ngan(m.ten, m.ma))
 
 

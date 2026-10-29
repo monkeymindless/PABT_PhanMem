@@ -134,17 +134,87 @@ def _cong_thuc(text) -> str:
     return ('=' + s.lstrip('=').strip()) if s and la_cong_thuc(s) else ''
 
 
+SO_LE_TOI_DA = 4            # số lượng / diện tích giữ tối đa 4 chữ số lẻ (cùng giới hạn hiển thị tien.so_luong_vn)
+
+
 def so_le_so_luong(dvt: str) -> int:
-    """Số chữ số thập phân của số lượng theo ĐVT: ha (cả "ha/vụ", "ha/năm" - vật nuôi QĐ 31/2025) và đơn vị bội ("100m3/vụ":
-    lồng 25 m³ = 0,25) giữ 4 chữ số; đơn vị khác 1 chữ số."""
+    """Số chữ số thập phân khi làm tròn KẾT QUẢ CÔNG THỨC số lượng theo ĐVT: ha (cả "ha/vụ", "ha/năm" - vật nuôi QĐ 31/2025) và đơn vị
+    bội ("100m3/vụ": lồng 25 m³ = 0,25) 4 chữ số; đơn vị khác 2 chữ số (29/10/2026 - trước đây 1 chữ số: 28,35 m² -> 28,4)."""
     d = bo_dau(dvt).split('/')[0].strip()
-    return 4 if d == 'ha' or d[:1].isdigit() else 1
+    return SO_LE_TOI_DA if d == 'ha' or d[:1].isdigit() else 2
+
+
+def chuan_so_luong(v):
+    """Số lượng / diện tích đã có (người gõ, đọc file, mục 1): giữ nguyên; chỉ làm tròn khi quá SO_LE_TOI_DA chữ số lẻ."""
+    from .tien import D, lam_tron
+    v = D(v)
+    return lam_tron(v, SO_LE_TOI_DA) if -v.normalize().as_tuple().exponent > SO_LE_TOI_DA else v
 
 
 def doc_so_luong(text, dvt: str = '', ten_o: str = 'Số lượng'):
-    """Số lượng mục 2, 3, 4 (gõ số hoặc công thức): làm tròn 1 chữ số thập phân; ĐVT ha giữ 4 chữ số (so_le_so_luong)."""
-    from .tien import lam_tron
+    """Số lượng / diện tích / khối lượng (mục 1-4, khái toán). Số gõ trực tiếp GIỮ NGUYÊN (28,35 là 28,35 - người dùng 29/10/2026:
+    làm tròn 1 chữ số lẻ làm sai tiền), quá 4 chữ số lẻ mới làm tròn 4. Công thức ("4,5*6,3", "10/3"): kết quả làm tròn theo
+    so_le_so_luong (2 chữ số, ĐVT ha 4) như ROUND của Excel."""
+    from .tien import la_cong_thuc
     v = doc_so(text, ten_o)
+    if la_cong_thuc(str(text if text is not None else '').strip()):
+        return lam_tron_cong_thuc(v, dvt)
+    return chuan_so_luong(v)
+
+
+def tinh_lai_cong_thuc(con) -> dict:
+    """Mở dự án (app.mo, không chỉ xem): dòng có số lượng / diện tích nhập bằng CÔNG THỨC (cột cong_thuc: "=3*4,1") tính lại theo
+    quy tắc hiện hành của doc_so_luong (người dùng 29/10/2026 - trước đây làm tròn 1 chữ số: =4,5*6,3 lưu 28,4 thay 28,35). Dòng gõ
+    số thường (cong_thuc trống: "12 m²") KHÔNG đổi. Bỏ qua: lần phương án đã phê duyệt / đã bị thay (khóa - số liệu đã trình), hộ
+    không nhận việc (bản offline theo hộ), công thức không tính được. Thành tiền không lưu trong CSDL: tự tính lại theo số mới.
+    Một giao dịch, có nhật ký - Hoàn tác được. Trả {'so_dong', 'so_ho', 'bo_qua_khoa'}."""
+    kq = dict(so_dong=0, so_ho=0, bo_qua_khoa=0)
+    from .nghiep_vu import co_cot_lan
+    from .tien import tinh_cong_thuc
+    try:
+        co_lan = co_cot_lan(con)
+        dong = []
+        for bang, cot, dvt in (('ct_dat', 'dien_tich', "'m²'"), ('ct_khoan', 'so_luong', 'dvt')):
+            if 'cong_thuc' not in {r[1] for r in con.execute(f'PRAGMA table_info({bang})')}:
+                continue
+            lan = 'lan' if co_lan else '1'
+            dong += [(bang, cot) + tuple(r) for r in con.execute(
+                f"SELECT id, ma_ho, {lan}, {cot}, {dvt}, cong_thuc FROM {bang} WHERE cong_thuc <> ''")]
+    except sqlite3.Error:                               # file cũ / không có bảng phương án: không làm gì
+        return kq
+    nhan = getattr(con, '_ho_nhan_viec', None)
+    sua, khoa = [], {}
+    from . import lan_pa
+    for bang, cot, i, ma_ho, lan, cu, dvt, ct in dong:
+        if nhan is not None and ma_ho not in nhan:
+            continue
+        try:
+            moi = lam_tron_cong_thuc(tinh_cong_thuc(ct), dvt or '')
+        except (ValueError, ArithmeticError):
+            continue
+        if moi == D(cu or 0):
+            continue
+        if ma_ho not in khoa:
+            khoa[ma_ho] = {x.lan for x in lan_pa.ds_lan(con, ma_ho) if x.khoa}
+        if lan in khoa[ma_ho]:
+            kq['bo_qua_khoa'] += 1
+            continue
+        sua.append((bang, cot, chuoi(moi), i, ma_ho))
+    if not sua:
+        return kq
+    with csdl.giao_dich(con):
+        for bang, cot, gt, i, _ in sua:
+            con.execute(f'UPDATE {bang} SET {cot} = ? WHERE id = ?', (gt, i))
+        so_ho = len({x[4] for x in sua})
+        csdl.ghi_nhat_ky(con, 'Tính lại số lượng nhập bằng công thức',
+                         f'{len(sua)} dòng / {so_ho} hộ: làm tròn 2 chữ số lẻ (ha 4) thay vì 1 chữ số')
+    kq.update(so_dong=len(sua), so_ho=so_ho)
+    return kq
+
+
+def lam_tron_cong_thuc(v, dvt: str = ''):
+    """Kết quả công thức số lượng / diện tích -> làm tròn như doc_so_luong (một nguồn)."""
+    from .tien import lam_tron
     return lam_tron(v, so_le_so_luong(dvt))
 
 

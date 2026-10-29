@@ -1092,7 +1092,7 @@ def ghi_bao_cao_tong_hop(so_lieu: dict, file_ra, tieu_de: str = '', dieu_kien: s
             o = ws.cell(r, c, v)
             o.border = vien
             if isinstance(v, float):
-                o.number_format = '#,##0.0' if c == 7 else so_fmt
+                o.number_format = '#,##0.0#' if c == 7 else so_fmt
             if c in (3, 4, 14, 19):
                 o.alignment = xuong
         tong['dt'] += x['dt']
@@ -1107,7 +1107,7 @@ def ghi_bao_cao_tong_hop(so_lieu: dict, file_ra, tieu_de: str = '', dieu_kien: s
                  (15, tong['pd']), (17, tong['ct'])):
         o = ws.cell(r, c, float(v))
         o.font = dam
-        o.number_format = '#,##0.0' if c == 7 else so_fmt
+        o.number_format = '#,##0.0#' if c == 7 else so_fmt
     for c in range(1, so_cot + 1):
         ws.cell(r, c).border = vien
     from .tien import tien_bang_chu

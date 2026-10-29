@@ -682,7 +682,7 @@ def _ghi_bang(ws, tieu_de: list, dong: list, dong_dau: int = 4, rong: list | Non
             o.border = khung
             o.alignment = Alignment(vertical='center', wrap_text=True)
             if isinstance(v, (int, float)):
-                o.number_format = '#,##0' if float(v) == int(v) else '#,##0.0'
+                o.number_format = '#,##0' if float(v) == int(v) else '#,##0.0#'
     from .in_an import _gop_o                       # gộp nhanh: mỗi hộ nhiều vùng gộp
     for (r1, c1, r2, c2) in gop or []:
         _gop_o(ws, r1 + dong_dau + 1, c1 + 1, r2 + dong_dau + 1, c2 + 1)

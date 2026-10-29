@@ -234,7 +234,7 @@ def lap(con, file_ra, ds_ma_ho=None, du_thao: bool | None = None, so_pa: str = '
             ghi_o(rr, 5, t['so_thua'], can='center')
             ghi_o(rr, 6, t['loai_dat'], can='center')
             for c, v in zip(COT_DT, (t['dt'], t['nn'], t['lua'], t['pnn'] + t['o'], t['o'])):
-                ghi_o(rr, c, float(v) if v else None, dinh_dang='#,##0.0;-#,##0.0;"-"')
+                ghi_o(rr, c, float(v) if v else None, dinh_dang='#,##0.0#;-#,##0.0#;"-"')
         for c in [1, 2, 3, *COT_TIEN, 19, 20]:
             if n > 1:
                 ws.merge_cells(start_row=r, start_column=c, end_row=r + n - 1, end_column=c)
@@ -257,7 +257,7 @@ def lap(con, file_ra, ds_ma_ho=None, du_thao: bool | None = None, so_pa: str = '
         for c in range(2, 7):
             ws.cell(r, c).border = vien
         for c in COT_DT:
-            ghi_o(r, c, float(dt[c]) if dt and dt.get(c) else None, dam=True, dinh_dang='#,##0.0;-#,##0.0;"-"')
+            ghi_o(r, c, float(dt[c]) if dt and dt.get(c) else None, dam=True, dinh_dang='#,##0.0#;-#,##0.0#;"-"')
         for c, k in zip(COT_TIEN, ('tien_dat', 'tien_tai_san', 'tien_cay_vat_nuoi', 'ho_tro_dao_tao', 'ho_tro_on_dinh', 'thuong',
                                    'tong')):
             ghi_o(r, c, int(tien[k]) if tien.get(k) else None, dam=True, dinh_dang='#,##0;-#,##0;"-"')

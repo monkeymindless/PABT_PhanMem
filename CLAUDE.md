@@ -2570,6 +2570,16 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     Qt áp lại cho mọi widget còn sống của lượt kiểm thử - mỗi lần hàng chục giây, và các bài chạy sau chậm theo (lượt đầy đủ 527 s -> 2.613 s;
     tìm bằng `unittest discover … --durations 30`). Kiểm hàm nhỏ (`giao_dien.ty_le_da_luu`, `luu_ty_le`) hoặc thay `QApplication.instance`
     bằng đối tượng giả (`tests/test_yeu_cau_1033._UngDungGia`); widget tạo trong test: close + deleteLater + processEvents.
+- SỐ LƯỢNG / DIỆN TÍCH KHÔNG LÀM TRÒN (người dùng 29/10/2026: gõ 28,35 m² phần mềm tính 28,4 -> sai tiền; test `tests/test_so_luong_2910.py`):
+  `lap_pa.doc_so_luong` (mọi ô Số lượng / Diện tích mục 1-4, khái toán `nhap_tai_san`, dán tài sản, phiếu kiểm đếm, đào tạo): số GÕ TRỰC TIẾP giữ
+  nguyên (`chuan_so_luong`: chỉ làm tròn khi quá `SO_LE_TOI_DA` 4 chữ số lẻ); KẾT QUẢ CÔNG THỨC làm tròn `so_le_so_luong` = 2 chữ số (ha / đơn vị bội 4) -
+  trước 29/10 làm tròn 1 chữ số cho cả số gõ. `chinh_sach.dong_dao_tao` không làm tròn diện tích. Hiển thị tổng diện tích (dải cộng, thanh trạng
+  thái, thống kê, tổng quan) = `tien.so_luong_vn` (đủ chữ số lẻ); danh sách hộ cột DT không quantize 0,1; Excel diện tích '#,##0.0#' (bảng tổng
+  hợp `mau_bang_tong_hop`, bảng điều chỉnh, báo cáo tổng hợp, theo dõi). Thành tiền vẫn ROUND(SL x ĐG x tỷ lệ, làm tròn dự án) bằng Decimal.
+  Mở dự án để sửa (`app.mo`): `lap_pa.tinh_lai_cong_thuc(con)` tính lại dòng ct_dat / ct_khoan có `cong_thuc` (số lưu cũ làm tròn 1 chữ số)
+  bằng `lam_tron_cong_thuc` (một nguồn với doc_so_luong); dòng gõ số thường KHÔNG đổi; bỏ qua lần đã phê duyệt / bị thay (`lan_pa.ds_lan` khoa),
+  hộ không nhận việc, công thức lỗi; một giao dịch + nhật ký (Hoàn tác được) -> thông báo nổi `chu_tinh_lai_cong_thuc`. Dòng đào tạo chép diện
+  tích từ mục 1 không có công thức: không tự đổi.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.
