@@ -168,7 +168,7 @@ class TestChonVungVaBoDem(CoNavy):
         self.assertEqual(chu['dt'][0], 'Tổng DT: 818,3 m² (0,0818 ha)')
         self.assertTrue(chu['dat'][0].startswith('Đất: '))
         self.assertTrue(chu['ho_tro'][0].startswith('HT & Thưởng: '))
-        self.assertIn('Lọc: <b style="color:#1E3A8A">3</b>/3 hộ · <b style="color:#1E3A8A">6</b> thửa', w.lb_loc.text())
+        self.assertIn('Lọc: <b style="color:#1E3A5F">3</b>/3 hộ · <b style="color:#1E3A5F">6</b> thửa', w.lb_loc.text())
         self.assertIn(f'Dự án: 3 hộ · 6 thửa · {vn(Decimal("818.3"), 1)} m²', w.lb_tom_tat.text())
 
     def test_hop_thong_ke(self):

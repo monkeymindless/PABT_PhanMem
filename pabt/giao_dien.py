@@ -19,11 +19,11 @@ from .csdl import giai_phong_bo_nho, la_may_yeu  # noqa: F401  (1.0.08: máy c�
 
 # Hệ thống thiết kế (đặc tả ARCH-PABT-2026-V4 mục 3, người dùng 11/10/2026): MỘT nguồn màu cho cả phần mềm.
 # 22/10/2026 "Ultra-Compact + UI/UX Pro Max": bảng màu tương phản WCAG AAA (chữ chính / navy trên nền trắng >= 7:1)
-# 1.0.34 (người dùng 29/10/2026) "Flagship Sapphire": Royal Sapphire #1E3A8A (trước #2F5F9E), Electric Indigo #2563EB, Emerald,
+# 1.0.34 (người dùng 29/10/2026) "Flagship Sapphire": Royal Sapphire #1E3A5F (trước #2F5F9E), Electric Indigo #2563EB, Emerald,
 # nền Cool Porcelain #F1F5F9 làm nổi thẻ trắng. nen / khung / vach / chu / chu_phu do tông nền đặt (dat_tong_nen, chu_de.TONG_NEN)
 TOKEN = dict(
-    chinh='#1E3A8A',          # Primary - Royal Sapphire
-    chinh_re='#172554',       # Deep Midnight Sapphire: rê chuột / đang nhấn
+    chinh='#1E3A5F',          # Primary - Slate-Navy hạ bão hòa (1.0.35, PA1; 1.0.34: #1E3A8A) - mỗi tông đổi màu này (chu_de.MAU_TONG)
+    chinh_re='#152C48',       # Deep Midnight Sapphire: rê chuột / đang nhấn
     chinh_nhat='#EFF6FF',     # Primary Light: nền mục đang chọn
     nhan='#2563EB',           # Accent - Electric Indigo: thẻ chọn, vòng focus, link, vạch chỉ thị
     phu='#059669',            # Success - Emerald: viền vùng chọn kiểu Excel, trạng thái hoàn thành
@@ -35,18 +35,15 @@ TOKEN = dict(
     nguy_hiem_nhat='#FEF2F2',
     chu='#0F172A',            # Neutral Dark: chữ chính
     chu_phu='#475569',        # Neutral Medium: chữ phụ
-    vach='#CBD5E1',           # Divider / viền (tông Sáng Sapphire)
-    vien='#CBD5E1',
-    nen='#F1F5F9',            # Surface: nền cửa sổ
+    vach='#D5DEE8',           # Divider / viền (tông mặc định 1.0.35: Sáng dịu Slate-Navy)
+    vien='#D5DEE8',
+    nen='#F3F6FA',            # Surface: nền cửa sổ
     nen_the='#FFFFFF',
     khung='#FFFFFF',          # Panel: thẻ, ô, bảng
 )
 CHINH_RE = TOKEN['chinh_re']  # navy khi rê chuột (nút nền navy, tiêu đề bảng) - cũng là vạch ngăn cột tiêu đề bảng
 CAO_NUT_MENU = 32             # nút điều hướng menu trái (0.9.95: 27; 17/10/2026 Hybrid Enterprise Navy: 32 - vùng cuộn có thanh 6 px)
 CAO_HANG_GON = 32             # hàng nút "Thu gọn menu" trên đỉnh menu trái (ngoài vùng cuộn, vạch ngăn dưới)
-MAU_ICON_MENU = '#CBD5E1'     # biểu tượng menu trái chưa chọn (1.0.34: nền tối - chữ / biểu tượng sáng)
-MAU_ICON_MENU_CHON = '#FFFFFF'   # biểu tượng lệnh đang chọn (trên viên gradient Electric Indigo)
-MAU_MENU_TAT = '#8391A7'      # lệnh tắt (chưa mở dự án): 4,6:1 trên nền tối #1E293B
 LE_VIEN_MENU = 6              # lề ngang mỗi viên thuốc trong menu trái (rong_mo cộng thêm 2 x lề)
 THOI_GIAN_MENU_MS = 160       # thu gọn / mở rộng menu trái trượt mượt (QVariantAnimation, OutCubic)
 RONG_MENU_TRAI = 175          # bề rộng menu trái mở (0.9.95: 248 -> 175; thu gọn: 44)
@@ -64,14 +61,14 @@ THE_TAB = dict(nen='#F1F5F9', chu='#475569', vien='#E2E8F0', nen_re='#E2E8F0', c
 MAU = {                                            # (màu biểu tượng / nền đặc, chữ, nền rê chuột) theo nhóm nút
     # 1.0.02 (người dùng 17/10/2026, Hybrid Enterprise Navy cho cửa sổ con): bỏ nền / biểu tượng cam, tím, vàng, xanh lá. Chỉ
     # nhóm DAC nền navy đặc; nhóm 'xoa' viền đỏ nhạt chữ đỏ; các nhóm khác nền trắng viền slate, biểu tượng navy / slate / teal
-    'luu':    ('#1E3A8A', '#FFFFFF', '#172554'),   # Lưu, Áp dụng, Thực hiện, Tạo dự án: hành động chính
-    'them':   ('#1E3A8A', '#FFFFFF', '#172554'),   # Thêm…
+    'luu':    ('#1E3A5F', '#FFFFFF', '#152C48'),   # Lưu, Áp dụng, Thực hiện, Tạo dự án: hành động chính
+    'them':   ('#1E3A5F', '#FFFFFF', '#152C48'),   # Thêm…
     'xoa':    ('#B83A3A', '#FFFFFF', '#991B1B'),   # Xóa…
     'sua':    ('#334155', '#FFFFFF', '#1E293B'),   # Gộp, Chuyển, Tách, Bỏ thay đổi
-    'in':     ('#1E3A8A', '#FFFFFF', '#172554'),   # In / Xuất, PDF
-    'nhap':   ('#1E3A8A', '#FFFFFF', '#172554'),   # Nhập, Mở, Nạp, Cập nhật
+    'in':     ('#1E3A5F', '#FFFFFF', '#152C48'),   # In / Xuất, PDF
+    'nhap':   ('#1E3A5F', '#FFFFFF', '#152C48'),   # Nhập, Mở, Nạp, Cập nhật
     'hoso':   ('#1F6F66', '#FFFFFF', '#115E59'),   # Hồ sơ hộ
-    'pa':     ('#1E3A8A', '#FFFFFF', '#172554'),   # Lập phương án
+    'pa':     ('#1E3A5F', '#FFFFFF', '#152C48'),   # Lập phương án
     'tra':    ('#475569', '#FFFFFF', '#334155'),   # Thông tin, Rà soát, Đối chiếu, Gợi ý, Chọn, Hộ trước / sau
     'nhat':   ('#ECEFF1', '#263238', '#CFD8DC'),   # Hủy, Đóng, Giới thiệu
 }
@@ -136,8 +133,8 @@ def _qss_kieu_nut() -> str:
     # (nền, chữ, viền, nền rê chuột, (chữ, nền, viền khi tắt)). Hybrid Enterprise Navy (17/10/2026): nút phụ nền trắng viền #CBD5E1
     # chữ #0F172A; nút xóa viền mảnh đỏ nhạt chữ đỏ, tắt thì mờ hẳn (không còn nền cam nhạt gây chú ý khi chưa chọn hộ)
     tat = ('#9AA0A6', '#F1F3F4', t['vach'])
-    kieu = {'primary': (t['chinh'], '#FFFFFF', t['chinh'], '#172554', tat),
-            'success': (t['chinh'], '#FFFFFF', t['chinh'], '#172554', tat),     # 1.0.02: Lưu navy (đặc tả Navy cửa sổ con)
+    kieu = {'primary': (t['chinh'], '#FFFFFF', t['chinh'], '#152C48', tat),
+            'success': (t['chinh'], '#FFFFFF', t['chinh'], '#152C48', tat),     # 1.0.02: Lưu navy (đặc tả Navy cửa sổ con)
             'danger': (NUT_XOA[0], NUT_XOA[1], NUT_XOA[2], NUT_XOA[3], ('#94A3B8', '#FFFFFF', '#E2E8F0')),
             'secondary': (NUT_PHU[0], NUT_PHU[1], NUT_PHU[2], NUT_PHU[3], ('#94A3B8', '#FFFFFF', '#E2E8F0'))}
     qss = ''
@@ -333,42 +330,47 @@ QSS_THE_CHAO = (
 )
 
 
-def _qss_menu_trai() -> str:
-    """Menu trái "Executive Dark-Indigo / Floating Pill" (1.0.34, người dùng 29/10/2026): nền tối chuyển sắc dọc, mỗi lệnh là một viên
-    thuốc bo 8 px (rê chuột: nền xanh trong suốt), lệnh đang chọn gradient Electric Indigo -> xanh trời + vạch trái 4 px. Tiêu đề nhóm
-    chữ in hoa xanh nhạt. Cỡ chữ ghi bằng px (phong_to nhân px). Chữ / biểu tượng sáng trên nền tối: MAU_ICON_MENU, MAU_ICON_MENU_CHON."""
+def _qss_menu_trai(ten: str | None = None) -> str:
+    """Menu trái theo tông (1.0.35, chu_de.MAU_TONG[...]['menu']): tông sáng (PA1 mặc định, Ấm, Xanh ngọc…) nền sáng liền mạch với vùng
+    làm việc, tông Titan / Tối nền tối. Mỗi lệnh một viên bo 8 px, lệnh đang chọn nền nhấn + vạch trái 4 px, tiêu đề nhóm chữ in hoa.
+    Đặt SAU khi đổi màu theo tông (_qss_day_du): màu ở đây đã là màu của tông. Cỡ chữ ghi bằng px (phong_to nhân px)."""
+    from . import chu_de
+    m = chu_de.mau_tong(TONG_NEN[0] if ten is None else ten)['menu']
     return f'''
-    QFrame[vai="menu_trai"] {{ background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #0F172A, stop:0.55 #1E293B, stop:1 #0F172A);
-        border: 0; border-right: 1px solid #334155; border-radius: 0; }}
-    QFrame#hang_gon_menu {{ background: transparent; border: 0; border-bottom: 1px solid #334155; }}
+    QFrame[vai="menu_trai"] {{ background: {m['nen']}; border: 0; border-right: 1px solid {m['vien']}; border-radius: 0; }}
+    QFrame#hang_gon_menu {{ background: transparent; border: 0; border-bottom: 1px solid {m['vien']}; }}
     QToolButton#nut_thu_gon {{ background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 2px 8px;
-        text-align: left; color: #94A3B8; font-size: 12px; font-weight: 600; }}
-    QToolButton#nut_thu_gon:hover {{ background: rgba(59, 130, 246, 0.16); border-color: rgba(96, 165, 250, 0.28); color: #FFFFFF; }}
+        text-align: left; color: {m['icon']}; font-size: 12px; font-weight: 600; }}
+    QToolButton#nut_thu_gon:hover {{ background: {m['re']}; color: {m['chon_chu'] if m['toi'] else m['nhom']}; }}
     QScrollArea#cuon_menu, QScrollArea#cuon_menu > QWidget {{ background: transparent; border: 0; }}
     QFrame[vai="menu_trai"] QScrollBar:vertical {{ background: transparent; width: 6px; margin: 2px 0; }}
-    QFrame[vai="menu_trai"] QScrollBar::handle:vertical {{ background: #475569; border-radius: 3px; min-height: 24px; }}
-    QFrame[vai="menu_trai"] QScrollBar::handle:vertical:hover {{ background: #64748B; }}
-    QFrame#vach_menu {{ color: #334155; margin: 2px 6px; }}
+    QFrame[vai="menu_trai"] QScrollBar::handle:vertical {{ background: {m['cuon']}; border-radius: 3px; min-height: 24px; }}
+    QFrame#vach_menu {{ color: {m['vien']}; margin: 2px 6px; }}
     QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 8px; margin: 0 {LE_VIEN_MENU}px;
-        padding: 2px 6px 2px 10px; text-align: left; font-weight: 600; font-size: 12.5px; color: #CBD5E1; }}
+        padding: 2px 6px 2px 10px; text-align: left; font-weight: 600; font-size: 12.5px; color: {m['chu']}; }}
     QToolButton[menu="1"], QToolButton[menu="1"]:focus {{ outline: none; }}
-    QToolButton[menu="1"]:hover {{ background: rgba(59, 130, 246, 0.16); color: #FFFFFF; border: 1px solid rgba(96, 165, 250, 0.28); }}
-    QToolButton[menu="1"]:pressed {{ background: rgba(59, 130, 246, 0.28); }}
-    QToolButton[menu="1"]:disabled {{ color: {MAU_MENU_TAT}; background: transparent; border-color: transparent; }}
-    QToolButton[menu="1"]:checked {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2563EB, stop:1 #0284C7); color: #FFFFFF;
-        font-weight: 700; border: 0; border-left: 4px solid #38BDF8; border-top: 1px solid rgba(186, 230, 253, 0.4);
-        padding-left: 7px; }}
-    QLabel[vai="nhom_menu"] {{ color: #60A5FA; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; background: transparent;
+    QToolButton[menu="1"]:hover {{ background: {m['re']}; color: {m['chon_chu']}; }}
+    QToolButton[menu="1"]:pressed {{ background: {m['chon_nen']}; }}
+    QToolButton[menu="1"]:disabled {{ color: {m['tat']}; background: transparent; border-color: transparent; }}
+    QToolButton[menu="1"]:checked {{ background: {m['chon_nen']}; color: {m['chon_chu']}; font-weight: 700; border: 0;
+        border-left: 4px solid {m['vach_chon']}; padding-left: 7px; }}
+    QLabel[vai="nhom_menu"] {{ color: {m['nhom']}; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; background: transparent;
         border: 0; border-radius: 4px; margin: 10px {LE_VIEN_MENU}px 4px {LE_VIEN_MENU}px; padding: 2px 4px; }}
-    QLabel[vai="nhom_menu"]:hover {{ color: #FFFFFF; background: rgba(59, 130, 246, 0.16); }}
-    QLabel[vai="nhom_menu"][dong="1"] {{ color: #7C93B5; }}'''
+    QLabel[vai="nhom_menu"]:hover {{ background: {m['re']}; }}
+    QLabel[vai="nhom_menu"][dong="1"] {{ color: {m['tat']}; }}'''
+
+
+def mau_menu() -> dict:
+    """Màu menu trái của tông đang dùng (biểu tượng lệnh, lệnh tắt…)."""
+    from . import chu_de
+    return chu_de.mau_tong(TONG_NEN[0])['menu']
 
 
 def _qss_the_so() -> str:
     """Thẻ KPI cửa sổ chính + hàng công cụ / dải cộng danh sách hộ (Hybrid Enterprise Navy, 17/10/2026)."""
     c = TOKEN['chinh']
     return '''
-    QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #1E3A8A; border-radius: 6px; }
+    QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #1E3A5F; border-radius: 6px; }
     QWidget[vai="the_so"]:hover { background: #F8FAFC; border-color: #CBD5E1; }
     QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
     QLabel[vai="so_the"] { font-size: 17px; font-weight: 700; color: #0F172A; }
@@ -435,7 +437,7 @@ QSS_THE_GACH_CHAN = '''
 # 20/10/2026: khối I #khung_chu_ho (lưới 3 cột), thẻ nhỏ [the_nho], ô tên / CCCD / pháp lý, dải tổng hợp địa chính #thanh_tom_tat_thua
 QSS_HO_SO_HO = '''
     QFrame#khung_chu_ho, QFrame#the_chu_ho { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
-    QLineEdit#o_ten { font-weight: 700; color: #1E3A8A; }
+    QLineEdit#o_ten { font-weight: 700; color: #1E3A5F; }
     QLineEdit#o_cccd { font-family: Consolas, "Courier New", monospace; letter-spacing: 1px; }
     QLineEdit#o_cccd[hop_le="0"] { border: 1px solid #C94545; background: #FEF2F2; }
     QLineEdit#o_phap_ly { color: #2F7D54; font-weight: 600; }
@@ -454,7 +456,7 @@ QSS_HO_SO_HO = '''
 QSS_LAP_PA_DAI = '''
     QFrame#dai_dinh_danh { background: #F1F5F9; border: 0; border-bottom: 1px solid #E2E8F0; }
     QLabel[vai_dd="nhan"] { color: #64748B; }
-    QLabel[vai_dd="ten"] { color: #1E3A8A; font-weight: 700; }
+    QLabel[vai_dd="ten"] { color: #1E3A5F; font-weight: 700; }
     QLabel[vai_dd="cccd"] { font-family: Consolas, "Courier New", monospace; font-weight: 600; color: #0F172A; }
     QLabel[vai_dd="dia_chi"] { color: #0F172A; font-weight: 600; }
     QLabel[vai_dd="dot"] { color: #1F76A6; font-weight: 700; }
@@ -463,7 +465,7 @@ QSS_LAP_PA_DAI = '''
     QFrame#dai_cong_muc { background: #F0FDF4; border: 1px solid #BBF7D0; border-top: 0;
         border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
     QLabel#dem_muc { color: #276348; }
-    QLabel#cong_muc { color: #1E3A8A; font-weight: 700; }'''
+    QLabel#cong_muc { color: #1E3A5F; font-weight: 700; }'''
 # bảng tổng hợp kinh phí (20/10/2026): khung an toàn nguồn vốn cạnh cơ cấu, dòng chân "Lần tính toán gần nhất"
 QSS_TONG_HOP_KP = '''
     QFrame#khung_an_toan_von { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
@@ -479,8 +481,8 @@ QSS_TONG_HOP_KP = '''
     QLabel#mo_ta_hop_den { color: #78350F; }
     QPushButton#nut_goi_chan_doan { background: #1F76A6; color: #FFFFFF; border: 1px solid #1A5C85; font-weight: 700; }
     QPushButton#nut_goi_chan_doan:hover { background: #1A5C85; }
-    QFrame#khung_so_vd { background: #FFFFFF; border: 1px solid #1E3A8A; border-radius: 6px; }
-    QFrame#dau_so_vd { background: #1E3A8A; border: 0; border-top-left-radius: 5px; border-top-right-radius: 5px; }
+    QFrame#khung_so_vd { background: #FFFFFF; border: 1px solid #1E3A5F; border-radius: 6px; }
+    QFrame#dau_so_vd { background: #1E3A5F; border: 0; border-top-left-radius: 5px; border-top-right-radius: 5px; }
     QLabel#tieu_de_so_vd { color: #FFFFFF; font-weight: 700; background: transparent; }
     QLabel#the_ho_vd { background: #E5A93A; color: #0F172A; font-weight: 700; border-radius: 4px; padding: 1px 8px; }
     QLabel#thong_tin_ho_vd { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 6px 8px; color: #0F172A; }
@@ -544,20 +546,21 @@ _KHOA_MAU_NEN = ('nen', 'khung', 'vach', 'chu', 'chu_phu')
 # màu GỐC mà bảng kiểu chung viết thẳng (#F8FAFC, #E2E8F0…): bảng kiểu dựng bằng màu này rồi đổi theo tông (ap_tong_nen). Từ 1.0.34
 # tông mặc định 'sang' (Sáng Sapphire) KHÁC màu gốc: nền #F1F5F9, viền #CBD5E1 - mở phần mềm là thấy giao diện mới
 _TOKEN_GOC = dict(nen='#F8FAFC', khung='#FFFFFF', vach='#E2E8F0', chu='#0F172A', chu_phu='#475569')
+CHINH_GOC = ('#1E3A5F', '#152C48')     # màu chính GỐC viết thẳng trong bảng kiểu (1.0.35) -> chu_de.MAU_TONG[tông]['chinh' / 'chinh_re']
 _RE_KHAI_BAO = re.compile(r'([A-Za-z-]+)(\s*:\s*)([^;{}]+)')
 _RE_MAU_HEX = re.compile(r'#[0-9A-Fa-f]{6}\b')
 # tông Tối chuyên gia (Dark Studio): ngoài 5 màu tông, các màu sáng viết thẳng khác trong bảng kiểu cũng đổi sang màu tối tương ứng
 # (nền nhạt, viền, chữ đậm, chữ navy trên nền trắng) - màu nền nút xanh / chữ trắng / huy hiệu ngữ nghĩa (vàng, đỏ nhạt) giữ nguyên
-TOI_NEN = {'#F0FDF4': '#0F2A1F', '#ECFDF5': '#0F2A1F', '#DCFCE7': '#14532D', '#FFFBEB': '#2A2210', '#FEF3C7': '#3B2F12',
+TOI_NEN = {'#F4F6F8': '#162033', '#FFF6D6': '#3B2F12', '#FDEBDD': '#3A2414', '#F1F4F7': '#162033', '#F0FDF4': '#0F2A1F', '#ECFDF5': '#0F2A1F', '#DCFCE7': '#14532D', '#FFFBEB': '#2A2210', '#FEF3C7': '#3B2F12',
            '#FEF2F2': '#3A1414', '#FEE2E2': '#4C1D1D', '#F0FDFA': '#0F2A28', '#FFFDE7': '#2A2210', '#F5F3FF': '#2A1F4A',
            '#F1F5F9': '#162033', '#EEF2F7': '#24324A', '#E2E8F0': '#2A3A52', '#EFF6FF': '#1E3A5F', '#F0F6FF': '#1E3A5F',
            '#DBEAFE': '#1E40AF', '#F0F9FF': '#0C2A3F', '#EEF5FC': '#24324A', '#DCEBFA': '#1E40AF', '#FAFBFC': '#0F172A', '#F8F9FA': '#0B1120'}
 TOI_VIEN = {'#BBF7D0': '#166534', '#86EFAC': '#15803D', '#A7F3D0': '#047857', '#FDE68A': '#854D0E', '#FECACA': '#7F1D1D',
             '#99F6E4': '#0F766E', '#BAE6FD': '#075985', '#CBD5E1': '#475569', '#DCE3EA': '#334155', '#94A3B8': '#64748B', '#BFDBFE': '#1E40AF'}
-TOI_CHU = {'#276348': '#86EFAC', '#2F7D54': '#86EFAC', '#065F46': '#6EE7B7', '#047857': '#6EE7B7', '#7C4A12': '#FCD34D',
+TOI_CHU = {'#14532D': '#86EFAC', '#075985': '#7DD3FC', '#4A5866': '#CBD5E1', '#276348': '#86EFAC', '#2F7D54': '#86EFAC', '#065F46': '#6EE7B7', '#047857': '#6EE7B7', '#7C4A12': '#FCD34D',
            '#9A5A12': '#FCD34D', '#78350F': '#FCD34D', '#B83A3A': '#FCA5A5', '#1F6F66': '#5EEAD4', '#2F5DB5': '#93C5FD',
-           '#1A5C85': '#7DD3FC', '#0284C7': '#7DD3FC', '#1E293B': '#E2E8F0', '#334155': '#CBD5E1', '#64748B': '#94A3B8', '#1E3A8A': '#93C5FD', '#2563EB': '#60A5FA',
-           '#172554': '#BFDBFE', '#202124': '#F1F5F9', '#1A1A1A': '#F1F5F9', '#0B2E4F': '#E2E8F0', '#5B6B82': '#A5B4C8'}
+           '#1A5C85': '#7DD3FC', '#0284C7': '#7DD3FC', '#1E293B': '#E2E8F0', '#334155': '#CBD5E1', '#64748B': '#94A3B8', '#1E3A5F': '#93C5FD', '#2563EB': '#60A5FA',
+           '#152C48': '#BFDBFE', '#202124': '#F1F5F9', '#1A1A1A': '#F1F5F9', '#0B2E4F': '#E2E8F0', '#5B6B82': '#A5B4C8'}
 
 
 def _bang_doi_mau(ten: str) -> dict:
@@ -569,9 +572,21 @@ def _bang_doi_mau(ten: str) -> dict:
     g = _TOKEN_GOC
     loc = lambda d: {k.upper(): v.upper() for k, v in d.items() if k.upper() != v.upper()}   # noqa: E731
     them = ten == 'toi'
-    return {'nen': loc({**(TOI_NEN if them else {}), g['nen']: nen, g['khung']: khung}),
-            'vien': loc({**(TOI_VIEN if them else {}), g['vach']: vach}),
-            'chu': loc({**(TOI_CHU if them else {}), g['chu']: chu, g['chu_phu']: chu_phu})}
+    mt = chu_de.mau_tong(ten)
+    chinh = {CHINH_GOC[0]: mt['chinh'], CHINH_GOC[1]: mt['chinh_re']}       # mọi thuộc tính; riêng từng loại (nền / viền / chữ) thắng
+    return {'nen': loc({**chinh, **(TOI_NEN if them else {}), g['nen']: nen, g['khung']: khung}),
+            'vien': loc({**chinh, **(TOI_VIEN if them else {}), g['vach']: vach}),
+            'chu': loc({**chinh, **(TOI_CHU if them else {}), g['chu']: chu, g['chu_phu']: chu_phu})}
+
+
+def mau_theo_tong(mau: str, loai: str = 'nen') -> str:
+    """Một màu GỐC (viết theo tông mặc định) -> màu của tông đang dùng. loai: 'nen' / 'vien' / 'chu'. Dùng cho màu đặt trong MÔ HÌNH
+    bảng / rich text (BackgroundRole, ForegroundRole, <span style>) mà bảng kiểu không đổi được (1.0.35)."""
+    return _bang_doi_mau(TONG_NEN[0]).get(loai, {}).get(mau.upper(), mau)
+
+
+def qmau_theo_tong(mau: str, loai: str = 'nen') -> QColor:
+    return QColor(mau_theo_tong(mau, loai))
 
 
 # khối thêm cho tông Tối (đặt CUỐI bảng kiểu): bảng, tiêu đề bảng, ô nhập, menu trái, hộp thoại, chú thích
@@ -595,7 +610,7 @@ QSS_TOI = '''
     QToolTip { background: #1E293B; color: #F1F5F9; border: 1px solid #475569; }
     QCheckBox, QRadioButton, QLabel { color: #E2E8F0; background: transparent; }
     QGroupBox { color: #E2E8F0; }
-    QFrame[vai="menu_trai"] { background: #090D16; }'''
+'''
 
 
 def ap_tong_nen(qss: str, ten: str | None = None) -> str:
@@ -624,13 +639,13 @@ def ap_tong_nen(qss: str, ten: str | None = None) -> str:
 def _qss_day_du() -> str:
     """Bảng kiểu cả phần mềm: kiểu chung + biến thể nút KieuNut (đặt cuối). Mọi chỗ đặt / dựng lại bảng kiểu (phóng to, thu
     nhỏ) dùng hàm này - trước đây phong_to dựng lại thiếu phần biến thể. 1.0.33: dựng bằng màu gốc rồi đổi theo tông nền."""
-    moi = {k: TOKEN[k] for k in _KHOA_MAU_NEN}
-    TOKEN.update(_TOKEN_GOC)
+    moi = {k: TOKEN[k] for k in (*_KHOA_MAU_NEN, 'chinh', 'chinh_re')}
+    TOKEN.update(_TOKEN_GOC, chinh=CHINH_GOC[0], chinh_re=CHINH_GOC[1])
     try:
         qss = _qss() + _qss_kieu_nut()
     finally:
         TOKEN.update(moi)
-    return ap_tong_nen(qss) + (QSS_TOI if TONG_NEN[0] == 'toi' else '')
+    return ap_tong_nen(qss) + (QSS_TOI if TONG_NEN[0] == 'toi' else '') + _qss_menu_trai()
 
 
 def bang_mau_ung_dung():
@@ -656,7 +671,8 @@ def dat_tong_nen(ten: str, luu: bool = False, ap_lai: bool = True) -> str:
     ten = ten if ten in chu_de.TONG_NEN else chu_de.MAC_DINH_TONG_NEN
     TONG_NEN[0] = ten
     _, nen, khung, vach, chu, chu_phu = chu_de.TONG_NEN[ten]
-    TOKEN.update(nen=nen, khung=khung, vach=vach, vien=vach, chu=chu, chu_phu=chu_phu)
+    mt = chu_de.mau_tong(ten)
+    TOKEN.update(nen=nen, khung=khung, vach=vach, vien=vach, chu=chu, chu_phu=chu_phu, chinh=mt['chinh'], chinh_re=mt['chinh_re'])
     if luu:
         chu_de.ghi(cai_dat_nho(), tong_nen=ten)
     app = QApplication.instance()
@@ -820,7 +836,6 @@ def _qss() -> str:
     QTableView QLineEdit:focus, QTableView QComboBox:focus, QTableView QPlainTextEdit:focus {{ padding: 2px 6px; }}
     QLineEdit:read-only {{ background: #F1F4F7; color: #4A5866; }}
     QToolButton[nho="1"] {{ font-size: 11px; padding: 3px 6px 2px 6px; }}
-{_qss_menu_trai()}
     QTabBar[vai="lam_viec"] {{ background: transparent; }}
     QTabBar[vai="lam_viec"]::tab {{ background: transparent; color: {TOKEN['chu_phu']}; border: 0;
         border-bottom: 2px solid transparent; padding: 7px 14px; margin: 0; font-weight: 600; }}
@@ -1116,7 +1131,7 @@ def kieu_o_gia_k(it) -> None:
 PHONG_SO = 'Consolas'
 PHONG_SO_DU_PHONG = 'Segoe UI Semibold'
 MAU_SO_KHONG = '#94A3B8'
-MAU_SO_TIEN = '#1E3A8A'
+MAU_SO_TIEN = '#1E3A5F'
 MAU_SO_VUOT = '#B83A3A'
 SO_KHONG = frozenset(('0', '0,0', '0,00', '0,0%', '0.0%', '0%', '-', '—'))
 CAN_SO = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)     # số nguyên: PySide2 bỏ qua cờ ghép kiểu enum
@@ -1150,12 +1165,12 @@ def phong_so(goc=None, dam: bool = False):
 def mau_so(chu, tien: bool = False, vuot: bool = False):
     """Màu chữ (hex) của một ô số: vượt -> đỏ; số 0 / gạch -> xám nhạt; cột tiền có số -> navy; còn lại None (màu mặc định)."""
     if vuot:
-        return MAU_SO_VUOT
+        return mau_theo_tong(MAU_SO_VUOT, 'chu')
     v = str(chu if chu is not None else '').strip()
     if v in SO_KHONG:
         return MAU_SO_KHONG
     if tien and v and (v[0].isdigit() or (v[0] in '+-' and v[1:2].isdigit())):
-        return MAU_SO_TIEN
+        return mau_theo_tong(MAU_SO_TIEN, 'chu')          # 1.0.35: theo tông (Tối: xanh sáng)
     return None
 
 
@@ -1201,7 +1216,7 @@ def kieu_trang_thai(muc: str, loai: str = 'QLabel', dam: bool = True) -> str:
 def dat_trang_thai(nhan, muc: str, chu: str) -> None:
     """Đặt chữ + màu trạng thái cho QLabel (băng kết quả, dòng báo trong hộp thoại). muc: dat / tin / canh_bao / loi."""
     nhan.setText(chu)
-    nhan.setStyleSheet(kieu_trang_thai(muc))
+    nhan.setStyleSheet(ap_tong_nen(kieu_trang_thai(muc)))           # 1.0.35: theo tông nền (Tối: dải tối)
 
 
 class con_tro_cho:
@@ -1306,7 +1321,7 @@ class KhungCao(QFrame):
         self._cao()
 
 
-MAU_BANG = ('#0B192C', '#1E3A8A', '#0F766E')   # banner: xanh sapphire
+MAU_BANG = ('#0B192C', '#1E3A5F', '#0F766E')   # banner: xanh sapphire
 VIEN_DAY = '#38BDF8'                           # viền đáy banner, 2px
 MAU_PHU_DE = '#E0F2FE'                         # dòng cơ quan: xanh băng trắng sáng
 MAU_DON_VI_BANNER = '#FCD34D'                  # 0.9.80: tên đơn vị trên banner navy - vàng kim nhạt (đọc rõ hơn xanh băng)
@@ -1463,7 +1478,7 @@ class TheKpiGon(QFrame):
     """Thẻ chỉ số 2 tầng cao 54 px (cùng kiểu thẻ số màn hình chính / Niêm yết): tên trên; số lớn + chữ phụ dưới. Vạch trái 3 px
     màu `mau`, góc trái bo 3 px (vạch thẳng). Chữ dài rút "…", đủ ở chú thích."""
 
-    def __init__(self, ten: str, mau: str = '#1E3A8A', goi_y: str = ''):
+    def __init__(self, ten: str, mau: str = '#1E3A5F', goi_y: str = ''):
         super().__init__()
         self.setObjectName('the_kpi_gon')
         dat_kieu_theo_tong(self, QSS_THE_KPI_GON.format(m=mau))
@@ -1549,7 +1564,7 @@ class DaiCongBang(QFrame):
         chu = '&nbsp;&nbsp;·&nbsp;&nbsp;'.join(f'<span style="color:#475569">{n}:</span> <b>{v}</b>' for n, v in phan)
         if tong:
             chu += ('&nbsp;&nbsp;|&nbsp;&nbsp;' if chu else '') + \
-                f'<span style="color:#1E3A8A; font-weight:800">{tong[0]}: {tong[1]}</span>'
+                f'<span style="color:#1E3A5F; font-weight:800">{tong[0]}: {tong[1]}</span>'
         return chu
 
     def dat(self, phan: list, tong=None, phan_gon: list | None = None, tong_gon=None) -> None:
@@ -1901,6 +1916,10 @@ CAO_BANNER = 42        # banner xanh: tên phần mềm + cơ quan canh giữa t
 
 
 class KhungBanner(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        KHI_DOI_TONG_NEN.append(lambda _t: self.update())          # đổi tông: vẽ lại dải màu của tông mới
+
     """Banner tên phần mềm (1.0.34): dải chuyển màu ba tầng MAU_BANG (đêm sâu -> Royal Sapphire -> teal), lưới tọa độ trắc địa mờ,
     ba vòng cung đồng mức bản đồ ở góc phải, dải sáng mép trên và viền đáy VIEN_DAY."""
 
@@ -1912,7 +1931,8 @@ class KhungBanner(QFrame):
         r = QRectF(self.rect())
         w, h = r.width(), r.height()
         g = QLinearGradient(r.topLeft(), r.topRight())
-        for t, m in zip((0, 0.52, 1), MAU_BANG):
+        from . import chu_de
+        for t, m in zip((0, 0.52, 1), chu_de.mau_tong(TONG_NEN[0])['banner']):
             g.setColorAt(t, QColor(m))
         p.fillRect(r, g)
         p.setPen(QPen(QColor(147, 197, 253, 22), 1))           # lưới tọa độ
@@ -2419,12 +2439,16 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     lo.setContentsMargins(4, 2, 4, 6)
     lo.setSpacing(2)
     nut, tieu_de = [], []                                    # tieu_de: (nút tiêu đề nhóm, tên nhóm, [nút lệnh của nhóm])
+    bieu_tuong = []                                          # (QAction, ký hiệu): tô lại biểu tượng khi đổi tông (1.0.35)
     dong = _doc_nhom_dong(dong_mac_dinh)
 
     def nut_menu(a) -> QToolButton:
-        b = nut_lenh(a, 18, mau=MAU_ICON_MENU)               # icon đơn sắc slate, mục đang chọn đổi sang navy (icon_hai_trang_thai)
+        mm = mau_menu()
+        b = nut_lenh(a, 18, mau=mm['icon'])                 # icon đơn sắc theo tông, mục đang chọn đổi màu (icon_hai_trang_thai)
         k = ky_hieu_nut(a.text())
-        ic = icon_hai_trang_thai(k, MAU_ICON_MENU, MAU_ICON_MENU_CHON, 18) if k else None
+        ic = icon_hai_trang_thai(k, mm['icon'], mm['icon_chon'], 18) if k else None
+        if k:
+            bieu_tuong.append((a, k))
         if ic is not None:
             a.setIcon(ic)
         if a.icon().isNull():
@@ -2522,7 +2546,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
         ve_nhom()
         dat_rong_muot(khung, RONG_MENU_GON if gon else khung.rong_mo())
         b_gon.setText('' if gon else '  Thu gọn menu')
-        ic = icon_ky_hieu(0xE76C if gon else 0xE76B, MAU_ICON_MENU, 16)    # mũi tên mở rộng / thu gọn
+        ic = icon_ky_hieu(0xE76C if gon else 0xE76B, mau_menu()['icon'], 16)    # mũi tên mở rộng / thu gọn
         b_gon.setIcon(ic) if ic is not None else b_gon.setText('»' if gon else '«  Thu gọn menu')
         b_gon.setToolTip('Mở rộng menu' if gon else 'Thu gọn menu (chỉ hiện biểu tượng)')
     def rong_mo() -> int:
@@ -2535,6 +2559,16 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     khung.installEventFilter(khung._vua_rong)
     b_gon.clicked.connect(lambda: dat(not khung.thu_gon))
     khung.dat_thu_gon = dat                                  # 1.0.16: app tự thu gọn / mở lại menu theo trang (màn hình hẹp)
+
+    def to_lai(_ten=None):
+        mm = mau_menu()
+        for a, k in bieu_tuong:
+            ic = icon_hai_trang_thai(k, mm['icon'], mm['icon_chon'], 18)
+            if ic is not None:
+                a.setIcon(ic)
+        dat(khung.thu_gon)                                  # mũi tên thu gọn
+    khung.to_lai_bieu_tuong = to_lai
+    KHI_DOI_TONG_NEN.append(to_lai)
     khung.nut_thu_gon, khung.hang_gon, khung.vung_cuon = b_gon, hang_gon, cuon
     dat(thu_gon_luc_dau)
     return khung
@@ -3383,7 +3417,7 @@ def _nen_cuon_hop() -> bool:
 
 
 # ---------------------------------------------------------------- thông báo nổi (HUD) góc dưới phải (1.0.07)
-MAU_HUD = {'tin': ('#0F172A', '#FFFFFF', '#38BDF8'), 'dat': ('#1E3A8A', '#FFFFFF', '#34D399'),
+MAU_HUD = {'tin': ('#0F172A', '#FFFFFF', '#38BDF8'), 'dat': ('#1E3A5F', '#FFFFFF', '#34D399'),
            'canh_bao': ('#78350F', '#FFFFFF', '#FBBF24')}
 HUD_MS = 2200                   # thời gian hiện (ms)
 LE_HUD = 18                     # cách mép phải / đáy cửa sổ (px)

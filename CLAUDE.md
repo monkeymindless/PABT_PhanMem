@@ -2613,6 +2613,20 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     (body.che_do_toi, localStorage `larc_field_ban_dem`, loại trừ `tuong_phan_cao`, theme-color #0B1120 khi bật), 2 nút lớn = thẻ Bento 82 px có dòng
     mô tả (`.chu_hero`; ngang vẫn 42 px), thanh mục con / thanh đáy kính mờ, `@keyframes trangHien / theNoi / sheetLen` (tắt khi prefers-reduced-
     motion). Ghi chú 1.3.0 "2 nút lớn gọn một hàng 46 px" được thay bằng yêu cầu Bento của người dùng 29/10/2026.
+- 1.0.35 (người dùng 29/10/2026 chọn trong 5 phương án ảnh mẫu: "Chọn PA1 mặc định"): MẶC ĐỊNH PA1 "Calm Executive Slate-Navy" - màu
+  chính GỐC #1E3A5F (thay #1E3A8A ở MỌI file pabt/ + tests/, trừ ve_bieu_tuong / phieu_kiem_dem; hover #152C48), nền #F3F6FA, viền #D5DEE8,
+  menu trái SÁNG #E8EEF5 (thay menu tối của 1.0.34). chu_de.TONG_NEN 7 tông: sang (PA1) / titan (PA4: menu than chì #1E293B, bảng sáng) / am
+  (PA2 giấy kem) / ngoc (PA3 xanh ngọc #115E59 - xanh lá trùng nghĩa "hoàn thành" của trạng thái: chỉ là tùy chọn) / toi (PA5 Tối) / diu /
+  trang. `chu_de.MAU_TONG[tông]` = chinh / chinh_re (màu chính), banner (3 màu KhungBanner), menu (nen, vien, chu, re, chon_nen, chon_chu,
+  vach_chon, nhom, tat, icon, icon_chon, cuon, toi). `giao_dien.CHINH_GOC` ('#1E3A5F', '#152C48') đổi theo tông ở `_bang_doi_mau` (mọi thuộc
+  tính; bảng riêng nền / viền / chữ thắng - Tối: chữ navy -> #93C5FD); `_qss_day_du` dựng với màu gốc rồi đổi, nối QSS_TOI rồi
+  `_qss_menu_trai()` (theo tông, KHÔNG qua bộ đổi màu) CUỐI. `mau_menu()` (biểu tượng / lệnh tắt); menu_trai tô lại biểu tượng khi đổi tông
+  (`khung.to_lai_bieu_tuong`, KHI_DOI_TONG_NEN). Màu đặt trong MÔ HÌNH bảng / rich text: `mau_theo_tong(hex, loai)` / `qmau_theo_tong` -
+  dùng ở ô chỉ đọc / nguồn giá BangMuc (XAM / VANG / CAM), `man_hinh_theo_doi.dong_noi(loai)` (3 dòng Cộng / Kinh phí / Tổng), dòng con tiền
+  đất, `chu_tong_pa`, `mau_so` (số tiền / vượt), thẻ KPI cửa sổ chính; `dat_trang_thai` qua ap_tong_nen; nút Dán tài sản / Xem trước / Mở / A±
+  qua dat_kieu_theo_tong. Đã bỏ MAU_ICON_MENU / MAU_ICON_MENU_CHON / MAU_MENU_TAT (dùng mau_menu()). Chưa làm theo ảnh mẫu: vạch thẻ KPI ở cạnh
+  trên (giữ vạch trái), chữ cái trong huy hiệu thẻ chào (giữ biểu tượng), "Ctrl+I" của Nhập file Excel (lệnh không có phím tắt đó). Mobile
+  giữ màu Sapphire của 1.0.34 (chỉ đồng bộ số phiên bản).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

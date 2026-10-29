@@ -26,23 +26,23 @@ MAU_KPI = (('quy_mo', 'Quy mô dự án', '#2563EB'), ('kinh_phi', 'Tổng kinh 
 TI_LE_CHIA = (65, 35)                # bên trái : bên phải
 
 QSS_TONG_QUAN = '''
-QFrame#dai_tong_thuat { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 4px solid #1E3A8A; border-radius: 6px; }
+QFrame#dai_tong_thuat { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 4px solid #1E3A5F; border-radius: 6px; }
 QLabel#tq_ten { font-size: 16px; font-weight: 700; color: #0F172A; background: transparent; border: 0; }
 QLabel#tq_phu { font-size: 12px; color: #64748B; background: transparent; border: 0; }
 QToolButton#the_khoi_tao { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px;
     text-align: left; font-size: 13px; font-weight: 600; color: #0F172A; }
-QToolButton#the_khoi_tao:hover { background: #F0F6FF; border-color: #1E3A8A; }
+QToolButton#the_khoi_tao:hover { background: #F0F6FF; border-color: #1E3A5F; }
 QToolButton#the_khoi_tao:disabled { color: #94A3B8; }
 QFrame#khung_tq { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
-QLabel#tq_tieu_de { font-size: 13px; font-weight: 700; color: #1E3A8A; background: transparent; border: 0; }
-QFrame#the_phap_ly { background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 3px solid #1E3A8A; border-radius: 3px; }
+QLabel#tq_tieu_de { font-size: 13px; font-weight: 700; color: #1E3A5F; background: transparent; border: 0; }
+QFrame#the_phap_ly { background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 3px solid #1E3A5F; border-radius: 3px; }
 QFrame#the_phap_ly[muc="canh_bao"] { border-left-color: #C98A22; background: #FFFBEB; }
 QFrame#the_phap_ly[muc="nguy"] { border-left-color: #B83A3A; background: #FEF2F2; }
 QFrame#the_phap_ly[muc="dat"] { border-left-color: #1F6F66; }
 QLabel#tq_dong_ho { font-size: 12px; color: #0F172A; background: transparent; border: 0; }
-QPushButton#nut_lap_pa { background: transparent; color: #1E3A8A; border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 10px;
+QPushButton#nut_lap_pa { background: transparent; color: #1E3A5F; border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 10px;
     margin: 3px 6px; font-weight: 600; }
-QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #1E3A8A; }
+QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #1E3A5F; }
 '''
 
 

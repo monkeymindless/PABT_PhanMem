@@ -99,8 +99,8 @@ class TestTongNen(unittest.TestCase):
         giao_dien.dat_tong_nen('sang', ap_lai=False)
 
     def test_cau_hinh_khong_qt(self):
-        self.assertEqual(set(chu_de.TONG_NEN), {'sang', 'diu', 'am', 'toi', 'trang'})                      # 1.0.34: thêm Ấm, Tối
-        self.assertEqual(chu_de.TONG_NEN['sang'][1:], ('#F1F5F9', '#FFFFFF', '#CBD5E1', '#0F172A', '#475569'))   # Sáng Sapphire
+        self.assertEqual(set(chu_de.TONG_NEN), {'sang', 'titan', 'diu', 'am', 'ngoc', 'toi', 'trang'})     # 1.0.35: 5 phương án + 2
+        self.assertEqual(chu_de.TONG_NEN['sang'][1:], ('#F3F6FA', '#FFFFFF', '#D5DEE8', '#0F172A', '#475569'))   # PA1 Slate-Navy
         self.assertEqual(chu_de.doc(None)['tong_nen'], 'sang')
         with mock.patch.dict(os.environ, {'PABT_TONG_NEN': 'diu'}):
             self.assertEqual(chu_de.doc(None)['tong_nen'], 'diu')
@@ -123,7 +123,7 @@ class TestTongNen(unittest.TestCase):
     def test_doi_mau_bang_kieu(self):
         goc = giao_dien._qss_day_du()
         self.assertEqual(giao_dien.ap_tong_nen(goc, 'sang'), goc)                  # áp lại tông đang dùng: không đổi thêm
-        self.assertIn('background: #F1F5F9', goc)                                   # 1.0.34: mặc định Sáng Sapphire khác màu gốc
+        self.assertIn('background: #F3F6FA', goc)                                   # mặc định PA1 khác màu gốc
         diu = giao_dien.ap_tong_nen(goc, 'diu')
         self.assertNotEqual(diu, goc)
         trang_chu = re.compile(r'(?<![\w-])color\s*:\s*#FFFFFF', re.I)
@@ -142,8 +142,8 @@ class TestTongNen(unittest.TestCase):
             self.assertIn('background: #E2E8F0', ud.kieu)
             self.assertEqual(ud.mau.window().color().name().upper(), '#E2E8F0')
             giao_dien.dat_tong_nen('sang')
-            self.assertEqual(giao_dien.TOKEN['nen'], '#F1F5F9')
-            self.assertEqual(ud.kieu, giao_dien._qss_day_du())                       # về đúng bảng kiểu Sáng Sapphire
+            self.assertEqual(giao_dien.TOKEN['nen'], '#F3F6FA')
+            self.assertEqual(ud.kieu, giao_dien._qss_day_du())                       # về đúng bảng kiểu mặc định
             h = HopGiaoDien(im_lang=True)
             self.assertEqual(set(h.r_tong_nen), set(chu_de.TONG_NEN))
             self.assertTrue(h.r_tong_nen['sang'].isChecked())

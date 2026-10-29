@@ -20,15 +20,46 @@ MAC_DINH_TUONG_PHAN = 'theo_windows'
 KHOA_MAT_DO = 'giao_dien/mat_do'
 KHOA_TUONG_PHAN = 'giao_dien/tuong_phan_cao'
 # 1.0.33 TÔNG NỀN bề mặt: tên -> (nhãn, nền cửa sổ, nền khung / ô, vạch ngăn, chữ chính, chữ phụ). giao_dien đổi các màu này trên bảng
-# kiểu chung (dat_tong_nen); áp ngay, nhớ cho lần mở sau. 1.0.34: mặc định Sáng Sapphire (nền #F1F5F9 - khác màu gốc 1.0.33), thêm Ấm
-# áp và Tối chuyên gia (Dark Studio).
+# kiểu chung (dat_tong_nen); áp ngay, nhớ cho lần mở sau. 1.0.35 (người dùng 29/10/2026 chọn 5 phương án): mặc định PA1 Calm Executive
+# Slate-Navy (menu trái sáng); PA2 Ấm áp, PA3 Xanh ngọc, PA4 Titan (menu tối), PA5 Tối chuyên gia; giữ Dịu mắt và Trắng tương phản.
 TONG_NEN = {
-    'sang': ('Sáng Sapphire (Flagship Pro)', '#F1F5F9', '#FFFFFF', '#CBD5E1', '#0F172A', '#475569'),
+    'sang': ('Sáng dịu Slate-Navy (mặc định)', '#F3F6FA', '#FFFFFF', '#D5DEE8', '#0F172A', '#475569'),
+    'titan': ('Titan (menu trái than chì, bảng sáng)', '#F3F5F8', '#FFFFFF', '#D5DCE5', '#0F172A', '#475569'),
+    'am': ('Ấm áp (giấy kem, làm việc lâu)', '#F4F1EA', '#FCFBF7', '#DDD6C8', '#1C1917', '#57534E'),
+    'ngoc': ('Xanh ngọc (kiểu bảng tính tài chính)', '#F2F7F5', '#FFFFFF', '#CFE0D8', '#0F172A', '#3F5A52'),
+    'toi': ('Tối chuyên gia (ban đêm)', '#0B1120', '#1E293B', '#334155', '#F1F5F9', '#CBD5E1'),
     'diu': ('Dịu mắt (Slate Studio)', '#E2E8F0', '#F8FAFC', '#94A3B8', '#0F172A', '#334155'),
-    'am': ('Ấm áp (Ivory Paper)', '#F5F2EB', '#FFFDF9', '#D6CFC2', '#1C1917', '#57534E'),
-    'toi': ('Tối chuyên gia (Dark Studio)', '#0B1120', '#1E293B', '#334155', '#F1F5F9', '#94A3B8'),
     'trang': ('Trắng tương phản (máy chiếu / ngoài trời)', '#FFFFFF', '#FFFFFF', '#94A3B8', '#000000', '#1E293B'),
 }
+# 1.0.35: màu chính (nút đặc, tiêu đề bảng, chữ nhấn), dải banner 3 tầng và kiểu MENU TRÁI của từng tông. menu: nen / vien / chu (lệnh) /
+# re (nền rê chuột) / chon_nen + chon_chu + vach_chon (lệnh đang chọn) / nhom (tiêu đề nhóm) / tat (lệnh tắt) / icon + icon_chon / cuon
+_MENU_SANG = dict(nen='#E8EEF5', vien='#D5DEE8', chu='#334155', re='#DCE5F0', chon_nen='#DBEAFE', chon_chu='#1E3A5F',
+                  vach_chon='#2563EB', nhom='#1E3A5F', tat='#6B7A90', icon='#475569', icon_chon='#1E3A5F', cuon='#B8C4D3', toi=False)
+_MENU_TOI = dict(nen='#1E293B', vien='#334155', chu='#CBD5E1', re='rgba(59, 130, 246, 0.16)', chon_nen='#334155', chon_chu='#FFFFFF',
+                 vach_chon='#60A5FA', nhom='#93C5FD', tat='#8391A7', icon='#CBD5E1', icon_chon='#FFFFFF', cuon='#475569', toi=True)
+MAU_TONG = {
+    'sang': dict(chinh='#1E3A5F', chinh_re='#152C48', banner=('#1E3A5F', '#24476F', '#2D5580'), menu=_MENU_SANG),
+    'titan': dict(chinh='#26446E', chinh_re='#1B3354', banner=('#1E293B', '#26446E', '#2F527F'), menu=_MENU_TOI),
+    'am': dict(chinh='#2A5582', chinh_re='#1F426A', banner=('#2A5582', '#2F5F8F', '#3A6B9B'),
+               menu=dict(_MENU_SANG, nen='#ECE7DC', vien='#DDD6C8', chu='#3F3A33', re='#E3DCCD', chon_nen='#DCE6F2', chon_chu='#2A5582',
+                         vach_chon='#2A5582', nhom='#2A5582', tat='#7D766B', icon='#57534E', icon_chon='#2A5582', cuon='#C9C0AE')),
+    'ngoc': dict(chinh='#115E59', chinh_re='#0B4440', banner=('#0B4440', '#115E59', '#0F766E'),
+                 menu=dict(_MENU_SANG, nen='#E6F0EC', vien='#CFE0D8', chu='#294A42', re='#D8E8E1', chon_nen='#CCEFE0', chon_chu='#0B4440',
+                           vach_chon='#115E59', nhom='#115E59', tat='#6D8A81', icon='#3F5A52', icon_chon='#0B4440', cuon='#A9C7BB')),
+    'toi': dict(chinh='#2563EB', chinh_re='#1D4ED8', banner=('#0B1120', '#16213A', '#1E293B'),
+                menu=dict(_MENU_TOI, nen='#0F172A', vien='#1E293B', chon_nen='#1E3A5F', vach_chon='#38BDF8', nhom='#60A5FA')),
+    'diu': dict(chinh='#1E3A5F', chinh_re='#152C48', banner=('#1E3A5F', '#24476F', '#2D5580'),
+                menu=dict(_MENU_SANG, nen='#DCE3EC', re='#D0D9E5')),
+    'trang': dict(chinh='#1E3A5F', chinh_re='#152C48', banner=('#1E3A5F', '#24476F', '#2D5580'),
+                  menu=dict(_MENU_SANG, nen='#FFFFFF', vien='#94A3B8', chu='#000000', icon='#1E293B', nhom='#000000', tat='#4B5563')),
+}
+
+
+def mau_tong(ten: str) -> dict:
+    """Màu chính / banner / menu của tông (tông lạ: mặc định)."""
+    return MAU_TONG.get(ten, MAU_TONG[MAC_DINH_TONG_NEN])
+
+
 MAC_DINH_TONG_NEN = 'sang'
 KHOA_TONG_NEN = 'giao_dien/tong_nen'
 

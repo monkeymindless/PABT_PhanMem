@@ -15,7 +15,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pabt import csdl, giao_dien  # noqa: E402
 from tests.test_toc_do import _du_an  # noqa: E402
 
-NAVY = '#1E3A8A'
+NAVY = '#1E3A5F'
 CAM_TIM_XANH_LA = ('#6950A1', '#594389', '#B8651F', '#9C551A', '#D83B01', '#B83201', '#107C41', '#0D6B37', '#1D7A6C', '#2F7A4F')
 
 
@@ -66,7 +66,7 @@ class TestQssChung(unittest.TestCase):
         self.assertIn(f'border-top: 2px solid {NAVY}', chon)
         self.assertIn('background: #E2E8F0', _quy_tac(qss, 'QTabBar::tab:hover:!selected'))
         nhom = _quy_tac(qss, 'QGroupBox')
-        self.assertIn('border: 1px solid #CBD5E1', nhom)                          # 1.0.34 Sáng Sapphire: viền #CBD5E1
+        self.assertIn('border: 1px solid #D5DEE8', nhom)                          # 1.0.35 PA1: viền #D5DEE8
         self.assertIn('border-radius: 6px', nhom)
         self.assertIn('margin-top: 6px', nhom)                           # 1.0.03: thẻ phẳng - tiêu đề nằm TRONG khung
         self.assertIn('padding: 26px', nhom)                             # chỗ cho tiêu đề (0.9.38: không bị khung cắt)
@@ -117,7 +117,7 @@ class TestCuaSoLapPA(_Co):
         self.addCleanup(lambda: (w.bo_thay_doi(), w.close()))
         self.assertEqual(w.thanh_tren.objectName(), 'thanh_tren_lap_pa')
         self.assertEqual(w.thanh_tren.styleSheet(), giao_dien.ap_tong_nen(mh.QSS_THANH_TREN))   # 1.0.34: đổi theo tông nền
-        self.assertIn('#F1F5F9', w.thanh_tren.styleSheet())
+        self.assertIn('#F3F6FA', w.thanh_tren.styleSheet())
         self.assertEqual(w.cb_ho.objectName(), 'o_chon_ho')
         self.assertEqual(w.cb_ho.minimumHeight(), mh.CAO_NUT_TREN)
         for b in (w.b_truoc, w.b_sau):
@@ -200,7 +200,7 @@ class TestTienDoKPI(_Co):
         self.assertIn('transparent', _quy_tac(td.QSS_CHE_DO, 'QPushButton'))
         self.assertTrue(k.nut_che_do['ho'].isChecked())
         self.assertEqual(k.lb_moc.objectName(), 'lb_moc')
-        self.assertIn('#F1F5F9', k.lb_moc.styleSheet())                         # 1.0.34: nền theo tông Sáng Sapphire
+        self.assertIn('#F3F6FA', k.lb_moc.styleSheet())                         # 1.0.35: nền theo tông PA1
         for w in (k.lb_moc, k.nut['Mốc pháp lý…'], k.nut['Xuất'], k.cb_loc, k.o_tim):
             self.assertGreaterEqual(w.minimumHeight(), td.CAO_O_CONG_CU)
 

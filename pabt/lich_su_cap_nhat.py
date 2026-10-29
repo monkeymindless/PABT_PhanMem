@@ -7,6 +7,14 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.35', '29/10/2026', (
+        'Giao diện mặc định mới "Sáng dịu Slate-Navy": màu xanh hạ độ chói, menu trái nền sáng liền mạch với vùng làm việc, lệnh đang chọn '
+        'nền xanh nhạt có vạch trái.',
+        'Cài đặt > Giao diện có 7 tông: Sáng dịu (mặc định), Titan (menu trái than chì, bảng sáng), Ấm áp (giấy kem), Xanh ngọc, Tối '
+        'chuyên gia, Dịu mắt, Trắng tương phản; mỗi tông đổi cả màu chính, băng tiêu đề và menu trái.',
+        'Tông Tối: hết các ô / dòng còn nền sáng - ô chỉ đọc trong bảng phương án, 3 dòng Cộng / Kinh phí / Tổng của Bảng tổng hợp, dòng '
+        'con tiền đất, số tiền, dải tổng cuối cửa sổ lập phương án, dải trạng thái.',
+    )),
     ('1.0.34', '29/10/2026', (
         'Giao diện mới "Flagship Sapphire" ngay khi mở phần mềm: màu chủ đạo Royal Sapphire, nền xám sứ làm nổi các thẻ trắng; menu trái '
         'nền tối, mỗi lệnh một viên bo tròn, lệnh đang chọn nổi bật màu xanh; thu gọn / mở rộng menu và chuyển trang có hiệu ứng trượt nhẹ.',
@@ -167,7 +175,7 @@ MUC = (
         'Cột bảng tự thu vừa chữ, nhường chỗ cho Tên tài sản / Ghi chú.',
         'Mẫu Word nhúng sẵn trong phần mềm, bản cài không còn thư mục mau_in. Đổi quy cách khi có quy định mới: Công cụ > Quản lý Mẫu in '
         '& Bản in > Nhập thông số mẫu Word (hoặc nhập gói .pabtcfg) - áp ngay, không cần cập nhật phần mềm.',
-        'Màu chủ đạo dịu hơn: thanh tiêu đề bảng, nút chính, banner đổi từ xanh navy rất đậm sang xanh cobalt dịu (#1E3A8A, chữ trắng '
+        'Màu chủ đạo dịu hơn: thanh tiêu đề bảng, nút chính, banner đổi từ xanh navy rất đậm sang xanh cobalt dịu (#1E3A5F, chữ trắng '
         'tương phản 6,5:1). Các màu xanh / đỏ / lá / cam gom về một tông dịu mỗi loại, bớt chói.',
         'Màn lập phương án và danh sách hộ ở màn hình 1366 phóng 125%: nút, nhãn, tên thẻ không còn bị cắt chữ; vùng bấm tối thiểu 24 px.',
         'Sửa lỗi: cửa sổ rỗng (chỉ có nút thu nhỏ / phóng to / đóng) nhấp nháy khi bật xem trước F4, mở Bàn giao mặt bằng và Bản đồ thửa '

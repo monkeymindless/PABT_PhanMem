@@ -23,7 +23,7 @@ from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
 # in_an (kéo theo openpyxl ~0,2 giây) chỉ nạp trong hộp In / Xuất: mở dự án, cửa sổ lập phương án không phải chờ
 from .nghiep_vu import DA_LAP_LUU, MUC_KHOAN, MUC_VN, NGUON_TAY, NGUON_TD, TEN_MUC, so_muc
 from .tien import D, KHONG, lam_tron, so_luong_vn, so_vn, vn
-from .giao_dien import but_so, con_tro_cho, kieu_o_canh_bao, loc_khi_ngung_go, mau_so, phong_so
+from .giao_dien import but_so, con_tro_cho, kieu_o_canh_bao, loc_khi_ngung_go, mau_so, mau_theo_tong, phong_so, qmau_theo_tong
 from .thong_bao import TEN_UD, chu_loi
 
 XAM, VANG, CAM = QColor('#F4F6F8'), QColor('#FFF6D6'), QColor('#FDEBDD')
@@ -1020,11 +1020,11 @@ class BangMuc(QWidget):
                         it.setForeground(but_so(mau))
                 if k not in sua:
                     it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                    it.setBackground(QBrush(XAM))
+                    it.setBackground(QBrush(qmau_theo_tong(XAM.name())))
                 if k == 'nguon' and nguon == NGUON_TD:
-                    it.setBackground(QBrush(VANG))
+                    it.setBackground(QBrush(qmau_theo_tong(VANG.name())))
                 elif k == 'nguon' and nguon == NGUON_TAY:
-                    it.setBackground(QBrush(CAM))
+                    it.setBackground(QBrush(qmau_theo_tong(CAM.name())))
                 if k in ('ten', 'can_cu_gia', 'quy_cach', 'ghi_chu', 'thua', 'vi_tri'):
                     it.setToolTip(str(o.get(k, '')))
                 if k in COT_CONG_THUC and o.get('cong_thuc'):
@@ -1092,10 +1092,10 @@ MAU_ICON_DAN_TS = '#1F76A6'
 RONG_XEM_TOI_THIEU = 320          # màn hình hẹp: khung xem trước CuaSoLapPA không hẹp hơn chừng này
 CHO_XEM_SAU_SUA_MS = 1500          # khung xem trước đang hiện: sửa số liệu xong chừng này mới nhờ Excel lập lại bản in
 # 1.0.02 (ảnh mẫu): tắt = nền trắng viền slate chữ navy; bật (đang xem) = nền xanh băng, viền navy, chữ navy đậm
-QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #1E3A8A; background: #FFFFFF; border: 1px solid #CBD5E1; '
+QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #1E3A5F; background: #FFFFFF; border: 1px solid #CBD5E1; '
                      'border-radius: 6px; padding: 0 12px; font-weight: 600; }'
                      'QPushButton#btn_toggle_preview:hover { background: #F1F5F9; border-color: #2563EB; }'
-                     'QPushButton#btn_toggle_preview:checked { color: #1E3A8A; background: #EFF6FF; border: 1px solid #1E3A8A; '
+                     'QPushButton#btn_toggle_preview:checked { color: #1E3A5F; background: #EFF6FF; border: 1px solid #1E3A5F; '
                      'font-weight: 700; }'
                      'QPushButton#btn_toggle_preview:checked:hover { background: #DBEAFE; }')
 # thẻ Hồ sơ / Đất / Nhà… của cửa sổ lập phương án (ảnh mẫu): kiểu gạch chân giao_dien.QSS_THE_GACH_CHAN (QSS chung, thanh thẻ có
@@ -1109,12 +1109,12 @@ QSS_THANH_TREN = ('QWidget#thanh_tren_lap_pa { background: #F8FAFC; border: 0; b
                   'QComboBox#o_chon_ho:hover { border-color: #94A3B8; }'
                   'QComboBox#o_chon_ho:focus { border: 2px solid #2563EB; padding: 0 7px; }'
                   'QPushButton#nut_ho_truoc, QPushButton#nut_ho_sau { background: #FFFFFF; border: 1px solid #CBD5E1; '
-                  'border-radius: 5px; padding: 0; color: #1E3A8A; font-weight: 700; }'
+                  'border-radius: 5px; padding: 0; color: #1E3A5F; font-weight: 700; }'
                   'QPushButton#nut_ho_truoc:hover, QPushButton#nut_ho_sau:hover { background: #F1F5F9; border-color: #94A3B8; }'
                   'QPushButton#nut_ho_truoc:disabled, QPushButton#nut_ho_sau:disabled { color: #CBD5E1; border-color: #E2E8F0; }')
 # dải tổng cộng + ◀ Trở lại / Tiếp theo ▶ dưới đáy: nền slate, vạch trên 2 px, tổng chữ navy đậm
 QSS_DAI_DIEU_HUONG = ('QFrame#dai_dieu_huong { background: #F1F5F9; border: 0; border-top: 2px solid #CBD5E1; }'
-                      'QLabel#tong_pa { font-size: 13px; font-weight: 700; color: #1E3A8A; background: transparent; border: 0; '
+                      'QLabel#tong_pa { font-size: 13px; font-weight: 700; color: #1E3A5F; background: transparent; border: 0; '
                       'padding: 2px 4px; }')
 
 
@@ -1162,7 +1162,7 @@ def chu_tong_pa(kq) -> tuple:
     bản gọn (cửa sổ hẹp) ghi số tiền từng mục kiểu "1,2 tỷ" / "23,5 triệu" (tien.vn_gon); TỔNG CỘNG luôn đủ số."""
     from .tien import vn_gon
     cach = '&nbsp;·&nbsp;'
-    tong = f'<span style="color:#1E3A8A">TỔNG CỘNG: <b>{vn(kq.tong)} đồng</b></span>'
+    tong = f'<span style="color:{mau_theo_tong("#1E3A5F", "chu")}">TỔNG CỘNG: <b>{vn(kq.tong)} đồng</b></span>'
     ra = []
     # mức: đầy đủ; gọn (vn_gon); chỉ mục có tiền (gọn); chỉ TỔNG CỘNG - hẹp tới đâu thì TỔNG CỘNG vẫn hiện đủ
     for gon, bo_khong in ((False, False), (True, False), (True, True)):
@@ -1172,7 +1172,7 @@ def chu_tong_pa(kq) -> tuple:
             if bo_khong and not x:
                 continue
             so = (vn_gon(x) if gon else vn(x)) if x else '0'
-            mau = MAU_MUC_CO if x else MAU_MUC_KHONG
+            mau = mau_theo_tong(MAU_MUC_CO if x else MAU_MUC_KHONG, 'chu')
             muc.append(f'<span style="color:{mau}">{so_muc(m)}. {TEN_MUC_TONG[m]}: '
                        + (f'<b>{so}</b>' if x else so) + '</span>')
         ra.append(cach.join(muc) + ('&nbsp;&nbsp;|&nbsp;&nbsp;' if muc else '') + tong)
@@ -1268,7 +1268,7 @@ class CuaSoLapPA(QDialog):
                               'và phân loại ngay khi mở.')
         self.b_dan.setFixedHeight(CAO_NUT_TREN)
         self.b_dan.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.b_dan.setStyleSheet(QSS_NUT_DAN_TS)        # có bộ chọn #btn_dan_ts: không truyền sang tooltip của nút
+        dat_kieu_theo_tong(self.b_dan, QSS_NUT_DAN_TS)        # có bộ chọn #btn_dan_ts: không truyền sang tooltip của nút
         self.b_dan.setProperty('khong_icon', True)      # to_mau không gắn biểu tượng màu nhóm đè lên nền xanh
         from .giao_dien import icon_ky_hieu
         ic = icon_ky_hieu(0xE77F, MAU_ICON_DAN_TS, 16)  # Paste (Segoe MDL2); máy không có phông (Win 7): chỉ chữ
@@ -1292,10 +1292,10 @@ class CuaSoLapPA(QDialog):
         self.btn_toggle_preview.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_toggle_preview.setToolTip('Xem trước (F4): hiện / ẩn bản in A4 của hộ đang mở ở nửa phải cửa sổ. Bản xem trước lấy cả số liệu '
                                            'chưa lưu; cần Microsoft Excel.')
-        self.btn_toggle_preview.setStyleSheet(QSS_NUT_XEM_TRUOC)
+        dat_kieu_theo_tong(self.btn_toggle_preview, QSS_NUT_XEM_TRUOC)
         self.btn_toggle_preview.setProperty('khong_icon', True)
         # View (Segoe MDL2): tắt biểu tượng navy, bật (đang xem, nền navy) biểu tượng trắng; Win 7 không có phông: chỉ chữ
-        ic = icon_ky_hieu(0xE890, '#1E3A8A', 16)
+        ic = icon_ky_hieu(0xE890, '#1E3A5F', 16)
         if ic is not None:
             self.btn_toggle_preview.setIcon(ic)
         self.btn_toggle_preview.clicked.connect(lambda: self.bat_tat_xem_truoc())
@@ -2800,7 +2800,7 @@ class HopRaSoat(QDialog):
                 it = QTableWidgetItem(v)
                 it.setToolTip(v)
                 if 'chưa ghi căn cứ' in x['ghi_chu_ra_soat']:
-                    it.setBackground(QBrush(CAM))
+                    it.setBackground(QBrush(qmau_theo_tong(CAM.name())))
                 self.bang.setItem(r, c, it)
         self.bang.doubleClicked.connect(lambda *_: self.mo_ho())
         lo = QVBoxLayout(self)

@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 
 from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
 from .tien import D, so_luong_vn, so_vn, vn, vn_gon
-from .giao_dien import TOKEN, TONG_NEN, chuyen_trang_muot, con_tro_cho
+from .giao_dien import TOKEN, chuyen_trang_muot, con_tro_cho, dat_kieu_theo_tong, mau_theo_tong
 from .thong_bao import TEN_UD, chu_loi
 
 # doi_chieu, nhap_excel, nhap_tho (kéo theo openpyxl ~0,2 giây - 60% thời gian nạp mã lúc mở phần mềm) nạp khi dùng tới
@@ -29,7 +29,7 @@ COT_SO = {4}
 # Segoe UI / Arial của Windows 7, KHÔNG phải emoji) + màu theo nấc. Chữ trạng thái và giá trị lọc giữ nguyên (BangHo.dong[r]['o'][5])
 THANH_NAC = ('□□□□', '■□□□', '■■□□', '■■■□', '■■■■')
 NHAN_NAC = ('Chưa lập PA', 'Đã lập PA', 'Đã phê duyệt', 'Đã chi trả', 'Đã bàn giao')
-MAU_NAC = ('#64748B', '#1F76A6', '#1E3A8A', '#1F6F66', '#2F7D54')
+MAU_NAC = ('#64748B', '#1F76A6', '#1E3A5F', '#1F6F66', '#2F7D54')
 MAU_MA_HO = '#1F76A6'                    # cột STT (định danh hộ trên danh sách)
 CAN_PHAI = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 CAN_TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -41,9 +41,9 @@ COT_GIAN_DS = (1, 2)          # Họ và tên, Địa chỉ: giãn / co theo khu
 TAT_CA_DOT, TAT_CA_TRANG_THAI = 'Đợt: Tất cả', 'Trạng thái: Tất cả'     # mục đầu ô lọc (thay nhãn "Đợt:" riêng)
 CAO_DAI_CONG_CU = 32                    # hàng công cụ + lọc danh sách hộ, dải cộng dưới bảng
 # nút "Mở" của bảng dự án gần đây: viền + chữ navy, rê chuột nền navy chữ trắng (bộ chọn #id thắng tô màu theo chữ "Mở" của _BoToMau)
-QSS_NUT_MO_GAN = ('QPushButton#nut_mo_gan { padding: 2px 14px; border: 1px solid #1E3A8A; border-radius: 4px; color: #1E3A8A; '
+QSS_NUT_MO_GAN = ('QPushButton#nut_mo_gan { padding: 2px 14px; border: 1px solid #1E3A5F; border-radius: 4px; color: #1E3A5F; '
                   'background: #FFFFFF; font-weight: 600; } '
-                  'QPushButton#nut_mo_gan:hover { background: #1E3A8A; color: #FFFFFF; } '
+                  'QPushButton#nut_mo_gan:hover { background: #1E3A5F; color: #FFFFFF; } '
                   'QPushButton#nut_mo_gan:pressed { background: #092240; color: #FFFFFF; }')
 # dải cộng dưới danh sách hộ: (khóa, nhãn). Tài sản & Cây = mục 2 nhà + 3 cây + vật nuôi (MUC_VN 7); Hỗ trợ & Thưởng = mục 4 + 5
 O_DAI_CONG = (('so_ho', 'CỘNG'), ('dt', 'Tổng DT'), ('dat', 'Đất'), ('tai_san', 'Tài sản & Cây'),
@@ -968,7 +968,7 @@ class CuaSoChinh(QMainWindow):
             if k != 'ty_le':                            # 0.9.80: A− / A+ có khung nút (viền nhẹ, bo 4px); "110%" là chữ bấm về 100%
                 b.setObjectName('nut_zoom')
                 b.setCursor(Qt.CursorShape.PointingHandCursor)
-                b.setStyleSheet(QSS_NUT_ZOOM)
+                dat_kieu_theo_tong(b, QSS_NUT_ZOOM)
             b.clicked.connect(lambda _=False, x=buoc: phong_to(x))
             self.statusBar().addPermanentWidget(b)
             self.nut_ty_le[k] = b
@@ -1589,8 +1589,8 @@ class CuaSoChinh(QMainWindow):
         ds = self.mo_hinh.dong
         hien = [ds[self.loc.mapToSource(self.loc.index(r, 0)).row()] for r in range(n)]
         tong_muc = cong_dai_cong(hien)
-        self.lb_loc.setText(f'Lọc: <b style="color:#1E3A8A">{n}</b>/{len(ds)} hộ · '
-                            f'<b style="color:#1E3A8A">{tong_muc["so_thua"]}</b> thửa ↗' if ds else '')
+        self.lb_loc.setText(f'Lọc: <b style="color:#1E3A5F">{n}</b>/{len(ds)} hộ · '
+                            f'<b style="color:#1E3A5F">{tong_muc["so_thua"]}</b> thửa ↗' if ds else '')
         self.lb_loc.setVisible(bool(ds))
         self._ve_dai_cong(n, tong_muc, co_du_lieu=bool(ds))
         self._cap_nhat_loc_the()
@@ -1837,9 +1837,8 @@ class CuaSoChinh(QMainWindow):
             if k in getattr(self, 'the_dia_chinh', {}):
                 _h, t, dt = nhom[k]
                 dc = self.the_dia_chinh[k]
-                toi = TONG_NEN[0] == 'toi'
-                dc.setText(f'<span style="font-weight:700; color:{"#E2E8F0" if toi else "#1E293B"}">{t} thửa</span><br>'
-                           f'<span style="color:{"#93C5FD" if toi else "#1A5C85"}">{so_luong_vn(dt)} m²</span>' if ds else '')
+                dc.setText(f'<span style="font-weight:700; color:{mau_theo_tong("#1E293B", "chu")}">{t} thửa</span><br>'
+                           f'<span style="color:{mau_theo_tong("#1A5C85", "chu")}">{so_luong_vn(dt)} m²</span>' if ds else '')
                 dc.setToolTip(f'{_h} hộ · {t} thửa · {so_luong_vn(dt)} m² ({so_ha(dt)})' if ds else '')
             phu = self.the_phu.get(k) if hasattr(self, 'the_phu') else None
             if phu is None:
@@ -2250,7 +2249,7 @@ class CuaSoChinh(QMainWindow):
             mo = QPushButton('Mở')
             mo.setCursor(Qt.CursorShape.PointingHandCursor)
             mo.setObjectName('nut_mo_gan')
-            mo.setStyleSheet(QSS_NUT_MO_GAN)
+            dat_kieu_theo_tong(mo, QSS_NUT_MO_GAN)
             mo.clicked.connect(lambda _=False, p=str(f): self._chay_lenh(lambda: self.mo(p)))
             hop_mo = QWidget()
             hm = QHBoxLayout(hop_mo)

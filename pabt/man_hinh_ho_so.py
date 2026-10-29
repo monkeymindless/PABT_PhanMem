@@ -402,7 +402,7 @@ class OThaoTac(QStyledItemDelegate):
         f = QFont(option.font)
         f.setBold(True)
         p.setFont(f)
-        p.setPen(QColor('#94A3B8' if tat else '#1E3A8A'))
+        p.setPen(QColor('#94A3B8' if tat else '#1E3A5F'))
         p.drawText(sua, CAN_GIUA, 'Sửa')
         from .giao_dien import icon_ky_hieu
         ic = icon_ky_hieu(0xE74D, '#94A3B8' if tat else '#B83A3A', 16)

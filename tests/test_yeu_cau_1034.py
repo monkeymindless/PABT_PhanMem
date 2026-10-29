@@ -20,24 +20,26 @@ class TestBangMau(unittest.TestCase):
     def test_token_flagship(self):
         t = giao_dien.TOKEN
         self.assertEqual((t['chinh'], t['chinh_re'], t['nhan'], t['thanh_cong'], t['canh_bao'], t['nguy_hiem']),
-                         ('#1E3A8A', '#172554', '#2563EB', '#059669', '#D97706', '#DC2626'))
-        self.assertEqual((t['nen'], t['nen_the'], t['vien']), ('#F1F5F9', '#FFFFFF', '#CBD5E1'))
+                         ('#1E3A5F', '#152C48', '#2563EB', '#059669', '#D97706', '#DC2626'))
+        self.assertEqual((t['nen'], t['nen_the'], t['vien']), ('#F3F6FA', '#FFFFFF', '#D5DEE8'))      # 1.0.35: PA1 Slate-Navy
         qss = giao_dien._qss_day_du()
         for cu in ('#2F5F9E', '#3B6FCE', '#264E83'):
             self.assertNotIn(cu, qss.upper())
-        self.assertIn('background: #F1F5F9', qss)                       # mặc định đã khác màu gốc 1.0.33 (#F8FAFC)
+        self.assertIn('background: #F3F6FA', qss)                       # mặc định khác màu gốc (#F8FAFC)
+        self.assertNotIn('#1E3A8A', qss.upper())                         # 1.0.35: màu chính gốc #1E3A5F
 
     def test_tong_nen_bon_che_do_va_toi(self):
-        self.assertTrue({'sang', 'diu', 'am', 'toi'} <= set(chu_de.TONG_NEN))
-        self.assertEqual(chu_de.TONG_NEN['toi'][1:], ('#0B1120', '#1E293B', '#334155', '#F1F5F9', '#94A3B8'))
+        self.assertTrue({'sang', 'titan', 'am', 'ngoc', 'toi', 'diu', 'trang'} == set(chu_de.TONG_NEN) == set(chu_de.MAU_TONG))
+        self.assertEqual(chu_de.TONG_NEN['toi'][1:], ('#0B1120', '#1E293B', '#334155', '#F1F5F9', '#CBD5E1'))
         giao_dien.TONG_NEN[0] = 'toi'
         try:
             day_du = giao_dien._qss_day_du()                             # dựng từ màu gốc rồi đổi theo tông Tối
             self.assertIn('background: #0B1120', day_du)
             self.assertIn('background: #1E293B', day_du)
             self.assertNotRegex(day_du, r'(?<![\w-])color: #0F172A')     # chữ chính sáng (dòng xen kẽ nền tối thì được)
-            self.assertTrue(day_du.endswith(giao_dien.QSS_TOI))          # khối bảng / ô nhập / menu tối đặt cuối
-            self.assertIn('QFrame[vai="menu_trai"] { background: #090D16; }', day_du)
+            self.assertTrue(day_du.endswith(giao_dien.QSS_TOI + giao_dien._qss_menu_trai('toi')))   # khối Tối + menu đặt cuối
+            self.assertIn('QFrame[vai="menu_trai"] { background: #0F172A;', day_du)
+            self.assertIn('background: #2563EB', day_du)                 # màu chính tông Tối (nút đặc)
         finally:
             giao_dien.TONG_NEN[0] = 'sang'
 
@@ -46,13 +48,39 @@ class TestBangMau(unittest.TestCase):
         self.assertEqual(chu_de.dao_nhanh_tong_nen('am'), 'toi')
         self.assertEqual(chu_de.dao_nhanh_tong_nen('toi'), 'sang')
 
-    def test_menu_trai_vien_thuoc_toi(self):
+    def test_menu_trai_theo_tong(self):
+        # 1.0.35: PA1 mặc định menu SÁNG liền mạch; Titan / Tối menu tối
         q = giao_dien._qss_menu_trai()
-        for chu in ('stop:0 #0F172A, stop:0.55 #1E293B, stop:1 #0F172A', 'border-right: 1px solid #334155', 'border-radius: 8px',
-                    'rgba(59, 130, 246, 0.16)', 'stop:0 #2563EB, stop:1 #0284C7', 'border-left: 4px solid #38BDF8', 'color: #60A5FA',
+        for chu in ('QFrame[vai="menu_trai"] { background: #E8EEF5', 'border-right: 1px solid #D5DEE8', 'border-radius: 8px',
+                    'background: #DBEAFE; color: #1E3A5F', 'border-left: 4px solid #2563EB', 'color: #1E3A5F; font-size: 10px',
                     'letter-spacing: 0.8px'):
             self.assertIn(chu, q)
-        self.assertEqual((giao_dien.MAU_ICON_MENU, giao_dien.MAU_ICON_MENU_CHON), ('#CBD5E1', '#FFFFFF'))
+        t = giao_dien._qss_menu_trai('titan')
+        self.assertIn('QFrame[vai="menu_trai"] { background: #1E293B', t)
+        self.assertIn('border-left: 4px solid #60A5FA', t)
+        self.assertEqual((giao_dien.mau_menu()['icon'], giao_dien.mau_menu()['icon_chon']), ('#475569', '#1E3A5F'))
+        for ten in chu_de.MAU_TONG:                                      # màu chính khác nhau theo tông, map đúng
+            giao_dien.TONG_NEN[0] = ten
+            try:
+                self.assertEqual(giao_dien.mau_theo_tong('#1E3A5F', 'nen'), chu_de.mau_tong(ten)['chinh'])
+            finally:
+                giao_dien.TONG_NEN[0] = 'sang'
+
+    def test_mau_mo_hinh_theo_tong(self):
+        # 1.0.35: màu đặt trong mô hình bảng (ô chỉ đọc, 3 dòng Cộng / Kinh phí / Tổng, dòng con, số tiền) đổi theo tông Tối
+        from pabt.man_hinh_theo_doi import dong_noi
+        self.assertEqual(giao_dien.mau_theo_tong('#F4F6F8'), '#F4F6F8')
+        giao_dien.TONG_NEN[0] = 'toi'
+        try:
+            self.assertEqual(giao_dien.mau_theo_tong('#F4F6F8'), '#162033')
+            self.assertEqual(giao_dien.mau_theo_tong('#475569', 'chu'), '#CBD5E1')
+            self.assertEqual(giao_dien.mau_so('150.000.000', tien=True), '#93C5FD')
+            for k in ('cong', 'kinh_phi', 'tong'):
+                nen, chu = dong_noi(k)
+                self.assertLess(nen.lightness(), 80, k)                    # nền tối
+                self.assertGreater(chu.lightness(), 150, k)                # chữ sáng
+        finally:
+            giao_dien.TONG_NEN[0] = 'sang'
 
     def test_mau_the_chao_bon_mau(self):
         nhan = [v[3] for v in giao_dien.MAU_THE_CHAO.values()]

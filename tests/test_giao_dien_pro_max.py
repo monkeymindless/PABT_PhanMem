@@ -29,9 +29,9 @@ class TestBangMau(unittest.TestCase):
     def test_token(self):
         t = giao_dien.TOKEN
         self.assertEqual((t['chinh'], t['chinh_nhat'], t['nhan'], t['phu'], t['nguy_hiem']),
-                         ('#1E3A8A', '#EFF6FF', '#2563EB', '#059669', '#DC2626'))       # 1.0.34 Flagship Sapphire
+                         ('#1E3A5F', '#EFF6FF', '#2563EB', '#059669', '#DC2626'))       # 1.0.34 Flagship Sapphire
         self.assertEqual((t['chu'], t['chu_phu'], t['nen'], t['khung'], t['vach']),
-                         ('#0F172A', '#475569', '#F1F5F9', '#FFFFFF', '#CBD5E1'))
+                         ('#0F172A', '#475569', '#F3F6FA', '#FFFFFF', '#D5DEE8'))     # 1.0.35: PA1 Slate-Navy
         self.assertEqual(giao_dien.MAU_SO_KHONG, '#94A3B8')
         self.assertEqual(giao_dien.MAU_VIEN_CHON, '#059669')            # viền vùng chọn kiểu Excel: Emerald Teal
         for mau, toi_thieu in ((t['chinh'], 6), (t['chu'], 7)):         # chữ chính: AAA (>= 7:1); xanh cobalt dịu (1.0.16): >= 6:1 (AA là 4,5)
@@ -57,7 +57,7 @@ class TestBangMau(unittest.TestCase):
     def test_tieu_de_bang(self):
         qss = giao_dien._qss_day_du()
         td = _quy_tac(qss, 'QHeaderView::section:horizontal')
-        for chu in ('background: #1E3A8A', 'color: #FFFFFF', 'font-weight: 600', 'border-right: 1px solid #172554',
+        for chu in ('background: #1E3A5F', 'color: #FFFFFF', 'font-weight: 600', 'border-right: 1px solid #152C48',
                     'border-bottom: 2px solid #2563EB'):
             self.assertIn(chu, td)
         self.assertIn(f'min-height: {giao_dien.CAO_TIEU_DE_BANG - 10}px', td)    # chiều cao tiêu đề giữ nguyên

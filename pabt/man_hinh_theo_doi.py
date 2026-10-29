@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from . import ho_so_scan, kinh_phi_du_an, thoi_han, theo_doi, van_dong
-from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
+from .giao_dien import dat_kieu_theo_tong, qmau_theo_tong  # noqa: E402  (1.0.34-1.0.35: màu đổi theo tông nền)
 from .bang_ao import BangAo
 from .giao_dien import (MAU_CANH_BAO_NEN, MAU_CANH_BAO_VIEN, qss_canh_bao)  # noqa: E402  (20/10/2026: cảnh báo hổ phách)
 from .giao_dien import (DaiCongBang, HangKpi, XepDong, dat_trang_thai, gan_chu_khi_trong, gan_thanh_ty_le,
@@ -39,7 +39,15 @@ THUA_TRONG = dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')     # hộ c
 # 1.0.02 (Hybrid Enterprise Navy): dòng nổi của Cơ cấu kinh phí / Đối soát - (nền, chữ). Cộng bồi thường = slate; kinh phí tổ chức
 # thực hiện = hổ phách nhạt; TỔNG KINH PHÍ = xanh băng chữ navy đậm (như dải cộng danh sách hộ)
 DONG_NOI = {'cong': (QColor('#F1F5F9'), QColor('#0F172A')), 'kinh_phi': (QColor('#FFFBEB'), QColor('#7C4A12')),
-            'tong': (QColor('#F0F6FF'), QColor('#1E3A8A'))}
+            'tong': (QColor('#F0F6FF'), QColor('#1E3A5F'))}
+
+
+def dong_noi(loai: str) -> tuple:
+    """(nền, chữ) QColor của dòng nổi (Cộng / Kinh phí / Tổng) theo tông nền đang dùng (1.0.35: tông Tối không còn khối sáng)."""
+    nen, chu = DONG_NOI[loai]
+    return qmau_theo_tong(nen.name(), 'nen'), qmau_theo_tong(chu.name(), 'chu')
+
+
 CAO_O_CONG_CU = 30                                       # ô tìm / nút Xuất / Mốc pháp lý của các trang theo dõi
 _DAM = dict(dam=True)                                     # kiểu ô chữ đậm (bảng ảo, dùng chung - chỉ đọc)
 
@@ -301,7 +309,7 @@ class KhungQuyetDinh(_Khung):
         self.dai_cong = DaiCongBang('dai_cong_qd')       # 1.0.03: cộng DT, tiền từng hạng mục, tổng phê duyệt của quyết định đang chọn
         # 1.0.03: dải 4 thẻ KPI đầu trang (số quyết định, lượt hộ, tiền đã duyệt, chênh lệch so với phương án)
         self.hang_kpi = HangKpi([
-            ('so_qd', 'Tổng số quyết định', '#1E3A8A'),
+            ('so_qd', 'Tổng số quyết định', '#1E3A5F'),
             ('luot_ho', 'Số lượt hộ đã phê duyệt', '#1F76A6', 'Lượt hộ = cộng số hộ của từng quyết định (một hộ phê duyệt bổ sung '
                                                              'tính nhiều lượt); chữ phụ: số hộ khác nhau / tổng số hộ dự án'),
             ('tien_qd', 'Tổng kinh phí đã duyệt QĐ', '#1F6F66'),
@@ -836,13 +844,13 @@ class KhungCoCau(_Khung):
         co_qd = bool(self.cc and self.cc['so_ho_phe_duyet'])
         for r, (loai, gt) in enumerate(dong):
             if loai in DONG_NOI:
-                nen, chu = DONG_NOI[loai]
+                nen, chu = dong_noi(loai)
                 for c in range(len(self.COT)):
                     kieu[(r, c)] = dict(nen=nen, mau_chu=chu, dam=True)
             elif loai == 'nhom':                                             # nhóm khoản I-V: chữ đậm
                 kieu.update({(r, c): dict(dam=True) for c in (0, 1, 3)})
             elif loai == 'nhom_con':                                         # dòng con tiền đất: chữ phụ
-                kieu.update({(r, c): dict(mau_chu=QColor('#475569')) for c in range(len(self.COT))})
+                kieu.update({(r, c): dict(mau_chu=qmau_theo_tong('#475569', 'chu')) for c in range(len(self.COT))})
             c_cc = len(self.COT) - 1
             if gt[c_cc]:                                                     # căn cứ pháp lý: một dòng, đủ chữ khi rê chuột
                 kieu[(r, c_cc)] = dict(kieu.get((r, c_cc), {}), goi_y=str(gt[c_cc]))
@@ -972,7 +980,7 @@ class KhungDoiSoat(_Khung):
         kieu = {}
         for r, d in enumerate(dong):
             if r == len(dong) - 1:                     # TỔNG CỘNG: như dòng tổng kinh phí của thẻ Cơ cấu
-                nen, chu = DONG_NOI['tong']
+                nen, chu = dong_noi('tong')
                 kieu.update({(r, c): dict(nen=nen, mau_chu=chu, dam=True) for c in range(len(self.COT))})
             elif d[4] is not None and d[4] > 0:
                 kieu[(r, 4)] = dict(nen=DO)
@@ -1081,7 +1089,7 @@ class KhungBangTongHop(_Khung):
         # 20/10/2026 (ảnh mẫu): 5 thẻ KPI - cộng bồi thường (100%), kinh phí tổ chức (QĐ 08/2025), hai phần phân bổ (hồ sơ địa phương,
         # mặc định 85% / 15%), tổng mức GPMB dự án. Tên thẻ phân bổ đặt lại ở _ve_kpi theo dia_phuong.phan_bo_kinh_phi()
         self.hang_kpi = HangKpi([
-            ('cong', 'Bồi thường, hỗ trợ', '#1E3A8A', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
+            ('cong', 'Bồi thường, hỗ trợ', '#1E3A5F', 'Cộng 5 nhóm khoản: đất, tài sản, cây trồng - vật nuôi, hỗ trợ, '
                                                             'thưởng = gốc 100%'),
             ('kinh_phi', 'KP tổ chức', '#1F76A6', 'Kinh phí tổ chức thực hiện bồi thường theo QĐ 08/2025/QĐ-UBND = '
                                                        'tỷ lệ % của cộng bồi thường, hỗ trợ'),
@@ -1224,7 +1232,7 @@ class KhungBangTongHop(_Khung):
 QSS_CHE_DO = ('QPushButton { border: 0; background: transparent; color: #475569; padding: 0 14px; border-radius: 5px; '
               'font-weight: 600; }'
               'QPushButton:hover:!checked { background: #CBD5E1; color: #0F172A; }'
-              'QPushButton:checked { background: #1E3A8A; color: #FFFFFF; font-weight: 700; }')
+              'QPushButton:checked { background: #1E3A5F; color: #FFFFFF; font-weight: 700; }')
 QSS_KHUNG_CHE_DO = 'QFrame#khung_che_do { background: #E2E8F0; border: 0; border-radius: 6px; }'
 QSS_MOC = ('QLabel#lb_moc { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 0 8px; '
            'color: #334155; }')
@@ -2254,7 +2262,7 @@ class KhungSoVanDong(QFrame):
             ds = []
             for i, b in enumerate(buoi, start=1):
                 kq = van_dong.TEN_KET_QUA.get(b['ket_qua'], b['ket_qua'])
-                mau = '#B83A3A' if b['ket_qua'] == 'chua_dong_y' else '#1E3A8A'
+                mau = '#B83A3A' if b['ket_qua'] == 'chua_dong_y' else '#1E3A5F'
                 ds.append(f'<div style="margin-bottom:6px;"><span style="color:{mau};"><b>● Buổi {i}: '
                           f'{van_dong.VIEC.get(b["viec"], b["viec"])}</b></span> <span style="color:#64748B;">{b["ngay"]}</span><br>'
                           + (f'• Hình thức: {b["hinh_thuc"]}<br>' if b['hinh_thuc'] else '')

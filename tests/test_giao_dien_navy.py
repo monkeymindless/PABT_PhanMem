@@ -99,10 +99,9 @@ class TestMenuTrai(CoNavy):
         for b in nut:
             self.assertEqual((b.minimumHeight(), b.maximumHeight()), (giao_dien.CAO_NUT_MENU, giao_dien.CAO_NUT_MENU))
         qss = giao_dien._qss_day_du()
-        # 1.0.34 Executive Dark-Indigo: nền tối chuyển sắc, viên thuốc đang chọn gradient Electric Indigo + vạch trái 4 px
-        for chu in ('QFrame[vai="menu_trai"] { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #0F172A',
-                    'border-right: 1px solid #334155', 'width: 6px', 'border-left: 4px solid #38BDF8', 'stop:0 #2563EB',
-                    'color: #60A5FA', 'border-radius: 8px'):
+        # 1.0.35 PA1: menu sáng liền mạch, viên đang chọn nền xanh nhạt + vạch trái 4 px
+        for chu in ('QFrame[vai="menu_trai"] { background: #E8EEF5', 'border-right: 1px solid #D5DEE8', 'width: 6px',
+                    'border-left: 4px solid #2563EB', 'background: #DBEAFE', 'color: #1E3A5F', 'border-radius: 8px'):
             self.assertIn(chu, qss)
 
 
@@ -194,7 +193,7 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertEqual(w.dai_cong_ds.chu['so_ho'][0], f'CỘNG ({n} HỘ · {t} THỬA)')
         tong = sum((d['tong'] for d in w.mo_hinh.dong), D(0))
         self.assertEqual(w.dai_cong_ds.chu['tong'][0], f'TỔNG CỘNG: {vn(tong)} đ')
-        self.assertIn(f'<b style="color:#1E3A8A">{n}</b>/{n} hộ', w.lb_loc.text())
+        self.assertIn(f'<b style="color:#1E3A5F">{n}</b>/{n} hộ', w.lb_loc.text())
         # lọc còn một hộ: dải cộng và huy hiệu theo các hộ đang hiện
         with w.con:
             for i, m in enumerate(r[0] for r in w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 2').fetchall()):
@@ -227,7 +226,7 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertEqual(w.cb_tt.itemText(0), ud.TAT_CA_TRANG_THAI)
         from pabt import giao_dien
         qss = giao_dien._qss_day_du()
-        self.assertIn('QHeaderView::section:horizontal { background: #1E3A8A; color: #FFFFFF', qss)
+        self.assertIn('QHeaderView::section:horizontal { background: #1E3A5F; color: #FFFFFF', qss)
         self.assertIn('selection-background-color: #DBEAFE', qss)
         self.assertEqual(giao_dien.CAO_DONG_BANG, 30)
         self.assertEqual(w.bang.verticalHeader().defaultSectionSize(), 30)
@@ -240,7 +239,7 @@ class TestManHinhChao(CoNavy):
         self.assertEqual(giao_dien.CAO_BANNER, 42)
         for nen, vien, _nr, _vr, _ic in giao_dien.MAU_THE_CHAO.values():
             self.assertEqual((nen, vien), ('#FFFFFF', '#E2E8F0'))
-        self.assertIn('QPushButton#nut_mo_gan:hover { background: #1E3A8A; color: #FFFFFF; }', ud.QSS_NUT_MO_GAN)
+        self.assertIn('QPushButton#nut_mo_gan:hover { background: #1E3A5F; color: #FFFFFF; }', ud.QSS_NUT_MO_GAN)
 
 
 if __name__ == '__main__':
