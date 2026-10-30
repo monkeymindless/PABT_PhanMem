@@ -46,7 +46,7 @@ TEN_KHAC = {
     # Bảng 2: nhóm I
     'Cẩm liên': ('Cà gần', 'Cà chắc xanh'),
     'Căm xe': ('Cẩm xe', 'Da đá'),
-    'Huỳnh': ('Huyện',),
+    'Huỷnh': ('Huyện',),
     'Kiền kiền phú quốc': ('Kiền kiền',),
     'Săng đá': ('Sao tía', 'Sao đá', 'Táu đá', 'Săng đào'),
     'Sao hải nam': ('Sao lá to', 'Kiền kiền Nghệ tĩnh'),
@@ -74,7 +74,7 @@ TEN_KHAC = {
     'Sâng': ('Trường', 'Trường mật'),
     'Sến mủ': ('Sến đỏ', 'Sến cát', 'Sến nam'),
     'Sồi áo tơi': ('Giẻ trắng', 'Giẻ bộp'),
-    'Sồi bốm': ('Dẻ ban', 'Dẻ đen'),
+    'Sồi bổm': ('Dẻ ban', 'Dẻ đen'),
     'Sồi dĩa': ('Dẻ cau', 'May có'),
     'Sồi lá mỏng': ('Dẻ bắc',),
     'Sồi quả dẹt': ('Dẻ quả dẹt',),
@@ -84,7 +84,7 @@ TEN_KHAC = {
     'Táu trắng': ('Làu táu trắng', 'Làu táu'),
     'Tếch': ('Giá tỵ',),
     'Trường quánh': ('Vải guốc',),
-    'Vên vên': ('Sao cát', 'Vên vên cát'),
+    'Vên Vên': ('Sao cát', 'Vên vên cát'),
     'Vên vên nghệ': ('Vên vên vàng', 'Sến bo bo'),
     # Bảng 4: nhóm III
     'Cà ổi bắc bộ': ('Dẻ đen', 'Giẻ gai'),
@@ -260,17 +260,24 @@ def bo_ten_khac(ten: str) -> str:
 
 def ap_ten_khac(con, ghi_nhat_ky: bool = True) -> int:
     """Đổi tên các dòng cây lâm nghiệp (dm_taisan nhóm 3) của bộ đơn giá / dự án đang mở cho có tên khác. Mã, đơn giá, ghi chú giữ
-    nguyên; dòng phương án đã lập (ct_khoan) KHÔNG đổi (giữ tên lúc lập). Một giao dịch, mở khóa danh mục. Trả số dòng đã đổi."""
+    nguyên; dòng phương án đã lập (ct_khoan) KHÔNG đổi (giữ tên lúc lập). Một giao dịch, mở khóa danh mục. Trả số dòng đã đổi.
+    30/10/2026: kèm chuẩn tên theo cách ghi văn bản (chuan_ten_cay - bỏ chú thích "(Năm thứ…)", sửa chính tả tên loài)."""
     from . import csdl
+    from .chuan_ten_cay import MUC_THIEU, chuan_ten, them_muc_thieu
     try:
         ds = con.execute("SELECT ma, ten FROM dm_taisan WHERE nhom = 3").fetchall()
     except Exception:                                    # noqa: BLE001 - file không có bảng danh mục
         return 0
-    doi = [(moi, r[0]) for r in ds for moi in (them_ten_khac(r[1]),) if moi != r[1]]
-    if not doi:
+    doi = [(moi, r[0]) for r in ds for moi in (them_ten_khac(chuan_ten(r[1])),) if moi != r[1]]
+    ten = {r[1].split(' - ')[0] for r in ds}
+    if not doi and not any(t.split(' - ')[0] in ten and t not in {r[1] for r in ds} for t, *_ in MUC_THIEU):
         return 0
     with csdl.giao_dich(con), csdl.mo_khoa_danh_muc(con):
         con.executemany('UPDATE dm_taisan SET ten = ? WHERE ma = ?', doi)
+        them = them_muc_thieu(con)
+        if not doi and not them:
+            return 0
         if ghi_nhat_ky:
-            csdl.ghi_nhat_ky(con, 'Bổ sung tên khác của cây lâm nghiệp', f'{len(doi)} dòng bộ đơn giá - {NGUON}')
-    return len(doi)
+            csdl.ghi_nhat_ky(con, 'Chuẩn tên cây trồng theo văn bản', f'{len(doi)} dòng bộ đơn giá đổi tên (tên khác cây lâm nghiệp '
+                             f'- {NGUON}, bỏ chú thích năm tuổi, sửa chính tả tên loài), thêm {them} mục văn bản có mà bộ thiếu')
+    return len(doi) + them

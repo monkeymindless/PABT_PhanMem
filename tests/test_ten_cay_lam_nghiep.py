@@ -48,7 +48,7 @@ class TestTenKhac(unittest.TestCase):
                 self.assertGreater(n, 2000)
                 self.assertEqual(t.ap_ten_khac(con), 0)
                 self.assertEqual(dict(con.execute('SELECT ma, don_gia FROM dm_taisan').fetchall()), gia)
-                self.assertTrue(con.execute("SELECT 1 FROM nhat_ky WHERE viec LIKE 'Bổ sung tên khác%'").fetchone())
+                self.assertTrue(con.execute("SELECT 1 FROM nhat_ky WHERE viec LIKE 'Chuẩn tên cây trồng%'").fetchone())
             finally:
                 con.close()
 

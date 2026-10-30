@@ -904,7 +904,7 @@ class BangMuc(QWidget):
             them('Tách phần trong / ngoài ranh thu hồi…', lambda: man.tach_ranh(), len(chon) == 1)
         elif muc == 3:
             m.addSeparator()
-            them('Tính mật độ…', lambda: man.tinh_mat_do(), len(chon) == 1)
+            them('Tính mật độ…', lambda: man.tinh_mat_do(), b.rowCount() > 0)
         from .giao_dien import them_muc_sao_chep
         them_muc_sao_chep(m, b, pos)                 # 1.0.04: "Sao chép ô" / "Sao chép cả dòng" đứng đầu menu
         if pos is not None:
@@ -2296,10 +2296,19 @@ class CuaSoLapPA(QDialog):
         return dlg
 
     def tinh_mat_do(self, i: int | None = None, cho: bool = True):
-        from .man_hinh_cay import HopMatDo
-        i = self._dong_dang_chon(3, 'tính mật độ') if i is None else i
+        """Tính mật độ cây trồng. i None (nút / chuột phải): MỌI loại cây của hộ trên cùng diện tích trồng - cây đơn giá cao tính
+        trước, phần vượt mật độ thành dòng riêng (HopMatDoNhieuCay, 30/10/2026). i cho sẵn: một dòng (HopMatDo)."""
         if i is None:
-            return None
+            from .man_hinh_cay import HopMatDoNhieuCay
+            dlg = HopMatDoNhieuCay(self)
+            if not cho:
+                return dlg
+            if dlg.exec() == QDialog.DialogCode.Accepted:
+                trong, ngoai, so_dong = dlg.ket_qua
+                self._sau_khi_them(3, None, f'Mật độ: {trong} cây trong mật độ, {ngoai} cây vượt mật độ' +
+                                   (f' ({so_dong} dòng vượt mật độ ngay dưới dòng cây).' if so_dong else '.'))
+            return dlg
+        from .man_hinh_cay import HopMatDo
         dlg = HopMatDo(self, i)
         if not cho:
             return dlg
@@ -2953,6 +2962,11 @@ class HopIn(QDialog):
         self.o_ct.setToolTip('Bản Word thể thức Nghị định 30/2020: A4 dọc, lề trái 30 mm, phải 15 mm, trên / dưới 20 mm; hàng '
                              'tiêu đề bảng lặp mỗi trang, mục III in tiếp ngay dưới mục II. PDF / in ra máy lấy từ bản Word.')
         self.o_ct.setChecked(True)
+        # 30/10/2026 (người dùng): kèm bản Excel - các hộ đang chọn trong MỘT file, mỗi hộ một sheet (in_excel_chi_tiet)
+        self.o_ct_excel = QCheckBox('Phương án chi tiết - Excel (1 file, mỗi hộ 1 sheet)')
+        self.o_ct_excel.setToolTip('Một file PHUONG_AN_CHI_TIET.xlsx trong thư mục PA CHI TIET: mỗi hộ một sheet (tên sheet = STT. họ tên), '
+                                   'cùng số liệu bản Word; số tiền / số lượng / tỷ lệ là số (cộng, lọc được). Bản để sửa / tính trong '
+                                   'Excel - PDF / in ra máy vẫn lấy từ bản Word.')
         self.o_word = QCheckBox('Xuất bản Word (.docx) chuẩn Nghị định 30', self)
         self.o_word.setChecked(True)
         self.o_word.setVisible(False)
@@ -3100,6 +3114,7 @@ class HopIn(QDialog):
         self.b_sua_tt.clicked.connect(lambda: self.sua_mau_van_ban('to_trinh'))
         self.the_tai_lieu = {}
         for r, (o, chu, loai) in enumerate(((self.o_ct, 'Word · NĐ 30/2020', 'lam'),
+                                            (self.o_ct_excel, 'Excel · 1 hộ = 1 sheet', 'xanh'),
                                             (self.o_bth, f'Tách {chu_pb} QĐ 08' if chu_pb else 'Kinh phí QĐ 08', 'xanh'),
                                             (self.o_bth_dc, 'Mẫu điều chỉnh', 'lam'),
                                             (self.o_tt, 'Chỉ mở ở Chính thức', 'xam'),
@@ -3441,9 +3456,10 @@ class HopIn(QDialog):
         self.o_chia.setChecked(True)
 
     def chon_mau(self, co: bool):
-        """Chọn / bỏ chọn mọi mẫu in (in đồng loạt), hoặc đánh dấu từng mẫu để in riêng lẻ."""
-        for o in (self.o_ct, self.o_bth, self.o_tt, self.o_bc):
-            if o.isEnabled() or not co:
+        """Chọn / bỏ chọn mọi mẫu in (in đồng loạt), hoặc đánh dấu từng mẫu để in riêng lẻ. Bản Excel nhiều sheet là bản làm việc
+        (không thuộc bộ hồ sơ trình): chỉ bỏ chọn, không tự chọn."""
+        for o in (self.o_ct, self.o_ct_excel, self.o_bth, self.o_tt, self.o_bc):
+            if (o.isEnabled() and o is not self.o_ct_excel) or not co:
                 o.setChecked(co)
 
     def sua_mau_van_ban(self, loai: str, mo: bool = True):
@@ -3526,6 +3542,7 @@ class HopIn(QDialog):
             if cha and Path(cha).is_dir():
                 self.o_thu_muc.setText(str(Path(cha) / f'BanIn_{datetime.now():%Y%m%d_%H%M}'))
             self.b_dau_ra.setChecked(str(cd.value('in/dau_ra_mo', 'true')).lower() in ('true', '1'))
+            self.o_ct_excel.setChecked(str(cd.value('in/ct_excel', 'false')).lower() in ('true', '1'))
         except (TypeError, ValueError):                                      # cài đặt cũ / hỏng: dùng mặc định
             pass
 
@@ -3541,12 +3558,13 @@ class HopIn(QDialog):
         cd.setValue('in/mo', self.o_mo.isChecked())
         cd.setValue('in/thu_muc_cha', str(Path(thu_muc).parent))
         cd.setValue('in/dau_ra_mo', self.b_dau_ra.isChecked())
+        cd.setValue('in/ct_excel', self.o_ct_excel.isChecked())
 
     def thuc_hien(self, xac_nhan: bool = True):
         from . import in_an
         from . import van_ban_trinh as vb
         ds = self.ds_ho()
-        chon = dict(chi_tiet=self.o_ct.isChecked(), bang_tong_hop=self.o_bth.isChecked(),
+        chon = dict(chi_tiet=self.o_ct.isChecked(), chi_tiet_excel=self.o_ct_excel.isChecked(), bang_tong_hop=self.o_bth.isChecked(),
                     bang_dieu_chinh=self.o_bth_dc.isChecked() and self.co_dieu_chinh,
                     to_trinh=self.o_tt.isChecked() and self.o_tt.isEnabled(),
                     bao_cao_y_kien=self.o_bc.isChecked() and self.o_bc.isEnabled())

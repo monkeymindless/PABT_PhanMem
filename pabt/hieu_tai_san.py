@@ -388,10 +388,20 @@ def loai_cay_dk(bang, ten: str) -> str | None:
 _SO_CHU = {'nhat': 1, 'mot': 1, 'hai': 2, 'ba': 3, 'bon': 4, 'tu': 4, 'nam': 5}
 
 
-def khoang_tuoi(ten: str):
-    """Khoảng năm tuổi (từ, đến - None = trở đi) của mục cây trồng theo tên, hoặc None nếu tên không ghi năm."""
+_RE_THU_HOACH = re.compile(r'nam thu hoach (?:thu )?(\d+)(?:\s*-\s*(\d+))?\s*(tro di)?')
+
+
+def khoang_tuoi(ten: str, kien_thiet: int | None = None):
+    """Khoảng năm tuổi (từ, đến - None = trở đi) của mục cây trồng theo tên, hoặc None nếu tên không ghi năm.
+    30/10/2026 (người dùng: văn bản chỉ ghi "Năm thứ 1, 2, 3" và "Năm thu hoạch thứ…", không có chú thích "(Năm thứ 3,4,5)"): năm thu
+    hoạch thứ k của loài có kien_thiet năm kiến thiết cơ bản = cây năm thứ kien_thiet + k (bang_tuoi tính kien_thiet theo các mục của
+    loài). Không truyền kien_thiet: đọc chú thích "(Năm thứ…)" của tên cũ nếu còn."""
     t = bo_dau(ten)
     t = re.sub(r'nam thu (nhat|mot|hai|ba|bon|tu|nam)\b', lambda m: f'nam thu {_SO_CHU[m.group(1)]}', t)
+    m = _RE_THU_HOACH.search(t)
+    if m and kien_thiet is not None:
+        a = int(m.group(1))
+        return kien_thiet + a, None if m.group(3) else kien_thiet + int(m.group(2) or a)
     m = re.search(r'\(nam thu ([\d,\s]+?)\s*(tro di)?\s*\)', t)          # "(Năm thứ 4,5,6,7,8)" / "(Năm thứ 19 trở đi)"
     if m:
         so = [int(x) for x in re.findall(r'\d+', m.group(1))]
@@ -416,6 +426,41 @@ def khoang_tuoi(ten: str):
     return None
 
 
+def _khoa_loai(ten: str) -> str:
+    from .cay_trong import ten_goc
+    return ' '.join(unicodedata.normalize('NFC', ten_goc(ten)).lower().split())      # có dấu: "Cây dứa" khác "Cây dừa"
+
+
+def bang_tuoi(ds_ten) -> dict:
+    """{tên mục: (từ, đến)} năm tuổi của mọi mục cây trồng có ghi năm. Năm kiến thiết cơ bản của mỗi loài = năm lớn nhất trong các mục
+    "Năm thứ N" / "Năm N" / "Từ năm thứ a đến năm thứ b" (không phải năm thu hoạch) của loài đó; năm thu hoạch thứ k = năm kiến thiết +
+    k. Loài không có mục kiến thiết: theo chú thích "(Năm thứ…)" nếu tên còn ghi, không thì năm thu hoạch thứ k = năm thứ k."""
+    ds_ten = list(ds_ten)
+    kt = {}
+    for ten in ds_ten:
+        if _RE_THU_HOACH.search(bo_dau(ten)):
+            continue
+        k = khoang_tuoi(ten)
+        if k is not None and k[1] is not None:
+            loai = _khoa_loai(ten)
+            kt[loai] = max(kt.get(loai, 0), k[1])
+    kq = {}
+    for ten in ds_ten:
+        loai = _khoa_loai(ten)
+        k = khoang_tuoi(ten, kt[loai]) if loai in kt else khoang_tuoi(ten)
+        if k is None and _RE_THU_HOACH.search(bo_dau(ten)):
+            k = khoang_tuoi(ten, 0)
+        if k is not None:
+            kq[ten] = k
+    return kq
+
+
+def tuoi_cua_muc(ten: str, ds_ten) -> tuple | None:
+    """Khoảng năm tuổi của một mục, tính theo các mục cùng loài trong ds_ten (danh mục cây trồng)."""
+    loai = _khoa_loai(ten)
+    return bang_tuoi([t for t in ds_ten if _khoa_loai(t) == loai] + [ten]).get(ten)
+
+
 def chon_theo_tuoi(ds_muc: list, ten: str, tuoi) -> object | None:
     """Mục cây trồng của loài ten đúng năm tuổi (quá năm cuối cùng thì lấy khoảng cuối)."""
     from .cay_trong import ten_goc
@@ -426,8 +471,8 @@ def chon_theo_tuoi(ds_muc: list, ten: str, tuoi) -> object | None:
     q = _chuan_loai(ten)
     if not q:
         return None
-    co_tuoi = [(m, khoang_tuoi(m.ten)) for m in ds_muc]
-    co_tuoi = [(m, k) for m, k in co_tuoi if k is not None]
+    bt = bang_tuoi(m.ten for m in ds_muc)
+    co_tuoi = [(m, bt[m.ten]) for m in ds_muc if m.ten in bt]
     for so in (lambda c: c == q, lambda c: bo_dau(c) == bo_dau(q)):
         loai = [(m, k) for m, k in co_tuoi if so(_chuan_loai(ten_goc(m.ten)))]
         if not loai:

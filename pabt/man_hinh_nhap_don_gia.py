@@ -122,7 +122,7 @@ class HopNhapDonGia(QDialog):
         for chu, gt in CACH_CAP_NHAT:
             self.o_cach.addItem(chu, gt)
         self.o_cach.setToolTip('Thay thế: mục cũ khớp với văn bản được đổi tên / mật độ / ghi chú theo cách ghi của văn bản (mã giữ nguyên, '
-                               'chú thích "(Năm thứ 3,4,5)" của tên cũ giữ khi văn bản không ghi - để chọn mục theo năm tuổi); mục cũ '
+                               'không thêm chú thích "(Năm thứ…)" - năm tuổi tính theo năm kiến thiết của loài); mục cũ '
                                'cùng nhóm (cây trồng / nhà, công trình / vật nuôi / hỗ trợ) không còn trong văn bản hiện dòng đỏ "bỏ" '
                                '- chọn sẵn, bỏ dấu "Dùng" để giữ. Dự án đã lập giữ nguyên số liệu; bộ đơn giá cũ được giữ.')
         self.o_cach.currentIndexChanged.connect(self._doi_cach)

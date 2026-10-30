@@ -75,7 +75,7 @@ def danh_muc_di_dong(con=None) -> dict:
     (từ, đến] cm; tuoi: có mục theo năm tuổi), goi_y. con None = bộ đơn giá ĐÓNG GÓI (don_gia.file_goc, chỉ đọc) - file nhúng vào ứng
     dụng điện thoại dựng lại giống nhau trên mọi máy."""
     from .cay_trong import khoang_duong_kinh, ten_goc
-    from .hieu_tai_san import khoang_tuoi
+    from .hieu_tai_san import bang_tuoi
     dong_lai = con is None
     if dong_lai:
         import sqlite3
@@ -88,6 +88,7 @@ def danh_muc_di_dong(con=None) -> dict:
         if dong_lai:
             con.close()
     nha, dm2, vat_nuoi, cay = [], [], [], {}
+    tuoi = bang_tuoi(r['ten'] or '' for r in ds if r['nhom'] == 3)
     for r in ds:
         ten = r['ten'] or ''
         muc = [str(r['ma'] or ''), ten, r['dvt'] or '', _gia(r['don_gia'])]
@@ -100,7 +101,7 @@ def danh_muc_di_dong(con=None) -> dict:
             if not t:
                 continue
             ct = cay.setdefault(bo_dau(t).lower(), dict(ten=t, dk=False, tuoi=False, dvt=muc[2], muc=[]))
-            k, tu = khoang_duong_kinh(ten), khoang_tuoi(ten)
+            k, tu = khoang_duong_kinh(ten), tuoi.get(ten)
             ct['dk'] = ct['dk'] or k is not None
             ct['tuoi'] = ct['tuoi'] or tu is not None
             ct['muc'].append(muc + [_so_hoac_none(k.tu) if k else None, _so_hoac_none(k.den) if k else None,

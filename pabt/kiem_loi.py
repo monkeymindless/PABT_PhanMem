@@ -158,7 +158,7 @@ def la_quan_he_chu_dat_va_tai_san(ds_ho_thua_cung_cap) -> bool:
 # ---------------------------------------------------------------- kiểm tra
 def kiem_tra(con, dm: DanhMuc | None = None) -> list:
     """Toàn bộ lỗi / cảnh báo của dự án (danh sách Loi), sắp theo hộ."""
-    from .cay_trong import quy_chuan_mat_do, so_cay_toi_da, ten_goc
+    from .cay_trong import DongMatDo, phan_bo_mat_do, quy_chuan_mat_do, ten_goc
     kq = []
     bc = BoiCanh.tu(con)
     dm = dm or DanhMuc(con)
@@ -374,22 +374,28 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
         # cây vượt mật độ trên diện tích đất nông nghiệp thu hồi
         dt_nn = sum((d.dien_tich for d in pa.dat if (bc.loai_dat.get(d.loai_dat.upper(), '') or '').lower().startswith('nông')
                      or d.loai_dat.upper() in ('CLN', 'HNK', 'LUC', 'LUK', 'BHK', 'NHK', 'RSX', 'NTS', 'CHN')), KHONG)
-        gom = {}
+        # 30/10/2026: mọi loại cây cùng chia diện tích - cây đơn giá cao tính trước (cay_trong.phan_bo_mat_do); dòng đã tách "Ngoài mật độ"
+        # không tính
+        dong_md = []
         for d in pa.khoan[3]:
-            if d.dvt.strip().lower() == 'cây' and he_so(d.ty_le) == 1:
-                gom.setdefault(ten_goc(d.ten), [KHONG, d])[0] += d.so_luong
-        for g, (sl, d) in gom.items():
+            if d.dvt.strip().lower() != 'cây' or he_so(d.ty_le) == 0 or d.so_luong != int(d.so_luong) \
+                    or (d.quy_cach or '').startswith('Ngoài mật độ ('):
+                continue
             m = dm.lay(d.ma or d.ma_tuong_duong)
-            kq_md = (g, m.ten if m else d.ten, m.can_cu if m else '')
+            kq_md = (ten_goc(d.ten), m.ten if m else d.ten, m.can_cu if m else '')
             q = mat_do.get(kq_md)
             if q is None:
                 q = mat_do[kq_md] = quy_chuan_mat_do(con, *kq_md)
-            if q.mat_do and dt_nn > 0:
-                toi_da = so_cay_toi_da(q.mat_do, dt_nn)
-                if sl > toi_da:
-                    them(CANH_BAO, 'Phương án', f'{g}: {so_vn(sl)} cây tính 100% vượt mật độ {so_vn(q.mat_do)} cây/ha trên '
-                         f'{so_vn(dt_nn)} m² đất NN thu hồi (tối đa {toi_da} cây): dùng "Tính mật độ…" để tách cây ngoài mật độ.',
-                         ma, ten)
+            dong_md.append(DongMatDo(kq_md[0], int(d.so_luong), q.mat_do, d.don_gia))
+        if dt_nn > 0 and any(x.mat_do for x in dong_md):
+            phan_bo_mat_do(dong_md, dt_nn)
+            vuot = {}
+            for x in dong_md:
+                if x.ngoai:
+                    vuot[x.ten] = vuot.get(x.ten, 0) + x.ngoai
+            if vuot:
+                them(CANH_BAO, 'Phương án', 'Cây vượt mật độ trên ' + f'{so_vn(dt_nn)} m² đất NN thu hồi (cây đơn giá cao tính trước): '
+                     + ', '.join(f'{g} {n} cây' for g, n in vuot.items()) + ' - dùng "Tính mật độ…" để tách cây vượt mật độ.', ma, ten)
         # tiến độ
         if h.get('da_chi_tra') and not h.get('da_phe_duyet'):
             them(LOI, 'Tiến độ', 'Đã chi trả nhưng chưa ghi phê duyệt phương án.', ma, ten)

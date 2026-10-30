@@ -71,7 +71,7 @@ class TestChonMuc(CoSo):
         self.assertEqual((k.loai, k.khop.ten, k.ghi_them), (NHA, 'Nhà 01 tầng - Kết cấu loại 4', 'Thực tế: Gác để ở'))
         k = ds['Xoài']
         self.assertEqual(k.loai, CAY)
-        self.assertEqual(h.khoang_tuoi(k.khop.ten), (14, 18))                 # 17 năm tuổi
+        self.assertEqual(h.tuoi_cua_muc(k.khop.ten, [m.ten for m in self.dm.muc[3]]), (14, 18))      # 17 năm tuổi
         k = ds['Tràm']
         self.assertEqual((k.loai, k.kieu, k.so_do, k.loai_cay), (CAY, 'dk', '28', 'Keo lá tràm'))   # tràm (có dấu huyền), không là trám
         k = ds['Ao nuôi cá ghép']
@@ -105,7 +105,7 @@ class TestThemVaoPhuongAn(CoSo):
         self.assertEqual(ten['Nhà tạm'].so_luong, Decimal('46'))
         self.assertIn('Thực tế: Gác để ở', ten['Nhà 01 tầng - Kết cấu loại 4'].ghi_chu)
         xoai = next(d for d in bo.pa.khoan[3] if d.ten.startswith('Cây xoài'))
-        self.assertEqual((xoai.so_luong, h.khoang_tuoi(xoai.ten)), (Decimal('16'), (14, 18)))
+        self.assertEqual((xoai.so_luong, h.tuoi_cua_muc(xoai.ten, [m.ten for m in self.dm.muc[3]])), (Decimal('16'), (14, 18)))
         tram = [d for d in bo.pa.khoan[3] if d.ten.startswith('Keo lá tràm')]
         self.assertEqual(sum(d.so_luong for d in tram), Decimal('1453'))     # 1453 cây đường kính 28 cm -> quy cách (d >25 cm)
         self.assertTrue(all('(d >25 cm)' in d.ten for d in tram))
@@ -127,7 +127,7 @@ class TestPhieuKiemDem(CoSo):
         self.assertEqual((kq['so_dong'], kq['loi']), (2, []))
         pa = BoSoan(self.con, 1, self.dm).pa
         xoai = next(d for d in pa.khoan[3] if d.ten.startswith('Cây xoài'))
-        self.assertEqual((xoai.so_luong, h.khoang_tuoi(xoai.ten)), (Decimal('16'), (14, 18)))
+        self.assertEqual((xoai.so_luong, h.tuoi_cua_muc(xoai.ten, [m.ten for m in self.dm.muc[3]])), (Decimal('16'), (14, 18)))
         self.assertTrue(any(d.ten.startswith('Keo lá tràm') and d.so_luong == 10 for d in pa.khoan[3]))
 
 

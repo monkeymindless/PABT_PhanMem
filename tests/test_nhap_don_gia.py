@@ -300,7 +300,7 @@ class TestApDung(CoSo):
             ('Cây bắp (Đông Xuân)', 'ha', 40000000, 3), ('Tre tàu, gai - Cây mới trồng dưới 1 năm tuổi', 'ha', 34000, 3)])
         # so khớp: tên trong ngoặc / dấu câu khác vẫn nhận ra mục có sẵn
         c = sqlite3.connect(don_gia.file_goc())
-        r = c.execute("SELECT ma, ten, dvt, don_gia FROM dm_taisan WHERE ten LIKE 'Cây bưởi - Năm thu hoạch thứ 1-5%'").fetchone()
+        r = c.execute("SELECT ma, ten, dvt, don_gia FROM dm_taisan WHERE ten = 'Cây bưởi - Năm thu hoạch thứ 1 - 5'").fetchone()
         c.close()
         m = ndg.so_khop([ndg.Muc('Cây bưởi - Năm thu hoạch thứ 1 - 5', r[2], int(float(r[3])), nhom=3)])[0]
         self.assertEqual((m.ma_khop, m.trang_thai), (r[0], 'giữ nguyên'))

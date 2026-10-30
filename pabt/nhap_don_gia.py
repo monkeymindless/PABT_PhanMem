@@ -547,7 +547,12 @@ def khoa_nhom_loai(chu: str) -> str:
         return 'quy hiem'
     m = re.search(r'\bnhom\s+(?:loai\s+)?([ivx]+|\d+)\b', k)
     if not m:
-        return ''
+        # bản scan: số La Mã đọc sai ("nhóm IJI", "nhóm Il", "nhóm 1V") - j / l / 1 / | thay chữ I
+        m = re.search(r'\bnhom\s+(?:loai\s+)?([ivxjl1|]+)(?![\w])', k)
+        if not m or not re.search(r'[ivx]', m.group(1)):
+            return ''
+        g = re.sub(r'[jl1|]', 'i', m.group(1))
+        return str(_LA_MA_SO[g]) if g in _LA_MA_SO else ''
     g = m.group(1)
     return str(int(g)) if g.isdigit() else str(_LA_MA_SO.get(g, '')) if g in _LA_MA_SO else ''
 
@@ -603,6 +608,36 @@ def _loai_trong_bo(dm_nhom3: list) -> dict:
     return kq
 
 
+NGUONG_SUA_TEN_LOAI = 0.72         # độ giống (bỏ dấu, SequenceMatcher) tối thiểu để sửa tên loài đọc sai về tên loài đã biết
+
+
+def sua_ten_loai(ten: str, khac: tuple, biet: dict) -> tuple:
+    """Tên loài đọc từ bản scan (OCR hay sai dấu / sai chữ: "Câmlai", "Bò'i lời giấy") -> (tên đúng, tên khác). biet = {tên loài đã
+    biết: (tên khác)} - danh sách Phụ lục VI gắn sẵn (ten_cay_lam_nghiep.TEN_KHAC) + loài trong bộ đơn giá đang dùng. Tên trùng hẳn
+    (bỏ dấu) giữ nguyên; giống >= NGUONG_SUA_TEN_LOAI (cộng điểm tên khác giống nhau) thì lấy tên đã biết; không thì giữ chữ đọc được."""
+    from difflib import SequenceMatcher
+
+    def k(x):
+        return ' '.join(re.sub(r"[^\w ]+", ' ', bo_dau(x).lower()).split())
+    kt = k(ten)
+    if not kt:
+        return ten, khac
+    for t in biet:
+        if k(t) == kt:
+            return t, biet[t] or khac
+    kk = k(' '.join(khac))
+    tot, diem = None, 0.0
+    for t, tk in biet.items():
+        d = SequenceMatcher(None, kt, k(t)).ratio()
+        if kk and tk:
+            d = max(d, 0.6 * d + 0.4 * SequenceMatcher(None, kk, k(' '.join(tk))).ratio())
+        if d > diem:
+            tot, diem = t, d
+    if tot is not None and diem >= NGUONG_SUA_TEN_LOAI:
+        return tot, biet[tot]
+    return ten, khac
+
+
 def tach_theo_loai(ds: list, nhom_loai: dict | None = None) -> tuple:
     """Dòng bảng giá theo NHÓM loài cây lâm nghiệp ("Nhóm IV gồm … loài" x cỡ đường kính) -> mỗi loài trong nhóm một dòng mỗi cỡ:
     "Bồ đề (d >6-9 cm)", "Trường (…) (d >6-9 cm)"… (người dùng 30/10/2026: "tách từng loại cây"). Loài của nhóm: danh sách trong văn
@@ -615,18 +650,22 @@ def tach_theo_loai(ds: list, nhom_loai: dict | None = None) -> tuple:
             theo_nhom.setdefault(m.nhom_loai, []).append(m)
     if not theo_nhom:
         return ds, []
-    bo = None
-    if any(k not in nhom_loai for k in theo_nhom):
-        con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
-        try:
-            bo = _loai_trong_bo([dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia FROM dm_taisan WHERE nhom = 3 ORDER BY rowid')])
-        finally:
-            con.close()
-    from .ten_cay_lam_nghiep import ten_khac
+    con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
+    try:
+        bo = _loai_trong_bo([dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia FROM dm_taisan WHERE nhom = 3 ORDER BY rowid')])
+    finally:
+        con.close()
+    from .ten_cay_lam_nghiep import TEN_KHAC, ten_khac
+    biet = {t: ten_khac(t) for t in bo}
+    biet.update(TEN_KHAC)
     loai_nhom, khong = {}, []
     for k, dong in theo_nhom.items():
         if nhom_loai.get(k):
-            loai_nhom[k] = [(t, khac or ten_khac(t)) for t, khac in nhom_loai[k]]
+            ds_loai = []
+            for t, khac in nhom_loai[k]:
+                t, khac = sua_ten_loai(t, khac, biet)       # 30/10/2026: tên loài bản scan đọc sai -> tên đã biết
+                ds_loai.append((t, khac or ten_khac(t)))
+            loai_nhom[k] = ds_loai
             continue
         gia = {_khoa(m.duong_kinh): m.don_gia for m in dong}
         cung = [loai for loai, co in (bo or {}).items()
@@ -684,7 +723,8 @@ def nhan_muc(dong: list, nhom: int = 0) -> list:
             dvt_c = _cot(o, r'^(dvt|don vi)', r'don vi tinh')
             ma_c = _cot(o, r'^(ma|ma so|ma ts|ma ho tro|ky hieu)$')
             stt_c = _cot(o, r'^(stt|tt|so tt|so thu tu)$')
-            dk_c = _cot(o, r'^duong kinh', r'^(d|dk|co)\s*\(?cm\)?$')       # bảng giá cây lâm nghiệp theo nhóm loài x cỡ đường kính
+            # bảng giá cây lâm nghiệp theo nhóm loài x cỡ đường kính (bản scan hay dính chữ: "Đườngkính")
+            dk_c = _cot(o, r'^duong ?kinh', r'^(d|dk|co)\s*\(?cm\)?$')
             if dk_c in (ten_c, gia_c):
                 dk_c = None
             tieu_de = (ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c)
@@ -705,7 +745,10 @@ def nhan_muc(dong: list, nhom: int = 0) -> list:
             dk = chuan_duong_kinh(r[dk_c]) if dk_c is not None else ''
             if dk_c is not None and (ten or dk):
                 # bảng nhóm loài: ô nhóm gộp nhiều hàng (chỉ hàng đầu có chữ) - các hàng sau là cỡ đường kính của nhóm đó
-                if ten and not re.fullmatch(r'[\d\W]+', ten):
+                # bản scan: ô nhóm gộp vắt sang trang sau còn mẩu chữ đọc sai ("nem", "Ị") ở hàng cỡ tiếp theo (">27-30") - vẫn là
+                # nhóm cũ; nhóm mới bắt đầu ở cỡ nhỏ nhất ("<3", "≤2") hoặc tên có chữ "Nhóm …"
+                if ten and not re.fullmatch(r'[\d\W]+', ten) and \
+                        (not nhom_dk or not dk or khoa_nhom_loai(ten) or re.match(r'\(d [<≤]', dk) or len(ten) > 12):
                     nhom_dk = ten
                 if dk and g and nhom_dk:
                     ten_nhom = ' '.join(re.sub(r'\([^)]*(?:danh s[áa]ch|ph[ụu] l[ụu]c)[^)]*\)', ' ', nhom_dk).split())
@@ -981,16 +1024,9 @@ def _khoa_quy_cach(ten: str) -> str:
     return ' '.join(re.sub(r'\bthu (?=\d)', '', _khoa_gon(ten)).split())
 
 
-_RE_NGOAC_TUOI = re.compile(r'(?i)\s*\(\s*n[ăa]m\s+th[ứu][^)]*\)')
-
-
 def ten_thay_the(ten_moi: str, ten_cu: str) -> str:
-    """Tên ghi vào mục cũ khi thay thế: đúng cách ghi của văn bản mới; chú thích quy đổi tuổi "(Năm thứ 3,4,5)" của tên cũ được giữ khi
-    văn bản không ghi (bộ chọn năm tuổi - hieu_tai_san.khoang_tuoi, ứng dụng điện thoại - đọc chú thích này để biết năm thu hoạch thứ
-    1-3 là cây năm thứ mấy)."""
-    m = _RE_NGOAC_TUOI.search(ten_cu or '')
-    if m and not _RE_NGOAC_TUOI.search(ten_moi) and 'thu hoach' in bo_dau(ten_moi):
-        return ten_moi + ' ' + m.group(0).strip()
+    """Tên ghi vào mục cũ khi thay thế: ĐÚNG cách ghi của văn bản mới. 30/10/2026 (người dùng: văn bản không có chú thích "(Năm thứ
+    3, 4, 5)"): không còn giữ chú thích quy đổi tuổi của tên cũ - năm tuổi tính theo cấu trúc (hieu_tai_san.bang_tuoi)."""
     return ten_moi
 
 
@@ -1054,6 +1090,9 @@ def _giong_tung_phan(a: str, b: str) -> bool:
 _NHO_GAN = {}
 
 
+NGUONG_KHOP_THEO_GIA = 0.55        # tên giống tối thiểu khi khớp theo đơn giá trùng (so_khop, bước sau cùng)
+
+
 def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False) -> list:
     """So với bộ đơn giá đang dùng: theo mã, tên (không dấu), tên bỏ ngoặc, quy cách ("Năm 1" ~ "Năm thứ 1"), rồi tên gần đúng cùng
     ĐVT. nhom None / 0: mỗi dòng theo nhóm của dòng (Muc.nhom); có nhom thì cả bảng theo nhóm đó.
@@ -1095,6 +1134,23 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False) -> list:
             theo_ten.setdefault(_khoa(bo_ten_khac(x['ten'])), x)
         bang[n] = ({x['ma'].upper(): x for x in ds_}, theo_ten, theo_dvt, gon, qc)
     da_khop = set()
+
+    def ghi_khop(m, r, n):
+        m.ten_thay = m.ghi_chu_thay = ''
+        if r is None:
+            m.trang_thai, m.ma_khop, m.gia_cu, m.ten_cu, m.ghi_chu_cu = 'mới', '', None, '', ''
+            return
+        m.ma_khop, m.ten_cu, m.ghi_chu_cu = r['ma'], r['ten'], r['ghi_chu'] or ''
+        da_khop.add((n, r['ma']))
+        m.gia_cu = doc_gia(r['don_gia']) if r['don_gia'] not in (None, '') else None
+        m.trang_thai = 'giữ nguyên' if m.gia_cu == m.don_gia else 'cập nhật'
+        if thay_the:
+            ten = ten_thay_the(m.ten, r['ten'])
+            gc = ghi_chu_thay_the(m.ghi_chu_cu, m.ghi_chu, ten) if n != 4 else ''
+            if ten != r['ten'] or (n != 4 and gc != m.ghi_chu_cu):
+                m.ten_thay, m.ghi_chu_thay = ten, gc
+                if m.trang_thai == 'giữ nguyên':
+                    m.trang_thai = 'đổi quy cách'
     for m in ds:
         n = nhom or m.nhom or 3
         theo_ma, theo_ten, theo_dvt, gon, qc = bang[n]
@@ -1124,21 +1180,23 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False) -> list:
                 _NHO_GAN[kn] = gan
             if _NHO_GAN[kn] is not None and _NHO_GAN[kn][0] in cung:
                 r, m.khop_gan = cung[_NHO_GAN[kn][0]], _NHO_GAN[kn][1]
-        m.ten_thay = m.ghi_chu_thay = ''
-        if r is None:
-            m.trang_thai, m.ma_khop, m.gia_cu, m.ten_cu, m.ghi_chu_cu = 'mới', '', None, '', ''
-        else:
-            m.ma_khop, m.ten_cu, m.ghi_chu_cu = r['ma'], r['ten'], r['ghi_chu'] or ''
-            da_khop.add((n, r['ma']))
-            m.gia_cu = doc_gia(r['don_gia']) if r['don_gia'] not in (None, '') else None
-            m.trang_thai = 'giữ nguyên' if m.gia_cu == m.don_gia else 'cập nhật'
-            if thay_the:
-                ten = ten_thay_the(m.ten, r['ten'])
-                gc = ghi_chu_thay_the(m.ghi_chu_cu, m.ghi_chu, ten) if n != 4 else ''
-                if ten != r['ten'] or (n != 4 and gc != m.ghi_chu_cu):
-                    m.ten_thay, m.ghi_chu_thay = ten, gc
-                    if m.trang_thai == 'giữ nguyên':
-                        m.trang_thai = 'đổi quy cách'
+        ghi_khop(m, r, n)
+    # 30/10/2026 (công cụ scan): tên đọc từ bản scan sai chữ ("Cây sori" / "Cây Sơ ri", "Lekina" / "Lekima") nhưng ĐƠN GIÁ trùng một mục
+    # cũ chưa khớp cùng nhóm và tên giống nhau một phần -> cùng mục (giá đúng từng đồng hiếm khi trùng ngẫu nhiên)
+    for m in ds:
+        if m.trang_thai != 'mới' or not m.don_gia:
+            continue
+        n = nhom or m.nhom or 3
+        k = _khoa_quy_cach(m.ten)
+        ung = []
+        for x in hien[n]:
+            if (n, x['ma']) in da_khop or x['don_gia'] in (None, '') or doc_gia(x['don_gia']) != m.don_gia:
+                continue
+            ung.append((difflib.SequenceMatcher(None, k, _khoa_quy_cach(x['ten'])).ratio(), x))
+        ung.sort(key=lambda t: -t[0])
+        if ung and ung[0][0] >= NGUONG_KHOP_THEO_GIA and (len(ung) == 1 or ung[0][0] - ung[1][0] >= 0.1):
+            m.khop_gan = ung[0][0]
+            ghi_khop(m, ung[0][1], n)
     # mã cho mục mới (người dùng 30/10/2026: "tự tạo mã cây trồng theo văn bản mới") - số tiếp theo của bộ đơn giá, theo thứ tự văn
     # bản; ap_dung cấp đúng mã này (mã của mục bị bỏ không dùng lại: dự án cũ còn ghi mã đó)
     from .ma_tai_san import tien_to

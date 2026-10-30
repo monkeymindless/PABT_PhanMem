@@ -371,17 +371,118 @@ def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = Non
         raise
     except OSError:
         pass                                            # thiếu osd.traineddata: đọc nguyên chiều
+    # 30/10/2026: bảng có khung kẻ -> xóa nét kẻ trước khi đọc, chữ xếp vào ô theo khung (luoi_bang); không khung: như cũ
+    luoi = None
+    if tra_ve == 'chu' and anh != goc:
+        sach, luoi = _xu_ly_khung(anh, td)
+        if sach is not None:
+            anh = sach
     tu = _doc_tsv(tess, anh, du_lieu, cho, psm)
-    k = he_so_phong(tu, _canh_ngan(anh))
+    k, he_so = he_so_phong(tu, _canh_ngan(anh)), 1.0
+    lon = anh
     if k > 1.15 and anh != goc:
         lon = _chuan_bi(anh, td, k)
         if lon != anh:
             tu_lon = _doc_tsv(tess, lon, du_lieu, cho, psm)
             if len(''.join(t[4] for t in tu_lon)) >= len(''.join(t[4] for t in tu)) * 0.8:   # phóng mà đọc được ít hơn hẳn: giữ lần đầu
-                tu = tu_lon
+                tu, he_so = tu_lon, k
     if tra_ve == 'hang':                                # từng từ kèm vị trí (nhập danh sách hộ từ bản scan: chia cột bảng)
         return gom_hang(tu)
+    if luoi is not None:
+        from .luoi_bang import xep_vao_o
+        tu = _doc_lai_o_gop(tess, lon, du_lieu, cho, luoi, he_so, tu, td)
+        dong = []
+        for loai, nd in xep_vao_o(tu, luoi, he_so):
+            # chữ ngoài bảng (tiêu đề, chú thích cuối trang, số trang) MỘT ô: không bị đọc nhầm thành dòng đơn giá theo cột bảng
+            dong += ['\t'.join(nd)] if loai == 'bang' else [x for x in (_bo_net(hg) for hg in gom_hang(nd)) if x]
+        return '\n'.join(dong)
     return '\n'.join(gom_dong(tu))
+
+
+LE_O_GOP = 12              # điểm ảnh: lề trắng thêm quanh ô / cột khi đọc lại riêng (Tesseract cần khoảng trống quanh chữ)
+
+
+_RE_TU_SO = re.compile(r'^[\W\d_]*\d[\W\d_]*$')
+
+
+def _cot_so(tu: list, vung: tuple, he_so: float) -> bool:
+    """Cột bảng mà >= 60% số từ (đọc cả trang) là số."""
+    x1, y1, x2, y2 = (v * he_so for v in vung)
+    trong = [w[4] for w in tu if x1 <= w[0] + w[2] / 2 < x2 and y1 <= w[1] + w[3] / 2 < y2]
+    return bool(trong) and sum(1 for t in trong if _RE_TU_SO.match(t)) >= 0.6 * len(trong)
+
+
+def _bo_net(hang: list) -> str:
+    """Một dòng chữ ngoài bảng bỏ mẩu nét kẻ / mép trang scan ("|", "[", "]") ở đầu, cuối dòng; dòng chỉ còn các mẩu đó: ''."""
+    ds = [t for _, _, _, t in hang]
+    while ds and ds[0].strip() in ('|', '||', '[', ']', '!', 'l', 'I', ')', '('):
+        ds.pop(0)
+    while ds and ds[-1].strip() in ('|', '||', '[', ']', '!', ')', '('):
+        ds.pop()
+    return ' '.join(ds)
+
+
+def _doc_lai_o_gop(tess: Path, anh: Path, du_lieu: list, cho, luoi, he_so: float, tu: list, td: Path | None) -> list:
+    """Đọc lại phần bảng theo khung (30/10/2026): đọc cả trang một lượt, Tesseract (chế độ khối chữ đều) hay lẫn dòng chữ của các cột
+    có ô cao thấp khác nhau ("Cà ổi sapa" cạnh ô tên khác hai dòng đọc thành "Chín . map"; "Nhóm I gồm 13 loài…" giữa 14 hàng giá đọc
+    thành "Ñ Ñ ii U"). Nay đọc riêng TỪNG CỘT của bảng (mỗi cột là một cột chữ đều), rồi riêng từng ô gộp nhiều hàng / nhiều cột
+    (luoi_bang.vung_gop - chữ ô gộp ngang vắt qua ranh cột); từ của lượt sau thay từ của lượt trước trong cùng vùng. Lỗi một vùng: giữ
+    kết quả cũ."""
+    try:
+        from PySide6.QtGui import QColor, QImage, QPainter
+        from .luoi_bang import vung_gop
+        im = QImage(str(anh))
+        if im.isNull():
+            return tu
+        doc, ngang = luoi.doc, luoi.ngang
+        cot = [(doc[j][0], ngang[0][0], doc[j + 1][0], ngang[-1][0]) for j in range(len(doc) - 1)]
+        # cột SỐ (STT, đường kính, đơn giá): đọc cả trang chính xác hơn đọc riêng cột hẹp (đã thử: "313.119" đọc riêng thành
+        # "313.116") - chỉ đọc riêng cột chữ
+        cot = [v for v in cot if not _cot_so(tu, v, he_so)]
+        vung = cot + vung_gop(luoi)
+    except Exception:                                   # noqa: BLE001
+        return tu
+    for i, (x1, y1, x2, y2) in enumerate(vung):
+        x1, y1, x2, y2 = (int(v * he_so) for v in (x1, y1, x2, y2))
+        if x2 - x1 < 8 or y2 - y1 < 8:
+            continue
+        try:
+            o = QImage(x2 - x1 + 2 * LE_O_GOP, y2 - y1 + 2 * LE_O_GOP, QImage.Format.Format_Grayscale8)
+            o.fill(QColor(255, 255, 255))
+            p = QPainter(o)
+            p.drawImage(LE_O_GOP, LE_O_GOP, im.copy(x1, y1, x2 - x1, y2 - y1))
+            p.end()
+            f = (td or anh.parent) / f'{anh.stem}_o{i}.png'
+            if not o.save(str(f)):
+                continue
+            moi = _doc_tsv(tess, f, du_lieu, cho, 6)
+        except LoiOCR:
+            raise
+        except Exception:                               # noqa: BLE001
+            continue
+        moi = [(x + x1 - LE_O_GOP, y + y1 - LE_O_GOP, w, h, t) for x, y, w, h, t in moi]
+        moi = [w for w in moi if x1 <= w[0] + w[2] / 2 < x2 and y1 <= w[1] + w[3] / 2 < y2]
+        if not moi and i < len(cot):
+            continue
+        tu = [w for w in tu if not (x1 <= w[0] + w[2] / 2 < x2 and y1 <= w[1] + w[3] / 2 < y2)] + moi
+    return tu
+
+
+def _xu_ly_khung(anh: Path, td: Path | None):
+    """(ảnh đã xoay thẳng + xóa nét kẻ, Luoi) khi trang có khung bảng; không có / lỗi: (None, None) - đọc như bảng không kẻ."""
+    try:
+        from PySide6.QtGui import QImage
+        from .luoi_bang import nhan_khung
+        im = QImage(str(anh))
+        if im.isNull():
+            return None, None
+        sach, luoi = nhan_khung(im)
+        if luoi is None:
+            return None, None
+        ra = (td or anh.parent) / (anh.stem + '_khung.png')
+        return (ra, luoi) if sach.save(str(ra)) else (None, None)
+    except Exception:                                   # noqa: BLE001
+        return None, None
 
 
 def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = 'chu', psm: int = 6):
@@ -456,5 +557,6 @@ def doc_chu(file, bao_tien_do=None, cho=None) -> list:
         raise LoiOCR(san_sang())
     dong = []
     for chu in tung_trang(file, bao_tien_do, cho):
-        dong += ['\t'.join(sua_dvt(o) for o in sua_so(x.strip()).split('\t')) for x in chu.splitlines() if x.strip()]
+        # strip chỉ dấu cách: ô trống đầu dòng bảng (Tab đầu) phải giữ, không thì lệch cột
+        dong += ['\t'.join(sua_dvt(o.strip()) for o in sua_so(x.strip(' \r')).split('\t')) for x in chu.splitlines() if x.strip()]
     return dong

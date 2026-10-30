@@ -2653,6 +2653,26 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     `ap_dung`: `TRANG_THAI_GHI` (mới / cập nhật / đổi quy cách / bỏ), UPDATE ten + ghi_chu theo mã, DELETE dòng 'bỏ' đã chọn; kết quả thêm
     so_quy_cach / so_bo. Bảng hộp `COT` 10 cột (Ghi chú quy cách, Tên hiện hành), màu xanh dương / đỏ. Dự án đã lập không đổi (ct_khoan giữ
     tên / giá; dm.lay mã không còn -> None, các nơi dùng đã xử lý).
+- 1.0.37 (người dùng 30/10/2026; test `tests/test_mat_do_nhieu_cay.py`, `test_scan_khung_bang.py`, `test_yeu_cau_3010.py`):
+  - MẬT ĐỘ NHIỀU LOẠI CÂY: `cay_trong.DongMatDo` + `phan_bo_mat_do(ds, dt)` (Fraction, không sai số): cây ĐƠN GIÁ cao tính trước (cùng giá
+    theo thứ tự dòng), trong mật độ = floor(DT còn lại x mật độ / 10.000), mỗi cây chiếm 10.000 / mật độ m², DT dư tính tiếp cây giá thấp
+    hơn; dòng chưa có mật độ không chiếm DT; một loài thì = `tach_mat_do` (tối thiểu 1 cây). `man_hinh_cay.nhom_mat_do(bo)` (mục 3 ĐVT
+    cây / bụi / khóm / gốc, số nguyên; dòng "Ngoài mật độ (" ngay dưới dòng cùng mã / tên / giá gộp lại -> tính lại không cộng dồn; dòng
+    cả dòng vượt lấy lại tỷ lệ gốc từ "tỷ lệ trong mật độ x%" trong quy cách), `ap_mat_do` (từ dưới lên: dòng chính = trong mật độ với
+    tỷ lệ gốc, phần vượt = dòng `nhan_ban` ngay dưới, tỷ lệ TL_NGOAI_MAT_DO, ghi chú `GHI_CHU_VUOT`; quy cách cũ giữ sau dấu "; "),
+    `HopMatDoNhieuCay` (bảng theo thứ tự ưu tiên, sửa được cột Mật độ). `CuaSoLapPA.tinh_mat_do()` (nút / chuột phải) mở hộp nhiều cây;
+    `tinh_mat_do(i)` vẫn là HopMatDo một dòng (test cũ). `canh_bao_mat_do` và `kiem_loi` (cảnh báo gộp theo loài) dùng cùng phân bổ.
+    CHƯA làm: quy tắc cây trồng xen "không vượt 0,5 lần giá trị cây trồng chính" (ảnh mẫu của người dùng có).
+  - Tên cây lâu năm (`pabt/chuan_ten_cay.py`: `chuan_ten` bỏ chú thích "(Năm thứ…)" sau năm thu hoạch, khoảng "thứ 1 - 5", `SUA_CHINH_TA`
+    tên loài đối chiếu ảnh VBHN, `SUA_TEN_DAY_DU`, `MUC_THIEU` + `them_muc_thieu`) qua `ten_cay_lam_nghiep.ap_ten_khac` (bộ đóng gói đã áp
+    bằng `tao_bo_don_gia.py --chuan-hoa 2026.10.12`, bản máy, dự án khi mở). Năm tuổi theo cấu trúc: `hieu_tai_san.bang_tuoi` (năm kiến
+    thiết của loài = năm lớn nhất của các mục "Năm thứ N"; năm thu hoạch thứ k = kiến thiết + k), `tuoi_cua_muc`; danh mục điện thoại
+    dựng lại. Bộ đơn giá đóng gói có CT5511 (nho thân gỗ thu hoạch 6 - 10).
+  - `pabt/in_excel_chi_tiet.py` `xuat_chi_tiet_xlsx(con, ds, file, bc, du_thao, lan)`: một file, mỗi hộ một sheet, số liệu dùng chung
+    `in_word.du_lieu_chi_tiet`; HopIn `o_ct_excel` (nhớ QSettings in/ct_excel) -> `xuat_bo_ho_so(chi_tiet_excel=)` -> PA CHI TIET\PHUONG_AN_CHI_TIET.xlsx (không PDF / in).
+  - Scan: `pabt/luoi_bang.py` (dò vạch kẻ khung bảng trên ảnh trang bằng Qt, xoay thẳng ảnh nghiêng, ô gộp ngang / dọc, `xep_vao_o`) dùng ở
+    `ocr` (xóa nét kẻ trước khi đọc, `_doc_lai_o_gop` đọc lại từng ô gộp / cột số); `nhap_don_gia.sua_ten_loai` sửa tên loài OCR sai theo
+    tên đã biết, khớp theo đơn giá khi tên đọc sai.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

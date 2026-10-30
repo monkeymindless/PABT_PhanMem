@@ -73,9 +73,8 @@ class TestDocVaKhop(_Co):
         self.assertEqual((v1.trang_thai, v1.ten_thay), ('đổi quy cách', 'Cây vải thiều - Năm thứ 1'))
         self.assertTrue(v1.ghi_chu_thay.startswith('Mật độ 330 cây/ha'))
         h1 = next(m for m in ds if m.ma_khop == self.vai[3]['ma'])
-        cu = self.vai[3]['ten']
-        self.assertIn('(Năm thứ', cu)
-        self.assertEqual(h1.ten_thay, 'Cây vải thiều - Năm thu hoạch thứ 1 - 5 ' + cu[cu.index('(Năm thứ'):])
+        # 30/10/2026: văn bản không ghi chú thích "(Năm thứ…)" -> tên theo đúng văn bản (không giữ chú thích của tên cũ)
+        self.assertEqual(h1.ten_thay or self.vai[3]['ten'], 'Cây vải thiều - Năm thu hoạch thứ 1 - 5')
         m1 = next(m for m in ds if m.ma_khop == self.man[0]['ma'])
         self.assertEqual(m1.ten_thay, 'Cây mận (roi) - Năm thứ 1')
         self.assertNotIn('roi;', m1.ghi_chu_thay + ';')                            # ghi chú lỗi "roi" của bộ cũ được bỏ
@@ -108,7 +107,7 @@ class TestDocVaKhop(_Co):
                          van_ban_cu=vb_cu)
         self.assertEqual(tt['so_moi'], 0)
         self.assertEqual(tt['so_bo'], len(bo) - 1)
-        self.assertGreaterEqual(tt['so_quy_cach'], 7)
+        self.assertGreaterEqual(tt['so_quy_cach'], 6)        # 1.0.37: bộ đóng gói đã chuẩn tên theo văn bản (một mục khỏi đổi)
         c = sqlite3.connect(don_gia.file_dang_dung())
         try:
             ten, gc, gia = c.execute('SELECT ten, ghi_chu, don_gia FROM dm_taisan WHERE ma = ?', (self.vai[0]['ma'],)).fetchone()

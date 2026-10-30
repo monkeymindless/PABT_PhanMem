@@ -12,6 +12,7 @@ import re
 import sqlite3
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_FLOOR
+from fractions import Fraction
 
 from . import csdl
 from .lap_pa import bo_dau
@@ -326,6 +327,53 @@ def tach_mat_do(so_cay, dien_tich_m2, mat_do_ha) -> tuple:
         return so, 0
     trong = min(so, toi_da)
     return trong, so - trong
+
+
+@dataclass
+class DongMatDo:
+    """Một dòng cây trồng đưa vào phân bổ diện tích theo mật độ (phan_bo_mat_do). mat_do None = chưa có mật độ (không tính)."""
+    ten: str
+    so_cay: int
+    mat_do: Decimal | None
+    don_gia: Decimal = KHONG
+    thu_tu: int = 0                 # kết quả: thứ tự ưu tiên (1 = tính trước), 0 = không tính
+    trong: int = 0                  # số cây trong mật độ
+    ngoai: int = 0                  # số cây vượt mật độ
+    dt_dung: Decimal = KHONG        # diện tích (m²) phần trong mật độ chiếm
+    dt_con: Decimal = KHONG         # diện tích còn lại sau dòng này
+
+    @property
+    def m2_moi_cay(self) -> Decimal:
+        return Decimal(10000) / D(self.mat_do) if self.mat_do else KHONG
+
+
+def _thap_phan(x: Fraction) -> Decimal:
+    return Decimal(x.numerator) / Decimal(x.denominator)
+
+
+def phan_bo_mat_do(ds: list, dien_tich_m2) -> Decimal:
+    """Nhiều loại cây trồng trên cùng diện tích trồng (người dùng 30/10/2026): cây ĐƠN GIÁ CAO tính trước làm cây trồng chính - trong
+    mật độ được tối đa (diện tích còn lại × mật độ / 10.000) cây, mỗi cây chiếm 10.000 / mật độ m²; diện tích còn dư tính tiếp cho cây
+    đơn giá cao thứ hai… tới khi hết diện tích; phần không còn chỗ là vượt mật độ. Cùng đơn giá: theo thứ tự dòng. Dòng chưa có mật độ
+    không chiếm diện tích (giữ nguyên số cây). Ghi kết quả vào từng DongMatDo, trả diện tích còn lại. Tính bằng phân số (không sai số
+    làm tròn); chỉ một loại cây thì giống tach_mat_do (diện tích có mà chưa đủ một cây vẫn được 1 cây)."""
+    tong = Fraction(D(dien_tich_m2)) if D(dien_tich_m2) > 0 else Fraction(0)
+    con = tong
+    co = sorted((x for x in ds if x.mat_do and D(x.mat_do) > 0), key=lambda x: -D(x.don_gia))   # sorted giữ thứ tự khi bằng giá
+    for x in ds:
+        x.thu_tu, x.trong, x.ngoai, x.dt_dung, x.dt_con = 0, int(x.so_cay), 0, KHONG, KHONG
+    for k, x in enumerate(co, start=1):
+        md = Fraction(D(x.mat_do))
+        vua = math.floor(con * md / 10000)
+        if vua == 0 and con == tong and tong > 0:       # như so_cay_toi_da: có diện tích thì tối thiểu 1 cây
+            vua = 1
+        x.thu_tu = k
+        x.trong = min(int(x.so_cay), vua)
+        x.ngoai = int(x.so_cay) - x.trong
+        dung = min(Fraction(x.trong * 10000) / md, con)
+        con -= dung
+        x.dt_dung, x.dt_con = _thap_phan(dung), _thap_phan(con)
+    return _thap_phan(con)
 
 
 # ---------------------------------------------------------------- tài sản trong / ngoài ranh thu hồi

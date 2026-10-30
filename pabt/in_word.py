@@ -428,10 +428,9 @@ def dong_dieu_chinh(con, ma_ho: int, bc, lan_dc, dong_moi: list, kq_moi, da: dic
     return out, _la_ma(len(muc_ts) + 1)
 
 
-def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
-    """Các dòng bảng mục III (w:tr) từ danh sách dòng của du_lieu_in.dong_chi_tiet (H / I / R / T) + G / S của phương án điều chỉnh."""
-    hang = []
-    # ghi chú mục 1 trùng nhau ở các dòng đất liền nhau: gộp dọc (như in_an.gop_ghi_chu_dat)
+def nhom_ghi_chu_dat(dong: list) -> dict:
+    """{chỉ số dòng: 'restart' | 'continue'} - ghi chú mục 1 trùng nhau ở các dòng đất liền nhau gộp dọc thành một ô (bản Word và bản
+    Excel nhiều sheet)."""
     gop_gc = {}
     i = 1 if dong and dong[0][0] == 'H' else 0
     nhom = []
@@ -449,6 +448,13 @@ def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
         if chu:
             nhom.append(i)
         i += 1
+    return gop_gc
+
+
+def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
+    """Các dòng bảng mục III (w:tr) từ danh sách dòng của du_lieu_in.dong_chi_tiet (H / I / R / T) + G / S của phương án điều chỉnh."""
+    hang = []
+    gop_gc = nhom_ghi_chu_dat(dong)
     muc_sl = muc_sl_dau
     for i, x in enumerate(dong):
         loai, gt = x[0], x[1]
@@ -533,8 +539,13 @@ def _pa_lan_1_nho(con, ma_ho: int):
     return csdl.nho(con, 'in.tat_ca_pa', lambda: nghiep_vu.doc_tat_ca_phuong_an(con)).get(ma_ho)
 
 
-def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None) -> str:
-    """XML thân văn bản (w:body không sectPr) phương án chi tiết một hộ."""
+def du_lieu_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None):
+    """Số liệu, chữ của phương án chi tiết một hộ - DÙNG CHUNG bản Word (noi_dung_chi_tiet) và bản Excel nhiều sheet (in_excel_chi_tiet;
+    người dùng 30/10/2026). Trả SimpleNamespace: da, ttho, dong (du_lieu_in.dong_chi_tiet / dong_dieu_chinh), kieu, dieu_chinh, x_lan,
+    nhan_tdc, so, ngay (chữ "địa danh, ngày …"), cap_tren, ten_cq, ten_van_ban, ten_da, dong_du_an, to_chuc, hang_i [(nhãn, giá trị)],
+    tieu_de_cot."""
+    from types import SimpleNamespace
+
     from . import nghiep_vu
     from .ho_so import la_to_chuc
     da = du_lieu_in._thong_tin_du_an(con)
@@ -562,14 +573,36 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
         dong, nhan_tdc = dong_dieu_chinh(con, ma_ho, bc, x_lan, dong, kq_lan, da)
     if du_thao:
         ttho['so_pa'], ttho['ngay_pa'] = '', ''
-    w = rong_trang()
-    # ---- quốc hiệu, tiêu ngữ, cơ quan, số, ngày (bảng ẩn viền 2 cột)
     dia_danh = da['dia_danh_ngay']                     # nơi đơn vị công tác (du_lieu_in.dia_danh_ngay) - KHÔNG phải xã có đất
     so = f'Số: {ttho["so_pa"]}/{da["ky_hieu_so"]}' if ttho['so_pa'] else f'Số:          /{da["ky_hieu_so"]}'
+    cap_tren, ten_cq = dong_co_quan(da)
+    ten = ('PHƯƠNG ÁN ĐIỀU CHỈNH' if dieu_chinh else 'PHƯƠNG ÁN CHI TIẾT' +
+           (f' BỔ SUNG (LẦN {lan})' if lan is not None and lan > 1 else ''))
+    ten_da = re.sub(r'^\s*dự\s+án\s+', '', ' '.join(str(da['du_an'] or '').split()), flags=re.I)
+    to_chuc = la_to_chuc(ttho['ho_ten'])
+    hang_i = [(du_lieu_in.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten'])]
+    if not to_chuc and ttho['cccd']:
+        hang_i.append(('Số CCCD:', ttho['cccd']))
+    hang_i.append((du_lieu_in.NHAN_DIA_CHI_TO_CHUC if to_chuc else 'Địa chỉ thường trú:', ttho['dia_chi']))
+    if not to_chuc and ttho['dien_thoai']:
+        hang_i.append(('Số điện thoại:', ttho['dien_thoai']))
+    return SimpleNamespace(da=da, ttho=ttho, dong=dong, kieu=kieu, dieu_chinh=dieu_chinh, x_lan=x_lan, nhan_tdc=nhan_tdc, so=so,
+                           ngay=f'{dia_danh}, {_ngay_chu(ttho["ngay_pa"], da["nam"])}', cap_tren=cap_tren, ten_cq=ten_cq,
+                           ten_van_ban=ten, ten_da=ten_da, dong_du_an=f'{du_lieu_in.nhan_du_an(ten_da)} {ten_da}', to_chuc=to_chuc,
+                           hang_i=hang_i, tieu_de_cot=tuple(TIEU_DE_COT_BS if kieu != lan_pa.CHINH else TIEU_DE_COT))
+
+
+def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None) -> str:
+    """XML thân văn bản (w:body không sectPr) phương án chi tiết một hộ."""
+    from . import nghiep_vu
+    x = du_lieu_chi_tiet(con, ma_ho, bc, du_thao, pa, lan)
+    da, ttho, dong, dieu_chinh, x_lan, nhan_tdc = x.da, x.ttho, x.dong, x.dieu_chinh, x.x_lan, x.nhan_tdc
+    so, cap_tren, ten_cq, to_chuc, hang_i = x.so, x.cap_tren, x.ten_cq, x.to_chuc, x.hang_i
+    w = rong_trang()
+    # ---- quốc hiệu, tiêu ngữ, cơ quan, số, ngày (bảng ẩn viền 2 cột)
     # cơ quan chủ quản 13 in hoa đứng (2 dòng); dòng 3 = cơ quan ban hành / chi nhánh 13 in hoa đậm GẠCH CHÂN đúng độ dài chữ
     # (PDF mẫu PA_01: "CHI NHÁNH X"; không còn dòng "____"); số, "(DỰ THẢO)" 13
     # đứng; quốc hiệu 13 in hoa đậm; tiêu ngữ 14 đậm, gạch dưới đúng độ dài chữ; địa danh / ngày 14 nghiêng (22/10/2026)
-    cap_tren, ten_cq = dong_co_quan(da)
     r1, r2 = rong_cot_dau()
     vua_trai = (r1 - 2 * 57) / 20                        # pt chữ trong cột cơ quan (trừ lề ô)
     do = _ham_do()
@@ -583,29 +616,19 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     # "Số: …/…" và "địa danh, ngày … tháng … năm …" là HAI Ô CÙNG MỘT HÀNG của bảng đầu: cùng cỡ chữ, cùng giãn dòng và khoảng
     # cách trước, canh trên -> hai dòng luôn ngang nhau (người dùng 22/10/2026: không được chênh cao thấp)
     so_o = _p(_r(so, co=CO_SO_NGAY), can='center', truoc=120) + (_p(_r('(DỰ THẢO)', dam=True, co=CO_DU_THAO), can='center') if du_thao else '')
-    ngay_o = _p(_r(f'{dia_danh}, {_ngay_chu(ttho["ngay_pa"], da["nam"])}', nghieng=True, co=CO_SO_NGAY), can='center', truoc=120)
+    ngay_o = _p(_r(x.ngay, nghieng=True, co=CO_SO_NGAY), can='center', truoc=120)
     t = [_bang([_hang([_o(trai, r1, doc='top', vien=False), _o(phai, r2, doc='top', vien=False)]),
                 _hang([_o(so_o, r1, doc='top', vien=False), _o(ngay_o, r2, doc='top', vien=False)])], [r1, r2], vien=False,
                lui=twip(LAN_LE_DAU_MM[0]))]
     # ---- tên văn bản
-    ten = ('PHƯƠNG ÁN ĐIỀU CHỈNH' if dieu_chinh else 'PHƯƠNG ÁN CHI TIẾT' +
-           (f' BỔ SUNG (LẦN {lan})' if lan is not None and lan > 1 else ''))
-    t += [_p(_r(ten, dam=True, co=CO_TEN_LOAI), can='center', truoc=240, dong=240)]
+    t += [_p(_r(x.ten_van_ban, dam=True, co=CO_TEN_LOAI), can='center', truoc=240, dong=240)]
     t += [_p(_r(x, dam=True, co=CO_TRICH_YEU), can='center', dong=240) for x in TRICH_YEU_DONG]
-    ten_da = re.sub(r'^\s*dự\s+án\s+', '', ' '.join(str(da['du_an'] or '').split()), flags=re.I)
     # 23/10/2026 (người dùng): GIỮ đường kẻ ngắn căn giữa dưới tên dự án, CÁCH chữ một khe (đoạn rỗng cao 6 pt có viền dưới - không sát
     # chữ để khỏi mất dấu chấm / dấu dưới); độ dài theo mẫu PDF (~48 mm)
-    t += [_p(_r(f'{du_lieu_in.nhan_du_an(ten_da)} {ten_da}', dam=True, co=CO_DU_AN), can='center', sau=0, dong=240), _duong_ke_du_an()]
+    t += [_p(_r(x.dong_du_an, dam=True, co=CO_DU_AN), can='center', sau=0, dong=240), _duong_ke_du_an()]
     # ---- I. chủ sử dụng (bảng ẩn viền: nhãn đậm | nội dung)
-    to_chuc = la_to_chuc(ttho['ho_ten'])
     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (du_lieu_in.tieu_de_muc_i - cùng bản Excel); tổ chức chỉ "Tổ chức:" / "Địa chỉ:"
     t.append(_p(_r(du_lieu_in.tieu_de_muc_i(to_chuc), dam=True, co=CO_DE_MUC), truoc=120, sau=60, giu_sau=True))
-    hang_i = [(du_lieu_in.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten'])]
-    if not to_chuc and ttho['cccd']:
-        hang_i.append(('Số CCCD:', ttho['cccd']))
-    hang_i.append((du_lieu_in.NHAN_DIA_CHI_TO_CHUC if to_chuc else 'Địa chỉ thường trú:', ttho['dia_chi']))
-    if not to_chuc and ttho['dien_thoai']:
-        hang_i.append(('Số điện thoại:', ttho['dien_thoai']))
     # 22/10/2026 (mẫu PA_01 / PA_003 người dùng gửi): nhãn chữ thường, tên chủ sử dụng (hàng đầu) in đậm, nội dung khác thường
     c1, c0 = w * 28 // 100, w * 5 // 100
     t.append(_bang([_hang([_o(_p(), c0, vien=False, doc='top'), _o(_p(_r(n, co=CO_THONG_TIN), can='left'), c1, vien=False, doc='top'),
@@ -625,7 +648,7 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
                     sau=SAU_DOAN, dau_dong=THUT_DAU))
     t.append(_p(_r('III. Bảng tính toán bồi thường, hỗ trợ', dam=True, co=CO_DE_MUC), truoc=120, sau=60))
     rong = rong_cot(_chu_cac_cot(dong, nghiep_vu.so_muc(2)), do)
-    tieu_de = tuple(TIEU_DE_COT_BS if kieu != lan_pa.CHINH else TIEU_DE_COT)
+    tieu_de = x.tieu_de_cot
     hang = [_hang([_o(_p(_r(x, dam=True, co=CO_BANG), can='center'), rong[i]) for i, x in enumerate(tieu_de)], tieu_de=True)]
     hang += _hang_tu_dong(dong, rong, nghiep_vu.so_muc(2))
     # IV. tái định cư (dòng cuối bảng)

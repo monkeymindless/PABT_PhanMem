@@ -131,7 +131,7 @@ class TestKhopBoDonGia(unittest.TestCase):
 
     def test_cay_va_tu_hiem(self):
         k = h.bo_sung(self.bo, self.dm, dict(ten='Xoài', dvt='cây', tuoi='14'), self.bo.phan_loai('Xoài', 'cây'))
-        self.assertIn('Năm thứ 14', k.khop.ten)
+        self.assertEqual(h.tuoi_cua_muc(k.khop.ten, [m.ten for m in self.dm.muc[3]]), (14, 18))       # 30/10/2026: năm tuổi theo năm kiến thiết
         k = self.k('Cọ dầu: 450 cây')
         self.assertFalse(k.khop is not None and 'đậu' in k.khop.ten.lower())           # có dấu thì so có dấu
         self.assertIn('Terrazzo', self.k('Sân gạch Terrazzo kt (3,4m x 18m) + (4,2 x 5m)').khop.ten)
@@ -187,7 +187,7 @@ class TestNhapPhieu(unittest.TestCase):
             'moi_9': [dict(muc=3, ten='Xoài trồng năm 2012: 6 cây')]}))
         k1 = pk.nhap_ket_qua_kiem_dem(self.con, f1)
         self.assertEqual(k1['khop'], [('moi_9', 3, 'ho_ten')])                                   # "pham van thu 1" giống >= 0,88
-        self.assertIn('Năm thứ 14', self.dong(3)[0][0])                                          # năm kiểm đếm theo "luc" của phiếu
+        self.assertEqual(self.dong(3)[0][0], 'Cây xoài - Năm thu hoạch 11 - 15')                                          # năm kiểm đếm theo "luc" của phiếu
         k2 = pk.nhap_ket_qua_kiem_dem(self.con, f, tao_ho_moi=True, chi={'moi_3'})
         self.assertEqual(k2['tao_moi'], 1)
         ma = k2['khop'][0][1]

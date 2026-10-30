@@ -7,6 +7,20 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.37', '30/10/2026', (
+        'Tính mật độ cây trồng: tính MỌI loại cây của hộ trên cùng diện tích trồng - cây đơn giá cao hơn tính trước làm cây trồng chính '
+        '(trong mật độ tối đa theo diện tích còn lại), diện tích còn dư tính tiếp cho cây đơn giá cao thứ hai… tới khi hết diện tích; '
+        'phần vượt mật độ tách thành dòng riêng ngay dưới dòng cây (tỷ lệ vượt mật độ, mặc định 0% - không bồi thường). Tính lại '
+        'nhiều lần không cộng dồn; Kiểm tra lỗi và lời nhắc khi nhập số cây cũng theo cách tính này.',
+        'Tên cây lâu năm theo đúng văn bản: bỏ chú thích "(Năm thứ 3, 4, 5)" (văn bản chỉ ghi Năm thứ 1, 2, 3 và Năm thu hoạch thứ…), '
+        'năm tuổi tự tính theo số năm kiến thiết của từng loài; sửa các tên loài sai chính tả / lỗi phông (Bời lời giấy, Muồng truổng, '
+        'Trám đỏ, Lekina…), bổ sung mục văn bản có mà bộ đơn giá thiếu (Cây nho thân gỗ năm thu hoạch 6 - 10).',
+        'Xuất hồ sơ & Bản in: thêm "Phương án chi tiết - Excel" - các hộ đã chọn trong MỘT file Excel, mỗi hộ một sheet, cùng số liệu '
+        'bản Word (số tiền, số lượng là số - cộng, lọc được).',
+        'Đọc bản scan (văn bản đơn giá, quyết định): dò đường kẻ khung bảng trên ảnh (cả ảnh hơi nghiêng), xóa nét kẻ trước khi đọc, '
+        'đặt chữ vào đúng ô (ô gộp nhiều hàng / nhiều cột), đọc lại riêng từng cột số - phân tách nội dung rõ ràng hơn; tên loài cây '
+        'đọc sai dấu được sửa theo tên đã biết.',
+    )),
     ('1.0.36', '30/10/2026', (
         'Cập nhật đơn giá: ô "Cách cập nhật" có "Thay thế toàn bộ văn bản cũ bằng văn bản này" - danh mục nhóm (cây trồng / nhà, công '
         'trình / vật nuôi / hỗ trợ) theo đúng văn bản mới: mục cũ đổi tên, mật độ, ghi chú theo cách ghi của văn bản (mã giữ nguyên), '
