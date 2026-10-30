@@ -600,6 +600,7 @@ class BangMuc(QWidget):
                 for w in ws:
                     if isinstance(w, QLabel) and w is not man.lb_tl:
                         w.setProperty('vai', 'nhan')
+                        w.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)   # nhãn sát ô, không giãn
                     hk.addWidget(w)
                     w.setMaximumHeight(26)
                 return k
@@ -617,8 +618,14 @@ class BangMuc(QWidget):
                                    'kiện, đủ điều kiện theo khoản 4 / khoản 5 Điều 111 Luật Đất đai năm 2024, hoặc không có.')
             self.cb_tdc.currentTextChanged.connect(lambda t: man.doi_tai_dinh_cu(t))
             self.cb_tdc.setProperty('nhap', '1')
-            h.addWidget(khoi(nhan, self.cb_tdc))
-            self.cb_tdc.setMinimumWidth(200)
+            # 30/10/2026 (người dùng): ô Tái định cư giãn hết phần còn lại của hàng (chữ dài - khoản 4 / 5 Điều 111), nhãn sát ô
+            self.cb_tdc.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+            self.cb_tdc.setMinimumContentsLength(30)
+            self.cb_tdc.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            k_tdc = khoi(nhan, self.cb_tdc)
+            h.addWidget(k_tdc)
+            h.gian(k_tdc)
+            self.cb_tdc.setMinimumWidth(280)
             lo.addLayout(h)
         # 0.9.95: bỏ khung viền bao hàng nhập (lề 0); mục 1: nút thao tác dòng + "Cộng mục 1" lên CÙNG hàng chọn thửa
         khung_nhap = QWidget()
@@ -1104,7 +1111,7 @@ QSS_NUT_XEM_TRUOC = ('QPushButton#btn_toggle_preview { color: #1E3A5F; backgroun
 from .giao_dien import QSS_THE_GACH_CHAN as QSS_THE_LAP_PA  # noqa: E402,F401  (tên cũ)
 # thanh trên cùng (chọn hộ + lệnh): nền slate nhạt, vạch dưới; ô chọn hộ nền trắng chữ đậm; nút ◀ ▶ nền trắng viền slate
 QSS_THANH_TREN = ('QWidget#thanh_tren_lap_pa { background: #F8FAFC; border: 0; border-bottom: 1px solid #E2E8F0; }'
-                  'QComboBox#o_chon_ho { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; '
+                  'QComboBox#o_chon_ho { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 5px; padding: 0 8px; min-height: 26px; '
                   'font-weight: 700; color: #0F172A; }'
                   'QComboBox#o_chon_ho:hover { border-color: #94A3B8; }'
                   'QComboBox#o_chon_ho:focus { border: 2px solid #2563EB; padding: 0 7px; }'
@@ -3109,6 +3116,11 @@ class HopIn(QDialog):
                                     'dự thảo / chính thức đang chọn), gộp thành MỘT bản PDF ở khung bên phải; chọn hộ ở ô "Nhảy tới hộ" trên '
                                     'thanh xem trước, in cả bản bằng nút "In…".')
         self.b_xem_nhieu.clicked.connect(lambda: self.xem_truoc_nhieu_ho())
+        # 30/10/2026 (người dùng): xem trước bản Excel "mỗi hộ một sheet" trước khi xuất file
+        self.b_xem_excel = QPushButton('Xem trước bản Excel các hộ')
+        self.b_xem_excel.setToolTip(f'Lập bản Excel phương án chi tiết (mỗi hộ một sheet) của các hộ đang đánh dấu (tối đa {XEM_NHIEU_TOI_DA} '
+                                    'hộ một lần) và hiện ở khung xem trước bên phải; chọn hộ ở ô "Nhảy tới hộ".')
+        self.b_xem_excel.clicked.connect(lambda: self.xem_truoc_excel_chi_tiet())
         self.b_sua_tt = QPushButton('Sửa mẫu…')           # 24/10/2026: cạnh ô Tờ trình (trước nằm lẻ loi ở đáy hộp)
         self.b_sua_tt.setToolTip('Mở mẫu tờ trình bằng Word / Excel để sửa; thêm mẫu từ file Word / Excel / PDF ở cửa sổ "Trình phê duyệt"')
         self.b_sua_tt.clicked.connect(lambda: self.sua_mau_van_ban('to_trinh'))
@@ -3122,6 +3134,8 @@ class HopIn(QDialog):
             luoi.addWidget(o, r, 0)
             if o is self.o_ct:
                 luoi.addWidget(self.b_xem_nhieu, r, 1)
+            if o is self.o_ct_excel:
+                luoi.addWidget(self.b_xem_excel, r, 1)
             if o is self.o_bth:
                 luoi.addWidget(self.b_xem_bth, r, 1)
             if o is self.o_tt:
@@ -3330,6 +3344,32 @@ class HopIn(QDialog):
                                                 du_thao=du_thao, lan=lan), ten_ho.get(m, str(m))) for k, m in enumerate(ds, 1)]
         gioi_han = f' (hiện {len(ds)}/{tong} hộ đầu)' if tong > len(ds) else ''
         self.w_preview.yeu_cau(khoa, tao, f'{len(ds)} hộ gộp ({"dự thảo" if du_thao else "chính thức"}){gioi_han}', ngay)
+        return khoa
+
+    def xem_truoc_excel_chi_tiet(self, ngay: bool = False):
+        """Xem trước bản Excel phương án chi tiết (in_excel_chi_tiet - mỗi hộ một sheet) của các hộ đang đánh dấu, gộp một bản PDF có ô
+        nhảy tới hộ (như xem_truoc_nhieu_ho). Tối đa XEM_NHIEU_TOI_DA hộ đầu. Trả khóa đã yêu cầu (None: chưa đánh dấu hộ nào)."""
+        from . import in_excel_chi_tiet
+        from .nghiep_vu import BoiCanh
+        ds = list(self.ds_ho())
+        if not ds:
+            if not getattr(self, 'im_lang', False):
+                QMessageBox.information(self, TEN_UD, 'Đánh dấu ít nhất một hộ (cột "Chọn") để xem trước bản Excel.')
+            return None
+        tong = len(ds)
+        ds = ds[:XEM_NHIEU_TOI_DA]
+        du_thao, lan = self.che_do() == 'du_thao', self.lan_in()
+        khoa = ('excel_ct', tuple(ds), du_thao, lan)
+        ten_ho = {h['ma_ho']: f'{h["thu_tu"]}. {h["ho_ten"]}' for h in self.ho}
+        self._ma_xem = None
+
+        def tao(thu_muc):
+            bc = BoiCanh.tu(self.con)
+            return [(in_excel_chi_tiet.xuat_chi_tiet_xlsx(self.con, [m], Path(thu_muc) / f'X{k:03d}_{du_lieu_in.ten_file_ho(self.con, m)}.xlsx',
+                                                          bc, du_thao=du_thao, lan=lan), ten_ho.get(m, str(m)))
+                    for k, m in enumerate(ds, 1)]
+        gioi_han = f' (hiện {len(ds)}/{tong} hộ đầu)' if tong > len(ds) else ''
+        self.w_preview.yeu_cau(khoa, tao, f'Excel {len(ds)} hộ ({"dự thảo" if du_thao else "chính thức"}){gioi_han}', ngay)
         return khoa
 
     def done(self, r):

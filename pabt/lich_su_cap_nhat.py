@@ -7,6 +7,19 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.38', '30/10/2026', (
+        'Ô chọn xổ xuống: danh sách hiện ngay dưới ô, đủ các mục (tới 20 mục, nhiều hơn thì có thanh cuộn) và rộng đủ chữ dài nhất - '
+        'không còn bị khuất mục / cắt chữ; màu mục đang chọn và mục dưới con trỏ chuột chuyển sang xanh xám nhạt, dịu mắt.',
+        'Bản in phương án chi tiết và bảng tổng hợp: tên đơn vị không còn in lặp hai lần khi ô "Đơn vị cấp trên" hoặc ô "Tên đơn vị trên '
+        'tiêu đề bản in (dòng 2)" ghi cả tên đơn vị lập phương án.',
+        'Bảng tổng hợp: bước cuối tự kẻ khung cho mọi ô thiếu nét - bảng luôn đủ đường kẻ ô trên mọi máy.',
+        'Xuất hồ sơ & Bản in: nút "Xem trước bản Excel các hộ" - xem trước bản Excel phương án chi tiết (mỗi hộ một sheet) trước khi xuất.',
+        'Niêm yết: bảng Hộ vướng đổi trạng thái một chạm như cột Ý kiến - bấm ô "Nhóm vướng" (hoặc phím Space): Chưa đánh dấu → Đủ điều '
+        'kiện → V1 … V5.',
+        'Thẻ Hỗ trợ: ô Tái định cư giãn hết phần còn lại của hàng (đọc được chữ dài), nhãn Nhân khẩu / DT đất NN sát ô, không còn khoảng trống.',
+        'Niêm yết - "Thêm hộ vào đợt": bảng mọi hộ chưa có trong đợt với Lập phương án, Tổng tiền, Điều kiện, Ý kiến gần nhất, Đợt hiện '
+        'tại; lọc theo từng thuộc tính + ô tìm, bấm tiêu đề cột để sắp xếp; hộ chưa đủ điều kiện / đang vướng vẫn thêm được khi đánh dấu.',
+    )),
     ('1.0.37', '30/10/2026', (
         'Tính mật độ cây trồng: tính MỌI loại cây của hộ trên cùng diện tích trồng - cây đơn giá cao hơn tính trước làm cây trồng chính '
         '(trong mật độ tối đa theo diện tích còn lại), diện tích còn dư tính tiếp cho cây đơn giá cao thứ hai… tới khi hết diện tích; '

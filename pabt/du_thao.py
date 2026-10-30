@@ -234,8 +234,46 @@ def ds_de_them(con, dot_id: int, loc: str, dot_nguon: int | None = None) -> list
     return kq
 
 
-def them_thu_cong(con, dot_id: int, ds_ma_ho: list) -> tuple:
-    """Thêm đúng các hộ đã chọn vào đợt. Hộ đang vướng hoặc đã có trong đợt thì bỏ qua. Trả (thêm, bỏ qua)."""
+TEN_LAP = {'da_lap': 'Đã lập PA', 'tu_lap': 'Tự lập, chưa soát', 'chua': 'Chưa lập PA'}
+
+
+def ds_ho_cho_dot(con, dot_id: int) -> list:
+    """Mọi hộ CHƯA có trong đợt dot_id, kèm các thuộc tính để lọc / sắp xếp ở hộp "Thêm hộ vào đợt" (người dùng 30/10/2026: lọc theo đã
+    lập phương án, đủ điều kiện, vẫn thêm được hộ chưa đủ điều kiện; sắp xếp theo nhiều thuộc tính). Mỗi hộ: ma_ho, thu_tu, ho_ten, dia_chi,
+    thua, lap ('da_lap' / 'tu_lap' / 'chua'), ten_lap, tien (tổng phương án, Decimal | None), dieu_kien ('du' / 'chua' / V1-V5),
+    ten_dieu_kien, y_kien (ý kiến ở đợt gần nhất hộ đã vào; '' = chưa vào đợt nào), ten_y_kien, dot_hien_id, dot_hien (tên đợt hộ đang thuộc)."""
+    from .lap_pa import phan_loai_lap
+    da_co = {r[0] for r in con.execute('SELECT ma_ho FROM y_kien_du_thao WHERE dot_id = ?', (dot_id,))}
+    try:
+        from .nghiep_vu import ket_qua_ho
+        kq_ho = ket_qua_ho(con)
+    except Exception:                                   # noqa: BLE001 - không tính được phương án: vẫn liệt kê hộ
+        kq_ho = {}
+    lap = phan_loai_lap(con, {m: kq.co_phuong_an for m, (kq, _) in kq_ho.items()} if kq_ho else None)
+    ten_dot = {r[0]: r[1] for r in con.execute('SELECT id, ten FROM dot_du_thao')}
+    y_kien = {}
+    for r in con.execute('SELECT ma_ho, loai FROM y_kien_du_thao ORDER BY dot_id'):
+        y_kien[r[0]] = r[1] or 'chua'                   # đợt sau ghi đè: ý kiến ở đợt gần nhất
+    kq = []
+    for r in con.execute('''SELECT ma_ho, thu_tu, ho_ten, dia_chi, du_dieu_kien, ma_vuong, dot_du_thao_id FROM ho
+                            ORDER BY thu_tu, ma_ho'''):
+        if r['ma_ho'] in da_co:
+            continue
+        dk = trang_thai_vuong(r['du_dieu_kien'], r['ma_vuong'])
+        l_ = lap.get(r['ma_ho'], 'chua')
+        yk = y_kien.get(r['ma_ho'], '')
+        kq.append(dict(ma_ho=r['ma_ho'], thu_tu=r['thu_tu'], ho_ten=r['ho_ten'] or '', dia_chi=r['dia_chi'] or '',
+                       thua=_thua(con, r['ma_ho']), lap=l_, ten_lap=TEN_LAP.get(l_, ''),
+                       tien=kq_ho[r['ma_ho']][0].tong if r['ma_ho'] in kq_ho else None,
+                       dieu_kien=dk, ten_dieu_kien=ten_trang_thai_vuong(dk),
+                       y_kien=yk, ten_y_kien=TEN_LOAI.get(yk, '') if yk else 'Chưa vào đợt nào',
+                       dot_hien_id=r['dot_du_thao_id'], dot_hien=ten_dot.get(r['dot_du_thao_id'], '')))
+    return kq
+
+
+def them_thu_cong(con, dot_id: int, ds_ma_ho: list, ca_vuong: bool = False) -> tuple:
+    """Thêm đúng các hộ đã chọn vào đợt. Hộ đã có trong đợt thì bỏ qua; hộ đang vướng (V1-V5) bỏ qua trừ khi ca_vuong (người dùng
+    30/10/2026: hộ chưa đủ điều kiện vẫn thêm được nếu người lập chọn). Trả (thêm, bỏ qua)."""
     from . import csdl
     kiem_ds_ho_nhan_viec(con, ds_ma_ho)
     them, bo = 0, 0
@@ -243,7 +281,7 @@ def them_thu_cong(con, dot_id: int, ds_ma_ho: list) -> tuple:
     with csdl.giao_dich(con):
         for ma in ds_ma_ho:
             h = con.execute('SELECT ma_vuong FROM ho WHERE ma_ho = ?', (ma,)).fetchone()
-            if h is None or (h['ma_vuong'] or '').strip():
+            if h is None or ((h['ma_vuong'] or '').strip() and not ca_vuong):
                 bo += 1
                 continue
             if con.execute('SELECT 1 FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_id, ma)).fetchone():
@@ -253,7 +291,8 @@ def them_thu_cong(con, dot_id: int, ds_ma_ho: list) -> tuple:
                         (dot_id, ma, gio))
             con.execute('UPDATE ho SET dot_du_thao_id = ? WHERE ma_ho = ?', (dot_id, ma))
             them += 1
-        csdl.ghi_nhat_ky(con, 'Thêm hộ vào đợt dự thảo', f'Đợt {dot_id}: thêm {them} hộ, bỏ qua {bo}')
+        csdl.ghi_nhat_ky(con, 'Thêm hộ vào đợt dự thảo', f'Đợt {dot_id}: thêm {them} hộ, bỏ qua {bo}'
+                         + (' (cho thêm hộ chưa đủ điều kiện / đang vướng)' if ca_vuong else ''))
     return them, bo
 
 
@@ -370,16 +409,47 @@ def ds_ho_dot(con, dot_id: int) -> list:
     return kq
 
 
-def ds_vuong(con) -> list:
+TEN_CHUA_DANH_DAU = 'Chưa đánh dấu đủ điều kiện'
+TEN_DU_DIEU_KIEN = 'Đủ điều kiện'
+# một chạm ở cột "Nhóm vướng" (người dùng 30/10/2026 - như cột Ý kiến): Chưa đánh dấu -> Đủ điều kiện -> V1 … V5 -> Chưa đánh dấu
+VONG_VUONG = ('chua', 'du') + tuple(k for k, _ in NHOM_VUONG)
+
+
+def trang_thai_vuong(du_dieu_kien, ma_vuong) -> str:
+    """'chua' / 'du' / mã vướng V1-V5 của hộ."""
+    ma = (ma_vuong or '').strip().upper()
+    return ma if ma in TEN_VUONG else ('du' if du_dieu_kien else 'chua')
+
+
+def ten_trang_thai_vuong(tt: str) -> str:
+    return TEN_VUONG.get(tt) or (TEN_DU_DIEU_KIEN if tt == 'du' else TEN_CHUA_DANH_DAU)
+
+
+def ds_vuong(con, giu=()) -> list:
+    """Hộ vướng (V1-V5) / chưa đánh dấu đủ điều kiện. giu: mã hộ vẫn hiện dù đã đủ điều kiện (vừa đổi bằng một chạm - dòng không biến
+    mất khỏi bảng đang thao tác)."""
+    giu = set(giu or ())
     kq = []
     for r in con.execute('''SELECT ma_ho, thu_tu, ho_ten, ma_vuong, ghi_chu_phap_ly, du_dieu_kien
-                            FROM ho WHERE TRIM(ma_vuong) <> '' OR du_dieu_kien = 0
-                            ORDER BY thu_tu, ma_ho'''):
+                            FROM ho ORDER BY thu_tu, ma_ho'''):
+        if not ((r['ma_vuong'] or '').strip() or not r['du_dieu_kien'] or r['ma_ho'] in giu):
+            continue
         d = dict(r)
         d['thua'] = _thua(con, r['ma_ho'])
-        d['ten_vuong'] = TEN_VUONG.get(r['ma_vuong'], 'Chưa đánh dấu đủ điều kiện' if not r['du_dieu_kien'] else '')
+        d['ten_vuong'] = ten_trang_thai_vuong(trang_thai_vuong(r['du_dieu_kien'], r['ma_vuong']))
         kq.append(d)
     return kq
+
+
+def doi_vuong_nhanh(con, ma_ho: int) -> str:
+    """Một chạm: chuyển hộ sang trạng thái kế tiếp trong VONG_VUONG (giữ ghi chú pháp lý). Trả trạng thái mới."""
+    r = con.execute('SELECT du_dieu_kien, ma_vuong, ghi_chu_phap_ly FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
+    if r is None:
+        raise LoiNhap('Không tìm thấy hộ.')
+    tt = trang_thai_vuong(r[0], r[1])
+    moi = VONG_VUONG[(VONG_VUONG.index(tt) + 1) % len(VONG_VUONG)]
+    ghi_phap_ly(con, ma_ho, 1 if moi == 'du' else 0, moi if moi in TEN_VUONG else '', r[2] or '')
+    return moi
 
 
 def _tien_ho(con) -> dict:

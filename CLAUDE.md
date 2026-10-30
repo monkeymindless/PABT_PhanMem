@@ -18,6 +18,9 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 - Báo cáo cho người dùng KÈM phân tích: điểm nghẽn, lệnh lặp lại, cách gọi lệnh nhanh nhất / đường tắt, cách gọi gói (nạp module
   khi nào), tốc độ (thời gian mở tắt, chạy lệnh) - bảng so với bản trước; lỗi / đơ của nút bấm, ô nhập, mục chọn (đã sửa gì).
 - Toàn bộ test (Qt6; Qt5 nếu có `venv38_32`), `vermin -t=3.8-` cho mã pabt/.
+- TỰ LÀM TRỌN GÓI, KHÔNG HỎI LẠI (người dùng 30/10/2026): sửa lỗi / nâng cấp / tinh chỉnh theo yêu cầu cho tới xong, test đạt thì TỰ
+  commit, tăng phiên bản, dựng bộ cài (DUNG_BO_CAI chuỗi lệnh + gói .larcud), thử máy trắng (`thu_may_trang.ps1`), đồng bộ LARC Mobile
+  cùng số phiên bản (dựng --url, đẩy Pages) - không dừng hỏi "commit?", "dựng bộ cài?". Chỉ hỏi khi yêu cầu mơ hồ thật sự.
 
 ## Lệnh (chạy từ thư mục gốc, dùng `.venv`)
 - Cài môi trường: `CAI_DAT.bat` (tạo `.venv`, cài `requirements.txt`: openpyxl, PySide6, chạy test)
@@ -2677,6 +2680,27 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - Scan: `pabt/luoi_bang.py` (dò vạch kẻ khung bảng trên ảnh trang bằng Qt, xoay thẳng ảnh nghiêng, ô gộp ngang / dọc, `xep_vao_o`) dùng ở
     `ocr` (xóa nét kẻ trước khi đọc, `_doc_lai_o_gop` đọc lại từng ô gộp / cột số); `nhap_don_gia.sua_ten_loai` sửa tên loài OCR sai theo
     tên đã biết, khớp theo đơn giá khi tên đọc sai.
+- 1.0.38 (người dùng 30/10/2026, ảnh màn hình; test `tests/test_giao_dien_3010.py`):
+  - Ô chọn: QSS chung `QComboBox { combobox-popup: 0; }` (Fusion mặc định kiểu "menu đè lên ô": vài mục + mũi tên cuộn, chữ dài bị cắt);
+    `_BoToMau`: Polish QComboBox maxVisibleItems 10 -> `SO_MUC_XO` 20, Show của `QComboBoxPrivateContainer` -> `vua_danh_sach_xo` (rộng = chữ
+    dài nhất sizeHintForColumn + `LE_DANH_SACH_XO`, không quá màn hình, dời vào màn hình). Màu chọn `MAU_CHON_DIU` (#D6E4F5 / #0F2A47), rê
+    chuột `MAU_RE_DIU` - danh sách xổ, QListView / QListWidget, chọn chữ trong ô nhập, QPalette Highlight (tông Tối giữ #1E40AF).
+  - `in_word.dong_co_quan` -> `_bo_trung_cap_tren`: dòng cấp trên kết thúc bằng dòng gạch chân ("…CHI NHÁNH X") bỏ phần đó, dòng trùng / rỗng
+    bỏ (ô dòng 2 trống thì DON_VI_TIEU_DE = đơn vị lập -> trước in "TRUNG TÂM … CHI NHÁNH X" + "CHI NHÁNH X"). Dùng chung Word / bảng tổng hợp.
+  - `in_an.dam_bao_khung_bth(ws, n_cot)` cuối `lap_bang_tong_hop`: hàng "STT" tới "TỔNG CỘNG" cuối, ô thiếu cạnh (ô gộp: cạnh ngoài) kẻ nét
+    mảnh. Không tái hiện được lỗi "máy mới mất khung" (máy trắng, bản Qt5, PDF dự phòng đều đủ khung) - đây là lớp bảo đảm.
+  - HopIn `b_xem_excel` -> `xem_truoc_excel_chi_tiet` (mỗi hộ một file .xlsx tạm qua `in_excel_chi_tiet.xuat_chi_tiet_xlsx`, gộp PDF + ô
+    nhảy tới hộ như xem_truoc_nhieu_ho; khóa ('excel_ct', …)).
+  - Hộ vướng một chạm: `du_thao.VONG_VUONG` ('chua', 'du', V1-V5), `trang_thai_vuong`, `doi_vuong_nhanh` (giữ ghi chú), `ds_vuong(con, giu)`
+    (hộ vừa đổi sang Đủ điều kiện vẫn hiện - `KhungDuThao._vm_giu`), `TEN_DU_DIEU_KIEN`; `KhungDuThao._doi_vuong` (cellClicked cột 3, Space;
+    bấm đúp cột 3 bỏ qua). Viên thuốc: "chua danh dau" xám TRƯỚC "du dieu kien" xanh lá.
+  - `XepDong.gian(w)`: khối nhận TOÀN BỘ phần rộng dư của dòng (khác: giữ cỡ cần). Thẻ Hỗ trợ: khối Tái định cư giãn, `cb_tdc` Expanding
+    AdjustToMinimumContentsLengthWithIcon (30) tối thiểu 280, nhãn của các khối Maximum.
+  - Niêm yết "Thêm hộ vào đợt" (`man_hinh_du_thao.HopThemHo` viết lại): `du_thao.ds_ho_cho_dot(con, dot_id)` (mọi hộ chưa ở đợt: lap theo
+    `lap_pa.phan_loai_lap` + `TEN_LAP`, tien từ ket_qua_ho, dieu_kien `trang_thai_vuong`, y_kien ở đợt gần nhất ('' = chưa vào đợt nào),
+    dot_hien), 4 ô lọc `cb_lap / cb_dk / cb_yk / cb_dot` + `o_tim` (`khop_loc`, ẩn dòng), sắp xếp theo tiêu đề cột (`_OSap` khóa UserRole + 1),
+    `ma_chon()` theo thứ tự dự án; `o_ca_chua` (tự bật khi đánh dấu hộ chưa đủ điều kiện) -> `them_thu_cong(…, ca_vuong=)` (mặc định vẫn bỏ
+    qua hộ vướng). `ds_de_them` (lọc kiểu cũ) giữ cho test.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

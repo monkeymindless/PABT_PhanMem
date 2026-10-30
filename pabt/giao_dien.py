@@ -655,8 +655,8 @@ def bang_mau_ung_dung():
     for vai_, mau in ((QPalette.ColorRole.Window, TOKEN['nen']), (QPalette.ColorRole.Base, TOKEN['khung']),
                       (QPalette.ColorRole.AlternateBase, '#0F172A' if toi else '#F8FAFC'), (QPalette.ColorRole.Text, TOKEN['chu']),
                       (QPalette.ColorRole.WindowText, TOKEN['chu']), (QPalette.ColorRole.ButtonText, TOKEN['chu']),
-                      (QPalette.ColorRole.Button, '#1E293B' if toi else '#FFFFFF'), (QPalette.ColorRole.Highlight, '#2563EB'),
-                      (QPalette.ColorRole.HighlightedText, '#FFFFFF'),
+                      (QPalette.ColorRole.Button, '#1E293B' if toi else '#FFFFFF'), (QPalette.ColorRole.Highlight, '#1E40AF' if toi else MAU_CHON_DIU[0]),
+                      (QPalette.ColorRole.HighlightedText, '#FFFFFF' if toi else MAU_CHON_DIU[1]),
                       (QPalette.ColorRole.ToolTipBase, '#1E293B' if toi else '#FFFDE7'),
                       (QPalette.ColorRole.ToolTipText, '#F1F5F9' if toi else '#1A1A1A')):
         p.setColor(vai_, QColor(mau))
@@ -827,7 +827,8 @@ def _qss() -> str:
     QLabel[vai="bang_ten"] {{ color: #0F3A63; background: #FFFFFF; font-size: 13px; padding: 8px 12px; border-radius: 8px;
         border: 1px solid #D5E1ED; border-left: 4px solid {TOKEN['nhan']}; }}
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit, QPlainTextEdit, QTextEdit {{ background: #FFFFFF; color: {TOKEN['chu']};
-        border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px 8px; selection-background-color: {TOKEN['nhan']}; }}
+        border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px 8px; selection-background-color: {MAU_CHON_DIU[0]};
+        selection-color: {MAU_CHON_DIU[1]}; }}
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit {{ min-height: 20px; }}
     QLineEdit:hover, QComboBox:hover, QSpinBox:hover, QPlainTextEdit:hover {{ border-color: #94A3B8; }}
     QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus, QPlainTextEdit:focus, QTextEdit:focus {{
@@ -867,12 +868,15 @@ def _qss() -> str:
     QProgressBar::chunk {{ background: #2563EB; border-radius: 5px; }}
     QSplitter::handle {{ background: #E2E8F0; }}
     QSplitter::handle:hover {{ background: #94A3B8; }}
+    QComboBox {{ combobox-popup: 0; }}
     QComboBox QAbstractItemView, QListView, QListWidget, QTreeView {{ background: #FFFFFF; color: #1A1A1A;
-        selection-background-color: #BBDEFB; selection-color: #0B2E4F; outline: 0; }}
-    QComboBox QAbstractItemView::item {{ min-height: 24px; padding: 2px 6px; color: #1A1A1A; }}
-    QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected,
-    QListView::item:hover, QListView::item:selected, QListWidget::item:hover, QListWidget::item:selected {{
-        background: #BBDEFB; color: #0B2E4F; }}
+        selection-background-color: {MAU_CHON_DIU[0]}; selection-color: {MAU_CHON_DIU[1]}; outline: 0; }}
+    QComboBox QAbstractItemView {{ border: 1px solid #CBD5E1; }}
+    QComboBox QAbstractItemView::item {{ min-height: 24px; padding: 2px 8px; color: #1A1A1A; }}
+    QComboBox QAbstractItemView::item:hover, QListView::item:hover, QListWidget::item:hover {{
+        background: {MAU_RE_DIU}; color: #0F172A; }}
+    QComboBox QAbstractItemView::item:selected, QListView::item:selected, QListWidget::item:selected {{
+        background: {MAU_CHON_DIU[0]}; color: {MAU_CHON_DIU[1]}; }}
     QTableView::item:hover, QTreeView::item:hover {{ background: #EEF5FC; color: #1A1A1A; }}
     QTableView::item:selected, QTreeView::item:selected {{ background: #DBEAFE; color: #0F172A; }}
     QMenu {{ background: #FFFFFF; color: #1A1A1A; border: 1px solid #C9D3DD; }}
@@ -1683,6 +1687,12 @@ class XepDong(QLayout):
         super().__init__(parent)
         self._muc = []
         self._cach = cach
+        self._gian = set()
+
+    def gian(self, w) -> None:
+        """Khối w nhận TOÀN BỘ phần rộng còn thừa của dòng nó nằm (các khối khác giữ đúng cỡ cần) - 30/10/2026: ô Tái định cư giãn,
+        nhãn các khối khác không bị kéo rộng tạo khoảng trống."""
+        self._gian.add(id(w))
 
     def addItem(self, it):
         self._muc.append(it)
@@ -1736,8 +1746,12 @@ class XepDong(QLayout):
             du = max(vung.width() - sum(ws) - self._cach * (len(hang) - 1), 0)
             cao = max(it.sizeHint().height() for it in hang)
             x = vung.x()
+            gian = [it for it in hang if it.widget() is not None and id(it.widget()) in self._gian]
             for it, w in zip(hang, ws):
-                them = du * w // sum(ws) if sum(ws) else 0
+                if gian:
+                    them = du // len(gian) if it in gian else 0
+                else:
+                    them = du * w // sum(ws) if sum(ws) else 0
                 if not chi_tinh:
                     it.setGeometry(QRect(QPoint(x, y), QSize(w + them, cao)))
                 x += w + them + self._cach
@@ -2666,8 +2680,8 @@ class _VuaRongMenu(QObject):
 # "chua dong thuan" / "khong dong y" trước "dong thuan" / "dong y"; "tu lap" trước "da lap"; ô có "chua" mà không khớp mẫu nào -> xám.
 MAU_VIEN_THUOC = (
     (('khong dong y', 'cuong che'), ('#FEE2E2', '#FECACA', '#B83A3A')),
-    (('chua dong thuan',), ('#F1F5F9', '#E2E8F0', '#64748B')),
-    (('da ban giao', 'hoan thanh', 'hoan tat', 'dong thuan', 'dong y'), ('#DCFCE7', '#86EFAC', '#2F7D54')),
+    (('chua dong thuan', 'chua danh dau'), ('#F1F5F9', '#E2E8F0', '#64748B')),
+    (('da ban giao', 'hoan thanh', 'hoan tat', 'dong thuan', 'dong y', 'du dieu kien'), ('#DCFCE7', '#86EFAC', '#2F7D54')),
     (('da chi tra', 'da nhan tien', 'da phe duyet'), ('#F0FDFA', '#99F6E4', '#1F6F66')),
     (('tu lap', 'y kien khac', 'v1', 'v2', 'v3', 'v4', 'v5', 'dang van dong'), ('#FEF3C7', '#FDE68A', '#9A5A12')),
     (('da lap',), ('#EFF6FF', '#BFDBFE', '#2F5DB5')),
@@ -4631,6 +4645,41 @@ def to_dong_bang(bang, r: int, loi: list, muc: str = 'canh_bao') -> None:
             it.setToolTip(('Cần xem lại:\n' + goi_y) if loi else '')
 
 
+# 30/10/2026 (người dùng): ô chọn xổ xuống hiện đủ mục và đủ chữ (trước: kiểu "menu đè lên ô" của Fusion - vài mục, mũi tên cuộn,
+# chữ dài bị cắt), màu chọn / rê chuột dịu mắt (trước: xanh sáng chữ trắng)
+MAU_CHON_DIU = ('#D6E4F5', '#0F2A47')       # mục đang chọn: nền xanh xám nhạt, chữ xanh đậm
+MAU_RE_DIU = '#EEF3FA'                       # mục dưới con trỏ chuột
+SO_MUC_XO = 20                               # số mục danh sách xổ hiện cùng lúc (ô chọn để mặc định 10 của Qt)
+LE_DANH_SACH_XO = 28                         # px cộng thêm vào bề rộng chữ dài nhất (lề mục + thanh cuộn)
+
+
+def vua_danh_sach_xo(khung) -> None:
+    """Danh sách xổ của ô chọn (khung = QComboBoxPrivateContainer đang hiện) rộng đủ chữ dài nhất (không hẹp hơn ô chọn, không rộng
+    hơn màn hình), dời vào trong màn hình nếu tràn phải."""
+    cb = khung.parent()
+    if not isinstance(cb, QComboBox):
+        return
+    v = cb.view()
+    try:
+        v.setTextElideMode(Qt.TextElideMode.ElideNone)
+        chu = max(v.sizeHintForColumn(cb.modelColumn()), 0)
+    except Exception:                                   # noqa: BLE001 - mô hình lạ: giữ bề rộng Qt
+        return
+    rong = chu + LE_DANH_SACH_XO + v.verticalScrollBar().sizeHint().width() + 2 * khung.frameWidth()
+    man = khung.screen().availableGeometry() if khung.screen() is not None else None
+    if man is not None:
+        rong = min(rong, man.width() - 16)
+    if rong <= khung.width():
+        return
+    g = khung.geometry()
+    g.setWidth(rong)
+    if man is not None and g.right() > man.right():
+        g.moveRight(man.right())
+    if man is not None and g.left() < man.left():
+        g.moveLeft(man.left())
+    khung.setGeometry(g)
+
+
 class _BoToMau(QObject):
     def eventFilter(self, obj, ev):
         t = ev.type()
@@ -4660,6 +4709,8 @@ class _BoToMau(QObject):
                 phong_to(0)
                 return True
         if t == QEvent.Type.Polish:                     # sắp hiện lần đầu: cửa sổ con có đủ nút Thu nhỏ / Phóng to / Đóng
+            if isinstance(obj, QComboBox) and obj.maxVisibleItems() == 10:
+                obj.setMaxVisibleItems(SO_MUC_XO)        # 30/10/2026: danh sách xổ hiện nhiều mục hơn (mặc định Qt 10)
             if la_cua_so_con_pabt(obj):
                 chuan_hoa_cua_so_con(obj)
             return False
@@ -4667,6 +4718,9 @@ class _BoToMau(QObject):
             if isinstance(obj, QWidget) and obj.property('pabt_cua_so_con') and obj.isWindow():
                 nho_kich_thuoc(obj)
             return False
+        if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow() and \
+                obj.metaObject().className() == 'QComboBoxPrivateContainer':
+            vua_danh_sach_xo(obj)                       # 30/10/2026: danh sách xổ rộng đủ chữ dài nhất
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow():
             if obj.property('_da_to_mau'):              # hiện lại cửa sổ đã xử lý: chỉ nút mới (máy yếu - không duyệt lại cả cây)
                 to_mau(obj)

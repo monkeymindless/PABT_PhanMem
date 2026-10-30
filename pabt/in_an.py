@@ -2157,9 +2157,70 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, so_pa_tong: st
     # dự thảo: "(DỰ THẢO)" dưới đường kẻ tên đơn vị; chính thức: xóa. SAU đường kẻ (1.0.04): chữ mới dưới tên đơn vị không làm
     # đường kẻ neo nhầm vào nó
     ap_che_do_du_thao(ws, du_thao, TEN_BTH)
+    dam_bao_khung_bth(ws, n_cot)                  # 30/10/2026: ô nào thiếu nét khung thì kẻ - bảng luôn đủ khung trên mọi máy
     _an_toan.luu_xlsx(wb, file_ra)
     chen_duong_ke(file_ra, dk)                    # đường kẻ (openpyxl không giữ hình vẽ)
     return file_ra
+
+
+def dam_bao_khung_bth(ws, n_cot: int) -> int:
+    """Bảo đảm khung kẻ ô bảng tổng hợp (người dùng 30/10/2026: "lập trên máy mới, bảng in tổng hợp bị mất khung đường kẻ"): từ hàng
+    tiêu đề "STT" tới dòng "TỔNG CỘNG" cuối, cột 1..n_cot - cạnh nào của ô (ô gộp: cạnh ngoài vùng gộp) chưa có nét thì kẻ nét mảnh; nét
+    sẵn có (đậm, mảnh) giữ nguyên. Trả số ô đã thêm nét. Bảng không có hàng STT / TỔNG CỘNG: không làm gì."""
+    from openpyxl.styles.borders import Border, Side
+    o_chu = ws._cells
+    dau = next((r for (r, c), o in sorted(o_chu.items()) if c == 1 and r <= 30
+                and isinstance(o.value, str) and o.value.strip().upper() == 'STT'), None)
+    cuoi = max((r for (r, c), o in o_chu.items() if c <= n_cot and isinstance(o.value, str)
+                and o.value.strip().upper().startswith('TỔNG CỘNG')), default=None)
+    if dau is None or cuoi is None or cuoi < dau:
+        return 0
+    gop = {}
+    for m in ws.merged_cells.ranges:
+        if m.max_row < dau or m.min_row > cuoi or m.min_col > n_cot:
+            continue
+        for r in range(max(m.min_row, dau), min(m.max_row, cuoi) + 1):
+            for c in range(m.min_col, min(m.max_col, n_cot) + 1):
+                gop[(r, c)] = m
+    an = set()                                          # cột ẩn (Vị trí đất, cột phụ): không xét, không làm cạnh kề
+    for d in ws.column_dimensions.values():
+        if d.hidden and d.min:
+            an.update(range(d.min, (d.max or d.min) + 1))
+    cot = [c for c in range(1, n_cot + 1) if c not in an]
+    trai = dict(zip(cot[1:], cot))                      # cột hiện liền bên trái / bên phải
+    phai = dict(zip(cot, cot[1:]))
+
+    ds_vien, canh_vien = ws.parent._borders, {}         # đọc mã viền của ô (o.border tạo proxy mỗi lần - chậm với 100.000 ô)
+
+    def co(r, c, canh) -> bool:
+        o = o_chu.get((r, c))
+        if o is None:
+            return False
+        i = o._style.borderId
+        if i not in canh_vien:
+            v = ds_vien[i]
+            canh_vien[i] = {k for k in ('left', 'right', 'top', 'bottom') if getattr(getattr(v, k, None), 'style', None)}
+        return canh in canh_vien[i]
+    manh = Side(style='thin')
+    them = 0
+    for r in range(dau, cuoi + 1):
+        for c in cot:
+            m = gop.get((r, c))
+            # cạnh cần nét; ô kề đã có nét chung thì coi như đủ (Excel vẽ một đường) - không ghi thêm hàng chục nghìn kiểu viền
+            can = dict(left=(m is None or c == m.min_col) and not co(r, trai.get(c), 'right'),
+                       right=(m is None or c == m.max_col) and not co(r, phai.get(c), 'left'),
+                       top=(m is None or r == m.min_row) and not co(r - 1, c, 'bottom'),
+                       bottom=(m is None or r == m.max_row) and not co(r + 1, c, 'top'))
+            if not any(can.values()):
+                continue
+            o = o_chu.get((r, c)) or ws.cell(r, c)
+            b = o.border
+            thieu = {k: manh for k, v in can.items() if v and not getattr(getattr(b, k), 'style', None)}
+            if thieu:
+                o.border = Border(left=thieu.get('left', b.left), right=thieu.get('right', b.right),
+                                  top=thieu.get('top', b.top), bottom=thieu.get('bottom', b.bottom))
+                them += 1
+    return them
 
 
 # ---------------------------------------------------------------- PDF / máy in qua Microsoft Excel: in_excel.py (1.0.29)

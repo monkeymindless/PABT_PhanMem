@@ -510,6 +510,25 @@ def dong_co_quan(da: dict) -> tuple[str, str]:
     X"): dòng gạch chân phải là "CHI NHÁNH …". Ô tên đơn vị trên tiêu đề của dự án cũ có thể ghi tên thành phố ("Thành phố Đồng
     Nai" - cách điền của file Excel cũ) hoặc trống: khi đó lấy phần "Chi nhánh …" của đơn vị lập, rồi của hồ sơ địa phương; chữ cũ
     (không phải chi nhánh) vẫn giữ làm dòng thường nếu chưa có trong tên cơ quan chủ quản."""
+    cap, gach = _dong_co_quan(da)
+    return _bo_trung_cap_tren(cap, gach), gach
+
+
+def _bo_trung_cap_tren(cap: str, gach: str) -> str:
+    """Dòng cơ quan cấp trên không lặp lại dòng gạch chân (người dùng 30/10/2026: ô cấp trên / ô dòng 2 ghi cả tên đơn vị lập "Trung tâm
+    … Chi nhánh X" -> bản in có hai lần "CHI NHÁNH X"): dòng kết thúc bằng dòng gạch chân thì bỏ phần đó, dòng trùng / rỗng thì bỏ."""
+    g = ' '.join(str(gach or '').upper().split())
+    kq = []
+    for d in str(cap or '').split('\n'):
+        d = ' '.join(d.split())
+        if g and d.upper().endswith(g):
+            d = d[:len(d) - len(g)].rstrip(' -,.')
+        if d and d.upper() != g and d.upper() not in (x.upper() for x in kq):
+            kq.append(d)
+    return '\n'.join(kq)
+
+
+def _dong_co_quan(da: dict) -> tuple:
     cap = str(da['DON_VI_CAP_TREN_2DONG'] or '').strip()
     tieu = ' '.join(str(da['DON_VI_TIEU_DE'] or '').upper().split())
     if _RE_CHI_NHANH.match(tieu):

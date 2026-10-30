@@ -2,7 +2,7 @@
 from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialog, QFormLayout, QFrame, QHBoxLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout, QFrame, QHBoxLayout,
                                QHeaderView, QLabel, QLineEdit, QMenu, QMessageBox, QProgressBar, QPushButton, QTabWidget,
                                QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget)
 
@@ -225,38 +225,76 @@ class HopPhapLy(QDialog):
         f.addRow(b)
 
 
+class _OSap(QTableWidgetItem):
+    """Ô bảng sắp xếp theo khóa (UserRole + 1: số thứ tự / số tiền / mức) thay vì theo chữ."""
+
+    def __lt__(self, other):
+        a, b = self.data(Qt.ItemDataRole.UserRole + 1), other.data(Qt.ItemDataRole.UserRole + 1)
+        if a is not None and b is not None:
+            try:
+                return a < b
+            except TypeError:
+                pass
+        return self.text().lower() < other.text().lower()
+
+
 class HopThemHo(QDialog):
-    """Chọn hộ đưa vào đợt đang mở: theo đợt niêm yết, hoặc theo tình trạng ý kiến."""
+    """Chọn hộ đưa vào đợt đang mở (30/10/2026 - người dùng): MỌI hộ chưa có trong đợt, kèm lập phương án, tổng tiền, điều kiện, ý kiến gần
+    nhất, đợt hiện tại; lọc theo từng thuộc tính + tìm; bấm tiêu đề cột để sắp xếp. Hộ đủ điều kiện, không vướng được đánh dấu sẵn; hộ chưa
+    đủ điều kiện / đang vướng vẫn thêm được khi người lập đánh dấu (ô "Cho thêm cả hộ chưa đủ điều kiện" tự bật)."""
+    COT = ['', 'STT', 'Họ và tên', 'Thửa', 'Lập phương án', 'Tổng tiền (đ)', 'Điều kiện', 'Ý kiến gần nhất', 'Đợt hiện tại']
+    LOC_LAP = [('', 'Lập PA: tất cả'), ('da_lap', 'Đã lập PA'), ('tu_lap', 'Tự lập, chưa soát'), ('chua', 'Chưa lập PA')]
+    LOC_DK = [('', 'Điều kiện: tất cả'), ('du', 'Đủ điều kiện'), ('chua', 'Chưa đánh dấu đủ điều kiện'), ('vuong', 'Đang vướng V1-V5')]
+    LOC_YK = [('', 'Ý kiến: tất cả'), ('-', 'Chưa vào đợt nào'), ('chua', 'Chưa lấy ý kiến'), ('dong_y', 'Đồng ý'),
+              ('khong_dong_y', 'Không đồng ý'), ('y_kien_khac', 'Ý kiến khác')]
 
     def __init__(self, parent, con, dot_id: int):
         super().__init__(parent)
+        from .giao_dien import loc_khi_ngung_go
         self.con, self.dot_id = con, dot_id
         self.setWindowTitle('Thêm hộ vào đợt')
-        self.resize(720, 480)
-        self.cb = QComboBox()
-        self.cb.addItem('Hộ đủ điều kiện, chưa có trong đợt này', ('du', None))
+        self.resize(1280, 640)
+        self.ds = du_thao.ds_ho_cho_dot(con, dot_id)
+        self.cb_lap, self.cb_dk, self.cb_yk = (self._o_loc(x) for x in (self.LOC_LAP, self.LOC_DK, self.LOC_YK))
+        self.cb_dot = QComboBox()
+        self.cb_dot.addItem('Đợt hiện tại: tất cả', None)
+        self.cb_dot.addItem('Chưa thuộc đợt nào', 0)
         for d in du_thao.ds_dot(con):
-            if d['id'] == dot_id:
-                continue
-            self.cb.addItem(f'Hộ đang niêm yết: {d["ten"]}', ('dot', d['id']))
-        self.cb.addItem('Hộ chưa lấy ý kiến', ('chua', None))
-        self.cb.addItem('Hộ chưa đồng thuận', ('khong_dong_y', None))
-        self.cb.addItem('Hộ có ý kiến khác', ('y_kien_khac', None))
-        self.bang = _bang(['', 'Mã hộ', 'Họ và tên', 'Thửa', 'Nguồn'])
-        self.bang.setColumnWidth(0, 36)
-        self.cb.currentIndexChanged.connect(self._nap)
+            if d['id'] != dot_id:
+                self.cb_dot.addItem(f'Đang ở: {d["ten"]}', d['id'])
+        self.cb_dot.currentIndexChanged.connect(lambda *_: self._loc())
+        self.o_tim = QLineEdit()
+        self.o_tim.setPlaceholderText('Tìm họ tên, thửa, địa chỉ…')
+        loc_khi_ngung_go(self.o_tim, self._loc)
+        self.o_ca_chua = QCheckBox('Cho thêm cả hộ chưa đủ điều kiện / đang vướng')
+        self.o_ca_chua.setToolTip('Bình thường chỉ hộ đủ điều kiện, không vướng mới vào đợt. Bật để thêm cả hộ chưa đủ điều kiện hoặc '
+                                  'đang vướng (V1-V5) đã đánh dấu - tự bật khi đánh dấu một hộ như vậy.')
+        self.bang = _bang(self.COT, [34, 50, 240, 150, 125, 115, 165, 125, 100], gian=2)
+        self.bang.setWordWrap(False)                    # một dòng mỗi hộ; chữ dài: chú thích
+        from .giao_dien import giu_cot_gian
+        self._giu = giu_cot_gian(self.bang, [2], 220)          # cột Họ và tên không bị bóp (hẹp thì cuộn ngang)
+        self.bang.setTextElideMode(Qt.TextElideMode.ElideRight)
+        self.bang.setSortingEnabled(False)
+        self.bang.itemChanged.connect(self._doi_dau)
+        self.lb_dem = QLabel('')
         lo = QVBoxLayout(self)
-        lo.addWidget(QLabel('Chọn nhóm hộ, đánh dấu những hộ cần thêm vào đợt đang mở '
-                            '(niêm yết, lấy ý kiến và đối thoại dùng chung danh sách này).'))
-        lo.addWidget(self.cb)
+        lo.addWidget(QLabel('Đánh dấu hộ cần thêm vào đợt đang mở (niêm yết, lấy ý kiến và đối thoại dùng chung danh sách này). Lọc theo '
+                            'từng thuộc tính; bấm tiêu đề cột để sắp xếp.'))
+        h1 = QHBoxLayout()
+        for w in (self.cb_lap, self.cb_dk, self.cb_yk, self.cb_dot):
+            h1.addWidget(w)
+        h1.addWidget(self.o_tim, 1)
+        lo.addLayout(h1)
         hang = QHBoxLayout()
-        b1 = QPushButton('Chọn tất cả')
-        b2 = QPushButton('Bỏ chọn')
+        b1 = QPushButton('Chọn các hộ đang hiện')
+        b2 = QPushButton('Bỏ chọn các hộ đang hiện')
         b1.clicked.connect(lambda: self._chon(True))
         b2.clicked.connect(lambda: self._chon(False))
         hang.addWidget(b1)
         hang.addWidget(b2)
+        hang.addWidget(self.o_ca_chua)
         hang.addStretch(1)
+        hang.addWidget(self.lb_dem)
         lo.addLayout(hang)
         lo.addWidget(self.bang, 1)
         b = QPushButton('Thêm vào đợt')
@@ -264,30 +302,120 @@ class HopThemHo(QDialog):
         lo.addWidget(b)
         self._nap()
 
+    def _o_loc(self, ds) -> QComboBox:
+        cb = QComboBox()
+        for k, t in ds:
+            cb.addItem(t, k)
+        cb.currentIndexChanged.connect(lambda *_: self._loc())
+        return cb
+
     def _nap(self):
-        loc, nguon = self.cb.currentData()
-        self.ds = du_thao.ds_de_them(self.con, self.dot_id, loc, nguon)
+        self.bang.blockSignals(True)
         self.bang.setRowCount(len(self.ds))
+        thu_dk = {k: i for i, k in enumerate(du_thao.VONG_VUONG)}
+        thu_lap = {'da_lap': 0, 'tu_lap': 1, 'chua': 2}
         for i, h in enumerate(self.ds):
-            o = QTableWidgetItem('')
+            o = _OSap('')
             o.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
-            o.setCheckState(Qt.CheckState.Unchecked if h['vuong'] else Qt.CheckState.Checked)
+            o.setCheckState(Qt.CheckState.Checked if h['dieu_kien'] == 'du' else Qt.CheckState.Unchecked)
+            o.setData(Qt.ItemDataRole.UserRole, h['ma_ho'])
+            o.setData(Qt.ItemDataRole.UserRole + 1, 0 if h['dieu_kien'] == 'du' else 1)
             self.bang.setItem(i, 0, o)
-            for c, v in enumerate((h['ma_ho'], h['ho_ten'], h['thua'], h['nhan']), 1):
-                self.bang.setItem(i, c, _o(v))
+            gt = [(h['thu_tu'], h['thu_tu']), (h['ho_ten'], None), (h['thua'], None), (h['ten_lap'], thu_lap.get(h['lap'], 9)),
+                  (vn(h['tien']) if h['tien'] is not None else '', float(h['tien']) if h['tien'] is not None else -1.0),
+                  ((f'{h["dieu_kien"]} - ' if h['dieu_kien'] in du_thao.TEN_VUONG else '') + h['ten_dieu_kien'],
+                   thu_dk.get(h['dieu_kien'], 99)), (h['ten_y_kien'], None), (h['dot_hien'], None)]
+            for c, (chu, khoa) in enumerate(gt, 1):
+                it = _OSap('' if chu is None else str(chu))
+                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                if khoa is not None:
+                    it.setData(Qt.ItemDataRole.UserRole + 1, khoa)
+                if c in (1, 5):
+                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                if c == 2 and h['dia_chi']:
+                    it.setToolTip(f'{h["ho_ten"]} - {h["dia_chi"]}')
+                elif c in (3, 6) and chu:
+                    it.setToolTip(str(chu))
+                self.bang.setItem(i, c, it)
+        self.bang.blockSignals(False)
+        self.bang.setSortingEnabled(True)
+        self.bang.sortByColumn(1, Qt.SortOrder.AscendingOrder)
+        self._loc()
+
+    def _h(self, r: int):
+        it = self.bang.item(r, 0)
+        ma = it.data(Qt.ItemDataRole.UserRole) if it is not None else None
+        return next((h for h in self.ds if h['ma_ho'] == ma), None)
+
+    def khop_loc(self, h) -> bool:
+        """Hộ h thỏa mọi ô lọc đang chọn."""
+        from .lap_pa import bo_dau
+        lap, dk, yk, dot = (self.cb_lap.currentData(), self.cb_dk.currentData(), self.cb_yk.currentData(), self.cb_dot.currentData())
+        if lap and h['lap'] != lap:
+            return False
+        if dk == 'vuong':
+            if h['dieu_kien'] not in du_thao.TEN_VUONG:
+                return False
+        elif dk and h['dieu_kien'] != dk:
+            return False
+        if yk == '-' and h['y_kien']:
+            return False
+        if yk and yk != '-' and h['y_kien'] != yk:
+            return False
+        if dot == 0 and h['dot_hien_id']:
+            return False
+        if dot and h['dot_hien_id'] != dot:
+            return False
+        tim = bo_dau(self.o_tim.text()).lower().strip()
+        return not tim or tim in bo_dau(f'{h["ho_ten"]} {h["thua"]} {h["dia_chi"]} {h["thu_tu"]}').lower()
+
+    def _loc(self, *_):
+        hien = 0
+        ma_h = {h['ma_ho']: h for h in self.ds}
+        for r in range(self.bang.rowCount()):
+            it = self.bang.item(r, 0)
+            h = ma_h.get(it.data(Qt.ItemDataRole.UserRole)) if it is not None else None
+            an = h is None or not self.khop_loc(h)
+            self.bang.setRowHidden(r, an)
+            hien += not an
+        self._dem(hien)
+
+    def _dem(self, hien: int | None = None):
+        if hien is None:
+            hien = sum(1 for r in range(self.bang.rowCount()) if not self.bang.isRowHidden(r))
+        self.lb_dem.setText(f'Đang hiện {hien}/{len(self.ds)} hộ · đã đánh dấu {len(self.ma_chon())}')
+
+    def _doi_dau(self, it):
+        if it.column() != 0:
+            return
+        h = self._h(it.row())
+        if it.checkState() == Qt.CheckState.Checked and h is not None and h['dieu_kien'] != 'du' and not self.o_ca_chua.isChecked():
+            self.o_ca_chua.setChecked(True)            # đánh dấu hộ chưa đủ điều kiện: hiểu là muốn thêm cả hộ đó
+        self._dem()
 
     def _chon(self, bat: bool):
         st = Qt.CheckState.Checked if bat else Qt.CheckState.Unchecked
-        for i in range(self.bang.rowCount()):
-            self.bang.item(i, 0).setCheckState(st)
+        self.bang.blockSignals(True)
+        for r in range(self.bang.rowCount()):
+            if not self.bang.isRowHidden(r):
+                h = self._h(r)
+                if bat and h is not None and h['dieu_kien'] != 'du' and not self.o_ca_chua.isChecked():
+                    continue                            # chọn hàng loạt: hộ chưa đủ điều kiện chỉ khi đã bật ô cho phép
+                self.bang.item(r, 0).setCheckState(st)
+        self.bang.blockSignals(False)
+        self._dem()
+
+    def ca_chua(self) -> bool:
+        return self.o_ca_chua.isChecked()
 
     def ma_chon(self) -> list:
-        kq = []
-        for i, h in enumerate(self.ds):
-            it = self.bang.item(i, 0)
+        """Mã hộ đã đánh dấu, theo thứ tự hộ của dự án."""
+        chon = set()
+        for r in range(self.bang.rowCount()):
+            it = self.bang.item(r, 0)
             if it is not None and it.checkState() == Qt.CheckState.Checked:
-                kq.append(h['ma_ho'])
-        return kq
+                chon.add(it.data(Qt.ItemDataRole.UserRole))
+        return [h['ma_ho'] for h in self.ds if h['ma_ho'] in chon]
 
 
 class KhungDuThao(QWidget):
@@ -444,7 +572,16 @@ class KhungDuThao(QWidget):
         ph.activated.connect(self._phim_y_kien)
         self._phim_yk = ph
         self.bang_dt.cellDoubleClicked.connect(lambda r, c: self._sua_yk(self.bang_dt, r))
-        self.bang_vm.cellDoubleClicked.connect(lambda r, c: self._phap_ly())
+        # 30/10/2026 (người dùng): Hộ vướng cũng một chạm như cột Ý kiến - bấm ô "Nhóm vướng" (hoặc Space) đổi trạng thái
+        self._vm_giu = set()                            # hộ vừa đổi sang Đủ điều kiện: vẫn hiện tới khi mở lại trang
+        self.bang_vm.setToolTip('Bấm ô "Nhóm vướng" (hoặc phím Space) để đổi: Chưa đánh dấu → Đủ điều kiện → V1 … V5 → Chưa đánh dấu. '
+                                'Bấm đúp ô khác để mở hộp đánh dấu pháp lý (ghi chú).')
+        self.bang_vm.cellClicked.connect(lambda r, c: self._doi_vuong(r) if c == 3 else None)
+        self.bang_vm.cellDoubleClicked.connect(lambda r, c: None if c == 3 else self._phap_ly())
+        pv = QShortcut(QKeySequence(Qt.Key.Key_Space), self.bang_vm)
+        pv.setContext(Qt.ShortcutContext.WidgetShortcut)
+        pv.activated.connect(lambda: self._doi_vuong(self.bang_vm.currentRow()) if self.bang_vm.currentColumn() == 3 else None)
+        self._phim_vm = pv
         lo.addWidget(self.tabs, 1)
         self.lb_chu = QLabel(f'Hộ chỉ vào đợt khi đã đủ điều kiện và không vướng. Niêm yết {du_thao.SO_NGAY_NIEM_YET} ngày, '
                              f'đối thoại không quá {du_thao.SO_NGAY_DOI_THOAI} ngày (Luật Đất đai 2024, Nghị định 88/2024/NĐ-CP, '
@@ -601,7 +738,7 @@ class KhungDuThao(QWidget):
                     it.setFont(f)
                 self.bang_th.setItem(i, c, it)
         self.bang_th.setToolTip('Tỷ lệ đồng thuận = hộ đã đồng ý trong nhóm lý do / hộ có kiến nghị nhóm đó')
-        vm = du_thao.ds_vuong(self.con)
+        vm = du_thao.ds_vuong(self.con, getattr(self, '_vm_giu', ()))
         self.bang_vm.setRowCount(len(vm))
         for i, h in enumerate(vm):
             for c, v in enumerate((h['ma_ho'], h['ho_ten'], h['thua'], h['ten_vuong'], h['ghi_chu_phap_ly'])):
@@ -695,7 +832,7 @@ class KhungDuThao(QWidget):
             self._bao('Chưa đánh dấu hộ nào.')
             return
         try:
-            them, bo = du_thao.them_thu_cong(self.con, dot, ds)
+            them, bo = du_thao.them_thu_cong(self.con, dot, ds, ca_vuong=d.ca_chua())
         except du_thao.LoiNhap as e:
             self._loi(e)
             return
@@ -800,6 +937,27 @@ class KhungDuThao(QWidget):
         self.bang_yk.setCurrentCell(r, 2)
         return loai
 
+    def _doi_vuong(self, r: int):
+        """Một chạm: đổi trạng thái pháp lý của hộ ở dòng r (bảng Hộ vướng), giữ dòng đang chọn. Trả trạng thái mới."""
+        it = self.bang_vm.item(r, 0) if r >= 0 else None
+        if self.chi_doc or it is None:
+            return None
+        ma = it.data(Qt.ItemDataRole.UserRole)
+        try:
+            tt = du_thao.doi_vuong_nhanh(self.con, ma)
+        except du_thao.LoiNhap as e:
+            self._loi(e)
+            return None
+        self._vm_giu.add(ma)
+        self.thay_doi_csdl = True
+        self._ve()
+        for i in range(self.bang_vm.rowCount()):
+            o = self.bang_vm.item(i, 0)
+            if o is not None and o.data(Qt.ItemDataRole.UserRole) == ma:
+                self.bang_vm.setCurrentCell(i, 3)
+                break
+        return tt
+
     def _bam_y_kien(self, r: int, c: int):
         if c == 2:
             self._doi_nhanh(r)
@@ -877,7 +1035,7 @@ class KhungDuThao(QWidget):
         if len(ds) != 1:
             self._bao('Chọn một hộ ở thẻ Hộ vướng.')
             return
-        ho = next(h for h in du_thao.ds_vuong(self.con) if h['ma_ho'] == ds[0])
+        ho = next(h for h in du_thao.ds_vuong(self.con, self._vm_giu | {ds[0]}) if h['ma_ho'] == ds[0])
         d = HopPhapLy(self, ho)
         if d.exec() != QDialog.DialogCode.Accepted:
             return
