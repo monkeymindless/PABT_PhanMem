@@ -51,6 +51,16 @@ class Muc:
     gia_cu: int | None = None
     nhom: int = 0                 # 2 nhà, công trình / 3 cây trồng / 7 vật nuôi / 4 hỗ trợ (0: chưa xác định)
     khop_gan: float = 0.0         # so khớp tên gần đúng (tỷ lệ giống); 0 = khớp đúng mã / tên
+    ghi_chu: str = ''             # quy cách văn bản ghi kèm (mật độ của loài cây: "Mật độ 1.111 cây/ha")
+    ten_cu: str = ''              # tên / ghi chú mục đang khớp trong bộ đơn giá (so_khop)
+    ghi_chu_cu: str = ''
+    ten_thay: str = ''            # chế độ thay thế: tên / ghi chú sẽ ghi vào mục cũ theo cách ghi của văn bản mới ('' = không đổi)
+    ghi_chu_thay: str = ''
+    bo_cu: bool = False           # dòng do so_khop thêm: mục cũ cùng nhóm không còn trong văn bản (chế độ thay thế)
+    nhom_loai: str = ''           # cây lâm nghiệp: khóa nhóm loài của bảng giá theo nhóm ('quy hiem', '1'…'8'; khoa_nhom_loai)
+    duong_kinh: str = ''          # "(d >6-9 cm)" - cỡ đường kính của dòng bảng giá theo nhóm / dòng đã tách theo loài
+    ten_loai: str = ''            # dòng đã tách theo loài: tên loài (không tên khác) - so khớp với bộ đơn giá
+    ma_moi: str = ''              # mã sẽ cấp cho mục mới (so_khop; ap_dung dùng đúng mã này)
 
 
 class LoiPdfScan(LoiNhap):
@@ -524,6 +534,138 @@ def _tach_gia(o: str):
     return None, ''
 
 
+_RE_MAT_DO_TEN = re.compile(r'(?i)\s*\(\s*(?:m[ậa]t\s*[đd][ộo](?:\s+chu[ẩa]n)?\s*:?\s*)?(?:(\d[\d.,]*)\s*(cây|cay|khóm|khom|bụi|bui|'
+                            r'hố|ho|gốc|goc)\s*/\s*ha|[^)]*)\s*\)')
+_LA_MA_SO = {'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5, 'vi': 6, 'vii': 7, 'viii': 8, 'ix': 9, 'x': 10}
+
+
+def khoa_nhom_loai(chu: str) -> str:
+    """Khóa nhóm loài cây lâm nghiệp trong bảng giá / danh sách loài: "Nhóm quý hiếm gồm 45 loài", "Bảng 1: Nhóm loài cây quý hiếm"
+    -> 'quy hiem'; "Nhóm I gồm 13 loài", "Bảng 4: Loài cây nhóm III", "nhóm 4" -> '1' / '3' / '4'. Không nhận ra: ''."""
+    k = ' '.join(bo_dau(chu or '').lower().split())
+    if 'quy hiem' in k:
+        return 'quy hiem'
+    m = re.search(r'\bnhom\s+(?:loai\s+)?([ivx]+|\d+)\b', k)
+    if not m:
+        return ''
+    g = m.group(1)
+    return str(int(g)) if g.isdigit() else str(_LA_MA_SO.get(g, '')) if g in _LA_MA_SO else ''
+
+
+def chuan_duong_kinh(chu: str) -> str:
+    """Ô cỡ đường kính thân -> phần tên như bộ đơn giá: "≤3" -> "(d ≤3 cm)", ">3 - 6" -> "(d >3-6 cm)", "> 42" -> "(d >42 cm)"; ô
+    không có số: ''."""
+    s = ' '.join(str(chu or '').replace('–', '-').split())
+    m = re.search(r'(<=|>=|[<>≤≥])?\s*(\d+(?:[.,]\d+)?)\s*(?:cm)?\s*(?:-\s*(\d+(?:[.,]\d+)?))?', s)
+    if not m:
+        return ''
+    dau = {'<=': '≤', '>=': '≥'}.get(m.group(1), m.group(1) or '')
+    return f'(d {dau}{m.group(2)}{"-" + m.group(3) if m.group(3) else ""} cm)'
+
+
+def doc_nhom_loai(dong: list) -> dict:
+    """Danh sách loài theo nhóm (Phụ lục VI của văn bản cây lâm nghiệp): dòng "Bảng k: Loài cây nhóm III" / "Bảng 1: Nhóm loài cây quý
+    hiếm" rồi bảng có cột "Tên Việt Nam" (+ "Tên Việt Nam khác") -> {khóa nhóm: [(tên loài, (tên khác…))]}."""
+    kq, khoa, ten_c, khac_c = {}, '', None, None
+    for r in dong:
+        o = [' '.join(bo_dau(c).lower().split()) for c in r]
+        chu = ' '.join(x for x in o if x)
+        if re.search(r'\bbang\s*\d+\b', chu) and 'nhom' in chu and sum(1 for x in o if x) <= 2:
+            khoa, ten_c, khac_c = khoa_nhom_loai(chu), None, None
+            continue
+        if not khoa:
+            continue
+        tc = _cot(o, r'^ten viet nam$', r'^ten (loai|cay|viet)(?! nam khac)')
+        if tc is not None and not any(re.fullmatch(r'\d+', x) for x in o):
+            ten_c, khac_c = tc, _cot(o, r'^ten (viet nam )?khac', r'ten viet nam khac')
+            continue
+        if ten_c is None or ten_c >= len(r):
+            continue
+        ten = ' '.join(r[ten_c].split()).strip(' .;')
+        if not ten or re.fullmatch(r'[\d\W]+', ten):
+            continue
+        khac = r[khac_c] if khac_c is not None and khac_c < len(r) else ''
+        ds_khac = tuple(x.strip() for x in re.split(r'[.;,]\s*', khac) if x.strip())
+        kq.setdefault(khoa, []).append((ten, ds_khac))
+    return kq
+
+
+def _loai_trong_bo(dm_nhom3: list) -> dict:
+    """Bộ đơn giá đang dùng: {tên loài (không tên khác): {khóa cỡ đường kính: dòng}} của các dòng "Loài (…) (d …)"."""
+    from .ten_cay_lam_nghiep import bo_ten_khac
+    kq = {}
+    for x in dm_nhom3:
+        m = re.search(r'\(\s*d\b[^)]*\)\s*$', x['ten'])
+        if not m:
+            continue
+        loai = bo_ten_khac(x['ten'])[:].rsplit('(', 1)[0].strip()
+        kq.setdefault(loai, {})[_khoa(m.group(0))] = x
+    return kq
+
+
+def tach_theo_loai(ds: list, nhom_loai: dict | None = None) -> tuple:
+    """Dòng bảng giá theo NHÓM loài cây lâm nghiệp ("Nhóm IV gồm … loài" x cỡ đường kính) -> mỗi loài trong nhóm một dòng mỗi cỡ:
+    "Bồ đề (d >6-9 cm)", "Trường (…) (d >6-9 cm)"… (người dùng 30/10/2026: "tách từng loại cây"). Loài của nhóm: danh sách trong văn
+    bản (doc_nhom_loai - Phụ lục VI); văn bản không có danh sách thì suy từ bộ đơn giá đang dùng: các loài có ĐÚNG bảng giá theo cỡ của
+    nhóm (giá không đổi). Trả (ds mới, [nhóm không tách được])."""
+    nhom_loai = nhom_loai or {}
+    theo_nhom = {}
+    for m in ds:
+        if m.nhom_loai:
+            theo_nhom.setdefault(m.nhom_loai, []).append(m)
+    if not theo_nhom:
+        return ds, []
+    bo = None
+    if any(k not in nhom_loai for k in theo_nhom):
+        con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
+        try:
+            bo = _loai_trong_bo([dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia FROM dm_taisan WHERE nhom = 3 ORDER BY rowid')])
+        finally:
+            con.close()
+    from .ten_cay_lam_nghiep import ten_khac
+    loai_nhom, khong = {}, []
+    for k, dong in theo_nhom.items():
+        if nhom_loai.get(k):
+            loai_nhom[k] = [(t, khac or ten_khac(t)) for t, khac in nhom_loai[k]]
+            continue
+        gia = {_khoa(m.duong_kinh): m.don_gia for m in dong}
+        cung = [loai for loai, co in (bo or {}).items()
+                if set(co) == set(gia) and all(doc_gia(co[c]['don_gia']) == g for c, g in gia.items())]
+        if cung:
+            loai_nhom[k] = [(t, ten_khac(t)) for t in cung]
+        else:
+            khong.append(dong[0].ten.rsplit('(', 1)[0].strip())
+    kq = []
+    for m in ds:
+        ds_loai = loai_nhom.get(m.nhom_loai) if m.nhom_loai else None
+        if not ds_loai:
+            kq.append(m)
+            continue
+        for t, khac in ds_loai:
+            ten = f'{t} ({", ".join(khac)}) {m.duong_kinh}' if khac else f'{t} {m.duong_kinh}'
+            kq.append(Muc(ten, m.dvt, m.don_gia, '', m.nguon_dong, nhom=m.nhom, ghi_chu=m.ghi_chu, duong_kinh=m.duong_kinh,
+                          ten_loai=t))
+    # thứ tự như bộ đơn giá: từng loài đủ các cỡ đường kính (văn bản ghi từng nhóm theo cỡ)
+    vt = {id(m): i for i, m in enumerate(kq)}
+    dau = {}
+    for m in kq:
+        if m.ten_loai:
+            dau.setdefault(m.ten_loai, vt[id(m)])
+    kq.sort(key=lambda m: (dau[m.ten_loai], vt[id(m)]) if m.ten_loai else (vt[id(m)], 0))
+    return kq, khong
+
+
+def tach_mat_do_ten(ten: str) -> tuple:
+    """"Cây cam (Mật độ 1.111 cây/ha)" / "Cây vải thiều (330 cây/ha)" -> ("Cây cam", "Mật độ 1.111 cây/ha"). Ngoặc khác giữ trong
+    tên ("Cây mận (roi) (Mật độ 493 cây/ha)" -> "Cây mận (roi)"). Không có mật độ: (tên, '')."""
+    for m in _RE_MAT_DO_TEN.finditer(ten):
+        if m.group(1) or re.match(r'(?i)\s*\(\s*m[ậa]t\s*[đd][ộo]', m.group(0)):
+            so, dv = m.group(1), m.group(2)
+            gc = f'Mật độ {so} {dv}/ha' if so else ' '.join(m.group(0).strip(' ()').split())
+            return ' '.join((ten[:m.start()] + ' ' + ten[m.end():]).split()), gc
+    return ten, ''
+
+
 def nhan_muc(dong: list, nhom: int = 0) -> list:
     """Dòng bảng -> các mục đơn giá. Có dòng tiêu đề (Tên, ĐVT, Đơn giá) thì theo cột; không có thì đọc theo mẫu
     '<mã> <tên> <ĐVT> <đơn giá>' trên từng dòng chữ (PDF).
@@ -532,29 +674,48 @@ def nhan_muc(dong: list, nhom: int = 0) -> list:
     con (-, +, a)...) -> tên "Cha - Con" như bộ đơn giá; dòng '*' là trường hợp chen giữa; ô giá có nhãn
     ("Đông Xuân: 24.880.000") -> "Tên (Đông Xuân)"; dòng tên trống tiếp tục mục ngay trên. nhom: nhóm mặc định (theo văn bản)."""
     kq, tieu_de, nhan = [], None, 1
-    cha = truong_hop = truoc = dvt_mac_dinh = ''
+    cha = truong_hop = truoc = dvt_mac_dinh = mat_do = mat_do_bang = nhom_dk = ''
     nhom_muc = 0
     for r in dong:
         o = [bo_dau(c) for c in r]
-        ten_c = _cot(o, r'^(ten|loai|noi dung|hang muc|danh muc|tai san|cay trong)', r'\bten (tai san|cay|cong trinh|khoan)')
+        ten_c = _cot(o, r'^(ten|loai|noi dung|hang muc|danh muc|tai san|cay trong|nhom loai)', r'\bten (tai san|cay|cong trinh|khoan)')
         gia_c = _cot(o, r'^(don gia|gia|muc (ho tro|boi thuong)|muc gia)', r'don gia')
         if ten_c is not None and gia_c is not None and ten_c != gia_c:
             dvt_c = _cot(o, r'^(dvt|don vi)', r'don vi tinh')
             ma_c = _cot(o, r'^(ma|ma so|ma ts|ma ho tro|ky hieu)$')
             stt_c = _cot(o, r'^(stt|tt|so tt|so thu tu)$')
-            tieu_de = (ten_c, gia_c, dvt_c, ma_c, stt_c)
+            dk_c = _cot(o, r'^duong kinh', r'^(d|dk|co)\s*\(?cm\)?$')       # bảng giá cây lâm nghiệp theo nhóm loài x cỡ đường kính
+            if dk_c in (ten_c, gia_c):
+                dk_c = None
+            tieu_de = (ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c)
             nhan = 1000 if any(re.search(r'nghin|1\.?000 ?d', x) for x in o) else 1
             # bảng không có cột ĐVT, đơn vị ghi ở tiêu đề cột giá: "Đơn giá bồi thường (đồng/ha)"
             md = re.search(r'(?i)(?:đồng|đ)\s*/\s*([^)]+)\)', r[gia_c])
             dvt_mac_dinh = md.group(1).strip() if md else ''
-            cha = truong_hop = truoc = ''
+            # mật độ ghi ở tiêu đề cột tên: "Nhóm loài cây gỗ trồng trên cạn (mật độ chuẩn 833 cây/ha)"
+            mat_do_bang = tach_mat_do_ten(' '.join(r[ten_c].split()))[1]
+            cha = truong_hop = truoc = nhom_dk = ''
             continue
         if tieu_de and len(r) >= 2:
-            ten_c, gia_c, dvt_c, ma_c, stt_c = tieu_de
+            ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c = tieu_de
             r = list(r) + [''] * (max(c for c in tieu_de if c is not None) + 1 - len(r))   # ô gộp: hàng ít ô hơn tiêu đề
             stt = r[stt_c].strip() if stt_c is not None else ''
             ten = ' '.join(r[ten_c].split()).rstrip(' .;:')
             g, nhan_gia = _tach_gia(r[gia_c])
+            dk = chuan_duong_kinh(r[dk_c]) if dk_c is not None else ''
+            if dk_c is not None and (ten or dk):
+                # bảng nhóm loài: ô nhóm gộp nhiều hàng (chỉ hàng đầu có chữ) - các hàng sau là cỡ đường kính của nhóm đó
+                if ten and not re.fullmatch(r'[\d\W]+', ten):
+                    nhom_dk = ten
+                if dk and g and nhom_dk:
+                    ten_nhom = ' '.join(re.sub(r'\([^)]*(?:danh s[áa]ch|ph[ụu] l[ụu]c)[^)]*\)', ' ', nhom_dk).split())
+                    dvt = (r[dvt_c].strip() if dvt_c is not None else '') or dvt_mac_dinh or 'cây'
+                    dvt = re.sub(r'(?i)^(?:đồng|đ)\s*/\s*', '', dvt)
+                    kq.append(Muc(f'{ten_nhom} {dk}', dvt, g * nhan, '', ' | '.join(c for c in r if c), nhom=nhom or 3,
+                                  ghi_chu=mat_do_bang, nhom_loai=khoa_nhom_loai(nhom_dk), duong_kinh=dk))
+                    continue
+                if not g:
+                    continue
             if not g:
                 if not ten:
                     continue
@@ -566,15 +727,20 @@ def nhan_muc(dong: list, nhom: int = 0) -> list:
                 elif _CON.match(stt) and cha:
                     truong_hop = ten                                # dòng con không giá: thêm một cấp
                 else:
-                    # mật độ ghi ở ghi chú danh mục, không ở tên: "Cây bưởi (Mật độ 210 cây/ha)" -> "Cây bưởi"
-                    cha, truong_hop = re.sub(r'(?i)\s*\(\s*m[ậa]t\s*[đd][ộo][^)]*\)', '', ten).strip(), ''
+                    # mật độ ghi ở ghi chú danh mục, không ở tên: "Cây bưởi (Mật độ 210 cây/ha)" / "Cây vải thiều (330 cây/ha)"
+                    # -> "Cây bưởi" + ghi chú "Mật độ 210 cây/ha" cho các dòng con
+                    cha, mat_do = tach_mat_do_ten(ten)
+                    truong_hop = ''
                 continue
+            gc = ''
             if not ten:                                             # tiếp tục mục ngay trên (ô tên gộp)
-                ten = truoc
+                ten, gc = truoc, mat_do if cha else ''
             elif _CON.match(stt) or stt.startswith('*') or (not stt and cha):     # dòng con (STT -, a)... hoặc để trống)
                 ten = ' - '.join(x for x in (cha, truong_hop, ten) if x)
+                gc = mat_do if cha else ''
             else:
-                cha = truong_hop = ''
+                cha = truong_hop = mat_do = ''
+                ten, gc = tach_mat_do_ten(ten)
             truoc = ten
             if not ten or re.fullmatch(r'[\d\W]+', ten):
                 continue
@@ -582,7 +748,7 @@ def nhan_muc(dong: list, nhom: int = 0) -> list:
             dvt = (r[dvt_c].strip() if dvt_c is not None else '') or dvt_mac_dinh
             dvt = re.sub(r'(?i)^(?:đồng|đ)\s*/\s*', '', dvt)          # "đồng/bụi" -> "bụi"
             kq.append(Muc(ten_day, dvt, g * nhan, r[ma_c].strip() if ma_c is not None else '',
-                          ' | '.join(c for c in r if c), nhom=nhom or nhom_muc or _nhom_dong(ten_day, dvt)))
+                          ' | '.join(c for c in r if c), nhom=nhom or nhom_muc or _nhom_dong(ten_day, dvt), ghi_chu=gc))
             continue
         if len(r) == 1:                                   # dòng chữ (PDF / Word không bảng)
             m = re.match(rf'^(?:(\d+|[A-Z]{{1,3}}\d+)\s+)?(.+?)\s+({DVT})\s+([\d][\d\.,]*)$', r[0], re.I)
@@ -809,6 +975,67 @@ def _khoa_gon(ten: str) -> str:
     return _khoa(re.sub(r'\([^)]*\)', ' ', ten))
 
 
+def _khoa_quy_cach(ten: str) -> str:
+    """Khóa gọn thêm bỏ chữ "thứ" trước số: "Năm 1" (bộ đơn giá cũ) ~ "Năm thứ 1" (văn bản mới), "Năm thu hoạch thứ 1-3 (Năm thứ
+    3,4,5)" ~ "Năm thu hoạch thứ 1 - 3"."""
+    return ' '.join(re.sub(r'\bthu (?=\d)', '', _khoa_gon(ten)).split())
+
+
+_RE_NGOAC_TUOI = re.compile(r'(?i)\s*\(\s*n[ăa]m\s+th[ứu][^)]*\)')
+
+
+def ten_thay_the(ten_moi: str, ten_cu: str) -> str:
+    """Tên ghi vào mục cũ khi thay thế: đúng cách ghi của văn bản mới; chú thích quy đổi tuổi "(Năm thứ 3,4,5)" của tên cũ được giữ khi
+    văn bản không ghi (bộ chọn năm tuổi - hieu_tai_san.khoang_tuoi, ứng dụng điện thoại - đọc chú thích này để biết năm thu hoạch thứ
+    1-3 là cây năm thứ mấy)."""
+    m = _RE_NGOAC_TUOI.search(ten_cu or '')
+    if m and not _RE_NGOAC_TUOI.search(ten_moi) and 'thu hoach' in bo_dau(ten_moi):
+        return ten_moi + ' ' + m.group(0).strip()
+    return ten_moi
+
+
+_RE_GHI_CHU_VAN_BAN_CU = re.compile(r'quyet dinh|nghi quyet|\bqd\b|/qd|\bsua doi\b|\bbo sung\b|cap nhat tu')
+
+
+def ghi_chu_thay_the(gc_cu: str, gc_moi: str, ten_moi: str) -> str:
+    """Ghi chú mục cũ khi văn bản mới thay thế văn bản cũ: mật độ theo văn bản mới (bỏ mật độ cũ), bỏ ghi chú thuộc văn bản cũ ("Sửa
+    đổi, bổ sung tại Quyết định số 66/2025…", "Cập nhật từ …") và đoạn trùng chữ trong ngoặc của tên mới (bộ cũ từng ghi "roi" của
+    "Cây mận (roi)" vào ghi chú); ghi chú khác giữ."""
+    ngoac = {_khoa(x) for x in re.findall(r'\(([^)]*)\)', ten_moi)}
+    giu = []
+    for d in (gc_cu or '').split(';'):
+        d = d.strip()
+        k = bo_dau(d)
+        if not d or _khoa(d) in ngoac or (gc_moi and k.startswith('mat do')) or _RE_GHI_CHU_VAN_BAN_CU.search(k):
+            continue
+        giu.append(d)
+    return '; '.join(([gc_moi] if gc_moi else []) + giu)
+
+
+NHOM_PHAM_VI = {2: 'nhà, công trình, vật kiến trúc', 3: 'cây trồng', NHOM_VN: 'vật nuôi, thủy sản', 4: 'chính sách hỗ trợ'}
+# từ khóa nhận văn bản cũ của nhóm trong danh sách văn bản căn cứ (đoán sẵn văn bản bị thay thế)
+_TU_NHOM_VB = {2: r'nha, cong trinh|nha va cong trinh|cong trinh xay dung|vat kien truc', 3: r'cay trong|hoa mau',
+               NHOM_VN: r'vat nuoi|thuy san', 4: r'ho tro|tai dinh cu'}
+
+
+def van_ban_cu_cua_nhom(nhom_ds: set) -> list:
+    """[(id, số hiệu, nội dung)] văn bản trong danh sách văn bản căn cứ của bộ đơn giá đang dùng có nội dung về nhóm (để chọn văn bản
+    bị thay thế). Bỏ văn bản sửa đổi / dự thảo / đã hết hiệu lực."""
+    con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
+    try:
+        ds = con.execute('SELECT id, so_hieu, noi_dung, trang_thai FROM van_ban ORDER BY id').fetchall()
+    finally:
+        con.close()
+    mau = '|'.join(_TU_NHOM_VB[n] for n in sorted(nhom_ds) if n in _TU_NHOM_VB)
+    kq = []
+    for i, sh, nd, tt in ds:
+        k = bo_dau(f'{sh} {nd}')
+        if mau and re.search(mau, k) and not re.search(r'du thao|het hieu luc|^sua doi', bo_dau(f'{nd} {tt}')) \
+                and re.search(r'quyet dinh|\bqd\b', bo_dau(sh)):
+            kq.append((i, sh, nd))
+    return kq
+
+
 GAN_DUNG = 0.9          # tên giống >= 90% (cùng ĐVT) thì coi là cùng mục; hiện "gần đúng" để người dùng xem lại
 
 
@@ -827,10 +1054,16 @@ def _giong_tung_phan(a: str, b: str) -> bool:
 _NHO_GAN = {}
 
 
-def so_khop(ds: list, nhom: int | None = None) -> list:
-    """So với bộ đơn giá đang dùng: theo mã, tên (không dấu), rồi tên gần đúng cùng ĐVT. nhom None / 0: mỗi dòng theo
-    nhóm của dòng (Muc.nhom); có nhom thì cả bảng theo nhóm đó."""
+def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False) -> list:
+    """So với bộ đơn giá đang dùng: theo mã, tên (không dấu), tên bỏ ngoặc, quy cách ("Năm 1" ~ "Năm thứ 1"), rồi tên gần đúng cùng
+    ĐVT. nhom None / 0: mỗi dòng theo nhóm của dòng (Muc.nhom); có nhom thì cả bảng theo nhóm đó.
+
+    thay_the (30/10/2026, người dùng: "thay thế toàn bộ văn bản cũ bằng văn bản mới, để đúng với toàn bộ nội dung theo văn bản mới"):
+    danh mục các nhóm có trong văn bản (cây trồng / nhà, công trình / vật nuôi / hỗ trợ) theo đúng văn bản - mục khớp có tên / mật độ /
+    ghi chú khác văn bản -> ten_thay / ghi_chu_thay (giá không đổi: trạng thái 'đổi quy cách'); mục cũ CÙNG NHÓM không còn trong văn
+    bản -> thêm dòng 'bỏ' (bo_cu, chọn sẵn). Cây trồng và vật nuôi cùng nhom 3 trong CSDL: văn bản cây trồng không bỏ vật nuôi."""
     import difflib
+    ds[:] = [m for m in ds if not m.bo_cu]
     f = don_gia.file_dang_dung()
     try:
         ban = (str(f), os.path.getmtime(f), os.path.getsize(f))   # bộ đơn giá đổi (cập nhật) -> khóa nhớ khác
@@ -838,9 +1071,10 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
         ban = (str(f), 0, 0)
     con = csdl.mo(f, chi_doc=True)
     try:
-        hien = {4: [dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia FROM dm_hotro')]}
+        hien = {4: [dict(r) for r in con.execute("SELECT ma, ten, dvt, don_gia, '' AS ghi_chu FROM dm_hotro")]}
         for n in (2, 3):
-            hien[n] = [dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia, phan_loai FROM dm_taisan WHERE nhom = ?', (n,))]
+            hien[n] = [dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia, phan_loai, ghi_chu FROM dm_taisan WHERE nhom = ? '
+                                                    'ORDER BY rowid', (n,))]
         # vật nuôi (nhóm 7 khi phân tích): các dòng nhóm 3 có mã VN / phân loại vật nuôi - nhóm 3 vẫn gồm cả hai (giữ cách khớp cũ)
         from .nghiep_vu import la_vat_nuoi
         hien[NHOM_VN] = [x for x in hien[3] if str(x['ma']).upper().startswith('VN') or la_vat_nuoi(x['phan_loai'])]
@@ -849,23 +1083,29 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
     from .ten_cay_lam_nghiep import bo_ten_khac
     bang = {}
     for n, ds_ in hien.items():
-        theo_dvt, gon = {}, {}
+        theo_dvt, gon, qc = {}, {}, {}
         for x in ds_:
             theo_dvt.setdefault(bo_dau(x['dvt'] or ''), {})[_khoa(x['ten'])] = x
             gon.setdefault(_khoa_gon(x['ten']), []).append(x)
+            qc.setdefault(_khoa_quy_cach(x['ten']), []).append(x)
         gon = {k: v[0] for k, v in gon.items() if len(v) == 1}       # bỏ ngoặc mà trùng nhiều mục: không dùng
+        qc = {k: v[0] for k, v in qc.items() if len(v) == 1}
         theo_ten = {_khoa(x['ten']): x for x in ds_}
         for x in ds_:                   # 26/10/2026: tên cây lâm nghiệp có tên khác ("Bách xanh (Tùng hương) (d …)") vẫn khớp tên văn bản
             theo_ten.setdefault(_khoa(bo_ten_khac(x['ten'])), x)
-        bang[n] = ({x['ma'].upper(): x for x in ds_}, theo_ten, theo_dvt, gon)
+        bang[n] = ({x['ma'].upper(): x for x in ds_}, theo_ten, theo_dvt, gon, qc)
+    da_khop = set()
     for m in ds:
         n = nhom or m.nhom or 3
-        theo_ma, theo_ten, theo_dvt, gon = bang[n]
+        theo_ma, theo_ten, theo_dvt, gon, qc = bang[n]
         r = theo_ma.get(m.ma.upper()) if m.ma else None
         r = r or theo_ten.get(_khoa(m.ten))
-        if r is None:
-            x = gon.get(_khoa_gon(m.ten))
-            r = x if x is not None and bo_dau(x['dvt'] or '') == bo_dau(m.dvt) else None
+        if r is None and m.ten_loai:                    # dòng tách theo loài: tên khác của văn bản ghi khác bộ đơn giá
+            r = theo_ten.get(_khoa(f'{m.ten_loai} {m.duong_kinh}'))
+        for khoa_, bang_ in ((_khoa_gon, gon), (_khoa_quy_cach, qc)):
+            if r is None:
+                x = bang_.get(khoa_(m.ten))
+                r = x if x is not None and bo_dau(x['dvt'] or '') == bo_dau(m.dvt) else None
         m.khop_gan = 0.0
         if r is None:
             k, dv = _khoa(m.ten), bo_dau(m.dvt)
@@ -884,13 +1124,61 @@ def so_khop(ds: list, nhom: int | None = None) -> list:
                 _NHO_GAN[kn] = gan
             if _NHO_GAN[kn] is not None and _NHO_GAN[kn][0] in cung:
                 r, m.khop_gan = cung[_NHO_GAN[kn][0]], _NHO_GAN[kn][1]
+        m.ten_thay = m.ghi_chu_thay = ''
         if r is None:
-            m.trang_thai, m.ma_khop, m.gia_cu = 'mới', '', None
+            m.trang_thai, m.ma_khop, m.gia_cu, m.ten_cu, m.ghi_chu_cu = 'mới', '', None, '', ''
         else:
-            m.ma_khop = r['ma']
+            m.ma_khop, m.ten_cu, m.ghi_chu_cu = r['ma'], r['ten'], r['ghi_chu'] or ''
+            da_khop.add((n, r['ma']))
             m.gia_cu = doc_gia(r['don_gia']) if r['don_gia'] not in (None, '') else None
             m.trang_thai = 'giữ nguyên' if m.gia_cu == m.don_gia else 'cập nhật'
+            if thay_the:
+                ten = ten_thay_the(m.ten, r['ten'])
+                gc = ghi_chu_thay_the(m.ghi_chu_cu, m.ghi_chu, ten) if n != 4 else ''
+                if ten != r['ten'] or (n != 4 and gc != m.ghi_chu_cu):
+                    m.ten_thay, m.ghi_chu_thay = ten, gc
+                    if m.trang_thai == 'giữ nguyên':
+                        m.trang_thai = 'đổi quy cách'
+    # mã cho mục mới (người dùng 30/10/2026: "tự tạo mã cây trồng theo văn bản mới") - số tiếp theo của bộ đơn giá, theo thứ tự văn
+    # bản; ap_dung cấp đúng mã này (mã của mục bị bỏ không dùng lại: dự án cũ còn ghi mã đó)
+    from .ma_tai_san import tien_to
+    lon = _so_lon_nhat(hien)
+    for m in ds:
+        m.ma_moi = ''
+        if m.trang_thai == 'mới' and not m.ma:
+            n = nhom or m.nhom or 3
+            tt = 'CS' if n == 4 else tien_to(3 if n == NHOM_VN else n, n == NHOM_VN)
+            lon[tt] = lon.get(tt, 0) + 1
+            m.ma_moi = f'{tt}{lon[tt]}'
+    if thay_the:
+        khop_ma = {ma for _, ma in da_khop}
+        vn_ma = {x['ma'] for x in hien[NHOM_VN]}
+        for n in pham_vi_thay_the(ds, nhom):
+            for x in hien[n]:
+                if x['ma'] in khop_ma or (n == 3 and x['ma'] in vn_ma):
+                    continue
+                g = doc_gia(x['don_gia']) if x['don_gia'] not in (None, '') else 0
+                ds.append(Muc(x['ten'], x['dvt'] or '', g or 0, trang_thai='bỏ', ma_khop=x['ma'], gia_cu=g, nhom=n,
+                              ten_cu=x['ten'], ghi_chu_cu=x['ghi_chu'] or '', bo_cu=True,
+                              nguon_dong=f'Mục {NHOM_PHAM_VI.get(n, "")} trong bộ đơn giá đang dùng nhưng văn bản mới không có'))
     return ds
+
+
+def _so_lon_nhat(hien: dict) -> dict:
+    """{tiền tố mã: số lớn nhất đang dùng} (TS / CT / VN / CS) trong các dòng danh mục đã đọc."""
+    lon = {}
+    for ds_ in hien.values():
+        for x in ds_:
+            m = re.fullmatch(r'([A-Za-z]+)(\d+)', str(x['ma'] or '').strip())
+            if m:
+                k = m.group(1).upper()
+                lon[k] = max(lon.get(k, 0), int(m.group(2)))
+    return lon
+
+
+def pham_vi_thay_the(ds: list, nhom: int | None = None) -> list:
+    """Các nhóm danh mục văn bản thay thế (nhóm của các dòng đọc được từ văn bản, không tính dòng 'bỏ')."""
+    return sorted({nhom or m.nhom or 3 for m in ds if not m.bo_cu})
 
 
 def _phan_loai_dang_dung(con, vat_nuoi: bool, nhom: int) -> str:
@@ -920,12 +1208,33 @@ def _phan_loai(con, nm: int, ten: str, van_ban: dict | None) -> str:
     return _phan_loai_dang_dung(con, False, nm)
 
 
-def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban: dict | None = None) -> dict:
+def _ma_cap(con, m, bang: str, tt: str, da_cap: dict, dung: set) -> str:
+    """Mã của mục mới: mã đã hiện trên bảng (so_khop - Muc.ma_moi) khi còn trống, không thì số tiếp theo."""
+    from .ma_tai_san import ma_tiep
+    if m.ma_moi and m.ma_moi.upper().startswith(tt) and m.ma_moi not in dung:
+        dung.add(m.ma_moi)
+        so = int(m.ma_moi[len(tt):])
+        da_cap[tt] = max(da_cap.get(tt, 0), so)
+        return m.ma_moi
+    while True:
+        ma = ma_tiep(con, bang, tt, da_cap)
+        if ma not in dung:
+            dung.add(ma)
+            return ma
+
+
+TRANG_THAI_GHI = ('mới', 'cập nhật', 'đổi quy cách', 'bỏ')
+CHU_TRANG_THAI = {'mới': 'mục mới', 'cập nhật': 'mục đổi giá', 'đổi quy cách': 'mục đổi tên / quy cách', 'bỏ': 'mục bỏ'}
+
+
+def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban: dict | None = None,
+            van_ban_cu: list | tuple = ()) -> dict:
     """Tạo bộ đơn giá mới (bộ đang dùng + các mục được chọn) và cài. Trả thông tin bộ mới + số mục.
-    nhom None / 0: mỗi dòng theo Muc.nhom. van_ban: kết quả phan_tich_van_ban (ghi vào danh mục văn bản căn cứ)."""
-    chon = [m for m in ds if m.chon and m.trang_thai in ('mới', 'cập nhật')]
+    nhom None / 0: mỗi dòng theo Muc.nhom. van_ban: kết quả phan_tich_van_ban (ghi vào danh mục văn bản căn cứ).
+    van_ban_cu: id các dòng văn bản căn cứ bị văn bản này thay thế (chế độ thay thế) -> trạng thái "Hết hiệu lực - thay thế bởi …"."""
+    chon = [m for m in ds if m.chon and m.trang_thai in TRANG_THAI_GHI]
     if not chon and not (van_ban and van_ban.get('so_hieu')):
-        raise LoiNhap('Không có mục nào mới hoặc đổi giá để cập nhật.')
+        raise LoiNhap('Không có mục nào mới, đổi giá, đổi quy cách hoặc bỏ để cập nhật.')
     # không có dòng giá nhưng có văn bản (văn bản chính sách): chỉ ghi vào danh mục văn bản căn cứ để theo dõi
     goc = don_gia.file_dang_dung()
     tt_cu = don_gia.thong_tin(goc)
@@ -937,32 +1246,44 @@ def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban
             pb = phien_ban or datetime.now().strftime('%Y.%m.%d.%H%M')
             if pb <= tt_cu['phien_ban']:
                 pb = tt_cu['phien_ban'] + '.1'
-            so = {'mới': 0, 'cập nhật': 0}
+            so = {k: 0 for k in TRANG_THAI_GHI}
             theo_nhom = {}
             with con, csdl.mo_khoa_danh_muc(con):
                 # mã mục mới theo quy ước 0.9.69 (ma_tai_san): CS (hỗ trợ), TS (nhà), CT (cây), VN (vật nuôi) - số tiếp theo
                 from .ma_tai_san import doi_ma, ma_tiep, tien_to
                 from .nghiep_vu import la_vat_nuoi
-                da_cap = {}
+                # số cuối từng tiền tố lấy TRƯỚC khi xóa dòng 'bỏ' - mã của mục bị bỏ không cấp lại cho mục khác
+                da_cap = {tt: max(n - 1, 0) for tt, n in ((tt, int(ma_tiep(con, b, tt)[len(tt):])) for b, tt in
+                          (('dm_hotro', 'CS'), ('dm_taisan', 'TS'), ('dm_taisan', 'CT'), ('dm_taisan', 'VN')))}
+                dung = {r_[0] for b in ('dm_hotro', 'dm_taisan') for r_ in con.execute(f'SELECT ma FROM {b}')}
                 for m in chon:
                     nm = nhom or m.nhom or 3
-                    if m.trang_thai == 'cập nhật':
-                        bang = 'dm_hotro' if nm == 4 else 'dm_taisan'
+                    bang = 'dm_hotro' if nm == 4 else 'dm_taisan'
+                    if m.trang_thai == 'bỏ':
+                        con.execute(f'DELETE FROM {bang} WHERE ma = ?', (m.ma_khop,))
+                    elif m.trang_thai in ('cập nhật', 'đổi quy cách'):
                         con.execute(f'UPDATE {bang} SET don_gia = ? WHERE ma = ?', (chuoi(m.don_gia), m.ma_khop))
+                        if m.ten_thay:              # thay thế theo cách ghi của văn bản mới: tên, mật độ (mã giữ nguyên)
+                            con.execute(f'UPDATE {bang} SET ten = ? WHERE ma = ?', (m.ten_thay, m.ma_khop))
+                            if bang == 'dm_taisan':
+                                con.execute('UPDATE dm_taisan SET ghi_chu = ? WHERE ma = ?', (m.ghi_chu_thay, m.ma_khop))
                     elif nm == 4:
-                        ma = doi_ma(m.ma, 4) if m.ma else ma_tiep(con, 'dm_hotro', 'CS', da_cap)
+                        ma = doi_ma(m.ma, 4) if m.ma else _ma_cap(con, m, 'dm_hotro', 'CS', da_cap, dung)
                         con.execute('INSERT INTO dm_hotro (ma, ten, dvt, don_gia, can_cu, trang_thai) VALUES (?,?,?,?,?,?)',
                                     (ma, m.ten, m.dvt, chuoi(m.don_gia), nguon, 'Cập nhật từ file'))
                     else:
                         nhom_db = 3 if nm == NHOM_VN else nm          # vật nuôi: nhom 3 + phân loại vật nuôi (CSDL không có nhom 7)
                         pl = _phan_loai(con, nm, m.ten, van_ban)
                         vn = nhom_db == 3 and la_vat_nuoi(pl)
-                        ma = doi_ma(m.ma, nhom_db, vn) if m.ma else ma_tiep(con, 'dm_taisan', tien_to(nhom_db, vn), da_cap)
+                        ma = doi_ma(m.ma, nhom_db, vn) if m.ma else _ma_cap(con, m, 'dm_taisan', tien_to(nhom_db, vn), da_cap, dung)
                         con.execute('INSERT INTO dm_taisan (ma, nhom, phan_loai, ten, dvt, don_gia, ghi_chu) VALUES (?,?,?,?,?,?,?)',
-                                    (ma, nhom_db, pl, m.ten, m.dvt, chuoi(m.don_gia), f'Cập nhật từ {nguon}'))
+                                    (ma, nhom_db, pl, m.ten, m.dvt, chuoi(m.don_gia),
+                                     '; '.join(x for x in (m.ghi_chu, f'Cập nhật từ {nguon}') if x)))
                     so[m.trang_thai] += 1
-                    theo_nhom.setdefault(nm, {'mới': 0, 'cập nhật': 0})[m.trang_thai] += 1
-                tom_tat = '; '.join(f'{NHOM[k]}: {v["mới"]} mục mới, {v["cập nhật"]} mục đổi giá'
+                    theo_nhom.setdefault(nm, {k: 0 for k in TRANG_THAI_GHI})[m.trang_thai] += 1
+                # mới / đổi giá luôn ghi (như trước); đổi quy cách / bỏ chỉ ghi khi có
+                tom_tat = '; '.join(f'{NHOM[k]}: ' + ', '.join(f'{v[t]} {chu}' for t, chu in CHU_TRANG_THAI.items()
+                                                               if v[t] or t in ('mới', 'cập nhật'))
                                     for k, v in sorted(theo_nhom.items())) or 'Văn bản chính sách: cần đối chiếu quy tắc tính'
                 vb = van_ban or {}
                 so_hieu = vb.get('so_hieu') and ' '.join(x for x in (vb.get('loai_vb', ''), vb['so_hieu'],
@@ -978,9 +1299,15 @@ def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban
                     con.execute('INSERT INTO van_ban (so_hieu, co_quan, noi_dung, trang_thai) VALUES (?,?,?,?)',
                                 (so_hieu or f'Cập nhật đơn giá từ {nguon}', vb.get('co_quan', ''),
                                  (vb.get('trich_yeu', '') + ' - ' if vb.get('trich_yeu') else '') + tom_tat, trang_thai))
+                ten_moi = so_hieu or nguon
+                for i in van_ban_cu:
+                    if cu is None or i != cu[0]:
+                        con.execute('UPDATE van_ban SET trang_thai = ? WHERE id = ?',
+                                    (f'Hết hiệu lực - thay thế bởi {ten_moi} (cập nhật {datetime.now():%d/%m/%Y})', i))
                 con.execute('UPDATE du_an SET phien_ban_gia = ?, nguon_nhap = ?, ngay_nhap = ? WHERE id = 1',
                             (pb, nguon, datetime.now().isoformat(timespec='seconds')))
         finally:
             con.close()
         tt = don_gia.cai_bo(moi)
-    return dict(tt, so_moi=so['mới'], so_cap_nhat=so['cập nhật'], theo_nhom=theo_nhom)
+    return dict(tt, so_moi=so['mới'], so_cap_nhat=so['cập nhật'], so_quy_cach=so['đổi quy cách'], so_bo=so['bỏ'],
+                theo_nhom=theo_nhom)

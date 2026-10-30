@@ -2627,6 +2627,32 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   qua dat_kieu_theo_tong. Đã bỏ MAU_ICON_MENU / MAU_ICON_MENU_CHON / MAU_MENU_TAT (dùng mau_menu()). Chưa làm theo ảnh mẫu: vạch thẻ KPI ở cạnh
   trên (giữ vạch trái), chữ cái trong huy hiệu thẻ chào (giữ biểu tượng), "Ctrl+I" của Nhập file Excel (lệnh không có phím tắt đó). Mobile
   giữ màu Sapphire của 1.0.34 (chỉ đồng bộ số phiên bản).
+- 1.0.36 THAY THẾ TOÀN BỘ VĂN BẢN CŨ BẰNG VĂN BẢN MỚI (người dùng 30/10/2026: "thay thế toàn bộ văn bản cũ bằng văn bản mới, để đúng
+  với toàn bộ nội dung theo văn bản mới"; "tự tạo mã cây trồng theo văn bản mới, tách từng loại cây"; test `tests/test_thay_the_don_gia.py`):
+  - Đọc (`nhap_don_gia`): `tach_mat_do_ten` ("(330 cây/ha)" / "(Mật độ [chuẩn] 493 cây/ha)" của dòng cha / tiêu đề cột tên -> `Muc.ghi_chu`
+    "Mật độ … cây/ha"; ngoặc khác như "(roi)" giữ trong tên; mục mới ghi mật độ vào ghi_chu). nhan_muc nhận cột "Đường kính thân cây" (`dk_c`):
+    bảng Phụ lục IV QĐ 48/2025 = ô NHÓM gộp nhiều hàng + một hàng mỗi cỡ -> Muc "<nhóm> (d ≤3 cm)" có `nhom_loai` (`khoa_nhom_loai`: 'quy
+    hiem' / số nhóm '1'..'8' từ La Mã hoặc số) + `duong_kinh` (`chuan_duong_kinh`: "≤3" -> "(d ≤3 cm)", ">3 - 6" -> "(d >3-6 cm)").
+    `doc_nhom_loai(dong)` (Phụ lục VI: dòng "Bảng k: Loài cây nhóm X" + bảng "Tên Việt Nam" / "Tên Việt Nam khác" (tách ". ; ,")) ->
+    `tach_theo_loai(ds, nhom_loai)` -> mỗi loài một dòng mỗi cỡ "Loài (Tên khác, …) (d …)" (`ten_loai` để khớp), xếp từng loài đủ cỡ như bộ;
+    văn bản không có danh sách loài -> các loài của bộ đang dùng có ĐÚNG bảng giá theo cỡ của nhóm (`_loai_trong_bo`); vẫn không có -> giữ dòng
+    nhóm + báo (`khong_tach`). HopNhapDonGia gọi ngay sau nhan_muc và báo số nhóm / loài đã tách. Văn bản thật (VBHN cây trồng.pdf, bản scan
+    48 trang) chưa thử trọn: OCR bảng nhiều cột kém - thử bằng bản Word / PDF có chữ khi có.
+  - So khớp: thêm khóa `_khoa_quy_cach` (bỏ ngoặc + bỏ "thứ" trước số: "Năm 1" ~ "Năm thứ 1"; duy nhất + cùng ĐVT), `ten_loai + duong_kinh`
+    tra theo_ten (có khóa bo_ten_khac); "(d <3 cm)" ~ "(d ≤3 cm)" vì _khoa bỏ ký hiệu. Mục mới: `Muc.ma_moi` (số tiếp theo của tiền tố
+    TS / CT / VN / CS theo thứ tự văn bản, hiện ở cột Mã "CT5511 (mới)"), `ap_dung._ma_cap` cấp đúng mã đó; `da_cap` lấy số cuối TRƯỚC khi xóa
+    dòng 'bỏ' - mã mục bỏ không cấp lại (ct_khoan dự án cũ còn ghi mã).
+  - `so_khop(..., thay_the=True)` (HopNhapDonGia `o_cach` "Cách cập nhật" = `CACH_CAP_NHAT`: Bổ sung, sửa đổi (mặc định) | Thay thế toàn bộ):
+    phạm vi = nhóm của các dòng văn bản (`pham_vi_thay_the`; cây trồng KHÔNG gồm vật nuôi dù cùng nhom 3); mục khớp có tên / ghi chú khác văn
+    bản -> `ten_thay` (`ten_thay_the`: GIỮ chú thích "(Năm thứ 3,4,5)" của tên cũ khi văn bản không ghi - hieu_tai_san.khoang_tuoi / ứng dụng
+    điện thoại cần nó), `ghi_chu_thay` (`ghi_chu_thay_the`: mật độ mới, BỎ ghi chú của văn bản cũ "Sửa đổi… QĐ 66/2025", "Cập nhật từ…",
+    đoạn trùng ngoặc tên mới "roi"), trạng thái 'đổi quy cách' (giá đổi vẫn 'cập nhật' + đổi tên); mục cũ cùng nhóm không có trong văn bản ->
+    Muc `bo_cu` 'bỏ' CHỌN SẴN (so lại thì bỏ các dòng bo_cu trước). `lb_canh_thay` báo số mục bỏ / số mục văn bản (bỏ nhiều hơn -> nhắc kiểm
+    tra đã đọc đủ bảng), accept hỏi xác nhận khi có mục bỏ. `cb_vb_cu` (`van_ban_cu_cua_nhom`: văn bản căn cứ là Quyết định có nội dung về
+    nhóm; một văn bản thì chọn sẵn) -> `ap_dung(van_ban_cu=[id])` ghi "Hết hiệu lực - thay thế bởi <số hiệu mới> (cập nhật …)".
+    `ap_dung`: `TRANG_THAI_GHI` (mới / cập nhật / đổi quy cách / bỏ), UPDATE ten + ghi_chu theo mã, DELETE dòng 'bỏ' đã chọn; kết quả thêm
+    so_quy_cach / so_bo. Bảng hộp `COT` 10 cột (Ghi chú quy cách, Tên hiện hành), màu xanh dương / đỏ. Dự án đã lập không đổi (ct_khoan giữ
+    tên / giá; dm.lay mã không còn -> None, các nơi dùng đã xử lý).
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

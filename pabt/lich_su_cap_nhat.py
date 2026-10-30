@@ -7,6 +7,15 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.36', '30/10/2026', (
+        'Cập nhật đơn giá: ô "Cách cập nhật" có "Thay thế toàn bộ văn bản cũ bằng văn bản này" - danh mục nhóm (cây trồng / nhà, công '
+        'trình / vật nuôi / hỗ trợ) theo đúng văn bản mới: mục cũ đổi tên, mật độ, ghi chú theo cách ghi của văn bản (mã giữ nguyên), '
+        'mục mới thêm, mục cũ không còn trong văn bản bị bỏ (dòng đỏ, bỏ dấu "Dùng" để giữ); văn bản cũ ghi "Hết hiệu lực".',
+        'Bảng giá cây lâm nghiệp theo nhóm loài x đường kính được tách thành từng loài mỗi cỡ ("Bồ đề (d >6-9 cm)", "Trường (d >6-9 cm)"…) '
+        'theo danh sách loài của văn bản (Phụ lục VI); mục mới được cấp mã CT tiếp theo, mã hiện ngay trên bảng xem trước.',
+        'Đọc văn bản đơn giá: mật độ "(330 cây/ha)", "(Mật độ 493 cây/ha)" vào ghi chú, không dính vào tên; "Năm thứ 1" của văn bản khớp '
+        '"Năm 1" của bộ đơn giá (trước đây thêm thành mục trùng).',
+    )),
     ('1.0.35', '29/10/2026', (
         'Giao diện mặc định mới "Sáng dịu Slate-Navy": màu xanh hạ độ chói, menu trái nền sáng liền mạch với vùng làm việc, lệnh đang chọn '
         'nền xanh nhạt có vạch trái.',

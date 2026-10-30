@@ -1,6 +1,6 @@
 # Bản đồ mã nguồn PABT
 
-Tạo bởi `tao_ban_do_ma.py` lúc 29/10/2026 19:34. Kiểm tra tĩnh: 0 cảnh báo.
+Tạo bởi `tao_ban_do_ma.py` lúc 30/10/2026 07:17. Kiểm tra tĩnh: 0 cảnh báo.
 
 ## Cảnh báo
 
@@ -59,7 +59,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 29/10/2026 19:34. Kiểm tra tĩnh: 0 cảnh
 | `kinh_phi_du_an.py` | 250 | 0 | 13 | csdl, theo_doi, tien |
 | `lan_pa.py` | 401 | 2 | 27 | csdl, tien |
 | `lap_pa.py` | 1221 | 4 | 30 | csdl, loai_dat, nghiep_vu, tien |
-| `lich_su_cap_nhat.py` | 834 | 0 | 1 | - |
+| `lich_su_cap_nhat.py` | 843 | 0 | 1 | - |
 | `loai_dat.py` | 137 | 0 | 6 | - |
 | `ma_tai_san.py` | 142 | 0 | 8 | - |
 | `man_hinh.py` | 3658 | 15 | 3 | du_lieu_in, giao_dien, hang_nhap_nhanh, lap_pa, nghiep_vu, thong_bao, tien |
@@ -85,7 +85,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 29/10/2026 19:34. Kiểm tra tĩnh: 0 cảnh
 | `man_hinh_kiem_toan.py` | 119 | 1 | 0 | giao_dien, kiem_toan, thong_bao |
 | `man_hinh_may_chu.py` | 844 | 7 | 4 | giao_dien, may_chu, thong_bao |
 | `man_hinh_nhap_chi_tiet.py` | 157 | 1 | 0 | nhap_chi_tiet, tien |
-| `man_hinh_nhap_don_gia.py` | 211 | 1 | 1 | lap_pa, nhap_don_gia, thong_bao, tien |
+| `man_hinh_nhap_don_gia.py` | 313 | 1 | 1 | lap_pa, nhap_don_gia, thong_bao, tien |
 | `man_hinh_ocr.py` | 477 | 2 | 1 | giao_dien, ocr_ho_so, thong_bao, tien |
 | `man_hinh_phan_loai.py` | 189 | 1 | 1 | lap_pa, phan_loai_tai_san, thong_bao |
 | `man_hinh_quan_ly.py` | 1184 | 7 | 4 | csdl, du_thao, giao_dien, kiem_loi, lap_pa, quan_ly, thoi_han, thong_bao, tien |
@@ -102,7 +102,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 29/10/2026 19:34. Kiểm tra tĩnh: 0 cảnh
 | `nguon_gia_dat.py` | 254 | 0 | 14 | lap_pa |
 | `nguon_luoi.py` | 616 | 1 | 29 | lap_pa |
 | `nhap_chi_tiet.py` | 878 | 7 | 34 | csdl, lap_pa, loai_dat, nghiep_vu, nhap_excel, tien |
-| `nhap_don_gia.py` | 987 | 3 | 32 | csdl, don_gia, lap_pa, tien |
+| `nhap_don_gia.py` | 1314 | 3 | 45 | csdl, don_gia, lap_pa, tien |
 | `nhap_excel.py` | 421 | 2 | 10 | csdl, tien |
 | `nhap_tai_san.py` | 202 | 2 | 4 | lap_pa, tien |
 | `nhap_tho.py` | 959 | 2 | 40 | csdl, lap_pa, nguon_luoi, nhap_excel, tien |
@@ -132,7 +132,7 @@ Tạo bởi `tao_ban_do_ma.py` lúc 29/10/2026 19:34. Kiểm tra tĩnh: 0 cảnh
 | `ve_bieu_tuong.py` | 202 | 0 | 6 | - |
 | `xem_truoc_tai_lieu.py` | 942 | 2 | 18 | - |
 
-Tổng: 65011 dòng mã trong pabt/.
+Tổng: 65449 dòng mã trong pabt/.
 
 ## Giá trị theo hồ sơ địa phương (dia_phuong.dang_ky)
 
@@ -517,7 +517,7 @@ Tổng: 65011 dòng mã trong pabt/.
 - lớp `HopNhapChiTiet` (dòng 19): `__init__`, `chon_tat_ca`, `ds_chon`, `cach_trung`, `_dem`, `ap_dung`
 
 ### `man_hinh_nhap_don_gia.py`
-- lớp `HopNhapDonGia` (dòng 30): `__init__`, `khop`, `_sua_o`, `accept`
+- lớp `HopNhapDonGia` (dòng 39): `__init__`, `thay_the`, `_doi_cach`, `_nap_vb_cu`, `khop`, `_sua_o`, `accept`
 - hàm: `mo_ta_van_ban`
 
 ### `man_hinh_ocr.py`
@@ -621,9 +621,9 @@ Tổng: 65011 dòng mã trong pabt/.
 
 ### `nhap_don_gia.py`
 - lớp `Muc` (dòng 42): 
-- lớp `LoiPdfScan` (dòng 56): 
-- lớp `LoiKhongCoGia` (dòng 60): 
-- hàm: `loai_that`, `doc_bang`, `chuyen_office`, `_doc_docx`, `_doc_pdf`, `dong_tu_chu`, `doc_bang_ocr`, `chuan_so_hieu`, `phan_tich_van_ban`, `van_ban_da_co`, `da_co`, `doc_gia`, `_cot`, `nhom_theo_chu`, `_nhom_dong`, `_tach_gia`, `nhan_muc`, `_bo_dau_khoan`, `_ten_gon`, `_la_tieu_de`, `_ket_cau`, `_cau_cuoi`, `_dieu_kien`, `_khoan_van`, `muc_tu_loi_van`, `_khoa`, `_khoa_gon`, `_giong_tung_phan`, `so_khop`, `_phan_loai_dang_dung`, `_phan_loai`, `ap_dung`
+- lớp `LoiPdfScan` (dòng 66): 
+- lớp `LoiKhongCoGia` (dòng 70): 
+- hàm: `loai_that`, `doc_bang`, `chuyen_office`, `_doc_docx`, `_doc_pdf`, `dong_tu_chu`, `doc_bang_ocr`, `chuan_so_hieu`, `phan_tich_van_ban`, `van_ban_da_co`, `da_co`, `doc_gia`, `_cot`, `nhom_theo_chu`, `_nhom_dong`, `_tach_gia`, `khoa_nhom_loai`, `chuan_duong_kinh`, `doc_nhom_loai`, `_loai_trong_bo`, `tach_theo_loai`, `tach_mat_do_ten`, `nhan_muc`, `_bo_dau_khoan`, `_ten_gon`, `_la_tieu_de`, `_ket_cau`, `_cau_cuoi`, `_dieu_kien`, `_khoan_van`, `muc_tu_loi_van`, `_khoa`, `_khoa_gon`, `_khoa_quy_cach`, `ten_thay_the`, `ghi_chu_thay_the`, `van_ban_cu_cua_nhom`, `_giong_tung_phan`, `so_khop`, `_so_lon_nhat`, `pham_vi_thay_the`, `_phan_loai_dang_dung`, `_phan_loai`, `_ma_cap`, `ap_dung`
 
 ### `nhap_excel.py`
 - lớp `BaoCaoNhap` (dòng 72): 

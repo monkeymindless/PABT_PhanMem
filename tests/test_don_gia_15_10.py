@@ -110,7 +110,9 @@ class TestManHinh(CoSo):
         from pabt.man_hinh_nhap_don_gia import C_GIA, C_MA, HopNhapDonGia
         d = HopNhapDonGia(None, None, 'thử', dong=BANG)
         d.im_lang = True
-        self.assertEqual([d.bang.item(r, C_MA).text() for r in range(3)], ['TS… (mới)', 'VN… (mới)', 'CT… (mới)'])
+        # 1.0.36: mã thật sẽ cấp (số tiếp theo của từng tiền tố), không còn "TS…"
+        for r, tt in enumerate(('TS', 'VN', 'CT')):
+            self.assertRegex(d.bang.item(r, C_MA).text(), rf'^{tt}\d+ \(mới\)$')
         self.assertEqual([d.o_nhom.itemData(i) for i in range(d.o_nhom.count())], [0, 2, 3, ndg.NHOM_VN, 4])
         d.bang.item(0, C_GIA).setText('1.500.000')                     # sửa đơn giá trên bảng trước khi áp dụng
         self.assertEqual(d.ds[0].don_gia, 1500000)
