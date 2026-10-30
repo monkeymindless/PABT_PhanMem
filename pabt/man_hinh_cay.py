@@ -181,7 +181,7 @@ def canh_bao_mat_do(bo, i: int) -> str:
         d = bo.pa.khoan[3][i]
     except (IndexError, KeyError):
         return ''
-    if 'mật độ' in (d.quy_cach or '').lower() or not d.so_luong:
+    if 'mật độ' in (d.quy_cach or '').lower() or la_dong_xen(d) or not d.so_luong:
         return ''
     m = bo.dm.lay(d.ma or d.ma_tuong_duong)
     q = ct.quy_chuan_mat_do(bo.con, d.ten, m.ten if m else d.ten, m.can_cu if m else '')
@@ -204,14 +204,34 @@ def canh_bao_mat_do(bo, i: int) -> str:
 
 
 # ---------------------------------------------------------------- mật độ nhiều loại cây trên cùng diện tích (30/10/2026)
-_RE_DAU_MAT_DO = re.compile(r'^(Trong|Ngoài) mật độ \([^)]*\)(?:;\s*)?')
-_RE_TL_GOC = re.compile(r'tỷ lệ trong mật độ ([\d.,]+)%')
+# dấu ở đầu quy cách: dòng chính (trong mật độ / cây trồng xen trong 0,5 lần) và dòng vượt (ngoài mật độ / cây xen vượt 0,5 lần)
+_RE_DAU_MAT_DO = re.compile(r'^(?:Trong mật độ|Ngoài mật độ|Cây trồng xen|Cây xen vượt [^(]*) \([^)]*\)(?:;\s*)?')
+_RE_TL_GOC = re.compile(r'tỷ lệ (?:trong mật độ|gốc) ([\d.,]+)%')
 _DVT_CAY = re.compile(r'(?i)^(cây|bụi|khóm|gốc|bụi/khóm|cây/bụi)$')
+DAU_VUOT = ('Ngoài mật độ (', 'Cây xen vượt ')
+DAU_XEN = ('Cây trồng xen (', 'Cây xen vượt ')
 GHI_CHU_VUOT = 'Phần cây trồng vượt mật độ, không tính toán bồi thường, hỗ trợ.'
 
 
+def ghi_chu_xen(he_so, vuot: bool) -> str:
+    """Ghi chú dòng cây trồng xen theo cách ghi của phương án mẫu (người dùng 30/10/2026)."""
+    if vuot:
+        return f'Phần cây trồng xen vượt quá {so_vn(D(he_so))} lần giá trị cây trồng chính, không tính toán bồi thường, hỗ trợ.'
+    return f'Phần cây trồng xen không vượt quá {so_vn(D(he_so))} lần giá trị cây trồng chính.'
+
+
 def _la_ngoai(d) -> bool:
-    return (d.quy_cach or '').startswith('Ngoài mật độ (')
+    return (d.quy_cach or '').startswith(DAU_VUOT)
+
+
+def la_dong_xen(d) -> bool:
+    """Dòng đã xếp là cây trồng xen ở lần tính trước."""
+    return (d.quy_cach or '').startswith(DAU_XEN)
+
+
+def _ghi_chu_tu_dong(gc: str) -> bool:
+    gc = gc or ''
+    return gc == GHI_CHU_VUOT or gc.startswith(('Cây ngoài mật độ: tỷ lệ', 'Phần cây trồng xen '))
 
 
 def _cung_dong(a, b) -> bool:
@@ -220,17 +240,19 @@ def _cung_dong(a, b) -> bool:
 
 @dataclass
 class NhomMatDo:
-    """Một dòng cây trồng (gồm cả dòng "Ngoài mật độ" đã tách ngay dưới nó ở lần tính trước) của phương án."""
+    """Một dòng cây trồng (gồm cả dòng vượt đã tách ngay dưới nó ở lần tính trước) của phương án."""
     i: int                          # chỉ số dòng chính trong bo.pa.khoan[3]
-    phu: list                       # chỉ số các dòng "Ngoài mật độ" gộp vào dòng chính
-    ty_le_goc: Decimal              # tỷ lệ bồi thường phần trong mật độ (tỷ lệ của dòng trước khi tách)
+    phu: list                       # chỉ số các dòng vượt gộp vào dòng chính
+    ty_le_goc: Decimal              # tỷ lệ bồi thường của dòng trước khi tách
     q: object                       # QuyChuanMatDo
     dong: ct.DongMatDo
+    xen: bool = False               # cây trồng xen: không xét mật độ, giới hạn theo giá trị cây trồng chính
 
 
 def nhom_mat_do(bo) -> list:
-    """Các dòng cây trồng mục 3 tính theo cây (ĐVT cây / bụi / khóm / gốc, số nguyên) để phân bổ mật độ. Dòng "Ngoài mật độ" ngay dưới
-    dòng cùng cây cùng giá (đã tách ở lần trước) gộp lại thành tổng số cây kiểm đếm - tính lại không cộng dồn."""
+    """Các dòng cây trồng mục 3 tính theo cây (ĐVT cây / bụi / khóm / gốc, số nguyên) để phân bổ mật độ. Dòng vượt ("Ngoài mật độ" /
+    "Cây xen vượt…") ngay dưới dòng cùng cây cùng giá (đã tách ở lần trước) gộp lại thành tổng số cây kiểm đếm - tính lại không cộng
+    dồn. Dòng đã xếp cây trồng xen giữ vai trò xen."""
     ds = bo.pa.khoan[3]
     kq, md_nho = [], {}
     for i, d in enumerate(ds):
@@ -241,7 +263,7 @@ def nhom_mat_do(bo) -> list:
             kq[-1].dong.so_cay += int(d.so_luong)
             continue
         tl = d.ty_le
-        if _la_ngoai(d):                              # cả dòng đã thành "ngoài mật độ": lấy lại tỷ lệ ghi trong quy cách
+        if _la_ngoai(d):                              # cả dòng đã thành dòng vượt: lấy lại tỷ lệ ghi trong quy cách
             m = _RE_TL_GOC.search(d.quy_cach or '')
             tl = doc_ty_le(m.group(1)) if m else D(1)
         m = bo.dm.lay(d.ma or d.ma_tuong_duong)
@@ -249,14 +271,36 @@ def nhom_mat_do(bo) -> list:
         if khoa not in md_nho:
             md_nho[khoa] = ct.quy_chuan_mat_do(bo.con, d.ten, khoa[1], khoa[2])
         q = md_nho[khoa]
-        kq.append(NhomMatDo(i, [], tl, q, ct.DongMatDo(d.ten, int(d.so_luong), q.mat_do, d.don_gia)))
+        kq.append(NhomMatDo(i, [], tl, q, ct.DongMatDo(d.ten, int(d.so_luong), q.mat_do, d.don_gia, tl), la_dong_xen(d)))
     return kq
 
 
-def ap_mat_do(bo, nhom: list, dt, tl_ngoai) -> tuple:
-    """Ghi kết quả phan_bo_mat_do vào phương án: dòng chính = số cây trong mật độ (tỷ lệ gốc), phần vượt = dòng riêng ngay dưới (tỷ lệ
-    ngoài mật độ, ghi chú vượt mật độ); cả dòng vượt thì chính dòng đó thành dòng vượt. Trả (tổng trong, tổng ngoài, số dòng vượt)."""
+def he_so_cay_xen(con) -> Decimal:
+    try:
+        v = D(csdl.doc_cai_dat(con, 'HE_SO_CAY_XEN', '') or ct.HE_SO_CAY_XEN)
+    except Exception:                                   # noqa: BLE001 - giá trị hỏng: mặc định 0,5
+        return ct.HE_SO_CAY_XEN
+    return v if v >= 0 else ct.HE_SO_CAY_XEN
+
+
+def phan_bo_nhom(nhom: list, dt, he_so=ct.HE_SO_CAY_XEN) -> dict:
+    """Cây trồng chính: phân bổ diện tích theo mật độ (phan_bo_mat_do); cây trồng xen: giới hạn he_so x giá trị cây trồng chính
+    (phan_bo_cay_xen). Trả dict(dt_con, gia_tri_chinh, toi_da_xen, xen_con)."""
+    chinh = [g.dong for g in nhom if not g.xen]
+    xen = [g.dong for g in nhom if g.xen]
+    dt_con = ct.phan_bo_mat_do(chinh, dt)
+    gtc = ct.gia_tri_cay(chinh)
+    toi_da = gtc * D(he_so)
+    xen_con = ct.phan_bo_cay_xen(xen, toi_da)
+    return dict(dt_con=dt_con, gia_tri_chinh=gtc, toi_da_xen=toi_da, xen_con=xen_con)
+
+
+def ap_mat_do(bo, nhom: list, dt, tl_ngoai, he_so=ct.HE_SO_CAY_XEN, kq: dict | None = None) -> tuple:
+    """Ghi kết quả phan_bo_nhom vào phương án: dòng chính = số cây trong mật độ / trong giới hạn cây xen (tỷ lệ gốc), phần vượt = dòng
+    riêng ngay dưới (vượt mật độ: tỷ lệ tl_ngoai; cây xen vượt: 0%, ghi chú theo mẫu); cả dòng vượt thì chính dòng đó thành dòng vượt.
+    Trả (tổng trong, tổng vượt, số dòng vượt)."""
     ds = bo.pa.khoan[3]
+    kq = kq or {}
     tong_trong = tong_ngoai = so_dong = 0
     for g in sorted(nhom, key=lambda g: -g.i):          # từ dưới lên: chèn / xóa dòng không làm lệch chỉ số dòng phía trên
         x = g.dong
@@ -264,71 +308,91 @@ def ap_mat_do(bo, nhom: list, dt, tl_ngoai) -> tuple:
             del ds[j]
         d = ds[g.i]
         goc = _RE_DAU_MAT_DO.sub('', d.quy_cach or '')
-        if d.ghi_chu == GHI_CHU_VUOT or (d.ghi_chu or '').startswith('Cây ngoài mật độ: tỷ lệ'):
+        if _ghi_chu_tu_dong(d.ghi_chu):
             d.ghi_chu = ''
         d.ty_le = g.ty_le_goc
         if not x.thu_tu:                                # chưa có mật độ: trả về đủ số cây, bỏ dấu mật độ cũ
             bo.sua_khoan(3, g.i, 'so_luong', str(x.so_cay))
             d.quy_cach = goc
             continue
-        mo_ta = (f'Mật độ {so_vn(x.mat_do)} cây/ha, ưu tiên {x.thu_tu} theo đơn giá, '
-                 f'dùng {so_vn(x.dt_dung.quantize(D("0.01")))} m² / {so_vn(D(dt))} m²')
         tong_trong += x.trong
         tong_ngoai += x.ngoai
+        sau = f'; {goc}' if goc else ''
+        tl_goc = '' if g.ty_le_goc == 1 else f'; tỷ lệ gốc {so_vn(g.ty_le_goc * 100)}%'
+        if g.xen:
+            mo_ta = (f'tối đa {so_vn(D(he_so))} lần giá trị cây trồng chính {vn(kq.get("gia_tri_chinh", KHONG))} đ = '
+                     f'{vn(kq.get("toi_da_xen", KHONG))} đ, ưu tiên {x.thu_tu} theo đơn giá')
+            dau_trong, dau_vuot = 'Cây trồng xen', f'Cây xen vượt {so_vn(D(he_so))} lần'
+            tl_vuot, gc_trong, gc_vuot = KHONG, ghi_chu_xen(he_so, False), ghi_chu_xen(he_so, True)
+        else:
+            mo_ta = (f'Mật độ {so_vn(x.mat_do)} cây/ha, ưu tiên {x.thu_tu} theo đơn giá, '
+                     f'dùng {so_vn(x.dt_dung.quantize(D("0.01")))} m² / {so_vn(D(dt))} m²')
+            if x.trong == 0:
+                mo_ta = (f'Mật độ {so_vn(x.mat_do)} cây/ha, ưu tiên {x.thu_tu} theo đơn giá: {so_vn(D(dt))} m² trồng đã dùng hết '
+                         'cho cây đơn giá cao hơn')
+            dau_trong, dau_vuot = 'Trong mật độ', 'Ngoài mật độ'
+            tl_vuot, gc_trong = D(tl_ngoai), ''
+            gc_vuot = GHI_CHU_VUOT if tl_vuot == 0 else f'Cây ngoài mật độ: tỷ lệ {so_vn(tl_vuot * 100)}%'
 
         def vuot(k):
-            ds[k].ty_le = D(tl_ngoai)
+            ds[k].ty_le = tl_vuot
             ds[k].thanh_tien_excel = None
-            ds[k].ghi_chu = GHI_CHU_VUOT if D(tl_ngoai) == 0 else f'Cây ngoài mật độ: tỷ lệ {so_vn(D(tl_ngoai) * 100)}%'
+            ds[k].ghi_chu = gc_vuot
         if x.trong == 0 and x.ngoai:
-            mo_ta = (f'Mật độ {so_vn(x.mat_do)} cây/ha, ưu tiên {x.thu_tu} theo đơn giá: {so_vn(D(dt))} m² trồng đã dùng hết cho cây '
-                     'đơn giá cao hơn')
             bo.sua_khoan(3, g.i, 'so_luong', str(x.ngoai))
-            tl_goc = '' if g.ty_le_goc == 1 else f'; tỷ lệ trong mật độ {so_vn(g.ty_le_goc * 100)}%'
-            d.quy_cach = f'Ngoài mật độ ({mo_ta}; vượt {x.ngoai} cây{tl_goc})' + (f'; {goc}' if goc else '')
+            d.quy_cach = f'{dau_vuot} ({mo_ta}; vượt {x.ngoai} cây{tl_goc}){sau}'
             vuot(g.i)
             so_dong += 1
             continue
         bo.sua_khoan(3, g.i, 'so_luong', str(x.trong))
-        d.quy_cach = f'Trong mật độ ({mo_ta})' + (f'; {goc}' if goc else '')
+        d.quy_cach = f'{dau_trong} ({mo_ta}){sau}'
+        if gc_trong and not d.ghi_chu:
+            d.ghi_chu = gc_trong
         if x.ngoai:
             j = bo.nhan_ban(3, g.i)
             bo.sua_khoan(3, j, 'so_luong', str(x.ngoai))
-            ds[j].quy_cach = f'Ngoài mật độ ({mo_ta}; vượt {x.ngoai} cây)' + (f'; {goc}' if goc else '')
+            ds[j].quy_cach = f'{dau_vuot} ({mo_ta}; vượt {x.ngoai} cây){sau}'
             vuot(j)
             so_dong += 1
     return tong_trong, tong_ngoai, so_dong
 
 
 def phan_bo_cua_ho(bo, dt=None) -> tuple:
-    """(nhóm, diện tích còn lại) phân bổ mật độ mọi dòng cây trồng của hộ trên diện tích đất nông nghiệp thu hồi (dt None)."""
+    """(nhóm, kết quả phan_bo_nhom) của mọi dòng cây trồng của hộ trên diện tích đất nông nghiệp thu hồi (dt None)."""
     nhom = nhom_mat_do(bo)
-    con = ct.phan_bo_mat_do([g.dong for g in nhom], dt_dat_nn(bo) if dt is None else dt)
-    return nhom, con
+    kq = phan_bo_nhom(nhom, dt_dat_nn(bo) if dt is None else dt, he_so_cay_xen(bo.con))
+    return nhom, kq
 
 
 class HopMatDoNhieuCay(_Hop):
-    """Tính mật độ MỌI dòng cây trồng của hộ trên cùng diện tích trồng: cây đơn giá cao làm cây trồng chính, tính trước; phần diện tích
-    còn dư tính tiếp cho cây đơn giá thấp hơn; cây không còn chỗ là vượt mật độ (dòng riêng, tỷ lệ ngoài mật độ)."""
-    COT = ['Ưu tiên', 'Cây trồng', 'Số cây', 'Đơn giá', 'Mật độ (cây/ha)', 'm²/cây', 'Trong mật độ', 'Vượt mật độ', 'DT dùng (m²)']
-    C_MD = 4
+    """Tính mật độ MỌI dòng cây trồng của hộ trên cùng diện tích trồng: cây trồng chính đơn giá cao tính trước; phần diện tích còn dư
+    tính tiếp cho cây đơn giá thấp hơn; cây không còn chỗ là vượt mật độ (dòng riêng, tỷ lệ ngoài mật độ). Cây trồng xen (đánh dấu ở
+    cột "Cây xen"): không xét mật độ, bồi thường tối đa 0,5 lần giá trị cây trồng chính - phần vượt là dòng riêng không tính tiền."""
+    COT = ['Ưu tiên', 'Cây trồng', 'Cây xen', 'Số cây', 'Đơn giá', 'Mật độ (cây/ha)', 'm²/cây', 'Được tính', 'Vượt',
+           'Dùng (m² / đ)']
+    C_XEN, C_MD, C_VUOT = 2, 5, 8
 
     def __init__(self, man):
         super().__init__(man)
         self.man = man
         bo = man.bo
         self.nhom = nhom_mat_do(bo)
-        self.setWindowTitle('Tính mật độ cây trồng (nhiều loại cây trên cùng diện tích)')
-        self.resize(980, 600)
+        self.setWindowTitle('Tính mật độ cây trồng, cây trồng xen (nhiều loại cây trên cùng diện tích)')
+        self.resize(1120, 620)
         self.o_dt = _o_so(so_vn(dt_dat_nn(bo)))
         self.o_tl = _o_so(so_vn(D(csdl.doc_cai_dat(bo.con, 'TL_NGOAI_MAT_DO', '0')) * 100))
+        self.he_so_cu = he_so_cay_xen(bo.con)
+        self.o_hs = _o_so(so_vn(self.he_so_cu))
         self.o_luu = QCheckBox('Lưu mật độ đã sửa trong bảng làm quy chuẩn của dự án')
         form = QFormLayout()
         form.addRow('Diện tích trồng (m²):', self.o_dt)
         form.addRow('Tỷ lệ bồi thường cây vượt mật độ (%):', self.o_tl)
-        ghi = QLabel('Cây có đơn giá cao hơn được tính trước làm cây trồng chính: trong mật độ tối đa = diện tích còn lại × mật độ / '
-                     '10.000. Diện tích còn dư tính tiếp cho cây đơn giá cao thứ hai… tới khi hết diện tích; phần còn lại là vượt mật '
-                     'độ - tách thành dòng riêng ngay dưới (tỷ lệ vượt mật độ, mặc định 0% = không bồi thường). Sửa được cột Mật độ.')
+        form.addRow('Cây trồng xen tối đa (lần giá trị cây trồng chính):', self.o_hs)
+        ghi = QLabel('Cây trồng chính có đơn giá cao hơn được tính trước: trong mật độ tối đa = diện tích còn lại × mật độ / 10.000; '
+                     'diện tích còn dư tính tiếp cho cây đơn giá cao thứ hai… tới khi hết; phần còn lại là vượt mật độ - dòng riêng ngay '
+                     'dưới (mặc định 0% = không bồi thường). Đánh dấu "Cây xen" cho cây trồng xen: không xét mật độ, được bồi thường tối '
+                     'đa 0,5 lần giá trị cây trồng chính (cây xen đơn giá cao tính trước); phần vượt là dòng riêng không tính tiền. Sửa '
+                     'được cột Mật độ.')
         ghi.setWordWrap(True)
         self.bang = QTableWidget(0, len(self.COT))
         self.bang.setHorizontalHeaderLabels(self.COT)
@@ -337,6 +401,7 @@ class HopMatDoNhieuCay(_Hop):
         hd = self.bang.horizontalHeader()
         hd.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         hd.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.bang.setWordWrap(False)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
         self.lb.setTextFormat(Qt.TextFormat.RichText)
@@ -350,8 +415,9 @@ class HopMatDoNhieuCay(_Hop):
         lo.addWidget(self.lb)
         lo.addWidget(self.o_luu)
         lo.addWidget(self._nut('Áp dụng vào phương án'))
-        # bảng xếp theo thứ tự ưu tiên (đơn giá giảm dần; dòng chưa có mật độ cuối bảng) - đơn giá không sửa ở đây nên thứ tự cố định
-        self.thu_tu = sorted(range(len(self.nhom)), key=lambda k: (not self.nhom[k].q.mat_do, -self.nhom[k].dong.don_gia, k))
+        # bảng xếp theo đơn giá giảm dần (dòng chưa có mật độ cuối bảng) - đơn giá không sửa ở đây nên thứ tự cố định
+        self.thu_tu = sorted(range(len(self.nhom)), key=lambda k: (not self.nhom[k].q.mat_do and not self.nhom[k].xen,
+                                                                   -self.nhom[k].dong.don_gia, k))
         self.bang.setRowCount(len(self.thu_tu))
         self.bang.blockSignals(True)
         for r, k in enumerate(self.thu_tu):
@@ -360,60 +426,84 @@ class HopMatDoNhieuCay(_Hop):
                 it = QTableWidgetItem('')
                 if c != self.C_MD:
                     it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                if c != 1:
+                if c not in (1, self.C_XEN):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(r, c, it)
+            o = self.bang.item(r, self.C_XEN)
+            o.setFlags(o.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            o.setCheckState(Qt.CheckState.Checked if g.xen else Qt.CheckState.Unchecked)
+            o.setToolTip('Cây trồng xen: không xét mật độ, bồi thường tối đa 0,5 lần giá trị cây trồng chính')
             self.bang.item(r, 1).setText(g.dong.ten)
-            self.bang.item(r, 2).setText(str(g.dong.so_cay))
-            self.bang.item(r, 3).setText(vn(g.dong.don_gia))
+            self.bang.item(r, 3).setText(str(g.dong.so_cay))
+            self.bang.item(r, 4).setText(vn(g.dong.don_gia))
             self.bang.item(r, self.C_MD).setText(so_vn(g.q.mat_do) if g.q.mat_do else '')
             self.bang.item(r, self.C_MD).setToolTip(g.q.can_cu or 'Chưa có mật độ trong danh mục - nhập mật độ (cây/ha)')
         self.bang.blockSignals(False)
         self.bang.itemChanged.connect(lambda *_: self.tinh())
-        for o in (self.o_dt, self.o_tl):
+        for o in (self.o_dt, self.o_tl, self.o_hs):
             o.textChanged.connect(lambda *_: self.tinh())
         self.tinh()
+
+    def dat_xen(self, ten_hoac_chi_so, xen: bool = True) -> None:
+        """Đánh dấu / bỏ cây trồng xen cho dòng (chỉ số trong self.nhom, hoặc tên cây) - dùng cho kiểm thử."""
+        for r, k in enumerate(self.thu_tu):
+            if k == ten_hoac_chi_so or self.nhom[k].dong.ten == ten_hoac_chi_so:
+                self.bang.item(r, self.C_XEN).setCheckState(Qt.CheckState.Checked if xen else Qt.CheckState.Unchecked)
 
     def _doc(self) -> tuple:
         dt = doc_so(self.o_dt.text(), 'Diện tích trồng')
         tl = doc_ty_le(self.o_tl.text() or '0')
+        hs = doc_so(self.o_hs.text() or '0', 'Hệ số cây trồng xen')
         for r, k in enumerate(self.thu_tu):
-            md = doc_so(self.bang.item(r, self.C_MD).text(), f'Mật độ của {self.nhom[k].dong.ten}', cho_phep_trong=True)
-            self.nhom[k].dong.mat_do = md if md > 0 else None
-        return dt, tl
+            g = self.nhom[k]
+            md = doc_so(self.bang.item(r, self.C_MD).text(), f'Mật độ của {g.dong.ten}', cho_phep_trong=True)
+            g.dong.mat_do = md if md > 0 else None
+            g.xen = self.bang.item(r, self.C_XEN).checkState() == Qt.CheckState.Checked
+        return dt, tl, hs
 
     def tinh(self):
         try:
-            dt, tl = self._doc()
+            dt, tl, hs = self._doc()
         except LoiNhap as e:
             self.lb.setText(f'<span style="color:#B83A3A">{e}</span>')
             return None
-        con = ct.phan_bo_mat_do([g.dong for g in self.nhom], dt)
+        kq = phan_bo_nhom(self.nhom, dt, hs)
         self.bang.blockSignals(True)
         do, xanh = QColor('#B83A3A'), QColor('#2E7D32')
         for r, k in enumerate(self.thu_tu):
-            x = self.nhom[k].dong
+            g = self.nhom[k]
+            x = g.dong
             co = bool(x.thu_tu)
-            gt = [str(x.thu_tu) if co else '-', None, None, None, None,
-                  so_vn(x.m2_moi_cay.quantize(D('0.01'))) if co else '', str(x.trong) if co else 'chưa có mật độ',
-                  str(x.ngoai) if co else '', so_vn(x.dt_dung.quantize(D('0.01'))) if co else '']
+            if g.xen:
+                gt = [f'xen {x.thu_tu}', None, None, None, None, None, '-', str(x.trong), str(x.ngoai), vn(x.dt_dung)]
+            else:
+                gt = [str(x.thu_tu) if co else '-', None, None, None, None, None,
+                      so_vn(x.m2_moi_cay.quantize(D('0.01'))) if co else '', str(x.trong) if co else 'chưa có mật độ',
+                      str(x.ngoai) if co else '', so_vn(x.dt_dung.quantize(D('0.01'))) if co else '']
             for c, v in enumerate(gt):
                 if v is not None:
                     self.bang.item(r, c).setText(v)
-            self.bang.item(r, 7).setForeground(do if x.ngoai else xanh)
+            self.bang.item(r, self.C_VUOT).setForeground(do if x.ngoai else xanh)
         self.bang.blockSignals(False)
-        trong = sum(g.dong.trong for g in self.nhom if g.dong.thu_tu)
-        ngoai = sum(g.dong.ngoai for g in self.nhom)
-        khong = [g.dong.ten for g in self.nhom if not g.dong.thu_tu]
+        chinh = [g.dong for g in self.nhom if not g.xen]
+        xen = [g.dong for g in self.nhom if g.xen]
+        trong = sum(x.trong for x in chinh if x.thu_tu)
+        ngoai = sum(x.ngoai for x in chinh)
+        khong = [x.ten for x in chinh if not x.thu_tu]
         dong = [
-            ('Diện tích trồng', f'{so_vn(dt)} m²; đã dùng <b>{so_vn((dt - con).quantize(D("0.01")))} m²</b>, còn '
-                                f'{so_vn(con.quantize(D("0.01")))} m²'),
-            ('Trong mật độ', f'<b>{trong} cây</b> (tỷ lệ của từng dòng)'),
+            ('Diện tích trồng', f'{so_vn(dt)} m²; đã dùng <b>{so_vn((dt - kq["dt_con"]).quantize(D("0.01")))} m²</b>, còn '
+                                f'{so_vn(kq["dt_con"].quantize(D("0.01")))} m²'),
+            ('Trong mật độ', f'<b>{trong} cây</b> (tỷ lệ của từng dòng) - giá trị cây trồng chính {vn(kq["gia_tri_chinh"])} đ'),
             ('Vượt mật độ', (f'<span style="color:#B83A3A"><b>{ngoai} cây</b></span> - dòng riêng, tỷ lệ {so_vn(tl * 100)}%')
              if ngoai else '<span style="color:#2E7D32"><b>Không có cây vượt mật độ</b></span>'),
         ]
+        if xen:
+            vuot_xen = sum(x.ngoai for x in xen)
+            dong.append(('Cây trồng xen', f'tối đa {so_vn(hs)} × {vn(kq["gia_tri_chinh"])} = <b>{vn(kq["toi_da_xen"])} đ</b>; '
+                         f'được tính {sum(x.trong for x in xen)} cây = {vn(ct.gia_tri_cay(xen))} đ' +
+                         (f'; <span style="color:#B83A3A"><b>vượt {vuot_xen} cây</b></span> (không bồi thường)' if vuot_xen else '')))
         if khong:
-            dong.append(('Chưa có mật độ', ', '.join(khong) + ' - không tính, giữ nguyên số cây (nhập mật độ để tính)'))
+            dong.append(('Chưa có mật độ', ', '.join(khong) + ' - không tính, giữ nguyên số cây (nhập mật độ hoặc đánh dấu cây xen)'))
         if not self.nhom:
             dong = [('Không có dòng', 'Hộ chưa có dòng cây trồng tính theo cây (ĐVT cây / bụi / khóm, số nguyên) ở mục 3.')]
         self.lb.setText('<table cellspacing="0" cellpadding="3">' + ''.join(
@@ -422,16 +512,20 @@ class HopMatDoNhieuCay(_Hop):
         return trong, ngoai
 
     def ap_dung(self) -> tuple:
-        dt, tl = self._doc()
+        dt, tl, hs = self._doc()
         if not self.nhom:
             raise LoiNhap('Hộ chưa có dòng cây trồng tính theo cây ở mục 3.')
         bo = self.man.bo
-        ct.phan_bo_mat_do([g.dong for g in self.nhom], dt)
+        kq = phan_bo_nhom(self.nhom, dt, hs)
         if self.o_luu.isChecked():
             for g in self.nhom:
-                if g.dong.mat_do and g.dong.mat_do != g.q.mat_do:
+                if not g.xen and g.dong.mat_do and g.dong.mat_do != g.q.mat_do:
                     ct.luu_quy_chuan_mat_do(bo.con, ct.QuyChuanMatDo(g.q.ten_cay, g.dong.mat_do, tl, 'Quy chuẩn của dự án'))
-        return ap_mat_do(bo, self.nhom, dt, tl)
+        if hs != self.he_so_cu and not getattr(bo, 'chi_doc', False):
+            with bo.con:
+                csdl.ghi_cai_dat(bo.con, 'HE_SO_CAY_XEN', str(hs))
+                csdl.ghi_nhat_ky(bo.con, 'Hệ số cây trồng xen', f'Cây trồng xen tối đa {so_vn(hs)} lần giá trị cây trồng chính')
+        return ap_mat_do(bo, self.nhom, dt, tl, hs, kq)
 
     def accept(self):
         try:

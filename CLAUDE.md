@@ -2662,7 +2662,11 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     tỷ lệ gốc, phần vượt = dòng `nhan_ban` ngay dưới, tỷ lệ TL_NGOAI_MAT_DO, ghi chú `GHI_CHU_VUOT`; quy cách cũ giữ sau dấu "; "),
     `HopMatDoNhieuCay` (bảng theo thứ tự ưu tiên, sửa được cột Mật độ). `CuaSoLapPA.tinh_mat_do()` (nút / chuột phải) mở hộp nhiều cây;
     `tinh_mat_do(i)` vẫn là HopMatDo một dòng (test cũ). `canh_bao_mat_do` và `kiem_loi` (cảnh báo gộp theo loài) dùng cùng phân bổ.
-    CHƯA làm: quy tắc cây trồng xen "không vượt 0,5 lần giá trị cây trồng chính" (ảnh mẫu của người dùng có).
+    CÂY TRỒNG XEN (người dùng 30/10/2026, theo ảnh phương án mẫu): cột "Cây xen" của hộp (`NhomMatDo.xen`, `dat_xen`) -> không xét
+    mật độ, `cay_trong.phan_bo_cay_xen(ds, tối đa)` (đơn giá cao trước, floor(giá trị còn / (ĐG x tỷ lệ))) với tối đa = `HE_SO_CAY_XEN`
+    0,5 (cai_dat HE_SO_CAY_XEN, ô trong hộp) x `gia_tri_cay` cây trồng chính (trong mật độ); `phan_bo_nhom`. Dòng: "Cây trồng xen (…)" +
+    ghi chú "Phần cây trồng xen không vượt quá…", vượt = "Cây xen vượt 0,5 lần (…)" tỷ lệ 0 + ghi chú "…vượt quá…, không tính toán
+    bồi thường, hỗ trợ."; tính lại giữ vai trò xen (`la_dong_xen`), cả dòng vượt lưu "tỷ lệ gốc x%". kiem_loi / canh_bao bỏ qua dòng xen.
   - Tên cây lâu năm (`pabt/chuan_ten_cay.py`: `chuan_ten` bỏ chú thích "(Năm thứ…)" sau năm thu hoạch, khoảng "thứ 1 - 5", `SUA_CHINH_TA`
     tên loài đối chiếu ảnh VBHN, `SUA_TEN_DAY_DU`, `MUC_THIEU` + `them_muc_thieu`) qua `ten_cay_lam_nghiep.ap_ten_khac` (bộ đóng gói đã áp
     bằng `tao_bo_don_gia.py --chuan-hoa 2026.10.12`, bản máy, dự án khi mở). Năm tuổi theo cấu trúc: `hieu_tai_san.bang_tuoi` (năm kiến

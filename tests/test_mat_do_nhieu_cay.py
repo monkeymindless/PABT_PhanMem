@@ -60,6 +60,25 @@ class TestPhanBo(unittest.TestCase):
         self.assertEqual((a.trong, b.trong, b.ngoai), (50, 61, 139))
 
 
+class TestCayXen(unittest.TestCase):
+    def test_gioi_han_nua_gia_tri_cay_chinh(self):
+        chinh = _dong('Gòn', 10, 200, 100000)
+        ct.phan_bo_mat_do([chinh], 1000)
+        self.assertEqual(ct.gia_tri_cay([chinh]), 1000000)
+        a, b = _dong('A', 5, None, 300000), _dong('B', 10, None, 100000)
+        con = ct.phan_bo_cay_xen([b, a], ct.gia_tri_cay([chinh]) * ct.HE_SO_CAY_XEN)   # tối đa 500.000 đ, đơn giá cao trước
+        self.assertEqual((a.thu_tu, a.trong, a.ngoai), (1, 1, 4))                     # 300.000 đ, còn 200.000 đ
+        self.assertEqual((b.thu_tu, b.trong, b.ngoai), (2, 2, 8))
+        self.assertEqual(con, 0)
+
+    def test_ty_le_va_gia_0(self):
+        a = ct.DongMatDo('A', 10, None, D(100000), D('0.8'))                            # 80 000 đ / cây
+        b = _dong('B', 7, None, 0)
+        ct.phan_bo_cay_xen([a, b], 250000)
+        self.assertEqual((a.trong, a.ngoai, a.dt_dung), (3, 7, 240000))
+        self.assertEqual((b.trong, b.ngoai), (7, 0))
+
+
 class TestTrenPhuongAn(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -143,13 +162,44 @@ class TestTrenPhuongAn(unittest.TestCase):
         dlg.ap_dung()
         d = w.bo.pa.khoan[3][self.i_thap]
         self.assertEqual((d.so_luong, d.ty_le), (10, 0))                    # cây giá cao dùng hết diện tích
-        self.assertIn('tỷ lệ trong mật độ 80%', d.quy_cach)
+        self.assertIn('tỷ lệ gốc 80%', d.quy_cach)
         dlg = w.tinh_mat_do(cho=False)
         dlg.im_lang = True
         dlg.o_dt.setText('100000000')
         dlg.ap_dung()
         d = w.bo.pa.khoan[3][self.i_thap]
         self.assertEqual((d.so_luong, d.ty_le), (10, D('0.8')))             # đủ diện tích: trả lại tỷ lệ gốc
+
+    def test_cay_trong_xen(self):
+        w = self.w
+        dt = 1000
+        so_cao = max(int(D(dt) * self.md_cao / 10000) // 2, 1)
+        self._so(self.i_cao, so_cao)
+        self._so(self.i_thap, 100000)
+        dlg = w.tinh_mat_do(cho=False)
+        dlg.im_lang = True
+        dlg.o_dt.setText(str(dt))
+        dlg.dat_xen(self.thap.ten)
+        dlg.ap_dung()
+        gia_chinh = so_cao * D(self.cao.don_gia)
+        so_xen = int(gia_chinh * D('0.5') / D(self.thap.don_gia))
+        ds = w.bo.pa.khoan[3]
+        self.assertEqual([d.so_luong for d in ds], [so_xen, 100000 - so_xen, so_cao])
+        self.assertTrue(ds[0].quy_cach.startswith('Cây trồng xen ('))
+        self.assertIn('không vượt quá 0,5 lần giá trị cây trồng chính', ds[0].ghi_chu)
+        self.assertTrue(ds[1].quy_cach.startswith('Cây xen vượt 0,5 lần ('))
+        self.assertEqual(ds[1].ty_le, 0)
+        self.assertIn('vượt quá 0,5 lần giá trị cây trồng chính, không tính toán', ds[1].ghi_chu)
+        self.assertTrue(ds[2].quy_cach.startswith('Trong mật độ ('))
+        # tính lại: vai trò cây xen giữ, dòng vượt gộp lại
+        dlg = w.tinh_mat_do(cho=False)
+        g = next(g for g in dlg.nhom if g.dong.ten == self.thap.ten)
+        self.assertEqual((g.xen, g.dong.so_cay), (True, 100000))
+        dlg.dat_xen(self.thap.ten, False)                                    # bỏ cây xen: thành cây trồng chính, xét mật độ
+        dlg.o_dt.setText('100000000')
+        dlg.ap_dung()
+        self.assertEqual([d.so_luong for d in w.bo.pa.khoan[3]], [100000, so_cao])
+        self.assertEqual(w.bo.pa.khoan[3][0].ghi_chu, '')
 
     def test_canh_bao_khi_nhap(self):
         w = self.w

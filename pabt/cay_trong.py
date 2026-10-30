@@ -336,6 +336,7 @@ class DongMatDo:
     so_cay: int
     mat_do: Decimal | None
     don_gia: Decimal = KHONG
+    ty_le: Decimal = Decimal(1)     # tỷ lệ bồi thường của dòng (giá trị cây = số cây x đơn giá x tỷ lệ)
     thu_tu: int = 0                 # kết quả: thứ tự ưu tiên (1 = tính trước), 0 = không tính
     trong: int = 0                  # số cây trong mật độ
     ngoai: int = 0                  # số cây vượt mật độ
@@ -374,6 +375,35 @@ def phan_bo_mat_do(ds: list, dien_tich_m2) -> Decimal:
         con -= dung
         x.dt_dung, x.dt_con = _thap_phan(dung), _thap_phan(con)
     return _thap_phan(con)
+
+
+HE_SO_CAY_XEN = Decimal('0.5')      # cây trồng xen bồi thường không quá 0,5 lần giá trị cây trồng chính (sửa ở cai_dat HE_SO_CAY_XEN)
+
+
+def gia_tri_cay(ds: list) -> Decimal:
+    """Giá trị phần được bồi thường (số cây trong x đơn giá x tỷ lệ) của các dòng đã phân bổ."""
+    return sum((Decimal(x.trong) * D(x.don_gia) * D(x.ty_le) for x in ds), KHONG)
+
+
+def phan_bo_cay_xen(ds: list, gia_tri_toi_da) -> Decimal:
+    """Cây trồng xen (người dùng 30/10/2026, theo ảnh phương án mẫu): không xét mật độ; tổng giá trị được bồi thường không quá
+    gia_tri_toi_da (= HE_SO_CAY_XEN x giá trị cây trồng chính). Cây xen ĐƠN GIÁ cao tính trước (cùng giá: thứ tự dòng), được tối đa
+    floor(giá trị còn lại / (đơn giá x tỷ lệ)) cây, giá trị còn dư tính tiếp cho cây xen đơn giá thấp hơn; phần còn lại vượt 0,5 lần
+    (không bồi thường). Dòng đơn giá 0 tính đủ. Kết quả ghi vào từng DongMatDo (trong / ngoai; dt_dung = giá trị đã dùng, dt_con = giá
+    trị còn lại); trả giá trị còn lại."""
+    con = max(D(gia_tri_toi_da), KHONG)
+    for x in ds:
+        x.thu_tu, x.trong, x.ngoai, x.dt_dung, x.dt_con = 0, int(x.so_cay), 0, KHONG, KHONG
+    for k, x in enumerate(sorted(ds, key=lambda x: -D(x.don_gia)), start=1):
+        gia = D(x.don_gia) * D(x.ty_le)
+        vua = int(x.so_cay) if gia <= 0 else int((con / gia).to_integral_value(rounding=ROUND_FLOOR))
+        x.thu_tu = k
+        x.trong = min(int(x.so_cay), vua)
+        x.ngoai = int(x.so_cay) - x.trong
+        x.dt_dung = Decimal(x.trong) * gia
+        con -= x.dt_dung
+        x.dt_con = con
+    return con
 
 
 # ---------------------------------------------------------------- tài sản trong / ngoài ranh thu hồi

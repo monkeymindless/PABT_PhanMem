@@ -12,6 +12,9 @@ MUC = (
         '(trong mật độ tối đa theo diện tích còn lại), diện tích còn dư tính tiếp cho cây đơn giá cao thứ hai… tới khi hết diện tích; '
         'phần vượt mật độ tách thành dòng riêng ngay dưới dòng cây (tỷ lệ vượt mật độ, mặc định 0% - không bồi thường). Tính lại '
         'nhiều lần không cộng dồn; Kiểm tra lỗi và lời nhắc khi nhập số cây cũng theo cách tính này.',
+        'Cây trồng xen: đánh dấu "Cây xen" trong hộp Tính mật độ - không xét mật độ, được bồi thường tối đa 0,5 lần giá trị cây '
+        'trồng chính (sửa được hệ số); cây xen đơn giá cao tính trước, phần vượt tách dòng riêng không tính tiền, ghi chú theo mẫu '
+        '"Phần cây trồng xen vượt quá 0,5 lần giá trị cây trồng chính, không tính toán bồi thường, hỗ trợ."',
         'Tên cây lâu năm theo đúng văn bản: bỏ chú thích "(Năm thứ 3, 4, 5)" (văn bản chỉ ghi Năm thứ 1, 2, 3 và Năm thu hoạch thứ…), '
         'năm tuổi tự tính theo số năm kiến thiết của từng loài; sửa các tên loài sai chính tả / lỗi phông (Bời lời giấy, Muồng truổng, '
         'Trám đỏ, Lekina…), bổ sung mục văn bản có mà bộ đơn giá thiếu (Cây nho thân gỗ năm thu hoạch 6 - 10).',

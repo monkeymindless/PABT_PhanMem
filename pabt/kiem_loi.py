@@ -379,7 +379,7 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
         dong_md = []
         for d in pa.khoan[3]:
             if d.dvt.strip().lower() != 'cây' or he_so(d.ty_le) == 0 or d.so_luong != int(d.so_luong) \
-                    or (d.quy_cach or '').startswith('Ngoài mật độ ('):
+                    or (d.quy_cach or '').startswith(('Ngoài mật độ (', 'Cây trồng xen (', 'Cây xen vượt ')):
                 continue
             m = dm.lay(d.ma or d.ma_tuong_duong)
             kq_md = (ten_goc(d.ten), m.ten if m else d.ten, m.can_cu if m else '')
