@@ -150,6 +150,9 @@ def van_ban_dang_dung() -> str:
 def tom_tat() -> str:
     xs = ds_xa()
     if dang_thay():
+        gan = xa_gan_san()
+        if gan and all(x in xs for x in gan):
+            return f'Bảng giá đang dùng (gắn sẵn + bổ sung): {", ".join(xs)} — {len(tat_ca())} dòng'
         return f'Bảng giá đang dùng (đã thay bảng gắn sẵn): {", ".join(xs)} — {len(tat_ca())} dòng'
     return 'Bảng gắn sẵn: ' + ', '.join(xs)
 
@@ -163,6 +166,8 @@ def mo_ta_vi_tri(r: dict) -> str:
     vt = r.get('vi_tri') or ''
     if r.get('dieu_kien'):
         return str(r['dieu_kien'])
+    if r.get('tinh_tu'):                                   # vị trí dựng theo hướng dẫn trong lời văn (quy_tac_vi_tri)
+        return f'{ten_vi_tri(vt)}: {r["tinh_tu"]}'
     if vt == 'MT':
         return f'Mặt tiền {r["ten_duong"]}'
     if len(vt) == 2 and vt[0] in 'TK' and vt[1] in '123':
@@ -229,7 +234,7 @@ def can_cu(r: dict, cot: str) -> str:
     vb = (r.get('van_ban') or van_ban_dang_dung()) if dang_thay() else 'NQ 28/2025/NQ-HĐND'
     ten_vt = ten_vi_tri(r['vi_tri'])
     return (f'{vb}: {r["xa"]}, {r["ten_duong"]} (từ {r["diem_dau"]} đến {r["diem_cuoi"]}), '
-            f'{ten_vt}, TT {r["tt"]}, {dict(COT)[cot]}')
+            f'{ten_vt}, TT {r["tt"]}, {dict(COT)[cot]}' + (f' ({r["tinh_tu"]})' if r.get('tinh_tu') else ''))
 
 
 def xuat_excel(file_ra) -> Path:
@@ -433,6 +438,39 @@ def ghi_thay(dong: list, van_ban: str = '', nguon: str = '') -> Path:
     os.replace(tam, p)
     _quen()
     return p
+
+
+def ghi_bo_sung(dong: list, van_ban: str = '', nguon: str = '') -> Path:
+    """BỔ SUNG bảng giá (người dùng 30/10/2026: "thêm mục để bổ sung thêm giá đất vào phần mềm"): địa bàn của `dong` thay dòng cùng địa
+    bàn (khop_xa) của bảng đang dùng, địa bàn khác giữ nguyên - kể cả bốn địa bàn gắn sẵn. Mỗi dòng mang văn bản căn cứ của mình
+    ('van_ban') để căn cứ in đúng nguồn."""
+    cu, vb_cu, thay = _da_doc()
+    vb_cu = vb_cu if thay else 'NQ 28/2025/NQ-HĐND'
+    xa_moi = list(dict.fromkeys(r.get('xa', '') for r in dong))
+    giu = []
+    for r in cu:
+        if any(khop_xa(x, r.get('xa', '')) or khop_xa(r.get('xa', ''), x) for x in xa_moi if x):
+            continue
+        r = dict(r)
+        r.setdefault('van_ban', vb_cu)
+        giu.append(r)
+    moi = []
+    for r in dong:
+        r = dict(r)
+        r.setdefault('van_ban', van_ban or 'Bảng giá đất bổ sung')
+        moi.append(r)
+    return ghi_thay(giu + moi, van_ban or vb_cu, nguon)
+
+
+@lru_cache(maxsize=1)
+def xa_gan_san() -> tuple:
+    """Tên các địa bàn của bảng gắn sẵn (đóng kèm)."""
+    p = _file()
+    try:
+        dong, _ = _doc(str(p), p.stat().st_mtime_ns)
+    except OSError:
+        return ()
+    return tuple(dict.fromkeys(r['xa'] for r in dong))
 
 
 def xoa_thay() -> bool:

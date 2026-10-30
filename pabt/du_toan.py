@@ -374,7 +374,7 @@ def xuat_khai_toan(dt: DuToan, file_ra, pdf: bool = False) -> dict:
 
     def f(**k):
         return Font(name=TM, size=k.pop('size', 12), **k)
-    mong = Side(style='thin', color='000000')
+    mong = Side(style='thin')
     vien = Border(left=mong, right=mong, top=mong, bottom=mong)
     giua = Alignment(horizontal='center', vertical='center', wrap_text=True)
     trai = Alignment(horizontal='left', vertical='center', wrap_text=True)

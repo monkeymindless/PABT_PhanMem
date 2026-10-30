@@ -461,7 +461,12 @@ class BoSoan:
         if self.co_thay_doi:
             raise LoiNhap('Lưu hoặc bỏ thay đổi của lần đang soạn trước khi lập phương án điều chỉnh.')
         from . import lan_pa
-        lan = lan_pa.tao_lan_dieu_chinh(self.con, self.ma_ho, lan_goc or self.lan, ten, ghi_chu)
+        if lan_goc is None:
+            # lần đang mở chưa có dòng (vừa lập bổ sung, chưa nhập gì) hoặc đã bị thay: điều chỉnh lần có phương án muộn nhất
+            # (30/10/2026 người dùng: đang ở "bổ sung lần 1" trống vẫn lập được điều chỉnh - trước báo "Hộ không có phương án lần 2")
+            x = lan_pa.lan_cua(self.con, self.ma_ho, self.lan)
+            lan_goc = self.lan if x is not None and x.so_dong and not x.bi_thay_boi else None
+        lan = lan_pa.tao_lan_dieu_chinh(self.con, self.ma_ho, lan_goc, ten, ghi_chu)
         self.mo(self.ma_ho, lan)
         return lan
 

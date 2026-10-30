@@ -899,6 +899,12 @@ PHONG_TO = 55                          # zoom khi mở trong Excel
 
 
 
+def _mau_vien(c):
+    """Viền đen của mẫu -> màu tự động (None): Excel chế độ tối (Dark Mode) đổi màu tự động sang sáng, viền đen ghi cứng
+    nằm trên nền tối trông như mất khung (người dùng 30/10/2026, máy khác). In ra giấy vẫn đen."""
+    return None if not c or c.upper() in ('000000', 'FF000000') else _mau(c)
+
+
 def _mau(c):
     return 'FF' + c if c else None
 
@@ -915,7 +921,7 @@ def tao_workbook():
     kieu = []
     for (phong, co, dam, nghieng, gach, mau_chu, nen, ngang, doc, xuong, thut, xoay, vien, so) in KIEU:
         f = Font(name=phong, sz=co, b=dam, i=nghieng, u='single' if gach else None, color=_mau(mau_chu))
-        b = Border(*[Side(style=v[1], color=_mau(v[2])) if v else Side() for v in vien])
+        b = Border(*[Side(style=v[1], color=_mau_vien(v[2])) if v else Side() for v in vien])
         kieu.append((f, b, PatternFill('solid', fgColor=_mau(nen)) if nen else PatternFill(), Alignment(
             horizontal=ngang, vertical=doc, wrap_text=xuong, indent=thut, text_rotation=xoay), so))
     for r, c, v, i in CELLS:

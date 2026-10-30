@@ -778,7 +778,7 @@ def _p(*chay, can: str = 'both', truoc: int = 0, sau: int = 60, dau_dong: int = 
 
 def _bang(hang: list, rong: list, vien: bool = True, doc: str = 'center', lech: int = 0) -> str:
     """hang: [[nội dung ô (chuỗi các w:p)]]. Trang A4 dọc lề trái 3 cm, phải 2 cm: tổng độ rộng cột <= 9.071 (twip)."""
-    b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="4" w:space="0" w:color="000000"/>'
+    b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="4" w:space="0" w:color="auto"/>'
                 for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
     luoi = ''.join(f'<w:gridCol w:w="{x}"/>' for x in rong)
     dong = ''.join('<w:tr>' + ''.join(f'<w:tc><w:tcPr><w:tcW w:w="{rong[i]}" w:type="dxa"/><w:vAlign w:val="{doc}"/></w:tcPr>'

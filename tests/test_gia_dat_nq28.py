@@ -292,24 +292,35 @@ class TestCapNhatGiaDat(unittest.TestCase):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
         from PySide6.QtWidgets import QApplication
         from pabt.app import CuaSoChinh
-        from pabt.man_hinh_gia_dat import HopCapNhatGiaDat
+        from pabt.man_hinh_du_toan import HopTraNQ28
+        from pabt.man_hinh_gia_dat import KhungCapNhatGiaDat
         app = QApplication.instance() or QApplication([])  # noqa: F841
         w = CuaSoChinh(menu_trai=True)
         self.assertIn('Cập nhật bảng giá đất…', w.lenh)
         self.assertNotIn('Thay bảng giá đất…', w.lenh)
         self.assertNotIn('Dùng lại bảng giá gắn sẵn', w.lenh)
-        d = w.cap_nhat_bang_gia_dat(cho=False)
-        self.assertIsInstance(d, HopCapNhatGiaDat)
+        # 30/10/2026: công cụ cập nhật là thẻ của cửa sổ Bảng giá đất (không còn cửa sổ riêng)
+        hop = w.cap_nhat_bang_gia_dat(cho=False)
+        self.assertIsInstance(hop, HopTraNQ28)
+        self.assertEqual(hop.tabs.currentIndex(), HopTraNQ28.THE_CAP_NHAT)
+        d = hop.khung_cn
+        self.assertIsInstance(d, KhungCapNhatGiaDat)
         p = Path(self._td.name) / 'gia.csv'
         p.write_text('Tên đường,Vị trí,Đất ở\nĐường C,MT,9000000\n', encoding='utf-8')
         d.im_lang = True
         d.o_xa.setText('Xã Mới')
         self.assertIsNotNone(d.nap_file(str(p)))
+        # mặc định BỔ SUNG: giữ bốn địa bàn gắn sẵn, thêm Xã Mới; thẻ Bảng giá nạp lại danh sách địa bàn
+        self.assertEqual(d.ghi(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều', 'Xã Mới'])
+        self.assertGreaterEqual(hop.cb_xa.findData('Xã Mới'), 0)
+        self.assertIn('gắn sẵn + bổ sung', nq.tom_tat())
+        self.assertIn('NQ 28/2025', nq.can_cu(nq.tim('Trị An')[0], 'dat_o'))     # dòng gắn sẵn giữ căn cứ của mình
+        d.cb_cach.setCurrentIndex(d.cb_cach.findData('thay'))
         self.assertEqual(d.ghi(), ['Xã Mới'])
         self.assertEqual(nq.ds_xa(), ['Xã Mới'])
         d.khoi_phuc()
         self.assertEqual(nq.ds_xa(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều'])
-        d.close()
+        hop.close()
         w.close()
 
 

@@ -7,6 +7,22 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.39', '30/10/2026', (
+        'Đường kẻ khung bản in Excel / Word (phương án chi tiết, bảng tổng hợp, khái toán) dùng màu tự động thay vì đen ghi cứng: mở '
+        'trên Excel / Word bật chế độ tối (Dark Mode) vẫn thấy khung (trước đây nét đen nằm trên nền tối - chỉ thấy chữ). In ra giấy '
+        'vẫn đen.',
+        'Phương án điều chỉnh: đang ở lần "bổ sung" chưa có dòng nào vẫn lập được phương án điều chỉnh (điều chỉnh lần có phương án '
+        'muộn nhất) - không còn báo "Hộ không có phương án lần 2". Bản in phương án điều chỉnh không còn đẩy cả khối "Tổng giá trị sau '
+        'điều chỉnh" sang trang sau (trang 1 hở); bảng tổng hợp điều chỉnh có khối chữ ký.',
+        'Bảng giá đất: công cụ cập nhật nằm ngay trong cửa sổ Bảng giá đất (thẻ "Cập nhật, bổ sung giá đất"), không còn cửa sổ riêng. '
+        'Mặc định BỔ SUNG vào bảng đang dùng (giữ các địa bàn khác, thay địa bàn trùng tên) - vẫn chọn được "Thay toàn bộ".',
+        'Đọc Nghị quyết bảng giá đất (Word, PDF có chữ, PDF scan, ảnh): phần mềm đọc cả LỜI VĂN hướng dẫn cách tính vị trí 2, 3, 4 không '
+        'nằm trong bảng (vd. "vị trí 2, vị trí 3, vị trí 4 lần lượt bằng 70%, 50%, 30% giá đất vị trí 1", "vị trí 3 bằng 80% vị trí 2", '
+        '"không thấp hơn …", theo từng loại đất) rồi dựng thêm các vị trí đó từ vị trí 1; bảng "Quy tắc vị trí" sửa / thêm / xóa được, '
+        'bấm "Tính lại vị trí". Căn cứ in trên phương án ghi rõ cách tính.',
+        'Thẻ Hỗ trợ: hai hàng nhập (Nhân khẩu / Tái định cư và Chính sách hỗ trợ) cách nhau rộng hơn; nút tăng / giảm ô số (Nhân khẩu) vẽ '
+        'lại gọn. Ô chọn "Lần lập PA" rộng hơn, hiện đủ tên lần.',
+    )),
     ('1.0.38', '30/10/2026', (
         'Ô chọn xổ xuống: danh sách hiện ngay dưới ô, đủ các mục (tới 20 mục, nhiều hơn thì có thanh cuộn) và rộng đủ chữ dài nhất - '
         'không còn bị khuất mục / cắt chữ; màu mục đang chọn và mục dưới con trỏ chuột chuyển sang xanh xám nhạt, dịu mắt.',

@@ -3506,7 +3506,7 @@ class CuaSoChinh(QMainWindow):
 
     def bang_gia_dat(self, cho: bool = True, the: int = 0):
         """Bảng giá đất: thẻ "Bảng giá đất 2026" (NQ 28/2025, tra theo địa bàn của dự án đang mở) và thẻ "Hệ số K" (QĐ 03/2026/QĐ-UBND,
-        nhập từ file / chữ dán - he_so_k.py). the: 0 / 1 = thẻ mở sẵn."""
+        nhập từ file / chữ dán - he_so_k.py), thẻ "Cập nhật, bổ sung giá đất" (web / file, quy tắc vị trí 2-4). the: 0 / 1 / 2 = thẻ mở sẵn."""
         from .man_hinh_du_toan import HopTraNQ28
         xa = ''
         if self.con is not None:
@@ -3518,12 +3518,10 @@ class CuaSoChinh(QMainWindow):
         return d
 
     def cap_nhat_bang_gia_dat(self, cho: bool = True):
-        """Tải bảng giá đất từ web hoặc file. Bảng mới thay bốn địa bàn gắn sẵn."""
-        from .man_hinh_gia_dat import HopCapNhatGiaDat
-        d = HopCapNhatGiaDat(self)
-        if cho:
-            d.exec()
-        return d
+        """Cập nhật / bổ sung bảng giá đất (web, file Excel / Word / PDF): 30/10/2026 là thẻ "Cập nhật, bổ sung giá đất" của cửa sổ Bảng
+        giá đất (không còn cửa sổ riêng). Trả cửa sổ Bảng giá đất (khung: d.khung_cn)."""
+        from .man_hinh_du_toan import HopTraNQ28
+        return self.bang_gia_dat(cho, the=HopTraNQ28.THE_CAP_NHAT)
 
     def lich_su_cap_nhat(self, cho: bool = True):
         """Chân trang: lịch sử cập nhật từ 0.9.53. Không mang các bản đã phát hành trước đó."""

@@ -170,7 +170,7 @@ def _duong_ke_du_an() -> str:
     """Đường kẻ ngang ngắn (DK_DU_AN_MM) căn giữa ngay dưới tên dự án: viền dưới của một đoạn rỗng thụt hai bên (Word vẽ viền đoạn
     suốt bề rộng giữa hai lề thụt)."""
     ben = (rong_trang() - twip(DK_DU_AN_MM)) // 2
-    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>'
+    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="auto"/></w:pBdr>'
             f'<w:spacing w:before="0" w:after="200" w:line="{DK_DU_AN_KHE_PT * 20}" w:lineRule="exact"/><w:ind w:left="{ben}" w:right="{ben}"/>'
             f'<w:rPr><w:sz w:val="4"/></w:rPr></w:pPr></w:p>')
 
@@ -197,7 +197,7 @@ def _hang(o: list, tieu_de: bool = False, khong_tach: bool = False) -> str:
 def _bang(hang: list, rong: list, vien: bool = True, le_o: int = 57, lui: int = 0, ngoai_sz: int = 4) -> str:
     """lui (twip): bảng bắt đầu lùi ra ngoài lề trái chừng này (w:tblInd âm, canh trái) - bảng đầu văn bản lấn lề."""
     b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="{ngoai_sz if k in ("top", "left", "bottom", "right") else 4}" '
-                f'w:space="0" w:color="000000"/>' for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
+                f'w:space="0" w:color="auto"/>' for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
     luoi = ''.join(f'<w:gridCol w:w="{x}"/>' for x in rong)
     vi_tri = f'<w:jc w:val="left"/><w:tblInd w:w="{-lui}" w:type="dxa"/>' if lui else '<w:jc w:val="center"/>'
     return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong)}" w:type="dxa"/>{vi_tri}<w:tblBorders>{b}</w:tblBorders>'
@@ -260,11 +260,11 @@ def _p_gach(chu: str, co: float, dam: bool, rong_o: int, do=None, khe: float = K
         ben = max(0, int((rong_o - max(rong_chu * 0.3, rong_chu - twip(ngan_mm))) // 2))
         return (f'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr>'
                 f'{_r(chu, dam=dam, co=co)}</w:p>'
-                f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:pBdr>'
+                f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:pBdr>'
                 f'<w:spacing w:before="0" w:after="0" w:line="{max(20, int(HO_GACH_PT * 20))}" w:lineRule="exact"/>'
                 f'<w:ind w:left="{ben}" w:right="{ben}"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p>')
     ben = max(0, int((rong_o - (_rong_do(chu, co, dam, do) + khe) * 20) // 2))
-    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="{HO_GACH_PT}" w:color="000000"/></w:pBdr>'
+    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="{HO_GACH_PT}" w:color="auto"/></w:pBdr>'
             f'<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="{ben}" w:right="{ben}"/>'
             f'<w:jc w:val="center"/></w:pPr>{_r(chu, dam=dam, co=co)}</w:p>')
 
@@ -469,10 +469,13 @@ def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
             # ô STT.. Tỷ lệ (cột 1-5)
             nen = 'D9D9D9' if loai == 'G' else None
             tong = _so(gt[6]) if gt[6] else '-'
+            # tiêu đề khối (G) đi liền dòng đầu của khối; dòng tổng hợp (S) chỉ dính dòng TỔNG CỘNG ngay sau - trước 30/10/2026 mọi dòng
+            # S keepNext: cả khối C + chữ ký bị đẩy sang trang 2, trang 1 hở ~1/3 (ảnh mẫu phương án điều chỉnh)
+            g = loai == 'G' or (i + 1 < len(dong) and dong[i + 1][0] == 'T')
             hang.append(_hang([
-                _o(_p(_r(str(gt[0] or ''), dam=loai == 'G', co=CO_BANG), can='center', giu_sau=True), rong[0], nen=nen),
-                _o(_p(_r(gt[1] or '', dam=loai == 'G', co=CO_BANG), can='left', giu_sau=True), sum(rong[1:6]), nhap=5, nen=nen),
-                _o(_p(_r(tong, dam=loai == 'G', co=CO_BANG), can='right', giu_sau=True), rong[6], nen=nen),
+                _o(_p(_r(str(gt[0] or ''), dam=loai == 'G', co=CO_BANG), can='center', giu_sau=g), rong[0], nen=nen),
+                _o(_p(_r(gt[1] or '', dam=loai == 'G', co=CO_BANG), can='left', giu_sau=g), sum(rong[1:6]), nhap=5, nen=nen),
+                _o(_p(_r(tong, dam=loai == 'G', co=CO_BANG), can='right', giu_sau=g), rong[6], nen=nen),
                 _o(_p(_r(gt[7] or '', co=CO_GHI_CHU), can='center') if gt[7] else _p(), rong[7], nen=nen)], khong_tach=True))
             continue
         if loai == 'T':

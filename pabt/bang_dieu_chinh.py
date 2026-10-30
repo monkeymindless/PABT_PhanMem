@@ -337,6 +337,25 @@ def lap(con, file_ra, ds_ma_ho=None, du_thao: bool | None = None, so_pa: str = '
     sau = {k: tong_qd['tien'].get(k, KHONG) + chenh.get(k, KHONG) for k in chenh}
     tong_cong('TỔNG CỘNG', sau, dt={7: tong_qd['dt']})
     dong_kinh_phi(sau['tong'])
+    # ---- khối chữ ký như bảng tổng hợp chính (30/10/2026: bảng điều chỉnh in ra không có chỗ ký); bản dự thảo không ký
+    if not du_thao:
+        r += 1
+
+        def ky(rr, c1, c2, chu, dam=False, nghieng=False):
+            ws.merge_cells(start_row=rr, start_column=c1, end_row=rr, end_column=c2)
+            ce = ws.cell(rr, c1, chu)
+            ce.font = font(dam=dam, nghieng=nghieng)
+            ce.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        ky(r, 14, n_cot, f'{da["dia_danh_ngay"]}, ngày ...... tháng ..... năm {da["nam"]}', nghieng=True)
+        r += 1
+        ky(r, 2, 6, 'NGƯỜI LẬP BIỂU', dam=True)
+        ky(r, 14, n_cot, 'TỔ CHỨC THỰC HIỆN NHIỆM VỤ BỒI THƯỜNG', dam=True)
+        r += 1
+        ky(r, 14, n_cot, da['CHUC_VU_KY'], dam=True)
+        r += 5
+        ky(r, 2, 6, da['nguoi_lap'], dam=True)
+        ky(r, 14, n_cot, da['nguoi_ky'], dam=True)
+        r += 1
     r_cuoi = r - 1
 
     # ---- in: A3 ngang, vừa bề ngang, lặp tiêu đề cột

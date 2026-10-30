@@ -725,12 +725,13 @@ def doi_nhanh_tong_nen() -> str:
 _MUI_TEN = {}
 
 
-def _anh_mui_ten(mau: str) -> str:
+def _anh_mui_ten(mau: str, len_: bool = False) -> str:
     """Ảnh mũi tên xuống (chevron) cho ô chọn - đường dẫn dạng '/' dùng trong url() của QSS; '' nếu không tạo được. Vẽ một lần mỗi
     phiên bằng QPainter (2 cỡ: tên@2x.png cho màn hình phóng to) vào thư mục tạm: đặt kiểu ::drop-down thì Qt bỏ mũi tên gốc của
     Fusion (kèm vạch đen dày cạnh mũi tên - 22/10/2026 người dùng: giao diện tinh gọn)."""
-    if mau in _MUI_TEN:
-        return _MUI_TEN[mau]
+    khoa = (mau, len_)
+    if khoa in _MUI_TEN:
+        return _MUI_TEN[khoa]
     duong = ''
     try:
         import tempfile
@@ -741,10 +742,10 @@ def _anh_mui_ten(mau: str) -> str:
             return ''
         d = Path(tempfile.gettempdir()) / 'pabt_qss'
         d.mkdir(parents=True, exist_ok=True)
-        ten = 'mui_ten_' + mau.lstrip('#')
+        ten = ('mui_len_' if len_ else 'mui_ten_') + mau.lstrip('#')
         if all((d / f'{ten}{h}.png').exists() for h in ('', '@2x')):
-            _MUI_TEN[mau] = str(d / f'{ten}.png').replace('\\', '/')    # đã vẽ ở lần chạy trước: bỏ qua (khởi động nhanh hơn)
-            return _MUI_TEN[mau]
+            _MUI_TEN[khoa] = str(d / f'{ten}.png').replace('\\', '/')    # đã vẽ ở lần chạy trước: bỏ qua (khởi động nhanh hơn)
+            return _MUI_TEN[khoa]
         for he_so, hau_to in ((1, ''), (2, '@2x')):
             n = 12 * he_so
             pm = QPixmap(n, n)
@@ -752,14 +753,15 @@ def _anh_mui_ten(mau: str) -> str:
             p = QPainter(pm)
             p.setRenderHint(QPainter.RenderHint.Antialiasing)
             p.setPen(QPen(QColor(mau), 1.6 * he_so, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
-            p.drawPolyline(QPolygonF([QPointF(3 * he_so, 4.5 * he_so), QPointF(6 * he_so, 7.5 * he_so), QPointF(9 * he_so, 4.5 * he_so)]))
+            y1, y2 = (7.5, 4.5) if len_ else (4.5, 7.5)       # len_: mũi tên lên (nút tăng của ô số)
+            p.drawPolyline(QPolygonF([QPointF(3 * he_so, y1 * he_so), QPointF(6 * he_so, y2 * he_so), QPointF(9 * he_so, y1 * he_so)]))
             p.end()
             f = d / f'{ten}{hau_to}.png'
             pm.save(str(f), 'PNG')
         duong = str(d / f'{ten}.png').replace('\\', '/')
     except Exception:                                   # noqa: BLE001 - không tạo được ảnh: ô chọn giữ mũi tên gốc của Qt
         duong = ''
-    _MUI_TEN[mau] = duong
+    _MUI_TEN[khoa] = duong
     return duong
 
 
@@ -774,6 +776,27 @@ def _qss_o_chon() -> str:
     QComboBox::down-arrow {{ image: url({thuong}); width: 12px; height: 12px; }}
     QComboBox::down-arrow:disabled {{ image: url({tat or thuong}); }}
     QComboBox::down-arrow:on {{ top: 1px; }}
+    ''' + _qss_o_so()
+
+
+def _qss_o_so() -> str:
+    """Nút tăng / giảm của ô số (QSpinBox): ô có kiểu viền riêng thì Qt vẽ nút mặc định thành vạch đen "–|" (30/10/2026 người dùng: ô
+    Nhân khẩu) - vẽ chevron lên / xuống nhỏ như ô chọn, nền trong suốt, rê chuột nền nhạt."""
+    len_, xuong = _anh_mui_ten('#64748B', True), _anh_mui_ten('#64748B')
+    len_tat, xuong_tat = _anh_mui_ten('#CBD5E1', True), _anh_mui_ten('#CBD5E1')
+    if not (len_ and xuong):
+        return ''
+    return f'''
+    QSpinBox::up-button, QDoubleSpinBox::up-button {{ subcontrol-origin: border; subcontrol-position: top right; width: 18px;
+        border: 0; background: transparent; }}
+    QSpinBox::down-button, QDoubleSpinBox::down-button {{ subcontrol-origin: border; subcontrol-position: bottom right; width: 18px;
+        border: 0; background: transparent; }}
+    QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover, QSpinBox::down-button:hover,
+        QDoubleSpinBox::down-button:hover {{ background: #EEF3FA; }}
+    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{ image: url({len_}); width: 10px; height: 10px; }}
+    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{ image: url({xuong}); width: 10px; height: 10px; }}
+    QSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:disabled {{ image: url({len_tat or len_}); }}
+    QSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:disabled {{ image: url({xuong_tat or xuong}); }}
     '''
 
 

@@ -93,9 +93,11 @@ def _dong_tu_o(cac_dong: list, ten_file: str, xa: str) -> tuple:
             c_gia['dat_o'] = c
     if c_ten is None or not c_gia:
         raise nq.LoiBangGia(f'{ten_file}: thiếu cột Tên đường hoặc cột giá.')
-    dau = ' '.join(' '.join(r) for r in chuan[:hang])
+    # đơn vị giá: chỉ xét vài dòng ngay trên tiêu đề + chính dòng tiêu đề ("ĐVT: 1.000 đồng/m²") - lời văn phía trên (câu "không thấp
+    # hơn 150.000 đồng/m²" của quy tắc vị trí) không phải đơn vị của bảng
+    dau = ' '.join(' '.join(r) for r in chuan[max(0, hang - 3):hang + 1])
     khoa = bo_dau(dau)
-    if 'nghin' in khoa:
+    if 'nghin' in khoa or re.search(r'\b1[.,]?000\s*(?:dong|d\b|vnd)', khoa):
         don_vi = 'nghin'
     elif 'dong/m' in khoa or 'dong / m' in khoa:
         don_vi = 'dong'
@@ -146,7 +148,7 @@ def loc_xa(dong: list, xa: str) -> list:
     if khop:
         return khop
     ten = {r['xa'] for r in co_ten}
-    if ten and all(_ten_ao(x) for x in ten):
+    if not ten or all(_ten_ao(x) for x in ten):          # file không ghi tên địa bàn: gán tên người dùng nhập
         for r in dong:
             r['xa'] = xa.strip()
         return dong
@@ -154,8 +156,9 @@ def loc_xa(dong: list, xa: str) -> list:
         f'Không thấy "{xa}" trong file. Các địa bàn đọc được: {", ".join(sorted(x for x in ten if x)) or "(không có tên)"}.')
 
 
-def doc_scan(file, xa: str = '', bao=None, cho=None) -> list:
-    """PDF ảnh hoặc file ảnh: nhận dạng từng trang, dừng khi đã đọc xong mục địa bàn (file lớn không đọc hết)."""
+def doc_scan(file, xa: str = '', bao=None, cho=None, chu_ra: list | None = None) -> list:
+    """PDF ảnh hoặc file ảnh: nhận dạng từng trang, dừng khi đã đọc xong mục địa bàn (file lớn không đọc hết).
+    chu_ra: danh sách nhận các dòng chữ đã nhận dạng (đọc quy tắc vị trí 2-4 trong lời văn - quy_tac_vi_tri)."""
     from . import ocr
     xa = (xa or '').strip()
     tim = ten_gon(xa)
@@ -175,6 +178,8 @@ def doc_scan(file, xa: str = '', bao=None, cho=None) -> list:
                 re.fullmatch(r'(?:\d+\.\s*)?(?:Xã|Phường|Thị trấn)\s+\S.{0,40}', d.strip(), re.I)
                 and bo_dau(tim) not in bo_dau(d) for d in chu.splitlines()):
             break
+    if chu_ra is not None:
+        chu_ra += dong_chu
     tach = []
     for d in dong_chu:
         if re.search(r'\s{2,}|\t', d):
@@ -196,7 +201,41 @@ def _gan_tinh(dong: list, tinh: str, xa: str, vb: str, chu: str) -> tuple:
 
 
 def doc_file(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> tuple:
-    """Đọc Excel / Word / PDF (kể cả PDF ảnh) / ảnh / CSV. Trả (dòng, văn bản, câu đơn vị)."""
+    """Đọc Excel / Word / PDF (kể cả PDF ảnh) / ảnh / CSV. Trả (dòng, văn bản, câu đơn vị). Văn bản có hướng dẫn tính vị trí 2-4 trong
+    lời văn (quy_tac_vi_tri) thì dòng các vị trí đó được dựng thêm từ vị trí 1 và câu đơn vị ghi rõ."""
+    kq = doc_file_day_du(file, tinh, xa, bao, cho)
+    dong, them = ap_quy_tac_file(kq)
+    return dong, kq['van_ban'], kq['chu'] + chu_quy_tac(kq['quy_tac'], them)
+
+
+def ap_quy_tac_file(kq: dict, quy_tac: list | None = None) -> tuple:
+    """(dòng sau khi dựng vị trí theo quy tắc, số dòng thêm). quy_tac None = quy tắc đọc được trong file (kq['quy_tac'])."""
+    from .quy_tac_vi_tri import ap_quy_tac
+    return ap_quy_tac(kq['dong_goc'], kq['quy_tac'] if quy_tac is None else quy_tac)
+
+
+def chu_quy_tac(quy_tac: list, them: int) -> str:
+    if not quy_tac:
+        return ''
+    from .quy_tac_vi_tri import tom_tat
+    return (f' Văn bản có hướng dẫn tính vị trí ngoài bảng ({tom_tat(quy_tac)}): đã dựng thêm {them} dòng - kiểm tra lại ở bảng '
+            '"Quy tắc vị trí".')
+
+
+def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> dict:
+    """Như doc_file nhưng CHƯA dựng vị trí theo quy tắc: {'dong_goc': dòng của bảng, 'quy_tac': [QuyTac] đọc trong lời văn,
+    'van_ban', 'chu'} - màn hình cho người dùng sửa quy tắc rồi tính lại (ap_quy_tac_file)."""
+    from .quy_tac_vi_tri import doc_quy_tac
+    chu_vb = []
+    dong, vb, chu = _doc_file(file, tinh, xa, bao, cho, chu_vb)
+    try:
+        qt = doc_quy_tac(chu_vb)
+    except Exception:                                   # noqa: BLE001 - lời văn lạ không được làm hỏng việc đọc bảng
+        qt = []
+    return {'dong_goc': dong, 'quy_tac': qt, 'van_ban': vb, 'chu': chu}
+
+
+def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
     from . import ocr
     from .nhap_don_gia import LoiPdfScan, doc_bang
     p = Path(file)
@@ -206,9 +245,13 @@ def doc_file(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> tuple:
     duoi = p.suffix.lower()
     if duoi in ('.xlsx', '.xlsm'):
         dong, vb, chu = nq.doc_excel(p)
+        try:                                            # ghi chú / sheet hướng dẫn trong file Excel (quy tắc vị trí)
+            chu_vb += doc_bang(p)[:5000]
+        except Exception:                               # noqa: BLE001
+            pass
     elif duoi in ocr.DUOI_ANH:
         try:
-            dong = doc_scan(p, xa, bao, cho)
+            dong = doc_scan(p, xa, bao, cho, chu_vb)
         except Exception as e:
             raise nq.LoiBangGia(str(e)) from None
         vb, chu = p.stem, 'Đọc từ ảnh, nhận dạng chữ.'
@@ -217,15 +260,23 @@ def doc_file(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> tuple:
             o = doc_bang(p)
         except LoiPdfScan:
             try:
-                dong = doc_scan(p, xa, bao, cho)
+                dong = doc_scan(p, xa, bao, cho, chu_vb)
             except Exception as e:
                 raise nq.LoiBangGia(str(e)) from None
             vb, chu = p.stem, 'PDF ảnh: nhận dạng từng trang.'
             return _gan_tinh(dong, tinh, xa, vb, chu)
         except Exception as e:
             raise nq.LoiBangGia(str(e)) from None
+        chu_vb += o
         if duoi == '.docx':
-            dong = phan_tich_nghi_quyet(o) or _dong_tu_o(o, p.name, xa)[0]
+            dong = phan_tich_nghi_quyet(o)
+            if not any((r.get('xa') or '').strip() for r in dong):
+                # bảng không chia mục theo xã (một địa bàn, có cột Điểm đầu / Điểm cuối): đọc theo cột như Excel; không được thì giữ
+                try:
+                    dong = _dong_tu_o(o, p.name, xa)[0]
+                except nq.LoiBangGia:
+                    if not dong:
+                        raise
             chu = 'Giá trong văn bản.'
         else:
             dong, chu = _dong_tu_o(o, p.name, xa)
@@ -238,11 +289,15 @@ def doc_file(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> tuple:
     return _gan_tinh(dong, tinh, xa, vb, chu)
 
 
-def ap_dung(dong: list, van_ban: str = '', nguon: str = '') -> list:
-    """Ghi bảng này thành bảng đang dùng. Bốn địa bàn gắn sẵn không còn hiện."""
+def ap_dung(dong: list, van_ban: str = '', nguon: str = '', bo_sung: bool = False) -> list:
+    """Ghi bảng này vào bảng giá đang dùng. bo_sung=False: THAY toàn bộ (bốn địa bàn gắn sẵn không còn hiện); bo_sung=True: thêm vào
+    bảng đang dùng, địa bàn trùng tên thì thay, địa bàn khác (cả bốn địa bàn gắn sẵn) giữ nguyên (gia_dat_nq28.ghi_bo_sung)."""
     if not dong:
         raise nq.LoiBangGia('Không có dòng giá để ghi.')
-    nq.ghi_thay(dong, van_ban, nguon)
+    if bo_sung:
+        nq.ghi_bo_sung(dong, van_ban, nguon)
+    else:
+        nq.ghi_thay(dong, van_ban, nguon)
     return nq.ds_xa()
 
 

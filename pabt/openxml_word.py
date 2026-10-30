@@ -60,7 +60,7 @@ def doan(*cac_chay, can: str = 'both', truoc: int = 0, sau: int = 0, dong: int =
     ind = ''.join(f' w:{k}="{v}"' for k, v in (('left', trai), ('right', phai), ('firstLine', dau_dong),
                                                ('hanging', treo)) if v)
     pr = ('<w:keepNext/>' if giu_sau else '') + ('<w:keepLines/>' if giu_dong else '') + ('<w:pageBreakBefore/>' if ngat_trang else '') + \
-        (f'<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="{vien_duoi_pt:g}" w:color="000000"/></w:pBdr>' if vien_duoi_pt > 0 else '') + \
+        (f'<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="{vien_duoi_pt:g}" w:color="auto"/></w:pBdr>' if vien_duoi_pt > 0 else '') + \
         (('<w:tabs>' + ''.join(f'<w:tab w:val="left" w:pos="{x}"/>' for x in ds_tab) + '</w:tabs>') if ds_tab else '') + \
         f'<w:spacing w:before="{truoc}" w:after="{sau}" w:line="{dong}" w:lineRule="auto"/>' + (f'<w:ind{ind}/>' if ind else '') + \
         f'<w:jc w:val="{can}"/>'
@@ -88,7 +88,7 @@ def doan_gach_ho(chu: str, rong_chu_pt: float, rong_vung_twip: int, co: float = 
 def doan_ke_ngang(rong_twip: int, rong_vung_twip: int, sau: int = 120) -> str:
     """Đường kẻ ngang ngắn căn giữa (đoạn rỗng có viền dưới, thụt hai bên) - vd. dưới tên dự án."""
     ben = max(0, (rong_vung_twip - rong_twip) // 2)
-    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>'
+    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="auto"/></w:pBdr>'
             f'<w:spacing w:before="0" w:after="{sau}" w:line="120" w:lineRule="exact"/><w:ind w:left="{ben}" w:right="{ben}"/>'
             f'<w:rPr><w:sz w:val="4"/></w:rPr></w:pPr></w:p>')
 
@@ -114,7 +114,7 @@ def hang(cac_o: list, lap_dau_trang: bool = False, khong_tach: bool = False) -> 
 
 def bang(cac_hang: list, rong_cot: list, vien: bool = True, le_o: int = 57, lui: int = 0, can: str = 'center') -> str:
     """Bảng cố định bề rộng cột (w:tbl). vien: khung + lưới; lui (twip): bắt đầu lùi ra ngoài lề trái (canh trái)."""
-    b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="4" w:space="0" w:color="000000"/>'
+    b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="4" w:space="0" w:color="auto"/>'
                 for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
     luoi = ''.join('<w:gridCol w:w="%d"/>' % x for x in rong_cot)
     vt = f'<w:jc w:val="left"/><w:tblInd w:w="{-lui}" w:type="dxa"/>' if lui else f'<w:jc w:val="{can}"/>'

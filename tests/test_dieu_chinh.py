@@ -59,6 +59,22 @@ class TestDuLieuDieuChinh(_Co):
         self.assertEqual(out[0][1][1], 'PHƯƠNG ÁN ĐÃ LẬP (LẦN 1, CHƯA PHÊ DUYỆT)')
         self.assertFalse(any('Quyết định số' in str(x[1][1]) for x in out))
 
+    def test_dang_o_lan_bo_sung_trong_van_lap_dieu_chinh(self):
+        """30/10/2026 (người dùng): đang ở "bổ sung lần 1" chưa có dòng (không có bổ sung lần 2) bấm "+ PA điều chỉnh" -> điều chỉnh
+        lần có phương án (lần 1), không báo "Hộ không có phương án lần 2"."""
+        con = self._con()
+        bo = BoSoan(con, 1)
+        self._them(bo, 3, 5)
+        bo.luu()
+        bo = BoSoan(con, 1)
+        self.assertEqual(bo.lap_bo_sung('Bổ sung'), 2)
+        self.assertEqual(bo.lan, 2)
+        lan = bo.lap_dieu_chinh()
+        self.assertEqual(lan, 3)
+        x = lan_pa.lan_cua(con, 1, 3)
+        self.assertEqual((x.la_dieu_chinh, x.thay_the), (True, 1))
+        self.assertEqual(len(bo.pa.khoan[3]), 1)                                            # đã chép dòng lần 1
+
     def test_dieu_chinh_tiep_ban_dieu_chinh_chua_duyet_tru_lan_da_duyet(self):
         """Chuỗi: lần 1 đã duyệt -> lần 2 điều chỉnh (chưa duyệt) -> lần 3 điều chỉnh lần 2: chênh lệch so với lần 1 (lần đã duyệt)."""
         con = self._con()

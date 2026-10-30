@@ -64,7 +64,7 @@ class _Ve:
         from openpyxl.utils import get_column_letter
         self.ws, self.r = ws, 1
         self.Font, self.Alignment = Font, Alignment
-        mong = Side(style='thin', color='000000')
+        mong = Side(style='thin')   # màu tự động (Excel / Word chế độ tối đổi theo)
         self.vien = Border(left=mong, right=mong, top=mong, bottom=mong)
         for i, w in enumerate(RONG_COT, start=1):
             cd = ws.column_dimensions[get_column_letter(i)]

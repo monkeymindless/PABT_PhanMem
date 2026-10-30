@@ -2701,6 +2701,33 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     dot_hien), 4 ô lọc `cb_lap / cb_dk / cb_yk / cb_dot` + `o_tim` (`khop_loc`, ẩn dòng), sắp xếp theo tiêu đề cột (`_OSap` khóa UserRole + 1),
     `ma_chon()` theo thứ tự dự án; `o_ca_chua` (tự bật khi đánh dấu hộ chưa đủ điều kiện) -> `them_thu_cong(…, ca_vuong=)` (mặc định vẫn bỏ
     qua hộ vướng). `ds_de_them` (lọc kiểu cũ) giữ cho test.
+- 1.0.39 (người dùng 30/10/2026; test `tests/test_quy_tac_vi_tri.py`, `test_dieu_chinh.test_dang_o_lan_bo_sung_trong_van_lap_dieu_chinh`,
+  `test_gia_dat_nq28.test_hop_va_menu`):
+  - "Máy khác mất khung bản in Excel / Word, chỉ thấy chữ": KHÔNG tái hiện được (máy trắng, bản Qt5, PDF dự phòng Qt / Excel đều đủ khung;
+    xem trước 700 px vẫn thấy nét). Giả thuyết: Excel / Word bật CHẾ ĐỘ TỐI - màu tự động đổi sáng, viền đen ghi cứng không đổi nằm trên nền
+    tối. Đã đổi viền đen sang màu TỰ ĐỘNG: `mau_bang_tong_hop._mau_vien` (đen -> None), `in_excel_chi_tiet` / `du_toan` Side(style='thin')
+    không màu, Word `w:color="auto"` (in_word, openxml_word, van_ban_trinh). Viền mới: KHÔNG ghi color='000000' (xám báo cáo giữ).
+  - `lap_pa.BoSoan.lap_dieu_chinh(None)`: lần đang mở chưa có dòng / đã bị thay -> lan_goc None (lan_pa chọn lần có phương án muộn nhất);
+    `lan_pa.tao_lan_dieu_chinh` với lan_goc chỉ định vẫn chặt. Word điều chỉnh: dòng S (tổng hợp khối) keepNext CHỈ khi dòng sau là T
+    (trước: cả khối C + chữ ký dồn trang 2). `bang_dieu_chinh.lap` có khối chữ ký (không ở bản dự thảo). cb_lan setMinimumContentsLength 34.
+  - `pabt/quy_tac_vi_tri.py` (không Qt): `doc_quy_tac(chữ | dòng | dòng ô)` -> [QuyTac(vi_tri, ty_le, so_voi, loai, toi_thieu nghìn, cau)]
+    (token "vi tri N" / "N%" / "hệ số 0,7" / "0,7 lần" trong từng vế câu: nhóm vị trí được tính -> nhóm tỷ lệ -> vị trí gốc; loại đất theo
+    chữ trước vị trí hoặc câu dẫn ngắn đứng trước ("Đối với đất nông nghiệp:"), hết ngữ cảnh ở "Điều" / "Chương" / "N."), `ap_quy_tac(dòng,
+    ds)` (tuyến = xã + tên đường + điểm đầu / cuối có đúng MỘT dòng ''/MT/VT1 và không mức T / K -> VT1, dựng VT2.. 'sinh_tu_quy_tac' +
+    'tinh_tu'; quy tắc riêng loại đất trước quy tắc chung; vị trí văn bản đã ghi giữ nguyên; áp lại bỏ dòng sinh lần trước). Thử trên văn bản
+    GIẢ LẬP - chưa có nghị quyết thật của tỉnh khác để thử.
+  - `cap_nhat_gia_dat.doc_file_day_du` (dòng gốc + quy tắc + chữ văn bản: docx/pdf qua doc_bang, Excel thêm doc_bang, scan qua doc_scan(chu_ra=)),
+    `ap_quy_tac_file`, `doc_file` = đọc + áp (API cũ); `ap_dung(…, bo_sung=)` -> `gia_dat_nq28.ghi_bo_sung` (giữ địa bàn khác - kể cả bốn
+    địa bàn gắn sẵn, dòng giữ 'van_ban' của mình; `can_cu` / `mo_ta_vi_tri` ghi 'tinh_tu'; `xa_gan_san`, tom_tat "gắn sẵn + bổ sung"). Docx
+    không chia mục theo xã -> đọc theo cột (`_dong_tu_o`); `loc_xa` file không ghi tên địa bàn -> gán tên người dùng nhập; đơn vị giá chỉ xét 3
+    dòng trên tiêu đề ("1.000 đồng" = nghìn).
+  - Cửa sổ Bảng giá đất (`man_hinh_du_toan.HopTraNQ28(xem=True)`) thẻ 3 `khung_cn` = `man_hinh_gia_dat.KhungCapNhatGiaDat` (thay hộp
+    HopCapNhatGiaDat - đã bỏ): bảng xem trước (nền vàng = dòng dựng theo quy tắc), `bang_qt` quy tắc (sửa ô, `them_quy_tac` / `xoa_quy_tac` /
+    `tinh_lai`, `quy_tac()`), `cb_cach` ('bo_sung' mặc định / 'thay'), `da_ghi` -> `HopTraNQ28.nap_lai_bang_gia`. `app.cap_nhat_bang_gia_dat`
+    = `bang_gia_dat(the=HopTraNQ28.THE_CAP_NHAT)`.
+  - Ô số (QSpinBox) có chevron lên / xuống `giao_dien._qss_o_so` (`_anh_mui_ten(mau, len_)`) - trước Qt vẽ vạch "–|". Thẻ Hỗ trợ:
+    `man_hinh.KHE_HANG_NHAP` 6 px giữa hàng nhân khẩu và hàng nhập chính sách.
+  - Ảnh quy trình / mẫu điều chỉnh: script scratchpad (dự án giả lập) -> `ket_qua_kiem_tra/anh_dieu_chinh/`.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

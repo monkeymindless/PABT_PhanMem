@@ -56,6 +56,7 @@ CAO_NUT_DONG = 24                  # nút thao tác dòng (Xóa dòng, Lên, Xu�
 THE_MUC = (0, 1, 2, 3, MUC_VN, 4)
 # 20/10/2026 (ảnh mẫu người dùng): bảng mục dòng 36 px, số / tiền phông Consolas canh phải; dải định danh hộ 38 px nền #F1F5F9
 CAO_DONG_MUC = 36
+KHE_HANG_NHAP = 6               # px: khoảng cách thêm giữa hàng nhân khẩu / tái định cư và hàng nhập chính sách (mục 4)
 PHONG_SO = 'Consolas'
 CAO_DAI_DINH_DANH = 38
 TEN_TAB = {0: 'Thông tin hộ, thửa đất', 1: '1. Đất', 2: '2. Nhà, công trình', 3: '3. Cây trồng', 4: '4. Vật nuôi',
@@ -627,6 +628,7 @@ class BangMuc(QWidget):
             h.gian(k_tdc)
             self.cb_tdc.setMinimumWidth(280)
             lo.addLayout(h)
+            lo.addSpacing(KHE_HANG_NHAP)          # 30/10/2026 (người dùng): hai hàng nhập (nhân khẩu / chính sách) quá sát nhau
         # 0.9.95: bỏ khung viền bao hàng nhập (lề 0); mục 1: nút thao tác dòng + "Cộng mục 1" lên CÙNG hàng chọn thửa
         khung_nhap = QWidget()
         khung_nhap.setObjectName('khung_nhap')
@@ -1513,7 +1515,7 @@ class CuaSoLapPA(QDialog):
         nhan.setProperty('vai', 'nhan')
         self.cb_lan = QComboBox()
         self.cb_lan.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self.cb_lan.setMinimumContentsLength(14)
+        self.cb_lan.setMinimumContentsLength(34)      # 30/10/2026: đủ chữ "Lần 2: Điều chỉnh khối lượng…" (trước 14 - cắt)
         self.cb_lan.setToolTip('Mỗi lần lập phương án (lần đầu, bổ sung lần 1, 2…) có dòng tài sản / chính sách, số phương án và '
                                'quyết định phê duyệt riêng. Lần đã có quyết định chỉ xem - không làm sai quyết định cũ.')
         self.cb_lan.activated.connect(lambda i: self.chon_lan(self.cb_lan.itemData(i)))

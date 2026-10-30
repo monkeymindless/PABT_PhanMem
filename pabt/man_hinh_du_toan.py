@@ -45,6 +45,8 @@ class HopTraNQ28(QDialog):
         self.dong = None
         self.he_so_k = None                             # hệ số K của dòng đã chọn (None: bảng hệ số không có dòng khớp)
         self.khung_k = None
+        self.khung_cn = None                            # thẻ "Cập nhật, bổ sung giá đất" (chỉ khi xem=True)
+        self._xem = xem
         self.setWindowTitle(('Bảng giá đất — ' if xem else 'Tra giá đất — ') + nq.tom_tat())
         self.resize(1100, 560)
         self.cb_xa = QComboBox()
@@ -104,6 +106,11 @@ class HopTraNQ28(QDialog):
             self.tabs = QTabWidget()
             self.tabs.addTab(trang, 'Bảng giá đất 2026')
             self.tabs.addTab(self.khung_k, 'Hệ số K (QĐ 03/2026/QĐ-UBND)')
+            # 30/10/2026 (người dùng): công cụ cập nhật / bổ sung bảng giá đất là một thẻ của cửa sổ này (bỏ cửa sổ riêng)
+            from .man_hinh_gia_dat import KhungCapNhatGiaDat
+            self.khung_cn = KhungCapNhatGiaDat(self, xa)
+            self.khung_cn.da_ghi.connect(self.nap_lai_bang_gia)
+            self.tabs.addTab(self.khung_cn, 'Cập nhật, bổ sung giá đất')
             self.tabs.setCurrentIndex(the)
             lo.addWidget(self.tabs)
         else:
@@ -114,6 +121,24 @@ class HopTraNQ28(QDialog):
             s.connect(lambda *_: self.loc())
         if self.cb_vt is not None:
             self.cb_vt.currentIndexChanged.connect(lambda *_: self.loc())
+        self.loc()
+
+    THE_CAP_NHAT = 2                                     # chỉ số thẻ "Cập nhật, bổ sung giá đất"
+
+    def nap_lai_bang_gia(self):
+        """Bảng giá đang dùng vừa đổi (thẻ Cập nhật ghi / dùng lại bảng gắn sẵn): nạp lại danh sách địa bàn, tiêu đề, bảng."""
+        nq = self.nq
+        cu = self.cb_xa.currentData() or ''
+        self.cb_xa.blockSignals(True)
+        try:
+            self.cb_xa.clear()
+            self.cb_xa.addItem('Tất cả địa bàn', '')
+            for x in nq.ds_xa():
+                self.cb_xa.addItem(x, x)
+            self.cb_xa.setCurrentIndex(max(0, self.cb_xa.findData(cu)))
+        finally:
+            self.cb_xa.blockSignals(False)
+        self.setWindowTitle(('Bảng giá đất — ' if self._xem else 'Tra giá đất — ') + nq.tom_tat())
         self.loc()
 
     def _k(self, x: dict, cot: str):
