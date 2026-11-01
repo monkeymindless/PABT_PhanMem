@@ -561,7 +561,11 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
 - **Dữ liệu → Nhập bản vẽ CAD (.dxf)…**: chọn lớp ranh thửa, lớp ranh thu hồi (nếu có), số tờ; phần mềm đọc số thửa / diện tích /
   loại đất trong nhãn, đo diện tích hình và phần nằm trong ranh thu hồi, đối chiếu với hồ sơ; đánh dấu thửa nào cập nhật diện tích
   thu hồi theo bản vẽ. **Dữ liệu → Bản đồ thửa đất**: tô xanh thửa hộ đã đồng thuận, đỏ chưa đồng thuận, vàng chưa lấy ý
-  kiến, xám thửa không có trong hồ sơ; bấm (không kéo) vào thửa mở hồ sơ hộ, ô "Số thửa → Enter" nhảy tới thửa, cuộn chuột phóng to.
+  kiến, xám thửa không có trong hồ sơ; bấm (không kéo) vào thửa mở hồ sơ hộ, ô "Số thửa → Enter" nhảy tới thửa, cuộn chuột hoặc
+  nút **+ / − / Vừa** góc bản đồ để phóng. **Mở KML / KMZ để xem…** đọc bản vẽ MicroStation / gCadas giống điện thoại: lưới thửa
+  và đường ranh (Level) đúng màu, số thửa / loại đất / diện tích là chữ (không còn chỉ chấm), mốc ranh hình thoi, ghi chú quy hoạch;
+  công tắc 4 lớp (Lưới thửa & ranh · Số thửa, loại đất, DT · Ranh mốc · Ghi chú); bấm đường / nhãn / mốc xem thuộc tính (kèm VN-2000);
+  bảng **Tra cứu** dưới bản đồ lọc rồi **Xem** bay tới. Muốn đưa ranh thửa vào dự án: **Nhập bản đồ…** (đa giác / DXF).
 - **Quét giấy tờ (OCR)…** (cửa sổ lập phương án, trang Dự toán): chọn ảnh chụp / PDF scan giấy chứng nhận, biên bản kiểm kê (cần
   Tesseract như đọc quyết định scan). Soát lại các ô rồi "Điền thông tin hộ & thửa" (trang Dự toán: "Thêm dòng đất") / "Đưa tài sản vào phương án…".
 - **Ứng dụng điện thoại LARC Mobile** (Android / iPhone, chạy không cần mạng; ứng dụng phát hành riêng, không nằm trong bộ cài
@@ -891,6 +895,8 @@ dự án thì xóa. Máy khác mở cùng file (ví dụ trong thư mục Google
 - **Vẫn mở để sửa**: máy đang sửa trước đó sẽ được cảnh báo. Chỉ chọn khi chắc máy kia đã thôi sửa.
 
 Máy kia tắt đột ngột thì khóa tự hết hạn sau 3 phút. Nhập file Excel đè lên file đang bị máy khác sửa sẽ bị từ chối.
+
+Từ **1.0.41**, khi mở để sửa phần mềm ghi vào file số phiên bản tối thiểu được ghi. Máy còn bản cũ hơn số đó sẽ **tự mở chỉ xem** (thông báo nổi góc cửa sổ) để không ghi sai dữ liệu — cập nhật phần mềm rồi mở lại là sửa được. Bản cũ hơn 1.0.41 chưa biết khóa này nên vẫn sửa được file của bản mới (hạn chế đã biết: nên cập nhật mọi máy cùng lúc).
 
 ## Máy chủ trong mạng nội bộ (LAN), tài khoản đăng nhập (0.9.2)
 

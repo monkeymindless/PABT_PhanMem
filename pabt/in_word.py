@@ -170,7 +170,7 @@ def _duong_ke_du_an() -> str:
     """Đường kẻ ngang ngắn (DK_DU_AN_MM) căn giữa ngay dưới tên dự án: viền dưới của một đoạn rỗng thụt hai bên (Word vẽ viền đoạn
     suốt bề rộng giữa hai lề thụt)."""
     ben = (rong_trang() - twip(DK_DU_AN_MM)) // 2
-    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="auto"/></w:pBdr>'
+    return (f'<w:p><w:pPr>{ox.xml_p_bdr_duoi(space="1")}'
             f'<w:spacing w:before="0" w:after="200" w:line="{DK_DU_AN_KHE_PT * 20}" w:lineRule="exact"/><w:ind w:left="{ben}" w:right="{ben}"/>'
             f'<w:rPr><w:sz w:val="4"/></w:rPr></w:pPr></w:p>')
 
@@ -182,7 +182,7 @@ def _o(noi_dung: str, rong: int, nhap: int = 1, doc: str = 'center', dong_doc: s
     an = ('top', 'left', 'bottom', 'right') if not vien else tuple(an_vien)
     pr = f'<w:tcW w:w="{rong}" w:type="dxa"/>' + (f'<w:gridSpan w:val="{nhap}"/>' if nhap > 1 else '') + \
         ('<w:vMerge w:val="restart"/>' if dong_doc == 'restart' else '<w:vMerge/>' if dong_doc == 'continue' else '') + \
-        ('<w:tcBorders>' + ''.join(f'<w:{k} w:val="nil"/>' for k in an) + '</w:tcBorders>' if an else '') + \
+        ox.xml_tc_borders(vien, an) + \
         (f'<w:shd w:val="clear" w:color="auto" w:fill="{nen}"/>' if nen else '') + f'<w:vAlign w:val="{doc}"/>'
     return f'<w:tc><w:tcPr>{pr}</w:tcPr>{noi_dung or _p()}</w:tc>'
 
@@ -194,13 +194,12 @@ def _hang(o: list, tieu_de: bool = False, khong_tach: bool = False) -> str:
     return f'<w:tr><w:trPr>{pr}</w:trPr>{"".join(o)}</w:tr>'
 
 
-def _bang(hang: list, rong: list, vien: bool = True, le_o: int = 57, lui: int = 0, ngoai_sz: int = 4) -> str:
+def _bang(hang: list, rong: list, vien: bool = True, le_o: int = 57, lui: int = 0, ngoai_sz: int = ox.SZ_VIEN) -> str:
     """lui (twip): bảng bắt đầu lùi ra ngoài lề trái chừng này (w:tblInd âm, canh trái) - bảng đầu văn bản lấn lề."""
-    b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="{ngoai_sz if k in ("top", "left", "bottom", "right") else 4}" '
-                f'w:space="0" w:color="auto"/>' for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
     luoi = ''.join(f'<w:gridCol w:w="{x}"/>' for x in rong)
     vi_tri = f'<w:jc w:val="left"/><w:tblInd w:w="{-lui}" w:type="dxa"/>' if lui else '<w:jc w:val="center"/>'
-    return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong)}" w:type="dxa"/>{vi_tri}<w:tblBorders>{b}</w:tblBorders>'
+    return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong)}" w:type="dxa"/>{vi_tri}'
+            f'{ox.xml_tbl_borders(vien, ngoai_sz, ox.SZ_VIEN)}'
             f'<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="28" w:type="dxa"/><w:left w:w="{le_o}" w:type="dxa"/>'
             f'<w:bottom w:w="28" w:type="dxa"/><w:right w:w="{le_o}" w:type="dxa"/></w:tblCellMar></w:tblPr>'
             f'<w:tblGrid>{luoi}</w:tblGrid>{"".join(hang)}</w:tbl>')
@@ -260,11 +259,11 @@ def _p_gach(chu: str, co: float, dam: bool, rong_o: int, do=None, khe: float = K
         ben = max(0, int((rong_o - max(rong_chu * 0.3, rong_chu - twip(ngan_mm))) // 2))
         return (f'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr>'
                 f'{_r(chu, dam=dam, co=co)}</w:p>'
-                f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:pBdr>'
+                f'<w:p><w:pPr>{ox.xml_p_bdr_duoi(space="0")}'
                 f'<w:spacing w:before="0" w:after="0" w:line="{max(20, int(HO_GACH_PT * 20))}" w:lineRule="exact"/>'
                 f'<w:ind w:left="{ben}" w:right="{ben}"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p>')
     ben = max(0, int((rong_o - (_rong_do(chu, co, dam, do) + khe) * 20) // 2))
-    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="{HO_GACH_PT}" w:color="auto"/></w:pBdr>'
+    return (f'<w:p><w:pPr>{ox.xml_p_bdr_duoi(space=str(HO_GACH_PT))}'
             f'<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="{ben}" w:right="{ben}"/>'
             f'<w:jc w:val="center"/></w:pPr>{_r(chu, dam=dam, co=co)}</w:p>')
 

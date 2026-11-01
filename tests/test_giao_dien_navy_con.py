@@ -47,7 +47,7 @@ class TestQssChung(unittest.TestCase):
         self.assertIn('#FECACA', xoa)
         self.assertIn('#B83A3A', xoa)
         phu = _quy_tac(qss, 'QPushButton[nhom="in"]')                  # nút phụ: trắng, viền slate, chữ #0F172A
-        for x in ('background: #FFFFFF', '#CBD5E1', 'color: #0F172A'):
+        for x in ('background: #FFFFFF', '#8696AB', 'color: #0F172A'):
             self.assertIn(x, phu)
         self.assertIn('#F1F5F9', _quy_tac(qss, 'QPushButton[nhom="in"]:hover'))
         self.assertIn(f'background: {NAVY}', _quy_tac(qss, 'QPushButton[bien_the="success"]'))   # KieuNut.LUU = navy

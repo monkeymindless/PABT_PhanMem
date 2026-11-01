@@ -179,15 +179,29 @@ def tao_dot(con, ten: str, ngay_bat_dau: str, dia_diem: str) -> int:
         return cur.lastrowid
 
 
-def dat_ngay_hop(con, dot_id: int, ngay_hop: str) -> str:
+def dat_ngay_hop(con, dot_id: int, ngay_hop: str, so_bb_bat_dau: str | None = None,
+                 so_bb_ket_thuc: str | None = None) -> str:
+    """Ghi ngày họp lấy ý kiến (+ số biên bản bắt đầu / kết thúc niêm yết khi truyền - in ở báo cáo tiếp thu ý kiến)."""
     from . import csdl
     han = han_doi_thoai(ngay_hop)
     hop = ngay_iso(doc_ngay(ngay_hop))
     with csdl.giao_dich(con):
         con.execute("UPDATE dot_du_thao SET ngay_hop = ?, han_doi_thoai = ?, trang_thai = 'da_hop' WHERE id = ?",
                     (hop, han, dot_id))
+        if so_bb_bat_dau is not None or so_bb_ket_thuc is not None:
+            con.execute('UPDATE dot_du_thao SET so_bb_bat_dau = ?, so_bb_ket_thuc = ? WHERE id = ?',
+                        ((so_bb_bat_dau or '').strip(), (so_bb_ket_thuc or '').strip(), dot_id))
         csdl.ghi_nhat_ky(con, 'Ngày họp lấy ý kiến', f'Đợt {dot_id}: {hien_ngay(hop)}, hạn đối thoại {hien_ngay(han)}')
     return han
+
+
+def so_bien_ban(con, dot_id: int) -> tuple:
+    """(số biên bản bắt đầu, kết thúc niêm yết, ngày họp) của đợt; file cũ thiếu cột -> ('', '', '')."""
+    try:
+        r = con.execute('SELECT so_bb_bat_dau, so_bb_ket_thuc, ngay_hop FROM dot_du_thao WHERE id = ?', (dot_id,)).fetchone()
+    except Exception:
+        return '', '', ''
+    return tuple((x or '') for x in r) if r else ('', '', '')
 
 
 def ds_de_them(con, dot_id: int, loc: str, dot_nguon: int | None = None) -> list:
@@ -271,6 +285,15 @@ def ds_ho_cho_dot(con, dot_id: int) -> list:
     return kq
 
 
+def _them_y_kien(con, dot_id: int, ma_ho: int, gio: str) -> None:
+    """Dòng ý kiến 'chua' của hộ trong đợt, ghi kèm LẦN phương án đang mở (30/10/2026 - phễu tiến độ theo hộ / lần PA). Trong giao
+    dịch của nơi gọi; file chưa có cột lan thì thêm cột trước."""
+    from . import csdl, lan_pa
+    csdl.dam_bao_cot_y_kien(con)
+    con.execute('''INSERT INTO y_kien_du_thao (dot_id, ma_ho, loai, ngay_cap_nhat, lan) VALUES (?, ?, 'chua', ?, ?)''',
+                (dot_id, ma_ho, gio, lan_pa.lan_niem_yet(con, ma_ho)))
+
+
 def them_thu_cong(con, dot_id: int, ds_ma_ho: list, ca_vuong: bool = False) -> tuple:
     """Thêm đúng các hộ đã chọn vào đợt. Hộ đã có trong đợt thì bỏ qua; hộ đang vướng (V1-V5) bỏ qua trừ khi ca_vuong (người dùng
     30/10/2026: hộ chưa đủ điều kiện vẫn thêm được nếu người lập chọn). Trả (thêm, bỏ qua)."""
@@ -287,8 +310,7 @@ def them_thu_cong(con, dot_id: int, ds_ma_ho: list, ca_vuong: bool = False) -> t
             if con.execute('SELECT 1 FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_id, ma)).fetchone():
                 bo += 1
                 continue
-            con.execute('''INSERT INTO y_kien_du_thao (dot_id, ma_ho, loai, ngay_cap_nhat) VALUES (?, ?, 'chua', ?)''',
-                        (dot_id, ma, gio))
+            _them_y_kien(con, dot_id, ma, gio)
             con.execute('UPDATE ho SET dot_du_thao_id = ? WHERE ma_ho = ?', (dot_id, ma))
             them += 1
         csdl.ghi_nhat_ky(con, 'Thêm hộ vào đợt dự thảo', f'Đợt {dot_id}: thêm {them} hộ, bỏ qua {bo}'
@@ -316,8 +338,7 @@ def dua_ho_vao_dot(con, dot_id: int, ds_ma_ho=None) -> tuple:
             if con.execute('SELECT 1 FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_id, ma)).fetchone():
                 bo += 1
                 continue
-            con.execute('''INSERT INTO y_kien_du_thao (dot_id, ma_ho, loai, ngay_cap_nhat) VALUES (?, ?, 'chua', ?)''',
-                        (dot_id, ma, gio))
+            _them_y_kien(con, dot_id, ma, gio)
             con.execute('UPDATE ho SET dot_du_thao_id = ? WHERE ma_ho = ?', (dot_id, ma))
             them += 1
         csdl.ghi_nhat_ky(con, 'Đưa hộ vào đợt dự thảo', f'Đợt {dot_id}: thêm {them} hộ, bỏ qua {bo}')
@@ -378,8 +399,7 @@ def chuyen_sang_dot(con, dot_id: int, ds_ma_ho: list, dot_moi: int) -> int:
                 continue
             con.execute('UPDATE y_kien_du_thao SET chuyen_dot_id = ? WHERE dot_id = ? AND ma_ho = ?', (dot_moi, dot_id, ma))
             if not con.execute('SELECT 1 FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_moi, ma)).fetchone():
-                con.execute('''INSERT INTO y_kien_du_thao (dot_id, ma_ho, loai, ngay_cap_nhat) VALUES (?, ?, 'chua', ?)''',
-                            (dot_moi, ma, gio))
+                _them_y_kien(con, dot_moi, ma, gio)
             con.execute('UPDATE ho SET dot_du_thao_id = ? WHERE ma_ho = ?', (dot_moi, ma))
             n += 1
         csdl.ghi_nhat_ky(con, 'Chuyển hộ sang đợt dự thảo sau', f'{n} hộ từ đợt {dot_id} sang đợt {dot_moi}')

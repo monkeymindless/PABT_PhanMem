@@ -512,6 +512,8 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = '
                 tong = d.pageCount()
                 if tong <= 0:
                     raise LoiOCR('Không mở được PDF hoặc file không có trang.')
+                if bao_tien_do:
+                    bao_tien_do(0, tong)                 # hiện hộp tiến độ trước khi render trang đầu (file nghìn trang)
                 for i in range(tong):
                     if cho and cho():
                         raise DaHuy()

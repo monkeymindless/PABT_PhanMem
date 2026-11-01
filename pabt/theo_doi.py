@@ -522,7 +522,16 @@ LOC_SQL_TOI_DA = 400         # tong_hop(ds_ma_ho) lọc bằng IN (?, …) khi d
 
 
 def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
-    """[TongHopHo] theo thứ tự hộ: thửa, các quyết định, bàn giao, tổng phương án."""
+    """[TongHopHo] theo thứ tự hộ: thửa, các quyết định, bàn giao, tổng phương án. Cả dự án (ds_ma_ho None): nhớ theo kết nối
+    (csdl.nho - tự đọc lại khi dữ liệu đổi) - mở dự án trước đây tính 3 lần (danh sách hộ, phễu, tổng quan; rà soát 31/10/2026).
+    Đối tượng TongHopHo DÙNG CHUNG: không sửa; danh sách trả là bản sao (sắp xếp / lọc thoải mái)."""
+    from . import csdl
+    if ds_ma_ho is None and isinstance(con, csdl.KetNoi):
+        return list(csdl.nho(con, ('theo_doi.tong_hop', bool(tinh_pa)), lambda: _tong_hop(con, None, tinh_pa)))
+    return _tong_hop(con, ds_ma_ho, tinh_pa)
+
+
+def _tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
     from .nghiep_vu import ket_qua_ho
     kqh = ket_qua_ho(con) if tinh_pa else {}            # dùng chung kết quả đã tính (danh sách hộ vừa tính xong)
     # ít hộ (lưu / sửa một vài hộ rồi tải lại danh sách): lọc ngay trong SQL theo các hộ đó - trước đây đọc cả bảng thửa, quyết định

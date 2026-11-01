@@ -491,8 +491,9 @@ class KhungDuThao(QWidget):
         self.lb_dot, self.lb_luy, self.lb_phu = NhanRutGon(''), NhanRutGon(''), NhanRutGon('')
         dai = QFrame()
         dai.setObjectName('dai_tien_do_ny')
-        dai.setStyleSheet('QFrame#dai_tien_do_ny { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; }'
-                          'QFrame#dai_tien_do_ny QLabel { color: #334155; background: transparent; border: 0; }')
+        dat_kieu_theo_tong(dai,
+            'QFrame#dai_tien_do_ny { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; }'
+            'QFrame#dai_tien_do_ny QLabel { color: #334155; background: transparent; border: 0; }')
         so = QHBoxLayout(dai)
         so.setContentsMargins(10, 3, 10, 3)
         so.setSpacing(14)
@@ -503,14 +504,17 @@ class KhungDuThao(QWidget):
         self.thanh = QProgressBar()
         self.thanh.setFixedHeight(8)
         self.thanh.setTextVisible(False)
-        self.thanh.setStyleSheet('QProgressBar { background: #E2E8F0; border: none; border-radius: 4px; }'
-                                 'QProgressBar::chunk { background: #1E3A5F; border-radius: 4px; }')
+        dat_kieu_theo_tong(self.thanh,
+            'QProgressBar { background: #E2E8F0; border: none; border-radius: 4px; }'
+            'QProgressBar::chunk { background: #1E3A5F; border-radius: 4px; }')
         lo.addWidget(self.thanh)
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
-        # 4 thẻ gọn (15/10/2026, người dùng): cao 28-30 px, chữ 12 px - nhường chiều cao cho bảng
-        # phông ở mức QTabBar (Qt5 đo bề rộng thẻ theo phông thanh thẻ - xem giao_dien.THE_TAB)
-        self.tabs.setStyleSheet('QTabBar { font-size: 12px; } QTabBar::tab { min-height: 16px; padding: 4px 12px; margin-top: 0px; }')
+        # 4 thẻ gọn: phông + lề ở mức QTabBar (Qt5 đo bề rộng thẻ theo phông thanh thẻ). Không setStyleSheet trên QTabWidget.
+        f_the = self.tabs.tabBar().font()
+        f_the.setPointSize(12)
+        self.tabs.tabBar().setFont(f_the)
+        self.tabs.tabBar().setStyleSheet('QTabBar { font-size: 12px; } QTabBar::tab { padding: 4px 12px; }')
         # CCCD hiển thị đủ số (1.0.04 bỏ che) - tiêu đề chỉ "CCCD"; bề rộng chuẩn từng cột + một cột giãn
         self.bang_ny = _bang(['STT', 'Họ và tên', 'CCCD', 'Thửa', 'Tổng tiền dự thảo', 'Địa điểm'],
                              [50, 170, 115, 85, 155], gian=5)
@@ -869,17 +873,23 @@ class KhungDuThao(QWidget):
             return
         d = QDialog(self)
         d.setWindowTitle('Ngày họp lấy ý kiến')
-        ngay = QLineEdit()
+        bd, kt, hop = du_thao.so_bien_ban(self.con, dot)
+        ngay = QLineEdit(du_thao.hien_ngay(hop) if hop else '')
         ngay.setPlaceholderText('Ngày họp dân, sau khi hết 10 ngày niêm yết')
+        o_bd, o_kt = QLineEdit(bd), QLineEdit(kt)
+        o_bd.setPlaceholderText('Số biên bản bắt đầu niêm yết (không bắt buộc)')
+        o_kt.setPlaceholderText('Số biên bản kết thúc niêm yết (không bắt buộc)')
         f = QFormLayout(d)
         f.addRow('Ngày họp:', ngay)
+        f.addRow('Biên bản bắt đầu niêm yết số:', o_bd)
+        f.addRow('Biên bản kết thúc niêm yết số:', o_kt)
         b = QPushButton('Ghi')
         b.clicked.connect(d.accept)
         f.addRow(b)
         if d.exec() != QDialog.DialogCode.Accepted:
             return
         try:
-            han = du_thao.dat_ngay_hop(self.con, dot, ngay.text())
+            han = du_thao.dat_ngay_hop(self.con, dot, ngay.text(), o_bd.text(), o_kt.text())
         except du_thao.LoiNhap as e:
             self._loi(e)
             return

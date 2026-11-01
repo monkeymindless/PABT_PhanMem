@@ -6,8 +6,9 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox, QPlainTextEdit,
-                               QPushButton, QSplitter, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,
+                               QMessageBox, QPlainTextEdit, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
+                               QVBoxLayout, QWidget)
 
 from .lap_pa import LoiNhap
 from .phan_loai_tai_san import LOAI, BoPhanLoai, doc_danh_sach
@@ -55,6 +56,12 @@ class HopDanTaiSan(QDialog):
         self.o_chu.setPlaceholderText(VI_DU)
         b_pl = QPushButton('Phân loại')
         b_pl.clicked.connect(lambda: self.phan_loai())
+        self.b_anh = QPushButton('Mở ảnh / PDF…')
+        self.b_anh.setToolTip('Nhận dạng chữ in trên ảnh hoặc PDF scan (Tesseract). Chữ viết tay dễ sai: xem lại dòng vàng trước khi thêm.')
+        self.b_anh.clicked.connect(lambda: self.mo_anh_pdf())
+        self.b_clip = QPushButton('Dán ảnh clipboard')
+        self.b_clip.setToolTip('Ảnh chụp màn hình trong Clipboard: nhận dạng chữ rồi phân loại. Chữ viết tay phải xem lại.')
+        self.b_clip.clicked.connect(lambda: self.dan_anh())
         tren = QWidget()
         lt = QVBoxLayout(tren)
         lt.setContentsMargins(0, 0, 0, 0)
@@ -62,6 +69,8 @@ class HopDanTaiSan(QDialog):
         lt.addWidget(self.o_chu, 1)
         h = QHBoxLayout()
         h.addStretch(1)
+        h.addWidget(self.b_anh)
+        h.addWidget(self.b_clip)
         h.addWidget(b_pl)
         lt.addLayout(h)
         self.bang = QTableWidget(0, len(COT))
@@ -93,6 +102,64 @@ class HopDanTaiSan(QDialog):
     def bao(self, chu: str, loi: bool = True) -> None:
         if not self.im_lang:
             (QMessageBox.warning if loi else QMessageBox.information)(self, TEN_UD, chu)
+
+    def mo_anh_pdf(self, file=None) -> list:
+        """OCR ảnh / PDF scan -> đổ chữ vào ô rồi Phân loại. file: đường dẫn (kiểm thử)."""
+        from . import ocr
+        from .thong_bao import chu_loi
+        if file is None:
+            if self.im_lang:
+                return []
+            loc = 'Ảnh và PDF (*.pdf *.jpg *.jpeg *.png *.tif *.tiff *.bmp);;Tất cả (*.*)'
+            file, _ = QFileDialog.getOpenFileName(self, 'Chọn ảnh hoặc PDF biên bản kiểm đếm', '', loc)
+            if not file:
+                return []
+        thieu = ocr.san_sang()
+        if thieu:
+            self.bao(thieu)
+            return []
+        try:
+            from .giao_dien import con_tro_cho
+            with con_tro_cho():
+                chu = '\n'.join(ocr.doc_chu(file))
+        except ocr.DaHuy:
+            return []
+        except (ocr.LoiOCR, OSError) as e:
+            self.bao(chu_loi('Không nhận dạng được chữ', e) if not isinstance(e, ocr.LoiOCR) else str(e))
+            return []
+        if not (chu or '').strip():
+            self.bao('Không đọc được chữ trên ảnh / PDF. Chữ viết tay, ảnh mờ: gõ hoặc dán chữ vào ô.', loi=False)
+            return []
+        cu = self.o_chu.toPlainText().strip()
+        self.o_chu.setPlainText((cu + '\n' + chu) if cu else chu)
+        return self.phan_loai()
+
+    def dan_anh(self, anh=None) -> list:
+        """Clipboard là ảnh thì OCR; là chữ thì đổ vào ô. anh: QImage (kiểm thử)."""
+        from pathlib import Path
+        import shutil
+        import tempfile
+        if anh is None:
+            cb = QApplication.clipboard()
+            chu = (cb.text() or '').strip()
+            if chu:
+                cu = self.o_chu.toPlainText().strip()
+                self.o_chu.setPlainText((cu + '\n' + chu) if cu else chu)
+                return self.phan_loai()
+            if cb.mimeData() is not None and cb.mimeData().hasImage():
+                anh = cb.image()
+            else:
+                self.bao('Clipboard chưa có ảnh hoặc chữ.', loi=False)
+                return []
+        td = Path(tempfile.mkdtemp(prefix='PABT_dan_ts_'))
+        try:
+            f = td / 'anh.png'
+            if not anh.save(str(f)):
+                self.bao('Không lưu được ảnh trong Clipboard để nhận dạng chữ.')
+                return []
+            return self.mo_anh_pdf(f)
+        finally:
+            shutil.rmtree(td, ignore_errors=True)
 
     # ---------------------------------------------- phân loại
     def phan_loai(self, chu: str | None = None) -> list:

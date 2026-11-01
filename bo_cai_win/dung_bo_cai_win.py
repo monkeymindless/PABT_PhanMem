@@ -131,19 +131,20 @@ def _ds_chuong_trinh(ban: str) -> list:
 
 def _chep_phang(goi: Path, ct: list, tien_to: str, da_co: dict | None = None) -> tuple:
     """Chép phẳng các file vào thư mục gói (IExpress không giữ thư mục): ([tên phẳng], [dòng danh sách exe], [dòng danh sách zip]).
-    da_co {(SHA-256, tên): tên phẳng} (bộ cài phổ quát): file giống hệt của bản kia - Tesseract OCR đóng kèm cả x64 lẫn x86 - dùng
-    lại tên phẳng đã chép, không chép lần hai (cai_dat.ps1 chỉ CHÉP từ gói theo danh sách, không di chuyển)."""
+    da_co {SHA-256: tên phẳng} (bộ cài phổ quát, dùng chung giữa hai bản): file GIỐNG HỆT NỘI DUNG - kể cả khác tên / khác chỗ (Tesseract,
+    dữ liệu pabt, HUONG_DAN.md, các .ico) - dùng lại tên phẳng đã chép, không chép lần hai (cai_dat.ps1 chỉ CHÉP từ gói theo danh
+    sách, không di chuyển; rà soát 31/10/2026: trước chỉ dùng lại file Tesseract cùng đích, bộ cài thừa ~1 MB)."""
     phang, ds_exe, ds_zip = [], [], []
+    da_co = {} if da_co is None else da_co
     for i, (ten, f) in enumerate(ct, start=1):
         co, bam = f.stat().st_size, hashlib.sha256(f.read_bytes()).hexdigest()
         dich = ten.replace('/', '\\')
-        p = None if da_co is None else da_co.get((bam, dich))
+        p = da_co.get(bam)
         if p is None:
             p = f'{tien_to}{i:03d}_{f.name}'        # tên duy nhất, giữ tên gốc cho dễ đọc nhật ký
             shutil.copy2(f, goi / p)
             phang.append(p)
-            if da_co is not None and dich.lower().startswith('tesseract\\'):
-                da_co[(bam, dich)] = p
+            da_co[bam] = p
         ds_exe.append(f'{p}\t{dich}\t{co}\t{bam}')
         ds_zip.append(f'{dich}\t{dich}\t{co}\t{bam}')
     return phang, ds_exe, ds_zip

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
                                QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QSpinBox, QTableWidget,
                                QTableWidgetItem, QVBoxLayout)
 
@@ -448,10 +448,19 @@ class HopDuAnMayChu(_Hop):
         self.bang_off.doubleClicked.connect(lambda *_: self.mo_offline())
         h2 = QHBoxLayout()
         for ten, ham in (('Mở bản offline', lambda: self.mo_offline()), ('Đưa lên máy chủ', lambda: self.dua_len()),
+                         ('Đồng bộ (vẫn giữ hộ)', lambda: self.dong_bo()),
                          ('Trả bớt hộ đã nhận…', lambda: self.tra_bot_ho()), ('Hủy bản offline', lambda: self.huy())):
             b = QPushButton(ten)
             b.clicked.connect(ham)
+            if ten.startswith('Đồng bộ'):
+                b.setToolTip('Bản nhận theo hộ: ghi số liệu các hộ lên máy chủ ngay (người khác thấy), các hộ vẫn do bạn giữ để làm tiếp')
             h2.addWidget(b)
+        self.o_tu_dong_bo = QCheckBox('Tự đồng bộ khi bấm Lưu (Ctrl+S)')
+        self.o_tu_dong_bo.setToolTip('Đang mở bản offline theo hộ: mỗi lần bấm Lưu (Ctrl+S) tự đồng bộ các hộ lên máy chủ (vẫn giữ hộ). '
+                                     'Có xung đột thì chỉ báo, không ghi đè.')
+        self.o_tu_dong_bo.setChecked(may_chu.tu_dong_bo_khi_luu())
+        self.o_tu_dong_bo.toggled.connect(lambda b: may_chu.ghi_cau_hinh(tu_dong_bo=bool(b)))
+        h2.addWidget(self.o_tu_dong_bo)
         h2.addStretch(1)
         b = QPushButton('Đóng')
         b.clicked.connect(self.reject)
@@ -576,6 +585,33 @@ class HopDuAnMayChu(_Hop):
         self.ve()
         self.bao(f'Đã đưa lên máy chủ:\n{f}', loi=False)
         return f
+
+    def dong_bo(self, x=None, ep: bool | None = None):
+        """Bản offline theo hộ: đồng bộ các hộ lên máy chủ mà vẫn giữ hộ (may_chu.dong_bo_ho). Xung đột: liệt kê hộ, hỏi ghi đè.
+        Trả kết quả gộp hoặc None."""
+        x = x or self._chon(self.bang_off, self.ds_off)
+        if x is None:
+            return None
+        if not x.get('ds_ma_ho'):
+            self.bao('Bản này mang về CẢ dự án (không nhận theo hộ): dùng "Đưa lên máy chủ".', loi=False)
+            return None
+        try:
+            with con_tro_cho():
+                kq = may_chu.dong_bo_ho(x['ban_sao'], ep=bool(ep))
+        except may_chu.LoiXungDot as e:
+            ds = '\n'.join(f'  - Mã {m}: {ten}' for m, ten in e.ds[:SO_HO_XUNG_DOT_HIEN])
+            if ep is None and self.hoi(f'XUNG ĐỘT: {len(e.ds)} hộ đã được sửa trực tiếp trên máy chủ sau lần nhận / đồng bộ trước:\n{ds}'
+                                       '\n\nVẫn ghi đè các hộ này bằng bản của bạn (file trên máy chủ được sao lưu vào thư mục SaoLuu)?'):
+                return self.dong_bo(x, ep=True)
+            self.bao(str(e))
+            return None
+        except (LoiMayChu, OSError) as e:
+            self.bao(chu_loi('Không đồng bộ được', e) if isinstance(e, OSError) else str(e))
+            return None
+        self.ve()
+        bo = f'\nBỏ qua {len(kq["bo_dong"])} dòng trỏ tới quyết định / đợt chưa có trên máy chủ.' if kq.get('bo_dong') else ''
+        self.bao(f'Đã đồng bộ {kq["so_ho"]} hộ lên máy chủ - các hộ vẫn do bạn giữ để làm tiếp.{bo}', loi=False)
+        return kq
 
     def huy(self, x=None):
         x = x or self._chon(self.bang_off, self.ds_off)

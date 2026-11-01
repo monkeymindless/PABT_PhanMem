@@ -22,9 +22,9 @@ COT = ('Dùng', 'Mã', 'Tên (theo văn bản)', 'ĐVT', 'Giá mới (đ)', 'Gi�
        'Ghi chú (quy cách)', 'Tên hiện hành trong bộ đơn giá')
 RONG_COT = (50, 100, 380, 70, 120, 140, 130, 90, 170)
 # 30/10/2026 (người dùng): "thay thế toàn bộ văn bản cũ bằng văn bản mới, để đúng với toàn bộ nội dung theo văn bản mới"
+# 1.0.46: chữ khác chuột phải "Thay thế dòng đang chọn" trên bảng Bộ đơn giá
 CACH_CAP_NHAT = (('Bổ sung, sửa đổi: thêm mục mới, đổi giá - các mục khác của bộ đơn giá giữ nguyên', False),
-                 ('Thay thế toàn bộ văn bản cũ bằng văn bản này: danh mục nhóm theo đúng văn bản (đổi tên, quy cách; bỏ mục không '
-                  'còn trong văn bản)', True))
+                 ('Thay cả nhóm theo văn bản này: đổi tên, quy cách; bỏ mục không còn trong văn bản', True))
 KHONG_VB_CU = '(Không đánh dấu văn bản nào hết hiệu lực)'
 
 
@@ -40,10 +40,11 @@ class HopNhapDonGia(QDialog):
     im_lang = False
 
     def __init__(self, file, parent=None, nguon: str = '', dong: list | None = None, van_ban: dict | None = None,
-                 nhom_uu_tien: int | None = None):
+                 nhom_uu_tien: int | None = None, thay_the: bool | None = None):
         """dong: các dòng đã đọc sẵn (ndg.doc_bang_ocr, có hộp tiến trình khi phải nhận dạng bản scan; chữ dán từ Clipboard).
         van_ban: ndg.phan_tich_van_ban (không có thì tự phân tích các dòng đầu của file). nhom_uu_tien: nhóm của thẻ đang xem ở Bộ
-        đơn giá (2 / 3 / 7 / 4) - dùng khi văn bản không cho biết nhóm (bảng dán, file không có trích yếu)."""
+        đơn giá (2 / 3 / 7 / 4) - dùng khi văn bản không cho biết nhóm (bảng dán, file không có trích yếu).
+        thay_the: True = chọn sẵn "Thay cả nhóm theo văn bản này" (nút Cập nhật đơn giá)."""
         # đọc file trước khi tạo hộp thoại: file lỗi thì không để lại hộp thoại dở dang
         dong = ndg.doc_bang(file) if dong is None else dong
         vb = van_ban if van_ban is not None else ndg.phan_tich_van_ban(dong)
@@ -121,7 +122,12 @@ class HopNhapDonGia(QDialog):
         self.o_cach = QComboBox()
         for chu, gt in CACH_CAP_NHAT:
             self.o_cach.addItem(chu, gt)
-        self.o_cach.setToolTip('Thay thế: mục cũ khớp với văn bản được đổi tên / mật độ / ghi chú theo cách ghi của văn bản (mã giữ nguyên, '
+        if thay_the:
+            for i in range(self.o_cach.count()):
+                if self.o_cach.itemData(i):
+                    self.o_cach.setCurrentIndex(i)
+                    break
+        self.o_cach.setToolTip('Thay cả nhóm: mục cũ khớp với văn bản được đổi tên / mật độ / ghi chú theo cách ghi của văn bản (mã giữ nguyên, '
                                'không thêm chú thích "(Năm thứ…)" - năm tuổi tính theo năm kiến thiết của loài); mục cũ '
                                'cùng nhóm (cây trồng / nhà, công trình / vật nuôi / hỗ trợ) không còn trong văn bản hiện dòng đỏ "bỏ" '
                                '- chọn sẵn, bỏ dấu "Dùng" để giữ. Dự án đã lập giữ nguyên số liệu; bộ đơn giá cũ được giữ.')

@@ -141,6 +141,9 @@ class TestKhoa(CoSo):
         k = b.doc()
         k['cap_nhat'] = time.time() - khoa.HET_HAN - 5
         b.p.write_text(__import__('json').dumps(k), encoding='utf-8')
+        self.assertIsNotNone(a.nguoi_khac())          # 31/10/2026: file khóa VỪA được sửa vẫn còn hiệu lực (đồng hồ máy kia có thể lệch)
+        cu = time.time() - khoa.HET_HAN - 5
+        os.utime(b.p, (cu, cu))                        # máy kia thôi làm mới: file khóa cũng cũ
         self.assertIsNone(a.nguoi_khac())
 
     def test_mo_chi_xem(self):

@@ -204,7 +204,7 @@ def luu_ho(con, ma_ho, thong_tin: dict, ds_thua: list) -> int:
         if tt['so_cccd'] and not tt['so_cccd'].isdigit():
             raise LoiNhap(f'Số CCCD "{tt["so_cccd"]}" chỉ gồm chữ số.')
     ds = chuan_hoa_thua(ds_thua)
-    with con:
+    with csdl.giao_dich(con):
         if moi:
             ma_ho, thu_tu = con.execute('SELECT COALESCE(MAX(ma_ho), 0) + 1, COALESCE(MAX(thu_tu), 0) + 1 FROM ho').fetchone()
             con.execute(f'''INSERT INTO ho (ma_ho, thu_tu, {', '.join(tt)}) VALUES (?, ?, {', '.join('?' * len(tt))})''',
@@ -273,7 +273,7 @@ def xoa_nhieu_ho(con, ds_ma_ho) -> str:
     if not ds:
         raise LoiNhap('Không có hộ nào để xóa (hộ đã bị xóa hoặc chưa chọn hộ).')
     thua, dong = sum(x['so_thua'] for x in ds), sum(x['so_dong_pa'] for x in ds)
-    with con:
+    with csdl.giao_dich(con):
         for x in ds:
             con.execute('DELETE FROM ho WHERE ma_ho = ?', (x['ma_ho'],))     # thửa, phương án, qd_ho xóa theo (CASCADE)
             con.execute('DELETE FROM tong_excel WHERE ma_ho = ?', (x['ma_ho'],))
@@ -293,7 +293,7 @@ def gop_ho(con, giu: int, bo: int) -> str:
         raise LoiNhap('Chọn hai hộ khác nhau để gộp.')
     kiem_ds_ho_nhan_viec(con, (giu, bo))
     a, b = doc_ho(con, giu), doc_ho(con, bo)
-    with con:
+    with csdl.giao_dich(con):
         cap = {}
         for k, _ in TRUONG_HO:
             if k == 'ghi_chu':
@@ -336,7 +336,7 @@ def chuyen_thua(con, ma_thua: int, ma_ho_moi: int) -> str:
     moi = doc_ho(con, ma_ho_moi)
     if t['ma_ho'] == ma_ho_moi:
         raise LoiNhap('Thửa đã thuộc hộ này.')
-    with con:
+    with csdl.giao_dich(con):
         n = con.execute('SELECT COALESCE(MAX(thu_tu), 0) + 1 FROM thua WHERE ma_ho = ?', (ma_ho_moi,)).fetchone()[0]
         con.execute('UPDATE thua SET ma_ho = ?, thu_tu = ? WHERE ma_thua = ?', (ma_ho_moi, n, ma_thua))
         so = con.execute('UPDATE ct_dat SET ma_ho = ? WHERE ma_thua = ?', (ma_ho_moi, ma_thua)).rowcount

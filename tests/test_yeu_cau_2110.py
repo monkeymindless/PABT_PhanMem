@@ -156,13 +156,24 @@ class TestChonVungVaBoDem(CoNavy):
         n_thua = sum(d['so_thua'] for d in ds)
         self.assertEqual(n_thua, 6)                                      # hộ 1, 2, 3 có 1, 2, 3 thửa
         dc = w.the_dia_chinh['so_ho'].text()
-        self.assertIn('6 thửa', dc)
-        self.assertIn('818,3 m²', dc)
+        self.assertEqual(dc, '6 thửa')                               # 1.0.44: sổ địa chính 2 dòng, không ghép "/"
+        self.assertEqual(w.the_dt['so_ho'].text(), '818,3 m²')
+        self.assertNotIn('/', dc)
+        self.assertNotIn('<br', dc.lower())
+        self.assertNotIn('/', w.the_dt['so_ho'].text())
         self.assertEqual(w.the_don_vi['so_ho'].text(), 'hộ')
         self.assertEqual(w.the_phu['so_ho'].text(), '100%')
         self.assertEqual(w.the_phu['tong'].text(), '0,0818 ha')            # thẻ Tổng kinh phí: tổng ha
-        self.assertEqual(w.the_khung['so_ho'].height(), w.CAO_THE_SO)      # không tăng chiều cao thẻ
+        self.assertEqual(w.the_khung['so_ho'].height(), w.CAO_THE_SO)
         self.assertIn('0 thửa', w.the_dia_chinh['da_pd'].text())
+        khung, o_thua, o_dt = w.the_khung['so_ho'], w.the_dia_chinh['so_ho'], w.the_dt['so_ho']
+        self.assertGreater(o_thua.height(), 8)
+        self.assertGreater(o_dt.height(), 8)
+        day_thua = o_thua.mapTo(khung, o_thua.rect().bottomLeft()).y()
+        dinh_dt = o_dt.mapTo(khung, o_dt.rect().topLeft()).y()
+        day_dt = o_dt.mapTo(khung, o_dt.rect().bottomLeft()).y()
+        self.assertLessEqual(day_thua, dinh_dt)                           # diện tích nằm dưới số thửa
+        self.assertLessEqual(day_dt, khung.height() - 6)                  # trên bo góc 6 px, không nới chiều cao thẻ
         chu = w.dai_cong_ds.chu
         self.assertEqual(chu['so_ho'][0], 'CỘNG (3 HỘ · 6 THỬA)')
         self.assertEqual(chu['dt'][0], 'Tổng DT: 818,3 m² (0,0818 ha)')

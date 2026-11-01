@@ -793,7 +793,7 @@ class TestCuaSoChinhNhom56(_Co):
             # 20/10/2026: phím số theo PHIM_NHANH (Tổng hợp tiền / Quyết định không có phím số)
             self.assertEqual(w.lenh[t].shortcut().toString(), dict(ud.PHIM_NHANH).get(t, ''))
         self.assertIs(w._khung_dang_xem(), w.tien_do)
-        self.assertEqual(w.lb_trang.text(), 'TIẾN ĐỘ CHI TRẢ & BÀN GIAO')
+        self.assertEqual(w.lb_trang.text(), 'Tiến độ chi trả && Bàn giao')  # 1.0.42 Title Case, hiện &
         from pabt.man_hinh_bao_cao import KHONG_SO
         self.assertEqual(w.tien_do.kpi.the['giai_ngan'].lb_so.text(), KHONG_SO)
 

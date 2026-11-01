@@ -260,6 +260,7 @@ CREATE TABLE IF NOT EXISTS pa_lan (
     ghi_chu TEXT NOT NULL DEFAULT '',
     loai TEXT NOT NULL DEFAULT 'bo_sung',             -- 1.0.15: chinh (lần đầu) / bo_sung / dieu_chinh (sửa sai lần đã duyệt)
     thay_the INTEGER NOT NULL DEFAULT 0,              -- lần điều chỉnh: số lần bị thay thế (0 = không thay lần nào)
+    dot_trinh_id INTEGER,                             -- 30/10/2026: đợt trình thẩm định của LẦN này (ho.dot_id = đợt gần nhất của hộ)
     UNIQUE (ma_ho, lan)
 );
 
@@ -290,6 +291,7 @@ CREATE TABLE IF NOT EXISTS y_kien_du_thao (
     ket_qua_doi_thoai TEXT NOT NULL DEFAULT '',
     chuyen_dot_id INTEGER,
     ngay_cap_nhat TEXT NOT NULL DEFAULT '',
+    lan INTEGER,                                      -- 30/10/2026: lần phương án được niêm yết (NULL = dòng cũ = lần 1)
     UNIQUE (dot_id, ma_ho)
 );
 CREATE TABLE IF NOT EXISTS doi_thoai_ho (

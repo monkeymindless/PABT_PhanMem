@@ -258,17 +258,70 @@ def bo_ten_khac(ten: str) -> str:
     return ten
 
 
+@functools.lru_cache(maxsize=16384)
+def _ten_chuan(ten: str) -> str:
+    """Tên chuẩn của một dòng (nhớ: mở lại dự án / bộ đơn giá trong cùng phiên không tính lại 5.500 tên - phương án đột phá 7)."""
+    from .chuan_ten_cay import chuan_ten
+    return them_ten_khac(chuan_ten(ten))
+
+
+def _dau_danh_muc(con) -> str:
+    """Dấu nhanh của danh mục cây (nhóm 3) + phiên bản phần mềm (quy tắc chuẩn tên đổi theo phiên bản)."""
+    from . import __version__
+    r = con.execute("SELECT COUNT(*), MAX(ma), SUM(LENGTH(ten)) FROM dm_taisan WHERE nhom = 3").fetchone()
+    return f'{__version__}|{r[0]}|{r[1]}|{r[2]}'
+
+
+def _file_nho_da_chuan():
+    from .dia_phuong import thu_muc_may
+    return thu_muc_may() / 'chuan_ten_cay.json'
+
+
+def ap_ten_khac_khi_can(con, file) -> int:
+    """ap_ten_khac lúc MỞ dự án, bỏ qua khi danh mục của file này đã chuẩn ở lần mở trước với cùng phiên bản phần mềm (rà soát
+    31/10/2026: mỗi lần mở chuẩn lại ~5.500 tên, lần đầu trong phiên ~150 ms). Nhớ ở <thư mục máy>\\chuan_ten_cay.json (KHÔNG ghi
+    vào file dự án - ghi thêm sẽ thành một bước Hoàn tác / Google Drive đồng bộ lại)."""
+    import json
+    import os
+    try:
+        dau = _dau_danh_muc(con)
+    except Exception:                                    # noqa: BLE001 - file không có bảng danh mục
+        return 0
+    khoa = str(file)
+    f = _file_nho_da_chuan()
+    try:
+        nho = json.loads(f.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        nho = {}
+    if not isinstance(nho, dict):
+        nho = {}
+    if nho.get(khoa) == dau:
+        return 0
+    n = ap_ten_khac(con)
+    try:
+        nho[khoa] = _dau_danh_muc(con)
+        if len(nho) > 200:                               # chỉ giữ 200 dự án gần nhất
+            nho = dict(list(nho.items())[-200:])
+        f.parent.mkdir(parents=True, exist_ok=True)
+        tam = f.with_name(f.name + '.tmp')
+        tam.write_text(json.dumps(nho, ensure_ascii=False), encoding='utf-8')
+        os.replace(tam, f)
+    except Exception:                                    # noqa: BLE001 - không nhớ được: lần sau chuẩn lại (như cũ)
+        pass
+    return n
+
+
 def ap_ten_khac(con, ghi_nhat_ky: bool = True) -> int:
     """Đổi tên các dòng cây lâm nghiệp (dm_taisan nhóm 3) của bộ đơn giá / dự án đang mở cho có tên khác. Mã, đơn giá, ghi chú giữ
     nguyên; dòng phương án đã lập (ct_khoan) KHÔNG đổi (giữ tên lúc lập). Một giao dịch, mở khóa danh mục. Trả số dòng đã đổi.
     30/10/2026: kèm chuẩn tên theo cách ghi văn bản (chuan_ten_cay - bỏ chú thích "(Năm thứ…)", sửa chính tả tên loài)."""
     from . import csdl
-    from .chuan_ten_cay import MUC_THIEU, chuan_ten, them_muc_thieu
+    from .chuan_ten_cay import MUC_THIEU, them_muc_thieu
     try:
         ds = con.execute("SELECT ma, ten FROM dm_taisan WHERE nhom = 3").fetchall()
     except Exception:                                    # noqa: BLE001 - file không có bảng danh mục
         return 0
-    doi = [(moi, r[0]) for r in ds for moi in (them_ten_khac(chuan_ten(r[1])),) if moi != r[1]]
+    doi = [(moi, r[0]) for r in ds for moi in (_ten_chuan(r[1]),) if moi != r[1]]
     ten = {r[1].split(' - ')[0] for r in ds}
     if not doi and not any(t.split(' - ')[0] in ten and t not in {r[1] for r in ds} for t, *_ in MUC_THIEU):
         return 0

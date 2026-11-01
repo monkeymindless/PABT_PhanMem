@@ -55,9 +55,11 @@ def khu_cong_thuc(wb) -> int:
 
 
 def luu_xlsx(wb, duong_dan) -> int:
-    """Lưu workbook xuất ra cho người dùng: khu_cong_thuc rồi wb.save. MỌI file Excel xuất ra đi qua đây."""
+    """Lưu workbook xuất ra cho người dùng: khu_cong_thuc rồi lưu (trang tính lớn ghi nhanh - ghi_xlsx_nhanh, phương án đột phá 7).
+    MỌI file Excel xuất ra đi qua đây."""
+    from . import ghi_xlsx_nhanh
     so = khu_cong_thuc(wb)
-    wb.save(str(duong_dan))
+    ghi_xlsx_nhanh.luu(wb, duong_dan)
     return so
 
 

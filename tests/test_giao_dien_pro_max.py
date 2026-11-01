@@ -32,7 +32,7 @@ class TestBangMau(unittest.TestCase):
                          ('#1E3A5F', '#EFF6FF', '#2563EB', '#059669', '#DC2626'))       # 1.0.34 Flagship Sapphire
         self.assertEqual((t['chu'], t['chu_phu'], t['nen'], t['khung'], t['vach']),
                          ('#0F172A', '#475569', '#F3F6FA', '#FFFFFF', '#D5DEE8'))     # 1.0.35: PA1 Slate-Navy
-        self.assertEqual(giao_dien.MAU_SO_KHONG, '#94A3B8')
+        self.assertEqual(giao_dien.MAU_SO_KHONG, '#64748B')          # 1.0.42: WCAG AA ≥ 4,5:1 trên trắng
         self.assertEqual(giao_dien.MAU_VIEN_CHON, '#059669')            # viền vùng chọn kiểu Excel: Emerald Teal
         for mau, toi_thieu in ((t['chinh'], 6), (t['chu'], 7)):         # chữ chính: AAA (>= 7:1); xanh cobalt dịu (1.0.16): >= 6:1 (AA là 4,5)
             self.assertGreaterEqual(_do_tuong_phan(mau, '#FFFFFF'), toi_thieu)
@@ -43,7 +43,7 @@ class TestBangMau(unittest.TestCase):
     def test_vong_focus_o_nhap(self):
         qss = giao_dien._qss_day_du()
         thuong = _quy_tac(qss, 'QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit, QPlainTextEdit, QTextEdit')
-        for chu in ('border: 1px solid #CBD5E1', 'border-radius: 6px', 'padding: 4px 8px', 'background: #FFFFFF', 'color: #0F172A'):
+        for chu in ('border: 1px solid #8696AB', 'border-radius: 6px', 'padding: 4px 8px', 'background: #FFFFFF', 'color: #0F172A'):
             self.assertIn(chu, thuong)
         focus = _quy_tac(qss, 'QLineEdit:focus')
         self.assertIn('border: 2px solid #2563EB', focus)
@@ -80,7 +80,7 @@ class TestBangMau(unittest.TestCase):
 
     def test_bo_cuc_giu_nguyen(self):
         from pabt import app, man_hinh
-        self.assertEqual(app.CuaSoChinh.CAO_THE_SO, 62)                  # 1.0.34: thêm thanh tiến độ 5 px
+        self.assertEqual(app.CuaSoChinh.CAO_THE_SO, 62)                  # không nới thẻ (màn 21" chừa bảng hộ)
         self.assertEqual(app.CAO_DAI_CONG_CU, 32)
         self.assertEqual(man_hinh.CAO_DAI_DINH_DANH, 38)
         self.assertEqual(man_hinh.CAO_DONG_MUC, 36)

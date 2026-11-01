@@ -821,6 +821,10 @@ class BangMuc(QWidget):
             i = self.cb_thua.findData(cu)
             self.cb_thua.setCurrentIndex(max(i, 0))
             return
+        khoa = (id(dm), len(dm.muc.get(self.muc) or ()))
+        if getattr(self, '_khoa_nap', None) == khoa:
+            return
+        self._khoa_nap = khoa
         self.hang.nap(dm)
         if self.muc == MUC_VN:
             self.khung_thieu_vn.setVisible(not dm.muc[MUC_VN])
@@ -1230,13 +1234,36 @@ class NhanTongPA(QLabel):
             self._chon()
 
 
+class _BangMucTre(dict):
+    """self.bang[m] dựng BangMuc lần đầu đọc (thẻ chưa xem không dựng lúc mở cửa sổ). .get / values / in không dựng."""
+
+    def __init__(self, man):
+        dict.__init__(self)
+        self._man = man
+
+    def __contains__(self, m):
+        return dict.__contains__(self, m)
+
+    def __getitem__(self, m):
+        self._man._dam_bao_bang(m)
+        return dict.__getitem__(self, m)
+
+
 class CuaSoLapPA(QDialog):
     """Hồ sơ và phương án một hộ trong một cửa sổ: thẻ 0 thông tin hộ, thửa đất → 1 đất → 2 nhà, công trình → 3 cây trồng →
     4 vật nuôi → 5 hỗ trợ (Tiếp theo / Trở lại). self.bang theo MỤC (bang[4] = hỗ trợ, bang[MUC_VN] = vật nuôi), thẻ: the_cua."""
 
-    def __init__(self, con, ma_ho: int, parent=None, danh_muc: DanhMuc | None = None):
+    def __init__(self, con, ma_ho: int, parent=None, danh_muc: DanhMuc | None = None, nhung: bool = False):
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
+        if nhung:
+            # nhúng thành trang tab của cửa sổ chính: đặt cờ Widget NGAY khi chưa có widget con (rà soát 31/10/2026: đặt sau khi đã dựng
+            # ~500 widget con tốn ~100 ms, cộng lần chuẩn hóa cờ cửa sổ con ở sự kiện Polish)
+            self.setWindowFlags(Qt.WindowType.Widget)
+            self.setProperty('nhung_tab', True)
+        else:
+            self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
+            from .giao_dien import chuan_hoa_cua_so_con
+            chuan_hoa_cua_so_con(self)                  # đo 1.0.47: setWindowFlags lúc Polish (đã có ~500 widget) = 38 ms
         self.resize(1360, 840)
         self.bo = BoSoan(con, ma_ho, danh_muc)
         self.da_luu = False
@@ -1368,10 +1395,12 @@ class CuaSoLapPA(QDialog):
         cuon0.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         cuon0.setWidget(the0)
         self.tab.addTab(cuon0, TEN_TAB[0])
-        self.bang = {}
+        self.bang = _BangMucTre(self)
+        self._dang_dung_bang = set()
         for the, m in enumerate(THE_MUC[1:], start=1):
-            self.bang[m] = BangMuc(self, m)
-            self.tab.addTab(self.bang[m], TEN_TAB[the])
+            cho = QWidget()
+            cho.setProperty('the_cho', m)
+            self.tab.addTab(cho, TEN_TAB[the])
         # ---- tổng + cảnh báo
         self.lb_tong = NhanTongPA()
         self.lb_tong.setObjectName('tong_pa')                # kiểu: QSS_DAI_DIEU_HUONG (dải đáy cửa sổ)
@@ -1427,11 +1456,12 @@ class CuaSoLapPA(QDialog):
                           # 0.9.84: bật / tắt xem trước A4 (cả khi đang đứng trong ô bảng / ô chữ của cửa sổ)
                           (QKeySequence('F4'), lambda: self.bat_tat_xem_truoc())):
             sc = QShortcut(phim, self)
+            # WidgetWithChildren: chỉ khi đang làm việc trên cửa sổ lập PA — tránh đụng Ctrl+Shift+V của tab Đơn giá bồi thường
+            if phim.toString() == 'Ctrl+Shift+V':
+                sc.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
             sc.activated.connect(ham)
             self._phim.append(sc)
         self._dang_nap = False
-        for m in MUC_KHOAN:
-            self.bang[m].nap_danh_sach()
         self.nap_ho()
         self.tab.setCurrentIndex(1 if self.bo.pa.dat or any(self.bo.pa.khoan[m] for m in MUC_KHOAN) else 0)
 
@@ -1773,6 +1803,52 @@ class CuaSoLapPA(QDialog):
             o.setCursorPosition(0)
         self.cb_ho.setToolTip(self.cb_ho.currentText())
 
+    def _dam_bao_bang(self, m: int) -> None:
+        """Dựng BangMuc mục m lần đầu (thẻ đang xem / lệnh đọc self.bang[m])."""
+        if dict.__contains__(self.bang, m) or m in self._dang_dung_bang or m not in THE_MUC[1:]:
+            return
+        self._dang_dung_bang.add(m)
+        try:
+            the = the_cua(m)
+            bm = BangMuc(self, m)
+            cu = self.tab.widget(the)
+            giu = self.tab.currentIndex()
+            nhan = self.tab.tabText(the)
+            self.tab.blockSignals(True)
+            self.tab.removeTab(the)
+            self.tab.insertTab(the, bm, nhan or TEN_TAB[the])
+            if 0 <= giu < self.tab.count():
+                self.tab.setCurrentIndex(giu)
+            self.tab.blockSignals(False)
+            dict.__setitem__(self.bang, m, bm)
+            if cu is not None:
+                cu.deleteLater()
+            if m == 4:
+                h = self.bo.pa.ho
+                cb = bm.cb_tdc
+                cb.blockSignals(True)
+                cb.setCurrentText(h.tai_dinh_cu or lap_pa.TAI_DINH_CU[0])
+                le = cb.lineEdit()
+                if le is not None:
+                    le.setCursorPosition(0)
+                cb.blockSignals(False)
+            bm.nap_danh_sach()
+            if bm.isVisible():
+                bm.ve()
+            else:
+                bm.ve_sau()
+            kq = self.bo.ket_qua
+            n = len(self.bo.ds(m))
+            bm.lb_tong.setText(
+                f'CỘNG MỤC {so_muc(m)} ({TEN_TAB[the].split(". ", 1)[-1].upper()}): {vn(kq.muc[m])} đồng')
+            bm.lb_dem.setText(
+                f'Tổng số: <b>{n:02d}</b> {"dòng đất" if m == 1 else "hạng mục"}  ·  Ctrl+C: sao chép ô')
+            bm.lb_dem.setToolTip(
+                'Chọn ô rồi bấm Ctrl+C sao chép giá trị; Ctrl+Shift+C hoặc chuột phải: sao chép cả dòng')
+            self._ap_khoa()
+        finally:
+            self._dang_dung_bang.discard(m)
+
     def hang_dieu_huong(self, the: int | None = None) -> QHBoxLayout:
         """0.9.95: MỘT hàng dưới đáy cửa sổ (28 px) = dải tổng cộng `lb_tong` + ◀ Trở lại / Tiếp theo ▶ theo thẻ đang xem (trước
         0.9.95 mỗi thẻ một hàng nút riêng cao 40 px). Thẻ cuối không có nút lưu riêng: "Lưu (Ctrl+S)" ở thanh trên.
@@ -1804,6 +1880,11 @@ class CuaSoLapPA(QDialog):
             self.b_tro_lai.setText(f'◀ Trở lại: {TEN_TAB[the - 1]}')
         if co_tien:
             self.b_tiep_theo.setText(f'Tiếp theo: {TEN_TAB[the + 1]} ▶')
+        if 0 < the < len(THE_MUC):
+            m = THE_MUC[the]
+            self._dam_bao_bang(m)
+            if m in MUC_KHOAN:
+                self.bang[m].nap_danh_sach()
 
     def sang_the(self, the: int) -> bool:
         """Chuyển thẻ; rời thẻ hồ sơ hộ có sửa đổi thì lưu hồ sơ trước (để thửa mới dùng được ở mục 1)."""
@@ -1826,18 +1907,23 @@ class CuaSoLapPA(QDialog):
             self.o_nk.setValue(h.nhan_khau or 0)
             self.o_di_chuyen.setChecked(h.phai_di_chuyen)
             self.o_dt_nn.setText(so_vn(h.dt_nn_dang_dung) if h.dt_nn_dang_dung else '')
-            cb = self.bang[4].cb_tdc
-            cb.setCurrentText(h.tai_dinh_cu or lap_pa.TAI_DINH_CU[0])
-            cb.lineEdit().setCursorPosition(0)
+            bm4 = self.bang.get(4)
+            if bm4 is not None:
+                cb = bm4.cb_tdc
+                cb.setCurrentText(h.tai_dinh_cu or lap_pa.TAI_DINH_CU[0])
+                cb.lineEdit().setCursorPosition(0)
             if self.ho_so.ma_ho != self.bo.ma_ho:
                 self.ho_so.nap(self.bo.ma_ho)
-            for m in THE_MUC[1:]:                       # chỉ vẽ ngay thẻ đang xem; thẻ khác vẽ khi chuyển sang (BangMuc.ve_sau)
-                bm = self.bang[m]
+            for m in THE_MUC[1:]:                       # chỉ vẽ thẻ đã dựng; thẻ khác dựng khi chuyển sang (_dam_bao_bang)
+                bm = self.bang.get(m)
+                if bm is None:
+                    continue
                 if bm.isVisible():
                     bm.ve()
                 else:
                     bm.ve_sau()
-            self.bang[1].nap_danh_sach()
+            if 1 in self.bang:
+                self.bang[1].nap_danh_sach()
         finally:
             self._dang_nap = False
         self.b_truoc.setEnabled(self.bo.ho_ke(-1) is not None)
@@ -1856,10 +1942,11 @@ class CuaSoLapPA(QDialog):
         from .tien import vn_gon
         for the, m in enumerate(THE_MUC[1:], start=1):
             n = len(self.bo.ds(m))
-            bm = self.bang[m]
-            bm.lb_tong.setText(f'CỘNG MỤC {so_muc(m)} ({TEN_TAB[the].split(". ", 1)[-1].upper()}): {vn(kq.muc[m])} đồng')
-            bm.lb_dem.setText(f'Tổng số: <b>{n:02d}</b> {"dòng đất" if m == 1 else "hạng mục"}  ·  Ctrl+C: sao chép ô')
-            bm.lb_dem.setToolTip('Chọn ô rồi bấm Ctrl+C sao chép giá trị; Ctrl+Shift+C hoặc chuột phải: sao chép cả dòng')
+            bm = self.bang.get(m)
+            if bm is not None:
+                bm.lb_tong.setText(f'CỘNG MỤC {so_muc(m)} ({TEN_TAB[the].split(". ", 1)[-1].upper()}): {vn(kq.muc[m])} đồng')
+                bm.lb_dem.setText(f'Tổng số: <b>{n:02d}</b> {"dòng đất" if m == 1 else "hạng mục"}  ·  Ctrl+C: sao chép ô')
+                bm.lb_dem.setToolTip('Chọn ô rồi bấm Ctrl+C sao chép giá trị; Ctrl+Shift+C hoặc chuột phải: sao chép cả dòng')
             # tên thẻ kèm số dòng và số tiền của mục (20/10/2026, ảnh mẫu)
             self.tab.setTabText(the, f'{TEN_TAB[the]} ({n}' + (f' · {vn_gon(kq.muc[m])}' if kq.muc[m] else '') + ')')
         self._dat_tong_dinh_danh()
@@ -2725,7 +2812,7 @@ class HopDuAn(QDialog):
             lb.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             self.lb_pl[k] = lb
             f.addRow(ten, lb)
-        self.b_phap_ly = QPushButton('Kiểm tra & Tiếp nhận Hồ sơ Pháp lý Đầu vào…')
+        self.b_phap_ly = QPushButton('Kiểm tra && Tiếp nhận hồ sơ pháp lý đầu vào…')
         self.b_phap_ly.clicked.connect(lambda: self.mo_tiep_nhan())
         f.addRow('', self.b_phap_ly)
         self.cap_nhat_phap_ly()

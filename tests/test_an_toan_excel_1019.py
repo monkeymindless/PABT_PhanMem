@@ -93,7 +93,13 @@ class TestMotCongLuu(unittest.TestCase):
     """Không nơi nào xuất file Excel cho người dùng bằng wb.save trực tiếp (chỉ cho phép các nơi xử lý MẪU in)."""
 
     # nơi lưu lại chính file MẪU (không có chữ người dùng gõ): ap_chuan_trang_mau / tao_mau_tu_excel trong in_an, tờ trình xlsx
-    CHO_PHEP = {'in_an.py': 3, 'an_toan.py': 1}
+    # ghi_xlsx_nhanh (30/10/2026) là phần ghi của cổng luu_xlsx - chỉ an_toan.luu_xlsx được gọi nó (test_ghi_nhanh_chi_qua_cong)
+    CHO_PHEP = {'in_an.py': 3, 'an_toan.py': 1, 'ghi_xlsx_nhanh.py': 2}
+
+    def test_ghi_nhanh_chi_qua_cong(self):
+        goc = Path(__file__).resolve().parent.parent / 'pabt'
+        goi = [f.name for f in sorted(goc.glob('*.py')) if re.search(r'ghi_xlsx_nhanh\.luu\(', f.read_text(encoding='utf-8'))]
+        self.assertEqual(goi, ['an_toan.py'])
 
     def test_khong_wb_save_truc_tiep(self):
         goc = Path(__file__).resolve().parent.parent / 'pabt'

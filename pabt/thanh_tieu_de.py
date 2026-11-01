@@ -27,11 +27,20 @@ from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QMenuBar, QSiz
 CAO = 34                 # chiều cao thanh (điểm logic) - như VS Code; 0.9.82: 38; 17/10/2026 Hybrid Enterprise Navy: 34 (1366x768)
 RONG_NUT_CUA_SO = 46     # nút thu nhỏ / phóng to / đóng
 VIEN_KEO = 5             # mép cửa sổ dùng để kéo đổi cỡ (điểm logic)
-MAU_NEN = '#F8F8F8'
-MAU_VACH = '#E5E5E5'
-MAU_CHU = '#3B3B3B'
-MAU_CHU_MO = '#8B8B8B'   # cửa sổ không hoạt động (như VS Code)
+MAU_NEN = '#F3F6FA'      # 1.0.42: cùng TOKEN['nen'] — tông Tối đổi qua _mau_chrome
+MAU_VACH = '#D5DEE8'
+MAU_CHU = '#0F172A'
+MAU_CHU_MO = '#475569'   # cửa sổ không hoạt động
 MAU_DONG = '#C42B1C'     # nền nút Đóng khi rê chuột (màu Windows 11)
+
+
+def _mau_chrome():
+    """(nền, vạch, chữ, chữ mờ) theo tông đang dùng — thanh tiêu đề cùng hệ TOKEN, không còn #F8F8F8 cứng."""
+    from . import giao_dien as gd
+    if gd.TONG_NEN[0] == 'toi':
+        return '#0B1120', '#334155', '#E2E8F0', '#94A3B8'
+    T = gd.TOKEN
+    return T['nen'], T['vach'], T['chu'], T['chu_phu']
 
 # ký hiệu Segoe Fluent Icons / Segoe MDL2 Assets (Windows 10+); máy không có phông -> chữ thường
 KY = dict(thu_nho=(0xE921, '–'), phong_to=(0xE922, '□'), tra_lai=(0xE923, '❐'), dong=(0xE8BB, '✕'))
@@ -71,15 +80,21 @@ class _NutThanh(QToolButton):
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setAutoRaise(True)
         self._co = co
+        self._dong = dong
+        self._rong = rong
         self.dat_ky(ten)
-        nen = MAU_DONG if dong else 'rgba(0,0,0,0.07)'
-        chu = '#FFFFFF' if dong else MAU_CHU
-        bo = '0px' if rong == RONG_NUT_CUA_SO else '5px'
+        self.ap_mau()
+
+    def ap_mau(self) -> None:
+        _nen, _vach, chu, chu_mo = _mau_chrome()
+        nen = MAU_DONG if self._dong else 'rgba(0,0,0,0.07)'
+        chu_re = '#FFFFFF' if self._dong else chu
+        bo = '0px' if self._rong == RONG_NUT_CUA_SO else '5px'
         self.setStyleSheet(
-            f'QToolButton {{ color: {MAU_CHU}; background: transparent; border: 0; border-radius: {bo}; padding: 0; }}'
-            f'QToolButton:hover {{ background: {nen}; color: {chu}; }}'
-            f'QToolButton:pressed {{ background: {"#A82315" if dong else "rgba(0,0,0,0.12)"}; color: {chu}; }}'
-            f'QToolButton:disabled {{ color: #C0C0C0; }}')
+            f'QToolButton {{ color: {chu}; background: transparent; border: 0; border-radius: {bo}; padding: 0; }}'
+            f'QToolButton:hover {{ background: {nen}; color: {chu_re}; }}'
+            f'QToolButton:pressed {{ background: {"#A82315" if self._dong else "rgba(0,0,0,0.12)"}; color: {chu_re}; }}'
+            f'QToolButton:disabled {{ color: {chu_mo}; }}')
 
     def dat_ky(self, ten: str) -> None:
         chu, phong = _chu_ky(ten)
@@ -111,11 +126,7 @@ class ThanhTieuDe(QWidget):
         mb.setParent(self)
         mb.setNativeMenuBar(False)
         mb.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-        mb.setStyleSheet(
-            'QMenuBar { background: transparent; color: %s; font-size: 13px; font-weight: 400; border: 0; padding: 0; }'
-            'QMenuBar::item { background: transparent; padding: 4px 8px; margin: 0 1px; border-radius: 5px; }'
-            'QMenuBar::item:selected { background: rgba(0,0,0,0.07); }'
-            'QMenuBar::item:pressed { background: rgba(0,0,0,0.12); }' % MAU_CHU)
+        self._kieu_menu()
         mb.setProperty('trong_thanh_td', True)       # giao_dien.vua_cao_menu: cao đúng bằng mục menu, canh giữa thanh
         from .giao_dien import vua_cao_menu
         vua_cao_menu(mb)
@@ -140,13 +151,32 @@ class ThanhTieuDe(QWidget):
         cua.installEventFilter(self)
         self._dat_tieu_de(cua.windowTitle())
         self.khung_windows = False               # True: đang dùng khung Windows (gắn thủ tục lỗi / không phải Windows)
+        from .giao_dien import KHI_DOI_TONG_NEN
+        KHI_DOI_TONG_NEN.append(self.ap_tong)
 
     # ------------------------------------------------------------------ hiển thị
+    def _kieu_menu(self) -> None:
+        _nen, _vach, chu, _mo = _mau_chrome()
+        self.mb.setStyleSheet(
+            'QMenuBar { background: transparent; color: %s; font-size: 13px; font-weight: 400; border: 0; padding: 0; }'
+            'QMenuBar::item { background: transparent; padding: 4px 8px; margin: 0 1px; border-radius: 5px; }'
+            'QMenuBar::item:selected { background: rgba(0,0,0,0.07); }'
+            'QMenuBar::item:pressed { background: rgba(0,0,0,0.12); }' % chu)
+
     def _kieu(self, hoat_dong: bool) -> None:
-        mau = MAU_CHU if hoat_dong else MAU_CHU_MO
+        nen, vach, chu, chu_mo = _mau_chrome()
+        mau = chu if hoat_dong else chu_mo
         self.setStyleSheet(
-            f'#thanh_tieu_de {{ background: {MAU_NEN}; border: 0; border-bottom: 1px solid {MAU_VACH}; }}'
+            f'#thanh_tieu_de {{ background: {nen}; border: 0; border-bottom: 1px solid {vach}; }}'
             f'#tieu_de_cua_so {{ color: {mau}; font-size: 12.5px; background: transparent; }}')
+        if getattr(self, 'mb', None) is not None:
+            self._kieu_menu()
+        for b in getattr(self, 'nut_cua_so', {}).values():
+            b.ap_mau()
+
+    def ap_tong(self, _ten=None) -> None:
+        """Đổi tông nền: thanh tiêu đề theo TOKEN / tông Tối (gắn KHI_DOI_TONG_NEN)."""
+        self._kieu(True)
 
     def _dat_tieu_de(self, chu: str) -> None:
         self.lb_tieu_de.setToolTip(chu)

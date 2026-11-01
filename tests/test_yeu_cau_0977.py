@@ -220,10 +220,12 @@ class TestXoaDotVaInDuThao(_Co):
         w = ud.CuaSoChinh(menu_trai=True)
         self.addCleanup(w.close)
         w.mo(str(self.p))
+        # 30/10/2026 (phương án đột phá 6): nút "Xuất bản hồ sơ đợt này" mở trình hướng dẫn xuất bản 4 bước (khâu xuất vẫn là
+        # HopIn.thuc_hien) thay vì mở thẳng Trung tâm Xuất bản
         with mock.patch.object(HopDotTrinh, 'exec', lambda self: setattr(self, 'mo_xuat_dot', 7) or 0), \
-                mock.patch.object(w, 'in_xuat') as ix:
+                mock.patch.object(w, 'xuat_ban_dot') as xb:
             w.dot_trinh()
-        ix.assert_called_once_with(dot_id=7, che_do='chinh_thuc')
+        xb.assert_called_once_with(dot_id=7, che_do='chinh_thuc')
 
 
 def _chu_word(f) -> str:

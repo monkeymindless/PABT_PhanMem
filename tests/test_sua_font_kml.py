@@ -9,7 +9,8 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from pabt.ban_do_kml import doc_kml, lam_sach_xml, phan_tich_kml
+from pabt.ban_do_kml import (doc_kml, lam_sach_xml, loai_nhan, lop_cad_tu_mo_ta, mau_kml_abgr, phan_tich_kml, tom_tat_cad,
+                             _toa_do)
 from pabt.sua_font_kml import sua_font_kml, tu_tcvn3
 
 L = '�'
@@ -90,6 +91,38 @@ class TestKmlCad(unittest.TestCase):
         chu = ' '.join(kq.canh_bao)
         self.assertIn('1 vòng tròn nhỏ', chu)
         self.assertIn('bản vẽ đường của phần mềm CAD (1 đường', chu)
+
+    def test_loai_nhan_va_lop_cad(self):
+        self.assertEqual(loai_nhan('549'), 'thua')
+        self.assertEqual(loai_nhan('CLN'), 'ld')
+        self.assertEqual(loai_nhan('3600.7'), 'dt')
+        self.assertEqual(loai_nhan('(120.5)'), 'dt_th')
+        self.assertEqual(loai_nhan('DN.T737'), 'moc')
+        self.assertEqual(loai_nhan('A1.P12', 'Level 45'), 'moc')
+        self.assertEqual(loai_nhan('Tờ số 59'), 'to')
+        self.assertEqual(loai_nhan('Hành lang bảo vệ'), 'ghi_chu')
+        self.assertEqual(loai_nhan('*'), 'ky_hieu')
+        self.assertEqual(lop_cad_tu_mo_ta('tanan2|Level 10'), ('tanan2', 'Level 10'))
+        self.assertEqual(lop_cad_tu_mo_ta('Level 44'), ('', 'Level 44'))
+        self.assertEqual(mau_kml_abgr('ffffffff'), '#FFFFFF')
+        self.assertEqual(mau_kml_abgr('ff0000ff'), '#FF0000')
+        self.assertEqual(mau_kml_abgr('00ffffff'), '')          # gần trong suốt
+
+    def test_style_va_toa_do_khong_khoang_trang(self):
+        pm = ('<Placemark><name>Polyline_005</name><description>tanan2|Level 10</description><styleUrl>#m</styleUrl>'
+              '<LineString><coordinates>106.95,11.02,0,106.951,11.021,0,106.952,11.022,0</coordinates></LineString></Placemark>'
+              '<Placemark><name>549</name><description>Level 3</description>'
+              '<Point><coordinates>106.9501,11.0201,0</coordinates></Point></Placemark>')
+        ds = doc_kml(self._file('cad_style.kml', _kml(pm), kmz=False))
+        duong = next(p for p in ds if p.duong)
+        self.assertEqual(duong.lop_cad, 'Level 10')
+        self.assertEqual(duong.ban_ve, 'tanan2')
+        self.assertEqual(duong.mau_duong, '#FFFFFF')             # StyleMap -> Style d: ffffffff
+        self.assertGreaterEqual(len(duong.duong[0]), 2)          # tọa độ dính nhau bằng dấu phẩy vẫn thành đường
+        nhan = next(p for p in ds if p.diem)
+        self.assertEqual(loai_nhan(nhan.ten, nhan.lop_cad), 'thua')
+        self.assertIn('đường ranh', tom_tat_cad(ds))
+        self.assertGreaterEqual(len(_toa_do('106.95,11.02,0,106.951,11.021,0')), 2)
 
 
 if __name__ == '__main__':

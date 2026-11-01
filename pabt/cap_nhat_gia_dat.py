@@ -16,6 +16,7 @@ import zipfile
 from pathlib import Path
 
 from . import gia_dat_nq28 as nq
+from .tien import lam_tron
 from .lap_pa import bo_dau
 
 
@@ -129,7 +130,7 @@ def _dong_tu_o(cac_dong: list, ten_file: str, xa: str) -> tuple:
     if don_vi == 'dong':
         for r in dong:
             for k, _ in nq.COT:
-                r[k] = int(round(r[k] / 1000))
+                r[k] = int(lam_tron(r[k], -3)) // 1000
     chu = 'Giá hiểu theo đồng/m².' if don_vi == 'dong' else 'Giá hiểu theo nghìn đồng/m².'
     return dong, chu
 
@@ -255,6 +256,10 @@ def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
         except Exception as e:
             raise nq.LoiBangGia(str(e)) from None
         vb, chu = p.stem, 'Đọc từ ảnh, nhận dạng chữ.'
+        if not dong:
+            dong = _gia_tu_loi_van(chu_vb, xa)
+            if dong:
+                chu += ' Đọc thêm từ lời văn.'
     else:
         try:
             o = doc_bang(p)
@@ -264,6 +269,10 @@ def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
             except Exception as e:
                 raise nq.LoiBangGia(str(e)) from None
             vb, chu = p.stem, 'PDF ảnh: nhận dạng từng trang.'
+            if not dong:
+                dong = _gia_tu_loi_van(chu_vb, xa)
+                if dong:
+                    chu += ' Đọc thêm từ lời văn.'
             return _gan_tinh(dong, tinh, xa, vb, chu)
         except Exception as e:
             raise nq.LoiBangGia(str(e)) from None
@@ -279,7 +288,13 @@ def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
                         raise
             chu = 'Giá trong văn bản.'
         else:
-            dong, chu = _dong_tu_o(o, p.name, xa)
+            try:
+                dong, chu = _dong_tu_o(o, p.name, xa)
+            except nq.LoiBangGia:
+                dong = _gia_tu_loi_van(o, xa)
+                chu = 'Giá đọc từ lời văn nghị quyết (không có bảng cột chuẩn).'
+                if not dong:
+                    raise
         vb = ''
         for r in o[:8]:
             d = ' '.join(str(x) for x in r).strip()
@@ -353,6 +368,17 @@ def _vi_tri_dong(ten: str, dem: dict) -> str:
         return 'T' + str(min(dem['t'], 3))
     dem['t'] = dem['k'] = 0
     return 'MT'
+
+
+def _gia_tu_loi_van(cac_dong: list, xa: str = '') -> list:
+    """Không có bảng cột chuẩn: bóc mục xã / tuyến / mức giá trong lời văn nghị quyết. Trả [] nếu không đọc được."""
+    dong = phan_tich_nghi_quyet(cac_dong)
+    xa = (xa or '').strip()
+    if xa:
+        for r in dong:
+            if not (r.get('xa') or '').strip():
+                r['xa'] = xa
+    return dong
 
 
 def phan_tich_nghi_quyet(cac_dong: list) -> list:

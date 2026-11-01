@@ -32,6 +32,8 @@ a = Analysis(
 # DLL lấy nhầm từ PATH của máy dựng (dựng trong Git Bash: C:\Program Files\Git\mingw64\bin\libssl-3-x64.dll,
 # libcrypto-3-x64.dll - OpenSSL của Git, +6,5 MB, không dùng: Python đã kèm libssl-3.dll / libcrypto-3.dll của nó)
 a.binaries = [b for b in a.binaries if not any(k in b[1].replace('/', '\\').lower() for k in ('\\git\\', '\\mingw64\\', '\\msys64\\'))]
+# OpenSSL "-x64" lấy từ System32 (PyInstaller đọc dependency): không ai nhập, Python và Tesseract đã kèm bản riêng (-5 MB); kiem_dll chặn nếu thiếu
+a.binaries = [b for b in a.binaries if not (b[1].replace('/', '\\').lower().endswith(('\\libssl-3-x64.dll', '\\libcrypto-3-x64.dll')) and '\\system32\\' in str(b[1]).replace('/', '\\').lower())]
 pyz = PYZ(a.pure)
 
 exe = EXE(

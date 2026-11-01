@@ -77,6 +77,19 @@ def lam_san(dm: DanhMuc) -> None:
         ds_chon_nhanh(dm, m)
 
 
+def lam_san_nen(dm: DanhMuc) -> None:
+    """lam_san ở LUỒNG NỀN (rà soát 31/10/2026: trên luồng giao diện ~260 ms ngay sau khi mở dự án - bấm lúc đó thì đơ). Chỉ đọc đối
+    tượng DanhMuc (không Qt, không CSDL); cửa sổ lập PA mở trước khi xong thì tự tính phần còn thiếu (kết quả như nhau)."""
+    import threading
+
+    def chay():
+        try:
+            lam_san(dm)
+        except Exception:                               # noqa: BLE001 - chỉ là dựng sẵn: lỗi thì cửa sổ tự tính khi cần
+            pass
+    threading.Thread(target=chay, daemon=True).start()
+
+
 CAO_HANG = 29                 # ô nhập / nút của hàng nhập nhanh (20/10/2026: 29 px; 1.0.02: 30; trước: ô kiểu nhap="1" ~34 px)
 # kiểu ô của hàng: giao_dien.QSS_HANG_NHAP trong bảng kiểu chung (chọn theo property hang_nhap="1") - KHÔNG setStyleSheet trên hàng:
 # kiểu cục bộ bắt Qt tính lại kiểu cả cây con, 4 hàng làm mở cửa sổ lập phương án chậm thêm ~60 ms (đo 1.0.02)
@@ -107,6 +120,8 @@ class HangNhapNhanh(QWidget):
             lo.addWidget(self.cb_muc)
         self.o_chon = OTimChon(GOI_Y.get(self.muc(), GOI_Y[2]))
         self.o_chon.khi_chon = lambda m: self._da_chon(m)
+        self.o_chon.khi_can_ds = self.dam_bao_ds
+        self._can_nap = False
         self.o_chon.o.setProperty('nhap', '1')
         self.o_chon.nut.setFixedSize(RONG_NUT_XO, CAO_HANG)     # nút ▼ liền ô chữ (1.0.03)
         self.o_chon.nut.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -178,9 +193,15 @@ class HangNhapNhanh(QWidget):
         return self.cb_muc.currentData() if self.cb_muc is not None else self._muc
 
     def nap(self, dm: DanhMuc) -> None:
-        """Danh sách chọn của mục đang chọn theo danh mục dm."""
+        """Ghi danh mục; danh sách chọn (~5.500 cây) chỉ dựng lúc gõ / xổ / chọn (1.0.47)."""
         self._dm = dm
-        self.o_chon.dat_muc(ds_chon_nhanh(dm, self.muc()))
+        self._can_nap = True
+
+    def dam_bao_ds(self) -> None:
+        if not getattr(self, '_can_nap', False) or self._dm is None:
+            return
+        self._can_nap = False
+        self.o_chon.dat_muc(ds_chon_nhanh(self._dm, self.muc()))
 
     def _doi_muc(self):
         m = self.muc()

@@ -94,6 +94,19 @@ def ds_sao_luu_tu_dong(file) -> list:
                   key=lambda f: f.name, reverse=True)
 
 
+def bo_anh_ban_do_ban_sao(dc) -> None:
+    """Trên BẢN SAO (sao lưu tự động, mốc khôi phục): bỏ ô ảnh nền bản đồ đã lưu (ban_do_luu.BANG_O - tải lại được) rồi VACUUM, để mỗi
+    bản sao không chép thêm vài MB ảnh (rà soát 31/10/2026: 5 bản sao lưu + tới 80 mốc). Lớp KML (nhỏ) giữ. Lỗi: giữ bản sao nguyên."""
+    try:
+        if dc.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'ban_do_o'").fetchone() and \
+                dc.execute('SELECT 1 FROM ban_do_o LIMIT 1').fetchone():
+            dc.execute('DELETE FROM ban_do_o')
+            dc.commit()
+            dc.execute('VACUUM')
+    except sqlite3.Error:
+        pass
+
+
 def sao_luu_tu_dong(con, file, giu: int = SAO_LUU_GIU) -> Path | None:
     """Bản sao nguyên tử file dự án đang mở (SQLite backup API trên chính kết nối - không tranh khóa với kết nối khác) vào
     <thư mục máy>\\sao_luu_tu_dong\\<tên>_<băm>_<giờ><đuôi>; giữ giu bản gần nhất. Bỏ qua khi đang giữa giao dịch hoặc file nằm
@@ -112,6 +125,7 @@ def sao_luu_tu_dong(con, file, giu: int = SAO_LUU_GIU) -> Path | None:
     try:
         con.backup(dc)
         dc.commit()
+        bo_anh_ban_do_ban_sao(dc)
     finally:
         dc.close()
     os.replace(tam, dich)
@@ -460,6 +474,12 @@ def _mo_tiep(con, tao: bool):
                 dam_bao_cot_pa_lan(con)
         except sqlite3.OperationalError:                # chỉ xem / file khóa: lan_pa tự thêm khi ghi
             pass
+    if not co_cot_y_kien(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
+        try:
+            with con:
+                dam_bao_cot_y_kien(con)
+        except sqlite3.OperationalError:                # chỉ xem / file khóa: du_thao tự thêm khi ghi
+            pass
     if not co_cot_thua(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
         try:
             with con:
@@ -473,6 +493,7 @@ def _mo_tiep(con, tao: bool):
                 dam_bao_cot_du_an(con)
         except sqlite3.OperationalError:                # chỉ xem / file khóa: lap_pa.luu_du_an thêm khi ghi
             pass
+    dat_ghi_toi_thieu(con)                              # CLI / nhập / GUI: cùng một chỗ (bộ đơn giá đóng gói tự bỏ)
     return con
 
 
@@ -510,7 +531,8 @@ def dam_bao_cot_thua(con) -> bool:
 
 # 1.0.15 (phương án ĐIỀU CHỈNH): pa_lan thêm loai / thay_the - KHÔNG đổi PHIEN_BAN_CSDL (như cột thua): file mới có sẵn (schema.sql),
 # file cũ thêm ở csdl.mo khi đã có hộ hoặc lúc ghi lần (lan_pa). Bản cũ mở file vẫn được (cột thừa).
-COT_PA_LAN_THEM = (('loai', "TEXT NOT NULL DEFAULT 'bo_sung'"), ('thay_the', 'INTEGER NOT NULL DEFAULT 0'))
+COT_PA_LAN_THEM = (('loai', "TEXT NOT NULL DEFAULT 'bo_sung'"), ('thay_the', 'INTEGER NOT NULL DEFAULT 0'),
+                   ('dot_trinh_id', 'INTEGER'))           # 30/10/2026: đợt trình theo LẦN phương án (phễu tiến độ theo hộ)
 
 
 def co_cot_pa_lan(con) -> bool:
@@ -520,12 +542,35 @@ def co_cot_pa_lan(con) -> bool:
 
 
 def dam_bao_cot_pa_lan(con) -> None:
-    """Thêm cột loai / thay_the cho pa_lan; lần 1 của mọi hộ là 'chinh'. Trong giao dịch của nơi gọi."""
+    """Thêm cột loai / thay_the / dot_trinh_id cho pa_lan; lần 1 của mọi hộ là 'chinh'. Trong giao dịch của nơi gọi.
+    dot_trinh_id vừa thêm: chép ho.dot_id CHỈ cho hộ có đúng một lần phương án (không nhầm được lần nào đã trình); hộ nhiều lần để
+    trống - phễu tiến độ dùng ho.dot_id cho lần đang mở như trước."""
     co = {r[1] for r in con.execute('PRAGMA table_info(pa_lan)')}
     for k, kieu in COT_PA_LAN_THEM:
         if k not in co:
             con.execute(f'ALTER TABLE pa_lan ADD COLUMN {k} {kieu}')
     con.execute("UPDATE pa_lan SET loai = 'chinh' WHERE lan = 1 AND loai = 'bo_sung'")
+    if 'dot_trinh_id' not in co:
+        con.execute('''UPDATE pa_lan SET dot_trinh_id = (SELECT h.dot_id FROM ho h WHERE h.ma_ho = pa_lan.ma_ho)
+                       WHERE (SELECT COUNT(*) FROM pa_lan p2 WHERE p2.ma_ho = pa_lan.ma_ho) = 1''')
+
+
+# 30/10/2026: lần phương án của dòng ý kiến niêm yết - KHÔNG đổi PHIEN_BAN_CSDL; NULL = dòng cũ (trước khi có cột) = lần 1
+COT_Y_KIEN_THEM = (('lan', 'INTEGER'),)
+
+
+def co_cot_y_kien(con) -> bool:
+    """y_kien_du_thao chưa có (file cũ) hoặc đã đủ cột COT_Y_KIEN_THEM: True (không cần thêm)."""
+    co = {r[1] for r in con.execute('PRAGMA table_info(y_kien_du_thao)')}
+    return not co or all(k in co for k, _ in COT_Y_KIEN_THEM)
+
+
+def dam_bao_cot_y_kien(con) -> None:
+    """Thêm cột còn thiếu của y_kien_du_thao (trong giao dịch của nơi gọi). Bảng chưa có: không làm gì."""
+    co = {r[1] for r in con.execute('PRAGMA table_info(y_kien_du_thao)')}
+    for k, kieu in COT_Y_KIEN_THEM:
+        if co and k not in co:
+            con.execute(f'ALTER TABLE y_kien_du_thao ADD COLUMN {k} {kieu}')
 
 
 def _tao_pa_lan(con) -> None:
@@ -765,6 +810,51 @@ def doc_cai_dat(con: sqlite3.Connection, ma: str, mac_dinh: str = '') -> str:
     except sqlite3.OperationalError:                # file chỉ xem phiên bản cũ chưa có bảng
         return mac_dinh
     return r[0] if r is not None and r[0] != '' else mac_dinh
+
+
+# Phần mềm ghi tối thiểu (rà soát kiến trúc 01/11/2026): lược đồ được mở rộng NHIỀU LẦN mà không đổi PHIEN_BAN_CSDL (bảng / cột thêm
+# - bản cũ vẫn MỞ được) nhưng bản cũ GHI thì không giữ các bất biến mới (vd. y_kien_du_thao.lan NULL = lần 1). Phần mềm mở để sửa ghi
+# số phiên bản tối thiểu vào cai_dat; bản thấp hơn số đó (từ bản này trở đi - bản cũ hơn không biết khóa này) tự mở CHỈ XEM.
+# Tăng GHI_TOI_THIEU khi thêm cột / bảng mở rộng mà bản trước ghi sẽ làm sai dữ liệu.
+KHOA_GHI_TOI_THIEU = 'PHAN_MEM_GHI_TOI_THIEU'
+GHI_TOI_THIEU = '1.0.41'            # lần đầu ghi cờ: bản 1.0.40 đã phát hành chưa biết khóa này
+TEN_BO_DON_GIA = 'bo_don_gia.sqlite'
+
+
+def so_phien_ban(s) -> tuple:
+    """'1.0.40' -> (1, 0, 40); chữ lạ -> ()."""
+    try:
+        return tuple(int(x) for x in str(s or '').strip().split('.') if x != '')
+    except ValueError:
+        return ()
+
+
+def phan_mem_ghi_toi_thieu(con) -> str:
+    return doc_cai_dat(con, KHOA_GHI_TOI_THIEU, '')
+
+
+def qua_cu_de_ghi(con, phien_ban: str) -> str:
+    """Phiên bản tối thiểu file yêu cầu nếu phien_ban THẤP hơn (phải mở chỉ xem); '' nếu được ghi."""
+    yc = phan_mem_ghi_toi_thieu(con)
+    return yc if yc and so_phien_ban(yc) > so_phien_ban(phien_ban) else ''
+
+
+def dat_ghi_toi_thieu(con) -> bool:
+    """Ghi GHI_TOI_THIEU vào file (chỉ khi file đang ghi số thấp hơn / chưa có). True nếu đã ghi. File chỉ đọc / bộ đơn giá
+    đóng gói / không có bảng cai_dat / lỗi: False. Không ghi nhật ký (chạy lúc mở, trước Hoàn tác)."""
+    if so_phien_ban(phan_mem_ghi_toi_thieu(con)) >= so_phien_ban(GHI_TOI_THIEU):
+        return False
+    try:
+        dd = con.execute('PRAGMA database_list').fetchone()
+        if Path(dd[2] if dd else '').name.lower() == TEN_BO_DON_GIA:
+            return False
+        if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'cai_dat'").fetchone():
+            return False
+        with giao_dich(con):
+            ghi_cai_dat(con, KHOA_GHI_TOI_THIEU, GHI_TOI_THIEU)
+    except sqlite3.Error:
+        return False
+    return True
 
 
 def ghi_cai_dat(con: sqlite3.Connection, ma: str, gia_tri) -> None:

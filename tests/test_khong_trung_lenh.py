@@ -62,7 +62,8 @@ class TestKhongTrungLenh(unittest.TestCase):
             if a is None or b in the_chao or w.khung_menu.isAncestorOf(b):
                 continue
             self.assertNotIn(a, trai | tren, f'nút "{a.text()}" trùng lệnh menu')
-        self.assertEqual(set(w.nut_ds), {'Thêm hộ…', 'Chọn hộ niêm yết…', 'Xóa hộ…'})
+        # 31/10/2026: Xem hộ trên bản đồ (người dùng yêu cầu nút ngoài bảng) - không có ở menu trái / thanh menu
+        self.assertEqual(set(w.nut_ds), {'Thêm hộ…', 'Chọn hộ niêm yết…', 'Xóa hộ…', 'Xem hộ trên bản đồ…'})
         self.assertFalse(hasattr(w, 'hang_chon'))
         self.assertFalse(hasattr(w, 'nut_chao_du_an'))
         t = w.thanh_td

@@ -369,7 +369,7 @@ class HopDotTrinh(_Hop):
         m.clear()
         dots = du_thao.dot_niem_yet_xong(self.con)
         if not dots:
-            m.addAction('Chưa có đợt niêm yết nào đã hết thời hạn (Nhóm 4: Niêm yết & Lấy ý kiến)').setEnabled(False)
+            m.addAction('Chưa có đợt niêm yết nào đã hết thời hạn (Nhóm 4: Niêm yết && Lấy ý kiến)').setEnabled(False)
             return
         tong = len(du_thao.ho_niem_yet_xong(self.con))
         dong = len(du_thao.ho_niem_yet_xong(self.con, chi_dong_y=True))

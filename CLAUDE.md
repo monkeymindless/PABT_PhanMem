@@ -2732,6 +2732,152 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.
 
+- ĐẠI TU "LARC theo quy trình QĐ 18" (người dùng 30/10/2026, CHƯA tăng phiên bản; nhánh `kiem-tra/bien-va-chuan-giao-dien`; lộ trình 8
+  bước, người dùng duyệt ảnh từng bước rồi mới làm tiếp; kết hợp phương án đột phá 1 buồng lái, 2 lập PA một trang, 3 giao diện thế hệ mới):
+  - Bước 1 `pabt/quy_trinh.py` (không Qt, KHÔNG đổi lược đồ): `GIAI_DOAN` 5 giai đoạn A-E gom 16 bước của `quy_trinh_qd18.BUOC`, `TEN_NGAN`,
+    `LENH_BUOC` (bước -> khóa `CuaSoChinh.lenh`; None = chưa có chỗ làm riêng), `MOC_BUOC` (bước 2 / 3 / 10 / 11 / 13 đánh dấu xong bằng NGÀY ở
+    cai_dat; bước 3 dùng chung `thoi_han.KHOA_NGAY_THONG_BAO`) + `doc_moc` / `ghi_moc` (nhật ký, hoàn tác được). `tinh(con, dong, lap,
+    hom_nay)` -> `KetQuaQuyTrinh` (buoc {b: TrangThaiBuoc(trang_thai xong / dang / chua / qua_han, xong, tong, mo_ta, con_ngay, ngay,
+    dieu_kien)}, hien_tai, viec [Viec(buoc, chu, muc loi / can / nhac, lenh)] <= VIEC_TOI_DA). Mẫu số các bước 6 / 8 là hộ ĐÃ CÓ phương án
+    (đã lập + tự lập chưa soát) - không thì dự án tự lập báo bước 6 xong trước bước 5. `dong_tu_csdl` (không có cửa sổ). Test `tests/test_quy_trinh.py`.
+  - Bước 2 buồng lái = `man_hinh_tong_quan.KhungTongQuanDuAn` MỞ RỘNG (không thay): `ThanhQuyTrinh` (16 nút `nut_buoc` property tt /
+    hien_tai, nhãn 5 giai đoạn, chú thích có điều kiện xong bước) + `KhungViecTiep` (chấm màu theo mức, nút `nut_viec` "Làm ngay →" /
+    "Ghi ngày"); cả màn hình trong QScrollArea `cuon_tong_quan`, phần dưới tối thiểu `CAO_PHAN_DUOI_TOI_THIEU` (1366 @125% không bóp nát),
+    thẻ khởi tạo `CAO_THE_KHOI_TAO` 36. App: `mo_buoc_quy_trinh(b)` (bước có mốc ngày -> `ghi_ngay_buoc`, còn lại `_kich_lenh(LENH_BUOC[b])`),
+    `ghi_ngay_buoc(b, ngay=None, cho)` (chỉ xem -> báo; ngày sai -> LoiNhap), `_kich_lenh(khóa)` (QAction tắt không chạy).
+  - PHỄU THEO HỘ thay thanh 16 bước (người dùng 30/10/2026: "không phải hộ nào cũng làm trong đợt 1, không phải hộ nào cũng đủ 16
+    bước, có hộ chỉ có phương án bổ sung" - thanh 16 nút cấp dự án SAI về khái niệm + rối mắt): `pabt/pheu_tien_do.py` (không Qt)
+    `tinh(con, lap, che_do 'mo'|'goc', tong_hop)` -> `KetQuaPheu` (ho [HoPheu: giai_doan, lan, co, dot_niem_yet, dot_trinh], `dem`,
+    `dem_co`, `doi_soat` = tổng giai đoạn bằng số hộ, `theo_giai_doan`, `theo_co`, `loc_dot`), `viec_tiep`. 8 giai đoạn `GIAI_DOAN_HO`
+    xét theo LẦN PA đang mở (lần chưa duyệt, không khóa, không bị thay, có dòng; không có -> lần duyệt muộn nhất; chưa dòng -> 1); bằng
+    chứng mạnh -> yếu: QĐ của lần -> đợt trình của lần -> ý kiến niêm yết của lần -> dòng PA. Mâu thuẫn = CỜ (`CO`, không đổi giai
+    đoạn): xử lý khi chưa có PA, trình thiếu ý kiến, PA 0 đồng, tự lập chưa soát, có ngày bàn giao chưa có QĐ, cảnh báo tiến độ, vướng,
+    không thửa; `pa_bo_sung` chỉ để biết. Phân tích dữ liệu thật trước khi làm (bản sao chỉ đọc, chỉ số đếm): ĐT762 171 hộ = chưa lập 1,
+    đã lập 1, niêm yết 138, chờ phê duyệt 31; cờ 137 PA 0 đồng / tự lập, 31 trình thiếu ý kiến, 170 ngày bàn giao từ Excel. Buồng lái:
+    `man_hinh_tong_quan.KhungPheu` (việc cấp dự án bước 1-3 `BUOC_DU_AN`, `DaiPheu` một dải `CAO_DAI_PHEU` 12 px, chú giải 8 giai đoạn +
+    cờ bấm được -> `HopHoPheu` cửa sổ danh sách hộ, bấm đúp mở PA; ô phạm vi cả dự án / từng đợt niêm yết / đợt trình; ô Lần PA đang
+    mở / gốc), `KhungViecTiep.dat(viec_tiep, quy_trinh)`. QToolButton có chữ phải setToolButtonStyle(TextBesideIcon) (mặc định chỉ biểu
+    tượng - ảnh thật từng mất hết chữ). Bỏ `ThanhQuyTrinh`; `quy_trinh` còn dùng cho việc cấp dự án + mốc ngày. Test `tests/test_pheu_tien_do.py`.
+  - NÂNG CẤP LƯỢC ĐỒ AN TOÀN (không đổi PHIEN_BAN_CSDL, như COT_PA_LAN_THEM): `pa_lan.dot_trinh_id` (đợt trình theo LẦN; `csdl.
+    dam_bao_cot_pa_lan` lúc thêm cột chép ho.dot_id CHỈ cho hộ có đúng một lần - không đoán), `y_kien_du_thao.lan` (`COT_Y_KIEN_THEM`,
+    `dam_bao_cot_y_kien`, NULL = dòng cũ = lần 1); schema.sql có sẵn; `csdl.mo` thêm khi file có hộ (trước Hoàn tác). Ghi: `quan_ly.gan_dot`
+    -> `lan_pa.gan_dot_trinh` (lần đang mở), `xoa_dot` xóa theo lần; `du_thao._them_y_kien` (cả ba chỗ thêm dòng ý kiến) ghi
+    `lan_pa.lan_niem_yet`. Phễu: lần chưa có dot_trinh_id mà hộ CHƯA có QĐ nào -> dùng ho.dot_id; hộ đã có QĐ lần trước thì ho.dot_id
+    KHÔNG gán cho lần bổ sung. Bản cũ mở file vẫn được (cột thừa); file cũ chỉ xem thiếu cột -> phễu coi như chưa có dữ liệu.
+  - `.venv` (30/10/2026): Python 3.14 của người dùng nay cài cho riêng người dùng `%LOCALAPPDATA%\Programs\Python\Python314` (3.14.10) -
+    `.venv\pyvenv.cfg` trỏ lại chỗ đó (bản cũ `.venv\pyvenv.cfg.bak_3147`). Máy KHÔNG có Git trong PATH: nhánh tạo bằng tay trong `.git`.
+  - PA6 xuất bản một chạm: `man_hinh_xuat_ban.HopXuatBanDot` (4 bước: chọn đợt -> kiểm điều kiện `quan_ly.kiem_tra_xuat_dot` + cờ phễu
+    -> xem trước cả bộ -> xuất / in / gộp PDF; thực hiện qua HopIn ẩn `thuc_hien(xac_nhan=False)`); `app.xuat_ban_dot`, `dot_trinh` mở nó.
+  - PA4 bản đồ trung tâm (`man_hinh_ban_do`): `cb_mau` theo `ban_do_cad.CHE_DO_MAU` (đồng thuận / tiến độ theo hộ = giai đoạn phễu,
+    `man_hinh_tong_quan.MAU_GIAI_DOAN` / lệch DT `ban_do_cad.lech_dien_tich`, `LECH_DT`: trong ranh so DT thu hồi, không ranh so DT
+    nguyên thửa), chú giải `XepDong` dựng lại theo cách tô (`bang_mau`, `mau_cua`), hàng công cụ XepDong (tối thiểu 860 điểm @125%);
+    `KhungBanDo.ve(ds, mau_cua, co_nen, giu_khung)`, `_can_vua` (vẽ trước khi hiện: vừa khung lại ở resizeEvent tới khi người dùng phóng /
+    kéo), `dat_o_nen` (ô ảnh đặt bằng phép affine từ 3 góc WGS84 -> VN-2000, z -10, không nhận chuột), `contextMenuEvent` -> `menu_cho_thua`.
+    Nền vệ tinh `pabt/nen_ban_do.py` (Esri World Imagery, z <= 17, <= 64 ô, đệm `<thư mục máy>\nen_ban_do\esri`, chỉ nhận JPEG / PNG)
+    + `NapNen` (4 luồng chỉ gọi `tai_o`, hàng đợi + QTimer đặt ô ở luồng giao diện, thế hệ bỏ kết quả cũ). Mặc định TẮT, nhớ QSettings
+    `ban_do/nen_ve_tinh` qua `cai_dat_nho` (script chụp ảnh phải chặn - đã lỡ ghi một lần vào HKCU, đã xóa). Ảnh: `ket_qua_kiem_tra/thu_that/
+    chup_ban_do.py` -> `anh_ban_do/`. Test `tests/test_ban_do_pa4.py`.
+  - PA5 làm việc nhóm: (b) `may_chu.dong_bo_ho(bản offline theo hộ)` = `gop_ho_tu_ban_offline(giu=True)`: gộp lên máy chủ, VẪN giữ hộ +
+    bản offline, dời mốc xung đột (dau_vet sau gộp, audit_max của bản offline) - CHÚ Ý hàm này từng có biến cục bộ `giu` (hộ người khác
+    giữ) trùng tên tham số: đã đổi thành `nguoi_khac`. Cài đặt máy `may_chu.json` `tu_dong_bo` (`tu_dong_bo_khi_luu`, mặc định tắt; ô ở
+    HopDuAnMayChu cạnh nút "Đồng bộ (vẫn giữ hộ)" = `dong_bo`) -> `app._tu_dong_bo_sau_luu` sau Ctrl+S (chay_nen; xung đột / mất mạng
+    chỉ thông báo nổi, không ghi đè). (a) `pabt/nhan_wifi.py` `MayNhan` (ThreadingHTTPServer trên IP nội bộ đã chọn, KHÔNG 0.0.0.0, cổng
+    8765… / tự chọn, mã phiên `secrets` trong đường dẫn, chỉ GET trang + POST `tai_len` thân thô + `X-Ten-File`, chỉ JSON
+    `kiem_tra_magic_bytes`, <= 200 MB, <= 100 file / phiên, ghi khối 64 KB -> `.dang_nhan` -> os.replace vào `<thư mục máy>\nhan_wifi\
+    <giờ>_<mã>`), trang điện thoại HTML nhúng (XHR có tiến độ). `pabt/ma_qr.py` = BẢN SAO ĐỘC LẬP di_dong/qr.py (test so lưới).
+    `man_hinh_nhan_wifi.HopNhanWifi` (QR, địa chỉ, chọn IP, bảng file, nhập qua `HopKiemDem.nhap`), nút "Nhận từ điện thoại qua
+    Wi-Fi…" trong hộp Phiếu kiểm đếm (`nhan_wifi(cho)`). Chưa thử với điện thoại thật (đã thử trang bằng trình duyệt trên 127.0.0.1).
+    Test `test_may_chu.TestChiaViecTheoHo.test_dong_bo_van_giu_ho / test_tu_dong_bo_khi_luu`, `tests/test_nhan_wifi.py`.
+  - PA7 tốc độ: `pabt/ghi_xlsx_nhanh.luu` (gọi trong `an_toan.luu_xlsx` - MỌI file Excel xuất ra): trang tính >= `NGUONG_O` 20.000 ô và
+    không có ô ngày / chữ nhiều định dạng / công thức mảng / siêu liên kết / chú thích: openpyxl ghi file với `_cells`, `row_dimensions`
+    (và `merged_cells` khi không có bảo vệ trang / kịch bản / lọc) TẠM RỖNG, `<sheetData>` + `<mergeCells>` dựng bằng chuỗi theo đúng quy
+    tắc `openpyxl.cell._writer` (style_id lấy TRƯỚC khi lưu để bảng kiểu có đủ), chèn lại vào zip. So từng ô / kiểu / ô gộp / dòng / cột với
+    wb.save thường: giống hệt (`tests/test_ghi_xlsx_nhanh.py`, cả bảng tổng hợp thật). Đo: bảng tổng hợp 3.000 hộ ghi file 1,23 -> 0,48 s,
+    tổng 3,65 -> 2,94 s; 5.000 hộ 5,5 s. `ten_cay_lam_nghiep._ten_chuan` lru_cache (mở lại dự án trong phiên không tính lại 5.500 tên).
+    Còn chậm: gộp ô / định dạng gộp của in_an (`_dinh_dang_gop`, `_vung_gop` - đã tối ưu trước), đối chiếu lúc mở dự án (5.000 hộ ~0,55 s).
+  - PA8 cỗ máy thời gian `pabt/co_may_thoi_gian.py`: mốc = SQLite backup + .json (lúc micro giây, lý do, số hộ, tổng, dấu file) ở
+    `<thư mục máy>\moc_thoi_gian\<tên>_<băm đường dẫn 8>`; không đổi từ mốc trước thì không chụp; giữ `GIU_GIO` 24 giờ đủ, rồi mỗi ngày
+    một mốc tới `GIU_NGAY` 30, mốc tay luôn giữ, tối đa `MOC_TOI_DA` 80. `so_sanh` (hộ thêm / bỏ / đổi tiền / đổi hồ sơ theo
+    `may_chu.dau_vet_ho`), `khoi_phuc` (chụp "trước khi khôi phục" rồi thay file), `thu_truoc(con, ham)` (chạy trên bản sao tạm).
+    App: `dong_ho_moc` mỗi `CHU_KY_PHUT` 60 phút, mốc lúc mở (sau sao lưu tự động) và lúc đóng, `chup_moc`, `co_may_thoi_gian` (lệnh
+    'Cỗ máy thời gian (mốc khôi phục)…' menu Tệp tin, LENH_CAN_DU_AN) -> `man_hinh_co_may_thoi_gian.HopCoMayThoiGian`, `khoi_phuc_moc`,
+    `xem_truoc_thao_tac(viec, ham)` (HopXemTruocThayDoi rồi mốc "trước thao tác") - dùng ở `nhap_chi_tiet` vào dự án đang mở (chạy thử với
+    deepcopy(kq.ho)). Test `tests/test_co_may_thoi_gian.py`.
+  - PA9 trợ lý `pabt/tro_ly.py`: NGOẠI TUYẾN `giai_thich_ho` (phương án hiện tại / các lần / quyết định theo 5 cột tien_* / Excel ban đầu
+    theo hạng mục), `nhap_to_trinh`; TRỰC TUYẾN tùy chọn `hoi_claude` qua thư viện chính thức `anthropic` (NẠP KHI DÙNG; cần Python
+    >= 3.10 - CHƯA có trong requirements / bản dựng: bản phát hành hiện chỉ chạy phần ngoại tuyến, đưa thư viện vào bản Win10 là quyết
+    định của người dùng), mô hình mặc định `claude-opus-5-5`, effort medium, `fallbacks` mảng `claude-opus-4-8` + beta
+    `server-side-fallback-2026-06-01`, kiểm `stop_reason` refusal, lỗi theo lớp ngoại lệ của thư viện. Cài đặt `<thư mục máy>\tro_ly_ai.json`
+    (bat mặc định False, mo_hinh, gui_ca_nhan mặc định False, khóa API mã hóa Windows DPAPI `bao_ve` / `mo_khoa`); `an_danh` che họ tên
+    hộ (làm ở luồng giao diện - kết nối CSDL không dùng ở luồng nền), CCCD / CMND, số điện thoại. Lệnh 'Trợ lý (giải thích, soạn
+    nháp)…' (menu Công cụ) -> `man_hinh_tro_ly.HopTroLy` 4 thẻ. Test `tests/test_tro_ly.py` (client GIẢ LẬP - không gọi mạng).
+  - PHÁT HÀNH 1.0.40 (31/10/2026, người dùng: "Yes, bump and build") = toàn bộ đại tu trên. Máy dựng VỪA ĐƯỢC DỰNG LẠI (bản sao dự án
+    30/10 ở `H:\PABT_PhanMem`): KHÔNG còn Git, Python 3.8.10 32-bit / venv38_32, `D:\APP AI PABT\cong_cu_android`, `khoa_android`
+    (khóa ký larc_field.jks - không tìm thấy ở ổ C / D / H / Google Drive). Người dùng cài lại Python 3.8.10 32-bit
+    (31/10/2026) -> venv38_32 tạo lại (nằm thật ở `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\PABT_dev\venv38_32` - MSIX
+    ảo hóa) -> dựng đủ Universal + bộ win10 riêng + `.larcud`, thử máy trắng 4 trường hợp ĐẠT. CHƯA đồng bộ LARC Mobile (dung.py cần JDK /
+    SDK + khóa ký; đẩy Pages cần Git). Ký .apk bằng khóa MỚI thì điện thoại đã cài bản cũ KHÔNG cài đè được (phải gỡ). Bộ win10 riêng thử
+    máy trắng bằng bản sao `thu_may_trang.ps1` đổi tên gói (script gốc chỉ
+    biết tên Universal). PhanTich: `ket_qua_kiem_tra/PhanTich_1.0.40_2026-10-31_0637.md` (lần đo đầu 06:32 lệch vì ổ đĩa bận - đã xóa).
+  - 1.0.40 dựng lại cùng ngày (người dùng: "xử lý hết" sau rà soát 10 agent): mở / nhập dự án -> Màn hình chính (tổng quan + phễu; `mo_trang(0)`
+    rồi `ve_trang_chu`); phễu gọn một hàng tiêu đề + nút "Chi tiết ▾" (`KhungPheu.thu_gon`, nhớ `tong_quan/thu_gon_pheu`). Làm tròn giá đất /
+    đơn giá đọc từ file nay nửa lên như Excel (`tien.lam_tron`; trước `round()` của Python: 2,5 -> 2) ở gia_dat_nq28._so_gia, đổi đồng ->
+    nghìn (gia_dat_nq28, cap_nhat_gia_dat), nhap_don_gia.doc_gia. Bản dựng: PABT.spec bỏ libssl-3-x64 / libcrypto-3-x64 lấy từ System32,
+    rut_gon (PySide2) bỏ Qt5Pdf / VirtualKeyboard / Svg / WebSockets / DBus ở thư mục gốc (Qt5Quick / QmlModels GIỮ - chưa thử bỏ); Universal
+    78,8 -> 74,6 MB. `.gitignore` chặn thêm *.xlsx *.docx *.rar *.zip *.vsix và ảnh ở gốc repo. Rà soát còn để ngỏ (chưa làm): số PA lưu ba
+    nơi (ho / pa_lan / qd_ho có thể lệch), dot_du_thao.so_bb_* không có ô nhập, nhan_wifi chưa có timeout, dữ liệu thật + PABT_PhanMem.rar
+    (1 GB) + FILE NQ28 BẢN FULL.pdf vẫn nằm trong thư mục dự án (người dùng tự dời).
+  - Tiếp (31/10/2026, "Làm tiếp"): `quan_ly.dat_so_pa` ghi cả `pa_lan` lần 1 (ho.so_pa là bản của lần 1 - trước chỉ chiều sua_lan -> ho);
+    qd_ho.so_pa GIỮ là bản ghi của quyết định (không tự đổi). `du_thao.dat_ngay_hop(..., so_bb_bat_dau, so_bb_ket_thuc)` + `so_bien_ban`, hộp
+    "Ngày họp dân" có 2 ô số biên bản (in ở báo cáo tiếp thu ý kiến). `nhan_wifi` XuLy.timeout = 60 s. Test `tests/test_ra_soat_3110.py`.
+  - BẢN ĐỒ NHƯ LARC MOBILE (người dùng 31/10/2026: xem KML / KMZ trên nền vệ tinh; tra tờ / thửa từ KML để biết vị trí thửa thu hồi; nút
+    ngoài bảng xem hộ trên bản đồ, tìm thửa theo số khi máy không có GPS; lưu bản đồ vào file .larc mở lại có sẵn):
+    `nen_ban_do.NEN` (ve_tinh / ve_tinh_ten (mặc định) / duong (OSM) / dia_hinh, = NEN của di_dong), `LOP` (mã lớp = thư mục đệm, 'esri'
+    = như cũ), `tai_o(..., lop=)`, `z_cho_khung`, `o_cua_khung` (<= O_TOI_DA_KHUNG 80 ô). HopBanDo: ô `cb_nen` + `o_nen`, `sl_dam` (độ
+    đậm tô thửa, QSettings ban_do/do_dam), nền tải THEO VÙNG ĐANG XEM (`KhungBanDo.khung_doi` -> `hen_nen` 250 ms -> `nap_nen(tu_dong=True)`;
+    khung chưa hiện: theo khung dự án `ds_o` như cũ), ô nền theo khóa (lớp, z, x, y) `view.o_khoa`, z vẽ = -100 + thứ tự lớp x 20 + z.
+    `mo_kml(files)` lớp KML CHỈ XEM (`view.ve_kml`: vùng / đường / điểm + tên, `kml_thua` [((tờ, thửa) chuẩn, item, mã hộ khớp)] theo
+    `ban_do_kml.so_hieu`, chú thích "Khớp hồ sơ dự án: hộ …"), `bo_kml`; `tim_thua("5/12" | "thửa 12 tờ 5" | "12")`, `xem_ho(ma_ho)` ->
+    `view.danh_dau` (viền #22D3EE + phóng). HopBanDo(con=None) mở được khi chưa có dự án ('Bản đồ thửa đất' rời LENH_CAN_DU_AN; thay
+    bằng 'Xem hộ trên bản đồ…' - nút thanh công cụ danh sách hộ + chuột phải, `app.xem_ho_tren_ban_do`). Lưu trong dự án:
+    `pabt/ban_do_luu.py` bảng `ban_do_lop` (XML KML nén zlib) / `ban_do_o` (ô JPEG / PNG), KHÔNG đổi PHIEN_BAN_CSDL, trong
+    `hoan_tac.BO_QUA`; `HopBanDo.luu_vao_du_an(tai=)` (ô vùng dự án `o_vung_du_an` <= O_LUU_TOI_DA 1500, tải ở chay_nen; OSM không lưu
+    sẵn), mở lại tự nạp lớp + đặt ô đã lưu trước khi tải mạng (`_dat_o_da_luu`). `ban_do_kml.doc_kml_xml(du, ten)`. Test
+    `tests/test_ban_do_ve_tinh.py`; ảnh `ket_qua_kiem_tra/anh_ban_do/ban_do_ve_tinh_kml.png` (script chụp ở scratchpad).
+    Dung lượng (rà soát agent 31/10/2026: 1.500 ô x 3 lớp làm .larc +65 MB, nhân theo sao lưu / mốc / Drive): `O_LUU_TOI_DA` 400 ô
+    TỔNG, chỉ lưu lớp ẢNH (`lop[:1]`), hỏi xác nhận kèm MB (`KB_MOI_O`), nút "Bỏ bản đồ đã lưu" (`bo_ban_do_da_luu` -> xoa_lop / xoa_o
+    + `thu_gon` VACUUM); `csdl.bo_anh_ban_do_ban_sao(dc)` bỏ ban_do_o trên BẢN SAO ở sao_luu_tu_dong và co_may_thoi_gian.chup_moc.
+  - NHÓM A + B (người dùng 31/10/2026 "Làm nhóm A + B" sau rà soát kiến trúc + tốc độ; test `tests/test_ra_soat_3110.py`,
+    `test_may_chu.test_gop_tinh_lai_tom_tat_va_chep_nhat_ky`):
+    A1 `kiem_loi.sua_tu_dong`: bỏ qua hộ không nhận việc và dòng ct_khoan của lần PA đang khóa (đã duyệt / bị thay), dùng csdl.giao_dich.
+    A2 `khoa.KhoaFile.con_hieu_luc`: còn sống khi giờ trong khóa HOẶC mtime file khóa trong HET_HAN; mtime cũ > 3 x HET_HAN = chết dù giờ
+    ghi ở tương lai; `lay()` tạo file O_EXCL (`_tao_loai_tru`), đọc lại sau khi ghi; `app.lam_moi_khoa` mất khóa -> mở lại dự án CHỈ
+    XEM (không nhả khóa của máy kia). Test giả lập hết hạn phải đặt cả `os.utime` (test_ho_so.TestKhoa).
+    A3 `may_chu._gop_ho(..., nhat_ky_tu)`: gộp xong `theo_doi.dong_bo_ho` từng hộ (cột tóm tắt phê duyệt / chi trả), `_TRO_DAT_NULL`
+    (pa_lan.dot_trinh_id trỏ đợt chưa có -> NULL, giữ dòng), chép nhat_ky sau `nhat_ky_max` (sổ nhận về; "[offline] …"), `lay_ve` dùng
+    `_chep_nhat_quan`. A4 `kiem_toan.THEO_DOI['qd_ho']` (tiền QĐ từng hạng mục, chi trả). A5 xem dòng trên.
+    B: `rut_gon` bản PySide2 bỏ thêm Qt5Quick / Qt5QmlModels + DLL trong PySide2\ trùng hệt bản ở gốc; `dung_bo_cai_win._chep_phang`
+    dùng lại file theo SHA-256 MỌI file (khóa {sha: tên phẳng}, cả trong một bản); `theo_doi.tong_hop` cả dự án nhớ bằng csdl.nho (khóa
+    ('theo_doi.tong_hop', tinh_pa), trả bản sao danh sách - đối tượng DÙNG CHUNG không sửa); `hang_nhap_nhanh.lam_san_nen` (luồng nền);
+    `ten_cay_lam_nghiep.ap_ten_khac_khi_can(con, file)` (nhớ dấu danh mục + phiên bản ở <thư mục máy>\chuan_ten_cay.json - không ghi file
+    dự án); `CuaSoLapPA(..., nhung=True)` đặt cờ Widget đầu __init__ (app.mo_lap_pa cho=True), `_nhung_hop` chỉ đặt cờ khi isWindow().
+    SẬP NGẪU NHIÊN (kiem_tra_giao_dien đủ 4 trạng thái, access violation ở sendPostedEvents(DeferredDelete), mỗi lần một lệnh khác):
+    nguyên nhân `man_hinh_tong_quan.KhungViecTiep.dat` lấy bố cục con bằng `takeAt` rồi `deleteLater` - Python cũng giữ / tự hủy ->
+    hủy hai lần; lộ ra từ khi mở dự án vào Màn hình chính (dựng lại khung mỗi lần mở). Nay các dòng trong một khung con `than`, dựng lại
+    = deleteLater MỘT widget. ĐỪNG `takeAt(...).layout().deleteLater()`; xóa các mục của bố cục bằng cách thay widget chứa. Cách khoanh
+    vùng: biến môi trường tạm tắt từng thay đổi rồi chạy lại kiem_tra_giao_dien (mỗi lần ~4 phút; `cmd /c ... > log 2>&1` để thấy vết
+    faulthandler). Cùng đợt: KhungBanDo nghe tín hiệu thanh cuộn (KHÔNG ghi đè scrollContentsBy), `tat()` / `_song` khi đóng; hẹn giờ
+    "Xem hộ trên bản đồ" là QTimer CON của cửa sổ bản đồ (QGraphicsItem không phải QObject - chạm hình đã hủy là sập, không báo lỗi).
+    Tiếp (01/11/2026, "tiếp"): `lap_pa.gan_chan_ho_nhan_viec(con, ds)` (app.mo, bản offline theo hộ, SAU các việc sửa dữ liệu lúc mở):
+    bảng tạm `_ho_nhan_viec` + TRIGGER TẠM BEFORE INSERT / UPDATE / DELETE trên MỌI bảng có cột ma_ho (trừ `BANG_KHONG_CHAN_HO` audit_logs,
+    tho_nhap) -> RAISE(ABORT, TB_HO_KHONG_NHAN) (sqlite3.IntegrityError) - lớp chặn cuối, các hàm ghi vẫn tự kiểm để báo rõ. Cờ
+    `csdl.KHOA_GHI_TOI_THIEU` / `GHI_TOI_THIEU` '1.0.41' (`dat_ghi_toi_thieu` trong `csdl.mo` khi mở để sửa — GUI, CLI, nhập — và
+    lần nữa ở app.mo trước Hoàn tác; bỏ qua `bo_don_gia.sqlite`; `qua_cu_de_ghi(con, __version__)` -> app.mo nhả khóa, mở lại CHỈ XEM +
+    thông báo nổi). TĂNG GHI_TOI_THIEU khi thêm cột / bảng mở rộng mà bản trước ghi sẽ sai dữ liệu. Test `tests/test_ra_soat_3110.py`
+    (TestChanHoNhanViecCSDL, TestGhiToiThieu). PHÁT HÀNH 1.0.41 (01/11/2026) = hai lớp trên.
+    CHƯA làm (nhóm C / đề xuất khác): gom DDL mở rộng lược đồ, cảnh báo cap_nhat.go() khi gói có lược đồ mới hơn bản gốc, PYZ
+    không nén zlib, A+/A− chỉ co giãn widget có kiểu riêng, tách module lớn, test nâng cấp từ file lược đồ cũ thật.
+
 ## Môi trường làm việc
 - Dự án ở `D:\APP AI PABT\PABT_PhanMem` (đường dẫn không dấu; trước 07/10/2026 là `D:\Thư mục mới\…` dạng NFD). File thật của người
   dùng (file dự án `.pabt` thật, `PABT_CHUAN_06-10-2026_QD42.xlsm` – dùng cho `PABT_EXCEL`) ở thư mục cha: chỉ đọc / thử trên bản sao.

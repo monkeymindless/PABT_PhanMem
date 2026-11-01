@@ -12,7 +12,7 @@ from pathlib import Path
 _DS_DR = 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'
 _DS_A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
 _DS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
-_NET = '<a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>'
+_NET = '<a:ln w="12700"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>'  # 1 pt (9525 = 0,75 pt — máy in/WPS hay ẩn)
 _SHEET = 'xl/worksheets/sheet1.xml'
 _RE_NEO_HINH = re.compile(r'<xdr:twoCellAnchor\b.*?</xdr:twoCellAnchor>', re.S)
 

@@ -54,6 +54,7 @@ class TestToanCuc(Co0995):
         self.app.processEvents()
         self.assertTrue(w.banner_ten.isVisibleTo(w))                    # màn hình chào: banner chuẩn
         w.mo(str(_du_an(self.td, 3)))
+        w.mo_trang(0)
         self.app.processEvents()
         self.assertTrue(w.hang_the.isVisibleTo(w))                      # Danh sách hộ
         self.assertFalse(w.banner_ten.isVisibleTo(w))                   # màn hình làm việc: nhường chỗ cho bảng

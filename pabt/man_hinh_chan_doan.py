@@ -118,7 +118,7 @@ class HopChanDoanHeThong(QDialog):
         trai.addWidget(self.lb_tep)
         # ---- phải: nút bảo trì 1-click + hộp đen
         phai = QVBoxLayout()
-        td = QLabel('CÔNG CỤ CỨU HỘ & BẢO TRÌ 1-CLICK:')
+        td = QLabel('Công cụ cứu hộ và bảo trì một nút:')
         td.setProperty('vai', 'tieu_de')
         td.setWordWrap(True)
         phai.addWidget(td)

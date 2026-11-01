@@ -229,9 +229,13 @@ def dat_so_pa(con, ds: list) -> int:
     gt = [(' '.join(str(so or '').split()), chuan_ngay(ngay), m) for m, so, ngay in ds]
     if not gt:
         return 0
+    from .lan_pa import co_bang
+    co_pa_lan = co_bang(con)
     with csdl.giao_dich(con):
         for so, ngay, m in gt:
             con.execute('UPDATE ho SET so_pa = ?, ngay_pa = ? WHERE ma_ho = ?', (so, ngay, m))
+            if co_pa_lan:                           # ho.so_pa là bản của lần 1 (lan_pa.sua_lan ghi chiều ngược lại): giữ hai nơi cùng số
+                con.execute('UPDATE pa_lan SET so_pa = ?, ngay_pa = ? WHERE ma_ho = ? AND lan = 1', (so, ngay, m))
         csdl.ghi_nhat_ky(con, 'Số phương án chi tiết', '; '.join(f'hộ {m}: {so} {ngay}'.strip() for so, ngay, m in gt)[:400])
     return len(gt)
 
@@ -260,6 +264,8 @@ def xoa_dot(con, dot_id: int) -> int:
     """Xóa đợt; các hộ của đợt trở về "chưa xếp đợt" (hồ sơ, thư mục đã xuất giữ nguyên). Trả số hộ được bỏ ra."""
     with csdl.giao_dich(con):
         n = con.execute('UPDATE ho SET dot_id = NULL WHERE dot_id = ?', (dot_id,)).rowcount
+        if 'dot_trinh_id' in {r[1] for r in con.execute('PRAGMA table_info(pa_lan)')}:
+            con.execute('UPDATE pa_lan SET dot_trinh_id = NULL WHERE dot_trinh_id = ?', (dot_id,))
         con.execute('DELETE FROM dot_trinh WHERE id = ?', (dot_id,))
         csdl.ghi_nhat_ky(con, 'Xóa đợt trình', f'id {dot_id}, {n} hộ')
     return n
@@ -270,9 +276,11 @@ def gan_dot(con, ds_ma_ho: list, dot_id) -> int:
     kiem_ds_ho_nhan_viec(con, ds_ma_ho)
     if dot_id is not None and not con.execute('SELECT 1 FROM dot_trinh WHERE id = ?', (dot_id,)).fetchone():
         raise LoiNhap('Đợt trình không còn trong dự án.')
+    from . import lan_pa
     with csdl.giao_dich(con):
         for ma in ds_ma_ho:
             con.execute('UPDATE ho SET dot_id = ? WHERE ma_ho = ?', (dot_id, ma))
+            lan_pa.gan_dot_trinh(con, ma, dot_id)       # 30/10/2026: đợt trình theo LẦN phương án đang mở (phễu tiến độ)
         csdl.ghi_nhat_ky(con, 'Xếp đợt trình', f'{len(ds_ma_ho)} hộ -> đợt {dot_id}')
     return len(ds_ma_ho)
 

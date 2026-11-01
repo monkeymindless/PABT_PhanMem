@@ -37,6 +37,11 @@ class PlacemarkKml:
     da_giac: list = field(default_factory=list)          # [(vòng ngoài [(kđ, vđ)], [lỗ…])]
     duong: list = field(default_factory=list)
     diem: list = field(default_factory=list)
+    mau_duong: str = ''                                  # '#RRGGBB' từ LineStyle (KML aabbggrr)
+    rong_duong: float = 1.0
+    mau_nhan: str = ''
+    lop_cad: str = ''                                    # "Level 10" — mô tả MicroStation / gCadas
+    ban_ve: str = ''                                     # "tanan2" trước dấu |
 
 
 def _the(e) -> str:
@@ -49,10 +54,28 @@ def _khoa(s: str) -> str:
 
 
 def _toa_do(chu: str) -> list:
-    """'106.9,10.9,0 107.0,11.0' -> [(106.9, 10.9), (107.0, 11.0)] (bỏ độ cao; cặp sai bỏ qua)."""
+    """'106.9,10.9,0 107.0,11.0' -> [(106.9, 10.9), (107.0, 11.0)] (bỏ độ cao; cặp sai bỏ qua). Một số phần mềm CAD ghi
+    cả đường bằng dấu phẩy, không có khoảng trắng ('lon,lat,alt,lon,lat,alt') — tách theo bộ ba."""
     kq = []
-    for cap in str(chu or '').split():
-        p = cap.split(',')
+    raw = str(chu or '').strip()
+    if not raw:
+        return kq
+    cap = raw.split()
+    if len(cap) == 1 and cap[0].count(',') >= 5:
+        so = cap[0].split(',')
+        i = 0
+        while i + 1 < len(so):
+            try:
+                kd, vd = float(so[i]), float(so[i + 1])
+            except ValueError:
+                i += 1
+                continue
+            if -180 <= kd <= 180 and -90 <= vd <= 90:
+                kq.append((kd, vd))
+            i += 3 if i + 2 < len(so) else 2
+        return kq
+    for t in cap:
+        p = t.split(',')
         try:
             kd, vd = float(p[0]), float(p[1])
         except (IndexError, ValueError):
@@ -65,7 +88,7 @@ def _toa_do(chu: str) -> list:
 def _vong(e) -> list:
     for c in e.iter():
         if _the(c) == 'coordinates':
-            p = _toa_do(c.text)
+            p = _toa_do(''.join(c.itertext()) if c.text is None else c.text)
             if len(p) >= 2 and p[0] == p[-1]:
                 p.pop()
             return p
@@ -98,7 +121,176 @@ def _hinh(geo, pm: PlacemarkKml) -> None:
             _hinh(c, pm)
 
 
-def _placemark(e, thu_muc: str) -> PlacemarkKml:
+_RE_LOP_CAD = re.compile(r'^(?:([^|\n]{1,40})\|)?\s*(Level\s*[\w-]+|ghichu)\s*$', re.I)
+
+
+def mau_kml_abgr(chu) -> str:
+    """Màu KML 'aabbggrr' -> '#RRGGBB'; gần trong suốt (alpha < 16) hoặc sai định dạng -> ''."""
+    c = str(chu or '').strip().lstrip('#')
+    if not re.fullmatch(r'[0-9A-Fa-f]{8}', c) or int(c[:2], 16) < 16:
+        return ''
+    return f'#{c[6:8]}{c[4:6]}{c[2:4]}'.upper()
+
+
+def lop_cad_tu_mo_ta(mo_ta: str) -> tuple:
+    """Mô tả MicroStation/gCadas 'tanan2|Level 10' -> (bản vẽ, lớp CAD). Không khớp -> ('', '')."""
+    m = _RE_LOP_CAD.match(str(mo_ta or '').strip())
+    if not m:
+        return '', ''
+    return (m.group(1) or '').strip(), (m.group(2) or '').strip()
+
+
+def loai_nhan(chu: str, lop_cad: str = '') -> str:
+    """Chữ của điểm KML -> loại nhãn địa chính (cùng quy tắc với LARC Mobile: loaiNhan)."""
+    c = str(chu or '').strip()
+    if not c:
+        return 'ky_hieu'
+    if re.fullmatch(r'[A-Z]{1,3}\d?\.[A-Z]{1,2}\d+[A-Z]?', c) or (
+            re.fullmatch(r'Level 4[45]', str(lop_cad or '')) and re.fullmatch(r'[A-Z0-9.\-]{2,12}', c)):
+        return 'moc'
+    if re.fullmatch(r'\d{1,4}(\s*/)?', c):
+        return 'thua'
+    if re.fullmatch(r'\(\s*\d+(?:[.,]\d+)?\s*\)', c):
+        return 'dt_th'
+    if re.fullmatch(r'\d+[.,]\d+', c):
+        return 'dt'
+    if re.fullmatch(r'[A-Z]{2,4}(?:\+[A-Z]{2,4})*', c):
+        return 'ld'
+    if re.match(r'^tờ\s*(?:bản\s*đồ\s*)?(?:số)?\s*\d+', c, re.I):
+        return 'to'
+    if len(c) <= 1:
+        return 'ky_hieu'
+    return 'ghi_chu'
+
+
+NGUONG_NHAN = {'ld': 12.0, 'dt': 10.0, 'dt_th': 30.0}     # mét: ghép loại đất / DT về số thửa gần nhất
+
+
+def gom_cum_nhan_thua(diem: list) -> list:
+    """Các điểm đã phân loại (dict loai/x/y/chu, tọa độ mét) -> cụm nhãn thửa (số thửa + loại đất + DT)."""
+    neo = [d for d in diem if d.get('loai') == 'thua']
+    ra = []
+    for a in neo:
+        ra.append(dict(kieu='nhan_thua', neo=a, so_thua=re.sub(r'\s*/\s*$', '', str(a.get('chu') or '')),
+                       x=a['x'], y=a['y'], ld=None, dt=None, dt_th=None, to=None,
+                       lat=a.get('lat'), lon=a.get('lon'), lop_cad=a.get('lop_cad', ''), ban_ve=a.get('ban_ve', '')))
+    theo = {id(a): ra[i] for i, a in enumerate(neo)}
+    ds_to = [d for d in diem if d.get('loai') == 'to']
+    for c in ra:
+        tot, dm = None, 400.0
+        for d in ds_to:
+            m = ((d['x'] - c['x']) ** 2 + (d['y'] - c['y']) ** 2) ** 0.5
+            if m < dm:
+                tot, dm = d, m
+        if tot is not None:
+            c['to'] = tot
+            c['cach_to'] = round(dm)
+            mso = re.search(r'(\d+)', str(tot.get('chu') or ''))
+            c['so_to'] = mso.group(1) if mso else ''
+        else:
+            c['so_to'] = ''
+            c['cach_to'] = None
+    for d in diem:
+        gh = NGUONG_NHAN.get(d.get('loai') or '', 0)
+        if not gh or not neo:
+            continue
+        tot, dm = None, gh
+        for a in neo:
+            m = ((a['x'] - d['x']) ** 2 + (a['y'] - d['y']) ** 2) ** 0.5
+            if m < dm:
+                tot, dm = a, m
+        if tot is None:
+            continue
+        c, k = theo[id(tot)], d['loai']
+        if c[k] is None or dm < c[k][1]:
+            c[k] = (d, dm)
+    for c in ra:
+        c['chu_ld'] = c['ld'][0]['chu'] if c['ld'] else ''
+        c['chu_dt'] = c['dt'][0]['chu'] if c['dt'] else ''
+        c['chu_dt_th'] = re.sub(r'[()\s]', '', c['dt_th'][0]['chu']) if c['dt_th'] else ''
+    return ra
+
+
+def tom_tat_cad(ds: list) -> str:
+    """Tóm tắt lớp KML CAD (đường ranh, nhãn thửa, mốc, ghi chú) — cùng nội dung với LARC Mobile."""
+    n_duong = sum(len(pm.duong) for pm in ds)
+    n_vung = sum(len(pm.da_giac) for pm in ds)
+    loai = [loai_nhan(pm.ten, pm.lop_cad) for pm in ds if pm.diem]
+    n_thua = sum(1 for x in loai if x == 'thua')
+    n_moc = sum(1 for x in loai if x == 'moc')
+    n_gc = sum(1 for x in loai if x == 'ghi_chu')
+    from .tien import so_vn
+    def n(a, t):
+        return f'{so_vn(a)} {t}' if a else ''
+    return ', '.join(x for x in (n(n_duong, 'đường ranh / lưới thửa'), n(n_thua, 'nhãn thửa'), n(n_moc, 'mốc'),
+                                 n(n_gc, 'ghi chú'), n(n_vung, 'đa giác thửa')) if x)
+
+
+def _doc_kieu(el) -> dict:
+    """Style KML -> {line, w, nhan} (màu '#RRGGBB')."""
+    kq = {'line': '', 'w': 1.0, 'nhan': ''}
+    for c in el.iter():
+        t = _the(c)
+        if t == 'LineStyle':
+            for x in c:
+                tx = _the(x)
+                if tx == 'color':
+                    kq['line'] = mau_kml_abgr(x.text)
+                elif tx == 'width':
+                    try:
+                        kq['w'] = max(0.5, float(str(x.text or '1').replace(',', '.')))
+                    except ValueError:
+                        pass
+        elif t in ('LabelStyle', 'IconStyle') and not kq['nhan']:
+            for x in c:
+                if _the(x) == 'color':
+                    kq['nhan'] = mau_kml_abgr(x.text)
+    return kq
+
+
+def _khoa_style(u: str) -> str:
+    s = str(u or '').strip()
+    return ('#' + s.split('#', 1)[-1]) if '#' in s else s
+
+
+def _thu_thap_kieu(goc) -> tuple:
+    kieu, ban_do = {}, {}
+    for e in goc.iter():
+        t, i = _the(e), e.get('id')
+        if t == 'Style' and i:
+            kieu['#' + i] = _doc_kieu(e)
+        elif t == 'StyleMap' and i:
+            for pr in e:
+                if _the(pr) != 'Pair':
+                    continue
+                key = next((str(x.text or '').strip() for x in pr if _the(x) == 'key'), '')
+                url = next((str(x.text or '').strip() for x in pr if _the(x) == 'styleUrl'), '')
+                if key == 'normal' and url:
+                    ban_do['#' + i] = _khoa_style(url)
+    return kieu, ban_do
+
+
+def _kieu_cua(pm_el, kieu: dict, ban_do: dict) -> dict:
+    for c in pm_el:
+        t = _the(c)
+        if t == 'Style':
+            return _doc_kieu(c)
+        if t == 'styleUrl':
+            k = _khoa_style(c.text)
+            for _i in range(4):
+                k = ban_do.get(k, k)
+            return kieu.get(k) or {}
+    return {}
+
+
+def _gan_hinh(el, pm: PlacemarkKml) -> None:
+    """Mọi Polygon / LineString / Point trong Placemark (kể cả bọc MultiGeometry) — giống getElementsByTagName của điện thoại."""
+    for c in el.iter():
+        if _the(c) in ('Polygon', 'LineString', 'Point'):
+            _hinh(c, pm)
+
+
+def _placemark(e, thu_muc: str, kieu: dict | None = None, ban_do: dict | None = None) -> PlacemarkKml:
     pm = PlacemarkKml(thu_muc=thu_muc)
     for c in e:
         t = _the(c)
@@ -114,19 +306,21 @@ def _placemark(e, thu_muc: str) -> PlacemarkKml:
                     pm.du_lieu[_khoa(d.get('name'))] = sua_font_kml(v)
                 elif td == 'SimpleData' and d.get('name'):
                     pm.du_lieu[_khoa(d.get('name'))] = sua_font_kml(str(d.text or '').strip())
-        elif t in ('Polygon', 'LineString', 'Point', 'MultiGeometry'):
-            _hinh(c, pm)
+    pm.ban_ve, pm.lop_cad = lop_cad_tu_mo_ta(pm.mo_ta)
+    st = _kieu_cua(e, kieu or {}, ban_do or {})
+    pm.mau_duong, pm.rong_duong, pm.mau_nhan = st.get('line') or '', float(st.get('w') or 1), st.get('nhan') or ''
+    _gan_hinh(e, pm)
     return pm
 
 
-def _duyet(e, thu_muc: str, ra: list) -> None:
+def _duyet(e, thu_muc: str, ra: list, kieu: dict | None = None, ban_do: dict | None = None) -> None:
     for c in e:
         t = _the(c)
         if t == 'Placemark':
-            ra.append(_placemark(c, thu_muc))
+            ra.append(_placemark(c, thu_muc, kieu, ban_do))
         elif t in ('Folder', 'Document'):
             ten = next((' '.join(str(x.text or '').split()) for x in c if _the(x) == 'name'), '')
-            _duyet(c, (f'{thu_muc} / {ten}' if thu_muc else ten) if t == 'Folder' and ten else thu_muc, ra)
+            _duyet(c, (f'{thu_muc} / {ten}' if thu_muc else ten) if t == 'Folder' and ten else thu_muc, ra, kieu, ban_do)
 
 
 def doc_byte_kml(file) -> bytes:
@@ -169,16 +363,26 @@ def doc_kml(file) -> list:
 
 
 def _doc_kml(file) -> list:
-    du = doc_byte_kml(file)
+    return doc_kml_xml(doc_byte_kml(file), Path(file).name)
+
+
+def doc_kml_xml(du: bytes, ten: str = 'KML') -> list:
+    """Nội dung XML KML (doc_byte_kml - đã kiểm tra an toàn; hoặc bản lưu trong dự án) -> [PlacemarkKml]."""
+    from .an_toan import LoiAnToan, kiem_tra_xml
+    try:
+        kiem_tra_xml(du, ten)
+    except LoiAnToan as e:
+        raise LoiCad(str(e)) from None
     try:
         goc = ET.fromstring(du)
     except ET.ParseError:
         try:
             goc = ET.fromstring(lam_sach_xml(du))
         except ET.ParseError as e:
-            raise LoiCad(f'File "{Path(file).name}" không phải KML hợp lệ: {e}') from None
+            raise LoiCad(f'File "{ten}" không phải KML hợp lệ: {e}') from None
     ra = []
-    _duyet([goc] if _the(goc) != 'kml' else goc, '', ra)
+    kieu, ban_do = _thu_thap_kieu(goc)
+    _duyet([goc] if _the(goc) != 'kml' else goc, '', ra, kieu, ban_do)
     return ra
 
 
@@ -310,8 +514,9 @@ def phan_tich_kml(file, so_to: str | None = None, kinh_tuyen: float | None = Non
         so_nhan = sum(1 for pm in ds if pm.diem and pm.ten)
         if so_duong:
             kq.canh_bao.append(f'File là bản vẽ đường của phần mềm CAD ({so_duong} đường lưới thửa / ranh, {so_nhan} nhãn số thửa, loại đất, mốc…): không '
-                               'có vùng thửa (đa giác) nên không tạo được thửa. Xem bản vẽ này bằng ứng dụng điện thoại (Bản đồ GPS); muốn nhập thửa vào '
-                               'dự án: xuất lại từ phần mềm địa chính dạng vùng (polygon) hoặc dùng bản vẽ .dxf.')
+                               'có vùng thửa (đa giác) nên không tạo được thửa. Xem bản vẽ này bằng "Mở KML / KMZ để xem…" trên Bản đồ thửa đất '
+                               '(lưới thửa, ranh Level, số thửa, mốc); muốn nhập thửa vào dự án: xuất lại từ phần mềm địa chính dạng vùng '
+                               '(polygon) hoặc dùng bản vẽ .dxf.')
         else:
             kq.canh_bao.append('File không có đa giác thửa nào đọc được số thửa / lô.')
     kq.so_to = kq.so_to or (kq.thua[0].so_to if kq.thua else '')

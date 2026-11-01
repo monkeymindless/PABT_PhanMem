@@ -52,6 +52,15 @@ def rut_gon(dist: Path) -> int:
     for f in qt.iterdir():
         if f.is_file() and (not _qt_dll_giu(f.name, giu) or not _qt_pyd_giu(f.name, giu_pyd) or f.name in BO_FILE):
             bo.append(f)
+    if qt.name == 'PySide2':                        # bản Win7: Qt5*.dll nằm ở thư mục gốc, không ai nhập (đo 31/10/2026: ~10 MB); kiem_dll chặn nếu thiếu
+        # Quick / QmlModels: chỉ VirtualKeyboard nhập (Qt5Qml KHÔNG nhập Quick - đồ thị nhập PE, rà soát 31/10/2026)
+        bo += [f for f in noi.glob('Qt5*.dll')
+               if re.fullmatch(r'Qt5(Pdf|VirtualKeyboard|Svg|WebSockets|DBus|Quick|QmlModels)\.dll', f.name, re.I)]
+        # bản trùng hệt của DLL đã có ở thư mục gốc (PySide2\MSVCP140.dll): Windows nạp DLL theo tên - một bản là đủ
+        for f in qt.glob('*.dll'):
+            g = noi / f.name
+            if g.is_file() and g.stat().st_size == f.stat().st_size and g.read_bytes() == f.read_bytes():
+                bo.append(f)
     for ten in ('translations', 'qml', 'resources', 'examples'):
         if (qt / ten).exists():
             bo.append(qt / ten)

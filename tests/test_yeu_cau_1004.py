@@ -154,7 +154,7 @@ class TestNhom4(_Co):
         self.addCleanup(h.close)
         self.assertIn('3 hộ', h.lb_pl['quy_mo'].text())
         self.assertIn('Chưa tiếp nhận', h.lb_pl['trang_thai'].text())
-        self.assertEqual(h.b_phap_ly.text(), 'Kiểm tra & Tiếp nhận Hồ sơ Pháp lý Đầu vào…')
+        self.assertEqual(h.b_phap_ly.text(), 'Kiểm tra && Tiếp nhận hồ sơ pháp lý đầu vào…')
         d = h.mo_tiep_nhan(cho=False)
         self.addCleanup(d.close)
         self.assertIs(d.con, con)

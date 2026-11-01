@@ -12,6 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from . import an_toan as _an_toan
+from .tien import lam_tron
 from .lap_pa import bo_dau
 
 VAN_BAN = 'Nghị quyết 28/2025/NQ-HĐND ngày 10/12/2025 của HĐND tỉnh Đồng Nai (bảng giá đất áp dụng từ 01/01/2026)'
@@ -304,10 +305,10 @@ def _so_gia(v) -> int:
     if isinstance(v, bool):
         return 0
     if isinstance(v, (int, float)):
-        return int(round(v))
+        return int(lam_tron(v))
     from .tien import doc_so_vn
     try:
-        return int(round(float(doc_so_vn(str(v)))))
+        return int(lam_tron(doc_so_vn(str(v))))
     except (ValueError, ArithmeticError):
         return 0
 
@@ -416,7 +417,7 @@ def doc_excel(file) -> tuple:
             if don_vi == 'dong':
                 for r in dong[bat:]:
                     for k, _ in COT:
-                        r[k] = int(round(r[k] / 1000))
+                        r[k] = int(lam_tron(r[k], -3)) // 1000
     finally:
         wb.close()
     if not dong:

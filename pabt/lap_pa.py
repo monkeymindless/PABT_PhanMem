@@ -43,6 +43,35 @@ def kiem_ho_nhan_viec(con, ma_ho) -> None:
                       'Bản offline theo hộ chỉ gộp các hộ đã nhận: hộ thêm mới ở đây sẽ không lên máy chủ. Thêm hộ trên máy chủ.')
 
 
+BANG_KHONG_CHAN_HO = ('audit_logs', 'tho_nhap')     # sổ ghi / dữ liệu thô: không thuộc "việc" của hộ
+
+
+def gan_chan_ho_nhan_viec(con, ds_ma_ho) -> int:
+    """Lớp chặn CUỐI ở tầng CSDL cho bản offline theo hộ (rà soát kiến trúc 31/10/2026): TRIGGER TẠM trên mọi bảng có cột ma_ho -
+    ghi (thêm / sửa / xóa) dòng của hộ không nằm trong ds_ma_ho thì hủy câu lệnh. Các hàm ghi vẫn tự kiểm (kiem_ho_nhan_viec) để có
+    thông báo rõ; trigger bắt các đường ghi lọt (hàm mới viết quên kiểm, kết nối dùng chung). Bảng tạm _ho_nhan_viec giữ mã hộ được
+    ghi; không ghi gì vào file dự án. Trả số trigger đã tạo."""
+    con.execute('CREATE TEMP TABLE IF NOT EXISTS _ho_nhan_viec (ma_ho INTEGER PRIMARY KEY)')
+    con.execute('DELETE FROM _ho_nhan_viec')
+    con.executemany('INSERT OR IGNORE INTO _ho_nhan_viec (ma_ho) VALUES (?)', [(int(m),) for m in ds_ma_ho])
+    tb = TB_HO_KHONG_NHAN.replace("'", "''")
+    n = 0
+    for (bang,) in con.execute("SELECT name FROM main.sqlite_master WHERE type = 'table'").fetchall():
+        if bang in BANG_KHONG_CHAN_HO or bang.startswith('sqlite_'):
+            continue
+        if 'ma_ho' not in {r[1] for r in con.execute(f'PRAGMA main.table_info("{bang}")')}:
+            continue
+        ngoai = '{0}.ma_ho NOT IN (SELECT ma_ho FROM _ho_nhan_viec)'
+        moi = (f'NEW.ma_ho IS NULL OR {ngoai.format("NEW")}') if bang == 'ho' else ngoai.format('NEW')
+        for ten, khi, dk in (('them', 'INSERT', moi), ('sua', 'UPDATE', f'{ngoai.format("OLD")} OR {ngoai.format("NEW")}'),
+                             ('xoa', 'DELETE', ngoai.format('OLD'))):
+            con.execute(f'''CREATE TEMP TRIGGER IF NOT EXISTS _nv_{bang}_{ten} BEFORE {khi} ON main."{bang}" WHEN {dk}
+                            BEGIN SELECT RAISE(ABORT, '{tb}'); END''')
+            n += 1
+    con.commit()                                    # tạo bảng / trigger tạm mở giao dịch ngầm: chốt ngay (như hoan_tac / kiem_toan)
+    return n
+
+
 def kiem_ds_ho_nhan_viec(con, ds_ma_ho) -> None:
     """Chặn thao tác ghi hàng loạt nếu trong ds_ma_ho có hộ không thuộc danh sách nhận việc của bản offline theo hộ."""
     ds = ho_nhan_viec(con)

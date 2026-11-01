@@ -37,15 +37,23 @@ class HopKiemDem(QDialog):
         self.b_du_lieu = QPushButton('Xuất dữ liệu cho ứng dụng điện thoại…')
         self.b_du_lieu.setToolTip('File .json mở trong ứng dụng LARC Mobile đã cài (Android .apk, iPhone bản PWA).')
         self.b_nhap = QPushButton('Nhập kết quả kiểm đếm (.json)…')
+        self.b_wifi = QPushButton('Nhận từ điện thoại qua Wi-Fi…')
+        self.b_wifi.setToolTip('Điện thoại cùng mạng Wi-Fi quét mã QR rồi gửi file kết quả .json thẳng về máy tính (không cần Zalo / cáp)')
         self.b_anh = QPushButton('Gắn ảnh hiện trạng từ thư mục…')
+        self.b_dan = QPushButton('Dán tài sản vào hộ đang chọn…')
+        self.b_dan.setToolTip('Mở hộp Dán danh sách tài sản (chữ, Excel, ảnh / PDF scan) cho hộ đang chọn trên bảng.')
+        self.b_pa = QPushButton('Mở lập phương án hộ…')
         self.b_du_lieu.clicked.connect(lambda: self.xuat_du_lieu())
         self.b_nhap.clicked.connect(lambda: self.nhap())
+        self.b_wifi.clicked.connect(lambda: self.nhan_wifi())
         self.b_anh.clicked.connect(lambda: self.gan_anh())
-        for b in (self.b_du_lieu, self.b_nhap, self.b_anh):
+        self.b_dan.clicked.connect(lambda: self.dan_tai_san())
+        self.b_pa.clicked.connect(lambda: self.mo_lap_pa())
+        for b in (self.b_du_lieu, self.b_nhap, self.b_wifi, self.b_anh, self.b_dan, self.b_pa):
             h.addWidget(b)
         lo.addWidget(hang)
         if chi_doc:
-            for b in (self.b_nhap, self.b_anh):
+            for b in (self.b_nhap, self.b_wifi, self.b_anh, self.b_dan):
                 b.setEnabled(False)
                 b.setToolTip('Dự án đang mở chỉ xem.')
         self.bang = QTableWidget(0, 4)
@@ -56,7 +64,7 @@ class HopKiemDem(QDialog):
         for c, w in enumerate((50, 260, 70)):
             self.bang.setColumnWidth(c, w)
         self.bang.horizontalHeader().setStretchLastSection(True)
-        self.bang.cellDoubleClicked.connect(lambda r, _c: self.mo_anh(r))
+        self.bang.cellDoubleClicked.connect(lambda r, c: self._bam_kep(r, c))
         lo.addWidget(self.bang, 2)
         self.o_kq = QPlainTextEdit()
         self.o_kq.setReadOnly(True)
@@ -128,10 +136,20 @@ class HopKiemDem(QDialog):
             chua = [x for x in kq['chua_khop'] if not x['ung_vien']]     # nhiều hộ giống nhau: không tự tạo, người dùng chọn tay
             if chua:
                 if tao_ho_moi is None:
-                    tao_ho_moi = not self.im_lang and QMessageBox.question(
-                        self, 'Phiếu kiểm đếm', f'{len(chua)} hộ trong phiếu chưa có trong dự án:\n- '
-                        + '\n- '.join(f'{x["ten"]} ({x["so_dong"]} dòng)' for x in chua[:15])
-                        + ('\n…' if len(chua) > 15 else '') + '\n\nThêm thành hộ mới của dự án?') == QMessageBox.StandardButton.Yes
+                    if self.im_lang:
+                        tao_ho_moi = False
+                    else:
+                        from .giao_dien import hop_ket_qua
+                        chap = {'ok': False}
+
+                        def _them(d):
+                            chap['ok'] = True
+                            d.accept()
+                        hop_ket_qua(self, f'{len(chua)} hộ trong phiếu chưa có trong dự án.',
+                                    [f'{x["ten"]} ({x["so_dong"]} dòng)' for x in chua],
+                                    tieu_de_ds='Hộ chưa khớp', canh_bao=True, tieu_de='Phiếu kiểm đếm',
+                                    nut_them=[('Thêm hộ mới', _them)])
+                        tao_ho_moi = chap['ok']
                 if tao_ho_moi:
                     with con_tro_cho():
                         k2 = pk.nhap_ket_qua_kiem_dem(self.con, file, self.dm, tao_ho_moi=True, chi={x['khoa'] for x in chua})
@@ -153,6 +171,18 @@ class HopKiemDem(QDialog):
         if kq.get('so_anh'):
             self.nap()
         return kq
+
+    def nhan_wifi(self, cho: bool = True):
+        """Hộp nhận file kết quả từ điện thoại qua Wi-Fi nội bộ (man_hinh_nhan_wifi); file nhận về nhập bằng self.nhap.
+        cho=False (kiểm thử): trả hộp, không chờ."""
+        if self.chi_doc:
+            return None
+        from .man_hinh_nhan_wifi import HopNhanWifi
+        h = HopNhanWifi(self, nhap=lambda f: self.nhap(f), im_lang=self.im_lang)
+        if cho and not self.im_lang:
+            h.exec()
+            return None
+        return h
 
     def gan_anh(self, thu_muc=None):
         if self.chi_doc:
@@ -181,3 +211,44 @@ class HopKiemDem(QDialog):
             anh = pk.anh_cua_ho(self.con, self._ma[r])
             if anh and not self.im_lang:
                 QDesktopServices.openUrl(QUrl.fromLocalFile(anh[0]['duong_dan']))
+
+    def _bam_kep(self, r: int, c: int) -> None:
+        """Bấm đúp cột Ảnh: mở ảnh; cột khác: mở lập phương án hộ."""
+        if c == 3:
+            self.mo_anh(r)
+        else:
+            self.mo_lap_pa(r)
+
+    def _ma_hang(self, r=None):
+        if r is None:
+            r = self.bang.currentRow()
+        if 0 <= r < len(getattr(self, '_ma', ())):
+            return self._ma[r]
+        return None
+
+    def _cua_so_chinh(self):
+        w = self.parent()
+        while w is not None and not hasattr(w, 'mo_lap_pa'):
+            w = w.parent()
+        return w
+
+    def mo_lap_pa(self, r=None, cho: bool = True):
+        """Mở cửa sổ / tab lập phương án của hộ đang chọn (hoặc dòng r)."""
+        ma = self._ma_hang(r)
+        if ma is None:
+            if not self.im_lang:
+                QMessageBox.information(self, 'Phiếu kiểm đếm', 'Chọn một hộ trên bảng trước.')
+            return None
+        cha = self._cua_so_chinh()
+        if cha is None:
+            return None
+        return cha.mo_lap_pa(ma, cho=cho)
+
+    def dan_tai_san(self, cho: bool = True, clip: str | None = None):
+        """Mở hộp Dán danh sách tài sản cho hộ đang chọn."""
+        if self.chi_doc:
+            return None
+        hop = self.mo_lap_pa(cho=False)
+        if hop is None or not hasattr(hop, 'mo_dan_tai_san'):
+            return None
+        return hop.mo_dan_tai_san(cho=cho, clip=clip)

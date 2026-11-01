@@ -46,6 +46,7 @@ class LanPA:
     loai: str = BO_SUNG
     thay_the: int = 0                               # lần điều chỉnh: số lần bị thay thế (0: không thay lần nào)
     bi_thay_boi: int = 0                            # lần này đã bị lần điều chỉnh số … thay thế (0: chưa)
+    dot_trinh_id: int | None = None                 # 30/10/2026: đợt trình thẩm định của lần này (None: chưa ghi theo lần)
 
     @property
     def la_dieu_chinh(self) -> bool:
@@ -120,7 +121,8 @@ def ds_lan(con, ma_ho: int) -> list:
             cot = r.keys()
             kq[r['lan']] = LanPA(r['lan'], r['ten'], r['ngay_lap'], r['so_pa'], r['ngay_pa'], r['trang_thai'], bool(r['khoa']),
                                  r['ghi_chu'], loai=(r['loai'] if 'loai' in cot else BO_SUNG) or BO_SUNG,
-                                 thay_the=int(r['thay_the'] or 0) if 'thay_the' in cot else 0)
+                                 thay_the=int(r['thay_the'] or 0) if 'thay_the' in cot else 0,
+                                 dot_trinh_id=r['dot_trinh_id'] if 'dot_trinh_id' in cot else None)
     for lan in set(dong) | set(qd) | {1}:
         kq.setdefault(lan, LanPA(lan, ten_mac_dinh(lan)))
     for lan, x in kq.items():
@@ -175,6 +177,22 @@ def lan_chua_duyet(con, ma_ho: int) -> int | None:
     if not co_qd:
         return next((x.lan for x in ds if x.so_dong), ds[0].lan if ds else 1)
     return next((x.lan for x in ds if not x.qd and x.so_dong), None)
+
+
+def gan_dot_trinh(con, ma_ho: int, dot_id) -> int | None:
+    """Ghi đợt trình (dot_id None: bỏ) cho LẦN phương án đang mở của hộ (lan_mac_dinh); trả số lần đã ghi. Trong giao dịch của nơi
+    gọi. File chưa có bảng pa_lan: None (chỉ còn ho.dot_id như trước)."""
+    if not co_bang(con):
+        return None
+    lan = lan_mac_dinh(con, ma_ho)
+    _dam_bao_dong(con, ma_ho, lan)
+    con.execute('UPDATE pa_lan SET dot_trinh_id = ? WHERE ma_ho = ? AND lan = ?', (dot_id, ma_ho, lan))
+    return lan
+
+
+def lan_niem_yet(con, ma_ho: int) -> int | None:
+    """Lần phương án được đưa vào đợt niêm yết bây giờ = lần đang mở (lan_mac_dinh); file chưa có pa_lan: None."""
+    return lan_mac_dinh(con, ma_ho) if co_bang(con) else None
 
 
 def _dam_bao_dong(con, ma_ho: int, lan: int) -> None:

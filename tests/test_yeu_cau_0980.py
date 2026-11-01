@@ -72,7 +72,7 @@ class TestBannerVaThanhTrangThai(CoSo):
             b = self.w.nut_ty_le[k]
             self.assertEqual(b.objectName(), 'nut_zoom')
             qss = b.styleSheet()
-            for s in ('#CBD5E1', '1px solid'):
+            for s in ('#8696AB', '1px solid'):
                 self.assertIn(s, qss)
             self.assertRegex(qss, r'border-radius: [45]px')                 # 4px (phóng cỡ chữ -> 5px)
         self.assertNotEqual(self.w.nut_ty_le['ty_le'].objectName(), 'nut_zoom')       # "110%" là chữ bấm, không khung

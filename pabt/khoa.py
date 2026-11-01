@@ -44,14 +44,34 @@ class KhoaFile:
     def la_cua_toi(self, k: dict | None) -> bool:
         return bool(k) and all(k.get(x) == v for x, v in self.cua_toi.items())
 
+    def _tuoi_file(self) -> float | None:
+        try:
+            return time.time() - self.p.stat().st_mtime
+        except OSError:
+            return None
+
+    def con_hieu_luc(self, k: dict | None) -> bool:
+        """Khóa còn sống. Rà soát kiến trúc 31/10/2026: trước đây chỉ so 'cap_nhat' (đồng hồ MÁY KIA) với đồng hồ máy này - hai máy lệch
+        giờ quá HET_HAN thì khóa hết hạn sớm / không bao giờ hết. Nay: còn sống khi giờ ghi trong khóa HOẶC thời điểm sửa file khóa (máy
+        chủ chia sẻ / ổ đĩa ghi) còn trong HET_HAN; file khóa không được sửa quá 3 x HET_HAN thì chắc chắn đã chết (máy kia tắt đột ngột)
+        dù giờ ghi bên trong ở tương lai (đồng hồ máy kia chạy nhanh)."""
+        if not k:
+            return False
+        tf = self._tuoi_file()
+        if tf is not None and tf > 3 * HET_HAN:
+            return False
+        try:
+            tk = time.time() - float(k.get('cap_nhat', 0))
+        except (TypeError, ValueError):
+            tk = HET_HAN + 1
+        return tk <= HET_HAN or (tf is not None and tf <= HET_HAN)
+
     def nguoi_khac(self) -> dict | None:
         """Khóa còn hiệu lực của máy / phiên khác, nếu có."""
         k = self.doc()
         if not k or self.la_cua_toi(k):
             return None
-        if time.time() - float(k.get('cap_nhat', 0)) > HET_HAN:
-            return None
-        return k
+        return k if self.con_hieu_luc(k) else None
 
     def _ghi(self, mo_luc=None) -> None:
         k = dict(self.cua_toi, mo_luc=mo_luc or time.time(), cap_nhat=time.time())
@@ -66,15 +86,36 @@ class KhoaFile:
                 pass
             raise
 
+    def _tao_loai_tru(self) -> bool:
+        """Tạo file khóa CHỈ KHI chưa có (O_EXCL - hai máy mở cùng lúc thì một máy thắng). False: đã có file (máy khác vừa tạo)."""
+        k = dict(self.cua_toi, mo_luc=time.time(), cap_nhat=time.time())
+        try:
+            fd = os.open(str(self.p), os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+        except FileExistsError:
+            return False
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(json.dumps(k, ensure_ascii=False))
+        return True
+
     def lay(self, ep: bool = False):
         """Giữ khóa. Trả (True, None) nếu được; (False, khóa của người khác) nếu đang bị khóa và không ép."""
         k = self.nguoi_khac()
         if k and not ep:
             return False, k
         try:
-            self._ghi()
+            if ep or self.p.exists():               # ép / khóa cũ đã hết hạn: ghi đè
+                self._ghi()
+            elif not self._tao_loai_tru():
+                k = self.nguoi_khac()                # máy khác vừa tạo khóa trong lúc này
+                if k:
+                    return False, k
+                self._ghi()
         except OSError:
             return True, None             # thư mục không ghi được: vẫn cho mở, không khóa
+        if not ep:                                  # hai máy cùng ghi đè khóa hết hạn: đọc lại, ai không còn là chủ thì nhường
+            k2 = self.doc()
+            if k2 and not self.la_cua_toi(k2) and self.con_hieu_luc(k2):
+                return False, k2
         self.dang_giu = True
         return True, None
 

@@ -187,6 +187,7 @@ class TestTheSoVaDanhSach(CoNavy):
         from pabt.tien import D, vn
         ud, w = self._cua_so(6)
         n = len(w.mo_hinh.dong)
+        w.mo_trang(0)
         self.assertTrue(w.dai_cong_ds.isVisibleTo(w))
         self.assertEqual(w.dai_cong_ds.height(), ud.CAO_DAI_CONG_CU)
         t = sum(d['so_thua'] for d in w.mo_hinh.dong)

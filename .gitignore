@@ -25,6 +25,16 @@ du_lieu/
 *.xls
 *.doc
 *.pdf
+# file Office / nén / ảnh để ở thư mục dự án (danh sách hộ thật, tài liệu, sao lưu): không đưa vào repo
+*.xlsx
+*.docx
+*.rar
+*.zip
+*.vsix
+/*.png
+/*.jpg
+/*.jpeg
+!di_dong/**
 
 # hồ sơ đợt trình xuất ra (<tên file dự án> - Hồ sơ PA\: phương án chi tiết, bảng tổng hợp có họ tên thật)
 * - Hồ sơ PA/

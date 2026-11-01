@@ -220,8 +220,8 @@ def _bang(cot: list) -> QTableWidget:
     return b
 
 
-_CANH_PHAI = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-_CANH_TRAI = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+_CANH_PHAI = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+_CANH_TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 _CHU_DAM = []
 
 
@@ -1016,7 +1016,7 @@ class KhungAnToanVon(QFrame):
         lo.setContentsMargins(10, 8, 10, 8)
         lo.setSpacing(6)
         h = QHBoxLayout()
-        td = QLabel('Đối soát khái toán Pre-F/S & an toàn nguồn vốn')
+        td = QLabel('Đối soát khái toán Pre-F/S và an toàn nguồn vốn')
         td.setProperty('vai', 'tieu_de')
         td.setWordWrap(True)
         h.addWidget(td, 1)
@@ -1196,8 +1196,9 @@ class KhungBangTongHop(_Khung):
 
     def showEvent(self, e):
         super().showEvent(e)
-        self._ve_kpi()
-        self._nap_the(self.tab.currentIndex())
+        if self._can_nap:                               # 1.0.44: không dựng lại KPI/bảng mỗi lần hiện (menu trái)
+            self._ve_kpi()
+            self._nap_the(self.tab.currentIndex())
 
     def _nap_the(self, i: int):
         if i in self._can_nap:

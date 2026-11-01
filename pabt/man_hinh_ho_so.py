@@ -855,7 +855,7 @@ class KhungHoSo(QWidget):
 
         def m2(v):
             return '—' if v is None else f'{so_vn(v)} m²'
-        self.lb_tieu_de_thua.setText(f'II. Thửa đất thu hồi & nguồn gốc ({tt["so_thua"]} thửa)')
+        self.lb_tieu_de_thua.setText(f'II. Thửa đất thu hồi && nguồn gốc ({tt["so_thua"]} thửa)')
         self.lb_tom_tat_thua.setText(
             f'<b>Tổng hợp địa chính hộ:</b> Tổng số thửa: <b>{tt["so_thua"]}</b> thửa  ·  Số tờ bản đồ: <b>{tt["so_to"]}</b> tờ  ·  '
             f'Tổng DT nguyên thửa: <b>{m2(tt["dt_nguyen_thua"])}</b>  ·  Tổng DT thu hồi: <b>{m2(tt["dt_thu_hoi"])}</b>  ·  '
@@ -999,7 +999,7 @@ class KhungHoSo(QWidget):
         r = self.bang.currentRow()
         sua = self.bang.editTriggers() != QAbstractItemView.EditTrigger.NoEditTriggers
         menu.addSeparator()
-        a = menu.addAction('Mở hộp soạn Nguồn gốc & Vị trí đầy đủ…\tEnter')
+        a = menu.addAction('Mở hộp soạn Nguồn gốc && Vị trí đầy đủ…\tEnter')
         a.setEnabled(r >= 0 and sua)
         a.triggered.connect(lambda _=False, r=r: self.sua_dong(r))
         menu.addSeparator()

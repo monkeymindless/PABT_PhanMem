@@ -426,10 +426,25 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
 
 def sua_tu_dong(con) -> int:
     """Sửa lỗi trình bày: họ tên (khoảng trắng, chữ hoa, chữ tổ hợp), địa chỉ / nơi cấp / ghi chú (khoảng trắng, chữ tổ hợp),
-    số CCCD (bỏ ký tự khác số), tên / ghi chú / quy cách các dòng phương án (chữ tổ hợp, khoảng trắng). Trả số ô đã sửa."""
+    số CCCD (bỏ ký tự khác số), tên / ghi chú / quy cách các dòng phương án (chữ tổ hợp, khoảng trắng). Trả số ô đã sửa.
+    Rà soát kiến trúc 31/10/2026: KHÔNG sửa hộ không nhận việc (bản offline theo hộ) và dòng của lần phương án đang khóa (đã có quyết định
+    phê duyệt / bị thay) - trước đây sửa cả, làm đổi chữ bản in của phương án đã duyệt."""
+    from . import lan_pa
+    from .lap_pa import ho_nhan_viec
+    from .nghiep_vu import co_cot_lan
+    nhan = ho_nhan_viec(con)
+    khoa = {}
+
+    def lan_khoa(ma_ho, lan) -> bool:
+        if ma_ho not in khoa:
+            khoa[ma_ho] = {x.lan for x in lan_pa.ds_lan(con, ma_ho) if x.khoa}
+        return (lan or 1) in khoa[ma_ho]
+    cot_lan = 'lan' if co_cot_lan(con) else '1'
     n = 0
-    with con:
+    with csdl.giao_dich(con):
         for h in con.execute('SELECT ma_ho, ho_ten, dia_chi, noi_cap, ghi_chu, so_cccd FROM ho').fetchall():
+            if nhan is not None and h['ma_ho'] not in nhan:
+                continue
             ten = chuan_chu(h['ho_ten'])
             moi = dict(ho_ten=chuan_ho_ten(ten) if la_ho_ten_don(ten) and not loi_font(ten) else ten,
                        dia_chi=chuan_chu(h['dia_chi']), noi_cap=chuan_chu(h['noi_cap']), ghi_chu=chuan_chu(h['ghi_chu']),
@@ -438,7 +453,9 @@ def sua_tu_dong(con) -> int:
             if doi:
                 con.execute(f'UPDATE ho SET {", ".join(k + " = ?" for k in doi)} WHERE ma_ho = ?', (*doi.values(), h['ma_ho']))
                 n += len(doi)
-        for r in con.execute('SELECT id, ten, ghi_chu, quy_cach FROM ct_khoan').fetchall():
+        for r in con.execute(f'SELECT id, ma_ho, {cot_lan} AS lan, ten, ghi_chu, quy_cach FROM ct_khoan').fetchall():
+            if (nhan is not None and r['ma_ho'] not in nhan) or lan_khoa(r['ma_ho'], r['lan']):
+                continue
             moi = {k: chuan_chu(r[k]) for k in ('ten', 'ghi_chu', 'quy_cach')}
             moi['ten'] = moi['ten'][:1].upper() + moi['ten'][1:]          # 'cây xoài…' -> 'Cây xoài…'
             doi = {k: v for k, v in moi.items() if v != (r[k] or '')}

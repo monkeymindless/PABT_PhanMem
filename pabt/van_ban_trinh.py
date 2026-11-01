@@ -778,13 +778,13 @@ def _p(*chay, can: str = 'both', truoc: int = 0, sau: int = 60, dau_dong: int = 
 
 def _bang(hang: list, rong: list, vien: bool = True, doc: str = 'center', lech: int = 0) -> str:
     """hang: [[nội dung ô (chuỗi các w:p)]]. Trang A4 dọc lề trái 3 cm, phải 2 cm: tổng độ rộng cột <= 9.071 (twip)."""
-    b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="4" w:space="0" w:color="auto"/>'
-                for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
+    from . import openxml_word as ox
     luoi = ''.join(f'<w:gridCol w:w="{x}"/>' for x in rong)
-    dong = ''.join('<w:tr>' + ''.join(f'<w:tc><w:tcPr><w:tcW w:w="{rong[i]}" w:type="dxa"/><w:vAlign w:val="{doc}"/></w:tcPr>'
-                                      f'{o}</w:tc>' for i, o in enumerate(h)) + '</w:tr>' for h in hang)
+    dong = ''.join('<w:tr>' + ''.join(
+        f'<w:tc><w:tcPr><w:tcW w:w="{rong[i]}" w:type="dxa"/>{ox.xml_tc_borders(vien)}<w:vAlign w:val="{doc}"/></w:tcPr>'
+        f'{o}</w:tc>' for i, o in enumerate(h)) + '</w:tr>' for h in hang)
     vi_tri = f'<w:tblInd w:w="{lech}" w:type="dxa"/>' if lech else '<w:jc w:val="center"/>'      # lech: lùi trái (twip, âm)
-    return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong)}" w:type="dxa"/>{vi_tri}<w:tblBorders>{b}</w:tblBorders>'
+    return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong)}" w:type="dxa"/>{vi_tri}{ox.xml_tbl_borders(vien)}'
             f'<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="45" w:type="dxa"/><w:right w:w="45" w:type="dxa"/>'
             f'</w:tblCellMar></w:tblPr><w:tblGrid>{luoi}</w:tblGrid>{dong}</w:tbl>')
 

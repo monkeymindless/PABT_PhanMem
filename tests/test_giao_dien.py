@@ -328,7 +328,10 @@ class TestMau(unittest.TestCase):
                 dau = next(b for b in nut if b.defaultAction() is w.lenh['Màn hình chính'])
                 self.assertEqual(nut.index(dau), 0)                          # đầu nhóm "Dự án & dự toán"
                 w.mo(str(_du_an(Path(td), 3)))
+                self.assertEqual(w.trang.currentIndex(), ud.TRANG_CHAO)      # 1.0.40: mở dự án vào Màn hình chính
+                w.lenh[ud.TRANG[0]].trigger()
                 self.assertEqual(w.trang.currentIndex(), 0)
+                w.ve_trang_chu()
                 w.lenh['Màn hình chính'].trigger()
                 self.assertEqual(w.trang.currentIndex(), ud.TRANG_CHAO)
                 self.assertIsNotNone(w.con)                                  # dự án vẫn mở
@@ -462,13 +465,15 @@ class TestMau(unittest.TestCase):
                 w = ud.CuaSoChinh(menu_trai=True)
                 w.show()
                 w.mo(str(_du_an(Path(td), 4)))
-                self.assertTrue(w.lenh[ud.TRANG[0]].isChecked())                 # mở: đánh dấu Danh sách hộ
+                self.assertTrue(w.lenh['Màn hình chính'].isChecked())            # 1.0.40: mở vào Màn hình chính
+                w.mo_trang(0)
+                self.assertTrue(w.lenh[ud.TRANG[0]].isChecked())                 # Danh sách hộ
                 self.assertEqual(list(w.bang_tong_hop.THE), ['Cơ cấu kinh phí dự án', 'Bảng kinh phí chi tiết',
                                                              'Đối soát dự toán Pre-F/S'])
                 self.assertEqual(w.bang_tong_hop.tab.count(), 3)
                 w.mo_trang(ud.TRANG_TONG_HOP)
                 self.assertEqual(w.trang.currentIndex(), ud.STACK_TONG_HOP)
-                self.assertTrue(w.lb_trang.text().startswith('BẢNG TỔNG HỢP KINH PHÍ'))
+                self.assertTrue(w.lb_trang.text().startswith('Bảng tổng hợp kinh phí'))
                 for the in (2, 1, 0):
                     w.bang_tong_hop.tab.setCurrentIndex(the)                     # như người dùng bấm thẻ
                     self.app.processEvents()
@@ -480,7 +485,7 @@ class TestMau(unittest.TestCase):
                 self.app.processEvents()
                 self.assertEqual(w.trang.currentIndex(), ud.STACK_QUYET_DINH)
                 self.assertEqual([k for k, t in enumerate(ud.TRANG) if w.lenh[t].isChecked()], [ud.TRANG_QUYET_DINH])
-                self.assertEqual(w.lb_trang.text(), 'QUYẾT ĐỊNH PHÊ DUYỆT')       # không dòng nhắc "◀ bấm Danh sách hộ…"
+                self.assertEqual(w.lb_trang.text(), 'Quyết định phê duyệt')       # 1.0.42 Title Case; không dòng nhắc "◀"
                 self.assertIs(w._khung_dang_xem(), w.quyet_dinh)
                 for t in ud.TRANG[1:]:
                     w.lenh[t].trigger()

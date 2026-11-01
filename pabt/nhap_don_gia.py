@@ -22,7 +22,7 @@ from xml.etree import ElementTree as ET
 
 from . import csdl, don_gia
 from .lap_pa import LoiNhap, bo_dau
-from .tien import D, chuoi
+from .tien import D, chuoi, lam_tron
 
 DUOI_HO_TRO = ('.xlsx', '.xlsm', '.docx', '.pdf', '.csv', '.txt', '.sqlite')
 DUOI_LIEN_KET = DUOI_HO_TRO + ('.xls', '.doc')     # liên kết trên trang web đáng đưa vào danh sách chọn
@@ -467,7 +467,7 @@ def doc_gia(v) -> int | None:
         g = D(s)
     except ValueError:
         return None
-    return int(g) if g > 0 and g == int(g) else (int(round(g)) if g >= 1000 else None)
+    return int(g) if g > 0 and g == int(g) else (int(lam_tron(g)) if g >= 1000 else None)
 
 
 def _cot(tieu_de: list, *mau) -> int | None:

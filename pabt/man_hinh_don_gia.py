@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
                                QHBoxLayout, QLabel, QLineEdit, QMenu, QMessageBox, QPushButton, QTableWidget,
-                               QTableWidgetItem, QTabWidget, QVBoxLayout)
+                               QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from . import csdl, don_gia, quan_tri_bo
 from .lap_pa import LoiNhap, bo_dau
@@ -51,6 +51,20 @@ THE_NHOM_CAP_NHAT = {0: 2, 1: 3, 2: 7, 3: 4}
 NHOM_THE_CAP_NHAT = {v: k for k, v in THE_NHOM_CAP_NHAT.items()}
 
 
+class _TheDonGia(QTabWidget):
+    """Thẻ Bộ đơn giá: lần đầu widget(i) / đổi thẻ mới dựng bảng (5.500 dòng cây không chặn cửa sổ mở)."""
+
+    def widget(self, index):
+        hop = self.parentWidget()
+        if isinstance(hop, HopBoDonGia):
+            hop._dam_bao_the(index)
+        return super().widget(index)
+
+    def currentWidget(self):
+        i = self.currentIndex()
+        return self.widget(i) if i >= 0 else None
+
+
 class HopBoDonGia(QDialog):
 
     im_lang = False             # True: không hiện hộp thông báo (kiểm thử); nội dung lưu ở thong_bao_cuoi
@@ -76,9 +90,12 @@ class HopBoDonGia(QDialog):
         self.o_tim = QLineEdit()
         self.o_tim.setPlaceholderText('Tìm trong thẻ đang xem (không cần dấu): xoai, nha cap 4, CS9…')
         loc_khi_ngung_go(self.o_tim, self.loc)
-        self.the = QTabWidget()
-        # đổi thẻ: lọc thẻ mới theo chữ đang tìm (trước chỉ lọc thẻ đang xem lúc gõ) + đếm lại huy hiệu
-        self.the.currentChanged.connect(lambda *_: self.loc(self.o_tim.text()) if self.o_tim.text().strip() else self._dem_loc())
+        self._ds_the = {}
+        self._the_da_dung = set()
+        self._dang_dung_the = set()
+        self.the = _TheDonGia()
+        # đổi thẻ: dựng bảng nếu chưa, lọc theo chữ đang tìm + đếm lại huy hiệu
+        self.the.currentChanged.connect(self._khi_doi_the)
         # hàng nút gọn (trước 0.9.17: 7 nút một hàng, chật ở màn hình 1366): lệnh cùng việc gom vào nút xổ, việc chính ở bên phải
         nut = QHBoxLayout()
         # 0.9.73: bỏ Giá đất / Đơn giá riêng (đã có ở menu trái: Bảng giá đất, Đơn giá đặc biệt) và cập nhật từ web, tra cứu
@@ -87,6 +104,7 @@ class HopBoDonGia(QDialog):
         self.b_cap.setToolTip('Nạp bộ đơn giá từ file định mức, hoặc sao lưu bộ đang dùng ra file')
         m = QMenu(self.b_cap)
         m.addAction('Nạp từ file định mức (Excel, Word, PDF, gói .sqlite, CSV)…', lambda: self.cap_nhat_file())
+        m.addAction('Nạp từ file — thay cả nhóm theo văn bản mới…', lambda: self.cap_nhat_file(thay_the=True))
         m.addAction('Dán bảng / văn bản đơn giá (Ctrl+Shift+V)', lambda: self.dan_don_gia())
         m.addAction('Sao lưu bộ đơn giá ra file (.sqlite / Excel)…', lambda: self.sao_luu())
         self.b_cap.setMenu(m)
@@ -160,6 +178,7 @@ class HopBoDonGia(QDialog):
         ten, _sql, cot, rong = THE[i]
         bang, _ck = THE_BANG[i]
         b = QTableWidget(len(ds), len(cot))
+        b.setUpdatesEnabled(False)
         b.setHorizontalHeaderLabels(cot)
         b.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         b.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -183,10 +202,12 @@ class HopBoDonGia(QDialog):
                 if cot[c].startswith(('Đơn giá', 'Mức thưởng', 'Tổng bồi')) and s.replace('.', '').isdigit() and float(s) >= 100:
                     s = vn(s)
                 it = QTableWidgetItem(s)
-                it.setToolTip(s)
+                if len(s) > 40:                         # chú thích đủ chữ dài; 5.500 × 6 ô tooltip làm chậm mở cửa sổ
+                    it.setToolTip(s)
                 b.setItem(r, c, it)
             if b.item(r, 0) is not None:
                 b.item(r, 0).setData(Qt.ItemDataRole.UserRole, khoa)
+        b.setUpdatesEnabled(True)
         nhan = f'{ten} ({len(ds)})'
         if i == I_QUY_UOC and self.con_du_an is not None:
             nhan = f'{ten} · dự án ({len(ds)})'
@@ -248,27 +269,71 @@ class HopBoDonGia(QDialog):
                   (f' Bộ cũ cất tại: {tt["cat"]}' if tt['cat'] else ''))
         return tt
 
+    def _khi_doi_the(self, i: int = 0):
+        self._dam_bao_the(i)
+        chu = self.o_tim.text()
+        if chu.strip():
+            self.loc(chu)
+        else:
+            self._dem_loc()
+
+    def _dam_bao_the(self, i: int) -> None:
+        """Dựng bảng thẻ i lần đầu (các thẻ khác chỉ có nhãn + số dòng)."""
+        if i < 0 or i in self._the_da_dung or i in self._dang_dung_the:
+            return
+        ds = self._ds_the.get(i)
+        if ds is None:
+            return
+        self._dang_dung_the.add(i)
+        try:
+            b, nhan = self._bang_the(i, ds)
+            cu = QTabWidget.widget(self.the, i)
+            giu = self.the.currentIndex()
+            self.the.blockSignals(True)
+            self.the.removeTab(i)
+            self.the.insertTab(i, b, nhan)
+            if 0 <= giu < self.the.count():
+                self.the.setCurrentIndex(giu)
+            self.the.blockSignals(False)
+            self._the_da_dung.add(i)
+            if cu is not None:
+                cu.deleteLater()
+        finally:
+            self._dang_dung_the.discard(i)
+
     def nap(self):
         self._dat_tieu()
         i_giu = self.the.currentIndex()
+        self.the.blockSignals(True)
         self.the.clear()
         self._khoa_the = {}                             # loc: chữ tìm từng dòng của mỗi thẻ (dựng lại khi nạp lại bộ đơn giá)
+        self._ds_the = {}
+        self._the_da_dung = set()
         con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
         try:
-            for i, (_ten, sql, _cot, _rong) in enumerate(THE):
+            for i, (ten, sql, _cot, _rong) in enumerate(THE):
                 src = self.con_du_an if i == I_QUY_UOC and self.con_du_an is not None else con
-                b, nhan = self._bang_the(i, src.execute(sql).fetchall())
-                self.the.addTab(b, nhan)
+                ds = src.execute(sql).fetchall()
+                self._ds_the[i] = ds
+                nhan = f'{ten} ({len(ds)})'
+                if i == I_QUY_UOC and self.con_du_an is not None:
+                    nhan = f'{ten} · dự án ({len(ds)})'
+                self.the.addTab(QWidget(), nhan)
         finally:
             con.close()
-        if 0 <= i_giu < self.the.count():
-            self.the.setCurrentIndex(i_giu)
+        self.the.blockSignals(False)
+        if not (0 <= i_giu < self.the.count()):
+            i_giu = 0
+        self._dam_bao_the(i_giu)
+        self.the.setCurrentIndex(i_giu)
         self._dem_loc()
 
     def _dem_loc(self, *_):
         """Huy hiệu "Đang lọc: a / b mục" (a = dòng đang hiện của thẻ đang xem)."""
-        b = self.the.currentWidget()
-        if b is None or not hasattr(self, 'lb_loc'):
+        i = self.the.currentIndex()
+        self._dam_bao_the(i)
+        b = QTabWidget.widget(self.the, i)
+        if b is None or not hasattr(self, 'lb_loc') or not isinstance(b, QTableWidget):
             return
         n = b.rowCount()
         hien = n - sum(self._khoa_the.get(self.the.currentIndex(), ([], []))[1])
@@ -350,7 +415,7 @@ class HopBoDonGia(QDialog):
 
     def _khoa_chon(self):
         b = self.the.currentWidget()
-        if b is None or b.currentRow() < 0 or b.item(b.currentRow(), 0) is None:
+        if b is None or not isinstance(b, QTableWidget) or b.currentRow() < 0 or b.item(b.currentRow(), 0) is None:
             return None
         return b.item(b.currentRow(), 0).data(Qt.ItemDataRole.UserRole)
 
@@ -473,8 +538,11 @@ class HopBoDonGia(QDialog):
         return d.exec() == QDialog.DialogCode.Accepted
 
     def loc(self, chu: str):
-        b = self.the.currentWidget()
         i = self.the.currentIndex()
+        self._dam_bao_the(i)
+        b = QTabWidget.widget(self.the, i)
+        if not isinstance(b, QTableWidget):
+            return
         if i not in self._khoa_the:     # chữ không dấu từng dòng: tính một lần mỗi thẻ (trước: ghép lại 5.510 dòng × 6 ô mỗi phím)
             self._khoa_the[i] = ([bo_dau(' '.join(b.item(r, c).text() for c in range(b.columnCount()) if b.item(r, c)))
                                   for r in range(b.rowCount())], [False] * b.rowCount())
@@ -491,7 +559,7 @@ class HopBoDonGia(QDialog):
             b.setUpdatesEnabled(True)
         self._dem_loc()
 
-    def cap_nhat_file(self, p=None, mat_khau=None):
+    def cap_nhat_file(self, p=None, mat_khau=None, thay_the=None):
         if not self._can_sua(mat_khau):
             return None
         if p is None:
@@ -501,7 +569,7 @@ class HopBoDonGia(QDialog):
                 return None
         from .nhap_tho import la_file_pabt
         if Path(p).suffix.lower() != '.sqlite' and not (Path(p).suffix.lower() in ('.xlsx', '.xlsm') and la_file_pabt(p)):
-            return self.cap_nhat_file_bat_ky(p)
+            return self.cap_nhat_file_bat_ky(p, thay_the=thay_the)
         try:
             with con_tro_cho():
                 tt = don_gia.cap_nhat_tu_file(p)
@@ -513,7 +581,7 @@ class HopBoDonGia(QDialog):
                                               'dự án đang lập muốn đổi thì bấm "Áp bộ đơn giá vào dự án đang mở".')
         return tt
 
-    def cap_nhat_file_bat_ky(self, p, nguon: str = '', cho: bool = True, mat_khau=None):
+    def cap_nhat_file_bat_ky(self, p, nguon: str = '', cho: bool = True, mat_khau=None, thay_the=None):
         """File Excel / Word / PDF / CSV bất kỳ: xem trước các dòng đơn giá rồi áp dụng."""
         if not self._can_sua(mat_khau):
             return None
@@ -522,7 +590,8 @@ class HopBoDonGia(QDialog):
         from .man_hinh_quan_ly import doc_co_tien_do
         try:
             dong = doc_co_tien_do(self, ndg.doc_bang_ocr, p)        # PDF scan: nhận dạng chữ từng trang, có nút Hủy
-            d = HopNhapDonGia(p, self, nguon, dong=dong, nhom_uu_tien=THE_NHOM_CAP_NHAT.get(self.the.currentIndex()))
+            d = HopNhapDonGia(p, self, nguon, dong=dong, nhom_uu_tien=THE_NHOM_CAP_NHAT.get(self.the.currentIndex()),
+                              thay_the=thay_the)
         except ocr.DaHuy:
             return None
         except ndg.LoiPdfScan as e:

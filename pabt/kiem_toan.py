@@ -58,6 +58,11 @@ THEO_DOI = {
                 "|| COALESCE(R.vi_tri, '')", False, ('gia', 'he_so_k', 'can_cu', 'tuyen_duong', 'vi_tri')),
     'dm_taisan': ('R.ma', 'NULL', 'NULL', "R.ma || ' ' || COALESCE(R.ten, '')", False, ('ten', 'dvt', 'don_gia', 'ghi_chu')),
     'dm_hotro': ('R.ma', 'NULL', 'NULL', "R.ma || ' ' || COALESCE(R.ten, '')", False, ('ten', 'dvt', 'don_gia', 'cach_tinh', 'can_cu')),
+    # rà soát kiến trúc 31/10/2026: tiền quyết định phê duyệt và chi trả của từng hộ (phần thanh tra hỏi nhiều nhất) - thêm / bỏ hộ khỏi
+    # quyết định và mọi lần sửa số tiền, đã chi trả, ngày, số tiền nhận
+    'qd_ho': ('R.id', 'R.ma_ho', 'NULL', "'Quyết định ' || COALESCE((SELECT so FROM quyet_dinh WHERE id = R.qd_id), R.qd_id)", True,
+              ('so_tien', 'tien_dat', 'tien_tai_san', 'tien_cay', 'tien_ho_tro', 'tien_thuong', 'qd_ct_so', 'qd_ct_ngay', 'da_chi_tra',
+               'chi_tra_ngay', 'chi_tra_so_tien', 'ly_do_chua_nhan')),
 }
 
 NHAN_TRUONG = {
@@ -69,6 +74,9 @@ NHAN_TRUONG = {
     'he_so_k': 'Hệ số K', 'can_cu': 'Căn cứ', 'tuyen_duong': 'Tuyến đường', 'ten': 'Tên', 'dvt': 'ĐVT', 'don_gia': 'Đơn giá',
     'cach_tinh': 'Cách tính', 'dien_tich': 'Diện tích (m²)', 'gia_bang_gia': 'Giá theo bảng giá', 'ty_le': 'Tỷ lệ',
     'so_luong': 'Số lượng', 'ma_tuong_duong': 'Mã tương đương', 'quy_cach': 'Quy cách', 'can_cu_gia': 'Căn cứ giá',
+    'so_tien': 'Số tiền phê duyệt', 'tien_dat': 'Tiền đất', 'tien_tai_san': 'Tiền tài sản', 'tien_cay': 'Tiền cây trồng, vật nuôi',
+    'tien_ho_tro': 'Tiền hỗ trợ', 'tien_thuong': 'Tiền thưởng', 'qd_ct_so': 'QĐ chi tiết số', 'qd_ct_ngay': 'QĐ chi tiết ngày',
+    'da_chi_tra': 'Đã chi trả', 'chi_tra_ngay': 'Ngày chi trả', 'chi_tra_so_tien': 'Số tiền đã nhận', 'ly_do_chua_nhan': 'Lý do chưa nhận',
 }
 HANH_DONG = {'them': 'Thêm', 'sua': 'Sửa', 'xoa': 'Xóa'}
 

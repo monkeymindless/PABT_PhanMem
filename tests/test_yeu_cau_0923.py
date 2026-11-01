@@ -89,7 +89,8 @@ class TestCuaSoChinh(CoSoCuaSo):
         w.mo_trang(0)
         p = _du_an(self.td, 5)
         w.mo(str(p))
-        self.assertEqual(w.trang.currentIndex(), 0)                         # mở dự án: về danh sách hộ
+        self.assertEqual(w.trang.currentIndex(), ud.TRANG_CHAO)             # 1.0.40: mở dự án vào Màn hình chính
+        w.mo_trang(0)
         self.assertTrue(w.hang_the.isVisible())
         self.assertEqual(ud.doc_gan_day()[0], str(p.resolve()))
         w.dong_du_an_lenh()
@@ -160,7 +161,7 @@ class TestCuaSoChinh(CoSoCuaSo):
         self.assertFalse(k.b_tu_du_an.isEnabled())
         k.im_lang = True
         w.mo(str(_du_an(self.td, 6)))
-        self.assertEqual(w.trang.currentIndex(), 0)                         # 0.9.69: mở dự án -> Danh sách hộ
+        self.assertEqual(w.trang.currentIndex(), ud.TRANG_CHAO)             # 1.0.40: mở dự án -> Màn hình chính
         w.mo_trang(ud.TRANG_DU_TOAN)
         self.assertTrue(k.b_tu_du_an.isEnabled())
         dt = k.lay('du_an')

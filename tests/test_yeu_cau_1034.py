@@ -52,8 +52,8 @@ class TestBangMau(unittest.TestCase):
         # 1.0.35: PA1 mặc định menu SÁNG liền mạch; Titan / Tối menu tối
         q = giao_dien._qss_menu_trai()
         for chu in ('QFrame[vai="menu_trai"] { background: #E8EEF5', 'border-right: 1px solid #D5DEE8', 'border-radius: 8px',
-                    'background: #DBEAFE; color: #1E3A5F', 'border-left: 4px solid #2563EB', 'color: #1E3A5F; font-size: 10px',
-                    'letter-spacing: 0.8px'):
+                    'background: #DBEAFE; color: #1E3A5F', 'border-left: 4px solid #2563EB', 'color: #1E3A5F; font-size: 11px',
+                    'letter-spacing: 0'):
             self.assertIn(chu, q)
         t = giao_dien._qss_menu_trai('titan')
         self.assertIn('QFrame[vai="menu_trai"] { background: #1E293B', t)
@@ -163,6 +163,7 @@ class TestThanhPhan(unittest.TestCase):
         self.assertEqual(st.currentIndex(), 2)                                         # không màn hình: đổi ngay
         giao_dien.chuyen_trang_muot(st, 2)
         self.assertEqual(st.currentIndex(), 2)
+        self.assertIsNone(getattr(st, '_hoat_anh_trang', None))                        # 1.0.44: không còn QVariantAnimation trượt
         w = QWidget()
         giao_dien.dat_rong_muot(w, 120)
         self.assertEqual((w.minimumWidth(), w.maximumWidth()), (120, 120))

@@ -23,6 +23,33 @@ A4 = (11906, 16838)                         # twip
 A3 = (16838, 23811)
 FONT = 'Times New Roman'
 _RE_CHO = re.compile(r'\{([A-Za-z0-9_.]+)\}')
+# 1 pt (sz = phần tám điểm). sz=4 (0,5 pt) + color=auto: WPS / LibreOffice / máy in PDF thường ẩn khung và gạch dưới chữ.
+SZ_VIEN = 8
+MAU_VIEN = '000000'
+
+
+def xml_canh_vien(k: str, hien: bool, sz: int = SZ_VIEN) -> str:
+    """Một cạnh viền Word. hien=False -> nil (ẩn)."""
+    if not hien:
+        return f'<w:{k} w:val="nil"/>'
+    return f'<w:{k} w:val="single" w:sz="{sz}" w:space="0" w:color="{MAU_VIEN}"/>'
+
+
+def xml_tbl_borders(vien: bool = True, ngoai_sz: int = SZ_VIEN, trong_sz: int = SZ_VIEN) -> str:
+    ks = ('top', 'left', 'bottom', 'right', 'insideH', 'insideV')
+    b = ''.join(xml_canh_vien(k, vien, ngoai_sz if k in ('top', 'left', 'bottom', 'right') else trong_sz) for k in ks)
+    return f'<w:tblBorders>{b}</w:tblBorders>'
+
+
+def xml_tc_borders(vien: bool = True, an_vien: tuple = (), sz: int = SZ_VIEN) -> str:
+    """Viền từng ô — WPS / LibreOffice hay bỏ tblBorders, chỉ vẽ tcBorders."""
+    an = set(('top', 'left', 'bottom', 'right') if not vien else an_vien)
+    return '<w:tcBorders>' + ''.join(xml_canh_vien(k, k not in an, sz) for k in ('top', 'left', 'bottom', 'right')) + '</w:tcBorders>'
+
+
+def xml_p_bdr_duoi(sz: int = SZ_VIEN, space: str = '1') -> str:
+    """Đường kẻ ngang dưới đoạn (gạch dưới chữ / dưới tên dự án)."""
+    return f'<w:pBdr><w:bottom w:val="single" w:sz="{sz}" w:space="{space}" w:color="{MAU_VIEN}"/></w:pBdr>'
 
 
 # ---------------------------------------------------------------- đơn vị, thoát ký tự
@@ -60,7 +87,7 @@ def doan(*cac_chay, can: str = 'both', truoc: int = 0, sau: int = 0, dong: int =
     ind = ''.join(f' w:{k}="{v}"' for k, v in (('left', trai), ('right', phai), ('firstLine', dau_dong),
                                                ('hanging', treo)) if v)
     pr = ('<w:keepNext/>' if giu_sau else '') + ('<w:keepLines/>' if giu_dong else '') + ('<w:pageBreakBefore/>' if ngat_trang else '') + \
-        (f'<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="{vien_duoi_pt:g}" w:color="auto"/></w:pBdr>' if vien_duoi_pt > 0 else '') + \
+        (xml_p_bdr_duoi(space=f'{vien_duoi_pt:g}') if vien_duoi_pt > 0 else '') + \
         (('<w:tabs>' + ''.join(f'<w:tab w:val="left" w:pos="{x}"/>' for x in ds_tab) + '</w:tabs>') if ds_tab else '') + \
         f'<w:spacing w:before="{truoc}" w:after="{sau}" w:line="{dong}" w:lineRule="auto"/>' + (f'<w:ind{ind}/>' if ind else '') + \
         f'<w:jc w:val="{can}"/>'
@@ -88,7 +115,7 @@ def doan_gach_ho(chu: str, rong_chu_pt: float, rong_vung_twip: int, co: float = 
 def doan_ke_ngang(rong_twip: int, rong_vung_twip: int, sau: int = 120) -> str:
     """Đường kẻ ngang ngắn căn giữa (đoạn rỗng có viền dưới, thụt hai bên) - vd. dưới tên dự án."""
     ben = max(0, (rong_vung_twip - rong_twip) // 2)
-    return (f'<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="auto"/></w:pBdr>'
+    return (f'<w:p><w:pPr>{xml_p_bdr_duoi(space="1")}'
             f'<w:spacing w:before="0" w:after="{sau}" w:line="120" w:lineRule="exact"/><w:ind w:left="{ben}" w:right="{ben}"/>'
             f'<w:rPr><w:sz w:val="4"/></w:rPr></w:pPr></w:p>')
 
@@ -101,7 +128,7 @@ def o(noi_dung: str, rong: int, nhap: int = 1, doc: str = 'center', gop_doc: str
     an = ('top', 'left', 'bottom', 'right') if not vien else tuple(an_vien)
     pr = f'<w:tcW w:w="{rong}" w:type="dxa"/>' + (f'<w:gridSpan w:val="{nhap}"/>' if nhap > 1 else '') + \
         ('<w:vMerge w:val="restart"/>' if gop_doc == 'bat_dau' else '<w:vMerge/>' if gop_doc == 'tiep' else '') + \
-        ('<w:tcBorders>' + ''.join(f'<w:{k} w:val="nil"/>' for k in an) + '</w:tcBorders>' if an else '') + \
+        xml_tc_borders(vien, an) + \
         (f'<w:shd w:val="clear" w:color="auto" w:fill="{nen}"/>' if nen else '') + f'<w:vAlign w:val="{doc}"/>'
     return f'<w:tc><w:tcPr>{pr}</w:tcPr>{noi_dung or doan()}</w:tc>'
 
@@ -114,11 +141,9 @@ def hang(cac_o: list, lap_dau_trang: bool = False, khong_tach: bool = False) -> 
 
 def bang(cac_hang: list, rong_cot: list, vien: bool = True, le_o: int = 57, lui: int = 0, can: str = 'center') -> str:
     """Bảng cố định bề rộng cột (w:tbl). vien: khung + lưới; lui (twip): bắt đầu lùi ra ngoài lề trái (canh trái)."""
-    b = ''.join(f'<w:{k} w:val="{"single" if vien else "nil"}" w:sz="4" w:space="0" w:color="auto"/>'
-                for k in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
     luoi = ''.join('<w:gridCol w:w="%d"/>' % x for x in rong_cot)
     vt = f'<w:jc w:val="left"/><w:tblInd w:w="{-lui}" w:type="dxa"/>' if lui else f'<w:jc w:val="{can}"/>'
-    return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong_cot)}" w:type="dxa"/>{vt}<w:tblBorders>{b}</w:tblBorders>'
+    return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong_cot)}" w:type="dxa"/>{vt}{xml_tbl_borders(vien)}'
             f'<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="28" w:type="dxa"/><w:left w:w="{le_o}" w:type="dxa"/>'
             f'<w:bottom w:w="28" w:type="dxa"/><w:right w:w="{le_o}" w:type="dxa"/></w:tblCellMar></w:tblPr>'
             f'<w:tblGrid>{luoi}</w:tblGrid>{"".join(cac_hang)}</w:tbl>')

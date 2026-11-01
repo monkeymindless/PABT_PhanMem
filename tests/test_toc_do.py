@@ -317,7 +317,7 @@ class TestRaSoatTaiLon(unittest.TestCase):
         import hashlib
         import shutil
         from pabt import don_gia
-        goc = Path(self.td.name) / 'bo.sqlite'
+        goc = Path(self.td.name) / don_gia.TEN_FILE   # cùng tên bộ đóng gói: csdl.mo không ghi cờ phiên bản vào bộ đơn giá
         shutil.copy(don_gia.file_goc(), goc)
         truoc = hashlib.sha256(goc.read_bytes()).hexdigest()
         csdl.chep_danh_muc(self.con, goc, don_vi=False, bang=don_gia.BANG_BO)

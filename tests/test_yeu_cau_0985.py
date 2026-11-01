@@ -201,8 +201,8 @@ class TestGoiMau(CoSoMay):
         w = CuaSoChinh()
         try:
             ten = [a.text() for a in w.menu_tren['Công cụ'].actions()]
-            self.assertIn('Xuất gói mẫu in & cấu hình…', ten)
-            self.assertIn('Nhập gói mẫu in & cấu hình…', ten)
+            self.assertIn('Xuất gói mẫu in && cấu hình…', ten)
+            self.assertIn('Nhập gói mẫu in && cấu hình…', ten)
             ds = w.xuat_goi_mau(self.td / 'tu_app.pabtcfg', cho=False)
             kq = w.nhap_goi_mau(ds['file'], xac_nhan=False)
             self.assertTrue(kq['ho_so'])

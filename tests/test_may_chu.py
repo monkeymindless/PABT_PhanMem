@@ -301,6 +301,27 @@ class TestChiaViecTheoHo(_Nen):
         self.nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
         self.qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
 
+    def test_gop_tinh_lai_tom_tat_va_chep_nhat_ky(self):
+        """Rà soát 31/10/2026: QĐ chỉ có trên bản offline -> dòng qd_ho bị bỏ, cột tóm tắt phê duyệt của hộ trên máy chủ phải tính lại
+        (không chép "đã phê duyệt" từ bản offline); nhật ký thao tác làm offline được chép lên ("[offline] …")."""
+        from pabt import theo_doi
+        bs = may_chu.lay_ve_theo_ho(self.f, [1], self.qt)
+        con = csdl.mo(bs)
+        qd = theo_doi.luu_qd(con, None, '09/QĐ-UBND', '01/10/2026')
+        theo_doi.them_ho_theo_pa(con, qd, [1])
+        self.assertEqual(con.execute('SELECT da_phe_duyet FROM ho WHERE ma_ho = 1').fetchone()[0], 1)
+        with con:
+            csdl.ghi_nhat_ky(con, 'Việc làm offline', 'thử')
+        con.close()
+        kq = may_chu.gop_ho_tu_ban_offline(bs)
+        self.assertTrue(any('quyet_dinh' in x for x in kq['bo_dong']))
+        con = csdl.mo(self.f)
+        try:
+            self.assertEqual(con.execute('SELECT da_phe_duyet FROM ho WHERE ma_ho = 1').fetchone()[0], 0)
+            self.assertTrue(con.execute("SELECT 1 FROM nhat_ky WHERE viec = '[offline] Việc làm offline'").fetchone())
+        finally:
+            con.close()
+
     def test_ds_ho_de_chon_va_hop_chon(self):
         if not CO_QT:
             self.skipTest('không có Qt')
@@ -430,6 +451,85 @@ class TestChiaViecTheoHo(_Nen):
             self.assertIn('Đã xóa hộ', ho_so.xoa_nhieu_ho(con, [2]))
         finally:
             con.close()
+
+    def _ghi_chu(self, f, ma):
+        con = csdl.mo(f, chi_doc=True)
+        try:
+            return con.execute('SELECT ghi_chu FROM ho WHERE ma_ho = ?', (ma,)).fetchone()[0]
+        finally:
+            con.close()
+
+    def _sua(self, f, ma, chu):
+        con = csdl.mo(f)
+        with con:
+            con.execute('UPDATE ho SET ghi_chu = ? WHERE ma_ho = ?', (chu, ma))
+        con.close()
+
+    def test_dong_bo_van_giu_ho(self):
+        """30/10/2026 (phương án đột phá 5): đồng bộ bản offline theo hộ lên máy chủ mà vẫn giữ hộ - lần sau chỉ báo xung đột khi có
+        người sửa SAU lần đồng bộ; trả hộ (gộp) sau đó vẫn đúng."""
+        bs = may_chu.lay_ve_theo_ho(self.f, [1, 2], self.qt)
+        self._sua(bs, 1, 'lần 1')
+        kq = may_chu.dong_bo_ho(bs)
+        self.assertEqual((kq['so_ho'], self._ghi_chu(self.f, 1)), (2, 'lần 1'))
+        self.assertTrue(bs.is_file())                                           # bản offline còn để làm tiếp
+        self.assertEqual(may_chu.ho_nhan_viec(bs), frozenset({1, 2}))
+        self.assertEqual(set(may_chu.ds_ho_dang_lay_ve(self.f, self.goc)), {1, 2})     # máy chủ vẫn khóa hộ cho người nhận
+        self._sua(bs, 2, 'lần 2')
+        may_chu.dong_bo_ho(bs)                                                  # mốc đã dời: không tự báo xung đột với chính mình
+        self.assertEqual(self._ghi_chu(self.f, 2), 'lần 2')
+        self._sua(self.f, 1, 'sửa thẳng trên máy chủ')                          # người khác sửa sau lần đồng bộ
+        self._sua(bs, 1, 'lần 3')
+        with self.assertRaises(may_chu.LoiXungDot) as e:
+            may_chu.dong_bo_ho(bs)
+        self.assertEqual([m for m, _ in e.exception.ds], [1])
+        self.assertEqual(self._ghi_chu(self.f, 1), 'sửa thẳng trên máy chủ')    # xung đột: không ghi gì
+        may_chu.dong_bo_ho(bs, ep=True)
+        self.assertEqual(self._ghi_chu(self.f, 1), 'lần 3')
+        kq = may_chu.gop_ho_tu_ban_offline(bs)                                  # trả hộ: không còn khóa, bản offline xóa
+        self.assertEqual(kq['so_ho'], 2)
+        self.assertEqual(may_chu.ds_ho_dang_lay_ve(self.f, self.goc), {})
+        self.assertFalse(bs.exists())
+        bs2 = may_chu.lay_ve(self.f)                                            # bản CẢ dự án: không đồng bộ kiểu giữ hộ
+        with self.assertRaises(LoiMayChu):
+            may_chu.dong_bo_ho(bs2)
+        may_chu.huy_lay_ve(bs2)
+
+    def test_tu_dong_bo_khi_luu(self):
+        if not CO_QT:
+            self.skipTest('không có Qt')
+        from pabt.app import CuaSoChinh
+        from pabt.man_hinh_may_chu import HopDuAnMayChu
+        bs = may_chu.lay_ve_theo_ho(self.f, [2, 4], self.qt)
+        self.assertFalse(may_chu.tu_dong_bo_khi_luu())                          # mặc định tắt
+        d = HopDuAnMayChu()
+        d.im_lang = True
+        self.assertFalse(d.o_tu_dong_bo.isChecked())
+        w = CuaSoChinh()
+        w.mo(bs, chi_doc=False)
+        try:
+            with w.con:
+                w.con.execute("UPDATE ho SET ghi_chu = 'chưa bật' WHERE ma_ho = 2")
+            self.assertTrue(w.luu_du_an_lenh())
+            self.assertNotEqual(self._ghi_chu(self.f, 2), 'chưa bật')           # tắt: Lưu không đụng máy chủ
+            d.o_tu_dong_bo.setChecked(True)
+            self.assertTrue(may_chu.tu_dong_bo_khi_luu())
+            with w.con:
+                w.con.execute("UPDATE ho SET ghi_chu = 'đã bật' WHERE ma_ho = 2")
+            self.assertTrue(w.luu_du_an_lenh())
+            self.assertEqual(self._ghi_chu(self.f, 2), 'đã bật')
+            self.assertEqual(set(may_chu.ds_ho_dang_lay_ve(self.f, self.goc)), {2, 4})
+            self._sua(self.f, 4, 'người khác sửa')                              # xung đột: Lưu vẫn xong, không ghi đè máy chủ
+            with w.con:
+                w.con.execute("UPDATE ho SET ghi_chu = 'của tôi' WHERE ma_ho = 4")
+            self.assertTrue(w.luu_du_an_lenh())
+            self.assertEqual(self._ghi_chu(self.f, 4), 'người khác sửa')
+            self.assertIsNotNone(d.dong_bo(d.ds_off[0], ep=True))               # nút Đồng bộ (vẫn giữ hộ): người dùng chọn ghi đè
+            self.assertEqual(self._ghi_chu(self.f, 4), 'của tôi')
+        finally:
+            w.dong_du_an()
+            w.close()
+            d.close()
 
     def test_cua_so_chinh_che_do_nhan_viec(self):
         if not CO_QT:

@@ -7,6 +7,60 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.47', '01/11/2026', (
+        'Thẻ số liệu giữ 62 px (không nới, chừa chỗ bảng hộ trên màn 21"): dòng 2 diện tích xếp sát số thửa, không bị bo góc cắt. '
+        'Bấm mở Bộ đơn giá / lập phương án / cửa sổ lệnh: chỉ dựng thẻ đang xem lúc mở, lần 2 dưới 0,1 giây.',
+    )),
+    ('1.0.46', '01/11/2026', (
+        'Dán tài sản: mở ảnh / PDF scan hoặc dán ảnh clipboard (Tesseract chữ in; chữ viết tay phải xem lại dòng vàng). '
+        'Phiếu kiểm đếm: nút Dán tài sản và Mở lập phương án hộ đang chọn; bấm đúp họ tên mở phương án.',
+        'Cập nhật giá đất: văn bản không có bảng cột vẫn đọc lời văn nghị quyết rồi xem trước. '
+        'Cập nhật đơn giá: thêm lệnh nạp file thay cả nhóm theo văn bản mới (khác chuột phải thay một dòng). '
+        'Ctrl+Shift+V không còn đụng giữa tab Lập phương án và Đơn giá bồi thường.',
+    )),
+    ('1.0.45', '01/11/2026', (
+        'Bản in trên máy mới (không cần Python): khung bảng và đường kẻ dưới chữ không còn mất khi mở bằng WPS / LibreOffice. '
+        'Phương án chi tiết (Word): viền từng ô, nét 1 pt, màu đen. Bảng tổng hợp (Excel): viền RGB đen, đường kẻ dưới tên đơn vị / '
+        'tiêu ngữ / dự án dày 1 pt.',
+    )),
+    ('1.0.44', '01/11/2026', (
+        'Thẻ số liệu: số thửa và diện tích là hai dòng sổ địa chính cạnh số hộ (không ghép bằng dấu gạch chéo), diện tích đủ '
+        'tương phản — không bị cắt, không đọc như tỷ lệ.',
+        'Bấm menu trái (và thanh menu / tab) chuyển trang ngay, không còn trượt 160 ms làm cửa sổ nhấp nháy. Dấu chọn mục '
+        'sáng tức thì; trang đã mở lần trước hiện lại dưới 0,1 giây.',
+    )),
+    ('1.0.43', '01/11/2026', (
+        'Bản đồ máy tính vẽ đúng file KML / KMZ xuất từ MicroStation / gCadas: hiện lưới thửa và đường ranh (Level), số thửa, '
+        'loại đất, diện tích, mốc ranh, ghi chú — không còn chỉ một đám chấm. Công tắc 4 lớp, nút + / − / Vừa trên bản đồ, '
+        'bấm đối tượng xem thuộc tính, bảng tra cứu dưới bản đồ (như LARC Mobile).',
+    )),
+    ('1.0.42', '01/11/2026', (
+        'Đồng bộ giao diện: một nguồn màu (thanh tiêu đề theo tông nền, kể cả tông Tối), số 0 và viền ô đạt tương phản WCAG, '
+        'nhóm menu Title Case, dấu & hiện đúng (không còn gạch chân chữ sau &), nút tắt có chú thích lý do.',
+        'Chọn hộ niêm yết tắt khi chưa mở dự án (không còn bấm im lặng). Danh sách dài (phiếu kiểm đếm, KML) hiện trong hộp cuộn. '
+        'Cảnh báo chỉ cài gói cập nhật .larcud do đơn vị phát hành. Sắp xếp cột diện tích theo số Decimal.',
+    )),
+    ('1.0.41', '01/11/2026', (
+        'Bản offline theo hộ (máy chủ LAN): tầng CSDL tự chặn mọi ghi (thêm / sửa / xóa) hộ không nằm trong danh sách nhận việc — '
+        'kể cả đường ghi lọt khi hàm mới quên kiểm. Thông báo tiếng Việt, không làm hỏng dữ liệu hộ đã nhận.',
+        'File dự án ghi cờ phiên bản phần mềm tối thiểu khi mở để sửa. Máy còn bản cũ hơn cờ đó (từ 1.0.41 trở đi) tự mở CHỈ XEM '
+        'kèm thông báo nổi, để khỏi ghi sai dữ liệu lược đồ đã mở rộng; cập nhật phần mềm rồi mở lại là sửa được.',
+    )),
+    ('1.0.40', '31/10/2026', (
+        'Màn hình chính khi mở dự án: việc cần làm cấp dự án và PHỄU TIẾN ĐỘ THEO HỘ (8 giai đoạn, theo lần phương án đang mở) - '
+        'hộ ở đợt khác nhau, hộ chỉ có phương án bổ sung đều được đếm đúng; các cờ cần xem lại (phương án 0 đồng, trình thiếu ý kiến, '
+        'có ngày bàn giao chưa có quyết định…) bấm được để ra danh sách hộ.',
+        'Xuất bản một chạm (Trình phê duyệt): chọn đợt, kiểm điều kiện, xem trước cả bộ rồi xuất / in / gộp PDF.',
+        'Bản đồ thửa đất: tô màu theo đồng thuận, tiến độ theo hộ hoặc lệch diện tích; nền ảnh vệ tinh tùy chọn (mặc định tắt, chỉ gửi '
+        'tọa độ ô ảnh, ảnh đã tải xem được khi mất mạng); chuột phải thửa để mở phương án hộ.',
+        'Làm việc nhóm: "Đồng bộ (vẫn giữ hộ)" đưa số liệu lên máy chủ mà vẫn giữ hộ đã nhận; tùy chọn tự đồng bộ khi Ctrl+S; điện '
+        'thoại cùng Wi-Fi quét mã QR gửi file kết quả kiểm đếm về máy tính.',
+        'Cỗ máy thời gian (Tệp tin): tự lưu mốc mỗi giờ khi có thay đổi, lúc mở / đóng dự án, trước thao tác hàng loạt; xem hộ nào đã '
+        'đổi rồi khôi phục. Nhập phương án chi tiết vào dự án đang mở được chạy thử và xem trước thay đổi trước khi ghi.',
+        'Trợ lý (Công cụ): giải thích vì sao tiền của hộ khác quyết định / các lần lập / file Excel, soạn nháp tờ trình - chạy trên máy, '
+        'không cần mạng.',
+        'Xuất Excel lớn nhanh hơn: bảng tổng hợp 3.000 hộ ghi file 1,2 giây còn 0,5 giây (nội dung giống hệt).',
+    )),
     ('1.0.39', '30/10/2026', (
         'Đường kẻ khung bản in Excel / Word (phương án chi tiết, bảng tổng hợp, khái toán) dùng màu tự động thay vì đen ghi cứng: mở '
         'trên Excel / Word bật chế độ tối (Dark Mode) vẫn thấy khung (trước đây nét đen nằm trên nền tối - chỉ thấy chữ). In ra giấy '

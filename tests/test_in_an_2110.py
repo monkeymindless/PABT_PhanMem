@@ -227,7 +227,11 @@ class TestWordNghiDinh30(_Co):
         self.assertTrue(all(p.find(f'{W}pPr/{W}keepNext') is not None for p in iv.iter(W + 'p')))   # IV đi liền chữ ký
         o_ky = ky.findall(W + 'tc')
         self.assertEqual(len(o_ky), 1)                                              # MỘT ô gộp cả lưới, chứa bảng chữ ký ba cột
-        self.assertEqual({e.tag.split('}')[1] for e in o_ky[0].find(f'{W}tcPr/{W}tcBorders')}, {'left', 'bottom', 'right'})
+        # 1.0.45: ghi đủ 4 cạnh (WPS chỉ vẽ tcBorders); trái / phải / dưới nil, trên single (vạch giữa IV và chữ ký)
+        bd = o_ky[0].find(f'{W}tcPr/{W}tcBorders')
+        self.assertEqual({e.tag.split('}')[1] for e in bd}, {'top', 'left', 'bottom', 'right'})
+        self.assertEqual(bd.find(f'{W}top').get(W + 'val'), 'single')
+        self.assertTrue(all(bd.find(f'{W}{k}').get(W + 'val') == 'nil' for k in ('left', 'bottom', 'right')))
         ba = o_ky[0].find(W + 'tbl')                                                # LẬP BIỂU - KIỂM TRA - chức vụ ký (24/10/2026: dịch sang trái)
         cot = [int(c.get(W + 'w')) for c in ba.find(W + 'tblGrid')]
         self.assertEqual(len(cot), 4)                                               # ba phần + cột đệm bên phải

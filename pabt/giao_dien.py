@@ -53,6 +53,11 @@ CAO_DONG_BANG = 30            # chiều cao dòng bảng dữ liệu (17/10/2026
 CAO_TIEU_DE_BANG = 34         # hàng tiêu đề cột bảng (nền navy, chữ trắng)
 MAT_DO = ['chuan']            # 1.0.17: mật độ bảng đang dùng (chu_de.MAT_DO): gon / chuan / thoang - dat_mat_do()
 CHINH = TOKEN['chinh']       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
+
+
+def chu_hien(s: str) -> str:
+    """Hiện dấu & trên QLabel / QPushButton / QAction (Qt lấy & làm phím tắt). Idempotent với && đã có."""
+    return (s or '').replace('&&', '\x00').replace('&', '&&').replace('\x00', '&&')
 # thẻ (QTabBar) cửa sổ con / trang nhúng (1.0.02): chưa chọn nền slate nhạt chữ slate; đang chọn nền trắng chữ navy + vạch trên navy.
 # PHÔNG THẺ (cỡ, độ đậm) khai ở mức QTabBar, KHÔNG trong ::tab: Qt5 đo bề rộng thẻ theo phông của thanh thẻ, phông trong ::tab chỉ dùng
 # lúc vẽ -> cắt chữ hai đầu (bản Win7); thẻ đang chọn cùng độ đậm
@@ -74,7 +79,7 @@ MAU = {                                            # (màu biểu tượng / n�
 }
 DAC = ('luu',)                                     # nhóm nút nền đặc (thao tác chính); các nhóm khác nền trắng viền slate
 # nút phụ / nút viền (1.0.02): (nền, chữ, viền, nền rê chuột, viền rê chuột, nền khi bấm); nút xóa: viền đỏ nhạt chữ đỏ
-NUT_PHU = ('#FFFFFF', '#0F172A', '#CBD5E1', '#F1F5F9', '#94A3B8', '#E2E8F0')
+NUT_PHU = ('#FFFFFF', '#0F172A', '#8696AB', '#F1F5F9', '#64748B', '#E2E8F0')  # 1.0.42: viền ≥ 3:1 WCAG 1.4.11
 NUT_XOA = ('#FFFFFF', '#B83A3A', '#FECACA', '#FEF2F2', '#FCA5A5', '#FEE2E2')
 NUT_TAT = ('#94A3B8', '#F8FAFC', '#E2E8F0')        # (chữ, nền, viền) nút đang tắt
 # (mẫu trên chữ đã bỏ dấu, nhóm) - xét theo thứ tự
@@ -348,13 +353,13 @@ def _qss_menu_trai(ten: str | None = None) -> str:
     QFrame#vach_menu {{ color: {m['vien']}; margin: 2px 6px; }}
     QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 8px; margin: 0 {LE_VIEN_MENU}px;
         padding: 2px 6px 2px 10px; text-align: left; font-weight: 600; font-size: 12.5px; color: {m['chu']}; }}
-    QToolButton[menu="1"], QToolButton[menu="1"]:focus {{ outline: none; }}
+    QToolButton[menu="1"]:focus {{ outline: none; border: 2px solid {m['vach_chon']}; }}
     QToolButton[menu="1"]:hover {{ background: {m['re']}; color: {m['chon_chu']}; }}
     QToolButton[menu="1"]:pressed {{ background: {m['chon_nen']}; }}
     QToolButton[menu="1"]:disabled {{ color: {m['tat']}; background: transparent; border-color: transparent; }}
     QToolButton[menu="1"]:checked {{ background: {m['chon_nen']}; color: {m['chon_chu']}; font-weight: 700; border: 0;
         border-left: 4px solid {m['vach_chon']}; padding-left: 7px; }}
-    QLabel[vai="nhom_menu"] {{ color: {m['nhom']}; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; background: transparent;
+    QLabel[vai="nhom_menu"] {{ color: {m['nhom']}; font-size: 11px; font-weight: 700; letter-spacing: 0; background: transparent;
         border: 0; border-radius: 4px; margin: 10px {LE_VIEN_MENU}px 4px {LE_VIEN_MENU}px; padding: 2px 4px; }}
     QLabel[vai="nhom_menu"]:hover {{ background: {m['re']}; }}
     QLabel[vai="nhom_menu"][dong="1"] {{ color: {m['tat']}; }}'''
@@ -382,7 +387,8 @@ def _qss_the_so() -> str:
     QWidget[vai="the_so"] QLabel[vai="huy_hieu_the"][co="ha"] { background: #FEF3C7; color: #7C4A12; }
     QLabel[vai="vach_the"] { background: #E2E8F0; }
     QWidget[vai="the_so"] QLabel[vai="vach_the"] { background: #E2E8F0; }
-    QLabel[vai="dia_chinh_the"] { font-size: 10px; margin: 0; padding: 0; }
+    QLabel[vai="dia_chinh_the"] { font-size: 11px; font-weight: 700; color: #1E293B; margin: 0; padding: 0; }
+    QLabel[vai="dt_the"] { font-size: 10.5px; font-weight: 600; color: #334155; margin: 0; padding: 0; }
     QLabel#lb_bo_dem_excel { background: #F0FDF4; border: 1px solid #2F7D54; color: #276348; font-weight: 700;
         border-radius: 4px; padding: 2px 10px; }
     QLabel#lb_bo_dem_excel:hover { background: #DCFCE7; }
@@ -554,12 +560,15 @@ _RE_MAU_HEX = re.compile(r'#[0-9A-Fa-f]{6}\b')
 TOI_NEN = {'#F4F6F8': '#162033', '#FFF6D6': '#3B2F12', '#FDEBDD': '#3A2414', '#F1F4F7': '#162033', '#F0FDF4': '#0F2A1F', '#ECFDF5': '#0F2A1F', '#DCFCE7': '#14532D', '#FFFBEB': '#2A2210', '#FEF3C7': '#3B2F12',
            '#FEF2F2': '#3A1414', '#FEE2E2': '#4C1D1D', '#F0FDFA': '#0F2A28', '#FFFDE7': '#2A2210', '#F5F3FF': '#2A1F4A',
            '#F1F5F9': '#162033', '#EEF2F7': '#24324A', '#E2E8F0': '#2A3A52', '#EFF6FF': '#1E3A5F', '#F0F6FF': '#1E3A5F',
-           '#DBEAFE': '#1E40AF', '#F0F9FF': '#0C2A3F', '#EEF5FC': '#24324A', '#DCEBFA': '#1E40AF', '#FAFBFC': '#0F172A', '#F8F9FA': '#0B1120'}
+            '#DBEAFE': '#1E40AF', '#F0F9FF': '#0C2A3F', '#EEF5FC': '#24324A', '#DCEBFA': '#1E40AF', '#FAFBFC': '#0F172A', '#F8F9FA': '#0B1120',
+           '#F8F8F8': '#0B1120', '#F3F6FA': '#0B1120'}
 TOI_VIEN = {'#BBF7D0': '#166534', '#86EFAC': '#15803D', '#A7F3D0': '#047857', '#FDE68A': '#854D0E', '#FECACA': '#7F1D1D',
-            '#99F6E4': '#0F766E', '#BAE6FD': '#075985', '#CBD5E1': '#475569', '#DCE3EA': '#334155', '#94A3B8': '#64748B', '#BFDBFE': '#1E40AF'}
+            '#99F6E4': '#0F766E', '#BAE6FD': '#075985', '#CBD5E1': '#475569', '#DCE3EA': '#334155', '#94A3B8': '#64748B', '#BFDBFE': '#1E40AF',
+            '#8696AB': '#64748B', '#E5E5E5': '#334155'}
 TOI_CHU = {'#14532D': '#86EFAC', '#075985': '#7DD3FC', '#4A5866': '#CBD5E1', '#276348': '#86EFAC', '#2F7D54': '#86EFAC', '#065F46': '#6EE7B7', '#047857': '#6EE7B7', '#7C4A12': '#FCD34D',
            '#9A5A12': '#FCD34D', '#78350F': '#FCD34D', '#B83A3A': '#FCA5A5', '#1F6F66': '#5EEAD4', '#2F5DB5': '#93C5FD',
            '#1A5C85': '#7DD3FC', '#0284C7': '#7DD3FC', '#1E293B': '#E2E8F0', '#334155': '#CBD5E1', '#64748B': '#94A3B8', '#1E3A5F': '#93C5FD', '#2563EB': '#60A5FA',
+           '#3B3B3B': '#E2E8F0', '#8B8B8B': '#94A3B8',
            '#152C48': '#BFDBFE', '#202124': '#F1F5F9', '#1A1A1A': '#F1F5F9', '#0B2E4F': '#E2E8F0', '#5B6B82': '#A5B4C8'}
 
 
@@ -830,9 +839,9 @@ def _qss() -> str:
         gridline-color: #E2E8F0; selection-background-color: #DBEAFE; selection-color: #0F172A; border: 1px solid #DCE3EA;
         border-radius: 6px; }}
     QTableCornerButton::section {{ background-color: {CHINH}; border: none; }}
-    QHeaderView::section:vertical {{ background-color: #F8FAFC; color: #64748B; font-weight: 500; border: 0;
+    QHeaderView::section:vertical {{ background-color: #F8FAFC; color: {TOKEN['chu_phu']}; font-weight: 500; border: 0;
         border-right: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0; padding: 0 4px; }}
-    QTableView, QTableWidget {{ outline: 0; }}
+    QTableView::item:focus, QTableWidget::item:focus {{ border: 1px solid {TOKEN['nhan']}; }}
     QLineEdit[nhap="1"], QComboBox[nhap="1"], QSpinBox[nhap="1"] {{ min-height: 24px; font-size: 13px; padding: 4px 10px; }}
     QTableView QLineEdit, QTableView QComboBox, QTableView QPlainTextEdit {{ font-size: 13px; padding: 2px 6px;
         border: 2px solid #2563EB; border-radius: 3px; background: #FFFFFF; selection-background-color: #DBEAFE; selection-color: #0F172A; }}
@@ -850,10 +859,10 @@ def _qss() -> str:
     QLabel[vai="bang_ten"] {{ color: #0F3A63; background: #FFFFFF; font-size: 13px; padding: 8px 12px; border-radius: 8px;
         border: 1px solid #D5E1ED; border-left: 4px solid {TOKEN['nhan']}; }}
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit, QPlainTextEdit, QTextEdit {{ background: #FFFFFF; color: {TOKEN['chu']};
-        border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px 8px; selection-background-color: {MAU_CHON_DIU[0]};
+        border: 1px solid #8696AB; border-radius: 6px; padding: 4px 8px; selection-background-color: {MAU_CHON_DIU[0]};
         selection-color: {MAU_CHON_DIU[1]}; }}
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit {{ min-height: 20px; }}
-    QLineEdit:hover, QComboBox:hover, QSpinBox:hover, QPlainTextEdit:hover {{ border-color: #94A3B8; }}
+    QLineEdit:hover, QComboBox:hover, QSpinBox:hover, QPlainTextEdit:hover {{ border-color: #64748B; }}
     QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus, QPlainTextEdit:focus, QTextEdit:focus {{
         border: 2px solid {TOKEN['nhan']}; padding: 3px 7px; background: #FFFFFF; }}
     QLineEdit[nhap="1"]:focus, QComboBox[nhap="1"]:focus, QSpinBox[nhap="1"]:focus {{ padding: 3px 9px; }}
@@ -1157,7 +1166,7 @@ def kieu_o_gia_k(it) -> None:
 # vượt / cảnh báo đỏ. Phông nhớ theo phông gốc (QFont.key): Phóng to / Thu nhỏ đổi cỡ thì tự dựng lại.
 PHONG_SO = 'Consolas'
 PHONG_SO_DU_PHONG = 'Segoe UI Semibold'
-MAU_SO_KHONG = '#94A3B8'
+MAU_SO_KHONG = '#64748B'          # 1.0.42: WCAG AA 4,76:1 trên trắng (trước #94A3B8 = 2,56:1)
 MAU_SO_TIEN = '#1E3A5F'
 MAU_SO_VUOT = '#B83A3A'
 SO_KHONG = frozenset(('0', '0,0', '0,00', '0,0%', '0.0%', '0%', '-', '—'))
@@ -1195,7 +1204,7 @@ def mau_so(chu, tien: bool = False, vuot: bool = False):
         return mau_theo_tong(MAU_SO_VUOT, 'chu')
     v = str(chu if chu is not None else '').strip()
     if v in SO_KHONG:
-        return MAU_SO_KHONG
+        return mau_theo_tong(MAU_SO_KHONG, 'chu')
     if tien and v and (v[0].isdigit() or (v[0] in '+-' and v[1:2].isdigit())):
         return mau_theo_tong(MAU_SO_TIEN, 'chu')          # 1.0.35: theo tông (Tối: xanh sáng)
     return None
@@ -1307,7 +1316,11 @@ def chay_nen(cha, ham, chu: str = 'Đang xử lý…'):
                 hop.append(h)
         dong_ho.timeout.connect(kiem)
         dong_ho.start()
-        vong.exec(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+        try:
+            co_su_kien = QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents
+        except AttributeError:                          # Qt5: cờ int, không có ProcessEventsFlag
+            co_su_kien = QEventLoop.ExcludeUserInputEvents
+        vong.exec(co_su_kien)
         dong_ho.stop()
         for h in hop:
             h.close()
@@ -2304,7 +2317,7 @@ def thanh_lenh(nhom: list) -> QFrame:
         o = QVBoxLayout(the)
         o.setContentsMargins(7, 4, 7, 6)
         o.setSpacing(3)
-        nhan = QLabel((ten or '').upper())              # nhóm không tên (Màn hình chính, 0.9.70): thẻ không chữ nhóm
+        nhan = QLabel(chu_hien(ten or ''))              # 1.0.42: Title Case, hiện & (không IN HOA)
         nhan.setProperty('vai', 'nhan_ribbon')
         o.addWidget(nhan)
         hang = QHBoxLayout()
@@ -2396,43 +2409,37 @@ def dat_rong_muot(w: QWidget, rong: int, thoi_luong: int | None = None) -> None:
     a.start()
 
 
-THOI_GIAN_TRANG_MS = 160        # chuyển trang / phân hệ trượt nhẹ 14 px -> 0 (1.0.34)
-DICH_TRANG_PX = 14
+THOI_GIAN_TRANG_MS = 160        # giữ hằng (API cũ); từ 1.0.44 không còn trượt trang
+DICH_TRANG_PX = 14              # giữ tên: test / mã gọi cũ còn đọc; không dùng để move() widget trong layout
+
+
+@contextmanager
+def dung_ve(w: QWidget):
+    """Tạm tắt vẽ widget (và con) để đổi trang / ẩn hiện hàng không bị nhấp nháy giữa chừng. Trả lại trạng thái cũ."""
+    cu = w.updatesEnabled()
+    w.setUpdatesEnabled(False)
+    try:
+        yield
+    finally:
+        w.setUpdatesEnabled(cu)
 
 
 def chuyen_trang_muot(stack, chi_so: int, thoi_luong: int = THOI_GIAN_TRANG_MS) -> None:
-    """Chuyển ô của QStackedWidget: trang mới hiện ra trượt nhẹ từ phải sang (DICH_TRANG_PX -> 0) trong thoi_luong ms. Không màn hình /
-    máy yếu / đã ở trang đó: đổi ngay (setCurrentIndex), không hoạt ảnh. Chỉ dời vị trí widget trang (không hiệu ứng mờ: QGraphics-
-    OpacityEffect vẽ lại cả bảng lớn qua ảnh đệm - chậm)."""
+    """Chuyển ô QStackedWidget ngay (setCurrentIndex).
+
+    Trước 1.0.44: trượt widget 14 px / 160 ms bằng QWidget.move(). Widget trang nằm trong layout của QStackedWidget: layout kéo
+    về chỗ cũ mỗi lần vẽ, cộng ẩn/hiện hàng thẻ số → cửa sổ nhấp nháy, cảm giác chậm khi bấm menu trái. Phản hồi tức thì
+    (< 100 ms trang đã nạp) là ngưỡng tốc độ; dấu chọn menu trái đã báo trang đang xem. thoi_luong giữ chữ ký cũ, không dùng."""
     if stack.currentIndex() == chi_so:
-        return
-    stack.setCurrentIndex(chi_so)
-    if not co_hoat_anh() or not stack.isVisible():
-        return
-    from PySide6.QtCore import QEasingCurve, QVariantAnimation
-    w = stack.currentWidget()
-    if w is None:
         return
     cu = getattr(stack, '_hoat_anh_trang', None)
     if cu is not None:
-        cu.stop()
-    goc = w.pos()
-    a = QVariantAnimation(stack)
-    a.setDuration(thoi_luong)
-    a.setStartValue(DICH_TRANG_PX)
-    a.setEndValue(0)
-    a.setEasingCurve(QEasingCurve.Type.OutCubic)
-
-    def dich(v, w=w, goc=goc):
         try:
-            if stack.currentWidget() is w:
-                w.move(goc.x() + int(v), goc.y())
+            cu.stop()
         except RuntimeError:
-            a.stop()
-    a.valueChanged.connect(dich)
-    a.finished.connect(lambda w=w, goc=goc: dich(0))
-    stack._hoat_anh_trang = a
-    a.start()
+            pass
+        stack._hoat_anh_trang = None
+    stack.setCurrentIndex(chi_so)
 
 
 def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_mac_dinh: tuple = ()) -> QFrame:
@@ -2516,7 +2523,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
         if ten in xo:                                        # một nút, bấm xổ danh sách lệnh của nhóm
             b = QToolButton()
             # nổi bật (nền xanh đậm như băng tiêu đề, vạch vàng, chữ trắng): nơi mở / tạo / lưu dự án - người dùng hay tìm
-            b.setText(f'{ten.upper()}   ▾')
+            b.setText(f'{chu_hien(ten)}   ▾')
             k = ky_hieu_nut('Mở dự án') if ten == 'Dự án' else ky_hieu_nut(ten)
             ic = icon_ky_hieu(k, '#FFFFFF', 22) if k else None
             if ic is not None:
@@ -2557,7 +2564,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     def ve_nhom():
         for t, ten, con in tieu_de:
             d = ten in dong
-            t.setText(('▸' if d else '▾') + ('' if khung.thu_gon else '  ' + ten.upper()))
+            t.setText(('▸' if d else '▾') + ('' if khung.thu_gon else '  ' + chu_hien(ten)))
             t.setToolTip(f'{"Mở" if d else "Đóng"} nhóm "{ten}"')
             t.setProperty('dong', '1' if d else '0')
             t.style().unpolish(t)
@@ -3115,6 +3122,7 @@ class OTimChon(QWidget):
         super().__init__(parent)
         self.chon = None
         self.khi_chon = None
+        self.khi_can_ds = None                      # 1.0.47: hàng nhập nhanh nạp danh mục lúc gõ / chọn, không lúc mở cửa sổ
         self._muc = []                              # [(nhãn, chữ không dấu, dữ liệu)]
         self._theo_nhan = {}
         self.o = QLineEdit()
@@ -3140,9 +3148,10 @@ class OTimChon(QWidget):
         self.ds.setMouseTracking(True)                 # rê chuột: tô dòng dưới chuột; bánh xe / thanh cuộn dùng được
         self.ds.itemEntered.connect(self.ds.setCurrentItem)
         self.ds.setObjectName('ds_goi_y')
-        self.ds.setStyleSheet('QListWidget#ds_goi_y { background: #FFFFFF; color: #1A1A1A; border: 1px solid #9FB6CC; }'
-                              'QListWidget#ds_goi_y::item { padding: 4px 6px; }'
-                              'QListWidget#ds_goi_y::item:selected { background: #DCEBFA; color: #0B2E4F; }')
+        dat_kieu_theo_tong(self.ds,
+            'QListWidget#ds_goi_y { background: #FFFFFF; color: #1A1A1A; border: 1px solid #9FB6CC; }'
+            'QListWidget#ds_goi_y::item { padding: 4px 6px; }'
+            'QListWidget#ds_goi_y::item:selected { background: #DCEBFA; color: #0B2E4F; }')
         self.ds.itemClicked.connect(lambda it: self._chon_nhan(it.text()))
         self.o.textEdited.connect(self._go)
         self.o.installEventFilter(self)
@@ -3154,6 +3163,11 @@ class OTimChon(QWidget):
         lo.addWidget(self.nut)
 
     # ---------------------------------------------- danh sách
+    def _dam_bao_ds(self):
+        f = self.khi_can_ds
+        if f is not None:
+            f()
+
     def dat_muc(self, ds: list) -> None:
         self._ds_hien = None
         self._muc = [(nhan, bo_dau(nhan), gt) for nhan, gt in ds]
@@ -3162,6 +3176,7 @@ class OTimChon(QWidget):
 
     def loc(self, chu: str) -> list:
         """Các nhãn khớp mọi từ đã gõ (không dấu); mục bắt đầu bằng từ đầu tiên xếp trước."""
+        self._dam_bao_ds()
         tu = bo_dau(chu).split()
         if not tu:
             return [m[0] for m in self._muc]
@@ -3197,6 +3212,7 @@ class OTimChon(QWidget):
         self.ds.raise_()
 
     def _go(self, chu: str):
+        self._dam_bao_ds()
         self.chon = self._theo_nhan.get(chu)
         self._hien(self.loc(chu) if chu.strip() else [])
 
@@ -3204,6 +3220,7 @@ class OTimChon(QWidget):
     goi_y_trong = 'Danh mục đơn giá chưa có mục nào cho phần này: gõ tên để nhập hạng mục ngoài danh mục.'
 
     def xem_tat_ca(self):
+        self._dam_bao_ds()
         self.o.setFocus()
         ds = self.loc('')
         if not ds:
@@ -3256,6 +3273,7 @@ class OTimChon(QWidget):
 
     def chon_du_lieu(self, gt) -> bool:
         """Chọn mục có dữ liệu gt (kiểm thử / chọn sẵn)."""
+        self._dam_bao_ds()
         for nhan, x in self._theo_nhan.items():
             if x == gt or x is gt:
                 self._chon_nhan(nhan)
@@ -3266,6 +3284,7 @@ class OTimChon(QWidget):
         return self.o.text()
 
     def setText(self, chu: str):
+        self._dam_bao_ds()
         self.o.setText(chu)
         self.chon = self._theo_nhan.get(chu)
 
@@ -4523,7 +4542,8 @@ class _BoChonVung(QObject):
 
     def gan_sm(self) -> None:
         sm = self.bang.selectionModel()
-        if sm is None or sm is self.sm:
+        # 31/10/2026 (kiểm tra giao diện): mô hình chọn cũ vừa bị hủy, PySide trả về đối tượng khác cùng địa chỉ (QWidgetItem…): bỏ qua
+        if sm is None or sm is self.sm or not hasattr(sm, 'selectionChanged'):
             return
         self.sm = sm
         sm.selectionChanged.connect(self.doi)

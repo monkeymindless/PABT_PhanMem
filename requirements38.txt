@@ -1,4 +1,4 @@
-# Bản phát hành (bộ cài Windows 7 SP1 / 8 / 8.1, 32-bit - chạy cả máy 64-bit): Python 3.8.10 32-bit + Qt5. Tạo bằng CAI_DAT_PHAT_HANH.bat
+﻿# Bản phát hành (bộ cài Windows 7 SP1 / 8 / 8.1, 32-bit - chạy cả máy 64-bit): Python 3.8.10 32-bit + Qt5. Tạo bằng CAI_DAT_PHAT_HANH.bat
 PySide2==5.15.2.1
 openpyxl>=3.1
 pypdf>=4

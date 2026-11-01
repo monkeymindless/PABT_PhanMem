@@ -12,6 +12,7 @@ Không phụ thuộc Qt (cỡ dòng ước theo số ký tự).
 from __future__ import annotations
 
 import math
+from decimal import InvalidOperation
 from pathlib import Path
 
 from . import du_lieu_in
@@ -398,6 +399,6 @@ def _tong_quyet_dinh(con, ds_qd: list) -> dict:
         for r in con.execute('SELECT dt_thu_hoi FROM thua WHERE ma_ho = ?', (m,)):
             try:
                 dt += D(r['dt_thu_hoi'] or 0)
-            except Exception:
-                pass
+            except (InvalidOperation, ValueError, TypeError):
+                continue
     return dict(tien=tien, dt=dt)

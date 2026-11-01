@@ -900,9 +900,9 @@ PHONG_TO = 55                          # zoom khi mở trong Excel
 
 
 def _mau_vien(c):
-    """Viền đen của mẫu -> màu tự động (None): Excel chế độ tối (Dark Mode) đổi màu tự động sang sáng, viền đen ghi cứng
-    nằm trên nền tối trông như mất khung (người dùng 30/10/2026, máy khác). In ra giấy vẫn đen."""
-    return None if not c or c.upper() in ('000000', 'FF000000') else _mau(c)
+    """Viền đen ghi RGB (không bỏ màu): WPS / LibreOffice coi Side không màu là không có nét. In giấy luôn đen.
+    Excel chế độ tối trên màn hình có thể tối hơn nền — bản in giấy / PDF vẫn đúng."""
+    return _mau(c) if c else 'FF000000'
 
 
 def _mau(c):

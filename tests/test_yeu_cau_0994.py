@@ -102,8 +102,9 @@ class TestNiemYet(CoSo):
         self.assertIs(b.parentWidget(), k.b_tao.parentWidget())         # cùng hàng nút đợt, không nằm trong thẻ 1
         trang1 = k.tach.widget(0)
         self.assertFalse([x for x in trang1.findChildren(QPushButton)])  # thẻ 1: bảng sát thanh thẻ
-        self.assertIn('padding: 4px 12px', k.tabs.styleSheet())
-        self.assertIn('font-size: 12px', k.tabs.styleSheet())
+        qss_the = k.tabs.tabBar().styleSheet()
+        self.assertIn('padding: 4px 12px', qss_the)
+        self.assertIn('font-size: 12px', qss_the)
         for t in k.the.values():                                         # KPI: nhãn + (số | chữ phụ) - 2 hàng thay 3
             self.assertIs(t.gia.parentWidget(), t)
             self.assertEqual(t.layout().count(), 2)

@@ -431,6 +431,45 @@ class ThuaBanDo:
     ma_ho: int | None
     ho_ten: str
     trang_thai: str
+    dt_thu_hoi: str | None = None            # 30/10/2026: DT thu hồi / DT nguyên thửa của thửa hồ sơ khớp (tô màu lệch diện tích)
+    dt_nguyen_thua: str | None = None
+
+
+# 30/10/2026 (phương án đột phá 4): tô màu bản đồ theo đồng thuận / tiến độ theo hộ / lệch diện tích bản đồ với hồ sơ
+CHE_DO_MAU = (('dong_thuan', 'Đồng thuận'), ('tien_do', 'Tiến độ theo hộ'), ('lech_dt', 'Lệch diện tích bản đồ / hồ sơ'))
+NGUONG_KHOP, NGUONG_LECH = D('0.02'), D('0.10')
+LECH_DT = {'khop': ('Khớp (lệch không quá 2%)', '#2F7D54'), 'lech_nhe': ('Lệch 2-10%', '#E5A93A'),
+           'lech_nhieu': ('Lệch trên 10%', '#C94545'), 'chua_dt': ('Hồ sơ chưa có diện tích', '#7F77DD'),
+           'khong_gan': TRANG_THAI['khong_gan']}
+
+
+def _so(x):
+    if x in (None, ''):
+        return None
+    try:
+        v = D(x)
+    except (ArithmeticError, ValueError, TypeError):
+        return None
+    return v if v.is_finite() else None
+
+
+def lech_dien_tich(t: ThuaBanDo) -> tuple:
+    """(khóa LECH_DT, tỷ lệ lệch Decimal | None, DT bản đồ, DT hồ sơ, cách so). Có ranh thu hồi: DT trong ranh so với DT thu hồi
+    của hồ sơ; không có ranh: DT hình thửa so với DT nguyên thửa (trống thì DT thu hồi)."""
+    if t.ma_ho is None:
+        return 'khong_gan', None, None, None, ''
+    trong = _so(t.dt_trong_ranh)
+    if trong is not None:
+        bd, hs, cach = trong, _so(t.dt_thu_hoi), 'DT trong ranh thu hồi so với DT thu hồi của hồ sơ'
+    else:
+        nt = _so(t.dt_nguyen_thua)
+        bd = _so(t.dt_hinh)
+        hs, cach = (nt, 'DT hình thửa so với DT nguyên thửa của hồ sơ') if nt else \
+            (_so(t.dt_thu_hoi), 'DT hình thửa so với DT thu hồi của hồ sơ')
+    if bd is None or not hs or hs <= 0:
+        return 'chua_dt', None, bd, hs, cach
+    ty = abs(bd - hs) / hs
+    return ('khop' if ty <= NGUONG_KHOP else 'lech_nhe' if ty <= NGUONG_LECH else 'lech_nhieu'), ty, bd, hs, cach
 
 
 def doc_ban_do(con, so_to: str | None = None) -> list:
@@ -440,13 +479,17 @@ def doc_ban_do(con, so_to: str | None = None) -> list:
     cm = chi_muc_thua(con)
     ten = {r['ma_ho']: r['ho_ten'] for r in con.execute('SELECT ma_ho, ho_ten FROM ho')}
     tt = trang_thai_ho(con)
+    nguyen = {}
+    if 'dt_nguyen_thua' in {r[1] for r in con.execute('PRAGMA table_info(thua)')}:
+        nguyen = {r[0]: r[1] for r in con.execute('SELECT ma_thua, dt_nguyen_thua FROM thua')}
     kq = []
     sql = f'SELECT * FROM {BANG}' + (' WHERE so_to = ?' if so_to else '') + ' ORDER BY so_to, CAST(so_thua AS INTEGER), so_thua'
     for r in con.execute(sql, (so_to,) if so_to else ()):
         k = cm.get((_khoa(r['so_to']), _khoa(r['so_thua'])))
         ma = k[1] if k else None
         kq.append(ThuaBanDo(r['so_to'], r['so_thua'], r['loai_dat'], json.loads(r['toa_do']), r['dt_hinh'], r['dt_trong_ranh'], ma,
-                            ten.get(ma, ''), tt.get(ma, 'chua') if ma is not None else 'khong_gan'))
+                            ten.get(ma, ''), tt.get(ma, 'chua') if ma is not None else 'khong_gan',
+                            k[2] if k else None, nguyen.get(k[0]) if k else None))
     return kq
 
 

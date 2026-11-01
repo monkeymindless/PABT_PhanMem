@@ -2201,7 +2201,7 @@ def dam_bao_khung_bth(ws, n_cot: int) -> int:
             v = ds_vien[i]
             canh_vien[i] = {k for k in ('left', 'right', 'top', 'bottom') if getattr(getattr(v, k, None), 'style', None)}
         return canh in canh_vien[i]
-    manh = Side(style='thin')
+    manh = Side(style='thin', color='000000')
     them = 0
     for r in range(dau, cuoi + 1):
         for c in cot:

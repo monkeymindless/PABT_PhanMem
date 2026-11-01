@@ -58,6 +58,8 @@ class TestDanTaiSanTuClipboard(unittest.TestCase):
         # phím tắt Ctrl+Shift+V gọi mo_dan_tai_san
         phim = [s for s in self.lp.findChildren(QShortcut) if s.key() == QKeySequence('Ctrl+Shift+V')]
         self.assertEqual(len(phim), 1)
+        from PySide6.QtCore import Qt
+        self.assertEqual(phim[0].context(), Qt.ShortcutContext.WidgetWithChildrenShortcut)
         with mock.patch.object(self.lp, 'mo_dan_tai_san') as m:
             phim[0].activated.emit()
             b.click()

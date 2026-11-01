@@ -21,7 +21,9 @@ class HopCapNhat(QDialog):
         lo = QVBoxLayout(self)
         gt = QLabel('Gói cập nhật (file <b>.larcud</b>) dùng để sửa lỗi, bổ sung tính năng mà <b>không phải cài lại</b> '
                     'phần mềm. Dữ liệu dự án và bộ đơn giá đã cập nhật được giữ nguyên. Bản cập nhật có hiệu lực khi mở lại '
-                    'phần mềm; nếu bản cập nhật lỗi, phần mềm tự quay về bản cài gốc.')
+                    'phần mềm; nếu bản cập nhật lỗi, phần mềm tự quay về bản cài gốc.<br><br>'
+                    '<b>Chỉ cài gói do đơn vị phát hành LARC gửi</b> (USB / email nội bộ / máy chủ đơn vị). '
+                    'Gói chạy mã Python trên máy này — không cài file lạ từ mạng.')
         gt.setWordWrap(True)
         lo.addWidget(gt)
         self.lb = QLabel()

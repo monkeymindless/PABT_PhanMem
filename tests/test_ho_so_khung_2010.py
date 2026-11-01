@@ -254,7 +254,7 @@ class TestBangThua(_Co):
         chu = [a.text() for a in m.actions() if a.text()]
         self.assertEqual(chu[0], 'Sao chép ô: "457"\tCtrl+C')
         self.assertEqual(chu[1], 'Sao chép cả dòng thửa\tCtrl+Shift+C')
-        self.assertIn('Mở hộp soạn Nguồn gốc & Vị trí đầy đủ…\tEnter', chu)
+        self.assertIn('Mở hộp soạn Nguồn gốc && Vị trí đầy đủ…\tEnter', chu)
 
     def test_xoa_nhieu_dong_chon_tung_o(self):
         k = self.khung()

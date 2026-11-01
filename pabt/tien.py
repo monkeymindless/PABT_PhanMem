@@ -18,7 +18,10 @@ def D(x) -> Decimal:
     if isinstance(x, int):
         return Decimal(x)
     if isinstance(x, float):
-        return Decimal(repr(x))          # 143.8 -> '143.8' (không lấy đuôi nhị phân)
+        d = Decimal(repr(x))             # 143.8 -> '143.8' (không lấy đuôi nhị phân)
+        if not d.is_finite():            # inf / nan: cùng quy tắc với chuỗi (trước đây co_so(float('nan')) = True)
+            raise ValueError(f'không đọc được số: {x!r}')
+        return d
     if type(x) is str:
         return _d_chuoi(x)
     return _d_chuoi_goc(str(x))
@@ -87,6 +90,10 @@ def la_cong_thuc(s) -> bool:
     return s.startswith('=') or bool(re.search(r'[+*/x×:()]|\d\s*-', s.lower()))
 
 
+CONG_THUC_DAI_TOI_DA = 1000          # ký tự - công thức thật trong ô số chỉ vài chục ký tự
+CONG_THUC_SAU_TOI_DA = 100           # tầng ngoặc / dấu âm lồng nhau
+
+
 def tinh_cong_thuc(s) -> Decimal:
     """Tính công thức cộng, trừ, nhân, chia, ngoặc: '=4,2*5,7' -> 23,94; '12x3 + 1,5' -> 37,5; '50%*200' -> 100.
     Nhân: * x × ; chia: / : ; số kiểu Việt Nam (dấu phẩy thập phân). Lỗi -> ValueError (thông báo tiếng Việt)."""
@@ -94,8 +101,11 @@ def tinh_cong_thuc(s) -> Decimal:
     s = str(s or '').strip().lstrip('=').strip().lower()
     if not s:
         raise ValueError('công thức trống')
+    if len(s) > CONG_THUC_DAI_TOI_DA:                 # dán nhầm cả đoạn văn / bảng vào ô số
+        raise ValueError(f'công thức quá dài (tối đa {CONG_THUC_DAI_TOI_DA} ký tự)')
     tok = re.findall(r'\d[\d.,]*|[-+*/x×:()%]|\S', s)
     vi_tri = [0]
+    sau = [0]                                         # tầng ngoặc / dấu âm lồng nhau: quá sâu -> ValueError, không RecursionError
 
     def xem():
         return tok[vi_tri[0]] if vi_tri[0] < len(tok) else None
@@ -126,11 +136,17 @@ def tinh_cong_thuc(s) -> Decimal:
 
     def thua_so():
         t = lay()
+        if t in ('-', '+', '('):
+            sau[0] += 1
+            if sau[0] > CONG_THUC_SAU_TOI_DA:
+                raise ValueError('công thức lồng ngoặc quá sâu')
         if t in ('-', '+'):
             v = thua_so()
+            sau[0] -= 1
             return -v if t == '-' else v
         if t == '(':
             v = bieu_thuc()
+            sau[0] -= 1
             if lay() != ')':
                 raise ValueError('thiếu dấu ")"')
         elif t is not None and t[0].isdigit():
@@ -183,7 +199,8 @@ def vn(x, so_le: int = 0) -> str:
     if so_le == 0:
         s = f'{lam_tron(x, 0):,.0f}'
         return s.replace(',', '.')
-    s = f'{x:,.{so_le}f}'
+    # làm tròn trước như ROUND của Excel: định dạng Decimal tự làm tròn kiểu ngân hàng (0,25 -> "0,2"; 23.450.000 -> "23,4 triệu")
+    s = f'{lam_tron(x, so_le):,.{so_le}f}'
     return s.replace(',', '#').replace('.', ',').replace('#', '.')
 
 
@@ -213,7 +230,10 @@ def so_vn(x) -> str:
     if x == x.to_integral_value():
         return vn(x)
     le = min(max(-x.normalize().as_tuple().exponent, 1), 4)
-    return vn(x, le)
+    x = lam_tron(x, le)
+    if x == x.to_integral_value():                  # 1,000005 -> "1" (trước: "1,0000")
+        return vn(x)
+    return vn(x, min(-x.normalize().as_tuple().exponent, le))
 
 
 # cột Số lượng / Khối lượng / Diện tích - định dạng kế toán (người dùng 15/10/2026): tài sản (mục 2 nhà, công trình) "*,00"; đất,

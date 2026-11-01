@@ -18,7 +18,7 @@ from . import csdl, du_toan
 from .du_toan import DongDT, DuToan
 from .lap_pa import DanhMuc, LoiNhap, doc_so
 from .tien import D, KHONG, so_luong_vn, so_vn, tien_bang_chu, vn
-from .giao_dien import con_tro_cho, kieu_o_gia_k, kieu_o_he_so_k, kieu_o_so
+from .giao_dien import con_tro_cho, dat_kieu_theo_tong, kieu_o_gia_k, kieu_o_he_so_k, kieu_o_so
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Dự toán & khái toán'
@@ -492,11 +492,11 @@ class KhungDuToan(QWidget):
         khung = QFrame()
         khung.setObjectName('khoi_chuan_bi')
         # có bộ chọn: kiểu không bộ chọn truyền sang ô gợi ý (tooltip) của các ô con -> nền đen
-        khung.setStyleSheet('QFrame#khoi_chuan_bi { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; }')
+        dat_kieu_theo_tong(khung, 'QFrame#khoi_chuan_bi { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; }')
         vo = QVBoxLayout(khung)
         vo.setContentsMargins(6, 3, 6, 3)
         vo.setSpacing(3)
-        tieu = QLabel('THÔNG TIN CHUẨN BỊ ĐẦU TƯ & KHÁI TOÁN TỔNG MỨC')
+        tieu = QLabel('Thông tin chuẩn bị đầu tư và khái toán tổng mức')
         tieu.setProperty('vai', 'nhan')
         # 0.9.95: nút nhỏ ẩn / hiện hai hàng thông tin chung - nhường chiều cao cho bảng khi đang nhập khối lượng
         self.b_an_tt = QToolButton()
