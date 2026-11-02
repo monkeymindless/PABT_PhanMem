@@ -7,6 +7,16 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.53', '03/11/2026', (
+        'Cập nhật đơn giá từ văn bản (Word, PDF, bản scan): dòng con "- Ống 1 m Φ1m" giữ tên dòng cha, khớp mục cũ theo cỡ Φ, kết cấu, '
+        'số đo, ĐVT dù tên văn bản ghi khác bộ đơn giá - không còn báo nhầm "mục mới". Dòng giá chung ("Trụ cổng, bờ kè và các loại tài sản '
+        'khác có kết cấu") cập nhật mọi mục cùng kết cấu. Ô giá "259.000 - 720.000" tách mức thấp / mức cao (mục có dấu chấm cuối tên).',
+        'Dòng hướng dẫn không có giá ("giếng sâu từ 10m … tính thêm 50%", gác lửng 40% / 20%) hiện riêng ở khung "Quy định cách tính".',
+        'Văn bản đơn giá cây trồng: dòng ghi nhiều loài ("Cây cải xanh, cải ngọt, cải thìa", "Si cảnh, Sanh cảnh…") tách thành từng loài như '
+        'bộ đơn giá; giá nhiều mùa vụ trong một ô ("Đông Xuân: … Hè Thu: …"); loài cây lâm nghiệp đọc sai tên nhận ra theo nhóm giá.',
+        'Bản scan: giá đọc sai chữ số ("S27.312", "157.000" thay "187.000"), ô giá không đọc được, cỡ đường kính đọc hỏng được đánh dấu '
+        '"giá cần xem lại" và không chọn sẵn; chế độ thay cả nhóm không tự chọn xóa mục chỉ vì bản scan đọc thiếu dòng.',
+    )),
     ('1.0.52', '02/11/2026', (
         'Niêm yết công khai: tùy chọn che số CCCD (075092***456) trên bản dự thảo dán tại điểm dân cư và file bảng niêm yết - ô ở Xuất hồ sơ & '
         'Bản in (chế độ Dự thảo), nhớ theo dự án, mặc định tắt. Tờ trình, quyết định, bảng ký nhận vẫn in đủ 12 số.',

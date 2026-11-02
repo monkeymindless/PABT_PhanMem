@@ -21,7 +21,7 @@ TEN_NHOM_NGAN = {2: 'Nhà, công trình', 3: 'Cây trồng', ndg.NHOM_VN: 'Vật
 C_MA, C_TEN, C_DVT, C_GIA = 1, 2, 3, 4
 COT = ('Dùng', 'Mã', 'Tên (theo văn bản)', 'ĐVT', 'Giá mới (đ)', 'Giá hiện hành (đ)', 'Trạng thái', 'Nhóm',
        'Ghi chú (quy cách)', 'Tên hiện hành trong bộ đơn giá')
-RONG_COT = (50, 100, 380, 70, 120, 140, 130, 90, 170)
+RONG_COT = (50, 100, 380, 70, 120, 140, 180, 90, 170)
 # 30/10/2026 (người dùng): "thay thế toàn bộ văn bản cũ bằng văn bản mới, để đúng với toàn bộ nội dung theo văn bản mới"
 # 1.0.46: chữ khác chuột phải "Thay thế dòng đang chọn" trên bảng Bộ đơn giá
 CACH_CAP_NHAT = (('Bổ sung, sửa đổi: thêm mục mới, đổi giá - các mục khác của bộ đơn giá giữ nguyên', False),
@@ -50,7 +50,8 @@ class HopNhapDonGia(QDialog):
         dong = ndg.doc_bang(file) if dong is None else dong
         vb = van_ban if van_ban is not None else ndg.phan_tich_van_ban(dong)
         nhom_vb = vb.get('nhom', 0) or nhom_uu_tien or 0
-        ds = ndg.nhan_muc(dong, nhom_vb)
+        quy_tac = []                                    # dòng quy định cách tính không có giá ("tính thêm 50%", "bằng 40% đơn giá…")
+        ds = ndg.nhan_muc(dong, nhom_vb, quy_tac)
         # bảng giá cây lâm nghiệp theo NHÓM loài x cỡ đường kính -> từng loài một dòng mỗi cỡ (danh sách loài Phụ lục VI của văn bản)
         so_nhom = len({m.nhom_loai for m in ds if m.nhom_loai})
         ds, khong_tach = ndg.tach_theo_loai(ds, ndg.doc_nhom_loai(dong))
@@ -64,6 +65,7 @@ class HopNhapDonGia(QDialog):
                                     ('\n\n' + '\n'.join(xem_van[:10]) if xem_van else ''))
         super().__init__(parent)
         self.tu_loi_van = tu_loi_van
+        self.scan = bool(getattr(dong, 'scan', False))   # dòng đọc bằng nhận dạng chữ: chặn giá nghi đọc sai, không chọn sẵn mục "bỏ"
         self.ds = ds
         self.van_ban = vb
         self.da_co = ndg.da_co(vb.get('so_hieu', ''))
@@ -164,6 +166,15 @@ class HopNhapDonGia(QDialog):
             lo.addWidget(QLabel('Câu có số tiền / tỷ lệ phần mềm KHÔNG tự lấy (khoảng giá, tỷ lệ %, không rõ tên) - xem và nhập tay nếu cần:'))
             lo.addWidget(o)
         self.xem_van = xem_van
+        self.quy_tac = quy_tac
+        if quy_tac:
+            o = QPlainTextEdit('\n'.join('• ' + x for x in quy_tac))
+            o.setReadOnly(True)
+            o.setMaximumHeight(110)
+            lo.addWidget(QLabel(f'Quy định cách tính trong văn bản ({len(quy_tac)} dòng, không có đơn giá - phần mềm không tạo mục; '
+                                'áp dụng khi lập phương án):'))
+            lo.addWidget(o)
+        self.o_quy_tac = o if quy_tac else None
         if vb.get('can_xem'):
             o = QPlainTextEdit('\n'.join(vb['can_xem']))
             o.setReadOnly(True)
@@ -214,7 +225,7 @@ class HopNhapDonGia(QDialog):
         self.cb_vb_cu.blockSignals(False)
 
     def khop(self):
-        ndg.so_khop(self.ds, self.o_nhom.currentData() or None, thay_the=self.thay_the())
+        ndg.so_khop(self.ds, self.o_nhom.currentData() or None, thay_the=self.thay_the(), scan=self.scan)
         nhom_bang = self.o_nhom.currentData() or 0
         self._dang_ve = True
         self.bang.setRowCount(len(self.ds))
@@ -226,7 +237,10 @@ class HopNhapDonGia(QDialog):
             dung = m.chon and m.trang_thai != 'giữ nguyên' and not (self.da_co and m.trang_thai == 'cập nhật')
             chk.setCheckState(Qt.CheckState.Checked if dung else Qt.CheckState.Unchecked)
             self.bang.setItem(i, 0, chk)
-            tt = m.trang_thai + (f' (gần đúng {m.khop_gan:.0%})' if m.khop_gan else '')
+            # cách khớp ngoài tên (đặc trưng / dòng chung / khoảng giá) + độ giống: người dùng chỉ cần soát các dòng này
+            ghi = '; '.join(x for x in (m.cach_khop, f'gần đúng {m.khop_gan:.0%}' if m.khop_gan else '',
+                                        'giá cần xem lại' if m.nghi_gia and m.trang_thai != 'giữ nguyên' else '') if x)
+            tt = m.trang_thai + (f' ({ghi})' if ghi else '')
             n = nhom_bang or m.nhom or 3
             # mục mới: tiền tố mã sẽ cấp khi áp dụng (số tiếp theo của bộ đơn giá - ma_tai_san.ma_tiep)
             ma = m.ma_khop or m.ma or (f'{m.ma_moi or ndg.TIEN_TO.get(n, "") + "…"} (mới)' if m.trang_thai == 'mới' else '')
@@ -234,9 +248,10 @@ class HopNhapDonGia(QDialog):
             for c, v in enumerate((ma, m.ten_thay or m.ten, m.dvt, vn(m.don_gia), vn(m.gia_cu) if m.gia_cu else '', tt,
                                    TEN_NHOM_NGAN.get(n, ''), m.ghi_chu_thay or m.ghi_chu, ten_cu), start=1):
                 it = QTableWidgetItem(v)
-                if c not in (C_TEN, C_DVT, C_GIA) or m.bo_cu:   # sửa được Tên, ĐVT, Đơn giá mới trước khi áp dụng
+                # sửa được Tên, ĐVT, Đơn giá mới trước khi áp dụng (dòng phụ của dòng chung: sửa ở dòng đầu của nhóm)
+                if c not in (C_TEN, C_DVT, C_GIA) or m.bo_cu or m.phu:
                     it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                it.setToolTip(m.nguon_dong if c != 9 or not m.ghi_chu_cu else f'Ghi chú hiện hành: {m.ghi_chu_cu}')
+                it.setToolTip(self._chu_thich(m) if c != 9 or not m.ghi_chu_cu else f'Ghi chú hiện hành: {m.ghi_chu_cu}')
                 it.setBackground(QBrush(MAU[m.trang_thai]))
                 if c in (4, 5):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -248,6 +263,14 @@ class HopNhapDonGia(QDialog):
         gan = sum(1 for m in self.ds if m.khop_gan)
         them = ''.join(f', {dem[k]} {chu}' for k, chu in (('đổi quy cách', 'đổi tên / quy cách'), ('bỏ', 'mục cũ không còn ghi'))
                        if dem[k])
+        chung = sum(1 for m in self.ds if m.cach_khop == ndg.CACH_DONG_CHUNG)
+        cap = sum(1 for m in self.ds if m.muc_gia == 'thap')
+        dac = sum(1 for m in self.ds if m.cach_khop == ndg.CACH_DAC_TRUNG)
+        nghi = sum(1 for m in self.ds if m.nghi_gia and m.trang_thai != 'giữ nguyên')
+        tach = len({m.tach_tu for m in self.ds if m.tach_tu})
+        them += (f', {chung} mục theo dòng chung' if chung else '') + (f', {cap} khoảng giá' if cap else '') + \
+            (f', {dac} khớp theo đặc trưng' if dac else '') + (f', {tach} dòng nhiều loài đã tách' if tach else '') + \
+            (f', {nghi} giá cần xem lại (bản scan)' if nghi else '')
         self.lb.setText(f'  {len(self.ds)} dòng: {dem["mới"]} mới, {dem["cập nhật"]} đổi giá{them}, {dem["giữ nguyên"]} không đổi'
                         + (f', {gan} khớp tên gần đúng.' if gan else '.'))
         so_vb = sum(1 for m in self.ds if not m.bo_cu)
@@ -256,11 +279,30 @@ class HopNhapDonGia(QDialog):
             nhom = ', '.join(ndg.NHOM_PHAM_VI.get(n, '') for n in ndg.pham_vi_thay_the(self.ds, self.o_nhom.currentData() or None))
             canh = (f'Thay thế toàn bộ danh mục {nhom}: văn bản có {so_vb} mục; {dem["bỏ"]} mục cũ không còn trong văn bản sẽ bị BỎ '
                     'khỏi bộ đơn giá (dòng đỏ, bỏ dấu "Dùng" để giữ).')
+            if self.scan:
+                canh += (' Văn bản đọc từ BẢN SCAN: dòng đọc hỏng cũng hiện thành "bỏ" - các dòng bỏ KHÔNG chọn sẵn, chỉ đánh dấu '
+                         'mục chắc chắn văn bản mới không còn.')
             if dem['bỏ'] > so_vb:
                 canh += (' Số mục bỏ nhiều hơn số mục văn bản: kiểm tra văn bản đã đọc ĐỦ các bảng / trang (bản scan, bảng nhiều '
                          'trang) và đúng nhóm trước khi áp dụng.')
         self.lb_canh_thay.setText(canh)
         self.lb_canh_thay.setVisible(bool(canh))
+
+    @staticmethod
+    def _chu_thich(m) -> str:
+        """Dòng gốc của văn bản + giải thích cách khớp (02/11/2026: người dùng chỉ cần soát)."""
+        giai = {ndg.CACH_DAC_TRUNG: 'Khớp theo đặc trưng (cỡ Φ, số đo, kết cấu, ĐVT, từ) - tên văn bản ghi khác tên trong bộ đơn giá.',
+                ndg.CACH_DONG_CHUNG: f'Dòng chung: "{m.cha}" - một mức giá cho mọi mục cùng kết cấu của các tài sản nêu ở dòng cha.',
+                ndg.CACH_THAP: f'Khoảng giá {m.khoang}: mức thấp -> mục tên không có dấu chấm cuối.',
+                ndg.CACH_CAO: f'Khoảng giá {m.khoang}: mức cao -> mục tên có dấu chấm cuối (quy ước của bộ đơn giá).'}
+        nghi = ''
+        if m.nghi_gia:
+            nghi = (f'Bản scan: {m.nghi_gia} - không chọn sẵn, đối chiếu văn bản gốc rồi đánh dấu "Dùng" nếu đúng.'
+                    if m.nghi_gia.startswith(('nghi', 'cỡ')) else
+                    f'Bản scan đọc ô giá "{m.nghi_gia}" không đúng dạng số tiền - giá {vn(m.don_gia)} là đoán; đối chiếu văn bản gốc.')
+        tach = f'Văn bản ghi chung nhiều loài: "{m.tach_tu}" - mỗi loài một mục như bộ đơn giá.' if m.tach_tu else ''
+        return '\n'.join(x for x in (m.nguon_dong, giai.get(m.cach_khop, ''), tach, nghi,
+                                     m.ghi_chu if m.muc_gia and not m.ma_khop else '') if x)
 
     def _sua_o(self, r: int, c: int):
         """Sửa tên / ĐVT / đơn giá mới: ghi vào mục rồi so khớp lại với bộ đơn giá đang dùng (đổi trạng thái mới / đổi giá)."""
@@ -268,7 +310,7 @@ class HopNhapDonGia(QDialog):
             return
         chu = ' '.join(self.bang.item(r, c).text().split())
         m = self.ds[r]
-        if m.bo_cu:
+        if m.bo_cu or m.phu:
             return
         if c == C_GIA:
             g = ndg.doc_gia(chu)

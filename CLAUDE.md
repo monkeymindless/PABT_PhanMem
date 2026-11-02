@@ -2728,6 +2728,34 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - Ô số (QSpinBox) có chevron lên / xuống `giao_dien._qss_o_so` (`_anh_mui_ten(mau, len_)`) - trước Qt vẽ vạch "–|". Thẻ Hỗ trợ:
     `man_hinh.KHE_HANG_NHAP` 6 px giữa hàng nhân khẩu và hàng nhập chính sách.
   - Ảnh quy trình / mẫu điều chỉnh: script scratchpad (dự án giả lập) -> `ket_qua_kiem_tra/anh_dieu_chinh/`.
+- 1.0.53 BỘ ĐỌC VĂN BẢN ĐƠN GIÁ (người dùng 02-03/11/2026: QĐ 18/2026 nhà, công trình báo nhầm "mục mới"; "thiết lập bộ đọc, bộ
+  phân tích chi tiết về liên kết cây trồng theo dạng của bộ đơn giá" - thử thật trên `D:\APP AI PABT\VBHN cây trồng.pdf` (48 trang scan,
+  NGOÀI repo, không đưa vào test); test `tests/test_nhap_don_gia_cha_con.py`, `tests/test_nhap_don_gia_cay_scan.py` (bộ đơn giá GIẢ LẬP:
+  chép bo_don_gia.sqlite, thay nhóm, mock `don_gia.file_dang_dung`)). `pabt/nhap_don_gia.py`:
+  - ĐỌC: bản scan hay ra từng DÒNG CHỮ (không khung) -> `_DocDong` (dòng cha không giá / con "-" hoặc chữ thường, STT ô gộp đặt giữa nhóm
+    `cha_sau_stt`, ô tên xuống dòng nối lại giữ dấu phẩy, ĐVT "mét" / "Đồng/m2" (`DVT`, `chuan_dvt` -> "m", "m²"), khoảng giá "a - b" ->
+    hai Muc `muc_gia` thap / cao (mức cao = tên + "." - quy ước bộ đơn giá), dòng hướng dẫn `la_quy_tac` -> danh sách `quy_tac`, chú thích
+    cuối trang `_RE_CHU_THICH_TRANG` bỏ). Bảng có tiêu đề (nhan_muc): tiêu đề cột giá đọc sai -> cột cuối; cột STT đọc sai ("SIT") -> cột 0;
+    hàng thừa ô bên trái; STT rác (`_RE_STT_HOP_LE`); STT trùng dòng cha / dòng cùng kiểu dòng con trước ("Năm 3" sau "Năm 2") vẫn là dòng
+    con; `tach_nhieu_gia` ("Đông Xuân: … Hè Thu, Mùa: …"); giá OCR `doc_gia_ocr` + `Muc.nghi_gia`; ô giá có ĐVT mà không đọc được -> quy_tac
+    "KHÔNG ĐỌC ĐƯỢC ĐƠN GIÁ"; cỡ đường kính hỏng giữa hai cỡ đều bước -> suy (`nghi_gia`). `nhan_muc(dong, nhom, quy_tac=None)`.
+  - KHỚP (`so_khop(ds, nhom, thay_the, scan=False)`), thứ tự: (0) dòng nhiều loài `ds_loai_trong_ten` -> từng loài `_tim_loai` (tên / quy
+    cách / có-không "Cây" / bỏ ngoặc theo giá ("Cây Liễu (mức 79.000 đ/cây)") / gần đúng cùng loài `_dau_giong`), loài bộ chưa có = mới,
+    `Muc.tach_tu`, dòng phụ `phu`; (1) cặp khoảng giá (bộ chưa có cặp: mục mới KHÔNG chọn sẵn); (2) dòng chung `chu_the_chung` (dòng cha nêu
+    nhiều tài sản + con có kết cấu `_ket_cau_chinh`: mọi mục cùng kết cấu của các chủ thể; "các loại … khác": khối liền cùng giá) - không đổi
+    tên từng mục khi thay thế; (3) mã / tên (`trung_dau` + `_chon_dau`: tên bỏ dấu trùng nhiều mục "Sưa" / "Sữa" chọn theo dấu) / quy cách /
+    gần đúng difflib (`_mau_thuan`: khác số đo / Φ / số năm thì không); ĐVT trống mà giá khác -> mục cùng tên bỏ ngoặc cùng giá ("Cây chuối"
+    ha / m²); (4) ĐẶC TRƯNG `dac_trung` / `diem_dac_trung` (Φ quy mm, số đo, kết cấu, số trơn, từ; `_cung_tu_dau` - không có Φ thì từ đầu
+    phải trùng; bỏ qua dòng loài cây `ten_loai`); (5) theo giá như cũ. `scan=True` (`DongScan` do `doc_bang_ocr` trả, hộp đọc `dong.scan`):
+    đổi giá mà `nham_chu_so` (1-4 chữ số cặp hay nhầm, hoặc chênh > 2,5 lần) -> nghi, không chọn sẵn; chế độ thay thế: dòng "bỏ" không chọn sẵn.
+  - Cây lâm nghiệp: `doc_nhom_loai` bỏ "(Được bãi bỏ)" và tên khác rác; `_sua_ten_nhom`: tên trùng hẳn -> loài của bộ có cùng bảng giá theo
+    cỡ với nhóm (`_loai_cung_gia`) mà văn bản chưa ghi đúng tên, ghép một-một theo độ giống (NGUONG_SUA_TEN_NHOM 0,6; còn đúng một cặp
+    0,45) -> `sua_ten_loai(ten, khac, biet, tranh)` (không đổi sang tên trùng bỏ dấu mà khác dấu + khác tên khác; không sang tên loài nhóm
+    khác của văn bản). Kết quả PDF thật: 5.035 / 5.205 dòng khớp đúng giá, 16 mới (14 = loài Mít nhóm IV bộ chưa có), 0 dòng nghi được chọn
+    sẵn; so_khop 5.205 dòng 0,56 s (`_khoa` / `_dvt_khoa` / `_dau_ten` lru_cache). OCR sai chữ số không sửa được tuyệt đối: dòng nghi chỉ
+    đánh dấu; nguồn tốt nhất vẫn là Word / PDF có chữ.
+  - Hộp `HopNhapDonGia`: khung "Quy định cách tính" (`o_quy_tac`), cột Trạng thái ghi cách khớp / "giá cần xem lại", chú thích giải thích
+    (`_chu_thich`), dòng phụ không sửa được, đếm dòng chung / khoảng giá / đặc trưng / tách loài / giá cần xem.
 - `khoa.py`: khóa nhiều máy bằng file `<x>.pabt.khoa` (làm mới 60 s, hết hạn 180 s); `app.mo()` hỏi mở chỉ xem / vẫn sửa.
 - `giao_dien.py`: QSS + tô màu nút tự động theo chữ trên nút (`LUAT` → `MAU`, property `nhom`), nhãn dùng property `vai`
   (`nhan`, `tieu_de`, `bang_ten`). Nút mới tự có màu nếu chữ khớp luật; thêm nhóm thì sửa `LUAT`/`MAU`.

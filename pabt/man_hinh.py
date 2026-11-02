@@ -3315,6 +3315,9 @@ class HopIn(QDialog):
         self.o_che_cccd.setToolTip('Chỉ áp cho bản DỰ THẢO dán tại điểm dân cư và file bảng niêm yết (Nghị định 13/2023/NĐ-CP): giữ 6 số '
                                    'đầu + 3 số cuối, bỏ ngày / nơi cấp. Tờ trình, quyết định, bảng ký nhận vẫn in đủ số. Nhớ theo dự án.')
         self.o_che_cccd.setChecked(che_cccd_niem_yet(con))
+        if getattr(parent, 'chi_doc', False):            # dự án mở chỉ xem: không ghi được tùy chọn - tắt ô, không cho bấm rồi báo lỗi
+            self.o_che_cccd.setEnabled(False)
+            self.o_che_cccd.setToolTip(self.o_che_cccd.toolTip() + ' Dự án đang mở chỉ xem: không đổi được tùy chọn này.')
         self.o_che_cccd.setVisible(False)
         self.o_che_cccd.toggled.connect(lambda bat: self._doi_che_cccd(bat))
         # 1.0.05: hộ có nhiều lần lập phương án (lần đầu + bổ sung) - in lần mới nhất (đợt trình bổ sung) hay cộng dồn
