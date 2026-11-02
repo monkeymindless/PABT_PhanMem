@@ -126,9 +126,9 @@ def ap_vao_du_an(con) -> dict:
     from . import don_gia_rieng
     rieng = don_gia_rieng.doc_rieng(con)          # quy ước, đơn giá thẩm định riêng của dự án: giữ lại
     csdl.chep_danh_muc(con, p, don_vi=False, bang=BANG_BO)
-    with con, csdl.mo_khoa_danh_muc(con):
+    with csdl.giao_dich(con), csdl.mo_khoa_danh_muc(con):
         don_gia_rieng.tra_rieng(con, rieng)
-    with con:
+    with csdl.giao_dich(con):
         con.execute('UPDATE du_an SET phien_ban_gia = ? WHERE id = 1', (tt['phien_ban'],))
         csdl.ghi_nhat_ky(con, 'Áp bộ đơn giá', f'Phiên bản {tt["phien_ban"]} ({tt["nguon"]})')
     return tt
@@ -149,7 +149,7 @@ def bo_sung_vat_nuoi(con) -> int:
     moi = [r for r in ds if r['ma'] not in co]
     if not moi:
         return 0
-    with con, csdl.mo_khoa_danh_muc(con):
+    with csdl.giao_dich(con), csdl.mo_khoa_danh_muc(con):
         for r in moi:
             k = [c for c in r if c in cot]
             con.execute(f'INSERT INTO dm_taisan ({", ".join(k)}) VALUES ({", ".join("?" * len(k))})', [r[c] for c in k])
@@ -190,7 +190,7 @@ def tao_bo_tu_excel(file_excel, file_ra, phien_ban: str = '', ghi_chu: str = '',
         con = csdl.tao_moi(ra)
         try:
             csdl.chep_danh_muc(con, tam, don_vi=False, bang=BANG_BO)
-            with con, csdl.mo_khoa_danh_muc(con):
+            with csdl.giao_dich(con), csdl.mo_khoa_danh_muc(con):
                 con.execute('DELETE FROM dm_xa')            # danh sách xã, phường của dự án nguồn: không đưa vào bộ
                 chuan_ten_danh_muc(con)                     # 'cây xoài' -> 'Cây xoài'
                 con.executemany('INSERT INTO van_ban (so_hieu, co_quan, noi_dung, trang_thai) VALUES (?,?,?,?)', list(theo_doi))
@@ -401,7 +401,7 @@ def _mo_sua():
         p = dam_bao_ban_sua()
         con = csdl.mo(p)
         try:
-            with con, csdl.mo_khoa_danh_muc(con):
+            with csdl.giao_dich(con), csdl.mo_khoa_danh_muc(con):
                 yield con
         finally:
             con.close()

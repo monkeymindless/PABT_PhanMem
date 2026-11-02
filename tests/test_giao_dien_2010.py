@@ -211,7 +211,8 @@ class TestHopIn(_Co):
         self.assertEqual(h.the_tai_lieu[h.o_tt].text(), 'Chỉ mở ở Chính thức')
         self.assertIn('85/15', h.the_tai_lieu[h.o_bth].text())
         self.assertIn('(2 hộ)', h.b_thuc_hien.text())
-        self.assertFalse(h.o_che_cccd.isChecked() or h.o_che_cccd.isVisibleTo(h))   # 1.0.04: không che CCCD
+        self.assertFalse(h.o_che_cccd.isChecked())                              # 1.0.52: che CCCD niêm yết - tùy chọn, mặc định tắt
+        self.assertTrue(h.o_che_cccd.isVisibleTo(h))                            # chỉ hiện ở chế độ Dự thảo
         h.the_che_do.setCurrentIndex(1)                                         # bấm thẻ Chính thức
         self.assertEqual(h.che_do(), 'chinh_thuc')
         self.assertTrue(all(o.isChecked() and o.isEnabled() for o in (h.o_ct, h.o_bth, h.o_tt, h.o_bc)))

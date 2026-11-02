@@ -50,7 +50,7 @@ class TestQssChung(unittest.TestCase):
         for x in ('background: #FFFFFF', '#8696AB', 'color: #0F172A'):
             self.assertIn(x, phu)
         self.assertIn('#F1F5F9', _quy_tac(qss, 'QPushButton[nhom="in"]:hover'))
-        self.assertIn(f'background: {NAVY}', _quy_tac(qss, 'QPushButton[bien_the="success"]'))   # KieuNut.LUU = navy
+        self.assertIn(f'background: {giao_dien.MAU_LUU[0]}', _quy_tac(qss, 'QPushButton[bien_the="success"]'))   # 1.0.52: Lưu xanh lục
         self.assertIn(f'background: {NAVY}', _quy_tac(qss, 'QToolButton[nhom="luu"]'))
 
     def test_the_khung_nhom_thanh_chia(self):

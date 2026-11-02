@@ -32,7 +32,7 @@ $TEN_NGAN = 'LARC'
 $LOI_TAT_CU = @('PABT - Lập phương án bồi thường.lnk', 'PABT.lnk')
 # định danh ứng dụng trên taskbar - PHẢI trùng pabt.app.APP_USER_MODEL_ID (tiến trình PABT tự đăng ký khi mở): lối tắt mang cùng
 # định danh thì cửa sổ đang chạy nhập vào nút đã ghim, ghim lên taskbar giữ biểu tượng PABT (không tách hai nút / mất biểu tượng)
-$APP_ID = 'gov.pabt.boithuong.enterprise.2026'
+$APP_ID = 'vn.larc.desktop.enterprise'
 $TEN_DAY_DU = 'PHẦN MỀM LẬP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ'
 $PHIEN_BAN = [System.IO.File]::ReadAllText((Join-Path $GOC 'phien_ban.txt')).Trim()
 $BAN = 'win10'

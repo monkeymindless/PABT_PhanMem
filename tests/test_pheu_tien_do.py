@@ -195,6 +195,7 @@ class TestLuocDo(_Co):
         shutil.copy2(self.file, cu)
         c = sqlite3.connect(cu)
         c.execute('ALTER TABLE y_kien_du_thao DROP COLUMN lan')
+        c.execute('DROP INDEX IF EXISTS ix_pa_lan_dot_trinh')                  # 1.0.52: chỉ mục trên cột (file cũ không có)
         c.execute('ALTER TABLE pa_lan DROP COLUMN dot_trinh_id')
         c.commit()
         c.close()

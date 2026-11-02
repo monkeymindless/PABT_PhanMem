@@ -7,6 +7,14 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.52', '02/11/2026', (
+        'Niêm yết công khai: tùy chọn che số CCCD (075092***456) trên bản dự thảo dán tại điểm dân cư và file bảng niêm yết - ô ở Xuất hồ sơ & '
+        'Bản in (chế độ Dự thảo), nhớ theo dự án, mặc định tắt. Tờ trình, quyết định, bảng ký nhận vẫn in đủ 12 số.',
+        'Nút Lưu màu xanh lục, khác nút thao tác chính. Số trên các thẻ số liệu dùng phông số thẳng cột.',
+        'Trợ lý AI luôn che họ tên, CCCD, số điện thoại, số giấy chứng nhận, tọa độ trước khi gửi (bỏ tùy chọn gửi nguyên).',
+        'Dự án lớn (10.000 hộ trở lên): thêm chỉ mục dữ liệu, mở dự án / lọc theo đợt nhanh hơn. Ghi dữ liệu nhiều bước gộp một lần ghi đĩa. '
+        'Biểu tượng LARC trên thanh tác vụ dùng định danh mới khi cài bằng bộ cài 1.0.52 (bộ cài tự cập nhật lối tắt đã ghim).',
+    )),
     ('1.0.51', '02/11/2026', (
         'Lưu tự động: cửa sổ lập phương án tự ghi phương án / hồ sơ hộ sau 10 giây ngừng thao tác (chọn 10 giây, 1 phút, 2 phút hoặc '
         'Tắt ở dải dưới cùng cửa sổ hoặc Cài đặt > Giao diện). Không hộp thoại, không cắt ngang ô đang gõ, bảng giữ nguyên ô đang chọn; '

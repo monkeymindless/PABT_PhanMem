@@ -106,7 +106,7 @@ class KieuNut(Enum):
     """Biến thể nút KHAI BÁO TƯỜNG MINH (đặc tả mục 6.1) - ưu tiên hơn màu đoán theo chữ (LUAT, giữ cho các nút chưa khai báo)."""
     CHINH = 'primary'          # nền Primary đặc, chữ trắng: thao tác chính của màn hình
     PHU = 'secondary'          # nền trắng, viền xám, chữ đen
-    LUU = 'success'            # Lưu, Duyệt: 1.0.02 nền navy đặc như CHINH (trước: xanh lá)
+    LUU = 'success'            # Lưu: 1.0.52 (người dùng 02/11/2026) nền xanh lục MAU_LUU - khác nút chính navy (1.0.02 - 1.0.51: navy)
     NGUY_HIEM = 'danger'       # nền trắng, viền đỏ nhạt, chữ đỏ: Xóa
 
 
@@ -132,6 +132,9 @@ def ap_kieu_nut(w, kieu: KieuNut) -> None:
                 a.changed.connect(lambda: QTimer.singleShot(0, gan_lai))
 
 
+MAU_LUU = ('#0F6E56', '#0B5340')       # 1.0.52: nút Lưu (KieuNut.LUU): nền, rê chuột - chữ trắng 6,3:1 (WCAG AA)
+
+
 def _qss_kieu_nut() -> str:
     """QSS các biến thể KieuNut: đặt CUỐI bảng kiểu (cùng độ ưu tiên thì quy tắc sau thắng màu đoán theo chữ / ribbon)."""
     t = TOKEN
@@ -139,7 +142,7 @@ def _qss_kieu_nut() -> str:
     # chữ #0F172A; nút xóa viền mảnh đỏ nhạt chữ đỏ, tắt thì mờ hẳn (không còn nền cam nhạt gây chú ý khi chưa chọn hộ)
     tat = ('#9AA0A6', '#F1F3F4', t['vach'])
     kieu = {'primary': (t['chinh'], '#FFFFFF', t['chinh'], '#152C48', tat),
-            'success': (t['chinh'], '#FFFFFF', t['chinh'], '#152C48', tat),     # 1.0.02: Lưu navy (đặc tả Navy cửa sổ con)
+            'success': (MAU_LUU[0], '#FFFFFF', MAU_LUU[0], MAU_LUU[1], tat),   # 1.0.52: nút Lưu (KieuNut.LUU) xanh lục
             'danger': (NUT_XOA[0], NUT_XOA[1], NUT_XOA[2], NUT_XOA[3], ('#94A3B8', '#FFFFFF', '#E2E8F0')),
             'secondary': (NUT_PHU[0], NUT_PHU[1], NUT_PHU[2], NUT_PHU[3], ('#94A3B8', '#FFFFFF', '#E2E8F0'))}
     qss = ''
@@ -384,7 +387,7 @@ def _qss_the_so() -> str:
     QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #1E3A5F; border-radius: 6px; }
     QWidget[vai="the_so"]:hover { background: #F8FAFC; border-color: #CBD5E1; }
     QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
-    QLabel[vai="so_the"] { font-size: 17px; font-weight: 700; color: #0F172A; }
+    QLabel[vai="so_the"] { font-family: "Consolas"; font-size: 17px; font-weight: 700; color: #0F172A; }
     QLabel[vai="nhan_the"] { color: #475569; font-size: 11.5px; font-weight: 600; }
     QLabel[vai="phu_the"] { color: #64748B; font-size: 11px; font-weight: 700; }
     QLabel[vai="huy_hieu_the"] { background: #F1F5F9; color: #5B6B82; border-radius: 4px; padding: 0 6px; font-size: 10.5px;
@@ -1662,7 +1665,7 @@ QSS_THE_KPI_GON_CHUNG = '''
     QFrame#the_kpi_gon:hover { border-color: #CBD5E1; }
     QFrame#the_kpi_gon QLabel { background: transparent; border: 0; }
     QLabel#kpi_ten { color: #475569; font-size: 12px; font-weight: 600; }
-    QLabel#kpi_so { color: ''' + MAU_SO_THE + '''; font-size: 16px; font-weight: 700; }
+    QLabel#kpi_so { color: ''' + MAU_SO_THE + '''; font-family: "Consolas"; font-size: 16px; font-weight: 700; }
     QLabel#kpi_phu { color: #64748B; font-size: 12px; }'''
 QSS_THE_KPI_GON = 'QFrame#the_kpi_gon {{ border-left-color: {m}; }}'
 MAU_KPI_TONG_QUAN = ('#2563EB', '#059669', '#0D9488', '#D97706')    # 4 thẻ màn hình Tổng quan (man_hinh_tong_quan.MAU_KPI)

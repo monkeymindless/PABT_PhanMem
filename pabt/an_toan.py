@@ -67,14 +67,43 @@ def luu_xlsx(wb, duong_dan) -> int:
 KHOA_CHE_CCCD = 'CHE_CCCD'          # cai_dat của dự án: '1' = bản in / văn bản trình che số CCCD (bản niêm yết công khai)
 
 
-def che_cccd(chu: str) -> str:
-    """1.0.04 (người dùng 19/10/2026): BỎ che số CCCD trên toàn hệ thống - luôn trả nguyên chuỗi (giữ tên hàm cho mã gọi cũ:
-    bản in, văn bản trình, Niêm yết, phiếu kiểm đếm)."""
-    return chu or ''
+def che_cccd(chu: str, che: bool = False) -> str:
+    """Số CCCD / CMND để in. Mặc định (che=False) trả nguyên chuỗi - văn bản nội bộ (tờ trình, quyết định, bảng ký nhận) in đủ số
+    (1.0.04). 1.0.52 (người dùng 02/11/2026): che=True dùng cho bản NIÊM YẾT CÔNG KHAI tại điểm dân cư (NĐ 13/2023/NĐ-CP):
+    12 số giữ 6 đầu + 3 cuối "075092***456"; 9 số (CMND) giữ 3 đầu + 3 cuối; chữ khác (không phải số) để nguyên."""
+    chu = chu or ''
+    if not che:
+        return chu
+    so = ''.join(c for c in chu if c.isdigit())
+    if len(so) == 12 and len(so) >= len(chu.strip()) - 3:
+        return so[:6] + '***' + so[-3:]
+    if len(so) == 9 and len(so) >= len(chu.strip()) - 3:
+        return so[:3] + '***' + so[-3:]
+    return chu
+
+
+KHOA_CHE_NIEM_YET = 'CHE_CCCD_NIEM_YET'          # cai_dat của dự án: '1' che / '0' không; trống -> hồ sơ địa phương
+
+
+def che_cccd_niem_yet(con) -> bool:
+    """1.0.52: bản niêm yết công khai (bảng niêm yết, bản in DỰ THẢO phương án chi tiết) có che số CCCD không. Mặc định TẮT; cài đặt
+    của dự án (HopIn chế độ Dự thảo) thắng hồ sơ địa phương ban_in.che_cccd_ban_du_thao."""
+    from . import csdl, dia_phuong
+    v = csdl.doc_cai_dat(con, KHOA_CHE_NIEM_YET, '') if con is not None else ''
+    if v in ('0', '1'):
+        return v == '1'
+    return bool(dia_phuong.lay('ban_in.che_cccd_ban_du_thao'))
+
+
+def dat_che_cccd_niem_yet(con, bat: bool) -> None:
+    from . import csdl
+    with csdl.giao_dich(con):
+        csdl.ghi_cai_dat(con, KHOA_CHE_NIEM_YET, '1' if bat else '0')
+        csdl.ghi_nhat_ky(con, 'Che số CCCD trên bản niêm yết', 'Bật' if bat else 'Tắt')
 
 
 def can_che_cccd(con) -> bool:
-    """1.0.04: không còn chế độ che CCCD - luôn False (khóa cai_dat CHE_CCCD của dự án cũ bỏ qua)."""
+    """Văn bản nội bộ (tờ trình, quyết định): luôn in đủ số - False (khóa cai_dat CHE_CCCD cũ bỏ qua). Bản niêm yết: che_cccd_niem_yet."""
     return False
 
 

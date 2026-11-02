@@ -413,7 +413,8 @@ def _thua(con, ma_ho: int) -> str:
 
 
 def ds_ho_dot(con, dot_id: int) -> list:
-    from .an_toan import che_cccd
+    from .an_toan import che_cccd, che_cccd_niem_yet
+    che = che_cccd_niem_yet(con)
     tien = _tien_ho(con)
     kq = []
     for r in con.execute('''SELECT y.*, h.ho_ten, h.so_cccd, h.dia_chi, h.thu_tu
@@ -421,7 +422,7 @@ def ds_ho_dot(con, dot_id: int) -> list:
                             WHERE y.dot_id = ? ORDER BY h.thu_tu, h.ma_ho''', (dot_id,)):
         d = dict(r)
         d['thua'] = _thua(con, r['ma_ho'])
-        d['cccd_che'] = che_cccd(r['so_cccd'] or '')
+        d['cccd_che'] = che_cccd(r['so_cccd'] or '', che)       # 1.0.52: file niêm yết; màn hình hiện số đủ (so_cccd)
         d['tien'] = tien.get(r['ma_ho'])
         d['lan_dt'] = con.execute('SELECT COUNT(*) FROM doi_thoai_ho WHERE dot_id = ? AND ma_ho = ?',
                                   (dot_id, r['ma_ho'])).fetchone()[0]

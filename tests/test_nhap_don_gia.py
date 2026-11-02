@@ -116,7 +116,7 @@ class TestDoc(CoSo):
         _pdf(p, ['BANG DON GIA', 'TS9001 Mai che khung thep lop ton m2 350.000', '2 Hang rao luoi B40 m 120.000'])
         ds = ndg.nhan_muc(ndg.doc_bang(p))
         self.assertEqual([(m.ma, m.ten, m.dvt, m.don_gia) for m in ds],
-                         [('TS9001', 'Mai che khung thep lop ton', 'm2', 350000), ('', 'Hang rao luoi B40', 'm', 120000)])
+                         [('TS9001', 'Mai che khung thep lop ton', 'm²', 350000), ('', 'Hang rao luoi B40', 'm', 120000)])
         anh = self.td / 'scan.pdf'
         _pdf(anh, [])
         with self.assertRaises(LoiNhap):                                    # PDF không có chữ (ảnh scan)

@@ -63,7 +63,7 @@ QSS_THE_NY = ('QFrame[vai="the_ny"] {{ background: #FFFFFF; border: 1px solid #E
               'border-radius: 6px; border-top-left-radius: 3px; border-bottom-left-radius: 3px; }}'
               'QFrame[vai="the_ny"]:hover {{ background: #F8FAFC; border-color: {m}; }}'
               'QLabel#the_ny_tieu {{ color: #475569; font-size: 12px; font-weight: 600; border: 0; background: transparent; }}'
-              'QLabel#the_ny_so {{ color: #0F172A; font-size: 16px; font-weight: 700; border: 0; background: transparent; }}'
+              'QLabel#the_ny_so {{ color: #0F172A; font-family: "Consolas"; font-size: 16px; font-weight: 700; border: 0; background: transparent; }}'
               'QLabel#the_ny_phu {{ color: #64748B; font-size: 12px; border: 0; background: transparent; }}')
 CAO_THE_NY = 54
 RONG_O_DOT = 300            # ô chọn đợt (chữ dài đủ ở chú thích)
@@ -707,7 +707,7 @@ class KhungDuThao(QWidget):
             dia = r['dia_diem'] if r else ''
         self.bang_ny.setRowCount(len(ho))
         for i, h in enumerate(ho):
-            for c, v in enumerate((i + 1, h['ho_ten'], h['cccd_che'], h['thua'],
+            for c, v in enumerate((i + 1, h['ho_ten'], h['so_cccd'] or '', h['thua'],
                                    vn(h['tien']) if h['tien'] is not None else '', dia)):
                 self.bang_ny.setItem(i, c, _o(v))
             self.bang_ny.item(i, 0).setData(Qt.ItemDataRole.UserRole, h['ma_ho'])

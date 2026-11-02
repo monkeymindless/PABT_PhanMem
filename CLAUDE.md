@@ -1530,7 +1530,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - QSS chung (`giao_dien._qss`): màu nút theo VAI TRÒ - `MAU` không còn cam / tím / xanh lá (MAU[n][0] = màu biểu tượng: navy / slate
     / teal; xóa #B91C1C); `_qss_nut_loai(loại, nhóm…)` dùng chung QPushButton / QToolButton / ribbon: nhóm DAC ('luu') nền navy chữ
     trắng, 'xoa' = `NUT_XOA` (trắng, viền #FECACA, chữ #B91C1C), nhóm khác = `NUT_PHU` (trắng, viền #CBD5E1, chữ #0F172A, rê chuột
-    #F1F5F9), tắt `NUT_TAT`. LUAT 'luu' thêm "tao du an", "xuat ban ho so". KieuNut.LUU ('success') = navy như CHINH (bỏ xanh lá).
+    #F1F5F9), tắt `NUT_TAT`. LUAT 'luu' thêm "tao du an", "xuat ban ho so". KieuNut.LUU ('success') = navy như CHINH (bỏ xanh lá) - 1.0.52: người dùng đổi lại xanh lục `MAU_LUU`.
     QTabBar::tab theo `THE_TAB` (nền #F1F5F9 chữ #475569, chọn nền trắng chữ navy 700 + vạch TRÊN 2 px navy, rê chuột #E2E8F0), QGroupBox
     viền #E2E8F0 bo 6 (tiêu đề kiểu thẻ trong vùng margin-top 22px - không bị cắt), QSplitter::handle #E2E8F0 / hover #94A3B8, QDialog
     nền #F8FAFC, `QLabel[vai="tieu_de"]` slate + vạch navy, MAU_TRANG_THAI['tin'] = thanh thông báo #F0F9FF viền #BAE6FD.
@@ -1626,7 +1626,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   - BỎ HẲN che CCCD (thay quyết định NĐ 13/2023 của 0.9.24 / 0.9.85): `an_toan.che_cccd` trả nguyên chuỗi, `can_che_cccd` luôn False
     (khóa cai_dat CHE_CCCD cũ bỏ qua), `pabt_profile.json` `ban_in.che_cccd_ban_du_thao = false`; `in_an._thong_tin_ho(che=)` /
     `lap_chi_tiet(che_cccd=)` giữ tham số nhưng bỏ qua; `HopIn.o_che_cccd` ẩn + luôn tắt (thuộc tính giữ cho mã cũ), bỏ `_luu_che_cccd`;
-    ô che trong Cấu hình nghiệp vụ ẩn. ĐỪNG thêm lại che CCCD.
+    ô che trong Cấu hình nghiệp vụ ẩn. (1.0.52: người dùng cho thêm lại che CCCD TÙY CHỌN chỉ cho bản niêm yết công khai - xem 1.0.52.)
   - Phương án chi tiết: tổ chức (`ho_so.la_to_chuc`) -> `dat_nhan_chu_su_dung` đổi "Họ và tên:" -> "Tổ chức:", "Địa chỉ thường trú:" ->
     `NHAN_DIA_CHI_TO_CHUC` "Địa chỉ:", ẩn dòng Số CCCD + Số điện thoại. Nguồn gốc (`dat_doan_van`): MỖI ĐOẠN MỘT DÒNG Excel
     (`_chia_doan_van(moi_doan=True)`), thụt đầu `so_nbsp_nguon_goc()` = 4 NBSP (hồ sơ `ban_in.nguon_goc.thut_dau_nbsp`, 0 = theo
@@ -2992,6 +2992,26 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     vòng lặp), thay `with con:` hàng loạt bằng `csdl.giao_dich`, `rut_gon.kiem_dll` bỏ qua tesseract khi win7 (đang đạt, giữ kiểm), bỏ
     `mo_trang(0)` trong `mo` (đặt trang quay lại - có chủ ý), QtPdf luồng nền (đối tượng tạo / hủy trong cùng luồng, QtPdf khóa PDFium toàn
     cục), `don_hop_da_dong` quét con trực tiếp (hộp của trang bên phải sẽ rò rỉ).
+- 1.0.52 (02/11/2026, người dùng xem lại danh sách KHÔNG LÀM của 1.0.51 và chọn LÀM 7 mục; test `tests/test_yeu_cau_1052.py`):
+  - CHE CCCD TÙY CHỌN cho bản NIÊM YẾT CÔNG KHAI (thay "đừng thêm lại" của 1.0.04): `an_toan.che_cccd(chu, che=False)` (mặc định trả
+    nguyên - mọi nơi gọi cũ in đủ; che=True: 12 số -> 6 đầu + "***" + 3 cuối, 9 số -> 3 + "***" + 3), `che_cccd_niem_yet(con)` = cai_dat
+    `KHOA_CHE_NIEM_YET` 'CHE_CCCD_NIEM_YET' ('1' / '0'; trống -> hồ sơ `ban_in.che_cccd_ban_du_thao`, mặc định false), `dat_che_cccd_niem_yet`
+    (giao dịch + nhật ký). Áp: `in_word.du_lieu_chi_tiet` (du_thao) -> `du_lieu_in._thong_tin_ho(che=)` (che số, BỎ ngày / nơi cấp; bản Excel
+    chi tiết cùng nguồn), `du_thao.ds_ho_dot` `cccd_che` (file bảng niêm yết); màn hình Niêm yết hiện số đủ (`so_cccd`). HopIn `o_che_cccd`
+    (dòng 6 khung tài liệu, chỉ hiện ở Dự thảo, ghi ngay vào dự án, khóa xem trước có trạng thái ô); Cấu hình nghiệp vụ `o_che` = mặc định
+    hồ sơ. `can_che_cccd` vẫn False (tờ trình / quyết định / bảng ký nhận luôn đủ 12 số). Bảng tổng hợp không có cột CCCD.
+  - Nút Lưu (KieuNut.LUU 'success') xanh lục `giao_dien.MAU_LUU` ('#0F6E56', rê chuột '#0B5340'); nhóm 'luu' theo chữ (Áp dụng, Thực
+    hiện, Tạo dự án…) GIỮ navy.
+  - AppUserModelID `vn.larc.desktop.enterprise` (app.APP_USER_MODEL_ID = cai_dat.ps1 `$APP_ID`; bộ cài đổi luôn định danh lối tắt đã ghim
+    - DoiBieuTuong); `app.dinh_danh_ung_dung()`: bản exe có bản cài GỐC < `ID_MOI_TU_BAN_CAI` '1.0.52' (chỉ nhận .larcud) dùng
+    `APP_USER_MODEL_ID_CU` - lối tắt máy đó còn định danh cũ.
+  - Trợ lý AI LUÔN ẩn danh: `doc_cai_dat()['gui_ca_nhan']` luôn False, `ghi_cai_dat` bỏ khóa, `hoi_claude` luôn `an_danh`; HopTroLy `o_ca_nhan`
+    = ô báo (đã tích, tắt).
+  - `csdl.CHI_MUC_THEM` (7 chỉ mục; `ix_ho_thutu` cuối = dấu hiệu đã tạo đủ) + `dam_bao_chi_muc` ở csdl.mo khi file có hộ (bộ đơn giá đóng
+    gói không bị ghi - test so băm + test_bo_don_gia_khong_bi_ghi_chi_muc). KHÔNG đổi PHIEN_BAN_CSDL / schema.sql.
+  - Thẻ KPI: `font-family: "Consolas"` ở QSS `QLabel[vai="so_the"]`, `QLabel#kpi_so` (giao_dien, man_hinh_bao_cao), `QLabel#the_ny_so`.
+  - `with con:` còn lại trong don_gia (5, kể cả `with con, csdl.mo_khoa_danh_muc(con)`) và lap_pa (3) -> `csdl.giao_dich(con)`: gọi lồng
+    trong giao dịch ngoài không COMMIT riêng (lỗi giữa chừng rollback cả lô). ho_so / du_thao / lan_pa đã dùng giao_dich từ trước.
 
 ## Môi trường làm việc
 - Dự án ở `D:\APP AI PABT\PABT_PhanMem` (đường dẫn không dấu; trước 07/10/2026 là `D:\Thư mục mới\…` dạng NFD). File thật của người

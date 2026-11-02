@@ -389,7 +389,8 @@ class TestMau(unittest.TestCase):
     def test_app_user_model_id(self):
         """Taskbar Windows nhận đúng biểu tượng PABT (không gộp vào python.exe): đặt AppUserModelID trước QApplication."""
         from pabt import app as ud
-        self.assertEqual(ud.APP_USER_MODEL_ID, 'gov.pabt.boithuong.enterprise.2026')
+        self.assertEqual(ud.APP_USER_MODEL_ID, 'vn.larc.desktop.enterprise')                   # 1.0.52
+        self.assertEqual(ud.dinh_danh_ung_dung(), ud.APP_USER_MODEL_ID)                         # mã nguồn: định danh mới
         if sys.platform == 'win32':
             import ctypes
             from ctypes import wintypes

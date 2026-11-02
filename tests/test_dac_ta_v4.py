@@ -189,8 +189,10 @@ class TestGiaoDien(CoSo):
         self.assertFalse(d.o_che_cccd.isChecked())
         self.assertTrue(d.o_che_cccd.isHidden())
         self.assertFalse(hasattr(d, '_luu_che_cccd'))
-        tt = du_lieu_in._thong_tin_ho(w.con, ma, du_lieu_in._thong_tin_du_an(w.con), True)    # che=True cũ: bỏ qua
-        self.assertEqual(tt['cccd'], '075092001234 - Ngày cấp: 01/01/2021')
+        da = du_lieu_in._thong_tin_du_an(w.con)
+        self.assertEqual(du_lieu_in._thong_tin_ho(w.con, ma, da)['cccd'], '075092001234 - Ngày cấp: 01/01/2021')
+        tt = du_lieu_in._thong_tin_ho(w.con, ma, da, True)    # 1.0.52: che=True = bản niêm yết công khai
+        self.assertEqual(tt['cccd'], '075092***234')
         from pabt import van_ban_trinh
         _, dong = van_ban_trinh.du_lieu(w.con, [ma])
         self.assertIn('075092001234', dong[0]['ho.cccd'])

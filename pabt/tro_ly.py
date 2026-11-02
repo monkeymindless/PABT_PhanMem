@@ -229,7 +229,8 @@ def doc_cai_dat() -> dict:
     except (OSError, ValueError):
         d = {}
     mh = d.get('mo_hinh') if d.get('mo_hinh') in MO_HINH else MO_HINH_MAC_DINH
-    return dict(bat=bool(d.get('bat')), mo_hinh=mh, gui_ca_nhan=bool(d.get('gui_ca_nhan')), co_khoa=bool(d.get('khoa')))
+    # 1.0.52 (người dùng 02/11/2026): LUÔN che dữ liệu cá nhân trước khi gửi - khóa gui_ca_nhan cũ trong file bỏ qua (luôn False)
+    return dict(bat=bool(d.get('bat')), mo_hinh=mh, gui_ca_nhan=False, co_khoa=bool(d.get('khoa')))
 
 
 def ghi_cai_dat(bat: bool | None = None, mo_hinh: str | None = None, gui_ca_nhan: bool | None = None, khoa: str | None = None,
@@ -245,8 +246,7 @@ def ghi_cai_dat(bat: bool | None = None, mo_hinh: str | None = None, gui_ca_nhan
         if mo_hinh not in MO_HINH:
             raise LoiTroLy(f'Mô hình không hỗ trợ: {mo_hinh}')
         d['mo_hinh'] = mo_hinh
-    if gui_ca_nhan is not None:
-        d['gui_ca_nhan'] = bool(gui_ca_nhan)
+    d.pop('gui_ca_nhan', None)                          # 1.0.52: không còn cho gửi dữ liệu cá nhân (tham số giữ cho mã cũ)
     if khoa:
         d['khoa'] = base64.b64encode(bao_ve(khoa.strip().encode('utf-8'))).decode('ascii')
     if xoa_khoa:
@@ -319,13 +319,12 @@ def co_thu_vien() -> bool:
 # ---------------------------------------------------------------- trực tuyến: hỏi Claude (tùy chọn)
 def hoi_claude(cau_hoi: str, ngu_canh: str = '', con=None, khach=None, gioi_han: float = 45) -> str:
     """Gửi câu hỏi (+ ngữ cảnh số liệu) tới Claude, trả lời bằng chữ. Chỉ chạy khi người dùng đã BẬT trợ lý trực tuyến. Che dữ liệu
-    cá nhân (an_danh) trừ khi đã bật gửi dữ liệu cá nhân. khach: client giả lập cho kiểm thử. Lỗi -> LoiTroLy (tiếng Việt)."""
+    cá nhân (an_danh) - LUÔN (1.0.52, không còn tùy chọn gửi nguyên). khach: client giả lập cho kiểm thử. Lỗi -> LoiTroLy (tiếng Việt)."""
     cd = doc_cai_dat()
     if not cd['bat']:
         raise LoiTroLy('Trợ lý trực tuyến đang TẮT: bật ở thẻ "Cài đặt" của cửa sổ Trợ lý (mặc định chỉ chạy ngoại tuyến).')
     noi_dung = (f'Số liệu / văn bản:\n{ngu_canh}\n\n' if ngu_canh else '') + f'Yêu cầu: {cau_hoi}'
-    if not cd['gui_ca_nhan']:
-        noi_dung = an_danh(noi_dung, con)
+    noi_dung = an_danh(noi_dung, con)
     if khach is None:
         try:
             import anthropic

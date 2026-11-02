@@ -1327,7 +1327,7 @@ class CuaSoLapPA(QDialog):
         self.b_luu.setToolTip('Lưu phương án của hộ (Ctrl+S)')
         self.b_luu.clicked.connect(lambda: self.luu())
         from .giao_dien import KieuNut, ap_kieu_nut
-        ap_kieu_nut(self.b_luu, KieuNut.LUU)            # 1.0.02: hành động chính - nền navy đặc
+        ap_kieu_nut(self.b_luu, KieuNut.LUU)            # hành động lưu - nền xanh lục (1.0.52)
         self.b_bo = QPushButton('Bỏ thay đổi')
         self.b_bo.clicked.connect(lambda: self.bo_thay_doi())
         self.b_in = QPushButton('In / Xuất…')
@@ -3308,10 +3308,15 @@ class HopIn(QDialog):
         self.o_so_ban.setSuffix(' bản / hộ')
         self.o_mo = QCheckBox('Mở thư mục kết quả khi xong')
         self.o_mo.setChecked(True)
-        # 1.0.04 (người dùng 19/10/2026): bỏ che số CCCD - ô giữ làm thuộc tính (mã / test cũ), không hiện, luôn tắt
-        self.o_che_cccd = QCheckBox('Che số CCCD')
-        self.o_che_cccd.setChecked(False)
+        # 1.0.52 (người dùng 02/11/2026): che số CCCD trên bản NIÊM YẾT công khai (chế độ Dự thảo + file bảng niêm yết) - tùy chọn của
+        # dự án, mặc định tắt; văn bản chính thức / nội bộ luôn in đủ 12 số
+        from .an_toan import che_cccd_niem_yet
+        self.o_che_cccd = QCheckBox('Che số CCCD trên bản niêm yết công khai (075092***456)')
+        self.o_che_cccd.setToolTip('Chỉ áp cho bản DỰ THẢO dán tại điểm dân cư và file bảng niêm yết (Nghị định 13/2023/NĐ-CP): giữ 6 số '
+                                   'đầu + 3 số cuối, bỏ ngày / nơi cấp. Tờ trình, quyết định, bảng ký nhận vẫn in đủ số. Nhớ theo dự án.')
+        self.o_che_cccd.setChecked(che_cccd_niem_yet(con))
         self.o_che_cccd.setVisible(False)
+        self.o_che_cccd.toggled.connect(lambda bat: self._doi_che_cccd(bat))
         # 1.0.05: hộ có nhiều lần lập phương án (lần đầu + bổ sung) - in lần mới nhất (đợt trình bổ sung) hay cộng dồn
         from .lan_pa import co_bang, ho_nhieu_lan
         self.cb_lan = QComboBox()
@@ -3418,6 +3423,7 @@ class HopIn(QDialog):
             luoi.addWidget(t, r, 2, Qt.AlignmentFlag.AlignRight)
             self.the_tai_lieu[o] = t
             t.setVisible(o is not self.o_bth_dc or self.co_dieu_chinh)
+        luoi.addWidget(self.o_che_cccd, 6, 0, 1, 3)
         luoi.setColumnStretch(0, 1)
         from PySide6.QtWidgets import QToolButton
         self.khung_dau_ra = QWidget()                    # 24/10/2026: "Đầu ra và nơi lưu" gấp được - bảng hộ có thêm chỗ khi cần
@@ -3661,7 +3667,7 @@ class HopIn(QDialog):
     def _ap_che_do(self) -> None:
         """DỰ THẢO: mẫu chính có chữ DỰ THẢO, chỉ phương án chi tiết + bảng tổng hợp (khóa tờ trình, báo cáo tiếp thu).
         CHÍNH THỨC: mẫu chính (số PA chính thức, không chữ dự thảo), trọn bộ 4 tài liệu.
-        Cả hai chế độ in đủ số CCCD (1.0.04). Mô tả ở chú thích hai thẻ (MO_TA_CHE_DO) + khung quy tắc (QUY_TAC_CHE_DO)."""
+        Chính thức in đủ số CCCD; Dự thảo che số CCCD khi bật ô o_che_cccd (1.0.52). Mô tả ở chú thích hai thẻ (MO_TA_CHE_DO) + khung quy tắc (QUY_TAC_CHE_DO)."""
         self._ap_tai_lieu()
         if self.che_do() == 'du_thao':
             for o, v in ((self.o_ct, True), (self.o_bth, True), (self.o_tt, False), (self.o_bc, False)):
@@ -3688,6 +3694,24 @@ class HopIn(QDialog):
             t.setText('Chỉ mở ở Chính thức' if du_thao else chu)
             dat_the_nho(t, 'xam' if du_thao else 'lam')
             t.setVisible(not (du_thao and o is self.o_bc))               # thẻ "Chỉ mở ở Chính thức" chỉ ghi một lần (ở Tờ trình)
+        if self.o_che_cccd.parentWidget() is not None:                    # 1.0.52: chỉ bản dự thảo (niêm yết) mới che CCCD
+            self.o_che_cccd.setVisible(du_thao)
+
+    def _doi_che_cccd(self, bat: bool) -> None:
+        import sqlite3
+        from .an_toan import che_cccd_niem_yet, dat_che_cccd_niem_yet
+        if bool(bat) == che_cccd_niem_yet(self.con):
+            return
+        try:
+            dat_che_cccd_niem_yet(self.con, bool(bat))
+        except sqlite3.Error as e:                                       # dự án mở chỉ xem
+            self.o_che_cccd.blockSignals(True)
+            self.o_che_cccd.setChecked(not bat)
+            self.o_che_cccd.blockSignals(False)
+            if not getattr(self, 'im_lang', False):
+                QMessageBox.warning(self, TEN_UD, chu_loi('Không lưu được tùy chọn che CCCD', e))
+            return
+        self._lam_moi_xem_truoc()
 
     # ---- danh sách hộ đánh dấu chọn
     def _theo_pham_vi(self):

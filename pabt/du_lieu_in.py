@@ -260,11 +260,14 @@ def _thong_tin_ho(con, ma_ho: int, da: dict, che: bool | None = None) -> dict:
     if ' là ' in ten:
         ten = ten.split(' là ')[0].strip()
     cccd = (h['so_cccd'] or '').strip()
-    if (h['ngay_cap'] or '').strip() and h['ngay_cap'] != '0':
-        cccd += f' - Ngày cấp: {h["ngay_cap"].strip()}'
-    if (h['noi_cap'] or '').strip():
-        cccd += f' - Nơi cấp: {h["noi_cap"].strip()}'
-    # 1.0.04: luôn in đủ số CCCD + ngày / nơi cấp (bỏ che CCCD; tham số che giữ cho mã gọi cũ)
+    if che:                                     # 1.0.52: bản niêm yết công khai - che số giữa, bỏ ngày / nơi cấp
+        from .an_toan import che_cccd
+        cccd = che_cccd(cccd, True)
+    else:                                       # văn bản nội bộ: in đủ số CCCD + ngày / nơi cấp (1.0.04)
+        if (h['ngay_cap'] or '').strip() and h['ngay_cap'] != '0':
+            cccd += f' - Ngày cấp: {h["ngay_cap"].strip()}'
+        if (h['noi_cap'] or '').strip():
+            cccd += f' - Nơi cấp: {h["noi_cap"].strip()}'
     from .ho_so import chuan_nguon_goc, lam_sach_doan_van
     ng = []                                     # nguồn gốc các thửa (bỏ trùng, giữ thứ tự): mỗi nội dung một đoạn
     for nguon_goc in _nguon_goc_cac_thua(con, ma_ho):

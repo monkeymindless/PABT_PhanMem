@@ -493,8 +493,40 @@ def _mo_tiep(con, tao: bool):
                 dam_bao_cot_du_an(con)
         except sqlite3.OperationalError:                # chỉ xem / file khóa: lap_pa.luu_du_an thêm khi ghi
             pass
+    if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?", (CHI_MUC_THEM[-1][0],)).fetchone()             and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
+        try:
+            with con:
+                dam_bao_chi_muc(con)
+        except sqlite3.OperationalError:                # chỉ xem / file khóa: lần mở sau
+            pass
     dat_ghi_toi_thieu(con)                              # CLI / nhập / GUI: cùng một chỗ (bộ đơn giá đóng gói tự bỏ)
     return con
+
+
+# 1.0.52 (người dùng 02/11/2026): chỉ mục cho dự án lớn (10.000 - 50.000 hộ). KHÔNG đổi PHIEN_BAN_CSDL: tạo ở csdl.mo khi file có hộ
+# (bộ đơn giá đóng gói không hộ - không bị ghi); bản cũ mở file vẫn được (chỉ mục thừa vô hại). Đo 5.000 hộ: dòng công thức 1,1 ->
+# 0,2 ms, danh sách hộ theo thứ tự 2,8 -> 1,8 ms, tra thửa theo tờ / số 0,36 -> 0,04 ms mỗi lần
+CHI_MUC_THEM = (
+    ('ix_ho_dot', 'CREATE INDEX IF NOT EXISTS ix_ho_dot ON ho(dot_id)'),
+    ('ix_ho_dot_dt', 'CREATE INDEX IF NOT EXISTS ix_ho_dot_dt ON ho(dot_du_thao_id)'),
+    ('ix_thua_to_thua', 'CREATE INDEX IF NOT EXISTS ix_thua_to_thua ON thua(so_to, so_thua, ma_ho)'),
+    ('ix_pa_lan_dot_trinh', 'CREATE INDEX IF NOT EXISTS ix_pa_lan_dot_trinh ON pa_lan(dot_trinh_id, ma_ho, lan)'),
+    ('ix_ct_dat_cong_thuc', "CREATE INDEX IF NOT EXISTS ix_ct_dat_cong_thuc ON ct_dat(ma_ho, lan) WHERE cong_thuc <> ''"),
+    ('ix_ct_khoan_cong_thuc', "CREATE INDEX IF NOT EXISTS ix_ct_khoan_cong_thuc ON ct_khoan(ma_ho, lan) WHERE cong_thuc <> ''"),
+    ('ix_ho_thutu', 'CREATE INDEX IF NOT EXISTS ix_ho_thutu ON ho(thu_tu, ma_ho)'),        # cuối: dấu hiệu đã tạo đủ
+)
+
+
+def dam_bao_chi_muc(con) -> int:
+    """Tạo các chỉ mục CHI_MUC_THEM còn thiếu (cột chưa có ở file cũ -> bỏ qua chỉ mục đó). Chạy trong giao dịch của nơi gọi."""
+    n = 0
+    for _ten, sql in CHI_MUC_THEM:
+        try:
+            con.execute(sql)
+            n += 1
+        except sqlite3.OperationalError:                # file cũ thiếu cột (pa_lan.dot_trinh_id, cong_thuc, lan...)
+            continue
+    return n
 
 
 # cột thêm vào bảng thua KHÔNG đổi PHIEN_BAN_CSDL (20/10/2026 - thẻ Thông tin hộ, thửa đất): file mới có sẵn (schema.sql); file cũ

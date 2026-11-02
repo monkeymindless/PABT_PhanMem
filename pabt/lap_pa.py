@@ -1045,7 +1045,7 @@ class BoSoan:
         # người dùng Lưu: luôn là đã lập phương án - mục không có / bỏ trống tính 0 đồng (0.9.21; trước: không dòng nào = chưa lập)
         trang_thai = f'{DA_LAP_LUU} {luc:%d/%m/%Y %H:%M})' if not tu_dong else TU_LAP if co_dong else 'Chưa lập phương án'
         truoc = csdl.trang_thai_nho(con)
-        with con:
+        with csdl.giao_dich(con):
             con.execute('''UPDATE ho SET nhan_khau = ?, phai_di_chuyen = ?, dt_nn_dang_dung = ?, trang_thai = ?, luu_luc = ?,
                            tai_dinh_cu = ? WHERE ma_ho = ?''',
                         (pa.ho.nhan_khau, int(pa.ho.phai_di_chuyen),
@@ -1146,7 +1146,7 @@ def luu_du_an(con, gia_tri: dict) -> None:
             raise LoiNhap('Năm: nhập 4 chữ số, ví dụ 2026.')
         nam = int(gt['nam'])
     cu = doc_du_an(con)
-    with con:
+    with csdl.giao_dich(con):
         csdl.dam_bao_cot_du_an(con)                     # file cũ chưa có cột dia_danh_don_vi (1.0.29)
         gt_ghi = dict(gt, nam=nam)
         # một tên dự án (0.9.72): ten_day_du (cột cũ, nhận loại kinh phí / kiểm lỗi) đi theo ten, trừ khi nơi gọi đưa riêng
@@ -1224,7 +1224,7 @@ def luu_kinh_phi_to_chuc(con, loai: str, ty_le: str = '') -> None:
     cu = (csdl.doc_cai_dat(con, 'LOAI_KINH_PHI', ''), csdl.doc_cai_dat(con, 'TL_KINH_PHI', ''))
     if cu == (loai, tl):
         return
-    with con:
+    with csdl.giao_dich(con):
         csdl.ghi_cai_dat(con, 'LOAI_KINH_PHI', loai)
         csdl.ghi_cai_dat(con, 'TL_KINH_PHI', tl)
         csdl.ghi_nhat_ky(con, 'Kinh phí tổ chức thực hiện', f'loại "{loai or "tự nhận"}", tỷ lệ "{tl or "mức tối đa"}"')

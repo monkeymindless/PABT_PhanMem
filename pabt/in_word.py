@@ -581,7 +581,8 @@ def du_lieu_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, l
         # lần 1: không có lần nào trước (= doc_phuong_an(den_lan=0)) - khỏi đọc CSDL
         pa_truoc = nghiep_vu.PhuongAn(ho=pa.ho) if lan == 1 else nghiep_vu.doc_phuong_an(con, ma_ho, den_lan=lan - 1)
     dong, kq_lan = du_lieu_in.dong_chi_tiet(con, ma_ho, bc, pa, pa_truoc)
-    ttho = du_lieu_in._thong_tin_ho(con, ma_ho, da)
+    from .an_toan import che_cccd_niem_yet
+    ttho = du_lieu_in._thong_tin_ho(con, ma_ho, da, che=du_thao and che_cccd_niem_yet(con))   # 1.0.52: dự thảo niêm yết
     from . import lan_pa
     kieu = lan_pa.loai_lan(con, ma_ho, lan)             # 1.0.15: MẪU IN theo loại lần - chi tiết / bổ sung / điều chỉnh
     x_lan = None

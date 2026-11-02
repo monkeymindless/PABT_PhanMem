@@ -443,6 +443,41 @@ def file_huong_dan():
 class TheSo(QWidget):
     """Thẻ số liệu ở đầu cửa sổ chính - bấm để lọc danh sách hộ theo chỉ số đó (0.9.23: thẻ tương tác, lộ trình người dùng)."""
     bam = Signal()
+    thanh = None                    # 1.0.52: thanh tiến độ NỔI sát mép dưới (không trong bố cục - không đè dòng diện tích)
+    LE_THANH = (10, 3)              # (lề trái / phải, cách mép dưới) của thanh tiến độ
+
+    cao_toi_thieu = 62              # = CuaSoChinh.CAO_THE_SO (cỡ chữ 100%)
+    _hen_vua = False
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._dat_thanh()
+
+    def event(self, e):
+        # 1.0.52: cỡ chữ của phần mềm 110 - 140% (A+): chữ 3 dòng cần cao hơn 62 px - thẻ cao theo nội dung (100% vẫn 62 px)
+        if e.type() in (QEvent.Type.Show, QEvent.Type.StyleChange, QEvent.Type.FontChange) and not self._hen_vua:
+            self._hen_vua = True
+            QTimer.singleShot(0, self.vua_cao)
+        return super().event(e)
+
+    def vua_cao(self):
+        self._hen_vua = False
+        lo = self.layout()
+        if lo is None:
+            return
+        lo.activate()
+        can = max(self.cao_toi_thieu, lo.minimumSize().height() + 8)    # + chỗ thanh tiến độ nổi ở đáy (cách chữ 3 px)
+        if self.height() != can or self.minimumHeight() != can:
+            self.setFixedHeight(can)
+
+    def _dat_thanh(self):
+        t = self.thanh
+        if t is None:
+            return
+        le, duoi = self.LE_THANH
+        cao = max(3, t.maximumHeight() if t.maximumHeight() < 50 else 5)
+        t.setGeometry(le, self.height() - duoi - cao, max(10, self.width() - 2 * le), cao)
+        t.raise_()
 
     def mouseReleaseEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton and self.rect().contains(e.position().toPoint() if hasattr(e, 'position')
@@ -1848,6 +1883,7 @@ class CuaSoChinh(QMainWindow):
         self.the_tien_do = {}                            # 1.0.34: thanh tiến độ (tỷ lệ số hộ) - ẩn ở thẻ Số hộ / Tổng kinh phí
         for k, ten in self.THE_SO:
             khung = TheSo()
+            khung.cao_toi_thieu = self.CAO_THE_SO
             khung.setObjectName('the_so')
             khung.setCursor(Qt.CursorShape.PointingHandCursor)
             khung.setToolTip(f'{ten} - ' + ('bấm để xem tất cả hộ' if not self.LOC_THE[k] else f'bấm để lọc danh sách hộ: {ten.lower()}'))
@@ -1917,9 +1953,14 @@ class CuaSoChinh(QMainWindow):
             o.setAlignment(hang, Qt.AlignmentFlag.AlignTop)
             o.addStretch(1)                                      # chỗ thừa ở đáy thẻ, không đẩy chữ xuống
             thanh = tao_thanh_tien_do(MAU_NHOM_KPI.get(NHOM_KPI_THE.get(k, ''), MAU_THE_SO.get(k, '#2563EB')))
+            # 1.0.52 (ảnh người dùng 02/11/2026: thanh đè dòng "42.914,0 m²" ở cỡ chữ 125%): thanh NỔI sát mép dưới, ngoài bố cục -
+            # chữ dùng trọn chiều cao thẻ 62 px. Đặt cha TRƯỚC khi ẩn / hiện (widget không cha hiện thành cửa sổ riêng)
+            thanh.setParent(khung)
+            thanh.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            thanh.setFixedHeight(4)
             thanh.setVisible(False)
-            o.addSpacing(2)
-            o.addWidget(thanh)
+            khung.thanh = thanh
+            khung._dat_thanh()
             self.the_tien_do[k] = thanh
             do_bong(khung, 14, 2, 26)
             self.the_so[k], self.the_phu[k], self.the_khung[k] = so, phu, khung
@@ -4127,7 +4168,25 @@ def hien_cua_so(w) -> None:
     w.showMaximized()
 
 
-APP_USER_MODEL_ID = 'gov.pabt.boithuong.enterprise.2026'
+# 1.0.52 (người dùng 02/11/2026): định danh thương mại, không dùng tiền tố "gov" của cơ quan nhà nước. Lối tắt của bộ cài mang cùng
+# định danh (cai_dat.ps1 $APP_ID) và bộ cài đổi luôn định danh các lối tắt đã ghim. Máy còn bản cài GỐC trước 1.0.52 (chỉ nhận gói
+# .larcud) giữ định danh cũ: lối tắt của máy đó còn định danh cũ - đổi thì taskbar tách thành hai nút
+APP_USER_MODEL_ID = 'vn.larc.desktop.enterprise'
+APP_USER_MODEL_ID_CU = 'gov.pabt.boithuong.enterprise.2026'
+ID_MOI_TU_BAN_CAI = '1.0.52'
+
+
+def dinh_danh_ung_dung() -> str:
+    """Định danh taskbar theo bản cài gốc: bản cài gốc < 1.0.52 (đang chạy gói cập nhật) -> định danh cũ."""
+    if not getattr(sys, 'frozen', False):
+        return APP_USER_MODEL_ID
+    try:
+        import nap_cap_nhat
+        goc = nap_cap_nhat.BAN_GOC or __version__
+    except ImportError:
+        goc = __version__
+    so = lambda v: tuple(int(x) for x in str(v).split('.') if x.isdigit())     # noqa: E731
+    return APP_USER_MODEL_ID if so(goc) >= so(ID_MOI_TU_BAN_CAI) else APP_USER_MODEL_ID_CU
 
 
 def dat_app_user_model_id() -> bool:
@@ -4137,7 +4196,7 @@ def dat_app_user_model_id() -> bool:
         return False
     try:
         import ctypes
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(dinh_danh_ung_dung())
         return True
     except Exception:                                   # noqa: BLE001 - Windows quá cũ / thiếu API: bỏ qua, không chặn khởi động
         return False
