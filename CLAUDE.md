@@ -2956,6 +2956,10 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   `git config --global safe.directory`).
 - 1.0.51 (02/11/2026, "Master prompt" 6 giai đoạn người dùng dán - viết theo mã KHÔNG khớp kho: tên hàm / dòng / file sai; làm theo ý
   trên mã thật; test `tests/test_yeu_cau_1051.py`). Git trong phiên Claude: `git -c safe.directory=* …` (không sửa cấu hình global).
+  PHÁT HÀNH 1.0.51: Universal + zip + `.larcud` + Mobile 1.0.51; 1312 test Qt6 / 1317 Qt5 đạt; máy trắng 4 nhánh DAT. Đẩy Pages: bản sao kho
+  ở `%TEMP%\larc-mobile`; Credential Manager của Git giữ tài khoản `phantuanvinhc01qldd` (403 với kho monkeymindless) - đẩy bằng
+  `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push origin main` (gh đăng nhập monkeymindless). Tác giả commit
+  kho đó: `monkeymindless <monkeymindless@users.noreply.github.com>`. `dung_exe38.py`: `nguon38` còn sau rmtree (MSIX) -> `nguon38_<pid>`.
   - LƯU TỰ ĐỘNG: `chu_de.CAC_MUC_LUU_TU_DONG` (10 / 60 / 120 / 0 giây), `chu_ky_luu_tu_dong(cai_dat=None)` (PABT_TU_LUU > đặt trong
     phiên > QSettings `lap_pa/chu_ky_tu_luu` > 10 giây; offscreen không QSettings = 0: test không tự ghi), `dat_chu_ky_luu_tu_dong`.
     CuaSoLapPA: `cb_tu_luu` + `lb_trang_thai_luu` ở DẢI ĐÁY (`hang_dieu_huong` - thanh trên đã kín ở 1366 @125%), `_hen_luu_tu_dong`

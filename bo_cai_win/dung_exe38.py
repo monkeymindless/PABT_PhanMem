@@ -27,11 +27,16 @@ LOAI_TRU_WEB = ['--hidden-import', 'html.parser', '--hidden-import', 'urllib.req
 
 
 def main() -> int:
+    global TAM
     if not PY38.exists():
         print(f'Chưa có môi trường Python 3.8 32-bit ({PY38}): chạy CAI_DAT_PHAT_HANH.bat trước.')
         return 1
     if TAM.exists():
-        shutil.rmtree(TAM)
+        shutil.rmtree(TAM, ignore_errors=True)
+    if TAM.exists():                                # 1.0.51: ứng dụng Claude (MSIX) ảo hóa %LOCALAPPDATA% - bản thật còn sau rmtree
+        for cu in DEV.glob('nguon38_*'):
+            shutil.rmtree(cu, ignore_errors=True)
+        TAM = DEV / f'nguon38_{os.getpid()}'
     TAM.mkdir(parents=True)
     for x in CHEP:
         nguon = GOC / x
