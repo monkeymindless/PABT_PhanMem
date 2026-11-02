@@ -136,6 +136,39 @@ class TestPheu(_Co):
         self.assertEqual(self.gd(kq, a).giai_doan, 'da_lap')            # ngày từ Excel không làm hộ "hoàn tất"
         self.assertIn('vuong', self.gd(kq, b).co)
 
+    def test_da_lap_niem_yet_dem_luy_ke_khi_da_trinh(self):
+        """Ô Đã lập / Niêm yết = lũy kế: hộ đã trình (chờ phê duyệt) vẫn là đã lập và đã niêm yết."""
+        a, b, c = self.ma[:3]
+        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1')
+        quan_ly.gan_dot(self.con, [a, b, c], dt)
+        kq = self.pheu()
+        self.assertEqual(kq.dem()['cho_phe_duyet'], 3)
+        self.assertEqual(kq.dem()['da_lap'], self.N - 3)     # 5 hộ chưa trình: đang đứng đúng ô đã lập
+        self.assertEqual(kq.dem()['niem_yet'], 0)
+        hien = kq.dem_hien_thi()
+        self.assertEqual(hien['da_lap'], self.N)             # lũy kế: cả 8 hộ đã lập
+        self.assertEqual(hien['niem_yet'], 3)                # lũy kế: 3 hộ đã đến mốc niêm yết / trình
+        self.assertEqual(hien['cho_phe_duyet'], 3)
+        self.assertEqual(len(kq.theo_moc('da_lap')), self.N)
+        self.assertEqual(sorted(x.ma_ho for x in kq.theo_moc('niem_yet')), sorted((a, b, c)))
+        self.assertEqual(kq.theo_moc('cho_phe_duyet'), kq.theo_giai_doan('cho_phe_duyet'))
+
+    def test_co_trinh_thieu_y_kien_keo_giai_doan_khi_ma_la(self):
+        """Mã giai đoạn lạ + cờ đã trình → vẫn đếm Chờ phê duyệt / lũy kế Đã lập, Niêm yết (không để cả 8 ô = 0)."""
+        self.assertEqual(ph._giai_doan_hop_le('Đã trình, chờ phê duyệt'), 'cho_phe_duyet')
+        self.assertEqual(ph._giai_doan_hop_le('Đã lập'), 'da_lap')
+        kq = ph.KetQuaPheu([
+            ph.HoPheu(1, 1, 'A', '', co={'trinh_thieu_y_kien', 'pa_0_dong'}),
+            ph.HoPheu(2, 2, 'B', 'xyz', co={'trinh_thieu_y_kien'}),
+            ph.HoPheu(3, 3, 'C', 'khong_phai_ma', co={'pa_0_dong'}),
+        ])
+        self.assertEqual(kq.dem()['cho_phe_duyet'], 2)
+        self.assertEqual(kq.dem()['da_lap'], 1)              # hộ C: mã lạ + PA 0 đồng, chưa có cờ trình
+        hien = kq.dem_hien_thi()
+        self.assertEqual(hien['da_lap'], 3)
+        self.assertEqual(hien['niem_yet'], 2)
+        self.assertEqual(hien['chua_lap'], 0)
+
 
 class TestLuocDo(_Co):
     N = 3

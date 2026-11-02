@@ -29,8 +29,8 @@ TOKEN = dict(
     phu='#059669',            # Success - Emerald: viền vùng chọn kiểu Excel, trạng thái hoàn thành
     thanh_cong='#059669',
     thanh_cong_nhat='#ECFDF5',
-    canh_bao='#D97706',
-    canh_bao_nhat='#FFFBEB',
+    canh_bao='#D97706',        # chữ cảnh báo (trước #8A5A00 rải rác)
+    canh_bao_nhat='#FFFBEB',   # nền ô vàng (trước #FFF2CC rải rác)
     nguy_hiem='#DC2626',      # Danger
     nguy_hiem_nhat='#FEF2F2',
     chu='#0F172A',            # Neutral Dark: chữ chính
@@ -561,7 +561,7 @@ TOI_NEN = {'#F4F6F8': '#162033', '#FFF6D6': '#3B2F12', '#FDEBDD': '#3A2414', '#F
            '#FEF2F2': '#3A1414', '#FEE2E2': '#4C1D1D', '#F0FDFA': '#0F2A28', '#FFFDE7': '#2A2210', '#F5F3FF': '#2A1F4A',
            '#F1F5F9': '#162033', '#EEF2F7': '#24324A', '#E2E8F0': '#2A3A52', '#EFF6FF': '#1E3A5F', '#F0F6FF': '#1E3A5F',
             '#DBEAFE': '#1E40AF', '#F0F9FF': '#0C2A3F', '#EEF5FC': '#24324A', '#DCEBFA': '#1E40AF', '#FAFBFC': '#0F172A', '#F8F9FA': '#0B1120',
-           '#F8F8F8': '#0B1120', '#F3F6FA': '#0B1120'}
+           '#F8F8F8': '#0B1120', '#F3F6FA': '#0B1120', '#FFF2CC': '#2A2210'}
 TOI_VIEN = {'#BBF7D0': '#166534', '#86EFAC': '#15803D', '#A7F3D0': '#047857', '#FDE68A': '#854D0E', '#FECACA': '#7F1D1D',
             '#99F6E4': '#0F766E', '#BAE6FD': '#075985', '#CBD5E1': '#475569', '#DCE3EA': '#334155', '#94A3B8': '#64748B', '#BFDBFE': '#1E40AF',
             '#8696AB': '#64748B', '#E5E5E5': '#334155'}
@@ -569,7 +569,8 @@ TOI_CHU = {'#14532D': '#86EFAC', '#075985': '#7DD3FC', '#4A5866': '#CBD5E1', '#2
            '#9A5A12': '#FCD34D', '#78350F': '#FCD34D', '#B83A3A': '#FCA5A5', '#1F6F66': '#5EEAD4', '#2F5DB5': '#93C5FD',
            '#1A5C85': '#7DD3FC', '#0284C7': '#7DD3FC', '#1E293B': '#E2E8F0', '#334155': '#CBD5E1', '#64748B': '#94A3B8', '#1E3A5F': '#93C5FD', '#2563EB': '#60A5FA',
            '#3B3B3B': '#E2E8F0', '#8B8B8B': '#94A3B8',
-           '#152C48': '#BFDBFE', '#202124': '#F1F5F9', '#1A1A1A': '#F1F5F9', '#0B2E4F': '#E2E8F0', '#5B6B82': '#A5B4C8'}
+           '#152C48': '#BFDBFE', '#202124': '#F1F5F9', '#1A1A1A': '#F1F5F9', '#0B2E4F': '#E2E8F0', '#5B6B82': '#A5B4C8',
+           '#8A5A00': '#FCD34D', '#1F4E78': '#93C5FD', '#D97706': '#FCD34D'}
 
 
 def _bang_doi_mau(ten: str) -> dict:
@@ -600,7 +601,6 @@ def qmau_theo_tong(mau: str, loai: str = 'nen') -> QColor:
 
 # khối thêm cho tông Tối (đặt CUỐI bảng kiểu): bảng, tiêu đề bảng, ô nhập, menu trái, hộp thoại, chú thích
 QSS_TOI = '''
-    QWidget { color: #F1F5F9; }
     QDialog, QMainWindow, QStackedWidget, QScrollArea, QScrollArea > QWidget > QWidget { background: #0B1120; }
     QTableWidget, QTableView, QListWidget, QTreeWidget, QTreeView { background: #1E293B; alternate-background-color: #0F172A;
         color: #F1F5F9; gridline-color: #334155; border: 1px solid #334155; selection-background-color: #1E40AF;
@@ -1329,6 +1329,130 @@ def chay_nen(cha, ham, chu: str = 'Đang xử lý…'):
     if 'loi' in kq:
         raise kq['loi']
     return kq.get('gt')
+
+
+def _co_su_kien_khong_nhap():
+    """Cờ processEvents: vẽ cửa sổ / kéo được, không nhận bấm chồng lệnh (Qt5: int)."""
+    from PySide6.QtCore import QEventLoop
+    try:
+        return QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents
+    except AttributeError:
+        return QEventLoop.ExcludeUserInputEvents
+
+
+def _cho_luong(luong, moi_nhip, nhip: float = 0.05):
+    """Chờ luồng nền: processEvents (cửa sổ vẽ / kéo được, không bấm chồng), không QEventLoop.exec (dễ kẹt khi QTimer không chạy)."""
+    import time
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance()
+    co = _co_su_kien_khong_nhap()
+    while luong.is_alive():
+        if moi_nhip():
+            break
+        if app is not None:
+            app.processEvents(co)
+        time.sleep(nhip)
+
+
+def chay_nen_tien_do(cha, ham, tien=None, gioi_han: float | None = None):
+    """Chạy ham(bao, cho) ở luồng nền (Tesseract / đọc file). tien: QProgressDialog đã hiện, nút Dừng.
+    tien is None (kiểm thử im_lang): gọi thẳng trên luồng hiện tại. ham không đụng widget / CSDL cửa sổ."""
+    import threading
+    import time
+    if tien is None:
+        return ham(lambda *_a: None, lambda: False)
+    kq, tien_do, huy = {}, [0, 1], threading.Event()
+
+    def bao(i, n):
+        tien_do[0], tien_do[1] = int(i or 0), max(int(n or 1), 1)
+
+    def cho() -> bool:
+        return huy.is_set()
+
+    def chay():
+        try:
+            kq['gt'] = ham(bao, cho)
+        except BaseException as e:                      # noqa: B036
+            kq['loi'] = e
+
+    luong = threading.Thread(target=chay, daemon=True)
+    luong.start()
+    bat_dau = time.monotonic()
+
+    def moi_nhip():
+        if tien.wasCanceled() or (gioi_han is not None and time.monotonic() - bat_dau > gioi_han):
+            huy.set()
+        n = max(int(tien_do[1] or 1), 1)
+        tien.setMaximum(n)
+        tien.setValue(min(max(int(tien_do[0] or 0), 0), n))
+        return not luong.is_alive()
+
+    _cho_luong(luong, moi_nhip)
+    luong.join(30)
+    if 'loi' in kq:
+        raise kq['loi']
+    return kq.get('gt')
+
+
+def chay_nen_huy(cha, ham, chu: str = 'Đang xử lý…', nut_huy: str = 'Bỏ qua',
+                 gioi_han: float | None = 45):
+    """Như chay_nen nhưng có nút hủy + hết giờ. Trả None nếu bỏ qua / hết giờ (luồng nền daemon tiếp tục).
+    Dùng Trợ lý AI sau OCR: mạng cắt không treo cửa sổ."""
+    import threading
+    import time
+    from PySide6.QtWidgets import QProgressDialog
+    kq = {}
+
+    def chay():
+        try:
+            kq['gt'] = ham()
+        except BaseException as e:                      # noqa: B036
+            kq['loi'] = e
+
+    luong = threading.Thread(target=chay, daemon=True)
+    luong.start()
+    luong.join(0.05)
+    if not luong.is_alive():
+        if 'loi' in kq:
+            raise kq['loi']
+        return kq.get('gt')
+    hop = QProgressDialog(chu, nut_huy, 0, 0, cha)
+    hop.setWindowTitle('LARC')
+    hop.setWindowModality(Qt.WindowModality.WindowModal)
+    hop.setMinimumDuration(0)
+    hop.show()
+    bat_dau = time.monotonic()
+
+    def moi_nhip():
+        if hop.wasCanceled() or (gioi_han is not None and time.monotonic() - bat_dau > gioi_han):
+            kq['bo'] = True
+            return True
+        return not luong.is_alive()
+
+    try:
+        _cho_luong(luong, moi_nhip)
+    finally:
+        hop.close()
+        hop.deleteLater()
+    if kq.get('bo'):
+        return None
+    luong.join()
+    if 'loi' in kq:
+        raise kq['loi']
+    return kq.get('gt')
+
+
+def ghi_loi_log(chu: str) -> None:
+    """Ghi một đoạn vào <thư mục máy>\\loi.log (không hiện hộp). Đường dự phòng: tải lại từng hộ lỗi, OCR hủy…"""
+    try:
+        from datetime import datetime
+        from .may_chu import thu_muc_may
+        p = thu_muc_may() / 'loi.log'
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, 'a', encoding='utf-8') as f:
+            f.write('==== %s\n%s\n\n' % (datetime.now().strftime('%d/%m/%Y %H:%M:%S'), (chu or '').rstrip()))
+    except OSError:
+        pass
 
 
 def vai(w: QWidget, ten: str) -> QWidget:

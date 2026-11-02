@@ -279,7 +279,7 @@ def co_thu_vien() -> bool:
 
 
 # ---------------------------------------------------------------- trực tuyến: hỏi Claude (tùy chọn)
-def hoi_claude(cau_hoi: str, ngu_canh: str = '', con=None, khach=None) -> str:
+def hoi_claude(cau_hoi: str, ngu_canh: str = '', con=None, khach=None, gioi_han: float = 45) -> str:
     """Gửi câu hỏi (+ ngữ cảnh số liệu) tới Claude, trả lời bằng chữ. Chỉ chạy khi người dùng đã BẬT trợ lý trực tuyến. Che dữ liệu
     cá nhân (an_danh) trừ khi đã bật gửi dữ liệu cá nhân. khach: client giả lập cho kiểm thử. Lỗi -> LoiTroLy (tiếng Việt)."""
     cd = doc_cai_dat()
@@ -295,7 +295,8 @@ def hoi_claude(cau_hoi: str, ngu_canh: str = '', con=None, khach=None) -> str:
             raise LoiTroLy('Máy này chưa có thư viện "anthropic" (cần Python 3.10 trở lên - bản Windows 10/11): trợ lý chỉ chạy '
                            'ngoại tuyến.') from None
         khoa = _khoa_da_luu()
-        khach = anthropic.Anthropic(api_key=khoa) if khoa else anthropic.Anthropic()
+        giay = max(float(gioi_han or 45), 5)
+        khach = anthropic.Anthropic(api_key=khoa, timeout=giay) if khoa else anthropic.Anthropic(timeout=giay)
         loi_api = (anthropic.AuthenticationError, anthropic.PermissionDeniedError, anthropic.RateLimitError,
                    anthropic.APIStatusError, anthropic.APIConnectionError)
     else:

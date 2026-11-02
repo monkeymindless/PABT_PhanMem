@@ -18,7 +18,7 @@ from . import csdl, du_toan
 from .du_toan import DongDT, DuToan
 from .lap_pa import DanhMuc, LoiNhap, doc_so
 from .tien import D, KHONG, so_luong_vn, so_vn, tien_bang_chu, vn
-from .giao_dien import con_tro_cho, dat_kieu_theo_tong, kieu_o_gia_k, kieu_o_he_so_k, kieu_o_so
+from .giao_dien import con_tro_cho, dat_kieu_theo_tong, kieu_o_gia_k, kieu_o_he_so_k, kieu_o_so, vua_dong
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Dự toán & khái toán'
@@ -757,7 +757,7 @@ class KhungDuToan(QWidget):
                 self._ve_dong(r)
         finally:
             self._dang_ve = False
-        self.bang.resizeRowsToContents()                 # chữ dài xuống dòng, hiện đủ nội dung
+        vua_dong(self.bang)                              # chữ dài xuống dòng, hiện đủ nội dung
         if chon is not None and 0 <= chon < len(self.dt.dong):
             self.bang.setCurrentCell(chon, 1)
         self._ve_dau_tong()
@@ -772,7 +772,7 @@ class KhungDuToan(QWidget):
                     self._ve_dong(i)
         finally:
             self._dang_ve = False
-        self.bang.resizeRowToContents(r)
+        vua_dong(self.bang)
         self._ve_dau_tong()
 
     def _ve_dau_tong(self):

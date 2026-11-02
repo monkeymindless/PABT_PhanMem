@@ -200,7 +200,7 @@ STACK_CUA_TRANG = (0, 1, 5, 2, 3)
 PHIM_NHANH = (('Danh sách hộ', 'Ctrl+1'), ('Dự toán & khái toán', 'Ctrl+2'), ('Bộ đơn giá…', 'Ctrl+3'),
               ('Dự thảo PABT…', 'Ctrl+4'), ('Theo dõi tiến độ', 'Ctrl+5'), ('Tìm nhanh…', 'Ctrl+K'))
 STACK_TONG_HOP, STACK_THEO_DOI, STACK_DU_TOAN, STACK_QUYET_DINH = 1, 2, 3, 5
-XANH, DO, VANG = QColor('#E2EFDA'), QColor('#F8CBAD'), QColor('#FFF2CC')
+XANH, DO, VANG = QColor('#E2EFDA'), QColor('#F8CBAD'), QColor(TOKEN['canh_bao_nhat'])
 # menu trái: nhóm đóng sẵn lần đầu mở phần mềm (sau đó nhớ theo người dùng) - vừa màn hình 1366x768 không phải cuộn
 # 0.9.70 (6 nhóm): nhóm ít dùng hằng ngày đóng sẵn - Khái toán (giai đoạn chuẩn bị đầu tư), Đơn giá, Phê duyệt & bàn giao
 # 0.9.88 (người dùng 15/10/2026): nhóm Đơn giá & bảng giá xuống cuối (6); đóng sẵn 1, 5, 6 - mở sẵn 2, 3, 4 (thao tác hằng ngày)
@@ -683,66 +683,8 @@ class CuaSoChinh(QMainWindow):
         from .giao_dien import dat_toi_thieu_cua_so
         dat_toi_thieu_cua_so(self)          # đặc tả V10: tối thiểu 1024 x 680 (màn hình nhỏ hơn thì theo màn hình)
         self.lenh = {}
-        for ten, ham in (('Dự án mới…', lambda: self.du_an_moi()),
-                         ('Nhập file Excel…', lambda: self.nhap_excel()), ('Mở dự án…', self.mo_du_an),
-                         ('Nhập phương án chi tiết…', lambda: self.nhap_chi_tiet()),
-                         ('Thêm hộ…', lambda: self.mo_ho_so(moi=True)),
-                         ('Xóa hộ…', lambda: self.xoa_ho()),
-                         ('Lập phương án hộ…', lambda: self.mo_lap_pa()), ('Thông tin dự án…', lambda: self.sua_du_an()),
-                         ('Rà soát giá…', lambda: self.ra_soat_gia()), ('In / Xuất…', lambda: self.in_xuat()),
-                         # 1.0.07: hộp Quản lý Mẫu in & Bản in (Ctrl+Shift+M, menu Công cụ) - thay lệnh "Cập nhật mẫu in…"
-                         ('Quản lý Mẫu in & Bản in…', lambda: self.quan_ly_mau_in()),
-                         ('Bộ đơn giá…', lambda: self.bo_don_gia()),
-                         ('Đơn giá riêng dự án…', lambda: self.don_gia_rieng()),
-                         ('Xuất báo cáo đối chiếu…', self.xuat_bao_cao), ('Cập nhật phần mềm…', lambda: self.cap_nhat_phan_mem()),
-                         ('Giới thiệu', self.gioi_thieu),
-                         ('Lưu dự án thành…', lambda: self.luu_du_an_thanh()), ('Đợt trình…', lambda: self.dot_trinh()),
-                         # 30/10/2026 (phương án đột phá 8): mốc theo giờ, xem khác biệt, khôi phục - menu Tệp tin
-                         ('Cỗ máy thời gian (mốc khôi phục)…', lambda: self.co_may_thoi_gian()),
-                         # 30/10/2026 (phương án đột phá 9): trợ lý giải thích số tiền hộ, nháp tờ trình; Claude tùy chọn - menu Công cụ
-                         ('Trợ lý (giải thích, soạn nháp)…', lambda: self.tro_ly()),
-                         ('Trạng thái hộ…', lambda: self.trang_thai_ho()),
-                         ('Kiểm tra lỗi…', lambda: self.kiem_tra_loi()),
-                         ('Xuất danh sách hộ…', lambda: self.xuat_danh_sach()),
-                         ('Màn hình chính', lambda: self.ve_trang_chu()),
-                         ('Bảng giá đất NQ 28…', lambda: self.bang_gia_dat()),
-                         ('Dự thảo PABT…', lambda: self.mo_du_thao()),
-                         ('So sánh với thực tế', lambda: self.so_sanh_du_toan()),
-                         ('Chọn hộ niêm yết…', lambda: self.chon_ho_niem_yet()),
-                         ('Cập nhật bảng giá đất…', lambda: self.cap_nhat_bang_gia_dat()),
-                         ('Đóng dự án', lambda: self.dong_du_an_lenh()),
-                         ('Xóa dự án…', lambda: self.xoa_du_an()),
-                         ('Thoát', self.close),
-                         ('Hướng dẫn sử dụng', lambda: self.huong_dan()),
-                         ('Lưu dự án', lambda: self.luu_du_an_lenh()),
-                         ('Kết nối máy chủ LAN…', lambda: self.thiet_lap_may_chu()),
-                         ('Phóng to chữ', lambda: self._phong_to(1)), ('Thu nhỏ chữ', lambda: self._phong_to(-1)),
-                         ('Cỡ chữ 100%', lambda: self._phong_to(0)),
-                         ('Dự án trên máy chủ…', lambda: self.du_an_may_chu()),
-                         # 0.9.85: gói mẫu in & cấu hình .pabtcfg (máy đơn, gửi qua Zalo / email) - chỉ ở menu Công cụ
-                         ('Xuất gói mẫu in & cấu hình…', lambda: self.xuat_goi_mau()),
-                         ('Nhập gói mẫu in & cấu hình…', lambda: self.nhap_goi_mau()),
-                         # 28/10/2026: gói cấu hình hàng loạt từ danh sách đơn vị (Excel / .json) - chỉ ở menu Công cụ
-                         ('Tạo gói cấu hình cho nhiều đơn vị…', lambda: self.tao_goi_don_vi()),
-                         # 0.9.86: nhật ký kiểm toán (ai sửa, cũ -> mới) - menu Dữ liệu + chuột phải danh sách hộ (cùng QAction)
-                         ('Nhật ký kiểm toán…', lambda: self.nhat_ky_kiem_toan()),
-                         ('Cấu hình nghiệp vụ…', lambda: self.cau_hinh_nghiep_vu()),
-                         # 1.0.17 (nền tảng giao diện 2.0): mật độ bảng + tương phản cao - menu Cài đặt
-                         ('Giao diện…', lambda: self.giao_dien_tuy_chinh()),
-                         # 0.9.87: bản đồ thửa đất (menu trái nhóm 4) + nhập bản vẽ CAD .dxf (menu Dữ liệu)
-                         ('Bản đồ thửa đất', lambda: self.ban_do_thua()),
-                         # 31/10/2026: thửa thu hồi của hộ đang chọn trên bản đồ (nền vệ tinh) - nút danh sách hộ + chuột phải
-                         ('Xem hộ trên bản đồ…', lambda: self.xem_ho_tren_ban_do()),
-                         ('Nhập bản vẽ CAD (.dxf)…', lambda: self.nhap_ban_ve_cad()),
-                         # 0.9.87: chẩn đoán + sửa file dự án + gói chẩn đoán (Trợ giúp); phiếu kiểm đếm thực địa (Công cụ)
-                         ('Chẩn đoán & sửa lỗi hệ thống…', lambda: self.chan_doan_he_thong()),
-                         ('Phiếu kiểm đếm thực địa…', lambda: self.phieu_kiem_dem()),
-                         # 1.0.04: tiếp nhận & kiểm tra pháp lý hồ sơ đầu vào - chạy được khi chưa mở dự án (KHÔNG thuộc LENH_CAN_DU_AN)
-                         ('Tiếp nhận & Kiểm tra pháp lý dự án…', lambda: self.tiep_nhan_phap_ly()),
-                         # 20/10/2026: Tìm nhanh Ctrl+K (menu Chỉnh sửa) - hộ theo CCCD / mã / tên / tờ-thửa và mọi chức năng
-                         ('Tìm nhanh…', lambda: self.tim_nhanh()),
-                         (LENH_THONG_KE, lambda: self.thong_ke_dia_chinh()),
-                         *((t, lambda _=False, i=i: self.mo_trang(i)) for i, t in enumerate(TRANG))):
+        from .lenh import ds_lenh
+        for ten, ham in ds_lenh(self):
             a = QAction(ten, self)
             a.triggered.connect(lambda _=False, ham=ham: self._chay_lenh(ham))
             self.lenh[ten] = a
@@ -1525,6 +1467,12 @@ class CuaSoChinh(QMainWindow):
                     xong = self._tai_lai_ho(doi)
                 except Exception:                      # tính riêng từng hộ lỗi: nạp lại toàn bộ (không để danh sách sai)
                     xong = False
+                    try:
+                        import traceback
+                        from .giao_dien import ghi_loi_log
+                        ghi_loi_log('Tải lại từng hộ lỗi — nạp lại toàn bộ.\n' + traceback.format_exc())
+                    except Exception:                   # noqa: BLE001 - không ghi được log thì vẫn nạp lại
+                        pass
             if not xong:
                 self._tai_lai_toan_bo()
             self._sau_tai_lai(giu_trang)

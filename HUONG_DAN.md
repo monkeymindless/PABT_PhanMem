@@ -1,4 +1,40 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.27 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.50 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+
+> **1.0.50**: **Quét giấy tờ / Dán tài sản** — ảnh xem trước thu như lúc nhận dạng (ảnh điện thoại vài MB cửa sổ vẫn kéo được); Tesseract
+> chạy nền, hộp tiến độ còn nút **Dừng**. Giấy chứng nhận không có tài sản không đọc hai lần; biên bản viết tay vẫn đọc thêm kiểu cột thưa
+> (ô **Chữ viết tay**, tối đa 8 trang). Trợ lý AI sau OCR có nút **Bỏ qua** và hết giờ khi mất mạng. Tông Tối: chú thích và ô nhập không còn
+> chữ tối trên nền tối. Bảng dự toán / cập nhật đơn giá giãn dòng nhanh hơn.
+
+> **1.0.49**: **Mở file** đọc PDF ảnh OCR (chủ yếu), Word, Excel, ảnh chụp. Tự lọc dòng tài sản / viết tay, bỏ mẫu in hành chính. PDF lớp chữ
+> thưa thì nhận dạng lại ảnh; Word/Excel chỉ có ảnh nhúng thì OCR ảnh trong file. Chữ viết tay: lần đọc khối chữ không ra dòng tài sản thì
+> đọc lại kiểu cột thưa. Trợ lý AI (nếu đã bật) tự viết lại dòng đã lọc thành "Tên: số lượng ĐVT" — **không gửi file ảnh / PDF**.
+
+> **1.0.48**: file ảnh / PDF lớn không còn làm cửa sổ "Không phản hồi" (hộp tiến độ từng trang, nút Dừng; ảnh thu về cỡ A4 300 dpi). Chỉ lấy
+> dòng tài sản / viết tay vào Dán tài sản — không đổ mẫu in hành chính và rác OCR; nút **Chữ OCR gốc**. Trợ lý AI viết lại là tùy chọn
+> (mặc định tắt). Ô **Đã lập / Niêm yết** trên màn hình chính đếm lũy kế (hộ đã trình, đã duyệt vẫn được tính); bấm ô để xem danh sách.
+
+> **1.0.47**: thẻ số liệu giữ **62 px** (không nới, chừa chỗ bảng hộ trên màn 21"); dòng 2 diện tích xếp sát số thửa, không bị bo góc cắt.
+> Bấm mở Bộ đơn giá / lập phương án: chỉ dựng thẻ đang xem, lần 2 dưới 0,1 giây.
+
+> **1.0.46**: Dán tài sản mở ảnh / PDF scan hoặc dán ảnh clipboard. Phiếu kiểm đếm: nút Dán tài sản và Mở lập phương án hộ đang chọn; bấm
+> đúp họ tên mở phương án. Cập nhật giá đất: văn bản không có bảng cột vẫn đọc lời văn nghị quyết. Cập nhật đơn giá: nạp file thay cả nhóm
+> theo văn bản mới. Ctrl+Shift+V không còn đụng giữa tab Lập phương án và Đơn giá bồi thường.
+
+> **1.0.45**: bản in trên máy mới (WPS / LibreOffice): khung bảng và đường kẻ dưới chữ không còn mất. Phương án chi tiết (Word): viền từng
+> ô, nét 1 pt, màu đen. Bảng tổng hợp (Excel): viền RGB đen, đường kẻ dưới tên đơn vị / tiêu ngữ / dự án dày 1 pt.
+
+> **1.0.44**: thẻ số liệu — số thửa và diện tích là hai dòng sổ địa chính cạnh số hộ (không ghép bằng dấu gạch chéo). Bấm menu trái
+> chuyển trang ngay, không còn trượt 160 ms làm cửa sổ nhấp nháy; trang đã mở lần trước hiện lại dưới 0,1 giây.
+
+> **1.0.43**: bản đồ máy tính vẽ đúng file KML / KMZ xuất từ MicroStation / gCadas: lưới thửa và đường ranh (Level), số thửa, loại đất,
+> diện tích, mốc ranh, ghi chú — không còn chỉ một đám chấm. Công tắc 4 lớp, nút + / − / Vừa, bấm đối tượng xem thuộc tính, bảng tra cứu
+> dưới bản đồ (như LARC Mobile).
+
+> **1.0.42**: một nguồn màu (thanh tiêu đề theo tông nền, kể cả tông Tối); số 0 và viền ô đạt tương phản. Nhóm menu Title Case, dấu & hiện
+> đúng. Chọn hộ niêm yết tắt khi chưa mở dự án. Cảnh báo chỉ cài gói cập nhật **.larcud** do đơn vị phát hành. Sắp xếp cột diện tích theo số.
+
+> **1.0.41**: bản offline theo hộ (máy chủ LAN): tầng CSDL tự chặn mọi ghi hộ không nằm trong danh sách nhận việc. File dự án ghi cờ phiên
+> bản phần mềm tối thiểu khi mở để sửa; máy còn bản cũ hơn cờ đó tự mở **chỉ xem** kèm thông báo nổi.
 
 > **1.0.27**: **bản thương mại** - phần mềm không còn ghi sẵn tên cơ quan nào. Nhập tên tổ chức, cơ quan cấp trên, địa chỉ ở Cài đặt → Cấu hình
 > nghiệp vụ → Cơ quan (ô còn trống có chữ gợi ý mờ), hoặc nhập **gói .pabtcfg** do nhà cung cấp cấu hình sẵn; tên phần mềm ở dòng 1 băng tiêu đề
@@ -566,8 +602,12 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
   và đường ranh (Level) đúng màu, số thửa / loại đất / diện tích là chữ (không còn chỉ chấm), mốc ranh hình thoi, ghi chú quy hoạch;
   công tắc 4 lớp (Lưới thửa & ranh · Số thửa, loại đất, DT · Ranh mốc · Ghi chú); bấm đường / nhãn / mốc xem thuộc tính (kèm VN-2000);
   bảng **Tra cứu** dưới bản đồ lọc rồi **Xem** bay tới. Muốn đưa ranh thửa vào dự án: **Nhập bản đồ…** (đa giác / DXF).
-- **Quét giấy tờ (OCR)…** (cửa sổ lập phương án, trang Dự toán): chọn ảnh chụp / PDF scan giấy chứng nhận, biên bản kiểm kê (cần
-  Tesseract như đọc quyết định scan). Soát lại các ô rồi "Điền thông tin hộ & thửa" (trang Dự toán: "Thêm dòng đất") / "Đưa tài sản vào phương án…".
+- **Quét giấy tờ (OCR)…** (cửa sổ lập phương án, trang Dự toán) và **Dán tài sản → Mở file**: chọn PDF ảnh OCR (chủ yếu), ảnh chụp,
+  Word, Excel. Phần mềm tự lọc dòng tài sản / viết tay, bỏ mẫu in hành chính. PDF lớp chữ thưa hoặc Word/Excel chỉ có ảnh nhúng thì
+  nhận dạng chữ trên máy (Tesseract, như đọc quyết định scan) — chạy nền, cửa sổ vẫn kéo được, nút **Dừng**. Ảnh xem trước thu cỡ
+  A4 300 dpi (ảnh điện thoại vài MB không làm đơ). Ô **Chữ viết tay** (mặc định bật): biên bản ít trang đọc thêm kiểu cột thưa;
+  Giấy chứng nhận không có tài sản không đọc hai lần. Trợ lý AI nếu bật thì viết lại dòng đã lọc — không gửi file; hộp **Bỏ qua**
+  và hết giờ khi mất mạng. Soát lại các ô rồi "Điền thông tin hộ & thửa" (trang Dự toán: "Thêm dòng đất") / "Đưa tài sản vào phương án…".
 - **Ứng dụng điện thoại LARC Mobile** (Android / iPhone, chạy không cần mạng; ứng dụng phát hành riêng, không nằm trong bộ cài
   máy tính). Từ bản 1.2.0 ứng dụng mở vào màn hình **✨ AI Quét & Nói**, thanh đáy 4 chế độ (AI Quét & Nói · Hồ sơ & TS · Bản đồ GPS ·
   Xuất .JSON):
@@ -1228,21 +1268,22 @@ Cách chuyển số liệu:
 
 Dòng lệnh: `python chay.py nhap-chi-tiet <file.xlsm> [<file.pabt>] [--trung bo_qua|thay|them]` (in kết quả đối chiếu).
 
-## Cập nhật phần mềm bằng gói cập nhật (.pabtcn)
+## Cập nhật phần mềm bằng gói cập nhật (.larcud)
 
-Sửa lỗi hoặc thêm tính năng **không phải cài lại**: người phát triển gửi một file nhỏ `PABT_CapNhat_<phiên bản>.pabtcn`
-(vài trăm KB). Máy dùng **bấm đúp file** đó (hoặc nút **Cập nhật phần mềm** ở góc dưới bên phải → **Cập nhật từ file…**) → phần mềm kiểm tra
-gói (đúng gói PABT, không hỏng, mới hơn bản đang chạy, hợp với bản cài) → cài → hỏi **mở lại phần mềm** để dùng bản mới.
-Phiên bản đang chạy hiện trên băng tiêu đề và ở **Giới thiệu**.
+Sửa lỗi hoặc thêm tính năng **không phải cài lại**: người phát triển gửi một file nhỏ `LARC_CapNhat_<phiên bản>.larcud`
+(vài trăm KB đến khoảng 2 MB). Máy dùng **bấm đúp file** đó (hoặc **Trợ giúp → Cập nhật phần mềm…** → **Cập nhật từ file…**) → phần mềm kiểm tra
+gói (đúng gói LARC, không hỏng, mới hơn bản đang chạy, hợp với bản cài) → cài → hỏi **mở lại phần mềm** để dùng bản mới.
+Phiên bản đang chạy hiện trên băng tiêu đề và ở **Giới thiệu**. Gói `.pabtcn` cũ vẫn nhận được. **Chỉ cài gói do đơn vị phát hành LARC gửi**
+(USB / email nội bộ / máy chủ đơn vị).
 
 - Bản cập nhật lưu ở `%APPDATA%\PABT\cap_nhat`; dữ liệu dự án, bộ đơn giá đã cập nhật, mẫu in không bị đụng tới.
 - Bản cập nhật lỗi (không nạp được, hoặc 2 lần mở liền không tới cửa sổ chính) **tự tắt**, phần mềm chạy bản cài gốc; lý do hiện
   trong hộp thoại Cập nhật phần mềm. **Gỡ bản cập nhật** để quay về bản gốc.
-- Cài bộ cài đầy đủ mới hơn thì bản cập nhật cũ tự bỏ qua. Gói chỉ thay mã PABT; thay đổi cần thư viện mới (Python, Qt…) phải
-  phát hành bộ cài mới. Chỉ cài gói từ người phát triển (gói chứa mã chương trình).
+- Cài bộ cài đầy đủ mới hơn thì bản cập nhật cũ tự bỏ qua. Gói chỉ thay mã LARC; thay đổi cần thư viện mới (Python, Qt…) phải
+  phát hành bộ cài mới.
 
 **Người phát triển tạo gói:** sửa mã, chạy kiểm thử, tăng `__version__` trong `pabt/__init__.py`, rồi bấm đúp **DUNG_CAP_NHAT.bat**
-(hoặc `.venv\Scripts\python tao_cap_nhat.py --mo-ta "Sửa lỗi …"`) → `bo_cai\PABT_CapNhat_<phiên bản>.pabtcn`. Gói dùng cho bản
+(hoặc `.venv\Scripts\python tao_cap_nhat.py --mo-ta "Sửa lỗi …"`) → `bo_cai\LARC_CapNhat_<phiên bản>.larcud`. Gói dùng cho bản
 cài từ 0.8.0 trở lên (cả bản Win 10/11 và Win 7/8) (`--toi-thieu` để đổi).
 
 ## Cài đặt
@@ -1262,7 +1303,7 @@ cài từ 0.8.0 trở lên (cả bản Win 10/11 và Win 7/8) (`--toi-thieu` đ�
 - cài xong tự kiểm tra phần mềm trên chính máy đó (giao diện, đọc PDF, bộ đơn giá, mẫu in, bảng giá đất). Nhật ký:
   `%TEMP%\pabt_cai_dat.log`. Cần ổ đĩa còn trống ≥ 300 MB.
 
-**Một bộ cài cho mọi máy** (từ 0.9.26): `PABT_Setup_Universal_<phiên bản>.exe` (~50 MB) chứa hai bản chương trình và tự chọn khi
+**Một bộ cài cho mọi máy** (từ 0.9.26): `LARC_Setup_Universal_<phiên bản>.exe` chứa hai bản chương trình và tự chọn khi
 cài:
 
 | Máy | Bản được cài | Nền chạy |

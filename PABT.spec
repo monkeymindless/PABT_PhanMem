@@ -20,7 +20,7 @@ a = Analysis(
     # mã + thông số ban_in.mau_word của pabt_profile.json
     datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/he_so_k_qd03.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'),
            (HO_SO, 'pabt'), ('HUONG_DAN.md', '.')],
-    hiddenimports=['pabt.mau_bang_tong_hop', 'pabt.in_word', 'html.parser','urllib.request', 'difflib', 'PySide6.QtPdfWidgets', 'PySide6.QtPrintSupport'],
+    hiddenimports=['pabt.mau_bang_tong_hop', 'pabt.in_word', 'pabt.lenh', 'html.parser','urllib.request', 'difflib', 'PySide6.QtPdfWidgets', 'PySide6.QtPrintSupport'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

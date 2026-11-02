@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 
 from . import nhap_don_gia as ndg
 from .lap_pa import LoiNhap
+from .giao_dien import vua_dong
 from .tien import vn
 from .thong_bao import TEN_UD
 
@@ -241,7 +242,7 @@ class HopNhapDonGia(QDialog):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(i, c, it)
         if len(self.ds) <= DONG_TU_CAO_TOI_DA:          # cao dòng theo chữ: đo từng dòng, bảng vài nghìn dòng thì bỏ qua
-            self.bang.resizeRowsToContents()
+            vua_dong(self.bang)
         self._dang_ve = False
         dem = {k: sum(m.trang_thai == k for m in self.ds) for k in MAU}
         gan = sum(1 for m in self.ds if m.khop_gan)

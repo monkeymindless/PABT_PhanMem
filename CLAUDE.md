@@ -11,7 +11,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 ## Quy trình MỖI LẦN sửa phiên bản (người dùng yêu cầu - bắt buộc)
 - Tăng `__version__`; đối chiếu với gói cập nhật đã phát hành gần nhất trong `bo_cai\` (`cap_nhat.doc_goi`: SHA-256;
   so từng file với mã nguồn).
-- Chạy `PHAN_TICH_PHIEN_BAN.bat` (= `phan_tich_phien_ban.py --so-sanh bo_cai\PABT_CapNhat_<bản trước>.pabtcn`): tốc độ mở / tắt,
+- Chạy `PHAN_TICH_PHIEN_BAN.bat` (= `phan_tich_phien_ban.py --so-sanh bo_cai\LARC_CapNhat_<bản trước>.larcud`): tốc độ mở / tắt,
   mở dự án, lưu + tải lại, lệnh dòng lệnh; module nạp lúc khởi động; mã lặp lại; file khác nhau -> `ket_qua_kiem_tra\PhanTich_*.md`.
 - Chạy `KIEM_TRA_GIAO_DIEN.bat` (= `kiem_tra_giao_dien.py`): bấm mọi nút, gõ mọi ô nhập, chọn mọi mục chọn, sửa ô bảng của mọi
   hộp thoại (bản sao dự án; chặn in / Excel / Word / mạng) -> lỗi, chậm / đơ (> 5 s), treo -> `ket_qua_kiem_tra\GiaoDien_*.md`.
@@ -2877,6 +2877,83 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
     (TestChanHoNhanViecCSDL, TestGhiToiThieu). PHÁT HÀNH 1.0.41 (01/11/2026) = hai lớp trên.
     CHƯA làm (nhóm C / đề xuất khác): gom DDL mở rộng lược đồ, cảnh báo cap_nhat.go() khi gói có lược đồ mới hơn bản gốc, PYZ
     không nén zlib, A+/A− chỉ co giãn widget có kiểu riêng, tách module lớn, test nâng cấp từ file lược đồ cũ thật.
+    GHI_TOI_THIEU GIỮ '1.0.41' tới hết 1.0.50 (không cột / bảng mở rộng làm bản trước ghi sai). Tăng phiên bản tuần tự, không nhảy số.
+    Bản 1.0.40 chưa biết khóa này nên vẫn sửa được file của bản mới — nên cập nhật mọi máy cùng lúc.
+- 1.0.42 (01/11/2026; test `tests/test_dong_bo_giao_dien_1042.py`, `test_chuan_giao_dien_wcag.py`, `test_giao_dien_pro_max.py`):
+  - Màu: `thanh_tieu_de._mau_chrome()` = TOKEN nen / vach / chu / chu_phu (bỏ xám VS Code `#F8F8F8`; tông Tối đổi chrome theo).
+    `MAU_SO_KHONG` #64748B (≥ 4,5:1 trên trắng; trước #94A3B8 = 2,56:1). Viền ô nhập thường `#8696AB` (≥ 3:1, WCAG 1.4.11) — `NUT_PHU`.
+    Cột STT dọc `TOKEN['chu_phu']` trên nền header. Ba cặp đó hết expectedFailure trong test WCAG.
+  - `giao_dien.chu_hien`: `&` → `&&` (idempotent). Tiêu đề nhóm menu trái Title Case (`'1. Khái toán & dự toán'`, không IN HOA cả dòng).
+    Lệnh tắt: chú thích lý do (`man_hinh_tim_nhanh`: "Lệnh đang tắt (chưa mở dự án hoặc đang chỉ xem)").
+  - `'Chọn hộ niêm yết…'` vào `LENH_CAN_DU_AN`; chưa mở dự án / chỉ xem thì tắt; `chon_ho_niem_yet(cho=False)` trả None (không im lặng).
+  - Danh sách dài (phiếu kiểm đếm, thuộc tính KML) trong `hop_ket_qua` / bảng cuộn — không QMessageBox giãn đẩy nút ra ngoài màn hình.
+  - `man_hinh_cap_nhat.HopCapNhat`: chữ "Chỉ cài gói do đơn vị phát hành LARC gửi" (USB / email nội bộ / máy chủ đơn vị).
+  - Sắp xếp cột diện tích / tiền: khóa số Decimal (hoặc `UserRole + 1`) — không so chữ `"1.200" < "900"`. `_MucSap` bảng hộ (STT, tổng tiền).
+- 1.0.43 (01/11/2026; test `tests/test_ban_do_cad_1043.py`): `man_hinh_ban_do.LOP_BD` = duong / nhan / moc / ghi_chu.
+  `KhungBanDo.ve_kml` / `kml_cad`: LineString = lưới thửa & ranh Level (`QGraphicsPathItem`, `kieu='duong'`, `lop_cad`); Point theo
+  `ban_do_kml.loaiNhan` (cùng LARC Mobile) → chữ số thửa / loại đất / DT (`QGraphicsSimpleTextItem`), mốc hình thoi, ghi chú — **không**
+  chấm 8 px cho mọi điểm; ký hiệu CAD `*` bỏ. Công tắc 4 lớp `o_lop`; `hop_nut` + / − / Vừa trên view; `bam_cad` Signal → thuộc tính
+  (kèm VN-2000); bảng Tra cứu dưới bản đồ lọc rồi Xem bay tới. Muốn đưa ranh vào dự án vẫn **Nhập bản đồ…** (đa giác / DXF).
+- 1.0.44 (01/11/2026; test `tests/test_toc_do_menu_1046.py`, `test_yeu_cau_2110.py`, `test_yeu_cau_1034.py`):
+  - Thẻ số liệu: sổ địa chính **hai dòng** cạnh số hộ (`the_dia_chinh` / `the_dt`) — `"6 thửa"` rồi diện tích, **không** ghép `"/"`,
+    không RichText (dòng DT từng bị cắt trong thẻ 62 px). `the_so[k].text()` vẫn CHỈ là số.
+  - `giao_dien.chuyen_trang_muot` = `setCurrentIndex` ngay. `THOI_GIAN_TRANG_MS` / `DICH_TRANG_PX` giữ tên API, **không** `QWidget.move()`
+    / `_hoat_anh_trang`. Layout QStackedWidget kéo widget về chỗ cũ mỗi lần vẽ + ẩn/hiện hàng thẻ số = nhấp nháy. `dung_ve(w)` tắt
+    `updatesEnabled` khi đổi trang. `CuaSoChinh.mo_trang` / `ve_trang_chu`: `_danh_dau_trang` trước khi nạp (dấu chọn < 1 khung hình).
+    Nhóm độc quyền: bấm mục đang chọn không tự bỏ dấu. Trang đã nạp lần 2 < 100 ms. `KhungTienDo.showEvent` không dựng lại KPI/bảng
+    mỗi lần hiện (`_can_nap`).
+- 1.0.45 (01/11/2026; test `tests/test_duong_ke_may_khac.py`, `test_in_an_2110.py`): máy mới / WPS / LibreOffice mất khung (WPS chỉ vẽ
+  `tcBorders`, nét 0,5 pt / viền không màu biến mất). Word: `openxml_word.SZ_VIEN` 8 (= 1 pt), `MAU_VIEN` `000000`; `xml_tbl_borders` +
+  `xml_tc_borders` từng ô + `xml_p_bdr_duoi`. Excel bảng tổng hợp: viền RGB đen `FF000000`; DrawingML `in_duong_ke` `w="12700"` (1 pt)
+  dưới tên đơn vị / tiêu ngữ / dự án. In giấy vẫn đen.
+- 1.0.46 (01/11/2026; test `tests/test_yeu_cau_1046.py`):
+  - `HopDanTaiSan.b_anh` "Mở file…", `b_clip` "Dán ảnh clipboard"; `mo_anh_pdf` → Tesseract chữ in; chữ viết tay dòng vàng phải xem lại.
+  - `HopKiemDem.b_dan` / `b_pa`; bấm đúp họ tên → `mo_lap_pa`.
+  - `cap_nhat_gia_dat._gia_tu_loi_van`: văn bản không có bảng cột (thiếu tiêu đề) vẫn đọc lời văn nghị quyết → dòng giá; `_dong_tu_o`
+    không tiêu đề → `LoiBangGia`.
+  - `HopBoDonGia` menu Cập nhật: "Nạp từ file — thay cả nhóm theo văn bản mới…" (`CACH_CAP_NHAT[1]` thay_the=True; khác chuột phải thay
+    một dòng). `HopNhapDonGia(..., thay_the=True)`.
+  - Ctrl+Shift+V trên `CuaSoLapPA`: `WidgetWithChildrenShortcut` (một shortcut) — không đụng tab Đơn giá bồi thường
+    (`HopBoDonGia._phim_dan` cùng phím, ngữ cảnh khung). Trợ lý không thuộc `LENH_CAN_DU_AN` (bật khi chưa mở dự án).
+- 1.0.47 (01/11/2026; test `tests/test_toc_do_menu_1046.py`): **`CuaSoChinh.CAO_THE_SO` = 62 — KHÔNG nới** (màn 21": chỗ bảng hộ; dòng 2
+  DT xếp sát số thửa, không bị bo góc cắt). `CuaSoLapPA`: chỉ dựng `BangMuc` thẻ đang xem (`bang.get(2/3)` None lúc mở; ≤ 1 bảng mục
+  1/2/3/4/7). `HangNhapNhanh.nap` đặt `_can_nap`; `dam_bao_ds` / `OTimChon.loc` mới nạp ~5.500 cây. `HopBoDonGia` lần 1 < 250 ms (trước
+  ~400 ms vì dựng mọi thẻ). `chuan_hoa_cua_so_con` không `setWindowFlags` lúc Polish (~500 widget = 38 ms).
+- 1.0.48 (02/11/2026; test `tests/test_ocr_viet_tay.py`):
+  - OCR ảnh lớn: `ocr.CANH_DAI_TOI_DA` 3508 (A4 @ 300 dpi); `kich_thuoc_ocr` / `_chuan_bi` / `_doc_qimage` thu trước Tesseract. Hộp tiến
+    độ từng trang, nút Dừng. KHÔNG PaddleOCR (NĐ 13/2023 — Tesseract trên máy).
+  - `ocr_ho_so.loc_dong_viet_tay` / `dong_dua_vao_dan` / `KetQuaOcr.dong_bo`: bỏ mẫu in hành chính (CỘNG HÒA, tiêu đề biên bản, chữ ký)
+    và rác OCR (`||||`, `aE#@$%`). `HopDanTaiSan.b_goc` "Chữ OCR gốc…"; `b_ai` "Trợ lý AI viết lại…" tắt khi Trợ lý chưa bật. AI chỉ nhận
+    dòng đã lọc — không gửi file ảnh / PDF. Mặc định tắt.
+  - `pheu_tien_do.MOC_LUY_KE` = da_lap / niem_yet: ô chú giải đếm lũy kế (hộ đã trình / duyệt vẫn "đã lập" / "đã niêm yết"); thanh phễu
+    vẫn chia đúng 1 giai đoạn / hộ. Bấm ô → danh sách. `CHU_THICH_MOC`. `man_hinh_tong_quan`.
+- 1.0.49 (02/11/2026; chưa đóng gói riêng — gói vào 1.0.50; `ocr_ho_so.DUOI_VAN_BAN` / `LOC_FILE`):
+  - Một đường `doc_chu(file)`: `quan_ly.doc_van_ban` (PDF lớp chữ / Word / Excel / CSV); PDF `_chu_mong` (`CHU_MONG` 80) → `ocr.doc_chu`
+    ảnh; `.docx`/`.xlsx`/`.xlsm` ít chữ → `_ocr_anh_trong_office`. `doc_va_phan_tich` = đọc + `phan_tich_tu_dong` + AI tùy chọn.
+  - Chữ viết tay: lần khối chữ (`psm` 6) không ra `loc.giu` thì đọc lại psm 4. Trợ lý bật → `chinh_dong_ocr_ai` viết "Tên: số lượng ĐVT".
+- 1.0.50 (02/11/2026, người dùng: chín phương án tinh chỉnh, **không đổi cấu trúc / bố cục**; test `tests/test_yeu_cau_1050.py`;
+  PHÁT HÀNH `LARC_Setup_Universal_1.0.50.exe` + `LARC_ChayNgay_1.0.50_Universal.zip` + `LARC_CapNhat_1.0.50.larcud` + LARC Mobile cùng số;
+  1305 test OK; `kiem_toan_lenh` 0; tu-kiem DAT Qt6+Qt5; máy trắng 4 nhánh DAT):
+  1. Xem trước `HopQuetGiayTo.anh_cac_trang` dùng `_doc_qimage` (cùng trần OCR); Qt5 `rmtree` thư mục tạm. Ảnh điện thoại vài MB cửa sổ
+     vẫn kéo được.
+  2. `ocr_ho_so.can_psm4` / `PSM4_TRANG_TOI_DA` 8; GCN `_la_gcn` (giấy chứng nhận / quyền sử dụng đất) không đọc hai lần; ô `o_viet_tay`
+     (mặc định bật) vẫn đọc cột thưa. `ocr.so_trang` (QtPdf rồi pypdf).
+  3. Tesseract luồng nền: `giao_dien.chay_nen_tien_do` / `chay_nen_huy` + `_cho_luong` (poll `is_alive` + `processEvents(ExcludeUserInputEvents)`,
+     **không** `QEventLoop.exec` — QTimer offscreen không chạy → treo unittest / `test_bam_lien_ket_chay_dung_lenh`). Hộp tiến độ còn
+     nút Dừng. QtPdf không đưa sang luồng khác.
+  4. `QSS_TOI`: **không** `QWidget { color: #F1F5F9 }` (truyền sang tooltip / ô nhập → chữ tối trên nền tối). Chữ tối theo widget
+     (`QLabel`, `QCheckBox`, `QToolTip`…).
+  5. Hex `#8A5A00` / `#1F4E78` / `#FFF2CC` → `TOKEN['canh_bao']` `#D97706` / `TOKEN['chinh']` / `TOKEN['canh_bao_nhat']` `#FFFBEB`
+     (`man_hinh.py`, `man_hinh_theo_doi`, `man_hinh_quan_ly`, `man_hinh_kiem_toan`, `man_hinh_phan_loai.VANG`, `app.VANG`).
+  6. `man_hinh_du_toan` / `man_hinh_nhap_don_gia`: `vua_dong` thay `resizeRowsToContents`.
+  7. `_tai_lai_ho` except → `giao_dien.ghi_loi_log` (`<thư mục máy>\loi.log`) rồi nạp toàn bộ.
+  8. `pabt/lenh.py` `ds_lenh(cua)` — `CuaSoChinh.__init__` chỉ gắn. **Lambda gọi lúc bấm** (`lambda: cua.huong_dan()`), không bound
+     method (trừ `mo_du_an` / `xuat_bao_cao` / `gioi_thieu` / `close`). Bound method làm `mock.patch.object(w, 'huong_dan')` không chặn
+     QAction → hộp thoại treo test. TRANG: `lambda i=i: cua.mo_trang(i)`. `PABT.spec` / `dung_exe38.LOAI_TRU_WEB` `--hidden-import pabt.lenh`.
+  9. AI sau OCR: `chay_nen_huy` nút Bỏ qua; `tro_ly.hoi_claude(..., gioi_han=45)` / `ocr_ho_so.GIOI_HAN_AI` 45 s — mất mạng không treo.
+  Giữ: KPI 62 px, menu trái, VBS in, không Inno Setup, không PaddleOCR, không viết lại 4 tầng. Đo vs 1.0.48: nạp mã 426→213 ms, khởi động
+  699→516 ms, mở dự án thật 1.001→770 ms; bảng tổng hợp 3.000 hộ ~3,5 s. GitHub Pages chưa đẩy (repo dubious ownership — không
+  `git config --global safe.directory`).
 
 ## Môi trường làm việc
 - Dự án ở `D:\APP AI PABT\PABT_PhanMem` (đường dẫn không dấu; trước 07/10/2026 là `D:\Thư mục mới\…` dạng NFD). File thật của người

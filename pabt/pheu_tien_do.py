@@ -32,6 +32,16 @@ TEN_GIAI_DOAN = dict(GIAI_DOAN_HO)
 TEN_NGAN_GIAI_DOAN = {'chua_lap': 'Chưa lập', 'da_lap': 'Đã lập', 'niem_yet': 'Niêm yết', 'cho_trinh': 'Chờ trình',
                       'cho_phe_duyet': 'Chờ phê duyệt', 'cho_chi_tra': 'Chờ chi trả', 'cho_ban_giao': 'Chờ bàn giao',
                       'hoan_tat': 'Hoàn tất'}
+THU_TU_GIAI_DOAN = [k for k, _ in GIAI_DOAN_HO]
+# Ô chú giải "Đã lập" / "Niêm yết" = số hộ ĐÃ ĐẾN mốc (lũy kế), không phải chỉ hộ đang đứng đúng ô đó.
+# Hộ đã trình / đã duyệt vẫn là "đã lập" và "đã niêm yết" — trước đây đếm độc quyền nên hai ô báo 0 (1.0.48).
+MOC_LUY_KE = frozenset(('da_lap', 'niem_yet'))
+_TEN_SANG_KHOA = {ten: k for k, ten in TEN_GIAI_DOAN.items()}
+_TEN_SANG_KHOA.update({ten: k for k, ten in TEN_NGAN_GIAI_DOAN.items()})
+CHU_THICH_MOC = {
+    'da_lap': 'Số hộ đã lập phương án (kể cả hộ đã niêm yết, trình hoặc phê duyệt). Bấm để xem danh sách.',
+    'niem_yet': 'Số hộ đã đưa vào đợt niêm yết (kể cả hộ đã có ý kiến, trình hoặc phê duyệt). Bấm để xem danh sách.',
+}
 CO = (                                          # cờ "cần kiểm tra" - không đổi giai đoạn
     ('xu_ly_khi_chua_co_pa', 'Đã đưa vào đợt niêm yết / đợt trình nhưng chưa có dòng phương án'),
     ('trinh_thieu_y_kien', 'Đã trình nhưng ý kiến niêm yết còn "chưa lấy"'),
@@ -69,9 +79,27 @@ class KetQuaPheu:
         return len(self.ho)
 
     def dem(self, ds=None) -> dict:
-        """{giai đoạn: số hộ} đủ mọi giai đoạn (0 khi không có)."""
-        c = Counter(x.giai_doan for x in (self.ho if ds is None else ds))
+        """{giai đoạn: số hộ đang đứng} đủ mọi giai đoạn (0 khi không có). Giai đoạn lạ quy về khóa hợp lệ / suy từ cờ."""
+        c = Counter(_giai_doan_cua(x) for x in (self.ho if ds is None else ds))
         return {k: c.get(k, 0) for k, _ in GIAI_DOAN_HO}
+
+    def dem_hien_thi(self, ds=None) -> dict:
+        """Số trên ô chú giải: 'Đã lập' / 'Niêm yết' = lũy kế đã đến mốc; ô 'Chờ…' / 'Chưa lập' / 'Hoàn tất' = đang đứng."""
+        hien = self.dem(ds)
+        kq = dict(hien)
+        for k in MOC_LUY_KE:
+            i = THU_TU_GIAI_DOAN.index(k)
+            kq[k] = sum(hien[x] for x in THU_TU_GIAI_DOAN[i:])
+        return kq
+
+    def theo_moc(self, gd: str, ds=None) -> list:
+        """Hộ bấm ô chú giải: mốc lũy kế = mọi hộ đã đến giai đoạn đó; ô khác = đang đứng đúng ô."""
+        ds = self.ho if ds is None else ds
+        if gd in MOC_LUY_KE:
+            i = THU_TU_GIAI_DOAN.index(gd)
+            moc = set(THU_TU_GIAI_DOAN[i:])
+            return [x for x in ds if _giai_doan_cua(x) in moc]
+        return [x for x in ds if _giai_doan_cua(x) == gd]
 
     def dem_co(self, ds=None) -> dict:
         c = Counter(k for x in (self.ho if ds is None else ds) for k in x.co)
@@ -82,7 +110,7 @@ class KetQuaPheu:
         return sum(self.dem().values()) == self.so_ho and all(x.giai_doan in TEN_GIAI_DOAN for x in self.ho)
 
     def theo_giai_doan(self, gd: str) -> list:
-        return [x for x in self.ho if x.giai_doan == gd]
+        return [x for x in self.ho if _giai_doan_cua(x) == gd]
 
     def theo_co(self, co: str) -> list:
         return [x for x in self.ho if co in x.co]
@@ -120,6 +148,31 @@ def viec_tiep(kq: KetQuaPheu, ds=None, toi_da: int = 7) -> list:
         if n and k in VIEC_GIAI_DOAN:
             viec.append(ViecPheu(VIEC_GIAI_DOAN[k].format(n=n), 'can', 'gd', k, LENH_GIAI_DOAN.get(k), n))
     return viec[:toi_da]
+
+
+def ten_giai_doan(x) -> str:
+    """Tên đầy đủ giai đoạn của hộ (hoặc của khóa / tên đã có)."""
+    k = _giai_doan_cua(x) if not isinstance(x, str) else _giai_doan_hop_le(x)
+    return TEN_GIAI_DOAN[k]
+
+
+def _giai_doan_hop_le(gd) -> str:
+    """Khóa giai đoạn; nhận mã, tên đầy đủ hoặc tên ngắn; mã lạ không làm mọi ô về 0."""
+    if gd in TEN_GIAI_DOAN:
+        return gd
+    return _TEN_SANG_KHOA.get(gd, 'chua_lap') if isinstance(gd, str) else 'chua_lap'
+
+
+def _giai_doan_cua(x) -> str:
+    """Khóa để đếm một hộ: mã hợp lệ, hoặc kéo lên mốc có bằng chứng (cờ) khi mã lạ / còn 'chưa lập'."""
+    gd = _giai_doan_hop_le(getattr(x, 'giai_doan', ''))
+    co = getattr(x, 'co', None) or ()
+    i = THU_TU_GIAI_DOAN.index(gd)
+    if 'trinh_thieu_y_kien' in co and i < THU_TU_GIAI_DOAN.index('cho_phe_duyet'):
+        return 'cho_phe_duyet'
+    if gd == 'chua_lap' and ('pa_0_dong' in co or 'tu_lap' in co):
+        return 'da_lap'
+    return gd
 
 
 def _bang(con) -> set:
@@ -233,5 +286,6 @@ def tinh(con, lap: dict | None = None, che_do: str = 'mo', tong_hop: list | None
             h.co.add('khong_thua')
         if lan > 1:
             h.co.add('pa_bo_sung')
+        h.giai_doan = _giai_doan_cua(h)
         kq.append(h)
     return KetQuaPheu(kq, che_do)

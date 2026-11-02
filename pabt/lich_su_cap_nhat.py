@@ -7,6 +7,28 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.50', '02/11/2026', (
+        'Quét giấy tờ / Dán tài sản: ảnh xem trước thu như lúc nhận dạng (ảnh điện thoại vài MB cửa sổ vẫn kéo được); '
+        'Tesseract chạy nền, hộp tiến độ còn nút Dừng. Giấy chứng nhận không có tài sản không đọc hai lần; biên bản viết tay '
+        'vẫn đọc thêm kiểu cột thưa (ô chọn, tối đa 8 trang). Trợ lý AI sau OCR có nút Bỏ qua và hết giờ khi mất mạng.',
+        'Tông Tối: chú thích (tooltip) và ô nhập không còn chữ tối trên nền tối. Màu cảnh báo / vàng ô gom vào bảng màu chung. '
+        'Bảng dự toán và cập nhật đơn giá giãn dòng nhanh hơn. Lỗi tải lại từng hộ ghi vào loi.log.',
+    )),
+    ('1.0.49', '02/11/2026', (
+        'Quét giấy tờ / Dán tài sản → Mở file: đọc PDF ảnh OCR (chủ yếu), Word, Excel, ảnh chụp. Tự lọc dòng tài sản / viết tay, '
+        'bỏ mẫu in hành chính. PDF lớp chữ thưa thì nhận dạng lại ảnh; Word/Excel chỉ có ảnh nhúng thì OCR ảnh trong file. '
+        'Chữ viết tay: lần đọc khối chữ không ra dòng tài sản thì đọc lại kiểu cột thưa.',
+        'Trợ lý AI (nếu đã bật ở Công cụ → Trợ lý) tự viết lại dòng đã lọc thành "Tên: số lượng ĐVT" — vẫn không gửi file ảnh / PDF. '
+        'Nút Trợ lý AI viết lại còn để chạy lại khi cần.',
+    )),
+    ('1.0.48', '02/11/2026', (
+        'Dán tài sản → Mở ảnh / PDF: file lớn (ảnh điện thoại, PDF scan vài MB) không còn làm cửa sổ "Không phản hồi". '
+        'Hộp tiến độ từng trang, nút Dừng; ảnh thu về cỡ A4 300 dpi trước khi nhận dạng.',
+        'Chỉ lấy dòng tài sản / viết tay vào Dán tài sản — không đổ mẫu in hành chính (CỘNG HÒA, tiêu đề biên bản, chữ ký) '
+        'và rác OCR. Nút Chữ OCR gốc để soát cả trang. Trợ lý AI viết lại dòng đã lọc là tùy chọn (mặc định tắt, không gửi file ảnh / PDF).',
+        'Màn hình chính: ô Đã lập / Niêm yết đếm lũy kế số hộ đã đến mốc đó (hộ đã trình, đã duyệt vẫn được tính) — không còn báo 0 '
+        'khi hộ đã sang bước sau. Bấm ô để xem đủ danh sách. Thanh phễu vẫn chia theo giai đoạn đang đứng.',
+    )),
     ('1.0.47', '01/11/2026', (
         'Thẻ số liệu giữ 62 px (không nới, chừa chỗ bảng hộ trên màn 21"): dòng 2 diện tích xếp sát số thửa, không bị bo góc cắt. '
         'Bấm mở Bộ đơn giá / lập phương án / cửa sổ lệnh: chỉ dựng thẻ đang xem lúc mở, lần 2 dưới 0,1 giây.',

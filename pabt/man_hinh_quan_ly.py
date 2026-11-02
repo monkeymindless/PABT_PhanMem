@@ -16,14 +16,14 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import csdl, du_thao, kiem_loi, quan_ly, thoi_han
 from .lap_pa import LoiNhap
 from .tien import D, vn
-from .giao_dien import KieuNut, XepDong, ap_kieu_nut, cac_dong_da_chon, con_tro_cho, dat_trang_thai
+from .giao_dien import TOKEN, KieuNut, XepDong, ap_kieu_nut, cac_dong_da_chon, con_tro_cho, dat_trang_thai
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Quản lý hồ sơ trình phương án'
 # huy hiệu danh sách kiểm tra hồ sơ đợt trình (1.0.03): {đạt?: (nền, chữ)} - True đạt, None xem lại, False thiếu
 HUY_HIEU_KIEM = {True: ('#DCFCE7', '#2F7D54'), None: ('#FEF3C7', '#9A5A12'), False: ('#FEE2E2', '#B83A3A')}
 SO_CHU_SO_PA = 2                    # số PA chi tiết đánh ở hộp "Đánh số": 01, 02, 03… (NĐ 30/2020/NĐ-CP); 0 = không thêm số 0
-DO, VANG, XANH = QColor('#F8CBAD'), QColor('#FFF2CC'), QColor('#E2EFDA')
+DO, VANG, XANH = QColor('#F8CBAD'), QColor(TOKEN['canh_bao_nhat']), QColor('#E2EFDA')
 
 
 def _html(s: str) -> str:

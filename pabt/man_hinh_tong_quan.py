@@ -53,6 +53,8 @@ QLabel#ph_tieu_de { font-size: 13px; font-weight: 700; color: #1E3A5F; backgroun
 QLabel#ph_phu { font-size: 12px; color: #475569; background: transparent; border: 0; }
 QToolButton#ph_chu_giai { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; font-size: 12px;
     color: #0F172A; text-align: left; }
+QToolButton#ph_chu_giai[rong="0"] { color: #94A3B8; }
+QToolButton#ph_chu_giai[rong="1"] { color: #0F172A; font-weight: 600; }
 QToolButton#ph_chu_giai:hover { background: #F1F5F9; border-color: #CBD5E1; }
 QToolButton#ph_co { background: #FFFBEB; border: 1px solid #F1D9A0; border-radius: 10px; padding: 1px 9px; font-size: 12px; color: #7A4B00; }
 QToolButton#ph_co:hover { border-color: #C98A22; }
@@ -183,8 +185,9 @@ class KhungPheu(QFrame):
             n = QToolButton()
             n.setObjectName('ph_chu_giai')
             n.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)      # mặc định QToolButton chỉ vẽ biểu tượng
+            n.setAutoRaise(True)
             n.setCursor(Qt.CursorShape.PointingHandCursor)
-            n.setToolTip(f'{ten} - bấm để xem danh sách hộ')
+            n.setToolTip(ph.CHU_THICH_MOC.get(k) or f'{ten} - bấm để xem danh sách hộ')
             n.clicked.connect(lambda _=False, k=k: self._chon_giai_doan(k))
             self.chu_giai[k] = n
             x.addWidget(n)
@@ -256,12 +259,12 @@ class KhungPheu(QFrame):
         cu = self.cb_pham_vi.currentData()
         self.cb_pham_vi.blockSignals(True)
         self.cb_pham_vi.clear()
-        self.cb_pham_vi.addItem('Cả dự án', None)
+        self.cb_pham_vi.addItem('Cả dự án', 'ca')
         for i, ten in dot_ny:
             self.cb_pham_vi.addItem(f'Niêm yết: {ten}', ('ny', i))
         for i, ten in dot_trinh:
             self.cb_pham_vi.addItem(f'Trình: {ten}', ('tr', i))
-        j = self.cb_pham_vi.findData(cu)
+        j = self.cb_pham_vi.findData(cu if cu not in (None, '') else 'ca')
         self.cb_pham_vi.setCurrentIndex(max(j, 0))
         self.cb_pham_vi.blockSignals(False)
         for b, n in self.nut_du_an.items():
@@ -278,20 +281,34 @@ class KhungPheu(QFrame):
         if kq is None:
             return []
         pv = self.cb_pham_vi.currentData()
-        if not pv:
+        if pv in (None, '', 'ca') or not isinstance(pv, (tuple, list)) or len(pv) != 2:
             return kq.ho
-        return kq.loc_dot(dot_niem_yet=pv[1]) if pv[0] == 'ny' else kq.loc_dot(dot_trinh=pv[1])
+        if pv[0] == 'ny':
+            return kq.loc_dot(dot_niem_yet=pv[1])
+        if pv[0] == 'tr':
+            return kq.loc_dot(dot_trinh=pv[1])
+        return kq.ho
 
     def _ve(self) -> None:
         kq = self.ket_qua
         if kq is None:
             return
         ds = self.ds_dang_xem()
-        dem = kq.dem(ds)
+        dem = kq.dem(ds)                    # dải phễu: mỗi hộ đúng một đoạn
+        hien = kq.dem_hien_thi(ds)          # ô chú giải: Đã lập / Niêm yết = lũy kế
         self.dai.dat(dem)
         for k, n in self.chu_giai.items():
-            n.setText(f'{ph.TEN_NGAN_GIAI_DOAN[k]}  {dem[k]}')
+            so = hien.get(k, 0)
+            n.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            n.setText(f'{ph.TEN_NGAN_GIAI_DOAN[k]}  {so}')
             n.setIcon(self._bieu_tuong(MAU_GIAI_DOAN[k]))
+            n.setProperty('rong', '1' if so else '0')
+            n.style().unpolish(n)
+            n.style().polish(n)
+            if k in ph.MOC_LUY_KE:
+                n.setToolTip(ph.CHU_THICH_MOC[k] + (f' Đang đứng đúng ô này: {dem.get(k, 0)} hộ.' if dem.get(k) else ''))
+            else:
+                n.setToolTip(f'{ph.TEN_GIAI_DOAN[k]} - bấm để xem danh sách hộ')
         bs = sum(1 for x in ds if 'pa_bo_sung' in x.co)
         self.lb_tom_tat.setText(f'{len(ds)} hộ' + (f' · {bs} hộ đang xét phương án bổ sung / điều chỉnh' if bs else ''))
         co = kq.dem_co(ds)
@@ -303,8 +320,11 @@ class KhungPheu(QFrame):
     def _chon_giai_doan(self, k: str) -> None:
         if self.ket_qua is None:
             return
-        ds = [x for x in self.ds_dang_xem() if x.giai_doan == k]
-        self.mo_ds.emit(f'{ph.TEN_GIAI_DOAN[k]} ({len(ds)} hộ)', ds)
+        ds = self.ket_qua.theo_moc(k, self.ds_dang_xem())
+        ten = ph.TEN_GIAI_DOAN.get(k, k)
+        if k in ph.MOC_LUY_KE:
+            ten = ph.CHU_THICH_MOC[k].split('.')[0]
+        self.mo_ds.emit(f'{ten} ({len(ds)} hộ)', ds)
 
     def _chon_co(self, k: str) -> None:
         if self.ket_qua is None:
@@ -343,7 +363,7 @@ class HopHoPheu(QDialog):
             it.setTextAlignment(int(Qt.AlignmentFlag.AlignCenter))
             self.bang.setItem(r, 0, it)
             self.bang.setItem(r, 1, QTableWidgetItem(x.ho_ten or ''))
-            self.bang.setItem(r, 2, QTableWidgetItem(ph.TEN_GIAI_DOAN[x.giai_doan]))
+            self.bang.setItem(r, 2, QTableWidgetItem(ph.ten_giai_doan(x)))
             it = QTableWidgetItem(str(x.lan))
             it.setTextAlignment(int(Qt.AlignmentFlag.AlignCenter))
             self.bang.setItem(r, 3, it)

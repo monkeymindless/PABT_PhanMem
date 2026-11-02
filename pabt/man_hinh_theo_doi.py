@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from . import ho_so_scan, kinh_phi_du_an, thoi_han, theo_doi, van_dong
-from .giao_dien import dat_kieu_theo_tong, qmau_theo_tong  # noqa: E402  (1.0.34-1.0.35: màu đổi theo tông nền)
+from .giao_dien import TOKEN, dat_kieu_theo_tong, qmau_theo_tong  # noqa: E402  (1.0.34-1.0.35: màu đổi theo tông nền)
 from .bang_ao import BangAo
 from .giao_dien import (MAU_CANH_BAO_NEN, MAU_CANH_BAO_VIEN, qss_canh_bao)  # noqa: E402  (20/10/2026: cảnh báo hổ phách)
 from .giao_dien import (DaiCongBang, HangKpi, XepDong, dat_trang_thai, gan_chu_khi_trong, gan_thanh_ty_le,
@@ -31,7 +31,7 @@ from .thong_bao import TEN_UD, THE_TONG_HOP, chu_loi
 from .tien import D, KHONG, so_vn, vn, vn_gon
 
 TIEU_DE = 'Theo dõi phê duyệt, chi trả, bàn giao'
-XANH, VANG, DO, XAM = QColor('#E2EFDA'), QColor('#FFF2CC'), QColor('#F8CBAD'), QColor('#F2F4F7')
+XANH, VANG, DO, XAM = QColor('#E2EFDA'), QColor(TOKEN['canh_bao_nhat']), QColor('#F8CBAD'), QColor('#F2F4F7')
 MAU_LIEN_KET = QColor('#2F5DB5')                          # chữ ô bấm đúp mở được file (biên lai, chứng từ)
 CHO_GO_MS = 200                                           # ô tìm: chờ ngừng gõ bấy nhiêu ms mới lọc (như OTimKiemThongMinh)
 DO_MAU = 300                                              # số dòng Qt đo khi tự canh bề rộng cột (bảng QTableWidget của hộp thoại)

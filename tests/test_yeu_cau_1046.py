@@ -43,7 +43,7 @@ class TestDanTaiSanOcr(CoSo):
         hop = HopDanTaiSan(None, '', dich=DichPhuongAn(BoSoan(con, 1, DanhMuc(con))))
         hop.im_lang = True
         self.addCleanup(hop.deleteLater)
-        self.assertEqual(hop.b_anh.text(), 'Mở ảnh / PDF…')
+        self.assertEqual(hop.b_anh.text(), 'Mở file…')
         self.assertEqual(hop.b_clip.text(), 'Dán ảnh clipboard')
         self.assertEqual(hop.mo_anh_pdf(), [])
 
@@ -57,10 +57,27 @@ class TestDanTaiSanOcr(CoSo):
         hop = HopDanTaiSan(None, '', dich=DichPhuongAn(BoSoan(con, 1, DanhMuc(con))))
         hop.im_lang = True
         self.addCleanup(hop.deleteLater)
-        with mock.patch('pabt.ocr.san_sang', return_value=''), mock.patch('pabt.ocr.doc_chu', return_value=['Xoài: 16 cây']):
+        with mock.patch('pabt.ocr.san_sang', return_value=''), mock.patch('pabt.ocr.doc_chu', return_value=['Xoài: 16 cây']) as doc:
             ds = hop.mo_anh_pdf(self.td / 'a.png')
         self.assertTrue(ds)
         self.assertIn('Xoài', hop.o_chu.toPlainText())
+        self.assertTrue(doc.called)
+
+    def test_thu_anh_lon_khong_vuot_a4_300dpi(self):
+        from pabt import ocr
+        self.assertEqual(ocr.kich_thuoc_ocr(1000, 800), (1000, 800))
+        w, h = ocr.kich_thuoc_ocr(8000, 6000)
+        self.assertEqual(max(w, h), ocr.CANH_DAI_TOI_DA)
+        self.assertEqual((w, h), (3508, 2631))
+        from PySide6.QtGui import QImage, QImageReader
+        im = QImage(3600, 80, QImage.Format.Format_RGB32)
+        im.fill(0xFFFFFFFF)
+        p = self.td / 'dai.png'
+        self.assertTrue(im.save(str(p)))
+        ra = ocr._chuan_bi(p, self.td)
+        kt = QImageReader(str(ra)).size()
+        self.assertTrue(kt.isValid())
+        self.assertLessEqual(max(kt.width(), kt.height()), ocr.CANH_DAI_TOI_DA)
 
 
 class TestPhieuDanTaiSan(CoSo):
@@ -128,5 +145,5 @@ class TestPhimVaTroLy(CoSo):
         phim = [s for s in hop.findChildren(QShortcut) if s.key() == QKeySequence('Ctrl+Shift+V')]
         self.assertEqual(len(phim), 1)
         self.assertEqual(phim[0].context(), Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self.assertEqual(__version__, '1.0.47')
-        self.assertEqual(lich_su_cap_nhat.MUC[0][0], '1.0.47')
+        self.assertEqual(__version__, '1.0.50')
+        self.assertEqual(lich_su_cap_nhat.MUC[0][0], '1.0.50')

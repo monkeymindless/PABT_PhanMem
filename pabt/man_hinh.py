@@ -665,7 +665,8 @@ class BangMuc(QWidget):
             h.setContentsMargins(0, 0, 0, 0)
             lb = QLabel('Danh mục đơn giá của dự án chưa có vật nuôi (dự án lập trước khi bộ đơn giá có QĐ 31/2025/QĐ-UBND).')
             lb.setWordWrap(True)
-            lb.setStyleSheet('QLabel { color: #8A5A00; }')
+            from .giao_dien import TOKEN
+            dat_kieu_theo_tong(lb, 'QLabel { color: %s; }' % TOKEN['canh_bao'])
             b = QPushButton('Bổ sung vật nuôi từ bộ đơn giá')
             b.setToolTip('Chỉ thêm các mục vật nuôi còn thiếu vào danh mục dự án - đơn giá khác của dự án giữ nguyên')
             b.clicked.connect(lambda: man.bo_sung_vat_nuoi())
@@ -1406,7 +1407,8 @@ class CuaSoLapPA(QDialog):
         self.lb_tong.setObjectName('tong_pa')                # kiểu: QSS_DAI_DIEU_HUONG (dải đáy cửa sổ)
         self.lb_tb = QLabel('')
         self.lb_tb.setWordWrap(True)
-        self.lb_tb.setStyleSheet('QLabel { color: #1F4E78; padding: 2px 6px; }')
+        from .giao_dien import TOKEN
+        dat_kieu_theo_tong(self.lb_tb, 'QLabel { color: %s; padding: 2px 6px; }' % TOKEN['chinh'])
         self.o_cb = QPlainTextEdit()
         self.o_cb.setReadOnly(True)
         from .giao_dien import kieu_trang_thai
@@ -3013,7 +3015,8 @@ class HopIn(QDialog):
         self.bang_ho.verticalHeader().setVisible(False)
         self.bang_ho.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.bang_ho.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        mau_lap = {'da_lap': '#1B5E20', 'tu_lap': '#8A5A00', 'chua': '#7A8794'}
+        from .giao_dien import TOKEN
+        mau_lap = {'da_lap': '#1B5E20', 'tu_lap': TOKEN['canh_bao'], 'chua': '#7A8794'}
         for i, h in enumerate(self.ho):
             chk = QTableWidgetItem()
             chk.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
