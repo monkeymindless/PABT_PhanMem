@@ -153,6 +153,14 @@ class HopDanTaiSan(QDialog):
         if not dong:
             self.bao('Chưa có dòng tài sản để nhờ AI viết lại. Mở file trước, hoặc gõ tay vào ô.', loi=False)
             return []
+        # 1.0.51: che họ tên chủ hộ có trong dự án ở luồng giao diện (luồng nền không dùng kết nối CSDL)
+        cs = self.cua_so
+        con = getattr(getattr(cs, 'bo', None), 'con', None) or getattr(cs, 'con', None)
+        if con is not None and not tro_ly.doc_cai_dat().get('gui_ca_nhan'):
+            try:
+                dong = [tro_ly.an_danh(x, con) for x in dong]
+            except Exception:                           # noqa: BLE001 - CSDL không đọc được: vẫn che CCCD / SĐT ở hoi_claude
+                pass
         try:
             if self.im_lang or khach is not None:
                 ra = chinh_dong_ocr_ai(dong, khach=khach)

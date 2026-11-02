@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from . import tiep_nhan_phap_ly as tn
+from .giao_dien import chu_hien
 from .thong_bao import TEN_UD, chu_loi
 
 TEN_THE = ('1. Quy định thu hồi, chủ đầu tư, thời hạn', '2. Hồ sơ pháp lý (32 mục)', '3. Kỹ thuật địa chính',
@@ -40,7 +41,7 @@ class HopTiepNhanPhapLy(QDialog):
         self.tab.addTab(self._the_1(), TEN_THE[0])
         self.tab.addTab(self._the_2(), TEN_THE[1])
         self.tab.addTab(self._the_3(), TEN_THE[2])
-        self.tab.addTab(self._the_4(), TEN_THE[3])
+        self.tab.addTab(self._the_4(), chu_hien(TEN_THE[3]))       # 1.0.51: hiện đúng dấu &
         self.tab.currentChanged.connect(lambda _: self.cap_nhat())
         self.lb_trang_thai = QLabel('')
         self.lb_trang_thai.setWordWrap(True)

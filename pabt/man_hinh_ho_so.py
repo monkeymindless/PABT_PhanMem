@@ -1131,12 +1131,16 @@ class KhungHoSo(QWidget):
         return True
 
     # ---------------------------------------------- lưu
-    def luu(self) -> bool:
+    def luu(self, im_lang: bool = False) -> bool:
+        """im_lang=True (lưu tự động 1.0.51): lỗi nhập không hiện hộp thoại - lý do ở self.loi_luu."""
         tt, ds = self.thu_thap()
+        self.loi_luu = ''
         try:
             self.ma_ho = ho_so.luu_ho(self.con, self.ma_ho, tt, ds)
         except LoiNhap as e:
-            self._bao(str(e))
+            self.loi_luu = ' '.join(str(e).split())
+            if not im_lang:
+                self._bao(str(e))
             return False
         self.canh_bao = ho_so.thua_trung_ho_khac(self.con, self.ma_ho)
         self._da_ghi()

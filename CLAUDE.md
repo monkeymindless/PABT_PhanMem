@@ -2954,6 +2954,40 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   Giữ: KPI 62 px, menu trái, VBS in, không Inno Setup, không PaddleOCR, không viết lại 4 tầng. Đo vs 1.0.48: nạp mã 426→213 ms, khởi động
   699→516 ms, mở dự án thật 1.001→770 ms; bảng tổng hợp 3.000 hộ ~3,5 s. GitHub Pages chưa đẩy (repo dubious ownership — không
   `git config --global safe.directory`).
+- 1.0.51 (02/11/2026, "Master prompt" 6 giai đoạn người dùng dán - viết theo mã KHÔNG khớp kho: tên hàm / dòng / file sai; làm theo ý
+  trên mã thật; test `tests/test_yeu_cau_1051.py`). Git trong phiên Claude: `git -c safe.directory=* …` (không sửa cấu hình global).
+  - LƯU TỰ ĐỘNG: `chu_de.CAC_MUC_LUU_TU_DONG` (10 / 60 / 120 / 0 giây), `chu_ky_luu_tu_dong(cai_dat=None)` (PABT_TU_LUU > đặt trong
+    phiên > QSettings `lap_pa/chu_ky_tu_luu` > 10 giây; offscreen không QSettings = 0: test không tự ghi), `dat_chu_ky_luu_tu_dong`.
+    CuaSoLapPA: `cb_tu_luu` + `lb_trang_thai_luu` ở DẢI ĐÁY (`hang_dieu_huong` - thanh trên đã kín ở 1366 @125%), `_hen_luu_tu_dong`
+    (một lần; hẹn lại mỗi thay đổi nhưng không quá 3 chu kỳ từ thay đổi đầu `_luc_doi_dau`), hẹn từ `cap_nhat` (`_sau_cap_nhat_tu_luu`)
+    + `itemChanged` bảng thửa / `textEdited` ô hồ sơ (`_noi_tu_luu_ho_so`, `_luc_go`). `_thuc_hien_luu_tu_dong`: `_dang_sua_o_bang`
+    (ô bảng EditingState, popup, hộp modal khác, gõ ô hồ sơ < 2,5 s) -> lùi 2 s. `luu(tu_dong=True)` = `_luu_im_lang`: hồ sơ
+    `KhungHoSo.luu(im_lang=True)` (lỗi -> `loi_luu`, giữ ô / cuộn bảng thửa), phương án `BoSoan.luu_tai_cho()` (= `luu(mo_lai=False)` +
+    dời `_pa_goc` / `_goc`, cập nhật `pa.ho.trang_thai`) - KHÔNG nap_ho, KHÔNG hộp thoại; LoiNhap -> "Tự lưu tạm hoãn: …" ở `lb_tb`.
+    Lần khóa / hộ không nhận việc: không tự lưu. CHÚ Ý `BoSoan.luu(tu_dong=True)` là "phần mềm tự lập" (TU_LAP) - KHÁC tự lưu.
+    KhungDuToan: `_dong_ho_tu_luu` (lặp theo chu kỳ, tối thiểu 10 s), chỉ khi có `self.file`, so `_dau_noi_dung()` với `_dau_da_luu`.
+    HopGiaoDien `cb_tu_luu`. LARC Mobile vốn lưu localStorage 250 ms sau mỗi lần gõ - chỉ thêm `#da_luu` "✓ Đã tự lưu" (ẩn <= 420 px).
+  - Giao diện: tông Tối TOI_NEN / TOI_VIEN / TOI_CHU thêm màu `MAU_TRANG_THAI` (dat_trang_thai 'tin' 1,57:1 trước đây); `bang_ao`
+    cọ số theo tông (`_but_theo_tong`, nhớ theo (màu, tông)); `mau_chu_nut` tông Tối biểu tượng sáng; `NUT_XOA` viền `#E35D5D` (3,5:1);
+    `QSS_TIEU_DIEM_NUT` cuối bảng kiểu (QPushButton:focus viền 2px #2563EB, đệm 3px 9px; nền đặc #93C5FD); `chu_hien` ở QCheckBox lớp CAD
+    và thẻ 4 Tiếp nhận pháp lý (QLabel không buddy hiện & đúng - không đổi); `vi_tri_danh_sach_noi` (OTimChon lật lên / co khi gần đáy);
+    CuaSoLapPA `MAN_HINH_THAP` 680: `_gon_man_hinh_thap` (dải định danh 28 px, lề dọc 1), `CAO_CANH_BAO_GON` 56; `phong_so` cho ô số
+    ChiTietHo / dự án gần đây / bảng tổng quan (KHÔNG cho thẻ KPI: số Consolas rộng hơn, thẻ 62 px bị rút "…").
+  - `_cho_luong(hop=)`: hộp tiến độ ApplicationModal + processEvents ĐẦY ĐỦ (trước ExcludeUserInputEvents -> nút Dừng / Bỏ qua không
+    bấm được); `chay_nen_tien_do` sau Dừng chờ tối đa `CHO_SAU_HUY_GIAY` 3 s rồi ném `ocr.DaHuy`. `closeEvent` gỡ `_bo_trang_an` khỏi
+    TRUOC_DOI_TY_LE. `khoi_dong_tot` sau 1 s (trước 5 s). `icon_ky_hieu` nhớ `_NHO_ICON` (trả bản sao QIcon). `KhungDuToan.dm` dùng lại
+    `cua.dm`. `pheu_tien_do.tinh` nhớ csdl.nho (khóa che_do + băm `lap`; tong_hop truyền vào thì không nhớ). `lenh.py` mọi lệnh lambda.
+    `do_toc_do_lenh.py` đo thêm mọi QAction còn lại (trừ Thoát / Xóa / Đóng dự án). `tinh_lai_cong_thuc` executemany.
+  - Bảo mật: `tro_ly.an_danh` thêm `_RE_CCCD_NHAN` (có dấu ngăn, chỉ sau nhãn CCCD/CMND - "120.000.000" là tiền), `_RE_SDT_NGAN`,
+    `_RE_SO_GCN` ([SO_GCN]), `_RE_TOA_DO` ([TOA_DO]), `_che_ho_ten` (sau ông / bà / chủ hộ: >= 2 từ viết hoa liền nhau -> [HO_TEN]);
+    DPAPI `ENTROPY_DPAPI` (mo_khoa thử lại không entropy cho khóa cũ); `ocr_ho_so.chinh_dong_ocr_ai(con=)` + HopDanTaiSan che họ tên dự án
+    ở luồng giao diện. `nhan_wifi`: mã phiên `token_urlsafe(12)` (16 ký tự), `TONG_TOI_DA` 1 GB / phiên.
+  - KHÔNG LÀM (trái quyết định người dùng / đã đo): che CCCD niêm yết (1.0.04 "ĐỪNG thêm lại"), KieuNut.LUU xanh lục (1.0.02 navy),
+    đổi AppUserModelID (lối tắt đã ghim của mọi máy tách nút - phải đổi cả `$APP_ID` bộ cài), WAL / wal_checkpoint, cache_size / mmap
+    (0.9.82 đã đo), 7 chỉ mục (đo 5.000 hộ: cong_thuc 1,1 -> 0,2 ms, ho thu_tu 2,8 -> 1,8 ms, không chỗ nào tra thửa theo tờ / số trong
+    vòng lặp), thay `with con:` hàng loạt bằng `csdl.giao_dich`, `rut_gon.kiem_dll` bỏ qua tesseract khi win7 (đang đạt, giữ kiểm), bỏ
+    `mo_trang(0)` trong `mo` (đặt trang quay lại - có chủ ý), QtPdf luồng nền (đối tượng tạo / hủy trong cùng luồng, QtPdf khóa PDFium toàn
+    cục), `don_hop_da_dong` quét con trực tiếp (hộp của trang bên phải sẽ rò rỉ).
 
 ## Môi trường làm việc
 - Dự án ở `D:\APP AI PABT\PABT_PhanMem` (đường dẫn không dấu; trước 07/10/2026 là `D:\Thư mục mới\…` dạng NFD). File thật của người

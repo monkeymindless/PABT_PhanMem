@@ -122,6 +122,79 @@ def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_
         cai_dat.setValue(KHOA_TONG_NEN, _chon(tong_nen, TONG_NEN, MAC_DINH_TONG_NEN))
 
 
+# 1.0.51 (người dùng 02/11/2026): LƯU TỰ ĐỘNG cửa sổ lập phương án / Khái toán - lưu sau N giây NGỪNG thao tác (không cắt ngang ô đang
+# gõ, không hộp thoại). 0 = tắt. Nhớ ở QSettings (KHOA_LUU_TU_DONG); biến môi trường PABT_TU_LUU (giây) ghi đè. Không có QSettings
+# (chạy offscreen - kiểm thử) mà chưa đặt trong phiên: TẮT, để bài kiểm thử không tự ghi CSDL ngoài ý muốn.
+CAC_MUC_LUU_TU_DONG = ((10, '10 giây'), (60, '1 phút'), (120, '2 phút'), (0, 'Tắt'))
+CHU_KY_LUU_MAC_DINH = 10
+KHOA_LUU_TU_DONG = 'lap_pa/chu_ky_tu_luu'
+_CHU_KY_HOP_LE = tuple(g for g, _ in CAC_MUC_LUU_TU_DONG)
+_chu_ky_phien = None                # giá trị đặt trong phiên khi không có QSettings (kiểm thử)
+_chu_ky_nho = None                  # đã đọc QSettings (đọc mỗi lần gõ phím là thừa)
+
+
+def _so_chu_ky(gia_tri, mac_dinh: int) -> int:
+    try:
+        g = int(str(gia_tri).strip())
+    except (TypeError, ValueError):
+        return mac_dinh
+    return g if g in _CHU_KY_HOP_LE else mac_dinh
+
+
+def _cai_dat_mac_dinh():
+    try:
+        from .giao_dien import cai_dat_nho
+        return cai_dat_nho()
+    except Exception:                   # không có Qt / chưa có QApplication
+        return None
+
+
+def chu_ky_luu_tu_dong(cai_dat=None) -> int:
+    """Chu kỳ lưu tự động (giây): 10 / 60 / 120, 0 = tắt. PABT_TU_LUU > giá trị đặt trong phiên > QSettings > 10 giây."""
+    env = os.environ.get('PABT_TU_LUU')
+    if env:
+        return _so_chu_ky(env, 0)
+    global _chu_ky_nho
+    if _chu_ky_phien is not None:
+        return _chu_ky_phien
+    if cai_dat is None:
+        if _chu_ky_nho is not None:
+            return _chu_ky_nho
+        cai_dat = _cai_dat_mac_dinh()
+        if cai_dat is None:
+            return 0
+        nho = True
+    else:
+        nho = False
+    try:
+        g = _so_chu_ky(cai_dat.value(KHOA_LUU_TU_DONG, CHU_KY_LUU_MAC_DINH), CHU_KY_LUU_MAC_DINH)
+    except (AttributeError, RuntimeError):
+        g = CHU_KY_LUU_MAC_DINH
+    if nho:
+        _chu_ky_nho = g
+    return g
+
+
+def dat_chu_ky_luu_tu_dong(giay: int, cai_dat=None) -> int:
+    """Ghi chu kỳ lưu tự động (0, 10, 60, 120 giây; số lạ -> 10). Trả giá trị đã ghi."""
+    global _chu_ky_phien, _chu_ky_nho
+    giay = _so_chu_ky(giay, CHU_KY_LUU_MAC_DINH)
+    _chu_ky_nho = giay
+    cai_dat = cai_dat if cai_dat is not None else _cai_dat_mac_dinh()
+    if cai_dat is None:
+        _chu_ky_phien = giay
+    else:
+        try:
+            cai_dat.setValue(KHOA_LUU_TU_DONG, giay)
+        except (AttributeError, RuntimeError):
+            _chu_ky_phien = giay
+    return giay
+
+
+def nhan_chu_ky(giay: int) -> str:
+    return dict(CAC_MUC_LUU_TU_DONG).get(giay, f'{giay} giây')
+
+
 def dao_nhanh_tong_nen(hien_tai: str = MAC_DINH_TONG_NEN) -> str:
     """1.0.34: tông kế tiếp khi bấm nút đổi nhanh (banner): đang Tối -> Sáng Sapphire; tông khác -> Tối chuyên gia."""
     return MAC_DINH_TONG_NEN if hien_tai == 'toi' else 'toi'

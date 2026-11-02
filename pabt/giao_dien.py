@@ -80,7 +80,7 @@ MAU = {                                            # (màu biểu tượng / n�
 DAC = ('luu',)                                     # nhóm nút nền đặc (thao tác chính); các nhóm khác nền trắng viền slate
 # nút phụ / nút viền (1.0.02): (nền, chữ, viền, nền rê chuột, viền rê chuột, nền khi bấm); nút xóa: viền đỏ nhạt chữ đỏ
 NUT_PHU = ('#FFFFFF', '#0F172A', '#8696AB', '#F1F5F9', '#64748B', '#E2E8F0')  # 1.0.42: viền ≥ 3:1 WCAG 1.4.11
-NUT_XOA = ('#FFFFFF', '#B83A3A', '#FECACA', '#FEF2F2', '#FCA5A5', '#FEE2E2')
+NUT_XOA = ('#FFFFFF', '#B83A3A', '#E35D5D', '#FEF2F2', '#FCA5A5', '#FEE2E2')   # 1.0.51: viền 3,5:1 (trước #FECACA 1,45:1 - WCAG 1.4.11)
 NUT_TAT = ('#94A3B8', '#F8FAFC', '#E2E8F0')        # (chữ, nền, viền) nút đang tắt
 # (mẫu trên chữ đã bỏ dấu, nhóm) - xét theo thứ tự
 LUAT = [
@@ -291,9 +291,15 @@ def _qss_nut_loai(loai: str, n: str, nen: str, re_: str, them: str = '') -> str:
 
 def mau_chu_nut(n: str | None) -> str:
     """Màu biểu tượng trên QPushButton theo nhóm (nền đặc: chữ trắng; nền nhạt: màu nhóm)."""
-    if not n or n == 'nhat':
-        return CHINH
-    return MAU[n][1] if n in DAC else _tron(MAU[n][0], 0.08, '#000000')
+    toi = TONG_NEN[0] == 'toi'                      # 1.0.51: tông Tối - biểu tượng sáng (trước navy trên nền tối 1,18:1)
+    if not n or n == 'nhat' or n not in MAU:
+        return mau_theo_tong(CHINH_GOC[0], 'chu') if toi else CHINH
+    if n in DAC:
+        return MAU[n][1]
+    if toi:
+        m = mau_theo_tong(MAU[n][0], 'chu')
+        return m if m.upper() != MAU[n][0].upper() else _tron(MAU[n][0], 0.55, '#FFFFFF')
+    return _tron(MAU[n][0], 0.08, '#000000')
 
 
 # thẻ số liệu màn hình chính (app.CuaSoChinh.THE_SO): màu viền trái + màu số. Kiểu nằm trong QSS chung (trước 0.9.18: mỗi
@@ -561,16 +567,21 @@ TOI_NEN = {'#F4F6F8': '#162033', '#FFF6D6': '#3B2F12', '#FDEBDD': '#3A2414', '#F
            '#FEF2F2': '#3A1414', '#FEE2E2': '#4C1D1D', '#F0FDFA': '#0F2A28', '#FFFDE7': '#2A2210', '#F5F3FF': '#2A1F4A',
            '#F1F5F9': '#162033', '#EEF2F7': '#24324A', '#E2E8F0': '#2A3A52', '#EFF6FF': '#1E3A5F', '#F0F6FF': '#1E3A5F',
             '#DBEAFE': '#1E40AF', '#F0F9FF': '#0C2A3F', '#EEF5FC': '#24324A', '#DCEBFA': '#1E40AF', '#FAFBFC': '#0F172A', '#F8F9FA': '#0B1120',
-           '#F8F8F8': '#0B1120', '#F3F6FA': '#0B1120', '#FFF2CC': '#2A2210'}
+           '#F8F8F8': '#0B1120', '#F3F6FA': '#0B1120', '#FFF2CC': '#2A2210',
+           '#EAF6EC': '#062E1E', '#FFF4DB': '#332407', '#FCEDEB': '#3B1219'}          # 1.0.51: nền dat_trang_thai
 TOI_VIEN = {'#BBF7D0': '#166534', '#86EFAC': '#15803D', '#A7F3D0': '#047857', '#FDE68A': '#854D0E', '#FECACA': '#7F1D1D',
             '#99F6E4': '#0F766E', '#BAE6FD': '#075985', '#CBD5E1': '#475569', '#DCE3EA': '#334155', '#94A3B8': '#64748B', '#BFDBFE': '#1E40AF',
-            '#8696AB': '#64748B', '#E5E5E5': '#334155'}
+            '#8696AB': '#64748B', '#E5E5E5': '#334155', '#E35D5D': '#F87171',
+            '#CDE8D2': '#166534', '#F1D9A0': '#854D0E', '#F3CFCA': '#7F1D1D'}
 TOI_CHU = {'#14532D': '#86EFAC', '#075985': '#7DD3FC', '#4A5866': '#CBD5E1', '#276348': '#86EFAC', '#2F7D54': '#86EFAC', '#065F46': '#6EE7B7', '#047857': '#6EE7B7', '#7C4A12': '#FCD34D',
            '#9A5A12': '#FCD34D', '#78350F': '#FCD34D', '#B83A3A': '#FCA5A5', '#1F6F66': '#5EEAD4', '#2F5DB5': '#93C5FD',
            '#1A5C85': '#7DD3FC', '#0284C7': '#7DD3FC', '#1E293B': '#E2E8F0', '#334155': '#CBD5E1', '#64748B': '#94A3B8', '#1E3A5F': '#93C5FD', '#2563EB': '#60A5FA',
            '#3B3B3B': '#E2E8F0', '#8B8B8B': '#94A3B8',
            '#152C48': '#BFDBFE', '#202124': '#F1F5F9', '#1A1A1A': '#F1F5F9', '#0B2E4F': '#E2E8F0', '#5B6B82': '#A5B4C8',
-           '#8A5A00': '#FCD34D', '#1F4E78': '#93C5FD', '#D97706': '#FCD34D'}
+           '#8A5A00': '#FCD34D', '#1F4E78': '#93C5FD', '#D97706': '#FCD34D',
+           # 1.0.51: chữ dat_trang_thai (tin 1,57:1 trên nền tối trước đây), đỏ / cam đậm
+           '#0C4A6E': '#7DD3FC', '#1E6B34': '#86EFAC', '#7A4B00': '#FCD34D', '#A12A1F': '#FCA5A5', '#7C2D12': '#FDBA74',
+           '#7F1D1D': '#FCA5A5'}
 
 
 def _bang_doi_mau(ten: str) -> dict:
@@ -645,13 +656,22 @@ def ap_tong_nen(qss: str, ten: str | None = None) -> str:
     return _RE_KHAI_BAO.sub(khai_bao, qss)
 
 
+# 1.0.51 (WCAG 2.4.7): nút đang có tiêu điểm bàn phím có vòng xanh rõ (Tab đi qua các nút) - viền 2px, đệm bớt 1px cho chữ không nhảy.
+# Đặt sau kiểu nút + biến thể KieuNut (thắng màu nhóm / biến thể cùng độ ưu tiên; khối tông Tối / menu trái vẫn ở cuối); nút nền đặc dùng vòng xanh nhạt để thấy trên nền navy
+QSS_TIEU_DIEM_NUT = '''
+    QPushButton:focus { border: 2px solid #2563EB; padding: 3px 9px; }
+    QPushButton[bien_the="primary"]:focus, QPushButton[bien_the="success"]:focus, QPushButton[nhom="luu"]:focus {
+        border: 2px solid #93C5FD; }
+'''
+
+
 def _qss_day_du() -> str:
     """Bảng kiểu cả phần mềm: kiểu chung + biến thể nút KieuNut (đặt cuối). Mọi chỗ đặt / dựng lại bảng kiểu (phóng to, thu
     nhỏ) dùng hàm này - trước đây phong_to dựng lại thiếu phần biến thể. 1.0.33: dựng bằng màu gốc rồi đổi theo tông nền."""
     moi = {k: TOKEN[k] for k in (*_KHOA_MAU_NEN, 'chinh', 'chinh_re')}
     TOKEN.update(_TOKEN_GOC, chinh=CHINH_GOC[0], chinh_re=CHINH_GOC[1])
     try:
-        qss = _qss() + _qss_kieu_nut()
+        qss = _qss() + _qss_kieu_nut() + QSS_TIEU_DIEM_NUT
     finally:
         TOKEN.update(moi)
     return ap_tong_nen(qss) + (QSS_TOI if TONG_NEN[0] == 'toi' else '') + _qss_menu_trai()
@@ -1029,8 +1049,25 @@ def _phong_ky_hieu():
     return _PHONG_KY_HIEU
 
 
+_NHO_ICON = {}                  # 1.0.51: (ký hiệu, màu, cỡ) -> QIcon đã vẽ (menu / nút dựng lại không vẽ lại bằng QPainter)
+
+
 def icon_ky_hieu(ma: int, mau: str = '#FFFFFF', co: int = 24):
-    """QIcon vẽ từ ký hiệu của phông biểu tượng Windows, hoặc None nếu máy không có phông / ký hiệu."""
+    """QIcon vẽ từ ký hiệu của phông biểu tượng Windows, hoặc None nếu máy không có phông / ký hiệu. Trả BẢN SAO của QIcon đã nhớ
+    (dữ liệu dùng chung, nơi gọi thêm ảnh vào không làm đổi bản nhớ)."""
+    from PySide6.QtGui import QIcon
+    khoa = (ma, str(mau).upper(), int(co))
+    if khoa in _NHO_ICON:
+        ic = _NHO_ICON[khoa]
+        return QIcon(ic) if ic is not None else None
+    ic = _ve_icon_ky_hieu(ma, mau, co)
+    if len(_NHO_ICON) > 600:
+        _NHO_ICON.clear()
+    _NHO_ICON[khoa] = ic
+    return QIcon(ic) if ic is not None else None
+
+
+def _ve_icon_ky_hieu(ma: int, mau: str = '#FFFFFF', co: int = 24):
     from PySide6.QtGui import QFont, QFontMetrics, QIcon, QPainter, QPixmap
     phong = _phong_ky_hieu()
     if not phong:
@@ -1331,6 +1368,9 @@ def chay_nen(cha, ham, chu: str = 'Đang xử lý…'):
     return kq.get('gt')
 
 
+CHO_SAU_HUY_GIAY = 3.0          # 1.0.51: sau khi bấm Dừng, chờ hàm nền trả phần đã làm (trang OCR đang đọc) tối đa chừng này
+
+
 def _co_su_kien_khong_nhap():
     """Cờ processEvents: vẽ cửa sổ / kéo được, không nhận bấm chồng lệnh (Qt5: int)."""
     from PySide6.QtCore import QEventLoop
@@ -1340,17 +1380,24 @@ def _co_su_kien_khong_nhap():
         return QEventLoop.ExcludeUserInputEvents
 
 
-def _cho_luong(luong, moi_nhip, nhip: float = 0.05):
-    """Chờ luồng nền: processEvents (cửa sổ vẽ / kéo được, không bấm chồng), không QEventLoop.exec (dễ kẹt khi QTimer không chạy)."""
+def _cho_luong(luong, moi_nhip, nhip: float = 0.05, hop=None):
+    """Chờ luồng nền: processEvents (cửa sổ vẽ / kéo được, không bấm chồng), không QEventLoop.exec (dễ kẹt khi QTimer không chạy).
+    hop: hộp tiến độ có nút Dừng / Bỏ qua - 1.0.51: hộp chặn mọi cửa sổ khác (ApplicationModal) và vòng chờ nhận cả sự kiện chuột /
+    phím, để nút Dừng bấm được (trước đây ExcludeUserInputEvents làm nút Dừng không phản hồi tới khi luồng nền tự xong)."""
     import time
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance()
     co = _co_su_kien_khong_nhap()
+    if hop is not None:
+        hop.setWindowModality(Qt.WindowModality.ApplicationModal)
     while luong.is_alive():
         if moi_nhip():
             break
         if app is not None:
-            app.processEvents(co)
+            if hop is not None and hop.isVisible():
+                app.processEvents()
+            else:
+                app.processEvents(co)
         time.sleep(nhip)
 
 
@@ -1378,17 +1425,24 @@ def chay_nen_tien_do(cha, ham, tien=None, gioi_han: float | None = None):
     luong = threading.Thread(target=chay, daemon=True)
     luong.start()
     bat_dau = time.monotonic()
+    luc_huy = []
 
     def moi_nhip():
-        if tien.wasCanceled() or (gioi_han is not None and time.monotonic() - bat_dau > gioi_han):
+        if not huy.is_set() and (tien.wasCanceled() or (gioi_han is not None and time.monotonic() - bat_dau > gioi_han)):
             huy.set()
+            luc_huy.append(time.monotonic())
+        if luc_huy and time.monotonic() - luc_huy[0] > CHO_SAU_HUY_GIAY:
+            return True                                 # bấm Dừng: chờ hàm nền trả kết quả đã có tối đa vài giây, không treo cửa sổ
         n = max(int(tien_do[1] or 1), 1)
         tien.setMaximum(n)
         tien.setValue(min(max(int(tien_do[0] or 0), 0), n))
         return not luong.is_alive()
 
-    _cho_luong(luong, moi_nhip)
-    luong.join(30)
+    _cho_luong(luong, moi_nhip, hop=tien)
+    luong.join(0.2 if luc_huy else 30)
+    if luc_huy and luong.is_alive():                    # hàm nền chưa kịp dừng: bỏ kết quả, báo đã dừng như hàm tự dừng
+        from .ocr import DaHuy
+        raise DaHuy()
     if 'loi' in kq:
         raise kq['loi']
     return kq.get('gt')
@@ -1430,7 +1484,7 @@ def chay_nen_huy(cha, ham, chu: str = 'Đang xử lý…', nut_huy: str = 'Bỏ 
         return not luong.is_alive()
 
     try:
-        _cho_luong(luong, moi_nhip)
+        _cho_luong(luong, moi_nhip, hop=hop)
     finally:
         hop.close()
         hop.deleteLater()
@@ -3135,6 +3189,23 @@ def nhap_mot_lan(delegate, event, option, index) -> bool:
     return True
 
 
+def vi_tri_danh_sach_noi(o: QWidget, rong: int, cao: int) -> tuple:
+    """1.0.51: vị trí danh sách gợi ý nổi dưới ô nhập `o` -> (x, (y, cao)): không tràn khỏi vùng làm việc (màn hình 1366 x 768 @125% chỉ
+    ~600 điểm cao - ô ở gần đáy thì danh sách bị thanh tác vụ che). Dưới không đủ chỗ: lật lên trên ô nếu trên rộng hơn, rồi co vừa chỗ."""
+    goc = o.mapToGlobal(o.rect().bottomLeft())
+    man = o.screen() or QApplication.primaryScreen()
+    if man is None:
+        return goc.x(), (goc.y(), cao)
+    vung = man.availableGeometry()
+    duoi = vung.bottom() - goc.y() - 4
+    tren = goc.y() - o.height() - vung.top() - 4
+    x = min(max(goc.x(), vung.left()), max(vung.left(), vung.right() - rong))
+    if cao <= duoi or duoi >= tren:
+        return x, (goc.y(), max(60, min(cao, duoi)))
+    cao = max(60, min(cao, tren))
+    return x, (goc.y() - o.height() - cao, cao)
+
+
 def neo_popup(cb, so_dong: int = 14) -> None:
     """Kéo danh sách xổ vào trong màn hình và bật thanh cuộn (vị trí NQ 28 hơn nghìn dòng, đủ 4 xã)."""
     try:
@@ -3330,8 +3401,10 @@ class OTimChon(QWidget):
             self._ds_hien = ds
         self.ds.setCurrentRow(0)
         cao = min(16, self.ds.count()) * (self.ds.sizeHintForRow(0) or 24) + 6
-        self.ds.resize(max(self.width(), 640), cao)
-        self.ds.move(self.o.mapToGlobal(self.o.rect().bottomLeft()))
+        rong = max(self.width(), 640)
+        x, y = vi_tri_danh_sach_noi(self.o, rong, cao)
+        self.ds.resize(rong, y[1])
+        self.ds.move(x, y[0])
         self.ds.show()
         self.ds.raise_()
 

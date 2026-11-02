@@ -20,8 +20,9 @@ def _app():
 class TestPhienBan1050(unittest.TestCase):
     def test_phien_ban(self):
         from pabt import __version__, lich_su_cap_nhat
-        self.assertEqual(__version__, '1.0.50')
-        self.assertEqual(lich_su_cap_nhat.MUC[0][0], '1.0.50')
+        self.assertGreaterEqual(tuple(int(x) for x in __version__.split('.')), (1, 0, 50))
+        self.assertEqual(lich_su_cap_nhat.MUC[0][0], __version__)              # mục mới nhất = phiên bản hiện hành
+        self.assertIn('1.0.50', [m[0] for m in lich_su_cap_nhat.MUC])
 
 
 class TestXemTruocThuAnh(unittest.TestCase):

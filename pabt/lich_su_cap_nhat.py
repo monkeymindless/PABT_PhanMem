@@ -7,6 +7,17 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.51', '02/11/2026', (
+        'Lưu tự động: cửa sổ lập phương án tự ghi phương án / hồ sơ hộ sau 10 giây ngừng thao tác (chọn 10 giây, 1 phút, 2 phút hoặc '
+        'Tắt ở dải dưới cùng cửa sổ hoặc Cài đặt > Giao diện). Không hộp thoại, không cắt ngang ô đang gõ, bảng giữ nguyên ô đang chọn; '
+        'nhãn "● Chưa lưu" / "✓ Đã tự lưu giờ:phút:giây". Khái toán đã có file .pabtdt cũng tự lưu. LARC Mobile vốn lưu ngay mỗi lần ghi - '
+        'nay hiện giờ đã tự lưu.',
+        'Hộp tiến độ (đọc file scan, Trợ lý AI): nút Dừng / Bỏ qua bấm được ngay. Danh sách gợi ý ô nhập gần đáy màn hình lật lên trên. '
+        'Màn hình thấp (laptop 1366 x 768): cửa sổ lập phương án nhường thêm chỗ cho bảng.',
+        'Tông Tối: số tiền, thanh thông báo, biểu tượng nút sáng rõ. Nút Xóa viền đỏ rõ hơn; nút đang chọn bằng phím Tab có viền xanh.',
+        'Trợ lý AI: che thêm số CCCD / điện thoại có dấu cách, số giấy chứng nhận, tọa độ, họ tên sau "ông / bà / chủ hộ" trước khi gửi; '
+        'khóa API mã hóa riêng cho LARC. Nhận phiếu qua Wi-Fi: mã phiên dài hơn, giới hạn dung lượng mỗi phiên.',
+    )),
     ('1.0.50', '02/11/2026', (
         'Quét giấy tờ / Dán tài sản: ảnh xem trước thu như lúc nhận dạng (ảnh điện thoại vài MB cửa sổ vẫn kéo được); '
         'Tesseract chạy nền, hộp tiến độ còn nút Dừng. Giấy chứng nhận không có tài sản không đọc hai lần; biên bản viết tay '

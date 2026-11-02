@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
                                QMessageBox, QPushButton, QSlider, QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout, QWidget)
 
 from . import ban_do_cad, ban_do_kml, nen_ban_do, toa_do
-from .giao_dien import XepDong, chan_tin_hieu, con_tro_cho
+from .giao_dien import XepDong, chan_tin_hieu, chu_hien, con_tro_cho
 from .thong_bao import TEN_UD, chu_loi
 from .tien import so_vn, vn
 
@@ -1109,7 +1109,7 @@ class HopBanDo(QDialog):
         hlop.addWidget(QLabel('Lớp CAD:'))
         self.o_lop = {}
         for k, ten in LOP_BD:
-            o = QCheckBox(ten)
+            o = QCheckBox(chu_hien(ten))             # 1.0.51: "&" không bị Qt lấy làm phím tắt
             o.setChecked(True)
             o.setToolTip('Bật / tắt lớp như trên LARC Mobile: lưới thửa & ranh Level, số thửa / loại đất / DT, mốc ranh, ghi chú.')
             o.toggled.connect(lambda _=False: self._doi_lop_cad())

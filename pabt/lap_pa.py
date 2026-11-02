@@ -232,8 +232,8 @@ def tinh_lai_cong_thuc(con) -> dict:
     if not sua:
         return kq
     with csdl.giao_dich(con):
-        for bang, cot, gt, i, _ in sua:
-            con.execute(f'UPDATE {bang} SET {cot} = ? WHERE id = ?', (gt, i))
+        for bang, cot in {(x[0], x[1]) for x in sua}:     # 1.0.51: một lệnh executemany mỗi bảng
+            con.executemany(f'UPDATE {bang} SET {cot} = ? WHERE id = ?', [(gt, i) for b, c, gt, i, _ in sua if (b, c) == (bang, cot)])
         so_ho = len({x[4] for x in sua})
         csdl.ghi_nhat_ky(con, 'Tính lại số lượng nhập bằng công thức',
                          f'{len(sua)} dòng / {so_ho} hộ: làm tròn 2 chữ số lẻ (ha 4) thay vì 1 chữ số')
@@ -1095,6 +1095,18 @@ class BoSoan:
             return (f'Đã lưu hộ {self.ma_ho} – {pa.ho.ho_ten}, lần {self.lan}: {vn(moi.tong)} đồng (cộng dồn mọi lần: '
                     f'{vn(self.ket_qua_cong_don.tong)} đồng).')
         return f'Đã lưu hộ {self.ma_ho} – {pa.ho.ho_ten}: tổng {vn(moi.tong)} đồng.'
+
+
+    def luu_tai_cho(self) -> str:
+        """1.0.51 lưu tự động: lưu như người dùng bấm Lưu nhưng KHÔNG đọc lại phương án - giữ nguyên đối tượng đang hiển thị (bảng
+        không dựng lại), chỉ dời mốc "đã lưu" (co_thay_doi, tổng cũ, nhật ký kiểm toán lần sau)."""
+        tb = self.luu(mo_lai=False)
+        r = self.con.execute('SELECT trang_thai FROM ho WHERE ma_ho = ?', (self.ma_ho,)).fetchone()
+        if r is not None:
+            self.pa.ho.trang_thai = r[0]
+        self._pa_goc = copy.deepcopy(self.pa)
+        self._goc = _dang_luu(self._pa_goc)
+        return tb
 
 
 # ---------------------------------------------------------------- dự án, rà soát giá

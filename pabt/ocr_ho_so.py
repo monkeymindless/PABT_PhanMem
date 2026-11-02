@@ -483,13 +483,17 @@ def _hoi_ai_gioi_han(ham, cho=None, gioi_han: float = GIOI_HAN_AI):
     return kq.get('gt')
 
 
-def chinh_dong_ocr_ai(dong, khach=None, cho=None, gioi_han: float = GIOI_HAN_AI) -> list:
+def chinh_dong_ocr_ai(dong, khach=None, cho=None, gioi_han: float = GIOI_HAN_AI, con=None) -> list:
     """Nhờ Trợ lý AI viết lại dòng OCR đã lọc (không gửi file ảnh / PDF). Trợ lý tắt / lỗi -> LoiTroLy.
-    khach giả lập: gọi thẳng. Máy thật: hết giờ / Dừng thì bỏ qua, không treo cửa sổ."""
+    khach giả lập: gọi thẳng. Máy thật: hết giờ / Dừng thì bỏ qua, không treo cửa sổ.
+    con (1.0.51): kết nối dự án đang mở - họ tên chủ hộ có trong dự án được che NGAY ở luồng gọi (kết nối CSDL không dùng ở luồng nền),
+    trừ khi đã bật gửi dữ liệu cá nhân."""
     from . import tro_ly
     ds = [str(x).strip() for x in (dong or []) if str(x).strip() and la_dong_ung_vien(x)][:TOI_DA_DONG_DAN]
     if not ds:
         return []
+    if con is not None and not tro_ly.doc_cai_dat().get('gui_ca_nhan'):
+        ds = [tro_ly.an_danh(x, con) for x in ds]
 
     def goi():
         return tro_ly.hoi_claude(CAU_HOI_OCR, '\n'.join(ds), khach=khach, gioi_han=gioi_han)

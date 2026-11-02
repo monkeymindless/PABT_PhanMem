@@ -59,6 +59,11 @@ CAO_DONG_MUC = 36
 KHE_HANG_NHAP = 6               # px: khoảng cách thêm giữa hàng nhân khẩu / tái định cư và hàng nhập chính sách (mục 4)
 PHONG_SO = 'Consolas'
 CAO_DAI_DINH_DANH = 38
+# 1.0.51: màn hình thấp (vùng làm việc <= MAN_HINH_THAP điểm - laptop 1366 x 768 @125% còn ~600): dải định danh / lần PA / thanh trên /
+# dải đáy sát lại, khung "Cần xem lại" tối đa 2 dòng - nhường ~90 px cho bảng phương án
+MAN_HINH_THAP = 680
+CAO_DAI_DINH_DANH_GON = 28
+CAO_CANH_BAO_GON = 56
 TEN_TAB = {0: 'Thông tin hộ, thửa đất', 1: '1. Đất', 2: '2. Nhà, công trình', 3: '3. Cây trồng', 4: '4. Vật nuôi',
            5: '5. Hỗ trợ'}                  # theo chỉ số thẻ
 
@@ -1269,6 +1274,12 @@ class CuaSoLapPA(QDialog):
         self.bo = BoSoan(con, ma_ho, danh_muc)
         self.da_luu = False
         self.thay_doi_csdl = False
+        # 1.0.51: lưu tự động sau N giây ngừng thao tác (chu_de.chu_ky_luu_tu_dong) - _kich_hoat_hen_luu_tu_dong / _thuc_hien_luu_tu_dong
+        self._hen_luu_tu_dong = QTimer(self)
+        self._hen_luu_tu_dong.setSingleShot(True)
+        self._hen_luu_tu_dong.timeout.connect(lambda: self._thuc_hien_luu_tu_dong())
+        self._luc_doi_dau = None                       # lúc có thay đổi đầu tiên chưa lưu: chờ ngừng gõ không quá 3 chu kỳ
+        self._luc_go = 0.0                             # lần gõ phím gần nhất trong ô chữ của thẻ hồ sơ
         # ---- dòng chọn hộ
         self.cb_ho = QComboBox()
         # 16/10/2026 (người dùng): hiện rõ đủ tên hộ - ô rộng hơn (bỏ nút Gợi ý, chữ nút ngắn lại nhường chỗ), chữ hiện từ ĐẦU tên
@@ -1463,6 +1474,10 @@ class CuaSoLapPA(QDialog):
                 sc.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
             sc.activated.connect(ham)
             self._phim.append(sc)
+        self._noi_tu_luu_ho_so()
+        self._thap = self._man_hinh_thap()
+        if self._thap:
+            self._gon_man_hinh_thap()
         self._dang_nap = False
         self.nap_ho()
         self.tab.setCurrentIndex(1 if self.bo.pa.dat or any(self.bo.pa.khoan[m] for m in MUC_KHOAN) else 0)
@@ -1867,7 +1882,23 @@ class CuaSoLapPA(QDialog):
         self.b_tiep_theo.clicked.connect(lambda: self.sang_the(self.tab.currentIndex() + 1))
         for b in (self.b_tro_lai, self.b_tiep_theo):
             b.setFixedHeight(28)
+        # 1.0.51: trạng thái lưu + chu kỳ lưu tự động ở dải đáy (thanh trên đã kín ở màn hình 1366 @125%)
+        from . import chu_de
+        self.lb_trang_thai_luu = QLabel('')
+        self.lb_trang_thai_luu.setObjectName('trang_thai_luu')
+        self.cb_tu_luu = QComboBox()
+        self.cb_tu_luu.setObjectName('o_tu_luu')
+        for giay, nhan in chu_de.CAC_MUC_LUU_TU_DONG:
+            self.cb_tu_luu.addItem(f'Tự lưu: {nhan}', giay)
+        self.cb_tu_luu.setToolTip('Lưu tự động phương án / hồ sơ hộ sau khoảng thời gian NGỪNG thao tác (không cắt ngang ô đang gõ, '
+                                  'không hiện hộp thoại). Tắt: chỉ lưu khi bấm Lưu / Ctrl+S.')
+        self.cb_tu_luu.setFixedHeight(28)
+        i = self.cb_tu_luu.findData(chu_de.chu_ky_luu_tu_dong())
+        self.cb_tu_luu.setCurrentIndex(max(0, i))
+        self.cb_tu_luu.activated.connect(lambda *_: self._doi_chu_ky_tu_luu())
         h.addWidget(self.lb_tong, 1)
+        h.addWidget(self.lb_trang_thai_luu)
+        h.addWidget(self.cb_tu_luu)
         h.addWidget(self.b_tro_lai)
         h.addWidget(self.b_tiep_theo)
         self.tab.currentChanged.connect(lambda i: self._cap_nhat_dieu_huong(i))
@@ -1964,14 +1995,17 @@ class CuaSoLapPA(QDialog):
         self.o_cb.setPlainText('Cần xem lại:\n' + '\n'.join('- ' + x for x in cb) if cb else '')
         if cb:
             dong = min(len(cb) + 1, 5)
-            self.o_cb.setFixedHeight(self.o_cb.fontMetrics().lineSpacing() * dong + 22)
+            cao = self.o_cb.fontMetrics().lineSpacing() * dong + 22
+            self.o_cb.setFixedHeight(min(cao, CAO_CANH_BAO_GON) if getattr(self, '_thap', False) else cao)
         self.o_cb.setVisible(bool(cb))
         thay = self.bo.co_thay_doi
         h = self.bo.pa.ho
         # hộ chưa lưu lần nào: Lưu vẫn bấm được - xác nhận đã lập phương án dù không có dòng nào (mọi mục 0 đồng)
         chua_lap = not str(h.trang_thai or '').startswith(DA_LAP_LUU)
-        self.b_luu.setEnabled((thay or self.ho_so.co_thay_doi() or chua_lap) and not (self.bo.khoa and not self.ho_so.co_thay_doi())
+        ho_so_thay = self.ho_so.co_thay_doi()
+        self.b_luu.setEnabled((thay or ho_so_thay or chua_lap) and not (self.bo.khoa and not ho_so_thay)
                               and not self._ho_khong_nhan())
+        self._sau_cap_nhat_tu_luu(thay or ho_so_thay)
         self.b_bo.setEnabled(thay)
         if hasattr(self, 'lb_lan'):
             self._dat_chu_lan()
@@ -2553,8 +2587,154 @@ class CuaSoLapPA(QDialog):
         self.cap_nhat()
         return chon
 
+    # ---------------------------------------------- màn hình thấp (1.0.51)
+    def _man_hinh_thap(self) -> bool:
+        man = self.screen() or QApplication.primaryScreen()
+        return man is not None and man.availableGeometry().height() <= MAN_HINH_THAP
+
+    def _gon_man_hinh_thap(self) -> None:
+        self.dai_dinh_danh.setFixedHeight(CAO_DAI_DINH_DANH_GON)
+        for f in (self.dai_dinh_danh, self.thanh_tren, self.dai_lan, self.dai_dieu_huong):
+            lo = f.layout()
+            if lo is not None:
+                m = lo.contentsMargins()
+                lo.setContentsMargins(m.left(), 1, m.right(), 1)
+
+    # ---------------------------------------------- lưu tự động (1.0.51)
+    def _noi_tu_luu_ho_so(self) -> None:
+        """Sửa ô bảng thửa / gõ ô chữ của thẻ hồ sơ cũng hẹn lưu tự động (thay đổi phương án hẹn qua cap_nhat)."""
+        import time
+        self.ho_so.bang.itemChanged.connect(lambda *_: self._kich_hoat_hen_luu_tu_dong())
+        for w in self.ho_so.o.values():
+            tin_hieu = getattr(w, 'textEdited', None)
+            if tin_hieu is not None:
+                tin_hieu.connect(lambda *_: (setattr(self, '_luc_go', time.monotonic()), self._kich_hoat_hen_luu_tu_dong(chac=True)))
+
+    def _doi_chu_ky_tu_luu(self) -> None:
+        from . import chu_de
+        giay = chu_de.dat_chu_ky_luu_tu_dong(int(self.cb_tu_luu.currentData() or 0))
+        if giay <= 0:
+            self._hen_luu_tu_dong.stop()
+            self.thong_bao('Đã tắt lưu tự động (bấm Lưu hoặc Ctrl+S để lưu).')
+        else:
+            self.thong_bao(f'Đã bật lưu tự động sau {chu_de.nhan_chu_ky(giay)} ngừng thao tác.')
+            self._luc_doi_dau = None
+            self._kich_hoat_hen_luu_tu_dong()
+
+    def _co_the_tu_luu(self) -> bool:
+        return not (self._dang_nap or self.bo.khoa or self._ho_khong_nhan() or getattr(self, '_chi_xem', False))
+
+    def _kich_hoat_hen_luu_tu_dong(self, chac: bool = False) -> None:
+        """Có thay đổi chưa lưu: hiện "● Chưa lưu" và hẹn lưu sau chu kỳ ngừng thao tác (gõ tiếp thì hẹn lại, nhưng không quá
+        3 chu kỳ kể từ thay đổi đầu tiên - làm liên tục vẫn được lưu)."""
+        if getattr(self, '_dang_nap', True) or not hasattr(self, 'lb_trang_thai_luu'):
+            return
+        if not chac and not (self.bo.co_thay_doi or self.ho_so.co_thay_doi()):
+            return
+        self._dat_trang_thai_luu('chua')
+        if not self._co_the_tu_luu():
+            return
+        from . import chu_de
+        giay = chu_de.chu_ky_luu_tu_dong()
+        if giay <= 0:
+            return
+        import time
+        bay_gio = time.monotonic()
+        if self._luc_doi_dau is None:
+            self._luc_doi_dau = bay_gio
+        con_lai = self._luc_doi_dau + 3 * giay - bay_gio
+        self._hen_luu_tu_dong.start(int(1000 * max(1.0, min(giay, con_lai))))
+
+    def _sau_cap_nhat_tu_luu(self, co_thay_doi: bool) -> None:
+        if co_thay_doi:
+            self._kich_hoat_hen_luu_tu_dong(chac=True)
+        elif hasattr(self, 'lb_trang_thai_luu') and self.lb_trang_thai_luu.property('tt') == 'chua':
+            self._hen_luu_tu_dong.stop()
+            self._luc_doi_dau = None
+            self._dat_trang_thai_luu('')
+
+    def _dat_trang_thai_luu(self, tt: str, luc: str = '', tu_dong: bool = True) -> None:
+        from .giao_dien import TOKEN, mau_theo_tong
+        lb = self.lb_trang_thai_luu
+        if lb.property('tt') == tt and not luc:
+            return
+        lb.setProperty('tt', tt)
+        if tt == 'chua':
+            lb.setText('● Chưa lưu')
+            lb.setToolTip('Có thay đổi chưa ghi vào file dự án')
+            mau = TOKEN['canh_bao']
+        elif tt == 'xong':
+            lb.setText(f'✓ Đã {"tự lưu" if tu_dong else "lưu"} {luc}')
+            lb.setToolTip('Đã ghi vào file dự án' + (' (lưu tự động)' if tu_dong else ''))
+            mau = '#0F6E56'
+        else:
+            lb.setText('')
+            lb.setToolTip('')
+            mau = TOKEN['chu_phu']
+        lb.setStyleSheet('QLabel#trang_thai_luu { color: %s; font-weight: 600; padding: 0 4px; }' % mau_theo_tong(mau, 'chu'))
+
+    def _dang_sua_o_bang(self) -> bool:
+        """Đang gõ dở (ô bảng đang sửa, danh sách gợi ý / menu đang mở, hộp thoại khác đang chờ, vừa gõ ô chữ thẻ hồ sơ): chưa tự lưu."""
+        import time
+        hop = QApplication.activeModalWidget()
+        if hop is not None and hop is not self and hop is not self.window():
+            return True
+        if QApplication.activePopupWidget() is not None:
+            return True
+        ds = [self.ho_so.bang] + [bm.bang for bm in self.bang.values() if bm is not None]
+        for b in ds:
+            if b.state() == QAbstractItemView.State.EditingState:
+                return True
+        return time.monotonic() - self._luc_go < 2.5
+
+    def _thuc_hien_luu_tu_dong(self) -> None:
+        if not self.isVisible() or not (self.bo.co_thay_doi or self.ho_so.co_thay_doi()) or not self._co_the_tu_luu():
+            return
+        if self._dang_sua_o_bang():
+            self._hen_luu_tu_dong.start(2000)          # đang gõ dở: lùi 2 giây
+            return
+        self.luu(tu_dong=True)
+
+    def _luu_im_lang(self) -> bool:
+        """Lưu tự động: không hộp thoại, không chuyển thẻ, không dựng lại bảng phương án (giữ ô đang chọn, vị trí cuộn); lỗi nhập
+        -> chỉ báo ở dòng thông báo, chờ lần sửa sau."""
+        if self.ho_so.co_thay_doi():
+            bang = self.ho_so.bang
+            o = (bang.currentRow(), bang.currentColumn())
+            cuon = bang.verticalScrollBar().value()
+            tieu_diem = QApplication.focusWidget()
+            if not self.ho_so.luu(im_lang=True):
+                self.thong_bao(f'Tự lưu tạm hoãn: {getattr(self.ho_so, "loi_luu", "") or "hồ sơ hộ chưa hợp lệ"}')
+                return False
+            if 0 <= o[0] < bang.rowCount():
+                bang.setCurrentCell(o[0], max(0, o[1]))
+            bang.verticalScrollBar().setValue(cuon)
+            if tieu_diem is not None and tieu_diem.isVisible():
+                tieu_diem.setFocus()
+        if self.bo.co_thay_doi:
+            try:
+                tb = self.bo.luu_tai_cho()
+            except LoiNhap as e:
+                self.thong_bao(f'Tự lưu tạm hoãn: {" ".join(str(e).split())}')
+                return False
+            self.thong_bao(tb)
+        self.da_luu = True
+        self._luc_doi_dau = None
+        self._hen_luu_tu_dong.stop()
+        self.cap_nhat()
+        self._dat_trang_thai_luu('xong', datetime.now().strftime('%H:%M:%S'))
+        cha = self.parent()
+        if self.property('nhung_tab') and cha is not None and hasattr(cha, 'tai_lai'):
+            cha.tai_lai()                               # DauVetHo: chỉ dựng lại dòng của hộ vừa lưu
+        return True
+
     # ---------------------------------------------- lưu / chuyển hộ / đóng
-    def luu(self) -> bool:
+    def luu(self, tu_dong: bool = False) -> bool:
+        """tu_dong=True: lưu tự động (_luu_im_lang). Không thì lưu khi người dùng bấm Lưu / Ctrl+S (báo lỗi bằng hộp thoại)."""
+        if tu_dong:
+            return self._luu_im_lang()
+        self._hen_luu_tu_dong.stop()
+        self._luc_doi_dau = None
         if self.ho_so.co_thay_doi() and not self.ho_so.luu():
             self.tab.setCurrentIndex(0)
             return False
@@ -2566,6 +2746,7 @@ class CuaSoLapPA(QDialog):
         self.da_luu = True
         self.nap_ho()
         self.thong_bao(tb)
+        self._dat_trang_thai_luu('xong', datetime.now().strftime('%H:%M:%S'), tu_dong=False)
         cha = self.parent()
         if self.property('nhung_tab') and cha is not None and hasattr(cha, 'tai_lai'):
             cha.tai_lai()

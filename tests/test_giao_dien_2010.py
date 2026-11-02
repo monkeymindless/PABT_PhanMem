@@ -125,7 +125,8 @@ class TestCuaSoLapPA(_Co):
         from pabt import man_hinh
         w = man_hinh.CuaSoLapPA(self.con, self.ma[0])
         self.addCleanup(lambda: (w.bo_thay_doi(), w.close()))
-        self.assertEqual(w.dai_dinh_danh.height() or w.dai_dinh_danh.maximumHeight(), man_hinh.CAO_DAI_DINH_DANH)
+        self.assertEqual(w.dai_dinh_danh.height() or w.dai_dinh_danh.maximumHeight(),
+                         man_hinh.CAO_DAI_DINH_DANH_GON if w._thap else man_hinh.CAO_DAI_DINH_DANH)   # 1.0.51: màn hình thấp gọn lại
         ten = self.con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (self.ma[0],)).fetchone()[0]
         self.assertEqual(w.dd['ten'][1].text(), ten)
         self.assertEqual(w.dd['dot'][1].text(), 'Chưa xếp đợt')

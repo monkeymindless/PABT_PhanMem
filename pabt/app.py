@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 
 from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
 from .tien import D, so_luong_vn, so_vn, vn, vn_gon
-from .giao_dien import TOKEN, chuyen_trang_muot, chu_hien, con_tro_cho, dat_kieu_theo_tong, dung_ve
+from .giao_dien import TOKEN, chuyen_trang_muot, chu_hien, con_tro_cho, dat_kieu_theo_tong, dung_ve, phong_so
 from .thong_bao import TEN_UD, chu_loi
 
 # doi_chieu, nhap_excel, nhap_tho (kéo theo openpyxl ~0,2 giây - 60% thời gian nạp mã lúc mở phần mềm) nạp khi dùng tới
@@ -631,6 +631,7 @@ class ChiTietHo(QDialog):
                                       f'{tl}%' if tl else '', vn(d.thanh_tien)])
                 for i in (3, 4, 5, 6):
                     it.setTextAlignment(i, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                    it.setFont(i, phong_so())          # 1.0.51: số canh cột (phông số dùng chung)
                 if d.thanh_tien_excel is not None and d.thanh_tien_excel != d.thanh_tien:
                     it.setBackground(6, QBrush(DO))
                     it.setToolTip(6, f'Excel: {vn(d.thanh_tien_excel)}')
@@ -2409,7 +2410,9 @@ class CuaSoChinh(QMainWindow):
                 ten.setIcon(ic_file)
             self.ds_gan_day.setItem(r, 0, ten)
             self.ds_gan_day.setItem(r, 1, QTableWidgetItem('—' if so_ho is None else f'{so_ho} hộ'))
-            self.ds_gan_day.setItem(r, 2, QTableWidgetItem('—' if tong is None else tong))
+            o_tong = QTableWidgetItem('—' if tong is None else tong)
+            o_tong.setFont(phong_so())                  # 1.0.51: số tiền phông số
+            self.ds_gan_day.setItem(r, 2, o_tong)
             cach = time.time() - st.st_mtime
             if cach < 3600:
                 luc = f'{max(1, int(cach // 60))} phút trước'
@@ -4096,9 +4099,11 @@ class CuaSoChinh(QMainWindow):
         return 'mat_ket_noi'
 
     def closeEvent(self, e):
-        from .giao_dien import KHI_DOI_TY_LE, XU_LY_HOAN_TAC
+        from .giao_dien import KHI_DOI_TY_LE, TRUOC_DOI_TY_LE, XU_LY_HOAN_TAC
         if self._hien_ty_le in KHI_DOI_TY_LE:
             KHI_DOI_TY_LE.remove(self._hien_ty_le)
+        if self._bo_trang_an in TRUOC_DOI_TY_LE:       # 1.0.51: không giữ tham chiếu cửa sổ đã đóng (rò rỉ khi mở lại nhiều lần)
+            TRUOC_DOI_TY_LE.remove(self._bo_trang_an)
         if self.hoan_tac_phim in XU_LY_HOAN_TAC:
             XU_LY_HOAN_TAC.remove(self.hoan_tac_phim)
         self.dong_du_an()
@@ -4162,7 +4167,9 @@ def main() -> int:
         w.mo(tep[0])
     try:
         import nap_cap_nhat
-        QTimer.singleShot(5000, nap_cap_nhat.khoi_dong_tot)
+        # 1.0.51: vòng sự kiện đã chạy, cửa sổ đã lên hình: xóa cờ "đang khởi động" sau 1 giây (trước 5 giây - tắt máy / đóng ngay
+        # trong 5 giây đầu bị tính là khởi động hỏng, hai lần là bỏ bản cập nhật .larcud)
+        QTimer.singleShot(1000, nap_cap_nhat.khoi_dong_tot)
     except ImportError:
         pass
     if tep and tep[0].lower().endswith(('.larcud', '.pabtcn')):                          # nhấp đúp gói cập nhật

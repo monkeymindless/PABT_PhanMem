@@ -232,6 +232,12 @@ class KhungDuToan(QWidget):
         self.con, self.file_du_an = con, file_du_an
         self.file = None
         self.dt = DuToan()
+        # 1.0.51: lưu tự động khái toán đã có file .pabtdt (chu_de.chu_ky_luu_tu_dong) - so dấu nội dung, không ghi khi đang sửa ô
+        self._dau_da_luu = None
+        self._dong_ho_tu_luu = QTimer(self)
+        self._dong_ho_tu_luu.setSingleShot(True)
+        self._dong_ho_tu_luu.timeout.connect(lambda: self._thuc_hien_luu_tu_dong())
+        self._dong_ho_tu_luu.start(10000)
         self.dt_goc = None                              # khái toán đã duyệt mở từ file (thẻ So sánh); None: dùng bảng thẻ 1
         self.ss = None                                  # kết quả so sánh gần nhất (du_toan.so_sanh)
         self.dt_goc_file = None
@@ -713,7 +719,10 @@ class KhungDuToan(QWidget):
     @property
     def dm(self) -> DanhMuc:
         if self._dm is None:
-            if self.con is not None:
+            cua = self.window()
+            if self.con is not None and getattr(cua, 'con', None) is self.con and getattr(cua, 'dm', None) is not None:
+                self._dm = cua.dm                        # 1.0.51: dùng lại danh mục cửa sổ chính đã đọc (không đọc lại ~5.600 mục)
+            elif self.con is not None:
                 self._dm = DanhMuc(self.con)
             else:
                 from . import csdl, don_gia
@@ -1094,7 +1103,44 @@ class KhungDuToan(QWidget):
             if not file:
                 return None
         self.file = self.dt.luu(file)
+        self._dau_da_luu = self._dau_noi_dung()
         return self.file
+
+    def _dau_noi_dung(self) -> str:
+        """Dấu nội dung dự toán (bỏ giờ lưu): khác dấu lần lưu trước = có thay đổi chưa lưu."""
+        import json
+        from dataclasses import asdict
+        dt = self.dt
+        du = {k: v for k, v in vars(dt).items() if k not in ('dong', 'ngay')}
+        du['dong'] = [asdict(d) for d in dt.dong]
+        return json.dumps(du, ensure_ascii=False, sort_keys=True, default=str)
+
+    def _thuc_hien_luu_tu_dong(self) -> bool:
+        """Định kỳ theo chu kỳ lưu tự động: khái toán đã có file, có thay đổi, không đang sửa ô -> ghi file im lặng."""
+        from . import chu_de
+        from PySide6.QtWidgets import QApplication
+        giay = chu_de.chu_ky_luu_tu_dong()
+        self._dong_ho_tu_luu.start(max(giay, 10) * 1000)
+        if giay <= 0 or self.file is None or not self.isVisible():
+            return False
+        if self.bang.state() == QAbstractItemView.State.EditingState or QApplication.activePopupWidget() is not None:
+            self._dong_ho_tu_luu.start(2000)
+            return False
+        self._doc_dau()
+        dau = self._dau_noi_dung()
+        if dau == self._dau_da_luu:
+            return False
+        try:
+            self.dt.luu(self.file)
+        except OSError as e:
+            self.lb_tb.setText(f'Tự lưu tạm hoãn: {e}')
+            self.lb_tb.setVisible(True)
+            return False
+        from datetime import datetime
+        self._dau_da_luu = dau
+        self.lb_tb.setText(f'✓ Đã tự lưu {Path(self.file).name} lúc {datetime.now():%H:%M:%S}')
+        self.lb_tb.setVisible(True)
+        return True
 
     def mo(self, file=None):
         if file is None:
@@ -1108,6 +1154,8 @@ class KhungDuToan(QWidget):
             return None
         self.file = Path(file)
         self.ve()
+        self._doc_dau()
+        self._dau_da_luu = self._dau_noi_dung()
         return self.dt
 
     def xuat_khai_toan(self, file=None, pdf: bool = False):

@@ -185,7 +185,20 @@ def _cot(con, bang: str) -> set:
 
 def tinh(con, lap: dict | None = None, che_do: str = 'mo', tong_hop: list | None = None) -> KetQuaPheu:
     """Phễu của cả dự án. che_do 'mo' (lần đang mở, mặc định) | 'goc' (lần 1 - phương án gốc). lap = lap_pa.phan_loai_lap(con);
-    tong_hop = theo_doi.tong_hop(con, tinh_pa=True) nếu nơi gọi đã có (không tính lại)."""
+    tong_hop = theo_doi.tong_hop(con, tinh_pa=True) nếu nơi gọi đã có (không tính lại).
+    1.0.51: nhớ kết quả trên kết nối (csdl.nho - tự tính lại khi dữ liệu đổi): chuyển qua lại các trang không tính lại phễu
+    (5.000 hộ ~50 ms). Đối tượng trả về DÙNG CHUNG - không sửa."""
+    if tong_hop is not None:
+        return _tinh(con, lap, che_do, tong_hop)
+    from . import csdl
+    try:
+        dau_lap = None if lap is None else hash(frozenset(lap.items()))
+    except TypeError:
+        return _tinh(con, lap, che_do, None)
+    return csdl.nho(con, ('pheu_tien_do.tinh', che_do, dau_lap), lambda: _tinh(con, lap, che_do, None))
+
+
+def _tinh(con, lap: dict | None, che_do: str, tong_hop: list | None) -> KetQuaPheu:
     from . import theo_doi
     from .lap_pa import phan_loai_lap
     if lap is None:

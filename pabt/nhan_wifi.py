@@ -28,6 +28,7 @@ from urllib.parse import unquote
 CONG_UU_TIEN = (8765, 8766, 8767, 8780)     # thử lần lượt (dễ nhớ / mở tường lửa), hết thì để hệ điều hành chọn
 KICH_TOI_DA = 200 * 1024 * 1024             # một file (ảnh biên bản gửi kèm dạng base64 trong .json)
 SO_FILE_TOI_DA = 100                        # mỗi phiên mở hộp
+TONG_TOI_DA = 1024 * 1024 * 1024             # 1.0.51: tổng dung lượng một phiên (không để máy khác trong Wi-Fi gửi đầy ổ đĩa)
 KHOI = 64 * 1024
 THU_MUC = 'nhan_wifi'
 
@@ -121,11 +122,13 @@ class MayNhan:
     def __init__(self, ip: str | None = None, thu_muc: Path | None = None, ten_may: str = ''):
         from .dia_phuong import thu_muc_may
         self.ip = ip
-        self.ma = secrets.token_urlsafe(6).replace('-', 'a').replace('_', 'b')
+        # 1.0.51: mã phiên 16 ký tự chữ / số (96 bit) - máy khác cùng Wi-Fi không đoán được đường dẫn nhận
+        self.ma = secrets.token_urlsafe(12).replace('-', 'a').replace('_', 'b')
         self.thu_muc = Path(thu_muc) if thu_muc else thu_muc_may() / THU_MUC / f'{datetime.now():%Y%m%d_%H%M%S}_{self.ma[:4]}'
         self.ten_may = ten_may or socket.gethostname()
         self.hang = queue.Queue()
         self.so_file = 0
+        self.tong_byte = 0
         self._khoa = threading.Lock()
         self._may = None
         self._luong = None
@@ -184,7 +187,10 @@ class MayNhan:
         with self._khoa:
             if self.so_file >= SO_FILE_TOI_DA:
                 raise LoiNhanWifi(f'Đã nhận đủ {SO_FILE_TOI_DA} file trong phiên này: đóng rồi mở lại hộp nhận trên máy tính.')
+            if self.tong_byte + co > TONG_TOI_DA:
+                raise LoiNhanWifi(f'Phiên này đã nhận gần {TONG_TOI_DA // (1024 * 1024)} MB: đóng rồi mở lại hộp nhận trên máy tính.')
             self.so_file += 1
+            self.tong_byte += co
             self.thu_muc.mkdir(parents=True, exist_ok=True)
             dich = self.thu_muc / ten_an_toan(ten)
             k = 2

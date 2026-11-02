@@ -669,6 +669,8 @@ class KhungTongQuanDuAn(QWidget):
             b.setItem(r, 2, QTableWidgetItem(x['trang_thai'] or ('Đã lập, chưa duyệt' if x['da_lap'] else 'Chưa lập phương án')))
             t = QTableWidgetItem(vn(x['tong']) if x['tong'] else '-')
             t.setTextAlignment(int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter))
+            from .giao_dien import phong_so
+            t.setFont(phong_so())                       # 1.0.51: số tiền phông số
             b.setItem(r, 3, t)
             nut = QPushButton('Lập PA →')
             nut.setObjectName('nut_lap_pa')

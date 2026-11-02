@@ -175,13 +175,39 @@ def nhap_to_trinh(con) -> str:
 # ---------------------------------------------------------------- che dữ liệu cá nhân
 _RE_CCCD = re.compile(r'(?<!\d)\d{9}(?:\d{3})?(?!\d)')
 _RE_SDT = re.compile(r'(?<!\d)(?:\+84|0)\d{9,10}(?!\d)')
+# 1.0.51: dạng có dấu cách / chấm / gạch. Số CCCD có dấu ngăn chỉ che khi đứng sau nhãn (CCCD, CMND, căn cước…) - "120.000.000" là
+# số tiền, không phải CCCD; số điện thoại phải bắt đầu 0 / +84
+_RE_CCCD_NHAN = re.compile(r'((?i:cccd|cmnd|căn cước|chứng minh|định danh)[^\d\n]{0,24})((?:\d[\s.\-]?){8,11}\d)(?!\d)')
+_RE_SDT_NGAN = re.compile(r'(?<![\d.,])(?:\+84|0)\d{2,3}[\s.\-]\d{3}[\s.\-]\d{3,4}(?![\d])')
+_RE_SO_GCN = re.compile(r'(?<![\w])[A-ZĐ]{2}[\s\-]?\d{6,8}(?![\w])')          # số phát hành giấy chứng nhận "CS 123456"
+_RE_TOA_DO = re.compile(r'(?<![\d.])\d{1,3}\.\d{4,}\s*[,;]\s*\d{1,3}\.\d{4,}(?![\d])'
+                        r'|(?<![\w])[XY]\s*[:=]\s*\d{6,7}(?:[.,]\d+)?(?![\d])')
+_RE_SAU_NHAN_TEN = re.compile(r'((?i:hộ ông|hộ bà|chủ hộ|đồng sử dụng|người thừa kế|ông|bà)\s*[:\-]?\s*)((?:[^\W\d_]+\s*){1,5})')
+
+
+def _che_ho_ten(m) -> str:
+    """Sau "ông / bà / chủ hộ…": các từ viết HOA chữ đầu liền nhau (>= 2 từ) là họ tên -> [HO_TEN]; "bà con nhân dân" giữ nguyên."""
+    du = m.group(2)
+    n, cuoi = 0, 0
+    for t in re.finditer(r'[^\W\d_]+', du):
+        if not t.group(0)[:1].isupper():
+            break
+        n, cuoi = n + 1, t.end()
+    if n < 2:
+        return m.group(0)
+    return m.group(1) + '[HO_TEN]' + du[cuoi:]
 
 
 def an_danh(chu: str, con=None) -> str:
     """Thay họ tên chủ hộ có trong dự án (con) bằng "Hộ #<mã>", số CCCD / CMND bằng "[CCCD]", số điện thoại bằng "[SĐT]"."""
     s = str(chu or '')
+    s = _RE_CCCD_NHAN.sub(lambda m: m.group(1) + '[CCCD]', s)
+    s = _RE_SDT_NGAN.sub('[SĐT]', s)
     s = _RE_SDT.sub('[SĐT]', s)
     s = _RE_CCCD.sub('[CCCD]', s)
+    s = _RE_SO_GCN.sub('[SO_GCN]', s)
+    s = _RE_TOA_DO.sub('[TOA_DO]', s)
+    s = _RE_SAU_NHAN_TEN.sub(_che_ho_ten, s)
     if con is not None:
         ten = sorted(((r[1].strip(), r[0]) for r in con.execute('SELECT ma_ho, ho_ten FROM ho') if r[1] and len(r[1].strip()) >= 4),
                      key=lambda x: -len(x[0]))
@@ -241,7 +267,12 @@ def _khoa_da_luu() -> str | None:
         return None
 
 
-def _dpapi(du: bytes, ma_hoa: bool) -> bytes:
+# 1.0.51: entropy riêng của phần mềm - chương trình khác chạy cùng tài khoản Windows không tự giải mã được khóa API. Khóa lưu trước
+# 1.0.51 (không entropy) vẫn đọc được (mo_khoa thử lại không entropy)
+ENTROPY_DPAPI = b'LARC_DPAPI_ENTROPY_2026'
+
+
+def _dpapi(du: bytes, ma_hoa: bool, entropy: bytes | None = None) -> bytes:
     import ctypes
     import sys
     if sys.platform != 'win32':
@@ -254,7 +285,11 @@ def _dpapi(du: bytes, ma_hoa: bool) -> bytes:
     ra = BLOB()
     crypt = ctypes.windll.crypt32
     ham = crypt.CryptProtectData if ma_hoa else crypt.CryptUnprotectData
-    if not ham(ctypes.byref(vao), None, None, None, None, 0x1, ctypes.byref(ra)):       # 0x1 = CRYPTPROTECT_UI_FORBIDDEN
+    them = None
+    if entropy:
+        them = BLOB(len(entropy), ctypes.cast(ctypes.create_string_buffer(entropy, len(entropy)), ctypes.POINTER(ctypes.c_char)))
+    if not ham(ctypes.byref(vao), None, ctypes.byref(them) if them is not None else None, None, None, 0x1,
+               ctypes.byref(ra)):                       # 0x1 = CRYPTPROTECT_UI_FORBIDDEN
         raise LoiTroLy('Không mã hóa / giải mã được khóa API (Windows DPAPI).')
     try:
         return ctypes.string_at(ra.pbData, ra.cbData)
@@ -263,11 +298,14 @@ def _dpapi(du: bytes, ma_hoa: bool) -> bytes:
 
 
 def bao_ve(du: bytes) -> bytes:
-    return _dpapi(du, True)
+    return _dpapi(du, True, ENTROPY_DPAPI)
 
 
 def mo_khoa(du: bytes) -> bytes:
-    return _dpapi(du, False)
+    try:
+        return _dpapi(du, False, ENTROPY_DPAPI)
+    except LoiTroLy:
+        return _dpapi(du, False)                        # khóa lưu bởi bản trước 1.0.51
 
 
 def co_thu_vien() -> bool:
