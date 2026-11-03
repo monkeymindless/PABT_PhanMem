@@ -236,3 +236,6 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Dự án ở `D:\APP AI PABT\PABT_PhanMem` (đường dẫn không dấu; trước 07/10/2026 là `D:\Thư mục mới\…` dạng NFD). File thật của người
   dùng (file dự án `.pabt` thật, `PABT_CHUAN_06-10-2026_QD42.xlsm` – dùng cho `PABT_EXCEL`) ở thư mục cha: chỉ đọc / thử trên bản sao.
 - Windows PowerShell 5.1; `.venv` dùng Python 3.14. `build/`, `dist/`, `bo_cai/` là sản phẩm dựng.
+- Máy dựng có Microsoft Word VÀ LibreOffice 26.8.2 (người dùng cho cài 03/11/2026, winget `TheDocumentFoundation.LibreOffice`): tầng PDF thứ
+  hai `van_ban_trinh.chuyen_pdf_libreoffice` đã chạy thật - 4 hộ 9,6 s, bố cục trùng bản Word (khung, ngắt trang, chữ ký). Kiểm thử chạy
+  qua đường Word / LibreOffice thật khi có; muốn thử nhánh "không Office" thì giả lập (`tim_libreoffice` / `co_word`), đừng gỡ phần mềm.
