@@ -2944,3 +2944,27 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
     `tro_ly._RE_SDT` / `_RE_SDT_NGAN` nhận "(+84)" / "+84 " có dấu ngăn, `_RE_SAU_NHAN_TEN` thêm nhãn người nhận tiền, người đại diện,
     người được ủy quyền, đồng sở hữu, chủ đất, chủ sở hữu, chủ sử dụng, họ và tên, họ tên (tên vẫn phải >= 2 từ viết hoa - "Họ tên chủ
     hộ…" không bị che).
+- 1.0.56 (người dùng 03/11/2026: "bổ sung phần scan bảng đơn giá… phân tích toàn bộ nội dung văn bản, trích xuất các quy định khác vào ghi
+  chú quy định cách tính… tự động tick ô có thay đổi… hiểu như một người thật (có thể dựa vào AI)"; rồi "khóa bảo mật: chỉ tài khoản máy
+  chủ hoặc admin sửa bộ đơn giá đất, tài sản, chính sách hỗ trợ, cây trồng - dùng LAN không thể ai cũng sửa, không thì không đồng bộ";
+  test `tests/test_quy_dinh_van_ban.py`, `tests/test_khoa_bo_don_gia.py`):
+  - `pabt/quy_dinh_van_ban.py` (không Qt): `trich_quy_dinh(dong, nhom, quy_tac)` (bỏ phần căn cứ tới "QUYẾT ĐỊNH:", Điều hiệu lực / tổ
+    chức thực hiện; câu có từ khóa + số / cụm mạnh; `sach_cau` bỏ rác OCR đầu / cuối câu; đoạn lời văn chứa lại >= 2 dòng quy tắc bảng
+    thì bỏ), `van_ban_chua_gom` (văn bản đã có: file nhắc đủ số hiệu các văn bản sửa đổi của nhóm -> dòng đổi giá chọn sẵn được),
+    `ghi_quy_dinh` (tham_so mã `QDCT:<nhóm>:<số hiệu>:<stt>` + ghi chú dm_taisan khớp phạm vi cụ thể), `quy_dinh_lien_quan` (Giải trình).
+    Thử VBHN cây trồng thật (48 trang scan, ngoài repo): 18 quy định, đã có + gồm đủ (VBHN nhắc QĐ 66) -> dòng đổi giá chọn sẵn.
+  - HopNhapDonGia: `cb_hien` (`HIEN`, văn bản >= `HIEN_TAT_CA_DUOI` dòng mặc định chỉ dòng cần xử lý), `chon_theo`, `o_luu_qd`, khung quy
+    định luôn dựng (ẩn khi trống), `b_ai` -> `phan_tich_ai` -> `pabt/phan_tich_ai_don_gia.py` (thư viện anthropic, cài đặt / khóa của
+    tro_ly; stream + `output_config.format` json_schema + thinking adaptive + fallbacks mảng 2026-06-01 như tro_ly): xác minh dòng cần xem
+    (`gan_khoa` theo (tên, ĐVT, dòng gốc) - so khớp lại làm lệch stt; `ap_xac_minh` gọi sau mỗi so_khop: đúng -> chọn, sai / không thấy
+    -> bỏ chọn, KHÔNG đổi giá), `gop_quy_dinh` (nguon 'AI'). Văn bản đơn giá công khai: không qua `an_danh` (che nhầm số tiền 9 / 12 chữ
+    số). Thẻ "Quy định cách tính" trong HopBoDonGia (tham_so QDCT:, thẻ Tham số loại ra). `chon_theo` cập nhật cả `m.chon`.
+  - KHÓA BẢO MẬT (`quan_tri_bo`): `co_quyen_sua` (đang cài từ máy chủ / quản trị máy chủ -> được; đăng nhập không quản trị hoặc máy có
+    may_chu.json -> KHÔNG, mật khẩu máy không thay; máy đơn: mở khóa phiên hoặc chưa đặt mật khẩu), `kiem_quyen` (LoiQuyenBoDonGia <
+    LoiNhap) gắn ở mọi hàm ghi, `sau_khi_sua` (quản trị -> `dong_bo_don_gia.phat_hanh`, lỗi ghi LOI_PHAT_HANH không làm hỏng việc sửa).
+    Sửa lỗi cũ: `HopBoDonGia.mo_khoa_quan_tri(mat_khau)` sai mật khẩu vẫn mở khóa. `man_hinh_don_gia.xin_quyen_sua` cho KhungCapNhatGiaDat,
+    `khoi_phuc_bang`, KhungHeSoK.
+  - `pabt/dong_bo_don_gia.py`: `<gốc>\BoDonGia\` bo_don_gia.sqlite (backup API), bang_gia_dat.json, he_so_k.json (None = máy quản trị dùng
+    bảng gắn sẵn -> máy nhận xóa bảng của mình), phien_ban.json (ghi CUỐI, mã = băm các file); `nhan` chép tạm, kiểm SHA-256 + kiem_tra_bo
+    + JSON trước khi cài; `<thư mục máy>\dong_bo_don_gia.json` mã đã nhận. `app.dong_bo_bo_don_gia` trong `sau_dang_nhap` (quản trị + máy
+    chủ chưa có bộ -> phát hành lần đầu). Đơn giá đặc biệt (quy ước riêng của dự án) KHÔNG khóa - dữ liệu dự án.

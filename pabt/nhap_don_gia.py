@@ -2142,12 +2142,15 @@ CHU_TRANG_THAI = {'mới': 'mục mới', 'cập nhật': 'mục đổi giá', '
 
 
 def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban: dict | None = None,
-            van_ban_cu: list | tuple = ()) -> dict:
+            van_ban_cu: list | tuple = (), quy_dinh: list | None = None) -> dict:
     """Tạo bộ đơn giá mới (bộ đang dùng + các mục được chọn) và cài. Trả thông tin bộ mới + số mục.
     nhom None / 0: mỗi dòng theo Muc.nhom. van_ban: kết quả phan_tich_van_ban (ghi vào danh mục văn bản căn cứ).
-    van_ban_cu: id các dòng văn bản căn cứ bị văn bản này thay thế (chế độ thay thế) -> trạng thái "Hết hiệu lực - thay thế bởi …"."""
+    van_ban_cu: id các dòng văn bản căn cứ bị văn bản này thay thế (chế độ thay thế) -> trạng thái "Hết hiệu lực - thay thế bởi …".
+    quy_dinh: quy định cách tính trích từ văn bản (quy_dinh_van_ban.trich_quy_dinh) -> tham_so QDCT:… + ghi chú mục liên quan (1.0.56)."""
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('cập nhật bộ đơn giá')      # 1.0.56: báo ngay, trước khi chép / ghi (cai_bo kiểm lại)
     chon = [m for m in ds if m.chon and m.trang_thai in TRANG_THAI_GHI]
-    if not chon and not (van_ban and van_ban.get('so_hieu')):
+    if not chon and not (van_ban and van_ban.get('so_hieu')) and not quy_dinh:
         raise LoiNhap('Không có mục nào mới, đổi giá, đổi quy cách hoặc bỏ để cập nhật.')
     # không có dòng giá nhưng có văn bản (văn bản chính sách): chỉ ghi vào danh mục văn bản căn cứ để theo dõi
     goc = don_gia.file_dang_dung()
@@ -2218,10 +2221,14 @@ def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban
                     if cu is None or i != cu[0]:
                         con.execute('UPDATE van_ban SET trang_thai = ? WHERE id = ?',
                                     (f'Hết hiệu lực - thay thế bởi {ten_moi} (cập nhật {datetime.now():%d/%m/%Y})', i))
+                kq_qd = {}
+                if quy_dinh:                            # 1.0.56: quy định cách tính của văn bản (tham_so QDCT:…, ghi chú mục)
+                    from .quy_dinh_van_ban import ghi_quy_dinh
+                    kq_qd = ghi_quy_dinh(con, vb, quy_dinh, nguon)
                 con.execute('UPDATE du_an SET phien_ban_gia = ?, nguon_nhap = ?, ngay_nhap = ? WHERE id = 1',
                             (pb, nguon, datetime.now().isoformat(timespec='seconds')))
         finally:
             con.close()
         tt = don_gia.cai_bo(moi)
     return dict(tt, so_moi=so['mới'], so_cap_nhat=so['cập nhật'], so_quy_cach=so['đổi quy cách'], so_bo=so['bỏ'],
-                theo_nhom=theo_nhom)
+                theo_nhom=theo_nhom, so_quy_dinh=kq_qd.get('so_quy_dinh', 0), so_muc_ghi_chu=kq_qd.get('so_muc_ghi_chu', 0))

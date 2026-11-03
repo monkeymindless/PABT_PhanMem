@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QFileDialog, QHB
 
 from . import he_so_k as hk
 from .giao_dien import kieu_o_he_so_k
+from .lap_pa import LoiNhap
 
 COT = [('chon', 'Lấy', 40), ('dia_ban', 'Địa bàn', 130), ('tt', 'TT', 45), ('loai_dat', 'Loại đất', 190), ('vi_tri', 'Vị trí', 55),
        ('he_so', 'Hệ số K', 70), ('tuyen_duong', 'Tuyến đường / khu vực', 220), ('diem_dau', 'Từ', 170), ('diem_cuoi', 'Đến', 170),
@@ -260,8 +261,11 @@ class KhungHeSoK(QWidget):
             dong = self.lay_dong()
             if not dong:
                 raise hk.LoiHeSoK('Chưa chọn dòng hệ số K nào để lưu.')
+            from .man_hinh_don_gia import xin_quyen_sua
+            if not xin_quyen_sua(self, self.im_lang):           # 1.0.56: chỉ quản trị sửa hệ số K
+                raise hk.LoiHeSoK('Chưa lưu: cần quyền quản trị bộ đơn giá.')
             hk.ghi(dong, self.o_vb.text().strip(), self.nguon)
-        except (hk.LoiHeSoK, OSError) as e:
+        except (hk.LoiHeSoK, LoiNhap, OSError) as e:
             self._bao(str(e))
             return False
         self.chua_luu = False
@@ -279,6 +283,10 @@ class KhungHeSoK(QWidget):
                                             'đổi.') \
                 == QMessageBox.StandardButton.Yes
         if not xac_nhan:
+            return False
+        from .man_hinh_don_gia import xin_quyen_sua
+        if not xin_quyen_sua(self, self.im_lang):
+            self._bao('Chưa đổi: cần quyền quản trị bộ đơn giá.')
             return False
         hk.xoa()
         self.chua_luu = False

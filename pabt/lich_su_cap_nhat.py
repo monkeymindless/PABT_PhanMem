@@ -7,6 +7,21 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.56', '03/11/2026', (
+        'KHÓA BẢO MẬT BỘ ĐƠN GIÁ: máy dùng máy chủ LAN chỉ tài khoản QUẢN TRỊ máy chủ (đang đăng nhập) sửa được bộ đơn giá - tài sản, '
+        'cây trồng, vật nuôi, chính sách hỗ trợ, bảng giá đất, hệ số K (cả nạp từ file, quét văn bản, khôi phục). Máy đơn: cần mở khóa bằng '
+        'mật khẩu quản trị bộ đơn giá.',
+        'ĐỒNG BỘ BỘ ĐƠN GIÁ QUA MÁY CHỦ: quản trị sửa xong, bộ đơn giá tự phát hành lên máy chủ; máy khác nhận khi đăng nhập (có kiểm tra '
+        'mã băm, file hỏng thì giữ bộ cũ). Quản trị bảo mật > Phát hành / Nhận bộ đơn giá để làm ngay.',
+        'Cập nhật đơn giá từ văn bản: đọc cả LỜI VĂN các điều khoản, trích các quy định cách tính (mật độ, cây trồng xen, phần vượt, tỷ lệ '
+        '%, trường hợp không bồi thường…) - lưu vào bộ đơn giá (thẻ "Quy định cách tính"), ghi vào ghi chú mục liên quan và hiện ở Giải '
+        'trình cách tính (Ctrl+I) khi lập phương án.',
+        'Tự chọn sẵn mọi dòng thay đổi (mới, đổi giá, đổi tên, bỏ); văn bản dài chỉ hiện các dòng cần xử lý; nút "Chọn mọi dòng thay '
+        'đổi" / "Bỏ chọn tất cả". Văn bản đã có (bản hợp nhất gồm đủ văn bản sửa đổi): dòng đổi giá cũng được chọn sẵn.',
+        'Kiểm tra bằng AI (tùy chọn, cần bật Trợ lý trực tuyến): AI đọc toàn văn văn bản như cán bộ thẩm định, xác minh tên / ĐVT / đơn '
+        'giá các dòng cần xem, tìm thêm quy định cách tính. Chỉ gửi chữ văn bản đơn giá (công khai); không bao giờ tự đổi giá - dòng AI đọc '
+        'khác được bỏ chọn để đối chiếu.',
+    )),
     ('1.0.55', '03/11/2026', (
         'Nhật ký kiểm toán có CHUỖI BĂM: mỗi dòng ghi qua LARC được ký nối với dòng trước - dòng bị sửa / xóa bằng công cụ khác ngoài '
         'phần mềm được báo ngay trên cửa sổ Nhật ký kiểm toán.',

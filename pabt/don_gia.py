@@ -208,13 +208,16 @@ def tao_bo_tu_excel(file_excel, file_ra, phien_ban: str = '', ghi_chu: str = '',
 
 
 def cai_bo(p) -> dict:
-    """Cài một bộ đơn giá (đã kiểm tra) làm bộ đang dùng trên máy này."""
+    """Cài một bộ đơn giá (đã kiểm tra) làm bộ đang dùng trên máy này. 1.0.56: cần quyền quản trị (quan_tri_bo.kiem_quyen)."""
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('cập nhật bộ đơn giá')
     tt = kiem_tra_bo(p)
     dich = file_cap_nhat()
     dich.parent.mkdir(parents=True, exist_ok=True)
     tam = dich.with_suffix('.tai')
     shutil.copyfile(p, tam)
     os.replace(tam, dich)
+    quan_tri_bo.sau_khi_sua()
     return dict(tt, file=str(dich))
 
 
@@ -260,12 +263,15 @@ def sao_luu_bo(dich) -> Path:
 def khoi_phuc_bo_goc() -> dict:
     """Dùng lại bộ đơn giá chuẩn đóng gói kèm phần mềm (0.9.73): bản đã cập nhật / sửa trên máy KHÔNG xóa - đổi tên thành
     "<tên>.truoc_khoi_phuc_<giờ>.sqlite" cạnh đó (lấy lại được). Trả thông tin bộ gốc + file đã cất (hoặc '' nếu chưa có bản máy)."""
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('khôi phục bộ đơn giá')
     moi = file_cap_nhat()
     cat = ''
     if moi.exists():
         dich = moi.with_name(f'{moi.stem}.truoc_khoi_phuc_{datetime.now():%Y%m%d_%H%M%S}.sqlite')
         os.replace(moi, dich)
         cat = str(dich)
+    quan_tri_bo.sau_khi_sua()
     return dict(kiem_tra_bo(file_goc()), cat=cat)
 
 
@@ -398,6 +404,8 @@ def _mo_sua():
 
     @contextmanager
     def _trong():
+        from . import quan_tri_bo
+        quan_tri_bo.kiem_quyen()                        # 1.0.56: khóa ở tầng ghi (không chỉ ở hộp Bộ đơn giá)
         p = dam_bao_ban_sua()
         con = csdl.mo(p)
         try:
@@ -405,6 +413,7 @@ def _mo_sua():
                 yield con
         finally:
             con.close()
+        quan_tri_bo.sau_khi_sua()                       # quản trị máy chủ: phát hành bộ vừa sửa lên máy chủ
 
     return _trong()
 

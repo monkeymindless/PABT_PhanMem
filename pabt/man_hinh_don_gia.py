@@ -29,18 +29,21 @@ THE = [
     ('Vật nuôi', _TS + f'nhom = 3 AND {_VAT_NUOI} ORDER BY LENGTH(ma), ma', *_COT_TS),
     ('Chính sách hỗ trợ (QĐ 42/2025)', 'SELECT ma, ten, dvt, don_gia, can_cu, cach_tinh FROM dm_hotro ORDER BY LENGTH(ma), ma',
      ['Mã', 'Khoản hỗ trợ', 'ĐVT', 'Đơn giá / hệ số', 'Căn cứ', 'Cách tính'], [55, 420, 90, 110, 330, 330]),
-    ('Tham số, hạn mức đất NN', 'SELECT ma, ten, gia_tri, dvt, can_cu, trang_thai FROM tham_so',
+    ('Tham số, hạn mức đất NN', "SELECT ma, ten, gia_tri, dvt, can_cu, trang_thai FROM tham_so WHERE ma NOT LIKE 'QDCT:%'",
      ['Mã', 'Tham số', 'Giá trị', 'ĐVT', 'Căn cứ', 'Trạng thái'], [120, 430, 90, 90, 330, 160]),
     ('Thưởng bàn giao mặt bằng', 'SELECT tu, muc FROM bieu_thuong ORDER BY CAST(tu AS REAL)',
      ['Mã', 'Tổng bồi thường, hỗ trợ từ (đ)', 'Mức thưởng (đ/hộ)'], [60, 220, 180]),     # Mã TH1… chỉ hiển thị (0.9.69)
     ('Văn bản căn cứ', 'SELECT id, so_hieu, co_quan, noi_dung, trang_thai FROM van_ban ORDER BY id',
      ['Văn bản', 'Cơ quan', 'Nội dung áp dụng', 'Trạng thái'], [380, 200, 440, 230]),
+    # 1.0.56: quy định cách tính trích từ văn bản đơn giá (quy_dinh_van_ban - tham_so mã QDCT:<nhóm>:<số hiệu>:<stt>)
+    ('Quy định cách tính', "SELECT ma, ten, can_cu, gia_tri FROM tham_so WHERE ma LIKE 'QDCT:%' ORDER BY ma",
+     ['Mã', 'Nhóm', 'Văn bản, điều khoản', 'Quy định'], [150, 150, 260, 760]),
 ]
 # bảng + cột khóa từng thẻ (cột 0 của SQL là khóa khi bang in quy_uoc/van_ban — không hiện)
 THE_BANG = (
     ('dm_taisan', 'ma'), ('dm_taisan', 'ma'), ('dm_taisan', 'ma'),
     ('dm_hotro', 'ma'), ('tham_so', 'ma'), ('bieu_thuong', 'tu'),
-    ('van_ban', 'id'),
+    ('van_ban', 'id'), ('tham_so', 'ma'),
 )
 # 0.9.69: bỏ thẻ "Quy ước giá tương đương" (người dùng: quy ước tùy biến từng máy / dự án - nhập ở Đơn giá đặc biệt)
 I_QUY_UOC = -1
@@ -117,6 +120,9 @@ class HopBoDonGia(QDialog):
         m.addAction('Đổi mật khẩu quản trị…', lambda: self.doi_mat_khau_quan_tri())
         m.addSeparator()
         m.addAction('Khôi phục bộ đơn giá chuẩn gốc của Tỉnh…', lambda: self.khoi_phuc_goc())
+        m.addSeparator()                            # 1.0.56: đồng bộ bộ đơn giá qua máy chủ LAN
+        m.addAction('Phát hành bộ đơn giá lên máy chủ (quản trị)', lambda: self.dong_bo_may_chu(True))
+        m.addAction('Nhận bộ đơn giá từ máy chủ', lambda: self.dong_bo_may_chu(False))
         self.b_qt.setMenu(m)
         self.b_ap = QPushButton('Áp bộ đơn giá vào dự án đang mở')
         self.b_ap.clicked.connect(lambda: self.ap_du_an())
@@ -156,7 +162,29 @@ class HopBoDonGia(QDialog):
             return 'Đã mở khóa (sửa được)'
         if quan_tri_bo.la_quan_tri_may_chu():
             return 'Tài khoản quản trị máy chủ'
+        if quan_tri_bo.bi_chan_may_chu() or quan_tri_bo.may_duoc_quan_ly():
+            return 'Chỉ quản trị máy chủ sửa được'
         return 'Đã kích hoạt' if quan_tri_bo.da_dat() else 'Chưa đặt mật khẩu'
+
+    def dong_bo_may_chu(self, phat_hanh: bool) -> str:
+        """1.0.56: phát hành (quản trị) / nhận bộ đơn giá qua thư mục máy chủ LAN. Trả chữ kết quả."""
+        from . import dong_bo_don_gia as db, may_chu
+        try:
+            if may_chu.PHIEN is None:
+                raise db.LoiDongBo('Chưa đăng nhập máy chủ LAN (Cài đặt > Kết nối máy chủ LAN).')
+            if phat_hanh:
+                pb = db.phat_hanh()
+                chu = f'Đã phát hành {db.mo_ta(pb)} lên máy chủ - các máy khác nhận khi đăng nhập.'
+            else:
+                kq = db.nhan(ep=True)
+                chu = f'Đã nhận {db.mo_ta(kq)} từ máy chủ.' if kq else 'Máy chủ chưa có bộ đơn giá nào được phát hành.'
+                self.nap()
+        except (LoiNhap, OSError) as e:
+            chu = str(e)
+            self._bao(QMessageBox.warning, chu)
+            return chu
+        self._bao(QMessageBox.information, chu)
+        return chu
 
     def _dat_tieu(self):
         tt = don_gia.thong_tin()
@@ -374,9 +402,14 @@ class HopBoDonGia(QDialog):
             self._da_mo_khoa = True
             self._dat_tieu()
             return True
-        if quan_tri_bo.bi_chan_may_chu():
-            self._bao(QMessageBox.warning, quan_tri_bo.mo_ta_quyen())
+        if quan_tri_bo.bi_chan_may_chu() or quan_tri_bo.may_duoc_quan_ly():
+            # 1.0.56: máy dùng máy chủ LAN - chỉ tài khoản quản trị máy chủ (mật khẩu máy không thay được)
+            self._bao(QMessageBox.warning, quan_tri_bo.ly_do_khong_sua())
             return False
+        if quan_tri_bo.da_dat() and quan_tri_bo.co_quyen_sua():      # đã mở khóa trong phiên này (hộp khác / lần trước)
+            self._da_mo_khoa = True
+            self._dat_tieu()
+            return True
         if self.im_lang:
             if mat_khau is None:
                 return False
@@ -387,6 +420,7 @@ class HopBoDonGia(QDialog):
                     return False
             except LoiNhap:
                 return False
+            quan_tri_bo.mo_khoa_phien()
             self._da_mo_khoa = True
             return True
         d = HopXacThucBo(self)
@@ -394,10 +428,11 @@ class HopBoDonGia(QDialog):
             d.o_mk.setText(mat_khau)
             if hasattr(d, 'o_lai'):
                 d.o_lai.setText(mat_khau2 if mat_khau2 is not None else mat_khau)
-            if d.thu():
-                d.accept()
+            if not d.thu():                             # sai mật khẩu: không mở khóa (trước 1.0.56 vẫn mở khóa)
+                return False
         elif d.exec() != QDialog.DialogCode.Accepted:
             return False
+        quan_tri_bo.mo_khoa_phien()
         self._da_mo_khoa = True
         self._dat_tieu()
         return True
@@ -709,6 +744,23 @@ _NHAN_O = {
     'ten_thuc_te': 'Tên thực tế', 'ten_tuong_duong': 'Áp giá tương đương',
     'so_hieu': 'Số hiệu văn bản', 'co_quan': 'Cơ quan', 'noi_dung': 'Nội dung áp dụng',
 }
+
+
+def xin_quyen_sua(cha=None, im_lang: bool = False) -> bool:
+    """1.0.56: trước khi ghi bảng giá đất / hệ số K / bộ đơn giá từ màn hình khác hộp Bộ đơn giá. Đã có quyền -> True; máy dùng máy chủ
+    LAN mà không phải quản trị -> báo, False; máy đơn đã đặt mật khẩu -> hỏi mật khẩu (đúng thì mở khóa cả phiên)."""
+    if quan_tri_bo.co_quyen_sua():
+        return True
+    if im_lang:
+        return False
+    from .thong_bao import TEN_UD
+    if quan_tri_bo.bi_chan_may_chu() or quan_tri_bo.may_duoc_quan_ly():
+        QMessageBox.warning(cha, TEN_UD, quan_tri_bo.ly_do_khong_sua())
+        return False
+    if HopXacThucBo(cha).exec() != QDialog.DialogCode.Accepted:
+        return False
+    quan_tri_bo.mo_khoa_phien()
+    return True
 
 
 class HopXacThucBo(QDialog):

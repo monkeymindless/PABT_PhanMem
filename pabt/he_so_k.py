@@ -184,7 +184,9 @@ def tom_tat() -> str:
 
 
 def ghi(dong: list, vb: str = '', nguon: str = '') -> Path:
-    """Ghi bảng hệ số K của máy (ghi file tạm rồi os.replace). Dòng không có hệ số hợp lệ bị bỏ."""
+    """Ghi bảng hệ số K của máy (ghi file tạm rồi os.replace). Dòng không có hệ số hợp lệ bị bỏ. 1.0.56: cần quyền quản trị."""
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('cập nhật hệ số K')
     ds = []
     for r in dong:
         r = chuan_dong(r)
@@ -199,15 +201,19 @@ def ghi(dong: list, vb: str = '', nguon: str = '') -> Path:
                               separators=(',', ':')).replace('},{', '},\n{'), encoding='utf-8')
     os.replace(tam, p)
     _quen()
+    quan_tri_bo.sau_khi_sua()
     return p
 
 
 def xoa() -> bool:
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('đổi bảng hệ số K')
     p = file_he_so()
     _quen()
     if not p.is_file():
         return False
     p.unlink()
+    quan_tri_bo.sau_khi_sua()
     return True
 
 

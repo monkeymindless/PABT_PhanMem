@@ -429,8 +429,10 @@ def doc_excel(file) -> tuple:
 
 
 def ghi_thay(dong: list, van_ban: str = '', nguon: str = '') -> Path:
-    """Ghi đè bảng giá đất của máy này. Bốn địa bàn gắn sẵn không còn hiện cho đến khi khôi phục."""
+    """Ghi đè bảng giá đất của máy này. Bốn địa bàn gắn sẵn không còn hiện cho đến khi khôi phục. 1.0.56: cần quyền quản trị."""
     import os
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('cập nhật bảng giá đất')
     p = file_thay()
     p.parent.mkdir(parents=True, exist_ok=True)
     tam = p.with_suffix('.json.tmp')
@@ -438,6 +440,7 @@ def ghi_thay(dong: list, van_ban: str = '', nguon: str = '') -> Path:
                    encoding='utf-8')
     os.replace(tam, p)
     _quen()
+    quan_tri_bo.sau_khi_sua()
     return p
 
 
@@ -476,9 +479,12 @@ def xa_gan_san() -> tuple:
 
 def xoa_thay() -> bool:
     """Xóa bảng người dùng: phần mềm trở lại 4 địa bàn gắn sẵn. False nếu đang không thay."""
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('đổi bảng giá đất')
     p = file_thay()
     if not p.is_file():
         return False
     p.unlink()
     _quen()
+    quan_tri_bo.sau_khi_sua()
     return True

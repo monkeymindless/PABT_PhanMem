@@ -962,5 +962,10 @@ def giai_trinh_dong_pa(pa: PhuongAn, bc: BoiCanh, muc: int, chi_so: int) -> dict
     dong = [f'Hạng mục: {ten}', '', 'Công thức:', f'  {cong_thuc}', '', 'Thay số:', *[f'  {x}' for x in thay]]
     if can_cu:
         dong += ['', 'Căn cứ, nguồn số liệu:', *[f'  {x}' for x in can_cu]]
+    # 1.0.56: quy định cách tính trích từ văn bản đơn giá (tham_so QDCT:…) có liên quan tới mục - xem để tính đúng (mật độ, tỷ lệ…)
+    from .quy_dinh_van_ban import quy_dinh_lien_quan
+    qd = quy_dinh_lien_quan(bc.ts, {1: 0, 2: 2, 3: 3, MUC_VN: 7, 4: 4}.get(muc, 0), ten) if muc != 1 else []
+    if qd:
+        dong += ['', 'Quy định cách tính trong văn bản đơn giá (liên quan):', *[f'  - {x}' for x in qd]]
     return dict(muc=muc, chi_so=chi_so, ten_hang_muc=ten, cong_thuc_chu=cong_thuc, thay_so=thay, can_cu=can_cu, thanh_tien=tt,
-                dong=dong)
+                dong=dong, quy_dinh=qd)

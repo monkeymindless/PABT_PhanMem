@@ -75,7 +75,8 @@ class TestBoDonGia(_Co):
         self.assertIn('Khóa quản trị', d.lb.text())
         self.assertEqual([a.text() for a in d.b_qt.menu().actions() if a.text()],
                          ['Mở khóa quản trị (cho phép sửa / xóa)…', 'Đổi mật khẩu quản trị…',
-                          'Khôi phục bộ đơn giá chuẩn gốc của Tỉnh…'])
+                          'Khôi phục bộ đơn giá chuẩn gốc của Tỉnh…',
+                      'Phát hành bộ đơn giá lên máy chủ (quản trị)', 'Nhận bộ đơn giá từ máy chủ'])
         for ten in ('b_gia_dat', 'b_don', 'cap_nhat_web', 'xem_gia_dat', 'don_gia_rieng'):
             self.assertFalse(hasattr(d, ten), ten)                     # lệnh trùng menu trái / web không dùng được: bỏ
 

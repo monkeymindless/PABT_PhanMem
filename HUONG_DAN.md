@@ -579,6 +579,16 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   căn cứ…** (hoặc chọn dòng rồi **Ctrl+I**): công thức bằng chữ, thay số cụ thể (diện tích / số lượng × đơn giá × hệ số K × tỷ lệ,
   làm tròn theo dự án), căn cứ / nguồn đơn giá; nút **Chép** để dán vào văn bản trả lời. Cửa sổ **Xem chi tiết tính tiền…**: rê chuột
   lên dòng tiền.
+- **Khóa bảo mật & đồng bộ bộ đơn giá (1.0.56)**: máy đã thiết lập máy chủ LAN thì CHỈ tài khoản **quản trị máy chủ** đang
+  đăng nhập sửa được bộ đơn giá (tài sản, cây trồng, vật nuôi, chính sách hỗ trợ, bảng giá đất, hệ số K - cả nạp từ file / văn bản,
+  khôi phục bộ gốc); mật khẩu quản trị trên máy không thay được. Quản trị sửa xong, bộ đơn giá tự phát hành vào thư mục máy chủ
+  (`BoDonGia\`); máy khác nhận khi đăng nhập. Làm ngay: Bộ đơn giá > **Quản trị bảo mật** > **Phát hành bộ đơn giá lên máy chủ** /
+  **Nhận bộ đơn giá từ máy chủ**. Máy đơn (không máy chủ): sửa cần mở khóa bằng mật khẩu quản trị bộ đơn giá (một lần mỗi phiên).
+- **Cập nhật đơn giá từ văn bản (1.0.56)**: phần mềm đọc cả lời văn các điều khoản, khung **Quy định cách tính** liệt kê các quy định
+  (mật độ, trồng xen, phần vượt, tỷ lệ %, trường hợp không bồi thường…) - tích **Lưu … quy định** để đưa vào bộ đơn giá (thẻ **Quy định
+  cách tính**), ghi chú mục liên quan và **Giải trình cách tính** khi lập phương án. Dòng thay đổi được chọn sẵn; ô **Hiện** chỉ các
+  dòng cần xử lý với văn bản dài. **Kiểm tra bằng AI…** (cần bật Trợ lý trực tuyến): AI đọc toàn văn, xác minh dòng cần xem, tìm thêm
+  quy định - chỉ gửi chữ văn bản đơn giá, không tự đổi giá (dòng AI đọc khác bị bỏ chọn để đối chiếu với văn bản gốc).
 - **Nhật ký kiểm toán có chuỗi băm (1.0.55)**: dòng dưới cùng cửa sổ Nhật ký kiểm toán cho biết chuỗi băm còn nguyên hay có dòng bị
   sửa / xóa ngoài phần mềm. Xóa các dòng CUỐI cùng không để lại dấu: lưu bản Excel nhật ký đã xuất / nộp để đối chiếu.
 - **Sao lưu tự động**: mỗi lần mở dự án để sửa, một bản sao được ghi vào `%APPDATA%\PABT\sao_luu_tu_dong\` (giữ 5 bản gần nhất

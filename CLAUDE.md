@@ -165,6 +165,10 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   (ghi nguyên tử); `tao_moi` XÓA file cũ trước.
 - Mọi ghi: `csdl.ghi_nhat_ky`; ghi danh mục trong `with ..., csdl.mo_khoa_danh_muc(con)`; hàm ghi dùng chung bọc `csdl.giao_dich(con)` (lồng
   được; `with con:` lồng COMMIT ở tầng trong). Không `IN (?,?…)` với danh sách hộ dài (trừ <= `theo_doi.LOC_SQL_TOI_DA`).
+- Ghi bộ đơn giá / bảng giá đất / hệ số K (1.0.56): hàm ghi gọi `quan_tri_bo.kiem_quyen(...)` ĐẦU và `quan_tri_bo.sau_khi_sua()`
+  CUỐI (don_gia `_mo_sua` / `cai_bo` / `khoi_phuc_bo_goc`, nhap_don_gia.ap_dung, gia_dat_nq28 ghi_thay / xoa_thay, he_so_k ghi / xoa).
+  Máy có may_chu.json: chỉ quản trị máy chủ đang đăng nhập; máy đơn: mật khẩu (`mo_khoa_phien`). Màn hình khác hộp Bộ đơn giá hỏi bằng
+  `man_hinh_don_gia.xin_quyen_sua`. Cài bộ nhận từ máy chủ trong `quan_tri_bo.cho_phep_dong_bo()` (dong_bo_don_gia). Hàm ghi mới: thêm cả hai.
 - Hàm ghi theo hộ gọi `lap_pa.kiem_ho_nhan_viec` / `kiem_ds_ho_nhan_viec` ở đầu (bản offline nhận việc theo hộ; trigger tạm
   `gan_chan_ho_nhan_viec` là lớp chặn cuối). Bảng `audit_logs`: không viết mã sửa / xóa.
 - Đối tượng nhớ dùng chung (`BoiCanh.tu`, `nghiep_vu.ket_qua_ho`, `theo_doi.tong_hop`, `csdl.nho`): KHÔNG sửa đối tượng trả về. Cả dự án:

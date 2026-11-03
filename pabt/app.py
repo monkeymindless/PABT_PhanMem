@@ -4065,6 +4065,7 @@ class CuaSoChinh(QMainWindow):
         self.cap_nhat_tai_khoan()
         if may_chu.PHIEN is None:
             return None
+        self.dong_bo_bo_don_gia()
         if self.con is not None and not self.chi_doc:       # nhật ký kiểm toán ghi đúng tài khoản vừa đăng nhập
             from . import kiem_toan
             try:
@@ -4083,6 +4084,33 @@ class CuaSoChinh(QMainWindow):
         else:
             self.statusBar().showMessage(f'Xin chào {may_chu.PHIEN.ten_hien}. Dự án dùng chung: nút "Dự án trên máy chủ…".', 15000)
         return cuoi
+
+    def dong_bo_bo_don_gia(self) -> str:
+        """1.0.56: đăng nhập máy chủ -> nhận bộ đơn giá (tài sản, cây trồng, vật nuôi, chính sách, bảng giá đất, hệ số K) do quản trị phát
+        hành; quản trị đăng nhập mà máy chủ chưa có bộ nào -> phát hành bộ của máy này (lần đầu). Lỗi chỉ báo, không chặn đăng nhập."""
+        from . import dong_bo_don_gia as db, quan_tri_bo
+        from .giao_dien import con_tro_cho, thong_bao_noi
+        chu, loai = '', 'tin'
+        try:
+            with con_tro_cho():
+                if quan_tri_bo.la_quan_tri_may_chu() and db.doc_phien_ban() is None:
+                    db.phat_hanh()
+                    chu = 'Đã phát hành bộ đơn giá của máy này lên máy chủ (các máy khác nhận khi đăng nhập).'
+                else:
+                    kq = db.nhan()
+                    if kq:
+                        chu = f'Đã nhận {db.mo_ta(kq)} từ máy chủ.'
+        except Exception as e:                          # noqa: BLE001 - mất mạng / file đang ghi dở: lần đăng nhập sau nhận lại
+            chu, loai = f'Chưa đồng bộ được bộ đơn giá với máy chủ: {e}', 'canh_bao'
+            from .giao_dien import ghi_loi_log
+            ghi_loi_log(chu)
+        if chu:
+            self.statusBar().showMessage(chu, 15000)
+            try:
+                thong_bao_noi(self, chu, loai)
+            except Exception:                           # noqa: BLE001 - thông báo nổi không được làm hỏng đăng nhập
+                pass
+        return chu
 
     def dang_xuat(self, xac_nhan: bool | None = None):
         if may_chu.PHIEN is None:

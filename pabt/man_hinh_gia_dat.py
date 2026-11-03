@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 
 from . import gia_dat_nq28 as nq
 from .giao_dien import loc_khi_ngung_go
+from .lap_pa import LoiNhap
 from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .tien import vn
 
@@ -119,6 +120,9 @@ def khoi_phuc_bang(cha, xac_nhan=None, hien: bool = True):
                 cha, TEN_UD, 'Bỏ bảng giá đang dùng và trở lại bảng gắn sẵn?') != QMessageBox.StandardButton.Yes:
             return False
     elif not xac_nhan:
+        return False
+    from .man_hinh_don_gia import xin_quyen_sua
+    if not xin_quyen_sua(cha, not hien):                         # 1.0.56: chỉ quản trị đổi bảng giá đất
         return False
     nq.xoa_thay()
     if hien:
@@ -465,6 +469,10 @@ class KhungCapNhatGiaDat(QWidget):
             return None
         bo_sung = self.cb_cach.currentData() == 'bo_sung'
         xs = ', '.join(dict.fromkeys(r['xa'] for r in self.dong))
+        from .man_hinh_don_gia import xin_quyen_sua
+        if not xin_quyen_sua(self, self.im_lang):               # 1.0.56: chỉ quản trị sửa bảng giá đất
+            self._bao('canh_bao', 'Chưa ghi: cần quyền quản trị bộ đơn giá.')
+            return None
         if not self.im_lang:
             from .thong_bao import TEN_UD
             hoi = (f'Bổ sung {len(self.dong)} dòng của {xs} vào bảng giá đang dùng?\nĐịa bàn trùng tên được thay, các địa bàn khác giữ '
@@ -479,7 +487,7 @@ class KhungCapNhatGiaDat(QWidget):
                 return None
         try:
             ra = ap_dung(self.dong, self.van_ban, self.nguon, bo_sung=bo_sung)
-        except (nq.LoiBangGia, OSError) as e:
+        except (nq.LoiBangGia, LoiNhap, OSError) as e:
             self._bao('canh_bao', str(e))
             return None
         self._bao('tin', 'Đã ghi. Bảng giá đang dùng: ' + ', '.join(ra) + f' ({len(nq.tat_ca())} dòng).')

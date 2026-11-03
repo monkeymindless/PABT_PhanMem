@@ -5,10 +5,12 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QMessageBox,
-                               QPlainTextEdit, QTableWidget, QTableWidgetItem, QVBoxLayout)
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QMessageBox,
+                               QPlainTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from . import nhap_don_gia as ndg
+from . import phan_tich_ai_don_gia as pai
+from . import quy_dinh_van_ban as qvb
 from .lap_pa import LoiNhap
 from .giao_dien import vua_dong
 from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
@@ -28,6 +30,9 @@ RONG_COT = (50, 100, 380, 70, 120, 140, 180, 90, 170)
 CACH_CAP_NHAT = (('Bổ sung, sửa đổi: thêm mục mới, đổi giá - các mục khác của bộ đơn giá giữ nguyên', False),
                  ('Thay cả nhóm theo văn bản này: đổi tên, quy cách; bỏ mục không còn trong văn bản', True))
 KHONG_VB_CU = '(Không đánh dấu văn bản nào hết hiệu lực)'
+# 1.0.56 (người dùng 03/11/2026: "tự động tick vào ô có nội dung thay đổi… hạn chế để người dùng phải tự chọn từng dòng"): bộ lọc bảng
+HIEN = (('Dòng cần xử lý: mới, đổi giá, đổi tên / quy cách, bỏ, cần xem lại', 'can'), ('Tất cả các dòng', 'tat_ca'))
+HIEN_TAT_CA_DUOI = 60            # văn bản ít dòng hơn: mặc định hiện tất cả (không cần lọc)
 
 
 def mo_ta_van_ban(vb: dict) -> str:
@@ -64,12 +69,26 @@ class HopNhapDonGia(QDialog):
             raise ndg.LoiKhongCoGia('Không tìm thấy đơn giá nào trong file: không có bảng (cột Tên, ĐVT, Đơn giá) và không có câu '
                                     'ghi giá dạng "<tên> … <số> đồng/<đơn vị>".' +
                                     ('\n\n' + '\n'.join(xem_van[:10]) if xem_van else ''))
+        # 1.0.56: quy định cách tính trong LỜI VĂN các điều khoản + dòng quy tắc của bảng (quy_dinh_van_ban)
+        quy_dinh = qvb.trich_quy_dinh(dong, nhom_vb, quy_tac)
         super().__init__(parent)
+        self.quy_dinh = quy_dinh
+        self.dong = dong
+        self.ket_qua_ai = None                          # 1.0.56: kết quả phân tích AI (tùy chọn) - áp lại sau mỗi lần so khớp
         self.tu_loi_van = tu_loi_van
         self.scan = bool(getattr(dong, 'scan', False))   # dòng đọc bằng nhận dạng chữ: chặn giá nghi đọc sai, không chọn sẵn mục "bỏ"
         self.ds = ds
         self.van_ban = vb
         self.da_co = ndg.da_co(vb.get('so_hieu', ''))
+        # văn bản đã có: file có gồm đủ các văn bản sửa đổi của nhóm đang dùng không (bản hợp nhất "48 được sửa đổi bởi 66") - gồm đủ thì
+        # giá trong file không cũ hơn bộ đơn giá: dòng đổi giá chọn sẵn được (trước 1.0.56: văn bản đã có luôn bỏ chọn dòng đổi giá)
+        self.chua_gom = []
+        if self.da_co:
+            try:
+                self.chua_gom = qvb.van_ban_chua_gom(dong, vb, set(ndg.pham_vi_thay_the(ds, None)) or {nhom_vb or 3})
+            except Exception:                           # noqa: BLE001 - không đọc được bộ đơn giá: coi như chưa gồm (an toàn)
+                self.chua_gom = ['(không đọc được danh sách văn bản của bộ đơn giá)']
+        self.da_co_cu = self.da_co and bool(self.chua_gom)
         self.ket_qua = None
         self.nguon = nguon or Path(str(file or 'Clipboard')).name
         self.setWindowTitle(f'Cập nhật đơn giá từ {self.nguon}')
@@ -82,10 +101,13 @@ class HopNhapDonGia(QDialog):
             l_vb.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             lo.addWidget(l_vb)
         canh = []
-        if self.da_co:
-            canh.append('Văn bản này ĐÃ CÓ trong danh sách văn bản của bộ đơn giá. Giá có thể đã được văn bản ban hành sau sửa đổi: '
-                        'các dòng ĐỔI GIÁ để trống ô "Dùng" (áp dụng lại sẽ ghi đè giá mới bằng giá cũ) - chỉ chọn khi chắc chắn. '
-                        'Mục MỚI (chưa có trong danh mục) vẫn được chọn.')
+        if self.da_co_cu:
+            canh.append('Văn bản này ĐÃ CÓ trong danh sách văn bản của bộ đơn giá và KHÔNG nhắc tới văn bản sửa đổi đang dùng: '
+                        + '; '.join(self.chua_gom[:4]) + ' - giá trong file có thể cũ hơn: các dòng ĐỔI GIÁ để trống ô "Dùng" (áp '
+                        'dụng lại sẽ ghi đè giá mới bằng giá cũ) - chỉ chọn khi chắc chắn. Mục MỚI vẫn được chọn.')
+        elif self.da_co:
+            canh.append('Văn bản này ĐÃ CÓ trong bộ đơn giá; file gồm đủ các văn bản sửa đổi của nhóm đang dùng (bản hợp nhất / cùng văn '
+                        'bản) - các dòng thay đổi được CHỌN SẴN.')
         if so_nhom:
             so_loai = len({m.ten_loai for m in ds if m.ten_loai})
             canh.append(f'Bảng giá cây lâm nghiệp theo nhóm loài: {so_nhom - len(khong_tach)} nhóm đã tách thành {so_loai} loài, mỗi '
@@ -151,6 +173,39 @@ class HopNhapDonGia(QDialog):
         dat_kieu_theo_tong(self.lb_canh_thay, 'QLabel { color: #B71C1C; background: #FFEBEE; padding: 6px; border-radius: 4px; }')
         lo.addWidget(self.lb_canh_thay)
         self.lb_canh_thay.setVisible(False)
+        hang_loc = QHBoxLayout()
+        n = QLabel('Hiện:')
+        n.setProperty('vai', 'nhan')
+        hang_loc.addWidget(n)
+        self.cb_hien = QComboBox()
+        for chu_, k_ in HIEN:
+            self.cb_hien.addItem(chu_, k_)
+        self.cb_hien.setCurrentIndex(0 if len(ds) >= HIEN_TAT_CA_DUOI else 1)
+        self.cb_hien.setToolTip('Văn bản vài nghìn dòng mà chỉ vài dòng thay đổi: chỉ hiện các dòng cần xem / cần cập nhật.')
+        self.cb_hien.currentIndexChanged.connect(lambda _: self._loc())
+        hang_loc.addWidget(self.cb_hien, 1)
+        self.b_chon_doi = QPushButton('Chọn mọi dòng thay đổi')
+        self.b_chon_doi.setToolTip('Đánh dấu "Dùng" mọi dòng mới / đổi giá / đổi tên, quy cách / bỏ (kể cả dòng giá cần xem lại của bản '
+                                   'scan - đối chiếu trước khi áp dụng)')
+        self.b_chon_doi.clicked.connect(lambda: self.chon_theo(True))
+        self.b_bo_chon = QPushButton('Bỏ chọn tất cả')
+        self.b_bo_chon.clicked.connect(lambda: self.chon_theo(False))
+        hang_loc.addWidget(self.b_chon_doi)
+        hang_loc.addWidget(self.b_bo_chon)
+        self.b_ai = QPushButton('Kiểm tra bằng AI…')
+        ok_ai, ly_do_ai = pai.dung_duoc()
+        self.b_ai.setToolTip('AI (Claude) đọc TOÀN VĂN văn bản như một cán bộ thẩm định: xác minh tên / ĐVT / đơn giá các dòng cần xem, '
+                             'tìm thêm quy định cách tính trong lời văn, quan hệ sửa đổi / thay thế. Chỉ gửi chữ của văn bản đơn giá '
+                             '(văn bản công khai) - không gửi dữ liệu dự án / hộ dân. Không tự đổi đơn giá: dòng AI đọc khác bị bỏ chọn '
+                             'để đối chiếu.' + ('' if ok_ai else f'\n\n{ly_do_ai}'))
+        self.b_ai.setEnabled(ok_ai)
+        self.b_ai.clicked.connect(lambda: self.phan_tich_ai())
+        hang_loc.addWidget(self.b_ai)
+        lo.addLayout(hang_loc)
+        self.lb_ai = QLabel()
+        self.lb_ai.setWordWrap(True)
+        lo.addWidget(self.lb_ai)
+        self.lb_ai.setVisible(False)
         self.bang = QTableWidget(0, len(COT))
         self.bang.setHorizontalHeaderLabels(list(COT))
         self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -168,14 +223,18 @@ class HopNhapDonGia(QDialog):
             lo.addWidget(o)
         self.xem_van = xem_van
         self.quy_tac = quy_tac
-        if quy_tac:
-            o = QPlainTextEdit('\n'.join('• ' + x for x in quy_tac))
-            o.setReadOnly(True)
-            o.setMaximumHeight(110)
-            lo.addWidget(QLabel(f'Quy định cách tính trong văn bản ({len(quy_tac)} dòng, không có đơn giá - phần mềm không tạo mục; '
-                                'áp dụng khi lập phương án):'))
-            lo.addWidget(o)
-        self.o_quy_tac = o if quy_tac else None
+        # quy định cách tính: khung luôn dựng (AI có thể thêm quy định khi văn bản ban đầu không có), ẩn khi trống
+        self.lb_qd = QLabel()
+        self.lb_qd.setWordWrap(True)
+        lo.addWidget(self.lb_qd)
+        self.o_quy_tac = QPlainTextEdit()
+        self.o_quy_tac.setReadOnly(True)
+        self.o_quy_tac.setMaximumHeight(130)
+        lo.addWidget(self.o_quy_tac)
+        self.o_luu_qd = QCheckBox()
+        self.o_luu_qd.setChecked(True)
+        lo.addWidget(self.o_luu_qd)
+        self._ve_quy_dinh()
         if vb.get('can_xem'):
             o = QPlainTextEdit('\n'.join(vb['can_xem']))
             o.setReadOnly(True)
@@ -225,8 +284,58 @@ class HopNhapDonGia(QDialog):
             self.cb_vb_cu.setCurrentIndex(1)
         self.cb_vb_cu.blockSignals(False)
 
+    def _ve_quy_dinh(self):
+        qd = self.quy_dinh
+        self.o_quy_tac.setPlainText('\n'.join('• ' + (f'[{q["dieu"]}] ' if q['dieu'] else '') + ('(AI) ' if q['nguon'] == 'AI' else '')
+                                               + q['chu'] for q in qd))
+        so_bang = sum(1 for q in qd if q['nguon'] == 'bảng')
+        so_ai = sum(1 for q in qd if q['nguon'] == 'AI')
+        self.lb_qd.setText(f'Quy định cách tính trong văn bản: {len(qd)} quy định ({so_bang} trong bảng giá, '
+                           f'{len(qd) - so_bang - so_ai} trong lời văn các điều khoản' + (f', {so_ai} do AI tìm thêm' if so_ai else '')
+                           + ') - không có đơn giá, phần mềm không tạo mục:')
+        self.o_luu_qd.setText(f'Lưu {len(qd)} quy định vào bộ đơn giá (thẻ "Quy định cách tính"; mục có tên khớp phạm vi quy định được '
+                              'ghi thêm vào ghi chú; hiện ở Giải trình cách tính khi lập phương án)')
+        for w in (self.lb_qd, self.o_quy_tac, self.o_luu_qd):
+            w.setVisible(bool(qd))
+
+    def phan_tich_ai(self, khach=None, xac_nhan=None) -> str:
+        """1.0.56: gửi toàn văn văn bản cho AI kiểm tra (pai). Trả chữ tóm tắt ('' = không chạy / lỗi). khach: client giả lập (kiểm thử)."""
+        nd, so_xm, cat = pai.noi_dung_gui(self.dong, self.ds, self.can_xu_ly, self.o_nhom.currentData() or 0)
+        if xac_nhan is None:
+            xac_nhan = self.im_lang or QMessageBox.question(
+                self, TEN_UD, f'Gửi chữ văn bản đơn giá ({len(nd):,} ký tự'.replace(',', '.') + f', {so_xm} dòng cần xác minh) cho AI '
+                '(Claude) kiểm tra?\n\nChỉ gửi nội dung văn bản đơn giá (văn bản công khai), không gửi dữ liệu dự án / hộ dân. Có thể '
+                'mất vài phút với văn bản dài.') == QMessageBox.StandardButton.Yes
+        if not xac_nhan:
+            return ''
+        try:
+            if khach is not None or self.im_lang:
+                kq = pai.goi_ai(nd, khach=khach)
+            else:
+                from .giao_dien import chay_nen_huy
+                kq = chay_nen_huy(self, lambda: pai.goi_ai(nd), 'AI đang đọc toàn văn văn bản và xác minh các dòng…',
+                                  gioi_han=pai.GIOI_HAN_GIAY + 30)
+                if kq is None:
+                    return ''
+        except pai.LoiAI as e:
+            if not self.im_lang:
+                QMessageBox.warning(self, TEN_UD, str(e))
+            return ''
+        self.ket_qua_ai = pai.gan_khoa(self.ds, kq)
+        them_qd = pai.gop_quy_dinh(self.quy_dinh, kq)
+        self._ve_quy_dinh()
+        self._dem_ai = {'dung': 0, 'sai': 0, 'khong_thay': 0}
+        self.khop()
+        chu = pai.tom_tat(kq, self._dem_ai, them_qd, so_xm, cat)
+        from .giao_dien import dat_trang_thai
+        dat_trang_thai(self.lb_ai, 'tin', chu)
+        self.lb_ai.setVisible(True)
+        return chu
+
     def khop(self):
         ndg.so_khop(self.ds, self.o_nhom.currentData() or None, thay_the=self.thay_the(), scan=self.scan)
+        if self.ket_qua_ai:
+            self._dem_ai = pai.ap_xac_minh(self.ds, self.ket_qua_ai)
         nhom_bang = self.o_nhom.currentData() or 0
         self._dang_ve = True
         self.bang.setRowCount(len(self.ds))
@@ -235,7 +344,7 @@ class HopNhapDonGia(QDialog):
             chk.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
             # văn bản đã có: chỉ bỏ chọn sẵn dòng ĐỔI GIÁ (có thể ghi đè giá văn bản sau đã sửa); mục mới không ghi đè gì - vẫn chọn
             # (QĐ 31/2025 có tên trong danh sách văn bản nhưng bộ đơn giá chưa có mục vật nuôi nào)
-            dung = m.chon and m.trang_thai != 'giữ nguyên' and not (self.da_co and m.trang_thai == 'cập nhật')
+            dung = m.chon and m.trang_thai != 'giữ nguyên' and not (self.da_co_cu and m.trang_thai == 'cập nhật')
             chk.setCheckState(Qt.CheckState.Checked if dung else Qt.CheckState.Unchecked)
             self.bang.setItem(i, 0, chk)
             # cách khớp ngoài tên (đặc trưng / dòng chung / khoảng giá) + độ giống: người dùng chỉ cần soát các dòng này
@@ -288,6 +397,35 @@ class HopNhapDonGia(QDialog):
                          'trang) và đúng nhóm trước khi áp dụng.')
         self.lb_canh_thay.setText(canh)
         self.lb_canh_thay.setVisible(bool(canh))
+        self._loc()
+
+    @staticmethod
+    def can_xu_ly(m) -> bool:
+        """Dòng người dùng cần nhìn: có thay đổi để ghi, giá bản scan cần xem lại, khớp tên gần đúng, tên văn bản khác chữ bộ đơn giá."""
+        return m.trang_thai in ndg.TRANG_THAI_GHI or bool(m.nghi_gia) or bool(m.khop_gan) or \
+            bool(m.ten_cu and m.ten_cu != (m.ten_thay or m.ten))
+
+    def _loc(self):
+        """Ẩn / hiện dòng theo ô "Hiện" (không đổi lựa chọn "Dùng")."""
+        chi_can = self.cb_hien.currentData() == 'can'
+        self.bang.setUpdatesEnabled(False)
+        try:
+            for i, m in enumerate(self.ds):
+                self.bang.setRowHidden(i, chi_can and not self.can_xu_ly(m))
+        finally:
+            self.bang.setUpdatesEnabled(True)
+
+    def chon_theo(self, bat: bool) -> int:
+        """bat: đánh dấu "Dùng" mọi dòng có thay đổi để ghi; False: bỏ chọn mọi dòng. Trả số dòng đổi trạng thái đánh dấu."""
+        n = 0
+        for i, m in enumerate(self.ds):
+            it = self.bang.item(i, 0)
+            moi = bat and m.trang_thai in ndg.TRANG_THAI_GHI
+            m.chon = moi
+            if (it.checkState() == Qt.CheckState.Checked) != moi:
+                it.setCheckState(Qt.CheckState.Checked if moi else Qt.CheckState.Unchecked)
+                n += 1
+        return n
 
     @staticmethod
     def _chu_thich(m) -> str:
@@ -337,7 +475,8 @@ class HopNhapDonGia(QDialog):
     def accept(self):
         for i, m in enumerate(self.ds):
             m.chon = self.bang.item(i, 0).checkState() == Qt.CheckState.Checked
-        if not any(m.chon and m.trang_thai in ndg.TRANG_THAI_GHI for m in self.ds):
+        luu_qd = self.quy_dinh if self.o_luu_qd is not None and self.o_luu_qd.isChecked() else None
+        if not any(m.chon and m.trang_thai in ndg.TRANG_THAI_GHI for m in self.ds) and not luu_qd:
             if not self.im_lang:
                 QMessageBox.warning(self, TEN_UD, 'Chưa chọn dòng nào mới, đổi giá, đổi quy cách hoặc bỏ để cập nhật.')
             return
@@ -349,14 +488,16 @@ class HopNhapDonGia(QDialog):
         vb_cu = [self.cb_vb_cu.currentData()] if self.thay_the() and self.cb_vb_cu.currentData() is not None else []
         try:
             self.ket_qua = ndg.ap_dung(self.ds, self.o_nhom.currentData() or None, self.nguon, van_ban=self.van_ban,
-                                       van_ban_cu=vb_cu)
+                                       van_ban_cu=vb_cu, quy_dinh=luu_qd)
         except LoiNhap as e:
             if not self.im_lang:
                 QMessageBox.warning(self, TEN_UD, str(e))
             return
         if not self.im_lang:
             kq = self.ket_qua
-            them = ''.join(f', {kq[k]} {chu}' for k, chu in (('so_quy_cach', 'mục đổi tên / quy cách'), ('so_bo', 'mục bỏ')) if kq.get(k))
+            them = ''.join(f', {kq[k]} {chu}' for k, chu in (('so_quy_cach', 'mục đổi tên / quy cách'), ('so_bo', 'mục bỏ'),
+                                                              ('so_quy_dinh', 'quy định cách tính'),
+                                                              ('so_muc_ghi_chu', 'mục được ghi chú quy định')) if kq.get(k))
             QMessageBox.information(self, TEN_UD, f'Đã tạo bộ đơn giá phiên bản {kq["phien_ban"]}: '
                                                   f'{kq["so_moi"]} mục mới, {kq["so_cap_nhat"]} mục đổi giá{them}.')
         super().accept()

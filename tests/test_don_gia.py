@@ -266,7 +266,7 @@ class TestManHinhMoi(CoSo):
         d = HopBoDonGia(None, con)
         d.im_lang = True
         # thẻ nhà / cây trồng / VẬT NUÔI riêng (vật nuôi QĐ 31/2025 không lẫn trong 5.500 dòng cây trồng)
-        self.assertEqual(d.the.count(), 7)                              # 0.9.69: bỏ thẻ Quy ước giá tương đương
+        self.assertEqual(d.the.count(), 8)                              # 0.9.69: bỏ thẻ Quy ước; 1.0.56: thêm Quy định cách tính
         self.assertNotIn('Quy ước', ' '.join(d.the.tabText(i) for i in range(d.the.count())))
         self.assertEqual([d.the.tabText(i).rsplit(' (', 1)[0] for i in range(3)], ['Nhà, công trình', 'Cây trồng', 'Vật nuôi'])
         self.assertGreater(d.the.widget(1).rowCount(), 5000)
