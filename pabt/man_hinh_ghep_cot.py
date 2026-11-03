@@ -2,6 +2,7 @@
 tên, địa chỉ, tờ, thửa, diện tích... bằng tay khi phần mềm không tự nhận ra (hoặc nhận chưa đúng). Xem trước bảng gốc và kết quả (số hộ,
 số thửa) ngay khi đổi. Cột file không có thì để "(không có)" - phần mềm bỏ qua."""
 from __future__ import annotations
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton,
@@ -17,8 +18,8 @@ TRUONG = [('ho_ten', 'Họ và tên'), ('dia_chi', 'Địa chỉ'), ('so_cccd', 
           ('stt', 'STT (để gộp dòng gãy)')]
 SO_DONG_XEM = 40
 SO_COT_XEM = 40
-MAU_DU_LIEU = QColor('#EEF6FF')
-MAU_CHON = QColor('#FFF3C4')
+MAU_DU_LIEU = mau_o_theo_tong(globals(), MAU_DU_LIEU='#EEF6FF')[0]
+MAU_CHON = mau_o_theo_tong(globals(), MAU_CHON='#FFF3C4')[0]
 
 
 class HopGhepCot(QDialog):

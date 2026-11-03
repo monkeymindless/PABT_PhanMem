@@ -7,6 +7,15 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.54', '03/11/2026', (
+        'Tông nền Tối / Ấm / Titan: nền ô trạng thái các bảng (xanh = khớp, cam = lệch, vàng = cần xem) và các dải, thẻ, khung viền riêng của '
+        'từng màn hình đổi màu theo tông - không còn ô nền sáng dưới chữ sáng.',
+        'Bấm A+ / A− khi đang ở tỷ lệ khác 100%: dải, thẻ, nhãn đổi màu sau khi cửa sổ đã mở vẫn giữ đúng cỡ chữ; đổi tỷ lệ / đổi tông nhanh '
+        'hơn (phần đang ẩn áp kiểu khi hiện ra).',
+        'Cỡ chữ thống nhất một thang (11 - 12 - 13 - 14 - 16 - 18 px): huy hiệu, nhãn phụ trên thẻ số liệu không còn chữ 10 px khó đọc.',
+        'Trình đọc màn hình (Narrator): ô nhập đọc đúng tên theo nhãn đứng cạnh ("Họ và tên", "Số CCCD"…). Bảng mật độ cây, chẩn đoán, '
+        'nhập chi tiết, quy trình: dòng cao vừa chữ.',
+    )),
     ('1.0.53', '03/11/2026', (
         'Cập nhật đơn giá từ văn bản (Word, PDF, bản scan): dòng con "- Ống 1 m Φ1m" giữ tên dòng cha, khớp mục cũ theo cỡ Φ, kết cấu, '
         'số đo, ĐVT dù tên văn bản ghi khác bộ đơn giá - không còn báo nhầm "mục mới". Dòng giá chung ("Trụ cổng, bờ kè và các loại tài sản '

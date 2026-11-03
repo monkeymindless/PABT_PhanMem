@@ -27,7 +27,7 @@ QLabel#xb_buoc { color: #475569; background: #F1F5F9; border: 1px solid #E2E8F0;
     font-size: 12px; font-weight: 600; }
 QLabel#xb_buoc[dang="1"] { color: #FFFFFF; background: #1E3A5F; border-color: #1E3A5F; }
 QLabel#xb_buoc[xong="1"] { color: #1E3A5F; background: #EFF6FF; border-color: #BFDBFE; }
-QLabel#xb_tieu_de { font-size: 15px; font-weight: 700; color: #0F172A; }
+QLabel#xb_tieu_de { font-size: 16px; font-weight: 700; color: #0F172A; }
 QLabel#xb_mo_ta { font-size: 12px; color: #475569; }
 '''
 MUC_KIEM = {True: ('dat', 'Đạt'), None: ('canh_bao', 'Xem lại'), False: ('loi', 'Thiếu')}

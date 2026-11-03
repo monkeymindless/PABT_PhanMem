@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
 from .tien import D, so_luong_vn, so_vn, vn, vn_gon
 from .giao_dien import TOKEN, chuyen_trang_muot, chu_hien, con_tro_cho, dat_kieu_theo_tong, dung_ve, phong_so
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .thong_bao import TEN_UD, chu_loi
 
 # doi_chieu, nhap_excel, nhap_tho (kéo theo openpyxl ~0,2 giây - 60% thời gian nạp mã lúc mở phần mềm) nạp khi dùng tới
@@ -23,7 +24,7 @@ MO_TA_UD = 'Lập phương án bồi thường, hỗ trợ'      # tiêu đề c
 # danh sách hộ ở màn hình chính: gọn (0.9.12). Tiền từng mục, quyết định, chi trả, bàn giao, ghi chú: menu "Bảng tổng hợp",
 # "Theo dõi tiến độ" (man_hinh_theo_doi)
 COT = ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²)', 'Trạng thái', 'Ghi chú']
-MAU_LECH = QColor('#F8CBAD')          # vàng cam: hộ lệch so với file Excel đối chiếu
+MAU_LECH = mau_o_theo_tong(globals(), MAU_LECH='#F8CBAD')[0]          # vàng cam: hộ lệch so với file Excel đối chiếu
 COT_SO = {4}
 # cột Trạng thái danh sách hộ (Hybrid Enterprise Navy, 17/10/2026): thanh tiến độ 4 ô bằng ký tự khối Unicode (■ □ - có trong
 # Segoe UI / Arial của Windows 7, KHÔNG phải emoji) + màu theo nấc. Chữ trạng thái và giá trị lọc giữ nguyên (BangHo.dong[r]['o'][5])
@@ -200,7 +201,7 @@ STACK_CUA_TRANG = (0, 1, 5, 2, 3)
 PHIM_NHANH = (('Danh sách hộ', 'Ctrl+1'), ('Dự toán & khái toán', 'Ctrl+2'), ('Bộ đơn giá…', 'Ctrl+3'),
               ('Dự thảo PABT…', 'Ctrl+4'), ('Theo dõi tiến độ', 'Ctrl+5'), ('Tìm nhanh…', 'Ctrl+K'))
 STACK_TONG_HOP, STACK_THEO_DOI, STACK_DU_TOAN, STACK_QUYET_DINH = 1, 2, 3, 5
-XANH, DO, VANG = QColor('#E2EFDA'), QColor('#F8CBAD'), QColor(TOKEN['canh_bao_nhat'])
+XANH, DO, VANG = mau_o_theo_tong(globals(), XANH='#E2EFDA', DO='#F8CBAD', VANG=TOKEN['canh_bao_nhat'])
 # menu trái: nhóm đóng sẵn lần đầu mở phần mềm (sau đó nhớ theo người dùng) - vừa màn hình 1366x768 không phải cuộn
 # 0.9.70 (6 nhóm): nhóm ít dùng hằng ngày đóng sẵn - Khái toán (giai đoạn chuẩn bị đầu tư), Đơn giá, Phê duyệt & bàn giao
 # 0.9.88 (người dùng 15/10/2026): nhóm Đơn giá & bảng giá xuống cuối (6); đóng sẵn 1, 5, 6 - mở sẵn 2, 3, 4 (thao tác hằng ngày)
@@ -2341,7 +2342,7 @@ class CuaSoChinh(QMainWindow):
                  lambda: self._chay_lenh(self.lich_su_cap_nhat)))):
             if i:
                 cham = QLabel('·')
-                cham.setStyleSheet('QLabel { color: #94A3B8; font-size: 14px; font-weight: 700; background: transparent; }')
+                dat_kieu_theo_tong(cham, 'QLabel { color: #94A3B8; font-size: 14px; font-weight: 700; background: transparent; }')
                 chan.addWidget(cham)
             khung, lk = self._lien_ket_icon(ma, chu, ham)
             lk.setToolTip(goi_y)
@@ -2374,7 +2375,7 @@ class CuaSoChinh(QMainWindow):
         from .giao_dien import icon_ky_hieu
         w = QWidget()
         w.setObjectName('trong_gan_day')
-        w.setStyleSheet('QWidget#trong_gan_day { background: transparent; border: 1px dashed #CBD5E1; border-radius: 8px; }')
+        dat_kieu_theo_tong(w, 'QWidget#trong_gan_day { background: transparent; border: 1px dashed #CBD5E1; border-radius: 8px; }')
         v = QVBoxLayout(w)
         v.setContentsMargins(16, 14, 16, 14)
         v.setSpacing(8)
@@ -2391,7 +2392,7 @@ class CuaSoChinh(QMainWindow):
         self.lb_trong = QLabel('Chưa có hồ sơ dự án nào được mở gần đây.\n'
                                "Hãy bấm 'Dự án mới' hoặc 'Mở dự án' phía trên để bắt đầu.")
         self.lb_trong.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lb_trong.setStyleSheet('QLabel { color: #64748B; font-size: 13px; background: transparent; border: 0; }')
+        dat_kieu_theo_tong(self.lb_trong, 'QLabel { color: #64748B; font-size: 13px; background: transparent; border: 0; }')
         v.addWidget(self.lb_trong)
         v.addStretch(1)
         return w

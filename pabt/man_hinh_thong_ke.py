@@ -138,7 +138,7 @@ class HopThongKeDiaChinh(QDialog):
     @staticmethod
     def _tieu_de(chu: str) -> QLabel:
         lb = QLabel(chu)
-        lb.setStyleSheet('QLabel { color: #0F172A; padding-top: 4px; }')
+        dat_kieu_theo_tong(lb, 'QLabel { color: #0F172A; padding-top: 4px; }')
         f = lb.font()
         f.setBold(True)
         lb.setFont(f)

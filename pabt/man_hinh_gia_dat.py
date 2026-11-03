@@ -8,9 +8,10 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 
 from . import gia_dat_nq28 as nq
 from .giao_dien import loc_khi_ngung_go
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .tien import vn
 
-XANH = QColor('#DDEBF7')
+XANH = mau_o_theo_tong(globals(), XANH='#DDEBF7')[0]
 
 
 class HopTraGiaDat(QDialog):

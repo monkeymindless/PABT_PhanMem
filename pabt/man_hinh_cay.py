@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDialog, QDialogBut
 from . import cay_trong as ct
 from . import csdl
 from .giao_dien import loc_khi_ngung_go
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
+from .giao_dien import vua_dong  # noqa: E402
 from .lap_pa import LoiNhap, doc_so, doc_ty_le
 from .nghiep_vu import NGUON_DM
 from .tien import D, KHONG, so_vn, vn
@@ -406,8 +408,8 @@ class HopMatDoNhieuCay(_Hop):
         self.lb.setWordWrap(True)
         self.lb.setTextFormat(Qt.TextFormat.RichText)
         self.lb.setObjectName('ket_qua_mat_do')
-        self.lb.setStyleSheet('QLabel#ket_qua_mat_do { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
-                              'padding: 8px 12px; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel#ket_qua_mat_do { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
+                                    'padding: 8px 12px; }')
         lo = QVBoxLayout(self)
         lo.addLayout(form)
         lo.addWidget(ghi)
@@ -558,8 +560,8 @@ class HopMatDo(_Hop):
         self.lb.setWordWrap(True)
         self.lb.setTextFormat(Qt.TextFormat.RichText)
         self.lb.setObjectName('ket_qua_mat_do')
-        self.lb.setStyleSheet('QLabel#ket_qua_mat_do { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
-                              'padding: 10px 12px; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel#ket_qua_mat_do { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
+                                    'padding: 10px 12px; }')
         self.resize(700, 520)
         form = QFormLayout()
         form.addRow('Cây trồng:', QLabel(f'<b>{d.ten}</b>' + (f'  (mã {d.ma})' if d.ma else '')))
@@ -745,8 +747,8 @@ class HopDienTichXayDung(_Hop):
         self.lb.setWordWrap(True)
         self.lb.setTextFormat(Qt.TextFormat.RichText)
         self.lb.setObjectName('kq_dtxd')
-        self.lb.setStyleSheet('QLabel#kq_dtxd { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
-                              'padding: 10px 12px; font-size: 13px; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel#kq_dtxd { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
+                                    'padding: 10px 12px; font-size: 13px; }')
         self.bang = QTableWidget(0, len(self.COT))
         self.bang.setHorizontalHeaderLabels(self.COT)
         self.bang.verticalHeader().setVisible(False)
@@ -762,7 +764,7 @@ class HopDienTichXayDung(_Hop):
                      'diện tích chiếm đất hay diện tích sàn. Phần vượt diện tích thu hồi: xem xét điều kiện bồi thường (phần ngoài '
                      'ranh thu hồi) theo quy định.')
         ghi.setWordWrap(True)
-        ghi.setStyleSheet('QLabel { color: #4A5B6C; }')
+        dat_kieu_theo_tong(ghi, 'QLabel { color: #4A5B6C; }')
         lo = QVBoxLayout(self)
         lo.addWidget(self.lb)
         lo.addWidget(self.bang, 1)
@@ -799,7 +801,7 @@ class HopDienTichXayDung(_Hop):
                         f.setBold(True)
                         it.setFont(f)
                     self.bang.setItem(r, c, it)
-            self.bang.resizeRowsToContents()
+            vua_dong(self.bang, None, None)
         finally:
             self._dang_ve = False
         vuot = kq['vuot']

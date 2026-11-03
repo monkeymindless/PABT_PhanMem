@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 from . import nhap_don_gia as ndg
 from .lap_pa import LoiNhap
 from .giao_dien import vua_dong
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 from .tien import vn
 from .thong_bao import TEN_UD
 
@@ -103,7 +104,7 @@ class HopNhapDonGia(QDialog):
         if canh:
             l_canh = QLabel('\n'.join('• ' + x for x in canh))
             l_canh.setWordWrap(True)
-            l_canh.setStyleSheet('QLabel { color: #B71C1C; background: #FFEBEE; padding: 6px; border-radius: 4px; }')
+            dat_kieu_theo_tong(l_canh, 'QLabel { color: #B71C1C; background: #FFEBEE; padding: 6px; border-radius: 4px; }')
             lo.addWidget(l_canh)
         self.o_nhom = QComboBox()
         self.o_nhom.addItem('Tự động: theo văn bản, tiêu đề nhóm và từng dòng (tên, ĐVT)', 0)
@@ -147,7 +148,7 @@ class HopNhapDonGia(QDialog):
         self.cb_vb_cu.setVisible(False)
         self.lb_canh_thay = QLabel()
         self.lb_canh_thay.setWordWrap(True)
-        self.lb_canh_thay.setStyleSheet('QLabel { color: #B71C1C; background: #FFEBEE; padding: 6px; border-radius: 4px; }')
+        dat_kieu_theo_tong(self.lb_canh_thay, 'QLabel { color: #B71C1C; background: #FFEBEE; padding: 6px; border-radius: 4px; }')
         lo.addWidget(self.lb_canh_thay)
         self.lb_canh_thay.setVisible(False)
         self.bang = QTableWidget(0, len(COT))

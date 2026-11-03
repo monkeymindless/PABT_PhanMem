@@ -168,7 +168,7 @@ class ThanhTieuDe(QWidget):
         mau = chu if hoat_dong else chu_mo
         self.setStyleSheet(
             f'#thanh_tieu_de {{ background: {nen}; border: 0; border-bottom: 1px solid {vach}; }}'
-            f'#tieu_de_cua_so {{ color: {mau}; font-size: 12.5px; background: transparent; }}')
+            f'#tieu_de_cua_so {{ color: {mau}; font-size: 13px; background: transparent; }}')
         if getattr(self, 'mb', None) is not None:
             self._kieu_menu()
         for b in getattr(self, 'nut_cua_so', {}).values():

@@ -1,10 +1,11 @@
 """Cửa sổ "Đơn giá riêng của dự án": quy ước giá tương đương nhập tay (tài sản đặc biệt của từng dự án) và nhập đơn giá
 thẩm định giá được phê duyệt (file Excel / Word / PDF / CSV). Lưu vào bảng quy_uoc của file dự án (don_gia_rieng)."""
 from __future__ import annotations
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtGui import QBrush
 from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QGridLayout, QHBoxLayout, QInputDialog, QLabel,
                                QLineEdit, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout,
                                QWidget)
@@ -16,7 +17,7 @@ from .thong_bao import TEN_UD
 
 COT_QU = [('ten_thuc_te', 'Tên tài sản thực tế (in ra phương án)', 300), ('ten_tuong_duong', 'Áp giá theo / nguồn giá', 260),
           ('dvt', 'ĐVT', 60), ('don_gia', 'Đơn giá (đ)', 100), ('can_cu', 'Căn cứ', 300), ('nguon', 'Thuộc', 100)]
-MAU_RIENG, MAU_TD = QColor('#E8F5E9'), QColor('#E3F2FD')
+MAU_RIENG, MAU_TD = mau_o_theo_tong(globals(), MAU_RIENG='#E8F5E9', MAU_TD='#E3F2FD')
 
 
 class HopDonGiaRieng(QDialog):

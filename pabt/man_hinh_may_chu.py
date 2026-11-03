@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import may_chu
 from .may_chu import LoiMayChu
 from .giao_dien import con_tro_cho
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 from .thong_bao import chu_loi
 
 
@@ -90,7 +91,7 @@ class HopDangNhap(_Hop):
         f.addRow('Mật khẩu:', self.o_mk)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
-        self.lb.setStyleSheet('QLabel { color: #B83A3A; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel { color: #B83A3A; }')
         b_dn = QPushButton('Đăng nhập')
         b_dn.setDefault(True)
         b_dn.setProperty('nhom', 'luu')
@@ -107,7 +108,7 @@ class HopDangNhap(_Hop):
         ghi = QLabel('Đăng nhập ở máy bất kỳ trong mạng nội bộ: phần mềm mở lại dự án đang làm dở. Không có máy chủ (mất mạng, '
                      'đi hiện trường) thì chọn "Làm việc offline" - mọi chức năng nhập liệu vẫn dùng bình thường.')
         ghi.setWordWrap(True)
-        ghi.setStyleSheet('QLabel { color: #5B6B7A; }')
+        dat_kieu_theo_tong(ghi, 'QLabel { color: #5B6B7A; }')
         lo = QVBoxLayout(self)
         lo.addWidget(tieu)
         lo.addWidget(self.lb_may_chu)

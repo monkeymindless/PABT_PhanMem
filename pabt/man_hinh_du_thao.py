@@ -548,8 +548,8 @@ class KhungDuThao(QWidget):
         tach = self.tach = QSplitter(Qt.Orientation.Vertical)
         tach.setChildrenCollapsible(False)
         tach.setHandleWidth(10)
-        tach.setStyleSheet('QSplitter::handle:vertical { background: #CBD5E1; margin: 3px 38%; border-radius: 2px; }'
-                           'QSplitter::handle:vertical:hover { background: #94A3B8; }')
+        dat_kieu_theo_tong(tach, 'QSplitter::handle:vertical { background: #CBD5E1; margin: 3px 38%; border-radius: 2px; }'
+                                 'QSplitter::handle:vertical:hover { background: #94A3B8; }')
         tach.addWidget(self._trang(self.bang_ny, []))   # nút "Xuất bảng niêm yết": hàng nút đợt phía trên (15/10/2026)
         tach.addWidget(self._trang(self.bang_vm, [
             ('Đánh dấu pháp lý hộ đang chọn', self._phap_ly),

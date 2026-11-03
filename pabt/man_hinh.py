@@ -23,7 +23,7 @@ from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
 # in_an (kéo theo openpyxl ~0,2 giây) chỉ nạp trong hộp In / Xuất: mở dự án, cửa sổ lập phương án không phải chờ
 from .nghiep_vu import DA_LAP_LUU, MUC_KHOAN, MUC_VN, NGUON_TAY, NGUON_TD, TEN_MUC, so_muc
 from .tien import D, KHONG, lam_tron, so_luong_vn, so_vn, vn
-from .giao_dien import but_so, con_tro_cho, kieu_o_canh_bao, loc_khi_ngung_go, mau_so, mau_theo_tong, phong_so, qmau_theo_tong
+from .giao_dien import but_so, con_tro_cho, kieu_o_canh_bao, loc_khi_ngung_go, mau_so, mau_theo_tong, phong_so, qmau_theo_tong, vua_dong
 from .thong_bao import TEN_UD, chu_loi
 
 XAM, VANG, CAM = QColor('#F4F6F8'), QColor('#FFF6D6'), QColor('#FDEBDD')
@@ -812,7 +812,7 @@ class BangMuc(QWidget):
                 it = QTableWidgetItem(v)
                 it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang_dt.setItem(r, c, it)
-        self.bang_dt.resizeRowsToContents()
+        vua_dong(self.bang_dt, None, None)
         if not ds:
             self.man.thong_bao('Mục 1 chưa có thửa đất nông nghiệp: nhập mục 1 trước, hoặc gõ số lượng / đơn giá ở bảng sau khi thêm.')
 

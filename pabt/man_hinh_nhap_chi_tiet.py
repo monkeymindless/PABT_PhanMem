@@ -1,6 +1,7 @@
 """Hộp thoại "Nhập phương án chi tiết từ Excel": xem các sheet hộ đọc được, chọn sheet cần nhập, cách xử lý hộ đã có trong
 dự án. Việc đọc / ghi nằm ở nhap_chi_tiet; hộp thoại chỉ cho chọn."""
 from __future__ import annotations
+from .giao_dien import vua_dong  # noqa: E402
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QDialog, QHBoxLayout, QHeaderView, QLabel, QPushButton,
@@ -63,7 +64,7 @@ class HopNhapChiTiet(QDialog):
         for c, w in enumerate((58, 70, 230, 400, 140)):
             self.bang.setColumnWidth(c, w)
         hd.setSectionResizeMode(len(COT) - 1, QHeaderView.ResizeMode.Stretch)
-        self.bang.resizeRowsToContents()
+        vua_dong(self.bang, None, None)
         self.bang.itemChanged.connect(lambda *_: self._dem())
         # 1.0.04: tô dòng lỗi (đỏ) / cần xem lại (vàng), ô lọc nhanh trên bảng xem trước
         from .giao_dien import gan_o_loc_bang, to_dong_bang

@@ -340,7 +340,7 @@ QSS_THE_CHAO = (
       'QToolButton#the_chao_nut { color: #0F172A; font-family: "Segoe UI"; font-size: 14.5pt; font-weight: 700; }'
       'QToolButton#the_chao_nut:disabled { color: #94A3B8; }'
       'QLabel[vai="phim_the_chao"] { background: rgba(15, 23, 42, 0.06); color: #475569; border: 1px solid #E2E8F0; '
-      'border-radius: 8px; padding: 0 6px; font-size: 10px; font-weight: 700; }'
+      'border-radius: 8px; padding: 0 6px; font-size: 11px; font-weight: 700; }'
 )
 
 
@@ -361,7 +361,7 @@ def _qss_menu_trai(ten: str | None = None) -> str:
     QFrame[vai="menu_trai"] QScrollBar::handle:vertical {{ background: {m['cuon']}; border-radius: 3px; min-height: 24px; }}
     QFrame#vach_menu {{ color: {m['vien']}; margin: 2px 6px; }}
     QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 8px; margin: 0 {LE_VIEN_MENU}px;
-        padding: 2px 6px 2px 10px; text-align: left; font-weight: 600; font-size: 12.5px; color: {m['chu']}; }}
+        padding: 2px 6px 2px 10px; text-align: left; font-weight: 600; font-size: 13px; color: {m['chu']}; }}
     QToolButton[menu="1"]:focus {{ outline: none; border: 2px solid {m['vach_chon']}; }}
     QToolButton[menu="1"]:hover {{ background: {m['re']}; color: {m['chon_chu']}; }}
     QToolButton[menu="1"]:pressed {{ background: {m['chon_nen']}; }}
@@ -387,17 +387,17 @@ def _qss_the_so() -> str:
     QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #1E3A5F; border-radius: 6px; }
     QWidget[vai="the_so"]:hover { background: #F8FAFC; border-color: #CBD5E1; }
     QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
-    QLabel[vai="so_the"] { font-family: "Consolas"; font-size: 17px; font-weight: 700; color: #0F172A; }
-    QLabel[vai="nhan_the"] { color: #475569; font-size: 11.5px; font-weight: 600; }
+    QLabel[vai="so_the"] { font-family: "Consolas"; font-size: 16px; font-weight: 700; color: #0F172A; }
+    QLabel[vai="nhan_the"] { color: #475569; font-size: 12px; font-weight: 600; }
     QLabel[vai="phu_the"] { color: #64748B; font-size: 11px; font-weight: 700; }
-    QLabel[vai="huy_hieu_the"] { background: #F1F5F9; color: #5B6B82; border-radius: 4px; padding: 0 6px; font-size: 10.5px;
+    QLabel[vai="huy_hieu_the"] { background: #F1F5F9; color: #5B6B82; border-radius: 4px; padding: 0 6px; font-size: 11px;
         font-weight: 700; }
     QWidget[vai="the_so"] QLabel[vai="huy_hieu_the"][co="1"] { background: #DBEAFE; color: #2F5DB5; }
     QWidget[vai="the_so"] QLabel[vai="huy_hieu_the"][co="ha"] { background: #FEF3C7; color: #7C4A12; }
     QLabel[vai="vach_the"] { background: #E2E8F0; }
     QWidget[vai="the_so"] QLabel[vai="vach_the"] { background: #E2E8F0; }
     QLabel[vai="dia_chinh_the"] { font-size: 11px; font-weight: 700; color: #1E293B; margin: 0; padding: 0; }
-    QLabel[vai="dt_the"] { font-size: 10.5px; font-weight: 600; color: #334155; margin: 0; padding: 0; }
+    QLabel[vai="dt_the"] { font-size: 11px; font-weight: 600; color: #334155; margin: 0; padding: 0; }
     QLabel#lb_bo_dem_excel { background: #F0FDF4; border: 1px solid #2F7D54; color: #276348; font-weight: 700;
         border-radius: 4px; padding: 2px 10px; }
     QLabel#lb_bo_dem_excel:hover { background: #DCFCE7; }
@@ -571,7 +571,11 @@ TOI_NEN = {'#F4F6F8': '#162033', '#FFF6D6': '#3B2F12', '#FDEBDD': '#3A2414', '#F
            '#F1F5F9': '#162033', '#EEF2F7': '#24324A', '#E2E8F0': '#2A3A52', '#EFF6FF': '#1E3A5F', '#F0F6FF': '#1E3A5F',
             '#DBEAFE': '#1E40AF', '#F0F9FF': '#0C2A3F', '#EEF5FC': '#24324A', '#DCEBFA': '#1E40AF', '#FAFBFC': '#0F172A', '#F8F9FA': '#0B1120',
            '#F8F8F8': '#0B1120', '#F3F6FA': '#0B1120', '#FFF2CC': '#2A2210',
-           '#EAF6EC': '#062E1E', '#FFF4DB': '#332407', '#FCEDEB': '#3B1219'}          # 1.0.51: nền dat_trang_thai
+           '#EAF6EC': '#062E1E', '#FFF4DB': '#332407', '#FCEDEB': '#3B1219',          # 1.0.51: nền dat_trang_thai
+           # P1: nền ô trạng thái của các bảng (xanh = khớp / đã xong, cam đỏ = lệch, vàng = cần xem, xám = chỉ đọc) - mau_o_theo_tong
+           '#E2EFDA': '#14331F', '#F8CBAD': '#4A2414', '#F2F2F2': '#1E293B', '#DDEBF7': '#1E3A5F', '#E8F5E9': '#14331F',
+           '#E3F2FD': '#1E3A5F', '#FCE4D6': '#3A2414', '#EEF1F4': '#1E293B', '#EEF6FF': '#1E3A5F', '#FFF3C4': '#3B2F12',
+           '#DFF0D8': '#14331F', '#FFF4D6': '#3B2F12', '#FFF8E1': '#2A2210', '#F5F5F5': '#1E293B', '#F2F4F7': '#1E293B'}
 TOI_VIEN = {'#BBF7D0': '#166534', '#86EFAC': '#15803D', '#A7F3D0': '#047857', '#FDE68A': '#854D0E', '#FECACA': '#7F1D1D',
             '#99F6E4': '#0F766E', '#BAE6FD': '#075985', '#CBD5E1': '#475569', '#DCE3EA': '#334155', '#94A3B8': '#64748B', '#BFDBFE': '#1E40AF',
             '#8696AB': '#64748B', '#E5E5E5': '#334155', '#E35D5D': '#F87171',
@@ -584,7 +588,8 @@ TOI_CHU = {'#14532D': '#86EFAC', '#075985': '#7DD3FC', '#4A5866': '#CBD5E1', '#2
            '#8A5A00': '#FCD34D', '#1F4E78': '#93C5FD', '#D97706': '#FCD34D',
            # 1.0.51: chữ dat_trang_thai (tin 1,57:1 trên nền tối trước đây), đỏ / cam đậm
            '#0C4A6E': '#7DD3FC', '#1E6B34': '#86EFAC', '#7A4B00': '#FCD34D', '#A12A1F': '#FCA5A5', '#7C2D12': '#FDBA74',
-           '#7F1D1D': '#FCA5A5'}
+           '#7F1D1D': '#FCA5A5',
+           '#B8433A': '#FCA5A5', '#2E7D32': '#86EFAC', '#1F5FA0': '#93C5FD'}       # P1: chữ ô bảng (mau_o_theo_tong 'chu')
 
 
 def _bang_doi_mau(ten: str) -> dict:
@@ -722,6 +727,20 @@ def dat_tong_nen(ten: str, luu: bool = False, ap_lai: bool = True) -> str:
 
 
 KHI_DOI_TONG_NEN = []          # hàm(tên tông) gọi sau mỗi lần đổi tông (nút đổi nhanh trên banner cập nhật chữ / biểu tượng)
+
+
+def mau_o_theo_tong(g: dict, loai: str = 'nen', **ten_mau) -> tuple:
+    """P1: hằng QColor cấp module của màn hình (nền ô trạng thái XANH / DO / VANG…, chữ liên kết) theo tông nền đang dùng. Gán vào
+    globals() g của module NGAY và gán lại sau mỗi lần đổi tông - mã trong module đọc tên hằng lúc vẽ bảng nên tự theo tông mới
+    (trước đây QColor('#E2EFDA') tính một lần lúc nạp: tông Tối ô vẫn nền sáng dưới chữ sáng). Viết:
+        XANH, DO = mau_o_theo_tong(globals(), XANH='#E2EFDA', DO='#F8CBAD')
+    Module khác cần hằng này thì đọc thuộc tính lúc dùng (man_hinh_theo_doi.XANH), không `from … import XANH` ở cấp module."""
+    def gan(_ten=None):
+        for k, v in ten_mau.items():
+            g[k] = qmau_theo_tong(v, loai)
+    gan()
+    KHI_DOI_TONG_NEN.append(gan)
+    return tuple(g[k] for k in ten_mau)
 _KIEU_THEO_TONG = []            # [(weakref widget, qss gốc)] - kiểu riêng của widget đổi theo tông (dat_kieu_theo_tong)
 
 
@@ -729,9 +748,18 @@ def dat_kieu_theo_tong(w: QWidget, qss: str) -> None:
     """setStyleSheet riêng của widget (dải, thẻ viết bằng màu gốc #F8FAFC / #E2E8F0…) đổi theo tông nền đang dùng - lúc đặt và mỗi lần
     đổi tông (dat_tong_nen). Kiểu riêng đặt thẳng bằng setStyleSheet thì giữ nguyên màu khi đổi tông (1.0.34)."""
     import weakref
-    w.setStyleSheet(ap_tong_nen(qss))
-    _KIEU_THEO_TONG[:] = [x for x in _KIEU_THEO_TONG if x[0]() is not None]
+    _dat_kieu_co_gian(w, ap_tong_nen(qss))
+    # P1: mỗi widget một mục (đặt lại kiểu nhiều lần - nhãn so sánh khái toán đổi màu theo kết quả - không dồn mục cũ)
+    _KIEU_THEO_TONG[:] = [x for x in _KIEU_THEO_TONG if x[0]() is not None and x[0]() is not w]
     _KIEU_THEO_TONG.append((weakref.ref(w), qss))
+
+
+def _dat_kieu_co_gian(w: QWidget, qss: str) -> None:
+    """setStyleSheet rồi co giãn theo tỷ lệ chữ đang dùng (A+ / A−) - trước đây kiểu đặt sau khi cửa sổ hiện, và kiểu đặt lại khi đổi
+    tông, về cỡ 100% dù người dùng đang để 120%."""
+    w.setStyleSheet(qss)
+    if TY_LE[0] != 1:
+        _co_gian_widget(w, TY_LE[0])
 
 
 def _ap_lai_kieu_theo_tong() -> None:
@@ -741,11 +769,26 @@ def _ap_lai_kieu_theo_tong() -> None:
         if w is None:
             continue
         try:
-            w.setStyleSheet(ap_tong_nen(qss))
+            if w.isVisible():
+                _dat_kieu_co_gian(w, ap_tong_nen(qss))
+            else:                                         # P1: widget đang ẩn: đổi màu khi nó hiện ra (_BoToMau, sự kiện Show)
+                w.setProperty('qss_cho_tong', qss)
             con.append((ref, qss))
         except RuntimeError:                              # widget đã bị hủy (C++)
             pass
     _KIEU_THEO_TONG[:] = con
+
+
+def _ap_kieu_cho(w: QWidget) -> None:
+    """Widget vừa hiện: áp kiểu riêng đã hoãn lúc nó đang ẩn (đổi tông nền, đổi tỷ lệ chữ)."""
+    qss = w.property('qss_cho_tong')
+    if qss:
+        w.setProperty('qss_cho_tong', None)
+        w.setProperty('qss_cho_ty_le', None)
+        _dat_kieu_co_gian(w, ap_tong_nen(qss))           # đã gồm co giãn theo tỷ lệ chữ
+    elif w.property('qss_cho_ty_le'):
+        w.setProperty('qss_cho_ty_le', None)
+        _co_gian_widget(w, TY_LE[0])
 
 
 def doi_nhanh_tong_nen() -> str:
@@ -947,7 +990,7 @@ def _qss() -> str:
     QFrame[vai="bang_to_chuc"] {{ background: transparent; border: 0; }}
     QFrame[vai="bang_to_chuc"] QLabel {{ color: #FFFFFF; background: transparent; border: 0; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="logo"] {{ background: transparent; border: 0; }}
-    QFrame[vai="bang_to_chuc"] QLabel[vai="ten_phan_mem"] {{ color: #FFFFFF; font-size: 12.5px; font-weight: 700; letter-spacing: 0.3px; }}
+    QFrame[vai="bang_to_chuc"] QLabel[vai="ten_phan_mem"] {{ color: #FFFFFF; font-size: 13px; font-weight: 700; letter-spacing: 0.3px; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="ten_to_chuc"] {{ color: {MAU_PHU_DE}; font-size: 11px; font-weight: 500; letter-spacing: 0.3px; }}
     QFrame[vai="bang_to_chuc"] QLabel[vai="dong_phu"] {{ color: #E2E8F0; font-size: 11px; font-weight: 500; letter-spacing: 0.3px; }}
     QFrame[vai="bang_to_chuc"] QToolButton[vai="nut_bang"] {{ color: #FFFFFF; background: rgba(255, 255, 255, 26);
@@ -1549,7 +1592,7 @@ MAU_DON_VI_BANNER = '#FCD34D'                  # 0.9.80: tên đơn vị trên b
 VANG = TOKEN['nhan']                           # điểm nhấn nút (không còn tô dòng cơ quan)
 QSS_CHIP = (
     'background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(148, 163, 184, 0.25); '
-    'border-radius: 8px; padding: 1px 8px; font-size: 10.5px; font-weight: 500;')
+    'border-radius: 8px; padding: 1px 8px; font-size: 11px; font-weight: 500;')
 MAU_MENU = '#081226'
 VIEN_MENU = '#1A2846'
 
@@ -2356,9 +2399,9 @@ def kieu_menu_bar(mb) -> None:
     """Thanh menu trên dải nhận diện. Vùng bấm trùng chữ mục; cao theo cỡ chữ để không cắt tiêu đề."""
     mb.setFocusPolicy(Qt.FocusPolicy.NoFocus)
     mb.setStyleSheet(
-        'QMenuBar { background: #FFFFFF; color: #1E293B; font-size: 12.5px; font-weight: 600; border: 0; '
+        'QMenuBar { background: #FFFFFF; color: #1E293B; font-size: 13px; font-weight: 600; border: 0; '
         'border-bottom: 1px solid #E2E8F0; padding: 0px 4px; }'
-        'QMenuBar::item { background: transparent; color: #1E293B; font-size: 12.5px; font-weight: 600; '
+        'QMenuBar::item { background: transparent; color: #1E293B; font-size: 13px; font-weight: 600; '
         'padding: 4px 12px; margin: 0px; border-radius: 4px; }'
         'QMenuBar::item:selected { background: #F1F5F9; color: #0F172A; }'
         'QMenuBar::item:pressed { background: #E2E8F0; color: #0F172A; }')
@@ -3866,6 +3909,9 @@ def nhap_bang_phim(bang) -> None:
 TY_LE = [1.0]                                   # tỷ lệ hiện tại (0,8 - 1,6)
 KHI_DOI_TY_LE = []                              # hàm gọi lại khi đổi tỷ lệ (cập nhật nhãn "100%")
 _CO_CHU_GOC = 9.5
+# P1: thang cỡ chữ (px) cho mọi 'font-size' viết trong QSS - nhãn phụ / huy hiệu 11, chữ thường 12-13, tiêu đề 14-16, số / tiêu đề lớn 18.
+# Không dùng cỡ lẻ (10,5 / 12,5 / 15 / 17) và chữ dưới 11 px (khó đọc trên màn hình 1366 x 768). tests/test_p1_giao_dien.py kiểm.
+THANG_CO_CHU = (11, 12, 13, 14, 16, 18)
 
 
 def _co_gian(qss: str, t: float) -> str:
@@ -3947,7 +3993,12 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
         app.setFont(f)
         app.setStyleSheet(_co_gian(_qss_day_du(), t))
         for w in app.allWidgets():
-            _co_gian_widget(w, t)
+            if not isinstance(w, QWidget):              # PySide có lúc trả vỏ Python cũ đã gắn lại (QSpacerItem) - bỏ qua
+                continue
+            if w.isVisible():
+                _co_gian_widget(w, t)
+            elif w.styleSheet():                       # P1: widget đang ẩn (trang / thẻ / menu chưa mở): co giãn khi nó hiện ra
+                w.setProperty('qss_cho_ty_le', True)     # (_BoToMau, sự kiện Show) - mỗi setStyleSheet riêng là một lần Qt áp lại kiểu
     finally:
         for w in cua_so:
             w.setUpdatesEnabled(True)
@@ -4042,11 +4093,14 @@ def dat_dong_gon(b, cao_chuan: int = CAO_DONG_CHUAN, cao_toi_thieu: int = CAO_DO
 
 def _gian_bang() -> None:
     """Chữ to / nhỏ hơn: dòng bảng (chữ xuống dòng) cao theo cho đủ chữ - chỉ bảng đang hiện, bảng quá dài thì bỏ qua."""
-    from PySide6.QtWidgets import QApplication, QTableView
+    from PySide6.QtWidgets import QApplication, QTableView, QTableWidget
     for w in QApplication.instance().allWidgets():
         if isinstance(w, QTableView) and w.wordWrap() and w.isVisible() and w.model() is not None \
                 and w.model().rowCount() <= 1500:
-            w.resizeRowsToContents()
+            if isinstance(w, QTableWidget):
+                vua_dong(w, None, None)                 # P1: đo chữ thật (không hỏi sizeHint mọi ô như resizeRowsToContents)
+            else:
+                w.resizeRowsToContents()
 
 
 def _bao_ty_le(t: float) -> None:
@@ -4961,6 +5015,8 @@ class _BoToMau(QObject):
             if isinstance(obj, QWidget) and obj.property('pabt_cua_so_con') and obj.isWindow():
                 nho_kich_thuoc(obj)
             return False
+        if t == QEvent.Type.Show and isinstance(obj, QWidget) and (obj.property('qss_cho_ty_le') or obj.property('qss_cho_tong')):
+            _ap_kieu_cho(obj)                            # P1: kiểu riêng của widget ẩn lúc bấm A+ / A− hay đổi tông nền
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow() and \
                 obj.metaObject().className() == 'QComboBoxPrivateContainer':
             vua_danh_sach_xo(obj)                       # 30/10/2026: danh sách xổ rộng đủ chữ dài nhất
@@ -4999,11 +5055,81 @@ def ap_kieu_cay(obj: QWidget) -> None:
     dat_ten_truy_cap(obj)
 
 
+_RE_THE_HTML = re.compile(r'<[^>]+>')
+
+
+def _chu_nhan(lb) -> str:
+    """Chữ của nhãn làm tên truy cập: bỏ thẻ HTML, ký hiệu phím tắt '&', dấu ':' / '*' cuối."""
+    t = _RE_THE_HTML.sub('', lb.text() or '').replace('&&', '\x01').replace('&', '').replace('\x01', '&')
+    return t.split('\n')[0].strip().rstrip(':*').strip()[:120]
+
+
+def nhan_cua_o_nhap(obj: QWidget) -> dict:
+    """{ô nhập: QLabel} cho các ô nhập trong cây obj có nhãn đứng ngay trước nó: QFormLayout (nhãn của hàng), QGridLayout (ô bên
+    trái cùng hàng), QHBoxLayout (phần tử liền trước). Duyệt mỗi bố cục một lần."""
+    from PySide6.QtWidgets import (QAbstractSpinBox, QBoxLayout, QComboBox, QDateEdit, QFormLayout, QGridLayout, QLabel, QLayout,
+                                   QPlainTextEdit, QTextEdit)
+    loai_o = (QLineEdit, QComboBox, QAbstractSpinBox, QDateEdit, QPlainTextEdit, QTextEdit)
+    ds = obj.findChildren(QLayout)
+    if obj.layout() is not None:
+        ds.append(obj.layout())
+    kq = {}
+
+    def ghi(o, lb):
+        if isinstance(o, loai_o) and isinstance(lb, QLabel) and o not in kq and _chu_nhan(lb):
+            kq[o] = lb
+    for lo in ds:
+        if isinstance(lo, QFormLayout):
+            for r in range(lo.rowCount()):
+                it_o = lo.itemAt(r, QFormLayout.ItemRole.FieldRole)
+                it_n = lo.itemAt(r, QFormLayout.ItemRole.LabelRole)
+                if it_o is not None and it_n is not None:
+                    ghi(it_o.widget(), it_n.widget())
+        elif isinstance(lo, QGridLayout):
+            for i in range(lo.count()):
+                o = lo.itemAt(i).widget()
+                if not isinstance(o, loai_o):
+                    continue
+                r, c, _, _ = lo.getItemPosition(i)
+                if c > 0:
+                    it = lo.itemAtPosition(r, c - 1)
+                    if it is not None:
+                        ghi(o, it.widget())
+        elif isinstance(lo, QBoxLayout) and lo.direction() in (QBoxLayout.Direction.LeftToRight, QBoxLayout.Direction.RightToLeft):
+            truoc = None
+            for i in range(lo.count()):
+                w = lo.itemAt(i).widget()
+                if w is None:
+                    continue                                 # khoảng giãn / bố cục con: không phá cặp nhãn - ô
+                if truoc is not None:
+                    ghi(w, truoc)
+                truoc = w
+    return kq
+
+
+def gan_nhan_o_nhap(obj: QWidget) -> int:
+    """Ô nhập chưa có tên truy cập lấy tên theo nhãn đứng cạnh (nhan_cua_o_nhap) và nhãn nhận ô đó làm buddy (trình đọc màn hình đọc
+    "Họ tên, ô nhập" thay vì chỉ "ô nhập"; nhãn có '&' thì Alt + chữ nhảy tới ô). Không ghi đè tên / buddy đã đặt tay. Trả số ô đã gắn."""
+    n = 0
+    for o, lb in nhan_cua_o_nhap(obj).items():
+        if lb.buddy() is None:
+            lb.setBuddy(o)
+        if not o.accessibleName():
+            o.setAccessibleName(_chu_nhan(lb))
+            n += 1
+        if not o.accessibleDescription():
+            mo_ta = (o.toolTip() or getattr(o, 'placeholderText', lambda: '')() or '').split('\n')[0].strip()
+            if mo_ta:
+                o.setAccessibleDescription(mo_ta[:200])
+    return n
+
+
 def dat_ten_truy_cap(obj: QWidget) -> None:
     """Tên truy cập (trình đọc màn hình / Narrator / phím tắt giọng nói) cho mọi nút và ô nhập CHƯA có tên: nút = chữ hiện trên nút, nút chỉ
     có biểu tượng = dòng đầu chú thích; ô nhập = chữ gợi ý hoặc chú thích. Không ghi đè tên đã đặt tay. Ô sửa bên trong QComboBox / QSpinBox
     bỏ qua (ô tổ hợp đã có tên của nó)."""
     from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QSpinBox
+    gan_nhan_o_nhap(obj)                                 # P1: ô nhập lấy tên theo nhãn đứng cạnh (đặt trước chữ gợi ý / chú thích)
     for b in obj.findChildren(QAbstractButton):
         if not b.accessibleName():
             chu = (b.text() or '').replace('&&', '\x01').replace('&', '').replace('\x01', '&').strip() or \

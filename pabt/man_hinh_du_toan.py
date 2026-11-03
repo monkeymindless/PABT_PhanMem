@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, Qt, QTimer
-from PySide6.QtGui import QBrush, QColor, QFont
+from PySide6.QtGui import QBrush, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFrame,
                                QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu, QMessageBox, QPushButton, QSizePolicy, QStackedWidget, QTabWidget, QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout, QWidget)
 
@@ -19,11 +19,12 @@ from .du_toan import DongDT, DuToan
 from .lap_pa import DanhMuc, LoiNhap, doc_so
 from .tien import D, KHONG, so_luong_vn, so_vn, tien_bang_chu, vn
 from .giao_dien import con_tro_cho, dat_kieu_theo_tong, kieu_o_gia_k, kieu_o_he_so_k, kieu_o_so, vua_dong
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Dự toán & khái toán'
-XAM, XANH = QColor('#F2F2F2'), QColor('#DDEBF7')
-DO_NHAT, XANH_LA = QColor('#F8CBAD'), QColor('#E2EFDA')
+XAM, XANH = mau_o_theo_tong(globals(), XAM='#F2F2F2', XANH='#DDEBF7')
+DO_NHAT, XANH_LA = mau_o_theo_tong(globals(), DO_NHAT='#F8CBAD', XANH_LA='#E2EFDA')
 COT_SS = ['Mục', 'Hạng mục', 'Khái toán (đ)', 'Thực tế áp giá (đ)', 'Chênh lệch (đ)', 'Tỷ lệ']
 COT = [('muc', 'Mục', 45), ('ten', 'Hạng mục', 380), ('dvt', 'ĐVT', 60), ('khoi_luong', 'Khối lượng (%)', 100),
        ('don_gia', 'Đơn giá (đ)', 110), ('he_so', 'Hệ số / tỷ lệ', 80), ('thanh_tien', 'Thành tiền (đ)', 130), ('ma', 'Mã', 70),
@@ -337,11 +338,11 @@ class KhungDuToan(QWidget):
         # rộng hơn màn hình 1366 (lỗi phóng to 0.9.26)
         dock.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         # 1.0.02 (Hybrid Enterprise Navy): thanh nhập nền trắng viền slate; ô / nút cao CAO_O_NHAP, ô đang gõ viền navy
-        dock.setStyleSheet('QFrame#thanh_nhap_nhanh { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; }'
-                           'QFrame#thanh_nhap_nhanh QLineEdit, QFrame#thanh_nhap_nhanh QComboBox { border: 1px solid #CBD5E1; '
-                           'border-radius: 5px; background: #FFFFFF; }'
-                           'QFrame#thanh_nhap_nhanh QLineEdit:focus, QFrame#thanh_nhap_nhanh QComboBox:focus { border: 2px solid #2563EB; }'
-                           'QFrame#thanh_nhap_nhanh QPushButton { padding: 4px 7px; }')
+        dat_kieu_theo_tong(dock, 'QFrame#thanh_nhap_nhanh { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; }'
+                                 'QFrame#thanh_nhap_nhanh QLineEdit, QFrame#thanh_nhap_nhanh QComboBox { border: 1px solid #CBD5E1; '
+                                 'border-radius: 5px; background: #FFFFFF; }'
+                                 'QFrame#thanh_nhap_nhanh QLineEdit:focus, QFrame#thanh_nhap_nhanh QComboBox:focus { border: 2px solid #2563EB; }'
+                                 'QFrame#thanh_nhap_nhanh QPushButton { padding: 4px 7px; }')
         v_dock = QVBoxLayout(dock)
         v_dock.setContentsMargins(8, 5, 8, 5)
         v_dock.setSpacing(4)
@@ -393,7 +394,7 @@ class KhungDuToan(QWidget):
             self.hang.o_do.setMaximumWidth(150)
         self.lb_tb = QLabel('')                         # thông báo của lần thêm gần nhất (không bật hộp thoại mỗi lần thêm)
         self.lb_tb.setWordWrap(True)
-        self.lb_tb.setStyleSheet('QLabel { color: #475569; }')
+        dat_kieu_theo_tong(self.lb_tb, 'QLabel { color: #475569; }')
         self.lb_tb.setVisible(False)
         v_dock.addLayout(h_d1)
         v_dock.addLayout(self._h_d2)
@@ -433,9 +434,9 @@ class KhungDuToan(QWidget):
         self.lb_tong.setTextFormat(Qt.TextFormat.RichText)
         self.lb_tong.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.lb_tong.setFixedHeight(CAO_THE_TONG_KT)    # 1.0.03: 2 dòng - tổng + bằng chữ; cơ cấu 6 mục
-        self.lb_tong.setStyleSheet('QLabel#the_tong_khai_toan { background: #F0F6FF; border: 1px solid #BAE6FD; '
-                                   'border-left: 4px solid #1E3A5F; border-radius: 5px; padding: 2px 8px; color: #1E3A5F; '
-                                   'font-weight: 700; }')
+        dat_kieu_theo_tong(self.lb_tong, 'QLabel#the_tong_khai_toan { background: #F0F6FF; border: 1px solid #BAE6FD; '
+                                         'border-left: 4px solid #1E3A5F; border-radius: 5px; padding: 2px 8px; color: #1E3A5F; '
+                                         'font-weight: 700; }')
         b_mo = QPushButton('Mở tệp (.pabtdt)…')
         b_mo.clicked.connect(lambda: self.mo())
         b_moi = QPushButton('Tạo mới')
@@ -510,9 +511,9 @@ class KhungDuToan(QWidget):
         self.b_an_tt.setCheckable(True)
         self.b_an_tt.setAutoRaise(True)
         self.b_an_tt.setObjectName('nut_an_tt')                # phẳng: chữ navy, rê chuột mới hiện nền (kiểu cục bộ thắng tô theo chữ)
-        self.b_an_tt.setStyleSheet('QToolButton#nut_an_tt { background: transparent; border: 0; color: #1E3A5F; font-weight: 600; '
-                                   'padding: 2px 6px; border-radius: 4px; }'
-                                   'QToolButton#nut_an_tt:hover { background: #E2E8F0; }')
+        dat_kieu_theo_tong(self.b_an_tt, 'QToolButton#nut_an_tt { background: transparent; border: 0; color: #1E3A5F; font-weight: 600; '
+                                         'padding: 2px 6px; border-radius: 4px; }'
+                                         'QToolButton#nut_an_tt:hover { background: #E2E8F0; }')
         self.b_an_tt.setToolTip('Ẩn / hiện thông tin chung (tên dự án, chủ đầu tư, nguồn vốn, địa bàn, quy mô, kinh phí QĐ08)')
         h_tieu = QHBoxLayout()
         h_tieu.setContentsMargins(0, 0, 0, 0)
@@ -951,16 +952,16 @@ class KhungDuToan(QWidget):
                 self.bang_ss.setItem(r, c, it)
         kt, tt, chenh, tl = self.ss['tong']
         if not kt:
-            self.lb_ss.setStyleSheet('QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; background: #EAF2FB; }')
+            dat_kieu_theo_tong(self.lb_ss, 'QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; background: #EAF2FB; }')
             self.lb_ss.setText('Khái toán chưa có số liệu: lập bảng ở thẻ "Khái toán / dự toán" hoặc mở file khái toán đã duyệt.')
         elif self.ss['vuot']:
-            self.lb_ss.setStyleSheet('QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; background: #F8CBAD; '
-                                     'color: #7A1B12; font-weight: bold; }')
+            dat_kieu_theo_tong(self.lb_ss, 'QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; background: #F8CBAD; '
+                                           'color: #7A1B12; font-weight: bold; }')
             self.lb_ss.setText(f'⚠ Thực tế áp giá VƯỢT khái toán {vn(chenh)} đồng ({so_vn(tl.quantize(D("0.1")))}%): '
                                'rà soát phương án các hộ hoặc trình điều chỉnh tổng mức kinh phí.')
         else:
-            self.lb_ss.setStyleSheet('QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; background: #E2EFDA; '
-                                     'color: #1E5E2F; font-weight: bold; }')
+            dat_kieu_theo_tong(self.lb_ss, 'QLabel { font-size: 14px; padding: 8px 10px; border-radius: 6px; background: #E2EFDA; '
+                                           'color: #1E5E2F; font-weight: bold; }')
             self.lb_ss.setText(f'✓ Thực tế áp giá trong phạm vi khái toán: còn {vn(-chenh)} đồng '
                                f'({so_vn((-tl).quantize(D("0.1")))}% tổng mức).')
         return self.ss

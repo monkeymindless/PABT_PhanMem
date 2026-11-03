@@ -1629,11 +1629,37 @@ def rut_gon_don_vi(ten: str) -> str:
     return f'{tat} {s[m.start():]}'.strip() if len(tat) >= 2 else s
 
 
+_RE_SO_THUA_NG = re.compile(r'(?i)thửa(?:\s+đất)?(?:\s+số)?\s*([0-9]+[a-z]?)')
+_RE_MUC_THUA_NG = re.compile(r'(?i)(?:\d{1,2}[.)]\s+|[-–+•]\s+)?thửa(?:\s+đất)?(?:\s+số)?\s*\d')
+
+
+def doan_theo_thua(chu) -> list:
+    """Chữ nguồn gốc -> các đoạn (theo xuống dòng). P2 (03/11/2026): đoạn nhắc từ HAI thửa trở lên mà mỗi thửa là một mục riêng ("1. Thửa
+    17 … 2. Thửa 16 …", "… m2. Thửa đất số 16 …", "…; - Thửa 18 …") tách tiếp ở đầu mỗi mục - trước đây cả đoạn rơi vào mọi thửa của
+    hộ. Thửa nhắc giữa câu không có dấu ngắt ("thửa 16 và thửa 17 cùng nguồn gốc") giữ một đoạn (đúng cho cả hai thửa)."""
+    ra = []
+    for d in str(chu or '').replace('\u2028', '\n').split('\n'):
+        d = d.strip()
+        if not d:
+            continue
+        if len({x.lower() for x in _RE_SO_THUA_NG.findall(d)}) < 2:
+            ra.append(d)
+            continue
+        cat = [0]
+        for m in _RE_MUC_THUA_NG.finditer(d):
+            i = m.start()
+            if i and (m.group(0)[0] not in 'Tt' or d[:i].rstrip()[-1:] in '.;:'):
+                cat.append(i)
+        cat.append(len(d))
+        ra.extend(x for x in (d[a:b].strip() for a, b in zip(cat, cat[1:])) if x)
+    return ra
+
+
 def nguon_goc_cua_thua(chu: str, so_thua, so_to='') -> str:
     """Đoạn nguồn gốc của MỘT thửa (bảng tổng hợp, hộ nhiều thửa - 1.0.04): chữ có nhiều đoạn, mỗi đoạn nói về thửa nào ("Thửa
     16…", "Thửa đất số 17, tờ …") -> chỉ các đoạn nói về thửa so_thua (+ đoạn chung không nhắc thửa nào đứng đầu); chữ không chia
     theo thửa thì giữ nguyên. Khử lặp cụm mở đầu (bo_lap_mo_dau)."""
-    doan = [bo_lap_mo_dau(x.strip()) for x in str(chu or '').replace(' ', '\n').split('\n') if x.strip()]
+    doan = [bo_lap_mo_dau(x.strip()) for x in doan_theo_thua(chu)]
     if not doan:
         return ''
     so = str(so_thua or '').strip()
@@ -1665,7 +1691,7 @@ def tach_nguon_goc_theo_thua(ds: list) -> list | None:
     if len({c for c in chu if c.strip()}) > 1:
         return [nguon_goc_cua_thua(c, so, to) for c, so, to in ds]
     re_thua = re.compile(r'(?i)thửa(?:\s+đất)?(?:\s+số)?\s*([0-9]+[a-z]?)')
-    doan = [d for d in (chu[0] or '').replace(' ', '\n').split('\n') if d.strip()]
+    doan = doan_theo_thua(chu[0])
     co = [{x.lower() for x in re_thua.findall(d)} for d in doan]
     if all(any(str(so).strip().lower() in s for s in co) for _, so, _ in ds if str(so).strip()) and \
             all(str(so).strip() for _, so, _ in ds):

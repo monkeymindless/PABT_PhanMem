@@ -9,18 +9,19 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtGui import QBrush
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout,
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QPushButton, QStackedWidget,
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import csdl, don_gia, du_an_moi, in_an, lap_pa, may_chu, to_chuc
 from .giao_dien import ChonXoXuong, bang_to_chuc, chay_nen, con_tro_cho
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .lap_pa import LoiNhap
 from .thong_bao import TEN_UD, chu_loi
 
 BUOC = ['1. Thông tin dự án', '2. Danh sách hộ, thửa (nhập thô)', '3. Bảng giá đất của dự án', '4. Hoàn thiện, in']
-CAM, XAM = QColor('#FCE4D6'), QColor('#EEF1F4')
+CAM, XAM = mau_o_theo_tong(globals(), CAM='#FCE4D6', XAM='#EEF1F4')
 COT_GIA = [('loai_dat', 'Loại đất', 80), ('nhom', 'Nhóm', 110), ('vi_tri', 'Vị trí (theo dữ liệu)', 130),
            ('vi_tri_ap', 'Vị trí áp dụng', 110), ('so_thua', 'Số thửa', 70), ('gia', 'Giá bảng giá (đ/m²)', 150),
            ('he_so_k', 'Hệ số K', 80), ('ghi_chu', 'Lưu ý', 360)]

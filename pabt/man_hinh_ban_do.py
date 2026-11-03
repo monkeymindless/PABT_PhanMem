@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 
 from . import ban_do_cad, ban_do_kml, nen_ban_do, toa_do
 from .giao_dien import XepDong, chan_tin_hieu, chu_hien, con_tro_cho
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 from .thong_bao import TEN_UD, chu_loi
 from .tien import so_vn, vn
 
@@ -392,7 +393,7 @@ class KhungBanDo(QGraphicsView):
         """Nút + / − / Vừa góc trên phải bản đồ (cùng bộ với LARC Mobile)."""
         hop = QWidget(self)
         hop.setObjectName('nut_phong_bd')
-        hop.setStyleSheet(
+        dat_kieu_theo_tong(hop,
             'QWidget#nut_phong_bd { background: rgba(255,255,255,230); border: 1px solid #CBD5E1; border-radius: 8px; }'
             'QToolButton { min-width: 32px; min-height: 28px; font: 14px "Segoe UI"; border: 0; border-radius: 6px; }'
             'QToolButton:hover { background: #EFF6FF; }')

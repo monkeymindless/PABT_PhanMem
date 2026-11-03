@@ -459,46 +459,9 @@ def _mo_tiep(con, tao: bool):
     elif ver > PHIEN_BAN_CSDL:
         raise RuntimeError(f'File dự án được tạo bằng phiên bản phần mềm mới hơn (CSDL v{ver}); hãy cập nhật phần mềm.')
     _dam_bao_khoa(con)
-    # file v16 nâng cấp lúc CHƯA có hộ (dự án trống) không có bảng phụ: tạo khi đã có hộ - trước khi Hoàn tác liệt kê bảng
-    # (bộ đơn giá / file chỉ có danh mục không có hộ: không bị ghi)
-    if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anh_hien_trang'").fetchone() \
-            and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                _tao_bang_phu(con)
-        except sqlite3.OperationalError:                # file đang bị khóa: các hàm dùng bảng phụ tự tạo khi ghi
-            pass
-    if not co_cot_pa_lan(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                dam_bao_cot_pa_lan(con)
-        except sqlite3.OperationalError:                # chỉ xem / file khóa: lan_pa tự thêm khi ghi
-            pass
-    if not co_cot_y_kien(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                dam_bao_cot_y_kien(con)
-        except sqlite3.OperationalError:                # chỉ xem / file khóa: du_thao tự thêm khi ghi
-            pass
-    if not co_cot_thua(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                dam_bao_cot_thua(con)
-        except sqlite3.OperationalError:                # chỉ xem / file khóa: ho_so.luu_ho thêm khi ghi
-            pass
-    if any(k not in {r[1] for r in con.execute('PRAGMA table_info(du_an)')} for k, _ in COT_DU_AN_THEM) and \
-            con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                dam_bao_cot_du_an(con)
-        except sqlite3.OperationalError:                # chỉ xem / file khóa: lap_pa.luu_du_an thêm khi ghi
-            pass
-    if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?", (CHI_MUC_THEM[-1][0],)).fetchone()             and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                dam_bao_chi_muc(con)
-        except sqlite3.OperationalError:                # chỉ xem / file khóa: lần mở sau
-            pass
+    # P2 (03/11/2026): các phần mở rộng lược đồ KHÔNG đổi PHIEN_BAN_CSDL (bảng phụ, cột thêm, chỉ mục) - một sổ MO_RONG, chỉ file có hộ
+    # (bộ đơn giá / file chỉ danh mục không bị ghi), một giao dịch cho mọi phần còn thiếu (trước: tối đa 6 lần ghi đĩa mỗi lần mở)
+    dam_bao_mo_rong(con)
     dat_ghi_toi_thieu(con)                              # CLI / nhập / GUI: cùng một chỗ (bộ đơn giá đóng gói tự bỏ)
     return con
 
@@ -735,6 +698,46 @@ def dam_bao_cot_du_an(con) -> None:
     for k, kieu in COT_DU_AN_THEM:
         if co and k not in co:
             con.execute(f'ALTER TABLE du_an ADD COLUMN {k} {kieu}')
+
+
+# P2 (03/11/2026): sổ mở rộng lược đồ KHÔNG đổi PHIEN_BAN_CSDL (file mới có sẵn từ schema.sql; file cũ có hộ thêm ở csdl.mo). Thêm phần mở
+# rộng mới: viết hàm kiểm (con) -> True khi ĐÃ CÓ và hàm làm (con) chạy trong giao dịch của nơi gọi, rồi thêm một dòng vào đây (thứ tự =
+# thứ tự chạy: chỉ mục cuối vì cần cột). Bản cũ mở file có phần mở rộng vẫn được (bảng / cột thừa vô hại); phần nào làm bản cũ GHI SAI
+# dữ liệu thì tăng GHI_TOI_THIEU.
+MO_RONG = (
+    ('bang_phu', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anh_hien_trang'").fetchone()),
+     lambda con: _tao_bang_phu(con)),
+    ('cot_pa_lan', lambda con: co_cot_pa_lan(con), lambda con: dam_bao_cot_pa_lan(con)),
+    ('cot_y_kien', lambda con: co_cot_y_kien(con), lambda con: dam_bao_cot_y_kien(con)),
+    ('cot_thua', lambda con: co_cot_thua(con), lambda con: dam_bao_cot_thua(con)),
+    ('cot_du_an', lambda con: all(k in {r[1] for r in con.execute('PRAGMA table_info(du_an)')} for k, _ in COT_DU_AN_THEM),
+     lambda con: dam_bao_cot_du_an(con)),
+    ('chi_muc', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?",
+                                             (CHI_MUC_THEM[-1][0],)).fetchone()), lambda con: dam_bao_chi_muc(con)),
+)
+
+
+def thieu_mo_rong(con) -> list:
+    """Tên các phần mở rộng lược đồ (MO_RONG) file còn thiếu - chỉ đọc (Bác sĩ CSDL, kiểm thử)."""
+    return [ten for ten, kiem, _lam in MO_RONG if not kiem(con)]
+
+
+def dam_bao_mo_rong(con) -> list:
+    """Thêm các phần mở rộng còn thiếu của file có hộ, MỘT giao dịch. Trả tên phần đã thêm ([] khi đủ / không có hộ / chỉ xem, file
+    khóa - các hàm ghi tự thêm phần của mình khi cần)."""
+    thieu = thieu_mo_rong(con)
+    if not thieu or not con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
+        return []
+    lam = {ten: f for ten, _k, f in MO_RONG}
+    try:
+        with con:
+            if not con.in_transaction:                  # sqlite3 không tự mở giao dịch trước ALTER / CREATE: mở tay cho cả lô
+                con.execute('BEGIN')                    # (một lần ghi đĩa; lỗi giữa chừng không để file nửa cũ nửa mới)
+            for ten in thieu:
+                lam[ten](con)
+    except sqlite3.OperationalError:                    # chỉ xem / file khóa: lần mở sau
+        return []
+    return thieu
 
 
 class DauVetHo:

@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
 
 from . import ho_so_scan, kinh_phi_du_an, thoi_han, theo_doi, van_dong
 from .giao_dien import TOKEN, dat_kieu_theo_tong, qmau_theo_tong  # noqa: E402  (1.0.34-1.0.35: màu đổi theo tông nền)
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .bang_ao import BangAo
 from .giao_dien import (MAU_CANH_BAO_NEN, MAU_CANH_BAO_VIEN, qss_canh_bao)  # noqa: E402  (20/10/2026: cảnh báo hổ phách)
 from .giao_dien import (DaiCongBang, HangKpi, XepDong, dat_trang_thai, gan_chu_khi_trong, gan_thanh_ty_le,
@@ -31,8 +32,8 @@ from .thong_bao import TEN_UD, THE_TONG_HOP, chu_loi
 from .tien import D, KHONG, so_vn, vn, vn_gon
 
 TIEU_DE = 'Theo dõi phê duyệt, chi trả, bàn giao'
-XANH, VANG, DO, XAM = QColor('#E2EFDA'), QColor(TOKEN['canh_bao_nhat']), QColor('#F8CBAD'), QColor('#F2F4F7')
-MAU_LIEN_KET = QColor('#2F5DB5')                          # chữ ô bấm đúp mở được file (biên lai, chứng từ)
+XANH, VANG, DO, XAM = mau_o_theo_tong(globals(), XANH='#E2EFDA', VANG=TOKEN['canh_bao_nhat'], DO='#F8CBAD', XAM='#F2F4F7')
+MAU_LIEN_KET = mau_o_theo_tong(globals(), 'chu', MAU_LIEN_KET='#2F5DB5')[0]                          # chữ ô bấm đúp mở được file (biên lai, chứng từ)
 CHO_GO_MS = 200                                           # ô tìm: chờ ngừng gõ bấy nhiêu ms mới lọc (như OTimKiemThongMinh)
 DO_MAU = 300                                              # số dòng Qt đo khi tự canh bề rộng cột (bảng QTableWidget của hộp thoại)
 THUA_TRONG = dict(so_to='', so_thua='', dt_thu_hoi='', loai_dat='')     # hộ chưa có thửa: vẫn một dòng
@@ -279,8 +280,8 @@ class KhungQuyetDinh(_Khung):
         self.ds_qd_w = QListWidget()
         self.ds_qd_w.setMinimumWidth(260)
         self.ds_qd_w.currentRowChanged.connect(lambda i: self.chon(self.ds_qd[i].id if 0 <= i < len(self.ds_qd) else None))
-        self.ds_qd_w.setStyleSheet('QListWidget::item { padding: 6px 4px; color: #2F5DB5; } '
-                                   'QListWidget::item:selected { background: #DCEBFA; color: #08345F; }')
+        dat_kieu_theo_tong(self.ds_qd_w, 'QListWidget::item { padding: 6px 4px; color: #2F5DB5; } '
+                                         'QListWidget::item:selected { background: #DCEBFA; color: #08345F; }')
         self.nut = {}
         cot_trai = QVBoxLayout()
         nhan = QLabel('Các quyết định phê duyệt')

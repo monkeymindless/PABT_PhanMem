@@ -3,6 +3,7 @@
 Mở hộp = bật máy chủ nhận (nhan_wifi.MayNhan) trên mạng nội bộ; đóng hộp = tắt. Hiện mã QR + địa chỉ để điện thoại mở bằng trình duyệt;
 file .json nhận về liệt kê trong bảng, người dùng bấm Nhập (phieu_kiem_dem qua hàm nhap của hộp Phiếu kiểm đếm - kiểm đủ, hỏi thêm hộ mới)."""
 from __future__ import annotations
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QDesktopServices, QImage, QPixmap
@@ -45,7 +46,7 @@ class HopNhanWifi(QDialog):
         self.lb_qr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lb_url = QLabel('')
         self.lb_url.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self.lb_url.setStyleSheet('QLabel { font-size: 15px; font-weight: 600; color: #1E3A5F; }')
+        dat_kieu_theo_tong(self.lb_url, 'QLabel { font-size: 16px; font-weight: 600; color: #1E3A5F; }')
         self.cb_ip = QComboBox()
         self.cb_ip.setToolTip('Địa chỉ mạng của máy tính - chọn địa chỉ cùng mạng Wi-Fi với điện thoại')
         self.cb_ip.activated.connect(lambda _: self.bat_dau(self.cb_ip.currentData()))

@@ -156,8 +156,9 @@ class TestCuaSoLapPA(_Co):
         self.addCleanup(k.deleteLater)
         self.assertEqual(xt.MAU_NEN, '#334155')
         self.assertEqual(k.thanh.objectName(), 'xt_thanh')
-        self.assertIn('#F8FAFC', _quy_tac(k.styleSheet(), 'QWidget#xt_thanh'))
-        self.assertIn('#CBD5E1', _quy_tac(k.styleSheet(), 'QWidget#xt_thanh'))
+        # P1: kiểu riêng đổi theo tông nền (dat_kieu_theo_tong) - màu gốc #F8FAFC / #CBD5E1 qua bảng đổi của tông đang dùng
+        self.assertIn(giao_dien.mau_theo_tong('#F8FAFC', 'nen'), _quy_tac(k.styleSheet(), 'QWidget#xt_thanh'))
+        self.assertIn(giao_dien.mau_theo_tong('#CBD5E1', 'vien'), _quy_tac(k.styleSheet(), 'QWidget#xt_thanh'))
         for b in (k.b_phong, k.b_thu, k.b_vua):
             self.assertEqual(b.maximumHeight(), xt.CAO_NUT_XT)
 

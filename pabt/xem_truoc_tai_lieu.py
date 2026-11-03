@@ -15,6 +15,7 @@ File tạm ở %TEMP%\\pabt_preview\\<pid>_<n>\\ - xóa khi cửa sổ đóng (d
 và lần mở sau (thư mục cũ hơn 12 giờ).
 """
 from __future__ import annotations
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 import atexit
 import itertools
 import os
@@ -393,20 +394,20 @@ class KhungXemTruocTaiLieu(QFrame):
         super().__init__(parent)
         self.setObjectName('khung_xem_truoc')
         self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setStyleSheet(f'QFrame#khung_xem_truoc {{ background: {MAU_NEN}; border: 1px solid #CBD5E1; border-radius: 6px; }}'
-                           f'QWidget#xt_thanh {{ background: {MAU_THANH}; border: 0; border-bottom: 1px solid #CBD5E1; '
-                           'border-top-left-radius: 6px; border-top-right-radius: 6px; }'
-                           f'QLabel#xt_thong_bao {{ color: #E2E8F0; font-size: 13px; padding: 24px; }}'
-                           'QLabel#xt_trang { color: #334155; font-weight: 600; padding: 0 6px; background: transparent; }'
-                           'QLabel#xt_gan_dung { color: #78350F; background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 4px; '
-                           'padding: 1px 6px; }'
-                           'QPushButton[xem_truoc="1"] { color: #0F172A; background: #FFFFFF; border: 1px solid #CBD5E1; '
-                           'border-radius: 5px; padding: 0 8px; font-weight: 600; }'
-                           'QPushButton[xem_truoc="1"]:hover { background: #F1F5F9; border-color: #94A3B8; }'
-                           'QPushButton[xem_truoc="1"]:pressed { background: #E2E8F0; }'
-                           'QPushButton[xem_truoc="1"]:disabled { color: #94A3B8; background: #F8FAFC; border-color: #E2E8F0; }'
-                           # nút "Mở bằng trình xem PDF" nằm giữa vùng trang tối: nền trắng, chữ navy
-                           'QPushButton#xt_mo_ngoai { color: #1E3A5F; }')
+        dat_kieu_theo_tong(self, f'QFrame#khung_xem_truoc {{ background: {MAU_NEN}; border: 1px solid #CBD5E1; border-radius: 6px; }}'
+                                 f'QWidget#xt_thanh {{ background: {MAU_THANH}; border: 0; border-bottom: 1px solid #CBD5E1; '
+                                 'border-top-left-radius: 6px; border-top-right-radius: 6px; }'
+                                 f'QLabel#xt_thong_bao {{ color: #E2E8F0; font-size: 13px; padding: 24px; }}'
+                                 'QLabel#xt_trang { color: #334155; font-weight: 600; padding: 0 6px; background: transparent; }'
+                                 'QLabel#xt_gan_dung { color: #78350F; background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 4px; '
+                                 'padding: 1px 6px; }'
+                                 'QPushButton[xem_truoc="1"] { color: #0F172A; background: #FFFFFF; border: 1px solid #CBD5E1; '
+                                 'border-radius: 5px; padding: 0 8px; font-weight: 600; }'
+                                 'QPushButton[xem_truoc="1"]:hover { background: #F1F5F9; border-color: #94A3B8; }'
+                                 'QPushButton[xem_truoc="1"]:pressed { background: #E2E8F0; }'
+                                 'QPushButton[xem_truoc="1"]:disabled { color: #94A3B8; background: #F8FAFC; border-color: #E2E8F0; }'
+                                 # nút "Mở bằng trình xem PDF" nằm giữa vùng trang tối: nền trắng, chữ navy
+                                 'QPushButton#xt_mo_ngoai { color: #1E3A5F; }')
         self.ham_in = ham_in
         self._vua = True                       # đang ở chế độ vừa trang: đổi cỡ khung thì vừa lại
         self.pdf: Path | None = None

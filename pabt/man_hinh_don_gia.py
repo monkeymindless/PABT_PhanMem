@@ -14,6 +14,7 @@ from . import csdl, don_gia, quan_tri_bo
 from .lap_pa import LoiNhap, bo_dau
 from .tien import vn
 from .giao_dien import con_tro_cho, loc_khi_ngung_go
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 from .thong_bao import TEN_UD, chu_loi
 
 _TS = 'SELECT ma, phan_loai, ten, dvt, don_gia, ghi_chu FROM dm_taisan WHERE '
@@ -85,8 +86,8 @@ class HopBoDonGia(QDialog):
         self.lb = QLabel()
         self.lb.setObjectName('dai_bo_don_gia')
         self.lb.setFixedHeight(28)
-        self.lb.setStyleSheet('QLabel#dai_bo_don_gia { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; '
-                              'padding: 0 10px; color: #0F172A; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel#dai_bo_don_gia { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; '
+                                    'padding: 0 10px; color: #0F172A; }')
         self.o_tim = QLineEdit()
         self.o_tim.setPlaceholderText('Tìm trong thẻ đang xem (không cần dấu): xoai, nha cap 4, CS9…')
         loc_khi_ngung_go(self.o_tim, self.loc)
@@ -746,7 +747,7 @@ class HopXacThucBo(QDialog):
         lo.addLayout(f)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
-        self.lb.setStyleSheet('QLabel { color: #B83A3A; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel { color: #B83A3A; }')
         lo.addWidget(self.lb)
         nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         nut.accepted.connect(self.thu)

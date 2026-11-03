@@ -2,6 +2,7 @@
 kiểm tra / sửa file dự án (chua_benh_csdl) và xuất gói chẩn đoán .zip (dự án đã ẩn danh) gửi tác giả. Hộp báo lỗi không mong muốn
 (giao_dien.cai_bat_loi) cũng có nút xuất gói này (xuat_goi_chan_doan)."""
 from __future__ import annotations
+from .giao_dien import vua_dong  # noqa: E402
 from datetime import datetime
 from pathlib import Path
 
@@ -201,7 +202,7 @@ class HopChanDoanHeThong(QDialog):
                 if c == 1:
                     o.setForeground(QColor(MAU_MUC.get(m['muc'], '#202124')))
                 self.bang.setItem(r, c, o)
-        self.bang.resizeRowsToContents()
+        vua_dong(self.bang, None, None)
         if self.file_pabt and Path(self.file_pabt).is_file():
             self.kiem_tra_file = chua_benh_csdl.kiem_tra_tep_pabt(self.file_pabt)
             self.lb_tep.setText(f'Dự án đang mở ({Path(self.file_pabt).name}): {self.kiem_tra_file["thong_bao"]}')
