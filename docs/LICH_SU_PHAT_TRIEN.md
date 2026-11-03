@@ -2968,3 +2968,37 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
     bảng gắn sẵn -> máy nhận xóa bảng của mình), phien_ban.json (ghi CUỐI, mã = băm các file); `nhan` chép tạm, kiểm SHA-256 + kiem_tra_bo
     + JSON trước khi cài; `<thư mục máy>\dong_bo_don_gia.json` mã đã nhận. `app.dong_bo_bo_don_gia` trong `sau_dang_nhap` (quản trị + máy
     chủ chưa có bộ -> phát hành lần đầu). Đơn giá đặc biệt (quy ước riêng của dự án) KHÔNG khóa - dữ liệu dự án.
+- 1.0.57 (người dùng 03/11/2026, ảnh phương án chi tiết hộ chỉ có đất 0 đồng - mục 2-6 trống vẫn in): `du_lieu_in.an_muc_trong` (cuối
+  `dong_chi_tiet`, dùng chung Word / Excel chi tiết / phương án điều chỉnh): khối 'H' mục khác 1 không dòng con và 0 đồng -> bỏ; 'R' thưởng
+  0 đồng -> bỏ; đánh lại số mục liền nhau, dòng con "3.1" -> "2.1". Vì số mục không cố định: `in_word._theo_muc` theo TÊN (`TEN_MUC_DAT`
+  cho mục đất), định dạng số lượng mục nhà `du_lieu_in.la_muc_nha`. Dòng thưởng 'R' đậm cả dòng (in_word `_hang_tu_dong` / `_chu_cac_cot`,
+  in_excel_chi_tiet). Đã xuất PDF bằng Word kiểm (hộ chỉ đất 0 đồng; hộ có cây chưa giá). Test `tests/test_an_muc_trong.py`.
+  STT mọi dòng căn giữa (người dùng: "1.1 lệch trái") - in_word / in_excel_chi_tiet.
+- 1.0.57 bộ đọc văn bản đơn giá (người dùng 03/11/2026, ảnh: PDF có chữ "TRINH QD HỢP NHẤT GIA BT NHA, CONG TRINH XAY DUNG - HOAN CHINH" ở
+  ổ H:\Máy tính khác\… - NGOÀI repo, chỉ thử tay): tên mục đọc thành "Đồng/m² sàn". `_DocDong`: `_tieu_de_bang` (dòng "STT Nhà từ 05 tầng
+  trở lên Đơn vị" = tiêu đề + ô tên dòng nhóm đầu bảng; "STT Loại biệt thự Đơn giá (đồng/m2" -> cha "Biệt thự" kieu_con 'noi' -> "Biệt thự
+  Song lập"; `dvt_bang` mỗi bảng đặt lại; mảnh tiêu đề "tính Đơn giá" bỏ), `_RE_CHI_DVT` (dòng chỉ ĐVT -> `dvt_cho`), `_RE_CHI_GIA` +
+  `_gia_ngu_canh` (dòng "sàn 9.445.000" / "đồng/m3 42.000" -> tên = cha - th), khối mô tả `mo_ta` ("* Kết cấu loại 1:" = th, "Kết cấu:" +
+  "- Khung cột…" bỏ qua), STT + gạch đầu dòng = dòng cha mới, dòng con xuống dòng nối vào th, dòng con cùng từ đầu với cha tự đủ tên. Hai
+  lỗi trùng chữ BỎ DẤU: "Chuồng" = "chuong" khớp mẫu tiêu đề "Chương" (`_RE_TIEU_DE_VB` nay `chuong\s+(số|La Mã)`); "Mức bồi thường" =
+  "muc" khớp "Mục" (`_RE_TIEU_DE_NHOM`); câu dẫn "Mức bồi thường / hỗ trợ…", "Trường hợp…" dài -> không làm tiền tố; dòng chữ thường sau
+  tiêu đề là tiêu đề xuống dòng (cuoi 'tieu_de'). KHU VỰC GIÁ: `Muc.khu_vuc` theo tiêu đề phụ lục "KHU VỰC n" (chữ HOA), `cac_khu_vuc`,
+  `khu_vuc_khop_nhat`, `loc_khu_vuc`; HopNhapDonGia `cb_kv` / `doi_khu_vuc`, `ds_tat_ca`. so_khop: dòng chung bỏ khi hai dòng con cùng trỏ
+  một mục; khoảng giá khớp theo tiền tố tên + đúng cặp giá; cùng giá + cùng ĐVT + cùng từ đầu + một mục -> khớp; tên = tên mục bỏ ngoặc
+  cuối + cùng giá, nhiều mục -> lần lượt (`_bo_ngoac_cuoi`). File thật: khu vực 1 111/111 khớp (trước 107 "mới" + đổi giá sai do trộn
+  khu vực 2); VBHN cây trồng không đổi (5.035 khớp, 16 mới). Test `tests/test_doc_bang_nha_1057.py` (dòng GIẢ LẬP).
+- 1.0.57 ĐỀ ÁN LARC V2.0 (người dùng 03/11/2026, `D:\APP AI PABT\De An Kien Truc Dot Pha Larc V2 0.md` - viết theo mã 1.0.54, số liệu
+  không đo thật; làm phần chưa có, giữ quyết định cũ). GÓI 1 đã có từ 1.0.55 (chuỗi băm ở bảng RIÊNG audit_bam, `kiem_toan.kiem_tra_toan_ven`);
+  KHÔNG DPAPI cho sao lưu (người dùng chọn "chỉ nén" cùng ngày), máy chủ không lưu mật khẩu / token trên máy. GÓI 2 `pabt/phan_quyen.py`:
+  6 vai trò (lanh_dao, tham_dinh, chuyen_vien, kiem_dem, ke_toan, thanh_tra) x 14 quyền (`QUYEN`, `ma_tran`), vai trò cũ quan_tri = mọi
+  quyền, nguoi_dung = mọi quyền trừ quản trị / bộ đơn giá; vai trò lạ = chỉ xem. `vai_tro_cho_file` (file trong thư mục máy chủ đang đăng
+  nhập / bản offline - sổ lay_ve ghi vai_tro), `chi_xem` (thanh tra -> app.mo chi_doc), `gan` (con._vai_tro + `gan_chan_csdl` trigger tạm:
+  bảng phương án / quyết định / niêm yết / thửa / cột hồ sơ hộ theo quyền; DELETE ho đã duyệt / chi trả luôn chặn với vai trò mới),
+  `kiem` / `lap_pa.kiem_quyen` chèn ở 29 hàm ghi (lan_pa, theo_doi, du_thao, quan_ly, ho_so, van_dong), `kiem_pa` (BoSoan.luu: so _pa_goc
+  - kiểm đếm: dòng mới đúng giá danh mục hoặc 0, tỷ lệ 1; không đổi mục 4), `kiem_xoa_ho` (chuyên viên chỉ hộ chưa lập), `lenh_bi_tat`
+  (app._ap_vai_tro_lenh ở mo / _cap_nhat_chon / _cap_nhat_lenh_theo_du_an), CuaSoLapPA `_ap_khoa` theo `quyen_bang`, `sua_o` chặn
+  `COT_GIA_VAI_TRO`. may_chu: TEN_VAI_TRO thêm 6 vai trò, `VAI_TRO_QUAN_TRI` (quan_tri, lanh_dao) = Phien.la_quan_tri (quan_tri_bo dùng);
+  HopTaiKhoan.doi_vai_tro đặt theo ô Vai trò. GÓI 4 (đo 3.000 hộ): `bang_dieu_chinh.ho_dieu_chinh` ~3.000 -> 2 câu SQL; `BoSoan.danh_sach_ho`
+  / `ho_ke` nhớ csdl.nho (chuyển hộ 32 -> 24 ms, phần Python 30 -> 17 ms; "< 8 ms" của đề án không đạt - còn lại là Qt vẽ). Chưa làm GÓI 3
+  (thanh 5 bước, Ctrl+B, nhiều tab hộ, BangMuc 7 cột + Space, F4 thuộc tính): trùng / trái quyết định cũ (thanh tab đã bỏ 0.9.94, F4 = xem
+  trước A4) - chờ người dùng chọn. Test `tests/test_phan_quyen.py`.

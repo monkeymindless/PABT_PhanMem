@@ -7,6 +7,23 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.57', '03/11/2026', (
+        'Phương án chi tiết (bản Word, bản Excel): mục nhà / cây trồng / vật nuôi / hỗ trợ / thưởng không có tiền và không có dòng tài sản '
+        'nào thì KHÔNG in; mục có tài sản (kể cả tài sản chưa có giá, chỉ có ghi chú) hoặc có tiền thì giữ. Các mục còn lại đánh số liền '
+        'nhau (1, 2, 3…).',
+        'Dòng thưởng chấp hành bàn giao mặt bằng in đậm; cột STT căn giữa ở mọi dòng (cả "1.1", "2.1").',
+        'Cập nhật đơn giá từ văn bản: đọc đúng tên bảng đơn giá nhà ("Nhà từ 05 tầng trở lên - Kết cấu loại 1"…) khi PDF ghi ĐVT '
+        '"Đồng/m² sàn" xuống dòng (trước: tên mục thành "Đồng/m² sàn"); biệt thự, chuồng trại, công đào, mồ mả, miếu thờ (hai trường hợp '
+        'nghĩa trang) khớp đúng mục bộ đơn giá.',
+        'Văn bản có nhiều khu vực giá (QĐ hợp nhất: Phụ lục I khu vực 1, Phụ lục II khu vực 2): chỉ lấy dòng của MỘT khu vực - ô "Khu vực '
+        'giá" (mặc định khu vực khớp bộ đơn giá đang dùng); trước đây trộn hai khu vực, báo hàng trăm mục "mới" và đổi giá sai.',
+        'PHÂN QUYỀN 6 VAI TRÒ cho máy chủ LAN (Quản lý tài khoản > ô Vai trò > Đổi vai trò): Lãnh đạo (quản trị, mở khóa phương án, '
+        'quyết định, chi trả), Thẩm định viên (khóa thẩm định), Chuyên viên lập phương án, Kiểm đếm viên (chỉ khối lượng - không sửa '
+        'đơn giá, chính sách hỗ trợ), Kế toán chi trả (quyết định, chi trả, bàn giao), Thanh tra (mở dự án chỉ xem). Hai vai trò cũ '
+        'giữ nguyên quyền. Không vai trò nào xóa được hộ đã có quyết định phê duyệt / đã chi trả.',
+        'Nhanh hơn: chuyển hộ ◀ ▶ trong cửa sổ lập phương án không đọc lại cả danh sách hộ (3.000 hộ: 32 -> 24 ms); bảng tổng hợp '
+        'điều chỉnh chỉ đọc hộ có phương án điều chỉnh.',
+    )),
     ('1.0.56', '03/11/2026', (
         'KHÓA BẢO MẬT BỘ ĐƠN GIÁ: máy dùng máy chủ LAN chỉ tài khoản QUẢN TRỊ máy chủ (đang đăng nhập) sửa được bộ đơn giá - tài sản, '
         'cây trồng, vật nuôi, chính sách hỗ trợ, bảng giá đất, hệ số K (cả nạp từ file, quét văn bản, khôi phục). Máy đơn: cần mở khóa bằng '

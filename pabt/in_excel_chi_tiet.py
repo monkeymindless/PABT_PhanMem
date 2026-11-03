@@ -108,7 +108,6 @@ class _Ve:
 
 def _ve_sheet(ws, x, du_thao: bool) -> None:
     """Một hộ: phần đầu, mục I, II, bảng mục III, IV, chữ ký."""
-    from . import nghiep_vu
     from .in_word import nhom_ghi_chu_dat
     from .tien import dinh_dang_so_luong
     v = _Ve(ws)
@@ -178,17 +177,16 @@ def _ve_sheet(ws, x, du_thao: bool) -> None:
     v.xuong()
     dong = x.dong
     gop_gc = nhom_ghi_chu_dat(dong)
-    so_muc_nha = nghiep_vu.so_muc(2)
     muc_sl = None
     dau_gop = None
     for i, d in enumerate(dong):
         loai, gt = d[0], d[1]
         cach_tinh = d[2] if len(d) > 2 and isinstance(d[2], str) else ''
         if loai == 'H':
-            muc_sl = 2 if str(gt[0]) == str(so_muc_nha) else None
+            muc_sl = 2 if du_lieu_in.la_muc_nha(gt) else None
         if loai == 'G' and len(d) > 2 and isinstance(d[2], int):
             muc_sl = 2 if d[2] == 2 else None
-        dam = loai in ('H', 'T', 'G')
+        dam = loai in ('H', 'T', 'G', 'R')             # 1.0.57: dòng thưởng in đậm
         if loai in ('G', 'S'):
             v.o(1, 1, '' if gt[0] is None else str(gt[0]), CO_BANG, dam=dam, can='center', vien=True)
             v.o(2, 6, gt[1] or '', CO_BANG, dam=dam, vien=True)
@@ -208,7 +206,7 @@ def _ve_sheet(ws, x, du_thao: bool) -> None:
             v.cao(1, CO_BANG, 8)
             v.xuong()
             continue
-        v.o(1, 1, '' if gt[0] is None else str(gt[0]), CO_BANG, dam=dam, can='center' if loai in ('H', 'R') else 'left', vien=True)
+        v.o(1, 1, '' if gt[0] is None else str(gt[0]), CO_BANG, dam=dam, can='center', vien=True)   # STT căn giữa (1.0.57)
         v.o(2, 2, gt[1] or '', CO_BANG, dam=dam, vien=True)
         if cach_tinh:
             v.o(3, 6, cach_tinh, CO_BANG, dam=dam, can='center', vien=True)

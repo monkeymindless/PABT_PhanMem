@@ -579,6 +579,18 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   căn cứ…** (hoặc chọn dòng rồi **Ctrl+I**): công thức bằng chữ, thay số cụ thể (diện tích / số lượng × đơn giá × hệ số K × tỷ lệ,
   làm tròn theo dự án), căn cứ / nguồn đơn giá; nút **Chép** để dán vào văn bản trả lời. Cửa sổ **Xem chi tiết tính tiền…**: rê chuột
   lên dòng tiền.
+- **Bảng mục III gọn (1.0.57)**: phương án chi tiết không in các mục nhà, cây trồng, vật nuôi, hỗ trợ, thưởng khi mục đó 0 đồng và
+  không có dòng nào; có tài sản (kể cả chưa có giá, chỉ ghi chú) thì mục vẫn in. Số mục đánh lại liền nhau; dòng thưởng in đậm;
+  cột STT căn giữa ở mọi dòng.
+- **Phân quyền 6 vai trò (1.0.57, máy chủ LAN)**: quản trị vào **Quản lý tài khoản**, chọn tài khoản, chọn ô **Vai trò** rồi bấm
+  **Đổi vai trò**. Lãnh đạo: quản trị, bộ đơn giá, mở khóa phương án, quyết định / chi trả, khôi phục mốc. Thẩm định viên: khóa thẩm
+  định phương án. Chuyên viên lập phương án: hồ sơ, phương án, niêm yết, đợt trình (chỉ xóa hộ chưa lập). Kiểm đếm viên: hồ sơ và khối
+  lượng (dòng mới lấy đúng đơn giá bộ đơn giá; không sửa đơn giá / tỷ lệ, không áp chính sách hỗ trợ). Kế toán chi trả: quyết định,
+  chi trả, bàn giao, vận động. Thanh tra: mở dự án chỉ xem, xem nhật ký kiểm toán. Hai vai trò cũ "Quản trị", "Người dùng" giữ nguyên
+  quyền. Áp cho dự án trên máy chủ và bản mang về; file riêng trên máy không giới hạn. Không vai trò nào xóa được hộ đã có quyết định
+  phê duyệt hoặc đã chi trả.
+- **Văn bản nhiều khu vực giá (1.0.57)**: văn bản đơn giá chia khu vực (mỗi phụ lục một khu vực) - hộp Cập nhật đơn giá có ô **Khu vực
+  giá**: chỉ dòng của khu vực đã chọn được so với bộ đơn giá (mặc định khu vực khớp bộ đang dùng nhiều nhất).
 - **Khóa bảo mật & đồng bộ bộ đơn giá (1.0.56)**: máy đã thiết lập máy chủ LAN thì CHỈ tài khoản **quản trị máy chủ** đang
   đăng nhập sửa được bộ đơn giá (tài sản, cây trồng, vật nuôi, chính sách hỗ trợ, bảng giá đất, hệ số K - cả nạp từ file / văn bản,
   khôi phục bộ gốc); mật khẩu quản trị trên máy không thay được. Quản trị sửa xong, bộ đơn giá tự phát hành vào thư mục máy chủ

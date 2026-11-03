@@ -169,6 +169,9 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   CUỐI (don_gia `_mo_sua` / `cai_bo` / `khoi_phuc_bo_goc`, nhap_don_gia.ap_dung, gia_dat_nq28 ghi_thay / xoa_thay, he_so_k ghi / xoa).
   Máy có may_chu.json: chỉ quản trị máy chủ đang đăng nhập; máy đơn: mật khẩu (`mo_khoa_phien`). Màn hình khác hộp Bộ đơn giá hỏi bằng
   `man_hinh_don_gia.xin_quyen_sua`. Cài bộ nhận từ máy chủ trong `quan_tri_bo.cho_phep_dong_bo()` (dong_bo_don_gia). Hàm ghi mới: thêm cả hai.
+- Phân quyền 6 vai trò (1.0.57, `phan_quyen`): vai trò gắn trên kết nối (`con._vai_tro`, app.mo theo `vai_tro_cho_file`); hàm ghi
+  gọi `lap_pa.kiem_quyen(con, '<quyền>')` ngay sau kiểm hộ nhận việc; BoSoan.luu `phan_quyen.kiem_pa`; trigger tạm `_pq_*`
+  (`gan_chan_csdl`). Hàm ghi MỚI: thêm kiem_quyen. Vai trò None (máy đơn / file riêng) = mọi quyền; 'quan_tri' / 'nguoi_dung' cũ giữ quyền.
 - Hàm ghi theo hộ gọi `lap_pa.kiem_ho_nhan_viec` / `kiem_ds_ho_nhan_viec` ở đầu (bản offline nhận việc theo hộ; trigger tạm
   `gan_chan_ho_nhan_viec` là lớp chặn cuối). Bảng `audit_logs`: không viết mã sửa / xóa.
 - Đối tượng nhớ dùng chung (`BoiCanh.tu`, `nghiep_vu.ket_qua_ho`, `theo_doi.tong_hop`, `csdl.nho`): KHÔNG sửa đối tượng trả về. Cả dự án:
@@ -224,6 +227,8 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Viền đen RGB / Word `sz 8 color 000000` (WPS / LibreOffice / chế độ tối không mất khung). Bảng lớn: không `ws.merge_cells` /
   `unmerge_cells` / `iter_rows` (dùng `in_an._gop_o`, `_bo_gop`, `_o_chu`). Không bật fitToPage khi có ngắt trang tay; giữ
   `RONG_DU_PHONG_BTH` 0,97 (đã đo: khít 100% Excel tách cột sang trang riêng).
+- Bảng mục III (1.0.57): `du_lieu_in.an_muc_trong` ẩn mục 2-6 không tiền + không dòng, ĐÁNH LẠI số mục - nhận mục theo TÊN
+  (`in_word._theo_muc`, `du_lieu_in.la_muc_nha`, `TEN_MUC_DAT`), đừng so số mục cố định (`so_muc`) trên dòng in.
 - Địa danh dòng ngày = `du_lieu_in.dia_danh_ngay` (nơi đơn vị công tác, không phải xã dự án). Tiêu đề mục I theo chủ sử dụng (tổ chức / hộ)
   - chữ người dùng chỉ định thắng PDF mẫu. Không ghi cố định tên đơn vị / người ký; hồ sơ địa phương mặc định trung tính.
 

@@ -360,12 +360,14 @@ def _la_ma(n: int) -> str:
 def _theo_muc(dong: list) -> dict:
     """{mục: [dòng 'I' của mục]} từ danh sách dòng du_lieu_in.dong_chi_tiet (tách theo dòng đề mục 'H')."""
     from . import nghiep_vu
-    ma = {str(nghiep_vu.so_muc(m)): m for m in (1, 2, 3, nghiep_vu.MUC_VN, 4)}
+    # theo TÊN mục (1.0.57: mục trống bị ẩn, số thứ tự đánh lại - số không còn cố định theo mục)
+    ma = {nghiep_vu.TEN_MUC[m]: m for m in (1, 2, 3, nghiep_vu.MUC_VN, 4)}
+    ma[du_lieu_in.TEN_MUC_DAT] = 1
     kq = {m: [] for m in ma.values()}
     hien = None
     for x in dong:
         if x[0] == 'H':
-            hien = ma.get(str(x[1][0]))
+            hien = ma.get(str(x[1][1]))
         elif x[0] == 'I' and hien is not None:
             kq[hien].append(x)
     return kq
@@ -459,8 +461,8 @@ def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
         loai, gt = x[0], x[1]
         cach_tinh = x[2] if len(x) > 2 else ''
         if loai == 'H':
-            muc_sl = 2 if str(gt[0]) == str(so_muc_nha) else None
-        dam = loai in ('H', 'T')
+            muc_sl = 2 if du_lieu_in.la_muc_nha(gt) else None
+        dam = loai in ('H', 'T', 'R')                   # 1.0.57: dòng thưởng in đậm cả dòng
         if loai == 'G' and len(x) > 2 and isinstance(x[2], int):
             muc_sl = 2 if x[2] == 2 else None           # tiêu đề khối của một mục: số lượng mục 2 (nhà) kiểu kế toán 2 chữ số lẻ
         if loai in ('G', 'S'):
@@ -488,7 +490,7 @@ def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
 
         def oc(chu, k, can, dam_o=dam, co_o=CO_BANG):
             return _o(_p(_r(chu, dam=dam_o, co=co_o), can=can, giu_sau=giu) if chu else _p(giu_sau=giu), rong[k])
-        o = [oc('' if gt[0] is None else str(gt[0]), 0, 'center' if loai in ('H', 'R') else 'left'), oc(gt[1] or '', 1, 'left')]
+        o = [oc('' if gt[0] is None else str(gt[0]), 0, 'center'), oc(gt[1] or '', 1, 'left')]   # STT căn giữa cả dòng con 1.1 (1.0.57)
         if cach_tinh:
             o.append(_o(_p(_r(cach_tinh, dam=dam, co=CO_BANG), can='center', giu_sau=giu), sum(rong[2:6]), nhap=4))
         else:
@@ -711,8 +713,8 @@ def _chu_cac_cot(dong: list, so_muc_nha) -> dict:
         loai, gt = x[0], x[1]
         cach_tinh = x[2] if len(x) > 2 else ''
         if loai == 'H':
-            muc_sl = 2 if str(gt[0]) == str(so_muc_nha) else None
-        dam = loai in ('H', 'T', 'G')
+            muc_sl = 2 if du_lieu_in.la_muc_nha(gt) else None
+        dam = loai in ('H', 'T', 'G', 'R')
         if loai == 'T' or loai in ('G', 'S'):
             chu.setdefault(6, []).append((_so(gt[6]) if gt[6] else '-', True))
             if loai != 'T' and gt[7]:

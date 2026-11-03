@@ -43,6 +43,14 @@ def kiem_ho_nhan_viec(con, ma_ho) -> None:
                       'Bản offline theo hộ chỉ gộp các hộ đã nhận: hộ thêm mới ở đây sẽ không lên máy chủ. Thêm hộ trên máy chủ.')
 
 
+def kiem_quyen(con, quyen: str, viec: str = '') -> None:
+    """1.0.57: vai trò tài khoản máy chủ LAN gắn trên kết nối không có quyền -> LoiNhap (phan_quyen.kiem). Máy đơn: không làm gì."""
+    if getattr(con, '_vai_tro', None) is None:
+        return
+    from .phan_quyen import kiem
+    kiem(con, quyen, viec)
+
+
 BANG_KHONG_CHAN_HO = ('audit_logs', 'tho_nhap')     # sổ ghi / dữ liệu thô: không thuộc "việc" của hộ
 
 
@@ -528,12 +536,19 @@ class BoSoan:
         return kiem_tra_pa(self.pa, self.bc)
 
     def danh_sach_ho(self) -> list:
-        return [(r['ma_ho'], r['thu_tu'], r['ho_ten']) for r in self.con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho')]
+        """[(mã hộ, thứ tự, họ tên)] theo thứ tự dự án - nhớ trên kết nối (csdl.nho, tự đọc lại khi dữ liệu đổi). 1.0.57 (đề án V2.0
+        Gói 4): trước đây mỗi lần chuyển hộ ◀ ▶ đọc lại cả bảng hộ 3 lần (3.000 hộ ~11 ms). KHÔNG sửa danh sách trả về (dùng chung)."""
+        return csdl.nho(self.con, 'lap_pa.danh_sach_ho', lambda: [(r['ma_ho'], r['thu_tu'], r['ho_ten']) for r in self.con.execute(
+            'SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho')])
 
     def ho_ke(self, buoc: int):
-        ds = [x[0] for x in self.danh_sach_ho()]
-        i = ds.index(self.ma_ho) + buoc
-        return ds[i] if 0 <= i < len(ds) else None
+        vt = csdl.nho(self.con, 'lap_pa.vi_tri_ho', lambda: {x[0]: i for i, x in enumerate(self.danh_sach_ho())})
+        ds = self.danh_sach_ho()
+        i = vt.get(self.ma_ho)
+        if i is None:
+            return None
+        i += buoc
+        return ds[i][0] if 0 <= i < len(ds) else None
 
     def thua_cua_ho(self) -> list:
         """Các thửa của hộ: (ma_thua, mô tả, DT còn chưa đưa vào mục 1)."""
@@ -1021,6 +1036,9 @@ class BoSoan:
         tu_dong: phương án phần mềm tự lập (Dự án mới) - trạng thái TU_LAP, chỉ thành "Đã lập" khi người dùng mở ra soát và Lưu.
         mo_lai=False: không đọc lại phương án vừa lưu (bộ soạn bỏ đi ngay - tự lập hàng loạt)."""
         kiem_ho_nhan_viec(self.con, self.ma_ho)
+        if getattr(self.con, '_vai_tro', None) is not None:      # 1.0.57: vai trò máy chủ LAN - phần phương án được sửa
+            from .phan_quyen import kiem_pa
+            kiem_pa(self.con, getattr(self, '_pa_goc', None), self.pa, getattr(self, 'dm', None))
         if self.khoa:
             from . import lan_pa
             x = lan_pa.lan_cua(self.con, self.ma_ho, self.lan)

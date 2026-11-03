@@ -429,7 +429,8 @@ class HopChonNhieuThua(QDialog):
 
 COT_CHU_DAI = {'ten', 'quy_cach', 'can_cu_gia', 'ghi_chu', 'cach_tinh'}
 COT_CONG_THUC = {'so_luong', 'dien_tich'}
-AP_NHIEU_DONG = {'loai_dat', 'vi_tri', 'gia_bang_gia', 'he_so_k', 'ty_le', 'ghi_chu'}   # mục 1: sửa một ô -> áp cho mọi dòng đã chọn
+AP_NHIEU_DONG = {'loai_dat', 'vi_tri', 'gia_bang_gia', 'he_so_k', 'ty_le', 'ghi_chu'}
+COT_GIA_VAI_TRO = {'don_gia', 'gia_bang_gia', 'he_so_k', 'ty_le', 'nguon', 'can_cu_gia'}   # 1.0.57: vai trò không quyền giá không sửa   # mục 1: sửa một ô -> áp cho mọi dòng đã chọn
 # hàng nhập nhanh + danh sách chọn: dùng chung với Dự toán & khái toán (0.9.67) - tên cũ giữ cho mã / test gọi từ man_hinh
 from .hang_nhap_nhanh import KIEU_SL, HangNhapNhanh, ds_chon_nhanh, lam_san  # noqa: E402,F401
 
@@ -1661,9 +1662,15 @@ class CuaSoLapPA(QDialog):
 
     def _ap_khoa(self) -> None:
         """Lần đang khóa: bảng mục chỉ xem, tắt ô / nút nhập; lần đang lập: như cũ."""
-        k = bool(self.bo.khoa) or self._ho_khong_nhan()
+        k0 = bool(self.bo.khoa) or self._ho_khong_nhan()
+        vt = getattr(self.bo.con, '_vai_tro', None)
         from PySide6.QtWidgets import QAbstractButton, QAbstractSpinBox
         for bm in self.bang.values():
+            k = k0
+            if vt is not None and not k:                # 1.0.57: vai trò không sửa mục này (kiểm đếm viên: mục hỗ trợ; kế toán…)
+                from . import phan_quyen
+                q = phan_quyen.quyen_bang(vt, 4 if bm.muc == 4 else bm.muc)
+                k = not (q['khoi_luong'] or q['gia'])
             b = bm._bang                               # không đọc bm.bang: thuộc tính đó vẽ thẻ chưa hiện (vẽ lười)
             if not hasattr(bm, '_et_goc'):
                 bm._et_goc = b.editTriggers()
@@ -1672,7 +1679,8 @@ class CuaSoLapPA(QDialog):
                 if isinstance(w, (QAbstractButton, QLineEdit, QComboBox, QAbstractSpinBox)) and not b.isAncestorOf(w) \
                         and w is not b:
                     w.setEnabled(not k)
-        self.b_dan.setEnabled(not k)
+        from . import phan_quyen
+        self.b_dan.setEnabled(not k0 and phan_quyen.quyen_bang(vt, 2)['khoi_luong'])
 
     def _ap_trang_thai_khoa(self) -> None:
         self._ap_khoa()
@@ -2141,6 +2149,15 @@ class CuaSoLapPA(QDialog):
 
     # ---------------------------------------------- sửa ô
     def sua_o(self, muc: int, r: int, cot: str, text: str):
+        # 1.0.57: vai trò tài khoản máy chủ (phan_quyen) - kiểm đếm viên không sửa đơn giá / hệ số / tỷ lệ
+        vt = getattr(self.bo.con, '_vai_tro', None)
+        if vt is not None and cot in COT_GIA_VAI_TRO:
+            from . import phan_quyen
+            if not phan_quyen.quyen_bang(vt, muc)['gia']:
+                QMessageBox.information(self, TEN_UD, f'Vai trò "{phan_quyen.ten_vai_tro(vt)}" không sửa đơn giá, hệ số, tỷ lệ: '
+                                                      'đơn giá theo bộ đơn giá - chuyên viên lập phương án áp giá.')
+                self.bang[muc]._ve_dong(r)
+                return
         # mục 1: sửa ô của một dòng đang nằm trong vùng chọn nhiều dòng -> áp cùng giá trị cho mọi dòng đã chọn (vị trí, giá, tỷ lệ…)
         ds = [r]
         if muc == 1 and cot in AP_NHIEU_DONG:

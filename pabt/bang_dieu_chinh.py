@@ -12,6 +12,7 @@ Không phụ thuộc Qt (cỡ dòng ước theo số ký tự).
 from __future__ import annotations
 
 import math
+import sqlite3
 from decimal import InvalidOperation
 from pathlib import Path
 
@@ -36,9 +37,14 @@ def ho_dieu_chinh(con, ds_ma_ho=None) -> list:
     """[(mã hộ, LanPA điều chỉnh mới nhất chưa bị thay)] của các hộ có phương án điều chỉnh theo thứ tự hộ."""
     kq = []
     chon = None if ds_ma_ho is None else set(ds_ma_ho)
+    # 1.0.57 (đề án V2.0 Gói 4): chỉ đọc lần phương án của hộ CÓ lần điều chỉnh (trước: ds_lan mọi hộ - 3.000 hộ = 3.000 lượt đọc)
+    try:
+        co = {r[0] for r in con.execute("SELECT DISTINCT ma_ho FROM pa_lan WHERE loai = 'dieu_chinh'")}
+    except sqlite3.Error:                               # file cũ chưa có cột loai: đọc từng hộ như trước
+        co = None
     for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho'):
         m = r[0]
-        if chon is not None and m not in chon:
+        if (chon is not None and m not in chon) or (co is not None and m not in co):
             continue
         dc = [x for x in lan_pa.ds_lan(con, m) if x.la_dieu_chinh and not x.bi_thay_boi]
         if dc:

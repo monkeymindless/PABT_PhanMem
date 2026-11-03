@@ -77,6 +77,12 @@ class HopNhapDonGia(QDialog):
         self.ket_qua_ai = None                          # 1.0.56: kết quả phân tích AI (tùy chọn) - áp lại sau mỗi lần so khớp
         self.tu_loi_van = tu_loi_van
         self.scan = bool(getattr(dong, 'scan', False))   # dòng đọc bằng nhận dạng chữ: chặn giá nghi đọc sai, không chọn sẵn mục "bỏ"
+        # 1.0.57: văn bản nhiều khu vực giá (QĐ 18/2026 hợp nhất: Phụ lục I khu vực 1, Phụ lục II khu vực 2) - bộ đơn giá một mức giá mỗi
+        # mục: chỉ dòng của MỘT khu vực (mặc định khu vực khớp bộ đơn giá đang dùng nhiều nhất), người dùng đổi ở ô "Khu vực giá"
+        self.ds_tat_ca = ds
+        self.khu_vuc = ndg.cac_khu_vuc(ds)
+        self.kv = ndg.khu_vuc_khop_nhat(ds, nhom_vb or None) if self.khu_vuc else ''
+        ds = ndg.loc_khu_vuc(ds, self.kv)
         self.ds = ds
         self.van_ban = vb
         self.da_co = ndg.da_co(vb.get('so_hieu', ''))
@@ -159,6 +165,19 @@ class HopNhapDonGia(QDialog):
                                '- chọn sẵn, bỏ dấu "Dùng" để giữ. Dự án đã lập giữ nguyên số liệu; bộ đơn giá cũ được giữ.')
         self.o_cach.currentIndexChanged.connect(self._doi_cach)
         hang_cach.addWidget(self.o_cach, 1)
+        self.cb_kv = None
+        if self.khu_vuc:
+            n = QLabel('Khu vực giá:')
+            n.setProperty('vai', 'nhan')
+            hang_cach.addWidget(n)
+            self.cb_kv = QComboBox()
+            for k, so in self.khu_vuc:
+                self.cb_kv.addItem(f'Khu vực {k} ({so} dòng)', k)
+            self.cb_kv.setCurrentIndex(max(0, self.cb_kv.findData(self.kv)))
+            self.cb_kv.setToolTip('Văn bản có nhiều khu vực giá (mỗi phụ lục một khu vực). Bộ đơn giá chỉ một mức giá mỗi mục: chọn khu '
+                                  'vực của đơn vị - mặc định khu vực khớp bộ đơn giá đang dùng nhiều nhất.')
+            self.cb_kv.currentIndexChanged.connect(lambda _: self.doi_khu_vuc(self.cb_kv.currentData()))
+            hang_cach.addWidget(self.cb_kv)
         self.lb_vb_cu = QLabel('Văn bản bị thay thế:')
         self.lb_vb_cu.setProperty('vai', 'nhan')
         hang_cach.addWidget(self.lb_vb_cu)
@@ -331,6 +350,16 @@ class HopNhapDonGia(QDialog):
         dat_trang_thai(self.lb_ai, 'tin', chu)
         self.lb_ai.setVisible(True)
         return chu
+
+    def doi_khu_vuc(self, kv: str):
+        """Đổi khu vực giá: danh sách dòng = dòng của khu vực đó, so khớp lại."""
+        if kv == self.kv:
+            return
+        self.kv = kv
+        for m in self.ds_tat_ca:                        # so khớp khu vực trước đã đặt trạng thái / bỏ chọn: làm lại từ đầu
+            m.chon = True
+        self.ds = ndg.loc_khu_vuc(self.ds_tat_ca, kv)
+        self.khop()
 
     def khop(self):
         ndg.so_khop(self.ds, self.o_nhom.currentData() or None, thay_the=self.thay_the(), scan=self.scan)

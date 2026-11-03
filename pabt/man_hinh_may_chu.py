@@ -405,11 +405,16 @@ class HopTaiKhoan(_Hop):
         self.ve()
         return True
 
-    def doi_vai_tro(self):
+    def doi_vai_tro(self, vai_tro: str | None = None):
+        """1.0.57: đặt vai trò của tài khoản đang chọn = vai trò ở ô "Vai trò" (6 vai trò nghiệp vụ - phan_quyen)."""
         u = self._chon()
         if u is None:
             return False
-        moi = may_chu.NGUOI_DUNG if u['vai_tro'] == may_chu.QUAN_TRI else may_chu.QUAN_TRI
+        moi = vai_tro or self.cb_vt.currentData()
+        if moi == u['vai_tro']:
+            self.bao(f'Tài khoản đã là vai trò "{may_chu.TEN_VAI_TRO.get(moi, moi)}": chọn vai trò khác ở ô "Vai trò" rồi bấm Đổi vai '
+                     'trò.')
+            return False
         try:
             may_chu.sua_nguoi_dung(self.phien, u['tai_khoan'], vai_tro=moi)
         except LoiMayChu as e:

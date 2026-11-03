@@ -714,6 +714,7 @@ class CuaSoChinh(QMainWindow):
         self.kq = None
         self.khoa = None
         self.chi_doc = False
+        self.vai_tro = None                             # 1.0.57: vai trò tài khoản máy chủ cho dự án đang mở (phan_quyen)
         self.nhan_viec = None                           # 1.0.29: bản offline theo hộ - frozenset mã hộ đã nhận (may_chu.ho_nhan_viec)
         self.dong_ho = QTimer(self)                      # làm mới khóa file mỗi phút
         self.dong_ho.setInterval(khoa.LAM_MOI * 1000)
@@ -1192,6 +1193,11 @@ class CuaSoChinh(QMainWindow):
                     return
                 chi_doc = hop.clickedButton() is nut_xem
             chi_doc = bool(chi_doc)
+            # 1.0.57: vai trò tài khoản máy chủ LAN (phan_quyen) - Thanh tra / vai trò không ghi gì: mở CHỈ XEM
+            from . import phan_quyen
+            vai_tro = phan_quyen.vai_tro_cho_file(p)
+            if phan_quyen.chi_xem(vai_tro):
+                chi_doc = True
             from .an_toan import la_goi_sao_luu
             if not chi_doc and la_goi_sao_luu(p):        # 1.0.55: bản sao lưu / mốc nén luôn mở chỉ xem (Lưu dự án thành… để dùng tiếp)
                 chi_doc = True
@@ -1252,6 +1258,13 @@ class CuaSoChinh(QMainWindow):
                         lap_pa.gan_chan_ho_nhan_viec(self.con, self.nhan_viec)
                     except sqlite3.Error:
                         pass
+                try:                                   # 1.0.57: vai trò máy chủ - hàm ghi kiểm (lap_pa.kiem_quyen) + trigger tạm (lớp cuối)
+                    phan_quyen.gan(self.con, vai_tro)
+                except sqlite3.Error:
+                    pass
+            else:
+                self.con._vai_tro = vai_tro
+            self.vai_tro = vai_tro
             self._cap_nhat_nut_ht()
             self.file = Path(p)
             self.dm = lap_pa.DanhMuc(self.con)
@@ -1261,6 +1274,7 @@ class CuaSoChinh(QMainWindow):
                 self.lenh[ten].setEnabled(not chi_doc)
             self.lenh['Đóng dự án'].setEnabled(True)
             self.lenh['Xóa dự án…'].setEnabled(True)
+            self._ap_vai_tro_lenh()
             self._cap_nhat_lenh_theo_du_an()            # mở dự án: bật sáng toàn bộ menu (Lập phương án vẫn tắt khi chỉ xem)
             for k in self.khung_trang.values():
                 k.dat_du_an(self.con, chi_doc)
@@ -1430,6 +1444,16 @@ class CuaSoChinh(QMainWindow):
             return 'excel'
         return ''
 
+    def _ap_vai_tro_lenh(self):
+        """1.0.57: tắt lệnh vai trò tài khoản máy chủ không có quyền (phan_quyen.LENH_QUYEN); chú thích lý do."""
+        vt = getattr(self, 'vai_tro', None)
+        if vt is None or self.con is None:
+            return
+        from . import phan_quyen
+        for ten in phan_quyen.lenh_bi_tat(vt, self.lenh):
+            self.lenh[ten].setEnabled(False)
+            self.lenh[ten].setStatusTip(f'Vai trò "{phan_quyen.ten_vai_tro(vt)}" không dùng lệnh này')
+
     def _cap_nhat_lenh_theo_du_an(self):
         """Chưa mở dự án: tắt các lệnh của nhóm 3, 4, 5 + Đơn giá đặc biệt (LENH_CAN_DU_AN); có dự án: bật (riêng Lập phương án hộ vẫn tắt khi chỉ xem)."""
         co = self.con is not None
@@ -1439,6 +1463,7 @@ class CuaSoChinh(QMainWindow):
                 a.setEnabled(co and not (self.chi_doc and ten == 'Lập phương án hộ…'))
                 # có dự án thì xóa nhắc (trước đây giữ mãi: thanh trạng thái vẫn báo "Mở hoặc tạo dự án…" khi đã mở)
                 a.setStatusTip('' if co else 'Mở hoặc tạo dự án để dùng chức năng này')
+        self._ap_vai_tro_lenh()
 
     def lam_moi_khoa(self, hoi: bool = True):
         """Làm mới khóa mỗi phút. Máy khác đã lấy khóa (chọn "Vẫn mở để sửa"): rà soát kiến trúc 31/10/2026 - chuyển dự án sang CHỈ XEM
@@ -1482,6 +1507,7 @@ class CuaSoChinh(QMainWindow):
             self.con.close()
             self.con = None
         self.nhan_viec = None
+        self.vai_tro = None
         self._cap_nhat_nhan_viec()
         self._cap_nhat_lenh_theo_du_an()                # đóng dự án: làm mờ lại nhóm 3, 4, 5 (+ Đơn giá đặc biệt) của menu trái
         if hasattr(self, 'nut_ht'):
@@ -2148,6 +2174,7 @@ class CuaSoChinh(QMainWindow):
             a_xoa.setToolTip('Chọn hộ trên danh sách rồi bấm Xóa hộ.')
         else:
             a_xoa.setToolTip(GOI_Y_MENU.get('Xóa hộ…', 'Xóa hộ'))
+        self._ap_vai_tro_lenh()
         if self.con is None:
             self.lb_tom_tat.setText('Sẵn sàng · Chưa mở dự án')
             return

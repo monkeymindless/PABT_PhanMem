@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 
 from . import csdl
-from .lap_pa import LoiNhap, bo_dau, doc_so, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec
+from .lap_pa import LoiNhap, bo_dau, doc_so, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec, kiem_quyen
 from .tien import D, chuoi, so_vn
 
 TRUONG_HO = [('ho_ten', 'Họ và tên'), ('so_cccd', 'Số CCCD'), ('ngay_cap', 'Ngày cấp'), ('noi_cap', 'Nơi cấp'),
@@ -193,6 +193,7 @@ def luu_ho(con, ma_ho, thong_tin: dict, ds_thua: list) -> int:
     """Thêm hộ mới (ma_ho = None) hoặc sửa hộ: thông tin + toàn bộ danh sách thửa (thêm / sửa / xóa). Trả mã hộ."""
     moi = ma_ho is None
     kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'sua_ho_so')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     # sửa hộ: chỉ ghi các trường có trong thong_tin (màn hình không hiện trường nào thì giữ nguyên trường đó)
     tt = {k: _gon(thong_tin.get(k)) for k, _ in TRUONG_HO if moi or k in thong_tin}
     if not tt.get('ho_ten'):
@@ -269,6 +270,10 @@ def xoa_nhieu_ho(con, ds_ma_ho) -> str:
     """Xóa các hộ cùng thửa, phương án, quyết định / chi trả của hộ (CASCADE) trong MỘT giao dịch - một bước hoàn tác; đánh
     lại số thứ tự một lần."""
     kiem_ds_ho_nhan_viec(con, ds_ma_ho)
+    kiem_quyen(con, 'xoa_ho')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
+    if getattr(con, '_vai_tro', None) is not None:
+        from .phan_quyen import kiem_xoa_ho
+        kiem_xoa_ho(con, ds_ma_ho)
     ds = thong_tin_xoa(con, ds_ma_ho)
     if not ds:
         raise LoiNhap('Không có hộ nào để xóa (hộ đã bị xóa hoặc chưa chọn hộ).')
@@ -292,6 +297,7 @@ def gop_ho(con, giu: int, bo: int) -> str:
     if giu == bo:
         raise LoiNhap('Chọn hai hộ khác nhau để gộp.')
     kiem_ds_ho_nhan_viec(con, (giu, bo))
+    kiem_quyen(con, 'sua_ho_so')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     a, b = doc_ho(con, giu), doc_ho(con, bo)
     with csdl.giao_dich(con):
         cap = {}
@@ -333,6 +339,7 @@ def chuyen_thua(con, ma_thua: int, ma_ho_moi: int) -> str:
     if t is None:
         raise LoiNhap(f'Không có thửa mã {ma_thua}.')
     kiem_ds_ho_nhan_viec(con, (t['ma_ho'], ma_ho_moi))
+    kiem_quyen(con, 'sua_ho_so')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     moi = doc_ho(con, ma_ho_moi)
     if t['ma_ho'] == ma_ho_moi:
         raise LoiNhap('Thửa đã thuộc hộ này.')

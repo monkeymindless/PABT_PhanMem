@@ -214,6 +214,8 @@ def _kiem_ho(con, ma_ho) -> None:
 def tao_lan_moi(con, ma_ho: int, ten: str | None = '', ghi_chu: str = '') -> int:
     """Lập phương án BỔ SUNG: lần mới = lần lớn nhất + 1 (rỗng - các lần trước giữ nguyên). Trả số lần."""
     _kiem_ho(con, ma_ho)
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'lap_bo_sung')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     ten = ten or ''
     lan = max(x.lan for x in ds_lan(con, ma_ho)) + 1
     with csdl.giao_dich(con):
@@ -233,6 +235,8 @@ def tao_lan_dieu_chinh(con, ma_ho: int, lan_goc: int | None = None, ten: str | N
     Xóa lần điều chỉnh (chưa có quyết định) thì lần cũ tính lại. Trả số lần mới. LoiNhap: hộ chưa có phương án / lần đã bị thay."""
     from .lap_pa import LoiNhap
     _kiem_ho(con, ma_ho)
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'lap_bo_sung')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     ds = ds_lan(con, ma_ho)
     ung = [x for x in ds if x.qd and not x.bi_thay_boi and x.so_dong] or [x for x in ds if not x.bi_thay_boi and x.so_dong]
     if lan_goc is None:
@@ -285,6 +289,8 @@ def sua_lan(con, ma_ho: int, lan: int, ten: str | None = None, so_pa: str | None
             ghi_chu: str | None = None) -> None:
     """Sửa tên / số, ngày phương án / ghi chú của một lần (None = giữ nguyên)."""
     _kiem_ho(con, ma_ho)
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'lap_bo_sung')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     gt = dict(ten=ten, so_pa=so_pa, ngay_pa=ngay_pa, ghi_chu=ghi_chu)
     cot = {k: str(v).strip() for k, v in gt.items() if v is not None}
     if not cot:
@@ -308,6 +314,8 @@ def mo_khoa_lan(con, ma_ho: int, lan: int, ly_do: str = '') -> None:
     """Mở khóa TẠM để điều chỉnh lần đã phê duyệt: trạng thái MO_KHOA (quyết định cũ giữ nguyên số liệu đã ghi), nhật ký ghi lý do -
     CẢNH BÁO: sửa xong cần ban hành quyết định điều chỉnh. Khóa lại: khoa_lai."""
     _kiem_ho(con, ma_ho)
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'mo_khoa_lan')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     with csdl.giao_dich(con):
         _dam_bao_dong(con, ma_ho, lan)
         con.execute('UPDATE pa_lan SET khoa = 0, trang_thai = ? WHERE ma_ho = ? AND lan = ?', (MO_KHOA, ma_ho, lan))
@@ -323,6 +331,8 @@ def mo_khoa_sua(con, ma_ho: int, lan: int) -> None:
 def khoa_lai(con, ma_ho: int, lan: int) -> None:
     """Khóa lại lần đã mở khóa điều chỉnh (có quyết định -> đã phê duyệt; không có -> đang lập nhưng khóa)."""
     _kiem_ho(con, ma_ho)
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'khoa_lan')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     co_qd = bool(_qd_cua_ho(con, ma_ho).get(lan))
     with csdl.giao_dich(con):
         _dam_bao_dong(con, ma_ho, lan)
@@ -335,6 +345,8 @@ def xoa_lan(con, ma_ho: int, lan: int) -> int:
     """Xóa lần bổ sung CHƯA phê duyệt (dòng phương án của lần đó). Lần 1 / lần đã có quyết định: LoiNhap. Trả số dòng xóa."""
     from .lap_pa import LoiNhap
     _kiem_ho(con, ma_ho)
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'lap_bo_sung')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     if lan <= 1:
         raise LoiNhap('Không xóa được phương án lần đầu (xóa từng dòng trong phương án nếu cần).')
     if _qd_cua_ho(con, ma_ho).get(lan):

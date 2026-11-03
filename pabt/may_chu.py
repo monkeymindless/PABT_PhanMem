@@ -31,7 +31,12 @@ THU_MUC_DU_AN = 'DuAn'
 THU_MUC_SAO_LUU = 'SaoLuu'
 LAP_BAM = 120000                       # số vòng PBKDF2-HMAC-SHA256
 QUAN_TRI, NGUOI_DUNG = 'quan_tri', 'nguoi_dung'
-TEN_VAI_TRO = {QUAN_TRI: 'Quản trị', NGUOI_DUNG: 'Người dùng'}
+TEN_VAI_TRO = {QUAN_TRI: 'Quản trị', NGUOI_DUNG: 'Người dùng (mọi việc lập phương án)'}
+# 1.0.57: 6 vai trò nghiệp vụ (phan_quyen - đề án LARC V2.0); quản trị = quan_tri hoặc lãnh đạo
+TEN_VAI_TRO.update({'lanh_dao': 'Lãnh đạo (phê duyệt, mở khóa)', 'tham_dinh': 'Thẩm định viên',
+                    'chuyen_vien': 'Chuyên viên lập phương án', 'kiem_dem': 'Kiểm đếm viên', 'ke_toan': 'Kế toán chi trả',
+                    'thanh_tra': 'Thanh tra, kiểm toán (chỉ xem)'})
+VAI_TRO_QUAN_TRI = (QUAN_TRI, 'lanh_dao')
 
 _LUOC_DO = '''
 CREATE TABLE IF NOT EXISTS nguoi_dung (
@@ -78,7 +83,7 @@ class Phien:
 
     @property
     def la_quan_tri(self) -> bool:
-        return self.vai_tro == QUAN_TRI
+        return self.vai_tro in VAI_TRO_QUAN_TRI
 
     @property
     def ten_hien(self) -> str:
@@ -318,7 +323,7 @@ def sua_nguoi_dung(phien, tai_khoan: str, ho_ten: str | None = None, chuc_vu: st
         r = con.execute('SELECT * FROM nguoi_dung WHERE tai_khoan = ?', (tai_khoan,)).fetchone()
         if r is None:
             raise LoiMayChu(f'Không có tài khoản "{tai_khoan}".')
-        if tai_khoan == phien.tai_khoan and (khoa or (vai_tro and vai_tro != QUAN_TRI)):
+        if tai_khoan == phien.tai_khoan and (khoa or (vai_tro and vai_tro not in VAI_TRO_QUAN_TRI)):
             raise LoiMayChu('Không tự khóa hoặc bỏ quyền quản trị của chính mình.')
         gt = {}
         if ho_ten is not None:
@@ -579,7 +584,8 @@ def lay_ve(file, phien=None) -> Path:
     finally:
         con.close()
     ds = [x for x in ds_lay_ve_cuc_bo() if x['ban_sao'] != str(dich)]
-    ds.append(dict(ban_sao=str(dich), goc=str(phien.goc), file_goc=str(f), tai_khoan=phien.tai_khoan, luc=_bay_gio(), sua_goc=sua))
+    ds.append(dict(ban_sao=str(dich), goc=str(phien.goc), file_goc=str(f), tai_khoan=phien.tai_khoan, luc=_bay_gio(), sua_goc=sua,
+                   vai_tro=phien.vai_tro))
     _ghi_so(ds)
     return dich
 
@@ -820,7 +826,7 @@ def lay_ve_theo_ho(file, ds_ma_ho, phien=None) -> Path:
     ds = ds_lay_ve_cuc_bo()
     ds.append(dict(ban_sao=str(dich), goc=str(phien.goc), file_goc=str(f), tai_khoan=phien.tai_khoan, luc=luc,
                    sua_goc=f.stat().st_mtime, ds_ma_ho=cac_ho, dau_vet={str(m): v for m, v in dau_vet.items()},
-                   audit_max=audit or 0, nhat_ky_max=nk or 0))
+                   audit_max=audit or 0, nhat_ky_max=nk or 0, vai_tro=phien.vai_tro))
     _ghi_so(ds)
     return dich
 
