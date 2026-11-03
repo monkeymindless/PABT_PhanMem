@@ -7,6 +7,20 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.55', '03/11/2026', (
+        'Nhật ký kiểm toán có CHUỖI BĂM: mỗi dòng ghi qua LARC được ký nối với dòng trước - dòng bị sửa / xóa bằng công cụ khác ngoài '
+        'phần mềm được báo ngay trên cửa sổ Nhật ký kiểm toán.',
+        'Giải trình cách tính từng dòng phương án: chuột phải dòng > "Giải trình cách tính & căn cứ…" (hoặc Ctrl+I) - công thức, thay '
+        'số, căn cứ / nguồn giá, có nút Chép; cửa sổ Xem chi tiết tính tiền: rê chuột lên dòng tiền để đọc giải trình.',
+        'Bản sao lưu tự động và mốc của Cỗ máy thời gian được NÉN (nhỏ hơn khoảng 5 lần, không mã hóa - luôn khôi phục được). Mở bản '
+        'sao lưu: phần mềm tự giải nén, mở chỉ xem.',
+        'Nhận phiếu qua Wi-Fi: quét mã QR thì gói tin được mã hóa (khóa nằm trong mã QR, không đi qua mạng) và kiểm tra không bị sửa '
+        'trên đường truyền.',
+        'Dải lần lập phương án gọn hơn: "+ PA bổ sung" là nút phụ; hộ chỉ có một lần phương án không hiện nút Xóa lần.',
+        'Sửa lỗi của 1.0.54 có thể làm phần mềm tự đóng (hiếm, sau khi mở - đóng nhiều cửa sổ): phần đọc tên ô nhập cho trình đọc màn hình.',
+        'Sửa lỗi: họ tên dán từ bản scan / PDF có ký tự điều khiển ẩn làm xuất hồ sơ báo lỗi "embedded null byte"; Trợ lý AI che thêm '
+        'họ tên sau "Người nhận tiền / Người đại diện / Người được ủy quyền / Chủ sở hữu / Họ và tên…" và số điện thoại dạng (+84).',
+    )),
     ('1.0.54', '03/11/2026', (
         'Tông nền Tối / Ấm / Titan: nền ô trạng thái các bảng (xanh = khớp, cam = lệch, vàng = cần xem) và các dải, thẻ, khung viền riêng của '
         'từng màn hình đổi màu theo tông - không còn ô nền sáng dưới chữ sáng.',

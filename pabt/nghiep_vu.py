@@ -898,3 +898,69 @@ def dong_bang_0(pa: PhuongAn) -> list:
 
 def kiem_tra_ho(con, ma_ho: int, bc: BoiCanh | None = None) -> list:
     return kiem_tra_pa(doc_phuong_an(con, ma_ho), bc or BoiCanh.tu(con))
+
+
+# ---------------------------------------------------------------- giải trình một dòng (1.0.55 - người dùng 03/11/2026)
+def chu_lam_tron(n: int) -> str:
+    """-3 -> 'làm tròn đến nghìn đồng' (tham số LAMTRON của dự án, ROUND của Excel)."""
+    return {0: 'làm tròn đến đồng', -1: 'làm tròn đến chục đồng', -2: 'làm tròn đến trăm đồng', -3: 'làm tròn đến nghìn đồng',
+            -4: 'làm tròn đến chục nghìn đồng', -5: 'làm tròn đến trăm nghìn đồng', -6: 'làm tròn đến triệu đồng'}.get(
+        int(n), f'làm tròn {n} chữ số')
+
+
+def giai_trinh_dong_pa(pa: PhuongAn, bc: BoiCanh, muc: int, chi_so: int) -> dict:
+    """Giải trình dòng chi_so (0-) của mục muc (1 đất; 2, 3, MUC_VN, 4 khoản) để trả lời thanh tra / người dân: ten_hang_muc,
+    cong_thuc_chu (công thức bằng chữ), thay_so [dòng thay số cụ thể], can_cu [căn cứ / nguồn giá], thanh_tien (Decimal - đúng như
+    tinh_pa), dong [mọi dòng gộp để hiện / chép]. Chỉ đọc, không đổi phương án."""
+    from .tien import so_vn, vn
+    tron = chu_lam_tron(bc.lamtron)
+    if muc == 1:
+        d = pa.dat[chi_so]
+        t = bc.thua.get(d.ma_thua) or {}
+        ten = mo_ta_thua(t.get('so_to', ''), t.get('so_thua', ''), d.loai_dat, bc.cap_dia_ban, bc.ten_dia_ban, d.vi_tri or t.get('vi_tri'))
+        k, tl = he_so(d.he_so_k), he_so(d.ty_le)
+        dg = D(d.gia_bang_gia) * k
+        tt = thanh_tien_dong_dat(d, bc)
+        cong_thuc = f'Thành tiền = ROUND(Diện tích × Giá đất theo bảng giá × Hệ số K × Tỷ lệ bồi thường; {tron})'
+        thay = []
+        if d.cong_thuc:
+            thay.append(f'Diện tích tính từ công thức đã nhập: {d.cong_thuc} = {so_vn(d.dien_tich)} m²')
+        thay.append(f'Đơn giá bồi thường = {vn(d.gia_bang_gia)} đ/m² × hệ số K {so_vn(k)} = {vn(dg)} đ/m²')
+        thay.append(f'Thành tiền = {so_vn(d.dien_tich)} m² × {vn(dg)} đ/m² × {so_vn(tl * 100)}% = {vn(D(d.dien_tich) * dg * tl)} đồng'
+                    f' -> {tron}: {vn(tt)} đồng')
+        can_cu = [x for x in (f'Loại đất {d.loai_dat}' + (f', vị trí {d.vi_tri}' if d.vi_tri else '') if d.loai_dat else '',
+                              (f'Nguồn gốc sử dụng đất: {t.get("nguon_goc")}' if t.get('nguon_goc') else ''),
+                              (f'Ghi chú / căn cứ: {d.ghi_chu}' if d.ghi_chu else '')) if x]
+    else:
+        d = pa.khoan[muc][chi_so]
+        tl = he_so(d.ty_le)
+        tt = thanh_tien_dong(d, bc)
+        ten = (f'{d.ma} - ' if d.ma else '') + (d.ten or '')
+        cong_thuc = f'Thành tiền = ROUND(Số lượng × Đơn giá × Tỷ lệ; {tron})'
+        thay = []
+        if d.cong_thuc:
+            thay.append(f'Số lượng tính từ công thức đã nhập: {d.cong_thuc} = {so_vn(d.so_luong)} {d.dvt or ""}'.rstrip())
+        if muc == 4 and d.ma in tap_ma_theo_nk():
+            thay.append('Đơn giá theo nhân khẩu: ' + don_gia_theo_nhan_khau(bc, d.ma, pa.nhan_khau, bc.nguong_nk)[1])
+        if d.cach_tinh:
+            thay.append(f'Cách tính: {d.cach_tinh}')
+        if muc == 4 and d.ma in tap_ma_on_dinh():
+            cong_thuc += ' (ổn định đời sống: số lượng = nhân khẩu, đơn giá = kg gạo × giá gạo × số tháng × mức hỗ trợ)'
+        elif muc == 4 and d.ma in tap_ma_dao_tao():
+            cong_thuc += ' (đào tạo, chuyển đổi nghề: số lượng = diện tích đất nông nghiệp thu hồi, đơn giá = giá đất × tỷ lệ hỗ trợ)'
+        thay.append(f'Thành tiền = {so_vn(d.so_luong)} {d.dvt or ""} × {vn(d.don_gia)} đ × {so_vn(tl * 100)}% = '
+                    f'{vn(D(d.so_luong) * D(d.don_gia) * tl)} đồng -> {tron}: {vn(tt)} đồng')
+        nguon = {NGUON_DM: 'đơn giá theo danh mục bộ đơn giá', NGUON_TD: 'đơn giá theo mục tương đương'
+                 + (f' {d.ma_tuong_duong}' if d.ma_tuong_duong else ''), NGUON_TAY: 'đơn giá nhập tay'}.get(d.nguon_gia, d.nguon_gia)
+        ht = (bc.hotro.get(d.ma) or {}) if muc == 4 else {}
+        can_cu = [x for x in (f'Nguồn giá: {nguon}' if nguon else '',
+                              (f'Căn cứ giá: {d.can_cu_gia}' if d.can_cu_gia else ''),
+                              (f'{"Căn cứ" if muc == 4 else "Quy cách"}: {d.quy_cach}' if d.quy_cach else ''),
+                              (f'Căn cứ chính sách: {ht.get("can_cu")}' if ht.get('can_cu') and ht.get('can_cu') != d.quy_cach else ''),
+                              (f'Ghi chú: {d.ghi_chu}' if d.ghi_chu and d.ghi_chu not in (d.quy_cach, ht.get('can_cu')) else ''))
+                  if x]
+    dong = [f'Hạng mục: {ten}', '', 'Công thức:', f'  {cong_thuc}', '', 'Thay số:', *[f'  {x}' for x in thay]]
+    if can_cu:
+        dong += ['', 'Căn cứ, nguồn số liệu:', *[f'  {x}' for x in can_cu]]
+    return dict(muc=muc, chi_so=chi_so, ten_hang_muc=ten, cong_thuc_chu=cong_thuc, thay_so=thay, can_cu=can_cu, thanh_tien=tt,
+                dong=dong)

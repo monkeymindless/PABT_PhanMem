@@ -908,6 +908,8 @@ class BangMuc(QWidget):
             them('Chọn nhiều thửa…', lambda: man.chon_nhieu_thua())
         else:
             them('Thêm dòng (ô nhập nhanh)', lambda: self.hang.o_chon.setFocus())
+        them('Giải trình cách tính && căn cứ…\tCtrl+I', lambda: man.xem_giai_trinh_dong(muc, chon[0]), len(chon) == 1)
+        m.addSeparator()
         them('Nhân bản dòng', lambda: man.nhan_ban_dong(muc), len(chon) == 1)
         them(f'Xóa {len(chon)} dòng đã chọn' if len(chon) > 1 else 'Xóa dòng', lambda: man.xoa_dong(muc), co)
         m.addSeparator()
@@ -1467,7 +1469,9 @@ class CuaSoLapPA(QDialog):
                           # 0.9.78: Dán danh sách tài sản (nhận cả khi đang đứng ở thẻ Hồ sơ hay thẻ mục nào)
                           (QKeySequence('Ctrl+Shift+V'), lambda: self.mo_dan_tai_san()),
                           # 0.9.84: bật / tắt xem trước A4 (cả khi đang đứng trong ô bảng / ô chữ của cửa sổ)
-                          (QKeySequence('F4'), lambda: self.bat_tat_xem_truoc())):
+                          (QKeySequence('F4'), lambda: self.bat_tat_xem_truoc()),
+                          # 1.0.55: giải trình cách tính dòng đang chọn (không dùng F2 - phím sửa ô của bảng)
+                          (QKeySequence('Ctrl+I'), lambda: self.xem_giai_trinh_dong())):
             sc = QShortcut(phim, self)
             # WidgetWithChildren: chỉ khi đang làm việc trên cửa sổ lập PA — tránh đụng Ctrl+Shift+V của tab Đơn giá bồi thường
             if phim.toString() == 'Ctrl+Shift+V':
@@ -1573,7 +1577,7 @@ class CuaSoLapPA(QDialog):
         self.lb_lan = self.lb_tong_cong_don = NhanRutGon('')
         self.lb_lan.setObjectName('lb_lan_pa')
         self.b_lan_moi = QPushButton('+ PA bổ sung')
-        ap_kieu_nut(self.b_lan_moi, KieuNut.CHINH)
+        ap_kieu_nut(self.b_lan_moi, KieuNut.PHU)     # 1.0.55: nút phụ - không tranh nổi bật với nút Lưu / nút chính của cửa sổ
         self.b_lan_moi.setToolTip('Lập thêm một phương án cho hộ (tài sản, chính sách bổ sung) - các lần trước và quyết định đã '
                                   'phê duyệt giữ nguyên; tổng của hộ cộng dồn mọi lần')
         self.b_lan_moi.clicked.connect(lambda: self.lap_bo_sung())
@@ -1621,6 +1625,7 @@ class CuaSoLapPA(QDialog):
         self.b_mo_khoa.setVisible(bool(self.bo.khoa))
         khong_nhan = self._ho_khong_nhan()
         self.b_xoa_lan.setEnabled(self.bo.lan > 1 and not (x and x.qd) and not khong_nhan)
+        self.b_xoa_lan.setVisible(len(ds) > 1)          # 1.0.55: hộ một lần PA - không có lần nào xóa được: nhường chỗ cho chữ tổng
         for b in (self.b_lan_moi, self.b_dieu_chinh, self.b_sua_lan, self.b_mo_khoa):
             b.setEnabled(not khong_nhan)       # 1.0.31: bản offline theo hộ - hộ không nhận việc chỉ xem
         if x is not None:
@@ -2495,6 +2500,30 @@ class CuaSoLapPA(QDialog):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self._sau_khi_them(2, i, 'Đã tách phần trong / ngoài ranh thu hồi (mô tả ở cột Quy cách).')
         return dlg
+
+    def xem_giai_trinh_dong(self, muc: int | None = None, i: int | None = None, cho: bool = True) -> dict | None:
+        """1.0.55: hộp "Giải trình cách tính" của một dòng phương án (công thức, thay số, căn cứ - nghiep_vu.giai_trinh_dong_pa) để
+        trả lời thanh tra / giải thích cho người dân; có nút Chép. muc / i None: thẻ mục và dòng đang chọn. cho=False: không hiện
+        hộp (kiểm thử). Trả dict giải trình hoặc None (không có dòng)."""
+        from .nghiep_vu import giai_trinh_dong_pa, so_muc
+        if muc is None:
+            t = self.tab.currentIndex()
+            if not 0 < t < len(THE_MUC):
+                self.thong_bao('Chọn một dòng ở thẻ mục (1. Đất … 5. Hỗ trợ) rồi bấm Ctrl+I để xem cách tính.')
+                return None
+            muc = THE_MUC[t]
+        ds = self.bo.ds(muc)
+        if i is None:
+            i = self.bang[muc].dong_chon()
+        if not 0 <= i < len(ds):
+            self.thong_bao('Chọn một dòng trong bảng để xem cách tính.')
+            return None
+        gt = giai_trinh_dong_pa(self.bo.pa, self.bo.bc, muc, i)
+        from .giao_dien import hop_ket_qua
+        from .tien import vn
+        hop_ket_qua(self, f'Mục {so_muc(muc)}, dòng {i + 1}: {gt["ten_hang_muc"]} - thành tiền {vn(gt["thanh_tien"])} đồng.', gt['dong'],
+                    'Công thức, thay số và căn cứ', hien=cho, tieu_de='Giải trình cách tính')
+        return gt
 
     def nhan_ban_dong(self, muc: int, i: int | None = None) -> int | None:
         """Chép dòng đang chọn thành dòng mới ngay dưới (mục 1: cùng thửa - tách diện tích theo loại đất / vị trí). Trả chỉ số dòng mới."""

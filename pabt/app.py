@@ -656,6 +656,10 @@ class ChiTietHo(QDialog):
         cay.setHeaderLabels(['STT', 'Tên tài sản, khoản', 'ĐVT', 'Số lượng', 'Đơn giá', 'Tỷ lệ', 'Thành tiền (đồng)'])
         dam = QFont()
         dam.setBold(True)
+        # 1.0.55: rê chuột lên dòng tiền = giải trình công thức, thay số, căn cứ (nghiep_vu.giai_trinh_dong_pa) - dòng nối theo id CSDL
+        pa, bc = nghiep_vu.doc_phuong_an(con, ma_ho), nghiep_vu.BoiCanh.tu(con)
+        vi_tri = {(1, r.id): (1, i) for i, r in enumerate(pa.dat) if r.id}
+        vi_tri.update({(m, r.id): (m, i) for m in nghiep_vu.MUC_KHOAN for i, r in enumerate(pa.khoan[m]) if r.id})
         for muc in nghiep_vu.THU_TU_MUC:                # 1 đất, 2 nhà, 3 cây, 4 vật nuôi, 5 hỗ trợ, 6 thưởng
             goc = QTreeWidgetItem([str(nghiep_vu.so_muc(muc)), nghiep_vu.TEN_MUC[muc], '', '', '', '', vn(k.muc[muc])])
             for i in (0, 1, 6):
@@ -668,9 +672,14 @@ class ChiTietHo(QDialog):
                 for i in (3, 4, 5, 6):
                     it.setTextAlignment(i, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                     it.setFont(i, phong_so())          # 1.0.51: số canh cột (phông số dùng chung)
+                vt = vi_tri.get((muc, getattr(d, 'id', 0) or 0))
+                if vt is not None:
+                    chu = '\n'.join(nghiep_vu.giai_trinh_dong_pa(pa, bc, *vt)['dong'])
+                    for i in (1, 6):
+                        it.setToolTip(i, chu)
                 if d.thanh_tien_excel is not None and d.thanh_tien_excel != d.thanh_tien:
                     it.setBackground(6, QBrush(DO))
-                    it.setToolTip(6, f'Excel: {vn(d.thanh_tien_excel)}')
+                    it.setToolTip(6, f'Excel: {vn(d.thanh_tien_excel)}' + (f'\n\n{it.toolTip(6)}' if it.toolTip(6) else ''))
                 goc.addChild(it)
             cay.addTopLevelItem(goc)
         tong = QTreeWidgetItem(['', 'TỔNG CỘNG', '', '', '', '', vn(k.tong)])
@@ -1183,6 +1192,9 @@ class CuaSoChinh(QMainWindow):
                     return
                 chi_doc = hop.clickedButton() is nut_xem
             chi_doc = bool(chi_doc)
+            from .an_toan import la_goi_sao_luu
+            if not chi_doc and la_goi_sao_luu(p):        # 1.0.55: bản sao lưu / mốc nén luôn mở chỉ xem (Lưu dự án thành… để dùng tiếp)
+                chi_doc = True
             if not chi_doc:
                 kf.lay(ep=True)
                 self.khoa = kf

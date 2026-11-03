@@ -173,6 +173,14 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Mã tài sản: nhà TS, cây CT, vật nuôi VN, chính sách CS, thưởng TH (`ma_tai_san`). Quy ước tương đương do người dùng tự nhập (bộ đơn giá
   không có).
 
+- Nhật ký kiểm toán: chuỗi băm ở bảng RIÊNG `audit_bam` (id = audit_logs.id; trigger TẠM `_kt_ky` AFTER INSERT từng dòng của
+  `kiem_toan.gan_ky`, hàm SQLite `_kt_bam` = `kiem_toan.tinh_bam`; đừng thêm cột vào audit_logs - bảng cấm UPDATE, INSERT … SELECT nhiều
+  dòng tính trước cả lô nên không nối được). `audit_bam` có trong `hoan_tac.BO_QUA`, `DauVetHo.BO_QUA`, `chua_benh_csdl._XOA_BANG` -
+  bảng mới bị trigger cấm xóa phải thêm vào cả ba (không thì Ctrl+Z lỗi / danh sách hộ tải lại toàn bộ mỗi lần lưu).
+- Bản sao lưu tự động / mốc thời gian: NÉN zlib (`an_toan.DAU_SAO_LUU`, KHÔNG mã hóa - người dùng chọn 03/11/2026: phải khôi phục được
+  sau khi cài lại Windows). Mở: `csdl.mo` tự giải nén ra file tạm, luôn chỉ xem (`KetNoi.close` xóa file tạm); `khoi_phuc` giải nén. Đừng
+  mở file sao lưu bằng `sqlite3.connect` thẳng.
+
 ### Tương thích Python 3.8 + Qt5 (bản Win7 32-bit)
 - Mỗi file `pabt/` có `from __future__ import annotations` (sau docstring), không API Python 3.9+ (`vermin -t=3.8-`). Chạy test cả
   `venv38_32`. Enum viết kiểu `Qt.AlignmentFlag.X`; `TextAlignmentRole` trả SỐ NGUYÊN; `QMenu.exec` bí danh bằng lambda (`_qt5_lam_qt6`).
@@ -196,6 +204,11 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Bảng: chiều cao dòng `giao_dien.vua_dong` (không `resizeRowsToContents`); bảng lớn `bang_ao.BangAo`; lệnh theo hộ đọc dòng bằng
   `cac_dong_da_chon` (không `selectedRows`); cột theo tên (`self.cot.index(khóa)`), không viết số cột. Chữ "&" trên nút / thẻ: `chu_hien`.
 - Phím tắt trùng cùng ngữ cảnh: Qt không chạy cái nào. Không gắn Ctrl+Z / Ctrl+Y lên QAction (`giao_dien.xu_ly_hoan_tac` xử lý).
+  F2 là phím sửa ô của bảng - không gán lệnh khác (giải trình dòng phương án dùng Ctrl+I).
+- Duyệt bố cục: KHÔNG lấy QLayoutItem (`itemAt` / `itemAtPosition` / `takeAt`) chỉ để đọc - vỏ Python của mục bố cục (QSpacerItem,
+  QWidgetItem: không phải QObject) sống lâu hơn đối tượng C++; widget mới cấp phát trùng địa chỉ bị PySide trả NHẦM vỏ cũ
+  (`'QSpacerItem' object has no attribute …`, có lúc sập 0xC0000005 / mã thoát 139 giữa lượt test). Dùng `lo.indexOf(widget)`,
+  `getItemPosition(i)`, `labelForField(w)` (1.0.55 - lỗi do `gan_nhan_o_nhap` của 1.0.54).
 - Test KHÔNG đổi bảng kiểu / bảng màu của QApplication thật (`ap_dung`, `dat_tong_nen(ap_lai=True)`, `dat_ty_le`): mỗi lần hàng chục giây
   cho cả lượt. Gỡ bộ lọc: `giao_dien.bo_ap_dung(app)`.
 

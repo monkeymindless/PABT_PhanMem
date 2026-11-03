@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialo
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from . import kiem_toan
-from .giao_dien import TOKEN, con_tro_cho, loc_khi_ngung_go
+from .giao_dien import TOKEN, con_tro_cho, dat_trang_thai, loc_khi_ngung_go
 from .thong_bao import TEN_UD, chu_loi
 
 COT = ['Thời gian', 'Người sửa', 'Máy', 'Thao tác', 'Mã hộ', 'Đối tượng', 'Trường', 'Giá trị cũ', 'Giá trị mới', 'Ghi chú']
@@ -58,8 +58,11 @@ class HopKiemToan(QDialog):
         b_xuat.clicked.connect(lambda: self.xuat())
         b_dong = QPushButton('Đóng')
         b_dong.clicked.connect(self.reject)
+        self.lb_toan_ven = QLabel('')                   # 1.0.55: kết quả đối chiếu chuỗi băm (kiem_toan.kiem_tra_toan_ven)
+        self.lb_toan_ven.setWordWrap(True)
         hd = QHBoxLayout()
-        hd.addWidget(self.lb, 1)
+        hd.addWidget(self.lb_toan_ven, 1)
+        hd.addWidget(self.lb, 2)
         hd.addWidget(b_xuat)
         hd.addWidget(b_dong)
         lo = QVBoxLayout(self)
@@ -67,7 +70,26 @@ class HopKiemToan(QDialog):
         lo.addWidget(self.bang, 1)
         lo.addLayout(hd)
         self.ds = []
+        self.kiem_toan_ven()
         self.nap()
+
+    def kiem_toan_ven(self) -> dict:
+        """Đối chiếu chuỗi băm của cả nhật ký (một lần khi mở cửa sổ - không theo bộ lọc) và hiện kết quả."""
+        with con_tro_cho():
+            kq = kiem_toan.kiem_tra_toan_ven(self.con)
+        self.kq_toan_ven = kq
+        chua = f'; {kq["so_chua_ky"]:,} dòng chưa ký (ghi trước 1.0.55 / bản cũ)'.replace(',', '.') if kq['so_chua_ky'] else ''
+        if kq['hop_le']:
+            dat_trang_thai(self.lb_toan_ven, 'dat', f'✓ Chuỗi băm kiểm toán toàn vẹn: {kq["so_dong_da_ky"]:,} dòng đã ký SHA-256'
+                           .replace(',', '.') + chua + '.')
+        else:
+            dat_trang_thai(self.lb_toan_ven, 'loi', f'Nhật ký bị can thiệp ngoài phần mềm: {len(kq["loi"])} chỗ - '
+                           + kq['loi'][0] + (' (xem chú thích)' if len(kq['loi']) > 1 else ''))
+        self.lb_toan_ven.setToolTip('\n'.join(kq['loi'][:30]) + ('\n\n' if kq['loi'] else '') +
+                                    'Mỗi dòng nhật ký ghi qua LARC được ký mã băm nối với dòng trước: sửa / xóa dòng bằng công cụ '
+                                    'SQLite ngoài phần mềm làm chuỗi gãy. Xóa các dòng CUỐI cùng không để lại dấu - đối chiếu với bản '
+                                    'Excel nhật ký đã xuất / nộp.')
+        return kq
 
     def _khoang(self) -> tuple:
         v = self.cb_ky.currentData()

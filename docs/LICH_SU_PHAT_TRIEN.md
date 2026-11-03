@@ -2914,3 +2914,33 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
 
 - 1.0.15 (chưa tăng `__version__`, chưa commit) PHƯƠNG ÁN ĐIỀU CHỈNH (người dùng 22/10/2026): `pa_lan.loai` ('chinh' / 'bo_sung' / 'dieu_chinh') + `thay_the` (lần bị thay) thêm bằng `csdl.dam_bao_cot_pa_lan` (KHÔNG đổi PHIEN_BAN_CSDL). `lan_pa.tao_lan_dieu_chinh` chép lần gốc sang lần mới; `nghiep_vu.doc_phuong_an` / `doc_tat_ca_phuong_an` bỏ lần bị thay khỏi tổng hộ, `tinh_chenh_lech_lan` = QĐ điều chỉnh ghi CHÊNH LỆCH (`theo_doi.them_ho_theo_pa`). `BoSoan.lap_dieu_chinh` / `CuaSoLapPA.lap_dieu_chinh` (nút "+ Lập PA điều chỉnh"). Mẫu in tạo bằng mã (không file mẫu): `in_word.noi_dung_chi_tiet` chọn mẫu chi tiết / bổ sung / điều chỉnh (A đã duyệt, B đề nghị, C chênh lệch) theo `pa_lan.loai`; `bang_dieu_chinh.lap` bảng tổng hợp điều chỉnh A3 (`xuat_bo_ho_so(bang_dieu_chinh=True)`, ô `HopIn.o_bth_dc` chỉ hiện khi dự án có hộ điều chỉnh). Test `tests/test_dieu_chinh.py`.
 - 1.0.54 P3 (03/11/2026): chạy thật trên máy dựng - OCR tiếng Việt Tesseract đóng kèm 73 bài đạt; LARC Mobile 62 bài (Chromium của Qt WebEngine); nhận phiếu Wi-Fi trên IP LAN 192.168.1.7 (JSON nhận, .exe chặn); LibreOffice 26.8.2 (cài bằng winget theo người dùng cho phép) chuyển 4 phương án chi tiết .docx -> PDF 9,6 s, pdf_du_phong_chi_tiet 4/4 không lỗi, ảnh trang trùng bản Word. Chưa thử: Windows 7 thật, điện thoại thật (Android / iPhone).
+- 1.0.54 (03/11/2026, P1-P2 sau rà soát): xem CLAUDE.md mục "Quy tắc đang hiệu lực" (màu theo tông dat_kieu_theo_tong / mau_o_theo_tong,
+  THANG_CO_CHU, gan_nhan_o_nhap, csdl.MO_RONG, in_an.doan_theo_thua); CLAUDE.md tách lịch sử sang file này.
+- 1.0.55 (người dùng 03/11/2026, đặc tả "5 phương án" viết theo mã 1.0.54 - nhiều chỗ không khớp, làm theo ý trên mã thật; test
+  `tests/test_yeu_cau_1055.py`):
+  - PA1 chuỗi băm: bảng `audit_bam` + trigger tạm (KHÁC đặc tả "cột bam trong audit_logs": INSERT … SELECT nhiều dòng của trigger ghi
+    vết tính subquery "băm dòng cuối" một lần cho cả lô -> chuỗi sai; audit_logs cấm UPDATE). `kiem_toan.kiem_tra_toan_ven` (băm sai,
+    băm mồ côi, khoảng trống id; dòng chưa ký = mốc khởi đầu / bản cũ), `HopKiemToan.lb_toan_ven`. Không có khóa bí mật (file dùng chung
+    nhiều máy): chỉ phát hiện sửa bằng công cụ ngoài phần mềm, người biết thuật toán tính lại được; cắt các dòng CUỐI không để dấu.
+    `nap_cap_nhat._dau` = HMAC với `_khoa_may` (MachineGuid KEY_WOW64_64KEY, COMPUTERNAME, đường dẫn exe) - chỉ hiệu lực ở bản cài mới.
+  - PA2: sao lưu / mốc CHỈ NÉN (người dùng chọn, hỏi trong phiên - không DPAPI). Dự án thử 1.360 KB -> 231 KB. Wi-Fi: KHÁC đặc tả "XOR
+    khóa 16 byte lặp" (bẻ được ngay từ đầu file JSON đã biết) - dòng khóa SHA-256(khóa|nonce|bộ đếm) + HMAC-SHA256, SHA-256 viết bằng JS
+    thuần trong `nhan_wifi.TRANG` (trang http nội bộ không có WebCrypto); `nhan_wifi.GiaiMa` / `ma_hoa`; khóa `MayNhan.khoa_qr` chỉ ở
+    `url_qr` (#k=). Test đối chiếu JS - Python bằng QJSEngine.
+  - PA3: "menu chuột phải 6-9 giây" (và lần 53-57 giây) là lỗi BỘ KIỂM TRA, không phải phần mềm: processEvents() ở mức vòng sự kiện gốc
+    không xử lý deleteLater - widget xóa trễ của mọi thao tác dồn tới vòng exec lồng đầu tiên (QMenu.exec). `kiem_tra_giao_dien.lam` gọi
+    `sendPostedEvents(None, DeferredDelete)` sau mỗi thao tác: 0 thao tác chậm, lượt một trạng thái 2,4 -> 1,2 phút. Giả thuyết của đặc
+    tả (chạy mục trước khi đóng menu) đã thử - không đổi; cách đo: ghi mốc giờ từng thao tác con (mục đầu tiên chạy sau 7 s).
+    A+ / A−: dọn trang ẩn đã có từ 1.0.08 (`_bo_trang_an`) - không làm thêm.
+  - PA4: `nghiep_vu.giai_trinh_dong_pa` (khớp `thanh_tien_dat` / `thanh_tien_khoan`), `CuaSoLapPA.xem_giai_trinh_dong` + mục menu
+    chuột phải BangMuc + Ctrl+I (KHÔNG F2 như đặc tả - phím sửa ô), `ChiTietHo` chú thích dòng (nối theo id CSDL).
+  - PA5: `b_lan_moi` KieuNut.PHU, `b_xoa_lan` ẩn khi hộ một lần PA. "Nút phụ trầm tĩnh" đã có từ 1.0.02 (NUT_PHU); KHÔNG hạ viền tĩnh
+    xuống #D5DEE8 như đặc tả (~1,3:1 - trái WCAG 1.4.11 đã sửa ở 1.0.42).
+  - LỖI CỦA 1.0.54 (phát hiện khi chạy toàn bộ test 1.0.55: Qt6 sập mã 139 giữa lượt, Qt5 "'QSpacerItem' object has no attribute
+    'objectName'" ở gian_cach / dat_ty_le): `gan_nhan_o_nhap` duyệt `itemAt` / `itemAtPosition` -> vỏ Python QSpacerItem sống lâu hơn C++,
+    PySide trả nhầm cho widget mới cùng địa chỉ. Viết lại bằng indexOf / getItemPosition / labelForField; gian_cach + dat_ty_le chặn
+    thêm isinstance(QWidget).
+  - PA6 (fuzzing): `du_lieu_in.ten_file_ho` lọc ký tự điều khiển \x00-\x1f, \x7f (\x00 làm Path / zipfile báo "embedded null byte");
+    `tro_ly._RE_SDT` / `_RE_SDT_NGAN` nhận "(+84)" / "+84 " có dấu ngăn, `_RE_SAU_NHAN_TEN` thêm nhãn người nhận tiền, người đại diện,
+    người được ủy quyền, đồng sở hữu, chủ đất, chủ sở hữu, chủ sử dụng, họ và tên, họ tên (tên vẫn phải >= 2 từ viết hoa - "Họ tên chủ
+    hộ…" không bị che).

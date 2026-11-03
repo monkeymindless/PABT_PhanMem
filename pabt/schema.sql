@@ -345,6 +345,15 @@ CREATE TRIGGER IF NOT EXISTS audit_logs_khong_sua BEFORE UPDATE ON audit_logs
 BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được sửa.'); END;
 CREATE TRIGGER IF NOT EXISTS audit_logs_khong_xoa BEFORE DELETE ON audit_logs
 BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được xóa.'); END;
+-- 1.0.55: chuỗi băm kiểm toán (kiem_toan.SQL_BAM)
+CREATE TABLE IF NOT EXISTS audit_bam (
+    id   INTEGER PRIMARY KEY,                -- = audit_logs.id của dòng được ký
+    bam  TEXT NOT NULL                       -- SHA-256 (32 ký tự đầu) nối chuỗi: băm dòng ký trước + nội dung dòng nhật ký
+);
+CREATE TRIGGER IF NOT EXISTS audit_bam_khong_sua BEFORE UPDATE ON audit_bam
+BEGIN SELECT RAISE(ABORT, 'Chuỗi băm kiểm toán không được sửa.'); END;
+CREATE TRIGGER IF NOT EXISTS audit_bam_khong_xoa BEFORE DELETE ON audit_bam
+BEGIN SELECT RAISE(ABORT, 'Chuỗi băm kiểm toán không được xóa.'); END;
 
 -- bản đồ thửa từ bản vẽ địa chính CAD .dxf (0.9.87, ban_do_cad.py): số tờ, số thửa, diện tích, tọa độ ranh thửa
 CREATE TABLE IF NOT EXISTS thua_ban_do (

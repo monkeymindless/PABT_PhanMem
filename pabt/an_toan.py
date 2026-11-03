@@ -251,3 +251,56 @@ def kiem_tra_magic_bytes(nguon, loai_cho_phep=None, ten: str = '') -> str:
         can = ', '.join(TEN_LOAI_TEP.get(x, x) for x in sorted(loai_cho_phep))
         raise LoiAnToan(f'"{ten}" không phải {can} (nội dung là {TEN_LOAI_TEP.get(loai, loai)}).')
     return loai
+
+
+# ---------------------------------------------------------------- bản sao lưu / mốc thời gian nén (1.0.55)
+# Người dùng 03/11/2026 chọn CHỈ NÉN (không mã hóa DPAPI: bản sao lưu phải mở được sau khi cài lại Windows / đổi máy / đặt lại mật khẩu).
+# Định dạng: DAU_SAO_LUU + 1 byte cờ (0 = zlib) + dữ liệu nén của file SQLite. csdl.mo(chi_doc=True) / co_may_thoi_gian.khoi_phuc đọc
+# trong suốt; file SQLite thường (bản cũ, kiểm thử) đọc như trước.
+DAU_SAO_LUU = b'LARC_BAK1\x00'
+DAU_SQLITE = b'SQLite format 3\x00'
+CO_NEN_ZLIB = 0
+
+
+def la_goi_sao_luu(duong_dan) -> bool:
+    try:
+        with open(duong_dan, 'rb') as f:
+            return f.read(len(DAU_SAO_LUU)) == DAU_SAO_LUU
+    except OSError:
+        return False
+
+
+def dong_goi_file_sao_luu(duong_dan) -> bool:
+    """Nén tại chỗ một file SQLite (bản sao vừa ghi, chưa đổi tên): ghi tạm + os.replace. File không phải SQLite / đã nén: để nguyên
+    (False)."""
+    import os
+    import zlib
+    p = Path(duong_dan)
+    du = p.read_bytes()
+    if not du.startswith(DAU_SQLITE):
+        return False
+    tam = p.with_name(p.name + '.nen')
+    with open(tam, 'wb') as f:
+        f.write(DAU_SAO_LUU + bytes((CO_NEN_ZLIB,)) + zlib.compress(du, 6))
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tam, p)
+    return True
+
+
+def mo_goi_file_sao_luu_ra_bytes(duong_dan) -> bytes | None:
+    """Nội dung SQLite gốc của bản sao lưu nén; None khi file không phải bản nén (đọc thẳng như cũ). Hỏng -> LoiAnToan."""
+    import zlib
+    du = Path(duong_dan).read_bytes()
+    if not du.startswith(DAU_SAO_LUU):
+        return None
+    co = du[len(DAU_SAO_LUU):len(DAU_SAO_LUU) + 1]
+    if co != bytes((CO_NEN_ZLIB,)):
+        raise LoiAnToan('Bản sao lưu dùng định dạng của phiên bản mới hơn - hãy cập nhật phần mềm.')
+    try:
+        goc = zlib.decompress(du[len(DAU_SAO_LUU) + 1:])
+    except zlib.error as e:
+        raise LoiAnToan(f'Bản sao lưu bị hỏng, không giải nén được ({e}).') from None
+    if not goc.startswith(DAU_SQLITE):
+        raise LoiAnToan('Bản sao lưu bị hỏng (không phải dữ liệu dự án).')
+    return goc

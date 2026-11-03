@@ -322,5 +322,6 @@ def ten_file_ho(con, ma_ho: int) -> str:
     ten = ' '.join(str(h['ho_ten'] or '').split())
     # "Nguyễn Văn A là chủ sở hữu tài sản gắn liền với thửa đất số…" (họ tên nhập kèm diễn giải): tên file chỉ lấy phần họ tên
     ten = re.split(r'\s+là\s+(?:chủ|người|đại diện|đồng)\b', ten, maxsplit=1, flags=re.I)[0]
-    ten = re.sub(r'[\\/:*?"<>|\r\n\t]+', ' ', ten)[:60].strip()
+    # 1.0.55: cả ký tự điều khiển (\x00 - \x1f, \x7f) dính vào khi dán từ OCR / PDF lỗi - \x00 làm Path / zipfile báo "embedded null byte"
+    ten = re.sub(r'[\\/:*?"<>|\x00-\x1f\x7f]+', ' ', ten)[:60].strip(' .')
     return f'PA_{h["thu_tu"]:03d}_ma{ma_ho}_{ten}'

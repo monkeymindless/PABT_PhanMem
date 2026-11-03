@@ -4145,6 +4145,8 @@ def gian_cach(goc: QWidget) -> None:
         if not isinstance(lo, QBoxLayout):
             continue
         cha = lo.parentWidget()
+        if cha is not None and not isinstance(cha, QWidget):  # phòng vỏ Python cũ PySide trả nhầm (xem nhan_cua_o_nhap)
+            continue
         if cha is not None and (cha.objectName() in ('menu_trong', 'hang_gon_menu')
                                 or cha.property('vai') in ('ribbon', 'nhom_ribbon', 'menu_trai')):
             continue
@@ -5066,7 +5068,9 @@ def _chu_nhan(lb) -> str:
 
 def nhan_cua_o_nhap(obj: QWidget) -> dict:
     """{ô nhập: QLabel} cho các ô nhập trong cây obj có nhãn đứng ngay trước nó: QFormLayout (nhãn của hàng), QGridLayout (ô bên
-    trái cùng hàng), QHBoxLayout (phần tử liền trước). Duyệt mỗi bố cục một lần."""
+    trái cùng hàng), QHBoxLayout (phần tử liền trước). 1.0.55: KHÔNG lấy QLayoutItem (itemAt / itemAtPosition) - vỏ Python của mục
+    bố cục (QSpacerItem, QWidgetItem không phải QObject) sống lâu hơn đối tượng C++, widget mới cấp phát trùng địa chỉ bị PySide trả
+    nhầm vỏ cũ ("QSpacerItem không có objectName", có lúc sập 0xC0000005). Chỉ dùng indexOf(widget) / getItemPosition / labelForField."""
     from PySide6.QtWidgets import (QAbstractSpinBox, QBoxLayout, QComboBox, QDateEdit, QFormLayout, QGridLayout, QLabel, QLayout,
                                    QPlainTextEdit, QTextEdit)
     loai_o = (QLineEdit, QComboBox, QAbstractSpinBox, QDateEdit, QPlainTextEdit, QTextEdit)
@@ -5074,36 +5078,41 @@ def nhan_cua_o_nhap(obj: QWidget) -> dict:
     if obj.layout() is not None:
         ds.append(obj.layout())
     kq = {}
-
-    def ghi(o, lb):
-        if isinstance(o, loai_o) and isinstance(lb, QLabel) and o not in kq and _chu_nhan(lb):
-            kq[o] = lb
+    con_cua = {}                                            # widget cha -> widget con trực tiếp (ứng viên trong các bố cục của nó)
     for lo in ds:
+        pw = lo.parentWidget()
+        if not isinstance(pw, QWidget):
+            continue
+        if pw not in con_cua:
+            con_cua[pw] = [w for w in pw.children() if isinstance(w, QWidget) and not w.isWindow()]
+        vt = {}
+        for w in con_cua[pw]:
+            i = lo.indexOf(w)
+            if i >= 0:
+                vt[w] = i
+        if not vt:
+            continue
         if isinstance(lo, QFormLayout):
-            for r in range(lo.rowCount()):
-                it_o = lo.itemAt(r, QFormLayout.ItemRole.FieldRole)
-                it_n = lo.itemAt(r, QFormLayout.ItemRole.LabelRole)
-                if it_o is not None and it_n is not None:
-                    ghi(it_o.widget(), it_n.widget())
+            for o in vt:
+                if isinstance(o, loai_o) and o not in kq:
+                    lb = lo.labelForField(o)
+                    if isinstance(lb, QLabel) and _chu_nhan(lb):
+                        kq[o] = lb
         elif isinstance(lo, QGridLayout):
-            for i in range(lo.count()):
-                o = lo.itemAt(i).widget()
-                if not isinstance(o, loai_o):
-                    continue
-                r, c, _, _ = lo.getItemPosition(i)
-                if c > 0:
-                    it = lo.itemAtPosition(r, c - 1)
-                    if it is not None:
-                        ghi(o, it.widget())
+            o_tai = {}
+            for w, i in vt.items():
+                r, c = lo.getItemPosition(i)[:2]
+                o_tai[(r, c)] = w
+            for (r, c), o in o_tai.items():
+                lb = o_tai.get((r, c - 1))
+                if isinstance(o, loai_o) and isinstance(lb, QLabel) and o not in kq and _chu_nhan(lb):
+                    kq[o] = lb
         elif isinstance(lo, QBoxLayout) and lo.direction() in (QBoxLayout.Direction.LeftToRight, QBoxLayout.Direction.RightToLeft):
-            truoc = None
-            for i in range(lo.count()):
-                w = lo.itemAt(i).widget()
-                if w is None:
-                    continue                                 # khoảng giãn / bố cục con: không phá cặp nhãn - ô
-                if truoc is not None:
-                    ghi(w, truoc)
-                truoc = w
+            theo_vt = {i: w for w, i in vt.items()}
+            for i, o in theo_vt.items():
+                lb = theo_vt.get(i - 1)
+                if isinstance(o, loai_o) and isinstance(lb, QLabel) and o not in kq and _chu_nhan(lb):
+                    kq[o] = lb
     return kq
 
 

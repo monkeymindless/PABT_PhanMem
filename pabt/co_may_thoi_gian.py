@@ -137,6 +137,8 @@ def chup_moc(con, file, ly_do: str = 'tu_dong', ghi_chu: str = '', bat_buoc: boo
         bo_anh_ban_do_ban_sao(dc)                        # ảnh nền bản đồ tải lại được: mốc không chép thêm vài MB mỗi lần
     finally:
         dc.close()
+    from .an_toan import dong_goi_file_sao_luu
+    dong_goi_file_sao_luu(tam)                          # 1.0.55: nén zlib (không mã hóa - người dùng chọn)
     os.replace(tam, dich)
     so_ho, tong = tom_tat(con)
     moc = Moc(dich, luc, ly_do, ghi_chu, so_ho, tong, dau_file(file))
@@ -188,7 +190,15 @@ def khoi_phuc(file, moc: Moc) -> Moc | None:
         finally:
             c.close()
     tam = file.with_name(file.name + '.khoi_phuc')
-    shutil.copyfile(moc.file, tam)
+    from .an_toan import mo_goi_file_sao_luu_ra_bytes
+    goc = mo_goi_file_sao_luu_ra_bytes(moc.file)        # 1.0.55: mốc nén -> giải nén; mốc cũ (SQLite thường) chép thẳng
+    if goc is None:
+        shutil.copyfile(moc.file, tam)
+    else:
+        with open(tam, 'wb') as f:
+            f.write(goc)
+            f.flush()
+            os.fsync(f.fileno())
     os.replace(tam, file)
     return truoc
 

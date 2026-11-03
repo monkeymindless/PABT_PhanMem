@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from . import csdl
 
 SO_BUOC = 50
-BO_QUA = ('nhat_ky', 'khoa_dm', 'sqlite_sequence', 'audit_logs',        # không hoàn tác nhật ký; cờ khóa danh mục do mo_khoa_danh_muc lo
+BO_QUA = ('nhat_ky', 'khoa_dm', 'sqlite_sequence', 'audit_logs', 'audit_bam',        # không hoàn tác nhật ký; cờ khóa danh mục do mo_khoa_danh_muc lo
           'ban_do_lop', 'ban_do_o')                  # bản đồ lưu trong dự án (31/10/2026): ảnh / KML lớn, không chép vào sổ hoàn tác
 _DANG_KY = csdl.HOAN_TAC                                   # id(con) -> HoanTac (để csdl.ghi_nhat_ky báo tên bước)
 

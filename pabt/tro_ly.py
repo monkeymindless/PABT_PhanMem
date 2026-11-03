@@ -174,15 +174,18 @@ def nhap_to_trinh(con) -> str:
 
 # ---------------------------------------------------------------- che dữ liệu cá nhân
 _RE_CCCD = re.compile(r'(?<!\d)\d{9}(?:\d{3})?(?!\d)')
-_RE_SDT = re.compile(r'(?<!\d)(?:\+84|0)\d{9,10}(?!\d)')
+_RE_SDT = re.compile(r'(?<!\d)(?:\(\+84\)\s*|\+84|0)\d{9,10}(?!\d)')   # 1.0.55: cả "(+84) 912345678"
 # 1.0.51: dạng có dấu cách / chấm / gạch. Số CCCD có dấu ngăn chỉ che khi đứng sau nhãn (CCCD, CMND, căn cước…) - "120.000.000" là
 # số tiền, không phải CCCD; số điện thoại phải bắt đầu 0 / +84
 _RE_CCCD_NHAN = re.compile(r'((?i:cccd|cmnd|căn cước|chứng minh|định danh)[^\d\n]{0,24})((?:\d[\s.\-]?){8,11}\d)(?!\d)')
-_RE_SDT_NGAN = re.compile(r'(?<![\d.,])(?:\+84|0)\d{2,3}[\s.\-]\d{3}[\s.\-]\d{3,4}(?![\d])')
+_RE_SDT_NGAN = re.compile(r'(?<![\d.,])(?:\(\+84\)\s*|\+84[\s.\-]?|0)\d{2,3}[\s.\-]\d{3}[\s.\-]\d{3,4}(?![\d])')
 _RE_SO_GCN = re.compile(r'(?<![\w])[A-ZĐ]{2}[\s\-]?\d{6,8}(?![\w])')          # số phát hành giấy chứng nhận "CS 123456"
 _RE_TOA_DO = re.compile(r'(?<![\d.])\d{1,3}\.\d{4,}\s*[,;]\s*\d{1,3}\.\d{4,}(?![\d])'
                         r'|(?<![\w])[XY]\s*[:=]\s*\d{6,7}(?:[.,]\d+)?(?![\d])')
-_RE_SAU_NHAN_TEN = re.compile(r'((?i:hộ ông|hộ bà|chủ hộ|đồng sử dụng|người thừa kế|ông|bà)\s*[:\-]?\s*)((?:[^\W\d_]+\s*){1,5})')
+# 1.0.55: thêm nhãn người nhận tiền / đại diện / được ủy quyền / đồng sở hữu / chủ đất / chủ sở hữu / chủ sử dụng / họ và tên
+_RE_SAU_NHAN_TEN = re.compile(
+    r'((?i:hộ ông|hộ bà|chủ hộ|đồng sử dụng|đồng sở hữu|người thừa kế|người nhận tiền|người đại diện|người được ủy quyền|'
+    r'chủ đất|chủ sở hữu|chủ sử dụng|họ và tên|họ tên|ông|bà)\s*[:\-]?\s*)((?:[^\W\d_]+\s*){1,5})')
 
 
 def _che_ho_ten(m) -> str:

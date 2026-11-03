@@ -265,7 +265,7 @@ _XOA_CHU = {'thua': ('nguon_goc',), 'ct_dat': ('ghi_chu',), 'ct_khoan': ('ghi_ch
             'doi_thoai_ho': ('thanh_phan', 'dien_bien', 'ket_luan', 'dia_diem'),
             'qd_ho': ('chung_tu', 'ly_do_chua_nhan', 'ghi_chu'), 'quyet_dinh': ('file',), 'dot_trinh': ('thu_muc',),
             'nhat_ky_van_dong': ('thanh_phan', 'noi_dung', 'ghi_chu', 'bien_ban')}
-_XOA_BANG = ('tho_nhap', 'nhat_ky', 'audit_logs', 'anh_hien_trang')
+_XOA_BANG = ('tho_nhap', 'nhat_ky', 'audit_logs', 'audit_bam', 'anh_hien_trang')
 _XOA_CAI_DAT = ('THU_MUC_HO_SO', 'FILE_KHAI_TOAN')
 
 

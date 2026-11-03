@@ -107,11 +107,32 @@ def _dau(d: Path) -> str:
     """Dấu của bản cập nhật đã cài: tên + cỡ + thời điểm sửa mọi file trong pabt\\ (cả .pyc đã biên dịch) và cap_nhat.json, phiên bản
     Python. File nào đổi / thêm / bớt -> dấu khác -> kiểm tra đầy đủ lại."""
     import hashlib
+    import hmac
     phan = [sys.implementation.cache_tag or '']
     for p in [d / 'cap_nhat.json'] + sorted(x for x in (d / 'pabt').rglob('*') if x.is_file()):
         st = p.stat()
         phan.append(f'{p.relative_to(d).as_posix()}|{st.st_size}|{st.st_mtime_ns}')
-    return hashlib.sha256('\n'.join(phan).encode('utf-8')).hexdigest()
+    return hmac.new(_khoa_may(), '\n'.join(phan).encode('utf-8'), hashlib.sha256).hexdigest()
+
+
+def _khoa_may() -> bytes:
+    """1.0.55: khóa HMAC của dấu .da_kiem_tot gắn với máy + bản cài (MachineGuid của Windows, tên máy, đường dẫn PABT.exe): dấu tính /
+    chép từ máy khác không khớp -> kiểm đủ lại. Không phải bí mật với người đã vào được máy (cùng tài khoản đọc được các giá trị này)."""
+    import hashlib
+    guid = ''
+    try:
+        import winreg
+        k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Cryptography', 0,
+                           winreg.KEY_READ | getattr(winreg, 'KEY_WOW64_64KEY', 0))    # Python 32-bit trên Windows 64-bit: nhánh 64-bit
+        guid = str(winreg.QueryValueEx(k, 'MachineGuid')[0])
+        winreg.CloseKey(k)
+    except (ImportError, OSError):
+        pass
+    try:
+        exe = str(Path(sys.executable).resolve()).lower()
+    except OSError:
+        exe = sys.executable.lower()
+    return hashlib.sha256('|'.join(('LARC_DA_KIEM_1', guid, os.environ.get('COMPUTERNAME', ''), exe)).encode('utf-8')).digest()
 
 
 def _da_kiem(d: Path) -> bool:

@@ -14,6 +14,7 @@ Ghi vết bằng hai cách:
 Dữ liệu nhập hàng loạt khi TẠO dự án (Dự án mới, nhập Excel - kết nối riêng, không gắn trigger) là số liệu gốc, không ghi từng dòng.
 """
 from __future__ import annotations
+import hashlib
 import sqlite3
 from datetime import datetime
 
@@ -45,6 +46,85 @@ BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được sửa.'); END
 CREATE TRIGGER IF NOT EXISTS {BANG}_khong_xoa BEFORE DELETE ON {BANG}
 BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được xóa.'); END;
 '''
+
+# 1.0.55 (người dùng 03/11/2026): CHUỖI BĂM - mỗi dòng audit_logs ghi qua phần mềm được ký SHA-256 nối với dòng ký trước (kiểu
+# blockchain), lưu ở bảng riêng audit_bam (audit_logs chặn UPDATE; trigger nhiều dòng INSERT … SELECT tính trước cả lô nên không nối
+# được từng dòng trong cùng câu lệnh - trigger AFTER INSERT từng dòng ghi sang bảng riêng thì nối đúng thứ tự). Sửa / xóa dòng nhật ký
+# bằng công cụ SQLite ngoài phần mềm (sau khi DROP trigger chặn) làm chuỗi gãy -> kiem_tra_toan_ven báo đúng dòng. Giới hạn: không dùng
+# khóa bí mật (file dùng chung nhiều máy / Google Drive) - người biết thuật toán vẫn tính lại được cả chuỗi; xóa các dòng CUỐI cùng
+# không để lại dấu (so với bản in / bản xuất Excel nhật ký đã nộp). Dòng ghi bằng bản cũ / kết nối không gắn ký: "chưa ký", không phải lỗi.
+BANG_BAM = 'audit_bam'
+SQL_BAM = '''
+CREATE TABLE IF NOT EXISTS audit_bam (
+    id   INTEGER PRIMARY KEY,                -- = audit_logs.id của dòng được ký
+    bam  TEXT NOT NULL                       -- SHA-256 (32 ký tự đầu) nối chuỗi: băm dòng ký trước + nội dung dòng nhật ký
+);
+CREATE TRIGGER IF NOT EXISTS audit_bam_khong_sua BEFORE UPDATE ON audit_bam
+BEGIN SELECT RAISE(ABORT, 'Chuỗi băm kiểm toán không được sửa.'); END;
+CREATE TRIGGER IF NOT EXISTS audit_bam_khong_xoa BEFORE DELETE ON audit_bam
+BEGIN SELECT RAISE(ABORT, 'Chuỗi băm kiểm toán không được xóa.'); END;
+'''
+COT_BAM = ('id', 'luc', 'nguoi', 'may', 'hanh_dong', 'bang', 'khoa', 'ma_ho', 'ma_thua', 'doi_tuong', 'truong', 'cu', 'moi', 'thao_tac')
+MUOI_BAM = 'LARC_AUDIT_2026|'
+
+
+def tinh_bam(bam_truoc, *gia_tri) -> str:
+    """Băm một dòng nhật ký: SHA-256 của băm dòng ký trước + các cột COT_BAM (None -> ''), lấy 32 ký tự hex đầu."""
+    chuoi = '|'.join('' if x is None else str(x) for x in (bam_truoc, *gia_tri))
+    return hashlib.sha256((MUOI_BAM + chuoi).encode('utf-8')).hexdigest()[:32]
+
+
+def co_bang_bam(con) -> bool:
+    return con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (BANG_BAM,)).fetchone() is not None
+
+
+def gan_ky(con) -> bool:
+    """Hàm _kt_bam + trigger TẠM ký từng dòng audit_logs của kết nối (gọi lại được; trong giao dịch của nơi gọi). False nếu file chưa có
+    bảng nhật ký / bảng băm (file cũ chỉ xem)."""
+    if not co_bang(con) or not co_bang_bam(con):
+        return False
+    con.create_function('_kt_bam', len(COT_BAM) + 1, tinh_bam)
+    gt = ', '.join(f'NEW."{c}"' for c in COT_BAM)
+    con.execute(f'''CREATE TEMP TRIGGER IF NOT EXISTS _kt_ky AFTER INSERT ON main.{BANG} BEGIN
+                    INSERT INTO {BANG_BAM} (id, bam) VALUES (NEW.id, _kt_bam(COALESCE((SELECT bam FROM main.{BANG_BAM}
+                    ORDER BY id DESC LIMIT 1), ''), {gt})); END''')
+    return True
+
+
+def kiem_tra_toan_ven(con) -> dict:
+    """Đối chiếu chuỗi băm (đọc, không ghi): hop_le, so_dong (nhật ký), so_dong_da_ky, so_chua_ky (ghi bằng bản cũ / kết nối không ký),
+    loi [chữ] - dòng bị sửa (băm không khớp), dòng ký bị xóa (băm dòng sau không khớp / băm mồ côi), khoảng trống id. Dòng chưa ký ở
+    đầu bảng (trước 1.0.55) là mốc khởi đầu hợp lệ."""
+    kq = dict(hop_le=True, so_dong=0, so_dong_da_ky=0, so_chua_ky=0, loi=[])
+    if not co_bang(con):
+        return kq
+    bam = {}
+    if co_bang_bam(con):
+        bam = dict(con.execute(f'SELECT id, bam FROM {BANG_BAM}').fetchall())
+    truoc, id_truoc, da_ky = '', None, False
+    cot = ', '.join(f'"{c}"' for c in COT_BAM)
+    for r in con.execute(f'SELECT {cot} FROM {BANG} ORDER BY id'):
+        kq['so_dong'] += 1
+        i = r[0]
+        if da_ky and id_truoc is not None and i != id_truoc + 1:
+            kq['loi'].append(f'Thiếu dòng nhật ký số {id_truoc + 1}' + (f' - {i - 1}' if i - 1 > id_truoc + 1 else '') +
+                             ' (bị xóa ngoài phần mềm).')
+        id_truoc = i
+        b = bam.pop(i, None)
+        if b is None:
+            kq['so_chua_ky'] += 1
+            continue
+        da_ky = True
+        kq['so_dong_da_ky'] += 1
+        if tinh_bam(truoc, *r) != b:
+            kq['loi'].append(f'Dòng nhật ký số {i} ({r[1]}) không khớp chuỗi băm: nội dung dòng này hoặc một dòng đã ký ngay trước nó '
+                             'bị sửa / xóa ngoài phần mềm.')
+        truoc = b
+    for i in sorted(bam):
+        kq['loi'].append(f'Có mã băm của dòng nhật ký số {i} nhưng dòng đó không còn (bị xóa ngoài phần mềm).')
+    kq['hop_le'] = not kq['loi']
+    return kq
+
 
 # bảng theo dõi bằng trigger tạm: (khóa, mã hộ, mã thửa, mô tả đối tượng - biểu thức SQL trên dòng R, ghi thêm / xóa?, [trường])
 THEO_DOI = {
@@ -87,12 +167,12 @@ def co_bang(con) -> bool:
 
 
 def dam_bao_bang(con) -> bool:
-    """Tạo bảng + trigger chặn sửa / xóa (nếu chưa có). False nếu không ghi được (file chỉ xem / đang khóa)."""
-    if co_bang(con):
+    """Tạo bảng + trigger chặn sửa / xóa (nếu chưa có), cả bảng chuỗi băm. False nếu không ghi được (file chỉ xem / đang khóa)."""
+    if co_bang(con) and co_bang_bam(con):
         return True
     try:
         with csdl.giao_dich(con):
-            for cau in _cau(SQL_BANG):
+            for cau in ([] if co_bang(con) else _cau(SQL_BANG)) + _cau(SQL_BAM):
                 con.execute(cau)
     except sqlite3.OperationalError:                    # file chỉ đọc / đang khóa
         return False
@@ -166,6 +246,7 @@ def gan(con, nguoi: str | None = None) -> bool:
             if all(t in cot for t in THEO_DOI[bang][5]):
                 for cau in _trigger(bang):
                     con.execute(cau)
+    gan_ky(con)                                 # 1.0.55: ký chuỗi băm từng dòng nhật ký
     con.commit()                                # tạo bảng / trigger tạm mở giao dịch ngầm: chốt ngay (như hoan_tac)
     return True
 
@@ -253,6 +334,7 @@ def ghi_thay_doi_pa(con, ma_ho: int, pa_cu, pa_moi, ten_thua: dict | None = None
         pass
     nguoi, may = (phien[0], phien[1]) if phien else (nguoi_dung(), csdl.ten_may())
     luc = datetime.now().isoformat(timespec='seconds')
+    gan_ky(con)                                 # kết nối chưa gắn ghi vết (gan) vẫn ký dòng phương án
     if ten_thua:
         ds = [(h, b, mt, dt.replace(f'thửa {mt} (', f'thửa {ten_thua[mt]} (') if mt in ten_thua else dt, t, c, m)
               for h, b, mt, dt, t, c, m in ds]

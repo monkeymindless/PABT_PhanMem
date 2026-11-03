@@ -128,6 +128,8 @@ def sao_luu_tu_dong(con, file, giu: int = SAO_LUU_GIU) -> Path | None:
         bo_anh_ban_do_ban_sao(dc)
     finally:
         dc.close()
+    from .an_toan import dong_goi_file_sao_luu
+    dong_goi_file_sao_luu(tam)                          # 1.0.55: nén zlib (không mã hóa - người dùng chọn)
     os.replace(tam, dich)
     for cu in ds_sao_luu_tu_dong(file)[max(1, giu):]:
         try:
@@ -331,6 +333,36 @@ class KetNoi(sqlite3.Connection):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.bo_nho = {}
+        self._file_tam = None
+
+    def close(self):
+        """Đóng; bản sao lưu nén mở chỉ xem: xóa file tạm đã giải nén (1.0.55)."""
+        super().close()
+        tam, self._file_tam = getattr(self, '_file_tam', None), None
+        if tam is not None:
+            try:
+                Path(tam).unlink()
+            except OSError:
+                pass
+
+
+def _file_tam_sao_luu(goc_file: Path, du: bytes) -> Path:
+    """Ghi nội dung SQLite đã giải nén ra %TEMP%\\pabt_sao_luu_mo\\<tên>_<số>.<đuôi> (xóa khi đóng kết nối; sót lại thì dọn lần sau)."""
+    import tempfile
+    import time
+    tm = Path(tempfile.gettempdir()) / 'pabt_sao_luu_mo'
+    tm.mkdir(parents=True, exist_ok=True)
+    for cu in tm.iterdir():                             # bản tạm của lần trước quên đóng (> 1 ngày)
+        try:
+            if time.time() - cu.stat().st_mtime > 86400:
+                cu.unlink()
+        except OSError:
+            pass
+    fd, ten = tempfile.mkstemp(prefix=goc_file.stem[:40] + '_', suffix=goc_file.suffix or DUOI_DU_AN, dir=str(tm))
+    with os.fdopen(fd, 'wb') as fo:                      # đóng ngay: Windows không xóa được file còn mở
+        fo.write(du)
+    f = Path(ten)
+    return f
 
 
 def _trang_thai(con) -> tuple:
@@ -395,8 +427,16 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
     p = Path(duong_dan)
     if not tao and not p.exists():
         raise FileNotFoundError(str(p))
+    tam = None
+    if not tao and p.is_file():
+        from .an_toan import mo_goi_file_sao_luu_ra_bytes
+        goc = mo_goi_file_sao_luu_ra_bytes(p)           # 1.0.55: bản sao lưu / mốc nén - giải nén ra file tạm, luôn mở CHỈ XEM
+        if goc is not None:
+            tam = _file_tam_sao_luu(p, goc)
+            p, chi_doc = tam, True
     if chi_doc:
         con = sqlite3.connect(uri_chi_doc(p), uri=True, factory=KetNoi)
+        con._file_tam = tam
         try:
             con.row_factory = sqlite3.Row
             ver = con.execute('PRAGMA user_version').fetchone()[0]
@@ -599,6 +639,9 @@ def _tao_bang_phu(con) -> bool:
     if not kiem_toan.co_bang(con):
         for cau in kiem_toan._cau(kiem_toan.SQL_BANG):
             con.execute(cau)
+    if not kiem_toan.co_bang_bam(con):
+        for cau in kiem_toan._cau(kiem_toan.SQL_BAM):
+            con.execute(cau)
     con.execute(ban_do_cad.SQL_BANG)
     from .phieu_kiem_dem import SQL_BANG_ANH
     con.execute(SQL_BANG_ANH)
@@ -707,6 +750,7 @@ def dam_bao_cot_du_an(con) -> None:
 MO_RONG = (
     ('bang_phu', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anh_hien_trang'").fetchone()),
      lambda con: _tao_bang_phu(con)),
+    ('bang_bam', lambda con: _co_bang_bam_kt(con), lambda con: _tao_bang_bam_kt(con)),        # 1.0.55: chuỗi băm kiểm toán
     ('cot_pa_lan', lambda con: co_cot_pa_lan(con), lambda con: dam_bao_cot_pa_lan(con)),
     ('cot_y_kien', lambda con: co_cot_y_kien(con), lambda con: dam_bao_cot_y_kien(con)),
     ('cot_thua', lambda con: co_cot_thua(con), lambda con: dam_bao_cot_thua(con)),
@@ -715,6 +759,18 @@ MO_RONG = (
     ('chi_muc', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?",
                                              (CHI_MUC_THEM[-1][0],)).fetchone()), lambda con: dam_bao_chi_muc(con)),
 )
+
+
+def _co_bang_bam_kt(con) -> bool:
+    """Đủ khi đã có audit_bam, hoặc file chưa có audit_logs (bảng phụ chưa tạo - bang_phu tạo cả hai)."""
+    ten = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('audit_logs', 'audit_bam')")}
+    return 'audit_bam' in ten or 'audit_logs' not in ten
+
+
+def _tao_bang_bam_kt(con) -> None:
+    from . import kiem_toan
+    for cau in kiem_toan._cau(kiem_toan.SQL_BAM):
+        con.execute(cau)
 
 
 def thieu_mo_rong(con) -> list:
@@ -747,7 +803,7 @@ class DauVetHo:
     lay(): tập mã hộ đã đổi kể từ lần lấy trước; None = phải nạp lại toàn bộ: thêm / xóa hộ, đổi thứ tự / mã hộ, ghi bảng không
     theo hộ (danh mục, dự án, quyết định, đợt trình, cài đặt...), hoặc kết nối / máy khác đã ghi vào file (PRAGMA data_version).
     Sổ ghi chỉ thêm dòng (không xóa sau mỗi lần lấy) để việc lấy không mở giao dịch, không làm đổi total_changes (csdl.nho)."""
-    BO_QUA = ('nhat_ky', 'khoa_dm', 'sqlite_sequence', 'tho_nhap')   # không ảnh hưởng số liệu hiển thị của hộ
+    BO_QUA = ('nhat_ky', 'khoa_dm', 'sqlite_sequence', 'tho_nhap', 'audit_bam')   # không ảnh hưởng số liệu hiển thị của hộ
     TOI_DA = 200000                                                  # sổ dài quá thì dọn (một lần, khi lấy)
 
     def __init__(self, con):

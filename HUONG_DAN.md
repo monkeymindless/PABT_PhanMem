@@ -575,8 +575,14 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   Niêm yết, Đơn giá) được đóng và dựng lại khi mở tới - đổi cỡ chữ nhanh hơn. Hộ đang sửa dở và trang Khái toán giữ nguyên.
 - **Kéo thả từ Windows Explorer** vào cửa sổ phần mềm: file dự án `.larc` / `.pabt` (mở), gói cập nhật `.larcud` (cài), gói mẫu in &
   cấu hình `.pabtcfg` (cài), Excel `.xlsx` / `.xlsm` (nhập - file phương án chi tiết tự nhận ra).
+- **Giải trình cách tính (1.0.55)**: trong cửa sổ lập phương án, chuột phải một dòng ở các thẻ mục > **Giải trình cách tính &
+  căn cứ…** (hoặc chọn dòng rồi **Ctrl+I**): công thức bằng chữ, thay số cụ thể (diện tích / số lượng × đơn giá × hệ số K × tỷ lệ,
+  làm tròn theo dự án), căn cứ / nguồn đơn giá; nút **Chép** để dán vào văn bản trả lời. Cửa sổ **Xem chi tiết tính tiền…**: rê chuột
+  lên dòng tiền.
+- **Nhật ký kiểm toán có chuỗi băm (1.0.55)**: dòng dưới cùng cửa sổ Nhật ký kiểm toán cho biết chuỗi băm còn nguyên hay có dòng bị
+  sửa / xóa ngoài phần mềm. Xóa các dòng CUỐI cùng không để lại dấu: lưu bản Excel nhật ký đã xuất / nộp để đối chiếu.
 - **Sao lưu tự động**: mỗi lần mở dự án để sửa, một bản sao được ghi vào `%APPDATA%\PABT\sao_luu_tu_dong\` (giữ 5 bản gần nhất
-  mỗi dự án, tên file kèm ngày giờ). Cần khôi phục: mở bản sao đó rồi **Lưu dự án thành…**. Mở chỉ xem không sao lưu.
+  mỗi dự án, tên file kèm ngày giờ; từ 1.0.55 file được NÉN - nhỏ hơn khoảng 5 lần, không mã hóa). Cần khôi phục: mở bản sao đó (phần mềm tự giải nén, mở chỉ xem) rồi **Lưu dự án thành…**, hoặc dùng **Cỗ máy thời gian**. Mở chỉ xem không sao lưu.
 
 ## Màn hình chính khi đã mở dự án - tổng quan dự án (1.0.07)
 

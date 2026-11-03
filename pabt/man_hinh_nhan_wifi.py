@@ -121,7 +121,7 @@ class HopNhanWifi(QDialog):
             self.lb_tt.setText(str(e))
             return ''
         self.lb_url.setText(url)
-        self.lb_qr.setPixmap(anh_qr(url))
+        self.lb_qr.setPixmap(anh_qr(self.may.url_qr or url))   # 1.0.55: QR mang khóa mã hóa (#k=…); chữ hiện không kèm khóa
         self.lb_tt.setText('Đang chờ điện thoại gửi file…')
         self.nhip.start()
         return url
