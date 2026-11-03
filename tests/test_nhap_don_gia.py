@@ -552,7 +552,8 @@ class TestLoiVan(CoSo):
         self.assertTrue(d.da_co)                                        # bộ đơn giá tích hợp đã ghi tên QĐ 31/2025
         # văn bản "đã có" nhưng các mục đều MỚI: vẫn chọn sẵn (trước đây bỏ chọn hết -> không áp dụng được)
         self.assertTrue(all(d.bang.item(i, 0).checkState() == Qt.CheckState.Checked for i in range(d.bang.rowCount())))
-        d.bang.item(5, 2).setText('Cá nuôi lồng, bè')                  # sửa tên trước khi áp dụng
+        from pabt.man_hinh_nhap_don_gia import C_TEN
+        d.bang.item(5, C_TEN).setText('Cá nuôi lồng, bè')              # sửa tên trước khi áp dụng
         self.assertEqual(d.ds[5].ten, 'Cá nuôi lồng, bè')
         d.accept()
         self.assertEqual((d.ket_qua['so_moi'], d.ket_qua['so_cap_nhat']), (7, 0))

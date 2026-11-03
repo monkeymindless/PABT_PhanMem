@@ -589,8 +589,19 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   chi trả, bàn giao, vận động. Thanh tra: mở dự án chỉ xem, xem nhật ký kiểm toán. Hai vai trò cũ "Quản trị", "Người dùng" giữ nguyên
   quyền. Áp cho dự án trên máy chủ và bản mang về; file riêng trên máy không giới hạn. Không vai trò nào xóa được hộ đã có quyết định
   phê duyệt hoặc đã chi trả.
-- **Văn bản nhiều khu vực giá (1.0.57)**: văn bản đơn giá chia khu vực (mỗi phụ lục một khu vực) - hộp Cập nhật đơn giá có ô **Khu vực
-  giá**: chỉ dòng của khu vực đã chọn được so với bộ đơn giá (mặc định khu vực khớp bộ đang dùng nhiều nhất).
+- **Văn bản nhiều khu vực giá (1.0.57)**: văn bản đơn giá chia khu vực (Phụ lục I khu vực 1, Phụ lục II khu vực 2) - hộp Cập nhật
+  đơn giá, ô **Khu vực giá** mặc định **Cả Phụ lục I và Phụ lục II - tách theo khu vực**: mỗi khu vực so với mục cùng khu vực của bộ
+  đơn giá (khu vực 1 không bị giá khu vực 2 đè), mỗi mục gắn khu vực của phụ lục, danh sách xã / phường của từng khu vực đọc từ phần
+  "Ghi chú: 1. Khu vực I bao gồm các phường, xã…" của văn bản. Chọn "Chỉ … khu vực N" khi chỉ cần một khu vực (như bộ một khu vực).
+  - Hộp chia **hai phần**: bên trái **bộ đơn giá hiện hành** (mã, tên, đơn giá, ghi chú đang dùng), bên phải **văn bản mới** (mã, tên,
+    ĐVT, đơn giá, ghi chú sẽ ghi) - mục mới thì phần trái trống; sửa tên / ĐVT / đơn giá mới ngay trên bảng.
+  - **Dự án chỉ dùng phụ lục của khu vực có xã dự án** (Thông tin dự án > Địa bàn): xã Bù Đăng (khu vực 2) dùng Phụ lục II, Phụ lục I
+    khóa ẩn (không hiện trong danh sách chọn, tìm, dán tài sản; dòng phương án cũ vẫn giữ giá); xã Nhơn Trạch (khu vực 1) ngược lại.
+    Mục bộ đơn giá không thuộc phụ lục nào (gác lửng, cây trồng, hỗ trợ…) dùng ở mọi khu vực.
+  - **Bộ đơn giá > thẻ Nhà, công trình**: nút **Phụ lục I - khu vực 1 / Phụ lục II - khu vực 2** - mỗi phụ lục một bảng; khi đang mở
+    dự án, phụ lục khu vực khác ghi "khóa" (quản trị mở khóa mới xem / sửa). Ô **Khu vực của dự án**: "Theo xã dự án" hoặc chọn tay
+    (địa bàn không có trong danh sách xã). Nút **Xã / phường từng khu vực…** xem danh sách. Thêm mục khi đang xem phụ lục nào thì mục
+    thuộc phụ lục đó.
 - **Khóa bảo mật & đồng bộ bộ đơn giá (1.0.56)**: máy đã thiết lập máy chủ LAN thì CHỈ tài khoản **quản trị máy chủ** đang
   đăng nhập sửa được bộ đơn giá (tài sản, cây trồng, vật nuôi, chính sách hỗ trợ, bảng giá đất, hệ số K - cả nạp từ file / văn bản,
   khôi phục bộ gốc); mật khẩu quản trị trên máy không thay được. Quản trị sửa xong, bộ đơn giá tự phát hành vào thư mục máy chủ

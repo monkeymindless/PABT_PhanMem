@@ -227,8 +227,9 @@ class TestHopThoai(_Co):
             self.assertIn('tính thêm 50%', h.o_quy_tac.toPlainText())
             self.assertIn('dòng chung', h.lb.text())
             i = next(i for i, m in enumerate(h.ds) if m.ma_khop == 'TS17')
-            self.assertIn('dòng chung', h.bang.item(i, 6).text())
-            self.assertIn('Dòng chung', h.bang.item(i, 2).toolTip())
+            from pabt.man_hinh_nhap_don_gia import C_TEN, C_TT
+            self.assertIn('dòng chung', h.bang.item(i, C_TT).text())
+            self.assertIn('Dòng chung', h.bang.item(i, C_TEN).toolTip())
             h.close()
             h.deleteLater()
         finally:

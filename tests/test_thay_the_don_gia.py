@@ -209,8 +209,9 @@ class TestHop(_Co):
             self.assertIn('kiểm tra văn bản đã đọc ĐỦ', h.lb_canh_thay.text())     # văn bản thử ít mục, bỏ rất nhiều
             self.assertEqual(h.bang.columnCount(), len(COT))
             r = next(i for i, m in enumerate(h.ds) if m.ma_khop == self.vai[0]['ma'])
-            self.assertEqual(h.bang.item(r, 2).text(), 'Cây vải thiều - Năm thứ 1')
-            self.assertEqual(h.bang.item(r, 9).text(), self.vai[0]['ten'])
+            from pabt.man_hinh_nhap_don_gia import C_TEN, C_TEN_CU
+            self.assertEqual(h.bang.item(r, C_TEN).text(), 'Cây vải thiều - Năm thứ 1')
+            self.assertEqual(h.bang.item(r, C_TEN_CU).text(), self.vai[0]['ten'])
             self.assertIn('đổi tên / quy cách', h.lb.text())
             h.accept()
             self.assertIsNotNone(h.ket_qua)

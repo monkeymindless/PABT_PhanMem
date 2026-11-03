@@ -21,10 +21,15 @@ MAU = {'mới': QColor('#E8F5E9'), 'cập nhật': QColor('#FFF8E1'), 'đổi qu
        'giữ nguyên': QColor('#F5F5F5')}
 DONG_TU_CAO_TOI_DA = 1500
 TEN_NHOM_NGAN = {2: 'Nhà, công trình', 3: 'Cây trồng', ndg.NHOM_VN: 'Vật nuôi', 4: 'Hỗ trợ'}
-C_MA, C_TEN, C_DVT, C_GIA = 1, 2, 3, 4
-COT = ('Dùng', 'Mã', 'Tên (theo văn bản)', 'ĐVT', 'Giá mới (đ)', 'Giá hiện hành (đ)', 'Trạng thái', 'Nhóm',
-       'Ghi chú (quy cách)', 'Tên hiện hành trong bộ đơn giá')
-RONG_COT = (50, 100, 380, 70, 120, 140, 180, 90, 170)
+# 1.0.57 (người dùng 04/11/2026: "chia làm 2 cột (2 phần dữ liệu), trái là … mã tài sản, tên tài sản hiện hành, đơn giá hiện hành, ghi
+# chú | bên phải là mã tài sản mới, tên tài sản mới, đơn giá mới, ghi chú … để đối chiếu các tài sản cũ mới với nhau")
+C_DUNG, C_MA_CU, C_TEN_CU, C_GIA_CU, C_GC_CU, C_MA, C_TEN, C_DVT, C_GIA, C_GC, C_TT, C_KV, C_NHOM = range(13)
+COT = ('Dùng', 'Mã\n(hiện hành)', 'Tên hiện hành\n(bộ đơn giá đang dùng)', 'Đơn giá\nhiện hành (đ)', 'Ghi chú\nhiện hành',
+       'Mã\n(mới)', 'Tên mới\n(theo văn bản)', 'ĐVT', 'Đơn giá\nmới (đ)', 'Ghi chú mới\n(quy cách)', 'Trạng thái', 'Khu vực',
+       'Nhóm')
+RONG_COT = (46, 72, 250, 100, 130, 92, 280, 60, 100, 150, 170, 110, 90)
+COT_HIEN_HANH = (C_MA_CU, C_TEN_CU, C_GIA_CU, C_GC_CU)
+COT_MOI = (C_MA, C_TEN, C_DVT, C_GIA, C_GC)
 # 30/10/2026 (người dùng): "thay thế toàn bộ văn bản cũ bằng văn bản mới, để đúng với toàn bộ nội dung theo văn bản mới"
 # 1.0.46: chữ khác chuột phải "Thay thế dòng đang chọn" trên bảng Bộ đơn giá
 CACH_CAP_NHAT = (('Bổ sung, sửa đổi: thêm mục mới, đổi giá - các mục khác của bộ đơn giá giữ nguyên', False),
@@ -77,12 +82,14 @@ class HopNhapDonGia(QDialog):
         self.ket_qua_ai = None                          # 1.0.56: kết quả phân tích AI (tùy chọn) - áp lại sau mỗi lần so khớp
         self.tu_loi_van = tu_loi_van
         self.scan = bool(getattr(dong, 'scan', False))   # dòng đọc bằng nhận dạng chữ: chặn giá nghi đọc sai, không chọn sẵn mục "bỏ"
-        # 1.0.57: văn bản nhiều khu vực giá (QĐ 18/2026 hợp nhất: Phụ lục I khu vực 1, Phụ lục II khu vực 2) - bộ đơn giá một mức giá mỗi
-        # mục: chỉ dòng của MỘT khu vực (mặc định khu vực khớp bộ đơn giá đang dùng nhiều nhất), người dùng đổi ở ô "Khu vực giá"
+        # 1.0.57: văn bản nhiều khu vực giá (QĐ 18/2026 hợp nhất: Phụ lục I khu vực 1, Phụ lục II khu vực 2) - mặc định nhập CẢ HAI
+        # khu vực, bộ đơn giá tách mục theo khu vực (khu_vuc_gia: dự án chỉ dùng phụ lục của xã dự án); ô "Khu vực giá" chọn một khu vực
+        from . import khu_vuc_gia
         self.ds_tat_ca = ds
         self.khu_vuc = ndg.cac_khu_vuc(ds)
-        self.kv = ndg.khu_vuc_khop_nhat(ds, nhom_vb or None) if self.khu_vuc else ''
-        ds = ndg.loc_khu_vuc(ds, self.kv)
+        self.kv = ndg.KV_CA_HAI if self.khu_vuc else ''
+        self.ten_pl = khu_vuc_gia.ten_phu_luc_kv(dong) if self.khu_vuc else {}
+        self.xa_kv = khu_vuc_gia.doc_ds_xa(dong) if self.khu_vuc else {}
         self.ds = ds
         self.van_ban = vb
         self.da_co = ndg.da_co(vb.get('so_hieu', ''))
@@ -171,11 +178,14 @@ class HopNhapDonGia(QDialog):
             n.setProperty('vai', 'nhan')
             hang_cach.addWidget(n)
             self.cb_kv = QComboBox()
+            self.cb_kv.addItem('Cả ' + ' và '.join(self.ten_kv(k) for k, _ in self.khu_vuc) + ' - tách theo khu vực', ndg.KV_CA_HAI)
             for k, so in self.khu_vuc:
-                self.cb_kv.addItem(f'Khu vực {k} ({so} dòng)', k)
-            self.cb_kv.setCurrentIndex(max(0, self.cb_kv.findData(self.kv)))
-            self.cb_kv.setToolTip('Văn bản có nhiều khu vực giá (mỗi phụ lục một khu vực). Bộ đơn giá chỉ một mức giá mỗi mục: chọn khu '
-                                  'vực của đơn vị - mặc định khu vực khớp bộ đơn giá đang dùng nhiều nhất.')
+                self.cb_kv.addItem(f'Chỉ {self.ten_kv(k)} ({so} dòng)', k)
+            self.cb_kv.setCurrentIndex(0)
+            so_xa = sum(len(v) for v in self.xa_kv.values())
+            self.cb_kv.setToolTip('Văn bản có nhiều khu vực giá (mỗi phụ lục một khu vực). Mặc định nhập CẢ các phụ lục: mỗi mục gắn khu vực '
+                                  f'của phụ lục ({so_xa} xã / phường đọc được từ phần ghi chú của văn bản); dự án chỉ dùng phụ lục của '
+                                  'khu vực có xã dự án, phụ lục kia tự khóa ẩn. "Chỉ khu vực …": như bộ đơn giá một khu vực.')
             self.cb_kv.currentIndexChanged.connect(lambda _: self.doi_khu_vuc(self.cb_kv.currentData()))
             hang_cach.addWidget(self.cb_kv)
         self.lb_vb_cu = QLabel('Văn bản bị thay thế:')
@@ -221,6 +231,10 @@ class HopNhapDonGia(QDialog):
         self.b_ai.clicked.connect(lambda: self.phan_tich_ai())
         hang_loc.addWidget(self.b_ai)
         lo.addLayout(hang_loc)
+        self.lb_hai_phan = QLabel('<b>Bên trái - BỘ ĐƠN GIÁ HIỆN HÀNH</b> (mã, tên, đơn giá, ghi chú đang dùng) &nbsp;|&nbsp; '
+                                  '<b>Bên phải - VĂN BẢN MỚI</b> (mã, tên, ĐVT, đơn giá, ghi chú sẽ ghi) - đối chiếu từng dòng cũ / mới.')
+        self.lb_hai_phan.setWordWrap(True)
+        lo.addWidget(self.lb_hai_phan)
         self.lb_ai = QLabel()
         self.lb_ai.setWordWrap(True)
         lo.addWidget(self.lb_ai)
@@ -232,7 +246,12 @@ class HopNhapDonGia(QDialog):
             self.bang.setColumnWidth(c, w)
         self.bang.horizontalHeader().setStretchLastSection(True)
         self.bang.setWordWrap(True)                     # tên dài (điều kiện "nuôi dưới 50%…" ở cuối) không bị cắt "…"
+        for c in COT_HIEN_HANH:
+            self.bang.horizontalHeaderItem(c).setToolTip('Bộ đơn giá hiện hành (đang dùng)')
+        for c in COT_MOI:
+            self.bang.horizontalHeaderItem(c).setToolTip('Văn bản mới (sẽ ghi vào bộ đơn giá mới khi áp dụng)')
         lo.addWidget(self.bang, 1)
+        self.bang.setColumnHidden(C_KV, not self.khu_vuc)
         self.bang.cellChanged.connect(self._sua_o)
         if xem_van:
             o = QPlainTextEdit('\n'.join(xem_van))
@@ -351,18 +370,25 @@ class HopNhapDonGia(QDialog):
         self.lb_ai.setVisible(True)
         return chu
 
+    def ten_kv(self, kv: str) -> str:
+        pl = self.ten_pl.get(kv, '')
+        return f'{pl} - khu vực {kv}' if pl else f'khu vực {kv}'
+
     def doi_khu_vuc(self, kv: str):
-        """Đổi khu vực giá: danh sách dòng = dòng của khu vực đó, so khớp lại."""
+        """Đổi khu vực giá: '*' = cả các khu vực (tách theo khu vực); một khu vực: chỉ dòng của khu vực đó. So khớp lại."""
         if kv == self.kv:
             return
         self.kv = kv
         for m in self.ds_tat_ca:                        # so khớp khu vực trước đã đặt trạng thái / bỏ chọn: làm lại từ đầu
             m.chon = True
-        self.ds = ndg.loc_khu_vuc(self.ds_tat_ca, kv)
+        self.ds = list(self.ds_tat_ca) if kv == ndg.KV_CA_HAI else ndg.loc_khu_vuc(self.ds_tat_ca, kv)
         self.khop()
 
     def khop(self):
-        ndg.so_khop(self.ds, self.o_nhom.currentData() or None, thay_the=self.thay_the(), scan=self.scan)
+        if self.kv == ndg.KV_CA_HAI:
+            ndg.so_khop_khu_vuc(self.ds, self.o_nhom.currentData() or None, thay_the=self.thay_the(), scan=self.scan)
+        else:
+            ndg.so_khop(self.ds, self.o_nhom.currentData() or None, thay_the=self.thay_the(), scan=self.scan)
         if self.ket_qua_ai:
             self._dem_ai = pai.ap_xac_minh(self.ds, self.ket_qua_ai)
         nhom_bang = self.o_nhom.currentData() or 0
@@ -375,24 +401,41 @@ class HopNhapDonGia(QDialog):
             # (QĐ 31/2025 có tên trong danh sách văn bản nhưng bộ đơn giá chưa có mục vật nuôi nào)
             dung = m.chon and m.trang_thai != 'giữ nguyên' and not (self.da_co_cu and m.trang_thai == 'cập nhật')
             chk.setCheckState(Qt.CheckState.Checked if dung else Qt.CheckState.Unchecked)
-            self.bang.setItem(i, 0, chk)
+            self.bang.setItem(i, C_DUNG, chk)
             # cách khớp ngoài tên (đặc trưng / dòng chung / khoảng giá) + độ giống: người dùng chỉ cần soát các dòng này
             ghi = '; '.join(x for x in (m.cach_khop, f'gần đúng {m.khop_gan:.0%}' if m.khop_gan else '',
                                         'giá cần xem lại' if m.nghi_gia and m.trang_thai != 'giữ nguyên' else '') if x)
             tt = m.trang_thai + (f' ({ghi})' if ghi else '')
             n = nhom_bang or m.nhom or 3
-            # mục mới: tiền tố mã sẽ cấp khi áp dụng (số tiếp theo của bộ đơn giá - ma_tai_san.ma_tiep)
-            ma = m.ma_khop or m.ma or (f'{m.ma_moi or ndg.TIEN_TO.get(n, "") + "…"} (mới)' if m.trang_thai == 'mới' else '')
-            ten_cu = m.ten_cu if m.ten_cu and m.ten_cu != (m.ten_thay or m.ten) else ''
-            for c, v in enumerate((ma, m.ten_thay or m.ten, m.dvt, vn(m.don_gia), vn(m.gia_cu) if m.gia_cu else '', tt,
-                                   TEN_NHOM_NGAN.get(n, ''), m.ghi_chu_thay or m.ghi_chu, ten_cu), start=1):
+            # mục mới: tiền tố mã sẽ cấp khi áp dụng (số tiếp theo của bộ đơn giá - ma_tai_san.ma_tiep); mục khớp giữ mã
+            if m.bo_cu:
+                ma_moi = ''
+            elif m.trang_thai == 'mới':
+                ma_moi = m.ma or f'{m.ma_moi or ndg.TIEN_TO.get(n, "") + "…"} (mới)'
+            else:
+                ma_moi = m.ma_khop or m.ma
+            co_cu = bool(m.ma_khop)
+            gia = {C_DUNG: None,
+                   C_MA_CU: m.ma_khop, C_TEN_CU: m.ten_cu if co_cu else '', C_GIA_CU: vn(m.gia_cu) if m.gia_cu is not None and co_cu else '',
+                   C_GC_CU: m.ghi_chu_cu if co_cu else '',
+                   C_MA: ma_moi, C_TEN: '' if m.bo_cu else (m.ten_thay or m.ten), C_DVT: '' if m.bo_cu else m.dvt,
+                   C_GIA: '' if m.bo_cu else vn(m.don_gia), C_GC: '' if m.bo_cu else (m.ghi_chu_thay or m.ghi_chu),
+                   C_TT: tt, C_KV: self.ten_kv(m.khu_vuc) if m.khu_vuc else '', C_NHOM: TEN_NHOM_NGAN.get(n, '')}
+            chu_thich = self._chu_thich(m)
+            for c, v in gia.items():
+                if c == C_DUNG:
+                    continue
                 it = QTableWidgetItem(v)
                 # sửa được Tên, ĐVT, Đơn giá mới trước khi áp dụng (dòng phụ của dòng chung: sửa ở dòng đầu của nhóm)
                 if c not in (C_TEN, C_DVT, C_GIA) or m.bo_cu or m.phu:
                     it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                it.setToolTip(self._chu_thich(m) if c != 9 or not m.ghi_chu_cu else f'Ghi chú hiện hành: {m.ghi_chu_cu}')
-                it.setBackground(QBrush(MAU[m.trang_thai]))
-                if c in (4, 5):
+                if c in COT_HIEN_HANH:
+                    it.setToolTip(f'Hiện hành: {m.ten_cu}' + (f'\nGhi chú: {m.ghi_chu_cu}' if m.ghi_chu_cu else '') if co_cu
+                                  else 'Bộ đơn giá đang dùng chưa có mục này')
+                else:
+                    it.setToolTip(chu_thich)
+                    it.setBackground(QBrush(MAU[m.trang_thai]))       # tô màu phần MỚI + trạng thái; phần hiện hành để nền thường
+                if c in (C_GIA_CU, C_GIA):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(i, c, it)
         if len(self.ds) <= DONG_TU_CAO_TOI_DA:          # cao dòng theo chữ: đo từng dòng, bảng vài nghìn dòng thì bỏ qua
@@ -448,7 +491,7 @@ class HopNhapDonGia(QDialog):
         """bat: đánh dấu "Dùng" mọi dòng có thay đổi để ghi; False: bỏ chọn mọi dòng. Trả số dòng đổi trạng thái đánh dấu."""
         n = 0
         for i, m in enumerate(self.ds):
-            it = self.bang.item(i, 0)
+            it = self.bang.item(i, C_DUNG)
             moi = bat and m.trang_thai in ndg.TRANG_THAI_GHI
             m.chon = moi
             if (it.checkState() == Qt.CheckState.Checked) != moi:
@@ -503,7 +546,7 @@ class HopNhapDonGia(QDialog):
 
     def accept(self):
         for i, m in enumerate(self.ds):
-            m.chon = self.bang.item(i, 0).checkState() == Qt.CheckState.Checked
+            m.chon = self.bang.item(i, C_DUNG).checkState() == Qt.CheckState.Checked
         luu_qd = self.quy_dinh if self.o_luu_qd is not None and self.o_luu_qd.isChecked() else None
         if not any(m.chon and m.trang_thai in ndg.TRANG_THAI_GHI for m in self.ds) and not luu_qd:
             if not self.im_lang:
@@ -516,8 +559,9 @@ class HopNhapDonGia(QDialog):
             return
         vb_cu = [self.cb_vb_cu.currentData()] if self.thay_the() and self.cb_vb_cu.currentData() is not None else []
         try:
+            kv = dict(xa=self.xa_kv, ten=self.ten_pl) if self.kv == ndg.KV_CA_HAI else None
             self.ket_qua = ndg.ap_dung(self.ds, self.o_nhom.currentData() or None, self.nguon, van_ban=self.van_ban,
-                                       van_ban_cu=vb_cu, quy_dinh=luu_qd)
+                                       van_ban_cu=vb_cu, quy_dinh=luu_qd, khu_vuc=kv)
         except LoiNhap as e:
             if not self.im_lang:
                 QMessageBox.warning(self, TEN_UD, str(e))
@@ -527,6 +571,9 @@ class HopNhapDonGia(QDialog):
             them = ''.join(f', {kq[k]} {chu}' for k, chu in (('so_quy_cach', 'mục đổi tên / quy cách'), ('so_bo', 'mục bỏ'),
                                                               ('so_quy_dinh', 'quy định cách tính'),
                                                               ('so_muc_ghi_chu', 'mục được ghi chú quy định')) if kq.get(k))
+            if kq.get('so_khu_vuc'):
+                them += ('. Đã tách theo khu vực: ' + ', '.join(self.ten_kv(k) for k, _ in self.khu_vuc) + ' - dự án chỉ dùng phụ lục '
+                         'của khu vực có xã dự án')
             QMessageBox.information(self, TEN_UD, f'Đã tạo bộ đơn giá phiên bản {kq["phien_ban"]}: '
                                                   f'{kq["so_moi"]} mục mới, {kq["so_cap_nhat"]} mục đổi giá{them}.')
         super().accept()

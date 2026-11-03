@@ -3002,3 +3002,20 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
   / `ho_ke` nhớ csdl.nho (chuyển hộ 32 -> 24 ms, phần Python 30 -> 17 ms; "< 8 ms" của đề án không đạt - còn lại là Qt vẽ). Chưa làm GÓI 3
   (thanh 5 bước, Ctrl+B, nhiều tab hộ, BangMuc 7 cột + Space, F4 thuộc tính): trùng / trái quyết định cũ (thanh tab đã bỏ 0.9.94, F4 = xem
   trước A4) - chờ người dùng chọn. Test `tests/test_phan_quyen.py`.
+- 1.0.57 HAI PHỤ LỤC THEO KHU VỰC (người dùng 04/11/2026, file Word "TRINH QD HỢP NHẤT GIA BT NHA, CONG TRINH XAY DUNG -HOAN CHINH.doc":
+  "phân tách đơn giá bồi thường tài sản nhà theo Phụ lục I và II … chỉ hoạt động bộ Phụ lục dựa vào xã có dự án … phụ lục còn lại tự
+  động bị khóa ẩn"; "bảng cập nhật đơn giá chia 2 phần: trái hiện hành | phải mới"). `pabt/khu_vuc_gia.py` (không Qt): KVMUC/KVXA/KVTEN
+  trong tham_so (đi theo bộ sang dự án qua ap_vao_du_an; KHÔNG đổi lược đồ), `doc_ds_xa` (ghi chú "Khu vực I bao gồm…", bỏ dòng số trang,
+  dòng bảng / dấu chấm cuối kết thúc danh sách), `ten_phu_luc_kv`, `khu_vuc_cua_xa` (tên dài "xã Bù Đăng, tỉnh …"), `khu_vuc_du_an`
+  (cai_dat KHU_VUC_GIA > xã), `dung_duoc`. nhap_don_gia: `so_khop(chi_ma=)` (mã mới vẫn theo cả bộ - `_cap_ma_moi`), `so_khop_khu_vuc`
+  (mục chưa gắn khu vực = khu vực "gốc" khớp nhiều nhất - bộ cũ một khu vực vẫn khớp đủ), `ap_dung(khu_vuc=)` gắn KVMUC cho mục khớp /
+  thêm; `_chon_dau` phân biệt "< 1m" / "≥ 1m" (khóa tên bỏ ký hiệu). Đọc bảng Word: `_tach_mo_ta` ("* Kết cấu loại 1: …" -> tên phụ
+  "Kết cấu loại 1", mô tả -> ghi chú; "Kết cấu: …" dưới dòng cha -> tên = dòng cha), tiêu đề "Loại | Quy mô, kết cấu" (cột Loại = STT),
+  "STT | Nhà từ 05 tầng… | ĐVT | Đơn giá" (ô tiêu đề = dòng cha đầu bảng), "Loại biệt thự" -> tiền tố "Biệt thự", tên ở cột Loại
+  ("Nhà bán kiên cố | Kết cấu: …"), "A. / B. Nhà xưởng" ở cột Loại = tiêu đề nhóm, tiêu đề bảng không cột giá kết thúc bảng giá trước,
+  "a) Bồn nhựa" = một cấp, `_ten_theo_loai` ("(nhà loại N)" khi tên trùng khác giá), "dông/m2". Bản Word QĐ 18/2026: khu vực 1 111/111
+  khớp bộ đang dùng, khu vực 2 98 mục mới; nhập xong so lại 209/209 giữ nguyên; PDF cùng văn bản vẫn 111/111. lap_pa.DanhMuc: mục khu
+  vực khác vào `an` (không ở `muc`), `bi_khoa` chặn them_tu_danh_muc / ap_gia_tuong_duong. HopNhapDonGia: 13 cột (C_MA_CU…C_GC_CU |
+  C_MA…C_GC | C_TT, C_KV, C_NHOM), cb_kv mặc định KV_CA_HAI. HopBoDonGia: `thanh_pl` (nút phụ lục, `_loc_phu_luc` thẻ 0, khóa phụ lục
+  khác khi mở dự án trừ khi đã mở khóa quản trị, `doi_khu_vuc_du_an` -> da_ap để app dựng lại DanhMuc), thẻ Tham số bỏ `KV%:%`;
+  don_gia.them_dong(khu_vuc=), xoa_dong / thay_the_dong giữ KVMUC. Test `tests/test_khu_vuc_gia_1057.py` (dữ liệu GIẢ LẬP).

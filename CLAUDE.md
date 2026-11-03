@@ -177,6 +177,10 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Đối tượng nhớ dùng chung (`BoiCanh.tu`, `nghiep_vu.ket_qua_ho`, `theo_doi.tong_hop`, `csdl.nho`): KHÔNG sửa đối tượng trả về. Cả dự án:
   `nghiep_vu.doc_tat_ca_phuong_an` - đừng gọi `tinh_ho` / `doc_phuong_an` trong vòng lặp hộ.
 - Nhiều lần phương án: `doc_phuong_an` mặc định CỘNG DỒN các lần (bỏ lần đã bị thay); `BoSoan.luu` chỉ ghi lần đang mở; lần khóa không sửa.
+- Khu vực giá (1.0.57, `khu_vuc_gia`): bộ đơn giá tách Phụ lục I / II theo khu vực - lưu ở tham_so `KVMUC:<mã>` / `KVXA:<xã>` / `KVTEN:<kv>`
+  (không đổi lược đồ; mục không có KVMUC dùng mọi khu vực). Dự án: `khu_vuc_du_an` (cai_dat KHU_VUC_GIA hoặc xã du_an.ten_dia_ban);
+  `lap_pa.DanhMuc` ẩn mục khu vực khác (`an`, `bi_khoa`; `lay` vẫn trả để đọc dòng cũ). Văn bản nhiều khu vực: `so_khop_khu_vuc` (so từng
+  khu vực với mục cùng khu vực, `chi_ma`), `ap_dung(khu_vuc=…)`. Thêm cách đọc / ghi danh mục mới theo mã: nhớ lọc theo khu vực.
 - Mã tài sản: nhà TS, cây CT, vật nuôi VN, chính sách CS, thưởng TH (`ma_tai_san`). Quy ước tương đương do người dùng tự nhập (bộ đơn giá
   không có).
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
-    ('1.0.57', '03/11/2026', (
+    ('1.0.57', '04/11/2026', (
         'Phương án chi tiết (bản Word, bản Excel): mục nhà / cây trồng / vật nuôi / hỗ trợ / thưởng không có tiền và không có dòng tài sản '
         'nào thì KHÔNG in; mục có tài sản (kể cả tài sản chưa có giá, chỉ có ghi chú) hoặc có tiền thì giữ. Các mục còn lại đánh số liền '
         'nhau (1, 2, 3…).',
@@ -23,6 +23,16 @@ MUC = (
         'giữ nguyên quyền. Không vai trò nào xóa được hộ đã có quyết định phê duyệt / đã chi trả.',
         'Nhanh hơn: chuyển hộ ◀ ▶ trong cửa sổ lập phương án không đọc lại cả danh sách hộ (3.000 hộ: 32 -> 24 ms); bảng tổng hợp '
         'điều chỉnh chỉ đọc hộ có phương án điều chỉnh.',
+        'HAI PHỤ LỤC THEO KHU VỰC GIÁ: văn bản đơn giá nhà, công trình có Phụ lục I (khu vực 1) và Phụ lục II (khu vực 2) - Cập nhật '
+        'đơn giá mặc định nhập CẢ HAI phụ lục, mỗi mục gắn khu vực của phụ lục, danh sách xã / phường từng khu vực đọc từ phần ghi chú '
+        'của văn bản. Dự án chỉ dùng phụ lục của khu vực có xã dự án (Địa bàn), phụ lục kia khóa ẩn khi lập phương án (không chọn, '
+        'không tìm, không thêm được). Bộ đơn giá > thẻ Nhà, công trình: nút Phụ lục I / Phụ lục II - hai bảng tách bạch; ô "Khu vực '
+        'của dự án" chọn tay khi địa bàn không có trong danh sách xã; nút "Xã / phường từng khu vực".',
+        'Hộp Cập nhật đơn giá chia HAI PHẦN: bên trái bộ đơn giá hiện hành (mã, tên, đơn giá, ghi chú), bên phải văn bản mới (mã, tên, '
+        'ĐVT, đơn giá, ghi chú) - đối chiếu từng dòng cũ / mới; cột Khu vực.',
+        'Đọc file Word (.doc, .docx) đơn giá nhà: tên "Nhà từ 05 tầng trở lên - Kết cấu loại 1" (mô tả kết cấu vào ghi chú, trước đây '
+        'dính cả đoạn mô tả vào tên), "Biệt thự Song lập", dòng "Kết cấu: … / Vật liệu hoàn thiện: …" của bảng Phụ lục II, nhà loại 4…8 '
+        'cùng tên thêm "(nhà loại N)", "a) Bồn nhựa / b) Bồn inox", ĐVT "Đồng/m² sàn" -> m²; "Ống bi … < 1m" / "≥ 1m" không nhầm nhau.',
     )),
     ('1.0.56', '03/11/2026', (
         'KHÓA BẢO MẬT BỘ ĐƠN GIÁ: máy dùng máy chủ LAN chỉ tài khoản QUẢN TRỊ máy chủ (đang đăng nhập) sửa được bộ đơn giá - tài sản, '

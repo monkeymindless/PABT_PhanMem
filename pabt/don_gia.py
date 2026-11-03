@@ -430,8 +430,9 @@ def doc_dong(bang: str, khoa, p=None) -> dict | None:
         con.close()
 
 
-def them_dong(bang: str, gt: dict, nhom=None) -> dict:
-    """Thêm một mục vào bộ đơn giá đang dùng (ghi bản máy). Trả dòng đã ghi."""
+def them_dong(bang: str, gt: dict, nhom=None, khu_vuc: str = '') -> dict:
+    """Thêm một mục vào bộ đơn giá đang dùng (ghi bản máy). Trả dòng đã ghi. khu_vuc (1.0.57): bộ tách theo khu vực giá - mục mới
+    thuộc phụ lục đang xem (khu_vuc_gia KVMUC)."""
     d = _sach_dong(bang, gt, nhom)
     ck = KHOA_SUA[bang]
     with _mo_sua() as con:
@@ -442,6 +443,9 @@ def them_dong(bang: str, gt: dict, nhom=None) -> dict:
                     [d[c] for c in cot])
         if ck == 'id':
             d['id'] = con.execute('SELECT last_insert_rowid()').fetchone()[0]
+        if khu_vuc and bang in ('dm_taisan', 'dm_hotro') and d.get(ck):
+            from . import khu_vuc_gia
+            khu_vuc_gia.ghi(con, {d[ck]: khu_vuc}, can_cu='thêm tay')
         csdl.ghi_nhat_ky(con, 'Sửa bộ đơn giá: thêm mục', f'{bang} {d.get(ck, d.get("ten") or d.get("ten_thuc_te") or "")}')
     return d
 
@@ -473,6 +477,8 @@ def xoa_dong(bang: str, khoa) -> dict:
         if r is None:
             raise LoiNhap(f'Không thấy mục {ck} = "{khoa}" để xóa.')
         con.execute(f'DELETE FROM {bang} WHERE {ck} = ?', (khoa,))
+        if bang in ('dm_taisan', 'dm_hotro'):           # 1.0.57: khu vực giá của mục (khu_vuc_gia)
+            con.execute('DELETE FROM tham_so WHERE ma = ?', ('KVMUC:' + str(khoa),))
         csdl.ghi_nhat_ky(con, 'Sửa bộ đơn giá: xóa mục', f'{bang} {khoa}')
         return dict(r)
 
@@ -489,6 +495,8 @@ def thay_the_dong(bang: str, khoa, gt: dict, nhom=None) -> dict:
             if con.execute(f'SELECT 1 FROM {bang} WHERE {ck} = ?', (moi_khoa,)).fetchone():
                 raise LoiNhap(f'Đã có mục {ck} = "{moi_khoa}", không thay được.')
         con.execute(f'DELETE FROM {bang} WHERE {ck} = ?', (khoa,))
+        if bang in ('dm_taisan', 'dm_hotro') and str(moi_khoa) != str(khoa):     # 1.0.57: mã mới giữ khu vực giá của mục cũ
+            con.execute('UPDATE OR REPLACE tham_so SET ma = ? WHERE ma = ?', ('KVMUC:' + str(moi_khoa), 'KVMUC:' + str(khoa)))
         cot = list(d)
         if ck == 'id':
             d['id'] = khoa

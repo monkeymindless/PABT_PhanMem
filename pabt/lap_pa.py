@@ -337,15 +337,27 @@ class DanhMuc:
 
     def __init__(self, con):
         self.muc = {2: [], 3: [], MUC_VN: [], 4: [], 9: []}
+        # 1.0.57 (người dùng 04/11/2026): bộ đơn giá tách theo khu vực giá (Phụ lục I khu vực 1 / Phụ lục II khu vực 2) - chỉ mục của khu
+        # vực có xã dự án; mục khu vực khác KHÓA ẨN (không chọn / tìm / thêm được; dòng phương án cũ vẫn đọc được giá qua lay)
+        from . import khu_vuc_gia
+        self.kv_dl = khu_vuc_gia.doc(con)
+        self.kv = khu_vuc_gia.khu_vuc_du_an(con, self.kv_dl)
+        self.an = {}
         for r in con.execute('SELECT * FROM dm_taisan WHERE nhom IN (2, 3) ORDER BY rowid'):
             nhom = MUC_VN if r['nhom'] == 3 and la_vat_nuoi(r['phan_loai']) else r['nhom']    # vật nuôi: mục riêng (0.9.20)
             m = MucDanhMuc('taisan', r['ma'], r['ten'], r['dvt'], D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
                            r['phan_loai'], r['ghi_chu'], nhom)
-            self.muc[nhom].append(m)
+            if khu_vuc_gia.dung_duoc(self.kv_dl, m.ma, self.kv):
+                self.muc[nhom].append(m)
+            else:
+                self.an[m.ma] = m
         for r in con.execute('SELECT * FROM dm_hotro ORDER BY LENGTH(ma), ma'):    # CS2 trước CS10 (mã 0.9.69 không có số 0)
-            self.muc[4].append(MucDanhMuc('hotro', r['ma'], r['ten'], r['dvt'],
-                                          D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
-                                          r['cach_tinh'], r['can_cu'], 4))
+            m = MucDanhMuc('hotro', r['ma'], r['ten'], r['dvt'], D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
+                           r['cach_tinh'], r['can_cu'], 4)
+            if khu_vuc_gia.dung_duoc(self.kv_dl, m.ma, self.kv):
+                self.muc[4].append(m)
+            else:
+                self.an[m.ma] = m
         for r in con.execute('SELECT * FROM quy_uoc ORDER BY id'):
             self.muc[9].append(MucDanhMuc('quyuoc', f'QU{r["id"]}', r['ten_thuc_te'], r['dvt'],
                                           D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
@@ -355,6 +367,18 @@ class DanhMuc:
             for m in ds:
                 m._khoa = bo_dau(f'{m.ma} {m.ten} {m.phan_loai}')
                 self.theo_ma.setdefault(m.ma, m)
+        for ma, m in self.an.items():
+            m._khoa = bo_dau(f'{m.ma} {m.ten} {m.phan_loai}')
+            self.theo_ma.setdefault(ma, m)
+
+    def bi_khoa(self, ma: str) -> str:
+        """Mục thuộc khu vực giá khác khu vực dự án: lý do (khóa) - '' nếu dùng được."""
+        if ma not in self.an:
+            return ''
+        from . import khu_vuc_gia
+        k = self.kv_dl['muc'].get(ma, '')
+        return (f'Mục {ma} thuộc {khu_vuc_gia.ten_kv(self.kv_dl, k)} - dự án áp '
+                f'{khu_vuc_gia.ten_kv(self.kv_dl, self.kv)} (theo xã dự án): phụ lục khu vực khác bị khóa.')
 
     def tim(self, nhom: int, tu_khoa: str = '', toi_da: int = 300) -> list:
         tu = bo_dau(tu_khoa).split()
@@ -815,6 +839,9 @@ class BoSoan:
             i = self.them_hang_muc_khac(muc, m.ten)
             self.ap_gia_tuong_duong(muc, i, m)
             return i, ''
+        khoa_kv = self.dm.bi_khoa(m.ma) if hasattr(self.dm, 'bi_khoa') else ''
+        if khoa_kv:
+            raise LoiNhap(khoa_kv)
         d = DongKhoan(muc=muc, ma=m.ma, ten=m.ten, dvt=m.dvt, don_gia=m.don_gia or KHONG, so_luong=D(1) if muc == 4 else KHONG,
                       quy_cach=(m.can_cu if muc == 4 else ''), nguon_gia=NGUON_DM)
         tb = ''
@@ -867,6 +894,9 @@ class BoSoan:
         """Áp đơn giá, ĐVT của mục tương đương; tên in ra vẫn là tên đã gõ."""
         if m.don_gia is None:
             raise LoiNhap(f'{m.ma} chưa có đơn giá trong danh mục, không áp giá tương đương được.')
+        khoa_kv = self.dm.bi_khoa(m.ma) if m.nguon != 'quyuoc' and hasattr(self.dm, 'bi_khoa') else ''
+        if khoa_kv:
+            raise LoiNhap(khoa_kv)
         d = self.pa.khoan[muc][i]
         ma_td = m.ma
         if m.nguon == 'quyuoc':
