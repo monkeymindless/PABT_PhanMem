@@ -3046,9 +3046,22 @@ class CuaSoLapPA(QDialog):
             return False
         self.bo.mo(ma_ho)
         self.ho_so.nap(ma_ho)
+        for bm in self.bang.values():                   # 1.0.58: ô nhập nhanh gõ dở không đi theo sang hộ khác (Enter ghi nhầm hộ)
+            if getattr(bm, 'hang', None) is not None:
+                bm.hang.xoa(giu_tieu_diem=True)
         self.nap_ho()
         self.lam_moi_xem_truoc()
         return True
+
+    def dat_tieu_diem_dau(self) -> None:
+        """1.0.58: mở hộ: tiêu điểm vào ô nhập đầu của thẻ đang xem (trước đây còn ở nút thu gọn menu: Space thu menu, 21 lần Tab mới tới ô tên)."""
+        t = self.tab.currentIndex()
+        if t <= 0 or t >= len(THE_MUC):
+            return
+        bm = self.bang[THE_MUC[t]]
+        o = bm.hang.o_chon.o if getattr(bm, 'hang', None) is not None else getattr(bm, 'cb_thua', None)
+        if o is not None:
+            o.setFocus()
 
     def sang_ho(self, buoc: int):
         ma = self.bo.ho_ke(buoc)

@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.59', '04/11/2026', (
+        'Cài đè / gỡ cài không xóa file Excel, Word, PDF của bạn để trong thư mục cài; cài gói cập nhật không xóa bản đang chạy.',
+        'Hai máy mở cùng lúc: máy sau mở chỉ xem; đồng hồ máy lệch không làm khóa sai; mang dự án về / đưa lên an toàn hơn khi có người đang sửa.',
+        'Chặn file nén độc; bản vẽ DXF bị cắt cụt được báo; giữ tối thiểu 10 mốc thời gian mới nhất dù dự án nghỉ lâu; gói Wi-Fi không mã hóa không nhập hàng loạt.',
+        'Ctrl+Shift+L chạy cả khi đã mở dự án; ô nhập nhanh gõ dở không theo sang hộ khác; mở hộ đặt sẵn con trỏ vào ô nhập; tông Tối đọc được dòng cảnh báo.',
+    )),
     ('1.0.58', '04/11/2026', (
         'Niêm yết và lấy ý kiến: nút Văn bản, biên bản… theo từng mục (Thông báo niêm yết, Giấy mời lấy ý kiến, Giấy mời / Thông báo đối thoại, '
         'các Biên bản): gõ nội dung hoặc đính kèm file, đọc sẵn số hiệu, ngày. Nút Đọc kết quả từ file…: PDF scan, ảnh, Word, Excel -> nhận ra từng hộ '

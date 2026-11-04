@@ -64,7 +64,7 @@ def pt(x: float) -> int:
 def thoat(s) -> str:
     """Thoát ký tự XML; xuống dòng -> <w:br/> (dùng TRONG một w:t)."""
     s = str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    s = ''.join(c for c in s if c in '\t\n\r' or ord(c) >= 32)          # bỏ ký tự điều khiển (XML không cho phép)
+    s = ''.join(c for c in s if c in '\t\n\r' or (ord(c) >= 32 and not 0xD800 <= ord(c) <= 0xDFFF and c not in '\ufffe\uffff'))          # bỏ ký tự điều khiển (XML không cho phép)
     return s.replace('\r\n', '\n').replace('\n', '</w:t><w:br/><w:t xml:space="preserve">')
 
 

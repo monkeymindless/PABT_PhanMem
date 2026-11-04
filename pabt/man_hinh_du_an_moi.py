@@ -304,9 +304,9 @@ class HopDuAnMoi(QDialog):
         return self._dem_loi_tho()
 
     def _dem_loi_tho(self) -> int:
-        from .giao_dien import MAU_DONG_CANH_BAO
+        from .giao_dien import MAU_DONG_CANH_BAO, mau_theo_tong
         n = sum(1 for r in range(self.bang_tho.rowCount()) if self.bang_tho.item(r, 0) is not None
-                and self.bang_tho.item(r, 0).background().color().name().upper() == MAU_DONG_CANH_BAO.upper())
+                and self.bang_tho.item(r, 0).background().color().name().upper() == mau_theo_tong(MAU_DONG_CANH_BAO).upper())
         self.lb_kiem_tho.setText(f'{n} dòng cần xem lại (tô vàng)' if n else '')
         return n
 
@@ -329,7 +329,7 @@ class HopDuAnMoi(QDialog):
     def _trang_3(self):
         w = QWidget()
         lo = QVBoxLayout(w)
-        lo.addWidget(QLabel('Giá đất theo bảng giá đất của địa bàn (NQ 28/2025/NQ-HĐND hoặc văn bản thay thế) và hệ số K '
+        lo.addWidget(__import__('pabt.giao_dien').giao_dien.nhan_xuong_dong('Giá đất theo bảng giá đất của địa bàn (NQ 28/2025/NQ-HĐND hoặc văn bản thay thế) và hệ số K '
                             '(QĐ hệ số điều chỉnh giá đất hiện hành). Dòng thiếu vị trí: nhập "Vị trí áp dụng" cho các thửa đó.'))
         self.bang_gia = QTableWidget(0, len(COT_GIA))
         self.bang_gia.setHorizontalHeaderLabels([c[1] for c in COT_GIA])

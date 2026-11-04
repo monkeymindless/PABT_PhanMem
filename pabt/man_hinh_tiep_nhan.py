@@ -119,7 +119,7 @@ class HopTiepNhanPhapLy(QDialog):
     def _the_2(self) -> QWidget:
         w = QWidget()
         lo = QVBoxLayout(w)
-        lo.addWidget(QLabel('Bấm ô "Đã có" để tích hồ sơ đã tiếp nhận; mục không áp dụng (theo loại chủ đầu tư / căn cứ) hiện mờ. '
+        lo.addWidget(__import__('pabt.giao_dien').giao_dien.nhan_xuong_dong('Bấm ô "Đã có" để tích hồ sơ đã tiếp nhận; mục không áp dụng (theo loại chủ đầu tư / căn cứ) hiện mờ. '
                             '(*) = bắt buộc để đủ điều kiện triển khai. Cột Ghi chú sửa trực tiếp (số, ngày văn bản…).'))
         self.bang_hs = QTableWidget(0, 4)
         self.bang_hs.setHorizontalHeaderLabels(['Đã có', 'Nội dung hồ sơ', 'Áp dụng', 'Ghi chú (số, ngày văn bản)'])

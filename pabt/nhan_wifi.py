@@ -324,7 +324,7 @@ class MayNhan:
             except OSError:
                 pass
             raise
-        self.hang.put(dict(file=dich, ten=str(ten), co=co, luc=datetime.now().strftime('%H:%M:%S')))
+        self.hang.put(dict(file=dich, ten=str(ten), co=co, luc=datetime.now().strftime('%H:%M:%S'), ma_hoa=giai is not None))
         return dich
 
 

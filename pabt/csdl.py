@@ -90,7 +90,7 @@ def ds_sao_luu_tu_dong(file) -> list:
     if not tm.is_dir():
         return []
     goc = _goc_sao_luu(file)
-    return sorted((f for f in tm.iterdir() if f.is_file() and f.name.startswith(goc + '_') and not f.name.endswith('.tmp')),
+    return sorted((f for f in tm.iterdir() if f.is_file() and f.name.startswith(goc + '_') and not f.name.endswith(('.tmp', '.tmp.nen'))),
                   key=lambda f: f.name, reverse=True)
 
 
@@ -530,6 +530,7 @@ CHI_MUC_THEM = (
     ('ix_ct_dat_cong_thuc', "CREATE INDEX IF NOT EXISTS ix_ct_dat_cong_thuc ON ct_dat(ma_ho, lan) WHERE cong_thuc <> ''"),
     ('ix_ct_khoan_cong_thuc', "CREATE INDEX IF NOT EXISTS ix_ct_khoan_cong_thuc ON ct_khoan(ma_ho, lan) WHERE cong_thuc <> ''"),
     ('ix_ho_thutu', 'CREATE INDEX IF NOT EXISTS ix_ho_thutu ON ho(thu_tu, ma_ho)'),        # cuối: dấu hiệu đã tạo đủ
+    ('ix_ykien_ho', 'CREATE INDEX IF NOT EXISTS ix_ykien_ho ON y_kien_du_thao(ma_ho)'),  # cuối: dấu hiệu đã tạo đủ
 )
 
 

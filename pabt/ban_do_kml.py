@@ -18,6 +18,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 import zipfile
+import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -341,7 +342,7 @@ def doc_byte_kml(file) -> bytes:
         kiem_tra_xml(du, p.name)
     except LoiAnToan as e:
         raise LoiCad(str(e)) from None
-    except (OSError, zipfile.BadZipFile) as e:
+    except (OSError, zipfile.BadZipFile, zlib.error, RuntimeError, NotImplementedError, EOFError) as e:
         raise LoiCad(f'Không đọc được "{p.name}": {e}') from None
     return du
 
@@ -537,7 +538,9 @@ def tao_kml(con, so_to: str | None = None, kinh_tuyen: float | None = None, ten_
     from .toa_do import kinh_tuyen_truc, vn2000_sang_wgs84
     kt = kinh_tuyen if kinh_tuyen is not None else kinh_tuyen_truc()
     ds = ban_do_cad.doc_ban_do(con, so_to)
-    e = html.escape
+
+    def e(s):                                           # 1.0.58: ký tự điều khiển (họ tên dán từ OCR / PDF) làm hỏng cả file KML
+        return html.escape(re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]', ' ', str(s)))
     kieu = ''.join(f'<Style id="{k}"><LineStyle><color>{_mau_kml(m, "ff")}</color><width>1.5</width></LineStyle>'
                    f'<PolyStyle><color>{_mau_kml(m, "66")}</color></PolyStyle></Style>'
                    for k, (_, m) in ban_do_cad.TRANG_THAI.items())

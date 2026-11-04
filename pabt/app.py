@@ -767,6 +767,8 @@ class CuaSoChinh(QMainWindow):
                           ('Tiếp nhận & Kiểm tra pháp lý dự án…', 'Ctrl+Shift+L'), ('Quản lý Mẫu in & Bản in…', 'Ctrl+Shift+M'),
                           (LENH_THONG_KE, 'Ctrl+Shift+T')):
             self.lenh[ten].setShortcut(QKeySequence(phim))
+        # 1.0.58: lệnh này chỉ gắn nút ở nhóm menu đóng sẵn: nút ẩn thì phím tắt không chạy - gắn vào cửa sổ
+        self.addAction(self.lenh['Tiếp nhận & Kiểm tra pháp lý dự án…'])
         self._i_trang = 0                                # trang (chỉ số TRANG) đang chọn - mở lại dự án thì về trang này
         self.khung_du_toan = None                        # trang Dự toán: tạo khi mở lần đầu (không làm chậm lúc khởi động)
         self.dm = None
@@ -1202,9 +1204,14 @@ class CuaSoChinh(QMainWindow):
             if not chi_doc and la_goi_sao_luu(p):        # 1.0.55: bản sao lưu / mốc nén luôn mở chỉ xem (Lưu dự án thành… để dùng tiếp)
                 chi_doc = True
             if not chi_doc:
-                kf.lay(ep=True)
-                self.khoa = kf
-                self.dong_ho.start()
+                # 1.0.58: chỉ ép khi người dùng đã chọn "Vẫn mở để sửa"; máy khác vừa lấy trước: mở chỉ xem (trước đây luôn ép, hai máy cùng sửa)
+                duoc, k2 = kf.lay(ep=bool(k))
+                if duoc:
+                    self.khoa = kf
+                    self.dong_ho.start()
+                else:
+                    chi_doc = True
+                    QTimer.singleShot(0, lambda: self.statusBar().showMessage(f'Mở chỉ xem: dự án vừa được mở để sửa trên {khoa.mo_ta(k2)}.', 10000))
             self.chi_doc = chi_doc
             tinh_lai = None
             self.con = csdl.mo(p, chi_doc=chi_doc)
@@ -3358,6 +3365,8 @@ class CuaSoChinh(QMainWindow):
             if the is not None and w is not None:
                 w.tab.setCurrentIndex(the)
             self._dam_bao_tab(khoa)
+            if w is not None:
+                w.dat_tieu_diem_dau()
             return w
         w = CuaSoLapPA(self.con, ma_ho, self, self.dm, nhung=cho)
         if the is not None:
@@ -3367,6 +3376,7 @@ class CuaSoChinh(QMainWindow):
         self._nhung_hop(w)
         ten_ho = (getattr(getattr(w.bo, 'pa', None), 'ho', None) and w.bo.pa.ho.ho_ten) or f'Hộ {ma_ho}'
         self._dam_bao_tab(khoa, f'Hộ: {ten_ho}', widget=w, dong_duoc=True)
+        w.dat_tieu_diem_dau()
         cu_chuyen = w.chuyen_ho
 
         def _chuyen(ma):

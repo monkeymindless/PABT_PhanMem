@@ -348,6 +348,7 @@ def doc_excel(file) -> tuple:
     hoặc nghìn đồng/m² nếu dòng tiêu đề ghi "nghìn". Cột tối thiểu: Tên đường và một cột giá (Đất ở hoặc Đơn giá).
     """
     import openpyxl
+    __import__('pabt.an_toan').an_toan.kiem_excel(file)
     wb = openpyxl.load_workbook(file, data_only=True)
     dong, van_ban = [], ''
     thay_don_vi = []

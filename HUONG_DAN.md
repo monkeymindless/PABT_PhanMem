@@ -1,4 +1,4 @@
-# Phần mềm LARC – lập phương án bồi thường, hỗ trợ (phiên bản 1.0.50 – Bản Tiêu chuẩn · Sử dụng nội bộ)
+# Phần mềm LARC – lập phương án bồi thường, hỗ trợ 
 
 > **1.0.50**: **Quét giấy tờ / Dán tài sản** — ảnh xem trước thu như lúc nhận dạng (ảnh điện thoại vài MB cửa sổ vẫn kéo được); Tesseract
 > chạy nền, hộp tiến độ còn nút **Dừng**. Giấy chứng nhận không có tài sản không đọc hai lần; biên bản viết tay vẫn đọc thêm kiểu cột thưa
@@ -821,7 +821,7 @@ tiếp và thông ra đường (theo bề rộng và khoảng cách: ≤1.000m /
 - Ô **Vị trí** mục 1 khi lập phương án xổ các tuyến của bảng đang dùng (địa bàn dự án đứng đầu).
 - **Cập nhật giá đất** (menu Bảng giá & chính sách, hoặc Bộ đơn giá → Giá đất): nhập xã / phường và tỉnh, bấm **Tải từ web**
   (Công báo Đồng Nai, hoặc vbpl.vn nếu tỉnh khác). Web không ra bảng đơn giá thì chọn file **Excel, Word, PDF hoặc CSV**.
-  Cột tối thiểu **Tên đường** và **Đất ở** hoặc **Đơn giá** (đồng/m²). Mỗi sheet Excel một địa bàn. Bấm **Dùng bảng này**:
+  Cột tối thiểu **Tên đường** và **Đất ở** hoặc **Đơn giá** (đồng/m²). Mỗi sheet Excel một địa bàn. Bấm **Ghi vào bảng giá đất**:
   bốn địa bàn gắn sẵn không còn hiện ở ô Vị trí và tra cứu — chỉ còn địa bàn trong file. **Dùng lại bảng gắn sẵn** (trong cùng hộp)
   trả về Xã Trị An, Xã Tân An, Xã Phú Lý, Phường Tân Triều. File nằm ở `%APPDATA%\PABT\bang_gia_dat.json` (không ghi vào bộ cài,
   không xóa đơn giá đã nhập trong phương án). Xuất bảng hiện tại ra Excel để lấy đúng mẫu cột: **Xuất bảng giá đất ra Excel…**.
@@ -883,7 +883,7 @@ khu vực Đông Nam Bộ** (Điều 176 Luật Đất đai 2024: cây hằng n�
 - **An toàn khi nhận file từ ngoài** (từ 0.9.16 không còn màn hình riêng): Word / Excel do PABT tự mở luôn tắt macro; kết nối
   mạng chỉ chấp nhận chứng chỉ HTTPS hợp lệ (TLS 1.2+); file nén / XML độc bị chặn; gói cập nhật sai mã SHA-256 (hỏng, bị sửa)
   bị từ chối. Quét virus do Microsoft Defender của máy đảm nhận: giữ Defender luôn bật, cập nhật.
-- **Tra cứu văn bản mới…**: mở Công báo Đồng Nai, trang góp ý dự thảo, Thư viện pháp luật để theo dõi quyết định mới.
+- **Cập nhật đơn giá**: mở Công báo Đồng Nai, trang góp ý dự thảo, Thư viện pháp luật để theo dõi quyết định mới.
 - **Áp bộ đơn giá vào dự án đang mở**: dự án đã lập không tự đổi giá; chọn lệnh này khi muốn dùng bộ mới (dòng đã lập giữ giá cũ —
   dùng Rà soát giá để kiểm tra).
 - Máy phát triển: đóng gói lại bộ tích hợp bằng `.venv\Scripts\python tao_bo_don_gia.py <PABT_CHUAN.xlsm> <YYYY.MM.DD>` trước khi dựng exe.
@@ -918,7 +918,7 @@ Trạng thái hộ, Đợt trình, In / Xuất) lấy hộ chọn **trên trang 
 Tiến độ chi trả & Bàn giao - cả ở chế độ Thửa còn vướng).
 **Màn hình chính** / màn hình chào: 3 nút lớn (Dự án mới, Mở dự án, Nhập Excel), **Đóng dự án** / **Xóa dự án** khi đang mở file;
 góc dưới phải có liên kết **Hướng dẫn sử dụng (F1)** (cùng lệnh menu Trợ giúp),
-danh sách **dự án làm việc gần đây** (nhấp đúp hoặc **Mở dự án đã chọn** để thay dự án — không thoát phần mềm; **Xóa khỏi danh
+danh sách **dự án làm việc gần đây** (nhấp đúp hoặc **Mở đã chọn** để thay dự án — không thoát phần mềm; **Xóa khỏi danh
 sách** giữ file; **Xóa file dự án** xóa hẳn `.pabt`, thư mục bản in giữ nguyên). Tệp tin → **Xóa dự án…** cùng lệnh.
 
 Trên danh sách hộ có bộ lọc **Đợt** (tất cả / chưa xếp đợt / từng đợt), **Trạng thái** (chưa / đã lập PA, chưa / đã phê duyệt,
@@ -1141,7 +1141,7 @@ Trong màn hình Lập phương án hộ:
     mẫu…** (PDF: Word mở ra và hỏi chuyển thành văn bản sửa được - bấm OK), **Sửa mẫu** (mở bằng Word / Excel), **Mẫu mặc định**
     (bỏ mẫu riêng). Trong mẫu gõ chỗ trống trong ngoặc nhọn, ví dụ `{so_to_trinh}`, `{tong_tien_chu}`; dòng bảng có `{ho.ho_ten}`,
     `{ho.tong_tien}`… được nhân thành mỗi hộ một dòng - danh sách đầy đủ ở nút **Mã điền tự động {…}…**.
-  - **Xuất hồ sơ đợt** (chọn: phương án chi tiết, bảng tổng hợp, tờ trình, phương án tổng - từng loại hoặc **Chọn tất cả**) tạo
+  - **Xuất bản hồ sơ đợt này →** (chọn: phương án chi tiết, bảng tổng hợp, tờ trình, phương án tổng - từng loại hoặc **Chọn tất cả**) tạo
     `<thư mục hồ sơ>\Đợt 1 - 25 hộ\PA CHI TIET\` (phương án chi tiết từng hộ `PA_<STT>_<họ tên>.xlsx`) và `...\PA TONG\`
     (`TO_TRINH.docx`, `PHUONG_AN_TONG.docx`, `BANG_TONG_HOP.xlsx`), kèm PDF nếu chọn (Excel / Word xuất); xuất lại khi số hộ đổi
     thì thư mục cũ đổi tên theo số hộ mới. **Xuất tất cả các đợt** làm lần lượt mọi đợt.
@@ -1366,7 +1366,7 @@ Windows 7 KB3063858" (đánh dấu sẵn) – Windows hỏi quyền quản trị
 cập nhật thì bỏ qua bước này (không hỏi gì).
 
 Chép **một file** bộ cài sang máy, bấm đúp → cửa sổ cài đặt (chọn thư mục, biểu tượng Desktop, liên kết file `.pabt`) → **Cài đặt**
-→ thanh tiến trình → tự kiểm tra → **Mở PABT**. Cài im lặng: `PABT_Setup_Universal_<phiên bản>.exe /Q`.
+→ thanh tiến trình → tự kiểm tra → **Mở LARC**. Cài im lặng: `PABT_Setup_Universal_<phiên bản>.exe /Q`.
 
 **Máy không chạy được file `.exe` của bộ cài** (phần mềm diệt virus chặn, hoặc tên người dùng Windows có dấu làm vỏ giải nén lỗi):
 giải nén `PABT_ChayNgay_<phiên bản>_Universal.zip` vào một thư mục rồi
@@ -1449,7 +1449,7 @@ Bộ kiểm thử so khớp với file Excel thật nếu đặt file ở `du_li
 | `pabt/gia_dat_nq28.py`, `pabt/bang_gia_nq28.json`, `pabt/man_hinh_gia_dat.py` | Bảng giá đất NQ 28/2025 (4 địa bàn): tra cứu, điền giá, xuất Excel |
 | `tao_bieu_tuong.py`, `pabt/bieu_tuong.ico` | Biểu tượng duy nhất của phần mềm / bộ cài, dựng từ `logo_PABT_nen_trang.png` (chữ PABT, nền trắng sữa, viền xanh đậm + vàng) |
 | `pabt/nhap_don_gia.py`, `pabt/man_hinh_nhap_don_gia.py` | Cập nhật bộ đơn giá từ Excel / Word / PDF / CSV hoặc trang web: đọc bảng, so khớp, xem trước, tạo phiên bản mới |
-| `pabt/man_hinh_quet_web.py` | Quét trang web / Công báo Đồng Nai: tìm văn bản đơn giá, chính sách; tải, phân tích, áp dụng theo ngày ban hành |
+| (đã bỏ) man_hinh_quet_web | Quét trang web / Công báo Đồng Nai: tìm văn bản đơn giá, chính sách; tải, phân tích, áp dụng theo ngày ban hành |
 | `pabt/ho_so.py` | Hồ sơ kiểm kê: thêm / sửa / xóa hộ, thửa; gộp hộ; chuyển thửa |
 | `pabt/nghiep_vu.py` | Quy tắc tính: thành tiền, làm tròn như ROUND của Excel, thưởng theo tổng mục 1–4, hỗ trợ ổn định đời sống, gợi ý HT09/HT10 theo hạn mức; kiểm tra quy tắc từng hộ |
 | `pabt/doi_chieu.py` | So từng hộ, từng dòng với Excel; xuất báo cáo `.xlsx` (TONG_HO, DONG_LECH, CAN_XEM_LAI) |

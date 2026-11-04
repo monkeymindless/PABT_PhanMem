@@ -82,7 +82,7 @@ class HopNhanWifi(QDialog):
         self.b_nhap = QPushButton('Nhập file đã chọn vào dự án')
         self.b_nhap.clicked.connect(lambda: self.nhap_dong(sorted({i.row() for i in self.bang.selectedIndexes()})))
         self.b_tat_ca = QPushButton('Nhập mọi file chưa nhập')
-        self.b_tat_ca.clicked.connect(lambda: self.nhap_dong([r for r, x in enumerate(self.ds) if x['tt'] == 'moi']))
+        self.b_tat_ca.clicked.connect(lambda: self.nhap_dong([r for r, x in enumerate(self.ds) if x['tt'] == 'moi' and x.get('ma_hoa', True)]))
         b_tm = QPushButton('Mở thư mục nhận')
         b_tm.clicked.connect(self._mo_thu_muc)
         b_dong = QPushButton('Đóng')
@@ -146,7 +146,7 @@ class HopNhanWifi(QDialog):
     def _ve(self) -> None:
         self.bang.setRowCount(len(self.ds))
         for r, x in enumerate(self.ds):
-            for c, chu in enumerate((x['luc'], x['file'].name, f'{max(1, x["co"] // 1024):,} KB'.replace(',', '.'), x['ket_qua'])):
+            for c, chu in enumerate((x['luc'], x['file'].name + ('' if x.get('ma_hoa', True) else ' (KHÔNG mã hóa: chọn dòng rồi nhập nếu chắc chắn)'), f'{max(1, x["co"] // 1024):,} KB'.replace(',', '.'), x['ket_qua'])):
                 it = QTableWidgetItem(chu)
                 if c == 3:
                     it.setForeground(QColor({'moi': '#475569', 'xong': '#166534', 'loi': '#B91C1C'}[x['tt']]))

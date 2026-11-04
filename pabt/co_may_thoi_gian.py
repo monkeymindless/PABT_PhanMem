@@ -145,9 +145,14 @@ def chup_moc(con, file, ly_do: str = 'tu_dong', ghi_chu: str = '', bat_buoc: boo
     du = dict(file=dich.name, luc=luc.isoformat(timespec='microseconds'), ly_do=ly_do, ghi_chu=ghi_chu, so_ho=so_ho, tong=tong,
               dau=moc.dau, goc=str(file))
     j = dich.with_suffix('.json')
-    j.write_text(json.dumps(du, ensure_ascii=False, indent=1), encoding='utf-8')
+    tam_j = j.with_name(j.name + '.tmp')
+    tam_j.write_text(json.dumps(du, ensure_ascii=False, indent=1), encoding='utf-8')
+    os.replace(tam_j, j)
     don_dep(file)
     return moc
+
+
+GIU_TOI_THIEU = 10
 
 
 def don_dep(file, bay_gio: datetime | None = None) -> int:
@@ -163,8 +168,16 @@ def don_dep(file, bay_gio: datetime | None = None) -> int:
         elif tuoi <= timedelta(days=GIU_NGAY) and m.luc.date() not in ngay_da_co:
             giu.append(m)
             ngay_da_co.add(m.luc.date())
+    for m in ds:                                        # 1.0.59: dự án nghỉ lâu: luôn còn vài mốc mới nhất dù đã quá hạn giữ
+        if len(giu) >= GIU_TOI_THIEU:
+            break
+        if not any(m is x for x in giu):
+            giu.append(m)
     tay = [m for m in giu if m.ly_do == 'tay']
-    khac = [m for m in giu if m.ly_do != 'tay'][:max(0, MOC_TOI_DA - len(tay))]
+    # 1.0.58: mốc ngày cũ không bị mốc trong ngày đẩy ra; mốc vừa chụp (mới nhất) luôn giữ
+    ngay = [m for m in giu if m.ly_do != 'tay' and bay_gio - m.luc > timedelta(hours=GIU_GIO)]
+    gan = [m for m in giu if m.ly_do != 'tay' and bay_gio - m.luc <= timedelta(hours=GIU_GIO)]
+    khac = ngay + gan[:max(1, MOC_TOI_DA - len(tay) - len(ngay))]
     con_lai = {id(m) for m in tay + khac}
     bo = 0
     for m in ds:

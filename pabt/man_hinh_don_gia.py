@@ -90,6 +90,8 @@ class HopBoDonGia(QDialog):
         self.lb = QLabel()
         self.lb.setObjectName('dai_bo_don_gia')
         self.lb.setFixedHeight(28)
+        from PySide6.QtWidgets import QSizePolicy
+        self.lb.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)      # 1.0.58: chữ dài không ép hộp rộng hơn màn hình
         dat_kieu_theo_tong(self.lb, 'QLabel#dai_bo_don_gia { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; '
                                     'padding: 0 10px; color: #0F172A; }')
         self.o_tim = QLineEdit()

@@ -45,11 +45,26 @@ class KhoaFile:
     def la_cua_toi(self, k: dict | None) -> bool:
         return bool(k) and all(k.get(x) == v for x, v in self.cua_toi.items())
 
+    def _gio_noi_luu(self) -> float:
+        """1.0.58: đồng hồ CỦA NƠI LƯU file (tạo file thăm dò rồi đọc giờ ghi): máy này nhanh / chậm giờ không làm khóa đang sống thành chết."""
+        t = self.p.with_name(f'{self.p.name}.{os.getpid()}.gio')
+        try:
+            t.write_bytes(b'')
+            return t.stat().st_mtime
+        except OSError:
+            return time.time()
+        finally:
+            try:
+                t.unlink()
+            except OSError:
+                pass
+
     def _tuoi_file(self) -> float | None:
         try:
-            return time.time() - self.p.stat().st_mtime
+            m = self.p.stat().st_mtime
         except OSError:
             return None
+        return self._gio_noi_luu() - m
 
     def con_hieu_luc(self, k: dict | None) -> bool:
         """Khóa còn sống. Rà soát kiến trúc 31/10/2026: trước đây chỉ so 'cap_nhat' (đồng hồ MÁY KIA) với đồng hồ máy này - hai máy lệch
@@ -70,6 +85,8 @@ class KhoaFile:
     def nguoi_khac(self) -> dict | None:
         """Khóa còn hiệu lực của máy / phiên khác, nếu có."""
         k = self.doc()
+        if k is None and self.p.exists() and (self._tuoi_file() or 0) <= HET_HAN:
+            return dict(may='?', nguoi='?', mo_luc=time.time(), cap_nhat=time.time())      # 1.0.58: file khóa đang tạo / đang bị giữ: coi như có người
         if not k or self.la_cua_toi(k):
             return None
         return k if self.con_hieu_luc(k) else None

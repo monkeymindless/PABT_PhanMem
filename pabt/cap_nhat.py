@@ -134,10 +134,20 @@ def kiem_tra(m: dict) -> None:
                          'hãy cài bộ cài đầy đủ mới.')
 
 
+def _dang_chay() -> str:
+    """Tên thư mục bản cập nhật mà tiến trình này đang chạy ('' = bản gốc)."""
+    p = Path(__file__).resolve().parent.parent
+    try:
+        return p.name if p.parent == thu_muc().resolve() else ''
+    except OSError:
+        return ''
+
+
 def _don(d: Path, giu: str = '') -> None:
-    """Xóa các bản cập nhật cũ (bỏ qua bản đang được dùng, sẽ xóa ở lần sau)."""
+    """Xóa các bản cập nhật cũ, GIỮ bản mới và bản đang chạy (1.0.58: xóa bản đang chạy làm màn hình chưa nạp lỗi thiếu module), xóa ở lần sau."""
+    dang = _dang_chay()
     for x in d.iterdir() if d.exists() else ():
-        if x.is_dir() and x.name != giu:
+        if x.is_dir() and x.name not in (giu, dang):
             shutil.rmtree(x, ignore_errors=True)
 
 

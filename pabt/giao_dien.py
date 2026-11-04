@@ -4932,10 +4932,17 @@ def gan_o_loc_bang(bang, o_tim, khi_loc=None) -> None:
     loc_khi_ngung_go(o_tim, loc)
 
 
+def nhan_xuong_dong(chu: str):
+    """QLabel xuống dòng: chữ dài không ép hộp thoại rộng hơn màn hình 1366 @125%."""
+    n = QLabel(chu)
+    n.setWordWrap(True)
+    return n
+
+
 def to_dong_bang(bang, r: int, loi: list, muc: str = 'canh_bao') -> None:
     """Tô nền cả dòng r (vàng: cảnh báo, đỏ: lỗi) + chú thích danh sách vấn đề; loi rỗng = bỏ tô."""
     from PySide6.QtGui import QBrush
-    mau = QBrush(QColor(MAU_DONG_LOI if muc == 'loi' else MAU_DONG_CANH_BAO)) if loi else QBrush()
+    mau = QBrush(qmau_theo_tong(MAU_DONG_LOI if muc == 'loi' else MAU_DONG_CANH_BAO)) if loi else QBrush()      # 1.0.58: tông Tối đọc được
     goi_y = '\n'.join(loi)
     for c in range(bang.columnCount()):
         it = bang.item(r, c)

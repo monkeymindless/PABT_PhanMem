@@ -490,6 +490,7 @@ def _thong_tin_du_an(hang: list) -> dict:
 
 def _mo(file):
     import openpyxl
+    __import__('pabt.an_toan').an_toan.kiem_excel(file)
     return openpyxl.load_workbook(file, read_only=True, data_only=True)
 
 

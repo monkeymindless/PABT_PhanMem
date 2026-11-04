@@ -13,6 +13,9 @@ import zipfile
 from pathlib import Path
 
 
+TOI_DA_GIAI_NEN = 2 ** 31 - 1          # không vượt ssize_t của bản 32-bit
+
+
 class LoiAnToan(Exception):
     pass
 
@@ -298,9 +301,23 @@ def mo_goi_file_sao_luu_ra_bytes(duong_dan) -> bytes | None:
     if co != bytes((CO_NEN_ZLIB,)):
         raise LoiAnToan('Bản sao lưu dùng định dạng của phiên bản mới hơn - hãy cập nhật phần mềm.')
     try:
-        goc = zlib.decompress(du[len(DAU_SAO_LUU) + 1:])
+        d = zlib.decompressobj()                        # 1.0.58: kiểm đầu trước, giới hạn cỡ (file lạ đổi đuôi nở hàng GB ngay khi mở)
+        goc = d.decompress(du[len(DAU_SAO_LUU) + 1:], 1024)
+        if not goc.startswith(DAU_SQLITE):
+            raise LoiAnToan('Bản sao lưu bị hỏng (không phải dữ liệu dự án).')
+        goc += d.decompress(d.unconsumed_tail, TOI_DA_GIAI_NEN)
+        if d.unconsumed_tail or not d.eof:
+            raise LoiAnToan('Bản sao lưu quá lớn hoặc bị hỏng.')
     except zlib.error as e:
         raise LoiAnToan(f'Bản sao lưu bị hỏng, không giải nén được ({e}).') from None
-    if not goc.startswith(DAU_SQLITE):
-        raise LoiAnToan('Bản sao lưu bị hỏng (không phải dữ liệu dự án).')
     return goc
+
+
+def kiem_excel(file) -> None:
+    """1.0.58: chặn bom nén trước load_workbook; file không phải zip (.xls, file lạ) để openpyxl báo như cũ."""
+    if zipfile.is_zipfile(file):
+        try:
+            kiem_tra_zip(file)
+        except LoiAnToan as e:
+            from .lap_pa import LoiNhap
+            raise LoiNhap(str(e)) from None

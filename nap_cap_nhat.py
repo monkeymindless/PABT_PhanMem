@@ -40,7 +40,7 @@ def thu_muc_hien_hanh():
     d = thu_muc()
     try:
         ten = (d / FILE_HIEN_HANH).read_text(encoding='utf-8').strip()
-    except OSError:
+    except (OSError, ValueError):               # ValueError: file rác không phải UTF-8 - không được làm sập lúc khởi động
         return None
     # chỉ nhận tên MỘT thư mục con của cap_nhat\: chặn '..', đường dẫn tuyệt đối, ổ đĩa khác, thư mục lồng
     if not ten or any(k in ten for k in ('/', '\\', ':')) or set(ten) <= {'.'}:
@@ -138,7 +138,7 @@ def _khoa_may() -> bytes:
 def _da_kiem(d: Path) -> bool:
     try:
         return (d / FILE_DA_KIEM).read_text(encoding='utf-8').strip() == _dau(d)
-    except OSError:
+    except (OSError, ValueError):
         return False
 
 

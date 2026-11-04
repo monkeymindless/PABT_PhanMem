@@ -132,6 +132,7 @@ def _doc_o(wb, sh, cot, dong):
 
 def nhap(file_excel, file_pabt) -> BaoCaoNhap:
     """Nhập file Excel -> file dự án. Có lỗi chặn thì không tạo file (xem BaoCaoNhap.loi)."""
+    __import__('pabt.an_toan').an_toan.kiem_excel(file_excel)
     wb = openpyxl.load_workbook(str(file_excel), read_only=True, data_only=True)
     try:
         return _nhap(wb, file_excel, file_pabt)

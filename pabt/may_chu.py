@@ -546,14 +546,22 @@ def ds_lay_ve_cuc_bo() -> list:
     """Dự án đã mang về máy này: [dict(ban_sao, goc, file_goc, tai_khoan, luc, sua_goc)]."""
     try:
         ds = json.loads(_so_lay_ve().read_text(encoding='utf-8'))
-    except (OSError, ValueError):
+    except ValueError:                                  # 1.0.58: sổ hỏng: giữ lại để cứu, không để lần ghi sau đè mất
+        try:
+            os.replace(_so_lay_ve(), str(_so_lay_ve()) + '.hong')
+        except OSError:
+            pass
+        return []
+    except OSError:
         return []
     return [x for x in ds if Path(x['ban_sao']).exists()]
 
 
 def _ghi_so(ds: list) -> None:
     _so_lay_ve().parent.mkdir(parents=True, exist_ok=True)
-    _so_lay_ve().write_text(json.dumps(ds, ensure_ascii=False, indent=1), encoding='utf-8')
+    tam = _so_lay_ve().with_name(_so_lay_ve().name + '.tam')      # 1.0.58: ghi nguyên tử (mất điện giữa chừng không mất sổ)
+    tam.write_text(json.dumps(ds, ensure_ascii=False, indent=1), encoding='utf-8')
+    os.replace(tam, _so_lay_ve())
 
 
 def lay_ve(file, phien=None) -> Path:
@@ -566,6 +574,7 @@ def lay_ve(file, phien=None) -> Path:
     rel = _tuong_doi(phien.goc, f)
     con = _mo(phien.goc)
     try:
+        con.execute('BEGIN IMMEDIATE')                  # 1.0.58: kiểm + giữ chỗ một giao dịch (như lay_ve_theo_ho): hai người không cùng mang về
         r = con.execute('SELECT * FROM lay_ve WHERE duong_dan = ?', (rel,)).fetchone()
         if r is not None and r['tai_khoan'] != phien.tai_khoan:
             raise LoiMayChu(f'Dự án đang được "{r["tai_khoan"]}" mang về máy {r["may"]} từ {r["luc"]}: chờ người đó đưa lên lại.')
@@ -579,12 +588,20 @@ def lay_ve(file, phien=None) -> Path:
             raise LoiMayChu(f'Dự án đang được sửa trên {khoa.mo_ta(k)}: chờ đóng rồi mới mang về.')
         dich = thu_muc_offline() / f'{f.stem}__{phien.tai_khoan}{f.suffix}'
         dich.parent.mkdir(parents=True, exist_ok=True)
-        _chep_nhat_quan(f, dich)                        # sqlite backup: ảnh chụp nhất quán kể cả khi máy khác đang ghi (copy2 thì không)
-        sua = f.stat().st_mtime
-        with con:
-            con.execute('INSERT OR REPLACE INTO lay_ve (duong_dan, tai_khoan, may, luc, sua_goc) VALUES (?,?,?,?,?)',
-                        (rel, phien.tai_khoan, _may(), _bay_gio(), sua))
-            _ghi_nhat_ky(con, phien.tai_khoan, 'Mang dự án về làm offline', rel)
+        sua = f.stat().st_mtime                         # 1.0.58: mốc lấy TRƯỚC khi chép (lấy sau: sửa đổi trong lúc chép bị ghi đè không báo)
+        con.execute('INSERT OR REPLACE INTO lay_ve (duong_dan, tai_khoan, may, luc, sua_goc) VALUES (?,?,?,?,?)',
+                    (rel, phien.tai_khoan, _may(), _bay_gio(), sua))
+        _ghi_nhat_ky(con, phien.tai_khoan, 'Mang dự án về làm offline', rel)
+        con.commit()
+        try:
+            _chep_nhat_quan(f, dich)
+            if f.stat().st_mtime != sua:
+                raise LoiMayChu('Dự án vừa được sửa trong lúc chép: mang về lại.')
+        except (OSError, sqlite3.Error, LoiMayChu):
+            with con:
+                con.execute('DELETE FROM lay_ve WHERE duong_dan = ? AND tai_khoan = ?', (rel, phien.tai_khoan))
+            raise
+        # thì không)
     finally:
         con.close()
     ds = [x for x in ds_lay_ve_cuc_bo() if x['ban_sao'] != str(dich)]
@@ -623,6 +640,15 @@ def dua_len(ban_sao, phien=None, ep: bool = False) -> Path:
     if f.exists():
         sl = goc / THU_MUC_SAO_LUU / f'{f.stem}_{datetime.now():%Y%m%d_%H%M%S}{f.suffix}'
         sl.parent.mkdir(parents=True, exist_ok=True)
+        if Path(str(f) + '-journal').exists():          # 1.0.58: giao dịch dở (máy kia mất điện): SQLite tự rollback trên đúng file của nó trước khi thay file
+            c = sqlite3.connect(str(f), timeout=15)
+            try:
+                c.execute('BEGIN IMMEDIATE')
+                c.rollback()
+            finally:
+                c.close()
+            if Path(str(f) + '-journal').exists():
+                raise LoiMayChu('Dự án trên máy chủ đang có giao dịch dở: thử lại sau.')
         shutil.copy2(f, sl)
     f.parent.mkdir(parents=True, exist_ok=True)
     tam = f.with_name(f.name + '.dang_dua_len')
