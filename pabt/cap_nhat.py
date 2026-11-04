@@ -108,7 +108,7 @@ def doc_goi(file) -> dict:
         raise LoiCapNhat('File không phải gói cập nhật LARC (không đọc được).') from e
     with z:
         m, _ = _doc_json(z)
-        if m.get('ung_dung') != UNG_DUNG or not so(m.get('phien_ban')):
+        if not isinstance(m, dict) or m.get('ung_dung') != UNG_DUNG or not re.fullmatch(r'\d+(\.\d+){0,3}', str(m.get('phien_ban') or '')):
             raise LoiCapNhat('File không phải gói cập nhật LARC.')
         ds = m.get('file') or {}
         if 'pabt/__init__.py' not in ds:

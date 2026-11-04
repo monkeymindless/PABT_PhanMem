@@ -472,6 +472,12 @@ def tinh_chenh_lech_lan(con, ma_ho: int, lan: int, bc: BoiCanh | None = None) ->
     kq = KetQuaHo(ma_ho=moi.ma_ho, ho_ten=moi.ho_ten, dong=moi.dong, da_luu=moi.da_luu)
     for m in kq.muc:
         kq.muc[m] = moi.muc.get(m, KHONG) - cu.muc.get(m, KHONG)
+    # 1.0.58: thưởng theo bậc trên TỔNG của hộ: chênh lệch = thưởng tổng sau điều chỉnh - thưởng tổng trước điều chỉnh (cùng các lần
+    # khác). Trước đây lấy thưởng lũy tiến của hai lần trên hai nền khác nhau: hộ có lần bổ sung xen giữa ra số sai, cộng các QĐ lệch tổng.
+    khac = doc_phuong_an(con, ma_ho, ngoai_lan=lan)
+    sau = gop_phuong_an(khac, doc_phuong_an(con, ma_ho, lan=lan))
+    truoc = gop_phuong_an(khac, doc_phuong_an(con, ma_ho, lan=cu_lan))
+    kq.muc[5] = tinh_pa(sau, bc).muc[5] - tinh_pa(truoc, bc).muc[5]
     return kq
 
 
@@ -865,7 +871,14 @@ def kiem_tra_pa(pa: PhuongAn, bc: BoiCanh) -> list:
             ct.append(f'Thửa {t["so_thua"]} tờ {t["so_to"]}: tổng DT ở mục 1 = {so_vn(dtt)} m², kiểm kê ghi {so_vn(t["dt_thu_hoi"])} m².')
     for ma, gk in (('CS9', False), ('CS10', True)):
         co = pa.dong_ho_tro(ma)
-        if not co or any(_dao_tao_theo_thua(d) for d in co):
+        if co and any(_dao_tao_theo_thua(d) for d in co):
+            # 1.0.58: nhập theo từng thửa: báo khi tổng vượt hạn mức giao đất NN (Điều 13 QĐ 42/2025) - trước đây không kiểm
+            sl_hm, _ = de_xuat_dao_tao_pa(pa, bc, gk)
+            tong = sum((d.so_luong for d in co), KHONG)
+            if tong > sl_hm:
+                ct.append(f'{ma}: tổng {so_vn(tong)} m² nhập theo thửa vượt hạn mức giao đất nông nghiệp, tối đa {so_vn(sl_hm)} m².')
+            continue
+        if not co:
             continue
         sl, dg = de_xuat_dao_tao_pa(pa, bc, gk)
         if co[0].so_luong != sl or co[0].don_gia != dg:

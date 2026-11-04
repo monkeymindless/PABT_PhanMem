@@ -720,6 +720,12 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
             if ma is not None and trung == 'bo_qua':
                 bc.bo_qua.append((h.sheet, f'trùng hộ {ma} đã có trong dự án'))
                 continue
+            if ma is not None and trung == 'thay' and con.execute(
+                    'SELECT 1 FROM qd_ho WHERE ma_ho = ? UNION ALL SELECT 1 FROM pa_lan WHERE ma_ho = ? AND khoa = 1 LIMIT 1',
+                    (ma, ma)).fetchone():
+                # 1.0.58: không xóa phương án đã có quyết định / đã khóa (BoSoan.luu cũng chặn) - số không còn khớp quyết định đã ban hành
+                bc.bo_qua.append((h.sheet, f'hộ {ma} đã có quyết định phê duyệt / đã khóa: không thay (lập phương án bổ sung, điều chỉnh)'))
+                continue
             ten_ho = f'Sheet "{h.sheet}" ({h.ten_ngan})'
             dat_tinh = any((d.don_gia or KHONG) > 0 or (d.thanh_tien or KHONG) > 0 for d in h.dat)
             ghi_chu_dat = '; '.join(dict.fromkeys(d.ghi_chu for d in h.dat if d.ghi_chu))
@@ -787,7 +793,8 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
             g = dict(h.tong)
             if g.get(MUC_VN) is not None:                   # tong_excel 5 cột: cây trồng gồm cả vật nuôi
                 g[3] = (g.get(3) or KHONG) + g[MUC_VN]
-            con.execute('INSERT OR REPLACE INTO tong_excel VALUES (?,?,?,?,?,?,?)',
+            con.execute('DELETE FROM tong_excel WHERE ma_ho = ?', (ma,))      # 1.0.58: Ctrl+Z khôi phục được (REPLACE không chạy trigger xóa)
+            con.execute('INSERT INTO tong_excel VALUES (?,?,?,?,?,?,?)',
                         (ma, *(_chuoi(g.get(m) if g.get(m) is not None else (KHONG if g.get('tong') is not None else None))
                                for m in (1, 2, 3, 4, 5)), _chuoi(g.get('tong'))))
             bc.canh_bao += [f'{ten_ho}: {x}' for x in h.canh_bao]

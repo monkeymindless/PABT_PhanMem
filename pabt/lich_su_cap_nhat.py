@@ -8,6 +8,14 @@ from __future__ import annotations
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
     ('1.0.58', '04/11/2026', (
+        'Niêm yết và lấy ý kiến: nút Văn bản, biên bản… theo từng mục (Thông báo niêm yết, Giấy mời lấy ý kiến, Giấy mời / Thông báo đối thoại, '
+        'các Biên bản): gõ nội dung hoặc đính kèm file, đọc sẵn số hiệu, ngày. Nút Đọc kết quả từ file…: PDF scan, ảnh, Word, Excel -> nhận ra từng hộ '
+        'trong đợt và kết quả, xem trước rồi mới ghi.',
+        'Đã sửa theo rà soát: đóng phần mềm bấm Hủy không còn thoát mất dữ liệu; Ctrl+S và chuyển hộ khi đang gõ dở ô không còn bỏ số vừa gõ; '
+        'thưởng trong quyết định điều chỉnh của hộ có lần bổ sung; không ghi nhầm DT thu hồi khi thửa có nhiều dòng hồ sơ; DT trong ranh của '
+        'ranh từ 30 đỉnh; nhập "Thay" không xóa phương án đã có quyết định; khái toán chưa lưu được hỏi khi thoát.',
+        'An toàn: gọi cscript / PowerShell bằng đường dẫn đầy đủ; HS đính kèm chỉ mở đúng loại hồ sơ; gỡ trigger lạ trong file nhận từ ngoài; '
+        'khôi phục mốc và hoàn tác để lại dấu vết kiểm toán; không khóa quản trị cuối cùng; che tên, CCCD, email kỹ hơn trước khi gửi AI.',
         'Cửa sổ lập phương án: nút "DS hộ" (Ctrl+B) ghim danh sách hộ bên trái - bấm tên để chuyển hộ, gõ để lọc không dấu.',
         'Nút "Gọn cột" trên bảng nhà, cây, vật nuôi, hỗ trợ: ẩn cột Mã, Nguồn giá, Quy cách, Căn cứ giá để cột Tên rộng hơn (mặc định tắt, nhớ cho '
         'lần sau). Phím Space trên bảng: khung chi tiết dòng dưới bảng - xem cách tính, sửa quy cách, căn cứ giá, ghi chú ngay tại đó.',

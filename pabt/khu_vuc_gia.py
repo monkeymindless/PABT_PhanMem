@@ -182,7 +182,7 @@ def khu_vuc_du_an(con, kv_dl: dict | None = None) -> str | None:
 def dat_khu_vuc_du_an(con, kv: str | None) -> None:
     from . import csdl
     with csdl.giao_dich(con):
-        con.execute('INSERT OR REPLACE INTO cai_dat (ma, gia_tri) VALUES (?, ?)', (KHOA_CAI_DAT, str(kv or '')))
+        csdl.ghi_cai_dat(con, KHOA_CAI_DAT, str(kv or ''))     # upsert: Ctrl+Z khôi phục giá trị cũ (REPLACE không chạy trigger xóa)
         csdl.ghi_nhat_ky(con, 'Chọn khu vực giá nhà, công trình', f'khu vực {kv}' if kv else 'theo xã dự án')
 
 

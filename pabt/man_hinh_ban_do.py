@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import ban_do_cad, ban_do_kml, nen_ban_do, toa_do
 from .giao_dien import XepDong, chan_tin_hieu, chu_hien, con_tro_cho
 from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
+from .lap_pa import LoiNhap
 from .thong_bao import TEN_UD, chu_loi
 from .tien import so_vn, vn
 
@@ -251,10 +252,12 @@ class HopNhapCad(QDialog):
         try:
             with con_tro_cho():
                 kq = ban_do_cad.luu(self.con, self.kq, cap, self.o_loai.isChecked())
-        except (ban_do_cad.LoiCad, OSError) as e:
+        except (ban_do_cad.LoiCad, OSError, LoiNhap) as e:
             self._bao(chu_loi('Không lưu được bản đồ', e), True)
             return None
         self._bao(f'Đã lưu {kq["luu"]} thửa vào bản đồ dự án ({kq["khop"]} thửa khớp hồ sơ, cập nhật DT thu hồi {kq["cap_nhat"]} thửa).')
+        if kq.get('nhieu_dong') or kq.get('vuot'):
+            self._bao('Chưa cập nhật DT thu hồi của ' + '; '.join(x for x in (f'{len(kq["nhieu_dong"])} thửa có nhiều dòng hồ sơ ({", ".join(kq["nhieu_dong"][:10])}): sửa tay ở hồ sơ hộ' if kq['nhieu_dong'] else '', f'{len(kq["vuot"])} thửa có DT vượt DT nguyên thửa ({", ".join(kq["vuot"][:10])})' if kq['vuot'] else '') if x) + '.', True)
         self.accept()
         return kq
 

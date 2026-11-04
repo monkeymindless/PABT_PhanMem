@@ -197,6 +197,16 @@ def nguoi_dung() -> str:
     return csdl.nguoi_dung()
 
 
+def ghi_su_kien(con, viec: str, chi_tiet: str = '', bang: str = 'du_an') -> None:
+    """1.0.58: một dòng nhật ký kiểm toán cho thao tác đổi cả khối số liệu (hoàn tác, khôi phục mốc). File chưa có bảng: bỏ qua."""
+    from datetime import datetime
+    try:
+        con.execute("INSERT INTO audit_logs (luc, nguoi, may, hanh_dong, bang, doi_tuong, moi, thao_tac) VALUES (?,?,?,'sua',?,?,?,?)",
+                    (datetime.now().isoformat(timespec='seconds'), nguoi_dung(), csdl.ten_may(), bang, 'Cả dự án', chi_tiet or viec, viec))
+    except sqlite3.OperationalError:
+        pass
+
+
 def dat_phien(con, nguoi: str | None = None, may: str | None = None) -> None:
     """Người / máy ghi vào nhật ký kiểm toán của kết nối (đăng nhập LAN đổi người: gọi lại)."""
     con.execute('CREATE TEMP TABLE IF NOT EXISTS _kt_phien (id INTEGER PRIMARY KEY CHECK (id = 1), nguoi TEXT, may TEXT)')

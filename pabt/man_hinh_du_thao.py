@@ -564,6 +564,18 @@ class KhungDuThao(QWidget):
             ('Chuyển hộ sang đợt sau', self._chuyen), ('Xuất biên bản đối thoại', self._xuat_dt)]), '3. Đối thoại && Tiếp thu')
         self.tabs.addTab(self._trang(self.bang_th, [
             ('Xuất báo cáo tổng hợp ý kiến', self._xuat_yk)]), '4. Tổng hợp kết quả ý kiến')
+        # 1.0.58 (người dùng 04/11/2026): văn bản, biên bản theo từng mục; đọc kết quả từ file scan / Word / Excel - theo thẻ đang mở
+        self.b_van_ban = QPushButton('Văn bản, biên bản…')
+        self.b_van_ban.setFixedHeight(26)
+        self.b_van_ban.setToolTip('Thông báo niêm yết, Giấy mời, Biên bản… của mục (thẻ) đang mở trong đợt đang chọn: gõ nội dung hoặc đính kèm file')
+        self.b_van_ban.clicked.connect(lambda: self.mo_van_ban())
+        self.b_doc_kq = QPushButton('Đọc kết quả từ file…')
+        self.b_doc_kq.setFixedHeight(26)
+        self.b_doc_kq.setToolTip('Chọn file biên bản / danh sách (PDF scan, ảnh, Word, Excel): nhận ra từng hộ trong đợt và kết quả, xem trước rồi mới ghi')
+        self.b_doc_kq.clicked.connect(lambda: self.doc_ket_qua())
+        self._h_goc.addWidget(self.b_van_ban)
+        self._h_goc.addWidget(self.b_doc_kq)
+        self.b_doc_kq.setEnabled(not chi_doc)
         self.tabs.currentChanged.connect(lambda *_: self._hien_nut_goc())
         self._hien_nut_goc()
         # thẻ 2: một chạm đổi ý kiến (bấm ô Ý kiến hoặc phím Space), bấm đúp ô Nội dung nhập phản ánh
@@ -596,6 +608,59 @@ class KhungDuThao(QWidget):
         for b in (self.b_tao, self.b_dua, self.b_goi, self.b_hop):
             b.setEnabled(not chi_doc)
         self.nap()
+
+    def _muc_hien_tai(self) -> str:
+        from .van_ban_dot import MUC
+        return MUC[max(0, self.tabs.currentIndex())][0]
+
+    def _can_dot(self):
+        """Mã đợt đang chọn; đang xem Lũy kế: nhắc chọn một đợt."""
+        d = self._dot_id()
+        if d is None:
+            self._bao('Chọn một đợt ở ô "Đợt" (văn bản, kết quả gắn với từng đợt, không gắn với Lũy kế).')
+        return d
+
+    def mo_van_ban(self, cho: bool = True):
+        d = self._can_dot()
+        if d is None:
+            return None
+        from .man_hinh_van_ban_dot import HopVanBanDot
+        h = HopVanBanDot(self, self.con, d, self.cb.currentText(), self._muc_hien_tai(), self.chi_doc)
+        if cho:
+            h.exec()
+        return h
+
+    def doc_ket_qua(self, files=None, cho: bool = True):
+        """Đọc kết quả từ file vào mục đang mở: xem trước theo từng hộ rồi mới ghi. cho=False: trả hộp (kiểm thử)."""
+        d = self._can_dot()
+        if d is None:
+            return None
+        from . import ocr, van_ban_dot as vbd
+        from .lap_pa import LoiNhap
+        from .man_hinh_quan_ly import doc_co_tien_do
+        from .man_hinh_van_ban_dot import LOC_FILE, HopKetQuaFile
+        from .thong_bao import chu_loi
+        if files is None:
+            files, _ = QFileDialog.getOpenFileNames(self, 'Chọn file kết quả', '', LOC_FILE)
+            if not files:
+                return None
+        try:
+            kq = doc_co_tien_do(self, vbd.doc_ket_qua, self.con, d, files)
+        except ocr.DaHuy:
+            return None
+        except (LoiNhap, OSError, ValueError, ocr.LoiOCR) as e:
+            self._bao(chu_loi('Không đọc được file', e))
+            return None
+        if not kq['dong']:
+            self._bao(f'Đọc {kq["tong_dong"]} dòng nhưng không nhận ra hộ nào của đợt này (so theo số CCCD, họ tên đủ chữ).')
+            return None
+        h = HopKetQuaFile(self, self.con, d, self._muc_hien_tai(), list(files), kq)
+        if not cho:
+            return h
+        if h.exec():
+            self.nap()
+            self._bao(f'Đã ghi kết quả {h.so_ghi} hộ.')
+        return h
 
     def _hien_nut_goc(self):
         hien = self.tabs.currentWidget()

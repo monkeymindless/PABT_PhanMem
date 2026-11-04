@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import json
 import re
+import unicodedata
 from dataclasses import dataclass, field
 
 MO_HINH = ('claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5')
@@ -87,7 +88,7 @@ def giai_thich_ho(con, ma_ho: int) -> GiaiThich:
             except Exception:                       # noqa: BLE001
                 continue
             g.dong.append(f'  - Lần {x.lan} ({x.nhan_trang_thai}): {vn(t)} đồng')
-            g.so_lieu['cac_lan'].append({'lan': x.lan, 'trang_thai': x.nhan_trang_thai, 'tong': str(t)})
+            g.so_lieu['cac_lan'].append({'lan': x.lan, 'trang_thai': x.nhan_trang_thai, 'tong': vn(t)})
         chua = [x.lan for x in ds if not x.khoa]
         if chua:
             g.dong.append(f'  Lần chưa phê duyệt: {", ".join(map(str, chua))} - số tiền các lần này chưa có trong quyết định nào.')
@@ -184,7 +185,7 @@ _RE_TOA_DO = re.compile(r'(?<![\d.])\d{1,3}\.\d{4,}\s*[,;]\s*\d{1,3}\.\d{4,}(?![
                         r'|(?<![\w])[XY]\s*[:=]\s*\d{6,7}(?:[.,]\d+)?(?![\d])')
 # 1.0.55: thêm nhãn người nhận tiền / đại diện / được ủy quyền / đồng sở hữu / chủ đất / chủ sở hữu / chủ sử dụng / họ và tên
 _RE_SAU_NHAN_TEN = re.compile(
-    r'((?i:hộ ông|hộ bà|chủ hộ|đồng sử dụng|đồng sở hữu|người thừa kế|người nhận tiền|người đại diện|người được ủy quyền|'
+    r'((?i:hộ ông|hộ bà|anh|chị|cô|chú|chủ hộ|đồng sử dụng|đồng sở hữu|người thừa kế|người nhận tiền|người đại diện|người được ủy quyền|'
     r'chủ đất|chủ sở hữu|chủ sử dụng|họ và tên|họ tên|ông|bà)\s*[:\-]?\s*)((?:[^\W\d_]+\s*){1,5})')
 
 
@@ -201,17 +202,48 @@ def _che_ho_ten(m) -> str:
     return m.group(1) + '[HO_TEN]' + du[cuoi:]
 
 
+_RE_EMAIL = re.compile(r'[\w.+\-]+@[\w\-]+(?:\.[\w\-]+)+')
+_RE_CCCD_NHOM = re.compile(r'(?<![\d.,])\d{3,4}(?:[\s.\-]\d{3,4}){2,3}(?!\d)')      # "0791 2345 6789", "079 123 456 789"
+
+
+def _gap(c: str) -> str:
+    """Một ký tự -> một ký tự bỏ dấu, chữ thường (giữ đúng vị trí trong chuỗi)."""
+    return unicodedata.normalize('NFD', c.replace('đ', 'd').replace('Đ', 'D'))[0].lower()
+
+
+def _che_ten_du_an(s: str, con) -> str:
+    """1.0.58: tên chủ hộ / đồng sử dụng của dự án: không phân biệt dấu, khoảng trắng, NFC / NFD, tách "A và B" - trước đây chỉ khớp nguyên văn."""
+    gap = ''.join(_gap(c) for c in s)
+    vung = []
+    for ma, ten in con.execute('SELECT ma_ho, ho_ten FROM ho'):
+        for phan in re.split(r'\s+(?:và|cùng|là)\s+|[,;]', unicodedata.normalize('NFC', ten or '')):
+            tu = [''.join(_gap(c) for c in t) for t in phan.split()]
+            if len(tu) >= 2:
+                mau = r'(?<!\w)' + r'\s+'.join(map(re.escape, tu)) + r'(?!\w)'
+                vung += [(m.start(), m.end(), ma) for m in re.finditer(mau, gap)]
+    vung.sort(key=lambda v: (v[0], v[0] - v[1]))        # cùng chỗ bắt đầu: vùng dài trước
+    kq, cuoi = [], 0
+    for a, b, ma in vung:
+        if a >= cuoi:                                   # bỏ vùng chồng lấn
+            kq.append(s[cuoi:a] + f'Hộ #{ma}')
+            cuoi = b
+    return ''.join(kq) + s[cuoi:]
+
+
 def an_danh(chu: str, con=None) -> str:
     """Thay họ tên chủ hộ có trong dự án (con) bằng "Hộ #<mã>", số CCCD / CMND bằng "[CCCD]", số điện thoại bằng "[SĐT]"."""
-    s = str(chu or '')
+    s = unicodedata.normalize('NFC', str(chu or ''))
+    s = _RE_EMAIL.sub('[EMAIL]', s)
     s = _RE_CCCD_NHAN.sub(lambda m: m.group(1) + '[CCCD]', s)
     s = _RE_SDT_NGAN.sub('[SĐT]', s)
     s = _RE_SDT.sub('[SĐT]', s)
+    s = _RE_CCCD_NHOM.sub(lambda m: '[CCCD]' if sum(c.isdigit() for c in m.group(0)) == 12 else m.group(0), s)
     s = _RE_CCCD.sub('[CCCD]', s)
     s = _RE_SO_GCN.sub('[SO_GCN]', s)
     s = _RE_TOA_DO.sub('[TOA_DO]', s)
     s = _RE_SAU_NHAN_TEN.sub(_che_ho_ten, s)
     if con is not None:
+        s = _che_ten_du_an(s, con)
         ten = sorted(((r[1].strip(), r[0]) for r in con.execute('SELECT ma_ho, ho_ten FROM ho') if r[1] and len(r[1].strip()) >= 4),
                      key=lambda x: -len(x[0]))
         for t, ma in ten:

@@ -335,6 +335,19 @@ class KetNoi(sqlite3.Connection):
         self.bo_nho = {}
         self._file_tam = None
 
+    def __exit__(self, t, v, tb):
+        """1.0.58: Python 3.8 (bản Win7) không rollback khi COMMIT lỗi ('database is locked'): giao dịch còn mở, giữ khóa ghi, thao tác
+        đã báo lỗi lại được ghi ở lần commit sau."""
+        try:
+            return super().__exit__(t, v, tb)
+        except sqlite3.Error:
+            if self.in_transaction:
+                try:
+                    self.rollback()
+                except sqlite3.Error:
+                    pass
+            raise
+
     def close(self):
         """Đóng; bản sao lưu nén mở chỉ xem: xóa file tạm đã giải nén (1.0.55)."""
         super().close()
@@ -702,7 +715,25 @@ def _cot(con, so_do: str, bang: str) -> list:
     return [r[1] for r in con.execute(f'PRAGMA {so_do}.table_info("{bang}")')]
 
 
-def chep_danh_muc(con, file_nguon, don_vi: bool = True, bang=DANH_MUC) -> None:
+_RE_TRIGGER_HOP_LE = re.compile(r'^(audit_logs_khong_(sua|xoa)|audit_bam_khong_(sua|xoa)|khoa_\w+_(INSERT|UPDATE|DELETE))$')
+
+
+def go_trigger_la(con) -> list:
+    """1.0.58: phần mềm chỉ tạo các trigger bền trên; file nhận từ ngoài có trigger khác có thể âm thầm đổi tiền mỗi lần lưu: gỡ + ghi nhật ký.
+    Mở chỉ xem: không ghi được, bỏ qua (không có lần ghi nào để trigger chạy). Trả tên đã gỡ."""
+    la = [r[0] for r in con.execute("SELECT name FROM main.sqlite_master WHERE type = 'trigger'") if not _RE_TRIGGER_HOP_LE.match(r[0])]
+    if la:
+        try:
+            with giao_dich(con):
+                for t in la:
+                    con.execute('DROP TRIGGER main."{}"'.format(t.replace('"', '""')))
+                ghi_nhat_ky(con, 'Gỡ trigger lạ trong file dự án', ', '.join(la))
+        except sqlite3.OperationalError:
+            return []
+    return la
+
+
+def chep_danh_muc(con, file_nguon, don_vi: bool = True, bang=DANH_MUC, trong_gd=None) -> None:
     """Chép các bảng danh mục (và thông tin đơn vị lập, người ký nếu don_vi) từ một file .pabt / bộ đơn giá khác.
     File nguồn chỉ được ĐỌC (trước 0.9.16 được mở ghi để nâng cấp lược đồ: bộ đơn giá đóng gói / trong gói cập nhật bị sửa ->
     sai mã SHA-256, gói cập nhật tự tắt; file dự án khác bị nâng cấp ngầm). Chép theo các cột có ở cả hai bên - cột nguồn cũ
@@ -723,6 +754,8 @@ def chep_danh_muc(con, file_nguon, don_vi: bool = True, bang=DANH_MUC) -> None:
                 cot = ', '.join(c for c in TRUONG_DON_VI if c in nguon)
                 if cot:
                     con.execute(f'UPDATE du_an SET ({cot}) = (SELECT {cot} FROM nguon.du_an WHERE id = 1) WHERE id = 1')
+            if trong_gd is not None:                    # 1.0.58: việc phải cùng giao dịch với chép (ATTACH thì phải ngoài giao dịch)
+                trong_gd()
     finally:
         con.execute('DETACH DATABASE nguon')
 

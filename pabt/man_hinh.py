@@ -820,7 +820,7 @@ class BangMuc(QWidget):
         from . import chinh_sach as cs
         bo = self.man.bo
         tl = so_vn(cs.ty_le_dao_tao(bo.bc, ma) * 100)
-        ds = cs.ds_thua_nn(bo)
+        ds = cs.ds_thua_nn(bo, ma)
         self.bang_dt.setRowCount(len(ds))
         for r, x in enumerate(ds):
             ck = QTableWidgetItem('')
@@ -2888,6 +2888,10 @@ class CuaSoLapPA(QDialog):
             except LoiNhap as e:
                 self.thong_bao(f'Tự lưu tạm hoãn: {" ".join(str(e).split())}')
                 return False
+            except sqlite3.Error as e:                  # 1.0.58: không bật hộp lỗi giữa lúc đang gõ
+                from .thong_bao import giai_thich
+                self.thong_bao(f'Tự lưu tạm hoãn: {giai_thich(e)[0]}')
+                return False
             self.thong_bao(tb)
         self.da_luu = True
         self._luc_doi_dau = None
@@ -2904,6 +2908,7 @@ class CuaSoLapPA(QDialog):
         """tu_dong=True: lưu tự động (_luu_im_lang). Không thì lưu khi người dùng bấm Lưu / Ctrl+S (báo lỗi bằng hộp thoại)."""
         if tu_dong:
             return self._luu_im_lang()
+        self._chot_dang_go()
         self._hen_luu_tu_dong.stop()
         self._luc_doi_dau = None
         if self.ho_so.co_thay_doi() and not self.ho_so.luu():
@@ -2913,6 +2918,11 @@ class CuaSoLapPA(QDialog):
             tb = self.bo.luu()
         except LoiNhap as e:
             QMessageBox.warning(self, TEN_UD, str(e))
+            return False
+        except sqlite3.Error as e:                      # 1.0.58: file bị khóa / ổ mạng mất kết nối: báo rõ, số vừa soạn còn trên màn hình
+            self._luc_doi_dau = None
+            self._hen_luu_tu_dong.start()
+            QMessageBox.warning(self, TEN_UD, chu_loi('Chưa lưu được phương án của hộ này (số liệu vừa soạn vẫn còn trên màn hình)', e))
             return False
         self.da_luu = True
         self.nap_ho()
@@ -3005,8 +3015,17 @@ class CuaSoLapPA(QDialog):
         ten = f'{bo.pa.ho.ho_ten}' + (' (chưa lưu)' if bo.co_thay_doi else '')
         self.w_preview.yeu_cau(None, tao, ten, ngay)
 
+    def _chot_dang_go(self) -> None:
+        """1.0.58: ô bảng / ô chữ đang gõ dở: mất tiêu điểm để Qt ghi giá trị trước khi lưu / rời hộ (phím tắt không đổi tiêu điểm -
+        trước đây Ctrl+S báo "Đã lưu" mà bỏ số vừa gõ, Ctrl+PgDown sang hộ khác không hỏi)."""
+        f = QApplication.focusWidget()
+        if f is not None and self.isAncestorOf(f):
+            f.clearFocus()
+            QApplication.processEvents()
+
     def hoi_luu(self) -> bool:
         """True nếu được phép rời hộ đang soạn."""
+        self._chot_dang_go()
         if not self.bo.co_thay_doi and not self.ho_so.co_thay_doi():
             return True
         tl = _hoi(self, TEN_UD, f'Hộ {self.bo.ma_ho} – {self.bo.pa.ho.ho_ten} có thay đổi chưa lưu. Lưu lại?')

@@ -237,7 +237,7 @@ def chuyen_office(p, loai: str = '', thu_muc=None) -> Path:
         ds = Path(td) / 'ds.txt'
         ds.write_text('\n'.join(('doc' if loai == '.doc' else 'xls', str(p), str(dich))), encoding='utf-16')
         try:
-            kq = subprocess.run(['cscript', '//nologo', str(vbs), str(ds)], capture_output=True, timeout=180,
+            kq = subprocess.run([__import__('pabt').exe_he_thong('cscript.exe'), '//nologo', str(vbs), str(ds)], capture_output=True, timeout=180,
                                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         except (OSError, subprocess.TimeoutExpired) as e:
             raise LoiNhap(f'{thay}\n({e})') from None

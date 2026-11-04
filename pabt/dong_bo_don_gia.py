@@ -97,6 +97,9 @@ def phat_hanh(goc=None) -> dict:
         raise LoiDongBo('Chỉ tài khoản quản trị máy chủ phát hành được bộ đơn giá.')
     tm = _goc(goc)
     tm.mkdir(parents=True, exist_ok=True)
+    pb_mc = doc_phien_ban(goc)                           # 1.0.58: hai quản trị: không đè bản người kia vừa phát hành
+    if pb_mc and pb_mc.get('ma') != ma_da_nhan():
+        raise LoiDongBo(f'Máy chủ có {mo_ta(pb_mc)} mới hơn bộ đơn giá trên máy này: nhận về rồi sửa lại, không ghi đè.')
     tep = {}
     with tempfile.TemporaryDirectory() as td:
         ban = Path(td) / FILE_BO                         # bản sao nhất quán bằng backup API (bộ có thể đang mở đọc)

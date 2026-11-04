@@ -1236,6 +1236,7 @@ class CuaSoChinh(QMainWindow):
                     self.dv = None
                 try:                                   # nhật ký kiểm toán (0.9.86): ai sửa, cũ -> mới
                     from . import kiem_toan
+                    csdl.go_trigger_la(self.con)
                     kiem_toan.gan(self.con)
                 except sqlite3.Error:                  # file đang khóa / lỗi: vẫn mở dự án (nhat_ky vẫn ghi thao tác)
                     pass
@@ -3420,7 +3421,7 @@ class CuaSoChinh(QMainWindow):
             chu = (f'XÓA {len(ds)} hộ khỏi dự án?\n\n' + '\n'.join(dong) +
                    '\n\nXóa cả thửa đất, phương án' + (', quyết định phê duyệt / chi trả của hộ' if qd else '') + ' của các hộ này.'
                    + (f'\nCHÚ Ý: {qd} hộ đã có quyết định phê duyệt.' if qd else '') +
-                   '\n\nXóa nhầm: bấm "Hoàn tác" trên băng tiêu đề (Ctrl+Z) để lấy lại.')
+                   '\n\nXóa nhầm: Chỉnh sửa > Hoàn tác (Ctrl+Z) (Ctrl+Z) để lấy lại.')
             hop = QMessageBox(QMessageBox.Icon.Warning, TEN_UD, chu,
                               QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, self)
             hop.button(QMessageBox.StandardButton.Yes).setText(f'Xóa {len(ds)} hộ')
@@ -4208,6 +4209,14 @@ class CuaSoChinh(QMainWindow):
         return 'mat_ket_noi'
 
     def closeEvent(self, e):
+        # 1.0.58: khái toán chưa lưu (kể cả chưa đặt tên file) không mất im lặng khi thoát
+        kt = sys.modules.get('pabt.man_hinh_du_toan')
+        if kt is not None and any(not k.hoi_luu() for k in self.findChildren(kt.KhungDuToan)):
+            e.ignore()
+            return
+        if self.dong_du_an() is False:                  # 1.0.58: người dùng Hủy / lưu lỗi: ở lại, không đóng, không mất thay đổi
+            e.ignore()
+            return
         from .giao_dien import KHI_DOI_TY_LE, TRUOC_DOI_TY_LE, XU_LY_HOAN_TAC
         if self._hien_ty_le in KHI_DOI_TY_LE:
             KHI_DOI_TY_LE.remove(self._hien_ty_le)
@@ -4215,7 +4224,6 @@ class CuaSoChinh(QMainWindow):
             TRUOC_DOI_TY_LE.remove(self._bo_trang_an)
         if self.hoan_tac_phim in XU_LY_HOAN_TAC:
             XU_LY_HOAN_TAC.remove(self.hoan_tac_phim)
-        self.dong_du_an()
         if may_chu.PHIEN is not None:                   # ghi "Đăng xuất" lên máy chủ: chờ tối đa 3 giây (mất mạng không treo lúc đóng)
             import threading
             t = threading.Thread(target=may_chu.dang_xuat, daemon=True)

@@ -110,7 +110,8 @@ def tam_giac_hoa(p: list) -> list:
         pts.reverse()
     kq = []
     vong = 0
-    while len(pts) > 3 and vong < len(pts) * len(pts) + 10:
+    tran = len(pts) * len(pts) + 10                     # 1.0.58: tính MỘT lần (trần theo len đang giảm: ranh >= 30 đỉnh thoát sớm, DT sai)
+    while len(pts) > 3 and vong < tran:
         vong += 1
         n = len(pts)
         cat = False
@@ -366,7 +367,9 @@ def _khoa(so) -> str:
 def chi_muc_thua(con) -> dict:
     """{(số tờ, số thửa) chuẩn hóa: (mã thửa, mã hộ, dt_thu_hoi, loai_dat)} của hồ sơ kiểm kê."""
     return {(_khoa(r['so_to']), _khoa(r['so_thua'])): (r['ma_thua'], r['ma_ho'], r['dt_thu_hoi'], r['loai_dat'])
-            for r in con.execute('SELECT ma_thua, ma_ho, so_to, so_thua, dt_thu_hoi, loai_dat FROM thua')}
+            # dòng có DT thu hồi đứng sau (thắng): thửa nhiều dòng hồ sơ gắn hộ chủ đất, không gắn hộ chỉ có tài sản
+            for r in con.execute('SELECT ma_thua, ma_ho, so_to, so_thua, dt_thu_hoi, loai_dat FROM thua '
+                                 'ORDER BY COALESCE(dt_thu_hoi, \'\') NOT IN (\'\', \'0\'), ma_thua')}
 
 
 def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool = False) -> dict:
@@ -375,6 +378,14 @@ def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool 
     if not dam_bao_bang(con):
         raise LoiCad('File dự án đang mở chỉ xem / bị khóa: không ghi được bản đồ.')
     cm = chi_muc_thua(con)
+    # 1.0.58: một thửa nhiều dòng hồ sơ (nhiều loại đất / hộ chỉ có tài sản): không biết ghi dòng nào -> không ghi, báo sửa tay; DT vượt
+    # DT nguyên thửa: không ghi; hộ ngoài phần nhận việc (bản offline): chặn
+    dong_thua = {}
+    for r in con.execute('SELECT ma_thua, so_to, so_thua, dt_nguyen_thua FROM thua'):
+        dong_thua.setdefault((_khoa(r['so_to']), _khoa(r['so_thua'])), []).append(r)
+    from .lap_pa import kiem_ds_ho_nhan_viec
+    kiem_ds_ho_nhan_viec(con, sorted({cm[k][1] for k in cap_nhat_dt or () if k in cm}))
+    nhieu_dong, vuot = [], []
     luc = datetime.now().isoformat(timespec='seconds')
     khop = cap_nhat = 0
     with csdl.giao_dich(con):
@@ -392,6 +403,14 @@ def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool 
                 khop += 1
                 if cap_nhat_dt and k in cap_nhat_dt:
                     moi = t.dt_trong_ranh if t.dt_trong_ranh is not None else (t.dt_ban_ve or t.dt_hinh)
+                    ds_dong = dong_thua.get(k, ())
+                    if len(ds_dong) > 1:
+                        nhieu_dong.append(f'{t.so_to}/{t.so_thua}')
+                        continue
+                    ng = ds_dong[0]['dt_nguyen_thua'] if ds_dong else None
+                    if ng not in (None, '') and D(moi) > D(ng):
+                        vuot.append(f'{t.so_to}/{t.so_thua}')
+                        continue
                     sets, ts = ['dt_thu_hoi = ?'], [chuoi(moi)]
                     if cap_nhat_loai and t.loai_dat:
                         sets.append('loai_dat = ?')
@@ -400,7 +419,7 @@ def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool 
                     cap_nhat += 1
         csdl.ghi_nhat_ky(con, 'Nhập bản vẽ CAD', f'{kq.nguon}: {len(kq.thua)} thửa tờ {kq.so_to} (khớp hồ sơ {khop}, cập nhật DT '
                                                  f'{cap_nhat})')
-    return dict(luu=len(kq.thua), khop=khop, cap_nhat=cap_nhat)
+    return dict(luu=len(kq.thua), khop=khop, cap_nhat=cap_nhat, nhieu_dong=nhieu_dong, vuot=vuot)
 
 
 # trạng thái đồng thuận của hộ (ý kiến ở đợt niêm yết gần nhất) -> màu trên bản đồ

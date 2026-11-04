@@ -9,6 +9,13 @@ import sys as _sys
 from pathlib import Path as _Path
 
 
+def exe_he_thong(ten: str, *con) -> str:
+    """1.0.58: đường dẫn tuyệt đối tới chương trình của Windows. Gọi tên trần ('cscript'): CreateProcess tìm thư mục hiện hành TRƯỚC
+    System32 - bấm đúp file dự án trong thư mục có cscript.exe lạ là chạy chương trình đó. exe_he_thong('powershell.exe', 'WindowsPowerShell', 'v1.0')."""
+    import os
+    return os.path.join(os.environ.get('SystemRoot') or r'C:\Windows', 'System32', *con, ten)
+
+
 def tai_nguyen(ten: str) -> _Path:
     """File dữ liệu của gói pabt: cạnh mã (mã nguồn, bản cập nhật .pabtcn), không có thì trong bản đóng gói."""
     p = _Path(__file__).with_name(ten)

@@ -273,6 +273,8 @@ def mat_do_thuc_te(so_cay, dien_tich_m2):
 
 
 def luu_quy_chuan_mat_do(con, q: QuyChuanMatDo) -> None:
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_gia', 'sửa quy chuẩn mật độ')
     with con:
         con.execute('INSERT INTO quy_chuan_mat_do (ten_cay, mat_do, ty_le_ngoai, can_cu) VALUES (?,?,?,?) '
                     'ON CONFLICT(ten_cay) DO UPDATE SET mat_do = excluded.mat_do, ty_le_ngoai = excluded.ty_le_ngoai, '

@@ -135,7 +135,7 @@ def _tat_excel_tu_dong(tu_luc: float, ten_exe: str = 'EXCEL.EXE') -> int:
     lenh = (f"Get-WmiObject Win32_Process -Filter \"Name='{ten_exe}'\" | Where-Object {{ $_.CommandLine -match "
             "'(-Embedding|/automation)' } | ForEach-Object { [string]$_.ProcessId + ' ' + $_.CreationDate }")
     try:
-        r = subprocess.run(['powershell', '-NoProfile', '-Command', lenh], capture_output=True, timeout=60,
+        r = subprocess.run([__import__('pabt').exe_he_thong('powershell.exe', 'WindowsPowerShell', 'v1.0'), '-NoProfile', '-Command', lenh], capture_output=True, timeout=60,
                            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     except (OSError, subprocess.TimeoutExpired):
         return 0
@@ -177,7 +177,7 @@ def chay_excel(cap_file: list, che_do: str = 'pdf', cho_moi_file: int = CHO_MOI_
         dung = Path(td) / 'dung.txt'
         bat_dau = time.time()
         try:
-            pr = subprocess.Popen(['cscript', '//nologo', str(vbs), str(ds), str(dung)], stdout=subprocess.PIPE,
+            pr = subprocess.Popen([__import__('pabt').exe_he_thong('cscript.exe'), '//nologo', str(vbs), str(ds), str(dung)], stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         except OSError as e:
             raise LoiIn(f'Không chạy được trình điều khiển Excel (cscript): {e}') from e

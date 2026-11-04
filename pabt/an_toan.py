@@ -149,7 +149,7 @@ def nap_goc_ca_windows(url: str, cho: int = 20) -> bool:
             "try{$x=$r.GetResponse();$x.Close();exit 0}catch [Net.WebException]{"
             "if($_.Exception.Status -eq 'TrustFailure'){exit 2};if($_.Exception.Response){exit 0};exit 3}")
     try:
-        kq = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', lenh], capture_output=True,
+        kq = subprocess.run([__import__('pabt').exe_he_thong('powershell.exe', 'WindowsPowerShell', 'v1.0'), '-NoProfile', '-NonInteractive', '-Command', lenh], capture_output=True,
                             timeout=cho + 10, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         ok = kq.returncode == 0
     except (OSError, subprocess.SubprocessError):

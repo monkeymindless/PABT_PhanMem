@@ -195,7 +195,11 @@ def tinh(con, lap: dict | None = None, che_do: str = 'mo', tong_hop: list | None
         dau_lap = None if lap is None else hash(frozenset(lap.items()))
     except TypeError:
         return _tinh(con, lap, che_do, None)
-    return csdl.nho(con, ('pheu_tien_do.tinh', che_do, dau_lap), lambda: _tinh(con, lap, che_do, None))
+    # 1.0.58: một khóa cố định, kiểm dấu lap bên trong: khóa theo dấu làm mỗi lần đổi trạng thái giữ thêm một bản phễu cả dự án (rò ~1,5 MB/lần)
+    cu = csdl.nho(con, ('pheu_tien_do.tinh', che_do, lap is None), lambda: [None, None])
+    if cu[1] is None or cu[0] != dau_lap:
+        cu[0], cu[1] = dau_lap, _tinh(con, lap, che_do, None)
+    return cu[1]
 
 
 def _tinh(con, lap: dict | None, che_do: str, tong_hop: list | None) -> KetQuaPheu:

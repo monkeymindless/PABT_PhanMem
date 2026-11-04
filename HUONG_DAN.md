@@ -530,8 +530,7 @@ thửa đất** của cùng cửa sổ).
 ngay dưới chữ (hở một khoảng nhỏ, không che dấu nặng), căn giữa theo nội dung phía trên; đường dưới tiêu ngữ dài bằng dòng
 tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đúng.
 
-- Đầu trang: tiêu đề cơ quan 2 dòng ("TRUNG TÂM PHÁT TRIỂN QUỸ ĐẤT / THÀNH PHỐ ĐỒNG NAI", "CHI NHÁNH VĨNH CỬU"), quốc hiệu, số
-  phương án "Số: …/PA-TTPTQĐ.CNVC", chức vụ người ký "PHÓ GIÁM ĐỐC" — lấy từ **Thông tin dự án** (Đơn vị cấp trên, Tên đơn vị trên
+- Đầu trang: tiêu đề cơ quan 2 dòng (đơn vị cấp trên, tên đơn vị), quốc hiệu, số phương án "Số: …/<ký hiệu>", chức vụ người ký - lấy từ **Thông tin dự án**.
   tiêu đề bản in, Ký hiệu số phương án, Chức vụ người ký…); ô nào để trống thì dùng thông tin đơn vị khai ở Cài đặt → Cấu hình nghiệp vụ → Cơ quan.
 - Các đường kẻ ngang của mẫu cũ (dưới tên cơ quan, dưới "Độc lập - Tự do - Hạnh phúc", dưới tên dự án) được giữ: lưu ở
   `mau_in\IN_CHITIET.duong_ke.xml` và chèn vào từng file bản in; **Cập nhật mẫu in…** từ file Excel lấy lại cả đường kẻ.
@@ -599,6 +598,7 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
   chi trả, bàn giao, vận động. Thanh tra: mở dự án chỉ xem, xem nhật ký kiểm toán. Hai vai trò cũ "Quản trị", "Người dùng" giữ nguyên
   quyền. Áp cho dự án trên máy chủ và bản mang về; file riêng trên máy không giới hạn. Không vai trò nào xóa được hộ đã có quyết định
   phê duyệt hoặc đã chi trả.
+- **Văn bản, kết quả từng mục của đợt niêm yết (1.0.58)**: màn hình Niêm yết, chọn một đợt và mở thẻ của mục. **Văn bản, biên bản…**: Thông báo niêm yết công khai, Giấy mời lấy ý kiến, Giấy mời / Thông báo đối thoại, các Biên bản: gõ nội dung hoặc đính kèm file; **Đọc từ file…** điền sẵn số hiệu, ngày, trích yếu. **Đọc kết quả từ file…**: chọn biên bản / danh sách (PDF scan, ảnh, Word, Excel; nhận dạng chữ ngay trên máy), phần mềm ghép từng hộ trong đợt theo CCCD, họ tên đủ chữ và kết quả (đồng ý, không đồng ý, ý kiến khác); xem trước, sửa, rồi ghi. Dòng không rõ kết quả không chọn sẵn; chữ viết tay nhận dạng kém, cần đối chiếu.
 - **Văn bản nhiều khu vực giá (1.0.57)**: văn bản đơn giá chia khu vực (Phụ lục I khu vực 1, Phụ lục II khu vực 2) - hộp Cập nhật
   đơn giá, ô **Khu vực giá** mặc định **Cả Phụ lục I và Phụ lục II - tách theo khu vực**: mỗi khu vực so với mục cùng khu vực của bộ
   đơn giá (khu vực 1 không bị giá khu vực 2 đè), mỗi mục gắn khu vực của phụ lục, danh sách xã / phường của từng khu vực đọc từ phần

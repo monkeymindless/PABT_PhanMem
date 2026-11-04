@@ -108,12 +108,14 @@ def doi_nhan_khau_on_dinh(d: DongKhoan, nk) -> None:
 
 
 # ---------------------------------------------------------------- đào tạo, chuyển đổi nghề
-def ds_thua_nn(bo) -> list:
+def ds_thua_nn(bo, ma: str = '') -> list:
     """Các dòng đất nông nghiệp ở mục 1 của hộ đang soạn: dict(mo_ta, dien_tich, don_gia) - để tính hỗ trợ đào tạo theo thửa."""
-    from .nghiep_vu import mo_ta_thua
+    from .nghiep_vu import la_giao_khoan, mo_ta_thua
     kq = []
     for d in bo.pa.dat:
         if d.nhom_dat != 'Nông nghiệp':
+            continue
+        if ma and la_giao_khoan(d, bo.bc) != (ma == 'CS10'):     # 1.0.58: CS9 đất thường, CS10 đất giao khoán: không lẫn tỷ lệ
             continue
         t = bo.bc.thua.get(d.ma_thua) or {}
         mt = mo_ta_thua(t.get('so_to', ''), t.get('so_thua', ''), d.loai_dat, bo.bc.cap_dia_ban, bo.bc.ten_dia_ban,

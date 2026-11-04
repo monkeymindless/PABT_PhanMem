@@ -121,16 +121,18 @@ def file_dang_dung() -> Path:
 def ap_vao_du_an(con) -> dict:
     """Thay danh mục, tham số, biểu thưởng, văn bản của dự án bằng bộ đơn giá đang dùng (giữ giá đất, hồ sơ và quy ước /
     đơn giá thẩm định riêng của dự án)."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_gia', 'áp bộ đơn giá vào dự án')
     p = file_dang_dung()
     tt = thong_tin(p)
     from . import don_gia_rieng
     rieng = don_gia_rieng.doc_rieng(con)          # quy ước, đơn giá thẩm định riêng của dự án: giữ lại
-    csdl.chep_danh_muc(con, p, don_vi=False, bang=BANG_BO)
-    with csdl.giao_dich(con), csdl.mo_khoa_danh_muc(con):
+
+    def xong():                                   # 1.0.58: cùng một giao dịch: lỗi giữa chừng không mất đơn giá riêng
         don_gia_rieng.tra_rieng(con, rieng)
-    with csdl.giao_dich(con):
         con.execute('UPDATE du_an SET phien_ban_gia = ? WHERE id = 1', (tt['phien_ban'],))
         csdl.ghi_nhat_ky(con, 'Áp bộ đơn giá', f'Phiên bản {tt["phien_ban"]} ({tt["nguon"]})')
+    csdl.chep_danh_muc(con, p, don_vi=False, bang=BANG_BO, trong_gd=xong)
     return tt
 
 

@@ -375,7 +375,8 @@ class HopBoDonGia(QDialog):
             if m and not sh.lower().startswith('dự thảo') and f'QĐ {m.group(1)}' not in so_vb:
                 so_vb.append(f'QĐ {m.group(1)}')
         vb = (' (' + ', '.join(so_vb[:6]) + (', …' if len(so_vb) > 6 else '') + ')') if so_vb else ''
-        self.lb.setText(f'<b>{tt["ten"]}</b> {tt["phien_ban"]}{vb}  ·  Khóa quản trị: <b>{self.trang_thai_khoa()}</b>')
+        self.lb.setText(f'<b>{tt["ten"]}</b> {tt["phien_ban"]}{vb}  ·  Khóa quản trị: <b>{self.trang_thai_khoa()}</b>'
+                        + (f'  ·  <b>{quan_tri_bo.LOI_PHAT_HANH}</b>' if quan_tri_bo.LOI_PHAT_HANH else ''))
         them = ('\nThẻ "Quy ước giá tương đương" đang hiện quy ước của dự án mở - đồng bộ với Đơn giá đặc biệt.'
                 if self.con_du_an is not None else '')
         self.lb.setToolTip(f'{tt["ten"]} - phiên bản {tt["phien_ban"]} (nguồn {tt["nguon"]}, đóng gói {tt["ngay"][:10]})\n'
@@ -924,7 +925,11 @@ class HopBoDonGia(QDialog):
                                                           'giữ đơn giá cũ; dùng Rà soát giá để kiểm tra).') == QMessageBox.StandardButton.Yes
         if not xac_nhan:
             return None
-        tt = don_gia.ap_vao_du_an(self.con_du_an)
+        try:
+            tt = don_gia.ap_vao_du_an(self.con_du_an)
+        except (LoiNhap, csdl.sqlite3.Error) as e:
+            self._bao(QMessageBox.warning, chu_loi('Chưa áp được bộ đơn giá vào dự án', e))
+            return None
         self.da_ap = True
         self._bao(QMessageBox.information, f'Đã áp bộ đơn giá phiên bản {tt["phien_ban"]} vào dự án.')
         return tt

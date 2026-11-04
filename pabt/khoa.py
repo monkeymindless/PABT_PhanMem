@@ -37,9 +37,10 @@ class KhoaFile:
 
     def doc(self) -> dict | None:
         try:
-            return json.loads(self.p.read_text(encoding='utf-8'))
+            k = json.loads(self.p.read_text(encoding='utf-8'))
         except (OSError, ValueError):
             return None
+        return k if isinstance(k, dict) else None
 
     def la_cua_toi(self, k: dict | None) -> bool:
         return bool(k) and all(k.get(x) == v for x, v in self.cua_toi.items())

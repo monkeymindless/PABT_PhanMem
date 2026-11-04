@@ -240,10 +240,14 @@ def dang_nhap(goc, tai_khoan: str, mat_khau: str) -> Phien:
         bam, _ = bam_mat_khau(mat_khau, r['muoi'])
         if not hmac.compare_digest(bam, r['bam']):
             sai = r['sai_lien_tiep'] + 1
+            # 1.0.58: không khóa quản trị cuối cùng (ai gõ sai 5 lần cũng khóa được, cả đơn vị mất quyền quản trị, không có đường mở)
+            con_qt = con.execute(f"SELECT 1 FROM nguoi_dung WHERE khoa = 0 AND tai_khoan <> ? AND vai_tro IN "
+                                 f"({','.join('?' * len(VAI_TRO_QUAN_TRI))})", (tk, *VAI_TRO_QUAN_TRI)).fetchone()
+            khoa_moi = 1 if sai >= 5 and (r['vai_tro'] not in VAI_TRO_QUAN_TRI or con_qt) else 0
             with con:
-                con.execute('UPDATE nguoi_dung SET sai_lien_tiep = ?, khoa = ? WHERE tai_khoan = ?', (sai, 1 if sai >= 5 else 0, tk))
+                con.execute('UPDATE nguoi_dung SET sai_lien_tiep = ?, khoa = ? WHERE tai_khoan = ?', (sai, khoa_moi, tk))
                 _ghi_nhat_ky(con, tk, 'Đăng nhập sai', f'lần {sai}')
-            raise LoiMayChu('Sai tài khoản hoặc mật khẩu.' + (' Tài khoản đã bị khóa do nhập sai 5 lần.' if sai >= 5 else ''))
+            raise LoiMayChu('Sai tài khoản hoặc mật khẩu.' + (' Tài khoản đã bị khóa do nhập sai 5 lần.' if khoa_moi else ''))
         with con:
             con.execute('UPDATE nguoi_dung SET sai_lien_tiep = 0, dang_nhap_cuoi = ?, may_cuoi = ? WHERE tai_khoan = ?',
                         (_bay_gio(), _may(), tk))

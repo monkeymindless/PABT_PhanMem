@@ -11,7 +11,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QBrush, QFont
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFrame,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFrame,
                                QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu, QMessageBox, QPushButton, QSizePolicy, QStackedWidget, QTabWidget, QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout, QWidget)
 
 from . import csdl, du_toan
@@ -1143,7 +1143,21 @@ class KhungDuToan(QWidget):
         self.lb_tb.setVisible(True)
         return True
 
+    def hoi_luu(self) -> bool:
+        """1.0.58: True nếu được rời khái toán đang soạn (mở file khác, thoát phần mềm); còn thay đổi chưa lưu thì hỏi."""
+        self._doc_dau()
+        co_doi = self._dau_noi_dung() != self._dau_da_luu if self.file else bool(self.dt.dong)
+        if not co_doi or self.im_lang or QApplication.platformName() == 'offscreen':     # offscreen (kiểm thử): không có người bấm
+            return True
+        tl = QMessageBox.question(self, TIEU_DE, 'Khái toán có thay đổi chưa lưu. Lưu lại?',
+                                  QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel)
+        if tl == QMessageBox.StandardButton.Save:
+            return self.luu(self.file) is not None
+        return tl == QMessageBox.StandardButton.Discard
+
     def mo(self, file=None):
+        if not self.hoi_luu():
+            return None
         if file is None:
             file, _ = QFileDialog.getOpenFileName(self, 'Mở dự toán', self._thu_muc(), f'Dự toán PABT (*{du_toan.DUOI})')
             if not file:

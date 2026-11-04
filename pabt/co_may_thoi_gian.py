@@ -200,7 +200,27 @@ def khoi_phuc(file, moc: Moc) -> Moc | None:
             f.flush()
             os.fsync(f.fileno())
     os.replace(tam, file)
+    _ghi_vet_khoi_phuc(file, moc, truoc)
     return truoc
+
+
+def _ghi_vet_khoi_phuc(file, moc: Moc, truoc) -> None:
+    """1.0.58: file đã về bản cũ, nhật ký kiểm toán phía sau mốc mất: ghi một dòng để biết đã khôi phục (lỗi ghi không hủy khôi phục)."""
+    from . import csdl, kiem_toan
+    chu = f'Về mốc {moc.luc:%d/%m/%Y %H:%M}; bản trước khôi phục: {truoc.file.name if truoc else "không có"}'
+    try:
+        c = csdl.mo(file)
+    except (sqlite3.Error, OSError):
+        return
+    try:
+        kiem_toan.gan_ky(c)
+        with csdl.giao_dich(c):
+            csdl.ghi_nhat_ky(c, 'Khôi phục mốc thời gian', chu)
+            kiem_toan.ghi_su_kien(c, 'Khôi phục mốc thời gian', chu)
+    except sqlite3.Error:
+        pass
+    finally:
+        c.close()
 
 
 # ---------------------------------------------------------------- so sánh hai trạng thái
