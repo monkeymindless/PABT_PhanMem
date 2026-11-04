@@ -3019,3 +3019,20 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
   C_MA…C_GC | C_TT, C_KV, C_NHOM), cb_kv mặc định KV_CA_HAI. HopBoDonGia: `thanh_pl` (nút phụ lục, `_loc_phu_luc` thẻ 0, khóa phụ lục
   khác khi mở dự án trừ khi đã mở khóa quản trị, `doi_khu_vuc_du_an` -> da_ap để app dựng lại DanhMuc), thẻ Tham số bỏ `KV%:%`;
   don_gia.them_dong(khu_vuc=), xoa_dong / thay_the_dong giữ KVMUC. Test `tests/test_khu_vuc_gia_1057.py` (dữ liệu GIẢ LẬP).
+- 1.0.58 GÓI 3 ĐỀ ÁN V2.0 (người dùng 04/11/2026 "làm tiếp" sau báo cáo Gói 3 trái quyết định cũ - làm phần không trái). `man_hinh_phu_lap_pa.py`
+  (nạp khi dùng lần đầu): `KhungDsHo` (Ctrl+B, nút `b_ds_ho` rộng 48 px vì hàng nút kín ở 1366 @125%: nút thường 80 px đẩy hàng 1.038 -> 1.122;
+  `_lo_tach` đổi QHBoxLayout - danh sách đứng NGOÀI `self.tach` vì `bat_tat_xem_truoc` dùng setSizes hai phần tử, widget(0) = vùng soạn;
+  `_rong_ds_ho` hẹp lại tới 120 khi thiếu chỗ; dựng lại khi `danh_sach_ho` đổi đối tượng - csdl.nho), `KhungChiTietDong` (Space, WidgetShortcut
+  trên bảng nên đang sửa ô thì Space vẫn gõ chữ; ghi qua `item.setText` -> `_doi_o` -> `sua_o`: cùng kiểm tra, phân quyền; `nap` đọc `bm.bang` vì
+  bảng vẽ lười), `HopSoSanhHo` + `so_sanh_ho.py` (không Qt, chỉ đọc số liệu ĐÃ LƯU; ghép dòng theo mục + tên + ĐVT + lần xuất hiện). `BangMuc.dat_gon`
+  / `COT_PHU_GON` / `doi_bang_gon` (mặc định TẮT, QSettings `lap_pa/bang_gon`). `_ap_khoa` chừa `b_gon` và khung chi tiết (ô tự chỉ đọc theo
+  NoEditTriggers). KHÔNG LÀM: thanh 5 bước `ThanhNhanhNghiepVu` (hàng trên đã kín ở 1366, trùng menu trái + phễu - quy tắc mỗi lệnh một chỗ), nhiều
+  tab `CuaSoLapPA` song song (thanh tab bỏ 0.9.94 theo ý người dùng; hai cửa sổ cùng soạn một file dễ ghi đè nhau -> thay bằng đối chiếu chỉ đọc),
+  F4 thuộc tính (F4 = xem trước A4 từ 0.9.84; thuộc tính dòng dùng Space), `NutPhanNhanh`, `HopGiaiTrinhPhapLy` (đã có giải trình Ctrl+I từ 1.0.55),
+  khung nổi ngay dưới dòng (QTableWidget không chèn được: khung đặt dưới bảng).
+- 1.0.58 ĐỌC PDF PHỤ LỤC II (`_DocDong`): bản PDF khớp bản Word 98/98 mục khu vực 2 (tên, ĐVT, giá), khu vực 1 vẫn 111/111. `bang_loai` + `_doc_bang_loai`
+  (tiêu đề "Loại Quy mô, kết cấu…"): số loại nằm giữa ô rơi vào đầu / cuối dòng và lẫn số trang nên BỎ, số loại = thứ tự mục trong nhóm A / B (dùng
+  chung `_ten_theo_loai`). `bang_stt` + `_doc_bang_stt` (tiêu đề "STT Danh mục" xuống dòng - chỉ bật ở bảng này để không đổi cách đọc bảng khác): dòng
+  không STT, không giá là ô tên; ngoặc chưa đóng thì số tiền thuộc tên; ĐVT xuống dòng (`dvt_mo`, `_noi_dvt`). Chung: `_RE_LOI_GIA_THEM` ("… tính thêm
+  110.000" không phải mục), "dông/" -> "đồng/". Test `tests/test_goi3_1058.TestDocPdfPhuLucII` (dữ liệu GIẢ LẬP).
+- 1.0.58 CHƯA GIẢI QUYẾT: cả bộ test Qt5 thỉnh thoảng sập 0xC0000374 (hỏng heap) ở `tests.test_yeu_cau_1008.TestDoiTyLeNhanh`, vết tại `QApplication.allWidgets()` trong `giao_dien._gian_bang` (`dat_ty_le`); chạy riêng bài đó đạt 4/4, chạy lại cả bộ đạt. Lần chạy Qt5 bản 1.0.57 (chưa có Gói 3) cũng từng dừng im lặng; chưa tìm ra nguyên nhân gốc, chưa rõ có xảy ra ngoài bộ test (A+ / A- trên bản Win7) không.

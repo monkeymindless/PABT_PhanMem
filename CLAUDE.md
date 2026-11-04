@@ -214,6 +214,8 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Danh sách dài: `giao_dien.hop_ket_qua` (không ghép vào QMessageBox). Hộp thoại mới có `im_lang` / `cho=False` cho test.
 - Bảng: chiều cao dòng `giao_dien.vua_dong` (không `resizeRowsToContents`); bảng lớn `bang_ao.BangAo`; lệnh theo hộ đọc dòng bằng
   `cac_dong_da_chon` (không `selectedRows`); cột theo tên (`self.cot.index(khóa)`), không viết số cột. Chữ "&" trên nút / thẻ: `chu_hien`.
+- Cửa sổ lập phương án (1.0.58): phím Ctrl+B (`bat_tat_ds_ho`), Space trên bảng mục (`BangMuc.bat_tat_chi_tiet`), F4 vẫn là xem trước A4. Khung
+  phụ `man_hinh_phu_lap_pa` dựng khi dùng lần đầu; khung chi tiết ghi qua ĐÚNG ô của bảng (`setText` -> `sua_o`), đừng ghi thẳng vào `bo.pa`.
 - Phím tắt trùng cùng ngữ cảnh: Qt không chạy cái nào. Không gắn Ctrl+Z / Ctrl+Y lên QAction (`giao_dien.xu_ly_hoan_tac` xử lý).
   F2 là phím sửa ô của bảng - không gán lệnh khác (giải trình dòng phương án dùng Ctrl+I).
 - Duyệt bố cục: KHÔNG lấy QLayoutItem (`itemAt` / `itemAtPosition` / `takeAt`) chỉ để đọc - vỏ Python của mục bố cục (QSpacerItem,

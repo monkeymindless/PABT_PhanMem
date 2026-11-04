@@ -52,6 +52,9 @@ COT_GD[4] = [('ma', 'Mã', 60), ('ten', 'Chính sách hỗ trợ', 300), ('cach_
 RONG_COT_GON = {'ma': 52, 'dvt': 55, 'so_luong': 72, 'don_gia': 92, 'ty_le': 54, 'thanh_tien': 105, 'nguon': 80,
                 'quy_cach': 90, 'ghi_chu': 150, 'can_cu_gia': 95}
 COT_GIAN = ('ten', 'cach_tinh', 'vi_tri')
+# 1.0.58 (Gói 3 đề án V2.0): chế độ Gọn cột ẩn cột phụ - nhường chỗ cho Tên; đọc / sửa ở khung chi tiết dòng (phím Space). Mặc định tắt
+COT_PHU_GON = {'ma', 'nguon', 'quy_cach', 'can_cu_gia'}
+KHOA_BANG_GON, KHOA_GHIM_DS_HO = 'lap_pa/bang_gon', 'lap_pa/ghim_ds_ho'
 CAO_NUT_DONG = 24                  # nút thao tác dòng (Xóa dòng, Lên, Xuống…) gọn
 THE_MUC = (0, 1, 2, 3, MUC_VN, 4)
 # 20/10/2026 (ảnh mẫu người dùng): bảng mục dòng 36 px, số / tiền phông Consolas canh phải; dải định danh hộ 38 px nền #F1F5F9
@@ -497,6 +500,12 @@ class BangMuc(QWidget):
         self._phim_xoa = QShortcut(QKeySequence(QKeySequence.StandardKey.Delete), self.bang)
         self._phim_xoa.setContext(Qt.ShortcutContext.WidgetShortcut)
         self._phim_xoa.activated.connect(lambda: man.xoa_dong(muc))
+        # 1.0.58: Space trên bảng (không đang sửa ô): bật / tắt khung chi tiết dòng dưới bảng
+        self.khung_ct = None
+        self._phim_ct = QShortcut(QKeySequence(Qt.Key.Key_Space), self.bang)
+        self._phim_ct.setContext(Qt.ShortcutContext.WidgetShortcut)
+        self._phim_ct.activated.connect(lambda: self.bat_tat_chi_tiet())
+        self.bang.currentCellChanged.connect(lambda r, *_: self._nap_chi_tiet(r))
         if muc == 1:
             for k, ds, goi, tay in (('thua', man.ds_thua_dong, man.doi_thua_dong, False),
                                     ('vi_tri', man.ds_vi_tri_dong, man.doi_vi_tri_dong, True)):
@@ -573,6 +582,16 @@ class BangMuc(QWidget):
             b.setStyleSheet('QPushButton { padding: 1px 8px; }')
             nut.addWidget(b)
             self.nut[ten] = b
+        self.b_gon = None
+        if muc != 1:                                     # mục 1 không có cột phụ để ẩn
+            self.b_gon = QPushButton('Gọn cột')
+            self.b_gon.setCheckable(True)
+            self.b_gon.setFixedHeight(CAO_NUT_DONG)
+            self.b_gon.setStyleSheet('QPushButton { padding: 1px 8px; }')
+            self.b_gon.setToolTip('Ẩn cột phụ (Mã, Nguồn giá, Quy cách, Căn cứ giá) để cột Tên rộng hơn. Xem / sửa các cột này ở khung chi '
+                                  'tiết dòng: chọn dòng rồi bấm phím Space.')
+            self.b_gon.toggled.connect(lambda v: man.doi_bang_gon(v))
+            nut.addWidget(self.b_gon)
         nut.addStretch(1)
         nut.setContentsMargins(0, 0, 0, 0)
         # dải chân bảng (20/10/2026, ảnh mẫu): "Tổng số: n hạng mục · Ctrl+C…" | "CỘNG MỤC k: … đ" (kiểu QSS_DAI_CONG_MUC)
@@ -692,6 +711,8 @@ class BangMuc(QWidget):
         khoi.addWidget(self.bang, 1)
         khoi.addWidget(self.dai_cong)
         lo.addLayout(khoi, 1)
+        self._khoi_bang = khoi
+        self.dat_gon(bool(getattr(man, '_bang_gon', False)))
         # nút Trở lại / Tiếp theo: MỘT hàng chung dưới đáy cửa sổ, cùng dải tổng cộng (CuaSoLapPA.hang_dieu_huong)
         self.bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.bang.customContextMenuRequested.connect(self.menu_dong)
@@ -910,6 +931,7 @@ class BangMuc(QWidget):
         else:
             them('Thêm dòng (ô nhập nhanh)', lambda: self.hang.o_chon.setFocus())
         them('Giải trình cách tính && căn cứ…\tCtrl+I', lambda: man.xem_giai_trinh_dong(muc, chon[0]), len(chon) == 1)
+        them('Chi tiết dòng\tSpace', lambda: self.bat_tat_chi_tiet(), len(chon) == 1)
         m.addSeparator()
         them('Nhân bản dòng', lambda: man.nhan_ban_dong(muc), len(chon) == 1)
         them(f'Xóa {len(chon)} dòng đã chọn' if len(chon) > 1 else 'Xóa dòng', lambda: man.xoa_dong(muc), co)
@@ -939,6 +961,36 @@ class BangMuc(QWidget):
         chu = it.text() if it is not None else ''
         QApplication.clipboard().setText(chu)
         return chu
+
+    def dat_gon(self, gon: bool) -> None:
+        """Chế độ Gọn cột: ẩn / hiện cột phụ (dữ liệu, sao chép, Tab giữa các ô không đổi - Tab tự bỏ qua cột ẩn)."""
+        for i, c in enumerate(self.cot):
+            if c[0] in COT_PHU_GON:
+                self._bang.setColumnHidden(i, gon)
+        if self.b_gon is not None and self.b_gon.isChecked() != gon:
+            self.b_gon.blockSignals(True)
+            self.b_gon.setChecked(gon)
+            self.b_gon.blockSignals(False)
+
+    def bat_tat_chi_tiet(self, hien: bool | None = None) -> bool:
+        """Hiện / ẩn khung chi tiết dòng dưới bảng (dựng lần đầu dùng). Trả trạng thái mới."""
+        hien = (self.khung_ct is None or self.khung_ct.isHidden()) if hien is None else bool(hien)
+        if self.khung_ct is None:
+            if not hien:
+                return False
+            from .man_hinh_phu_lap_pa import KhungChiTietDong
+            self.khung_ct = KhungChiTietDong(self)
+            self._khoi_bang.insertWidget(1, self.khung_ct)     # vào bố cục TRƯỚC khi hiện (không thành cửa sổ lạ)
+        self.khung_ct.setVisible(hien)
+        if hien:
+            self.khung_ct.nap()
+        else:
+            self._bang.setFocus()
+        return hien
+
+    def _nap_chi_tiet(self, r: int | None = None) -> None:
+        if self.khung_ct is not None and not self.khung_ct.isHidden() and not self._dang_ve:
+            self.khung_ct.nap(r)
 
     def dong_chon(self) -> int:
         return self.bang.currentRow()
@@ -1002,6 +1054,7 @@ class BangMuc(QWidget):
         self.vua_dong()
         if chon is not None and 0 <= chon < n:
             self.bang.setCurrentCell(chon, 1)
+        self._nap_chi_tiet()
 
     def vua_dong(self):
         """Chiều cao mọi dòng theo chữ thật trên bề rộng cột hiện tại (30-88 px)."""
@@ -1095,6 +1148,7 @@ class BangMuc(QWidget):
         if self._dang_ve or c >= len(self.cot):
             return
         self.man.sua_o(self.muc, r, self.cot[c][0], self.bang.item(r, c).text())
+        self._nap_chi_tiet()
 
 
 # ---------------------------------------------------------------- màn hình lập phương án hộ
@@ -1307,6 +1361,13 @@ class CuaSoLapPA(QDialog):
         self.b_sau.clicked.connect(lambda: self.sang_ho(1))
         self.b_truoc.setToolTip('Hộ trước (Ctrl+Left, Ctrl+PgUp)')
         self.b_sau.setToolTip('Hộ sau (Ctrl+Right, Ctrl+PgDn)')
+        self.b_ds_ho = QPushButton('DS hộ')             # 1.0.58: ghim danh sách hộ bên trái
+        self.b_ds_ho.setCheckable(True)
+        self.b_ds_ho.setProperty('khong_icon', True)
+        self.b_ds_ho.setFixedWidth(48)                  # hàng nút đã kín ở 1366 @125% (~1.090 điểm): không dùng bề rộng nút thường 80 px
+        self.b_ds_ho.setStyleSheet('QPushButton { padding: 0 2px; }')
+        self.b_ds_ho.setToolTip('Ghim danh sách hộ bên trái (Ctrl+B): bấm tên hộ để chuyển, lọc không dấu, đối chiếu hai hộ')
+        self.b_ds_ho.clicked.connect(lambda v: self.bat_tat_ds_ho(v))
         for b, ten in ((self.b_truoc, 'nut_ho_truoc'), (self.b_sau, 'nut_ho_sau')):
             b.setFixedWidth(32)
             b.setObjectName(ten)
@@ -1361,11 +1422,11 @@ class CuaSoLapPA(QDialog):
         h1 = QHBoxLayout(self.thanh_tren)
         h1.setContentsMargins(8, 4, 8, 4)
         h1.setSpacing(4)
-        for b in (self.b_truoc, self.b_sau, self.b_luu, self.b_bo, self.b_in, self.b_dong):
+        for b in (self.b_truoc, self.b_sau, self.b_ds_ho, self.b_luu, self.b_bo, self.b_in, self.b_dong):
             b.setFixedHeight(CAO_NUT_TREN)
         nhan = QLabel('Hộ:')
         nhan.setProperty('vai', 'nhan')
-        for w in (nhan, self.cb_ho, self.b_truoc, self.b_sau, self.b_dan):
+        for w in (nhan, self.cb_ho, self.b_truoc, self.b_sau, self.b_ds_ho, self.b_dan):
             h1.addWidget(w, 1 if w is self.cb_ho else 0)
         h1.addSpacing(10)
         h1.addStretch(0)
@@ -1410,6 +1471,10 @@ class CuaSoLapPA(QDialog):
         cuon0.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         cuon0.setWidget(the0)
         self.tab.addTab(cuon0, TEN_TAB[0])
+        from .giao_dien import cai_dat_nho
+        cd = cai_dat_nho()                              # 1.0.58: nhớ Gọn cột / ghim danh sách hộ (offscreen - kiểm thử: không đọc)
+        self._bang_gon = cd is not None and str(cd.value(KHOA_BANG_GON, 'false')).lower() in ('true', '1')
+        self._w_ds_ho = None
         self.bang = _BangMucTre(self)
         self._dang_dung_bang = set()
         for the, m in enumerate(THE_MUC[1:], start=1):
@@ -1455,9 +1520,11 @@ class CuaSoLapPA(QDialog):
         lo.addWidget(self.thanh_tren)
         lo.addWidget(self._tao_dai_dinh_danh())        # 20/10/2026: chủ hộ, CCCD, địa chỉ, đợt trình, tổng kinh phí - một hàng 38 px
         lo.addWidget(self._tao_dai_lan())              # 1.0.05: lần phương án (lần đầu + bổ sung)
-        lo_tach = QVBoxLayout()
+        lo_tach = QHBoxLayout()                         # 1.0.58: [danh sách hộ ghim] + vùng soạn | xem trước
         lo_tach.setContentsMargins(6, 0, 6, 0)
-        lo_tach.addWidget(self.tach)
+        lo_tach.setSpacing(6)
+        lo_tach.addWidget(self.tach, 1)
+        self._lo_tach = lo_tach
         lo.addLayout(lo_tach, 1)
         self._phim = []
         for phim, ham in ((QKeySequence(QKeySequence.StandardKey.Save), lambda: self.luu()),
@@ -1472,7 +1539,9 @@ class CuaSoLapPA(QDialog):
                           # 0.9.84: bật / tắt xem trước A4 (cả khi đang đứng trong ô bảng / ô chữ của cửa sổ)
                           (QKeySequence('F4'), lambda: self.bat_tat_xem_truoc()),
                           # 1.0.55: giải trình cách tính dòng đang chọn (không dùng F2 - phím sửa ô của bảng)
-                          (QKeySequence('Ctrl+I'), lambda: self.xem_giai_trinh_dong())):
+                          (QKeySequence('Ctrl+I'), lambda: self.xem_giai_trinh_dong()),
+                          # 1.0.58: ghim danh sách hộ bên trái
+                          (QKeySequence('Ctrl+B'), lambda: self.bat_tat_ds_ho())):
             sc = QShortcut(phim, self)
             # WidgetWithChildren: chỉ khi đang làm việc trên cửa sổ lập PA — tránh đụng Ctrl+Shift+V của tab Đơn giá bồi thường
             if phim.toString() == 'Ctrl+Shift+V':
@@ -1486,6 +1555,8 @@ class CuaSoLapPA(QDialog):
         self._dang_nap = False
         self.nap_ho()
         self.tab.setCurrentIndex(1 if self.bo.pa.dat or any(self.bo.pa.khoan[m] for m in MUC_KHOAN) else 0)
+        if cd is not None and str(cd.value(KHOA_GHIM_DS_HO, 'false')).lower() in ('true', '1'):
+            self.bat_tat_ds_ho(True, nho=False)
 
     # ---------------------------------------------- nhiều lần lập phương án (1.0.05)
     def _tao_dai_dinh_danh(self) -> QFrame:
@@ -1677,7 +1748,8 @@ class CuaSoLapPA(QDialog):
             b.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers if k else bm._et_goc)
             for w in bm.findChildren(QWidget):
                 if isinstance(w, (QAbstractButton, QLineEdit, QComboBox, QAbstractSpinBox)) and not b.isAncestorOf(w) \
-                        and w is not b:
+                        and w is not b and w is not bm.b_gon \
+                        and not (bm.khung_ct is not None and bm.khung_ct.isAncestorOf(w)):   # 1.0.58: chỉ đổi cách xem / ô tự chỉ đọc
                     w.setEnabled(not k)
         from . import phan_quyen
         self.b_dan.setEnabled(not k0 and phan_quyen.quyen_bang(vt, 2)['khoi_luong'])
@@ -1942,6 +2014,57 @@ class CuaSoLapPA(QDialog):
         return True
 
     # ---------------------------------------------- hiển thị
+    def bat_tat_ds_ho(self, hien: bool | None = None, nho: bool = True) -> bool:
+        """Ghim / bỏ ghim danh sách hộ bên trái (Ctrl+B; dựng lần đầu dùng). Trả trạng thái mới."""
+        hien = (self._w_ds_ho is None or self._w_ds_ho.isHidden()) if hien is None else bool(hien)
+        if self._w_ds_ho is None and hien:
+            from .man_hinh_phu_lap_pa import KhungDsHo
+            self._w_ds_ho = KhungDsHo(self)
+            self._lo_tach.insertWidget(0, self._w_ds_ho)      # vào bố cục TRƯỚC khi hiện (không thành cửa sổ lạ)
+        if self._w_ds_ho is not None:
+            if hien:
+                self._w_ds_ho.setFixedWidth(self._rong_ds_ho())
+            self._w_ds_ho.setVisible(hien)
+            if hien:
+                self._w_ds_ho.nap()
+        self.b_ds_ho.setChecked(hien)
+        if nho:
+            from .giao_dien import cai_dat_nho
+            cd = cai_dat_nho()
+            if cd is not None:
+                cd.setValue(KHOA_GHIM_DS_HO, hien)
+        return hien
+
+    def _rong_ds_ho(self, rong_man: int | None = None) -> int:
+        """Bề rộng danh sách ghim: RONG_DS_HO; màn hình không đủ chỗ cho phần soạn + danh sách (1366 @125%) thì hẹp lại, không dưới 120,
+        để cửa sổ không rộng hơn màn hình (tên dài: xem chú thích khi rê chuột)."""
+        from .man_hinh_phu_lap_pa import RONG_DS_HO
+        if rong_man is None:
+            man = self.screen() or QApplication.primaryScreen()
+            rong_man = man.availableGeometry().width() if man is not None else 10 ** 6
+        m = self.layout().contentsMargins()
+        con = rong_man - self.tach.minimumSizeHint().width() - m.left() - m.right() - 12 - 16
+        return max(120, min(RONG_DS_HO, con))
+
+    def doi_bang_gon(self, gon: bool) -> None:
+        """Bật / tắt Gọn cột cho mọi bảng mục của cửa sổ (bảng chưa dựng đọc _bang_gon khi dựng); nhớ cho lần sau."""
+        self._bang_gon = bool(gon)
+        for bm in self.bang.values():
+            bm.dat_gon(self._bang_gon)
+        from .giao_dien import cai_dat_nho
+        cd = cai_dat_nho()
+        if cd is not None:
+            cd.setValue(KHOA_BANG_GON, self._bang_gon)
+
+    def doi_chieu_ho(self, ma_b: int | None = None, cho: bool = True):
+        """Hộp đối chiếu phương án đã lưu của hộ đang mở với hộ khác (mặc định hộ kế tiếp) - không chặn cửa sổ này."""
+        from .man_hinh_phu_lap_pa import HopSoSanhHo
+        ma_b = ma_b if ma_b is not None else (self.bo.ho_ke(1) or self.bo.ho_ke(-1))
+        d = HopSoSanhHo(self, self.bo.con, self.bo.danh_sach_ho(), self.bo.ma_ho, ma_b)
+        if cho:
+            d.show()
+        return d
+
     def nap_ho(self):
         self._dang_nap = True
         try:
@@ -1949,6 +2072,8 @@ class CuaSoLapPA(QDialog):
             i = self.cb_ho.findData(self.bo.ma_ho)
             self.cb_ho.setCurrentIndex(i)
             self._hien_ten_ho()
+            if self._w_ds_ho is not None and not self._w_ds_ho.isHidden():
+                self._w_ds_ho.nap()
             h = self.bo.pa.ho
             self.o_nk.setValue(h.nhan_khau or 0)
             self.o_di_chuyen.setChecked(h.phai_di_chuyen)
@@ -2859,6 +2984,8 @@ class CuaSoLapPA(QDialog):
         rong = man.availableGeometry().width() if man is not None else 10 ** 6
         m = self.layout().contentsMargins()
         con = rong - self.tach.widget(0).minimumSizeHint().width() - m.left() - m.right() - self.tach.handleWidth() - 16
+        if self._w_ds_ho is not None and not self._w_ds_ho.isHidden():      # 1.0.58: danh sách hộ ghim cũng chiếm chỗ
+            con -= self._w_ds_ho.width() + 6
         self.w_preview.setMinimumWidth(max(RONG_XEM_TOI_THIEU, min(520, con)))
 
     def lam_moi_xem_truoc(self, ngay: bool = False) -> None:

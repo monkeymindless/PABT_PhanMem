@@ -582,6 +582,16 @@ tiêu ngữ. Tên đơn vị, tên dự án dài ngắn khác nhau vẫn canh đ
 - **Bảng mục III gọn (1.0.57)**: phương án chi tiết không in các mục nhà, cây trồng, vật nuôi, hỗ trợ, thưởng khi mục đó 0 đồng và
   không có dòng nào; có tài sản (kể cả chưa có giá, chỉ ghi chú) thì mục vẫn in. Số mục đánh lại liền nhau; dòng thưởng in đậm;
   cột STT căn giữa ở mọi dòng.
+- **Làm nhanh trong cửa sổ lập phương án (1.0.58)**:
+  - **DS hộ** (hoặc **Ctrl+B**): ghim danh sách hộ bên trái; bấm tên để chuyển hộ (còn thay đổi chưa lưu thì vẫn hỏi lưu), gõ vào ô trên
+    cùng để lọc không cần dấu. Màn hình hẹp thì danh sách tự hẹp lại, rê chuột lên tên để xem đủ chữ.
+  - **Gọn cột** (bảng nhà, cây trồng, vật nuôi, hỗ trợ): ẩn cột Mã, Nguồn giá, Quy cách, Căn cứ giá để cột Tên rộng hơn; bấm lại để hiện.
+    Mặc định tắt, phần mềm nhớ lựa chọn. Số liệu và bản in không đổi.
+  - **Phím Space** trên bảng (hoặc chuột phải > **Chi tiết dòng**): khung dưới bảng hiện cách tính của dòng đang chọn, sửa được quy cách, căn
+    cứ giá, ghi chú; khung đi theo dòng đang chọn. Space lại hoặc **Đóng** để tắt. Phương án đã khóa thì các ô chỉ xem.
+  - **Đối chiếu hai hộ**: nút dưới danh sách hộ ghim (hoặc chuột phải một hộ > **Đối chiếu với hộ đang mở**). Bảng so từng dòng theo số liệu
+    **đã lưu**: khác đơn giá (tô màu), khác số lượng, chỉ một hộ có, chênh lệch tổng tiền; chọn **Chỉ dòng khác nhau** để lọc, **Đọc lại** sau
+    khi lưu. Hộp chỉ đọc, không chặn cửa sổ đang soạn.
 - **Phân quyền 6 vai trò (1.0.57, máy chủ LAN)**: quản trị vào **Quản lý tài khoản**, chọn tài khoản, chọn ô **Vai trò** rồi bấm
   **Đổi vai trò**. Lãnh đạo: quản trị, bộ đơn giá, mở khóa phương án, quyết định / chi trả, khôi phục mốc. Thẩm định viên: khóa thẩm
   định phương án. Chuyên viên lập phương án: hồ sơ, phương án, niêm yết, đợt trình (chỉ xóa hộ chưa lập). Kiểm đếm viên: hồ sơ và khối

@@ -7,6 +7,15 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.58', '04/11/2026', (
+        'Cửa sổ lập phương án: nút "DS hộ" (Ctrl+B) ghim danh sách hộ bên trái - bấm tên để chuyển hộ, gõ để lọc không dấu.',
+        'Nút "Gọn cột" trên bảng nhà, cây, vật nuôi, hỗ trợ: ẩn cột Mã, Nguồn giá, Quy cách, Căn cứ giá để cột Tên rộng hơn (mặc định tắt, nhớ cho '
+        'lần sau). Phím Space trên bảng: khung chi tiết dòng dưới bảng - xem cách tính, sửa quy cách, căn cứ giá, ghi chú ngay tại đó.',
+        'Đối chiếu hai hộ (nút dưới danh sách hộ ghim, hoặc chuột phải một hộ): so phương án đã lưu, báo cùng tài sản khác đơn giá, khác số '
+        'lượng, chỉ một hộ có, chênh lệch tổng tiền. Chỉ đọc, mở song song khi đang soạn.',
+        'Đọc bản PDF đơn giá Phụ lục II đúng như bản Word: đủ các dòng nhà, tên không còn rác ("đồng/m2", "STT Danh mục"), ĐVT xuống dòng '
+        '("m sâu", "m dài", "giếng"), số tiền trong ngoặc giải thích hoặc câu hướng dẫn không còn thành mục.',
+    )),
     ('1.0.57', '04/11/2026', (
         'Phương án chi tiết (bản Word, bản Excel): mục nhà / cây trồng / vật nuôi / hỗ trợ / thưởng không có tiền và không có dòng tài sản '
         'nào thì KHÔNG in; mục có tài sản (kể cả tài sản chưa có giá, chỉ có ghi chú) hoặc có tiền thì giữ. Các mục còn lại đánh số liền '

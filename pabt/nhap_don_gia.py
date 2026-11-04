@@ -903,6 +903,17 @@ _RE_CHU_THICH_TRANG = re.compile(r'(?:muc|phu luc|dieu|khoan|diem) nay (?:duoc|d
 _RE_STT_HOP_LE = re.compile(r'[(\s]*(?:\d{1,3}[a-z]?|[IVXLHJÏ]{1,6}|[a-zđ]|[-+–•*]+|\d+\.\d+)[.):\'"’”°,]*\s*')
 
 
+# 1.0.58 - Phụ lục II bản PDF đọc theo dòng (QĐ 18/2026): ĐVT xuống dòng ("… đồng/m" + "sâu 631.000", "đồng/giế" + "ng" + "277.000"); bảng
+# "Loại | Quy mô, kết cấu": tên ở dòng "Nhà …", mô tả nhiều dòng, số loại rơi lẫn vào dòng mô tả, giá một dòng riêng
+_RE_DVT_MO = re.compile(r'^(?P<ten>.*?)\s*(?:đồng|đ)\s*/\s*(?P<dv>[^\s/]+)$', re.I)
+_RE_SO_TIEN = re.compile(r'\d{1,3}(?:[.,]\d{3})+')
+_RE_NOI_DVT_GIA = re.compile(r'(?P<du>[^\d/]{1,12}?)\s+(?P<g>\d{1,3}(?:[.,]\d{3})+)')
+_RE_NOI_DVT = re.compile(r'[^\W\d_]+(?: [^\W\d_]+)?')
+_RE_LOI_GIA_THEM = re.compile(r'(?i)(?:tính thêm|tăng thêm|giảm trừ|giảm)\s*$')     # "… thì tính thêm 110.000" (đồng/m² ở dòng sau): lời văn
+_RE_TEN_LOAI = re.compile(r'^(?:Nhà|Công trình|Biệt thự)\b')
+_RE_MO_TA_LOAI = re.compile(r'^(?:Kết cấu|Vật liệu hoàn thiện|Phần diện tích)\b')
+
+
 def _tu_dau_chu(ten: str) -> str:
     m = re.match(r'\W*(\w+)', bo_dau(ten or ''))
     return m.group(1) if m else ''
@@ -940,6 +951,10 @@ class _DocDong:
         self.duoi = ''                    # dấu phẩy / chấm phẩy cuối tên mục vừa đọc (ô tên xuống dòng: nối giữ dấu)
         self.dvt_cho = ''                 # 1.0.57: dòng chỉ có ĐVT ("Đồng/m²") - ĐVT của dòng giá kế tiếp ("sàn 9.445.000")
         self.dvt_bang = ''                # ĐVT ghi ở dòng tiêu đề bảng ("Đơn giá (đồng/m2 sàn)")
+        self.dvt_mo = False               # 1.0.58: ĐVT vừa đọc có thể còn phần ở dòng sau ("đồng/m" + "sâu 631.000")
+        self.bang_stt = False             # 1.0.58: bảng "STT | Danh mục | ĐVT | Đơn giá": mỗi mục một STT, dòng không STT là ô tên xuống dòng
+        self.bang_loai = None             # 1.0.58: bảng "Loại | Quy mô, kết cấu | Đơn giá" (_doc_bang_loai)
+        self.loai_stt = None              # {id(Muc): số loại} - nhan_muc._ten_theo_loai
         self._bo_cha()
 
     def _bo_cha(self):
@@ -957,6 +972,24 @@ class _DocDong:
         của dòng nhóm đầu bảng nằm chung dòng tiêu đề; Phụ lục Ib "STT Loại biệt thự Đơn giá (đồng/m2"); mảnh tiêu đề xuống dòng ("tính
         Đơn giá", "sàn)"). Trả True = đã xử lý dòng."""
         k = bo_dau(s)
+        if self.bang_loai is not None and self.bang_loai['tieu_de']:      # mảnh tiêu đề "Đơn giá bồi / thường (đồng/m2 / sàn xây dựng)"
+            md = re.search(r'dong\s*/\s*(m2|m²|m3|m³|m)\b', k)
+            if md:
+                self.dvt_bang = chuan_dvt(md.group(1))
+            if re.fullmatch(r'[\d\s]+', s):                 # hàng số cột "1 2 3": hết tiêu đề
+                self.bang_loai['tieu_de'] = False
+            return True
+        if re.match(r'loai\s+quy mo', k):
+            self.bang_loai = dict(tieu_de=True, dem=0, ten='', mo_ta=[], da_gia=False, muc=None)
+            self.bang_stt, self.dvt_bang = False, ''
+            self._bo_cha()
+            self.cuoi = None
+            return True
+        if re.fullmatch(r'(?:stt|tt)\s+danh muc', k):       # tiêu đề xuống dòng: "STT Danh mục" / "Đơn vị" / "tính Đơn giá"
+            self.bang_stt, self.dvt_bang = True, ''
+            self._bo_cha()
+            self.cuoi = None
+            return True
         if re.fullmatch(r'(?:tinh|don vi(?: tinh)?|dvt|don gia|\(?dong\)?|san\)?|xay dung\)?|[\s().,/])+', k):
             return True                                     # mảnh tiêu đề cột xuống dòng
         m = re.match(r'(?:stt|tt)\s+(.*?)\s*(?:don vi(?: tinh)?|dvt|don gia)\b(.*)$', k)
@@ -969,6 +1002,7 @@ class _DocDong:
         self.cuoi = None
         kg = bo_dau(giua)
         if not giua or re.match(r'(ten|noi dung|hang muc|danh muc)\b', kg):
+            self.bang_stt = kg.startswith('danh muc')
             return True
         if kg.startswith('loai '):                          # "Loại biệt thự" -> dòng cha "Biệt thự" (tên mục "Biệt thự Song lập")
             giua = giua[5:].strip()
@@ -986,11 +1020,116 @@ class _DocDong:
         self.quy_tac.append(f'{ngu_canh}: {chu}' if ngu_canh else chu)
         self.cuoi = ('qt', len(self.quy_tac) - 1)
 
+    def _noi_dvt(self, du: str) -> None:
+        """Phần ĐVT ở dòng sau: "m" + "sâu" -> "m sâu"; "giế" + "ng" -> "giếng"."""
+        self.dvt_cho = f'{self.dvt_cho} {du}' if len(self.dvt_cho) <= 2 else self.dvt_cho + du
+
+    def _doc_bang_stt(self, s: str) -> str | None:
+        """Bảng mỗi mục một STT (1.0.58): dòng không STT, không giá là ô tên xuống dòng (kể cả chữ hoa, "(…)"); giá trong ngoặc chưa đóng
+        không phải giá của mục. Trả None = đã xử lý xong dòng; chữ = dòng còn lại để đọc tiếp."""
+        if _RE_TIEU_DE_VB.match(bo_dau(s)) and not _RE_STT_DONG.match(s):
+            self.bang_stt = False
+            return s
+        if re.fullmatch(r'\d{1,3}', s):                     # STT đứng riêng / số trang: hết mục trước
+            self._bo_cha()
+            self.dvt_cho, self.dvt_mo, self.cuoi = '', False, None
+            return None
+        dang_ten = self.cha and self.cuoi and self.cuoi[0] == 'cha'
+        if dang_ten and (f'{self.cha} {s}'.count('(') > f'{self.cha} {s}'.count(')')
+                         or (s[0] in ');' and self.cha.count('(') > self.cha.count(')'))):
+            self._noi_ten(s)
+            return None
+        if self.dvt_mo and self.cha:
+            m = _RE_NOI_DVT_GIA.fullmatch(s)
+            if m:
+                self._noi_dvt(m.group('du'))
+                self._gia_ngu_canh('', m.group('g'), s)
+                return None
+            if len(s) <= 12 and _RE_NOI_DVT.fullmatch(s):
+                self._noi_dvt(s)
+                return None
+        m = _RE_DVT_MO.match(s)
+        if m and not _RE_SO_TIEN.search(m.group('ten')):
+            self.dvt_cho, self.dvt_mo = chuan_dvt(m.group('dv')), True
+            s = m.group('ten').strip()
+            if not s:
+                return None
+        if dang_ten and not self.so_con and not _RE_SO_TIEN.search(s[-12:]) and not _RE_STT_DONG.match(s) and not _RE_GACH.match(s):
+            self._noi_ten(s)
+            return None
+        return s
+
+    def _noi_ten(self, s: str) -> None:
+        ket = self.cha_ket if self.cha_ket in ('.', ';', ',') and not self.cha.endswith(self.cha_ket) else ''
+        self.cha = f'{self.cha}{ket}{s}' if s[0] in ');' else f'{self.cha}{ket} {s}'
+        self.cha_ket = s.rstrip()[-1:]
+
+    def _doc_bang_loai(self, s: str) -> bool:
+        """Bảng "Loại | Quy mô, kết cấu công trình | Đơn giá" đọc theo dòng (1.0.58): tên ở dòng "Nhà …", mô tả "Kết cấu: …", "Vật liệu hoàn
+        thiện: …" nhiều dòng -> ghi chú; số loại nằm giữa ô rơi vào đầu / cuối một dòng bất kỳ và lẫn với số trang -> bỏ, số loại = thứ tự
+        mục trong nhóm A / B; giá một dòng riêng hoặc cuối dòng tên / mô tả. False = hết bảng (dòng đọc tiếp như thường)."""
+        L = self.bang_loai
+        if _RE_TIEU_DE_VB.match(bo_dau(s)):
+            self._ket_loai()
+            self.bang_loai = None
+            return False
+        if re.fullmatch(r'\d{1,2}', s):
+            return True
+        if re.match(r'^[A-ZĐ]\.\s+\w', s):                 # "A. Nhà, nhà ở" / "B. Nhà xưởng"
+            self._ket_loai()
+            L['dem'] = 0
+            self.nhom_muc = nhom_theo_chu(s) or self.nhom_muc
+            return True
+        s = re.sub(r'^\d{1,2}\s+(?=\S)', '', s)
+        if not _RE_TEN_LOAI.match(s):                   # "Nhà tạm 1": số thuộc tên
+            s = re.sub(r'\s+\d{1,2}$', '', s)
+        mg = re.search(r'(?:^|\s)(\d{1,3}(?:[.,]\d{3})+)\s*$', s)
+        than = s[:mg.start()].strip() if mg else s
+        if than:
+            self._chu_loai(than)
+        if mg and L['ten'] and not L['da_gia']:
+            L['dem'] += 1
+            self._them(L['ten'].rstrip(' .;:'), self.dvt_bang, doc_gia(mg.group(1)), None, '', s, '', '; '.join(L['mo_ta']), '')
+            L['muc'], L['da_gia'] = self.kq[-1], True
+            if self.loai_stt is not None:
+                self.loai_stt[id(L['muc'])] = str(L['dem'])
+        return True
+
+    def _chu_loai(self, than: str) -> None:
+        L = self.bang_loai
+        if _RE_TEN_LOAI.match(than):
+            self._ket_loai()
+            m = re.search(r'\s(?=Kết cấu\b|Vật liệu hoàn thiện\b)', than)     # "Nhà nuôi yến Kết cấu khung chịu lực …": tên + mô tả một dòng
+            ten, mo_ta = (than[:m.start()], than[m.end():]) if m else (than, '')
+            L.update(ten=ten, mo_ta=[mo_ta] if mo_ta else [], da_gia=False, muc=None)
+        elif _RE_MO_TA_LOAI.match(than):
+            L['mo_ta'].append(than)
+        elif L['mo_ta']:
+            L['mo_ta'][-1] = f'{L["mo_ta"][-1]} {than}'
+        elif L['ten'] and not L['da_gia']:
+            L['ten'] = f'{L["ten"]} {than}'
+        if L['muc'] is not None and not _RE_TEN_LOAI.match(than):
+            L['muc'].ghi_chu = '; '.join(L['mo_ta'])
+
+    def _ket_loai(self) -> None:
+        """Hết một tên: tên không có giá mà có mô tả ("Nhà nuôi yến kết hợp ở: Phần diện tích để ở …") là quy định cách tính."""
+        L = self.bang_loai
+        if L['ten'] and not L['da_gia'] and L['mo_ta'] and self.quy_tac is not None:
+            self.quy_tac.append(f'{L["ten"]}: {" ".join(L["mo_ta"])}')
+        L.update(ten='', mo_ta=[], da_gia=False, muc=None)
+
     def doc(self, s: str):
         s = ' '.join(str(s or '').split())
         if not s:
             return
+        s = re.sub(r'(?i)\bdông\s*/', 'đồng/', s)           # văn bản gõ sai "dông/m2"
+        if self.bang_stt:
+            s = self._doc_bang_stt(s)
+            if s is None:
+                return
         if self._tieu_de_bang(s):
+            return
+        if self.bang_loai is not None and self._doc_bang_loai(s):
             return
         if _RE_CHI_DVT.fullmatch(s):                        # dòng chỉ có ĐVT ("Đồng/m²"): ĐVT của dòng giá kế tiếp
             self.dvt_cho = _dvt_nha(s)
@@ -1021,6 +1160,8 @@ class _DocDong:
                 g1 = None
         if g1 and mg.group('ten').rstrip().endswith(':'):      # lời văn "Cá thịt: 45.000" (ĐVT ở dòng sau) - không phải dòng bảng
             g1 = None
+        if g1 and not mg.groupdict().get('dvt') and _RE_LOI_GIA_THEM.search(mg.group('ten')):
+            g1 = None
         ten = mg.group('ten').strip(' -–:;,') if g1 else ''
         self.duoi = (re.search(r'[,;]\s*$', mg.group('ten')) or [''])[0].strip() if g1 else ''
         if not g1 or not ten or re.fullmatch(r'[\d\W]+', ten):
@@ -1046,7 +1187,7 @@ class _DocDong:
             cha_cua, ten = self.cha, f'{self.cha} {ten}'
             self.so_con += 1
         elif self.cha:
-            if thuong and not gach and self.so_con == 0 and self.cha_ket not in (':', ')'):
+            if not gach and self.so_con == 0 and ((thuong and self.cha_ket not in (':', ')')) or self.bang_stt):
                 ten = f'{self.cha} {ten}'                           # dòng cha xuống dòng: cùng một mục
                 gc = self.mat_do
                 self._bo_cha()
@@ -1081,6 +1222,7 @@ class _DocDong:
     def _them(self, ten, dvt, g1, g2, ma, nguon, cha, gc, khoang):
         self.mo_ta = False
         self.dvt_cho = ''
+        self.dvt_mo = False
         nh = self.nhom or self.nhom_muc or _nhom_dong(ten, dvt)
         if g2:
             ds = [Muc(ten, dvt, g1, ma, nguon, nhom=nh, ghi_chu=gc, cha=cha, muc_gia='thap', khoang=khoang),
@@ -1185,6 +1327,7 @@ def nhan_muc(dong: list, nhom: int = 0, quy_tac: list | None = None) -> list:
     kv, n_kv = '', 0
     mo_ta_cho = tien_to_bang = ''           # 1.0.57: mô tả kết cấu chờ gắn vào mục kế tiếp; tiền tố tên ("Biệt thự")
     la_loai_bang, n_cha, loai_stt = False, 0, {}
+    doc_dong.loai_stt = loai_stt
     for r in dong:
         for m_ in kq[n_kv:]:                              # 1.0.57: khu vực giá của phụ lục chứa dòng (tiêu đề "… KHU VỰC 2 …")
             m_.khu_vuc = m_.khu_vuc or kv
