@@ -72,6 +72,10 @@ class Muc:
     nghi_gia: str = ''            # chữ ô giá bản scan không đúng dạng số tiền ("S27.312", "729/009"): giá đã sửa đoán - không chọn sẵn
     tach_tu: str = ''             # dòng văn bản ghi nhiều loài ("Cây cải xanh, cải ngọt, cải thìa") đã tách theo bộ đơn giá
     khu_vuc: str = ''             # 1.0.57: văn bản nhiều khu vực giá ("PHỤ LỤC II … KHU VỰC 2") - số khu vực của phụ lục chứa dòng
+    he_so: str = ''               # 1.0.60: mức là HỆ SỐ, không phải số tiền ("1.5" lần giá đất nông nghiệp): don_gia = 0, ghi chữ này
+    he_so_cu: str = ''            # hệ số đang dùng trong bộ đơn giá (so_khop)
+    can_cu: str = ''              # 1.0.60: "Điểm a khoản 1 Điều 8" - dòng đọc từ điều khoản (khớp mục hỗ trợ theo Điều / giá / nghiệp vụ)
+    ngu_canh: str = ''            # tiêu đề Điều + câu dẫn khoản của dòng (nhận nhóm nghiệp vụ)
 
 
 class LoiPdfScan(LoiNhap):
@@ -373,10 +377,133 @@ def doc_bang_ocr(file, bao_tien_do=None, cho=None) -> list:
 
 # ---------------------------------------------------------------- nhận biết văn bản: số, ngày, cơ quan ban hành, trích yếu
 # loại văn bản trong số hiệu: QĐ, NQ, CT (địa phương); NĐ (nghị định), TT / TTLT (thông tư), QH15 (luật, nghị quyết Quốc hội)
-_RE_SO_VB = re.compile(r'(?i)\bs[ốo]\s*:?\s*(\d+[a-z]?\s*/\s*(?:\d{4}\s*/\s*)?(?:QĐ|QD|NQ|CT|NĐ|ND|TTLT|TT|QH)[\w.Đđ-]*)')
-_RE_SO_TRONG = re.compile(r'(?i)\b(\d+[a-z]?\s*/\s*(?:\d{4}\s*/\s*)?(?:(?:QĐ|QD|NQ|NĐ|ND|TTLT|TT)-[\wĐđ.]+|QH\d+))')
+_LOAI_SO = r'(?:QĐ|QD|NQ|CT|NĐ|ND|TTLT|TT|QH|VBHN)'
+_RE_SO_VB = re.compile(r'(?i)\bs[ốoôơó]\s*(?:hi[ệe]u)?\s*:?\s*(\d+[a-z]?\s*/\s*(?:\d{4}\s*/\s*)?' + _LOAI_SO + r'[\w.Đđ-]*)')
+_RE_SO_TRONG = re.compile(r'(?i)\b(\d+[a-z]?\s*/\s*(?:\d{4}\s*/\s*)?(?:(?:QĐ|QD|NQ|NĐ|ND|TTLT|TT|VBHN)-[\wĐđ.]+|QH\d+))')
 _TIEU_DE_LOAI = ('quyet dinh', 'nghi quyet', 'nghi dinh', 'thong tu', 'thong tu lien tich', 'luat')
 _RE_NGAY_VB = re.compile(r'(?i)ngày\s*(\d{1,2})\s*(?:/|-|tháng)\s*(\d{1,2})\s*(?:/|-|năm)\s*(\d{4})')
+# 1.0.60: trên chữ đã bỏ dấu (bản OCR hay đọc "nắm", "thảng"): chỉ lấy số
+_RE_NGAY_KD = re.compile(r'\bngay\s*(\d{1,2})\s*(?:/|-|\.|thang)\s*(\d{1,2})\s*(?:/|-|\.|nam)\s*(\d{4})')
+_RE_NGAY_KY = re.compile(r'\bky\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{4})')          # chữ ký số: "Thời gian ký: 02.10.2025 05:08:38"
+_RE_KEM_THEO = re.compile(r'(?i)kèm\s+theo\s+(?:Quyết\s+định|Nghị\s+quyết|Thông\s+tư|Nghị\s+định)\s+(?:số\s*:?\s*)?(\d+[a-z]?\s*/\s*(?:\d{4}\s*/\s*)?'
+                          + _LOAI_SO + r'[\w.Đđ-]*)')
+
+
+def chuan_chu_so_hieu(x: str) -> str:
+    """1.0.60 - sửa số hiệu văn bản bản OCR đọc rời trong chữ: "NĐ. CP", "NĐ- CP", "QĐ- UBND", "QH 15", "42 /2025/ QĐ-UBND"
+    -> "NĐ-CP", "QĐ-UBND", "QH15", "42/2025/QĐ-UBND". Chữ khác giữ nguyên."""
+    x = re.sub(r'(?i)\b(QĐ|QD|NĐ|ND|NQ|TTLT|TT|VBHN)\s*[.\-–—]\s*(?=(?:UBND|HĐND|HDND|CP|TTg|BTNMT|BNNMT|BTC|BXD|BNN|UBTVQH)\b)', r'\1-', x)
+    x = re.sub(r'\b(QH)\s+(\d{2})\b', r'\1\2', x)
+    return re.sub(r'\b(\d{1,4}[a-z]?)\s*/\s*(\d{4})\s*/\s*(?=' + _LOAI_SO + r')', r'\1/\2/', x)
+
+
+def _so_hieu_sach(so: str) -> str:
+    """Số hiệu bắt được -> dạng ghi: bỏ khoảng trắng, dấu cuối; "QD-UBND" (OCR mất dấu) -> "QĐ-UBND", "ND-CP" -> "NĐ-CP"."""
+    so = re.sub(r'\s+', '', so).strip('.,;:')
+    return re.sub(r'(?i)/ND-', '/NĐ-', re.sub(r'(?i)/QD-', '/QĐ-', so))
+
+
+def so_hieu_tu_ten_file(ten: str) -> str:
+    """Số hiệu suy từ tên file khi phần đầu văn bản không đọc được: "42_QDQPPL_QPPL_2025 thay thế 58, 62.pdf",
+    "31_2025_QD-UBND_673864.docx", "QD42-2025-QD-UBND 02-10-2025 ….docx" -> "42/2025/QĐ-UBND"; không suy được -> ''."""
+    k = bo_dau(re.split(r'[\\/]', str(ten or ''))[-1]).upper()
+    m = re.search(r'(?<!\d)(\d{1,4})[_ -]+(\d{4})[_ -]+VBHN', k)
+    if m:
+        return f'{m.group(1)}/{m.group(2)}/VBHN-UBND'
+    m = re.search(r'(?<!\d)(\d{1,4})[_ -]+(\d{4})[_ -]+QD[_ -]+(?:UBND|QPPL)', k) or re.search(r'\bQD[_ -]*(\d{1,4})[_ -]+(\d{4})[_ -]+QD', k)
+    if m:
+        return f'{m.group(1)}/{m.group(2)}/QĐ-UBND'
+    m = re.search(r'(?<!\d)(\d{1,4})[_ -]+QD\w*[_ -]+(?:QPPL[_ -]+)?(\d{4})(?!\d)', k)
+    if m:
+        return f'{m.group(1)}/{m.group(2)}/QĐ-UBND'
+    m = re.search(r'(?<!\d)(\d{1,4})[_ -]+(\d{4})[_ -]+NQ[_ -]+HDND', k)
+    return f'{m.group(1)}/{m.group(2)}/NQ-HĐND' if m else ''
+
+
+def _ngay_tu(m) -> str:
+    d, t, n = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    return f'{d:02d}/{t:02d}/{n}' if 1 <= d <= 31 and 1 <= t <= 12 and 1950 <= n <= 2100 else ''
+
+
+def _phan_dau(dau: list) -> list:
+    """Các dòng phần đầu văn bản: trước tiêu đề loại văn bản ("QUYẾT ĐỊNH") hoặc dòng "Căn cứ" đầu tiên; không có các dòng đó (bảng,
+    trích đoạn) -> 30 dòng đầu."""
+    for i, x in enumerate(dau):
+        k = bo_dau(x)
+        if i and k.rstrip(' :') in _TIEU_DE_LOAI:
+            return dau[:i]
+        if k.startswith(('can cu ', 'xet de nghi', 'theo de nghi')):
+            return dau[:i]
+    return dau[:30]
+
+
+# cụm dẫn chiếu "được sửa đổi, bổ sung (một số điều) bởi (các) Luật số …, Nghị định số …" - văn bản KHÁC sửa văn bản được dẫn, không phải nội
+# dung sửa đổi; chỉ ăn các số hiệu ngay sau "bởi" (phần còn lại của câu giữ nguyên). Chữ bản OCR hay sai: sửa/sủa/sứa, đổi/đôi/đối, bổ/bô/bố
+_RE_DAN_CHIEU = re.compile(r'(?i),?\s*(?:đã\s+|đang\s+)?(?:được|bị)\s+s[ửủứu]a\s+đ[ổôốồỗo]i\s*,?\s*(?:và\s+)?b[ổôốồỗo]\s+sung(?:\s+một\s+s[ốô]\s+điều)?\s+'
+                           r'(?:bởi|tại|theo)(?:\s*(?:,|\||và(?=\s+(?:s[ốô]|Luật|Nghị|\d))|các\b\.?|Luật\b|Nghị\s+định\b|Thông\s+tư\b|Quyết\s+định\b|s[ốô](?=\s*\d)|s[ốô]\b|\d+/\d{4}/[\w.Đđ-]*[\wĐđ]))+')
+_RE_THAY_THE = re.compile(r'(?:^|\b(?:quyet dinh|nghi quyet|nghi dinh|thong tu|van ban)(?: nay)?\s+)(?:va\s+)?(thay the|bai bo|sua doi|bo sung|ngung ap dung)\b')
+_RE_CAU_HIEU_LUC = re.compile(r'\b(thay the|bai bo|het hieu luc|ngung ap dung)\b')
+_RE_BI_THAY = re.compile(r'(?i)\b(\d{1,4}[a-z]?/\d{4}/(?:QĐ|QD|NQ|NĐ|ND)-[\wĐđ.]*[\wĐđ])')
+_RE_DOI_TUONG = re.compile(r'\b(?:quyet dinh|nghi quyet|nghi dinh|thong tu|van ban|dieu|khoan|diem|muc|phu luc|bang|quy dinh)\b')
+
+
+def bo_dan_chieu(x: str) -> str:
+    """Chữ bỏ cụm "được sửa đổi, bổ sung bởi …" (số hiệu đọc rời hai dòng "NĐ-" + "CP" nối lại trước)."""
+    return _RE_DAN_CHIEU.sub('', chuan_chu_so_hieu(x))
+
+
+def khoan_hieu_luc(dong: list) -> tuple:
+    """1.0.60: (các khoản về việc sửa đổi / thay thế / bãi bỏ của CHÍNH văn bản, [số hiệu văn bản bị thay thế]). Bỏ phần "Căn cứ …" và cụm
+    dẫn chiếu "được sửa đổi, bổ sung bởi Luật số …". Khoản dẫn "… thay thế các Quy định sau:" kéo theo các điểm a), b), c) ngay dưới
+    (Điều 2 QĐ 42/2025: thay thế QĐ 58/2024, Điều 4 và khoản 3 Điều 5 QĐ 62/2024, QĐ 05/2025)."""
+    van = dong_loi_van(dong)
+    i0 = next((i for i, x in enumerate(van) if re.match(r'(?:quyet dinh|quyet nghi)\s*:$|dieu\s+\d+\s*[.:]', bo_dau(x))), 0)
+    can_xem, bi_thay = [], []
+    dan = False
+
+    def them_so(chu):
+        for m in _RE_BI_THAY.finditer(bo_dan_chieu(chu)):
+            so = _so_hieu_sach(m.group(1))
+            if so not in bi_thay:
+                bi_thay.append(so)
+    for c in _khoan_van(van[i0:]):
+        k = bo_dau(c)
+        if k.startswith(('can cu ', 'theo de nghi', 'xet de nghi')) or re.match(r'n\w{0,2}i nhan|tm\.|kt\.', k):
+            dan = False
+            continue
+        cap, than = _bo_dau_khoan(c)
+        if dan and cap == 3:                            # điểm a), b), c) của khoản dẫn
+            can_xem.append(c[:300])
+            them_so(c)
+            continue
+        dan = False
+        than_k = bo_dau(bo_dan_chieu(than))
+        m = _RE_THAY_THE.search(than_k[:120])
+        if m and (_RE_DOI_TUONG.search(than_k) or re.search(r'\d', than_k)):
+            can_xem.append(c[:300])
+            if m.group(1) not in ('sua doi', 'bo sung') or than.rstrip().endswith(':'):
+                them_so(c)
+            dan = than.rstrip().endswith(':')
+        elif _RE_CAU_HIEU_LUC.search(than_k) and _RE_BI_THAY.search(bo_dan_chieu(than)) and \
+                re.search(r'(?:quyet dinh|nghi quyet)\s+(?:so\b|nay\b)', than_k):
+            # "Quyết định này có hiệu lực từ … và thay thế Quyết định số …", "Quyết định số … hết hiệu lực kể từ …"
+            can_xem.append(c[:300])
+            them_so(c)
+    return can_xem, bi_thay
+
+
+def van_ban_cu_theo_so_hieu(so_hieu: list | tuple) -> list:
+    """[(id, số hiệu, nội dung)] các dòng văn bản căn cứ của bộ đơn giá đang dùng ứng với số hiệu trong danh sách, còn hiệu lực."""
+    ks = [chuan_so_hieu(x) for x in so_hieu or () if x]
+    if not ks:
+        return []
+    con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
+    try:
+        ds = [tuple(r) for r in con.execute('SELECT id, so_hieu, noi_dung, trang_thai FROM van_ban')]
+    finally:
+        con.close()
+    return [(i, sh, nd) for i, sh, nd, tt in ds if 'het hieu luc' not in bo_dau(tt)
+            and any(re.search(r'(?<!\d)' + re.escape(k), chuan_so_hieu(sh)) for k in ks)]
 
 
 def chuan_so_hieu(s: str) -> str:
@@ -388,19 +515,41 @@ def phan_tich_van_ban(dong: list, ten_goi: str = '') -> dict:
     """Số hiệu, ngày ban hành, cơ quan, loại, trích yếu của văn bản (các dòng đầu đọc từ Word / PDF / OCR) và tên gọi trên
     trang web (nếu có); nhom: nhóm danh mục đoán theo trích yếu (3 cây trồng, vật nuôi / 2 nhà, công trình / 4 hỗ trợ);
     dong_nai: văn bản của Đồng Nai; sua_doi: văn bản sửa đổi, bổ sung."""
-    dau = [' '.join(' '.join(c for c in r if c).split()) for r in dong[:150]]
+    dau = [chuan_chu_so_hieu(' '.join(' '.join(str(c) for c in r if c).split())) for r in dong[:150]]
     toan = '\n'.join(x for x in dau if x)
+    # 1.0.60 (QĐ 42/2025 bản scan): số hiệu, ngày CHỈ ở phần đầu văn bản (dòng "Căn cứ Luật … số 72/2025/QH15" là văn bản khác); phần đầu
+    # không đọc được (OCR "Số: 4à /2025/QĐ-UBND"): câu "Ban hành kèm theo Quyết định số … ngày …", tên trên trang web, tên file; ngày thêm:
+    # chữ ký số "Thời gian ký: 02.10.2025"
+    chu_dau = '\n'.join(x for x in _phan_dau(dau) if x)
     so = ngay = ''
-    m = _RE_SO_VB.search(toan) or _RE_SO_TRONG.search(ten_goi or '')
-    if m:
-        so = re.sub(r'\s+', '', m.group(1)).strip('.,;')
-        mn = _RE_NGAY_VB.search(toan[m.end(): m.end() + 300]) if m.re is _RE_SO_VB else None
-        mn = mn or _RE_NGAY_VB.search(toan) or _RE_NGAY_VB.search(ten_goi or '')
-        if mn:
-            ngay = f'{int(mn.group(1)):02d}/{int(mn.group(2)):02d}/{mn.group(3)}'
+    mso = _RE_SO_VB.search(chu_dau)
+    kem = None
+    for x in dau:
+        if not bo_dau(x).startswith('can cu'):
+            kem = _RE_KEM_THEO.search(x)
+            if kem:
+                break
+    if mso:
+        so = _so_hieu_sach(mso.group(1))
+    elif kem:
+        so = _so_hieu_sach(kem.group(1))
+    else:
+        mt = _RE_SO_TRONG.search(chuan_chu_so_hieu(ten_goi or ''))
+        so = _so_hieu_sach(mt.group(1)) if mt else so_hieu_tu_ten_file(ten_goi)
+    mn = _RE_NGAY_KD.search(bo_dau(chu_dau))
+    if mn is None and kem is not None:
+        mn = _RE_NGAY_KD.search(bo_dau(kem.string[kem.end():]))
+    if mn is None:
+        mn = _RE_NGAY_KY.search(bo_dau(chu_dau))
+    if mn is None and so:
+        mn = _RE_NGAY_KY.search(bo_dau(toan)) or _RE_NGAY_KD.search(bo_dau(ten_goi or ''))
+    if mn and so:
+        ngay = _ngay_tu(mn)
     kd = bo_dau(toan[:1500])
     co_quan = ''
-    mc = re.search(r'(uy ban nhan dan|hoi dong nhan dan)\s+(tinh|thanh pho)\s+dong nai', kd)
+    # bản OCR đọc hai cột chung dòng: "ỦY BAN NHÂN DÂN CỘNG HÒA XÃ HỘI…" / "TỈNH ĐỒNG NAI Độc lập - Tự do…": bỏ quốc hiệu, tiêu ngữ
+    kd_cq = re.sub(r'cong hoa xa hoi chu nghia viet nam|doc lap\s*[-–—.]?\s*tu do\s*[-–—.]?\s*hanh phuc', ' ', kd)
+    mc = re.search(r'(uy ban nhan dan|hoi dong nhan dan)\W+(tinh|thanh pho)\W+dong nai', kd_cq)
     if mc:
         co_quan = ('Ủy ban nhân dân ' if mc.group(1).startswith('uy') else 'Hội đồng nhân dân ') + \
             ('tỉnh' if mc.group(2) == 'tinh' else 'thành phố') + ' Đồng Nai'
@@ -415,7 +564,7 @@ def phan_tich_van_ban(dong: list, ten_goi: str = '') -> dict:
                 co_quan = 'Bộ ' + ten[:1].upper() + ten[1:]
                 break
     su = bo_dau(so).upper()
-    loai = ('Nghị quyết' if 'NQ' in su else 'Quyết định' if re.search(r'Q[D]', su) else 'Nghị định' if re.search(r'/N[D]', su)
+    loai = ('Văn bản hợp nhất' if 'VBHN' in su else 'Nghị quyết' if 'NQ' in su else 'Quyết định' if re.search(r'Q[D]', su) else 'Nghị định' if re.search(r'/N[D]', su)
             else 'Thông tư liên tịch' if 'TTLT' in su else 'Thông tư' if re.search(r'/TT', su) else '')
     trich = []
     for i, x in enumerate(dau):
@@ -440,17 +589,14 @@ def phan_tich_van_ban(dong: list, ten_goi: str = '') -> dict:
         trich_yeu = re.sub(r'(?i)^.*?\b(q[uđ]y[ếe]t\s+[đd][ịi]nh|ngh[ịi]\s+quy[ếe]t|ngh[ịi]\s+[đd][ịi]nh|th[ôo]ng\s+t[ưu](?:\s+li[êe]n\s+t[ịi]ch)?|'
                            r'lu[ậa]t)\s+s[ốo]\s*\S+\s*', '', ten_goi).strip()
     goc = bo_dau(trich_yeu + ' ' + (ten_goi or ''))
-    # câu sửa đổi / bãi bỏ trong thân văn bản: phần mềm chỉ áp dụng bảng giá, các nội dung này người dùng tự xem
-    can_xem = []
-    for r in dong:
-        x = ' '.join(' '.join(c for c in r if c).split())
-        if len(r) == 1 and x not in trich and \
-                re.match(r'(\d+\.\s*|[a-zđ]\)\s*)?(bai bo|sua doi|bo sung|thay the|ngung ap dung)\b', bo_dau(x)):
-            can_xem.append(x[:300])
+    # câu sửa đổi / bãi bỏ của chính văn bản: phần mềm chỉ áp dụng bảng giá, các nội dung này người dùng tự xem
+    can_xem, thay_the_vb = khoan_hieu_luc(dong)
+    can_xem = [x for x in can_xem if x not in trich]
+    thay_the_vb = [x for x in thay_the_vb if chuan_so_hieu(x) != chuan_so_hieu(so)]
     return dict(so_hieu=so, ngay=ngay, co_quan=co_quan, loai_vb=loai, trich_yeu=trich_yeu,
                 dong_nai='dong nai' in kd or 'dong nai' in bo_dau(ten_goi or ''),
                 nhom=nhom_theo_chu(trich_yeu or ten_goi or ''),
-                sua_doi=bool(re.search(r'sua doi|bo sung|thay the|bai bo', goc)), can_xem=can_xem[:30])
+                sua_doi=bool(re.search(r'sua doi|bo sung|thay the|bai bo', goc)), can_xem=can_xem[:30], thay_the_vb=thay_the_vb)
 
 
 def van_ban_da_co() -> list:
@@ -1319,6 +1465,10 @@ def nhan_muc(dong: list, nhom: int = 0, quy_tac: list | None = None) -> list:
     con (-, +, a)...) -> tên "Cha - Con" như bộ đơn giá; dòng '*' là trường hợp chen giữa; ô giá có nhãn
     ("Đông Xuân: 24.880.000") -> "Tên (Đông Xuân)"; ô giá khoảng "a - b" -> hai mục (mức cao: tên có dấu chấm cuối); dòng tên trống
     tiếp tục mục ngay trên. nhom: nhóm mặc định (theo văn bản). quy_tac: danh sách nhận các dòng quy định cách tính không có giá."""
+    # 1.0.60: số tiền trong "Ví dụ" không phải đơn giá; văn bản chính sách: lời văn trong Điều do muc_chinh_sach_tu_dieu_khoan đọc
+    dong = bo_vi_du(dong)
+    if nhom == 4 and co_dieu_khoan(dong):
+        dong = bo_loi_van_dieu(dong)
     kq, tieu_de, nhan = [], None, 1
     cha = truong_hop = truoc = dvt_mac_dinh = mat_do = mat_do_bang = nhom_dk = ''
     nhom_muc = so_cot = 0
@@ -1616,8 +1766,9 @@ def loc_khu_vuc(ds: list, kv: str) -> list:
 # ---------------------------------------------------------------- đơn giá ghi trong lời văn (văn bản không có bảng)
 # "25.000 đồng/m² mặt nước", "1,5 triệu đồng/con", "30 nghìn đồng/kg", "3.000.000 đ/hộ"
 _RE_GIA_VAN = re.compile(
-    r'(?P<so>\d{1,3}(?:[.,]\d{3})+(?:,\d+)?|\d+(?:,\d+)?)\s*(?P<boi>triệu|trieu|nghìn|nghin|ngàn|ngan)?\s*(?:đồng|đ)(?![\w])'
-    r'\s*(?:\([^)]{0,40}\)\s*)?/\s*(?:01\s+|1\s+)?(?P<dvt>[^\s;,.()]+'
+    r'(?P<so>\d{1,3}(?:[.,]\d{3})+(?:,\d+)?|\d+(?:,\d+)?)\.?\s*(?P<boi>triệu|trieu|nghìn|nghin|ngàn|ngan)?\s*(?:đồng|đông|đổng|đ)(?![\w])'
+    r'\s*(?:\([^)]{0,40}\)\s*)?(?:/\s*(?:01\s+|1\s+|một\s+)?|trên\s+(?:một|01|1)\s+)'
+    r'(?P<dvt>nh[âa]n\s+kh[ẩâa]u(?:\s*/\s*[^\s;,.():]+)?|đơn\s+vị\s+vật\s+nuôi|m[ée]t\s+d[àa]i|[^\s;,.():]+'
     r'(?:\s+(?:mặt\s+nước|nuôi|thả\s+nuôi|ao|lồng|bè|sàn|năm|tháng|yến(?:\s+thô)?))?)',
     re.I)
 _RE_KHOANG = re.compile(r'(?i)(?:từ|tu)\s+[\d.,]+\s*(?:triệu|nghìn|ngàn)?\s*(?:đồng|đ)?\s*(?:đến|tới|-|–)\s*$')
@@ -1723,7 +1874,8 @@ def _khoan_van(dong: list) -> list:
         if not x:
             continue
         if dang and (_RE_DAU_KHOAN.match(x) or dang.endswith((';', ':', '.')) or
-                     (x[:1].isupper() and _RE_DAU_KHOAN.match(dang) and _la_tieu_de(dang))):
+                     (x[:1].isupper() and _RE_DAU_KHOAN.match(dang) and _la_tieu_de(dang)
+                      and not _RE_NOI_TIEU_DE.search(bo_dau(dang)))):     # "… bổ sung bởi" + "Nghị định số …": chưa hết câu
             kq.append(dang)
             dang = x
         else:
@@ -1741,7 +1893,7 @@ def muc_tu_loi_van(dong: list, nhom: int = 0) -> tuple:
     lại: khoảng giá "từ… đến…", tỷ lệ %, không ra tên]). Người dùng đối chiếu từng dòng trên HopNhapDonGia trước khi áp dụng
     (câu gốc ở Muc.nguon_dong)."""
     ds, xem, tieu_de = [], [], {}
-    for khoan in _khoan_van(dong):
+    for khoan in _khoan_van(bo_vi_du(dong_loi_van(dong))):
         cap, than = _bo_dau_khoan(khoan)
         if cap == 0:
             tieu_de.clear()
@@ -1812,9 +1964,336 @@ def muc_tu_loi_van(dong: list, nhom: int = 0) -> tuple:
             ten_day = f'{cha_m} - {ten}' if cha_m and bo_dau(cha_m) not in bo_dau(ten) else ten
             if ghi:
                 ten_day += f' ({"; ".join(ghi)})'
-            dvt = ' '.join(m.group('dvt').split())
+            dvt = _chuan_dvt_van(m.group('dvt'))
             ds.append(Muc(ten_day[:200], dvt, g, '', khoan[:300], nhom=nhom or _nhom_dong(ten_day, dvt)))
     return ds, xem
+
+
+# ---------------------------------------------------------------- 1.0.60: toàn văn văn bản chính sách (bản OCR, Word, PDF chữ)
+_RE_O_GIA = re.compile(r'^\W*\d{1,3}(?:[.,]\d{3})+\W*(?:đồng|đông|đ)?\W*$', re.I)
+_HOA = 'A-ZĐÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴ'      # khoảng À-Ỹ của Unicode gồm cả chữ thường ("đ")
+_RE_RAC_DAU_DONG = re.compile(r'^[\s.…_~=|‘’\'"`^„]+(?=\S)')
+_RE_DIEU_THAT = re.compile(r'^(?:Điều|ĐIỀU|Dieu|Điêu|Điểu|Diều|Điếu)\s+(\d+[a-zđ]?)\s*(?:[.:]\s*|\s(?=[' + _HOA + r'])(?!Luật|Nghị|Quyết|Bộ|Thông))(.*)$')
+_RE_HET_DIEU = re.compile(r'n\w{0,2}i nhan\b|tm\.|kt\.')
+_RE_HEADING_MUC = re.compile(r'(?:chuong|muc)\s*[\divxlh]{0,6}\s*$')
+_RE_NOI_TIEU_DE = re.compile(r'(?:\bso|\bboi|\btai|\bva|\bcua|\btheo|\bkhoan|\bdieu|\bnghi|\bsua|\bbo|,|-)$')
+_RE_DIEU_HANH_CHINH = re.compile(r'hieu luc|to chuc thuc hien|trach nhiem|pham vi dieu chinh|doi tuong ap dung|chuyen tiep|thi hanh|^sua doi, bo sung$')
+
+
+def _chu_dong_van(r, scan: bool = False) -> str:
+    """Một dòng doc_bang / OCR -> chữ lời văn. Dòng một ô: đoạn văn. Bản scan: dòng căn đều bị tách nhiều ô ("Luật || số 43/2024/QH15, || …"),
+    ô rác ("|") -> nối; dòng có ô giá là hàng bảng (biểu thưởng) -> ''. Word / Excel: hàng nhiều ô là bảng -> ''."""
+    if isinstance(r, str):
+        return ' '.join(r.split())
+    o = [' '.join(str(c).split()) for c in r if str(c or '').strip()]
+    if len(o) <= 1:
+        return o[0] if o else ''
+    that = [x for x in o if len(re.findall(r'\w', x)) >= 2]
+    if len(that) <= 1:
+        return that[0] if that else ''
+    if scan and not any(_RE_O_GIA.match(x) for x in o):
+        return ' '.join(o)
+    return ''
+
+
+def sach_dong_ocr(x: str) -> str:
+    """Bỏ rác đầu dòng bản OCR, sửa ký hiệu khoản: ". Điều 16.", "_..2. Trường hợp", "1, Đối với" (-> "1. Đối với"); số hiệu đọc rời."""
+    x = _RE_RAC_DAU_DONG.sub('', chuan_chu_so_hieu(x))
+    return re.sub(r'^(\d{1,2}),\s+(?=[' + _HOA + r'])', r'\1. ', x)
+
+
+def dong_loi_van(dong: list) -> list:
+    """Các dòng lời văn đã làm sạch: bỏ số trang, mảnh rác dưới 3 ký tự; giữ thứ tự (chữ nối dòng do _khoan_van)."""
+    scan = isinstance(dong, DongScan)
+    kq = []
+    for r in dong:
+        x = sach_dong_ocr(_chu_dong_van(r, scan))
+        if x and len(re.findall(r'\w', x)) >= 3 and not re.fullmatch(r'\W*\d{1,3}\W*', x):
+            kq.append(x)
+    return kq
+
+
+def _la_dau_khoan_moi(x: str) -> bool:
+    return bool(_RE_DIEU_THAT.match(x) or re.match(r'\d{1,2}[.,]\s+[' + _HOA + ']', x) or re.match(r'(?:chuong|muc\s*\d|phu luc)\b', bo_dau(x)))
+
+
+VI_DU_TOI_DA = 40                  # phòng "Ví dụ" không có khoản sau: không nuốt phần còn lại của văn bản
+
+
+def bo_vi_du(dong: list) -> list:
+    """Bỏ đoạn "Ví dụ: …" (và các gạch đầu dòng tính thử dưới nó) tới khoản / Điều mới: số tiền trong ví dụ không phải đơn giá. Giữ kiểu danh
+    sách (DongScan). Mỗi phần tử là chuỗi hoặc hàng nhiều ô."""
+    kq, dem = [], -1
+    for r in dong:
+        x = sach_dong_ocr(' '.join(str(c) for c in ([r] if isinstance(r, str) else r) if c))
+        if dem < 0 and re.match(r'vi du\b', bo_dau(x)):
+            dem = 0
+            continue
+        if dem >= 0:
+            dem += 1
+            if not _la_dau_khoan_moi(x) and dem <= VI_DU_TOI_DA:
+                continue
+            dem = -1
+        kq.append(r)
+    return DongScan(kq) if isinstance(dong, DongScan) else kq
+
+
+def co_dieu_khoan(dong: list, toi_thieu: int = 3) -> bool:
+    """Văn bản viết theo Điều (từ toi_thieu Điều trở lên)."""
+    return sum(1 for x in dong_loi_van(dong) if _RE_DIEU_THAT.match(x)) >= toi_thieu
+
+
+def bo_loi_van_dieu(dong: list) -> list:
+    """Văn bản chính sách: chỉ giữ cho bộ đọc bảng (nhan_muc) phần ngoài các Điều (phụ lục) và bảng có tiêu đề cột trong Điều - lời văn trong
+    Điều do muc_chinh_sach_tu_dieu_khoan đọc, không để bộ đọc theo dòng cắt vụn."""
+    kq, trong, bang = [], False, False
+    scan = isinstance(dong, DongScan)
+    for r in dong:
+        chu = ' '.join(str(c) for c in ([r] if isinstance(r, str) else r) if c)
+        x = sach_dong_ocr(chu)
+        k = bo_dau(x)
+        if _RE_DIEU_THAT.match(x):
+            trong, bang = True, False
+            kq.append(['']) if False else None
+            continue
+        if re.match(r'phu luc\b', k) or _RE_HET_DIEU.match(k):
+            trong, bang = False, False
+        elif trong and re.search(r'\b(?:stt|tt)\b', k) and re.search(r'don gia|muc ho tro|muc boi thuong', k):
+            bang = True
+        if not trong or bang:
+            kq.append(r)
+    return DongScan(kq) if scan else kq
+
+
+def van_theo_dieu(dong: list) -> list:
+    """Lời văn theo Điều: [dict(so, ten, dong)] - ten: trọn tiêu đề Điều (nhiều dòng, kể cả "… được sửa đổi, bổ sung bởi Nghị định số …"),
+    dong: các dòng thân Điều. Bỏ tiêu đề Chương / Mục, dòng chữ hoa, phần "Nơi nhận" / chữ ký. dong đã qua dong_loi_van."""
+    kq, cur, dang_ten = [], None, False
+    for x in dong:
+        k = bo_dau(x)
+        md = _RE_DIEU_THAT.match(x)
+        if md:
+            cur = dict(so=md.group(1), ten=md.group(2).strip(), dong=[])
+            kq.append(cur)
+            dang_ten = True
+            continue
+        if _RE_HET_DIEU.match(k):
+            cur, dang_ten = None, False
+            continue
+        if cur is None or _RE_HEADING_MUC.match(k) or (x == x.upper() and len(x) > 5 and not re.search(r'\d', x)):
+            continue
+        if dang_ten:
+            t = bo_dau(cur['ten'])
+            if not _la_dau_khoan_moi(x) and not re.match(r'[a-zđ]\)|[-–+•]', x) and not t.endswith((':', '.')) and (
+                    not x[:1].isupper() or re.match(r'(?:Nghị|Luật|Điều|Bộ|CP\b)', x) or _RE_NOI_TIEU_DE.search(t)):
+                cur['ten'] = f'{cur["ten"]} {x}'
+                continue
+            dang_ten = False
+        cur['dong'].append(x)
+    return kq
+
+
+_RE_CAT_TEN_DIEU = re.compile(r'(?i)\s+(?:quy\s+định\s+tại|(?:được|bị)\s+s[ửủứu]a\s+đ|đối\s+với\s+trường\s+hợp\s+không\s+có|khi\s+Nhà\s+nước\s+thu\s+h[ồôố]i)')
+
+
+def ten_dieu_gon(ten: str) -> str:
+    """Tiêu đề Điều -> cụm chính, vế đầu: "Xác định chi phí đầu tư vào đất còn lại đối với trường hợp không có hồ sơ … quy định tại …" ->
+    "Chi phí đầu tư vào đất còn lại"."""
+    x = ' '.join(str(ten or '').split())
+    m = _RE_CAT_TEN_DIEU.search(x)
+    x = x[:m.start()] if m else x
+    x = re.sub(r'(?i)^xác\s+định\s+', '', x.split(';')[0]).strip(' ,.;:')
+    return x[:1].upper() + x[1:] if x else ''
+
+
+def cac_khoan_dieu(d: dict) -> list:
+    """Thân một Điều -> [(số khoản, chữ điểm, phần chữ bỏ ký hiệu, chữ khoản đầy đủ, câu dẫn của khoản)]. Sửa chữ điểm OCR đọc nhầm theo thứ
+    tự ("e)" sau "b)" là "c)"); khoản mất số ("2." đọc thành ".") nhận ra vì mở đầu giống khoản trước."""
+    kq = []
+    khoan, diem, dan, mo_dau = '', '', '', ''
+    for c in _khoan_van(d['dong']):
+        cap, than = _bo_dau_khoan(c)
+        if cap == 1 or cap == 2:
+            m = re.match(r'\s*(\d+)', c)
+            khoan, diem, dan = m.group(1), '', than
+            mo_dau = re.sub(r'\W', '', bo_dau(than))[:14]
+        elif cap == 3:
+            chu = c.strip()[:1].lower()
+            mong = chr(ord(diem) + 1) if diem else 'a'
+            diem = mong if (chu != mong and chu in 'eê' and mong == 'c') else chu
+        elif cap == 9 and mo_dau and khoan.isdigit() and len(than) > 40 and re.sub(r'\W', '', bo_dau(than))[:14] == mo_dau:
+            khoan, diem, dan = str(int(khoan) + 1), '', than
+        kq.append((khoan, diem, than, c, dan))
+    return kq
+
+
+_RE_CUM_CHINH = re.compile(r'(?i)(?:h[ỗôốổ]\s+tr[ợơ]|b[ồôố]i\s+th[ưu][ờơ]ng)\b[^.;:]{8,140}')
+_RE_CUOI_MUC = re.compile(r'(?i)(?:[,;:]?\s*m[ứu]c\s+(?:h[ỗôốổ]\s+tr[ợơ]|b[ồôố]i\s+th[ưu][ờơ]ng)(?:\s+là)?\s*:?\s*$)|'
+                          r'(?:(?:\s+thì)?\s+được\s+(?:tính\s+)?(?:h[ỗôốổ]\s+tr[ợơ]|b[ồôố]i\s+th[ưu][ờơ]ng)\s*$)')
+_RE_CAU_RIENG = re.compile(r'(?<=[.])\s+(?=[' + _HOA + '])')
+_SUA_OCR = ((r'chỉ phí', 'chi phí'), (r'di chuyên\b', 'di chuyển'), (r'hô trợ', 'hỗ trợ'), (r'bôi thường', 'bồi thường'), (r'thập (?=hơn|dưới)', 'thấp '),
+            (r'tìm đường', 'tim đường'), (r'\bđên\b', 'đến'), (r'\bđ[ắâ]t\b', 'đất'), (r'\bnăm trong\b', 'nằm trong'), (r'mồ má\b', 'mồ mả'),
+            (r'mô mả\b', 'mồ mả'), (r'\bbăng\b', 'bằng'), (r'\bquyêt\b', 'quyết'), (r'\bđôi với\b', 'đối với'), (r'trực tiệp', 'trực tiếp'),
+            (r'\bđê (?=tháo|di|xác|thực|sử)', 'để '), (r'\btiên\b', 'tiền'), (r'\bsô\b', 'số'), (r'\bđiêu\b', 'điều'), (r'sửa đôi', 'sửa đổi'), (r'\bbô sung', 'bổ sung'))
+
+
+def sua_chu_ocr(x: str) -> str:
+    """Sửa lỗi dấu hay gặp của bản OCR tiếng Việt trong lời văn pháp lý (giữ chữ hoa đầu): "Chỉ phí" -> "Chi phí", "di chuyên" -> "di chuyển"."""
+    for mau, moi in _SUA_OCR:
+        x = re.sub(mau, lambda m, n=moi: n[:1].upper() + n[1:] if m.group()[:1].isupper() else n, x, flags=re.I)
+    return x
+
+
+def _cum_chinh(chu: str) -> str:
+    """Câu dẫn khoản -> cụm "hỗ trợ / bồi thường …" cuối cùng: "… không được bồi thường mà được hỗ trợ để tháo dỡ, phá dỡ, di dời, như sau:" ->
+    "Hỗ trợ để tháo dỡ, phá dỡ, di dời"."""
+    kq = ''
+    for m in _RE_CUM_CHINH.finditer(chu or ''):
+        x = m.group()
+        cuoi = list(re.finditer(r'(?i)h[ỗôốổ]\s+tr[ợơ]|b[ồôố]i\s+th[ưu][ờơ]ng', x))
+        x = x[cuoi[-1].start():]                        # "bồi thường mà được hỗ trợ để tháo dỡ" -> "hỗ trợ để tháo dỡ"
+        x = re.split(r'(?i)\s+(?:như\s+sau|khi\s+Nhà\s+nước|theo\s+quy\s+định)\b', x)[0].strip(' ,;:.')
+        if len(x) >= 15:
+            kq = x
+    return kq[:1].upper() + kq[1:]
+
+
+def _chuan_dvt_van(d: str) -> str:
+    """ĐVT trong lời văn (kể cả chữ OCR): "mét dài" -> "md"; "m”", "m®" -> "m²"; "nhân khâu/tháng" -> "nhân khẩu/tháng"."""
+    d = ' '.join(str(d or '').split()).strip(' :')
+    if re.fullmatch(r'(?i)m[”"“®°\'’*²2]+', d):
+        return 'm²'
+    if re.fullmatch(r'(?i)m[ée]t\s+d[àa]i', d):
+        return 'md'
+    return re.sub(r'(?i)nh[âa]n\s+kh[âa]u', 'nhân khẩu', re.sub(r'\s*/\s*', '/', d))
+
+
+def _so_tien_van(m) -> int | None:
+    boi = (m.group('boi') or '').lower()
+    so = m.group('so')
+    if boi:
+        g = D(so.replace('.', '').replace(',', '.')) * (1000000 if boi.startswith('tri') else 1000)
+        return int(g) if g == int(g) else None
+    return doc_gia(so)
+
+
+_RE_THUONG = re.compile(r'\b(duoi|tu)\s+(\d{1,4})\s+trieu\s+dong[^|]*?(?:\|\s*|\s)\W*(\d{1,3}(?:[.,]\d{3}){2})\s*(?:dong|d)?\W*$')
+
+
+def doc_bieu_thuong(dong: list) -> list:
+    """Biểu thưởng bàn giao mặt bằng trước hạn (Điều 15 khoản 4 QĐ 42/2025): "Dưới 20 triệu đồng | 2.000.000 đồng" … "Từ 500 triệu đồng trở
+    lên | 20.000.000 đồng" -> [(từ mức đồng, mức thưởng đồng)] (cùng dạng bảng bieu_thuong). Không phải đơn giá hỗ trợ: không thành dòng mục."""
+    kq, tha = [], 0
+    for r in dong:
+        o = [str(c) for c in ([r] if isinstance(r, str) else r) if str(c or '').strip()]
+        k = bo_dau(' | '.join(o))
+        if re.search(r'muc thuong|duoc thuong', k):
+            tha = 12
+            continue
+        if tha <= 0:
+            continue
+        m = _RE_THUONG.search(k)
+        if m:
+            g = doc_gia(m.group(3))
+            if g:
+                kq.append((0 if m.group(1) == 'duoi' else int(m.group(2)) * 1000000, g))
+                tha = 3
+                continue
+        tha -= 1
+    return kq if len(kq) >= 2 else []
+
+
+def so_bieu_thuong(bieu: list) -> str:
+    """Biểu thưởng đọc từ văn bản so với bộ đơn giá đang dùng: '' = trùng; khác -> chữ nêu mức khác."""
+    con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
+    try:
+        cu = {int(D(str(r[0]))): int(D(str(r[1]))) for r in con.execute('SELECT tu, muc FROM bieu_thuong')}
+    finally:
+        con.close()
+    moi = dict(bieu)
+    khac = [f'từ {t:,} đ: {cu.get(t, 0):,} -> {moi.get(t, 0):,} đ'.replace(',', '.') for t in sorted(set(cu) | set(moi)) if cu.get(t) != moi.get(t)]
+    return '; '.join(khac)
+
+
+def muc_chinh_sach_tu_dieu_khoan(dong: list, nhom: int = 4) -> tuple:
+    """Toàn văn văn bản chính sách bồi thường, hỗ trợ, tái định cư -> (ds Muc, câu cần xem, biểu thưởng). Đọc theo cấu trúc Điều / khoản / điểm:
+    - điểm a) b) c) kèm câu dẫn của khoản ("Di chuyển trong địa bàn cấp xã: 10.000.000 đồng/hộ"; Điều 12 khoản 2 không trùng tên Điều 8);
+    - ma trận xã / phường x nhân khẩu ("6.000.000 đồng/hộ/tháng tại địa bàn xã, 8.000.000 đồng/hộ/tháng tại địa bàn phường…");
+    - hệ số ("bằng 1,5 lần giá đất nông nghiệp": Muc.he_so, không phải số tiền);
+    - mức cụ thể (đồng/m², đồng/mộ, đồng/đơn vị vật nuôi, đồng/mét dài, đồng trên một hộ).
+    Bỏ đoạn "Ví dụ", Điều hiệu lực / tổ chức thực hiện. Mục dẫn chiếu Luật / Nghị định (ổn định đời sống: "30 kg gạo") không có số tiền trong
+    văn bản: không tạo dòng, so_khop giữ nguyên mục cũ."""
+    ds, xem, da = [], [], set()
+    van = bo_vi_du(dong_loi_van(dong))
+    for d in van_theo_dieu(van):
+        ten_d = sua_chu_ocr(ten_dieu_gon(bo_dan_chieu(d['ten'])))
+        kd_ten = bo_dau(ten_d)
+        if _RE_DIEU_HANH_CHINH.search(kd_ten):
+            continue
+        toan_dieu = bo_dau(' '.join(d['dong']))
+        don_vi_kg = re.search(r'tuong duong\s*(\d+)\s*kg\s*khoi luong', toan_dieu)
+        for khoan, diem, than, goc, dan in cac_khoan_dieu(d):
+            can_cu = ' '.join(x for x in (f'Điểm {diem}' if diem else '', f'khoản {khoan}' if khoan else '', f'Điều {d["so"]}') if x)
+            can_cu = can_cu[:1].upper() + can_cu[1:]
+            nguon = f'[{can_cu}] {goc[:300]}'
+            k_than = bo_dau(than)
+            for mh in re.finditer(r'\bbang\s+(\d+(?:[.,]\d+)?)\s+lan\s+gia\s+dat\s+nong\s+nghiep', k_than):
+                if re.search(r'dao tao|chuyen doi nghe', kd_ten):
+                    hs = mh.group(1).replace(',', '.')
+                    if ('hs', hs) not in da:
+                        da.add(('hs', hs))
+                        ds.append(Muc(f'Hỗ trợ đào tạo, chuyển đổi nghề và tìm kiếm việc làm (hệ số {hs.replace(".", ",")})', 'm²', 0, '', nguon,
+                                      nhom=nhom, he_so=hs, can_cu=can_cu, ngu_canh=ten_d,
+                                      ghi_chu='Lần giá đất nông nghiệp cùng loại trong bảng giá đất của địa phương'))
+            mg = re.search(r'tuong duong\s*(\d+)\s*kg\s*gao', k_than)
+            if mg:
+                xem.append(f'{can_cu}: tính bằng tiền tương đương {mg.group(1)} kg gạo - giữ các mục ổn định đời sống của bộ đơn giá, tính theo giá gạo.')
+            gia = list(_RE_GIA_VAN.finditer(than))
+            pos = 0
+            for j, m in enumerate(gia):
+                truoc = than[pos:m.start()]
+                pos = m.end()
+                g = _so_tien_van(m)
+                dvt = _chuan_dvt_van(m.group('dvt'))
+                if not g:
+                    continue
+                if dvt == 'm' and 'dau tu vao dat' in kd_ten:      # OCR mất "²": "30.000 đồng/m,"
+                    dvt = 'm²'
+                sau = bo_dau(than[m.end():gia[j + 1].start() if j + 1 < len(gia) else len(than)])
+                mb = re.match(r'\W*(?:tai|tren|o)\s+dia\s+ban\s+(xa|phuong)\b', sau)
+                ghi = ''
+                if mb:                                  # ma trận xã / phường x nhân khẩu
+                    xa = 'xã' if mb.group(1) == 'xa' else 'phường'
+                    n = re.search(r'tu\s+0?(\d+)\s+nhan khau tro xuong', k_than)
+                    n = n.group(1) if n else '4'
+                    ten = f'{ten_d} - địa bàn {xa}' + (f': cộng thêm từ nhân khẩu thứ {int(n) + 1}' if 'khau' in bo_dau(dvt) else f' (hộ đến {n} nhân khẩu)')
+                else:
+                    ve = _RE_CAU_RIENG.split(truoc)[-1]
+                    ve = _RE_CUOI_MUC.sub('', ve.strip(' ,;:'))
+                    leaf = sua_chu_ocr(_ten_gon(bo_dan_chieu(ve)))
+                    ctx = sua_chu_ocr(_cum_chinh(bo_dan_chieu(dan))) if (dan and (diem or dan.rstrip().endswith(':') or 'nhu sau' in bo_dau(dan))) else ''
+                    if not ctx and (len(leaf) < 3 or (len(leaf.split()) < 6 and not re.search(r'h[oô] tr|boi thuong', bo_dau(leaf)))):
+                        ctx = ten_d
+                    kl, kc = bo_dau(leaf), bo_dau(ctx)
+                    if not leaf or kl in kc:
+                        ten = ctx
+                    elif not ctx or kc in kl:
+                        ten = leaf
+                    else:
+                        ten = f'{ctx} - {leaf}'
+                if not ten:
+                    xem.append(f'{can_cu}: có số tiền nhưng không rõ tên mục: {goc[:200]}')
+                    continue
+                if 'dau tu vao dat' in kd_ten and 'thoi han su dung dat con lai' in k_than:
+                    ghi = f'P = ({g:,} / T1) x T2; T1: thời hạn sử dụng đất; T2: thời hạn sử dụng đất còn lại'.replace(',', '.')
+                elif 'vat nuoi' in bo_dau(dvt) and don_vi_kg:
+                    ghi = f'Mỗi đơn vị vật nuôi tương đương {don_vi_kg.group(1)} kg khối lượng vật nuôi sống'
+                khoa_da = (d['so'], khoan, diem, g, dvt)
+                if khoa_da in da:                       # công thức nhắc lại số tiền
+                    continue
+                da.add(khoa_da)
+                ds.append(Muc(ten[:200], dvt, g, '', nguon, nhom=nhom, can_cu=can_cu, ngu_canh=f'{ten_d} {dan[:160]}', ghi_chu=ghi))
+    return ds, xem, doc_bieu_thuong(dong)
 
 
 # ---------------------------------------------------------------- so khớp với bộ đơn giá đang dùng
@@ -2163,6 +2642,110 @@ def nham_chu_so(a: int, b: int) -> bool:
     return 0 < len(khac) <= 4 and all(frozenset(t) in _NHAM_SO for t in khac)
 
 
+# ---------------------------------------------------------------- 1.0.60: khớp dòng chính sách với mục hỗ trợ (dm_hotro)
+# nhóm nghiệp vụ (theo thứ tự: nhóm hẹp trước), trên chữ bỏ dấu
+_NHOM_CS = (('on_dinh', r'on dinh doi song'), ('dau_tu', r'dau tu vao dat'), ('vat_nuoi', r'vat nuoi'),
+            ('gpxd', r'giay phep|thao do, pha do'), ('mo_ma', r'mo ma'),
+            ('di_chuyen', r'di chuyen tai san|thao do, di chuyen|di chuyen trong|di chuyen ngoai'),
+            ('dao_tao', r'dao tao|chuyen doi nghe'), ('tu_lo', r'tu lo cho o'), ('thue_nha', r'thue nha|tam cu'),
+            ('cao_do', r'cao do|cai tao lai'), ('chinh_sach', r'liet si|thuong binh|benh binh|ho ngheo|dan toc thieu so|ho chinh sach'))
+_RE_DIEU_CAN_CU = re.compile(r'(?:khoan\s+(\d+)\s+)?dieu\s+(\d+)\s+qd')
+_RE_DIEU_MUC = re.compile(r'(?:khoan\s+(\d+)\s+)?dieu\s+(\d+)\b')
+CACH_CHINH_SACH = 'theo điều khoản'
+CACH_CUNG_MUC = 'cùng mức với mục đã khớp'
+CACH_DAN_CHIEU = 'được dẫn chiếu trong văn bản'
+
+
+def nhom_chinh_sach(chu: str) -> str:
+    k = bo_dau(chu)
+    return next((t for t, mau in _NHOM_CS if re.search(mau, k)), '')
+
+
+def _dvt_cs(d: str) -> str:
+    k = bo_dau(d)
+    return 'nk' if 'khau' in k else 'thang' if 'thang' in k else _dvt_khoa(d)
+
+
+def _vi_tri_cs(k: str) -> str:
+    """Phạm vi trong tên mục: trong xã / sang xã khác / ngoài tỉnh; địa bàn xã / phường."""
+    if re.search(r'ngoai tinh|ngoai thanh pho', k):
+        return 'ngoai_tinh'
+    if re.search(r'ngoai dia ban|sang xa', k):
+        return 'ngoai_xa'
+    if re.search(r'trong (?:dia ban|pham vi|xa)', k):
+        return 'trong_xa'
+    return ''
+
+
+def _xa_phuong(k: str) -> str:
+    m = re.search(r'dia ban (xa|phuong)\b', k)
+    return m.group(1) if m else ''
+
+
+def _khop_chinh_sach(m, ds_hotro_cu: list, da_ma: set) -> tuple:
+    """Mục hỗ trợ của bộ đơn giá ứng với dòng đọc từ điều khoản -> (dòng dm_hotro, dùng lại?) hoặc (None, False). Cùng nhóm nghiệp vụ là bắt
+    buộc; chấm điểm theo (a) Điều / khoản trong cột căn cứ, (b) đơn giá + ĐVT, (c) phạm vi xã / phường, trong xã / ngoài xã / ngoài tỉnh.
+    Khớp 1-1; hết mục chưa khớp mà cùng nhóm, cùng giá với mục đã khớp (Điều 17 cùng mức Điều 14; hộ nghèo cùng mức thương binh 21-60%) ->
+    dùng lại mục đó, không sinh mã mới. Khác giá chỉ nhận khi không còn mục cùng giá và ứng viên rõ ràng (đổi giá thật)."""
+    nhom = nhom_chinh_sach(m.ten) or nhom_chinh_sach(m.ngu_canh)
+    if not nhom:
+        return None, False
+    k_m = bo_dau(f'{m.ten}')
+    he_moi = D(m.he_so) if m.he_so else None
+    md = _RE_DIEU_MUC.search(bo_dau(m.can_cu))
+    dv = _dvt_cs(m.dvt)
+    vt, xp = _vi_tri_cs(k_m), _xa_phuong(k_m)
+    ung = []
+    for x in ds_hotro_cu:
+        k_x = bo_dau(x['ten'])
+        if nhom_chinh_sach(x['ten']) != nhom:
+            continue
+        if xp and _xa_phuong(k_x) and xp != _xa_phuong(k_x):
+            continue
+        if vt and _vi_tri_cs(k_x) and vt != _vi_tri_cs(k_x):
+            continue
+        dvx = _dvt_cs(x['dvt'] or '')
+        if dv and dvx and dv != dvx:
+            continue
+        cu = x['don_gia']
+        if m.he_so:
+            try:
+                cung_gia = D(str(cu)) == he_moi
+            except ValueError:
+                cung_gia = False
+        else:
+            cung_gia = doc_gia(cu) == m.don_gia if cu not in (None, '') else False
+        diem = 4 if cung_gia else 0
+        if md:
+            for mx in _RE_DIEU_CAN_CU.finditer(bo_dau(x.get('can_cu') or '')):
+                if mx.group(2) == md.group(2):
+                    diem += 2 + (1 if mx.group(1) and mx.group(1) == md.group(1) else 0)
+                    break
+        ung.append((diem, cung_gia, x))
+    if not ung:
+        return None, False
+    ung.sort(key=lambda t: -t[0])
+    chua = [t for t in ung if t[2]['ma'] not in da_ma]
+    gia_chua = [t for t in chua if t[1]]
+    if gia_chua:
+        return gia_chua[0][2], False
+    gia_da = [t for t in ung if t[1] and t[2]['ma'] in da_ma]
+    if gia_da:
+        return gia_da[0][2], True
+    # đổi giá: chỉ một ứng viên chưa khớp, hoặc ứng viên hơn hẳn theo Điều / khoản
+    if chua and (len(chua) == 1 or chua[0][0] > chua[1][0]) and (vt or xp or len(chua) == 1 or chua[0][0] >= 2):
+        return chua[0][2], False
+    return None, False
+
+
+def la_muc_dan_chieu(x: dict) -> bool:
+    """Mục hỗ trợ không phải mức tiền do chính văn bản ấn định (dẫn chiếu Luật / Nghị định, hệ số, nhập theo dự án): văn bản chính sách
+    không ghi số tiền thì giữ nguyên, không phải "bỏ"."""
+    from .nghiep_vu import MA_DAO_TAO, MA_ON_DINH, MA_TDC
+    g = doc_gia(x['don_gia']) if x['don_gia'] not in (None, '') else None
+    return x['ma'] in MA_ON_DINH or x['ma'] in MA_TDC or x['ma'] in MA_DAO_TAO or not g or g < GIA_TOI_THIEU
+
+
 def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: bool = False, chi_ma: set | None = None) -> list:
     """So với bộ đơn giá đang dùng: theo mã, tên (không dấu), tên bỏ ngoặc, quy cách ("Năm 1" ~ "Năm thứ 1"), rồi tên gần đúng cùng
     ĐVT, rồi theo ĐẶC TRƯNG (cỡ Φ, số đo, kết cấu, ĐVT, từ - diem_dac_trung), rồi theo đơn giá trùng. nhom None / 0: mỗi dòng theo
@@ -2192,7 +2775,7 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
         ban = (str(f), 0, 0)
     con = csdl.mo(f, chi_doc=True)
     try:
-        hien = {4: [dict(r) for r in con.execute("SELECT ma, ten, dvt, don_gia, '' AS ghi_chu FROM dm_hotro")]}
+        hien = {4: [dict(r) for r in con.execute("SELECT ma, ten, dvt, don_gia, can_cu, '' AS ghi_chu FROM dm_hotro")]}
         for n in (2, 3):
             hien[n] = [dict(r) for r in con.execute('SELECT ma, ten, dvt, don_gia, phan_loai, ghi_chu FROM dm_taisan WHERE nhom = ? '
                                                     'ORDER BY rowid', (n,))]
@@ -2264,6 +2847,15 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
         da_khop.add((n, r['ma']))
         m.gia_cu = doc_gia(r['don_gia']) if r['don_gia'] not in (None, '') else None
         m.trang_thai = 'giữ nguyên' if m.gia_cu == m.don_gia else 'cập nhật'
+        if m.he_so:                                     # 1.0.60: hệ số (Điều 13 QĐ 42/2025) so theo số, không theo tiền
+            m.he_so_cu = str(r['don_gia'] or '')
+            try:
+                m.trang_thai = 'giữ nguyên' if D(m.he_so_cu) == D(m.he_so) else 'cập nhật'
+            except ValueError:
+                m.trang_thai = 'cập nhật'
+            m.gia_cu = None
+        if m.can_cu:                                    # dòng đọc từ điều khoản: tên mục giữ theo bộ đơn giá (mã, phương án đã lập không đổi)
+            return
         if thay_the and m.cach_khop != CACH_DONG_CHUNG:   # dòng chung: tên văn bản là của cả nhóm tài sản - giữ tên từng mục
             ten = ten_thay_the(m.ten, r['ten'])
             gc = ghi_chu_thay_the(m.ghi_chu_cu, m.ghi_chu, ten) if n != 4 else ''
@@ -2282,7 +2874,7 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
     for m in ds:
         n = nhom or m.nhom or 3
         theo_ma, theo_ten, _, _, qc, _ = bang[n]
-        if m.ma or m.muc_gia or m.ten_loai or theo_ten.get(_khoa(m.ten)) or qc.get(_khoa_quy_cach(m.ten)):
+        if m.can_cu or m.ma or m.muc_gia or m.ten_loai or theo_ten.get(_khoa(m.ten)) or qc.get(_khoa_quy_cach(m.ten)):
             continue
         nguon_ds, duoi = m.ten, ''
         if m.duong_kinh and m.ten.endswith(m.duong_kinh):
@@ -2421,6 +3013,17 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
             them_sau[id(m)] = phu
     if them_sau:
         ds[:] = [y for m in ds for y in [m] + them_sau.get(id(m), [])]
+    # 2b. 1.0.60: dòng đọc từ điều khoản văn bản chính sách: theo Điều / khoản, đơn giá + ĐVT, nhóm nghiệp vụ - không qua khớp tên gần đúng
+    for m in ds:
+        if id(m) in xong or not m.can_cu or (nhom or m.nhom or 3) != 4:
+            continue
+        r, dung_lai = _khop_chinh_sach(m, hien[4], {ma for nh, ma in da_khop if nh == 4})
+        xong.add(id(m))
+        if r is None:
+            ghi_khop(m, None, 4)
+        else:
+            m.cach_khop = CACH_CUNG_MUC if dung_lai else CACH_CHINH_SACH
+            ghi_khop(m, r, 4)
     # 3. mã, tên, quy cách, tên gần đúng
     for m in ds:
         if id(m) in xong:
@@ -2538,6 +3141,11 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
                 if x['ma'] in khop_ma or (n == 3 and x['ma'] in vn_ma):
                     continue
                 g = doc_gia(x['don_gia']) if x['don_gia'] not in (None, '') else 0
+                # 1.0.60: văn bản chính sách dẫn chiếu Luật / Nghị định, không ghi số tiền của mục này: giữ nguyên, không báo "bỏ"
+                if n == 4 and la_muc_dan_chieu(x):
+                    ds.append(Muc(x['ten'], x['dvt'] or '', g or 0, trang_thai='giữ nguyên', ma_khop=x['ma'], gia_cu=g, nhom=n, ten_cu=x['ten'],
+                                  bo_cu=True, chon=False, cach_khop=CACH_DAN_CHIEU, nguon_dong='Văn bản không ấn định lại mức tiền của mục này: giữ nguyên'))
+                    continue
                 ds.append(Muc(x['ten'], x['dvt'] or '', g or 0, trang_thai='bỏ', ma_khop=x['ma'], gia_cu=g, nhom=n,
                               ten_cu=x['ten'], ghi_chu_cu=x['ghi_chu'] or '', bo_cu=True, chon=not scan,
                               nguon_dong=f'Mục {NHOM_PHAM_VI.get(n, "")} trong bộ đơn giá đang dùng nhưng văn bản mới không có'))
@@ -2704,15 +3312,16 @@ def ap_dung(ds: list, nhom: int | None, nguon: str, phien_ban: str = '', van_ban
                     if m.trang_thai == 'bỏ':
                         con.execute(f'DELETE FROM {bang} WHERE ma = ?', (m.ma_khop,))
                     elif m.trang_thai in ('cập nhật', 'đổi quy cách'):
-                        con.execute(f'UPDATE {bang} SET don_gia = ? WHERE ma = ?', (chuoi(m.don_gia), m.ma_khop))
+                        con.execute(f'UPDATE {bang} SET don_gia = ? WHERE ma = ?', (m.he_so or chuoi(m.don_gia), m.ma_khop))
                         if m.ten_thay:              # thay thế theo cách ghi của văn bản mới: tên, mật độ (mã giữ nguyên)
                             con.execute(f'UPDATE {bang} SET ten = ? WHERE ma = ?', (m.ten_thay, m.ma_khop))
                             if bang == 'dm_taisan':
                                 con.execute('UPDATE dm_taisan SET ghi_chu = ? WHERE ma = ?', (m.ghi_chu_thay, m.ma_khop))
                     elif nm == 4:
                         ma = doi_ma(m.ma, 4) if m.ma else _ma_cap(con, m, 'dm_hotro', 'CS', da_cap, dung)
-                        con.execute('INSERT INTO dm_hotro (ma, ten, dvt, don_gia, can_cu, trang_thai) VALUES (?,?,?,?,?,?)',
-                                    (ma, m.ten, m.dvt, chuoi(m.don_gia), nguon, 'Cập nhật từ file'))
+                        cc = ' '.join(x for x in (m.can_cu, (van_ban or {}).get('so_hieu', '')) if x) or nguon
+                        con.execute('INSERT INTO dm_hotro (ma, ten, dvt, don_gia, can_cu, cach_tinh, trang_thai) VALUES (?,?,?,?,?,?,?)',
+                                    (ma, m.ten, m.dvt, m.he_so or chuoi(m.don_gia), cc, m.ghi_chu, 'Cập nhật từ file'))
                         ma_ghi[id(m)] = ma
                     else:
                         nhom_db = 3 if nm == NHOM_VN else nm          # vật nuôi: nhom 3 + phân loại vật nuôi (CSDL không có nhom 7)

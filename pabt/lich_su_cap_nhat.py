@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.60', '05/11/2026', (
+        'Đọc được toàn văn Quyết định chính sách bồi thường, hỗ trợ, tái định cư (bản scan, PDF chữ, Word): nhận đúng số hiệu, ngày, các văn bản bị thay thế; không nhầm với dòng Căn cứ.',
+        'Đơn giá đọc theo Điều / khoản / điểm và khớp đúng mã CS đang dùng; số tiền trong Ví dụ và biểu thưởng không thành mục; mục dẫn chiếu Luật, Nghị định không còn bị báo bỏ.',
+        'Quy định cách tính trích từ văn bản sạch hơn, ghi đúng Điều, khoản, điểm.',
+    )),
     ('1.0.59', '04/11/2026', (
         'Cài đè / gỡ cài không xóa file Excel, Word, PDF của bạn để trong thư mục cài; cài gói cập nhật không xóa bản đang chạy.',
         'Hai máy mở cùng lúc: máy sau mở chỉ xem; đồng hồ máy lệch không làm khóa sai; mang dự án về / đưa lên an toàn hơn khi có người đang sửa.',

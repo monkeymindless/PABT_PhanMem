@@ -59,7 +59,7 @@ class HopNhapDonGia(QDialog):
         thay_the: True = chọn sẵn "Thay cả nhóm theo văn bản này" (nút Cập nhật đơn giá)."""
         # đọc file trước khi tạo hộp thoại: file lỗi thì không để lại hộp thoại dở dang
         dong = ndg.doc_bang(file) if dong is None else dong
-        vb = van_ban if van_ban is not None else ndg.phan_tich_van_ban(dong)
+        vb = van_ban if van_ban is not None else ndg.phan_tich_van_ban(dong, Path(str(file)).name if file else (nguon or ''))
         nhom_vb = vb.get('nhom', 0) or nhom_uu_tien or 0
         quy_tac = []                                    # dòng quy định cách tính không có giá ("tính thêm 50%", "bằng 40% đơn giá…")
         ds = ndg.nhan_muc(dong, nhom_vb, quy_tac)
@@ -67,7 +67,14 @@ class HopNhapDonGia(QDialog):
         so_nhom = len({m.nhom_loai for m in ds if m.nhom_loai})
         ds, khong_tach = ndg.tach_theo_loai(ds, ndg.doc_nhom_loai(dong))
         xem_van, tu_loi_van = [], False
-        if not ds:                                      # không có bảng: đơn giá viết trong điều khoản (QĐ 31/2025 vật nuôi...)
+        # 1.0.60: văn bản chính sách (toàn văn QĐ 42/2025): LUÔN đọc điều khoản, kể cả khi có bảng nhỏ; dòng khớp mã CS đang dùng
+        chinh_sach = nhom_vb == 4 and ndg.co_dieu_khoan(dong)
+        bieu = []
+        if chinh_sach:
+            ds_van, xem_van, bieu = ndg.muc_chinh_sach_tu_dieu_khoan(dong, 4)
+            tu_loi_van = bool(ds_van)
+            ds = list(ds) + ds_van
+        elif not ds:                                    # không có bảng: đơn giá viết trong điều khoản (QĐ 31/2025 vật nuôi...)
             ds, xem_van = ndg.muc_tu_loi_van(dong, nhom_vb)
             tu_loi_van = bool(ds)
         if not ds:
@@ -81,6 +88,12 @@ class HopNhapDonGia(QDialog):
         self.dong = dong
         self.ket_qua_ai = None                          # 1.0.56: kết quả phân tích AI (tùy chọn) - áp lại sau mỗi lần so khớp
         self.tu_loi_van = tu_loi_van
+        self.chinh_sach = chinh_sach
+        self.bieu_thuong = bieu
+        try:
+            self.vb_cu_khop = ndg.van_ban_cu_theo_so_hieu(vb.get('thay_the_vb') or ())
+        except Exception:                               # noqa: BLE001 - bộ đơn giá đọc không được: chỉ không gợi ý
+            self.vb_cu_khop = []
         self.scan = bool(getattr(dong, 'scan', False))   # dòng đọc bằng nhận dạng chữ: chặn giá nghi đọc sai, không chọn sẵn mục "bỏ"
         # 1.0.57: văn bản nhiều khu vực giá (QĐ 18/2026 hợp nhất: Phụ lục I khu vực 1, Phụ lục II khu vực 2) - mặc định nhập CẢ HAI
         # khu vực, bộ đơn giá tách mục theo khu vực (khu_vuc_gia: dự án chỉ dùng phụ lục của xã dự án); ô "Khu vực giá" chọn một khu vực
@@ -130,10 +143,21 @@ class HopNhapDonGia(QDialog):
                          'đang dùng: các dòng giữ theo tên nhóm.' if khong_tach else ''))
         if mt and not vb.get('dong_nai'):
             canh.append('Không thấy tên Đồng Nai trong văn bản: kiểm tra đây có đúng văn bản áp dụng tại địa phương không.')
-        if self.tu_loi_van:
+        if self.chinh_sach:
+            canh.append(f'Văn bản chính sách: {sum(1 for m in ds if m.can_cu)} mức đọc từ các điều khoản, đối chiếu với mã hỗ trợ đang dùng theo '
+                        'Điều / khoản, đơn giá và nghiệp vụ. Mục dẫn chiếu Luật / Nghị định (ổn định đời sống, tái định cư, đào tạo) giữ nguyên.')
+            if bieu:
+                khac = ndg.so_bieu_thuong(bieu)
+                canh.append(f'Biểu thưởng bàn giao mặt bằng ({len(bieu)} mức): ' + (f'KHÁC bộ đơn giá - {khac}; sửa ở Bộ đơn giá nếu đúng.' if khac else
+                                                                                    'trùng bộ đơn giá.'))
+        elif self.tu_loi_van:
             canh.append(f'Văn bản không có bảng giá: {len(ds)} đơn giá đọc từ LỜI VĂN các điều khoản (tên = chữ trước số tiền, ghép '
                         'tiêu đề khoản). Rê chuột vào tên để xem câu gốc; sửa tên / bỏ chọn dòng chưa đúng trước khi áp dụng.')
-        if vb.get('sua_doi'):
+        if vb.get('thay_the_vb'):
+            co_ = {ndg.chuan_so_hieu(x) for x in vb['thay_the_vb'] if any(ndg.chuan_so_hieu(x) in ndg.chuan_so_hieu(c[1]) for c in self.vb_cu_khop)}
+            canh.append('Văn bản này thay thế: ' + ', '.join(vb['thay_the_vb']) + (' - dòng có trong danh sách văn bản căn cứ được ghi hết hiệu lực '
+                        'khi áp dụng.' if co_ else '.'))
+        if vb.get('sua_doi') and not self.chinh_sach:
             canh.append('Văn bản sửa đổi, bổ sung: chỉ các bảng giá trong văn bản được áp dụng; nội dung bãi bỏ / sửa điều khoản '
                         'ở khung bên dưới cần tự xử lý.')
         if canh:
@@ -161,7 +185,7 @@ class HopNhapDonGia(QDialog):
         self.o_cach = QComboBox()
         for chu, gt in CACH_CAP_NHAT:
             self.o_cach.addItem(chu, gt)
-        if thay_the:
+        if thay_the and not chinh_sach:                 # văn bản chính sách: mặc định bổ sung, đối chiếu (không thay cả nhóm)
             for i in range(self.o_cach.count()):
                 if self.o_cach.itemData(i):
                     self.o_cach.setCurrentIndex(i)
@@ -197,6 +221,10 @@ class HopNhapDonGia(QDialog):
         lo.addLayout(hang_cach)
         self.lb_vb_cu.setVisible(False)
         self.cb_vb_cu.setVisible(False)
+        if self.vb_cu_khop:                             # văn bản ghi rõ văn bản bị thay thế: chọn sẵn, không cần chế độ thay cả nhóm
+            self._nap_vb_cu()
+            self.lb_vb_cu.setVisible(True)
+            self.cb_vb_cu.setVisible(True)
         self.lb_canh_thay = QLabel()
         self.lb_canh_thay.setWordWrap(True)
         dat_kieu_theo_tong(self.lb_canh_thay, 'QLabel { color: #B71C1C; background: #FFEBEE; padding: 6px; border-radius: 4px; }')
@@ -300,8 +328,8 @@ class HopNhapDonGia(QDialog):
         tt = self.thay_the()
         if tt:
             self._nap_vb_cu()
-        self.lb_vb_cu.setVisible(tt)
-        self.cb_vb_cu.setVisible(tt)
+        self.lb_vb_cu.setVisible(tt or bool(self.vb_cu_khop))
+        self.cb_vb_cu.setVisible(tt or bool(self.vb_cu_khop))
         self.khop()
 
     def _nap_vb_cu(self):
@@ -315,10 +343,14 @@ class HopNhapDonGia(QDialog):
             ds = []
         k = ndg.chuan_so_hieu(self.van_ban.get('so_hieu', ''))
         ds = [x for x in ds if not (k and k in ndg.chuan_so_hieu(x[1]))]        # không gợi ý chính văn bản đang nhập
+        id_co = {x[0] for x in ds}
+        ds = list(ds) + [x for x in self.vb_cu_khop if x[0] not in id_co]
         for i, sh, nd in ds:
             self.cb_vb_cu.addItem(sh, i)
             self.cb_vb_cu.setItemData(self.cb_vb_cu.count() - 1, nd, Qt.ItemDataRole.ToolTipRole)
-        if len(ds) == 1:
+        if self.vb_cu_khop:                             # 1.0.60: văn bản nêu đích danh (Điều 2 QĐ 42/2025) thắng gợi ý theo nhóm
+            self.cb_vb_cu.setCurrentIndex(self.cb_vb_cu.findData(self.vb_cu_khop[0][0]))
+        elif len(ds) == 1:
             self.cb_vb_cu.setCurrentIndex(1)
         self.cb_vb_cu.blockSignals(False)
 
@@ -416,10 +448,10 @@ class HopNhapDonGia(QDialog):
                 ma_moi = m.ma_khop or m.ma
             co_cu = bool(m.ma_khop)
             gia = {C_DUNG: None,
-                   C_MA_CU: m.ma_khop, C_TEN_CU: m.ten_cu if co_cu else '', C_GIA_CU: vn(m.gia_cu) if m.gia_cu is not None and co_cu else '',
+                   C_MA_CU: m.ma_khop, C_TEN_CU: m.ten_cu if co_cu else '', C_GIA_CU: m.he_so_cu.replace('.', ',') if m.he_so else vn(m.gia_cu) if m.gia_cu is not None and co_cu else '',
                    C_GC_CU: m.ghi_chu_cu if co_cu else '',
                    C_MA: ma_moi, C_TEN: '' if m.bo_cu else (m.ten_thay or m.ten), C_DVT: '' if m.bo_cu else m.dvt,
-                   C_GIA: '' if m.bo_cu else vn(m.don_gia), C_GC: '' if m.bo_cu else (m.ghi_chu_thay or m.ghi_chu),
+                   C_GIA: '' if m.bo_cu else (m.he_so.replace('.', ',') if m.he_so else vn(m.don_gia)), C_GC: '' if m.bo_cu else (m.ghi_chu_thay or m.ghi_chu),
                    C_TT: tt, C_KV: self.ten_kv(m.khu_vuc) if m.khu_vuc else '', C_NHOM: TEN_NHOM_NGAN.get(n, '')}
             chu_thich = self._chu_thich(m)
             for c, v in gia.items():
@@ -523,6 +555,17 @@ class HopNhapDonGia(QDialog):
         m = self.ds[r]
         if m.bo_cu or m.phu:
             return
+        if c == C_GIA and m.he_so:                      # hệ số: 1,5 (lần giá đất) - không phải số tiền
+            try:
+                hs = str(ndg.D(chu.replace(',', '.')))
+            except ValueError:
+                hs = ''
+            if hs and hs != m.he_so:
+                m.he_so = hs
+            elif not hs and not self.im_lang:
+                QMessageBox.warning(self, TEN_UD, f'Hệ số "{chu}" không đọc được: gõ số (ví dụ 1,5).')
+            self.khop()
+            return
         if c == C_GIA:
             g = ndg.doc_gia(chu)
             if not g:
@@ -557,7 +600,8 @@ class HopNhapDonGia(QDialog):
                 self, TEN_UD, f'Bỏ {so_bo} mục cũ không còn trong văn bản khỏi bộ đơn giá?\n\nBộ đơn giá hiện hành vẫn được giữ '
                               '(bộ mới là phiên bản sau); dự án đã lập phương án giữ nguyên số liệu.') != QMessageBox.StandardButton.Yes:
             return
-        vb_cu = [self.cb_vb_cu.currentData()] if self.thay_the() and self.cb_vb_cu.currentData() is not None else []
+        vb_cu = [self.cb_vb_cu.currentData()] if (self.thay_the() or self.vb_cu_khop) and self.cb_vb_cu.currentData() is not None else []
+        vb_cu += [x[0] for x in self.vb_cu_khop if x[0] not in vb_cu]       # mọi văn bản bị thay thế nêu đích danh
         try:
             kv = dict(xa=self.xa_kv, ten=self.ten_pl) if self.kv == ndg.KV_CA_HAI else None
             self.ket_qua = ndg.ap_dung(self.ds, self.o_nhom.currentData() or None, self.nguon, van_ban=self.van_ban,

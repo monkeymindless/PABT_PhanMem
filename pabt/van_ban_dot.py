@@ -105,7 +105,7 @@ def doc_thong_tin(file, bao_tien_do=None, cho=None) -> dict:
     from .nhap_don_gia import phan_tich_van_ban
     from .quan_ly import doc_van_ban
     dong, _ = doc_van_ban(file, bao_tien_do, cho)
-    vb = phan_tich_van_ban(dong)
+    vb = phan_tich_van_ban(dong, str(file).replace('\\', '/').rsplit('/', 1)[-1])
     return dict(so_hieu=vb.get('so_hieu', ''), ngay=vb.get('ngay', ''), noi_dung=vb.get('trich_yeu', ''))
 
 

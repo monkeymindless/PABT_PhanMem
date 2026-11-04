@@ -117,7 +117,7 @@ def noi_dung_gui(dong: list, ds: list, can_xu_ly, nhom: int = 0) -> tuple:
     """(chữ gửi đi, số dòng xác minh, đã cắt văn bản?)."""
     chu, cat = chu_van_ban(dong)
     xm = dong_can_xac_minh(ds, can_xu_ly)
-    dong_xm = '\n'.join(f'{i}\t{m.ten}\t{m.dvt}\t{m.don_gia}\t{m.trang_thai}'
+    dong_xm = '\n'.join(f'{i}\t{m.ten}\t{m.dvt}\t{m.he_so or m.don_gia}\t{m.trang_thai}'
                         + (f'\tgiá đọc được trên bản scan: "{m.nghi_gia}"' if m.nghi_gia else '') for i, m in xm)
     yeu_cau = (
         'Nhiệm vụ:\n'
@@ -215,7 +215,7 @@ def ap_xac_minh(ds: list, kq: dict) -> dict:
         theo.setdefault(_khoa_dong(m), m)
     for x in kq.get('xac_minh') or ():
         m = theo.get(x.get('_khoa'))
-        if m is None:
+        if m is None or m.he_so:                         # 1.0.60: dòng hệ số (1,5 lần giá đất): kết quả AI là số tiền nguyên, không so được
             continue
         kl = x.get('ket_luan')
         gia = x.get('don_gia')

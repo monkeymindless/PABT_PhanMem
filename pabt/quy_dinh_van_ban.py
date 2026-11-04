@@ -35,6 +35,9 @@ _RE_BO_CAU = re.compile(r'^(?:can cu|theo de nghi|xet de nghi|quyet dinh:|quyet 
 _RE_DIEU_BO = re.compile(r'hieu luc|to chuc thuc hien|trach nhiem|dieu khoan thi hanh|pham vi dieu chinh|doi tuong ap dung|'
                          r'xu ly chuyen tiep|thi hanh')
 _RE_DIEU = re.compile(r'^(?:Điều|ĐIỀU|Dieu)\s+(\d+[a-zđ]?)\s*[.:]?\s*(.*)$')
+# không tách câu sau chữ viết tắt ("NĐ. CP", "TP. Biên Hòa", "khoản 2. Điều") - bản OCR hay chèn dấu chấm
+_RE_VIET_TAT = re.compile(r'(?:\b(?:NĐ|QĐ|TT|NQ|TP|Tp|UBND|HĐND)|\b(?i:khu\s+vực|điều|khoản)(?:\s+\d+)?)\.?$')
+_RE_MANH_SO_HIEU = re.compile(r'^\W*(?:\d{1,4}/\d{4}/\S+|(?:Luật|Nghị\s+định)\s+s[ốô]\s*\d+/\d{4}/\S+)(?:[\s,;:]+(?:và\s+)?(?:(?:Luật|Nghị\s+định)\s+)?(?:s[ốô]\s*)?\d+/\d{4}/\S+)*\W*$')
 _RE_KHOAN = re.compile(r'^(\d+)\.\s+(?=\S)')
 _RE_DIEM = re.compile(r'^([a-zđ])\)\s+')
 _RE_PHAM_VI = re.compile(r'(?i)\b(?:đối\s+với|áp\s+dụng\s+(?:cho|đối\s+với)|riêng)\s+(.{3,90}?)(?=\s*[:;,]|\s+(?:thì|được|là|có|bằng|'
@@ -46,14 +49,6 @@ _PHAM_VI_CHUNG = {'cay trong', 'cay', 'tai san', 'nha', 'cong trinh', 'vat nuoi'
 
 def _gon(x: str) -> str:
     return ' '.join(str(x or '').split())
-
-
-def _dong_chu(r) -> str:
-    """Một dòng của doc_bang / OCR -> chữ (dòng một ô = đoạn văn; dòng nhiều ô = hàng bảng - trả '' để không lẫn vào lời văn)."""
-    if isinstance(r, str):
-        return _gon(r)
-    o = [str(c) for c in r if str(c or '').strip()]
-    return _gon(o[0]) if len(o) == 1 else ''
 
 
 def pham_vi(chu: str) -> str:
@@ -73,6 +68,17 @@ def sach_cau(chu: str) -> str:
     return chu.strip()
 
 
+def tach_cau(chu: str) -> list:
+    """Tách câu ở dấu . ; trước chữ hoa, trừ sau chữ viết tắt (NĐ, QĐ, TT, NQ, TP, UBND, HĐND, khu vực, Điều, khoản)."""
+    kq, tu = [], 0
+    for m in re.finditer(r'(?<=[.;])\s+(?=\S)', chu):
+        if chu[m.end()].isupper() and not _RE_VIET_TAT.search(chu[tu:m.start()]):
+            kq.append(chu[tu:m.start()])
+            tu = m.end()
+    kq.append(chu[tu:])
+    return kq
+
+
 def la_cau_quy_dinh(chu: str) -> bool:
     k = bo_dau(sach_cau(chu))
     if len(k) < 20 or _RE_BO_CAU.search(k):
@@ -87,7 +93,9 @@ def la_cau_quy_dinh(chu: str) -> bool:
 def trich_quy_dinh(dong: list, nhom_vb: int = 0, quy_tac: list | None = None) -> list:
     """[dict(chu, nhom, dieu, pham_vi, nguon)] - quy định cách tính trong văn bản: dòng quy tắc của bảng (quy_tac, nguon 'bảng') + câu
     trong lời văn các điều khoản (nguon 'điều khoản'). Bỏ phần căn cứ, hiệu lực, tổ chức thực hiện, chữ ký. Không trùng lặp."""
-    from .nhap_don_gia import _khoan_van, nhom_theo_chu
+    from .nhap_don_gia import (_RE_DIEU_HANH_CHINH, DongScan, _khoan_van, bo_dan_chieu, bo_vi_du, cac_khoan_dieu, dong_loi_van, nhom_theo_chu,
+                               sua_chu_ocr, ten_dieu_gon, van_theo_dieu)
+    scan = isinstance(dong, DongScan)
     kq, da = [], set()
 
     def them(chu, dieu, nguon):
@@ -106,48 +114,26 @@ def trich_quy_dinh(dong: list, nhom_vb: int = 0, quy_tac: list | None = None) ->
     for x in quy_tac or ():
         if not str(x).startswith('KHÔNG ĐỌC ĐƯỢC'):
             them(x, '', 'bảng')
-    # lời văn: chia theo Điều, bỏ Điều hiệu lực / tổ chức thực hiện; trong Điều ghép dòng thành khoản (_khoan_van)
-    dieu, ten_dieu, doan, bat_dau = '', '', [], False
-
-    def xu_ly_dieu():
-        if not doan or _RE_DIEU_BO.search(bo_dau(ten_dieu)):
-            return
-        khoan = ''
-        for c in _khoan_van(doan):
-            mk = _RE_KHOAN.match(c)
-            if mk:
-                khoan = f'khoản {mk.group(1)}'
-            md = _RE_DIEM.match(c)
-            vi_tri = ' '.join(x for x in (dieu, khoan, f'điểm {md.group(1)}' if md else '') if x)
-            for cau in re.split(r'(?<=[.;])\s+(?=[A-ZĐÀ-Ỹ])', c):
+    # lời văn theo Điều (1.0.60: nhận trọn tiêu đề Điều nhiều dòng, câu chỉ lấy từ thân Điều); bỏ Điều hiệu lực / tổ chức thực hiện, đoạn "Ví dụ"
+    van = bo_vi_du(dong_loi_van(dong))
+    cac_dieu = van_theo_dieu(van)
+    for d in cac_dieu:
+        ten = ten_dieu_gon(bo_dan_chieu(d['ten']))
+        if _RE_DIEU_BO.search(bo_dau(ten)) or _RE_DIEU_HANH_CHINH.search(bo_dau(ten)):
+            continue
+        dieu = f'Điều {d["so"]}'
+        # "Điều 5. Đối với cây … thì …" (tiêu đề là luôn nội dung)
+        if len(d['ten']) > 60 and re.search(r'\bthì\b', d['ten']) and la_cau_quy_dinh(d['ten']):
+            them(d['ten'], dieu, 'điều khoản')
+        for khoan, diem, than, goc, _dan in cac_khoan_dieu(d):
+            vi_tri = ' '.join(x for x in (dieu, f'khoản {khoan}' if khoan else '', f'điểm {diem}' if diem else '') if x)
+            for cau in tach_cau(re.sub(r'^\s*[a-zđ]\)\s*', '', bo_dan_chieu(goc))):
+                if _RE_MANH_SO_HIEU.match(cau):
+                    continue
                 if la_cau_quy_dinh(cau):
-                    them(cau, vi_tri, 'điều khoản')
-    for r in dong:
-        x = _dong_chu(r)
-        if not x:
-            continue
-        k = bo_dau(x)
-        if not bat_dau:                                 # phần căn cứ / trích yếu trước "QUYẾT ĐỊNH:" / "QUYẾT NGHỊ:" / Điều 1
-            if re.match(r'(quyet dinh|quyet nghi)\s*:?$', k) or _RE_DIEU.match(x):
-                bat_dau = True
-            if not _RE_DIEU.match(x):
-                continue
-        md = _RE_DIEU.match(x)
-        if md:
-            xu_ly_dieu()
-            dieu, ten_dieu, doan = f'Điều {md.group(1)}', md.group(2), []
-            if md.group(2) and len(md.group(2)) > 60:   # "Điều 5. Đối với cây … thì …" (tiêu đề dài là luôn nội dung)
-                doan.append(md.group(2))
-            continue
-        if re.match(r'(noi nhan|tm\.|kt\.)', k):
-            xu_ly_dieu()
-            doan = []
-            dieu = ten_dieu = ''
-            continue
-        doan.append(x)
-    xu_ly_dieu()
-    if not bat_dau:                                     # văn bản không có "QUYẾT ĐỊNH:" / Điều (bảng dán, trích đoạn): xét mọi đoạn
-        for c in _khoan_van([r for r in (_dong_chu(r) for r in dong) if r]):
+                    them(sua_chu_ocr(cau) if scan else cau, vi_tri, 'điều khoản')
+    if not cac_dieu:                                    # văn bản không có Điều (bảng dán, trích đoạn): xét mọi đoạn
+        for c in _khoan_van(van):
             if la_cau_quy_dinh(c):
                 them(c, '', 'điều khoản')
     return kq

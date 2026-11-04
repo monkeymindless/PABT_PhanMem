@@ -181,6 +181,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   (không đổi lược đồ; mục không có KVMUC dùng mọi khu vực). Dự án: `khu_vuc_du_an` (cai_dat KHU_VUC_GIA hoặc xã du_an.ten_dia_ban);
   `lap_pa.DanhMuc` ẩn mục khu vực khác (`an`, `bi_khoa`; `lay` vẫn trả để đọc dòng cũ). Văn bản nhiều khu vực: `so_khop_khu_vuc` (so từng
   khu vực với mục cùng khu vực, `chi_ma`), `ap_dung(khu_vuc=…)`. Thêm cách đọc / ghi danh mục mới theo mã: nhớ lọc theo khu vực.
+- Văn bản chính sách (1.0.60): dòng `Muc.can_cu` đọc theo Điều / khoản (`muc_chinh_sach_tu_dieu_khoan`), khớp `_khop_chinh_sach`, giữ tên mục của bộ; nhóm 4 chế độ thay thế: mục dẫn chiếu (`la_muc_dan_chieu`) "giữ nguyên", không "bỏ". Chữ lớp hoa dùng `_HOA` (khoảng À-Ỹ gồm cả chữ thường).
 - Mã tài sản: nhà TS, cây CT, vật nuôi VN, chính sách CS, thưởng TH (`ma_tai_san`). Quy ước tương đương do người dùng tự nhập (bộ đơn giá
   không có).
 
