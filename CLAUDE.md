@@ -243,6 +243,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   - chữ người dùng chỉ định thắng PDF mẫu. Không ghi cố định tên đơn vị / người ký; hồ sơ địa phương mặc định trung tính.
 
 ### Phát hành, bộ cài
+- APK LARC Mobile: phải ký đúng khóa đang phát hành (`khoa_android/larc_field.jks`, chứng chỉ 07c02414…, đặt LARC_KHOA_APK; `dung.khoa_ky` không tự sinh khóa). Đổi khóa = điện thoại đã cài phải gỡ: so chứng chỉ (`apksigner verify --print-certs`) với bản trên Pages trước khi đẩy.
 - Một bộ cài `LARC_Setup_Universal_<ver>.exe` + zip Universal + gói `LARC_CapNhat_<ver>.larcud`; vẫn dựng hai bản chương trình (Win10-11
   Qt6 x64, Win7-8 Qt5 x86). Không Inno Setup >= 6.5. Giữ bộ cài cũ trong `bo_cai\`. Chuỗi lệnh dựng dừng khi một bước lỗi. Thử máy trắng
   `thu_may_trang.ps1`. LARC Mobile đồng bộ số phiên bản (`di_dong/dung.py --url`, đẩy Pages bằng `gh auth git-credential`).

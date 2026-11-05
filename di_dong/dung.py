@@ -50,8 +50,17 @@ MAU = DAY / 'ung_dung' / 'index.html'
 BIEU_TUONG = DAY / 'bieu_tuong.png'
 DANH_MUC_MAC_DINH = DAY / 'danh_muc_mac_dinh.json'
 NGUON_ANDROID = DAY / 'android'
-CONG_CU = Path(os.environ.get('LARC_ANDROID') or REPO.parent / 'cong_cu_android')
-KHOA = Path(os.environ.get('LARC_KHOA_APK') or REPO.parent / 'khoa_android' / 'larc_field.jks')
+
+
+def _noi_mac_dinh(*ten) -> Path:
+    """Thư mục cha của repo trước, rồi trong repo (công cụ, khóa có thể nằm một trong hai nơi)."""
+    p = REPO.parent.joinpath(*ten)
+    q = REPO.joinpath(*ten)
+    return q if not p.exists() and q.exists() else p
+
+
+CONG_CU = Path(os.environ.get('LARC_ANDROID') or _noi_mac_dinh('cong_cu_android'))
+KHOA = Path(os.environ.get('LARC_KHOA_APK') or _noi_mac_dinh('khoa_android', 'larc_field.jks'))
 BIET_DANH = 'larc_field'
 RA = REPO / 'bo_cai'
 API_MIN, API_DICH, BUILD_TOOLS = 24, 34, '34.0.0'
@@ -237,10 +246,13 @@ def cong_cu() -> dict:
 
 
 def khoa_ky(cc: dict) -> tuple:
-    """(file khóa, mật khẩu). Chưa có: tạo khóa RSA 4096, hạn 30 năm."""
+    """(file khóa, mật khẩu). Không thấy khóa thì DỪNG: khóa mới làm điện thoại đã cài không cài đè được (phải gỡ, mất dữ liệu trên máy); bản 1.0.60 từng bị ký nhầm khóa tự sinh như vậy.
+    Chủ ý tạo khóa mới: đặt LARC_TAO_KHOA_MOI=1 (khóa RSA 4096, hạn 30 năm)."""
     mk_file = KHOA.with_name('matkhau.txt')
     if KHOA.exists():
         return KHOA, mk_file.read_text(encoding='utf-8').strip()
+    if os.environ.get('LARC_TAO_KHOA_MOI') != '1':
+        raise SystemExit(f'Không thấy khóa ký: {KHOA}. Đặt LARC_KHOA_APK trỏ tới khóa đang dùng. Khóa mới làm điện thoại đã cài không cài đè được; chủ ý tạo thì đặt LARC_TAO_KHOA_MOI=1.')
     KHOA.parent.mkdir(parents=True, exist_ok=True)
     mk = secrets.token_urlsafe(24)
     _chay([cc['keytool'], '-genkeypair', '-keystore', KHOA, '-alias', BIET_DANH, '-keyalg', 'RSA', '-keysize', '4096',
