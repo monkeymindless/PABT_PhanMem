@@ -51,7 +51,7 @@ class TestMenuTitleCase(unittest.TestCase):
         chu = m.tieu_de_nhom['1. Khái toán & dự toán'].text()
         self.assertIn('Khái toán', chu)
         self.assertNotIn('KHÁI TOÁN', chu)
-        self.assertIn('&&', chu)
+        self.assertIn(' & ', chu)                                        # nhãn QLabel: 1.0.69 sửa lỗi hiện thành hai dấu &
 
 
 class TestThanhTieuDeTheoTong(unittest.TestCase):

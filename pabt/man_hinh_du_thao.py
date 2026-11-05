@@ -515,9 +515,13 @@ class KhungDuThao(QWidget):
         f_the.setPointSize(12)
         self.tabs.tabBar().setFont(f_the)
         self.tabs.tabBar().setStyleSheet('QTabBar { font-size: 12px; } QTabBar::tab { padding: 4px 12px; }')
+        # 1.0.69: 4 thẻ luôn đủ chữ, sát lề trái: không cuộn thanh thẻ ("...ết công khai"), không cắt chữ
+        self.tabs.setUsesScrollButtons(False)
+        self.tabs.setElideMode(Qt.TextElideMode.ElideNone)
+        self.tabs.tabBar().setExpanding(False)
         # CCCD hiển thị đủ số (1.0.04 bỏ che) - tiêu đề chỉ "CCCD"; bề rộng chuẩn từng cột + một cột giãn
         self.bang_ny = _bang(['STT', 'Họ và tên', 'CCCD', 'Thửa', 'Tổng tiền dự thảo', 'Địa điểm'],
-                             [50, 170, 115, 85, 155], gian=5)
+                             [50, 230, 115, 85, 155, 120], gian=1)
         self.bang_yk = _bang(['Mã hộ', 'Họ và tên', 'Ý kiến', 'Nhóm kiến nghị', 'Nội dung', 'Chênh lệch'],
                              [70, 160, 145, 150, 0, 120], gian=4)
         self.bang_dt = _bang(['Mã hộ', 'Họ và tên', 'Lý do chưa đồng ý', 'Lần đối thoại', 'Kết luận', 'Chuyển đợt'],
@@ -538,23 +542,24 @@ class KhungDuThao(QWidget):
         gan_chu_khi_trong(self.bang_th, 'Chưa có kiến nghị nào được tổng hợp')
         # 0.9.70 (đặc tả ARCH-PABT-2026-V7 phần V): 4 thẻ con, tên không ghi cứng số ngày. Thẻ 1 gồm hộ đang niêm yết và (khung
         # dưới) hộ vướng / chưa đủ điều kiện - trước là thẻ 5 riêng: người niêm yết cần thấy ngay hộ nào chưa đưa vào được
-        from PySide6.QtWidgets import QSplitter
+        from .giao_dien import TachCoNam, giu_cot_gian
+        self._giu_ny = giu_cot_gian(self.bang_ny, [1], 230)
+        for b in (self.bang_yk, self.bang_dt):
+            b.setColumnWidth(1, max(230, b.columnWidth(1)))
         goc = QWidget()                                 # góc phải thanh 4 thẻ: nút của thẻ đang mở
         self._h_goc = QHBoxLayout(goc)
         self._h_goc.setContentsMargins(0, 0, 4, 2)
         self._h_goc.setSpacing(6)
         self._nut_goc = []
         self.tabs.setCornerWidget(goc, Qt.Corner.TopRightCorner)
-        tach = self.tach = QSplitter(Qt.Orientation.Vertical)
+        tach = self.tach = TachCoNam(Qt.Orientation.Vertical)
         tach.setChildrenCollapsible(False)
-        tach.setHandleWidth(10)
-        dat_kieu_theo_tong(tach, 'QSplitter::handle:vertical { background: #CBD5E1; margin: 3px 38%; border-radius: 2px; }'
-                                 'QSplitter::handle:vertical:hover { background: #94A3B8; }')
+        tach.setHandleWidth(14)
         tach.addWidget(self._trang(self.bang_ny, []))   # nút "Xuất bảng niêm yết": hàng nút đợt phía trên (15/10/2026)
         tach.addWidget(self._trang(self.bang_vm, [
             ('Đánh dấu pháp lý hộ đang chọn', self._phap_ly),
             ('Xuất danh sách đôn đốc V1, V2', self._xuat_dd)],
-            'Hộ vướng / chưa đủ điều kiện niêm yết (kéo thanh ngăn phía trên để đổi chiều cao hai bảng)'))
+            'Hộ chưa đủ điều kiện niêm yết, hộ vướng (kéo thanh ngăn phía trên để đổi chiều cao hai bảng)'))
         tach.setStretchFactor(0, 3)
         tach.setStretchFactor(1, 2)
         tach.handle(1).setToolTip('Kéo lên / xuống để đổi chiều cao bảng Hộ niêm yết và bảng Hộ vướng')
@@ -804,7 +809,10 @@ class KhungDuThao(QWidget):
         for i, h in enumerate(ho):
             for c, v in enumerate((i + 1, h['ho_ten'], h['so_cccd'] or '', h['thua'],
                                    vn(h['tien']) if h['tien'] is not None else '', dia)):
-                self.bang_ny.setItem(i, c, _o(v))
+                o = _o(v)
+                if c == 1:
+                    o.setToolTip(str(v))
+                self.bang_ny.setItem(i, c, o)
             self.bang_ny.item(i, 0).setData(Qt.ItemDataRole.UserRole, h['ma_ho'])
         self.bang_yk.setRowCount(len(ho))
         for i, h in enumerate(ho):

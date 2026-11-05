@@ -477,3 +477,30 @@ def so_sanh(cu: dict, moi: dict) -> list:
         kq += _khac_duong(k, da[ku], db[k], cap_cot)
     kq += [f'Bỏ địa bàn {k}' for k in sorted(con_cu)]
     return kq
+
+
+class DynamicRegulationEngine:
+    """Động cơ quy tắc: một gói (mọi hệ số, yếu tố, công thức, làm tròn, câu chữ là dữ liệu JSON), không có quy tắc pháp lý trong mã. Lớp mỏng trên các hàm của module và gia_dat_qd03.tinh_don_gia.
+    Mặc định gói gắn sẵn; tu_file nạp + kiểm gói .json mới."""
+
+    def __init__(self, goi: dict | None = None):
+        self.goi = goi or _gan_san()
+
+    @classmethod
+    def tu_ma(cls, ma: str):
+        g = lay_goi(ma)
+        if g is None:
+            raise ValueError(f'Không có gói quy tắc {ma}.')
+        return cls(g)
+
+    @classmethod
+    def tu_file(cls, file):
+        return cls(doc_file_goi(file))
+
+    def tra_doan(self, xa: str, ma_doan: str):
+        from . import gia_dat_qd03 as g
+        return g.tim_doan(g.dia_ban_theo_ten(xa, self.goi), ma_doan, self.goi)
+
+    def tinh(self, dau_vao, doan: dict | None = None):
+        from . import gia_dat_qd03 as g
+        return g.tinh_don_gia(dau_vao, doan, self.goi)

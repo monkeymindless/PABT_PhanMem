@@ -194,6 +194,7 @@ class DongDat:
     thanh_tien_excel: Decimal | None = None
     id: int | None = None
     cong_thuc: str = ''             # công thức đã gõ ra diện tích (=20*10,55); trống = gõ số
+    ap_gia: str = ''                # JSON don_gia, gia_bang_gia_nq28, he_so_k1 / k2 / k3, cong_thuc_dien_giai khi áp đơn giá đất (1.0.69)
 
 
 @dataclass
@@ -346,7 +347,8 @@ def _dong_dat(r) -> DongDat:
                    vi_tri=r['vi_tri'], gia_bang_gia=D(r['gia_bang_gia']), he_so_k=he_so(r['he_so_k']),
                    ty_le=None if r['ty_le'] in (None, '') else D(r['ty_le']), ghi_chu=r['ghi_chu'],
                    thanh_tien_excel=_dec_hoac_none(r['thanh_tien_excel']), id=r['id'],
-                   cong_thuc=(r['cong_thuc'] or '') if 'cong_thuc' in r.keys() else '')
+                   cong_thuc=(r['cong_thuc'] or '') if 'cong_thuc' in r.keys() else '',
+                   ap_gia=(r['ap_gia'] or '') if 'ap_gia' in r.keys() else '')
 
 
 def _dong_khoan(r) -> DongKhoan:
@@ -939,6 +941,12 @@ def giai_trinh_dong_pa(pa: PhuongAn, bc: BoiCanh, muc: int, chi_so: int) -> dict
         if d.cong_thuc:
             thay.append(f'Diện tích tính từ công thức đã nhập: {d.cong_thuc} = {so_vn(d.dien_tich)} m²')
         thay.append(f'Đơn giá bồi thường = {vn(d.gia_bang_gia)} đ/m² × hệ số K {so_vn(k)} = {vn(dg)} đ/m²')
+        if d.ap_gia:
+            import json
+            try:
+                thay.append('Thuyết minh đơn giá đất: ' + json.loads(d.ap_gia).get('cong_thuc_dien_giai', ''))
+            except ValueError:
+                pass
         thay.append(f'Thành tiền = {so_vn(d.dien_tich)} m² × {vn(dg)} đ/m² × {so_vn(tl * 100)}% = {vn(D(d.dien_tich) * dg * tl)} đồng'
                     f' -> {tron}: {vn(tt)} đồng')
         can_cu = [x for x in (f'Loại đất {d.loai_dat}' + (f', vị trí {d.vi_tri}' if d.vi_tri else '') if d.loai_dat else '',

@@ -142,7 +142,7 @@ class TestCuaSoLapPA(_CoDuAn):
         w = CuaSoLapPA(self.con, self.ma[0])
         try:
             ten = [w.tab.tabText(i).rsplit(' (', 1)[0] for i in range(w.tab.count())]
-            self.assertEqual(ten[1:], ['1. Đất', '2. Nhà, công trình', '3. Cây trồng', '4. Vật nuôi', '5. Hỗ trợ'])
+            self.assertEqual(ten[1:], ['1. Đất', '2. Nhà, công trình', '3. Cây trồng', '4. Vật nuôi', '5. Hỗ trợ && TĐC'])
             self.assertEqual((the_cua(MUC_VN), the_cua(4)), (4, 5))
             w.them_nhanh(MUC_VN, w.bo.dm.lay('VN5'), so_luong='3')
             self.assertEqual(w.tab.currentIndex(), 4)

@@ -175,6 +175,24 @@ def _hai(x) -> str:
     return format(_q(x, 2), 'f').replace('.', ',')
 
 
+def he_hien(x) -> str:
+    """Hệ số trên màn hình, công thức: 2 chữ số lẻ kiểu VN (1,45 ; 1,00 ; 0,90); hệ số lẻ hơn (0,9025) giữ đủ, không làm tròn mất giá trị pháp lý."""
+    d = D(x)
+    return _hai(d) if _q(d, 2) == d else format(d.normalize(), 'f').replace('.', ',')
+
+
+def _tuyen_co_quy_dinh_rieng(doan: dict | None) -> bool:
+    """Chốt chặn nhân trùng K3 (Văn bản hướng dẫn 29/05/2026 của Sở NN&MT): Phụ lục I.2 đã có K1 riêng cho tuyến đường đất, sỏi, đá, cấp phối hoặc "các tuyến đường giao thông còn lại".
+    Dấu trong gói quyết định; gói mới chưa đánh dấu thì nhận theo tên tuyến."""
+    if not doan:
+        return False
+    if doan.get('co_quy_dinh_rieng_duong_dat_tai_pl1'):
+        return True
+    from .lap_pa import bo_dau
+    t = bo_dau(doan.get('ten_duong', ''))
+    return t.startswith(('duong dat', 'duong soi', 'duong cap phoi')) or 'con lai' in t
+
+
 def _k1_bang_nhap(goi: dict, v: DauVao, doan: dict, nhom: dict | None) -> tuple:
     """K1 theo bảng hệ số K máy đã nhập (thẻ Hệ số K): chỉ khi đang dùng gói gắn sẵn và máy đã thay bảng. (hệ số hoặc None, văn bản của bảng, có thay không)."""
     from . import he_so_k as hk
@@ -242,7 +260,7 @@ def tinh_don_gia(v: DauVao, doan: dict | None = None, goi: dict | None = None) -
     k3 = MOT
     la_nn = bool(nhom['la_nong_nghiep']) if nhom else False
     nhom_nay = 'nn' if la_nn else 'pnn'
-    co_rieng = bool(v.co_quy_dinh_rieng_duong_dat_pl1) or bool(doan and doan.get('co_quy_dinh_rieng_duong_dat_tai_pl1'))
+    co_rieng = bool(v.co_quy_dinh_rieng_duong_dat_pl1) or _tuyen_co_quy_dinh_rieng(doan)
     ds = list(v.yeu_to_pl3 or [])
     ap, co_khoa, loai_tru = [], False, False
     for y in goi.get('yeu_to', ()):
@@ -294,16 +312,23 @@ def tinh_don_gia(v: DauVao, doan: dict | None = None, goi: dict | None = None) -
             lap_luan.append(cau('ct_thap', gia_cu_the=vn(g_ct), gia_tinh=vn(da_tron)))
 
     nhan = {'K_KHAC': 'K_khác'}
-    cong_thuc = vn(g) + ''.join(f' × {_he(gia_tri.get(m, MOT))} ({nhan.get(m, m)})' for m in ct['he_so'] if not (m == 'K_KHAC' and k_khac == 1)) + f' = {vn(da_tron)} VNĐ/m²'
+    cong_thuc = vn(g) + ''.join(f' × {he_hien(gia_tri.get(m, MOT))} ({nhan.get(m, m)})' for m in ct['he_so'] if not (m == 'K_KHAC' and k_khac == 1)) + f' = {vn(da_tron)} đ/m²'
     return KetQua(g, k1, k2, k3, k_khac, tong, chua_tron, da_tron, cuoi, chuyen_tiep, cong_thuc, canh_bao, lap_luan, goi.get('ma', ''), f'{bang_gia} × {so_hieu}', mau.get('ghi_chu_ct') or mau_goc['ghi_chu_ct'], them, nguon_k1)
 
 
 def cong_thuc_gon(kq: KetQua) -> str:
-    """Công thức một dòng cho thanh áp giá nhanh: bỏ hệ số bằng 1 ('230.000 × 1,45 = 333.500 đ/m²'). Có giá cụ thể chuyển tiếp thì ghi giá đang dùng."""
-    he = [kq.k1, kq.k2, kq.k3, kq.k_khac] + list(kq.he_so_them.values())
-    chu = vn(kq.don_gia_nq28) + ''.join(f' × {_he(x)}' for x in he if D(x) != 1)
+    """Công thức một dòng cho ngăn áp giá nhanh: '230.000 × 1,45 × 1,00 × 1,00 = 333.500 đ/m²' (K khác chỉ khi khác 1). Có giá cụ thể chuyển tiếp thì ghi giá đang dùng."""
+    he = [kq.k1, kq.k2, kq.k3] + ([kq.k_khac] if D(kq.k_khac) != 1 else []) + list(kq.he_so_them.values())
+    chu = vn(kq.don_gia_nq28) + ''.join(f' × {he_hien(x)}' for x in he)
     return (f'{chu} = {vn(kq.don_gia_da_lam_tron)} đ/m²' if not kq.ap_dung_chuyen_tiep
             else f'Giá cụ thể {vn(kq.don_gia_ap_dung)} đ/m²')
+
+
+def chi_tiet_ap_gia(kq: KetQua) -> dict:
+    """Thông tin pháp lý lưu kèm dòng đất khi áp giá (số dạng chữ, không float): đọc lại được từng hệ số, không phải tách từ câu ghi chú."""
+    from .tien import chuoi
+    return dict(don_gia=chuoi(kq.don_gia_ap_dung), gia_bang_gia_nq28=chuoi(kq.don_gia_nq28), he_so_k1=chuoi(kq.k1), he_so_k2=chuoi(kq.k2), he_so_k3=chuoi(kq.k3), he_so_k_khac=chuoi(kq.k_khac),
+                cong_thuc_dien_giai=kq.cong_thuc, goi=kq.goi_ma, can_cu=kq.can_cu_ngan, chuyen_tiep=bool(kq.ap_dung_chuyen_tiep))
 
 
 def ghi_chu_ap_gia(kq: KetQua, doan: dict | None = None, dia_ban: str = '') -> str:

@@ -105,7 +105,7 @@ class TestChonVungVaBoDem(CoNavy):
         self.assertEqual(tk['so_dem'], 3)
         self.assertEqual(tk['tong'], Decimal('818.3'))
         self.assertEqual(tk['trung_binh'], Decimal('818.3') / 3)
-        chu = 'Trung bình: 272,8     Tổng số đếm: 3     Tổng: 818,3'
+        chu = 'Đang chọn: 3 dòng (3 ô)  |  Tổng DT/KL: 818,3'
         self.assertEqual(tk['chuoi'], chu)
         self.assertEqual(w.lb_bo_dem_excel.text(), chu)
         self.assertTrue(w.lb_bo_dem_excel.isVisibleTo(w))
@@ -198,8 +198,7 @@ class TestChonVungVaBoDem(CoNavy):
         self.assertEqual(hop.bang_dot.item(0, 1).text(), '3 hộ')
         # bôi đen trong hộp: bộ đếm của hộp (góc dưới trái)
         _chon_o(hop.bang_tt, [(0, 5), (1, 5)])
-        self.assertTrue(hop.lb_bo_dem_excel.text().startswith('Trung bình: '))
-        self.assertIn('Tổng số đếm: 2', hop.lb_bo_dem_excel.text())
+        self.assertTrue(hop.lb_bo_dem_excel.text().startswith(('Trung bình: ', 'Đang chọn: 2 dòng')))       # 1.0.69: cột biết bản chất có dạng riêng
         tt = hop.sao_chep_tom_tat()
         self.assertIn('3 hộ', tt)
         self.assertIn('1. Tổng quy mô toàn dự án', tt)
@@ -224,9 +223,11 @@ class TestChonVungVaBoDem(CoNavy):
         d.show()
         _chon_o(b, [(0, 1), (1, 1)])
         from pabt.giao_dien import NhanBoDem
-        n = b.findChild(NhanBoDem)
+        n = d.findChild(NhanBoDem)
         self.assertIsNotNone(n)
-        self.assertEqual(n.text(), 'Trung bình: 1.750     Tổng số đếm: 2     Tổng: 3.500')
+        self.assertIs(n.parentWidget(), d)                            # 1.0.69: dưới chân bảng, không nổi trong lòng bảng
+        self.assertEqual(d.layout().indexOf(n), d.layout().indexOf(b) + 1)
+        self.assertEqual(n.text(), 'Đang chọn: 2 dòng (2 ô)  |  Tổng Thành tiền: 3.500 đồng')
 
 
 if __name__ == '__main__':

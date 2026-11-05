@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtGui import QColor, QFont
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
                                QMessageBox, QPlainTextEdit, QProgressDialog, QPushButton, QScrollArea, QFrame, QSizePolicy, QTableView, QVBoxLayout, QWidget)
 
 from . import ap_gia_dat as ap
@@ -18,7 +18,7 @@ from . import gia_dat_qd03 as g
 from . import goi_gia_dat as gg
 from . import quet_chung as qc
 from . import van_ban_can_cu as vb
-from .giao_dien import TOKEN, XepDong, hop_ket_qua
+from .giao_dien import TOKEN, XepDong, gan_dinh_dang_nghin, hop_ket_qua
 from .lap_pa import LoiNhap, doc_so
 from .man_hinh_quet_chung import NutQuetChung
 from .nghiep_vu import BoiCanh, thanh_tien_dat
@@ -201,7 +201,7 @@ class HopTinhGiaDat(QDialog):
         self.bo_mo, self.truoc_ap, self.sau_ap = bo_mo, truoc_ap, sau_ap
         self.bao_cao = None                      # (tóm tắt, chi tiết) của lần áp gần nhất khi có hộ chuyển nhánh / bị chặn
         self.setWindowTitle(TIEU_DE)
-        self.resize(1320, 680)
+        self.resize(1440, 760)
         self.kq = None
         self.doan = None
         self._tat_ca = None                      # mọi hàng của dự án (đọc lần đầu cần, đọc lại sau khi ghi)
@@ -246,12 +246,12 @@ class HopTinhGiaDat(QDialog):
         self.o_g = QLineEdit('0')
         self.o_g.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.lb_g = QLabel('')
-        self.nut_tra = QPushButton('Tra bảng giá')
+        self.nut_tra = QPushButton('Tra giá')
         self.nut_tra.setToolTip('Điền giá từ bảng giá đất đang dùng: dòng thứ tự vị trí kết nối trong cụm dòng của đoạn đường đã chọn')
         self.nut_tra.clicked.connect(lambda: self.tra_gia(True))
         self.ck_k2 = QCheckBox('')
         self.hang_k2, self.lb_k2 = _hang_tich(self.ck_k2, '')
-        self.o_k2 = QLineEdit('1')
+        self.o_k2 = QLineEdit('1,00')
         self.o_k2.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.o_k2.setEnabled(False)
         self.ck_pl3 = {}
@@ -263,11 +263,14 @@ class HopTinhGiaDat(QDialog):
         self.ck_rieng = QCheckBox('')
         self.hang_rieng, self.lb_rieng = _hang_tich(self.ck_rieng, '')
         self.hang_pl3 = {}
-        self.o_khac = QLineEdit('1')
+        self.o_khac = QLineEdit('1,00')
         self.o_khac.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.o_cu_the = QLineEdit('')
         self.o_cu_the.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.nut_quet_gd = NutQuetChung('Quét văn bản, bảng giá để lấy dữ liệu…', qc.GIA_DAT, self)
+        gan_dinh_dang_nghin(self.o_g)
+        gan_dinh_dang_nghin(self.o_cu_the)
+        self.nut_quet_gd = NutQuetChung('Quét bảng giá', qc.GIA_DAT, self)
+        self.nut_quet_gd.setToolTip('Quét văn bản, bảng giá (PDF, ảnh, Word, Excel) để lấy dữ liệu và văn bản căn cứ')
         self.nut_quet_gd.da_quet.connect(self.sau_khi_quet)
 
         def hang(*w):
@@ -289,27 +292,32 @@ class HopTinhGiaDat(QDialog):
         f = QFormLayout(tp)
         f.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         f.addRow('Văn bản, quy tắc:', hang(self.cb_goi, self.nut_quy_tac))
-        f.addRow('Xã, phường:', self.cb_dia_ban)
-        f.addRow('Nhóm đất:', self.cb_nhom)
+        # 1.0.69: trường ngắn chung một hàng, hệ số + yếu tố luôn thấy (không còn phần thu gọn)
+        def nhan_ngan(chu):
+            w = QLabel(chu)
+            return w
+
+        def hang_doi(*cap):
+            h = QHBoxLayout()
+            h.setContentsMargins(0, 0, 0, 0)
+            for nhan, w, gian in cap:
+                if nhan:
+                    h.addWidget(nhan_ngan(nhan))
+                h.addWidget(w, gian)
+            return h
+        f.addRow('Xã, phường:', hang_doi(('', self.cb_dia_ban, 1), ('Nhóm đất:', self.cb_nhom, 1)))
         f.addRow('Tìm đoạn đường:', self.o_tim)
         f.addRow('Đoạn đường:', self.cb_doan)
-        f.addRow('Vị trí kết nối:', self.cb_vi_tri)
-        f.addRow('Mặt đường:', self.cb_ket_cau)
-        f.addRow('Giá bảng giá (đ/m²):', hang(self.o_g, self.nut_tra))
+        f.addRow('Vị trí kết nối:', hang_doi(('', self.cb_vi_tri, 1), ('Mặt đường:', self.cb_ket_cau, 1)))
+        f.addRow('Giá NQ 28 (đ/m²):', hang_doi(('', self.o_g, 1), ('', self.nut_tra, 0), ('', self.nut_quet_gd, 0)))
         f.addRow('', self.lb_g)
-        f.addRow(self.nut_quet_gd)
-        self.nut_them = nut_mo('Mở thêm: K2, yếu tố ảnh hưởng, hệ số khác, giá đất cụ thể')
-        f.addRow(self.nut_them)
-        self.khung_them = QWidget()
-        ft = QFormLayout(self.khung_them)
-        ft.setContentsMargins(0, 0, 0, 0)
-        ft.addRow(self.hang_k2)
-        ft.addRow('Hệ số K2:', self.o_k2)
-        ft.addRow(self.khung_yt)
-        ft.addRow(self.hang_rieng)
-        ft.addRow('Hệ số khác:', self.o_khac)
-        ft.addRow('Giá đất cụ thể đã duyệt:', self.o_cu_the)
-        f.addRow(self.khung_them)
+        f.addRow('Hệ số K2:', hang_doi(('', self.o_k2, 1), ('K khác:', self.o_khac, 1), ('Giá cụ thể:', self.o_cu_the, 2)))
+        luoi_ck = QGridLayout()
+        luoi_ck.setContentsMargins(0, 0, 0, 0)
+        luoi_ck.addWidget(self.hang_k2, 0, 0)
+        luoi_ck.addWidget(self.hang_rieng, 0, 1)
+        f.addRow(luoi_ck)
+        f.addRow(self.khung_yt)
         self.lb_ap_dung = QLabel('')                      # phần đã thu gọn vẫn phải thấy đang áp gì, vì đổi số tiền
         self.lb_ap_dung.setWordWrap(True)
         f.addRow(self.lb_ap_dung)
@@ -319,9 +327,7 @@ class HopTinhGiaDat(QDialog):
         cuon.setFrameShape(QFrame.Shape.NoFrame)
         cuon.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         cuon.setWidget(tp)
-        hai.addWidget(cuon, 7)                   # bảng dòng đất cần đủ 9 cột, thấy Đơn giá mới, Thành tiền mới không phải cuộn ngang
-        self.khung_them.hide()
-        self.nut_them.toggled.connect(self.khung_them.setVisible)
+        hai.addWidget(cuon, 8)                   # bảng dòng đất cần đủ 9 cột, thấy Đơn giá mới, Thành tiền mới không phải cuộn ngang
 
         phai = QVBoxLayout()
         kqg = QGroupBox('Đơn giá đất bồi thường')
@@ -353,7 +359,8 @@ class HopTinhGiaDat(QDialog):
         self.o_loc = QLineEdit()
         self.o_loc.setPlaceholderText('Lọc: tên chủ hộ, số tờ, số thửa, loại đất (không cần dấu)…')
         self.o_loc.setClearButtonEnabled(True)
-        self.nut_chon_het = QPushButton('Chọn tất cả dòng đang hiện')
+        self.nut_chon_het = QPushButton('Chọn tất cả')
+        self.nut_chon_het.setToolTip('Tích mọi dòng đang hiện trong bảng')
         self.nut_chon_het.clicked.connect(lambda: self.chon_het(True))
         self.nut_bo_chon = QPushButton('Bỏ chọn')
         self.nut_bo_chon.setToolTip('Bỏ tích các dòng đang hiện')
@@ -392,7 +399,7 @@ class HopTinhGiaDat(QDialog):
         vh.addWidget(self.lb_ho)
         vh.addWidget(self.bang, 1)
         phai.addWidget(gh, 1)
-        hai.addLayout(phai, 13)
+        hai.addLayout(phai, 12)
         lo.addLayout(hai, 1)
 
         # ---- phần thu gọn: văn bản căn cứ (mở ra phía trên hàng nút)
@@ -494,16 +501,21 @@ class HopTinhGiaDat(QDialog):
         self.o_cu_the.setPlaceholderText(mau['nhan_cu_the'] if co_ct else 'Văn bản này không có quy định chuyển tiếp')
 
         moi = QWidget()                                   # thay cả khung chứa, không gỡ từng dòng khỏi bố cục
-        lo = QFormLayout(moi)
-        lo.setContentsMargins(0, 0, 0, 0)
+        ngoai = QVBoxLayout(moi)
+        ngoai.setContentsMargins(0, 0, 0, 0)
+        luoi = QGridLayout()
+        luoi.setContentsMargins(0, 0, 0, 0)
+        ngoai.addLayout(luoi)
+        lo = QFormLayout()
+        ngoai.addLayout(lo)
         cu_chon = {m for m, c in self.ck_pl3.items() if c.isChecked()}
         self.ck_pl3, self.o_he_so, self.hang_pl3 = {}, {}, {}
-        for y in goi.get('yeu_to', ()):
+        for vt_y, y in enumerate(goi.get('yeu_to', ())):
             c = QCheckBox('')
             c.setChecked(y['ma'] in cu_chon)
             c.toggled.connect(lambda *_: self.tinh())
             hang_y, _ = _hang_tich(c, y['ten'])
-            lo.addRow(hang_y)
+            luoi.addWidget(hang_y, vt_y // 2, vt_y % 2)
             self.ck_pl3[y['ma']] = c
             self.hang_pl3[y['ma']] = hang_y
         for x in goi.get('he_so_them') or ():
@@ -612,7 +624,7 @@ class HopTinhGiaDat(QDialog):
         nhom, cot = self.nhom_cot()
         gia = g.gia_bang_gia(self.cb_dia_ban.currentData() or '', self.doan_hien_tai(), nhom, self.cb_vi_tri.currentData() or '', cot, self.goi)
         if gia is not None:
-            self.o_g.setText(vn(gia).replace('.', ''))
+            self.o_g.setText(vn(gia))
             self.lb_g.setText(f'Tự tra từ bảng giá {self.goi["bang_gia"]}')
         else:
             self.lb_g.setText('Nhập tay: bảng giá không có dòng khớp')
@@ -652,10 +664,10 @@ class HopTinhGiaDat(QDialog):
         k = self.kq
         self.lb_gia.setText(f'{vn(k.don_gia_ap_dung)} đ/m²')
         cu_the = self.o_cu_the.text().strip()
-        self.lb_ap_dung.setText(f'Đang áp dụng: K1 = {g._he(k.k1)} · K2 = {g._he(k.k2)} · K3 = {g._he(k.k3)} · K khác = {g._he(k.k_khac)}'
-                                + ''.join(f' · {m} = {g._he(x)}' for m, x in k.he_so_them.items())
+        self.lb_ap_dung.setText(f'Đang áp dụng: K1 = {g.he_hien(k.k1)} · K2 = {g.he_hien(k.k2)} · K3 = {g.he_hien(k.k3)} · K khác = {g.he_hien(k.k_khac)}'
+                                + ''.join(f' · {m} = {g.he_hien(x)}' for m, x in k.he_so_them.items())
                                 + (f' · K1 theo bảng đã nhập ({k.nguon_k1})' if k.nguon_k1 else '')
-                                + (f' · giá cụ thể {vn(D(v.gia_dat_cu_the))}' + (' (đang dùng)' if k.ap_dung_chuyen_tiep else ' (thấp hơn, không dùng)') if cu_the else ''))
+                                + (f' · giá cụ thể {vn(D(v.gia_dat_cu_the))} đ/m²' + (' (đang dùng)' if k.ap_dung_chuyen_tiep else ' (thấp hơn, không dùng)') if cu_the else ''))
         self.lb_gia.setToolTip('\n'.join(k.buoc_lap_luan))
         self.lb_ct.setText('Công thức: ' + k.cong_thuc)
         self.lb_canh_bao.setText('\n'.join('! ' + c for c in gg.canh_bao_goi(self.goi, self.xa_du_an) + k.canh_bao))
@@ -829,7 +841,7 @@ class HopTinhGiaDat(QDialog):
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         tien_do = self._hop_tien_do(len({x.ma_ho for x in chon}))
         try:
-            kq = ap.ap_hang_loat(self.con, chon, self.kq.don_gia_ap_dung, gc, vt, self.bo_mo, self.truoc_ap, tien_do)
+            kq = ap.ap_hang_loat(self.con, chon, self.kq.don_gia_ap_dung, gc, vt, self.bo_mo, self.truoc_ap, tien_do, g.chi_tiet_ap_gia(self.kq))
             if kq.so_dong:
                 cb = ap.gop_can_cu(self.con, self.goi, self.o_can_cu.toPlainText())
                 if cb:

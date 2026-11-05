@@ -69,7 +69,7 @@ class TestLogic(CoSo):
         bo = BoSoan(self.con, self.ma[0])
         d = bo.pa.dat[0]
         self.assertEqual((d.gia_bang_gia, d.he_so_k), (D(333500), D(1)))
-        for chu in ('230.000', '1,45 (K1)', '1 (K2)', '1 (K3)', '333.500'):
+        for chu in ('230.000', '1,45 (K1)', '1,00 (K2)', '1,00 (K3)', '333.500 đ/m²'):
             self.assertIn(chu, d.ghi_chu)
         self.assertEqual(bo.ket_qua.muc[1], thanh_tien_dat(d.dien_tich, D(333500), 1, d.ty_le, bo.bc.lamtron))
         self.assertNotEqual(bo.ket_qua.tong, cu)
@@ -405,7 +405,7 @@ class TestThanhNhanhVaCuaSo(CoSo):
         self.assertEqual(t.cb_doan.count(), 26)                      # chỉ đoạn của Xã Tân An
         self._chon_doan(t)
         self.assertEqual(t.kq.k1, D('1.32'))                         # đất CLN: K1 nông nghiệp
-        self.assertIn('× 1,32 =', t.lb_ct.text())
+        self.assertIn('× 1,32 × 1,00 × 1,00 =', t.lb_ct.text())
         self.assertIn('đ/m²', t.lb_ct.text())
         self.assertEqual(D(t.o_g.text().replace('.', '')), t.kq.don_gia_nq28)
         cu = t.kq.don_gia_ap_dung
@@ -504,8 +504,8 @@ class TestThanhNhanhVaCuaSo(CoSo):
         ap.them_dong_dat(self.con, self.ma[0], '5', '6', 'CLN', '10')
         w = self._cua_so()
         self.assertIn(CHU_BANG_TINH_DAT, w.bang[1].nut)
-        self.assertEqual(w.bang[1].nut[CHU_BANG_TINH_DAT].text(), 'Mở bảng tính đầy đủ (NQ 28 && QĐ 03)')     # "&" hiện đúng, không thành phím tắt
-        self.assertIn('Mở bảng tính đầy đủ (NQ 28 && QĐ 03)…', [a.text() for a in w.bang[1].menu_dong().actions()])
+        self.assertEqual(w.bang[1].nut[CHU_BANG_TINH_DAT].text(), 'Bảng tính giá đất (NQ 28 && QĐ 03)')     # "&" hiện đúng, không thành phím tắt
+        self.assertIn('Bảng tính giá đất (NQ 28 && QĐ 03)…', [a.text() for a in w.bang[1].menu_dong().actions()])
         t = w.bang[1].thanh_gia
         self._chon_doan(t)
         w.bang[1].bang.selectRow(1)

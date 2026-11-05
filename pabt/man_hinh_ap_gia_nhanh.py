@@ -4,9 +4,9 @@ Yếu tố khác (K2, Phụ lục III, K khác, giá cụ thể): bảng tính �
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy, QWidget
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 
-from .giao_dien import dat_kieu_theo_tong
+from .giao_dien import dat_kieu_theo_tong, gan_dinh_dang_nghin, icon_ky_hieu
 from .lap_pa import LoiNhap, doc_so
 from .tien import vn
 
@@ -24,40 +24,51 @@ class ThanhApGiaNhanh(QWidget):
         self._dang_nap = False
         self._g_tay = False                   # người dùng tự gõ giá: không tự tra đè
         self.ly_do = ''
-        h = QHBoxLayout(self)
-        h.setContentsMargins(0, 0, 0, 0)
-        h.setSpacing(6)
-        nhan = QLabel('Áp giá nhanh:')
-        nhan.setProperty('vai', 'nhan')
-        h.addWidget(nhan)
+        lo = QVBoxLayout(self)
+        lo.setContentsMargins(0, 2, 0, 2)
+        lo.setSpacing(4)
+        ha, hb = QHBoxLayout(), QHBoxLayout()
+        ha.setSpacing(6)
+        hb.setSpacing(6)
+        lo.addLayout(ha)
+        lo.addLayout(hb)
+
+        def nhan(chu):
+            w = QLabel(chu)
+            w.setProperty('vai', 'nhan')
+            return w
         self.cb_doan, self.cb_vi_tri, self.cb_ket_cau = QComboBox(), QComboBox(), QComboBox()
-        for cb, tip, gian, chu in ((self.cb_doan, 'Đoạn đường của xã, phường dự án', 3, 14), (self.cb_vi_tri, 'Vị trí kết nối', 2, 8), (self.cb_ket_cau, 'Mặt đường', 2, 8)):
-            cb.setToolTip(tip)
-            cb.setMinimumContentsLength(chu)
+        for cb, ten, rong, rong_xo, gian in ((self.cb_doan, 'Đoạn đường (QĐ 03):', 380, 560, 1), (self.cb_vi_tri, 'Vị trí:', 170, 520, 0), (self.cb_ket_cau, 'Mặt đường:', 210, 460, 0)):
+            cb.setMinimumContentsLength(14)
+            cb.setMinimumWidth(rong)
             cb.setMaxVisibleItems(18)
             cb.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-            cb.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-            cb.view().setMinimumWidth(460)        # ô hẹp, danh sách xổ vẫn đủ chữ
+            cb.view().setMinimumWidth(rong_xo)        # ô gọn, danh sách xổ đủ tên đường, điểm đầu, điểm cuối
             cb.currentIndexChanged.connect(lambda *_, c=cb: self._doi_cb(c))
-            h.addWidget(cb, gian)
+            ha.addWidget(nhan(ten))
+            ha.addWidget(cb, gian)
         self.o_g = QLineEdit()
         self.o_g.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.o_g.setPlaceholderText('Giá NQ 28')
+        self.o_g.setFixedWidth(130)
         self.o_g.setToolTip('Giá bảng giá (đ/m²): tự tra theo đoạn đường, vị trí, loại đất của dòng; gõ số để dùng giá khác')
-        self.o_g.setMaximumWidth(self.o_g.fontMetrics().boundingRect('12.345.678').width() + 20)
+        gan_dinh_dang_nghin(self.o_g)
         self.o_g.textEdited.connect(lambda *_: self._go_gia())
-        h.addWidget(self.o_g)
+        hb.addWidget(nhan('Giá NQ 28 (đ/m²):'))
+        hb.addWidget(self.o_g)
         self.lb_ct = QLabel('')
-        dat_kieu_theo_tong(self.lb_ct, 'QLabel { font-weight: 600; }')
+        dat_kieu_theo_tong(self.lb_ct, 'QLabel { color: #1d4ed8; font-weight: bold; }')
         self.lb_ct.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        h.addWidget(self.lb_ct, 3)
-        self.b_ap = QPushButton('Áp vào dòng đất đang chọn')
+        hb.addWidget(self.lb_ct, 1)
+        self.b_ap = QPushButton('Áp vào dòng đang chọn')
         self.b_ap.clicked.connect(lambda: self.ap_dong_chon())
-        self.b_them = QPushButton('Thêm thành dòng đất mới')
+        self.b_them = QPushButton('+ Áp thành dòng đất mới')
         self.b_them.setToolTip('Thêm một dòng cho thửa đang chọn ở ô Thửa, áp luôn đơn giá này')
         self.b_them.clicked.connect(lambda: self.them_dong_moi())
-        h.addWidget(self.b_ap)
-        h.addWidget(self.b_them)
+        ic = icon_ky_hieu(0xE73E, '#16a34a', 14)      # CheckMark
+        if ic is not None:
+            self.b_ap.setIcon(ic)
+        hb.addWidget(self.b_ap)
+        hb.addWidget(self.b_them)
 
     def showEvent(self, e):
         super().showEvent(e)
@@ -164,8 +175,7 @@ class ThanhApGiaNhanh(QWidget):
             self.lb_ct.setText(self.ly_do)
             self.lb_ct.setToolTip(self.ly_do)
         else:
-            self.lb_ct.setText(g.cong_thuc_gon(self.kq) + (' (!)' if self.kq.canh_bao else ''))      # (!): K3 tự khóa, K1 chưa có... chi tiết ở chú thích
-            self.lb_ct.setMinimumWidth(min(self.lb_ct.fontMetrics().boundingRect(self.lb_ct.text()).width() + 8, 300))     # công thức là thứ phải đọc được: ô chọn nhường chỗ
+            self.lb_ct.setText('= ' + g.cong_thuc_gon(self.kq) + (' (!)' if self.kq.canh_bao else ''))      # (!): K3 tự khóa, K1 chưa có... chi tiết ở chú thích
             self.lb_ct.setToolTip('\n'.join(['Công thức: ' + self.kq.cong_thuc] + ['! ' + c for c in self.kq.canh_bao] + self.kq.buoc_lap_luan))
         self.cap_nhat_khoa()
         return self.kq
@@ -193,7 +203,7 @@ class ThanhApGiaNhanh(QWidget):
             if kq is None or kq.don_gia_ap_dung <= 0:
                 loi.append((i, ly_do or 'Đơn giá bằng 0.'))
                 continue
-            bo.ap_don_gia_qd03([i], kq.don_gia_ap_dung, g.ghi_chu_ap_gia(kq, doan, g.ten_ngan(x)), vt)
+            bo.ap_don_gia_qd03([i], kq.don_gia_ap_dung, g.ghi_chu_ap_gia(kq, doan, g.ten_ngan(x)), vt, g.chi_tiet_ap_gia(kq))
             doi.extend(bo.ho_tro_doi)
         bo.ho_tro_doi = doi
         return loi
@@ -231,7 +241,7 @@ class ThanhApGiaNhanh(QWidget):
         man = self.man
         mt = ma_thua if ma_thua is not None else (self.bm.cb_thua.currentData() if self.bm.cb_thua.count() else None)
         if mt is None:
-            man.thong_bao('Hộ này chưa có thửa: thêm thửa ở thẻ Thông tin hộ, thửa đất.')
+            man.thong_bao('Hộ này chưa có thửa: thêm thửa ở thẻ 0. Hồ sơ & Thửa.')
             return None
         if not man.dam_bao_sua_dat():
             return None

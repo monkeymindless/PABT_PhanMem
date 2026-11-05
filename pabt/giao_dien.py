@@ -9,9 +9,10 @@ from contextlib import contextmanager
 from enum import Enum
 
 from PySide6.QtCore import QEvent, QLibraryInfo, QLocale, QObject, QPoint, QRect, QSettings, QSize, QTimer, QTranslator, Signal
-from PySide6.QtGui import QColor, QFont, QPainter, QPalette
+from PySide6.QtGui import QColor, QFont, QPainter, QPalette, QPolygon
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QApplication, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QLayout, QPushButton, QRadioButton,
+                               QSplitter, QSplitterHandle, QStyle, QStyleOptionViewItem,
                                QLineEdit, QSpinBox, QStyledItemDelegate, QToolButton, QVBoxLayout, QWidget)
 
 from .lap_pa import bo_dau
@@ -53,6 +54,26 @@ CAO_DONG_BANG = 30            # chiều cao dòng bảng dữ liệu (17/10/2026
 CAO_TIEU_DE_BANG = 34         # hàng tiêu đề cột bảng (nền navy, chữ trắng)
 MAT_DO = ['chuan']            # 1.0.17: mật độ bảng đang dùng (chu_de.MAT_DO): gon / chuan / thoang - dat_mat_do()
 CHINH = TOKEN['chinh']       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
+
+
+def gan_dinh_dang_nghin(o) -> None:
+    """Ô nhập số tiền: tự chấm hàng nghìn khi gõ (230.000), giữ con trỏ theo số chữ số bên trái. Công thức (=...) và chữ lạ giữ nguyên để lap_pa.doc_so báo lỗi."""
+    def doi(chu):
+        s = chu.strip()
+        if not s or not re.fullmatch(r'[\d.]+', s):
+            return
+        so = s.replace('.', '')
+        moi = f'{int(so):,}'.replace(',', '.')
+        if moi == chu:
+            return
+        ben_trai = sum(c.isdigit() for c in chu[:o.cursorPosition()])
+        o.setText(moi)
+        vt, dem = 0, 0
+        while vt < len(moi) and dem < ben_trai:
+            dem += moi[vt].isdigit()
+            vt += 1
+        o.setCursorPosition(vt)
+    o.textEdited.connect(doi)
 
 
 def chu_hien(s: str) -> str:
@@ -2790,7 +2811,7 @@ def menu_trai(nhom: list, thu_gon_luc_dau: bool = False, xo: tuple = (), dong_ma
     def ve_nhom():
         for t, ten, con in tieu_de:
             d = ten in dong
-            t.setText(('▸' if d else '▾') + ('' if khung.thu_gon else '  ' + chu_hien(ten)))
+            t.setText(('▸' if d else '▾') + ('' if khung.thu_gon else '  ' + ten))
             t.setToolTip(f'{"Mở" if d else "Đóng"} nhóm "{ten}"')
             t.setProperty('dong', '1' if d else '0')
             t.style().unpolish(t)
@@ -4582,7 +4603,7 @@ SO_LE_DEM_TOI_DA = 4
 COT_DINH_DANH = frozenset((
     'stt', 'tt', '#', 'ma ho', 'so cccd', 'cccd', 'cmnd', 'so cmnd', 'cccd/cmnd', 'so cccd/cmnd', 'dien thoai', 'so dien thoai', 'sdt',
     'to', 'to bd', 'so to', 'to ban do', 'so to ban do', 'thua', 'thua so', 'so hieu thua', 'so thua hieu', 'ma thua', 'to/thua',
-    'nam', 'ngay'))
+    'nam', 'ngay', 'vi tri', 'he so', 'he so k', 'ty le', 'ty le %', 'ty le (%)', '%', 'chon'))
 TU_DAU_DINH_DANH = ('ngay', 'nam')          # tiêu đề bắt đầu bằng từ này: "Ngày PA", "Ngày ban hành", "Năm sinh"
 COT_CHON_DONG = ('stt', 'tt', '#')           # bấm ô cột này = chọn cả dòng
 _RE_SO_O = re.compile(r'([-+−]?\d[\d.,]*)\s*(đồng|đ|m²|m2|ha|%|cây|hộ|thửa)?', re.IGNORECASE)
@@ -4620,6 +4641,20 @@ def la_cot_dinh_danh(bang, c: int) -> bool:
     return t in COT_DINH_DANH or (t.split()[0] in TU_DAU_DINH_DANH if t else False)
 
 
+def nhom_cot_dem(bang, c: int) -> str:
+    """Bản chất cột với bộ đếm: 'kl' (diện tích, số lượng, khối lượng), 'gia' (đơn giá), 'tien' (thành tiền), '' (cột khác). Khác bản chất không cộng chung."""
+    t = _ten_cot_chuan(bang, c)
+    if not t or la_cot_dinh_danh(bang, c):
+        return ''
+    if 'thanh tien' in t or 'so tien' in t or t.startswith(('tong tien', 'kinh phi', 'tien ')):
+        return 'tien'
+    if 'don gia' in t or t.startswith('gia '):
+        return 'gia'
+    if t.startswith(('dt ', 'dien tich', 'so luong', 'khoi luong')) or t in ('dt', 'sl', 'kl'):
+        return 'kl'
+    return ''
+
+
 def doc_so_o(chu):
     """Chữ hiển thị của ô -> (Decimal, số chữ số lẻ) hoặc None (không phải số). Kiểu VN (tien.doc_so_vn); bỏ hậu tố đ / đồng / m² /
     ha / % / cây / hộ / thửa; ô gạch '-' = 0."""
@@ -4653,14 +4688,14 @@ def thong_ke_vung_chon(bang) -> dict:
     so_le (chữ số lẻ nhiều nhất của các số), chuoi ("Trung bình: …     Tổng số đếm: n     Tổng: …"; chỉ chữ: "Tổng số đếm: n"; dưới
     2 ô có chữ: ''). Bỏ dòng / cột ẩn; ô gộp tính một lần (ô trên trái); cột định danh (la_cot_dinh_danh) chỉ đếm, không cộng."""
     from .tien import D
-    kq = dict(so_dem=0, so_so=0, tong=D(0), trung_binh=None, so_le=0, chuoi='')
+    kq = dict(so_dem=0, so_so=0, tong=D(0), trung_binh=None, so_le=0, chuoi='', so_dong=0, nhom={})
     try:
         sm, m = bang.selectionModel(), bang.model()
     except RuntimeError:
         return kq
     if sm is None or m is None:
         return kq
-    dinh_danh, da_gop = {}, set()
+    dinh_danh, da_gop, nhom_cua, dong = {}, set(), {}, set()
     for i in sm.selectedIndexes():
         r, c = i.row(), i.column()
         if bang.isRowHidden(r) or bang.isColumnHidden(c):
@@ -4676,18 +4711,29 @@ def thong_ke_vung_chon(bang) -> dict:
         if not chu:
             continue
         kq['so_dem'] += 1
+        dong.add(r)
         if c not in dinh_danh:
             dinh_danh[c] = la_cot_dinh_danh(bang, c)
+            nhom_cua[c] = nhom_cot_dem(bang, c)
         if dinh_danh[c]:
             continue
         so = doc_so_o(chu)
         if so is None:
             continue
+        if nhom_cua[c]:
+            g = kq['nhom'].setdefault(nhom_cua[c], dict(tong=D(0), n=0, so_le=0))
+            g['tong'] += so[0]
+            g['n'] += 1
+            g['so_le'] = max(g['so_le'], min(so[1], SO_LE_DEM_TOI_DA))
         kq['so_so'] += 1
         kq['tong'] += so[0]
         kq['so_le'] = max(kq['so_le'], min(so[1], SO_LE_DEM_TOI_DA))
+    kq['so_dong'] = len(dong)
+    if kq['nhom']:                                      # có cột biết bản chất: "Tổng" là tổng đúng loại, không phải cộng mọi cột số
+        g = kq['nhom'].get('tien') or kq['nhom'].get('kl') or kq['nhom']['gia']
+        kq['tong'], kq['so_le'] = g['tong'], g['so_le']
     if kq['so_so']:
-        kq['trung_binh'] = kq['tong'] / kq['so_so']
+        kq['trung_binh'] = kq['tong'] / (g['n'] if kq['nhom'] else kq['so_so'])
     kq['chuoi'] = chu_thong_ke(kq)
     return kq
 
@@ -4707,6 +4753,16 @@ def chu_thong_ke(kq: dict) -> str:
         return ''
     if not kq['so_so']:
         return f'Tổng số đếm: {n}'
+    nhom = kq.get('nhom')
+    if nhom:
+        phan = [f'Đang chọn: {kq["so_dong"]} dòng ({n} ô)']
+        if 'kl' in nhom:
+            phan.append(f'Tổng DT/KL: {so_bo_dem(nhom["kl"]["tong"], nhom["kl"]["so_le"])}')
+        if 'gia' in nhom:
+            phan.append(f'Đơn giá TB: {so_bo_dem(nhom["gia"]["tong"] / nhom["gia"]["n"], 0)} đ')
+        if 'tien' in nhom:
+            phan.append(f'Tổng Thành tiền: {so_bo_dem(nhom["tien"]["tong"], nhom["tien"]["so_le"])} đồng')
+        return '  |  '.join(phan)
     return (f'Trung bình: {so_bo_dem(kq["trung_binh"], kq["so_le"])}     Tổng số đếm: {n}     '
             f'Tổng: {so_bo_dem(kq["tong"], kq["so_le"])}')
 
@@ -4866,25 +4922,55 @@ class _BoChonVung(QObject):
         except RuntimeError:
             return
         tk = thong_ke_vung_chon(b)
-        ham = getattr(w, 'cap_nhat_bo_dem', None)
+        cha = b.parentWidget()                        # cha gần nhất có dải đếm: cửa sổ lập phương án nhúng trong cửa sổ chính dùng dải của nó
+        while cha is not None and not callable(getattr(cha, 'cap_nhat_bo_dem', None)):
+            cha = cha.parentWidget()
+        ham = getattr(cha if cha is not None else w, 'cap_nhat_bo_dem', None)
         if callable(ham):
             ham(b, tk)
             return
         if self.nhan_noi is None:
             if not tk['chuoi']:
                 return
-            self.nhan_noi = NhanBoDem(b)
+            self.nhan_noi = self._tao_nhan_chan_bang()
         self.nhan_noi.dat(tk)
+        if self.nhan_noi.property('chan_bang'):
+            self.nhan_noi.setVisible(True)       # giữ chỗ khi không có chữ: kéo chọn không làm bảng co giãn dưới tay
         self._dat_nhan_noi()
+
+    def _tao_nhan_chan_bang(self):
+        """Nhãn đếm nằm NGAY DƯỚI bảng trong bố cục dọc chứa bảng (1.0.69, trước đây nổi trong lòng bảng, che dòng cuối)."""
+        b = self.bang
+        cha = b.parentWidget()
+        lo = _bo_cuc_doc_chua(cha.layout(), b) if cha is not None and cha.layout() is not None else None
+        if lo is None:
+            return NhanBoDem(b)
+        n = NhanBoDem(cha)
+        lo.insertWidget(lo.indexOf(b) + 1, n)
+        n.setProperty('chan_bang', True)
+        return n
 
     def _dat_nhan_noi(self) -> None:
         n = self.nhan_noi
-        if n is None or not n.isVisible():
+        if n is None or not n.isVisible() or n.property('chan_bang'):
             return
         n.adjustSize()
         vp = self.bang.viewport().geometry()
         n.move(max(0, vp.right() - n.width() - 6), max(0, vp.bottom() - n.height() - 6))
         n.raise_()
+
+
+def _bo_cuc_doc_chua(lo, w):
+    """Bố cục dọc (kể cả lồng) chứa trực tiếp widget w. Duyệt bằng children() + indexOf: không lấy QLayoutItem (xem CLAUDE.md)."""
+    from PySide6.QtWidgets import QBoxLayout
+    if isinstance(lo, QBoxLayout) and lo.indexOf(w) >= 0:
+        return lo if lo.direction() in (QBoxLayout.Direction.TopToBottom, QBoxLayout.Direction.Down) else None
+    for con in lo.children():
+        if isinstance(con, QBoxLayout):
+            kq = _bo_cuc_doc_chua(con, w)
+            if kq is not None:
+                return kq
+    return None
 
 
 def cho_chon_vung_o(bang) -> None:
@@ -4940,6 +5026,29 @@ def gan_o_loc_bang(bang, o_tim, khi_loc=None) -> None:
         if khi_loc is not None:
             khi_loc(n)
     loc_khi_ngung_go(o_tim, loc)
+
+
+class _TayNam(QSplitterHandle):
+    """Thanh ngăn có biểu tượng nắm kéo: hai vạch đôi + hình thoi giữa (vẽ tay, không phụ thuộc phông Win 7)."""
+
+    def paintEvent(self, e):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        mau = QColor(TOKEN['chu_phu'])
+        p.setPen(mau)
+        p.setBrush(mau)
+        x, y = self.width() // 2, self.height() // 2
+        for dau, cuoi in ((x - 62, x - 12), (x + 12, x + 62)):
+            p.drawLine(dau, y - 2, cuoi, y - 2)
+            p.drawLine(dau, y + 2, cuoi, y + 2)
+        p.drawPolygon(QPolygon([QPoint(x, y - 5), QPoint(x + 5, y), QPoint(x, y + 5), QPoint(x - 5, y)]))
+
+
+class TachCoNam(QSplitter):
+    """QSplitter có tay nắm nhìn thấy được."""
+
+    def createHandle(self):
+        return _TayNam(self.orientation(), self)
 
 
 def nhan_xuong_dong(chu: str):
@@ -4998,6 +5107,67 @@ def vua_danh_sach_xo(khung) -> None:
     khung.setGeometry(g)
 
 
+def chuan_o_chon(cb) -> None:
+    """Mọi ô chọn (1.0.69): gọn khi đóng, không giãn theo chữ dài nhất (nguyên nhân cửa sổ bị đẩy rộng ra); khi xổ, vua_danh_sach_xo mở rộng đủ chữ."""
+    if cb.sizeAdjustPolicy() != QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon:
+        cb.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    if cb.minimumContentsLength() == 0:
+        cb.setMinimumContentsLength(16)
+
+
+class OChonGiua(QStyledItemDelegate):
+    """Ô đánh dấu nằm giữa ô (cột "Chọn"). Mô hình nhận trạng thái 0 / 2."""
+
+    @staticmethod
+    def _vung(opt, w):
+        st = w.style() if w is not None else QApplication.style()
+        r = QRect(0, 0, st.pixelMetric(QStyle.PixelMetric.PM_IndicatorWidth, None, w), st.pixelMetric(QStyle.PixelMetric.PM_IndicatorHeight, None, w))
+        r.moveCenter(opt.rect.center())
+        return r
+
+    def paint(self, p, opt, idx):
+        v = idx.data(Qt.ItemDataRole.CheckStateRole)
+        if v is None:
+            return super().paint(p, opt, idx)
+        w = opt.widget
+        st = w.style() if w is not None else QApplication.style()
+        o = QStyleOptionViewItem(opt)
+        self.initStyleOption(o, idx)
+        o.features &= ~QStyleOptionViewItem.ViewItemFeature.HasCheckIndicator
+        o.text = ''
+        st.drawControl(QStyle.ControlElement.CE_ItemViewItem, o, p, w)
+        c = QStyleOptionViewItem(opt)
+        c.rect = self._vung(opt, w)
+        c.state = (opt.state & ~QStyle.StateFlag.State_On & ~QStyle.StateFlag.State_Off) | (QStyle.StateFlag.State_On if int(getattr(v, 'value', v)) == 2 else QStyle.StateFlag.State_Off)
+        st.drawPrimitive(QStyle.PrimitiveElement.PE_IndicatorItemViewItemCheck, c, p, w)
+        return None
+
+    def editorEvent(self, ev, model, opt, idx):
+        if ev.type() in (QEvent.Type.MouseButtonRelease, QEvent.Type.MouseButtonDblClick) and idx.data(Qt.ItemDataRole.CheckStateRole) is not None:
+            if not idx.flags() & Qt.ItemFlag.ItemIsUserCheckable or not self._vung(opt, opt.widget).contains(ev.pos()):
+                return False
+            if ev.type() == QEvent.Type.MouseButtonDblClick:
+                return True
+            v = idx.data(Qt.ItemDataRole.CheckStateRole)
+            return model.setData(idx, Qt.CheckState.Unchecked if int(getattr(v, 'value', v)) == 2 else Qt.CheckState.Checked, Qt.ItemDataRole.CheckStateRole)
+        return super().editorEvent(ev, model, opt, idx)
+
+
+def chuan_cot_chon(w) -> None:
+    """Cột tiêu đề "Chọn" của các bảng trong w: rộng tối thiểu 50 px, ô đánh dấu giữa ô."""
+    from PySide6.QtWidgets import QTableView
+    for b in w.findChildren(QTableView):
+        m = b.model()
+        if m is None or b.property('_cot_chon_xong'):
+            continue
+        b.setProperty('_cot_chon_xong', True)
+        for c in range(m.columnCount()):
+            if str(m.headerData(c, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole) or '').strip().lower() == 'chọn':
+                if b.itemDelegateForColumn(c) is None:
+                    b.setItemDelegateForColumn(c, OChonGiua(b))
+                b.setColumnWidth(c, max(50, b.columnWidth(c)))
+
+
 class _BoToMau(QObject):
     def eventFilter(self, obj, ev):
         t = ev.type()
@@ -5029,6 +5199,8 @@ class _BoToMau(QObject):
         if t == QEvent.Type.Polish:                     # sắp hiện lần đầu: cửa sổ con có đủ nút Thu nhỏ / Phóng to / Đóng
             if isinstance(obj, QComboBox) and obj.maxVisibleItems() == 10:
                 obj.setMaxVisibleItems(SO_MUC_XO)        # 30/10/2026: danh sách xổ hiện nhiều mục hơn (mặc định Qt 10)
+            if isinstance(obj, QComboBox):
+                chuan_o_chon(obj)
             if la_cua_so_con_pabt(obj):
                 chuan_hoa_cua_so_con(obj)
             return False
@@ -5049,6 +5221,7 @@ class _BoToMau(QObject):
                     vua_man_hinh(obj)                   # hộp con luôn nằm giữa màn hình mỗi lần hiện
                 return False
             ap_kieu_cay(obj)
+            chuan_cot_chon(obj)
             obj.setProperty('_da_to_mau', True)
             from PySide6.QtWidgets import QDialog, QMessageBox
             if isinstance(obj, QDialog) and not isinstance(obj, QMessageBox):

@@ -144,7 +144,7 @@ def gop_can_cu(con, goi: dict, chu_hien: str | None = None) -> str:
     return ''
 
 
-def ap_hang_loat(con, dong: list, don_gia, ghi_chu: str, vi_tri: str = '', bo_mo=None, truoc_bo_mo=None, bao_tien_do=None) -> KetQuaAp:
+def ap_hang_loat(con, dong: list, don_gia, ghi_chu: str, vi_tri: str = '', bo_mo=None, truoc_bo_mo=None, bao_tien_do=None, chi_tiet=None) -> KetQuaAp:
     """Áp một đơn giá vào các hàng DongGia đã chọn, mỗi hộ một lần lưu. Hộ lỗi ghi vào bi_chan, hộ khác vẫn áp. bo_mo: hộ đang mở chỉ đổi trong bộ soạn;
     truoc_bo_mo(): trả False nếu bản đang mở không sửa được (cửa sổ tự chuyển nhánh khi đang xem V1). bao_tien_do(đã xong, tổng): trả True để dừng, hộ đã áp vẫn giữ."""
     kq = KetQuaAp()
@@ -174,7 +174,7 @@ def ap_hang_loat(con, dong: list, don_gia, ghi_chu: str, vi_tri: str = '', bo_mo
             for x in ds:
                 if not 0 <= x.chi_so < len(bo.pa.dat) or bo.pa.dat[x.chi_so].ma_thua != x.ma_thua or bo.pa.dat[x.chi_so].loai_dat != x.loai_dat:
                     raise LoiNhap('dòng đất đã đổi so với lúc mở bảng này: nạp lại rồi áp.')
-            so = bo.ap_don_gia_qd03([x.chi_so for x in ds], don_gia, ghi_chu, vi_tri)
+            so = bo.ap_don_gia_qd03([x.chi_so for x in ds], don_gia, ghi_chu, vi_tri, chi_tiet)
             if luu:
                 bo.luu(mo_lai=False)
         except LoiNhap as e:

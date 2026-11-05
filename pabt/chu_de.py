@@ -125,8 +125,8 @@ def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_
 # 1.0.51 (người dùng 02/11/2026): LƯU TỰ ĐỘNG cửa sổ lập phương án / Khái toán - lưu sau N giây NGỪNG thao tác (không cắt ngang ô đang
 # gõ, không hộp thoại). 0 = tắt. Nhớ ở QSettings (KHOA_LUU_TU_DONG); biến môi trường PABT_TU_LUU (giây) ghi đè. Không có QSettings
 # (chạy offscreen - kiểm thử) mà chưa đặt trong phiên: TẮT, để bài kiểm thử không tự ghi CSDL ngoài ý muốn.
-CAC_MUC_LUU_TU_DONG = ((10, '10 giây'), (60, '1 phút'), (120, '2 phút'), (0, 'Tắt'))
-CHU_KY_LUU_MAC_DINH = 10
+CAC_MUC_LUU_TU_DONG = ((10, '10 giây'), (30, '30 giây'), (60, '1 phút'), (120, '2 phút'), (0, 'Tắt'))
+CHU_KY_LUU_MAC_DINH = 30
 KHOA_LUU_TU_DONG = 'lap_pa/chu_ky_tu_luu'
 _CHU_KY_HOP_LE = tuple(g for g, _ in CAC_MUC_LUU_TU_DONG)
 _chu_ky_phien = None                # giá trị đặt trong phiên khi không có QSettings (kiểm thử)

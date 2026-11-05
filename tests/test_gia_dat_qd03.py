@@ -160,7 +160,7 @@ class TestVanBanCanCu(unittest.TestCase):
         self.assertEqual([x.so_hieu for x in ds if not x.so_hieu.startswith('VB-')],
                          ['31/2024/QH15', '254/2025/QH15', '49/2026/NĐ-CP', '27/2025/NQ-HĐND', '28/2025/NQ-HĐND', '03/2026/QĐ-UBND',
                           '1201/SNNMT-ĐĐ'])
-        self.assertEqual([x.bac for x in ds], [2, 3, 6, 11, 11, 12, 13, 13])
+        self.assertEqual([x.bac for x in ds], [2, 3, 5, 10, 10, 11, 12, 12])
         self.assertEqual(len(ds), 8)                                         # VB 29/5/2026 không đè mất NQ 28 (lỗi bản TSX)
 
     def test_13_bac_dung(self):
@@ -168,16 +168,18 @@ class TestVanBanCanCu(unittest.TestCase):
                (2, 'Luật Tổ chức chính quyền địa phương số 72/2025/QH15'),
                (3, 'Nghị quyết số 254/2025/QH15 của Quốc hội quy định ... thi hành Luật Đất đai'),
                (4, 'Pháp lệnh số 01/2020/UBTVQH14 của Ủy ban Thường vụ Quốc hội'),
-               (5, 'Quyết định số 10/2020/QĐ-CTN của Chủ tịch nước'),
-               (6, 'Nghị định số 78/2025/NĐ-CP của Chính phủ'),
-               (7, 'Quyết định số 20/2025/QĐ-TTg của Thủ tướng Chính phủ'),
-               (8, 'Thông tư số 08/2024/TT-BTNMT của Bộ Tài nguyên và Môi trường'),
-               (9, 'Văn bản hợp nhất số 01/VBHN-BTNMT'),
-               (10, 'Công văn số 123/BNNMT-ĐĐ của Bộ Nông nghiệp và Môi trường hướng dẫn'),
-               (11, 'Nghị quyết số 28/2025/NQ-HĐND ngày 10/5/2025 của HĐND tỉnh Đồng Nai'),
-               (12, 'Quyết định số 03/2026/QĐ-UBND ngày 11/5/2026 của UBND thành phố Đồng Nai'),
-               (13, 'Văn bản số 1201/SNNMT-ĐĐ ngày 20/5/2026 của Sở Nông nghiệp và Môi trường'),
-               (13, 'Quyết định số 12/2026/QĐ-UBND của UBND xã Tân An về thu hồi đất')]
+               (4, 'Quyết định số 10/2020/QĐ-CTN của Chủ tịch nước'),
+               (5, 'Nghị định số 78/2025/NĐ-CP của Chính phủ'),
+               (6, 'Quyết định số 20/2025/QĐ-TTg của Thủ tướng Chính phủ'),
+               (7, 'Thông tư số 08/2024/TT-BTNMT của Bộ Tài nguyên và Môi trường'),
+               (8, 'Văn bản hợp nhất số 01/VBHN-BTNMT'),
+               (9, 'Công văn số 123/BNNMT-ĐĐ của Bộ Nông nghiệp và Môi trường hướng dẫn'),
+               (10, 'Nghị quyết số 28/2025/NQ-HĐND ngày 10/5/2025 của HĐND tỉnh Đồng Nai'),
+               (11, 'Quyết định số 03/2026/QĐ-UBND ngày 11/5/2026 của UBND thành phố Đồng Nai'),
+               (12, 'Văn bản số 1201/SNNMT-ĐĐ ngày 20/5/2026 của Sở Nông nghiệp và Môi trường'),
+               (12, 'Văn bản hướng dẫn ngày 29/5/2026 của Sở Nông nghiệp và Môi trường về xác định giá đất'),
+               (13, 'Quyết định số 12/2026/QĐ-UBND của UBND xã Tân An về thu hồi đất'),
+               (13, 'Công văn số 5/UBND của UBND phường Trị An')]
         for bac, chu in mau:
             self.assertEqual(vb.phan_loai(chu).bac, bac, chu)
 

@@ -179,7 +179,7 @@ class TestHangNutLapPhuongAn(_Co):
         self.assertEqual((c.b_dan.text(), c.btn_toggle_preview.text()), ('Dán tài sản', 'Xem trước'))
         self.assertTrue(c.cb_ho.currentText().endswith(dai))
         self.assertEqual(c.cb_ho.lineEdit().cursorPosition(), 0)            # chữ hiện từ đầu tên
-        self.assertEqual(c.cb_ho.toolTip(), c.cb_ho.currentText())
+        self.assertIn(c.cb_ho.currentText().split('. ', 1)[1], c.cb_ho.toolTip())     # 1.0.69: chú thích = Họ tên - CCCD - Địa chỉ - Đợt
 
 
 class TestToiUuKiemToan(_Co):

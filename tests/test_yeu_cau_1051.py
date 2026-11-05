@@ -43,13 +43,13 @@ class TestChuKy(_Co):
         self.assertEqual(chu_de.chu_ky_luu_tu_dong(), 0)                   # offscreen, chưa đặt: tắt (kiểm thử không tự ghi)
         self.assertEqual(chu_de.dat_chu_ky_luu_tu_dong(60), 60)
         self.assertEqual(chu_de.chu_ky_luu_tu_dong(), 60)
-        self.assertEqual(chu_de.dat_chu_ky_luu_tu_dong(7), chu_de.CHU_KY_LUU_MAC_DINH)   # số lạ -> 10 giây
+        self.assertEqual(chu_de.dat_chu_ky_luu_tu_dong(7), chu_de.CHU_KY_LUU_MAC_DINH)   # số lạ -> mặc định 30 giây
         os.environ['PABT_TU_LUU'] = '120'
         try:
             self.assertEqual(chu_de.chu_ky_luu_tu_dong(), 120)
         finally:
             os.environ.pop('PABT_TU_LUU')
-        self.assertEqual([g for g, _ in chu_de.CAC_MUC_LUU_TU_DONG], [10, 60, 120, 0])
+        self.assertEqual([g for g, _ in chu_de.CAC_MUC_LUU_TU_DONG], [10, 30, 60, 120, 0])
 
     def test_qsettings(self):
         class _CaiDat(dict):
@@ -59,7 +59,7 @@ class TestChuKy(_Co):
             def setValue(self, k, v):
                 self[k] = v
         cd = _CaiDat()
-        self.assertEqual(chu_de.chu_ky_luu_tu_dong(cd), 10)                 # mặc định 10 giây
+        self.assertEqual(chu_de.chu_ky_luu_tu_dong(cd), 30)                 # mặc định 30 giây
         chu_de.dat_chu_ky_luu_tu_dong(0, cd)
         self.assertEqual(chu_de.chu_ky_luu_tu_dong(cd), 0)
 
@@ -87,7 +87,7 @@ class TestLapPA(_Co):
 
     def test_tu_luu_khong_dung_lai_bang(self):
         w = self.w
-        self.assertIn('Tự lưu: 10 giây', w.cb_tu_luu.currentText())
+        self.assertEqual(w.cb_tu_luu.currentText(), '10 giây')
         b = w.bang[1]
         n = self._so_dong_csdl()
         self.assertGreaterEqual(n, 2)

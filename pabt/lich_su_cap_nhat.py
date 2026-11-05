@@ -7,6 +7,14 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.69', '06/11/2026', (
+        'Cửa sổ Nhập phương án chi tiết gọn còn 4 tầng: một thanh hộ + phiên bản + Lưu, In; 6 thẻ mục nổi bật (Alt+0 đến Alt+5, xanh đậm là mục đang chọn, xanh lá là mục có dữ liệu) kèm Tổng kinh phí hộ; một hàng công cụ; một dải đáy. Thông tin hộ xem ở chú thích ô Hộ.',
+        'Phiên bản phương án chọn bằng một ô có huy hiệu màu; nút Chốt V1 / Tạo nhánh V2 theo ngữ cảnh; menu ⋯ thêm Nhân bản, Khôi phục số đang lập, Xóa nhánh nháp. Menu In / Xuất gồm Xem trước và 4 mẫu.',
+        'Áp giá nhanh là ngăn đóng / mở hai hàng, đọc đủ tên đường. Bảng tính giá đất: gọn hơn, tiền tự chấm hàng nghìn, hệ số luôn 2 chữ số lẻ (1,45; 1,00; 0,90), đơn vị thống nhất đ/m². Dòng đất lưu riêng giá NQ 28, K1, K2, K3, câu diễn giải.',
+        'Bộ đếm khi chọn ô không còn cộng lẫn STT, vị trí, hệ số K, tỷ lệ: Đang chọn N dòng | Tổng DT/KL | Đơn giá TB | Tổng Thành tiền, nằm dưới chân bảng, không che dòng.',
+        'Đọc kết quả từ file: tìm cột Mã hộ, thêm tầng tên gần đúng khi khớp tổng tiền; nhận tên có hậu tố cắt cụt "là chủ sở...". Văn bản căn cứ sắp theo đúng 13 bậc mới: Sở, ngành bậc 12, cấp xã bậc 13.',
+        'Thông tin dự án: nhãn gọn, ô đơn vị đủ chữ, Cấp địa bàn + Tên xã + Năm một hàng, tên xã tự viết hoa chữ đầu. Niêm yết: 4 thẻ không còn bị khuất chữ, cột Họ và tên rộng, thanh ngăn có tay nắm.',
+    )),
     ('1.0.68', '05/11/2026', (
         'Tính đơn giá đất: khung bên phải luôn có các dòng đất của mọi hộ, không phải chọn hộ trước. Chọn phạm vi (tất cả hộ, hộ đang chọn, một hộ), lọc theo tên chủ hộ, số tờ, số thửa, loại đất; Chọn tất cả / Bỏ chọn các dòng đang hiện. Đơn giá mới, Thành tiền mới của dòng đã tích đổi ngay khi đổi thông số.',
         'Thêm dòng đất cho hộ ngay trong bảng tính (Tờ, Thửa, Loại đất, Diện tích); tự tạo dòng đất từ thông tin thửa cho hộ có thửa mà mục 1 còn trống.',

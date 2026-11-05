@@ -781,7 +781,12 @@ def dam_bao_cot_du_an(con) -> None:
 # rộng mới: viết hàm kiểm (con) -> True khi ĐÃ CÓ và hàm làm (con) chạy trong giao dịch của nơi gọi, rồi thêm một dòng vào đây (thứ tự =
 # thứ tự chạy: chỉ mục cuối vì cần cột). Bản cũ mở file có phần mở rộng vẫn được (bảng / cột thừa vô hại); phần nào làm bản cũ GHI SAI
 # dữ liệu thì tăng GHI_TOI_THIEU.
+def co_cot_ap_gia(con) -> bool:
+    return 'ap_gia' in {r[1] for r in con.execute('PRAGMA table_info(ct_dat)')}
+
+
 MO_RONG = (
+    ('cot_ap_gia', lambda con: co_cot_ap_gia(con), lambda con: con.execute("ALTER TABLE ct_dat ADD COLUMN ap_gia TEXT NOT NULL DEFAULT ''")),   # 1.0.69: giá gốc, K1, K2, K3 của dòng đất
     ('bang_phu', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anh_hien_trang'").fetchone()),
      lambda con: _tao_bang_phu(con)),
     ('bang_bam', lambda con: _co_bang_bam_kt(con), lambda con: _tao_bang_bam_kt(con)),        # 1.0.55: chuỗi băm kiểm toán

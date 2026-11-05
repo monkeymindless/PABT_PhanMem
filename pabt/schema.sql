@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS ct_dat (
     ghi_chu      TEXT NOT NULL DEFAULT '',
     thanh_tien_excel TEXT,                             -- thành tiền đọc từ file Excel (để đối chiếu)
     cong_thuc    TEXT NOT NULL DEFAULT '',             -- công thức đã gõ ra diện tích
+    ap_gia       TEXT NOT NULL DEFAULT '',             -- JSON thông tin pháp lý khi áp đơn giá đất (1.0.69)
     lan          INTEGER NOT NULL DEFAULT 1            -- v17: lần lập phương án của hộ (1 = lần đầu, 2.. = bổ sung) - pa_lan
 );
 CREATE INDEX IF NOT EXISTS ix_ctdat_ho ON ct_dat(ma_ho);
