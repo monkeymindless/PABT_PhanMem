@@ -41,6 +41,8 @@ du_lieu/
 # bản in hàng loạt (In / Xuất -> BanIn_<giờ>\) và báo cáo đối chiếu (<file dự án>_DoiChieu.xlsx): dữ liệu thật của các hộ
 BanIn_*/
 *_DoiChieu.xlsx
+# tài liệu, hình ảnh, bản nháp gom từ thư mục gốc (không phải mã; có DANH_SACH_DA_CHUYEN.csv để trả về chỗ cũ)
+/tai_nguyen_ngoai/
 # mẫu in cũ được giữ lại khi thay mẫu (lệnh "Mẫu in")
 mau_in/cu/
 
