@@ -544,6 +544,10 @@ class KhungXemTruocTaiLieu(QFrame):
         if not self.kieu_office:
             self.b_in.setVisible(ham_in is not None)
             self.b_in_hop.setVisible(co_hop_in())
+        else:                                                # nút không vào bố cục ở bảng In: có cha, ẩn (xem HopIn: không cha thì không được giải phóng)
+            for b in (self.b_ngang, self.b_in, self.b_in_hop):
+                b.setParent(self)
+                b.setVisible(False)
         # ---- vùng xem
         self.lb_tb = QLabel('Chọn một hộ để xem trước bản in A4.')
         self.lb_tb.setObjectName('xt_thong_bao')

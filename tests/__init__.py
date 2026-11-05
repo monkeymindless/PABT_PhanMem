@@ -29,6 +29,34 @@ except ImportError:                                     # máy không có Qt: c�
 else:
     APP = QApplication.instance() or QApplication([])
 
+    # Bản Qt5 là tiến trình 32-bit (trần khoảng 1,8 GB): test không có vòng sự kiện nên deleteLater không chạy, cửa sổ đã đóng chất dần; đo 06/11/2026
+    # cả lượt lên 1.771 MB rồi sập 0xC0000374 / access violation ở vị trí bất kỳ (lần cấp phát hụt), không ổn định. Sau mỗi bài: hủy các widget đã
+    # deleteLater; hết mỗi module (trước setUpClass của module sau): hủy nốt cửa sổ cấp cao còn lại.
+    import gc
+    import unittest
+
+    from PySide6.QtCore import QCoreApplication, QEvent
+
+    _chay_goc = unittest.TestCase.run
+
+    def _chay_roi_don(self, result=None):
+        kq = _chay_goc(self, result)
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        return kq
+
+    unittest.TestCase.run = _chay_roi_don
+    _het_module_goc = unittest.TestSuite._handleModuleTearDown
+
+    def _het_module_roi_don(self, result):
+        _het_module_goc(self, result)
+        for w in QApplication.topLevelWidgets():
+            w.close()
+            w.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        gc.collect()
+
+    unittest.TestSuite._handleModuleTearDown = _het_module_roi_don
+
     @atexit.register
     def _dong_qt():
         for w in QApplication.topLevelWidgets():

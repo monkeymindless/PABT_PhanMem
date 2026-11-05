@@ -3531,6 +3531,11 @@ class HopIn(QDialog):
             self.nhom_che_do.addButton(b)
         self.r_du_thao.setToolTip(MO_TA_CHE_DO['du_thao'])
         self.r_chinh_thuc.setToolTip(MO_TA_CHE_DO['chinh_thuc'])
+        # các ô trạng thái trên không vào bố cục: phải có cha, nếu không tín hiệu nối lambda giữ self làm cả hộp không bao giờ được giải
+        # phóng sau khi đóng (mỗi lần mở bảng In sót 12 widget cấp cao, allWidgets ngày càng dài)
+        for w in (self.cb_pham_vi, self.cb_dot, self.o_chia, self.o_mo, self.r_excel, self.r_pdf, self.r_in, self.r_du_thao, self.r_chinh_thuc):
+            w.setParent(self)
+            w.setVisible(False)
 
         # ---- danh sách hộ (khung mở bằng nút Chọn…): lọc theo chữ, sắp xếp theo cột; tình trạng, đợt, địa chỉ vẫn tìm được, hiện ở chú thích và màu tên
         self.o_tim = QLineEdit()
