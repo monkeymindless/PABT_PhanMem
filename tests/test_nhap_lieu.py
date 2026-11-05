@@ -232,7 +232,6 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         w.close()
 
     def test_ho_tro_theo_cach_tinh_va_ban_in(self):
-        from pabt import in_an
         from pabt.man_hinh import CuaSoLapPA
         w = CuaSoLapPA(self.con, 1)
         b4 = w.bang[4]
