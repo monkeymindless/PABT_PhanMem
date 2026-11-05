@@ -94,7 +94,7 @@ class TestMenuTrai(_Co):
             'Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…',          # Bản đồ thửa đất: menu Dữ liệu (18/10)
             'Xuất báo cáo đối chiếu…', 'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…', 'Quyết định phê duyệt',
             'Theo dõi tiến độ',                                   # 1.0.00: Báo cáo tiến độ GPMB gộp vào đây
-            'Bộ đơn giá…', 'Đơn giá riêng dự án…', 'Bảng giá đất NQ 28…', 'Tính đơn giá đất QĐ 03…')])     # 0.9.88: nhóm Đơn giá & bảng giá ở cuối
+            'Bộ đơn giá…', 'Đơn giá riêng dự án…', 'Bảng giá đất NQ 28…', 'Tính đơn giá đất…')])     # 0.9.88: nhóm Đơn giá & bảng giá ở cuối
         nhan = {k: L[k].text().replace('&&', '&') for k in ('Dự toán & khái toán', 'Danh sách hộ', 'Lập phương án hộ…',
                                                             'Kiểm tra lỗi…', 'Xuất báo cáo đối chiếu…', 'Đợt trình…',
                                                             'In / Xuất…', 'Theo dõi tiến độ')}

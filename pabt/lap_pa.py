@@ -748,7 +748,7 @@ class BoSoan:
                 continue
             d = self.pa.dat[i]
             d.gia_bang_gia, d.he_so_k = don_gia, D(1)
-            bo = re.sub(r'\s*;?\s*(?:' + re.escape(self.GHI_CHU_QD03) + r'|Hệ số K theo )[^;]*', '', d.ghi_chu or '')
+            bo = re.sub(r'\s*;?\s*(?:Đơn giá đất theo |Hệ số K theo )[^;]*', '', d.ghi_chu or '')           # căn cứ cũ, gói nào cũng thay
             bo = re.sub(r'\s*;?\s*Giá đất nhập tay', '', bo).strip(' ;')
             d.ghi_chu = ((bo + '; ') if bo else '') + (ghi_chu or self.GHI_CHU_QD03 + f' {vn(don_gia)} đ/m²')
             d.thanh_tien_excel = None

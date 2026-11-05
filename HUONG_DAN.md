@@ -1221,6 +1221,25 @@ Theo Mục IV Quyết định 18/2026/QĐ-UBND (16 bước). Các mốc ngày b�
     còn vướng - báo cáo định kỳ), *Danh sách đề nghị cưỡng chế (Excel)* (hộ, thửa, quyết định, số buổi vận động, hạn vận động, số ngày quá
     hạn, mốc thu hồi đất). Danh sách đầy đủ các hộ: **Dữ liệu → Xuất danh sách hộ…**.
 
+## Tính đơn giá đất và bộ quy tắc giá đất
+
+**Tính đơn giá đất…** tính đơn giá bồi thường theo đoạn đường: giá bảng giá × K1 × K2 × K3 × hệ số khác, rồi làm tròn; có giải trình từng bước. Chọn hộ ở danh sách trước khi mở thì áp được đơn giá vào các dòng đất đã tích.
+
+**Khi có văn bản mới về giá đất** (đổi hệ số, thêm hệ số, đổi cách làm tròn, thêm xã): không cần chờ bản phần mềm mới.
+
+1. Trong bảng tính bấm **Bộ quy tắc…**.
+2. Tạo gói: **Tạo gói mới từ gói này** (văn bản chỉ đổi một phần), **Tạo gói từ bảng hệ số K đã nhập** (đã đọc phụ lục ở thẻ Hệ số K, có cả xã mới) hoặc **Nhập gói từ file**.
+3. Ghi số hiệu, ngày hiệu lực; sửa yếu tố ảnh hưởng, công thức, làm tròn ở thẻ **Quy tắc**, câu giải trình ở thẻ **Câu giải trình, căn cứ**.
+4. Xem thẻ **Khác gói gốc** rồi bấm **Lưu gói**. Máy có máy chủ LAN: quản trị lưu, các máy tự nhận; máy đơn: theo mật khẩu Bộ đơn giá nếu đã đặt.
+
+Những điều cần biết:
+
+- **Số đã tính không tự đổi.** Đơn giá đã áp nằm trong dòng đất kèm tên văn bản ở cột Ghi chú, V1 giữ nguyên, dự án giữ gói đã chọn. Muốn tính theo gói mới: chọn gói ở ô **Văn bản, quy tắc** rồi áp lại.
+- Bảng tính nhắc khi hôm nay đã có gói khác đang hiệu lực, hoặc xã của dự án chưa có trong gói.
+- Chọn gói mới thì văn bản căn cứ của gói được gộp vào danh sách căn cứ. Văn bản cũ đã bị thay thế: tự xóa dòng đó trong ô Văn bản căn cứ.
+- **Hệ số K:** gói gắn sẵn dùng bảng đã nhập ở thẻ Hệ số K nếu máy đã nhập, và ghi rõ trong giải trình. Gói riêng dùng hệ số của chính nó.
+- Gói chỉ khai báo được công thức dạng **tích các hệ số**. Văn bản đặt cách tính khác (bậc thang theo diện tích, cộng trừ) cần bản cập nhật phần mềm, phát hành bằng gói .larcud, không phải cài lại.
+
 ## Kiểm tra lỗi trước khi trình
 
 **Kiểm tra lỗi…** rà toàn dự án, chia **Lỗi** (tô đỏ) và **Cảnh báo**, lọc theo nhóm: thông tin dự án (tên, xã, người ký…),

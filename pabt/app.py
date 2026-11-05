@@ -240,7 +240,7 @@ NHAN_MENU = {'Lập phương án hộ…': 'Lập phương án chi tiết', 'Th�
              'Thông tin dự án…': 'Thông tin dự án',
              'Bảng giá đất NQ 28…': 'Bảng giá đất',
              'Cập nhật bảng giá đất…': 'Cập nhật giá đất',
-             'Tính đơn giá đất QĐ 03…': 'Tính đơn giá đất',
+             'Tính đơn giá đất…': 'Tính đơn giá đất',
              'Dự thảo PABT…': 'Niêm yết & Lấy ý kiến',
              'Tổng hợp tiền theo phương án': 'Bảng tổng hợp kinh phí',
              'Quyết định phê duyệt': 'Quyết định phê duyệt', 'Đợt trình…': 'Đợt trình thẩm định',
@@ -888,7 +888,7 @@ class CuaSoChinh(QMainWindow):
             # 1.0.00: "Báo cáo tiến độ GPMB" gộp vào "Tiến độ chi trả & Bàn giao" (thẻ chỉ số, chế độ Thửa còn vướng, Xuất báo cáo)
             ('5. Phê duyệt & bàn giao', [L['Quyết định phê duyệt'], L['Theo dõi tiến độ']]),
             ('6. Đơn giá & bảng giá', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Bảng giá đất NQ 28…'],
-                                         L['Tính đơn giá đất QĐ 03…']]),
+                                         L['Tính đơn giá đất…']]),
         ]
         # hoàn tác / làm lại thao tác đã ghi vào file dự án: menu Chỉnh sửa trên thanh menu (người dùng 11/10/2026 - như các phần
         # mềm khác; trước đây nút trên băng tiêu đề). Chữ "Ctrl+Z" sau "\t" chỉ để hiện: KHÔNG gắn phím tắt cho QAction - phím

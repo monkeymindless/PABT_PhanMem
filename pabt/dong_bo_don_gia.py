@@ -24,6 +24,7 @@ THU_MUC = 'BoDonGia'
 FILE_BO = 'bo_don_gia.sqlite'
 FILE_GIA_DAT = 'bang_gia_dat.json'
 FILE_HE_SO_K = 'he_so_k.json'
+FILE_QUY_TAC = 'quy_tac_gia_dat.json'
 FILE_PHIEN_BAN = 'phien_ban.json'
 FILE_DA_NHAN = 'dong_bo_don_gia.json'
 CO_TOI_DA = 200 * 1024 * 1024
@@ -51,8 +52,8 @@ def _goc(goc=None) -> Path:
 
 
 def _nguon_gia_dat() -> dict:
-    from . import gia_dat_nq28, he_so_k
-    return {FILE_GIA_DAT: gia_dat_nq28.file_thay(), FILE_HE_SO_K: he_so_k.file_he_so()}
+    from . import gia_dat_nq28, goi_gia_dat, he_so_k
+    return {FILE_GIA_DAT: gia_dat_nq28.file_thay(), FILE_HE_SO_K: he_so_k.file_he_so(), FILE_QUY_TAC: goi_gia_dat.file_may()}
 
 
 def _ghi_nguyen_tu(nguon: Path, dich: Path) -> None:
@@ -147,7 +148,7 @@ def can_nhan(goc=None) -> dict | None:
 
 def nhan(goc=None, ep: bool = False) -> dict | None:
     """Nhận bộ đơn giá từ máy chủ về máy này. None: không có gì mới. Lỗi kiểm SHA-256 / file hỏng -> LoiDongBo (máy giữ bộ cũ)."""
-    from . import don_gia, gia_dat_nq28, he_so_k, quan_tri_bo
+    from . import don_gia, gia_dat_nq28, goi_gia_dat, he_so_k, quan_tri_bo
     pb = doc_phien_ban(goc)
     if pb is None or (not ep and pb.get('ma') == ma_da_nhan()):
         return None
@@ -156,7 +157,7 @@ def nhan(goc=None, ep: bool = False) -> dict | None:
     with tempfile.TemporaryDirectory() as td:
         chep = {}
         for ten, sha in tep.items():
-            if ten not in (FILE_BO, FILE_GIA_DAT, FILE_HE_SO_K) or sha is None:
+            if ten not in (FILE_BO, FILE_GIA_DAT, FILE_HE_SO_K, FILE_QUY_TAC) or sha is None:
                 continue
             p = tm / ten
             try:
@@ -172,7 +173,7 @@ def nhan(goc=None, ep: bool = False) -> dict | None:
         if FILE_BO not in chep:
             raise LoiDongBo('Máy chủ thiếu file bộ đơn giá.')
         don_gia.kiem_tra_bo(chep[FILE_BO])               # file hỏng / không phải bộ đơn giá -> LoiNhap, chưa đổi gì trên máy
-        for ten in (FILE_GIA_DAT, FILE_HE_SO_K):
+        for ten in (FILE_GIA_DAT, FILE_HE_SO_K, FILE_QUY_TAC):
             if ten in chep:
                 try:
                     json.loads(chep[ten].read_text(encoding='utf-8'))
@@ -181,7 +182,8 @@ def nhan(goc=None, ep: bool = False) -> dict | None:
         with quan_tri_bo.cho_phep_dong_bo():
             tt = don_gia.cai_bo(chep[FILE_BO])
             for ten, dich, quen in ((FILE_GIA_DAT, gia_dat_nq28.file_thay(), gia_dat_nq28._quen),
-                                    (FILE_HE_SO_K, he_so_k.file_he_so(), he_so_k._quen)):
+                                    (FILE_HE_SO_K, he_so_k.file_he_so(), he_so_k._quen),
+                                    (FILE_QUY_TAC, goi_gia_dat.file_may(), goi_gia_dat._quen)):
                 if ten in chep:
                     Path(dich).parent.mkdir(parents=True, exist_ok=True)
                     _ghi_nguyen_tu(chep[ten], Path(dich))

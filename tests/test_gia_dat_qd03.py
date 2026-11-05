@@ -33,8 +33,8 @@ class TestDuLieu(unittest.TestCase):
     def test_hang_so_k3_khop_json(self):
         pl3 = g.du_lieu()['phu_luc_III_yeu_to_anh_huong']
         json_k3 = {r['ma']: D(str(r['he_so_k3'])) for r in pl3['dat_phi_nong_nghiep'] + pl3['dat_nong_nghiep']}
-        for ma, he, _, _ in g.YEU_TO_PL3:
-            self.assertEqual(json_k3[ma], he, ma)
+        for y in g.gg._gan_san()['yeu_to']:
+            self.assertEqual(json_k3[y['ma']], D(y['he_so']), y['ma'])
         self.assertEqual(pl3['yeu_to_khac_mac_dinh'], 1.0)
 
     def test_k1_khop_bang_he_so_k_gan_san(self):
@@ -57,7 +57,8 @@ class TestDuLieu(unittest.TestCase):
         from pabt import gia_dat_nq28 as nq
         k = 'Bảng 54. Xã Tân An'
         d = g.ds_doan(k)[0]
-        for i, (ma, vt, _) in enumerate(g.VI_TRI_KET_NOI):
+        for i, x in enumerate(g.gg._gan_san()['vi_tri']):
+            ma, vt = x['ma'], x['vi_tri']
             gia = g.gia_bang_gia(k, d, 'DAT_O', ma)
             r = next(x for x in nq.tat_ca() if x['xa'] == 'Xã Tân An' and x['tt'] == d['tt_bat_dau'] + i)
             self.assertEqual(r['vi_tri'], vt)

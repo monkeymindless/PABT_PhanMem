@@ -175,11 +175,11 @@ class TestLenhVaCanGiua(unittest.TestCase):
 
     def test_lenh_moi_co_o_dung_mot_cho(self):
         w = self._cua_so()
-        for t in ('Tính đơn giá đất QĐ 03…', 'Quét file thông minh…'):
+        for t in ('Tính đơn giá đất…', 'Quét file thông minh…'):
             self.assertIn(t, w.lenh)
         from PySide6.QtWidgets import QToolButton
         trai = [b.defaultAction().text() for b in w.khung_menu.findChildren(QToolButton) if b.defaultAction() is not None]
-        self.assertIn(w.lenh['Tính đơn giá đất QĐ 03…'].text(), trai)
+        self.assertIn(w.lenh['Tính đơn giá đất…'].text(), trai)
         tren = [a.text() for a in w.menu_tren['Dữ liệu'].actions()]
         self.assertIn(w.lenh['Quét file thông minh…'].text(), tren)
 

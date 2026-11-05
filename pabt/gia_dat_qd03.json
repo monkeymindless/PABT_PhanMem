@@ -13,6 +13,178 @@
   "cong_thuc_chuan": "Gia_Dat = Gia_Bang_Gia_NQ28 * K_BienDongThiTruong_PL1 * K_QuyHoach_PL2 * K_YeuToKhac_PL3",
   "nguon_file": "CSDL_HeSoDieuChinhGiaDat_QD03_2026_DongNai.json (người dùng cung cấp 05/11/2026); đã bỏ 2 bảng chi tiết 742 dòng (K1 đồng nhất trong cụm 7 dòng - đã kiểm), giữ 106 đoạn + Phụ lục III"
  },
+ "goi": {
+  "ma": "QD03_2026_DONG_NAI",
+  "ten": "QĐ 03/2026/QĐ-UBND (Đồng Nai)",
+  "so_hieu": "QĐ 03/2026/QĐ-UBND",
+  "bang_gia": "NQ 28/2025/NQ-HĐND",
+  "hieu_luc_tu": "2026-05-11",
+  "hieu_luc_den": "",
+  "van_ban_can_cu": [
+   "Quyết định số 03/2026/QĐ-UBND ngày 11/5/2026 của UBND thành phố Đồng Nai quy định hệ số điều chỉnh giá đất trên địa bàn thành phố Đồng Nai năm 2026"
+  ],
+  "cong_thuc": {
+   "he_so": [
+    "K1",
+    "K2",
+    "K3",
+    "K_KHAC"
+   ],
+   "lam_tron_he_so": 6,
+   "lam_tron_tam": 4,
+   "lam_tron": 0
+  },
+  "he_so_them": [],
+  "chuyen_tiep": {
+   "bat": true
+  },
+  "nhom_dat": [
+   {
+    "ma": "DAT_NONG_NGHIEP",
+    "ten": "Đất nông nghiệp (CLN, BHK, LUC, RSX, NTS) - PL I.2",
+    "cot_k1": "k1_nong_nghiep",
+    "cot_gia": "nn_cay",
+    "phu_luc": "I.2",
+    "la_nong_nghiep": true
+   },
+   {
+    "ma": "DAT_O",
+    "ten": "Đất ở (ONT, ODT) - PL I.1",
+    "cot_k1": "k1_dat_o",
+    "cot_gia": "dat_o",
+    "phu_luc": "I.1",
+    "la_nong_nghiep": false
+   },
+   {
+    "ma": "DAT_TMDV",
+    "ten": "Đất thương mại, dịch vụ (TMD) - PL I.1",
+    "cot_k1": "k1_tmdv",
+    "cot_gia": "tmdv",
+    "phu_luc": "I.1",
+    "la_nong_nghiep": false
+   },
+   {
+    "ma": "DAT_SXKD_KHOANGSAN",
+    "ten": "Đất cơ sở SX phi nông nghiệp & Khoáng sản (SKC, SKS) - PL I.1",
+    "cot_k1": "k1_sxkd",
+    "cot_gia": "sxkd",
+    "phu_luc": "I.1",
+    "la_nong_nghiep": false
+   },
+   {
+    "ma": "DAT_NONG_NGHIEP",
+    "ten": "Đất rừng sản xuất, nuôi trồng thủy sản - PL I.2",
+    "cot_k1": "k1_nong_nghiep",
+    "cot_gia": "nn_rung_nts",
+    "phu_luc": "I.2",
+    "la_nong_nghiep": true
+   }
+  ],
+  "vi_tri": [
+   {
+    "ma": "MAT_TIEN_VT1",
+    "vi_tri": "MT",
+    "ten": "Dòng 1 (VT1): Mặt tiền đường chính"
+   },
+   {
+    "ma": "DAU_NOI_TRUC_TIEP_M1",
+    "vi_tri": "T1",
+    "ten": "Dòng 2: Đấu nối trực tiếp - Mức 1 (Rộng ≥5m cách ≤1000m; 3-<5m cách ≤500m)"
+   },
+   {
+    "ma": "DAU_NOI_TRUC_TIEP_M2",
+    "vi_tri": "T2",
+    "ten": "Dòng 3: Đấu nối trực tiếp - Mức 2 (Rộng ≥5m cách >1000m; 3-<5m cách 500-1000m; <3m cách ≤200m)"
+   },
+   {
+    "ma": "DAU_NOI_TRUC_TIEP_M3",
+    "vi_tri": "T3",
+    "ten": "Dòng 4: Đấu nối trực tiếp - Mức 3 (Rộng 3-<5m cách >1000m; <3m cách >200m)"
+   },
+   {
+    "ma": "KHONG_DAU_NOI_M1",
+    "vi_tri": "K1",
+    "ten": "Dòng 5: Không đấu nối trực tiếp - Mức 1"
+   },
+   {
+    "ma": "KHONG_DAU_NOI_M2",
+    "vi_tri": "K2",
+    "ten": "Dòng 6: Không đấu nối trực tiếp - Mức 2"
+   },
+   {
+    "ma": "KHONG_DAU_NOI_M3",
+    "vi_tri": "K3",
+    "ten": "Dòng 7: Không đấu nối trực tiếp - Mức 3"
+   }
+  ],
+  "ket_cau": [
+   {
+    "ma": "NHUA_BETONG",
+    "ten": "Đường nhựa, bê tông xi măng (K3 = 1,00)"
+   },
+   {
+    "ma": "DAT_SOI_DA_CAPPHOI",
+    "ten": "Đường đất, đá, cuội, sỏi hỗn hợp, cấp phối (Đất NN: K3 = 0,90)"
+   }
+  ],
+  "yeu_to": [
+   {
+    "ma": "PNN_TTTM_200M",
+    "he_so": "1.05",
+    "ap_cho": "pnn",
+    "can_cu": "Mục I.1 Phụ lục III",
+    "ten": "Đất PNN trong phạm vi ≤200m từ mép ngoài TTTM, trung tâm hành chính, siêu thị (×1,05)",
+    "dien_giai": "Phạm vi ≤200m TTTM/TTHC/Siêu thị (×1,05)"
+   },
+   {
+    "ma": "PNN_NGHIATRANG_100M",
+    "he_so": "0.95",
+    "ap_cho": "pnn",
+    "can_cu": "Mục I.2 Phụ lục III",
+    "ten": "Đất PNN trong phạm vi ≤100m từ mép ngoài nghĩa trang, nghĩa địa, nhà tang lễ, hỏa táng (×0,95)",
+    "dien_giai": "Phạm vi ≤100m Nghĩa trang/Nhà tang lễ/Hỏa táng (×0,95)"
+   },
+   {
+    "ma": "PNN_HANHLANG_50M",
+    "he_so": "0.95",
+    "ap_cho": "pnn",
+    "can_cu": "Mục I.3 Phụ lục III",
+    "ten": "Đất PNN trong phạm vi ≤50m từ mép ngoài hành lang an toàn đường sắt, cao tốc, hầm chui (×0,95)",
+    "dien_giai": "Phạm vi ≤50m Hành lang đường sắt/Cao tốc/Hầm chui (×0,95)"
+   },
+   {
+    "ma": "NN_DUONG_DAT_SOI_DA",
+    "he_so": "0.90",
+    "ap_cho": "nn",
+    "can_cu": "Mục II.1 Phụ lục III",
+    "kich_hoat_ket_cau": "DAT_SOI_DA_CAPPHOI",
+    "khoa_neu_quy_dinh_rieng": true,
+    "ten": "Đất NN tiếp giáp mặt đường đất, đá, cuội, sỏi hỗn hợp, cấp phối (×0,90)",
+    "dien_giai": "Đất nông nghiệp tiếp giáp mặt đường bằng đất, đá, cuội, sỏi hỗn hợp, đường cấp phối (chưa quy định riêng tại Phụ lục I.2)"
+   }
+  ],
+  "cau_chu": {
+   "buoc_1": "Bước 1 (Bảng giá đất {bang_gia}): Xác định đơn giá gốc theo khu vực ({dia_ban}) và vị trí kết nối ({vi_tri}) = {gia} đ/m².",
+   "buoc_2_doan": "Bước 2 (Phụ lục {phu_luc} {so_hieu}): Tuyến \"{ten_duong}\" (Đoạn từ \"{diem_dau}\" đến \"{diem_cuoi}\"), nhóm đất {nhom} -> Hệ số biến động thị trường K1 = {k1}.",
+   "buoc_2_tay": "Bước 2 (Hệ số biến động thị trường K1 - {so_hieu}): K1 = {k1}.",
+   "k2_co": "Bước 3 (Phụ lục II {so_hieu}): Khu đất thực hiện dự án đầu tư có thông tin hệ số sử dụng đất (FAR) -> Áp dụng hệ số điều chỉnh theo quy hoạch K2 = {k2}.",
+   "k2_khong": "Bước 3 (Phụ lục II {so_hieu}): Theo Văn bản 1201/SNNMT-ĐĐ, trường hợp không phải dự án đầu tư xác định theo hệ số sử dụng đất (FAR) -> Không áp dụng Phụ lục II (K2 = 1,00).",
+   "k3_khoa": "Bước 4 (Phụ lục III {so_hieu}): Tuyến đường đã có hệ số riêng cho đường đất tại Phụ lục I.2 -> Giữ nguyên K3 = 1,00.",
+   "k3_nn_co": "Bước 4 (Mục II.1 Phụ lục III QĐ 03 & Văn bản hướng dẫn ngày 29/5/2026 của Sở NN&MT): {yeu_to} -> Áp dụng quy trình 3 bước, nhân hệ số K3 = {k3_2}.",
+   "k3_nn_khong": "Bước 4 (Phụ lục III {so_hieu}): Đất nông nghiệp tiếp giáp đường nhựa, bê tông xi măng -> K3 = 1,00.",
+   "k3_pnn_co": "Bước 4 (Mục I Phụ lục III {so_hieu}): Áp dụng yếu tố ảnh hưởng đất phi nông nghiệp [{yeu_to}] -> Hệ số K3 = {k3}.",
+   "k3_pnn_khong": "Bước 4 (Phụ lục III {so_hieu}): Không có yếu tố ảnh hưởng đặc biệt tại Mục I Phụ lục III -> K3 = 1,00.",
+   "canh_bao_khoa": "Cảnh báo chống nhân trùng (Văn bản 1201 & Văn bản 29/5/2026): Tuyến đường này đã được quy định hệ số K riêng cho đường đất/sỏi/đá (hoặc các tuyến đường còn lại) tại Phụ lục I.2, nên KHÔNG nhân thêm hệ số 0,90 tại Phụ lục III (K3 = 1,00).",
+   "loai_tru_nn": "Lưu ý pháp lý: Các hệ số 1,05 (phạm vi 200m TTTM) và 0,95 (phạm vi 100m nghĩa trang / 50m hành lang đường sắt, cao tốc) tại Mục I Phụ lục III chỉ áp dụng cho Đất phi nông nghiệp, hệ thống đã tự động loại trừ khỏi Đất nông nghiệp.",
+   "loai_tru_pnn": "Lưu ý pháp lý: Hệ số 0,90 (mặt đường đất, đá, sỏi, cấp phối tại Mục II.1 Phụ lục III) chỉ áp dụng cho Đất nông nghiệp, hệ thống đã tự động loại trừ khỏi Đất phi nông nghiệp.",
+   "ct_cao": "Bước 5 (Quy định chuyển tiếp - Tiết 2 Điểm a Khoản 3 Điều 4 {so_hieu}): Giá đất cụ thể đã phê duyệt/thẩm định ({gia_cu_the} đ/m²) ≥ Giá tính theo Bảng giá đất × Hệ số K ({gia_tinh} đ/m²) -> Tiếp tục áp dụng theo Giá đất cụ thể đã phê duyệt/thẩm định = {gia_cu_the} đ/m².",
+   "ct_thap": "Bước 5 (Quy định chuyển tiếp - Tiết 1 Điểm a Khoản 3 Điều 4 {so_hieu}): Giá đất cụ thể đã phê duyệt/thẩm định ({gia_cu_the} đ/m²) < Giá tính theo Bảng giá đất × Hệ số K ({gia_tinh} đ/m²) -> Chuyển sang áp dụng theo {so_hieu} = {gia_tinh} đ/m².",
+   "ghi_chu_ct": "giữ giá đất cụ thể đã phê duyệt - khoản 3 Điều 4 QĐ 03",
+   "nhan_k2": "Dự án đầu tư có hệ số sử dụng đất (FAR): áp dụng Phụ lục II",
+   "nhan_rieng": "Tuyến đã có hệ số riêng cho đường đất, sỏi, \"các tuyến còn lại\" ở Phụ lục I.2 (khóa K3 = 1,00)",
+   "nhan_cu_the": "Trống nếu không có (khoản 3 Điều 4 QĐ 03)"
+  }
+ },
  "phu_luc_III_yeu_to_anh_huong": {
   "dat_phi_nong_nghiep": [
    {

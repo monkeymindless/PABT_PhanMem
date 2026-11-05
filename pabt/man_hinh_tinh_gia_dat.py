@@ -1,6 +1,6 @@
-"""Cửa sổ "Tính đơn giá đất bồi thường" (NQ 28/2025/NQ-HĐND x QĐ 03/2026/QĐ-UBND) - thay cửa sổ tính giá nội bộ cũ.
+"""Cửa sổ "Tính đơn giá đất bồi thường" - thay cửa sổ tính giá nội bộ cũ. Nhóm đất, vị trí, mặt đường, yếu tố, hệ số thêm dựng theo gói quy tắc đang chọn (goi_gia_dat.py), gói gắn sẵn: NQ 28/2025/NQ-HĐND x QĐ 03/2026/QĐ-UBND.
 
-Logic ở gia_dat_qd03.py (port calculateStandardLandPrice), van_ban_can_cu.py (13 bậc pháp lý), quet_chung.py (bộ quét dùng chung); file này
+Logic ở gia_dat_qd03.py, van_ban_can_cu.py (13 bậc pháp lý), quet_chung.py (bộ quét dùng chung); file này
 chỉ hiển thị. Ba khối: Văn bản căn cứ (tự khử trùng + sắp xếp mỗi khi quét thêm / sửa xong) | Thông số đầu vào (địa bàn, nhóm đất, tuyến đường
 & đoạn đường điểm đầu -> điểm cuối từ 106 đoạn, vị trí kết nối cụm 7 dòng NQ 27 / NQ 28, mặt đường, G_NQ28, K2, Phụ lục III, K khác, giá đất
 cụ thể chuyển tiếp) và kết quả tức thì | Các dòng đất của hộ đang chọn để áp giá. Áp giá = BoSoan.ap_don_gia_qd03 + luu (khóa hộ nhận việc,
@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QPushButton, QScrollArea, QFrame, QSizePolicy, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import gia_dat_qd03 as g
+from . import goi_gia_dat as gg
 from . import quet_chung as qc
 from . import van_ban_can_cu as vb
 from .lap_pa import LoiNhap, doc_so
@@ -32,6 +33,33 @@ def _o_so(chu: str) -> QTableWidgetItem:
     return o
 
 
+class _NhanTich(QLabel):
+    """Chữ của ô đánh dấu: tự xuống dòng, bấm vào chữ cũng đổi ô. QCheckBox không xuống dòng: chữ dài đẩy cột trái vượt khung, mất nút bên phải."""
+
+    def __init__(self, chu: str, ck: QCheckBox):
+        super().__init__(chu)
+        self.ck = ck
+        self.setWordWrap(True)
+
+    def mouseReleaseEvent(self, e):
+        if self.ck.isEnabled():
+            self.ck.toggle()
+        super().mouseReleaseEvent(e)
+
+
+def _hang_tich(ck: QCheckBox, chu: str) -> tuple:
+    """(widget một dòng: ô đánh dấu + chữ tự xuống dòng, nhãn). Tắt cả dòng bằng widget.setEnabled."""
+    w = QWidget()
+    h = QHBoxLayout(w)
+    h.setContentsMargins(0, 0, 0, 0)
+    h.setSpacing(6)
+    nhan = _NhanTich(chu, ck)
+    ck.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+    h.addWidget(ck, 0, Qt.AlignmentFlag.AlignTop)
+    h.addWidget(nhan, 1)
+    return w, nhan
+
+
 class HopTinhGiaDat(QDialog):
     """con: kết nối dự án (None: chỉ tính, không áp). ds_ma_ho: các hộ có dòng đất để áp giá. xa_mac_dinh: tên địa bàn dự án."""
     im_lang = False
@@ -46,11 +74,14 @@ class HopTinhGiaDat(QDialog):
         self._bo = {}                            # ma_ho -> BoSoan đang mở
         self._dong = []                          # (ma_ho, chỉ số dòng đất) theo hàng của bảng
         self.ket_qua_ap = None                   # (số dòng, số hộ) sau khi áp
+        self.xa_du_an = xa_mac_dinh or ''
+        self.goi = gg.goi_du_an(con, self.xa_du_an)
+        self._dang_dung = False                  # đang dựng lại theo gói: chưa tính
         lo = QVBoxLayout(self)
-        td = QLabel('Bảng tính đơn giá đất bồi thường - NQ 28/2025/NQ-HĐND và QĐ 03/2026/QĐ-UBND')
-        td.setProperty('vai', 'tieu_de')
-        td.setWordWrap(True)
-        lo.addWidget(td)
+        self.lb_tieu_de = QLabel('')
+        self.lb_tieu_de.setProperty('vai', 'tieu_de')
+        self.lb_tieu_de.setWordWrap(True)
+        lo.addWidget(self.lb_tieu_de)
 
         # ---- các ô nhập
         self.o_can_cu = QPlainTextEdit()
@@ -59,25 +90,21 @@ class HopTinhGiaDat(QDialog):
         self.nut_quet_cc.da_quet.connect(self.sau_khi_quet)
         self.nut_sap = QPushButton('Sắp xếp lại (13 bậc)')
         self.nut_sap.clicked.connect(self.sap_xep_can_cu)
+        self.cb_goi = QComboBox()
+        self.cb_goi.setToolTip('Văn bản, quy tắc dùng để tính. Có văn bản mới: bấm Bộ quy tắc để nhập, không phải cài lại phần mềm.')
+        self.nut_quy_tac = QPushButton('Bộ quy tắc…')
+        self.nut_quy_tac.setToolTip('Xem, tạo, nhập gói quy tắc khi có văn bản mới: hệ số, yếu tố ảnh hưởng, công thức, hiệu lực')
+        self.nut_quy_tac.clicked.connect(lambda: self.mo_bo_quy_tac())
         self.cb_dia_ban = QComboBox()
-        for k in g.ds_dia_ban():
-            self.cb_dia_ban.addItem(g.ten_ngan(k), k)
         self.cb_nhom = QComboBox()
-        for ma, ten in g.NHOM_DAT:
-            self.cb_nhom.addItem(ten, f'{ma}|{g.COT_BANG_GIA[ma]}')
-        self.cb_nhom.addItem('Đất rừng sản xuất, nuôi trồng thủy sản - PL I.2', f'DAT_NONG_NGHIEP|{g.COT_NN_RUNG_NTS}')
         self.o_tim = QLineEdit()
         self.o_tim.setPlaceholderText('Tìm tuyến đường, điểm đầu, điểm cuối (không cần dấu)…')
         self.o_tim.setClearButtonEnabled(True)
         self.cb_doan = QComboBox()
         self.cb_doan.setMaxVisibleItems(18)
         self.cb_vi_tri = QComboBox()
-        for ma, _, mo_ta in g.VI_TRI_KET_NOI:
-            self.cb_vi_tri.addItem(mo_ta, ma)
         self.cb_ket_cau = QComboBox()
-        for ma, ten in g.KET_CAU:
-            self.cb_ket_cau.addItem(ten, ma)
-        for cb in (self.cb_dia_ban, self.cb_nhom, self.cb_doan, self.cb_vi_tri, self.cb_ket_cau):   # chữ dài không đẩy cột trái rộng ra; danh sách xổ vẫn rộng đủ chữ
+        for cb in (self.cb_goi, self.cb_dia_ban, self.cb_nhom, self.cb_doan, self.cb_vi_tri, self.cb_ket_cau):   # chữ dài không đẩy cột trái rộng ra; danh sách xổ vẫn rộng đủ chữ
             cb.setMinimumContentsLength(20)
             cb.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
             cb.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
@@ -86,21 +113,26 @@ class HopTinhGiaDat(QDialog):
         self.o_g.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.lb_g = QLabel('')
         self.nut_tra = QPushButton('Tra bảng giá')
-        self.nut_tra.setToolTip('Điền giá NQ 28 từ bảng giá đất đang dùng: dòng thứ tự vị trí kết nối trong cụm 7 dòng của đoạn đường đã chọn')
+        self.nut_tra.setToolTip('Điền giá từ bảng giá đất đang dùng: dòng thứ tự vị trí kết nối trong cụm dòng của đoạn đường đã chọn')
         self.nut_tra.clicked.connect(lambda: self.tra_gia(True))
-        self.ck_k2 = QCheckBox('Dự án đầu tư có hệ số sử dụng đất (FAR): áp dụng Phụ lục II')
+        self.ck_k2 = QCheckBox('')
+        self.hang_k2, self.lb_k2 = _hang_tich(self.ck_k2, '')
         self.o_k2 = QLineEdit('1')
         self.o_k2.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.o_k2.setEnabled(False)
         self.ck_pl3 = {}
-        for ma, he, _, mo_ta in g.YEU_TO_PL3:
-            self.ck_pl3[ma] = QCheckBox(mo_ta)
-        self.ck_rieng = QCheckBox('Tuyến đã có hệ số riêng cho đường đất, sỏi, "các tuyến còn lại" ở Phụ lục I.2 (khóa K3 = 1,00)')
+        self.o_he_so = {}                        # hệ số gói khai báo thêm: mã -> ô nhập
+        self.khung_yt = QWidget()                # yếu tố + hệ số thêm của gói, dựng lại khi đổi gói
+        self.lo_yt = QVBoxLayout(self.khung_yt)
+        self.lo_yt.setContentsMargins(0, 0, 0, 0)
+        self._yt_con = None
+        self.ck_rieng = QCheckBox('')
+        self.hang_rieng, self.lb_rieng = _hang_tich(self.ck_rieng, '')
+        self.hang_pl3 = {}
         self.o_khac = QLineEdit('1')
         self.o_khac.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.o_cu_the = QLineEdit('')
         self.o_cu_the.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.o_cu_the.setPlaceholderText('Trống nếu không có (khoản 3 Điều 4 QĐ 03)')
         self.nut_quet_gd = NutQuetChung('Quét văn bản, bảng giá để lấy dữ liệu…', qc.GIA_DAT, self)
         self.nut_quet_gd.da_quet.connect(self.sau_khi_quet)
 
@@ -122,26 +154,25 @@ class HopTinhGiaDat(QDialog):
         tp = QGroupBox('Thông số')
         f = QFormLayout(tp)
         f.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        f.addRow('Văn bản, quy tắc:', hang(self.cb_goi, self.nut_quy_tac))
         f.addRow('Xã, phường:', self.cb_dia_ban)
         f.addRow('Nhóm đất:', self.cb_nhom)
         f.addRow('Tìm đoạn đường:', self.o_tim)
         f.addRow('Đoạn đường:', self.cb_doan)
         f.addRow('Vị trí kết nối:', self.cb_vi_tri)
         f.addRow('Mặt đường:', self.cb_ket_cau)
-        f.addRow('Giá NQ 28 (đ/m²):', hang(self.o_g, self.nut_tra))
+        f.addRow('Giá bảng giá (đ/m²):', hang(self.o_g, self.nut_tra))
         f.addRow('', self.lb_g)
         f.addRow(self.nut_quet_gd)
-        self.nut_them = nut_mo('Mở thêm: K2 (FAR), Phụ lục III, hệ số khác, giá đất cụ thể')
+        self.nut_them = nut_mo('Mở thêm: K2, yếu tố ảnh hưởng, hệ số khác, giá đất cụ thể')
         f.addRow(self.nut_them)
         self.khung_them = QWidget()
         ft = QFormLayout(self.khung_them)
         ft.setContentsMargins(0, 0, 0, 0)
-        ft.addRow(self.ck_k2)
+        ft.addRow(self.hang_k2)
         ft.addRow('Hệ số K2:', self.o_k2)
-        for c in self.ck_pl3.values():
-            c.setToolTip(c.text())
-            ft.addRow(c)
-        ft.addRow(self.ck_rieng)
+        ft.addRow(self.khung_yt)
+        ft.addRow(self.hang_rieng)
         ft.addRow('Hệ số khác:', self.o_khac)
         ft.addRow('Giá đất cụ thể đã duyệt:', self.o_cu_the)
         f.addRow(self.khung_them)
@@ -224,6 +255,7 @@ class HopTinhGiaDat(QDialog):
         lo.addLayout(hn)
 
         # ---- nối tín hiệu
+        self.cb_goi.currentIndexChanged.connect(lambda *_: self.doi_goi(self.cb_goi.currentData()))
         self.cb_dia_ban.currentIndexChanged.connect(lambda *_: self._nap_doan())
         self.o_tim.textChanged.connect(lambda *_: self._nap_doan(giu=True))
         for cb in (self.cb_doan, self.cb_vi_tri, self.cb_nhom):
@@ -232,7 +264,7 @@ class HopTinhGiaDat(QDialog):
             cb.currentIndexChanged.connect(lambda *_: self.tinh())
         for e in (self.o_g, self.o_k2, self.o_khac, self.o_cu_the):
             e.textChanged.connect(lambda *_: self.tinh())
-        for c in (self.ck_k2, self.ck_rieng, *self.ck_pl3.values()):
+        for c in (self.ck_k2, self.ck_rieng):
             c.toggled.connect(lambda *_: self.tinh())
         self.ck_k2.toggled.connect(self.o_k2.setEnabled)
         self.cb_nhom.currentIndexChanged.connect(lambda *_: self._dong_bo_yeu_to())
@@ -240,13 +272,113 @@ class HopTinhGiaDat(QDialog):
         self._chu_nut_can_cu()
         self.bang.itemChanged.connect(lambda *_: self._dat_nut_ap())
 
-        i = g.ds_dia_ban().index(g.dia_ban_theo_ten(xa_mac_dinh)) if g.dia_ban_theo_ten(xa_mac_dinh) else 0
-        self.cb_dia_ban.setCurrentIndex(i)
-        self._nap_doan()
-        self._dong_bo_yeu_to()
+        self._nap_ds_goi()
+        self._dung_theo_goi()
+        if not self.goi.get('gan_san'):
+            self._gop_can_cu_goi()
         self.nap_dong_dat(list(ds_ma_ho))
         self.tra_gia(False)
         self.tinh()
+
+    # ---------------------------------------------------------------- gói quy tắc
+    def _nap_ds_goi(self) -> None:
+        self.cb_goi.blockSignals(True)
+        self.cb_goi.clear()
+        for x in gg.ds_goi():
+            self.cb_goi.addItem(gg.nhan_goi(x), x['ma'])
+        self.cb_goi.setCurrentIndex(max(0, self.cb_goi.findData(self.goi.get('ma'))))
+        self.cb_goi.setToolTip(self.cb_goi.currentText())
+        self.cb_goi.blockSignals(False)
+
+    def _dung_theo_goi(self) -> None:
+        """Dựng lại ô chọn, yếu tố, nhãn theo gói đang chọn; giữ lựa chọn cũ nếu gói mới vẫn có."""
+        goi = self.goi
+        mau = dict(gg._gan_san()['cau_chu'], **(goi.get('cau_chu') or {}))
+        self._dang_dung = True
+        self.lb_tieu_de.setText(f'Bảng tính đơn giá đất bồi thường - {goi["bang_gia"]} và {goi["so_hieu"]}')
+
+        def nap(cb, ds, cu):
+            cb.blockSignals(True)
+            cb.clear()
+            for chu, gt in ds:
+                cb.addItem(chu, gt)
+            cb.setCurrentIndex(max(0, cb.findData(cu)))
+            cb.setToolTip(cb.currentText())
+            cb.blockSignals(False)
+
+        xa_cu = g.ten_ngan(self.cb_dia_ban.currentData() or '') or self.xa_du_an
+        k = g.dia_ban_theo_ten(xa_cu, goi)
+        nap(self.cb_dia_ban, [(g.ten_ngan(x), x) for x in g.ds_dia_ban(goi)], k)
+        nap(self.cb_nhom, [(x['ten'], f'{x["ma"]}|{x["cot_gia"]}') for x in goi['nhom_dat']], self.cb_nhom.currentData())
+        nap(self.cb_vi_tri, [(x['ten'], x['ma']) for x in goi['vi_tri']], self.cb_vi_tri.currentData())
+        nap(self.cb_ket_cau, [(x['ten'], x['ma']) for x in goi['ket_cau']], self.cb_ket_cau.currentData())
+        self.lb_k2.setText(mau['nhan_k2'])
+        self.lb_rieng.setText(mau['nhan_rieng'])
+        co_ct = bool((goi.get('chuyen_tiep') or {}).get('bat'))
+        self.o_cu_the.setEnabled(co_ct)
+        self.o_cu_the.setPlaceholderText(mau['nhan_cu_the'] if co_ct else 'Văn bản này không có quy định chuyển tiếp')
+
+        moi = QWidget()                                   # thay cả khung chứa, không gỡ từng dòng khỏi bố cục
+        lo = QFormLayout(moi)
+        lo.setContentsMargins(0, 0, 0, 0)
+        cu_chon = {m for m, c in self.ck_pl3.items() if c.isChecked()}
+        self.ck_pl3, self.o_he_so, self.hang_pl3 = {}, {}, {}
+        for y in goi.get('yeu_to', ()):
+            c = QCheckBox('')
+            c.setChecked(y['ma'] in cu_chon)
+            c.toggled.connect(lambda *_: self.tinh())
+            hang_y, _ = _hang_tich(c, y['ten'])
+            lo.addRow(hang_y)
+            self.ck_pl3[y['ma']] = c
+            self.hang_pl3[y['ma']] = hang_y
+        for x in goi.get('he_so_them') or ():
+            e = QLineEdit(str(x.get('mac_dinh', 1)).replace('.', ','))
+            e.setAlignment(Qt.AlignmentFlag.AlignRight)
+            e.setToolTip(x.get('can_cu', ''))
+            e.textChanged.connect(lambda *_: self.tinh())
+            lo.addRow(f'{x.get("ten") or x["ma"]} ({x["ma"]}):', e)
+            self.o_he_so[x['ma']] = e
+        if self._yt_con is not None:
+            self.lo_yt.removeWidget(self._yt_con)
+            self._yt_con.hide()
+            self._yt_con.deleteLater()
+        self.lo_yt.addWidget(moi)
+        self._yt_con = moi
+        self._dang_dung = False
+        self._dong_bo_yeu_to()
+        self._nap_doan()
+
+    def doi_goi(self, ma) -> None:
+        """Người dùng chọn gói khác: dựng lại, gộp văn bản căn cứ của gói vào danh sách."""
+        x = gg.lay_goi(ma or '')
+        if x is None or x.get('ma') == self.goi.get('ma'):
+            return
+        self.goi = x
+        self._gop_can_cu_goi()
+        self._dung_theo_goi()
+
+    def _gop_can_cu_goi(self) -> None:
+        if self.goi.get('van_ban_can_cu'):
+            self.o_can_cu.setPlainText(vb.gop_va_sap_xep([self.o_can_cu.toPlainText()], list(self.goi['van_ban_can_cu']))[0])
+            self._chu_nut_can_cu()
+
+    def mo_bo_quy_tac(self):
+        from .man_hinh_goi_gia_dat import HopGoiGiaDat
+        h = HopGoiGiaDat(self, self.goi.get('ma', ''))
+        h.im_lang = self.im_lang
+        if self.im_lang:
+            return h
+        h.exec()
+        if h.da_doi:
+            self.lam_moi_goi()
+        return h
+
+    def lam_moi_goi(self) -> None:
+        """Sau khi sửa bộ quy tắc: đọc lại danh sách; gói đang dùng đã bị xóa thì về gói theo ngày."""
+        x = gg.lay_goi(self.goi.get('ma', '')) or gg.chon_goi(None, self.xa_du_an)
+        self.goi = x
+        self._nap_ds_goi()
+        self._dung_theo_goi()
 
     # ---------------------------------------------------------------- văn bản căn cứ
     def eventFilter(self, obj, e):
@@ -268,7 +400,7 @@ class HopTinhGiaDat(QDialog):
         ma_cu = self.cb_doan.currentData() if giu else None
         from .lap_pa import bo_dau
         khoa = bo_dau(self.o_tim.text()).split()
-        ds = [r for r in g.ds_doan(self.cb_dia_ban.currentData() or '')
+        ds = [r for r in g.ds_doan(self.cb_dia_ban.currentData() or '', self.goi)
               if all(k in bo_dau(f'{r["ten_duong"]} {r["diem_dau"]} {r["diem_cuoi"]}') for k in khoa)]
         self.cb_doan.blockSignals(True)
         self.cb_doan.clear()
@@ -281,12 +413,13 @@ class HopTinhGiaDat(QDialog):
         self.tinh()
 
     def _dong_bo_yeu_to(self) -> None:
-        """Yếu tố Phụ lục III chỉ chọn được đúng nhóm đất (Mục I: phi nông nghiệp; Mục II.1: nông nghiệp)."""
-        la_nn = self.nhom_cot()[0] == 'DAT_NONG_NGHIEP'
-        for ma, _, nhom, _ in g.YEU_TO_PL3:
-            c = self.ck_pl3[ma]
-            dung = (nhom == 'nn') == la_nn
-            c.setEnabled(dung)
+        """Yếu tố ảnh hưởng chỉ chọn được đúng nhóm đất của gói (ap_cho: nn / pnn / ca)."""
+        n = g.nhom_cua(self.goi, *self.nhom_cot())
+        nhom_nay = 'nn' if n and n.get('la_nong_nghiep') else 'pnn'
+        for y in self.goi.get('yeu_to', ()):
+            c = self.ck_pl3[y['ma']]
+            dung = y['ap_cho'] in (nhom_nay, 'ca')
+            self.hang_pl3[y['ma']].setEnabled(dung)
             if not dung:
                 c.setChecked(False)
 
@@ -295,15 +428,17 @@ class HopTinhGiaDat(QDialog):
         return tuple((self.cb_nhom.currentData() or 'DAT_NONG_NGHIEP|nn_cay').split('|'))
 
     def doan_hien_tai(self):
-        return g.tim_doan(self.cb_dia_ban.currentData() or '', self.cb_doan.currentData() or '')
+        return g.tim_doan(self.cb_dia_ban.currentData() or '', self.cb_doan.currentData() or '', self.goi)
 
     def tra_gia(self, thong_bao: bool = False) -> None:
-        """Điền G_NQ28 từ bảng giá đất đang dùng; không có dòng khớp thì giữ số người dùng nhập."""
+        """Điền giá từ bảng giá đất đang dùng; không có dòng khớp thì giữ số người dùng nhập."""
+        if self._dang_dung:
+            return
         nhom, cot = self.nhom_cot()
-        gia = g.gia_bang_gia(self.cb_dia_ban.currentData() or '', self.doan_hien_tai(), nhom, self.cb_vi_tri.currentData() or '', cot)
+        gia = g.gia_bang_gia(self.cb_dia_ban.currentData() or '', self.doan_hien_tai(), nhom, self.cb_vi_tri.currentData() or '', cot, self.goi)
         if gia is not None:
             self.o_g.setText(vn(gia).replace('.', ''))
-            self.lb_g.setText('Tự tra từ bảng giá NQ 28')
+            self.lb_g.setText(f'Tự tra từ bảng giá {self.goi["bang_gia"]}')
         else:
             self.lb_g.setText('Nhập tay: bảng giá không có dòng khớp')
             if thong_bao and not self.im_lang:
@@ -311,19 +446,22 @@ class HopTinhGiaDat(QDialog):
 
     # ---------------------------------------------------------------- tính
     def dau_vao(self) -> g.DauVao:
-        nhom, _ = self.nhom_cot()
+        nhom, cot = self.nhom_cot()
         cu_the = self.o_cu_the.text().strip()
         return g.DauVao(
             dia_ban=self.cb_dia_ban.currentData() or '', nhom_dat=nhom, ma_doan_duong=self.cb_doan.currentData() or '',
             loai_ket_noi_vi_tri=self.cb_vi_tri.currentData() or 'MAT_TIEN_VT1', ket_cau_mat_duong=self.cb_ket_cau.currentData() or 'NHUA_BETONG',
-            don_gia_bang_gia=doc_so(self.o_g.text(), 'Đơn giá bảng giá NQ 28'),
+            don_gia_bang_gia=doc_so(self.o_g.text(), 'Đơn giá bảng giá'), cot_gia=cot,
             ap_dung_quy_hoach_pl2=self.ck_k2.isChecked(), he_so_quy_hoach_k2=doc_so(self.o_k2.text(), 'Hệ số K2') or D(1),
             yeu_to_pl3=[m for m, c in self.ck_pl3.items() if c.isChecked() and c.isEnabled()],
             he_so_khac=doc_so(self.o_khac.text(), 'Hệ số khác') or D(1),
             gia_dat_cu_the=doc_so(cu_the, 'Giá đất cụ thể') if cu_the else D(0),
-            co_quy_dinh_rieng_duong_dat_pl1=self.ck_rieng.isChecked())
+            co_quy_dinh_rieng_duong_dat_pl1=self.ck_rieng.isChecked(),
+            he_so_them={m: doc_so(e.text(), m) for m, e in self.o_he_so.items() if e.text().strip()})
 
     def tinh(self):
+        if self._dang_dung:
+            return None
         try:
             v = self.dau_vao()
         except LoiNhap as e:
@@ -334,15 +472,17 @@ class HopTinhGiaDat(QDialog):
             self.nut_ap.setEnabled(False)
             return None
         self.doan = self.doan_hien_tai()
-        self.kq = g.tinh_don_gia(v, self.doan)
+        self.kq = g.tinh_don_gia(v, self.doan, self.goi)
         k = self.kq
         self.lb_gia.setText(f'{vn(k.don_gia_ap_dung)} đ/m²')
         cu_the = self.o_cu_the.text().strip()
         self.lb_ap_dung.setText(f'Đang áp dụng: K1 = {g._he(k.k1)} · K2 = {g._he(k.k2)} · K3 = {g._he(k.k3)} · K khác = {g._he(k.k_khac)}'
+                                + ''.join(f' · {m} = {g._he(x)}' for m, x in k.he_so_them.items())
+                                + (f' · K1 theo bảng đã nhập ({k.nguon_k1})' if k.nguon_k1 else '')
                                 + (f' · giá cụ thể {vn(D(v.gia_dat_cu_the))}' + (' (đang dùng)' if k.ap_dung_chuyen_tiep else ' (thấp hơn, không dùng)') if cu_the else ''))
         self.lb_gia.setToolTip('\n'.join(k.buoc_lap_luan))
         self.lb_ct.setText('Công thức: ' + k.cong_thuc)
-        self.lb_canh_bao.setText('\n'.join('! ' + c for c in k.canh_bao))
+        self.lb_canh_bao.setText('\n'.join('! ' + c for c in gg.canh_bao_goi(self.goi, self.xa_du_an) + k.canh_bao))
         self.o_giai_trinh.setPlainText('\n'.join(k.buoc_lap_luan))
         self._ve_gia_moi()
         self._dat_nut_ap()
@@ -355,8 +495,9 @@ class HopTinhGiaDat(QDialog):
             self.o_can_cu.setPlainText(vb.gop_va_sap_xep([self.o_can_cu.toPlainText()], kq.can_cu)[0])
             self._chu_nut_can_cu()
         ts = kq.tham_so or {}
-        if ts.get('dia_ban') in g.ds_dia_ban():
-            self.cb_dia_ban.setCurrentIndex(self.cb_dia_ban.findData(ts['dia_ban']))
+        k_xa = g.dia_ban_theo_ten(g.ten_ngan(ts.get('dia_ban') or ''), self.goi)
+        if k_xa:
+            self.cb_dia_ban.setCurrentIndex(self.cb_dia_ban.findData(k_xa))
         if ts.get('ket_cau_mat_duong'):
             self.cb_ket_cau.setCurrentIndex(max(0, self.cb_ket_cau.findData(ts['ket_cau_mat_duong'])))
         for m in ts.get('yeu_to_pl3', ()):
@@ -458,6 +599,7 @@ class HopTinhGiaDat(QDialog):
             so_ho += 1
         try:
             vb.ghi_can_cu_du_an(self.con, self.o_can_cu.toPlainText())
+            gg.nho_goi_du_an(self.con, self.goi['ma'])              # dự án giữ gói đã áp, có gói mới cũng không tự đổi
         except Exception:                                                # noqa: BLE001 - lưu căn cứ không được thì không làm hỏng việc áp giá
             pass
         self.ket_qua_ap = (so_dong, so_ho)

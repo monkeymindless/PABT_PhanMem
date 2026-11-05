@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.64', '05/11/2026', (
+        'Bộ quy tắc giá đất: văn bản mới về giá đất nhập thành một gói có ngày hiệu lực (hệ số, yếu tố ảnh hưởng, công thức nhân, làm tròn, câu giải trình), không phải chờ sửa phần mềm, cài lại từng máy. Mở ở nút Bộ quy tắc trong bảng Tính đơn giá đất.',
+        'Tạo gói từ gói cũ rồi sửa, từ bảng hệ số K đã nhập (thêm được xã mới, như Tân Triều), hoặc nhập từ file. Xem khác gì gói cũ trước khi lưu. Máy chủ LAN tự phát hành gói cho các máy.',
+        'Số đã áp vào hộ không tự đổi khi có gói mới: dòng đất ghi rõ văn bản đã dùng, dự án giữ gói đã chọn, V1 nguyên vẹn. Bảng tính nhắc khi hôm nay đã có gói khác đang hiệu lực hoặc xã của dự án chưa có trong gói.',
+        'Bảng tính đơn giá đất nay dùng đúng hệ số K đã nhập ở thẻ Hệ số K và ghi rõ trong giải trình; trước đây là hai nguồn riêng.',
+    )),
     ('1.0.63', '05/11/2026', (
         'Đa phiên bản phương án: V0 bản đang lập, V1 dự thảo niêm yết (khóa, không bao giờ bị ghi đè), V2.1, V2.2… sau ý kiến, đối thoại, V3 trình duyệt. Thanh chọn phiên bản ngay trên màn hình '
         'Lập phương án. Trả về số niêm yết một chạm, cho một hộ hoặc đồng loạt cả đợt, không phải nhập lại; ghép được đất theo V1, nhà, cây theo V2.',

@@ -38,7 +38,7 @@ def ds_lenh(cua) -> list:
         ('So sánh với thực tế', lambda: cua.so_sanh_du_toan()),
         ('Chọn hộ niêm yết…', lambda: cua.chon_ho_niem_yet()),
         ('Cập nhật bảng giá đất…', lambda: cua.cap_nhat_bang_gia_dat()),
-        ('Tính đơn giá đất QĐ 03…', lambda: cua.tinh_don_gia_dat()),
+        ('Tính đơn giá đất…', lambda: cua.tinh_don_gia_dat()),
         ('Quét file thông minh…', lambda: cua.quet_thong_minh()),
         ('Đóng dự án', lambda: cua.dong_du_an_lenh()),
         ('Xóa dự án…', lambda: cua.xoa_du_an()),
