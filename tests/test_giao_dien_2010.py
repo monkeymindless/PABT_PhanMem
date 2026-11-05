@@ -200,23 +200,22 @@ class TestTienDo(_Co):
 # ---------------------------------------------------------------- trung tâm xuất bản
 class TestHopIn(_Co):
     def test_hai_the_che_do_va_4_tai_lieu(self):
-        from pabt.man_hinh import THE_CHE_DO, HopIn
+        from pabt.man_hinh import HopIn
         h = HopIn(self.con, None, ma_ho_chon=self.ma[:2], file_du_an=self.p, che_do='du_thao')
         self.addCleanup(h.close)
-        self.assertEqual([h.the_che_do.tabText(i) for i in range(h.the_che_do.count())], [t for _, t in THE_CHE_DO])
-        self.assertEqual(h.the_che_do.currentIndex(), 0)
+        self.assertEqual(h.hang_che_do.gia_tri(), 'du_thao')
         self.assertFalse(h.r_du_thao.isVisibleTo(h))                            # radio cũ ẩn, vẫn là nguồn trạng thái
         self.assertFalse(h.o_tt.isEnabled() or h.o_bc.isEnabled())              # dự thảo: khóa tờ trình + báo cáo tiếp thu
         self.assertFalse(h.o_tt.isVisibleTo(h) or h.o_bc.isVisibleTo(h))        # dự thảo: không hiện, đỡ rối
         self.assertIn('(2 hộ)', h.b_thuc_hien.text())
         self.assertFalse(h.o_che_cccd.isChecked())                              # 1.0.52: che CCCD niêm yết - tùy chọn, mặc định tắt
         self.assertTrue(h.o_che_cccd.isVisibleTo(h))                            # chỉ hiện ở chế độ Dự thảo
-        h.the_che_do.setCurrentIndex(1)                                         # bấm thẻ Chính thức
+        h.hang_che_do.dat('chinh_thuc')                                         # chọn Bản chính thức
         self.assertEqual(h.che_do(), 'chinh_thuc')
         self.assertTrue(all(o.isChecked() and o.isEnabled() for o in (h.o_ct, h.o_bth, h.o_tt, h.o_bc)))
-        self.assertTrue(h.o_tt.isVisibleTo(h) and h.o_bc.isVisibleTo(h))
+        self.assertFalse(h.o_tt.isHidden() or h.o_bc.isHidden())
         h.r_du_thao.setChecked(True)                                            # đặt bằng mã: thẻ đổi theo
-        self.assertEqual(h.the_che_do.currentIndex(), 0)
+        self.assertEqual(h.hang_che_do.gia_tri(), 'du_thao')
         self.assertFalse(h.o_bc.isChecked())
 
 

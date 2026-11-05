@@ -7,6 +7,10 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.66', '05/11/2026', (
+        'Bảng In làm lại theo cấu trúc bảng In của Word, Excel: cột trái In, Xuất, Xuất dữ liệu; nút In lớn, Số bản sao; chọn Máy in, Thuộc tính máy in; Thiết đặt: hộ, tài liệu, bản, Trang, In hai mặt, Xếp bộ, Khổ giấy; bản xem trước bên phải, trang và thu phóng ở đáy.',
+        'Tài liệu đang xem là tài liệu sẽ in. In nhiều hộ thành một lệnh in, đúng thứ tự, xếp bộ và hai mặt được. Ô Hộ gõ như ô Trang của Word: 1-3, 5.',
+    )),
     ('1.0.65', '05/11/2026', (
         'Bảng In / Xuất làm lại cho gọn: chọn Một hộ, Nhiều hộ hoặc Xuất dữ liệu; mở lên ở Dự thảo. Phương án chi tiết tích riêng Word, Excel, PDF; chỉ tích PDF thì không để lại file Word.',
         'Xem trước một hàng nút: Word, Excel, PDF gộp, Bảng tổng hợp. Danh sách hộ gọn hơn, bản xem trước rộng hơn, bỏ các ghi chú và thẻ nhỏ.',

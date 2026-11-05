@@ -39,7 +39,7 @@ class TestHopIn(CoSoXem):
         h = self._hop()
         self.assertEqual(h.bang_ho.columnCount(), 6)
         self.assertEqual([h.bang_ho.horizontalHeaderItem(c).text() for c in (4, 5)], ['Đợt', 'Địa chỉ'])
-        tieu_de_nut = {b.text() for b in h.findChildren(type(h.b_xem_bth))}
+        tieu_de_nut = {b.text() for b in h.findChildren(type(h.b_chon_het))}
         self.assertNotIn('Chọn tất cả mẫu (in đồng loạt)', tieu_de_nut)           # bỏ: chế độ phát hành đã tự chọn mẫu
         self.assertNotIn('Bỏ chọn mẫu', tieu_de_nut)
         self.assertNotIn('Chọn hộ đã lập', tieu_de_nut)                            # trùng ô "Hộ cần in"
@@ -90,10 +90,12 @@ class TestHopIn(CoSoXem):
         APP.processEvents()
         la = [w for w in APP.topLevelWidgets() if w.isVisible() and w is not h and w not in truoc]
         self.assertEqual(la, [])
-        self.assertFalse(h.khung_luu.isWindow())
-        for k in ('mot', 'nhieu'):                                                 # đổi thẻ: phần ẩn / hiện không thành cửa sổ riêng
+        self.assertFalse(h.khung_xuat_them.isWindow())
+        for k in ('mot', 'nhieu', 'xuat', 'in'):                                   # đổi mục: phần ẩn / hiện không thành cửa sổ riêng
             h.dat_pham_vi(k)
             APP.processEvents()
+        h.b_chon_ho.setChecked(True)
+        APP.processEvents()
         self.assertEqual([w for w in APP.topLevelWidgets() if w.isVisible() and w is not h and w not in truoc], [])
         h.reject()
 

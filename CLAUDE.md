@@ -230,7 +230,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   cho cả lượt. Gỡ bộ lọc: `giao_dien.bo_ap_dung(app)`.
 
 ### Bản in
-- Bảng In / Xuất (`HopIn`, 1.0.65): Một hộ | Nhiều hộ | Xuất dữ liệu, mặc định Dự thảo, lưu `<thư mục file dự án>\BanIn_<giờ>`, không nhớ thư mục, không thêm ghi chú / thẻ nhỏ. Lệnh xuất dữ liệu mới: thêm vào thẻ Xuất dữ liệu (QAction), không thêm lên menu; lưu trong thư mục dự án, không hỏi.
+- Bảng In / Xuất (`HopIn`, 1.0.66) theo cấu trúc bảng In của Word, Excel (cột trái In | Xuất | Xuất dữ liệu; nút In + Số bản sao; Máy in; Thiết đặt; xem trước, thanh trang + thu phóng ở đáy): thêm tùy chọn in thì thêm một `thanh_phan_in.HangChon`, không thêm ghi chú / thẻ nhỏ. Mở mặc định Dự thảo; tài liệu đang xem là tài liệu sẽ in; lưu `<thư mục file dự án>\BanIn_<giờ>`, không nhớ thư mục. Lệnh xuất dữ liệu mới: thêm vào mục Xuất dữ liệu (QAction), không thêm lên menu; lưu trong thư mục dự án, không hỏi. Đường gửi máy in mới phải chặn trong `kiem_tra_giao_dien.chan_tac_dong`.
 - Phương án chi tiết CHỈ bản Word (`in_word`, XML thuần - không python-docx); bảng tổng hợp Excel dựng bằng mã `mau_bang_tong_hop.py`
   (không còn file mẫu Excel). PDF: Word -> LibreOffice -> `docx_sang_pdf` (Qt). Thông số mẫu Word ở hồ sơ địa phương `ban_in.mau_word`.
 - Mọi file Excel xuất cho người dùng qua `an_toan.luu_xlsx` (khử công thức lạ) - không `wb.save` trực tiếp. VBS Office giữ

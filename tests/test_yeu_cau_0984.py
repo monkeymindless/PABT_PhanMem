@@ -188,18 +188,10 @@ class TestHopIn(CoSoXem):
     def test_chia_doi_bam_ho_va_doi_che_do(self):
         from pabt.man_hinh import HopIn
         h = HopIn(self.con, None, file_du_an=self.p, che_do='chinh_thuc')
-        self.assertEqual(h.tach.count(), 2)
-        self.assertIs(h.tach.widget(1), h.phai)
-        self.assertEqual(h.w_preview.minimumWidth(), 520)
+        self.assertTrue(h.w_preview.kieu_office)
         h.show()
         APP.processEvents()
         APP.processEvents()
-        a, b = h.tach.sizes()
-        trai = h.cuon_trai.minimumWidth()                      # 1.0.29: khung tùy chọn không hẹp hơn nội dung (không cuộn ngang)
-        if a + b >= 2 * max(520, trai):
-            self.assertLess(a, b)                               # 05/11/2026: phần lớn bề rộng cho bản xem trước
-        else:                                                    # màn hình nhỏ / phông offscreen rộng: trái đủ nội dung hoặc phải 520
-            self.assertTrue(a >= trai - 2 or b == 520, (a, b, trai))
         h.bang_ho.setCurrentCell(0, 1)                           # bấm hộ -> lập bản xem trước của hộ
         self.assertTrue(h.w_preview.cho_xong(30))
         ma = h.bang_ho.item(0, 0).data(256)

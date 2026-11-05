@@ -281,6 +281,9 @@ def chan_tac_dong(kt: KiemTra) -> None:
     in_an.mo_file = lambda p: kt.dem.update(['mo_file'])
     in_an.chay_excel = lambda *a, **k: []            # không mở Excel, không in
     van_ban_trinh.chay_word = lambda *a, **k: []    # không mở Word, không in
+    from pabt import thanh_phan_in, xem_truoc_tai_lieu
+    xem_truoc_tai_lieu.in_theo_tuy_chon = lambda *a, **k: kt.dem.update(['in_may']) or 0
+    thanh_phan_in.mo_thuoc_tinh = lambda *a, **k: kt.dem.update(['thuoc_tinh_may_in'])
 
     def khong_mang(*a, **k):
         raise OSError('Kiểm tra giao diện: không kết nối mạng')

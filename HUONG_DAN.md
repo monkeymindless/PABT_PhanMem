@@ -1223,16 +1223,18 @@ Theo Mục IV Quyết định 18/2026/QĐ-UBND (16 bước). Các mốc ngày b�
 
 ## In và xuất hồ sơ
 
-Mở **In / Xuất…**. Bảng mở ở bản **Dự thảo**; đổi sang **Chính thức** ở góc trên.
+Mở **In / Xuất…**. Bảng giống bảng In của Word, Excel. Mở lên ở **Bản dự thảo**.
 
-| Thẻ | Dùng khi | Chọn được | Xem trước |
-|---|---|---|---|
-| **Một hộ** | In một hộ: bấm hộ trong danh sách | Word, Excel, PDF | Word, Excel |
-| **Nhiều hộ** | In cả đợt hoặc nhiều hộ: tích hộ, hoặc chọn nhanh theo đợt | Word, Excel, PDF, gộp một file; kèm bảng tổng hợp (Chính thức: thêm tờ trình, báo cáo ý kiến) | Word, Excel, PDF gộp, bảng tổng hợp |
-| **Xuất dữ liệu** | Lấy số liệu ra Excel | Danh sách hộ, báo cáo đối chiếu | |
+| Cột trái | Dùng khi | Chọn |
+|---|---|---|
+| **In** | Gửi ra máy in | Máy in, số bản sao; hộ, tài liệu, bản dự thảo / chính thức; trang, in hai mặt, xếp bộ, khổ giấy |
+| **Xuất** | Tạo file | Phương án chi tiết: Word, Excel, PDF, gộp một file; kèm bảng tổng hợp (Bản chính thức: thêm tờ trình, báo cáo ý kiến) |
+| **Xuất dữ liệu** | Lấy số liệu ra Excel | Danh sách hộ, báo cáo đối chiếu |
 
-- Bấm **Xuất file** để lưu, **In ra máy** để gửi tới máy in mặc định. Chỉ tích PDF thì không để lại file Word.
-- File tự lưu vào thư mục chứa file dự án (thư mục **BanIn_** kèm ngày giờ), xong tự mở thư mục đó. Cần nơi khác thì bấm **Đổi…**.
+- **Hộ:** chọn **In một hộ**, các hộ đã lập phương án, tất cả, hoặc theo đợt. Ô **Hộ** gõ như ô Trang của Word: `1-3, 5`. Nút **Chọn…** mở danh sách hộ để tìm, tích chọn.
+- **Tài liệu đang xem là tài liệu sẽ in.** Phương án chi tiết xem từng hộ, hoặc chọn **PDF gộp các hộ** để xem chung. Xem trước tối đa 30 hộ một lần; bấm In thì in đủ các hộ đã chọn.
+- **Xuất file** tự lưu vào thư mục chứa file dự án (thư mục **BanIn_** kèm ngày giờ), xong tự mở thư mục đó. Chỉ tích PDF thì không để lại file Word. Cần nơi khác thì bấm **Đổi thư mục**.
+- Máy Windows 7: bản này gửi tới máy in mặc định qua Word, Excel; chỉ chọn được số bản sao.
 
 ## Tính đơn giá đất và bộ quy tắc giá đất
 

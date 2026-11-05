@@ -71,7 +71,7 @@ class TestPhanLoaiLap(unittest.TestCase):
         self.assertIn('Đã chọn 3 hộ, tổng 3.000.000', dlg.lb_chon.text())
         dlg.cb_pham_vi.setCurrentIndex(dlg.cb_pham_vi.findData('tu_lap'))
         self.assertEqual(len(dlg.ds_ho()), 139)
-        self.assertIn('139 hộ phương án tự lập CHƯA SOÁT', dlg.lb_chon.text())
+        self.assertIn('139 hộ tự lập CHƯA SOÁT', dlg.lb_chon.text())
         dlg.cb_pham_vi.setCurrentIndex(dlg.cb_pham_vi.findData('pa'))
         dlg.bang_ho.item(39, 0).setCheckState(Qt.CheckState.Unchecked)           # bỏ hộ 40
         self.assertEqual((dlg.cb_pham_vi.currentData(), dlg.ds_ho()), ('tu_chon', [7, 99]))

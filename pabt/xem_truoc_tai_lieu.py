@@ -116,12 +116,12 @@ def he_so_xem_toi_da() -> float:
 
 
 
-def in_tai_lieu(doc, printer, tu: int = 0, den: int = 0) -> int:
-    """Vẽ các trang của QPdfDocument lên máy in (trang tu..den, đánh số từ 1; 0 = cả tài liệu). Bản PDF đã có sẵn lề của mẫu ->
-    in cả tờ giấy (fullPage), giữ tỉ lệ, canh giữa; hướng giấy theo từng trang. Máy in không tự in nhiều bản thì in lặp. Trả số
+def in_tai_lieu(doc, printer, tu: int = 0, den: int = 0, ds_trang=None, kho=None) -> int:
+    """Vẽ các trang của QPdfDocument lên máy in (trang tu..den, đánh số từ 1; 0 = cả tài liệu; ds_trang: đúng các trang này). Bản PDF đã có sẵn lề của mẫu ->
+    in cả tờ giấy (fullPage), giữ tỉ lệ, canh giữa; hướng giấy theo từng trang. Máy in không tự in nhiều bản thì in lặp. kho: None giữ khổ của máy in; '' khổ theo từng trang; 'A4' / 'A3'. Trả số
     trang đã in."""
-    from PySide6.QtCore import QRectF, QSize
-    from PySide6.QtGui import QPageLayout, QPainter
+    from PySide6.QtCore import QRectF, QSize, QSizeF
+    from PySide6.QtGui import QPageLayout, QPageSize, QPainter
     n = doc.pageCount()
     if n <= 0:
         return 0
@@ -129,13 +129,26 @@ def in_tai_lieu(doc, printer, tu: int = 0, den: int = 0) -> int:
     den = min(n, den or n)
     if tu > den:
         return 0
+    cac_trang = [i - 1 for i in ds_trang if 1 <= i <= n] if ds_trang else list(range(tu - 1, den))
+    if not cac_trang:
+        return 0
     ban = 1 if printer.supportsMultipleCopies() else max(1, printer.copyCount())
+    # máy in không tự in nhiều bản: xếp bộ 1,2,3 1,2,3; không xếp bộ 1,1 2,2
+    thu_tu = cac_trang * ban if printer.collateCopies() else [i for i in cac_trang for _ in range(ban)]
     printer.setFullPage(True)
 
     def huong(i):
         co = doc.pagePointSize(i)
         return QPageLayout.Orientation.Landscape if co.width() > co.height() else QPageLayout.Orientation.Portrait
-    printer.setPageOrientation(huong(tu - 1))
+
+    def dat_kho(i):
+        if kho in ('A4', 'A3'):
+            printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4 if kho == 'A4' else QPageSize.PageSizeId.A3))
+        elif kho is not None:
+            co = doc.pagePointSize(i)
+            printer.setPageSize(QPageSize(QSizeF(min(co.width(), co.height()), max(co.width(), co.height())), QPageSize.Unit.Point, '', QPageSize.SizeMatchPolicy.FuzzyMatch))
+        printer.setPageOrientation(huong(i))
+    dat_kho(thu_tu[0])
     p = QPainter()
     if not p.begin(printer):
         raise OSError('Không mở được máy in ' + (printer.printerName() or ''))
@@ -143,23 +156,36 @@ def in_tai_lieu(doc, printer, tu: int = 0, den: int = 0) -> int:
     try:
         dpi = min(DPI_IN_TOI_DA, printer.resolution() or DPI_IN_TOI_DA)
         dau = True
-        for _ in range(ban):
-            for i in range(tu - 1, den):
-                if not dau:
-                    printer.setPageOrientation(huong(i))
-                    printer.newPage()
-                dau = False
-                co = doc.pagePointSize(i)
-                anh = doc.render(i, QSize(max(1, round(co.width() / 72 * dpi)), max(1, round(co.height() / 72 * dpi))))
-                vp = p.viewport()
-                p.setWindow(vp)
-                k = min(vp.width() / anh.width(), vp.height() / anh.height())
-                w, h = anh.width() * k, anh.height() * k
-                p.drawImage(QRectF(vp.x() + (vp.width() - w) / 2, vp.y() + (vp.height() - h) / 2, w, h), anh)
-                da_in += 1
+        for i in thu_tu:
+            if not dau:
+                dat_kho(i)
+                printer.newPage()
+            dau = False
+            co = doc.pagePointSize(i)
+            anh = doc.render(i, QSize(max(1, round(co.width() / 72 * dpi)), max(1, round(co.height() / 72 * dpi))))
+            vp = p.viewport()
+            p.setWindow(vp)
+            k = min(vp.width() / anh.width(), vp.height() / anh.height())
+            w, h = anh.width() * k, anh.height() * k
+            p.drawImage(QRectF(vp.x() + (vp.width() - w) / 2, vp.y() + (vp.height() - h) / 2, w, h), anh)
+            da_in += 1
     finally:
         p.end()
     return da_in
+
+
+def in_theo_tuy_chon(doc, ten_may: str = '', so_ban: int = 1, xep_bo: bool = True, hai_mat: str = 'mot', kho: str = '', trang=None, ten: str = '') -> int:
+    """Nút In của bảng In kiểu Word: một lệnh in tới máy in đã chọn, đủ số bản, xếp bộ, hai mặt, khổ giấy, các trang. Trả số trang đã in."""
+    from PySide6.QtPrintSupport import QPrinter
+    from .thong_bao import TEN_UD
+    printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+    if ten_may:
+        printer.setPrinterName(ten_may)
+    printer.setDocName(ten or TEN_UD)
+    printer.setCopyCount(max(1, int(so_ban or 1)))
+    printer.setCollateCopies(bool(xep_bo))
+    printer.setDuplex({'dai': QPrinter.DuplexMode.DuplexLongSide, 'ngan': QPrinter.DuplexMode.DuplexShortSide}.get(hai_mat, QPrinter.DuplexMode.DuplexNone))
+    return in_tai_lieu(doc, printer, ds_trang=trang or None, kho=kho or '')
 
 
 def in_co_hop_thoai(cha, doc, ten: str = '', printer=None, hoi: bool = True) -> int:
@@ -390,14 +416,17 @@ class KhungXemTruocTaiLieu(QFrame):
     đúng khi file .docx mà Word không dùng được). self.xlsx = file bản in đang xem (.xlsx hoặc .docx). ham_in(pdf, xlsx): nút In
     nhanh (None: nút ẩn). don_dep(): đóng tài liệu, xóa file tạm."""
 
-    def __init__(self, parent=None, ham_in=None):
+    def __init__(self, parent=None, ham_in=None, kieu_office: bool = False):
         super().__init__(parent)
+        from .giao_dien import TOKEN
+        self.kieu_office = bool(kieu_office)            # bảng In kiểu Word: nền sáng, thanh trang + thu phóng ở đáy, không có nút In riêng
+        self._nen = TOKEN['nen'] if self.kieu_office else MAU_NEN
         self.setObjectName('khung_xem_truoc')
         self.setFrameShape(QFrame.Shape.NoFrame)
-        dat_kieu_theo_tong(self, f'QFrame#khung_xem_truoc {{ background: {MAU_NEN}; border: 1px solid #CBD5E1; border-radius: 6px; }}'
+        dat_kieu_theo_tong(self, f'QFrame#khung_xem_truoc {{ background: {self._nen}; border: 1px solid #CBD5E1; border-radius: 6px; }}'
                                  f'QWidget#xt_thanh {{ background: {MAU_THANH}; border: 0; border-bottom: 1px solid #CBD5E1; '
                                  'border-top-left-radius: 6px; border-top-right-radius: 6px; }'
-                                 f'QLabel#xt_thong_bao {{ color: #E2E8F0; font-size: 13px; padding: 24px; }}'
+                                 f'QLabel#xt_thong_bao {{ color: {TOKEN["chu_phu"] if self.kieu_office else "#E2E8F0"}; font-size: 13px; padding: 24px; }}'
                                  'QLabel#xt_trang { color: #334155; font-weight: 600; padding: 0 6px; background: transparent; }'
                                  'QLabel#xt_gan_dung { color: #78350F; background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 4px; '
                                  'padding: 1px 6px; }'
@@ -474,6 +503,7 @@ class KhungXemTruocTaiLieu(QFrame):
         self._phim_in = QShortcut(QKeySequence('Ctrl+P'), self)
         self._phim_in.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self._phim_in.activated.connect(lambda: self.b_in_hop.isEnabled() and self.in_hop_thoai())
+        self._phim_in.setEnabled(not self.kieu_office)       # bảng In: Ctrl+P là nút In lớn
         # thanh công cụ: 3 cụm trong XepDong - khung hẹp (màn hình nhỏ) thì cụm sau xuống dòng, không cắt chữ nút
         from .giao_dien import XepDong
         self.thanh = QWidget()
@@ -483,8 +513,20 @@ class KhungXemTruocTaiLieu(QFrame):
         h.setContentsMargins(8, 4, 8, 4)
         nhan = QLabel('Trang')
         nhan.setObjectName('xt_trang')
-        for nhom, phai in (((self.b_phong, self.b_thu, self.b_vua, self.b_ngang), False), ((nhan, self.b_truoc, self.lb_trang, self.b_sau, self.cb_muc), False),
-                           ((self.lb_gan_dung, self.b_in_hop, self.b_in), True)):
+        cum_thanh = (((self.b_phong, self.b_thu, self.b_vua, self.b_ngang), False), ((nhan, self.b_truoc, self.lb_trang, self.b_sau, self.cb_muc), False),
+                     ((self.lb_gan_dung, self.b_in_hop, self.b_in), True))
+        if self.kieu_office:                                 # như Word: trang bên trái, thu phóng bên phải, ở đáy
+            from PySide6.QtWidgets import QSlider
+            self.lb_phan_tram = QLabel('100%')
+            self.lb_phan_tram.setObjectName('xt_trang')
+            self.sl_phong = QSlider(Qt.Orientation.Horizontal)
+            self.sl_phong.setRange(10, 300)
+            self.sl_phong.setFixedWidth(120)
+            self.sl_phong.setToolTip('Thu phóng')
+            self.sl_phong.valueChanged.connect(self._doi_thanh_truot)
+            cum_thanh = (((nhan, self.b_truoc, self.lb_trang, self.b_sau, self.cb_muc), False),
+                         ((self.lb_gan_dung, self.b_vua, self.lb_phan_tram, self.b_thu, self.sl_phong, self.b_phong), True))
+        for nhom, phai in cum_thanh:
             cum = QWidget()
             hc = QHBoxLayout(cum)
             hc.setContentsMargins(0, 0, 0, 0)
@@ -498,9 +540,10 @@ class KhungXemTruocTaiLieu(QFrame):
             h.addWidget(cum)
         # 1.0.16: ẩn / hiện nút SAU khi đã đặt vào bố cục - setVisible(True) lên widget CHƯA có cha làm nó hiện thành cửa sổ riêng rỗng
         # (nút thu nhỏ / phóng to / đóng, tiêu đề "PABT") nhấp nháy mỗi lần mở khung xem trước F4
-        self.b_in.setVisible(ham_in is not None)
         self.cb_muc.setVisible(False)
-        self.b_in_hop.setVisible(co_hop_in())
+        if not self.kieu_office:
+            self.b_in.setVisible(ham_in is not None)
+            self.b_in_hop.setVisible(co_hop_in())
         # ---- vùng xem
         self.lb_tb = QLabel('Chọn một hộ để xem trước bản in A4.')
         self.lb_tb.setObjectName('xt_thong_bao')
@@ -524,8 +567,11 @@ class KhungXemTruocTaiLieu(QFrame):
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 0, 0, 0)
         lo.setSpacing(0)
-        lo.addWidget(self.thanh)
+        if not self.kieu_office:
+            lo.addWidget(self.thanh)
         lo.addWidget(self.ngan, 1)
+        if self.kieu_office:
+            lo.addWidget(self.thanh)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._hen = QTimer(self)                  # chờ ngừng bấm
         self._hen.setSingleShot(True)
@@ -551,10 +597,10 @@ class KhungXemTruocTaiLieu(QFrame):
             self.view.setFrameShape(QFrame.Shape.NoFrame)
             pal = self.view.palette()
             for vai in (QPalette.ColorRole.Dark, QPalette.ColorRole.Window, QPalette.ColorRole.Base):
-                pal.setColor(vai, QColor(MAU_NEN))
+                pal.setColor(vai, QColor(self._nen))
             self.view.setPalette(pal)
             self.view.viewport().setPalette(pal)
-            self.view.setStyleSheet(f'QPdfView {{ background: {MAU_NEN}; border: none; }}')
+            self.view.setStyleSheet(f'QPdfView {{ background: {self._nen}; border: none; }}')
             self.view.pageNavigator().currentPageChanged.connect(lambda _: self._doi_trang())
             self.view.installEventFilter(self)
             self.kieu = 'qpdfview'
@@ -651,6 +697,29 @@ class KhungXemTruocTaiLieu(QFrame):
                 self.cb_muc.blockSignals(False)
         self.b_in.setEnabled(self.pdf is not None and self.xlsx is not None and self._dang is None)
         self.b_in_hop.setEnabled(self.pdf is not None and self.doc is not None and n > 0 and self._dang is None)
+        self._ve_phan_tram()
+
+    def _ve_phan_tram(self) -> None:
+        """Bảng In kiểu Word: thanh thu phóng, số phần trăm theo hệ số đang xem."""
+        if not self.kieu_office or self.view is None:
+            return
+        v = round((self._he_so_vua() if self._vua else self.he_so()) * 100)
+        self.sl_phong.blockSignals(True)
+        self.sl_phong.setValue(v)
+        self.sl_phong.blockSignals(False)
+        self.lb_phan_tram.setText(f'{v}%')
+
+    def _doi_thanh_truot(self, v: int) -> None:
+        if self.view is None or self.so_trang() == 0:
+            return
+        k = min(v / 100, he_so_xem_toi_da())
+        self._vua = False
+        if self.kieu == 'qpdfview':
+            self.view.setZoomFactor(k)
+        else:
+            self.view.vua_trang, self.view.he_so = False, k
+            self.view.ve()
+        self.lb_phan_tram.setText(f'{round(k * 100)}%')
 
     # ---- phóng to / trang
     def he_so(self) -> float:
@@ -671,6 +740,7 @@ class KhungXemTruocTaiLieu(QFrame):
         else:
             self.view.vua_trang, self.view.he_so = False, moi
             self.view.ve()
+        self._ve_phan_tram()
 
     def _he_so_vua_goc(self) -> float:
         """Hệ số phóng để trọn MỘT trang nằm trong khung (cả bề ngang lẫn bề cao). QPdfView: hệ số 1 = cỡ giấy (pt) x dpi
@@ -716,6 +786,7 @@ class KhungXemTruocTaiLieu(QFrame):
         else:
             self.view.vua_trang = True
             self.view.ve()
+        self._ve_phan_tram()
 
     def eventFilter(self, o, e):
         from PySide6.QtCore import QEvent
@@ -906,6 +977,10 @@ class KhungXemTruocTaiLieu(QFrame):
         return not self.dang_lap()
 
     # ---- in / mở ngoài / dọn
+    def ten_tai_lieu(self) -> str:
+        f = self.xlsx or self.pdf
+        return Path(f).stem if f else ''
+
     def in_nhanh(self) -> None:
         if self.ham_in is not None and self.pdf is not None:
             self.ham_in(self.pdf, self.xlsx)
