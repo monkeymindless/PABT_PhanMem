@@ -81,7 +81,9 @@ di_dong\DUNG.bat            (hoặc .venv\Scripts\python di_dong\dung.py [--url 
   màu theo `<Style>` / `<StyleMap>`, mô tả "bản vẽ|Level N"), chữ ở `<Point>` (tên điểm, màu LabelStyle; ảnh PNG đi kèm chỉ là chữ vẽ sẵn - không
   dùng), `<Polygon>` là vòng tròn ~1 m quanh cọc mốc hoặc rỗng tọa độ. `docKmlBytes` -> lớp {thua, duong (Float64Array Mercator + khung),
   diem (loai theo dạng chữ `loaiNhan`: thua, ld, dt, dt_th, moc, to, ghi_chu, ky_hieu), vong_moc, nhan_thua (`gomCumNhanThua`: loại đất <= 12 m,
-  DT <= 10 m, DT thu hồi <= 30 m về số thửa gần nhất - ngưỡng đo trên file thật; nhãn "Tờ số" gần nhất <= 400 m), bb}. `giaiNenKmz`: thư mục
+  DT <= 10 m, DT một phần "(xxx)" <= 30 m về số thửa gần nhất - ngưỡng đo trên file thật; nhãn "Tờ số" gần nhất <= 400 m), bb}. Nhãn "(xxx)" (khóa
+  `dt_th`) là một phần của thửa, có phần trong ranh, có phần ngoài ranh, KHÔNG phải DT thu hồi: chỉ hiện với chữ "chưa đối chiếu ranh thu hồi";
+  `duaThuaVaoHo` để trống ô DT, nêu nhãn ở `#d_dt_goi_y` (`goiYDtDat`). Mobile không ghép thửa từ đường CAD như `pabt/ban_do_ghep.py`. `giaiNenKmz`: thư mục
   trung tâm, mất thì quét đầu tệp cục bộ; `lamSachXml` (BOM, ký tự điều khiển, "&" trần) rồi DOMParser, vẫn lỗi thì đọc kiểu HTML. `suaFontKml`:
   TCVN3 đọc nhầm Latin-1 -> đổi chính xác; "�" -> từ điển + ngữ cảnh (cùng từ điển với `pabt/sua_font_kml.py` của bản máy tính - test hai bên
   cùng danh sách câu). Vẽ: đường gom theo màu (một stroke mỗi màu, chỉ đường trong khung), nhãn theo ưu tiên + tránh đè (lưới 24 px), mốc nhìn xa
