@@ -7,6 +7,11 @@ CHẠY HOÀN TOÀN TRÊN MÁY (quyết định của người dùng, xem docs/LI
 PDF chữ; PDF ảnh / file ảnh scan nhận dạng bằng Tesseract đóng kèm - ocr.py), không gửi file hay chữ lên dịch vụ ngoài. Không có "AI" gọi mạng:
 "thông minh" ở đây là nhận dạng theo mẫu văn bản / bảng (quy tắc), kết quả luôn hiện ra cho người dùng xem trước khi áp dụng.
 
+BỘ ĐỊNH TUYẾN (1.0.62): `nhan_loai` nhận loại TỪNG file -> màn hình chuyên trách đã có (DICH): Excel PABT / danh sách hộ -> nhập dự án, Excel mỗi
+sheet một hộ -> nhập phương án chi tiết, Phụ lục hệ số K, bảng giá đất, bảng đơn giá nhà / cây -> Bộ đơn giá, biên bản kiểm đếm / sổ đỏ -> phương
+án của hộ. Không viết bộ đọc thứ hai: thửa bóc bằng ocr_ho_so.boc_tach, tài sản đưa qua hộp "Dán danh sách tài sản" (khớp danh mục đơn giá).
+Nút có đầu ra riêng (đọc quyết định của một hộ, kết quả niêm yết theo đợt, đính file văn bản) giữ đường đọc riêng vì cần kết quả riêng.
+
 Ngữ cảnh (scanContext của TSX): AUTO_DETECT (mọi nút Nạp / Quét chung), LEGAL_BASIS_ONLY (quét văn bản căn cứ), LAND_PRICE_TABLE (văn bản /
 bảng giá đất - thông số tính giá), ASSET_CROP_PRICE_TABLE (đơn giá nhà, vật kiến trúc, cây trồng), DETAILED_HOUSEHOLD_DOSSIER (biên bản kiểm
 đếm / hồ sơ chi tiết của hộ), MASTER_COMPENSATION_SHEET (bảng tổng hợp). Văn bản căn cứ được trích ở MỌI ngữ cảnh."""
@@ -33,6 +38,24 @@ LOC_FILE = ('Mọi file hỗ trợ (*.pdf *.doc *.docx *.xls *.xlsx *.xlsm *.csv
             'Tất cả file (*.*)')
 DUOI_CHU = ('.txt', '.csv', '.json', '.md', '.html', '.htm')
 DUOI_ANH = ('.png', '.jpg', '.jpeg', '.tif', '.tiff', '.bmp', '.webp')
+
+# loại file -> màn hình xử lý tiếp
+D_DU_AN, D_CHI_TIET, D_HE_SO_K, D_BANG_GIA, D_DON_GIA, D_HO_SO, D_CAN_CU, D_KHAC = (
+    'du_an_excel', 'pa_chi_tiet', 'he_so_k', 'bang_gia_dat', 'don_gia', 'ho_so_ho', 'can_cu', 'khac')
+DICH = (
+    (D_DU_AN, 'File dự án / danh sách hộ, thửa', 'Nhập vào dự án'),
+    (D_CHI_TIET, 'Phương án chi tiết (mỗi sheet một hộ)', 'Nhập phương án chi tiết'),
+    (D_HE_SO_K, 'Phụ lục hệ số K', 'Mở thẻ Hệ số K'),
+    (D_BANG_GIA, 'Bảng giá đất', 'Mở thẻ Cập nhật bảng giá đất'),
+    (D_DON_GIA, 'Bảng đơn giá nhà, cây, chính sách', 'Mở Bộ đơn giá'),
+    (D_HO_SO, 'Biên bản kiểm đếm / giấy tờ của hộ', 'Đưa vào phương án của hộ'),
+    (D_CAN_CU, 'Văn bản căn cứ', 'Ghi vào mục Văn bản căn cứ'),
+    (D_KHAC, 'Chưa nhận ra', 'Không xử lý'),
+)
+TEN_LOAI = {m: t for m, t, _ in DICH}
+VIEC_LOAI = {m: v for m, _, v in DICH}
+DUOI_EXCEL = ('.xlsx', '.xlsm')
+TOI_THIEU_MUC_GIA = 3             # ít nhất chừng này dòng có đơn giá thì coi là bảng đơn giá
 
 
 @dataclass
@@ -71,9 +94,17 @@ class KetQuaQuet:
     tom_tat: list = field(default_factory=list)
     loi: list = field(default_factory=list)            # file đọc không được: "tên file: lý do"
     so_file: int = 0
+    tung_file: list = field(default_factory=list)      # [{'file': Path, 'loai': mã DICH}]
+    dong_dan: list = field(default_factory=list)       # dòng tài sản đã lọc, đưa vào hộp "Dán danh sách tài sản"
+    ho_ten: str = ''                                   # chủ sử dụng đọc được từ giấy tờ (tim_ho)
+    so_cccd: str = ''
 
     def co_du_lieu(self) -> bool:
-        return bool(self.can_cu or self.dong_dat or self.dong_tai_san or self.tham_so)
+        return bool(self.can_cu or self.dong_dat or self.dong_tai_san or self.tham_so or self.dong_dan
+                    or any(f['loai'] != D_KHAC for f in self.tung_file))
+
+    def co_du_lieu_ho(self) -> bool:
+        return bool(self.dong_dat or self.dong_dan or self.dong_tai_san)
 
 
 # ---------------------------------------------------------------- đọc file
@@ -150,6 +181,140 @@ def nhan_dien_thua(noi_dung: str) -> list:
             for m in _RE_THUA.finditer(noi_dung)]
 
 
+# ---------------------------------------------------------------- nhận loại file, ghi vào hộ
+def _loai_excel(p: Path) -> str:
+    """Excel dạng dự án (mẫu PABT) / phương án chi tiết: nhận theo cấu trúc, không cần đọc hết các sheet."""
+    if p.suffix.lower() not in DUOI_EXCEL or not p.is_file():
+        return ''
+    from . import nhap_chi_tiet, nhap_tho
+    try:
+        if nhap_tho.la_file_pabt(p):
+            return D_DU_AN
+        if nhap_chi_tiet.la_file_chi_tiet(p):
+            return D_CHI_TIET
+    except Exception:                                                   # noqa: BLE001 - không nhận được: đọc như file thường
+        return ''
+    return ''
+
+
+_RE_TIEU_DE_HO = re.compile(r'bien ban (?:kiem ke|kiem dem|dieu tra|xac minh hien trang)|phieu kiem (?:ke|dem)|giay chung nhan\s+quyen su dung')
+_RE_PA_HO = re.compile(r'phuong an (?:chi tiet|boi thuong)')       # dùng .match: phải đứng đầu dòng
+_RE_CHU_HO = re.compile(r'ho va ten|chu ho|chu su dung|ho ong|ong \(ba\)')
+GIAY_TO_NGAN = 20000              # ký tự: giấy tờ của một hộ ngắn; cẩm nang, báo cáo có nhắc "tờ ... thửa ... m2" thì dài hơn nhiều
+
+
+def la_giay_to_ho(nd: str) -> bool:
+    '''Giấy tờ của MỘT hộ: tiêu đề giấy tờ ngay phần đầu file (biên bản kiểm kê, sổ đỏ; phương án kèm tên chủ hộ), hoặc văn bản ngắn có "tờ ... thửa
+    ... m2". Không xét từ khóa trong toàn văn: cẩm nang, báo cáo, văn bản thẩm định đều có nhắc "biên bản kiểm kê" (đã đo trên file thật).'''
+    from .lap_pa import bo_dau
+    dong = [bo_dau(x.strip()) for x in str(nd or '').splitlines()[:30] if x.strip()]
+    dau = ' '.join(dong)
+    if _RE_TIEU_DE_HO.search(dau):
+        return True
+    # phương án của hộ: dòng TIÊU ĐỀ bắt đầu bằng "phương án ..." (báo cáo chỉ nhắc tới trong câu), có chủ hộ và có thửa / bảng tài sản
+    if any(_RE_PA_HO.match(x) for x in dong) and _RE_CHU_HO.search(dau) and ('thua' in dau or 'ten tai san' in bo_dau(str(nd)[:5000])):
+        return True
+    return len(nd) <= GIAY_TO_NGAN and bool(_RE_THUA.search(nd))
+
+
+def nhan_loai(p, noi_dung: str, ngu_canh: str = AUTO) -> str:
+    """Loại của một file theo nội dung đã đọc (DICH). Quét riêng văn bản căn cứ: luôn là căn cứ."""
+    from . import he_so_k, nhap_don_gia
+    from .lap_pa import bo_dau
+    p = Path(p)
+    if ngu_canh == CAN_CU:
+        return D_CAN_CU
+    nd = str(noi_dung or '')
+    if nd.strip():
+        if he_so_k.la_phu_luc([nd]):
+            return D_HE_SO_K
+        thap = bo_dau(nd[:200000])
+        if 'bang gia dat' in thap and ('diem dau' in thap and 'diem cuoi' in thap or any(he_so_k._RE_BANG.match(d) for d in nd.splitlines())):
+            return D_BANG_GIA
+        if p.suffix.lower() in DUOI_EXCEL:
+            dau = bo_dau('\n'.join(nd.splitlines()[:40]))
+            if ('ho ten' in dau or 'ho va ten' in dau or 'chu su dung' in dau) and 'thua' in dau:
+                return D_DU_AN
+        if la_giay_to_ho(nd):
+            return D_HO_SO
+        n_gia = 0
+        # báo cáo đối chiếu (bảng tiền có số, có chữ đơn giá) không phải bảng đơn giá; tên file phần mềm tự đặt: "<dự án>_DoiChieu"
+        if 'don gia' in thap and 'doichieu' not in bo_dau(p.stem).replace(' ', '').replace('_', '') and 'doi chieu' not in bo_dau(' '.join(nd.splitlines()[:8])):
+            try:
+                n_gia = sum(1 for m in nhap_don_gia.nhan_muc([r.split('\t') for r in nd.splitlines()]) if getattr(m, 'don_gia', None))
+            except Exception:                                           # noqa: BLE001 - không phải bảng đơn giá
+                n_gia = 0
+        if n_gia >= TOI_THIEU_MUC_GIA:
+            return D_DON_GIA
+        if van_ban_can_cu.trich_can_cu(nd, p.name):
+            return D_CAN_CU
+    return {GIA_DAT: D_BANG_GIA, GIA_TAI_SAN: D_DON_GIA, HO_SO_HO: D_HO_SO}.get(ngu_canh, D_KHAC)
+
+
+def _boc_ho_so(nd: str, kq: KetQuaQuet, ten_file: str) -> None:
+    """Giấy tờ của hộ: chủ sử dụng, thửa (ocr_ho_so.boc_tach; không có thì mẫu 'tờ ... thửa ... m2'), dòng tài sản đã lọc."""
+    from . import ocr_ho_so
+    bt = ocr_ho_so.boc_tach(nd)
+    kq.ho_ten = kq.ho_ten or bt.ho_ten
+    kq.so_cccd = kq.so_cccd or bt.so_cccd
+    duong_dat = bool(_RE_DUONG_DAT.search(nd))
+    dat = [DongDat(str(t.get('so_to') or ''), str(t.get('so_thua') or ''), str(t.get('loai_dat') or ''), 'DAT_NONG_NGHIEP',
+                   _so(t.get('dt_thu_hoi')), 'Bóc tách từ giấy tờ của hộ', 'DAT_SOI_DA_CAPPHOI' if duong_dat else 'NHUA_BETONG')
+           for t in bt.thua if t.get('so_thua')] or nhan_dien_thua(nd)
+    if dat:
+        kq.dong_dat.extend(dat)
+        kq.tom_tat.append(f'[Hồ sơ chi tiết] Bóc tách {len(dat)} thửa đất từ "{ten_file}".')
+    loc = ocr_ho_so.dong_dua_vao_dan(nd)
+    if loc.giu:
+        kq.dong_dan.extend(loc.giu)
+        kq.tom_tat.append(f'[Hồ sơ chi tiết] {loc.ly_do or f"Lấy {len(loc.giu)} dòng tài sản."}')
+
+
+def tim_ho(con, kq: KetQuaQuet):
+    """Hộ khớp giấy tờ vừa quét: số CCCD, không có thì họ tên trùng DUY NHẤT. None: không chắc - người dùng tự chọn."""
+    from .lap_pa import bo_dau
+    if kq.so_cccd:
+        ds = con.execute('SELECT ma_ho FROM ho WHERE so_cccd = ?', (kq.so_cccd,)).fetchall()
+        if len(ds) == 1:
+            return ds[0][0]
+    if kq.ho_ten:
+        ten = bo_dau(kq.ho_ten)
+        ds = [r[0] for r in con.execute('SELECT ma_ho, ho_ten FROM ho') if bo_dau(r[1]) == ten]
+        if len(ds) == 1:
+            return ds[0]
+    return None
+
+
+def _so_thua(x) -> str:
+    return str(x or '').strip().lstrip('0') or '0'
+
+
+def ghi_thua_vao_ho(bo, ds_dat) -> tuple:
+    """Thêm dòng mục 1 (BoSoan - CHƯA lưu) cho các thửa quét được, khớp theo tờ + thửa của hộ; diện tích theo giấy tờ; đường đất ghi vào
+    Ghi chú để người lập chọn K3 ở bảng tính giá. Trả (số dòng thêm, [thửa không có trong hồ sơ hộ], [thửa đã có dòng])."""
+    from .tien import so_vn
+    theo = {(_so_thua(t['so_to']), _so_thua(t['so_thua'])): t['ma_thua'] for t in bo.bc.thua_cua(bo.ma_ho)}
+    da_co = {d.ma_thua for d in bo.pa.dat}
+    them, thieu, trung = 0, [], []
+    for d in ds_dat:
+        ten = f'tờ {d.to_ban_do} thửa {d.so_thua}'
+        ma = theo.get((_so_thua(d.to_ban_do), _so_thua(d.so_thua)))
+        if ma is None:
+            thieu.append(ten)
+        elif ma in da_co:
+            trung.append(ten)
+        else:
+            i, _ = bo.them_thua(ma)
+            if d.dien_tich_thu_hoi > 0:
+                bo.sua_dat(i, 'dien_tich', so_vn(d.dien_tich_thu_hoi))
+            if d.ket_cau_mat_duong == 'DAT_SOI_DA_CAPPHOI':
+                cu = bo.pa.dat[i].ghi_chu
+                bo.pa.dat[i].ghi_chu = ((cu + '; ') if cu else '') + 'Giấy tờ ghi tiếp giáp đường đất, sỏi, đá, cấp phối: xem K3 (Phụ lục III QĐ 03)'
+            da_co.add(ma)
+            them += 1
+    return them, thieu, trung
+
+
 # ---------------------------------------------------------------- bộ quét
 def quet(files, ngu_canh: str = AUTO, bao_tien_do=None, cho=None, doc=None) -> KetQuaQuet:
     """executeUnifiedAIScan: đọc từng file MỘT lần, rồi (tùy ngữ cảnh) trích văn bản căn cứ / thông số giá đất / đơn giá tài sản / thửa đất.
@@ -163,6 +328,12 @@ def quet(files, ngu_canh: str = AUTO, bao_tien_do=None, cho=None, doc=None) -> K
     for f in list(files or ()):
         p = Path(f)
         kq.so_file += 1
+        if doc is None and ngu_canh != CAN_CU:                          # file dự án lớn: nhận theo cấu trúc, không đọc hết các sheet
+            loai_x = _loai_excel(p)
+            if loai_x:
+                kq.tung_file.append({'file': p, 'loai': loai_x})
+                kq.tom_tat.append(f'"{p.name}": {TEN_LOAI[loai_x]}.')
+                continue
         try:
             nd = doc(p) if doc is not None else doc_noi_dung(p, bao_tien_do, cho)
         except LoiNhap as e:
@@ -174,6 +345,8 @@ def quet(files, ngu_canh: str = AUTO, bao_tien_do=None, cho=None, doc=None) -> K
             kq.loi.append(f'{p.name}: {e}')
             continue
         thap = nd.lower()
+        loai_f = nhan_loai(p, nd, ngu_canh)
+        kq.tung_file.append({'file': p, 'loai': loai_f})
         # 1. văn bản pháp lý: ở MỌI lần quét
         cc = van_ban_can_cu.trich_can_cu(nd, p.name)
         if cc:
@@ -197,12 +370,9 @@ def quet(files, ngu_canh: str = AUTO, bao_tien_do=None, cho=None, doc=None) -> K
                 kq.dong_tai_san.extend(ts)
                 kq.tom_tat.append(f'[Tài sản, cây trồng] Bóc tách {len(ts)} hạng mục nhà / vật kiến trúc / cây trồng từ "{p.name}".')
         # 4. hồ sơ kiểm đếm chi tiết của hộ
-        if ngu_canh in (AUTO, HO_SO_HO) or 'thửa đất số' in thap or 'tờ bản đồ' in thap:
-            dat = nhan_dien_thua(nd)
-            if dat:
-                loai.append(HO_SO_HO)
-                kq.dong_dat.extend(dat)
-                kq.tom_tat.append(f'[Hồ sơ chi tiết] Bóc tách {len(dat)} thửa đất thu hồi kèm kết cấu mặt đường từ "{p.name}".')
+        if loai_f == D_HO_SO:
+            loai.append(HO_SO_HO)
+            _boc_ho_so(nd, kq, p.name)
     kq.loai_phat_hien = list(dict.fromkeys(loai))
     kq.can_cu = list(dict.fromkeys(kq.can_cu))
     kq.do_tin_cay = 0.0 if not kq.co_du_lieu() else 0.99 if not kq.loi else 0.8

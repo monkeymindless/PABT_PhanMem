@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.62', '05/11/2026', (
+        'Quét file thông minh nay nhận loại TỪNG file và đưa vào đúng chỗ: file dự án / danh sách hộ, phương án chi tiết, phụ lục hệ số K, bảng giá đất, '
+        'bảng đơn giá nhà, cây, biên bản kiểm đếm, văn bản căn cứ. Nhận sai thì đổi được loại trước khi xử lý.',
+        'Biên bản kiểm đếm, giấy tờ của hộ: nút Đưa vào phương án của hộ thêm dòng đất theo tờ + thửa, tài sản qua hộp Dán danh sách tài sản; tự gợi ý '
+        'hộ theo CCCD / họ tên. Chưa ghi vào file cho tới khi bạn soát và bấm Lưu.',
+        'Bản scan chỉ nhận dạng chữ một lần: quét xong mở màn hình xử lý không phải chờ đọc lại.',
+    )),
     ('1.0.61', '05/11/2026', (
         'Bảng tính đơn giá đất bồi thường mới (lệnh Tính đơn giá đất, menu Đơn giá & bảng giá): Đơn giá = ROUND(giá NQ 28 × K1 × K2 × K3 × K khác). '
         'Chọn tuyến đường và ĐOẠN đường (điểm đầu → điểm cuối, 106 đoạn Phường Trị An, Xã Tân An, Xã Phú Lý theo QĐ 03/2026/QĐ-UBND), vị trí kết nối '

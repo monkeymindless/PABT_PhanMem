@@ -615,13 +615,29 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = '
         shutil.rmtree(td, ignore_errors=True)
 
 
+_DA_DOC = {}                # (đường dẫn, mtime, cỡ, psm) -> các dòng; vừa đọc gần nhất ở cuối
+_DA_DOC_TOI_DA = 6
+
+
 def doc_chu(file, bao_tien_do=None, cho=None, psm: int = 6) -> list:
     """Các dòng chữ của bản scan (PDF ảnh hoặc file ảnh). bao_tien_do(trang, tổng số trang); cho() trả True để hủy.
-    psm: chế độ Tesseract (6 = khối chữ; 4 = cột thưa — biên bản viết tay)."""
+    psm: chế độ Tesseract (6 = khối chữ; 4 = cột thưa — biên bản viết tay). Nhớ TRONG BỘ NHỚ vài file vừa đọc (theo đường dẫn, thời điểm sửa,
+    cỡ): bộ quét chung nhận loại rồi màn hình chuyên trách đọc lại không phải nhận dạng lại. Không ghi đĩa."""
     if not may_doc()[0]:
         raise LoiOCR(san_sang())
+    try:
+        st = os.stat(str(file))
+        khoa = (os.path.abspath(str(file)), st.st_mtime_ns, st.st_size, psm)
+    except OSError:
+        khoa = None
+    if khoa in _DA_DOC:
+        return list(_DA_DOC[khoa])
     dong = []
     for chu in tung_trang(file, bao_tien_do, cho, psm=psm):
         # strip chỉ dấu cách: ô trống đầu dòng bảng (Tab đầu) phải giữ, không thì lệch cột
         dong += ['\t'.join(sua_dvt(o.strip()) for o in sua_so(x.strip(' \r')).split('\t')) for x in chu.splitlines() if x.strip()]
+    if khoa is not None:
+        while len(_DA_DOC) >= _DA_DOC_TOI_DA:
+            _DA_DOC.pop(next(iter(_DA_DOC)))
+        _DA_DOC[khoa] = list(dong)
     return dong

@@ -3884,27 +3884,105 @@ class CuaSoChinh(QMainWindow):
     def quet_thong_minh(self, files=None, cho: bool = True, ngu_canh: str = 'AUTO_DETECT', doc=None):
         """Quét file thông minh (bộ quét DÙNG CHUNG quet_chung.py, chạy trên máy): xem kết quả rồi ghi văn bản căn cứ vào dự án hoặc mở
         Bảng tính đơn giá đất với thông số vừa đọc. files / doc: kiểm thử. cho=False: trả hộp kết quả."""
-        from . import van_ban_can_cu as vbcc
         from .man_hinh_quet_chung import HopKetQuaQuet, chon_va_quet
         kq = chon_va_quet(self, ngu_canh, files, doc)
         if kq is None:
             return None
-        h = HopKetQuaQuet(self, kq, self.con is not None, bool(getattr(self, 'chi_doc', False)))
-        if not cho:
-            return h
-        h.exec()
-        if h.hanh_dong == 'ghi_can_cu' and self.con is not None:
-            try:
+        ds_ho = []
+        ma_goi_y = None
+        if self.con is not None:
+            from . import quet_chung
+            ds_ho = [(r[0], r[1]) for r in self.con.execute('SELECT ma_ho, ho_ten FROM ho ORDER BY thu_tu, ma_ho')]
+            chon = self.ho_da_chon()
+            ma_goi_y = quet_chung.tim_ho(self.con, kq) or (chon[0] if chon else None)
+        while True:
+            h = HopKetQuaQuet(self, kq, self.con is not None, bool(getattr(self, 'chi_doc', False)), ds_ho, ma_goi_y)
+            if not cho:
+                return h
+            h.exec()
+            if not h.hanh_dong:
+                return h
+            ma_goi_y = h.ho_chon() or ma_goi_y
+            self.xu_ly_ket_qua_quet(h)
+            from . import quet_chung as qc
+            if h.hanh_dong == 'mo_file' and h.loai_chon == qc.D_DU_AN:   # có thể đã đổi dự án đang mở: danh sách hộ của hộp không còn đúng
+                return h
+            for f in kq.tung_file:                                       # file vừa mở màn hình xử lý: không nhắc lại
+                if f['file'] == h.file_chon or (h.hanh_dong == 'dua_vao_ho' and f['loai'] == qc.D_HO_SO):
+                    f['da_xu_ly'] = True
+            if not any(not f.get('da_xu_ly') and f['loai'] in h.LOAI_CON_VIEC for f in kq.tung_file):
+                return h
+
+    def xu_ly_ket_qua_quet(self, h):
+        """Việc người dùng chọn ở hộp kết quả quét: mở đúng màn hình chuyên trách của file đó / đưa vào hộ / ghi căn cứ / tính giá đất."""
+        from . import van_ban_can_cu as vbcc
+        kq = h.kq
+        try:
+            if h.hanh_dong == 'ghi_can_cu' and self.con is not None:
                 vbcc.ghi_can_cu_du_an(self.con, vbcc.doc_can_cu_du_an(self.con) + '\n' + '\n'.join(kq.can_cu))
                 self.thong_bao(f'Đã ghi {len(kq.can_cu)} văn bản căn cứ vào dự án (sắp theo 13 bậc hiệu lực).')
-            except Exception as e:                                       # noqa: BLE001 - LoiNhap (quyền) / lỗi ghi: báo rõ, không sập
-                QMessageBox.warning(self, TEN_UD, str(e))
-        elif h.hanh_dong == 'tinh_gia':
-            t = self.tinh_don_gia_dat(cho=False)
-            t.sau_khi_quet(kq)
-            if t.exec() == QDialog.DialogCode.Accepted and t.ket_qua_ap:
-                self.tai_lai()
-        return h
+            elif h.hanh_dong == 'tinh_gia':
+                t = self.tinh_don_gia_dat(cho=False)
+                t.sau_khi_quet(kq)
+                if t.exec() == QDialog.DialogCode.Accepted and t.ket_qua_ap:
+                    self.tai_lai()
+            elif h.hanh_dong == 'dua_vao_ho':
+                self.dua_ket_qua_quet_vao_ho(kq, h.ho_chon())
+            elif h.hanh_dong == 'mo_file':
+                return self.mo_file_quet(h.file_chon, h.loai_chon, kq, h.ho_chon())
+        except Exception as e:                                           # noqa: BLE001 - LoiNhap (quyền) / lỗi đọc: báo rõ, không sập
+            QMessageBox.warning(self, TEN_UD, chu_loi('Chưa xử lý được', e))
+        return None
+
+    def mo_file_quet(self, file, loai: str, kq=None, ma_ho=None, cho: bool = True):
+        """Bộ định tuyến: đưa file vào màn hình chuyên trách theo loại (quet_chung.DICH). Trả màn hình / kết quả của màn hình đó."""
+        from . import quet_chung as qc
+        file = str(file)
+        if loai == qc.D_DU_AN:
+            return self.nhap_excel(file)
+        if loai == qc.D_CHI_TIET:
+            return self.nhap_chi_tiet(file)
+        if loai in (qc.D_HE_SO_K, qc.D_BANG_GIA):
+            from .man_hinh_du_toan import HopTraNQ28
+            d = self.bang_gia_dat(cho=False, the=1 if loai == qc.D_HE_SO_K else HopTraNQ28.THE_CAP_NHAT)
+            if cho:
+                (d.khung_k if loai == qc.D_HE_SO_K else d.khung_cn).chon_file(file)
+                d.exec()
+            return d
+        if loai == qc.D_DON_GIA:
+            d = self.bo_don_gia(cho=cho)
+            if cho and d is not None:
+                d.cap_nhat_file(file)
+            return d
+        if loai == qc.D_HO_SO:
+            return self.dua_ket_qua_quet_vao_ho(kq, ma_ho, cho=cho)
+        return None
+
+    def dua_ket_qua_quet_vao_ho(self, kq, ma_ho, cho: bool = True):
+        """Thửa, tài sản quét được -> cửa sổ phương án của hộ (CHƯA lưu: người dùng soát rồi bấm Lưu như mọi khi). Thửa khớp theo tờ + thửa; tài
+        sản qua hộp "Dán danh sách tài sản" (tự xếp mục, khớp danh mục đơn giá). Trả (cửa sổ, hộp dán, (thêm, thiếu, trùng))."""
+        from . import quet_chung as qc
+        if self.con is None or kq is None or ma_ho is None:
+            QMessageBox.information(self, TEN_UD, 'Chọn hộ cần đưa dữ liệu vào.')
+            return None
+        w = self.mo_lap_pa(ma_ho, cho=cho)
+        if w is None or not hasattr(w, 'bo'):
+            return None
+        them, thieu, trung = qc.ghi_thua_vao_ho(w.bo, kq.dong_dat)
+        if them:
+            w.bang[1].ve()
+            w.bang[1].nap_danh_sach()
+            w.cap_nhat()
+        bao = [f'Thêm {them} dòng đất (chưa lưu).'] if them else []
+        if thieu:
+            bao.append('Không có trong hồ sơ hộ: ' + ', '.join(thieu) + ' (thêm thửa ở thẻ Thông tin hộ, thửa đất).')
+        if trung:
+            bao.append('Đã có dòng: ' + ', '.join(trung) + '.')
+        if bao:
+            w.thong_bao(' '.join(bao))
+        chu = kq.dong_dan or [f'{t.ten} {t.dvt} {t.so_luong}' for t in kq.dong_tai_san]
+        hop = w.dan_tai_san('\n'.join(chu), cho=cho) if chu else None
+        return w, hop, (them, thieu, trung)
 
     def cap_nhat_bang_gia_dat(self, cho: bool = True):
         """Cập nhật / bổ sung bảng giá đất (web, file Excel / Word / PDF): 30/10/2026 là thẻ "Cập nhật, bổ sung giá đất" của cửa sổ Bảng
