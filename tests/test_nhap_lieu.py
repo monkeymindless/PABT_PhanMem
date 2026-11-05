@@ -264,11 +264,15 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         gop = [x for x in dong if len(x) > 2]
         self.assertTrue(any('30kg gạo' in x[2] for x in gop))                    # cách tính in gộp ô
         self.assertTrue(any(x[1][0] == '-' and x[1][1].startswith('Thửa đất') for x in dong))   # dòng thửa dưới tên chính sách
-        f = in_an.lap_chi_tiet(self.con, 1, Path(self.tmp.name) / 'in_cs' / 'pa.xlsx')
-        import openpyxl
-        ws = openpyxl.load_workbook(f).active
-        chu = [str(ws.cell(r, 2).value or '') for r in range(1, ws.max_row + 1)]
-        self.assertTrue(any(c.startswith('Tái định cư: Đủ điều kiện bố trí một (01) suất') for c in chu))
+        # 1.0.19+: phương án chi tiết chỉ còn bản Word (in_an.lap_chi_tiet đã bỏ)
+        import re
+        import zipfile
+        from pabt import in_word
+        (Path(self.tmp.name) / 'in_cs').mkdir(exist_ok=True)
+        f = in_word.xuat_chi_tiet_docx(self.con, 1, Path(self.tmp.name) / 'in_cs' / 'pa.docx')
+        with zipfile.ZipFile(f) as z:
+            chu = ''.join(re.findall(r'<w:t(?:\s[^>]*)?>(.*?)</w:t>', z.read('word/document.xml').decode('utf-8'), re.S))
+        self.assertIn('Phương án tái định cư: Đủ điều kiện bố trí một (01) suất', chu)
         w.close()
 
     def test_o_tim_chon_va_man_hinh_chinh(self):

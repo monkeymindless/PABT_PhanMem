@@ -194,12 +194,12 @@ class TestQuanLyDuAn(unittest.TestCase):
         self.assertEqual(quan_ly.thu_muc_ho_so(self.con, self.p), goc)
         kq = quan_ly.xuat_dot(self.con, d1, goc)
         self.assertEqual(kq['thu_muc'].name, 'Đợt 1 - 2 hộ')
-        self.assertEqual(len(kq['excel']), 3)                    # 2 PA chi tiết + bảng tổng hợp
+        self.assertEqual((len(kq['word']), len(kq['excel'])), (2, 1))    # 1.0.19+: 2 PA chi tiết Word + bảng tổng hợp Excel
         self.assertTrue((kq['thu_muc'] / 'PA TONG' / 'BANG_TONG_HOP.xlsx').exists())     # 0.9.16: PA CHI TIET / PA TONG
         quan_ly.gan_dot(self.con, self.ma[2:3], d1)              # chuyển thêm 1 hộ: thư mục đổi tên theo số hộ
         kq = quan_ly.xuat_dot(self.con, d1, goc)
         self.assertEqual(sorted(p.name for p in goc.iterdir()), ['Đợt 1 - 3 hộ'])
-        self.assertEqual(len(kq['excel']), 4)
+        self.assertEqual((len(kq['word']), len(kq['excel'])), (3, 1))
         with self.assertRaises(LoiNhap):
             quan_ly.xuat_dot(self.con, d2, goc)                  # đợt 2 không còn hộ
         self.assertEqual(quan_ly.xoa_dot(self.con, d1), 3)
