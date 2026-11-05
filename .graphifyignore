@@ -1,0 +1,21 @@
+# Giảm tải đồ thị mã nguồn: chỉ giữ mã của dự án (pabt/, tests/, di_dong/, bo_cai_win/, script gốc).
+# Bộ công cụ bên thứ ba (JDK, Android SDK): 34% số nút của đồ thị trước khi bỏ.
+cong_cu_android/
+khoa_android/
+# Bản chép, gói công cụ, gói biểu tượng để cạnh mã
+PABT_PhanMem/
+tai_nguyen_ngoai/
+PABT_BoCongCu_TuDong_0.9.87/
+LARC_Icon_3D_Chuan_0987/
+LARC_Icon_3D_Chuan_UI_ChuyenGia_0987/
+PABT_Icon_3D_SoDoDiaChinh_0987/
+# Sản phẩm dựng, môi trường, kết quả chạy
+.claude/
+.graphify/
+.venv/
+build/
+dist/
+bo_cai/
+ket_qua_kiem_tra/
+BanIn_*/
+__pycache__/

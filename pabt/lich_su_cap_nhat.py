@@ -7,6 +7,18 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.61', '05/11/2026', (
+        'Bảng tính đơn giá đất bồi thường mới (lệnh Tính đơn giá đất, menu Đơn giá & bảng giá): Đơn giá = ROUND(giá NQ 28 × K1 × K2 × K3 × K khác). '
+        'Chọn tuyến đường và ĐOẠN đường (điểm đầu → điểm cuối, 106 đoạn Phường Trị An, Xã Tân An, Xã Phú Lý theo QĐ 03/2026/QĐ-UBND), vị trí kết nối '
+        '(cụm 7 dòng NQ 27 / NQ 28): K1 theo phụ lục I.1 / I.2 và giá NQ 28 tự điền; K3 = 0,90 cho đất nông nghiệp tiếp giáp đường đất, đá, sỏi, '
+        'cấp phối nhưng tự khóa 1,00 nếu tuyến đã có quy định riêng (VB 1201/SNNMT-ĐĐ, VB 29/5/2026); quy định chuyển tiếp khoản 3 Điều 4. '
+        'Có nhật ký giải trình từng bước; áp thẳng vào dòng đất của các hộ đang chọn.',
+        'Mục Văn bản căn cứ tự khử trùng lặp và sắp xếp theo 13 bậc hiệu lực pháp lý (Hiến pháp, Luật … đến văn bản Sở) mỗi khi quét thêm hoặc sửa xong, '
+        'lưu theo dự án.',
+        'Một bộ quét file dùng chung (lệnh Quét file thông minh…, ba nút Quét ở thẻ Niêm yết, hai nút Quét trong bảng tính giá): đọc PDF, Word, Excel, '
+        'ảnh scan ngay trên máy (không gửi ra ngoài), hiện kết quả để xem trước rồi mới ghi.',
+        'Mọi hộp thoại luôn nằm giữa màn hình, cao và rộng tối đa bằng màn hình trừ 32 px, phần thân cuộn riêng, hàng nút luôn hiện.',
+    )),
     ('1.0.60', '05/11/2026', (
         'Đọc được toàn văn Quyết định chính sách bồi thường, hỗ trợ, tái định cư (bản scan, PDF chữ, Word): nhận đúng số hiệu, ngày, các văn bản bị thay thế; không nhầm với dòng Căn cứ.',
         'Đơn giá đọc theo Điều / khoản / điểm và khớp đúng mã CS đang dùng; số tiền trong Ví dụ và biểu thưởng không thành mục; mục dẫn chiếu Luật, Nghị định không còn bị báo bỏ.',

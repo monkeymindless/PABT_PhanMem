@@ -715,6 +715,28 @@ class BoSoan:
         d.thanh_tien_excel = None
         return f' Hệ số K = {so_vn(k)} ({cc}).'
 
+    GHI_CHU_QD03 = 'Đơn giá đất theo NQ 28/2025/NQ-HĐND × QĐ 03/2026/QĐ-UBND:'
+
+    def ap_don_gia_qd03(self, chi_so, don_gia, ghi_chu: str = '') -> int:
+        """Áp đơn giá đất đã tính (gia_dat_qd03.tinh_don_gia - NQ 28 x QĐ 03, đã ROUND về đồng) vào các dòng mục 1: giá bảng giá = đơn giá
+        áp dụng, hệ số K = 1 (K1, K2, K3 đã nằm trong đơn giá; Thành tiền = diện tích x đơn giá áp dụng), căn cứ công thức ghi vào Ghi chú
+        (thay căn cứ cũ cùng loại / "Hệ số K theo ..."). Chưa lưu: người gọi bấm luu(). Trả số dòng đã áp."""
+        don_gia = D(don_gia)
+        if don_gia <= 0:
+            raise LoiNhap('Đơn giá đất phải lớn hơn 0.')
+        n = 0
+        for i in chi_so:
+            if not 0 <= i < len(self.pa.dat):
+                continue
+            d = self.pa.dat[i]
+            d.gia_bang_gia, d.he_so_k = don_gia, D(1)
+            bo = re.sub(r'\s*;?\s*(?:' + re.escape(self.GHI_CHU_QD03) + r'|Hệ số K theo )[^;]*', '', d.ghi_chu or '')
+            bo = re.sub(r'\s*;?\s*Giá đất nhập tay', '', bo).strip(' ;')
+            d.ghi_chu = ((bo + '; ') if bo else '') + (ghi_chu or self.GHI_CHU_QD03 + f' {vn(don_gia)} đ/m²')
+            d.thanh_tien_excel = None
+            n += 1
+        return n
+
     def sua_dat(self, i: int, cot: str, text) -> str:
         if cot not in SUA_DUOC_DAT:
             raise LoiNhap('Ô này tự tính, không sửa được.')

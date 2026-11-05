@@ -575,6 +575,19 @@ class KhungDuThao(QWidget):
         self.b_doc_kq.clicked.connect(lambda: self.doc_ket_qua())
         self._h_goc.addWidget(self.b_van_ban)
         self._h_goc.addWidget(self.b_doc_kq)
+        # 05/11/2026: ba nút Quét của thẻ Niêm yết cùng gọi MỘT bộ quét dùng chung (quet_chung / lệnh 'Quét file thông minh…' của cửa sổ chính)
+        self.nut_quet = {}
+        for ngu_canh, chu, goi_y in (
+                ('DETAILED_HOUSEHOLD_DOSSIER', 'Quét hồ sơ chi tiết…', 'Quét biên bản kiểm đếm / hồ sơ chi tiết của hộ (đất, nhà, cây trồng): xem trước kết quả rồi mới áp'),
+                ('LAND_PRICE_TABLE', 'Quét đơn giá đất…', 'Quét file đơn giá / văn bản giá đất: nhận địa bàn, mặt đường, văn bản căn cứ, rồi mở Bảng tính đơn giá đất'),
+                ('ASSET_CROP_PRICE_TABLE', 'Quét đơn giá nhà, cây…', 'Quét file đơn giá nhà, vật kiến trúc, cây trồng')):
+            b = QPushButton(chu)
+            b.setFixedHeight(26)
+            b.setToolTip(goi_y)
+            b.clicked.connect(lambda _=False, nc=ngu_canh: self.quet_chung(nc))
+            self._h_goc.addWidget(b)
+            self.nut_quet[ngu_canh] = b
+            self._nut_goc.append((self.tabs.widget(0), b))
         self.b_doc_kq.setEnabled(not chi_doc)
         self.tabs.currentChanged.connect(lambda *_: self._hien_nut_goc())
         self._hien_nut_goc()
@@ -629,6 +642,13 @@ class KhungDuThao(QWidget):
         if cho:
             h.exec()
         return h
+
+    def quet_chung(self, ngu_canh: str, files=None, doc=None, cho: bool = True):
+        """Nút Quét của thẻ Niêm yết -> bộ quét dùng chung của cửa sổ chính (cùng hộp xem kết quả, cùng văn bản căn cứ 13 bậc)."""
+        w = self.window()
+        if not hasattr(w, 'quet_thong_minh'):
+            return None
+        return w.quet_thong_minh(files=files, cho=cho, ngu_canh=ngu_canh, doc=doc)
 
     def doc_ket_qua(self, files=None, cho: bool = True):
         """Đọc kết quả từ file vào mục đang mở: xem trước theo từng hộ rồi mới ghi. cho=False: trả hộp (kiểm thử)."""

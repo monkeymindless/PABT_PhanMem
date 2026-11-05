@@ -182,6 +182,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   `lap_pa.DanhMuc` ẩn mục khu vực khác (`an`, `bi_khoa`; `lay` vẫn trả để đọc dòng cũ). Văn bản nhiều khu vực: `so_khop_khu_vuc` (so từng
   khu vực với mục cùng khu vực, `chi_ma`), `ap_dung(khu_vuc=…)`. Thêm cách đọc / ghi danh mục mới theo mã: nhớ lọc theo khu vực.
 - Văn bản chính sách (1.0.60): dòng `Muc.can_cu` đọc theo Điều / khoản (`muc_chinh_sach_tu_dieu_khoan`), khớp `_khop_chinh_sach`, giữ tên mục của bộ; nhóm 4 chế độ thay thế: mục dẫn chiếu (`la_muc_dan_chieu`) "giữ nguyên", không "bỏ". Chữ lớp hoa dùng `_HOA` (khoảng À-Ỹ gồm cả chữ thường).
+- Đơn giá đất bồi thường NQ 28 x QĐ 03 (1.0.61, `gia_dat_qd03` + `man_hinh_tinh_gia_dat`): Đơn giá = ROUND(G x K1 x K2 x K3 x K khác); K1 theo ĐOẠN đường (106 đoạn, `pabt/gia_dat_qd03.json`), K2 khóa 1,00 trừ dự án có FAR, K3 NN đường đất 0,90 và TỰ KHÓA 1,00 khi tuyến có quy định riêng ở PL I.2. Áp vào hộ bằng `BoSoan.ap_don_gia_qd03` (giá := đơn giá đã ROUND, K := 1). Văn bản căn cứ luôn qua `van_ban_can_cu.gop_va_sap_xep` (13 bậc, khóa theo SỐ HIỆU CỦA CHÍNH văn bản). Mọi nút Quét / Nạp file mới gọi `quet_chung.quet` (+ `man_hinh_quet_chung.NutQuetChung` / `chon_va_quet`), chạy trên máy, KHÔNG dịch vụ ngoài.
 - Mã tài sản: nhà TS, cây CT, vật nuôi VN, chính sách CS, thưởng TH (`ma_tai_san`). Quy ước tương đương do người dùng tự nhập (bộ đơn giá
   không có).
 

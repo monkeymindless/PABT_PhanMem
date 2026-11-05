@@ -3785,17 +3785,27 @@ def thong_bao_noi(cua_so: QWidget | None, chu: str, loai: str = 'tin', ms: int =
     return hud
 
 
-def vua_man_hinh(w: QWidget) -> None:
-    """Cửa sổ / hộp thoại lớn hơn màn hình đang dùng (laptop nhỏ, phóng to 125-150%): thu vừa 94% màn hình và canh giữa."""
+BIEN_MAN_HINH = 32             # 05/11/2026 (CenteredResponsiveModal của đặc tả): hộp con cao / rộng tối đa = vùng làm việc - 32 px
+CHUA_TIEU_DE_TOI_THIEU = 30    # khung + thanh tiêu đề của cửa sổ hệ điều hành khi chưa hiện (frameGeometry chưa biết)
+
+
+def vua_man_hinh(w: QWidget, bien: int = BIEN_MAN_HINH, giua: bool = True) -> None:
+    """Cửa sổ / hộp thoại: cao và rộng tối đa = vùng làm việc của màn hình đang dùng - `bien` (32 px, tính cả khung và thanh tiêu đề -
+    laptop nhỏ, phóng to 125-150% vẫn không tràn), và CANH GIỮA màn hình (giua=True). Phần thân cuộn riêng, hàng nút cố định: `cuon_than_hop`."""
     from PySide6.QtWidgets import QApplication
     man = (w.screen() if hasattr(w, 'screen') else None) or QApplication.primaryScreen()
     if man is None or w.isMaximized():
         return
     vung = man.availableGeometry()
-    rong, cao = min(w.width(), int(vung.width() * 0.94)), min(w.height(), int(vung.height() * 0.94))
+    kg = w.frameGeometry().size() - w.geometry().size()
+    them_r, them_c = max(0, kg.width()), max(0, kg.height())
+    if them_c < CHUA_TIEU_DE_TOI_THIEU:
+        them_c = CHUA_TIEU_DE_TOI_THIEU
+    rong, cao = min(w.width(), vung.width() - bien - them_r), min(w.height(), vung.height() - bien - them_c)
     if (rong, cao) != (w.width(), w.height()):
         w.resize(rong, cao)
-        w.move(vung.x() + (vung.width() - rong) // 2, vung.y() + (vung.height() - cao) // 2)
+    if giua:
+        w.move(vung.x() + (vung.width() - rong - them_r) // 2, vung.y() + (vung.height() - cao - them_c) // 2)
 
 
 # ---------------------------------------------------------------- nhập liệu bằng bàn phím trong bảng
@@ -5034,6 +5044,9 @@ class _BoToMau(QObject):
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow():
             if obj.property('_da_to_mau'):              # hiện lại cửa sổ đã xử lý: chỉ nút mới (máy yếu - không duyệt lại cả cây)
                 to_mau(obj)
+                from PySide6.QtWidgets import QDialog as _QD, QMessageBox as _QM
+                if isinstance(obj, _QD) and not isinstance(obj, _QM):
+                    vua_man_hinh(obj)                   # hộp con luôn nằm giữa màn hình mỗi lần hiện
                 return False
             ap_kieu_cay(obj)
             obj.setProperty('_da_to_mau', True)

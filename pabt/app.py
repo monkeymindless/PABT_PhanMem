@@ -240,6 +240,7 @@ NHAN_MENU = {'Lập phương án hộ…': 'Lập phương án chi tiết', 'Th�
              'Thông tin dự án…': 'Thông tin dự án',
              'Bảng giá đất NQ 28…': 'Bảng giá đất',
              'Cập nhật bảng giá đất…': 'Cập nhật giá đất',
+             'Tính đơn giá đất QĐ 03…': 'Tính đơn giá đất',
              'Dự thảo PABT…': 'Niêm yết & Lấy ý kiến',
              'Tổng hợp tiền theo phương án': 'Bảng tổng hợp kinh phí',
              'Quyết định phê duyệt': 'Quyết định phê duyệt', 'Đợt trình…': 'Đợt trình thẩm định',
@@ -886,7 +887,8 @@ class CuaSoChinh(QMainWindow):
             # mọi việc về quyết định ở MỘT chỗ: trang "Quyết định phê duyệt" (Thêm / Nhập từ file / Sửa / Xóa)
             # 1.0.00: "Báo cáo tiến độ GPMB" gộp vào "Tiến độ chi trả & Bàn giao" (thẻ chỉ số, chế độ Thửa còn vướng, Xuất báo cáo)
             ('5. Phê duyệt & bàn giao', [L['Quyết định phê duyệt'], L['Theo dõi tiến độ']]),
-            ('6. Đơn giá & bảng giá', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Bảng giá đất NQ 28…']]),
+            ('6. Đơn giá & bảng giá', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Bảng giá đất NQ 28…'],
+                                         L['Tính đơn giá đất QĐ 03…']]),
         ]
         # hoàn tác / làm lại thao tác đã ghi vào file dự án: menu Chỉnh sửa trên thanh menu (người dùng 11/10/2026 - như các phần
         # mềm khác; trước đây nút trên băng tiêu đề). Chữ "Ctrl+Z" sau "\t" chỉ để hiện: KHÔNG gắn phím tắt cho QAction - phím
@@ -2760,7 +2762,7 @@ class CuaSoChinh(QMainWindow):
                         ('Chỉnh &sửa', [self.nut_ht['lui'], self.nut_ht['toi'], None, 'Tìm nhanh…']),
                         # 0.9.66 (người dùng 12/10/2026 - mỗi lệnh một chỗ): lệnh đã có ở menu trái không lặp ở đây - Báo cáo
                         # tổng hợp, Xuất báo cáo đối chiếu, Bộ đơn giá, Thông tin dự án (KIEM_TRA test_khong_trung_menu_trai)
-                        ('&Dữ liệu', ['Nhập file Excel…', 'Nhập phương án chi tiết…', 'Nhập bản vẽ CAD (.dxf)…', 'Bản đồ thửa đất',
+                        ('&Dữ liệu', ['Nhập file Excel…', 'Nhập phương án chi tiết…', 'Quét file thông minh…', 'Nhập bản vẽ CAD (.dxf)…', 'Bản đồ thửa đất',
                                       None, 'Trạng thái hộ…',
                                       'Xuất danh sách hộ…', LENH_THONG_KE, None, 'Nhật ký kiểm toán…']),
                         ('&Công cụ', ['Quản lý Mẫu in & Bản in…', 'Rà soát giá…', 'Cập nhật bảng giá đất…', None,
@@ -3862,6 +3864,47 @@ class CuaSoChinh(QMainWindow):
         if cho:
             d.exec()
         return d
+
+    def tinh_don_gia_dat(self, cho: bool = True, ds_ma_ho=None):
+        """Bảng tính đơn giá đất bồi thường (NQ 28/2025 x QĐ 03/2026 - man_hinh_tinh_gia_dat.HopTinhGiaDat): tính + áp vào dòng đất của các hộ
+        đang chọn trên danh sách (ds_ma_ho: kiểm thử). Chưa mở dự án: chỉ tính. cho=False: trả hộp (kiểm thử)."""
+        from .man_hinh_tinh_gia_dat import HopTinhGiaDat
+        xa, ds = '', []
+        if self.con is not None:
+            r = self.con.execute('SELECT ten_dia_ban FROM du_an WHERE id = 1').fetchone()
+            xa = (r[0] or '') if r else ''
+            ds = list(ds_ma_ho) if ds_ma_ho is not None else self.ho_da_chon()
+        d = HopTinhGiaDat(self, self.con, ds, xa, bool(getattr(self, 'chi_doc', False)))
+        if not cho:
+            return d
+        if d.exec() == QDialog.DialogCode.Accepted and d.ket_qua_ap:
+            self.tai_lai()
+        return d
+
+    def quet_thong_minh(self, files=None, cho: bool = True, ngu_canh: str = 'AUTO_DETECT', doc=None):
+        """Quét file thông minh (bộ quét DÙNG CHUNG quet_chung.py, chạy trên máy): xem kết quả rồi ghi văn bản căn cứ vào dự án hoặc mở
+        Bảng tính đơn giá đất với thông số vừa đọc. files / doc: kiểm thử. cho=False: trả hộp kết quả."""
+        from . import van_ban_can_cu as vbcc
+        from .man_hinh_quet_chung import HopKetQuaQuet, chon_va_quet
+        kq = chon_va_quet(self, ngu_canh, files, doc)
+        if kq is None:
+            return None
+        h = HopKetQuaQuet(self, kq, self.con is not None, bool(getattr(self, 'chi_doc', False)))
+        if not cho:
+            return h
+        h.exec()
+        if h.hanh_dong == 'ghi_can_cu' and self.con is not None:
+            try:
+                vbcc.ghi_can_cu_du_an(self.con, vbcc.doc_can_cu_du_an(self.con) + '\n' + '\n'.join(kq.can_cu))
+                self.thong_bao(f'Đã ghi {len(kq.can_cu)} văn bản căn cứ vào dự án (sắp theo 13 bậc hiệu lực).')
+            except Exception as e:                                       # noqa: BLE001 - LoiNhap (quyền) / lỗi ghi: báo rõ, không sập
+                QMessageBox.warning(self, TEN_UD, str(e))
+        elif h.hanh_dong == 'tinh_gia':
+            t = self.tinh_don_gia_dat(cho=False)
+            t.sau_khi_quet(kq)
+            if t.exec() == QDialog.DialogCode.Accepted and t.ket_qua_ap:
+                self.tai_lai()
+        return h
 
     def cap_nhat_bang_gia_dat(self, cho: bool = True):
         """Cập nhật / bổ sung bảng giá đất (web, file Excel / Word / PDF): 30/10/2026 là thẻ "Cập nhật, bổ sung giá đất" của cửa sổ Bảng
