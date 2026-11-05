@@ -161,11 +161,11 @@ class TestKml(_KhongFileBentley):
         except ImportError:
             self.skipTest('không có Qt')
         QApplication.instance() or QApplication([])
-        from pabt.man_hinh_ban_do import HopBanDo, HopNhapCad
+        from pabt.man_hinh_ban_do import HopBanDo, KhungNhapBanDo
         p = _du_an(Path(self.td.name), 4)
         con = csdl.mo(p)
         self.addCleanup(con.close)
-        h = HopNhapCad(con)
+        h = KhungNhapBanDo(con)
         h.im_lang = True
         self.assertTrue(h.chon_file(str(self.f)))
         self.assertTrue(h.cb_kt.isEnabled() and not h.cb_thua.isEnabled())

@@ -165,14 +165,18 @@ class TestManHinhBanDo(_KhongFileBentley):
         self.assertTrue(all(o.zValue() < 0 for o in h.view.o_nen))
         self.assertTrue(h.lb_nguon.isVisibleTo(h))                              # ghi nguồn ảnh khi bật nền
         self.assertIn(f'{len(goi)}/{len(goi)}', h.lb.text())
-        # ô ảnh nền không chặn bấm: bấm giữa thửa vẫn mở hộ
+        # ô ảnh nền không chặn bấm: bấm giữa thửa hiện thông tin ở dải dưới (05/11/2026), nhấp đúp mở hộ
         mo = []
         h.mo_ho = mo.append
         h.resize(900, 600)
         h.view.resize(800, 500)
         h.view.vua()
         it = next(i for i in h.view.thua if i.t.ma_ho is not None)
-        self.assertEqual(h.view.bam_diem(h.view.mapFromScene(it.sceneBoundingRect().center())), it.t.ma_ho)
+        tam = h.view.mapFromScene(it.sceneBoundingRect().center())
+        self.assertEqual(h.view.bam_diem(tam), it.t.ma_ho)
+        self.assertEqual(mo, [])
+        self.assertEqual(h.thua_chon.so_thua, it.t.so_thua)
+        self.assertEqual(h.view.mo_diem(tam), it.t.ma_ho)
         self.assertEqual(mo, [it.t.ma_ho])
         h.o_nen.setChecked(False)                                              # tắt: bỏ ảnh nền
         self.assertEqual(h.view.o_nen, [])

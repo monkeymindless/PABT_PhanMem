@@ -2762,7 +2762,8 @@ class CuaSoChinh(QMainWindow):
                         ('Chỉnh &sửa', [self.nut_ht['lui'], self.nut_ht['toi'], None, 'Tìm nhanh…']),
                         # 0.9.66 (người dùng 12/10/2026 - mỗi lệnh một chỗ): lệnh đã có ở menu trái không lặp ở đây - Báo cáo
                         # tổng hợp, Xuất báo cáo đối chiếu, Bộ đơn giá, Thông tin dự án (KIEM_TRA test_khong_trung_menu_trai)
-                        ('&Dữ liệu', ['Nhập file Excel…', 'Nhập phương án chi tiết…', 'Quét file thông minh…', 'Nhập bản vẽ CAD (.dxf)…', 'Bản đồ thửa đất',
+                        # 05/11/2026: "Nhập bản đồ" gộp vào cửa sổ Bản đồ thửa đất (nút Mở bản đồ + thẻ Nhập vào dự án), không còn mục riêng
+                        ('&Dữ liệu', ['Nhập file Excel…', 'Nhập phương án chi tiết…', 'Quét file thông minh…', 'Bản đồ thửa đất',
                                       None, 'Trạng thái hộ…',
                                       LENH_THONG_KE, None, 'Nhật ký kiểm toán…']),
                         ('&Công cụ', ['Quản lý Mẫu in & Bản in…', 'Rà soát giá…', 'Cập nhật bảng giá đất…', None,
@@ -2859,18 +2860,13 @@ class CuaSoChinh(QMainWindow):
         m.deleteLater()
 
     def nhap_ban_ve_cad(self, file=None, cho: bool = True):
-        """Nhập ranh thửa từ bản vẽ địa chính .dxf vào bản đồ dự án (tùy chọn cập nhật DT thu hồi). True nếu đã lưu."""
+        """Nhập bản đồ (.dxf, .kml, .kmz) vào dự án: từ 05/11/2026 là thẻ "Nhập vào dự án" của cửa sổ Bản đồ thửa đất (thấy ngay ô thửa trên bản đồ, cửa sổ không chặn). Trả cửa sổ bản đồ."""
         if self.con is None or self.chi_doc:
             QMessageBox.information(self, TEN_UD, 'Mở dự án (không ở chế độ chỉ xem) trước khi nhập bản vẽ.')
             return False
-        from .man_hinh_ban_do import HopNhapCad
-        d = HopNhapCad(self.con, self, file)
-        if not cho:
-            return d
-        ok = d.exec() == QDialog.DialogCode.Accepted
-        if ok:
-            self.tai_lai()
-        return ok
+        d = self.ban_do_thua(cho)
+        d.mo_the_nhap(file, hoi_file=cho)
+        return d
 
     def ban_do_thua(self, cho: bool = True):
         """Bản đồ thửa đất (cửa sổ riêng, không chặn): màu theo đồng thuận, bấm thửa mở hồ sơ / phương án của hộ. Chưa mở dự án
@@ -2878,7 +2874,7 @@ class CuaSoChinh(QMainWindow):
         from .man_hinh_ban_do import HopBanDo
         co = self.con is not None
         d = HopBanDo(self.con, self, mo_ho=(lambda ma: self.mo_lap_pa(ma)) if co else None,
-                     nhap=None if (self.chi_doc or not co) else (lambda: self.nhap_ban_ve_cad()), chi_doc=self.chi_doc)
+                     sau_luu=(lambda: self.tai_lai()) if co else None, chi_doc=self.chi_doc)
         d.setWindowModality(Qt.WindowModality.NonModal)
         if cho:
             d.show()

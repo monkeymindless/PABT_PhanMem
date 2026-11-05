@@ -417,6 +417,12 @@ def main(argv) -> int:
                 kt.dem_hop_an = f'{ten}: ' + ', '.join(sorted({type(h).__name__ for h in an}))
             if ten in ud.TRANG and w.con is not None:                       # trang bên phải: thử các điều khiển của trang
                 kt.lam(f'Trang "{ten}"', lambda: kt.thu(w.trang.currentWidget()))
+            # cửa sổ KHÔNG chặn (Bản đồ thửa đất...): lệnh trả về ngay nên trước đây không được thử nút nào (05/11/2026)
+            for h in [h for h in w.findChildren(QDialog) if h.isVisible() and not h.isModal()]:
+                kt.dem['hop'] += 1
+                ten_hop = f'[{type(h).__name__}: {h.windowTitle()[:50]}]'
+                kt.lam(ten_hop, lambda h=h, ten_hop=ten_hop: kt.thu(h, ten_hop))
+                kt.lam('đóng cửa sổ không chặn', h.close)
             thu_trang_nhung(kt, w)
             faulthandler.cancel_dump_traceback_later()
         kt.dem_trang_thai[TRANG_THAI[tt]] = len(kt.loi) - loi_truoc

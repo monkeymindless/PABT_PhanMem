@@ -792,9 +792,16 @@ MO_RONG = (
      lambda con: dam_bao_cot_du_an(con)),
     ('phien_ban_pa', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'pa_phien_ban'").fetchone()),
      lambda con: _tao_bang_phien_ban(con)),                                                    # 1.0.63: V1, V2.n, V3
+    ('cot_ban_do', lambda con: _co_cot_ban_do(con), lambda con: con.execute("ALTER TABLE thua_ban_do ADD COLUMN chi_tiet TEXT NOT NULL DEFAULT ''")),
     ('chi_muc', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?",
                                              (CHI_MUC_THEM[-1][0],)).fetchone()), lambda con: dam_bao_chi_muc(con)),
 )
+
+
+def _co_cot_ban_do(con) -> bool:
+    """Bảng thua_ban_do chưa có (file chưa có hộ / bảng phụ chưa tạo - tạo sẽ đủ cột) hoặc đã có cột chi_tiet (ban_do_ghep)."""
+    cot = {r[1] for r in con.execute('PRAGMA table_info(thua_ban_do)')}
+    return not cot or 'chi_tiet' in cot
 
 
 def _tao_bang_phien_ban(con) -> None:

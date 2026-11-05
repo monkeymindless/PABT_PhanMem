@@ -7,6 +7,14 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.67', '05/11/2026', (
+        'Bản đồ thửa đất: file KML, KMZ của phần mềm CAD chỉ có đường và nhãn nay tự ghép thành ô thửa (số tờ, số thửa, loại đất, diện tích, mốc ranh, ghi chú), đối chiếu diện tích hình với nhãn; thửa lệch được báo, không tự ghi vào hồ sơ.',
+        'Diện tích thu hồi tính theo ranh thu hồi qua mốc và đối chiếu với nhãn bản vẽ (trước đây lấy nhãn "(xxx)" gần số thửa nhất, có thể là phần ngoài ranh).',
+        'Cửa sổ Nhập bản đồ gộp vào Bản đồ thửa đất: nút Mở bản đồ (.kml, .kmz, .dxf), thẻ Nhập vào dự án. Bảng thông tin bên phải bản đồ, kéo thanh chia để chỉnh to nhỏ, nút Ẩn bảng.',
+        'Đo đường, đo vùng, đọc tọa độ VN-2000 và GPS (tự bắt đúng đỉnh thửa); la bàn, mũi tên, thanh thu phóng trên bản đồ; nút Định vị: thửa đang chọn, tọa độ gõ tay, vị trí của máy.',
+        'Bấm ô thửa hiện số tờ, số thửa, diện tích, diện tích thu hồi, hộ, trạng thái, mốc ranh; nhấp đúp mở phương án. Gắn hộ, tạo hộ mới, đổi hộ ngay trên ô thửa; tên hộ hiện trên bản đồ.',
+        'Nền bản đồ thêm "Không nền" để tô màu theo trạng thái hộ nhẹ máy; đổi cách tô không phải vẽ lại cả bản đồ. Ảnh vệ tinh nét hơn (tới mức 19 nơi có ảnh). Số thửa, DT, mốc trên bản vẽ lớn không còn bị mất.',
+    )),
     ('1.0.66', '05/11/2026', (
         'Bảng In làm lại theo cấu trúc bảng In của Word, Excel: cột trái In, Xuất, Xuất dữ liệu; nút In lớn, Số bản sao; chọn Máy in, Thuộc tính máy in; Thiết đặt: hộ, tài liệu, bản, Trang, In hai mặt, Xếp bộ, Khổ giấy; bản xem trước bên phải, trang và thu phóng ở đáy.',
         'Tài liệu đang xem là tài liệu sẽ in. In nhiều hộ thành một lệnh in, đúng thứ tự, xếp bộ và hai mặt được. Ô Hộ gõ như ô Trang của Word: 1-3, 5.',

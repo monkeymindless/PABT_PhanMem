@@ -333,6 +333,31 @@ def gop_ho(con, giu: int, bo: int) -> str:
     return tb
 
 
+def them_thua(con, ma_ho: int, dong: dict) -> int:
+    """Thêm MỘT thửa vào hồ sơ hộ (ghim hộ vào thửa trên bản đồ), không đụng các thửa khác của hộ. dong: các khóa của TRUONG_THUA (số gõ kiểu Việt Nam). Trả mã thửa."""
+    kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'sua_ho_so')
+    ho = con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (ma_ho,)).fetchone()
+    if ho is None:
+        raise LoiNhap(f'Không có hộ mã {ma_ho}.')
+    g = chuan_hoa_thua([dong])
+    if not g:
+        raise LoiNhap('Chưa có số tờ, số thửa.')
+    g = g[0]
+    if con.execute('SELECT 1 FROM thua WHERE ma_ho = ? AND so_to = ? AND so_thua = ? AND loai_dat = ?',
+                   (ma_ho, g['so_to'], g['so_thua'], g['loai_dat'])).fetchone():
+        raise LoiNhap(f'Hộ {ho["ho_ten"]} đã có thửa {g["so_thua"]} tờ {g["so_to"]}.')
+    cot = ['so_to', 'so_thua', 'loai_dat', 'dt_thu_hoi', 'nguon_goc', 'vi_tri']
+    with csdl.giao_dich(con):
+        if csdl.dam_bao_cot_thua(con):
+            cot += [k for k, _ in csdl.COT_THUA_THEM]
+        mt, tt = con.execute('SELECT COALESCE(MAX(ma_thua), 0) + 1, (SELECT COALESCE(MAX(thu_tu), 0) + 1 FROM thua WHERE ma_ho = ?) FROM thua', (ma_ho,)).fetchone()
+        con.execute(f'''INSERT INTO thua (ma_thua, ma_ho, {', '.join(cot)}, thu_tu) VALUES ({', '.join('?' * (len(cot) + 3))})''',
+                    (mt, ma_ho, *(g.get(k, '') for k in cot), tt))
+        csdl.ghi_nhat_ky(con, 'Thêm thửa từ bản đồ', f'Hộ {ma_ho} {ho["ho_ten"]}: thửa {g["so_thua"]} tờ {g["so_to"]}')
+    return mt
+
+
 def chuyen_thua(con, ma_thua: int, ma_ho_moi: int) -> str:
     """Chuyển một thửa (kèm các dòng mục 1 gắn với thửa) sang hộ khác."""
     t = con.execute('SELECT * FROM thua WHERE ma_thua = ?', (ma_thua,)).fetchone()

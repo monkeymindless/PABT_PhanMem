@@ -35,6 +35,7 @@ SQL_BANG = f'''CREATE TABLE IF NOT EXISTS {BANG} (
     lop TEXT NOT NULL DEFAULT '',
     nguon TEXT NOT NULL DEFAULT '',     -- tên file .dxf
     luc TEXT NOT NULL,
+    chi_tiet TEXT NOT NULL DEFAULT '',  -- JSON (bản vẽ đường - ban_do_ghep): đối chiếu với nhãn, các phần DT, mốc, ghi chú
     UNIQUE (so_to, so_thua)
 )'''
 
@@ -160,6 +161,7 @@ class ThuaCad:
     toa_do: list
     nhan: str = ''
     lop: str = ''
+    chi_tiet: dict = field(default_factory=dict)         # thửa tự ghép từ đường (ban_do_ghep): đối chiếu, các phần DT, mốc, ghi chú
 
 
 @dataclass
@@ -170,6 +172,12 @@ class KetQuaCad:
     lop_ranh: str = ''
     so_to: str = ''
     nguon: str = ''
+    # bản vẽ đường (ban_do_ghep): vùng hành lang thu hồi, đoạn đóng đầu tuyến, vùng nhiều số thửa, số thửa ngoài vùng khép kín, thống kê
+    ranh_vung: list = field(default_factory=list)
+    ranh_dong: list = field(default_factory=list)
+    chua_tach: list = field(default_factory=list)
+    khong_khep: list = field(default_factory=list)
+    thong_ke: dict = field(default_factory=dict)
 
 
 NHO_DOC_TOI_DA = 2              # 1.0.33: số file bản đồ giữ kết quả đọc trong RAM (đọc danh sách lớp rồi phân tích = cùng một file)
@@ -354,6 +362,22 @@ def dam_bao_bang(con) -> bool:
     return True
 
 
+def co_cot_chi_tiet(con) -> bool:
+    return 'chi_tiet' in {r[1] for r in con.execute(f'PRAGMA table_info({BANG})')}
+
+
+def dam_bao_cot_chi_tiet(con) -> bool:
+    """File cũ: thêm cột chi_tiet khi ghi bản đồ (bảng chưa có thì dam_bao_bang tạo đủ cột). False: file chỉ xem / khóa."""
+    if co_cot_chi_tiet(con):
+        return True
+    try:
+        with csdl.giao_dich(con):
+            con.execute(f"ALTER TABLE {BANG} ADD COLUMN chi_tiet TEXT NOT NULL DEFAULT ''")
+    except sqlite3.OperationalError:
+        return False
+    return True
+
+
 def _khoa(so) -> str:
     """Số tờ / thửa so khớp: số bỏ 0 đầu; chữ (lô rừng "TK126/K6") viết hoa, bỏ khoảng trắng, "-" "_" "." -> "/", bỏ 0 đầu từng
     nhóm số ("TK126-K06" = "TK126/K6") - 1.0.32."""
@@ -375,7 +399,7 @@ def chi_muc_thua(con) -> dict:
 def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool = False) -> dict:
     """Ghi thửa bản vẽ vào dự án (thay thửa cùng số tờ / số thửa). cap_nhat_dt: tập (tờ, thửa) cập nhật DT thu hồi của hồ sơ theo DT
     trong ranh (không có ranh: DT bản vẽ / DT hình). Trả {'luu', 'khop', 'cap_nhat'}."""
-    if not dam_bao_bang(con):
+    if not dam_bao_bang(con) or not dam_bao_cot_chi_tiet(con):
         raise LoiCad('File dự án đang mở chỉ xem / bị khóa: không ghi được bản đồ.')
     cm = chi_muc_thua(con)
     # 1.0.58: một thửa nhiều dòng hồ sơ (nhiều loại đất / hộ chỉ có tài sản): không biết ghi dòng nào -> không ghi, báo sửa tay; DT vượt
@@ -390,14 +414,14 @@ def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool 
     khop = cap_nhat = 0
     with csdl.giao_dich(con):
         for t in kq.thua:
-            con.execute(f'''INSERT INTO {BANG} (so_to, so_thua, loai_dat, dt_ban_ve, dt_hinh, dt_trong_ranh, toa_do, nhan, lop, nguon, luc)
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(so_to, so_thua) DO UPDATE SET loai_dat = excluded.loai_dat,
+            con.execute(f'''INSERT INTO {BANG} (so_to, so_thua, loai_dat, dt_ban_ve, dt_hinh, dt_trong_ranh, toa_do, nhan, lop, nguon, luc, chi_tiet)
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(so_to, so_thua) DO UPDATE SET loai_dat = excluded.loai_dat,
                             dt_ban_ve = excluded.dt_ban_ve, dt_hinh = excluded.dt_hinh, dt_trong_ranh = excluded.dt_trong_ranh,
                             toa_do = excluded.toa_do, nhan = excluded.nhan, lop = excluded.lop, nguon = excluded.nguon,
-                            luc = excluded.luc''',
+                            luc = excluded.luc, chi_tiet = excluded.chi_tiet''',
                         (t.so_to, t.so_thua, t.loai_dat, None if t.dt_ban_ve is None else chuoi(t.dt_ban_ve), chuoi(t.dt_hinh),
                          None if t.dt_trong_ranh is None else chuoi(t.dt_trong_ranh), json.dumps(t.toa_do), t.nhan, t.lop,
-                         kq.nguon, luc))
+                         kq.nguon, luc, json.dumps(t.chi_tiet, ensure_ascii=False) if t.chi_tiet else ''))
             k = (_khoa(t.so_to), _khoa(t.so_thua))
             if k in cm:
                 khop += 1
@@ -452,10 +476,15 @@ class ThuaBanDo:
     trang_thai: str
     dt_thu_hoi: str | None = None            # 30/10/2026: DT thu hồi / DT nguyên thửa của thửa hồ sơ khớp (tô màu lệch diện tích)
     dt_nguyen_thua: str | None = None
+    dt_ban_ve: str | None = None             # DT ghi trên nhãn bản vẽ
+    chi_tiet: dict = field(default_factory=dict)     # bản vẽ đường (ban_do_ghep): đối chiếu, các phần DT, mốc, ghi chú, điểm đặt số thửa
+    ma_thua: int | None = None               # dòng thửa của hồ sơ khớp số tờ, số thửa
+    tam: bool = False                        # vừa phân tích từ file, chưa lưu vào dự án
 
 
 # 30/10/2026 (phương án đột phá 4): tô màu bản đồ theo đồng thuận / tiến độ theo hộ / lệch diện tích bản đồ với hồ sơ
-CHE_DO_MAU = (('dong_thuan', 'Đồng thuận'), ('tien_do', 'Tiến độ theo hộ'), ('lech_dt', 'Lệch diện tích bản đồ / hồ sơ'))
+CHE_DO_MAU = (('dong_thuan', 'Đồng thuận'), ('tien_do', 'Tiến độ theo hộ'), ('lech_dt', 'Lệch diện tích bản đồ / hồ sơ'),
+              ('thu_hoi', 'Phạm vi thu hồi'))
 NGUONG_KHOP, NGUONG_LECH = D('0.02'), D('0.10')
 LECH_DT = {'khop': ('Khớp (lệch không quá 2%)', '#2F7D54'), 'lech_nhe': ('Lệch 2-10%', '#E5A93A'),
            'lech_nhieu': ('Lệch trên 10%', '#C94545'), 'chua_dt': ('Hồ sơ chưa có diện tích', '#7F77DD'),
@@ -491,6 +520,62 @@ def lech_dien_tich(t: ThuaBanDo) -> tuple:
     return ('khop' if ty <= NGUONG_KHOP else 'lech_nhe' if ty <= NGUONG_LECH else 'lech_nhieu'), ty, bd, hs, cach
 
 
+THU_HOI = {'ca_thua': ('Thu hồi cả thửa', TRANG_THAI['khong'][1]), 'mot_phan': ('Thu hồi một phần', TRANG_THAI['chua'][1]),
+           'ngoai': ('Ngoài ranh thu hồi', TRANG_THAI['dong_y'][1]), 'chua_ro': ('Chưa có DT thu hồi', TRANG_THAI['khong_gan'][1])}
+
+
+def muc_thu_hoi(t: ThuaBanDo) -> str:
+    """Khóa THU_HOI của thửa: theo DT trong ranh của bản vẽ, bản vẽ không có ranh thì theo DT thu hồi của hồ sơ."""
+    th = _so(t.dt_trong_ranh)
+    if th is None:
+        th = _so(t.dt_thu_hoi)
+    ca = _so(t.dt_ban_ve) or _so(t.dt_hinh) or _so(t.dt_nguyen_thua)
+    if th is None:
+        return 'chua_ro'
+    if th <= 0:
+        return 'ngoai'
+    return 'ca_thua' if ca and th >= ca - 1 else 'mot_phan'
+
+
+def thua_tu_ket_qua(con, kq: KetQuaCad) -> list:
+    """Thửa vừa phân tích từ file (chưa lưu) -> [ThuaBanDo] kèm hộ khớp số tờ, số thửa: tô màu, bấm xem ngay; con None: chỉ hình."""
+    cm, ten, tt, nguyen = {}, {}, {}, {}
+    if con is not None:
+        cm = chi_muc_thua(con)
+        ten = {r['ma_ho']: r['ho_ten'] for r in con.execute('SELECT ma_ho, ho_ten FROM ho')}
+        tt = trang_thai_ho(con)
+        if 'dt_nguyen_thua' in {r[1] for r in con.execute('PRAGMA table_info(thua)')}:
+            nguyen = {r[0]: r[1] for r in con.execute('SELECT ma_thua, dt_nguyen_thua FROM thua')}
+    ra = []
+    for t in kq.thua:
+        k = cm.get((_khoa(t.so_to), _khoa(t.so_thua)))
+        ma = k[1] if k else None
+        ra.append(ThuaBanDo(t.so_to, t.so_thua, t.loai_dat, t.toa_do, chuoi(t.dt_hinh), None if t.dt_trong_ranh is None else chuoi(t.dt_trong_ranh), ma,
+                            ten.get(ma, ''), tt.get(ma, 'chua') if ma is not None else 'khong_gan', k[2] if k else None,
+                            nguyen.get(k[0]) if k else None, None if t.dt_ban_ve is None else chuoi(t.dt_ban_ve), t.chi_tiet,
+                            k[0] if k else None, True))
+    return ra
+
+
+def sua_thua_ban_do(con, so_to: str, so_thua: str, moi: dict) -> tuple:
+    """Sửa số tờ / số thửa / loại đất của một thửa TRÊN BẢN ĐỒ (bản vẽ đọc nhầm nhãn) - hồ sơ hộ không đổi. moi: so_to, so_thua, loai_dat. Trả (tờ, thửa) mới."""
+    from .lap_pa import LoiNhap, kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')
+    to, thua = str(moi.get('so_to', so_to)).strip(), str(moi.get('so_thua', so_thua)).strip()
+    if not thua:
+        raise LoiNhap('Số thửa không được để trống.')
+    with csdl.giao_dich(con):
+        r = con.execute(f'SELECT id, loai_dat FROM {BANG} WHERE so_to = ? AND so_thua = ?', (so_to, so_thua)).fetchone()
+        if r is None:
+            raise LoiNhap(f'Bản đồ dự án không có thửa {so_thua} tờ {so_to}.')
+        if (to, thua) != (so_to, so_thua) and con.execute(f'SELECT 1 FROM {BANG} WHERE so_to = ? AND so_thua = ?', (to, thua)).fetchone():
+            raise LoiNhap(f'Bản đồ đã có thửa {thua} tờ {to}.')
+        loai = str(moi.get('loai_dat', r['loai_dat'])).strip().upper()
+        con.execute(f'UPDATE {BANG} SET so_to = ?, so_thua = ?, loai_dat = ? WHERE id = ?', (to, thua, loai, r['id']))
+        csdl.ghi_nhat_ky(con, 'Sửa thửa trên bản đồ', f'Thửa {so_thua} tờ {so_to} -> thửa {thua} tờ {to}, loại đất {loai}')
+    return to, thua
+
+
 def doc_ban_do(con, so_to: str | None = None) -> list:
     """Các thửa đã nhập bản vẽ (lọc theo tờ), kèm hộ (theo số tờ / số thửa của hồ sơ) và trạng thái đồng thuận."""
     if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (BANG,)).fetchone():
@@ -502,13 +587,51 @@ def doc_ban_do(con, so_to: str | None = None) -> list:
     if 'dt_nguyen_thua' in {r[1] for r in con.execute('PRAGMA table_info(thua)')}:
         nguyen = {r[0]: r[1] for r in con.execute('SELECT ma_thua, dt_nguyen_thua FROM thua')}
     kq = []
+    co_ct = co_cot_chi_tiet(con)
     sql = f'SELECT * FROM {BANG}' + (' WHERE so_to = ?' if so_to else '') + ' ORDER BY so_to, CAST(so_thua AS INTEGER), so_thua'
     for r in con.execute(sql, (so_to,) if so_to else ()):
         k = cm.get((_khoa(r['so_to']), _khoa(r['so_thua'])))
         ma = k[1] if k else None
+        ct = r['chi_tiet'] if co_ct else ''
+        try:
+            ct = json.loads(ct) if ct else {}
+        except ValueError:
+            ct = {}
         kq.append(ThuaBanDo(r['so_to'], r['so_thua'], r['loai_dat'], json.loads(r['toa_do']), r['dt_hinh'], r['dt_trong_ranh'], ma,
                             ten.get(ma, ''), tt.get(ma, 'chua') if ma is not None else 'khong_gan',
-                            k[2] if k else None, nguyen.get(k[0]) if k else None))
+                            k[2] if k else None, nguyen.get(k[0]) if k else None, r['dt_ban_ve'], ct, k[0] if k else None))
+    return kq
+
+
+def ds_khoa(con) -> set:
+    """{(tờ, thửa) chuẩn hóa} các thửa đã lưu trong bản đồ dự án."""
+    if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (BANG,)).fetchone():
+        return set()
+    return {(_khoa(r[0]), _khoa(r[1])) for r in con.execute(f'SELECT so_to, so_thua FROM {BANG}')}
+
+
+def gop_ket_qua(ds: list) -> KetQuaCad:
+    """Gộp kết quả phân tích của nhiều file (nhiều lớp KML mở cùng lúc). Thửa trùng số tờ, số thửa: giữ thửa của file đầu, báo."""
+    if len(ds) == 1:
+        return ds[0]
+    kq = KetQuaCad(nguon=', '.join(x.nguon for x in ds if x.nguon))
+    da = set()
+    for x in ds:
+        for t in x.thua:
+            k = (_khoa(t.so_to), _khoa(t.so_thua))
+            if k in da:
+                kq.canh_bao.append(f'Thửa {t.so_thua} tờ {t.so_to} có ở nhiều file: lấy file đầu tiên.')
+                continue
+            da.add(k)
+            kq.thua.append(t)
+        kq.canh_bao += x.canh_bao
+        kq.ranh_vung += x.ranh_vung
+        kq.ranh_dong += x.ranh_dong
+        kq.chua_tach += x.chua_tach
+        kq.khong_khep += x.khong_khep
+    kq.lop_thua = '; '.join(sorted({x.lop_thua for x in ds if x.lop_thua}))
+    kq.lop_ranh = '; '.join(sorted({x.lop_ranh for x in ds if x.lop_ranh}))
+    kq.so_to = ', '.join(sorted({x.so_to for x in ds if x.so_to}))
     return kq
 
 

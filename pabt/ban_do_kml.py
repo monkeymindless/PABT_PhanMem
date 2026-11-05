@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 import html
+import math
 import os
 import re
 import xml.etree.ElementTree as ET
@@ -86,11 +87,12 @@ def _toa_do(chu: str) -> list:
     return kq
 
 
-def _vong(e) -> list:
+def _vong(e, giu_kin: bool = False) -> list:
+    """Tọa độ trong phần tử. Vòng đa giác: bỏ điểm cuối trùng điểm đầu. giu_kin (đường LineString): giữ - đường khép kín mà mất đoạn cuối thì thửa vẽ bằng một đường liền bị hở."""
     for c in e.iter():
         if _the(c) == 'coordinates':
             p = _toa_do(''.join(c.itertext()) if c.text is None else c.text)
-            if len(p) >= 2 and p[0] == p[-1]:
+            if not giu_kin and len(p) >= 2 and p[0] == p[-1]:
                 p.pop()
             return p
     return []
@@ -110,7 +112,7 @@ def _hinh(geo, pm: PlacemarkKml) -> None:
         if len(ngoai) >= 3:
             pm.da_giac.append((ngoai, lo))
     elif t == 'LineString':
-        p = _vong(geo)
+        p = _vong(geo, giu_kin=True)
         if len(p) >= 2:
             pm.duong.append(p)
     elif t == 'Point':
@@ -212,10 +214,19 @@ def gom_cum_nhan_thua(diem: list) -> list:
     return ra
 
 
+def la_vong_moc_wgs(vong: list) -> bool:
+    """Vòng tròn nhỏ quanh cọc mốc (tọa độ độ): ước lượng cạnh khung theo mét."""
+    if len(vong) < SO_DINH_VONG_MOC:
+        return False
+    xs, ys = [p[0] for p in vong], [p[1] for p in vong]
+    kx = 111320.0 * max(0.2, abs(math.cos(math.radians(ys[0]))))
+    return max((max(xs) - min(xs)) * kx, (max(ys) - min(ys)) * 110540.0) < CO_VONG_MOC
+
+
 def tom_tat_cad(ds: list) -> str:
     """Tóm tắt lớp KML CAD (đường ranh, nhãn thửa, mốc, ghi chú) — cùng nội dung với LARC Mobile."""
-    n_duong = sum(len(pm.duong) for pm in ds)
-    n_vung = sum(len(pm.da_giac) for pm in ds)
+    n_duong = sum(1 for pm in ds for d in pm.duong if not la_vong_moc_wgs(d))   # vòng tròn quanh cọc mốc không phải đường ranh, đa giác thửa
+    n_vung = sum(1 for pm in ds for n, _lo in pm.da_giac if not la_vong_moc_wgs(n))
     loai = [loai_nhan(pm.ten, pm.lop_cad) for pm in ds if pm.diem]
     n_thua = sum(1 for x in loai if x == 'thua')
     n_moc = sum(1 for x in loai if x == 'moc')
@@ -447,16 +458,33 @@ def so_hieu(pm: PlacemarkKml, so_to_mac_dinh: str = '') -> tuple:
     return chuan(to) if to else '', chuan(thua) if thua else '', _lay(d, _KHOA_LOAI).upper(), dt
 
 
+def la_ten_ranh(chu: str) -> bool:
+    """Tên có từ "ranh" (không dấu, không phân biệt hoa thường)."""
+    return bool(_RE_RANH.search(_khoa(chu).replace('_', ' ')))
+
+
 def la_ranh(pm: PlacemarkKml) -> bool:
     """Đa giác ranh thu hồi / ranh dự án (tên hoặc thư mục có chữ "ranh")."""
-    return bool(_RE_RANH.search(_khoa(f'{pm.ten} {pm.thu_muc}').replace('_', ' ')))
+    return la_ten_ranh(f'{pm.ten} {pm.thu_muc}')
 
 
 def phan_tich_kml(file, so_to: str | None = None, kinh_tuyen: float | None = None) -> KetQuaCad:
     """File .kml / .kmz -> KetQuaCad (thửa tọa độ VN-2000 theo kinh tuyến trục) - xem trước rồi ban_do_cad.luu như bản vẽ .dxf."""
-    from .toa_do import chu_kinh_tuyen, kinh_tuyen_truc, wgs84_sang_vn2000
+    from .toa_do import chu_kinh_tuyen, co_dinh_datum, kinh_tuyen_truc, wgs84_sang_vn2000
     kt = kinh_tuyen if kinh_tuyen is not None else kinh_tuyen_truc()
-    ds = doc_kml(file)
+    with co_dinh_datum():
+        return _phan_tich_ds(doc_kml(file), file, so_to, kt, chu_kinh_tuyen, wgs84_sang_vn2000)
+
+
+def phan_tich_du_lieu(xml: bytes, ten: str, so_to: str | None = None, kinh_tuyen: float | None = None) -> KetQuaCad:
+    """Như phan_tich_kml nhưng từ nội dung XML (lớp KML đã lưu trong dự án, không còn file gốc)."""
+    from .toa_do import chu_kinh_tuyen, co_dinh_datum, kinh_tuyen_truc, wgs84_sang_vn2000
+    kt = kinh_tuyen if kinh_tuyen is not None else kinh_tuyen_truc()
+    with co_dinh_datum():
+        return _phan_tich_ds(doc_kml_xml(xml, ten), ten, so_to, kt, chu_kinh_tuyen, wgs84_sang_vn2000)
+
+
+def _phan_tich_ds(ds, file, so_to, kt, chu_kinh_tuyen, wgs84_sang_vn2000) -> KetQuaCad:
     kq = KetQuaCad(nguon=Path(file).name, lop_thua=f'KML (kinh tuyến trục {chu_kinh_tuyen(kt)})', so_to=str(so_to or ''))
 
     def doi(vong):
@@ -514,10 +542,14 @@ def phan_tich_kml(file, so_to: str | None = None, kinh_tuyen: float | None = Non
         so_duong = sum(len(pm.duong) for pm in ds)
         so_nhan = sum(1 for pm in ds if pm.diem and pm.ten)
         if so_duong:
+            # bản vẽ đường của phần mềm CAD (không có đa giác thửa): tự ghép lưới thửa thành vùng rồi gán nhãn (ban_do_ghep)
+            from . import ban_do_ghep
+            ghep = ban_do_ghep.ghep_thua(ds, kt, str(so_to or ''), Path(file).name, ranh)
+            if ghep.thua:
+                return ghep
             kq.canh_bao.append(f'File là bản vẽ đường của phần mềm CAD ({so_duong} đường lưới thửa / ranh, {so_nhan} nhãn số thửa, loại đất, mốc…): không '
-                               'có vùng thửa (đa giác) nên không tạo được thửa. Xem bản vẽ này bằng "Mở KML / KMZ để xem…" trên Bản đồ thửa đất '
-                               '(lưới thửa, ranh Level, số thửa, mốc); muốn nhập thửa vào dự án: xuất lại từ phần mềm địa chính dạng vùng '
-                               '(polygon) hoặc dùng bản vẽ .dxf.')
+                               'ghép được vùng thửa nào có số thửa (lưới thửa chưa khép kín). Bản vẽ vẫn hiện trên bản đồ (lưới thửa, ranh, số thửa, '
+                               'mốc); muốn tô màu theo thửa: xuất lại từ phần mềm địa chính dạng vùng (polygon) hoặc dùng bản vẽ .dxf.')
         else:
             kq.canh_bao.append('File không có đa giác thửa nào đọc được số thửa / lô.')
     kq.so_to = kq.so_to or (kq.thua[0].so_to if kq.thua else '')

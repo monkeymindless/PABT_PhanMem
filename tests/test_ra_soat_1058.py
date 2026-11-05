@@ -94,7 +94,7 @@ class TestCsdl(unittest.TestCase):
         cm = ban_do_cad.chi_muc_thua(self.con)
         self.assertEqual(cm[(ban_do_cad._khoa('5'), ban_do_cad._khoa('12'))][1], 1)     # gắn hộ chủ đất
         kq = ban_do_cad.KetQuaCad.__new__(ban_do_cad.KetQuaCad)
-        t = mock.Mock(so_to='5', so_thua='12', loai_dat='CLN', dt_ban_ve=None, dt_hinh=450, dt_trong_ranh=450, toa_do=[], nhan='', lop='')
+        t = mock.Mock(so_to='5', so_thua='12', loai_dat='CLN', dt_ban_ve=None, dt_hinh=450, dt_trong_ranh=450, toa_do=[], nhan='', lop='', chi_tiet={})
         kq.thua, kq.nguon, kq.so_to = [t], 'x', '5'
         r = ban_do_cad.luu(self.con, kq, {(ban_do_cad._khoa('5'), ban_do_cad._khoa('12'))})
         self.assertEqual((r['cap_nhat'], len(r['nhieu_dong'])), (0, 1))

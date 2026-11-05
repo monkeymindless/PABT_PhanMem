@@ -369,6 +369,7 @@ CREATE TABLE IF NOT EXISTS thua_ban_do (
     lop TEXT NOT NULL DEFAULT '',
     nguon TEXT NOT NULL DEFAULT '',     -- tên file .dxf
     luc TEXT NOT NULL,
+    chi_tiet TEXT NOT NULL DEFAULT '',  -- JSON (bản vẽ đường - ban_do_ghep): đối chiếu với nhãn, các phần DT, mốc, ghi chú
     UNIQUE (so_to, so_thua)
 );
 

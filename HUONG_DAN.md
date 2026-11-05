@@ -643,14 +643,19 @@ dưới phải. Hộp thoại cao hơn màn hình: phần thân có thanh cuộn
 - **Cài đặt → Cấu hình nghiệp vụ…**: số ngày (niêm yết, đối thoại, thẩm định, thông báo thu hồi đất nông nghiệp / phi nông nghiệp,
   vận động trước cưỡng chế), căn cứ pháp lý, mức kinh phí tổ chức thực hiện và tỷ lệ phân bổ, ngưỡng kiểm tra, che CCCD bản dự
   thảo, thông tin cơ quan. Bấm Lưu là áp dụng ngay; "Khôi phục mặc định…" bỏ mọi sửa đổi. Quy trình 16 bước hiện thời hạn theo cấu hình.
-- **Dữ liệu → Nhập bản vẽ CAD (.dxf)…**: chọn lớp ranh thửa, lớp ranh thu hồi (nếu có), số tờ; phần mềm đọc số thửa / diện tích /
-  loại đất trong nhãn, đo diện tích hình và phần nằm trong ranh thu hồi, đối chiếu với hồ sơ; đánh dấu thửa nào cập nhật diện tích
-  thu hồi theo bản vẽ. **Dữ liệu → Bản đồ thửa đất**: tô xanh thửa hộ đã đồng thuận, đỏ chưa đồng thuận, vàng chưa lấy ý
-  kiến, xám thửa không có trong hồ sơ; bấm (không kéo) vào thửa mở hồ sơ hộ, ô "Số thửa → Enter" nhảy tới thửa, cuộn chuột hoặc
-  nút **+ / − / Vừa** góc bản đồ để phóng. **Mở KML / KMZ để xem…** đọc bản vẽ MicroStation / gCadas giống điện thoại: lưới thửa
-  và đường ranh (Level) đúng màu, số thửa / loại đất / diện tích là chữ (không còn chỉ chấm), mốc ranh hình thoi, ghi chú quy hoạch;
-  công tắc 4 lớp (Lưới thửa & ranh · Số thửa, loại đất, DT · Ranh mốc · Ghi chú); bấm đường / nhãn / mốc xem thuộc tính (kèm VN-2000);
-  bảng **Tra cứu** dưới bản đồ lọc rồi **Xem** bay tới. Muốn đưa ranh thửa vào dự án: **Nhập bản đồ…** (đa giác / DXF).
+- **Dữ liệu → Bản đồ thửa đất**: một cửa sổ cho cả xem, nhập và theo dõi. Bản đồ bên trái, bảng thông tin bên phải (kéo **thanh chia** giữa hai bên để chỉnh to nhỏ, nút **Ẩn bảng** để bản đồ chiếm trọn).
+  - **Mở bản đồ (.kml, .kmz, .dxf)…**: đặt bản vẽ lên màn hình và tự phân tích. File KML / KMZ của MicroStation, gCadas thường chỉ có đường và nhãn, không có vùng thửa: phần mềm tự ghép lưới thửa thành ô, gán số thửa,
+    loại đất, diện tích, mốc ranh, ghi chú; nhận ra ranh thu hồi (đường đi qua các vòng mốc) và số tờ (nhãn "Tờ số n", không vượt đường ranh tờ). Chưa ghi gì vào dự án cho tới khi lưu. Bản vẽ .dxf: chọn lớp ranh thửa, lớp ranh thu hồi ở thẻ **Nhập vào dự án**.
+  - **Bấm ô thửa**: bảng bên phải hiện số tờ, số thửa, loại đất, DT thửa, DT thu hồi, hộ, trạng thái, đối chiếu, mốc ranh, ghi chú, tọa độ VN-2000 và GPS. **Nhấp đúp**: mở phương án hộ. Chuột phải: thêm các lệnh.
+  - **Độ chính xác**: DT thửa so hình với nhãn bản vẽ; DT thu hồi tính hình học theo ranh rồi đối chiếu với nhãn "(xxx)" (nhãn là DT từng phần, có phần trong ranh, có phần ngoài ranh; nhãn nhỏ người vẽ hay đặt sang thửa bên cạnh). Khớp thì lấy số trên nhãn; không khớp thì hiện
+    **CẦN XEM LẠI** kèm lý do, lấy số hình học và không tự đánh dấu cập nhật hồ sơ. Vùng nhiều số thửa không xác định được chủ, số thửa không có đủ ranh khép kín: báo, không đoán. Kết quả chỉ đúng tới mức bản vẽ gốc đúng; đối chiếu lại với hồ sơ đo đạc khi lập phương án.
+  - **Nhập vào dự án** (thẻ bên phải): bảng thửa kèm hồ sơ hiện tại và đối chiếu; **Đánh dấu thửa khớp** chỉ đánh dấu thửa có trong hồ sơ, đối chiếu khớp; **Lưu vào dự án** ghi ô thửa và lớp bản vẽ, cập nhật DT thu hồi của thửa được đánh dấu.
+  - **Gắn hộ…** (bảng bên phải, chuột phải): thêm thửa vào hồ sơ hộ đã có, tạo hộ mới theo tên, hoặc chuyển từ hộ khác; tên hộ hiện trên ô thửa khi phóng đủ gần, màu tô theo trạng thái hộ. **Sửa số tờ, thửa…**: sửa khi bản vẽ đọc nhầm nhãn (chỉ trên bản đồ, không đổi hồ sơ hộ).
+  - **Tô màu**: ô **Màu theo** (đồng thuận, tiến độ theo hộ, lệch diện tích, phạm vi thu hồi), **Độ đậm**, công tắc **Tô màu**, **Tên hộ**; công tắc lớp địa chính (lưới thửa & ranh, số thửa / loại đất / DT, ranh mốc, ghi chú). Nhìn xa phần mềm ẩn bớt chữ cho khỏi rối, phóng gần hiện đủ.
+  - **Đo đường, Đo vùng, Tọa độ**: bấm từng điểm (tự bắt đúng đỉnh thửa, giữ Alt để không bắt), kéo vẫn di chuyển bản đồ, nhấp đúp hoặc chuột phải kết thúc, Backspace bỏ điểm cuối, Esc thôi đo. Đo trên mặt chiếu VN-2000 như bản đồ địa chính.
+  - **La bàn** trên bản đồ: kéo vòng ngoài xoay bản đồ, bấm chữ N về hướng Bắc (Bắc lưới VN-2000), mũi tên di chuyển; nút **+ / −**, thanh trượt, **Vừa** để phóng.
+  - **Định vị**: thửa đang chọn (bay tới ở mức ảnh nét nhất), tọa độ gõ tay (GPS "11.0217, 106.9567" hoặc VN-2000 "X 1219655 Y 410596" đo ngoài thực địa), vị trí của máy (dịch vụ định vị Windows, hiện vòng sai số; định vị theo Wi-Fi chỉ để tham khảo). Ảnh vệ tinh có thể lệch vài mét so với tọa độ đo đạc: ranh thửa theo tọa độ, không theo ảnh.
+  - **Nền bản đồ**: Vệ tinh, Vệ tinh + tên đường, Bản đồ đường phố, Địa hình, **Không nền** (không tải ảnh, tô màu nhẹ máy nhất, dùng được khi mất mạng).
 - **Quét giấy tờ (OCR)…** (cửa sổ lập phương án, trang Dự toán) và **Dán tài sản → Mở file**: chọn PDF ảnh OCR (chủ yếu), ảnh chụp,
   Word, Excel. Phần mềm tự lọc dòng tài sản / viết tay, bỏ mẫu in hành chính. PDF lớp chữ thưa hoặc Word/Excel chỉ có ảnh nhúng thì
   nhận dạng chữ trên máy (Tesseract, như đọc quyết định scan) — chạy nền, cửa sổ vẫn kéo được, nút **Dừng**. Ảnh xem trước thu cỡ
