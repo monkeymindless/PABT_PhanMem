@@ -82,8 +82,10 @@ class TestBanIn(unittest.TestCase):
         kq = in_an.xuat_hang_loat(self.con, [1, 2], self.td / 'loat', bang_tong_hop=True)
         self.assertEqual(len(kq['excel']), 1)                          # 1.0.19+: phương án chi tiết là Word, chỉ bảng tổng hợp là Excel
         self.assertTrue(all(p.exists() for p in kq['excel']))
+        self.assertEqual(len(kq['word']), 2)                           # mỗi hộ một bản Word
+        self.assertTrue(all(p.exists() for p in kq['word']))
         ho_ten = self.con.execute('SELECT ho_ten FROM ho WHERE ma_ho = 1').fetchone()[0]
-        self.assertTrue(kq['excel'][0].name.startswith('PA_001_ma1_' + ho_ten))
+        self.assertTrue(kq['word'][0].name.startswith('PA_001_ma1_' + ho_ten), [p.name for p in kq['word']])
 
     @unittest.skipUnless(sys.platform == 'win32' and os.environ.get('PABT_THU_EXCEL', '1') != '0', 'cần Microsoft Excel (Windows)')
     def test_xuat_pdf_bang_excel_that(self):

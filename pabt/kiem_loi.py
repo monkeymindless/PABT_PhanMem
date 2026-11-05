@@ -156,17 +156,8 @@ def la_quan_he_chu_dat_va_tai_san(ds_ho_thua_cung_cap) -> bool:
 
 
 # ---------------------------------------------------------------- kiểm tra
-def kiem_tra(con, dm: DanhMuc | None = None) -> list:
-    """Toàn bộ lỗi / cảnh báo của dự án (danh sách Loi), sắp theo hộ."""
-    from .cay_trong import DongMatDo, phan_bo_mat_do, quy_chuan_mat_do, ten_goc
-    kq = []
-    bc = BoiCanh.tu(con)
-    dm = dm or DanhMuc(con)
-
-    def them(muc_do, nhom, nd, ma=None, ten='', sua=False):
-        kq.append(Loi(muc_do, nhom, nd, ma, ten, sua))
-
-    # ---- thông tin dự án
+def _kiem_du_an(con, them) -> None:
+    """Thông tin dự án: ô in trên bản in còn trống, lỗi font."""
     da = con.execute('SELECT * FROM du_an WHERE id = 1').fetchone()
     if da is not None:
         for k, ten in (('ten', 'Tên dự án'), ('ten_dia_ban', 'Tên xã, phường'), ('nguoi_ky', 'Người ký'),
@@ -176,8 +167,10 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
         for k in ('ten', 'ten_day_du', 'don_vi_lap', 'ten_dia_ban'):
             if k in da.keys() and loi_font(da[k]):
                 them(LOI, 'Font chữ', f'Thông tin dự án ({k}): {loi_font(da[k])}.')
-    # ---- hộ
-    ho = [dict(r) for r in con.execute('SELECT * FROM ho ORDER BY thu_tu, ma_ho')]
+
+
+def _kiem_ho(ho: list, them) -> None:
+    """Thông tin từng hộ (họ tên, địa chỉ, font, CCCD, ngày cấp, điện thoại) và trùng CCCD / họ tên + địa chỉ giữa các hộ."""
     cccd = {}
     ten_dc = {}
     for h in ho:
@@ -232,12 +225,12 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
             for h in ds:
                 them(CANH_BAO, 'Thông tin hộ', 'Trùng họ tên và địa chỉ với hộ ' +
                      ', '.join(f'{x["thu_tu"]}. {x["ho_ten"]}' for x in ds if x is not h) + '.', h['ma_ho'], h['ho_ten'])
+
+
+def _kiem_thua(bc, ho: list, tat_ca: dict, them) -> None:
+    """Từng thửa (DT thu hồi, số tờ / thửa, loại đất) và một thửa có ở nhiều hộ."""
     ten_ho = {h['ma_ho']: h['ho_ten'] for h in ho}
     ho_theo_ma = {h['ma_ho']: h for h in ho}
-    # đọc phương án cả dự án một lần (3 truy vấn) - trước đây doc_phuong_an mỗi hộ: 5.000 hộ = 15.000 truy vấn. 1.0.04: đọc TRƯỚC
-    # phần thửa (quy tắc tài sản trên đất của tổ chức / hộ khác cần phương án)
-    tat_ca = doc_tat_ca_phuong_an(con)
-    # ---- thửa
     vi_tri_thua = {}
     thua_theo_vi_tri = {}
     for t in bc.thua.values():
@@ -272,13 +265,10 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
             for ma in ds:
                 them(CANH_BAO, 'Thửa đất', f'Thửa {so} tờ {to} cũng có ở hộ khác ({", ".join(ten_ho.get(x, "") for x in ds if x != ma)}): '
                      'kiểm tra đồng sử dụng / trùng hồ sơ.', ma, ten_ho.get(ma, ''))
-    # ---- phương án từng hộ
-    da_sua = {r[0] for r in con.execute('SELECT ma_ho FROM ho WHERE luu_luc IS NOT NULL')}
-    # phương án cả dự án đã đọc một lần ở trên (tat_ca)
-    # kết quả tính + kiểm tra đang nhớ (dùng chung) nếu còn đúng; không thì tính ngay trên phương án vừa đọc (không đọc lại lần 2)
-    kqh = (ket_qua_ho_san(con) or {}) if type(bc) is BoiCanh else {}
-    mat_do = {}                                         # quy chuẩn mật độ theo loại cây: tra một lần
-    # ngưỡng của "Bác sĩ hồ sơ" (0.9.86) - hồ sơ địa phương mục quy_tac_kiem_tra
+
+
+def _nguong_bac_si(con):
+    """Ngưỡng của "Bác sĩ hồ sơ" (0.9.86) - hồ sơ địa phương mục quy_tac_kiem_tra. Trả (tỷ lệ tối đa, nhân khẩu cảnh báo, cấp địa bàn, hạn mức đất ở)."""
     from . import dia_phuong
     from .lap_pa import bo_dau as _bd
     qt = dia_phuong.lay('quy_tac_kiem_tra') or {}
@@ -288,6 +278,133 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
     khoa_cap = {'xa': 'xa', 'phuong': 'phuong', 'dac khu': 'dac_khu'}.get(_bd(cap).lower(), '')
     v = (qt.get('han_muc_dat_o_m2') or {}).get(khoa_cap)
     han_muc = D(str(v)) if v is not None else None
+    return tl_toi_da, nk_canh_bao, cap, han_muc
+
+
+def _kiem_dien_tich_muc_1(bc, ma, ten, pa, ds_kt, them) -> None:
+    """Kết quả kiem_tra_pa của hộ; DT bồi thường mục 1 LỚN HƠN DT thu hồi của thửa: lỗi (kiem_tra_pa chỉ báo "khác" - lệch nhỏ hơn có thể do không bồi thường hết)."""
+    dt_mot = {}
+    for d in pa.dat:
+        dt_mot[d.ma_thua] = dt_mot.get(d.ma_thua, KHONG) + d.dien_tich
+    vuot = {}
+    for t in bc.thua_cua(ma):
+        dtt = dt_mot.get(t['ma_thua'], KHONG)
+        if dtt > D(t['dt_thu_hoi'] or 0):
+            vuot[f'Thửa {t["so_thua"]} tờ {t["so_to"]}: tổng DT ở mục 1'] = (t, dtt)
+    for x in ds_kt:
+        khop = next((k for k in vuot if x.startswith(k)), None)
+        if khop:
+            t, dtt = vuot[khop]
+            them(LOI, BAC_SI, f'Thửa {t["so_thua"]} tờ {t["so_to"]}: diện tích bồi thường ở mục 1 ({so_vn(dtt)} m²) LỚN HƠN '
+                 f'diện tích thu hồi ({so_vn(t["dt_thu_hoi"])} m²).', ma, ten)
+            continue
+        them(LOI if 'chưa có' in x or 'không gắn' in x else CANH_BAO, 'Phương án', x, ma, ten)
+
+
+def _kiem_ty_le_toi_da(ma, ten, pa, tl_toi_da, them) -> None:
+    """Tỷ lệ chất lượng còn lại / tỷ lệ bồi thường của đất, nhà, công trình, cây, vật nuôi không quá ngưỡng (mặc định 100%)."""
+    for i, d in enumerate(pa.dat, start=1):
+        if d.ty_le is not None and he_so(d.ty_le) > tl_toi_da:
+            them(LOI, BAC_SI, f'Dòng 1.{i}: tỷ lệ {so_vn(he_so(d.ty_le) * 100)}% vượt {so_vn(tl_toi_da * 100)}%.', ma, ten)
+    for muc in (2, 3, MUC_VN):
+        for i, d in enumerate(pa.khoan[muc], start=1):
+            if d.ty_le is not None and he_so(d.ty_le) > tl_toi_da:
+                them(LOI, BAC_SI, f'Dòng {so_muc(muc)}.{i} ({d.ten[:40]}): tỷ lệ chất lượng / bồi thường '
+                     f'{so_vn(he_so(d.ty_le) * 100)}% vượt {so_vn(tl_toi_da * 100)}%.', ma, ten)
+
+
+def _kiem_nhan_khau(h, ma, ten, pa, nk_canh_bao, them) -> None:
+    """Hỗ trợ tính theo nhân khẩu mà hộ chưa nhập / khác số nhân khẩu; số nhân khẩu bất thường."""
+    nk = h['nhan_khau']
+    od, tnk = tap_ma_on_dinh(), tap_ma_theo_nk()
+    theo_nk = [d for d in pa.khoan[4] if d.ma in od or d.ma in tnk]
+    if theo_nk and not nk:
+        them(LOI, BAC_SI, f'Có hỗ trợ tính theo nhân khẩu ({theo_nk[0].ten[:40]}) nhưng hộ chưa nhập số nhân khẩu.', ma, ten)
+    elif nk:
+        for d in pa.khoan[4]:
+            if d.ma in od and d.so_luong != D(nk):
+                them(CANH_BAO, BAC_SI, f'Hỗ trợ ổn định đời sống tính {so_vn(d.so_luong)} nhân khẩu, hồ sơ hộ ghi {nk} nhân '
+                     'khẩu.', ma, ten)
+        if int(nk) > nk_canh_bao:
+            them(CANH_BAO, BAC_SI, f'Số nhân khẩu {nk} lớn bất thường (trên {nk_canh_bao}): kiểm tra lại hộ khẩu / xác nhận '
+                 'của UBND cấp xã.', ma, ten)
+
+
+def _kiem_so_lieu_dong(ma, ten, pa, them) -> None:
+    """Từng dòng phương án: lỗi font, số âm, tỷ lệ dưới 100% chưa ghi lý do."""
+    for muc in MUC_KHOAN:
+        sm = so_muc(muc)
+        for i, d in enumerate(pa.khoan[muc], start=1):
+            for nhan, v in (('tên', d.ten), ('ghi chú', d.ghi_chu), ('quy cách', d.quy_cach)):
+                lf = loi_font(v)
+                if lf:
+                    them(LOI, 'Font chữ', f'Dòng {sm}.{i} ({nhan}): {lf}.', ma, ten, 'tổ hợp' in lf)
+            if d.so_luong < 0 or d.don_gia < 0:
+                them(LOI, 'Số liệu, tổng tiền', f'Dòng {sm}.{i} ({d.ten[:40]}): số âm.', ma, ten)
+    for i, d in enumerate(pa.dat, start=1):
+        if d.dien_tich < 0:
+            them(LOI, 'Số liệu, tổng tiền', f'Dòng 1.{i}: diện tích âm.', ma, ten)
+        tl = he_so(d.ty_le)
+        if tl < 1 and not (d.ghi_chu or '').strip():
+            them(CANH_BAO, 'Phương án', f'Dòng 1.{i}: tỷ lệ bồi thường {so_vn(tl * 100)}% chưa ghi lý do ở ghi chú.', ma, ten)
+
+
+def _kiem_mat_do_cay(con, bc, dm, ma, ten, pa, mat_do: dict, them) -> None:
+    """Cây vượt mật độ trên diện tích đất nông nghiệp thu hồi. mat_do: quy chuẩn theo loại cây, tra một lần cho cả dự án."""
+    from .cay_trong import DongMatDo, phan_bo_mat_do, quy_chuan_mat_do, ten_goc
+    dt_nn = sum((d.dien_tich for d in pa.dat if (bc.loai_dat.get(d.loai_dat.upper(), '') or '').lower().startswith('nông')
+                 or d.loai_dat.upper() in ('CLN', 'HNK', 'LUC', 'LUK', 'BHK', 'NHK', 'RSX', 'NTS', 'CHN')), KHONG)
+    # 30/10/2026: mọi loại cây cùng chia diện tích - cây đơn giá cao tính trước (cay_trong.phan_bo_mat_do); dòng đã tách "Ngoài mật độ"
+    # không tính
+    dong_md = []
+    for d in pa.khoan[3]:
+        if d.dvt.strip().lower() != 'cây' or he_so(d.ty_le) == 0 or d.so_luong != int(d.so_luong) \
+                or (d.quy_cach or '').startswith(('Ngoài mật độ (', 'Cây trồng xen (', 'Cây xen vượt ')):
+            continue
+        m = dm.lay(d.ma or d.ma_tuong_duong)
+        kq_md = (ten_goc(d.ten), m.ten if m else d.ten, m.can_cu if m else '')
+        q = mat_do.get(kq_md)
+        if q is None:
+            q = mat_do[kq_md] = quy_chuan_mat_do(con, *kq_md)
+        dong_md.append(DongMatDo(kq_md[0], int(d.so_luong), q.mat_do, d.don_gia))
+    if dt_nn > 0 and any(x.mat_do for x in dong_md):
+        phan_bo_mat_do(dong_md, dt_nn)
+        vuot = {}
+        for x in dong_md:
+            if x.ngoai:
+                vuot[x.ten] = vuot.get(x.ten, 0) + x.ngoai
+        if vuot:
+            them(CANH_BAO, 'Phương án', 'Cây vượt mật độ trên ' + f'{so_vn(dt_nn)} m² đất NN thu hồi (cây đơn giá cao tính trước): '
+                 + ', '.join(f'{g} {n} cây' for g, n in vuot.items()) + ' - dùng "Tính mật độ…" để tách cây vượt mật độ.', ma, ten)
+
+
+def _kiem_tien_do(h, ma, ten, k, them) -> None:
+    """Tiến độ phê duyệt / chi trả / bàn giao có khớp nhau, khớp tổng phương án không."""
+    if h.get('da_chi_tra') and not h.get('da_phe_duyet'):
+        them(LOI, 'Tiến độ', 'Đã chi trả nhưng chưa ghi phê duyệt phương án.', ma, ten)
+    if h.get('da_ban_giao') and not h.get('da_phe_duyet'):
+        them(CANH_BAO, 'Tiến độ', 'Đã đánh dấu bàn giao mặt bằng nhưng chưa có quyết định phê duyệt. Nếu hộ chưa bàn giao thật: '
+             'Tiến độ chi trả & Bàn giao, chọn hộ, "Bàn giao mặt bằng các hộ đã chọn…", bỏ tích "Đã bàn giao mặt bằng".', ma, ten)
+    elif h.get('da_ban_giao') and not h.get('da_chi_tra'):
+        them(CANH_BAO, 'Tiến độ', 'Đã bàn giao mặt bằng nhưng chưa ghi chi trả.', ma, ten)
+    if h.get('da_phe_duyet') and str(h.get('qd_so_tien') or '').strip() and D(h['qd_so_tien']) != k.tong:
+        them(CANH_BAO, 'Tiến độ', f'Số tiền phê duyệt {vn(h["qd_so_tien"])} khác tổng phương án hiện tại {vn(k.tong)} '
+             '(phương án sửa sau khi phê duyệt?).', ma, ten)
+    if h.get('da_chi_tra') and str(h.get('chi_tra_so_tien') or '').strip() and str(h.get('qd_so_tien') or '').strip() \
+            and D(h['chi_tra_so_tien']) != D(h['qd_so_tien']):
+        them(CANH_BAO, 'Tiến độ', f'Số tiền đã chi {vn(h["chi_tra_so_tien"])} khác số tiền phê duyệt {vn(h["qd_so_tien"])}.',
+             ma, ten)
+    if h.get('da_phe_duyet') and not str(h.get('qd_so') or '').strip():
+        them(CANH_BAO, 'Tiến độ', 'Đã phê duyệt nhưng chưa ghi số quyết định.', ma, ten)
+
+
+def _kiem_phuong_an(con, bc, dm, ho: list, tat_ca: dict, them) -> None:
+    """Phương án từng hộ. tat_ca: phương án cả dự án đã đọc một lần."""
+    da_sua = {r[0] for r in con.execute('SELECT ma_ho FROM ho WHERE luu_luc IS NOT NULL')}
+    # kết quả tính + kiểm tra đang nhớ (dùng chung) nếu còn đúng; không thì tính ngay trên phương án vừa đọc (không đọc lại lần 2)
+    kqh = (ket_qua_ho_san(con) or {}) if type(bc) is BoiCanh else {}
+    mat_do = {}                                         # quy chuẩn mật độ theo loại cây: tra một lần
+    tl_toi_da, nk_canh_bao, cap, han_muc = _nguong_bac_si(con)
     for h in ho:
         ma, ten = h['ma_ho'], h['ho_ten']
         pa = tat_ca.get(ma) or doc_phuong_an(con, ma)
@@ -300,46 +417,9 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
         co_thua = bool(bc.thua_cua(ma))
         if co_thua and not k.co_phuong_an:
             them(CANH_BAO, 'Phương án', 'Hộ có thửa thu hồi nhưng chưa lập phương án.', ma, ten)
-        # DT bồi thường mục 1 LỚN HƠN DT thu hồi của thửa: lỗi (kiem_tra_pa chỉ báo "khác" - lệch nhỏ hơn có thể do không bồi thường hết)
-        dt_mot = {}
-        for d in pa.dat:
-            dt_mot[d.ma_thua] = dt_mot.get(d.ma_thua, KHONG) + d.dien_tich
-        vuot = {}
-        for t in bc.thua_cua(ma):
-            dtt = dt_mot.get(t['ma_thua'], KHONG)
-            if dtt > D(t['dt_thu_hoi'] or 0):
-                vuot[f'Thửa {t["so_thua"]} tờ {t["so_to"]}: tổng DT ở mục 1'] = (t, dtt)
-        for x in ds_kt:
-            khop = next((k for k in vuot if x.startswith(k)), None)
-            if khop:
-                t, dtt = vuot[khop]
-                them(LOI, BAC_SI, f'Thửa {t["so_thua"]} tờ {t["so_to"]}: diện tích bồi thường ở mục 1 ({so_vn(dtt)} m²) LỚN HƠN '
-                     f'diện tích thu hồi ({so_vn(t["dt_thu_hoi"])} m²).', ma, ten)
-                continue
-            them(LOI if 'chưa có' in x or 'không gắn' in x else CANH_BAO, 'Phương án', x, ma, ten)
-        # tỷ lệ chất lượng còn lại / tỷ lệ bồi thường của đất, nhà, công trình, cây, vật nuôi không quá ngưỡng (mặc định 100%)
-        for i, d in enumerate(pa.dat, start=1):
-            if d.ty_le is not None and he_so(d.ty_le) > tl_toi_da:
-                them(LOI, BAC_SI, f'Dòng 1.{i}: tỷ lệ {so_vn(he_so(d.ty_le) * 100)}% vượt {so_vn(tl_toi_da * 100)}%.', ma, ten)
-        for muc in (2, 3, MUC_VN):
-            for i, d in enumerate(pa.khoan[muc], start=1):
-                if d.ty_le is not None and he_so(d.ty_le) > tl_toi_da:
-                    them(LOI, BAC_SI, f'Dòng {so_muc(muc)}.{i} ({d.ten[:40]}): tỷ lệ chất lượng / bồi thường '
-                         f'{so_vn(he_so(d.ty_le) * 100)}% vượt {so_vn(tl_toi_da * 100)}%.', ma, ten)
-        # nhân khẩu: hỗ trợ tính theo nhân khẩu mà hộ chưa nhập / khác số nhân khẩu; số nhân khẩu bất thường
-        nk = h['nhan_khau']
-        od, tnk = tap_ma_on_dinh(), tap_ma_theo_nk()
-        theo_nk = [d for d in pa.khoan[4] if d.ma in od or d.ma in tnk]
-        if theo_nk and not nk:
-            them(LOI, BAC_SI, f'Có hỗ trợ tính theo nhân khẩu ({theo_nk[0].ten[:40]}) nhưng hộ chưa nhập số nhân khẩu.', ma, ten)
-        elif nk:
-            for d in pa.khoan[4]:
-                if d.ma in od and d.so_luong != D(nk):
-                    them(CANH_BAO, BAC_SI, f'Hỗ trợ ổn định đời sống tính {so_vn(d.so_luong)} nhân khẩu, hồ sơ hộ ghi {nk} nhân '
-                         'khẩu.', ma, ten)
-            if int(nk) > nk_canh_bao:
-                them(CANH_BAO, BAC_SI, f'Số nhân khẩu {nk} lớn bất thường (trên {nk_canh_bao}): kiểm tra lại hộ khẩu / xác nhận '
-                     'của UBND cấp xã.', ma, ten)
+        _kiem_dien_tich_muc_1(bc, ma, ten, pa, ds_kt, them)
+        _kiem_ty_le_toi_da(ma, ten, pa, tl_toi_da, them)
+        _kiem_nhan_khau(h, ma, ten, pa, nk_canh_bao, them)
         # hạn mức đất ở (theo hồ sơ địa phương - chưa cấu hình thì không kiểm tra)
         if han_muc is not None:
             dt_o = sum((d.dien_tich for d in pa.dat if d.nhom_dat == 'Đất ở'), KHONG)
@@ -349,21 +429,7 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
         if not k.da_luu:                                    # người dùng đã lưu: số 0 là cố ý (không bồi thường mục đó)
             for x in dong_bang_0(pa):
                 them(CANH_BAO, 'Phương án', x, ma, ten)
-        for muc in MUC_KHOAN:
-            sm = so_muc(muc)
-            for i, d in enumerate(pa.khoan[muc], start=1):
-                for nhan, v in (('tên', d.ten), ('ghi chú', d.ghi_chu), ('quy cách', d.quy_cach)):
-                    lf = loi_font(v)
-                    if lf:
-                        them(LOI, 'Font chữ', f'Dòng {sm}.{i} ({nhan}): {lf}.', ma, ten, 'tổ hợp' in lf)
-                if d.so_luong < 0 or d.don_gia < 0:
-                    them(LOI, 'Số liệu, tổng tiền', f'Dòng {sm}.{i} ({d.ten[:40]}): số âm.', ma, ten)
-        for i, d in enumerate(pa.dat, start=1):
-            if d.dien_tich < 0:
-                them(LOI, 'Số liệu, tổng tiền', f'Dòng 1.{i}: diện tích âm.', ma, ten)
-            tl = he_so(d.ty_le)
-            if tl < 1 and not (d.ghi_chu or '').strip():
-                them(CANH_BAO, 'Phương án', f'Dòng 1.{i}: tỷ lệ bồi thường {so_vn(tl * 100)}% chưa ghi lý do ở ghi chú.', ma, ten)
+        _kiem_so_lieu_dong(ma, ten, pa, them)
         # diện tích xây dựng (m²) mục 2 so với DT thu hồi của hộ
         dt_thu_hoi = sum((D(t['dt_thu_hoi'] or 0) for t in bc.thua_cua(ma)), KHONG)
         dt_xd = sum((d.so_luong for d in pa.khoan[2] if d.dvt.replace('2', '²').strip() == 'm²' and he_so(d.ty_le) > 0
@@ -371,53 +437,35 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
         if dt_thu_hoi > 0 and dt_xd > dt_thu_hoi:
             them(CANH_BAO, 'Phương án', f'Diện tích nhà, công trình ở mục 2 ({so_vn(dt_xd)} m²) lớn hơn DT thu hồi '
                  f'({so_vn(dt_thu_hoi)} m²): kiểm tra phần nằm ngoài ranh thu hồi.', ma, ten)
-        # cây vượt mật độ trên diện tích đất nông nghiệp thu hồi
-        dt_nn = sum((d.dien_tich for d in pa.dat if (bc.loai_dat.get(d.loai_dat.upper(), '') or '').lower().startswith('nông')
-                     or d.loai_dat.upper() in ('CLN', 'HNK', 'LUC', 'LUK', 'BHK', 'NHK', 'RSX', 'NTS', 'CHN')), KHONG)
-        # 30/10/2026: mọi loại cây cùng chia diện tích - cây đơn giá cao tính trước (cay_trong.phan_bo_mat_do); dòng đã tách "Ngoài mật độ"
-        # không tính
-        dong_md = []
-        for d in pa.khoan[3]:
-            if d.dvt.strip().lower() != 'cây' or he_so(d.ty_le) == 0 or d.so_luong != int(d.so_luong) \
-                    or (d.quy_cach or '').startswith(('Ngoài mật độ (', 'Cây trồng xen (', 'Cây xen vượt ')):
-                continue
-            m = dm.lay(d.ma or d.ma_tuong_duong)
-            kq_md = (ten_goc(d.ten), m.ten if m else d.ten, m.can_cu if m else '')
-            q = mat_do.get(kq_md)
-            if q is None:
-                q = mat_do[kq_md] = quy_chuan_mat_do(con, *kq_md)
-            dong_md.append(DongMatDo(kq_md[0], int(d.so_luong), q.mat_do, d.don_gia))
-        if dt_nn > 0 and any(x.mat_do for x in dong_md):
-            phan_bo_mat_do(dong_md, dt_nn)
-            vuot = {}
-            for x in dong_md:
-                if x.ngoai:
-                    vuot[x.ten] = vuot.get(x.ten, 0) + x.ngoai
-            if vuot:
-                them(CANH_BAO, 'Phương án', 'Cây vượt mật độ trên ' + f'{so_vn(dt_nn)} m² đất NN thu hồi (cây đơn giá cao tính trước): '
-                     + ', '.join(f'{g} {n} cây' for g, n in vuot.items()) + ' - dùng "Tính mật độ…" để tách cây vượt mật độ.', ma, ten)
-        # tiến độ
-        if h.get('da_chi_tra') and not h.get('da_phe_duyet'):
-            them(LOI, 'Tiến độ', 'Đã chi trả nhưng chưa ghi phê duyệt phương án.', ma, ten)
-        if h.get('da_ban_giao') and not h.get('da_phe_duyet'):
-            them(CANH_BAO, 'Tiến độ', 'Đã đánh dấu bàn giao mặt bằng nhưng chưa có quyết định phê duyệt. Nếu hộ chưa bàn giao thật: '
-                 'Tiến độ chi trả & Bàn giao, chọn hộ, "Bàn giao mặt bằng các hộ đã chọn…", bỏ tích "Đã bàn giao mặt bằng".', ma, ten)
-        elif h.get('da_ban_giao') and not h.get('da_chi_tra'):
-            them(CANH_BAO, 'Tiến độ', 'Đã bàn giao mặt bằng nhưng chưa ghi chi trả.', ma, ten)
-        if h.get('da_phe_duyet') and str(h.get('qd_so_tien') or '').strip() and D(h['qd_so_tien']) != k.tong:
-            them(CANH_BAO, 'Tiến độ', f'Số tiền phê duyệt {vn(h["qd_so_tien"])} khác tổng phương án hiện tại {vn(k.tong)} '
-                 '(phương án sửa sau khi phê duyệt?).', ma, ten)
-        if h.get('da_chi_tra') and str(h.get('chi_tra_so_tien') or '').strip() and str(h.get('qd_so_tien') or '').strip() \
-                and D(h['chi_tra_so_tien']) != D(h['qd_so_tien']):
-            them(CANH_BAO, 'Tiến độ', f'Số tiền đã chi {vn(h["chi_tra_so_tien"])} khác số tiền phê duyệt {vn(h["qd_so_tien"])}.',
-                 ma, ten)
-        if h.get('da_phe_duyet') and not str(h.get('qd_so') or '').strip():
-            them(CANH_BAO, 'Tiến độ', 'Đã phê duyệt nhưng chưa ghi số quyết định.', ma, ten)
-    # ---- đơn giá (dòng áp giá tương đương / nhập tay / khác danh mục)
+        _kiem_mat_do_cay(con, bc, dm, ma, ten, pa, mat_do, them)
+        _kiem_tien_do(h, ma, ten, k, them)
+
+
+def _kiem_don_gia(con, dm, them) -> None:
+    """Đơn giá: dòng áp giá tương đương / nhập tay / khác danh mục."""
     for x in ra_soat_gia(con, dm):
         muc_do = LOI if 'chưa ghi căn cứ' in x['ghi_chu_ra_soat'] or 'không có trong danh mục' in x['ghi_chu_ra_soat'] else CANH_BAO
         them(muc_do, 'Đơn giá', f'Dòng {x["stt"]} ({str(x["ten"])[:50]}): {x["ghi_chu_ra_soat"]}.', x['ma_ho'], x['ho_ten'])
-    # ---- đối chiếu Excel (dự án nhập từ PABT Excel)
+
+
+def kiem_tra(con, dm: DanhMuc | None = None) -> list:
+    """Toàn bộ lỗi / cảnh báo của dự án (danh sách Loi), sắp theo hộ."""
+    kq = []
+    bc = BoiCanh.tu(con)
+    dm = dm or DanhMuc(con)
+
+    def them(muc_do, nhom, nd, ma=None, ten='', sua=False):
+        kq.append(Loi(muc_do, nhom, nd, ma, ten, sua))
+
+    _kiem_du_an(con, them)
+    ho = [dict(r) for r in con.execute('SELECT * FROM ho ORDER BY thu_tu, ma_ho')]
+    _kiem_ho(ho, them)
+    # đọc phương án cả dự án một lần (3 truy vấn) - trước đây doc_phuong_an mỗi hộ: 5.000 hộ = 15.000 truy vấn. 1.0.04: đọc TRƯỚC
+    # phần thửa (quy tắc tài sản trên đất của tổ chức / hộ khác cần phương án)
+    tat_ca = doc_tat_ca_phuong_an(con)
+    _kiem_thua(bc, ho, tat_ca, them)
+    _kiem_phuong_an(con, bc, dm, ho, tat_ca, them)
+    _kiem_don_gia(con, dm, them)
     thu_tu = {h['ma_ho']: h['thu_tu'] for h in ho}
     kq.sort(key=lambda l: (thu_tu.get(l.ma_ho, -1) if l.ma_ho is not None else -1, NHOM.index(l.nhom) if l.nhom in NHOM else 99,
                            l.muc_do != LOI))
