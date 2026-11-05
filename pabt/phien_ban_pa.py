@@ -223,6 +223,37 @@ def tao_v2(con, ma_ho: int, ghi_chu: str = '', nguon: str = V1) -> str:
     return ma
 
 
+def xoa_v2(con, ma_ho: int, ma: str) -> None:
+    """Xóa nhánh nháp V2.n còn mở. Nhánh đang khóa, đang là nguồn của V3: không xóa (V3 phải truy được về nguồn)."""
+    if not _RE_V2.match(ma or ''):
+        raise LoiNhap('Chỉ xóa được nhánh nháp V2.')
+    r = lay(con, ma_ho, ma)
+    if r is None:
+        raise LoiNhap(f'Hộ {ma_ho} không có nhánh {ma}.')
+    if r['khoa']:
+        raise LoiNhap(f'{ma} đang khóa: mở khóa rồi xóa.')
+    v3 = lay(con, ma_ho, V3)
+    if v3 is not None and (v3['cha'] == ma or ma in json.loads(v3['nguon_nhom'] or '{}').values()):
+        raise LoiNhap(f'V3 đang lấy số liệu từ {ma}: đổi nguồn V3 trước khi xóa.')
+    kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'sua_gia', f'xóa nhánh {ma}')
+    with csdl.giao_dich(con):
+        con.execute('DELETE FROM pa_phien_ban WHERE ma_ho = ? AND ma = ?', (ma_ho, ma))
+        csdl.ghi_nhat_ky(con, f'Xóa nhánh dự thảo {ma}', f'Hộ {ma_ho}')
+
+
+def khoi_phuc_v0(con, ma_ho: int, nguon: str) -> None:
+    """Đưa nội dung một phiên bản về số đang lập V0 (khôi phục khi V0 sửa sai). Phiên bản nguồn giữ nguyên."""
+    goc = lay(con, ma_ho, nguon)
+    if goc is None:
+        raise LoiNhap(f'Hộ {ma_ho} không có phiên bản {nguon}.')
+    kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'sua_gia', 'khôi phục phiên bản')
+    with csdl.giao_dich(con):
+        _ap_hien_hanh(con, ma_ho, pa_tu_json(con, ma_ho, goc['du_lieu']), goc['lan'])
+        csdl.ghi_nhat_ky(con, 'Khôi phục số đang lập theo phiên bản', f'Hộ {ma_ho}: theo {nguon}')
+
+
 def tao_v2_tu_y_kien(con, ma_ho: int, noi_dung: str) -> str:
     """Hộ có ý kiến khác phương án: tạo nhánh V2 sẵn để người lập sửa. Cùng nội dung đã có nhánh (đọc lại file): không tạo thêm. Trả mã nhánh, '' nếu đã có."""
     ghi_chu = f'Ý kiến của hộ: {noi_dung}'.strip()

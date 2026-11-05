@@ -6,6 +6,7 @@ Màn hình chỉ hiển thị và chuyển thao tác của người dùng vào �
 """
 from __future__ import annotations
 import copy
+import json
 import functools
 import re
 import sqlite3
@@ -736,7 +737,7 @@ class BoSoan:
 
     GHI_CHU_QD03 = 'Đơn giá đất theo NQ 28/2025/NQ-HĐND × QĐ 03/2026/QĐ-UBND:'
 
-    def ap_don_gia_qd03(self, chi_so, don_gia, ghi_chu: str = '', vi_tri: str = '') -> int:
+    def ap_don_gia_qd03(self, chi_so, don_gia, ghi_chu: str = '', vi_tri: str = '', chi_tiet: dict | None = None) -> int:
         """Áp đơn giá đất đã tính (gia_dat_qd03.tinh_don_gia - NQ 28 x QĐ 03, đã ROUND về đồng) vào các dòng mục 1: giá bảng giá = đơn giá
         áp dụng, hệ số K = 1 (K1, K2, K3 đã nằm trong đơn giá; Thành tiền = diện tích x đơn giá áp dụng), căn cứ công thức ghi vào Ghi chú
         (thay căn cứ cũ cùng loại / "Hệ số K theo ..."). vi_tri: chữ ghi vào cột Vị trí (đoạn đường đã dùng tính giá), '' giữ nguyên. Khoản đào tạo, chuyển
@@ -758,6 +759,7 @@ class BoSoan:
             d.thanh_tien_excel = None
             if vi_tri:
                 d.vi_tri = vi_tri
+            d.ap_gia = json.dumps(chi_tiet, ensure_ascii=False) if chi_tiet else ''
             da_ap.append(d)
             n += 1
         self.ho_tro_doi = self._tinh_lai_dao_tao_theo_thua(khop, da_ap) + self.tinh_lai_ho_tro(chi_dao_tao=True)
@@ -839,6 +841,8 @@ class BoSoan:
         tb = ''
         if cot == 'thua':
             return self.doi_thua(i, text)
+        if cot in ('gia_bang_gia', 'he_so_k', 'loai_dat', 'vi_tri'):
+            d.ap_gia = ''                                # số đã khác lúc áp đơn giá: không còn đúng thuyết minh cũ
         if cot == 'loai_dat':
             ld = chuan_ma_loai_dat(text)
             if ld and any(x not in self.bc.loai_dat for x in ld.split('+')):
@@ -1230,13 +1234,16 @@ class BoSoan:
             con.execute(f'DELETE FROM ct_dat WHERE ma_ho = ?{loc}', ts)
             con.execute(f'DELETE FROM ct_khoan WHERE ma_ho = ?{loc}', ts)
             cot_lan, gt_lan = (', lan', (self.lan,)) if co_lan else ('', ())
+            co_ap_gia = csdl.co_cot_ap_gia(con)         # file chưa qua MO_RONG (0 hộ lúc mở): dữ liệu vẫn đủ trong ghi chú
+            cot_ag = ', ap_gia' if co_ap_gia else ''
             for k, d in enumerate(pa.dat, start=1):
-                con.execute(f'''INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia,
-                               he_so_k, ty_le, ghi_chu, thanh_tien_excel, cong_thuc{cot_lan})
-                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?{",?" if co_lan else ""})''',
+                con.execute(f"""INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia,
+                               he_so_k, ty_le, ghi_chu, thanh_tien_excel, cong_thuc{cot_lan}{cot_ag})
+                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?{",?" if co_lan else ""}{",?" if co_ap_gia else ""})""",
                             (self.ma_ho, d.ma_thua, k, d.loai_dat, d.nhom_dat, chuoi(d.dien_tich), d.vi_tri, chuoi(d.gia_bang_gia),
                              chuoi(d.he_so_k), '' if d.ty_le is None else chuoi(d.ty_le), d.ghi_chu,
-                             chuoi(d.thanh_tien_excel) if d.thanh_tien_excel is not None else None, d.cong_thuc, *gt_lan))
+                             chuoi(d.thanh_tien_excel) if d.thanh_tien_excel is not None else None, d.cong_thuc, *gt_lan,
+                             *((d.ap_gia,) if co_ap_gia else ())))
             for muc in MUC_KHOAN:
                 for k, d in enumerate(pa.khoan[muc], start=1):
                     con.execute(f'''INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia, ty_le, quy_cach, ghi_chu,
@@ -1308,8 +1315,14 @@ def doc_du_an(con) -> dict:
     return {k: ('' if k not in co or r[k] is None else str(r[k])) for k, _ in TRUONG_DU_AN}
 
 
+def chuan_ten_dia_ban(ten) -> str:
+    """Viết hoa chữ cái đầu mỗi từ: "bù đăng" -> "Bù Đăng". Tiền tố xã / phường giữ nguyên chữ người dùng nếu đã có."""
+    return ' '.join(w[:1].upper() + w[1:].lower() for w in unicodedata.normalize('NFC', str(ten or '')).split())
+
+
 def luu_du_an(con, gia_tri: dict) -> None:
     gt = {k: ' '.join(str(gia_tri.get(k, '') or '').split()) for k, _ in TRUONG_DU_AN}
+    gt['ten_dia_ban'] = chuan_ten_dia_ban(gt.get('ten_dia_ban'))
     if not gt['ten']:
         raise LoiNhap('Tên dự án không được để trống.')
     if gt['cap_dia_ban'] not in ('Xã', 'Phường', 'Thị trấn', 'Đặc khu'):

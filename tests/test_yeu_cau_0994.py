@@ -113,7 +113,7 @@ class TestNiemYet(CoSo):
         from PySide6.QtWidgets import QHeaderView
         w, k = self._khung()
         hd = k.bang_ny.horizontalHeader()
-        self.assertEqual(hd.sectionResizeMode(5), QHeaderView.ResizeMode.Stretch)     # Địa điểm giãn
+        self.assertEqual(hd.sectionResizeMode(1), QHeaderView.ResizeMode.Stretch)     # 1.0.69: Họ và tên giãn, Địa điểm vừa đủ
         self.assertEqual(hd.sectionResizeMode(4), QHeaderView.ResizeMode.Interactive)
         self.assertGreaterEqual(k.bang_ny.columnWidth(4), 155)                        # Tổng tiền dự thảo
         self.assertGreaterEqual(k.bang_vm.columnWidth(3), 175)                        # Nhóm vướng

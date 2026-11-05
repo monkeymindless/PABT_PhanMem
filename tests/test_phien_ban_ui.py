@@ -205,10 +205,13 @@ class TestGiaoDien(unittest.TestCase):
         man, m = self._lap_pa(w)
         t = man.thanh_pb
         man.nap_ho()
-        self.assertEqual(sorted(t.nut), ['V0', 'chot', 'moi'])
-        t.nut['chot'].click()
-        self.assertEqual(sorted(t.nut), ['V0', 'V1', 'V3', 'moi'])
-        t.nut[pb.V1].click()                                                       # V1: khóa chỉ xem cả bảng, một lần bấm
+        ma_o = lambda: [t.cb.itemData(i) for i in range(t.cb.count())]            # noqa: E731
+        self.assertEqual(ma_o(), ['V0'])
+        self.assertEqual(t.b_hd.text(), 'Chốt V1')
+        t.b_hd.click()
+        self.assertEqual(ma_o(), ['V0', 'V1', 'V3'])
+        self.assertEqual(t.b_hd.text(), 'Tạo nhánh V2')
+        t.cb.activated.emit(t.cb.findData(pb.V1))                                                       # V1: khóa chỉ xem cả bảng, một lần bấm
         self.assertTrue(man.bo.khoa)
         self.assertEqual(man.bo.phien_ban, pb.V1)
         self.assertTrue(man.b_mo_khoa.isHidden())                                  # không có nút mở khóa
@@ -219,7 +222,7 @@ class TestGiaoDien(unittest.TestCase):
         man.bo.pa.khoan[3][0].don_gia = D(50000)
         man.bo.luu()
         self.assertEqual(BoSoan(w.con, m).pa.khoan[3][0].don_gia, D(10000))         # số hiện hành không đổi
-        t.nut[pb.V0].click()
+        t.chon(pb.V0)
         self.assertEqual((man.bo.phien_ban, man.bo.pa.khoan[3][0].don_gia), (None, D(10000)))
 
     def test_nut_mo_khoa_khoa_lai_tung_phien_ban(self):
@@ -238,7 +241,7 @@ class TestGiaoDien(unittest.TestCase):
         self.assertFalse(man.bo.khoa)
         self.assertEqual(man.bo.phien_ban, pb.V1)
         self.assertEqual(t.b_khoa.text(), 'Khóa lại')
-        self.assertEqual(t.nut[pb.V1].text(), 'V1 Đang mở')
+        self.assertIn('[Đang mở]', t.cb.itemText(t.cb.findData(pb.V1)))
         self.assertEqual(man.lb_trang_thai_lan.text(), 'ĐANG SỬA V1')
         self.assertIn('Lưu ghi vào V1', t.chu_trang_thai())
         man.bo.pa.khoan[3][0].don_gia = D(11111)
@@ -248,12 +251,12 @@ class TestGiaoDien(unittest.TestCase):
         self.assertTrue(t.tra_v1_goc(True))
         self.assertTrue(man.bo.khoa)
         self.assertEqual(man.bo.pa.khoan[3][0].don_gia, D(10000))
-        self.assertEqual(t.nut[pb.V1].text(), 'V1 Đã khóa')
+        self.assertIn('[Đã khóa]', t.cb.itemText(t.cb.findData(pb.V1)))
         t.chon(pb.V3)                                                              # V3: mở sẵn, khóa được, mở lại được
         self.assertEqual(t.b_khoa.text(), 'Khóa lại')
         t.b_khoa.click()
         self.assertTrue(man.bo.khoa)
-        self.assertEqual(t.nut[pb.V3].text(), 'V3 Đã khóa')
+        self.assertIn('[Đã khóa]', t.cb.itemText(t.cb.findData(pb.V3)))
         t.b_khoa.click()
         self.assertFalse(man.bo.khoa)
 
@@ -288,10 +291,10 @@ class TestGiaoDien(unittest.TestCase):
             pb.tao_v2(w.con, m)
         t._dau = None
         t.nap()
-        self.assertEqual(sorted(k for k in t.nut if k.startswith('V2')), ['V2.3', 'V2.4', 'V2.5'])
+        v2 = lambda: [t.cb.itemData(i) for i in range(t.cb.count()) if str(t.cb.itemData(i)).startswith('V2')]   # noqa: E731
+        self.assertEqual(v2(), ['V2.1', 'V2.2', 'V2.3', 'V2.4', 'V2.5'])            # 1.0.69: một ô chọn, đủ mọi nhánh
         t.chon('V2.1')                                                             # nhánh cũ đang mở: vẫn có nút của nó
-        self.assertIn('V2.1', t.nut)
-        self.assertEqual(sum(1 for k in t.nut if k.startswith('V2')), 3)
+        self.assertEqual(t.cb.currentData(), 'V2.1')
 
     def test_dai_mot_hang_va_menu_lan(self):
         w = self._cua_so()

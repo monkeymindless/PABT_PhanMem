@@ -5,27 +5,16 @@ import sqlite3
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit,
                                QMenu, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import phien_ban_pa as pb
-from .giao_dien import TOKEN, dat_kieu_theo_tong
+from .giao_dien import icon_ky_hieu
 from .lap_pa import LoiNhap
 from .tien import vn
 
 TIEU_DE = 'LARC - Phiên bản phương án'
-
-
-TOI_DA_V2 = 3                # hộ nhiều nhánh: hiện chừng này nút V2 (nhánh đang mở, các nhánh mới nhất), còn lại trong nút "V2…"
-
-
-def _kieu_vien(b, loai: str = '') -> None:
-    """Nút viên thuốc của dải phiên bản; màu từ TOKEN, đổi theo tông nền. loai: '' | 'khoa' (V1) | 'trinh' (V3) | 'dang' (đang mở)."""
-    n, c, v = {'khoa': (TOKEN['thanh_cong_nhat'], TOKEN['phu'], TOKEN['phu']), 'trinh': (TOKEN['canh_bao_nhat'], TOKEN['canh_bao'], TOKEN['canh_bao']),
-               'dang': (TOKEN['chinh'], TOKEN['khung'], TOKEN['chinh'])}.get(loai, (TOKEN['khung'], TOKEN['chu'], TOKEN['chu_phu']))
-    dat_kieu_theo_tong(b, f'QPushButton {{ background: {n}; color: {c}; border: 1px solid {v}; border-radius: 11px; padding: 1px 9px; '
-                          f'font-weight: {600 if loai == "dang" else 400}; }}')
 
 
 class ThanhPhienBan(QWidget):
@@ -38,9 +27,19 @@ class ThanhPhienBan(QWidget):
         self.h = QHBoxLayout(self)
         self.h.setContentsMargins(0, 0, 0, 0)
         self.h.setSpacing(4)
-        self.nut = {}
-        self._cu = []
         self._dau = None
+        self.cb = QComboBox()
+        self.cb.setObjectName('o_phien_ban')
+        self.cb.setFixedHeight(26)
+        self.cb.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.cb.setMinimumContentsLength(22)
+        self.cb.view().setMinimumWidth(380)
+        self.cb.activated.connect(self._chon_o)
+        self.h.addWidget(self.cb)
+        self.b_hd = QPushButton('Chốt V1')
+        self.b_hd.setFixedHeight(26)
+        self.b_hd.clicked.connect(lambda: self.bam_ngu_canh())
+        self.h.addWidget(self.b_hd)
         self.b_dc = QPushButton('Đối chiếu…')
         self.b_dc.setToolTip('Bảng đối chiếu V1, V2, V3 của hộ: chênh lệch, trình theo V1 hoặc V2, ghép từng nhóm, 4 mẫu in')
         self.b_dc.setFixedHeight(26)
@@ -53,26 +52,25 @@ class ThanhPhienBan(QWidget):
         if not getattr(self.man, 'im_lang', False):
             QMessageBox.warning(self, TIEU_DE, chu)
 
-    def _them(self, ma, chu, tip, ham, loai='') -> QPushButton:
-        b = QPushButton(chu)
-        b.setFixedHeight(24)
-        b.setToolTip(tip)
-        _kieu_vien(b, loai)
-        b.clicked.connect(lambda *_: ham())
-        self.h.addWidget(b)
-        self._cu.append(b)
-        if ma:
-            self.nut[ma] = b
-        return b
-
-    def _mui(self) -> None:
-        l = QLabel('→')
-        l.setProperty('vai', 'nhan')
-        self.h.addWidget(l)
-        self._cu.append(l)
+    def _icon(self, ma: str, khoa: bool):
+        """Huy hiệu màu của mục trong ô chọn (hình vẽ, không dùng emoji: Win 7 không có phông)."""
+        mau = {pb.V0: '#16a34a', pb.V1: '#64748b', pb.V3: '#1d4ed8'}.get(ma, '#ea580c')
+        if khoa:
+            ic = icon_ky_hieu(0xE72E, mau, 14)        # Lock
+            if ic is not None:
+                return ic
+        anh = QPixmap(14, 14)
+        anh.fill(QColor(0, 0, 0, 0))
+        ve = QPainter(anh)
+        ve.setRenderHint(QPainter.RenderHint.Antialiasing)
+        ve.setBrush(QColor(mau))
+        ve.setPen(QColor(mau))
+        ve.drawEllipse(2, 2, 10, 10)
+        ve.end()
+        return QIcon(anh)
 
     def nap(self) -> None:
-        """Vẽ lại theo hộ, phiên bản đang mở (không đổi gì thì giữ nguyên nút)."""
+        """Nạp ô chọn theo hộ, phiên bản đang mở (không đổi gì thì giữ nguyên)."""
         bo = self.man.bo
         ds = pb.ds_phien_ban(bo.con, bo.ma_ho)
         hien = getattr(bo, 'phien_ban', None) or pb.V0
@@ -80,43 +78,53 @@ class ThanhPhienBan(QWidget):
         sua_duoc = not getattr(self.man, '_chi_xem', False)
         ghi = {x['ma']: x for x in ds}
         self._dat_nut_khoa(ghi.get(hien), sua_duoc)
-        dau = (bo.ma_ho, hien, tuple(sorted((x['ma'], bool(x['khoa'])) for x in ds)), sua_duoc)
+        self.b_hd.setEnabled(sua_duoc)
+        self.b_hd.setText('Chốt V1' if pb.V1 not in co else 'Tạo nhánh V2')
+        self.b_hd.setToolTip('Chốt số hiện hành thành phương án niêm yết V1. In PA dự thảo, xuất bảng niêm yết cũng tự chốt.' if pb.V1 not in co
+                             else 'Tạo nhánh dự thảo mới từ V1 để điều chỉnh theo ý kiến, V1 giữ nguyên')
+        dau = (bo.ma_ho, hien, tuple(sorted((x['ma'], bool(x['khoa'])) for x in ds)))
         if dau == self._dau:
             return
         self._dau = dau
-        for w in self._cu:
-            self.h.removeWidget(w)
-            w.hide()                 # Qt hẹn hiện widget vừa vào bố cục: bỏ cha trước khi hẹn chạy (đổi hộ liền hai lần) sẽ thành cửa sổ lạ; hide() hủy hẹn
-            w.deleteLater()
-        self._cu, self.nut = [], {}
+        self.cb.blockSignals(True)
+        self.cb.clear()
+        self.cb.addItem(self._icon(pb.V0, False), 'V0: Phương án gốc [Đang lập]', pb.V0)
+        for x in ds:
+            ma, k = x['ma'], bool(x['khoa'])
+            if ma == pb.V1:
+                chu = 'V1: PA Dự thảo Niêm yết ' + ('[Đã khóa]' if k else '[Đang mở]')
+            elif ma == pb.V3:
+                chu = 'V3: PA Chính thức Trình thẩm định / Phê duyệt' + (' [Đã khóa]' if k else '')
+            else:
+                chu = f'{ma}: PA Điều chỉnh sau Ý kiến / Đối thoại' + (' [Đã khóa]' if k else '')
+            self.cb.addItem(self._icon(ma, k), chu, ma)
+            self.cb.setItemData(self.cb.count() - 1, f'{x["nhan"]}. {x["ghi_chu"]}', Qt.ItemDataRole.ToolTipRole)
+        self.cb.setCurrentIndex(max(0, self.cb.findData(hien)))
+        self.cb.setToolTip(self.cb.currentText())
+        self.cb.blockSignals(False)
 
-        def kieu(x, mac_dinh=''):
-            return 'dang' if hien == x['ma'] else ('khoa' if x['khoa'] else mac_dinh)
-        self._them(pb.V0, 'V0 Đang lập', 'Bản đang lập: số hiện hành của hộ', lambda: self.chon(pb.V0), 'dang' if hien == pb.V0 else '')
-        self._mui()
-        if pb.V1 in co:
-            k = ghi[pb.V1]['khoa']
-            self._them(pb.V1, 'V1 Đã khóa' if k else 'V1 Đang mở', ghi[pb.V1]['nhan'] + (': chứng cứ niêm yết, đang khóa; in lại không ghi đè' if k else ': đang mở khóa, sửa được; bản đã chốt vẫn giữ riêng'), lambda: self.chon(pb.V1), kieu(ghi[pb.V1]))
-        else:
-            self._them('chot', 'Chốt V1', 'Chốt số hiện hành thành phương án niêm yết V1. In PA dự thảo, xuất bảng niêm yết cũng tự chốt.', lambda: self.chot_v1()).setEnabled(sua_duoc)
-        self._mui()
-        v2 = [x['ma'] for x in ds if x['ma'].startswith('V2.')]
-        hien_v2 = v2[-TOI_DA_V2:]
-        if hien in v2 and hien not in hien_v2:
-            hien_v2 = [hien] + hien_v2[-(TOI_DA_V2 - 1):]
-        con_lai = [x for x in v2 if x not in hien_v2]
-        if con_lai:
-            b = self._them('', f'V2… ({len(con_lai)})', 'Các nhánh cũ hơn', lambda: None)
-            m = QMenu(b)
-            for x in con_lai:
-                m.addAction(ghi[x]['nhan'], lambda ma=x: self.chon(ma))
-            b.setMenu(m)
-        for x in hien_v2:
-            self._them(x, x + (' (khóa)' if ghi[x]['khoa'] else ''), f'{ghi[x]["nhan"]}. {ghi[x]["ghi_chu"]}', lambda ma=x: self.chon(ma), kieu(ghi[x]))
-        self._them('moi', ' + ', 'Tạo nhánh dự thảo mới từ V1 để điều chỉnh theo ý kiến, V1 giữ nguyên', lambda: self.tao_v2()).setEnabled(sua_duoc)
-        if pb.V3 in co:
-            self._mui()
-            self._them(pb.V3, 'V3 Đã khóa' if ghi[pb.V3]['khoa'] else 'V3 Trình duyệt', ghi[pb.V3]['nhan'] + '. ' + ghi[pb.V3]['ghi_chu'], lambda: self.chon(pb.V3), kieu(ghi[pb.V3], 'trinh'))
+    def bam_ngu_canh(self) -> str:
+        """Nút cạnh ô chọn: chưa có V1 thì chốt V1, có rồi thì tạo nhánh V2."""
+        bo = self.man.bo
+        if pb.lay(bo.con, bo.ma_ho, pb.V1) is None:
+            self.chot_v1()
+            return pb.V1
+        return self.tao_v2()
+
+    def _chon_o(self, i: int) -> None:
+        if not self.chon(self.cb.itemData(i)):       # không chuyển được (còn sửa chưa lưu, chọn Hủy): ô về đúng bản đang mở
+            self._dau = None
+            self.nap()
+
+    def in_mau(self, ma: str, dich=None):
+        """Menu In / Xuất: một trong 4 mẫu của hộ đang mở (dùng bảng đối chiếu, không viết đường in thứ hai)."""
+        man = self.man
+        d = HopDoiChieu(man, man.bo.con, [man.bo.ma_ho], man.bo.ma_ho, getattr(man, '_chi_xem', False))
+        d.im_lang = getattr(man, 'im_lang', False)
+        try:
+            return d.in_mau(ma, dich)
+        finally:
+            d.deleteLater()
 
     def _dat_nut_khoa(self, r, sua_duoc: bool) -> None:
         """Nút mở khóa / khóa lại cho phiên bản đang xem. V0 và lần đã phê duyệt dùng nút Mở khóa của lần (b_mo_khoa)."""
@@ -164,6 +172,69 @@ class ThanhPhienBan(QWidget):
             a = menu.addAction('Trả V1 về bản đã chốt…', lambda: self.tra_v1_goc())
             a.setToolTip('V1 về đúng số lúc chốt niêm yết và khóa lại')
             a.setEnabled(not getattr(self.man, '_chi_xem', False) and not self.man._ho_khong_nhan())
+        hien = getattr(bo, 'phien_ban', None)
+        duoc = not getattr(self.man, '_chi_xem', False) and not self.man._ho_khong_nhan()
+        menu.addSeparator()
+        a = menu.addAction('Nhân bản phương án thành nhánh mới', lambda: self.nhan_ban())
+        a.setEnabled(duoc and pb.lay(bo.con, bo.ma_ho, pb.V1) is not None)
+        a = menu.addAction('Khôi phục số đang lập theo bản đang xem…', lambda: self.khoi_phuc())
+        a.setEnabled(duoc and bool(hien))
+        a = menu.addAction('Xóa nhánh nháp đang xem…', lambda: self.xoa_nhanh())
+        a.setEnabled(duoc and bool(hien) and str(hien).startswith('V2.') and not bo.khoa)
+
+    def nhan_ban(self) -> str:
+        """Nhánh V2 mới từ bản đang xem (V2.n, V1); đang ở V0 / V3 thì từ V1."""
+        man, bo = self.man, self.man.bo
+        if not man.hoi_luu():
+            return ''
+        hien = getattr(bo, 'phien_ban', None)
+        try:
+            ma = pb.tao_v2(bo.con, bo.ma_ho, f'Nhân bản từ {hien or pb.V1}.', hien if hien and hien != pb.V3 else pb.V1)
+        except LoiNhap as e:
+            self._bao(str(e))
+            return ''
+        self._dau = None
+        self.nap()
+        self.chon(ma)
+        return ma
+
+    def khoi_phuc(self, xac_nhan: bool | None = None) -> bool:
+        man, bo = self.man, self.man.bo
+        hien = getattr(bo, 'phien_ban', None)
+        if not hien:
+            return False
+        if xac_nhan is None and not getattr(man, 'im_lang', False):
+            xac_nhan = QMessageBox.question(self, TIEU_DE, f'Ghi nội dung {hien} vào số đang lập V0? Số V0 hiện tại bị thay, {hien} giữ nguyên.') == QMessageBox.StandardButton.Yes
+        if xac_nhan is False or not man.hoi_luu():
+            return False
+        try:
+            pb.khoi_phuc_v0(bo.con, bo.ma_ho, hien)
+        except (LoiNhap, sqlite3.OperationalError) as e:
+            self._bao(str(e))
+            return False
+        self._dau = None
+        self.chon(pb.V0)
+        return True
+
+    def xoa_nhanh(self, xac_nhan: bool | None = None) -> bool:
+        man, bo = self.man, self.man.bo
+        hien = getattr(bo, 'phien_ban', None)
+        if not hien:
+            return False
+        if xac_nhan is None and not getattr(man, 'im_lang', False):
+            xac_nhan = QMessageBox.question(self, TIEU_DE, f'Xóa nhánh nháp {hien}? Không khôi phục được.') == QMessageBox.StandardButton.Yes
+        if xac_nhan is False:
+            return False
+        try:
+            pb.xoa_v2(bo.con, bo.ma_ho, hien)
+        except (LoiNhap, sqlite3.OperationalError) as e:
+            self._bao(str(e))
+            return False
+        bo.mo_phien_ban(pb.V0)
+        self._dau = None
+        man.nap_ho()
+        man.lam_moi_xem_truoc()
+        return True
 
     def tra_v1_goc(self, xac_nhan: bool | None = None) -> bool:
         man, bo = self.man, self.man.bo

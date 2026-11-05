@@ -49,10 +49,10 @@ class TestHopTinhGiaDat(unittest.TestCase):
         self.assertIn('→', h.cb_doan.itemText(0))
         self.assertIsNotNone(h.kq)
         # G tự tra từ bảng giá NQ 28 theo cụm 7 dòng; đổi vị trí kết nối -> G đổi
-        g_mt = D(h.o_g.text())
+        g_mt = D(h.o_g.text().replace('.', ''))
         h.cb_vi_tri.setCurrentIndex(3)                                  # T3
-        self.assertNotEqual(D(h.o_g.text()), g_mt)
-        self.assertLess(D(h.o_g.text()), g_mt)
+        self.assertNotEqual(D(h.o_g.text().replace('.', '')), g_mt)
+        self.assertLess(D(h.o_g.text().replace('.', '')), g_mt)
         self.assertIn('Tự tra', h.lb_g.text())
 
     def test_gia_theo_doan_va_nhom(self):
@@ -223,7 +223,6 @@ class TestLenhVaCanGiua(unittest.TestCase):
         self.addCleanup(h.close)
         h.resize(3000, 3000)
         h.show()
-        h.nut_them.setChecked(True)                                         # mở hết phần thu gọn: hộp vẫn không cao quá màn hình, hàng nút còn thấy
         h.nut_mo_cc.setChecked(True)
         h.nut_mo_gt.setChecked(True)
         APP.processEvents()

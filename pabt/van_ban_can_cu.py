@@ -24,16 +24,16 @@ TEN_BAC = {
     1: 'Hiến pháp',
     2: 'Bộ luật, Luật của Quốc hội',
     3: 'Nghị quyết của Quốc hội',
-    4: 'Pháp lệnh, Nghị quyết của Ủy ban Thường vụ Quốc hội',
-    5: 'Lệnh, Quyết định của Chủ tịch nước',
-    6: 'Nghị định, Nghị quyết của Chính phủ',
-    7: 'Quyết định, Chỉ thị của Thủ tướng Chính phủ',
-    8: 'Thông tư của Bộ trưởng, Thủ trưởng cơ quan ngang Bộ',
-    9: 'Văn bản hợp nhất (Trung ương)',
-    10: 'Văn bản hướng dẫn của Chính phủ và các Bộ, ngành Trung ương',
-    11: 'Nghị quyết của HĐND tỉnh, thành phố',
-    12: 'Quyết định, Chỉ thị của UBND tỉnh, thành phố',
-    13: 'Văn bản hướng dẫn của Sở, ban, ngành và chính quyền cấp cơ sở',
+    4: 'Pháp lệnh, Nghị quyết của Ủy ban Thường vụ Quốc hội; Lệnh, Quyết định của Chủ tịch nước',
+    5: 'Nghị định, Nghị quyết của Chính phủ',
+    6: 'Quyết định, Chỉ thị của Thủ tướng Chính phủ',
+    7: 'Thông tư, Thông tư liên tịch',
+    8: 'Văn bản hợp nhất',
+    9: 'Văn bản hướng dẫn của Chính phủ, Bộ ngành Trung ương',
+    10: 'Nghị quyết của HĐND tỉnh, thành phố',
+    11: 'Quyết định, Chỉ thị của UBND tỉnh, thành phố',
+    12: 'Văn bản hướng dẫn của Sở, ngành tỉnh, thành phố',
+    13: 'Văn bản cấp xã, phường và đơn vị cơ sở',
 }
 
 # danh sách căn cứ mặc định của cửa sổ tính giá đất (theo TSX DEFAULT_LEGAL_BASES)
@@ -80,54 +80,56 @@ class VanBan:
 def _bac_theo_hau_to(hau: str, dau: str, truoc_ubnd_cap_co_so: bool) -> int:
     """Bậc theo hậu tố số hiệu (phần sau năm: QH15, NĐ-CP, QĐ-UBND, SNNMT-ĐĐ...) và loại văn bản ở phần đầu câu."""
     h = hau.upper()
-    if 'UBTVQH' in h:
+    if 'UBTVQH' in h or h.startswith(('L-CTN', 'QĐ-CTN', 'QD-CTN')):
         return 4
     if h.startswith('QH'):
         return 3 if 'nghị quyết' in dau else 2
-    if h.startswith(('L-CTN', 'QĐ-CTN', 'QD-CTN')):
-        return 5
     if h.startswith(('NĐ-CP', 'ND-CP', 'NQ-CP')):
-        return 6
+        return 5
     if h.startswith(('QĐ-TTG', 'QD-TTG', 'CT-TTG')):
-        return 7
+        return 6
     if h.startswith(('TTLT', 'TT-')):
-        return 8
+        return 7
     if h.startswith('VBHN'):
-        return 9
+        return 8
     if h.startswith(('NQ-HĐND', 'NQ-HDND')):
-        return 11
+        return 13 if truoc_ubnd_cap_co_so else 10
     if h.startswith(('QĐ-UBND', 'QD-UBND', 'CT-UBND', 'QĐ-', 'QD-')):
-        return 13 if truoc_ubnd_cap_co_so else 12
+        return 13 if truoc_ubnd_cap_co_so else 11
     if h.startswith(('BNNMT', 'BTNMT', 'BNN', 'BTC', 'BXD', 'BTP', 'BKHĐT', 'VPCP', 'BNV')):
-        return 10
+        return 9
+    if h.startswith(('SNN', 'STNMT', 'SXD', 'STC', 'SGTVT', 'SKHĐT', 'S')) and not truoc_ubnd_cap_co_so and h != 'UBND':
+        return 12
     return 0
 
 
 def _bac_theo_chu_dau(dau: str, cap_co_so: bool) -> int:
-    """Bậc theo từ khóa trong phần ĐẦU câu (loại văn bản + cơ quan ban hành), cùng thứ tự kiểm tra như bản TSX."""
+    """Bậc theo từ khóa trong phần ĐẦU câu (loại văn bản + cơ quan ban hành)."""
     if 'hiến pháp' in dau:
         return 1
     if re.search(r'\b(bộ )?luật\b', dau):
         return 2
     if 'nghị quyết' in dau and 'quốc hội' in dau and 'ủy ban thường vụ' not in dau:
         return 3
-    if 'pháp lệnh' in dau or ('nghị quyết' in dau and ('ủy ban thường vụ quốc hội' in dau or 'ubtvqh' in dau)):
+    if 'pháp lệnh' in dau or 'chủ tịch nước' in dau or ('nghị quyết' in dau and ('ủy ban thường vụ quốc hội' in dau or 'ubtvqh' in dau)):
         return 4
-    if 'chủ tịch nước' in dau:
-        return 5
     if 'nghị định' in dau or ('nghị quyết' in dau and 'chính phủ' in dau):
-        return 6
+        return 5
     if ('quyết định' in dau or 'chỉ thị' in dau) and 'thủ tướng' in dau:
-        return 7
+        return 6
     if 'thông tư' in dau:
-        return 8
+        return 7
     if 'văn bản hợp nhất' in dau:
-        return 9
+        return 8
     if re.search(r'\bchính phủ\b|\bbộ (nông nghiệp|tài nguyên|tài chính|xây dựng|tư pháp|nội vụ|kế hoạch)', dau):
+        return 9
+    if cap_co_so:
+        return 13
+    if 'nghị quyết' in dau and ('hđnd' in dau or 'hội đồng nhân dân' in dau):
         return 10
-    if 'nghị quyết' in dau and ('hđnd' in dau or 'hội đồng nhân dân' in dau) and not cap_co_so:
+    if ('quyết định' in dau or 'chỉ thị' in dau) and 'ubnd' in dau:
         return 11
-    if ('quyết định' in dau or 'chỉ thị' in dau) and 'ubnd' in dau and not cap_co_so:
+    if re.search(r'\bsở\b|\bban quản lý\b', dau):
         return 12
     return 13
 
@@ -144,7 +146,7 @@ def phan_loai(chu: str) -> VanBan:
     m = _RE_SO.search(s)
     if m is None:                                       # "Quyết định 03/2026/QĐ-UBND ..." (không có chữ "số"): mã nằm ngay đầu câu
         m = _RE_MA_DAU.match(s)
-    if m is not None and gioi is not None and m.start() > gioi.start() and (m.start() > 12 or m.re is _RE_SO):
+    if m is not None and gioi is not None and m.start(1) > gioi.start() and (m.start(1) > 12 or m.re is _RE_SO):
         m = None                                        # số nằm trong thân câu ("... theo Nghị quyết số 28/2025/..."): không phải của văn bản này
     # phần đầu: từ đầu câu tới chữ "số" / mã số / "ngày" / "của" đầu tiên = loại văn bản của CHÍNH văn bản này
     diem = [x for x in (m.start() if m else -1, m_ngay.start() if m_ngay else -1) if x >= 0]

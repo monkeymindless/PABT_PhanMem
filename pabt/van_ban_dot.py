@@ -142,12 +142,14 @@ _RE_UUID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 _RE_THUA_TO = re.compile(r'([\d][\d,;\s]*?)\s*\(\s*t[ờo]\s*(?:b[ảa]n\s*đ[ồo]\s*)?(?:s[ốo]\s*)?(\d+)\s*\)', re.I)
 _RE_THUA_TO_2 = re.compile(r'th[ửu]a\s*(?:đ[ấa]t\s*)?(?:s[ốo]\s*)?(\d+)\s*[,;\-\s]*t[ờo]\s*(?:b[ảa]n\s*đ[ồo]\s*)?(?:s[ốo]\s*)?(\d+)', re.I)
 # hậu tố trong cột tên / trong tên hộ của phần mềm: "... là chủ sở hữu", "UBND xã ... quản lý." (trên chữ đã bỏ dấu)
-_RE_HAU_TO = re.compile(r'\s+(?:la chu so huu|la chu su dung|la nguoi su dung|dai dien|cung vo|cung chong|thua ke)\b.*$|\s+quan ly\s*$')
+_RE_HAU_TO = re.compile(r'\s+(?:la chu so\b|la chu so huu|la chu su dung|la chu\b|la nguoi su dung|dai dien|cung vo|cung chong|thua ke)\b.*$|\s+quan ly\b.*$')
+NGUONG_TEN_MO = 0.86                  # tầng 4: độ giống tên (không dấu); chỉ nhận khi cùng tổng tiền với phương án của hộ
+TIEU_DE_MA_HO = ('ma ho', 'ma dinh danh', 'household_id', 'household id')
 
 
 def chuan_cccd(x) -> str:
-    """Chữ số của CCCD / CMND; Excel cắt mất số 0 đầu (11 số) thì bù lại."""
-    so = re.sub(r'\D', '', str(x or ''))
+    """Chữ số của CCCD / CMND. Ô số Excel đọc thành "79062029253.0": bỏ đuôi; Excel cắt mất số 0 đầu (11 số): bù lại."""
+    so = re.sub(r'\D', '', re.sub(r'\.0+\s*$', '', str(x or '').strip()))
     return '0' + so if len(so) == 11 else so
 
 
@@ -172,6 +174,7 @@ class _KhopHo:
 
     def __init__(self, con, dot_id: int):
         from . import phien_ban_pa as pb
+        self.con, self._tong = con, None
         self.ho = [dict(r) for r in con.execute('SELECT h.ma_ho, h.ho_ten, h.so_cccd FROM y_kien_du_thao y JOIN ho h ON h.ma_ho = y.ma_ho '
                                                 'WHERE y.dot_id = ? ORDER BY h.thu_tu, h.ma_ho', (dot_id,))]
         self.theo_ma, self.theo_cccd, self.theo_ten, self.theo_thua, self.stt = {}, {}, {}, {}, {}
@@ -221,11 +224,59 @@ class _KhopHo:
                 return h, 'họ tên + STT'
         return None, ''
 
-    def khop(self, cac: list) -> tuple:
+    def _tong_ho(self, ma: int) -> set:
+        """Các tổng tiền hợp lệ của hộ: số hiện hành và V1, V2, V3 (file có thể lập theo bất kỳ bản nào). Tính khi cần: chỉ dòng tới tầng 4 mới phải tính."""
+        if self._tong is None:
+            from . import phien_ban_pa as pb
+            from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_pa
+            bc = BoiCanh.tu(self.con)
+            self._tong = {}
+            for m, pa in doc_tat_ca_phuong_an(self.con, set(self.theo_ma)).items():
+                t = {tinh_pa(pa, bc).tong}
+                for x in pb.ds_phien_ban(self.con, m):
+                    t.add(pb.tong(self.con, m, x['ma'], bc))
+                self._tong[m] = {v for v in t if v}
+        return self._tong.get(ma, set())
+
+    def _theo_ten_mo(self, cac: list) -> tuple:
+        """Tầng 4: tên gần đúng (sai chính tả, gõ thiếu chữ) VÀ có đúng tổng tiền trong dòng. Hai hộ cùng thỏa: không ghép."""
+        from difflib import SequenceMatcher
+        from .tien import doc_so_vn
+        so = set()
+        for c in cac:
+            if re.search(r'\d{4,}|\d[.,]\d{3}', c):
+                try:
+                    so.add(doc_so_vn(c.strip()))
+                except (ValueError, ArithmeticError):
+                    pass
+        if not so:
+            return None, ''
+        hop = {}
+        for c in cac:
+            t = ten_sach(c)
+            if len(t.split()) < 2:
+                continue
+            for k, ds in self.theo_ten.items():
+                if SequenceMatcher(None, t, k).ratio() >= NGUONG_TEN_MO:
+                    for h in ds:
+                        if so & self._tong_ho(h['ma_ho']):
+                            hop[h['ma_ho']] = h
+        return (next(iter(hop.values())), 'tên gần đúng + tổng tiền') if len(hop) == 1 else (None, '')
+
+    def khop(self, cac: list, ma_cot=None) -> tuple:
+        """ma_cot: giá trị cột "Mã hộ" của dòng (file xuất từ phần mềm), nếu có."""
         chu = ' '.join(cac)
         m = _RE_UUID.search(chu)
         if m and m.group(0).lower() in self.uuid:
             return self.uuid[m.group(0).lower()], 'mã định danh'
+        if ma_cot is not None:
+            try:
+                h = self.theo_ma.get(int(float(str(ma_cot).strip())))
+            except (ValueError, OverflowError):
+                h = None
+            # mã hộ là số nhỏ, file của dự án khác cũng có: dòng ghi tên khác hẳn thì không tin cột này
+            if h is not None and (not re.search(r'[^\W\d_]{2}', chu) or f' {ten_sach(h["ho_ten"])} ' in f' {_ten_chuan(chu)} '):
+                return h, 'mã hộ'
         # theo TỪNG Ô: nối cả dòng rồi bỏ dấu cách sẽ dính STT vào CCCD ("1 75200000001" -> sai số). Ô số Excel có thể là "75200000001.0"
         for x in (y for c in cac for y in re.findall(r'(?<!\d)\d{9}(?:\d{2,3})?(?!\d)', re.sub(r'(?<=\d)[ .\-](?=\d)', '', re.sub(r'\.0$', '', c.strip())))):
             ds = self.theo_cccd.get(chuan_cccd(x), [])
@@ -244,7 +295,8 @@ class _KhopHo:
                 h = self._theo_ten(cac, chu, ds)[0]
                 if h is not None:
                     return h, 'thửa, tờ + họ tên'
-        return self._theo_ten(cac, chu)
+        h, cach = self._theo_ten(cac, chu)
+        return (h, cach) if h is not None else self._theo_ten_mo(cac)
 
 
 def doc_ket_qua(con, dot_id: int, files, bao_tien_do=None, cho=None) -> dict:
@@ -256,13 +308,18 @@ def doc_ket_qua(con, dot_id: int, files, bao_tien_do=None, cho=None) -> dict:
     for f in ([files] if isinstance(files, (str, Path)) else files):
         dong, s = doc_van_ban(f, bao_tien_do, cho)
         scan = scan or bool(s)
+        cot_ma = None
         for r in dong:
             cac = [str(c) for c in r if str(c or '').strip()]
             if not cac:
                 continue
+            if cot_ma is None:
+                cot_ma = next((i for i, c in enumerate(r) if bo_dau(str(c or '')).lower().strip(' :.') in TIEU_DE_MA_HO), None)
+                if cot_ma is not None:
+                    continue                                # dòng tiêu đề có cột Mã hộ: từ đây khớp theo cột đó trước
             tong += 1
             chu = ' '.join(cac)
-            h, cach = kh.khop(cac)
+            h, cach = kh.khop(cac, r[cot_ma] if cot_ma is not None and cot_ma < len(r) and str(r[cot_ma] or '').strip() else None)
             if h is None:
                 if re.search(r'[^\W\d_]{2}', chu):
                     sot.append(chu[:80])
