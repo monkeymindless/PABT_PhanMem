@@ -517,13 +517,17 @@ def xuat_niem_yet(con, dot_id: int, file) -> 'Path':
     dot = con.execute('SELECT * FROM dot_du_thao WHERE id = ?', (dot_id,)).fetchone()
     if dot is None:
         raise LoiNhap('Chưa chọn đợt dự thảo.')
+    from . import phien_ban_pa as pb
+    ho = ds_ho_dot(con, dot_id)
+    pb.khoa_v1_nhieu(con, [h['ma_ho'] for h in ho], dot['ten'])       # 1.0.63: niêm yết = chốt V1, số trên bảng theo V1
     dong = []
-    for i, h in enumerate(ds_ho_dot(con, dot_id), 1):
+    for i, h in enumerate(ho, 1):
+        tien = pb.tong(con, h['ma_ho'], pb.V1) if pb.lay(con, h['ma_ho'], pb.V1) is not None else h['tien']
         dong.append({
             'STT': i, 'Mã hộ': h['ma_ho'], 'Họ và tên': h['ho_ten'], 'CCCD': h['cccd_che'],
             'Địa chỉ': h['dia_chi'], 'Thửa': h['thua'],
-            'Tổng tiền dự thảo': vn(h['tien']) if h['tien'] is not None else '',
-            'Địa điểm niêm yết': dot['dia_diem'],
+            'Tổng tiền dự thảo': vn(tien) if tien is not None else '',
+            'Địa điểm niêm yết': dot['dia_diem'], 'Mã định danh': pb.uuid_ho(con, h['ma_ho']),
         })
     tieu = (f'DỰ THẢO PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ — {dot["ten"]}. '
             f'Niêm yết {hien_ngay(dot["ngay_bat_dau"])} đến {hien_ngay(dot["ngay_ket_thuc"])} '

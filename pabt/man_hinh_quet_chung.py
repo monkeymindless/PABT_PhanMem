@@ -218,3 +218,45 @@ class HopKetQuaQuet(QDialog):
     def _chon(self, hanh_dong: str) -> None:
         self.hanh_dong = hanh_dong
         self.accept()
+
+
+class HopVanBanCanCu(QDialog):
+    """Mục Văn bản căn cứ của dự án: quét thêm / sửa -> tự khử trùng lặp, sắp 13 bậc hiệu lực. Dùng chung nội dung với cửa sổ tính giá đất."""
+    im_lang = False
+
+    def __init__(self, parent, con, chi_doc: bool = False):
+        super().__init__(parent)
+        self.con, self.chi_doc = con, chi_doc
+        self.setWindowTitle('Văn bản căn cứ của dự án (13 bậc hiệu lực pháp lý)')
+        self.resize(880, 520)
+        lo = QVBoxLayout(self)
+        self.o = QPlainTextEdit()
+        self.o.setPlainText(vb.doc_can_cu_du_an(con))
+        lo.addWidget(self.o, 1)
+        nut = QDialogButtonBox()
+        self.b_quet = NutQuetChung('Quét thêm văn bản…', qc.CAN_CU, self)
+        self.b_quet.da_quet.connect(self.them)
+        self.b_sap = QPushButton('Sắp xếp lại')
+        self.b_sap.clicked.connect(lambda: self.them())
+        self.b_luu = QPushButton('Lưu vào dự án')
+        self.b_luu.setEnabled(not chi_doc)
+        self.b_luu.clicked.connect(lambda: self.luu())
+        nut.addButton(self.b_quet, QDialogButtonBox.ButtonRole.ActionRole)
+        nut.addButton(self.b_sap, QDialogButtonBox.ButtonRole.ActionRole)
+        nut.addButton(self.b_luu, QDialogButtonBox.ButtonRole.AcceptRole)
+        nut.addButton('Đóng', QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(self.reject)
+        lo.addWidget(nut)
+
+    def them(self, kq=None) -> None:
+        self.o.setPlainText(vb.gop_va_sap_xep([self.o.toPlainText()], kq.can_cu if kq is not None else ())[0])
+
+    def luu(self) -> bool:
+        from .lap_pa import LoiNhap
+        try:
+            self.o.setPlainText(vb.ghi_can_cu_du_an(self.con, self.o.toPlainText()))
+        except LoiNhap as e:
+            if not self.im_lang:
+                QMessageBox.warning(self, TIEU_DE, str(e))
+            return False
+        self.accept()
+        return True

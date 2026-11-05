@@ -485,8 +485,26 @@ class BoSoan:
         self.mo(ma_ho, lan)
 
     # ---------------------------------------------- mở / trạng thái
+    def mo_phien_ban(self, ma: str) -> None:
+        """Xem / sửa một phiên bản (phien_ban_pa): V0 = số hiện hành; V1 khóa chỉ xem; V2.n, V3 sửa được, Lưu ghi vào phiên bản đó."""
+        from . import phien_ban_pa as pb
+        ma_ho, lan = self.ma_ho, self.lan
+        self.mo(ma_ho, lan)
+        if ma in (None, pb.V0):
+            return
+        r = pb.lay(self.con, ma_ho, ma)
+        if r is None:
+            raise LoiNhap(f'Hộ {ma_ho} chưa có phiên bản {ma}.')
+        self.mo(ma_ho, r['lan'])
+        self.pa = pb.pa_tu_json(self.con, ma_ho, r['du_lieu'])
+        self.phien_ban = ma
+        self.khoa = self.khoa or bool(r['khoa'])
+        self._pa_goc = copy.deepcopy(self.pa)
+        self._goc = _dang_luu(self._pa_goc)
+
     def mo(self, ma_ho: int, lan: int | None = None):
         from . import lan_pa
+        self.phien_ban = None
         self.bc = self._bc_chung if self._bc_chung is not None else BoiCanh.tu(self.con)
         if lan in (None, 1) and (getattr(self, '_mot_lan', False) or _mot_lan_chua_duyet(self.con, ma_ho)):
             # đường tắt (hầu hết các hộ - tự lập Dự án mới 3.000 hộ): một lần, chưa quyết định -> một lần đọc như trước 1.0.05
@@ -1087,6 +1105,13 @@ class BoSoan:
         """Lưu phương án đang soạn (một giao dịch). Trả mô tả để hiện cho người dùng.
         tu_dong: phương án phần mềm tự lập (Dự án mới) - trạng thái TU_LAP, chỉ thành "Đã lập" khi người dùng mở ra soát và Lưu.
         mo_lai=False: không đọc lại phương án vừa lưu (bộ soạn bỏ đi ngay - tự lập hàng loạt)."""
+        if getattr(self, 'phien_ban', None):              # đang mở V2.n / V3: ghi vào phiên bản, không đụng số hiện hành (V3 tự áp)
+            from . import phien_ban_pa as pb
+            ma = self.phien_ban
+            pb.sua(self.con, self.ma_ho, ma, self.pa)
+            if mo_lai:
+                self.mo_phien_ban(ma)
+            return f'Đã lưu {ma} của hộ {self.ma_ho} – {self.pa.ho.ho_ten}: tổng {vn(self.ket_qua.tong)} đồng.'
         kiem_ho_nhan_viec(self.con, self.ma_ho)
         if getattr(self.con, '_vai_tro', None) is not None:      # 1.0.57: vai trò máy chủ LAN - phần phương án được sửa
             from .phan_quyen import kiem_pa

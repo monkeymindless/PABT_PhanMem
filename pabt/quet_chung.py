@@ -114,12 +114,8 @@ def doc_noi_dung(file, bao_tien_do=None, cho=None) -> str:
     duoi = p.suffix.lower()
     if duoi in DUOI_CHU:
         return p.read_text(encoding='utf-8-sig', errors='replace')
-    from . import nhap_don_gia as nd
-    if duoi in DUOI_ANH:
-        from . import ocr
-        return '\n'.join(ocr.doc_chu(p, bao_tien_do, cho))
-    dong = nd.doc_bang_ocr(p, bao_tien_do, cho)
-    return '\n'.join('\t'.join(str(o) for o in r) for r in dong)
+    from .quan_ly import doc_van_ban                    # 1.0.63: cùng một lõi với Đọc kết quả từ file, đọc quyết định
+    return '\n'.join('\t'.join(str(o) for o in r) for r in doc_van_ban(p, bao_tien_do, cho)[0])
 
 
 # ---------------------------------------------------------------- nhận dạng theo mẫu (port của các hàm TSX)

@@ -27,7 +27,7 @@ TANG = (
          'du_an_moi man_hinh_du_an_moi ho_so man_hinh_ho_so ho_so_scan man_hinh_ho_so_scan tiep_nhan_phap_ly man_hinh_tiep_nhan to_chuc '
          'so_sanh_ho kiem_loi'),
         ('2. Lập phương án', 'Tính tiền từng hộ: đất, nhà, cây, hỗ trợ, thưởng',
-         'lap_pa lan_pa nghiep_vu man_hinh man_hinh_phu_lap_pa chinh_sach cay_trong man_hinh_cay hieu_tai_san ma_tai_san phan_loai_tai_san '
+         'lap_pa lan_pa phien_ban_pa man_hinh_phien_ban nghiep_vu man_hinh man_hinh_phu_lap_pa chinh_sach cay_trong man_hinh_cay hieu_tai_san ma_tai_san phan_loai_tai_san '
          'man_hinh_phan_loai loai_dat chuan_ten_cay ten_cay_lam_nghiep nhap_tai_san hang_nhap_nhanh bang_dieu_chinh'),
         ('3. Niêm yết, lấy ý kiến', 'Đợt niêm yết, ý kiến, đối thoại, vận động',
          'du_thao man_hinh_du_thao van_ban_dot man_hinh_van_ban_dot bao_cao_y_kien van_dong thoi_han'),
@@ -39,12 +39,12 @@ TANG = (
         ('Đơn giá và giá đất', 'Bộ đơn giá, bảng giá NQ 28, hệ số K, tính giá QĐ 03, văn bản căn cứ',
          'don_gia don_gia_rieng man_hinh_don_gia man_hinh_don_gia_rieng dong_bo_don_gia khu_vuc_gia quan_tri_bo gia_dat_nq28 gia_dat_qd03 '
          'man_hinh_tinh_gia_dat man_hinh_gia_dat he_so_k man_hinh_he_so_k cap_nhat_gia_dat nguon_gia_dat nguon_luoi quy_tac_vi_tri '
-         'nhap_don_gia man_hinh_nhap_don_gia phan_tich_ai_don_gia quy_dinh_van_ban van_ban_can_cu'),
+         'nhap_don_gia man_hinh_nhap_don_gia phan_tich_ai_don_gia quy_dinh_van_ban van_ban_can_cu goi_gia_dat man_hinh_goi_gia_dat'),
         ('Quét và nhập file', 'Bộ quét chung, Tesseract, đọc PDF, Word, Excel',
          'quet_chung man_hinh_quet_chung ocr ocr_ho_so man_hinh_ocr pdf_bang pdf_du_phong doc_xls nhap_excel nhap_tho nhap_chi_tiet '
          'man_hinh_nhap_chi_tiet man_hinh_ghep_cot'),
         ('In và xuất bản', 'Bản Word, bảng tổng hợp Excel, PDF, mẫu in',
-         'in_an in_word in_excel in_excel_chi_tiet in_duong_ke du_lieu_in mau_bang_tong_hop openxml_word docx_sang_pdf ghi_xlsx_nhanh '
+         'in_phien_ban in_an in_word in_excel in_excel_chi_tiet in_duong_ke du_lieu_in mau_bang_tong_hop openxml_word docx_sang_pdf ghi_xlsx_nhanh '
          'man_hinh_xuat_ban man_hinh_quan_ly_mau goi_mau ma_qr xem_truoc_tai_lieu'),
         ('Bản đồ và thực địa', 'CAD, KML, nền bản đồ, phiếu kiểm đếm, nhận qua Wi-Fi',
          'ban_do_cad ban_do_kml ban_do_luu dxf_thuan nen_ban_do sua_font_kml toa_do man_hinh_ban_do phieu_kiem_dem man_hinh_kiem_dem '

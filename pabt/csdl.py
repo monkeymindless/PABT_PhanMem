@@ -790,9 +790,21 @@ MO_RONG = (
     ('cot_thua', lambda con: co_cot_thua(con), lambda con: dam_bao_cot_thua(con)),
     ('cot_du_an', lambda con: all(k in {r[1] for r in con.execute('PRAGMA table_info(du_an)')} for k, _ in COT_DU_AN_THEM),
      lambda con: dam_bao_cot_du_an(con)),
+    ('phien_ban_pa', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'pa_phien_ban'").fetchone()),
+     lambda con: _tao_bang_phien_ban(con)),                                                    # 1.0.63: V1, V2.n, V3
     ('chi_muc', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?",
                                              (CHI_MUC_THEM[-1][0],)).fetchone()), lambda con: dam_bao_chi_muc(con)),
 )
+
+
+def _tao_bang_phien_ban(con) -> None:
+    """Ảnh chụp phiên bản phương án (phien_ban_pa.py) + mã định danh hộ nhúng vào file xuất."""
+    con.execute('''CREATE TABLE IF NOT EXISTS pa_phien_ban (
+        id INTEGER PRIMARY KEY, ma_ho INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE, ma TEXT NOT NULL, lan INTEGER NOT NULL DEFAULT 1,
+        loai TEXT NOT NULL DEFAULT '', nhan TEXT NOT NULL DEFAULT '', tao_luc TEXT NOT NULL DEFAULT '', nguoi_tao TEXT NOT NULL DEFAULT '', khoa INTEGER NOT NULL DEFAULT 0,
+        cha TEXT NOT NULL DEFAULT '', ghi_chu TEXT NOT NULL DEFAULT '', nguon_nhom TEXT NOT NULL DEFAULT '{}', du_lieu TEXT NOT NULL, UNIQUE (ma_ho, ma))''')
+    con.execute('''CREATE TABLE IF NOT EXISTS ho_uuid (
+        ma_ho INTEGER PRIMARY KEY REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE, uuid TEXT NOT NULL UNIQUE)''')
 
 
 def _co_bang_bam_kt(con) -> bool:

@@ -177,6 +177,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Đối tượng nhớ dùng chung (`BoiCanh.tu`, `nghiep_vu.ket_qua_ho`, `theo_doi.tong_hop`, `csdl.nho`): KHÔNG sửa đối tượng trả về. Cả dự án:
   `nghiep_vu.doc_tat_ca_phuong_an` - đừng gọi `tinh_ho` / `doc_phuong_an` trong vòng lặp hộ.
 - Nhiều lần phương án: `doc_phuong_an` mặc định CỘNG DỒN các lần (bỏ lần đã bị thay); `BoSoan.luu` chỉ ghi lần đang mở; lần khóa không sửa.
+- Phiên bản phương án (1.0.63, `phien_ban_pa`): V0 số hiện hành, V1 chứng cứ niêm yết (không bao giờ ghi đè), V2.n nhánh từ V1, V3 trình duyệt; là ảnh chụp JSON của MỘT lần, không cộng dồn - khác `lan_pa` (đợt pháp lý cộng dồn). Đặt / sửa V3 ghi luôn vào số hiện hành; đang mở V2 / V3 thì `BoSoan.luu` ghi vào phiên bản.
 - Khu vực giá (1.0.57, `khu_vuc_gia`): bộ đơn giá tách Phụ lục I / II theo khu vực - lưu ở tham_so `KVMUC:<mã>` / `KVXA:<xã>` / `KVTEN:<kv>`
   (không đổi lược đồ; mục không có KVMUC dùng mọi khu vực). Dự án: `khu_vuc_du_an` (cai_dat KHU_VUC_GIA hoặc xã du_an.ten_dia_ban);
   `lap_pa.DanhMuc` ẩn mục khu vực khác (`an`, `bi_khoa`; `lay` vẫn trả để đọc dòng cũ). Văn bản nhiều khu vực: `so_khop_khu_vuc` (so từng
@@ -211,6 +212,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   bấm), không gọi thẳng hàm (mất trạng thái tắt khi chỉ xem / chưa mở dự án - `LENH_CAN_DU_AN`). `tests/test_khong_trung_lenh.py` chặn.
 - Widget chưa vào bố cục mà `setVisible(True)` = CỬA SỔ LẠ: ẩn / hiện SAU khi addWidget; widget con của cửa sổ chính ngoài bố cục phải ẩn
   (từng nuốt cú bấm menu). Sau khi đổi bố cục hộp thoại: chạy `kiem_tra_giao_dien.py` (mục "Cửa sổ lạ").
+- Gỡ widget khỏi bố cục đang hiện: `removeWidget` + `hide()` + `deleteLater()`, KHÔNG `setParent(None)`: Qt hẹn hiện widget vừa thêm, bỏ cha trước khi hẹn chạy thành cửa sổ lạ (1.0.63).
 - Hộp thoại tạo với cha, dọn bằng `don_hop_da_dong`; không `WA_DeleteOnClose` hàng loạt, không giữ hộp làm thuộc tính để dùng lại; QMenu tạm
   `deleteLater`; KHÔNG `takeAt(...).layout().deleteLater()` (hủy hai lần - sập) - thay cả widget chứa. QGraphicsItem không phải QObject.
 - Danh sách dài: `giao_dien.hop_ket_qua` (không ghép vào QMessageBox). Hộp thoại mới có `im_lang` / `cho=False` cho test.

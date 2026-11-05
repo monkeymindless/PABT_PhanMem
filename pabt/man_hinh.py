@@ -1638,7 +1638,7 @@ class CuaSoLapPA(QDialog):
         nhan.setProperty('vai', 'nhan')
         self.cb_lan = QComboBox()
         self.cb_lan.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self.cb_lan.setMinimumContentsLength(34)      # 30/10/2026: đủ chữ "Lần 2: Điều chỉnh khối lượng…" (trước 14 - cắt)
+        self.cb_lan.setMinimumContentsLength(24)      # 30/10/2026: đủ chữ "Lần 2: Điều chỉnh khối lượng…" (trước 14 - cắt)
         self.cb_lan.setToolTip('Mỗi lần lập phương án (lần đầu, bổ sung lần 1, 2…) có dòng tài sản / chính sách, số phương án và '
                                'quyết định phê duyệt riêng. Lần đã có quyết định chỉ xem - không làm sai quyết định cũ.')
         self.cb_lan.activated.connect(lambda i: self.chon_lan(self.cb_lan.itemData(i)))
@@ -1671,17 +1671,42 @@ class CuaSoLapPA(QDialog):
         for b in (self.b_lan_moi, self.b_dieu_chinh, self.b_sua_lan, self.b_mo_khoa, self.b_xoa_lan):
             b.setFixedHeight(26)
         self.cb_lan.setFixedHeight(26)
+        # 1.0.63: một dải duy nhất - lần | V0 -> V1 -> V2.n -> V3 | trạng thái | Đối chiếu, "…". Bổ sung, điều chỉnh, sửa, xóa lần vào menu "…"
+        from .man_hinh_phien_ban import ThanhPhienBan
+        self.thanh_pb = ThanhPhienBan(self)
+        self._nut_an_lan = QWidget(f)                   # giữ các nút (trạng thái bật / tắt, chữ) làm nguồn cho menu; luôn ẩn, không chiếm chỗ
+        la = QHBoxLayout(self._nut_an_lan)
+        for b in (self.b_lan_moi, self.b_dieu_chinh, self.b_sua_lan, self.b_xoa_lan):
+            la.addWidget(b)
+        self.nut_them_lan = QPushButton(' … ')
+        self.nut_them_lan.setFixedHeight(26)
+        self.nut_them_lan.setToolTip('Thêm PA bổ sung, PA điều chỉnh; sửa, xóa lần phương án')
+        self.menu_lan = QMenu(self.nut_them_lan)
+        self.menu_lan.setToolTipsVisible(True)
+        self.menu_lan.aboutToShow.connect(self._ve_menu_lan)
+        self.nut_them_lan.setMenu(self.menu_lan)
         h.addWidget(nhan)
         h.addWidget(self.cb_lan)
-        h.addWidget(self.b_lan_moi)
-        h.addWidget(self.b_dieu_chinh)
-        h.addWidget(self.b_sua_lan)
+        h.addWidget(self.thanh_pb)
         h.addWidget(self.b_mo_khoa)
-        h.addWidget(self.b_xoa_lan)
         h.addWidget(self.lb_trang_thai_lan)
         h.addWidget(self.lb_lan, 1)
+        h.addWidget(self.thanh_pb.b_dc)
+        h.addWidget(self.nut_them_lan)
+        h.addWidget(self._nut_an_lan)
+        self._nut_an_lan.hide()
         self.dai_lan = f
         return f
+
+    def _ve_menu_lan(self) -> None:
+        """Menu "…": đúng trạng thái bật / tắt, hiện / ẩn của các nút lần phương án (tính ở _nap_lan)."""
+        self.menu_lan.clear()
+        for b, chu in ((self.b_lan_moi, 'Thêm PA bổ sung…'), (self.b_dieu_chinh, 'Thêm PA điều chỉnh…'), (self.b_sua_lan, 'Sửa lần phương án…'), (self.b_xoa_lan, 'Xóa lần phương án…')):
+            if b.isHidden():
+                continue
+            a = self.menu_lan.addAction(chu, b.click)
+            a.setEnabled(b.isEnabled())
+            a.setToolTip(b.toolTip())
 
     def _nap_lan(self) -> None:
         ds = self.bo.ds_lan()
@@ -1694,7 +1719,10 @@ class CuaSoLapPA(QDialog):
         self.cb_lan.blockSignals(False)
         self.cb_lan.setToolTip(self.cb_lan.currentText())
         x = next((y for y in ds if y.lan == self.bo.lan), None)
-        self.b_mo_khoa.setVisible(bool(self.bo.khoa))
+        pb_mo = getattr(self.bo, 'phien_ban', None)
+        self.b_mo_khoa.setVisible(bool(self.bo.khoa) and not pb_mo)   # V1 khóa vĩnh viễn: không có nút mở khóa
+        if hasattr(self, 'thanh_pb'):
+            self.thanh_pb.nap()
         khong_nhan = self._ho_khong_nhan()
         self.b_xoa_lan.setEnabled(self.bo.lan > 1 and not (x and x.qd) and not khong_nhan)
         self.b_xoa_lan.setVisible(len(ds) > 1)          # 1.0.55: hộ một lần PA - không có lần nào xóa được: nhường chỗ cho chữ tổng
@@ -1709,6 +1737,8 @@ class CuaSoLapPA(QDialog):
             self.lb_trang_thai_lan.setToolTip(day_du)
             from .giao_dien import dat_the_nho
             dat_the_nho(self.lb_trang_thai_lan, 'vang' if x.trang_thai == 'mo_khoa' else ('xanh' if self.bo.khoa else 'lam'))
+            if pb_mo:                                   # đang xem một phiên bản: thẻ nói đúng phiên bản đó
+                self.lb_trang_thai_lan.setText(f'{pb_mo} ĐÃ KHÓA - CHỈ XEM' if self.bo.khoa else f'ĐANG SỬA {pb_mo}')
         self.dai_lan.setProperty('khoa', '1' if self.bo.khoa else '0')
         self.dai_lan.style().unpolish(self.dai_lan)
         self.dai_lan.style().polish(self.dai_lan)
@@ -2101,7 +2131,11 @@ class CuaSoLapPA(QDialog):
         self.b_sau.setEnabled(self.bo.ho_ke(1) is not None)
         self._nap_lan()
         self._ap_khoa()
-        self.thong_bao(f'Lần {self.bo.lan} đã có quyết định phê duyệt - chỉ xem. Bổ sung tài sản / chính sách: "+ Lập PA '
+        chu_pb = self.thanh_pb.chu_trang_thai()       # V1 khóa vì đã niêm yết, không phải vì quyết định phê duyệt; đang sửa V2, V3: Lưu ghi vào đâu
+        if chu_pb and (getattr(self.bo, 'phien_ban', None) or not self.bo.khoa):
+            self.thong_bao(chu_pb)
+        else:
+            self.thong_bao(f'Lần {self.bo.lan} đã có quyết định phê duyệt - chỉ xem. Bổ sung tài sản / chính sách: "+ Lập PA '
                            'bổ sung"; điều chỉnh lần này: "Mở khóa".' if self.bo.khoa else '')
         if not getattr(self, '_dang_ht', False):
             self._lich_su, self._vi_tri = [], -1             # hộ mới mở / vừa lưu: bắt đầu lịch sử hoàn tác mới
@@ -3264,6 +3298,10 @@ class HopDuAn(QDialog):
             lap_pa.luu_kinh_phi_to_chuc(self.con, '' if self._kp_tu_dong else (self.o_loai_kp.currentData() or ''), '')
         except LoiNhap as e:
             QMessageBox.warning(self, TEN_UD, str(e))
+            return
+        except sqlite3.OperationalError as e:                # dự án mở chỉ xem / file chỉ đọc: báo rõ, không văng lỗi
+            from .thong_bao import chu_loi
+            QMessageBox.warning(self, TEN_UD, chu_loi('Lưu thông tin dự án', e))
             return
         super().accept()
 

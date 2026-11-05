@@ -7,6 +7,14 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.63', '05/11/2026', (
+        'Đa phiên bản phương án: V0 bản đang lập, V1 dự thảo niêm yết (khóa, không bao giờ bị ghi đè), V2.1, V2.2… sau ý kiến, đối thoại, V3 trình duyệt. Thanh chọn phiên bản ngay trên màn hình '
+        'Lập phương án. Trả về số niêm yết một chạm, cho một hộ hoặc đồng loạt cả đợt, không phải nhập lại; ghép được đất theo V1, nhà, cây theo V2.',
+        'Bảng đối chiếu V1, V2, V3 kèm chênh lệch và lý do giải trình, cho từng hộ và toàn đợt (Lập phương án; Niêm yết: thẻ 3, 4).',
+        'Bố cục gọn hơn: dải Lần lập PA một dòng với các nút V0 → V1 → V2 → V3 (lệnh ít dùng gom vào nút ...); bảng đối chiếu danh sách hộ bên trái, chi tiết bên phải; bảng tính đơn giá đất hai cột, đơn giá to dễ thấy, phần ít dùng thu gọn.',
+        'Bốn mẫu in tách riêng: 01 dự thảo niêm yết (V1), 02 dự thảo đối thoại (V2.n), 03 bảng đối chiếu, 04 chính thức trình duyệt (V3). In dự thảo, xuất bảng niêm yết tự chốt V1.',
+        'Đọc kết quả từ file ở Niêm yết: khớp hộ theo mã định danh, CCCD (kể cả mất số 0 đầu), số thửa + tờ, họ tên (bỏ "là chủ sở hữu", "quản lý"; trùng tên dùng STT). Hộ không đồng ý được tạo sẵn nhánh V2.',
+    )),
     ('1.0.62', '05/11/2026', (
         'Quét file thông minh nay nhận loại TỪNG file và đưa vào đúng chỗ: file dự án / danh sách hộ, phương án chi tiết, phụ lục hệ số K, bảng giá đất, '
         'bảng đơn giá nhà, cây, biên bản kiểm đếm, văn bản căn cứ. Nhận sai thì đổi được loại trước khi xử lý.',

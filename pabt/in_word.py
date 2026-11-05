@@ -574,6 +574,11 @@ def du_lieu_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, l
     da = du_lieu_in._thong_tin_du_an(con)
     da['ky_hieu_so'] = du_lieu_in.ky_hieu_cua_ho(con, ma_ho, da['ky_hieu_so'])
     lan = du_lieu_in.chon_lan_in(con, ma_ho, lan)
+    if du_thao and pa is None:                          # 1.0.63: bản dự thảo gửi dân, niêm yết luôn theo V1 đã chốt, không in số đang thử
+        from . import phien_ban_pa
+        r_v1 = phien_ban_pa.lay(con, ma_ho, phien_ban_pa.V1)
+        if r_v1 is not None and r_v1['lan'] == (lan or 1):
+            pa = phien_ban_pa.pa_tu_json(con, ma_ho, r_v1['du_lieu'])
     pa_truoc = None
     if lan is not None:
         if pa is None:
@@ -616,7 +621,7 @@ def du_lieu_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, l
                            hang_i=hang_i, tieu_de_cot=tuple(TIEU_DE_COT_BS if kieu != lan_pa.CHINH else TIEU_DE_COT))
 
 
-def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None) -> str:
+def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None, nhan_du_thao: str = '') -> str:
     """XML thân văn bản (w:body không sectPr) phương án chi tiết một hộ."""
     from . import nghiep_vu
     x = du_lieu_chi_tiet(con, ma_ho, bc, du_thao, pa, lan)
@@ -639,7 +644,7 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
         _p_gach('Độc lập - Tự do - Hạnh phúc', CO_TIEU_NGU, True, r2 - 2 * 57, do, khe=KHE_TIEU_NGU_PT if do else KHE_GACH_PT)
     # "Số: …/…" và "địa danh, ngày … tháng … năm …" là HAI Ô CÙNG MỘT HÀNG của bảng đầu: cùng cỡ chữ, cùng giãn dòng và khoảng
     # cách trước, canh trên -> hai dòng luôn ngang nhau (người dùng 22/10/2026: không được chênh cao thấp)
-    so_o = _p(_r(so, co=CO_SO_NGAY), can='center', truoc=120) + (_p(_r('(DỰ THẢO)', dam=True, co=CO_DU_THAO), can='center') if du_thao else '')
+    so_o = _p(_r(so, co=CO_SO_NGAY), can='center', truoc=120) + (_p(_r(f'({nhan_du_thao or "DỰ THẢO"})', dam=True, co=CO_DU_THAO), can='center') if du_thao else '')
     ngay_o = _p(_r(x.ngay, nghieng=True, co=CO_SO_NGAY), can='center', truoc=120)
     t = [_bang([_hang([_o(trai, r1, doc='top', vien=False), _o(phai, r2, doc='top', vien=False)]),
                 _hang([_o(so_o, r1, doc='top', vien=False), _o(ngay_o, r2, doc='top', vien=False)])], [r1, r2], vien=False,
@@ -735,11 +740,11 @@ def sect_pr() -> str:
             f'w:footer="284" w:gutter="0"/></w:sectPr>')
 
 
-def xuat_chi_tiet_docx(con, ma_ho: int, file_ra, bc=None, du_thao: bool = False, pa=None, lan=None) -> Path:
+def xuat_chi_tiet_docx(con, ma_ho: int, file_ra, bc=None, du_thao: bool = False, pa=None, lan=None, nhan_du_thao: str = '') -> Path:
     """Ghi phương án chi tiết một hộ ra file .docx (thể thức NĐ 30). Trả đường dẫn file."""
     file_ra = Path(file_ra)
     file_ra.parent.mkdir(parents=True, exist_ok=True)
-    du = _goi_docx(noi_dung_chi_tiet(con, ma_ho, bc, du_thao, pa, lan), sect_pr())
+    du = _goi_docx(noi_dung_chi_tiet(con, ma_ho, bc, du_thao, pa, lan, nhan_du_thao), sect_pr())
     tam = file_ra.with_name(file_ra.name + '.tmp')
     tam.write_bytes(du)
     tam.replace(file_ra)

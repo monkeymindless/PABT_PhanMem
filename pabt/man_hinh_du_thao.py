@@ -561,9 +561,9 @@ class KhungDuThao(QWidget):
         self.tabs.addTab(tach, '1. Niêm yết công khai')
         self.tabs.addTab(self._trang(self.bang_yk, []), '2. Lấy ý kiến nhân dân')
         self.tabs.addTab(self._trang(self.bang_dt, [
-            ('Chuyển hộ sang đợt sau', self._chuyen), ('Xuất biên bản đối thoại', self._xuat_dt)]), '3. Đối thoại && Tiếp thu')
+            ('Đối chiếu V1 - V2 - V3…', lambda: self.doi_chieu_phien_ban()), ('Chuyển hộ sang đợt sau', self._chuyen), ('Xuất biên bản đối thoại', self._xuat_dt)]), '3. Đối thoại && Tiếp thu')
         self.tabs.addTab(self._trang(self.bang_th, [
-            ('Xuất báo cáo tổng hợp ý kiến', self._xuat_yk)]), '4. Tổng hợp kết quả ý kiến')
+            ('Đối chiếu V1 - V2 - V3… ', lambda: self.doi_chieu_phien_ban()), ('Xuất báo cáo tổng hợp ý kiến', self._xuat_yk)]), '4. Tổng hợp kết quả ý kiến')
         # 1.0.58 (người dùng 04/11/2026): văn bản, biên bản theo từng mục; đọc kết quả từ file scan / Word / Excel - theo thẻ đang mở
         self.b_van_ban = QPushButton('Văn bản, biên bản…')
         self.b_van_ban.setFixedHeight(26)
@@ -575,19 +575,19 @@ class KhungDuThao(QWidget):
         self.b_doc_kq.clicked.connect(lambda: self.doc_ket_qua())
         self._h_goc.addWidget(self.b_van_ban)
         self._h_goc.addWidget(self.b_doc_kq)
-        # 05/11/2026: ba nút Quét của thẻ Niêm yết cùng gọi MỘT bộ quét dùng chung (quet_chung / lệnh 'Quét file thông minh…' của cửa sổ chính)
+        # 05/11/2026: các việc quét của thẻ Niêm yết cùng gọi MỘT bộ quét dùng chung (quet_chung / lệnh 'Quét file thông minh…' của cửa sổ chính)
+        self.b_quet_ny = QPushButton('Quét, căn cứ')       # một nút: thanh 4 thẻ không phải cuộn
+        self.b_quet_ny.setFixedHeight(26)
+        self.b_quet_ny.setToolTip('Quét hồ sơ chi tiết của hộ, file đơn giá đất, nhà, cây; Văn bản căn cứ của dự án. Đọc trên máy, xem trước kết quả rồi mới áp')
+        m_q = QMenu(self.b_quet_ny)
         self.nut_quet = {}
-        for ngu_canh, chu, goi_y in (
-                ('DETAILED_HOUSEHOLD_DOSSIER', 'Quét hồ sơ chi tiết…', 'Quét biên bản kiểm đếm / hồ sơ chi tiết của hộ (đất, nhà, cây trồng): xem trước kết quả rồi mới áp'),
-                ('LAND_PRICE_TABLE', 'Quét đơn giá đất…', 'Quét file đơn giá / văn bản giá đất: nhận địa bàn, mặt đường, văn bản căn cứ, rồi mở Bảng tính đơn giá đất'),
-                ('ASSET_CROP_PRICE_TABLE', 'Quét đơn giá nhà, cây…', 'Quét file đơn giá nhà, vật kiến trúc, cây trồng')):
-            b = QPushButton(chu)
-            b.setFixedHeight(26)
-            b.setToolTip(goi_y)
-            b.clicked.connect(lambda _=False, nc=ngu_canh: self.quet_chung(nc))
-            self._h_goc.addWidget(b)
-            self.nut_quet[ngu_canh] = b
-            self._nut_goc.append((self.tabs.widget(0), b))
+        for ngu_canh, chu in (('DETAILED_HOUSEHOLD_DOSSIER', 'Quét hồ sơ chi tiết của hộ (đất, nhà, cây)…'), ('LAND_PRICE_TABLE', 'Quét file đơn giá đất…'), ('ASSET_CROP_PRICE_TABLE', 'Quét file đơn giá nhà, vật kiến trúc, cây trồng…')):
+            self.nut_quet[ngu_canh] = m_q.addAction(chu, lambda nc=ngu_canh: self.quet_chung(nc))
+        m_q.addSeparator()
+        self.nut_can_cu = m_q.addAction('Văn bản căn cứ của dự án (13 bậc)…', lambda: self.van_ban_can_cu())
+        self.b_quet_ny.setMenu(m_q)
+        self._h_goc.addWidget(self.b_quet_ny)
+        self._nut_goc.append((self.tabs.widget(0), self.b_quet_ny))
         self.b_doc_kq.setEnabled(not chi_doc)
         self.tabs.currentChanged.connect(lambda *_: self._hien_nut_goc())
         self._hien_nut_goc()
@@ -643,6 +643,13 @@ class KhungDuThao(QWidget):
             h.exec()
         return h
 
+    def van_ban_can_cu(self, cho: bool = True):
+        from .man_hinh_quet_chung import HopVanBanCanCu
+        d = HopVanBanCanCu(self, self.con, self.chi_doc)
+        if cho:
+            d.exec()
+        return d
+
     def quet_chung(self, ngu_canh: str, files=None, doc=None, cho: bool = True):
         """Nút Quét của thẻ Niêm yết -> bộ quét dùng chung của cửa sổ chính (cùng hộp xem kết quả, cùng văn bản căn cứ 13 bậc)."""
         w = self.window()
@@ -672,14 +679,17 @@ class KhungDuThao(QWidget):
             self._bao(chu_loi('Không đọc được file', e))
             return None
         if not kq['dong']:
-            self._bao(f'Đọc {kq["tong_dong"]} dòng nhưng không nhận ra hộ nào của đợt này (so theo số CCCD, họ tên đủ chữ).')
+            mau = '; '.join(kq.get('khong_khop', ())[:3])
+            self._bao(f'Đọc {kq["tong_dong"]} dòng nhưng không dòng nào khớp với {kq.get("so_ho_dot", 0)} hộ của đợt đang chọn (đã thử mã định danh, CCCD, số thửa + tờ, '
+                      f'họ tên). Xem lại đã chọn đúng đợt chưa, file có cột họ tên hoặc thửa không.' + (f'\nVí dụ dòng không khớp: {mau}' if mau else ''))
             return None
         h = HopKetQuaFile(self, self.con, d, self._muc_hien_tai(), list(files), kq)
         if not cho:
             return h
         if h.exec():
             self.nap()
-            self._bao(f'Đã ghi kết quả {h.so_ghi} hộ.')
+            so_v2 = sum(1 for x in kq['dong'] if x.v2)
+            self._bao(f'Đã ghi kết quả {h.so_ghi} hộ.' + (f' Tạo sẵn nhánh dự thảo V2 cho {so_v2} hộ có ý kiến khác (V1 giữ nguyên).' if so_v2 else ''))
         return h
 
     def _hien_nut_goc(self):
@@ -906,7 +916,30 @@ class KhungDuThao(QWidget):
         cha = self.window()
         if not hasattr(cha, 'in_xuat'):
             return None
+        from . import phien_ban_pa
+        phien_ban_pa.khoa_v1_nhieu(self.con, ds, self.cb.currentText())    # 1.0.63: in dự thảo gửi dân = chốt V1, bản in lấy số V1
         return cha.in_xuat(cho=cho, ma_ho=ds, che_do='du_thao')
+
+    def doi_chieu_phien_ban(self, cho: bool = True):
+        """Bảng đối chiếu V1 | V2.n | V3 của các hộ trong đợt đang chọn (Mẫu 01-04, áp dụng đồng loạt)."""
+        dot = self._can_dot()
+        if dot is None:
+            return None
+        ds = [h['ma_ho'] for h in du_thao.ds_ho_dot(self.con, dot)]
+        if not ds:
+            self._bao('Đợt này chưa có hộ.')
+            return None
+        from .man_hinh_phien_ban import HopDoiChieu
+        d = HopDoiChieu(self, self.con, ds, ds[0], self.chi_doc, dot)
+        if not cho:
+            return d
+        d.exec()
+        if d.da_doi:
+            self.nap()
+            cha = self.window()
+            if hasattr(cha, 'tai_lai'):
+                cha.tai_lai(giu_trang=True)
+        return d
 
     def _them_ho(self):
         dot = self._dot_id()
