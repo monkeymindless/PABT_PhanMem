@@ -3,34 +3,163 @@
 Logic ở gia_dat_qd03.py, van_ban_can_cu.py (13 bậc pháp lý), quet_chung.py (bộ quét dùng chung); file này
 chỉ hiển thị. Ba khối: Văn bản căn cứ (tự khử trùng + sắp xếp mỗi khi quét thêm / sửa xong) | Thông số đầu vào (địa bàn, nhóm đất, tuyến đường
 & đoạn đường điểm đầu -> điểm cuối từ 106 đoạn, vị trí kết nối cụm 7 dòng NQ 27 / NQ 28, mặt đường, G_NQ28, K2, Phụ lục III, K khác, giá đất
-cụ thể chuyển tiếp) và kết quả tức thì | Các dòng đất của hộ đang chọn để áp giá. Áp giá = BoSoan.ap_don_gia_qd03 + luu (khóa hộ nhận việc,
-phân quyền, nhật ký, hoàn tác như mọi thao tác lưu phương án)."""
+cụ thể chuyển tiếp) và kết quả tức thì | Các dòng đất của mọi hộ trong dự án để áp giá (1.0.68: phạm vi, lọc nhanh, thêm / tự tạo dòng đất; bảng ảo, đổi thông số chỉ tính dòng đang thấy).
+Áp giá = ap_gia_dat.ap_hang_loat (BoSoan.ap_don_gia_qd03 + luu: khóa hộ nhận việc, phân quyền, nhật ký, hoàn tác như mọi thao tác lưu phương án; hộ có V1 ghi vào nhánh V2)."""
 from __future__ import annotations
 
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPlainTextEdit,
-                               QPushButton, QScrollArea, QFrame, QSizePolicy, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtGui import QColor, QFont
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+                               QMessageBox, QPlainTextEdit, QProgressDialog, QPushButton, QScrollArea, QFrame, QSizePolicy, QTableView, QVBoxLayout, QWidget)
 
+from . import ap_gia_dat as ap
 from . import gia_dat_qd03 as g
 from . import goi_gia_dat as gg
 from . import quet_chung as qc
 from . import van_ban_can_cu as vb
+from .giao_dien import TOKEN, XepDong, hop_ket_qua
 from .lap_pa import LoiNhap, doc_so
 from .man_hinh_quet_chung import NutQuetChung
-from .nghiep_vu import thanh_tien_dat
+from .nghiep_vu import BoiCanh, thanh_tien_dat
 from .tien import D, vn
 
 TIEU_DE = 'LARC - Tính đơn giá đất bồi thường'
-TOI_DA_HO = 60                                   # số hộ tối đa đưa vào bảng chọn dòng đất một lần (mỗi hộ một lần mở phương án)
-TOI_DA_COT_HO = 190
+TOI_DA_COT_HO = 135
+TAT_CA, DANG_CHON = 'tat_ca', 'dang_chon'
+HO_CAN_TIEN_DO = 50
+COT_DONG = ('Chọn', 'Hộ', 'Tờ, thửa', 'Loại đất', 'DT (m²)', 'Giá hiện tại', 'Đơn giá mới', 'Thành tiền mới', 'Ghi vào')
+C_CHON, C_HO, C_THUA, C_LOAI, C_DT, C_GIA, C_MOI, C_TIEN, C_DICH = range(len(COT_DONG))
+RONG_MAU = {C_CHON: 'Chọn', C_THUA: 'Thửa 1234 tờ 123', C_LOAI: 'Loại đất', C_DT: '12.345,6', C_GIA: 'Giá hiện tại', C_MOI: 'Đơn giá mới', C_TIEN: 'Thành tiền mới'}
 
 
-def _o_so(chu: str) -> QTableWidgetItem:
-    o = QTableWidgetItem(chu)
-    o.setTextAlignment(int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter))
-    return o
+class _MoHinhDong(QAbstractTableModel):
+    """Bảng dòng đất: dong = các hàng đang hiện (DongGia), tich = khóa các dòng đã tích (giữ qua lọc / đổi phạm vi). Đơn giá mới, Thành tiền mới chỉ hiện ở dòng đang tích, tính khi vẽ."""
+
+    def __init__(self, parent=None, khi_doi=None):
+        super().__init__(parent)
+        self.dong, self.tich = [], set()
+        self.gia = None
+        self.lamtron = 0
+        self.khi_doi = khi_doi
+
+    def dat_dong(self, ds: list) -> None:
+        self.beginResetModel()
+        self.dong = ds
+        self.endResetModel()
+
+    def dat_gia(self, gia) -> None:
+        self.gia = gia
+        if self.dong:
+            self.dataChanged.emit(self.index(0, C_MOI), self.index(len(self.dong) - 1, C_TIEN))
+
+    def doi_tich(self, ds: list, bat: bool) -> None:
+        for x in ds:
+            if x.chi_so != ap.CO_CHUA_DONG:
+                (self.tich.add if bat else self.tich.discard)(x.khoa)
+        if self.dong:
+            self.dataChanged.emit(self.index(0, C_CHON), self.index(len(self.dong) - 1, C_TIEN))
+        if self.khi_doi is not None:
+            self.khi_doi()
+
+    def rowCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() else len(self.dong)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() else len(COT_DONG)
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
+            return COT_DONG[section]
+        return None
+
+    def flags(self, idx):
+        f = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        if idx.isValid() and idx.column() == C_CHON and self.dong[idx.row()].chi_so != ap.CO_CHUA_DONG:
+            f |= Qt.ItemFlag.ItemIsUserCheckable
+        return f
+
+    def _chu(self, x, c: int) -> str:
+        if c == C_HO:
+            return f'{x.ma_ho} - {x.ho_ten}'.strip(' -')
+        if c == C_THUA:
+            return x.ten_thua
+        if c == C_DICH:
+            return x.dich
+        if x.chi_so == ap.CO_CHUA_DONG:
+            return ''
+        if c == C_LOAI:
+            return x.loai_dat
+        if c == C_DT:
+            return vn(x.dien_tich, 1)
+        if c == C_GIA:
+            return vn(x.gia_hien_tai)
+        if self.gia is None or x.khoa not in self.tich or c not in (C_MOI, C_TIEN):
+            return ''
+        return vn(self.gia) if c == C_MOI else vn(thanh_tien_dat(x.dien_tich, self.gia, 1, x.ty_le, self.lamtron))     # cùng làm tròn với phương án thật
+
+    def data(self, idx, role=Qt.ItemDataRole.DisplayRole):
+        if not idx.isValid():
+            return None
+        x, c = self.dong[idx.row()], idx.column()
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.ToolTipRole:
+            return self._chu(x, c) if c != C_CHON else None
+        if role == Qt.ItemDataRole.CheckStateRole and c == C_CHON and x.chi_so != ap.CO_CHUA_DONG:
+            return 2 if x.khoa in self.tich else 0           # số nguyên: enum trả qua QVariant khác nhau giữa Qt5 và Qt6
+        if role == Qt.ItemDataRole.TextAlignmentRole and C_DT <= c <= C_TIEN:
+            return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        if role == Qt.ItemDataRole.ForegroundRole and x.chi_so == ap.CO_CHUA_DONG:
+            return QColor(TOKEN['chu_phu'])
+        return None
+
+    def setData(self, idx, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.CheckStateRole or idx.column() != C_CHON:
+            return False
+        self.doi_tich([self.dong[idx.row()]], int(getattr(value, 'value', value)) == 2)
+        return True
+
+
+class _BangDong(QTableView):
+    def rowCount(self) -> int:
+        return self.model().rowCount()
+
+
+class HopThemDongDat(QDialog):
+    """+ Thêm dòng đất cho hộ: chọn hộ, nhập Tờ, Thửa, Loại đất, Diện tích."""
+    im_lang = False
+
+    def __init__(self, parent, ds_ho: list, ma_mac_dinh=None, ds_loai=()):
+        super().__init__(parent)
+        self.setWindowTitle('Thêm dòng đất cho hộ')
+        f = QFormLayout(self)
+        self.cb_ho = QComboBox()
+        self.cb_ho.setEditable(True)
+        self.cb_ho.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.cb_ho.completer().setFilterMode(Qt.MatchFlag.MatchContains)
+        self.cb_ho.completer().setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        for ma, ten in ds_ho:
+            self.cb_ho.addItem(f'{ma} - {ten}', ma)
+        self.cb_ho.setCurrentIndex(max(0, self.cb_ho.findData(ma_mac_dinh)))
+        self.o_to, self.o_thua, self.o_dt = QLineEdit(), QLineEdit(), QLineEdit()
+        self.cb_loai = QComboBox()
+        self.cb_loai.setEditable(True)
+        self.cb_loai.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        for ma, chu in ds_loai:
+            self.cb_loai.addItem(chu, ma)
+        self.cb_loai.setCurrentIndex(max(0, self.cb_loai.findData('CLN')))
+        f.addRow('Hộ:', self.cb_ho)
+        f.addRow('Tờ:', self.o_to)
+        f.addRow('Thửa:', self.o_thua)
+        f.addRow('Loại đất:', self.cb_loai)
+        f.addRow('Diện tích (m²):', self.o_dt)
+        nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        nut.accepted.connect(self.accept)
+        nut.rejected.connect(self.reject)
+        f.addRow(nut)
+
+    def gia_tri(self) -> tuple:
+        chu = self.cb_loai.currentText().strip()
+        return self.cb_ho.currentData(), self.o_to.text(), self.o_thua.text(), chu.split()[0] if chu else '', self.o_dt.text()
 
 
 class _NhanTich(QLabel):
@@ -61,19 +190,24 @@ def _hang_tich(ck: QCheckBox, chu: str) -> tuple:
 
 
 class HopTinhGiaDat(QDialog):
-    """con: kết nối dự án (None: chỉ tính, không áp). ds_ma_ho: các hộ có dòng đất để áp giá. xa_mac_dinh: tên địa bàn dự án."""
+    """con: kết nối dự án (None: chỉ tính, không áp). Bảng bên phải luôn có mọi hộ của dự án; ds_ma_ho: hộ đang chọn (phạm vi mặc định, dòng tích sẵn). xa_mac_dinh: tên địa bàn dự án.
+    bo_mo: bộ soạn của cửa sổ lập phương án đang mở, hộ đó đọc / ghi qua bộ soạn; dong_tich: chỉ tích sẵn các dòng này của hộ đó; truoc_ap(): False thì hộ đó không ghi được; sau_ap(): cửa sổ vẽ lại;
+    thong_so: dict cho dat_thong_so."""
     im_lang = False
 
-    def __init__(self, parent=None, con=None, ds_ma_ho=(), xa_mac_dinh: str = '', chi_doc: bool = False):
+    def __init__(self, parent=None, con=None, ds_ma_ho=(), xa_mac_dinh: str = '', chi_doc: bool = False, bo_mo=None, dong_tich=None, truoc_ap=None, sau_ap=None, thong_so=None):
         super().__init__(parent)
         self.con, self.chi_doc = con, bool(chi_doc)
+        self.bo_mo, self.truoc_ap, self.sau_ap = bo_mo, truoc_ap, sau_ap
+        self.bao_cao = None                      # (tóm tắt, chi tiết) của lần áp gần nhất khi có hộ chuyển nhánh / bị chặn
         self.setWindowTitle(TIEU_DE)
         self.resize(1320, 680)
         self.kq = None
         self.doan = None
-        self._bo = {}                            # ma_ho -> BoSoan đang mở
-        self._dong = []                          # (ma_ho, chỉ số dòng đất) theo hàng của bảng
-        self.ket_qua_ap = None                   # (số dòng, số hộ) sau khi áp
+        self._tat_ca = None                      # mọi hàng của dự án (đọc lần đầu cần, đọc lại sau khi ghi)
+        self._ds_chon = []                       # hộ đang chọn lúc mở
+        self._cot_loai = {}                      # loại đất -> cột bảng giá (đếm dòng lệch nhóm đất)
+        self.ket_qua_ap = None                   # (số dòng, số hộ) cộng dồn các lần áp trong cửa sổ này
         self.xa_du_an = xa_mac_dinh or ''
         self.goi = gg.goi_du_an(con, self.xa_du_an)
         self._dang_dung = False                  # đang dựng lại theo gói: chưa tính
@@ -185,7 +319,7 @@ class HopTinhGiaDat(QDialog):
         cuon.setFrameShape(QFrame.Shape.NoFrame)
         cuon.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         cuon.setWidget(tp)
-        hai.addWidget(cuon, 9)
+        hai.addWidget(cuon, 7)                   # bảng dòng đất cần đủ 9 cột, thấy Đơn giá mới, Thành tiền mới không phải cuộn ngang
         self.khung_them.hide()
         self.nut_them.toggled.connect(self.khung_them.setVisible)
 
@@ -211,18 +345,54 @@ class HopTinhGiaDat(QDialog):
         phai.addWidget(kqg)
         self.lb_ho = QLabel('')
         self.lb_ho.setWordWrap(True)
-        self.bang = QTableWidget(0, 8)
-        self.bang.setHorizontalHeaderLabels(['Chọn', 'Hộ', 'Tờ, thửa', 'Loại đất', 'DT (m²)', 'Giá hiện tại', 'Đơn giá mới', 'Thành tiền mới'])
+        self.cb_pham_vi = QComboBox()
+        self.cb_pham_vi.setMaxVisibleItems(18)
+        self.cb_pham_vi.setMinimumContentsLength(20)
+        self.cb_pham_vi.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.cb_pham_vi.setToolTip('Hộ hiện trong bảng: cả dự án để áp hàng loạt, các hộ đang chọn ở danh sách hộ, hoặc một hộ')
+        self.o_loc = QLineEdit()
+        self.o_loc.setPlaceholderText('Lọc: tên chủ hộ, số tờ, số thửa, loại đất (không cần dấu)…')
+        self.o_loc.setClearButtonEnabled(True)
+        self.nut_chon_het = QPushButton('Chọn tất cả dòng đang hiện')
+        self.nut_chon_het.clicked.connect(lambda: self.chon_het(True))
+        self.nut_bo_chon = QPushButton('Bỏ chọn')
+        self.nut_bo_chon.setToolTip('Bỏ tích các dòng đang hiện')
+        self.nut_bo_chon.clicked.connect(lambda: self.chon_het(False))
+        self.nut_them_dong = QPushButton('+ Thêm dòng đất cho hộ…')
+        self.nut_them_dong.setToolTip('Chọn hộ, nhập Tờ, Thửa, Loại đất, Diện tích: dòng mới được tích sẵn. Thửa chưa có trong hồ sơ hộ thì thêm vào hồ sơ.')
+        self.nut_them_dong.clicked.connect(lambda: self.them_dong())
+        self.nut_tu_tao = QPushButton('Tự tạo dòng đất từ thông tin Thửa của hộ')
+        self.nut_tu_tao.setToolTip('Các hộ trong phạm vi đã có thửa mà mục 1 còn trống: tạo một dòng đất cho mỗi thửa còn DT thu hồi')
+        self.nut_tu_tao.clicked.connect(lambda: self.tu_tao_dong())
+        self.mo_hinh = _MoHinhDong(self, lambda: self._dat_nut_ap())
+        self.bang = _BangDong()
+        self.bang.setModel(self.mo_hinh)
         self.bang.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.bang.verticalHeader().setVisible(False)
-        self.bang.horizontalHeader().setStretchLastSection(True)
+        self.bang.setAlternatingRowColors(True)
+        self.bang.setWordWrap(False)             # tên dài xem ở chú thích; không để dòng cao thấp khác nhau
         self.bang.setMinimumHeight(90)
+        hh = self.bang.horizontalHeader()
+        hh.setStretchLastSection(True)
+        do = self.bang.fontMetrics()
+        for c, mau in RONG_MAU.items():
+            self.bang.setColumnWidth(c, do.boundingRect(mau).width() + 22)
+        self.bang.setColumnWidth(C_HO, TOI_DA_COT_HO)
         gh = QGroupBox('Các dòng đất của hộ để áp giá')
         vh = QVBoxLayout(gh)
+        h_loc = QHBoxLayout()
+        h_loc.addWidget(self.cb_pham_vi, 1)
+        h_loc.addWidget(self.o_loc, 1)
+        vh.addLayout(h_loc)
+        xd = XepDong(None, 6)
+        for w in (self.nut_chon_het, self.nut_bo_chon, self.nut_them_dong, self.nut_tu_tao):
+            xd.addWidget(w)
+        vh.addLayout(xd)
         vh.addWidget(self.lb_ho)
         vh.addWidget(self.bang, 1)
         phai.addWidget(gh, 1)
-        hai.addLayout(phai, 11)
+        hai.addLayout(phai, 13)
         lo.addLayout(hai, 1)
 
         # ---- phần thu gọn: văn bản căn cứ (mở ra phía trên hàng nút)
@@ -245,7 +415,9 @@ class HopTinhGiaDat(QDialog):
         self.nut_mo_gt.toggled.connect(self.o_giai_trinh.setVisible)
         hn.addWidget(self.nut_mo_cc)
         hn.addWidget(self.nut_mo_gt)
-        hn.addStretch(1)
+        self.lb_ap_ket_qua = QLabel('')
+        self.lb_ap_ket_qua.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        hn.addWidget(self.lb_ap_ket_qua, 1)
         nut_dong = QPushButton('Đóng')
         nut_dong.clicked.connect(self.reject)
         self.nut_ap = QPushButton('Áp đơn giá vào các dòng đã chọn')
@@ -270,13 +442,16 @@ class HopTinhGiaDat(QDialog):
         self.cb_nhom.currentIndexChanged.connect(lambda *_: self._dong_bo_yeu_to())
         self.o_can_cu.installEventFilter(self)
         self._chu_nut_can_cu()
-        self.bang.itemChanged.connect(lambda *_: self._dat_nut_ap())
+        self.cb_pham_vi.currentIndexChanged.connect(lambda *_: self._doi_pham_vi())
+        self.o_loc.textChanged.connect(lambda *_: self._loc())
 
         self._nap_ds_goi()
         self._dung_theo_goi()
         if not self.goi.get('gan_san'):
             self._gop_can_cu_goi()
-        self.nap_dong_dat(list(ds_ma_ho))
+        self.nap_dong_dat(list(ds_ma_ho), dong_tich)
+        if thong_so:
+            self.dat_thong_so(**thong_so)
         self.tra_gia(False)
         self.tinh()
 
@@ -469,7 +644,8 @@ class HopTinhGiaDat(QDialog):
             self.lb_gia.setText('Chưa tính được')
             self.lb_ap_dung.setText('')
             self.lb_ct.setText(str(e))
-            self.nut_ap.setEnabled(False)
+            self._ve_gia_moi()                       # không để số cũ ở cột Đơn giá mới khi ô nhập đang sai
+            self._dat_nut_ap()
             return None
         self.doan = self.doan_hien_tai()
         self.kq = g.tinh_don_gia(v, self.doan, self.goi)
@@ -506,107 +682,269 @@ class HopTinhGiaDat(QDialog):
         self.tinh()
 
     # ---------------------------------------------------------------- dòng đất của hộ
-    def nap_dong_dat(self, ds_ma_ho: list) -> None:
-        from .lap_pa import BoSoan
-        self.bang.setRowCount(0)
-        self._dong, self._bo = [], {}
-        if self.con is None or not ds_ma_ho:
-            self.lb_ho.setText('Chưa chọn hộ: bảng chỉ để tính. Chọn hộ ở danh sách hộ rồi mở lại để áp đơn giá vào dòng đất.')
+    def dat_thong_so(self, dia_ban=None, ma_doan=None, vi_tri=None, ket_cau=None, loai_dat=None) -> None:
+        """Điền sẵn thông số (mở từ thanh áp giá nhanh, theo dòng đất đang thao tác). Giá trị gói không có thì bỏ qua."""
+        for cb, gt in ((self.cb_dia_ban, dia_ban), (self.cb_doan, ma_doan), (self.cb_vi_tri, vi_tri), (self.cb_ket_cau, ket_cau)):
+            k = cb.findData(gt) if gt else -1
+            if k >= 0:
+                cb.setCurrentIndex(k)
+        n = g.nhom_theo_loai_dat(loai_dat, self.goi) if loai_dat else None
+        if n is not None:
+            self.cb_nhom.setCurrentIndex(max(0, self.cb_nhom.findData(f'{n["ma"]}|{n["cot_gia"]}')))
+
+    def nap_dong_dat(self, ds_ma_ho: list, dong_tich=None) -> None:
+        """Nạp bảng theo hộ đang chọn: chưa chọn hộ thì phạm vi cả dự án (không tích sẵn dòng nào: áp nhầm cả dự án sẽ khó sửa), có thì tích sẵn dòng của các hộ đó."""
+        self._ds_chon = [int(m) for m in ds_ma_ho]
+        co = self.con is not None
+        for w in (self.cb_pham_vi, self.o_loc, self.nut_chon_het, self.nut_bo_chon):
+            w.setEnabled(co)
+        for w in (self.nut_them_dong, self.nut_tu_tao):
+            w.setEnabled(co and not self.chi_doc)
+        self.mo_hinh.tich = set()
+        if not co:
+            self.lb_ho.setText('Chưa mở dự án: bảng chỉ để tính. Mở dự án để áp đơn giá vào dòng đất của các hộ.')
             return
-        bo_qua = max(0, len(ds_ma_ho) - TOI_DA_HO)
-        for ma in ds_ma_ho[:TOI_DA_HO]:
-            try:
-                bs = BoSoan(self.con, ma)
-            except Exception:                                           # noqa: BLE001 - hộ lỗi dữ liệu: bỏ qua, không dừng cả cửa sổ
-                continue
-            self._bo[ma] = bs
-            for i, d in enumerate(bs.pa.dat):
-                self._dong.append((ma, i))
-        self.bang.setRowCount(len(self._dong))
-        for r, (ma, i) in enumerate(self._dong):
-            bs = self._bo[ma]
-            d = bs.pa.dat[i]
-            o = QTableWidgetItem()
-            o.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
-            o.setCheckState(Qt.CheckState.Checked)
-            self.bang.setItem(r, 0, o)
-            ten = bs.pa.ho.ho_ten or ''
-            for c, v in ((1, f'{ma} - {ten}'.strip(' -')), (2, bs.ten_thua(d.ma_thua)), (3, d.loai_dat)):
-                it = QTableWidgetItem(v)
-                it.setToolTip(v)
-                self.bang.setItem(r, c, it)
-            self.bang.setItem(r, 4, _o_so(vn(d.dien_tich, 1)))
-            self.bang.setItem(r, 5, _o_so(vn(d.gia_bang_gia * d.he_so_k)))
-        self.bang.setColumnHidden(1, len(self._bo) <= 1)
-        hh = self.bang.horizontalHeader()                 # cột vừa nội dung, không cắt chữ; cột Hộ tối đa TOI_DA_COT_HO px (đủ tên ở chú thích), bảng rộng quá thì cuộn ngang
-        hh.setStretchLastSection(True)
-        for c in range(self.bang.columnCount()):
-            hh.setSectionResizeMode(c, QHeaderView.ResizeMode.Interactive if c == 1 else QHeaderView.ResizeMode.ResizeToContents)
-        self.bang.resizeColumnToContents(1)
-        self.bang.setColumnWidth(1, min(TOI_DA_COT_HO, self.bang.columnWidth(1)))
-        self.lb_ho.setText(f'{len(self._bo)} hộ, {len(self._dong)} dòng đất.' + (f' (Chỉ hiện {TOI_DA_HO} hộ đầu; còn {bo_qua} hộ chưa đưa vào.)'
-                                                                                 if bo_qua else ''))
+        self.mo_hinh.lamtron = BoiCanh.tu(self.con).lamtron
+        self.cb_pham_vi.blockSignals(True)
+        self.cb_pham_vi.clear()
+        self.cb_pham_vi.addItem('Tất cả hộ trong dự án (áp giá hàng loạt)', TAT_CA)
+        if self._ds_chon:
+            self.cb_pham_vi.addItem(f'Chỉ hộ đang chọn ({len(self._ds_chon)} hộ)', DANG_CHON)
+        self._ds_ho = [(r[0], r[1] or '') for r in self.con.execute('SELECT ma_ho, ho_ten FROM ho ORDER BY thu_tu, ma_ho')]
+        for ma, ten in self._ds_ho:
+            self.cb_pham_vi.addItem(f'{ma} - {ten}', ma)
+        mac_dinh = self._ds_chon[0] if self.bo_mo is not None and len(self._ds_chon) == 1 else (DANG_CHON if self._ds_chon else TAT_CA)
+        self.cb_pham_vi.setCurrentIndex(max(0, self.cb_pham_vi.findData(mac_dinh)))
+        self.cb_pham_vi.blockSignals(False)
+        self._tat_ca = None
+        hang = self._hang_pham_vi()
+        tich = None if dong_tich is None else set(dong_tich)
+        self.mo_hinh.tich = {x.khoa for x in hang if x.chi_so != ap.CO_CHUA_DONG and x.ma_ho in self._ds_chon and (tich is None or x.chi_so in tich)}
+        self._loc()
+        loai = next((x.loai_dat for x in hang if x.khoa in self.mo_hinh.tich), '')
+        if loai:
+            self.dat_thong_so(loai_dat=loai)
+
+    def _hang_pham_vi(self) -> list:
+        """Các hàng của phạm vi đang chọn; phạm vi nhỏ không đọc cả dự án."""
+        pv = self.cb_pham_vi.currentData()
+        if pv == TAT_CA and self._tat_ca is None:
+            self._tat_ca = ap.doc_dong(self.con, None, self.bo_mo)
+        if pv == TAT_CA:
+            return self._tat_ca
+        ds = set(self._ds_chon) if pv == DANG_CHON else {pv}
+        if self._tat_ca is not None:
+            return [x for x in self._tat_ca if x.ma_ho in ds]
+        return ap.doc_dong(self.con, ds, self.bo_mo)
+
+    def _doi_pham_vi(self) -> None:
+        self.setCursor(Qt.CursorShape.WaitCursor)
+        try:
+            self._loc()
+        finally:
+            self.unsetCursor()
+
+    def _loc(self) -> None:
+        """Hiện các hàng của phạm vi khớp ô lọc (mọi từ, không dấu)."""
+        if self.con is None or self.cb_pham_vi.count() == 0:
+            return
+        from .lap_pa import bo_dau
+        khoa = bo_dau(self.o_loc.text()).split()
+        hang = self._hang_pham_vi()
+        ds = [x for x in hang if all(k in x.tim for k in khoa)] if khoa else list(hang)
+        self.mo_hinh.dat_dong(ds)
+        self.bang.setColumnHidden(C_HO, len({x.ma_ho for x in ds}) <= 1)
         self._ve_gia_moi()
         self._dat_nut_ap()
 
+    def _lam_moi_dong(self) -> None:
+        """Đọc lại sau khi ghi: giá hiện tại, phiên bản ghi vào, dòng mới."""
+        self._tat_ca = None
+        self._loc()
+
+    def chon_het(self, bat: bool) -> None:
+        self.mo_hinh.doi_tich(self.mo_hinh.dong, bat)
+
     def _ve_gia_moi(self) -> None:
-        if self.kq is None:
-            return
-        gia = self.kq.don_gia_ap_dung
-        self.bang.blockSignals(True)
-        for r, (ma, i) in enumerate(self._dong):
-            d = self._bo[ma].pa.dat[i]
-            self.bang.setItem(r, 6, _o_so(vn(gia)))
-            self.bang.setItem(r, 7, _o_so(vn(thanh_tien_dat(d.dien_tich, gia, 1, d.ty_le, self._bo[ma].bc.lamtron))))   # cùng làm tròn với phương án thật
-        self.bang.blockSignals(False)
+        self.mo_hinh.dat_gia(self.kq.don_gia_ap_dung if self.kq is not None else None)
 
     def dong_da_chon(self) -> list:
-        return [self._dong[r] for r in range(self.bang.rowCount())
-                if self.bang.item(r, 0) is not None and self.bang.item(r, 0).checkState() == Qt.CheckState.Checked]
+        """Các hàng đang HIỆN và đã tích: dòng bị ô lọc che không áp (thấy gì áp nấy)."""
+        t = self.mo_hinh.tich
+        return [x for x in self.mo_hinh.dong if x.khoa in t]
+
+    def _lech_nhom(self, ds: list) -> list:
+        """Dòng đã tích có loại đất thuộc nhóm khác nhóm đang tính (đơn giá theo nhóm đất: áp nhầm là sai số tiền)."""
+        from . import gia_dat_nq28 as nq
+        cot = self.nhom_cot()[1]
+        kq = []
+        for x in ds:
+            if x.loai_dat not in self._cot_loai:
+                self._cot_loai[x.loai_dat] = nq.cot_cua_loai(x.loai_dat)
+            c = self._cot_loai[x.loai_dat]
+            if c and c != cot:
+                kq.append(x)
+        return kq
 
     def _dat_nut_ap(self) -> None:
-        ok = self.kq is not None and self.con is not None and not self.chi_doc and bool(self.dong_da_chon()) and self.kq.don_gia_ap_dung > 0
+        chon = self.dong_da_chon()
+        n = len(chon)
+        ok = self.kq is not None and self.con is not None and not self.chi_doc and n > 0 and self.kq.don_gia_ap_dung > 0
         self.nut_ap.setEnabled(ok)
-        n = len(self.dong_da_chon())
         self.nut_ap.setText(f'Áp đơn giá vào {n} dòng đã chọn' if n else 'Áp đơn giá vào các dòng đã chọn')
-        self.nut_ap.setToolTip('' if ok else 'Cần: mở dự án (không ở chế độ chỉ xem), chọn hộ có dòng đất, tích dòng cần áp và đơn giá lớn hơn 0.')
+        self.nut_ap.setToolTip('' if ok else 'Cần: mở dự án (không ở chế độ chỉ xem), tích ít nhất một dòng đất và đơn giá lớn hơn 0.')
+        if self.con is None:
+            return
+        hien = self.mo_hinh.dong
+        so_ho = len({x.ma_ho for x in hien})
+        so_dong = sum(1 for x in hien if x.chi_so != ap.CO_CHUA_DONG)
+        chu = f'{so_ho} hộ, {so_dong} dòng đất đang hiện, đã tích {n} dòng.'
+        an = len(self.mo_hinh.tich) - n
+        if an > 0:
+            chu += f' {an} dòng đã tích đang bị che, không áp.'
+        trong = so_ho - len({x.ma_ho for x in hien if x.chi_so != ap.CO_CHUA_DONG})
+        if trong:
+            chu += f' {trong} hộ chưa có dòng đất.'
+        lech = len(self._lech_nhom(chon))
+        if lech:
+            chu += f' ! {lech} dòng có loại đất khác nhóm đất đang tính.'
+        self.lb_ho.setText(chu)
 
     def ap_gia(self, xac_nhan: bool | None = None) -> tuple:
-        """Áp đơn giá vào các dòng đã tích: mỗi hộ một lần lưu phương án. Trả (số dòng, số hộ, danh sách lỗi). xac_nhan=True: không hỏi."""
+        """Áp đơn giá vào các dòng đã tích: mỗi hộ một lần lưu; hộ có V1 ghi vào nhánh V2. Trả (số dòng, số hộ, danh sách lỗi). xac_nhan=True: không hỏi."""
         if self.kq is None or self.con is None:
             return 0, 0, []
         chon = self.dong_da_chon()
         if not chon:
             return 0, 0, []
         if xac_nhan is None and not self.im_lang:
-            if QMessageBox.question(self, TIEU_DE, f'Áp đơn giá {vn(self.kq.don_gia_ap_dung)} đ/m² vào {len(chon)} dòng đất?') != \
-                    QMessageBox.StandardButton.Yes:
+            lech = len(self._lech_nhom(chon))
+            hoi = f'Áp đơn giá {vn(self.kq.don_gia_ap_dung)} đ/m² vào {len(chon)} dòng đất của {len({x.ma_ho for x in chon})} hộ?'
+            if lech:
+                hoi += f'\n\n{lech} dòng có loại đất khác nhóm đất đang tính ({self.cb_nhom.currentText()}).'
+            if QMessageBox.question(self, TIEU_DE, hoi) != QMessageBox.StandardButton.Yes:
                 return 0, 0, []
         gc = g.ghi_chu_ap_gia(self.kq, self.doan, g.ten_ngan(self.cb_dia_ban.currentData() or ''))
-        theo_ho = {}
-        for ma, i in chon:
-            theo_ho.setdefault(ma, []).append(i)
-        so_dong, so_ho, loi = 0, 0, []
-        for ma, chi_so in theo_ho.items():
-            bs = self._bo[ma]
-            try:
-                n = bs.ap_don_gia_qd03(chi_so, self.kq.don_gia_ap_dung, gc)
-                bs.luu()
-            except LoiNhap as e:
-                loi.append(f'Hộ {ma}: {e}')
-                continue
-            so_dong += n
-            so_ho += 1
+        vt = g.mo_ta_vi_tri(self.doan, self.cb_vi_tri.currentData() or '', self.goi)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        tien_do = self._hop_tien_do(len({x.ma_ho for x in chon}))
         try:
-            vb.ghi_can_cu_du_an(self.con, self.o_can_cu.toPlainText())
-            gg.nho_goi_du_an(self.con, self.goi['ma'])              # dự án giữ gói đã áp, có gói mới cũng không tự đổi
-        except Exception:                                                # noqa: BLE001 - lưu căn cứ không được thì không làm hỏng việc áp giá
-            pass
-        self.ket_qua_ap = (so_dong, so_ho)
+            kq = ap.ap_hang_loat(self.con, chon, self.kq.don_gia_ap_dung, gc, vt, self.bo_mo, self.truoc_ap, tien_do)
+            if kq.so_dong:
+                cb = ap.gop_can_cu(self.con, self.goi, self.o_can_cu.toPlainText())
+                if cb:
+                    kq.canh_bao.append(cb)
+                self.o_can_cu.setPlainText(vb.doc_can_cu_du_an(self.con))
+                self._chu_nut_can_cu()
+        finally:
+            QApplication.restoreOverrideCursor()
+            if tien_do is not None:
+                self.findChild(QProgressDialog).deleteLater()
+        cu = self.ket_qua_ap or (0, 0)
+        self.ket_qua_ap = (cu[0] + kq.so_dong, cu[1] + kq.so_ho)
+        if kq.so_dong and self.sau_ap is not None and self.bo_mo is not None and any(x.ma_ho == self.bo_mo.ma_ho for x in chon):
+            self.sau_ap()
+        self._bao_ket_qua(kq)
+        if self.bo_mo is not None and kq.so_dong and not kq.bi_chan:
+            self.accept()                                                # mở từ phương án một hộ: trở về bảng Đất vừa cập nhật
+        else:
+            self.mo_hinh.tich -= {x.khoa for x in chon if not any(c.startswith(f'Hộ {x.ma_ho} ') for c in kq.bi_chan)}
+            self._lam_moi_dong()
+        return kq.so_dong, kq.so_ho, kq.bi_chan
+
+    def _hop_tien_do(self, so_ho: int):
+        """Áp nhiều hộ (mỗi hộ một lần ghi file): hộp tiến độ có nút Dừng, cửa sổ không bị báo Không phản hồi. Ít hộ: không cần."""
+        if so_ho < HO_CAN_TIEN_DO or self.im_lang:
+            return None
+        hop = QProgressDialog('Đang áp đơn giá vào dòng đất của các hộ…', 'Dừng', 0, so_ho, self)
+        hop.setWindowTitle(TIEU_DE)
+        hop.setWindowModality(Qt.WindowModality.WindowModal)
+        hop.setMinimumDuration(400)
+
+        def bao(k, n):
+            hop.setValue(k)                                              # setValue của hộp modal tự xử lý sự kiện
+            return hop.wasCanceled()
+        return bao
+
+    def _bao_ket_qua(self, kq) -> None:
+        """Mọi hộ ghi bình thường: một câu ở nhãn. Có hộ chuyển nhánh V2 / bị chặn: danh sách đầy đủ trong hop_ket_qua (không ghép vào QMessageBox)."""
+        tom_tat = f'Đã áp đơn giá {vn(self.kq.don_gia_ap_dung)} đ/m² cho {kq.so_dong} dòng đất của {kq.so_ho} hộ.'
+        self.lb_ap_ket_qua.setText(tom_tat)
+        ct = [f'Hộ {m}: V1 đã niêm yết giữ nguyên, ghi vào nhánh {v}.' for m, v in kq.nhanh.items()] + [f'Không áp được: {c}' for c in kq.bi_chan] + kq.canh_bao + \
+             [f'Tính lại hỗ trợ: {c}' for c in kq.ho_tro]
+        self.bao_cao = (tom_tat, ct) if kq.nhanh or kq.bi_chan or kq.canh_bao or kq.ho_tro else None
+        if self.bao_cao and not self.im_lang:
+            hop_ket_qua(self, tom_tat, ct, 'Chi tiết', canh_bao=bool(kq.bi_chan), tieu_de=TIEU_DE)
+
+    # ---------------------------------------------------------------- thêm / tự tạo dòng đất
+    def _ma_ho_goi_y(self):
+        chi_so = self.bang.currentIndex()
+        if chi_so.isValid() and chi_so.row() < len(self.mo_hinh.dong):
+            return self.mo_hinh.dong[chi_so.row()].ma_ho
+        pv = self.cb_pham_vi.currentData()
+        return pv if isinstance(pv, int) else (self._ds_chon[0] if self._ds_chon else None)
+
+    def them_dong(self, gia_tri=None):
+        """gia_tri: (mã hộ, tờ, thửa, loại đất, DT) cho sẵn (kiểm thử), không thì hỏi. Trả DongGia vừa thêm hoặc None."""
+        if self.con is None or self.chi_doc:
+            return None
+        if gia_tri is None:
+            from .loai_dat import ds_chon
+            h = HopThemDongDat(self, self._ds_ho, self._ma_ho_goi_y(), ds_chon(self.con))
+            h.im_lang = self.im_lang
+            if self.im_lang:
+                return h
+            ok = h.exec() == QDialog.DialogCode.Accepted
+            gia_tri = h.gia_tri()
+            h.deleteLater()
+            if not ok:
+                return None
+        try:
+            dong, nhanh = ap.them_dong_dat(self.con, *gia_tri, bo_mo=self.bo_mo)
+        except LoiNhap as e:
+            self._bao_loi(str(e))
+            return None
+        self.mo_hinh.tich.add(dong.khoa)
+        pv = self.cb_pham_vi.currentData()
+        if pv != TAT_CA and pv != dong.ma_ho and not (pv == DANG_CHON and dong.ma_ho in self._ds_chon):
+            self.cb_pham_vi.setCurrentIndex(max(0, self.cb_pham_vi.findData(dong.ma_ho)))
+        self.o_loc.blockSignals(True)
+        self.o_loc.clear()
+        self.o_loc.blockSignals(False)
+        self._lam_moi_dong()
+        if self.bo_mo is not None and dong.ma_ho == self.bo_mo.ma_ho and self.sau_ap is not None:
+            self.sau_ap()
+        self.lb_ap_ket_qua.setText(f'Đã thêm {dong.ten_thua} cho hộ {dong.ma_ho}' + (f', ghi vào {nhanh} (V1 giữ nguyên).' if nhanh else '.'))
+        return dong
+
+    def _bao_loi(self, chu: str) -> None:
+        self.lb_ap_ket_qua.setText(chu)
         if not self.im_lang:
-            if loi:
-                QMessageBox.warning(self, TIEU_DE, f'Đã áp {so_dong} dòng ({so_ho} hộ). Không áp được:\n' + '\n'.join(loi[:10]))
-            else:
-                QMessageBox.information(self, TIEU_DE, f'Đã áp đơn giá {vn(self.kq.don_gia_ap_dung)} đ/m² cho {so_dong} dòng đất của {so_ho} hộ.')
-        self.accept()
-        return so_dong, so_ho, loi
+            QMessageBox.warning(self, TIEU_DE, chu)
+
+    def tu_tao_dong(self, xac_nhan: bool | None = None) -> tuple:
+        """Hộ trong phạm vi có thửa mà mục 1 còn trống: tạo dòng đất, tích sẵn. Trả (số hộ, số dòng, [cảnh báo])."""
+        if self.con is None or self.chi_doc:
+            return 0, 0, []
+        trong = sorted({x.ma_ho for x in self._hang_pham_vi() if x.chi_so == ap.CO_CHUA_DONG and x.so_thua_ho})
+        if not trong:
+            self.lb_ap_ket_qua.setText('Trong phạm vi này không có hộ nào có thửa mà mục 1 còn trống.')
+            return 0, 0, []
+        if xac_nhan is None and not self.im_lang and len(trong) > 1:
+            if QMessageBox.question(self, TIEU_DE, f'Tạo dòng đất từ thông tin thửa cho {len(trong)} hộ chưa có dòng đất?') != QMessageBox.StandardButton.Yes:
+                return 0, 0, []
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            so_ho, so_dong, cb = ap.tao_dong_tu_thua(self.con, trong, self.bo_mo)
+        finally:
+            QApplication.restoreOverrideCursor()
+        self._lam_moi_dong()
+        tao = set(trong)
+        self.mo_hinh.doi_tich([x for x in self.mo_hinh.dong if x.ma_ho in tao], True)
+        if self.bo_mo is not None and self.bo_mo.ma_ho in tao and self.sau_ap is not None:
+            self.sau_ap()
+        tom_tat = f'Đã tạo {so_dong} dòng đất cho {so_ho} hộ.'
+        self.lb_ap_ket_qua.setText(tom_tat)
+        if cb and not self.im_lang:
+            hop_ket_qua(self, tom_tat, cb, 'Cần xem lại', canh_bao=True, tieu_de=TIEU_DE)
+        return so_ho, so_dong, cb

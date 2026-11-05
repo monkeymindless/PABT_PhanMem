@@ -479,6 +479,7 @@ class BoSoan:
         self.con = con
         self._mot_lan = mot_lan     # nơi gọi biết hộ chỉ có lần 1, chưa quyết định (dự án vừa tạo) - bỏ truy vấn kiểm tra
         self.dm = danh_muc or DanhMuc(con)
+        self.ho_tro_doi = []        # câu báo khoản hỗ trợ đã tính lại ở lần áp đơn giá đất gần nhất
         # bc: bối cảnh dùng chung cả loạt hộ (tự lập phương án Dự án mới - lưu phương án không đổi thửa / danh mục nên bối cảnh còn
         # đúng); không truyền: lấy theo csdl.nho (mỗi lần mở 1 truy vấn PRAGMA data_version - 3.000 hộ ~0,25 s)
         self._bc_chung = bc
@@ -735,13 +736,16 @@ class BoSoan:
 
     GHI_CHU_QD03 = 'Đơn giá đất theo NQ 28/2025/NQ-HĐND × QĐ 03/2026/QĐ-UBND:'
 
-    def ap_don_gia_qd03(self, chi_so, don_gia, ghi_chu: str = '') -> int:
+    def ap_don_gia_qd03(self, chi_so, don_gia, ghi_chu: str = '', vi_tri: str = '') -> int:
         """Áp đơn giá đất đã tính (gia_dat_qd03.tinh_don_gia - NQ 28 x QĐ 03, đã ROUND về đồng) vào các dòng mục 1: giá bảng giá = đơn giá
         áp dụng, hệ số K = 1 (K1, K2, K3 đã nằm trong đơn giá; Thành tiền = diện tích x đơn giá áp dụng), căn cứ công thức ghi vào Ghi chú
-        (thay căn cứ cũ cùng loại / "Hệ số K theo ..."). Chưa lưu: người gọi bấm luu(). Trả số dòng đã áp."""
+        (thay căn cứ cũ cùng loại / "Hệ số K theo ..."). vi_tri: chữ ghi vào cột Vị trí (đoạn đường đã dùng tính giá), '' giữ nguyên. Khoản đào tạo, chuyển
+        đổi nghề theo giá đất tính lại theo đơn giá mới (self.ho_tro_doi: câu báo). Chưa lưu: người gọi bấm luu(). Trả số dòng đã áp."""
         don_gia = D(don_gia)
         if don_gia <= 0:
             raise LoiNhap('Đơn giá đất phải lớn hơn 0.')
+        khop = self._khop_dao_tao_theo_thua()               # theo mô tả thửa, mô tả có vị trí nên khớp trước khi đổi
+        da_ap = []
         n = 0
         for i in chi_so:
             if not 0 <= i < len(self.pa.dat):
@@ -752,8 +756,81 @@ class BoSoan:
             bo = re.sub(r'\s*;?\s*Giá đất nhập tay', '', bo).strip(' ;')
             d.ghi_chu = ((bo + '; ') if bo else '') + (ghi_chu or self.GHI_CHU_QD03 + f' {vn(don_gia)} đ/m²')
             d.thanh_tien_excel = None
+            if vi_tri:
+                d.vi_tri = vi_tri
+            da_ap.append(d)
             n += 1
+        self.ho_tro_doi = self._tinh_lai_dao_tao_theo_thua(khop, da_ap) + self.tinh_lai_ho_tro(chi_dao_tao=True)
         return n
+
+    def _khop_dao_tao_theo_thua(self) -> list:
+        """[(dòng hỗ trợ đào tạo nhập theo thửa, dòng đất của thửa đó)]. Dòng tên tự gõ không khớp thửa nào thì bỏ qua, giữ nguyên số người lập đã nhập."""
+        from . import chinh_sach as cs
+        from .nghiep_vu import _dao_tao_theo_thua, tap_ma_dao_tao
+        kq = []
+        for ma in tap_ma_dao_tao():
+            ds = cs.ds_thua_nn(self, ma)
+            for k in self.pa.dong_ho_tro(ma):
+                if _dao_tao_theo_thua(k):
+                    x = next((t for t in ds if t['mo_ta'] == k.ten and t['dien_tich'] == k.so_luong), None) or next((t for t in ds if t['mo_ta'] == k.ten), None)
+                    if x is not None:
+                        ds.remove(x)
+                        kq.append((k, x['dong']))
+        return kq
+
+    def _tinh_lai_dao_tao_theo_thua(self, khop: list, da_ap: list) -> list:
+        from . import chinh_sach as cs
+        kq = []
+        for k, d in khop:
+            if not any(d is x for x in da_ap):
+                continue
+            moi = D(d.gia_bang_gia) * d.he_so_k
+            mo_ta = next((t['mo_ta'] for t in cs.ds_thua_nn(self, k.ma) if t['dong'] is d), k.ten)
+            if k.don_gia != moi or k.ten != mo_ta:
+                kq.append(f'{k.ma} {mo_ta}: đơn giá {vn(k.don_gia)} -> {vn(moi)} đ/m²')
+                k.don_gia, k.ten, k.thanh_tien_excel = moi, mo_ta, None
+        return kq
+
+    def tinh_lai_ho_tro(self, chi_dao_tao: bool = False) -> list:
+        """Sửa các khoản hỗ trợ đã có theo số liệu mới (goi_y: chỉ 'sửa' / 'thay'; khoản đề xuất THÊM để người lập quyết định). chi_dao_tao: chỉ khoản tính theo giá đất,
+        vì đổi đơn giá không đổi diện tích: khoản ổn định đời sống người lập đã chọn không bị thay theo. Trả câu báo."""
+        from .nghiep_vu import tap_ma_dao_tao
+        ma_dt = tap_ma_dao_tao()
+        ds = [x for x in self.goi_y()[0] if x.viec in ('sửa', 'thay') and (not chi_dao_tao or x.ma in ma_dt)]
+        self.ap_dung_goi_y(ds)
+        return [f'{x.ma}: {x.ly_do}' for x in ds]
+
+    def them_dong_tu_thua(self, ten: str = '') -> tuple:
+        """Mục 1: một dòng cho mỗi thửa còn DT chưa đưa vào. Loại đất lạ (không có trong danh mục) không đưa vào, báo; chưa có giá vẫn giữ dòng, báo. Trả (số dòng, [cảnh báo])."""
+        cb = []
+        n = 0
+        ten = ten or f'Hộ {self.ma_ho} {self.pa.ho.ho_ten}'
+        for mt, _, con_lai in self.thua_cua_ho():
+            if con_lai <= 0:
+                continue
+            i, tb = self.them_thua(mt)
+            d = self.pa.dat[i]
+            if not d.loai_dat or d.loai_dat not in self.bc.loai_dat:      # mã lạ (không thuộc danh mục chuẩn / bảng giá): không tự lập
+                self.xoa(1, i)
+                cb.append(f'{ten}: {self.ten_thua(mt)} loại đất {d.loai_dat or ""} không có trong danh mục, chưa đưa vào mục 1.'
+                          .replace('đất  không', 'đất không'))
+                continue
+            n += 1
+            if d.gia_bang_gia <= 0:
+                cb.append(f'{ten}: {self.ten_thua(mt)} chưa có giá {d.loai_dat} vị trí {d.vi_tri or "?"}.')
+            elif tb.startswith('Kiểm kê ghi'):
+                cb.append(f'{ten}: {tb}')
+        return n, cb
+
+    def dat_dong_moi(self, i: int, loai_dat: str, dien_tich) -> None:
+        """Dòng vừa thêm: theo loại đất, diện tích người dùng nhập (không theo số kiểm kê của thửa); giá tra lại theo loại đất mới."""
+        d = self.pa.dat[i]
+        ld = chuan_ma_loai_dat(loai_dat)
+        if ld != d.loai_dat:
+            d.loai_dat, d.nhom_dat = ld, self.nhom_dat(ld)
+            self._dien_gia_dat(d)
+        d.dien_tich = D(dien_tich)
+        d.thanh_tien_excel = None
 
     def sua_dat(self, i: int, cot: str, text) -> str:
         if cot not in SUA_DUOC_DAT:

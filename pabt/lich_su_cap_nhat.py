@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.68', '05/11/2026', (
+        'Tính đơn giá đất: khung bên phải luôn có các dòng đất của mọi hộ, không phải chọn hộ trước. Chọn phạm vi (tất cả hộ, hộ đang chọn, một hộ), lọc theo tên chủ hộ, số tờ, số thửa, loại đất; Chọn tất cả / Bỏ chọn các dòng đang hiện. Đơn giá mới, Thành tiền mới của dòng đã tích đổi ngay khi đổi thông số.',
+        'Thêm dòng đất cho hộ ngay trong bảng tính (Tờ, Thửa, Loại đất, Diện tích); tự tạo dòng đất từ thông tin thửa cho hộ có thửa mà mục 1 còn trống.',
+        'Mục 1. Đất có thanh áp giá nhanh một hàng: Đoạn đường -> Vị trí -> Mặt đường -> Giá NQ 28 -> công thức, kết quả; Áp vào dòng đất đang chọn, Thêm thành dòng đất mới. Nút và menu chuột phải Mở bảng tính đầy đủ (NQ 28 & QĐ 03): chọn sẵn hộ, tích sẵn dòng đang thao tác; áp xong bảng Đất cập nhật ngay.',
+        'Áp giá ghi đủ công thức G × K1 × K2 × K3 vào ghi chú dòng đất (ra bản in), ghi vị trí theo đoạn đường, gộp văn bản căn cứ vào dự án, tính lại khoản đào tạo chuyển đổi nghề theo giá đất và tổng phương án.',
+        'Hộ đã có V1 niêm yết: áp giá ghi vào nhánh V2 (chưa có thì tự tạo), V1 giữ nguyên; áp hàng loạt báo danh sách hộ chuyển nhánh, hộ không ghi được.',
+    )),
     ('1.0.67', '05/11/2026', (
         'Bản đồ thửa đất: file KML, KMZ của phần mềm CAD chỉ có đường và nhãn nay tự ghép thành ô thửa (số tờ, số thửa, loại đất, diện tích, mốc ranh, ghi chú), đối chiếu diện tích hình với nhãn; thửa lệch được báo, không tự ghi vào hồ sơ.',
         'Diện tích thu hồi tính theo ranh thu hồi qua mốc và đối chiếu với nhãn bản vẽ (trước đây lấy nhãn "(xxx)" gần số thửa nhất, có thể là phần ngoài ranh).',

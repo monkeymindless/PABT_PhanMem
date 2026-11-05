@@ -3866,7 +3866,8 @@ class CuaSoChinh(QMainWindow):
         d = HopTinhGiaDat(self, self.con, ds, xa, bool(getattr(self, 'chi_doc', False)))
         if not cho:
             return d
-        if d.exec() == QDialog.DialogCode.Accepted and d.ket_qua_ap:
+        d.exec()
+        if d.ket_qua_ap:                               # bảng tính ở lại sau khi áp để áp tiếp đoạn đường khác: đóng bằng nút nào cũng tải lại
             self.tai_lai()
         return d
 
@@ -3913,7 +3914,8 @@ class CuaSoChinh(QMainWindow):
             elif h.hanh_dong == 'tinh_gia':
                 t = self.tinh_don_gia_dat(cho=False)
                 t.sau_khi_quet(kq)
-                if t.exec() == QDialog.DialogCode.Accepted and t.ket_qua_ap:
+                t.exec()
+                if t.ket_qua_ap:
                     self.tai_lai()
             elif h.hanh_dong == 'dua_vao_ho':
                 self.dua_ket_qua_quet_vao_ho(kq, h.ho_chon())

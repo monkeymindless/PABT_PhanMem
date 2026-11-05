@@ -102,6 +102,23 @@ def gia_bang_gia(dia_ban: str, doan: dict | None, nhom_dat: str, ma_vi_tri: str,
     return None
 
 
+def nhom_theo_loai_dat(loai_dat: str, goi=None) -> dict | None:
+    """Dòng nhóm đất của gói ứng với loại đất của dòng phương án (CLN, ONT...): theo cột bảng giá của loại đất. None: gói không có nhóm này."""
+    from . import gia_dat_nq28 as nq
+    cot = nq.cot_cua_loai(loai_dat)
+    return next((x for x in _goi(goi)['nhom_dat'] if x['cot_gia'] == cot), None) if cot else None
+
+
+def mo_ta_vi_tri(doan: dict | None, ma_vi_tri: str, goi=None) -> str:
+    """Chữ ghi vào cột Vị trí của dòng đất, cùng kiểu BoSoan.chon_vi_tri_nq28. Không có đoạn đường: ''."""
+    if not doan:
+        return ''
+    from . import gia_dat_nq28 as nq
+    vt = next((x.get('vi_tri', '') for x in _goi(goi)['vi_tri'] if x['ma'] == ma_vi_tri), '')
+    ten = 'Mặt tiền' if vt == 'MT' else nq.ten_vi_tri(vt)
+    return f'{ten} {doan["ten_duong"]} (đoạn từ {doan["diem_dau"]} đến {doan["diem_cuoi"]})'
+
+
 # ---------------------------------------------------------------- tính đơn giá
 @dataclass
 class DauVao:
@@ -279,6 +296,14 @@ def tinh_don_gia(v: DauVao, doan: dict | None = None, goi: dict | None = None) -
     nhan = {'K_KHAC': 'K_khác'}
     cong_thuc = vn(g) + ''.join(f' × {_he(gia_tri.get(m, MOT))} ({nhan.get(m, m)})' for m in ct['he_so'] if not (m == 'K_KHAC' and k_khac == 1)) + f' = {vn(da_tron)} VNĐ/m²'
     return KetQua(g, k1, k2, k3, k_khac, tong, chua_tron, da_tron, cuoi, chuyen_tiep, cong_thuc, canh_bao, lap_luan, goi.get('ma', ''), f'{bang_gia} × {so_hieu}', mau.get('ghi_chu_ct') or mau_goc['ghi_chu_ct'], them, nguon_k1)
+
+
+def cong_thuc_gon(kq: KetQua) -> str:
+    """Công thức một dòng cho thanh áp giá nhanh: bỏ hệ số bằng 1 ('230.000 × 1,45 = 333.500 đ/m²'). Có giá cụ thể chuyển tiếp thì ghi giá đang dùng."""
+    he = [kq.k1, kq.k2, kq.k3, kq.k_khac] + list(kq.he_so_them.values())
+    chu = vn(kq.don_gia_nq28) + ''.join(f' × {_he(x)}' for x in he if D(x) != 1)
+    return (f'{chu} = {vn(kq.don_gia_da_lam_tron)} đ/m²' if not kq.ap_dung_chuyen_tiep
+            else f'Giá cụ thể {vn(kq.don_gia_ap_dung)} đ/m²')
 
 
 def ghi_chu_ap_gia(kq: KetQua, doan: dict | None = None, dia_ban: str = '') -> str:

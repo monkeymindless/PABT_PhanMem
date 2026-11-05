@@ -164,8 +164,7 @@ class TestLapPA(_Co):
     def test_tra_gia_dat_nq28_o_muc_1(self):
         from pabt import gia_dat_nq28 as nq
         w = self._cua_so()
-        self.assertIn('Tra giá đất NQ 28…', w.bang[1].nut)
-        self.assertEqual(w.bang[1].nut['Tra giá đất NQ 28…'].text(), 'Tra giá đất NQ 28…')
+        self.assertIn('Tra giá đất NQ 28…', [a.text() for a in w.bang[1].menu_dong().actions()])     # 1.0.68: nút chuyển vào menu chuột phải của dòng
         self.assertTrue(w.bo.pa.dat, 'dự án giả lập phải có dòng đất')
         dong = next(r for r in nq.theo_dia_ban(w.bo.bc.ten_dia_ban or '') if nq.gia_dong(r, nq.cot_cua_loai(w.bo.pa.dat[0].loai_dat)))
         tb = w.tra_gia_dat_nq28(0, dong=dong)                           # một dòng đất: không cần chọn

@@ -427,7 +427,7 @@ class TestPhanTach(unittest.TestCase):
             self.assertEqual(self.js('window.LARC.doiTuongTai(280, 150, 400, 300).chu'), 'DN.T737')       # mốc cách 40 m (k = 2)
             self.js('window.LARC.hienDoiTuong(window.LARC.doiTuongTai(200, 150, 400, 300)); 1')
             chu = self.js('document.getElementById("tt_thua").textContent')
-            for x in ('Thửa 549', 'CLN', '7078.1 m²', '3600.7 m²', 'VN-2000', 'WGS84', 'Level 3'):
+            for x in ('Thửa 549', 'CLN', '7078.1 m²', '3600.7 m²', 'chưa đối chiếu ranh thu hồi', 'VN-2000', 'WGS84', 'Level 3'):
                 self.assertIn(x, chu)
             # bảng tra cứu: có thửa, mốc, ghi chú; lọc theo chữ
             self.assertFalse(self.js('document.getElementById("khung_ds_kml").hidden'))
@@ -439,13 +439,73 @@ class TestPhanTach(unittest.TestCase):
             self.js('{ const o = document.querySelectorAll("#m_lop input")[2]; o.checked = false; o.dispatchEvent(new Event("change")); } 1')
             self.assertNotEqual(self.js('(window.LARC.doiTuongTai(280, 150, 400, 300) || {}).chu || ""'), 'DN.T737')
             self.js('{ const o = document.querySelectorAll("#m_lop input")[2]; o.checked = true; o.dispatchEvent(new Event("change")); } 1')
-            # đưa thửa vào hồ sơ hộ: điền sẵn ô Đất (tờ từ nhãn tờ gần nhất, DT thu hồi) để người kiểm đếm xác nhận
+            # đưa thửa vào hồ sơ hộ: điền sẵn tờ (nhãn tờ gần nhất), thửa, loại đất để người kiểm đếm xác nhận; ô DT để người đo nhập
             self.js('window.prompt = () => "Hộ thử bản đồ"; document.getElementById("b_ho_moi").click(); 1')
             self._doi(lambda: self.js('!!window.LARC.ST.chon'))
             self.js('[...document.querySelectorAll("#tt_thua button")].find(b => b.textContent.includes("Đưa thửa")).click(); 1')
-            self.assertEqual(self.jsj('["d_to", "d_thua", "d_loai", "d_dt"].map(i => document.getElementById(i).value)'), ['59', '549', 'CLN', '3600,7'])
+            self.assertEqual(self.jsj('["d_to", "d_thua", "d_loai", "d_dt"].map(i => document.getElementById(i).value)'), ['59', '549', 'CLN', ''])
         finally:
             self.js('delete document.getElementById("ban_do").getBoundingClientRect; window.LARC.LOP.length = 0; window.LARC.veBangKml(); 1')
+
+    @staticmethod
+    def _kml_nhan_phan():
+        # thửa 550: nhãn "(2407)" gần số thửa nhất là phần NGOÀI ranh, phần trong ranh "(113.2)" ở xa hơn (số liệu giả lập theo ca đã gặp trên file thật);
+        # thửa 551 chỉ có DT nguyên thửa; "(77.7)" không có số thửa nào trong 30 m
+        import math
+        lat, lon, kx = 11.02, 106.95, 111320 * math.cos(math.radians(11.02))
+        diem = lambda chu, dx, dy: (f'<Placemark><name>{chu}</name><description>Level 3</description>'                                  # noqa: E731
+                                    f'<Point><coordinates>{lon + dx / kx:.9f},{lat + dy / 110540:.9f},0</coordinates></Point></Placemark>')
+        return ('<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><Folder>'
+                + diem('550', 0, 0) + diem('CLN', 0, -2) + diem('2520.2', 0, -4) + diem('(2407)', 5, -10) + diem('(113.2)', 0, -25)
+                + diem('551', 200, 0) + diem('640.5', 200, -4) + diem('(77.7)', 600, 0) + '</Folder></Document></kml>')
+
+    def test_nhan_dt_mot_phan_khong_la_dt_thu_hoi(self):
+        self._nap_kmz(self._kml_nhan_phan())
+        hang = '[...document.querySelectorAll("#tt_thua .tt_kml b")].map(b => b.textContent)'
+        thua = 'window.__kq.nhan_thua.find(c => c.so_thua === %s)'
+        dua = '[...document.querySelectorAll("#tt_thua button")].find(b => b.textContent.includes("Đưa thửa")).click(); 1'
+        self.js('window.LARC.LOP.length = 0; window.LARC.LOP.push(window.__kq); document.getElementById("o_tim_kml").value = ""; window.LARC.veBangKml(); 1')
+        try:
+            self.assertEqual(self.js((thua % '"550"') + '.chu_dt_th'), '2407')     # nhãn gần nhất vẫn được ghép, nhưng chỉ là nhãn
+            # cụm thửa: hàng thuộc tính gọi là DT một phần, nêu rõ chưa đối chiếu; không có hàng "DT thu hồi"
+            self.js('window.LARC.hienDoiTuong(%s); 1' % (thua % '"550"'))
+            self.assertIn('DT một phần', self.jsj(hang))
+            self.assertNotIn('DT thu hồi', self.jsj(hang))
+            self.assertIn('2407 m² (nhãn gần số thửa nhất, chưa đối chiếu ranh thu hồi)', self.js('document.getElementById("tt_thua").textContent'))
+            # nhãn lẻ không thuộc cụm nào: cũng không gọi là diện tích thu hồi
+            self.js('window.LARC.hienDoiTuong(window.__kq.diem.find(d => d.chu === "(77.7)")); 1')
+            chu = self.js('document.getElementById("tt_thua").textContent')
+            self.assertIn('Diện tích một phần: (77.7)', chu)
+            self.assertIn('chưa đối chiếu ranh thu hồi', chu)
+            self.assertNotIn('Diện tích thu hồi', chu)
+            # bảng tra cứu
+            phu = self.jsj('[...document.querySelectorAll("#bang_ds_kml .dong small")].map(s => s.textContent)')
+            self.assertIn('CLN · 2520.2 m² · một phần 2407 m²', phu)
+            self.assertFalse([s for s in phu if 'thu hồi' in s])
+            # đưa vào phiếu: ô DT để trống, nhãn chỉ là gợi ý nêu rõ chưa đối chiếu
+            goi_y = 'document.getElementById("d_dt_goi_y")'
+            self.js('window.prompt = () => "Hộ thử nhãn phần"; document.getElementById("b_ho_moi").click(); 1')
+            self._doi(lambda: self.js('!!window.LARC.ST.chon'))
+            self.js('window.LARC.hienDoiTuong(%s); %s' % (thua % '"550"', dua))
+            self.assertEqual(self.js('document.getElementById("d_dt").value'), '')
+            self.assertFalse(self.js(goi_y + '.hidden'))
+            chu = self.js(goi_y + '.textContent')
+            for x in ('DT nguyên thửa 2520.2 m²', 'DT một phần 2407 m²', 'chưa đối chiếu ranh thu hồi'):
+                self.assertIn(x, chu)
+            # đổi số thửa: gợi ý của thửa cũ không còn đúng
+            self.js('{ const o = document.getElementById("d_thua"); o.value = "999"; o.dispatchEvent(new Event("input")); } 1')
+            self.assertTrue(self.js(goi_y + '.hidden'))
+            # thửa chỉ có DT nguyên thửa: cũng không tự điền (có thể chỉ thu hồi một phần)
+            self.js('window.LARC.hienDoiTuong(%s); %s' % (thua % '"551"', dua))
+            self.assertEqual(self.js('document.getElementById("d_dt").value'), '')
+            self.assertIn('DT nguyên thửa 640.5 m²', self.js(goi_y + '.textContent'))
+            self.assertNotIn('DT một phần', self.js(goi_y + '.textContent'))
+            # người đo nhập số đo: lưu đúng số đó vào hồ sơ, gợi ý tắt
+            self.js('document.getElementById("d_to").value = "59"; document.getElementById("d_dt").value = "113,2"; document.getElementById("b_them_dat").click(); 1')
+            self.assertEqual(self.jsj('window.LARC.ST.ho[window.LARC.ST.chon].dat.map(d => [d.so_thua, d.dt_thu_hoi])'), [['551', '113,2']])
+            self.assertTrue(self.js(goi_y + '.hidden'))
+        finally:
+            self.js('window.LARC.LOP.length = 0; window.LARC.veBangKml(); 1')
 
     def test_nut_nap_kml(self):
         # nút độc lập (không bọc label quanh ô file ẩn); đặt lại value TRƯỚC khi mở hộp chọn - chọn lại đúng file vẫn nhận

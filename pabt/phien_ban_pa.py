@@ -95,6 +95,11 @@ def pa_tu_json(con, ma_ho: int, chu: str) -> PhuongAn:
     return pa
 
 
+def dat_tu_json(chu: str) -> list:
+    """Các dòng đất của ảnh chụp, không đọc thông tin hộ (danh sách dòng đất cả dự án)."""
+    return [_dong_vao(DongDat, r, _SO_DAT) for r in json.loads(chu).get('dat', ())]
+
+
 # ---------------------------------------------------------------- đọc
 def _khoa_sap(ma: str) -> tuple:
     m = _RE_V2.match(ma)
@@ -343,8 +348,7 @@ def _tinh_lai_ho_tro(con, ma_ho: int, lan: int, pa: PhuongAn) -> PhuongAn:
     from .lap_pa import BoSoan
     bo = BoSoan(con, ma_ho, lan=lan)
     bo.pa = pa
-    de_xuat = bo.goi_y()[0]
-    bo.ap_dung_goi_y([x for x in de_xuat if x.viec in ('sửa', 'thay')])
+    bo.tinh_lai_ho_tro()
     return bo.pa
 
 
