@@ -266,7 +266,9 @@ class TestManHinh(_DuAn):
         from pabt.man_hinh import HopIn
         i = quan_ly.tao_dot(self.con, so_to_trinh='7/TTr', so_pa_tong='30', ngay_pa_tong='9/10/2026')
         quan_ly.gan_dot(self.con, self.ma[:2], i)
-        h = HopIn(self.con, None)
+        h = HopIn(self.con, None, che_do='chinh_thuc')
+        for o in (h.o_tt, h.o_bc):
+            o.setChecked(False)
         self.addCleanup(h.close)
         self.assertFalse(h.o_tt.isChecked())                           # không theo đợt: tờ trình, PA tổng không chọn sẵn
         h.cb_dot.setCurrentIndex(h.cb_dot.findData(i))                  # chọn đợt: đánh dấu hộ của đợt + chọn mọi mẫu

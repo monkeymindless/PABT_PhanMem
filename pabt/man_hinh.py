@@ -561,8 +561,6 @@ class BangMuc(QWidget):
                                                 'giá" phía dưới.')
             self.o_chon, self.o_sl, self.o_tl, self.o_gc = self.hang.o_chon, self.hang.o_sl, self.hang.o_tl, self.hang.o_gc
             self.cb_kieu = self.hang.cb_kieu
-            self.nhan_tl = QLabel('')                        # (tỷ lệ ghi ngay trong ô)
-            self.nhan_tl.setVisible(False)
             nhap.addWidget(self.hang, 1)
             self.nut['Thêm vào bảng'] = self.hang.nut_them
         # ---- nút thao tác dòng
@@ -790,7 +788,7 @@ class BangMuc(QWidget):
         self.cs_loai = k
         self.the_cs.setCurrentIndex({'': 0, 'od': 1, 'dt': 2, 'tn': 3}.get(k, 0))
         self.the_cs.setVisible(k in ('od', 'dt', 'tn'))
-        for w in (self.o_sl, self.o_tl, self.nhan_tl):
+        for w in (self.o_sl, self.o_tl):
             w.setVisible(k not in ('od', 'dt', 'tn'))
 
     def xem_cach_tinh(self):
@@ -1688,6 +1686,7 @@ class CuaSoLapPA(QDialog):
         h.addWidget(nhan)
         h.addWidget(self.cb_lan)
         h.addWidget(self.thanh_pb)
+        h.addWidget(self.thanh_pb.b_khoa)
         h.addWidget(self.b_mo_khoa)
         h.addWidget(self.lb_trang_thai_lan)
         h.addWidget(self.lb_lan, 1)
@@ -1707,6 +1706,7 @@ class CuaSoLapPA(QDialog):
             a = self.menu_lan.addAction(chu, b.click)
             a.setEnabled(b.isEnabled())
             a.setToolTip(b.toolTip())
+        self.thanh_pb.them_menu(self.menu_lan)
 
     def _nap_lan(self) -> None:
         ds = self.bo.ds_lan()
@@ -1720,7 +1720,7 @@ class CuaSoLapPA(QDialog):
         self.cb_lan.setToolTip(self.cb_lan.currentText())
         x = next((y for y in ds if y.lan == self.bo.lan), None)
         pb_mo = getattr(self.bo, 'phien_ban', None)
-        self.b_mo_khoa.setVisible(bool(self.bo.khoa) and not pb_mo)   # V1 khóa vĩnh viễn: không có nút mở khóa
+        self.b_mo_khoa.setVisible(bool(x.khoa) if x is not None else bool(self.bo.khoa) and not pb_mo)   # khóa của LẦN đã phê duyệt, ở mọi phiên bản; khóa của phiên bản: thanh_pb.b_khoa
         if hasattr(self, 'thanh_pb'):
             self.thanh_pb.nap()
         khong_nhan = self._ho_khong_nhan()
@@ -1739,6 +1739,8 @@ class CuaSoLapPA(QDialog):
             dat_the_nho(self.lb_trang_thai_lan, 'vang' if x.trang_thai == 'mo_khoa' else ('xanh' if self.bo.khoa else 'lam'))
             if pb_mo:                                   # đang xem một phiên bản: thẻ nói đúng phiên bản đó
                 self.lb_trang_thai_lan.setText(f'{pb_mo} ĐÃ KHÓA - CHỈ XEM' if self.bo.khoa else f'ĐANG SỬA {pb_mo}')
+                if pb_mo == 'V1' and not self.bo.khoa:
+                    dat_the_nho(self.lb_trang_thai_lan, 'vang')
         self.dai_lan.setProperty('khoa', '1' if self.bo.khoa else '0')
         self.dai_lan.style().unpolish(self.dai_lan)
         self.dai_lan.style().polish(self.dai_lan)
@@ -1895,7 +1897,7 @@ class CuaSoLapPA(QDialog):
             return False
         from . import lan_pa
         lan_pa.mo_khoa_lan(self.bo.con, self.bo.ma_ho, self.bo.lan, ly_do or '')
-        self.bo.mo(self.bo.ma_ho, self.bo.lan)
+        self.bo.mo_phien_ban(getattr(self.bo, 'phien_ban', None))     # đang xem V2, V3: ở lại phiên bản đó
         self.nap_ho()
         return True
 
@@ -3363,13 +3365,8 @@ MO_TA_CHE_DO = {
 
 
 # 20/10/2026 (ảnh mẫu người dùng): hai thẻ chế độ phát hành + khung quy tắc tự động + danh sách tài liệu có thẻ nhỏ
-THE_CHE_DO = (('du_thao', '1. Chế độ Dự thảo Niêm yết (Áp giá công khai)'), ('chinh_thuc', '2. Chế độ Hồ sơ Chính thức (Trọn bộ hồ sơ)'))
-QUY_TAC_CHE_DO = {
-    'du_thao': '<b>Quy tắc tự động ở chế độ Dự thảo:</b> in chữ <b>(DỰ THẢO)</b> ở tiêu đề · chưa ghi số phương án · chỉ xuất '
-               '<b>Phương án chi tiết</b> và <b>Bảng tổng hợp niêm yết</b> (khóa tờ trình, báo cáo tiếp thu) · in đủ số CCCD.',
-    'chinh_thuc': '<b>Quy tắc tự động ở chế độ Chính thức:</b> không có chữ DỰ THẢO · số / ngày phương án theo đợt trình · '
-                  '<b>trọn bộ 4 tài liệu</b>: phương án chi tiết, bảng tổng hợp, tờ trình, báo cáo tiếp thu & giải trình ý kiến.',
-}
+THE_PHAM_VI = (('mot', 'Một hộ'), ('nhieu', 'Nhiều hộ'), ('du_lieu', 'Xuất dữ liệu'))
+THE_CHE_DO = (('du_thao', 'Dự thảo'), ('chinh_thuc', 'Chính thức'))
 
 
 class _MucSap(QTableWidgetItem):
@@ -3386,7 +3383,8 @@ XEM_NHIEU_TOI_DA = 30           # xem trước gộp nhiều hộ: tối đa ch�
 
 
 class HopIn(QDialog):
-    """Chọn hộ, loại bản in, đầu ra (Excel / Excel + PDF / máy in) và thư mục."""
+    """In / xuất hồ sơ (người dùng 05/11/2026: tối giản, phân loại rõ). Trái: Một hộ | Nhiều hộ | Xuất dữ liệu, Dự thảo | Chính thức, danh sách hộ, định dạng Word / Excel / PDF;
+    phải: xem trước Word / Excel / PDF gộp / Bảng tổng hợp. Lưu vào thư mục chứa file dự án, không hỏi. Lõi xuất: van_ban_trinh.xuat_bo_ho_so, một chỗ."""
 
     def __init__(self, con, parent=None, ma_ho_chon: list | None = None, file_du_an=None, che_do: str | None = None,
                  dot_id: int | None = None):
@@ -3395,8 +3393,8 @@ class HopIn(QDialog):
         self.con = con
         self.file_du_an = file_du_an
         self.ket_qua = None
-        self.setWindowTitle('Xuất hồ sơ & Bản in')
-        self.resize(1600, 900)                      # 0.9.84: nửa phải là khung xem trước A4 (vua_man_hinh thu lại theo màn hình)
+        self.setWindowTitle('In / Xuất hồ sơ')
+        self.resize(1360, 820)                      # phần lớn bề rộng cho khung xem trước A4 (vua_man_hinh thu lại theo màn hình)
         # hộ + tình trạng lập phương án: "đã lập" không tính phương án phần mềm tự lập lúc tạo Dự án mới mà chưa soát
         kq = nghiep_vu.tinh_tat_ca(con)
         self.tong = {k.ma_ho: k.tong for k in kq}
@@ -3418,20 +3416,20 @@ class HopIn(QDialog):
             ten = con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (self.ma_ho_chon[0],)).fetchone()[0]
             self.cb_pham_vi.addItem(f'Hộ đang chọn: {ten}' if len(self.ma_ho_chon) == 1
                                     else f'{len(self.ma_ho_chon)} hộ đang chọn', 'chon')
-        self.cb_pham_vi.addItem(f'Các hộ đã lập phương án ({len(self.ds_pa)} hộ)', 'pa')
+        self.cb_pham_vi.addItem(f'Đã lập phương án ({len(self.ds_pa)} hộ)', 'pa')
         if self.ds_tu_lap:
-            self.cb_pham_vi.addItem(f'Hộ có phương án tự lập, chưa soát ({len(self.ds_tu_lap)} hộ)', 'tu_lap')
+            self.cb_pham_vi.addItem(f'Tự lập, chưa soát ({len(self.ds_tu_lap)} hộ)', 'tu_lap')
             self.cb_pham_vi.addItem(f'Mọi hộ có phương án ({len(self.ds_co_pa)} hộ)', 'co_pa')
-        self.cb_pham_vi.addItem(f'Tất cả hộ ({len(self.ds_tat_ca)} hộ)', 'tat_ca')
-        self.cb_pham_vi.addItem('Tự chọn trong danh sách bên dưới', 'tu_chon')
+        self.cb_pham_vi.addItem(f'Tất cả ({len(self.ds_tat_ca)} hộ)', 'tat_ca')
+        self.cb_pham_vi.addItem('Tự chọn', 'tu_chon')
         self.cb_pham_vi.currentIndexChanged.connect(lambda _: self._theo_pham_vi())
-        # danh sách hộ đánh dấu chọn: lọc theo chữ, chọn nhanh
+        # danh sách hộ: lọc theo chữ, sắp xếp theo cột. Tình trạng, đợt, địa chỉ vẫn tìm được, hiện ở chú thích và màu tên
         self.o_tim = QLineEdit()
-        self.o_tim.setPlaceholderText('Tìm theo STT, họ tên, tình trạng (không cần dấu)…')
+        self.o_tim.setPlaceholderText('Tìm hộ (không cần dấu)…')
         loc_khi_ngung_go(self.o_tim, self._loc)
         self.bang_ho = QTableWidget(len(self.ho), 6)
         self.bang_ho.setHorizontalHeaderLabels(['Chọn', 'STT - Họ và tên', 'Tình trạng', 'Tổng tiền (đ)', 'Đợt', 'Địa chỉ'])
-        self.bang_ho.setMinimumHeight(200)                                  # 24/10/2026: bảng hộ giãn theo chiều cao hộp (trước chỉ ~5 dòng)
+        self.bang_ho.setMinimumHeight(120)
         self.bang_ho.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.bang_ho.horizontalHeader().setSectionsClickable(True)           # bấm tiêu đề cột để sắp xếp
         self.bang_ho.horizontalHeader().sectionClicked.connect(self._sap_xep)
@@ -3449,82 +3447,74 @@ class HopIn(QDialog):
             self.bang_ho.setItem(i, 0, chk)
             lap = self.lap.get(h['ma_ho'], 'chua')
             khoa_sx = {1: i, 3: float(self.tong.get(h['ma_ho'], D(0)))}      # STT theo thứ tự dự án, tiền theo số
+            dia_chi = ' '.join(str(h.get('dia_chi') or '').split())
             for c, v in enumerate((f'{h["thu_tu"]}. {h["ho_ten"]}', in_an.LAP[lap],
-                                   vn(self.tong.get(h['ma_ho'], D(0))) if lap != 'chua' else '', h.get('dot') or '',
-                                   ' '.join(str(h.get('dia_chi') or '').split())), start=1):
+                                   vn(self.tong.get(h['ma_ho'], D(0))) if lap != 'chua' else '', h.get('dot') or '', dia_chi), start=1):
                 it = _MucSap(v)
                 if c in khoa_sx:
                     it.setData(Qt.ItemDataRole.UserRole + 1, khoa_sx[c])
-                if c == 2:
-                    it.setForeground(QColor(mau_lap[lap]))
+                if c == 1:
+                    it.setToolTip(' · '.join(x for x in (v, in_an.LAP[lap], f'Đợt {h["dot"]}' if h.get('dot') else '', dia_chi) if x))
+                    if lap != 'da_lap':
+                        it.setForeground(QColor(mau_lap[lap]))
                 if c == 3:
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                if c == 5:
-                    it.setToolTip(v)
                 self.bang_ho.setItem(i, c, it)
-        # 20/10/2026: cột vừa khung trái (trước 56 + 420 + 190 + 150: khung tùy chọn rộng hơn vùng hiện, phải cuộn ngang - thẻ nhỏ
-        # của danh sách tài liệu và khung quy tắc bị khuất)
-        for c, w in enumerate((56, 200, 120, 110, 90)):
-            self.bang_ho.setColumnWidth(c, w)
-        self.bang_ho.horizontalHeader().setStretchLastSection(True)
+        dau = self.bang_ho.horizontalHeader()
+        dau.setStretchLastSection(False)
+        self.bang_ho.setColumnWidth(0, 62)
+        dau.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        dau.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        for c in (2, 4, 5):
+            self.bang_ho.setColumnHidden(c, True)
         self.bang_ho.itemChanged.connect(self._doi_chon)
         self.lb_chon = QLabel()
-        from .giao_dien import NhanBoDem
+        from .giao_dien import NhanBoDem, NhanRutGon
         self.lb_bo_dem = NhanBoDem()                    # bộ đếm vùng chọn (như Excel): nằm DƯỚI bảng, không nổi đè lên cột tiền
-        hang_chon = QHBoxLayout()
-        hang_chon.addWidget(self.o_tim, 1)
-        for chu, ham in (('Chọn các hộ đang hiện', lambda: self._danh_dau(self._dang_hien(), giu=True)),
-                         ('Bỏ chọn tất cả', lambda: self._danh_dau([]))):
-            b = QPushButton(chu)
-            b.clicked.connect(ham)
-            hang_chon.addWidget(b)
-        # 22/10/2026 (người dùng - chỉ thị tái cấu trúc bản in): phương án chi tiết CHỈ xuất bản Word (.docx, thể thức NĐ 30 -
-        # in_word, mẫu chuẩn duy nhất); PDF / in / gộp PDF lấy từ bản Word, không còn bản Excel (mẫu IN_CHITIET chỉ dùng dựng PDF
-        # gần đúng khi máy không có Word). o_word giữ làm thuộc tính (luôn tích, ẩn) cho mã cũ / kiểm thử.
-        self.o_ct = QCheckBox('Phương án chi tiết từng hộ (Word .docx / .pdf)')
-        self.o_ct.setToolTip('Bản Word thể thức Nghị định 30/2020: A4 dọc, lề trái 30 mm, phải 15 mm, trên / dưới 20 mm; hàng '
-                             'tiêu đề bảng lặp mỗi trang, mục III in tiếp ngay dưới mục II. PDF / in ra máy lấy từ bản Word.')
+        self.b_chon_het = QPushButton('Chọn hết')
+        self.b_chon_het.setToolTip('Chọn các hộ đang hiện trong danh sách')
+        self.b_chon_het.clicked.connect(lambda: self._danh_dau(self._dang_hien(), giu=True))
+        self.b_bo_chon = QPushButton('Bỏ chọn')
+        self.b_bo_chon.clicked.connect(lambda: self._danh_dau([]))
+        # định dạng của phương án chi tiết: Word, Excel, PDF độc lập (PDF lấy từ bản Word, chỉ tích PDF thì không để lại file Word)
+        self.o_ct = QCheckBox('Word')
+        self.o_ct.setToolTip('Bản Word thể thức Nghị định 30/2020')
         self.o_ct.setChecked(True)
-        # 30/10/2026 (người dùng): kèm bản Excel - các hộ đang chọn trong MỘT file, mỗi hộ một sheet (in_excel_chi_tiet)
-        self.o_ct_excel = QCheckBox('Phương án chi tiết - Excel (1 file, mỗi hộ 1 sheet)')
-        self.o_ct_excel.setToolTip('Một file PHUONG_AN_CHI_TIET.xlsx trong thư mục PA CHI TIET: mỗi hộ một sheet (tên sheet = STT. họ tên), '
-                                   'cùng số liệu bản Word; số tiền / số lượng / tỷ lệ là số (cộng, lọc được). Bản để sửa / tính trong '
-                                   'Excel - PDF / in ra máy vẫn lấy từ bản Word.')
+        self.o_ct_excel = QCheckBox('Excel')
+        self.o_ct_excel.setToolTip('Một file Excel, mỗi hộ một sheet, số liệu như bản Word: để sửa, tính tiếp')
+        self.o_pdf = QCheckBox('PDF')
+        self.o_pdf.setToolTip('PDF lấy từ bản Word. Máy không có Word: PDF gần đúng.')
+        self.o_pdf.setChecked(True)
+        self.o_gop = QCheckBox('Gộp một file')
+        self.o_gop.setToolTip('Gộp PDF các hộ thành PHUONG_AN_CHI_TIET.pdf')
         self.o_word = QCheckBox('Xuất bản Word (.docx) chuẩn Nghị định 30', self)
         self.o_word.setChecked(True)
         self.o_word.setVisible(False)
-        self.o_bth = QCheckBox('Bảng tổng hợp kinh phí phương án (.xlsx)')
-        self.o_bth.setToolTip('Bảng tổng hợp A3 ngang (Excel)')
+        self.chi_tiet_theo_word = False                 # hộp ẩn của Xuất bản theo đợt: bỏ tích Word là không xuất phương án chi tiết, PDF chỉ cho hồ sơ kèm theo
+        # hồ sơ kèm theo, chỉ khi in nhiều hộ. 1.0.15: bảng điều chỉnh chỉ khi dự án có hộ đã lập phương án điều chỉnh
+        self.o_bth = QCheckBox('Bảng tổng hợp')
+        self.o_bth.setToolTip('Bảng tổng hợp kinh phí A3 ngang (Excel)')
         self.o_bth.setChecked(not self.ma_ho_chon)
-        # 1.0.15: bảng tổng hợp ĐIỀU CHỈNH (mẫu riêng) - chỉ hiện khi dự án có hộ đã lập phương án điều chỉnh
         from . import bang_dieu_chinh as _bdc
-        self.o_bth_dc = QCheckBox('Bảng tổng hợp phương án điều chỉnh (.xlsx)')
-        self.o_bth_dc.setToolTip('Bảng tổng hợp riêng cho các hộ có phương án điều chỉnh: I. đã phê duyệt, II. đề nghị điều chỉnh, '
-                                 'III. chênh lệch, IV. tổng giá trị đã phê duyệt, V. tổng sau điều chỉnh (A3 ngang)')
+        self.o_bth_dc = QCheckBox('Bảng điều chỉnh')
+        self.o_bth_dc.setToolTip('Bảng tổng hợp các hộ có phương án điều chỉnh: đã phê duyệt, đề nghị điều chỉnh, chênh lệch (A3 ngang)')
         self.co_dieu_chinh = _bdc.co_dieu_chinh(self.con)
         self.o_bth_dc.setChecked(self.co_dieu_chinh)
-        self.o_bth_dc.setVisible(self.co_dieu_chinh)
-        # văn bản trình của đợt (0.9.16): tờ trình / văn bản trình - số, ngày lấy theo đợt trình đã chọn; phương án tổng bỏ
-        # từ 0.9.69 (người dùng tự làm)
-        self.o_tt = QCheckBox('Tờ trình đề nghị thẩm định & phê duyệt'.replace('&', '&&'))
-        self.o_tt.setToolTip('Tờ trình / văn bản trình (mẫu Word / Excel - sửa ở "Trình phê duyệt"); số, ngày theo đợt trình')
-        # 20/10/2026 (đặc tả: "trọn bộ 4 tài liệu"): báo cáo tiếp thu ý kiến - chỉ ở chế độ chính thức (nơi DUY NHẤT xuất .docx này:
-        # HopDotTrinh bỏ xuất từ 0.9.77)
-        self.o_bc = QCheckBox('Báo cáo tiếp thu && giải trình ý kiến (.docx)')      # '&&': '&' đơn là phím tắt
-        self.o_bc.setToolTip('Báo cáo tổng hợp ý kiến nhân dân, tiếp thu và giải trình (Word), thư mục PA TONG')
-        # 16/10/2026 (người dùng): bỏ ô "Báo cáo tiếp thu ý kiến", ô chọn mẫu (Mẫu chính / Dự thảo) từng bản in và dòng ghi chú
-        # dưới Chế độ phát hành - chữ DỰ THẢO đã do Chế độ phát hành quyết định (một lệnh một chỗ); mô tả chế độ ở chú thích nút chọn
-        # chế độ phát hành (đặc tả V10 phần V): bản DỰ THẢO (niêm yết, họp dân - Bước 6) / bản CHÍNH THỨC (trình thẩm định Bước 8, gửi hộ Bước 11)
+        self.o_tt = QCheckBox('Tờ trình')
+        self.o_tt.setToolTip('Tờ trình đề nghị thẩm định, phê duyệt; số, ngày theo đợt. Sửa mẫu ở cửa sổ Trình phê duyệt.')
+        self.o_bc = QCheckBox('Báo cáo ý kiến')
+        self.o_bc.setToolTip('Báo cáo tổng hợp ý kiến nhân dân, tiếp thu và giải trình (Word)')
+        # chế độ phát hành (đặc tả V10 phần V). Mở bảng in: mặc định Dự thảo (người dùng 05/11/2026)
         self.r_du_thao = QRadioButton('Bản DỰ THẢO (niêm yết công khai, họp dân - Bước 6)')
         self.r_chinh_thuc = QRadioButton('Bản CHÍNH THỨC (trình thẩm định - Bước 8, gửi từng hộ - Bước 11)')
-        self.r_chinh_thuc.setChecked(True)
+        self.r_du_thao.setChecked(True)
         self.nhom_che_do = QButtonGroup(self)
         for b in (self.r_du_thao, self.r_chinh_thuc):
             self.nhom_che_do.addButton(b)
         self.r_du_thao.setToolTip(MO_TA_CHE_DO['du_thao'])
         self.r_chinh_thuc.setToolTip(MO_TA_CHE_DO['chinh_thuc'])
         self.cb_dot = QComboBox()
-        self.cb_dot.addItem('(Không theo đợt: số tờ trình, số phương án tổng để trống)', None)
+        self.cb_dot.addItem('Không theo đợt', None)
         from . import quan_ly
         try:
             self.ds_dot = quan_ly.ds_dot(con)
@@ -3532,10 +3522,13 @@ class HopIn(QDialog):
             self.ds_dot = []
         for d in self.ds_dot:
             self.cb_dot.addItem(f'{d.ten} - {d.so_ho} hộ' + (f' - {d.van_ban_trinh}' if d.van_ban_trinh else ''), d.id)
+        self.cb_dot.setToolTip('Chọn đợt: tự chọn các hộ của đợt; số văn bản, số phương án tổng lấy theo đợt')
         self.cb_dot.currentIndexChanged.connect(lambda _: self._theo_dot())
+        # trạng thái dùng cho lõi xuất, không hiện: đầu ra theo ô Word / PDF và nút In ra máy; luôn chia PA CHI TIET / PA TONG khi nhiều hộ; luôn mở thư mục kết quả
         self.o_chia = QCheckBox('Lưu thành 2 thư mục "PA CHI TIET" và "PA TONG"')
-        self.o_chia.setToolTip('"PA CHI TIET": phương án chi tiết từng hộ; "PA TONG": bảng tổng hợp, tờ trình, báo cáo tiếp thu ý kiến')
         self.o_chia.setChecked(True)
+        self.o_mo = QCheckBox('Mở thư mục kết quả khi xong')
+        self.o_mo.setChecked(True)
         self.r_excel = QRadioButton('File Excel / Word (.xlsx / .docx)')
         self.r_pdf = QRadioButton('File Excel / Word + PDF (qua Microsoft Excel / Word)')
         self.r_in = QRadioButton('Gửi cả lô ra máy in mặc định (qua Microsoft Excel / Word)')
@@ -3543,219 +3536,243 @@ class HopIn(QDialog):
         self.nhom_ra = QButtonGroup(self)
         for b in (self.r_excel, self.r_pdf, self.r_in):
             self.nhom_ra.addButton(b)
-        # tùy chọn đầu ra
-        self.o_gop = QCheckBox('Gộp PDF phương án chi tiết thành một file')
-        self.o_gop.setToolTip('Gộp PDF phương án chi tiết các hộ thành một file PHUONG_AN_CHI_TIET.pdf')
+        self.o_pdf.toggled.connect(lambda bat: None if self.r_in.isChecked() else (self.r_pdf if bat else self.r_excel).setChecked(True))
+        self.r_pdf.toggled.connect(lambda bat: bat and self.o_pdf.setChecked(True))
+        self.r_excel.toggled.connect(lambda bat: bat and self.o_pdf.setChecked(False))
         self.o_so_ban = QSpinBox()
         self.o_so_ban.setRange(1, 20)
-        self.o_so_ban.setSuffix(' bản / hộ')
-        self.o_mo = QCheckBox('Mở thư mục kết quả khi xong')
-        self.o_mo.setChecked(True)
-        # 1.0.52 (người dùng 02/11/2026): che số CCCD trên bản NIÊM YẾT công khai (chế độ Dự thảo + file bảng niêm yết) - tùy chọn của
-        # dự án, mặc định tắt; văn bản chính thức / nội bộ luôn in đủ 12 số
+        self.o_so_ban.setSuffix(' bản')
+        self.o_so_ban.setToolTip('Số bản mỗi hộ khi in ra máy')
+        # 1.0.52 (người dùng 02/11/2026): che số CCCD trên bản niêm yết công khai - tùy chọn của dự án, mặc định tắt; văn bản chính thức luôn đủ 12 số
         from .an_toan import che_cccd_niem_yet
-        self.o_che_cccd = QCheckBox('Che số CCCD trên bản niêm yết công khai (075092***456)')
-        self.o_che_cccd.setToolTip('Chỉ áp cho bản DỰ THẢO dán tại điểm dân cư và file bảng niêm yết (Nghị định 13/2023/NĐ-CP): giữ 6 số '
-                                   'đầu + 3 số cuối, bỏ ngày / nơi cấp. Tờ trình, quyết định, bảng ký nhận vẫn in đủ số. Nhớ theo dự án.')
+        self.o_che_cccd = QCheckBox('Che số CCCD (bản niêm yết)')
+        self.o_che_cccd.setToolTip('Chỉ áp cho bản Dự thảo dán tại điểm dân cư (Nghị định 13/2023/NĐ-CP): giữ 6 số đầu + 3 số cuối. Nhớ theo dự án.')
         self.o_che_cccd.setChecked(che_cccd_niem_yet(con))
         if getattr(parent, 'chi_doc', False):            # dự án mở chỉ xem: không ghi được tùy chọn - tắt ô, không cho bấm rồi báo lỗi
             self.o_che_cccd.setEnabled(False)
-            self.o_che_cccd.setToolTip(self.o_che_cccd.toolTip() + ' Dự án đang mở chỉ xem: không đổi được tùy chọn này.')
-        self.o_che_cccd.setVisible(False)
         self.o_che_cccd.toggled.connect(lambda bat: self._doi_che_cccd(bat))
         # 1.0.05: hộ có nhiều lần lập phương án (lần đầu + bổ sung) - in lần mới nhất (đợt trình bổ sung) hay cộng dồn
         from .lan_pa import co_bang, ho_nhieu_lan
         self.cb_lan = QComboBox()
-        self.cb_lan.addItem('Lần phương án mới nhất của mỗi hộ (trình bổ sung)', 'moi_nhat')
-        self.cb_lan.addItem('Cộng dồn mọi lần lập phương án của hộ', 'cong_don')
-        self.cb_lan.setToolTip('Hộ chỉ có một lần lập phương án: hai cách cho cùng bản in. Hộ có phương án bổ sung: "mới nhất" in '
-                               'phương án chi tiết BỔ SUNG LẦN k (chỉ tài sản / chính sách của lần đó, số PA của lần); "cộng dồn" '
-                               'in tất cả các lần trong một bản.')
+        self.cb_lan.addItem('Lần mới nhất của mỗi hộ', 'moi_nhat')
+        self.cb_lan.addItem('Cộng dồn mọi lần', 'cong_don')
+        self.cb_lan.setToolTip('Hộ có phương án bổ sung: "mới nhất" chỉ in lần bổ sung đó; "cộng dồn" in tất cả các lần trong một bản.')
         self.so_ho_nhieu_lan = len(ho_nhieu_lan(con)) if co_bang(con) else 0
         self.cb_lan.currentIndexChanged.connect(lambda _: self._lam_moi_xem_truoc())
-        hang_in = QHBoxLayout()
-        hang_in.addWidget(self.r_in)
-        hang_in.addWidget(QLabel('Số bản:'))
-        hang_in.addWidget(self.o_so_ban)
-        hang_in.addStretch(1)
         for b in (self.r_excel, self.r_pdf, self.r_in):
             b.toggled.connect(lambda _: self._bat_tuy_chon())
         self._bat_tuy_chon()
+        # nơi lưu: tự hiểu là thư mục chứa file dự án (người dùng 05/11/2026), không nhớ thư mục lần trước; đổi khi thật cần
         goc = Path(file_du_an).parent if file_du_an else Path.home() / 'Documents'
-        self.o_thu_muc = QLineEdit(str(goc / f'BanIn_{datetime.now():%Y%m%d_%H%M}'))
-        b_chon = QPushButton('Chọn…')
-        b_chon.clicked.connect(lambda: self._chon_thu_muc())
-        hang = QHBoxLayout()
-        hang.addWidget(self.o_thu_muc, 1)
-        hang.addWidget(b_chon)
-        form = QFormLayout()
-        # chế độ phát hành: HAI THẺ (ảnh mẫu 20/10/2026); r_du_thao / r_chinh_thuc giữ làm nguồn trạng thái (ẩn, mã / test cũ dùng)
+        self.o_thu_muc = QLineEdit(str(goc / f'BanIn_{datetime.now():%Y%m%d_%H%M}'), self)
+        self.o_thu_muc.setVisible(False)
+        self.lb_luu = NhanRutGon('')
+        self.o_thu_muc.textChanged.connect(lambda *_: self._ve_noi_luu())
+        self._ve_noi_luu()
+        self.b_chon_tm = QPushButton('Đổi…')
+        self.b_chon_tm.setToolTip('Lưu vào thư mục khác')
+        self.b_chon_tm.clicked.connect(lambda: self._chon_thu_muc())
+
+        # ---- hai lựa chọn gốc: in cho ai (Một hộ / Nhiều hộ / Xuất dữ liệu), bản nào (Dự thảo / Chính thức); r_du_thao, r_chinh_thuc giữ làm nguồn trạng thái
         from PySide6.QtWidgets import QTabBar
-        self.the_che_do = QTabBar()
-        self.the_che_do.setObjectName('the_che_do_in')
-        self.the_che_do.setExpanding(False)
-        self.the_che_do.setDrawBase(False)
-        for k, chu in THE_CHE_DO:
-            self.the_che_do.addTab(chu)
-            self.the_che_do.setTabToolTip(self.the_che_do.count() - 1, MO_TA_CHE_DO[k])
-        self.the_che_do.setCurrentIndex(1)
+
+        def thanh_the(ds):
+            t = QTabBar()
+            t.setObjectName('the_che_do_in')
+            t.setExpanding(False)
+            t.setDrawBase(False)
+            for chu in ds:
+                t.addTab(chu)
+            return t
+        self.the_che_do = thanh_the([chu for _, chu in THE_CHE_DO])
+        for i, (k, _) in enumerate(THE_CHE_DO):
+            self.the_che_do.setTabToolTip(i, MO_TA_CHE_DO[k])
         self.the_che_do.currentChanged.connect(lambda i: (self.r_du_thao if THE_CHE_DO[i][0] == 'du_thao'
                                                           else self.r_chinh_thuc).setChecked(True) if i >= 0 else None)
-        for b in (self.r_du_thao, self.r_chinh_thuc):
-            b.setVisible(False)
-        self.lb_quy_tac = QLabel('')
-        self.lb_quy_tac.setObjectName('quy_tac_che_do')
-        self.lb_quy_tac.setWordWrap(True)
-        hang_loc = QHBoxLayout()                          # 24/10/2026: Đợt trình + Hộ cần in cùng một hàng (bảng hộ có thêm chỗ)
-        hang_loc.addWidget(QLabel('Đợt trình:'))
-        hang_loc.addWidget(self.cb_dot, 1)
-        hang_loc.addWidget(QLabel('Hộ cần in:'))
-        hang_loc.addWidget(self.cb_pham_vi, 1)
-        self.cb_dot.setMinimumContentsLength(14)
-        self.cb_pham_vi.setMinimumContentsLength(14)
-        self.cb_dot.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self.cb_pham_vi.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        form.addRow(hang_loc)
-        if self.so_ho_nhieu_lan:
-            form.addRow(f'Lần phương án ({self.so_ho_nhieu_lan} hộ có bổ sung):', self.cb_lan)
-        # tài liệu cấu thành bộ hồ sơ (20/10/2026, ảnh mẫu): mỗi dòng ô chọn + thẻ nhỏ bên phải; mẫu chính (IN_CHITIET /
-        # IN_BANGTONGHOP - sửa ở "Mẫu in…"); chữ DỰ THẢO theo chế độ phát hành
-        from . import dia_phuong
-        from .giao_dien import dat_the_nho
-        pb = dia_phuong.phan_bo_kinh_phi()
-        chu_pb = '/'.join(str(t).replace('.', ',') for _, t in pb[:2]) if len(pb) >= 2 else ''
+        lenh = getattr(parent, 'lenh', None) or {}
+        self._pham_vi = [x for x in THE_PHAM_VI if x[0] != 'du_lieu' or 'Xuất danh sách hộ…' in lenh]
+        self.the_pham_vi = thanh_the([chu for _, chu in self._pham_vi])
+        mot = len(self.ma_ho_chon) == 1 and che_do is None and dot_id is None
+        self.the_pham_vi.setCurrentIndex(0 if mot else 1)
+        hang_the = QHBoxLayout()
+        hang_the.addWidget(self.the_pham_vi)
+        hang_the.addStretch(1)
+        hang_the.addWidget(self.the_che_do)
+
+        # ---- chọn hộ
+        self.khung_chon_ho = QWidget()
+        v_ho = QVBoxLayout(self.khung_chon_ho)
+        v_ho.setContentsMargins(0, 0, 0, 0)
+        v_ho.setSpacing(4)
+        self.khung_loc = QWidget()                        # chỉ khi in nhiều hộ
+        h_loc = QHBoxLayout(self.khung_loc)
+        h_loc.setContentsMargins(0, 0, 0, 0)
+        for cb in (self.cb_pham_vi, self.cb_dot):
+            cb.setMinimumContentsLength(10)
+            cb.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+            h_loc.addWidget(cb, 1)
+        v_ho.addWidget(self.khung_loc)
+        h_tim = QHBoxLayout()
+        h_tim.addWidget(self.o_tim, 1)
+        h_tim.addWidget(self.b_chon_het)
+        h_tim.addWidget(self.b_bo_chon)
+        v_ho.addLayout(h_tim)
+        v_ho.addWidget(self.bang_ho, 1)
+        h_dem = QHBoxLayout()
+        h_dem.addWidget(self.lb_chon, 1)
+        h_dem.addWidget(self.lb_bo_dem)
+        v_ho.addLayout(h_dem)
+
+        # ---- tài liệu: phương án chi tiết + định dạng; kèm theo khi nhiều hộ
         self.khung_tai_lieu = QFrame()
         self.khung_tai_lieu.setObjectName('khung_tai_lieu')
-        luoi = QGridLayout(self.khung_tai_lieu)
-        luoi.setContentsMargins(10, 6, 10, 6)
-        luoi.setHorizontalSpacing(8)
-        luoi.setVerticalSpacing(4)
-        self.b_xem_bth = QPushButton('Xem trước bảng tổng hợp')     # 16/10/2026: xem trước bảng tổng hợp các hộ đang đánh dấu
-        self.b_xem_bth.setToolTip('Lập bảng tổng hợp các hộ đang đánh dấu (theo mẫu, chế độ dự thảo / chính thức đang chọn) '
-                                  'và hiện ở khung xem trước bên phải')
-        self.b_xem_bth.clicked.connect(lambda: self.xem_truoc_bang_tong_hop())
-        # 24/10/2026 (người dùng): xem trước NHIỀU HỘ trên cùng một bản (như nhiều hộ trong một file PDF) - các hộ đang đánh dấu
-        self.b_xem_nhieu = QPushButton('Xem trước gộp các hộ đã chọn')
-        self.b_xem_nhieu.setToolTip(f'Lập phương án chi tiết của các hộ đang đánh dấu (tối đa {XEM_NHIEU_TOI_DA} hộ một lần, theo chế độ '
-                                    'dự thảo / chính thức đang chọn), gộp thành MỘT bản PDF ở khung bên phải; chọn hộ ở ô "Nhảy tới hộ" trên '
-                                    'thanh xem trước, in cả bản bằng nút "In…".')
-        self.b_xem_nhieu.clicked.connect(lambda: self.xem_truoc_nhieu_ho())
-        # 30/10/2026 (người dùng): xem trước bản Excel "mỗi hộ một sheet" trước khi xuất file
-        self.b_xem_excel = QPushButton('Xem trước bản Excel các hộ')
-        self.b_xem_excel.setToolTip(f'Lập bản Excel phương án chi tiết (mỗi hộ một sheet) của các hộ đang đánh dấu (tối đa {XEM_NHIEU_TOI_DA} '
-                                    'hộ một lần) và hiện ở khung xem trước bên phải; chọn hộ ở ô "Nhảy tới hộ".')
-        self.b_xem_excel.clicked.connect(lambda: self.xem_truoc_excel_chi_tiet())
-        self.b_sua_tt = QPushButton('Sửa mẫu…')           # 24/10/2026: cạnh ô Tờ trình (trước nằm lẻ loi ở đáy hộp)
-        self.b_sua_tt.setToolTip('Mở mẫu tờ trình bằng Word / Excel để sửa; thêm mẫu từ file Word / Excel / PDF ở cửa sổ "Trình phê duyệt"')
-        self.b_sua_tt.clicked.connect(lambda: self.sua_mau_van_ban('to_trinh'))
-        self.the_tai_lieu = {}
-        for r, (o, chu, loai) in enumerate(((self.o_ct, 'Word · NĐ 30/2020', 'lam'),
-                                            (self.o_ct_excel, 'Excel · 1 hộ = 1 sheet', 'xanh'),
-                                            (self.o_bth, f'Tách {chu_pb} QĐ 08' if chu_pb else 'Kinh phí QĐ 08', 'xanh'),
-                                            (self.o_bth_dc, 'Mẫu điều chỉnh', 'lam'),
-                                            (self.o_tt, 'Chỉ mở ở Chính thức', 'xam'),
-                                            (self.o_bc, 'Chỉ mở ở Chính thức', 'xam'))):
-            luoi.addWidget(o, r, 0)
-            if o is self.o_ct:
-                luoi.addWidget(self.b_xem_nhieu, r, 1)
-            if o is self.o_ct_excel:
-                luoi.addWidget(self.b_xem_excel, r, 1)
-            if o is self.o_bth:
-                luoi.addWidget(self.b_xem_bth, r, 1)
-            if o is self.o_tt:
-                luoi.addWidget(self.b_sua_tt, r, 1)
-            t = QLabel(chu)
-            dat_the_nho(t, loai)
-            luoi.addWidget(t, r, 2, Qt.AlignmentFlag.AlignRight)
-            self.the_tai_lieu[o] = t
-            t.setVisible(o is not self.o_bth_dc or self.co_dieu_chinh)
-        luoi.addWidget(self.o_che_cccd, 6, 0, 1, 3)
-        luoi.setColumnStretch(0, 1)
-        from PySide6.QtWidgets import QToolButton
-        self.khung_dau_ra = QWidget()                    # 24/10/2026: "Đầu ra và nơi lưu" gấp được - bảng hộ có thêm chỗ khi cần
-        f_ra = QFormLayout(self.khung_dau_ra)
-        f_ra.setContentsMargins(0, 0, 0, 0)
-        f_ra.addRow('Đầu ra:', self.r_excel)
-        f_ra.addRow('', self.r_pdf)
-        f_ra.addRow('', self.o_gop)
-        f_ra.addRow('', hang_in)
-        f_ra.addRow('Lưu vào thư mục:', hang)
-        f_ra.addRow('', self.o_chia)
-        f_ra.addRow('', self.o_mo)
-        self.b_dau_ra = QToolButton()
-        self.b_dau_ra.setObjectName('nut_gap_dau_ra')
-        self.b_dau_ra.setCheckable(True)
-        self.b_dau_ra.setChecked(True)
-        self.b_dau_ra.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self.b_dau_ra.setAutoRaise(True)
-        self.b_dau_ra.toggled.connect(self._gap_dau_ra)          # đặt trạng thái SAU khi vào bố cục (widget chưa có cha mà setVisible -> hiện thành cửa sổ riêng)
+        v_tl = QVBoxLayout(self.khung_tai_lieu)
+        v_tl.setContentsMargins(10, 6, 10, 6)
+        v_tl.setSpacing(4)
+        h_ct = QHBoxLayout()
+        nhan = QLabel('Phương án chi tiết:')
+        nhan.setProperty('vai', 'nhan')
+        h_ct.addWidget(nhan)
+        for o in (self.o_ct, self.o_ct_excel, self.o_pdf, self.o_gop):
+            h_ct.addWidget(o)
+        h_ct.addStretch(1)
+        v_tl.addLayout(h_ct)
+        self.khung_kem = QWidget()
+        h_kem = QHBoxLayout(self.khung_kem)
+        h_kem.setContentsMargins(0, 0, 0, 0)
+        nhan = QLabel('Kèm theo:')
+        nhan.setProperty('vai', 'nhan')
+        h_kem.addWidget(nhan)
+        for o in (self.o_bth, self.o_bth_dc, self.o_tt, self.o_bc):
+            h_kem.addWidget(o)
+        h_kem.addStretch(1)
+        v_tl.addWidget(self.khung_kem)
+        h_kt = QHBoxLayout()
+        h_kt.addWidget(self.o_che_cccd)
+        if self.so_ho_nhieu_lan:
+            h_kt.addWidget(self.cb_lan, 1)
+        else:
+            self.cb_lan.setParent(self.khung_tai_lieu)
+            self.cb_lan.setVisible(False)
+        h_kt.addStretch(1)
+        v_tl.addLayout(h_kt)
+
+        # ---- nơi lưu
+        self.khung_luu = QWidget()
+        h_luu = QHBoxLayout(self.khung_luu)
+        h_luu.setContentsMargins(0, 0, 0, 0)
+        nhan = QLabel('Lưu vào:')
+        nhan.setProperty('vai', 'nhan')
+        h_luu.addWidget(nhan)
+        h_luu.addWidget(self.lb_luu, 1)
+        h_luu.addWidget(self.b_chon_tm)
+
+        # ---- xuất dữ liệu: dùng lại lệnh của cửa sổ chính
+        self.khung_du_lieu = QWidget()
+        v_dl = QVBoxLayout(self.khung_du_lieu)
+        v_dl.setContentsMargins(0, 4, 0, 0)
+        self.nut_du_lieu = {}
+        for chu, ten in (('Danh sách hộ (Excel)', 'Xuất danh sách hộ…'), ('Báo cáo đối chiếu (Excel)', 'Xuất báo cáo đối chiếu…')):
+            if ten in lenh:
+                b = QPushButton(chu)
+                b.setMaximumWidth(320)
+                b.clicked.connect(lambda _=False, a=lenh[ten]: a.trigger())
+                self.nut_du_lieu[ten] = b
+                v_dl.addWidget(b)
+        nhan = QLabel('File lưu vào thư mục chứa file dự án.')
+        nhan.setProperty('vai', 'nhan')
+        v_dl.addWidget(nhan)
+        v_dl.addStretch(1)
+
+        # ---- nút dưới cùng
         nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.b_thuc_hien = nut.button(QDialogButtonBox.StandardButton.Ok)
-        self.b_thuc_hien.setText('Bắt đầu Xuất bản && In hàng loạt')
+        self.b_thuc_hien.setText('Xuất file')
         nut.button(QDialogButtonBox.StandardButton.Cancel).setText('Đóng')
         from .giao_dien import KieuNut, ap_kieu_nut
-        ap_kieu_nut(nut.button(QDialogButtonBox.StandardButton.Ok), KieuNut.CHINH)   # 1.0.02: xuất / in - hành động chính, navy
+        ap_kieu_nut(self.b_thuc_hien, KieuNut.CHINH)
         nut.accepted.connect(lambda: self.thuc_hien())
         nut.rejected.connect(self.reject)
-        self.lb = QLabel('PDF / in ra máy cần Microsoft Word (phương án chi tiết, tờ trình) và Excel (bảng tổng hợp); không có Word vẫn dựng '
-                         'được PDF gần đúng. Số văn bản, số phương án tổng lấy theo đợt đã chọn.')
-        self.lb.setObjectName('ghi_chu_in')
-        self.lb.setWordWrap(True)
-        # 0.9.84 (người dùng 14/10/2026): xem trước A4 ngay trong hộp - QSplitter 50/50: trái = tùy chọn (cuộn được khi màn hình
-        # hẹp, không ép hộp rộng hơn màn hình 1366), phải = KhungXemTruocTaiLieu luôn hiện. Bấm một hộ -> bản in của hộ đó; đổi chế
-        # độ Dự thảo / Chính thức, mẫu -> lập lại (yeu_cau: Excel xuất PDF ở nền, chỉ giữ yêu cầu mới nhất)
+        self.b_in = QPushButton('In ra máy')
+        self.b_in.setToolTip('Gửi tới máy in mặc định của Windows, đúng lề và khổ giấy của bản Word / Excel')
+        self.b_in.clicked.connect(lambda: self.in_ra_may())
+        h_nut = QHBoxLayout()
+        h_nut.addStretch(1)
+        h_nut.addWidget(self.o_so_ban)
+        h_nut.addWidget(self.b_in)
+        h_nut.addWidget(nut)
+
+        # ---- khung trái: tùy chọn (cuộn được khi màn hình hẹp), phải: xem trước A4 luôn hiện
         from .xem_truoc_tai_lieu import KhungXemTruocTaiLieu, in_qua_excel
         trai = QWidget()
-        # 1.0.02 (Hybrid Enterprise Navy): khung tùy chọn là thẻ trắng viền slate bo 6 (cạnh khung xem trước A4)
         trai.setObjectName('the_tuy_chon_in')
         trai.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         # kiểu ở QSS chung (giao_dien): kiểu cục bộ trên khung chứa bắt Qt tính lại kiểu cho cả cây con
         lo_trai = QVBoxLayout(trai)
         lo_trai.setContentsMargins(10, 8, 10, 8)
-        lo_trai.addWidget(self.the_che_do)
-        lo_trai.addWidget(self.lb_quy_tac)
-        lo_trai.addLayout(form)
-        lo_trai.addLayout(hang_chon)
-        lo_trai.addWidget(self.bang_ho, 1)               # bảng hộ chiếm phần cao còn lại của hộp
-        hang_dem = QHBoxLayout()
-        hang_dem.addWidget(self.lb_chon, 1)
-        hang_dem.addWidget(self.lb_bo_dem)
-        lo_trai.addLayout(hang_dem)
-        nhan_tl = QLabel('Tài liệu xuất bản:')
-        nhan_tl.setStyleSheet('QLabel { font-weight: 600; }')
-        lo_trai.addWidget(nhan_tl)
+        lo_trai.addLayout(hang_the)
+        lo_trai.addWidget(self.khung_chon_ho, 1)
         lo_trai.addWidget(self.khung_tai_lieu)
-        lo_trai.addWidget(self.b_dau_ra)
-        lo_trai.addWidget(self.khung_dau_ra)
-        self._gap_dau_ra(True)
-        lo_trai.addWidget(self.lb)
+        lo_trai.addWidget(self.khung_luu)
+        lo_trai.addWidget(self.khung_du_lieu, 1)
         cuon = QScrollArea()
         cuon.setWidgetResizable(True)
         cuon.setFrameShape(QFrame.Shape.NoFrame)
         cuon.setStyleSheet('QScrollArea { background: transparent; border: 0; }')
         cuon.viewport().setAutoFillBackground(False)
         cuon.setWidget(trai)
-        # 1.0.29: khung tùy chọn KHÔNG cuộn ngang (1536 @125% từng hiện thanh cuộn ngang): tắt thanh ngang, bề rộng tối thiểu của vùng
-        # cuộn = bề rộng tối thiểu của nội dung + thanh cuộn dọc (_vua_trai) - vạch chia không kéo hẹp hơn được
+        # 1.0.29: khung tùy chọn KHÔNG cuộn ngang: bề rộng tối thiểu của vùng cuộn = của nội dung + thanh cuộn dọc (_vua_trai)
         cuon.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.cuon_trai = cuon
-        self._vua_trai()
         self.w_preview = KhungXemTruocTaiLieu(self, ham_in=lambda pdf, xlsx: in_qua_excel(self, pdf, xlsx))
         self.w_preview.setMinimumWidth(520)
+        # xem trước: bốn nút một hàng, thay cho nút rải theo từng dòng tài liệu
+        self.b_xem_word = QPushButton('Word')
+        self.b_xem_word.setToolTip('Bản Word của hộ đang trỏ trong danh sách')
+        self.b_xem_word.clicked.connect(lambda: self.xem_truoc_word())
+        self.b_xem_excel = QPushButton('Excel')
+        self.b_xem_excel.setToolTip(f'Bản Excel của các hộ đã chọn (tối đa {XEM_NHIEU_TOI_DA} hộ một lần)')
+        self.b_xem_excel.clicked.connect(lambda: self.xem_truoc_excel_chi_tiet())
+        self.b_xem_nhieu = QPushButton('PDF gộp')
+        self.b_xem_nhieu.setToolTip(f'Phương án của các hộ đã chọn gộp một bản (tối đa {XEM_NHIEU_TOI_DA} hộ một lần), có ô nhảy tới hộ')
+        self.b_xem_nhieu.clicked.connect(lambda: self.xem_truoc_nhieu_ho())
+        self.b_xem_bth = QPushButton('Bảng tổng hợp')
+        self.b_xem_bth.setToolTip('Bảng tổng hợp của các hộ đã chọn')
+        self.b_xem_bth.clicked.connect(lambda: self.xem_truoc_bang_tong_hop())
+        self.nhom_xem = QButtonGroup(self)
+        self.phai = QWidget()
+        lo_phai = QVBoxLayout(self.phai)
+        lo_phai.setContentsMargins(0, 0, 0, 0)
+        lo_phai.setSpacing(4)
+        h_xem = QHBoxLayout()
+        nhan = QLabel('Xem trước:')
+        nhan.setProperty('vai', 'nhan')
+        h_xem.addWidget(nhan)
+        from .giao_dien import TOKEN, dat_kieu_theo_tong
+        for b in (self.b_xem_word, self.b_xem_excel, self.b_xem_nhieu, self.b_xem_bth):
+            b.setCheckable(True)
+            b.setProperty('khong_icon', True)
+            dat_kieu_theo_tong(b, f'QPushButton:checked {{ background: {TOKEN["chinh"]}; color: {TOKEN["khung"]}; border-color: {TOKEN["chinh"]}; }}')
+            self.nhom_xem.addButton(b)
+            h_xem.addWidget(b)
+        h_xem.addStretch(1)
+        lo_phai.addLayout(h_xem)
+        lo_phai.addWidget(self.w_preview, 1)
         self.tach = QSplitter(Qt.Orientation.Horizontal)
         self.tach.addWidget(cuon)
-        self.tach.addWidget(self.w_preview)
+        self.tach.addWidget(self.phai)
         self.tach.setChildrenCollapsible(False)
-        self.tach.setStretchFactor(0, 1)
+        self.tach.setStretchFactor(0, 0)
         self.tach.setStretchFactor(1, 1)
         self._chia_doi = False
-        self._da_keo = False                        # người dùng kéo vạch chia: không ép lại 50/50 khi đổi cỡ hộp
+        self._da_keo = False                        # người dùng kéo vạch chia: không ép lại khi đổi cỡ hộp
         self.tach.splitterMoved.connect(lambda *_: setattr(self, '_da_keo', True))
         self._ma_xem = None
         lo = QVBoxLayout(self)
         lo.setContentsMargins(8, 8, 8, 10)               # nút chính luôn nằm trọn trong hộp (không sát / cắt mép dưới)
         lo.addWidget(self.tach, 1)
-        lo.addWidget(nut)
+        lo.addLayout(h_nut)
+        self.the_pham_vi.currentChanged.connect(lambda _: self._ap_pham_vi())
         self._theo_pham_vi()
         for b in (self.r_du_thao, self.r_chinh_thuc):
             b.toggled.connect(lambda dang, x=b: dang and (self._ap_che_do(), self._lam_moi_xem_truoc()))
@@ -3767,10 +3784,65 @@ class HopIn(QDialog):
             self.cb_dot.setCurrentIndex(self.cb_dot.findData(dot_id))       # -> _theo_dot: hộ của đợt, mọi mẫu, thư mục của đợt
         if che_do in ('du_thao', 'chinh_thuc'):
             self.dat_che_do(che_do)
+        self._ap_pham_vi()
+        self._vua_trai()
         if self.ma_ho_chon:                         # mở từ hộ đang chọn: xem trước ngay hộ đầu
             i = next((i for i, h in enumerate(self.ho) if h['ma_ho'] == self.ma_ho_chon[0]), None)
             if i is not None:
                 self.bang_ho.setCurrentCell(i, 1)
+        self._dem()
+
+    # ---- phạm vi in: một hộ / nhiều hộ / xuất dữ liệu
+    def pham_vi_in(self) -> str:
+        return self._pham_vi[max(0, self.the_pham_vi.currentIndex())][0]
+
+    def mot_ho(self) -> bool:
+        return self.pham_vi_in() == 'mot'
+
+    def dat_pham_vi(self, k: str) -> None:
+        self.the_pham_vi.setCurrentIndex(next(i for i, x in enumerate(self._pham_vi) if x[0] == k))
+
+    def _ap_pham_vi(self) -> None:
+        """Mỗi phạm vi chỉ hiện đúng phần cần: một hộ không có lọc, tích chọn, hồ sơ kèm theo, PDF gộp; xuất dữ liệu không có danh sách hộ, xem trước."""
+        k = self.pham_vi_in()
+        nhieu, du_lieu = k == 'nhieu', k == 'du_lieu'
+        for w in (self.khung_chon_ho, self.khung_tai_lieu, self.khung_luu, self.phai, self.o_so_ban, self.b_in, self.b_thuc_hien):
+            w.setVisible(not du_lieu)
+        self.khung_du_lieu.setVisible(du_lieu)
+        self.the_che_do.setVisible(not du_lieu)
+        for w in (self.khung_loc, self.b_chon_het, self.b_bo_chon, self.khung_kem, self.o_gop, self.b_xem_nhieu, self.b_xem_bth):
+            w.setVisible(nhieu)
+        self.o_bth_dc.setVisible(self.co_dieu_chinh)
+        self.bang_ho.setColumnHidden(0, not nhieu)
+        if k == 'mot' and self.bang_ho.currentRow() < 0 and self.bang_ho.rowCount():
+            r = next((i for i in range(self.bang_ho.rowCount()) if self.bang_ho.item(i, 0).data(Qt.ItemDataRole.UserRole) in self.ds_pa), 0)
+            self.bang_ho.setCurrentCell(r, 1)
+        self._dem()
+
+    def _ve_noi_luu(self) -> None:
+        """Hiện phần cuối đường dẫn (thư mục dự án \\ thư mục bản in), đủ đường dẫn ở chú thích."""
+        p = Path(self.o_thu_muc.text())
+        self.lb_luu.setText(f'{p.parent.name}\\{p.name}' if p.parent.name else str(p))
+        self.lb_luu.setToolTip(str(p))
+
+    def in_ra_may(self, xac_nhan: bool = True):
+        """Gửi các tài liệu đã tích tới máy in mặc định qua Word / Excel. Ô định dạng giữ nguyên."""
+        self.r_in.setChecked(True)
+        try:
+            return self.thuc_hien(xac_nhan)
+        finally:
+            (self.r_pdf if self.o_pdf.isChecked() else self.r_excel).setChecked(True)
+
+    def xem_truoc_word(self) -> None:
+        """Bản Word của hộ đang trỏ; chưa trỏ hộ nào thì hộ đầu trong các hộ đã chọn."""
+        r = self.bang_ho.currentRow()
+        if r < 0:
+            ds = self.ds_ho()
+            if not ds:
+                return
+            r = next(i for i in range(self.bang_ho.rowCount()) if self.bang_ho.item(i, 0).data(Qt.ItemDataRole.UserRole) == ds[0])
+            self.bang_ho.setCurrentCell(r, 1)
+        self.xem_dong(r)
 
     # ---- xem trước A4 (khung bên phải)
     def showEvent(self, e):
@@ -3788,7 +3860,7 @@ class HopIn(QDialog):
 
     def chia_doi(self) -> None:
         w = max(2, self.tach.width() - self.tach.handleWidth())
-        trai = max(w // 2, self._vua_trai())
+        trai = max(min(w * 2 // 5, 500), self._vua_trai())
         self.tach.setSizes([trai, max(1, w - trai)])
 
     def resizeEvent(self, e):
@@ -3805,6 +3877,9 @@ class HopIn(QDialog):
         if ma == self._ma_xem and self.w_preview.dang_lap():
             return
         self._ma_xem = ma
+        self.b_xem_word.setChecked(True)
+        if self.mot_ho():
+            self._dem()
         self._lam_moi_xem_truoc()
 
     def khoa_xem_truoc(self):
@@ -3840,6 +3915,7 @@ class HopIn(QDialog):
             return None
         du_thao, mau = self.che_do() == 'du_thao', None
         khoa = ('bth', tuple(ds), du_thao, mau, self.lan_in())
+        self.b_xem_bth.setChecked(True)
         self._ma_xem = None                         # bấm lại một dòng hộ thì xem lại phương án chi tiết của hộ đó
         lan = self.lan_in()
 
@@ -3861,6 +3937,7 @@ class HopIn(QDialog):
         ds = ds[:XEM_NHIEU_TOI_DA]
         du_thao, lan = self.che_do() == 'du_thao', self.lan_in()
         khoa = ('nhieu', tuple(ds), du_thao, lan)
+        self.b_xem_nhieu.setChecked(True)
         ten_ho = {h['ma_ho']: f'{h["thu_tu"]}. {h["ho_ten"]}' for h in self.ho}
         self._ma_xem = None                         # bấm lại một dòng hộ thì xem lại phương án của riêng hộ đó
 
@@ -3885,6 +3962,7 @@ class HopIn(QDialog):
         ds = ds[:XEM_NHIEU_TOI_DA]
         du_thao, lan = self.che_do() == 'du_thao', self.lan_in()
         khoa = ('excel_ct', tuple(ds), du_thao, lan)
+        self.b_xem_excel.setChecked(True)
         ten_ho = {h['ma_ho']: f'{h["thu_tu"]}. {h["ho_ten"]}' for h in self.ho}
         self._ma_xem = None
 
@@ -3911,37 +3989,33 @@ class HopIn(QDialog):
         self._ap_che_do()
 
     def _ap_che_do(self) -> None:
-        """DỰ THẢO: mẫu chính có chữ DỰ THẢO, chỉ phương án chi tiết + bảng tổng hợp (khóa tờ trình, báo cáo tiếp thu).
-        CHÍNH THỨC: mẫu chính (số PA chính thức, không chữ dự thảo), trọn bộ 4 tài liệu.
-        Chính thức in đủ số CCCD; Dự thảo che số CCCD khi bật ô o_che_cccd (1.0.52). Mô tả ở chú thích hai thẻ (MO_TA_CHE_DO) + khung quy tắc (QUY_TAC_CHE_DO)."""
+        """DỰ THẢO: mẫu chính có chữ DỰ THẢO, chỉ phương án chi tiết + bảng tổng hợp (không có tờ trình, báo cáo tiếp thu).
+        CHÍNH THỨC: mẫu chính (số PA chính thức, không chữ dự thảo), trọn bộ 4 tài liệu. Định dạng Word / Excel / PDF do người dùng chọn, đổi bản không đổi;
+        Chính thức in đủ số CCCD; Dự thảo che số CCCD khi bật ô o_che_cccd (1.0.52). Mô tả ở chú thích hai thẻ (MO_TA_CHE_DO)."""
         self._ap_tai_lieu()
         if self.che_do() == 'du_thao':
-            for o, v in ((self.o_ct, True), (self.o_bth, True), (self.o_tt, False), (self.o_bc, False)):
+            for o, v in ((self.o_bth, True), (self.o_tt, False), (self.o_bc, False)):
                 o.setChecked(v)
         else:
-            for o in (self.o_ct, self.o_bth, self.o_tt, self.o_bc):
+            for o in (self.o_bth, self.o_tt, self.o_bc):
                 o.setChecked(True)
+        if not (self.o_ct.isChecked() or self.o_ct_excel.isChecked() or self.o_pdf.isChecked()):
+            self.o_ct.setChecked(True)
 
     def _ap_tai_lieu(self) -> None:
-        """Thẻ chế độ, khung quy tắc, khóa / mở tờ trình + báo cáo tiếp thu theo chế độ (không đổi ô đã chọn khác)."""
-        from .giao_dien import dat_the_nho
+        """Thẻ chế độ, tờ trình + báo cáo tiếp thu chỉ có ở Chính thức, che CCCD chỉ ở Dự thảo (không đổi ô đã chọn khác)."""
         du_thao = self.che_do() == 'du_thao'
         i = next(j for j, (k, _) in enumerate(THE_CHE_DO) if k == self.che_do())
         if self.the_che_do.currentIndex() != i:
             self.the_che_do.blockSignals(True)
             self.the_che_do.setCurrentIndex(i)
             self.the_che_do.blockSignals(False)
-        self.lb_quy_tac.setText(QUY_TAC_CHE_DO[self.che_do()])
-        for o, chu in ((self.o_tt, 'Theo đợt trình'), (self.o_bc, 'Word (.docx)')):
+        for o in (self.o_tt, self.o_bc):
             o.setEnabled(not du_thao)
+            o.setVisible(not du_thao)
             if du_thao:
                 o.setChecked(False)
-            t = self.the_tai_lieu[o]
-            t.setText('Chỉ mở ở Chính thức' if du_thao else chu)
-            dat_the_nho(t, 'xam' if du_thao else 'lam')
-            t.setVisible(not (du_thao and o is self.o_bc))               # thẻ "Chỉ mở ở Chính thức" chỉ ghi một lần (ở Tờ trình)
-        if self.o_che_cccd.parentWidget() is not None:                    # 1.0.52: chỉ bản dự thảo (niêm yết) mới che CCCD
-            self.o_che_cccd.setVisible(du_thao)
+        self.o_che_cccd.setVisible(du_thao)                               # 1.0.52: chỉ bản dự thảo (niêm yết) mới che CCCD
 
     def _doi_che_cccd(self, bat: bool) -> None:
         import sqlite3
@@ -4010,14 +4084,13 @@ class HopIn(QDialog):
         tu_lap = sum(1 for m in ds if self.lap.get(m) == 'tu_lap')
         chua = sum(1 for m in ds if self.lap.get(m) == 'chua')
         if hasattr(self, 'b_thuc_hien'):
-            self.b_thuc_hien.setText(f'Bắt đầu Xuất bản && In hàng loạt ({len(ds)} hộ)')
+            self.b_thuc_hien.setText('Xuất file' if self.mot_ho() else f'Xuất file ({len(ds)} hộ)')
         self.lb_chon.setText(f'Đã chọn {len(ds)} hộ, tổng {vn(tong)} đồng' +
                              (f' — trong đó {tu_lap} hộ phương án tự lập CHƯA SOÁT' if tu_lap else '') +
                              (f', {chua} hộ chưa có phương án' if chua else '') + '.')
 
     def _bat_tuy_chon(self):
         self.o_gop.setEnabled(self.r_pdf.isChecked())
-        self.o_so_ban.setEnabled(self.r_in.isChecked())
 
     # ---- đợt trình, chọn mẫu in
     def dot_chon(self):
@@ -4045,17 +4118,6 @@ class HopIn(QDialog):
             if (o.isEnabled() and o is not self.o_ct_excel) or not co:
                 o.setChecked(co)
 
-    def sua_mau_van_ban(self, loai: str, mo: bool = True):
-        from . import van_ban_trinh as vb
-        from .in_an import mo_file
-        p = vb.mau_de_sua(loai)
-        if mo:
-            QMessageBox.information(self, TEN_UD, f'Mở mẫu {vb.LOAI[loai][1].lower()} bằng {"Excel" if p.suffix == ".xlsx" else "Word"}:'
-                                    f'\n{p}\n\nSửa xong bấm Lưu rồi đóng. Chỗ trống viết trong ngoặc nhọn, ví dụ {{so_to_trinh}} '
-                                    '(danh sách ở cửa sổ "Trình phê duyệt" > "Mã điền tự động {…}…").')
-            mo_file(p)
-        return p
-
     def xem_truoc(self):
         """Xem trước (khung bên phải) hộ đầu tiên đang đánh dấu chọn - thay nút "Xem trước bản in…" mở file ra ngoài (trước 0.9.84).
         Trả khung xem trước."""
@@ -4077,7 +4139,11 @@ class HopIn(QDialog):
             self.o_thu_muc.setText(p)
 
     def ds_ho(self) -> list:
-        """Các hộ đang đánh dấu chọn, theo thứ tự danh sách."""
+        """Các hộ sẽ in: thẻ Một hộ: hộ đang trỏ; thẻ Nhiều hộ: các hộ đang đánh dấu chọn, theo thứ tự danh sách."""
+        if self.mot_ho():
+            r = self.bang_ho.currentRow()
+            it = self.bang_ho.item(r, 0) if r >= 0 else None
+            return [it.data(Qt.ItemDataRole.UserRole)] if it is not None else []
         return sorted((self.bang_ho.item(i, 0).data(Qt.ItemDataRole.UserRole) for i in range(self.bang_ho.rowCount())
                        if self.bang_ho.item(i, 0).checkState() == Qt.CheckState.Checked), key=lambda m: self._stt.get(m, 0))
 
@@ -4104,13 +4170,8 @@ class HopIn(QDialog):
         if bang is self.bang_ho:
             self.lb_bo_dem.dat(tk)
 
-    def _gap_dau_ra(self, mo: bool) -> None:
-        self.khung_dau_ra.setVisible(mo)
-        self.b_dau_ra.setText(('▾ ' if mo else '▸ ') + 'Đầu ra và nơi lưu')
-
     def _nap_lua_chon(self) -> None:
-        """Nhớ lựa chọn lần trước (QSettings; kiểm thử / offscreen không đọc): đầu ra (Excel / PDF - KHÔNG nhớ "in ra máy" cho khỏi in nhầm),
-        gộp PDF, số bản, hai tùy chọn thư mục, thư mục cha, khung đầu ra gấp / mở."""
+        """Nhớ lựa chọn lần trước (QSettings; kiểm thử / offscreen không đọc): định dạng Word / Excel / PDF, gộp PDF, số bản. Không nhớ thư mục: luôn theo file dự án."""
         from .giao_dien import cai_dat_nho
         cd = cai_dat_nho()
         if cd is None:
@@ -4119,12 +4180,7 @@ class HopIn(QDialog):
             (self.r_excel if cd.value('in/dau_ra', 'pdf') == 'excel' else self.r_pdf).setChecked(True)
             self.o_gop.setChecked(str(cd.value('in/gop', 'true')).lower() in ('true', '1'))
             self.o_so_ban.setValue(int(cd.value('in/so_ban', 1)))
-            self.o_chia.setChecked(str(cd.value('in/chia', 'true')).lower() in ('true', '1'))
-            self.o_mo.setChecked(str(cd.value('in/mo', 'true')).lower() in ('true', '1'))
-            cha = str(cd.value('in/thu_muc_cha', '') or '')
-            if cha and Path(cha).is_dir():
-                self.o_thu_muc.setText(str(Path(cha) / f'BanIn_{datetime.now():%Y%m%d_%H%M}'))
-            self.b_dau_ra.setChecked(str(cd.value('in/dau_ra_mo', 'true')).lower() in ('true', '1'))
+            self.o_ct.setChecked(str(cd.value('in/word', 'true')).lower() in ('true', '1'))
             self.o_ct_excel.setChecked(str(cd.value('in/ct_excel', 'false')).lower() in ('true', '1'))
         except (TypeError, ValueError):                                      # cài đặt cũ / hỏng: dùng mặc định
             pass
@@ -4137,20 +4193,19 @@ class HopIn(QDialog):
         cd.setValue('in/dau_ra', 'excel' if self.r_excel.isChecked() else 'pdf')
         cd.setValue('in/gop', self.o_gop.isChecked())
         cd.setValue('in/so_ban', self.o_so_ban.value())
-        cd.setValue('in/chia', self.o_chia.isChecked())
-        cd.setValue('in/mo', self.o_mo.isChecked())
-        cd.setValue('in/thu_muc_cha', str(Path(thu_muc).parent))
-        cd.setValue('in/dau_ra_mo', self.b_dau_ra.isChecked())
+        cd.setValue('in/word', self.o_ct.isChecked())
         cd.setValue('in/ct_excel', self.o_ct_excel.isChecked())
 
     def thuc_hien(self, xac_nhan: bool = True):
         from . import in_an
         from . import van_ban_trinh as vb
         ds = self.ds_ho()
-        chon = dict(chi_tiet=self.o_ct.isChecked(), chi_tiet_excel=self.o_ct_excel.isChecked(), bang_tong_hop=self.o_bth.isChecked(),
-                    bang_dieu_chinh=self.o_bth_dc.isChecked() and self.co_dieu_chinh,
-                    to_trinh=self.o_tt.isChecked() and self.o_tt.isEnabled(),
-                    bao_cao_y_kien=self.o_bc.isChecked() and self.o_bc.isEnabled())
+        nhieu = not self.mot_ho()                            # thẻ Một hộ: chỉ phương án chi tiết
+        chi_pdf = self.o_pdf.isChecked() and not self.o_ct.isChecked() and not self.chi_tiet_theo_word     # chỉ tích PDF: dựng từ bản Word rồi không để lại file Word
+        chon = dict(chi_tiet=self.o_ct.isChecked() or chi_pdf, chi_tiet_excel=self.o_ct_excel.isChecked(), bang_tong_hop=self.o_bth.isChecked() and nhieu,
+                    bang_dieu_chinh=self.o_bth_dc.isChecked() and self.co_dieu_chinh and nhieu,
+                    to_trinh=self.o_tt.isChecked() and self.o_tt.isEnabled() and nhieu,
+                    bao_cao_y_kien=self.o_bc.isChecked() and self.o_bc.isEnabled() and nhieu)
         if not any(chon.values()):
             QMessageBox.information(self, TEN_UD, 'Chọn ít nhất một loại bản in.')
             return None
@@ -4204,8 +4259,13 @@ class HopIn(QDialog):
                 # PA CHI TIET\ phương án chi tiết; PA TONG\ bảng tổng hợp, tờ trình / văn bản trình, phương án tổng (số theo đợt)
                 kq = vb.xuat_bo_ho_so(self.con, ds, thu_muc, dot=dot, pdf=self.r_pdf.isChecked(), in_may=in_may,
                                       lan=self.lan_in(),
-                                      du_thao=self.che_do() == 'du_thao', so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked(), bao_tien_do=bao_tao, bao_excel=bao_excel,
+                                      du_thao=self.che_do() == 'du_thao', so_ban=so_ban, chia_thu_muc=self.o_chia.isChecked() and nhieu, bao_tien_do=bao_tao, bao_excel=bao_excel,
                                       **chon)
+                if chi_pdf and self.r_pdf.isChecked():
+                    for f in list(kq['word']):
+                        if f.name.startswith('PA_') and f.with_suffix('.pdf').exists():
+                            f.unlink()
+                            kq['word'].remove(f)
                 ct = [f for f in kq['pdf'] if f.name.startswith('PA_')]
                 if self.o_gop.isChecked() and self.o_gop.isEnabled() and len(ct) > 1:
                     tien.setLabelText(f'Đang gộp {len(ct)} file PDF…')

@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.65', '05/11/2026', (
+        'Bảng In / Xuất làm lại cho gọn: chọn Một hộ, Nhiều hộ hoặc Xuất dữ liệu; mở lên ở Dự thảo. Phương án chi tiết tích riêng Word, Excel, PDF; chỉ tích PDF thì không để lại file Word.',
+        'Xem trước một hàng nút: Word, Excel, PDF gộp, Bảng tổng hợp. Danh sách hộ gọn hơn, bản xem trước rộng hơn, bỏ các ghi chú và thẻ nhỏ.',
+        'File tự lưu vào thư mục chứa file dự án, không hỏi; đổi thư mục khi cần. Danh sách hộ, báo cáo đối chiếu xuất ở một chỗ: thẻ Xuất dữ liệu.',
+        'Được mở khóa từng phiên bản V1, V2, V3 để sửa trực tiếp, khóa lại khi xong; bản V1 lúc chốt vẫn giữ riêng, trả về được ở nút "…". V0, V2, V3 của lần đã phê duyệt dùng nút Mở khóa của lần.',
+        'Sửa lỗi: chọn chính sách hỗ trợ hiện một hộp thoại trống.',
+    )),
     ('1.0.64', '05/11/2026', (
         'Bộ quy tắc giá đất: văn bản mới về giá đất nhập thành một gói có ngày hiệu lực (hệ số, yếu tố ảnh hưởng, công thức nhân, làm tròn, câu giải trình), không phải chờ sửa phần mềm, cài lại từng máy. Mở ở nút Bộ quy tắc trong bảng Tính đơn giá đất.',
         'Tạo gói từ gói cũ rồi sửa, từ bảng hệ số K đã nhập (thêm được xã mới, như Tân Triều), hoặc nhập từ file. Xem khác gì gói cũ trước khi lưu. Máy chủ LAN tự phát hành gói cho các máy.',

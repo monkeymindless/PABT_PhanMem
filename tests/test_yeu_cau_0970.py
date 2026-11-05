@@ -92,15 +92,15 @@ class TestMenuTrai(_Co):
             'Dự toán & khái toán', 'So sánh với thực tế', 'Tiếp nhận & Kiểm tra pháp lý dự án…',   # 1.0.04
             'Thông tin dự án…', 'Danh sách hộ',
             'Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…',          # Bản đồ thửa đất: menu Dữ liệu (18/10)
-            'Xuất báo cáo đối chiếu…', 'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…', 'Quyết định phê duyệt',
+            'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…', 'Quyết định phê duyệt',
             'Theo dõi tiến độ',                                   # 1.0.00: Báo cáo tiến độ GPMB gộp vào đây
             'Bộ đơn giá…', 'Đơn giá riêng dự án…', 'Bảng giá đất NQ 28…', 'Tính đơn giá đất…')])     # 0.9.88: nhóm Đơn giá & bảng giá ở cuối
         nhan = {k: L[k].text().replace('&&', '&') for k in ('Dự toán & khái toán', 'Danh sách hộ', 'Lập phương án hộ…',
-                                                            'Kiểm tra lỗi…', 'Xuất báo cáo đối chiếu…', 'Đợt trình…',
+                                                            'Kiểm tra lỗi…', 'Đợt trình…',
                                                             'In / Xuất…', 'Theo dõi tiến độ')}
         self.assertEqual(list(nhan.values()), ['Lập khái toán & Dự toán', 'Danh sách hộ và Thửa', 'Lập phương án chi tiết',
-                                               'Kiểm tra lỗi pháp lý', 'Đối chiếu số liệu', 'Đợt trình thẩm định',
-                                               'Xuất hồ sơ & Bản in', 'Tiến độ chi trả & Bàn giao'])
+                                               'Kiểm tra lỗi pháp lý', 'Đợt trình thẩm định',
+                                               'In / Xuất hồ sơ', 'Tiến độ chi trả & Bàn giao'])
         # lệnh rời menu trái vẫn còn đúng một chỗ trên thanh menu
         self.assertIn(L['Cập nhật bảng giá đất…'], w.menu_tren['Công cụ'].actions())
         self.assertIn(L['Trạng thái hộ…'], w.menu_tren['Dữ liệu'].actions())

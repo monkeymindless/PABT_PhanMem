@@ -57,6 +57,26 @@ class TestKhongCuaSoLa(_Co):
         app.processEvents()
         self.assertEqual(bat.ds, [])
 
+    def test_chon_chinh_sach_ho_tro_khong_hien_hop_trong(self):
+        """Người dùng 05/11/2026: chọn chính sách hỗ trợ hiện hộp thoại trống (nhãn không cha, setVisible(True) khi đổi loại chính sách)."""
+        from pabt import man_hinh as mh
+        bat = _BatCuaSo()
+        bat.gan()
+        self.addCleanup(bat.go)
+        w = mh.CuaSoLapPA(self.con, 1)
+        self.addCleanup(lambda: (w.bo_thay_doi(), w.close()))
+        w.show()
+        app = _qt()
+        i = next(k for k in range(w.tab.count()) if 'Hỗ trợ' in w.tab.tabText(k))
+        w.tab.setCurrentIndex(i)
+        app.processEvents()
+        ds = w.bo.dm.muc[4]
+        self.assertTrue(ds)
+        for m in ds:
+            w.bang[4]._da_chon(m)
+            app.processEvents()
+        self.assertEqual(bat.ds, [])
+
     def test_khung_xem_truoc_nut_in_chi_hien_sau_khi_co_cha(self):
         from pabt import xem_truoc_tai_lieu as xt
         bat = _BatCuaSo()

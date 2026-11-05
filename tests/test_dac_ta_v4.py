@@ -184,7 +184,7 @@ class TestGiaoDien(CoSo):
             w.con.execute("UPDATE ho SET so_cccd = '075092001234', ngay_cap = '01/01/2021' WHERE thu_tu = 1")
         ma = w.con.execute('SELECT ma_ho FROM ho WHERE thu_tu = 1').fetchone()[0]
         from pabt.man_hinh import HopIn
-        d = HopIn(w.con, w, [ma])
+        d = HopIn(w.con, w, [ma], che_do='chinh_thuc')
         self.addCleanup(d.close)
         self.assertFalse(d.o_che_cccd.isChecked())
         self.assertTrue(d.o_che_cccd.isHidden())

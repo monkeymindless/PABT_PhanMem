@@ -123,7 +123,7 @@ class TestXemTruocBangTongHop(CoSoXem):
         from pabt.man_hinh import HopIn
         h = HopIn(self.con, None, file_du_an=self.p)
         h.im_lang = True
-        self.assertEqual(h.b_xem_bth.text(), 'Xem trước bảng tổng hợp')
+        self.assertEqual(h.b_xem_bth.text(), 'Bảng tổng hợp')
         from PySide6.QtCore import Qt
         for r in range(h.bang_ho.rowCount()):
             h.bang_ho.item(r, 0).setCheckState(Qt.CheckState.Unchecked)

@@ -1221,6 +1221,19 @@ Theo Mục IV Quyết định 18/2026/QĐ-UBND (16 bước). Các mốc ngày b�
     còn vướng - báo cáo định kỳ), *Danh sách đề nghị cưỡng chế (Excel)* (hộ, thửa, quyết định, số buổi vận động, hạn vận động, số ngày quá
     hạn, mốc thu hồi đất). Danh sách đầy đủ các hộ: **Dữ liệu → Xuất danh sách hộ…**.
 
+## In và xuất hồ sơ
+
+Mở **In / Xuất…**. Bảng mở ở bản **Dự thảo**; đổi sang **Chính thức** ở góc trên.
+
+| Thẻ | Dùng khi | Chọn được | Xem trước |
+|---|---|---|---|
+| **Một hộ** | In một hộ: bấm hộ trong danh sách | Word, Excel, PDF | Word, Excel |
+| **Nhiều hộ** | In cả đợt hoặc nhiều hộ: tích hộ, hoặc chọn nhanh theo đợt | Word, Excel, PDF, gộp một file; kèm bảng tổng hợp (Chính thức: thêm tờ trình, báo cáo ý kiến) | Word, Excel, PDF gộp, bảng tổng hợp |
+| **Xuất dữ liệu** | Lấy số liệu ra Excel | Danh sách hộ, báo cáo đối chiếu | |
+
+- Bấm **Xuất file** để lưu, **In ra máy** để gửi tới máy in mặc định. Chỉ tích PDF thì không để lại file Word.
+- File tự lưu vào thư mục chứa file dự án (thư mục **BanIn_** kèm ngày giờ), xong tự mở thư mục đó. Cần nơi khác thì bấm **Đổi…**.
+
 ## Tính đơn giá đất và bộ quy tắc giá đất
 
 **Tính đơn giá đất…** tính đơn giá bồi thường theo đoạn đường: giá bảng giá × K1 × K2 × K3 × hệ số khác, rồi làm tròn; có giải trình từng bước. Chọn hộ ở danh sách trước khi mở thì áp được đơn giá vào các dòng đất đã tích.

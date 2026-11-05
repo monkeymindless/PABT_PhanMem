@@ -177,7 +177,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Đối tượng nhớ dùng chung (`BoiCanh.tu`, `nghiep_vu.ket_qua_ho`, `theo_doi.tong_hop`, `csdl.nho`): KHÔNG sửa đối tượng trả về. Cả dự án:
   `nghiep_vu.doc_tat_ca_phuong_an` - đừng gọi `tinh_ho` / `doc_phuong_an` trong vòng lặp hộ.
 - Nhiều lần phương án: `doc_phuong_an` mặc định CỘNG DỒN các lần (bỏ lần đã bị thay); `BoSoan.luu` chỉ ghi lần đang mở; lần khóa không sửa.
-- Phiên bản phương án (1.0.63, `phien_ban_pa`): V0 số hiện hành, V1 chứng cứ niêm yết (không bao giờ ghi đè), V2.n nhánh từ V1, V3 trình duyệt; là ảnh chụp JSON của MỘT lần, không cộng dồn - khác `lan_pa` (đợt pháp lý cộng dồn). Đặt / sửa V3 ghi luôn vào số hiện hành; đang mở V2 / V3 thì `BoSoan.luu` ghi vào phiên bản.
+- Phiên bản phương án (1.0.63, `phien_ban_pa`): V0 số hiện hành, V1 chứng cứ niêm yết (in lại không ghi đè; người dùng mở khóa được, `dat_khoa`, bản lúc chốt giữ ở V1.goc), V2.n nhánh từ V1, V3 trình duyệt; là ảnh chụp JSON của MỘT lần, không cộng dồn - khác `lan_pa` (đợt pháp lý cộng dồn). Đặt / sửa V3 ghi luôn vào số hiện hành; đang mở V2 / V3 thì `BoSoan.luu` ghi vào phiên bản.
 - Khu vực giá (1.0.57, `khu_vuc_gia`): bộ đơn giá tách Phụ lục I / II theo khu vực - lưu ở tham_so `KVMUC:<mã>` / `KVXA:<xã>` / `KVTEN:<kv>`
   (không đổi lược đồ; mục không có KVMUC dùng mọi khu vực). Dự án: `khu_vuc_du_an` (cai_dat KHU_VUC_GIA hoặc xã du_an.ten_dia_ban);
   `lap_pa.DanhMuc` ẩn mục khu vực khác (`an`, `bi_khoa`; `lay` vẫn trả để đọc dòng cũ). Văn bản nhiều khu vực: `so_khop_khu_vuc` (so từng
@@ -230,6 +230,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   cho cả lượt. Gỡ bộ lọc: `giao_dien.bo_ap_dung(app)`.
 
 ### Bản in
+- Bảng In / Xuất (`HopIn`, 1.0.65): Một hộ | Nhiều hộ | Xuất dữ liệu, mặc định Dự thảo, lưu `<thư mục file dự án>\BanIn_<giờ>`, không nhớ thư mục, không thêm ghi chú / thẻ nhỏ. Lệnh xuất dữ liệu mới: thêm vào thẻ Xuất dữ liệu (QAction), không thêm lên menu; lưu trong thư mục dự án, không hỏi.
 - Phương án chi tiết CHỈ bản Word (`in_word`, XML thuần - không python-docx); bảng tổng hợp Excel dựng bằng mã `mau_bang_tong_hop.py`
   (không còn file mẫu Excel). PDF: Word -> LibreOffice -> `docx_sang_pdf` (Qt). Thông số mẫu Word ở hồ sơ địa phương `ban_in.mau_word`.
 - Mọi file Excel xuất cho người dùng qua `an_toan.luu_xlsx` (khử công thức lạ) - không `wb.save` trực tiếp. VBS Office giữ

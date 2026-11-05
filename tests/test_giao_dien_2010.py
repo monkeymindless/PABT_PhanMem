@@ -206,17 +206,15 @@ class TestHopIn(_Co):
         self.assertEqual([h.the_che_do.tabText(i) for i in range(h.the_che_do.count())], [t for _, t in THE_CHE_DO])
         self.assertEqual(h.the_che_do.currentIndex(), 0)
         self.assertFalse(h.r_du_thao.isVisibleTo(h))                            # radio cũ ẩn, vẫn là nguồn trạng thái
-        self.assertIn('DỰ THẢO', h.lb_quy_tac.text())
         self.assertFalse(h.o_tt.isEnabled() or h.o_bc.isEnabled())              # dự thảo: khóa tờ trình + báo cáo tiếp thu
-        self.assertEqual(h.the_tai_lieu[h.o_tt].text(), 'Chỉ mở ở Chính thức')
-        self.assertIn('85/15', h.the_tai_lieu[h.o_bth].text())
+        self.assertFalse(h.o_tt.isVisibleTo(h) or h.o_bc.isVisibleTo(h))        # dự thảo: không hiện, đỡ rối
         self.assertIn('(2 hộ)', h.b_thuc_hien.text())
         self.assertFalse(h.o_che_cccd.isChecked())                              # 1.0.52: che CCCD niêm yết - tùy chọn, mặc định tắt
         self.assertTrue(h.o_che_cccd.isVisibleTo(h))                            # chỉ hiện ở chế độ Dự thảo
         h.the_che_do.setCurrentIndex(1)                                         # bấm thẻ Chính thức
         self.assertEqual(h.che_do(), 'chinh_thuc')
         self.assertTrue(all(o.isChecked() and o.isEnabled() for o in (h.o_ct, h.o_bth, h.o_tt, h.o_bc)))
-        self.assertIn('trọn bộ 4 tài liệu', h.lb_quy_tac.text())
+        self.assertTrue(h.o_tt.isVisibleTo(h) and h.o_bc.isVisibleTo(h))
         h.r_du_thao.setChecked(True)                                            # đặt bằng mã: thẻ đổi theo
         self.assertEqual(h.the_che_do.currentIndex(), 0)
         self.assertFalse(h.o_bc.isChecked())

@@ -486,7 +486,7 @@ class BoSoan:
 
     # ---------------------------------------------- mở / trạng thái
     def mo_phien_ban(self, ma: str) -> None:
-        """Xem / sửa một phiên bản (phien_ban_pa): V0 = số hiện hành; V1 khóa chỉ xem; V2.n, V3 sửa được, Lưu ghi vào phiên bản đó."""
+        """Xem / sửa một phiên bản (phien_ban_pa): V0 = số hiện hành; phiên bản đang khóa (hoặc lần đã phê duyệt) chỉ xem; đang mở: Lưu ghi vào phiên bản đó."""
         from . import phien_ban_pa as pb
         ma_ho, lan = self.ma_ho, self.lan
         self.mo(ma_ho, lan)
@@ -1108,6 +1108,8 @@ class BoSoan:
         if getattr(self, 'phien_ban', None):              # đang mở V2.n / V3: ghi vào phiên bản, không đụng số hiện hành (V3 tự áp)
             from . import phien_ban_pa as pb
             ma = self.phien_ban
+            if self.khoa:
+                raise LoiNhap(f'{ma} đang khóa, chỉ xem: bấm Mở khóa để sửa.')
             pb.sua(self.con, self.ma_ho, ma, self.pa)
             if mo_lai:
                 self.mo_phien_ban(ma)

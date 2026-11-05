@@ -1,7 +1,7 @@
 """Đa phiên bản phương án của một hộ theo quy trình niêm yết: V0 -> V1 -> V2.n -> V3 (1.0.63, người dùng 05/11/2026). Không Qt.
 
 V0  bản đang lập = chính các dòng ct_dat / ct_khoan hiện hành (không lưu thêm).
-V1  dự thảo niêm yết: ảnh chụp từ V0 lúc in / xuất niêm yết, KHÓA, không bao giờ ghi đè (chứng cứ pháp lý).
+V1  dự thảo niêm yết: ảnh chụp từ V0 lúc in / xuất niêm yết, KHÓA: in lại không ghi đè. Người dùng tự mở khóa được để sửa (dat_khoa, 05/11/2026), bản đã chốt giữ riêng ở V1.goc, trả về được.
 V2.n  dự thảo sau ý kiến / đối thoại: nhân bản từ V1 (hoặc V2 khác), sửa được, không đụng V1.
 V3  chính thức trình thẩm định, phê duyệt: lấy nguyên từ V1 / V2.n hoặc ghép từng nhóm. Đặt V3 thì GHI LUÔN vào dòng hiện hành để danh sách hộ,
     bảng tổng hợp, quyết định, chi trả (đều đọc ct_*) khớp số trình; V1, V2.n vẫn nguyên.
@@ -31,6 +31,7 @@ from .nghiep_vu import (MUC_KHOAN, MUC_VN, BoiCanh, DongDat, DongKhoan, PhuongAn
 from .tien import D, KHONG, chuoi
 
 V0, V1, V3 = 'V0', 'V1', 'V3'
+V1_GOC = 'V1.goc'             # bản V1 lúc mới chốt, tạo khi mở khóa lần đầu; không hiện trong ds_phien_ban
 LOAI = {V1: 'niem_yet', V3: 'trinh_duyet'}
 TEN_NGAN = {V0: 'V0: Bản nháp đang lập', V1: 'V1: PA Dự thảo Niêm yết (đã khóa)', V3: 'V3: PA Chính thức Trình thẩm định, phê duyệt'}
 # nhóm hạng mục để ghép V3; thưởng (mục 5) luôn tự tính từ tổng, không ghép
@@ -105,7 +106,7 @@ def ds_phien_ban(con, ma_ho: int) -> list:
     if not co_bang(con):
         return []
     kq = [dict(r) for r in con.execute('''SELECT ma, lan, loai, nhan, tao_luc, nguoi_tao, khoa, cha, ghi_chu, nguon_nhom FROM pa_phien_ban
-                                          WHERE ma_ho = ?''', (ma_ho,))]
+                                          WHERE ma_ho = ? AND ma <> ?''', (ma_ho, V1_GOC))]
     return sorted(kq, key=lambda x: _khoa_sap(x['ma']))
 
 
@@ -226,12 +227,12 @@ def tao_v2_tu_y_kien(con, ma_ho: int, noi_dung: str) -> str:
 
 
 def sua(con, ma_ho: int, ma: str, pa: PhuongAn, ghi_chu: str | None = None) -> None:
-    """Ghi nội dung đã sửa của V2.n / V3. V1 khóa: báo lỗi. V3: ghi luôn vào số hiện hành."""
+    """Ghi nội dung đã sửa của phiên bản đang mở khóa; đang khóa: báo lỗi. V3: ghi luôn vào số hiện hành."""
     r = lay(con, ma_ho, ma)
     if r is None:
         raise LoiNhap(f'Hộ {ma_ho} chưa có phiên bản {ma}.')
     if r['khoa']:
-        raise LoiNhap(f'{ma} đã khóa làm chứng cứ niêm yết, không sửa được. Muốn điều chỉnh: tạo nhánh V2 mới.')
+        raise LoiNhap(f'{ma} đang khóa: bấm Mở khóa để sửa' + (', hoặc tạo nhánh V2 mới để giữ nguyên V1.' if ma == V1 else '.'))
     kiem_ho_nhan_viec(con, ma_ho)
     kiem_quyen(con, 'sua_gia', f'sửa phương án {ma}')
     with csdl.giao_dich(con):
@@ -240,6 +241,47 @@ def sua(con, ma_ho: int, ma: str, pa: PhuongAn, ghi_chu: str | None = None) -> N
         csdl.ghi_nhat_ky(con, f'Sửa phương án {ma}', f'Hộ {ma_ho}')
         if ma == V3:
             _ap_hien_hanh(con, ma_ho, pa, r['lan'])
+
+
+def dat_khoa(con, ma_ho: int, ma: str, khoa: bool, ly_do: str = '') -> None:
+    """Bật / tắt khóa một phiên bản. Mở khóa V1 lần đầu: giữ bản đã chốt ở V1.goc để trả về được (tra_v1_ve_goc). Khóa của lần đã phê duyệt là việc khác: lan_pa.mo_khoa_lan."""
+    r = lay(con, ma_ho, ma)
+    if r is None:
+        raise LoiNhap(f'Hộ {ma_ho} chưa có phiên bản {ma}.')
+    if bool(r['khoa']) == bool(khoa):
+        return
+    kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'sua_gia', f'{"khóa" if khoa else "mở khóa"} phương án {ma}')
+    with csdl.giao_dich(con):
+        if not khoa and ma == V1 and lay(con, ma_ho, V1_GOC) is None:
+            con.execute('''INSERT INTO pa_phien_ban (ma_ho, ma, lan, loai, nhan, tao_luc, nguoi_tao, khoa, cha, ghi_chu, nguon_nhom, du_lieu)
+                           SELECT ma_ho, ?, lan, loai, nhan, tao_luc, nguoi_tao, 1, cha, ghi_chu, nguon_nhom, du_lieu FROM pa_phien_ban WHERE ma_ho = ? AND ma = ?''', (V1_GOC, ma_ho, V1))
+        con.execute('UPDATE pa_phien_ban SET khoa = ? WHERE ma_ho = ? AND ma = ?', (1 if khoa else 0, ma_ho, ma))
+        csdl.ghi_nhat_ky(con, f'{"Khóa" if khoa else "Mở khóa"} phương án {ma}', f'Hộ {ma_ho}. {ly_do}'.strip()[:300])
+
+
+def v1_da_sua(con, ma_ho: int) -> bool:
+    """V1 đã khác bản lúc chốt (sau khi mở khóa, sửa)."""
+    g, r = lay(con, ma_ho, V1_GOC), lay(con, ma_ho, V1)
+    return bool(g and r and g['du_lieu'] != r['du_lieu'])
+
+
+def tra_v1_ve_goc(con, ma_ho: int) -> None:
+    """V1 về đúng bản lúc chốt và khóa lại. Không có bản giữ riêng (chưa mở khóa lần nào): không làm gì."""
+    g = lay(con, ma_ho, V1_GOC)
+    if g is None:
+        return
+    kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'sua_gia', 'trả V1 về bản đã chốt')
+    with csdl.giao_dich(con):
+        con.execute('UPDATE pa_phien_ban SET du_lieu = ?, khoa = 1 WHERE ma_ho = ? AND ma = ?', (g['du_lieu'], ma_ho, V1))
+        csdl.ghi_nhat_ky(con, 'Trả V1 về bản đã chốt', f'Hộ {ma_ho}')
+
+
+def _kiem_v3_mo(con, ma_ho: int) -> None:
+    r = lay(con, ma_ho, V3)
+    if r is not None and r['khoa']:
+        raise LoiNhap('V3 đang khóa: bấm Mở khóa rồi chốt lại.')
 
 
 def _ap_hien_hanh(con, ma_ho: int, pa: PhuongAn, lan: int) -> None:
@@ -261,6 +303,7 @@ def dat_v3(con, ma_ho: int, nguon: str = V1, ly_do: str = '') -> None:
         raise LoiNhap(f'Hộ {ma_ho} không có phiên bản {nguon}.')
     kiem_ho_nhan_viec(con, ma_ho)
     kiem_quyen(con, 'sua_gia', 'chốt phương án trình duyệt')
+    _kiem_v3_mo(con, ma_ho)
     pa = pa_tu_json(con, ma_ho, goc['du_lieu'])
     with csdl.giao_dich(con):
         _ghi(con, ma_ho, V3, goc['lan'], pa, LOAI[V3], f'V3 - PA Chính thức Trình duyệt (theo {nguon})', 0, nguon,
@@ -273,6 +316,7 @@ def ghep_v3(con, ma_ho: int, nguon_nhom: dict, ly_do: str = '') -> None:
     """V3 ghép từng nhóm (đất theo V1, nhà, cây theo V2.1…). Nhóm hỗ trợ nguồn TINH_LAI: giữ khoản của V1 rồi tính lại theo số liệu đã ghép."""
     kiem_ho_nhan_viec(con, ma_ho)
     kiem_quyen(con, 'sua_gia', 'ghép phương án trình duyệt')
+    _kiem_v3_mo(con, ma_ho)
     goc1 = lay(con, ma_ho, V1) or {}
     lan = goc1.get('lan') or _lan_mo(con, ma_ho)
 

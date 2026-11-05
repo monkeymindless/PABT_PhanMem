@@ -361,6 +361,7 @@ class HopXuatBanDot(QDialog):
             return None
         hop = HopIn(self.con, self, ma_ho_chon=ds, file_du_an=self.file_du_an, che_do=self.che_do(), dot_id=d.id)
         try:
+            hop.chi_tiet_theo_word = True                    # bỏ tích phương án chi tiết ở đây là không xuất phương án chi tiết
             hop.o_ct.setChecked(self.o_ct.isChecked())
             hop.o_ct_excel.setChecked(False)
             hop.o_bth.setChecked(self.o_bth.isChecked())

@@ -222,6 +222,63 @@ class TestGiaoDien(unittest.TestCase):
         t.nut[pb.V0].click()
         self.assertEqual((man.bo.phien_ban, man.bo.pa.khoan[3][0].don_gia), (None, D(10000)))
 
+    def test_nut_mo_khoa_khoa_lai_tung_phien_ban(self):
+        w = self._cua_so()
+        man, m = self._lap_pa(w)
+        t = man.thanh_pb
+        man.nap_ho()
+        self.assertTrue(t.b_khoa.isHidden())                                       # V0 chưa khóa: không có nút
+        pb.khoa_v1(w.con, m)
+        t.nap()
+        t.chon(pb.V1)
+        self.assertFalse(t.b_khoa.isHidden())
+        self.assertEqual(t.b_khoa.text(), 'Mở khóa')
+        self.assertEqual(man.lb_trang_thai_lan.text(), 'V1 ĐÃ KHÓA - CHỈ XEM')
+        t.b_khoa.click()
+        self.assertFalse(man.bo.khoa)
+        self.assertEqual(man.bo.phien_ban, pb.V1)
+        self.assertEqual(t.b_khoa.text(), 'Khóa lại')
+        self.assertEqual(t.nut[pb.V1].text(), 'V1 Đang mở')
+        self.assertEqual(man.lb_trang_thai_lan.text(), 'ĐANG SỬA V1')
+        self.assertIn('Lưu ghi vào V1', t.chu_trang_thai())
+        man.bo.pa.khoan[3][0].don_gia = D(11111)
+        man.bo.luu()
+        man._ve_menu_lan()
+        self.assertIn('Trả V1 về bản đã chốt…', [a.text() for a in man.menu_lan.actions()])
+        self.assertTrue(t.tra_v1_goc(True))
+        self.assertTrue(man.bo.khoa)
+        self.assertEqual(man.bo.pa.khoan[3][0].don_gia, D(10000))
+        self.assertEqual(t.nut[pb.V1].text(), 'V1 Đã khóa')
+        t.chon(pb.V3)                                                              # V3: mở sẵn, khóa được, mở lại được
+        self.assertEqual(t.b_khoa.text(), 'Khóa lại')
+        t.b_khoa.click()
+        self.assertTrue(man.bo.khoa)
+        self.assertEqual(t.nut[pb.V3].text(), 'V3 Đã khóa')
+        t.b_khoa.click()
+        self.assertFalse(man.bo.khoa)
+
+    def test_lan_da_duyet_mo_khoa_duoc_o_moi_phien_ban(self):
+        w = self._cua_so()
+        man, m = self._lap_pa(w)
+        t = man.thanh_pb
+        pb.khoa_v1(w.con, m)
+        v2 = pb.tao_v2(w.con, m)
+        from pabt import lan_pa
+        lan_pa._dam_bao_dong(w.con, m, 1)
+        with w.con:
+            w.con.execute('UPDATE pa_lan SET khoa = 1 WHERE ma_ho = ? AND lan = 1', (m,))
+        man.bo.mo(m, 1)
+        man.nap_ho()
+        self.assertTrue(man.bo.khoa)
+        self.assertFalse(man.b_mo_khoa.isHidden())                                 # V0
+        t.chon(v2)
+        self.assertTrue(man.bo.khoa)
+        self.assertFalse(man.b_mo_khoa.isHidden())                                 # V2: trước đây mất nút, không sửa được
+        self.assertTrue(t.b_khoa.isHidden())
+        self.assertTrue(man.mo_khoa_lan(True, 'Điều chỉnh'))
+        self.assertEqual(man.bo.phien_ban, v2)                                     # ở lại V2
+        self.assertFalse(man.bo.khoa)
+
     def test_nhieu_nhanh_gom_nut(self):
         w = self._cua_so()
         man, m = self._lap_pa(w)

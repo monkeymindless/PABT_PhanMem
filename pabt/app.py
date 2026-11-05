@@ -245,7 +245,7 @@ NHAN_MENU = {'Lập phương án hộ…': 'Lập phương án chi tiết', 'Th�
              'Tổng hợp tiền theo phương án': 'Bảng tổng hợp kinh phí',
              'Quyết định phê duyệt': 'Quyết định phê duyệt', 'Đợt trình…': 'Đợt trình thẩm định',
              'Trạng thái hộ…': 'Trạng thái hộ',
-             'In / Xuất…': 'Xuất hồ sơ & Bản in', 'Quản lý Mẫu in & Bản in…': 'Quản lý Mẫu in & Bản in…',
+             'In / Xuất…': 'In / Xuất hồ sơ', 'Quản lý Mẫu in & Bản in…': 'Quản lý Mẫu in & Bản in…',
              'Xuất báo cáo đối chiếu…': 'Đối chiếu số liệu',
              'Nhập bản vẽ CAD (.dxf)…': 'Nhập bản đồ (.dxf, .kml, .kmz)…'}      # 1.0.32: cả bản đồ KML / KMZ (Google Earth)
 # 0.9.69 (người dùng 12/10/2026 đổi tên): gợi ý khi rê chuột theo tên mới (khóa self.lenh giữ tên cũ - mã / test gọi theo khóa)
@@ -882,7 +882,7 @@ class CuaSoChinh(QMainWindow):
                                         L['Tiếp nhận & Kiểm tra pháp lý dự án…']]),
             ('2. Dự án triển khai', [L['Thông tin dự án…'], L['Danh sách hộ']]),
             # 18/10/2026 (người dùng): "Bản đồ thửa đất" rời menu trái -> menu Dữ liệu, cạnh Nhập bản vẽ CAD (menu trái gọn)
-            ('3. Lập phương án', [L['Lập phương án hộ…'], L['Dự thảo PABT…'], L['Kiểm tra lỗi…'], L['Xuất báo cáo đối chiếu…']]),
+            ('3. Lập phương án', [L['Lập phương án hộ…'], L['Dự thảo PABT…'], L['Kiểm tra lỗi…']]),
             ('4. Tổng hợp & trình duyệt', [L['Tổng hợp tiền theo phương án'], L['Đợt trình…'], L['In / Xuất…']]),
             # mọi việc về quyết định ở MỘT chỗ: trang "Quyết định phê duyệt" (Thêm / Nhập từ file / Sửa / Xóa)
             # 1.0.00: "Báo cáo tiến độ GPMB" gộp vào "Tiến độ chi trả & Bàn giao" (thẻ chỉ số, chế độ Thửa còn vướng, Xuất báo cáo)
@@ -2764,7 +2764,7 @@ class CuaSoChinh(QMainWindow):
                         # tổng hợp, Xuất báo cáo đối chiếu, Bộ đơn giá, Thông tin dự án (KIEM_TRA test_khong_trung_menu_trai)
                         ('&Dữ liệu', ['Nhập file Excel…', 'Nhập phương án chi tiết…', 'Quét file thông minh…', 'Nhập bản vẽ CAD (.dxf)…', 'Bản đồ thửa đất',
                                       None, 'Trạng thái hộ…',
-                                      'Xuất danh sách hộ…', LENH_THONG_KE, None, 'Nhật ký kiểm toán…']),
+                                      LENH_THONG_KE, None, 'Nhật ký kiểm toán…']),
                         ('&Công cụ', ['Quản lý Mẫu in & Bản in…', 'Rà soát giá…', 'Cập nhật bảng giá đất…', None,
                                       'Phiếu kiểm đếm thực địa…', 'Trợ lý (giải thích, soạn nháp)…', None,
                                       'Xuất gói mẫu in & cấu hình…', 'Nhập gói mẫu in & cấu hình…',
@@ -3623,10 +3623,7 @@ class CuaSoChinh(QMainWindow):
         if self.kq is None or self.con is None:
             QMessageBox.information(self, TEN_UD, 'Hãy nhập hoặc mở một dự án trước.')
             return
-        mac_dinh = str(self.file.with_name(self.file.stem + '_DoiChieu.xlsx'))
-        p, _ = QFileDialog.getSaveFileName(self, 'Lưu báo cáo đối chiếu', mac_dinh, 'File Excel (*.xlsx)')
-        if not p:
-            return
+        p = str(self.file.with_name(self.file.stem + '_DoiChieu.xlsx'))         # lưu cạnh file dự án, không hỏi (người dùng 05/11/2026)
         da = self.con.execute('SELECT ten, nguon_nhap FROM du_an WHERE id = 1').fetchone()
         from . import doi_chieu
         try:
@@ -3738,11 +3735,7 @@ class CuaSoChinh(QMainWindow):
             return None
         if file is None:
             goc = quan_ly.thu_muc_ho_so(self.con, self.file)
-            mac_dinh = str((goc if goc.exists() else self.file.parent) / (ten_file or f'BaoCaoTongHop_{self.file.stem}.xlsx'))
-            file, _ = QFileDialog.getSaveFileName(self, 'Lưu danh sách hộ' if ten_file else 'Lưu báo cáo tổng hợp', mac_dinh,
-                                                  'File Excel (*.xlsx)')
-            if not file:
-                return None
+            file = str((goc if goc.exists() else self.file.parent) / (ten_file or f'BaoCaoTongHop_{self.file.stem}.xlsx'))     # trong thư mục dự án, không hỏi
         try:
             with con_tro_cho():
                 # số liệu đọc ở đây (kết quả tính dùng chung), ghi Excel ở luồng nền: hàng nghìn hộ không "Không phản hồi"

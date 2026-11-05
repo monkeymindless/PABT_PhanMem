@@ -91,6 +91,7 @@ class TestXemNhieuHo(CoSoXem):
     def test_che_do_du_thao_doi_khoa(self):
         h = self._hop()
         h._danh_dau([r[0] for r in self.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho')][:2])
+        h.r_chinh_thuc.setChecked(True)
         k1 = h.xem_truoc_nhieu_ho(ngay=True)
         h.w_preview.cho_xong(30)
         h.r_du_thao.setChecked(True)

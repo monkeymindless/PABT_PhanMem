@@ -1,6 +1,7 @@
 """Giao diện đa phiên bản phương án (1.0.63): các nút phiên bản trong dải lần phương án và bảng đối chiếu V1 | V2.n | V3. Logic ở phien_ban_pa.py, in_phien_ban.py."""
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -28,7 +29,7 @@ def _kieu_vien(b, loai: str = '') -> None:
 
 
 class ThanhPhienBan(QWidget):
-    """Các nút V0 -> V1 -> V2.n -> V3 trong dải "Lần lập PA" của cửa sổ lập phương án. Bấm là đổi phiên bản; V1 chỉ xem. man: CuaSoLapPA."""
+    """Các nút V0 -> V1 -> V2.n -> V3 trong dải "Lần lập PA" của cửa sổ lập phương án. Bấm là đổi phiên bản; b_khoa: mở khóa / khóa lại phiên bản đang xem. man: CuaSoLapPA."""
 
     def __init__(self, man):
         super().__init__()
@@ -44,6 +45,9 @@ class ThanhPhienBan(QWidget):
         self.b_dc.setToolTip('Bảng đối chiếu V1, V2, V3 của hộ: chênh lệch, trình theo V1 hoặc V2, ghép từng nhóm, 4 mẫu in')
         self.b_dc.setFixedHeight(26)
         self.b_dc.clicked.connect(lambda: self.doi_chieu())
+        self.b_khoa = QPushButton('Mở khóa')
+        self.b_khoa.setFixedHeight(26)
+        self.b_khoa.clicked.connect(lambda: self.doi_khoa())
 
     def _bao(self, chu: str) -> None:
         if not getattr(self.man, 'im_lang', False):
@@ -74,7 +78,9 @@ class ThanhPhienBan(QWidget):
         hien = getattr(bo, 'phien_ban', None) or pb.V0
         co = {x['ma'] for x in ds}
         sua_duoc = not getattr(self.man, '_chi_xem', False)
-        dau = (bo.ma_ho, hien, tuple(sorted(co)), sua_duoc)
+        ghi = {x['ma']: x for x in ds}
+        self._dat_nut_khoa(ghi.get(hien), sua_duoc)
+        dau = (bo.ma_ho, hien, tuple(sorted((x['ma'], bool(x['khoa'])) for x in ds)), sua_duoc)
         if dau == self._dau:
             return
         self._dau = dau
@@ -83,11 +89,14 @@ class ThanhPhienBan(QWidget):
             w.hide()                 # Qt hẹn hiện widget vừa vào bố cục: bỏ cha trước khi hẹn chạy (đổi hộ liền hai lần) sẽ thành cửa sổ lạ; hide() hủy hẹn
             w.deleteLater()
         self._cu, self.nut = [], {}
-        ghi = {x['ma']: x for x in ds}
+
+        def kieu(x, mac_dinh=''):
+            return 'dang' if hien == x['ma'] else ('khoa' if x['khoa'] else mac_dinh)
         self._them(pb.V0, 'V0 Đang lập', 'Bản đang lập: số hiện hành của hộ', lambda: self.chon(pb.V0), 'dang' if hien == pb.V0 else '')
         self._mui()
         if pb.V1 in co:
-            self._them(pb.V1, 'V1 Đã khóa', ghi[pb.V1]['nhan'] + ': chứng cứ niêm yết, chỉ xem, không bao giờ bị ghi đè', lambda: self.chon(pb.V1), 'dang' if hien == pb.V1 else 'khoa')
+            k = ghi[pb.V1]['khoa']
+            self._them(pb.V1, 'V1 Đã khóa' if k else 'V1 Đang mở', ghi[pb.V1]['nhan'] + (': chứng cứ niêm yết, đang khóa; in lại không ghi đè' if k else ': đang mở khóa, sửa được; bản đã chốt vẫn giữ riêng'), lambda: self.chon(pb.V1), kieu(ghi[pb.V1]))
         else:
             self._them('chot', 'Chốt V1', 'Chốt số hiện hành thành phương án niêm yết V1. In PA dự thảo, xuất bảng niêm yết cũng tự chốt.', lambda: self.chot_v1()).setEnabled(sua_duoc)
         self._mui()
@@ -103,17 +112,82 @@ class ThanhPhienBan(QWidget):
                 m.addAction(ghi[x]['nhan'], lambda ma=x: self.chon(ma))
             b.setMenu(m)
         for x in hien_v2:
-            self._them(x, x, f'{ghi[x]["nhan"]}. {ghi[x]["ghi_chu"]}', lambda ma=x: self.chon(ma), 'dang' if hien == x else '')
+            self._them(x, x + (' (khóa)' if ghi[x]['khoa'] else ''), f'{ghi[x]["nhan"]}. {ghi[x]["ghi_chu"]}', lambda ma=x: self.chon(ma), kieu(ghi[x]))
         self._them('moi', ' + ', 'Tạo nhánh dự thảo mới từ V1 để điều chỉnh theo ý kiến, V1 giữ nguyên', lambda: self.tao_v2()).setEnabled(sua_duoc)
         if pb.V3 in co:
             self._mui()
-            self._them(pb.V3, 'V3 Trình duyệt', ghi[pb.V3]['nhan'] + '. ' + ghi[pb.V3]['ghi_chu'], lambda: self.chon(pb.V3), 'dang' if hien == pb.V3 else 'trinh')
+            self._them(pb.V3, 'V3 Đã khóa' if ghi[pb.V3]['khoa'] else 'V3 Trình duyệt', ghi[pb.V3]['nhan'] + '. ' + ghi[pb.V3]['ghi_chu'], lambda: self.chon(pb.V3), kieu(ghi[pb.V3], 'trinh'))
+
+    def _dat_nut_khoa(self, r, sua_duoc: bool) -> None:
+        """Nút mở khóa / khóa lại cho phiên bản đang xem. V0 và lần đã phê duyệt dùng nút Mở khóa của lần (b_mo_khoa)."""
+        man = self.man
+        co = r is not None and man.b_mo_khoa.isHidden()
+        self.b_khoa.setVisible(co)
+        if not co:
+            return
+        self.b_khoa.setText('Mở khóa' if r['khoa'] else 'Khóa lại')
+        self.b_khoa.setToolTip(f'Mở khóa {r["ma"]} để sửa trực tiếp, Lưu ghi vào {r["ma"]}' if r['khoa'] else f'Khóa {r["ma"]}: chỉ xem, không sửa nhầm')
+        self.b_khoa.setEnabled(sua_duoc and not man._ho_khong_nhan())
+
+    def doi_khoa(self, xac_nhan: bool | None = None) -> bool:
+        """Mở khóa / khóa lại phiên bản đang xem. Mở V1: hỏi một lần cho mỗi cửa sổ (V1 là số đã niêm yết), các hộ sau chỉ một lần bấm."""
+        man, bo = self.man, self.man.bo
+        ma = getattr(bo, 'phien_ban', None)
+        r = pb.lay(bo.con, bo.ma_ho, ma) if ma else None
+        if r is None:
+            return False
+        mo = bool(r['khoa'])
+        if mo and ma == pb.V1 and xac_nhan is None and not getattr(man, 'im_lang', False) and not getattr(man, '_da_hoi_mo_v1', False):
+            if QMessageBox.question(self, TIEU_DE, 'Mở khóa V1 để sửa trực tiếp số đã niêm yết? Bản đã chốt vẫn giữ riêng, trả về được ở nút "…".') != QMessageBox.StandardButton.Yes:
+                return False
+            man._da_hoi_mo_v1 = True
+        if xac_nhan is False or (not mo and not man.hoi_luu()):
+            return False
+        try:
+            pb.dat_khoa(bo.con, bo.ma_ho, ma, not mo)
+        except (LoiNhap, sqlite3.OperationalError) as e:
+            self._bao(str(e))
+            return False
+        self._lam_moi(ma)
+        return True
+
+    def _lam_moi(self, ma) -> None:
+        man = self.man
+        man.bo.mo_phien_ban(ma)
+        man.nap_ho()
+        man.lam_moi_xem_truoc()
+
+    def them_menu(self, menu) -> None:
+        """Mục thêm vào menu "…": trả V1 về bản đã chốt khi V1 đã sửa."""
+        bo = self.man.bo
+        if pb.v1_da_sua(bo.con, bo.ma_ho):
+            a = menu.addAction('Trả V1 về bản đã chốt…', lambda: self.tra_v1_goc())
+            a.setToolTip('V1 về đúng số lúc chốt niêm yết và khóa lại')
+            a.setEnabled(not getattr(self.man, '_chi_xem', False) and not self.man._ho_khong_nhan())
+
+    def tra_v1_goc(self, xac_nhan: bool | None = None) -> bool:
+        man, bo = self.man, self.man.bo
+        if xac_nhan is None and not getattr(man, 'im_lang', False):
+            xac_nhan = QMessageBox.question(self, TIEU_DE, 'Trả V1 về đúng số lúc chốt niêm yết và khóa lại? Phần đã sửa trong V1 sẽ bỏ.') == QMessageBox.StandardButton.Yes
+        if xac_nhan is False or not man.hoi_luu():
+            return False
+        try:
+            pb.tra_v1_ve_goc(bo.con, bo.ma_ho)
+        except (LoiNhap, sqlite3.OperationalError) as e:
+            self._bao(str(e))
+            return False
+        self._lam_moi(getattr(bo, 'phien_ban', None))
+        return True
 
     def chu_trang_thai(self) -> str:
         """Câu giải thích hiện ở dòng thông báo: đang sửa gì, Lưu ghi vào đâu."""
         hien = getattr(self.man.bo, 'phien_ban', None) or pb.V0
+        if hien != pb.V0 and self.man.bo.khoa:
+            if not self.man.b_mo_khoa.isHidden():
+                return f'{hien} thuộc lần đã có quyết định phê duyệt - chỉ xem. Bấm Mở khóa để sửa.'
+            return 'V1 đang khóa làm chứng cứ niêm yết - chỉ xem. Bấm Mở khóa để sửa, hoặc "+" để tạo nhánh V2.' if hien == pb.V1 else f'{hien} đang khóa - chỉ xem. Bấm Mở khóa để sửa.'
         if hien == pb.V1:
-            return 'V1 đã khóa làm chứng cứ niêm yết - chỉ xem. Muốn điều chỉnh: bấm "+" để tạo nhánh V2.'
+            return 'Đang sửa V1 (đã mở khóa): Lưu ghi vào V1. Bản đã chốt vẫn giữ riêng, trả về được ở nút "…".'
         if hien == pb.V3:
             return 'Đang sửa V3: Lưu ghi vào V3 và ghi luôn vào số hiện hành; V1, V2 giữ nguyên.'
         if hien != pb.V0:

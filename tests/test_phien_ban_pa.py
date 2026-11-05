@@ -87,6 +87,55 @@ class TestKichBan(CoSo):
         with self.assertRaises(LoiNhap):
             bo.luu()
 
+    def test_mo_khoa_v1_sua_duoc_giu_ban_chot_tra_ve_duoc(self):
+        con, m = self.con, self.ma[0]
+        pb.khoa_v1(con, m)
+        pb.dat_khoa(con, m, pb.V1, False, 'Sửa sai sót')
+        bo = BoSoan(con, m)
+        bo.mo_phien_ban(pb.V1)
+        self.assertFalse(bo.khoa)
+        bo.pa.khoan[3][0].don_gia = D(12345)
+        bo.luu()
+        self.assertEqual(pb.doc_pa(con, m, pb.V1).khoan[3][0].don_gia, D(12345))
+        self.assertEqual(BoSoan(con, m).pa.khoan[3][0].don_gia, D(10000))            # số hiện hành, V3 không đổi theo
+        self.assertEqual(pb.doc_pa(con, m, pb.V3).khoan[3][0].don_gia, D(10000))
+        self.assertFalse(pb.khoa_v1(con, m))                                         # in lại không ghi đè V1 đã sửa
+        self.assertEqual(pb.doc_pa(con, m, pb.V1).khoan[3][0].don_gia, D(12345))
+        self.assertTrue(pb.v1_da_sua(con, m))
+        self.assertNotIn(pb.V1_GOC, [x['ma'] for x in pb.ds_phien_ban(con, m)])
+        self.assertTrue(con.execute("SELECT 1 FROM nhat_ky WHERE viec = 'Mở khóa phương án V1' AND chi_tiet LIKE '%Sửa sai sót%'").fetchone())
+        pb.dat_khoa(con, m, pb.V1, True)
+        with self.assertRaises(LoiNhap):
+            pb.sua(con, m, pb.V1, pb.doc_pa(con, m, pb.V1))
+        pb.dat_khoa(con, m, pb.V1, False)                                            # mở lần hai: bản giữ riêng vẫn là bản lúc chốt
+        pb.tra_v1_ve_goc(con, m)
+        self.assertEqual(pb.doc_pa(con, m, pb.V1).khoan[3][0].don_gia, D(10000))
+        self.assertTrue(pb.lay(con, m, pb.V1)['khoa'])
+        self.assertFalse(pb.v1_da_sua(con, m))
+
+    def test_khoa_mo_khoa_v2_v3(self):
+        con, m = self.con, self.ma[0]
+        pb.khoa_v1(con, m)
+        v2 = pb.tao_v2(con, m, 'x')
+        pb.dat_khoa(con, m, v2, True)
+        bo = BoSoan(con, m)
+        bo.mo_phien_ban(v2)
+        self.assertTrue(bo.khoa)
+        with self.assertRaises(LoiNhap):
+            bo.luu()
+        pb.dat_khoa(con, m, v2, False)
+        pb.sua(con, m, v2, pb.doc_pa(con, m, v2))
+        pb.dat_khoa(con, m, pb.V3, True)
+        with self.assertRaises(LoiNhap):
+            pb.dat_v3(con, m, v2)
+        with self.assertRaises(LoiNhap):
+            pb.ghep_v3(con, m, {pb.DAT: v2})
+        self.assertEqual(pb.ap_dong_loat(con, [m], v2)[0], 0)
+        pb.dat_khoa(con, m, pb.V3, False)
+        pb.dat_v3(con, m, v2)
+        with self.assertRaises(LoiNhap):
+            pb.dat_khoa(con, m, 'V2.9', False)
+
     def test_v2_khong_dung_so_hien_hanh(self):
         con, m = self.con, self.ma[0]
         pb.khoa_v1(con, m)
