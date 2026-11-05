@@ -442,6 +442,9 @@ CHU_TRONG_MUC = {1: 'Chưa có dòng bồi thường đất', 2: 'Chưa có nhà
                  MUC_VN: 'Chưa có vật nuôi', 4: 'Chưa có khoản hỗ trợ'}    # 1.0.03: chữ giữa bảng mục khi chưa có dòng
 
 
+CHU_BANG_TINH_DAT = 'Mở bảng tính đầy đủ (NQ 28 & QĐ 03)'
+
+
 class BangMuc(QWidget):
     """Một thẻ mục: hàng nhập nhanh (chọn / gõ tên → số lượng → Thêm), bảng dòng phương án, nút Trở lại / Tiếp theo."""
 
@@ -545,12 +548,13 @@ class BangMuc(QWidget):
             self.b_chon_nhieu_thua.setToolTip('Đánh dấu nhiều thửa (lọc theo tờ / loại đất, Ctrl+A chọn tất cả) rồi thêm vào mục 1')
             self.b_chon_nhieu_thua.clicked.connect(lambda: man.chon_nhieu_thua())
             nhap.addWidget(self.b_chon_nhieu_thua)
-            # 0.9.75: tra giá đất NQ 28 ngay hàng nhập mục 1 (cạnh cột Vị trí của bảng): chọn dòng đất rồi tra
-            b = QPushButton('Tra giá đất NQ 28…')
-            b.setToolTip('Chọn dòng đất ở bảng rồi tra bảng giá đất Nghị quyết 28/2025: ghi vị trí và điền giá theo loại đất')
-            b.clicked.connect(lambda: man.tra_gia_dat_nq28())
+            # 1.0.68: thay nút Tra giá đất NQ 28 (giá gốc, chưa có hệ số K) ở hàng này; lệnh Tra giá vẫn ở menu chuột phải của dòng
+            from .giao_dien import chu_hien
+            b = QPushButton(chu_hien(CHU_BANG_TINH_DAT))
+            b.setToolTip('Mở bảng tính đơn giá đất: K2, yếu tố ảnh hưởng, hệ số khác, giá đất cụ thể; áp vào dòng đang chọn hoặc nhiều hộ')
+            b.clicked.connect(lambda: man.mo_bang_tinh_dat())
             nhap.addWidget(b)
-            self.nut['Tra giá đất NQ 28…'] = b
+            self.nut[CHU_BANG_TINH_DAT] = b
         else:
             # hàng nhập nhanh DÙNG CHUNG với Dự toán & khái toán (hang_nhap_nhanh.HangNhapNhanh, 0.9.67); tên cũ giữ làm bí danh
             self.hang = HangNhapNhanh(lambda: man.them_nhanh(muc), muc=muc)
@@ -698,8 +702,14 @@ class BangMuc(QWidget):
             h.addWidget(b)
             self.khung_thieu_vn.setVisible(False)
             lo.addWidget(self.khung_thieu_vn)
+        self.thanh_gia = None
         if muc == 1:
             self.cb_thua.setProperty('nhap', '1')
+            from .man_hinh_ap_gia_nhanh import ThanhApGiaNhanh
+            self.thanh_gia = ThanhApGiaNhanh(man, self)
+            lo.addWidget(self.thanh_gia)
+            self.bang.currentCellChanged.connect(lambda r, c, r0, c0: self.thanh_gia.tinh() if r != r0 else None)
+            self.cb_thua.currentIndexChanged.connect(lambda *_: self.thanh_gia.tinh())
         if muc == 4:
             lo.addWidget(self._the_cach_tinh())
         if muc != 1:
@@ -940,6 +950,7 @@ class BangMuc(QWidget):
             them('Chọn mọi dòng (Ctrl+A)', lambda: b.selectAll(), b.rowCount() > 0)
             m.addSeparator()
             them('Tra giá đất NQ 28…', lambda: man.tra_gia_dat_nq28(), len(chon) == 1)
+            them(CHU_BANG_TINH_DAT.replace('&', '&&') + '…', lambda: man.mo_bang_tinh_dat())
         elif muc == 2:
             m.addSeparator()
             them('Kiểm tra DT xây dựng…', lambda: man.kiem_tra_dt_xay_dung())
@@ -1781,8 +1792,11 @@ class CuaSoLapPA(QDialog):
             for w in bm.findChildren(QWidget):
                 if isinstance(w, (QAbstractButton, QLineEdit, QComboBox, QAbstractSpinBox)) and not b.isAncestorOf(w) \
                         and w is not b and w is not bm.b_gon \
+                        and not (bm.thanh_gia is not None and bm.thanh_gia.isAncestorOf(w)) and w is not bm.nut.get(CHU_BANG_TINH_DAT) \
                         and not (bm.khung_ct is not None and bm.khung_ct.isAncestorOf(w)):   # 1.0.58: chỉ đổi cách xem / ô tự chỉ đọc
                     w.setEnabled(not k)
+            if bm.thanh_gia is not None:               # tự bật / tắt: V1 khóa vẫn áp được, ghi vào nhánh V2
+                bm.thanh_gia.cap_nhat_khoa()
         from . import phan_quyen
         self.b_dan.setEnabled(not k0 and phan_quyen.quyen_bang(vt, 2)['khoi_luong'])
 
@@ -2658,6 +2672,64 @@ class CuaSoLapPA(QDialog):
         self.bang[1]._ve_dong(i)
         self.cap_nhat()
         return tb
+
+    # ---------------------------------------------------------------- áp đơn giá đất (ap_gia_dat, man_hinh_ap_gia_nhanh, man_hinh_tinh_gia_dat)
+    def co_the_ap_gia_dat(self) -> bool:
+        """Hộ / bản đang mở có áp giá được không. V1 khóa vẫn được: áp thì chuyển sang nhánh V2; lần đã phê duyệt thì không."""
+        from . import lan_pa
+        bo = self.bo
+        if getattr(self, '_chi_xem', False) or self._ho_khong_nhan():
+            return False
+        vt = getattr(bo.con, '_vai_tro', None)
+        if vt is not None:                             # vai trò máy chủ LAN không được sửa giá đất
+            from . import phan_quyen
+            if not phan_quyen.quyen_bang(vt, 1)['gia']:
+                return False
+        return not bo.khoa or (getattr(bo, 'phien_ban', None) == 'V1' and not (lan_pa.co_bang(bo.con) and lan_pa.dang_khoa(bo.con, bo.ma_ho, bo.lan)))
+
+    def dam_bao_sua_dat(self) -> bool:
+        """Trước khi áp giá vào bản đang mở: V1 đang khóa thì tạo nhánh V2 rồi mở nhánh đó, V1 giữ nguyên. False: không ghi được."""
+        from .ap_gia_dat import LY_DO_V2
+        bo = self.bo
+        if not self.co_the_ap_gia_dat():
+            self.thong_bao('Bản đang mở chỉ xem, không áp giá được.')
+            return False
+        if bo.khoa:
+            ma = self.thanh_pb.tao_v2(LY_DO_V2)
+            if not ma or self.bo.khoa:
+                return False
+            self.thong_bao(f'V1 đã niêm yết giữ nguyên: đang áp giá vào nhánh {ma}.')
+        return True
+
+    def sau_ap_gia_dat(self, tb: str = '', chon=None) -> None:
+        """Vẽ lại sau khi áp giá vào bộ soạn: bảng Đất, khoản hỗ trợ đã tính lại, tổng; hẹn lưu như mọi lần sửa ô. Thửa mới thêm từ bảng tính: thẻ hồ sơ đọc lại."""
+        bo = self.bo
+        if bo.bc is not None and len(bo.bc.thua_cua(bo.ma_ho)) != self.bang[1].cb_thua.count() and not self.ho_so.co_thay_doi():
+            self.ho_so.nap(bo.ma_ho)
+        self.bang[1].ve(chon=chon)
+        self.bang[1].nap_danh_sach()
+        bm4 = self.bang.get(4)
+        if bm4 is not None:
+            bm4.ve()
+        self.cap_nhat()
+        if tb:
+            self.thong_bao(tb)
+        self._kich_hoat_hen_luu_tu_dong()
+
+    def mo_bang_tinh_dat(self, cho: bool = True):
+        """Bảng tính đầy đủ: chọn sẵn hộ này, tích sẵn dòng đang chọn (không chọn dòng nào thì mọi dòng). Áp xong bảng Đất cập nhật ngay. cho=False: trả hộp (kiểm thử)."""
+        from .man_hinh_tinh_gia_dat import HopTinhGiaDat
+        bo = self.bo
+        bm = self.bang[1]
+        chon = [i for i in bm.cac_dong_chon() if 0 <= i < len(bo.pa.dat)]
+        d = HopTinhGiaDat(self, bo.con, [bo.ma_ho], bo.bc.ten_dia_ban or '', not self.co_the_ap_gia_dat(), bo_mo=bo, dong_tich=chon or None,
+                          truoc_ap=self.dam_bao_sua_dat, sau_ap=self.sau_ap_gia_dat, thong_so=bm.thanh_gia.thong_so())
+        d.im_lang = getattr(self, 'im_lang', False)
+        if not cho:
+            return d
+        d.exec()
+        d.deleteLater()
+        return d
 
     def kiem_tra_dt_xay_dung(self, cho: bool = True):
         """Tổng diện tích tài sản xây dựng (nhà chính trước, rồi nhà khác, mái che…) so với tổng diện tích thu hồi."""

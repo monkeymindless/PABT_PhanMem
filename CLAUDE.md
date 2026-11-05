@@ -177,6 +177,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Đối tượng nhớ dùng chung (`BoiCanh.tu`, `nghiep_vu.ket_qua_ho`, `theo_doi.tong_hop`, `csdl.nho`): KHÔNG sửa đối tượng trả về. Cả dự án:
   `nghiep_vu.doc_tat_ca_phuong_an` - đừng gọi `tinh_ho` / `doc_phuong_an` trong vòng lặp hộ.
 - Nhiều lần phương án: `doc_phuong_an` mặc định CỘNG DỒN các lần (bỏ lần đã bị thay); `BoSoan.luu` chỉ ghi lần đang mở; lần khóa không sửa.
+- Áp đơn giá đất (1.0.68, `ap_gia_dat`): mọi đường áp giá đi qua `BoSoan.ap_don_gia_qd03`; hộ có V1 ghi nhánh V2 (`mo_ban_ghi`), hộ đang mở trong cửa sổ ghi vào bộ soạn của cửa sổ (`bo_mo`), không mở BoSoan thứ hai cho hộ đó. Đổi đơn giá chỉ tính lại khoản đào tạo (`tinh_lai_ho_tro(chi_dao_tao=True)`); đổi diện tích mới tính cả. Mở cả dự án không tích sẵn dòng; dòng bị lọc che không áp.
 - Phiên bản phương án (1.0.63, `phien_ban_pa`): V0 số hiện hành, V1 chứng cứ niêm yết (in lại không ghi đè; người dùng mở khóa được, `dat_khoa`, bản lúc chốt giữ ở V1.goc), V2.n nhánh từ V1, V3 trình duyệt; là ảnh chụp JSON của MỘT lần, không cộng dồn - khác `lan_pa` (đợt pháp lý cộng dồn). Đặt / sửa V3 ghi luôn vào số hiện hành; đang mở V2 / V3 thì `BoSoan.luu` ghi vào phiên bản.
 - Khu vực giá (1.0.57, `khu_vuc_gia`): bộ đơn giá tách Phụ lục I / II theo khu vực - lưu ở tham_so `KVMUC:<mã>` / `KVXA:<xã>` / `KVTEN:<kv>`
   (không đổi lược đồ; mục không có KVMUC dùng mọi khu vực). Dự án: `khu_vuc_du_an` (cai_dat KHU_VUC_GIA hoặc xã du_an.ten_dia_ban);

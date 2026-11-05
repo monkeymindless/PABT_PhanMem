@@ -1243,6 +1243,11 @@ Mở **In / Xuất…**. Bảng giống bảng In của Word, Excel. Mở lên �
 
 ## Tính đơn giá đất và bộ quy tắc giá đất
 
+**Áp giá hàng loạt (1.0.68):** khung bên phải cửa sổ **Tính đơn giá đất…** luôn có dòng đất của mọi hộ. Ô phạm vi chọn Tất cả hộ / Chỉ hộ đang chọn / một hộ; ô lọc tìm theo tên chủ hộ, số tờ, số thửa, loại đất, không cần gõ dấu. Mở từ menu mà chưa chọn hộ thì chưa dòng nào được tích sẵn, tránh áp nhầm cả dự án: lọc đúng các dòng cùng đoạn đường rồi bấm **Chọn tất cả dòng đang hiện**. Dòng đã tích nhưng bị ô lọc che thì không áp. Sau khi áp, cửa sổ vẫn mở để áp tiếp đoạn đường khác. Nhãn phía trên bảng báo khi có dòng khác nhóm đất đang tính.
+**+ Thêm dòng đất cho hộ…** thêm một dòng theo Tờ, Thửa, Loại đất, Diện tích (thửa chưa có thì thêm vào hồ sơ hộ). **Tự tạo dòng đất từ thông tin Thửa của hộ** tạo dòng cho các hộ có thửa mà mục 1 còn trống.
+**Trong mục 1. Đất:** thanh **Áp giá nhanh** tính theo đoạn đường của xã dự án, vị trí, mặt đường; nhóm đất theo loại đất của từng dòng. Cần K2, yếu tố ảnh hưởng, giá đất cụ thể: bấm **Mở bảng tính đầy đủ (NQ 28 & QĐ 03)** (hoặc chuột phải trên dòng). Lệnh **Tra giá đất NQ 28…** (giá gốc, chưa nhân hệ số) nay ở menu chuột phải của dòng.
+**Hộ đã có V1 niêm yết:** áp giá hàng loạt ghi vào nhánh V2 đang mở, chưa có thì tự tạo; V1 giữ nguyên. Đang xem V1 khóa trong cửa sổ lập phương án mà bấm áp: phần mềm tạo nhánh V2 rồi chuyển sang nhánh đó. Đang ở V0 thì ghi vào V0. Áp giá tính lại khoản đào tạo, chuyển đổi nghề theo giá đất; khoản ổn định đời sống chỉ đổi khi diện tích đất đổi (thêm dòng, tự tạo dòng).
+
 **Tính đơn giá đất…** tính đơn giá bồi thường theo đoạn đường: giá bảng giá × K1 × K2 × K3 × hệ số khác, rồi làm tròn; có giải trình từng bước. Chọn hộ ở danh sách trước khi mở thì áp được đơn giá vào các dòng đất đã tích.
 
 **Khi có văn bản mới về giá đất** (đổi hệ số, thêm hệ số, đổi cách làm tròn, thêm xã): không cần chờ bản phần mềm mới.

@@ -114,7 +114,7 @@ class TestHopTinhGiaDat(unittest.TestCase):
         self.addCleanup(con.close)
         ds = [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY ma_ho')][:2]
         h = self._hop(con, ds, 'Tân An')
-        n_dong = sum(len(b.pa.dat) for b in h._bo.values())
+        n_dong = sum(len(BoSoan(con, m).pa.dat) for m in ds)
         self.assertGreaterEqual(n_dong, 2)
         self.assertEqual(h.bang.rowCount(), n_dong)
         h.cb_nhom.setCurrentIndex(0)
