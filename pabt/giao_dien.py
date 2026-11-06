@@ -153,6 +153,14 @@ def ap_kieu_nut(w, kieu: KieuNut) -> None:
                 a.changed.connect(lambda: QTimer.singleShot(0, gan_lai))
 
 
+# nút chuyển bảng con (thẻ Niêm yết, 06/11/2026 - màu theo người dùng); canh_bao="1": bảng hộ vướng có hộ
+QSS_NUT_BANG_CON = ('QPushButton#nut_bang_con { background: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; border-radius: 13px; '
+                    'padding: 2px 10px; font-size: 12px; font-weight: 600; }'
+                    'QPushButton#nut_bang_con:hover { background: #F1F5F9; }'
+                    'QPushButton#nut_bang_con[canh_bao="1"] { color: #B45309; border: 1px solid #F59E0B; font-weight: 700; }'
+                    'QPushButton#nut_bang_con:checked { background: #1D4ED8; color: #FFFFFF; border: 1px solid #1D4ED8; font-weight: 700; }'
+                    'QPushButton#nut_bang_con[loai="vuong"]:checked { background: #D97706; color: #FFFFFF; border: 1px solid #D97706; }')
+MAU_NUT_BANG_CON = {'thuong': '#334155', 'canh': '#B45309', 'chon': '#FFFFFF'}
 MAU_LUU = ('#0F6E56', '#0B5340')       # 1.0.52: nút Lưu (KieuNut.LUU): nền, rê chuột - chữ trắng 6,3:1 (WCAG AA)
 
 

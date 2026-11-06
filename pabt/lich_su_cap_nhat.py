@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.74', '06/11/2026', (
+        'Niêm yết công khai: hai bảng "DS hộ niêm yết trong đợt" và "Hộ chưa đủ ĐK / Vướng pháp lý" chuyển bằng nút, mỗi bảng dùng trọn chiều cao màn hình; không còn thanh ngăn kéo. Hàng nút chỉ hiện nút của bảng đang mở.',
+        'Bấm thẻ "Vướng pháp lý" mở thẳng bảng hộ vướng; bấm "Đã niêm yết" hoặc "Đủ điều kiện lập PA" mở bảng hộ trong đợt. Nút hộ vướng tô cam khi có hộ cần xử lý.',
+        'Bảng hộ niêm yết: cột Họ và tên giãn rộng, cột Địa điểm đủ rộng, số tiền đậm canh phải; rê chuột xem đủ họ tên, thửa, địa điểm.',
+    )),
     ('1.0.73', '06/11/2026', (
         'Bản bảo trì: sắp xếp lại mã nguồn bên trong (bảng tổng hợp, bảng điều chỉnh, nhập Excel, đọc văn bản đơn giá, các màn hình lớn) để dễ sửa lỗi và nâng cấp về sau. Chức năng, số liệu, bản in, giao diện không đổi.',
     )),

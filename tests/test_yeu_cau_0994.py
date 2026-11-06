@@ -100,7 +100,7 @@ class TestNiemYet(CoSo):
         b = k._nut['Xuất bảng niêm yết']
         self.assertIs(b, k.b_xuat_ny)
         self.assertIs(b.parentWidget(), k.b_tao.parentWidget())         # cùng hàng nút đợt, không nằm trong thẻ 1
-        trang1 = k.tach.widget(0)
+        trang1 = k.trang_ny
         self.assertFalse([x for x in trang1.findChildren(QPushButton)])  # thẻ 1: bảng sát thanh thẻ
         qss_the = k.tabs.tabBar().styleSheet()
         self.assertIn('padding: 4px 12px', qss_the)
@@ -115,15 +115,15 @@ class TestNiemYet(CoSo):
         hd = k.bang_ny.horizontalHeader()
         self.assertEqual(hd.sectionResizeMode(1), QHeaderView.ResizeMode.Stretch)     # 1.0.69: Họ và tên giãn, Địa điểm vừa đủ
         self.assertEqual(hd.sectionResizeMode(4), QHeaderView.ResizeMode.Interactive)
-        self.assertGreaterEqual(k.bang_ny.columnWidth(4), 155)                        # Tổng tiền dự thảo
+        self.assertGreaterEqual(k.bang_ny.columnWidth(4), 135)                        # Tổng tiền dự thảo
         self.assertGreaterEqual(k.bang_vm.columnWidth(3), 175)                        # Nhóm vướng
         self.assertEqual(k.bang_vm.horizontalHeader().sectionResizeMode(4), QHeaderView.ResizeMode.Stretch)
         for b in (k.bang_ny, k.bang_yk, k.bang_dt, k.bang_th, k.bang_vm):
             h = b.horizontalHeader()
-            self.assertGreaterEqual(h.minimumSectionSize(), 60)
+            self.assertGreaterEqual(h.minimumSectionSize(), 48 if b is k.bang_ny else 60)
             fm = h.fontMetrics()
             for c in range(b.columnCount()):
-                if h.sectionResizeMode(c) == QHeaderView.ResizeMode.Stretch:
+                if h.sectionResizeMode(c) in (QHeaderView.ResizeMode.Stretch, QHeaderView.ResizeMode.Fixed):
                     continue
                 chu = b.horizontalHeaderItem(c).text()
                 self.assertGreaterEqual(b.columnWidth(c), fm.horizontalAdvance(chu) + 26, chu)
