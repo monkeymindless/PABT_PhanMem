@@ -154,6 +154,18 @@ class TestKml(_KhongFileBentley):
                          {('11', '103'): 10000, ('TK126/K06', '34'): 10000})
         pm = {x.ten: x.du_lieu for x in ban_do_kml.doc_kml(ra)}
         self.assertEqual(pm['Thửa 103 tờ 11']['ma_ho'], '2')
+        self.assertNotIn('mau', pm['Thửa 103 tờ 11'])                       # chưa tô tay: không có màu riêng
+        # 06/11/2026: màu tô tay đi theo file xuất (Google Earth thấy màu; ABGR) và nhập lại vẫn còn; thửa khác không đổi
+        ban_do_cad.dat_mau_thua(con, '11', '103', '#DC2626')
+        ban_do_kml.xuat_kml(con, ra, kinh_tuyen=107.75)
+        chu = ban_do_kml.tao_kml(con, kinh_tuyen=107.75)
+        self.assertIn('<PolyStyle><color>662626dc</color></PolyStyle>', chu)
+        self.assertEqual(chu.count('662626dc'), 1)
+        lai = ban_do_kml.phan_tich_kml(ra, kinh_tuyen=107.75)
+        self.assertEqual({t.so_thua: t.mau for t in lai.thua}, {'103': '#DC2626', '34': ''})
+        ban_do_cad.dat_mau_thua(con, '11', '103', '')
+        ban_do_cad.luu(con, lai)
+        self.assertEqual({t.so_thua: t.mau for t in ban_do_cad.doc_ban_do(con)}, {'103': '#DC2626', '34': ''})
 
     def test_man_hinh(self):
         try:

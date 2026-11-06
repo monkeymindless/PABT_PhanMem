@@ -534,6 +534,7 @@ def _phan_tich_ds(ds, file, so_to, kt, chu_kinh_tuyen, wgs84_sang_vn2000) -> Ket
         nhan = ' | '.join(x for x in (pm.ten, *(f'{k}={v}' for k, v in pm.du_lieu.items() if v)) if x)
         kq.thua.append(ThuaCad(to, thua, loai, dt_kem, D(f'{dt:.1f}'), None if trong is None else D(f'{max(trong, 0):.1f}'),
                                [[round(x, 3), round(y, 3)] for x, y in chinh], nhan[:500], 'KML'))
+        kq.thua[-1].mau = pm.du_lieu.get('mau', '')     # file do phần mềm xuất: giữ màu tô tay (ban_do_cad.luu lọc qua chuan_mau)
     if vong_moc:
         kq.canh_bao.append(f'{vong_moc} vòng tròn nhỏ (< {CO_VONG_MOC} m) quanh cọc mốc: không phải thửa, bỏ qua.')
     if khong_hinh:
@@ -586,11 +587,16 @@ def tao_kml(con, so_to: str | None = None, kinh_tuyen: float | None = None, ten_
         du = dict(so_to=t.so_to, so_thua=t.so_thua, loai_dat=t.loai_dat, dien_tich=t.dt_hinh or '',
                   dien_tich_trong_ranh=t.dt_trong_ranh or '', ma_ho='' if t.ma_ho is None else str(t.ma_ho), chu_su_dung=t.ho_ten,
                   trang_thai=ban_do_cad.TRANG_THAI[t.trang_thai][0])
+        kieu_rieng = ''
+        if t.mau:                                       # màu tô tay thắng màu theo trạng thái (như trên bản đồ); dữ liệu kèm để nhập lại còn màu
+            du['mau'] = t.mau
+            kieu_rieng = (f'<Style><LineStyle><color>{_mau_kml(t.mau, "ff")}</color><width>1.5</width></LineStyle>'
+                          f'<PolyStyle><color>{_mau_kml(t.mau, "66")}</color></PolyStyle></Style>')
         mo_ta = (f'Thửa {t.so_thua} tờ {t.so_to} {t.loai_dat}; DT {so_vn(t.dt_hinh)} m²'
                  + (f' (trong ranh {so_vn(t.dt_trong_ranh)} m²)' if t.dt_trong_ranh not in (None, '') else '')
                  + (f'; hộ {t.ho_ten}' if t.ho_ten else '') + f'; {ban_do_cad.TRANG_THAI[t.trang_thai][0]}')
         pm.append(f'<Placemark><name>{e(f"Thửa {t.so_thua} tờ {t.so_to}")}</name><description>{e(mo_ta)}</description>'
-                  f'<styleUrl>#{t.trang_thai}</styleUrl><ExtendedData>'
+                  f'<styleUrl>#{t.trang_thai}</styleUrl>{kieu_rieng}<ExtendedData>'
                   + ''.join(f'<Data name="{k}"><value>{e(str(v))}</value></Data>' for k, v in du.items())
                   + f'</ExtendedData><Polygon><outerBoundaryIs><LinearRing><coordinates>{td}</coordinates></LinearRing>'
                   '</outerBoundaryIs></Polygon></Placemark>')

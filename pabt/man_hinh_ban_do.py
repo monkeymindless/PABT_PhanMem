@@ -2874,7 +2874,7 @@ class HopBanDo(QDialog):
     def _chia_doc_mac_dinh(self, cd) -> None:
         """Chiều cao phần thông tin thửa: lần trước kéo bao nhiêu giữ bấy nhiêu; không quá một nửa để bảng dưới còn chỗ."""
         tong = sum(self.chia_doc.sizes()) or self.ben_phai.height()
-        mac_dinh = min(self.CAO_TT_MAC_DINH, tong // 2)  # màn hình thấp: chia đôi, bảng dưới vẫn đủ dòng
+        mac_dinh = min(self.CAO_TT_MAC_DINH, tong * 2 // 5)  # màn hình thấp: thông tin cuộn được, nhường nhiều chỗ hơn cho bảng dưới
         try:
             cao = int(cd.value(self.KHOA_CAO_TT, mac_dinh)) if cd is not None else mac_dinh
         except (TypeError, ValueError):

@@ -28,6 +28,12 @@ except ImportError:                                     # máy không có Qt: c�
     APP = None
 else:
     APP = QApplication.instance() or QApplication([])
+    # phông như phần mềm thật (giao_dien.ap_dung). Không đặt thì Qt5 offscreen dùng Helvetica 12 pt: chạy riêng module, dòng bảng 46 px thay vì 30,
+    # thẻ số liệu 63 px thay vì 62 (kết quả test phụ thuộc thứ tự chạy). Chỉ đặt phông, không áp cả bảng kiểu (chậm).
+    from PySide6.QtGui import QFont
+    _phong = QFont('Segoe UI')
+    _phong.setPointSizeF(9.5)
+    APP.setFont(_phong)
 
     # Bản Qt5 là tiến trình 32-bit (trần khoảng 1,8 GB): test không có vòng sự kiện nên deleteLater không chạy, cửa sổ đã đóng chất dần; đo 06/11/2026
     # cả lượt lên 1.771 MB rồi sập 0xC0000374 / access violation ở vị trí bất kỳ (lần cấp phát hụt), không ổn định. Sau mỗi bài: hủy các widget đã
