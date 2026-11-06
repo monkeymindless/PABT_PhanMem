@@ -38,6 +38,7 @@ def _ung_vien() -> list:
     exe = 'tesseract.exe' if sys.platform == 'win32' else 'tesseract'
     if getattr(sys, 'frozen', False):
         ds.append(Path(sys.executable).parent / 'tesseract' / exe)
+        ds.append(Path(sys.executable).parent.parent / 'x64' / 'tesseract' / exe)      # zip Universal chạy ngay x86\PABT.exe: một bản Tesseract ở x64\
     goc = Path(__file__).resolve().parents[1]
     ds += [goc / 'tesseract' / exe, goc / 'bo_cai_win' / 'tesseract' / exe]      # chạy từ mã nguồn
     ds.append(Path(os.environ.get('PABT_THU_MUC_MAY') or Path(os.environ.get('APPDATA') or Path.home()) / 'PABT') /

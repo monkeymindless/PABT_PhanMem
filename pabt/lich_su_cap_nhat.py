@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.71', '06/11/2026', (
+        'Nhanh hơn với dự án lớn: tạo dự án mới 3.000 hộ nhanh gần gấp đôi, lập bảng tổng hợp nhanh hơn khoảng 19%. Số liệu, bản in không đổi.',
+        'Bảng In: đóng bảng giờ giải phóng hết bộ nhớ, dùng cả ngày không nặng dần.',
+        'Bản đồ thửa đất: xuất KML / KMZ mang theo màu tô tay, nhập lại vẫn còn màu.',
+        'Bản đồ thửa đất: cửa sổ thấp nhường nhiều chỗ hơn cho bảng bên dưới.',
+        'Gói chạy ngay (.zip) nhẹ hơn khoảng 24 MB.',
+    )),
     ('1.0.70', '06/11/2026', (
         'Bản đồ thửa đất: tô màu từng ô thửa bằng tay. Chuột phải lên thửa, chọn Tô màu ô thửa: 8 màu nhanh, Màu khác…, Bỏ màu đã tô. Màu lưu cùng dự án, đổi cách tô hay nạp lại file bản vẽ vẫn giữ; chú giải và tỷ lệ đồng thuận vẫn theo trạng thái thật của thửa.',
         'Bản đồ thửa đất: bảng bên phải không còn bị che chữ, mất mục. Thông tin thửa tự cuộn, kéo thanh ngăn để chia chỗ với bảng dưới; thẻ Nhập vào dự án cuộn được, nút Lưu luôn thấy ở đáy.',

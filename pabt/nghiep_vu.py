@@ -29,12 +29,19 @@ NK_CO_BAN = 4                                   # QĐ 42/2025: mức cơ bản c
 _TAP_MA: list = [None, None]                    # [hồ sơ địa phương đã đọc (đối tượng dia_phuong.doc()), (ổn định, theo NK, TĐC, đào tạo)]
 
 
+_DIA_PHUONG: list = []
+
+
 def _tap_ma() -> tuple:
     """(mã ổn định đời sống, mã thuê nhà / tự lo chỗ ở, mã tái định cư, mã đào tạo) = mã chuẩn (Đồng Nai, QĐ 42/2025) HỢP với mã khai
     báo thêm ở hồ sơ địa phương chinh_sach_ho_tro.ma_on_dinh / ma_theo_nk / ma_tdc / ma_dao_tao (bộ đơn giá tỉnh khác). Mã ổn định / theo nhân khẩu KHÔNG BAO
     GIỜ là tái định cư (ưu tiên mã; hồ sơ ghi trùng thì bỏ khỏi tập TĐC). Nhớ theo đối tượng hồ sơ (dia_phuong.doc đổi khi nạp lại)."""
-    from . import dia_phuong
-    hs = dia_phuong.doc()
+    if _DIA_PHUONG:
+        hs = _DIA_PHUONG[0].doc()
+    else:
+        from . import dia_phuong
+        _DIA_PHUONG.append(dia_phuong)
+        hs = dia_phuong.doc()
     if _TAP_MA[0] is not hs:
         ch = hs.get('chinh_sach_ho_tro') if isinstance(hs, dict) else None
         ch = ch if isinstance(ch, dict) else {}

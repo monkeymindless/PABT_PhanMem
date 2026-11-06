@@ -222,7 +222,8 @@ def tao_du_an(file_pabt, thong_tin: dict, dong: list, bang_gia: list, tu_lap: bo
                         (nguon or 'Nhập thô (Dự án mới)',))
             csdl.ghi_nhat_ky(con, 'Lập dự án mới', f'{len(ho)} hộ, {len(thua)} thửa, {len(gia)} giá đất')
         if tu_lap:
-            cb += tu_lap_phuong_an(con)
+            with csdl.giao_dich(con):                  # file đang tạo (lỗi thì bỏ cả file): cả loạt một giao dịch, không phải mỗi hộ một lần COMMIT
+                cb += tu_lap_phuong_an(con)
         kq = tinh_tat_ca(con)
         bao_cao = dict(file=str(p), so_ho=len(ho), so_thua=len(thua), so_ho_co_pa=sum(1 for k in kq if k.tong > 0),
                        tong=sum((k.tong for k in kq), KHONG), canh_bao=cb)

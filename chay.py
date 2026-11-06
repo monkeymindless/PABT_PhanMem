@@ -1,4 +1,7 @@
-"""Chạy phần mềm PABT.
+"""Chạy phần mềm PABT (cách dùng: _CACH_DUNG, in ra bằng chay.py --help)."""
+from __future__ import annotations
+
+_CACH_DUNG = """Chạy phần mềm PABT.
 
   python chay.py                                   mở cửa sổ phần mềm (cần PySide6)
   python chay.py nhap <file.xlsm> [<file.pabt>]   nhập file Excel -> file dự án + báo cáo đối chiếu (không cần PySide6)
@@ -18,7 +21,6 @@
       định: Goi_cau_hinh cạnh file danh sách. --nen: căn cứ pháp lý / thời hạn / kinh phí lấy theo máy này (mặc định), hồ sơ trung
       tính đóng kèm, hoặc file hồ sơ địa phương của tỉnh.
 """
-from __future__ import annotations
 import sys
 from pathlib import Path
 
@@ -409,7 +411,7 @@ def _goi_don_vi(lenh: str, argv) -> int:
             raise LoiDoiSo('chưa chỉ file.' if not so else f'thừa đối số: {" ".join(so[1:])}')
     except LoiDoiSo as e:
         print(f'LỖI ĐỐI SỐ: {e}\n')
-        print(__doc__)
+        print(_CACH_DUNG)
         return 2
     if lenh == 'mau-goi-don-vi':
         print(f'Đã ghi file Excel mẫu -> {gd.tao_file_mau(so[0])}')
@@ -448,7 +450,7 @@ def main(argv) -> int:
     if lenh in ('mau-goi-don-vi', 'tao-goi-don-vi'):
         return _goi_don_vi(lenh, argv[1:])
     if lenh not in TUY_CHON:
-        print(__doc__)
+        print(_CACH_DUNG)
         return 2
     try:
         so, tc = _tach(argv[1:], TUY_CHON[lenh])
@@ -470,7 +472,7 @@ def main(argv) -> int:
             raise LoiDoiSo(f'thừa đối số: {" ".join(so[2:])}')
     except LoiDoiSo as e:
         print(f'LỖI ĐỐI SỐ: {e}\n')
-        print(__doc__)
+        print(_CACH_DUNG)
         return 2
     if _dang_bi_khoa(f_pabt):
         return 1

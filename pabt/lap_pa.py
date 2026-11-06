@@ -20,7 +20,7 @@ from .nghiep_vu import (DA_LAP_LUU, MA_ON_DINH, MUC_KHOAN, MUC_VN, NGUON_DM, NGU
                         de_xuat_dao_tao_pa, doc_phuong_an, giu_ket_qua_ho, goi_y_ho_tro, goi_y_khoan, ket_qua_ho_san,
                         kiem_tra_pa, so_vi_tri, tap_ma_tdc, thanh_tien_dong, thanh_tien_dong_dat, tinh_pa)
 from .loai_dat import chuan_ma_loai_dat
-from .tien import D, KHONG, chuoi, so_luong_vn, so_vn, vn
+from .tien import D, KHONG, chuoi, la_cong_thuc, so_luong_vn, so_vn, tinh_cong_thuc, vn
 
 
 class LoiNhap(ValueError):
@@ -135,7 +135,6 @@ def _bo_dau(s: str) -> str:
 
 def doc_so(text, ten_o: str, cho_phep_trong: bool = True, toi_thieu=KHONG, toi_da=None):
     """Đọc số người dùng gõ ('1.480.500', '143,8', '100%') hoặc công thức ('=4,2*5,7', '12x3+1,5'); sai thì báo LoiNhap."""
-    from .tien import la_cong_thuc, tinh_cong_thuc
     s = str(text if text is not None else '').strip()
     if s and la_cong_thuc(s):
         try:

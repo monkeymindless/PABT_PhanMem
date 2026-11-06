@@ -1654,6 +1654,7 @@ class CuaSoChinh(QMainWindow):
                     dia_chi=x.get('dia_chi') or '',          # đầy đủ (chú thích); cột hiện bản gọn theo địa bàn dự án
                     o=[i, h['ho_ten'], rut_gon_dia_chi(x.get('dia_chi'), dia_ban), st, dt, trang_thai, gc])
 
+    @csdl.tam_tat_gc()
     def _tai_lai_toan_bo(self):
         from . import doi_chieu
         self.kq = doi_chieu.doi_chieu(self.con)

@@ -44,7 +44,7 @@ def main() -> int:
             shutil.copytree(nguon, TAM / x, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
         else:
             shutil.copy2(nguon, TAM / x)
-    lenh = [str(PY38), '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir', '--windowed', '--name', 'PABT',
+    lenh = [str(PY38), '-OO', '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir', '--windowed', '--name', 'PABT',
             '--distpath', str(TAM / 'dist'), '--workpath', str(TAM / 'build'), '--specpath', str(TAM),
             '--icon', str(TAM / 'pabt' / 'bieu_tuong.ico'), '--log-level', 'WARN',
             # Qt6 không có trong môi trường này; mã nhận PySide2 qua bí danh (pabt._qt5_lam_qt6)

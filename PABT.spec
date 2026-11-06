@@ -27,7 +27,7 @@ a = Analysis(
     # cap_nhat_web đi cùng bản cài từ 0.9.49 (nút Tải từ web của bảng giá đất). Màn hình quét web (man_hinh_quet_web) đã xóa ở 1.0.27.
     excludes=LOAI_TRU,
     noarchive=False,
-    optimize=0,
+    optimize=2,
 )
 # DLL lấy nhầm từ PATH của máy dựng (dựng trong Git Bash: C:\Program Files\Git\mingw64\bin\libssl-3-x64.dll,
 # libcrypto-3-x64.dll - OpenSSL của Git, +6,5 MB, không dùng: Python đã kèm libssl-3.dll / libcrypto-3.dll của nó)

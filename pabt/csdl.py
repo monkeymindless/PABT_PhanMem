@@ -677,6 +677,20 @@ def _dam_bao_khoa(con) -> None:
                                 BEGIN SELECT RAISE(ABORT, '{THONG_BAO_KHOA}'); END''')
 
 
+@contextmanager
+def tam_tat_gc():
+    """Tắt dọn rác của Python trong một thao tác hàng loạt (đo 3.000 hộ: mở dự án -10%, bảng tổng hợp -11%: dữ liệu vừa tạo còn dùng tiếp,
+    dọn rác chỉ duyệt lại nó nhiều lần). Lồng được, trả lại trạng thái cũ kể cả khi lỗi. Dùng làm with hoặc @decorator."""
+    import gc
+    bat = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if bat:
+            gc.enable()
+
+
 _SAU_GD = {}              # id(kết nối) -> số tầng giao_dich đang mở
 
 
@@ -938,14 +952,20 @@ def ghi_nhat_ky(con: sqlite3.Connection, viec: str, chi_tiet: str = '') -> None:
                 (datetime.now().isoformat(timespec='seconds'), ten_may(), nguoi_dung(), viec, chi_tiet))
 
 
+_TEN_MAY: list = []
+
+
 def ten_may() -> str:
     """Tên máy tính (ghi nhật ký, khóa file, máy chủ LAN). Bằng đúng platform.node() - hàm đó cũng gọi socket.gethostname() - nhưng
     không qua platform.uname(): từ Python 3.12 uname() đọc thông tin Windows qua WMI, lần gọi đầu mất ~50 ms."""
+    if _TEN_MAY:
+        return _TEN_MAY[0]
     import socket
     try:
-        return socket.gethostname()
+        _TEN_MAY.append(socket.gethostname())
     except OSError:
         return ''
+    return _TEN_MAY[0]
 
 
 def tham_so(con: sqlite3.Connection) -> dict:

@@ -20,6 +20,7 @@ from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.cell_range import CellRange, MultiCellRange
 
 from . import an_toan as _an_toan
+from . import csdl
 from . import nghiep_vu
 from .du_lieu_in import (nhan_du_an, _thong_tin_du_an, bo_lap_mo_dau, chon_lan_in, ghi_chu_in, ky_hieu_cua_ho, tieu_de_muc_i, ten_file_ho)  # noqa: F401 - tên cũ của in_an (mã gọi cũ, test)
 from .nghiep_vu import BoiCanh, doc_phuong_an, tinh_pa
@@ -380,8 +381,11 @@ def _them_cf(cf_moi, cf, vung: list):
 
 
 def _chep_kieu_dong(ws, nguon: int, dich: int, so_cot: int):
+    o = ws._cells                                       # ws.cell kiểm tra hàng / cột mỗi lần gọi: đọc thẳng, chỉ gọi khi ô chưa có
     for c in range(1, so_cot + 1):
-        ws.cell(dich, c)._style = copy(ws.cell(nguon, c)._style)
+        den = o.get((dich, c)) or ws.cell(dich, c)
+        goc = o.get((nguon, c)) or ws.cell(nguon, c)
+        den._style = copy(goc._style)
 
 
 def _so(v):
@@ -405,10 +409,24 @@ def _kieu(x):
     return x._style
 
 
+_LOP_GOP: list = []
+
+
+def _nap_lop_gop() -> list:
+    """Lớp openpyxl dùng khi gộp ô: nạp trễ (khởi động không nạp openpyxl), một lần - bảng 3.000 hộ gộp 24.000 vùng."""
+    from openpyxl.cell.cell import MergedCell
+    from openpyxl.styles.borders import Border
+    from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.cell_range import CellRange
+    from openpyxl.worksheet.merge import MergedCellRange
+    _LOP_GOP[:] = [get_column_letter, Border, CellRange, MergedCellRange, MergedCell]
+    return _LOP_GOP
+
+
 def _gop_o(ws, r1: int, c1: int, r2: int, c2: int) -> None:
     """Gộp ô như ws.merge_cells nhưng không so vùng mới với TẤT CẢ vùng gộp đã có (openpyxl duyệt hết mỗi lần gộp: bảng tổng hợp
     300 hộ ~2.000 vùng gộp = ~2 triệu phép so, 9 giây). Vùng gộp của bản in không chồng nhau. openpyxl khác cấu trúc: dùng merge_cells."""
-    from openpyxl.utils import get_column_letter
+    get_column_letter = (_LOP_GOP or _nap_lop_gop())[0]
     vung = f'{get_column_letter(c1)}{r1}:{get_column_letter(c2)}{r2}'
     ds = getattr(ws.merged_cells, 'ranges', None)
     if not isinstance(ds, set) or not hasattr(ws, '_cells') or _StyleArray is None:   # openpyxl khác cấu trúc: cách của openpyxl
@@ -436,9 +454,7 @@ def _bo_gop(ws, m) -> None:
 def _vung_gop(ws, vung: str):
     """Như MergedCellRange(ws, vung) (openpyxl 3.1: __init__ -> _get_borders: ô đầu nhận viền phải / dưới của ô cuối) nhưng nhớ kết quả
     cộng viền theo (viền ô đầu, viền ô cuối) - openpyxl băm lại đối tượng viền mỗi vùng (3.000 hộ ~19.000 vùng, ~3 giây)."""
-    from openpyxl.styles.borders import Border
-    from openpyxl.worksheet.cell_range import CellRange
-    from openpyxl.worksheet.merge import MergedCellRange
+    _, Border, CellRange, MergedCellRange, _ = _LOP_GOP or _nap_lop_gop()
     m = MergedCellRange.__new__(MergedCellRange)
     m.ws = ws
     CellRange.__init__(m, range_string=vung)
@@ -463,8 +479,7 @@ def _dinh_dang_gop(ws, m) -> None:
     """Như openpyxl Worksheet._clean_merge_range + MergedCellRange.format (3.1): ô trừ ô đầu thành MergedCell; ô mép nhận viền
     cạnh tương ứng của ô đầu; mọi ô nhận protection của ô đầu. Khác: nhớ kết quả cộng viền theo (viền ô, viền ô đầu, cạnh) cho cả
     workbook - openpyxl băm lại đối tượng viền ở MỖI ô (4 giây / 300 hộ), kết quả giống hệt nhau."""
-    from openpyxl.cell.cell import MergedCell
-    from openpyxl.styles.borders import Border
+    _, Border, _, _, MergedCell = _LOP_GOP or _nap_lop_gop()
     nho = ws.parent.__dict__.setdefault('_pabt_vien_gop', {})
     o = ws._cells
     cac_o = m.cells
@@ -1831,6 +1846,7 @@ def thu_cot_khong_bth(ws, cot_khong, cot_nhan: int, r1: int, r2: int, n_cot: int
     return thu
 
 
+@csdl.tam_tat_gc()
 def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, so_pa_tong: str = '',
                       ngay_pa_tong: str = '', bao_tien_do=None, ky_hieu_so: str = '', du_thao: bool | None = None,
                       lan='cong_don') -> Path:
