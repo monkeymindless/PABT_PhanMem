@@ -2746,28 +2746,8 @@ def la_muc_dan_chieu(x: dict) -> bool:
     return x['ma'] in MA_ON_DINH or x['ma'] in MA_TDC or x['ma'] in MA_DAO_TAO or not g or g < GIA_TOI_THIEU
 
 
-def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: bool = False, chi_ma: set | None = None) -> list:
-    """So với bộ đơn giá đang dùng: theo mã, tên (không dấu), tên bỏ ngoặc, quy cách ("Năm 1" ~ "Năm thứ 1"), rồi tên gần đúng cùng
-    ĐVT, rồi theo ĐẶC TRƯNG (cỡ Φ, số đo, kết cấu, ĐVT, từ - diem_dac_trung), rồi theo đơn giá trùng. nhom None / 0: mỗi dòng theo
-    nhóm của dòng (Muc.nhom); có nhom thì cả bảng theo nhóm đó.
-
-    Khoảng giá (Muc.muc_gia thap / cao): cặp mục cùng tên trong bộ (mục cao có dấu chấm cuối tên - quy ước của bộ đơn giá) - thấp
-    gán mục thấp, cao gán mục cao; bộ chưa có cặp thì đề xuất mục mới (không chọn sẵn).
-    Dòng chung (dòng cha chu_the_chung + dòng con có kết cấu): mỗi giá con cập nhật MỌI mục của các tài sản nêu ở dòng cha cùng kết
-    cấu, cùng ĐVT; "các loại tài sản khác" thêm các mục liền khối cùng ĐVT đang cùng giá với nhóm đó - thêm dòng phụ (phu), không
-    thêm mục mới.
-
-    thay_the (30/10/2026, người dùng: "thay thế toàn bộ văn bản cũ bằng văn bản mới, để đúng với toàn bộ nội dung theo văn bản mới"):
-    danh mục các nhóm có trong văn bản (cây trồng / nhà, công trình / vật nuôi / hỗ trợ) theo đúng văn bản - mục khớp có tên / mật độ /
-    ghi chú khác văn bản -> ten_thay / ghi_chu_thay (giá không đổi: trạng thái 'đổi quy cách'); mục cũ CÙNG NHÓM không còn trong văn
-    bản -> thêm dòng 'bỏ' (bo_cu, chọn sẵn). Cây trồng và vật nuôi cùng nhom 3 trong CSDL: văn bản cây trồng không bỏ vật nuôi.
-
-    chi_ma (1.0.57 - so_khop_khu_vuc): chỉ so với các mục có mã trong tập này (mục của một khu vực giá); mã mới vẫn tính theo cả bộ."""
-    import difflib
-    for m in ds:
-        if m.tach_tu and not m.phu:                     # so lại: dòng tách loài về lại dòng văn bản ban đầu
-            m.ten, m.tach_tu = m.tach_tu, ''
-    ds[:] = [m for m in ds if not m.bo_cu and not m.phu]
+def _doc_bo_hien_hanh(chi_ma: set | None) -> tuple:
+    """Bộ đơn giá đang dùng: ({nhóm: [mục]}, dấu phiên bản của bộ (khóa nhớ khớp gần đúng), {tiền tố mã: số lớn nhất} của CẢ bộ)."""
     f = don_gia.file_dang_dung()
     try:
         ban = (str(f), os.path.getmtime(f), os.path.getsize(f))   # bộ đơn giá đổi (cập nhật) -> khóa nhớ khác
@@ -2788,6 +2768,11 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
     if chi_ma is not None:
         hien = {n: [x for x in v if x['ma'] in chi_ma] for n, v in hien.items()}
         ban = ban + (len(chi_ma), hash(frozenset(chi_ma)))
+    return hien, ban, lon_bo
+
+
+def _lap_bang_tra(hien: dict) -> tuple:
+    """Bảng tra theo từng nhóm: bang[n] = (theo mã, theo tên, theo ĐVT + tên, tên bỏ ngoặc, quy cách, cùng tên bỏ ngoặc); trung_dau[n]: tên bỏ dấu trùng nhiều mục."""
     from .ten_cay_lam_nghiep import bo_ten_khac
     bang, trung_dau = {}, {}
     for n, ds_ in hien.items():
@@ -2810,11 +2795,25 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
             for kh in {_khoa(x['ten']), _khoa(bo_ten_khac(x['ten']))}:
                 ten_ds.setdefault(kh, []).append(x)
         trung_dau[n] = {k: v for k, v in ten_ds.items() if len(v) > 1}
-    da_khop = set()
-    chi_muc = {}                        # nhóm -> {từ: [vị trí mục]} - lọc ứng viên so theo đặc trưng
+    return bang, trung_dau
 
-    def ung_vien(ten, dvt, n, bo_khop=True):
+
+class _PhienKhop:
+    """Trạng thái một lượt so_khop, dùng chung giữa các bước khớp."""
+
+    def __init__(self, hien: dict, ban: tuple, nhom: int | None, thay_the: bool):
+        self.hien, self.ban, self.nhom, self.thay_the = hien, ban, nhom, thay_the
+        self.bang, self.trung_dau = _lap_bang_tra(hien)
+        self.da_khop = set()            # (nhóm, mã) đã có dòng khớp
+        self.chi_muc = {}               # nhóm -> {từ: [vị trí mục]} - lọc ứng viên so theo đặc trưng
+        self.xong = set()               # id(dòng) đã xử lý ở một bước trước, các bước sau bỏ qua
+
+    def nhom_cua(self, m) -> int:
+        return self.nhom or m.nhom or 3
+
+    def ung_vien(self, ten, dvt, n, bo_khop=True):
         """[(điểm, mục)] theo đặc trưng, điểm giảm dần."""
+        hien, da_khop, chi_muc = self.hien, self.da_khop, self.chi_muc
         if n not in chi_muc:
             cm = {}
             for i, x in enumerate(hien[n]):
@@ -2838,13 +2837,14 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
         kq.sort(key=lambda t: (-t[0], t[1]))
         return [(d, x) for d, _, x in kq]
 
-    def ghi_khop(m, r, n):
+    def ghi_khop(self, m, r, n):
+        """Ghi kết quả khớp mục r (None = mục mới) vào dòng m: trạng thái, giá cũ; thay_the: tên / ghi chú thay."""
         m.ten_thay = m.ghi_chu_thay = ''
         if r is None:
             m.trang_thai, m.ma_khop, m.gia_cu, m.ten_cu, m.ghi_chu_cu = 'mới', '', None, '', ''
             return
         m.ma_khop, m.ten_cu, m.ghi_chu_cu = r['ma'], r['ten'], r['ghi_chu'] or ''
-        da_khop.add((n, r['ma']))
+        self.da_khop.add((n, r['ma']))
         m.gia_cu = doc_gia(r['don_gia']) if r['don_gia'] not in (None, '') else None
         m.trang_thai = 'giữ nguyên' if m.gia_cu == m.don_gia else 'cập nhật'
         if m.he_so:                                     # 1.0.60: hệ số (Điều 13 QĐ 42/2025) so theo số, không theo tiền
@@ -2856,24 +2856,22 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
             m.gia_cu = None
         if m.can_cu:                                    # dòng đọc từ điều khoản: tên mục giữ theo bộ đơn giá (mã, phương án đã lập không đổi)
             return
-        if thay_the and m.cach_khop != CACH_DONG_CHUNG:   # dòng chung: tên văn bản là của cả nhóm tài sản - giữ tên từng mục
+        if self.thay_the and m.cach_khop != CACH_DONG_CHUNG:   # dòng chung: tên văn bản là của cả nhóm tài sản - giữ tên từng mục
             ten = ten_thay_the(m.ten, r['ten'])
             gc = ghi_chu_thay_the(m.ghi_chu_cu, m.ghi_chu, ten) if n != 4 else ''
             if ten != r['ten'] or (n != 4 and gc != m.ghi_chu_cu):
                 m.ten_thay, m.ghi_chu_thay = ten, gc
                 if m.trang_thai == 'giữ nguyên':
                     m.trang_thai = 'đổi quy cách'
-    xong = set()
-    for m in ds:
-        m.khop_gan, m.cach_khop = 0.0, ''
-        if m.nghi_gia.startswith('nghi đọc sai'):
-            m.nghi_gia = ''
-    # 0. dòng ghi nhiều loài cùng giá -> từng loài theo bộ đơn giá (bộ ghi "Cây cải xanh", "Cây cải ngọt"… cùng giá); loài bộ chưa có:
-    # mục mới. Chỉ tách khi cả tên không khớp mục nào mà ít nhất một loài khớp.
+
+
+def _khop_tach_loai(ds: list, p: _PhienKhop) -> None:
+    """Bước 0. Dòng ghi nhiều loài cùng giá -> từng loài theo bộ đơn giá (bộ ghi "Cây cải xanh", "Cây cải ngọt"… cùng giá); loài bộ chưa có:
+    mục mới. Chỉ tách khi cả tên không khớp mục nào mà ít nhất một loài khớp."""
     them_loai, nho_loai = {}, {}
     for m in ds:
-        n = nhom or m.nhom or 3
-        theo_ma, theo_ten, _, _, qc, _ = bang[n]
+        n = p.nhom_cua(m)
+        theo_ma, theo_ten, _, _, qc, _ = p.bang[n]
         if m.can_cu or m.ma or m.muc_gia or m.ten_loai or theo_ten.get(_khoa(m.ten)) or qc.get(_khoa_quy_cach(m.ten)):
             continue
         nguon_ds, duoi = m.ten, ''
@@ -2886,7 +2884,7 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
             continue
         ten_loai = []
         for t in loai:
-            ten_loai.append((t + duoi, _tim_loai(t, duoi, m, n, bang[n], hien[n], da_khop, nho_loai.setdefault(n, {}))))
+            ten_loai.append((t + duoi, _tim_loai(t, duoi, m, n, p.bang[n], p.hien[n], p.da_khop, nho_loai.setdefault(n, {}))))
         if not any(x for _, x in ten_loai):
             continue
         goc_ten = m.ten
@@ -2895,21 +2893,25 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
             y = m if i == 0 else Muc(t, m.dvt, m.don_gia, '', m.nguon_dong, nhom=m.nhom, ghi_chu=m.ghi_chu, cha=m.cha, phu=True,
                                      nghi_gia=m.nghi_gia)
             y.ten, y.tach_tu, y.cach_khop = t, goc_ten, CACH_TACH_LOAI
-            ghi_khop(y, x, n)
+            p.ghi_khop(y, x, n)
             if x is not None:
                 y.khop_gan = 0.0
-            xong.add(id(y))
+            p.xong.add(id(y))
             if i:
                 phu.append(y)
         them_loai[id(m)] = phu
     if them_loai:
         ds[:] = [y for m in ds for y in [m] + them_loai.get(id(m), [])]
-    # 1. khoảng giá "a - b": cặp mục cùng tên (mục cao có dấu chấm cuối tên)
+
+
+def _khop_khoang_gia(ds: list, p: _PhienKhop) -> None:
+    """Bước 1. Khoảng giá "a - b": cặp mục cùng tên (mục cao có dấu chấm cuối tên)."""
+    hien, da_khop, xong = p.hien, p.da_khop, p.xong
     for i in range(len(ds) - 1):
         a, b = ds[i], ds[i + 1]
         if a.muc_gia != 'thap' or b.muc_gia != 'cao' or id(a) in xong:
             continue
-        n = nhom or a.nhom or 3
+        n = p.nhom_cua(a)
         k = _khoa(a.ten)
         cap = [x for x in hien[n] if _khoa(x['ten']) == k and _cung_dvt(a.dvt, x['dvt'] or '') and (n, x['ma']) not in da_khop]
         if not cap:
@@ -2927,7 +2929,7 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
                     break
         diem = 0.0
         if not cap:
-            uv = ung_vien(a.ten, a.dvt, n)
+            uv = p.ung_vien(a.ten, a.dvt, n)
             if uv:
                 diem, k0 = uv[0][0], _khoa(uv[0][1]['ten'])
                 cap = [x for d, x in uv if _khoa(x['ten']) == k0 and d >= diem - 0.001]
@@ -2936,19 +2938,53 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
             cap = [None, cap[0]]
         for m, x, cach in ((a, cap[0] if cap else None, CACH_THAP), (b, cap[1] if len(cap) > 1 else None, CACH_CAO)):
             m.cach_khop = cach
-            ghi_khop(m, x, n)
+            p.ghi_khop(m, x, n)
             m.khop_gan = diem if x is not None else 0.0
             m.chon = x is not None                          # mục mới của khoảng giá: đề xuất, không chọn sẵn
             if x is None:
                 m.ghi_chu = (f'{"Mức cao" if m is b else "Mức thấp"} của khoảng giá {a.khoang or ""} '
                              f'(mức {"thấp" if m is b else "cao"}: {(a if m is b else b).ten})').replace('  ', ' ')
             xong.add(id(m))
-    # 2. dòng chung: giá con của dòng cha nêu nhiều tài sản -> mọi mục cùng kết cấu của các tài sản đó
+
+
+def _mo_rong_tai_san_khac(con_: list, gan: dict, vt: dict, muc: list, n: int, da_khop: set) -> None:
+    """"các loại tài sản khác": thêm vào gan các mục liền khối cùng ĐVT, đang cùng giá với nhóm của một giá con."""
+    theo_gia = {}
+    for m in con_:
+        for x in gan.get(id(m), ()):
+            theo_gia.setdefault(doc_gia(x['don_gia']), set()).add(id(m))
+    theo_gia = {g: next(iter(v)) for g, v in theo_gia.items() if g and len(v) == 1}
+    co = sorted(vt[id(x)] for v in gan.values() for x in v)
+    if co and theo_gia:
+        da = {id(x) for v in gan.values() for x in v}
+        for buoc, j in ((1, co[-1] + 1), (-1, co[0] - 1)):
+            while 0 <= j < len(muc):
+                x = muc[j]
+                g = doc_gia(x['don_gia']) if x['don_gia'] not in (None, '') else None
+                if (n, x['ma']) in da_khop or g not in theo_gia:
+                    break
+                mm = next(m for m in con_ if id(m) == theo_gia[g])
+                if id(x) not in da and _cung_dvt(mm.dvt, x['dvt'] or ''):
+                    gan[theo_gia[g]].append(x)
+                    da.add(id(x))
+                j += buoc
+            # khối giữa các mục chủ thể (thứ tự bộ đơn giá xen kẽ)
+        for j in range(co[0], co[-1] + 1):
+            x = muc[j]
+            g = doc_gia(x['don_gia']) if x['don_gia'] not in (None, '') else None
+            if id(x) not in da and g in theo_gia and (n, x['ma']) not in da_khop:
+                gan[theo_gia[g]].append(x)
+                da.add(id(x))
+
+
+def _khop_dong_chung(ds: list, p: _PhienKhop) -> None:
+    """Bước 2. Dòng chung: giá con của dòng cha nêu nhiều tài sản -> mọi mục cùng kết cấu của các tài sản đó."""
+    hien, da_khop, xong = p.hien, p.da_khop, p.xong
     them_sau = {}
     nhom_cha = {}
     for m in ds:
         if m.cha and id(m) not in xong and chu_the_chung(m.cha):
-            nhom_cha.setdefault((m.cha, nhom or m.nhom or 3), []).append(m)
+            nhom_cha.setdefault((m.cha, p.nhom_cua(m)), []).append(m)
     for (cha, n), con_ in nhom_cha.items():
         chu_the, khac = chu_the_chung(cha)
         gan = {}
@@ -2969,73 +3005,55 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
         if any(c > 1 for c in dem_x.values()):
             continue
         vt = {id(x): i for i, x in enumerate(hien[n])}
-        if khac:                    # "các loại tài sản khác": mục liền khối cùng ĐVT, đang cùng giá với nhóm của một giá con
-            theo_gia = {}
-            for m in con_:
-                for x in gan.get(id(m), ()):
-                    theo_gia.setdefault(doc_gia(x['don_gia']), set()).add(id(m))
-            theo_gia = {g: next(iter(v)) for g, v in theo_gia.items() if g and len(v) == 1}
-            co = sorted(vt[id(x)] for v in gan.values() for x in v)
-            if co and theo_gia:
-                da = {id(x) for v in gan.values() for x in v}
-                for buoc, j in ((1, co[-1] + 1), (-1, co[0] - 1)):
-                    while 0 <= j < len(hien[n]):
-                        x = hien[n][j]
-                        g = doc_gia(x['don_gia']) if x['don_gia'] not in (None, '') else None
-                        if (n, x['ma']) in da_khop or g not in theo_gia:
-                            break
-                        mm = next(m for m in con_ if id(m) == theo_gia[g])
-                        if id(x) not in da and _cung_dvt(mm.dvt, x['dvt'] or ''):
-                            gan[theo_gia[g]].append(x)
-                            da.add(id(x))
-                        j += buoc
-                    # khối giữa các mục chủ thể (thứ tự bộ đơn giá xen kẽ)
-                for j in range(co[0], co[-1] + 1):
-                    x = hien[n][j]
-                    g = doc_gia(x['don_gia']) if x['don_gia'] not in (None, '') else None
-                    if id(x) not in da and g in theo_gia and (n, x['ma']) not in da_khop:
-                        gan[theo_gia[g]].append(x)
-                        da.add(id(x))
+        if khac:
+            _mo_rong_tai_san_khac(con_, gan, vt, hien[n], n, da_khop)
         for m in con_:
             ds_x = sorted(gan.get(id(m), ()), key=lambda x: vt[id(x)])
             if not ds_x:
                 continue
             m.cach_khop = CACH_DONG_CHUNG
-            ghi_khop(m, ds_x[0], n)
+            p.ghi_khop(m, ds_x[0], n)
             xong.add(id(m))
             phu = []
             for x in ds_x[1:]:
-                p = Muc(m.ten, m.dvt, m.don_gia, '', m.nguon_dong, nhom=m.nhom, cha=m.cha, phu=True, cach_khop=CACH_DONG_CHUNG,
+                q = Muc(m.ten, m.dvt, m.don_gia, '', m.nguon_dong, nhom=m.nhom, cha=m.cha, phu=True, cach_khop=CACH_DONG_CHUNG,
                         chon=m.chon)
-                ghi_khop(p, x, n)
-                xong.add(id(p))
-                phu.append(p)
+                p.ghi_khop(q, x, n)
+                xong.add(id(q))
+                phu.append(q)
             them_sau[id(m)] = phu
     if them_sau:
         ds[:] = [y for m in ds for y in [m] + them_sau.get(id(m), [])]
-    # 2b. 1.0.60: dòng đọc từ điều khoản văn bản chính sách: theo Điều / khoản, đơn giá + ĐVT, nhóm nghiệp vụ - không qua khớp tên gần đúng
+
+
+def _khop_dieu_khoan(ds: list, p: _PhienKhop) -> None:
+    """Bước 2b (1.0.60). Dòng đọc từ điều khoản văn bản chính sách: theo Điều / khoản, đơn giá + ĐVT, nhóm nghiệp vụ - không qua khớp tên gần đúng."""
     for m in ds:
-        if id(m) in xong or not m.can_cu or (nhom or m.nhom or 3) != 4:
+        if id(m) in p.xong or not m.can_cu or p.nhom_cua(m) != 4:
             continue
-        r, dung_lai = _khop_chinh_sach(m, hien[4], {ma for nh, ma in da_khop if nh == 4})
-        xong.add(id(m))
+        r, dung_lai = _khop_chinh_sach(m, p.hien[4], {ma for nh, ma in p.da_khop if nh == 4})
+        p.xong.add(id(m))
         if r is None:
-            ghi_khop(m, None, 4)
+            p.ghi_khop(m, None, 4)
         else:
             m.cach_khop = CACH_CUNG_MUC if dung_lai else CACH_CHINH_SACH
-            ghi_khop(m, r, 4)
-    # 3. mã, tên, quy cách, tên gần đúng
+            p.ghi_khop(m, r, 4)
+
+
+def _khop_ten(ds: list, p: _PhienKhop) -> None:
+    """Bước 3. Mã, tên, quy cách, tên gần đúng."""
+    import difflib
     for m in ds:
-        if id(m) in xong:
+        if id(m) in p.xong:
             continue
-        n = nhom or m.nhom or 3
-        theo_ma, theo_ten, theo_dvt, gon, qc, cung_gon = bang[n]
+        n = p.nhom_cua(m)
+        theo_ma, theo_ten, theo_dvt, gon, qc, cung_gon = p.bang[n]
         r = theo_ma.get(m.ma.upper()) if m.ma else None
-        r = r or _chon_dau(trung_dau[n].get(_khoa(m.ten)), m) or theo_ten.get(_khoa(m.ten))
+        r = r or _chon_dau(p.trung_dau[n].get(_khoa(m.ten)), m) or theo_ten.get(_khoa(m.ten))
         if r is None and m.ten_loai:                    # dòng tách theo loài: tên khác của văn bản ghi khác bộ đơn giá
             k_ = _khoa(f'{m.ten_loai} {m.duong_kinh}')
-            r = _chon_dau(trung_dau[n].get(k_), m) or theo_ten.get(k_)
-        if r is not None and (n, r['ma']) in da_khop and not m.ma and _dau_khac(m, r):
+            r = _chon_dau(p.trung_dau[n].get(k_), m) or theo_ten.get(k_)
+        if r is not None and (n, r['ma']) in p.da_khop and not m.ma and _dau_khac(m, r):
             r = None                                    # mục đã khớp dòng khác cùng tên bỏ dấu, chữ có dấu khác: loài khác
         if r is not None and not m.dvt and doc_gia(r['don_gia']) != m.don_gia:
             khac = [x for x in cung_gon.get(_khoa_gon(m.ten), ()) if x is not r and doc_gia(x['don_gia']) == m.don_gia]
@@ -3050,7 +3068,7 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
             cung = theo_dvt.get(dv, {})
             # khớp gần đúng (difflib, so với hàng nghìn tên): nhớ theo bộ đơn giá + nhóm + ĐVT + tên - đổi nhóm, sửa một ô rồi
             # so lại cả bảng không phải tính lại các dòng cũ
-            kn = (ban, n, dv, m.ten)
+            kn = (p.ban, n, dv, m.ten)
             if kn not in _NHO_GAN:
                 gan_ = None
                 for g in difflib.get_close_matches(k, list(cung), n=3, cutoff=GAN_DUNG):
@@ -3062,14 +3080,16 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
                 _NHO_GAN[kn] = gan_
             if _NHO_GAN[kn] is not None and _NHO_GAN[kn][0] in cung:
                 r, m.khop_gan = cung[_NHO_GAN[kn][0]], _NHO_GAN[kn][1]
-        ghi_khop(m, r, n)
-    # 4. theo đặc trưng (02/11/2026): tên văn bản ghi khác bộ - cỡ Φ, số đo, kết cấu, ĐVT, từ; nhiều mục ngang điểm thì thôi (trừ khi
-    # đơn giá trùng một mục)
+        p.ghi_khop(m, r, n)
+
+
+def _khop_dac_trung(ds: list, p: _PhienKhop) -> None:
+    """Bước 4 (02/11/2026). Tên văn bản ghi khác bộ - cỡ Φ, số đo, kết cấu, ĐVT, từ; nhiều mục ngang điểm thì thôi (trừ khi đơn giá trùng một mục)."""
     for m in ds:
-        if id(m) in xong or m.trang_thai != 'mới' or m.ten_loai:
+        if id(m) in p.xong or m.trang_thai != 'mới' or m.ten_loai:
             continue
-        n = nhom or m.nhom or 3
-        uv = [t for t in ung_vien(m.ten, m.dvt, n) if _cung_tu_dau(m.ten, t[1]['ten'])]
+        n = p.nhom_cua(m)
+        uv = [t for t in p.ung_vien(m.ten, m.dvt, n) if _cung_tu_dau(m.ten, t[1]['ten'])]
         if not uv:
             continue
         cung_gia = [t for t in uv if t[0] >= uv[0][0] - 0.05 and doc_gia(t[1]['don_gia']) == m.don_gia]
@@ -3078,14 +3098,20 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
                 continue
             uv = cung_gia
         m.cach_khop = CACH_DAC_TRUNG
-        ghi_khop(m, uv[0][1], n)
+        p.ghi_khop(m, uv[0][1], n)
         m.khop_gan = uv[0][0]
+
+
+def _khop_cung_gia(ds: list, p: _PhienKhop) -> None:
+    """Bước 5. Còn là mục mới mà ĐƠN GIÁ trùng một mục chưa khớp cùng nhóm: 3 mức từ chặt tới rộng."""
+    import difflib
+    hien, da_khop, xong = p.hien, p.da_khop, p.xong
     # 30/10/2026 (công cụ scan): tên đọc từ bản scan sai chữ ("Cây sori" / "Cây Sơ ri", "Lekina" / "Lekima") nhưng ĐƠN GIÁ trùng một mục
     # cũ chưa khớp cùng nhóm và tên giống nhau một phần -> cùng mục (giá đúng từng đồng hiếm khi trùng ngẫu nhiên)
     for m in ds:
         if m.trang_thai != 'mới' or not m.don_gia or id(m) in xong:
             continue
-        n = nhom or m.nhom or 3
+        n = p.nhom_cua(m)
         k = _khoa_quy_cach(m.ten)
         ung = []
         for x in hien[n]:
@@ -3095,13 +3121,13 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
         ung.sort(key=lambda t: -t[0])
         if ung and ung[0][0] >= NGUONG_KHOP_THEO_GIA and (len(ung) == 1 or ung[0][0] - ung[1][0] >= 0.1):
             m.khop_gan = ung[0][0]
-            ghi_khop(m, ung[0][1], n)
+            p.ghi_khop(m, ung[0][1], n)
     # 1.0.57 (QĐ 18/2026 "Công đào (ao nuôi trồng thủy sản hoặc làm hầm chứa nước, …)" / bộ "Công đào ao/ hầm chứa nước/ cải tạo đầm
     # phá, hố bom"): cùng ĐƠN GIÁ, cùng ĐVT, cùng từ đầu tên và chỉ MỘT mục chưa khớp như vậy -> cùng mục (tên diễn đạt khác)
     for m in ds:
         if m.trang_thai != 'mới' or not m.don_gia or not m.dvt or id(m) in xong or m.muc_gia:
             continue
-        n = nhom or m.nhom or 3
+        n = p.nhom_cua(m)
         dau = _khoa(m.ten).split()[:1]
         ung = [x for x in hien[n] if (n, x['ma']) not in da_khop and x['don_gia'] not in (None, '')
                and doc_gia(x['don_gia']) == m.don_gia and _dvt_khoa(x['dvt'] or '') == _dvt_khoa(m.dvt)
@@ -3109,21 +3135,79 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
         if len(ung) == 1:
             m.khop_gan = difflib.SequenceMatcher(None, _khoa(m.ten), _khoa(ung[0]['ten'])).ratio()
             m.cach_khop = '; '.join(c for c in (m.cach_khop, 'cùng giá, cùng ĐVT') if c)
-            ghi_khop(m, ung[0], n)
+            p.ghi_khop(m, ung[0], n)
     # 1.0.57 (QĐ 18/2026: "Miếu thờ dọc đường, bàn thiên" ghi hai lần - trường hợp vào nghĩa trang quy hoạch / tự thu xếp; bộ đơn giá
     # ghi hai mục "… (Vào nghĩa trang quy hoạch)", "… (Tự thu xếp ngoài nghĩa trang)"): tên văn bản = tên mục bỏ ngoặc cuối, cùng
     # giá, cùng ĐVT, nhiều mục ngang nhau -> gán lần lượt theo thứ tự bộ đơn giá (dòng văn bản trước - mục trước)
     for m in ds:
         if m.trang_thai != 'mới' or not m.don_gia or id(m) in xong:
             continue
-        n = nhom or m.nhom or 3
+        n = p.nhom_cua(m)
         k = _khoa_gon(m.ten)
         ung = [x for x in hien[n] if (n, x['ma']) not in da_khop and x['don_gia'] not in (None, '')
                and doc_gia(x['don_gia']) == m.don_gia and _khoa_gon(_bo_ngoac_cuoi(x['ten'])) == k
                and (not m.dvt or _dvt_khoa(x['dvt'] or '') == _dvt_khoa(m.dvt))]
         if ung:
             m.cach_khop = '; '.join(c for c in (m.cach_khop, 'tên bỏ chú thích cuối') if c)
-            ghi_khop(m, ung[0], n)
+            p.ghi_khop(m, ung[0], n)
+
+
+def _them_dong_bo(ds: list, p: _PhienKhop, scan: bool) -> None:
+    """thay_the: mục cũ CÙNG NHÓM không còn trong văn bản -> thêm dòng 'bỏ'."""
+    hien = p.hien
+    khop_ma = {ma for _, ma in p.da_khop}
+    vn_ma = {x['ma'] for x in hien[NHOM_VN]}
+    for n in pham_vi_thay_the(ds, p.nhom):
+        for x in hien[n]:
+            if x['ma'] in khop_ma or (n == 3 and x['ma'] in vn_ma):
+                continue
+            g = doc_gia(x['don_gia']) if x['don_gia'] not in (None, '') else 0
+            # 1.0.60: văn bản chính sách dẫn chiếu Luật / Nghị định, không ghi số tiền của mục này: giữ nguyên, không báo "bỏ"
+            if n == 4 and la_muc_dan_chieu(x):
+                ds.append(Muc(x['ten'], x['dvt'] or '', g or 0, trang_thai='giữ nguyên', ma_khop=x['ma'], gia_cu=g, nhom=n, ten_cu=x['ten'],
+                              bo_cu=True, chon=False, cach_khop=CACH_DAN_CHIEU, nguon_dong='Văn bản không ấn định lại mức tiền của mục này: giữ nguyên'))
+                continue
+            ds.append(Muc(x['ten'], x['dvt'] or '', g or 0, trang_thai='bỏ', ma_khop=x['ma'], gia_cu=g, nhom=n,
+                          ten_cu=x['ten'], ghi_chu_cu=x['ghi_chu'] or '', bo_cu=True, chon=not scan,
+                          nguon_dong=f'Mục {NHOM_PHAM_VI.get(n, "")} trong bộ đơn giá đang dùng nhưng văn bản mới không có'))
+
+
+def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: bool = False, chi_ma: set | None = None) -> list:
+    """So với bộ đơn giá đang dùng: theo mã, tên (không dấu), tên bỏ ngoặc, quy cách ("Năm 1" ~ "Năm thứ 1"), rồi tên gần đúng cùng
+    ĐVT, rồi theo ĐẶC TRƯNG (cỡ Φ, số đo, kết cấu, ĐVT, từ - diem_dac_trung), rồi theo đơn giá trùng. nhom None / 0: mỗi dòng theo
+    nhóm của dòng (Muc.nhom); có nhom thì cả bảng theo nhóm đó.
+
+    Khoảng giá (Muc.muc_gia thap / cao): cặp mục cùng tên trong bộ (mục cao có dấu chấm cuối tên - quy ước của bộ đơn giá) - thấp
+    gán mục thấp, cao gán mục cao; bộ chưa có cặp thì đề xuất mục mới (không chọn sẵn).
+    Dòng chung (dòng cha chu_the_chung + dòng con có kết cấu): mỗi giá con cập nhật MỌI mục của các tài sản nêu ở dòng cha cùng kết
+    cấu, cùng ĐVT; "các loại tài sản khác" thêm các mục liền khối cùng ĐVT đang cùng giá với nhóm đó - thêm dòng phụ (phu), không
+    thêm mục mới.
+
+    thay_the (30/10/2026, người dùng: "thay thế toàn bộ văn bản cũ bằng văn bản mới, để đúng với toàn bộ nội dung theo văn bản mới"):
+    danh mục các nhóm có trong văn bản (cây trồng / nhà, công trình / vật nuôi / hỗ trợ) theo đúng văn bản - mục khớp có tên / mật độ /
+    ghi chú khác văn bản -> ten_thay / ghi_chu_thay (giá không đổi: trạng thái 'đổi quy cách'); mục cũ CÙNG NHÓM không còn trong văn
+    bản -> thêm dòng 'bỏ' (bo_cu, chọn sẵn). Cây trồng và vật nuôi cùng nhom 3 trong CSDL: văn bản cây trồng không bỏ vật nuôi.
+
+    chi_ma (1.0.57 - so_khop_khu_vuc): chỉ so với các mục có mã trong tập này (mục của một khu vực giá); mã mới vẫn tính theo cả bộ.
+
+    Thứ tự các bước quyết định kết quả (bước trước giữ mục, bước sau không dùng lại): đừng đổi."""
+    for m in ds:
+        if m.tach_tu and not m.phu:                     # so lại: dòng tách loài về lại dòng văn bản ban đầu
+            m.ten, m.tach_tu = m.tach_tu, ''
+    ds[:] = [m for m in ds if not m.bo_cu and not m.phu]
+    hien, ban, lon_bo = _doc_bo_hien_hanh(chi_ma)
+    p = _PhienKhop(hien, ban, nhom, thay_the)
+    for m in ds:
+        m.khop_gan, m.cach_khop = 0.0, ''
+        if m.nghi_gia.startswith('nghi đọc sai'):
+            m.nghi_gia = ''
+    _khop_tach_loai(ds, p)
+    _khop_khoang_gia(ds, p)
+    _khop_dong_chung(ds, p)
+    _khop_dieu_khoan(ds, p)
+    _khop_ten(ds, p)
+    _khop_dac_trung(ds, p)
+    _khop_cung_gia(ds, p)
     # giá bản scan đọc sai dạng ("S27.312") / đổi giá mà chỉ khác chữ số hay đọc nhầm, chênh quá xa: không chọn sẵn, người dùng xem lại
     for m in ds:
         if scan and not m.nghi_gia and m.trang_thai == 'cập nhật' and m.gia_cu and nham_chu_so(m.don_gia, m.gia_cu):
@@ -3134,21 +3218,7 @@ def so_khop(ds: list, nhom: int | None = None, thay_the: bool = False, scan: boo
     # bản; ap_dung cấp đúng mã này (mã của mục bị bỏ không dùng lại: dự án cũ còn ghi mã đó)
     _cap_ma_moi(ds, nhom, lon_bo)
     if thay_the:
-        khop_ma = {ma for _, ma in da_khop}
-        vn_ma = {x['ma'] for x in hien[NHOM_VN]}
-        for n in pham_vi_thay_the(ds, nhom):
-            for x in hien[n]:
-                if x['ma'] in khop_ma or (n == 3 and x['ma'] in vn_ma):
-                    continue
-                g = doc_gia(x['don_gia']) if x['don_gia'] not in (None, '') else 0
-                # 1.0.60: văn bản chính sách dẫn chiếu Luật / Nghị định, không ghi số tiền của mục này: giữ nguyên, không báo "bỏ"
-                if n == 4 and la_muc_dan_chieu(x):
-                    ds.append(Muc(x['ten'], x['dvt'] or '', g or 0, trang_thai='giữ nguyên', ma_khop=x['ma'], gia_cu=g, nhom=n, ten_cu=x['ten'],
-                                  bo_cu=True, chon=False, cach_khop=CACH_DAN_CHIEU, nguon_dong='Văn bản không ấn định lại mức tiền của mục này: giữ nguyên'))
-                    continue
-                ds.append(Muc(x['ten'], x['dvt'] or '', g or 0, trang_thai='bỏ', ma_khop=x['ma'], gia_cu=g, nhom=n,
-                              ten_cu=x['ten'], ghi_chu_cu=x['ghi_chu'] or '', bo_cu=True, chon=not scan,
-                              nguon_dong=f'Mục {NHOM_PHAM_VI.get(n, "")} trong bộ đơn giá đang dùng nhưng văn bản mới không có'))
+        _them_dong_bo(ds, p, scan)
     return ds
 
 
