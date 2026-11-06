@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.70', '06/11/2026', (
+        'Bản đồ thửa đất: tô màu từng ô thửa bằng tay. Chuột phải lên thửa, chọn Tô màu ô thửa: 8 màu nhanh, Màu khác…, Bỏ màu đã tô. Màu lưu cùng dự án, đổi cách tô hay nạp lại file bản vẽ vẫn giữ; chú giải và tỷ lệ đồng thuận vẫn theo trạng thái thật của thửa.',
+        'Bản đồ thửa đất: bảng bên phải không còn bị che chữ, mất mục. Thông tin thửa tự cuộn, kéo thanh ngăn để chia chỗ với bảng dưới; thẻ Nhập vào dự án cuộn được, nút Lưu luôn thấy ở đáy.',
+        'Mục Tính đơn giá đất ở menu trái có biểu tượng.',
+    )),
     ('1.0.69', '06/11/2026', (
         'Cửa sổ Nhập phương án chi tiết gọn còn 4 tầng: một thanh hộ + phiên bản + Lưu, In; 6 thẻ mục nổi bật (Alt+0 đến Alt+5, xanh đậm là mục đang chọn, xanh lá là mục có dữ liệu) kèm Tổng kinh phí hộ; một hàng công cụ; một dải đáy. Thông tin hộ xem ở chú thích ô Hộ.',
         'Phiên bản phương án chọn bằng một ô có huy hiệu màu; nút Chốt V1 / Tạo nhánh V2 theo ngữ cảnh; menu ⋯ thêm Nhân bản, Khôi phục số đang lập, Xóa nhánh nháp. Menu In / Xuất gồm Xem trước và 4 mẫu.',

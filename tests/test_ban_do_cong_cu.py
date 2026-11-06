@@ -588,6 +588,86 @@ class TestGanHo(_Co):
         self.assertEqual(d.gia_tri()['so_thua'], '102')
         d.deleteLater()
 
+    def test_ben_phai_khong_bi_che_va_cuon_duoc(self):
+        from PySide6.QtWidgets import QApplication, QScrollArea, QSplitter
+        h = self._mo()
+        h.resize(1200, 620)
+        h.show()
+        h.bat_do('duong')                                             # đang đo: thêm khung kết quả đo ở trên, ảnh người dùng gửi
+        h.tab_duoi.setVisible(True)
+        h.tab_duoi.setCurrentWidget(h.khung_nhap)
+        QApplication.processEvents()
+        self.addCleanup(lambda: h.bat_do(None))
+        self.assertIsInstance(h.chia_doc, QSplitter)
+        self.assertIs(h.chia_doc.widget(0), h.cuon_tt)
+        self.assertIs(h.chia_doc.widget(1), h.tab_duoi)
+        self.assertIsInstance(h.cuon_tt, QScrollArea)
+        # phần thông tin không bị ép: khung giữ đủ cao, thừa thì cuộn
+        self.assertGreaterEqual(h.khung_tt.height(), h.khung_tt.minimumSizeHint().height())
+        k = h.khung_nhap
+        self.assertGreaterEqual(k.bang.height(), 170)
+        # hàng tham số đủ chỗ cho mọi dòng (Kinh tuyến trục không bị che)
+        self.assertGreaterEqual(k._hang.height(), k._xep_hang.heightForWidth(k._hang.width()))
+        # nút Lưu luôn thấy: nằm ngoài vùng cuộn
+        self.assertFalse(k.cuon_than.widget().isAncestorOf(k.b_luu_thua))
+        self.assertTrue(k.b_luu_thua.isVisible())
+        self.assertLessEqual(k.b_luu_thua.mapTo(k, k.b_luu_thua.rect().bottomLeft()).y(), k.height())
+        # kéo được, không thu mất phần nào
+        tren, duoi = h.chia_doc.sizes()
+        h.chia_doc.setSizes([tren - 60, duoi + 60])
+        self.assertLess(h.chia_doc.sizes()[0], tren)
+        self.assertFalse(h.chia_doc.childrenCollapsible())
+
+    def test_to_mau_o_thua(self):
+        h = self._mo()
+        t = self._it(h, '1').t
+        self.assertTrue(t.tam)
+        m = h.menu_cho_thua(t)
+        con = m.menu_to_mau
+        self.assertIn('Tô màu ô thửa', [a.text() for a in m.actions()])
+        chu = [a.text() for a in con.actions() if a.text()]
+        self.assertEqual(chu[0], 'Đỏ')
+        self.assertIn('Màu khác…', chu)
+        bo = next(a for a in con.actions() if a.text() == 'Bỏ màu đã tô')
+        self.assertFalse(bo.isEnabled())
+        m.deleteLater()
+        # thửa chưa lưu: giữ trong bộ nhớ, thấy ngay, lưu bản đồ thì vào dự án
+        h.o_to_mau.setChecked(False)
+        self.assertTrue(h.to_mau_thua(t, '#dc2626'))
+        self.assertEqual(t.mau, '#DC2626')
+        self.assertTrue(h.o_to_mau.isChecked())
+        it = self._it(h, '1')
+        self.assertEqual(it.brush().color().rgb() & 0xFFFFFF, 0xDC2626)
+        self.assertEqual(it.khoa_mau, t.trang_thai)                   # chú giải, % đồng thuận vẫn theo trạng thái
+        self.assertIn('1 thửa tô tay', h.lb_tong.text())
+        self.assertEqual(t.chi_tiet.get('mau'), None)
+        h.khung_nhap.luu()
+        t = self._it(h, '1').t
+        self.assertFalse(t.tam)
+        self.assertEqual(t.mau, '#DC2626')
+        self.assertEqual(self._it(h, '1').brush().color().rgb() & 0xFFFFFF, 0xDC2626)
+        self.assertNotIn('mau', t.chi_tiet)                           # chi_tiet vẫn chỉ là dữ liệu đối chiếu bản vẽ
+        # đã lưu: ghi ngay, đổi cách tô không mất, mở lại còn
+        self.assertTrue(h.to_mau_thua(t, '#2563EB'))
+        from pabt import ban_do_cad
+        doc = {x.so_thua: x for x in ban_do_cad.doc_ban_do(self.con)}
+        self.assertEqual(doc['1'].mau, '#2563EB')
+        self.assertEqual(doc['2'].mau, '')
+        h.cb_mau.setCurrentIndex(1)
+        self.assertEqual(self._it(h, '1').brush().color().rgb() & 0xFFFFFF, 0x2563EB)
+        # bỏ màu: về màu theo cách tô; nạp lại file không mất màu đã tô
+        ban_do_cad.dat_mau_thua(self.con, t.so_to, t.so_thua, '#16A34A')
+        kq = ban_do_cad.KetQuaCad(thua=[ban_do_cad.ThuaCad(t.so_to, t.so_thua, 'CLN', None, ban_do_cad.D('1'), None, t.toa_do)], nguon='x')
+        ban_do_cad.luu(self.con, kq)
+        self.assertEqual({x.so_thua: x.mau for x in ban_do_cad.doc_ban_do(self.con)}['1'], '#16A34A')
+        ban_do_cad.dat_mau_thua(self.con, t.so_to, t.so_thua, '')
+        self.assertEqual({x.so_thua: x.mau for x in ban_do_cad.doc_ban_do(self.con)}['1'], '')
+        with self.assertRaises(ValueError):
+            ban_do_cad.dat_mau_thua(self.con, t.so_to, t.so_thua, 'do')
+        d = h.chon_mau_thua(self._it(h, '2').t, cho=False)
+        self.assertEqual(d.currentColor().name().upper(), ban_do_cad.MAU_TO_TAY[0][1])
+        d.deleteLater()
+
     def test_menu_chuot_phai(self):
         h = self._mo()
         m = h.menu_cho_thua(self._it(h, '1').t)

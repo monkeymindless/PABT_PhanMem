@@ -16,11 +16,11 @@ import re
 import threading
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QPixmap, QPolygonF, QTransform
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QFileDialog,
+from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPainterPath, QPen, QPixmap, QPolygonF, QTransform
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QColorDialog, QComboBox, QDialog, QFileDialog, QFrame,
                                QGraphicsEllipseItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsPolygonItem, QGraphicsScene,
                                QGraphicsSimpleTextItem, QGraphicsView, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit, QMenu,
-                               QMessageBox, QPushButton, QSlider, QSplitter, QTableWidget, QTableWidgetItem, QTabWidget, QToolButton, QVBoxLayout, QWidget)
+                               QMessageBox, QPushButton, QScrollArea, QSlider, QSplitter, QTableWidget, QTableWidgetItem, QTabWidget, QToolButton, QVBoxLayout, QWidget)
 
 from . import ban_do_cad, ban_do_kml, do_dac, nen_ban_do, toa_do
 from .giao_dien import TOKEN, XepDong, chan_tin_hieu, chay_nen, chu_hien, con_tro_cho, qmau_theo_tong
@@ -45,6 +45,10 @@ def _khoi(ds) -> QWidget:
 
 
 # ---------------------------------------------------------------- nhập bản vẽ
+CAO_BANG_NHAP_TOI_THIEU = 170       # tiêu đề hai dòng + vài dòng thửa
+CAO_THONG_TIN_TOI_THIEU, CAO_THE_DUOI_TOI_THIEU = 120, 170      # hai phần của bảng bên phải bản đồ
+
+
 class KhungNhapBanDo(QWidget):
     """Thẻ "Nhập vào dự án" của cửa sổ Bản đồ thửa đất (05/11/2026: trước là hộp thoại riêng, xem trước bằng chữ, không thấy trên bản đồ). File .dxf / .kml / .kmz, lớp ranh thửa / ranh
     thu hồi (DXF), kinh tuyến trục (KML), số tờ -> bảng thửa + đối chiếu -> lưu vào dự án (tùy chọn cập nhật DT thu hồi). doi_ket_qua: vừa phân tích (cửa sổ vẽ thửa lên bản đồ);
@@ -120,16 +124,42 @@ class KhungNhapBanDo(QWidget):
         hn = QHBoxLayout()
         hn.addWidget(self.b_khop, 1)
         hn.addWidget(self.b_luu_thua, 1)
-        lo = QVBoxLayout(self)
+        # 1.0.70 (người dùng 06/11/2026: bị che, không cuộn được): thân cuộn dọc, bảng luôn đủ vài dòng, hàng nút Lưu cố định ở đáy
+        than = QWidget()
+        lo = QVBoxLayout(than)
         lo.setContentsMargins(4, 4, 4, 4)
         lo.setSpacing(4)
         lo.addWidget(hang)
         lo.addWidget(self.bang, 1)
         lo.addWidget(self.lb)
         lo.addWidget(self.o_loai)
-        lo.addLayout(hn)
+        self.bang.setMinimumHeight(CAO_BANG_NHAP_TOI_THIEU)
+        self.cuon_than = QScrollArea()
+        self.cuon_than.setWidgetResizable(True)
+        self.cuon_than.setFrameShape(QFrame.Shape.NoFrame)
+        self.cuon_than.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.cuon_than.setWidget(than)
+        self._hang, self._xep_hang = hang, h
+        ngoai = QVBoxLayout(self)
+        ngoai.setContentsMargins(0, 0, 0, 4)
+        ngoai.setSpacing(4)
+        ngoai.addWidget(self.cuon_than, 1)
+        hn.setContentsMargins(4, 0, 4, 0)
+        ngoai.addLayout(hn)
         if file:
             self.chon_file(file)
+
+    def _vua_hang(self) -> None:
+        """Hàng tham số xếp nhiều dòng theo bề rộng: trong vùng cuộn chiều cao phải đặt theo số dòng, không thì dòng cuối (Kinh tuyến trục) bị che."""
+        self._hang.setMinimumHeight(self._xep_hang.heightForWidth(max(1, self.cuon_than.viewport().width() - 8)))
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._vua_hang()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        self._vua_hang()
 
     def minimumSizeHint(self):
         """Thẻ trong QTabWidget: cỡ tối thiểu của thẻ này ép cả bảng bên phải rộng theo hàng tham số. Hẹp thì hàng tự xuống dòng, bảng cuộn ngang; người dùng kéo thanh chia."""
@@ -151,6 +181,7 @@ class KhungNhapBanDo(QWidget):
         self.o_file.setText(ten)
         self.khoi_lop_thua.setVisible(False)
         self.khoi_lop_ranh.setVisible(False)
+        self._vua_hang()
         for cb in (self.cb_thua, self.cb_ranh):
             with chan_tin_hieu(cb):
                 cb.clear()
@@ -190,6 +221,7 @@ class KhungNhapBanDo(QWidget):
             return self.phan_tich()
         self.khoi_lop_thua.setVisible(True)
         self.khoi_lop_ranh.setVisible(True)
+        self._vua_hang()
         for cb in (self.cb_thua, self.cb_ranh):
             cb.setEnabled(True)
         self.cb_kt.setEnabled(False)
@@ -1566,7 +1598,7 @@ class HopBanDo(QDialog):
         hlop.addWidget(QLabel('Ô thửa:'))
         self.o_to_mau = QCheckBox('Tô màu')
         self.o_to_mau.setChecked(True)
-        self.o_to_mau.setToolTip('Tô màu ô thửa theo cách đang chọn ở ô "Màu theo" (đồng thuận, tiến độ…)')
+        self.o_to_mau.setToolTip('Tô màu ô thửa theo cách đang chọn ở ô "Màu theo" (đồng thuận, tiến độ…). Tô tay từng ô: chuột phải lên thửa, Tô màu ô thửa')
         self.o_to_mau.toggled.connect(lambda bat: self.view.dat_to_mau(bat))
         hlop.addWidget(self.o_to_mau)
         self.o_ten_ho = QCheckBox('Tên hộ')
@@ -1677,14 +1709,36 @@ class HopBanDo(QDialog):
         lo.addWidget(self.khung_cg)
         lo.addWidget(self.khung_lop)
         # bảng bên phải (người dùng 05/11/2026: bản đồ vệ tinh rộng nhất có thể): bản đồ cao hết cửa sổ; kéo thanh chia để chỉnh hai bên, kéo hết cỡ hoặc nút "Ẩn bảng" để bản đồ chiếm trọn
+        # 1.0.70 (người dùng 06/11/2026: nội dung bị che, không cuộn được): hai phần kéo được bằng thanh ngăn; phần thông tin tự cuộn, không còn bị ép chồng chữ
+        from .giao_dien import TachCoNam
         self.ben_phai = QWidget()
         vd = QVBoxLayout(self.ben_phai)
         vd.setContentsMargins(4, 0, 0, 0)
-        vd.setSpacing(4)
-        vd.addWidget(self.khung_do)
-        vd.addWidget(self.khung_tt)
-        vd.addWidget(self.tab_duoi, 1)
-        vd.addStretch(0)                                 # chưa có thẻ: dải thông tin nằm trên cùng
+        vd.setSpacing(0)
+        than_tt = QWidget()
+        vt = QVBoxLayout(than_tt)
+        vt.setContentsMargins(0, 0, 4, 0)
+        vt.setSpacing(4)
+        vt.addWidget(self.khung_do)
+        vt.addWidget(self.khung_tt)
+        vt.addStretch(1)                                 # chưa có thẻ: dải thông tin nằm trên cùng
+        self.cuon_tt = QScrollArea()
+        self.cuon_tt.setWidgetResizable(True)
+        self.cuon_tt.setFrameShape(QFrame.Shape.NoFrame)
+        self.cuon_tt.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.cuon_tt.setWidget(than_tt)
+        self.cuon_tt.setMinimumHeight(CAO_THONG_TIN_TOI_THIEU)
+        self.tab_duoi.setMinimumHeight(CAO_THE_DUOI_TOI_THIEU)
+        self.chia_doc = TachCoNam(Qt.Orientation.Vertical)
+        self.chia_doc.setHandleWidth(12)
+        self.chia_doc.setChildrenCollapsible(False)
+        self.chia_doc.addWidget(self.cuon_tt)
+        self.chia_doc.addWidget(self.tab_duoi)
+        self.chia_doc.setStretchFactor(0, 0)
+        self.chia_doc.setStretchFactor(1, 1)
+        self.chia_doc.handle(1).setToolTip('Kéo lên / xuống để chia chỗ giữa thông tin thửa và bảng bên dưới')
+        self.chia_doc.splitterMoved.connect(lambda *_: self._nho_chia_doc())
+        vd.addWidget(self.chia_doc, 1)
         self.chia = QSplitter(Qt.Orientation.Horizontal)
         self.chia.setHandleWidth(8)
         self.chia.addWidget(self.view)
@@ -1784,7 +1838,8 @@ class HopBanDo(QDialog):
             k = ban_do_cad.muc_thu_hoi(t)
         else:
             k = t.trang_thai
-        return (k, *bang[k])
+        ten, mau = bang[k]
+        return k, ten, getattr(t, 'mau', '') or mau     # màu tô tay thắng; khóa giữ theo trạng thái để chú giải, % đồng thuận vẫn đúng
 
     def _ve_chu_giai(self, dem: dict) -> None:
         while self.cg.count():
@@ -1855,6 +1910,9 @@ class HopBanDo(QDialog):
             them = f' · trong ranh {dem.get("ca_thua", 0) + dem.get("mot_phan", 0)} thửa'
         else:
             them = f' · đồng thuận {dem.get("dong_y", 0) * 100 / gan:.1f}%' if gan else ''
+        to_tay = sum(1 for t in ds if t.mau)
+        if to_tay:
+            them += f' · {to_tay} thửa tô tay'
         tam = sum(1 for t in ds if t.tam)
         self.lb_tong.setText(f'Tổng {len(ds)} thửa' + them.replace('.', ',') + (f' · {tam} thửa chưa lưu vào dự án' if tam else ''))
 
@@ -2738,6 +2796,9 @@ class HopBanDo(QDialog):
         m.addAction('Định vị thửa này', lambda: self.dinh_vi_thua(t))
         if t.ma_ho is not None:
             m.addAction('Xem các thửa của hộ', lambda: self.xem_ho(t.ma_ho))
+        if not self.chi_doc:
+            m.addSeparator()
+            self._them_menu_to_mau(m, t)
         if self.con is not None and not self.chi_doc:
             m.addSeparator()
             m.addAction('Đổi hộ của thửa…' if t.ma_ho is not None else 'Gắn hộ vào thửa…', lambda: self.gan_ho(t))
@@ -2747,6 +2808,53 @@ class HopBanDo(QDialog):
         m.exec(diem)
         m.deleteLater()
         return None
+
+    def _them_menu_to_mau(self, m, t) -> None:
+        """Menu con Tô màu ô thửa: bảng màu nhanh, Màu khác…, Bỏ màu đã tô."""
+        c = QMenu('Tô màu ô thửa', m)                    # có cha + giữ tham chiếu: Qt5 hủy menu con addMenu(chữ) khi vỏ Python hết tham chiếu
+        m.addMenu(c)
+        m.menu_to_mau = c
+        for ten, mau in ban_do_cad.MAU_TO_TAY:
+            anh = QPixmap(14, 14)
+            anh.fill(QColor(mau))
+            a = c.addAction(QIcon(anh), ten, lambda ma=mau: self.to_mau_thua(t, ma))
+            a.setCheckable(True)
+            a.setChecked(t.mau == mau)
+        c.addSeparator()
+        c.addAction('Màu khác…', lambda: self.chon_mau_thua(t))
+        c.addAction('Bỏ màu đã tô', lambda: self.to_mau_thua(t, '')).setEnabled(bool(t.mau))
+
+    def chon_mau_thua(self, t, cho: bool = True):
+        """Hộp chọn màu bất kỳ. cho=False: trả hộp (kiểm thử)."""
+        d = QColorDialog(QColor(t.mau or ban_do_cad.MAU_TO_TAY[0][1]), self)
+        d.setWindowTitle(f'Tô màu thửa {t.so_thua} tờ {t.so_to}')
+        if not cho:
+            return d
+        if d.exec() == QDialog.DialogCode.Accepted:
+            self.to_mau_thua(t, d.currentColor().name())
+        d.deleteLater()
+        return d
+
+    def to_mau_thua(self, t, mau: str) -> bool:
+        """Tô tay một ô thửa (mau '': bỏ). Thửa trong dự án ghi ngay; thửa chưa lưu giữ màu tới khi lưu bản đồ. Thấy ngay: bật ô Tô màu nếu đang tắt, chỉ đổi màu các ô."""
+        mau = ban_do_cad.chuan_mau(mau)
+        try:
+            if t.tam:
+                kq = getattr(getattr(self, 'khung_nhap', None), 'kq', None)
+                for x in (kq.thua if kq is not None else ()):
+                    if (x.so_to, x.so_thua) == (t.so_to, t.so_thua):
+                        x.mau = mau
+            else:
+                ban_do_cad.dat_mau_thua(self.con, t.so_to, t.so_thua, mau)
+        except (LoiNhap, ban_do_cad.LoiCad) as e:
+            self.lb.setText(str(e))
+            return False
+        t.mau = mau
+        if not self.o_to_mau.isChecked():
+            self.o_to_mau.setChecked(True)
+        self._doi_mau()
+        self.lb.setText(f'Đã tô màu thửa {t.so_thua} tờ {t.so_to}' if mau else f'Đã bỏ màu tô của thửa {t.so_thua} tờ {t.so_to}')
+        return True
 
     def done(self, r):
         self._dung()
@@ -2759,6 +2867,26 @@ class HopBanDo(QDialog):
     def hideEvent(self, e):                             # đóng bằng nút X / bị ẩn trước khi hủy (deleteLater): dừng hẹn giờ, tải nền
         self._dung(chi_tam=True)
         super().hideEvent(e)
+
+    KHOA_CAO_TT = 'ban_do/cao_thong_tin'
+    CAO_TT_MAC_DINH = 330
+
+    def _chia_doc_mac_dinh(self, cd) -> None:
+        """Chiều cao phần thông tin thửa: lần trước kéo bao nhiêu giữ bấy nhiêu; không quá một nửa để bảng dưới còn chỗ."""
+        tong = sum(self.chia_doc.sizes()) or self.ben_phai.height()
+        mac_dinh = min(self.CAO_TT_MAC_DINH, tong // 2)  # màn hình thấp: chia đôi, bảng dưới vẫn đủ dòng
+        try:
+            cao = int(cd.value(self.KHOA_CAO_TT, mac_dinh)) if cd is not None else mac_dinh
+        except (TypeError, ValueError):
+            cao = mac_dinh
+        cao = max(CAO_THONG_TIN_TOI_THIEU, min(cao, tong - CAO_THE_DUOI_TOI_THIEU))
+        self.chia_doc.setSizes([cao, max(CAO_THE_DUOI_TOI_THIEU, tong - cao)])
+
+    def _nho_chia_doc(self) -> None:
+        from .giao_dien import cai_dat_nho
+        cd = cai_dat_nho()
+        if cd is not None:
+            cd.setValue(self.KHOA_CAO_TT, self.chia_doc.sizes()[0])
 
     def _chia_mac_dinh(self) -> None:
         """Đặt độ rộng bảng bên phải một lần khi cửa sổ hiện: lần trước người dùng kéo bao nhiêu thì giữ bấy nhiêu."""
@@ -2773,6 +2901,7 @@ class HopBanDo(QDialog):
             rong = self.RONG_BEN_MAC_DINH
         tong = sum(self.chia.sizes())
         rong = max(0, min(rong, tong - self.RONG_BAN_DO_TOI_THIEU))
+        self._chia_doc_mac_dinh(cd)
         self.chia.setSizes([tong - rong, rong])
         self._dat_chu_an_ben()
 
