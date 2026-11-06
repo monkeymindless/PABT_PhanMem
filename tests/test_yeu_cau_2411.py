@@ -97,6 +97,7 @@ class TestXemNhieuHo(CoSoXem):
         h.r_du_thao.setChecked(True)
         k2 = h.xem_truoc_nhieu_ho(ngay=True)
         self.assertNotEqual(k1, k2)                                 # dự thảo / chính thức là hai bản khác nhau
+        self.assertTrue(h.w_preview.cho_xong(30))                   # luồng nền còn chép file thì không xóa được thư mục tạm (Windows)
 
     def test_ban_gan_dung_khi_khong_co_word(self):
         """Máy không dùng được Word: từng hộ dựng PDF gần đúng bằng Qt từ file .docx rồi gộp."""

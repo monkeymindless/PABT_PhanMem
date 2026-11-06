@@ -45,6 +45,12 @@ class TestMenuTraiVaMenuKhac(CoNavy):
     def test_mo_tung_trang_menu_trai_lan_hai_nhanh(self):
         from pabt import app as ud
         _ud, w = self._cua_so(so_ho=8)
+        # việc hẹn giờ MỘT LẦN sau khi mở dự án (sao lưu tự động + mốc thời gian, làm sẵn nền) chạy xong rồi mới đo: rơi vào lần đo thì "lần 2" 100-170 ms
+        # dù chuyển trang chỉ ~5 ms (bài này lúc đạt lúc không suốt nhiều phiên bản, tùy tốc độ máy)
+        het = time.monotonic() + max(ud.SAO_LUU_SAU_MS, 400) / 1000 + 0.3
+        while time.monotonic() < het:
+            self.app.processEvents()
+            time.sleep(0.01)
         ds = []
         for i, ten in enumerate(ud.TRANG):
             lan1 = self._ms(lambda i=i: w.mo_trang(i))
