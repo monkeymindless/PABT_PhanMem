@@ -183,8 +183,8 @@ def kiem_tra_zip(p, toi_da: int = 400 * 2 ** 20, ti_le: int = 250, so_muc: int =
 
 def kiem_tra_xml(du: bytes, ten: str = '') -> None:
     """Chặn XML có khai báo DOCTYPE / ENTITY (tấn công mở rộng thực thể, đọc file máy qua thực thể ngoài)."""
-    dau = du[:4096].upper()
-    if b'<!DOCTYPE' in dau or b'<!ENTITY' in du.upper():
+    hoa = bytes(du).replace(b'\x00', b'').upper()      # bỏ byte 0: XML UTF-16; cả file: chú thích dài đẩy DOCTYPE qua khỏi phần đầu
+    if b'<!DOCTYPE' in hoa or b'<!ENTITY' in hoa:
         raise LoiAnToan(f'Nội dung XML {ten} có khai báo DOCTYPE / ENTITY: nghi file độc, không mở.')
 
 

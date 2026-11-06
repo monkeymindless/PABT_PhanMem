@@ -406,7 +406,8 @@ class TestCuaSo(_Nen):
         w.b_ds_ho.setVisible(True)
         self.assertLessEqual(co - khong, 52)
         self.assertEqual(w._rong_ds_ho(5000), 230)                                 # màn hình rộng: đủ bề rộng
-        self.assertEqual(w._rong_ds_ho(600), 120)                                  # màn hình hẹp: không dưới 120
+        # màn hình không đủ chỗ: không dưới 120 (1.0.75: cụm nút xuống hàng dưới, phần soạn tối thiểu hẹp hơn nên đo theo tach, không số cố định)
+        self.assertEqual(w._rong_ds_ho(w.tach.minimumSizeHint().width()), 120)
         w.bat_tat_ds_ho(True)
         self.assertGreaterEqual(w._w_ds_ho.minimumWidth(), 120)
 

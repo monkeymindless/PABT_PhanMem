@@ -176,6 +176,7 @@ def _truong_dot(ngay_trinh, so_to_trinh, ghi_chu, loai_van_ban, so_pa_tong, ngay
 def tao_dot(con, ten: str = '', ngay_trinh: str = '', so_to_trinh: str = '', ghi_chu: str = '', loai_van_ban: str = 'Tờ trình',
             so_pa_tong: str = '', ngay_pa_tong: str = '', ky_hieu_so: str | None = None) -> int:
     """ky_hieu_so None: lấy ký hiệu của đợt gần nhất, không có thì của dự án (cột du_an cũ / tổ chức mặc định)."""
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     so = (con.execute('SELECT MAX(so) FROM dot_trinh').fetchone()[0] or 0) + 1
     ten = ' '.join(str(ten or '').split()) or f'Đợt {so}'
     if con.execute('SELECT 1 FROM dot_trinh WHERE ten = ?', (ten,)).fetchone():
@@ -200,6 +201,7 @@ def ky_hieu_mac_dinh(con) -> str:
 
 def sua_dot(con, dot_id: int, ten: str, ngay_trinh: str = '', so_to_trinh: str = '', ghi_chu: str = '',
             loai_van_ban: str = 'Tờ trình', so_pa_tong: str = '', ngay_pa_tong: str = '', ky_hieu_so: str | None = None) -> None:
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     ten = ' '.join(str(ten or '').split())
     if not ten:
         raise LoiNhap('Tên đợt không được để trống.')
@@ -264,6 +266,7 @@ def danh_so_pa(con, ds_ma_ho: list, bat_dau, ngay: str = '', chi_ho_chua_co: boo
 
 def xoa_dot(con, dot_id: int) -> int:
     """Xóa đợt; các hộ của đợt trở về "chưa xếp đợt" (hồ sơ, thư mục đã xuất giữ nguyên). Trả số hộ được bỏ ra."""
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     with csdl.giao_dich(con):
         n = con.execute('UPDATE ho SET dot_id = NULL WHERE dot_id = ?', (dot_id,)).rowcount
         if 'dot_trinh_id' in {r[1] for r in con.execute('PRAGMA table_info(pa_lan)')}:

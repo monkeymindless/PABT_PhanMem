@@ -91,7 +91,7 @@ class TestManHinhLapPA(unittest.TestCase):
         self.assertIsNotNone(m)
         i = w.them_hang_muc_khac(2, 'Mái che khung sắt lợp tôn', m_tuong_duong=m)
         self.assertEqual(w.bang[2].bang.rowCount(), 10)
-        self.assertEqual(w.bang[2].bang.item(i, self._cot(w, 2, 'nguon')).text(), f'tương đương: {m.ma}')
+        self.assertEqual(w.bang[2].bang.item(i, self._cot(w, 2, 'nguon')).text(), f'Tương đương: {m.ma}')
         w.bang[2].bang.item(i, self._cot(w, 2, 'so_luong')).setText('10')
         self.assertEqual(w.bo.pa.khoan[2][i].so_luong, 10)
         # thêm từ danh mục (cây trồng)

@@ -222,6 +222,23 @@ class TestBangIn(unittest.TestCase):
             APP.processEvents()
         self.assertTrue(list(Path(w.file).parent.rglob('DanhSachHo_*.xlsx')))
 
+    def test_in_xong_bao_ket_qua(self):
+        """Rà soát 06/11/2026: in xong báo số trang; ô Trang ngoài phạm vi (0 trang) không im lặng."""
+        from pabt import xem_truoc_tai_lieu as xt
+        if not xt.co_hop_in():
+            self.skipTest('cần QtPdf (bản Qt 6); bản Win 7 in qua Word / Excel')
+        h = self._hop(ma_ho_chon=[self.ma[0]])
+        with mock.patch.object(h, '_hoi_tu_lap', return_value=True), mock.patch.object(h.w_preview, 'cho_xong', return_value=True), \
+                mock.patch.object(h.w_preview, 'so_trang', return_value=3), mock.patch('PySide6.QtWidgets.QMessageBox.information') as tin, \
+                mock.patch('PySide6.QtWidgets.QMessageBox.warning') as canh_bao:
+            with mock.patch.object(xt, 'in_theo_tuy_chon', return_value=3):
+                self.assertEqual(h.in_ra_may(), 3)
+            self.assertIn('3 trang', tin.call_args[0][2])
+            canh_bao.assert_not_called()
+            with mock.patch.object(xt, 'in_theo_tuy_chon', return_value=0):
+                self.assertEqual(h.in_ra_may(), 0)
+            self.assertIn('Không có trang', canh_bao.call_args[0][2])
+
     def test_mo_tu_lap_phuong_an_khong_co_muc_du_lieu(self):
         h = self._hop(ma_ho_chon=self.ma[:1])
         self.assertNotIn('du_lieu', h.nut_rail)

@@ -3020,7 +3020,8 @@ class HopBanDo(QDialog):
             if self.im_lang:
                 return None
             to = self.cb_to.currentData()
-            file, _ = QFileDialog.getSaveFileName(self, 'Xuất bản đồ thửa đất', f'BanDo_{"to_" + str(to) if to else "du_an"}.kmz',
+            from .csdl import duong_goi_y
+            file, _ = QFileDialog.getSaveFileName(self, 'Xuất bản đồ thửa đất', duong_goi_y(self.con, f'BanDo_{"to_" + str(to) if to else "du_an"}.kmz'),
                                                   'Google Earth nén (*.kmz);;Google Earth (*.kml)')
             if not file:
                 return None

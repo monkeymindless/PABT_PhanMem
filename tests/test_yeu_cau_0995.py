@@ -112,7 +112,7 @@ class TestToanCuc(Co0995):
 class TestLapPhuongAn(Co0995):
     def test_hang_tren_mot_hang_va_dieu_huong_chung_tong(self):
         from PySide6.QtWidgets import QPushButton
-        from pabt import man_hinh
+        from pabt import hang_nhap_nhanh, man_hinh
         ud, w = self._cua_so()
         ma = w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 1').fetchone()[0]
         c = w.mo_lap_pa(ma, cho=True)
@@ -143,7 +143,9 @@ class TestLapPhuongAn(Co0995):
         # 20/10/2026 (ảnh mẫu): "CỘNG MỤC k" ở dải chân bảng (mọi mục), không còn trên hàng chọn thửa
         self.assertIs(b1.lb_tong.parentWidget(), b1.dai_cong)
         for ten in ('▲ Lên', '▼ Xuống'):                                 # Xóa dòng: thùng rác cột cuối (18/10/2026)
-            self.assertEqual(c.bang[2].nut[ten].height() or c.bang[2].nut[ten].minimumHeight(), man_hinh.CAO_NUT_DONG)
+            self.assertEqual(c.bang[1].nut[ten].height() or c.bang[1].nut[ten].minimumHeight(), man_hinh.CAO_NUT_DONG)
+            # 1.0.75: mục 2 trở đi nút lên cùng hàng nhập nhanh, cao bằng hàng
+            self.assertEqual(c.bang[2].nut[ten].height() or c.bang[2].nut[ten].minimumHeight(), hang_nhap_nhanh.CAO_HANG)
 
     def test_cot_bang_muc_gon_va_gian(self):
         from PySide6.QtWidgets import QHeaderView

@@ -77,6 +77,31 @@ class TestKhongCuaSoLa(_Co):
             app.processEvents()
         self.assertEqual(bat.ds, [])
 
+    def test_chon_danh_muc_moi_muc_khong_hien_cua_so_la(self):
+        """Rà soát 06/11/2026: hàng nhập nhanh của mọi mục (nhà, cây, vật nuôi, hỗ trợ) đều đổi nhãn theo dòng chọn."""
+        from pabt import man_hinh as mh
+        bat = _BatCuaSo()
+        bat.gan()
+        self.addCleanup(bat.go)
+        w = mh.CuaSoLapPA(self.con, 1)
+        self.addCleanup(lambda: (w.bo_thay_doi(), w.close()))
+        w.show()
+        app = _qt()
+        da_thu = 0
+        for muc, ds in w.bo.dm.muc.items():
+            try:
+                bang = w.bang[muc]
+            except KeyError:                            # danh mục không có bảng riêng (chỉ để tra)
+                continue
+            if not hasattr(bang, '_da_chon'):
+                continue
+            for m in list(ds)[:8]:
+                bang._da_chon(m)
+                app.processEvents()
+                da_thu += 1
+        self.assertGreater(da_thu, 0)
+        self.assertEqual(bat.ds, [])
+
     def test_khung_xem_truoc_nut_in_chi_hien_sau_khi_co_cha(self):
         from pabt import xem_truoc_tai_lieu as xt
         bat = _BatCuaSo()

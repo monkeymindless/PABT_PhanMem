@@ -694,6 +694,9 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
     tác cả lô.
     trung: 'bo_qua' (hộ đã có trong dự án - cùng CCCD / họ tên - thì bỏ qua), 'thay' (thay hồ sơ, thửa, phương án của hộ đó;
     giữ mã hộ, đợt trình, quyết định), 'them' (vẫn thêm thành hộ mới). du_an: điền các ô thông tin dự án còn trống."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')                 # vai trò tài khoản máy chủ (phan_quyen)
+    kiem_quyen(con, 'sua_khoi_luong')
     if trung not in ('bo_qua', 'thay', 'them'):
         raise ValueError(trung)
     bc = BaoCaoNhap()

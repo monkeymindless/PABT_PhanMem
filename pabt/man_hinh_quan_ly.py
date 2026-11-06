@@ -672,7 +672,11 @@ class HopDotTrinh(_Hop):
         d = quan_ly.lay_dot(self.con, dot)
         if not self.hoi(f'Xóa {d.ten}? {d.so_ho} hộ của đợt trở về "chưa xếp đợt" (hồ sơ, thư mục đã xuất giữ nguyên).'):
             return None
-        quan_ly.xoa_dot(self.con, dot)
+        try:
+            quan_ly.xoa_dot(self.con, dot)
+        except LoiNhap as e:
+            self.bao(str(e))
+            return None
         self.thay_doi = True
         self.ve_dot()
         return dot
@@ -1156,7 +1160,11 @@ class HopKiemLoi(_Hop):
     def sua_tu_dong(self):
         if not self.hoi('Sửa tự động các lỗi trình bày (khoảng trắng, viết hoa họ tên, chữ tổ hợp, số CCCD) cho toàn dự án?'):
             return 0
-        n = kiem_loi.sua_tu_dong(self.con)
+        try:
+            n = kiem_loi.sua_tu_dong(self.con)
+        except LoiNhap as e:
+            self.bao(str(e))
+            return 0
         self.da_sua = self.da_sua or n > 0
         self.kiem_tra()
         self.bao(f'Đã sửa {n} ô.', loi=False)
@@ -1164,7 +1172,8 @@ class HopKiemLoi(_Hop):
 
     def xuat(self, file=None):
         if file is None:
-            file, _ = QFileDialog.getSaveFileName(self, 'Lưu kết quả kiểm tra', 'KiemTraLoi.xlsx', 'File Excel (*.xlsx)')
+            from .csdl import duong_goi_y
+            file, _ = QFileDialog.getSaveFileName(self, 'Lưu kết quả kiểm tra', duong_goi_y(self.con, 'KiemTraLoi.xlsx'), 'File Excel (*.xlsx)')
             if not file:
                 return None
         try:

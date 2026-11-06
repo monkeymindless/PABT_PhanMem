@@ -731,12 +731,15 @@ def _cot(con, so_do: str, bang: str) -> list:
 
 
 _RE_TRIGGER_HOP_LE = re.compile(r'^(audit_logs_khong_(sua|xoa)|audit_bam_khong_(sua|xoa)|khoa_\w+_(INSERT|UPDATE|DELETE))$')
+_RE_THAN_TRIGGER_HOP_LE = re.compile(r"\bBEGIN\s+SELECT\s+RAISE\s*\(\s*ABORT\s*,\s*'[^']*'\s*\)\s*;\s*END\s*$", re.I)
 
 
 def go_trigger_la(con) -> list:
     """1.0.58: phần mềm chỉ tạo các trigger bền trên; file nhận từ ngoài có trigger khác có thể âm thầm đổi tiền mỗi lần lưu: gỡ + ghi nhật ký.
     Mở chỉ xem: không ghi được, bỏ qua (không có lần ghi nào để trigger chạy). Trả tên đã gỡ."""
-    la = [r[0] for r in con.execute("SELECT name FROM main.sqlite_master WHERE type = 'trigger'") if not _RE_TRIGGER_HOP_LE.match(r[0])]
+    # tên đúng chưa đủ: file ngoài có thể đặt tên giống trigger của phần mềm nhưng thân làm việc khác -> kiểm cả thân
+    la = [r[0] for r in con.execute("SELECT name, sql FROM main.sqlite_master WHERE type = 'trigger'")
+          if not (_RE_TRIGGER_HOP_LE.match(r[0]) and _RE_THAN_TRIGGER_HOP_LE.search(r[1] or ''))]
     if la:
         try:
             with giao_dich(con):
@@ -1006,6 +1009,19 @@ def qua_cu_de_ghi(con, phien_ban: str) -> str:
     """Phiên bản tối thiểu file yêu cầu nếu phien_ban THẤP hơn (phải mở chỉ xem); '' nếu được ghi."""
     yc = phan_mem_ghi_toi_thieu(con)
     return yc if yc and so_phien_ban(yc) > so_phien_ban(phien_ban) else ''
+
+
+def duong_goi_y(con, ten_file: str = '') -> str:
+    """Nơi lưu gợi ý cho hộp "Lưu thành": thư mục chứa file dự án + ten_file (người dùng 05/11/2026). Dự án trong bộ nhớ,
+    bản sao lưu đang mở (file giải nén tạm): chỉ trả ten_file, để Windows tự chọn thư mục."""
+    try:
+        dd = con.execute('PRAGMA database_list').fetchone()
+    except sqlite3.Error:
+        dd = None
+    if not dd or not dd[2] or getattr(con, '_file_tam', None):
+        return ten_file
+    goc = Path(dd[2]).parent
+    return str(goc / ten_file) if ten_file else str(goc)
 
 
 def dat_ghi_toi_thieu(con) -> bool:

@@ -1,4 +1,4 @@
-"""Quét bố cục nút: mở mọi lệnh, hộp thoại, thẻ ở nhiều cỡ cửa sổ, báo nút đè nút / đè thanh thẻ, thanh thẻ thiếu chỗ, nút cắt chữ, nút thấp, nút sát nhau. Dữ liệu GIẢ LẬP.
+r"""Quét bố cục nút: mở mọi lệnh, hộp thoại, thẻ ở nhiều cỡ cửa sổ, báo nút đè nút / đè thanh thẻ, thanh thẻ thiếu chỗ, nút cắt chữ, nút thấp, nút sát nhau. Dữ liệu GIẢ LẬP.
 
   .venv\Scripts\python kiem_tra_bo_cuc.py <file_ra.tsv> [rong,cao ...]   (mặc định 1093,614 1536,864; 1093 = màn 1366 phóng 125%)
 

@@ -86,6 +86,16 @@ class TestCsdl(unittest.TestCase):
         self.assertEqual(csdl.go_trigger_la(self.con), [])              # trigger của phần mềm giữ nguyên
         self.assertTrue(self.con.execute("SELECT 1 FROM sqlite_master WHERE name = 'audit_logs_khong_xoa'").fetchone())
 
+    def test_go_trigger_gia_ten_phan_mem(self):
+        """Tên giống trigger của phần mềm nhưng thân đổi tiền: vẫn gỡ; trigger khóa thật (có WHEN) giữ nguyên."""
+        with self.con:
+            self.con.execute("CREATE TRIGGER khoa_ct_khoan_INSERT AFTER INSERT ON ct_khoan "
+                             "BEGIN UPDATE ct_khoan SET don_gia = 1; END")
+        self.assertEqual(csdl.go_trigger_la(self.con), ['khoa_ct_khoan_INSERT'])
+        co_khoa = self.con.execute("SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'khoa\\_%' ESCAPE '\\'").fetchone()[0]
+        self.assertGreater(co_khoa, 0)
+        self.assertEqual(csdl.go_trigger_la(self.con), [])
+
     def test_cad_thua_nhieu_dong_khong_ghi_nham(self):
         with self.con:
             self.con.execute("INSERT INTO ho (ma_ho, thu_tu, ho_ten) VALUES (2, 2, 'B')")

@@ -161,6 +161,10 @@ class KhoaFile:
 
 
 def mo_ta(k: dict) -> str:
-    gio = lambda t: datetime.fromtimestamp(float(t)).strftime('%H:%M %d/%m/%Y')
+    def gio(t) -> str:
+        try:
+            return datetime.fromtimestamp(float(t)).strftime('%H:%M %d/%m/%Y')
+        except (TypeError, ValueError, OverflowError, OSError):     # file .khoa hỏng / bị sửa: vẫn hiện được hộp hỏi mở chỉ xem
+            return '?'
     return (f'máy "{k.get("may", "?")}", người dùng "{k.get("nguoi", "?")}", mở lúc {gio(k.get("mo_luc", 0))} '
             f'(còn hoạt động lúc {gio(k.get("cap_nhat", 0))})')

@@ -282,6 +282,27 @@ class TestGiaoDien(unittest.TestCase):
         self.assertEqual(man.bo.phien_ban, v2)                                     # ở lại V2
         self.assertFalse(man.bo.khoa)
 
+    def test_lan_da_mo_khoa_khoa_lai_duoc(self):
+        """Rà soát 06/11/2026: V0 / lần đã duyệt mở khóa xong phải có nút khóa lại, không chỉ có chiều mở."""
+        w = self._cua_so()
+        man, m = self._lap_pa(w)
+        from pabt import lan_pa
+        lan_pa._dam_bao_dong(w.con, m, 1)
+        with w.con:
+            w.con.execute('UPDATE pa_lan SET khoa = 1 WHERE ma_ho = ? AND lan = 1', (m,))
+        man.bo.mo(m, 1)
+        man.nap_ho()
+        self.assertTrue(man.b_khoa_lan.isHidden())                                 # đang khóa: chỉ có Mở khóa
+        self.assertTrue(man.mo_khoa_lan(True, 'Điều chỉnh'))
+        self.assertFalse(man.bo.khoa)
+        self.assertFalse(man.b_khoa_lan.isHidden())
+        self.assertTrue(man.b_mo_khoa.isHidden())
+        self.assertTrue(man.khoa_lai_lan())
+        self.assertTrue(man.bo.khoa)
+        self.assertTrue(man.b_khoa_lan.isHidden())
+        self.assertFalse(man.b_mo_khoa.isHidden())
+        self.assertTrue(w.con.execute("SELECT 1 FROM nhat_ky WHERE viec = 'Khóa lại lần phương án'").fetchone() is not None)
+
     def test_nhieu_nhanh_gom_nut(self):
         w = self._cua_so()
         man, m = self._lap_pa(w)

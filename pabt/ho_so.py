@@ -46,6 +46,20 @@ def _tach_ds_ngan(dong: str) -> str:
     return '\n- '.join(d.strip() for d in doan)
 
 
+_RE_DIEN_GIAI_TEN = re.compile(r'\s+là chủ sở hữu|\s+-\s+Đất do ', re.I)
+
+
+def tach_ho_ten(chuoi) -> tuple:
+    """(tên riêng, phần diễn giải pháp lý) khi ô họ tên bị ghi cả câu: "Nguyễn Văn A là chủ sở hữu tài sản… - Đất do UBND xã… quản lý." (06/11/2026, người dùng).
+    Không có cụm nhận biết, hoặc trước cụm đó không có tên: giữ nguyên, phần diễn giải rỗng (không đoán)."""
+    s = ' '.join(str(chuoi or '').split())
+    m = _RE_DIEN_GIAI_TEN.search(s)
+    if m is None or m.start() == 0:
+        return s, ''
+    dg = s[m.start():].strip(' -')
+    return s[:m.start()].rstrip(' ,;:-'), dg[:1].upper() + dg[1:]
+
+
 def chuan_nguon_goc(v) -> str:
     """Giữ xuống dòng. Gạch đầu dòng viết liền trong câu tách thành dòng riêng bắt đầu bằng '- ' khi: " - " đứng sau dấu kết câu
     / dấu hai chấm, hoặc cả dòng là danh sách ngắn ("đất ở - đất lúa - đất vườn", 0.9.46). 0.9.88 (người dùng 15/10/2026): KHÔNG

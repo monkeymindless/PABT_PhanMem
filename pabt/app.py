@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
 from .tien import D, so_luong_vn, so_vn, vn, vn_gon
 from .giao_dien import TOKEN, chuyen_trang_muot, chu_hien, con_tro_cho, dat_kieu_theo_tong, dung_ve, phong_so
+from .giao_dien import mau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
 from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .thong_bao import TEN_UD, chu_loi
 
@@ -1643,13 +1644,18 @@ class CuaSoChinh(QMainWindow):
         """(số thửa + DT, trường trạng thái trên bảng ho, TongHopHo, tên đợt) để dựng dòng danh sách; ds_ma_ho: chỉ các hộ này."""
         from . import theo_doi
         from .quan_ly import TRUONG_TT, ds_dot
-        loc, ts = '', ()
+        loc, ts, chon = '', (), None
         if ds_ma_ho is not None:
-            loc, ts = f' WHERE ma_ho IN ({",".join("?" * len(ds_ma_ho))})', tuple(ds_ma_ho)
+            if len(ds_ma_ho) <= theo_doi.LOC_SQL_TOI_DA:
+                loc, ts = f' WHERE ma_ho IN ({",".join("?" * len(ds_ma_ho))})', tuple(ds_ma_ho)
+            else:                                       # danh sách dài: SQLite của bản Win7 chỉ nhận 999 tham số -> đọc hết rồi lọc
+                chon = set(ds_ma_ho)
         # tờ/thửa "12/45" của mọi thửa: ô tìm danh sách hộ tìm được theo tờ / thửa (17/10/2026)
         # diện tích cộng bằng Decimal (dải cộng dưới danh sách - trước đây SUM(CAST AS REAL) của SQLite: số thực)
         so_thua = {}
         for ma, dt, to, thua in self.con.execute(f'SELECT ma_ho, dt_thu_hoi, so_to, so_thua FROM thua{loc}', ts):
+            if chon is not None and ma not in chon:
+                continue
             n, tong_dt, chu = so_thua.get(ma, (0, D(0), ''))
             try:
                 dt = D(dt or 0)
@@ -1657,7 +1663,8 @@ class CuaSoChinh(QMainWindow):
                 dt = D(0)
             so_thua[ma] = (n + 1, tong_dt + dt, f'{chu} {to}/{thua}')
         tt = {r['ma_ho']: dict(r) for r in self.con.execute(
-            f'SELECT ma_ho, trang_thai, dot_id, dia_chi, so_cccd, {", ".join(TRUONG_TT)} FROM ho{loc}', ts)}
+            f'SELECT ma_ho, trang_thai, dot_id, dia_chi, so_cccd, {", ".join(TRUONG_TT)} FROM ho{loc}', ts)
+            if chon is None or r['ma_ho'] in chon}
         th = {x.ma_ho: x for x in theo_doi.tong_hop(self.con, ds_ma_ho, tinh_pa=False)}
         ten_dot = {d.id: d.ten for d in ds_dot(self.con)}
         r = self.con.execute('SELECT ten_dia_ban FROM du_an WHERE id = 1').fetchone()
@@ -1841,8 +1848,8 @@ class CuaSoChinh(QMainWindow):
         ds = self.mo_hinh.dong
         hien = [ds[self.loc.mapToSource(self.loc.index(r, 0)).row()] for r in range(n)]
         tong_muc = cong_dai_cong(hien)
-        self.lb_loc.setText(f'Lọc: <b style="color:#1E3A5F">{n}</b>/{len(ds)} hộ · '
-                            f'<b style="color:#1E3A5F">{tong_muc["so_thua"]}</b> thửa ↗' if ds else '')
+        self.lb_loc.setText(f'Lọc: <b style="color:{mau_theo_tong("#1E3A5F", "chu")}">{n}</b>/{len(ds)} hộ · '
+                            f'<b style="color:{mau_theo_tong("#1E3A5F", "chu")}">{tong_muc["so_thua"]}</b> thửa ↗' if ds else '')
         self.lb_loc.setVisible(bool(ds))
         self._ve_dai_cong(n, tong_muc, co_du_lieu=bool(ds))
         self._cap_nhat_loc_the()

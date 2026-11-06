@@ -154,7 +154,7 @@ class TestBangTongHop(_Co):
         self.assertIn('15%', k.hang_kpi.the['pb_1'].lb_ten.text())
         self.assertNotIn('thẩm định', k.hang_kpi.the['pb_1'].lb_ten.text().lower())   # nhãn theo hồ sơ địa phương (UBND cấp xã)
         self.assertIn('Lần tính toán gần nhất', k.lb_chan.text())
-        self.assertIs(k.tab.widget(0), k.the_1)                                 # thẻ 1 = cơ cấu | an toàn nguồn vốn
+        self.assertIs(k.tab.widget(0), k.co_cau)                                 # thẻ 1 = cơ cấu | an toàn nguồn vốn
         self.assertEqual(k.co_cau.COT[0], 'STT')
         self.assertEqual(k.co_cau.COT[-1], 'Căn cứ pháp lý áp dụng')
         self.assertIn('Chưa', k.an_toan.the_trang_thai.text())                  # chưa chọn khái toán

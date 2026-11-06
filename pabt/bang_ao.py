@@ -170,6 +170,7 @@ class BangAo(QTableView):
     """Bảng chỉ đọc chọn theo dòng, chạy trên mô hình ảo. dat_du_lieu(dòng, dữ liệu dòng, kiểu ô, gộp ô) thay cho setRowCount +
     setItem từng ô."""
     cellDoubleClicked = Signal(int, int)
+    cellClicked = Signal(int, int)
 
     def __init__(self, cot: list, can_phai=(), parent=None, sap_xep: bool = False, tu_cao: bool = True):
         super().__init__(parent)
@@ -191,6 +192,7 @@ class BangAo(QTableView):
             dau.setSortIndicator(0, Qt.SortOrder.AscendingOrder)    # mặc định Qt: cột 0 GIẢM dần (STT ngược)
             self.setSortingEnabled(True)
         self.doubleClicked.connect(lambda i: self.cellDoubleClicked.emit(i.row(), i.column()))
+        self.clicked.connect(lambda i: self.cellClicked.emit(i.row(), i.column()))
         cho_phep_sao_chep_bang(self)                    # cuộn mượt, Ctrl+C, chọn vùng ô, bộ đếm (giao_dien)
 
     def dat_du_lieu(self, dong: list, du_lieu: list | None = None, kieu: dict | None = None, gop=(),

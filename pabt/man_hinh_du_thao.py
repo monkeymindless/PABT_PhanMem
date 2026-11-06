@@ -1021,11 +1021,12 @@ class KhungDuThao(QWidget):
         if not ds:
             self._bao('Đợt này chưa có hộ.')
             return None
-        from .man_hinh_phien_ban import HopDoiChieu
+        from .man_hinh_phien_ban import HopDoiChieu, xoa_hop_da_dong
         d = HopDoiChieu(self, self.con, ds, ds[0], self.chi_doc, dot)
         if not cho:
             return d
         d.exec()
+        xoa_hop_da_dong(d)                            # bấm từ khung niêm yết không qua _chay_lenh: không tự xóa thì mỗi lần mở để lại một hộp ẩn giữ cả dữ liệu
         if d.da_doi:
             self.nap()
             cha = self.window()
@@ -1269,7 +1270,8 @@ class KhungDuThao(QWidget):
 
     def _luu_file(self, tieu_de, ham):
         dot = self._dot_id()
-        p, _ = QFileDialog.getSaveFileName(self, tieu_de, '', 'Excel (*.xlsx)')
+        from .csdl import duong_goi_y
+        p, _ = QFileDialog.getSaveFileName(self, tieu_de, duong_goi_y(self.con, tieu_de + '.xlsx'), 'Excel (*.xlsx)')
         if not p:
             return
         try:

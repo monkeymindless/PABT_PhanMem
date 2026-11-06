@@ -153,6 +153,19 @@ def ap_kieu_nut(w, kieu: KieuNut) -> None:
                 a.changed.connect(lambda: QTimer.singleShot(0, gan_lai))
 
 
+# cửa sổ lập phương án (06/11/2026, gói V3.3 - màu theo người dùng)
+QSS_NUT_THEM_HANG = 'QPushButton { background: #1E3A8A; color: #FFFFFF; border: 1px solid #1E3A8A; border-radius: 5px; padding: 2px 10px; font-weight: 700; } QPushButton:hover { background: #1E40AF; } QPushButton:disabled { background: #CBD5E1; border-color: #CBD5E1; }'
+QSS_VACH_HANG_NHAP = 'QFrame { background: #CBD5E1; border: 0; }'
+QSS_NUT_LUU_DOI = 'QPushButton { background: #16A34A; color: #FFFFFF; border: 1px solid #16A34A; border-radius: 5px; padding: 2px 10px; font-weight: 700; } QPushButton:hover { background: #15803D; }'
+QSS_NUT_DA_LUU = 'QPushButton, QPushButton:disabled { background: #F1F5F9; color: #64748B; border: 1px solid #E2E8F0; border-radius: 5px; padding: 2px 10px; }'
+QSS_NUT_PHIEN_BAN = 'QPushButton { background: #EFF6FF; color: #1D4ED8; border: 1px solid #93C5FD; border-radius: 5px; padding: 2px 8px; font-weight: 700; } QPushButton:hover { background: #DBEAFE; } QPushButton:disabled { color: #94A3B8; border-color: #E2E8F0; background: #F8FAFC; font-weight: 400; }'
+QSS_NUT_IN_THANH = 'QPushButton { background: #F8FAFC; color: #0F172A; border: 1px solid #CBD5E1; border-radius: 5px; padding: 2px 8px; font-weight: 700; } QPushButton:hover { background: #F1F5F9; }'
+QSS_NUT_DONG_THANH = 'QPushButton { background: #FFF1F2; color: #BE123C; border: 1px solid #FECDD3; border-radius: 5px; padding: 2px 10px; } QPushButton:hover { background: #E11D48; color: #FFFFFF; border-color: #E11D48; }'
+# cột Nguồn giá: (nền, chữ)
+MAU_NGUON_GIA = {'dm': ('#DCFCE7', '#166534'), 'td': ('#FEF9C3', '#854D0E'), 'tay': ('#FFEDD5', '#9A3412')}
+MAU_CHU_VUNG_CHON = '#1D4ED8'
+MAU_DONG_TONG_BANG = '#EFF6FF'     # dòng tổng cố định dưới bảng (Bảng kinh phí chi tiết)
+MAU_CHU_PHU_BANG = '#64748B'       # dòng chữ phụ trong ô
 # nút chuyển bảng con (thẻ Niêm yết, 06/11/2026 - màu theo người dùng); canh_bao="1": bảng hộ vướng có hộ
 QSS_NUT_BANG_CON = ('QPushButton#nut_bang_con { background: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; border-radius: 13px; '
                     'padding: 2px 10px; font-size: 12px; font-weight: 600; }'
@@ -4960,9 +4973,11 @@ class _BoChonVung(QObject):
         except RuntimeError:
             return
         tk = thong_ke_vung_chon(b)
-        cha = b.parentWidget()                        # cha gần nhất có dải đếm: cửa sổ lập phương án nhúng trong cửa sổ chính dùng dải của nó
+        # cha gần nhất có dải đếm: cửa sổ lập phương án nhúng trong cửa sổ chính dùng dải của nó. Dừng ở biên cửa sổ: bảng trong hộp thoại con
+        # (_BangDong của HopTinhGiaDat) không gọi hàm của cửa sổ đã mở hộp, không có hàm thì dùng nhãn riêng dưới bảng
+        cha = None if b.isWindow() else b.parentWidget()
         while cha is not None and not callable(getattr(cha, 'cap_nhat_bo_dem', None)):
-            cha = cha.parentWidget()
+            cha = None if cha.isWindow() else cha.parentWidget()
         ham = getattr(cha if cha is not None else w, 'cap_nhat_bo_dem', None)
         if callable(ham):
             ham(b, tk)

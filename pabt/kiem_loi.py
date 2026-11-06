@@ -478,6 +478,8 @@ def sua_tu_dong(con) -> int:
     Rà soát kiến trúc 31/10/2026: KHÔNG sửa hộ không nhận việc (bản offline theo hộ) và dòng của lần phương án đang khóa (đã có quyết định
     phê duyệt / bị thay) - trước đây sửa cả, làm đổi chữ bản in của phương án đã duyệt."""
     from . import lan_pa
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')                 # vai trò tài khoản máy chủ (phan_quyen)
     from .lap_pa import ho_nhan_viec
     from .nghiep_vu import co_cot_lan
     nhan = ho_nhan_viec(con)

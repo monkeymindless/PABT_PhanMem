@@ -12,6 +12,35 @@ from .giao_dien import chu_hien, dat_kieu_theo_tong, icon_ky_hieu
 
 CAO_THE = 36
 # Segoe MDL2: hồ sơ, bản đồ, nhà, cây, vật nuôi (trái tim: phông không có hình con vật), hỗ trợ
+THE_VAT_NUOI = 4
+
+
+def _icon_ca(mau: str):
+    """Biểu tượng con cá (thẻ Vật nuôi, thủy sản): bộ Segoe MDL2 không có, vẽ tay nên chạy cả Win 7."""
+    from PySide6.QtCore import QPointF, QRectF, Qt
+    from PySide6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPixmap
+    pm = QPixmap(32, 32)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    than = QPainterPath()
+    than.addEllipse(QRectF(2, 8, 21, 16))
+    duoi = QPainterPath()
+    duoi.moveTo(QPointF(20, 16))
+    duoi.lineTo(QPointF(30, 7))
+    duoi.lineTo(QPointF(30, 25))
+    duoi.closeSubpath()
+    mat = QPainterPath()
+    mat.addEllipse(QRectF(7, 12, 4, 4))
+    p.fillPath(than.united(duoi).subtracted(mat), QColor(mau))
+    p.end()
+    return QIcon(pm)
+
+
+def _icon_the(i: int, mau: str):
+    return _icon_ca(mau) if i == THE_VAT_NUOI else icon_ky_hieu(BIEU_TUONG[i], mau, 16)
+
+
 BIEU_TUONG = (0xE8A5, 0xE826, 0xE80F, 0xE913, 0xEB51, 0xE8F1)
 MAU_THE = {'chon': ('#1d4ed8', '#1e3a8a', '#ffffff', 'bold'), 'co': ('#f0fdf4', '#16a34a', '#15803d', 'bold'), 'trong': ('#f8fafc', '#cbd5e1', '#475569', '600')}
 QSS_HUY_HIEU = 'QLabel { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; color: #b45309; font-weight: bold; padding: 2px 10px; }'
@@ -48,7 +77,7 @@ class ThanhTheMuc(QWidget):
             b.setToolTip(f'Alt+{i}')
             b.clicked.connect(lambda *_, k=i: self.bam(k))
             if i < len(BIEU_TUONG):
-                ic = icon_ky_hieu(BIEU_TUONG[i], '#1E3A5F', 16)
+                ic = _icon_the(i, '#1E3A5F')
                 if ic is not None:
                     b.setIcon(ic)
             self.h.addWidget(b)
@@ -129,6 +158,6 @@ class ThanhTheMuc(QWidget):
             self._trang[i] = trang
             dat_kieu_theo_tong(b, _qss(trang))
             if i < len(BIEU_TUONG):
-                ic = icon_ky_hieu(BIEU_TUONG[i], '#ffffff' if dang else MAU_THE[trang][2], 16)
+                ic = _icon_the(i, '#ffffff' if dang else MAU_THE[trang][2])
                 if ic is not None:
                     b.setIcon(ic)

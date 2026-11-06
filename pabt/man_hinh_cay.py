@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDialog, QDialogBut
 from . import cay_trong as ct
 from . import csdl
 from .giao_dien import loc_khi_ngung_go
+from .giao_dien import mau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
 from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 from .giao_dien import vua_dong  # noqa: E402
 from .lap_pa import LoiNhap, doc_so, doc_ty_le
@@ -133,7 +134,7 @@ class HopCayChuVi(_Hop):
         if loi:
             tb = f'Chu vi không thuộc khoảng nào của {ten}: ' + ', '.join(so_vn(x) for x in loi)
         if tb:
-            self.lb.setText(f'<span style="color:#B83A3A">{tb}</span>')
+            self.lb.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">{tb}</span>')
         else:
             tong = sum(so for _, so, _, _ in self.nhom)
             self.lb.setText(f'{tong} cây, {len(self.nhom)} quy cách. Chu vi = π × đường kính (π ≈ {ct.pi_chuoi()}).')
@@ -467,7 +468,7 @@ class HopMatDoNhieuCay(_Hop):
         try:
             dt, tl, hs = self._doc()
         except LoiNhap as e:
-            self.lb.setText(f'<span style="color:#B83A3A">{e}</span>')
+            self.lb.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">{e}</span>')
             return None
         kq = phan_bo_nhom(self.nhom, dt, hs)
         self.bang.blockSignals(True)
@@ -509,7 +510,7 @@ class HopMatDoNhieuCay(_Hop):
         if not self.nhom:
             dong = [('Không có dòng', 'Hộ chưa có dòng cây trồng tính theo cây (ĐVT cây / bụi / khóm, số nguyên) ở mục 3.')]
         self.lb.setText('<table cellspacing="0" cellpadding="3">' + ''.join(
-            f'<tr><td style="color:#1F4E79; font-weight:600; padding-right:14px">{a}</td><td>{b}</td></tr>' for a, b in dong) +
+            f'<tr><td style="color:{mau_theo_tong("#1F4E79", "chu")}; font-weight:600; padding-right:14px">{a}</td><td>{b}</td></tr>' for a, b in dong) +
             '</table>')
         return trong, ngoai
 
@@ -596,14 +597,14 @@ class HopMatDo(_Hop):
         try:
             dt, so, md, tl = self._doc()
         except LoiNhap as e:
-            self.lb.setText(f'<span style="color:#B83A3A">{e}</span>')
+            self.lb.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">{e}</span>')
             return None
         if md is None:
             self.lb.setText('Chưa có mật độ quy chuẩn: nhập mật độ (cây/ha).')
             return None
         trong, ngoai = ct.tach_mat_do(so, dt, md)
         p = ct.phan_tich_mat_do(so, dt, md)
-        do = '#B83A3A'
+        do = mau_theo_tong('#B83A3A', 'chu')
         dong = [
             ('Mật độ quy định', f'{so_vn(md)} cây/ha (= {so_vn(p["m2_moi_cay"])} m²/cây)' +
                                 (f' - <i>{self.q.can_cu}</i>' if self.q.nguon == 'gần đúng' else '')),
@@ -617,7 +618,7 @@ class HopMatDo(_Hop):
                            (f'; <b>vượt mật độ {ngoai} cây</b> ({so_vn(tl * 100)}%)' if ngoai else '')),
         ]
         self.lb.setText('<table cellspacing="0" cellpadding="3">' + ''.join(
-            f'<tr><td style="color:#1F4E79; font-weight:600; padding-right:14px">{a}</td><td>{b}</td></tr>' for a, b in dong) +
+            f'<tr><td style="color:{mau_theo_tong("#1F4E79", "chu")}; font-weight:600; padding-right:14px">{a}</td><td>{b}</td></tr>' for a, b in dong) +
             '</table>')
         return trong, ngoai
 
@@ -698,7 +699,7 @@ class HopRanh(_Hop):
             tong, trong, tl = self._doc()
             r = ct.tach_ranh(tong, trong, self.o_kc.isChecked(), tl)
         except (LoiNhap, ValueError) as e:
-            self.lb.setText(f'<span style="color:#B83A3A">{e}</span>')
+            self.lb.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">{e}</span>')
             return None
         s = f'Tính 100%: <b>{so_vn(r["trong"])}</b>'
         if r['ngoai'] > 0:

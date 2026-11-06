@@ -7,6 +7,14 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.75', '07/11/2026', (
+        'An toàn: file dự án nhận từ ngoài có trigger giả tên của phần mềm được gỡ khi mở; chặn chặt hơn file XML độc; file khóa hỏng không còn gây lỗi khi mở dự án.',
+        'Tài khoản máy chủ không đủ quyền: đợt trình, đợt niêm yết, quyết định, nhập phương án chi tiết, sửa lỗi tự động, lưu bản vẽ báo rõ không có quyền. Thông báo lỗi trên một số màn hình đổi màu theo tông nền.',
+        'Lập phương án: các nút Dán, Tính mật độ, KT diện tích, Lên, Xuống, Gọn cột lên cùng hàng nhập nhanh (cửa sổ hẹp thì xuống hàng dưới); thêm nút Tự tính hỗ trợ; bảng cao hơn.',
+        'Hồ sơ hộ: ô họ tên ghi cả câu thì tách tên riêng, phần còn lại sang Tình trạng pháp lý; thửa có DT thu hồi 0 mà mục Đất đã có diện tích thì tự điền. Chỉ ghi khi bấm Lưu.',
+        'Nút Lưu xanh khi có thay đổi, "Đã lưu" khi xong; số lượng theo cây, con, cái không còn đuôi ,0; cột Nguồn giá tô màu theo loại; một thanh chân bảng, quét chọn nhiều ô là hiện ngay tổng số lượng, đơn giá trung bình, thành tiền.',
+        'Bảng tổng hợp kinh phí: bảng Cơ cấu rộng hết màn hình (khung đối soát Pre-F/S sang thẻ Đối soát); bảng Chi tiết không còn cắt số tiền, có hàng tổng cố định thẳng cột, nút Ẩn cột trống, cột Thao tác mở phương án, họ tên hai dòng.',
+    )),
     ('1.0.74', '06/11/2026', (
         'Niêm yết công khai: hai bảng "DS hộ niêm yết trong đợt" và "Hộ chưa đủ ĐK / Vướng pháp lý" chuyển bằng nút, mỗi bảng dùng trọn chiều cao màn hình; không còn thanh ngăn kéo. Hàng nút chỉ hiện nút của bảng đang mở.',
         'Bấm thẻ "Vướng pháp lý" mở thẳng bảng hộ vướng; bấm "Đã niêm yết" hoặc "Đủ điều kiện lập PA" mở bảng hộ trong đợt. Nút hộ vướng tô cam khi có hộ cần xử lý.',

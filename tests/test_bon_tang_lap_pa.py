@@ -221,7 +221,7 @@ class TestCuaSo(CoSo):
         self.assertTrue(w.tab.tabBar().isHidden())
         self.assertTrue(w.dai_dinh_danh.isHidden())
         self.assertFalse(w.bang[1].dai_cong.isVisibleTo(w))
-        self.assertEqual(w.dai_dieu_huong.maximumHeight(), 36)
+        self.assertEqual(w.dai_dieu_huong.maximumHeight(), 34)
         self.assertGreaterEqual(w.cb_ho.minimumWidth(), 240)
         self.assertNotRegex(w.cb_ho.currentText(), r' 0$')
         for k in ('CCCD', ):

@@ -329,6 +329,7 @@ class ThanhPhienBan(QWidget):
         if not cho:
             return d
         d.exec()
+        xoa_hop_da_dong(d)                            # bấm từ thanh phiên bản không qua _chay_lenh: không tự xóa thì mỗi lần mở để lại một hộp ẩn giữ cả dữ liệu
         if d.da_doi:
             self._dau = None
             man.bo.mo_phien_ban(getattr(man.bo, 'phien_ban', None) or pb.V0)
@@ -353,6 +354,13 @@ def _o_so(chu: str, dam: bool = False) -> QTableWidgetItem:
         f.setBold(True)
         o.setFont(f)
     return o
+
+
+def xoa_hop_da_dong(d) -> None:
+    """Hộp đã đóng: chuyển khỏi cây cửa sổ chính rồi hẹn xóa (findChildren của don_hop_da_dong gặp hộp đang chờ xóa làm vỏ Python sống mãi, xem giao_dien._thung_cho_xoa)."""
+    from .giao_dien import _thung_cho_xoa
+    d.setParent(_thung_cho_xoa())
+    d.deleteLater()
 
 
 class HopDoiChieu(QDialog):
@@ -617,20 +625,21 @@ class HopDoiChieu(QDialog):
         h = self.ma_ho()
         tich = self.ma_da_tich()
         try:
+            from .csdl import duong_goi_y
             if ma == '01':
-                d = dich or QFileDialog.getExistingDirectory(self, 'Chọn thư mục lưu Mẫu 01')
+                d = dich or QFileDialog.getExistingDirectory(self, 'Chọn thư mục lưu Mẫu 01', duong_goi_y(self.con))
                 if not d:
                     return None
                 kq = ipb.mau_01(self.con, tich or [h], d)
             elif ma == '03':
-                d = dich or QFileDialog.getSaveFileName(self, 'Lưu Mẫu 03', 'Mau03_DoiChieu.xlsx', 'Excel (*.xlsx)')[0]
+                d = dich or QFileDialog.getSaveFileName(self, 'Lưu Mẫu 03', duong_goi_y(self.con, 'Mau03_DoiChieu.xlsx'), 'Excel (*.xlsx)')[0]
                 if not d:
                     return None
                 kq = ipb.mau_03(self.con, tich or self.ds, d)
             else:
                 v2 = self.cb_v2.currentData() or ''
                 goi_y = f'Mau02_{v2}_Ho{h}.docx' if ma == '02' else f'Mau04_V3_Ho{h}.docx'
-                d = dich or QFileDialog.getSaveFileName(self, f'Lưu Mẫu {ma}', goi_y, 'Word (*.docx)')[0]
+                d = dich or QFileDialog.getSaveFileName(self, f'Lưu Mẫu {ma}', duong_goi_y(self.con, goi_y), 'Word (*.docx)')[0]
                 if not d:
                     return None
                 kq = ipb.mau_02(self.con, h, v2, d) if ma == '02' else ipb.mau_04(self.con, h, d)

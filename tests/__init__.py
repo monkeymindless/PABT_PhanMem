@@ -45,6 +45,7 @@ else:
     import unittest
 
     from PySide6.QtCore import QCoreApplication, QEvent
+    from PySide6.QtWidgets import QMessageBox
 
     _chay_goc = unittest.TestCase.run
 
@@ -58,9 +59,15 @@ else:
 
     def _het_module_roi_don(self, result):
         _het_module_goc(self, result)
-        for w in QApplication.topLevelWidgets():
-            w.close()
-            w.deleteLater()
+        # cửa sổ sót của test có thể đang có thay đổi chưa lưu (form lập phương án tự điền khi nạp): không để hộp "Lưu lại?" hiện giữa lượt (treo / sập)
+        hoi_goc = QMessageBox.question
+        QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Discard)
+        try:
+            for w in QApplication.topLevelWidgets():
+                w.close()
+                w.deleteLater()
+        finally:
+            QMessageBox.question = hoi_goc
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
         gc.collect()
 

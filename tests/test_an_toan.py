@@ -56,6 +56,15 @@ class TestFileDoc(unittest.TestCase):
         with self.assertRaises(an_toan.LoiAnToan):
             an_toan.kiem_tra_xml(b'<?xml version="1.0"?><!DOCTYPE a [<!ENTITY x "xx">]><a>&x;</a>')
         an_toan.kiem_tra_xml(b'<?xml version="1.0"?><w:document/>')
+        dem = b'<!--' + b'x' * 5000 + b'-->'            # DOCTYPE bị chú thích đẩy qua khỏi phần đầu file
+        with self.assertRaises(an_toan.LoiAnToan):
+            an_toan.kiem_tra_xml(b'<?xml version="1.0"?>' + dem + b'<!DOCTYPE a SYSTEM "file:///c:/x"><a/>')
+        with self.assertRaises(an_toan.LoiAnToan):      # XML UTF-16
+            an_toan.kiem_tra_xml('<?xml version="1.0"?><!DOCTYPE a><a/>'.encode('utf-16'))
+
+    def test_mo_ta_file_khoa_hong(self):
+        from pabt import khoa
+        self.assertIn('?', khoa.mo_ta({'may': 'M', 'nguoi': 'N', 'mo_luc': 'hỏng', 'cap_nhat': 1e30}))
 
     def test_docx_doc_bi_chan(self):
         from pabt import nhap_don_gia as ndg

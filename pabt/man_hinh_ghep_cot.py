@@ -3,6 +3,7 @@ tên, địa chỉ, tờ, thửa, diện tích... bằng tay khi phần mềm kh
 số thửa) ngay khi đổi. Cột file không có thì để "(không có)" - phần mềm bỏ qua."""
 from __future__ import annotations
 from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
+from .giao_dien import mau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
 
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton,
@@ -195,7 +196,7 @@ class HopGhepCot(QDialog):
         if kq.ho:
             self.lb_kq.setText(f'Đọc được <b>{len(kq.ho)} hộ, {len(kq.thua)} thửa</b>; {len(kq.canh_bao)} điểm cần xem lại.')
         else:
-            self.lb_kq.setText('<span style="color:#B83A3A">' + ' '.join(kq.loi[:1]) + '</span>')
+            self.lb_kq.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">' + ' '.join(kq.loi[:1]) + '</span>')
 
     def nhan_tu_dong(self) -> None:
         self._chon_nguon(None)

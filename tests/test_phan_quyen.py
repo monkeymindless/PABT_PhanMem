@@ -42,6 +42,43 @@ class _Nen(unittest.TestCase):
 
 
 class TestVaiTro(_Nen):
+    def test_duong_ghi_phu_bao_loi_quyen_ro_rang(self):
+        """Rà soát 07/11/2026: các hàm này trước chỉ bị trigger tạm chặn (IntegrityError, hộp "lỗi không mong muốn") hoặc lọt hẳn."""
+        from pabt import du_thao, kiem_loi, nhap_chi_tiet, quan_ly
+        pq.gan(self.con, pq.THANH_TRA)
+        for goi in (lambda: du_thao.tao_dot(self.con, 'Đợt 1', '01/11/2026', 'Xã'),
+                    lambda: du_thao.dat_ngay_hop(self.con, 1, '01/11/2026'),
+                    lambda: du_thao.xoa_dot(self.con, 1),
+                    lambda: quan_ly.tao_dot(self.con, 'Đợt 1'),
+                    lambda: quan_ly.sua_dot(self.con, 1, 'Đợt 1'),
+                    lambda: quan_ly.xoa_dot(self.con, 1),
+                    lambda: theo_doi.luu_qd(self.con, None, '1/QĐ'),
+                    lambda: theo_doi.xoa_qd(self.con, 1),
+                    lambda: nhap_chi_tiet.ghi(self.con, []),
+                    lambda: kiem_loi.sua_tu_dong(self.con)):
+            with self.assertRaises(pq.LoiQuyen):
+                goi()
+
+    def test_so_lieu_dong_danh_sach_dai_khong_vuot_tham_so(self):
+        """Danh sách hộ dài hơn LOC_SQL_TOI_DA: đọc hết rồi lọc, kết quả đúng như lọc bằng SQL; hộ ngoài danh sách không lọt vào."""
+        from types import SimpleNamespace
+        from pabt.app import CuaSoChinh
+        dai = [self.ma[0]] + list(range(100000, 101500))
+        so_thua, tt, _th, _dot, _xa = CuaSoChinh._so_lieu_dong(SimpleNamespace(con=self.con), dai)
+        self.assertEqual(set(tt), {self.ma[0]})
+        self.assertLessEqual(set(so_thua), {self.ma[0]})
+        ngan = CuaSoChinh._so_lieu_dong(SimpleNamespace(con=self.con), [self.ma[0]])
+        self.assertEqual(ngan[0], so_thua)
+        self.assertEqual(ngan[1], tt)
+
+    def test_duong_ghi_phu_dung_vai_tro_van_chay(self):
+        from pabt import kiem_loi, quan_ly
+        pq.gan(self.con, pq.CHUYEN_VIEN)
+        self.assertTrue(quan_ly.tao_dot(self.con, 'Đợt thử'))
+        self.assertGreaterEqual(kiem_loi.sua_tu_dong(self.con), 0)
+        pq.gan(self.con, pq.KE_TOAN)
+        self.assertTrue(theo_doi.luu_qd(self.con, None, '1/QĐ-UBND'))
+
     def test_may_don_khong_gioi_han(self):
         self.assertIsNone(pq.vai_tro_cua(self.con))
         bo = self.bo()

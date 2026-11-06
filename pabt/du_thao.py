@@ -167,6 +167,7 @@ def ghi_phap_ly(con, ma_ho: int, du_dieu_kien: int, ma_vuong: str, ghi_chu: str)
 
 
 def tao_dot(con, ten: str, ngay_bat_dau: str, dia_diem: str) -> int:
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     from . import csdl
     ten = (ten or '').strip()
     if not ten:
@@ -183,6 +184,7 @@ def tao_dot(con, ten: str, ngay_bat_dau: str, dia_diem: str) -> int:
 def dat_ngay_hop(con, dot_id: int, ngay_hop: str, so_bb_bat_dau: str | None = None,
                  so_bb_ket_thuc: str | None = None) -> str:
     """Ghi ngày họp lấy ý kiến (+ số biên bản bắt đầu / kết thúc niêm yết khi truyền - in ở báo cáo tiếp thu ý kiến)."""
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     from . import csdl
     han = han_doi_thoai(ngay_hop)
     hop = ngay_iso(doc_ngay(ngay_hop))
@@ -800,6 +802,7 @@ def xoa_dot(con, dot_id: int) -> dict:
     """Xóa một đợt niêm yết / lấy ý kiến: các hộ của đợt trở về danh sách chờ (vẫn "đủ điều kiện", chưa thuộc đợt nào - hoặc thuộc đợt
     gần nhất còn lại của hộ); ý kiến và biên bản đối thoại GHI TRONG ĐỢT NÀY bị xóa theo đợt. Phương án, thửa, hồ sơ hộ giữ nguyên 100%.
     Trả thong_tin_xoa_dot (số liệu trước khi xóa)."""
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     from . import csdl
     tt = thong_tin_xoa_dot(con, dot_id)
     with csdl.giao_dich(con):

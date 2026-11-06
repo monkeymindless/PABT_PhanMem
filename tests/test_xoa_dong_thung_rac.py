@@ -43,7 +43,7 @@ class TestThungRac(unittest.TestCase):
             self.assertNotIn('Xóa dòng', b.nut)                                   # bỏ nút
             self.assertEqual(b.bang.columnCount(), len(b.cot) + 1)
             self.assertEqual(b.c_xoa, len(b.cot))
-            self.assertEqual(b.bang.horizontalHeaderItem(b.c_xoa).text(), '')
+            self.assertEqual(b.bang.horizontalHeaderItem(b.c_xoa).text(), 'Xóa')    # 1.0.75: cột thùng rác có tiêu đề
             self.assertEqual(b.bang.columnWidth(b.c_xoa), self.mh.RONG_COT_XOA)
             self.assertIsInstance(b.bang.itemDelegateForColumn(b.c_xoa), self.mh.NutXoaDong)
             for r in range(b.bang.rowCount()):

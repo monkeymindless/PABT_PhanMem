@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QHBoxLayout, 
                                QVBoxLayout)
 
 from . import cap_nhat
+from .giao_dien import mau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
 
 TIEU_DE = 'Cập nhật phần mềm LARC'
 
@@ -53,11 +54,11 @@ class HopCapNhat(QDialog):
             if tt['mo_ta']:
                 dong.append('Nội dung: ' + tt['mo_ta'])
             if tt['da_cai'] != tt['dang_chay'] and not tt['loi']:
-                dong.append('<span style="color:#9A5A12">Mở lại phần mềm để dùng bản cập nhật này.</span>')
+                dong.append(f'<span style="color:{mau_theo_tong("#9A5A12", "chu")}">Mở lại phần mềm để dùng bản cập nhật này.</span>')
         else:
             dong.append('Chưa cài bản cập nhật nào.')
         if tt['loi']:
-            dong.append('<span style="color:#B83A3A">Bản cập nhật bị tắt do lỗi: ' + tt['loi'].splitlines()[0] + '</span>')
+            dong.append(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">Bản cập nhật bị tắt do lỗi: ' + tt['loi'].splitlines()[0] + '</span>')
         self.lb.setText('<br>'.join(dong))
         self.b_go.setEnabled(bool(tt['da_cai']))
 

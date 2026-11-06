@@ -400,6 +400,8 @@ def chi_muc_thua(con) -> dict:
 def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool = False) -> dict:
     """Ghi thửa bản vẽ vào dự án (thay thửa cùng số tờ / số thửa). cap_nhat_dt: tập (tờ, thửa) cập nhật DT thu hồi của hồ sơ theo DT
     trong ranh (không có ranh: DT bản vẽ / DT hình). Trả {'luu', 'khop', 'cap_nhat'}."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')                 # vai trò tài khoản máy chủ (phan_quyen)
     if not dam_bao_bang(con) or not dam_bao_cot_chi_tiet(con):
         raise LoiCad('File dự án đang mở chỉ xem / bị khóa: không ghi được bản đồ.')
     cm = chi_muc_thua(con)

@@ -131,6 +131,7 @@ def _khoa_so(so: str) -> str:
 
 def luu_qd(con, qd_id, so: str, ngay: str = '', trich_yeu: str = '', tong_tien='', file: str = '', ghi_chu: str = '') -> int:
     """Thêm (qd_id None) hoặc sửa quyết định. Trả id."""
+    kiem_quyen(con, 'qd_chi_tra')                 # vai trò tài khoản máy chủ (phan_quyen)
     so = ' '.join(str(so or '').split())
     if not so:
         raise LoiNhap('Nhập số quyết định (ví dụ 1234/QĐ-UBND).')
@@ -155,6 +156,7 @@ def luu_qd(con, qd_id, so: str, ngay: str = '', trich_yeu: str = '', tong_tien='
 
 def xoa_qd(con, qd_id: int) -> int:
     """Xóa quyết định và các dòng hộ của nó (hồ sơ hộ, phương án giữ nguyên). Trả số hộ bị bỏ ra."""
+    kiem_quyen(con, 'qd_chi_tra')                 # vai trò tài khoản máy chủ (phan_quyen)
     ds = ho_cua_qd(con, qd_id)
     with csdl.giao_dich(con):
         so = con.execute('SELECT so FROM quyet_dinh WHERE id = ?', (qd_id,)).fetchone()

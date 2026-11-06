@@ -443,7 +443,6 @@ O_HO_SO_DINH_KEM = (2, 2)
 BI_DANH_O = {'ho_ten': ('lb_ten', 'o_ten'), 'so_cccd': ('lb_cccd', 'o_cccd'), 'ngay_cap': ('lb_ngay_cap', 'o_ngay_cap'),
              'dia_chi': ('lb_dia_chi', 'o_dia_chi'), 'dien_thoai': ('lb_sdt', 'o_sdt'), 'ghi_chu': ('lb_ghi_chu', 'o_ghi_chu'),
              'phap_ly': ('lb_tinh_trang', 'o_phap_ly')}
-GOI_Y_SAO_CHEP = 'Ctrl+C: sao chép ô'
 # mẫu câu nguồn gốc đất (HopNguonGoc - chèn tại con trỏ; '…' là chỗ điền). Không ghi số liệu thật.
 MAU_CAU_NGUON_GOC = (
     ('Mở đầu thửa', 'Thửa đất số …, tờ bản đồ số …, xã …: '),
@@ -533,9 +532,8 @@ class KhungHoSo(QWidget):
         h.addStretch(1)
         self.the_loai_doi_tuong = _the_nho('', 'vang')
         self.the_cccd = _the_nho('', 'xanh')
-        self.the_sao_chep = _the_nho(GOI_Y_SAO_CHEP, 'lam')
-        self.the_sao_chep.setToolTip('Bảng thửa: nhấp một lần chọn ô, Ctrl+C chép giá trị ô, Ctrl+Shift+C chép cả dòng thửa.')
-        for t in (self.the_loai_doi_tuong, self.the_cccd, self.the_sao_chep):
+        # 06/11/2026: bỏ huy hiệu "Ctrl+C: sao chép ô" (trông như nút, đã có ở dải đáy)
+        for t in (self.the_loai_doi_tuong, self.the_cccd):
             h.addWidget(t)
         lo.addLayout(h)
         luoi = QGridLayout()
@@ -620,7 +618,11 @@ class KhungHoSo(QWidget):
         self.lb_tieu_de_thua.setProperty('vai', 'tieu_de')
         h.addWidget(self.lb_tieu_de_thua)
         h.addWidget(self.lb, 1)
-        self.the_goi_y_bang = _the_nho('Bấm đúp Nguồn gốc: xem / sửa đủ', 'lam')
+        self.the_goi_y_bang = QLabel('Bấm đúp Nguồn gốc: xem / sửa đủ')   # chữ gợi ý, không phải nút
+        self.the_goi_y_bang.setProperty('vai', 'phu')
+        f_gy = self.the_goi_y_bang.font()
+        f_gy.setItalic(True)
+        self.the_goi_y_bang.setFont(f_gy)
         h.addWidget(self.the_goi_y_bang)
         h.addWidget(b_them)
         h.addWidget(self.b_thao_tac)
@@ -723,6 +725,64 @@ class KhungHoSo(QWidget):
         self.ban_dau = self.thu_thap()
         if getattr(self, '_ht_bang', None) is not None:
             self._ht_bang.ghi_nho()
+        self._tu_dien_khi_nap()
+
+    def _tu_dien_khi_nap(self) -> None:
+        """Sau khi nạp hộ (06/11/2026, người dùng): ô họ tên ghi cả câu thì tách tên riêng, phần diễn giải sang Tình trạng pháp lý; thửa có DT thu hồi 0 mà mục 1 đã có diện tích thì
+        điền. Chỉ đổi trên form: người dùng thấy, bấm Lưu mới ghi (đúng đường lưu thường: quyền, nhật ký, hoàn tác). Dự án chỉ xem: chỉ hiện, không tính là thay đổi."""
+        if self.ma_ho is None:
+            return
+        doi = []
+        w_ten, w_pl = self.o.get('ho_ten'), self.o.get('phap_ly')
+        if w_ten is not None and w_pl is not None:
+            ten, dg = ho_so.tach_ho_ten(w_ten.text())
+            if dg:
+                w_ten.setText(ten)
+                w_ten.setCursorPosition(0)
+                cu = w_pl.text().strip()
+                if dg not in cu:
+                    w_pl.setText(f'{cu}; {dg}' if cu else dg)
+                    w_pl.setCursorPosition(0)
+                doi.append('tách họ tên')
+        n = self._dien_dt_tu_muc_1()
+        if n:
+            doi.append(f'điền DT thu hồi {n} thửa từ mục 1')
+        if not doi:
+            return
+        self.cap_nhat_tom_tat_thua()
+        self.cap_nhat_nhan_to_chuc()
+        if getattr(self, 'chi_doc', False):
+            self.ban_dau = self.thu_thap()
+        else:
+            self.lb.setText('Đã tự ' + ', '.join(doi) + ': xem lại rồi bấm Lưu. ' + self.lb.text())
+
+    def _dien_dt_tu_muc_1(self) -> int:
+        """Dòng thửa DT thu hồi trống / 0 mà mục 1 có diện tích của đúng thửa đó: điền. Trả số thửa đã điền."""
+        from .tien import D, KHONG, doc_so_vn
+        c_dt = self.cot.index('dt_thu_hoi')
+        tong = {}
+        for r in self.con.execute('SELECT ma_thua, dien_tich FROM ct_dat WHERE ma_ho = ? AND ma_thua IS NOT NULL', (self.ma_ho,)):
+            tong[r['ma_thua']] = tong.get(r['ma_thua'], KHONG) + D(r['dien_tich'] or 0)
+        if not any(v > 0 for v in tong.values()):
+            return 0
+        n = 0
+        cu = self.bang.blockSignals(True)
+        try:
+            ma_cac_dong = [self.bang.item(r, 0).data(Qt.ItemDataRole.UserRole) if self.bang.item(r, 0) is not None else None for r in range(self.bang.rowCount())]
+            for r, ma in enumerate(ma_cac_dong):
+                it = self.bang.item(r, c_dt)
+                if it is None or ma is None or ma_cac_dong.count(ma) != 1 or tong.get(ma, KHONG) <= 0:
+                    continue
+                try:
+                    gia_tri = doc_so_vn(it.text()) if it.text().strip() else KHONG
+                except (ValueError, ArithmeticError):
+                    continue
+                if gia_tri == 0:
+                    it.setText(so_vn(tong[ma]))
+                    n += 1
+        finally:
+            self.bang.blockSignals(cu)
+        return n
 
     def _vi_tri_gia(self) -> dict:
         """{mã thửa: vị trí giá đất ở mục 1 (mọi lần lập phương án, không trùng)} - cột "Vị trí đất" chỉ xem."""
@@ -855,7 +915,7 @@ class KhungHoSo(QWidget):
 
         def m2(v):
             return '—' if v is None else f'{so_vn(v)} m²'
-        self.lb_tieu_de_thua.setText(f'II. Thửa đất thu hồi && nguồn gốc ({tt["so_thua"]} thửa)')
+        self.lb_tieu_de_thua.setText(f'II. Thửa đất thu hồi & nguồn gốc ({tt["so_thua"]} thửa)')
         self.lb_tom_tat_thua.setText(
             f'<b>Tổng hợp địa chính hộ:</b> Tổng số thửa: <b>{tt["so_thua"]}</b> thửa  ·  Số tờ bản đồ: <b>{tt["so_to"]}</b> tờ  ·  '
             f'Tổng DT nguyên thửa: <b>{m2(tt["dt_nguyen_thua"])}</b>  ·  Tổng DT thu hồi: <b>{m2(tt["dt_thu_hoi"])}</b>  ·  '
@@ -866,6 +926,7 @@ class KhungHoSo(QWidget):
                                         if loai else '')
         for t in self.the_loai:                           # thẻ cơ cấu loại đất (dựng lại - vài thẻ)
             self.khoi_the_loai.removeWidget(t)
+            t.hide()                                      # gọi hai lần trong một lượt: thẻ chờ xóa không đè lên chữ
             t.deleteLater()
         self.the_loai = []
         for ten, dt, n, ma in self.co_cau_loai():
