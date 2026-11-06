@@ -7,6 +7,9 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.73', '06/11/2026', (
+        'Bản bảo trì: sắp xếp lại mã nguồn bên trong (bảng tổng hợp, bảng điều chỉnh, nhập Excel, đọc văn bản đơn giá, các màn hình lớn) để dễ sửa lỗi và nâng cấp về sau. Chức năng, số liệu, bản in, giao diện không đổi.',
+    )),
     ('1.0.72', '06/11/2026', (
         'Niêm yết & Lấy ý kiến: nút không còn che thẻ; nút của thẻ đang mở nằm ở một hàng riêng dưới thanh thẻ.',
         'Lập phương án trên màn hình nhỏ: số tổng cộng và tổng kinh phí không còn bị cắt; thẻ mục, hàng trên tự rút gọn chữ, chữ đầy đủ ở chú thích.',
