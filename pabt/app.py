@@ -733,6 +733,48 @@ class CuaSoChinh(QMainWindow):
         self.resize(min(1360, vung.width() - 40) if vung else 1360, min(760, vung.height() - 40) if vung else 760)
         from .giao_dien import dat_toi_thieu_cua_so
         dat_toi_thieu_cua_so(self)          # đặc tả V10: tối thiểu 1024 x 680 (màn hình nhỏ hơn thì theo màn hình)
+        self._tao_lenh()
+        self._i_trang = 0                                # trang (chỉ số TRANG) đang chọn - mở lại dự án thì về trang này
+        self.khung_du_toan = None                        # trang Dự toán: tạo khi mở lần đầu (không làm chậm lúc khởi động)
+        self.dm = None
+        self._tao_loc_ds()
+        self._tao_bang_ho()
+        self._tao_cho_trang()
+        hang = self._thanh_cong_cu_ds()                  # Thêm hộ, Lập phương án, Xóa hộ (theo ngữ cảnh) | bộ lọc
+        nen = QWidget()
+        vo = QVBoxLayout(nen)
+        vo.setContentsMargins(0, 0, 0, 0)
+        vo.setSpacing(0)
+        than = QWidget()
+        lo = QVBoxLayout(than)
+        lo.setContentsMargins(10, 8, 10, 6)
+        lo.setSpacing(7)
+        from .giao_dien import bang_to_chuc
+        self._dat_chu_lenh()
+        nhom = self._nhom_menu()
+        self._tao_nut_hoan_tac()
+        self._thanh_menu()
+        self.bang_tieu_de = bang_to_chuc(f'Phiên bản {__version__}')
+        self.bang_tieu_de.setParent(self)                 # giữ cho test / dat_to_chuc; không xếp vào layout (V5: header 38px)
+        self.bang_tieu_de.hide()
+        vo.addWidget(self.banner_ten)
+        vo.addWidget(than, 1)
+        phai = self._dung_khung_menu(lo, nhom)
+        self.hang_the = QWidget()                        # thẻ số liệu (ẩn ở màn hình chào)
+        self.hang_the.setLayout(self._hang_the_so())
+        self.hang_the.layout().setContentsMargins(0, 0, 0, 0)
+        phai.addWidget(self.hang_the)
+        trang_ds = self._dung_trang_ds(hang)
+        self._tao_khung_tab()
+        self._dung_ngan_trang(phai, trang_ds)
+        self.setCentralWidget(nen)
+        self._dung_thanh_trang_thai()
+        # Cập nhật phần mềm / Giới thiệu: menu Trợ giúp (trước 0.9.23 thêm hai nút ở góc dưới - mỗi lệnh một chỗ)
+        self._cap_nhat_lenh_theo_du_an()                # chưa mở dự án: làm mờ nhóm 3, 4, 5 + Đơn giá đặc biệt
+        self._hien_trang_chao()
+
+    def _tao_lenh(self) -> None:
+        """Mọi lệnh (QAction), nhóm trang, phím tắt."""
         self.lenh = {}
         from .lenh import ds_lenh
         for ten, ham in ds_lenh(self):
@@ -773,9 +815,9 @@ class CuaSoChinh(QMainWindow):
             self.lenh[ten].setShortcut(QKeySequence(phim))
         # 1.0.58: lệnh này chỉ gắn nút ở nhóm menu đóng sẵn: nút ẩn thì phím tắt không chạy - gắn vào cửa sổ
         self.addAction(self.lenh['Tiếp nhận & Kiểm tra pháp lý dự án…'])
-        self._i_trang = 0                                # trang (chỉ số TRANG) đang chọn - mở lại dự án thì về trang này
-        self.khung_du_toan = None                        # trang Dự toán: tạo khi mở lần đầu (không làm chậm lúc khởi động)
-        self.dm = None
+
+    def _tao_loc_ds(self) -> None:
+        """Ô tìm, mô hình, bộ lọc của danh sách hộ."""
         self.lb_ket_qua = QLabel('')
         self.lb_ket_qua.setStyleSheet('QLabel { font-weight: bold; padding: 5px 8px; }')
         self.lb_ket_qua.setWordWrap(True)               # chữ đối chiếu dài (~980 điểm) không ép cửa sổ rộng hơn màn hình 1366
@@ -805,6 +847,9 @@ class CuaSoChinh(QMainWindow):
         self.lb_loc = NhanBam('')                        # 21/10/2026: "Lọc: k/N hộ · t thửa ↗" - bấm mở Thống kê Hộ · Thửa · Diện tích
         self.lb_loc.bam = lambda: self.lenh[LENH_THONG_KE].trigger()      # cùng QAction với menu Dữ liệu (tắt khi chưa mở dự án)
         self.lb_loc.setToolTip('Bấm để xem bảng thống kê Hộ · Thửa · Diện tích (Ctrl+Shift+T)')
+
+    def _tao_bang_ho(self) -> None:
+        """Bảng danh sách hộ."""
         self.bang = QTableView()
         self.bang.setModel(self.loc)
         self.bang.setSortingEnabled(True)
@@ -837,6 +882,9 @@ class CuaSoChinh(QMainWindow):
         from .giao_dien import cho_phep_sao_chep_bang
         cho_phep_sao_chep_bang(self.bang)                # gắn ngay (không chờ cửa sổ hiện): bộ đếm, viền vùng chọn, Ctrl+C
         self._vua_tieu_de()
+
+    def _tao_cho_trang(self) -> None:
+        """Khung trống giữ chỉ số của các trang tạo khi mở lần đầu."""
         # trang bên phải: danh sách hộ / bảng tổng hợp (3 mục) / theo dõi tiến độ - chọn ở menu trái. Bảng tổng hợp, theo dõi tiến độ,
         # quyết định TẠO KHI MỞ LẦN ĐẦU (máy yếu - 16/10/2026: mở phần mềm không dựng ~200 thành phần và nạp ~10
         # module chưa dùng); chỗ của chúng trong self.trang là khung trống giữ chỉ số (_dam_bao_trang). self.khung_trang chỉ chứa
@@ -848,17 +896,9 @@ class CuaSoChinh(QMainWindow):
             lo_cho = QVBoxLayout(cho)
             lo_cho.setContentsMargins(0, 0, 0, 0)
             self._cho_trang[i] = cho
-        hang = self._thanh_cong_cu_ds()                  # Thêm hộ, Lập phương án, Xóa hộ (theo ngữ cảnh) | bộ lọc
-        nen = QWidget()
-        vo = QVBoxLayout(nen)
-        vo.setContentsMargins(0, 0, 0, 0)
-        vo.setSpacing(0)
-        than = QWidget()
-        lo = QVBoxLayout(than)
-        lo.setContentsMargins(10, 8, 10, 6)
-        lo.setSpacing(7)
-        from .giao_dien import bang_to_chuc, thanh_lenh
-        from .giao_dien import menu_trai as tao_menu_trai
+
+    def _dat_chu_lenh(self) -> None:
+        """Chữ, gợi ý của lệnh trên menu."""
         L = self.lenh
         # 0.9.20 (người dùng yêu cầu "gọn chữ"): chữ trên menu ngắn (NHAN_MENU, tên đầy đủ ở gợi ý); khóa self.lenh giữ tên cũ
         for k, ngan in NHAN_MENU.items():
@@ -872,6 +912,10 @@ class CuaSoChinh(QMainWindow):
         for k, a in L.items():
             if k not in da:
                 a.setText(chu_hien(a.text()))
+
+    def _nhom_menu(self) -> list:
+        """Các nhóm của menu trái."""
+        L = self.lenh
         # 0.9.23 (lộ trình người dùng): 5 nhóm theo vòng đời nghiệp vụ - dự án -> bảng giá -> lập phương án -> tổng hợp, trình ->
         # tiến độ. Thao tác file (tạo / mở / lưu / nhập) lên thanh menu Tệp tin / Dữ liệu (trước: nút xổ "DỰ ÁN ▾" đầu menu trái,
         # danh sách xổ đè lên các nút bên dưới); Thêm hộ / Xóa hộ (thao tác theo hộ đang chọn) ở thanh công cụ của danh sách hộ.
@@ -893,10 +937,14 @@ class CuaSoChinh(QMainWindow):
             ('6. Đơn giá & bảng giá', [L['Bộ đơn giá…'], L['Đơn giá riêng dự án…'], L['Bảng giá đất NQ 28…'],
                                          L['Tính đơn giá đất…']]),
         ]
+        return nhom
+
+    def _tao_nut_hoan_tac(self) -> None:
+        """Lệnh Hoàn tác / Làm lại."""
+        from .giao_dien import icon_ky_hieu, ky_hieu_nut, mau_icon
         # hoàn tác / làm lại thao tác đã ghi vào file dự án: menu Chỉnh sửa trên thanh menu (người dùng 11/10/2026 - như các phần
         # mềm khác; trước đây nút trên băng tiêu đề). Chữ "Ctrl+Z" sau "\t" chỉ để hiện: KHÔNG gắn phím tắt cho QAction - phím
         # tắt của QAction được xử lý trước KeyPress, làm hỏng giao_dien.xu_ly_hoan_tac (Ctrl+Z theo khung đang làm việc)
-        from .giao_dien import XU_LY_HOAN_TAC, icon_ky_hieu, ky_hieu_nut, mau_icon
         self.nut_ht = {}
         for k, chu, lai in (('lui', 'Hoàn tác', False), ('toi', 'Làm lại', True)):
             a = QAction(chu, self)
@@ -905,12 +953,12 @@ class CuaSoChinh(QMainWindow):
                 a.setIcon(ic)
             a.triggered.connect(lambda _=False, x=lai: self.hoan_tac(x))
             self.nut_ht[k] = a
-        self._thanh_menu()
-        self.bang_tieu_de = bang_to_chuc(f'Phiên bản {__version__}')
-        self.bang_tieu_de.setParent(self)                 # giữ cho test / dat_to_chuc; không xếp vào layout (V5: header 38px)
-        self.bang_tieu_de.hide()
-        vo.addWidget(self.banner_ten)
-        vo.addWidget(than, 1)
+
+    def _dung_khung_menu(self, lo, nhom):
+        """Menu trái (hoặc thanh nút kiểu cũ). Trả bố cục phần nội dung."""
+        from .giao_dien import menu_trai as tao_menu_trai
+        from .giao_dien import thanh_lenh
+        L = self.lenh
         if self.menu_trai:
             # 17/10/2026 (Hybrid Enterprise Navy): menu trái sát mép trái / dưới cửa sổ (thanh bên, viền phải 1 px); lề chỉ ở phần nội dung
             lo.setContentsMargins(0, 0, 0, 0)
@@ -929,10 +977,10 @@ class CuaSoChinh(QMainWindow):
             lo.addWidget(thanh_lenh([('Dự án', [L['Dự án mới…'], L['Mở dự án…'], L['Lưu dự án thành…'],
                                                 L['Nhập file Excel…'], L['Nhập phương án chi tiết…']]), *nhom]))
             phai = lo
-        self.hang_the = QWidget()                        # thẻ số liệu (ẩn ở màn hình chào)
-        self.hang_the.setLayout(self._hang_the_so())
-        self.hang_the.layout().setContentsMargins(0, 0, 0, 0)
-        phai.addWidget(self.hang_the)
+        return phai
+
+    def _dung_trang_ds(self, hang) -> QWidget:
+        """Trang danh sách hộ."""
         trang_ds = QWidget()
         lo_ds = QVBoxLayout(trang_ds)
         lo_ds.setContentsMargins(0, 0, 0, 0)
@@ -949,6 +997,10 @@ class CuaSoChinh(QMainWindow):
         khoi_bang.addWidget(self.bang, 1)
         khoi_bang.addWidget(self._dai_cong())
         lo_ds.addLayout(khoi_bang, 1)
+        return trang_ds
+
+    def _tao_khung_tab(self) -> None:
+        """Tên trang, khung tab, phím chuyển tab."""
         # tiêu đề trang: luôn ẩn (16/10/2026), chỉ giữ chữ tên trang hiện tại - con của cửa sổ, KHÔNG xếp vào bố cục (1.0.32)
         self.lb_trang = QLabel('', self)
         self.lb_trang.setProperty('vai', 'tieu_de')
@@ -965,6 +1017,9 @@ class CuaSoChinh(QMainWindow):
             phim.activated.connect(lambda b=buoc: self._tab_ke(b))
         # thanh tab KHÔNG xếp vào bố cục (15/10/2026, người dùng: thu hồi ~40 px chiều cao) - chuyển trang bằng menu trái /
         # thanh menu (Ctrl+1..5 = các trang); khung_tab chỉ giữ danh sách trang / tab hộ đang mở trong RAM
+
+    def _dung_ngan_trang(self, phai, trang_ds) -> None:
+        """Các trang bên phải."""
         self.trang = QStackedWidget()
         self.trang_dt = QWidget()                        # trang Dự toán & khái toán (KhungDuToan tạo khi mở lần đầu)
         lo_dt = QVBoxLayout(self.trang_dt)
@@ -979,7 +1034,10 @@ class CuaSoChinh(QMainWindow):
         self.ngan_lv.addWidget(self.khung_tab.stack_phu)
         phai.addWidget(self.ngan_lv, 1)
         self.bang.selectionModel().selectionChanged.connect(lambda *_: self._cap_nhat_chon())
-        self.setCentralWidget(nen)
+
+    def _dung_thanh_trang_thai(self) -> None:
+        """Thanh trạng thái: tóm tắt, bộ đếm, cỡ giao diện, tài khoản."""
+        from .giao_dien import XU_LY_HOAN_TAC
         self.lb_tom_tat = QLabel('Sẵn sàng')             # thanh trạng thái: Sẵn sàng · tổng số hộ | đã chọn
         self.lb_tom_tat.setToolTip('Nhấp đúp một hộ để lập / sửa phương án.')
         self.statusBar().addWidget(self.lb_tom_tat, 1)
@@ -1018,9 +1076,6 @@ class CuaSoChinh(QMainWindow):
         self.nut_tk.menu().aboutToShow.connect(self._menu_tai_khoan)
         self.statusBar().addPermanentWidget(self.nut_tk)
         self.cap_nhat_tai_khoan()
-        # Cập nhật phần mềm / Giới thiệu: menu Trợ giúp (trước 0.9.23 thêm hai nút ở góc dưới - mỗi lệnh một chỗ)
-        self._cap_nhat_lenh_theo_du_an()                # chưa mở dự án: làm mờ nhóm 3, 4, 5 + Đơn giá đặc biệt
-        self._hien_trang_chao()
 
     # ------------------------------------------------ lệnh
     def nhap_excel(self, xl=None, dich=None):

@@ -175,7 +175,7 @@ class TestLenhModule(unittest.TestCase):
         self.assertIn(LENH_THONG_KE, ten)
         for t in TRANG:
             self.assertIn(t, ten)
-        src = inspect.getsource(__import__('pabt.app', fromlist=['CuaSoChinh']).CuaSoChinh.__init__)
+        src = inspect.getsource(__import__('pabt.app', fromlist=['CuaSoChinh']).CuaSoChinh._tao_lenh)
         self.assertIn('ds_lenh', src)
         self.assertNotIn("'Dự án mới…', lambda", src)
 
