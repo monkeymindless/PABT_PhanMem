@@ -1457,35 +1457,37 @@ class _DocDong:
         self.cuoi = ('cha',)
 
 
-def nhan_muc(dong: list, nhom: int = 0, quy_tac: list | None = None) -> list:
-    """Dòng bảng -> các mục đơn giá. Có dòng tiêu đề (Tên, ĐVT, Đơn giá) thì theo cột; không có thì đọc từng dòng chữ (_DocDong:
-    '<mã> <tên> <ĐVT> <đơn giá>', dòng cha / dòng con, khoảng giá).
+class _HangGia:
+    """Một hàng của bảng đơn giá đã bóc: tên, STT, ô giá."""
+    __slots__ = ('r', 'stt', 'ten', 'ten_o_stt', 'gc_mt', 'la_mo_ta', 'gach', 'g', 'nhan_gia', 'khoang', 'nhieu', 'nghi', 'o_gia', 'dk')
 
-    Bảng phân cấp như văn bản UBND: dòng nhóm (I, II...) không có giá; dòng mục (1, 2...) không có giá là "cha" của các dòng
-    con (-, +, a)...) -> tên "Cha - Con" như bộ đơn giá; dòng '*' là trường hợp chen giữa; ô giá có nhãn
-    ("Đông Xuân: 24.880.000") -> "Tên (Đông Xuân)"; ô giá khoảng "a - b" -> hai mục (mức cao: tên có dấu chấm cuối); dòng tên trống
-    tiếp tục mục ngay trên. nhom: nhóm mặc định (theo văn bản). quy_tac: danh sách nhận các dòng quy định cách tính không có giá."""
-    # 1.0.60: số tiền trong "Ví dụ" không phải đơn giá; văn bản chính sách: lời văn trong Điều do muc_chinh_sach_tu_dieu_khoan đọc
-    dong = bo_vi_du(dong)
-    if nhom == 4 and co_dieu_khoan(dong):
-        dong = bo_loi_van_dieu(dong)
-    kq, tieu_de, nhan = [], None, 1
-    cha = truong_hop = truoc = dvt_mac_dinh = mat_do = mat_do_bang = nhom_dk = ''
-    nhom_muc = so_cot = 0
-    stt_cha = con_truoc = dk_truoc = ''
-    doc_dong = _DocDong(kq, nhom, quy_tac)
-    kv, n_kv = '', 0
-    mo_ta_cho = tien_to_bang = ''           # 1.0.57: mô tả kết cấu chờ gắn vào mục kế tiếp; tiền tố tên ("Biệt thự")
-    la_loai_bang, n_cha, loai_stt = False, 0, {}
-    doc_dong.loai_stt = loai_stt
-    for r in dong:
-        for m_ in kq[n_kv:]:                              # 1.0.57: khu vực giá của phụ lục chứa dòng (tiêu đề "… KHU VỰC 2 …")
-            m_.khu_vuc = m_.khu_vuc or kv
-        n_kv = len(kq)
+
+class _DocBangGia:
+    """Trạng thái đọc bảng đơn giá theo cột của nhan_muc: tiêu đề cột đang dùng, dòng cha, dòng con, mục vừa đọc."""
+
+    def __init__(self, nhom: int, quy_tac: list | None):
+        self.nhom, self.quy_tac = nhom, quy_tac
+        self.kq, self.tieu_de, self.nhan = [], None, 1
+        self.cha = self.truong_hop = self.truoc = self.dvt_mac_dinh = self.mat_do = self.mat_do_bang = self.nhom_dk = ''
+        self.nhom_muc = self.so_cot = 0
+        self.stt_cha = self.con_truoc = self.dk_truoc = ''
+        self.doc_dong = _DocDong(self.kq, nhom, quy_tac)
+        self.kv, self.n_kv = '', 0
+        self.mo_ta_cho = self.tien_to_bang = ''  # 1.0.57: mô tả kết cấu chờ gắn vào mục kế tiếp; tiền tố tên ("Biệt thự")
+        self.la_loai_bang, self.n_cha, self.loai_stt = False, 0, {}
+        self.doc_dong.loai_stt = self.loai_stt
+
+    def gan_khu_vuc(self, r) -> None:
+        for m_ in self.kq[self.n_kv:]:                    # 1.0.57: khu vực giá của phụ lục chứa dòng (tiêu đề "… KHU VỰC 2 …")
+            m_.khu_vuc = m_.khu_vuc or self.kv
+        self.n_kv = len(self.kq)
         mk = _RE_KHU_VUC.search(' '.join(str(c) for c in r if c))
         if mk:
-            kv = mk.group(1)
-        o = [bo_dau(c) for c in r]
+            self.kv = mk.group(1)
+
+    def doc_tieu_de(self, r, o) -> bool:
+        """Hàng tiêu đề cột: ghi nhận cột, đặt lại dòng cha. True = hàng này đã xử lý xong."""
+        kq = self.kq
         ten_c = _cot(o, r'^(ten|loai|noi dung|hang muc|danh muc|tai san|cay trong|nhom loai)', r'\bten (tai san|cay|cong trinh|khoan)')
         gia_c = _cot(o, r'^(don gia|gia|muc (ho tro|boi thuong)|muc gia)', r'don gia')
         stt_cot = _cot(o, r'^\s*(s\s?t\s?t|st|s[il1|f]t|stl|tt|so tt|so thu tu)\W*$')
@@ -1517,204 +1519,267 @@ def nhan_muc(dong: list, nhom: int = 0, quy_tac: list | None = None) -> list:
             stt_c = stt_cot
             if stt_c is None and ten_c > 0 and 0 not in (dvt_c, ma_c, gia_c):
                 stt_c = 0                                   # cột đầu trước cột tên: STT (tiêu đề đọc sai "SIT")
-            so_cot = len(r)
+            self.so_cot = len(r)
             # bảng giá cây lâm nghiệp theo nhóm loài x cỡ đường kính (bản scan hay dính chữ: "Đườngkính")
             dk_c = _cot(o, r'^duong ?kinh', r'^(d|dk|co)\s*\(?cm\)?$')
             if dk_c in (ten_c, gia_c):
                 dk_c = None
-            tieu_de = (ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c)
-            nhan = 1000 if any(re.search(r'nghin|1\.?000 ?d', x) for x in o) else 1
+            self.tieu_de = (ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c)
+            self.nhan = 1000 if any(re.search(r'nghin|1\.?000 ?d', x) for x in o) else 1
             # bảng không có cột ĐVT, đơn vị ghi ở tiêu đề cột giá: "Đơn giá bồi thường (đồng/ha)"
             md = re.search(r'(?i)(?:đồng|đ)\s*/\s*([^)]+)\)', r[gia_c])
-            dvt_mac_dinh = md.group(1).strip() if md else ''
+            self.dvt_mac_dinh = md.group(1).strip() if md else ''
             # mật độ ghi ở tiêu đề cột tên: "Nhóm loài cây gỗ trồng trên cạn (mật độ chuẩn 833 cây/ha)"
-            mat_do_bang = tach_mat_do_ten(' '.join(r[ten_c].split()))[1]
-            cha = truong_hop = truoc = nhom_dk = mo_ta_cho = ''
-            cha, tien_to_bang, la_loai_bang, n_cha = cha_dau, tien_to, la_loai, len(kq)
+            self.mat_do_bang = tach_mat_do_ten(' '.join(r[ten_c].split()))[1]
+            self.cha = self.truong_hop = self.truoc = self.nhom_dk = self.mo_ta_cho = ''
+            self.cha, self.tien_to_bang, self.la_loai_bang, self.n_cha = cha_dau, tien_to, la_loai, len(kq)
             if cha_dau:
-                stt_cha = con_truoc = ''
-            dvt_mac_dinh = _dvt_nha(dvt_mac_dinh) or dvt_mac_dinh if re.search(r'(?i)\bsàn', dvt_mac_dinh) else dvt_mac_dinh
-            doc_dong._bo_cha()
-            continue
+                self.stt_cha = self.con_truoc = ''
+            self.dvt_mac_dinh = _dvt_nha(self.dvt_mac_dinh) or self.dvt_mac_dinh if re.search(r'(?i)\bsàn', self.dvt_mac_dinh) else self.dvt_mac_dinh
+            self.doc_dong._bo_cha()
+            return True
         if stt_cot is not None and gia_c is None and len(r) >= 2 and not any(re.search(r'\d{1,3}(?:[.,]\d{3})+', str(c)) for c in r) \
                 and o[stt_cot].strip() and not o[stt_cot].strip().isdigit():
             # 1.0.57: tiêu đề bảng khác không có cột giá ("STT | Kết cấu | Tỷ lệ còn lại", "STT | TÊN PHỤ LỤC") - hết bảng giá trước
             # (trước: các dòng của bảng mới đọc theo cột của bảng giá cũ -> mục rác "Kết cấu - 5 | 6 | 7")
-            tieu_de = None
-            cha = truong_hop = truoc = nhom_dk = ''
-            doc_dong._bo_cha()
+            self.tieu_de = None
+            self.cha = self.truong_hop = self.truoc = self.nhom_dk = ''
+            self.doc_dong._bo_cha()
+            return True
+        return False
+
+    def _boc_ten(self, r) -> _HangGia | None:
+        """Bóc STT, tên, mô tả kết cấu của hàng. None = hàng là tiêu đề nhóm, đã xử lý xong."""
+        ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c = self.tieu_de
+        if self.so_cot and len(r) > self.so_cot:                       # bản scan: mẩu chữ rác thành ô thừa bên trái - giữ ô đầu + các ô cuối
+            r = [r[0]] + list(r[len(r) - self.so_cot + 1:])
+        r = list(r) + [''] * (max(c for c in self.tieu_de if c is not None) + 1 - len(r))   # ô gộp: hàng ít ô hơn tiêu đề
+        stt = r[stt_c].strip() if stt_c is not None else ''
+        ten = ' '.join(r[ten_c].split()).rstrip(' .;:')
+        ten_o_stt = False
+        if stt and not _RE_STT_HOP_LE.fullmatch(stt):    # STT bản scan thành chữ rác ("—— h ị", "1ö")
+            s_ = ' '.join(stt.split())
+            if re.match(r'^[A-ZĐ]\.\s+\w', s_) and not any(re.search(r'\d{1,3}(?:[.,]\d{3})+', str(c)) for c in r[1:]):
+                # 1.0.57: "A. Nhà, nhà ở" / "B. Nhà xưởng" ghi ở cột Loại - tiêu đề nhóm, không phải dòng cha
+                self.nhom_muc = nhom_theo_chu(s_) or self.nhom_muc
+                self.cha = self.truong_hop = self.truoc = self.mo_ta_cho = ''
+                return None
+            if stt_c != ten_c and len(re.findall(r'[^\W\d_]{2,}', s_)) >= 2:
+                # 1.0.57: tên ghi ở cột Loại, cột tên là mô tả ("Nhà bán kiên cố | Kết cấu: Cột gỗ… | 1.660.000")
+                ten_o_stt, mo_ta_o = True, ten
+                ten = s_.rstrip(' .;:')
+            stt = ''
+        stt = stt.strip('( ')
+        gc_mt, la_mo_ta = '', False
+        if ten_o_stt:
+            gc_mt = mo_ta_o
+            self.cha = self.truong_hop = self.mo_ta_cho = ''
+        else:
+            truoc_mt, mo_ta_, loai_kc = _tach_mo_ta(ten)
+            if mo_ta_:
+                # 1.0.57: ô tên lẫn mô tả kết cấu ("* Kết cấu loại 1: - Khung cột: …", "Kết cấu: Móng…", "Vật liệu hoàn thiện: …")
+                # -> tên "Kết cấu loại 1" (dưới dòng cha "Nhà từ 05 tầng trở lên"), mô tả vào ghi chú
+                ten = ' - '.join(x for x in (truoc_mt, loai_kc) if x)
+                gc_mt, la_mo_ta = mo_ta_, not ten
+        if stt and self.cha and (stt == self.stt_cha or (self.con_truoc and _tu_dau_chu(ten) == self.con_truoc)):
+            stt = ''                                    # STT ô gộp đọc lặp ở dòng con / vắt trang
+        gach = bool(_RE_GACH.match(ten)) and not _CON.match(ten)
+        if gach:                                        # dòng con ghi gạch đầu dòng trong ô tên ("- Ống 1 m Φ1m")
+            ten = _RE_GACH.sub('', ten)
+        d = _HangGia()
+        d.r, d.stt, d.ten, d.ten_o_stt, d.gc_mt, d.la_mo_ta, d.gach = r, stt, ten, ten_o_stt, gc_mt, la_mo_ta, gach
+        return d
+
+    def _doc_o_gia(self, d: _HangGia) -> None:
+        """Đọc ô giá (một giá, khoảng, nhiều mùa vụ, bản scan) và ô cỡ đường kính của hàng."""
+        ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c = self.tieu_de
+        r = d.r
+        g, nhan_gia = _tach_gia(r[gia_c])
+        khoang = doc_khoang_gia(r[gia_c]) if not g else None
+        nhieu = tach_nhieu_gia(r[gia_c]) if not g and not khoang else []
+        nghi = ''
+        o_gia = re.sub(r'^.{1,40}?:\s*', '', ' '.join(r[gia_c].split())) if nhan_gia else ' '.join(r[gia_c].split())
+        if not g and re.fullmatch(r"[\W_]{1,4}\s*\d{1,3}(?:[.,]\d{3})+\s*[\W_]{0,3}", o_gia):
+            o_gia = o_gia.strip(" !'.,:;`|_-")             # mẩu dấu rác của bản scan quanh số tiền
+            g = doc_gia(o_gia)
+        if g and not _RE_GIA_SACH.fullmatch(o_gia):
+            nghi = o_gia                                # "5272.219": số đọc được nhưng sai dạng số tiền
+        if not g and not khoang and not nhieu and o_gia and (dvt_c is None or r[dvt_c].strip()):
+            g = doc_gia_ocr(o_gia)
+            nghi = o_gia if g else ''
+        dk = chuan_duong_kinh(r[dk_c]) if dk_c is not None else ''
+        if dk_c is not None and not dk and g and r[dk_c].strip() and self.dk_truoc:
+            mk = re.fullmatch(r'\(d >(\d+)-(\d+) cm\)', self.dk_truoc)
+            if mk:                                      # bản scan đọc hỏng ô cỡ (">18-21" -> "> ni"): cỡ kế tiếp cùng bước
+                a_, b_ = int(mk.group(1)), int(mk.group(2))
+                dk = f'(d >{b_}-{2 * b_ - a_} cm)'
+                nghi = f'cỡ đường kính đọc "{r[dk_c].strip()}" - suy là {dk} theo thứ tự'
+        if dk:
+            self.dk_truoc = dk
+        d.g, d.nhan_gia, d.khoang, d.nhieu, d.nghi, d.o_gia, d.dk = g, nhan_gia, khoang, nhieu, nghi, o_gia, dk
+
+    def _hang_duong_kinh(self, d: _HangGia) -> bool:
+        """Bảng nhóm loài x cỡ đường kính. True = hàng đã xử lý xong."""
+        ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c = self.tieu_de
+        r, ten, g, dk, nghi = d.r, d.ten, d.g, d.dk, d.nghi
+        if dk_c is not None and (ten or dk):
+            # bảng nhóm loài: ô nhóm gộp nhiều hàng (chỉ hàng đầu có chữ) - các hàng sau là cỡ đường kính của nhóm đó
+            # bản scan: ô nhóm gộp vắt sang trang sau còn mẩu chữ đọc sai ("nem", "Ị") ở hàng cỡ tiếp theo (">27-30") - vẫn là
+            # nhóm cũ; nhóm mới bắt đầu ở cỡ nhỏ nhất ("<3", "≤2") hoặc tên có chữ "Nhóm …"
+            if ten and not re.fullmatch(r'[\d\W]+', ten) and \
+                    (not self.nhom_dk or not dk or khoa_nhom_loai(ten) or re.match(r'\(d [<≤]', dk) or len(ten) > 12):
+                self.nhom_dk = ten
+            if dk and g and self.nhom_dk:
+                ten_nhom = ' '.join(re.sub(r'\([^)]*(?:danh s[áa]ch|ph[ụu] l[ụu]c)[^)]*\)', ' ', self.nhom_dk).split())
+                dvt = (r[dvt_c].strip() if dvt_c is not None else '') or self.dvt_mac_dinh or 'cây'
+                dvt = chuan_dvt(dvt)
+                self.kq.append(Muc(f'{ten_nhom} {dk}', dvt, g * self.nhan, '', ' | '.join(c for c in r if c), nhom=self.nhom or 3,
+                                   ghi_chu=self.mat_do_bang, nhom_loai=khoa_nhom_loai(self.nhom_dk), duong_kinh=dk, nghi_gia=nghi))
+                return True
+            if not g:
+                return True
+        return False
+
+    def _hang_khong_gia(self, d: _HangGia) -> None:
+        """Hàng không đọc được giá: ghi chú, quy tắc, tiêu đề nhóm, dòng cha / dòng con."""
+        ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c = self.tieu_de
+        r, stt, ten, ten_o_stt, gc_mt, la_mo_ta, gach, o_gia = d.r, d.stt, d.ten, d.ten_o_stt, d.gc_mt, d.la_mo_ta, d.gach, d.o_gia
+        kq, quy_tac = self.kq, self.quy_tac
+        if la_mo_ta:                                # dòng mô tả không giá: ghi chú của mục vừa đọc / mục kế tiếp
+            if len(kq) > self.n_cha:
+                for x in kq[-2 if kq[-1].muc_gia == 'cao' else -1:]:
+                    x.ghi_chu = '; '.join(y for y in (x.ghi_chu, gc_mt) if y)
+            else:
+                self.mo_ta_cho = '; '.join(y for y in (self.mo_ta_cho, gc_mt) if y)
+            return
+        if ten_o_stt:                               # "Nhà nuôi yến kết hợp ở | Phần diện tích để ở được áp giá …"
+            if quy_tac is not None and gc_mt:
+                quy_tac.append(f'{ten}: {gc_mt}')
+            return
+        if not ten:
+            return
+        if la_quy_tac(ten):                         # "- Giếng sâu từ 10m trở lên thì … tính thêm 50% mức giá trên"
+            if quy_tac is not None:
+                quy_tac.append(f'{self.truoc}: {ten}' if self.truoc and gach else ten)
+            return
+        if o_gia and dvt_c is not None and r[dvt_c].strip():
+            # có ĐVT, ô giá có chữ nhưng không đọc được ("Á A"): dòng giá hỏng - báo, không làm dòng cha
+            if quy_tac is not None:
+                quy_tac.append(f'KHÔNG ĐỌC ĐƯỢC ĐƠN GIÁ (bản scan): {" - ".join(x for x in (self.cha, ten) if x)} | '
+                               f'{r[dvt_c].strip()} | "{o_gia}" - nhập tay nếu cần')
+            return
+        if _LA_MA.match(stt) or _la_ma_ocr(stt) or (not stt and re.match(r'(?i)^(nhom|phan|muc|phu luc)\b', bo_dau(ten))):
+            self.nhom_muc = nhom_theo_chu(ten) or self.nhom_muc        # tiêu đề nhóm
+            self.cha = self.truong_hop = self.truoc = ''
+        elif self.cha and not stt and re.match(r'^[a-zđ]\)\s*\w', ten):
+            self.truong_hop = ten[2:].strip()       # "a) Bồn nhựa" dưới "Di dời bồn nước": một cấp, không nối vào mục trên
+        elif not stt and not gach and ten[:1].islower() and kq and self.truoc and kq[-1].ten.startswith(self.truoc):
+            for x in kq[-2 if kq[-1].muc_gia == 'cao' else -1:]:   # ô tên xuống dòng thành hàng riêng: nối vào mục trên
+                x.ten = f'{x.ten[:-1]} {ten}.' if x.muc_gia == 'cao' else f'{x.ten} {ten}'
+            self.truoc = f'{self.truoc} {ten}'
+        elif stt.startswith('*'):
+            self.truong_hop = ten
+        elif (_CON.match(stt) or gach) and self.cha:
+            self.truong_hop = ten                           # dòng con không giá: thêm một cấp
+        else:
+            # mật độ ghi ở ghi chú danh mục, không ở tên: "Cây bưởi (Mật độ 210 cây/ha)" / "Cây vải thiều (330 cây/ha)"
+            # -> "Cây bưởi" + ghi chú "Mật độ 210 cây/ha" cho các dòng con
+            self.cha, self.mat_do = tach_mat_do_ten(ten)
+            self.truong_hop, self.stt_cha, self.con_truoc = '', stt, ''
+            self.truoc, self.mo_ta_cho, self.n_cha = '', '', len(kq)
+
+    def _them_muc(self, d: _HangGia) -> None:
+        """Hàng có giá: dựng tên đầy đủ theo dòng cha, thêm mục (một giá / khoảng / nhiều mùa vụ)."""
+        ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c = self.tieu_de
+        r, stt, ten, gc_mt, la_mo_ta, gach, g = d.r, d.stt, d.ten, d.gc_mt, d.la_mo_ta, d.gach, d.g
+        nhan_gia, khoang, nhieu, nghi = d.nhan_gia, d.khoang, d.nhieu, d.nghi
+        kq, nhom, nhan = self.kq, self.nhom, self.nhan
+        gc, cha_cua = '', ''
+        if la_mo_ta and self.cha:                               # "Kết cấu: … | 7.052.000" dưới "1 | Nhà 6 đến 8 tầng": tên = dòng cha
+            ten = ' - '.join(x for x in (self.cha, self.truong_hop) if x)
+            gc = self.mat_do
+        elif not ten:                                           # tiếp tục mục ngay trên (ô tên gộp)
+            ten, gc = self.truoc, self.mat_do if self.cha else ''
+        elif _CON.match(stt) or stt.startswith('*') or (not stt and self.cha) or ((gach or ten[:1].islower()) and self.cha):
+            # dòng con (STT -, a)... hoặc để trống; ô tên có gạch đầu dòng / chữ thường - kể cả khi bản scan đặt STT ô gộp vào dòng con)
+            cha_cua = self.cha
+            self.con_truoc = _tu_dau_chu(ten)
+            if gach and not self.truong_hop and self.con_truoc and self.con_truoc == _tu_dau_chu(self.cha):
+                pass                                    # dòng con tự đủ tên ("- Chuồng heo, bò lợp lá" dưới "Chuồng heo, chuồng bò…")
+            else:
+                ten = ' - '.join(x for x in (self.cha, self.truong_hop, ten) if x)
+            gc = self.mat_do if self.cha else ''
+        else:
+            self.cha = self.truong_hop = self.mat_do = ''
+            ten, gc = tach_mat_do_ten(ten)
+        if self.tien_to_bang and ten and not bo_dau(ten).startswith(bo_dau(self.tien_to_bang)):
+            ten = f'{self.tien_to_bang} {ten}'
+        gc = '; '.join(y for y in (gc, self.mo_ta_cho, gc_mt) if y)
+        self.mo_ta_cho = ''
+        self.truoc = ten
+        if not ten or re.fullmatch(r'[\d\W]+', ten):
+            return
+        ten_day = f'{ten} ({nhan_gia})' if nhan_gia else ten
+        dvt = chuan_dvt((r[dvt_c].strip() if dvt_c is not None else '') or self.dvt_mac_dinh)    # "đồng/bụi" -> "bụi"
+        if re.search(r'(?i)\bsàn', dvt):
+            dvt = _dvt_nha(dvt) or dvt                  # "Đồng/m² sàn" -> "m²" (bộ đơn giá ghi ĐVT nhà là m²)
+        ma = r[ma_c].strip() if ma_c is not None else ''
+        nh = nhom or self.nhom_muc or _nhom_dong(ten_day, dvt)
+        nguon = ' | '.join(c for c in r if c)
+        if nhieu:                                       # "Đông Xuân: … Hè Thu, Mùa: …" -> một mục mỗi mùa vụ
+            for nh_, g_ in nhieu:
+                kq.append(Muc(f'{ten} ({nh_})', dvt, g_ * nhan, ma, nguon, nhom=nhom or self.nhom_muc or _nhom_dong(ten, dvt),
+                              ghi_chu=gc, cha=cha_cua))
+        elif khoang:
+            kq.append(Muc(ten_day, dvt, khoang[0] * nhan, ma, nguon, nhom=nh, ghi_chu=gc, cha=cha_cua, muc_gia='thap',
+                          khoang=' '.join(r[gia_c].split())))
+            kq.append(Muc(ten_day + '.', dvt, khoang[1] * nhan, '', nguon, nhom=nh, ghi_chu=gc, cha=cha_cua, muc_gia='cao',
+                          khoang=' '.join(r[gia_c].split())))
+        else:
+            kq.append(Muc(ten_day, dvt, g * nhan, ma, nguon, nhom=nh, ghi_chu=gc, cha=cha_cua, nghi_gia=nghi))
+            if self.la_loai_bang and (stt or self.stt_cha).isdigit():
+                self.loai_stt[id(kq[-1])] = stt or self.stt_cha
+
+    def doc_hang(self, r) -> None:
+        """Một hàng dưới tiêu đề cột."""
+        d = self._boc_ten(r)
+        if d is None:
+            return
+        self._doc_o_gia(d)
+        if self._hang_duong_kinh(d):
+            return
+        if not d.g and not d.khoang and not d.nhieu:
+            self._hang_khong_gia(d)
+            return
+        self._them_muc(d)
+
+
+def nhan_muc(dong: list, nhom: int = 0, quy_tac: list | None = None) -> list:
+    """Dòng bảng -> các mục đơn giá. Có dòng tiêu đề (Tên, ĐVT, Đơn giá) thì theo cột; không có thì đọc từng dòng chữ (_DocDong:
+    '<mã> <tên> <ĐVT> <đơn giá>', dòng cha / dòng con, khoảng giá).
+
+    Bảng phân cấp như văn bản UBND: dòng nhóm (I, II...) không có giá; dòng mục (1, 2...) không có giá là "cha" của các dòng
+    con (-, +, a)...) -> tên "Cha - Con" như bộ đơn giá; dòng '*' là trường hợp chen giữa; ô giá có nhãn
+    ("Đông Xuân: 24.880.000") -> "Tên (Đông Xuân)"; ô giá khoảng "a - b" -> hai mục (mức cao: tên có dấu chấm cuối); dòng tên trống
+    tiếp tục mục ngay trên. nhom: nhóm mặc định (theo văn bản). quy_tac: danh sách nhận các dòng quy định cách tính không có giá."""
+    # 1.0.60: số tiền trong "Ví dụ" không phải đơn giá; văn bản chính sách: lời văn trong Điều do muc_chinh_sach_tu_dieu_khoan đọc
+    dong = bo_vi_du(dong)
+    if nhom == 4 and co_dieu_khoan(dong):
+        dong = bo_loi_van_dieu(dong)
+    p = _DocBangGia(nhom, quy_tac)
+    for r in dong:
+        p.gan_khu_vuc(r)
+        if p.doc_tieu_de(r, [bo_dau(c) for c in r]):
             continue
-        if tieu_de and len(r) >= 2:
-            ten_c, gia_c, dvt_c, ma_c, stt_c, dk_c = tieu_de
-            if so_cot and len(r) > so_cot:                             # bản scan: mẩu chữ rác thành ô thừa bên trái - giữ ô đầu + các ô cuối
-                r = [r[0]] + list(r[len(r) - so_cot + 1:])
-            r = list(r) + [''] * (max(c for c in tieu_de if c is not None) + 1 - len(r))   # ô gộp: hàng ít ô hơn tiêu đề
-            stt = r[stt_c].strip() if stt_c is not None else ''
-            ten = ' '.join(r[ten_c].split()).rstrip(' .;:')
-            ten_o_stt = False
-            if stt and not _RE_STT_HOP_LE.fullmatch(stt):    # STT bản scan thành chữ rác ("—— h ị", "1ö")
-                s_ = ' '.join(stt.split())
-                if re.match(r'^[A-ZĐ]\.\s+\w', s_) and not any(re.search(r'\d{1,3}(?:[.,]\d{3})+', str(c)) for c in r[1:]):
-                    # 1.0.57: "A. Nhà, nhà ở" / "B. Nhà xưởng" ghi ở cột Loại - tiêu đề nhóm, không phải dòng cha
-                    nhom_muc = nhom_theo_chu(s_) or nhom_muc
-                    cha = truong_hop = truoc = mo_ta_cho = ''
-                    continue
-                if stt_c != ten_c and len(re.findall(r'[^\W\d_]{2,}', s_)) >= 2:
-                    # 1.0.57: tên ghi ở cột Loại, cột tên là mô tả ("Nhà bán kiên cố | Kết cấu: Cột gỗ… | 1.660.000")
-                    ten_o_stt, mo_ta_o = True, ten
-                    ten = s_.rstrip(' .;:')
-                stt = ''
-            stt = stt.strip('( ')
-            gc_mt, la_mo_ta = '', False
-            if ten_o_stt:
-                gc_mt = mo_ta_o
-                cha = truong_hop = mo_ta_cho = ''
-            else:
-                truoc_mt, mo_ta_, loai_kc = _tach_mo_ta(ten)
-                if mo_ta_:
-                    # 1.0.57: ô tên lẫn mô tả kết cấu ("* Kết cấu loại 1: - Khung cột: …", "Kết cấu: Móng…", "Vật liệu hoàn thiện: …")
-                    # -> tên "Kết cấu loại 1" (dưới dòng cha "Nhà từ 05 tầng trở lên"), mô tả vào ghi chú
-                    ten = ' - '.join(x for x in (truoc_mt, loai_kc) if x)
-                    gc_mt, la_mo_ta = mo_ta_, not ten
-            if stt and cha and (stt == stt_cha or (con_truoc and _tu_dau_chu(ten) == con_truoc)):
-                stt = ''                                    # STT ô gộp đọc lặp ở dòng con / vắt trang
-            gach = bool(_RE_GACH.match(ten)) and not _CON.match(ten)
-            if gach:                                        # dòng con ghi gạch đầu dòng trong ô tên ("- Ống 1 m Φ1m")
-                ten = _RE_GACH.sub('', ten)
-            g, nhan_gia = _tach_gia(r[gia_c])
-            khoang = doc_khoang_gia(r[gia_c]) if not g else None
-            nhieu = tach_nhieu_gia(r[gia_c]) if not g and not khoang else []
-            nghi = ''
-            o_gia = re.sub(r'^.{1,40}?:\s*', '', ' '.join(r[gia_c].split())) if nhan_gia else ' '.join(r[gia_c].split())
-            if not g and re.fullmatch(r"[\W_]{1,4}\s*\d{1,3}(?:[.,]\d{3})+\s*[\W_]{0,3}", o_gia):
-                o_gia = o_gia.strip(" !'.,:;`|_-")             # mẩu dấu rác của bản scan quanh số tiền
-                g = doc_gia(o_gia)
-            if g and not _RE_GIA_SACH.fullmatch(o_gia):
-                nghi = o_gia                                # "5272.219": số đọc được nhưng sai dạng số tiền
-            if not g and not khoang and not nhieu and o_gia and (dvt_c is None or r[dvt_c].strip()):
-                g = doc_gia_ocr(o_gia)
-                nghi = o_gia if g else ''
-            dk = chuan_duong_kinh(r[dk_c]) if dk_c is not None else ''
-            if dk_c is not None and not dk and g and r[dk_c].strip() and dk_truoc:
-                mk = re.fullmatch(r'\(d >(\d+)-(\d+) cm\)', dk_truoc)
-                if mk:                                      # bản scan đọc hỏng ô cỡ (">18-21" -> "> ni"): cỡ kế tiếp cùng bước
-                    a_, b_ = int(mk.group(1)), int(mk.group(2))
-                    dk = f'(d >{b_}-{2 * b_ - a_} cm)'
-                    nghi = f'cỡ đường kính đọc "{r[dk_c].strip()}" - suy là {dk} theo thứ tự'
-            if dk:
-                dk_truoc = dk
-            if dk_c is not None and (ten or dk):
-                # bảng nhóm loài: ô nhóm gộp nhiều hàng (chỉ hàng đầu có chữ) - các hàng sau là cỡ đường kính của nhóm đó
-                # bản scan: ô nhóm gộp vắt sang trang sau còn mẩu chữ đọc sai ("nem", "Ị") ở hàng cỡ tiếp theo (">27-30") - vẫn là
-                # nhóm cũ; nhóm mới bắt đầu ở cỡ nhỏ nhất ("<3", "≤2") hoặc tên có chữ "Nhóm …"
-                if ten and not re.fullmatch(r'[\d\W]+', ten) and \
-                        (not nhom_dk or not dk or khoa_nhom_loai(ten) or re.match(r'\(d [<≤]', dk) or len(ten) > 12):
-                    nhom_dk = ten
-                if dk and g and nhom_dk:
-                    ten_nhom = ' '.join(re.sub(r'\([^)]*(?:danh s[áa]ch|ph[ụu] l[ụu]c)[^)]*\)', ' ', nhom_dk).split())
-                    dvt = (r[dvt_c].strip() if dvt_c is not None else '') or dvt_mac_dinh or 'cây'
-                    dvt = chuan_dvt(dvt)
-                    kq.append(Muc(f'{ten_nhom} {dk}', dvt, g * nhan, '', ' | '.join(c for c in r if c), nhom=nhom or 3,
-                                  ghi_chu=mat_do_bang, nhom_loai=khoa_nhom_loai(nhom_dk), duong_kinh=dk, nghi_gia=nghi))
-                    continue
-                if not g:
-                    continue
-            if not g and not khoang and not nhieu:
-                if la_mo_ta:                                # dòng mô tả không giá: ghi chú của mục vừa đọc / mục kế tiếp
-                    if len(kq) > n_cha:
-                        for x in kq[-2 if kq[-1].muc_gia == 'cao' else -1:]:
-                            x.ghi_chu = '; '.join(y for y in (x.ghi_chu, gc_mt) if y)
-                    else:
-                        mo_ta_cho = '; '.join(y for y in (mo_ta_cho, gc_mt) if y)
-                    continue
-                if ten_o_stt:                               # "Nhà nuôi yến kết hợp ở | Phần diện tích để ở được áp giá …"
-                    if quy_tac is not None and gc_mt:
-                        quy_tac.append(f'{ten}: {gc_mt}')
-                    continue
-                if not ten:
-                    continue
-                if la_quy_tac(ten):                         # "- Giếng sâu từ 10m trở lên thì … tính thêm 50% mức giá trên"
-                    if quy_tac is not None:
-                        quy_tac.append(f'{truoc}: {ten}' if truoc and gach else ten)
-                    continue
-                if o_gia and dvt_c is not None and r[dvt_c].strip():
-                    # có ĐVT, ô giá có chữ nhưng không đọc được ("Á A"): dòng giá hỏng - báo, không làm dòng cha
-                    if quy_tac is not None:
-                        quy_tac.append(f'KHÔNG ĐỌC ĐƯỢC ĐƠN GIÁ (bản scan): {" - ".join(x for x in (cha, ten) if x)} | '
-                                       f'{r[dvt_c].strip()} | "{o_gia}" - nhập tay nếu cần')
-                    continue
-                if _LA_MA.match(stt) or _la_ma_ocr(stt) or (not stt and re.match(r'(?i)^(nhom|phan|muc|phu luc)\b', bo_dau(ten))):
-                    nhom_muc = nhom_theo_chu(ten) or nhom_muc        # tiêu đề nhóm
-                    cha = truong_hop = truoc = ''
-                elif cha and not stt and re.match(r'^[a-zđ]\)\s*\w', ten):
-                    truong_hop = ten[2:].strip()            # "a) Bồn nhựa" dưới "Di dời bồn nước": một cấp, không nối vào mục trên
-                elif not stt and not gach and ten[:1].islower() and kq and truoc and kq[-1].ten.startswith(truoc):
-                    for x in kq[-2 if kq[-1].muc_gia == 'cao' else -1:]:   # ô tên xuống dòng thành hàng riêng: nối vào mục trên
-                        x.ten = f'{x.ten[:-1]} {ten}.' if x.muc_gia == 'cao' else f'{x.ten} {ten}'
-                    truoc = f'{truoc} {ten}'
-                elif stt.startswith('*'):
-                    truong_hop = ten
-                elif (_CON.match(stt) or gach) and cha:
-                    truong_hop = ten                                # dòng con không giá: thêm một cấp
-                else:
-                    # mật độ ghi ở ghi chú danh mục, không ở tên: "Cây bưởi (Mật độ 210 cây/ha)" / "Cây vải thiều (330 cây/ha)"
-                    # -> "Cây bưởi" + ghi chú "Mật độ 210 cây/ha" cho các dòng con
-                    cha, mat_do = tach_mat_do_ten(ten)
-                    truong_hop, stt_cha, con_truoc = '', stt, ''
-                    truoc, mo_ta_cho, n_cha = '', '', len(kq)
-                continue
-            gc, cha_cua = '', ''
-            if la_mo_ta and cha:                                    # "Kết cấu: … | 7.052.000" dưới "1 | Nhà 6 đến 8 tầng": tên = dòng cha
-                ten = ' - '.join(x for x in (cha, truong_hop) if x)
-                gc = mat_do
-            elif not ten:                                           # tiếp tục mục ngay trên (ô tên gộp)
-                ten, gc = truoc, mat_do if cha else ''
-            elif _CON.match(stt) or stt.startswith('*') or (not stt and cha) or ((gach or ten[:1].islower()) and cha):
-                # dòng con (STT -, a)... hoặc để trống; ô tên có gạch đầu dòng / chữ thường - kể cả khi bản scan đặt STT ô gộp vào dòng con)
-                cha_cua = cha
-                con_truoc = _tu_dau_chu(ten)
-                if gach and not truong_hop and con_truoc and con_truoc == _tu_dau_chu(cha):
-                    pass                                    # dòng con tự đủ tên ("- Chuồng heo, bò lợp lá" dưới "Chuồng heo, chuồng bò…")
-                else:
-                    ten = ' - '.join(x for x in (cha, truong_hop, ten) if x)
-                gc = mat_do if cha else ''
-            else:
-                cha = truong_hop = mat_do = ''
-                ten, gc = tach_mat_do_ten(ten)
-            if tien_to_bang and ten and not bo_dau(ten).startswith(bo_dau(tien_to_bang)):
-                ten = f'{tien_to_bang} {ten}'
-            gc = '; '.join(y for y in (gc, mo_ta_cho, gc_mt) if y)
-            mo_ta_cho = ''
-            truoc = ten
-            if not ten or re.fullmatch(r'[\d\W]+', ten):
-                continue
-            ten_day = f'{ten} ({nhan_gia})' if nhan_gia else ten
-            dvt = chuan_dvt((r[dvt_c].strip() if dvt_c is not None else '') or dvt_mac_dinh)    # "đồng/bụi" -> "bụi"
-            if re.search(r'(?i)\bsàn', dvt):
-                dvt = _dvt_nha(dvt) or dvt                  # "Đồng/m² sàn" -> "m²" (bộ đơn giá ghi ĐVT nhà là m²)
-            ma = r[ma_c].strip() if ma_c is not None else ''
-            nh = nhom or nhom_muc or _nhom_dong(ten_day, dvt)
-            nguon = ' | '.join(c for c in r if c)
-            if nhieu:                                       # "Đông Xuân: … Hè Thu, Mùa: …" -> một mục mỗi mùa vụ
-                for nh_, g_ in nhieu:
-                    kq.append(Muc(f'{ten} ({nh_})', dvt, g_ * nhan, ma, nguon, nhom=nhom or nhom_muc or _nhom_dong(ten, dvt),
-                                  ghi_chu=gc, cha=cha_cua))
-            elif khoang:
-                kq.append(Muc(ten_day, dvt, khoang[0] * nhan, ma, nguon, nhom=nh, ghi_chu=gc, cha=cha_cua, muc_gia='thap',
-                              khoang=' '.join(r[gia_c].split())))
-                kq.append(Muc(ten_day + '.', dvt, khoang[1] * nhan, '', nguon, nhom=nh, ghi_chu=gc, cha=cha_cua, muc_gia='cao',
-                              khoang=' '.join(r[gia_c].split())))
-            else:
-                kq.append(Muc(ten_day, dvt, g * nhan, ma, nguon, nhom=nh, ghi_chu=gc, cha=cha_cua, nghi_gia=nghi))
-                if la_loai_bang and (stt or stt_cha).isdigit():
-                    loai_stt[id(kq[-1])] = stt or stt_cha
+        if p.tieu_de and len(r) >= 2:
+            p.doc_hang(r)
             continue
-        if len(r) == 1 or not tieu_de:                    # dòng chữ (PDF / Word không bảng, bản scan đọc theo dòng, bảng dán)
-            doc_dong.doc(' '.join(str(c) for c in r if str(c or '').strip()))
-    for m_ in kq[n_kv:]:
-        m_.khu_vuc = m_.khu_vuc or kv
-    _ten_theo_loai(kq, loai_stt)
-    return kq
+        if len(r) == 1 or not p.tieu_de:                  # dòng chữ (PDF / Word không bảng, bản scan đọc theo dòng, bảng dán)
+            p.doc_dong.doc(' '.join(str(c) for c in r if str(c or '').strip()))
+    for m_ in p.kq[p.n_kv:]:
+        m_.khu_vuc = m_.khu_vuc or p.kv
+    _ten_theo_loai(p.kq, p.loai_stt)
+    return p.kq
 
 
 def _ten_theo_loai(kq: list, loai_stt: dict) -> None:
