@@ -121,7 +121,7 @@ class TestLapPhuongAn(Co0995):
         self.assertIn('Ctrl+Left', c.b_truoc.toolTip())
         self.assertIn('Ctrl+Right', c.b_sau.toolTip())
         from pabt.man_hinh import RONG_O_HO                                  # 16/10/2026: ô rộng hơn, đủ tên hộ
-        self.assertEqual((c.cb_ho.minimumWidth(), c.cb_ho.maximumWidth()), RONG_O_HO)
+        self.assertEqual((c.cb_ho.minimumWidth(), c.cb_ho.maximumWidth()), (150 if c.width() < c.RONG_THANH_TREN_GON else RONG_O_HO[0], RONG_O_HO[1]))
         for b in (c.b_dan, c.b_luu, c.btn_toggle_preview, c.b_dong):
             self.assertEqual(b.height() or b.minimumHeight(), man_hinh.CAO_NUT_TREN)
         # một hàng điều hướng chung với dải tổng cộng, thẻ mục không còn hàng nút riêng
@@ -193,7 +193,8 @@ class TestKhaiToanNiemYet(Co0995):
         k.tabs.setCurrentIndex(3)
         self.assertTrue(k._nut['Xuất báo cáo tổng hợp ý kiến'].isVisibleTo(k))
         self.assertFalse(k._nut['Xuất biên bản đối thoại'].isVisibleTo(k))
-        self.assertIs(k.tabs.cornerWidget(), k._nut['Xuất báo cáo tổng hợp ý kiến'].parentWidget())
+        self.assertIsNone(k.tabs.cornerWidget())             # 06/11/2026: hàng nút riêng, không chiếm chỗ thanh thẻ
+        self.assertIs(k._goc_nut, k._nut['Xuất báo cáo tổng hợp ý kiến'].parentWidget())
         k.tabs.setCurrentIndex(2)
         self.assertTrue(k._nut['Xuất biên bản đối thoại'].isVisibleTo(k))
         self.assertGreaterEqual(k.bang_th.columnWidth(0), 185)

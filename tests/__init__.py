@@ -8,6 +8,9 @@ import atexit
 import os
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+# offscreen không có phông: mọi ký tự thành ô vuông rộng gấp đôi, số đo bề rộng chữ sai. Dùng phông Windows thật để đo đúng như máy người dùng.
+if os.path.isdir(r'C:\Windows\Fonts'):
+    os.environ.setdefault('QT_QPA_FONTDIR', r'C:\Windows\Fonts')
 # Thư mục dữ liệu máy RIÊNG cho cả lượt kiểm thử (0.9.87): trước đây bài mở dự án ghi đường dẫn tệp tạm vào danh sách "Dự án
 # gần đây" (%APPDATA%\PABT\du_an_gan_day.json) của người dùng, đẩy các dự án thật ra khỏi danh sách. Bài nào cần thư mục riêng
 # vẫn tự đặt PABT_THU_MUC_MAY (mock.patch.dict).

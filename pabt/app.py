@@ -464,7 +464,10 @@ class TheSo(QWidget):
 
     def vua_cao(self):
         self._hen_vua = False
-        lo = self.layout()
+        try:
+            lo = self.layout()
+        except RuntimeError:                            # thẻ đã hủy trước khi hẹn giờ chạy (đóng cửa sổ ngay sau khi hiện)
+            return
         if lo is None:
             return
         lo.activate()
@@ -2314,7 +2317,7 @@ class CuaSoChinh(QMainWindow):
             b = nut_lenh(self.lenh[ten], CO_ICON_THE_CHAO, duoi=True)
             b.setToolTip(goi_y)
             the.setToolTip(goi_y)
-            the.dat_noi_dung(b, phu)               # biểu tượng 38px, tên lệnh, mô tả: tất cả trong thẻ
+            the.dat_noi_dung(b, phu, 'Hồ sơ pháp lý' if ten.startswith('Tiếp nhận') else '')   # biểu tượng 38px, tên lệnh, mô tả: tất cả trong thẻ
             h.addWidget(the)
             self.nut_chao[ten] = b
             self.the_chao[ten] = the

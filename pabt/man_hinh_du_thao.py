@@ -546,12 +546,15 @@ class KhungDuThao(QWidget):
         self._giu_ny = giu_cot_gian(self.bang_ny, [1], 230)
         for b in (self.bang_yk, self.bang_dt):
             b.setColumnWidth(1, max(230, b.columnWidth(1)))
-        goc = QWidget()                                 # góc phải thanh 4 thẻ: nút của thẻ đang mở
-        self._h_goc = QHBoxLayout(goc)
-        self._h_goc.setContentsMargins(0, 0, 4, 2)
+        # 06/11/2026 (người dùng kèm ảnh): nút của thẻ đang mở ở HÀNG RIÊNG dưới thanh thẻ, căn phải. Trước ở góc phải thanh thẻ: nút chiếm 658 px, 4 thẻ
+        # cần 606 px và không cuộn được (1.0.69), cửa sổ dưới ~1.600 px thì nút che thẻ, không bấm tới được
+        self._goc_nut = QWidget()
+        self._h_goc = QHBoxLayout(self._goc_nut)
+        self._h_goc.setContentsMargins(0, 0, 0, 0)
         self._h_goc.setSpacing(6)
+        self._h_goc.addStretch(1)
         self._nut_goc = []
-        self.tabs.setCornerWidget(goc, Qt.Corner.TopRightCorner)
+        self._ruot_the = {}                             # trang của tabs -> nội dung (bảng) của thẻ
         tach = self.tach = TachCoNam(Qt.Orientation.Vertical)
         tach.setChildrenCollapsible(False)
         tach.setHandleWidth(14)
@@ -563,12 +566,12 @@ class KhungDuThao(QWidget):
         tach.setStretchFactor(0, 3)
         tach.setStretchFactor(1, 2)
         tach.handle(1).setToolTip('Kéo lên / xuống để đổi chiều cao bảng Hộ niêm yết và bảng Hộ vướng')
-        self.tabs.addTab(tach, '1. Niêm yết công khai')
-        self.tabs.addTab(self._trang(self.bang_yk, []), '2. Lấy ý kiến nhân dân')
-        self.tabs.addTab(self._trang(self.bang_dt, [
-            ('Đối chiếu V1 - V2 - V3…', lambda: self.doi_chieu_phien_ban()), ('Chuyển hộ sang đợt sau', self._chuyen), ('Xuất biên bản đối thoại', self._xuat_dt)]), '3. Đối thoại && Tiếp thu')
-        self.tabs.addTab(self._trang(self.bang_th, [
-            ('Đối chiếu V1 - V2 - V3… ', lambda: self.doi_chieu_phien_ban()), ('Xuất báo cáo tổng hợp ý kiến', self._xuat_yk)]), '4. Tổng hợp kết quả ý kiến')
+        self.tabs.addTab(self._boc_the(tach), '1. Niêm yết công khai')
+        self.tabs.addTab(self._boc_the(self._trang(self.bang_yk, [])), '2. Lấy ý kiến nhân dân')
+        self.tabs.addTab(self._boc_the(self._trang(self.bang_dt, [
+            ('Đối chiếu V1 - V2 - V3…', lambda: self.doi_chieu_phien_ban()), ('Chuyển hộ sang đợt sau', self._chuyen), ('Xuất biên bản đối thoại', self._xuat_dt)])), '3. Đối thoại && Tiếp thu')
+        self.tabs.addTab(self._boc_the(self._trang(self.bang_th, [
+            ('Đối chiếu V1 - V2 - V3… ', lambda: self.doi_chieu_phien_ban()), ('Xuất báo cáo tổng hợp ý kiến', self._xuat_yk)])), '4. Tổng hợp kết quả ý kiến')
         # 1.0.58 (người dùng 04/11/2026): văn bản, biên bản theo từng mục; đọc kết quả từ file scan / Word / Excel - theo thẻ đang mở
         self.b_van_ban = QPushButton('Văn bản, biên bản…')
         self.b_van_ban.setFixedHeight(26)
@@ -592,7 +595,7 @@ class KhungDuThao(QWidget):
         self.nut_can_cu = m_q.addAction('Văn bản căn cứ của dự án (13 bậc)…', lambda: self.van_ban_can_cu())
         self.b_quet_ny.setMenu(m_q)
         self._h_goc.addWidget(self.b_quet_ny)
-        self._nut_goc.append((self.tabs.widget(0), self.b_quet_ny))
+        self._nut_goc.append((tach, self.b_quet_ny))
         self.b_doc_kq.setEnabled(not chi_doc)
         self.tabs.currentChanged.connect(lambda *_: self._hien_nut_goc())
         self._hien_nut_goc()
@@ -697,8 +700,22 @@ class KhungDuThao(QWidget):
             self._bao(f'Đã ghi kết quả {h.so_ghi} hộ.' + (f' Tạo sẵn nhánh dự thảo V2 cho {so_v2} hộ có ý kiến khác (V1 giữ nguyên).' if so_v2 else ''))
         return h
 
+    def _boc_the(self, trang):
+        """Trang của thanh 4 thẻ: [hàng nút của thẻ] + nội dung. Hàng nút chuyển sang trang đang mở (_hien_nut_goc)."""
+        w = QWidget()
+        lo = QVBoxLayout(w)
+        lo.setContentsMargins(0, 4, 0, 0)
+        lo.setSpacing(4)
+        lo.addWidget(trang, 1)
+        self._ruot_the[w] = trang
+        return w
+
     def _hien_nut_goc(self):
-        hien = self.tabs.currentWidget()
+        bao = self.tabs.currentWidget()
+        if bao is not None and self._goc_nut.parentWidget() is not bao:
+            bao.layout().insertWidget(0, self._goc_nut)
+            self._goc_nut.show()                        # đổi cha làm widget ẩn: hiện lại SAU khi vào bố cục (không thành cửa sổ lạ)
+        hien = self._ruot_the.get(bao)
         for trang, b in self._nut_goc:
             b.setVisible(trang is hien)
 
@@ -712,8 +729,7 @@ class KhungDuThao(QWidget):
         lo = QVBoxLayout(w)
         lo.setContentsMargins(0, 4 if tieu_de else 2, 0, 0)
         if not tieu_de:
-            # 0.9.95: nút của thẻ (Xuất biên bản đối thoại, Xuất báo cáo tổng hợp ý kiến, Chuyển hộ sang đợt sau) nằm ở góc phải
-            # thanh 4 thẻ, chỉ hiện khi thẻ đó đang mở - bảng sát thanh thẻ, không còn hàng nút riêng
+            # nút của thẻ (Xuất biên bản đối thoại, Xuất báo cáo tổng hợp ý kiến, Chuyển hộ sang đợt sau) ở hàng nút dưới thanh 4 thẻ, chỉ hiện khi thẻ đó đang mở
             for ten, ham in nut:
                 b = QPushButton(ten)
                 b.clicked.connect(ham)

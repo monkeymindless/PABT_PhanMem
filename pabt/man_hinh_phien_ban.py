@@ -80,6 +80,8 @@ class ThanhPhienBan(QWidget):
         self._dat_nut_khoa(ghi.get(hien), sua_duoc)
         self.b_hd.setEnabled(sua_duoc)
         self.b_hd.setText('Chốt V1' if pb.V1 not in co else 'Tạo nhánh V2')
+        if self.b_hd.minimumWidth():                    # cửa sổ hẹp (CuaSoLapPA.resizeEvent): giữ đủ chữ khi chữ đổi
+            self.b_hd.setMinimumWidth(self.b_hd.fontMetrics().horizontalAdvance(self.b_hd.text()) + 18)
         self.b_hd.setToolTip('Chốt số hiện hành thành phương án niêm yết V1. In PA dự thảo, xuất bảng niêm yết cũng tự chốt.' if pb.V1 not in co
                              else 'Tạo nhánh dự thảo mới từ V1 để điều chỉnh theo ý kiến, V1 giữ nguyên')
         dau = (bo.ma_ho, hien, tuple(sorted((x['ma'], bool(x['khoa'])) for x in ds)))

@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.72', '06/11/2026', (
+        'Niêm yết & Lấy ý kiến: nút không còn che thẻ; nút của thẻ đang mở nằm ở một hàng riêng dưới thanh thẻ.',
+        'Lập phương án trên màn hình nhỏ: số tổng cộng và tổng kinh phí không còn bị cắt; thẻ mục, hàng trên tự rút gọn chữ, chữ đầy đủ ở chú thích.',
+        'Bảng In: nút Thuộc tính máy in, Thiết lập trang dễ bấm hơn. Rút gọn chữ vài nút và tên thẻ Bộ đơn giá để không bị cắt.',
+        'Sửa lỗi hao bộ nhớ: mở Bộ đơn giá hoặc lập phương án rồi Đóng dự án, phần mềm không trả lại bộ nhớ (mỗi lần khoảng 3 MB với Bộ đơn giá). Dùng cả ngày không còn nặng dần vì lỗi này.',
+    )),
     ('1.0.71', '06/11/2026', (
         'Nhanh hơn với dự án lớn: tạo dự án mới 3.000 hộ nhanh gần gấp đôi, lập bảng tổng hợp nhanh hơn khoảng 19%. Số liệu, bản in không đổi.',
         'Bảng In: đóng bảng giờ giải phóng hết bộ nhớ, dùng cả ngày không nặng dần.',

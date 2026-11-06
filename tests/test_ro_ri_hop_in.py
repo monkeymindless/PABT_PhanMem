@@ -5,6 +5,7 @@ from __future__ import annotations
 import gc
 import unittest
 
+from tests.test_giao_dien_navy import CoNavy
 from tests.test_yeu_cau_0984 import CoSoXem
 
 
@@ -49,6 +50,44 @@ class TestHopInKhongSotWidget(CoSoXem):
             self.assertIsNotNone(w.parent())
             self.assertFalse(w.isVisible())             # không vào bố cục: không được nổi lên góc hộp thoại
         h.close()
+
+
+class TestHopNhungTabKhongSot(CoNavy):
+    """06/11/2026: mở tab Bộ đơn giá / lập phương án rồi bấm lệnh menu Đóng dự án: hộp đã đóng không được giải phóng, giữ cả dữ liệu đơn giá
+    (~3 MB mỗi lần, bản 32-bit ~500 lần là cạn bộ nhớ). Do don_hop_da_dong (cuối _chay_lenh) hẹn xóa lần nữa hộp mà KhungLamViecDaTab.bo vừa hẹn."""
+
+    def _don(self):
+        from PySide6.QtCore import QEventLoop, QTimer
+        vs = QEventLoop()
+        QTimer.singleShot(30, vs.quit)
+        vs.exec()
+        gc.collect()
+
+    def _dem(self, lop):
+        return sum(1 for o in gc.get_objects() if type(o).__name__ == lop)
+
+    def _thu(self, lop, mo):
+        ud, w = self._cua_so(so_ho=3)
+        self._don()
+        file = w.file
+        truoc = self._dem(lop)
+        for _ in range(3):
+            if w.con is None:
+                w.mo(str(file), chi_doc=False)
+                self._don()
+            w._chay_lenh(lambda: mo(w))
+            self._don()
+            self.assertEqual(self._dem(lop), truoc + 1)
+            w.lenh['Đóng dự án'].trigger()
+            self._don()
+            self.assertIsNone(w.con)
+        self.assertEqual(self._dem(lop), truoc)
+
+    def test_bo_don_gia(self):
+        self._thu('HopBoDonGia', lambda w: w.bo_don_gia())
+
+    def test_lap_phuong_an(self):
+        self._thu('CuaSoLapPA', lambda w: w.mo_lap_pa(w.con.execute('SELECT MIN(ma_ho) FROM ho').fetchone()[0]))
 
 
 if __name__ == '__main__':

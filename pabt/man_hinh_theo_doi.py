@@ -1117,7 +1117,7 @@ class KhungBangTongHop(_Khung):
                 w.layout().setContentsMargins(LE_THE, LE_THE - 2, LE_THE, LE_THE - 2)
             w.da_doi.connect(self._doi)
             w.mo_ho.connect(self.mo_ho.emit)
-        self.b_phe_duyet = QPushButton('Xem Quyết định phê duyệt  →')
+        self.b_phe_duyet = QPushButton('Xem QĐ phê duyệt  →')
         self.b_phe_duyet.setToolTip('Mở Nhóm 6: Quyết định phê duyệt (danh sách quyết định, hộ của quyết định, khớp số liệu)')
         self.b_phe_duyet.clicked.connect(self.di_den_phe_duyet.emit)
         self.tab.setCornerWidget(self.b_phe_duyet, Qt.Corner.TopRightCorner)

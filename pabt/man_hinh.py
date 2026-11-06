@@ -7,7 +7,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from PySide6.QtCore import QEvent, Qt, QTimer
-from PySide6.QtGui import QBrush, QColor, QFont, QKeySequence, QShortcut
+from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QKeySequence, QShortcut
 from datetime import datetime
 from pathlib import Path
 
@@ -1309,6 +1309,7 @@ class NhanTongPA(QLabel):
         self.setTextFormat(Qt.TextFormat.RichText)
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self._chu = ('', '')
+        self.chu_thich = None                           # chú thích riêng; None: chữ đầy đủ
 
     def dat(self, du: str, *gon: str) -> None:
         """du: chữ đầy đủ; gon: các mức gọn dần (chọn mức đầu tiên vừa bề rộng; không mức nào vừa: mức gọn nhất)."""
@@ -1328,7 +1329,7 @@ class NhanTongPA(QLabel):
         if chu != QLabel.text(self):
             self.setText(chu)
         doc.setHtml(du)
-        self.setToolTip(doc.toPlainText().replace('\xa0·\xa0', '\n').replace('\xa0\xa0|\xa0\xa0', '\n'))
+        self.setToolTip(self.chu_thich if self.chu_thich is not None else doc.toPlainText().replace('\xa0·\xa0', '\n').replace('\xa0\xa0|\xa0\xa0', '\n'))
 
     def text(self) -> str:
         """Chữ ĐẦY ĐỦ (như NhanRutGon) - chữ đang vẽ có thể là bản gọn."""
@@ -1698,6 +1699,8 @@ class CuaSoLapPA(QDialog):
             return
         kq = self.bo.ket_qua_cong_don
         self.lb_tong_dd.setText(f'Tổng kinh phí hộ: {vn(kq.tong)} đ')
+        if hasattr(self, 'thanh_the'):
+            self.thanh_the.vua()
         self.lb_tong_dd.setToolTip('Tổng kinh phí phương án của hộ' + (' - cộng dồn mọi lần lập phương án'
                                                                        if self.cb_lan.count() > 1 else ''))
 
@@ -2109,12 +2112,12 @@ class CuaSoLapPA(QDialog):
         self.cb_tu_luu.setToolTip('Lưu tự động phương án / hồ sơ hộ sau khoảng thời gian NGỪNG thao tác (không cắt ngang ô đang gõ, '
                                   'không hiện hộp thoại). Tắt: chỉ lưu khi bấm Lưu / Ctrl+S.')
         self.cb_tu_luu.setFixedHeight(28)
+        self.cb_tu_luu.setMaximumWidth(92)              # chữ ngắn nhất "Tắt", dài nhất "10 giây": nhường chỗ cho số tổng
         i = self.cb_tu_luu.findData(chu_de.chu_ky_luu_tu_dong())
         self.cb_tu_luu.setCurrentIndex(max(0, i))
         self.cb_tu_luu.activated.connect(lambda *_: self._doi_chu_ky_tu_luu())
-        self.lb_chan = QLabel('')
+        self.lb_chan = NhanTongPA()                     # 06/11/2026: hẹp thì chữ gọn dần, số tổng không bị cắt ("TỔNG CỘNG PHƯƠNG ÁN: 162" đọc nhầm số tiền)
         self.lb_chan.setObjectName('lb_chan_lap_pa')
-        self.lb_chan.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         nhan_tl = QLabel('Tự lưu:')
         nhan_tl.setProperty('vai', 'nhan')
         h.addWidget(self.lb_tong)
@@ -2154,9 +2157,13 @@ class CuaSoLapPA(QDialog):
             chu = f'Tổng số: {len(self.bo.ds(m))} dòng  |  Cộng mục đang xem: {vn(kq.muc[m])} đ  |  '
         else:
             chu = f'Tổng số: {self.ho_so.bang.rowCount()} thửa  |  '
-        self.lb_chan.setText(f'{chu}<b>TỔNG CỘNG PHƯƠNG ÁN: {vn(kq.tong)} đồng</b>')
-        self.lb_chan.setMinimumWidth(min(self.lb_chan.fontMetrics().boundingRect(self.lb_chan.text()).width(), 520))
-        self.lb_chan.setToolTip(self.lb_tong.text())
+        gon = f'<b>TỔNG: {vn(kq.tong)} đ</b>'
+        giua = f'Cộng mục: {vn(kq.muc[THE_MUC[i]])} đ  |  {gon}' if 0 < i < len(THE_MUC) else gon
+        self.lb_chan.chu_thich = self.lb_tong.text()
+        self.lb_chan.dat(f'{chu}<b>TỔNG CỘNG PHƯƠNG ÁN: {vn(kq.tong)} đồng</b>', giua, gon)
+        f_dam = self.lb_chan.font()
+        f_dam.setBold(True)
+        self.lb_chan.setMinimumWidth(QFontMetrics(f_dam).horizontalAdvance(f'TỔNG: {vn(kq.tong)} đ') + 8)
 
     def cap_nhat_bo_dem(self, bang, tk: dict) -> None:
         """Bộ đếm vùng chọn của mọi bảng trong cửa sổ (giao_dien._BoChonVung tìm hàm này ở cha gần nhất)."""
@@ -2992,6 +2999,21 @@ class CuaSoLapPA(QDialog):
         return chon
 
     # ---------------------------------------------- màn hình thấp (1.0.51)
+    RONG_THANH_TREN_GON = 1280
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        hep = self.width() < self.RONG_THANH_TREN_GON
+        if hep != getattr(self, '_thanh_tren_hep', False) and hasattr(self, 'thanh_pb'):
+            self._thanh_tren_hep = hep                  # hàng trên ở 1366 @125%: 2 ô chọn nhường chỗ, nút Chốt V1 / Mở khóa không bị cắt; chữ đủ ở danh sách xổ và chú thích
+            self.cb_lan.setMinimumContentsLength(8 if hep else 24)
+            self.thanh_pb.cb.setMinimumContentsLength(8 if hep else 22)
+            self.nhan_lan.setVisible(not hep)
+            self.cb_ho.setMinimumWidth(150 if hep else RONG_O_HO[0])
+            self.b_luu.setText('Lưu' if hep else 'Lưu (Ctrl+S)')
+            for b in (self.thanh_pb.b_hd, self.thanh_pb.b_khoa, self.b_mo_khoa, self.thanh_pb.b_dc):
+                b.setMinimumWidth(b.fontMetrics().horizontalAdvance(b.text()) + 18 if hep else 0)
+
     def _man_hinh_thap(self) -> bool:
         man = self.screen() or QApplication.primaryScreen()
         return man is not None and man.availableGeometry().height() <= MAN_HINH_THAP

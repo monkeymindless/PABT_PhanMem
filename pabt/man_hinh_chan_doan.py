@@ -15,7 +15,7 @@ from . import chua_benh_csdl, csdl
 
 MAU_MUC = {'dat': '#047857', 'canh_bao': '#9A5A12', 'loi': '#B83A3A'}
 CHU_MUC = {'dat': 'Đạt', 'canh_bao': 'Lưu ý', 'loi': 'Lỗi'}
-NUT_GOI = 'Xuất gói chẩn đoán ẩn danh gửi tác giả (.zip)…'
+NUT_GOI = 'Xuất gói chẩn đoán ẩn danh (.zip)…'
 # 20/10/2026 (ảnh mẫu người dùng): 5 chỉ số kiểm toán kỹ thuật (khóa, mã chỉ số, nhãn) + 4 nút bảo trì 1-click (việc chua_benh_csdl.
 # sua_tep_pabt, chữ nút, biểu tượng Segoe MDL2) - không emoji (Win 7)
 CHI_SO = (('khoa', '1. Trạng thái tệp khóa CSDL (.khoa)'), ('toan_ven', '2. Kiểm tra toàn vẹn CSDL (integrity_check)'),

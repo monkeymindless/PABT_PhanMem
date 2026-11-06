@@ -277,7 +277,7 @@ class HopDotTrinh(_Hop):
         self.b_xoa_so.clicked.connect(lambda: self.xoa_so())
         # một chạm: lấy hộ đã niêm yết xong ở Nhóm 4 (Niêm yết & Lấy ý kiến) vào đợt đang chọn
         self.b_niem_yet = QToolButton()
-        self.b_niem_yet.setText('Lấy hộ đã niêm yết xong từ Nhóm 4')
+        self.b_niem_yet.setText('Lấy hộ đã niêm yết xong')
         self.b_niem_yet.setToolTip('Nạp vào đợt các hộ đã hết thời hạn niêm yết công khai (không vướng pháp lý) - '
                                    'chọn tất cả, chỉ hộ đã đồng thuận, hoặc theo từng đợt niêm yết')
         self.b_niem_yet.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)

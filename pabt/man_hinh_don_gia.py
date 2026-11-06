@@ -22,17 +22,18 @@ _COT_TS = (['Mã', 'Phân loại', 'Tên', 'ĐVT', 'Đơn giá (đ)', 'Ghi chú'
 # vật nuôi (mục 3 của phương án như cây trồng): mã VN.. của bộ tích hợp (QĐ 31/2025/QĐ-UBND) hoặc mục cập nhật từ văn bản vật
 # nuôi (nhap_don_gia.ap_dung ghi phân loại PHAN_LOAI_VAT_NUOI) - thẻ riêng để thấy ngay, không lẫn trong 5.500 dòng cây trồng
 _VAT_NUOI = f"(ma LIKE 'VN%' OR phan_loai LIKE '{don_gia.PHAN_LOAI_VAT_NUOI}%')"
+TEN_DAY_THE = {'Chính sách hỗ trợ': 'Chính sách hỗ trợ (QĐ 42/2025)', 'Tham số, hạn mức': 'Tham số, hạn mức đất NN', 'Thưởng bàn giao': 'Thưởng bàn giao mặt bằng'}      # chú thích thẻ: tên thẻ rút gọn để cửa sổ 1536 px không phải cuộn thanh thẻ
 THE = [
     # chỉ nhóm 2: các dòng HT / TH (nhóm 4, 5) trong dm_taisan trùng thẻ Chính sách hỗ trợ / Thưởng (người dùng 12/10/2026)
     ('Nhà, công trình', _TS + 'nhom = 2 ORDER BY rowid', *_COT_TS),
     ('Cây trồng', _TS + f'nhom = 3 AND NOT {_VAT_NUOI} ORDER BY rowid', *_COT_TS),
     ('Vật nuôi', _TS + f'nhom = 3 AND {_VAT_NUOI} ORDER BY LENGTH(ma), ma', *_COT_TS),
-    ('Chính sách hỗ trợ (QĐ 42/2025)', 'SELECT ma, ten, dvt, don_gia, can_cu, cach_tinh FROM dm_hotro ORDER BY LENGTH(ma), ma',
+    ('Chính sách hỗ trợ', 'SELECT ma, ten, dvt, don_gia, can_cu, cach_tinh FROM dm_hotro ORDER BY LENGTH(ma), ma',
      ['Mã', 'Khoản hỗ trợ', 'ĐVT', 'Đơn giá / hệ số', 'Căn cứ', 'Cách tính'], [55, 420, 90, 110, 330, 330]),
-    ('Tham số, hạn mức đất NN', "SELECT ma, ten, gia_tri, dvt, can_cu, trang_thai FROM tham_so WHERE ma NOT LIKE 'QDCT:%' "
+    ('Tham số, hạn mức', "SELECT ma, ten, gia_tri, dvt, can_cu, trang_thai FROM tham_so WHERE ma NOT LIKE 'QDCT:%' "
                                 "AND ma NOT LIKE 'KV%:%'",
      ['Mã', 'Tham số', 'Giá trị', 'ĐVT', 'Căn cứ', 'Trạng thái'], [120, 430, 90, 90, 330, 160]),
-    ('Thưởng bàn giao mặt bằng', 'SELECT tu, muc FROM bieu_thuong ORDER BY CAST(tu AS REAL)',
+    ('Thưởng bàn giao', 'SELECT tu, muc FROM bieu_thuong ORDER BY CAST(tu AS REAL)',
      ['Mã', 'Tổng bồi thường, hỗ trợ từ (đ)', 'Mức thưởng (đ/hộ)'], [60, 220, 180]),     # Mã TH1… chỉ hiển thị (0.9.69)
     ('Văn bản căn cứ', 'SELECT id, so_hieu, co_quan, noi_dung, trang_thai FROM van_ban ORDER BY id',
      ['Văn bản', 'Cơ quan', 'Nội dung áp dụng', 'Trạng thái'], [380, 200, 440, 230]),
@@ -544,6 +545,8 @@ class HopBoDonGia(QDialog):
                 if i == I_QUY_UOC and self.con_du_an is not None:
                     nhan = f'{ten} · dự án ({len(ds)})'
                 self.the.addTab(QWidget(), nhan)
+                if ten in TEN_DAY_THE:
+                    self.the.setTabToolTip(self.the.count() - 1, TEN_DAY_THE[ten])
         finally:
             con.close()
         self.the.blockSignals(False)

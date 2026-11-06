@@ -2118,7 +2118,11 @@ class TheChao(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         do_bong(self, 22, 3, 42)
 
-    def dat_noi_dung(self, nut: QToolButton, phu: str) -> QLabel:
+    def sizeHint(self):
+        """Đúng cỡ thiết kế khi có chỗ, chỉ co tới RONG_THE_CHAO_TOI_THIEU khi cửa sổ hẹp (trước: theo chữ, phông thật làm thẻ hẹp 168 px, tên lệnh dài bị cắt giữa chữ)."""
+        return QSize(*KICH_THE_CHAO)
+
+    def dat_noi_dung(self, nut: QToolButton, phu: str, chu: str = '') -> QLabel:
         """Xếp nút lệnh (biểu tượng trên, chữ dưới) và dòng mô tả vào thẻ; nút lấy tên #the_chao_nut (kiểu trong suốt, chữ 14,5pt đậm)
         và biểu tượng 38px màu của loại thẻ (vẽ lại khi lệnh đổi trạng thái: Qt chép biểu tượng của QAction đè lên). Trả nhãn mô tả."""
         from PySide6.QtWidgets import QSizePolicy
@@ -2129,6 +2133,8 @@ class TheChao(QFrame):
         nut.setIconSize(QSize(CO_HUY_HIEU_THE_CHAO, CO_HUY_HIEU_THE_CHAO))
         a = nut.defaultAction()
         k = ky_hieu_nut(a.text()) if a is not None else None
+        if chu:                                         # chữ riêng của thẻ, ngắn hơn tên lệnh ở menu
+            nut.setText(chu)
         bo = MAU_THE_CHAO.get(self._loai or '', ('', '', '#EFF6FF', CHINH, CHINH))
         ic = huy_hieu_bieu_tuong(k, bo[4], bo[2], CO_HUY_HIEU_THE_CHAO) if k else None
         if ic is not None:
@@ -2137,6 +2143,8 @@ class TheChao(QFrame):
                 def gan_lai(nut=nut, ic=ic):
                     try:
                         nut.setIcon(ic)
+                        if chu:
+                            nut.setText(chu)
                     except RuntimeError:                # nút đã bị hủy
                         pass
                 a.changed.connect(lambda: QTimer.singleShot(0, gan_lai))
@@ -2162,7 +2170,9 @@ class TheChao(QFrame):
     def _dat_phim(self):
         if getattr(self, 'lb_phim', None) is not None:
             self.lb_phim.adjustSize()
-            self.lb_phim.move(self.width() - self.lb_phim.width() - 10, 10)
+            x = self.width() - self.lb_phim.width() - 10
+            self.lb_phim.move(x, 10)
+            self.lb_phim.setVisible(x >= (self.width() + CO_HUY_HIEU_THE_CHAO) // 2 + 2)     # thẻ hẹp: không đè biểu tượng; phím tắt vẫn ở chú thích
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
@@ -2436,6 +2446,23 @@ def kieu_menu_bar(mb) -> None:
         KHI_DOI_TY_LE.append(_vua_moi_menu)
 
 
+_THUNG_CHO_XOA: list = []
+
+
+def _thung_cho_xoa():
+    """Widget ẩn, ngoài cây cửa sổ chính, chứa hộp đã gỡ tab trong lúc chờ deleteLater chạy. findChildren của tổ tiên gặp widget đang chờ xóa làm vỏ
+    Python của nó sống mãi, giữ cả dữ liệu (06/11/2026: tab Bộ đơn giá rồi lệnh Đóng dự án: ~3 MB / lần, đo được; _chay_lenh gọi findChildren cuối lệnh)."""
+    from PySide6.QtWidgets import QWidget
+    if _THUNG_CHO_XOA:
+        try:
+            _THUNG_CHO_XOA[0].objectName()
+            return _THUNG_CHO_XOA[0]
+        except RuntimeError:                            # đã hủy (đóng mọi cửa sổ cấp cao lúc thoát / giữa các module kiểm thử)
+            _THUNG_CHO_XOA.clear()
+    _THUNG_CHO_XOA.append(QWidget())
+    return _THUNG_CHO_XOA[0]
+
+
 class KhungLamViecDaTab(QWidget):
     """Bộ điều khiển trang làm việc: trang chính (số nguyên) + widget phụ (hộ / bộ đơn giá / niêm yết) giữ nguyên trong RAM.
     Từ 15/10/2026 (người dùng: thu hồi chiều cao) KHÔNG còn thanh tab hiện trên màn hình - chuyển trang bằng menu trái / thanh
@@ -2515,6 +2542,8 @@ class KhungLamViecDaTab(QWidget):
         if w is not None and xoa_widget:
             self.stack_phu.removeWidget(w)
             w.setProperty('nhung_tab', False)
+            w.hide()
+            w.setParent(_thung_cho_xoa())               # xem _thung_cho_xoa: không để findChildren của cửa sổ chính gặp hộp đang chờ xóa
             w.deleteLater()
         return khoa, w
 

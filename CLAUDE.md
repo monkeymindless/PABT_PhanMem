@@ -230,6 +230,8 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   (`'QSpacerItem' object has no attribute …`, có lúc sập 0xC0000005 / mã thoát 139 giữa lượt test). Dùng `lo.indexOf(widget)`,
   `getItemPosition(i)`, `labelForField(w)` (1.0.55 - lỗi do `gan_nhan_o_nhap` của 1.0.54).
 - Bản Qt5 là tiến trình 32-bit (trần ~1,8 GB): hỏng bộ nhớ đổi vị trí mỗi lần = đo bộ nhớ trước. Widget ngoài bố cục phải có cha + ẩn (không cha, tín hiệu nối lambda giữ self: hộp đã đóng không bao giờ được giải phóng). Hàm chạy hàng chục nghìn lần: không `import` trong thân (PySide thay `__import__` bằng hàm Python). Thao tác hàng loạt tạo nhiều đối tượng: `csdl.tam_tat_gc`.
+- `findChildren` trên tổ tiên của widget đang chờ `deleteLater` làm vỏ Python của nó sống mãi, giữ cả dữ liệu (1.0.72): hộp có dữ liệu lớn thì chuyển khỏi cây trước khi xóa như `KhungLamViecDaTab.bo` (`_thung_cho_xoa`). Kiểm rò rỉ: `kiem_tra_ro_ri.py`.
+- Offscreen mặc định không có phông (ô vuông, đo sai chữ): đo bố cục đặt `QT_QPA_FONTDIR=C:\Windows\Fonts` (`tests/__init__`, `kiem_tra_bo_cuc.py`) và xem ảnh `w.grab()`. Không đặt nút ở góc thanh thẻ (`setCornerWidget`) khi thanh thẻ không cuộn: nút che thẻ.
 - Test KHÔNG đổi bảng kiểu / bảng màu của QApplication thật (`ap_dung`, `dat_tong_nen(ap_lai=True)`, `dat_ty_le`): mỗi lần hàng chục giây
   cho cả lượt. Gỡ bộ lọc: `giao_dien.bo_ap_dung(app)`.
 
