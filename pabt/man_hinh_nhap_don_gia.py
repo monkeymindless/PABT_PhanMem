@@ -62,6 +62,47 @@ class HopNhapDonGia(QDialog):
         van_ban: ndg.phan_tich_van_ban (không có thì tự phân tích các dòng đầu của file). nhom_uu_tien: nhóm của thẻ đang xem ở Bộ
         đơn giá (2 / 3 / 7 / 4) - dùng khi văn bản không cho biết nhóm (bảng dán, file không có trích yếu).
         thay_the: True = chọn sẵn "Thay cả nhóm theo văn bản này" (nút Cập nhật đơn giá)."""
+        dong, vb, nhom_vb, quy_tac, ds, so_nhom, khong_tach, xem_van, tu_loi_van, chinh_sach, bieu, quy_dinh = self._phan_tich(file, nguon, dong, van_ban, nhom_uu_tien)
+        super().__init__(parent)
+        self._gan_van_ban(quy_dinh, dong, tu_loi_van, chinh_sach, bieu, ds, vb, nhom_vb)
+        self.ket_qua = None
+        self.nguon = nguon or Path(str(file or 'Clipboard')).name
+        self.setWindowTitle(f'Cập nhật đơn giá từ {self.nguon}')
+        self.resize(1360, 820)
+        lo = QVBoxLayout(self)
+        lo.setContentsMargins(10, 8, 10, 8)
+        lo.setSpacing(6)
+        mt = mo_ta_van_ban(vb)
+        if mt:
+            ty = vb.get('trich_yeu', '')
+            l_vb = QLabel(f'<b>{mt}</b>' + (f' - {ty}' if ty else ''))
+            l_vb.setWordWrap(True)
+            l_vb.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            lo.addWidget(l_vb)
+        canh = self._lap_luu_y(vb, ds, mt, so_nhom, khong_tach, bieu)
+        self._dung_hang_cach(lo, thay_the, chinh_sach)
+        self.lb_canh_thay = QLabel()
+        self.lb_canh_thay.setWordWrap(True)
+        dat_kieu_theo_tong(self.lb_canh_thay, KIEU_CANH)
+        self.lb_canh_thay.setVisible(False)
+        self.xem_van = xem_van
+        self.quy_tac = quy_tac
+        self._cho_dem = False
+        self._khoa_tim = {}
+        self._dung_hang_loc(lo, ds)
+        self._dung_bang_doi_chieu(lo)
+        self._dung_chu_giai(lo)
+        self._dung_khung_phu(lo, canh, xem_van, vb)
+        self._dung_hang_duoi(lo)
+        self._ve_quy_dinh()
+        self.khop()
+        if self.da_co_cu:                               # cảnh báo nghiêm trọng (giá trong file có thể cũ hơn): mở sẵn thẻ Lưu ý
+            self.khung_phu.setCurrentWidget(self._tr_luu)
+            self.b_phu.setChecked(True)
+
+    @staticmethod
+    def _phan_tich(file, nguon, dong, van_ban, nhom_uu_tien) -> tuple:
+        """Đọc và phân tích văn bản, trước khi tạo hộp thoại."""
         # đọc file trước khi tạo hộp thoại: file lỗi thì không để lại hộp thoại dở dang
         dong = ndg.doc_bang(file) if dong is None else dong
         vb = van_ban if van_ban is not None else ndg.phan_tich_van_ban(dong, Path(str(file)).name if file else (nguon or ''))
@@ -88,7 +129,10 @@ class HopNhapDonGia(QDialog):
                                     ('\n\n' + '\n'.join(xem_van[:10]) if xem_van else ''))
         # 1.0.56: quy định cách tính trong LỜI VĂN các điều khoản + dòng quy tắc của bảng (quy_dinh_van_ban)
         quy_dinh = qvb.trich_quy_dinh(dong, nhom_vb, quy_tac)
-        super().__init__(parent)
+        return dong, vb, nhom_vb, quy_tac, ds, so_nhom, khong_tach, xem_van, tu_loi_van, chinh_sach, bieu, quy_dinh
+
+    def _gan_van_ban(self, quy_dinh, dong, tu_loi_van, chinh_sach, bieu, ds, vb, nhom_vb) -> None:
+        """Giữ kết quả phân tích; so với bộ đơn giá đang dùng."""
         self.quy_dinh = quy_dinh
         self.dong = dong
         self.ket_qua_ai = None                          # 1.0.56: kết quả phân tích AI (tùy chọn) - áp lại sau mỗi lần so khớp
@@ -120,20 +164,9 @@ class HopNhapDonGia(QDialog):
             except Exception:                           # noqa: BLE001 - không đọc được bộ đơn giá: coi như chưa gồm (an toàn)
                 self.chua_gom = ['(không đọc được danh sách văn bản của bộ đơn giá)']
         self.da_co_cu = self.da_co and bool(self.chua_gom)
-        self.ket_qua = None
-        self.nguon = nguon or Path(str(file or 'Clipboard')).name
-        self.setWindowTitle(f'Cập nhật đơn giá từ {self.nguon}')
-        self.resize(1360, 820)
-        lo = QVBoxLayout(self)
-        lo.setContentsMargins(10, 8, 10, 8)
-        lo.setSpacing(6)
-        mt = mo_ta_van_ban(vb)
-        if mt:
-            ty = vb.get('trich_yeu', '')
-            l_vb = QLabel(f'<b>{mt}</b>' + (f' - {ty}' if ty else ''))
-            l_vb.setWordWrap(True)
-            l_vb.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            lo.addWidget(l_vb)
+
+    def _lap_luu_y(self, vb, ds, mt, so_nhom, khong_tach, bieu) -> list:
+        """Các lưu ý về văn bản (thẻ Lưu ý)."""
         canh = []
         if self.da_co_cu:
             canh.append('Văn bản này ĐÃ CÓ trong danh sách văn bản của bộ đơn giá và KHÔNG nhắc tới văn bản sửa đổi đang dùng: '
@@ -169,6 +202,10 @@ class HopNhapDonGia(QDialog):
             canh.append('Văn bản sửa đổi, bổ sung: chỉ các bảng giá trong văn bản được áp dụng; nội dung bãi bỏ / sửa điều khoản '
                         'ở khung bên dưới cần tự xử lý.')
         self.canh = canh                                # 1.0.61: lưu ý chuyển vào khung "Thông tin kèm theo" (thẻ Lưu ý) - nhường chỗ cho bảng
+        return canh
+
+    def _dung_hang_cach(self, lo, thay_the, chinh_sach) -> None:
+        """Hàng chọn nhóm, cách cập nhật, khu vực, văn bản hết hiệu lực."""
         self.o_nhom = QComboBox()
         self.o_nhom.addItem('Tự động theo văn bản', 0)
         self.o_nhom.setToolTip('Tự động: theo văn bản, tiêu đề nhóm và từng dòng (tên, ĐVT). Hoặc ép cả văn bản vào một nhóm danh mục.')
@@ -229,14 +266,9 @@ class HopNhapDonGia(QDialog):
             self._nap_vb_cu()
             self.lb_vb_cu.setVisible(True)
             self.cb_vb_cu.setVisible(True)
-        self.lb_canh_thay = QLabel()
-        self.lb_canh_thay.setWordWrap(True)
-        dat_kieu_theo_tong(self.lb_canh_thay, KIEU_CANH)
-        self.lb_canh_thay.setVisible(False)
-        self.xem_van = xem_van
-        self.quy_tac = quy_tac
-        self._cho_dem = False
-        self._khoa_tim = {}
+
+    def _dung_hang_loc(self, lo, ds) -> None:
+        """Hàng lọc / chọn."""
         # --- hàng lọc / chọn (1.0.61: gọn một hàng; nút "Chọn tất cả" + menu các cách chọn)
         hang_loc = QHBoxLayout()
         hang_loc.setSpacing(8)
@@ -293,6 +325,9 @@ class HopNhapDonGia(QDialog):
         self.lb_ai.setWordWrap(True)
         lo.addWidget(self.lb_ai)
         self.lb_ai.setVisible(False)
+
+    def _dung_bang_doi_chieu(self, lo) -> None:
+        """Bảng đối chiếu: chiếm phần lớn cửa sổ."""
         # --- bảng đối chiếu: chiếm phần lớn cửa sổ
         self.bang = QTableWidget(0, len(COT))
         self.bang.setHorizontalHeaderLabels(list(COT))
@@ -317,6 +352,9 @@ class HopNhapDonGia(QDialog):
         self.bang.setColumnHidden(C_KV, not self.khu_vuc)
         self.bang.cellChanged.connect(self._sua_o)
         self.bang.itemChanged.connect(self._hen_dem)
+
+    def _dung_chu_giai(self, lo) -> None:
+        """Chú giải màu + tóm tắt."""
         # --- chú giải màu + tóm tắt
         hang_chu = QHBoxLayout()
         hang_chu.setSpacing(10)
@@ -333,6 +371,9 @@ class HopNhapDonGia(QDialog):
         self.lb.setWordWrap(True)
         hang_chu.addWidget(self.lb, 1)
         lo.addLayout(hang_chu)
+
+    def _dung_khung_phu(self, lo, canh, xem_van, vb) -> None:
+        """Khung thông tin kèm theo."""
         # --- khung thông tin kèm theo (ẩn mặc định): lưu ý, quy định cách tính, câu cần nhập tay, nội dung sửa đổi
         self.khung_phu = QTabWidget()
         self.khung_phu.setMaximumHeight(200)
@@ -374,6 +415,9 @@ class HopNhapDonGia(QDialog):
                                                                     'xem và xử lý nếu cần)')
         lo.addWidget(self.khung_phu)
         self.khung_phu.setVisible(False)
+
+    def _dung_hang_duoi(self, lo) -> None:
+        """Hàng dưới cùng."""
         # --- hàng dưới cùng
         duoi = QHBoxLayout()
         duoi.setSpacing(8)
@@ -397,11 +441,6 @@ class HopNhapDonGia(QDialog):
         duoi.addWidget(b_huy)
         duoi.addWidget(self.b_ap_dung)
         lo.addLayout(duoi)
-        self._ve_quy_dinh()
-        self.khop()
-        if self.da_co_cu:                               # cảnh báo nghiêm trọng (giá trong file có thể cũ hơn): mở sẵn thẻ Lưu ý
-            self.khung_phu.setCurrentWidget(self._tr_luu)
-            self.b_phu.setChecked(True)
 
     def _cap_nhat_phu(self):
         """Số lưu ý / quy định trên thẻ và nút; nút đỏ khi có lưu ý."""

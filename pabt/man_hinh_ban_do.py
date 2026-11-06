@@ -1491,6 +1491,22 @@ class HopBanDo(QDialog):
         self._can_phan_tich = False                      # lớp KML đã lưu mà chưa có thửa: phân tích khi cửa sổ hiện
         self._hen_vi_tri = None
         self.lop_kml = []                                # [(tên file, [PlacemarkKml])] - các lớp bản vẽ đang mở
+        self._tao_thanh_cong_cu()
+        self._tao_ban_do_va_lop()
+        self._tao_tra_cuu(con, chi_doc)
+        self._tao_khung_do()
+        lo = QVBoxLayout(self)
+        lo.addWidget(self.khung_cc)          # nút ẩn / hiện SAU khi bố cục đã gắn vào hộp (1.0.16: nút chưa có cha thành cửa sổ rỗng)
+        lo.addWidget(self.khung_cg)
+        lo.addWidget(self.khung_lop)
+        self._dung_ben_phai()
+        self._dung_chia(lo)
+        self._dat_trang_thai_dau(con, chi_doc)
+        self._nap_cai_dat_nen()
+        self.nap_to()
+
+    def _tao_thanh_cong_cu(self) -> None:
+        """Hàng công cụ trên bản đồ + chú giải."""
         self.cb_to = QComboBox()
         self.cb_to.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)     # "Tất cả các tờ" nạp sau khi hộp đã hiện: không bị cắt chữ
         self.cb_to.setMinimumContentsLength(12)
@@ -1585,6 +1601,9 @@ class HopBanDo(QDialog):
         self.lb_tong = QLabel('')                       # 1.0.33: tổng số thửa + tỷ lệ đồng thuận (thửa đã gắn hộ)
         self.lb_tong.setProperty('vai', 'nhan')
         self.cg.gian(self.lb_tong)                       # dòng tổng nhận phần rộng thừa: các ô chú giải đứng sát nhau
+
+    def _tao_ban_do_va_lop(self) -> None:
+        """Khung bản đồ và hàng bật / tắt lớp."""
         self.view = KhungBanDo(self)
         self.view.bam_ho.connect(self._bam_ho)
         self.view.bam_thua.connect(self._bam_thua)
@@ -1626,6 +1645,9 @@ class HopBanDo(QDialog):
         self.b_an_ben.setToolTip('Ẩn / hiện bảng thông tin bên phải để bản đồ chiếm trọn cửa sổ (hoặc kéo thanh chia giữa hai bên để chỉnh to nhỏ)')
         self.b_an_ben.clicked.connect(lambda: self.an_hien_ben())
         hlop.addWidget(self.b_an_ben)
+
+    def _tao_tra_cuu(self, con, chi_doc) -> None:
+        """Thẻ Tra cứu / Nhập vào dự án và dải thông tin thửa."""
         self.khung_tc = QWidget()
         vtc = QVBoxLayout(self.khung_tc)
         vtc.setContentsMargins(4, 4, 4, 4)
@@ -1676,6 +1698,9 @@ class HopBanDo(QDialog):
         self.khung_tt.b_ho.clicked.connect(lambda: self.thua_chon is not None and self.xem_ho(self.thua_chon.ma_ho))
         self.khung_tt.b_sua.clicked.connect(lambda: self.sua_thua())
         self.khung_tt.b_chep.clicked.connect(lambda: self.sao_chep_thua())
+
+    def _tao_khung_do(self) -> None:
+        """Kết quả đo, bộ nạp ảnh nền, các nhãn đáy."""
         self.khung_do = QWidget()
         hdo = QVBoxLayout(self.khung_do)
         hdo.setContentsMargins(0, 0, 0, 0)
@@ -1704,10 +1729,9 @@ class HopBanDo(QDialog):
         self.lb.setWordWrap(True)
         self.lb_nguon = QLabel(nen_ban_do.GHI_NGUON)
         self.lb_nguon.setProperty('vai', 'nhan')
-        lo = QVBoxLayout(self)
-        lo.addWidget(self.khung_cc)          # nút ẩn / hiện SAU khi bố cục đã gắn vào hộp (1.0.16: nút chưa có cha thành cửa sổ rỗng)
-        lo.addWidget(self.khung_cg)
-        lo.addWidget(self.khung_lop)
+
+    def _dung_ben_phai(self) -> None:
+        """Bảng bên phải bản đồ."""
         # bảng bên phải (người dùng 05/11/2026: bản đồ vệ tinh rộng nhất có thể): bản đồ cao hết cửa sổ; kéo thanh chia để chỉnh hai bên, kéo hết cỡ hoặc nút "Ẩn bảng" để bản đồ chiếm trọn
         # 1.0.70 (người dùng 06/11/2026: nội dung bị che, không cuộn được): hai phần kéo được bằng thanh ngăn; phần thông tin tự cuộn, không còn bị ép chồng chữ
         from .giao_dien import TachCoNam
@@ -1739,6 +1763,9 @@ class HopBanDo(QDialog):
         self.chia_doc.handle(1).setToolTip('Kéo lên / xuống để chia chỗ giữa thông tin thửa và bảng bên dưới')
         self.chia_doc.splitterMoved.connect(lambda *_: self._nho_chia_doc())
         vd.addWidget(self.chia_doc, 1)
+
+    def _dung_chia(self, lo) -> None:
+        """Thanh chia bản đồ | bảng bên phải và hàng nhãn đáy."""
         self.chia = QSplitter(Qt.Orientation.Horizontal)
         self.chia.setHandleWidth(8)
         self.chia.addWidget(self.view)
@@ -1756,6 +1783,9 @@ class HopBanDo(QDialog):
         hd.addWidget(self.lb_nguon)
         hd.addWidget(self.lb_toa_do)
         lo.addLayout(hd)
+
+    def _dat_trang_thai_dau(self, con, chi_doc) -> None:
+        """Ẩn / hiện, bật / tắt ban đầu."""
         self.khung_do.setVisible(False)
         self.tab_duoi.setVisible(False)
         self.lb_nguon.setVisible(False)
@@ -1765,6 +1795,9 @@ class HopBanDo(QDialog):
         self.khung_nhap.b_luu_thua.setEnabled(not chi_doc and con is not None)
         self._nap_lop_da_luu()
         self._cap_nhat_nut_luu()
+
+    def _nap_cai_dat_nen(self) -> None:
+        """Nền bản đồ, độ đậm đã nhớ."""
         from .giao_dien import cai_dat_nho
         cd = cai_dat_nho()
         self.o_nen.setChecked(cd is not None and str(cd.value(self.KHOA_NEN, 'false')).lower() == 'true')
@@ -1779,7 +1812,6 @@ class HopBanDo(QDialog):
         self.o_nen.toggled.connect(self._doi_nen)
         self.cb_nen.currentIndexChanged.connect(lambda _: self._doi_loai_nen())
         self.sl_dam.valueChanged.connect(self._doi_do_dam)
-        self.nap_to()
 
     def _con_doc(self):
         return self.con if self.con is not None and self._con_song() else None
