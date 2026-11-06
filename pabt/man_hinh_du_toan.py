@@ -244,17 +244,50 @@ class KhungDuToan(QWidget):
         self.dt_goc_file = None
         self.b_tu_du_an = None                          # nút "Từ dự án đang mở": bật / tắt theo dự án (dat_du_an)
         self._dm = None
-        from .giao_dien import KieuNut, ap_kieu_nut
-        from .hang_nhap_nhanh import HangNhapNhanh
-        from .loai_dat import ds_chon
-        from .nghiep_vu import MUC_VN
         # 0.9.71 (người dùng 12/10/2026 - bo_cuc_khai_toan.txt): tiêu đề phân hệ + chế độ | thông tin chuẩn bị đầu tư | thanh nhập
         # nhanh MỘT khung | bảng dự toán (phần lớn chiều cao) | thẻ tổng cộng | hàng nút đáy. Logic giữ nguyên (cùng đối tượng:
         # bang, hang, cb_loai_dat / o_dt_dat / o_gia_dat, lb_tong, lb_tb; self.tab = 2 chế độ, thanh thẻ ẩn - nút chọn chế độ)
         # 15/10/2026 (người dùng): bỏ tiêu đề "KHÁI TOÁN KINH PHÍ…" và nút Chế độ Lập khái toán / So sánh - trùng hai mục menu trái
         # "Lập khái toán & Dự toán" / "So sánh với thực tế" (app.mo_trang / so_sanh_du_toan chọn self.tab); dành chỗ cho phần nhập liệu
         khoi_dau = self._khoi_chuan_bi()                # 7 trường + Kinh phí QĐ08 (lưu trong .pabtdt)
-        # ---- thanh nhập nhanh: Lấy khối lượng ▾ | Mục | (đất: loại đất, diện tích, đơn giá) / (tài sản: hàng dùng chung với hộ)
+        dock = self._dung_thanh_nhap(con)
+        h_bang = self._dung_bang_du_toan()
+        h_day = self._dung_hang_day()
+        the1 = QWidget()
+        lo = QVBoxLayout(the1)
+        lo.setContentsMargins(0, 0, 0, 0)
+        lo.setSpacing(6)
+        lo.addWidget(khoi_dau)
+        lo.addWidget(dock)
+        lo.addLayout(h_bang)
+        lo.addWidget(self.bang, 1)
+        lo.addLayout(h_day)
+        self.tab = QTabWidget()                         # 2 chế độ; thanh thẻ ẩn - chọn bằng menu trái
+        self.tab.addTab(the1, 'Khái toán / dự toán')
+        self.tab.addTab(self._the_so_sanh(), 'So sánh với thực tế áp giá')
+        self.tab.tabBar().setVisible(False)
+        self.tab.setDocumentMode(True)
+        self.tab.currentChanged.connect(lambda i: i == 1 and self.con is not None and self.so_sanh_thuc_te())
+        ngoai = QVBoxLayout(self)
+        ngoai.setContentsMargins(10, 8, 10, 8)
+        ngoai.setSpacing(8)
+        ngoai.addWidget(self.tab)
+        self._doi_muc_nhap()
+        self._dang_ve = False
+        for k, w in self.o_cb.items():                  # gõ là ghi vào dự toán (lưu cùng file .pabtdt)
+            if isinstance(w, QComboBox):
+                w.currentIndexChanged.connect(lambda _=0, k=k, w=w: setattr(self.dt, k, w.currentData() or ''))
+            else:
+                w.textChanged.connect(lambda t, k=k: setattr(self.dt, k, ' '.join(t.split())))
+        self.ve()
+        self._nap_hang()
+
+    def _dung_thanh_nhap(self, con) -> QFrame:
+        """Thanh nhập nhanh: Lấy khối lượng ▾ | Mục | (đất: loại đất, diện tích, đơn giá) / (tài sản: hàng dùng chung với hộ)."""
+        from .giao_dien import KieuNut, ap_kieu_nut
+        from .hang_nhap_nhanh import HangNhapNhanh
+        from .loai_dat import ds_chon
+        from .nghiep_vu import MUC_VN
         self.b_lay = QPushButton('Lấy khối lượng')
         self.b_lay.setToolTip('Lấy khối lượng (thay các dòng đang có) từ dự án đang mở, file dự án (.larc / .pabt), file PABT Excel hoặc danh '
                               'sách thô; áp đơn giá hiện hành của bộ đơn giá')
@@ -400,7 +433,10 @@ class KhungDuToan(QWidget):
         v_dock.addLayout(self._h_d2)
         v_dock.addWidget(self.lb_tb)
         dock.installEventFilter(self)
-        # ---- bảng dự toán
+        return dock
+
+    def _dung_bang_du_toan(self) -> QHBoxLayout:
+        """Bảng dự toán; trả hàng tiêu đề + nút của bảng."""
         self.bang = QTableWidget(0, len(COT))
         self.bang.setHorizontalHeaderLabels([c[1] for c in COT])
         from .giao_dien import gan_chu_khi_trong
@@ -427,7 +463,11 @@ class KhungDuToan(QWidget):
             b = QPushButton(ten)
             b.clicked.connect(ham)
             h_bang.addWidget(b)
-        # ---- thẻ tổng cộng + hàng nút đáy
+        return h_bang
+
+    def _dung_hang_day(self) -> QHBoxLayout:
+        """Thẻ tổng cộng + hàng nút đáy."""
+        from .giao_dien import KieuNut, ap_kieu_nut
         self.lb_tong = QLabel('')
         self.lb_tong.setObjectName('the_tong_khai_toan')
         self.lb_tong.setWordWrap(False)                 # 0.9.95: một dòng cùng hàng nút đáy (chi tiết từng mục ở chú thích)
@@ -463,34 +503,7 @@ class KhungDuToan(QWidget):
                      'tổng mục 1-5). Thành tiền = khối lượng × đơn giá × hệ số, làm tròn như dự án. "Áp đơn giá hiện hành" thay '
                      'đơn giá các dòng có mã theo bộ đơn giá đang dùng (áp giá dự thảo cho dự án tương tự).')
         self._cach_tinh = ghi.text()                    # cách tính: chú thích của ô tổng (dòng chữ dài chiếm chỗ của bảng)
-        the1 = QWidget()
-        lo = QVBoxLayout(the1)
-        lo.setContentsMargins(0, 0, 0, 0)
-        lo.setSpacing(6)
-        lo.addWidget(khoi_dau)
-        lo.addWidget(dock)
-        lo.addLayout(h_bang)
-        lo.addWidget(self.bang, 1)
-        lo.addLayout(h_day)
-        self.tab = QTabWidget()                         # 2 chế độ; thanh thẻ ẩn - chọn bằng menu trái
-        self.tab.addTab(the1, 'Khái toán / dự toán')
-        self.tab.addTab(self._the_so_sanh(), 'So sánh với thực tế áp giá')
-        self.tab.tabBar().setVisible(False)
-        self.tab.setDocumentMode(True)
-        self.tab.currentChanged.connect(lambda i: i == 1 and self.con is not None and self.so_sanh_thuc_te())
-        ngoai = QVBoxLayout(self)
-        ngoai.setContentsMargins(10, 8, 10, 8)
-        ngoai.setSpacing(8)
-        ngoai.addWidget(self.tab)
-        self._doi_muc_nhap()
-        self._dang_ve = False
-        for k, w in self.o_cb.items():                  # gõ là ghi vào dự toán (lưu cùng file .pabtdt)
-            if isinstance(w, QComboBox):
-                w.currentIndexChanged.connect(lambda _=0, k=k, w=w: setattr(self.dt, k, w.currentData() or ''))
-            else:
-                w.textChanged.connect(lambda t, k=k: setattr(self.dt, k, ' '.join(t.split())))
-        self.ve()
-        self._nap_hang()
+        return h_day
 
     def _khoi_chuan_bi(self) -> QFrame:
         """Thông tin chuẩn bị đầu tư & khái toán tổng mức (người dùng 12/10/2026, đặc tả ARCH-PABT-2026-V7 phần IV): hai hàng -

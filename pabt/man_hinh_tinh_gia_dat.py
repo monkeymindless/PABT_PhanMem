@@ -189,6 +189,15 @@ def _hang_tich(ck: QCheckBox, chu: str) -> tuple:
     return w, nhan
 
 
+def _hang_o(*w):
+    """Hàng ngang không lề; ô chọn, ô nhập giãn."""
+    h = QHBoxLayout()
+    h.setContentsMargins(0, 0, 0, 0)
+    for x in w:
+        h.addWidget(x, 1 if isinstance(x, (QComboBox, QLineEdit)) else 0)
+    return h
+
+
 class HopTinhGiaDat(QDialog):
     """con: kết nối dự án (None: chỉ tính, không áp). Bảng bên phải luôn có mọi hộ của dự án; ds_ma_ho: hộ đang chọn (phạm vi mặc định, dòng tích sẵn). xa_mac_dinh: tên địa bàn dự án.
     bo_mo: bộ soạn của cửa sổ lập phương án đang mở, hộ đó đọc / ghi qua bộ soạn; dong_tich: chỉ tích sẵn các dòng này của hộ đó; truoc_ap(): False thì hộ đó không ghi được; sau_ap(): cửa sổ vẽ lại;
@@ -216,8 +225,28 @@ class HopTinhGiaDat(QDialog):
         self.lb_tieu_de.setProperty('vai', 'tieu_de')
         self.lb_tieu_de.setWordWrap(True)
         lo.addWidget(self.lb_tieu_de)
+        self._tao_o_nhap(con)
+        # ---- hai cột: trái thông số; phải kết quả + các dòng đất (luôn thấy, không phải cuộn)
+        hai = QHBoxLayout()
+        hai.addWidget(self._dung_cot_thong_so(), 8)    # bảng dòng đất cần đủ 9 cột, thấy Đơn giá mới, Thành tiền mới không phải cuộn ngang
+        hai.addLayout(self._dung_cot_ket_qua(), 12)
+        lo.addLayout(hai, 1)
+        self._dung_khung_can_cu(lo)
+        lo.addLayout(self._dung_hang_nut())
+        self._noi_tin_hieu()
 
-        # ---- các ô nhập
+        self._nap_ds_goi()
+        self._dung_theo_goi()
+        if not self.goi.get('gan_san'):
+            self._gop_can_cu_goi()
+        self.nap_dong_dat(list(ds_ma_ho), dong_tich)
+        if thong_so:
+            self.dat_thong_so(**thong_so)
+        self.tra_gia(False)
+        self.tinh()
+
+    def _tao_o_nhap(self, con) -> None:
+        """Các ô nhập thông số."""
         self.o_can_cu = QPlainTextEdit()
         self.o_can_cu.setPlainText(vb.doc_can_cu_du_an(con))
         self.nut_quet_cc = NutQuetChung('Quét file văn bản căn cứ…', qc.CAN_CU, self)
@@ -273,25 +302,12 @@ class HopTinhGiaDat(QDialog):
         self.nut_quet_gd.setToolTip('Quét văn bản, bảng giá (PDF, ảnh, Word, Excel) để lấy dữ liệu và văn bản căn cứ')
         self.nut_quet_gd.da_quet.connect(self.sau_khi_quet)
 
-        def hang(*w):
-            h = QHBoxLayout()
-            h.setContentsMargins(0, 0, 0, 0)
-            for x in w:
-                h.addWidget(x, 1 if isinstance(x, (QComboBox, QLineEdit)) else 0)
-            return h
-
-        def nut_mo(chu):
-            b = QPushButton('▸  ' + chu)
-            b.setCheckable(True)
-            b.toggled.connect(lambda bat, b=b, chu=chu: b.setText(('▾  ' if bat else '▸  ') + chu))
-            return b
-
-        # ---- hai cột: trái thông số; phải kết quả + các dòng đất (luôn thấy, không phải cuộn)
-        hai = QHBoxLayout()
+    def _dung_cot_thong_so(self) -> QScrollArea:
+        """Cột trái: nhóm Thông số trong vùng cuộn."""
         tp = QGroupBox('Thông số')
         f = QFormLayout(tp)
         f.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        f.addRow('Văn bản, quy tắc:', hang(self.cb_goi, self.nut_quy_tac))
+        f.addRow('Văn bản, quy tắc:', _hang_o(self.cb_goi, self.nut_quy_tac))
         # 1.0.69: trường ngắn chung một hàng, hệ số + yếu tố luôn thấy (không còn phần thu gọn)
         def nhan_ngan(chu):
             w = QLabel(chu)
@@ -327,8 +343,10 @@ class HopTinhGiaDat(QDialog):
         cuon.setFrameShape(QFrame.Shape.NoFrame)
         cuon.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         cuon.setWidget(tp)
-        hai.addWidget(cuon, 8)                   # bảng dòng đất cần đủ 9 cột, thấy Đơn giá mới, Thành tiền mới không phải cuộn ngang
+        return cuon
 
+    def _dung_cot_ket_qua(self) -> QVBoxLayout:
+        """Cột phải: đơn giá kết quả + bảng các dòng đất."""
         phai = QVBoxLayout()
         kqg = QGroupBox('Đơn giá đất bồi thường')
         vq = QVBoxLayout(kqg)
@@ -399,20 +417,27 @@ class HopTinhGiaDat(QDialog):
         vh.addWidget(self.lb_ho)
         vh.addWidget(self.bang, 1)
         phai.addWidget(gh, 1)
-        hai.addLayout(phai, 12)
-        lo.addLayout(hai, 1)
+        return phai
 
-        # ---- phần thu gọn: văn bản căn cứ (mở ra phía trên hàng nút)
+    def _dung_khung_can_cu(self, lo) -> None:
+        """Phần thu gọn: văn bản căn cứ (mở ra phía trên hàng nút)."""
         self.khung_can_cu = QGroupBox('Văn bản căn cứ (tự sắp theo 13 bậc hiệu lực)')
         vk = QVBoxLayout(self.khung_can_cu)
         vk.addWidget(self.o_can_cu)
-        vk.addLayout(hang(self.nut_quet_cc, self.nut_sap))
+        vk.addLayout(_hang_o(self.nut_quet_cc, self.nut_sap))
         vk.itemAt(1).layout().addStretch(1)
         self.o_can_cu.setMaximumHeight(170)
         lo.addWidget(self.khung_can_cu)
         self.khung_can_cu.hide()
 
-        # ---- hàng nút (cố định ở đáy)
+    def _dung_hang_nut(self) -> QHBoxLayout:
+        """Hàng nút (cố định ở đáy)."""
+        def nut_mo(chu):
+            b = QPushButton('▸  ' + chu)
+            b.setCheckable(True)
+            b.toggled.connect(lambda bat, b=b, chu=chu: b.setText(('▾  ' if bat else '▸  ') + chu))
+            return b
+
         hn = QHBoxLayout()
         self.nut_mo_cc = QPushButton('')
         self.nut_mo_cc.setCheckable(True)
@@ -431,9 +456,9 @@ class HopTinhGiaDat(QDialog):
         self.nut_ap.clicked.connect(lambda: self.ap_gia())
         hn.addWidget(nut_dong)
         hn.addWidget(self.nut_ap)
-        lo.addLayout(hn)
+        return hn
 
-        # ---- nối tín hiệu
+    def _noi_tin_hieu(self) -> None:
         self.cb_goi.currentIndexChanged.connect(lambda *_: self.doi_goi(self.cb_goi.currentData()))
         self.cb_dia_ban.currentIndexChanged.connect(lambda *_: self._nap_doan())
         self.o_tim.textChanged.connect(lambda *_: self._nap_doan(giu=True))
@@ -451,16 +476,6 @@ class HopTinhGiaDat(QDialog):
         self._chu_nut_can_cu()
         self.cb_pham_vi.currentIndexChanged.connect(lambda *_: self._doi_pham_vi())
         self.o_loc.textChanged.connect(lambda *_: self._loc())
-
-        self._nap_ds_goi()
-        self._dung_theo_goi()
-        if not self.goi.get('gan_san'):
-            self._gop_can_cu_goi()
-        self.nap_dong_dat(list(ds_ma_ho), dong_tich)
-        if thong_so:
-            self.dat_thong_so(**thong_so)
-        self.tra_gia(False)
-        self.tinh()
 
     # ---------------------------------------------------------------- gói quy tắc
     def _nap_ds_goi(self) -> None:
