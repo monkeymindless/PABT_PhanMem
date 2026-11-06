@@ -140,16 +140,9 @@ def nhap(file_excel, file_pabt) -> BaoCaoNhap:
         wb.close()                       # nhả file Excel (Windows khóa file đang mở)
 
 
-def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
-    bc = BaoCaoNhap(file_excel=str(file_excel), file_pabt=str(file_pabt))
-    can = ['DB_HO', 'DB_THUA', 'DB_DATCT', 'DB_TAISAN', 'DB_CAY', 'DB_HOTRO', 'DM_HOTRO', 'THAM_SO']
-    thieu = [s for s in can if s not in wb.sheetnames]
-    if thieu:
-        bc.loi.append('File không phải PABT (thiếu sheet ' + ', '.join(thieu) + ').')
-        return bc
-
-    # ------------------------------------------------ đọc
-    b_ho, b_thua = Bang(wb['DB_HO']), Bang(wb['DB_THUA'])
+def _doc_ho(wb, bc) -> tuple:
+    """Sheet DB_HO. Trả (các hộ, các mã hộ)."""
+    b_ho = Bang(wb['DB_HO'])
     ho = []
     c = {k: b_ho.cot(*v) for k, v in dict(ma=('MaHo',), ten=('HoTen',), cccd=('SoCCCD',), nc=('NgayCap',), noi=('NoiCap',),
                                            dc=('DiaChi',), dt=('SoDienThoai',), pl=('PhapLy',), tc=('TranhChap',),
@@ -166,7 +159,12 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
     trung = sorted(m for m, n in Counter(ma_ho).items() if n > 1)
     if trung:
         bc.loi.append('Mã hộ bị trùng trong DB_HO: ' + ', '.join(map(str, trung)) + ' (chạy ĐÁNH LẠI MÃ HỘ trên file Excel rồi nhập lại).')
+    return ho, ma_ho
 
+
+def _doc_thua(wb, bc, tap_ho: set) -> list:
+    """Sheet DB_THUA."""
+    b_thua = Bang(wb['DB_THUA'])
     thua = []
     c = {k: b_thua.cot(*v, bat_buoc=k != 'vt') for k, v in dict(ma=('MaThua',), ho=('MaHo',), to=('SoTo',), so=('SoThua',),
                                                                  ld=('LoaiDat',), dt=('DienTichThuHoi',), ng=('NguonGocDat',),
@@ -178,13 +176,14 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
                          so_to=_txt(r[c['to']]), so_thua=_txt(r[c['so']]), loai_dat=_txt(r[c['ld']]),
                          dt_thu_hoi=_so(r[c['dt']]), nguon_goc=_txt(r[c['ng']]),
                          vi_tri=' '.join(_txt(b_thua.gia_tri(r, c['vt'])).split()), thu_tu=i + 1))
-    tap_ho = set(ma_ho)
     mo_coi = [t['ma_thua'] for t in thua if t['ma_ho'] not in tap_ho]
     if mo_coi:
         bc.loi.append('Thửa không thuộc hộ nào (mã thửa): ' + ', '.join(map(str, mo_coi[:20])))
-    tap_thua = {t['ma_thua'] for t in thua}
+    return thua
 
-    # mục 1
+
+def _doc_ct_dat(wb, bc, tap_thua: set) -> list:
+    """Mục 1: sheet DB_DATCT."""
     b = Bang(wb['DB_DATCT'])
     c = {k: b.cot(v) for k, v in dict(ho='MaHo', thua='MaThua', ld='LoaiDat', nhom='NhomDat', dt='DienTichThuHoi', vt='ViTri',
                                       gia='GiaBangGia', k='HeSoK', tl='TyLe', tt='ThanhTien', gc='GhiChu').items()}
@@ -200,7 +199,11 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
                            gia_bang_gia=_so(r[c['gia']]), he_so_k=_so_hoac_rong(r[c['k']]) or '1',
                            ty_le=_so_hoac_rong(r[c['tl']]) or '1', ghi_chu=_txt(r[c['gc']]),
                            thanh_tien_excel=_so_hoac_rong(r[c['tt']])))
-    # mục 2, 3, 4
+    return ct_dat
+
+
+def _doc_ct_khoan(wb) -> list:
+    """Mục 2, 3, 4: sheet DB_TAISAN, DB_CAY, DB_HOTRO."""
     ct_khoan = []
     for muc, sh, cot_ma, cot_ten, cot_qc in ((2, 'DB_TAISAN', 'MaTS', 'TenTaiSan', 'QuyCach'), (3, 'DB_CAY', 'MaTS', 'TenTaiSan', 'QuyCach'),
                                              (4, 'DB_HOTRO', 'MaHoTro', 'TenKhoan', 'CanCu')):
@@ -214,11 +217,11 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
                                  dvt=_txt(r[c['dvt']]), so_luong=_so(r[c['sl']]), don_gia=_so(r[c['dg']]),
                                  ty_le=_so_hoac_rong(r[c['tl']]) or '1', quy_cach=_txt(r[c['qc']]), ghi_chu=_txt(r[c['gc']]),
                                  thanh_tien_excel=_so_hoac_rong(r[c['tt']])))
-    for d in ct_dat + ct_khoan:
-        if d['ma_ho'] not in tap_ho:
-            bc.loi.append(f'Dòng phương án (mục {d.get("muc", 1)}) của mã hộ {d["ma_ho"]} không có trong DB_HO.')
+    return ct_khoan
 
-    # dự án
+
+def _doc_du_an(wb) -> dict:
+    """Thông tin dự án: sheet DB_DUAN và các tên định danh DA_*."""
     da = dict(ten='', ten_day_du='', don_vi_cap_tren='', don_vi_lap='', cap_dia_ban='Phường', ten_dia_ban='',
               so_phuong_an='', nam=None, can_cu_dinh_kem='')
     if 'DB_DUAN' in wb.sheetnames:
@@ -238,8 +241,11 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
                 da[khoa] = ' '.join(v.split())
     if not da['ten_day_du']:
         da['ten_day_du'] = da['ten']
+    return da
 
-    # danh mục, tham số
+
+def _doc_danh_muc(wb) -> tuple:
+    """Danh mục, tham số. Trả (dm_ts, dm_ht, dm_ld, gia, xa, ts, vb)."""
     dm_ts = []
     if 'DG_NHANUOC' in wb.sheetnames:
         b = Bang(wb['DG_NHANUOC'])
@@ -291,6 +297,11 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
         vb = [(_txt(r[c['vb']]), _txt(r[c['cq']]), _txt(r[c['nd']]), _txt(r[c['tt']])) for r in b.dong if _txt(r[c['vb']])]
     # sheet QUY_UOC_TUONG_DUONG của file Excel PABT KHÔNG nhập (16/10/2026, người dùng: quy ước tương đương để trống - mẫu Excel
     # chỉ có dòng ví dụ; quy ước của dự án nhập ở Đơn giá đặc biệt khi có tài sản cần áp giá tương đương)
+    return dm_ts, dm_ht, dm_ld, gia, xa, ts, vb
+
+
+def _doc_bieu_thuong(wb, bc) -> list:
+    """Biểu thưởng theo tên định danh THUONG_TU / THUONG_MUC."""
     bieu = []
     vt_tu, vt_muc = _ten_dinh_danh(wb, 'THUONG_TU'), _ten_dinh_danh(wb, 'THUONG_MUC')
     if vt_tu and vt_muc:
@@ -302,8 +313,11 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
                 bieu.append((tu, muc))
     if not bieu:
         bc.canh_bao.append('Không đọc được biểu thưởng (tên THUONG_TU / THUONG_MUC): thưởng sẽ bằng 0.')
+    return bieu
 
-    # tổng từng hộ theo THEO_DOI của Excel (giá trị Excel tính lúc lưu file) để đối chiếu
+
+def _doc_tong_excel(wb, bc) -> None:
+    """Tổng từng hộ theo THEO_DOI của Excel (giá trị Excel tính lúc lưu file) để đối chiếu: ghi vào bc.tong_excel."""
     if 'THEO_DOI' in wb.sheetnames:
         hd = None
         trong = 0
@@ -331,7 +345,9 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
             bc.tong_excel[int(D(m))] = {1: g('1. dat'), 2: g('2. nha, ct'), 3: g('3. cay trong'), 4: g('4. ho tro'),
                                         5: g('5. thuong'), 'tong': g('tong cong')}
 
-    # đối chiếu HS_KIEMKE (nguồn gốc) với DB_THUA
+
+def _doi_chieu_kiem_ke(wb, bc, thua: list) -> None:
+    """Đối chiếu HS_KIEMKE (nguồn gốc) với DB_THUA: cảnh báo vào bc, thửa thiếu vị trí lấy từ HS_KIEMKE."""
     if 'HS_KIEMKE' in wb.sheetnames:
         b = Bang(wb['HS_KIEMKE'])
         cm = b.cot('MaThua', bat_buoc=False)
@@ -358,6 +374,71 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
         if n_kk != len(thua):
             bc.canh_bao.append(f'HS_KIEMKE có {n_kk} dòng thửa, DB_THUA có {len(thua)} thửa.')
 
+
+def _ghi_vao_csdl(con, file_excel, bc, da, ho, thua, ct_dat, ct_khoan, danh_muc, bieu) -> None:
+    """Ghi mọi số liệu đã đọc vào file dự án mới, một giao dịch."""
+    dm_ts, dm_ht, dm_ld, gia, xa, ts, vb = danh_muc
+    with con, csdl.mo_khoa_danh_muc(con):
+        con.execute('''UPDATE du_an SET ten=?, ten_day_du=?, don_vi_cap_tren=?, don_vi_lap=?, cap_dia_ban=?, ten_dia_ban=?,
+                       so_phuong_an=?, nam=?, can_cu_dinh_kem=?, nguon_nhap=?, ngay_nhap=? WHERE id=1''',
+                    (da['ten'], da['ten_day_du'], da['don_vi_cap_tren'], da['don_vi_lap'], da['cap_dia_ban'], da['ten_dia_ban'],
+                     da['so_phuong_an'], da['nam'], da['can_cu_dinh_kem'], Path(file_excel).name,
+                     datetime.now().isoformat(timespec='seconds')))
+        for i, h in enumerate(ho, start=1):
+            con.execute('''INSERT INTO ho (ma_ho, thu_tu, ho_ten, so_cccd, ngay_cap, noi_cap, dia_chi, dien_thoai, phap_ly,
+                           tranh_chap, tai_dinh_cu, ghi_chu, trang_thai) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        (h['ma_ho'], i, h['ho_ten'], h['so_cccd'], h['ngay_cap'], h['noi_cap'], h['dia_chi'], h['dien_thoai'],
+                         h['phap_ly'], h['tranh_chap'], h['tai_dinh_cu'], h['ghi_chu'], h['trang_thai']))
+        con.executemany('''INSERT INTO thua (ma_thua, ma_ho, so_to, so_thua, loai_dat, dt_thu_hoi, nguon_goc, vi_tri, thu_tu)
+                           VALUES (:ma_thua,:ma_ho,:so_to,:so_thua,:loai_dat,:dt_thu_hoi,:nguon_goc,:vi_tri,:thu_tu)''', thua)
+        con.executemany('''INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia, he_so_k,
+                           ty_le, ghi_chu, thanh_tien_excel) VALUES (:ma_ho,:ma_thua,:thu_tu,:loai_dat,:nhom_dat,:dien_tich,
+                           :vi_tri,:gia_bang_gia,:he_so_k,:ty_le,:ghi_chu,:thanh_tien_excel)''', ct_dat)
+        con.executemany('''INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia, ty_le, quy_cach, ghi_chu,
+                           thanh_tien_excel) VALUES (:muc,:ma_ho,:thu_tu,:ma,:ten,:dvt,:so_luong,:don_gia,:ty_le,:quy_cach,
+                           :ghi_chu,:thanh_tien_excel)''', ct_khoan)
+        con.executemany('INSERT OR REPLACE INTO dm_taisan VALUES (?,?,?,?,?,?,?)', dm_ts)
+        con.executemany('INSERT OR REPLACE INTO dm_hotro VALUES (?,?,?,?,?,?,?)', dm_ht)
+        con.executemany('INSERT OR REPLACE INTO dm_loaidat VALUES (?,?,?,?)', dm_ld)
+        con.executemany('INSERT INTO gia_dat (xa_phuong, loai_dat, vi_tri, tuyen_duong, gia, he_so_k, can_cu) VALUES (?,?,?,?,?,?,?)', gia)
+        con.executemany('INSERT OR REPLACE INTO dm_xa VALUES (?,?,?,?,?,?)', xa)
+        con.executemany('INSERT OR REPLACE INTO tham_so VALUES (?,?,?,?,?,?)', ts)
+        con.executemany('INSERT INTO van_ban (so_hieu, co_quan, noi_dung, trang_thai) VALUES (?,?,?,?)', vb)
+        con.executemany('INSERT OR REPLACE INTO bieu_thuong VALUES (?,?)', bieu)
+        csdl.chuyen_vat_nuoi(con)                   # dòng vật nuôi (mã nhóm vật nuôi) ở DB_CAY -> mục Vật nuôi riêng
+        from .ma_tai_san import chuyen_csdl
+        chuyen_csdl(con)                            # file Excel dùng mã cũ (HT01, VN01, cây TS140…) -> mã 0.9.69
+        con.executemany('INSERT OR REPLACE INTO tong_excel VALUES (?,?,?,?,?,?,?)',
+                        [(m, *(chuoi(v[k]) if v.get(k) is not None else None for k in (1, 2, 3, 4, 5, 'tong')))
+                         for m, v in bc.tong_excel.items()])
+        csdl.ghi_nhat_ky(con, 'Nhập từ Excel', f'{Path(file_excel).name}: {len(ho)} hộ, {len(thua)} thửa, '
+                                               f'{len(ct_dat) + len(ct_khoan)} dòng phương án')
+
+
+def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
+    bc = BaoCaoNhap(file_excel=str(file_excel), file_pabt=str(file_pabt))
+    can = ['DB_HO', 'DB_THUA', 'DB_DATCT', 'DB_TAISAN', 'DB_CAY', 'DB_HOTRO', 'DM_HOTRO', 'THAM_SO']
+    thieu = [s for s in can if s not in wb.sheetnames]
+    if thieu:
+        bc.loi.append('File không phải PABT (thiếu sheet ' + ', '.join(thieu) + ').')
+        return bc
+
+    # ------------------------------------------------ đọc
+    ho, ma_ho = _doc_ho(wb, bc)
+    tap_ho = set(ma_ho)
+    thua = _doc_thua(wb, bc, tap_ho)
+    tap_thua = {t['ma_thua'] for t in thua}
+    ct_dat = _doc_ct_dat(wb, bc, tap_thua)
+    ct_khoan = _doc_ct_khoan(wb)
+    for d in ct_dat + ct_khoan:
+        if d['ma_ho'] not in tap_ho:
+            bc.loi.append(f'Dòng phương án (mục {d.get("muc", 1)}) của mã hộ {d["ma_ho"]} không có trong DB_HO.')
+    da = _doc_du_an(wb)
+    dm_ts, dm_ht, dm_ld, gia, xa, ts, vb = _doc_danh_muc(wb)
+    bieu = _doc_bieu_thuong(wb, bc)
+    _doc_tong_excel(wb, bc)
+    _doi_chieu_kiem_ke(wb, bc, thua)
+
     if bc.loi:
         return bc
 
@@ -371,41 +452,7 @@ def _nhap(wb, file_excel, file_pabt) -> BaoCaoNhap:
     con, tam = csdl.tao_moi_tam(file_pabt)
     xong = False
     try:
-        with con, csdl.mo_khoa_danh_muc(con):
-            con.execute('''UPDATE du_an SET ten=?, ten_day_du=?, don_vi_cap_tren=?, don_vi_lap=?, cap_dia_ban=?, ten_dia_ban=?,
-                           so_phuong_an=?, nam=?, can_cu_dinh_kem=?, nguon_nhap=?, ngay_nhap=? WHERE id=1''',
-                        (da['ten'], da['ten_day_du'], da['don_vi_cap_tren'], da['don_vi_lap'], da['cap_dia_ban'], da['ten_dia_ban'],
-                         da['so_phuong_an'], da['nam'], da['can_cu_dinh_kem'], Path(file_excel).name,
-                         datetime.now().isoformat(timespec='seconds')))
-            for i, h in enumerate(ho, start=1):
-                con.execute('''INSERT INTO ho (ma_ho, thu_tu, ho_ten, so_cccd, ngay_cap, noi_cap, dia_chi, dien_thoai, phap_ly,
-                               tranh_chap, tai_dinh_cu, ghi_chu, trang_thai) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                            (h['ma_ho'], i, h['ho_ten'], h['so_cccd'], h['ngay_cap'], h['noi_cap'], h['dia_chi'], h['dien_thoai'],
-                             h['phap_ly'], h['tranh_chap'], h['tai_dinh_cu'], h['ghi_chu'], h['trang_thai']))
-            con.executemany('''INSERT INTO thua (ma_thua, ma_ho, so_to, so_thua, loai_dat, dt_thu_hoi, nguon_goc, vi_tri, thu_tu)
-                               VALUES (:ma_thua,:ma_ho,:so_to,:so_thua,:loai_dat,:dt_thu_hoi,:nguon_goc,:vi_tri,:thu_tu)''', thua)
-            con.executemany('''INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia, he_so_k,
-                               ty_le, ghi_chu, thanh_tien_excel) VALUES (:ma_ho,:ma_thua,:thu_tu,:loai_dat,:nhom_dat,:dien_tich,
-                               :vi_tri,:gia_bang_gia,:he_so_k,:ty_le,:ghi_chu,:thanh_tien_excel)''', ct_dat)
-            con.executemany('''INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia, ty_le, quy_cach, ghi_chu,
-                               thanh_tien_excel) VALUES (:muc,:ma_ho,:thu_tu,:ma,:ten,:dvt,:so_luong,:don_gia,:ty_le,:quy_cach,
-                               :ghi_chu,:thanh_tien_excel)''', ct_khoan)
-            con.executemany('INSERT OR REPLACE INTO dm_taisan VALUES (?,?,?,?,?,?,?)', dm_ts)
-            con.executemany('INSERT OR REPLACE INTO dm_hotro VALUES (?,?,?,?,?,?,?)', dm_ht)
-            con.executemany('INSERT OR REPLACE INTO dm_loaidat VALUES (?,?,?,?)', dm_ld)
-            con.executemany('INSERT INTO gia_dat (xa_phuong, loai_dat, vi_tri, tuyen_duong, gia, he_so_k, can_cu) VALUES (?,?,?,?,?,?,?)', gia)
-            con.executemany('INSERT OR REPLACE INTO dm_xa VALUES (?,?,?,?,?,?)', xa)
-            con.executemany('INSERT OR REPLACE INTO tham_so VALUES (?,?,?,?,?,?)', ts)
-            con.executemany('INSERT INTO van_ban (so_hieu, co_quan, noi_dung, trang_thai) VALUES (?,?,?,?)', vb)
-            con.executemany('INSERT OR REPLACE INTO bieu_thuong VALUES (?,?)', bieu)
-            csdl.chuyen_vat_nuoi(con)                   # dòng vật nuôi (mã nhóm vật nuôi) ở DB_CAY -> mục Vật nuôi riêng
-            from .ma_tai_san import chuyen_csdl
-            chuyen_csdl(con)                            # file Excel dùng mã cũ (HT01, VN01, cây TS140…) -> mã 0.9.69
-            con.executemany('INSERT OR REPLACE INTO tong_excel VALUES (?,?,?,?,?,?,?)',
-                            [(m, *(chuoi(v[k]) if v.get(k) is not None else None for k in (1, 2, 3, 4, 5, 'tong')))
-                             for m, v in bc.tong_excel.items()])
-            csdl.ghi_nhat_ky(con, 'Nhập từ Excel', f'{Path(file_excel).name}: {len(ho)} hộ, {len(thua)} thửa, '
-                                                   f'{len(ct_dat) + len(ct_khoan)} dòng phương án')
+        _ghi_vao_csdl(con, file_excel, bc, da, ho, thua, ct_dat, ct_khoan, (dm_ts, dm_ht, dm_ld, gia, xa, ts, vb), bieu)
         xong = True
     finally:
         con.close()
