@@ -17,7 +17,7 @@ RE_HEX = re.compile(r'#[0-9A-Fa-f]{6}\b')
 TU_DO = {'giao_dien.py', 'chu_de.py', 've_bieu_tuong.py', 'nhan_wifi.py', 'phieu_kiem_dem.py'}
 MOC_MAU = {
     'man_hinh_phien_ban.py': 4, 'man_hinh_the_muc.py': 14, 'man_hinh_ap_gia_nhanh.py': 2,
-    'app.py': 37, 'ban_do_cad.py': 8, 'ban_do_kml.py': 1, 'lich_su_cap_nhat.py': 1, 'man_hinh.py': 54,
+    'app.py': 37, 'ban_do_cad.py': 16, 'ban_do_kml.py': 1, 'lich_su_cap_nhat.py': 1, 'man_hinh.py': 54,
     'man_hinh_ban_do.py': 19, 'man_hinh_bao_cao.py': 19, 'man_hinh_cap_nhat.py': 2, 'man_hinh_cay.py': 24,
     'man_hinh_chan_doan.py': 5, 'man_hinh_don_gia.py': 4, 'man_hinh_don_gia_rieng.py': 2, 'man_hinh_du_an_moi.py': 2,
     'man_hinh_du_thao.py': 25, 'man_hinh_du_toan.py': 25, 'man_hinh_ghep_cot.py': 4, 'man_hinh_gia_dat.py': 2,

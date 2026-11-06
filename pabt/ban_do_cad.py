@@ -162,6 +162,7 @@ class ThuaCad:
     nhan: str = ''
     lop: str = ''
     chi_tiet: dict = field(default_factory=dict)         # thửa tự ghép từ đường (ban_do_ghep): đối chiếu, các phần DT, mốc, ghi chú
+    mau: str = ''                        # màu tô tay của thửa chưa lưu (#RRGGBB); trong dự án nằm ở chi_tiet['mau']
 
 
 @dataclass
@@ -412,8 +413,18 @@ def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool 
     nhieu_dong, vuot = [], []
     luc = datetime.now().isoformat(timespec='seconds')
     khop = cap_nhat = 0
+    mau_cu = {}
+    for r in con.execute(f"SELECT so_to, so_thua, chi_tiet FROM {BANG} WHERE chi_tiet LIKE '%\"mau\"%'"):
+        try:
+            mau_cu[(r['so_to'], r['so_thua'])] = chuan_mau(json.loads(r['chi_tiet']).get('mau'))
+        except (ValueError, AttributeError):              # JSON hỏng: như chưa tô, không chặn việc lưu bản đồ
+            pass
     with csdl.giao_dich(con):
         for t in kq.thua:
+            ct = dict(t.chi_tiet or {})
+            mau = chuan_mau(getattr(t, 'mau', '')) or mau_cu.get((t.so_to, t.so_thua), '')      # nạp lại file bản vẽ không làm mất màu đã tô
+            if mau:
+                ct['mau'] = mau
             con.execute(f'''INSERT INTO {BANG} (so_to, so_thua, loai_dat, dt_ban_ve, dt_hinh, dt_trong_ranh, toa_do, nhan, lop, nguon, luc, chi_tiet)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(so_to, so_thua) DO UPDATE SET loai_dat = excluded.loai_dat,
                             dt_ban_ve = excluded.dt_ban_ve, dt_hinh = excluded.dt_hinh, dt_trong_ranh = excluded.dt_trong_ranh,
@@ -421,7 +432,7 @@ def luu(con, kq: KetQuaCad, cap_nhat_dt: set | None = None, cap_nhat_loai: bool 
                             luc = excluded.luc, chi_tiet = excluded.chi_tiet''',
                         (t.so_to, t.so_thua, t.loai_dat, None if t.dt_ban_ve is None else chuoi(t.dt_ban_ve), chuoi(t.dt_hinh),
                          None if t.dt_trong_ranh is None else chuoi(t.dt_trong_ranh), json.dumps(t.toa_do), t.nhan, t.lop,
-                         kq.nguon, luc, json.dumps(t.chi_tiet, ensure_ascii=False) if t.chi_tiet else ''))
+                         kq.nguon, luc, json.dumps(ct, ensure_ascii=False) if ct else ''))
             k = (_khoa(t.so_to), _khoa(t.so_thua))
             if k in cm:
                 khop += 1
@@ -480,6 +491,41 @@ class ThuaBanDo:
     chi_tiet: dict = field(default_factory=dict)     # bản vẽ đường (ban_do_ghep): đối chiếu, các phần DT, mốc, ghi chú, điểm đặt số thửa
     ma_thua: int | None = None               # dòng thửa của hồ sơ khớp số tờ, số thửa
     tam: bool = False                        # vừa phân tích từ file, chưa lưu vào dự án
+    mau: str = ''                            # màu tô tay (#RRGGBB), thắng màu của cách tô đang chọn
+
+
+# 1.0.70: tô tay từng ô thửa (chuột phải): bảng màu nhanh; màu lưu trong chi_tiet['mau'], đọc ra ThuaBanDo.mau để chi_tiet vẫn chỉ là dữ liệu đối chiếu bản vẽ
+MAU_TO_TAY = (('Đỏ', '#DC2626'), ('Cam', '#EA580C'), ('Vàng', '#EAB308'), ('Xanh lá', '#16A34A'), ('Xanh dương', '#2563EB'), ('Tím', '#7C3AED'), ('Hồng', '#DB2777'), ('Xám', '#64748B'))
+
+
+def chuan_mau(mau) -> str:
+    """'#RRGGBB' hợp lệ, không thì ''."""
+    s = str(mau or '').strip()
+    return s.upper() if re.fullmatch(r'#[0-9A-Fa-f]{6}', s) else ''
+
+
+def dat_mau_thua(con, so_to: str, so_thua: str, mau: str = '') -> None:
+    """Ghi màu tô tay của một thửa trong bản đồ dự án; '' = bỏ màu. Không đụng hồ sơ hộ."""
+    from .lap_pa import LoiNhap, kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')
+    if mau and not chuan_mau(mau):
+        raise LoiNhap(f'Mã màu không hợp lệ: {mau}.')
+    if not dam_bao_cot_chi_tiet(con):
+        raise LoiCad('File dự án đang mở chỉ xem / bị khóa: không ghi được bản đồ.')
+    with csdl.giao_dich(con):
+        r = con.execute(f'SELECT id, chi_tiet FROM {BANG} WHERE so_to = ? AND so_thua = ?', (so_to, so_thua)).fetchone()
+        if r is None:
+            raise LoiNhap(f'Bản đồ dự án không có thửa {so_thua} tờ {so_to}.')
+        try:
+            ct = json.loads(r['chi_tiet']) if r['chi_tiet'] else {}
+        except ValueError:
+            ct = {}
+        if mau:
+            ct['mau'] = chuan_mau(mau)
+        else:
+            ct.pop('mau', None)
+        con.execute(f'UPDATE {BANG} SET chi_tiet = ? WHERE id = ?', (json.dumps(ct, ensure_ascii=False) if ct else '', r['id']))
+        csdl.ghi_nhat_ky(con, 'Tô màu ô thửa trên bản đồ', f'Thửa {so_thua} tờ {so_to}: {mau or "bỏ màu"}')
 
 
 # 30/10/2026 (phương án đột phá 4): tô màu bản đồ theo đồng thuận / tiến độ theo hộ / lệch diện tích bản đồ với hồ sơ
@@ -553,7 +599,7 @@ def thua_tu_ket_qua(con, kq: KetQuaCad) -> list:
         ra.append(ThuaBanDo(t.so_to, t.so_thua, t.loai_dat, t.toa_do, chuoi(t.dt_hinh), None if t.dt_trong_ranh is None else chuoi(t.dt_trong_ranh), ma,
                             ten.get(ma, ''), tt.get(ma, 'chua') if ma is not None else 'khong_gan', k[2] if k else None,
                             nguyen.get(k[0]) if k else None, None if t.dt_ban_ve is None else chuoi(t.dt_ban_ve), t.chi_tiet,
-                            k[0] if k else None, True))
+                            k[0] if k else None, True, chuan_mau(getattr(t, 'mau', ''))))
     return ra
 
 
@@ -597,9 +643,10 @@ def doc_ban_do(con, so_to: str | None = None) -> list:
             ct = json.loads(ct) if ct else {}
         except ValueError:
             ct = {}
+        mau = chuan_mau(ct.pop('mau', '')) if isinstance(ct, dict) else ''
         kq.append(ThuaBanDo(r['so_to'], r['so_thua'], r['loai_dat'], json.loads(r['toa_do']), r['dt_hinh'], r['dt_trong_ranh'], ma,
                             ten.get(ma, ''), tt.get(ma, 'chua') if ma is not None else 'khong_gan',
-                            k[2] if k else None, nguyen.get(k[0]) if k else None, r['dt_ban_ve'], ct, k[0] if k else None))
+                            k[2] if k else None, nguyen.get(k[0]) if k else None, r['dt_ban_ve'], ct, k[0] if k else None, False, mau))
     return kq
 
 

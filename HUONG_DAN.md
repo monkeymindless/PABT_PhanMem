@@ -1243,6 +1243,8 @@ Mở **In / Xuất…**. Bảng giống bảng In của Word, Excel. Mở lên �
 
 ## Tính đơn giá đất và bộ quy tắc giá đất
 
+**Tô tay ô thửa trên bản đồ (1.0.70):** chuột phải lên thửa, chọn Tô màu ô thửa. Màu tô tay nằm đè lên màu của ô Màu theo; muốn về màu theo trạng thái thì chọn Bỏ màu đã tô. Bảng bên phải bản đồ có thanh ngăn kéo được giữa thông tin thửa và bảng dưới; thẻ Nhập vào dự án cuộn được, nút Lưu luôn ở đáy.
+
 **Cửa sổ phương án 4 tầng (1.0.69):** thanh trên gồm Hộ, phiên bản, Lưu, In / Xuất, Đóng; thẻ mục đổi bằng Alt+0 đến Alt+5; hàng công cụ có Thêm thửa (mũi tên: thêm tất cả, chọn nhiều, tách thửa), Bảng tính giá đất, Áp giá nhanh (bấm để mở ngăn), Dán tài sản, ▲ ▼; dải đáy có tổng số dòng, cộng mục, tổng phương án, Tự lưu. Thông tin hộ (CCCD, địa chỉ, đợt): rê chuột lên ô Hộ. Lần bổ sung / điều chỉnh ở menu ⋯; ô chọn Lần chỉ hiện khi hộ có từ hai lần trở lên. Bỏ thay đổi: bấm Đóng, phần mềm hỏi.
 
 **Áp giá hàng loạt (1.0.68):** khung bên phải cửa sổ **Tính đơn giá đất…** luôn có dòng đất của mọi hộ. Ô phạm vi chọn Tất cả hộ / Chỉ hộ đang chọn / một hộ; ô lọc tìm theo tên chủ hộ, số tờ, số thửa, loại đất, không cần gõ dấu. Mở từ menu mà chưa chọn hộ thì chưa dòng nào được tích sẵn, tránh áp nhầm cả dự án: lọc đúng các dòng cùng đoạn đường rồi bấm **Chọn tất cả dòng đang hiện**. Dòng đã tích nhưng bị ô lọc che thì không áp. Sau khi áp, cửa sổ vẫn mở để áp tiếp đoạn đường khác. Nhãn phía trên bảng báo khi có dòng khác nhóm đất đang tính.

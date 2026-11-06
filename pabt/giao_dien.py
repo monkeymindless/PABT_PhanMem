@@ -1084,6 +1084,7 @@ class KhungLogo(QWidget):
 # ---------------------------------------------------------------- biểu tượng nút (ký hiệu Segoe Fluent Icons / MDL2 Assets)
 # (mẫu trên chữ đã bỏ dấu, mã ký hiệu) - xét theo thứ tự; Windows 7 không có các phông này thì nút chỉ hiện chữ
 KY_HIEU = [
+    (r'^tinh don gia dat', 0xE8EF),       # 1.0.70: máy tính, cùng biểu tượng nút Bảng tính giá đất trong mục 1. Đất
     (r'tiep nhan', 0xE8F0),               # 1.0.04: Tiếp nhận hồ sơ pháp lý
     (r'^danh sach ho', 0xE716), (r'tong quat ho', 0xE8FD), (r'^quyet dinh( phe duyet)?$', 0xE8A5), (r'tong hop tien', 0xE9F9),
     (r'theo doi tien do|^tien do|theo doi chi tra', 0xE9D2), (r'^mau in', 0xE72C), (r'^bang tong hop', 0xE80A), (r'^hoan tac', 0xE7A7), (r'^lam lai', 0xE7A6),
