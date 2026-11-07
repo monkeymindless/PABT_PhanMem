@@ -130,7 +130,7 @@ class TestTheSoVaDanhSach(CoNavy):
         w.bam_the_so('so_ho')
         self.assertTrue(all(k.property('dang_loc') == '0' for k in w.the_khung.values()))
         self.assertEqual(w.CAO_THE_SO, 62)
-        self.assertEqual(w.the_khung['so_ho'].height(), 62)
+        self.assertEqual(w.the_khung['so_ho'].cao_toi_thieu, 62)      # mốc thiết kế: chưa áp bảng kiểu thì thẻ tự giãn
 
     def test_trang_thai_4_nac_giu_gia_tri_loc(self):
         from PySide6.QtCore import Qt
@@ -194,7 +194,7 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertEqual(w.dai_cong_ds.chu['so_ho'][0], f'CỘNG ({n} HỘ · {t} THỬA)')
         tong = sum((d['tong'] for d in w.mo_hinh.dong), D(0))
         self.assertEqual(w.dai_cong_ds.chu['tong'][0], f'TỔNG CỘNG: {vn(tong)} đ')
-        self.assertIn(f'<b style="color:#1E3A5F">{n}</b>/{n} hộ', w.lb_loc.text())
+        self.assertIn(f'<b style="color:#345678">{n}</b>/{n} hộ', w.lb_loc.text())
         # lọc còn một hộ: dải cộng và huy hiệu theo các hộ đang hiện
         with w.con:
             for i, m in enumerate(r[0] for r in w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 2').fetchall()):
@@ -227,7 +227,7 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertEqual(w.cb_tt.itemText(0), ud.TAT_CA_TRANG_THAI)
         from pabt import giao_dien
         qss = giao_dien._qss_day_du()
-        self.assertIn('QHeaderView::section:horizontal { background: #1E3A5F; color: #FFFFFF', qss)
+        self.assertIn('QHeaderView::section:horizontal { background: #345678; color: #FFFFFF', qss)
         self.assertIn('selection-background-color: #DBEAFE', qss)
         self.assertEqual(giao_dien.CAO_DONG_BANG, 30)
         self.assertEqual(w.bang.verticalHeader().defaultSectionSize(), 30)

@@ -42,6 +42,9 @@ TOKEN = dict(
     nen_the='#FFFFFF',
     khung='#FFFFFF',          # Panel: thẻ, ô, bảng
 )
+# 1.0.79: màu chính khởi đầu theo phương án Navy mặc định (dat_tong_nen đặt lại khi áp giao diện); bảng kiểu vẫn dựng từ CHINH_GOC
+from . import chu_de as _chu_de  # noqa: E402
+TOKEN.update(chinh=_chu_de.mau_tong('sang')['chinh'], chinh_re=_chu_de.mau_tong('sang')['chinh_re'])
 CHINH_RE = TOKEN['chinh_re']  # navy khi rê chuột (nút nền navy, tiêu đề bảng) - cũng là vạch ngăn cột tiêu đề bảng
 CAO_NUT_MENU = 32             # nút điều hướng menu trái (0.9.95: 27; 17/10/2026 Hybrid Enterprise Navy: 32 - vùng cuộn có thanh 6 px)
 CAO_HANG_GON = 32             # hàng nút "Thu gọn menu" trên đỉnh menu trái (ngoài vùng cuộn, vạch ngăn dưới)
@@ -171,7 +174,7 @@ QSS_NUT_BANG_CON = ('QPushButton#nut_bang_con { background: #FFFFFF; color: #334
                     'padding: 2px 10px; font-size: 12px; font-weight: 600; }'
                     'QPushButton#nut_bang_con:hover { background: #F1F5F9; }'
                     'QPushButton#nut_bang_con[canh_bao="1"] { color: #B45309; border: 1px solid #F59E0B; font-weight: 700; }'
-                    'QPushButton#nut_bang_con:checked { background: #1D4ED8; color: #FFFFFF; border: 1px solid #1D4ED8; font-weight: 700; }'
+                    'QPushButton#nut_bang_con:checked { background: #1E3A5F; color: #FFFFFF; border: 1px solid #1E3A5F; font-weight: 700; }'
                     'QPushButton#nut_bang_con[loai="vuong"]:checked { background: #D97706; color: #FFFFFF; border: 1px solid #D97706; }')
 MAU_NUT_BANG_CON = {'thuong': '#334155', 'canh': '#B45309', 'chon': '#FFFFFF'}
 MAU_LUU = ('#0F6E56', '#0B5340')       # 1.0.52: nút Lưu (KieuNut.LUU): nền, rê chuột - chữ trắng 6,3:1 (WCAG AA)
@@ -539,8 +542,9 @@ QSS_TONG_HOP_KP = '''
     QPushButton#nut_goi_chan_doan { background: #1F76A6; color: #FFFFFF; border: 1px solid #1A5C85; font-weight: 700; }
     QPushButton#nut_goi_chan_doan:hover { background: #1A5C85; }
     QFrame#khung_so_vd { background: #FFFFFF; border: 1px solid #1E3A5F; border-radius: 6px; }
-    QFrame#dau_so_vd { background: #1E3A5F; border: 0; border-top-left-radius: 5px; border-top-right-radius: 5px; }
-    QLabel#tieu_de_so_vd { color: #FFFFFF; font-weight: 700; background: transparent; }
+    QFrame#dau_so_vd { background: #EAF1F8; border: 0; border-left: 4px solid #1E3A5F; border-bottom: 1px solid #CBD9E8;
+        border-top-left-radius: 5px; border-top-right-radius: 5px; }
+    QLabel#tieu_de_so_vd { color: #1E3A5E; font-weight: 700; background: transparent; }
     QLabel#the_ho_vd { background: #E5A93A; color: #0F172A; font-weight: 700; border-radius: 4px; padding: 1px 8px; }
     QLabel#thong_tin_ho_vd { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 6px 8px; color: #0F172A; }
     QLabel#ket_luan_vd { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 5px; padding: 6px 8px; color: #075985; }
@@ -603,6 +607,11 @@ _KHOA_MAU_NEN = ('nen', 'khung', 'vach', 'chu', 'chu_phu')
 # màu GỐC mà bảng kiểu chung viết thẳng (#F8FAFC, #E2E8F0…): bảng kiểu dựng bằng màu này rồi đổi theo tông (ap_tong_nen). Từ 1.0.34
 # tông mặc định 'sang' (Sáng Sapphire) KHÁC màu gốc: nền #F1F5F9, viền #CBD5E1 - mở phần mềm là thấy giao diện mới
 _TOKEN_GOC = dict(nen='#F8FAFC', khung='#FFFFFF', vach='#E2E8F0', chu='#0F172A', chu_phu='#475569')
+# 1.0.79: màu GIỮ CHỖ trong bảng kiểu chung, chỉ dùng ở các khai báo này; _bang_doi_mau thay theo tông + phương án Navy
+TD_GOC = dict(nen='#1E3A5D', chu='#FFFFFE', vach='#1E3A5C', day='#1E3A5B', re='#1E3A5A')     # tiêu đề bảng ngang
+DAU_GOC = dict(nen='#EAF1F8', chu='#1E3A5E', vien='#CBD9E8')                                  # đầu khung Sổ nhật ký vận động
+TOKEN_NHAN_GOC = '#2563EB'
+_NHO_BANG_DOI_MAU: dict = {}                                                                   # (tông, phương án) -> bảng đổi màu; xem _bang_doi_mau
 CHINH_GOC = ('#1E3A5F', '#152C48')     # màu chính GỐC viết thẳng trong bảng kiểu (1.0.35) -> chu_de.MAU_TONG[tông]['chinh' / 'chinh_re']
 _RE_KHAI_BAO = re.compile(r'([A-Za-z-]+)(\s*:\s*)([^;{}]+)')
 _RE_MAU_HEX = re.compile(r'#[0-9A-Fa-f]{6}\b')
@@ -641,15 +650,28 @@ def _bang_doi_mau(ten: str) -> dict:
     lẫn nền khung; viền đổi vạch ngăn; chữ chỉ đổi chữ chính / chữ phụ - chữ trắng trên nút xanh giữ nguyên. Tông 'toi' thêm
     TOI_NEN / TOI_VIEN / TOI_CHU."""
     from . import chu_de
+    # 1.0.79: nhớ theo (tông, phương án): mau_theo_tong gọi cho từng ô khi vẽ bảng, không dựng lại từ điển mỗi lần. KHÔNG sửa bảng trả về
+    khoa = (ten, chu_de.phuong_an_hien())
+    kq = _NHO_BANG_DOI_MAU.get(khoa)
+    if kq is not None:
+        return kq
     _, nen, khung, vach, chu, chu_phu = chu_de.TONG_NEN.get(ten, chu_de.TONG_NEN[chu_de.MAC_DINH_TONG_NEN])
     g = _TOKEN_GOC
     loc = lambda d: {k.upper(): v.upper() for k, v in d.items() if k.upper() != v.upper()}   # noqa: E731
     them = ten == 'toi'
     mt = chu_de.mau_tong(ten)
+    pa = chu_de.mau_phuong_an(ten)
     chinh = {CHINH_GOC[0]: mt['chinh'], CHINH_GOC[1]: mt['chinh_re']}       # mọi thuộc tính; riêng từng loại (nền / viền / chữ) thắng
-    return {'nen': loc({**chinh, **(TOI_NEN if them else {}), g['nen']: nen, g['khung']: khung}),
-            'vien': loc({**chinh, **(TOI_VIEN if them else {}), g['vach']: vach}),
-            'chu': loc({**chinh, **(TOI_CHU if them else {}), g['chu']: chu, g['chu_phu']: chu_phu})}
+    # tiêu đề bảng, đầu khung: tông không theo phương án giữ cách cũ (nền màu chính, chữ trắng, vạch màu chính đậm, viền đáy màu nhấn)
+    td = dict(nen=pa['td_nen'], chu=pa['td_chu'], vach=pa['td_vach'], day=pa['td_day'], re=pa['td_re']) if pa else \
+        dict(nen=mt['chinh'], chu='#FFFFFF', vach=mt['chinh_re'], day=TOKEN_NHAN_GOC, re=mt['chinh_re'])
+    dau = dict(nen=pa['dau_nen'], chu=pa['dau_chu'], vien=pa['dau_vien']) if pa else \
+        (dict(nen='#24324A', chu='#93C5FD', vien='#334155') if them else dict(nen=DAU_GOC['nen'], chu=mt['chinh'], vien=DAU_GOC['vien']))
+    kq = {'nen': loc({**chinh, **(TOI_NEN if them else {}), g['nen']: nen, g['khung']: khung, TD_GOC['nen']: td['nen'], TD_GOC['re']: td['re'], DAU_GOC['nen']: dau['nen']}),
+          'vien': loc({**chinh, **(TOI_VIEN if them else {}), g['vach']: vach, TD_GOC['vach']: td['vach'], TD_GOC['day']: td['day'], DAU_GOC['vien']: dau['vien']}),
+          'chu': loc({**chinh, **(TOI_CHU if them else {}), g['chu']: chu, g['chu_phu']: chu_phu, TD_GOC['chu']: td['chu'], DAU_GOC['chu']: dau['chu']})}
+    _NHO_BANG_DOI_MAU[khoa] = kq
+    return kq
 
 
 def mau_theo_tong(mau: str, loai: str = 'nen') -> str:
@@ -768,6 +790,16 @@ def dat_tong_nen(ten: str, luu: bool = False, ap_lai: bool = True) -> str:
         except RuntimeError:                              # widget đã bị hủy
             KHI_DOI_TONG_NEN.remove(ham)
     return ten
+
+
+def dat_phuong_an_navy(ma: str, luu: bool = False, ap_lai: bool = True) -> str:
+    """Đổi phương án Navy: áp ngay cho mọi cửa sổ đang mở (qua dat_tong_nen), luu: nhớ cho lần mở sau."""
+    from . import chu_de
+    ma = chu_de.dat_phuong_an(ma)
+    if luu:
+        chu_de.ghi(cai_dat_nho(), phuong_an_navy=ma)
+    dat_tong_nen(TONG_NEN[0], ap_lai=ap_lai)
+    return ma
 
 
 KHI_DOI_TONG_NEN = []          # hàm(tên tông) gọi sau mỗi lần đổi tông (nút đổi nhanh trên banner cập nhật chữ / biểu tượng)
@@ -941,10 +973,10 @@ def _qss() -> str:
     QPushButton:disabled {{ color: {chu_tat}; background: {nen_tat}; border-color: {vien_tat}; }}
     QHeaderView::section {{ background: #EEF3F8; color: #24415E; font-weight: 600; padding: 7px 6px; border: 0;
         border-right: 1px solid #DDE5EE; border-bottom: 2px solid #C9D6E3; }}
-    QHeaderView::section:horizontal {{ background: {CHINH}; color: #FFFFFF; font-weight: 600; padding: 4px 8px;
-        min-height: {CAO_TIEU_DE_BANG - 10}px; border: 0; border-right: 1px solid {CHINH_RE}; border-bottom: 2px solid {TOKEN['nhan']}; }}
-    QHeaderView::section:horizontal:hover {{ background: {CHINH_RE}; }}
-    QHeaderView {{ color: #FFFFFF; }}
+    QHeaderView::section:horizontal {{ background: {TD_GOC['nen']}; color: {TD_GOC['chu']}; font-weight: 600; padding: 4px 8px;
+        min-height: {CAO_TIEU_DE_BANG - 10}px; border: 0; border-right: 1px solid {TD_GOC['vach']}; border-bottom: 2px solid {TD_GOC['day']}; }}
+    QHeaderView::section:horizontal:hover {{ background: {TD_GOC['re']}; }}
+    QHeaderView {{ color: {TD_GOC['chu']}; }}
     QTableView, QTreeView, QTableWidget, QTreeWidget {{ background: #FFFFFF; alternate-background-color: #F8FAFC;
         gridline-color: #E2E8F0; selection-background-color: #DBEAFE; selection-color: #0F172A; border: 1px solid #DCE3EA;
         border-radius: 6px; }}
@@ -5640,6 +5672,7 @@ def ap_dung(app) -> None:
     app.setFont(f)
     from . import chu_de
     ct = chu_de.doc(cai_dat_nho())
+    chu_de.dat_phuong_an(ct['phuong_an_navy'])
     dat_mat_do(ct['mat_do'], ap_lai=False)
     dat_tong_nen(ct['tong_nen'], ap_lai=False)          # 1.0.33: tông nền đã chọn (offscreen / kiểm thử: luôn 'sang')
     p = bang_mau_ung_dung()

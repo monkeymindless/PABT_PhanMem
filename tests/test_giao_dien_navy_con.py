@@ -15,7 +15,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pabt import csdl, giao_dien  # noqa: E402
 from tests.test_toc_do import _du_an  # noqa: E402
 
-NAVY = '#1E3A5F'
+NAVY = '#345678'      # 1.0.79: màu chính phương án mặc định pa1_nordic
 CAM_TIM_XANH_LA = ('#6950A1', '#594389', '#B8651F', '#9C551A', '#D83B01', '#B83201', '#107C41', '#0D6B37', '#1D7A6C', '#2F7A4F')
 
 
@@ -179,7 +179,7 @@ class TestTienDoKPI(_Co):
             self.assertEqual(t.maximumHeight(), bc.CAO_THE_KPI)
             self.assertIn(f'border-left: 3px solid {bc.MAU_THE[khoa]}', t.styleSheet())
             self.assertIn('[dang_loc="1"]', t.styleSheet())
-        self.assertEqual(set(bc.MAU_THE.values()), {NAVY, '#1F76A6', '#2F7D54', '#1F6F66', '#C98A22', '#B83A3A'})   # 6 thẻ (20/10/2026)
+        self.assertEqual(set(bc.MAU_THE.values()), {'#1E3A5F', '#1F76A6', '#2F7D54', '#1F6F66', '#C98A22', '#B83A3A'})   # 6 thẻ (20/10/2026)
         self.assertIsNone(k.the_kpi_dang_loc())                          # tất cả hộ: không thẻ nào đang lọc
         self.assertFalse(any(t.dang_loc() for t in k.kpi.the.values()))
         k.bam_kpi('mat_bang')
@@ -197,7 +197,7 @@ class TestTienDoKPI(_Co):
         for b in k.nut_che_do.values():
             self.assertIs(b.parentWidget(), k.khung_che_do)              # hai nút trong một khung "viên thuốc"
         self.assertIn('#E2E8F0', k.khung_che_do.styleSheet())
-        self.assertIn(f'background: {NAVY}', _quy_tac(td.QSS_CHE_DO, 'QPushButton:checked'))
+        self.assertIn('background: #1E3A5F', _quy_tac(td.QSS_CHE_DO, 'QPushButton:checked'))     # màu gốc, dat_kieu_theo_tong đổi theo phương án
         self.assertIn('transparent', _quy_tac(td.QSS_CHE_DO, 'QPushButton'))
         self.assertTrue(k.nut_che_do['ho'].isChecked())
         self.assertEqual(k.lb_moc.objectName(), 'lb_moc')
@@ -218,10 +218,10 @@ class TestTongHopVaNiemYet(_Co):
         for loai in ('cong', 'kinh_phi', 'tong'):
             r = next(i for i, (x, _) in enumerate(dong) if x == loai)
             ki = mh.kieu[(r, 0)]
-            self.assertEqual((ki['nen'], ki['mau_chu']), td.DONG_NOI[loai])
+            self.assertEqual((ki['nen'], ki['mau_chu']), td.dong_noi(loai))
             self.assertTrue(ki['dam'])
         self.assertEqual(td.DONG_NOI['tong'][0].name().upper(), '#F0F6FF')
-        self.assertEqual(td.DONG_NOI['tong'][1].name().upper(), NAVY)
+        self.assertEqual(td.DONG_NOI['tong'][1].name().upper(), '#1E3A5F')
 
     def test_the_niem_yet_vach_trai(self):
         from pabt import man_hinh_du_thao as dt
@@ -229,7 +229,8 @@ class TestTongHopVaNiemYet(_Co):
         self.addCleanup(k.close)
         for khoa, t in k.the.items():
             self.assertEqual(t.property('vai'), 'the_ny')
-            self.assertIn(f'border-left: 3px solid {dt.MAU_THE_NY[khoa]}', t.styleSheet())
+            from pabt.giao_dien import mau_theo_tong
+            self.assertIn(f'border-left: 3px solid {mau_theo_tong(dt.MAU_THE_NY[khoa], "vien")}', t.styleSheet())
             self.assertEqual(t.gia.objectName(), 'the_ny_so')
         from PySide6.QtWidgets import QFrame
         self.assertIn('border-radius: 5px', k.findChild(QFrame, 'dai_tien_do_ny').styleSheet())

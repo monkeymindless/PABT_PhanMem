@@ -31,13 +31,13 @@ class TestChuDe(unittest.TestCase):
                 os.environ[k] = v
 
     def test_mac_dinh_va_gia_tri_la(self):
-        self.assertEqual(chu_de.doc(None), {'mat_do': 'chuan', 'tuong_phan': 'theo_windows', 'tong_nen': 'sang'})   # 1.0.33: tông nền
+        self.assertEqual(chu_de.doc(None), {'mat_do': 'chuan', 'tuong_phan': 'theo_windows', 'tong_nen': 'sang', 'phuong_an_navy': 'pa1_nordic'})   # 1.0.33: tông nền
         self.assertEqual(chu_de.doc(_CaiDat({chu_de.KHOA_MAT_DO: 'lung tung'}))['mat_do'], 'chuan')
 
     def test_ghi_doc_va_moi_truong(self):
         c = _CaiDat()
         chu_de.ghi(c, mat_do='gon', tuong_phan='bat')
-        self.assertEqual(chu_de.doc(c), {'mat_do': 'gon', 'tuong_phan': 'bat', 'tong_nen': 'sang'})
+        self.assertEqual(chu_de.doc(c), {'mat_do': 'gon', 'tuong_phan': 'bat', 'tong_nen': 'sang', 'phuong_an_navy': 'pa1_nordic'})
         os.environ['PABT_MAT_DO'] = 'thoang'
         self.assertEqual(chu_de.doc(c)['mat_do'], 'thoang')
 

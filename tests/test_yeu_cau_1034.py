@@ -20,7 +20,7 @@ class TestBangMau(unittest.TestCase):
     def test_token_flagship(self):
         t = giao_dien.TOKEN
         self.assertEqual((t['chinh'], t['chinh_re'], t['nhan'], t['thanh_cong'], t['canh_bao'], t['nguy_hiem']),
-                         ('#1E3A5F', '#152C48', '#2563EB', '#059669', '#D97706', '#DC2626'))
+                         ('#345678', '#284460', '#2563EB', '#059669', '#D97706', '#DC2626'))
         self.assertEqual((t['nen'], t['nen_the'], t['vien']), ('#F3F6FA', '#FFFFFF', '#D5DEE8'))      # 1.0.35: PA1 Slate-Navy
         qss = giao_dien._qss_day_du()
         for cu in ('#2F5F9E', '#3B6FCE', '#264E83'):

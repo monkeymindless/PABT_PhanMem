@@ -55,9 +55,57 @@ MAU_TONG = {
 }
 
 
+# 1.0.79 (người dùng 07/11/2026): 6 phương án Navy dịu mắt, chỉ áp cho các tông nền sáng trung tính + Ấm; Tối, Titan, Ngọc giữ màu riêng.
+# chinh, chinh_re: màu chính, rê chuột; chinh_am: màu chính ở tông Ấm; td_*: tiêu đề bảng ngang (nền, chữ, vạch cột, viền đáy, rê chuột);
+# dau_*: đầu khung phụ Sổ nhật ký vận động (nền, chữ, viền). Tương phản chữ / nền đã tính theo WCAG: tests/test_phuong_an_navy.py.
+PHUONG_AN_NAVY = {
+    'pa1_nordic': dict(ten='PA1: Xanh Đá Bắc Âu dịu mắt (Nordic Slate)', chinh='#345678', chinh_re='#284460', chinh_am='#3A5A78',
+                       td_nen='#345678', td_chu='#FFFFFF', td_vach='#43688E', td_day='#608AB5', td_re='#284460',
+                       dau_nen='#EAF1F8', dau_chu='#284460', dau_vien='#CBD9E8'),
+    'pa2_suong_nhat': dict(ten='PA2: Tiêu đề bảng Nền Sương Nhạt (Fluent Mist)', chinh='#2B4C73', chinh_re='#213B59', chinh_am='#325478',
+                           td_nen='#E6EEF7', td_chu='#1E3A5F', td_vach='#CBD9E8', td_day='#8FB0D4', td_re='#D8E4F2',
+                           dau_nen='#EBF2FA', dau_chu='#1E3A5F', dau_vien='#CBD9E8'),
+    'pa3_thep_diu': dict(ten='PA3: Xanh Thép Chân Trời hạ bão hòa (Horizon Steel)', chinh='#3B5978', chinh_re='#2E4761', chinh_am='#3E5C76',
+                         td_nen='#3B5978', td_chu='#FFFFFF', td_vach='#4A6B8C', td_day='#587A9E', td_re='#2E4761',
+                         dau_nen='#EDF2F7', dau_chu='#2E4761', dau_vien='#CBD5E1'),
+    'pa4_cobalt_diu': dict(ten='PA4: Xanh Lam Hành Chính chuẩn mực (Serene Cobalt)', chinh='#2F5275', chinh_re='#24405C', chinh_am='#35587A',
+                           td_nen='#2F5275', td_chu='#FFFFFF', td_vach='#3D658C', td_day='#4D78A3', td_re='#24405C',
+                           dau_nen='#E8F0F8', dau_chu='#24405C', dau_vien='#C5D7EA'),
+    'pa5_khoi_am': dict(ten='PA5: Xanh Khói Ấm chống mỏi mắt (Cashmere Slate)', chinh='#3A5874', chinh_re='#2D455C', chinh_am='#3A5874',
+                        td_nen='#3A5874', td_chu='#FFFFFF', td_vach='#496A8A', td_day='#5B7FA0', td_re='#2D455C',
+                        dau_nen='#EFECE6', dau_chu='#2D455C', dau_vien='#D8D0C5'),
+    'pa6_khoang_sang': dict(ten='PA6: Xanh Khoáng Chất sáng nhẹ (Airy Mineral)', chinh='#3D6082', chinh_re='#304D69', chinh_am='#406282',
+                            td_nen='#3D6082', td_chu='#FFFFFF', td_vach='#4C7296', td_day='#648CB3', td_re='#304D69',
+                            dau_nen='#EBF3FA', dau_chu='#304D69', dau_vien='#CFE0F0'),
+}
+MAC_DINH_PHUONG_AN = 'pa1_nordic'
+KHOA_PHUONG_AN = 'giao_dien/phuong_an_navy'
+TONG_THEO_PHUONG_AN = ('sang', 'diu', 'trang', 'am')
+_PHUONG_AN = [MAC_DINH_PHUONG_AN]
+
+
+def phuong_an_hien() -> str:
+    return _PHUONG_AN[0]
+
+
+def dat_phuong_an(ma: str) -> str:
+    _PHUONG_AN[0] = ma if ma in PHUONG_AN_NAVY else MAC_DINH_PHUONG_AN
+    return _PHUONG_AN[0]
+
+
+def mau_phuong_an(ten: str) -> dict | None:
+    """Màu của phương án đang chọn cho tông ten; tông giữ màu riêng: None."""
+    if ten not in TONG_THEO_PHUONG_AN:
+        return None
+    pa = PHUONG_AN_NAVY[_PHUONG_AN[0]]
+    return dict(pa, chinh=pa['chinh_am']) if ten == 'am' else pa
+
+
 def mau_tong(ten: str) -> dict:
-    """Màu chính / banner / menu của tông (tông lạ: mặc định)."""
-    return MAU_TONG.get(ten, MAU_TONG[MAC_DINH_TONG_NEN])
+    """Màu chính / banner / menu của tông (tông lạ: mặc định); tông theo phương án Navy lấy màu chính của phương án."""
+    mt = MAU_TONG.get(ten, MAU_TONG[MAC_DINH_TONG_NEN])
+    pa = mau_phuong_an(ten)
+    return dict(mt, chinh=pa['chinh'], chinh_re=pa['chinh_re']) if pa else mt
 
 
 MAC_DINH_TONG_NEN = 'sang'
@@ -106,11 +154,12 @@ def doc(cai_dat=None) -> dict:
     md = os.environ.get('PABT_MAT_DO') or lay(KHOA_MAT_DO)
     tp = os.environ.get('PABT_TUONG_PHAN_CAO') or lay(KHOA_TUONG_PHAN)
     tn = os.environ.get('PABT_TONG_NEN') or lay(KHOA_TONG_NEN)
+    pa = os.environ.get('PABT_PHUONG_AN_NAVY') or lay(KHOA_PHUONG_AN)
     return {'mat_do': _chon(md, MAT_DO, MAC_DINH_MAT_DO), 'tuong_phan': _chon(tp, TUONG_PHAN, MAC_DINH_TUONG_PHAN),
-            'tong_nen': _chon(tn, TONG_NEN, MAC_DINH_TONG_NEN)}
+            'tong_nen': _chon(tn, TONG_NEN, MAC_DINH_TONG_NEN), 'phuong_an_navy': _chon(pa, PHUONG_AN_NAVY, MAC_DINH_PHUONG_AN)}
 
 
-def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_nen: str | None = None) -> None:
+def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_nen: str | None = None, phuong_an_navy: str | None = None) -> None:
     """Ghi lựa chọn (chỉ phần được đưa vào) vào cai_dat (QSettings); không có cai_dat thì bỏ qua."""
     if cai_dat is None:
         return
@@ -120,6 +169,8 @@ def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_
         cai_dat.setValue(KHOA_TUONG_PHAN, _chon(tuong_phan, TUONG_PHAN, MAC_DINH_TUONG_PHAN))
     if tong_nen is not None:
         cai_dat.setValue(KHOA_TONG_NEN, _chon(tong_nen, TONG_NEN, MAC_DINH_TONG_NEN))
+    if phuong_an_navy is not None:
+        cai_dat.setValue(KHOA_PHUONG_AN, _chon(phuong_an_navy, PHUONG_AN_NAVY, MAC_DINH_PHUONG_AN))
 
 
 # 1.0.51 (người dùng 02/11/2026): LƯU TỰ ĐỘNG cửa sổ lập phương án / Khái toán - lưu sau N giây NGỪNG thao tác (không cắt ngang ô đang

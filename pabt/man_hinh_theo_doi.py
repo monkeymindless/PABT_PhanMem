@@ -1517,7 +1517,7 @@ class KhungTienDo(_Khung):
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip('Từng hộ: quyết định, chi trả, bàn giao, vận động (bấm đúp dòng để cập nhật)' if k == 'ho' else
                          'Thửa của hộ đã phê duyệt mà chưa bàn giao mặt bằng, xếp theo mức ưu tiên giải tỏa')
-            b.setStyleSheet(QSS_CHE_DO)
+            dat_kieu_theo_tong(b, QSS_CHE_DO)                # 1.0.79: màu chính theo tông + phương án Navy, không mã cứng
             self.nhom_che_do.addButton(b, i)
             self.nut_che_do[k] = b
             h_pill.addWidget(b)
