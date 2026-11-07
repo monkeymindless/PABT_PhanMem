@@ -25,7 +25,7 @@ os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 if os.path.isdir(r'C:\Windows\Fonts'):
     os.environ.setdefault('QT_QPA_FONTDIR', r'C:\Windows\Fonts')
 import pabt  # noqa
-from PySide6.QtCore import QCoreApplication, QEvent, QPoint, QRect  # noqa
+from PySide6.QtCore import QCoreApplication, QEvent, QPoint, QRect, Qt  # noqa
 from PySide6.QtWidgets import QAbstractButton, QApplication, QDialog, QPushButton, QTabBar, QTabWidget, QToolButton, QWidget  # noqa
 qa = QApplication([])
 from pabt import app as ud  # noqa
@@ -82,7 +82,7 @@ def xet(goc, man):
         # vùng thẻ THẬT (thẻ cuối) so với nút: Qt cắt thanh thẻ theo corner, vùng thẻ bị cuộn: phát hiện bằng nút mũi tên hiện ra
         vung = trong_khung_cuon(b, goc)
         rong_can = sum(b.tabRect(i).width() for i in range(b.count()))
-        if rong_can > b.width() + 2:
+        if rong_can > b.width() + 2 and not b.usesScrollButtons():     # có nút cuộn: thẻ nào cũng tới được
             bao('THANH_THE_THIEU_CHO', man, f'{nhan(b)} cần {rong_can}, có {b.width()}')
         tb.append((b, vung))
     for i, (a, ra) in enumerate(ds):
@@ -104,13 +104,14 @@ def xet(goc, man):
                 bao('NUT_DE_THE', man, f'{nhan(a)} x {nhan(b)} ({g.width()}x{g.height()})')
         if isinstance(a, (QPushButton, QToolButton)):
             t = a.text().replace('&&', 'x').replace('&', '')
-            if t and '\n' not in t:
+            chi_bieu_tuong = isinstance(a, QToolButton) and a.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+            if t and '\n' not in t and not chi_bieu_tuong:      # nút chỉ biểu tượng (menu trái thu gọn): chữ ẩn là cố ý
                 can = a.fontMetrics().horizontalAdvance(t) + (a.iconSize().width() + 4 if not a.icon().isNull() else 0) + 12
                 if QPushButton.menu(a) if isinstance(a,QPushButton) else QToolButton.menu(a):
                     can += 14
                 if a.width() < can - 2:
                     bao('CAT_CHU', man, f'{nhan(a)} rộng {a.width()}, chữ cần {can}')
-            if a.height() < 22 and a.isEnabled():
+            if a.height() < 22 and a.isEnabled() and a.objectName() != 'lineedit_clear_button' and a.toolTip() != 'Xóa chữ đã gõ':   # nút xóa nằm trong ô nhập
                 bao('NUT_THAP', man, f'{nhan(a)} cao {a.height()}')
             cha = a.parentWidget()
             if cha is not None and not type(cha).__name__.startswith('QAbstractScroll') and cha.width() > 0:
@@ -210,4 +211,9 @@ with open(RA, 'w', encoding='utf-8') as g:
         g.write(f'{l}\t{m}\t{c}\n')
 print('so loai', dict(dem), 'so hop', len(da_thu), flush=True)
 sys.stdout.flush()
-os._exit(0)
+try:                                                    # os._exit vẫn chạy DLL_PROCESS_DETACH của Qt: có lúc sập mã 139 sau khi đã ghi xong kết quả
+    import ctypes
+    import ctypes.wintypes as _wt
+    ctypes.windll.kernel32.TerminateProcess(_wt.HANDLE(-1), 0)
+finally:
+    os._exit(0)

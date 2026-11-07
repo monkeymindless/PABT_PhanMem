@@ -593,7 +593,7 @@ class BangMuc(QWidget):
                 x.setParent(self)
                 x.hide()
             self.b_mui_thua = QPushButton('▾')
-            self.b_mui_thua.setFixedWidth(24)
+            self.b_mui_thua.setFixedWidth(34)                # chữ ▾ + mũi tên menu: 24 px cắt chữ
             self.b_mui_thua.setProperty('khong_icon', True)
             self.b_mui_thua.setToolTip('Thêm tất cả thửa, chọn nhiều thửa, tách thửa thành dòng đất mới')
             ap_kieu_nut(self.b_mui_thua, KieuNut.CHINH)

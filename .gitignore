@@ -54,3 +54,5 @@ loi.log
 
 # Tesseract OCR đóng kèm bộ cài (dựng bằng bo_cai_win/chuan_bi_tesseract.py từ bản tải về)
 bo_cai_win/tesseract/
+_luu_tru_don_dep/
+khoa_android/

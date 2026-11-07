@@ -7,6 +7,10 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.76', '07/11/2026', (
+        'Tài khoản máy chủ không có quyền sửa hồ sơ: lưu, bỏ lớp bản đồ và ảnh nền trong dự án báo rõ không có quyền.',
+        'Lập phương án mục Đất: nút mũi tên chọn thửa rộng hơn, không bị cắt; nút Thuộc tính máy in, Thiết lập trang đủ chữ.',
+    )),
     ('1.0.75', '07/11/2026', (
         'An toàn: file dự án nhận từ ngoài có trigger giả tên của phần mềm được gỡ khi mở; chặn chặt hơn file XML độc; file khóa hỏng không còn gây lỗi khi mở dự án.',
         'Tài khoản máy chủ không đủ quyền: đợt trình, đợt niêm yết, quyết định, nhập phương án chi tiết, sửa lỗi tự động, lưu bản vẽ báo rõ không có quyền. Thông báo lỗi trên một số màn hình đổi màu theo tông nền.',

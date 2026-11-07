@@ -3082,3 +3082,10 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
 - KHÔNG làm theo gợi ý của bộ quét: `_xoa_het_phien` có `@atexit.register`, không phải hàm chết; `int(Decimal(chữ))` ném InvalidOperation, `except ValueError` không bắt; `round()` phần lớn là tọa độ / điểm ảnh.
 - 3 test theo giao diện 1.0.75: tiêu đề cột thùng rác 'Xóa'; nút Lên / Xuống mục 2 trở đi cao `CAO_HANG` (mục 1 vẫn `CAO_NUT_DONG`); `_rong_ds_ho` đo theo `tach`, không số 600.
 - Kết quả: Qt6 + Qt5 1.829 bài đạt; giao diện 0 lỗi / 0 đơ / 0 cửa sổ lạ; vermin 3.8 đạt. `test_the_so_mot_dong_va_menu_trai_gon` chạy RIÊNG ra 66 != 62 cả trên bản trước đợt sửa, cả lượt thì đạt (phụ thuộc thứ tự, chưa tìm nguyên nhân). `kiem_tra_bo_cuc.py` thoát mã 139 sau khi in xong kết quả.
+
+## 1.0.76 (07/11/2026): xử lý nốt mục còn lại của rà soát khép kín
+- `ban_do_luu.luu_lop / xoa_lop / luu_o / xoa_o`: `kiem_quyen('sua_ho_so')` như `ban_do_cad`; `man_hinh_ban_do` bắt LoiNhap khi xóa.
+- Test thẻ số 66 != 62 khi chạy riêng: chưa áp bảng kiểu thì nội dung cao hơn nên thẻ tự giãn; có bảng kiểu vẫn 62 (đã đo, cả khi mở dự án). Test so `cao_toi_thieu`, không so chiều cao thật.
+- `kiem_tra_bo_cuc.py`: bỏ báo giả (nút chỉ biểu tượng, nút xóa trong ô nhập, thanh thẻ có nút cuộn: 175 mục còn 1); thoát bằng TerminateProcess vì os._exit vẫn chạy phần hủy DLL của Qt, có lúc sập mã 139 sau khi đã ghi xong.
+- Dọn dẹp thật (`larc_ai_khep_kin.py --don-dep --thuc-thi`): file .pabt / Excel mẫu và thư mục lồng `PABT_PhanMem/` (.git hỏng: `bad object HEAD`) sang `_luu_tru_don_dep/dot_20261107/`. `phan_tich_phien_ban` tìm dự án thật cả trong `03_du_lieu_du_an_mau`.
+- `.gitignore`: thêm `_luu_tru_don_dep/`, `khoa_android/` (khóa ký và mật khẩu, repo có remote công khai).

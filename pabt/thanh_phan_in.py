@@ -223,6 +223,7 @@ def nut_lien_ket(chu: str) -> QPushButton:
     """Nút dạng chữ gạch chân như link Thuộc tính Máy in, Thiết lập Trang của Word."""
     b = QPushButton(chu)
     b.setProperty('khong_icon', True)
+    b.setMinimumWidth(b.fontMetrics().horizontalAdvance(chu) + 14)      # đủ chữ cả khi hàng máy in hẹp
     b.setMinimumHeight(24)                              # vùng bấm tối thiểu (WCAG 2.2): trước 17 px
     b.setCursor(Qt.CursorShape.PointingHandCursor)
     dat_kieu_theo_tong(b, f'QPushButton {{ background: transparent; color: {TOKEN["nhan"]}; border: 0; text-decoration: underline; padding: 0 2px; }}'

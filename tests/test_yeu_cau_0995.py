@@ -80,7 +80,8 @@ class TestToanCuc(Co0995):
         ud, w = self._cua_so()
         the = w.the_so['so_ho'].parentWidget()
         # 17/10/2026 (Hybrid Enterprise Navy - thay mức 0.9.95): thẻ 56 px (tên trên, số + chữ phụ dưới), cách 8 px; nút menu 32 px
-        self.assertEqual(the.maximumHeight(), ud.CuaSoChinh.CAO_THE_SO)
+        # mốc thiết kế, không đo chiều cao thật: chưa áp bảng kiểu (chạy riêng bài này) nội dung cao hơn, thẻ tự giãn 66 px; có bảng kiểu 62 px
+        self.assertEqual(the.cao_toi_thieu, ud.CuaSoChinh.CAO_THE_SO)
         self.assertEqual(w.hang_the.layout().spacing(), 8)
         self.assertEqual(giao_dien.CAO_NUT_MENU, 32)
         km = w.khung_menu

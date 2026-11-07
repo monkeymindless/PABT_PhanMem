@@ -260,7 +260,8 @@ def main(argv) -> int:
     lan = int(argv[argv.index('--lan') + 1]) if '--lan' in argv else 3
     du_an = argv[argv.index('--du-an') + 1] if '--du-an' in argv else ''
     if not du_an:                                                       # dự án thật mặc định: file .pabt đầu tiên cạnh mã nguồn
-        du_an = str(next(iter(sorted(GOC.glob('*.pabt')) + sorted(GOC.parent.glob('*.pabt'))), '') or '')
+        du_an = str(next(iter(sorted(GOC.glob('*.pabt')) + sorted(GOC.parent.glob('*.pabt')) +
+                              sorted(GOC.glob('_luu_tru_don_dep/*/03_du_lieu_du_an_mau/*.pabt'))), '') or '')
     if not so_sanh and '--khong-so-sanh' not in argv:                   # mặc định: gói cập nhật mới nhất khác phiên bản mã nguồn
         pb = re.search(r"__version__\s*=\s*'([^']+)'", (GOC / 'pabt' / '__init__.py').read_text(encoding='utf-8')).group(1)
         so = lambda s: tuple(int(x) for x in re.findall(r'\d+', s))       # noqa: E731

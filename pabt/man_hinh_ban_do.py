@@ -2674,7 +2674,11 @@ class HopBanDo(QDialog):
                     self, TEN_UD, 'Các lớp KML đã lưu trong file dự án. Bỏ khỏi bản đồ và xóa bản đã lưu?') != \
                     QMessageBox.StandardButton.Yes:
                 return
-            ban_do_luu.xoa_lop(self.con)
+            try:
+                ban_do_luu.xoa_lop(self.con)
+            except LoiNhap as e:
+                self.lb.setText(chu_loi('Không bỏ được lớp đã lưu', e))
+                return
         self.lop_kml, self.xml_kml = [], {}
         self.ds_tam = []
         self.khung_nhap.bo_het()
@@ -2718,7 +2722,11 @@ class HopBanDo(QDialog):
                 self, TEN_UD, f'Xóa bản đồ đã lưu trong file dự án ({tt["lop"]} lớp KML, {tt["o"]} ô ảnh nền, '
                 f'{tt["kich"] / 2 ** 20:.1f} MB)?') != QMessageBox.StandardButton.Yes:
             return None
-        kq = {'lop': ban_do_luu.xoa_lop(self.con), 'o': ban_do_luu.xoa_o(self.con)}
+        try:
+            kq = {'lop': ban_do_luu.xoa_lop(self.con), 'o': ban_do_luu.xoa_o(self.con)}
+        except LoiNhap as e:
+            self.lb.setText(chu_loi('Không xóa được bản đồ đã lưu', e))
+            return None
         self.lb.setText(f'Đã xóa bản đồ đã lưu: {kq["lop"]} lớp KML, {kq["o"]} ô ảnh nền - file dự án đã thu gọn.')
         self._cap_nhat_nut_luu()
         return kq

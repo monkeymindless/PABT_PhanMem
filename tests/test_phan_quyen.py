@@ -59,6 +59,17 @@ class TestVaiTro(_Nen):
             with self.assertRaises(pq.LoiQuyen):
                 goi()
 
+    def test_ban_do_da_luu_can_quyen_ho_so(self):
+        from pabt import ban_do_luu
+        pq.gan(self.con, pq.THANH_TRA)
+        for goi in (lambda: ban_do_luu.luu_lop(self.con, []), lambda: ban_do_luu.xoa_lop(self.con),
+                    lambda: ban_do_luu.luu_o(self.con, []), lambda: ban_do_luu.xoa_o(self.con)):
+            with self.assertRaises(pq.LoiQuyen):
+                goi()
+        pq.gan(self.con, pq.KIEM_DEM)
+        self.assertEqual(ban_do_luu.luu_lop(self.con, []), 0)
+        self.assertEqual(ban_do_luu.xoa_lop(self.con), 0)
+
     def test_so_lieu_dong_danh_sach_dai_khong_vuot_tham_so(self):
         """Danh sách hộ dài hơn LOC_SQL_TOI_DA: đọc hết rồi lọc, kết quả đúng như lọc bằng SQL; hộ ngoài danh sách không lọt vào."""
         from types import SimpleNamespace

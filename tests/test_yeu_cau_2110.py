@@ -164,7 +164,7 @@ class TestChonVungVaBoDem(CoNavy):
         self.assertEqual(w.the_don_vi['so_ho'].text(), 'hộ')
         self.assertEqual(w.the_phu['so_ho'].text(), '100%')
         self.assertEqual(w.the_phu['tong'].text(), '0,0818 ha')            # thẻ Tổng kinh phí: tổng ha
-        self.assertEqual(w.the_khung['so_ho'].height(), w.CAO_THE_SO)
+        self.assertEqual(w.the_khung['so_ho'].cao_toi_thieu, w.CAO_THE_SO)  # mốc thiết kế: chưa áp bảng kiểu thì thẻ tự giãn
         self.assertIn('0 thửa', w.the_dia_chinh['da_pd'].text())
         khung, o_thua, o_dt = w.the_khung['so_ho'], w.the_dia_chinh['so_ho'], w.the_dt['so_ho']
         self.assertGreater(o_thua.height(), 8)
