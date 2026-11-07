@@ -7,6 +7,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QCheckBox, QComb
                                QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget)
 
 from . import du_thao
+from .giao_dien import VAI_PHU_TEN, OTenHaiTang, cao_ten_hai_tang  # noqa: E402
+from .ho_so import dong_duoi_ten, tach_ho_ten  # noqa: E402
 from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 from .thong_bao import TEN_UD, chu_loi
 from .tien import vn
@@ -525,6 +527,8 @@ class KhungDuThao(QWidget):
         # CCCD hiển thị đủ số (1.0.04 bỏ che) - tiêu đề chỉ "CCCD"; bề rộng chuẩn từng cột + một cột giãn
         self.bang_ny = _bang(['STT', 'Họ và tên', 'CCCD', 'Thửa', 'Tổng tiền dự thảo', 'Địa điểm'], RONG_COT_NY, gian=1)
         self.bang_ny.horizontalHeader().setMinimumSectionSize(RONG_COT_NY[0])
+        self.bang_ny.setItemDelegateForColumn(1, OTenHaiTang(self.bang_ny))     # 1.0.78: ghi chú dưới tên hộ
+        self.bang_ny.horizontalHeader().sectionResized.connect(lambda c, *_: self._vua_cao_ny() if c == 1 else None)
         self.bang_ny.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
         self.bang_ny.setProperty('stt_co_dinh', RONG_COT_NY[0])
         san_tieu_de(self.bang_ny)
@@ -875,6 +879,21 @@ class KhungDuThao(QWidget):
         self.thanh.setValue(int(round(tk['pt_bao_phu'])))
         self._ve_bang(dot, tk)
 
+
+    def _vua_cao_ny(self) -> None:
+        """Dòng có ghi chú dưới tên: cao theo chữ theo bề rộng cột Họ và tên."""
+        b = self.bang_ny
+        vh = b.verticalHeader()
+        for r in range(b.rowCount()):
+            it = b.item(r, 1)
+            phu = it.data(VAI_PHU_TEN) if it is not None else None
+            can = vh.defaultSectionSize()
+            if phu:
+                h1, h2 = cao_ten_hai_tang(it.text(), phu, b.font(), b.columnWidth(1) - 10)
+                can = max(can, h1 + h2 + 8)
+            if b.rowHeight(r) != can:
+                b.setRowHeight(r, can)
+
     def _ve_bang(self, dot, tk):
         ho = du_thao.ds_ho_dot(self.con, dot) if dot else []
         dia = ''
@@ -883,11 +902,14 @@ class KhungDuThao(QWidget):
             dia = r['dia_diem'] if r else ''
         self.bang_ny.setRowCount(len(ho))
         for i, h in enumerate(ho):
-            for c, v in enumerate((i + 1, h['ho_ten'], h['so_cccd'] or '', h['thua'],
+            phu = dong_duoi_ten(h['ho_ten'], h.get('phap_ly'), h.get('ghi_chu_ten'))
+            for c, v in enumerate((i + 1, tach_ho_ten(h['ho_ten'])[0], h['so_cccd'] or '', h['thua'],
                                    vn(h['tien']) if h['tien'] is not None else '', dia)):
                 o = _o(v)
                 if c in (1, 3, 5):
-                    o.setToolTip(str(v))
+                    o.setToolTip(f'{v}\n{phu}' if c == 1 and phu else str(v))
+                if c == 1 and phu:
+                    o.setData(VAI_PHU_TEN, phu)
                 if c in (0, 2, 3):
                     o.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 elif c == 4:
@@ -897,6 +919,7 @@ class KhungDuThao(QWidget):
                     o.setFont(f)
                 self.bang_ny.setItem(i, c, o)
             self.bang_ny.item(i, 0).setData(Qt.ItemDataRole.UserRole, h['ma_ho'])
+        self._vua_cao_ny()
         self.bang_yk.setRowCount(len(ho))
         for i, h in enumerate(ho):
             for c, v in enumerate((h['ma_ho'], h['ho_ten'], '● ' + du_thao.TEN_LOAI.get(h['loai'], ''),

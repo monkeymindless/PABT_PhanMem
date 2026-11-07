@@ -19,6 +19,7 @@ from openpyxl.styles import Alignment
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.cell_range import CellRange, MultiCellRange
 
+from .ho_so import ten_day_du_in  # noqa: E402
 from . import an_toan as _an_toan
 from . import csdl
 from . import nghiep_vu
@@ -2047,7 +2048,7 @@ def _ke_hoach_mot_ho_bth(b, stt, ma, pa, kq, thua, h, bc, chuan_nguon_goc) -> tu
     c_ho = tuple(c for c in cot_ho if c in gop) or (K['tai_dinh_cu'],)
     c_thua = cot_thua + tuple(c for c in cot_ho if c not in gop)
     tien = _tien_ho_bth(pa, kq, bc)
-    o_ho = {K['stt']: stt, K['ho_ten']: h['ho_ten'], K['dia_chi']: h['dia_chi'], K['tai_dinh_cu']: h['tai_dinh_cu'] or None,
+    o_ho = {K['stt']: stt, K['ho_ten']: ten_day_du_in(h['ho_ten'], h['phap_ly'], h['ghi_chu_ten'] if 'ghi_chu_ten' in h.keys() else ''), K['dia_chi']: h['dia_chi'], K['tai_dinh_cu']: h['tai_dinh_cu'] or None,
             K['ghi_chu']: f'Hỗ trợ khác: {format(int(tien["khac"]), ",").replace(",", ".")} đ' if tien['khac'] > 0 else None}
     for k in COT_TIEN_BTH:
         if K[k] not in lap:

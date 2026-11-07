@@ -743,9 +743,15 @@ def dau_vet_ho(con, ds_ma_ho) -> dict:
         if 'ma_ho' not in cot:
             continue
         i = cot.index('ma_ho')
+        # 1.0.78: cột ghi_chu_ten trống không tính vào dấu vết: máy khác mở file làm thêm cột (csdl.MO_RONG) không phải "hộ đã sửa";
+        # đổi dấu vết ở đây sẽ báo XUNG ĐỘT giả cho mọi hộ đang nhận về
+        i_gc = cot.index('ghi_chu_ten') if bang == 'ho' and 'ghi_chu_ten' in cot else None
         for nhom in _nhom(cac):
             for r in con.execute(f'SELECT * FROM {bang} WHERE ma_ho IN ({",".join("?" * len(nhom))}) ORDER BY rowid', nhom):
-                bam[r[i]].update(repr((bang, tuple(r))).encode('utf-8'))
+                gt = tuple(r)
+                if i_gc is not None and not gt[i_gc]:
+                    gt = gt[:i_gc] + gt[i_gc + 1:]
+                bam[r[i]].update(repr((bang, gt)).encode('utf-8'))
     return {m: h.hexdigest() for m, h in bam.items()}
 
 

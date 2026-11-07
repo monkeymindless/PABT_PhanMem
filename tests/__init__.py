@@ -73,6 +73,43 @@ else:
 
     unittest.TestSuite._handleModuleTearDown = _het_module_roi_don
 
+    # 07/11/2026 (2 lượt kiểm tra treo hơn 1 giờ không ai biết: bài test hỏng rồi khi dọn cửa sổ hiện hộp "Lưu thay đổi?"):
+    # hộp thoại / menu chờ bấm quá GIAY_HOP_TOI_DA: báo tên hộp, tự đóng, test đi tiếp; cả lượt quá GIAY_LUOT_TOI_DA: in chồng gọi rồi thoát.
+    # Đổi bằng PABT_TEST_GIAY_HOP / PABT_TEST_GIAY_LUOT (0 = tắt).
+    import faulthandler
+    import sys as _sys
+
+    from PySide6.QtCore import QTimer
+
+    GIAY_HOP_TOI_DA = int(os.environ.get('PABT_TEST_GIAY_HOP', 60))
+    GIAY_LUOT_TOI_DA = int(os.environ.get('PABT_TEST_GIAY_LUOT', 2400))
+    HOP_BI_KET = []                                     # tên các hộp phải tự đóng: lượt test có mục này là có lỗi cần xem
+
+    if GIAY_LUOT_TOI_DA and _sys.stderr is not None:
+        faulthandler.dump_traceback_later(GIAY_LUOT_TOI_DA, exit=True)
+
+    if GIAY_HOP_TOI_DA:
+        _dang_cho = {'hop': None, 'giay': 0}
+
+        def _xet_hop_ket():
+            hop = QApplication.activeModalWidget() or QApplication.activePopupWidget()
+            if hop is None or hop is not _dang_cho['hop']:
+                _dang_cho.update(hop=hop, giay=0)
+                return
+            _dang_cho['giay'] += 5
+            if _dang_cho['giay'] < GIAY_HOP_TOI_DA:
+                return
+            ten = f'{type(hop).__name__}: {hop.windowTitle()} / {getattr(hop, "text", lambda: "")()}'[:200]
+            HOP_BI_KET.append(ten)
+            print(f'\n[CHONG TREO] hộp thoại chờ quá {GIAY_HOP_TOI_DA} giây, tự đóng: {ten}', file=_sys.stderr, flush=True)
+            _dang_cho.update(hop=None, giay=0)
+            hop.close()
+
+        _gac_hop = QTimer(APP)
+        _gac_hop.setInterval(5000)
+        _gac_hop.timeout.connect(_xet_hop_ket)
+        _gac_hop.start()
+
     @atexit.register
     def _dong_qt():
         for w in QApplication.topLevelWidgets():

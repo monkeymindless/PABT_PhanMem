@@ -15,8 +15,8 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QIcon
-from PySide6.QtWidgets import QSizePolicy, QStyledItemDelegate, QStyleOptionViewItem
+from PySide6.QtGui import QBrush, QColor, QFont, QIcon
+from PySide6.QtWidgets import QSizePolicy
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QFrame,
                                QButtonGroup, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QMenu, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QSplitter, QStackedWidget, QTableWidget,
@@ -30,7 +30,7 @@ from .bang_ao import BangAo
 from .giao_dien import (MAU_CANH_BAO_NEN, MAU_CANH_BAO_VIEN, qss_canh_bao)  # noqa: E402  (20/10/2026: cảnh báo hổ phách)
 from .giao_dien import (DaiCongBang, HangKpi, XepDong, dat_trang_thai, gan_chu_khi_trong, gan_thanh_ty_le,
                         vua_dong, loc_khi_ngung_go)
-from .ho_so import tach_ho_ten
+from .ho_so import dong_duoi_ten, tach_ho_ten
 from .lap_pa import LoiNhap, bo_dau
 from .thong_bao import TEN_UD, THE_TONG_HOP, chu_loi
 from .tien import D, KHONG, so_vn, vn, vn_gon
@@ -659,38 +659,12 @@ class KhungQuyetDinh(_Khung):
 
 
 # ---------------------------------------------------------------- Bảng tổng hợp: tiền theo phương án
-class _OTenHaiTang(QStyledItemDelegate):
-    """Ô Họ và tên: dòng 1 đậm tên riêng, dòng 2 chữ nhỏ phần diễn giải pháp lý (ho_so.tach_ho_ten); không có diễn giải: một dòng. Đủ câu ở chú thích."""
+from .giao_dien import OTenHaiTang as _OTenHaiTang, cao_ten_hai_tang  # noqa: E402
 
-    def paint(self, p, option, index):
-        from PySide6.QtWidgets import QApplication, QStyle
-        from .giao_dien import MAU_CHU_PHU_BANG, qmau_theo_tong
-        ten, dg = tach_ho_ten(index.data() or '')
-        opt = QStyleOptionViewItem(option)
-        self.initStyleOption(opt, index)
-        opt.text = ''
-        (opt.widget.style() if opt.widget is not None else QApplication.style()).drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, p, opt.widget)
-        r = option.rect.adjusted(5, 2, -5, -2)
-        chon = bool(option.state & QStyle.StateFlag.State_Selected)
-        p.save()
-        f = QFont(option.font)
-        if not dg:
-            p.setFont(f)
-            p.setPen(option.palette.highlightedText().color() if chon else option.palette.text().color())
-            p.drawText(r, int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft), QFontMetrics(f).elidedText(ten, Qt.TextElideMode.ElideRight, r.width()))
-            p.restore()
-            return
-        f.setBold(True)
-        p.setFont(f)
-        p.setPen(option.palette.highlightedText().color() if chon else option.palette.text().color())
-        cao = r.height() // 2
-        p.drawText(r.adjusted(0, 0, 0, -cao), int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft), QFontMetrics(f).elidedText(ten, Qt.TextElideMode.ElideRight, r.width()))
-        f2 = QFont(option.font)
-        f2.setPixelSize(11)
-        p.setFont(f2)
-        p.setPen(option.palette.highlightedText().color() if chon else qmau_theo_tong(MAU_CHU_PHU_BANG, 'chu'))
-        p.drawText(r.adjusted(0, r.height() - cao, 0, 0), int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft), QFontMetrics(f2).elidedText(dg, Qt.TextElideMode.ElideRight, r.width()))
-        p.restore()
+
+def _cao_ten(chu, f, rong: int) -> tuple:
+    ten, _, phu = str(chu or '').partition('\n')
+    return cao_ten_hai_tang(ten, phu, f, rong)
 
 
 class _HangTongCoDinh(QTableWidget):
@@ -766,7 +740,6 @@ class KhungTongHopTien(_Khung):
         self.bang = BangAo(self.COT_HIEN, can_phai=(0, 1, *range(3, 13)), sap_xep=True, tu_cao=False)
         self.bang.cellDoubleClicked.connect(self._mo_ho_dong)
         self.bang.cellClicked.connect(lambda r, c: self._mo_ho_dong(r, c) if c == self.C_THAO_TAC else None)
-        self.bang.setColumnHidden(self.C_MA, True)
         self.bang.setItemDelegateForColumn(self.C_TEN, _OTenHaiTang(self.bang))
         # 1.0.03 (Ảnh 10): cột nhỏ cố định, cột tiền vừa số, Họ và tên giãn - cả TỔNG PHƯƠNG ÁN luôn trong khung, không cuộn ngang
         dau = self.bang.horizontalHeader()
@@ -778,6 +751,8 @@ class KhungTongHopTien(_Khung):
                 self.bang.setColumnWidth(c, self.RONG_CO_DINH[c])
             else:                                       # cột tiền: đo theo số dài nhất / dòng tiêu đề dài nhất (_vua_cot_tien); cột Họ và tên giãn phần còn lại (_gian_cot_ten)
                 dau.setSectionResizeMode(c, QHeaderView.ResizeMode.Interactive)
+        self.bang.setColumnHidden(self.C_MA, True)      # ẩn SAU khi đặt chế độ từng cột (1.0.78)
+        self.bang.mo_hinh.modelReset.connect(lambda: self._sau_dat_lai())
         self._dang_gian = False
         dau.sectionResized.connect(lambda c, _c, _n: self._gian_cot_ten() if c != self.C_TEN else None)
         self.bang.verticalScrollBar().rangeChanged.connect(lambda *_: self._gian_cot_ten())
@@ -828,6 +803,10 @@ class KhungTongHopTien(_Khung):
         ds = self.dong()
         hien, ma, kieu = [], [], {}
         hai_tang = False
+        phap_ly = {}
+        if self.con is not None:
+            from . import csdl as _csdl
+            phap_ly = {x[0]: (x[1], x[2]) for x in self.con.execute(f'SELECT ma_ho, phap_ly, {_csdl.sql_ghi_chu_ten(self.con)} FROM ho')}
         for r, d in enumerate(ds):
             dong = _chu(d, so=(4,), tien=tuple(range(5, 13)))
             dong[self.C_THAO_TAC] = '✎ Mở PA'
@@ -836,8 +815,10 @@ class KhungTongHopTien(_Khung):
             kieu[(r, 0)] = dict(can_giua=True)
             kieu[(r, 10)] = _DAM
             ten, dg = tach_ho_ten(d[self.C_TEN])
-            kieu[(r, self.C_TEN)] = dict(goi_y=str(d[self.C_TEN]))
-            hai_tang = hai_tang or bool(dg)
+            phu = dong_duoi_ten(d[self.C_TEN], *phap_ly.get(d[1], ('', '')))
+            dong[self.C_TEN] = f'{ten}\n{phu}' if phu else ten
+            kieu[(r, self.C_TEN)] = dict(goi_y=str(d[self.C_TEN]) if dg else dong[self.C_TEN])
+            hai_tang = hai_tang or bool(phu)
             if d[12] is not None:
                 kieu[(r, 12)] = dict(nen=DO if d[12] else XANH)
             kieu[(r, self.C_THAO_TAC)] = dict(can_giua=True, goi_y=(f'Đối chiếu Excel: {d[13]}. ' if d[13] else '') + 'Bấm để mở lập phương án của hộ này (hoặc nhấp đúp dòng bất kỳ)')
@@ -849,6 +830,7 @@ class KhungTongHopTien(_Khung):
         b.verticalHeader().setDefaultSectionSize(self.CAO_DONG_HAI_TANG if hai_tang else giao_dien.CAO_DONG_BANG)
         tong = self._dong_tong(ds)
         self._vua_cot_tien(hien + [tong] if ds else hien)
+        self._sau_dat_lai()
         self.hang_tong.dat(tong if ds else None)
         self._an_cot_trong(ds)
         self._ve_dai_cong(ds)
@@ -874,6 +856,29 @@ class KhungTongHopTien(_Khung):
             self.hang_tong.setColumnHidden(c, an)
         self._gian_cot_ten()
 
+    def _sau_dat_lai(self) -> None:
+        """Đặt lại mô hình (nạp, sắp xếp): cột Mã hộ ẩn vẫn giữ 100 px khoảng trống giữa TT và Họ tên (đẩy cột cuối ra ngoài khung); dòng về mặc định."""
+        b = self.bang
+        b.setColumnHidden(self.C_MA, False)
+        b.setColumnHidden(self.C_MA, True)
+        self._gian_cot_ten()
+        self._vua_cao_ten(ep=True)
+
+    def _vua_cao_ten(self, ep: bool = False) -> None:
+        """Dòng cao theo họ tên xuống dòng. Chỉ đo lại khi đổi bề rộng cột / đổi dữ liệu; chỉ đặt dòng cần cao hơn mặc định."""
+        b = self.bang
+        rong = b.columnWidth(self.C_TEN) - 10
+        if not ep and rong == getattr(self, '_rong_da_do_ten', None):
+            return
+        self._rong_da_do_ten = rong
+        f, vh = b.font(), b.verticalHeader()
+        mac_dinh = vh.defaultSectionSize()
+        for r, d in enumerate(getattr(b.mo_hinh, 'dong', []) or []):
+            h1, h2 = _cao_ten(d[self.C_TEN], f, rong)
+            can = max(mac_dinh, h1 + h2 + 8)
+            if vh.sectionSize(r) != can:
+                vh.resizeSection(r, can)
+
     def _gian_cot_ten(self) -> None:
         """Cột Họ và tên nhận phần rộng còn lại, không hẹp hơn RONG_TEN_TOI_THIEU (Stretch của Qt ép xuống còn vài chục px khi nhiều cột tiền): không đủ chỗ thì bảng cuộn ngang."""
         if self._dang_gian:
@@ -884,6 +889,7 @@ class KhungTongHopTien(_Khung):
             khac = sum(b.columnWidth(c) for c in range(len(self.COT)) if c != self.C_TEN and not b.isColumnHidden(c))
             b.setColumnWidth(self.C_TEN, max(self.RONG_TEN_TOI_THIEU, b.viewport().width() - khac))
             self.hang_tong.khop()
+            self._vua_cao_ten()
         finally:
             self._dang_gian = False
 

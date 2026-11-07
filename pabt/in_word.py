@@ -609,7 +609,7 @@ def du_lieu_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, l
            (f' BỔ SUNG (LẦN {lan})' if lan is not None and lan > 1 else ''))
     ten_da = re.sub(r'^\s*dự\s+án\s+', '', ' '.join(str(da['du_an'] or '').split()), flags=re.I)
     to_chuc = la_to_chuc(ttho['ho_ten'])
-    hang_i = [(du_lieu_in.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten'])]
+    hang_i = [(du_lieu_in.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten_in'])]
     if not to_chuc and ttho['cccd']:
         hang_i.append(('Số CCCD:', ttho['cccd']))
     hang_i.append((du_lieu_in.NHAN_DIA_CHI_TO_CHUC if to_chuc else 'Địa chỉ thường trú:', ttho['dia_chi']))

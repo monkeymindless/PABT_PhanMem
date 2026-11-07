@@ -13,6 +13,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 
 from . import BAN_THU_NGHIEM, NHAN_THU_NGHIEM, __version__, csdl, khoa, lap_pa, may_chu, nghiep_vu
 from .tien import D, so_luong_vn, so_vn, vn, vn_gon
+from .giao_dien import VAI_PHU_TEN, OTenHaiTang, cao_ten_hai_tang  # noqa: E402
+from .ho_so import dong_duoi_ten, tach_ho_ten  # noqa: E402
 from .giao_dien import TOKEN, chuyen_trang_muot, chu_hien, con_tro_cho, dat_kieu_theo_tong, dung_ve, phong_so
 from .giao_dien import mau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
 from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
@@ -582,7 +584,11 @@ class BangHo(QAbstractTableModel):
             return None
         d, c = self.dong[index.row()], index.column()
         v = d['o'][c]
+        if c == 1 and role == VAI_PHU_TEN:
+            return d.get('phu_ten') or None
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+            if c == 1 and d.get('phu_ten'):
+                return d['ten_gon']
             if c == 4:
                 return so_vn(v)
             if c == 5 and role == Qt.ItemDataRole.DisplayRole:      # thanh tiến độ 4 ô + trạng thái (giá trị gốc ở d['o'][5])
@@ -608,6 +614,8 @@ class BangHo(QAbstractTableModel):
         if role == Qt.ItemDataRole.ToolTipRole:
             if c == 6 and v:
                 return str(v)
+            if c == 1 and d.get('phu_ten'):
+                return f'{d["ten_gon"]}\n{d["phu_ten"]}'
             if c == 5:
                 return (d.get('goi_y_tt') or str(v)) + f'\nTiến độ: {NHAN_NAC[d.get("nac", 0)]} ({d.get("nac", 0)}/4)'
             if c in (1, 2):
@@ -872,6 +880,15 @@ class CuaSoChinh(QMainWindow):
         # 1.0.03: cột Trạng thái vẽ thanh 4 nấc + viên thuốc màu (QPainter - chữ của mô hình giữ nguyên: lọc, tìm, kiểm thử)
         from .giao_dien import gan_vien_thuoc
         gan_vien_thuoc(self.bang, 5)
+        # 1.0.78: dòng ghi chú dưới tên hộ: dòng cao theo chữ, đo lại khi lọc / sắp xếp / đổi bề rộng cột (dòng gắn theo vị trí, không theo hộ)
+        self.bang.setItemDelegateForColumn(1, OTenHaiTang(self.bang))
+        self._hen_cao_ho = QTimer(self)
+        self._hen_cao_ho.setSingleShot(True)
+        self._hen_cao_ho.setInterval(0)
+        self._hen_cao_ho.timeout.connect(self._vua_cao_dong_ho)
+        for tin in (self.loc.modelReset, self.loc.layoutChanged, self.loc.rowsInserted, self.loc.rowsRemoved):
+            tin.connect(lambda *_: self._hen_cao_ho.start())
+        self.bang.horizontalHeader().sectionResized.connect(lambda c, *_: self._hen_cao_ho.start() if c == 1 else None)
         self.bang.sortByColumn(0, Qt.SortOrder.AscendingOrder)
         self.bang.doubleClicked.connect(lambda idx: self._chay_lenh(lambda: self.mo_chi_tiet(idx)))
         self.bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -1640,6 +1657,24 @@ class CuaSoChinh(QMainWindow):
         self.tai_lai()
         return True
 
+    def _vua_cao_dong_ho(self) -> None:
+        """Dòng có ghi chú dưới tên cao theo chữ, dòng khác về mặc định. Dự án không có ghi chú nào: không duyệt dòng."""
+        b, nguon = self.bang, self.loc.sourceModel()
+        co = any(d.get('phu_ten') for d in nguon.dong)
+        if not co and not getattr(self, '_co_cao_ho', False):
+            return
+        self._co_cao_ho = co
+        vh, f, rong = b.verticalHeader(), b.font(), b.columnWidth(1) - 10
+        mac_dinh = vh.defaultSectionSize()
+        for r in range(self.loc.rowCount()):
+            d = nguon.dong[self.loc.mapToSource(self.loc.index(r, 1)).row()]
+            can = mac_dinh
+            if d.get('phu_ten'):
+                h1, h2 = cao_ten_hai_tang(d['ten_gon'], d['phu_ten'], f, rong)
+                can = max(mac_dinh, h1 + h2 + 8)
+            if vh.sectionSize(r) != can:
+                vh.resizeSection(r, can)
+
     def _so_lieu_dong(self, ds_ma_ho=None) -> tuple:
         """(số thửa + DT, trường trạng thái trên bảng ho, TongHopHo, tên đợt) để dựng dòng danh sách; ds_ma_ho: chỉ các hộ này."""
         from . import theo_doi
@@ -1663,7 +1698,7 @@ class CuaSoChinh(QMainWindow):
                 dt = D(0)
             so_thua[ma] = (n + 1, tong_dt + dt, f'{chu} {to}/{thua}')
         tt = {r['ma_ho']: dict(r) for r in self.con.execute(
-            f'SELECT ma_ho, trang_thai, dot_id, dia_chi, so_cccd, {", ".join(TRUONG_TT)} FROM ho{loc}', ts)
+            f'SELECT ma_ho, trang_thai, dot_id, dia_chi, so_cccd, phap_ly, {csdl.sql_ghi_chu_ten(self.con)}, {", ".join(TRUONG_TT)} FROM ho{loc}', ts)
             if chon is None or r['ma_ho'] in chon}
         th = {x.ma_ho: x for x in theo_doi.tong_hop(self.con, ds_ma_ho, tinh_pa=False)}
         ten_dot = {d.id: d.ten for d in ds_dot(self.con)}
@@ -1711,7 +1746,7 @@ class CuaSoChinh(QMainWindow):
             nac = (4 if x.get('da_ban_giao') else 3 if x.get('da_chi_tra') else 2 if x.get('da_phe_duyet') else
                    1 if da_lap or h['tong'] > 0 else 0)
         return dict(ma_ho=h['ma_ho'], tong=h['tong'], lech=h['lech'], da_lap=da_lap, nac=nac, muc=h.get('muc') or {}, dt=dt,
-                    so_thua=st,
+                    so_thua=st, phu_ten=dong_duoi_ten(h['ho_ten'], x.get('phap_ly'), x.get('ghi_chu_ten')), ten_gon=tach_ho_ten(h['ho_ten'])[0],
                     **{k: x.get(k) for k in TRUONG_TT},
                     dot_id=x.get('dot_id'), goi_y_tt=goi_y, mau_tt=mau, mau_gc=MAU_LECH if gc else None,
                     tim=f'{h["ma_ho"]} {x.get("theo_doi") or ""} {ten_dot.get(x.get("dot_id"), "")} '

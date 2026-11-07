@@ -115,13 +115,13 @@ class TestLapPA(_Co):
         c = self._cs()
         hs = c.ho_so
         self.assertEqual(hs.o['ho_ten'].text(), 'Nguyễn Văn Thử')
-        self.assertIn('Là chủ sở hữu', hs.o['phap_ly'].text())
+        self.assertIn('Là chủ sở hữu', hs.o['ghi_chu_ten'].text())
         self.assertTrue(hs.co_thay_doi())
         self.assertIn('2. Nguyễn Văn Thử', c.cb_ho.currentText())
         self.assertNotIn('chủ sở hữu', c.cb_ho.currentText())
         self.assertEqual(self.con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (self.ma[1],)).fetchone()[0], CAU)    # chưa ghi
         self.assertTrue(hs.luu())
-        r = self.con.execute('SELECT ho_ten, phap_ly FROM ho WHERE ma_ho = ?', (self.ma[1],)).fetchone()
+        r = self.con.execute('SELECT ho_ten, ghi_chu_ten FROM ho WHERE ma_ho = ?', (self.ma[1],)).fetchone()
         self.assertEqual(r[0], 'Nguyễn Văn Thử')
         self.assertIn('Là chủ sở hữu', r[1])
         hs.nap()

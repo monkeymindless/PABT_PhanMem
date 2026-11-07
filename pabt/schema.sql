@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS ho (
     tranh_chap   TEXT NOT NULL DEFAULT '',
     tai_dinh_cu  TEXT NOT NULL DEFAULT '',
     ghi_chu      TEXT NOT NULL DEFAULT '',
+    ghi_chu_ten  TEXT NOT NULL DEFAULT '',             -- 1.0.78: dòng hiện dưới tên hộ (file cũ: csdl.MO_RONG)
     trang_thai   TEXT NOT NULL DEFAULT 'Chưa lập phương án',
     -- chính sách theo QĐ 42/2025 (dùng cho gợi ý hỗ trợ ở giai đoạn 2)
     phai_di_chuyen  INTEGER NOT NULL DEFAULT 0,

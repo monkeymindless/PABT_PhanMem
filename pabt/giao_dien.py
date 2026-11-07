@@ -3844,7 +3844,10 @@ def thong_bao_noi(cua_so: QWidget | None, chu: str, loai: str = 'tin', ms: int =
     """Hiện thông báo nổi trên cửa sổ cấp cao nhất chứa cua_so. Trả ThongBaoNoiHUD (None nếu không có cửa sổ)."""
     if cua_so is None:
         return None
-    w = cua_so.window()
+    try:
+        w = cua_so.window()
+    except RuntimeError:                                # cửa sổ đã hủy
+        return None
     hud = getattr(w, '_hud', None)
     try:
         if hud is None or hud.parentWidget() is not w:
@@ -4636,6 +4639,163 @@ def cho_phep_sao_chep_bang(bang) -> None:
     if bang.contextMenuPolicy() == Qt.ContextMenuPolicy.DefaultContextMenu:
         bang.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         bang.customContextMenuRequested.connect(lambda p, b=bang: menu_sao_chep(b, p))
+
+
+# ---------------------------------------------------------------- ô Họ và tên hai tầng (1.0.78)
+from PySide6.QtGui import QFontMetrics as _QFM  # noqa: E402
+from PySide6.QtWidgets import QStyle as _QStyle, QStyledItemDelegate as _QDeleg, QStyleOptionViewItem as _QOpt  # noqa: E402
+
+VAI_PHU_TEN = Qt.ItemDataRole.UserRole + 21      # dòng dưới tên; không có vai này thì lấy phần sau "\n" của chữ ô
+_CO_XUONG_DONG = int(Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+
+
+def _phong_phu_ten(f):
+    f2 = QFont(f)
+    f2.setPixelSize(11)
+    return f2
+
+
+def cao_ten_hai_tang(ten, phu, f, rong: int) -> tuple:
+    """Chiều cao (px) phần tên, dòng dưới tên khi xuống dòng trong bề rộng rong, đo bằng đúng phông vẽ. Tên in đậm khi có dòng dưới."""
+    fb = QFont(f)
+    if phu:
+        fb.setBold(True)
+    rong = max(20, rong)
+    h1 = _QFM(fb).boundingRect(0, 0, rong, 10 ** 6, _CO_XUONG_DONG, ten or '').height()
+    h2 = _QFM(_phong_phu_ten(f)).boundingRect(0, 0, rong, 10 ** 6, _CO_XUONG_DONG, phu).height() if phu else 0
+    return h1, h2
+
+
+class OTenHaiTang(_QDeleg):
+    """Ô Họ và tên: dòng 1 tên, dòng 2 chữ nhỏ ghi chú dưới tên; chữ dài xuống dòng, không rút "…". Chiều cao dòng do bảng đặt (cao_ten_hai_tang)."""
+
+    def paint(self, p, option, index):
+        ten, _, phu = str(index.data() or '').partition('\n')
+        phu = index.data(VAI_PHU_TEN) or phu
+        opt = _QOpt(option)
+        self.initStyleOption(opt, index)
+        f = QFont(opt.font)
+        opt.text = ''
+        (opt.widget.style() if opt.widget is not None else QApplication.style()).drawControl(_QStyle.ControlElement.CE_ItemViewItem, opt, p, opt.widget)
+        r = option.rect.adjusted(5, 2, -5, -2)
+        chon = bool(option.state & _QStyle.StateFlag.State_Selected)
+        h1, h2 = cao_ten_hai_tang(ten, phu, f, r.width())
+        y = r.top() + max(0, (r.height() - h1 - h2) // 2)
+        mau = option.palette.highlightedText().color() if chon else opt.palette.text().color()
+        vai_mau = index.data(Qt.ItemDataRole.ForegroundRole)
+        if vai_mau is not None and not chon:
+            mau = vai_mau.color()
+        p.save()
+        if phu:
+            f.setBold(True)
+        p.setFont(f)
+        p.setPen(mau)
+        p.drawText(r.left(), y, r.width(), h1, _CO_XUONG_DONG, ten)
+        if phu:
+            p.setFont(_phong_phu_ten(opt.font))
+            p.setPen(mau if chon else qmau_theo_tong(MAU_CHU_PHU_BANG, 'chu'))
+            p.drawText(r.left(), y + h1, r.width(), h2, _CO_XUONG_DONG, phu)
+        p.restore()
+
+
+# ---------------------------------------------------------------- cắt / dán ô kiểu Excel (1.0.78)
+def doc_o_clipboard(chu: str) -> list:
+    """Chữ dán (Excel, Word, chính bảng này: tab giữa ô, xuống dòng giữa dòng, ô có xuống dòng nằm trong "...") -> [[ô]]."""
+    import csv
+    import io
+    chu = str(chu or '').replace('\r\n', '\n').replace('\r', '\n')
+    if chu.endswith('\n'):
+        chu = chu[:-1]
+    if not chu:
+        return []
+    try:
+        return [list(d) or [''] for d in csv.reader(io.StringIO(chu, newline=''), delimiter='\t')]
+    except csv.Error:
+        return [d.split('\t') for d in chu.split('\n')]
+
+
+def _o_duoc_ghi(bang, r: int, c: int, bo_cot=()) -> bool:
+    it = bang.item(r, c)
+    return it is not None and c not in bo_cot and bool(it.flags() & Qt.ItemFlag.ItemIsEditable)
+
+
+def _ghi_cac_o(bang, viec: list, ghi=None) -> int:
+    """Ghi [(r, c, chữ)]; bỏ chọn trong lúc ghi (bảng áp một ô cho mọi dòng đang chọn không được áp nhầm), xong chọn lại."""
+    sm = bang.selectionModel()
+    chon = sm.selection()
+    hien = bang.currentIndex()
+    sm.clearSelection()
+    n = 0
+    try:
+        for r, c, chu in viec:
+            if ghi is not None:
+                ghi(r, c, chu)
+            else:
+                bang.item(r, c).setText(chu)
+            n += 1
+    finally:
+        if hien.isValid():
+            bang.setCurrentIndex(hien)
+        sm.clearSelection()
+        sm.select(chon, sm.SelectionFlag.Select)
+    return n
+
+
+def dan_vao_bang(bang, chu=None, ghi=None, bo_cot=()) -> dict:
+    """Ctrl+V: một giá trị + nhiều ô đang chọn -> điền mọi ô chọn; còn lại dán khối từ ô trên cùng bên trái vùng chọn. Bỏ qua cột ẩn
+    (dán theo cột đang thấy), ô không sửa được, phần tràn ngoài bảng. Trả {'da_ghi', 'bo_qua'}."""
+    from PySide6.QtWidgets import QAbstractItemView, QApplication
+    if bang.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers:
+        return dict(da_ghi=0, bo_qua=0)
+    dl = doc_o_clipboard(QApplication.clipboard().text() if chu is None else chu)
+    chon = bang.selectionModel().selectedIndexes()
+    if not chon and bang.currentIndex().isValid():
+        chon = [bang.currentIndex()]
+    if not dl or not chon:
+        return dict(da_ghi=0, bo_qua=0)
+    viec, bo = [], 0
+    if len(dl) == 1 and len(dl[0]) == 1:
+        for i in chon:
+            if bang.isColumnHidden(i.column()) or bang.isRowHidden(i.row()):
+                continue
+            if _o_duoc_ghi(bang, i.row(), i.column(), bo_cot):
+                viec.append((i.row(), i.column(), dl[0][0]))
+            else:
+                bo += 1
+    else:
+        r0, c0 = min(i.row() for i in chon), min(i.column() for i in chon)
+        cot = [c for c in range(c0, bang.columnCount()) if not bang.isColumnHidden(c)]
+        dong = [r for r in range(r0, bang.rowCount()) if not bang.isRowHidden(r)]
+        for k, hang in enumerate(dl):
+            for j, gt in enumerate(hang):
+                if k < len(dong) and j < len(cot) and _o_duoc_ghi(bang, dong[k], cot[j], bo_cot):
+                    viec.append((dong[k], cot[j], gt))
+                else:
+                    bo += 1
+    return dict(da_ghi=_ghi_cac_o(bang, viec, ghi), bo_qua=bo)
+
+
+def cat_khoi_bang(bang, ghi=None, bo_cot=()) -> dict:
+    """Ctrl+X: chép vùng chọn rồi xóa chữ các ô sửa được (ô không sửa được: chỉ chép)."""
+    from PySide6.QtWidgets import QAbstractItemView
+    sao_chep_bang(bang)
+    if bang.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers:
+        return dict(da_ghi=0, bo_qua=0)
+    chon = bang.selectionModel().selectedIndexes() or ([bang.currentIndex()] if bang.currentIndex().isValid() else [])
+    viec = [(i.row(), i.column(), '') for i in chon if _o_duoc_ghi(bang, i.row(), i.column(), bo_cot)]
+    return dict(da_ghi=_ghi_cac_o(bang, viec, ghi), bo_qua=len(chon) - len(viec))
+
+
+def gan_cat_dan(bang, dan, cat) -> tuple:
+    """Ctrl+V, Ctrl+X trên ô bảng (WidgetShortcut: đang sửa trong ô thì ô chữ tự xử lý như thường)."""
+    from PySide6.QtGui import QKeySequence, QShortcut
+    kq = []
+    for phim, ham in ((QKeySequence.StandardKey.Paste, dan), (QKeySequence.StandardKey.Cut, cat)):
+        sc = QShortcut(QKeySequence(phim), bang)
+        sc.setContext(Qt.ShortcutContext.WidgetShortcut)
+        sc.activated.connect(ham)
+        kq.append(sc)
+    return tuple(kq)
 
 
 # ---------------------------------------------------------------- bôi đen vùng ô + bộ đếm kiểu Excel (người dùng 21/10/2026)

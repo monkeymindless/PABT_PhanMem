@@ -12,7 +12,7 @@ from .tien import D, chuoi, so_vn
 
 TRUONG_HO = [('ho_ten', 'Họ và tên'), ('so_cccd', 'Số CCCD'), ('ngay_cap', 'Ngày cấp'), ('noi_cap', 'Nơi cấp'),
              ('dia_chi', 'Địa chỉ'), ('dien_thoai', 'Điện thoại'), ('phap_ly', 'Pháp lý'), ('tranh_chap', 'Tranh chấp'),
-             ('tai_dinh_cu', 'Tái định cư'), ('trang_thai', 'Trạng thái'), ('ghi_chu', 'Ghi chú')]
+             ('tai_dinh_cu', 'Tái định cư'), ('trang_thai', 'Trạng thái'), ('ghi_chu', 'Ghi chú'), ('ghi_chu_ten', 'Ghi chú dưới tên')]
 TRUONG_THUA = [('so_to', 'Tờ'), ('so_thua', 'Thửa'), ('loai_dat', 'Loại đất'), ('dt_thu_hoi', 'DT thu hồi (m²)'),
                ('nguon_goc', 'Nguồn gốc'), ('vi_tri', 'Vị trí'),
                ('dt_nguyen_thua', 'DT nguyên thửa (m²)'), ('so_gcn', 'Giấy chứng nhận')]      # 2 trường cuối: 20/10/2026
@@ -49,15 +49,65 @@ def _tach_ds_ngan(dong: str) -> str:
 _RE_DIEN_GIAI_TEN = re.compile(r'\s+là chủ sở hữu|\s+-\s+Đất do ', re.I)
 
 
+# 1.0.78: từ viết thường ngay sau tên nhưng vẫn là phần của tên / nhiều chủ: không tách
+_TU_NOI_TEN = frozenset(('và', 'cùng', 'với', 'hoặc', 'con', 'vợ', 'chồng', 'ông', 'bà', 'anh', 'chị', 'em', 'cha', 'mẹ', 'đồng', 'theo', 'do'))
+# câu diễn giải phải mở đầu bằng một trong các cụm này: chỉ dựa vào chữ thường thì tách nhầm "Khu Bảo | tồn Thiên nhiên…" (test 1610 bắt được)
+_DAU_CAU_SAU_TEN = ('xây dựng', 'xây', 'có', 'là', 'thuê', 'mượn', 'sử dụng', 'canh tác', 'nhận', 'trồng', 'đang', 'được', 'chủ', 'sở hữu',
+                    'tạo lập', 'quản lý', 'cất', 'dựng', 'khai phá', 'ở', 'cư trú', 'thừa kế', 'mua', 'hiện')
+
+
+def _vi_tri_het_ten(s: str) -> int:
+    """Chuẩn chung (1.0.78): 2 - 6 từ viết hoa chữ đầu (tên người) rồi câu từ 3 từ trở lên mở đầu bằng _DAU_CAU_SAU_TEN -> vị trí đầu câu; 0 nếu
+    không chắc (tổ chức, tên viết thường, nhiều chủ "A và B", dấu phẩy trong tên). Không đoán: câu khác nhập ở ô Ghi chú dưới tên."""
+    tu = s.split()
+    i = 0
+    while i < len(tu) and tu[i][:1].isupper():
+        if tu[i][-1] in ',;:':
+            return 0
+        i += 1
+    if not 2 <= i <= 6 or len(tu) - i < 3 or not tu[i][:1].islower() or tu[i].lower() in _TU_NOI_TEN or la_to_chuc(s):
+        return 0
+    sau = ' '.join(tu[i:]).lower()
+    if not any(sau == d or sau.startswith(d + ' ') for d in _DAU_CAU_SAU_TEN):
+        return 0
+    return len(' '.join(tu[:i])) + 1
+
+
 def tach_ho_ten(chuoi) -> tuple:
     """(tên riêng, phần diễn giải pháp lý) khi ô họ tên bị ghi cả câu: "Nguyễn Văn A là chủ sở hữu tài sản… - Đất do UBND xã… quản lý." (06/11/2026, người dùng).
     Không có cụm nhận biết, hoặc trước cụm đó không có tên: giữ nguyên, phần diễn giải rỗng (không đoán)."""
     s = ' '.join(str(chuoi or '').split())
     m = _RE_DIEN_GIAI_TEN.search(s)
-    if m is None or m.start() == 0:
+    vt = m.start() if m is not None and m.start() > 0 else _vi_tri_het_ten(s)
+    if not vt:
         return s, ''
-    dg = s[m.start():].strip(' -')
-    return s[:m.start()].rstrip(' ,;:-'), dg[:1].upper() + dg[1:]
+    dg = s[vt:].strip(' -')
+    return s[:vt].rstrip(' ,;:-'), dg[:1].upper() + dg[1:]
+
+
+_RE_DOAN_CHU_SO_HUU = re.compile(r'^là chủ sở hữu\b', re.I)
+
+
+def ten_day_du_in(ho_ten, phap_ly='', ghi_chu_ten='') -> str:
+    """Bản in (người dùng 07/11/2026): tên và ghi chú ghi LIỀN nhau: "Phan Văn Minh là chủ sở hữu tài sản…". Màn hình tách hai dòng cho dễ theo dõi."""
+    ten = tach_ho_ten(ho_ten)[0]
+    phu = dong_duoi_ten(ho_ten, phap_ly, ghi_chu_ten)
+    return f'{ten} {phu[:1].lower()}{phu[1:]}' if phu else ten
+
+
+def dong_duoi_ten(ho_ten, phap_ly='', ghi_chu_ten='') -> str:
+    """Dòng hiện dưới tên hộ trên các danh sách (1.0.78): phần diễn giải còn trong ô họ tên + ô Ghi chú dưới tên + các đoạn "Là chủ sở
+    hữu…" của Tình trạng pháp lý (dữ liệu 1.0.75 tách sang đó; đoạn cách nhau bằng ";"). Không có thì ''."""
+    _ten, dg = tach_ho_ten(ho_ten)
+    ds = [dg] if dg else []
+    gc = ' '.join(str(ghi_chu_ten or '').split())
+    if gc and gc.lower() not in (x.lower() for x in ds):
+        ds.append(gc)
+    for d in str(phap_ly or '').split(';'):
+        d = ' '.join(d.split())
+        if _RE_DOAN_CHU_SO_HUU.match(d) and d.lower() not in (x.lower() for x in ds):
+            ds.append(d[:1].upper() + d[1:])
+    return '; '.join(ds)
 
 
 def chuan_nguon_goc(v) -> str:
@@ -160,6 +210,7 @@ def doc_ho(con, ma_ho: int) -> dict:
     if r is None:
         raise LoiNhap(f'Không có hộ mã {ma_ho}.')
     ho = dict(r)
+    ho.setdefault('ghi_chu_ten', '')                     # file cũ mở chỉ xem chưa có cột
     ho['thua'] = [dict(t) for t in con.execute(
         '''SELECT t.*, (SELECT COUNT(*) FROM ct_dat d WHERE d.ma_thua = t.ma_thua) AS so_dong_pa
            FROM thua t WHERE t.ma_ho = ? ORDER BY t.thu_tu, t.ma_thua''', (ma_ho,))]
@@ -220,6 +271,8 @@ def luu_ho(con, ma_ho, thong_tin: dict, ds_thua: list) -> int:
             raise LoiNhap(f'Số CCCD "{tt["so_cccd"]}" chỉ gồm chữ số.')
     ds = chuan_hoa_thua(ds_thua)
     with csdl.giao_dich(con):
+        if 'ghi_chu_ten' in tt:
+            csdl.dam_bao_cot_ghi_chu_ten(con)
         if moi:
             ma_ho, thu_tu = con.execute('SELECT COALESCE(MAX(ma_ho), 0) + 1, COALESCE(MAX(thu_tu), 0) + 1 FROM ho').fetchone()
             con.execute(f'''INSERT INTO ho (ma_ho, thu_tu, {', '.join(tt)}) VALUES (?, ?, {', '.join('?' * len(tt))})''',
@@ -314,6 +367,7 @@ def gop_ho(con, giu: int, bo: int) -> str:
     kiem_quyen(con, 'sua_ho_so')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     a, b = doc_ho(con, giu), doc_ho(con, bo)
     with csdl.giao_dich(con):
+        csdl.dam_bao_cot_ghi_chu_ten(con)
         cap = {}
         for k, _ in TRUONG_HO:
             if k == 'ghi_chu':

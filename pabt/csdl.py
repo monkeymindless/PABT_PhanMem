@@ -551,6 +551,23 @@ def dam_bao_chi_muc(con) -> int:
 COT_THUA_THEM = (('dt_nguyen_thua', "TEXT NOT NULL DEFAULT ''"), ('so_gcn', "TEXT NOT NULL DEFAULT ''"))
 
 
+def co_cot_ghi_chu_ten(con) -> bool:
+    """1.0.78: cột ho.ghi_chu_ten (dòng ghi chú hiện dưới tên hộ)."""
+    return any(r[1] == 'ghi_chu_ten' for r in con.execute('PRAGMA table_info(ho)'))
+
+
+def dam_bao_cot_ghi_chu_ten(con) -> None:
+    if not co_cot_ghi_chu_ten(con):
+        con.execute("ALTER TABLE ho ADD COLUMN ghi_chu_ten TEXT NOT NULL DEFAULT ''")
+
+
+def sql_ghi_chu_ten(con, bang: str = '') -> str:
+    """Biểu thức SELECT an toàn với file chưa có cột (mở chỉ xem file cũ)."""
+    if not co_cot_ghi_chu_ten(con):
+        return "'' AS ghi_chu_ten"
+    return f'{bang}.ghi_chu_ten' if bang else 'ghi_chu_ten'
+
+
 def co_cot_thua(con) -> bool:
     """Bảng thua đã có các cột COT_THUA_THEM (nhớ trên kết nối khi đã có)."""
     if getattr(con, '_co_cot_thua', False):
@@ -803,6 +820,7 @@ def co_cot_ap_gia(con) -> bool:
 
 
 MO_RONG = (
+    ('cot_ghi_chu_ten', lambda con: co_cot_ghi_chu_ten(con), lambda con: dam_bao_cot_ghi_chu_ten(con)),      # 1.0.78
     ('cot_ap_gia', lambda con: co_cot_ap_gia(con), lambda con: con.execute("ALTER TABLE ct_dat ADD COLUMN ap_gia TEXT NOT NULL DEFAULT ''")),   # 1.0.69: giá gốc, K1, K2, K3 của dòng đất
     ('bang_phu', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anh_hien_trang'").fetchone()),
      lambda con: _tao_bang_phu(con)),

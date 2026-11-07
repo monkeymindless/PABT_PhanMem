@@ -7,6 +7,15 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.78', '07/11/2026', (
+        'Bảng In: thêm Hộp in Windows như Word, Excel: chọn máy in, trang, số bản, Preferences của máy in (khay giấy, chất lượng…) cho lần in đó. Bản Windows 7 in qua Word / Excel.',
+        'Lập phương án: Ctrl+V dán, Ctrl+X cắt ô như Excel (dán khối từ Excel, Word; một giá trị điền mọi ô đang chọn; Ctrl+Z hoàn tác cả lần dán). Có ở các mục và bảng thửa; menu chuột phải có Cắt, Dán.',
+        'Sang hộ khác (nút, Ctrl + mũi tên, danh sách xổ xuống, danh sách hộ): luôn mở thẻ Hồ sơ & Thửa để nhập theo thứ tự.',
+        'Hồ sơ hộ: thêm ô Ghi chú dưới tên: nội dung bất kỳ, hiện ngay dưới tên hộ ở Danh sách hộ, Bảng kinh phí chi tiết, Niêm yết công khai. Dòng "Là chủ sở hữu…" đang nằm ở Tình trạng pháp lý cũng hiện lại.',
+        'Gõ cả câu vào ô Họ và tên (ví dụ "Phan Văn Minh xây dựng trên một phần thửa đất số …"): tự tách tên riêng, phần câu sang ô Ghi chú dưới tên; bấm Lưu mới ghi. Tổ chức, nhiều chủ cùng tên không tách.',
+        'Bản in phương án chi tiết (Word) và bảng tổng hợp ghi liền cả tên và ghi chú: "Phan Văn Minh là chủ sở hữu tài sản trên thửa…".',
+        'Bảng kinh phí chi tiết: hết khoảng trống giữa TT và Họ tên, đủ cột trong khung; họ tên dài xuống dòng hiện đủ chữ, dòng tự cao theo chữ.',
+    )),
     ('1.0.77', '07/11/2026', (
         'Số tiền, diện tích, khối lượng trên màn hình đổi sang kiểu chữ Segoe UI dễ đọc: số 0 không còn gạch chéo, số gọn hơn, cột vẫn thẳng hàng. Số CCCD và thẻ số liệu dùng cùng kiểu.',
     )),

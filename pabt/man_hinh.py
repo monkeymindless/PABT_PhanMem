@@ -25,6 +25,7 @@ from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
 # in_an (kéo theo openpyxl ~0,2 giây) chỉ nạp trong hộp In / Xuất: mở dự án, cửa sổ lập phương án không phải chờ
 from .nghiep_vu import DA_LAP_LUU, MUC_KHOAN, MUC_VN, NGUON_TAY, NGUON_TD, TEN_MUC, so_muc
 from .tien import D, KHONG, lam_tron, so_luong_vn, so_vn, vn
+from .giao_dien import cat_khoi_bang, dan_vao_bang, gan_cat_dan  # noqa: E402
 from .giao_dien import but_so, con_tro_cho, kieu_o_canh_bao, loc_khi_ngung_go, mau_so, mau_theo_tong, phong_so, qmau_theo_tong, vua_dong
 from .thong_bao import TEN_UD, chu_loi
 
@@ -541,6 +542,7 @@ class BangMuc(QWidget):
         self._phim_xoa = QShortcut(QKeySequence(QKeySequence.StandardKey.Delete), self.bang)
         self._phim_xoa.setContext(Qt.ShortcutContext.WidgetShortcut)
         self._phim_xoa.activated.connect(lambda: man.xoa_dong(muc))
+        gan_cat_dan(self.bang, lambda: self.dan_o(), lambda: self.cat_o())      # 1.0.78: như Excel; Ctrl+C của cho_phep_sao_chep_bang
         # 1.0.58: Space trên bảng (không đang sửa ô): bật / tắt khung chi tiết dòng dưới bảng
         self.khung_ct = None
         self._phim_ct = QShortcut(QKeySequence(Qt.Key.Key_Space), self.bang)
@@ -1103,6 +1105,10 @@ class BangMuc(QWidget):
             a.setEnabled(bat)
             a.triggered.connect(lambda *_: ham())
             return a
+        sua_duoc = b.editTriggers() != QAbstractItemView.EditTrigger.NoEditTriggers
+        them('Cắt\tCtrl+X', lambda: self.cat_o(), sua_duoc)
+        them('Dán\tCtrl+V', lambda: self.dan_o(), sua_duoc)
+        m.addSeparator()
         if muc == 1:
             them('Thêm thửa vào mục 1…', lambda: man.them_thua())
             them('Thêm tất cả thửa', lambda: man.them_tat_ca_thua())
@@ -1334,6 +1340,30 @@ class BangMuc(QWidget):
         """Bấm ô thùng rác: xóa đúng dòng r (không xóa cả vùng đang chọn)."""
         if c == self.c_xoa and 0 <= r < self.bang.rowCount():
             self.man.xoa_dong(self.muc, r)
+
+    def _ghi_nhieu_o(self, lam) -> dict:
+        """Dán / cắt nhiều ô: ghi qua đúng ô bảng (cellChanged -> sua_o); ô sai gom lại báo một lần; một bước Hoàn tác."""
+        man = self.man
+        man._gom_loi, man._gop_lich_su = [], True
+        try:
+            kq = lam()
+        finally:
+            loi, man._gom_loi, man._gop_lich_su = man._gom_loi, None, False
+        man._ghi_lich_su()
+        kq['loi'] = loi
+        bo = kq['bo_qua'] + len(loi)
+        man.thong_bao(f'Đã ghi {kq["da_ghi"] - len(loi)} ô' + (f', bỏ qua {bo} ô (không sửa được / sai giá trị)' if bo else '')
+                      + (f': {loi[0]}' if loi else '') + '.')
+        return kq
+
+    def dan_o(self, chu=None) -> dict:
+        """Ctrl+V. Cột Thửa chọn bằng danh sách, không nhận chữ dán."""
+        bo = {i for i, c in enumerate(self.cot) if c[0] == 'thua'}
+        return self._ghi_nhieu_o(lambda: dan_vao_bang(self.bang, chu, bo_cot=bo))
+
+    def cat_o(self) -> dict:
+        bo = {i for i, c in enumerate(self.cot) if c[0] == 'thua'}
+        return self._ghi_nhieu_o(lambda: cat_khoi_bang(self.bang, bo_cot=bo))
 
     def _doi_o(self, r: int, c: int):
         if self._dang_ve or c >= len(self.cot):
@@ -2619,7 +2649,7 @@ class CuaSoLapPA(QDialog):
     # ---------------------------------------------- hoàn tác (Ctrl+Z / Ctrl+Y) trong cửa sổ
     def _ghi_lich_su(self):
         """Sau mỗi thay đổi (cap_nhat được gọi sau mọi sửa đổi): lưu một bản phương án đang soạn nếu khác bản trước."""
-        if getattr(self, '_dang_ht', False) or not hasattr(self, '_lich_su'):
+        if getattr(self, '_dang_ht', False) or getattr(self, '_gop_lich_su', False) or not hasattr(self, '_lich_su'):
             return
         from .lap_pa import _dang_luu
         hien = _dang_luu(self.bo.pa)
@@ -2714,6 +2744,10 @@ class CuaSoLapPA(QDialog):
         if vt is not None and cot in COT_GIA_VAI_TRO:
             from . import phan_quyen
             if not phan_quyen.quyen_bang(vt, muc)['gia']:
+                if getattr(self, '_gom_loi', None) is not None:     # đang dán nhiều ô: báo gộp một lần
+                    self._gom_loi.append(f'vai trò không sửa cột {cot}')
+                    self.bang[muc]._ve_dong(r)
+                    return
                 QMessageBox.information(self, TEN_UD, f'Vai trò "{phan_quyen.ten_vai_tro(vt)}" không sửa đơn giá, hệ số, tỷ lệ: '
                                                       'đơn giá theo bộ đơn giá - chuyên viên lập phương án áp giá.')
                 self.bang[muc]._ve_dong(r)
@@ -2737,7 +2771,10 @@ class CuaSoLapPA(QDialog):
                 tb = ' '.join(x for x in (tb, f'Cần xem lại diện tích: {cb}.' if cb else '') if x)
             self.thong_bao(tb)
         except LoiNhap as e:
-            QMessageBox.warning(self, TEN_UD, str(e))
+            if getattr(self, '_gom_loi', None) is not None:
+                self._gom_loi.append(str(e))
+            else:
+                QMessageBox.warning(self, TEN_UD, str(e))
         if muc == 1:                                    # cảnh báo diện tích tính theo cả thửa: vẽ lại mọi dòng cùng thửa
             thua = {self.bo.pa.dat[i].ma_thua for i in ds if 0 <= i < len(self.bo.pa.dat)}
             ds = sorted(set(ds) | {i for i, d in enumerate(self.bo.pa.dat) if d.ma_thua in thua})
@@ -3590,6 +3627,10 @@ class CuaSoLapPA(QDialog):
                 bm.hang.xoa(giu_tieu_diem=True)
         self.nap_ho()
         self.lam_moi_xem_truoc()
+        # 1.0.78 (người dùng): sang hộ khác luôn bắt đầu ở thẻ Hồ sơ & Thửa để nhập theo thứ tự. Tiêu điểm vào khung, không vào ô chữ:
+        # đứng trong ô chữ thì Ctrl + mũi tên nhảy từng từ, không sang hộ được nữa
+        self.tab.setCurrentIndex(0)
+        self.ho_so.setFocus()
         return True
 
     def dat_tieu_diem_dau(self) -> None:
@@ -4194,13 +4235,26 @@ class HopIn(QDialog):
         self.b_thuoc_tinh = nut_lien_ket('Thuộc tính máy in')
         self.b_thuoc_tinh.clicked.connect(lambda: self.mo_thuoc_tinh_may_in())
         self.b_thuoc_tinh.setEnabled(bool(ds_may))
+        self.b_hop_windows = nut_lien_ket('Hộp in Windows…')
+        self.b_hop_windows.setToolTip('Hộp in chuẩn của Windows như Word, Excel: máy in, trang, số bản; nút Preferences chỉnh khay giấy, '
+                                      'chất lượng, ghim… theo trình điều khiển, áp dụng cho lần in này')
+        self.b_hop_windows.clicked.connect(lambda: self.in_hop_windows())
+        self.b_hop_windows.setEnabled(bool(ds_may))
         self.khung_may_in = QWidget()
         v_may = QVBoxLayout(self.khung_may_in)
         v_may.setContentsMargins(0, 0, 0, 0)
         v_may.setSpacing(3)
         v_may.addWidget(nhan_de_muc('Máy in'))
         v_may.addWidget(self.hang_may_in)
-        v_may.addWidget(self.b_thuoc_tinh, 0, Qt.AlignmentFlag.AlignRight)
+        h_lk = QHBoxLayout()
+        h_lk.setContentsMargins(0, 0, 0, 0)
+        h_lk.addStretch(1)
+        h_lk.addWidget(self.b_hop_windows)
+        h_lk.addSpacing(10)
+        h_lk.addWidget(self.b_thuoc_tinh)
+        v_may.addLayout(h_lk)
+        if not self._in_pdf:                            # bản Win 7 (Qt5): in qua Word / Excel, không có hộp này
+            self.b_hop_windows.hide()
 
 
     def _dung_thiet_dat(self, con, parent) -> None:
@@ -4674,6 +4728,37 @@ class HopIn(QDialog):
                 QMessageBox.information(self, TEN_UD, f'Đã gửi {n} trang tới {self.hang_may_in.gia_tri() or "máy in mặc định"}.')
             else:
                 QMessageBox.warning(self, TEN_UD, f'Không có trang nào để in: tài liệu có {self.w_preview.so_trang()} trang, xem lại ô Trang.')
+        return n
+
+    def in_hop_windows(self):
+        """1.0.78: lập bản in rồi mở hộp in chuẩn của Windows (điền sẵn máy in, số bản, xếp bộ, hai mặt đang chọn). Trả số trang đã in / None."""
+        from . import xem_truoc_tai_lieu as xt
+        ds = self.ds_ho()
+        k = self.tai_lieu()
+        if not ds:
+            QMessageBox.information(self, TEN_UD, 'Chưa chọn hộ nào để in.')
+            return None
+        if not self._hoi_tu_lap(ds, True):
+            return None
+        if not self._in_pdf:
+            return self._in_qua_office(k, True)
+        if len(ds) > TOI_DA_IN_PDF:
+            QMessageBox.information(self, TEN_UD, f'Hộp in Windows nhận tối đa {TOI_DA_IN_PDF} hộ một lệnh. Chia nhỏ danh sách, hoặc bấm nút In để gửi qua Word / Excel.')
+            return None
+        try:
+            with con_tro_cho():
+                self._lap_ban_in(k, ds)
+                xong = self.w_preview.cho_xong(CHO_LAP_BAN_IN_GIAY) and self.w_preview.so_trang()
+            if not xong:
+                QMessageBox.warning(self, TEN_UD, 'Chưa lập được bản in: ' + (self.w_preview.thong_bao() or 'hết thời gian chờ.'))
+                return None
+            may = xt.may_in_theo_tuy_chon(self.hang_may_in.gia_tri(), self.o_so_ban.value(), self.hang_xep_bo.gia_tri(), self.hang_mat.gia_tri(),
+                                          self.w_preview.ten_tai_lieu())
+            n = xt.in_co_hop_thoai(self, self.w_preview.doc, self.w_preview.ten_tai_lieu(), may, kho=self.hang_kho.gia_tri())
+        except OSError as e:
+            QMessageBox.warning(self, TEN_UD, chu_loi('Chưa in được', e))
+            return None
+        self._luu_lua_chon(Path(self.o_thu_muc.text()))
         return n
 
     def _in_qua_office(self, k: str, xac_nhan: bool):

@@ -264,7 +264,7 @@ def _co_bang(con, bang: str) -> bool:
 BANG_PA = ('ct_dat', 'ct_khoan')
 BANG_QD = ('quyet_dinh', 'qd_ho')
 BANG_NIEM_YET = ('dot_du_thao', 'y_kien_du_thao', 'doi_thoai_ho', 'dot_trinh')
-COT_HO_SO = ('ho_ten', 'so_cccd', 'ngay_cap', 'noi_cap', 'dia_chi', 'dien_thoai', 'phap_ly', 'tranh_chap', 'tai_dinh_cu', 'ghi_chu',
+COT_HO_SO = ('ho_ten', 'so_cccd', 'ngay_cap', 'noi_cap', 'dia_chi', 'dien_thoai', 'phap_ly', 'tranh_chap', 'tai_dinh_cu', 'ghi_chu', 'ghi_chu_ten',
              'phai_di_chuyen', 'nhan_khau', 'dt_nn_dang_dung')
 
 

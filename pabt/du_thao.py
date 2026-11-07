@@ -425,7 +425,8 @@ def ds_ho_dot(con, dot_id: int) -> list:
     che = che_cccd_niem_yet(con)
     tien = _tien_ho(con)
     kq = []
-    for r in con.execute('''SELECT y.*, h.ho_ten, h.so_cccd, h.dia_chi, h.thu_tu
+    from . import csdl
+    for r in con.execute(f'''SELECT y.*, h.ho_ten, h.so_cccd, h.dia_chi, h.thu_tu, h.phap_ly, {csdl.sql_ghi_chu_ten(con, 'h')}
                             FROM y_kien_du_thao y JOIN ho h ON h.ma_ho = y.ma_ho
                             WHERE y.dot_id = ? ORDER BY h.thu_tu, h.ma_ho''', (dot_id,)):
         d = dict(r)

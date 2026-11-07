@@ -14,6 +14,8 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, os.getcwd())
+import faulthandler
+faulthandler.dump_traceback_later(1800, exit=True)      # không chờ vô hạn: in chồng gọi rồi thoát
 RA = sys.argv[1]
 CO = [tuple(int(x) for x in a.split(',')) for a in sys.argv[2:]] or [(1093, 614), (1536, 864)]
 sys.argv = sys.argv[:1]

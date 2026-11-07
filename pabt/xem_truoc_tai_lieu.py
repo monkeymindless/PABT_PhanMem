@@ -174,8 +174,8 @@ def in_tai_lieu(doc, printer, tu: int = 0, den: int = 0, ds_trang=None, kho=None
     return da_in
 
 
-def in_theo_tuy_chon(doc, ten_may: str = '', so_ban: int = 1, xep_bo: bool = True, hai_mat: str = 'mot', kho: str = '', trang=None, ten: str = '') -> int:
-    """Nút In của bảng In kiểu Word: một lệnh in tới máy in đã chọn, đủ số bản, xếp bộ, hai mặt, khổ giấy, các trang. Trả số trang đã in."""
+def may_in_theo_tuy_chon(ten_may: str = '', so_ban: int = 1, xep_bo: bool = True, hai_mat: str = 'mot', ten: str = ''):
+    """QPrinter theo lựa chọn của bảng In (nút In; hộp in Windows điền sẵn từ đây)."""
     from PySide6.QtPrintSupport import QPrinter
     from .thong_bao import TEN_UD
     printer = QPrinter(QPrinter.PrinterMode.HighResolution)
@@ -185,10 +185,16 @@ def in_theo_tuy_chon(doc, ten_may: str = '', so_ban: int = 1, xep_bo: bool = Tru
     printer.setCopyCount(max(1, int(so_ban or 1)))
     printer.setCollateCopies(bool(xep_bo))
     printer.setDuplex({'dai': QPrinter.DuplexMode.DuplexLongSide, 'ngan': QPrinter.DuplexMode.DuplexShortSide}.get(hai_mat, QPrinter.DuplexMode.DuplexNone))
+    return printer
+
+
+def in_theo_tuy_chon(doc, ten_may: str = '', so_ban: int = 1, xep_bo: bool = True, hai_mat: str = 'mot', kho: str = '', trang=None, ten: str = '') -> int:
+    """Nút In của bảng In kiểu Word: một lệnh in tới máy in đã chọn, đủ số bản, xếp bộ, hai mặt, khổ giấy, các trang. Trả số trang đã in."""
+    printer = may_in_theo_tuy_chon(ten_may, so_ban, xep_bo, hai_mat, ten)
     return in_tai_lieu(doc, printer, ds_trang=trang or None, kho=kho or '')
 
 
-def in_co_hop_thoai(cha, doc, ten: str = '', printer=None, hoi: bool = True) -> int:
+def in_co_hop_thoai(cha, doc, ten: str = '', printer=None, hoi: bool = True, kho=None) -> int:
     """Nút "In…": hộp in của Windows như Word / Excel - chọn máy in, số bản, trang in, thuộc tính máy in; bấm In thì gửi bản
     đang xem. hoi=False (kiểm thử): dùng printer đưa vào, không hiện hộp. Trả số trang đã in (0 = hủy / không in)."""
     from PySide6.QtWidgets import QMessageBox
@@ -214,7 +220,7 @@ def in_co_hop_thoai(cha, doc, ten: str = '', printer=None, hoi: bool = True) -> 
     tu, den = (printer.fromPage(), printer.toPage()) if printer.printRange() == QPrinter.PrintRange.PageRange else (0, 0)
     try:
         with con_tro_cho():
-            return in_tai_lieu(doc, printer, tu, den)
+            return in_tai_lieu(doc, printer, tu, den, kho=kho)
     except Exception as e:
         if hoi:
             QMessageBox.warning(cha, TEN_UD, chu_loi('Chưa in được', e))

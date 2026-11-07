@@ -431,13 +431,13 @@ class OThaoTac(QStyledItemDelegate):
 CAO_TOM_TAT_THUA = 34
 # nhãn ô thông tin chủ sử dụng (tổ chức: "Tổ chức" / "Địa chỉ", ẩn các ô AN_KHI_TO_CHUC - 1.0.04)
 NHAN_HO = {'ho_ten': 'Họ và tên', 'so_cccd': 'Số CCCD/Định danh', 'ngay_cap': 'Ngày cấp / Nơi cấp', 'dia_chi': 'Địa chỉ thường trú',
-           'dien_thoai': 'Số điện thoại', 'phap_ly': 'Tình trạng pháp lý', 'ghi_chu': 'Ghi chú hồ sơ hộ', 'tranh_chap': 'Tranh chấp',
+           'dien_thoai': 'Số điện thoại', 'phap_ly': 'Tình trạng pháp lý', 'ghi_chu': 'Ghi chú hồ sơ hộ', 'ghi_chu_ten': 'Ghi chú dưới tên', 'tranh_chap': 'Tranh chấp',
            'tai_dinh_cu': 'Tái định cư', 'trang_thai': 'Trạng thái'}
 AN_KHI_TO_CHUC = ('so_cccd', 'ngay_cap', 'noi_cap', 'dien_thoai')
 # lưới 3 cột khối I (20/10/2026, theo ảnh người dùng): khóa -> (hàng, cột). Ngày cấp + nơi cấp chung một ô; "Hồ sơ đính kèm" (nút
 # NutHoSoScan) ở hàng 2 cột 2. Trường không có ở đây (an=) không hiện
 O_LUOI_HO = {'ho_ten': (0, 0), 'so_cccd': (0, 1), 'ngay_cap': (0, 2), 'dia_chi': (1, 0), 'dien_thoai': (1, 1), 'phap_ly': (1, 2),
-             'ghi_chu': (2, 0), 'tranh_chap': (2, 1), 'tai_dinh_cu': (3, 0), 'trang_thai': (3, 1)}
+             'ghi_chu': (2, 0), 'tranh_chap': (2, 1), 'tai_dinh_cu': (3, 0), 'trang_thai': (3, 1), 'ghi_chu_ten': (4, 0)}
 O_HO_SO_DINH_KEM = (2, 2)
 # tên thuộc tính theo đặc tả (bí danh của self.o / self.nhan_o)
 BI_DANH_O = {'ho_ten': ('lb_ten', 'o_ten'), 'so_cccd': ('lb_cccd', 'o_cccd'), 'ngay_cap': ('lb_ngay_cap', 'o_ngay_cap'),
@@ -564,6 +564,9 @@ class KhungHoSo(QWidget):
                 self.o['noi_cap'].setPlaceholderText('Nơi cấp')
                 hh.addWidget(self.o['noi_cap'], 1)
                 luoi.addLayout(hh, hang, cot * 2 + 1)
+            elif k == 'ghi_chu_ten':                           # 1.0.78: nội dung dài: rộng hết hàng
+                w.setPlaceholderText('Hiện dưới tên hộ; bản in ghi liền sau tên. Ví dụ: xây dựng trên một phần thửa đất số …, tờ bản đồ số … của ông bà …')
+                luoi.addWidget(w, hang, cot * 2 + 1, 1, 5)
             else:
                 luoi.addWidget(w, hang, cot * 2 + 1)
         nhan = QLabel('Hồ sơ đính kèm:')
@@ -676,6 +679,8 @@ class KhungHoSo(QWidget):
         b.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         b.customContextMenuRequested.connect(lambda pos: self.menu_bang(pos))
         cho_phep_sao_chep_bang(b)
+        from .giao_dien import cat_khoi_bang, dan_vao_bang, gan_cat_dan
+        gan_cat_dan(b, lambda: dan_vao_bang(b), lambda: cat_khoi_bang(b))       # 1.0.78
         return b
 
     def _thanh_tom_tat(self) -> QFrame:
@@ -733,7 +738,7 @@ class KhungHoSo(QWidget):
         if self.ma_ho is None:
             return
         doi = []
-        w_ten, w_pl = self.o.get('ho_ten'), self.o.get('phap_ly')
+        w_ten, w_pl = self.o.get('ho_ten'), self.o.get('ghi_chu_ten')     # 1.0.78: sang ô riêng (trước: Tình trạng pháp lý)
         if w_ten is not None and w_pl is not None:
             ten, dg = ho_so.tach_ho_ten(w_ten.text())
             if dg:

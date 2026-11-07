@@ -6,6 +6,7 @@ import sqlite3
 from datetime import date
 from decimal import Decimal
 
+from .ho_so import ten_day_du_in  # noqa: E402
 from . import nghiep_vu
 from .nghiep_vu import BoiCanh, doc_phuong_an, tinh_pa
 from .tien import D, KHONG
@@ -323,7 +324,8 @@ def _thong_tin_ho(con, ma_ho: int, da: dict, che: bool | None = None) -> dict:
         f'Sau khi UBND {da["cap_dia_ban_thuong"] or "xã, phường"} xác nhận điều kiện tái định cư (nếu có).'
     dt = (h['dien_thoai'] or '').strip()
     k = h.keys()
-    return dict(ma_ho=ma_ho, ho_ten=ten, cccd=cccd.strip(' -'), dia_chi=(h['dia_chi'] or '').strip(),
+    ho_ten_in = ten_day_du_in(h['ho_ten'], h['phap_ly'], h['ghi_chu_ten'] if 'ghi_chu_ten' in h.keys() else '')     # 1.0.78: bản in ghi liền tên + ghi chú
+    return dict(ma_ho=ma_ho, ho_ten=ten, ho_ten_in=ho_ten_in, cccd=cccd.strip(' -'), dia_chi=(h['dia_chi'] or '').strip(),
                 dien_thoai='' if dt == '0' else dt, nguon_goc='\n'.join(ng), tai_dinh_cu=tdc,
                 so_pa=(h['so_pa'] or '').strip() if 'so_pa' in k else '', ngay_pa=(h['ngay_pa'] or '') if 'ngay_pa' in k else '')
 
