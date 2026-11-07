@@ -157,8 +157,8 @@ class HopKetQuaQuet(QDialog):
         # ---- đưa vào hộ
         self._sua_duoc = co_du_an and not chi_doc
         self.cb_ho = QComboBox()
-        for ma, ten in ds_ho:
-            self.cb_ho.addItem(f'{ma} - {ten}', ma)
+        from .giao_dien import nap_o_chon
+        nap_o_chon(self.cb_ho, [(f'{ma} - {ten}', ma, '') for ma, ten in ds_ho])
         if ma_ho is not None:
             self.cb_ho.setCurrentIndex(max(0, self.cb_ho.findData(ma_ho)))
         self.b_dua = QPushButton('Đưa vào phương án của hộ')

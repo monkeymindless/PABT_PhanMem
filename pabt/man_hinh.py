@@ -26,7 +26,7 @@ from .lap_pa import NHOM_TIM, BoSoan, DanhMuc, LoiNhap, bo_dau
 from .nghiep_vu import DA_LAP_LUU, MUC_KHOAN, MUC_VN, NGUON_TAY, NGUON_TD, TEN_MUC, so_muc
 from .tien import D, KHONG, lam_tron, so_luong_vn, so_vn, vn
 from .giao_dien import cat_khoi_bang, dan_vao_bang, gan_cat_dan  # noqa: E402
-from .giao_dien import but_so, con_tro_cho, kieu_o_canh_bao, loc_khi_ngung_go, mau_so, mau_theo_tong, phong_so, qmau_theo_tong, vua_dong
+from .giao_dien import but_so, con_tro_cho, kieu_o_canh_bao, loc_khi_ngung_go, mau_so, mau_theo_tong, nap_o_chon, phong_so, qmau_theo_tong, vua_dong
 from .thong_bao import TEN_UD, chu_loi
 
 XAM, VANG, CAM = QColor('#F4F6F8'), QColor('#FFF6D6'), QColor('#FDEBDD')
@@ -2248,11 +2248,11 @@ class CuaSoLapPA(QDialog):
 
     def _nap_ds_ho(self):
         self.cb_ho.blockSignals(True)
-        self.cb_ho.clear()
+        ds = []
         for ma, tt, ten in self.bo.danh_sach_ho():
             ten = _ten_ho_hien(ten)
-            self.cb_ho.addItem(f'{tt}. {tach_ho_ten(ten)[0]}', ma)            # không hiện "(mã n)" (16/10/2026); ô chỉ tên riêng, đủ câu ở chú thích (06/11/2026)
-            self.cb_ho.setItemData(self.cb_ho.count() - 1, f'{tt}. {ten}', Qt.ItemDataRole.ToolTipRole)
+            ds.append((f'{tt}. {tach_ho_ten(ten)[0]}', ma, f'{tt}. {ten}'))    # không hiện "(mã n)" (16/10/2026); ô chỉ tên riêng, đủ câu ở chú thích (06/11/2026)
+        nap_o_chon(self.cb_ho, ds)
         self.cb_ho.blockSignals(False)
         self._hien_ten_ho()
 

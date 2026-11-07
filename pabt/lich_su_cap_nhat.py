@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.79', '07/11/2026', (
+        'Bảng tính giá đất: thêm ô Vị trí, phạm vi theo Điều 5, Điều 6 Nghị quyết 28: Vị trí 1 Phạm vi 1 (100%), Phạm vi 2 (80%), Phạm vi 3 (60%); Vị trí 2 (đất nông nghiệp 30%, đất phi nông nghiệp 15% hoặc 10%), có áp giá tối thiểu, tối đa theo Phụ lục VIII và ghi căn cứ vào giải trình.',
+        'Bảng tính giá đất: nhãn Vị trí kết nối ghi đúng ngưỡng mét của địa bàn đang chọn (phường 600 m, 400 m; xã 1.000 m, 500 m).',
+        'Màu Navy dịu mắt: 6 phương án trong hộp Giao diện, mặc định phương án Nordic; tiêu đề bảng, nút thẻ, viên trạng thái, Sổ vận động đồng bộ một màu.',
+        'Nhanh hơn với dự án lớn (đo 3.000 hộ): mở cửa sổ lập phương án 490 -> 256 ms, mở dự án 1,30 -> 1,18 giây, mở danh sách xổ chọn hộ 72 -> 37 ms.',
+        'Bảng tính giá đất: cột Thông số không còn bị cắt chữ bên phải trên màn hình thấp.',
+    )),
     ('1.0.78', '07/11/2026', (
         'Bảng In: thêm Hộp in Windows như Word, Excel: chọn máy in, trang, số bản, Preferences của máy in (khay giấy, chất lượng…) cho lần in đó. Bản Windows 7 in qua Word / Excel.',
         'Lập phương án: Ctrl+V dán, Ctrl+X cắt ô như Excel (dán khối từ Excel, Word; một giá trị điền mọi ô đang chọn; Ctrl+Z hoàn tác cả lần dán). Có ở các mục và bảng thửa; menu chuột phải có Cắt, Dán.',

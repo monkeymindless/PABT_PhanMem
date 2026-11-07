@@ -101,7 +101,7 @@ class TestMenuTrai(CoNavy):
         qss = giao_dien._qss_day_du()
         # 1.0.35 PA1: menu sáng liền mạch, viên đang chọn nền xanh nhạt + vạch trái 4 px
         for chu in ('QFrame[vai="menu_trai"] { background: #E8EEF5', 'border-right: 1px solid #D5DEE8', 'width: 6px',
-                    'border-left: 4px solid #2563EB', 'background: #DBEAFE', 'color: #1E3A5F', 'border-radius: 8px'):
+                    'border-left: 4px solid #2563EB', 'background: #DBEAFE', f'color: {giao_dien.mau_menu()["chon_chu"]}', 'border-radius: 8px'):
             self.assertIn(chu, qss)
 
 

@@ -105,7 +105,11 @@ def mau_tong(ten: str) -> dict:
     """Màu chính / banner / menu của tông (tông lạ: mặc định); tông theo phương án Navy lấy màu chính của phương án."""
     mt = MAU_TONG.get(ten, MAU_TONG[MAC_DINH_TONG_NEN])
     pa = mau_phuong_an(ten)
-    return dict(mt, chinh=pa['chinh'], chinh_re=pa['chinh_re']) if pa else mt
+    if not pa:
+        return mt
+    # 1.0.79: chữ nhóm, lệnh đang chọn của menu trái cùng màu chính với phần còn lại; nền, viền menu giữ nguyên
+    menu = {k: pa['chinh'] if isinstance(v, str) and v.upper() == '#1E3A5F' else v for k, v in mt['menu'].items()}
+    return dict(mt, chinh=pa['chinh'], chinh_re=pa['chinh_re'], menu=menu)
 
 
 MAC_DINH_TONG_NEN = 'sang'

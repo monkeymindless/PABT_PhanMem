@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialo
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from . import kiem_toan
-from .giao_dien import TOKEN, con_tro_cho, dat_trang_thai, loc_khi_ngung_go
+from .giao_dien import TOKEN, con_tro_cho, dat_trang_thai, loc_khi_ngung_go, nap_o_chon
 from .thong_bao import TEN_UD, chu_loi
 
 COT = ['Thời gian', 'Người sửa', 'Máy', 'Thao tác', 'Mã hộ', 'Đối tượng', 'Trường', 'Giá trị cũ', 'Giá trị mới', 'Ghi chú']
@@ -24,9 +24,8 @@ class HopKiemToan(QDialog):
         self.setWindowTitle('Nhật ký kiểm toán - thay đổi số liệu')
         self.resize(1250, 720)
         self.cb_ho = QComboBox()
-        self.cb_ho.addItem('Mọi hộ và danh mục', None)
-        for r in con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho'):
-            self.cb_ho.addItem(f'{r["thu_tu"]}. {r["ho_ten"]}', r['ma_ho'])
+        nap_o_chon(self.cb_ho, [('Mọi hộ và danh mục', None, '')] + [(f'{r["thu_tu"]}. {r["ho_ten"]}', r['ma_ho'], '')
+                                                                     for r in con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho')])
         if ma_ho is not None and self.cb_ho.findData(ma_ho) >= 0:
             self.cb_ho.setCurrentIndex(self.cb_ho.findData(ma_ho))
         self.cb_ky = QComboBox()

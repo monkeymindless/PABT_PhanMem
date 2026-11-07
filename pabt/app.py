@@ -16,7 +16,7 @@ from .tien import D, so_luong_vn, so_vn, vn, vn_gon
 from .giao_dien import VAI_PHU_TEN, OTenHaiTang, cao_ten_hai_tang  # noqa: E402
 from .ho_so import dong_duoi_ten, tach_ho_ten  # noqa: E402
 from .giao_dien import TOKEN, chuyen_trang_muot, chu_hien, con_tro_cho, dat_kieu_theo_tong, dung_ve, phong_so
-from .giao_dien import mau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
+from .giao_dien import mau_so, mau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
 from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .thong_bao import TEN_UD, chu_loi
 
@@ -548,6 +548,14 @@ class LocHo(QSortFilterProxyModel):
         return True
 
 
+# 1.0.79: BangHo.data chạy hàng chục nghìn lần mỗi lần mở dự án (sắp xếp, đo cột): so số nguyên (đọc Qt.ItemDataRole.X qua enum tốn
+# hơn nhiều) và trả None ngay với vai trò không dùng (biểu tượng, dấu chọn, cỡ ô...)
+_VAI_HIEN, _VAI_SUA, _VAI_CHU_THICH = int(Qt.ItemDataRole.DisplayRole), int(Qt.ItemDataRole.EditRole), int(Qt.ItemDataRole.ToolTipRole)
+_VAI_PHONG, _VAI_CAN, _VAI_NEN = int(Qt.ItemDataRole.FontRole), int(Qt.ItemDataRole.TextAlignmentRole), int(Qt.ItemDataRole.BackgroundRole)
+_VAI_CHU, _VAI_SAP = int(Qt.ItemDataRole.ForegroundRole), int(Qt.ItemDataRole.UserRole)
+_VAI_BANG_HO = frozenset((_VAI_HIEN, _VAI_SUA, _VAI_CHU_THICH, _VAI_PHONG, _VAI_CAN, _VAI_NEN, _VAI_CHU, _VAI_SAP, int(VAI_PHU_TEN)))
+
+
 class BangHo(QAbstractTableModel):
     """Danh sách hộ: mỗi dòng dict(ma_ho, tong, các trường trạng thái, o=[giá trị các cột COT], tim=chữ để tìm thêm)."""
 
@@ -579,24 +587,23 @@ class BangHo(QAbstractTableModel):
                 return CAN_GIUA if section in COT_GIUA else None
         return None
 
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if not index.isValid():
+    def data(self, index, role=_VAI_HIEN):
+        if role not in _VAI_BANG_HO or not index.isValid():
             return None
         d, c = self.dong[index.row()], index.column()
         v = d['o'][c]
         if c == 1 and role == VAI_PHU_TEN:
             return d.get('phu_ten') or None
-        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+        if role == _VAI_HIEN or role == _VAI_SUA:
             if c == 1 and d.get('phu_ten'):
                 return d['ten_gon']
             if c == 4:
                 return so_vn(v)
-            if c == 5 and role == Qt.ItemDataRole.DisplayRole:      # thanh tiến độ 4 ô + trạng thái (giá trị gốc ở d['o'][5])
+            if c == 5 and role == _VAI_HIEN:      # thanh tiến độ 4 ô + trạng thái (giá trị gốc ở d['o'][5])
                 return f'{THANH_NAC[d.get("nac", 0)]}  {v}'
             return str(v)
-        if role == Qt.ItemDataRole.ForegroundRole:
+        if role == _VAI_CHU:
             if c in COT_SO:                                        # số 0 xám nhạt (giao_dien.mau_so - một nguồn)
-                from .giao_dien import mau_so
                 m = mau_so(so_vn(v))
                 return self._but(m) if m else None
             if c == 5:
@@ -606,12 +613,9 @@ class BangHo(QAbstractTableModel):
             if c == 1:
                 return self._but(TOKEN['chu'])                 # 1.0.34: theo tông nền (Tối: chữ sáng)
             return None
-        if role == Qt.ItemDataRole.FontRole and c == 1:
-            return self._phong()
-        if role == Qt.ItemDataRole.FontRole and c in COT_SO:
-            from .giao_dien import phong_so
-            return phong_so()
-        if role == Qt.ItemDataRole.ToolTipRole:
+        if role == _VAI_PHONG:
+            return self._phong() if c == 1 else phong_so() if c in COT_SO else None
+        if role == _VAI_CHU_THICH:
             if c == 6 and v:
                 return str(v)
             if c == 1 and d.get('phu_ten'):
@@ -622,7 +626,7 @@ class BangHo(QAbstractTableModel):
                 dau = d.get('dia_chi') or v if c == 2 else v             # cột Địa chỉ: địa chỉ đầy đủ (0.9.72)
                 return f'{dau}\nMã hộ {d["ma_ho"]}' + (f'\nGhi chú: {d["theo_doi"]}' if d.get('theo_doi') else '')
             return None
-        if role == Qt.ItemDataRole.UserRole:                       # giá trị để sắp xếp
+        if role == _VAI_SAP:                                       # giá trị để sắp xếp
             if c == 5:                                             # trạng thái: theo nấc tiến độ rồi theo chữ
                 return f'{d.get("nac", 0)} {v}'
             if c in COT_SO or c in (0, 3):
@@ -633,10 +637,10 @@ class BangHo(QAbstractTableModel):
                 except Exception:
                     return 0.0
             return str(v)
-        if role == Qt.ItemDataRole.TextAlignmentRole:
+        if role == _VAI_CAN:
             # số nguyên (như bang_ao): Qt5 / PySide2 bỏ qua cờ ghép kiểu enum -> cột số canh trái-trên (17/10/2026)
             return CAN_GIUA if c in COT_GIUA else CAN_PHAI if c in COT_SO else CAN_TRAI
-        if role == Qt.ItemDataRole.BackgroundRole and c == 6 and d.get('mau_gc') is not None:
+        if role == _VAI_NEN and c == 6 and d.get('mau_gc') is not None:
             return QBrush(d['mau_gc'])
         return None
 

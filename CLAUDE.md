@@ -220,6 +220,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Hộp thoại tạo với cha, dọn bằng `don_hop_da_dong`; không `WA_DeleteOnClose` hàng loạt, không giữ hộp làm thuộc tính để dùng lại; QMenu tạm
   `deleteLater`; KHÔNG `takeAt(...).layout().deleteLater()` (hủy hai lần - sập) - thay cả widget chứa. QGraphicsItem không phải QObject.
 - Danh sách dài: `giao_dien.hop_ket_qua` (không ghép vào QMessageBox). Hộp thoại mới có `im_lang` / `cho=False` cho test.
+- Ô chọn nhiều mục (danh sách hộ): nạp bằng `giao_dien.nap_o_chon` (mô hình dựng sẵn + dòng đều: 12 ms so với 110 ms ở 3.000 hộ), không `addItem` trong vòng lặp. Hàm dữ liệu của mô hình bảng lớn: so số nguyên, không đọc `Qt.ItemDataRole.X` mỗi lần gọi (`BangHo.data`). QScrollArea chỉ cuộn dọc: `man_hinh_tinh_gia_dat._CuonDoc` để không cắt nội dung.
 - Bảng: chiều cao dòng `giao_dien.vua_dong` (không `resizeRowsToContents`); bảng lớn `bang_ao.BangAo`; lệnh theo hộ đọc dòng bằng
   `cac_dong_da_chon` (không `selectedRows`); cột theo tên (`self.cot.index(khóa)`), không viết số cột. Chữ "&" trên nút / thẻ: `chu_hien`.
 - Cửa sổ lập phương án (1.0.58): phím Ctrl+B (`bat_tat_ds_ho`), Space trên bảng mục (`BangMuc.bat_tat_chi_tiet`), F4 vẫn là xem trước A4. Khung

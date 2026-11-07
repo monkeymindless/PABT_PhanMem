@@ -206,7 +206,7 @@ class TestGiaoDien(unittest.TestCase):
             self.assertEqual(giao_dien.mau_theo_tong(giao_dien.MAU_TRANG_THAI['tin'][0], 'chu').upper(), '#7DD3FC')
             self.assertNotEqual(giao_dien.mau_chu_nut('in').upper(), giao_dien.MAU['in'][0].upper())
             giao_dien.TONG_NEN[0] = 'sang'
-            self.assertEqual(bang_ao._but_so_tien().color().name().upper(), giao_dien.MAU_SO_TIEN.upper())
+            self.assertEqual(bang_ao._but_so_tien().color().name().upper(), giao_dien.mau_theo_tong(giao_dien.MAU_SO_TIEN, 'chu').upper())     # 1.0.79: theo phương án Navy
         finally:
             giao_dien.TONG_NEN[0] = cu
 

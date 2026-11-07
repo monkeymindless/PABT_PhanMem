@@ -535,8 +535,27 @@ def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
     Đối tượng TongHopHo DÙNG CHUNG: không sửa; danh sách trả là bản sao (sắp xếp / lọc thoải mái)."""
     from . import csdl
     if ds_ma_ho is None and isinstance(con, csdl.KetNoi):
-        return list(csdl.nho(con, ('theo_doi.tong_hop', bool(tinh_pa)), lambda: _tong_hop(con, None, tinh_pa)))
+        return list(csdl.nho(con, ('theo_doi.tong_hop', bool(tinh_pa)), (lambda: _tong_hop_co_pa(con)) if tinh_pa else (lambda: _tong_hop(con, None, False))))
     return _tong_hop(con, ds_ma_ho, tinh_pa)
+
+
+def _tong_hop_co_pa(con) -> list:
+    """1.0.79: cả dự án có tiền phương án = bản không tiền (đã nhớ, danh sách hộ vừa đọc) + tiền từ ket_qua_ho: mở dự án trước đây đọc toàn bộ
+    thửa / quyết định / hộ hai lần. Đối tượng có tiền là bản chép nông, không sửa đối tượng đang nhớ của bản không tiền."""
+    from . import csdl
+    from .nghiep_vu import ket_qua_ho
+    goc = csdl.nho(con, ('theo_doi.tong_hop', False), lambda: _tong_hop(con, None, False))
+    kqh = ket_qua_ho(con)
+    kq = []
+    for x in goc:
+        k = kqh.get(x.ma_ho)
+        if k is not None:
+            moi = TongHopHo.__new__(TongHopHo)
+            moi.__dict__.update(x.__dict__)
+            moi.tong_pa, moi.muc_pa = k[0].tong, muc_5_cot(k[0].muc)
+            x = moi
+        kq.append(x)
+    return kq
 
 
 def _tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:

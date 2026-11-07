@@ -2519,9 +2519,12 @@ class HopNhatKyVanDong(_Hop):
         self.cb_ho.setMinimumWidth(360)
         buoi = {b['ma_ho'] for b in van_dong.ds_buoi(con)}
         # hộ có buổi vận động / cần vận động lên đầu danh sách
+        ds_chon = []
         for x in sorted(self.ds, key=lambda x: (not (x.ma_ho in buoi or van_dong.viec_ap_dung(x)), x.thu_tu, x.ma_ho)):
             dau = '● ' if (x.ma_ho in buoi or van_dong.viec_ap_dung(x)) else ''
-            self.cb_ho.addItem(f'{dau}{x.ho_ten}', x.ma_ho)
+            ds_chon.append((f'{dau}{x.ho_ten}', x.ma_ho, ''))
+        from .giao_dien import nap_o_chon
+        nap_o_chon(self.cb_ho, ds_chon)
         if ma_ho is not None:
             self.cb_ho.setCurrentIndex(max(0, self.cb_ho.findData(ma_ho)))
         self.cb_ho.currentIndexChanged.connect(lambda *_: self.nap())

@@ -51,14 +51,15 @@ class TestBangMau(unittest.TestCase):
     def test_menu_trai_theo_tong(self):
         # 1.0.35: PA1 mặc định menu SÁNG liền mạch; Titan / Tối menu tối
         q = giao_dien._qss_menu_trai()
+        chinh = giao_dien.mau_menu()['chon_chu']          # 1.0.79: chữ menu theo màu chính của phương án Navy
         for chu in ('QFrame[vai="menu_trai"] { background: #E8EEF5', 'border-right: 1px solid #D5DEE8', 'border-radius: 8px',
-                    'background: #DBEAFE; color: #1E3A5F', 'border-left: 4px solid #2563EB', 'color: #1E3A5F; font-size: 11px',
+                    f'background: #DBEAFE; color: {chinh}', 'border-left: 4px solid #2563EB', f'color: {chinh}; font-size: 11px',
                     'letter-spacing: 0'):
             self.assertIn(chu, q)
         t = giao_dien._qss_menu_trai('titan')
         self.assertIn('QFrame[vai="menu_trai"] { background: #1E293B', t)
         self.assertIn('border-left: 4px solid #60A5FA', t)
-        self.assertEqual((giao_dien.mau_menu()['icon'], giao_dien.mau_menu()['icon_chon']), ('#475569', '#1E3A5F'))
+        self.assertEqual((giao_dien.mau_menu()['icon'], giao_dien.mau_menu()['icon_chon']), ('#475569', chinh))
         for ten in chu_de.MAU_TONG:                                      # màu chính khác nhau theo tông, map đúng
             giao_dien.TONG_NEN[0] = ten
             try:

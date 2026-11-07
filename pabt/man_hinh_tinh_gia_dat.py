@@ -8,7 +8,7 @@ cụ thể chuyển tiếp) và kết quả tức thì | Các dòng đất của
 from __future__ import annotations
 
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtCore import QAbstractTableModel, QEvent, QModelIndex, Qt
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
                                QMessageBox, QPlainTextEdit, QProgressDialog, QPushButton, QScrollArea, QFrame, QSizePolicy, QTableView, QVBoxLayout, QWidget)
@@ -137,8 +137,8 @@ class HopThemDongDat(QDialog):
         self.cb_ho.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.cb_ho.completer().setFilterMode(Qt.MatchFlag.MatchContains)
         self.cb_ho.completer().setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
-        for ma, ten in ds_ho:
-            self.cb_ho.addItem(f'{ma} - {ten}', ma)
+        from .giao_dien import nap_o_chon
+        nap_o_chon(self.cb_ho, [(f'{ma} - {ten}', ma, '') for ma, ten in ds_ho])
         self.cb_ho.setCurrentIndex(max(0, self.cb_ho.findData(ma_mac_dinh)))
         self.o_to, self.o_thua, self.o_dt = QLineEdit(), QLineEdit(), QLineEdit()
         self.cb_loai = QComboBox()
@@ -196,6 +196,27 @@ def _hang_o(*w):
     for x in w:
         h.addWidget(x, 1 if isinstance(x, (QComboBox, QLineEdit)) else 0)
     return h
+
+
+class _CuonDoc(QScrollArea):
+    """Vùng cuộn chỉ cuộn dọc: rộng tối thiểu = nội dung + thanh cuộn (1.0.79: màn hình 1093 x 614 cắt mất 20 px bên phải cột Thông số)."""
+
+    def minimumSizeHint(self):
+        s = super().minimumSizeHint()
+        w = self.widget()
+        if w is not None:
+            s.setWidth(w.minimumSizeHint().width() + self.verticalScrollBar().sizeHint().width())
+        return s
+
+    def eventFilter(self, o, e):
+        if o is self.widget() and e.type() == QEvent.Type.LayoutRequest:      # nội dung đổi (đổi gói quy tắc): bố cục ngoài đọc lại bề rộng, không giữ số cũ
+            self.updateGeometry()
+        return super().eventFilter(o, e)
+
+    def sizeHint(self):
+        s = super().sizeHint()                      # bề rộng mong muốn = tối thiểu: phần thừa chia theo hệ số giãn 8 : 12, bảng dòng đất bên phải vẫn rộng
+        s.setWidth(self.minimumSizeHint().width())
+        return s
 
 
 class HopTinhGiaDat(QDialog):
@@ -348,7 +369,7 @@ class HopTinhGiaDat(QDialog):
         self.lb_ap_dung.setWordWrap(True)
         f.addRow(self.lb_ap_dung)
         # cột trái cuộn riêng: mở phần "Mở thêm" trên màn hình thấp không đẩy hộp cao hơn màn hình, đơn giá bên phải vẫn thấy
-        cuon = QScrollArea()
+        cuon = _CuonDoc()
         cuon.setWidgetResizable(True)
         cuon.setFrameShape(QFrame.Shape.NoFrame)
         cuon.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

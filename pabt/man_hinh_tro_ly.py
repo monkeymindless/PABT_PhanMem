@@ -37,8 +37,9 @@ class HopTroLy(QDialog):
         self.cb_ho = QComboBox()
         self.cb_ho.setEditable(True)
         self.cb_ho.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        for r in self.con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho'):
-            self.cb_ho.addItem(f'{r["thu_tu"]}. {r["ho_ten"] or ""}', r['ma_ho'])
+        from .giao_dien import nap_o_chon
+        nap_o_chon(self.cb_ho, [(f'{r["thu_tu"]}. {r["ho_ten"] or ""}', r['ma_ho'], '')
+                                for r in self.con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho')])
         if ma_ho is not None:
             i = self.cb_ho.findData(ma_ho)
             if i >= 0:

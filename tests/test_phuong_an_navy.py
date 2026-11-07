@@ -40,6 +40,15 @@ class TestPhuongAn(unittest.TestCase):
             self.assertGreaterEqual(tuong_phan(x['td_chu'], x['td_re']), 4.5, ma)
             self.assertGreaterEqual(tuong_phan(x['dau_chu'], x['dau_nen']), 6.0, ma)
 
+    def test_menu_trai_cung_mau_chinh(self):
+        for ma in chu_de.PHUONG_AN_NAVY:
+            chu_de.dat_phuong_an(ma)
+            self.addCleanup(chu_de.dat_phuong_an, chu_de.MAC_DINH_PHUONG_AN)
+            m = chu_de.mau_tong('sang')
+            self.assertEqual(m['menu']['nhom'], m['chinh'])
+            self.assertEqual(m['menu']['chon_chu'], m['chinh'])
+        self.assertEqual(chu_de.MAU_TONG['sang']['menu']['nhom'], '#1E3A5F')      # bảng gốc không bị sửa
+
     def test_tong_rieng_khong_theo_phuong_an(self):
         for ten in ('toi', 'titan', 'ngoc'):
             self.assertIsNone(chu_de.mau_phuong_an(ten))

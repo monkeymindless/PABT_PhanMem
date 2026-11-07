@@ -125,4 +125,7 @@ print('so lenh', len(lenh), 'nghi ro', len(ro), flush=True)
 for x in ro:
     print(x.strip()[:200], flush=True)
 sys.stdout.flush()
-os._exit(0)
+try:                                                    # os._exit vẫn chạy DLL_PROCESS_DETACH của Qt: có lúc sập mã 139 sau khi đã in xong kết quả
+    ctypes.windll.kernel32.TerminateProcess(wt.HANDLE(-1), 0)
+finally:
+    os._exit(0)
