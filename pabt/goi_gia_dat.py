@@ -35,6 +35,7 @@ CAI_DAT_DU_AN = 'GOI_GIA_DAT'
 # câu chữ của gói: (khóa, nhãn trên màn hình Bộ quy tắc). Ô điền: {so_hieu} {bang_gia} và ô riêng của từng câu
 CAU_CHU = (
     ('buoc_1', 'Bước 1: giá bảng giá. Ô: {dia_ban} {vi_tri} {gia}'),
+    ('buoc_1_vt', 'Bước 1a: tỷ lệ Vị trí, Phạm vi, trần sàn'),
     ('buoc_2_doan', 'Bước 2: K1 theo đoạn đường. Ô: {phu_luc} {ten_duong} {diem_dau} {diem_cuoi} {nhom} {k1}'),
     ('buoc_2_tay', 'Bước 2: K1 nhập tay. Ô: {k1}'),
     ('k2_co', 'Bước 3: có K2. Ô: {k2}'),

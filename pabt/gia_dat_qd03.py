@@ -10,6 +10,7 @@ Làm tròn trung gian theo gói (gắn sẵn: tổng hệ số 6, giá chưa là
 K1: gói gắn sẵn mà máy đã nhập bảng hệ số K mới (thẻ Hệ số K) thì theo bảng đã nhập và ghi rõ trong giải trình: chỉ MỘT nguồn K có hiệu lực, không âm thầm tính theo số cũ. Gói riêng mang K của nó."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -137,6 +138,8 @@ class DauVao:
     co_quy_dinh_rieng_duong_dat_pl1: bool = False
     he_so_them: dict = field(default_factory=dict)   # hệ số gói khai báo thêm: {'K4': Decimal}
     cot_gia: str = ''                                # cột bảng giá của mục nhóm đất đang chọn
+    ma_vi_tri_dat: str = ''                          # 1.0.79: mã mục goi['vi_tri_dat']['muc']; '' = như VT1_PV1 (100%)
+    loai_nn: str = ''                                # 1.0.79: loại đất NN để tra trần sàn Phụ lục VIII (cln / hang_nam / rung / nts)
 
 
 @dataclass
@@ -159,6 +162,8 @@ class KetQua:
     ghi_chu_ct: str = ''
     he_so_them: dict = field(default_factory=dict)
     nguon_k1: str = ''                               # '' (gói) | văn bản của bảng hệ số K đã nhập
+    gia_truoc_vi_tri: Decimal | None = None          # 1.0.79: giá dòng bảng giá trước tỷ lệ vị trí / phạm vi (None: không áp)
+    vi_tri_dat: str = ''                             # tên mục vị trí / phạm vi đã áp
 
 
 def _q(x, so_le: int) -> Decimal:
@@ -204,6 +209,102 @@ def _k1_bang_nhap(goi: dict, v: DauVao, doan: dict, nhom: dict | None) -> tuple:
     return k, hk.van_ban_ngan(), True
 
 
+def muc_vi_tri_dat(goi=None) -> list:
+    """Các mục Vị trí / Phạm vi của gói; gói không khai báo: [] (màn hình ẩn ô chọn, tính như cũ)."""
+    return (_goi(goi).get('vi_tri_dat') or {}).get('muc') or []
+
+
+# Phụ lục VIII tách 4 loại đất, Phụ lục I gộp 2 cột giá: cùng cột giá nhưng trần sàn có thể khác (Bình Phước: cây lâu năm 240, hằng năm 170)
+LOAI_NN_THEO_COT = {'nn_cay': (('cln', 'Cây lâu năm'), ('hang_nam', 'Cây hằng năm, lúa')), 'nn_rung_nts': (('rung', 'Rừng sản xuất'), ('nts', 'Nuôi trồng thủy sản'))}
+
+
+def dong_phu_luc_viii(dia_ban: str, goi=None) -> dict | None:
+    from .lap_pa import bo_dau
+    bang = (_goi(goi).get('vi_tri_dat') or {}).get('phu_luc_viii') or {}
+    def chuan(x):
+        x = bo_dau(ten_ngan(x) or '')
+        for tien_to in ('xa ', 'phuong '):
+            x = x[len(tien_to):] if x.startswith(tien_to) else x
+        return x
+    t = chuan(dia_ban)
+    return next((v for k, v in bang.items() if chuan(k) == t), None)
+
+
+def loai_nn_can_chon(dia_ban: str, cot: str, goi=None) -> list:
+    """[(mã, nhãn)] khi hai loại đất cùng cột giá có trần / sàn khác nhau ở xã này (phải chọn); giống nhau: []."""
+    r = dong_phu_luc_viii(dia_ban, goi)
+    ds = LOAI_NN_THEO_COT.get(cot)
+    if r is None or not ds:
+        return []
+    return list(ds) if any(r[m][ds[0][0]] != r[m][ds[1][0]] for m in ('toi_thieu', 'toi_da')) else []
+
+
+def gioi_han_nong_nghiep(dia_ban: str, cot: str, goi=None, loai: str = '') -> tuple:
+    """(giá tối thiểu, giá tối đa) đồng/m² theo Phụ lục VIII của gói; loai '' = loại đầu của cột giá; ô trống hoặc xã không có: None."""
+    r = dong_phu_luc_viii(dia_ban, goi)
+    if r is None:
+        return None, None
+    khoa = loai or LOAI_NN_THEO_COT.get(cot, (('cln', ''),))[0][0]
+    san, tran = r['toi_thieu'].get(khoa), r['toi_da'].get(khoa)
+    return (None if san is None else D(san) * 1000), (None if tran is None else D(tran) * 1000)
+
+
+def _ap_vi_tri_dat(goi: dict, v: DauVao, g: Decimal, doan, nhom, cau, canh_bao: list, lap_luan: list) -> tuple:
+    """Tỷ lệ Vị trí / Phạm vi + trần, sàn. Trả (giá sau khi áp, giá trước hoặc None, tên mục). Mục 100% hoặc không chọn: giữ nguyên, không thêm chữ
+    (kết quả vàng không đổi). Tỷ lệ, trần, sàn lấy từ gói, không viết trong mã."""
+    muc = next((x for x in muc_vi_tri_dat(goi) if x['ma'] == v.ma_vi_tri_dat), None)
+    la_nn = bool(nhom['la_nong_nghiep']) if nhom else False
+    if muc is None or D(muc['nn' if la_nn else 'pnn']) == 1 or nhom is None:
+        return g, None, ''
+    ty = D(muc['nn' if la_nn else 'pnn'])
+    tinh = lam_tron(g * ty, 0)
+    moi, ghi = tinh, ''
+    if la_nn:
+        cot = v.cot_gia or nhom['cot_gia']
+        san, tran = gioi_han_nong_nghiep(v.dia_ban, cot, goi, v.loai_nn)
+        if san is None and tran is None:
+            canh_bao.append('Phụ lục VIII không có giá tối thiểu, tối đa của xã / loại đất này: chưa áp, cần đối chiếu tay.')
+        if not v.loai_nn and loai_nn_can_chon(v.dia_ban, cot, goi):
+            canh_bao.append('Xã này có trần, sàn khác nhau giữa hai loại đất cùng cột giá: đang tính theo loại đầu, cần chọn đúng loại đất.')
+        if muc.get('vi_tri') == 2 and tran is not None and moi > tran:
+            moi, ghi = tran, f', vượt giá tối đa nên lấy {vn(tran)} đ/m² (Phụ lục VIII)'
+        elif san is not None and moi < san:
+            moi, ghi = san, f', thấp hơn giá tối thiểu nên lấy {vn(san)} đ/m² (Phụ lục VIII)'
+    else:
+        san = gia_bang_gia(v.dia_ban, doan, 'DAT_NONG_NGHIEP', v.loai_ket_noi_vi_tri, 'nn_cay', goi)
+        if san is None:
+            canh_bao.append('Không tra được giá đất trồng cây lâu năm của cùng tuyến đường: chưa áp mức sàn, cần đối chiếu tay.')
+        elif moi < san:
+            moi, ghi = san, f', thấp hơn giá đất trồng cây lâu năm vị trí 1, phạm vi 1 của tuyến nên lấy {vn(san)} đ/m²'
+    lap_luan.append(cau('buoc_1_vt', can_cu=(goi.get('vi_tri_dat') or {}).get('can_cu', ''), muc=muc['ten'], gia_goc=vn(g),
+                        ty_le=format((ty * 100).normalize(), 'f').replace('.', ','), gia_tinh=vn(tinh), gioi_han=ghi, gia=vn(moi)))
+    return moi, g, muc['ten']
+
+
+def nhan_vi_tri(x: dict, doan: dict | None, dia_ban: str = '', goi=None) -> str:
+    """Nhãn dòng Vị trí kết nối theo đúng ngưỡng của địa bàn trong bảng giá (phường 600 / 400 m, xã 1.000 / 500 m...); dòng không đấu nối
+    (K) ghi cùng điều kiện với dòng đấu nối (T) cùng mức. Không tra được ngưỡng: nhãn của gói."""
+    ten = x.get('ten', '')
+    vt = x.get('vi_tri', '')
+    if not doan or len(vt) != 2 or vt[0] not in 'TK':
+        return ten
+    from . import gia_dat_nq28 as nq
+    a = b = None
+    for r in nq.tat_ca():
+        if r.get('tt') == int(doan['tt_bat_dau']) and nq.khop_xa(ten_ngan(dia_ban), r['xa']):
+            a, b = (r.get('nguong') or [None, None])[:2]
+            break
+    if a is None:
+        return ten
+    if vt[0] == 'K':
+        ds = _goi(goi)['vi_tri']
+        t = next((y for y in ds if y.get('vi_tri') == 'T' + vt[1]), None)
+        m = re.search(r'\(.*\)', t['ten']) if t else None
+        if m and '(' not in ten:
+            ten = f'{ten} {m.group(0)}'
+    return ten.replace('1000m', f'{a}m').replace('500m', f'{b}m').replace('500-', f'{b}-')
+
+
 def _dien(mau: str, **gt) -> str:
     """Điền ô {ten} bằng thay chuỗi: mẫu đến từ file gói nên không dùng str.format (đọc được thuộc tính đối tượng)."""
     for k, x in gt.items():
@@ -228,6 +329,7 @@ def tinh_don_gia(v: DauVao, doan: dict | None = None, goi: dict | None = None) -
 
     # Bước 2: K1
     nhom = nhom_cua(goi, v.nhom_dat, v.cot_gia)
+    g, gia_truoc, ten_vt = _ap_vi_tri_dat(goi, v, g, doan, nhom, cau, canh_bao, lap_luan)
     k1 = D(v.he_so_k1) if v.he_so_k1 is not None and D(v.he_so_k1) != 0 else MOT
     nguon_k1 = ''
     if doan:
@@ -313,7 +415,9 @@ def tinh_don_gia(v: DauVao, doan: dict | None = None, goi: dict | None = None) -
 
     nhan = {'K_KHAC': 'K_khác'}
     cong_thuc = vn(g) + ''.join(f' × {he_hien(gia_tri.get(m, MOT))} ({nhan.get(m, m)})' for m in ct['he_so'] if not (m == 'K_KHAC' and k_khac == 1)) + f' = {vn(da_tron)} đ/m²'
-    return KetQua(g, k1, k2, k3, k_khac, tong, chua_tron, da_tron, cuoi, chuyen_tiep, cong_thuc, canh_bao, lap_luan, goi.get('ma', ''), f'{bang_gia} × {so_hieu}', mau.get('ghi_chu_ct') or mau_goc['ghi_chu_ct'], them, nguon_k1)
+    kq = KetQua(g, k1, k2, k3, k_khac, tong, chua_tron, da_tron, cuoi, chuyen_tiep, cong_thuc, canh_bao, lap_luan, goi.get('ma', ''), f'{bang_gia} × {so_hieu}', mau.get('ghi_chu_ct') or mau_goc['ghi_chu_ct'], them, nguon_k1)
+    kq.gia_truoc_vi_tri, kq.vi_tri_dat = gia_truoc, ten_vt
+    return kq
 
 
 def cong_thuc_gon(kq: KetQua) -> str:
@@ -335,4 +439,5 @@ def ghi_chu_ap_gia(kq: KetQua, doan: dict | None = None, dia_ban: str = '') -> s
     """Câu căn cứ ghi vào ô Ghi chú của dòng đất khi áp đơn giá: nêu rõ văn bản đã dùng, để có gói mới vẫn biết số này tính theo gì."""
     d = f'{dia_ban}, ' if dia_ban else ''
     t = f'{doan["ten_duong"]} ({doan["diem_dau"]} - {doan["diem_cuoi"]}), ' if doan else ''
-    return f'Đơn giá đất theo {kq.can_cu_ngan}: {d}{t}{kq.cong_thuc}' + (f' ({kq.ghi_chu_ct})' if kq.ap_dung_chuyen_tiep else '')
+    vt = f'{kq.vi_tri_dat}; ' if kq.vi_tri_dat else ''
+    return f'Đơn giá đất theo {kq.can_cu_ngan}: {d}{t}{vt}{kq.cong_thuc}' + (f' ({kq.ghi_chu_ct})' if kq.ap_dung_chuyen_tiep else '')

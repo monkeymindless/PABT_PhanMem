@@ -325,6 +325,16 @@ class HopTinhGiaDat(QDialog):
         f.addRow('Tìm đoạn đường:', self.o_tim)
         f.addRow('Đoạn đường:', self.cb_doan)
         f.addRow('Vị trí kết nối:', hang_doi(('', self.cb_vi_tri, 1), ('Mặt đường:', self.cb_ket_cau, 1)))
+        self.cb_vt_dat = QComboBox()                        # 1.0.79: Vị trí 1 / 2, Phạm vi (Điều 5, 6 NQ 28); gói không khai báo thì ẩn
+        self.cb_vt_dat.setMaxVisibleItems(8)
+        self.cb_vt_dat.setMinimumContentsLength(20)
+        self.cb_vt_dat.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.cb_vt_dat.setToolTip('Tỷ lệ theo Điều 5, Điều 6 Nghị quyết 28. Vị trí 2 tính theo giá Dòng 1 của tuyến đường, có áp giá trần, sàn.')
+        self.cb_loai_nn = QComboBox()                       # chỉ hiện khi xã có trần, sàn khác nhau giữa hai loại đất cùng cột giá
+        self.cb_loai_nn.setToolTip('Phụ lục VIII: giá tối thiểu, tối đa của loại đất này ở xã đang chọn khác loại kia.')
+        self._dong_vt_dat = hang_doi(('', self.cb_vt_dat, 1), ('', self.cb_loai_nn, 0))
+        f.addRow('Vị trí, phạm vi:', self._dong_vt_dat)
+        self._lb_vt_dat = f.labelForField(self._dong_vt_dat)
         f.addRow('Giá NQ 28 (đ/m²):', hang_doi(('', self.o_g, 1), ('', self.nut_tra, 0), ('', self.nut_quet_gd, 0)))
         f.addRow('', self.lb_g)
         f.addRow('Hệ số K2:', hang_doi(('', self.o_k2, 1), ('K khác:', self.o_khac, 1), ('Giá cụ thể:', self.o_cu_the, 2)))
@@ -464,7 +474,12 @@ class HopTinhGiaDat(QDialog):
         self.o_tim.textChanged.connect(lambda *_: self._nap_doan(giu=True))
         for cb in (self.cb_doan, self.cb_vi_tri, self.cb_nhom):
             cb.currentIndexChanged.connect(lambda *_: self.tra_gia(False))
-        for cb in (self.cb_dia_ban, self.cb_doan, self.cb_nhom, self.cb_vi_tri, self.cb_ket_cau):
+        self.cb_doan.currentIndexChanged.connect(lambda *_: self._ve_nhan_vi_tri())
+        self.cb_loai_nn.currentIndexChanged.connect(lambda *_: self.tinh())
+        for cb in (self.cb_dia_ban, self.cb_nhom):
+            cb.currentIndexChanged.connect(lambda *_: self._nap_loai_nn())
+        self.cb_vt_dat.currentIndexChanged.connect(lambda *_: self._doi_vt_dat())
+        for cb in (self.cb_dia_ban, self.cb_doan, self.cb_nhom, self.cb_vi_tri, self.cb_ket_cau, self.cb_vt_dat):
             cb.currentIndexChanged.connect(lambda *_: self.tinh())
         for e in (self.o_g, self.o_k2, self.o_khac, self.o_cu_the):
             e.textChanged.connect(lambda *_: self.tinh())
@@ -509,6 +524,11 @@ class HopTinhGiaDat(QDialog):
         nap(self.cb_nhom, [(x['ten'], f'{x["ma"]}|{x["cot_gia"]}') for x in goi['nhom_dat']], self.cb_nhom.currentData())
         nap(self.cb_vi_tri, [(x['ten'], x['ma']) for x in goi['vi_tri']], self.cb_vi_tri.currentData())
         nap(self.cb_ket_cau, [(x['ten'], x['ma']) for x in goi['ket_cau']], self.cb_ket_cau.currentData())
+        muc_vt = g.muc_vi_tri_dat(goi)
+        nap(self.cb_vt_dat, [(x['ten'], x['ma']) for x in muc_vt], self.cb_vt_dat.currentData())
+        self.cb_vt_dat.setVisible(bool(muc_vt))
+        self._nap_loai_nn()
+        self._lb_vt_dat.setVisible(bool(muc_vt))
         self.lb_k2.setText(mau['nhan_k2'])
         self.lb_rieng.setText(mau['nhan_rieng'])
         co_ct = bool((goi.get('chuyen_tiep') or {}).get('bat'))
@@ -625,6 +645,33 @@ class HopTinhGiaDat(QDialog):
             if not dung:
                 c.setChecked(False)
 
+    def _ve_nhan_vi_tri(self) -> None:
+        """Chữ Dòng 2-7 đúng ngưỡng khoảng cách của địa bàn đang chọn."""
+        doan, db = self.doan_hien_tai(), self.cb_dia_ban.currentData() or ''
+        for i, x in enumerate(self.goi['vi_tri']):
+            if i < self.cb_vi_tri.count():
+                self.cb_vi_tri.setItemText(i, g.nhan_vi_tri(x, doan, db, self.goi))
+
+    def _nap_loai_nn(self) -> None:
+        cu = self.cb_loai_nn.currentData()
+        self.cb_loai_nn.blockSignals(True)
+        self.cb_loai_nn.clear()
+        ds = g.loai_nn_can_chon(self.cb_dia_ban.currentData() or '', self.nhom_cot()[1], self.goi)
+        for ma, ten in ds:
+            self.cb_loai_nn.addItem(ten, ma)
+        self.cb_loai_nn.setCurrentIndex(max(0, self.cb_loai_nn.findData(cu)))
+        self.cb_loai_nn.blockSignals(False)
+        self.cb_loai_nn.setVisible(bool(ds))
+
+    def _doi_vt_dat(self) -> None:
+        """Vị trí 2 tính theo giá Dòng 1 của tuyến: khóa Vị trí kết nối ở Dòng 1."""
+        ma = self.cb_vt_dat.currentData()
+        la_vt2 = next((x.get('vi_tri') == 2 for x in g.muc_vi_tri_dat(self.goi) if x['ma'] == ma), False)
+        if la_vt2 and self.cb_vi_tri.count():
+            self.cb_vi_tri.setCurrentIndex(0)
+        self.cb_vi_tri.setEnabled(not la_vt2)
+        self.cb_vi_tri.setToolTip('Vị trí 2 tính theo giá Dòng 1 của tuyến đường.' if la_vt2 else '')
+
     def nhom_cot(self) -> tuple:
         """(nhóm đất QĐ 03, cột bảng giá NQ 28) của mục đang chọn - dữ liệu mục là chuỗi 'nhóm|cột' (tuple không qua được QVariant của Qt5)."""
         return tuple((self.cb_nhom.currentData() or 'DAT_NONG_NGHIEP|nn_cay').split('|'))
@@ -653,7 +700,7 @@ class HopTinhGiaDat(QDialog):
         return g.DauVao(
             dia_ban=self.cb_dia_ban.currentData() or '', nhom_dat=nhom, ma_doan_duong=self.cb_doan.currentData() or '',
             loai_ket_noi_vi_tri=self.cb_vi_tri.currentData() or 'MAT_TIEN_VT1', ket_cau_mat_duong=self.cb_ket_cau.currentData() or 'NHUA_BETONG',
-            don_gia_bang_gia=doc_so(self.o_g.text(), 'Đơn giá bảng giá'), cot_gia=cot,
+            don_gia_bang_gia=doc_so(self.o_g.text(), 'Đơn giá bảng giá'), cot_gia=cot, ma_vi_tri_dat=self.cb_vt_dat.currentData() or '', loai_nn=self.cb_loai_nn.currentData() or '',
             ap_dung_quy_hoach_pl2=self.ck_k2.isChecked(), he_so_quy_hoach_k2=doc_so(self.o_k2.text(), 'Hệ số K2') or D(1),
             yeu_to_pl3=[m for m, c in self.ck_pl3.items() if c.isChecked() and c.isEnabled()],
             he_so_khac=doc_so(self.o_khac.text(), 'Hệ số khác') or D(1),
@@ -853,6 +900,8 @@ class HopTinhGiaDat(QDialog):
                 return 0, 0, []
         gc = g.ghi_chu_ap_gia(self.kq, self.doan, g.ten_ngan(self.cb_dia_ban.currentData() or ''))
         vt = g.mo_ta_vi_tri(self.doan, self.cb_vi_tri.currentData() or '', self.goi)
+        if self.kq.vi_tri_dat:
+            vt = f'{vt} - {self.kq.vi_tri_dat}' if vt else self.kq.vi_tri_dat
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         tien_do = self._hop_tien_do(len({x.ma_ho for x in chon}))
         try:

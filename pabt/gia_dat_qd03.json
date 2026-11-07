@@ -182,7 +182,1380 @@
    "ghi_chu_ct": "giữ giá đất cụ thể đã phê duyệt - khoản 3 Điều 4 QĐ 03",
    "nhan_k2": "Dự án đầu tư có hệ số sử dụng đất (FAR): áp dụng Phụ lục II",
    "nhan_rieng": "Tuyến đã có hệ số riêng cho đường đất, sỏi, \"các tuyến còn lại\" ở Phụ lục I.2 (khóa K3 = 1,00)",
-   "nhan_cu_the": "Trống nếu không có (khoản 3 Điều 4 QĐ 03)"
+   "nhan_cu_the": "Trống nếu không có (khoản 3 Điều 4 QĐ 03)",
+   "buoc_1_vt": "Bước 1a ({can_cu}): {muc}: {gia_goc} × {ty_le}% = {gia_tinh} đ/m²{gioi_han}. Đơn giá gốc để nhân hệ số = {gia} đ/m²."
+  },
+  "vi_tri_dat": {
+   "can_cu": "Điều 5, Điều 6 NQ 28/2025/NQ-HĐND",
+   "muc": [
+    {
+     "ma": "VT1_PV1",
+     "ten": "Vị trí 1 - Phạm vi 1 (đất NN đến mét 100; PNN đến mét 50): 100%",
+     "vi_tri": 1,
+     "nn": "1",
+     "pnn": "1"
+    },
+    {
+     "ma": "VT1_PV2",
+     "ten": "Vị trí 1 - Phạm vi 2 (đất NN trên 100-200 m; PNN trên 50-100 m): 80%",
+     "vi_tri": 1,
+     "nn": "0.8",
+     "pnn": "0.8"
+    },
+    {
+     "ma": "VT1_PV3",
+     "ten": "Vị trí 1 - Phạm vi 3 (đất NN trên 200 m; PNN trên 100 m): 60%",
+     "vi_tri": 1,
+     "nn": "0.6",
+     "pnn": "0.6"
+    },
+    {
+     "ma": "VT2_PV1",
+     "ten": "Vị trí 2, còn lại - Phạm vi 1 (đất NN 30%; PNN đến mét 50: 15%)",
+     "vi_tri": 2,
+     "nn": "0.3",
+     "pnn": "0.15"
+    },
+    {
+     "ma": "VT2_PV2",
+     "ten": "Vị trí 2, còn lại - Phạm vi 2 (đất NN 30%; PNN trên 50 m: 10%)",
+     "vi_tri": 2,
+     "nn": "0.3",
+     "pnn": "0.1"
+    }
+   ],
+   "phu_luc_viii": {
+    "Phường Biên Hòa": {
+     "toi_thieu": {
+      "cln": 350,
+      "hang_nam": 350,
+      "nts": 240,
+      "rung": 240
+     },
+     "toi_da": {
+      "cln": 630,
+      "hang_nam": 630,
+      "nts": 430,
+      "rung": 430
+     }
+    },
+    "Phường Trấn Biên": {
+     "toi_thieu": {
+      "cln": 370,
+      "hang_nam": 370,
+      "nts": 250,
+      "rung": 250
+     },
+     "toi_da": {
+      "cln": 670,
+      "hang_nam": 670,
+      "nts": 450,
+      "rung": 450
+     }
+    },
+    "Phường Tam Hiệp": {
+     "toi_thieu": {
+      "cln": 370,
+      "hang_nam": 370,
+      "nts": 250,
+      "rung": 250
+     },
+     "toi_da": {
+      "cln": 670,
+      "hang_nam": 670,
+      "nts": 450,
+      "rung": 450
+     }
+    },
+    "Phường Long Bình": {
+     "toi_thieu": {
+      "cln": 370,
+      "hang_nam": 370,
+      "nts": 250,
+      "rung": 250
+     },
+     "toi_da": {
+      "cln": 670,
+      "hang_nam": 670,
+      "nts": 450,
+      "rung": 450
+     }
+    },
+    "Phường Trảng Dài": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 80,
+      "rung": 80
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 140,
+      "rung": 140
+     }
+    },
+    "Phường Hố Nai": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 120,
+      "rung": 120
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 220,
+      "rung": 220
+     }
+    },
+    "Phường Long Hưng": {
+     "toi_thieu": {
+      "cln": 350,
+      "hang_nam": 350,
+      "nts": 240,
+      "rung": 240
+     },
+     "toi_da": {
+      "cln": 460,
+      "hang_nam": 460,
+      "nts": 310,
+      "rung": 310
+     }
+    },
+    "Phường Tân Triều": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 80,
+      "rung": 80
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 140,
+      "rung": 140
+     }
+    },
+    "Phường Phước Tân": {
+     "toi_thieu": {
+      "cln": 350,
+      "hang_nam": 350,
+      "nts": 240,
+      "rung": 240
+     },
+     "toi_da": {
+      "cln": 460,
+      "hang_nam": 460,
+      "nts": 310,
+      "rung": 310
+     }
+    },
+    "Phường Tam Phước": {
+     "toi_thieu": {
+      "cln": 350,
+      "hang_nam": 350,
+      "nts": 240,
+      "rung": 240
+     },
+     "toi_da": {
+      "cln": 460,
+      "hang_nam": 460,
+      "nts": 310,
+      "rung": 310
+     }
+    },
+    "Xã Long Thành": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 180,
+      "rung": 180
+     }
+    },
+    "Xã Bình An": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 130,
+      "rung": 130
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 230,
+      "rung": 230
+     }
+    },
+    "Xã An Phước": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 130,
+      "rung": 130
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 230,
+      "rung": 230
+     }
+    },
+    "Xã Long Phước": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 130,
+      "rung": 130
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 230,
+      "rung": 230
+     }
+    },
+    "Xã Phước Thái": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 130,
+      "rung": 130
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 230,
+      "rung": 230
+     }
+    },
+    "Xã Nhơn Trạch": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 180,
+      "rung": 180
+     }
+    },
+    "Xã Đại Phước": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 180,
+      "rung": 180
+     }
+    },
+    "Xã Phước An": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 180,
+      "rung": 180
+     }
+    },
+    "Phường Long Khánh": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 140,
+      "hang_nam": 140,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Phường Bảo Vinh": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 140,
+      "hang_nam": 140,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Phường Xuân Lập": {
+     "toi_thieu": {
+      "cln": 170,
+      "hang_nam": 170,
+      "nts": 150,
+      "rung": 150
+     },
+     "toi_da": {
+      "cln": 240,
+      "hang_nam": 240,
+      "nts": 210,
+      "rung": 210
+     }
+    },
+    "Phường Hàng Gòn": {
+     "toi_thieu": {
+      "cln": 120,
+      "hang_nam": 120,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 170,
+      "hang_nam": 170,
+      "nts": 140,
+      "rung": 140
+     }
+    },
+    "Phường Bình Lộc": {
+     "toi_thieu": {
+      "cln": 110,
+      "hang_nam": 110,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 140,
+      "hang_nam": 140,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Xã Xuân Lộc": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Hòa": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Thành": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Bắc": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Xuân Phú": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Định": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Cẩm Mỹ": {
+     "toi_thieu": {
+      "cln": 110,
+      "hang_nam": 110,
+      "nts": 70,
+      "rung": 70
+     },
+     "toi_da": {
+      "cln": 200,
+      "hang_nam": 200,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Xã Xuân Quế": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Đường": {
+     "toi_thieu": {
+      "cln": 110,
+      "hang_nam": 110,
+      "nts": 70,
+      "rung": 70
+     },
+     "toi_da": {
+      "cln": 200,
+      "hang_nam": 200,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Xã Sông Ray": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Đông": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Trảng Bom": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 115,
+      "rung": 115
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 210,
+      "rung": 210
+     }
+    },
+    "Xã An Viễn": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 120,
+      "rung": 120
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 220,
+      "rung": 220
+     }
+    },
+    "Xã Bàu Hàm": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 160,
+      "rung": 160
+     }
+    },
+    "Xã Bình Minh": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 115,
+      "rung": 115
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 210,
+      "rung": 210
+     }
+    },
+    "Xã Hưng Thịnh": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 160,
+      "rung": 160
+     }
+    },
+    "Xã Dầu Giây": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 160,
+      "rung": 160
+     }
+    },
+    "Xã Gia Kiệm": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 115,
+      "rung": 115
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 210,
+      "rung": 210
+     }
+    },
+    "Xã Thống Nhất": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Định Quán": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Phú Vinh": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã La Ngà": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Phú Hòa": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Thanh Sơn": {
+     "toi_thieu": {
+      "cln": 20,
+      "hang_nam": 20,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Tân Phú": {
+     "toi_thieu": {
+      "cln": 30,
+      "hang_nam": 30,
+      "nts": 25,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 55,
+      "hang_nam": 55,
+      "nts": 50,
+      "rung": 50
+     }
+    },
+    "Xã Tà Lài": {
+     "toi_thieu": {
+      "cln": 25,
+      "hang_nam": 25,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 50,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Nam Cát Tiên": {
+     "toi_thieu": {
+      "cln": 25,
+      "hang_nam": 25,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 50,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Phú Lâm": {
+     "toi_thieu": {
+      "cln": 30,
+      "hang_nam": 30,
+      "nts": 25,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 55,
+      "hang_nam": 55,
+      "nts": 50,
+      "rung": 50
+     }
+    },
+    "Xã Đak Lua": {
+     "toi_thieu": {
+      "cln": 15,
+      "hang_nam": 15,
+      "nts": 15,
+      "rung": 15
+     },
+     "toi_da": {
+      "cln": 30,
+      "hang_nam": 30,
+      "nts": 30,
+      "rung": 30
+     }
+    },
+    "Xã Trị An": {
+     "toi_thieu": {
+      "cln": 35,
+      "hang_nam": 35,
+      "nts": 25,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 60,
+      "nts": 50,
+      "rung": 50
+     }
+    },
+    "Xã Tân An": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 80,
+      "rung": 80
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 140,
+      "rung": 140
+     }
+    },
+    "Xã Phú Lý": {
+     "toi_thieu": {
+      "cln": 35,
+      "hang_nam": 35,
+      "nts": 25,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 60,
+      "nts": 50,
+      "rung": 50
+     }
+    },
+    "Phường Bình Phước": {
+     "toi_thieu": {
+      "cln": 240,
+      "hang_nam": 170,
+      "nts": 25,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 280,
+      "hang_nam": 220,
+      "nts": 130,
+      "rung": null
+     }
+    },
+    "Phường Đồng Xoài": {
+     "toi_thieu": {
+      "cln": 240,
+      "hang_nam": 170,
+      "nts": 25,
+      "rung": 16
+     },
+     "toi_da": {
+      "cln": 280,
+      "hang_nam": 220,
+      "nts": 130,
+      "rung": 39
+     }
+    },
+    "Phường Minh Hưng": {
+     "toi_thieu": {
+      "cln": 152,
+      "hang_nam": 110,
+      "nts": 30,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 250,
+      "hang_nam": 200,
+      "nts": 120,
+      "rung": null
+     }
+    },
+    "Phường Chơn Thành": {
+     "toi_thieu": {
+      "cln": 152,
+      "hang_nam": 110,
+      "nts": 30,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 250,
+      "hang_nam": 200,
+      "nts": 120,
+      "rung": null
+     }
+    },
+    "Xã Nha Bích": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 90,
+      "nts": 30,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 250,
+      "hang_nam": 121,
+      "nts": 72,
+      "rung": null
+     }
+    },
+    "Phường Bình Long": {
+     "toi_thieu": {
+      "cln": 70,
+      "hang_nam": 50,
+      "nts": 20,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 112,
+      "hang_nam": 90,
+      "nts": 63,
+      "rung": null
+     }
+    },
+    "Phường An Lộc": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 90,
+      "nts": 20,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 210,
+      "hang_nam": 168,
+      "nts": 118,
+      "rung": null
+     }
+    },
+    "Phường Phước Bình": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 20,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 140,
+      "hang_nam": 112,
+      "nts": 90,
+      "rung": null
+     }
+    },
+    "Phường Phước Long": {
+     "toi_thieu": {
+      "cln": 120,
+      "hang_nam": 80,
+      "nts": 20,
+      "rung": 15
+     },
+     "toi_da": {
+      "cln": 210,
+      "hang_nam": 168,
+      "nts": 134,
+      "rung": 37
+     }
+    },
+    "Xã Thuận Lợi": {
+     "toi_thieu": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 22
+     },
+     "toi_da": {
+      "cln": 98,
+      "hang_nam": 78,
+      "nts": 63,
+      "rung": 54
+     }
+    },
+    "Xã Tân Lợi": {
+     "toi_thieu": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 20,
+      "rung": 22
+     },
+     "toi_da": {
+      "cln": 110,
+      "hang_nam": 88,
+      "nts": 70,
+      "rung": 54
+     }
+    },
+    "Xã Đồng Tâm": {
+     "toi_thieu": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 20,
+      "rung": 19
+     },
+     "toi_da": {
+      "cln": 113,
+      "hang_nam": 90,
+      "nts": 72,
+      "rung": 47
+     }
+    },
+    "Xã Đồng Phú": {
+     "toi_thieu": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 20,
+      "rung": 22
+     },
+     "toi_da": {
+      "cln": 90,
+      "hang_nam": 72,
+      "nts": 58,
+      "rung": 54
+     }
+    },
+    "Xã Lộc Ninh": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Lộc Thành": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Lộc Hưng": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 56,
+      "nts": 45,
+      "rung": 44
+     }
+    },
+    "Xã Lộc Tấn": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 56,
+      "nts": 45,
+      "rung": 44
+     }
+    },
+    "Xã Lộc Thạnh": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Lộc Quang": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Tân Khai": {
+     "toi_thieu": {
+      "cln": 70,
+      "hang_nam": 50,
+      "nts": 20,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 96,
+      "hang_nam": 77,
+      "nts": 61,
+      "rung": 42
+     }
+    },
+    "Xã Tân Hưng": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": null
+     }
+    },
+    "Xã Tân Quan": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": null
+     }
+    },
+    "Xã Minh Đức": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 15,
+      "rung": 17
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Phước Sơn": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 13,
+      "rung": 10
+     },
+     "toi_da": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 48,
+      "rung": 25
+     }
+    },
+    "Xã Nghĩa Trung": {
+     "toi_thieu": {
+      "cln": 50,
+      "hang_nam": 35,
+      "nts": 15,
+      "rung": 13
+     },
+     "toi_da": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 48,
+      "rung": 32
+     }
+    },
+    "Xã Bù Đăng": {
+     "toi_thieu": {
+      "cln": 48,
+      "hang_nam": 34,
+      "nts": 15,
+      "rung": 13
+     },
+     "toi_da": {
+      "cln": 88,
+      "hang_nam": 70,
+      "nts": 56,
+      "rung": 32
+     }
+    },
+    "Xã Thọ Sơn": {
+     "toi_thieu": {
+      "cln": 48,
+      "hang_nam": 34,
+      "nts": 15,
+      "rung": 13
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 56,
+      "nts": 45,
+      "rung": 32
+     }
+    },
+    "Xã Đắk Nhau": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 13,
+      "rung": 10
+     },
+     "toi_da": {
+      "cln": 65,
+      "hang_nam": 52,
+      "nts": 42,
+      "rung": 25
+     }
+    },
+    "Xã Bom Bo": {
+     "toi_thieu": {
+      "cln": 48,
+      "hang_nam": 34,
+      "nts": 15,
+      "rung": 13
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 56,
+      "nts": 45,
+      "rung": 32
+     }
+    },
+    "Xã Thiện Hưng": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 13,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Tân Tiến": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 13,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Hưng Phước": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 13,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Đắk Ơ": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Phú Nghĩa": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Đa Kia": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 20,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 55,
+      "hang_nam": 44,
+      "nts": 35,
+      "rung": null
+     }
+    },
+    "Xã Bù Gia Mập": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Phú Riềng": {
+     "toi_thieu": {
+      "cln": 48,
+      "hang_nam": 34,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 81,
+      "hang_nam": 65,
+      "nts": 52,
+      "rung": null
+     }
+    },
+    "Xã Phú Trung": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 77,
+      "hang_nam": 62,
+      "nts": 49,
+      "rung": null
+     }
+    },
+    "Xã Long Hà": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 77,
+      "hang_nam": 62,
+      "nts": 49,
+      "rung": null
+     }
+    },
+    "Xã Bình Tân": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 77,
+      "hang_nam": 62,
+      "nts": 49,
+      "rung": null
+     }
+    }
+   }
   }
  },
  "phu_luc_III_yeu_to_anh_huong": {
