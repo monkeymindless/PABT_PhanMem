@@ -74,7 +74,7 @@ class TestBangMau(unittest.TestCase):
         self.assertNotIn('font', chon)                                    # phông chỉ ở mức QTabBar (Qt5 cắt chữ)
         self.assertIn('border-bottom: 3px solid transparent', _quy_tac(qss, 'QTabBar[vai="gach_chan"]::tab'))  # không đổi cao
         tong = _quy_tac(qss, 'QLabel#tong_dinh_danh')
-        for chu in ('background: #FEF3C7', 'border: 1px solid #E5A93A', 'color: #7C4A12', 'Consolas', 'font-weight: 700',
+        for chu in ('background: #FEF3C7', 'border: 1px solid #E5A93A', 'color: #7C4A12', 'Segoe UI', 'font-weight: 700',
                     'border-radius: 5px', 'padding: 2px 10px'):
             self.assertIn(chu, tong)
 

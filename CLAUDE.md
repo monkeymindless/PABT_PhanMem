@@ -210,6 +210,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   màn hình), `mau_theo_tong` / `qmau_theo_tong` (màu trong mô hình bảng / rich text). Không `setStyleSheet` có `#RRGGBB` trực tiếp; số mã
   màu mỗi file có mốc (`tests/test_p1_giao_dien.MOC_MAU`). Không `setStyleSheet` trên KHUNG CHỨA (Qt tính lại cả cây - chậm): QSS chung
   theo property / objectName, hoặc đặt trên widget lá.
+- Phông số trên màn hình: `giao_dien.PHONG_SO` Segoe UI, dự phòng Tahoma (người dùng 07/11/2026: Consolas khó xem - đừng đưa lại); chữ số Segoe UI cùng bề rộng nên cột vẫn thẳng. Ô số dùng `phong_so`, không viết tên phông riêng.
 - Cỡ chữ QSS theo `giao_dien.THANG_CO_CHU` (11-12-13-14-16-18 px). Thẻ số liệu cửa sổ chính cao 62 px - không nới.
 - MỖI LỆNH MỘT CHỖ: menu trái và thanh menu không lặp nhau; nút / chuột phải dùng lại QAction của `self.lenh` (`pabt/lenh.py`, lambda gọi lúc
   bấm), không gọi thẳng hàm (mất trạng thái tắt khi chỉ xem / chưa mở dự án - `LENH_CAN_DU_AN`). `tests/test_khong_trung_lenh.py` chặn.

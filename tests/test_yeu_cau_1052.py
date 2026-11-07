@@ -110,7 +110,7 @@ class TestGiaoDien(unittest.TestCase):
         from pabt import giao_dien
         qss = giao_dien._qss_day_du()
         self.assertIn(f'background: {giao_dien.MAU_LUU[0]}', qss)
-        self.assertIn('QLabel[vai="so_the"] { font-family: "Consolas"', qss)
+        self.assertIn('QLabel[vai="so_the"] { font-family: "Segoe UI"', qss)
 
     def test_the_so_thanh_tien_do_khong_de_chu(self):
         """Ảnh người dùng 02/11/2026: thanh tiến độ đè dòng diện tích ở cỡ chữ 125% - thanh nổi ở đáy, thẻ cao theo nội dung."""

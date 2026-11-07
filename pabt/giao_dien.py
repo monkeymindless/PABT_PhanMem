@@ -429,7 +429,7 @@ def _qss_the_so() -> str:
     QWidget[vai="the_so"] { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #1E3A5F; border-radius: 6px; }
     QWidget[vai="the_so"]:hover { background: #F8FAFC; border-color: #CBD5E1; }
     QWidget[vai="the_so"] QLabel { background: transparent; border: 0; }
-    QLabel[vai="so_the"] { font-family: "Consolas"; font-size: 16px; font-weight: 700; color: #0F172A; }
+    QLabel[vai="so_the"] { font-family: "Segoe UI"; font-size: 16px; font-weight: 700; color: #0F172A; }
     QLabel[vai="nhan_the"] { color: #475569; font-size: 12px; font-weight: 600; }
     QLabel[vai="phu_the"] { color: #64748B; font-size: 11px; font-weight: 700; }
     QLabel[vai="huy_hieu_the"] { background: #F1F5F9; color: #5B6B82; border-radius: 4px; padding: 0 6px; font-size: 11px;
@@ -495,7 +495,7 @@ QSS_THE_GACH_CHAN = '''
 QSS_HO_SO_HO = '''
     QFrame#khung_chu_ho, QFrame#the_chu_ho { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
     QLineEdit#o_ten { font-weight: 700; color: #1E3A5F; }
-    QLineEdit#o_cccd { font-family: Consolas, "Courier New", monospace; letter-spacing: 1px; }
+    QLineEdit#o_cccd { font-family: "Segoe UI", Tahoma; letter-spacing: 1px; }
     QLineEdit#o_cccd[hop_le="0"] { border: 1px solid #C94545; background: #FEF2F2; }
     QLineEdit#o_phap_ly { color: #2F7D54; font-weight: 600; }
     QLabel[the_nho] { border-radius: 9px; padding: 2px 9px; font-size: 11px; font-weight: 600; }
@@ -514,11 +514,11 @@ QSS_LAP_PA_DAI = '''
     QFrame#dai_dinh_danh { background: #F1F5F9; border: 0; border-bottom: 1px solid #E2E8F0; }
     QLabel[vai_dd="nhan"] { color: #64748B; }
     QLabel[vai_dd="ten"] { color: #1E3A5F; font-weight: 700; }
-    QLabel[vai_dd="cccd"] { font-family: Consolas, "Courier New", monospace; font-weight: 600; color: #0F172A; }
+    QLabel[vai_dd="cccd"] { font-family: "Segoe UI", Tahoma; font-weight: 600; color: #0F172A; }
     QLabel[vai_dd="dia_chi"] { color: #0F172A; font-weight: 600; }
     QLabel[vai_dd="dot"] { color: #1F76A6; font-weight: 700; }
     QLabel#tong_dinh_danh { background: #FEF3C7; border: 1px solid #E5A93A; border-radius: 5px; padding: 2px 10px;
-        color: #7C4A12; font-family: Consolas, "Courier New", monospace; font-weight: 700; }
+        color: #7C4A12; font-family: "Segoe UI", Tahoma; font-weight: 700; }
     QFrame#dai_cong_muc { background: #F0FDF4; border: 1px solid #BBF7D0; border-top: 0;
         border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
     QLabel#dem_muc { color: #276348; }
@@ -1290,10 +1290,10 @@ def kieu_o_gia_k(it) -> None:
 
 # --------------------------------------------------------------------- phông số đồng bộ (người dùng 20/10/2026)
 # MỘT nguồn cho mọi ô số tiền / diện tích / khối lượng (danh sách hộ BangHo, BangAo các trang tổng hợp, BangMuc, Khái toán): phông
-# Consolas (chữ số cùng bề rộng - cột thẳng hàng), máy thiếu Consolas -> Segoe UI Semibold; canh phải; số 0 xám nhạt, tiền dương navy,
+# 1.0.77 (người dùng 07/11/2026: Consolas khó xem, số 0 có gạch chéo): Segoe UI (chữ số cùng bề rộng nên cột vẫn thẳng hàng, dấu chấm hẹp, số gọn), máy thiếu -> Tahoma; canh phải; số 0 xám nhạt, tiền dương navy,
 # vượt / cảnh báo đỏ. Phông nhớ theo phông gốc (QFont.key): Phóng to / Thu nhỏ đổi cỡ thì tự dựng lại.
-PHONG_SO = 'Consolas'
-PHONG_SO_DU_PHONG = 'Segoe UI Semibold'
+PHONG_SO = 'Segoe UI'
+PHONG_SO_DU_PHONG = 'Tahoma'
 MAU_SO_KHONG = '#64748B'          # 1.0.42: WCAG AA 4,76:1 trên trắng (trước #94A3B8 = 2,56:1)
 MAU_SO_TIEN = '#1E3A5F'
 MAU_SO_VUOT = '#B83A3A'
@@ -1308,7 +1308,7 @@ _NHO_BUT_SO: dict = {}
 
 
 def phong_so(goc=None, dam: bool = False):
-    """QFont số (Consolas, dự phòng Segoe UI Semibold) cùng cỡ với phông goc (mặc định phông ứng dụng); dam = đậm (thành tiền)."""
+    """QFont số (Segoe UI, dự phòng Tahoma) cùng cỡ với phông goc (mặc định phông ứng dụng); dam = đậm (thành tiền)."""
     goc = QFont(goc) if goc is not None else QApplication.font()
     khoa = (goc.key(), dam)
     f = _NHO_PHONG_SO.get(khoa)
@@ -1318,7 +1318,7 @@ def phong_so(goc=None, dam: bool = False):
             f.setFamilies([PHONG_SO, PHONG_SO_DU_PHONG])
         else:                                           # Qt < 5.13
             f.setFamily(PHONG_SO)
-        f.setStyleHint(QFont.StyleHint.Monospace)
+        f.setStyleHint(QFont.StyleHint.SansSerif)
         f.setBold(dam)
         if len(_NHO_PHONG_SO) > 64:
             _NHO_PHONG_SO.clear()
@@ -1753,7 +1753,7 @@ QSS_THE_KPI_GON_CHUNG = '''
     QFrame#the_kpi_gon:hover { border-color: #CBD5E1; }
     QFrame#the_kpi_gon QLabel { background: transparent; border: 0; }
     QLabel#kpi_ten { color: #475569; font-size: 12px; font-weight: 600; }
-    QLabel#kpi_so { color: ''' + MAU_SO_THE + '''; font-family: "Consolas"; font-size: 16px; font-weight: 700; }
+    QLabel#kpi_so { color: ''' + MAU_SO_THE + '''; font-family: "Segoe UI"; font-size: 16px; font-weight: 700; }
     QLabel#kpi_phu { color: #64748B; font-size: 12px; }'''
 QSS_THE_KPI_GON = 'QFrame#the_kpi_gon {{ border-left-color: {m}; }}'
 MAU_KPI_TONG_QUAN = ('#2563EB', '#059669', '#0D9488', '#D97706')    # 4 thẻ màn hình Tổng quan (man_hinh_tong_quan.MAU_KPI)

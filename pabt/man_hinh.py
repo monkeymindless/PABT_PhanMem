@@ -59,10 +59,10 @@ COT_PHU_GON = {'ma', 'nguon', 'quy_cach', 'can_cu_gia'}
 KHOA_BANG_GON, KHOA_GHIM_DS_HO = 'lap_pa/bang_gon', 'lap_pa/ghim_ds_ho'
 CAO_NUT_DONG = 24                  # nút thao tác dòng (Xóa dòng, Lên, Xuống…) gọn
 THE_MUC = (0, 1, 2, 3, MUC_VN, 4)
-# 20/10/2026 (ảnh mẫu người dùng): bảng mục dòng 36 px, số / tiền phông Consolas canh phải; dải định danh hộ 38 px nền #F1F5F9
+# 20/10/2026 (ảnh mẫu người dùng): bảng mục dòng 36 px, số / tiền phông số chung (giao_dien.PHONG_SO) canh phải; dải định danh hộ 38 px nền #F1F5F9
 CAO_DONG_MUC = 36
 KHE_HANG_NHAP = 6               # px: khoảng cách thêm giữa hàng nhân khẩu / tái định cư và hàng nhập chính sách (mục 4)
-PHONG_SO = 'Consolas'
+PHONG_SO = 'Segoe UI'
 CAO_DAI_DINH_DANH = 38
 # 1.0.51: màn hình thấp (vùng làm việc <= MAN_HINH_THAP điểm - laptop 1366 x 768 @125% còn ~600): dải định danh / lần PA / thanh trên /
 # dải đáy sát lại, khung "Cần xem lại" tối đa 2 dòng - nhường ~90 px cho bảng phương án

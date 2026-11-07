@@ -3089,3 +3089,6 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
 - `kiem_tra_bo_cuc.py`: bỏ báo giả (nút chỉ biểu tượng, nút xóa trong ô nhập, thanh thẻ có nút cuộn: 175 mục còn 1); thoát bằng TerminateProcess vì os._exit vẫn chạy phần hủy DLL của Qt, có lúc sập mã 139 sau khi đã ghi xong.
 - Dọn dẹp thật (`larc_ai_khep_kin.py --don-dep --thuc-thi`): file .pabt / Excel mẫu và thư mục lồng `PABT_PhanMem/` (.git hỏng: `bad object HEAD`) sang `_luu_tru_don_dep/dot_20261107/`. `phan_tich_phien_ban` tìm dự án thật cả trong `03_du_lieu_du_an_mau`.
 - `.gitignore`: thêm `_luu_tru_don_dep/`, `khoa_android/` (khóa ký và mật khẩu, repo có remote công khai).
+
+## 1.0.77 (07/11/2026): phông số Segoe UI
+- Người dùng (ảnh cửa sổ lập phương án): kiểu chữ số tiền khó xem. Bỏ Consolas (chọn 20/10/2026, số 0 gạch chéo, chữ số và dấu chấm cùng rộng làm chuỗi dài): `PHONG_SO` Segoe UI, `PHONG_SO_DU_PHONG` Tahoma, kể cả QSS thẻ KPI, ô CCCD, ô tổng kinh phí. Đã đo: 10 chữ số Segoe UI cùng bề rộng (thường và đậm), chuỗi `14.090.899.000` hẹp hơn Consolas 9-12%.

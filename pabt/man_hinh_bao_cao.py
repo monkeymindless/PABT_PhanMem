@@ -29,7 +29,7 @@ QFrame#the_kpi {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3
 QFrame#the_kpi:hover {{ background: #F8FAFC; border-color: #94A3B8; border-left-color: {m}; }}
 QFrame#the_kpi[dang_loc="1"] {{ background: #EFF6FF; border: 1px solid #1E3A5F; border-left: 3px solid {m}; }}
 QLabel#kpi_tieu_de {{ color: #475569; font-size: 11px; font-weight: 600; background: transparent; border: 0; }}
-QLabel#kpi_so {{ color: #0F172A; font-family: "Consolas"; font-size: 16px; font-weight: 700; background: transparent; border: 0; }}
+QLabel#kpi_so {{ color: #0F172A; font-family: "Segoe UI"; font-size: 16px; font-weight: 700; background: transparent; border: 0; }}
 QLabel#kpi_phu {{ color: #475569; font-size: 11px; background: transparent; border: 0; }}
 QProgressBar {{ background: #E2E8F0; border: 0; border-radius: 2px; }}
 '''

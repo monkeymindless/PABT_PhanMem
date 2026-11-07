@@ -130,7 +130,7 @@ class _MoHinhAo(QAbstractTableModel):
             if c in self.cot_tien and v and (v[0].isdigit() or v[0] == '-'):
                 return _but_so_tien()
             return None
-        if role == _CHU and c in self.can_phai:          # cột số: phông số (Consolas) cùng cỡ phông ứng dụng
+        if role == _CHU and c in self.can_phai:          # cột số: phông số chung (PHONG_SO) cùng cỡ phông ứng dụng
             return phong_so(None, dam=bool(k and k.get('dam')))
         if k is None:
             return None

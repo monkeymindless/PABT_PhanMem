@@ -7,6 +7,9 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.77', '07/11/2026', (
+        'Số tiền, diện tích, khối lượng trên màn hình đổi sang kiểu chữ Segoe UI dễ đọc: số 0 không còn gạch chéo, số gọn hơn, cột vẫn thẳng hàng. Số CCCD và thẻ số liệu dùng cùng kiểu.',
+    )),
     ('1.0.76', '07/11/2026', (
         'Tài khoản máy chủ không có quyền sửa hồ sơ: lưu, bỏ lớp bản đồ và ảnh nền trong dự án báo rõ không có quyền.',
         'Lập phương án mục Đất: nút mũi tên chọn thửa rộng hơn, không bị cắt; nút Thuộc tính máy in, Thiết lập trang đủ chữ.',
