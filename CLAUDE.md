@@ -200,6 +200,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 
 ### Tương thích Python 3.8 + Qt5 (bản Win7 32-bit)
 - Mỗi file `pabt/` có `from __future__ import annotations` (sau docstring), không API Python 3.9+ (`vermin -t=3.8-`). Chạy test cả
+- f-string: biểu thức bên trong không dùng trùng loại dấu nháy với chuỗi ngoài (`f'{ham("x")}'`): trùng là lỗi cú pháp trên Python 3.8, vermin không bắt (`tests/test_toi_1080.TestBienDich`, lượt Qt5).
   `venv38_32`. Enum viết kiểu `Qt.AlignmentFlag.X`; `TextAlignmentRole` trả SỐ NGUYÊN; `QMenu.exec` bí danh bằng lambda (`_qt5_lam_qt6`).
 - Không emoji trong chữ giao diện (Win7 không có phông): biểu tượng `giao_dien.icon_ky_hieu` (Segoe MDL2). Tên file trong bản dựng ASCII.
 - `cai_dat.ps1` / `go_cai_dat.ps1` viết theo PowerShell 2.0, gọi bằng `-Command` + ReadAllText (không `-File`).
@@ -210,6 +211,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   màn hình), `mau_theo_tong` / `qmau_theo_tong` (màu trong mô hình bảng / rich text). Không `setStyleSheet` có `#RRGGBB` trực tiếp; số mã
   màu mỗi file có mốc (`tests/test_p1_giao_dien.MOC_MAU`). Không `setStyleSheet` trên KHUNG CHỨA (Qt tính lại cả cây - chậm): QSS chung
   theo property / objectName, hoặc đặt trên widget lá.
+- Màu viết trong bảng kiểu là màu GỐC (`CHINH_GOC`, không `TOKEN['chinh']` ở cấp module: đã là màu phương án, tông Tối không ánh xạ được - lỗi 1.0.79). Chữ HTML, màu ô bảng: `mau_theo_tong` (`tests/test_toi_1080.py` chặn viết thẳng); nền rgba đặt ở QSS chung + `QSS_TOI`. Toàn bộ test đạt KHÔNG chứng minh màu đúng: đổi màu thì xem ảnh tông Tối.
 - Phông số trên màn hình: `giao_dien.PHONG_SO` Segoe UI, dự phòng Tahoma (người dùng 07/11/2026: Consolas khó xem - đừng đưa lại); chữ số Segoe UI cùng bề rộng nên cột vẫn thẳng. Ô số dùng `phong_so`, không viết tên phông riêng.
 - Cỡ chữ QSS theo `giao_dien.THANG_CO_CHU` (11-12-13-14-16-18 px). Thẻ số liệu cửa sổ chính cao 62 px - không nới.
 - MỖI LỆNH MỘT CHỖ: menu trái và thanh menu không lặp nhau; nút / chuột phải dùng lại QAction của `self.lenh` (`pabt/lenh.py`, lambda gọi lúc

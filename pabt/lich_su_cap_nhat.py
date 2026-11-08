@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.80', '07/11/2026', (
+        'Bảng tính giá đất: khi chọn Vị trí, Phạm vi, màn hình và Ghi chú dòng đất hiện đủ phép tính, ví dụ 230.000 × 30% = 69.000 đ/m², vượt giá tối đa của Xã Phú Lý nên lấy 60.000 đ/m² (Phụ lục VIII). Cách tính không đổi.',
+        'Tông Tối: sửa lỗi của 1.0.79 làm các nhãn (Hộ, Thửa, Họ và tên, Tên dự án...) tối mờ khó đọc.',
+        'Tông Tối: thẻ số liệu Theo dõi tiến độ, nút Đóng, nút thu phóng bản đồ, dòng nhóm hồ sơ pháp lý, bảng thống kê không còn nền sáng; cột STT, trạng thái, hệ số K, giá x K và các dòng cảnh báo đọc rõ.',
+        'Đổi phương án màu Navy: nhãn và tiêu đề đổi màu đồng bộ ngay.',
+    )),
     ('1.0.79', '07/11/2026', (
         'Bảng tính giá đất: thêm ô Vị trí, phạm vi theo Điều 5, Điều 6 Nghị quyết 28: Vị trí 1 Phạm vi 1 (100%), Phạm vi 2 (80%), Phạm vi 3 (60%); Vị trí 2 (đất nông nghiệp 30%, đất phi nông nghiệp 15% hoặc 10%), có áp giá tối thiểu, tối đa theo Phụ lục VIII và ghi căn cứ vào giải trình.',
         'Bảng tính giá đất: nhãn Vị trí kết nối ghi đúng ngưỡng mét của địa bàn đang chọn (phường 600 m, 400 m; xã 1.000 m, 500 m).',

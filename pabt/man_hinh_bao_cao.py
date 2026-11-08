@@ -61,7 +61,7 @@ class _TheKPI(QFrame):
     def __init__(self, tieu_de: str, mau: str, goi_y: str = '', parent=None):
         super().__init__(parent)
         self.setObjectName('the_kpi')
-        self.setStyleSheet(_QSS_THE.format(m=mau))
+        dat_kieu_theo_tong(self, _QSS_THE.format(m=mau))     # 1.0.80: thẻ nền trắng trên tông Tối
         self.setProperty('dang_loc', '0')
         self.setFixedHeight(CAO_THE_KPI)
         self.setCursor(Qt.CursorShape.PointingHandCursor)

@@ -164,6 +164,7 @@ class KetQua:
     nguon_k1: str = ''                               # '' (gói) | văn bản của bảng hệ số K đã nhập
     gia_truoc_vi_tri: Decimal | None = None          # 1.0.79: giá dòng bảng giá trước tỷ lệ vị trí / phạm vi (None: không áp)
     vi_tri_dat: str = ''                             # tên mục vị trí / phạm vi đã áp
+    dien_giai_vi_tri: str = ''                       # 1.0.80: '230.000 × 30% = 69.000 đ/m², vượt giá tối đa... nên lấy 60.000': hiện trên màn hình, ghi vào Ghi chú
 
 
 def _q(x, so_le: int) -> Decimal:
@@ -255,7 +256,7 @@ def _ap_vi_tri_dat(goi: dict, v: DauVao, g: Decimal, doan, nhom, cau, canh_bao: 
     muc = next((x for x in muc_vi_tri_dat(goi) if x['ma'] == v.ma_vi_tri_dat), None)
     la_nn = bool(nhom['la_nong_nghiep']) if nhom else False
     if muc is None or D(muc['nn' if la_nn else 'pnn']) == 1 or nhom is None:
-        return g, None, ''
+        return g, None, '', ''
     ty = D(muc['nn' if la_nn else 'pnn'])
     tinh = lam_tron(g * ty, 0)
     moi, ghi = tinh, ''
@@ -267,18 +268,19 @@ def _ap_vi_tri_dat(goi: dict, v: DauVao, g: Decimal, doan, nhom, cau, canh_bao: 
         if not v.loai_nn and loai_nn_can_chon(v.dia_ban, cot, goi):
             canh_bao.append('Xã này có trần, sàn khác nhau giữa hai loại đất cùng cột giá: đang tính theo loại đầu, cần chọn đúng loại đất.')
         if muc.get('vi_tri') == 2 and tran is not None and moi > tran:
-            moi, ghi = tran, f', vượt giá tối đa nên lấy {vn(tran)} đ/m² (Phụ lục VIII)'
+            moi, ghi = tran, f', vượt giá tối đa của {v.dia_ban} nên lấy {vn(tran)} đ/m² (Phụ lục VIII)'
         elif san is not None and moi < san:
-            moi, ghi = san, f', thấp hơn giá tối thiểu nên lấy {vn(san)} đ/m² (Phụ lục VIII)'
+            moi, ghi = san, f', thấp hơn giá tối thiểu của {v.dia_ban} nên lấy {vn(san)} đ/m² (Phụ lục VIII)'
     else:
         san = gia_bang_gia(v.dia_ban, doan, 'DAT_NONG_NGHIEP', v.loai_ket_noi_vi_tri, 'nn_cay', goi)
         if san is None:
             canh_bao.append('Không tra được giá đất trồng cây lâu năm của cùng tuyến đường: chưa áp mức sàn, cần đối chiếu tay.')
         elif moi < san:
             moi, ghi = san, f', thấp hơn giá đất trồng cây lâu năm vị trí 1, phạm vi 1 của tuyến nên lấy {vn(san)} đ/m²'
+    ty_le = format((ty * 100).normalize(), 'f').replace('.', ',')
     lap_luan.append(cau('buoc_1_vt', can_cu=(goi.get('vi_tri_dat') or {}).get('can_cu', ''), muc=muc['ten'], gia_goc=vn(g),
-                        ty_le=format((ty * 100).normalize(), 'f').replace('.', ','), gia_tinh=vn(tinh), gioi_han=ghi, gia=vn(moi)))
-    return moi, g, muc['ten']
+                        ty_le=ty_le, gia_tinh=vn(tinh), gioi_han=ghi, gia=vn(moi)))
+    return moi, g, muc['ten'], cau('vt_ngan', gia_goc=vn(g), ty_le=ty_le, gia_tinh=vn(tinh), gioi_han=ghi)
 
 
 def nhan_vi_tri(x: dict, doan: dict | None, dia_ban: str = '', goi=None) -> str:
@@ -329,7 +331,7 @@ def tinh_don_gia(v: DauVao, doan: dict | None = None, goi: dict | None = None) -
 
     # Bước 2: K1
     nhom = nhom_cua(goi, v.nhom_dat, v.cot_gia)
-    g, gia_truoc, ten_vt = _ap_vi_tri_dat(goi, v, g, doan, nhom, cau, canh_bao, lap_luan)
+    g, gia_truoc, ten_vt, dien_giai_vt = _ap_vi_tri_dat(goi, v, g, doan, nhom, cau, canh_bao, lap_luan)
     k1 = D(v.he_so_k1) if v.he_so_k1 is not None and D(v.he_so_k1) != 0 else MOT
     nguon_k1 = ''
     if doan:
@@ -416,7 +418,7 @@ def tinh_don_gia(v: DauVao, doan: dict | None = None, goi: dict | None = None) -
     nhan = {'K_KHAC': 'K_khác'}
     cong_thuc = vn(g) + ''.join(f' × {he_hien(gia_tri.get(m, MOT))} ({nhan.get(m, m)})' for m in ct['he_so'] if not (m == 'K_KHAC' and k_khac == 1)) + f' = {vn(da_tron)} đ/m²'
     kq = KetQua(g, k1, k2, k3, k_khac, tong, chua_tron, da_tron, cuoi, chuyen_tiep, cong_thuc, canh_bao, lap_luan, goi.get('ma', ''), f'{bang_gia} × {so_hieu}', mau.get('ghi_chu_ct') or mau_goc['ghi_chu_ct'], them, nguon_k1)
-    kq.gia_truoc_vi_tri, kq.vi_tri_dat = gia_truoc, ten_vt
+    kq.gia_truoc_vi_tri, kq.vi_tri_dat, kq.dien_giai_vi_tri = gia_truoc, ten_vt, dien_giai_vt
     return kq
 
 
@@ -439,5 +441,5 @@ def ghi_chu_ap_gia(kq: KetQua, doan: dict | None = None, dia_ban: str = '') -> s
     """Câu căn cứ ghi vào ô Ghi chú của dòng đất khi áp đơn giá: nêu rõ văn bản đã dùng, để có gói mới vẫn biết số này tính theo gì."""
     d = f'{dia_ban}, ' if dia_ban else ''
     t = f'{doan["ten_duong"]} ({doan["diem_dau"]} - {doan["diem_cuoi"]}), ' if doan else ''
-    vt = f'{kq.vi_tri_dat}; ' if kq.vi_tri_dat else ''
+    vt = f'{kq.vi_tri_dat}: {kq.dien_giai_vi_tri}; ' if kq.vi_tri_dat else ''
     return f'Đơn giá đất theo {kq.can_cu_ngan}: {d}{t}{vt}{kq.cong_thuc}' + (f' ({kq.ghi_chu_ct})' if kq.ap_dung_chuyen_tiep else '')

@@ -160,7 +160,7 @@ class HopCayChuVi(_Hop):
             self.bao('Chọn loại cây và nhập ít nhất một chu vi hợp lệ.')
             return
         if loi and not self.im_lang and QMessageBox.question(
-                self, TIEU_DE, self.lb.text().replace('<span style="color:#B83A3A">', '').replace('</span>', '') +
+                self, TIEU_DE, re.sub(r'</?span[^>]*>', '', self.lb.text()) +
                 '\n\nVẫn thêm các cây còn lại?') != QMessageBox.StandardButton.Yes:
             return
         self.dong_moi = self.them()
@@ -472,7 +472,7 @@ class HopMatDoNhieuCay(_Hop):
             return None
         kq = phan_bo_nhom(self.nhom, dt, hs)
         self.bang.blockSignals(True)
-        do, xanh = QColor('#B83A3A'), QColor('#2E7D32')
+        do, xanh = QColor(mau_theo_tong('#B83A3A', 'chu')), QColor(mau_theo_tong('#2E7D32', 'chu'))
         for r, k in enumerate(self.thu_tu):
             g = self.nhom[k]
             x = g.dong
@@ -497,14 +497,14 @@ class HopMatDoNhieuCay(_Hop):
             ('Diện tích trồng', f'{so_vn(dt)} m²; đã dùng <b>{so_vn((dt - kq["dt_con"]).quantize(D("0.01")))} m²</b>, còn '
                                 f'{so_vn(kq["dt_con"].quantize(D("0.01")))} m²'),
             ('Trong mật độ', f'<b>{trong} cây</b> (tỷ lệ của từng dòng) - giá trị cây trồng chính {vn(kq["gia_tri_chinh"])} đ'),
-            ('Vượt mật độ', (f'<span style="color:#B83A3A"><b>{ngoai} cây</b></span> - dòng riêng, tỷ lệ {so_vn(tl * 100)}%')
-             if ngoai else '<span style="color:#2E7D32"><b>Không có cây vượt mật độ</b></span>'),
+            ('Vượt mật độ', (f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}"><b>{ngoai} cây</b></span> - dòng riêng, tỷ lệ {so_vn(tl * 100)}%')
+             if ngoai else f'<span style="color:{mau_theo_tong("#2E7D32", "chu")}"><b>Không có cây vượt mật độ</b></span>'),
         ]
         if xen:
             vuot_xen = sum(x.ngoai for x in xen)
             dong.append(('Cây trồng xen', f'tối đa {so_vn(hs)} × {vn(kq["gia_tri_chinh"])} = <b>{vn(kq["toi_da_xen"])} đ</b>; '
                          f'được tính {sum(x.trong for x in xen)} cây = {vn(ct.gia_tri_cay(xen))} đ' +
-                         (f'; <span style="color:#B83A3A"><b>vượt {vuot_xen} cây</b></span> (không bồi thường)' if vuot_xen else '')))
+                         (f'; <span style="color:{mau_theo_tong("#B83A3A", "chu")}"><b>vượt {vuot_xen} cây</b></span> (không bồi thường)' if vuot_xen else '')))
         if khong:
             dong.append(('Chưa có mật độ', ', '.join(khong) + ' - không tính, giữ nguyên số cây (nhập mật độ hoặc đánh dấu cây xen)'))
         if not self.nhom:
@@ -613,7 +613,7 @@ class HopMatDo(_Hop):
             ('Số cây kiểm đếm', f'{so} cây → cần diện tích <b>{so_vn(p["dt_can"])} m²</b> theo mật độ'),
             ('Đối chiếu', (f'<span style="color:{do}"><b>VƯỢT mật độ {ngoai} cây</b> '
                            f'(thiếu {so_vn(p["dt_thieu"])} m² diện tích trồng)</span>') if ngoai else
-                          '<span style="color:#2E7D32"><b>Không vượt mật độ</b></span>'),
+                          f'<span style="color:{mau_theo_tong("#2E7D32", "chu")}"><b>Không vượt mật độ</b></span>'),
             ('Bồi thường', f'<b>Đảm bảo mật độ {trong} cây</b> (100%)' +
                            (f'; <b>vượt mật độ {ngoai} cây</b> ({so_vn(tl * 100)}%)' if ngoai else '')),
         ]
@@ -797,7 +797,7 @@ class HopDienTichXayDung(_Hop):
                     if c in (1, 3, 5, 6):
                         it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                     if c == 7 and x['vuot'] > 0:
-                        it.setForeground(QColor('#B8433A'))
+                        it.setForeground(QColor(mau_theo_tong('#B8433A', 'chu')))
                         f = it.font()
                         f.setBold(True)
                         it.setFont(f)
@@ -806,8 +806,8 @@ class HopDienTichXayDung(_Hop):
         finally:
             self._dang_ve = False
         vuot = kq['vuot']
-        ket = (f'<span style="color:#B8433A"><b>VƯỢT {so_vn(vuot)} m²</b> so với diện tích thu hồi</span>' if vuot > 0 else
-               '<span style="color:#2F7A4F"><b>Không vượt</b> diện tích thu hồi</span>')
+        ket = (f'<span style="color:{mau_theo_tong("#B8433A", "chu")}"><b>VƯỢT {so_vn(vuot)} m²</b> so với diện tích thu hồi</span>' if vuot > 0 else
+               f'<span style="color:{mau_theo_tong("#2F7A4F", "chu")}"><b>Không vượt</b> diện tích thu hồi</span>')
         self.lb.setText(f'Tổng diện tích thu hồi của hộ: <b>{so_vn(kq["thu_hoi"])} m²</b> &nbsp;·&nbsp; '
                         f'Tổng diện tích tài sản xây dựng đã lập: <b>{so_vn(kq["tong"])} m²</b> &nbsp;→&nbsp; {ket}')
         lt = kq['loai_tru']

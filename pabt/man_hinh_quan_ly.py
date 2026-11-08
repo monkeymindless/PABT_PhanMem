@@ -17,7 +17,7 @@ from . import csdl, du_thao, kiem_loi, quan_ly, thoi_han
 from .lap_pa import LoiNhap
 from .tien import D, vn
 from .giao_dien import TOKEN, KieuNut, XepDong, ap_kieu_nut, cac_dong_da_chon, con_tro_cho, dat_trang_thai
-from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
+from .giao_dien import mau_o_theo_tong, mau_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Quản lý hồ sơ trình phương án'
@@ -476,7 +476,7 @@ class HopDotTrinh(_Hop):
             muc = 'dat' if dat == len(self.kiem) else 'loi' if any(ok is False for ok, _ in self.kiem) else 'canh_bao'
             xem = [chu for ok, chu in self.kiem if ok is not True]
             # 1.0.03: huy hiệu màu theo từng loại (Đạt / Xem lại / Thiếu) - đủ từng điều kiện ở chú thích
-            huy = ''.join(f'&nbsp;<span style="background-color:{nen}; color:{chu_mau}; font-weight:600">&nbsp;{ten[ok]} {n}&nbsp;</span>'
+            huy = ''.join(f'&nbsp;<span style="background-color:{mau_theo_tong(nen, "nen")}; color:{mau_theo_tong(chu_mau, "chu")}; font-weight:600">&nbsp;{ten[ok]} {n}&nbsp;</span>'
                           for ok, (nen, chu_mau) in HUY_HIEU_KIEM.items()
                           for n in [sum(1 for x, _ in self.kiem if x is ok)] if n)
             dat_trang_thai(self.lb_kiem, muc, f'Hồ sơ Bước 8: <b>đạt {dat}/{len(self.kiem)}</b> điều kiện&nbsp;{huy}'

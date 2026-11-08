@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
                                QStyledItemDelegate, QStyleOptionViewItem, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import ho_so
-from .giao_dien import MAU_CANH_BAO_CHU, MAU_CANH_BAO_NEN, ChonXoXuong
+from .giao_dien import MAU_CANH_BAO_CHU, MAU_CANH_BAO_NEN, ChonXoXuong, mau_theo_tong
 from .lap_pa import LoiNhap
 from .tien import so_vn
 from .thong_bao import TEN_UD
@@ -894,7 +894,7 @@ class KhungHoSo(QWidget):
                     con = ng - th_cua[(self._chu(r, 'so_to'), self._chu(r, 'so_thua'))]
                     chu = so_vn(con)
                     tip = 'DT nguyên thửa - tổng DT thu hồi các dòng cùng tờ / thửa'
-                    mau = QColor(MAU_CANH_BAO_CHU) if con < 0 else None       # 20/10/2026: cảnh báo = hổ phách (một màu)
+                    mau = QColor(mau_theo_tong(MAU_CANH_BAO_CHU, 'chu')) if con < 0 else None       # 20/10/2026: cảnh báo = hổ phách (một màu)
                     if con < 0:
                         tip = 'DT thu hồi lớn hơn DT nguyên thửa - kiểm tra lại số liệu.'
                 # chỉ đặt khi đổi: mỗi lần đặt phát dataChanged -> hẹn tính lại tóm tắt (đặt mãi thì vòng lặp khi rảnh)
@@ -907,7 +907,7 @@ class KhungHoSo(QWidget):
                     it.setData(Qt.ItemDataRole.UserRole + 1, do)
                     if do:
                         it.setForeground(mau)
-                        it.setBackground(QColor(MAU_CANH_BAO_NEN))
+                        it.setBackground(QColor(mau_theo_tong(MAU_CANH_BAO_NEN, 'nen')))
                     else:
                         it.setData(Qt.ItemDataRole.ForegroundRole, None)
                         it.setData(Qt.ItemDataRole.BackgroundRole, None)
@@ -938,7 +938,7 @@ class KhungHoSo(QWidget):
             t = QLabel(f'{ten}: {so_vn(dt)} m² ({n} thửa)')
             nen, mau = mau_loai_dat(ma) if ma else MAU_LOAI_KHAC
             t.setProperty('the_nho', 'loai')
-            t.setStyleSheet(f'background: {nen}; color: {mau};')      # màu theo nhóm - nhãn lá, không phải khung chứa
+            t.setStyleSheet(f'background: {mau_theo_tong(nen, "nen")}; color: {mau_theo_tong(mau, "chu")};')      # màu theo nhóm - nhãn lá, không phải khung chứa
             self.khoi_the_loai.addWidget(t)
             self.the_loai.append(t)
 

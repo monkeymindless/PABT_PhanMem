@@ -36,6 +36,7 @@ CAI_DAT_DU_AN = 'GOI_GIA_DAT'
 CAU_CHU = (
     ('buoc_1', 'Bước 1: giá bảng giá. Ô: {dia_ban} {vi_tri} {gia}'),
     ('buoc_1_vt', 'Bước 1a: tỷ lệ Vị trí, Phạm vi, trần sàn'),
+    ('vt_ngan', 'Dòng phép tính Vị trí, Phạm vi trên màn hình và Ghi chú'),
     ('buoc_2_doan', 'Bước 2: K1 theo đoạn đường. Ô: {phu_luc} {ten_duong} {diem_dau} {diem_cuoi} {nhom} {k1}'),
     ('buoc_2_tay', 'Bước 2: K1 nhập tay. Ô: {k1}'),
     ('k2_co', 'Bước 3: có K2. Ô: {k2}'),

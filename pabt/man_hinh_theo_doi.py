@@ -1726,7 +1726,7 @@ class KhungTienDo(_Khung):
         du = sum(1 for x in co_qd if self.moc.get(x.ma_ho, {}).get('du'))
         ngay = thoi_han.ngay_thong_bao(self.con)
         tb = f'thông báo thu hồi đất {thoi_han.hien_ngay(ngay)}' if ngay else \
-            '<span style="color:#A12A1F;">chưa nhập ngày thông báo</span>'
+            f'<span style="color:{mau_theo_tong("#A12A1F", "chu")};">chưa nhập ngày thông báo</span>'
         # một dòng (vừa màn hình 1366): chữ đầy đủ ở chú thích
         self.lb_moc.setText(f'<b>Mốc pháp lý:</b> {tb} · đất NN ≥ {n["thu_hoi_nn"]} ngày, PNN ≥ {n["thu_hoi_pnn"]} ngày · vận động '
                             f'{n["van_dong"]} ngày · đủ mốc <b>{du}/{len(co_qd)}</b> hộ')
@@ -2482,7 +2482,7 @@ class KhungSoVanDong(QFrame):
                 kq = van_dong.TEN_KET_QUA.get(b['ket_qua'], b['ket_qua'])
                 mau = '#B83A3A' if b['ket_qua'] == 'chua_dong_y' else '#1E3A5F'
                 ds.append(f'<div style="margin-bottom:6px;"><span style="color:{mau};"><b>● Buổi {i}: '
-                          f'{van_dong.VIEC.get(b["viec"], b["viec"])}</b></span> <span style="color:#64748B;">{b["ngay"]}</span><br>'
+                          f'{van_dong.VIEC.get(b["viec"], b["viec"])}</b></span> <span style="color:{mau_theo_tong("#64748B", "chu")};">{b["ngay"]}</span><br>'
                           + (f'• Hình thức: {b["hinh_thuc"]}<br>' if b['hinh_thuc'] else '')
                           + (f'• Thành phần: {b["thanh_phan"]}<br>' if b['thanh_phan'] else '')
                           + (f'• Nội dung: {b["noi_dung"]}<br>' if b['noi_dung'] else '')
@@ -2801,7 +2801,7 @@ class HopHoTheoDoi(_Hop):
         nhan = sum((_so(q['chi_tra_so_tien']) or _so(q['so_tien']) for q in self.ds if q['da_chi_tra']), KHONG)
         t = f'{len(self.ds)} quyết định · tổng phê duyệt <b>{vn(tong)} đ</b> · đã nhận {vn(nhan)} đ'
         if self.tong_pa is not None and self.ds and tong != D(self.tong_pa):
-            t += f' · <span style="color:#A12A1F">khác tổng phương án hiện tại {vn(self.tong_pa)} đ</span>'
+            t += f' · <span style="color:{mau_theo_tong("#A12A1F", "chu")}">khác tổng phương án hiện tại {vn(self.tong_pa)} đ</span>'
         self.lb_tong.setText(t if self.ds else 'Hộ chưa có quyết định phê duyệt nào.')
         for k in ('Sửa…', 'Bỏ khỏi quyết định'):
             self.nut[k].setEnabled(bool(self.ds))

@@ -1289,7 +1289,7 @@ class BangMuc(QWidget):
                 if k in COT_CONG_THUC and o.get('cong_thuc'):
                     it.setData(Qt.ItemDataRole.UserRole, o['cong_thuc'])          # sửa ô: hiện lại công thức
                     it.setToolTip(f'Công thức: {o["cong_thuc"]} = {o[k]}')
-                    it.setForeground(QBrush(QColor('#1F5FA0')))
+                    it.setForeground(QBrush(QColor(mau_theo_tong('#1F5FA0', 'chu'))))
                 if self.muc == 1 and k == 'dien_tich':      # 20/10/2026: vượt DT thu hồi / nguyên thửa - nhắc, không chặn
                     cb = bo.canh_bao_dien_tich(r)
                     if cb:
@@ -4129,7 +4129,7 @@ class HopIn(QDialog):
                 if c == 1:
                     it.setToolTip(' · '.join(x for x in (v, in_an.LAP[lap], f'Đợt {h["dot"]}' if h.get('dot') else '', dia_chi) if x))
                     if lap != 'da_lap':
-                        it.setForeground(QColor(mau_lap[lap]))
+                        it.setForeground(QColor(mau_theo_tong(mau_lap[lap], 'chu')))
                 if c == 3:
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang_ho.setItem(i, c, it)

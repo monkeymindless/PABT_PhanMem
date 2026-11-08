@@ -9,12 +9,12 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialo
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from . import kiem_toan
-from .giao_dien import TOKEN, con_tro_cho, dat_trang_thai, loc_khi_ngung_go, nap_o_chon
+from .giao_dien import CHINH_GOC, con_tro_cho, dat_trang_thai, loc_khi_ngung_go, mau_theo_tong, nap_o_chon
 from .thong_bao import TEN_UD, chu_loi
 
 COT = ['Thời gian', 'Người sửa', 'Máy', 'Thao tác', 'Mã hộ', 'Đối tượng', 'Trường', 'Giá trị cũ', 'Giá trị mới', 'Ghi chú']
 KY = [('Tất cả', None), ('Hôm nay', 0), ('7 ngày gần đây', 7), ('30 ngày gần đây', 30), ('Năm nay', 'nam')]
-MAU_HANH_DONG = {'them': '#1B5E20', 'sua': TOKEN['chinh'], 'xoa': '#B3261E'}
+MAU_HANH_DONG = {'them': '#1B5E20', 'sua': CHINH_GOC[0], 'xoa': '#B3261E'}
 
 
 class HopKiemToan(QDialog):
@@ -111,7 +111,7 @@ class HopKiemToan(QDialog):
             for c, v in enumerate(gt):
                 it = QTableWidgetItem('' if v is None else str(v))
                 if c == 3:
-                    it.setForeground(QColor(MAU_HANH_DONG.get(d['hanh_dong'], '#202124')))
+                    it.setForeground(QColor(mau_theo_tong(MAU_HANH_DONG.get(d['hanh_dong'], '#202124'), 'chu')))
                 if c in (7, 8) and v is not None and len(str(v)) > 30:
                     it.setToolTip(str(v))
                 self.bang.setItem(i, c, it)

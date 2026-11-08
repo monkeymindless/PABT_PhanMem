@@ -752,7 +752,8 @@ class HopTinhGiaDat(QDialog):
                                 + (f' · K1 theo bảng đã nhập ({k.nguon_k1})' if k.nguon_k1 else '')
                                 + (f' · giá cụ thể {vn(D(v.gia_dat_cu_the))} đ/m²' + (' (đang dùng)' if k.ap_dung_chuyen_tiep else ' (thấp hơn, không dùng)') if cu_the else ''))
         self.lb_gia.setToolTip('\n'.join(k.buoc_lap_luan))
-        self.lb_ct.setText('Công thức: ' + k.cong_thuc)
+        # 1.0.80: thấy ngay vì sao giá gốc khác giá dòng đường (Vị trí 2: 230.000 × 30% = 69.000, vượt tối đa xã nên lấy 60.000), không phải mở nhật ký giải trình
+        self.lb_ct.setText((f'Vị trí: {k.dien_giai_vi_tri}\n' if k.dien_giai_vi_tri else '') + 'Công thức: ' + k.cong_thuc)
         self.lb_canh_bao.setText('\n'.join('! ' + c for c in gg.canh_bao_goi(self.goi, self.xa_du_an) + k.canh_bao))
         self.o_giai_trinh.setPlainText('\n'.join(k.buoc_lap_luan))
         self._ve_gia_moi()

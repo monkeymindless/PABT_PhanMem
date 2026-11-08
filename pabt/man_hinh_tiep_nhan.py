@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
                                QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from . import tiep_nhan_phap_ly as tn
-from .giao_dien import chu_hien
+from .giao_dien import chu_hien, mau_theo_tong
 from .thong_bao import TEN_UD, chu_loi
 
 TEN_THE = ('1. Quy định thu hồi, chủ đầu tư, thời hạn', '2. Hồ sơ pháp lý (32 mục)', '3. Kỹ thuật địa chính',
@@ -261,15 +261,15 @@ class HopTiepNhanPhapLy(QDialog):
                     f.setBold(True)
                     it.setFont(f)
                     it.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-                    it.setBackground(QBrush(QColor('#EFF6FF')))
+                    it.setBackground(QBrush(QColor(mau_theo_tong('#EFF6FF', 'nen'))))
                     b.setItem(r, 0, QTableWidgetItem(''))
                     b.item(r, 0).setFlags(Qt.ItemFlag.ItemIsEnabled)
-                    b.item(r, 0).setBackground(QBrush(QColor('#EFF6FF')))
+                    b.item(r, 0).setBackground(QBrush(QColor(mau_theo_tong('#EFF6FF', 'nen'))))
                     b.setItem(r, C_ND, it)
                     for c in (C_AD, C_GC):
                         x = QTableWidgetItem('')
                         x.setFlags(Qt.ItemFlag.ItemIsEnabled)
-                        x.setBackground(QBrush(QColor('#EFF6FF')))
+                        x.setBackground(QBrush(QColor(mau_theo_tong('#EFF6FF', 'nen'))))
                         b.setItem(r, c, x)
                     continue
                 co = QTableWidgetItem('')
@@ -302,7 +302,7 @@ class HopTiepNhanPhapLy(QDialog):
                     continue
                 ad = tn.ap_dung(m, d)
                 b.item(r, C_AD).setText('Có' if ad else 'Không')
-                mau = QColor('#0F172A') if ad else QColor('#94A3B8')
+                mau = QColor(mau_theo_tong('#0F172A', 'chu')) if ad else QColor('#94A3B8')
                 for c in (C_ND, C_AD):
                     b.item(r, c).setForeground(QBrush(mau))
         finally:
@@ -338,7 +338,7 @@ class HopTiepNhanPhapLy(QDialog):
         if th['thoi_han']:
             mau = dict(loi='#B83A3A', canh_bao='#9A5A12', tin='#1F6F66')
             dong += ['', '<b>Thời hạn chủ trương / Nghị quyết HĐND:</b>'] + \
-                [f'<span style="color:{mau[m]}">• {x}</span>' for m, x in th['thoi_han']]
+                [f'<span style="color:{mau_theo_tong(mau[m], "chu")}">• {x}</span>' for m, x in th['thoi_han']]
         self.lb_phan_tich.setText('<br>'.join(dong))
         for ds, muc in ((self.ds_co, th['da_co']), (self.ds_thieu, th['con_thieu'])):
             ds.clear()

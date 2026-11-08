@@ -645,6 +645,7 @@ class BangHo(QAbstractTableModel):
         return None
 
     def _but(self, mau: str):
+        mau = mau_theo_tong(mau, 'chu')                  # 1.0.80: theo tông; nhớ theo màu đã đổi nên đổi tông không giữ bút cũ
         b = self._nho_but.get(mau) if hasattr(self, '_nho_but') else None
         if b is None:
             self._nho_but = getattr(self, '_nho_but', {})
@@ -4285,7 +4286,7 @@ class CuaSoChinh(QMainWindow):
             self.nut_tk.setText('● Máy đơn · Máy chủ LAN')
             self.nut_tk.setToolTip('Không dùng máy chủ trong mạng nội bộ. Bấm để thiết lập (không bắt buộc).')
             mau = '#5F6368'
-        self.nut_tk.setStyleSheet(f'QToolButton {{ color: {mau}; font-weight: 600; }}')
+        dat_kieu_theo_tong(self.nut_tk, f'QToolButton {{ color: {mau}; font-weight: 600; }}')
         self.dat_tieu_de()
 
     def _menu_tai_khoan(self):

@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QCheckBox, QComb
 from . import du_thao
 from .giao_dien import VAI_PHU_TEN, OTenHaiTang, cao_ten_hai_tang  # noqa: E402
 from .ho_so import dong_duoi_ten, tach_ho_ten  # noqa: E402
-from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
+from .giao_dien import dat_kieu_theo_tong, mau_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 from .thong_bao import TEN_UD, chu_loi
 from .tien import vn
 
@@ -927,7 +927,7 @@ class KhungDuThao(QWidget):
                 self.bang_yk.setItem(i, c, _o(v))
             self.bang_yk.item(i, 0).setData(Qt.ItemDataRole.UserRole, h['ma_ho'])
             it = self.bang_yk.item(i, 2)                                # màu theo ý kiến (xanh / đỏ / vàng / xám)
-            it.setForeground(QBrush(QColor(MAU_Y_KIEN.get(h['loai'], '#64748B'))))
+            it.setForeground(QBrush(QColor(mau_theo_tong(MAU_Y_KIEN.get(h['loai'], '#64748B'), 'chu'))))
             it.setData(Qt.ItemDataRole.UserRole, h['loai'])
             it.setToolTip('Bấm để đổi ý kiến (hoặc phím Space)')
         chua_dong = [h for h in ho if h['loai'] in ('khong_dong_y', 'y_kien_khac')]
@@ -1418,7 +1418,7 @@ class HopChonNiemYet(QDialog):
                 tt += f' (kiểm tra phương án: {len(h["can_xem"])} điểm cần xem lại)'
             o_tt = _o(tt)
             o_tt.setToolTip(chr(10).join(h['ly_do'] + h['can_xem']) or tt)
-            o_tt.setForeground(Qt.GlobalColor.darkGreen if h['du'] else Qt.GlobalColor.darkRed)
+            o_tt.setForeground(QColor(mau_theo_tong('#008000' if h['du'] else '#800000', 'chu')))
             o_tien = _o('' if h['tien'] is None else vn(h['tien']))
             o_tien.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             for c, x in enumerate((_o(h['thu_tu']), _o(h['ho_ten']), o_tien, o_tt, _o(h['dot'])), 1):

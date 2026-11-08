@@ -558,7 +558,7 @@ class KhungBanDo(QGraphicsView):
         hop = QWidget(self)
         hop.setObjectName('nut_phong_bd')
         dat_kieu_theo_tong(hop,
-            'QWidget#nut_phong_bd { background: rgba(255,255,255,230); border: 1px solid #CBD5E1; border-radius: 8px; }'
+            'QWidget#nut_phong_bd { border: 1px solid #CBD5E1; border-radius: 8px; }'       # nền trong mờ theo tông: QSS chung (rgba không qua bảng đổi màu)
             'QToolButton { min-width: 32px; min-height: 28px; font: 14px "Segoe UI"; border: 0; border-radius: 6px; }'
             'QToolButton:hover { background: #EFF6FF; }')
         v = QVBoxLayout(hop)

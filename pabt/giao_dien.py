@@ -42,10 +42,12 @@ TOKEN = dict(
     nen_the='#FFFFFF',
     khung='#FFFFFF',          # Panel: thẻ, ô, bảng
 )
+CHINH_GOC = ('#1E3A5F', '#152C48')     # màu chính GỐC viết thẳng trong bảng kiểu (1.0.35) -> chu_de.MAU_TONG[tông]['chinh' / 'chinh_re']
+# Hằng màu dùng trong bảng kiểu lấy CHINH_GOC, KHÔNG lấy TOKEN: TOKEN['chinh'] đã là màu của phương án, _bang_doi_mau không ánh xạ được theo tông (1.0.80: nhãn tối mờ ở tông Tối)
 # 1.0.79: màu chính khởi đầu theo phương án Navy mặc định (dat_tong_nen đặt lại khi áp giao diện); bảng kiểu vẫn dựng từ CHINH_GOC
 from . import chu_de as _chu_de  # noqa: E402
 TOKEN.update(chinh=_chu_de.mau_tong('sang')['chinh'], chinh_re=_chu_de.mau_tong('sang')['chinh_re'])
-CHINH_RE = TOKEN['chinh_re']  # navy khi rê chuột (nút nền navy, tiêu đề bảng) - cũng là vạch ngăn cột tiêu đề bảng
+CHINH_RE = CHINH_GOC[1]  # navy khi rê chuột (nút nền navy, tiêu đề bảng) - cũng là vạch ngăn cột tiêu đề bảng
 CAO_NUT_MENU = 32             # nút điều hướng menu trái (0.9.95: 27; 17/10/2026 Hybrid Enterprise Navy: 32 - vùng cuộn có thanh 6 px)
 CAO_HANG_GON = 32             # hàng nút "Thu gọn menu" trên đỉnh menu trái (ngoài vùng cuộn, vạch ngăn dưới)
 LE_VIEN_MENU = 6              # lề ngang mỗi viên thuốc trong menu trái (rong_mo cộng thêm 2 x lề)
@@ -56,7 +58,7 @@ RONG_MENU_TOI_DA = 248        # lệnh dài ("Bảng tổng hợp kinh phí" ~18
 CAO_DONG_BANG = 30            # chiều cao dòng bảng dữ liệu (17/10/2026 Hybrid Enterprise Navy: 32 -> 30)
 CAO_TIEU_DE_BANG = 34         # hàng tiêu đề cột bảng (nền navy, chữ trắng)
 MAT_DO = ['chuan']            # 1.0.17: mật độ bảng đang dùng (chu_de.MAT_DO): gon / chuan / thoang - dat_mat_do()
-CHINH = TOKEN['chinh']       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
+CHINH = CHINH_GOC[0]       # xanh đậm: tiêu đề bảng, nhãn thuộc tính, tab đang chọn
 
 
 def gan_dinh_dang_nghin(o) -> None:
@@ -612,12 +614,11 @@ TD_GOC = dict(nen='#1E3A5D', chu='#FFFFFE', vach='#1E3A5C', day='#1E3A5B', re='#
 DAU_GOC = dict(nen='#EAF1F8', chu='#1E3A5E', vien='#CBD9E8')                                  # đầu khung Sổ nhật ký vận động
 TOKEN_NHAN_GOC = '#2563EB'
 _NHO_BANG_DOI_MAU: dict = {}                                                                   # (tông, phương án) -> bảng đổi màu; xem _bang_doi_mau
-CHINH_GOC = ('#1E3A5F', '#152C48')     # màu chính GỐC viết thẳng trong bảng kiểu (1.0.35) -> chu_de.MAU_TONG[tông]['chinh' / 'chinh_re']
 _RE_KHAI_BAO = re.compile(r'([A-Za-z-]+)(\s*:\s*)([^;{}]+)')
 _RE_MAU_HEX = re.compile(r'#[0-9A-Fa-f]{6}\b')
 # tông Tối chuyên gia (Dark Studio): ngoài 5 màu tông, các màu sáng viết thẳng khác trong bảng kiểu cũng đổi sang màu tối tương ứng
 # (nền nhạt, viền, chữ đậm, chữ navy trên nền trắng) - màu nền nút xanh / chữ trắng / huy hiệu ngữ nghĩa (vàng, đỏ nhạt) giữ nguyên
-TOI_NEN = {'#EEF3FA': '#24324A', '#E5A93A': '#854D0E', '#FFEBEE': '#3A1414', '#F4F6F8': '#162033', '#FFF6D6': '#3B2F12', '#FDEBDD': '#3A2414', '#F1F4F7': '#162033', '#F0FDF4': '#0F2A1F', '#ECFDF5': '#0F2A1F', '#DCFCE7': '#14532D', '#FFFBEB': '#2A2210', '#FEF3C7': '#3B2F12',
+TOI_NEN = {'#F1F3F4': '#1E293B', '#CBD5E1': '#334155', '#FFF1F2': '#3A1414', '#ECFCCB': '#1F2E0F', '#EEF3FA': '#24324A', '#E5A93A': '#854D0E', '#FFEBEE': '#3A1414', '#F4F6F8': '#162033', '#FFF6D6': '#3B2F12', '#FDEBDD': '#3A2414', '#F1F4F7': '#162033', '#F0FDF4': '#0F2A1F', '#ECFDF5': '#0F2A1F', '#DCFCE7': '#14532D', '#FFFBEB': '#2A2210', '#FEF3C7': '#3B2F12',
            '#FEF2F2': '#3A1414', '#FEE2E2': '#4C1D1D', '#F0FDFA': '#0F2A28', '#FFFDE7': '#2A2210', '#F5F3FF': '#2A1F4A',
            '#F1F5F9': '#162033', '#EEF2F7': '#24324A', '#E2E8F0': '#2A3A52', '#EFF6FF': '#1E3A5F', '#F0F6FF': '#1E3A5F',
             '#DBEAFE': '#1E40AF', '#F0F9FF': '#0C2A3F', '#EEF5FC': '#24324A', '#DCEBFA': '#1E40AF', '#FAFBFC': '#0F172A', '#F8F9FA': '#0B1120',
@@ -627,7 +628,7 @@ TOI_NEN = {'#EEF3FA': '#24324A', '#E5A93A': '#854D0E', '#FFEBEE': '#3A1414', '#F
            '#E2EFDA': '#14331F', '#F8CBAD': '#4A2414', '#F2F2F2': '#1E293B', '#DDEBF7': '#1E3A5F', '#E8F5E9': '#14331F',
            '#E3F2FD': '#1E3A5F', '#FCE4D6': '#3A2414', '#EEF1F4': '#1E293B', '#EEF6FF': '#1E3A5F', '#FFF3C4': '#3B2F12',
            '#DFF0D8': '#14331F', '#FFF4D6': '#3B2F12', '#FFF8E1': '#2A2210', '#F5F5F5': '#1E293B', '#F2F4F7': '#1E293B'}
-TOI_VIEN = {'#BBF7D0': '#166534', '#86EFAC': '#15803D', '#A7F3D0': '#047857', '#FDE68A': '#854D0E', '#FECACA': '#7F1D1D',
+TOI_VIEN = {'#FECDD3': '#7F1D1D', '#BBF7D0': '#166534', '#86EFAC': '#15803D', '#A7F3D0': '#047857', '#FDE68A': '#854D0E', '#FECACA': '#7F1D1D',
             '#99F6E4': '#0F766E', '#BAE6FD': '#075985', '#CBD5E1': '#475569', '#DCE3EA': '#334155', '#94A3B8': '#64748B', '#BFDBFE': '#1E40AF',
             '#8696AB': '#64748B', '#E5E5E5': '#334155', '#E35D5D': '#F87171',
             '#CDE8D2': '#166534', '#F1D9A0': '#854D0E', '#F3CFCA': '#7F1D1D'}
@@ -642,6 +643,9 @@ TOI_CHU = {'#0F3A63': '#93C5FD', '#991B1B': '#FCA5A5', '#1F76A6': '#7DD3FC', '#4
            # 1.0.51: chữ dat_trang_thai (tin 1,57:1 trên nền tối trước đây), đỏ / cam đậm
            '#0C4A6E': '#7DD3FC', '#1E6B34': '#86EFAC', '#7A4B00': '#FCD34D', '#A12A1F': '#FCA5A5', '#7C2D12': '#FDBA74',
            '#7F1D1D': '#FCA5A5',
+           # 1.0.80: chữ bảng / thanh trạng thái viết màu tối chưa có trong bảng đổi
+           '#1B5E20': '#86EFAC', '#B3261E': '#FCA5A5', '#5F6368': '#CBD5E1', '#107C41': '#86EFAC', '#BE123C': '#FDA4AF', '#008000': '#86EFAC', '#800000': '#FCA5A5',
+           '#1F5FA0': '#93C5FD', '#3F6212': '#BEF264',
            '#B8433A': '#FCA5A5', '#2E7D32': '#86EFAC', '#1F5FA0': '#93C5FD'}       # P1: chữ ô bảng (mau_o_theo_tong 'chu')
 
 
@@ -687,6 +691,7 @@ def qmau_theo_tong(mau: str, loai: str = 'nen') -> QColor:
 # khối thêm cho tông Tối (đặt CUỐI bảng kiểu): bảng, tiêu đề bảng, ô nhập, menu trái, hộp thoại, chú thích
 QSS_TOI = '''
     QDialog, QMainWindow, QStackedWidget, QScrollArea, QScrollArea > QWidget > QWidget { background: #0B1120; }
+    QWidget#nut_phong_bd { background: rgba(30, 41, 59, 230); }
     QTableWidget, QTableView, QListWidget, QTreeWidget, QTreeView { background: #1E293B; alternate-background-color: #0F172A;
         color: #F1F5F9; gridline-color: #334155; border: 1px solid #334155; selection-background-color: #1E40AF;
         selection-color: #FFFFFF; }
@@ -996,6 +1001,7 @@ def _qss() -> str:
         border-bottom: 0; border-top: 2px solid {CHINH}; margin-top: 0px; }}
     QTabWidget::pane {{ border: 1px solid {THE_TAB['vien']}; border-radius: 0 6px 6px 6px; background: #FFFFFF; top: -1px; }}
     QLabel[vai="nhan"] {{ color: {CHINH}; font-weight: 600; }}
+    QWidget#nut_phong_bd {{ background: rgba(255, 255, 255, 230); }}
     QLabel[vai="tieu_de"] {{ color: {CHINH}; background: #F1F5F9; font-weight: 700; padding: 6px 10px; border-radius: 5px;
         border-left: 3px solid {CHINH}; }}
     QLabel[vai="bang_ten"] {{ color: #0F3A63; background: #FFFFFF; font-size: 13px; padding: 8px 12px; border-radius: 8px;
@@ -1298,7 +1304,7 @@ MAU_TRANG_THAI = {
 
 
 MAU_HE_SO_K = '#1F76A6'                                  # cột Hệ số K (bảng giá NQ 28, bảng hệ số K): căn giữa, đậm, xanh trời
-MAU_GIA_K = TOKEN['chinh']                               # cột Giá × K: căn phải, đậm, navy
+MAU_GIA_K = CHINH_GOC[0]                                 # cột Giá × K: căn phải, đậm, navy
 
 
 def _o_dam(it, mau: str, can) -> None:
@@ -1306,7 +1312,7 @@ def _o_dam(it, mau: str, can) -> None:
     f = it.font()
     f.setBold(True)
     it.setFont(f)
-    it.setForeground(QBrush(QColor(mau)))
+    it.setForeground(QBrush(QColor(mau_theo_tong(mau, 'chu'))))
     it.setTextAlignment(can)
 
 
@@ -1902,10 +1908,10 @@ class DaiCongBang(QFrame):
 
     @staticmethod
     def _html(phan: list, tong) -> str:
-        chu = '&nbsp;&nbsp;·&nbsp;&nbsp;'.join(f'<span style="color:#475569">{n}:</span> <b>{v}</b>' for n, v in phan)
+        chu = '&nbsp;&nbsp;·&nbsp;&nbsp;'.join(f'<span style="color:{mau_theo_tong("#475569", "chu")}">{n}:</span> <b>{v}</b>' for n, v in phan)
         if tong:
             chu += ('&nbsp;&nbsp;|&nbsp;&nbsp;' if chu else '') + \
-                f'<span style="color:#1E3A5F; font-weight:800">{tong[0]}: {tong[1]}</span>'
+                f'<span style="color:{mau_theo_tong("#1E3A5F", "chu")}; font-weight:800">{tong[0]}: {tong[1]}</span>'
         return chu
 
     def dat(self, phan: list, tong=None, phan_gon: list | None = None, tong_gon=None) -> None:

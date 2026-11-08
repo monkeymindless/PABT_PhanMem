@@ -183,6 +183,7 @@
    "nhan_k2": "Dự án đầu tư có hệ số sử dụng đất (FAR): áp dụng Phụ lục II",
    "nhan_rieng": "Tuyến đã có hệ số riêng cho đường đất, sỏi, \"các tuyến còn lại\" ở Phụ lục I.2 (khóa K3 = 1,00)",
    "nhan_cu_the": "Trống nếu không có (khoản 3 Điều 4 QĐ 03)",
+   "vt_ngan": "{gia_goc} × {ty_le}% = {gia_tinh} đ/m²{gioi_han}",
    "buoc_1_vt": "Bước 1a ({can_cu}): {muc}: {gia_goc} × {ty_le}% = {gia_tinh} đ/m²{gioi_han}. Đơn giá gốc để nhân hệ số = {gia} đ/m²."
   },
   "vi_tri_dat": {

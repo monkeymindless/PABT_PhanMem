@@ -73,6 +73,24 @@ class TestTinh(unittest.TestCase):
         self.assertTrue(any('Điều 5' in x and '30%' in x and 'tối đa' in x for x in kq.buoc_lap_luan))
         self.assertIn('Vị trí 2', g.ghi_chu_ap_gia(kq))
 
+    def test_vi_du_phu_ly_tran_60000_co_dien_giai(self):
+        # 1.0.80 (người dùng hỏi vì sao 60.000): Điều 5 khoản 1 điểm b: 30% x 230.000 = 69.000 vượt tối đa Xã Phú Lý 60.000 (Phụ lục VIII), rồi mới nhân K
+        kq = tinh(230000, NN, 'VT2_PV1')
+        self.assertEqual(kq.don_gia_nq28, 60000)
+        self.assertEqual(kq.gia_truoc_vi_tri, 230000)
+        self.assertEqual(kq.dien_giai_vi_tri, '230.000 × 30% = 69.000 đ/m², vượt giá tối đa của Xã Phú Lý nên lấy 60.000 đ/m² (Phụ lục VIII)')
+        self.assertIn('69.000', g.ghi_chu_ap_gia(kq))
+        k = g.tinh_don_gia(g.DauVao(dia_ban='Xã Phú Lý', nhom_dat=NN[0], cot_gia=NN[1], don_gia_bang_gia=Dc(230000), ma_vi_tri_dat='VT2_PV1', he_so_k1=Dc('1.45')), None)
+        self.assertEqual(k.don_gia_ap_dung, 87000)                   # bảng giá x hệ số (Điều 3 khoản 2 QĐ 03): 60.000 x 1,45
+
+    def test_vi_tri_1_pham_vi_1_khong_co_dien_giai(self):
+        self.assertEqual(tinh(230000, NN, 'VT1_PV1').dien_giai_vi_tri, '')
+        self.assertEqual(tinh(230000, NN, '').dien_giai_vi_tri, '')
+
+    def test_dien_giai_khi_duoi_san_va_trong_khoang(self):
+        self.assertIn('thấp hơn giá tối thiểu của Xã Phú Lý nên lấy 35.000', tinh(100000, NN, 'VT2_PV1').dien_giai_vi_tri)
+        self.assertEqual(tinh(150000, NN, 'VT2_PV1').dien_giai_vi_tri, '150.000 × 30% = 45.000 đ/m²')
+
     def test_goi_khong_khai_bao_thi_nhu_cu(self):
         goi = dict(g._goi(None))
         goi.pop('vi_tri_dat')
@@ -117,6 +135,7 @@ class TestManHinh(unittest.TestCase):
         self.assertEqual(h.cb_vi_tri.currentIndex(), 0)
         self.assertFalse(h.cb_vi_tri.isEnabled())
         self.assertEqual(h.dau_vao().ma_vi_tri_dat, 'VT2_PV1')
+        self.assertIn('Vị trí: ', h.lb_ct.text())                # phép tính hiện ngay trên màn hình
         h.cb_vt_dat.setCurrentIndex(0)
         self.assertTrue(h.cb_vi_tri.isEnabled())
 

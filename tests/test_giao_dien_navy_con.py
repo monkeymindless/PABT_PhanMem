@@ -177,7 +177,7 @@ class TestTienDoKPI(_Co):
         k = self._khung()
         for khoa, t in k.kpi.the.items():
             self.assertEqual(t.maximumHeight(), bc.CAO_THE_KPI)
-            self.assertIn(f'border-left: 3px solid {bc.MAU_THE[khoa]}', t.styleSheet())
+            self.assertIn(f'border-left: 3px solid {giao_dien.mau_theo_tong(bc.MAU_THE[khoa], "vien")}', t.styleSheet())     # 1.0.80: thẻ theo tông, màu chính theo phương án Navy
             self.assertIn('[dang_loc="1"]', t.styleSheet())
         self.assertEqual(set(bc.MAU_THE.values()), {'#1E3A5F', '#1F76A6', '#2F7D54', '#1F6F66', '#C98A22', '#B83A3A'})   # 6 thẻ (20/10/2026)
         self.assertIsNone(k.the_kpi_dang_loc())                          # tất cả hộ: không thẻ nào đang lọc
