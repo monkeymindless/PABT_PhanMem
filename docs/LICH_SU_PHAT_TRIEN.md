@@ -3157,3 +3157,4 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
 - Đồng bộ: `quan_tri_bo.dang_ky_khi_doi` (WeakMethod) / `bao_doi` - gọi trong `sau_khi_sua` (mọi ghi bảng giá, hệ số K, gói, bộ đơn giá) và
   khi lưu toàn văn; bảng tính đăng ký `lam_moi_theo_du_lieu` (gói, trường hợp, tra lại giá, tính lại). Màn hình mới cần nạp lại khi dữ liệu
   giá đất đổi: đăng ký cùng chỗ, không tự thêm tín hiệu riêng.
+- 1.0.82 PHÁT HÀNH (08/11/2026): Universal 72,5 MB, zip 84,3 MB, `.larcud` 2,1 MB; tu-kiem DAT Qt6 / Qt5; máy trắng 4 nhánh DAT. Test Qt6 và Qt5 toàn bộ đạt. Giao diện 0 lỗi, 0 cửa sổ lạ, 0 chậm (`GiaoDien_1.0.82_2026-11-08_1354.md`). Tốc độ `PhanTich_1.0.82_2026-11-08_1357.md` lệch hai chiều (lập PA lần đầu -75%, lần sau +27%, doi-chieu +59%) trên những đường 1.0.82 KHÔNG sửa; đo lại doi-chieu 4 lần cùng mã: 760 - 1.626 ms -> nhiễu máy, không kết luận. Pages lên 1.0.82, APK khóa 07c02414….
