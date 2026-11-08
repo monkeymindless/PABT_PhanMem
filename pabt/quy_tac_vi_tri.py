@@ -332,6 +332,8 @@ def doc_toan_van_nghi_quyet(cac_dong, luu: bool = False) -> dict:
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(json.dumps(dict(dieu=dieu, quy_tac=quy_tac), ensure_ascii=False, indent=1), encoding='utf-8')
         kq['file'] = str(f)
+        from .quan_tri_bo import bao_doi
+        bao_doi()                                       # 1.0.82: Bảng tính giá đất đang mở dùng ngay hệ số của toàn văn
     return kq
 
 
@@ -352,11 +354,44 @@ class LoiQuyTac(ValueError):
     """Thiếu số liệu / trường hợp không có trong gói quy tắc (thông báo tiếng Việt)."""
 
 
+def _khoan_dieu(can_cu: str):
+    m = re.search(r'Kho\u1ea3n\s+(\d+)\s+\u0110i\u1ec1u\s+(\d+)', can_cu or '')
+    return (int(m.group(2)), int(m.group(1))) if m else None
+
+
+def _he_so_cua_cau(q: dict) -> list:
+    """Hệ số trong một quy tắc toàn văn: 'hệ số 0,8' -> 0.8; '80%' -> 0.8 (bỏ 100% nói về phạm vi chung)."""
+    ra = [Decimal(x) for x in q.get('he_so') or []]
+    return ra or [Decimal(x) / 100 for x in q.get('ty_le') or []]
+
+
 def quy_tac_nq28() -> dict:
+    """Quy tắc NQ 28 của gói (gia_dat_qd03.json, khóa quy_tac_nq28) + (1.0.82) hệ số đọc từ TOÀN VĂN đã nạp trên máy: khoản của
+    Điều 8 trùng căn cứ của trường hợp và có đúng một hệ số / tỷ lệ thì dùng số của văn bản, ghi 'nguon' (câu văn bản). Bản chép sâu."""
+    import copy
     from .goi_gia_dat import du_lieu_goc
     q = du_lieu_goc().get('quy_tac_nq28')
     if not q:
         raise LoiQuyTac('Gói dữ liệu chưa có quy tắc NQ 28 (khóa quy_tac_nq28 của gia_dat_qd03.json).')
+    q = copy.deepcopy(q)
+    tv = doc_quy_tac_toan_van_da_luu()
+    if not tv:
+        return q
+    theo = {}
+    for x in tv:
+        theo.setdefault((x.get('dieu'), x.get('khoan')), []).append(x)
+    for x in q['truong_hop']:
+        k = _khoan_dieu(x.get('can_cu'))
+        ds = [(c, hs) for c in theo.get(k, ()) for hs in [_he_so_cua_cau(c)] if len(hs) == 1 and 0 < hs[0] <= 2]
+        if len(ds) == 1:
+            x['he_so'], x['nguon'] = str(ds[0][1][0]), ds[0][0].get('noi_dung', '')
+    mt = q['nhieu_mat_tien']
+    for c in theo.get(_khoan_dieu(mt.get('can_cu')), ()):
+        hs = [h for h in _he_so_cua_cau(c) if 1 < h <= 2]
+        if len(hs) == 2:
+            mt['hai_duong_pl_vii'], mt['mot_pl_vii_va_duong_khac'] = str(max(hs)), str(min(hs))
+            mt['nguon'] = c.get('noi_dung', '')
+            break
     return q
 
 
@@ -404,8 +439,9 @@ def tinh_gia_tai_dinh_cu_va_truong_hop_cu_the(truong_hop: str, gia=None, **ts) -
     q = quy_tac_nq28()
     th = str(truong_hop or '').strip()
 
-    def ra(g, hs, giai, cc):
-        return dict(gia=lam_tron(g, 0), he_so=hs, giai_trinh=giai, can_cu=cc)
+    def ra(g, hs, giai, cc, nguon=''):
+        return dict(gia=lam_tron(g, 0), he_so=hs, giai_trinh=giai, can_cu=cc,
+                    nguon=('hệ số theo toàn văn đã nạp: "' + nguon[:160] + '"') if nguon else 'hệ số theo gói quy tắc')
 
     def vnd(x):
         return f'{lam_tron(x, 0):,}'.replace(',', '.')
@@ -458,7 +494,7 @@ def tinh_gia_tai_dinh_cu_va_truong_hop_cu_the(truong_hop: str, gia=None, **ts) -
         mt = q['nhieu_mat_tien']
         hs = Decimal(mt['hai_duong_pl_vii' if th == 'mat_tien_2_pl_vii' else 'mot_pl_vii_va_duong_khac'])
         return ra(g * hs, hs, f'Lớp {mt["lop_m"]} m đầu: {hs} x {vnd(g)} (phần sau lớp {mt["lop_m"]} m tính như thửa một mặt tiền)',
-                  mt['can_cu'])
+                  mt['can_cu'], mt.get('nguon', ''))
     if th == 'giap_ranh':
         gr = q['giap_ranh']
         ban = _D(ts.get('gia_tinh_ban'), 'Giá đất tỉnh giáp ranh')
@@ -478,4 +514,33 @@ def tinh_gia_tai_dinh_cu_va_truong_hop_cu_the(truong_hop: str, gia=None, **ts) -
     if x is None:
         raise LoiQuyTac(f'Không có trường hợp "{th}" trong gói quy tắc NQ 28.')
     hs = Decimal(x['he_so'])
-    return ra(g * hs, hs, f'{x["ten"]}: {hs} x {vnd(g)}', x['can_cu'])
+    return ra(g * hs, hs, f'{x["ten"]}: {hs} x {vnd(g)}', x['can_cu'], x.get('nguon', ''))
+
+
+# trường hợp dùng được trong bảng tính đơn giá đất (nhân vào giá bảng giá G): bỏ chênh lệch suất TĐC (số tiền hỗ trợ, không phải giá) và
+# phạm vi (bảng tính đã có ô Vị trí, phạm vi theo gói)
+def truong_hop_bang_tinh() -> list:
+    return [x for x in cac_truong_hop() if x[0] != 'chenh_lech_suat_tdc' and not x[0].startswith('pham_vi_')]
+
+
+THAM_SO_TRUONG_HOP = {'tdc_gan_duong': ('khoang_cach_m', 'Khoảng cách tới đường Phụ lục VII (m); thêm "đô thị" nếu ở đô thị'),
+                      'nga_ba': ('gia_cac_duong', 'Giá các đường giao nhau (đ/m²), cách nhau ";"'),
+                      'giap_ranh': ('gia_tinh_ban', 'Giá đất cùng loại của tỉnh giáp ranh (đ/m²)'),
+                      'thoi_han': ('so_nam', 'Thời hạn sử dụng còn lại (năm)')}
+
+
+def tinh_theo_tham_so_chu(truong_hop: str, gia, chu: str = '') -> dict:
+    """Như tinh_gia_tai_dinh_cu_va_truong_hop_cu_the, tham số riêng gõ trong một ô chữ (THAM_SO_TRUONG_HOP)."""
+    ts = {}
+    ten = THAM_SO_TRUONG_HOP.get(truong_hop, ('', ''))[0]
+    chu = str(chu or '').strip()
+    if ten == 'gia_cac_duong':
+        ts[ten] = [x.strip() for x in chu.split(';') if x.strip()]
+    elif ten == 'khoang_cach_m':
+        k = bo_dau(chu).lower()
+        ts['do_thi'] = 'do thi' in k
+        m = re.search(r'\d+(?:[.,]\d+)?', k)
+        ts[ten] = m.group(0) if m else None
+    elif ten:
+        ts[ten] = chu or None
+    return tinh_gia_tai_dinh_cu_va_truong_hop_cu_the(truong_hop, gia, **ts)

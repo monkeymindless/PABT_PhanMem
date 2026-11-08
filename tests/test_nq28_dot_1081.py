@@ -130,7 +130,24 @@ class TestToanVan(unittest.TestCase):
                 gia_dat_nq28._quen()
 
 
-class TestGiaTdc(unittest.TestCase):
+class _MayTrong(unittest.TestCase):
+    def setUp(self):
+        import os
+        import tempfile
+        self._td = tempfile.TemporaryDirectory()
+        self._cu = os.environ.get('PABT_THU_MUC_MAY')
+        os.environ['PABT_THU_MUC_MAY'] = self._td.name
+
+    def tearDown(self):
+        import os
+        if self._cu is None:
+            os.environ.pop('PABT_THU_MUC_MAY', None)
+        else:
+            os.environ['PABT_THU_MUC_MAY'] = self._cu
+        self._td.cleanup()
+
+
+class TestGiaTdc(_MayTrong):
     def tinh(self, *a, **k):
         from pabt.quy_tac_vi_tri import tinh_gia_tai_dinh_cu_va_truong_hop_cu_the
         return tinh_gia_tai_dinh_cu_va_truong_hop_cu_the(*a, **k)
@@ -195,6 +212,72 @@ class TestManHinh(unittest.TestCase):
         self.assertEqual(t.tinh()['gia'], D(1500000))
         for w in (h, t, k):
             w.deleteLater()
+
+
+class TestHeSoToanVan(_MayTrong):
+    def test_toan_van_thay_he_so_goi(self):
+        from pabt.quy_tac_vi_tri import doc_toan_van_nghi_quyet, quy_tac_nq28, tinh_gia_tai_dinh_cu_va_truong_hop_cu_the as tinh
+        self.assertEqual(tinh('dang_tuyen', '1000000')['gia'], D(200000))
+        vb = TOAN_VAN + 'Điều 8. Trường hợp cụ thể\n8. Đất dạng tuyến tính bằng hệ số 0,25 giá đất.\n'
+        doc_toan_van_nghi_quyet(vb.replace('Điều 8. Trường hợp cụ thể\n3.', 'Điều 7. Khác\n3.'), luu=True)
+        kq = tinh('dang_tuyen', '1000000')
+        self.assertEqual(kq['gia'], D(250000))
+        self.assertIn('toàn văn', kq['nguon'])
+        self.assertEqual(quy_tac_nq28()['truong_hop'][3]['he_so'], '0.25')
+        from pabt.goi_gia_dat import du_lieu_goc
+        self.assertEqual(du_lieu_goc()['quy_tac_nq28']['truong_hop'][3]['he_so'], '0.2')      # dữ liệu gói dùng chung không bị sửa
+
+
+@unittest.skipUnless(CO_QT, 'cần PySide6')
+class TestBangTinh(_MayTrong):
+    @classmethod
+    def setUpClass(cls):
+        from PySide6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+
+    def _hop(self):
+        from pabt.man_hinh_tinh_gia_dat import HopTinhGiaDat
+        h = HopTinhGiaDat(None, None, [], 'Phú Lý', False)
+        h.im_lang = True
+        self.addCleanup(h.deleteLater)
+        return h
+
+    def test_4_loai_dat_nn(self):
+        h = self._hop()
+        ds = [h.cb_nhom.itemData(i) for i in range(h.cb_nhom.count())]
+        for x in ('DAT_NONG_NGHIEP|nn_cay|cln', 'DAT_NONG_NGHIEP|nn_cay|hang_nam', 'DAT_NONG_NGHIEP|nn_rung_nts|nts',
+                  'DAT_NONG_NGHIEP|nn_rung_nts|rung', 'DAT_O|dat_o'):
+            self.assertIn(x, ds)
+        h.cb_nhom.setCurrentIndex(h.cb_nhom.findData('DAT_NONG_NGHIEP|nn_rung_nts|rung'))
+        self.assertEqual(h.nhom_cot(), ('DAT_NONG_NGHIEP', 'nn_rung_nts'))
+        self.assertEqual(h.dau_vao().loai_nn, 'rung')
+        self.assertFalse(h.cb_loai_nn.isVisible())
+        self.assertEqual(h.cb_nhom.itemData(h.tim_nhom('DAT_NONG_NGHIEP', 'nn_rung_nts', 'RPH')), 'DAT_NONG_NGHIEP|nn_rung_nts|rung')
+        self.assertEqual(h.cb_nhom.itemData(h.tim_nhom('DAT_NONG_NGHIEP', 'nn_cay', 'LUC')), 'DAT_NONG_NGHIEP|nn_cay|hang_nam')
+
+    def test_truong_hop_nq28_va_dong_bo(self):
+        h = self._hop()
+        h.cb_nhom.setCurrentIndex(h.cb_nhom.findData('DAT_O|dat_o'))
+        h.o_g.setText('1.000.000')
+        goc = h.tinh().don_gia_ap_dung
+        h.cb_th.setCurrentIndex(h.cb_th.findData('kcn_moi'))
+        self.assertEqual(h.dau_vao().don_gia_bang_gia, D(900000))
+        self.assertIn('Khoản 6 Điều 8', h.lb_ct.text())
+        self.assertLess(h.kq.don_gia_ap_dung, goc)
+        h.cb_th.setCurrentIndex(h.cb_th.findData('thoi_han'))
+        self.assertTrue(h.o_th.isVisibleTo(h))
+        h.o_th.setText('35')
+        self.assertEqual(h.dau_vao().don_gia_bang_gia, D(500000))
+        # nạp toàn văn ở nơi khác -> bảng tính đang mở đổi theo (KCN 0,90 -> 0,85)
+        h.cb_th.setCurrentIndex(h.cb_th.findData('kcn_moi'))
+        from pabt.quy_tac_vi_tri import doc_toan_van_nghi_quyet
+        vb = TOAN_VAN.replace('3. Thửa đất có từ 2 mặt tiền trong phạm vi 50 m nhân hệ số 1,20.',
+                              '6. Đất trong khu công nghiệp mới tính bằng hệ số 0,85.')
+        doc_toan_van_nghi_quyet(vb, luu=True)
+        self.assertEqual(h.cb_th.currentData(), 'kcn_moi')
+        g = D(h.o_g.text().replace('.', ''))                 # làm mới tra lại giá theo bảng giá đang dùng
+        self.assertEqual(h.dau_vao().don_gia_bang_gia, (g * D('0.85')).quantize(D(1)))
+        self.assertIn('toàn văn', h.lb_ct.text())
 
 
 if __name__ == '__main__':

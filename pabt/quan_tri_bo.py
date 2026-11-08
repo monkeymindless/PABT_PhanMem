@@ -150,10 +150,40 @@ def cho_phep_dong_bo():
         _DONG_BO -= 1
 
 
+_KHI_DOI = []          # weakref.WeakMethod: màn hình đang mở cần nạp lại khi bảng giá / hệ số K / bộ quy tắc / toàn văn NQ 28 đổi
+
+
+def dang_ky_khi_doi(ham) -> None:
+    """1.0.82: màn hình (Bảng tính giá đất NQ 28 & QĐ 03) đăng ký phương thức gọi lại khi dữ liệu giá đất trên máy đổi. Giữ tham chiếu
+    YẾU: hộp đã đóng / hủy tự rơi khỏi danh sách (không giữ hộp sống - xem CLAUDE.md rò rỉ)."""
+    import weakref
+    _KHI_DOI[:] = [w for w in _KHI_DOI if w() is not None]
+    _KHI_DOI.append(weakref.WeakMethod(ham))
+
+
+def bao_doi() -> int:
+    """Gọi lại mọi màn hình đã đăng ký (lỗi của một màn hình không làm hỏng việc ghi). Trả số màn hình đã nạp lại."""
+    n = 0
+    for w in list(_KHI_DOI):
+        ham = w()
+        if ham is None:
+            _KHI_DOI.remove(w)
+            continue
+        try:
+            ham()
+            n += 1
+        except RuntimeError:                            # widget C++ đã hủy
+            _KHI_DOI.remove(w)
+        except Exception:                               # noqa: BLE001
+            pass
+    return n
+
+
 def sau_khi_sua() -> str:
     """Gọi CUỐI mọi hàm ghi: quản trị máy chủ đang đăng nhập -> tự phát hành bộ đơn giá lên máy chủ (máy khác nhận khi đăng nhập).
-    Lỗi (mất mạng…) không làm hỏng việc vừa sửa: trả / ghi LOI_PHAT_HANH."""
+    Lỗi (mất mạng…) không làm hỏng việc vừa sửa: trả / ghi LOI_PHAT_HANH. 1.0.82: báo màn hình đang mở nạp lại (bao_doi)."""
     global LOI_PHAT_HANH
+    bao_doi()
     if _DONG_BO or not la_quan_tri_may_chu():
         return ''
     try:

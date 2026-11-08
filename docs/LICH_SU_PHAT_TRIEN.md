@@ -3146,3 +3146,14 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
 - Màn hình: `pabt/man_hinh_gia_dat_nq28.py` (`HopPhanTich4LoaiDatNN`, `HopTinhGiaTaiDinhCuVaDieu8` - chỉ tính / xem, không ghi); 2 nút trên
   hàng nút của khung "Quy tắc vị trí" (KhungCapNhatGiaDat). Chữ nút KHÔNG emoji (Win 7). Test: `tests/test_nq28_dot_1081.py`.
 - 1.0.81 PHÁT HÀNH (08/11/2026): Universal 72,5 MB, zip 84,3 MB, `.larcud` 2,1 MB; tu-kiem DAT cả Qt6 / Qt5; máy trắng 4 nhánh DAT. Test Qt6 1.912 bài, Qt5 đạt (5 bài hỏng lần đầu vì thiếu mục MUC 1.0.81 - thêm rồi chạy lại đạt). Giao diện 0 lỗi, 0 cửa sổ lạ, 0 chậm (`GiaoDien_1.0.81_2026-11-08_1310.md`). Tốc độ `PhanTich_1.0.81_2026-11-08_1311.md`: lập PA lần sau 226 -> 256 ms (+14%, một lần đo; mốc Python rỗng lệch -32% cho thấy nhiễu), các mục khác nhanh hơn hoặc trong nhiễu. Pages lên 1.0.81, APK khóa 07c02414…. BẪY: `tao_cap_nhat.py --help` và `di_dong/dung.py --help` KHÔNG có trợ giúp - chạy dựng thật.
+
+## 1.0.82 (08/11/2026 - người dùng: bảng tính NQ 28 chưa theo 4 loại đất / quy tắc đã đọc; đọc file phải đồng bộ bảng tính)
+- Bảng tính đơn giá đất (`HopTinhGiaDat`): ô Nhóm đất tách nhóm NN của gói theo `quy_tac_nq28.loai_nn` (`_muc_nhom`), dữ liệu mục
+  'nhóm|cột|loại PL VIII' (`nhom_cot` vẫn trả 2 phần, `loai_nn_chon`, `tim_nhom` chọn đúng loại theo mã đất). Gói (khóa "goi") KHÔNG đổi
+  - vàng 3.061 ca giữ. Test chọn nhóm theo `findData('DAT_O|dat_o')`, đừng theo chỉ số mục (mục 1 nay là cây hằng năm).
+- Ô "Trường hợp NQ 28" (`cb_th`, `o_th` tham số): `quy_tac_vi_tri.tinh_theo_tham_so_chu` nhân vào G TRƯỚC hệ số K (`_gia_theo_truong_hop`);
+  câu giải trình đầu `lb_ct`, nhật ký giải trình, Ghi chú áp giá. Bỏ chênh lệch suất TĐC (số tiền) và phạm vi (đã có ô Vị trí, phạm vi).
+- `quy_tac_nq28()` trả bản CHÉP SÂU + hệ số đọc từ toàn văn đã lưu (khoản / điều trùng căn cứ, đúng 1 hệ số) - kết quả có 'nguon'.
+- Đồng bộ: `quan_tri_bo.dang_ky_khi_doi` (WeakMethod) / `bao_doi` - gọi trong `sau_khi_sua` (mọi ghi bảng giá, hệ số K, gói, bộ đơn giá) và
+  khi lưu toàn văn; bảng tính đăng ký `lam_moi_theo_du_lieu` (gói, trường hợp, tra lại giá, tính lại). Màn hình mới cần nạp lại khi dữ liệu
+  giá đất đổi: đăng ký cùng chỗ, không tự thêm tín hiệu riêng.

@@ -74,7 +74,7 @@ class TestHopTinhGiaDat(unittest.TestCase):
         h.ck_rieng.setChecked(True)
         self.assertEqual(h.kq.k3, 1)
         self.assertTrue(h.lb_canh_bao.text())
-        h.cb_nhom.setCurrentIndex(1)                                    # đất ở: yếu tố NN bị loại, tích PNN được
+        h.cb_nhom.setCurrentIndex(h.cb_nhom.findData('DAT_O|dat_o'))    # đất ở: yếu tố NN bị loại, tích PNN được
         self.assertFalse(h.ck_pl3['NN_DUONG_DAT_SOI_DA'].isEnabled())
         h.ck_pl3['PNN_NGHIATRANG_100M'].setChecked(True)
         self.assertEqual(h.kq.k3, D('0.95'))

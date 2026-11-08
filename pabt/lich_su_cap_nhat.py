@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.82', '08/11/2026', (
+        'Bảng tính giá đất (NQ 28 & QĐ 03): ô Nhóm đất tách 4 loại đất nông nghiệp - cây lâu năm, cây hằng năm (lúa), nuôi trồng thủy sản, rừng sản xuất (rừng phòng hộ, đặc dụng tính theo rừng sản xuất); giá trần, sàn Phụ lục VIII theo đúng loại đã chọn.',
+        'Bảng tính giá đất: thêm ô Trường hợp NQ 28 - tái định cư, thửa nhiều mặt tiền, lòng chợ, khu công nghiệp mới, đất dạng tuyến, đường đất, dạ cầu, qua kênh rạch, hành lang an toàn đường bộ, giáp ranh tỉnh, đất có thời hạn. Hệ số nhân vào giá NQ 28 trước hệ số K, ghi vào giải trình và Ghi chú dòng đất khi áp giá.',
+        'Đọc toàn văn Nghị quyết 28: hệ số trong văn bản được dùng ngay cho bảng tính (thay hệ số mặc định), giải trình ghi câu văn bản.',
+        'Đọc file bổ sung, sửa đổi, thay thế bảng giá đất, hệ số K, bộ quy tắc hoặc toàn văn nghị quyết: Bảng tính giá đất đang mở tự cập nhật theo.',
+    )),
     ('1.0.81', '08/11/2026', (
         'Lập phương án: xóa, sửa hoặc thêm thửa ở thẻ Hồ sơ & Thửa rồi Lưu không còn báo lỗi FOREIGN KEY; dòng đất của thửa đã xóa được giữ lại (bỏ gắn thửa), thửa mới tự có dòng ở mục 1. Đất.',
         'Bôi đen ô ở bảng trong hộp thoại nhúng hoặc bảng mở thêm sau cũng hiện tổng nhanh (số dòng, tổng diện tích, tổng thành tiền).',

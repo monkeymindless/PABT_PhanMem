@@ -422,7 +422,7 @@ class TestManHinh(CoMay):
         nhan.mouseReleaseEvent(_su_kien_chuot())                     # bấm vào chữ cũng đổi ô
         self.assertNotEqual(c.isChecked(), was)
         c.setChecked(False)
-        h.cb_nhom.setCurrentIndex(1)                                 # đất ở: cả dòng tắt, bấm chữ không đổi
+        h.cb_nhom.setCurrentIndex(h.cb_nhom.findData('DAT_O|dat_o'))  # đất ở: cả dòng tắt, bấm chữ không đổi
         self.assertFalse(c.isEnabled())
         nhan.mouseReleaseEvent(_su_kien_chuot())
         self.assertFalse(c.isChecked())
