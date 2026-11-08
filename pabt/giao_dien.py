@@ -12,7 +12,7 @@ from PySide6.QtCore import QEvent, QLibraryInfo, QLocale, QObject, QPoint, QRect
 from PySide6.QtGui import QColor, QFont, QPainter, QPalette, QPolygon, QStandardItem, QStandardItemModel
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QApplication, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QLayout, QPushButton, QRadioButton,
-                               QSplitter, QSplitterHandle, QStyle, QStyleOptionViewItem,
+                               QSplitter, QSplitterHandle, QStyle, QStyleOptionViewItem, QTableView,
                                QLineEdit, QSpinBox, QStyledItemDelegate, QToolButton, QVBoxLayout, QWidget)
 
 from .lap_pa import bo_dau
@@ -5476,6 +5476,8 @@ class _BoToMau(QObject):
             return False
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and (obj.property('qss_cho_ty_le') or obj.property('qss_cho_tong')):
             _ap_kieu_cho(obj)                            # P1: kiểu riêng của widget ẩn lúc bấm A+ / A− hay đổi tông nền
+        if t == QEvent.Type.Show and isinstance(obj, QTableView) and not obj.property('_co_sao_chep'):
+            cho_phep_sao_chep_bang(obj)                  # 1.0.81: bảng thêm sau / hộp nhúng - bôi đen vẫn hiện tổng nhanh, Ctrl+C
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow() and \
                 obj.metaObject().className() == 'QComboBoxPrivateContainer':
             vua_danh_sach_xo(obj)                       # 30/10/2026: danh sách xổ rộng đủ chữ dài nhất

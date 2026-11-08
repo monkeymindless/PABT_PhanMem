@@ -3120,3 +3120,28 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
 - `tests/test_toi_1080.py` chặn viết thẳng mã màu trong chữ HTML và ô bảng.
 - Vị trí 2 (người dùng hỏi vì sao 60.000 thay vì 69.000, 07/11/2026): cách tính ĐÚNG, không đổi. NQ 28 Điều 5 khoản 1 điểm b: 30% giá vị trí 1 phạm vi 1 "không được cao hơn giá đất tối đa" Phụ lục VIII: Xã Phú Lý cây lâu năm 60 (nghìn đồng/m²) -> 69.000 thành 60.000; QĐ 03 Điều 3 khoản 2: giá bảng giá NHÂN lần lượt hệ số -> 60.000 x 1,45 = 87.000. Đối chiếu file Bang gia.doc: Phụ lục VIII 95 xã khớp 100%, dòng 22 ĐT 761 = 230 / 200 / đất ở 980; 109 tuyến bảng gắn sẵn đều có trong Phụ lục VII. Lỗi là màn hình chỉ hiện 60.000 × 1,45, phép tính nằm trong nhật ký giải trình: thêm `KetQua.dien_giai_vi_tri`, câu `vt_ngan` của gói, hiện ở `lb_ct` và Ghi chú dòng đất.
 - f-string trùng loại dấu nháy (`f'{ham('x')}'`) hợp lệ từ Python 3.12, LỖI CÚ PHÁP trên 3.8; vermin KHÔNG bắt. Mã lỗi trong một module nạp lười làm bản Qt5 sập khi bài test mở QMessageBox. `tests/test_toi_1080.TestBienDich` biên dịch mọi file bằng Python đang chạy (lượt Qt5 sẽ bắt).
+
+
+## 1.0.81 (08/11/2026 - lệnh /larc-nq28: 4 đợt NQ 28)
+- Đợt 1 - lỗi "FOREIGN KEY constraint failed" khi xóa / sửa thửa ở thẻ 0 của cửa sổ lập phương án rồi Lưu: dòng mục 1 còn gắn `ma_thua` đã xóa.
+  `BoSoan.dong_bo_dat_theo_thua_csdl(bc_moi)` (gọi trong `CuaSoLapPA._sau_ghi_ho_so`, đặt luôn `bo.bc`): dòng gắn thửa mất -> gắn lại theo
+  (tờ, thửa) nếu hộ còn thửa đó, không có thì `ma_thua = None` (GIỮ dòng và số tiền, không tự xóa); thửa MỚI (không có trong bối cảnh cũ) chưa
+  có dòng -> `them_thua` (mã đất không có trong danh mục vẫn giữ). Lưới an toàn `BoSoan._thua_hop_le_khi_luu` ở đầu `luu`.
+- Đợt 1 - bộ đếm vùng chọn: `_BoToMau` gắn `cho_phep_sao_chep_bang` khi QTableView HIỆN (bảng tạo sau khi cửa sổ đã hiện, bảng trong hộp nhúng
+  `_nhung_hop` không phải cửa sổ). Chuỗi bộ đếm giữ nguyên ("Đang chọn: n dòng (k ô) | Tổng DT/KL | Tổng Thành tiền") - đã có từ trước.
+- Đợt 2 - 4 loại đất nông nghiệp (Điều 5): bảng giá NQ 28 chỉ có 2 cột giá NN (`nn_cay`, `nn_rung_nts`) -> KHÔNG đổi cột của bảng giá; lớp
+  `gia_dat_nq28.LOAI_NN` (nn_cln, nn_chn, nn_nts, nn_rsx) + `DU_PHONG_COT` (cột riêng nếu bảng có, không thì cột gộp), `loai_nn_cua_ma`,
+  `phan_tich_4_loai_nn` (giá + trần / sàn Phụ lục VIII theo `gia_dat_qd03.gioi_han_nong_nghiep`). `COT_LOAI` thêm CNT, NKH, LUN (nn_cay), RPH,
+  RDD (nn_rung_nts). MNC KHÔNG vào COT_LOAI (luật 2024: phi nông nghiệp) - chỉ trong danh sách nn_nts của gói (khi nuôi trồng thủy sản).
+  `cap_nhat_gia_dat._loai_gia`: kiểm "rung" / "thuy san" TRƯỚC "san xuat" ("Đất rừng sản xuất" từng thành sxkd).
+- Đợt 3 - toàn văn NQ 28 (.docx / .pdf, Điều 1 -> 10, không bảng Tên đường): `doc_file_day_du` bắt LoiBangGia, nếu
+  `quy_tac_vi_tri.la_van_ban_toan_van_nq28` (40 dòng đầu có "Nghị quyết" + "giá đất", >= 5 điều) thì không báo lỗi: bảng trên = bảng giá đang
+  dùng của xã đang chọn, `doc_toan_van_nghi_quyet(luu=True)` bóc các khoản có %, hệ số, khoảng cách -> `<thư mục máy>/quy_tac_toan_van_nq28.json`
+  (kq['toan_van']). Bảng "Quy tắc vị trí" nhận tỷ lệ tới 120% (Khoản 3 Điều 8).
+- Đợt 4 - `quy_tac_vi_tri.tinh_gia_tai_dinh_cu_va_truong_hop_cu_the(truong_hop, gia, **ts)` (Decimal, `lam_tron` 0): tái định cư (PL VI 1,00;
+  tiếp giáp PL VII 1,00; nội bộ 0,50; cách <= 500 m đô thị / 1.000 m nông thôn 0,50; còn lại 0,40; TMDV 0,70; SXKD 0,60; chênh lệch suất tối
+  thiểu), phạm vi NN / PNN (+ sàn), 2 mặt tiền 1,20 / 1,10 lớp 50 m, Điều 8 K5-K12, Điều 9 giáp ranh, Điều 10 thời hạn / 70 năm. MỌI hệ số ở
+  khóa `quy_tac_nq28` của `pabt/gia_dat_qd03.json` (NGOÀI khóa "goi" - vàng 3.061 ca không đổi), lấy từ danh sách người dùng gửi 08/11/2026,
+  CHƯA đối chiếu bản gốc NQ 28 (chưa có file toàn văn trong máy). Ngã ba Khoản 7 chưa có hệ số trong yêu cầu: theo đường giá cao nhất x 1,00.
+- Màn hình: `pabt/man_hinh_gia_dat_nq28.py` (`HopPhanTich4LoaiDatNN`, `HopTinhGiaTaiDinhCuVaDieu8` - chỉ tính / xem, không ghi); 2 nút trên
+  hàng nút của khung "Quy tắc vị trí" (KhungCapNhatGiaDat). Chữ nút KHÔNG emoji (Win 7). Test: `tests/test_nq28_dot_1081.py`.

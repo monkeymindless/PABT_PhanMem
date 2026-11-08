@@ -2714,7 +2714,7 @@ class CuaSoLapPA(QDialog):
         """Hồ sơ hộ vừa ghi CSDL (lưu, gộp, chuyển thửa): đọc lại thửa / tên hộ, giữ phương án đang soạn."""
         self.thay_doi_csdl = True
         bc = self.bo.bc.__class__.tu(self.bo.con)
-        self.bo.bc = bc
+        kq = self.bo.dong_bo_dat_theo_thua_csdl(bc)      # 1.0.81: dòng mục 1 theo thửa vừa xóa / sửa / thêm (đặt self.bo.bc = bc)
         r = self.bo.con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (self.bo.ma_ho,)).fetchone()
         if r is not None:
             self.bo.pa.ho.ho_ten = r[0]
@@ -2724,6 +2724,10 @@ class CuaSoLapPA(QDialog):
         self.bang[1].nap_danh_sach()
         self.bang[1].ve()
         self.cap_nhat()
+        if any(kq.values()):
+            self.thong_bao('Mục 1 theo hồ sơ thửa: ' + ', '.join(
+                f'{n} {ten}' for n, ten in ((kq['them'], 'dòng thêm cho thửa mới'), (kq['gan_lai'], 'dòng gắn lại thửa'),
+                                            (kq['bo_gan'], 'dòng bỏ gắn thửa đã xóa (giữ số liệu)')) if n) + ' - bấm Lưu để ghi.')
 
     def _sau_xoa_ho(self, tb: str):
         self.thay_doi_csdl = True

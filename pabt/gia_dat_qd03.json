@@ -2980,5 +2980,190 @@
     "co_quy_dinh_rieng_duong_dat_tai_pl1": false
    }
   ]
+ },
+ "quy_tac_nq28": {
+  "van_ban": "Nghị quyết 28/2025/NQ-HĐND ngày 10/12/2025 của HĐND tỉnh Đồng Nai",
+  "ghi_chu": "Tỷ lệ, hệ số theo danh sách quy tắc người dùng cung cấp ngày 08/11/2026 (Điều 1, 5, 6, 8, 9, 10). Đối chiếu văn bản gốc trước khi dùng chính thức; sửa số tại đây, không sửa mã.",
+  "loai_nn": [
+   {
+    "ma": "nn_cln",
+    "ten": "Đất trồng cây lâu năm",
+    "ma_dat": [
+     "CLN",
+     "CNT",
+     "NKH"
+    ],
+    "cot_gia": "nn_cay",
+    "pl_viii": "cln",
+    "can_cu": "Điều 5"
+   },
+   {
+    "ma": "nn_chn",
+    "ten": "Đất trồng cây hằng năm",
+    "ma_dat": [
+     "HNK",
+     "CHN",
+     "BHK",
+     "NHK",
+     "NHP",
+     "LUA",
+     "LUC",
+     "LUK",
+     "LUN"
+    ],
+    "cot_gia": "nn_cay",
+    "pl_viii": "hang_nam",
+    "can_cu": "Điều 5"
+   },
+   {
+    "ma": "nn_nts",
+    "ten": "Đất nuôi trồng thủy sản",
+    "ma_dat": [
+     "NTS",
+     "MNC"
+    ],
+    "cot_gia": "nn_rung_nts",
+    "pl_viii": "nts",
+    "can_cu": "Điều 5",
+    "ghi_chu": "MNC chỉ khi mặt nước chuyên dùng sử dụng nuôi trồng thủy sản"
+   },
+   {
+    "ma": "nn_rsx",
+    "ten": "Đất rừng sản xuất",
+    "ma_dat": [
+     "RSX",
+     "RPH",
+     "RDD"
+    ],
+    "cot_gia": "nn_rung_nts",
+    "pl_viii": "rung",
+    "can_cu": "Điều 5",
+    "ghi_chu": "Rừng phòng hộ, rừng đặc dụng tính 100% giá rừng sản xuất"
+   }
+  ],
+  "tai_dinh_cu": {
+   "can_cu": "Khoản 2 Điều 1, Khoản 7 Điều 6, Khoản 4 Điều 8",
+   "muc": [
+    {
+     "ma": "pl_vi",
+     "ten": "Đất ở KDC / Khu TĐC có giá tại Phụ lục VI",
+     "he_so": "1"
+    },
+    {
+     "ma": "tiep_giap_pl_vii",
+     "ten": "Đường nội bộ chưa có giá - thửa tiếp giáp đường Phụ lục VII",
+     "he_so": "1"
+    },
+    {
+     "ma": "noi_bo",
+     "ten": "Thửa nội bộ bên trong KDC tiếp giáp đường Phụ lục VII (theo đường có giá cao nhất)",
+     "he_so": "0.5"
+    },
+    {
+     "ma": "gan_duong",
+     "ten": "KDC cách đường Phụ lục VII không quá 500 m (đô thị) / 1.000 m (nông thôn)",
+     "he_so": "0.5",
+     "cach_do_thi_m": 500,
+     "cach_nong_thon_m": 1000
+    },
+    {
+     "ma": "con_lai",
+     "ten": "KDC còn lại",
+     "he_so": "0.4"
+    }
+   ],
+   "tmdv": "0.7",
+   "sxkd": "0.6"
+  },
+  "pham_vi": {
+   "can_cu": "Điều 8",
+   "nn": {
+    "PV1": "1",
+    "PV2": "0.8",
+    "PV3": "0.6",
+    "VT2": "0.3",
+    "san": "Phụ lục VIII"
+   },
+   "pnn": {
+    "PV1": "1",
+    "PV2": "0.8",
+    "PV3": "0.6",
+    "VT2-PV1": "0.15",
+    "VT2-PV2": "0.1",
+    "san": "CLN VT1-PV1"
+   }
+  },
+  "nhieu_mat_tien": {
+   "can_cu": "Khoản 3 Điều 8",
+   "lop_m": 50,
+   "hai_duong_pl_vii": "1.2",
+   "mot_pl_vii_va_duong_khac": "1.1"
+  },
+  "truong_hop": [
+   {
+    "ma": "long_cho",
+    "ten": "Mặt tiền lòng chợ",
+    "can_cu": "Khoản 5 Điều 8",
+    "he_so": "1"
+   },
+   {
+    "ma": "kcn_moi",
+    "ten": "Khu, cụm công nghiệp mới",
+    "can_cu": "Khoản 6 Điều 8",
+    "he_so": "0.9"
+   },
+   {
+    "ma": "nga_ba",
+    "ten": "Ngã ba, ngã tư - theo đường có giá cao nhất",
+    "can_cu": "Khoản 7 Điều 8",
+    "he_so": "1",
+    "theo_duong_cao_nhat": true
+   },
+   {
+    "ma": "dang_tuyen",
+    "ten": "Đất dạng tuyến",
+    "can_cu": "Khoản 8 Điều 8",
+    "he_so": "0.2"
+   },
+   {
+    "ma": "duong_dat",
+    "ten": "Đường đất, đá, cấp phối",
+    "can_cu": "Khoản 9 Điều 8",
+    "he_so": "0.8"
+   },
+   {
+    "ma": "da_cau",
+    "ten": "Dạ cầu, cầu vượt",
+    "can_cu": "Khoản 10 Điều 8",
+    "he_so": "0.8"
+   },
+   {
+    "ma": "kenh_rach_pl_vii",
+    "ten": "Qua kênh, rạch - đường Phụ lục VII",
+    "can_cu": "Khoản 11 Điều 8",
+    "he_so": "0.4"
+   },
+   {
+    "ma": "kenh_rach_khac",
+    "ten": "Qua kênh, rạch - đường ngoài Phụ lục VII",
+    "can_cu": "Khoản 11 Điều 8",
+    "he_so": "0.5"
+   },
+   {
+    "ma": "hlat_duong_bo",
+    "ten": "Đất từ mép đường đến hết hành lang an toàn đường bộ",
+    "can_cu": "Khoản 12 Điều 8",
+    "he_so": "1"
+   }
+  ],
+  "giap_ranh": {
+   "can_cu": "Điều 9",
+   "nguong_chenh_lech": "0.3",
+   "ty_le_gia_tinh_ban": "0.7"
+  },
+  "thoi_han": {
+   "can_cu": "Điều 10",
+   "nam_chuan": 70
+  }
  }
 }

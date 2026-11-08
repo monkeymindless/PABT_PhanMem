@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.81', '08/11/2026', (
+        'Lập phương án: xóa, sửa hoặc thêm thửa ở thẻ Hồ sơ & Thửa rồi Lưu không còn báo lỗi FOREIGN KEY; dòng đất của thửa đã xóa được giữ lại (bỏ gắn thửa), thửa mới tự có dòng ở mục 1. Đất.',
+        'Bôi đen ô ở bảng trong hộp thoại nhúng hoặc bảng mở thêm sau cũng hiện tổng nhanh (số dòng, tổng diện tích, tổng thành tiền).',
+        'Bảng giá đất: tách 4 loại đất nông nghiệp theo Điều 5 Nghị quyết 28 (cây lâu năm, cây hằng năm, nuôi trồng thủy sản, rừng sản xuất); rừng phòng hộ, đặc dụng tính theo rừng sản xuất. Nút Phân tích 4 loại đất NN xem giá và trần, sàn Phụ lục VIII.',
+        'Đọc file toàn văn Nghị quyết 28 (không có bảng Tên đường) không còn báo lỗi: đọc các quy tắc tỷ lệ, phạm vi, khoảng cách trong lời văn.',
+        'Nút Giá TĐC, Điều 8-10: tính giá đất tái định cư, phạm vi, thửa nhiều mặt tiền, các trường hợp cụ thể Điều 8, giáp ranh Điều 9, đất có thời hạn Điều 10.',
+    )),
     ('1.0.80', '07/11/2026', (
         'Bảng tính giá đất: khi chọn Vị trí, Phạm vi, màn hình và Ghi chú dòng đất hiện đủ phép tính, ví dụ 230.000 × 30% = 69.000 đ/m², vượt giá tối đa của Xã Phú Lý nên lấy 60.000 đ/m² (Phụ lục VIII). Cách tính không đổi.',
         'Tông Tối: sửa lỗi của 1.0.79 làm các nhãn (Hộ, Thửa, Họ và tên, Tên dự án...) tối mờ khó đọc.',

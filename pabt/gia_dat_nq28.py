@@ -61,7 +61,54 @@ def ten_vi_tri(ma: str) -> str:
 # mã loại đất -> cột giá
 COT_LOAI = {'ONT': 'dat_o', 'ODT': 'dat_o', 'TMD': 'tmdv', 'SKC': 'sxkd', 'SKS': 'sxkd', 'SKN': 'sxkd',
             'CLN': 'nn_cay', 'HNK': 'nn_cay', 'BHK': 'nn_cay', 'LUC': 'nn_cay', 'LUK': 'nn_cay', 'LUA': 'nn_cay', 'CHN': 'nn_cay',
-            'NHK': 'nn_cay', 'RSX': 'nn_rung_nts', 'NTS': 'nn_rung_nts'}
+            'NHK': 'nn_cay', 'RSX': 'nn_rung_nts', 'NTS': 'nn_rung_nts',
+            # 1.0.81 (Điều 5 NQ 28): chăn nuôi tập trung / NN khác theo cây lâu năm; lúa nước còn lại theo cây hằng năm; rừng phòng hộ,
+            # đặc dụng tính 100% rừng sản xuất
+            'CNT': 'nn_cay', 'NKH': 'nn_cay', 'LUN': 'nn_cay', 'RPH': 'nn_rung_nts', 'RDD': 'nn_rung_nts'}
+# 1.0.81: 4 loại đất nông nghiệp độc lập (Điều 5 NQ 28). Phụ lục I gộp 2 cột giá -> mỗi loại có cột giá dự phòng (DU_PHONG_COT); bảng giá
+# nào có cột riêng (nn_cln…) thì dùng cột riêng. Danh sách mã đất, cột Phụ lục VIII: khóa quy_tac_nq28.loai_nn của gia_dat_qd03.json.
+LOAI_NN = [('nn_cln', 'Đất trồng cây lâu năm'), ('nn_chn', 'Đất trồng cây hằng năm'), ('nn_nts', 'Đất nuôi trồng thủy sản'),
+           ('nn_rsx', 'Đất rừng sản xuất')]
+DU_PHONG_COT = {'nn_cln': 'nn_cay', 'nn_chn': 'nn_cay', 'nn_nts': 'nn_rung_nts', 'nn_rsx': 'nn_rung_nts'}
+
+
+def quy_tac_loai_nn() -> list:
+    """[{ma, ten, ma_dat, cot_gia, pl_viii, can_cu}] của gói dữ liệu (gia_dat_qd03.json, khóa quy_tac_nq28.loai_nn)."""
+    from .goi_gia_dat import du_lieu_goc
+    return list((du_lieu_goc().get('quy_tac_nq28') or {}).get('loai_nn') or [])
+
+
+def loai_nn_cua_ma(loai_dat: str) -> str | None:
+    """Mã loại đất ('CLN', 'LUC+HNK', 'RPH') -> một trong 4 loại đất nông nghiệp ('nn_cln'…); không phải đất NN: None."""
+    ma = {m: x['ma'] for x in quy_tac_loai_nn() for m in x.get('ma_dat') or ()}
+    for p in re.split(r'[+,;/ ]+', (loai_dat or '').upper()):
+        if p in ma:
+            return ma[p]
+    return None
+
+
+def cot_gia_that(cot: str, r: dict | None = None) -> str:
+    """Cột giá thật của dòng bảng giá: 4 loại NN dùng cột riêng nếu dòng có, không thì cột dự phòng (nn_cay / nn_rung_nts)."""
+    if cot in DU_PHONG_COT and (r is None or not r.get(cot)):
+        return DU_PHONG_COT[cot]
+    return cot
+
+
+def phan_tich_4_loai_nn(r: dict, dia_ban: str = '', goi=None) -> list:
+    """Một dòng bảng giá -> 4 dòng [{ma, ten, ma_dat, cot_gia, gia (đồng/m²), toi_thieu, toi_da (Phụ lục VIII, đồng/m² hoặc None),
+    can_cu}] để xem trước / đối chiếu giá từng loại đất nông nghiệp."""
+    from . import gia_dat_qd03 as q3
+    ra = []
+    for x in quy_tac_loai_nn():
+        cot = cot_gia_that(x['ma'], r)
+        try:
+            tt, td = q3.gioi_han_nong_nghiep(dia_ban or r.get('xa', ''), x['cot_gia'], goi, x.get('pl_viii', ''))
+        except Exception:                                   # noqa: BLE001 - gói không có Phụ lục VIII: chỉ hiện giá bảng
+            tt = td = None
+        ra.append(dict(ma=x['ma'], ten=x['ten'], ma_dat=', '.join(x.get('ma_dat') or ()), cot_gia=cot,
+                       gia=gia_dong(r, x['ma']) if r else 0, toi_thieu=tt, toi_da=td, can_cu=x.get('can_cu', ''),
+                       ghi_chu=x.get('ghi_chu', '')))
+    return ra
 
 
 def _file() -> Path:
@@ -227,15 +274,15 @@ def ten_ngan_xa(r_xa: str) -> str:
 
 
 def gia_dong(r: dict, cot: str) -> int:
-    """Giá đồng/m² của một dòng theo cột (văn bản ghi nghìn đồng)."""
-    return int(r[cot]) * 1000
+    """Giá đồng/m² của một dòng theo cột (văn bản ghi nghìn đồng). 4 loại đất NN (nn_cln…): cột riêng nếu có, không thì cột dự phòng."""
+    return int(r[cot_gia_that(cot, r)]) * 1000
 
 
 def can_cu(r: dict, cot: str) -> str:
     vb = (r.get('van_ban') or van_ban_dang_dung()) if dang_thay() else 'NQ 28/2025/NQ-HĐND'
     ten_vt = ten_vi_tri(r['vi_tri'])
     return (f'{vb}: {r["xa"]}, {r["ten_duong"]} (từ {r["diem_dau"]} đến {r["diem_cuoi"]}), '
-            f'{ten_vt}, TT {r["tt"]}, {dict(COT)[cot]}' + (f' ({r["tinh_tu"]})' if r.get('tinh_tu') else ''))
+            f'{ten_vt}, TT {r["tt"]}, {dict(COT + LOAI_NN)[cot]}' + (f' ({r["tinh_tu"]})' if r.get('tinh_tu') else ''))
 
 
 def xuat_excel(file_ra) -> Path:

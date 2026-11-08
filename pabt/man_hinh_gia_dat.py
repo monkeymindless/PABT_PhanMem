@@ -209,9 +209,16 @@ class KhungCapNhatGiaDat(QWidget):
         self.b_them_qt.clicked.connect(lambda: self.them_quy_tac())
         self.b_xoa_qt.clicked.connect(lambda: self.xoa_quy_tac())
         self.b_tinh.clicked.connect(lambda: self.tinh_lai())
+        # 1.0.81: 4 loại đất nông nghiệp (Điều 5) và giá tái định cư / trường hợp cụ thể Điều 8-10 NQ 28
+        self.b_4_loai = QPushButton('Phân tích 4 loại đất NN…')
+        self.b_4_loai.setToolTip('Giá 4 loại đất nông nghiệp (CLN, HNK, NTS, RSX) của dòng đang chọn và trần / sàn Phụ lục VIII')
+        self.b_4_loai.clicked.connect(lambda: self.phan_tich_4_loai())
+        self.b_tdc = QPushButton('Giá TĐC, Điều 8-10…')
+        self.b_tdc.setToolTip('Tính giá đất tái định cư (Điều 1, 6, 8) và các trường hợp cụ thể Điều 8-10 NQ 28 từ giá dòng đang chọn')
+        self.b_tdc.clicked.connect(lambda: self.tinh_tdc())
         h_qt.addWidget(self.lb_qt, 1)
         h_qt.addStretch()
-        for b in (self.b_them_qt, self.b_xoa_qt, self.b_tinh):
+        for b in (self.b_4_loai, self.b_tdc, self.b_them_qt, self.b_xoa_qt, self.b_tinh):
             h_qt.addWidget(b)
         lo_qt.addLayout(h_qt)
         lo_qt.addWidget(self.bang_qt)
@@ -346,11 +353,32 @@ class KhungCapNhatGiaDat(QWidget):
                 tt = int(doc_so_vn(o(4)) / 1000) if o(4) else 0
             except (ValueError, InvalidOperation, ArithmeticError):
                 continue
-            if not (1 <= sv < vt <= 5) or not (0 < tl <= 1):
+            if not (1 <= sv < vt <= 5) or not (0 < tl <= Decimal('1.2')):     # 1.0.81: giữ 110%, 120% (Khoản 3 Điều 8 NQ 28)
                 continue
             cb = b.cellWidget(r, 3)
             ra.append(QuyTac(vt, tl.normalize(), sv, cb.currentData() if cb is not None else '', tt, o(5)))
         return gon(ra)
+
+    def _dong_chon(self) -> dict | None:
+        r = self.bang.currentRow()
+        if 0 <= r < len(self.dong):
+            return self.dong[r]
+        ds = nq.tim(self.o_xa.text().strip())
+        return ds[0] if ds else None
+
+    def phan_tich_4_loai(self, hien: bool = True):
+        from .man_hinh_gia_dat_nq28 import HopPhanTich4LoaiDatNN
+        hop = HopPhanTich4LoaiDatNN(self, self._dong_chon(), self.o_xa.text().strip())
+        if hien and not self.im_lang:
+            hop.exec()
+        return hop
+
+    def tinh_tdc(self, hien: bool = True):
+        from .man_hinh_gia_dat_nq28 import HopTinhGiaTaiDinhCuVaDieu8
+        hop = HopTinhGiaTaiDinhCuVaDieu8(self, self._dong_chon())
+        if hien and not self.im_lang:
+            hop.exec()
+        return hop
 
     def them_quy_tac(self, vi_tri: int = 2, ty_le: str = '70', so_voi: int = 1, loai: str = ''):
         from decimal import Decimal

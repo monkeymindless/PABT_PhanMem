@@ -1100,6 +1100,49 @@ class BoSoan:
             n += 1
         return n
 
+    def dong_bo_dat_theo_thua_csdl(self, bc_moi=None) -> dict:
+        """Hồ sơ thửa vừa đổi trong CSDL (thẻ 0: xóa / sửa / thêm thửa, gộp hộ, chuyển thửa) - đồng bộ dòng mục 1 đang soạn (1.0.81):
+        - dòng gắn thửa không còn của hộ: gắn lại theo (số tờ, số thửa) nếu hộ còn thửa đó (thửa xóa rồi tạo lại), không có thì bỏ gắn
+          thửa (ma_thua = None - GIỮ dòng và số tiền để người dùng tự xem, không tự xóa);
+        - thửa MỚI của hộ (chưa có trong bối cảnh cũ) chưa có dòng mục 1: tự thêm dòng như them_thua (mọi loại đất, kể cả RDD, RPH,
+          MNC, DDT, DGT, DTL, SON - mã không có trong danh mục vẫn giữ, đơn giá 0 / nhập tay).
+        bc_moi: bối cảnh đọc lại sau khi ghi (None: đọc từ self.con); hàm đặt self.bc = bc_moi. Trả {'gan_lai', 'bo_gan', 'them'}."""
+        cu = {t['ma_thua']: t for t in self.bc.thua_cua(self.ma_ho)}
+        if bc_moi is None:
+            bc_moi = type(self.bc).tu(self.con)
+        self.bc = bc_moi
+        moi = {t['ma_thua']: t for t in bc_moi.thua_cua(self.ma_ho)}
+        theo_so = {(str(t['so_to'] or '').strip(), str(t['so_thua'] or '').strip()): mt for mt, t in moi.items()}
+        kq = dict(gan_lai=0, bo_gan=0, them=0)
+        for d in self.pa.dat:
+            if d.ma_thua is None or d.ma_thua in moi:
+                continue
+            t = cu.get(d.ma_thua)
+            mt = theo_so.get((str(t['so_to'] or '').strip(), str(t['so_thua'] or '').strip())) if t else None
+            d.ma_thua = mt
+            kq['gan_lai' if mt is not None else 'bo_gan'] += 1
+        da_co = {d.ma_thua for d in self.pa.dat + self.pa_khac.dat}
+        for mt in moi:
+            if mt not in cu and mt not in da_co:
+                self.them_thua(mt)
+                kq['them'] += 1
+        return kq
+
+    def _thua_hop_le_khi_luu(self) -> None:
+        """Lưới an toàn của luu (1.0.81 - lỗi "FOREIGN KEY constraint failed" khi thửa đã bị xóa / sửa ở nơi khác mà cửa sổ còn giữ
+        dòng đất gắn thửa cũ): dòng gắn thửa không còn trong CSDL -> gắn lại theo (tờ, thửa) của hộ, không có thì bỏ gắn thửa."""
+        ds = [d for d in self.pa.dat if d.ma_thua is not None]
+        if not ds:
+            return
+        con_lai = {r[0]: (str(r[1] or '').strip(), str(r[2] or '').strip())
+                   for r in self.con.execute('SELECT ma_thua, so_to, so_thua FROM thua WHERE ma_ho = ?', (self.ma_ho,))}
+        theo_so = {v: k for k, v in con_lai.items()}
+        for d in ds:
+            if d.ma_thua in con_lai:
+                continue
+            t = self.bc.thua.get(d.ma_thua)
+            d.ma_thua = theo_so.get((str(t['so_to'] or '').strip(), str(t['so_thua'] or '').strip())) if t else None
+
     def xoa_nhieu_dat(self, ds_chi_so) -> int:
         """Xóa nhiều dòng mục 1 (chỉ số dòng; trùng / ngoài phạm vi bỏ qua). Trả số dòng đã xóa."""
         ds = sorted({int(i) for i in ds_chi_so if 0 <= int(i) < len(self.pa.dat)}, reverse=True)
@@ -1210,6 +1253,7 @@ class BoSoan:
         loi = self.loi_chan_luu()
         if loi:
             raise LoiNhap('Chưa lưu được:\n' + '\n'.join('- ' + x for x in loi))
+        self._thua_hop_le_khi_luu()
         con, pa = self.con, self.pa
         from . import lan_pa
         from .nghiep_vu import co_cot_lan, tinh_pa_lan

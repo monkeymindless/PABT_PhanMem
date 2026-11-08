@@ -226,14 +226,30 @@ def chu_quy_tac(quy_tac: list, them: int) -> str:
 def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> dict:
     """Như doc_file nhưng CHƯA dựng vị trí theo quy tắc: {'dong_goc': dòng của bảng, 'quy_tac': [QuyTac] đọc trong lời văn,
     'van_ban', 'chu'} - màn hình cho người dùng sửa quy tắc rồi tính lại (ap_quy_tac_file)."""
-    from .quy_tac_vi_tri import doc_quy_tac
+    from .quy_tac_vi_tri import doc_quy_tac, doc_toan_van_nghi_quyet, la_van_ban_toan_van_nq28
     chu_vb = []
-    dong, vb, chu = _doc_file(file, tinh, xa, bao, cho, chu_vb)
+    toan_van = None
+    try:
+        dong, vb, chu = _doc_file(file, tinh, xa, bao, cho, chu_vb)
+    except nq.LoiBangGia:
+        # 1.0.81: toàn văn Nghị quyết (Điều 1 -> 10, không có bảng Tên đường): không báo lỗi - đọc quy tắc trong lời văn, bảng phía
+        # trên là bảng giá đường đang dùng của địa bàn đang chọn
+        if not la_van_ban_toan_van_nq28(chu_vb):
+            raise
+        dong = [dict(r) for r in nq.tat_ca() if xa and nq.khop_xa(xa, r['xa'])]
+        vb, chu = Path(file).stem, ('Toàn văn nghị quyết (không có bảng Tên đường): đã đọc quy tắc trong lời văn; bảng phía trên là '
+                                   f'bảng giá đường đang dùng của {xa or "địa bàn đang chọn (chưa nhập xã)"}.')
+    if la_van_ban_toan_van_nq28(chu_vb):
+        try:
+            toan_van = doc_toan_van_nghi_quyet(chu_vb, luu=True)
+            chu += f' Toàn văn: {len(toan_van["quy_tac"])} quy tắc ở {len(toan_van["dieu"])} điều (lưu {toan_van["file"]}).'
+        except Exception:                               # noqa: BLE001 - lời văn lạ không làm hỏng việc đọc bảng
+            toan_van = None
     try:
         qt = doc_quy_tac(chu_vb)
     except Exception:                                   # noqa: BLE001 - lời văn lạ không được làm hỏng việc đọc bảng
         qt = []
-    return {'dong_goc': dong, 'quy_tac': qt, 'van_ban': vb, 'chu': chu}
+    return {'dong_goc': dong, 'quy_tac': qt, 'van_ban': vb, 'chu': chu, 'toan_van': toan_van}
 
 
 def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
@@ -331,10 +347,10 @@ def _loai_gia(chu: str):
     k = bo_dau(chu)
     if 'thuong mai' in k:
         return 'tmdv'
+    if re.search(r'\brung\b', k) or 'thuy san' in k:      # 1.0.81: trước 'san xuat' - "Đất rừng sản xuất" từng bị nhận là SX-KD
+        return 'nn_rung_nts'
     if 'san xuat' in k or 'khoang san' in k:
         return 'sxkd'
-    if 'rung' in k or 'thuy san' in k:
-        return 'nn_rung_nts'
     if 'cay lau' in k or 'cay hang' in k:
         return 'nn_cay'
     if re.search(r'dat o\b', k):

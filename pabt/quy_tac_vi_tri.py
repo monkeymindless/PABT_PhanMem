@@ -257,3 +257,225 @@ def ap_quy_tac(dong: list, ds: list) -> tuple:
 
 def tom_tat(ds: list) -> str:
     return '; '.join(q.mo_ta() for q in ds)
+
+
+# ---------------------------------------------------------------- 1.0.81: toàn văn Nghị quyết bảng giá đất (Điều 1 -> 10)
+TEN_FILE_TOAN_VAN = 'quy_tac_toan_van_nq28.json'          # trong thư mục máy
+_RE_DIEU = re.compile(r'^dieu\s+(\d{1,2})\s*[.:]?\s*(.*)$')
+_RE_KHOAN = re.compile(r'^(\d{1,2})\s*[.)]\s+(.*)$')
+_RE_PT = re.compile(r'(\d{1,3}(?:[.,]\d+)?)\s*%')
+_RE_HS = re.compile(r'he so\s*(?:dieu chinh\s*)?(?:la\s*|bang\s*)?(\d+[.,]\d+)')
+_RE_MET = re.compile(r'(\d{1,3}(?:[.,]\d{3})*|\d+)\s*(?:m\b|met\b)')
+
+
+def _dong_chu(cac_dong) -> list:
+    if isinstance(cac_dong, str):
+        cac_dong = cac_dong.splitlines()
+    ra = []
+    for d in cac_dong:
+        chu = ' '.join(str(x) for x in (d if isinstance(d, (list, tuple)) else [d]) if str(x or '').strip())
+        ra += [x.strip() for x in chu.splitlines() if x.strip()]
+    return ra
+
+
+def la_van_ban_toan_van_nq28(cac_dong) -> bool:
+    """Toàn văn nghị quyết bảng giá đất: phần đầu (40 dòng) có "Nghị quyết" + "giá đất", thân có từ 5 điều khác nhau (Điều 1, 2…)."""
+    dong = _dong_chu(cac_dong)
+    dau = bo_dau(' '.join(dong[:40])).lower()
+    if 'nghi quyet' not in dau or 'gia dat' not in dau:
+        return False
+    so = {m.group(1) for m in (_RE_DIEU.match(bo_dau(x).lower()) for x in dong) if m}
+    return len(so) >= 5
+
+
+def doc_toan_van_nghi_quyet(cac_dong, luu: bool = False) -> dict:
+    """Bóc tách toàn văn: {'dieu': [{so, ten, khoan: [{so, noi_dung}]}], 'quy_tac': [{dieu, khoan, noi_dung, ty_le, he_so, khoang_cach_m,
+    loai}], 'file'}. Quy tắc = khoản / đoạn có tỷ lệ %, hệ số hoặc khoảng cách (m) - phạm vi chiều sâu 50/100/200 m, giá đất tái định cư,
+    trường hợp cụ thể Điều 8-10. luu: ghi <thư mục máy>/quy_tac_toan_van_nq28.json (người dùng đối chiếu, màn hình giá TĐC đọc lại)."""
+    dieu, hien, khoan = [], None, None
+    for goc in _dong_chu(cac_dong):
+        k = bo_dau(goc).lower().strip()
+        m = _RE_DIEU.match(k)
+        if m:
+            hien = dict(so=int(m.group(1)), ten=goc.split('.', 1)[-1].strip() if '.' in goc[:12] else goc, khoan=[])
+            dieu.append(hien)
+            khoan = None
+            continue
+        if hien is None:
+            continue
+        m = _RE_KHOAN.match(k)
+        if m:
+            khoan = dict(so=int(m.group(1)), noi_dung=goc)
+            hien['khoan'].append(khoan)
+        elif khoan is not None:
+            khoan['noi_dung'] += ' ' + goc
+        else:
+            khoan = dict(so=0, noi_dung=goc)
+            hien['khoan'].append(khoan)
+    quy_tac = []
+    for d in dieu:
+        for kh in d['khoan']:
+            for cau in re.split(r'(?<=[.;:])\s+(?=[a-zđ]\)|[-+])', kh['noi_dung']):
+                k = bo_dau(cau).lower()
+                pt = [x.replace(',', '.') for x in _RE_PT.findall(k)]
+                hs = [x.replace(',', '.') for x in _RE_HS.findall(k)]
+                met = [x.replace('.', '').replace(',', '') for x in _RE_MET.findall(k)]
+                if not (pt or hs or met):
+                    continue
+                quy_tac.append(dict(dieu=d['so'], khoan=kh['so'], noi_dung=cau.strip()[:400], ty_le=pt, he_so=hs, khoang_cach_m=met,
+                                    loai=_loai(k)))
+    kq = dict(dieu=[dict(so=d['so'], ten=d['ten'][:200], so_khoan=len(d['khoan'])) for d in dieu], quy_tac=quy_tac, file='')
+    if luu:
+        import json
+        from .may_chu import thu_muc_may
+        f = thu_muc_may() / TEN_FILE_TOAN_VAN
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(dict(dieu=dieu, quy_tac=quy_tac), ensure_ascii=False, indent=1), encoding='utf-8')
+        kq['file'] = str(f)
+    return kq
+
+
+def doc_quy_tac_toan_van_da_luu() -> list:
+    """Quy tắc toàn văn đã lưu trên máy (doc_toan_van_nghi_quyet(luu=True)); chưa có / hỏng: []."""
+    import json
+    from .may_chu import thu_muc_may
+    f = thu_muc_may() / TEN_FILE_TOAN_VAN
+    try:
+        return list(json.loads(f.read_text(encoding='utf-8')).get('quy_tac') or [])
+    except (OSError, ValueError, AttributeError):
+        return []
+
+
+# ---------------------------------------------------------------- 1.0.81: giá đất tái định cư + trường hợp cụ thể Điều 8-10
+# Mọi tỷ lệ / hệ số đọc từ gói dữ liệu (gia_dat_qd03.json, khóa quy_tac_nq28) - không viết cố định quy tắc pháp lý vào mã.
+class LoiQuyTac(ValueError):
+    """Thiếu số liệu / trường hợp không có trong gói quy tắc (thông báo tiếng Việt)."""
+
+
+def quy_tac_nq28() -> dict:
+    from .goi_gia_dat import du_lieu_goc
+    q = du_lieu_goc().get('quy_tac_nq28')
+    if not q:
+        raise LoiQuyTac('Gói dữ liệu chưa có quy tắc NQ 28 (khóa quy_tac_nq28 của gia_dat_qd03.json).')
+    return q
+
+
+def _D(x, ten: str) -> Decimal:
+    if isinstance(x, Decimal):
+        return x
+    if x is None or str(x).strip() == '':
+        raise LoiQuyTac(f'Thiếu {ten}.')
+    try:
+        from .tien import doc_so_vn
+        return doc_so_vn(str(x)) if not isinstance(x, int) else Decimal(x)
+    except (ValueError, ArithmeticError):
+        raise LoiQuyTac(f'{ten}: "{x}" không phải số.') from None
+
+
+def cac_truong_hop() -> list:
+    """[(mã, tên, căn cứ)] mọi trường hợp tinh_gia_tai_dinh_cu_va_truong_hop_cu_the nhận (cho ô chọn của màn hình)."""
+    q = quy_tac_nq28()
+    tdc = q['tai_dinh_cu']
+    ra = [('tdc_' + m['ma'], 'Tái định cư - ' + m['ten'], tdc['can_cu']) for m in tdc['muc']]
+    ra += [('tdc_tmdv', 'Tái định cư - Đất thương mại, dịch vụ trong Khu TĐC', tdc['can_cu']),
+           ('tdc_sxkd', 'Tái định cư - Đất SXKD trong Khu TĐC', tdc['can_cu']),
+           ('chenh_lech_suat_tdc', 'Hỗ trợ chênh lệch suất tái định cư tối thiểu', tdc['can_cu'])]
+    pv = q['pham_vi']
+    ra += [(f'pham_vi_{n}_{ma}', f'Phạm vi - {"Đất nông nghiệp" if n == "nn" else "Đất phi nông nghiệp"} {ma}', pv['can_cu'])
+           for n in ('nn', 'pnn') for ma in pv[n] if ma != 'san']
+    mt = q['nhieu_mat_tien']
+    ra += [('mat_tien_2_pl_vii', f'PNN từ 2 mặt tiền - ít nhất 2 đường Phụ lục VII (lớp {mt["lop_m"]} m)', mt['can_cu']),
+           ('mat_tien_1_pl_vii', f'PNN từ 2 mặt tiền - 1 đường Phụ lục VII + đường khác (lớp {mt["lop_m"]} m)', mt['can_cu'])]
+    ra += [(x['ma'], x['ten'], x['can_cu']) for x in q['truong_hop']]
+    ra += [('giap_ranh', 'Đất giáp ranh tỉnh khác', q['giap_ranh']['can_cu']),
+           ('thoi_han', f'Đất có thời hạn (quy đổi chuẩn {q["thoi_han"]["nam_chuan"]} năm)', q['thoi_han']['can_cu'])]
+    return ra
+
+
+def tinh_gia_tai_dinh_cu_va_truong_hop_cu_the(truong_hop: str, gia=None, **ts) -> dict:
+    """Giá đất (đồng/m², Decimal, làm tròn tien.lam_tron 0 chữ số = ROUND_HALF_UP) theo trường hợp NQ 28. Trả {gia, he_so, giai_trinh,
+    can_cu} (chenh_lech_suat_tdc: gia = số tiền hỗ trợ). gia: giá gốc đồng/m² (giá đường / giá đất ở TĐC / giá 70 năm…). Tham số riêng:
+      tdc_gan_duong: khoang_cach_m, do_thi (bool) - xa hơn ngưỡng thì tính như KDC còn lại;
+      chenh_lech_suat_tdc: dt_suat (m²), gia_tdc (đ/m²), tien_bt_dat_o (đ);
+      pham_vi_<nn|pnn>_<mã>: san (đ/m², không bắt buộc - giá không thấp hơn sàn);
+      nga_ba: gia_cac_duong (danh sách giá các đường, lấy cao nhất);
+      giap_ranh: gia_tinh_ban (đ/m²);  thoi_han: so_nam."""
+    from .tien import lam_tron
+    q = quy_tac_nq28()
+    th = str(truong_hop or '').strip()
+
+    def ra(g, hs, giai, cc):
+        return dict(gia=lam_tron(g, 0), he_so=hs, giai_trinh=giai, can_cu=cc)
+
+    def vnd(x):
+        return f'{lam_tron(x, 0):,}'.replace(',', '.')
+
+    if th == 'chenh_lech_suat_tdc':
+        dt, g, bt = _D(ts.get('dt_suat'), 'DT suất tối thiểu'), _D(ts.get('gia_tdc'), 'Giá đất TĐC'), _D(ts.get('tien_bt_dat_o'),
+                                                                                                         'Tiền bồi thường đất ở')
+        v = max(Decimal(0), dt * g - bt)
+        return ra(v, None, f'max(0; {dt} m² x {vnd(g)} - {vnd(bt)}) = {vnd(v)} đồng', q['tai_dinh_cu']['can_cu'])
+    if th == 'nga_ba':
+        ds = [_D(x, 'Giá đường') for x in (ts.get('gia_cac_duong') or [])] + ([_D(gia, 'Giá đường')] if gia not in (None, '') else [])
+        if not ds:
+            raise LoiQuyTac('Ngã ba, ngã tư: nhập giá các đường.')
+        x = next(x for x in q['truong_hop'] if x['ma'] == 'nga_ba')
+        hs = Decimal(x['he_so'])
+        return ra(max(ds) * hs, hs, f'Giá đường cao nhất {vnd(max(ds))} x {hs}', x['can_cu'])
+    g = _D(gia, 'Giá gốc (đồng/m²)')
+    if th.startswith('tdc_'):
+        tdc = q['tai_dinh_cu']
+        ma = th[4:]
+        if ma in ('tmdv', 'sxkd'):
+            hs = Decimal(tdc[ma])
+            return ra(g * hs, hs, f'{hs} x giá đất ở TĐC {vnd(g)}', tdc['can_cu'])
+        m = next((x for x in tdc['muc'] if x['ma'] == ma), None)
+        if m is None:
+            raise LoiQuyTac(f'Không có trường hợp tái định cư "{ma}".')
+        if ma == 'gan_duong':
+            kc = _D(ts.get('khoang_cach_m'), 'Khoảng cách tới đường Phụ lục VII (m)')
+            nguong = Decimal(m['cach_do_thi_m'] if ts.get('do_thi') else m['cach_nong_thon_m'])
+            if kc > nguong:
+                m = next(x for x in tdc['muc'] if x['ma'] == 'con_lai')
+                hs = Decimal(m['he_so'])
+                return ra(g * hs, hs, f'Cách {kc} m > {nguong} m: {m["ten"]} - {hs} x {vnd(g)}', tdc['can_cu'])
+        hs = Decimal(m['he_so'])
+        return ra(g * hs, hs, f'{m["ten"]}: {hs} x {vnd(g)}', tdc['can_cu'])
+    if th.startswith('pham_vi_'):
+        nhom, _, ma = th[len('pham_vi_'):].partition('_')
+        bang = q['pham_vi'].get(nhom) or {}
+        if ma not in bang or ma == 'san':
+            raise LoiQuyTac(f'Không có phạm vi "{ma}" cho nhóm "{nhom}".')
+        hs = Decimal(bang[ma])
+        v = g * hs
+        giai = f'{ma}: {hs} x {vnd(g)}'
+        if ts.get('san') not in (None, ''):
+            san = _D(ts['san'], 'Giá sàn')
+            if v < san:
+                v, giai = san, giai + f' < sàn ({bang.get("san", "")}) {vnd(san)}: lấy sàn'
+        return ra(v, hs, giai, q['pham_vi']['can_cu'])
+    if th in ('mat_tien_2_pl_vii', 'mat_tien_1_pl_vii'):
+        mt = q['nhieu_mat_tien']
+        hs = Decimal(mt['hai_duong_pl_vii' if th == 'mat_tien_2_pl_vii' else 'mot_pl_vii_va_duong_khac'])
+        return ra(g * hs, hs, f'Lớp {mt["lop_m"]} m đầu: {hs} x {vnd(g)} (phần sau lớp {mt["lop_m"]} m tính như thửa một mặt tiền)',
+                  mt['can_cu'])
+    if th == 'giap_ranh':
+        gr = q['giap_ranh']
+        ban = _D(ts.get('gia_tinh_ban'), 'Giá đất tỉnh giáp ranh')
+        nguong, tl = Decimal(gr['nguong_chenh_lech']), Decimal(gr['ty_le_gia_tinh_ban'])
+        if g > 0 and ban > g and (ban - g) / g > nguong:
+            v = max(g, ban * tl)
+            return ra(v, tl, f'Chênh lệch {lam_tron((ban - g) / g * 100, 1)}% > {nguong * 100}%: max({vnd(g)}; {tl} x {vnd(ban)})',
+                      gr['can_cu'])
+        return ra(g, Decimal(1), f'Chênh lệch không quá {nguong * 100}%: giữ giá {vnd(g)}', gr['can_cu'])
+    if th == 'thoi_han':
+        n = _D(ts.get('so_nam'), 'Thời hạn sử dụng (năm)')
+        chuan = Decimal(q['thoi_han']['nam_chuan'])
+        if n <= 0:
+            raise LoiQuyTac('Thời hạn sử dụng phải lớn hơn 0.')
+        return ra(g * min(n, chuan) / chuan, None, f'{vnd(g)} x {min(n, chuan)} / {chuan} năm', q['thoi_han']['can_cu'])
+    x = next((x for x in q['truong_hop'] if x['ma'] == th), None)
+    if x is None:
+        raise LoiQuyTac(f'Không có trường hợp "{th}" trong gói quy tắc NQ 28.')
+    hs = Decimal(x['he_so'])
+    return ra(g * hs, hs, f'{x["ten"]}: {hs} x {vnd(g)}', x['can_cu'])
