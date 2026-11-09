@@ -393,7 +393,8 @@ class TestManHinhNhapLieu(TestNhapLieuDuAn):
         # mục 1: danh sách thửa / vị trí theo dòng cho ô xổ xuống
         self.assertTrue(w.ds_thua_dong(0))
         self.assertTrue(w.ds_vi_tri_dong(0))
-        nhan, gt = w.ds_vi_tri_dong(0)[0]
+        self.assertEqual(w.ds_vi_tri_dong(0)[0][1][0], 'mo_bang_nq28')
+        nhan, gt = next(x for x in w.ds_vi_tri_dong(0) if isinstance(x[1], tuple) and x[1][0] == 'nq28')
         w.doi_vi_tri_dong(0, gt)
         self.assertEqual(w.bo.pa.dat[0].gia_bang_gia, D(w.bo.ds_vi_tri_nq28(0)[0][2]))
         w.close()

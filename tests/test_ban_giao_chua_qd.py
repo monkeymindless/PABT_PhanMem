@@ -98,16 +98,16 @@ class TestPhanTichTienDo(TestBanGiaoChuaQD):
         self.assertIn('đã tích bàn giao', self._x(a).trang_thai)
         q = theo_doi.luu_qd(self.con, None, '9/QĐ-UBND', '01/10/2026', 'Phê duyệt thử')
         theo_doi.them_ho_theo_pa(self.con, q, [a, b])
-        self.assertEqual(self._x(b).tien_do.nac, 2)                                     # có quyết định -> nấc phê duyệt
+        self.assertEqual(self._x(b).tien_do.nac, 4)                                     # có quyết định -> nấc phê duyệt (B9–11)
         self.assertTrue(self._x(b).trang_thai.startswith('Đã phê duyệt'))
         theo_doi.ghi_chi_tra(self.con, [(q, a), (q, b)], '05/10/2026', '')
-        self.assertEqual(self._x(b).tien_do.nac, 3)                                     # nhận đủ tiền -> nấc chi trả
+        self.assertEqual(self._x(b).tien_do.nac, 5)                                     # nhận đủ tiền -> nấc chi trả (B12–14)
         td = self._x(a).tien_do
-        self.assertEqual(td.nac, 3)                                                     # đã tích nhưng chưa có ngày biên bản
+        self.assertEqual(td.nac, 5)                                                     # đã tích nhưng chưa có ngày biên bản
         self.assertEqual(td.canh_bao, 'đã tích bàn giao, chưa có ngày biên bản')
         theo_doi.ghi_ban_giao(self.con, [a], dict(da_ban_giao=True, ban_giao_ngay='16/10/2026'))   # ngày biên bản, không file
         td = self._x(a).tien_do
-        self.assertEqual((td.nac, td.da_bg, td.canh_bao), (4, True, ''))
+        self.assertEqual((td.nac, td.da_bg, td.canh_bao), (6, True, ''))
         self.assertEqual(self._x(a).trang_thai, 'Đã bàn giao MB')
 
     def test_bien_ban_chung_nhieu_ho(self):

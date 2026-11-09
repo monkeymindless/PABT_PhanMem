@@ -39,9 +39,9 @@ class TestHamThuan(unittest.TestCase):
 
     def test_thanh_nac_khong_emoji(self):
         from pabt import app as ud
-        self.assertEqual(len(ud.THANH_NAC), 5)
+        self.assertEqual(len(ud.THANH_NAC), 7)
         for t in ud.THANH_NAC:
-            self.assertEqual(len(t), 4)
+            self.assertEqual(len(t), 6)
             self.assertTrue(set(t) <= {'■', '□'})                       # U+25A0 / U+25A1: có trong Segoe UI / Arial của Windows 7
         nguon = inspect.getsource(ud)
         for e in ('📌', '📍'):                                            # emoji ghim cũ (Windows 7 hiện ô vuông)
@@ -132,7 +132,7 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertEqual(w.CAO_THE_SO, 62)
         self.assertEqual(w.the_khung['so_ho'].cao_toi_thieu, 62)      # mốc thiết kế: chưa áp bảng kiểu thì thẻ tự giãn
 
-    def test_trang_thai_4_nac_giu_gia_tri_loc(self):
+    def test_trang_thai_6_nac_giu_gia_tri_loc(self):
         from PySide6.QtCore import Qt
         ud, w = self._cua_so(6)
         m = w.mo_hinh
@@ -158,8 +158,8 @@ class TestTheSoVaDanhSach(CoNavy):
         theo_doi.ghi_ban_giao(w.con, [ma], dict(da_ban_giao=True, ban_giao_ngay='10/10/2026'))   # ngày biên bản
         w.tai_lai()
         d0 = next(d for d in m.dong if d['ma_ho'] == ma)
-        self.assertEqual(d0['nac'], 4)
-        self.assertTrue(m.data(m.index(m.dong.index(d0), 5), Qt.ItemDataRole.DisplayRole).startswith('■■■■'))
+        self.assertEqual(d0['nac'], 6)
+        self.assertTrue(m.data(m.index(m.dong.index(d0), 5), Qt.ItemDataRole.DisplayRole).startswith('■■■■■■'))
         self.assertNotIn('■', ''.join(d['o'][5] for d in m.dong))       # giá trị lọc / tìm không lẫn ký tự thanh
         self.assertEqual(len(goc), len(m.dong))
         w.cb_tt.setCurrentIndex(w.cb_tt.findData('da_bg'))              # bộ lọc trạng thái như cũ

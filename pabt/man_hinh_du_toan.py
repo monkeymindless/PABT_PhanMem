@@ -34,7 +34,7 @@ SO = {'khoi_luong', 'don_gia', 'he_so', 'thanh_tien', 'muc'}
 
 class HopTraNQ28(QDialog):
     """Chọn giá đất theo bảng giá NQ 28/2025 (đồng/m²); cột Hệ số K / Giá × K theo bảng hệ số K của máy (he_so_k.py).
-    xem=True (lệnh "Bảng giá đất" của cửa sổ chính): hai thẻ "Bảng giá đất 2026" | "Hệ số K" (QĐ 03/2026/QĐ-UBND), nút Đóng."""
+    xem=True (lệnh "Bảng giá đất" của cửa sổ chính): "Bảng giá đất 2026" | "Hệ số K" | "Cập nhật, bổ sung giá đất" | "Bộ quy tắc giá đất", nút Đóng."""
     im_lang = False
 
     def __init__(self, parent=None, xa: str = '', loai_dat: str = '', xem: bool = False, the: int = 0):
@@ -49,7 +49,7 @@ class HopTraNQ28(QDialog):
         self.khung_cn = None                            # thẻ "Cập nhật, bổ sung giá đất" (chỉ khi xem=True)
         self._xem = xem
         self.setWindowTitle(('Bảng giá đất — ' if xem else 'Tra giá đất — ') + nq.tom_tat())
-        self.resize(1100, 560)
+        self.resize(1200, 760 if xem else 560)
         self.cb_xa = QComboBox()
         self.cb_xa.addItem('Tất cả địa bàn', '')
         for x in nq.ds_xa():
@@ -112,6 +112,10 @@ class HopTraNQ28(QDialog):
             self.khung_cn = KhungCapNhatGiaDat(self, xa)
             self.khung_cn.da_ghi.connect(self.nap_lai_bang_gia)
             self.tabs.addTab(self.khung_cn, 'Cập nhật, bổ sung giá đất')
+            # Bộ quy tắc giá đất (trước là cửa sổ riêng): nhập văn bản đơn giá và quy tắc cùng chỗ với bảng giá
+            from .man_hinh_goi_gia_dat import HopGoiGiaDat
+            self.khung_goi = HopGoiGiaDat(self, nhung=True)
+            self.tabs.addTab(self.khung_goi, 'Bộ quy tắc giá đất')
             self.tabs.setCurrentIndex(the)
             lo.addWidget(self.tabs)
         else:
@@ -125,6 +129,7 @@ class HopTraNQ28(QDialog):
         self.loc()
 
     THE_CAP_NHAT = 2                                     # chỉ số thẻ "Cập nhật, bổ sung giá đất"
+    THE_QUY_TAC = 3                                      # chỉ số thẻ "Bộ quy tắc giá đất"
 
     def nap_lai_bang_gia(self):
         """Bảng giá đang dùng vừa đổi (thẻ Cập nhật ghi / dùng lại bảng gắn sẵn): nạp lại danh sách địa bàn, tiêu đề, bảng."""

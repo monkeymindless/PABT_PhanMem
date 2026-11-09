@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
+from functools import lru_cache
 
 from . import goi_gia_dat as gg
 from .tien import D, lam_tron, vn
@@ -29,9 +30,79 @@ def du_lieu() -> dict:
     return gg.du_lieu_goc()
 
 
+def _ten_xa_khoa(xa: str) -> str:
+    """Khóa so tên địa bàn (lap_pa.khoa_dia_ban: bỏ "Bảng 53.", tiền tố Xã / Phường; giữ dấu - "Lộc Thành" khác "Lộc Thạnh")."""
+    from .lap_pa import khoa_dia_ban
+    return khoa_dia_ban(ten_ngan(xa) or '')
+
+
+def _ma_xa(xa: str) -> str:
+    """Phần tên xã trong mã đoạn BG_… (không dấu, như trước 1.0.90 để mã đoạn đã lưu ở dòng đất không đổi)."""
+    from .lap_pa import bo_dau
+    t = bo_dau(ten_ngan(xa) or '')
+    for p in ('xa ', 'phuong ', 'thi tran ', 'dac khu '):
+        if t.startswith(p):
+            t = t[len(p):]
+    return re.sub(r'[^A-Za-z0-9]+', '_', t)
+
+
+_DEM_DOAN = {'dong': None, 'theo_xa': {}}
+
+
+@lru_cache(maxsize=65536)
+def _chu_doan(s) -> str:
+    from .lap_pa import bo_dau
+    return ' '.join(re.sub(r'[^a-z0-9]+', ' ', bo_dau(s or '')).split())
+
+
+def doan_tu_bang_gia(xa: str) -> list:
+    """Đoạn đường dựng từ bảng giá đất đang dùng của một xã / phường (7 mức MT…K3 cùng tên đường + điểm đầu / cuối).
+    1.0.90: chỉ duyệt dòng của xã (gia_dat_nq28.dong_cua_xa), nhớ kết quả tới khi bảng giá đổi (trước: duyệt 16.374 dòng mỗi lần gọi,
+    so_doan gọi cho 94 xã); điểm đầu / cuối so sau khi bỏ dấu câu, hai đoạn cùng tuyến chồng số TT (phụ lục đất ở ghi "30 tháng 4",
+    phụ lục nông nghiệp ghi "30 tháng tư") gộp một - trước hiện hai đoạn trùng TT, chọn nhầm đoạn chỉ có giá nông nghiệp thì giá đất ở = 0.
+    Trả bản chép (nơi gọi sửa được)."""
+    from . import gia_dat_nq28 as nq
+    dong = nq._da_doc()[0]
+    if _DEM_DOAN['dong'] is not dong:
+        _DEM_DOAN.update(dong=dong, theo_xa={})
+    ra = _DEM_DOAN['theo_xa'].get(xa)
+    if ra is None:
+        hang = {}
+        for r in nq.dong_cua_xa(xa):
+            tt = int(r.get('tt') or 0)
+            khoa = (_chu_doan(r.get('ten_duong')), _chu_doan(r.get('diem_dau')), _chu_doan(r.get('diem_cuoi')))
+            d = hang.setdefault(khoa, dict(ten_duong=r.get('ten_duong') or '', diem_dau=r.get('diem_dau') or '',
+                                           diem_cuoi=r.get('diem_cuoi') or '', tt_bat_dau=tt,
+                                           tt_ket_thuc=tt, co_quy_dinh_rieng_duong_dat_tai_pl1=False))
+            d['tt_bat_dau'] = min(d['tt_bat_dau'], tt) if d['tt_bat_dau'] else tt
+            d['tt_ket_thuc'] = max(d['tt_ket_thuc'], tt)
+        ra = []
+        for d in sorted(hang.values(), key=lambda x: (x['tt_bat_dau'], x['ten_duong'])):
+            cung = next((x for x in reversed(ra) if x['tt_bat_dau'] == d['tt_bat_dau']
+                         and _chu_doan(x['ten_duong']) == _chu_doan(d['ten_duong'])), None)
+            if cung is not None:
+                cung['tt_ket_thuc'] = max(cung['tt_ket_thuc'], d['tt_ket_thuc'])
+                continue
+            ra.append(d)
+        for i, d in enumerate(ra, 1):
+            d['ma_doan_duong'] = f'BG_{_ma_xa(xa)}_{i:03d}'
+        _DEM_DOAN['theo_xa'][xa] = ra
+    return [dict(d) for d in ra]
+
+
 def ds_dia_ban(goi=None) -> list:
-    """Tên khóa bảng của gói: 'Bảng 53. Phường Trị An', …"""
-    return list(_goi(goi)['dia_ban'].keys())
+    """Địa bàn của gói, rồi thêm xã / phường có trong bảng giá đất đang dùng (tự cập nhật khi đọc file mới)."""
+    goi = _goi(goi)
+    tu_goi = list((goi.get('dia_ban') or {}).keys())
+    da = {_ten_xa_khoa(k): k for k in tu_goi}
+    ra = list(tu_goi)
+    from . import gia_dat_nq28 as nq
+    for xa in nq.ds_xa():
+        t = _ten_xa_khoa(xa)
+        if t and t not in da:
+            ra.append(xa)
+            da[t] = xa
+    return ra
 
 
 def ten_ngan(dia_ban: str) -> str:
@@ -40,12 +111,36 @@ def ten_ngan(dia_ban: str) -> str:
     return s.split('. ', 1)[1] if s.startswith('Bảng') and '. ' in s else s
 
 
+def _khoa_dia_ban_goi(dia_ban: str, goi: dict) -> str:
+    """Khóa đúng trong goi['dia_ban'] (có thể là 'Bảng 53. …' hoặc tên xã bảng giá)."""
+    db = goi.get('dia_ban') or {}
+    if dia_ban in db:
+        return dia_ban
+    from .lap_pa import trung_dia_ban
+    for k in db:
+        if trung_dia_ban(ten_ngan(k), ten_ngan(dia_ban)):
+            return k
+    return ''
+
+
 def ds_doan(dia_ban: str, goi=None) -> list:
-    return list(_goi(goi)['dia_ban'].get(dia_ban, ()))
+    """Đoạn đường của địa bàn trong gói; xã mới chỉ có ở bảng giá thì dựng từ bảng giá."""
+    goi = _goi(goi)
+    khoa = _khoa_dia_ban_goi(dia_ban, goi)
+    if khoa:
+        return list(goi['dia_ban'][khoa])
+    return doan_tu_bang_gia(ten_ngan(dia_ban) or dia_ban)
 
 
 def so_doan(goi=None) -> int:
-    return sum(len(v) for v in _goi(goi)['dia_ban'].values())
+    goi = _goi(goi)
+    n = sum(len(v) for v in (goi.get('dia_ban') or {}).values())
+    da = {_ten_xa_khoa(k) for k in (goi.get('dia_ban') or ())}
+    from . import gia_dat_nq28 as nq
+    for xa in nq.ds_xa():
+        if _ten_xa_khoa(xa) not in da:
+            n += len(doan_tu_bang_gia(xa))
+    return n
 
 
 def tim_doan(dia_ban: str, ma_doan: str, goi=None) -> dict | None:
@@ -58,18 +153,17 @@ def nhan_doan(r: dict) -> str:
 
 
 def dia_ban_theo_ten(ten: str, goi=None) -> str:
-    """Tên xã / phường bất kỳ ('Trị An', 'xã Tân An'...) -> khóa bảng của gói ('' nếu gói không có)."""
-    from .lap_pa import bo_dau
-    t = bo_dau(ten or '')
-    for p in ('xa ', 'phuong ', 'thi tran '):
-        if t.startswith(p):
-            t = t[len(p):]
-    if not t:
+    """Tên xã / phường bất kỳ ('Trị An', 'xã Tân An'...) -> khóa địa bàn đang dùng (gói hoặc bảng giá)."""
+    from .lap_pa import cung_dia_ban, trung_dia_ban
+    if not _ten_xa_khoa(ten):
         return ''
+    gan = ''
     for k in ds_dia_ban(goi):
-        if t in bo_dau(ten_ngan(k)):
+        if trung_dia_ban(ten_ngan(k), ten_ngan(ten)):
             return k
-    return ''
+        if not gan and cung_dia_ban(ten_ngan(k), ten_ngan(ten)):
+            gan = k
+    return gan
 
 
 def nhom_cua(goi: dict, nhom_dat: str, cot: str = '') -> dict | None:
@@ -86,21 +180,48 @@ def gia_bang_gia(dia_ban: str, doan: dict | None, nhom_dat: str, ma_vi_tri: str,
     if doan is None or i is None:
         return None
     from . import gia_dat_nq28 as nq
-    from .lap_pa import bo_dau
     vt = ds_vt[i].get('vi_tri', '')
     if not cot:
         n = nhom_cua(goi, nhom_dat)
         cot = n['cot_gia'] if n else ''
     if not cot:
         return None
+    ten = _chu_doan(doan.get('ten_duong'))
+    ung = [r for r in nq.dong_cua_xa(ten_ngan(dia_ban))            # 1.0.90: chỉ dòng của xã, không duyệt cả bảng toàn tỉnh
+           if r.get('vi_tri') == vt and _chu_doan(r.get('ten_duong')) == ten]
+    if not ung:
+        return None
+
+    def cung_diem(a, b) -> bool:
+        x, y = _chu_doan(a), _chu_doan(b)
+        return bool(x) and x == y
+
+    def gia(r) -> int:
+        try:
+            return nq.gia_dong(r, cot)
+        except (KeyError, TypeError, ValueError):
+            return 0
+
     tt = int(doan['tt_bat_dau']) + i
-    for r in nq.tat_ca():
-        if r.get('tt') == tt and nq.khop_xa(ten_ngan(dia_ban), r['xa']) and r.get('vi_tri') == vt and bo_dau(r['ten_duong']) == bo_dau(doan['ten_duong']):
-            try:
-                return D(nq.gia_dong(r, cot))
-            except (KeyError, TypeError, ValueError):
-                return None
-    return None
+    dung = [r for r in ung if cung_diem(r.get('diem_dau'), doan.get('diem_dau'))
+            and cung_diem(r.get('diem_cuoi'), doan.get('diem_cuoi'))]
+    # 1.0.90 - tra THEO PHỤ LỤC: đất ở / TMDV / SXKD lấy ở dòng Phụ lục III, đất nông nghiệp ở dòng Phụ lục I. Hai phụ lục chưa gộp được
+    # một dòng khi điểm đầu / cuối ghi khác chữ ("30 tháng 4" / "30 tháng tư"): trước lấy dòng đầu tiên -> giá đất ở = 0. Thứ tự: đúng đoạn,
+    # rồi cùng tuyến; trong đó dòng đúng phụ lục có giá trước. Cùng TT nhưng KHÁC tuyến (Long Bình TT 99: Xa lộ Hà Nội / Điểu Xiển) đã loại ở trên.
+    pl = nq.phu_luc_cua_cot(nq.cot_gia_that(cot))
+    for nhom in (dung, ung):
+        theo_tt = [r for r in nhom if r.get('tt') == tt]
+        co_gia = sorted((r for r in theo_tt if gia(r) > 0), key=lambda r: pl not in nq.phu_luc_dong(r))
+        if co_gia:
+            return D(gia(co_gia[0]))
+    theo_tt = [r for r in (dung or ung) if r.get('tt') == tt]
+    chon = theo_tt[0] if theo_tt else (ung[0] if len(ung) == 1 else None)
+    if chon is None:
+        return None
+    try:
+        return D(nq.gia_dong(chon, cot))
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def nhom_theo_loai_dat(loai_dat: str, goi=None) -> dict | None:
@@ -110,6 +231,15 @@ def nhom_theo_loai_dat(loai_dat: str, goi=None) -> dict | None:
     return next((x for x in _goi(goi)['nhom_dat'] if x['cot_gia'] == cot), None) if cot else None
 
 
+def lam_sach_vi_tri(chu: str) -> str:
+    """Cắt hậu tố "Không" dính cuối mô tả vị trí (ô Trường hợp NQ 28 mặc định "Không" bị nối vào chữ vị trí)."""
+    t = str(chu or '').strip()
+    hau = 'Không'
+    if t.endswith(hau) and len(t) > len(hau):
+        return t[: -len(hau)].rstrip(' \t-–—,;')
+    return t
+
+
 def mo_ta_vi_tri(doan: dict | None, ma_vi_tri: str, goi=None) -> str:
     """Chữ ghi vào cột Vị trí của dòng đất, cùng kiểu BoSoan.chon_vi_tri_nq28. Không có đoạn đường: ''."""
     if not doan:
@@ -117,7 +247,7 @@ def mo_ta_vi_tri(doan: dict | None, ma_vi_tri: str, goi=None) -> str:
     from . import gia_dat_nq28 as nq
     vt = next((x.get('vi_tri', '') for x in _goi(goi)['vi_tri'] if x['ma'] == ma_vi_tri), '')
     ten = 'Mặt tiền' if vt == 'MT' else nq.ten_vi_tri(vt)
-    return f'{ten} {doan["ten_duong"]} (đoạn từ {doan["diem_dau"]} đến {doan["diem_cuoi"]})'
+    return lam_sach_vi_tri(f'{ten} {doan["ten_duong"]} (đoạn từ {doan["diem_dau"]} đến {doan["diem_cuoi"]})')
 
 
 # ---------------------------------------------------------------- tính đơn giá
@@ -140,6 +270,7 @@ class DauVao:
     cot_gia: str = ''                                # cột bảng giá của mục nhóm đất đang chọn
     ma_vi_tri_dat: str = ''                          # 1.0.79: mã mục goi['vi_tri_dat']['muc']; '' = như VT1_PV1 (100%)
     loai_nn: str = ''                                # 1.0.79: loại đất NN để tra trần sàn Phụ lục VIII (cln / hang_nam / rung / nts)
+    truong_hop_nq28: str = ''                        # 1.0.83: mã ô Trường hợp NQ 28, để dòng đất nhớ và mở lại bảng tính
 
 
 @dataclass
@@ -200,9 +331,12 @@ def _tuyen_co_quy_dinh_rieng(doan: dict | None) -> bool:
 
 
 def _k1_bang_nhap(goi: dict, v: DauVao, doan: dict, nhom: dict | None) -> tuple:
-    """K1 theo bảng hệ số K máy đã nhập (thẻ Hệ số K): chỉ khi đang dùng gói gắn sẵn và máy đã thay bảng. (hệ số hoặc None, văn bản của bảng, có thay không)."""
+    """K1 theo bảng hệ số K máy đã nhập: gói gắn sẵn đã thay bảng, hoặc đoạn đường dựng từ bảng giá (chưa có cột K1 trong gói)."""
     from . import he_so_k as hk
-    if not goi.get('gan_san') or not hk.dang_thay():
+    if not hk.dang_thay():
+        return None, '', False
+    cot_k1 = (nhom or {}).get('cot_k1') or ''
+    if not goi.get('gan_san') and cot_k1 and cot_k1 in doan:
         return None, '', False
     i = next((k for k, x in enumerate(goi['vi_tri']) if x['ma'] == v.loai_ket_noi_vi_tri), 0)
     cot = v.cot_gia or (nhom['cot_gia'] if nhom else '')
@@ -292,8 +426,8 @@ def nhan_vi_tri(x: dict, doan: dict | None, dia_ban: str = '', goi=None) -> str:
         return ten
     from . import gia_dat_nq28 as nq
     a = b = None
-    for r in nq.tat_ca():
-        if r.get('tt') == int(doan['tt_bat_dau']) and nq.khop_xa(ten_ngan(dia_ban), r['xa']):
+    for r in nq.dong_cua_xa(ten_ngan(dia_ban)):
+        if r.get('tt') == int(doan['tt_bat_dau']):
             a, b = (r.get('nguong') or [None, None])[:2]
             break
     if a is None:
@@ -338,6 +472,11 @@ def tinh_don_gia(v: DauVao, doan: dict | None = None, goi: dict | None = None) -
         if nhom is not None:
             if nhom['cot_k1'] in doan:
                 k1 = D(doan[nhom['cot_k1']])
+                # 1.0.90: đoạn có K1 khác nhau theo vị trí (gói tạo từ bảng hệ số K): vị trí đang chọn có số riêng thì dùng số đó
+                ma_vt = next((x.get('vi_tri', '') for x in goi['vi_tri'] if x['ma'] == v.loai_ket_noi_vi_tri), '')
+                rieng = ((doan.get('k1_theo_vt') or {}).get(ma_vt) or {}).get(nhom['cot_k1']) if ma_vt else None
+                if rieng is not None:
+                    k1 = D(rieng)
             else:
                 canh_bao.append(f'Đoạn đường này chưa có hệ số K1 cho "{nhom["ten"]}" trong gói: đang tính với K1 = {_hai(k1)}, cần kiểm tra lại.')
         lap_luan.append(cau('buoc_2_doan', phu_luc=(nhom or {}).get('phu_luc', ''), ten_duong=doan['ten_duong'], diem_dau=doan['diem_dau'], diem_cuoi=doan['diem_cuoi'], nhom=v.nhom_dat, k1=_hai(k1)))
@@ -430,11 +569,19 @@ def cong_thuc_gon(kq: KetQua) -> str:
             else f'Giá cụ thể {vn(kq.don_gia_ap_dung)} đ/m²')
 
 
-def chi_tiet_ap_gia(kq: KetQua) -> dict:
-    """Thông tin pháp lý lưu kèm dòng đất khi áp giá (số dạng chữ, không float): đọc lại được từng hệ số, không phải tách từ câu ghi chú."""
+def chi_tiet_ap_gia(kq: KetQua, v: DauVao | None = None, mo_ta_vi_tri: str = '') -> dict:
+    """Thông tin pháp lý lưu kèm dòng đất khi áp giá (số dạng chữ, không float): đọc lại được từng hệ số, không phải tách từ câu ghi chú.
+    Có đầu vào v: dòng đất nhớ thêm địa bàn, nhóm, đoạn đường, vị trí, trường hợp NQ 28 để mở lại bảng tính đúng ô đã chọn."""
     from .tien import chuoi
-    return dict(don_gia=chuoi(kq.don_gia_ap_dung), gia_bang_gia_nq28=chuoi(kq.don_gia_nq28), he_so_k1=chuoi(kq.k1), he_so_k2=chuoi(kq.k2), he_so_k3=chuoi(kq.k3), he_so_k_khac=chuoi(kq.k_khac),
-                cong_thuc_dien_giai=kq.cong_thuc, goi=kq.goi_ma, can_cu=kq.can_cu_ngan, chuyen_tiep=bool(kq.ap_dung_chuyen_tiep))
+    ra = dict(don_gia=chuoi(kq.don_gia_ap_dung), gia_bang_gia_nq28=chuoi(kq.don_gia_nq28), he_so_k1=chuoi(kq.k1), he_so_k2=chuoi(kq.k2), he_so_k3=chuoi(kq.k3), he_so_k_khac=chuoi(kq.k_khac),
+              cong_thuc_dien_giai=kq.cong_thuc, goi=kq.goi_ma, can_cu=kq.can_cu_ngan, chuyen_tiep=bool(kq.ap_dung_chuyen_tiep))
+    if v is not None:
+        ra.update(dia_ban=v.dia_ban, nhom_dat=v.nhom_dat, ma_doan_duong=v.ma_doan_duong,
+                  loai_ket_noi_vi_tri=v.loai_ket_noi_vi_tri, ket_cau_mat_duong=v.ket_cau_mat_duong,
+                  pham_vi_vi_tri=v.ma_vi_tri_dat, truong_hop_nq28=v.truong_hop_nq28 or '',
+                  yeu_to_pl3=list(v.yeu_to_pl3 or []), ap_dung_quy_hoach_pl2=bool(v.ap_dung_quy_hoach_pl2),
+                  mo_ta_vi_tri=lam_sach_vi_tri(mo_ta_vi_tri))
+    return ra
 
 
 def ghi_chu_ap_gia(kq: KetQua, doan: dict | None = None, dia_ban: str = '') -> str:

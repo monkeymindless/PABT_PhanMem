@@ -98,9 +98,15 @@ class KetQuaQuet:
     dong_dan: list = field(default_factory=list)       # dòng tài sản đã lọc, đưa vào hộp "Dán danh sách tài sản"
     ho_ten: str = ''                                   # chủ sử dụng đọc được từ giấy tờ (tim_ho)
     so_cccd: str = ''
+    quy_tac: list = field(default_factory=list)        # câu quy định / đơn giá / hệ số trích từ toàn văn
+    toan_van: str = ''                                 # chữ đã đọc, để người dùng đối chiếu
+    nq_chu: str = ''                                   # thân nghị quyết bảng giá (nút Lưu quy tắc toàn văn)
+    chat_luong: list = field(default_factory=list)     # 1.0.90: [{file, cach_doc, ky_tu, hong, ma_cu, ty_le_viet, canh_bao}] từng file
+    cau_truc: list = field(default_factory=list)       # 1.0.90: dàn ý phan_cap của mọi file (Phần / Chương / Mục / Điều / Khoản / Điểm / Bảng)
 
     def co_du_lieu(self) -> bool:
         return bool(self.can_cu or self.dong_dat or self.dong_tai_san or self.tham_so or self.dong_dan
+                    or self.quy_tac or self.toan_van
                     or any(f['loai'] != D_KHAC for f in self.tung_file))
 
     def co_du_lieu_ho(self) -> bool:
@@ -110,12 +116,154 @@ class KetQuaQuet:
 # ---------------------------------------------------------------- đọc file
 def doc_noi_dung(file, bao_tien_do=None, cho=None) -> str:
     """Toàn bộ chữ của file (ô cách nhau bằng Tab, mỗi dòng bảng một dòng). Lỗi đọc: ném LoiNhap / ocr.LoiOCR (quet() bắt từng file)."""
+    return doc_toan_van(file, bao_tien_do, cho)[0]
+
+
+def _doc_chu_thuong(p: Path) -> str:
+    """File chữ: UTF-8 (có / không BOM), UTF-16 (BOM), không thì cp1258 (Windows tiếng Việt) - không thay bừa ký tự bằng '?'."""
+    du = p.read_bytes()
+    if du.startswith((b'\xff\xfe', b'\xfe\xff')):
+        return du.decode('utf-16', errors='replace')
+    try:
+        return du.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        pass
+    for ma in ('cp1258', 'cp1252'):
+        try:
+            return du.decode(ma)
+        except UnicodeDecodeError:
+            continue
+    return du.decode('utf-8', errors='replace')
+
+
+def doc_toan_van(file, bao_tien_do=None, cho=None) -> tuple:
+    """(toàn văn, thông tin đọc {cach_doc, ma_cu, ...chỉ số chuan_chu.danh_gia}). 1.0.90 - bộ quét đọc ĐỦ: Word có số / gạch đầu dòng tự động,
+    ngắt dòng, Tab (nhap_don_gia._doc_docx day_du); .doc chuyển .docx rồi đọc như Word; chữ phông cũ TCVN3 / VNI đổi sang Unicode; NFC, bỏ ký
+    tự vô hình. Bảng: ô cách nhau bằng Tab, mỗi hàng một dòng. Lỗi đọc: ném LoiNhap / ocr.LoiOCR (quet() bắt từng file)."""
+    from . import chuan_chu
+    from .nhap_don_gia import loai_that
     p = Path(file)
     duoi = p.suffix.lower()
+    cach = 'chữ'
     if duoi in DUOI_CHU:
-        return p.read_text(encoding='utf-8-sig', errors='replace')
-    from .quan_ly import doc_van_ban                    # 1.0.63: cùng một lõi với Đọc kết quả từ file, đọc quyết định
-    return '\n'.join('\t'.join(str(o) for o in r) for r in doc_van_ban(p, bao_tien_do, cho)[0])
+        nd = _doc_chu_thuong(p)
+        cach = 'file chữ'
+    else:
+        dong = None
+        that = loai_that(p) if duoi in ('.docx', '.doc') else ''
+        if that in ('.docx', '.doc'):
+            from . import an_toan
+            from .lap_pa import LoiNhap
+            from .nhap_don_gia import _doc_docx, chuyen_office
+            try:
+                f = p if that == '.docx' else chuyen_office(p, '.doc')
+                an_toan.kiem_tra_zip(f)
+                dong = _doc_docx(f, day_du=True)
+                cach = 'Word (đủ số, gạch đầu dòng tự động)' if that == '.docx' else 'Word 97-2003 (chuyển .docx rồi đọc đủ)'
+            except (LoiNhap, an_toan.LoiAnToan, OSError, KeyError, ValueError):
+                dong = None                             # đọc theo đường chung bên dưới (cả bộ đọc .doc không cần Office)
+        if dong is None:
+            from .quan_ly import doc_van_ban            # 1.0.63: cùng một lõi với Đọc kết quả từ file, đọc quyết định
+            dong, ocr = doc_van_ban(p, bao_tien_do, cho)
+            cach = 'nhận dạng chữ trên ảnh (OCR) - nên soát lại số liệu' if ocr else ('PDF có lớp chữ' if duoi == '.pdf' else 'chữ')
+        nd = '\n'.join('\t'.join(str(o) for o in r) for r in dong)
+        if cach == 'PDF có lớp chữ' and lop_chu_hong(nd):
+            nd, cach = _ocr_lai(p, nd, bao_tien_do, cho)
+    nd, ma_cu = chuan_chu.sua_chu(nd)
+    tt = chuan_chu.danh_gia(nd)
+    if 'lớp chữ hỏng' in cach:
+        tt['canh_bao'].append('Lớp chữ trong PDF do máy scan tự nhận dạng bị sai (mất dấu, sai ký tự)'
+                              + (': đã nhận dạng lại bằng Tesseract trên máy.' if 'đã nhận dạng lại' in cach else
+                                 '. Không nhận dạng lại được trên máy này - đối chiếu bản giấy.'))
+    tt.update(cach_doc=cach + (', đã đổi chữ phông cũ TCVN3 sang Unicode' if ma_cu else ''), ma_cu_doi=ma_cu)
+    return nd, tt
+
+
+_TU_VIET_KHONG_DAU = ('uy ban', 'nhan dan', 'quyet dinh', 'cong hoa', 'viet nam', 'dieu ', 'khoan', ' cua ', ' theo ', ' duoc ',
+                      ' nam 20', 'thu hoi', 'boi thuong', 'dat dai', 'nghi quyet', ' va ')
+
+
+def lop_chu_hong(nd: str) -> bool:
+    """Lớp chữ của PDF scan do máy scan / phần mềm khác nhận dạng SAI (QĐ 03/2026 bản CamScanner: "ceNG no,q, xA HeI cHU Ncni^l vIFT NAM"):
+    văn bản rõ là tiếng Việt (nhiều cụm từ hành chính khi bỏ dấu) mà gần như không có chữ có dấu."""
+    from . import chuan_chu
+    from .lap_pa import bo_dau
+    s = str(nd or '')[:60000]
+    tt = chuan_chu.danh_gia(s)
+    if tt['chu_cai'] < 300 or tt['ty_le_viet'] >= 0.03:
+        return False
+    b = ' ' + bo_dau(s) + ' '
+    return sum(1 for t in _TU_VIET_KHONG_DAU if t in b) >= 3
+
+
+def _ocr_lai(p: Path, nd_cu: str, bao_tien_do, cho) -> tuple:
+    """Nhận dạng lại PDF có lớp chữ hỏng bằng Tesseract trên máy; dùng bản mới nếu nhiều chữ có dấu hơn rõ rệt. (chữ, cách đọc)."""
+    from . import chuan_chu, ocr
+    if ocr.san_sang():
+        return nd_cu, 'PDF có lớp chữ hỏng (máy chưa có bộ nhận dạng chữ)'
+    try:
+        moi = '\n'.join(ocr.doc_chu(p, bao_tien_do, cho))
+    except ocr.DaHuy:
+        raise
+    except ocr.LoiOCR:
+        return nd_cu, 'PDF có lớp chữ hỏng (nhận dạng lại không được)'
+    if chuan_chu.danh_gia(moi)['ty_le_viet'] >= chuan_chu.danh_gia(nd_cu)['ty_le_viet'] + 0.05:
+        return moi, 'PDF có lớp chữ hỏng - đã nhận dạng lại bằng OCR trên máy, nên soát lại số liệu'
+    return nd_cu, 'PDF có lớp chữ hỏng (nhận dạng lại không tốt hơn)'
+
+
+# ---------------------------------------------------------------- phân cấp văn bản (Phần / Chương / Mục / Điều / Khoản / Điểm / Phụ lục)
+_CAP = (
+    (1, re.compile(r'(phan|chuong)\s+([ivxlc]+|\d+)\b'), lambda m: f'{"Phần" if m.group(1) == "phan" else "Chương"} {m.group(2).upper()}'),
+    (1, re.compile(r'phu luc\b\s*([ivxlc]+|\d+)?'), lambda m: 'Phụ lục' + (f' {m.group(1).upper()}' if m.group(1) else '')),
+    (2, re.compile(r'muc\s+(\d+|[ivx]+)\b'), lambda m: f'Mục {m.group(1).upper()}'),
+    (3, re.compile(r'dieu\s+(\d+)\s*[.:]?'), lambda m: f'Điều {m.group(1)}'),
+)
+_RE_KHOAN = re.compile(r'(\d{1,2})\.\s+\S')
+_RE_DIEM = re.compile(r'([a-zđ])\)\s+\S')
+TEN_CAP = {1: 'Phần / Chương / Phụ lục', 2: 'Mục', 3: 'Điều', 4: 'Khoản', 5: 'Điểm', 6: 'Bảng'}
+CAU_TRUC_TOI_DA = 3000
+
+
+def phan_cap(nd: str, ten_file: str = '') -> list:
+    """Dàn ý của văn bản: [{cap 1-6, nhan ('Điều 5', 'Khoản 2', 'Điểm a', 'Bảng'), chu (dòng, tối đa 300 ký tự), dong (số dòng), file}].
+    Khoản / điểm chỉ nhận trong một Điều (tránh nhận nhầm số thứ tự của bảng); bảng nhận theo dòng tiêu đề có Tab ("TT", "STT")."""
+    from .lap_pa import bo_dau
+    ra, trong_dieu, trong_bang = [], False, False
+    for i, goc in enumerate(str(nd or '').splitlines(), 1):
+        s = goc.strip()
+        if not s:
+            continue
+        o = [x.strip() for x in s.split('\t')]
+        if len(o) >= 3:                                 # hàng bảng
+            dau = bo_dau(o[0])
+            if dau in ('tt', 'stt', 'so tt') and not trong_bang:
+                ra.append(dict(cap=6, nhan='Bảng', chu=' | '.join(x for x in o if x)[:300], dong=i, file=ten_file))
+                trong_bang = True
+            continue
+        trong_bang = False
+        b = bo_dau(s)[:80]
+        nhan, cap = '', 0
+        for c, mau, ten in _CAP:
+            m = mau.match(b)
+            if m:
+                nhan, cap = ten(m), c
+                break
+        if cap:
+            trong_dieu = cap == 3
+        elif trong_dieu and len(s) > 6:
+            m = _RE_KHOAN.match(b)
+            if m:
+                nhan, cap = f'Khoản {m.group(1)}', 4
+            else:
+                m = _RE_DIEM.match(b)
+                if m:
+                    nhan, cap = f'Điểm {s[0]}', 5
+        if cap:
+            ra.append(dict(cap=cap, nhan=nhan, chu=s[:300], dong=i, file=ten_file))
+            if len(ra) >= CAU_TRUC_TOI_DA:
+                break
+    return ra
 
 
 # ---------------------------------------------------------------- nhận dạng theo mẫu (port của các hàm TSX)
@@ -132,22 +280,141 @@ def _so(chu) -> Decimal:
         return Decimal(0)
 
 
+_DEM_XA_TOI_DA = 400000
+
+
+def dia_ban_chinh(noi_dung: str, nhieu: bool = False):
+    """1.0.90: địa bàn của văn bản theo tên xã / phường THẬT của bảng giá đang dùng ("xã Trị An", "phường Biên Hòa"): một xã chiếm ít nhất
+    60% số lần nhắc (và nhắc ít nhất 2 lần) -> khóa địa bàn của bảng tính; nhiều xã ngang nhau (bảng giá toàn tỉnh, cẩm nang) -> '' (không
+    đoán). nhieu=True: trả None nếu văn bản nhắc từ 3 xã trở lên (văn bản nhiều địa bàn), '' nếu không."""
+    from . import gia_dat_qd03 as g
+    from .lap_pa import khoa_dia_ban
+    goc_chu = unicodedata_nfc(str(noi_dung or '')[:_DEM_XA_TOI_DA])
+    s = goc_chu.lower()
+    chung = {}                                          # mọi tên "xã / phường + Tên Riêng" (kể cả xã chưa có trong bảng giá của máy)
+    for m in re.finditer(r'(?i)\b(?:xã|phường|thị trấn|đặc khu)\s+([^\s,.;:()]+(?:\s+[^\s,.;:()]+){0,3})', goc_chu):
+        tu = []
+        for w in m.group(1).split():
+            if not w[:1].isupper():
+                break
+            tu.append(w)
+        if tu:
+            k = khoa_dia_ban(' '.join(tu))
+            chung[k] = chung.get(k, 0) + 1
+    if nhieu:
+        return None if len(chung) >= 3 else ''
+    dem = {}
+    for ten in g.ds_dia_ban():
+        ngan = g.ten_ngan(ten)
+        goc = re.sub(r'^(xã|phường|thị trấn|đặc khu)\s+', '', ngan.lower()).strip()
+        if len(goc) < 3:
+            continue
+        n = len(re.findall(r'(?:xã|phường|thị trấn|đặc khu)\s+' + re.escape(goc) + r'(?![\wà-ỹ])', s))
+        if n:
+            k = khoa_dia_ban(ngan)
+            if k not in dem or dem[k][0] < n:
+                dem[k] = (n, ten)
+    if not dem:
+        return ''
+    tong = max(sum(n for n, _ in dem.values()), sum(chung.values()))
+    n, ten = max(dem.values(), key=lambda x: x[0])
+    if len(dem) == 1 and len(chung) <= 1:
+        return ten                                      # văn bản chỉ nhắc một xã / phường
+    return ten if n >= 2 and n >= 0.6 * tong else ''
+
+
+def unicodedata_nfc(s: str) -> str:
+    import unicodedata
+    return unicodedata.normalize('NFC', s)
+
+
 def nhan_dien_tham_so(noi_dung: str) -> dict:
-    """inferValuationParamsFromText: địa bàn (Bảng 53 / 54 / 55) + kết cấu mặt đường đất / sỏi / đá / cấp phối (K3 = 0,90 đất NN)."""
+    """inferValuationParamsFromText: địa bàn (Bảng 8 / 53 / 54 / 55) + kết cấu mặt đường đất / sỏi / đá / cấp phối (K3 = 0,90 đất NN)."""
     thap = noi_dung.lower()
     kq = {}
-    if 'xã tân an' in thap or 'bảng 54' in thap:
-        kq['dia_ban'] = 'Bảng 54. Xã Tân An'
-    elif 'xã phú lý' in thap or 'bảng 55' in thap:
-        kq['dia_ban'] = 'Bảng 55. Xã Phú Lý'
-    elif 'phường trị an' in thap or 'xã trị an' in thap or 'bảng 53' in thap:
-        kq['dia_ban'] = 'Bảng 53. Phường Trị An'
+    xa = dia_ban_chinh(noi_dung)
+    if xa:
+        kq['dia_ban'] = xa
+    ung = []
+    for mau, ten in (('tân triều', 'Bảng 8. Phường Tân Triều'), ('xã tân an', 'Bảng 54. Xã Tân An'),
+                     ('xã phú lý', 'Bảng 55. Xã Phú Lý'), ('phường trị an', 'Bảng 53. Phường Trị An'),
+                     ('xã trị an', 'Bảng 53. Phường Trị An'), ('bảng 54', 'Bảng 54. Xã Tân An'),
+                     ('bảng 55', 'Bảng 55. Xã Phú Lý'), ('bảng 53', 'Bảng 53. Phường Trị An')):
+        i = thap.find(mau)
+        if i >= 0:
+            ung.append((i, ten))
+    m8 = re.search(r'bảng 8(?!\d)', thap)
+    if m8:
+        ung.append((m8.start(), 'Bảng 8. Phường Tân Triều'))
+    if ung and 'dia_ban' not in kq and dia_ban_chinh(noi_dung, nhieu=True) is not None:
+        kq['dia_ban'] = min(ung)[1]                     # văn bản chỉ nói về địa bàn gắn sẵn (Bảng 8 / 53-55 của QĐ 03)
     if 'đường đất' in thap or 'cấp phối' in thap or 'sỏi hỗn hợp' in thap:
         kq['ket_cau_mat_duong'] = 'DAT_SOI_DA_CAPPHOI'
         kq['yeu_to_pl3'] = ['NN_DUONG_DAT_SOI_DA']
     elif 'đường nhựa' in thap or 'bê tông' in thap:
         kq['ket_cau_mat_duong'] = 'NHUA_BETONG'
     return kq
+
+
+_TOAN_VAN_TOI_DA = 1_500_000
+
+
+def _gop_toan_van(kq: KetQuaQuet, ten: str, nd: str) -> bool:
+    """Gắn toàn văn và câu trích vào kết quả. True: file là toàn văn nghị quyết bảng giá đất."""
+    if not str(nd or '').strip():
+        return False
+    truoc = len(kq.quy_tac)
+    khoi = f'—— {ten} ——\n{nd}'
+    if len(kq.toan_van) < _TOAN_VAN_TOI_DA:
+        con = _TOAN_VAN_TOI_DA - len(kq.toan_van)
+        kq.toan_van += (('\n\n' if kq.toan_van else '') + khoi)[:con]
+    if la_giay_to_ho(nd):
+        return False
+    for c in trich_cau_quy_tac(nd):
+        if c not in kq.quy_tac:
+            kq.quy_tac.append(c)
+    from . import quy_tac_vi_tri as qv
+    la_nq = qv.la_van_ban_toan_van_nq28(nd)
+    try:
+        if la_nq:
+            kq.nq_chu = (kq.nq_chu + '\n' + nd).strip()
+            tv = qv.doc_toan_van_nghi_quyet(nd, luu=False)
+            for q in tv.get('quy_tac') or []:
+                cau = f"Điều {q.get('dieu')} khoản {q.get('khoan')}: {str(q.get('noi_dung') or '')[:300]}"
+                if cau not in kq.quy_tac:
+                    kq.quy_tac.append(cau)
+            kq.tom_tat.append(f'[Toàn văn] {ten}: {len(tv.get("dieu") or [])} điều, {len(tv.get("quy_tac") or [])} quy tắc tính. '
+                              'Chưa ghi vào máy — bấm Lưu quy tắc toàn văn để bảng tính giá dùng.')
+        else:
+            for q in qv.doc_quy_tac(nd):
+                cau = q.cau or q.mo_ta()
+                if cau and cau not in kq.quy_tac:
+                    kq.quy_tac.append(cau)
+    except (ValueError, TypeError, ArithmeticError):
+        la_nq = False
+    if len(kq.quy_tac) > truoc and not la_nq:
+        kq.tom_tat.append(f'[Quy tắc] Trích {len(kq.quy_tac) - truoc} câu quy định / đơn giá từ "{ten}".')
+    return la_nq
+
+
+def trich_cau_quy_tac(nd: str) -> list:
+    """Câu trong toàn văn mang quy định bồi thường, hệ số hoặc đơn giá (không gửi ra ngoài, không bịa câu không có trong file)."""
+    from .lap_pa import bo_dau
+    ra = []
+    for dong in str(nd or '').splitlines():
+        s = ' '.join(dong.split())
+        if len(s) < 16 or len(s) > 400:
+            continue
+        t = bo_dau(s)
+        la_dieu = bool(re.match(r'(dieu|khoan)\s+\d', t))
+        co_bt = 'boi thuong' in t or 'thu hoi dat' in t or 'ho tro' in t
+        co_gia = 'dong/' in t.replace(' ', '') or 'he so' in t
+        if (la_dieu and (co_bt or co_gia)) or (co_gia and co_bt):
+            if s not in ra:
+                ra.append(s)
+        if len(ra) >= 60:
+            break
+    return ra
 
 
 _RE_TAI_SAN = re.compile(r'(?im)^([^\t|;\n]+?)[\t|;]+(cây|m2|m²|m3|m|md|cái|bộ|hố)[\t|;]+([\d.,]+)[\t|;]+([\d.,]+)')
@@ -331,7 +598,12 @@ def quet(files, ngu_canh: str = AUTO, bao_tien_do=None, cho=None, doc=None) -> K
                 kq.tom_tat.append(f'"{p.name}": {TEN_LOAI[loai_x]}.')
                 continue
         try:
-            nd = doc(p) if doc is not None else doc_noi_dung(p, bao_tien_do, cho)
+            if doc is not None:
+                from . import chuan_chu
+                nd, ma_cu = chuan_chu.sua_chu(doc(p))
+                tt = dict(chuan_chu.danh_gia(nd), cach_doc='chữ cho sẵn', ma_cu_doi=ma_cu)
+            else:
+                nd, tt = doc_toan_van(p, bao_tien_do, cho)
         except LoiNhap as e:
             kq.loi.append(f'{p.name}: {e}')
             continue
@@ -341,7 +613,18 @@ def quet(files, ngu_canh: str = AUTO, bao_tien_do=None, cho=None, doc=None) -> K
             kq.loi.append(f'{p.name}: {e}')
             continue
         thap = nd.lower()
+        kq.chat_luong.append(dict(tt, file=p.name))
+        for c in tt.get('canh_bao') or ():
+            kq.tom_tat.append(f'[Chất lượng đọc] "{p.name}": {c}')
+        if tt.get('ma_cu_doi'):
+            kq.tom_tat.append(f'[Phông chữ] "{p.name}": chữ phông cũ TCVN3 đã đổi sang Unicode - soát lại vài chỗ có dấu.')
+        if not nd.strip():
+            kq.loi.append(f'{p.name}: file không có chữ (trang trắng, hoặc ảnh chưa nhận dạng được).')
+        if len(kq.cau_truc) < CAU_TRUC_TOI_DA:
+            kq.cau_truc.extend(phan_cap(nd, p.name)[:CAU_TRUC_TOI_DA - len(kq.cau_truc)])
         loai_f = nhan_loai(p, nd, ngu_canh)
+        if _gop_toan_van(kq, p.name, nd) and loai_f == D_KHAC:
+            loai_f = D_CAN_CU
         kq.tung_file.append({'file': p, 'loai': loai_f})
         # 1. văn bản pháp lý: ở MỌI lần quét
         cc = van_ban_can_cu.trich_can_cu(nd, p.name)
@@ -372,5 +655,9 @@ def quet(files, ngu_canh: str = AUTO, bao_tien_do=None, cho=None, doc=None) -> K
     kq.loai_phat_hien = list(dict.fromkeys(loai))
     kq.can_cu = list(dict.fromkeys(kq.can_cu))
     kq.do_tin_cay = 0.0 if not kq.co_du_lieu() else 0.99 if not kq.loi else 0.8
+    if kq.do_tin_cay and any('OCR' in (c.get('cach_doc') or '') for c in kq.chat_luong):
+        kq.do_tin_cay = min(kq.do_tin_cay, 0.85)       # 1.0.90: nhận dạng ảnh - số liệu cần soát lại
+    if kq.do_tin_cay and any(c.get('canh_bao') for c in kq.chat_luong):
+        kq.do_tin_cay = min(kq.do_tin_cay, 0.7)
     kq.thoi_gian_ms = int((time.perf_counter() - bat_dau) * 1000)
     return kq

@@ -435,6 +435,37 @@ def uri_chi_doc(duong_dan) -> str:
     return ('file://' + s if s.startswith('/') else 'file:///' + s) + '?mode=ro'
 
 
+CHO_KHOA_GIAY = 30.0       # 1.0.90: chờ khóa file (máy khác / Google Drive đang ghi) tối đa chừng này giây rồi mới báo "database is locked"
+
+
+def journal_do_dang(file) -> bool:
+    """File -journal của dự án là giao dịch dở (máy kia mất điện giữa lúc ghi). File -journal 0 byte (công cụ / bản khác dùng chế độ TRUNCATE
+    hoặc PERSIST để lại) không phải giao dịch dở: chỉ file có nội dung mới là (SQLite cũng chỉ coi journal có nội dung là "hot journal")."""
+    try:
+        return Path(str(file) + '-journal').stat().st_size > 0
+    except OSError:
+        return False
+
+
+def giai_phong_khoa_treo(con) -> None:
+    """Giao dịch ngầm còn mở trên kết nối (lệnh ghi chưa COMMIT, ngoài mọi khối giao_dich) giữ khóa file làm máy khác / kết nối khác chờ:
+    ghi hẳn xuống như nút Lưu (app.luu cũng COMMIT giao dịch ngầm). Đang trong giao_dich thì không đụng. Lỗi: hủy giao dịch ngầm."""
+    if con is None or _SAU_GD.get(id(con), 0) > 0 or not getattr(con, 'in_transaction', False):
+        return
+    try:
+        con.commit()
+    except sqlite3.Error:
+        try:
+            con.rollback()
+        except sqlite3.Error:
+            pass
+
+
+def _la_loi_khoa(e: Exception) -> bool:
+    s = str(e).lower()
+    return isinstance(e, sqlite3.OperationalError) and ('locked' in s or 'busy' in s)
+
+
 def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connection:
     """Mở file dự án (tự nâng cấp file cũ). chi_doc: mở chỉ xem, mọi lệnh ghi đều bị SQLite từ chối."""
     p = Path(duong_dan)
@@ -448,7 +479,7 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
             tam = _file_tam_sao_luu(p, goc)
             p, chi_doc = tam, True
     if chi_doc:
-        con = sqlite3.connect(uri_chi_doc(p), uri=True, factory=KetNoi)
+        con = sqlite3.connect(uri_chi_doc(p), uri=True, factory=KetNoi, timeout=CHO_KHOA_GIAY)
         con._file_tam = tam
         try:
             con.row_factory = sqlite3.Row
@@ -459,7 +490,7 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
             con.close()                                 # file hỏng / không phải CSDL: không để Windows giữ khóa file (26/10/2026)
             raise
         return con
-    con = sqlite3.connect(str(p), factory=KetNoi)
+    con = sqlite3.connect(str(p), factory=KetNoi, timeout=CHO_KHOA_GIAY)
     try:
         return _mo_tiep(con, tao)
     except BaseException:
@@ -470,8 +501,12 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
 def _mo_tiep(con, tao: bool):
     """Phần sau khi kết nối của mo (nâng cấp lược đồ, khóa danh mục, bảng phụ)."""
     con.row_factory = sqlite3.Row
+    con.execute(f'PRAGMA busy_timeout = {int(CHO_KHOA_GIAY * 1000)}')
     con.execute('PRAGMA foreign_keys = ON')
-    # file dự án có thể nằm trong thư mục Google Drive: không dùng WAL (Drive đồng bộ kém các file -wal, -shm)
+    # file dự án có thể nằm trong thư mục Google Drive: không dùng WAL (Drive đồng bộ kém các file -wal, -shm).
+    # 1.0.90: GIỮ DELETE. Đã thử TRUNCATE (yêu cầu đại phẫu): kết nối TRUNCATE giữ mở file -journal, kết nối khác ở chế độ DELETE (bản cũ ở máy
+    # khác cùng thư mục Drive / LAN, may_chu, co_may_thoi_gian, chua_benh_csdl mở sqlite3.connect thẳng) không xóa được journal khi COMMIT
+    # -> "disk I/O error" (tests/test_toc_do.test_may_khac_ghi_vao_file, test_tai_lai). Chống khóa bằng busy_timeout 30 s + giao_dich thử lại.
     con.execute('PRAGMA journal_mode = DELETE')
     # bảng tạm của Hoàn tác (_ht_nhat_ky), dấu vết hộ (_dv_ho), kiểm toán (_kt_phien) nằm trên RAM - không ghi file tạm ra đĩa mỗi lần
     # lưu (máy yếu, ổ HDD - 16/10/2026). Thiết lập của kết nối, không ghi vào file
@@ -724,8 +759,24 @@ def giao_dich(con):
         if sau:
             yield con
         else:
-            with con:
+            try:
                 yield con
+            except BaseException:
+                con.rollback()
+                raise
+            # như `with con:` nhưng COMMIT bị từ chối NGAY vì khóa (SQLite không chờ được - hai bên cùng đợi nhau) thì thử lại vài lần, giao
+            # dịch vẫn còn nguyên. Đã chờ hết busy_timeout (30 s) mà vẫn khóa: không thử lại, tránh treo vài phút
+            import time
+            for lan in range(5):
+                bat_dau = time.monotonic()
+                try:
+                    con.commit()
+                    break
+                except sqlite3.OperationalError as e:
+                    if not _la_loi_khoa(e) or lan == 4 or time.monotonic() - bat_dau > 2:
+                        con.rollback()
+                        raise
+                    time.sleep(0.15 * (lan + 1))
     finally:
         if sau:
             _SAU_GD[k] = sau

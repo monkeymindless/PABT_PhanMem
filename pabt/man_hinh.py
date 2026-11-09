@@ -4,6 +4,7 @@ Mọi quy tắc nằm trong lap_pa.BoSoan; ở đây chỉ hiển thị và chuy
 Các hàm thao tác nhận tham số tùy chọn (mục danh mục, tên, thửa...) để kiểm thử không cần bấm hộp thoại.
 """
 from __future__ import annotations
+import json
 import re
 import sqlite3
 from PySide6.QtCore import QEvent, Qt, QTimer
@@ -488,6 +489,29 @@ class BangMuc(QWidget):
             lo.addWidget(self._the_cach_tinh())
         self._dung_khoi_bang(man, lo)
         self._ket_thuc_dung(man, muc)
+        import weakref
+        from .giao_dien import KHI_DOI_TONG_NEN
+        tham = weakref.ref(self)
+        def theo_tong(_ten=None, _t=tham):                  # đổi tông nền: ô đã vẽ giữ màu tông cũ (ô Thành tiền tối trên nền sáng)
+            w = _t()
+            if w is None:
+                raise RuntimeError('thẻ mục đã hủy')
+            w._to_lai_theo_tong()
+        KHI_DOI_TONG_NEN.append(theo_tong)
+
+    def _to_lai_theo_tong(self) -> None:
+        """Tô lại nền ô không sửa được + ô Nguồn giá theo tông nền hiện tại (không dựng lại dòng)."""
+        sua = lap_pa.SUA_DUOC_DAT if self.muc == 1 else lap_pa.SUA_DUOC_KHOAN
+        for r in range(self.bang.rowCount()):
+            for c, (k, _, _) in enumerate(self.cot):
+                it = self.bang.item(r, c)
+                if it is None:
+                    continue
+                if k == 'nguon' and it.text():
+                    self._to_nguon_gia(it, self.man.bo.pa.khoan[self.muc][r].nguon_gia)
+                elif k not in sua:
+                    it.setBackground(QBrush(qmau_theo_tong(XAM.name())))
+        self.bang.viewport().update()
 
     def _tao_bang_muc(self, man, muc) -> None:
         """Bảng của mục: cột, ủy quyền ô, phím."""
@@ -571,6 +595,7 @@ class BangMuc(QWidget):
         if muc == 1:
             self.cb_thua = QComboBox()
             self.cb_thua.setMinimumWidth(240)
+            self.cb_thua.setMaximumWidth(460)                # 1.0.90: không giãn hết hàng ("Thửa 17 tờ 39 - HNK - 0 m²" đủ chỗ)
             nhan = QLabel('Thửa:')
             nhan.setProperty('vai', 'nhan')
             nhap.addWidget(nhan)
@@ -809,13 +834,18 @@ class BangMuc(QWidget):
                     ds_w.append(it.widget())
             xd = XepDong(khung_nhap, 6)
             xd.setContentsMargins(0, 0, 0, 0)
-            for nhom in (ds_w[:4], ds_w[4:]):
+            for j, nhom in enumerate((ds_w[:4], ds_w[4:])):
                 k = QWidget()
                 hk = QHBoxLayout(k)
                 hk.setContentsMargins(0, 0, 0, 0)
                 hk.setSpacing(6)
                 for w in nhom:
                     hk.addWidget(w, 1 if w is self.cb_thua else 0)
+                if j == 0:
+                    # 1.0.90: phần rộng thừa của hàng dồn vào khối Thửa (ô Thửa có trần, sau đó là khoảng trống) - trước XepDong chia đều
+                    # cho mọi khối, nút "Bảng tính giá đất", "Áp giá nhanh" bị kéo dài ~360 px
+                    hk.addStretch(1)
+                    xd.gian(k)
                 xd.addWidget(k)
             k = QWidget()
             k.setLayout(nut)
@@ -1375,7 +1405,7 @@ class BangMuc(QWidget):
 # ---------------------------------------------------------------- màn hình lập phương án hộ
 # ô chọn hộ của cửa sổ lập phương án (px): rộng tới 560 cho đủ tên hộ / tổ chức; hẹp được tới 160 để hàng nút trên cùng luôn MỘT hàng
 # (16/10/2026, người dùng: bỏ nút SCAN, mọi nút lên một dòng) - màn hình 1366 ở 125% còn ~1.090 điểm
-RONG_O_HO = (240, 560)
+RONG_O_HO = (240, 400)              # 1.0.90: trần 560 -> 400 (tên hộ thường < 40 ký tự; ô dài để trống, người dùng 09/11/2026)
 CLIP_TOI_DA = 200_000        # clipboard dài hơn (cả một tài liệu) không tự điền vào hộp Dán danh sách: phân loại sẽ đơ
 # 1.0.02 (Hybrid Enterprise Navy cửa sổ con, theo ảnh mẫu người dùng 17/10/2026): nút Dán tài sản nền trắng viền slate chữ đậm,
 # biểu tượng xanh trời; rê chuột nền xanh băng viền xanh trời
@@ -2793,9 +2823,15 @@ class CuaSoLapPA(QDialog):
         self.sua_o(1, r, 'thua', ma_thua)
 
     def ds_vi_tri_dong(self, r: int) -> list:
-        return [(nhan, ('nq28', x)) for nhan, x, _ in self.bo.ds_vi_tri_nq28(r)] if 0 <= r < len(self.bo.pa.dat) else []
+        if not 0 <= r < len(self.bo.pa.dat):
+            return []
+        mo = ('📐 Mở bảng áp giá đất NQ 28 & QĐ 03 (chọn vị trí, thuộc tính)…', ('mo_bang_nq28', r))
+        return [mo] + [(nhan, ('nq28', x)) for nhan, x, _ in self.bo.ds_vi_tri_nq28(r)]
 
     def doi_vi_tri_dong(self, r: int, gt):
+        if isinstance(gt, tuple) and gt[0] == 'mo_bang_nq28':
+            self.mo_bang_tinh_dat(dong_chon=[r])
+            return
         if isinstance(gt, tuple) and gt[0] == 'nq28':
             chon = self.bang[1].cac_dong_chon()
             ds = chon if r in chon and len(chon) > 1 else [r]          # chọn nhiều dòng: cùng tuyến đường / vị trí cho cả loạt
@@ -3149,14 +3185,63 @@ class CuaSoLapPA(QDialog):
             self.thong_bao(tb)
         self._kich_hoat_hen_luu_tu_dong()
 
-    def mo_bang_tinh_dat(self, cho: bool = True):
-        """Bảng tính đầy đủ: chọn sẵn hộ này, tích sẵn dòng đang chọn (không chọn dòng nào thì mọi dòng). Áp xong bảng Đất cập nhật ngay. cho=False: trả hộp (kiểm thử)."""
+    def _do_doan_tu_vi_tri(self, chu: str) -> dict:
+        """Dò đoạn đường / địa bàn từ chữ cột Vị trí khi dòng đất chưa có JSON áp giá."""
+        from . import gia_dat_qd03 as g
+        t = g.lam_sach_vi_tri(chu)
+        if not t:
+            return {}
+        for db in g.ds_dia_ban():
+            for r in g.ds_doan(db):
+                ten, dau, cuoi = str(r.get('ten_duong') or ''), str(r.get('diem_dau') or ''), str(r.get('diem_cuoi') or '')
+                if ten and ten in t and dau and dau in t and cuoi and cuoi in t:
+                    return dict(dia_ban=db, ma_doan=r.get('ma_doan_duong') or '')
+        return {}
+
+    def _thong_so_dong_dat(self, r: int) -> dict:
+        """Đọc JSON dong.ap_gia (không có thì dò chữ vị trí) thành tham số dat_thong_so của bảng tính."""
+        if not 0 <= r < len(self.bo.pa.dat):
+            return {}
+        dong = self.bo.pa.dat[r]
+        js = {}
+        if getattr(dong, 'ap_gia', ''):
+            try:
+                tam = json.loads(dong.ap_gia)
+            except (TypeError, ValueError):
+                tam = None
+            if isinstance(tam, dict):
+                js = tam
+        ts = {}
+        for nguon, dich in (('dia_ban', 'dia_ban'), ('ma_doan_duong', 'ma_doan'), ('loai_ket_noi_vi_tri', 'vi_tri'),
+                            ('ket_cau_mat_duong', 'ket_cau'), ('pham_vi_vi_tri', 'pham_vi'), ('truong_hop_nq28', 'truong_hop'),
+                            ('yeu_to_pl3', 'yeu_to_pl3'), ('he_so_k2', 'he_so_k2')):
+            if js.get(nguon) not in (None, ''):
+                ts[dich] = js[nguon]
+        if 'ap_dung_quy_hoach_pl2' in js:
+            ts['ap_dung_quy_hoach_pl2'] = bool(js['ap_dung_quy_hoach_pl2'])
+        if dong.loai_dat:
+            ts['loai_dat'] = dong.loai_dat
+        if not ts.get('ma_doan'):
+            for k, v in self._do_doan_tu_vi_tri(dong.vi_tri or js.get('mo_ta_vi_tri') or '').items():
+                ts.setdefault(k, v)
+        return ts
+
+    def mo_bang_tinh_dat(self, cho: bool = True, dong_chon: list | None = None):
+        """Bảng tính đầy đủ: chọn sẵn hộ này, tích sẵn dòng đang chọn (không chọn dòng nào thì mọi dòng). Áp xong bảng Đất cập nhật ngay.
+        dong_chon: các dòng mục 1 cần mở (ô Vị trí). cho=False: trả hộp (kiểm thử)."""
         from .man_hinh_tinh_gia_dat import HopTinhGiaDat
         bo = self.bo
         bm = self.bang[1]
-        chon = [i for i in bm.cac_dong_chon() if 0 <= i < len(bo.pa.dat)]
+        if dong_chon is None:
+            chon = [i for i in bm.cac_dong_chon() if 0 <= i < len(bo.pa.dat)]
+        else:
+            chon = [i for i in dong_chon if 0 <= i < len(bo.pa.dat)]
+        rieng = self._thong_so_dong_dat(chon[0]) if chon else {}
+        nen = bm.thanh_gia.thong_so() if getattr(bm, 'thanh_gia', None) is not None else {}
+        ts = dict(nen)
+        ts.update({k: v for k, v in rieng.items() if v is not None and v != ''})
         d = HopTinhGiaDat(self, bo.con, [bo.ma_ho], bo.bc.ten_dia_ban or '', not self.co_the_ap_gia_dat(), bo_mo=bo, dong_tich=chon or None,
-                          truoc_ap=self.dam_bao_sua_dat, sau_ap=self.sau_ap_gia_dat, thong_so=bm.thanh_gia.thong_so())
+                          truoc_ap=self.dam_bao_sua_dat, sau_ap=self.sau_ap_gia_dat, thong_so=ts or None)
         d.im_lang = getattr(self, 'im_lang', False)
         if not cho:
             return d
@@ -3607,6 +3692,8 @@ class CuaSoLapPA(QDialog):
         """True nếu được phép rời hộ đang soạn."""
         self._chot_dang_go()
         if not self.bo.co_thay_doi and not self.ho_so.co_thay_doi():
+            return True
+        if getattr(self, 'im_lang', False):
             return True
         tl = _hoi(self, TEN_UD, f'Hộ {self.bo.ma_ho} – {self.bo.pa.ho.ho_ten} có thay đổi chưa lưu. Lưu lại?')
         if tl == 'luu':

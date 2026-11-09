@@ -422,6 +422,9 @@ def _khoa_ngay(s: str):
 
 
 # ---------------------------------------------------------------- tổng hợp theo hộ
+SO_NAC_QD18 = 6          # 1.0.83: thang 0..6 theo 16 bước QĐ 18/2026/QĐ-UBND
+
+
 @dataclass
 class TongHopHo:
     ma_ho: int
@@ -438,6 +441,8 @@ class TongHopHo:
     theo_doi: str = ''
     muc_pa: dict = field(default_factory=dict)
     da_lap: bool = False              # đã lưu phương án, kể cả mọi mục 0 đồng / ô bỏ trống
+    da_niem_yet: bool = False         # Bước 6–7 QĐ 18: hộ đã đưa vào đợt niêm yết (ho.dot_du_thao_id)
+    da_trinh: bool = False            # Bước 8 QĐ 18: hộ đã xếp vào đợt trình thẩm định (ho.dot_id)
     # 1.0.05 - nhiều lần lập phương án: số lần (có dòng), các lần chưa có quyết định, tiền phương án của các lần ĐÃ duyệt (5 cột)
     so_lan: int = 1
     lan_chua_duyet: list = field(default_factory=list)
@@ -468,32 +473,39 @@ class TongHopHo:
     def trang_thai(self) -> str:
         """Trạng thái ngắn gọn cho danh sách hộ - theo tiến độ phân tích tuần tự (+ điểm cần xem lại)."""
         td = self.tien_do
-        if td.nac == 4:
+        if td.da_bg:
             chu = 'Đã bàn giao MB'
-        elif td.nac == 3:
+        elif td.da_ct:
             chu = 'Đã nhận tiền, chưa bàn giao'
-        elif td.nac == 2 and len(self.qd_chua_nhan) < len(self.qd):
+        elif td.da_pd and len(self.qd_chua_nhan) < len(self.qd):
             chu = f'Đã nhận {len(self.qd) - len(self.qd_chua_nhan)}/{len(self.qd)} QĐ'
-        elif td.nac == 2:
+        elif td.da_pd:
             chu = 'Đã phê duyệt' + (f' ({len(self.qd)} QĐ)' if len(self.qd) > 1 else '') + ', chưa nhận tiền'
+        elif td.nac == 3:
+            chu = 'Đã trình thẩm định (B8)'
+        elif td.nac == 2:
+            chu = 'Đã niêm yết & Lấy ý kiến (B6–7)'
         elif td.nac == 1:
-            chu = 'Đã lập phương án'
+            chu = 'Đã lập phương án (B5)'
         else:
             chu = 'Chưa lập phương án'
         return chu + (f' · {td.canh_bao}' if td.canh_bao else '')
 
 
-# ---------------------------------------------------------------- phân tích tiến độ TỰ ĐỘNG (thanh 4 nấc danh sách hộ)
+# ---------------------------------------------------------------- phân tích tiến độ TỰ ĐỘNG (thanh 6 nấc danh sách hộ, QĐ 18/2026)
 @dataclass
 class TienDoHo:
-    """nac 0-4 (□□□□ chưa lập PA … ■■■■ đã bàn giao); da_pd / da_ct / da_bg: từng bước ĐÃ ĐỦ theo thứ tự; canh_bao: dữ liệu
-    nhập tay chưa khớp thứ tự / chứng cứ (vd. tích "đã bàn giao" khi chưa có quyết định, chưa có biên bản)."""
+    """nac 0-6 (□□□□□□ chưa lập PA … ■■■■■■ đã bàn giao); da_pd / da_ct / da_bg: từng bước ĐÃ ĐỦ theo thứ tự;
+    da_ny / da_tr: đã niêm yết (B6–7) / đã trình thẩm định (B8); canh_bao: dữ liệu nhập tay chưa khớp thứ tự / chứng cứ
+    (vd. tích "đã bàn giao" khi chưa có quyết định, chưa có biên bản)."""
     nac: int
     da_lap: bool
     da_pd: bool
     da_ct: bool
     da_bg: bool
     canh_bao: str = ''
+    da_ny: bool = False
+    da_tr: bool = False
 
 
 def co_bien_ban_ban_giao(x) -> bool:
@@ -503,19 +515,24 @@ def co_bien_ban_ban_giao(x) -> bool:
 
 
 def phan_tich_tien_do(x) -> TienDoHo:
-    """Tiến độ một hộ (TongHopHo) TUẦN TỰ từ dữ liệu thật (người dùng 17/10/2026 - "khi đã phê duyệt tăng nấc phê duyệt, đã bàn giao
-    tăng nấc bàn giao, tự động chạy"; chọn: tuần tự, bàn giao cần biên bản):
-      nấc 1 Lập PA: đã lưu phương án / có tiền phương án;
-      nấc 2 Phê duyệt: hộ có trong ít nhất một quyết định phê duyệt (qd_ho);
-      nấc 3 Chi trả: đã phê duyệt và MỌI quyết định của hộ đã ghi nhận tiền;
-      nấc 4 Bàn giao: đã chi trả + đã tích bàn giao có ngày biên bản (co_bien_ban_ban_giao).
+    """Tiến độ một hộ (TongHopHo) TUẦN TỰ từ dữ liệu thật (người dùng 17/10/2026 - tuần tự, bàn giao cần biên bản;
+    1.0.83 nâng thang 0..6 theo 16 bước QĐ 18/2026/QĐ-UBND):
+      nấc 1 Lập PA (B5): đã lưu phương án / có tiền phương án;
+      nấc 2 Niêm yết (B6–7): đã lập và có đợt dự thảo, hoặc đã trình;
+      nấc 3 Trình thẩm định (B8): đã lập và có đợt trình;
+      nấc 4 Phê duyệt (B9–11): hộ có trong ít nhất một quyết định phê duyệt (qd_ho);
+      nấc 5 Chi trả (B12–14): đã phê duyệt và MỌI quyết định của hộ đã ghi nhận tiền;
+      nấc 6 Bàn giao (B15–16): đã chi trả + đã tích bàn giao có ngày biên bản (co_bien_ban_ban_giao).
     Tích "đã bàn giao" mà thiếu ngày biên bản / chưa đủ bước trước: KHÔNG tăng nấc, ghi canh_bao (bàn giao trước, thiếu ngày)."""
+    da_tr = bool(getattr(x, 'da_trinh', False))
+    da_ny = bool(getattr(x, 'da_niem_yet', False)) or da_tr
+    # 1.0.90: gắn đợt niêm yết / trình không biến hộ CHƯA lập phương án thành đã lập (trước nhảy cóc lên nấc 2 / 3) - giữ nấc 0, cảnh báo
     da_lap = bool(x.da_lap or x.tong_pa > 0)
     da_pd = bool(x.qd)
     da_ct = da_pd and not x.qd_chua_nhan
     bien_ban = co_bien_ban_ban_giao(x)
     da_bg = da_ct and bien_ban
-    nac = 4 if da_bg else 3 if da_ct else 2 if da_pd else 1 if da_lap else 0
+    nac = 6 if da_bg else 5 if da_ct else 4 if da_pd else 3 if (da_lap and da_tr) else 2 if (da_lap and da_ny) else 1 if da_lap else 0
     canh_bao = ''
     if x.da_ban_giao and not da_bg:
         thieu = ([] if da_ct else ['chưa ' + ('nhận đủ tiền' if da_pd else 'phê duyệt')]) + ([] if bien_ban else ['chưa có ngày biên bản'])
@@ -523,7 +540,9 @@ def phan_tich_tien_do(x) -> TienDoHo:
     cho = [n for n in getattr(x, 'lan_chua_duyet', []) if n > 1] if da_pd else []
     if cho:                                             # 1.0.05: đã có quyết định, còn phương án bổ sung chưa phê duyệt
         canh_bao = '; '.join(c for c in (canh_bao, 'PA bổ sung lần ' + ', '.join(map(str, cho)) + ' chưa phê duyệt') if c)
-    return TienDoHo(nac, da_lap, da_pd, da_ct, da_bg, canh_bao)
+    if not da_lap and (da_ny or da_tr):
+        canh_bao = '; '.join(c for c in (canh_bao, 'đã gắn đợt niêm yết / trình nhưng hộ chưa lập phương án (tổng phương án = 0)') if c)
+    return TienDoHo(nac, da_lap, da_pd, da_ct, da_bg, canh_bao, da_ny, da_tr)
 
 
 LOC_SQL_TOI_DA = 400         # tong_hop(ds_ma_ho) lọc bằng IN (?, …) khi danh sách không quá chừng này (giới hạn tham số SQLite cũ 999)
@@ -602,7 +621,9 @@ def _tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
         da_lap = str(h['trang_thai'] or '').startswith('Đã lập') or h['ma_ho'] in co_dong
         x = TongHopHo(h['ma_ho'], h['thu_tu'], h['ho_ten'], h['dia_chi'], thua.get(h['ma_ho'], []), qd.get(h['ma_ho'], []),
                       da_ban_giao=bool(h['da_ban_giao']), ban_giao_ngay=h['ban_giao_ngay'], ly_do_ban_giao=h['ly_do_ban_giao'],
-                      bien_ban_ban_giao=h['bien_ban_ban_giao'], theo_doi=h['theo_doi'], da_lap=da_lap)
+                      bien_ban_ban_giao=h['bien_ban_ban_giao'], theo_doi=h['theo_doi'], da_lap=da_lap,
+                      da_niem_yet=bool(h['dot_du_thao_id']) if 'dot_du_thao_id' in h.keys() else False,
+                      da_trinh=bool(h['dot_id']) if 'dot_id' in h.keys() else False)
         if tinh_pa and h['ma_ho'] in kqh:
             k = kqh[h['ma_ho']][0]
             x.tong_pa, x.muc_pa = k.tong, muc_5_cot(k.muc)

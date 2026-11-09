@@ -4,7 +4,7 @@ Yếu tố khác (K2, Phụ lục III, K khác, giá cụ thể): bảng tính �
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 
 from .giao_dien import dat_kieu_theo_tong, gan_dinh_dang_nghin, icon_ky_hieu
 from .lap_pa import LoiNhap, doc_so
@@ -24,51 +24,66 @@ class ThanhApGiaNhanh(QWidget):
         self._dang_nap = False
         self._g_tay = False                   # người dùng tự gõ giá: không tự tra đè
         self.ly_do = ''
+        # 1.0.90 (người dùng 09/11/2026: "chỗ trống, chỗ chật, ô quá dài / quá ngắn"): MỘT hàng xếp tràn (XepDong) thay hai hàng - đủ chỗ thì
+        # một hàng, hẹp thì khối sau xuống dòng; phần rộng thừa dồn cho ô Đoạn đường, nút giữ đúng cỡ chữ, không kéo dài.
+        from .giao_dien import XepDong
         lo = QVBoxLayout(self)
         lo.setContentsMargins(0, 2, 0, 2)
-        lo.setSpacing(4)
-        ha, hb = QHBoxLayout(), QHBoxLayout()
-        ha.setSpacing(6)
-        hb.setSpacing(6)
-        lo.addLayout(ha)
-        lo.addLayout(hb)
+        lo.setSpacing(0)
+        khung = QWidget()
+        xd = XepDong(khung, 8)
+        xd.setContentsMargins(0, 0, 0, 0)
+        lo.addWidget(khung)
 
         def nhan(chu):
             w = QLabel(chu)
             w.setProperty('vai', 'nhan')
             return w
+
+        def khoi(*ds, gian=None, deo=False):
+            """deo: phần thừa của hàng thành khoảng trống bên phải khối (nút / ô giá giữ đúng cỡ, không bị kéo dài khi xuống dòng)."""
+            k = QWidget()
+            h = QHBoxLayout(k)
+            h.setContentsMargins(0, 0, 0, 0)
+            h.setSpacing(4)
+            for w in ds:
+                h.addWidget(w, 1 if w is gian else 0)
+            if deo:
+                h.addStretch(1)
+            xd.addWidget(k)
+            return k
         self.cb_doan, self.cb_vi_tri, self.cb_ket_cau = QComboBox(), QComboBox(), QComboBox()
-        for cb, ten, rong, rong_xo, gian in ((self.cb_doan, 'Đoạn đường (QĐ 03):', 380, 560, 1), (self.cb_vi_tri, 'Vị trí:', 170, 520, 0), (self.cb_ket_cau, 'Mặt đường:', 210, 460, 0)):
-            cb.setMinimumContentsLength(14)
+        for cb, rong, chu, rong_xo in ((self.cb_doan, 240, 22, 600), (self.cb_vi_tri, 240, 24, 600), (self.cb_ket_cau, 205, 20, 360)):
+            cb.setMinimumContentsLength(chu)
             cb.setMinimumWidth(rong)
-            cb.setMaxVisibleItems(18)
+            cb.setMaxVisibleItems(20)
             cb.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-            cb.view().setMinimumWidth(rong_xo)        # ô gọn, danh sách xổ đủ tên đường, điểm đầu, điểm cuối
+            cb.view().setMinimumWidth(rong_xo)        # ô gọn, danh sách xổ đủ tên đường, điểm đầu, điểm cuối / đủ chữ vị trí, phạm vi
             cb.currentIndexChanged.connect(lambda *_, c=cb: self._doi_cb(c))
-            ha.addWidget(nhan(ten))
-            ha.addWidget(cb, gian)
+        self.cb_vi_tri.setToolTip('Dòng 1-7 của bảng giá NQ 28; Vị trí 1 phạm vi 2, 3 và Vị trí 2, còn lại (Điều 5, 6 NQ 28) tính theo giá Dòng 1')
         self.o_g = QLineEdit()
         self.o_g.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.o_g.setFixedWidth(130)
-        self.o_g.setToolTip('Giá bảng giá (đ/m²): tự tra theo đoạn đường, vị trí, loại đất của dòng; gõ số để dùng giá khác')
+        self.o_g.setFixedWidth(108)
+        self.o_g.setToolTip('Giá bảng giá NQ 28 (đ/m²): tự tra theo đoạn đường, vị trí, loại đất của dòng; gõ số để dùng giá khác')
         gan_dinh_dang_nghin(self.o_g)
         self.o_g.textEdited.connect(lambda *_: self._go_gia())
-        hb.addWidget(nhan('Giá NQ 28 (đ/m²):'))
-        hb.addWidget(self.o_g)
         self.lb_ct = QLabel('')
         dat_kieu_theo_tong(self.lb_ct, 'QLabel { color: #1d4ed8; font-weight: bold; }')
-        self.lb_ct.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        hb.addWidget(self.lb_ct, 1)
-        self.b_ap = QPushButton('Áp vào dòng đang chọn')
+        self.b_ap = QPushButton('Áp vào dòng chọn')
+        self.b_ap.setToolTip('Áp đơn giá vào các dòng đất đang chọn ở bảng (mỗi dòng tính theo loại đất của nó)')
         self.b_ap.clicked.connect(lambda: self.ap_dong_chon())
-        self.b_them = QPushButton('+ Áp thành dòng đất mới')
+        self.b_them = QPushButton('+ Dòng đất mới')
         self.b_them.setToolTip('Thêm một dòng cho thửa đang chọn ở ô Thửa, áp luôn đơn giá này')
         self.b_them.clicked.connect(lambda: self.them_dong_moi())
         ic = icon_ky_hieu(0xE73E, '#16a34a', 14)      # CheckMark
         if ic is not None:
             self.b_ap.setIcon(ic)
-        hb.addWidget(self.b_ap)
-        hb.addWidget(self.b_them)
+        xd.gian(khoi(nhan('Đoạn đường:'), self.cb_doan, gian=self.cb_doan))
+        khoi(nhan('Vị trí:'), self.cb_vi_tri)
+        khoi(nhan('Mặt đường:'), self.cb_ket_cau)
+        khoi(nhan('Giá NQ 28:'), self.o_g, deo=True)
+        khoi(self.b_ap, self.b_them, deo=True)
+        khoi(self.lb_ct, gian=self.lb_ct)                 # công thức: đúng cỡ chữ; hẹp thì xuống dòng riêng, đủ cả dòng
 
     def showEvent(self, e):
         super().showEvent(e)
@@ -91,9 +106,7 @@ class ThanhApGiaNhanh(QWidget):
             for x in cac_xa:
                 for r in g.ds_doan(x, self.goi):
                     self.cb_doan.addItem(('' if k else g.ten_ngan(x) + ': ') + g.nhan_doan(r), f'{x}|{r["ma_doan_duong"]}')
-            self.cb_vi_tri.clear()
-            for x in self.goi['vi_tri']:
-                self.cb_vi_tri.addItem(x['ten'], x['ma'])
+            self._nap_vi_tri(g)
             self.cb_ket_cau.clear()
             for x in self.goi['ket_cau']:
                 self.cb_ket_cau.addItem(x['ten'], x['ma'])
@@ -102,6 +115,31 @@ class ThanhApGiaNhanh(QWidget):
         self._g_tay = False
         self.tinh()
         self.cap_nhat_khoa()
+
+    def _nap_vi_tri(self, g) -> None:
+        """Ô Vị trí: 7 dòng bảng giá của gói (Phạm vi 1 - 100%), rồi Vị trí 1 phạm vi 2, 3 và Vị trí 2, còn lại của gói (1.0.90, người dùng
+        09/11/2026). Dữ liệu mục 'mã dòng|mã vị trí - phạm vi'; mục phạm vi / Vị trí 2 tính theo giá Dòng 1 như bảng tính đầy đủ."""
+        self.cb_vi_tri.clear()
+        ds_vt = self.goi['vi_tri']
+        for x in ds_vt:
+            self.cb_vi_tri.addItem(x['ten'], f'{x["ma"]}|')
+        dong_1 = ds_vt[0]['ma'] if ds_vt else ''
+        nhom = {1: [], 2: []}
+        for m in g.muc_vi_tri_dat(self.goi):
+            if str(m.get('nn')) == '1' and str(m.get('pnn')) == '1':
+                continue                                  # Vị trí 1 - Phạm vi 1 (100%) = các dòng ở trên
+            nhom.setdefault(int(m.get('vi_tri') or 1), []).append(m)
+        for vi_tri, ds in sorted(nhom.items()):
+            if not ds:
+                continue
+            self.cb_vi_tri.insertSeparator(self.cb_vi_tri.count())
+            for m in ds:
+                self.cb_vi_tri.addItem(m['ten'] + (' - theo giá Dòng 1' if vi_tri >= 2 else ''), f'{dong_1}|{m["ma"]}')
+
+    def _vi_tri(self) -> tuple:
+        """(mã dòng bảng giá, mã vị trí - phạm vi hoặc '')."""
+        a, _, b = (self.cb_vi_tri.currentData() or '').partition('|')
+        return a, b
 
     def _doi_cb(self, cb) -> None:
         cb.setToolTip(cb.currentText())
@@ -125,7 +163,9 @@ class ThanhApGiaNhanh(QWidget):
         if not self._da_nap:
             return {}
         x, d = self._doan()
-        return dict(dia_ban=x, ma_doan=(d or {}).get('ma_doan_duong'), vi_tri=self.cb_vi_tri.currentData(), ket_cau=self.cb_ket_cau.currentData(), loai_dat=self._loai_dang_chon())
+        vt, pv = self._vi_tri()
+        return dict(dia_ban=x, ma_doan=(d or {}).get('ma_doan_duong'), vi_tri=vt, pham_vi=pv or None, ket_cau=self.cb_ket_cau.currentData(),
+                    loai_dat=self._loai_dang_chon())
 
     # ---------------------------------------------------------------- tính
     def _loai_dang_chon(self) -> str:
@@ -139,29 +179,49 @@ class ThanhApGiaNhanh(QWidget):
             return bo.pa.dat[0].loai_dat
         return str((t or {}).get('loai_dat') or '')
 
+    @staticmethod
+    def _pl_viii(loai_dat: str) -> str:
+        """Loại đất NN của dòng (CLN / HNK, LUC / NTS / RSX…) -> mã cột Phụ lục VIII của gói ('' nếu không phải đất NN)."""
+        from . import gia_dat_nq28 as nq
+        try:
+            l = nq.loai_nn_cua_ma(loai_dat)
+            return next((x.get('pl_viii', '') for x in nq.quy_tac_loai_nn() if x['ma'] == l), '') if l else ''
+        except Exception:                                   # noqa: BLE001 - gói tỉnh khác không có quy_tac_nq28
+            return ''
+
     def tinh_cho(self, loai_dat: str) -> tuple:
         """(KetQua hoặc None, lý do không tính được) của một loại đất, theo thông số trên thanh."""
+        kq, _v, ly_do = self._tinh(loai_dat)
+        return kq, ly_do
+
+    def _tinh(self, loai_dat: str) -> tuple:
+        """(KetQua, DauVao, lý do). 1.0.90: giá tra đúng cột loại đất NN (cây lâu năm khác cây hằng năm), tính Vị trí / Phạm vi + trần sàn
+        Phụ lục VIII như bảng tính đầy đủ."""
+        from . import gia_dat_nq28 as nq
         from . import gia_dat_qd03 as g
         if self.goi is None:
             self.nap()
         n = g.nhom_theo_loai_dat(loai_dat, self.goi)
         if n is None:
-            return None, f'Loại đất {loai_dat or "(chưa chọn)"} chưa có nhóm giá: dùng bảng tính đầy đủ.'
+            return None, None, f'Loại đất {loai_dat or "(chưa chọn)"} chưa có nhóm giá: dùng bảng tính đầy đủ.'
         x, doan = self._doan()
         if doan is None:
-            return None, 'Chọn đoạn đường.'
-        vt = self.cb_vi_tri.currentData() or ''
+            return None, None, 'Chọn đoạn đường.'
+        vt, pv = self._vi_tri()
+        pl = self._pl_viii(loai_dat)
         if self._g_tay:
             try:
                 gia = doc_so(self.o_g.text(), 'Giá bảng giá')
             except LoiNhap as e:
-                return None, str(e)
+                return None, None, str(e)
         else:
-            gia = g.gia_bang_gia(x, doan, n['ma'], vt, n['cot_gia'], self.goi)
+            gia = g.gia_bang_gia(x, doan, n['ma'], vt, nq.cot_cua_nhom(n['cot_gia'], pl), self.goi)
         if not gia or gia <= 0:
-            return None, 'Bảng giá không có dòng khớp: gõ giá vào ô Giá NQ 28.'
-        v = g.DauVao(dia_ban=x, nhom_dat=n['ma'], ma_doan_duong=doan['ma_doan_duong'], loai_ket_noi_vi_tri=vt, ket_cau_mat_duong=self.cb_ket_cau.currentData() or '', don_gia_bang_gia=gia, cot_gia=n['cot_gia'])
-        return g.tinh_don_gia(v, doan, self.goi), ''
+            return None, None, 'Bảng giá không có dòng khớp: gõ giá vào ô Giá NQ 28.'
+        v = g.DauVao(dia_ban=x, nhom_dat=n['ma'], ma_doan_duong=doan['ma_doan_duong'], loai_ket_noi_vi_tri=vt,
+                     ket_cau_mat_duong=self.cb_ket_cau.currentData() or '', don_gia_bang_gia=gia, cot_gia=n['cot_gia'],
+                     ma_vi_tri_dat=pv, loai_nn=pl)
+        return g.tinh_don_gia(v, doan, self.goi), v, ''
 
     def tinh(self):
         """Tính theo loại đất của dòng đang chọn, hiện công thức."""
@@ -195,15 +255,17 @@ class ThanhApGiaNhanh(QWidget):
         from . import gia_dat_qd03 as g
         bo = self.man.bo
         x, doan = self._doan()
-        vt = g.mo_ta_vi_tri(doan, self.cb_vi_tri.currentData() or '', self.goi)
+        vt_goc = g.mo_ta_vi_tri(doan, self._vi_tri()[0], self.goi)
         loi = []
         doi = []
         for i in ds:
-            kq, ly_do = self.tinh_cho(bo.pa.dat[i].loai_dat)
+            kq, v, ly_do = self._tinh(bo.pa.dat[i].loai_dat)
             if kq is None or kq.don_gia_ap_dung <= 0:
                 loi.append((i, ly_do or 'Đơn giá bằng 0.'))
                 continue
-            bo.ap_don_gia_qd03([i], kq.don_gia_ap_dung, g.ghi_chu_ap_gia(kq, doan, g.ten_ngan(x)), vt, g.chi_tiet_ap_gia(kq))
+            vt = g.lam_sach_vi_tri(f'{vt_goc} - {kq.vi_tri_dat}' if kq.vi_tri_dat and vt_goc else (vt_goc or kq.vi_tri_dat))
+            # 1.0.90: dòng đất nhớ địa bàn, đoạn, vị trí, phạm vi (chi_tiet_ap_gia có đầu vào) - mở lại bảng tính đúng ô đã chọn
+            bo.ap_don_gia_qd03([i], kq.don_gia_ap_dung, g.ghi_chu_ap_gia(kq, doan, g.ten_ngan(x)), vt, g.chi_tiet_ap_gia(kq, v, vt))
             doi.extend(bo.ho_tro_doi)
         bo.ho_tro_doi = doi
         return loi

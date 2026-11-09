@@ -21,9 +21,10 @@ def _kq(**kw):
 
 
 class TestDuLieu(unittest.TestCase):
-    def test_106_doan_3_dia_ban(self):
-        self.assertEqual(g.so_doan(), 106)
-        self.assertEqual([len(g.ds_doan(k)) for k in g.ds_dia_ban()], [61, 26, 19])
+    def test_161_doan_4_dia_ban(self):
+        self.assertEqual(g.so_doan(), 161)
+        self.assertEqual([len(g.ds_doan(k)) for k in g.ds_dia_ban()], [61, 26, 19, 55])
+        self.assertEqual(g.ds_dia_ban()[-1], 'Bảng 8. Phường Tân Triều')
         for k in g.ds_dia_ban():
             tt = 1
             for r in g.ds_doan(k):                       # cụm 7 dòng / đoạn, liên tiếp
@@ -69,7 +70,8 @@ class TestDuLieu(unittest.TestCase):
         self.assertEqual(g.dia_ban_theo_ten('Xã Tân An'), 'Bảng 54. Xã Tân An')
         self.assertEqual(g.dia_ban_theo_ten('phường Trị An'), 'Bảng 53. Phường Trị An')
         self.assertEqual(g.dia_ban_theo_ten('Phú Lý'), 'Bảng 55. Xã Phú Lý')
-        self.assertEqual(g.dia_ban_theo_ten('Tân Triều'), '')
+        self.assertEqual(g.dia_ban_theo_ten('Tân Triều'), 'Bảng 8. Phường Tân Triều')
+        self.assertEqual(g.dia_ban_theo_ten('xã Tân Triều'), 'Bảng 8. Phường Tân Triều')
 
 
 class TestCongThuc(unittest.TestCase):

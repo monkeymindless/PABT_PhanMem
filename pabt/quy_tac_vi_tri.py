@@ -337,6 +337,16 @@ def doc_toan_van_nghi_quyet(cac_dong, luu: bool = False) -> dict:
     return kq
 
 
+def so_dieu_toan_van_da_luu() -> int:
+    """Số điều của toàn văn đã lưu trên máy (0: chưa lưu / file hỏng)."""
+    import json
+    from .may_chu import thu_muc_may
+    try:
+        return len(json.loads((thu_muc_may() / TEN_FILE_TOAN_VAN).read_text(encoding='utf-8')).get('dieu') or [])
+    except (OSError, ValueError, AttributeError):
+        return 0
+
+
 def doc_quy_tac_toan_van_da_luu() -> list:
     """Quy tắc toàn văn đã lưu trên máy (doc_toan_van_nghi_quyet(luu=True)); chưa có / hỏng: []."""
     import json

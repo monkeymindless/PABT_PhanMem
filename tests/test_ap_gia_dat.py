@@ -415,6 +415,26 @@ class TestThanhNhanhVaCuaSo(CoSo):
         t.cb_vi_tri.setCurrentIndex(2)
         self.assertNotEqual(t.kq.don_gia_nq28, D(0))
 
+    def test_vi_tri_2_va_pham_vi_trong_o_vi_tri(self):
+        """1.0.90: ô Vị trí có thêm Vị trí 1 phạm vi 2, 3 và Vị trí 2, còn lại (tính theo giá Dòng 1, tỷ lệ + trần sàn như bảng tính đầy đủ)."""
+        w = self._cua_so()
+        t = w.bang[1].thanh_gia
+        self._chon_doan(t)
+        du_lieu = [t.cb_vi_tri.itemData(i) or '' for i in range(t.cb_vi_tri.count())]
+        self.assertTrue(any(x.endswith('|VT1_PV2') for x in du_lieu))
+        k = next(i for i, x in enumerate(du_lieu) if x.endswith('|VT2_PV1'))
+        self.assertIn('Vị trí 2', t.cb_vi_tri.itemText(k))
+        dong_1 = t.kq.don_gia_nq28
+        t.cb_vi_tri.setCurrentIndex(k)
+        self.assertEqual(t.kq.gia_truoc_vi_tri, dong_1)               # giá G theo Dòng 1 của tuyến
+        self.assertLess(t.kq.don_gia_nq28, dong_1)                    # rồi nhân tỷ lệ Vị trí 2 (30% NN), xét trần sàn PL VIII
+        self.assertTrue(t.kq.vi_tri_dat)
+        self.assertEqual(t.thong_so()['pham_vi'], 'VT2_PV1')
+        self.assertEqual(t.ap_dong_chon([0]), 1)
+        dong = w.bo.pa.dat[0]
+        self.assertIn('Vị trí 2', dong.vi_tri)
+        self.assertEqual(json.loads(dong.ap_gia)['pham_vi_vi_tri'], 'VT2_PV1')    # mở lại bảng tính đúng ô đã chọn
+
     def test_tuyen_co_quy_dinh_rieng_k3_tu_khoa(self):
         import copy
         w = self._cua_so()

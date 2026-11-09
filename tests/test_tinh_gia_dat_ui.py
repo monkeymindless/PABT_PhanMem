@@ -238,6 +238,31 @@ class TestLenhVaCanGiua(unittest.TestCase):
         if h.width() <= vung.width():                                       # màn hình ảo 800 x 600 đo chữ rộng gấp đôi: hộp có thể rộng hơn
             self.assertLessEqual(abs(tam.x() - vung.center().x()), 40)
         self.assertLessEqual(abs(tam.y() - vung.center().y()), 40)
+        khung = h.frameGeometry()
+        self.assertGreaterEqual(khung.left(), vung.left() - 2)
+        self.assertGreaterEqual(khung.top(), vung.top() - 2)
+        self.assertLessEqual(khung.right(), vung.right() + 2)
+        self.assertLessEqual(khung.bottom(), vung.bottom() + 2)
+
+    def test_mo_hop_tu_can_giua_khong_can_goi_tay(self):
+        """Mở hộp con: bộ lọc hiện cửa sổ tự kéo về giữa, không cần gọi tay vua_man_hinh."""
+        from pabt.giao_dien import _BoToMau
+        from pabt.man_hinh_du_toan import HopTraNQ28
+        if getattr(APP, '_bo_to_mau', None) is None:
+            APP._bo_to_mau = _BoToMau(APP)
+            APP.installEventFilter(APP._bo_to_mau)
+        h = HopTraNQ28(None, xem=True)
+        self.addCleanup(h.close)
+        h.resize(2400, 1600)
+        h.move(0, 0)
+        h.show()
+        APP.processEvents()
+        vung = (h.screen() or APP.primaryScreen()).availableGeometry()
+        khung = h.frameGeometry()
+        self.assertLessEqual(khung.width(), vung.width())
+        self.assertLessEqual(khung.height(), vung.height())
+        self.assertLessEqual(abs(khung.center().x() - vung.center().x()), 48)
+        self.assertLessEqual(abs(khung.center().y() - vung.center().y()), 48)
 
 
 if __name__ == '__main__':

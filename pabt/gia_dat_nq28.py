@@ -13,7 +13,7 @@ from pathlib import Path
 
 from . import an_toan as _an_toan
 from .tien import lam_tron
-from .lap_pa import bo_dau
+from .lap_pa import bo_dau, cung_dia_ban, khoa_dia_ban
 
 VAN_BAN = 'Nghị quyết 28/2025/NQ-HĐND ngày 10/12/2025 của HĐND tỉnh Đồng Nai (bảng giá đất áp dụng từ 01/01/2026)'
 COT = [('dat_o', 'Đất ở'), ('tmdv', 'Đất thương mại, dịch vụ'), ('sxkd', 'Đất SX-KD phi NN, khoáng sản'),
@@ -85,6 +85,17 @@ def loai_nn_cua_ma(loai_dat: str) -> str | None:
         if p in ma:
             return ma[p]
     return None
+
+
+def cot_cua_nhom(cot: str, pl_viii: str = '') -> str:
+    """Cột giá để tra bảng: nhóm đã tách (cây lâu năm / hằng năm / rừng / thủy sản) dùng cột riêng nếu bảng có; không thì cột gộp."""
+    pl = (pl_viii or '').strip()
+    if not pl:
+        return cot
+    for x in quy_tac_loai_nn():
+        if x.get('pl_viii') == pl and x.get('ma'):
+            return x['ma']
+    return cot
 
 
 def cot_gia_that(cot: str, r: dict | None = None) -> str:
@@ -205,8 +216,39 @@ def tom_tat() -> str:
     return 'Bảng gắn sẵn: ' + ', '.join(xs)
 
 
+_CHI_MUC_XA = {'dong': None, 'theo_ten': {}, 'hoi': {}}
+
+
+def _chi_muc_xa() -> dict:
+    """Chỉ mục theo tên xã của bảng đang dùng (1.0.90: bảng toàn tỉnh 16.374 dòng - trước mỗi lần tra một xã duyệt hết bảng). Dựng lại
+    khi bảng đọc lại (đối tượng dòng khác: ghi / thay file)."""
+    dong = _da_doc()[0]
+    cm = _CHI_MUC_XA
+    if cm['dong'] is not dong:
+        theo, theo_khoa = {}, {}
+        for r in dong:
+            theo.setdefault(r.get('xa') or '', []).append(r)
+        for ten in theo:
+            if ten:
+                theo_khoa.setdefault(khoa_dia_ban(ten), []).append(ten)
+        cm.update(dong=dong, theo_ten=theo, theo_khoa=theo_khoa, hoi={})
+    return cm
+
+
+def dong_cua_xa(xa: str) -> list:
+    """Các dòng bảng giá của một xã / phường (khop_xa), nhớ theo tên hỏi. Tên đúng (giữ dấu, bỏ tiền tố) của một xã trong bảng: lấy thẳng
+    xã đó; không thì so từng tên (gõ không dấu, tên ngắn). Dùng chung: không sửa danh sách / dòng trả về."""
+    cm = _chi_muc_xa()
+    kq = cm['hoi'].get(xa)
+    if kq is None:
+        dung = cm['theo_khoa'].get(khoa_dia_ban(xa)) if '~' in khoa_dia_ban(xa) else None
+        ten_khop = dung or [ten for ten in cm['theo_ten'] if ten and khop_xa(xa, ten)]
+        kq = cm['hoi'][xa] = [r for ten in ten_khop for r in cm['theo_ten'][ten]]
+    return kq
+
+
 def ds_xa() -> list:
-    return list(dict.fromkeys(r['xa'] for r in tat_ca()))
+    return [x for x in _chi_muc_xa()['theo_ten'] if x]
 
 
 def mo_ta_vi_tri(r: dict) -> str:
@@ -236,18 +278,16 @@ def cot_cua_loai(loai_dat: str) -> str | None:
 
 
 def khop_xa(ten: str, r_xa: str) -> bool:
-    t = bo_dau(ten or '')
-    t = re.sub(r'^(xa|phuong|thi tran)\s+', '', t)
-    return bool(t) and t in bo_dau(r_xa)
+    """1.0.90: so nguyên chữ, giữ dấu khi hai bên cùng có dấu (lap_pa.cung_dia_ban). Trước so chuỗi con không dấu: "An Lộc" khớp cả
+    "Xuân Lộc", "Lộc Thành" khớp cả "Lộc Thạnh" - giá đất / đoạn đường của xã khác lẫn vào."""
+    return cung_dia_ban(ten, r_xa)
 
 
 def tim(xa: str = '', tu_khoa: str = '', vi_tri: str = '') -> list:
     """Lọc theo địa bàn (bỏ qua nếu không khớp địa bàn nào), mã vị trí (vi_tri: 'VT2', 'KV1-VT3'… - '' = mọi vị trí) và từ khóa
     không dấu (tên đường, điểm đầu / cuối, mã vị trí)."""
-    ds = tat_ca()
-    theo_xa = [r for r in ds if khop_xa(xa, r['xa'])]
-    if theo_xa:
-        ds = theo_xa
+    theo_xa = dong_cua_xa(xa) if str(xa or '').strip() else []
+    ds = list(theo_xa) if theo_xa else tat_ca()
     if vi_tri:
         vt = str(vi_tri).strip().upper()
         ds = [r for r in ds if str(r.get('vi_tri') or '').upper() == vt]
@@ -265,12 +305,37 @@ def tim(xa: str = '', tu_khoa: str = '', vi_tri: str = '') -> list:
 def theo_dia_ban(xa: str = '') -> list:
     """Mọi dòng của bảng (đủ các địa bàn - dự án có thể đi qua nhiều xã, phường), địa bàn của dự án đứng đầu."""
     ds = tat_ca()
-    return [r for r in ds if khop_xa(xa, r['xa'])] + [r for r in ds if not khop_xa(xa, r['xa'])]
+    dau = dong_cua_xa(xa) if str(xa or '').strip() else []
+    if not dau:
+        return ds
+    co = {id(r) for r in dau}
+    return list(dau) + [r for r in ds if id(r) not in co]
 
 
 def ten_ngan_xa(r_xa: str) -> str:
     """"Xã Trị An" -> "Trị An"."""
     return re.sub(r'^(Xã|Phường|Thị trấn)\s+', '', r_xa or '')
+
+
+COT_PHU_LUC_III = ('dat_o', 'tmdv', 'sxkd')               # NQ 28: Phụ lục III đất phi nông nghiệp; cột còn lại (nn_*) là Phụ lục I
+
+
+def phu_luc_cua_cot(cot: str) -> str:
+    """Phụ lục NQ 28 chứa giá của cột: 'III' đất ở / TMDV / SXKD, 'I' đất nông nghiệp."""
+    return 'III' if cot in COT_PHU_LUC_III else 'I'
+
+
+def phu_luc_dong(r: dict) -> set:
+    """Các phụ lục mà dòng bảng giá mang giá (1.0.90): theo nhãn lúc đọc file (phu_luc), dòng cũ chưa có nhãn thì theo cột có giá."""
+    pl = r.get('phu_luc')
+    if isinstance(pl, (list, tuple)) and pl:
+        return set(pl)
+    ra = set()
+    if any(int(r.get(c) or 0) > 0 for c in COT_PHU_LUC_III):
+        ra.add('III')
+    if any(int(r.get(c) or 0) > 0 for c, _ in COT + LOAI_NN if c not in COT_PHU_LUC_III):
+        ra.add('I')
+    return ra
 
 
 def gia_dong(r: dict, cot: str) -> int:

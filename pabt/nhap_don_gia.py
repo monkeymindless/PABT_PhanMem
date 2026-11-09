@@ -134,8 +134,17 @@ def doc_bang(file) -> list:
             raise LoiNhap(f'File "{p.name}" thực chất là một trang web (HTML), không phải file {duoi}: thường do trang tải về '
                           'yêu cầu đăng nhập / xác nhận, hoặc liên kết đã hết hạn. Mở đường dẫn bằng trình duyệt, tải file về '
                           'máy rồi dùng "Cập nhật bộ đơn giá từ file…".')
-        if that in ('.xls', '.doc'):                    # Office 97-2003 (văn bản trên Công báo hay là .doc): nhờ Word / Excel
-            return doc_bang(chuyen_office(p, that))
+        if that in ('.xls', '.doc'):                    # Office 97-2003: Word / Excel, rồi LibreOffice, rồi bộ đọc .doc thuần Python
+            try:
+                return doc_bang(chuyen_office(p, that))
+            except LoiNhap:
+                if that != '.doc':
+                    raise
+                from .doc_doc import LoiDoc, doc_dong
+                try:
+                    return doc_dong(p)
+                except LoiDoc as e:
+                    raise LoiNhap(f'File "{p.name}" là Word 97-2003 (.doc) nhưng không đọc được chữ. {e}') from None
         if that in ('.pdf', '.docx') and that != duoi or that == '.xlsx' and duoi not in ('.xlsx', '.xlsm'):
             duoi = that                                 # đúng nội dung nhưng sai đuôi: đọc theo nội dung
         elif not that:
@@ -166,7 +175,7 @@ def doc_bang(file) -> list:
         except csv.Error:                               # văn bản thường (không có cột): mỗi dòng một ô
             return [[l.strip()] for l in txt.splitlines()]
         return [[c.strip() for c in r] for r in csv.reader(txt.splitlines(), mau)]
-    raise LoiNhap(f'Chưa hỗ trợ file {duoi or "(không có đuôi)"}. Hỗ trợ: Excel, Word (.docx), PDF có chữ, CSV.')
+    raise LoiNhap(f'Chưa hỗ trợ file {duoi or "(không có đuôi)"}. Hỗ trợ: Excel, Word (.doc, .docx), PDF có chữ, CSV.')
 
 
 _VBS_CHUYEN = r'''
@@ -246,6 +255,8 @@ def chuyen_office(p, loai: str = '', thu_muc=None) -> Path:
         except (OSError, subprocess.TimeoutExpired) as e:
             raise LoiNhap(f'{thay}\n({e})') from None
     loi = kq.stderr.decode('oem', 'replace').strip()
+    if not dich.exists() and loai == '.doc' and _chuyen_libreoffice(p, dich, 'docx'):
+        return dich
     if not dich.exists():
         if 'KHONG_CO_OFFICE' in loi:
             raise LoiNhap(f'Máy chưa có Microsoft {ten} để đọc file cũ. {thay}')
@@ -253,21 +264,229 @@ def chuyen_office(p, loai: str = '', thu_muc=None) -> Path:
     return dich
 
 
-def _doc_docx(p: Path) -> list:
-    W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+def _chuyen_libreoffice(p: Path, dich: Path, muc: str) -> bool:
+    """Chuyển .doc sang .docx bằng LibreOffice nếu máy có. False: không có hoặc không tạo được file."""
+    import shutil
+    from .van_ban_trinh import tim_libreoffice
+    soffice = tim_libreoffice()
+    if soffice is None:
+        return False
+    with tempfile.TemporaryDirectory(prefix='pabt_doc_') as td:
+        td = Path(td)
+        ho_so = td / 'hs'
+        ra = td / 'ra'
+        ra.mkdir()
+        lenh = [str(soffice), f'-env:UserInstallation={ho_so.resolve().as_uri()}', '--headless', '--invisible',
+                '--norestore', '--nologo', '--nodefault', '--nolockcheck', '--convert-to', muc, '--outdir', str(ra), str(p)]
+        try:
+            subprocess.run(lenh, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120,
+                           creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        except (OSError, subprocess.SubprocessError):
+            return False
+        tao = ra / (p.stem + '.' + muc)
+        if not tao.is_file() or tao.stat().st_size <= 0:
+            return False
+        shutil.copyfile(str(tao), str(dich))
+    return dich.is_file()
+
+
+_W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+_RE_PHONG_CU = re.compile(rb'(?i)w:(?:ascii|hAnsi)="(?:\.vn|vni[- ])')
+
+
+def _phong_cua(rpr) -> str:
+    """Tên phông (ascii, không có thì hAnsi) trong w:rPr."""
+    if rpr is None:
+        return ''
+    f = rpr.find(_W + 'rFonts')
+    if f is None:
+        return ''
+    return f.get(_W + 'ascii') or f.get(_W + 'hAnsi') or ''
+
+
+class _KieuDocx:
+    """Phông mặc định, phông + đánh số theo kiểu đoạn (styles.xml), định dạng đánh số (numbering.xml) của một file Word."""
+
+    def __init__(self, z, an_toan, ten: str, can_so: bool):
+        self.phong_md, self.phong_kieu, self.so_kieu = '', {}, {}
+        self.num, self.abs, self.dem = {}, {}, {}
+        du = self._doc(z, 'word/styles.xml', an_toan, ten)
+        if du is not None:
+            goc = ET.fromstring(du)
+            d = goc.find(f'{_W}docDefaults/{_W}rPrDefault/{_W}rPr')
+            self.phong_md = _phong_cua(d)
+            cha, phong = {}, {}
+            for s in goc.iter(_W + 'style'):
+                sid = s.get(_W + 'styleId') or ''
+                b = s.find(_W + 'basedOn')
+                cha[sid] = b.get(_W + 'val') if b is not None else ''
+                phong[sid] = _phong_cua(s.find(_W + 'rPr'))
+                np_ = s.find(f'{_W}pPr/{_W}numPr')
+                if np_ is not None:
+                    n = np_.find(_W + 'numId')
+                    lv = np_.find(_W + 'ilvl')
+                    self.so_kieu[sid] = (n.get(_W + 'val') if n is not None else '', int(lv.get(_W + 'val')) if lv is not None else 0)
+            for sid in phong:                            # phông kế thừa theo basedOn
+                x, da = sid, set()
+                while x and not phong.get(x) and x not in da:
+                    da.add(x)
+                    x = cha.get(x, '')
+                self.phong_kieu[sid] = phong.get(x, '') if x else ''
+        if can_so:
+            du = self._doc(z, 'word/numbering.xml', an_toan, ten)
+            if du is not None:
+                goc = ET.fromstring(du)
+                for a in goc.iter(_W + 'abstractNum'):
+                    lv = {}
+                    for l in a.findall(_W + 'lvl'):
+                        g = {k: (l.find(_W + k).get(_W + 'val') if l.find(_W + k) is not None else '') for k in ('start', 'numFmt', 'lvlText')}
+                        lv[int(l.get(_W + 'ilvl') or 0)] = g
+                    self.abs[a.get(_W + 'abstractNumId')] = lv
+                for n in goc.iter(_W + 'num'):
+                    a = n.find(_W + 'abstractNumId')
+                    bd = {}
+                    for o in n.findall(_W + 'lvlOverride'):
+                        s = o.find(_W + 'startOverride')
+                        if s is not None:
+                            bd[int(o.get(_W + 'ilvl') or 0)] = int(s.get(_W + 'val') or 1)
+                    self.num[n.get(_W + 'numId')] = (a.get(_W + 'val') if a is not None else '', bd)
+
+    @staticmethod
+    def _doc(z, ten_trong, an_toan, ten):
+        try:
+            du = z.read(ten_trong)
+        except KeyError:
+            return None
+        try:
+            an_toan.kiem_tra_xml(du, ten)
+        except an_toan.LoiAnToan:
+            return None
+        return du
+
+    @staticmethod
+    def _dang(n: int, fmt: str) -> str:
+        if fmt in ('lowerLetter', 'upperLetter'):
+            s = ''
+            while n > 0:
+                n, r = divmod(n - 1, 26)
+                s = chr(97 + r) + s
+            return s.upper() if fmt == 'upperLetter' else s
+        if fmt in ('lowerRoman', 'upperRoman'):
+            s = ''
+            for v, k in ((1000, 'm'), (900, 'cm'), (500, 'd'), (400, 'cd'), (100, 'c'), (90, 'xc'), (50, 'l'), (40, 'xl'), (10, 'x'),
+                         (9, 'ix'), (5, 'v'), (4, 'iv'), (1, 'i')):
+                while n >= v:
+                    s, n = s + k, n - v
+            return s.upper() if fmt == 'upperRoman' else s
+        if fmt == 'decimalZero':
+            return f'{n:02d}'
+        return str(n)
+
+    def so(self, ppr) -> str:
+        """Chữ đánh số tự động của đoạn ("Điều 5.", "a)", "-"), '' nếu không có."""
+        num_id, ilvl = '', 0
+        np_ = ppr.find(_W + 'numPr') if ppr is not None else None
+        if np_ is not None:
+            n, lv = np_.find(_W + 'numId'), np_.find(_W + 'ilvl')
+            num_id = n.get(_W + 'val') if n is not None else ''
+            ilvl = int(lv.get(_W + 'val')) if lv is not None else 0
+        elif ppr is not None and ppr.find(_W + 'pStyle') is not None:
+            num_id, ilvl = self.so_kieu.get(ppr.find(_W + 'pStyle').get(_W + 'val'), ('', 0))
+        if not num_id or num_id == '0' or num_id not in self.num:
+            return ''
+        a, bd = self.num[num_id]
+        lv = self.abs.get(a) or {}
+        g = lv.get(ilvl)
+        if g is None:
+            return ''
+        if g['numFmt'] == 'bullet':
+            t = g['lvlText'] or '-'
+            return '-' if not t.strip() or any('' <= c <= '' for c in t) else t.strip()
+        if g['numFmt'] == 'none':
+            return g['lvlText'].strip()
+        dem = self.dem.setdefault(a, {})
+        if (a, num_id) not in self.dem:                  # danh sách mới bắt đầu lại số (startOverride)
+            self.dem[(a, num_id)] = True
+            for k, v in bd.items():
+                dem[k] = v - 1
+        dem[ilvl] = dem.get(ilvl, int(lv[ilvl]['start'] or 1) - 1) + 1
+        for k in [k for k in dem if k > ilvl]:           # cấp dưới bắt đầu lại
+            del dem[k]
+        t = g['lvlText'] or f'%{ilvl + 1}.'
+        for k in range(ilvl + 1):
+            gk = lv.get(k) or {}
+            t = t.replace(f'%{k + 1}', self._dang(dem.get(k, int(gk.get('start') or 1)), gk.get('numFmt') or 'decimal'))
+        return t.strip()
+
+
+def _doc_docx(p: Path, day_du: bool = False) -> list:
+    """Dòng (danh sách ô) của file Word. Chữ phông cũ TCVN3 / VNI (theo phông của từng đoạn, kể cả phông kiểu đoạn / mặc định) đổi sang Unicode
+    (1.0.90 - mọi đường đọc). day_du=True (bộ quét file): thêm số / gạch đầu dòng tự động của Word ("Điều 5.", "a)", "-"), Tab giữ là Tab,
+    ngắt dòng mềm tách dòng, bỏ chữ ẩn."""
+    W = _W
     from . import an_toan
     with zipfile.ZipFile(p) as z:
         du = z.read('word/document.xml')
-    try:
-        an_toan.kiem_tra_xml(du, p.name)                # XML có DOCTYPE / ENTITY: không phân tích
-    except an_toan.LoiAnToan as e:
-        raise LoiNhap(str(e)) from None
+        try:
+            an_toan.kiem_tra_xml(du, p.name)            # XML có DOCTYPE / ENTITY: không phân tích
+        except an_toan.LoiAnToan as e:
+            raise LoiNhap(str(e)) from None
+        try:
+            kieu_du = z.read('word/styles.xml')
+        except KeyError:
+            kieu_du = b''
+        phong_cu = bool(_RE_PHONG_CU.search(du) or _RE_PHONG_CU.search(kieu_du))
+        kieu = _KieuDocx(z, an_toan, p.name, day_du) if (phong_cu or day_du) else None
+    from .chuan_chu import chuyen_theo_phong
 
-    def chu(par) -> str:
-        return ' '.join(''.join(t.text or '' for t in par.iter(W + 't')).split())
+    def chu_giau(par, trong_o: bool) -> str:
+        """Đọc từng đoạn chữ (w:r) theo phông của nó; Tab, ngắt dòng, ký hiệu; số tự động ở đầu đoạn."""
+        ppr = par.find(W + 'pPr')
+        sid = ''
+        if ppr is not None and ppr.find(W + 'pStyle') is not None:
+            sid = ppr.find(W + 'pStyle').get(W + 'val') or ''
+        phong_doan = kieu.phong_kieu.get(sid, '') or kieu.phong_md
+        ra = []
+        for r in par.iter(W + 'r'):
+            rpr = r.find(W + 'rPr')
+            if day_du and rpr is not None and rpr.find(W + 'vanish') is not None:
+                continue
+            phong = _phong_cua(rpr) or phong_doan
+            for x in r:
+                if x.tag == W + 't':
+                    ra.append(chuyen_theo_phong(x.text or '', phong) if phong_cu else (x.text or ''))
+                elif x.tag == W + 'tab':
+                    ra.append('\t' if day_du and not trong_o else ' ')
+                elif x.tag in (W + 'br', W + 'cr'):
+                    ra.append('\n' if day_du and not trong_o else ' ')
+                elif x.tag == W + 'noBreakHyphen':
+                    ra.append('-')
+                elif x.tag == W + 'sym':
+                    ma = x.get(W + 'char') or ''
+                    ra.append('-' if ma.upper().startswith('F0') else ' ')
+        so = kieu.so(ppr) if day_du else ''
+        dong = []
+        for d in ''.join(ra).split('\n'):
+            d = '\t'.join(' '.join(x.split()) for x in d.split('\t')).strip('\t ')
+            if d:
+                dong.append(d)
+        if so and dong:
+            dong[0] = f'{so} {dong[0]}'
+        return '\n'.join(dong)
+
+    def chu(par, trong_o: bool = False) -> str:
+        if kieu is None:
+            return ' '.join(''.join(t.text or '' for t in par.iter(W + 't')).split())
+        return chu_giau(par, trong_o)
 
     def o(tc) -> str:                                   # các đoạn trong một ô cách nhau dấu cách ("ỦY BAN NHÂN DÂN TỈNH ...")
-        return ' '.join(x for x in (chu(par) for par in tc.iter(W + 'p')) if x)
+        return ' '.join(x for x in (chu(par, True) for par in tc.iter(W + 'p')) if x)
+
+    def doan(el) -> list:
+        ra = []
+        for t in (chu(par) for par in ([el] if el.tag == W + 'p' else el.iter(W + 'p'))):
+            ra += [[d] for d in t.split('\n') if d]
+        return ra
     # theo thứ tự trong văn bản: đoạn văn (số, ngày, trích yếu ở đầu quyết định) mỗi đoạn một dòng; bảng mỗi hàng một dòng.
     # Đọc dòng chảy (iterparse, 0.9.87): đọc xong một hàng của bảng cấp ngoài / một đoạn văn thì xử lý rồi xóa khỏi cây - không
     # giữ cả cây XML của văn bản lớn trong RAM (bản 32-bit Windows 7). Thứ tự và kết quả như dựng cả cây (kể cả hàng của bảng lồng
@@ -291,7 +510,7 @@ def _doc_docx(p: Path) -> list:
             if el.tag == W + 'tbl':
                 dong += [[o(tc) for tc in tr.findall(W + 'tc')] for tr in el.iter(W + 'tr')]  # (hàng đã xử lý ở trên)
             else:
-                dong += [[t] for t in (chu(par) for par in ([el] if el.tag == W + 'p' else el.iter(W + 'p'))) if t]
+                dong += doan(el)
             el.clear()
             cha.remove(el)
     if not dong and b'body>' not in du:                 # XML lạ không có <w:body>: đọc các phần tử con của gốc như trước
@@ -299,7 +518,7 @@ def _doc_docx(p: Path) -> list:
             if el.tag == W + 'tbl':
                 dong += [[o(tc) for tc in tr.findall(W + 'tc')] for tr in el.iter(W + 'tr')]
             else:
-                dong += [[t] for t in (chu(par) for par in ([el] if el.tag == W + 'p' else el.iter(W + 'p'))) if t]
+                dong += doan(el)
     return dong
 
 

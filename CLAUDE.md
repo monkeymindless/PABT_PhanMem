@@ -66,7 +66,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
 - `chay.py`: điểm vào; CLI (`nhap`, `doi-chieu`) hoặc mở GUI `pabt/app.py` (đối số `.pabt` / `.pabtcn` → mở GUI); `tu-kiem <file>` tự kiểm tra bản đóng gói.
 - `pabt/csdl.py` + `pabt/schema.sql`: tạo/mở `.pabt`. Phiên bản lược đồ = `PRAGMA user_version` (`PHIEN_BAN_CSDL`). Đổi lược đồ: sửa
   `schema.sql` (file mới), tăng `PHIEN_BAN_CSDL`, thêm lệnh vào `_NANG_CAP[v_cũ]` (ADD COLUMN tự bỏ qua nếu cột đã có).
-  `journal_mode=DELETE` (không WAL, vì file hay nằm trong Google Drive). `mo(..., chi_doc=True)` mở chỉ xem (URI `mode=ro`).
+  `journal_mode=DELETE` (không WAL, vì file hay nằm trong Google Drive; không TRUNCATE - xem mục Dữ liệu, CSDL). `mo(..., chi_doc=True)` mở chỉ xem (URI `mode=ro`).
   `tao_moi()` **xóa file cũ** rồi tạo lại. Mọi thao tác ghi gọi `csdl.ghi_nhat_ky`.
 - Mô hình: `ho` 1–n `thua`; phương án: `ct_dat` (mục 1) và `ct_khoan` (mục 2 nhà, 3 cây, 4 hỗ trợ; cột `muc`). Mục 5 (thưởng) tính từ
   `bieu_thuong`, không lưu. Danh mục: `dm_taisan`, `dm_hotro`, `dm_loaidat`, `gia_dat`, `dm_xa`, `tham_so`, `quy_uoc`, `van_ban`
@@ -161,7 +161,10 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   dòng trong `csdl.MO_RONG` (hàm kiểm + hàm làm; `dam_bao_mo_rong` chạy một giao dịch, chỉ file có hộ). Phần mở rộng làm bản cũ GHI SAI dữ
   liệu: tăng `csdl.GHI_TOI_THIEU`. Bộ đơn giá đóng gói `pabt/bo_don_gia.sqlite` KHÔNG được bị ghi khi mở (test so băm) - nâng bằng
   `tao_bo_don_gia.py --chuan-hoa <nhãn>`.
-- `journal_mode=DELETE` (không WAL - file hay nằm trên Google Drive / thư mục mạng). Tạo file mới: `csdl.tao_moi_tam` + `hoan_tat_tao_moi`
+- `journal_mode=DELETE` (không WAL - file hay nằm trên Google Drive / thư mục mạng). KHÔNG TRUNCATE / PERSIST: 1.0.90 đã thử theo yêu cầu,
+  kết nối khác ở chế độ DELETE (bản cũ ở máy khác, may_chu, co_may_thoi_gian) COMMIT báo "disk I/O error". Chờ khóa `csdl.CHO_KHOA_GIAY` 30 s;
+  giao dịch dở = `csdl.journal_do_dang` (file -journal có nội dung).
+  Tạo file mới: `csdl.tao_moi_tam` + `hoan_tat_tao_moi`
   (ghi nguyên tử); `tao_moi` XÓA file cũ trước.
 - Mọi ghi: `csdl.ghi_nhat_ky`; ghi danh mục trong `with ..., csdl.mo_khoa_danh_muc(con)`; hàm ghi dùng chung bọc `csdl.giao_dich(con)` (lồng
   được; `with con:` lồng COMMIT ở tầng trong). Không `IN (?,?…)` với danh sách hộ dài (trừ <= `theo_doi.LOC_SQL_TOI_DA`).
@@ -185,8 +188,17 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   `lap_pa.DanhMuc` ẩn mục khu vực khác (`an`, `bi_khoa`; `lay` vẫn trả để đọc dòng cũ). Văn bản nhiều khu vực: `so_khop_khu_vuc` (so từng
   khu vực với mục cùng khu vực, `chi_ma`), `ap_dung(khu_vuc=…)`. Thêm cách đọc / ghi danh mục mới theo mã: nhớ lọc theo khu vực.
 - Văn bản chính sách (1.0.60): dòng `Muc.can_cu` đọc theo Điều / khoản (`muc_chinh_sach_tu_dieu_khoan`), khớp `_khop_chinh_sach`, giữ tên mục của bộ; nhóm 4 chế độ thay thế: mục dẫn chiếu (`la_muc_dan_chieu`) "giữ nguyên", không "bỏ". Chữ lớp hoa dùng `_HOA` (khoảng À-Ỹ gồm cả chữ thường).
-- Đơn giá đất bồi thường NQ 28 x QĐ 03 (1.0.61, `gia_dat_qd03` + `man_hinh_tinh_gia_dat`): Đơn giá = ROUND(G x K1 x K2 x K3 x K khác); K1 theo ĐOẠN đường (106 đoạn, `pabt/gia_dat_qd03.json`), K2 khóa 1,00 trừ dự án có FAR, K3 NN đường đất 0,90 và TỰ KHÓA 1,00 khi tuyến có quy định riêng ở PL I.2. Áp vào hộ bằng `BoSoan.ap_don_gia_qd03` (giá := đơn giá đã ROUND, K := 1). Bộ quy tắc (1.0.64, `goi_gia_dat`): mọi hệ số, yếu tố, công thức, làm tròn, câu giải trình nằm trong GÓI dữ liệu có hiệu lực (gắn sẵn: khóa `goi` của json trên; máy: `quy_tac_gia_dat.json`, đồng bộ qua máy chủ LAN), KHÔNG viết cố định quy tắc pháp lý vào mã; đổi gói gắn sẵn phải qua `tests/vang_gia_dat_qd03.json` (3.061 ca, cả câu chữ). Chỉ một nguồn K: gói gắn sẵn + bảng K đã nhập thì theo bảng, ghi rõ giải trình. Số đã áp không tự đổi; dự án nhớ gói. Văn bản căn cứ luôn qua `van_ban_can_cu.gop_va_sap_xep` (13 bậc theo danh sách người dùng 06/11/2026, khóa theo SỐ HIỆU CỦA CHÍNH văn bản). Mọi nút Quét / Nạp file mới gọi `quet_chung.quet` (+ `man_hinh_quet_chung.NutQuetChung` / `chon_va_quet`), chạy trên máy, KHÔNG dịch vụ ngoài. Loại file mới: thêm vào `quet_chung.DICH` + `nhan_loai` + `CuaSoChinh.mo_file_quet`, dùng lại màn hình chuyên trách; nhận loại theo tiêu đề đầu file, không theo từ khóa toàn văn.
+- Đơn giá đất bồi thường NQ 28 x QĐ 03 (1.0.61, `gia_dat_qd03` + `man_hinh_tinh_gia_dat`): Đơn giá = ROUND(G x K1 x K2 x K3 x K khác); K1 theo ĐOẠN đường (161 đoạn gồm Phường Tân Triều, `pabt/gia_dat_qd03.json`), K2 khóa 1,00 trừ dự án có FAR, K3 NN đường đất 0,90 và TỰ KHÓA 1,00 khi tuyến có quy định riêng ở PL I.2. Áp vào hộ bằng `BoSoan.ap_don_gia_qd03` (giá := đơn giá đã ROUND, K := 1). Bộ quy tắc (1.0.64, `goi_gia_dat`): mọi hệ số, yếu tố, công thức, làm tròn, câu giải trình nằm trong GÓI dữ liệu có hiệu lực (gắn sẵn: khóa `goi` của json trên; máy: `quy_tac_gia_dat.json`, đồng bộ qua máy chủ LAN), KHÔNG viết cố định quy tắc pháp lý vào mã; đổi gói gắn sẵn phải qua `tests/vang_gia_dat_qd03.json` (3.935 ca, cả câu chữ). Chỉ một nguồn K: gói gắn sẵn + bảng K đã nhập thì theo bảng, ghi rõ giải trình. Số đã áp không tự đổi; dự án nhớ gói. Văn bản căn cứ luôn qua `van_ban_can_cu.gop_va_sap_xep` (13 bậc theo danh sách người dùng 06/11/2026, khóa theo SỐ HIỆU CỦA CHÍNH văn bản). Mọi nút Quét / Nạp file mới gọi `quet_chung.quet` (+ `man_hinh_quet_chung.NutQuetChung` / `chon_va_quet`), chạy trên máy, KHÔNG dịch vụ ngoài. Loại file mới: thêm vào `quet_chung.DICH` + `nhan_loai` + `CuaSoChinh.mo_file_quet`, dùng lại màn hình chuyên trách; nhận loại theo tiêu đề đầu file, không theo từ khóa toàn văn.
 - Bản đồ (1.0.67): thông tin thửa ở bảng BÊN PHẢI bản đồ (`ben_phai`, thanh chia ngang `chia`, nhớ độ rộng; người dùng yêu cầu để bản đồ rộng nhất - đừng đưa về dưới bản đồ). Nhập bản đồ là thẻ của `HopBanDo` (`KhungNhapBanDo`), không còn hộp riêng; nút "Mở bản đồ" đặt lên bản đồ và tự phân tích, thửa chưa lưu có `ThuaBanDo.tam`. Bản vẽ đường CAD: `ban_do_ghep.ghep_thua` (không viết cố định Level: lớp lưới chọn theo số vùng khớp nhãn DT nguyên thửa, ranh = lớp qua vòng mốc). DT thu hồi = giao hình học ĐỐI CHIẾU nhãn (`doi_chieu_thu_hoi`); nhãn "(xxx)" là DT một phần, không gọi là DT thu hồi. Không đoán: chưa chắc thì `chi_tiet.ly_do`, không tự đánh dấu cập nhật hồ sơ. Bấm thửa = thông tin (`bam_thua`), nhấp đúp = mở phương án (`bam_ho`). Đổi cách tô: `view.to_lai`, không dựng lại cảnh. Hình do thước đo / dấu định vị giữ: cảnh bị xóa thì `quen_hinh` trước. `nen_ban_do.KHONG_NEN` nằm ngoài `NEN` (`NEN` trùng di_dong).
+- Tên xã / phường (1.0.90): so bằng `lap_pa.cung_dia_ban` / `trung_dia_ban` / `khoa_dia_ban` (nguyên chữ, GIỮ DẤU khi hai bên có dấu: "Lộc
+  Thành" ≠ "Lộc Thạnh", "An Lộc" ≠ "Xuân Lộc"). Không so chuỗi con không dấu. Dòng bảng giá một xã: `gia_dat_nq28.dong_cua_xa` (chỉ mục),
+  đừng duyệt `tat_ca()` trong hàm tra giá.
+- Bảng giá NQ 28 PHÂN LOẠI THEO PHỤ LỤC (người dùng 09/11/2026): chỉ PL I (nông nghiệp) + PL III (phi NN) là bảng đường; dòng ghi
+  `phu_luc`; đất ở / TMDV / SXKD tra ở PL III, đất NN ở PL I (`phu_luc_cua_cot`). Cùng TT có thể là HAI tuyến (Long Bình TT 99) - không gộp
+  dòng chỉ theo (xã, TT, vị trí). Giá lưu NGHÌN đồng/m² như văn bản, áp vào dòng đất luôn qua `gia_dong` (x1.000). Ô giá đọc không chắc
+  (".600", "5Io") để trống, không đoán.
+- Gói quy tắc: đoạn cùng `tt_bat_dau` chỉ hợp lệ khi khác tuyến; K1 khác theo vị trí -> `k1_theo_vt` (tinh_don_gia đọc); gói cũ tách đôi tự
+  gộp khi nhập (`goi_gia_dat.gop_doan_trung`).
 - Mã tài sản: nhà TS, cây CT, vật nuôi VN, chính sách CS, thưởng TH (`ma_tai_san`). Quy ước tương đương do người dùng tự nhập (bộ đơn giá
   không có).
 

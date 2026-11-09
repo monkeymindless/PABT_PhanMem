@@ -2,11 +2,12 @@
 
 Logic ở gia_dat_qd03.py, van_ban_can_cu.py (13 bậc pháp lý), quet_chung.py (bộ quét dùng chung); file này
 chỉ hiển thị. Ba khối: Văn bản căn cứ (tự khử trùng + sắp xếp mỗi khi quét thêm / sửa xong) | Thông số đầu vào (địa bàn, nhóm đất, tuyến đường
-& đoạn đường điểm đầu -> điểm cuối từ 106 đoạn, vị trí kết nối cụm 7 dòng NQ 27 / NQ 28, mặt đường, G_NQ28, K2, Phụ lục III, K khác, giá đất
+& đoạn đường điểm đầu -> điểm cuối từ 161 đoạn (kể cả Phường Tân Triều), vị trí kết nối cụm 7 dòng NQ 27 / NQ 28, mặt đường, G_NQ28, K2, Phụ lục III, K khác, giá đất
 cụ thể chuyển tiếp) và kết quả tức thì | Các dòng đất của mọi hộ trong dự án để áp giá (1.0.68: phạm vi, lọc nhanh, thêm / tự tạo dòng đất; bảng ảo, đổi thông số chỉ tính dòng đang thấy).
 Áp giá = ap_gia_dat.ap_hang_loat (BoSoan.ap_don_gia_qd03 + luu: khóa hộ nhận việc, phân quyền, nhật ký, hoàn tác như mọi thao tác lưu phương án; hộ có V1 ghi vào nhánh V2)."""
 from __future__ import annotations
 
+import json
 
 from PySide6.QtCore import QAbstractTableModel, QEvent, QModelIndex, Qt
 from PySide6.QtGui import QColor, QFont
@@ -296,6 +297,7 @@ class HopTinhGiaDat(QDialog):
         self.o_g = QLineEdit('0')
         self.o_g.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.lb_g = QLabel('')
+        self.lb_g.setWordWrap(True)                         # 1.0.90: tên văn bản bảng giá dài (842 px) làm cột thông số cuộn ngang ở 1093 x 614
         self.nut_tra = QPushButton('Tra giá')
         self.nut_tra.setToolTip('Điền giá từ bảng giá đất đang dùng: dòng thứ tự vị trí kết nối trong cụm dòng của đoạn đường đã chọn')
         self.nut_tra.clicked.connect(lambda: self.tra_gia(True))
@@ -497,7 +499,11 @@ class HopTinhGiaDat(QDialog):
         nut_dong.clicked.connect(self.reject)
         self.nut_ap = QPushButton('Áp đơn giá vào các dòng đã chọn')
         self.nut_ap.clicked.connect(lambda: self.ap_gia())
+        self.nut_vi_tri = QPushButton('Cập nhật Vị trí & Hệ số K')
+        self.nut_vi_tri.setToolTip('Ghi vị trí và hệ số K vào dòng đất đang chọn, kể cả đất công đơn giá 0 đồng.')
+        self.nut_vi_tri.clicked.connect(self.cap_nhat_vi_tri_dong)
         hn.addWidget(nut_dong)
+        hn.addWidget(self.nut_vi_tri)
         hn.addWidget(self.nut_ap)
         return hn
 
@@ -622,7 +628,17 @@ class HopTinhGiaDat(QDialog):
             self._chu_nut_can_cu()
 
     def mo_bo_quy_tac(self):
+        """Mở bộ quy tắc ngay trong cửa sổ Bảng giá đất (cùng chỗ nhập đơn giá). Không có cửa sổ chính thì mở hộp như trước."""
+        from .man_hinh_du_toan import HopTraNQ28
         from .man_hinh_goi_gia_dat import HopGoiGiaDat
+        cha = self.parent()
+        while cha is not None and not hasattr(cha, 'bang_gia_dat'):
+            cha = cha.parent()
+        if cha is not None and not self.im_lang:
+            d = cha.bang_gia_dat(cho=True, the=HopTraNQ28.THE_QUY_TAC)
+            if getattr(d, 'khung_goi', None) is not None and d.khung_goi.da_doi:
+                self.lam_moi_goi()
+            return getattr(d, 'khung_goi', d)
         h = HopGoiGiaDat(self, self.goi.get('ma', ''))
         h.im_lang = self.im_lang
         if self.im_lang:
@@ -774,10 +790,12 @@ class HopTinhGiaDat(QDialog):
         if self._dang_dung:
             return
         nhom, cot = self.nhom_cot()
+        from . import gia_dat_nq28 as nq
+        cot = nq.cot_cua_nhom(cot, self.loai_nn_chon())
         gia = g.gia_bang_gia(self.cb_dia_ban.currentData() or '', self.doan_hien_tai(), nhom, self.cb_vi_tri.currentData() or '', cot, self.goi)
         if gia is not None:
             self.o_g.setText(vn(gia))
-            self.lb_g.setText(f'Tự tra từ bảng giá {self.goi["bang_gia"]}')
+            self.lb_g.setText('Tự tra từ bảng giá đang dùng: ' + nq.van_ban_dang_dung())
         else:
             self.lb_g.setText('Nhập tay: bảng giá không có dòng khớp')
             if thong_bao and not self.im_lang:
@@ -792,6 +810,7 @@ class HopTinhGiaDat(QDialog):
             loai_ket_noi_vi_tri=self.cb_vi_tri.currentData() or 'MAT_TIEN_VT1', ket_cau_mat_duong=self.cb_ket_cau.currentData() or 'NHUA_BETONG',
             don_gia_bang_gia=self._gia_theo_truong_hop(doc_so(self.o_g.text(), 'Đơn giá bảng giá')), cot_gia=cot,
             ma_vi_tri_dat=self.cb_vt_dat.currentData() or '', loai_nn=self.loai_nn_chon() or self.cb_loai_nn.currentData() or '',
+            truong_hop_nq28=self.cb_th.currentData() or '',
             ap_dung_quy_hoach_pl2=self.ck_k2.isChecked(), he_so_quy_hoach_k2=doc_so(self.o_k2.text(), 'Hệ số K2') or D(1),
             yeu_to_pl3=[m for m, c in self.ck_pl3.items() if c.isChecked() and c.isEnabled()],
             he_so_khac=doc_so(self.o_khac.text(), 'Hệ số khác') or D(1),
@@ -876,15 +895,30 @@ class HopTinhGiaDat(QDialog):
         self.tinh()
 
     # ---------------------------------------------------------------- dòng đất của hộ
-    def dat_thong_so(self, dia_ban=None, ma_doan=None, vi_tri=None, ket_cau=None, loai_dat=None) -> None:
-        """Điền sẵn thông số (mở từ thanh áp giá nhanh, theo dòng đất đang thao tác). Giá trị gói không có thì bỏ qua."""
-        for cb, gt in ((self.cb_dia_ban, dia_ban), (self.cb_doan, ma_doan), (self.cb_vi_tri, vi_tri), (self.cb_ket_cau, ket_cau)):
+    def dat_thong_so(self, dia_ban=None, ma_doan=None, vi_tri=None, ket_cau=None, loai_dat=None, pham_vi=None,
+                     truong_hop=None, yeu_to_pl3=None, he_so_k2=None, ap_dung_quy_hoach_pl2=None, **_kw) -> None:
+        """Điền sẵn thông số (mở từ thanh áp giá nhanh hoặc từ JSON dòng đất). Giá trị gói không có thì bỏ qua.
+        tim_nhom giữ cách chọn 4 loại đất nông nghiệp của 1.0.82."""
+        for cb, gt in ((self.cb_dia_ban, dia_ban), (self.cb_doan, ma_doan), (self.cb_vi_tri, vi_tri), (self.cb_ket_cau, ket_cau),
+                       (self.cb_vt_dat, pham_vi), (self.cb_th, truong_hop)):
             k = cb.findData(gt) if gt else -1
             if k >= 0:
                 cb.setCurrentIndex(k)
         n = g.nhom_theo_loai_dat(loai_dat, self.goi) if loai_dat else None
         if n is not None:
             self.cb_nhom.setCurrentIndex(max(0, self.tim_nhom(n['ma'], n['cot_gia'], loai_dat)))
+        if yeu_to_pl3 is not None:
+            chon = set(yeu_to_pl3)
+            for m, c in self.ck_pl3.items():
+                if c.isEnabled():
+                    c.setChecked(m in chon)
+        if ap_dung_quy_hoach_pl2 is not None:
+            self.ck_k2.setChecked(bool(ap_dung_quy_hoach_pl2))
+        if he_so_k2 not in (None, ''):
+            try:
+                self.o_k2.setText(vn(D(str(he_so_k2).replace(',', '.')), 2))
+            except (ArithmeticError, ValueError):
+                self.o_k2.setText(str(he_so_k2))
 
     def tim_nhom(self, ma: str, cot: str, loai_dat: str = '') -> int:
         """Chỉ số mục Nhóm đất của (nhóm, cột giá); nhóm NN đã tách 4 loại thì chọn đúng loại theo mã đất (CLN, LUC, NTS, RPH…)."""
@@ -999,6 +1033,12 @@ class HopTinhGiaDat(QDialog):
         self.nut_ap.setEnabled(ok)
         self.nut_ap.setText(f'Áp đơn giá vào {n} dòng đã chọn' if n else 'Áp đơn giá vào các dòng đã chọn')
         self.nut_ap.setToolTip('' if ok else 'Cần: mở dự án (không ở chế độ chỉ xem), tích ít nhất một dòng đất và đơn giá lớn hơn 0.')
+        nut = getattr(self, 'nut_vi_tri', None)
+        if nut is not None:
+            co_dong = (self.bo_mo is not None and not self.chi_doc and self.kq is not None and
+                       any(x.ma_ho == self.bo_mo.ma_ho and x.chi_so != ap.CO_CHUA_DONG for x in chon))
+            nut.setEnabled(bool(co_dong))
+            nut.setToolTip('' if co_dong else 'Chọn dòng đất của hộ đang lập phương án. Đơn giá 0 đồng (đất công) vẫn cập nhật được vị trí và hệ số K.')
         if self.con is None:
             return
         hien = self.mo_hinh.dong
@@ -1036,10 +1076,16 @@ class HopTinhGiaDat(QDialog):
         vt = g.mo_ta_vi_tri(self.doan, self.cb_vi_tri.currentData() or '', self.goi)
         if self.kq.vi_tri_dat:
             vt = f'{vt} - {self.kq.vi_tri_dat}' if vt else self.kq.vi_tri_dat
+        vt = g.lam_sach_vi_tri(vt)
+        try:
+            v_ap = self.dau_vao()
+        except LoiNhap:
+            v_ap = None
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         tien_do = self._hop_tien_do(len({x.ma_ho for x in chon}))
         try:
-            kq = ap.ap_hang_loat(self.con, chon, self.kq.don_gia_ap_dung, gc, vt, self.bo_mo, self.truoc_ap, tien_do, g.chi_tiet_ap_gia(self.kq))
+            kq = ap.ap_hang_loat(self.con, chon, self.kq.don_gia_ap_dung, gc, vt, self.bo_mo, self.truoc_ap, tien_do,
+                                 g.chi_tiet_ap_gia(self.kq, v_ap, vt))
             if kq.so_dong:
                 cb = ap.gop_can_cu(self.con, self.goi, self.o_can_cu.toPlainText())
                 if cb:
@@ -1061,6 +1107,53 @@ class HopTinhGiaDat(QDialog):
             self.mo_hinh.tich -= {x.khoa for x in chon if not any(c.startswith(f'Hộ {x.ma_ho} ') for c in kq.bi_chan)}
             self._lam_moi_dong()
         return kq.so_dong, kq.so_ho, kq.bi_chan
+
+    def cap_nhat_vi_tri_dong(self) -> int:
+        """Ghi vị trí, hệ số K và JSON thuộc tính vào dòng đất của cửa sổ lập phương án đang mở. Đơn giá 0 (đất công) vẫn ghi được.
+        Trả số dòng đã cập nhật."""
+        if self.kq is None or self.bo_mo is None or self.chi_doc:
+            return 0
+        chon = [x for x in self.dong_da_chon() if x.ma_ho == self.bo_mo.ma_ho and x.chi_so != ap.CO_CHUA_DONG]
+        if not chon:
+            return 0
+        if self.truoc_ap is not None and not self.truoc_ap():
+            return 0
+        try:
+            v = self.dau_vao()
+        except LoiNhap as e:
+            self.lb_ap_ket_qua.setText(str(e))
+            return 0
+        vt = g.mo_ta_vi_tri(self.doan, self.cb_vi_tri.currentData() or '', self.goi)
+        if self.kq.vi_tri_dat:
+            vt = f'{vt} - {self.kq.vi_tri_dat}' if vt else self.kq.vi_tri_dat
+        vt = g.lam_sach_vi_tri(vt)
+        ct = g.chi_tiet_ap_gia(self.kq, v, vt)
+        chu = json.dumps(ct, ensure_ascii=False)
+        he = self.kq.tong_he_so if D(self.kq.tong_he_so) > 0 else D(1)
+        n = 0
+        for x in chon:
+            if not 0 <= x.chi_so < len(self.bo_mo.pa.dat):
+                continue
+            dong = self.bo_mo.pa.dat[x.chi_so]
+            if dong.ma_thua != x.ma_thua or dong.loai_dat != x.loai_dat:
+                continue
+            if vt:
+                dong.vi_tri = vt
+            dong.he_so_k = he
+            dong.ap_gia = chu
+            dong.thanh_tien_excel = None
+            n += 1
+        if n and self.con is not None:
+            # 1.0.90: như nút Áp giá - văn bản căn cứ của gói (QĐ 03/2026, NQ 28/2025) vào mục căn cứ của dự án để thuyết minh đủ căn cứ
+            cb = ap.gop_can_cu(self.con, self.goi, self.o_can_cu.toPlainText())
+            if not cb:
+                self.o_can_cu.setPlainText(vb.doc_can_cu_du_an(self.con))
+                self._chu_nut_can_cu()
+        if n and self.sau_ap is not None:
+            self.sau_ap(f'Đã cập nhật vị trí và hệ số K cho {n} dòng đất.')
+        elif n:
+            self.lb_ap_ket_qua.setText(f'Đã cập nhật vị trí và hệ số K cho {n} dòng đất.')
+        return n
 
     def _hop_tien_do(self, so_ho: int):
         """Áp nhiều hộ (mỗi hộ một lần ghi file): hộp tiến độ có nút Dừng, cửa sổ không bị báo Không phản hồi. Ít hộ: không cần."""

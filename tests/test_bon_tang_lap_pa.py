@@ -257,9 +257,12 @@ class TestCuaSo(CoSo):
         APP.processEvents()
         t = bm.thanh_gia
         self.assertTrue(t.isVisibleTo(bm))
-        self.assertGreaterEqual(t.cb_doan.width(), 380)
+        # 1.0.90: một hàng xếp tràn - ô Đoạn đường nhận phần rộng thừa (tối thiểu 240), ô giá gọn, danh sách xổ đủ chữ
+        self.assertGreaterEqual(t.cb_doan.width(), 240)
         self.assertGreaterEqual(t.cb_doan.view().minimumWidth(), 560)
-        self.assertEqual(t.o_g.width(), 130)
+        self.assertEqual(t.o_g.width(), 108)
+        self.assertLess(bm.b_ap_nhanh.width(), 220)                  # nút giữ cỡ chữ, không bị kéo dài
+        self.assertLess(t.b_ap.width(), 260)
         self.assertGreater(t.cb_doan.count(), 0)
         self.assertIn('đ/m²', t.lb_ct.text())
         menu = [a.text() for a in bm.menu_thua.actions()]

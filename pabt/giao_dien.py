@@ -408,17 +408,17 @@ def _qss_menu_trai(ten: str | None = None) -> str:
     QFrame[vai="menu_trai"] QScrollBar::handle:vertical {{ background: {m['cuon']}; border-radius: 3px; min-height: 24px; }}
     QFrame#vach_menu {{ color: {m['vien']}; margin: 2px 6px; }}
     QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 8px; margin: 0 {LE_VIEN_MENU}px;
-        padding: 2px 6px 2px 10px; text-align: left; font-weight: 600; font-size: 13px; color: {m['chu']}; }}
+        padding: 2px 6px 2px 10px; text-align: left; font-weight: 500; font-size: 13px; color: {m['chu']}; }}
     QToolButton[menu="1"]:focus {{ outline: none; border: 2px solid {m['vach_chon']}; }}
     QToolButton[menu="1"]:hover {{ background: {m['re']}; color: {m['chon_chu']}; }}
     QToolButton[menu="1"]:pressed {{ background: {m['chon_nen']}; }}
     QToolButton[menu="1"]:disabled {{ color: {m['tat']}; background: transparent; border-color: transparent; }}
     QToolButton[menu="1"]:checked {{ background: {m['chon_nen']}; color: {m['chon_chu']}; font-weight: 700; border: 0;
         border-left: 4px solid {m['vach_chon']}; padding-left: 7px; }}
-    QLabel[vai="nhom_menu"] {{ color: {m['nhom']}; font-size: 11px; font-weight: 700; letter-spacing: 0; background: transparent;
-        border: 0; border-radius: 4px; margin: 10px {LE_VIEN_MENU}px 4px {LE_VIEN_MENU}px; padding: 2px 4px; }}
+    QLabel[vai="nhom_menu"] {{ color: {m['nhom']}; font-size: 12px; font-weight: 700; letter-spacing: 0; background: transparent;
+        border: 0; border-radius: 4px; margin: 12px {LE_VIEN_MENU}px 4px {LE_VIEN_MENU}px; padding: 3px 4px; }}
     QLabel[vai="nhom_menu"]:hover {{ background: {m['re']}; }}
-    QLabel[vai="nhom_menu"][dong="1"] {{ color: {m['tat']}; }}'''
+    QLabel[vai="nhom_menu"][dong="1"] {{ color: {m['nhom']}; font-weight: 600; }}'''
 
 
 def mau_menu() -> dict:
@@ -3046,7 +3046,9 @@ class _VuaRongMenu(QObject):
 # "chua dong thuan" / "khong dong y" trước "dong thuan" / "dong y"; "tu lap" trước "da lap"; ô có "chua" mà không khớp mẫu nào -> xám.
 MAU_VIEN_THUOC = (
     (('khong dong y', 'cuong che'), ('#FEE2E2', '#FECACA', '#B83A3A')),
-    (('chua dong thuan', 'chua danh dau'), ('#F1F5F9', '#E2E8F0', '#64748B')),
+    (('chua dong thuan', 'chua danh dau', 'chua lay y kien'), ('#F1F5F9', '#E2E8F0', '#64748B')),
+    (('da trinh tham dinh', 'da trinh'), ('#EEF2FF', '#C7D2FE', '#4338CA')),
+    (('da niem yet', 'lay y kien'), ('#E0F2FE', '#BAE6FD', '#0369A1')),
     (('da ban giao', 'hoan thanh', 'hoan tat', 'dong thuan', 'dong y', 'du dieu kien'), ('#DCFCE7', '#86EFAC', '#2F7D54')),
     (('da chi tra', 'da nhan tien', 'da phe duyet'), ('#F0FDFA', '#99F6E4', '#1F6F66')),
     (('tu lap', 'y kien khac', 'v1', 'v2', 'v3', 'v4', 'v5', 'dang van dong'), ('#FEF3C7', '#FDE68A', '#9A5A12')),
@@ -3056,7 +3058,7 @@ MAU_VIEN_THUOC_XAM = ('#F1F5F9', '#E2E8F0', '#64748B')
 CAO_VIEN_THUOC = 22             # chiều cao viên thuốc (px, kẹp theo chiều cao dòng)
 BO_VIEN_THUOC = 10
 LE_VIEN_THUOC = 8               # lề ngang trong viên thuốc
-DAU_THANH_NAC = '■□'            # ô Trạng thái danh sách hộ bắt đầu bằng thanh 4 nấc "■■□□"
+DAU_THANH_NAC = '■□'            # ô Trạng thái danh sách hộ bắt đầu bằng thanh 6 nấc "■■□□□□"
 MAU_THANH_TY_LE = '#1F76A6'
 MAU_RANH_TY_LE = '#E2E8F0'
 _RE_SO_TY_LE = re.compile(r'-?\d+(?:[.,]\d+)?')
@@ -3089,8 +3091,8 @@ def so_ty_le(chu: str):
 
 class VeOBangChuyenNghiep(QStyledItemDelegate):
     """Vẽ ô bảng bằng QPainter, KHÔNG đổi dữ liệu của mô hình (text() / DisplayRole giữ nguyên - kiểm thử đọc chữ như cũ).
-    kieu='vien_thuoc': chữ trong khung viên thuốc bo tròn, màu theo nội dung (MAU_VIEN_THUOC); ô bắt đầu bằng thanh nấc "■■□□" (danh
-    sách hộ) vẽ 4 vạch tiến độ nhỏ trước viên thuốc; ký hiệu "●" đầu chữ (ý kiến) bỏ - màu đã nói lên loại. Ô trống: vẽ như thường.
+    kieu='vien_thuoc': chữ trong khung viên thuốc bo tròn, màu theo nội dung (MAU_VIEN_THUOC); ô bắt đầu bằng thanh nấc "■■□□□□" (danh
+    sách hộ) vẽ từng vạch tiến độ nhỏ trước viên thuốc; ký hiệu "●" đầu chữ (ý kiến) bỏ - màu đã nói lên loại. Ô trống: vẽ như thường.
     kieu='ty_le': vẽ như thường + thanh tỷ trọng mảnh (cao 3 px) sát mép dưới, dài theo min(100, số %) của ô."""
 
     def __init__(self, parent=None, kieu: str = 'vien_thuoc', mau_thanh: str = MAU_THANH_TY_LE):
@@ -3150,7 +3152,7 @@ class VeOBangChuyenNghiep(QStyledItemDelegate):
         from PySide6.QtCore import QRectF
         p.save()
         p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        if nac:                                             # 4 vạch tiến độ: đã qua = màu chữ viên thuốc, chưa = xám nhạt
+        if nac:                                             # vạch tiến độ (6 nấc): đã qua = màu chữ viên thuốc, chưa = xám nhạt
             cao_v = min(12, r.height() - 8)
             y_v = r.top() + (r.height() - cao_v) / 2
             p.setPen(Qt.PenStyle.NoPen)
@@ -3902,11 +3904,33 @@ BIEN_MAN_HINH = 32             # 05/11/2026 (CenteredResponsiveModal của đặ
 CHUA_TIEU_DE_TOI_THIEU = 30    # khung + thanh tiêu đề của cửa sổ hệ điều hành khi chưa hiện (frameGeometry chưa biết)
 
 
+def _man_hinh_mo(w: QWidget):
+    """Màn hình người đang nhìn: màn hình cửa sổ cha, rồi cửa sổ đang dùng, rồi màn hình chính."""
+    from PySide6.QtWidgets import QApplication
+    cha = w.parentWidget()
+    while cha is not None:
+        try:
+            if cha.isWindow() and cha.screen() is not None:
+                return cha.screen()
+        except RuntimeError:
+            break
+        cha = cha.parentWidget()
+    app = QApplication.instance()
+    if app is not None:
+        dang = app.activeWindow()
+        try:
+            if dang is not None and dang is not w and dang.screen() is not None:
+                return dang.screen()
+        except RuntimeError:
+            pass
+    rieng = w.screen() if hasattr(w, 'screen') else None
+    return rieng or (app.primaryScreen() if app is not None else None)
+
+
 def vua_man_hinh(w: QWidget, bien: int = BIEN_MAN_HINH, giua: bool = True) -> None:
     """Cửa sổ / hộp thoại: cao và rộng tối đa = vùng làm việc của màn hình đang dùng - `bien` (32 px, tính cả khung và thanh tiêu đề -
     laptop nhỏ, phóng to 125-150% vẫn không tràn), và CANH GIỮA màn hình (giua=True). Phần thân cuộn riêng, hàng nút cố định: `cuon_than_hop`."""
-    from PySide6.QtWidgets import QApplication
-    man = (w.screen() if hasattr(w, 'screen') else None) or QApplication.primaryScreen()
+    man = _man_hinh_mo(w)
     if man is None or w.isMaximized():
         return
     vung = man.availableGeometry()
@@ -3914,11 +3938,36 @@ def vua_man_hinh(w: QWidget, bien: int = BIEN_MAN_HINH, giua: bool = True) -> No
     them_r, them_c = max(0, kg.width()), max(0, kg.height())
     if them_c < CHUA_TIEU_DE_TOI_THIEU:
         them_c = CHUA_TIEU_DE_TOI_THIEU
-    rong, cao = min(w.width(), vung.width() - bien - them_r), min(w.height(), vung.height() - bien - them_c)
+    rong = max(200, min(w.width(), vung.width() - bien - them_r))
+    cao = max(120, min(w.height(), vung.height() - bien - them_c))
+    if w.minimumWidth() > rong:
+        w.setMinimumWidth(rong)
+    if w.minimumHeight() > cao:
+        w.setMinimumHeight(cao)
+    khoa_co = w.minimumSize() == w.maximumSize() and 0 < w.maximumWidth() < _QWIDGETSIZE_MAX
+    if not khoa_co:
+        # 1.0.90: trần = vùng làm việc của màn hình (trước = đúng cỡ lúc mở: hộp con không kéo giãn / phóng to được)
+        w.setMaximumSize(max(vung.width() - bien - them_r, w.minimumWidth()), max(vung.height() - bien - them_c, w.minimumHeight()))
     if (rong, cao) != (w.width(), w.height()):
         w.resize(rong, cao)
+    rong, cao = w.width(), w.height()
     if giua:
-        w.move(vung.x() + (vung.width() - rong - them_r) // 2, vung.y() + (vung.height() - cao - them_c) // 2)
+        x = vung.x() + (vung.width() - rong - them_r) // 2
+        y = vung.y() + (vung.height() - cao - them_c) // 2
+        x = max(vung.x(), min(x, vung.x() + vung.width() - rong - them_r))
+        y = max(vung.y(), min(y, vung.y() + vung.height() - cao - them_c))
+        w.move(x, y)
+
+
+def hen_giua_man_hinh(w: QWidget) -> None:
+    """Windows đặt lại vị trí sau sự kiện hiện (bám cửa sổ cha, lệch góc). Hẹn một nhịp, khi kích thước đã chốt, kéo về giữa."""
+    def lan(hop=w):
+        try:
+            if hop.isVisible() and not hop.isMaximized():
+                vua_man_hinh(hop)
+        except RuntimeError:
+            return
+    QTimer.singleShot(0, lan)
 
 
 # ---------------------------------------------------------------- nhập liệu bằng bàn phím trong bảng
@@ -5487,6 +5536,7 @@ class _BoToMau(QObject):
                 from PySide6.QtWidgets import QDialog as _QD, QMessageBox as _QM
                 if isinstance(obj, _QD) and not isinstance(obj, _QM):
                     vua_man_hinh(obj)                   # hộp con luôn nằm giữa màn hình mỗi lần hiện
+                    hen_giua_man_hinh(obj)
                 return False
             ap_kieu_cay(obj)
             chuan_cot_chon(obj)
@@ -5496,6 +5546,7 @@ class _BoToMau(QObject):
                 if la_cua_so_con_pabt(obj) and _nen_cuon_hop():
                     cuon_than_hop(obj)                     # 1.0.07: hộp cao hơn màn hình - thân cuộn, hàng nút luôn hiện
                 vua_man_hinh(obj)
+                hen_giua_man_hinh(obj)
         return False
 
 

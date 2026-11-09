@@ -640,14 +640,16 @@ def dua_len(ban_sao, phien=None, ep: bool = False) -> Path:
     if f.exists():
         sl = goc / THU_MUC_SAO_LUU / f'{f.stem}_{datetime.now():%Y%m%d_%H%M%S}{f.suffix}'
         sl.parent.mkdir(parents=True, exist_ok=True)
-        if Path(str(f) + '-journal').exists():          # 1.0.58: giao dịch dở (máy kia mất điện): SQLite tự rollback trên đúng file của nó trước khi thay file
+        # 1.0.58: giao dịch dở (máy kia mất điện): SQLite tự rollback trên đúng file của nó trước khi thay file. 1.0.90 (journal TRUNCATE):
+        # file -journal 0 byte luôn có sau khi mở dự án, không phải giao dịch dở - chỉ xét file có nội dung
+        if csdl.journal_do_dang(f):
             c = sqlite3.connect(str(f), timeout=15)
             try:
                 c.execute('BEGIN IMMEDIATE')
                 c.rollback()
             finally:
                 c.close()
-            if Path(str(f) + '-journal').exists():
+            if csdl.journal_do_dang(f):
                 raise LoiMayChu('Dự án trên máy chủ đang có giao dịch dở: thử lại sau.')
         shutil.copy2(f, sl)
     f.parent.mkdir(parents=True, exist_ok=True)

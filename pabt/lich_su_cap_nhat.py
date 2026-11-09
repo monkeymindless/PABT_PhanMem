@@ -7,6 +7,43 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.90', '09/11/2026', (
+        'Gói cài giá đất (.larcgia): xuất rồi nhập lại không còn báo "số TT phải tăng dần" (đoạn đường bị tách đôi do Phụ lục I.1 / I.2 ghi khác dấu câu); gói đã xuất từ bản cũ tự gộp khi nhập. Tạo gói từ bảng hệ số K toàn tỉnh được: đoạn có hệ số K khác nhau theo vị trí giữ riêng từng vị trí.',
+        'Bảng giá đất đọc từ Nghị quyết phân loại theo PHỤ LỤC: chỉ lấy Phụ lục I (nông nghiệp) và III (phi nông nghiệp) - không còn lẫn dòng đảo / cù lao, khu công nghiệp, tái định cư vào bảng đường của xã; giá đất ở tra ở Phụ lục III, đất nông nghiệp ở Phụ lục I; ô Tên đường bỏ trống hoặc dòng mặt tiền thiếu ở một phụ lục lấy theo phụ lục kia; hai đoạn ghi cùng chữ ở hai số TT không bị gộp mất. Nên đọc lại file bảng giá NQ 28 để cập nhật bảng đang dùng.',
+        'Tên xã so nguyên chữ và giữ dấu: "An Lộc" không còn lẫn với "Xuân Lộc", "Lộc Thành" khác "Lộc Thạnh" (giá, đoạn đường, hệ số K, bổ sung bảng giá không xóa nhầm xã khác).',
+        'Bảng tính đơn giá đất nhanh hơn với bảng giá toàn tỉnh (chỉ đọc dòng của xã đang chọn, nhớ đoạn đường).',
+        'Thẻ 1. Đất gọn hơn: Áp giá nhanh xếp một hàng (màn hình hẹp tự xuống dòng), ô Vị trí có thêm Vị trí 1 phạm vi 2, 3 và Vị trí 2, còn lại (tính theo giá Dòng 1, tỷ lệ và trần sàn như bảng tính đầy đủ); nút giữ đúng cỡ chữ, ô Hộ / ô Thửa không còn kéo dài để trống.',
+        'Chống lỗi "database is locked" khi file dự án nằm trên Google Drive / thư mục mạng: chờ khóa tới 30 giây, ghi lại khi bị từ chối tức thời, giao dịch treo được ghi xuống; mở bảng tính giá đất không còn văng lỗi.',
+        'Quét file thông minh: đọc đủ Word (số, gạch đầu dòng tự động, ngắt dòng), đổi chữ phông cũ TCVN3 / VNI sang Unicode, PDF scan có lớp chữ hỏng (máy scan nhận dạng sai, mất dấu) tự nhận dạng lại trên máy; thẻ Cấu trúc văn bản phân cấp Phần / Chương / Mục / Điều / Khoản / Điểm / Bảng có ô lọc; tìm trong nội dung, lưu ra .txt; cột Cách đọc, chất lượng từng file; địa bàn chỉ tự nhận khi văn bản nói rõ một xã.',
+        'Hộ chưa lập phương án mà đã gắn đợt niêm yết / trình không nhảy nấc tiến độ, có cảnh báo; hộp thoại con kéo giãn được tới cỡ màn hình; lưu quy tắc toàn văn NQ 28 cần quyền quản trị và không bị file trích đoạn ghi đè; cập nhật vị trí dòng đất ghi luôn văn bản căn cứ vào dự án.',
+    )),
+    ('1.0.89', '09/11/2026', (
+        'Bảng tính đơn giá đất bồi thường tự hiện đủ xã / phường có trong bảng giá đất đã cập nhật; đoạn đường thiếu trong gói được dựng từ bảng giá, hệ số K lấy từ bảng đã nhập.',
+        'Bộ quy tắc: Xuất / Nhập gói cài (.larcgia) — chọn xã, đóng kèm đơn giá đất + hệ số K (luôn đi cùng) và bộ quy tắc để dùng trên máy khác.',
+    )),
+    ('1.0.88', '08/11/2026', (
+        'Thẻ Cập nhật bảng giá đất có nút Xóa bảng cũ, ghi bảng mới: xóa mọi xã và mọi giá cũ rồi ghi đúng bảng vừa đọc.',
+        'Hai phụ lục đất ở và nông nghiệp của cùng một đoạn đường được gộp thành một dòng, không còn dòng 0 đồng vì thiếu một phụ lục.',
+    )),
+    ('1.0.87', '08/11/2026', (
+        'Mọi cửa sổ con khi mở được kéo về giữa màn hình đang dùng, thu vừa vùng làm việc, không tràn mất góc hay mất nút.',
+    )),
+    ('1.0.86', '08/11/2026', (
+        'Đọc bảng giá: lấy đủ điểm đầu, điểm cuối và tách giá theo nhóm đất của bảng tính (cây lâu năm, cây hằng năm, rừng sản xuất, nuôi trồng thủy sản, đất ở, thương mại, sản xuất).',
+        'Bảng tính đơn giá đọc giá Nghị quyết 28 từ bảng giá đang dùng, đúng nhóm đất và đúng đoạn đường. File có điều khoản nghị quyết thì cập nhật quy tắc Nghị quyết 28, không chỉ Quyết định 03.',
+    )),
+    ('1.0.85', '08/11/2026', (
+        'Cập nhật bảng giá đất: nhập tên tỉnh / thành phố là đủ để tìm giá cả tỉnh. Xã / phường không bắt buộc.',
+        'Bộ quy tắc giá đất nằm trong cửa sổ Bảng giá đất (thẻ Bộ quy tắc giá đất), cùng chỗ nhập văn bản đơn giá và bảng giá.',
+    )),
+    ('1.0.84', '08/11/2026', (
+        'Bảng tính đơn giá đất NQ 28 và QĐ 03: thêm Phường Tân Triều (Bảng 8, 55 đoạn đường), cùng bộ với bảng giá đất và hệ số K.',
+        'Quét file đọc được Word 97-2003 (.doc): nhờ Word hoặc LibreOffice nếu có, không thì đọc chữ ngay trong phần mềm. Xem toàn văn, trích quy định / đơn giá / quy tắc tính bồi thường. Nghị quyết bảng giá đất bấm Lưu quy tắc toàn văn để bảng tính dùng.',
+    )),
+    ('1.0.83', '08/11/2026', (
+        'Danh sách hộ: thanh trạng thái 6 nấc (0/6 đến 6/6) theo 16 bước Quyết định 18/2026/QĐ-UBND — kiểm đếm và hồ sơ, lập dự thảo, niêm yết và lấy ý kiến, trình thẩm định, phê duyệt, chi trả, bàn giao mặt bằng.',
+        'Lập phương án, mục 1. Đất: ô Vị trí mở bảng tính đơn giá đất NQ 28 và QĐ 03. Bảng tính nhớ vị trí, hệ số K và thuộc tính đã chọn, kể cả đất công đơn giá 0 đồng.',
+    )),
     ('1.0.82', '08/11/2026', (
         'Bảng tính giá đất (NQ 28 & QĐ 03): ô Nhóm đất tách 4 loại đất nông nghiệp - cây lâu năm, cây hằng năm (lúa), nuôi trồng thủy sản, rừng sản xuất (rừng phòng hộ, đặc dụng tính theo rừng sản xuất); giá trần, sàn Phụ lục VIII theo đúng loại đã chọn.',
         'Bảng tính giá đất: thêm ô Trường hợp NQ 28 - tái định cư, thửa nhiều mặt tiền, lòng chợ, khu công nghiệp mới, đất dạng tuyến, đường đất, dạ cầu, qua kênh rạch, hành lang an toàn đường bộ, giáp ranh tỉnh, đất có thời hạn. Hệ số nhân vào giá NQ 28 trước hệ số K, ghi vào giải trình và Ghi chú dòng đất khi áp giá.',

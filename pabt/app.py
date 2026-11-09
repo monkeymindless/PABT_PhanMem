@@ -29,18 +29,32 @@ MO_TA_UD = 'Lập phương án bồi thường, hỗ trợ'      # tiêu đề c
 COT = ['STT', 'Họ và tên', 'Địa chỉ', 'Số thửa', 'DT thu hồi (m²)', 'Trạng thái', 'Ghi chú']
 MAU_LECH = mau_o_theo_tong(globals(), MAU_LECH='#F8CBAD')[0]          # vàng cam: hộ lệch so với file Excel đối chiếu
 COT_SO = {4}
-# cột Trạng thái danh sách hộ (Hybrid Enterprise Navy, 17/10/2026): thanh tiến độ 4 ô bằng ký tự khối Unicode (■ □ - có trong
-# Segoe UI / Arial của Windows 7, KHÔNG phải emoji) + màu theo nấc. Chữ trạng thái và giá trị lọc giữ nguyên (BangHo.dong[r]['o'][5])
-THANH_NAC = ('□□□□', '■□□□', '■■□□', '■■■□', '■■■■')
-NHAN_NAC = ('Chưa lập PA', 'Đã lập PA', 'Đã phê duyệt', 'Đã chi trả', 'Đã bàn giao')
-MAU_NAC = ('#64748B', '#1F76A6', '#1E3A5F', '#1F6F66', '#2F7D54')
+# cột Trạng thái danh sách hộ (Hybrid Enterprise Navy, 17/10/2026; 1.0.83: 6 nấc theo 16 bước QĐ 18/2026/QĐ-UBND):
+# thanh tiến độ 6 ô bằng ký tự khối Unicode (■ □ - có trong Segoe UI / Arial của Windows 7, KHÔNG phải emoji) + màu theo nấc.
+# Chữ trạng thái và giá trị lọc giữ nguyên (BangHo.dong[r]['o'][5])
+THANH_NAC = ('□□□□□□', '■□□□□□', '■■□□□□', '■■■□□□', '■■■■□□', '■■■■■□', '■■■■■■')
+NHAN_NAC = ('Bước 1–4: Kiểm đếm, hồ sơ', 'Bước 5: Đã lập dự thảo PA (V0)',
+            'Bước 6–7: Đã niêm yết & Lấy ý kiến (V1/V2)', 'Bước 8: Đã trình thẩm định (V3)',
+            'Bước 9–11: Đã phê duyệt PA', 'Bước 12–14: Đã chi trả', 'Bước 15–16: Đã bàn giao MB')
+MAU_NAC = ('#64748B', '#2B6CB0', '#1F76A6', '#4F46E5', '#1E3A5F', '#1F6F66', '#2F7D54')
+
+
+def chi_so_nac(nac) -> int:
+    """Chỉ số thanh 0..6, kẹp trong THANH_NAC / NHAN_NAC (dữ liệu cũ hoặc nấc lạ không làm vỡ ô)."""
+    try:
+        i = int(nac or 0)
+    except (TypeError, ValueError):
+        return 0
+    if i < 0:
+        return 0
+    return i if i < len(THANH_NAC) else len(THANH_NAC) - 1
 MAU_MA_HO = '#1F76A6'                    # cột STT (định danh hộ trên danh sách)
 CAN_PHAI = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 CAN_TRAI = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 CAN_GIUA = int(Qt.AlignmentFlag.AlignCenter)
 COT_GIUA = {0, 3}             # 1.0.03: STT, Số thửa căn giữa (tiêu đề + dữ liệu); DT thu hồi căn phải
 # bề rộng cột danh sách hộ sau khi tự canh: {cột: (tối thiểu, tối đa)} - Ghi chú (cột cuối) giãn lấp phần còn lại
-RONG_COT_DS = {0: (48, 64), 3: (64, 80), 4: (100, 120), 5: (200, 250), 6: (90, 150)}      # 1.0.16: hẹp hơn - Họ và tên / Địa chỉ (giãn) nhận thêm chỗ trên 1366 @125%
+RONG_COT_DS = {0: (48, 64), 3: (64, 80), 4: (100, 120), 5: (225, 285), 6: (90, 150)}      # 1.0.83: cột Trạng thái rộng thêm cho 6 vạch + viên thuốc, không cắt chữ
 COT_GIAN_DS = (1, 2)          # Họ và tên, Địa chỉ: giãn / co theo khung nhìn
 TAT_CA_DOT, TAT_CA_TRANG_THAI = 'Đợt: Tất cả', 'Trạng thái: Tất cả'     # mục đầu ô lọc (thay nhãn "Đợt:" riêng)
 CAO_DAI_CONG_CU = 32                    # hàng công cụ + lọc danh sách hộ, dải cộng dưới bảng
@@ -599,15 +613,15 @@ class BangHo(QAbstractTableModel):
                 return d['ten_gon']
             if c == 4:
                 return so_vn(v)
-            if c == 5 and role == _VAI_HIEN:      # thanh tiến độ 4 ô + trạng thái (giá trị gốc ở d['o'][5])
-                return f'{THANH_NAC[d.get("nac", 0)]}  {v}'
+            if c == 5 and role == _VAI_HIEN:      # thanh tiến độ 6 ô + trạng thái (giá trị gốc ở d['o'][5])
+                return f'{THANH_NAC[chi_so_nac(d.get("nac", 0))]}  {v}'
             return str(v)
         if role == _VAI_CHU:
             if c in COT_SO:                                        # số 0 xám nhạt (giao_dien.mau_so - một nguồn)
                 m = mau_so(so_vn(v))
                 return self._but(m) if m else None
             if c == 5:
-                return self._but(MAU_NAC[d.get('nac', 0)])
+                return self._but(MAU_NAC[chi_so_nac(d.get('nac', 0))])
             if c == 0:
                 return self._but(MAU_MA_HO)
             if c == 1:
@@ -621,7 +635,8 @@ class BangHo(QAbstractTableModel):
             if c == 1 and d.get('phu_ten'):
                 return f'{d["ten_gon"]}\n{d["phu_ten"]}'
             if c == 5:
-                return (d.get('goi_y_tt') or str(v)) + f'\nTiến độ: {NHAN_NAC[d.get("nac", 0)]} ({d.get("nac", 0)}/4)'
+                i = chi_so_nac(d.get('nac', 0))
+                return (d.get('goi_y_tt') or str(v)) + f'\nTiến độ: {NHAN_NAC[i]} ({d.get("nac", 0)}/{len(THANH_NAC) - 1})'
             if c in (1, 2):
                 dau = d.get('dia_chi') or v if c == 2 else v             # cột Địa chỉ: địa chỉ đầy đủ (0.9.72)
                 return f'{dau}\nMã hộ {d["ma_ho"]}' + (f'\nGhi chú: {d["theo_doi"]}' if d.get('theo_doi') else '')
@@ -1703,7 +1718,7 @@ class CuaSoChinh(QMainWindow):
                 dt = D(0)
             so_thua[ma] = (n + 1, tong_dt + dt, f'{chu} {to}/{thua}')
         tt = {r['ma_ho']: dict(r) for r in self.con.execute(
-            f'SELECT ma_ho, trang_thai, dot_id, dia_chi, so_cccd, phap_ly, {csdl.sql_ghi_chu_ten(self.con)}, {", ".join(TRUONG_TT)} FROM ho{loc}', ts)
+            f'SELECT ma_ho, trang_thai, dot_id, dot_du_thao_id, dia_chi, so_cccd, phap_ly, {csdl.sql_ghi_chu_ten(self.con)}, {", ".join(TRUONG_TT)} FROM ho{loc}', ts)
             if chon is None or r['ma_ho'] in chon}
         th = {x.ma_ho: x for x in theo_doi.tong_hop(self.con, ds_ma_ho, tinh_pa=False)}
         ten_dot = {d.id: d.ten for d in ds_dot(self.con)}
@@ -1741,15 +1756,15 @@ class CuaSoChinh(QMainWindow):
             trang_thai, goi_y, mau = x.get('trang_thai', ''), '', None
         gc = h.get('ghi_chu_dc') or ''
         da_lap = bool(getattr(t, 'da_lap', False) or (t is not None and t.tong_pa > 0))
-        # nấc tiến độ (cột Trạng thái, thanh 4 ô) = phân tích TỰ ĐỘNG, tuần tự (17/10/2026): phê duyệt theo quyết định, chi trả khi
-        # mọi quyết định đã nhận tiền, bàn giao khi có ngày biên bản. Các cờ phê duyệt / chi trả / bàn giao của dòng (bộ lọc trạng
-        # thái quan_ly.hop_trang_thai, thẻ số liệu) lấy CÙNG kết quả này - tích tay "đã bàn giao" không làm thẻ / nấc tăng
+        # nấc tiến độ (cột Trạng thái, thanh 6 ô, 0/6..6/6) = phân tích TỰ ĐỘNG, tuần tự (17/10/2026, thang QĐ 18 từ 1.0.83):
+        # phê duyệt theo quyết định, chi trả khi mọi quyết định đã nhận tiền, bàn giao khi có ngày biên bản. Niêm yết / trình
+        # lấy từ đợt. Các cờ phê duyệt / chi trả / bàn giao của dòng (bộ lọc trạng thái, thẻ số liệu) lấy CÙNG kết quả này
         if td is not None:
             nac = td.nac
             x = dict(x, da_phe_duyet=td.da_pd, da_chi_tra=td.da_ct, da_ban_giao=td.da_bg)
         else:
-            nac = (4 if x.get('da_ban_giao') else 3 if x.get('da_chi_tra') else 2 if x.get('da_phe_duyet') else
-                   1 if da_lap or h['tong'] > 0 else 0)
+            nac = (6 if x.get('da_ban_giao') else 5 if x.get('da_chi_tra') else 4 if x.get('da_phe_duyet') else
+                   3 if x.get('dot_id') else 2 if x.get('dot_du_thao_id') else 1 if da_lap or h['tong'] > 0 else 0)
         return dict(ma_ho=h['ma_ho'], tong=h['tong'], lech=h['lech'], da_lap=da_lap, nac=nac, muc=h.get('muc') or {}, dt=dt,
                     so_thua=st, phu_ten=dong_duoi_ten(h['ho_ten'], x.get('phap_ly'), x.get('ghi_chu_ten')), ten_gon=tach_ho_ten(h['ho_ten'])[0],
                     **{k: x.get(k) for k in TRUONG_TT},
@@ -3949,7 +3964,7 @@ class CuaSoChinh(QMainWindow):
 
     def bang_gia_dat(self, cho: bool = True, the: int = 0):
         """Bảng giá đất: thẻ "Bảng giá đất 2026" (NQ 28/2025, tra theo địa bàn của dự án đang mở) và thẻ "Hệ số K" (QĐ 03/2026/QĐ-UBND,
-        nhập từ file / chữ dán - he_so_k.py), thẻ "Cập nhật, bổ sung giá đất" (web / file, quy tắc vị trí 2-4). the: 0 / 1 / 2 = thẻ mở sẵn."""
+        nhập từ file / chữ dán - he_so_k.py), thẻ "Cập nhật, bổ sung giá đất" (web / file, quy tắc vị trí 2-4), thẻ "Bộ quy tắc giá đất". the: 0 / 1 / 2 / 3 = thẻ mở sẵn."""
         from .man_hinh_du_toan import HopTraNQ28
         xa = ''
         if self.con is not None:
@@ -3966,8 +3981,23 @@ class CuaSoChinh(QMainWindow):
         from .man_hinh_tinh_gia_dat import HopTinhGiaDat
         xa, ds = '', []
         if self.con is not None:
-            r = self.con.execute('SELECT ten_dia_ban FROM du_an WHERE id = 1').fetchone()
-            xa = (r[0] or '') if r else ''
+            # 1.0.90: lưu tự động đang hẹn giờ ở cửa sổ lập phương án -> ghi luôn, giao dịch ngầm còn mở -> ghi xuống; file dự án bị máy khác /
+            # Google Drive giữ khóa quá lâu thì vẫn mở bảng tính (chưa biết xã dự án), không văng lỗi "database is locked"
+            cua_so = list(QApplication.topLevelWidgets()) + list(getattr(getattr(self, 'khung_tab', None), 'widget', {}).values())
+            for w in cua_so:
+                hen = getattr(w, '_hen_luu_tu_dong', None)
+                if hen is not None and hen.isActive() and getattr(w, 'con', None) is self.con:
+                    hen.stop()
+                    try:
+                        w._thuc_hien_luu_tu_dong()
+                    except Exception:                       # noqa: BLE001 - lưu tự động lỗi tự báo ở cửa sổ đó
+                        pass
+            csdl.giai_phong_khoa_treo(self.con)
+            try:
+                r = self.con.execute('SELECT ten_dia_ban FROM du_an WHERE id = 1').fetchone()
+                xa = (r[0] or '') if r else ''
+            except sqlite3.OperationalError as e:
+                self.statusBar().showMessage(f'Chưa đọc được tên xã của dự án ({e}): chọn địa bàn trong bảng tính.', 8000)
             ds = list(ds_ma_ho) if ds_ma_ho is not None else self.ho_da_chon()
         d = HopTinhGiaDat(self, self.con, ds, xa, bool(getattr(self, 'chi_doc', False)))
         if not cho:

@@ -133,6 +133,64 @@ def _bo_dau(s: str) -> str:
     return ' '.join(t.lower().split())
 
 
+_TIEN_TO_DIA_BAN = (('thi', 'tran'), ('dac', 'khu'), ('xa',), ('phuong',))
+
+
+@functools.lru_cache(maxsize=8192)
+def khoa_dia_ban(s) -> str:
+    """Khóa so sánh tên xã / phường (1.0.90): bỏ "Bảng 53.", bỏ tiền tố Xã / Phường / Thị trấn / Đặc khu, mỗi chữ = chữ không dấu
+    + '~' + các dấu của nó (sắp xếp - "Hòa" = "Hoà"). Giữ dấu để "Lộc Thành" khác "Lộc Thạnh" (bỏ dấu là trùng nhau)."""
+    t = unicodedata.normalize('NFD', str(s or '')).lower()
+    chu = []
+    for w in re.split(r'[^\ẁ-ͯ]+', t):
+        if not w:
+            continue
+        dau = sorted(c for c in w if unicodedata.combining(c)) + (['đ'] if 'đ' in w else [])
+        goc = ''.join(c for c in w if not unicodedata.combining(c)).replace('đ', 'd')
+        if goc:
+            chu.append((goc, ''.join(dau)))
+    if len(chu) >= 2 and chu[0][0] == 'bang' and chu[1][0].isdigit():
+        chu = chu[2:]
+    for tt in _TIEN_TO_DIA_BAN:
+        if len(chu) > len(tt) and tuple(x[0] for x in chu[:len(tt)]) == tt:
+            chu = chu[len(tt):]
+            break
+    return ' '.join(g + ('~' + d if d else '') for g, d in chu)
+
+
+def _khong_dau_khoa(k: str) -> str:
+    return ' '.join(w.split('~')[0] for w in k.split())
+
+
+def _cap_khoa(a, b) -> tuple:
+    """Hai khóa để so: hai bên cùng có dấu thì giữ dấu, một bên gõ không dấu thì bỏ dấu cả hai."""
+    ka, kb = khoa_dia_ban(a), khoa_dia_ban(b)
+    if ka and kb and ka != kb and ('~' not in ka or '~' not in kb):
+        ka, kb = _khong_dau_khoa(ka), _khong_dau_khoa(kb)
+    return ka, kb
+
+
+def trung_dia_ban(a, b) -> bool:
+    """Đúng cùng tên xã / phường (bỏ tiền tố Xã / Phường, "Bảng 53."): "Phường Trị An" = "Xã Trị An" = "tri an"; "Lộc Thành" khác "Lộc Thạnh"."""
+    ka, kb = _cap_khoa(a, b)
+    return bool(ka) and ka == kb
+
+
+@functools.lru_cache(maxsize=16384)
+def cung_dia_ban(a, b) -> bool:
+    """Hai tên chỉ cùng một xã / phường. So nguyên CHỮ (không so chuỗi con: "An Lộc" không khớp "Xuân Lộc"); hai bên cùng có dấu thì
+    so cả dấu ("Lộc Thành" khác "Lộc Thạnh"), một bên gõ không dấu thì so không dấu. Tên ngắn là đoạn chữ liên tiếp của tên dài
+    ("Trị An" khớp "Bảng 53. Phường Trị An")."""
+    ka, kb = _cap_khoa(a, b)
+    if not ka or not kb:
+        return False
+    if ka == kb:
+        return True
+    ngan, dai = sorted((ka.split(), kb.split()), key=len)
+    n = len(ngan)
+    return any(dai[i:i + n] == ngan for i in range(len(dai) - n + 1))
+
+
 def doc_so(text, ten_o: str, cho_phep_trong: bool = True, toi_thieu=KHONG, toi_da=None):
     """Đọc số người dùng gõ ('1.480.500', '143,8', '100%') hoặc công thức ('=4,2*5,7', '12x3+1,5'); sai thì báo LoiNhap."""
     s = str(text if text is not None else '').strip()

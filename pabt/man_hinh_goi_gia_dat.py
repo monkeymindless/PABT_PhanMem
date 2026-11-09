@@ -4,7 +4,8 @@ from __future__ import annotations
 import copy
 from datetime import date
 
-from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDialog, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit, QMessageBox, QPlainTextEdit,
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit, QMessageBox, QPlainTextEdit,
                                QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from . import goi_gia_dat as gg
@@ -20,12 +21,93 @@ def _o(x) -> QTableWidgetItem:
     return QTableWidgetItem('' if x is None else str(x))
 
 
+class HopChonXaGoiCai(QDialog):
+    """Chọn xã / phường để đóng gói cài: đơn giá đất và hệ số K luôn đi cùng; bộ quy tắc kèm theo."""
+    im_lang = False
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Chọn xã / phường đóng gói cài giá đất')
+        self.resize(720, 520)
+        self.chon = []
+        lo = QVBoxLayout(self)
+        lo.addWidget(QLabel('Mỗi địa bàn trong gói cài gồm đủ đơn giá đất và hệ số K. Bộ quy tắc giá đất đi kèm gói.'))
+        hang = QHBoxLayout()
+        self.b_het = QPushButton('Chọn tất cả đủ cặp')
+        self.b_bo = QPushButton('Bỏ chọn')
+        hang.addWidget(self.b_het)
+        hang.addWidget(self.b_bo)
+        hang.addStretch(1)
+        lo.addLayout(hang)
+        self.bang = QTableWidget(0, 4)
+        self.bang.setHorizontalHeaderLabels(['Chọn', 'Địa bàn', 'Dòng đơn giá', 'Dòng hệ số K'])
+        self.bang.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.bang.verticalHeader().setVisible(False)
+        self.bang.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        lo.addWidget(self.bang, 1)
+        self.lb = QLabel('')
+        self.lb.setWordWrap(True)
+        lo.addWidget(self.lb)
+        nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        nut.button(QDialogButtonBox.StandardButton.Ok).setText('Xuất gói cài…')
+        nut.button(QDialogButtonBox.StandardButton.Cancel).setText('Hủy')
+        nut.accepted.connect(self.accept)
+        nut.rejected.connect(self.reject)
+        lo.addWidget(nut)
+        self.b_het.clicked.connect(self._chon_het)
+        self.b_bo.clicked.connect(self._bo_het)
+        self._nap()
+
+    def _nap(self) -> None:
+        self._ds = gg.ds_xa_cho_goi_cai()
+        self.bang.setRowCount(len(self._ds))
+        du = thieu = 0
+        for i, x in enumerate(self._ds):
+            ck = QTableWidgetItem()
+            ck.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled if x['du']
+                        else Qt.ItemFlag.ItemIsUserCheckable)
+            ck.setCheckState(Qt.CheckState.Unchecked)
+            if not x['du']:
+                ck.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.bang.setItem(i, 0, ck)
+            self.bang.setItem(i, 1, _o(x['ten'] + ('' if x['du'] else ' (thiếu một bên)')))
+            self.bang.setItem(i, 2, _o(x['so_gia']))
+            self.bang.setItem(i, 3, _o(x['so_k']))
+            du += 1 if x['du'] else 0
+            thieu += 0 if x['du'] else 1
+        self.lb.setText(f'{du} địa bàn đủ cặp đơn giá + hệ số K; {thieu} địa bàn thiếu một bên (không chọn được).')
+
+    def _chon_het(self) -> None:
+        for i, x in enumerate(self._ds):
+            if x['du']:
+                self.bang.item(i, 0).setCheckState(Qt.CheckState.Checked)
+
+    def _bo_het(self) -> None:
+        for i in range(self.bang.rowCount()):
+            it = self.bang.item(i, 0)
+            if it is not None and it.flags() & Qt.ItemFlag.ItemIsEnabled:
+                it.setCheckState(Qt.CheckState.Unchecked)
+
+    def accept(self) -> None:
+        self.chon = [self._ds[i]['ten'] for i in range(self.bang.rowCount())
+                     if self.bang.item(i, 0) and self.bang.item(i, 0).checkState() == Qt.CheckState.Checked]
+        if not self.chon:
+            if not self.im_lang:
+                QMessageBox.warning(self, TIEU_DE, 'Chọn ít nhất một xã / phường đủ cặp đơn giá đất và hệ số K.')
+            return
+        super().accept()
+
+
 class HopGoiGiaDat(QDialog):
     """Trái: danh sách gói. Phải: nội dung gói đang chọn (gói gắn sẵn chỉ xem). self.da_doi: có lưu / xóa gói. im_lang: kiểm thử."""
     im_lang = False
 
-    def __init__(self, parent=None, ma_chon: str = ''):
+    def __init__(self, parent=None, ma_chon: str = '', nhung: bool = False):
         super().__init__(parent)
+        self._nhung = nhung
+        if nhung:
+            from PySide6.QtCore import Qt
+            self.setWindowFlags(Qt.WindowType.Widget)
         self.setWindowTitle(TIEU_DE)
         self.resize(1240, 680)
         self.g = None
@@ -54,8 +136,10 @@ class HopGoiGiaDat(QDialog):
         for ten, chu, tip, ham in (
                 ('b_chep', 'Tạo gói mới từ gói này…', 'Văn bản mới chỉ đổi một phần: chép gói đang chọn rồi sửa', lambda: self.tao_tu_goi()),
                 ('b_tu_k', 'Tạo gói từ bảng hệ số K đã nhập…', 'Đoạn đường và K1 lấy từ thẻ Hệ số K (đã đọc từ văn bản), kể cả xã mới; K3, công thức chép từ gói đang chọn', lambda: self.tao_tu_he_so_k()),
-                ('b_nhap', 'Nhập gói từ file…', 'File .json gói quy tắc do đơn vị khác hoặc đơn vị phát hành gửi; kiểm từng trường, không chạy mã', lambda: self.nhap_file()),
-                ('b_xuat', 'Xuất gói ra file…', 'Gửi gói cho đơn vị khác', lambda: self.xuat_file()),
+                ('b_nhap', 'Nhập gói quy tắc từ file…', 'File .json gói quy tắc do đơn vị khác hoặc đơn vị phát hành gửi; kiểm từng trường, không chạy mã', lambda: self.nhap_file()),
+                ('b_xuat', 'Xuất gói quy tắc ra file…', 'Gửi gói quy tắc (không kèm bảng giá / hệ số K) cho đơn vị khác', lambda: self.xuat_file()),
+                ('b_xuat_cai', 'Xuất gói cài (giá + hệ số K)…', 'Chọn xã / phường: đóng kèm đơn giá đất + hệ số K (luôn đi cùng) và bộ quy tắc thành file .larcgia để cài máy khác hoặc đóng vào bản mới', lambda: self.xuat_goi_cai()),
+                ('b_nhap_cai', 'Nhập gói cài giá đất…', 'Nhận file .larcgia: cài bộ quy tắc + đơn giá đất + hệ số K của các xã trong gói', lambda: self.nhap_goi_cai()),
                 ('b_xoa', 'Xóa gói', 'Xóa gói của máy; số đã áp vào hộ không đổi', lambda: self.xoa())):
             b = QPushButton(chu)
             b.setToolTip(tip)
@@ -173,6 +257,8 @@ class HopGoiGiaDat(QDialog):
         self.b_luu.clicked.connect(lambda: self.luu())
         d = QPushButton('Đóng')
         d.clicked.connect(self.reject)
+        if nhung:
+            d.hide()
         for b in (self.b_kiem, d, self.b_luu):
             hn.addWidget(b)
         lo.addLayout(hn)
@@ -381,6 +467,69 @@ class HopGoiGiaDat(QDialog):
         except OSError as e:
             self._bao(f'Không ghi được file: {e}')
             return False
+        return True
+
+    def xuat_goi_cai(self, file=None, ds_xa=None) -> bool:
+        """Chọn xã (đơn giá + hệ số K đi cùng) rồi xuất file .larcgia kèm bộ quy tắc."""
+        if ds_xa is None:
+            h = HopChonXaGoiCai(self)
+            h.im_lang = self.im_lang
+            if self.im_lang:
+                h._chon_het()
+                h.accept()
+                ds_xa = h.chon
+            else:
+                if h.exec() != QDialog.DialogCode.Accepted:
+                    return False
+                ds_xa = h.chon
+        if not ds_xa:
+            self._bao('Chưa chọn xã / phường nào.')
+            return False
+        if file is None:
+            mau = 'GoiCai_GiaDat_' + ('_'.join(x.replace(' ', '')[:12] for x in ds_xa[:2]) or 'DongNai')
+            file, _ = QFileDialog.getSaveFileName(self, 'Lưu gói cài giá đất', mau + gg.DUOI_GOI_CAI,
+                                                  f'Gói cài giá đất (*{gg.DUOI_GOI_CAI})')
+            if not file:
+                return False
+        try:
+            goc = self.g if self.g and not self.moi else gg._gan_san()
+            if goc and not goc.get('gan_san') and self.g is goc:
+                goc = self.gia_tri()
+            ra = gg.xuat_goi_cai(file, ds_xa, goc)
+        except (gg.LoiGoi, OSError) as e:
+            self._bao(str(e))
+            return False
+        self._bao(f'Đã xuất gói cài {len(ds_xa)} địa bàn (đơn giá + hệ số K + bộ quy tắc):\n{ra}', loi=False)
+        return True
+
+    def nhap_goi_cai(self, file=None, bo_sung: bool = True) -> bool:
+        if file is None:
+            file, _ = QFileDialog.getOpenFileName(self, 'Chọn gói cài giá đất', '', f'Gói cài giá đất (*{gg.DUOI_GOI_CAI})')
+            if not file:
+                return False
+        try:
+            xem = gg.doc_goi_cai(file)
+        except gg.LoiGoi as e:
+            self._bao(str(e))
+            return False
+        xa = ', '.join(xem['mo_ta'].get('xa') or [])
+        if not self.im_lang:
+            hoi = (f'Cài gói giá đất gồm {xem["mo_ta"].get("so_gia", 0)} dòng đơn giá và '
+                   f'{xem["mo_ta"].get("so_k", 0)} dòng hệ số K của: {xa}?\n'
+                   'Địa bàn trùng tên được thay; địa bàn khác trên máy giữ nguyên. Bộ quy tắc trong gói được lưu vào máy.')
+            if QMessageBox.question(self, TIEU_DE, hoi) != QMessageBox.StandardButton.Yes:
+                return False
+        if not self._xin_quyen():
+            return False
+        try:
+            kq = gg.nhap_goi_cai(file, bo_sung=bo_sung)
+        except Exception as e:                                           # noqa: BLE001
+            self._bao(str(e))
+            return False
+        self.da_doi = True
+        self.nap(kq.get('goi_ma') or '')
+        self._bao(f'Đã cài {len(kq.get("xa") or [])} địa bàn ({kq.get("so_gia", 0)} dòng giá, {kq.get("so_k", 0)} dòng hệ số K). '
+                  'Cửa sổ Tính đơn giá đất bồi thường sẽ hiện đủ xã vừa cài.', loi=False)
         return True
 
     # ------------------------------------------------ lưu, xóa

@@ -1,4 +1,4 @@
-"""Bộ quy tắc giá đất (1.0.64): gói dữ liệu thay cho quy tắc viết trong mã. Đáp án vàng chụp từ bản viết cố định (3.061 ca trên lưới 254.016 tổ hợp, gồm cả câu giải trình): gói gắn sẵn phải ra y hệt.
+"""Bộ quy tắc giá đất (1.0.64): gói dữ liệu thay cho quy tắc viết trong mã. Đáp án vàng chụp từ bản viết cố định (3.935 ca từ 1.0.84, thêm Phường Tân Triều; gồm cả câu giải trình): gói gắn sẵn phải ra y hệt.
 Quy định đổi -> gói mới: đổi hệ số, thêm hệ số, đổi làm tròn, hiệu lực, thêm xã; số cũ không tự đổi; một nguồn K."""
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from pathlib import Path
 
 from pabt import csdl
 from pabt import dong_bo_don_gia as db
+from pabt import gia_dat_nq28 as nq
 from pabt import gia_dat_qd03 as g
 from pabt import goi_gia_dat as gg
 from pabt import he_so_k, may_chu, phien_ban_pa as pb, quan_tri_bo
@@ -63,6 +64,7 @@ class CoMay(unittest.TestCase):
         may_chu.dang_xuat()
         gg._quen()
         he_so_k._quen()
+        nq._quen()
         self.addCleanup(self._don)
 
     def _don(self):
@@ -74,6 +76,7 @@ class CoMay(unittest.TestCase):
             os.environ['PABT_THU_MUC_MAY'] = self._cu
         gg._quen()
         he_so_k._quen()
+        nq._quen()
         shutil.rmtree(self.td, ignore_errors=True)
 
     def goi_moi(self, ma='QD15_2027', ten='QĐ 15/2027/QĐ-UBND', tu='01/01/2027'):
@@ -301,12 +304,85 @@ class TestMotNguonHeSoK(CoMay):
         r = moi['dia_ban']['Xã A'][0]
         self.assertEqual((r['k1_nn_cay'], r['k1_nn_rung_nts']), ('1.3', '1.3'))
 
-    def test_k_doi_theo_vi_tri_trong_doan_thi_tu_choi(self):
+    def test_k_doi_theo_vi_tri_trong_doan_giu_tung_vi_tri(self):
+        """1.0.90: K1 khác nhau theo vị trí trong cùng đoạn (Tam Hiệp, Lê Thoa) - trước từ chối cả gói, nay K1 đoạn = vị trí đầu, vị trí khác
+        ghi ở k1_theo_vt. Cùng một vị trí ghi hai số khác nhau mới từ chối."""
         d = g.ds_doan(DOAN_TRI_AN)[0]
         he_so_k.ghi([dict(dia_ban='Xã A', tt=i + 1, loai_dat='dat_o', vi_tri=vt, tuyen_duong=d['ten_duong'], diem_dau='a', diem_cuoi='b', he_so=k, ghi_chu='') for i, (vt, k) in enumerate((('MT', '1.3'), ('T1', '1.4')))],
                     'Quyết định số 15/2027/QĐ-UBND')
+        goi = gg.tao_goi_tu_he_so_k(gg._gan_san(), 'K_MOI', 'QĐ 15', '01/01/2027')
+        doan = goi['dia_ban']['Xã A'][0]
+        self.assertEqual((doan['k1_dat_o'], doan['k1_theo_vt']), ('1.3', {'T1': {'k1_dat_o': '1.4'}}))
+        self.assertEqual(gg.kiem_goi(goi), [])
+        he_so_k.ghi([dict(dia_ban='Xã A', tt=1, loai_dat='dat_o', vi_tri='MT', tuyen_duong=d['ten_duong'], diem_dau='a', diem_cuoi='b', he_so=k, ghi_chu='', khu_vuc=i)
+                     for i, k in enumerate(('1.3', '1.4'))], 'Quyết định số 15/2027/QĐ-UBND')
+        if len([r for r in he_so_k.tat_ca() if r['dia_ban'] == 'Xã A']) == 2:     # bảng giữ được hai dòng cùng TT, cùng vị trí
+            with self.assertRaises(gg.LoiGoi):
+                gg.tao_goi_tu_he_so_k(gg._gan_san(), 'K_MOI', 'QĐ 15', '01/01/2027')
+
+    def test_bang_tinh_tu_them_xa_tu_bang_gia(self):
+        """Cập nhật bảng giá xã mới: ô Xã / phường của bảng tính hiện xã đó, đoạn đường dựng từ bảng giá."""
+        nq.ghi_thay([dict(xa='Phường Biên Hòa Mới', tt=1, ten_duong='Đường Thử', diem_dau='A', diem_cuoi='B',
+                          vi_tri='MT', nguong=[1000, 500], dat_o=1500, tmdv=1000, sxkd=900, nn_cay=200, nn_rung_nts=100),
+                     dict(xa='Phường Biên Hòa Mới', tt=2, ten_duong='Đường Thử', diem_dau='A', diem_cuoi='B',
+                          vi_tri='T1', nguong=[1000, 500], dat_o=800, tmdv=600, sxkd=500, nn_cay=150, nn_rung_nts=80)],
+                    'NQ thử', 'thu.docx')
+        ds = g.ds_dia_ban()
+        self.assertTrue(any('Biên Hòa Mới' in x for x in ds))
+        khoa = g.dia_ban_theo_ten('Biên Hòa Mới')
+        self.assertTrue(khoa)
+        doan = g.ds_doan(khoa)
+        self.assertEqual(len(doan), 1)
+        self.assertEqual(doan[0]['ten_duong'], 'Đường Thử')
+        self.assertEqual((doan[0]['tt_bat_dau'], doan[0]['tt_ket_thuc']), (1, 2))
+
+
+class TestGoiCaiGiaDat(CoMay):
+    def _dong_gia(self, xa, gia=1500):
+        return [dict(xa=xa, tt=1, ten_duong='Đường Gói', diem_dau='Đầu', diem_cuoi='Cuối', vi_tri='MT',
+                     nguong=[1000, 500], dat_o=gia, tmdv=gia, sxkd=gia, nn_cay=200, nn_rung_nts=100),
+                dict(xa=xa, tt=2, ten_duong='Đường Gói', diem_dau='Đầu', diem_cuoi='Cuối', vi_tri='T1',
+                     nguong=[1000, 500], dat_o=gia // 2, tmdv=gia // 2, sxkd=gia // 2, nn_cay=150, nn_rung_nts=80)]
+
+    def _dong_k(self, xa, k='1.25'):
+        return [dict(dia_ban=xa, tt=i, loai_dat=n, vi_tri=vt, tuyen_duong='Đường Gói', diem_dau='Đầu',
+                     diem_cuoi='Cuối', he_so=k, ghi_chu='')
+                for i, vt in enumerate(('MT', 'T1'), 1) for n in ('dat_o', 'tmdv', 'sxkd', 'nn_cay', 'nn_rung_nts')]
+
+    def _nap_cap(self, xa='Phường Thử Gói', gia=1500, k='1.25'):
+        nq.ghi_bo_sung(self._dong_gia(xa, gia), 'NQ gói', 'goi.docx')
+        cu = he_so_k.tat_ca() if he_so_k.dang_thay() else []
+        he_so_k.ghi(cu + self._dong_k(xa, k), 'Quyết định số 03/2026/QĐ-UBND')
+
+    def test_ds_xa_chi_chon_duoc_khi_du_cap(self):
+        self._nap_cap()
+        nq.ghi_bo_sung([dict(xa='Xã Chỉ Có Giá', tt=1, ten_duong='Đường X', diem_dau='', diem_cuoi='', vi_tri='MT',
+                             nguong=[1000, 500], dat_o=100, tmdv=0, sxkd=0, nn_cay=0, nn_rung_nts=0)], 'NQ', 'a.docx')
+        ds = {x['ten']: x for x in gg.ds_xa_cho_goi_cai()}
+        self.assertTrue(ds['Phường Thử Gói']['du'])
+        self.assertFalse(ds['Xã Chỉ Có Giá']['du'])
+
+    def test_xuat_nhap_goi_cai_theo_xa(self):
+        self._nap_cap('Phường A Gói')
+        self._nap_cap('Phường B Gói', gia=2000, k='1.4')
+        p = self.td / 'goi.larcgia'
+        ra = gg.xuat_goi_cai(p, ['Phường A Gói'])
+        self.assertTrue(Path(ra).is_file())
         with self.assertRaises(gg.LoiGoi):
-            gg.tao_goi_tu_he_so_k(gg._gan_san(), 'K_MOI', 'QĐ 15', '01/01/2027')
+            gg.xuat_goi_cai(self.td / 'thieu.larcgia', ['Xã Không Có'])
+        # máy khác: thư mục máy trống
+        os.environ['PABT_THU_MUC_MAY'] = str(self.td / 'may_khac')
+        gg._quen()
+        he_so_k._quen()
+        nq._quen()
+        kq = gg.nhap_goi_cai(ra, bo_sung=True)
+        self.assertEqual(kq['xa'], ['Phường A Gói'])
+        self.assertTrue(any(nq.khop_xa('A Gói', x) for x in nq.ds_xa()))
+        self.assertFalse(any(nq.khop_xa('B Gói', x) for x in nq.ds_xa()))
+        self.assertTrue(any('A Gói' in (r.get('dia_ban') or '') for r in he_so_k.tat_ca()))
+        self.assertTrue(any(x['ma'] == kq['goi_ma'] for x in gg.ds_goi()))
+        # bảng tính hiện xã vừa cài
+        self.assertTrue(any('A Gói' in x for x in g.ds_dia_ban()))
 
 
 class TestDongBoMayChu(CoMay):
@@ -352,6 +428,25 @@ class TestManHinh(CoMay):
         HopGoiGiaDat.__init__(h, None, ma)
         self.addCleanup(h.close)
         return h
+
+    def test_nut_xuat_nhap_goi_cai_va_bang_tinh_co_xa_moi(self):
+        from pabt.man_hinh_goi_gia_dat import HopChonXaGoiCai
+        nq.ghi_bo_sung([dict(xa='Phường UI Gói', tt=1, ten_duong='Đường UI', diem_dau='A', diem_cuoi='B', vi_tri='MT',
+                             nguong=[1000, 500], dat_o=1000, tmdv=800, sxkd=700, nn_cay=100, nn_rung_nts=50)], 'NQ', 'u.docx')
+        he_so_k.ghi([dict(dia_ban='Phường UI Gói', tt=1, loai_dat=n, vi_tri='MT', tuyen_duong='Đường UI',
+                          diem_dau='A', diem_cuoi='B', he_so='1.2', ghi_chu='') for n in ('dat_o', 'nn_cay')],
+                    'Quyết định số 03/2026/QĐ-UBND')
+        hop = self._hop_goi()
+        self.assertTrue(hasattr(hop, 'b_xuat_cai') and hasattr(hop, 'b_nhap_cai'))
+        p = self.td / 'ui.larcgia'
+        self.assertTrue(hop.xuat_goi_cai(str(p), ['Phường UI Gói']))
+        h = HopChonXaGoiCai(None)
+        h.im_lang = True
+        self.addCleanup(h.close)
+        self.assertGreaterEqual(h.bang.rowCount(), 1)
+        tinh = self._hop_tinh()
+        ten = [tinh.cb_dia_ban.itemText(i) for i in range(tinh.cb_dia_ban.count())]
+        self.assertTrue(any('UI Gói' in x for x in ten))
 
     def test_doi_goi_dung_lai_o_chon_va_tinh_theo_goi(self):
         moi = self.goi_moi()

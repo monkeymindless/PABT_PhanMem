@@ -222,8 +222,10 @@ class TestNhapHangLoat(unittest.TestCase):
             con.close()
             p = csdl.hoan_tat_tao_moi(tam, Path(td) / 'a.pabt')
             c2 = csdl.mo(p)
-            self.assertEqual(c2.execute('PRAGMA journal_mode').fetchone()[0], 'delete')   # file thật: như cũ
-            c2.close()
+            try:
+                self.assertEqual(c2.execute('PRAGMA journal_mode').fetchone()[0], 'delete')   # file thật: như cũ (1.0.90 thử TRUNCATE - lỗi khi máy khác ghi)
+            finally:
+                c2.close()
 
     def test_chuan_hoa_nho_giong_cu(self):
         from pabt.nhap_excel import chuan_hoa
