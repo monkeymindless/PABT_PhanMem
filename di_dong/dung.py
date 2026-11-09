@@ -21,6 +21,7 @@ matkhau.txt cạnh nó; chưa có thì tạo). GIỮ KỸ khóa này: bản cậ
 from __future__ import annotations
 import json
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -62,6 +63,8 @@ def _noi_mac_dinh(*ten) -> Path:
 CONG_CU = Path(os.environ.get('LARC_ANDROID') or _noi_mac_dinh('cong_cu_android'))
 KHOA = Path(os.environ.get('LARC_KHOA_APK') or _noi_mac_dinh('khoa_android', 'larc_field.jks'))
 BIET_DANH = 'larc_field'
+# SHA-256 chứng chỉ ký của LARC Mobile đang phát hành (Pages) - đổi = điện thoại đã cài phải gỡ.
+CHUNG_CHI_PHAT_HANH = '07c02414c3f499ae167f2ef03298d7e4201f3a8bfe03a19dd03ee4cea0bb19a9'
 RA = REPO / 'bo_cai'
 API_MIN, API_DICH, BUILD_TOOLS = 24, 34, '34.0.0'
 CHE_DO = ('pwa', 'android')
@@ -263,6 +266,20 @@ def khoa_ky(cc: dict) -> tuple:
     return KHOA, mk
 
 
+def kiem_chung_chi(cc: dict, apk: Path) -> str:
+    """Dừng nếu APK không ký bằng chứng chỉ đang phát hành (CHUNG_CHI_PHAT_HANH). 1.0.91: thư mục cha của repo có một
+    khoa_android khác (tạo 05/11/2026) mà _noi_mac_dinh ưu tiên - ký nhầm thì điện thoại đã cài không cài đè được.
+    Chủ ý đổi khóa: LARC_TAO_KHOA_MOI=1."""
+    kq = subprocess.run([str(cc['java']), '-jar', str(cc['apksigner']), 'verify', '--print-certs', str(apk)],
+                        capture_output=True, text=True, encoding='utf-8', errors='replace')
+    m = re.search(r'certificate SHA-256 digest:\s*([0-9a-f]+)', kq.stdout)
+    so = m.group(1) if m else ''
+    if so != CHUNG_CHI_PHAT_HANH and os.environ.get('LARC_TAO_KHOA_MOI') != '1':
+        raise SystemExit(f'APK ký bằng chứng chỉ {so[:8] or "?"}…, không phải chứng chỉ đang phát hành {CHUNG_CHI_PHAT_HANH[:8]}… '
+                         f'(khóa {KHOA}). Đặt LARC_KHOA_APK trỏ tới khóa đúng.')
+    return so
+
+
 def dung_pwa(ver: str = PHIEN_BAN) -> Path:
     ra = RA / f'LARC_Mobile_PWA_{ver}.zip'
     RA.mkdir(parents=True, exist_ok=True)
@@ -317,6 +334,7 @@ def dung_apk(ver: str = PHIEN_BAN) -> Path:
         _chay([cc['java'], '-jar', cc['apksigner'], 'sign', '--ks', khoa, '--ks-key-alias', BIET_DANH, '--ks-pass', f'pass:{mk}',
                '--key-pass', f'pass:{mk}', '--out', t / 'da_ky.apk', t / 'can.apk'])
         _chay([cc['java'], '-jar', cc['apksigner'], 'verify', '--min-sdk-version', API_MIN, t / 'da_ky.apk'])
+        kiem_chung_chi(cc, t / 'da_ky.apk')
         shutil.copy(t / 'da_ky.apk', ra.with_name(ra.name + '.tmp'))
         ra.with_name(ra.name + '.tmp').replace(ra)
     print('APK:', ra, f'({ra.stat().st_size // 1024} KB)')
