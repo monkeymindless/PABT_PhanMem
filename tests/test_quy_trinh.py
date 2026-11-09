@@ -203,7 +203,7 @@ class TestBuongLai(unittest.TestCase):
         from pabt import quan_ly
         tq = self.w.tong_quan
         ma = [r[0] for r in self.w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu')]
-        dt = quan_ly.tao_dot(self.w.con, 'Đợt trình 1')
+        dt = quan_ly.tao_dot(self.w.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.w.con, ma[:3], dt)
         tq._nap_pheu(self.w.con, {m: 'da_lap' for m in ma})
         self.app.processEvents()

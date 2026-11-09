@@ -45,6 +45,7 @@ CHU_THICH_MOC = {
 CO = (                                          # cờ "cần kiểm tra" - không đổi giai đoạn
     ('xu_ly_khi_chua_co_pa', 'Đã đưa vào đợt niêm yết / đợt trình nhưng chưa có dòng phương án'),
     ('trinh_thieu_y_kien', 'Đã trình nhưng ý kiến niêm yết còn "chưa lấy"'),
+    ('xep_dot_chua_trinh', 'Đã xếp vào đợt trình nhưng đợt chưa có số, ngày văn bản trình (chưa trình)'),
     ('pa_0_dong', 'Có dòng phương án nhưng tổng 0 đồng'),
     ('tu_lap', 'Phần mềm tự lập, chưa soát lại'),
     ('ngay_bg_chua_qd', 'Có ngày bàn giao nhưng chưa có quyết định phê duyệt'),
@@ -235,12 +236,15 @@ def _tinh(con, lap: dict | None, che_do: str, tong_hop: list | None) -> KetQuaPh
         c = _cot(con, 'y_kien_du_thao')
         lan_sql = 'lan' if 'lan' in c else 'NULL'
         chuyen = 'chuyen_dot_id' if 'chuyen_dot_id' in c else 'NULL'
-        for r in con.execute(f'SELECT ma_ho, {lan_sql}, dot_id, loai, {chuyen} FROM y_kien_du_thao ORDER BY dot_id, id'):
+        from .du_thao import hieu_luc                 # 1.0.91: ý kiến sau đối thoại thay ý kiến lần lấy ý kiến
+        for r in con.execute(f'SELECT ma_ho, {lan_sql}, dot_id, {hieu_luc(con)}, {chuyen} FROM y_kien_du_thao ORDER BY dot_id, id'):
             k = (r[0], int(r[1] or 1))
             if r[4] is not None and k in y_kien:
                 continue                        # dòng đã chuyển sang đợt sau: giữ dòng của đợt mới (đọc sau)
             if r[4] is None or k not in y_kien:
                 y_kien[k] = (r[2], r[3] or 'chua')
+    from .quan_ly import dot_co_van_ban_trinh
+    dot_vb = dot_co_van_ban_trinh(con)          # 1.0.91: chỉ đợt có số + ngày văn bản trình là đã trình (B8)
     kq = []
     for x in tong_hop:
         ma = x.ma_ho
@@ -270,6 +274,9 @@ def _tinh(con, lap: dict | None, che_do: str, tong_hop: list | None) -> KetQuaPh
         dot_trinh = pl.get(lan, (False, 0, None))[2]
         if dot_trinh is None and not co_qd and dot_id_ho is not None:
             dot_trinh = dot_id_ho               # hộ chưa có quyết định nào: đợt trình của hộ là đợt của lần đang xét
+        if dot_trinh is not None and dot_trinh not in dot_vb:
+            h.co.add('xep_dot_chua_trinh')      # mới xếp đợt, chưa có tờ trình: chưa phải đã trình
+            dot_trinh = None
         h.dot_trinh = dot_trinh
         if lan in qd_lan:
             if any(not q['da_chi_tra'] for q in qd_lan[lan]):

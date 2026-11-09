@@ -160,6 +160,11 @@ class HopYKien(QDialog):
         self.tien = QLineEdit(str(ho['so_tien_chenh'] or '0'))
         self.ngay_dt = QLineEdit()
         self.ngay_dt.setPlaceholderText('Ngày đối thoại, nếu có')
+        self.yk_dt = QComboBox()                        # 1.0.91: ý kiến của hộ sau đối thoại
+        for k, t in du_thao.LOAI_SAU_DOI_THOAI:
+            self.yk_dt.addItem(t, k)
+        self.yk_dt.setCurrentIndex(max(0, self.yk_dt.findData(ho.get('y_kien_doi_thoai') or '')))
+        self.yk_dt.setToolTip('Ý kiến của hộ sau khi đối thoại, vận động (lần lấy ý kiến không đồng ý, đối thoại xong có thể đồng ý)')
         f = QVBoxLayout(self)
         h = QHBoxLayout()
         h.addWidget(QLabel('Ý kiến:'))
@@ -175,6 +180,8 @@ class HopYKien(QDialog):
         h2.addWidget(QLabel('Chênh lệch tiền (đồng):'))
         h2.addWidget(self.tien)
         h2.addWidget(self.ngay_dt)
+        h2.addWidget(QLabel('Sau đối thoại:'))
+        h2.addWidget(self.yk_dt)
         f.addLayout(h2)
         b = QPushButton('Lưu')
         b.clicked.connect(self.accept)
@@ -534,8 +541,9 @@ class KhungDuThao(QWidget):
         san_tieu_de(self.bang_ny)
         self.bang_yk = _bang(['Mã hộ', 'Họ và tên', 'Ý kiến', 'Nhóm kiến nghị', 'Nội dung', 'Chênh lệch'],
                              [70, 160, 145, 150, 0, 120], gian=4)
-        self.bang_dt = _bang(['Mã hộ', 'Họ và tên', 'Lý do chưa đồng ý', 'Lần đối thoại', 'Kết luận', 'Chuyển đợt'],
-                             [70, 160, 180, 95, 0, 110], gian=4)
+        # 1.0.91 (người dùng 09/11/2026): ý kiến lần lấy ý kiến và ý kiến SAU đối thoại (lần 1 không đồng ý, đối thoại xong đồng ý)
+        self.bang_dt = _bang(['Mã hộ', 'Họ và tên', 'Ý kiến lần đầu', 'Lý do chưa đồng ý', 'Lần đối thoại', 'Ý kiến sau đối thoại', 'Kết luận',
+                              'Chuyển đợt'], [70, 160, 130, 180, 95, 160, 0, 100], gian=6)
         self.bang_th = _bang(['Nhóm lý do kiến nghị', 'Số hộ kiến nghị', 'Đã đồng thuận', 'Chưa đồng thuận', 'Tỷ lệ đồng thuận',
                               'Nội dung tiêu biểu'], [200, 80, 90, 90, 90], gian=5)
         self.bang_th.setProperty('the_tong_hop', True)
@@ -543,6 +551,8 @@ class KhungDuThao(QWidget):
         # 1.0.03: Ý kiến / Nhóm vướng vẽ viên thuốc màu, Tỷ lệ đồng thuận có thanh tỷ trọng; bảng trống có lời hướng dẫn
         from .giao_dien import gan_chu_khi_trong, gan_thanh_ty_le, gan_vien_thuoc
         gan_vien_thuoc(self.bang_yk, 2)
+        gan_vien_thuoc(self.bang_dt, 2)
+        gan_vien_thuoc(self.bang_dt, 5)
         gan_vien_thuoc(self.bang_vm, 3)
         gan_thanh_ty_le(self.bang_th, 4, mau='#1F6F66')
         gan_chu_khi_trong(self.bang_ny, 'Chưa có hộ trong đợt niêm yết',
@@ -615,7 +625,14 @@ class KhungDuThao(QWidget):
         ph.setContext(Qt.ShortcutContext.WidgetShortcut)
         ph.activated.connect(self._phim_y_kien)
         self._phim_yk = ph
-        self.bang_dt.cellDoubleClicked.connect(lambda r, c: self._sua_yk(self.bang_dt, r))
+        self.bang_dt.setToolTip('Bấm ô "Ý kiến sau đối thoại" (hoặc phím Space) để đổi: Chưa đối thoại → Đồng ý → Không đồng ý → Ý kiến '
+                                'khác. Bấm đúp ô khác để ghi biên bản đối thoại (ngày, kết luận, ý kiến của hộ).')
+        self.bang_dt.cellClicked.connect(lambda r, c: self._doi_nhanh_dt(r) if c == 5 else None)
+        self.bang_dt.cellDoubleClicked.connect(lambda r, c: None if c == 5 else self._sua_yk(self.bang_dt, r))
+        pd = QShortcut(QKeySequence(Qt.Key.Key_Space), self.bang_dt)
+        pd.setContext(Qt.ShortcutContext.WidgetShortcut)
+        pd.activated.connect(lambda: self._doi_nhanh_dt(self.bang_dt.currentRow()) if self.bang_dt.currentColumn() == 5 else None)
+        self._phim_dt = pd
         # 30/10/2026 (người dùng): Hộ vướng cũng một chạm như cột Ý kiến - bấm ô "Nhóm vướng" (hoặc Space) đổi trạng thái
         self._vm_giu = set()                            # hộ vừa đổi sang Đủ điều kiện: vẫn hiện tới khi mở lại trang
         self.bang_vm.setToolTip('Bấm ô "Nhóm vướng" (hoặc phím Space) để đổi: Chưa đánh dấu → Đủ điều kiện → V1 … V5 → Chưa đánh dấu. '
@@ -933,10 +950,16 @@ class KhungDuThao(QWidget):
         chua_dong = [h for h in ho if h['loai'] in ('khong_dong_y', 'y_kien_khac')]
         self.bang_dt.setRowCount(len(chua_dong))
         for i, h in enumerate(chua_dong):
-            for c, v in enumerate((h['ma_ho'], h['ho_ten'], h['noi_dung'], h['lan_dt'], h['ket_qua_doi_thoai'],
+            sau = h.get('y_kien_doi_thoai') or ''
+            for c, v in enumerate((h['ma_ho'], h['ho_ten'], '● ' + du_thao.TEN_LOAI.get(h['loai'], ''), h['noi_dung'], h['lan_dt'],
+                                   '● ' + du_thao.TEN_SAU_DOI_THOAI.get(sau, ''), h['ket_qua_doi_thoai'],
                                    'Đã chuyển' if h['chuyen_dot_id'] else '')):
                 self.bang_dt.setItem(i, c, _o(v))
             self.bang_dt.item(i, 0).setData(Qt.ItemDataRole.UserRole, h['ma_ho'])
+            for c, k in ((2, h['loai']), (5, sau or 'chua')):
+                it = self.bang_dt.item(i, c)
+                it.setForeground(QBrush(QColor(mau_theo_tong(MAU_Y_KIEN.get(k, '#64748B'), 'chu'))))
+            self.bang_dt.item(i, 5).setToolTip('Bấm để đổi ý kiến sau đối thoại (hoặc phím Space)')
         nhom = du_thao.tong_hop_nhom(self.con, dot)                     # tỷ lệ đồng thuận theo nhóm lý do (0.9.75)
         self.bang_th.setRowCount(len(nhom))
         for i, x in enumerate(nhom):
@@ -1156,8 +1179,11 @@ class KhungDuThao(QWidget):
         try:
             du_thao.ghi_y_kien(self.con, self._dot_id(), h['ma_ho'], d.loai.currentData(), d.nhom.currentData(),
                                d.nd.toPlainText(), tien_chenh=d.tien.text(), ket_qua=d.kq.toPlainText())
-            if d.ngay_dt.text().strip() and d.kq.toPlainText().strip():
-                du_thao.ghi_doi_thoai(self.con, self._dot_id(), h['ma_ho'], d.ngay_dt.text(), '', d.kq.toPlainText())
+            sau = d.yk_dt.currentData() or ''
+            if d.ngay_dt.text().strip() and (d.kq.toPlainText().strip() or sau):
+                du_thao.ghi_doi_thoai(self.con, self._dot_id(), h['ma_ho'], d.ngay_dt.text(), '', d.kq.toPlainText(), y_kien=sau)
+            elif sau != (h.get('y_kien_doi_thoai') or ''):
+                du_thao.dat_y_kien_sau_doi_thoai(self.con, self._dot_id(), h['ma_ho'], sau)
         except du_thao.LoiNhap as e:
             self._loi(e)
             return
@@ -1180,6 +1206,27 @@ class KhungDuThao(QWidget):
         self.bang_yk.selectRow(r)
         self.bang_yk.setCurrentCell(r, 2)
         return loai
+
+    def _doi_nhanh_dt(self, r: int):
+        """Một chạm (1.0.91): đổi ý kiến SAU ĐỐI THOẠI của hộ ở dòng r (thẻ Đối thoại & Tiếp thu), giữ dòng đang chọn. Trả ý kiến mới."""
+        it = self.bang_dt.item(r, 0) if r >= 0 else None
+        dot = self._dot_id()
+        if self.chi_doc or it is None or not dot:
+            return None
+        ma = it.data(Qt.ItemDataRole.UserRole)
+        try:
+            moi = du_thao.doi_y_kien_sau_doi_thoai_nhanh(self.con, dot, ma)
+        except du_thao.LoiNhap as e:
+            self._loi(e)
+            return None
+        self.thay_doi_csdl = True
+        self._ve()
+        for i in range(self.bang_dt.rowCount()):
+            o = self.bang_dt.item(i, 0)
+            if o is not None and o.data(Qt.ItemDataRole.UserRole) == ma:
+                self.bang_dt.setCurrentCell(i, 5)
+                break
+        return moi
 
     def _doi_vuong(self, r: int):
         """Một chạm: đổi trạng thái pháp lý của hộ ở dòng r (bảng Hộ vướng), giữ dòng đang chọn. Trả trạng thái mới."""

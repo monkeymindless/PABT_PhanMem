@@ -294,6 +294,7 @@ CREATE TABLE IF NOT EXISTS y_kien_du_thao (
     chuyen_dot_id INTEGER,
     ngay_cap_nhat TEXT NOT NULL DEFAULT '',
     lan INTEGER,                                      -- 30/10/2026: lần phương án được niêm yết (NULL = dòng cũ = lần 1)
+    y_kien_doi_thoai TEXT NOT NULL DEFAULT '',        -- 1.0.91: ý kiến sau đối thoại ('' = chưa đối thoại)
     UNIQUE (dot_id, ma_ho)
 );
 CREATE TABLE IF NOT EXISTS doi_thoai_ho (
@@ -306,7 +307,8 @@ CREATE TABLE IF NOT EXISTS doi_thoai_ho (
     thanh_phan TEXT NOT NULL DEFAULT '',
     dien_bien TEXT NOT NULL DEFAULT '',
     ket_luan TEXT NOT NULL DEFAULT '',
-    bien_ban_so TEXT NOT NULL DEFAULT ''
+    bien_ban_so TEXT NOT NULL DEFAULT '',
+    y_kien TEXT NOT NULL DEFAULT ''                    -- 1.0.91: ý kiến của hộ ở lần đối thoại này
 );
 CREATE INDEX IF NOT EXISTS ix_ykien_dot_ho ON y_kien_du_thao(dot_id, ma_ho);
 CREATE INDEX IF NOT EXISTS ix_doithoai_ho ON doi_thoai_ho(dot_id, ma_ho);

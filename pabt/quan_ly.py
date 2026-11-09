@@ -173,6 +173,15 @@ def _truong_dot(ngay_trinh, so_to_trinh, ghi_chu, loai_van_ban, so_pa_tong, ngay
             chuan_ngay(ngay_pa_tong))
 
 
+def dot_co_van_ban_trinh(con) -> set:
+    """Id các đợt trình ĐÃ TRÌNH THẬT (Bước 8 QĐ 18/2026): có văn bản trình - đủ số và ngày tờ trình / văn bản. Đợt chỉ mới xếp hộ (chưa có
+    số, ngày) chưa phải đã trình (người dùng 09/11/2026: "chưa có văn bản trình mà 6 nấc đã ghi đã trình"). File cũ không có bảng: rỗng."""
+    try:
+        return {r[0] for r in con.execute("SELECT id FROM dot_trinh WHERE TRIM(so_to_trinh) <> '' AND TRIM(ngay_trinh) <> ''")}
+    except sqlite3.OperationalError:
+        return set()
+
+
 def tao_dot(con, ten: str = '', ngay_trinh: str = '', so_to_trinh: str = '', ghi_chu: str = '', loai_van_ban: str = 'Tờ trình',
             so_pa_tong: str = '', ngay_pa_tong: str = '', ky_hieu_so: str | None = None) -> int:
     """ky_hieu_so None: lấy ký hiệu của đợt gần nhất, không có thì của dự án (cột du_an cũ / tổ chức mặc định)."""

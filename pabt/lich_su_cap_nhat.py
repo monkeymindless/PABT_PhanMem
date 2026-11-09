@@ -7,6 +7,10 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.91', '09/11/2026', (
+        'Đối thoại ghi được ý kiến của hộ SAU đối thoại (lấy ý kiến không đồng ý, đối thoại xong đồng ý): cột Ý kiến sau đối thoại ở thẻ 3 bấm một chạm, ô Sau đối thoại trong hộp ghi biên bản; tỷ lệ đồng thuận, tổng hợp ý kiến, lọc hộ, chuyển đợt tính theo ý kiến sau đối thoại, ý kiến lần đầu giữ làm chứng cứ.',
+        'Thang 6 nấc theo đúng trình tự QĐ 18/2026: hộ chỉ được tính Đã trình thẩm định (B8) khi đợt trình có văn bản trình (số và ngày tờ trình); mới xếp vào đợt trình thì vẫn ở bước niêm yết, lấy ý kiến, đối thoại (B6-7) và ghi rõ chưa có tờ trình. Trạng thái nấc 2 ghi đúng việc đã làm: đang lấy ý kiến / đã lấy ý kiến (đồng ý, không đồng ý cần đối thoại) / đã đối thoại; cảnh báo trình khi chưa có ý kiến hoặc chưa đối thoại.',
+    )),
     ('1.0.90', '09/11/2026', (
         'Gói cài giá đất (.larcgia): xuất rồi nhập lại không còn báo "số TT phải tăng dần" (đoạn đường bị tách đôi do Phụ lục I.1 / I.2 ghi khác dấu câu); gói đã xuất từ bản cũ tự gộp khi nhập. Tạo gói từ bảng hệ số K toàn tỉnh được: đoạn có hệ số K khác nhau theo vị trí giữ riêng từng vị trí.',
         'Bảng giá đất đọc từ Nghị quyết phân loại theo PHỤ LỤC: chỉ lấy Phụ lục I (nông nghiệp) và III (phi nông nghiệp) - không còn lẫn dòng đảo / cù lao, khu công nghiệp, tái định cư vào bảng đường của xã; giá đất ở tra ở Phụ lục III, đất nông nghiệp ở Phụ lục I; ô Tên đường bỏ trống hoặc dòng mặt tiền thiếu ở một phụ lục lấy theo phụ lục kia; hai đoạn ghi cùng chữ ở hai số TT không bị gộp mất. Nên đọc lại file bảng giá NQ 28 để cập nhật bảng đang dùng.',

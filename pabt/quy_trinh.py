@@ -154,6 +154,13 @@ def _dem(con, sql: str, ts=()) -> int:
         return 0
 
 
+def _cac_dong(con, sql: str, ts=()) -> list:
+    try:
+        return con.execute(sql, ts).fetchall()
+    except Exception:                                   # noqa: BLE001 - file cũ thiếu bảng / cột
+        return []
+
+
 def _tien_do(t: TrangThaiBuoc, xong: int, tong: int, chu: str) -> None:
     t.xong, t.tong = xong, tong
     t.mo_ta = f'{xong} / {tong} {chu}'
@@ -265,8 +272,15 @@ def tinh(con, dong: list | None = None, lap: dict | None = None, hom_nay=None) -
         t.dieu_kien = [(False, 'Có hộ đã niêm yết và có ý kiến')]
 
     # 8. trình thẩm định (đợt trình), 9. quyết định phê duyệt
-    so_dot_trinh = _dem(con, 'SELECT COUNT(*) FROM dot_trinh')
-    ho_trinh = _dem(con, 'SELECT COUNT(*) FROM ho WHERE dot_id IS NOT NULL')
+    # 1.0.91 (người dùng 09/11/2026): ĐÃ TRÌNH = đợt có văn bản trình (số + ngày tờ trình); đợt mới xếp hộ chưa tính
+    from .quan_ly import dot_co_van_ban_trinh
+    dot_vb = dot_co_van_ban_trinh(con)
+    so_dot_trinh = len(dot_vb)
+    ho_trinh = sum(1 for r in _cac_dong(con, 'SELECT dot_id FROM ho WHERE dot_id IS NOT NULL') if r[0] in dot_vb)
+    dot_chua_vb = _dem(con, 'SELECT COUNT(*) FROM dot_trinh') - so_dot_trinh
+    if dot_chua_vb > 0:
+        viec.append(Viec(8, f'{dot_chua_vb} đợt trình chưa có số, ngày văn bản trình: hộ trong đợt chưa tính là đã trình', 'nhac',
+                         LENH_BUOC[8], dot_chua_vb))
     pd = sum(1 for d in dong if d.get('da_phe_duyet'))
     t = T[8]
     _tien_do(t, max(ho_trinh, pd), co_pa, 'hộ có phương án đã trình thẩm định')

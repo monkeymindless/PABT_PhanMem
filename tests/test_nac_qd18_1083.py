@@ -96,8 +96,17 @@ class TestThangSauNac(unittest.TestCase):
         self.assertTrue(x.da_niem_yet)
         self.assertFalse(x.da_trinh)
         self.assertEqual(x.tien_do.nac, 2)
+        # 1.0.91: xếp vào đợt trình CHƯA có số / ngày tờ trình -> chưa trình (vẫn nấc 2, chữ nói rõ)
         with con:
+            con.execute("INSERT INTO dot_trinh (id, so, ten) VALUES (4, 1, 'Đợt trình 1')")
             con.execute('UPDATE ho SET dot_id = 4 WHERE ma_ho = ?', (ma,))
+        x = next(h for h in theo_doi.tong_hop(con, [ma], tinh_pa=False) if h.ma_ho == ma)
+        self.assertFalse(x.da_trinh)
+        self.assertTrue(x.xep_dot_trinh)
+        self.assertEqual(x.tien_do.nac, 2)
+        self.assertIn('chưa có tờ trình', x.trang_thai)
+        with con:
+            con.execute("UPDATE dot_trinh SET so_to_trinh = '15/TTr-BBT', ngay_trinh = '2026-11-01' WHERE id = 4")
         x = next(h for h in theo_doi.tong_hop(con, [ma], tinh_pa=False) if h.ma_ho == ma)
         self.assertTrue(x.da_trinh)
         self.assertEqual(x.tien_do.nac, 3)

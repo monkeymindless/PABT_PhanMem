@@ -69,7 +69,7 @@ class TestPheu(_Co):
         for m in (a, b, c):
             du_thao.doi_y_kien_nhanh(self.con, ny, m)                   # chua -> dong_y
         self.assertEqual(self.pheu().dem()['cho_trinh'], 3)
-        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1')
+        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.con, [a, b, d], dt)                        # d chưa có ý kiến
         kq = self.pheu()
         self.assertEqual(kq.dem()['cho_phe_duyet'], 3)
@@ -88,7 +88,7 @@ class TestPheu(_Co):
 
     def test_phuong_an_bo_sung_xet_theo_lan_dang_mo(self):
         a = self.ma[0]
-        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1')
+        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.con, [a], dt)
         q = theo_doi.luu_qd(self.con, None, '1/QĐ-UBND', '05/10/2026')
         theo_doi.them_ho_theo_pa(self.con, q, [a])
@@ -109,7 +109,7 @@ class TestPheu(_Co):
         self.assertEqual(self.con.execute('SELECT lan FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (ny, a)).fetchone()[0], 2)
         self.assertEqual(self.gd(self.pheu(), a).giai_doan, 'niem_yet')
         du_thao.doi_y_kien_nhanh(self.con, ny, a)
-        dt2 = quan_ly.tao_dot(self.con, 'Đợt trình 2')
+        dt2 = quan_ly.tao_dot(self.con, 'Đợt trình 2', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.con, [a], dt2)
         h = self.gd(self.pheu(), a)
         self.assertEqual((h.giai_doan, h.dot_trinh), ('cho_phe_duyet', dt2))
@@ -120,7 +120,7 @@ class TestPheu(_Co):
 
     def test_xoa_dot_trinh_xoa_theo_lan(self):
         a = self.ma[0]
-        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1')
+        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.con, [a], dt)
         quan_ly.xoa_dot(self.con, dt)
         self.assertIsNone(self.con.execute('SELECT dot_trinh_id FROM pa_lan WHERE ma_ho = ? AND lan = 1', (a,)).fetchone()[0])
@@ -139,7 +139,7 @@ class TestPheu(_Co):
     def test_da_lap_niem_yet_dem_luy_ke_khi_da_trinh(self):
         """Ô Đã lập / Niêm yết = lũy kế: hộ đã trình (chờ phê duyệt) vẫn là đã lập và đã niêm yết."""
         a, b, c = self.ma[:3]
-        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1')
+        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.con, [a, b, c], dt)
         kq = self.pheu()
         self.assertEqual(kq.dem()['cho_phe_duyet'], 3)

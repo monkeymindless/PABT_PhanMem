@@ -657,21 +657,29 @@ def dam_bao_cot_pa_lan(con) -> None:
 
 
 # 30/10/2026: lần phương án của dòng ý kiến niêm yết - KHÔNG đổi PHIEN_BAN_CSDL; NULL = dòng cũ (trước khi có cột) = lần 1
-COT_Y_KIEN_THEM = (('lan', 'INTEGER'),)
+COT_Y_KIEN_THEM = (('lan', 'INTEGER'),
+                   # 1.0.91 (người dùng 09/11/2026): ý kiến của hộ SAU đối thoại ('' = chưa đối thoại; ý kiến hiệu lực = cột này, không thì loai)
+                   ('y_kien_doi_thoai', "TEXT NOT NULL DEFAULT ''"))
+COT_DOI_THOAI_THEM = (('y_kien', "TEXT NOT NULL DEFAULT ''"),)      # 1.0.91: ý kiến của hộ ở từng lần đối thoại
+
+
+def _cot_cua(con, bang: str) -> set:
+    return {r[1] for r in con.execute(f'PRAGMA table_info({bang})')}
 
 
 def co_cot_y_kien(con) -> bool:
-    """y_kien_du_thao chưa có (file cũ) hoặc đã đủ cột COT_Y_KIEN_THEM: True (không cần thêm)."""
-    co = {r[1] for r in con.execute('PRAGMA table_info(y_kien_du_thao)')}
-    return not co or all(k in co for k, _ in COT_Y_KIEN_THEM)
+    """y_kien_du_thao / doi_thoai_ho chưa có (file cũ) hoặc đã đủ cột thêm: True (không cần thêm)."""
+    co, dt = _cot_cua(con, 'y_kien_du_thao'), _cot_cua(con, 'doi_thoai_ho')
+    return (not co or all(k in co for k, _ in COT_Y_KIEN_THEM)) and (not dt or all(k in dt for k, _ in COT_DOI_THOAI_THEM))
 
 
 def dam_bao_cot_y_kien(con) -> None:
-    """Thêm cột còn thiếu của y_kien_du_thao (trong giao dịch của nơi gọi). Bảng chưa có: không làm gì."""
-    co = {r[1] for r in con.execute('PRAGMA table_info(y_kien_du_thao)')}
-    for k, kieu in COT_Y_KIEN_THEM:
-        if co and k not in co:
-            con.execute(f'ALTER TABLE y_kien_du_thao ADD COLUMN {k} {kieu}')
+    """Thêm cột còn thiếu của y_kien_du_thao, doi_thoai_ho (trong giao dịch của nơi gọi). Bảng chưa có: không làm gì."""
+    for bang, ds in (('y_kien_du_thao', COT_Y_KIEN_THEM), ('doi_thoai_ho', COT_DOI_THOAI_THEM)):
+        co = _cot_cua(con, bang)
+        for k, kieu in ds:
+            if co and k not in co:
+                con.execute(f'ALTER TABLE {bang} ADD COLUMN {k} {kieu}')
 
 
 def _tao_pa_lan(con) -> None:

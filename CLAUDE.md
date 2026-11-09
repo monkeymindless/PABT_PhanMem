@@ -199,6 +199,9 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   (".600", "5Io") để trống, không đoán.
 - Gói quy tắc: đoạn cùng `tt_bat_dau` chỉ hợp lệ khi khác tuyến; K1 khác theo vị trí -> `k1_theo_vt` (tinh_don_gia đọc); gói cũ tách đôi tự
   gộp khi nhập (`goi_gia_dat.gop_doan_trung`).
+- Trình tự QĐ 18 (1.0.91, người dùng): ĐÃ TRÌNH (B8) = hộ trong đợt trình CÓ văn bản trình (số + ngày) - `quan_ly.dot_co_van_ban_trinh`,
+  dùng chung ở theo_doi / pheu_tien_do / quy_trinh; xếp đợt chưa có tờ trình vẫn là B6-7. Ý kiến đồng thuận = ý kiến HIỆU LỰC (sau đối
+  thoại nếu có, `du_thao.hieu_luc(con)`); cột `loai` là ý kiến lần lấy ý kiến, giữ làm chứng cứ - đếm / lọc đồng thuận mới phải dùng hieu_luc.
 - Mã tài sản: nhà TS, cây CT, vật nuôi VN, chính sách CS, thưởng TH (`ma_tai_san`). Quy ước tương đương do người dùng tự nhập (bộ đơn giá
   không có).
 
