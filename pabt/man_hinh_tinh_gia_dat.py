@@ -396,6 +396,7 @@ class HopTinhGiaDat(QDialog):
         kqg = QGroupBox('Đơn giá đất bồi thường')
         vq = QVBoxLayout(kqg)
         self.lb_gia = QLabel('')
+        self.lb_gia.setWordWrap(True)                       # 1.0.91: đơn giá lớn (chữ 1,8 lần) không đẩy cột thông số rộng quá 1093 x 614
         f_gia = QFont(self.lb_gia.font())
         f_gia.setPointSizeF(f_gia.pointSizeF() * 1.8)
         f_gia.setBold(True)

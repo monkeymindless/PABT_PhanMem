@@ -958,7 +958,7 @@ class KhungDuThao(QWidget):
             self.bang_dt.item(i, 0).setData(Qt.ItemDataRole.UserRole, h['ma_ho'])
             for c, k in ((2, h['loai']), (5, sau or 'chua')):
                 it = self.bang_dt.item(i, c)
-                it.setForeground(QBrush(QColor(mau_theo_tong(MAU_Y_KIEN.get(k, '#64748B'), 'chu'))))
+                it.setForeground(QBrush(QColor(mau_theo_tong(MAU_Y_KIEN.get(k, MAU_Y_KIEN['chua']), 'chu'))))
             self.bang_dt.item(i, 5).setToolTip('Bấm để đổi ý kiến sau đối thoại (hoặc phím Space)')
         nhom = du_thao.tong_hop_nhom(self.con, dot)                     # tỷ lệ đồng thuận theo nhóm lý do (0.9.75)
         self.bang_th.setRowCount(len(nhom))

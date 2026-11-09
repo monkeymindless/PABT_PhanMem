@@ -408,17 +408,17 @@ def _qss_menu_trai(ten: str | None = None) -> str:
     QFrame[vai="menu_trai"] QScrollBar::handle:vertical {{ background: {m['cuon']}; border-radius: 3px; min-height: 24px; }}
     QFrame#vach_menu {{ color: {m['vien']}; margin: 2px 6px; }}
     QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 8px; margin: 0 {LE_VIEN_MENU}px;
-        padding: 2px 6px 2px 10px; text-align: left; font-weight: 500; font-size: 13px; color: {m['chu']}; }}
+        padding: 2px 6px 2px 10px; text-align: left; font-weight: 600; font-size: 13px; color: {m['chu']}; }}
     QToolButton[menu="1"]:focus {{ outline: none; border: 2px solid {m['vach_chon']}; }}
     QToolButton[menu="1"]:hover {{ background: {m['re']}; color: {m['chon_chu']}; }}
     QToolButton[menu="1"]:pressed {{ background: {m['chon_nen']}; }}
     QToolButton[menu="1"]:disabled {{ color: {m['tat']}; background: transparent; border-color: transparent; }}
     QToolButton[menu="1"]:checked {{ background: {m['chon_nen']}; color: {m['chon_chu']}; font-weight: 700; border: 0;
         border-left: 4px solid {m['vach_chon']}; padding-left: 7px; }}
-    QLabel[vai="nhom_menu"] {{ color: {m['nhom']}; font-size: 12px; font-weight: 700; letter-spacing: 0; background: transparent;
-        border: 0; border-radius: 4px; margin: 12px {LE_VIEN_MENU}px 4px {LE_VIEN_MENU}px; padding: 3px 4px; }}
+    QLabel[vai="nhom_menu"] {{ color: {m['nhom']}; font-size: 11px; font-weight: 700; letter-spacing: 0; background: transparent;
+        border: 0; border-radius: 4px; margin: 10px {LE_VIEN_MENU}px 4px {LE_VIEN_MENU}px; padding: 2px 4px; }}
     QLabel[vai="nhom_menu"]:hover {{ background: {m['re']}; }}
-    QLabel[vai="nhom_menu"][dong="1"] {{ color: {m['nhom']}; font-weight: 600; }}'''
+    QLabel[vai="nhom_menu"][dong="1"] {{ color: {m['tat']}; }}'''
 
 
 def mau_menu() -> dict:

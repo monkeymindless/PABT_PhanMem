@@ -56,6 +56,7 @@ class TestGiaoDien(unittest.TestCase):
         from PySide6.QtWidgets import QApplication
         from pabt import giao_dien
         app = QApplication.instance() or QApplication([])
+        da_ap = getattr(app, '_bo_to_mau', None) is not None
         giao_dien.ap_dung(app)
         try:
             self.assertEqual(giao_dien.dat_mat_do('gon'), 'gon')
@@ -68,6 +69,8 @@ class TestGiaoDien(unittest.TestCase):
             self.assertTrue(h.r_mat_do['thoang'].isChecked())
         finally:
             giao_dien.dat_mat_do('chuan')
+            if not da_ap:                   # 1.0.91: gỡ bảng kiểu đã áp (CLAUDE.md) - để lại làm bài đo bố cục chạy sau sai (test_toc_do_1079)
+                giao_dien.bo_ap_dung(app)
 
     def test_qss_tuong_phan_khong_dat_mau(self):
         from pabt import giao_dien
