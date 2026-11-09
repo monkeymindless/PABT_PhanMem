@@ -37,7 +37,7 @@ class TestBangMau(unittest.TestCase):
             self.assertIn('background: #0B1120', day_du)
             self.assertIn('background: #1E293B', day_du)
             self.assertNotRegex(day_du, r'(?<![\w-])color: #0F172A')     # chữ chính sáng (dòng xen kẽ nền tối thì được)
-            self.assertTrue(day_du.endswith(giao_dien.QSS_TOI + giao_dien._qss_menu_trai('toi')))   # khối Tối + menu đặt cuối
+            self.assertTrue(day_du.endswith(giao_dien.QSS_TOI + giao_dien._qss_o_tich_toi() + giao_dien._qss_menu_trai('toi')))   # khối Tối + ô tích Tối (1.0.91) + menu đặt cuối
             self.assertIn('QFrame[vai="menu_trai"] { background: #0F172A;', day_du)
             self.assertIn('background: #2563EB', day_du)                 # màu chính tông Tối (nút đặc)
         finally:
@@ -53,7 +53,7 @@ class TestBangMau(unittest.TestCase):
         q = giao_dien._qss_menu_trai()
         chinh = giao_dien.mau_menu()['chon_chu']          # 1.0.79: chữ menu theo màu chính của phương án Navy
         for chu in ('QFrame[vai="menu_trai"] { background: #E8EEF5', 'border-right: 1px solid #D5DEE8', 'border-radius: 8px',
-                    f'background: #DBEAFE; color: {chinh}', 'border-left: 4px solid #2563EB', f'color: {chinh}; font-size: 11px',
+                    f'background: #DBEAFE; color: {chinh}', 'border-left: 4px solid #2563EB', f'color: {chinh}; font-size: 12px',        # 1.0.91: tiêu đề nhóm 12 px (trước 11 px nhỏ hơn mục lệnh 13 px)
                     'letter-spacing: 0'):
             self.assertIn(chu, q)
         t = giao_dien._qss_menu_trai('titan')

@@ -16,7 +16,16 @@ from . import tiep_nhan_phap_ly as tn
 from .giao_dien import chu_hien, mau_theo_tong
 from .thong_bao import TEN_UD, chu_loi
 
-TEN_THE = ('1. Quy định thu hồi, chủ đầu tư, thời hạn', '2. Hồ sơ pháp lý (32 mục)', '3. Kỹ thuật địa chính',
+# Nhãn rút gọn hiển thị (đầy đủ ở tooltip): nhãn dài bị cắt trong cột nhãn / cột ô tích (Đợt A, 09/11/2026)
+_NHAN_NGAN = {'ngay_chu_truong': ('Ngày QĐ chủ trương', 'dd/mm/yyyy'), 'han_chu_truong': ('Thực hiện đến ngày', 'dd/mm/yyyy'),
+              'so_nq_hdnd': ('Số NQ HĐND', ''), 'ngay_nq_hdnd': ('Ngày thông qua NQ', 'dd/mm/yyyy'),
+              'khoan_79': ('Khoản Điều 79', '1..32'), 'so_chu_truong': ('Số / ngày chủ trương', ''),
+              'quy_mo_dt': ('Quy mô dự kiến (m²)', ''), 'dia_ban': ('Địa bàn (xã, phường)', '')}
+_KT_NGAN = {'kt03': 'Diện tích thu hồi > 0, không vượt diện tích thửa', 'kt04': 'Tổng diện tích bảng kê khớp bản đồ',
+            'kt05': 'Loại đất đúng ký hiệu TT 08/2024/TT-BTNMT', 'kt06': 'Có tên người sử dụng đất từng thửa',
+            'kt07': 'Phân biệt thửa hộ, cá nhân với thửa tổ chức', 'kt09': 'Hệ tọa độ VN-2000, đúng kinh tuyến trục',
+            'kt10': 'Căn cứ pháp lý khác đã ghi chú'}
+TEN_THE = ('1. Quy định thu hồi', '2. Hồ sơ pháp lý (32 mục)', '3. Kỹ thuật địa chính',
            '4. Tổng hợp & xuất văn bản')
 C_CO, C_ND, C_AD, C_GC = 0, 1, 2, 3
 
@@ -59,7 +68,7 @@ class HopTiepNhanPhapLy(QDialog):
             self.nut['Lưu vào dự án'] = b
             h.addWidget(b)
         h.addStretch(1)
-        b = QPushButton('Khởi tạo Dự án Mới (.pabt) từ Hồ sơ này →')
+        b = QPushButton('Tạo dự án từ hồ sơ này')
         b.setToolTip('Mở hộp Dự án mới, điền sẵn tên dự án, chủ đầu tư, địa bàn từ hồ sơ tiếp nhận')
         b.clicked.connect(lambda: self.khoi_tao_du_an())
         b.setEnabled(khoi_tao is not None)
@@ -87,7 +96,11 @@ class HopTiepNhanPhapLy(QDialog):
             o = QLineEdit()
             o.textChanged.connect(lambda _=None: self._doi())
             self.o_da[k] = o
-            f.addRow(f'{ten}:', o)
+            ngan, mau_go = _NHAN_NGAN.get(k, (ten, ''))
+            if mau_go:
+                o.setPlaceholderText(mau_go)
+            o.setToolTip(ten)
+            f.addRow(f'{ngan}:', o)
         self.cb_cdt = QComboBox()
         for k, ten in tn.LOAI_CDT:
             self.cb_cdt.addItem(ten, k)
@@ -96,16 +109,20 @@ class HopTiepNhanPhapLy(QDialog):
         g = QGroupBox('Căn cứ thu hồi đất')
         gl = QVBoxLayout(g)
         self.o_cc = {}
+        from .giao_dien import nut_co_mo_ta
         for k, ten in tn.CAN_CU:
-            o = QCheckBox(ten)
+            tieu, _, mo_ta = ten.partition(' - ')           # "Điều 79 Luật Đất đai 2024 - Thu hồi …": tiêu đề ngắn + mô tả phụ
+            o = QCheckBox(tieu)
+            o.setToolTip(ten)
             o.toggled.connect(lambda _=None: self._doi())
             self.o_cc[k] = o
-            gl.addWidget(o)
+            gl.addWidget(nut_co_mo_ta(o, mo_ta))
         f.addRow(g)
         cuon = QScrollArea()
         cuon.setWidgetResizable(True)
         cuon.setWidget(trai)
-        phai = QGroupBox('Phân tích tự động: trách nhiệm của Tổ chức làm nhiệm vụ bồi thường, thời hạn')
+        phai = QGroupBox('Phân tích tự động')
+        phai.setToolTip('Trách nhiệm của Tổ chức làm nhiệm vụ bồi thường, thời hạn chủ trương / Nghị quyết HĐND')
         pl = QVBoxLayout(phai)
         self.lb_phan_tich = QLabel('')
         self.lb_phan_tich.setWordWrap(True)
@@ -148,7 +165,8 @@ class HopTiepNhanPhapLy(QDialog):
         gl = QVBoxLayout(g)
         self.o_kt = {}
         for k, ten in tn.KY_THUAT:
-            o = QCheckBox(ten)
+            o = QCheckBox(_KT_NGAN.get(k, ten))
+            o.setToolTip(ten)
             o.toggled.connect(lambda _=None: self._doi())
             self.o_kt[k] = o
             gl.addWidget(o)
@@ -188,11 +206,13 @@ class HopTiepNhanPhapLy(QDialog):
         lo.addLayout(luoi, 1)
         g = QGroupBox('Xác nhận')
         gl = QVBoxLayout(g)
-        self.o_du = QCheckBox('Dự án ĐỦ ĐIỀU KIỆN triển khai công tác bồi thường, hỗ trợ, tái định cư')
-        self.o_tien_do = QCheckBox('Dự án ĐẢM BẢO ĐÚNG TIẾN ĐỘ (thời hạn chủ trương, hiệu lực Nghị quyết HĐND)')
-        for o in (self.o_du, self.o_tien_do):
+        from .giao_dien import nut_co_mo_ta
+        self.o_du = QCheckBox('Dự án ĐỦ ĐIỀU KIỆN triển khai')
+        self.o_tien_do = QCheckBox('Dự án ĐẢM BẢO ĐÚNG TIẾN ĐỘ')
+        for o, mo_ta in ((self.o_du, 'Đủ điều kiện triển khai công tác bồi thường, hỗ trợ, tái định cư.'),
+                         (self.o_tien_do, 'Còn trong thời hạn chủ trương, Nghị quyết HĐND còn hiệu lực.')):
             o.toggled.connect(lambda _=None: self._doi())
-            gl.addWidget(o)
+            gl.addWidget(nut_co_mo_ta(o, mo_ta))
         self.lb_danh_gia = QLabel('')
         self.lb_danh_gia.setWordWrap(True)
         gl.addWidget(self.lb_danh_gia)

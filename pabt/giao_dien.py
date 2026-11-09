@@ -408,17 +408,78 @@ def _qss_menu_trai(ten: str | None = None) -> str:
     QFrame[vai="menu_trai"] QScrollBar::handle:vertical {{ background: {m['cuon']}; border-radius: 3px; min-height: 24px; }}
     QFrame#vach_menu {{ color: {m['vien']}; margin: 2px 6px; }}
     QToolButton[menu="1"] {{ background: transparent; border: 1px solid transparent; border-radius: 8px; margin: 0 {LE_VIEN_MENU}px;
-        padding: 2px 6px 2px 10px; text-align: left; font-weight: 600; font-size: 13px; color: {m['chu']}; }}
+        padding: 2px 6px 2px 10px; text-align: left; font-weight: 500; font-size: 13px; color: {m['chu']}; }}
     QToolButton[menu="1"]:focus {{ outline: none; border: 2px solid {m['vach_chon']}; }}
     QToolButton[menu="1"]:hover {{ background: {m['re']}; color: {m['chon_chu']}; }}
     QToolButton[menu="1"]:pressed {{ background: {m['chon_nen']}; }}
     QToolButton[menu="1"]:disabled {{ color: {m['tat']}; background: transparent; border-color: transparent; }}
     QToolButton[menu="1"]:checked {{ background: {m['chon_nen']}; color: {m['chon_chu']}; font-weight: 700; border: 0;
         border-left: 4px solid {m['vach_chon']}; padding-left: 7px; }}
-    QLabel[vai="nhom_menu"] {{ color: {m['nhom']}; font-size: 11px; font-weight: 700; letter-spacing: 0; background: transparent;
-        border: 0; border-radius: 4px; margin: 10px {LE_VIEN_MENU}px 4px {LE_VIEN_MENU}px; padding: 2px 4px; }}
+    QLabel[vai="nhom_menu"] {{ color: {m['nhom']}; font-size: 12px; font-weight: 700; letter-spacing: 0; background: transparent;
+        border: 0; border-radius: 4px; margin: 12px {LE_VIEN_MENU}px 4px {LE_VIEN_MENU}px; padding: 3px 4px; }}
     QLabel[vai="nhom_menu"]:hover {{ background: {m['re']}; }}
-    QLabel[vai="nhom_menu"][dong="1"] {{ color: {m['tat']}; }}'''
+    QLabel[vai="nhom_menu"][dong="1"] {{ color: {m['nhom']}; font-weight: 600; }}'''
+
+
+_O_TICH_TOI = {}        # cờ: đã vẽ bộ ảnh ô tích (thư mục) - vẽ một lần mỗi tiến trình
+
+
+def _anh_o_tich_toi():
+    """Bộ ảnh ô tích / nút chọn cho tông Tối (QSS ::indicator cần ảnh: kiểu gốc của Windows vẽ ô tích không thấy khung trên nền tối). Vẽ bằng
+    QPainter ra thư mục máy, trả thư mục (hoặc None khi chưa có QGuiApplication / không ghi được)."""
+    if 'thu_muc' in _O_TICH_TOI:
+        return _O_TICH_TOI['thu_muc']
+    from PySide6.QtCore import QPointF, QRectF
+    from PySide6.QtGui import QGuiApplication, QPen, QPixmap
+    if QGuiApplication.instance() is None:
+        return None
+    _O_TICH_TOI['thu_muc'] = None
+    try:
+        from . import dia_phuong
+        d = dia_phuong.thu_muc_may() / 'bieu_tuong_o_tich'
+        d.mkdir(parents=True, exist_ok=True)
+        c = 18
+        for ten, (nen, vien, dau) in {'tt': ('#0F172A', '#94A3B8', None), 'tt_chon': ('#2563EB', '#93C5FD', '#FFFFFF'),
+                                      'tt_tat': ('#162033', '#475569', None), 'tt_chon_tat': ('#334155', '#64748B', '#94A3B8')}.items():
+            for hinh in ('vuong', 'tron'):
+                pm = QPixmap(c, c)
+                pm.fill(Qt.GlobalColor.transparent)
+                p = QPainter(pm)
+                p.setRenderHint(QPainter.RenderHint.Antialiasing)
+                p.setPen(QPen(QColor(vien), 1.5))
+                p.setBrush(QColor(nen))
+                r = QRectF(1.5, 1.5, c - 3, c - 3)
+                if hinh == 'vuong':
+                    p.drawRoundedRect(r, 3, 3)
+                    if dau:
+                        p.setPen(QPen(QColor(dau), 2.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+                        p.drawPolyline([QPointF(4.8, 9.4), QPointF(7.8, 12.4), QPointF(13.2, 5.8)])
+                else:
+                    p.drawEllipse(r)
+                    if dau:
+                        p.setPen(Qt.PenStyle.NoPen)
+                        p.setBrush(QColor(dau))
+                        p.drawEllipse(QPointF(c / 2, c / 2), 3.6, 3.6)
+                p.end()
+                pm.save(str(d / f'{hinh}_{ten}.png'))
+        _O_TICH_TOI['thu_muc'] = d.as_posix()
+    except Exception:  # noqa: BLE001 - không vẽ được ảnh thì giữ kiểu gốc
+        _O_TICH_TOI['thu_muc'] = None
+    return _O_TICH_TOI['thu_muc']
+
+
+def _qss_o_tich_toi() -> str:
+    """QSS ô tích / nút chọn tông Tối (khung sáng, ô chọn nền xanh + dấu ✓ trắng); rỗng nếu không vẽ được ảnh."""
+    d = _anh_o_tich_toi()
+    if not d:
+        return ''
+    kq = ''
+    for lop, hinh in (('QCheckBox', 'vuong'), ('QRadioButton', 'tron')):
+        kq += (f'{lop}::indicator {{ width: 18px; height: 18px; image: url({d}/{hinh}_tt.png); }}'
+               f'{lop}::indicator:checked {{ image: url({d}/{hinh}_tt_chon.png); }}'
+               f'{lop}::indicator:disabled {{ image: url({d}/{hinh}_tt_tat.png); }}'
+               f'{lop}::indicator:checked:disabled {{ image: url({d}/{hinh}_tt_chon_tat.png); }}')
+    return kq
 
 
 def mau_menu() -> dict:
@@ -753,7 +814,7 @@ def _qss_day_du() -> str:
         qss = _qss() + _qss_kieu_nut() + QSS_TIEU_DIEM_NUT
     finally:
         TOKEN.update(moi)
-    return ap_tong_nen(qss) + (QSS_TOI if TONG_NEN[0] == 'toi' else '') + _qss_menu_trai()
+    return ap_tong_nen(qss) + (QSS_TOI + _qss_o_tich_toi() if TONG_NEN[0] == 'toi' else '') + _qss_menu_trai()
 
 
 def bang_mau_ung_dung():
@@ -833,6 +894,26 @@ def dat_kieu_theo_tong(w: QWidget, qss: str) -> None:
     # P1: mỗi widget một mục (đặt lại kiểu nhiều lần - nhãn so sánh khái toán đổi màu theo kết quả - không dồn mục cũ)
     _KIEU_THEO_TONG[:] = [x for x in _KIEU_THEO_TONG if x[0]() is not None and x[0]() is not w]
     _KIEU_THEO_TONG.append((weakref.ref(w), qss))
+
+
+def nut_co_mo_ta(nut, mo_ta: str) -> QWidget:
+    """Ô tích / nút chọn có DÒNG MÔ TẢ PHỤ (Đợt B 09/11/2026): tiêu đề ngắn trên nút, giải thích dài xuống dòng bên dưới (chữ phụ 12 px,
+    thụt theo chữ nút, tự xuống dòng - không bị cắt, không làm nút rộng thêm). Trả về khung chứa; thêm KHUNG vào bố cục, giữ `nut` để đọc
+    trạng thái. Mô tả cũng là tooltip của nút."""
+    w = QWidget()
+    v = QVBoxLayout(w)
+    v.setContentsMargins(0, 0, 0, 0)
+    v.setSpacing(0)
+    v.addWidget(nut)
+    if mo_ta:
+        lb = QLabel(mo_ta)
+        lb.setWordWrap(True)
+        lb.setContentsMargins(24, 0, 0, 4)
+        dat_kieu_theo_tong(lb, f'QLabel {{ color: {TOKEN["chu_phu"]}; background: transparent; font-size: 12px; }}')
+        v.addWidget(lb)
+        if not nut.toolTip():
+            nut.setToolTip(mo_ta)
+    return w
 
 
 def _dat_kieu_co_gian(w: QWidget, qss: str) -> None:

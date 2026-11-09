@@ -34,7 +34,7 @@ class HopDonGiaRieng(QDialog):
         self.resize(1250, 680)
         self.tab = QTabWidget()
         self.tab.addTab(self._the_quy_uoc(), 'Quy ước giá tương đương')
-        self.tab.addTab(self._the_tham_dinh(), 'Nhập đơn giá thẩm định (tài sản đặc biệt)')
+        self.tab.addTab(self._the_tham_dinh(), 'Đơn giá thẩm định')
         self.tab.setCurrentIndex(the)
         b_dong = QPushButton('Đóng')
         b_dong.clicked.connect(self.reject)

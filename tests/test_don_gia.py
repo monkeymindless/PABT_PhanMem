@@ -276,7 +276,7 @@ class TestManHinhMoi(CoSo):
                          sqlite3.connect(don_gia.file_goc()).execute('SELECT COUNT(*) FROM dm_taisan').fetchone()[0])
         # 0.9.73: Cập nhật = nạp file / sao lưu (bỏ web, tra cứu trình duyệt); bỏ nút Giá đất, Đơn giá riêng (menu trái có)
         self.assertEqual([a.text() for a in d.b_cap.menu().actions() if a.text()],
-                         ['Nạp từ file định mức (Excel, Word, PDF, gói .sqlite, CSV)…',
+                         ['Nạp từ file định mức…',
                           'Nạp từ file — thay cả nhóm theo văn bản mới…',
                           'Dán bảng / văn bản đơn giá (Ctrl+Shift+V)',
                           'Sao lưu bộ đơn giá ra file (.sqlite / Excel)…'])          # 1.0.46: thêm nạp thay cả nhóm

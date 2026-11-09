@@ -166,7 +166,7 @@ class HopTroLy(QDialog):
         self.cb_mh.setCurrentIndex(self.cb_mh.findData(cd['mo_hinh']))
         self.cb_mh.activated.connect(lambda _: tro_ly.ghi_cai_dat(mo_hinh=self.cb_mh.currentData()))
         # 1.0.52 (người dùng 02/11/2026): luôn che dữ liệu cá nhân - ô chỉ để báo, không đổi được
-        self.o_ca_nhan = QCheckBox('Luôn che họ tên, số CCCD, số điện thoại, số giấy chứng nhận, tọa độ trước khi gửi (bắt buộc)')
+        self.o_ca_nhan = QCheckBox('Luôn che thông tin cá nhân trước khi gửi (bắt buộc)')
         self.o_ca_nhan.setToolTip('Nghị định 13/2023/NĐ-CP: dữ liệu cá nhân không gửi ra máy chủ bên ngoài. Che ngay trên máy này.')
         self.o_ca_nhan.setChecked(True)
         self.o_ca_nhan.setEnabled(False)
@@ -186,7 +186,8 @@ class HopTroLy(QDialog):
         f = QFormLayout()
         f.addRow(self.o_bat)
         f.addRow('Mô hình:', self.cb_mh)
-        f.addRow(self.o_ca_nhan)
+        from .giao_dien import nut_co_mo_ta
+        f.addRow(nut_co_mo_ta(self.o_ca_nhan, 'Họ tên, số CCCD, số điện thoại, số giấy chứng nhận, tọa độ.'))
         f.addRow('Khóa API:', hk)
         lo = QVBoxLayout(w)
         lo.addWidget(gt)

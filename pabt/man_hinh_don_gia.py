@@ -111,7 +111,7 @@ class HopBoDonGia(QDialog):
         self.b_cap = QPushButton('Cập nhật đơn giá')
         self.b_cap.setToolTip('Nạp bộ đơn giá từ file định mức, hoặc sao lưu bộ đang dùng ra file')
         m = QMenu(self.b_cap)
-        m.addAction('Nạp từ file định mức (Excel, Word, PDF, gói .sqlite, CSV)…', lambda: self.cap_nhat_file())
+        m.addAction('Nạp từ file định mức…', lambda: self.cap_nhat_file())
         m.addAction('Nạp từ file — thay cả nhóm theo văn bản mới…', lambda: self.cap_nhat_file(thay_the=True))
         m.addAction('Dán bảng / văn bản đơn giá (Ctrl+Shift+V)', lambda: self.dan_don_gia())
         m.addAction('Sao lưu bộ đơn giá ra file (.sqlite / Excel)…', lambda: self.sao_luu())

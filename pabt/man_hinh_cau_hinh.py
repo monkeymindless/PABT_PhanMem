@@ -207,10 +207,11 @@ class HopCauHinhNghiepVu(QDialog):
             f.addRow(f'Hạn mức đất ở tại {nhan} (m²):', o)
         bi = self.hs['ban_in']
         # 1.0.52: mặc định che số CCCD trên bản niêm yết công khai cho dự án chưa tự chọn (Xuất hồ sơ & Bản in > Dự thảo)
-        self.o_che = QCheckBox('Che số CCCD trên bản niêm yết công khai (mặc định cho dự án chưa chọn)')
+        self.o_che = QCheckBox('Che số CCCD trên bản niêm yết công khai')
         self.o_che.setToolTip('Bản dự thảo dán tại điểm dân cư và file bảng niêm yết: 075092***456. Văn bản chính thức in đủ số.')
         self.o_che.setChecked(bool(bi.get('che_cccd_ban_du_thao')))
-        f.addRow('', self.o_che)
+        from .giao_dien import nut_co_mo_ta
+        f.addRow('', nut_co_mo_ta(self.o_che, 'Mặc định cho dự án chưa tự chọn.'))
         self.cb_doc = QComboBox()
         for t, v in CAN_DOC:
             self.cb_doc.addItem(t, v)

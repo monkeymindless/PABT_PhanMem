@@ -26,12 +26,12 @@ class HopGiaoDien(QDialog):
         self.r_mat_do = {}
         hien = giao_dien.MAT_DO[0]
         for ten, (nhan, cao, _td) in chu_de.MAT_DO.items():
-            r = QRadioButton(f'{nhan}  (dòng {cao} px) - {GOI_Y_MAT_DO[ten]}')
+            r = QRadioButton(f'{nhan}  (dòng {cao} px)')
             r.setChecked(ten == hien)          # đặt trạng thái TRƯỚC khi nối tín hiệu: mở hộp không được tự đổi / lưu mật độ
             self.nhom_mat_do.addButton(r)
             self.r_mat_do[ten] = r
             r.toggled.connect(lambda dung, t=ten: dung and self.doi_mat_do(t))
-            hn.addWidget(r)
+            hn.addWidget(giao_dien.nut_co_mo_ta(r, GOI_Y_MAT_DO[ten]))
         lo.addWidget(nhom)
         nhom_tn = QGroupBox('Tông nền bề mặt')                 # 1.0.33: áp ngay cho mọi cửa sổ đang mở
         hn = QVBoxLayout(nhom_tn)

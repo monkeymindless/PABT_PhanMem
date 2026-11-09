@@ -698,6 +698,11 @@ class BangMuc(QWidget):
                 b.setFixedWidth(28)
                 b.setProperty('khong_icon', True)
                 b.setStyleSheet('QPushButton { padding: 0; }')
+                from .giao_dien import TOKEN, icon_ky_hieu       # Đợt C: mũi tên chevron mảnh cùng màu chữ phụ thay tam giác đặc (chữ ▲ ▼ đậm, nặng mắt)
+                ic = icon_ky_hieu(0xE70E if ten[0] == '▲' else 0xE70D, TOKEN['chu_phu'], 14)
+                if ic is not None:
+                    b.setIcon(ic)
+                    b.setText('')
             elif ten == 'Dán tài sản':
                 b.setToolTip('Ctrl+Shift+V. Dán / gõ nhiều dòng tài sản: tự xếp vào đúng mục theo bộ đơn giá')
             if muc != 1:                                # chữ ngắn + biểu tượng vector (không emoji: Win 7 không có phông)
