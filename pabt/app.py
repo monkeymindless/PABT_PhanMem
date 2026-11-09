@@ -1342,6 +1342,8 @@ class CuaSoChinh(QMainWindow):
                 try:                                   # nhật ký kiểm toán (0.9.86): ai sửa, cũ -> mới
                     from . import kiem_toan
                     csdl.go_trigger_la(self.con)
+                    from . import tro_ly
+                    tro_ly.chup_ten_che(self.con)           # 1.0.91: an_danh che họ tên chủ hộ cả khi gọi không có kết nối (luồng nền)
                     kiem_toan.gan(self.con)
                 except sqlite3.Error:                  # file đang khóa / lỗi: vẫn mở dự án (nhat_ky vẫn ghi thao tác)
                     pass

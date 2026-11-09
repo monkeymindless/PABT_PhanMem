@@ -143,6 +143,7 @@ def goi_ai(noi_dung: str, khach=None, gioi_han: float = GIOI_HAN_GIAY) -> dict:
     """Gửi tới Claude (cài đặt / khóa của Trợ lý), trả dict theo LUOC_DO. Lỗi -> LoiAI (tiếng Việt)."""
     from . import tro_ly
     cd = tro_ly.doc_cai_dat()
+    noi_dung = tro_ly.an_danh(noi_dung)           # 1.0.91: luôn che dữ liệu cá nhân trước khi gửi (CCCD, SĐT, tọa độ, tên chủ hộ đã chụp) - trước đây gửi nguyên
     if khach is None:
         ok, ly_do = dung_duoc()
         if not ok:

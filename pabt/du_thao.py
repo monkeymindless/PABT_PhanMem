@@ -155,8 +155,13 @@ def goi_y_du_dieu_kien(con) -> int:
           AND EXISTS (SELECT 1 FROM thua t WHERE t.ma_ho = h.ma_ho AND TRIM(t.nguon_goc) <> '')
           AND (TRIM(IFNULL(h.luu_luc, '')) <> '' OR EXISTS (SELECT 1 FROM ct_dat d WHERE d.ma_ho = h.ma_ho))
     ''')]
+    nv = ho_nhan_viec(con)
+    if nv is not None:                          # 1.0.91: bản offline theo hộ chỉ đánh dấu các hộ đã nhận (gợi ý trên cả dự án, không báo lỗi)
+        ds = [m for m in ds if int(m) in nv]
     if not ds:
         return 0
+    kiem_quyen(con, 'niem_yet')                 # 1.0.91: cùng quyền với ghi_phap_ly (đánh dấu đủ điều kiện niêm yết)
+    kiem_ds_ho_nhan_viec(con, ds)
     with csdl.giao_dich(con):
         for ma in ds:
             con.execute('UPDATE ho SET du_dieu_kien = 1 WHERE ma_ho = ?', (ma,))

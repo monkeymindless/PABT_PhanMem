@@ -244,11 +244,29 @@ def an_danh(chu: str, con=None) -> str:
     s = _RE_SAU_NHAN_TEN.sub(_che_ho_ten, s)
     if con is not None:
         s = _che_ten_du_an(s, con)
-        ten = sorted(((r[1].strip(), r[0]) for r in con.execute('SELECT ma_ho, ho_ten FROM ho') if r[1] and len(r[1].strip()) >= 4),
-                     key=lambda x: -len(x[0]))
-        for t, ma in ten:
-            s = re.sub(re.escape(t), f'Hộ #{ma}', s, flags=re.I)
+        ten = _ten_chu_ho(con)
+    else:
+        ten = _TEN_CHUP                                 # 1.0.91: không có kết nối (luồng nền, OCR, phân tích đơn giá): dùng ảnh chụp tên đã lấy ở luồng giao diện
+    for t, ma in ten:
+        s = re.sub(re.escape(t), f'Hộ #{ma}', s, flags=re.I)
     return s
+
+
+def _ten_chu_ho(con) -> list:
+    return sorted(((r[1].strip(), r[0]) for r in con.execute('SELECT ma_ho, ho_ten FROM ho') if r[1] and len(r[1].strip()) >= 4),
+                  key=lambda x: -len(x[0]))
+
+
+_TEN_CHUP: list = []         # [(họ tên, mã hộ)] của dự án đang mở; chụp ở luồng giao diện (chup_ten_che), đọc ở mọi luồng
+
+
+def chup_ten_che(con) -> None:
+    """Chụp danh sách họ tên chủ hộ của dự án đang mở cho an_danh khi KHÔNG có kết nối (kiểm toán 09/11/2026: đường OCR AI / phân tích
+    đơn giá gọi an_danh không truyền con nên tên đứng riêng không được che). Gọi khi mở dự án và trước mỗi lần nhờ AI; lỗi đọc: giữ bản cũ."""
+    try:
+        _TEN_CHUP[:] = _ten_chu_ho(con) if con is not None else []
+    except Exception:                                   # noqa: BLE001 - CSDL đang khóa / không đọc được: không chặn mở dự án
+        pass
 
 
 # ---------------------------------------------------------------- cài đặt: bật / tắt, khóa API (Windows DPAPI)

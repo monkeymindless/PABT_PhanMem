@@ -156,6 +156,7 @@ class HopDanTaiSan(QDialog):
         # 1.0.51: che họ tên chủ hộ có trong dự án ở luồng giao diện (luồng nền không dùng kết nối CSDL)
         cs = self.cua_so
         con = getattr(getattr(cs, 'bo', None), 'con', None) or getattr(cs, 'con', None)
+        tro_ly.chup_ten_che(con)                        # 1.0.91: làm mới ảnh chụp tên (hộ mới thêm sau lúc mở dự án)
         if con is not None and not tro_ly.doc_cai_dat().get('gui_ca_nhan'):
             try:
                 dong = [tro_ly.an_danh(x, con) for x in dong]

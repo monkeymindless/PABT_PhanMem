@@ -1421,8 +1421,19 @@ def chuan_ten_dia_ban(ten) -> str:
     return ' '.join(w[:1].upper() + w[1:].lower() for w in unicodedata.normalize('NFC', str(ten or '')).split())
 
 
+def kiem_quyen_du_an(con) -> None:
+    """1.0.91: sửa thông tin dự án cần quyền sửa hồ sơ HOẶC quản trị (lãnh đạo có quản trị, không có sửa hồ sơ). Máy đơn: không làm gì."""
+    if getattr(con, '_vai_tro', None) is None:
+        return
+    from .phan_quyen import QUAN_TRI, quyen_cua, vai_tro_cua
+    if QUAN_TRI in quyen_cua(vai_tro_cua(con)):
+        return
+    kiem_quyen(con, 'sua_ho_so', 'sửa thông tin dự án')
+
+
 def luu_du_an(con, gia_tri: dict) -> None:
-    gt = {k: ' '.join(str(gia_tri.get(k, '') or '').split()) for k, _ in TRUONG_DU_AN}
+    kiem_quyen_du_an(con)
+    gt ={k: ' '.join(str(gia_tri.get(k, '') or '').split()) for k, _ in TRUONG_DU_AN}
     gt['ten_dia_ban'] = chuan_ten_dia_ban(gt.get('ten_dia_ban'))
     if not gt['ten']:
         raise LoiNhap('Tên dự án không được để trống.')

@@ -503,6 +503,7 @@ def _mo_tiep(con, tao: bool):
     con.row_factory = sqlite3.Row
     con.execute(f'PRAGMA busy_timeout = {int(CHO_KHOA_GIAY * 1000)}')
     con.execute('PRAGMA foreign_keys = ON')
+    con.execute('PRAGMA trusted_schema = OFF')          # 1.0.91: trigger / view trong file ngoài không gọi được hàm SQL không "vô hại"
     # file dự án có thể nằm trong thư mục Google Drive: không dùng WAL (Drive đồng bộ kém các file -wal, -shm).
     # 1.0.90: GIỮ DELETE. Đã thử TRUNCATE (yêu cầu đại phẫu): kết nối TRUNCATE giữ mở file -journal, kết nối khác ở chế độ DELETE (bản cũ ở máy
     # khác cùng thư mục Drive / LAN, may_chu, co_may_thoi_gian, chua_benh_csdl mở sqlite3.connect thẳng) không xóa được journal khi COMMIT
@@ -512,6 +513,7 @@ def _mo_tiep(con, tao: bool):
     # lưu (máy yếu, ổ HDD - 16/10/2026). Thiết lập của kết nối, không ghi vào file
     con.execute('PRAGMA temp_store = MEMORY')
     ver = con.execute('PRAGMA user_version').fetchone()[0]
+    da_go = _go_trigger_la_som(con) if ver != 0 else []      # trước mọi lần ghi bên dưới (nâng cấp, mở rộng, ghi tối thiểu)
     if ver == 0:
         con.executescript(_SCHEMA.read_text(encoding='utf-8'))
         con.execute(f'PRAGMA user_version = {PHIEN_BAN_CSDL}')
@@ -551,6 +553,12 @@ def _mo_tiep(con, tao: bool):
     # (bộ đơn giá / file chỉ danh mục không bị ghi), một giao dịch cho mọi phần còn thiếu (trước: tối đa 6 lần ghi đĩa mỗi lần mở)
     dam_bao_mo_rong(con)
     dat_ghi_toi_thieu(con)                              # CLI / nhập / GUI: cùng một chỗ (bộ đơn giá đóng gói tự bỏ)
+    if da_go:                                           # nhật ký sau khi lược đồ đủ bảng (không ghi được: bỏ qua, trigger đã gỡ)
+        try:
+            ghi_nhat_ky(con, 'Gỡ trigger lạ trong file dự án', ', '.join(da_go))
+            con.commit()
+        except sqlite3.Error:
+            pass
     return con
 
 
@@ -807,15 +815,43 @@ def _cot(con, so_do: str, bang: str) -> list:
 
 
 _RE_TRIGGER_HOP_LE = re.compile(r'^(audit_logs_khong_(sua|xoa)|audit_bam_khong_(sua|xoa)|khoa_\w+_(INSERT|UPDATE|DELETE))$')
-_RE_THAN_TRIGGER_HOP_LE = re.compile(r"\bBEGIN\s+SELECT\s+RAISE\s*\(\s*ABORT\s*,\s*'[^']*'\s*\)\s*;\s*END\s*$", re.I)
+# 1.0.91 (kiểm toán 09/11/2026): kiểm TOÀN BỘ câu lệnh, neo đầu và cuối - trước chỉ `.search` phần "BEGIN SELECT RAISE… END" ở cuối nên thân
+# `UPDATE ho SET tien='0'; -- BEGIN SELECT RAISE(ABORT,'x'); <xuống dòng> END` (lệnh thật + chú thích giả) lọt qua. Hai dạng hợp lệ duy nhất:
+# trigger khóa danh mục (có WHEN đọc khoa_dm) và trigger nhật ký (không WHEN); thân chỉ là SELECT RAISE(ABORT, '<chữ>').
+_RE_TRIGGER_NGUYEN_VAN = re.compile(
+    r'^\s*CREATE\s+TRIGGER\s+(?:IF\s+NOT\s+EXISTS\s+)?"?(?P<ten>\w+)"?\s+BEFORE\s+(?P<viec>INSERT|UPDATE|DELETE)\s+ON\s+"?(?P<bang>\w+)"?\s+'
+    r'(?:WHEN\s+\(\s*SELECT\s+mo\s+FROM\s+khoa_dm\s+WHERE\s+id\s*=\s*1\s*\)\s*=\s*0\s+)?'
+    r"BEGIN\s+SELECT\s+RAISE\s*\(\s*ABORT\s*,\s*'[^']*'\s*\)\s*;\s*END\s*;?\s*$", re.I)
+_RE_TRIGGER_KHOA_DM = re.compile(r'^khoa_(?P<bang>\w+)_(?P<viec>INSERT|UPDATE|DELETE)$')
+_RE_TRIGGER_NHAT_KY = re.compile(r'^(?P<bang>audit_logs|audit_bam)_khong_(?P<viec>sua|xoa)$')
+
+
+def trigger_hop_le(ten: str, sql) -> bool:
+    """Trigger do chính phần mềm tạo: tên đúng mẫu, bảng và biến cố khớp tên, thân nguyên văn (xem _RE_TRIGGER_NGUYEN_VAN)."""
+    m = _RE_TRIGGER_NGUYEN_VAN.match(sql or '')
+    if m is None or m.group('ten') != ten:
+        return False
+    viec, bang, co_when = m.group('viec').upper(), m.group('bang'), bool(re.search(r'\bWHEN\b', sql, re.I))
+    k = _RE_TRIGGER_KHOA_DM.match(ten)
+    if k is not None:
+        return co_when and k.group('bang') == bang and bang in DANH_MUC and k.group('viec') == viec
+    n = _RE_TRIGGER_NHAT_KY.match(ten)
+    if n is not None:
+        return (not co_when) and n.group('bang') == bang and viec == ('UPDATE' if n.group('viec') == 'sua' else 'DELETE')
+    return False
+
+
+def trigger_la(con) -> list:
+    """Tên các trigger trong file KHÔNG phải do phần mềm tạo (chỉ đọc, không ghi gì)."""
+    return [r[0] for r in con.execute("SELECT name, sql FROM main.sqlite_master WHERE type = 'trigger'")
+            if not trigger_hop_le(r[0], r[1])]
 
 
 def go_trigger_la(con) -> list:
     """1.0.58: phần mềm chỉ tạo các trigger bền trên; file nhận từ ngoài có trigger khác có thể âm thầm đổi tiền mỗi lần lưu: gỡ + ghi nhật ký.
     Mở chỉ xem: không ghi được, bỏ qua (không có lần ghi nào để trigger chạy). Trả tên đã gỡ."""
-    # tên đúng chưa đủ: file ngoài có thể đặt tên giống trigger của phần mềm nhưng thân làm việc khác -> kiểm cả thân
-    la = [r[0] for r in con.execute("SELECT name, sql FROM main.sqlite_master WHERE type = 'trigger'")
-          if not (_RE_TRIGGER_HOP_LE.match(r[0]) and _RE_THAN_TRIGGER_HOP_LE.search(r[1] or ''))]
+    # tên đúng chưa đủ: file ngoài có thể đặt tên giống trigger của phần mềm nhưng thân làm việc khác -> kiểm cả thân (1.0.91: nguyên văn)
+    la = trigger_la(con)
     if la:
         try:
             with giao_dich(con):
@@ -824,6 +860,27 @@ def go_trigger_la(con) -> list:
                 ghi_nhat_ky(con, 'Gỡ trigger lạ trong file dự án', ', '.join(la))
         except sqlite3.OperationalError:
             return []
+    return la
+
+
+def _go_trigger_la_som(con) -> list:
+    """1.0.91: gỡ trigger lạ NGAY khi mở (trước nâng cấp lược đồ / mở rộng / ghi tối thiểu - những lần ghi đầu tiên mà trigger lạ có thể
+    can thiệp; trước đây chỉ GUI quét, sau khi csdl.mo đã ghi: CLI nhập / đối chiếu, máy chủ LAN, chữa bệnh không quét). Không ghi nhật ký ở
+    đây (file cũ có thể chưa có bảng nhật ký): trả tên để nơi gọi ghi sau. Mở chỉ xem: không gỡ được, trả []."""
+    la = trigger_la(con)
+    if not la:
+        return []
+    try:
+        con.execute('BEGIN IMMEDIATE')
+        for t in la:
+            con.execute('DROP TRIGGER main."{}"'.format(t.replace('"', '""')))
+        con.execute('COMMIT')
+    except sqlite3.OperationalError:
+        try:
+            con.execute('ROLLBACK')
+        except sqlite3.OperationalError:
+            pass
+        return []
     return la
 
 

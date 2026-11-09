@@ -205,6 +205,8 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Mã tài sản: nhà TS, cây CT, vật nuôi VN, chính sách CS, thưởng TH (`ma_tai_san`). Quy ước tương đương do người dùng tự nhập (bộ đơn giá
   không có).
 
+- Trigger bền trong file: CHỈ hai dạng do phần mềm tạo (khóa danh mục `khoa_<bảng>_<VIỆC>`, nhật ký `audit_*_khong_sua/xoa`), kiểm NGUYÊN VĂN bằng `csdl.trigger_hop_le`; mọi trigger khác bị gỡ ngay trong `csdl._mo_tiep`. Thêm trigger bền mới: thêm mẫu vào `trigger_hop_le` (không thì bị gỡ). Trigger nghiệp vụ dùng TEMP (`_pq_*`, `_kt_ky`). Kết nối đặt `trusted_schema = OFF`.
+- Gửi dịch vụ AI: mọi nội dung qua `tro_ly.an_danh` ở tầng gọi API; không có kết nối thì dựa vào `tro_ly.chup_ten_che(con)` (gọi ở luồng giao diện trước khi nhờ AI).
 - Nhật ký kiểm toán: chuỗi băm ở bảng RIÊNG `audit_bam` (id = audit_logs.id; trigger TẠM `_kt_ky` AFTER INSERT từng dòng của
   `kiem_toan.gan_ky`, hàm SQLite `_kt_bam` = `kiem_toan.tinh_bam`; đừng thêm cột vào audit_logs - bảng cấm UPDATE, INSERT … SELECT nhiều
   dòng tính trước cả lô nên không nối được). `audit_bam` có trong `hoan_tac.BO_QUA`, `DauVetHo.BO_QUA`, `chua_benh_csdl._XOA_BANG` -

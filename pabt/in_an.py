@@ -26,6 +26,7 @@ from . import nghiep_vu
 from .du_lieu_in import (nhan_du_an, _thong_tin_du_an, bo_lap_mo_dau, chon_lan_in, ghi_chu_in, ky_hieu_cua_ho, tieu_de_muc_i, ten_file_ho)  # noqa: F401 - tên cũ của in_an (mã gọi cũ, test)
 from .nghiep_vu import BoiCanh, doc_phuong_an, tinh_pa
 from .tien import D, KHONG
+from .tien import vn as _tien_vn
 
 TEN_BTH = 'IN_BANGTONGHOP'
 DONG_DAU_BTH = 13      # IN_BANGTONGHOP: dòng dữ liệu đầu (mặc định hồ sơ: mau_in.IN_BANGTONGHOP.dong_du_lieu_dau)
@@ -2267,7 +2268,7 @@ def lap_bang_tong_hop(con, file_ra, ds_ma_ho: list | None = None, so_pa_tong: st
     a6 = str(ws['A6'].value or '')
     if '(Đối với ' in a6:
         ws['A6'] = re.sub(r'\(Đối với .*?m2\)', f'(Đối với {len(khoi):02d} trường hợp/ {tong_thua} thửa đất/ '
-                          f'{format(float(tong_dt), ",.1f").replace(",", "#").replace(".", ",").replace("#", ".")}m2)', a6)
+                          f'{_tien_vn(tong_dt, 1)}m2)', a6)
     dien_so_ngay(ws, so_pa_tong, ngay_pa_tong, 'Phương án số')
     chuan_dong_ngay(ws, dia_danh=da['dia_danh_ngay'])          # nơi đơn vị công tác, không phải xã có đất
     viet_hoa_du_an(ws, d0)                                       # "DỰ ÁN <tên>" như phương án chi tiết
