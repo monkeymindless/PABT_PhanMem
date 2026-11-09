@@ -429,10 +429,10 @@ class HopTinhGiaDat(QDialog):
         self.nut_bo_chon = QPushButton('Bỏ chọn')
         self.nut_bo_chon.setToolTip('Bỏ tích các dòng đang hiện')
         self.nut_bo_chon.clicked.connect(lambda: self.chon_het(False))
-        self.nut_them_dong = QPushButton('+ Thêm dòng đất cho hộ…')
+        self.nut_them_dong = QPushButton('+ Thêm dòng đất…')
         self.nut_them_dong.setToolTip('Chọn hộ, nhập Tờ, Thửa, Loại đất, Diện tích: dòng mới được tích sẵn. Thửa chưa có trong hồ sơ hộ thì thêm vào hồ sơ.')
         self.nut_them_dong.clicked.connect(lambda: self.them_dong())
-        self.nut_tu_tao = QPushButton('Tự tạo dòng đất từ thông tin Thửa của hộ')
+        self.nut_tu_tao = QPushButton('Tạo dòng từ thửa')
         self.nut_tu_tao.setToolTip('Các hộ trong phạm vi đã có thửa mà mục 1 còn trống: tạo một dòng đất cho mỗi thửa còn DT thu hồi')
         self.nut_tu_tao.clicked.connect(lambda: self.tu_tao_dong())
         self.mo_hinh = _MoHinhDong(self, lambda: self._dat_nut_ap())
@@ -498,9 +498,9 @@ class HopTinhGiaDat(QDialog):
         hn.addWidget(self.lb_ap_ket_qua, 1)
         nut_dong = QPushButton('Đóng')
         nut_dong.clicked.connect(self.reject)
-        self.nut_ap = QPushButton('Áp đơn giá vào các dòng đã chọn')
+        self.nut_ap = QPushButton('Áp vào dòng đã chọn')
         self.nut_ap.clicked.connect(lambda: self.ap_gia())
-        self.nut_vi_tri = QPushButton('Cập nhật Vị trí & Hệ số K')
+        self.nut_vi_tri = QPushButton('Cập nhật vị trí, K')
         self.nut_vi_tri.setToolTip('Ghi vị trí và hệ số K vào dòng đất đang chọn, kể cả đất công đơn giá 0 đồng.')
         self.nut_vi_tri.clicked.connect(self.cap_nhat_vi_tri_dong)
         hn.addWidget(nut_dong)
@@ -691,7 +691,8 @@ class HopTinhGiaDat(QDialog):
 
     def _chu_nut_can_cu(self) -> None:
         n = len(vb.gop_va_sap_xep([self.o_can_cu.toPlainText()])[1])
-        self.nut_mo_cc.setText(('▾' if self.nut_mo_cc.isChecked() else '▸') + f'  Văn bản căn cứ ({n} văn bản, đã sắp 13 bậc)')
+        self.nut_mo_cc.setText(('▾' if self.nut_mo_cc.isChecked() else '▸') + f'  Văn bản căn cứ ({n})')
+        self.nut_mo_cc.setToolTip(f'{n} văn bản, đã sắp theo 13 bậc hiệu lực')
 
     # ---------------------------------------------------------------- chọn đoạn đường / nhóm đất
     def _nap_doan(self, giu: bool = False) -> None:
@@ -1032,8 +1033,8 @@ class HopTinhGiaDat(QDialog):
         n = len(chon)
         ok = self.kq is not None and self.con is not None and not self.chi_doc and n > 0 and self.kq.don_gia_ap_dung > 0
         self.nut_ap.setEnabled(ok)
-        self.nut_ap.setText(f'Áp đơn giá vào {n} dòng đã chọn' if n else 'Áp đơn giá vào các dòng đã chọn')
-        self.nut_ap.setToolTip('' if ok else 'Cần: mở dự án (không ở chế độ chỉ xem), tích ít nhất một dòng đất và đơn giá lớn hơn 0.')
+        self.nut_ap.setText(f'Áp vào {n} dòng' if n else 'Áp vào dòng đã chọn')    # 1.0.92: chữ ngắn - hàng nút đáy rộng 977 px ép cột Thông số ở 1093 x 614
+        self.nut_ap.setToolTip('Áp đơn giá vào các dòng đã tích' if ok else 'Cần: mở dự án (không ở chế độ chỉ xem), tích ít nhất một dòng đất và đơn giá lớn hơn 0.')
         nut = getattr(self, 'nut_vi_tri', None)
         if nut is not None:
             co_dong = (self.bo_mo is not None and not self.chi_doc and self.kq is not None and

@@ -420,6 +420,8 @@ class TestGiaoDien(_Co):
         from PySide6.QtWidgets import QApplication
         from pabt import giao_dien
         self.app = QApplication.instance() or QApplication([])
+        if getattr(self.app, '_bo_to_mau', None) is None:     # 1.0.92: gỡ bảng kiểu đã áp sau bài (để lại làm test_toc_do_1079 đo bố cục sai)
+            self.addCleanup(giao_dien.bo_ap_dung, self.app)
         giao_dien.ap_dung(self.app)
         os.environ.setdefault('PABT_THU_MUC_MAY', str(self.td))
 

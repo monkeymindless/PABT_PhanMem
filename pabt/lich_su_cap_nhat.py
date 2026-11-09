@@ -7,6 +7,16 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.92', '10/11/2026', (
+        'An toàn file dự án: phần mềm kiểm chặt các "trigger" (lệnh tự chạy) nằm trong file .pabt nhận từ nơi khác và gỡ trigger lạ ngay khi mở, '
+        'trước mọi lần ghi - kể cả nhập Excel bằng dòng lệnh và dự án trên máy chủ LAN; có ghi nhật ký.',
+        'Phân quyền máy chủ LAN: nút Nhập phương án chi tiết tắt đúng theo vai trò; sửa Thông tin dự án và Gợi ý đủ điều kiện cũng kiểm quyền '
+        '(bản offline theo hộ chỉ đánh dấu các hộ đã nhận).',
+        'Trợ lý AI: họ tên chủ hộ luôn được che trước khi gửi, kể cả khi nhờ AI viết lại dòng OCR hay phân tích văn bản đơn giá.',
+        'Bảng tổng hợp: tổng diện tích dòng "Đối với ... m2" làm tròn như Excel (0,25 thành 0,3).',
+        'Giao diện: menu trái chữ nhóm rõ hơn; ô tích tông Tối có khung; tùy chọn dài (Điều 79, 127, 122, mật độ bảng, che CCCD) có tiêu đề ngắn '
+        'và dòng mô tả bên dưới; nhãn ở hộp Tiếp nhận pháp lý không còn bị cắt.',
+    )),
     ('1.0.91', '09/11/2026', (
         'Đối thoại ghi được ý kiến của hộ SAU đối thoại (lấy ý kiến không đồng ý, đối thoại xong đồng ý): cột Ý kiến sau đối thoại ở thẻ 3 bấm một chạm, ô Sau đối thoại trong hộp ghi biên bản; tỷ lệ đồng thuận, tổng hợp ý kiến, lọc hộ, chuyển đợt tính theo ý kiến sau đối thoại, ý kiến lần đầu giữ làm chứng cứ.',
         'Thang 6 nấc theo đúng trình tự QĐ 18/2026: hộ chỉ được tính Đã trình thẩm định (B8) khi đợt trình có văn bản trình (số và ngày tờ trình); mới xếp vào đợt trình thì vẫn ở bước niêm yết, lấy ý kiến, đối thoại (B6-7) và ghi rõ chưa có tờ trình. Trạng thái nấc 2 ghi đúng việc đã làm: đang lấy ý kiến / đã lấy ý kiến (đồng ý, không đồng ý cần đối thoại) / đã đối thoại; cảnh báo trình khi chưa có ý kiến hoặc chưa đối thoại.',
