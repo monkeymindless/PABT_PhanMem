@@ -25,7 +25,7 @@ from . import csdl, nhap_excel
 from .lap_pa import LoiNhap
 from .nguon_luoi import DONG_TIM_COT, TRONG_LIEN_TIEP, Nguon, _co_chu, chuan_luoi, lay_nguon  # noqa: F401 (TRONG_LIEN_TIEP: tên cũ)
 from .nhap_excel import BaoCaoNhap, _txt, chuan_cccd, chuan_hoa
-from .tien import D, chuoi, doc_so_vn
+from .tien import D, chuoi, doc_so_vn, la_cong_thuc, tinh_cong_thuc
 
 # trường -> [(mẫu regex trên tiêu đề đã chuẩn hóa, điểm)]; mẫu loại trừ đặt trong LOAI_TRU
 MAU_COT = {
@@ -95,11 +95,32 @@ class BoCot:
     thu_cong: bool = False                         # người dùng tự ghép cột
 
 
+# tên trường viết liền của bảng thuộc tính bản đồ / file xuất từ phần mềm địa chính (gCadas, ArcGIS, MapInfo, Famis, TMV.Map...: SOTO,
+# SHTHUA, DIENTICH, MDSD, TENCHU, Ten_Chu...) -> cụm chuẩn để MAU_COT nhận (1.0.98). Khóa: tiêu đề đã chuẩn hóa, bỏ dấu cách / _ / . / -
+_TEN_GON = {
+    **dict.fromkeys(('soto', 'shto', 'sohieuto', 'tobando', 'shbando', 'sobando', 'tobd', 'sotobd', 'sotobando', 'toso'), 'so to'),
+    **dict.fromkeys(('sothua', 'shthua', 'sohieuthua', 'thuaso', 'thuadat', 'sothuadat', 'thuadatso'), 'so thua'),
+    **dict.fromkeys(('dientich', 'dtich', 'dtichthua'), 'dien tich'),
+    **dict.fromkeys(('dtthuhoi', 'dientichthuhoi', 'dtth', 'dtichthuhoi', 'dtthuhoim2'), 'dien tich thu hoi'),
+    **dict.fromkeys(('dtbando', 'dientichbando', 'dtbd'), 'dien tich ban do'),
+    **dict.fromkeys(('loaidat', 'mdsd', 'khmdsd', 'kyhieumdsd', 'mucdich', 'mucdichsd', 'mucdichsudung', 'khloaidat', 'maloaidat',
+                     'loaidatsd', 'kyhieuloaidat'), 'loai dat'),
+    **dict.fromkeys(('tenchu', 'chusudung', 'chusd', 'tenchusd', 'hoten', 'hotenchu', 'tenchusudung', 'tenchuho', 'chuhoso',
+                     'hotenchusd', 'tennguoisd', 'tenchu1'), 'ho ten'),
+    **dict.fromkeys(('diachi', 'diachichu', 'dcchu', 'diachithuongtru', 'diachichusd'), 'dia chi'),
+    **dict.fromkeys(('socmnd', 'cmnd', 'cccd', 'socccd', 'cmndcccd', 'sogiayto', 'sogt', 'sodinhdanh'), 'so cccd'),
+    **dict.fromkeys(('dienthoai', 'sdt', 'sodienthoai'), 'dien thoai'),
+    **dict.fromkeys(('nguongoc', 'nguongocsd', 'nguongocsudung'), 'nguon goc'),
+    'ghichu': 'ghi chu', 'vitri': 'vi tri', 'nhankhau': 'nhan khau', 'sonhankhau': 'so nhan khau',
+}
+
+
 def _diem_cot(text: str, gan_dung: bool = False):
     """Tiêu đề một cột -> {trường: điểm}. gan_dung: bản scan nhận dạng sai chữ - so gần đúng khi không khớp mẫu."""
     kq = {}
     if not text:
         return kq
+    text = _TEN_GON.get(re.sub(r'[\s_.\-]+', '', text), text)
     for truong, mau in MAU_COT.items():
         if truong in LOAI_TRU and re.search(LOAI_TRU[truong], text) and truong != 'dt_ban_do':
             continue
@@ -367,6 +388,9 @@ def _doc_dt(v):
     if isinstance(v, (int, float)):
         return D(v)
     s = re.sub(r'(m2|m²|ha)\s*$', '', str(v).strip(), flags=re.I).strip()
+    if la_cong_thuc(s):                             # 1.0.98: ô ghi phép tính ("=12*3,5", "120+35,5") - như ô số lượng phương án
+        from .lap_pa import lam_tron_cong_thuc
+        return lam_tron_cong_thuc(tinh_cong_thuc(s), 'm2')
     return doc_so_vn(s)                             # '1.070' = 1.070 m² (trước đây đọc thành 1,07)
 
 

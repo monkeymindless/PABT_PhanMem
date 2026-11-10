@@ -1,6 +1,7 @@
 r"""Phân tích một phiên bản PABT (chạy MỖI LẦN sửa phiên bản), có thể so với bản trước - ví dụ gói cập nhật đã phát hành:
 
   .venv\Scripts\python phan_tich_phien_ban.py [--so-sanh bo_cai\LARC_CapNhat_0.9.94.pabtcn | <thư mục mã>] [--so-ho 3000]
+      [--quy-mo-lon 10000 | 0]   (1.0.98: đo thêm bản mới ở quy mô lớn, so với NGƯỠNG; 0 = bỏ qua)
                                               [--du-an <file .pabt thật, chỉ đọc - chạy trên bản sao>] [--lan 3]
   Hoặc bấm đúp PHAN_TICH_PHIEN_BAN.bat (tự so với gói .pabtcn mới nhất trong bo_cai\ khác phiên bản mã nguồn).
 
@@ -217,6 +218,26 @@ def _o(v) -> str:
     return str(v)
 
 
+# 1.0.98 (Đợt 7): ngưỡng ở quy mô lớn (dự án 10.000 hộ - cao tốc Bảo Lộc - Liên Khương đã 3.389 hộ / 4.538 thửa): ms
+NGUONG_LON = {'mo_du_an_lon': 8000, 'luu_1_ho': 60, 'tai_lai_sau_luu': 1500, 'doi_chieu_ca_du_an': 20000,
+              'bang_tong_hop_xlsx': 60000, 'dong_du_an_lon': 3000}
+
+
+def bao_cao_lon(kq: dict, so_ho: int) -> str:
+    """Mục quy mô lớn: thao tác theo N hộ của bản mới so với NGUONG_LON."""
+    t = ['', '## 1b. Quy mô lớn (' + f'{so_ho:,}'.replace(',', '.') + ' hộ, chỉ bản mới - so với ngưỡng)', '',
+         '| Thao tác | Đo được | Ngưỡng | Kết quả |', '|---|---|---|---|']
+    for k, ng in NGUONG_LON.items():
+        v = kq.get(k)
+        if not isinstance(v, (int, float)):
+            continue
+        ten = dict(TEN_DO).get(k, k).replace('N hộ', f'{so_ho} hộ')
+        t.append(f'| {ten} | {_o(v)} | {_o(float(ng))} | ' + ('đạt' if v <= ng else '**VƯỢT NGƯỠNG**') + ' |')
+    vuot = [k for k, ng in NGUONG_LON.items() if isinstance(kq.get(k), (int, float)) and kq[k] > ng]
+    t += ['', 'Tất cả thao tác trong ngưỡng.' if not vuot else f'Cần tối ưu: {len(vuot)} thao tác vượt ngưỡng.']
+    return '\n'.join(t) + '\n'
+
+
 def bao_cao(kq_moi: dict, kq_cu: dict | None, tinh_moi: dict, tinh_cu: dict | None, doi: list | None, so_ho: int) -> str:
     cu = kq_cu is not None
     t = [f'# Phân tích phiên bản PABT {kq_moi.get("phien_ban")}' + (f' so với {kq_cu.get("phien_ban")}' if cu else ''),
@@ -259,6 +280,7 @@ def main(argv) -> int:
     so_ho = int(argv[argv.index('--so-ho') + 1]) if '--so-ho' in argv else 3000
     lan = int(argv[argv.index('--lan') + 1]) if '--lan' in argv else 3
     du_an = argv[argv.index('--du-an') + 1] if '--du-an' in argv else ''
+    lon = int(argv[argv.index('--quy-mo-lon') + 1]) if '--quy-mo-lon' in argv else 10000
     if not du_an:                                                       # dự án thật mặc định: file .pabt đầu tiên cạnh mã nguồn
         du_an = str(next(iter(sorted(GOC.glob('*.pabt')) + sorted(GOC.parent.glob('*.pabt')) +
                               sorted(GOC.glob('_luu_tru_don_dep/*/03_du_lieu_du_an_mau/*.pabt'))), '') or '')
@@ -280,7 +302,13 @@ def main(argv) -> int:
             kq_cu = do_toc_do(cu, du_an, so_ho, lan)
             tinh_cu = phan_tich_tinh(cu)
             doi = khac_nhau(cu, GOC)
+        kq_lon = None
+        if lon > so_ho:
+            print(f'Đo quy mô lớn {lon} hộ (bản mới)…', flush=True)
+            kq_lon = do_toc_do(GOC, '', lon, 1)
     bc = bao_cao(kq_moi, kq_cu, tinh_moi, tinh_cu, doi, so_ho)
+    if kq_lon:
+        bc += bao_cao_lon(kq_lon, lon)
     ra = GOC / 'ket_qua_kiem_tra' / f'PhanTich_{kq_moi.get("phien_ban")}_{datetime.now():%Y-%m-%d_%H%M}.md'
     ra.parent.mkdir(exist_ok=True)
     ra.write_text(bc, encoding='utf-8')

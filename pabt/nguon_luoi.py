@@ -17,9 +17,12 @@ from .lap_pa import LoiNhap
 
 DUOI_EXCEL = ('.xlsx', '.xlsm', '.xls')
 DUOI_ANH = ('.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff')
-DUOI_HO_TRO = DUOI_EXCEL + ('.csv', '.txt', '.docx', '.doc', '.pdf') + DUOI_ANH
-LOC_MO_FILE = ('Danh sách hộ, thửa (*.xlsx *.xlsm *.xls *.csv *.docx *.doc *.pdf *.png *.jpg *.jpeg *.tif *.tiff *.bmp);;'
-               'File Excel (*.xlsx *.xlsm *.xls);;PDF, ảnh scan (*.pdf *.png *.jpg *.jpeg *.tif *.tiff *.bmp);;Tất cả file (*.*)')
+DUOI_HO_TRO = DUOI_EXCEL + ('.csv', '.txt', '.dbf', '.docx', '.doc', '.pdf') + DUOI_ANH
+LOC_MO_FILE = ('Danh sách hộ, thửa (*.xlsx *.xlsm *.xls *.csv *.txt *.dbf *.docx *.doc *.pdf *.png *.jpg *.jpeg *.tif *.tiff *.bmp);;'
+               'File Excel (*.xlsx *.xlsm *.xls);;Bảng thuộc tính bản đồ địa chính (*.dbf *.csv *.txt);;'
+               'PDF, ảnh scan (*.pdf *.png *.jpg *.jpeg *.tif *.tiff *.bmp);;Tất cả file (*.*)')
+# byte đầu file dBASE (bảng thuộc tính shapefile của gCadas / ArcGIS / MapInfo / QGIS; Famis xuất DBF): III, IV, V, FoxPro, Visual FoxPro
+_DAU_DBF = frozenset((0x02, 0x03, 0x04, 0x05, 0x30, 0x31, 0x32, 0x43, 0x63, 0x83, 0x8B, 0x8E, 0xCB, 0xF5, 0xFB))
 
 TRONG_LIEN_TIEP = 100       # dừng đọc sau ngần này dòng trống liền nhau (sheet định dạng sẵn tới dòng 1.048.576)
 DONG_TIM_COT = 40           # bề rộng bảng = cột có chữ cuối cùng trong ngần này dòng đầu (cột tiêu đề cuối)
@@ -215,6 +218,78 @@ def _tu_bang_chu(p: Path, loai: str) -> list:
     rows = nhap_don_gia.doc_bang(p)
     luoi, g, rong = chuan_luoi([list(r) for r in rows][:TOI_DA_DONG])
     return [Nguon(p.stem, luoi, g, rong, loai)] if luoi else []
+
+
+def _la_dbf(p: Path) -> bool:
+    try:
+        with open(p, 'rb') as f:
+            dau = f.read(32)
+    except OSError:
+        return False
+    return len(dau) == 32 and dau[0] in _DAU_DBF and int.from_bytes(dau[8:10], 'little') >= 33
+
+
+def _o_dbf(kieu: str, raw: bytes, so_le: int, giai):
+    """Một ô DBF -> giá trị lưới. Số: chuỗi kiểu Việt Nam (dấu phẩy thập phân - doc_so_vn đọc '1.070' là một nghìn không bảy mươi)."""
+    if kieu in 'NF':
+        s = raw.decode('ascii', errors='ignore').strip()
+        if not s or s.strip('*') == '':
+            return None
+        try:
+            from decimal import Decimal, InvalidOperation
+            v = Decimal(s)
+        except (InvalidOperation, ValueError):
+            return s
+        if v == v.to_integral_value():
+            return int(v)
+        return format(v.normalize(), 'f').replace('.', ',')
+    if kieu == 'D':
+        s = raw.decode('ascii', errors='ignore').strip()
+        return f'{s[6:8]}/{s[4:6]}/{s[:4]}' if len(s) == 8 and s.isdigit() else (s or None)
+    if kieu == 'L':
+        s = raw.decode('ascii', errors='ignore').strip().upper()
+        return {'T': 'Có', 'Y': 'Có', 'F': 'Không', 'N': 'Không'}.get(s)
+    if kieu in 'CV':
+        s = giai(raw.rstrip(b'\x00 ')).strip()
+        return s or None
+    return None                                         # memo / nhị phân: không có chữ cần nhập
+
+
+def _tu_dbf(p: Path) -> list:
+    """Bảng thuộc tính dBASE (.dbf, 1.0.98): dòng 1 = tên trường (SOTO, SHTHUA, DIENTICH, MDSD, TENCHU...), mỗi bản ghi chưa xóa một dòng.
+    Chữ: UTF-8 nếu đúng UTF-8, không thì Latin-1 (mã TCVN3 / VNI để sua_cac_o đổi) - đoán trên CẢ bảng."""
+    b = p.read_bytes()
+    so_ban_ghi = int.from_bytes(b[4:8], 'little')
+    dai_dau = int.from_bytes(b[8:10], 'little')
+    dai_ban_ghi = int.from_bytes(b[10:12], 'little')
+    truong, i = [], 32
+    while i + 32 <= dai_dau and b[i] != 0x0D:
+        ten = b[i:i + 11].split(b'\x00')[0].decode('latin-1').strip()
+        truong.append((ten, chr(b[i + 11]), b[i + 16], b[i + 17]))
+        i += 32
+    if not truong or dai_ban_ghi <= 1:
+        raise LoiNhap(f'File "{p.name}" không có bảng thuộc tính dBASE đọc được.')
+    try:
+        b[dai_dau:dai_dau + so_ban_ghi * dai_ban_ghi].decode('utf-8')
+        giai = lambda x: x.decode('utf-8', errors='replace')            # noqa: E731
+    except UnicodeDecodeError:
+        giai = lambda x: x.decode('latin-1')                               # noqa: E731
+    dong = [[t[0] for t in truong]]
+    vt = dai_dau
+    for _ in range(min(so_ban_ghi, TOI_DA_DONG)):
+        ban_ghi = b[vt:vt + dai_ban_ghi]
+        vt += dai_ban_ghi
+        if len(ban_ghi) < dai_ban_ghi:
+            break
+        if ban_ghi[:1] == b'*':                          # bản ghi đã xóa
+            continue
+        hang, j = [], 1
+        for _ten, kieu, dai, so_le in truong:
+            hang.append(_o_dbf(kieu, ban_ghi[j:j + dai], so_le, giai))
+            j += dai
+        dong.append(hang)
+    luoi, g, rong = chuan_luoi(dong)
+    return [Nguon(p.stem, luoi, g, rong, 'csv')] if luoi else []
 
 
 # ---------------------------------------------------------------- chia cột bảng từ vị trí chữ (PDF, bản scan)
@@ -573,6 +648,10 @@ def loai_file(p: Path) -> str:
         raise LoiNhap(f'Không thấy file {p}.')
     if duoi in DUOI_ANH:
         return 'anh'
+    if duoi == '.dbf':
+        if _la_dbf(p):
+            return 'dbf'
+        raise LoiNhap(f'File "{p.name}" bị hỏng hoặc không phải bảng dBASE (.dbf).')
     that = nhap_don_gia.loai_that(p)
     if that == '.html':
         raise LoiNhap(f'File "{p.name}" thực chất là một trang web (HTML), không phải file {duoi}: tải lại file gốc.')
@@ -583,7 +662,20 @@ def loai_file(p: Path) -> str:
     if duoi in DUOI_HO_TRO:
         raise LoiNhap(f'File "{p.name}" bị hỏng hoặc chưa tải xong (nội dung không phải {duoi}).')
     raise LoiNhap(f'Chưa hỗ trợ file {duoi or "(không có đuôi)"}. Hỗ trợ: Excel (.xlsx, .xls), Word, PDF (có chữ hoặc bản scan), '
-                  'ảnh (.jpg, .png, .tif), CSV.')
+                  'ảnh (.jpg, .png, .tif), CSV / TXT, bảng thuộc tính bản đồ .dbf.')
+
+
+_TEN_MA_CU = {'tcvn3': 'TCVN3 (.VnTime)', 'vni': 'VNI (VNI-Times)'}
+
+
+def _sua_ma_cu(ds: list) -> list:
+    """1.0.98: chữ phông cũ TCVN3 / VNI trong ô (danh sách xuất từ phần mềm địa chính cũ) -> Unicode, ghi chú cho người dùng kiểm."""
+    from .chuan_chu import sua_cac_o
+    for n in ds:
+        n.luoi, lp = sua_cac_o(n.luoi)
+        if lp:
+            n.ghi_chu.append(f'Chữ phông {_TEN_MA_CU[lp]} đã đổi sang Unicode: xem lại họ tên, địa chỉ trước khi nhập.')
+    return ds
 
 
 def lay_nguon(file, bao_tien_do=None, cho=None, scan: bool = False, psm: int = 4) -> list:
@@ -592,11 +684,13 @@ def lay_nguon(file, bao_tien_do=None, cho=None, scan: bool = False, psm: int = 4
     p = Path(file)
     loai = loai_file(p)
     if loai == 'xlsx':
-        return _tu_xlsx(p)
+        return _sua_ma_cu(_tu_xlsx(p))
     if loai == 'xls':
-        return _tu_xls(p)
+        return _sua_ma_cu(_tu_xls(p))
+    if loai == 'dbf':
+        return _sua_ma_cu(_tu_dbf(p))
     if loai in ('docx', 'doc', 'csv'):
-        return _tu_bang_chu(p, 'csv' if loai == 'csv' else 'word')
+        return _sua_ma_cu(_tu_bang_chu(p, 'csv' if loai == 'csv' else 'word'))
     if loai == 'pdf' and not scan:
         ds = _tu_pdf_chu(p, bao_tien_do, cho)
         if ds:

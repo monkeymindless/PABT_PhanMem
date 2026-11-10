@@ -104,9 +104,11 @@ def doc_bang(file) -> list:
     if duoi == '.pdf':
         return [[l] for l in _doc_pdf(p)]
     if duoi in ('.csv', '.txt'):
-        txt = p.read_text(encoding='utf-8-sig', errors='replace')
+        from .chuan_chu import giai_ma_byte
+        txt = giai_ma_byte(p.read_bytes())[0]          # 1.0.98: CSV / TXT ANSI (TCVN3, VNI, Windows-1258) không còn thành "�"
+        txt = txt.replace('\r\n', '\n').replace('\r', '\n')    # như read_text: csv.Sniffer của Python 3.8 đoán sai khi còn \r\n
         try:
-            mau = csv.Sniffer().sniff(txt[:4000], delimiters=',;\t') if txt.strip() else csv.excel
+            mau = csv.Sniffer().sniff(txt[:4000], delimiters=',;\t|') if txt.strip() else csv.excel
         except csv.Error:                               # văn bản thường (không có cột): mỗi dòng một ô
             return [[l.strip()] for l in txt.splitlines()]
         return [[c.strip() for c in r] for r in csv.reader(txt.splitlines(), mau)]

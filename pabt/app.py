@@ -1056,7 +1056,8 @@ class CuaSoChinh(QMainWindow):
         """Nhập file PABT Excel (mẫu .xlsm) hoặc file Excel bất kỳ có họ tên, địa chỉ, tờ, thửa, DT thu hồi, loại đất."""
         if xl is None:
             xl, _ = QFileDialog.getOpenFileName(self, 'Chọn file Excel (file PABT hoặc danh sách hộ, thửa)', '',
-                                                'File Excel (*.xlsm *.xlsx)')
+                                                'File Excel (*.xlsm *.xlsx);;Bảng thuộc tính bản đồ địa chính (*.dbf *.csv *.txt);;'
+                                                'Tất cả file (*.*)')
             if not xl:
                 return
         from . import nhap_excel, nhap_tho

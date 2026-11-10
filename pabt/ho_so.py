@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 
 from . import csdl
-from .lap_pa import LoiNhap, bo_dau, doc_so, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec, kiem_quyen
+from .lap_pa import LoiNhap, bo_dau, doc_so, doc_so_luong, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec, kiem_quyen
 from .tien import D, chuoi, so_vn
 
 TRUONG_HO = [('ho_ten', 'Họ và tên'), ('so_cccd', 'Số CCCD'), ('ngay_cap', 'Ngày cấp'), ('noi_cap', 'Nơi cấp'),
@@ -231,7 +231,8 @@ def chuan_hoa_thua(ds: list) -> list:
         ten = f'Thửa {g["so_thua"] or "?"} tờ {g["so_to"] or "?"}'
         if not g['so_to'] and not g['so_thua']:
             raise LoiNhap(f'Dòng thửa {i}: chưa nhập số tờ, số thửa.')
-        g['dt_thu_hoi'] = chuoi(doc_so(g['dt_thu_hoi'], f'{ten}: DT thu hồi'))
+        # 1.0.98: phép tính ("=12*3,5") làm tròn như ô số lượng phương án (một nguồn: lap_pa.doc_so_luong)
+        g['dt_thu_hoi'] = chuoi(doc_so_luong(g['dt_thu_hoi'], 'm2', f'{ten}: DT thu hồi'))
         if g['dt_nguyen_thua']:                             # trống = chưa nhập (không phải 0)
             nguyen = doc_so(g['dt_nguyen_thua'], f'{ten}: DT nguyên thửa')
             if nguyen < D(g['dt_thu_hoi']):

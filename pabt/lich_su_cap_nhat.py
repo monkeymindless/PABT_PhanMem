@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.98', '11/11/2026', (
+        'Nhập danh sách hộ, thửa từ phần mềm địa chính: đọc được bảng thuộc tính bản đồ .dbf (gCadas, ArcGIS, MapInfo, Famis) và tên cột viết liền như SOTO, SHTHUA, DIENTICH, MDSD, TENCHU.',
+        'Danh sách soạn bằng phông cũ TCVN3 (.VnTime) hoặc VNI tự đổi sang chữ Unicode khi nhập (có nhắc xem lại họ tên, địa chỉ); file CSV / TXT lưu kiểu ANSI không còn bị lỗi chữ.',
+        'Ô diện tích trong file nhập ghi phép tính (=12*3,5 hoặc 120+35,5) được tính ra số; diện tích thửa gõ bằng phép tính làm tròn giống ô số lượng phương án.',
+    )),
     ('1.0.97', '10/11/2026', (
         'Nhật ký kiểm toán: phần mềm nhớ điểm cuối nhật ký trên máy này - nếu file dự án bị sửa ngoài phần mềm (xóa bớt dòng cuối, tính lại mã) thì báo ngay khi mở.',
         'Khôi phục mốc thời gian: mốc bị hỏng không còn ghi đè lên dự án đang tốt; bản sao lưu tự động được kiểm tra trước khi giữ.',
