@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.97', '10/11/2026', (
+        'Nhật ký kiểm toán: phần mềm nhớ điểm cuối nhật ký trên máy này - nếu file dự án bị sửa ngoài phần mềm (xóa bớt dòng cuối, tính lại mã) thì báo ngay khi mở.',
+        'Khôi phục mốc thời gian: mốc bị hỏng không còn ghi đè lên dự án đang tốt; bản sao lưu tự động được kiểm tra trước khi giữ.',
+        'File dự án hỏng: báo rõ "File dự án bị hỏng" và gợi ý khôi phục, không còn làm phần mềm tắt đột ngột.',
+        'Cập nhật bộ đơn giá qua mạng chỉ nhận địa chỉ https:// và file có mã kiểm tra SHA-256; mật khẩu tài khoản máy chủ LAN tối thiểu 8 ký tự.',
+    )),
     ('1.0.96', '10/11/2026', (
         'Bên trong phần mềm sắp xếp lại gọn hơn (tách các phần đọc file đơn giá, màu giao diện, thông báo lỗi thành phần riêng): chức năng và cách dùng không đổi, nền móng cho các bản nâng cấp sau.',
     )),
