@@ -319,5 +319,5 @@ def kiem_excel(file) -> None:
         try:
             kiem_tra_zip(file)
         except LoiAnToan as e:
-            from .lap_pa import LoiNhap
+            from .loi import LoiNhap
             raise LoiNhap(str(e)) from None

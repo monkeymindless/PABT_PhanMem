@@ -14,7 +14,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 GOC = Path(__file__).resolve().parent.parent / 'pabt'
 RE_HEX = re.compile(r'#[0-9A-Fa-f]{6}\b')
 # file được viết màu thẳng: hệ màu (giao_dien, chu_de), vẽ biểu tượng / bản đồ, trang web điện thoại, xem trước giấy in
-TU_DO = {'giao_dien.py', 'chu_de.py', 've_bieu_tuong.py', 'nhan_wifi.py', 'phieu_kiem_dem.py'}
+TU_DO = {'giao_dien.py', 'mau_tong.py', 'chu_de.py', 've_bieu_tuong.py', 'nhan_wifi.py', 'phieu_kiem_dem.py'}
 MOC_MAU = {
     'man_hinh_phien_ban.py': 4, 'man_hinh_the_muc.py': 14, 'man_hinh_ap_gia_nhanh.py': 2,
     'app.py': 39, 'ban_do_cad.py': 16, 'ban_do_kml.py': 1, 'lich_su_cap_nhat.py': 1, 'man_hinh.py': 54,

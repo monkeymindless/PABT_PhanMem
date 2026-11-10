@@ -154,7 +154,7 @@ def doc_toan_van(file, bao_tien_do=None, cho=None) -> tuple:
         if that in ('.docx', '.doc'):
             from . import an_toan
             from .lap_pa import LoiNhap
-            from .nhap_don_gia import _doc_docx, chuyen_office
+            from .nhap_don_gia_doc import _doc_docx, chuyen_office
             try:
                 f = p if that == '.docx' else chuyen_office(p, '.doc')
                 an_toan.kiem_tra_zip(f)

@@ -12,7 +12,7 @@ Thanh tra: mở dự án CHỈ XEM (`chi_xem`).
 """
 from __future__ import annotations
 
-from .lap_pa import LoiNhap
+from .loi import LoiNhap      # 1.0.96: không nhập ngược lap_pa (tầng nghiệp vụ)
 
 LANH_DAO, THAM_DINH, CHUYEN_VIEN, KIEM_DEM, KE_TOAN, THANH_TRA = (
     'lanh_dao', 'tham_dinh', 'chuyen_vien', 'kiem_dem', 'ke_toan', 'thanh_tra')

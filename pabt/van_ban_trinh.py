@@ -131,7 +131,7 @@ def them_mau(loai: str, file_nguon) -> tuple:
                 raise LoiNhap(f'Microsoft Word không chuyển được "{p.name}" sang .docx: ' + ('; '.join(loi) or 'không rõ lỗi'))
             tam, duoi = dich, '.docx'
         elif duoi == '.xls':
-            from .nhap_don_gia import chuyen_office
+            from .nhap_don_gia_doc import chuyen_office
             tam, duoi = chuyen_office(tam, '.xls'), '.xlsx'
         try:
             an_toan.kiem_tra_zip(tam)

@@ -23,8 +23,7 @@ from .loai_dat import chuan_ma_loai_dat
 from .tien import D, KHONG, chuoi, la_cong_thuc, so_luong_vn, so_vn, tinh_cong_thuc, vn
 
 
-class LoiNhap(ValueError):
-    """Giá trị người dùng nhập không hợp lệ (thông báo tiếng Việt, hiện nguyên cho người dùng)."""
+from .loi import LoiNhap  # noqa: E402,F401  (1.0.96: định nghĩa ở module lá pabt/loi.py; lap_pa.LoiNhap giữ nguyên cho 65 file dùng)
 
 
 TB_HO_KHONG_NHAN = ('Hộ này không nằm trong danh sách nhận việc của bạn nên sẽ không được gộp lên máy chủ: không lưu được trên bản '

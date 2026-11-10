@@ -86,7 +86,7 @@ class TestDocXls(_Co):
         p = self.td / 'hong.xls'
         b = mau_xls.bytes_xls()
         p.write_bytes(b[:3000])
-        with mock.patch('pabt.nhap_don_gia.chuyen_office', side_effect=LoiNhap('không có Excel')):
+        with mock.patch('pabt.nhap_don_gia_doc.chuyen_office', side_effect=LoiNhap('không có Excel')):
             with self.assertRaises(LoiNhap):
                 nhap_tho.doc(p)
         with self.assertRaises(doc_xls.LoiXls):
@@ -222,7 +222,7 @@ class TestCongThucChuaTinh(_Co):
 
     def test_tham_chieu_don_gian_duoc_giai(self):
         p = self.xlsx('cong_thuc.xlsx', self._bang)                    # openpyxl không lưu giá trị đã tính của công thức
-        with mock.patch('pabt.nhap_don_gia.chuyen_office', side_effect=AssertionError('không cần Excel')):
+        with mock.patch('pabt.nhap_don_gia_doc.chuyen_office', side_effect=AssertionError('không cần Excel')):
             ds = nguon_luoi.lay_nguon(p)
         tong = next(n for n in ds if n.ten == 'TỔNG CẬP NHẬT')
         self.assertEqual(tong.luoi[1][:3], [1, 'Lê Văn An', 30])
@@ -234,7 +234,7 @@ class TestCongThucChuaTinh(_Co):
             ws.append([1, '=UPPER("Lê Văn An")&" "', 30, 5])
             ws.append([2, '=UPPER("Trần Thị Bình")&" "', 31, 6])
         p = self.xlsx('cong_thuc2.xlsx', bang)
-        with mock.patch('pabt.nhap_don_gia.chuyen_office', side_effect=LoiNhap('máy không có Excel')):
+        with mock.patch('pabt.nhap_don_gia_doc.chuyen_office', side_effect=LoiNhap('máy không có Excel')):
             kq = nhap_tho.doc(p)
         self.assertTrue(any('công thức chưa có giá trị đã lưu' in x for x in kq.thong_bao))
         self.assertTrue(any('Ctrl+S' in x for x in kq.thong_bao))

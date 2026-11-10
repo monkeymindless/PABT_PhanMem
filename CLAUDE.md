@@ -63,6 +63,7 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   test GUI không được để QMessageBox hiện ra (sẽ treo).
 
 ## Kiến trúc
+- Module lá (1.0.96, kiểm toán kiến trúc): `pabt/loi.py` (LoiNhap - lap_pa nhập lại; tầng nền như phan_quyen / an_toan nhập từ đây, KHÔNG từ lap_pa), `pabt/mau_tong.py` (màu theo tông: TONG_NEN, TOI_*, mau_theo_tong, qmau_theo_tong, CHINH_GOC - không nhập giao_dien; giao_dien nhập lại), `pabt/nhap_don_gia_doc.py` (đọc file đơn giá: doc_bang, chuyen_office, OCR - không Qt; nhap_don_gia nhập lại; test vá `pabt.nhap_don_gia_doc.chuyen_office`), `pabt/lenh.py` giữ cả siêu dữ liệu lệnh (TRANG, PHIM_*, NHAN_MENU, LENH_CAN_DU_AN, GOI_Y_MENU...; app nhập lại) - module con không nhập ngược `app`. Tên cũ vẫn dùng được (cùng đối tượng); đừng GÁN LẠI các hằng dùng chung (TONG_NEN, TOKEN...) mà sửa tại chỗ.
 - `chay.py`: điểm vào; CLI (`nhap`, `doi-chieu`) hoặc mở GUI `pabt/app.py` (đối số `.pabt` / `.pabtcn` → mở GUI); `tu-kiem <file>` tự kiểm tra bản đóng gói.
 - `pabt/csdl.py` + `pabt/schema.sql`: tạo/mở `.pabt`. Phiên bản lược đồ = `PRAGMA user_version` (`PHIEN_BAN_CSDL`). Đổi lược đồ: sửa
   `schema.sql` (file mới), tăng `PHIEN_BAN_CSDL`, thêm lệnh vào `_NANG_CAP[v_cũ]` (ADD COLUMN tự bỏ qua nếu cột đã có).

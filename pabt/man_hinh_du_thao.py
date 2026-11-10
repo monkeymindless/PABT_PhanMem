@@ -844,7 +844,7 @@ class KhungDuThao(QWidget):
     def _mo_tien_do(self):
         cha = self.window()
         if hasattr(cha, 'mo_trang'):
-            from .app import TRANG_THEO_DOI
+            from .lenh import TRANG_THEO_DOI
             cha.mo_trang(TRANG_THEO_DOI)
 
     def _dot_id(self):

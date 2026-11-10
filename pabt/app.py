@@ -200,30 +200,15 @@ class DaiCong(QFrame):
         super().changeEvent(e)
         if e.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange):
             self._chon()
-# các trang bên phải cửa sổ chính (chọn ở menu trái). 0.9.76 (Mục IV QĐ 18/2026, Nhóm 5 - 6): Bảng tổng hợp kinh phí là MỘT trang 3 thẻ
-# (cơ cấu, chi tiết hộ, đối soát khái toán); Quyết định phê duyệt; Tiến độ chi trả & Bàn giao (1.0.00: gộp trang "Báo cáo tiến độ
-# GPMB" - thẻ chỉ số + chế độ xem "Thửa còn vướng" - vào trang theo dõi; man_hinh_theo_doi.KhungTienDo); Dự toán / khái toán (0.9.23 -
-# lộ trình người dùng: mục tiêu tài chính của DỰ ÁN, trang trong cửa sổ chính). Ctrl+1..5 theo thứ tự này
-TRANG = ['Danh sách hộ', 'Tổng hợp tiền theo phương án', 'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Dự toán & khái toán']
-TRANG_DS, TRANG_TONG_HOP, TRANG_QUYET_DINH, TRANG_THEO_DOI, TRANG_DU_TOAN = range(5)
+# 1.0.96: siêu dữ liệu lệnh (tên trang, phím tắt, chữ menu, lệnh cần dự án) ở pabt/lenh.py - lenh / tim_nhanh / du_thao không
+# còn nhập ngược app; tên vẫn truy cập được qua app.X
+from .lenh import (GOI_Y_MENU, LENH_CAN_DU_AN, LENH_DANH_DAU_PHU, LENH_THONG_KE, NHAN_MENU, PHIM_LENH, PHIM_NHANH, TRANG, TRANG_DS, TRANG_DU_TOAN, TRANG_QUYET_DINH, TRANG_THEO_DOI, TRANG_TONG_HOP)  # noqa: E402,F401
 TRANG_CHAO = 4                     # chỉ số trong self.trang (QStackedWidget) của màn hình chào khi chưa mở dự án
 SAO_LUU_SAU_MS = 1500             # 1.0.08: sao lưu tự động dự án vừa mở để sửa - sau khi cửa sổ đã vẽ xong
 DUOI_KEO_THA = ('.larc', '.pabt', '.larcud', '.pabtcn', '.pabtcfg', '.xlsx', '.xlsm')   # file kéo thả nhận được
 # chỉ số TRANG -> chỉ số trong self.trang (QStackedWidget): 0 danh sách, 1 bảng tổng hợp, 2 theo dõi, 3 dự toán, 4 chào, 5 quyết định
 # (các trang mới thêm cuối để giữ nguyên chỉ số cũ)
 STACK_CUA_TRANG = (0, 1, 5, 2, 3)
-# phím tắt nhanh (người dùng 20/10/2026): Ctrl+1 Danh sách hộ, Ctrl+2 Khái toán & Dự toán, Ctrl+3 Đơn giá bồi thường (tab bộ đơn
-# giá), Ctrl+4 Niêm yết & Lấy ý kiến (tab), Ctrl+5 Tiến độ & Bàn giao; Ctrl+K Tìm nhanh (CCCD, mã hộ, họ tên, tờ/thửa, chức năng).
-# Tổng hợp tiền / Quyết định phê duyệt không có phím số - mở bằng menu trái hoặc Ctrl+K
-PHIM_NHANH = (('Danh sách hộ', 'Ctrl+1'), ('Dự toán & khái toán', 'Ctrl+2'), ('Bộ đơn giá…', 'Ctrl+3'),
-              ('Dự thảo PABT…', 'Ctrl+4'), ('Theo dõi tiến độ', 'Ctrl+5'), ('Tìm nhanh…', 'Ctrl+K'))
-# phím tắt của lệnh (ngoài Ctrl+số): MỘT bảng - tests/test_dot4_lenh kiểm tên lệnh thật và không trùng phím. 1.0.95 (kiểm toán
-# 09/11/2026): thêm Thêm hộ, Tính đơn giá đất, Xuất danh sách hộ (thao tác hằng ngày phải qua 2-3 lần bấm menu)
-PHIM_LENH = (('Dự án mới…', 'Ctrl+N'), ('Mở dự án…', 'Ctrl+O'), ('Dự án trên máy chủ…', 'Ctrl+Shift+O'), ('Lưu dự án', 'Ctrl+S'),
-             ('Lưu dự án thành…', 'Ctrl+Shift+S'), ('Hướng dẫn sử dụng', 'F1'),
-             ('Tiếp nhận & Kiểm tra pháp lý dự án…', 'Ctrl+Shift+L'), ('Quản lý Mẫu in & Bản in…', 'Ctrl+Shift+M'),
-             ('Thống kê Hộ · Thửa · Diện tích…', 'Ctrl+Shift+T'), ('Thêm hộ…', 'Ctrl+Shift+H'), ('Tính đơn giá đất…', 'Ctrl+Shift+G'),
-             ('Xuất danh sách hộ…', 'Ctrl+Shift+E'))
 STACK_TONG_HOP, STACK_THEO_DOI, STACK_DU_TOAN, STACK_QUYET_DINH = 1, 2, 3, 5
 XANH, DO, VANG = mau_o_theo_tong(globals(), XANH='#E2EFDA', DO='#F8CBAD', VANG=TOKEN['canh_bao_nhat'])
 # menu trái: nhóm đóng sẵn lần đầu mở phần mềm (sau đó nhớ theo người dùng) - vừa màn hình 1366x768 không phải cuộn
@@ -231,21 +216,6 @@ XANH, DO, VANG = mau_o_theo_tong(globals(), XANH='#E2EFDA', DO='#F8CBAD', VANG=T
 # 0.9.88 (người dùng 15/10/2026): nhóm Đơn giá & bảng giá xuống cuối (6); đóng sẵn 1, 5, 6 - mở sẵn 2, 3, 4 (thao tác hằng ngày)
 NHOM_DONG_MAC_DINH = ('1. Khái toán & dự toán', '5. Phê duyệt & bàn giao', '6. Đơn giá & bảng giá')
 GAN_DAY_TOI_DA = 30                # số dự án nhớ trong danh sách "Dự án làm việc gần đây" (26/10/2026: 8 -> 30, bảng giãn hết màn hình chào)
-# 0.9.80: chưa mở dự án thì các lệnh của dự án bị làm mờ (QAction tắt); mở / đóng dự án thì bật / tắt lại. Từ 0.9.88 (thứ tự nhóm
-# mới): nhóm 3 (Lập phương án), 4 (Tổng hợp & trình duyệt), 5 (Phê duyệt & bàn giao) + Đơn giá đặc biệt của nhóm 6. Nhóm 1 (khái
-# toán), 2, Đơn giá bồi thường, Bảng giá đất và Màn hình chính vẫn dùng được khi chưa có dự án
-LENH_CAN_DU_AN = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…', 'Xuất báo cáo đối chiếu…',
-                  'Tổng hợp tiền theo phương án', 'Đợt trình…', 'In / Xuất…',
-                  'Quyết định phê duyệt', 'Theo dõi tiến độ', 'Nhật ký kiểm toán…', 'Xem hộ trên bản đồ…',
-                  # nhóm 6 Đơn giá & bảng giá: Đơn giá đặc biệt là của DỰ ÁN (tắt khi chưa mở); Đơn giá bồi thường, Bảng giá đất vẫn
-                  # bật (liên kết chân màn hình chào, tra cứu khi chưa có dự án)
-                  'Đơn giá riêng dự án…',
-                  # 21/10/2026: thống kê Hộ · Thửa · Diện tích (menu Dữ liệu + huy hiệu "Lọc:" cuối hàng lọc danh sách hộ)
-                  'Thống kê Hộ · Thửa · Diện tích…',
-                  # 30/10/2026: mốc khôi phục của dự án đang mở (menu Tệp tin)
-                  'Cỗ máy thời gian (mốc khôi phục)…',
-                  'Chọn hộ niêm yết…')
-LENH_THONG_KE = 'Thống kê Hộ · Thửa · Diện tích…'
 # Nhập bản vẽ CAD, Phiếu kiểm đếm (menu Dữ liệu / Công cụ, 0.9.87): KHÔNG tắt khi chưa mở dự án - mục menu mờ bấm không có phản
 # ứng, người dùng tưởng hỏng; bấm thì báo "mở dự án trước" (_can_du_an).
 # nút A− / A+ trên thanh trạng thái: khung nút nhỏ, viền nhẹ, bo 4px
@@ -253,43 +223,6 @@ QSS_NUT_ZOOM = ('QToolButton#nut_zoom { border: 1px solid #8696AB; border-radius
                 'color: #1E293B; font-weight: 600; }'
                 'QToolButton#nut_zoom:hover { background: #F1F5F9; border-color: #94A3B8; }'
                 'QToolButton#nut_zoom:pressed { background: #E2E8F0; }')
-# chữ ngắn trên menu (khóa = tên lệnh đầy đủ trong self.lenh, hiện ở gợi ý khi rê chuột)
-NHAN_MENU = {'Lập phương án hộ…': 'Lập phương án chi tiết', 'Thêm hộ…': 'Thêm hộ', 'Xóa hộ…': 'Xóa hộ',
-             'Tiếp nhận & Kiểm tra pháp lý dự án…': 'Tiếp nhận hồ sơ pháp lý',
-             'Kiểm tra lỗi…': 'Kiểm tra lỗi pháp lý',
-             # 0.9.70 (đặc tả ARCH-PABT-2026-V7, người dùng 12/10/2026): chữ trên menu trái theo 6 nhóm nghiệp vụ
-             'Dự toán & khái toán': 'Lập khái toán & Dự toán', 'Danh sách hộ': 'Danh sách hộ và Thửa',
-             'Theo dõi tiến độ': 'Tiến độ chi trả & Bàn giao',
-             'Bộ đơn giá…': 'Đơn giá bồi thường', 'Đơn giá riêng dự án…': 'Đơn giá đặc biệt', 'Rà soát giá…': 'Rà soát giá',
-             'Thông tin dự án…': 'Thông tin dự án',
-             'Bảng giá đất NQ 28…': 'Bảng giá đất',
-             'Cập nhật bảng giá đất…': 'Cập nhật giá đất',
-             'Tính đơn giá đất…': 'Tính đơn giá đất',
-             'Dự thảo PABT…': 'Niêm yết & Lấy ý kiến',
-             'Tổng hợp tiền theo phương án': 'Bảng tổng hợp kinh phí',
-             'Quyết định phê duyệt': 'Quyết định phê duyệt', 'Đợt trình…': 'Đợt trình thẩm định',
-             'Trạng thái hộ…': 'Trạng thái hộ',
-             'In / Xuất…': 'In / Xuất hồ sơ', 'Quản lý Mẫu in & Bản in…': 'Quản lý Mẫu in & Bản in…',
-             'Xuất báo cáo đối chiếu…': 'Đối chiếu số liệu',
-             'Nhập bản vẽ CAD (.dxf)…': 'Nhập bản đồ (.dxf, .kml, .kmz)…'}      # 1.0.32: cả bản đồ KML / KMZ (Google Earth)
-# 0.9.69 (người dùng 12/10/2026 đổi tên): gợi ý khi rê chuột theo tên mới (khóa self.lenh giữ tên cũ - mã / test gọi theo khóa)
-GOI_Y_MENU = {'Bộ đơn giá…': 'Đơn giá bồi thường (bộ đơn giá nhà, cây, vật nuôi, chính sách hỗ trợ)',
-              'Đơn giá riêng dự án…': 'Đơn giá đặc biệt của dự án (nhập tay, thẩm định giá)',
-              'Dự thảo PABT…': 'Niêm yết công khai dự thảo phương án và lấy ý kiến',
-              'Đợt trình…': 'Đợt trình thẩm định: đợt trình, số phương án, văn bản trình',
-              'Dự toán & khái toán': 'Lập khái toán & dự toán (giai đoạn chuẩn bị đầu tư - file .pabtdt riêng)',
-              'So sánh với thực tế': 'So sánh khái toán đã duyệt với số liệu áp giá thực tế của dự án',
-              'Tiếp nhận & Kiểm tra pháp lý dự án…': 'Tiếp nhận & kiểm tra pháp lý hồ sơ đầu vào (32 mục, thời hạn chủ trương, '
-                                                      'kỹ thuật địa chính) - dùng được khi chưa có dự án (Ctrl+Shift+L)',
-              'Danh sách hộ': 'Danh sách hộ và thửa đất của dự án',
-              'Tổng hợp tiền theo phương án': 'Bảng tổng hợp kinh phí: cơ cấu, chi tiết từng hộ, đối soát khái toán',
-              'Xuất báo cáo đối chiếu…': 'Đối chiếu số liệu với file Excel kiểm đếm (xuất báo cáo)',
-              'In / Xuất…': 'Xuất hồ sơ & bản in: phương án chi tiết, bảng tổng hợp, tờ trình',
-              'Theo dõi tiến độ': 'Tiến độ chi trả & bàn giao: tỷ lệ giải ngân, mặt bằng sạch, thửa còn vướng, mốc thu hồi đất, vận '
-                                  'động và cưỡng chế; báo cáo tiến độ GPMB',
-              'Quyết định phê duyệt': 'Quản lý quyết định phê duyệt phương án và các hộ của từng quyết định'}
-# 1.0.03: lệnh menu trái mở trang nhúng / chế độ - đánh dấu khi đang xem (cùng TRANG và 'Màn hình chính'; app._dong_bo_menu_trai)
-LENH_DANH_DAU_PHU = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Bộ đơn giá…', 'So sánh với thực tế')
 TEN_TAB = {'don_gia': 'Đơn giá bồi thường', 'du_thao': 'Niêm yết && Lấy ý kiến'}   # "&&": QTabBar hiện "&"
 
 

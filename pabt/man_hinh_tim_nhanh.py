@@ -32,7 +32,7 @@ def ghi_gan_day(cua_so, ten: str) -> None:
 
 def ly_do_tat(cua_so, ten: str) -> str:
     """Vì sao lệnh đang tắt - nói rõ thay vì chỉ làm mờ (trước đây: "Lệnh đang tắt (chưa mở dự án hoặc đang chỉ xem)")."""
-    from .app import LENH_CAN_DU_AN
+    from .lenh import LENH_CAN_DU_AN
     con = getattr(cua_so, 'con', None)
     if con is None and ten in LENH_CAN_DU_AN:
         return 'Mở hoặc tạo dự án trước'
@@ -76,7 +76,7 @@ class Muc:
 
 def ds_muc(cua_so) -> list:
     """Mọi hộ của dự án đang mở + mọi lệnh của cửa sổ chính (NHAN_MENU làm chữ chính, tên đầy đủ làm chữ phụ)."""
-    from .app import NHAN_MENU
+    from .lenh import NHAN_MENU
     kq = []
     con = getattr(cua_so, 'con', None)
     if con is not None:
