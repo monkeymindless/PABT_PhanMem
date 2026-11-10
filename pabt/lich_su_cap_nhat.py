@@ -7,6 +7,9 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.96', '10/11/2026', (
+        'Bên trong phần mềm sắp xếp lại gọn hơn (tách các phần đọc file đơn giá, màu giao diện, thông báo lỗi thành phần riêng): chức năng và cách dùng không đổi, nền móng cho các bản nâng cấp sau.',
+    )),
     ('1.0.95', '10/11/2026', (
         'Phím tắt mới: Ctrl+Shift+H Thêm hộ, Ctrl+Shift+G Tính đơn giá đất, Ctrl+Shift+E Xuất danh sách hộ.',
         'Tìm nhanh (Ctrl+K): chưa gõ gì thì lệnh vừa dùng đứng đầu; gõ > để chỉ tìm lệnh, @ để chỉ tìm hộ; lệnh đang tắt ghi rõ lý do (chưa mở dự án, vai trò không có quyền, dự án đang mở chỉ xem).',
