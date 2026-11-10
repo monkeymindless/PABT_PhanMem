@@ -126,8 +126,15 @@ def sao_luu_tu_dong(con, file, giu: int = SAO_LUU_GIU) -> Path | None:
         con.backup(dc)
         dc.commit()
         bo_anh_ban_do_ban_sao(dc)
+        kt = dc.execute('PRAGMA quick_check').fetchone()     # 1.0.97: không giữ bản sao lưu hỏng (tưởng có mà khôi phục không được)
     finally:
         dc.close()
+    if not kt or kt[0] != 'ok':
+        try:
+            tam.unlink()
+        except OSError:
+            pass
+        raise sqlite3.DatabaseError(f'Bản sao lưu tự động không qua kiểm tra toàn vẹn ({kt[0] if kt else "không rõ"}) - đã bỏ.')
     from .an_toan import dong_goi_file_sao_luu
     dong_goi_file_sao_luu(tam)                          # 1.0.55: nén zlib (không mã hóa - người dùng chọn)
     os.replace(tam, dich)
@@ -483,9 +490,11 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
         con._file_tam = tam
         try:
             con.row_factory = sqlite3.Row
+            con.execute('PRAGMA trusted_schema = OFF')  # 1.0.97: như nhánh mở để sửa (_mo_tiep)
             ver = con.execute('PRAGMA user_version').fetchone()[0]
             if not 3 <= ver <= PHIEN_BAN_CSDL:
                 raise RuntimeError(f'File dự án phiên bản CSDL v{ver} cần được mở để sửa một lần (nâng cấp) trước khi mở chỉ xem.')
+            _kiem_luoc_do(con)                          # 1.0.97: lược đồ hỏng -> báo ngay, không văng UnicodeDecodeError về sau
         except BaseException:
             con.close()                                 # file hỏng / không phải CSDL: không để Windows giữ khóa file (26/10/2026)
             raise
@@ -513,6 +522,8 @@ def _mo_tiep(con, tao: bool):
     # lưu (máy yếu, ổ HDD - 16/10/2026). Thiết lập của kết nối, không ghi vào file
     con.execute('PRAGMA temp_store = MEMORY')
     ver = con.execute('PRAGMA user_version').fetchone()[0]
+    if ver != 0:
+        _kiem_luoc_do(con)
     da_go = _go_trigger_la_som(con) if ver != 0 else []      # trước mọi lần ghi bên dưới (nâng cấp, mở rộng, ghi tối thiểu)
     if ver == 0:
         con.executescript(_SCHEMA.read_text(encoding='utf-8'))
@@ -861,6 +872,22 @@ def go_trigger_la(con) -> list:
         except sqlite3.OperationalError:
             return []
     return la
+
+
+def _kiem_luoc_do(con) -> None:
+    """1.0.97 (thử file hỏng ngẫu nhiên): lược đồ có byte hỏng làm MỌI câu lệnh sau ném UnicodeDecodeError (Python không giải mã được
+    thông báo lỗi của SQLite) - không phải sqlite3.Error nên các hộp thoại không bắt, phần mềm văng. Đọc trọn lược đồ (vài KB) ngay khi
+    mở: hỏng -> sqlite3.DatabaseError có lời rõ ràng."""
+    try:
+        con.execute('SELECT type, name, tbl_name, sql FROM main.sqlite_master').fetchall()
+        try:                                            # câu chạm bảng: SQLite mới PHÂN TÍCH lược đồ (đọc sqlite_master thì chưa)
+            con.execute('SELECT 1 FROM main.ho LIMIT 0').fetchall()
+        except sqlite3.OperationalError as e:
+            if 'no such table' not in str(e):           # file chỉ danh mục / bộ đơn giá không có bảng ho: lược đồ vẫn đọc được
+                raise
+    except (UnicodeDecodeError, sqlite3.DatabaseError) as e:
+        raise sqlite3.DatabaseError('File dự án bị hỏng (không đọc được cấu trúc bảng). Mở bản sao lưu tự động hoặc Cỗ máy thời gian '
+                                    'để khôi phục.') from e
 
 
 def _go_trigger_la_som(con) -> list:

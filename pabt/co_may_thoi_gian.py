@@ -191,6 +191,19 @@ def don_dep(file, bay_gio: datetime | None = None) -> int:
     return bo
 
 
+def kiem_tra_file(p) -> str:
+    """'' nếu file SQLite p đọc được và PRAGMA quick_check = ok; còn lại: mô tả lỗi (1.0.97, kiểm toán dữ liệu 09/11/2026)."""
+    try:
+        c = sqlite3.connect(f'file:{Path(p).as_posix()}?mode=ro', uri=True)
+        try:
+            r = c.execute('PRAGMA quick_check').fetchone()
+        finally:
+            c.close()
+    except sqlite3.Error as e:
+        return str(e) or 'không đọc được'
+    return '' if r and r[0] == 'ok' else str(r[0] if r else 'không rõ')
+
+
 def khoi_phuc(file, moc: Moc) -> Moc | None:
     """Thay file dự án bằng bản của mốc. Nơi gọi PHẢI đóng mọi kết nối tới file trước. Chụp mốc "trước khi khôi phục" của file hiện
     tại (luôn chụp) để quay lại được. Trả mốc vừa chụp."""
@@ -207,11 +220,20 @@ def khoi_phuc(file, moc: Moc) -> Moc | None:
     goc = mo_goi_file_sao_luu_ra_bytes(moc.file)        # 1.0.55: mốc nén -> giải nén; mốc cũ (SQLite thường) chép thẳng
     if goc is None:
         shutil.copyfile(moc.file, tam)
+        with open(tam, 'rb+') as f:                     # 1.0.97: ghi xuống đĩa trước khi thay file (mất điện giữa chừng)
+            os.fsync(f.fileno())
     else:
         with open(tam, 'wb') as f:
             f.write(goc)
             f.flush()
             os.fsync(f.fileno())
+    loi = kiem_tra_file(tam)                           # 1.0.97: mốc hỏng KHÔNG được chép đè lên file dự án đang tốt
+    if loi:
+        try:
+            tam.unlink()
+        except OSError:
+            pass
+        raise sqlite3.DatabaseError(f'Mốc {moc.luc:%d/%m/%Y %H:%M} bị hỏng ({loi}): không khôi phục, file dự án giữ nguyên.')
     os.replace(tam, file)
     _ghi_vet_khoi_phuc(file, moc, truoc)
     return truoc

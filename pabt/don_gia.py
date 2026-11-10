@@ -288,10 +288,22 @@ def cap_nhat_tu_file(p, phien_ban: str = '') -> dict:
     return cai_bo(p)
 
 
+TOI_DA_TAI = 200 * 2 ** 20          # 1.0.97: trần dung lượng file bộ đơn giá tải về (bộ thật khoảng 5 MB)
+
+
+def _kiem_dia_chi(url, ten: str) -> None:
+    """1.0.97 (kiểm toán bảo mật 09/11/2026): chỉ https:// (máy chủ của đơn vị) hoặc file: (thư mục dùng chung) - http:// để lộ và bị
+    sửa nội dung trên đường truyền."""
+    dau = str(url or '').strip().lower()
+    if not (dau.startswith('https://') or dau.startswith('file:')):
+        raise LoiNhap(f'{ten} phải là địa chỉ https:// (hoặc file trong thư mục dùng chung), không dùng http:// hay giao thức khác.')
+
+
 def kiem_tra_mang(url: str, timeout: int = 20) -> dict | None:
     """Đọc thông báo cập nhật (JSON) tại url; trả thông báo nếu có phiên bản mới hơn bộ đang dùng, không thì None."""
     if not url:
         raise LoiNhap('Chưa có địa chỉ cập nhật. Nhập địa chỉ file thông báo (JSON) do đơn vị quản lý bộ đơn giá cung cấp.')
+    _kiem_dia_chi(url, 'Địa chỉ thông báo cập nhật')
     try:
         from .an_toan import ngu_canh_tls
         with urllib.request.urlopen(url, timeout=timeout, context=ngu_canh_tls()) as r:
@@ -304,16 +316,33 @@ def kiem_tra_mang(url: str, timeout: int = 20) -> dict | None:
 
 
 def tai_va_cai(tb: dict, timeout: int = 120) -> dict:
-    """Tải bộ đơn giá theo thông báo cập nhật, kiểm tra mã SHA-256 (nếu có) rồi cài."""
+    """Tải bộ đơn giá theo thông báo cập nhật, kiểm tra mã SHA-256 (BẮT BUỘC từ 1.0.97) rồi cài. Dừng khi vượt TOI_DA_TAI."""
+    import re
+    ma = str(tb.get('sha256') or '').strip()
+    if not re.fullmatch(r'[0-9a-fA-F]{64}', ma):
+        raise LoiNhap('Thông báo cập nhật thiếu mã kiểm tra SHA-256 (64 ký tự): không tải - đề nghị đơn vị phát hành bổ sung mã.')
+    _kiem_dia_chi(tb.get('tai_ve'), 'Địa chỉ tải bộ đơn giá')
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / TEN_FILE
+        bam = hashlib.sha256()
         try:
             from .an_toan import ngu_canh_tls
             with urllib.request.urlopen(tb['tai_ve'], timeout=timeout, context=ngu_canh_tls()) as r, open(p, 'wb') as f:
-                shutil.copyfileobj(r, f)
+                da = 0
+                while True:
+                    k = r.read(2 ** 16)
+                    if not k:
+                        break
+                    da += len(k)
+                    if da > TOI_DA_TAI:
+                        raise LoiNhap(f'File tải về lớn hơn {TOI_DA_TAI // 2 ** 20} MB: không phải bộ đơn giá, dừng tải.')
+                    bam.update(k)
+                    f.write(k)
+        except LoiNhap:
+            raise
         except Exception as e:
             raise LoiNhap(f'Không tải được bộ đơn giá:\n{e}') from None
-        if tb.get('sha256') and hashlib.sha256(p.read_bytes()).hexdigest().lower() != str(tb['sha256']).lower():
+        if bam.hexdigest().lower() != ma.lower():
             raise LoiNhap('File tải về sai mã kiểm tra (SHA-256): không cài.')
         return cai_bo(p)
 

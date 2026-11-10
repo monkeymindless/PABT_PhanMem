@@ -390,7 +390,7 @@ class TestDongBoMayChu(CoMay):
         goc = self.td / 'MayChu'
         may_chu.khoi_tao(goc, 'QuanTri', 'matkhau1', 'Quản trị')
         qt = may_chu.dang_nhap(goc, 'quantri', 'matkhau1')
-        may_chu.them_nguoi_dung(qt, 'nv1', 'Nhân viên', 'abc123')
+        may_chu.them_nguoi_dung(qt, 'nv1', 'Nhân viên', 'abc12345')
         gg.ghi_goi(self.goi_moi())                                  # sau_khi_sua tự phát hành
         self.assertEqual(quan_tri_bo.LOI_PHAT_HANH, '')
         self.assertIsNotNone(db.doc_phien_ban(goc)['tep'][db.FILE_QUY_TAC])
@@ -398,7 +398,7 @@ class TestDongBoMayChu(CoMay):
         os.environ['PABT_THU_MUC_MAY'] = str(self.td / 'may_b')
         gg._quen()
         self.assertEqual(len(gg.ds_goi()), 1)
-        may_chu.dang_nhap(goc, 'nv1', 'abc123')
+        may_chu.dang_nhap(goc, 'nv1', 'abc12345')
         self.assertIsNotNone(db.nhan())
         self.assertEqual([x['ma'] for x in gg.ds_goi()], [gg.MA_GAN_SAN, 'QD15_2027'])
         with self.assertRaises(LoiQuyenBoDonGia):                   # nhân viên không tự sửa gói

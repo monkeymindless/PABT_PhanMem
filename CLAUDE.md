@@ -212,6 +212,8 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   `kiem_toan.gan_ky`, hàm SQLite `_kt_bam` = `kiem_toan.tinh_bam`; đừng thêm cột vào audit_logs - bảng cấm UPDATE, INSERT … SELECT nhiều
   dòng tính trước cả lô nên không nối được). `audit_bam` có trong `hoan_tac.BO_QUA`, `DauVetHo.BO_QUA`, `chua_benh_csdl._XOA_BANG` -
   bảng mới bị trigger cấm xóa phải thêm vào cả ba (không thì Ctrl+Z lỗi / danh sách hộ tải lại toàn bộ mỗi lần lưu).
+- Điểm neo nhật ký kiểm toán (1.0.97): `kiem_toan.ghi_neo` / `kiem_tra_neo` nhớ (dòng ký cuối, băm) ở `<thư mục máy>\neo_kiem_toan.json` (ngoài file; nhận diện chuỗi bằng dòng ký ĐẦU) - phát hiện cắt đuôi / tính lại chuỗi; chỉ ghi khi chuỗi còn khớp neo cũ (không xóa dấu vết). Ghi ở `kiem_toan.gan` (mở) và `app.dong_du_an` (đóng).
+- Toàn vẹn file: `co_may_thoi_gian.kiem_tra_file` (quick_check) trước khi khôi phục mốc - mốc hỏng KHÔNG chép đè; sao lưu tự động quick_check bản sao trước khi giữ. `csdl._kiem_luoc_do` ở CẢ hai nhánh mở (sửa / chỉ xem): lược đồ hỏng -> DatabaseError (trước: UnicodeDecodeError ở câu lệnh sau, hộp thoại không bắt). Bộ đơn giá qua mạng: chỉ https:// hoặc file:, SHA-256 BẮT BUỘC, trần `don_gia.TOI_DA_TAI` 200 MB. Mật khẩu tài khoản máy chủ LAN >= `may_chu.MAT_KHAU_TOI_THIEU` (8; chỉ khi tạo / đổi).
 - Bản sao lưu tự động / mốc thời gian: NÉN zlib (`an_toan.DAU_SAO_LUU`, KHÔNG mã hóa - người dùng chọn 03/11/2026: phải khôi phục được
   sau khi cài lại Windows). Mở: `csdl.mo` tự giải nén ra file tạm, luôn chỉ xem (`KetNoi.close` xóa file tạm); `khoi_phuc` giải nén. Đừng
   mở file sao lưu bằng `sqlite3.connect` thẳng.

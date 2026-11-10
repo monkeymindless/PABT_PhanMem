@@ -188,9 +188,12 @@ def bam_mat_khau(mat_khau: str, muoi: str | None = None) -> tuple:
     return bam, muoi
 
 
+MAT_KHAU_TOI_THIEU = 8              # 1.0.97 (kiểm toán bảo mật 09/11/2026: 6 ký tự quá ngắn) - chỉ áp khi tạo / đổi mật khẩu
+
+
 def _kiem_mat_khau(mk: str) -> None:
-    if len(str(mk or '')) < 6:
-        raise LoiMayChu('Mật khẩu cần ít nhất 6 ký tự.')
+    if len(str(mk or '')) < MAT_KHAU_TOI_THIEU:
+        raise LoiMayChu(f'Mật khẩu cần ít nhất {MAT_KHAU_TOI_THIEU} ký tự.')
 
 
 def _kiem_tai_khoan(tk: str) -> str:

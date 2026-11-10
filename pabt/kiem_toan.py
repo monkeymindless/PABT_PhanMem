@@ -122,8 +122,90 @@ def kiem_tra_toan_ven(con) -> dict:
         truoc = b
     for i in sorted(bam):
         kq['loi'].append(f'Có mã băm của dòng nhật ký số {i} nhưng dòng đó không còn (bị xóa ngoài phần mềm).')
+    kq['loi'] += kiem_tra_neo(con)              # 1.0.97: cắt đuôi / tính lại cả chuỗi so với điểm neo ngoài file
     kq['hop_le'] = not kq['loi']
     return kq
+
+
+# ---------------------------------------------------------------- 1.0.97: ĐIỂM NEO ngoài file (kiểm toán bảo mật 09/11/2026)
+# Chuỗi băm nằm trong file nên người sửa được file tính lại được cả chuỗi, và xóa các dòng CUỐI không để lại dấu. Mỗi lần mở / đóng dự
+# án trên máy này phần mềm nhớ (dòng ký cuối, băm của nó) ở thư mục máy - ngoài file. Lần sau: dòng neo phải còn trong file với đúng
+# băm, nếu không -> báo nhật ký đã bị cắt đuôi hoặc tính lại sau lần làm việc trước TRÊN MÁY NÀY. Chuỗi nhận diện bằng dòng ký ĐẦU tiên
+# (không theo đường dẫn: file chép / đổi tên vẫn khớp). Không khóa bí mật (quyết định 1.0.55: file dùng chung nhiều máy).
+FILE_NEO = 'neo_kiem_toan.json'
+NEO_TOI_DA = 500                                # số chuỗi (dự án) nhớ trên một máy
+
+
+def _duong_neo():
+    from .dia_phuong import thu_muc_may
+    return thu_muc_may() / FILE_NEO
+
+
+def _doc_neo() -> dict:
+    import json
+    try:
+        d = json.loads(_duong_neo().read_text(encoding='utf-8'))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def khoa_chuoi(con) -> str | None:
+    """Nhận diện chuỗi băm: id + băm của dòng ký đầu tiên. None: file chưa có dòng ký."""
+    if not co_bang_bam(con):
+        return None
+    r = con.execute(f'SELECT id, bam FROM {BANG_BAM} ORDER BY id LIMIT 1').fetchone()
+    return f'{r[0]}:{r[1]}' if r else None
+
+
+def kiem_tra_neo(con) -> list:
+    """Lỗi so với điểm neo của máy này (đọc, không ghi). [] khi chưa có neo / khớp."""
+    k = khoa_chuoi(con)
+    neo = _doc_neo().get(k) if k else None
+    if not neo:
+        return []
+    try:
+        i, bam_neo = int(neo['id']), str(neo['bam'])
+    except (KeyError, TypeError, ValueError):
+        return []
+    r = con.execute(f'SELECT bam FROM {BANG_BAM} WHERE id = ?', (i,)).fetchone()
+    luc = str(neo.get('luc', ''))
+    if r is None:
+        return [f'Nhật ký kiểm toán bị CẮT ĐUÔI: máy này đã thấy tới dòng số {i} (lúc {luc}) nhưng file không còn dòng đó.']
+    if r[0] != bam_neo:
+        return [f'Chuỗi băm nhật ký bị TÍNH LẠI: dòng số {i} khác mã băm máy này ghi nhận lúc {luc}.']
+    return []
+
+
+def ghi_neo(con) -> bool:
+    """Nhớ dòng ký cuối của chuỗi vào thư mục máy. CHỈ ghi khi chuỗi khớp neo cũ và không lùi (không xóa dấu vết khi file đã bị sửa).
+    Lỗi ghi (thư mục không ghi được): bỏ qua."""
+    import json
+    from datetime import datetime as _dt
+    k = khoa_chuoi(con)
+    if not k or kiem_tra_neo(con):
+        return False
+    r = con.execute(f'SELECT id, bam FROM {BANG_BAM} ORDER BY id DESC LIMIT 1').fetchone()
+    d = _doc_neo()
+    cu = d.get(k) or {}
+    try:
+        if int(cu.get('id', -1)) > r[0]:
+            return False
+    except (TypeError, ValueError):
+        pass
+    d[k] = dict(id=r[0], bam=r[1], luc=_dt.now().strftime('%d/%m/%Y %H:%M'))
+    if len(d) > NEO_TOI_DA:                     # bỏ chuỗi lâu nhất (thứ tự chèn của dict)
+        for x in list(d)[:len(d) - NEO_TOI_DA]:
+            d.pop(x, None)
+    try:
+        p = _duong_neo()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tam = p.with_suffix('.tmp')
+        tam.write_text(json.dumps(d, ensure_ascii=False), encoding='utf-8')
+        tam.replace(p)
+        return True
+    except OSError:
+        return False
 
 
 # bảng theo dõi bằng trigger tạm: (khóa, mã hộ, mã thửa, mô tả đối tượng - biểu thức SQL trên dòng R, ghi thêm / xóa?, [trường])
@@ -257,6 +339,7 @@ def gan(con, nguoi: str | None = None) -> bool:
                 for cau in _trigger(bang):
                     con.execute(cau)
     gan_ky(con)                                 # 1.0.55: ký chuỗi băm từng dòng nhật ký
+    ghi_neo(con)                                # 1.0.97: điểm neo ngoài file (chỉ ghi khi chuỗi còn khớp neo cũ)
     con.commit()                                # tạo bảng / trigger tạm mở giao dịch ngầm: chốt ngay (như hoan_tac)
     return True
 

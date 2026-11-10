@@ -187,19 +187,19 @@ class TestMayChu(unittest.TestCase):
     def test_vai_tro_tai_khoan_va_file(self):
         qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
         for vt in pq.TEN_VAI_TRO:
-            may_chu.them_nguoi_dung(qt, vt.replace('_', ''), f'Người {vt}', 'abc123', vai_tro=vt)
-        ld = may_chu.dang_nhap(self.goc, 'lanhdao', 'abc123')
+            may_chu.them_nguoi_dung(qt, vt.replace('_', ''), f'Người {vt}', 'abc12345', vai_tro=vt)
+        ld = may_chu.dang_nhap(self.goc, 'lanhdao', 'abc12345')
         self.assertTrue(ld.la_quan_tri)                                # lãnh đạo = quản trị (tài khoản, bộ đơn giá)
         f = may_chu.thu_muc_du_an(self.goc) / 'DA.pabt'
         csdl.tao_moi(f).close()
-        kd = may_chu.dang_nhap(self.goc, 'kiemdem', 'abc123')
+        kd = may_chu.dang_nhap(self.goc, 'kiemdem', 'abc12345')
         self.assertFalse(kd.la_quan_tri)
         self.assertEqual(pq.vai_tro_cho_file(f), pq.KIEM_DEM)
         self.assertIsNone(pq.vai_tro_cho_file(self.td / 'rieng.pabt'))  # file riêng trên máy: không giới hạn
         from pabt import quan_tri_bo
         self.assertFalse(quan_tri_bo.co_quyen_sua())                    # kiểm đếm viên không sửa bộ đơn giá
         may_chu.sua_nguoi_dung(may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1'), 'kiemdem', vai_tro=pq.CHUYEN_VIEN)
-        self.assertEqual(may_chu.dang_nhap(self.goc, 'kiemdem', 'abc123').vai_tro, pq.CHUYEN_VIEN)
+        self.assertEqual(may_chu.dang_nhap(self.goc, 'kiemdem', 'abc12345').vai_tro, pq.CHUYEN_VIEN)
 
 
 if __name__ == '__main__':

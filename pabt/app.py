@@ -1281,6 +1281,9 @@ class CuaSoChinh(QMainWindow):
                     from . import tro_ly
                     tro_ly.chup_ten_che(self.con)           # 1.0.91: an_danh che họ tên chủ hộ cả khi gọi không có kết nối (luồng nền)
                     kiem_toan.gan(self.con)
+                    loi_neo = kiem_toan.kiem_tra_neo(self.con)      # 1.0.97: nhật ký bị cắt / tính lại so với lần trước trên máy này
+                    if loi_neo:
+                        QTimer.singleShot(0, lambda m=loi_neo[0]: self.statusBar().showMessage('CẢNH BÁO: ' + m + ' Xem Nhật ký kiểm toán.', 0))
                 except sqlite3.Error:                  # file đang khóa / lỗi: vẫn mở dự án (nhat_ky vẫn ghi thao tác)
                     pass
                 try:                                   # 16/10/2026: quy ước tương đương mẫu (bộ đơn giá / Excel cũ) -> bỏ
@@ -1548,6 +1551,12 @@ class CuaSoChinh(QMainWindow):
             self.ht = None
         self.dv = None
         if self.con is not None:
+            if not self.chi_doc:                      # 1.0.97: nhớ điểm neo nhật ký kiểm toán cuối phiên (ngoài file)
+                try:
+                    from . import kiem_toan
+                    kiem_toan.ghi_neo(self.con)
+                except sqlite3.Error:
+                    pass
             self.con.close()
             self.con = None
         self.nhan_viec = None

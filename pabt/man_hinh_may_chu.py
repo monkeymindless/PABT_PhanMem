@@ -172,7 +172,7 @@ class HopThietLap(_Hop):
         self.lb.setWordWrap(True)
         self.o_qt_tk = QLineEdit('quantri')
         self.o_qt_ten = QLineEdit('Quản trị hệ thống')
-        self.o_qt_mk = _o_mk('ít nhất 6 ký tự')
+        self.o_qt_mk = _o_mk('ít nhất 8 ký tự')
         self.o_qt_mk2 = _o_mk('nhập lại')
         from .giao_dien import the_form
         self.the_moi = the_form('Khởi tạo máy chủ mới (lần đầu)', [
@@ -283,7 +283,7 @@ class HopDoiMatKhau(_Hop):
         super().__init__(parent)
         self.setWindowTitle('Đổi mật khẩu')
         self.setFixedWidth(400)
-        self.o_cu, self.o_moi, self.o_moi2 = _o_mk(), _o_mk('ít nhất 6 ký tự'), _o_mk()
+        self.o_cu, self.o_moi, self.o_moi2 = _o_mk(), _o_mk('ít nhất 8 ký tự'), _o_mk()
         f = QFormLayout(self)
         f.addRow('Mật khẩu hiện tại:', self.o_cu)
         f.addRow('Mật khẩu mới:', self.o_moi)
@@ -320,7 +320,7 @@ class HopTaiKhoan(_Hop):
         self.bang = _bang(self.COT, [110, 190, 130, 90, 90, 140, 110])
         self.o_tk, self.o_ten, self.o_cv = QLineEdit(), QLineEdit(), QLineEdit()
         self.o_tk.setPlaceholderText('vd: vinh.pt')
-        self.o_mk = _o_mk('ít nhất 6 ký tự')
+        self.o_mk = _o_mk('ít nhất 8 ký tự')
         self.cb_vt = QComboBox()
         for k, t in may_chu.TEN_VAI_TRO.items():
             self.cb_vt.addItem(t, k)

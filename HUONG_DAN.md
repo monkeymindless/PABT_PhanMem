@@ -1010,7 +1010,7 @@ Không bắt buộc. Có 3 cách dùng, chuyển qua lại bất kỳ lúc nào:
 2. Máy đầu tiên: nút **Máy chủ LAN** (góc dưới bên phải) → **Thiết lập máy chủ…** → chọn thư mục → nhập tài khoản quản trị, mật
    khẩu → **Khởi tạo máy chủ mới**. Phần mềm tạo `pabt_may_chu.sqlite` (tài khoản), thư mục `DuAn\` (dự án dùng chung), `SaoLuu\`.
 3. Đăng nhập bằng tài khoản quản trị → menu tài khoản → **Quản lý tài khoản người dùng…**: thêm tài khoản cho từng người
-   (tài khoản không dấu, ví dụ `vinh.pt`; mật khẩu ≥ 6 ký tự), đặt lại mật khẩu, khóa / mở khóa, đổi vai trò.
+   (tài khoản không dấu, ví dụ `vinh.pt`; mật khẩu ≥ 8 ký tự), đặt lại mật khẩu, khóa / mở khóa, đổi vai trò.
 4. Các máy khác: **Thiết lập máy chủ…** → chọn cùng thư mục → **Kết nối máy chủ có sẵn**.
 
 **Hằng ngày:** mở phần mềm → hộp **Đăng nhập** (nhớ tài khoản lần trước). Đăng nhập đúng: dự án mở gần nhất của tài khoản được mở

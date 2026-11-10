@@ -64,39 +64,39 @@ class TestMayChu(_Nen):
 
     def test_sai_mat_khau_khoa_tai_khoan(self):
         qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
-        may_chu.them_nguoi_dung(qt, 'vinh.pt', 'Nguyễn Văn Thử', 'abc123')
+        may_chu.them_nguoi_dung(qt, 'vinh.pt', 'Nguyễn Văn Thử', 'abc12345')
         for _ in range(4):
             with self.assertRaises(LoiMayChu):
                 may_chu.dang_nhap(self.goc, 'vinh.pt', 'sai')
-        may_chu.dang_nhap(self.goc, 'vinh.pt', 'abc123')               # đúng trước lần 5: đếm lại từ đầu
+        may_chu.dang_nhap(self.goc, 'vinh.pt', 'abc12345')               # đúng trước lần 5: đếm lại từ đầu
         for _ in range(5):
             with self.assertRaises(LoiMayChu):
                 may_chu.dang_nhap(self.goc, 'vinh.pt', 'sai')
         with self.assertRaisesRegex(LoiMayChu, 'khóa'):
-            may_chu.dang_nhap(self.goc, 'vinh.pt', 'abc123')
+            may_chu.dang_nhap(self.goc, 'vinh.pt', 'abc12345')
         may_chu.sua_nguoi_dung(qt, 'vinh.pt', khoa=False)              # quản trị mở khóa
-        self.assertEqual(may_chu.dang_nhap(self.goc, 'vinh.pt', 'abc123').tai_khoan, 'vinh.pt')
+        self.assertEqual(may_chu.dang_nhap(self.goc, 'vinh.pt', 'abc12345').tai_khoan, 'vinh.pt')
         with self.assertRaises(LoiMayChu):
-            may_chu.dang_nhap(self.goc, 'khongco', 'abc123')
+            may_chu.dang_nhap(self.goc, 'khongco', 'abc12345')
 
     def test_quan_ly_tai_khoan(self):
         qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
-        may_chu.them_nguoi_dung(qt, 'nv1', 'Nhân viên 1', 'abc123', chuc_vu='Chuyên viên')
-        for tk, ten, mk in (('a', 'X', 'abc123'), ('Có dấu', 'X', 'abc123'), ('nv2', 'X', '123'), ('nv2', '', 'abc123'),
-                            ('nv1', 'Trùng', 'abc123')):
+        may_chu.them_nguoi_dung(qt, 'nv1', 'Nhân viên 1', 'abc12345', chuc_vu='Chuyên viên')
+        for tk, ten, mk in (('a', 'X', 'abc12345'), ('Có dấu', 'X', 'abc12345'), ('nv2', 'X', '123'), ('nv2', '', 'abc12345'),
+                            ('nv1', 'Trùng', 'abc12345')):
             with self.assertRaises(LoiMayChu):
                 may_chu.them_nguoi_dung(qt, tk, ten, mk)
         with self.assertRaises(LoiMayChu):
             may_chu.sua_nguoi_dung(qt, 'quantri', khoa=True)           # không tự khóa mình
         with self.assertRaises(LoiMayChu):
             may_chu.sua_nguoi_dung(qt, 'quantri', vai_tro=may_chu.NGUOI_DUNG)
-        nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc12345')
         self.assertFalse(nv.la_quan_tri)
         with self.assertRaises(LoiMayChu):
-            may_chu.them_nguoi_dung(nv, 'nv3', 'X', 'abc123')          # người dùng thường không thêm được
+            may_chu.them_nguoi_dung(nv, 'nv3', 'X', 'abc12345')          # người dùng thường không thêm được
         with self.assertRaises(LoiMayChu):
             may_chu.doi_mat_khau(nv, 'sai', 'moi12345')
-        may_chu.doi_mat_khau(nv, 'abc123', 'moi12345')
+        may_chu.doi_mat_khau(nv, 'abc12345', 'moi12345')
         may_chu.dang_nhap(self.goc, 'nv1', 'moi12345')
         may_chu.dat_lai_mat_khau(qt, 'nv1', 'reset123')
         may_chu.dang_nhap(self.goc, 'nv1', 'reset123')
@@ -128,11 +128,11 @@ class TestMayChu(_Nen):
     def test_mang_ve_dua_len(self):
         f = self.du_an('DA1')
         qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
-        may_chu.them_nguoi_dung(qt, 'nv1', 'Nhân viên 1', 'abc123')
+        may_chu.them_nguoi_dung(qt, 'nv1', 'Nhân viên 1', 'abc12345')
         bs = may_chu.lay_ve(f)
         self.assertTrue(bs.exists() and bs.parent == may_chu.thu_muc_offline())
         self.assertEqual(may_chu.ds_du_an()[0]['lay_ve']['tai_khoan'], 'quantri')
-        nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc12345')
         with self.assertRaisesRegex(LoiMayChu, 'mang về'):
             may_chu.lay_ve(f, nv)                                         # người khác đang mang về
         may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
@@ -204,10 +204,10 @@ class TestHopMayChu(_Nen):
         t.im_lang = True
         self.assertEqual(t.kiem_tra(), 'moi')
         t.o_qt_tk.setText('admin')
-        t.o_qt_mk.setText('abcdef')
-        t.o_qt_mk2.setText('abcdeX')
+        t.o_qt_mk.setText('abcdef12')
+        t.o_qt_mk2.setText('abcdeX12')
         self.assertFalse(t.khoi_tao())                                     # nhập lại không khớp
-        t.o_qt_mk2.setText('abcdef')
+        t.o_qt_mk2.setText('abcdef12')
         self.assertTrue(t.khoi_tao())
         self.assertEqual(may_chu.doc_cau_hinh()['may_chu'], str(moi))
         t2 = HopThietLap(None, str(self.goc))
@@ -223,16 +223,16 @@ class TestHopMayChu(_Nen):
         may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
         h = HopTaiKhoan()
         h.im_lang = True
-        self.assertTrue(h.them('nv1', 'Nhân viên', 'abc123', may_chu.NGUOI_DUNG, ''))
-        self.assertFalse(h.them('nv1', 'Trùng', 'abc123', may_chu.NGUOI_DUNG, ''))
+        self.assertTrue(h.them('nv1', 'Nhân viên', 'abc12345', may_chu.NGUOI_DUNG, ''))
+        self.assertFalse(h.them('nv1', 'Trùng', 'abc12345', may_chu.NGUOI_DUNG, ''))
         self.assertEqual(h.bang.rowCount(), 2)
         r = next(i for i, u in enumerate(h.ds) if u['tai_khoan'] == 'nv1')
         h.bang.selectRow(r)
         self.assertTrue(h.khoa_mo())
         self.assertTrue(next(u for u in h.ds if u['tai_khoan'] == 'nv1')['khoa'])
         h.bang.selectRow(next(i for i, u in enumerate(h.ds) if u['tai_khoan'] == 'nv1'))
-        self.assertTrue(h.dat_lai('moimk1'))
-        may_chu.dang_nhap(self.goc, 'nv1', 'moimk1')
+        self.assertTrue(h.dat_lai('moimk123'))
+        may_chu.dang_nhap(self.goc, 'nv1', 'moimk123')
         d = HopDuAnMayChu()
         d.im_lang = True
         self.assertEqual(d.bang.rowCount(), 1)
@@ -297,8 +297,8 @@ class TestChiaViecTheoHo(_Nen):
             con.execute("UPDATE ho SET dia_chi = 'Ấp 2, xã Thử', so_cccd = '075000000999' WHERE ma_ho IN (4, 5, 6)")
         con.close()
         self.qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
-        may_chu.them_nguoi_dung(self.qt, 'nv1', 'Nhân viên 1', 'abc123')
-        self.nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        may_chu.them_nguoi_dung(self.qt, 'nv1', 'Nhân viên 1', 'abc12345')
+        self.nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc12345')
         self.qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
 
     def test_gop_tinh_lai_tom_tat_va_chep_nhat_ky(self):

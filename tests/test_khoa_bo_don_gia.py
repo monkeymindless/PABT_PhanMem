@@ -93,7 +93,7 @@ class TestMayChu(_Nen):
         self.goc = self.td / 'MayChu'
         may_chu.khoi_tao(self.goc, 'QuanTri', 'matkhau1', 'Quản trị')
         qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
-        may_chu.them_nguoi_dung(qt, 'nv1', 'Nhân viên', 'abc123')
+        may_chu.them_nguoi_dung(qt, 'nv1', 'Nhân viên', 'abc12345')
         may_chu.dang_xuat()
 
     def test_may_dung_may_chu_chi_quan_tri_sua(self):
@@ -104,7 +104,7 @@ class TestMayChu(_Nen):
         with self.assertRaises(LoiQuyenBoDonGia) as e:
             self.ghi_gia_dat()
         self.assertIn('quản trị máy chủ', str(e.exception))
-        may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        may_chu.dang_nhap(self.goc, 'nv1', 'abc12345')
         self.assertFalse(quan_tri_bo.co_quyen_sua())
         with self.assertRaises(LoiQuyenBoDonGia):
             don_gia.cai_bo(don_gia.file_goc())
@@ -128,7 +128,7 @@ class TestMayChu(_Nen):
         may_chu.dang_xuat()
         # máy khác (thư mục máy riêng), nhân viên đăng nhập -> nhận đúng bộ của quản trị
         self.dat_may('may_b')
-        may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        may_chu.dang_nhap(self.goc, 'nv1', 'abc12345')
         self.assertIsNotNone(db.can_nhan())
         kq = db.nhan()
         self.assertIsNotNone(kq)
@@ -144,7 +144,7 @@ class TestMayChu(_Nen):
         self.assertTrue(gia_dat_nq28.xoa_thay())
         may_chu.dang_xuat()
         self.dat_may('may_b')
-        may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        may_chu.dang_nhap(self.goc, 'nv1', 'abc12345')
         db.nhan()
         self.assertFalse(gia_dat_nq28.file_thay().exists())
 
@@ -156,14 +156,14 @@ class TestMayChu(_Nen):
         with open(f, 'ab') as x:
             x.write(b'hong')
         self.dat_may('may_b')
-        may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        may_chu.dang_nhap(self.goc, 'nv1', 'abc12345')
         with self.assertRaises(db.LoiDongBo):
             db.nhan()
         self.assertFalse(don_gia.file_cap_nhat().exists())        # máy giữ bộ cũ (bản đóng gói)
         self.assertEqual(db.ma_da_nhan(), '')
 
     def test_nhan_vien_khong_phat_hanh(self):
-        may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        may_chu.dang_nhap(self.goc, 'nv1', 'abc12345')
         with self.assertRaises(db.LoiDongBo):
             db.phat_hanh()
         self.assertIsNone(db.doc_phien_ban(self.goc))
