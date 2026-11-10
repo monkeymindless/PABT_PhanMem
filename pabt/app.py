@@ -217,6 +217,13 @@ STACK_CUA_TRANG = (0, 1, 5, 2, 3)
 # Tổng hợp tiền / Quyết định phê duyệt không có phím số - mở bằng menu trái hoặc Ctrl+K
 PHIM_NHANH = (('Danh sách hộ', 'Ctrl+1'), ('Dự toán & khái toán', 'Ctrl+2'), ('Bộ đơn giá…', 'Ctrl+3'),
               ('Dự thảo PABT…', 'Ctrl+4'), ('Theo dõi tiến độ', 'Ctrl+5'), ('Tìm nhanh…', 'Ctrl+K'))
+# phím tắt của lệnh (ngoài Ctrl+số): MỘT bảng - tests/test_dot4_lenh kiểm tên lệnh thật và không trùng phím. 1.0.95 (kiểm toán
+# 09/11/2026): thêm Thêm hộ, Tính đơn giá đất, Xuất danh sách hộ (thao tác hằng ngày phải qua 2-3 lần bấm menu)
+PHIM_LENH = (('Dự án mới…', 'Ctrl+N'), ('Mở dự án…', 'Ctrl+O'), ('Dự án trên máy chủ…', 'Ctrl+Shift+O'), ('Lưu dự án', 'Ctrl+S'),
+             ('Lưu dự án thành…', 'Ctrl+Shift+S'), ('Hướng dẫn sử dụng', 'F1'),
+             ('Tiếp nhận & Kiểm tra pháp lý dự án…', 'Ctrl+Shift+L'), ('Quản lý Mẫu in & Bản in…', 'Ctrl+Shift+M'),
+             ('Thống kê Hộ · Thửa · Diện tích…', 'Ctrl+Shift+T'), ('Thêm hộ…', 'Ctrl+Shift+H'), ('Tính đơn giá đất…', 'Ctrl+Shift+G'),
+             ('Xuất danh sách hộ…', 'Ctrl+Shift+E'))
 STACK_TONG_HOP, STACK_THEO_DOI, STACK_DU_TOAN, STACK_QUYET_DINH = 1, 2, 3, 5
 XANH, DO, VANG = mau_o_theo_tong(globals(), XANH='#E2EFDA', DO='#F8CBAD', VANG=TOKEN['canh_bao_nhat'])
 # menu trái: nhóm đóng sẵn lần đầu mở phần mềm (sau đó nhớ theo người dùng) - vừa màn hình 1366x768 không phải cuộn
@@ -836,14 +843,10 @@ class CuaSoChinh(QMainWindow):
                 nhom_trang.addAction(a)
         self._nhom_trang = nhom_trang
         self.lenh['Màn hình chính'].setToolTip('Về màn hình bắt đầu (dự án mới, mở dự án, nhập Excel, dự án gần đây)')
-        for ten, phim in (('Dự án mới…', 'Ctrl+N'), ('Mở dự án…', 'Ctrl+O'), ('Dự án trên máy chủ…', 'Ctrl+Shift+O'),
-                          ('Lưu dự án', 'Ctrl+S'),
-                          ('Lưu dự án thành…', 'Ctrl+Shift+S'), ('Hướng dẫn sử dụng', 'F1'),
-                          ('Tiếp nhận & Kiểm tra pháp lý dự án…', 'Ctrl+Shift+L'), ('Quản lý Mẫu in & Bản in…', 'Ctrl+Shift+M'),
-                          (LENH_THONG_KE, 'Ctrl+Shift+T')):
+        for ten, phim in PHIM_LENH:
             self.lenh[ten].setShortcut(QKeySequence(phim))
-        # 1.0.58: lệnh này chỉ gắn nút ở nhóm menu đóng sẵn: nút ẩn thì phím tắt không chạy - gắn vào cửa sổ
-        self.addAction(self.lenh['Tiếp nhận & Kiểm tra pháp lý dự án…'])
+            # 1.0.58 / 1.0.95: lệnh chỉ có nút ở nhóm menu đóng sẵn thì phím tắt không chạy khi nút ẩn - gắn mọi lệnh có phím vào cửa sổ
+            self.addAction(self.lenh[ten])
 
     def _tao_loc_ds(self) -> None:
         """Ô tìm, mô hình, bộ lọc của danh sách hộ."""
@@ -1977,6 +1980,8 @@ class CuaSoChinh(QMainWindow):
         if loai == 'lenh':
             a = self.lenh.get(khoa)
             if a is not None and a.isEnabled():
+                from .man_hinh_tim_nhanh import ghi_gan_day
+                ghi_gan_day(self, khoa)                 # 1.0.95: Ctrl+K chưa gõ gì -> lệnh vừa dùng đứng đầu
                 a.trigger()
             return None
         idx = self.chon_ho_tren_danh_sach(khoa)

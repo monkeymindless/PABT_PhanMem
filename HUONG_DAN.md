@@ -1,5 +1,7 @@
 # Phần mềm LARC – lập phương án bồi thường, hỗ trợ 
 
+> **1.0.95**: **Phím tắt mới**: **Ctrl+Shift+H** Thêm hộ, **Ctrl+Shift+G** Tính đơn giá đất, **Ctrl+Shift+E** Xuất danh sách hộ. Ô **Tìm nhanh (Ctrl+K)**: chưa gõ gì thì các lệnh vừa dùng đứng đầu; gõ **>** rồi tên để chỉ tìm lệnh, gõ **@** rồi tên / CCCD để chỉ tìm hộ; lệnh đang tắt ghi rõ lý do (chưa mở dự án, vai trò không có quyền, dự án đang mở chỉ xem).
+>
 > **1.0.50**: **Quét giấy tờ / Dán tài sản** — ảnh xem trước thu như lúc nhận dạng (ảnh điện thoại vài MB cửa sổ vẫn kéo được); Tesseract
 > chạy nền, hộp tiến độ còn nút **Dừng**. Giấy chứng nhận không có tài sản không đọc hai lần; biên bản viết tay vẫn đọc thêm kiểu cột thưa
 > (ô **Chữ viết tay**, tối đa 8 trang). Trợ lý AI sau OCR có nút **Bỏ qua** và hết giờ khi mất mạng. Tông Tối: chú thích và ô nhập không còn

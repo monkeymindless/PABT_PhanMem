@@ -245,6 +245,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   `cac_dong_da_chon` (không `selectedRows`); cột theo tên (`self.cot.index(khóa)`), không viết số cột. Chữ "&" trên nút / thẻ: `chu_hien`.
 - Cửa sổ lập phương án (1.0.58): phím Ctrl+B (`bat_tat_ds_ho`), Space trên bảng mục (`BangMuc.bat_tat_chi_tiet`), F4 vẫn là xem trước A4. Khung
   phụ `man_hinh_phu_lap_pa` dựng khi dùng lần đầu; khung chi tiết ghi qua ĐÚNG ô của bảng (`setText` -> `sua_o`), đừng ghi thẳng vào `bo.pa`.
+- Phím tắt lệnh cửa sổ chính: một bảng `app.PHIM_LENH` (+ `PHIM_NHANH` Ctrl+số); siêu dữ liệu lệnh (PHIM_*, LENH_CAN_DU_AN, NHAN_MENU, LENH_DANH_DAU_PHU, phan_quyen.LENH_QUYEN) phải dùng ĐÚNG tên trong `lenh.ds_lenh` (`tests/test_dot4_lenh.py`).
 - Phím tắt trùng cùng ngữ cảnh: Qt không chạy cái nào. Không gắn Ctrl+Z / Ctrl+Y lên QAction (`giao_dien.xu_ly_hoan_tac` xử lý).
   F2 là phím sửa ô của bảng - không gán lệnh khác (giải trình dòng phương án dùng Ctrl+I).
 - Duyệt bố cục: KHÔNG lấy QLayoutItem (`itemAt` / `itemAtPosition` / `takeAt`) chỉ để đọc - vỏ Python của mục bố cục (QSpacerItem,
