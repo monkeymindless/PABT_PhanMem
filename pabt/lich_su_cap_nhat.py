@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.94', '10/11/2026', (
+        'Màn hình chính gọn hơn: chú giải tiến độ chỉ hiện trạng thái đang có hộ; Việc nên làm tiếp hiện 5 việc quan trọng nhất, bấm Xem thêm để thấy phần còn lại.',
+        'Giao diện tối: biểu tượng các nút lớn ở màn hình chính và thanh lệnh hiện rõ (trước đây gần như chìm vào nền).',
+        'Bảng giá đất, thẻ Hệ số K: chữ nút không còn bị cắt trên màn hình 1366 x 768 (tỷ lệ 125%).',
+        'Nút đang tắt có chú thích lý do (rê chuột để xem); dọn bộ nhớ khi in mẫu so sánh phiên bản.',
+    )),
     ('1.0.93', '10/11/2026', (
         'Nút bấm gọn mắt hơn: mỗi cửa sổ chỉ nút Lưu có nền đặc; Chốt V1, Đối chiếu, In / Xuất cùng một kiểu; nút Đóng không còn màu đỏ; '
         'nút Lập PA, Xem hộ, Làm ngay ở màn hình chính thành dạng liên kết.',
