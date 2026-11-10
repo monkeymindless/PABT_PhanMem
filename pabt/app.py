@@ -4514,6 +4514,50 @@ def dat_app_user_model_id() -> bool:
         return False
 
 
+# 1.1.01 (Đợt 10): nạp trước lúc rảnh (sau khi cửa sổ đã lên hình) để lần đầu mở Lập PA / In / Xuất Excel không phải chờ nạp mã:
+# openpyxl ~0,4 s (máy yếu > 1 s) nạp ở LUỒNG NỀN (thư viện ngoài, Python thuần - không vướng vòng nhập chéo với mã pabt); module
+# màn hình (Qt) nạp ở luồng giao diện, MỖI LẦN MỘT module, cách nhau NAP_TRUOC_CACH_MS (mỗi module 30-80 ms - chen giữa thao tác).
+NAP_TRUOC_SAU_MS = 3000
+NAP_TRUOC_CACH_MS = 300
+NAP_TRUOC_NEN = ('openpyxl', 'openpyxl.styles', 'openpyxl.utils.cell')
+NAP_TRUOC_GIAO_DIEN = ('pabt.man_hinh', 'pabt.man_hinh_ho_so', 'pabt.in_an', 'pabt.quan_ly', 'pabt.man_hinh_quan_ly',
+                       'pabt.man_hinh_tinh_gia_dat')
+
+
+def nap_truoc_luc_ranh(sau_ms: int = NAP_TRUOC_SAU_MS) -> None:
+    """Hẹn nạp trước (gọi trong main). PABT_NAP_TRUOC=0 tắt. Máy RAM < 3 GB: không nạp openpyxl trước (giữ RAM cho việc khác)."""
+    import importlib
+    import os
+    import threading
+    if os.environ.get('PABT_NAP_TRUOC') == '0':
+        return
+    ram = csdl.ram_vat_ly_mb()
+
+    def nen():
+        for m in NAP_TRUOC_NEN:
+            try:
+                importlib.import_module(m)
+            except Exception:                           # noqa: BLE001 - chỉ là nạp trước: lỗi thì để lần dùng thật báo
+                return
+    con_lai = list(NAP_TRUOC_GIAO_DIEN)
+
+    def mot_module():
+        if not con_lai:
+            return
+        try:
+            importlib.import_module(con_lai.pop(0))
+        except Exception:                               # noqa: BLE001
+            con_lai.clear()
+            return
+        QTimer.singleShot(NAP_TRUOC_CACH_MS, mot_module)
+
+    def bat_dau():
+        if ram is None or ram >= 3000:
+            threading.Thread(target=nen, name='nap_truoc', daemon=True).start()
+        mot_module()
+    QTimer.singleShot(sau_ms, bat_dau)
+
+
 def main() -> int:
     dat_app_user_model_id()
     app = QApplication(sys.argv)
@@ -4533,6 +4577,9 @@ def main() -> int:
     tep = [a for a in sys.argv[1:] if not a.startswith('--')]
     co_file = bool(tep and csdl.la_file_du_an(tep[0]))
     hien_cua_so(w)                         # dùng hết màn hình: thanh nút gọn 2 dòng, danh sách hộ rộng
+    from . import do_toc_do                # 1.1.01: thời gian khởi động thật (vòng sự kiện chạy = cửa sổ đã lên hình) - báo cáo đo tốc độ
+    QTimer.singleShot(0, lambda: do_toc_do.ghi_khoi_dong(do_toc_do.ms_tu_luc_chay()))
+    nap_truoc_luc_ranh()
     w.khoi_dong_may_chu(mo_lai=not co_file)   # máy chủ LAN (nếu có thiết lập): đăng nhập, mở lại dự án đang làm
     if co_file:
         w.mo(tep[0])

@@ -399,7 +399,7 @@ def kiem_tra_moi_truong(thu_muc_may=None) -> list:
 
 def dong_goi_chan_doan(file_zip, file_pabt=None, thu_muc_may=None, loi_text: str = '') -> Path:
     """Gói .zip gửi tác giả: thong_tin_may.json (máy, màn hình, kiểm tra môi trường), loi_vua_gap.txt, loi.log, pabt_profile.json,
-    du_an_an_danh.pabt (an_danh_du_an). Ghi file tạm rồi os.replace."""
+    khoi_dong.json + bao_cao_toc_do.md (1.1.01), du_an_an_danh.pabt (an_danh_du_an). Ghi file tạm rồi os.replace."""
     from . import dia_phuong
     tm = Path(thu_muc_may) if thu_muc_may else dia_phuong.thu_muc_may()
     ra = Path(file_zip)
@@ -416,10 +416,13 @@ def dong_goi_chan_doan(file_zip, file_pabt=None, thu_muc_may=None, loi_text: str
             z.writestr('thong_tin_may.json', json.dumps(tt, ensure_ascii=False, indent=2))
             if loi_text:
                 z.writestr('loi_vua_gap.txt', loi_text)
-            for ten in ('loi.log', dia_phuong.TEN_FILE):
+            for ten in ('loi.log', dia_phuong.TEN_FILE, 'khoi_dong.json'):     # 1.1.01: kèm thời gian các lần khởi động
                 f = tm / ten
                 if f.is_file():
                     z.write(f, ten)
+            bc = sorted((tm / 'bao_cao_toc_do').glob('TocDo_*.md')) if (tm / 'bao_cao_toc_do').is_dir() else []
+            if bc:                                      # báo cáo đo tốc độ gần nhất (Chẩn đoán > Đo tốc độ máy này)
+                z.write(bc[-1], 'bao_cao_toc_do.md')
             if file_pabt and Path(file_pabt).is_file():
                 ad = Path(td) / 'du_an_an_danh.pabt'
                 an_danh_du_an(file_pabt, ad)

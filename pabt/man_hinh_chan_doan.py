@@ -16,6 +16,8 @@ from . import chua_benh_csdl, csdl
 MAU_MUC = {'dat': '#047857', 'canh_bao': '#9A5A12', 'loi': '#B83A3A'}
 CHU_MUC = {'dat': 'Đạt', 'canh_bao': 'Lưu ý', 'loi': 'Lỗi'}
 NUT_GOI = 'Xuất gói chẩn đoán ẩn danh (.zip)…'
+NUT_TOC_DO = 'Đo tốc độ máy này'
+MAU_ICON_NUT = '#1E3A5F'                 # biểu tượng nút bảo trì / đo tốc độ (navy gốc)
 # 20/10/2026 (ảnh mẫu người dùng): 5 chỉ số kiểm toán kỹ thuật (khóa, mã chỉ số, nhãn) + 4 nút bảo trì 1-click (việc chua_benh_csdl.
 # sua_tep_pabt, chữ nút, biểu tượng Segoe MDL2) - không emoji (Win 7)
 CHI_SO = (('khoa', '1. Trạng thái tệp khóa CSDL (.khoa)'), ('toan_ven', '2. Kiểm tra toàn vẹn CSDL (integrity_check)'),
@@ -130,7 +132,7 @@ class HopChanDoanHeThong(QDialog):
         for i, (viec, chu, ky) in enumerate(NUT_BAO_TRI):
             b = QPushButton(chu.format(v=_csdl.PHIEN_BAN_CSDL))
             b.setProperty('khong_icon', True)
-            ic = icon_ky_hieu(ky, '#1E3A5F', 16)
+            ic = icon_ky_hieu(ky, MAU_ICON_NUT, 16)
             if ic is not None:
                 b.setIcon(ic)
             b.setMinimumHeight(34)
@@ -143,6 +145,18 @@ class HopChanDoanHeThong(QDialog):
         self.nut_bao_tri['cuu'].setToolTip('File có trang dữ liệu hỏng: sao lưu rồi chép mọi dòng đọc được của từng bảng sang file mới.')
         self.nut_bao_tri['nang_cap'].setToolTip('Sao lưu rồi mở bằng phần mềm một lần để nâng cấp lược đồ lên bản mới nhất.')
         phai.addLayout(luoi)
+        # 1.1.01 (Đợt 10): đo tốc độ máy này (tiến trình con, dự án giả lập - không đụng dự án thật)
+        self.b_toc_do = QPushButton(NUT_TOC_DO)
+        self.b_toc_do.setProperty('khong_icon', True)
+        ic = icon_ky_hieu(0xEC4A, MAU_ICON_NUT, 16)          # Speed high (Segoe MDL2); Win 7 không có phông: chỉ chữ
+        if ic is not None:
+            self.b_toc_do.setIcon(ic)
+        self.b_toc_do.setMinimumHeight(34)
+        self.b_toc_do.setMinimumWidth(120)
+        self.b_toc_do.setToolTip('Đo các thao tác thường dùng (mở dự án, lập phương án, lưu, xuất Excel) trên một dự án GIẢ LẬP, tốc độ '
+                                 'ổ đĩa và các lần khởi động gần đây; ghi báo cáo kèm nhận xét. Không đụng dự án đang mở. Khoảng 1 phút.')
+        self.b_toc_do.clicked.connect(lambda: self.do_toc_do())
+        phai.addWidget(self.b_toc_do)
         hop = QFrame()
         hop.setObjectName('khung_hop_den')
         lh = QVBoxLayout(hop)
@@ -307,6 +321,41 @@ class HopChanDoanHeThong(QDialog):
             self._bao('\n'.join(kq['hanh_dong'] + ['', kq['kiem_tra_sau']['thong_bao']]), not kq['thanh_cong'])
         self.nap()
         return kq
+
+    def do_toc_do(self, file_ra=None, so_ho: int = 1000, cho: bool = True):
+        """Chạy `do-toc-do` trong tiến trình con (offscreen, thư mục máy tạm) rồi hiện báo cáo. Trả đường dẫn báo cáo hoặc None."""
+        import os
+        import subprocess
+        import sys
+        from .dia_phuong import thu_muc_may
+        from .giao_dien import chay_nen, hop_ket_qua
+        ra = Path(file_ra) if file_ra else thu_muc_may() / 'bao_cao_toc_do' / f'TocDo_{datetime.now():%Y%m%d_%H%M%S}.md'
+        if getattr(sys, 'frozen', False):
+            lenh = [sys.executable, 'do-toc-do', str(ra), '--so-ho', str(so_ho)]
+        else:
+            lenh = [sys.executable, str(Path(__file__).resolve().parents[1] / 'chay.py'), 'do-toc-do', str(ra), '--so-ho', str(so_ho)]
+        env = dict(os.environ, QT_QPA_PLATFORM='offscreen')
+
+        def chay():
+            return subprocess.run(lenh, env=env, capture_output=True, timeout=1200,
+                                  creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        try:
+            r = chay_nen(self, chay, 'Đang đo tốc độ máy trên dự án giả lập (khoảng 1 phút)…') if cho else chay()
+        except Exception as e:                          # noqa: BLE001 - hết giờ / không chạy được tiến trình con
+            from .thong_bao import chu_loi
+            self._bao(chu_loi('Không đo được tốc độ', e), True)
+            return None
+        if r.returncode != 0 or not ra.is_file():
+            loi = (r.stderr or b'').decode('utf-8', 'replace').strip().splitlines()[-3:]
+            self._bao('Không đo được tốc độ' + (': ' + ' '.join(loi) if loi else '.'), True)
+            return None
+        noi_dung = ra.read_text(encoding='utf-8')
+        nhan_xet = noi_dung.split('## Nhận xét', 1)[-1].strip().splitlines()
+        if cho and not self.im_lang:
+            hop_ket_qua(self, f'Đã đo xong. Báo cáo: {ra}', noi_dung.splitlines(), tieu_de_ds='Kết quả đo',
+                        nut_them=[('Mở thư mục báo cáo', lambda _h: os.startfile(str(ra.parent)))])
+        self.nhan_xet_toc_do = [x.lstrip('- ') for x in nhan_xet if x.strip()]
+        return ra
 
     def xuat_goi(self, file_ra=None):
         return xuat_goi_chan_doan(self, self.file_pabt, file_ra=file_ra, im_lang=self.im_lang)

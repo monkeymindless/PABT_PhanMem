@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.1.01', '11/11/2026', (
+        'Trợ giúp > Chẩn đoán & sửa lỗi hệ thống: nút "Đo tốc độ máy này" đo các thao tác thường dùng trên dự án giả lập (không đụng dự án thật), tốc độ ổ đĩa, các lần khởi động gần đây, kèm nhận xét (ổ cứng cũ, RAM, phần mềm diệt virus...). Gói chẩn đoán gửi tác giả có kèm báo cáo này.',
+        'Giao diện: thêm mục "Chế độ máy yếu" (Tự nhận / Bật / Tắt) - bật cho máy chậm dù RAM đủ.',
+        'Lần đầu mở Lập phương án, In / Xuất Excel sau khi mở phần mềm nhanh hơn (phần mềm chuẩn bị sẵn lúc bạn chưa thao tác).',
+    )),
     ('1.1.00', '11/11/2026', (
         'Mở hộ khác khi đang lập phương án (chưa sửa gì ở hộ đang mở) gần như tức thì: phần mềm chuyển hộ ngay trong cửa sổ, không dựng lại cửa sổ (nhanh gấp 9 lần).',
         'Bấm lại So sánh với thực tế khi dự án chưa đổi: có kết quả ngay; danh sách Chọn hộ niêm yết, Bảng giá đất NQ 28 hiện nhanh hơn.',

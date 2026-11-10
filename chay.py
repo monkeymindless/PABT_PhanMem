@@ -14,6 +14,7 @@ _CACH_DUNG = """Chạy phần mềm PABT.
       tạo mới với bộ đơn giá tích hợp) rồi đối chiếu tổng tiền với file. Hộ đã có (cùng CCCD / họ tên): mặc định bỏ qua.
   python chay.py doi-chieu <file.pabt>             tính lại và đối chiếu một file dự án đã nhập
   python chay.py tu-kiem <file_ket_qua.txt>         tự kiểm tra bản cài (giao diện, PDF, bộ đơn giá, mẫu in, bảng giá đất)
+  PABT.exe do-toc-do [<báo cáo.md>] [--so-ho 1000]  đo tốc độ máy này trên dự án giả lập (không đụng dự án thật) -> báo cáo
   PABT.exe go-cai-dat [-Im]                         gỡ cài đặt (mục "Gỡ" của Windows) - không mở cửa sổ PowerShell
   python chay.py mau-goi-don-vi <file.xlsx>        ghi file Excel mẫu danh sách đơn vị (mỗi dòng một đơn vị)
   python chay.py tao-goi-don-vi <danh_sach.xlsx|.json> [<thư mục ra>] [--nen may|mac_dinh|<hồ sơ.json>] [--kem-mau]
@@ -429,6 +430,31 @@ def _goi_don_vi(lenh: str, argv) -> int:
     return 0 if kq and all(x['file'] for x in kq) else 1
 
 
+def do_toc_do(args) -> int:
+    """Đo tốc độ máy (pabt.do_toc_do, 1.1.01): chế độ không hiện cửa sổ (offscreen), dự án giả lập trong thư mục tạm. Nút "Đo tốc độ máy
+    này" ở hộp Chẩn đoán chạy lệnh này trong tiến trình con."""
+    import os
+    from datetime import datetime
+    from pathlib import Path
+    so_ho = 1000
+    if '--so-ho' in args:
+        i = args.index('--so-ho')
+        so_ho = max(50, int(args[i + 1]))
+        args = args[:i] + args[i + 2:]
+    os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+    if os.path.isdir(r'C:\Windows\Fonts'):
+        os.environ.setdefault('QT_QPA_FONTDIR', r'C:\Windows\Fonts')      # offscreen không tự có phông: đo chữ sai
+    from pabt import dia_phuong, do_toc_do as dtd
+    ra = Path(args[0]) if args else dia_phuong.thu_muc_may() / 'bao_cao_toc_do' / f'TocDo_{datetime.now():%Y%m%d_%H%M%S}.md'
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication(['PABT'])
+    from pabt.giao_dien import ap_dung
+    ap_dung(app)
+    p = dtd.chay(ra, so_ho, bao=lambda chu: print(chu, flush=True) if sys.stdout else None)
+    print(f'Đã ghi báo cáo: {p}')
+    return 0
+
+
 def main(argv) -> int:
     # --khung-windows: mở cửa sổ có khung Windows (thanh_tieu_de đọc sys.argv) - trước 1.0.32 rơi vào nhánh lệnh, in hướng dẫn rồi thoát
     if not argv or argv[0].lower().endswith(('.pabt', '.larc', '.larcud', '.pabtcn', '.pabtcfg')) or argv[0] in ('--menu-trai', '--menu-tren',
@@ -447,6 +473,8 @@ def main(argv) -> int:
         ra = pk.xuat_du_lieu_mac_dinh(argv[1])
         print(f'Đã ghi danh mục cho ứng dụng điện thoại -> {ra}')
         return 0
+    if lenh == 'do-toc-do':
+        return do_toc_do(argv[1:])
     if lenh in ('mau-goi-don-vi', 'tao-goi-don-vi'):
         return _goi_don_vi(lenh, argv[1:])
     if lenh not in TUY_CHON:

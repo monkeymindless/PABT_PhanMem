@@ -290,6 +290,9 @@ def chan_tac_dong(kt: KiemTra) -> None:
         raise OSError('Kiểm tra giao diện: không kết nối mạng')
     urllib.request.urlopen = khong_mang
     os.startfile = lambda *a, **k: None
+    # 1.1.01: nút "Đo tốc độ máy này" (Chẩn đoán) chạy tiến trình con ~1 phút: chỉ đếm, không đo thật (không bị coi là đơ)
+    from pabt import man_hinh_chan_doan
+    man_hinh_chan_doan.HopChanDoanHeThong.do_toc_do = lambda self, *a, **k: kt.dem.update(['do_toc_do'])
 
 
 def du_an_thu(td: Path, so_ho: int) -> Path:
