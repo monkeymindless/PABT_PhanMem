@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFrame, QHBoxLayout, 
 from . import pheu_tien_do as ph
 from . import quy_trinh as qt
 from . import tong_quan_du_an as tq
-from .giao_dien import cai_dat_nho, dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
+from .giao_dien import cai_dat_nho, dat_kieu_theo_tong, qmau_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 from .tien import so_luong_vn, vn, vn_gon
 
 LENH_KHOI_TAO = (                    # (khóa self.lenh, chữ trên thẻ, mô tả)
@@ -45,23 +45,24 @@ QFrame#the_phap_ly[muc="canh_bao"] { border-left-color: #C98A22; background: #FF
 QFrame#the_phap_ly[muc="nguy"] { border-left-color: #B83A3A; background: #FEF2F2; }
 QFrame#the_phap_ly[muc="dat"] { border-left-color: #1F6F66; }
 QLabel#tq_dong_ho { font-size: 12px; color: #0F172A; background: transparent; border: 0; }
-QPushButton#nut_lap_pa { background: transparent; color: #1E3A5F; border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 10px;
+/* 1.0.93: nút trong dòng = cấp BA (liên kết phẳng, viền chỉ hiện khi rê chuột) - người dùng chọn hệ nút 3 cấp 10/11/2026 */
+QPushButton#nut_lap_pa { background: transparent; color: #2563EB; border: 1px solid transparent; border-radius: 4px; padding: 1px 10px;
     margin: 3px 6px; font-weight: 600; }
-QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #1E3A5F; }
+QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #CBD5E1; }
 QFrame#khung_pheu { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
 QLabel#ph_tieu_de { font-size: 13px; font-weight: 700; color: #1E3A5F; background: transparent; border: 0; }
 QLabel#ph_phu { font-size: 12px; color: #475569; background: transparent; border: 0; }
 QToolButton#ph_chu_giai { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; font-size: 12px;
     color: #0F172A; text-align: left; }
-QToolButton#ph_chu_giai[rong="0"] { color: #94A3B8; }
+QToolButton#ph_chu_giai[rong="0"] { color: #64748B; }
 QToolButton#ph_chu_giai[rong="1"] { color: #0F172A; font-weight: 600; }
 QToolButton#ph_chu_giai:hover { background: #F1F5F9; border-color: #CBD5E1; }
 QToolButton#ph_co { background: #FFFBEB; border: 1px solid #F1D9A0; border-radius: 10px; padding: 1px 9px; font-size: 12px; color: #7A4B00; }
 QToolButton#ph_co:hover { border-color: #C98A22; }
 QLabel#qt_viec { font-size: 12px; color: #0F172A; background: transparent; border: 0; }
-QPushButton#nut_viec { background: transparent; color: #1E3A5F; border: 1px solid #CBD5E1; border-radius: 4px; padding: 2px 10px;
+QPushButton#nut_viec { background: transparent; color: #2563EB; border: 1px solid transparent; border-radius: 4px; padding: 2px 10px;
     min-height: 22px; font-weight: 600; }
-QPushButton#nut_viec:hover { background: #EFF6FF; border-color: #1E3A5F; }
+QPushButton#nut_viec:hover { background: #EFF6FF; border-color: #CBD5E1; }
 '''
 # màu chấm trạng thái của việc (theo mức) - chữ trên nền trắng của khung
 MAU_MUC_VIEC = {'loi': '#DC2626', 'can': '#2563EB', 'nhac': '#B45309'}
@@ -112,7 +113,7 @@ class DaiPheu(QWidget):
         vien = QPainterPath()
         vien.addRoundedRect(r, self.height() / 2, self.height() / 2)
         p.setClipPath(vien)
-        p.fillRect(r, QColor('#E2E8F0'))
+        p.fillRect(r, qmau_theo_tong('#F1F5F9'))         # 1.0.93: nền thanh theo tông (Tối trước đây vẫn sáng)
         for k, x, rong in self._doan():
             p.fillRect(QRectF(x, 0, rong + 0.5, self.height()), QColor(MAU_GIAI_DOAN[k]))
         p.end()

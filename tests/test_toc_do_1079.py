@@ -130,6 +130,14 @@ class TestCotThongSoGiaDat(unittest.TestCase):
     def test_man_hinh_thap_khong_cat_chu(self):
         from PySide6.QtWidgets import QScrollArea
         from pabt.man_hinh_tinh_gia_dat import HopTinhGiaDat
+        from pabt import giao_dien                   # 1.0.93: đo trong trạng thái sạch - bài khác để lại bảng kiểu + bộ tô màu (thêm biểu
+        if getattr(qa, '_bo_to_mau', None) is not None:  # tượng vào nút) làm số đo đổi theo thứ tự chạy; trả lại sau bài
+            giao_dien.bo_ap_dung(qa)
+            self.addCleanup(giao_dien.ap_dung, qa)
+        elif qa.styleSheet():
+            cu = qa.styleSheet()
+            qa.setStyleSheet('')
+            self.addCleanup(qa.setStyleSheet, cu)
         h = HopTinhGiaDat()
         self.addCleanup(h.deleteLater)
         h.show()

@@ -2,12 +2,12 @@
 KhungCapNhatGiaDat: thẻ "Cập nhật, bổ sung giá đất" của cửa sổ Bảng giá đất (man_hinh_du_toan.HopTraNQ28)."""
 from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont
+from PySide6.QtGui import QBrush, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel,
                                QLineEdit, QMessageBox, QPushButton, QSplitter, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import gia_dat_nq28 as nq
-from .giao_dien import loc_khi_ngung_go
+from .giao_dien import loc_khi_ngung_go, qmau_theo_tong
 from .lap_pa import LoiNhap
 from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .tien import vn
@@ -276,7 +276,7 @@ class KhungCapNhatGiaDat(QWidget):
         self.b_ghi.setEnabled(bool(dong))
         self.b_thay.setEnabled(bool(dong))
         self.bang.setUpdatesEnabled(False)
-        vang = QBrush(QColor('#FFF4D6'))
+        vang = QBrush(qmau_theo_tong('#FFF6D6'))           # 1.0.93: đổi theo tông (Tối: nền vàng sẫm)
         try:
             self.bang.setRowCount(len(dong))
             for i, r in enumerate(dong):

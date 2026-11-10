@@ -30,7 +30,11 @@ TOKEN = dict(
     phu='#059669',            # Success - Emerald: viền vùng chọn kiểu Excel, trạng thái hoàn thành
     thanh_cong='#059669',
     thanh_cong_nhat='#ECFDF5',
-    canh_bao='#D97706',        # chữ cảnh báo (trước #8A5A00 rải rác)
+    canh_bao='#D97706',        # vạch / biểu tượng / viền cảnh báo (làm CHỮ chỉ 3,2:1 trên trắng - dùng canh_bao_chu)
+    # 1.0.93 (kiểm toán 09/11/2026): chữ trạng thái đạt AA 4,5:1 trên nền sáng; tông Tối đổi qua TOI_CHU
+    canh_bao_chu='#9A5A12',
+    thanh_cong_chu='#047857',
+    nguy_hiem_chu='#B91C1C',
     canh_bao_nhat='#FFFBEB',   # nền ô vàng (trước #FFF2CC rải rác)
     nguy_hiem='#DC2626',      # Danger
     nguy_hiem_nhat='#FEF2F2',
@@ -163,9 +167,11 @@ QSS_NUT_THEM_HANG = 'QPushButton { background: #1E3A8A; color: #FFFFFF; border: 
 QSS_VACH_HANG_NHAP = 'QFrame { background: #CBD5E1; border: 0; }'
 QSS_NUT_LUU_DOI = 'QPushButton { background: #16A34A; color: #FFFFFF; border: 1px solid #16A34A; border-radius: 5px; padding: 2px 10px; font-weight: 700; } QPushButton:hover { background: #15803D; }'
 QSS_NUT_DA_LUU = 'QPushButton, QPushButton:disabled { background: #F1F5F9; color: #64748B; border: 1px solid #E2E8F0; border-radius: 5px; padding: 2px 10px; }'
-QSS_NUT_PHIEN_BAN = 'QPushButton { background: #EFF6FF; color: #1D4ED8; border: 1px solid #93C5FD; border-radius: 5px; padding: 2px 8px; font-weight: 700; } QPushButton:hover { background: #DBEAFE; } QPushButton:disabled { color: #94A3B8; border-color: #E2E8F0; background: #F8FAFC; font-weight: 400; }'
-QSS_NUT_IN_THANH = 'QPushButton { background: #F8FAFC; color: #0F172A; border: 1px solid #CBD5E1; border-radius: 5px; padding: 2px 8px; font-weight: 700; } QPushButton:hover { background: #F1F5F9; }'
-QSS_NUT_DONG_THANH = 'QPushButton { background: #FFF1F2; color: #BE123C; border: 1px solid #FECDD3; border-radius: 5px; padding: 2px 10px; } QPushButton:hover { background: #E11D48; color: #FFFFFF; border-color: #E11D48; }'
+# 1.0.93 (người dùng 10/11/2026 chọn hệ nút 3 cấp - thay phân cấp V3.3): nút phiên bản, In / Xuất = cấp PHỤ (nền khung, viền >= 3:1);
+# Đóng = cấp BA (phẳng, không đỏ - Đóng không phá hủy dữ liệu). Mỗi thanh chỉ Lưu nền đặc.
+QSS_NUT_PHIEN_BAN = 'QPushButton { background: #FFFFFF; color: #0F172A; border: 1px solid #8696AB; border-radius: 5px; padding: 2px 8px; font-weight: 600; } QPushButton:hover { background: #F1F5F9; border-color: #64748B; } QPushButton:disabled { color: #94A3B8; border-color: #E2E8F0; background: #F8FAFC; font-weight: 400; }'
+QSS_NUT_IN_THANH = 'QPushButton { background: #FFFFFF; color: #0F172A; border: 1px solid #8696AB; border-radius: 5px; padding: 2px 8px; font-weight: 600; } QPushButton:hover { background: #F1F5F9; border-color: #64748B; }'
+QSS_NUT_DONG_THANH = 'QPushButton { background: transparent; color: #334155; border: 1px solid transparent; border-radius: 5px; padding: 2px 10px; } QPushButton:hover { background: #F1F5F9; color: #0F172A; border-color: #E2E8F0; }'
 # cột Nguồn giá: (nền, chữ)
 MAU_NGUON_GIA = {'dm': ('#DCFCE7', '#166534'), 'td': ('#FEF9C3', '#854D0E'), 'tay': ('#FFEDD5', '#9A3412')}
 MAU_CHU_VUNG_CHON = '#1D4ED8'
@@ -707,7 +713,10 @@ TOI_CHU = {'#0F3A63': '#93C5FD', '#991B1B': '#FCA5A5', '#1F76A6': '#7DD3FC', '#4
            # 1.0.80: chữ bảng / thanh trạng thái viết màu tối chưa có trong bảng đổi
            '#1B5E20': '#86EFAC', '#B3261E': '#FCA5A5', '#5F6368': '#CBD5E1', '#107C41': '#86EFAC', '#BE123C': '#FDA4AF', '#008000': '#86EFAC', '#800000': '#FCA5A5',
            '#1F5FA0': '#93C5FD', '#3F6212': '#BEF264',
-           '#B8433A': '#FCA5A5', '#2E7D32': '#86EFAC', '#1F5FA0': '#93C5FD'}       # P1: chữ ô bảng (mau_o_theo_tong 'chu')
+           '#B8433A': '#FCA5A5', '#2E7D32': '#86EFAC', '#1F5FA0': '#93C5FD',      # P1: chữ ô bảng (mau_o_theo_tong 'chu')
+           # 1.0.93: chữ tối chưa có trong bảng đổi (Tối 1,9 - 2,9:1 trước đây)
+           '#1D4ED8': '#93C5FD', '#B71C1C': '#FCA5A5', '#B45309': '#FCD34D', '#B91C1C': '#FCA5A5', '#166534': '#86EFAC',
+           '#475569': '#CBD5E1', '#0F6E56': '#6EE7B7'}
 
 
 def _bang_doi_mau(ten: str) -> dict:
@@ -3125,17 +3134,21 @@ class _VuaRongMenu(QObject):
 # ---------------------------------------------------------------- 1.0.03: hiển thị bảng kiểu Enterprise Financial Desktop
 # Viên thuốc (pill badge) cho ô trạng thái / ý kiến / nhóm vướng: (mẫu trên chữ đã bỏ dấu, (nền, viền, chữ)) - xét theo thứ tự.
 # "chua dong thuan" / "khong dong y" trước "dong thuan" / "dong y"; "tu lap" trước "da lap"; ô có "chua" mà không khớp mẫu nào -> xám.
+# 1.0.93 (người dùng 10/11/2026 chọn hệ màu 4 nhóm): chưa làm = trung tính, đang xử lý = thông tin (xanh dương), cần chú ý = cảnh báo (vàng),
+# xong = thành công (xanh lục); đỏ chỉ cho trường hợp chặn (không đồng ý, cưỡng chế). Chữ đạt 4,5:1 trên nền viên thuốc; tông Tối đổi qua TOI_*.
+_VT_DO, _VT_TRUNG, _VT_DANG = ('#FEF2F2', '#FECACA', '#B91C1C'), ('#F1F5F9', '#E2E8F0', '#475569'), ('#EFF6FF', '#BFDBFE', '#1D4ED8')
+_VT_CHU_Y, _VT_XONG = ('#FFFBEB', '#FDE68A', '#9A5A12'), ('#ECFDF5', '#A7F3D0', '#047857')
 MAU_VIEN_THUOC = (
-    (('khong dong y', 'cuong che'), ('#FEE2E2', '#FECACA', '#B83A3A')),
-    (('chua dong thuan', 'chua danh dau', 'chua lay y kien'), ('#F1F5F9', '#E2E8F0', '#64748B')),
-    (('da trinh tham dinh', 'da trinh'), ('#EEF2FF', '#C7D2FE', '#4338CA')),
-    (('da niem yet', 'lay y kien'), ('#E0F2FE', '#BAE6FD', '#0369A1')),
-    (('da ban giao', 'hoan thanh', 'hoan tat', 'dong thuan', 'dong y', 'du dieu kien'), ('#DCFCE7', '#86EFAC', '#2F7D54')),
-    (('da chi tra', 'da nhan tien', 'da phe duyet'), ('#F0FDFA', '#99F6E4', '#1F6F66')),
-    (('tu lap', 'y kien khac', 'v1', 'v2', 'v3', 'v4', 'v5', 'dang van dong'), ('#FEF3C7', '#FDE68A', '#9A5A12')),
-    (('da lap',), ('#EFF6FF', '#BFDBFE', '#2F5DB5')),
+    (('khong dong y', 'cuong che'), _VT_DO),
+    (('chua dong thuan', 'chua danh dau', 'chua lay y kien'), _VT_TRUNG),
+    (('da trinh tham dinh', 'da trinh'), _VT_DANG),
+    (('da niem yet', 'lay y kien'), _VT_DANG),
+    (('da ban giao', 'hoan thanh', 'hoan tat', 'dong thuan', 'dong y', 'du dieu kien'), _VT_XONG),
+    (('da chi tra', 'da nhan tien', 'da phe duyet'), _VT_XONG),
+    (('tu lap', 'y kien khac', 'v1', 'v2', 'v3', 'v4', 'v5', 'dang van dong'), _VT_CHU_Y),
+    (('da lap',), _VT_DANG),
 )
-MAU_VIEN_THUOC_XAM = ('#F1F5F9', '#E2E8F0', '#64748B')
+MAU_VIEN_THUOC_XAM = _VT_TRUNG
 CAO_VIEN_THUOC = 22             # chiều cao viên thuốc (px, kẹp theo chiều cao dòng)
 BO_VIEN_THUOC = 10
 LE_VIEN_THUOC = 8               # lề ngang trong viên thuốc
@@ -3227,6 +3240,8 @@ class VeOBangChuyenNghiep(QStyledItemDelegate):
         st = w.style() if w is not None else QApplication.style()
         st.drawControl(QStyle.ControlElement.CE_ItemViewItem, o, p, w)
         nen, vien, mau_chu = mau_vien_thuoc(chu)
+        # 1.0.93: đổi theo tông lúc vẽ (trước đây tông Tối vẫn viên thuốc nền sáng - cùng lớp lỗi ô Thành tiền)
+        nen, vien, mau_chu = mau_theo_tong(nen, 'nen'), mau_theo_tong(vien, 'vien'), mau_theo_tong(mau_chu, 'chu')
         r = option.rect
         fm = o.fontMetrics
         x = r.left() + 6
@@ -3238,7 +3253,7 @@ class VeOBangChuyenNghiep(QStyledItemDelegate):
             y_v = r.top() + (r.height() - cao_v) / 2
             p.setPen(Qt.PenStyle.NoPen)
             for k in nac:
-                p.setBrush(self._c(mau_chu if k == '■' else '#CBD5E1'))
+                p.setBrush(self._c(mau_chu if k == '■' else mau_theo_tong('#CBD5E1', 'vien')))
                 p.drawRoundedRect(QRectF(x, y_v, 4, cao_v), 1.5, 1.5)
                 x += 6
             x += 4
@@ -3329,11 +3344,11 @@ class _ChuKhiTrong(QWidget):
             p.drawPixmap(r.center().x() - CO_MINH_HOA // 2, y, hinh)
             y += cao_hinh
         p.setFont(f)
-        p.setPen(QColor('#64748B'))
+        p.setPen(qmau_theo_tong('#64748B', 'chu'))           # 1.0.93: đổi theo tông
         p.drawText(QRect(r.left() + 12, y, r.width() - 24, h1), int(Qt.AlignmentFlag.AlignCenter), self.chu_chinh)
         if self.chu_phu:
             p.setFont(f2)
-            p.setPen(QColor('#94A3B8'))
+            p.setPen(qmau_theo_tong('#64748B', 'chu'))       # 1.0.93: #94A3B8 chỉ 2,6:1 trên nền sáng
             p.drawText(QRect(r.left() + 12, y + h1 + 4, r.width() - 24, h2),
                        int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop) | int(Qt.TextFlag.TextWordWrap), self.chu_phu)
         p.end()

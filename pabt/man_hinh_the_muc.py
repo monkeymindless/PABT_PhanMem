@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
 
-from .giao_dien import chu_hien, dat_kieu_theo_tong, icon_ky_hieu
+from .giao_dien import chu_hien, dat_kieu_theo_tong, icon_ky_hieu, mau_theo_tong
 
 CAO_THE = 36
 # Segoe MDL2: hồ sơ, bản đồ, nhà, cây, vật nuôi (trái tim: phông không có hình con vật), hỗ trợ
@@ -42,14 +42,18 @@ def _icon_the(i: int, mau: str):
 
 
 BIEU_TUONG = (0xE8A5, 0xE826, 0xE80F, 0xE913, 0xEB51, 0xE8F1)
-MAU_THE = {'chon': ('#1d4ed8', '#1e3a8a', '#ffffff', 'bold'), 'co': ('#f0fdf4', '#16a34a', '#15803d', 'bold'), 'trong': ('#f8fafc', '#cbd5e1', '#475569', '600')}
-QSS_HUY_HIEU = 'QLabel { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; color: #b45309; font-weight: bold; padding: 2px 10px; }'
+# 1.0.93 (người dùng 10/11/2026 chọn hệ nút 3 cấp): thẻ không còn nền xanh đặc / xanh lục - màu xanh lục dành cho Lưu và "xong". Đang chọn:
+# nền khung + vạch đáy 3 px màu nhấn; có dữ liệu: viền rõ, chữ đậm vừa; trống: nền nhạt, chữ phụ. Tổng kinh phí: chữ đậm trên nền khung (bỏ viên cam).
+MAU_THE = {'chon': ('#FFFFFF', '#2563EB', '#0F172A', 'bold'), 'co': ('#FFFFFF', '#8696AB', '#0F172A', '600'), 'trong': ('#F8FAFC', '#E2E8F0', '#475569', 'normal')}
+MAU_ICON_THE = {'chon': MAU_THE['chon'][1], 'co': '#1E3A5F', 'trong': '#64748B'}     # đang chọn: cùng màu vạch đáy
+QSS_HUY_HIEU = 'QLabel { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; color: #0F172A; font-weight: bold; padding: 2px 10px; }'
 
 
 def _qss(trang: str) -> str:
     nen, vien, chu, dam = MAU_THE[trang]
-    return (f'QPushButton {{ background: {nen}; border: 1px solid {vien}; color: {chu}; font-weight: {dam}; font-size: 13px; border-radius: 6px; padding: 2px 10px; }}'
-            f'QPushButton:hover {{ border-width: 2px; }}')
+    day = f' border-bottom: 3px solid {vien};' if trang == 'chon' else ''
+    return (f'QPushButton {{ background: {nen}; border: 1px solid {vien};{day} color: {chu}; font-weight: {dam}; font-size: 13px; border-radius: 6px; padding: 2px 10px; }}'
+            f'QPushButton:hover {{ border-color: {MAU_THE["chon"][1]}; }}')
 
 
 TIEN_TO_TONG = 'Tổng kinh phí hộ: '
@@ -77,7 +81,7 @@ class ThanhTheMuc(QWidget):
             b.setToolTip(f'Alt+{i}')
             b.clicked.connect(lambda *_, k=i: self.bam(k))
             if i < len(BIEU_TUONG):
-                ic = _icon_the(i, '#1E3A5F')
+                ic = _icon_the(i, mau_theo_tong(MAU_ICON_THE['trong'], 'chu'))
                 if ic is not None:
                     b.setIcon(ic)
             self.h.addWidget(b)
@@ -158,6 +162,6 @@ class ThanhTheMuc(QWidget):
             self._trang[i] = trang
             dat_kieu_theo_tong(b, _qss(trang))
             if i < len(BIEU_TUONG):
-                ic = _icon_the(i, '#ffffff' if dang else MAU_THE[trang][2])
+                ic = _icon_the(i, mau_theo_tong(MAU_ICON_THE[trang], 'chu'))
                 if ic is not None:
                     b.setIcon(ic)

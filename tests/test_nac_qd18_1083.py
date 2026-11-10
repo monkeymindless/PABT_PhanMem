@@ -121,9 +121,11 @@ class TestThangSauNac(unittest.TestCase):
         tip = m.data(m.index(0, 5), Qt.ItemDataRole.ToolTipRole)
         self.assertIn(ud.NHAN_NAC[1], tip)
         self.assertIn('(1/6)', tip)
-        self.assertEqual(giao_dien.mau_vien_thuoc('Đã niêm yết & Lấy ý kiến (B6–7)')[:3], ('#E0F2FE', '#BAE6FD', '#0369A1'))
-        self.assertEqual(giao_dien.mau_vien_thuoc('Đã trình thẩm định (B8)')[:3], ('#EEF2FF', '#C7D2FE', '#4338CA'))
-        self.assertEqual(giao_dien.mau_vien_thuoc('Đã lập phương án (B5)')[2], '#2F5DB5')
+        # 1.0.93 (người dùng 10/11/2026 chọn 4 nhóm màu): B5 / B6-7 / B8 cùng nhóm "đang xử lý"; nấc cụ thể phân biệt bằng thanh 6 nấc
+        for chu in ('Đã niêm yết & Lấy ý kiến (B6–7)', 'Đã trình thẩm định (B8)', 'Đã lập phương án (B5)'):
+            self.assertEqual(giao_dien.mau_vien_thuoc(chu)[:3], giao_dien._VT_DANG)
+        self.assertEqual(giao_dien.mau_vien_thuoc('Đã phê duyệt, chưa nhận tiền')[:3], giao_dien._VT_XONG)
+        self.assertEqual(giao_dien.mau_vien_thuoc('Không đồng ý')[:3], giao_dien._VT_DO)
         self.assertEqual(giao_dien.mau_vien_thuoc('Chưa lấy ý kiến')[0], '#F1F5F9')
 
     def test_du_phong_khong_co_tong_hop(self):

@@ -3,9 +3,9 @@ tên, địa chỉ, tờ, thửa, diện tích... bằng tay khi phần mềm kh
 số thửa) ngay khi đổi. Cột file không có thì để "(không có)" - phần mềm bỏ qua."""
 from __future__ import annotations
 from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
-from .giao_dien import mau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
+from .giao_dien import mau_theo_tong, qmau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
 
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtGui import QBrush
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton,
                                QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
@@ -158,7 +158,7 @@ class HopGhepCot(QDialog):
                 if i + 1 >= dau:
                     it.setBackground(QBrush(MAU_DU_LIEU))
                 if j in ten:
-                    it.setBackground(QBrush(MAU_CHON if i + 1 < dau else QColor('#DFF0D8')))
+                    it.setBackground(QBrush(MAU_CHON if i + 1 < dau else qmau_theo_tong('#ECFDF5')))          # 1.0.93: đổi theo tông
                 self.bang.setItem(i, j, it)
         self.bang.resizeColumnsToContents()
         for j in range(cot_hien):

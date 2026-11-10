@@ -892,7 +892,7 @@ class BangMuc(QWidget):
             lb = QLabel('Danh mục đơn giá của dự án chưa có vật nuôi (dự án lập trước khi bộ đơn giá có QĐ 31/2025/QĐ-UBND).')
             lb.setWordWrap(True)
             from .giao_dien import TOKEN
-            dat_kieu_theo_tong(lb, 'QLabel { color: %s; }' % TOKEN['canh_bao'])
+            dat_kieu_theo_tong(lb, 'QLabel { color: %s; }' % TOKEN['canh_bao_chu'])
             b = QPushButton('Bổ sung vật nuôi từ bộ đơn giá')
             b.setToolTip('Chỉ thêm các mục vật nuôi còn thiếu vào danh mục dự án - đơn giá khác của dự án giữ nguyên')
             b.clicked.connect(lambda: man.bo_sung_vat_nuoi())
@@ -3503,7 +3503,7 @@ class CuaSoLapPA(QDialog):
         if tt == 'chua':
             lb.setText('● Chưa lưu')
             lb.setToolTip('Có thay đổi chưa ghi vào file dự án')
-            mau = TOKEN['canh_bao']
+            mau = TOKEN['canh_bao_chu']
         elif tt == 'xong':
             lb.setText(f'✓ Đã {"tự lưu" if tu_dong else "lưu"} {luc}')
             lb.setToolTip('Đã ghi vào file dự án' + (' (lưu tự động)' if tu_dong else ''))
@@ -4207,7 +4207,7 @@ class HopIn(QDialog):
         self.bang_ho.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.bang_ho.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         from .giao_dien import TOKEN
-        mau_lap = {'da_lap': '#1B5E20', 'tu_lap': TOKEN['canh_bao'], 'chua': '#7A8794'}
+        mau_lap = {'da_lap': '#1B5E20', 'tu_lap': TOKEN['canh_bao_chu'], 'chua': '#5B6B7A'}   # 1.0.93: chữ đạt 4,5:1
         for i, h in enumerate(self.ho):
             chk = QTableWidgetItem()
             chk.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)

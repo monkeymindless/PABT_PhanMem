@@ -229,6 +229,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
   màu mỗi file có mốc (`tests/test_p1_giao_dien.MOC_MAU`). Không `setStyleSheet` trên KHUNG CHỨA (Qt tính lại cả cây - chậm): QSS chung
   theo property / objectName, hoặc đặt trên widget lá.
 - Màu viết trong bảng kiểu là màu GỐC (`CHINH_GOC`, không `TOKEN['chinh']` ở cấp module: đã là màu phương án, tông Tối không ánh xạ được - lỗi 1.0.79). Chữ HTML, màu ô bảng: `mau_theo_tong` (`tests/test_toi_1080.py` chặn viết thẳng); nền rgba đặt ở QSS chung + `QSS_TOI`. Toàn bộ test đạt KHÔNG chứng minh màu đúng: đổi màu thì xem ảnh tông Tối.
+- Hệ nút 3 cấp (người dùng 10/11/2026, thay V3.3): chính = nền đặc, mỗi thanh / hộp chỉ MỘT (Lưu xanh lục); phụ = nền khung viền `NUT_PHU`; cấp ba = phẳng (Đóng, nút trong dòng); Xóa = viền đỏ. Đóng không đỏ. Trạng thái hộ: viên thuốc 4 nhóm `giao_dien._VT_*`, đỏ chỉ cho chặn. Màu vẽ trong mô hình / delegate / QPainter: `qmau_theo_tong(màu gốc, vai)` đọc lúc vẽ, KHÔNG `QColor('#…')` (`tests/test_dot2_mau.MOC_QCOLOR_HEX`); chữ trạng thái dùng `TOKEN['canh_bao_chu' | 'thanh_cong_chu' | 'nguy_hiem_chu']`.
 - Phông số trên màn hình: `giao_dien.PHONG_SO` Segoe UI, dự phòng Tahoma (người dùng 07/11/2026: Consolas khó xem - đừng đưa lại); chữ số Segoe UI cùng bề rộng nên cột vẫn thẳng. Ô số dùng `phong_so`, không viết tên phông riêng.
 - Cỡ chữ QSS theo `giao_dien.THANG_CO_CHU` (11-12-13-14-16-18 px). Thẻ số liệu cửa sổ chính cao 62 px - không nới.
 - MỖI LỆNH MỘT CHỖ: menu trái và thanh menu không lặp nhau; nút / chuột phải dùng lại QAction của `self.lenh` (`pabt/lenh.py`, lambda gọi lúc
@@ -284,7 +285,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Không viết lại 4 tầng; không bỏ Office / VBS; không WAL; không đệm mẫu Excel bằng pickle / deepcopy (hỏng openpyxl).
 - Che CCCD chỉ là TÙY CHỌN cho bản niêm yết (1.0.52); tờ trình / quyết định in đủ số. Trợ lý AI luôn ẩn danh; không gửi ảnh / dữ liệu biên
   bản lên dịch vụ AI / OCR ngoài. OCR = Tesseract trên máy.
-- Nút Lưu xanh lục (`MAU_LUU`); thanh tab ngang đã bỏ; tên dự án chỉ ở tiêu đề cửa sổ.
+- Nút Lưu xanh lục (`MAU_LUU`), là nút nền đặc duy nhất của cửa sổ lập phương án; thanh tab ngang đã bỏ; tên dự án chỉ ở tiêu đề cửa sổ.
 
 ### Môi trường phiên Claude
 - Ứng dụng Claude (MSIX) ảo hóa `%LOCALAPPDATA%`: venv38_32 thật ở `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\PABT_dev`.

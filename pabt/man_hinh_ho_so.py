@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
                                QStyledItemDelegate, QStyleOptionViewItem, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import ho_so
-from .giao_dien import MAU_CANH_BAO_CHU, MAU_CANH_BAO_NEN, ChonXoXuong, mau_theo_tong
+from .giao_dien import MAU_CANH_BAO_CHU, MAU_CANH_BAO_NEN, TOKEN, ChonXoXuong, mau_theo_tong, qmau_theo_tong
 from .lap_pa import LoiNhap
 from .tien import so_vn
 from .thong_bao import TEN_UD
@@ -323,7 +323,7 @@ class ONguonGoc(QStyledItemDelegate):
         y = vung.top() + max(0.0, (vung.height() - 2 * cao) / 2)
         chon = bool(op.state & QStyle.StateFlag.State_Selected)
         mau = op.palette.highlightedText().color() if chon else op.palette.text().color()
-        phu = mau if chon else QColor('#64748B')
+        phu = mau if chon else qmau_theo_tong('#64748B', 'chu')     # 1.0.93: đổi theo tông (Tối 3,1:1 trước đây)
         p.save()
         lk = self.vung_lien_ket(op.rect, font)
         for i, (nhan, gt) in enumerate((('• Vị trí: ', vt), ('• Nguồn gốc: ', chu))):
@@ -338,7 +338,7 @@ class ONguonGoc(QStyledItemDelegate):
                 p.setPen(mau)
                 hien = fm.elidedText(gt, Qt.TextElideMode.ElideRight, max(10.0, con))
             else:
-                p.setPen(QColor('#94A3B8'))
+                p.setPen(phu)                                   # 1.0.93: #94A3B8 chỉ 2,6:1 trên nền sáng
                 hien = '(chưa ghi)'
             p.drawText(QRectF(vung.left() + rn, yy, max(10.0, con), cao),
                        int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter), hien)
@@ -396,20 +396,20 @@ class OThaoTac(QStyledItemDelegate):
         tat = getattr(self.khung, 'chi_doc', False)
         p.save()
         p.setRenderHint(p.RenderHint.Antialiasing, True)
-        p.setPen(QPen(QColor('#CBD5E1')))
-        p.setBrush(QColor('#FFFFFF'))
+        p.setPen(QPen(QColor(TOKEN['vach'])))                 # 1.0.93: nút theo tông (Tối trước đây nút trắng chữ navy)
+        p.setBrush(QColor(TOKEN['khung']))
         p.drawRoundedRect(sua, 4, 4)
         f = QFont(option.font)
         f.setBold(True)
         p.setFont(f)
-        p.setPen(QColor('#94A3B8' if tat else '#1E3A5F'))
+        p.setPen(qmau_theo_tong('#94A3B8' if tat else '#1E3A5F', 'chu'))
         p.drawText(sua, CAN_GIUA, 'Sửa')
         from .giao_dien import icon_ky_hieu
-        ic = icon_ky_hieu(0xE74D, '#94A3B8' if tat else '#B83A3A', 16)
+        ic = icon_ky_hieu(0xE74D, mau_theo_tong('#94A3B8' if tat else '#B83A3A', 'chu'), 16)
         if ic is not None:
             p.drawPixmap(int(xoa.center().x() - 8), int(xoa.center().y() - 8), ic.pixmap(16, 16))
         else:
-            p.setPen(QColor('#94A3B8' if tat else '#B83A3A'))
+            p.setPen(qmau_theo_tong('#94A3B8' if tat else '#B83A3A', 'chu'))
             p.drawText(xoa, CAN_GIUA, '×')
         p.restore()
 

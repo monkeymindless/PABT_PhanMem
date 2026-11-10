@@ -3,7 +3,7 @@
 Mở hộp = bật máy chủ nhận (nhan_wifi.MayNhan) trên mạng nội bộ; đóng hộp = tắt. Hiện mã QR + địa chỉ để điện thoại mở bằng trình duyệt;
 file .json nhận về liệt kê trong bảng, người dùng bấm Nhập (phieu_kiem_dem qua hàm nhap của hộp Phiếu kiểm đếm - kiểm đủ, hỏi thêm hộ mới)."""
 from __future__ import annotations
-from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
+from .giao_dien import dat_kieu_theo_tong, qmau_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QDesktopServices, QImage, QPixmap
@@ -149,7 +149,7 @@ class HopNhanWifi(QDialog):
             for c, chu in enumerate((x['luc'], x['file'].name + ('' if x.get('ma_hoa', True) else ' (KHÔNG mã hóa: chọn dòng rồi nhập nếu chắc chắn)'), f'{max(1, x["co"] // 1024):,} KB'.replace(',', '.'), x['ket_qua'])):
                 it = QTableWidgetItem(chu)
                 if c == 3:
-                    it.setForeground(QColor({'moi': '#475569', 'xong': '#166534', 'loi': '#B91C1C'}[x['tt']]))
+                    it.setForeground(qmau_theo_tong({'moi': '#475569', 'xong': '#166534', 'loi': '#B91C1C'}[x['tt']], 'chu'))
                 self.bang.setItem(r, c, it)
 
     def nhap_dong(self, ds_dong: list) -> int:

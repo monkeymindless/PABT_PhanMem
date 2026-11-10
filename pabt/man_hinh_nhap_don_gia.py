@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtGui import QBrush
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu,
                                QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QTabWidget, QTableWidget, QTableWidgetItem,
                                QToolButton, QVBoxLayout, QWidget)
@@ -13,13 +13,13 @@ from . import nhap_don_gia as ndg
 from . import phan_tich_ai_don_gia as pai
 from . import quy_dinh_van_ban as qvb
 from .lap_pa import LoiNhap, bo_dau
-from .giao_dien import vua_dong
+from .giao_dien import mau_theo_tong, qmau_theo_tong, vua_dong
 from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 from .tien import vn
 from .thong_bao import TEN_UD
 
-MAU = {'mới': QColor('#E8F5E9'), 'cập nhật': QColor('#FFF8E1'), 'đổi quy cách': QColor('#E3F2FD'), 'bỏ': QColor('#FFEBEE'),
-       'giữ nguyên': QColor('#F5F5F5')}
+# 1.0.93: màu GỐC (có trong TOI_NEN) đọc lúc vẽ qua qmau_theo_tong - trước đây QColor cố định: tông Tối nền pastel dưới chữ sáng
+MAU_GOC = {'mới': '#ECFDF5', 'cập nhật': '#FFFBEB', 'đổi quy cách': '#EEF3FA', 'bỏ': '#FFEBEE', 'giữ nguyên': '#F4F6F8'}
 DONG_TU_CAO_TOI_DA = 1500
 TEN_NHOM_NGAN = {2: 'Nhà, công trình', 3: 'Cây trồng', ndg.NHOM_VN: 'Vật nuôi', 4: 'Hỗ trợ'}
 # 1.0.57 (người dùng 04/11/2026: "chia làm 2 cột (2 phần dữ liệu), trái là … mã tài sản, tên tài sản hiện hành, đơn giá hiện hành, ghi
@@ -358,7 +358,7 @@ class HopNhapDonGia(QDialog):
         # --- chú giải màu + tóm tắt
         hang_chu = QHBoxLayout()
         hang_chu.setSpacing(10)
-        chip = ''.join(f'<span style="background-color:{MAU[k].name()}; color:black;">&nbsp;{t}&nbsp;</span>&nbsp; '
+        chip = ''.join(f'<span style="background-color:{mau_theo_tong(MAU_GOC[k])}; color:{mau_theo_tong("#0F172A", "chu")};">&nbsp;{t}&nbsp;</span>&nbsp; '
                        for k, t in (('mới', 'mới'), ('cập nhật', 'đổi giá'), ('đổi quy cách', 'đổi tên / quy cách'), ('bỏ', 'bỏ'),
                                     ('giữ nguyên', 'không đổi')))
         self.lb_chu = QLabel(chip)
@@ -653,14 +653,14 @@ class HopNhapDonGia(QDialog):
                                   else 'Bộ đơn giá đang dùng chưa có mục này')
                 else:
                     it.setToolTip(chu_thich)
-                    it.setBackground(QBrush(MAU[m.trang_thai]))       # tô màu phần MỚI + trạng thái; phần hiện hành để nền thường
+                    it.setBackground(QBrush(qmau_theo_tong(MAU_GOC[m.trang_thai])))       # tô màu phần MỚI + trạng thái; phần hiện hành để nền thường
                 if c in (C_GIA_CU, C_GIA):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(i, c, it)
         if len(self.ds) <= DONG_TU_CAO_TOI_DA:          # cao dòng theo chữ: đo từng dòng, bảng vài nghìn dòng thì bỏ qua
             vua_dong(self.bang)
         self._dang_ve = False
-        dem = {k: sum(m.trang_thai == k for m in self.ds) for k in MAU}
+        dem = {k: sum(m.trang_thai == k for m in self.ds) for k in MAU_GOC}
         gan = sum(1 for m in self.ds if m.khop_gan)
         them = ''.join(f', {dem[k]} {chu}' for k, chu in (('đổi quy cách', 'đổi tên / quy cách'), ('bỏ', 'mục cũ không còn ghi'))
                        if dem[k])
