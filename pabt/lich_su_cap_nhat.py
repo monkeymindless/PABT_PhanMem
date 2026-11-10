@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.93', '10/11/2026', (
+        'Nút bấm gọn mắt hơn: mỗi cửa sổ chỉ nút Lưu có nền đặc; Chốt V1, Đối chiếu, In / Xuất cùng một kiểu; nút Đóng không còn màu đỏ; '
+        'nút Lập PA, Xem hộ, Làm ngay ở màn hình chính thành dạng liên kết.',
+        'Thẻ mục ở cửa sổ lập phương án: thẻ đang mở có vạch xanh bên dưới (không còn nền xanh đặc); tổng kinh phí hộ hiển thị chữ đậm, bỏ nền cam.',
+        'Trạng thái hộ dùng 4 nhóm màu dễ nhận: xám chưa làm, xanh dương đang xử lý, vàng cần chú ý, xanh lục đã xong (đỏ chỉ cho không đồng ý, cưỡng chế).',
+        'Giao diện tối: trạng thái hộ, nút Sửa thửa, thanh tiến độ, bảng giá đất, nhập đơn giá đổi đúng màu tối, chữ rõ hơn.',
+    )),
     ('1.0.92', '10/11/2026', (
         'An toàn file dự án: phần mềm kiểm chặt các "trigger" (lệnh tự chạy) nằm trong file .pabt nhận từ nơi khác và gỡ trigger lạ ngay khi mở, '
         'trước mọi lần ghi - kể cả nhập Excel bằng dòng lệnh và dự án trên máy chủ LAN; có ghi nhật ký.',
