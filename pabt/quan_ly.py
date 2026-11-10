@@ -1100,6 +1100,12 @@ def ghi_bao_cao_tong_hop(so_lieu: dict, file_ra, tieu_de: str = '', dieu_kien: s
         o.border = vien
     so_fmt = '#,##0'
     tong = {'dt': KHONG, 'tong': KHONG, 'pd': KHONG, 'ct': KHONG, 1: KHONG, 2: KHONG, 3: KHONG, 4: KHONG, 5: KHONG}
+    from .ghi_xlsx_nhanh import KieuO
+    # 1.0.99 (Đợt 8): mỗi tổ hợp kiểu dựng MỘT lần, chép vào ô (trước: gán border / number_format / alignment từng ô - openpyxl băm lại
+    # đối tượng kiểu mỗi lần, 77% thời gian xuất). File ra giống hệt (tests/test_dot8_toc_do).
+    k_vien, k_xuong = KieuO(ws, border=vien), KieuO(ws, border=vien, alignment=xuong)
+    k_so = {c: KieuO(ws, border=vien, number_format='#,##0.0#' if c == 7 else so_fmt,
+                     alignment=xuong if c in (3, 4, 14, 19) else None) for c in range(1, so_cot + 1)}
     for i, x in enumerate(ds, start=1):
         r = h0 + i
         pd = (f'{x["qd_so"]}' + (f' ngày {x["qd_ngay"]}' if x['qd_ngay'] else '')) if x['da_phe_duyet'] else ''
@@ -1113,11 +1119,7 @@ def ghi_bao_cao_tong_hop(so_lieu: dict, file_ra, tieu_de: str = '', dieu_kien: s
                (x['ban_giao_ngay'] or 'Đã bàn giao') if x['da_ban_giao'] else '', x['theo_doi']]
         for c, v in enumerate(gia, start=1):
             o = ws.cell(r, c, v)
-            o.border = vien
-            if isinstance(v, float):
-                o.number_format = '#,##0.0#' if c == 7 else so_fmt
-            if c in (3, 4, 14, 19):
-                o.alignment = xuong
+            (k_so[c] if isinstance(v, float) else k_xuong if c in (3, 4, 14, 19) else k_vien).ap(o)
         tong['dt'] += x['dt']
         tong['tong'] += x['tong']
         for m in (1, 2, 3, 4, 5):

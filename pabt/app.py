@@ -2279,6 +2279,19 @@ class CuaSoChinh(QMainWindow):
         if self.con is None or self.file is None or not hasattr(self, 'mo_hinh'):
             self.ngan_chao.setCurrentIndex(0)
             return
+        # 1.0.99 (Đợt 8): về Màn hình chính khi số liệu không đổi thì KHÔNG tính / vẽ lại (trước 150 ms mỗi lần bấm, dự án 3.000 hộ).
+        # Khóa: dấu hiệu dữ liệu của kết nối (total_changes + data_version: máy khác ghi cũng đổi), ngày (hạn pháp lý), tông nền, cỡ chữ,
+        # chế độ chỉ xem, danh sách hộ của mô hình, lần phương án đang xem ở phễu.
+        from datetime import date
+        from .giao_dien import TY_LE, TONG_NEN
+        tt = csdl.trang_thai_nho(self.con)
+        khoa_tq = None if tt is None else (tt, id(self.con), str(self.file), bool(getattr(self, 'chi_doc', False)), date.today(),
+                                        TONG_NEN[0], TY_LE[0], id(self.mo_hinh.dong), len(self.mo_hinh.dong),
+                                        None if self.tong_quan is None else self.tong_quan.pheu.cb_lan.currentData())
+        if khoa_tq is not None and self.tong_quan is not None and getattr(self, '_khoa_tong_quan', None) == khoa_tq:
+            self.ngan_chao.setCurrentWidget(self.tong_quan)
+            return
+        self._khoa_tong_quan = None
         if self.tong_quan is None:
             from .man_hinh_tong_quan import KhungTongQuanDuAn
             self.tong_quan = KhungTongQuanDuAn(self.lenh)
@@ -2300,6 +2313,7 @@ class CuaSoChinh(QMainWindow):
             lap = lap_pa.phan_loai_lap(self.con)
             self.tong_quan.nap(self.con, self.mo_hinh.dong, da.get('ten') or self.file.stem, dia_ban, str(self.file),
                                da.get('chu_dau_tu') or '', lap=lap)
+            self._khoa_tong_quan = khoa_tq                 # chỉ nhớ khi nạp trọn vẹn (lỗi giữa chừng: lần sau tính lại)
         except Exception as e:                          # số liệu phụ (niêm yết, vận động) lỗi: vẫn hiện màn hình chính
             self.statusBar().showMessage(chu_loi('Không tính được số liệu tổng quan', e), 8000)
         self.ngan_chao.setCurrentWidget(self.tong_quan)

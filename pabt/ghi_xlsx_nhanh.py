@@ -12,12 +12,36 @@ from __future__ import annotations
 import io
 import re
 import zipfile
+from copy import copy as _chep
 
 NGUONG_O = 20000                     # trang tính nhỏ hơn: wb.save thường (khác biệt thời gian không đáng kể)
 MUC_NEN = 5                          # mức nén zlib của trang tính lớn (6 = mặc định: chậm hơn, file nhỏ hơn rất ít)
 _THAY_CHU = str.maketrans({'&': '&amp;', '<': '&lt;', '>': '&gt;'})
 _THAY_THUOC_TINH = str.maketrans({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\n': '&#10;', '\r': '&#13;',
                                   '\t': '&#09;'})
+
+
+class KieuO:
+    """Kiểu ô openpyxl dựng MỘT lần, áp cho nhiều ô (1.0.99 - Đợt 8 tốc độ). Gán `o.border = vien` / `o.font = ...` cho từng ô làm openpyxl
+    băm lại cả cây đối tượng kiểu mỗi lần (IndexedList.add -> __hash__): xuất danh sách 3.000 hộ 77% thời gian nằm ở đây. KieuO gán các
+    thuộc tính một lần lên ô mẫu (không thuộc trang tính nào), rồi `ap(o)` chép mảng mã kiểu (StyleArray) - đúng cách openpyxl tự chép
+    kiểu (Cell._style). File ra giống hệt gán từng ô.
+        k = KieuO(ws, border=vien, number_format='#,##0')
+        k.ap(ws.cell(r, c, v))"""
+
+    __slots__ = ('_kieu',)
+
+    def __init__(self, ws, **thuoc_tinh):
+        from openpyxl.cell.cell import Cell
+        mau = Cell(ws)                                   # ô mẫu: đăng ký kiểu vào workbook, không thêm ô vào trang tính
+        for ten, gt in thuoc_tinh.items():
+            if gt is not None:
+                setattr(mau, ten, gt)
+        self._kieu = mau._style
+
+    def ap(self, o):
+        o._style = _chep(self._kieu)
+        return o
 
 
 def _dung_duoc(ws) -> bool:

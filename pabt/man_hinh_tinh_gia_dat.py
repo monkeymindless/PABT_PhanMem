@@ -971,7 +971,11 @@ class HopTinhGiaDat(QDialog):
         """Các hàng của phạm vi đang chọn; phạm vi nhỏ không đọc cả dự án."""
         pv = self.cb_pham_vi.currentData()
         if pv == TAT_CA and self._tat_ca is None:
-            self._tat_ca = ap.doc_dong(self.con, None, self.bo_mo)
+            if self.bo_mo is None:                       # 1.0.99: mở lại hộp khi dữ liệu chưa đổi - không đọc lại cả dự án (csdl.nho)
+                from .csdl import nho
+                self._tat_ca = nho(self.con, ('ap_gia_dat.doc_dong',), lambda: ap.doc_dong(self.con, None, None))
+            else:                                        # hộ đang mở trong cửa sổ: lấy cả dòng chưa lưu, không nhớ
+                self._tat_ca = ap.doc_dong(self.con, None, self.bo_mo)
         if pv == TAT_CA:
             return self._tat_ca
         ds = set(self._ds_chon) if pv == DANG_CHON else {pv}

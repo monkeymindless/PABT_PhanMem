@@ -7,6 +7,10 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.99', '11/11/2026', (
+        'Nhanh hơn: Xuất danh sách hộ nhanh gấp 3 lần; mở lại Kiểm tra lỗi, Tính đơn giá đất khi chưa sửa gì gần như tức thì; về Màn hình chính không phải tính lại khi số liệu không đổi.',
+        'Hộp thoại nhiều nút hiện nhanh hơn 28-39% (tô màu, biểu tượng nút không phải tính lại mỗi lần mở); bảng hộ của Đợt trình, danh sách chọn hộ khi In / Xuất dựng nhanh hơn.',
+    )),
     ('1.0.98', '11/11/2026', (
         'Nhập danh sách hộ, thửa từ phần mềm địa chính: đọc được bảng thuộc tính bản đồ .dbf (gCadas, ArcGIS, MapInfo, Famis) và tên cột viết liền như SOTO, SHTHUA, DIENTICH, MDSD, TENCHU.',
         'Danh sách soạn bằng phông cũ TCVN3 (.VnTime) hoặc VNI tự đổi sang chữ Unicode khi nhập (có nhắc xem lại họ tên, địa chỉ); file CSV / TXT lưu kiểu ANSI không còn bị lỗi chữ.',
