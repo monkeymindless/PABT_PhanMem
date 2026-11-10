@@ -347,7 +347,9 @@ class TestHopInWindows(_Nen):
         if not xt.co_hop_in():
             self.skipTest('bản Qt5 không có hộp in')
         from PySide6.QtPrintSupport import QPrinter
-        p = xt.may_in_theo_tuy_chon('', 3, False, 'dai', 'Thử')
+        from tests.test_in_mot_ho_nhieu_ho import may_in_gia     # 1.0.98: không phụ thuộc máy in thật có in hai mặt hay không
+        with may_in_gia():
+            p = xt.may_in_theo_tuy_chon('', 3, False, 'dai', 'Thử')
         self.assertEqual((p.copyCount(), p.collateCopies(), p.duplex(), p.docName()), (3, False, QPrinter.DuplexMode.DuplexLongSide, 'Thử'))
 
 
