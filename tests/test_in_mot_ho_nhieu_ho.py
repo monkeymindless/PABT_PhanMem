@@ -309,10 +309,25 @@ class TestInTheoTuyChon(unittest.TestCase):
         def gia(doc, printer, **k):
             nhan.update(ban=printer.copyCount(), xep=printer.collateCopies(), mat=printer.duplex(), k=k)
             return 1
-        with mock.patch.object(xt, 'in_tai_lieu', gia):
+        with mock.patch.object(xt, 'in_tai_lieu', gia), may_in_gia():
             self.assertEqual(xt.in_theo_tuy_chon(self.doc, '', 3, False, 'ngan', 'A4', [2], 'x'), 1)
         self.assertEqual((nhan['ban'], nhan['xep'], nhan['mat']), (3, False, QPrinter.DuplexMode.DuplexShortSide))
         self.assertEqual(nhan['k'], dict(ds_trang=[2], kho='A4'))
+
+
+def may_in_gia():
+    """1.0.98: QPrinter nhớ chế độ hai mặt đã đặt. Máy in mặc định không in hai mặt thì Qt bỏ qua setDuplex và trả DuplexNone - bài
+    kiểm phụ thuộc máy in thật của máy chạy (hỏng trên máy dựng từ 1.0.91). Bài kiểm phần mềm ĐẶT đúng lựa chọn, không kiểm máy in."""
+    from PySide6 import QtPrintSupport
+
+    class MayInGia(QtPrintSupport.QPrinter):
+        def setDuplex(self, che_do):
+            self._hai_mat = che_do
+            super().setDuplex(che_do)
+
+        def duplex(self):
+            return getattr(self, '_hai_mat', super().duplex())
+    return mock.patch.object(QtPrintSupport, 'QPrinter', MayInGia)
 
 
 if __name__ == '__main__':
