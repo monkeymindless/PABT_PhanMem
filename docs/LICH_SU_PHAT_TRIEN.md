@@ -3223,3 +3223,5 @@ yêu cầu của người dùng: quyết định, lý do, số đo, cái bẫy �
 ' - csv.Sniffer của Python 3.8 đoán sai (mỗi dòng một ô; test_gia_dat_nq28 chỉ hỏng ở lượt Qt5), read_text cũ tự đổi xuống dòng: doc_bang đổi 
  /  -> 
 .
+- 1.0.98 PHÁT HÀNH (11/11/2026): LARC_Setup_Universal_1.0.98.exe (72,7 MB) + zip Universal (84,4 MB) + LARC_CapNhat_1.0.98.larcud (2,2 MB, 178 file); tu-kiem DAT Qt6 / Qt5; máy trắng 4 nhánh DAT. Test Qt6 2.007 bài đạt; Qt5 đạt sau khi sửa 
+ của CSV. GiaoDien_1.0.98: 0 lỗi, 0 cửa sổ lạ, 0 chậm. PhanTich so 1.0.97: thao tác lệch +-5%; số khởi động nhanh hơn 28-35% vẫn là sai lệch đo bản cũ từ gói .larcud (biên dịch lại pyc). 10.000 hộ: mở 2,2 s, lưu 20 ms, tải lại 105 ms, bảng tổng hợp 10,7 s - trong ngưỡng. LARC Mobile 1.0.98 lên Pages.
