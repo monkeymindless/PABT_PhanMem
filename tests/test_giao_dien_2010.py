@@ -125,7 +125,8 @@ class TestCuaSoLapPA(_Co):
         from pabt import man_hinh
         w = man_hinh.CuaSoLapPA(self.con, self.ma[0])
         self.addCleanup(lambda: (w.bo_thay_doi(), w.close()))
-        self.assertEqual(w.dai_dinh_danh.height() or w.dai_dinh_danh.maximumHeight(), man_hinh.CAO_DAI_DINH_DANH)
+        self.assertEqual(w.dai_dinh_danh.height() or w.dai_dinh_danh.maximumHeight(),
+                         man_hinh.CAO_DAI_DINH_DANH_GON if w._thap else man_hinh.CAO_DAI_DINH_DANH)   # 1.0.51: màn hình thấp gọn lại
         ten = self.con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (self.ma[0],)).fetchone()[0]
         self.assertEqual(w.dd['ten'][1].text(), ten)
         self.assertEqual(w.dd['dot'][1].text(), 'Chưa xếp đợt')
@@ -153,7 +154,7 @@ class TestBangTongHop(_Co):
         self.assertIn('15%', k.hang_kpi.the['pb_1'].lb_ten.text())
         self.assertNotIn('thẩm định', k.hang_kpi.the['pb_1'].lb_ten.text().lower())   # nhãn theo hồ sơ địa phương (UBND cấp xã)
         self.assertIn('Lần tính toán gần nhất', k.lb_chan.text())
-        self.assertIs(k.tab.widget(0), k.the_1)                                 # thẻ 1 = cơ cấu | an toàn nguồn vốn
+        self.assertIs(k.tab.widget(0), k.co_cau)                                 # thẻ 1 = cơ cấu | an toàn nguồn vốn
         self.assertEqual(k.co_cau.COT[0], 'STT')
         self.assertEqual(k.co_cau.COT[-1], 'Căn cứ pháp lý áp dụng')
         self.assertIn('Chưa', k.an_toan.the_trang_thai.text())                  # chưa chọn khái toán
@@ -199,24 +200,22 @@ class TestTienDo(_Co):
 # ---------------------------------------------------------------- trung tâm xuất bản
 class TestHopIn(_Co):
     def test_hai_the_che_do_va_4_tai_lieu(self):
-        from pabt.man_hinh import THE_CHE_DO, HopIn
+        from pabt.man_hinh import HopIn
         h = HopIn(self.con, None, ma_ho_chon=self.ma[:2], file_du_an=self.p, che_do='du_thao')
         self.addCleanup(h.close)
-        self.assertEqual([h.the_che_do.tabText(i) for i in range(h.the_che_do.count())], [t for _, t in THE_CHE_DO])
-        self.assertEqual(h.the_che_do.currentIndex(), 0)
+        self.assertEqual(h.hang_che_do.gia_tri(), 'du_thao')
         self.assertFalse(h.r_du_thao.isVisibleTo(h))                            # radio cũ ẩn, vẫn là nguồn trạng thái
-        self.assertIn('DỰ THẢO', h.lb_quy_tac.text())
         self.assertFalse(h.o_tt.isEnabled() or h.o_bc.isEnabled())              # dự thảo: khóa tờ trình + báo cáo tiếp thu
-        self.assertEqual(h.the_tai_lieu[h.o_tt].text(), 'Chỉ mở ở Chính thức')
-        self.assertIn('85/15', h.the_tai_lieu[h.o_bth].text())
+        self.assertFalse(h.o_tt.isVisibleTo(h) or h.o_bc.isVisibleTo(h))        # dự thảo: không hiện, đỡ rối
         self.assertIn('(2 hộ)', h.b_thuc_hien.text())
-        self.assertFalse(h.o_che_cccd.isChecked() or h.o_che_cccd.isVisibleTo(h))   # 1.0.04: không che CCCD
-        h.the_che_do.setCurrentIndex(1)                                         # bấm thẻ Chính thức
+        self.assertFalse(h.o_che_cccd.isChecked())                              # 1.0.52: che CCCD niêm yết - tùy chọn, mặc định tắt
+        self.assertTrue(h.o_che_cccd.isVisibleTo(h))                            # chỉ hiện ở chế độ Dự thảo
+        h.hang_che_do.dat('chinh_thuc')                                         # chọn Bản chính thức
         self.assertEqual(h.che_do(), 'chinh_thuc')
         self.assertTrue(all(o.isChecked() and o.isEnabled() for o in (h.o_ct, h.o_bth, h.o_tt, h.o_bc)))
-        self.assertIn('trọn bộ 4 tài liệu', h.lb_quy_tac.text())
+        self.assertFalse(h.o_tt.isHidden() or h.o_bc.isHidden())
         h.r_du_thao.setChecked(True)                                            # đặt bằng mã: thẻ đổi theo
-        self.assertEqual(h.the_che_do.currentIndex(), 0)
+        self.assertEqual(h.hang_che_do.gia_tri(), 'du_thao')
         self.assertFalse(h.o_bc.isChecked())
 
 

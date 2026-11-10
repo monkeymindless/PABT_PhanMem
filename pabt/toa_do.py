@@ -162,12 +162,33 @@ def doc_file_datum(file, ten: str = 'VN2000') -> tuple | None:
 
 
 _NHO_DATUM: dict = {}
+_CO_DINH = [0, None]                                    # [số tầng co_dinh_datum đang mở, tham số]
+
+
+class co_dinh_datum:
+    """`with toa_do.co_dinh_datum():` đổi hàng chục nghìn điểm một lượt (vẽ bản đồ, phân tích bản vẽ): chỉ đọc hồ sơ + stat file datum một lần (đo trên file thật: 16.000 lần stat
+    chiếm 1/3 thời gian vẽ lại)."""
+
+    def __enter__(self):
+        if _CO_DINH[0] == 0:
+            _CO_DINH[1] = None
+            _CO_DINH[1] = tham_so_datum()
+        _CO_DINH[0] += 1
+        return self
+
+    def __exit__(self, *_):
+        _CO_DINH[0] -= 1
+        if _CO_DINH[0] <= 0:
+            _CO_DINH[0], _CO_DINH[1] = 0, None
+        return False
 
 
 def tham_so_datum() -> tuple:
     """((dX, dY, dZ, rX, rY, rZ, ppm), quy ước, nguồn): file datum Bentley (hồ sơ ban_do.file_datum / thư mục cài Bentley) nếu đọc được,
     không thì TOWGS84 gắn sẵn. Nhớ theo (đường dẫn, mtime)."""
     import os
+    if _CO_DINH[1] is not None:
+        return _CO_DINH[1]
     ung = []
     try:
         from . import dia_phuong

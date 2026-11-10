@@ -39,11 +39,11 @@ class TestHopIn(CoSoXem):
         h = self._hop()
         self.assertEqual(h.bang_ho.columnCount(), 6)
         self.assertEqual([h.bang_ho.horizontalHeaderItem(c).text() for c in (4, 5)], ['Đợt', 'Địa chỉ'])
-        tieu_de_nut = {b.text() for b in h.findChildren(type(h.b_xem_bth))}
+        tieu_de_nut = {b.text() for b in h.findChildren(type(h.b_chon_het))}
         self.assertNotIn('Chọn tất cả mẫu (in đồng loạt)', tieu_de_nut)           # bỏ: chế độ phát hành đã tự chọn mẫu
         self.assertNotIn('Bỏ chọn mẫu', tieu_de_nut)
         self.assertNotIn('Chọn hộ đã lập', tieu_de_nut)                            # trùng ô "Hộ cần in"
-        self.assertIn('Sửa mẫu…', tieu_de_nut)                                     # cạnh ô Tờ trình
+        self.assertNotIn('Sửa mẫu…', tieu_de_nut)                                  # 05/11/2026: sửa mẫu ở cửa sổ Trình phê duyệt
         self.assertIn('Gửi cả lô', h.r_in.text())                                  # phân biệt với "In…" / "In nhanh" bản đang xem
 
     def test_sap_xep_theo_tien_va_xuat_theo_thu_tu_du_an(self):
@@ -78,10 +78,9 @@ class TestHopIn(CoSoXem):
     def test_the_che_do_thu_gon_the_nho(self):
         h = self._hop()
         h.dat_che_do('du_thao')
-        self.assertTrue(h.the_tai_lieu[h.o_bc].isHidden())                         # "Chỉ mở ở Chính thức" ghi một lần (Tờ trình)
-        self.assertFalse(h.the_tai_lieu[h.o_tt].isHidden())
+        self.assertTrue(h.o_bc.isHidden() and h.o_tt.isHidden())                   # Dự thảo: không có tờ trình, báo cáo ý kiến
         h.dat_che_do('chinh_thuc')
-        self.assertFalse(h.the_tai_lieu[h.o_bc].isHidden())
+        self.assertFalse(h.o_bc.isHidden() or h.o_tt.isHidden())
 
     def test_khong_tao_cua_so_la(self):
         """Widget chưa có cha mà setVisible -> hiện thành cửa sổ riêng (đã gặp ở khung "Đầu ra và nơi lưu" 1.0.23)."""
@@ -91,17 +90,13 @@ class TestHopIn(CoSoXem):
         APP.processEvents()
         la = [w for w in APP.topLevelWidgets() if w.isVisible() and w is not h and w not in truoc]
         self.assertEqual(la, [])
-        self.assertFalse(h.khung_dau_ra.isWindow())
-        h.reject()
-
-    def test_gap_khung_dau_ra(self):
-        h = self._hop()
-        h.show()
+        self.assertFalse(h.khung_xuat_them.isWindow())
+        for k in ('mot', 'nhieu', 'xuat', 'in'):                                   # đổi mục: phần ẩn / hiện không thành cửa sổ riêng
+            h.dat_pham_vi(k)
+            APP.processEvents()
+        h.b_chon_ho.setChecked(True)
         APP.processEvents()
-        self.assertTrue(h.khung_dau_ra.isVisible())
-        h.b_dau_ra.setChecked(False)
-        self.assertFalse(h.khung_dau_ra.isVisible())
-        self.assertTrue(h.b_dau_ra.text().startswith('▸'))
+        self.assertEqual([w for w in APP.topLevelWidgets() if w.isVisible() and w is not h and w not in truoc], [])
         h.reject()
 
     def test_nho_lua_chon(self):
@@ -113,13 +108,13 @@ class TestHopIn(CoSoXem):
             h.o_so_ban.setValue(3)
             h._luu_lua_chon(self.td / 'ra' / 'BanIn_x')
             self.assertEqual(cd.d['in/dau_ra'], 'excel')
-            self.assertEqual(cd.d['in/thu_muc_cha'], str(self.td / 'ra'))
+            self.assertNotIn('in/thu_muc_cha', cd.d)                               # 05/11/2026: không nhớ thư mục, luôn theo file dự án
             (self.td / 'ra').mkdir()
             h2 = self._hop()                                                       # mở lại: nhớ đầu ra, gộp PDF, số bản, thư mục cha
             self.assertTrue(h2.r_excel.isChecked())
             self.assertFalse(h2.o_gop.isChecked())
             self.assertEqual(h2.o_so_ban.value(), 3)
-            self.assertTrue(h2.o_thu_muc.text().startswith(str(self.td / 'ra')))
+            self.assertFalse(h2.o_thu_muc.text().startswith(str(self.td / 'ra')))
             cd.d['in/dau_ra'] = 'in'                                               # "in ra máy" KHÔNG được nhớ: tránh in nhầm
             h3 = self._hop()
             self.assertTrue(h3.r_pdf.isChecked() and not h3.r_in.isChecked())

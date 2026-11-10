@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import may_chu
 from .may_chu import LoiMayChu
 from .giao_dien import con_tro_cho
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 from .thong_bao import chu_loi
 
 
@@ -90,7 +91,7 @@ class HopDangNhap(_Hop):
         f.addRow('Mật khẩu:', self.o_mk)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
-        self.lb.setStyleSheet('QLabel { color: #B83A3A; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel { color: #B83A3A; }')
         b_dn = QPushButton('Đăng nhập')
         b_dn.setDefault(True)
         b_dn.setProperty('nhom', 'luu')
@@ -107,7 +108,7 @@ class HopDangNhap(_Hop):
         ghi = QLabel('Đăng nhập ở máy bất kỳ trong mạng nội bộ: phần mềm mở lại dự án đang làm dở. Không có máy chủ (mất mạng, '
                      'đi hiện trường) thì chọn "Làm việc offline" - mọi chức năng nhập liệu vẫn dùng bình thường.')
         ghi.setWordWrap(True)
-        ghi.setStyleSheet('QLabel { color: #5B6B7A; }')
+        dat_kieu_theo_tong(ghi, 'QLabel { color: #5B6B7A; }')
         lo = QVBoxLayout(self)
         lo.addWidget(tieu)
         lo.addWidget(self.lb_may_chu)
@@ -171,7 +172,7 @@ class HopThietLap(_Hop):
         self.lb.setWordWrap(True)
         self.o_qt_tk = QLineEdit('quantri')
         self.o_qt_ten = QLineEdit('Quản trị hệ thống')
-        self.o_qt_mk = _o_mk('ít nhất 6 ký tự')
+        self.o_qt_mk = _o_mk('ít nhất 8 ký tự')
         self.o_qt_mk2 = _o_mk('nhập lại')
         from .giao_dien import the_form
         self.the_moi = the_form('Khởi tạo máy chủ mới (lần đầu)', [
@@ -282,7 +283,7 @@ class HopDoiMatKhau(_Hop):
         super().__init__(parent)
         self.setWindowTitle('Đổi mật khẩu')
         self.setFixedWidth(400)
-        self.o_cu, self.o_moi, self.o_moi2 = _o_mk(), _o_mk('ít nhất 6 ký tự'), _o_mk()
+        self.o_cu, self.o_moi, self.o_moi2 = _o_mk(), _o_mk('ít nhất 8 ký tự'), _o_mk()
         f = QFormLayout(self)
         f.addRow('Mật khẩu hiện tại:', self.o_cu)
         f.addRow('Mật khẩu mới:', self.o_moi)
@@ -319,7 +320,7 @@ class HopTaiKhoan(_Hop):
         self.bang = _bang(self.COT, [110, 190, 130, 90, 90, 140, 110])
         self.o_tk, self.o_ten, self.o_cv = QLineEdit(), QLineEdit(), QLineEdit()
         self.o_tk.setPlaceholderText('vd: vinh.pt')
-        self.o_mk = _o_mk('ít nhất 6 ký tự')
+        self.o_mk = _o_mk('ít nhất 8 ký tự')
         self.cb_vt = QComboBox()
         for k, t in may_chu.TEN_VAI_TRO.items():
             self.cb_vt.addItem(t, k)
@@ -404,11 +405,16 @@ class HopTaiKhoan(_Hop):
         self.ve()
         return True
 
-    def doi_vai_tro(self):
+    def doi_vai_tro(self, vai_tro: str | None = None):
+        """1.0.57: đặt vai trò của tài khoản đang chọn = vai trò ở ô "Vai trò" (6 vai trò nghiệp vụ - phan_quyen)."""
         u = self._chon()
         if u is None:
             return False
-        moi = may_chu.NGUOI_DUNG if u['vai_tro'] == may_chu.QUAN_TRI else may_chu.QUAN_TRI
+        moi = vai_tro or self.cb_vt.currentData()
+        if moi == u['vai_tro']:
+            self.bao(f'Tài khoản đã là vai trò "{may_chu.TEN_VAI_TRO.get(moi, moi)}": chọn vai trò khác ở ô "Vai trò" rồi bấm Đổi vai '
+                     'trò.')
+            return False
         try:
             may_chu.sua_nguoi_dung(self.phien, u['tai_khoan'], vai_tro=moi)
         except LoiMayChu as e:

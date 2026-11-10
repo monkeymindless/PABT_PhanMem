@@ -18,8 +18,9 @@ import tempfile
 import time
 from pathlib import Path
 
-DUOI_ANH = ('.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp')
+DUOI_ANH = ('.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp', '.webp')
 DPI = 300
+CANH_DAI_TOI_DA = 3508      # cạnh dài A4 @ 300 dpi: ảnh điện thoại / PDF scan lớn thu về cỡ này trước khi Tesseract (1.0.48)
 
 
 class LoiOCR(RuntimeError):
@@ -37,6 +38,7 @@ def _ung_vien() -> list:
     exe = 'tesseract.exe' if sys.platform == 'win32' else 'tesseract'
     if getattr(sys, 'frozen', False):
         ds.append(Path(sys.executable).parent / 'tesseract' / exe)
+        ds.append(Path(sys.executable).parent.parent / 'x64' / 'tesseract' / exe)      # zip Universal chạy ngay x86\PABT.exe: một bản Tesseract ở x64\
     goc = Path(__file__).resolve().parents[1]
     ds += [goc / 'tesseract' / exe, goc / 'bo_cai_win' / 'tesseract' / exe]      # chạy từ mã nguồn
     ds.append(Path(os.environ.get('PABT_THU_MUC_MAY') or Path(os.environ.get('APPDATA') or Path.home()) / 'PABT') /
@@ -232,6 +234,62 @@ def sua_dvt(o: str) -> str:
     return 'm²' if len(o.strip()) <= 4 and _RE_DVT_MU.fullmatch(o.strip()) else o
 
 
+def kich_thuoc_ocr(rong: int, cao: int, gioi: int = CANH_DAI_TOI_DA) -> tuple:
+    """Kích thước đọc OCR: không vượt `gioi` ở cạnh dài (giữ tỉ lệ). Ảnh 8000×6000 → 3508×2631."""
+    rong, cao = int(rong or 0), int(cao or 0)
+    m = max(rong, cao)
+    if m <= gioi or m <= 0:
+        return max(1, rong or 1), max(1, cao or 1)
+    k = gioi / m
+    return max(1, int(rong * k)), max(1, int(cao * k))
+
+
+def so_trang(file) -> int:
+    """Số trang PDF (QtPdf / pypdf); ảnh / file khác = 1. Không mở được -> 1."""
+    p = Path(file)
+    duoi = p.suffix.lower()
+    if duoi in DUOI_ANH or duoi != '.pdf':
+        return 1
+    try:
+        from PySide6.QtPdf import QPdfDocument
+    except ImportError:
+        QPdfDocument = None
+    if QPdfDocument is not None:
+        d = QPdfDocument()
+        try:
+            d.load(str(p))
+            n = int(d.pageCount() or 0)
+            if n > 0:
+                return n
+        except Exception:                               # noqa: BLE001 - PDF hỏng: thử pypdf
+            pass
+        finally:
+            try:
+                d.close()
+            except Exception:                           # noqa: BLE001
+                pass
+    try:
+        from pypdf import PdfReader
+        return max(1, len(PdfReader(str(p)).pages))
+    except Exception:                                   # noqa: BLE001
+        return 1
+
+
+def _doc_qimage(anh: Path, gioi: int = CANH_DAI_TOI_DA):
+    """Đọc ảnh; file lớn giải nén đã thu (không nạp bitmap 20–40 MP rồi mới thu — máy treo)."""
+    from PySide6.QtCore import QSize
+    from PySide6.QtGui import QImage, QImageReader
+    r = QImageReader(str(anh))
+    kt = r.size()
+    if kt.isValid() and max(kt.width(), kt.height()) > gioi:
+        w, h = kich_thuoc_ocr(kt.width(), kt.height(), gioi)
+        r.setScaledSize(QSize(w, h))
+    im = r.read()
+    if im is not None and not im.isNull():
+        return im
+    return QImage(str(anh))
+
+
 # ---------------------------------------------------------------- ảnh từng trang
 def _anh_trang_pypdf(file: Path, td: Path):
     """Qt5 (bản Win 7/8, không có QtPdf): ảnh scan lớn nhất của TỪNG trang bằng pypdf - yield (số trang, tổng, ảnh | None) ngay khi
@@ -287,13 +345,13 @@ PHONG_TOI_DA = 4.0            # 16/10/2026: ảnh 42 px phóng x3 thì "Giếng"
 
 def _chuan_bi(anh: Path, td: Path | None = None, he_so: float = 1.0) -> Path:
     """Ảnh xám (1 byte / điểm ảnh - Tesseract đọc ổn định hơn ảnh màu), phóng he_so lần khi > 1. Trả file PNG đã xử lý (hoặc ảnh
-    gốc khi không xử lý được)."""
+    gốc khi không xử lý được). 1.0.48: cạnh dài không vượt CANH_DAI_TOI_DA (ảnh điện thoại / PDF scan lớn)."""
     try:
         from PySide6.QtCore import Qt
         from PySide6.QtGui import QImage
     except ImportError:
         return anh
-    im = QImage(str(anh))
+    im = _doc_qimage(anh) if he_so <= 1 else QImage(str(anh))
     if im.isNull():
         return anh
     if im.hasAlphaChannel():                                     # PNG nền trong suốt (ảnh xuất từ phần mềm): đặt lên nền trắng, không thì chữ đen trên đen
@@ -306,8 +364,12 @@ def _chuan_bi(anh: Path, td: Path | None = None, he_so: float = 1.0) -> Path:
         im = nen
     im = im.convertToFormat(QImage.Format.Format_Grayscale8)     # xám TRƯỚC khi phóng: 1 byte / điểm ảnh thay 4 (nhanh ~3 lần)
     if he_so > 1:
-        im = im.scaled(int(im.width() * he_so), int(im.height() * he_so), Qt.AspectRatioMode.KeepAspectRatio,
-                       Qt.TransformationMode.SmoothTransformation)
+        w, h = kich_thuoc_ocr(int(im.width() * he_so), int(im.height() * he_so))
+        if w > im.width() or h > im.height():
+            im = im.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    elif max(im.width(), im.height()) > CANH_DAI_TOI_DA:
+        w, h = kich_thuoc_ocr(im.width(), im.height())
+        im = im.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     ra = (td or anh.parent) / (anh.stem + (f'_x{he_so:g}' if he_so > 1 else '') + '_xl.png')   # td: thư mục tạm, không ghi cạnh ảnh gốc
     return ra if im.save(str(ra)) else anh
 
@@ -520,8 +582,9 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = '
                     if bao_tien_do:
                         bao_tien_do(i + 1, tong)
                     kt = d.pagePointSize(i)
-                    # Một trang một ảnh, xóa ngay sau khi đọc: file vài nghìn trang không giữ hết ảnh trong RAM.
-                    anh = d.render(i, QSize(max(1, int(kt.width() * dpi / 72)), max(1, int(kt.height() * dpi / 72))))
+                    # PDF chụp điện thoại hay khai báo khổ trang = số điểm ảnh: 300 dpi bị phóng thành 8–20 MP → treo.
+                    w, h = kich_thuoc_ocr(max(1, int(kt.width() * dpi / 72)), max(1, int(kt.height() * dpi / 72)))
+                    anh = d.render(i, QSize(w, h))
                     p = td / f'trang_{i + 1:04d}.png'
                     if anh.isNull() or not anh.save(str(p)):
                         continue
@@ -553,12 +616,29 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = '
         shutil.rmtree(td, ignore_errors=True)
 
 
-def doc_chu(file, bao_tien_do=None, cho=None) -> list:
-    """Các dòng chữ của bản scan (PDF ảnh hoặc file ảnh). bao_tien_do(trang, tổng số trang); cho() trả True để hủy."""
+_DA_DOC = {}                # (đường dẫn, mtime, cỡ, psm) -> các dòng; vừa đọc gần nhất ở cuối
+_DA_DOC_TOI_DA = 6
+
+
+def doc_chu(file, bao_tien_do=None, cho=None, psm: int = 6) -> list:
+    """Các dòng chữ của bản scan (PDF ảnh hoặc file ảnh). bao_tien_do(trang, tổng số trang); cho() trả True để hủy.
+    psm: chế độ Tesseract (6 = khối chữ; 4 = cột thưa — biên bản viết tay). Nhớ TRONG BỘ NHỚ vài file vừa đọc (theo đường dẫn, thời điểm sửa,
+    cỡ): bộ quét chung nhận loại rồi màn hình chuyên trách đọc lại không phải nhận dạng lại. Không ghi đĩa."""
     if not may_doc()[0]:
         raise LoiOCR(san_sang())
+    try:
+        st = os.stat(str(file))
+        khoa = (os.path.abspath(str(file)), st.st_mtime_ns, st.st_size, psm)
+    except OSError:
+        khoa = None
+    if khoa in _DA_DOC:
+        return list(_DA_DOC[khoa])
     dong = []
-    for chu in tung_trang(file, bao_tien_do, cho):
+    for chu in tung_trang(file, bao_tien_do, cho, psm=psm):
         # strip chỉ dấu cách: ô trống đầu dòng bảng (Tab đầu) phải giữ, không thì lệch cột
         dong += ['\t'.join(sua_dvt(o.strip()) for o in sua_so(x.strip(' \r')).split('\t')) for x in chu.splitlines() if x.strip()]
+    if khoa is not None:
+        while len(_DA_DOC) >= _DA_DOC_TOI_DA:
+            _DA_DOC.pop(next(iter(_DA_DOC)))
+        _DA_DOC[khoa] = list(dong)
     return dong

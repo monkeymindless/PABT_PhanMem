@@ -5,6 +5,8 @@ còn gặp trên hồ sơ, bảng giá đất (BHK, NHK) và ký hiệu cũ (LUN
 """
 from __future__ import annotations
 
+import functools
+
 NONG_NGHIEP, PHI_NONG_NGHIEP, CHUA_SU_DUNG = 'Nông nghiệp', 'Phi nông nghiệp', 'Chưa sử dụng'
 
 LOAI_DAT = [
@@ -89,8 +91,13 @@ def nhom_mac_dinh(ma: str) -> str:
 
 
 def _bo_dau(s: str) -> str:
+    return _bo_dau_chuoi(str(s or ''))
+
+
+@functools.lru_cache(maxsize=4096)
+def _bo_dau_chuoi(s: str) -> str:
     import unicodedata
-    s = unicodedata.normalize('NFD', str(s or '').replace('đ', 'd').replace('Đ', 'D'))
+    s = unicodedata.normalize('NFD', s.replace('đ', 'd').replace('Đ', 'D'))
     return ''.join(c for c in s if unicodedata.category(c) != 'Mn').lower()
 
 

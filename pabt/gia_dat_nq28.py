@@ -13,7 +13,7 @@ from pathlib import Path
 
 from . import an_toan as _an_toan
 from .tien import lam_tron
-from .lap_pa import bo_dau
+from .lap_pa import bo_dau, cung_dia_ban, khoa_dia_ban
 
 VAN_BAN = 'Nghị quyết 28/2025/NQ-HĐND ngày 10/12/2025 của HĐND tỉnh Đồng Nai (bảng giá đất áp dụng từ 01/01/2026)'
 COT = [('dat_o', 'Đất ở'), ('tmdv', 'Đất thương mại, dịch vụ'), ('sxkd', 'Đất SX-KD phi NN, khoáng sản'),
@@ -61,7 +61,65 @@ def ten_vi_tri(ma: str) -> str:
 # mã loại đất -> cột giá
 COT_LOAI = {'ONT': 'dat_o', 'ODT': 'dat_o', 'TMD': 'tmdv', 'SKC': 'sxkd', 'SKS': 'sxkd', 'SKN': 'sxkd',
             'CLN': 'nn_cay', 'HNK': 'nn_cay', 'BHK': 'nn_cay', 'LUC': 'nn_cay', 'LUK': 'nn_cay', 'LUA': 'nn_cay', 'CHN': 'nn_cay',
-            'NHK': 'nn_cay', 'RSX': 'nn_rung_nts', 'NTS': 'nn_rung_nts'}
+            'NHK': 'nn_cay', 'RSX': 'nn_rung_nts', 'NTS': 'nn_rung_nts',
+            # 1.0.81 (Điều 5 NQ 28): chăn nuôi tập trung / NN khác theo cây lâu năm; lúa nước còn lại theo cây hằng năm; rừng phòng hộ,
+            # đặc dụng tính 100% rừng sản xuất
+            'CNT': 'nn_cay', 'NKH': 'nn_cay', 'LUN': 'nn_cay', 'RPH': 'nn_rung_nts', 'RDD': 'nn_rung_nts'}
+# 1.0.81: 4 loại đất nông nghiệp độc lập (Điều 5 NQ 28). Phụ lục I gộp 2 cột giá -> mỗi loại có cột giá dự phòng (DU_PHONG_COT); bảng giá
+# nào có cột riêng (nn_cln…) thì dùng cột riêng. Danh sách mã đất, cột Phụ lục VIII: khóa quy_tac_nq28.loai_nn của gia_dat_qd03.json.
+LOAI_NN = [('nn_cln', 'Đất trồng cây lâu năm'), ('nn_chn', 'Đất trồng cây hằng năm'), ('nn_nts', 'Đất nuôi trồng thủy sản'),
+           ('nn_rsx', 'Đất rừng sản xuất')]
+DU_PHONG_COT = {'nn_cln': 'nn_cay', 'nn_chn': 'nn_cay', 'nn_nts': 'nn_rung_nts', 'nn_rsx': 'nn_rung_nts'}
+
+
+def quy_tac_loai_nn() -> list:
+    """[{ma, ten, ma_dat, cot_gia, pl_viii, can_cu}] của gói dữ liệu (gia_dat_qd03.json, khóa quy_tac_nq28.loai_nn)."""
+    from .goi_gia_dat import du_lieu_goc
+    return list((du_lieu_goc().get('quy_tac_nq28') or {}).get('loai_nn') or [])
+
+
+def loai_nn_cua_ma(loai_dat: str) -> str | None:
+    """Mã loại đất ('CLN', 'LUC+HNK', 'RPH') -> một trong 4 loại đất nông nghiệp ('nn_cln'…); không phải đất NN: None."""
+    ma = {m: x['ma'] for x in quy_tac_loai_nn() for m in x.get('ma_dat') or ()}
+    for p in re.split(r'[+,;/ ]+', (loai_dat or '').upper()):
+        if p in ma:
+            return ma[p]
+    return None
+
+
+def cot_cua_nhom(cot: str, pl_viii: str = '') -> str:
+    """Cột giá để tra bảng: nhóm đã tách (cây lâu năm / hằng năm / rừng / thủy sản) dùng cột riêng nếu bảng có; không thì cột gộp."""
+    pl = (pl_viii or '').strip()
+    if not pl:
+        return cot
+    for x in quy_tac_loai_nn():
+        if x.get('pl_viii') == pl and x.get('ma'):
+            return x['ma']
+    return cot
+
+
+def cot_gia_that(cot: str, r: dict | None = None) -> str:
+    """Cột giá thật của dòng bảng giá: 4 loại NN dùng cột riêng nếu dòng có, không thì cột dự phòng (nn_cay / nn_rung_nts)."""
+    if cot in DU_PHONG_COT and (r is None or not r.get(cot)):
+        return DU_PHONG_COT[cot]
+    return cot
+
+
+def phan_tich_4_loai_nn(r: dict, dia_ban: str = '', goi=None) -> list:
+    """Một dòng bảng giá -> 4 dòng [{ma, ten, ma_dat, cot_gia, gia (đồng/m²), toi_thieu, toi_da (Phụ lục VIII, đồng/m² hoặc None),
+    can_cu}] để xem trước / đối chiếu giá từng loại đất nông nghiệp."""
+    from . import gia_dat_qd03 as q3
+    ra = []
+    for x in quy_tac_loai_nn():
+        cot = cot_gia_that(x['ma'], r)
+        try:
+            tt, td = q3.gioi_han_nong_nghiep(dia_ban or r.get('xa', ''), x['cot_gia'], goi, x.get('pl_viii', ''))
+        except Exception:                                   # noqa: BLE001 - gói không có Phụ lục VIII: chỉ hiện giá bảng
+            tt = td = None
+        ra.append(dict(ma=x['ma'], ten=x['ten'], ma_dat=', '.join(x.get('ma_dat') or ()), cot_gia=cot,
+                       gia=gia_dong(r, x['ma']) if r else 0, toi_thieu=tt, toi_da=td, can_cu=x.get('can_cu', ''),
+                       ghi_chu=x.get('ghi_chu', '')))
+    return ra
 
 
 def _file() -> Path:
@@ -158,8 +216,39 @@ def tom_tat() -> str:
     return 'Bảng gắn sẵn: ' + ', '.join(xs)
 
 
+_CHI_MUC_XA = {'dong': None, 'theo_ten': {}, 'hoi': {}}
+
+
+def _chi_muc_xa() -> dict:
+    """Chỉ mục theo tên xã của bảng đang dùng (1.0.90: bảng toàn tỉnh 16.374 dòng - trước mỗi lần tra một xã duyệt hết bảng). Dựng lại
+    khi bảng đọc lại (đối tượng dòng khác: ghi / thay file)."""
+    dong = _da_doc()[0]
+    cm = _CHI_MUC_XA
+    if cm['dong'] is not dong:
+        theo, theo_khoa = {}, {}
+        for r in dong:
+            theo.setdefault(r.get('xa') or '', []).append(r)
+        for ten in theo:
+            if ten:
+                theo_khoa.setdefault(khoa_dia_ban(ten), []).append(ten)
+        cm.update(dong=dong, theo_ten=theo, theo_khoa=theo_khoa, hoi={})
+    return cm
+
+
+def dong_cua_xa(xa: str) -> list:
+    """Các dòng bảng giá của một xã / phường (khop_xa), nhớ theo tên hỏi. Tên đúng (giữ dấu, bỏ tiền tố) của một xã trong bảng: lấy thẳng
+    xã đó; không thì so từng tên (gõ không dấu, tên ngắn). Dùng chung: không sửa danh sách / dòng trả về."""
+    cm = _chi_muc_xa()
+    kq = cm['hoi'].get(xa)
+    if kq is None:
+        dung = cm['theo_khoa'].get(khoa_dia_ban(xa)) if '~' in khoa_dia_ban(xa) else None
+        ten_khop = dung or [ten for ten in cm['theo_ten'] if ten and khop_xa(xa, ten)]
+        kq = cm['hoi'][xa] = [r for ten in ten_khop for r in cm['theo_ten'][ten]]
+    return kq
+
+
 def ds_xa() -> list:
-    return list(dict.fromkeys(r['xa'] for r in tat_ca()))
+    return [x for x in _chi_muc_xa()['theo_ten'] if x]
 
 
 def mo_ta_vi_tri(r: dict) -> str:
@@ -189,18 +278,16 @@ def cot_cua_loai(loai_dat: str) -> str | None:
 
 
 def khop_xa(ten: str, r_xa: str) -> bool:
-    t = bo_dau(ten or '')
-    t = re.sub(r'^(xa|phuong|thi tran)\s+', '', t)
-    return bool(t) and t in bo_dau(r_xa)
+    """1.0.90: so nguyên chữ, giữ dấu khi hai bên cùng có dấu (lap_pa.cung_dia_ban). Trước so chuỗi con không dấu: "An Lộc" khớp cả
+    "Xuân Lộc", "Lộc Thành" khớp cả "Lộc Thạnh" - giá đất / đoạn đường của xã khác lẫn vào."""
+    return cung_dia_ban(ten, r_xa)
 
 
 def tim(xa: str = '', tu_khoa: str = '', vi_tri: str = '') -> list:
     """Lọc theo địa bàn (bỏ qua nếu không khớp địa bàn nào), mã vị trí (vi_tri: 'VT2', 'KV1-VT3'… - '' = mọi vị trí) và từ khóa
     không dấu (tên đường, điểm đầu / cuối, mã vị trí)."""
-    ds = tat_ca()
-    theo_xa = [r for r in ds if khop_xa(xa, r['xa'])]
-    if theo_xa:
-        ds = theo_xa
+    theo_xa = dong_cua_xa(xa) if str(xa or '').strip() else []
+    ds = list(theo_xa) if theo_xa else tat_ca()
     if vi_tri:
         vt = str(vi_tri).strip().upper()
         ds = [r for r in ds if str(r.get('vi_tri') or '').upper() == vt]
@@ -218,7 +305,11 @@ def tim(xa: str = '', tu_khoa: str = '', vi_tri: str = '') -> list:
 def theo_dia_ban(xa: str = '') -> list:
     """Mọi dòng của bảng (đủ các địa bàn - dự án có thể đi qua nhiều xã, phường), địa bàn của dự án đứng đầu."""
     ds = tat_ca()
-    return [r for r in ds if khop_xa(xa, r['xa'])] + [r for r in ds if not khop_xa(xa, r['xa'])]
+    dau = dong_cua_xa(xa) if str(xa or '').strip() else []
+    if not dau:
+        return ds
+    co = {id(r) for r in dau}
+    return list(dau) + [r for r in ds if id(r) not in co]
 
 
 def ten_ngan_xa(r_xa: str) -> str:
@@ -226,16 +317,37 @@ def ten_ngan_xa(r_xa: str) -> str:
     return re.sub(r'^(Xã|Phường|Thị trấn)\s+', '', r_xa or '')
 
 
+COT_PHU_LUC_III = ('dat_o', 'tmdv', 'sxkd')               # NQ 28: Phụ lục III đất phi nông nghiệp; cột còn lại (nn_*) là Phụ lục I
+
+
+def phu_luc_cua_cot(cot: str) -> str:
+    """Phụ lục NQ 28 chứa giá của cột: 'III' đất ở / TMDV / SXKD, 'I' đất nông nghiệp."""
+    return 'III' if cot in COT_PHU_LUC_III else 'I'
+
+
+def phu_luc_dong(r: dict) -> set:
+    """Các phụ lục mà dòng bảng giá mang giá (1.0.90): theo nhãn lúc đọc file (phu_luc), dòng cũ chưa có nhãn thì theo cột có giá."""
+    pl = r.get('phu_luc')
+    if isinstance(pl, (list, tuple)) and pl:
+        return set(pl)
+    ra = set()
+    if any(int(r.get(c) or 0) > 0 for c in COT_PHU_LUC_III):
+        ra.add('III')
+    if any(int(r.get(c) or 0) > 0 for c, _ in COT + LOAI_NN if c not in COT_PHU_LUC_III):
+        ra.add('I')
+    return ra
+
+
 def gia_dong(r: dict, cot: str) -> int:
-    """Giá đồng/m² của một dòng theo cột (văn bản ghi nghìn đồng)."""
-    return int(r[cot]) * 1000
+    """Giá đồng/m² của một dòng theo cột (văn bản ghi nghìn đồng). 4 loại đất NN (nn_cln…): cột riêng nếu có, không thì cột dự phòng."""
+    return int(r[cot_gia_that(cot, r)]) * 1000
 
 
 def can_cu(r: dict, cot: str) -> str:
     vb = (r.get('van_ban') or van_ban_dang_dung()) if dang_thay() else 'NQ 28/2025/NQ-HĐND'
     ten_vt = ten_vi_tri(r['vi_tri'])
     return (f'{vb}: {r["xa"]}, {r["ten_duong"]} (từ {r["diem_dau"]} đến {r["diem_cuoi"]}), '
-            f'{ten_vt}, TT {r["tt"]}, {dict(COT)[cot]}' + (f' ({r["tinh_tu"]})' if r.get('tinh_tu') else ''))
+            f'{ten_vt}, TT {r["tt"]}, {dict(COT + LOAI_NN)[cot]}' + (f' ({r["tinh_tu"]})' if r.get('tinh_tu') else ''))
 
 
 def xuat_excel(file_ra) -> Path:
@@ -348,6 +460,7 @@ def doc_excel(file) -> tuple:
     hoặc nghìn đồng/m² nếu dòng tiêu đề ghi "nghìn". Cột tối thiểu: Tên đường và một cột giá (Đất ở hoặc Đơn giá).
     """
     import openpyxl
+    __import__('pabt.an_toan').an_toan.kiem_excel(file)
     wb = openpyxl.load_workbook(file, data_only=True)
     dong, van_ban = [], ''
     thay_don_vi = []
@@ -429,8 +542,10 @@ def doc_excel(file) -> tuple:
 
 
 def ghi_thay(dong: list, van_ban: str = '', nguon: str = '') -> Path:
-    """Ghi đè bảng giá đất của máy này. Bốn địa bàn gắn sẵn không còn hiện cho đến khi khôi phục."""
+    """Ghi đè bảng giá đất của máy này. Bốn địa bàn gắn sẵn không còn hiện cho đến khi khôi phục. 1.0.56: cần quyền quản trị."""
     import os
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('cập nhật bảng giá đất')
     p = file_thay()
     p.parent.mkdir(parents=True, exist_ok=True)
     tam = p.with_suffix('.json.tmp')
@@ -438,6 +553,7 @@ def ghi_thay(dong: list, van_ban: str = '', nguon: str = '') -> Path:
                    encoding='utf-8')
     os.replace(tam, p)
     _quen()
+    quan_tri_bo.sau_khi_sua()
     return p
 
 
@@ -476,9 +592,12 @@ def xa_gan_san() -> tuple:
 
 def xoa_thay() -> bool:
     """Xóa bảng người dùng: phần mềm trở lại 4 địa bàn gắn sẵn. False nếu đang không thay."""
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('đổi bảng giá đất')
     p = file_thay()
     if not p.is_file():
         return False
     p.unlink()
     _quen()
+    quan_tri_bo.sau_khi_sua()
     return True

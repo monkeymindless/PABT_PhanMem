@@ -224,7 +224,7 @@ class TestPhongSo(_CoCuaSo):
         self.assertNotEqual(g.phong_so(QFont('Segoe UI', 12)).pointSizeF(), 10)   # Phóng to: cỡ mới
         self.assertEqual(g.mau_so('0'), g.MAU_SO_KHONG)
         self.assertEqual(g.mau_so('-'), g.MAU_SO_KHONG)
-        self.assertEqual(g.mau_so('1.250.000', tien=True), g.MAU_SO_TIEN)
+        self.assertEqual(g.mau_so('1.250.000', tien=True), g.mau_theo_tong(g.MAU_SO_TIEN, 'chu'))     # 1.0.79: màu chính theo phương án Navy đang chọn
         self.assertIsNone(g.mau_so('1.250.000'))
         self.assertEqual(g.mau_so('5', vuot=True), g.MAU_SO_VUOT)
 

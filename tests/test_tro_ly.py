@@ -96,10 +96,11 @@ class TestTrucTuyen(_Co):
         gui = g['messages'][0]['content']
         self.assertNotIn(ten, gui)
         self.assertNotIn('075092000123', gui)
-        tro_ly.ghi_cai_dat(gui_ca_nhan=True, mo_hinh='claude-sonnet-5-5')    # người dùng cho phép: gửi nguyên
+        tro_ly.ghi_cai_dat(gui_ca_nhan=True, mo_hinh='claude-sonnet-5-5')    # 1.0.52: không còn cho gửi nguyên - vẫn che
         k = _Khach()
         tro_ly.hoi_claude('Vì sao?', ten, self.con, k)
-        self.assertIn(ten, k.goi[0]['messages'][0]['content'])
+        self.assertNotIn(ten, k.goi[0]['messages'][0]['content'])
+        self.assertFalse(tro_ly.doc_cai_dat()['gui_ca_nhan'])
         self.assertEqual(k.goi[0]['model'], 'claude-sonnet-5-5')
         with self.assertRaises(tro_ly.LoiTroLy):
             tro_ly.hoi_claude('x', khach=_Khach(stop='refusal'))

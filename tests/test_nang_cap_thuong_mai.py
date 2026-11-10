@@ -31,8 +31,8 @@ class _MayChu(unittest.TestCase):
         tm.mkdir(parents=True, exist_ok=True)
         self.f = Path(shutil.move(str(_du_an(self.td, 6)), str(tm / 'DA.pabt')))
         self.qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
-        may_chu.them_nguoi_dung(self.qt, 'nv1', 'Nhân viên 1', 'abc123')
-        self.nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc123')
+        may_chu.them_nguoi_dung(self.qt, 'nv1', 'Nhân viên 1', 'abc12345')
+        self.nv = may_chu.dang_nhap(self.goc, 'nv1', 'abc12345')
         self.qt = may_chu.dang_nhap(self.goc, 'quantri', 'matkhau1')
 
     def tearDown(self):

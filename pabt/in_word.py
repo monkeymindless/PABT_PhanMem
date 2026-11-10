@@ -360,12 +360,14 @@ def _la_ma(n: int) -> str:
 def _theo_muc(dong: list) -> dict:
     """{mục: [dòng 'I' của mục]} từ danh sách dòng du_lieu_in.dong_chi_tiet (tách theo dòng đề mục 'H')."""
     from . import nghiep_vu
-    ma = {str(nghiep_vu.so_muc(m)): m for m in (1, 2, 3, nghiep_vu.MUC_VN, 4)}
+    # theo TÊN mục (1.0.57: mục trống bị ẩn, số thứ tự đánh lại - số không còn cố định theo mục)
+    ma = {nghiep_vu.TEN_MUC[m]: m for m in (1, 2, 3, nghiep_vu.MUC_VN, 4)}
+    ma[du_lieu_in.TEN_MUC_DAT] = 1
     kq = {m: [] for m in ma.values()}
     hien = None
     for x in dong:
         if x[0] == 'H':
-            hien = ma.get(str(x[1][0]))
+            hien = ma.get(str(x[1][1]))
         elif x[0] == 'I' and hien is not None:
             kq[hien].append(x)
     return kq
@@ -459,8 +461,8 @@ def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
         loai, gt = x[0], x[1]
         cach_tinh = x[2] if len(x) > 2 else ''
         if loai == 'H':
-            muc_sl = 2 if str(gt[0]) == str(so_muc_nha) else None
-        dam = loai in ('H', 'T')
+            muc_sl = 2 if du_lieu_in.la_muc_nha(gt) else None
+        dam = loai in ('H', 'T', 'R')                   # 1.0.57: dòng thưởng in đậm cả dòng
         if loai == 'G' and len(x) > 2 and isinstance(x[2], int):
             muc_sl = 2 if x[2] == 2 else None           # tiêu đề khối của một mục: số lượng mục 2 (nhà) kiểu kế toán 2 chữ số lẻ
         if loai in ('G', 'S'):
@@ -488,7 +490,7 @@ def _hang_tu_dong(dong: list, rong: list, so_muc_nha, muc_sl_dau=None) -> list:
 
         def oc(chu, k, can, dam_o=dam, co_o=CO_BANG):
             return _o(_p(_r(chu, dam=dam_o, co=co_o), can=can, giu_sau=giu) if chu else _p(giu_sau=giu), rong[k])
-        o = [oc('' if gt[0] is None else str(gt[0]), 0, 'center' if loai in ('H', 'R') else 'left'), oc(gt[1] or '', 1, 'left')]
+        o = [oc('' if gt[0] is None else str(gt[0]), 0, 'center'), oc(gt[1] or '', 1, 'left')]   # STT căn giữa cả dòng con 1.1 (1.0.57)
         if cach_tinh:
             o.append(_o(_p(_r(cach_tinh, dam=dam, co=CO_BANG), can='center', giu_sau=giu), sum(rong[2:6]), nhap=4))
         else:
@@ -572,6 +574,11 @@ def du_lieu_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, l
     da = du_lieu_in._thong_tin_du_an(con)
     da['ky_hieu_so'] = du_lieu_in.ky_hieu_cua_ho(con, ma_ho, da['ky_hieu_so'])
     lan = du_lieu_in.chon_lan_in(con, ma_ho, lan)
+    if du_thao and pa is None:                          # 1.0.63: bản dự thảo gửi dân, niêm yết luôn theo V1 đã chốt, không in số đang thử
+        from . import phien_ban_pa
+        r_v1 = phien_ban_pa.lay(con, ma_ho, phien_ban_pa.V1)
+        if r_v1 is not None and r_v1['lan'] == (lan or 1):
+            pa = phien_ban_pa.pa_tu_json(con, ma_ho, r_v1['du_lieu'])
     pa_truoc = None
     if lan is not None:
         if pa is None:
@@ -581,7 +588,8 @@ def du_lieu_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, l
         # lần 1: không có lần nào trước (= doc_phuong_an(den_lan=0)) - khỏi đọc CSDL
         pa_truoc = nghiep_vu.PhuongAn(ho=pa.ho) if lan == 1 else nghiep_vu.doc_phuong_an(con, ma_ho, den_lan=lan - 1)
     dong, kq_lan = du_lieu_in.dong_chi_tiet(con, ma_ho, bc, pa, pa_truoc)
-    ttho = du_lieu_in._thong_tin_ho(con, ma_ho, da)
+    from .an_toan import che_cccd_niem_yet
+    ttho = du_lieu_in._thong_tin_ho(con, ma_ho, da, che=du_thao and che_cccd_niem_yet(con))   # 1.0.52: dự thảo niêm yết
     from . import lan_pa
     kieu = lan_pa.loai_lan(con, ma_ho, lan)             # 1.0.15: MẪU IN theo loại lần - chi tiết / bổ sung / điều chỉnh
     x_lan = None
@@ -601,7 +609,7 @@ def du_lieu_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, l
            (f' BỔ SUNG (LẦN {lan})' if lan is not None and lan > 1 else ''))
     ten_da = re.sub(r'^\s*dự\s+án\s+', '', ' '.join(str(da['du_an'] or '').split()), flags=re.I)
     to_chuc = la_to_chuc(ttho['ho_ten'])
-    hang_i = [(du_lieu_in.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten'])]
+    hang_i = [(du_lieu_in.NHAN_TO_CHUC if to_chuc else 'Họ và tên:', ttho['ho_ten_in'])]
     if not to_chuc and ttho['cccd']:
         hang_i.append(('Số CCCD:', ttho['cccd']))
     hang_i.append((du_lieu_in.NHAN_DIA_CHI_TO_CHUC if to_chuc else 'Địa chỉ thường trú:', ttho['dia_chi']))
@@ -613,7 +621,7 @@ def du_lieu_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, l
                            hang_i=hang_i, tieu_de_cot=tuple(TIEU_DE_COT_BS if kieu != lan_pa.CHINH else TIEU_DE_COT))
 
 
-def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None) -> str:
+def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, lan=None, nhan_du_thao: str = '') -> str:
     """XML thân văn bản (w:body không sectPr) phương án chi tiết một hộ."""
     from . import nghiep_vu
     x = du_lieu_chi_tiet(con, ma_ho, bc, du_thao, pa, lan)
@@ -636,7 +644,7 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
         _p_gach('Độc lập - Tự do - Hạnh phúc', CO_TIEU_NGU, True, r2 - 2 * 57, do, khe=KHE_TIEU_NGU_PT if do else KHE_GACH_PT)
     # "Số: …/…" và "địa danh, ngày … tháng … năm …" là HAI Ô CÙNG MỘT HÀNG của bảng đầu: cùng cỡ chữ, cùng giãn dòng và khoảng
     # cách trước, canh trên -> hai dòng luôn ngang nhau (người dùng 22/10/2026: không được chênh cao thấp)
-    so_o = _p(_r(so, co=CO_SO_NGAY), can='center', truoc=120) + (_p(_r('(DỰ THẢO)', dam=True, co=CO_DU_THAO), can='center') if du_thao else '')
+    so_o = _p(_r(so, co=CO_SO_NGAY), can='center', truoc=120) + (_p(_r(f'({nhan_du_thao or "DỰ THẢO"})', dam=True, co=CO_DU_THAO), can='center') if du_thao else '')
     ngay_o = _p(_r(x.ngay, nghieng=True, co=CO_SO_NGAY), can='center', truoc=120)
     t = [_bang([_hang([_o(trai, r1, doc='top', vien=False), _o(phai, r2, doc='top', vien=False)]),
                 _hang([_o(so_o, r1, doc='top', vien=False), _o(ngay_o, r2, doc='top', vien=False)])], [r1, r2], vien=False,
@@ -710,8 +718,8 @@ def _chu_cac_cot(dong: list, so_muc_nha) -> dict:
         loai, gt = x[0], x[1]
         cach_tinh = x[2] if len(x) > 2 else ''
         if loai == 'H':
-            muc_sl = 2 if str(gt[0]) == str(so_muc_nha) else None
-        dam = loai in ('H', 'T', 'G')
+            muc_sl = 2 if du_lieu_in.la_muc_nha(gt) else None
+        dam = loai in ('H', 'T', 'G', 'R')
         if loai == 'T' or loai in ('G', 'S'):
             chu.setdefault(6, []).append((_so(gt[6]) if gt[6] else '-', True))
             if loai != 'T' and gt[7]:
@@ -732,11 +740,11 @@ def sect_pr() -> str:
             f'w:footer="284" w:gutter="0"/></w:sectPr>')
 
 
-def xuat_chi_tiet_docx(con, ma_ho: int, file_ra, bc=None, du_thao: bool = False, pa=None, lan=None) -> Path:
+def xuat_chi_tiet_docx(con, ma_ho: int, file_ra, bc=None, du_thao: bool = False, pa=None, lan=None, nhan_du_thao: str = '') -> Path:
     """Ghi phương án chi tiết một hộ ra file .docx (thể thức NĐ 30). Trả đường dẫn file."""
     file_ra = Path(file_ra)
     file_ra.parent.mkdir(parents=True, exist_ok=True)
-    du = _goi_docx(noi_dung_chi_tiet(con, ma_ho, bc, du_thao, pa, lan), sect_pr())
+    du = _goi_docx(noi_dung_chi_tiet(con, ma_ho, bc, du_thao, pa, lan, nhan_du_thao), sect_pr())
     tam = file_ra.with_name(file_ra.name + '.tmp')
     tam.write_bytes(du)
     tam.replace(file_ra)

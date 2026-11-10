@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS ho (
     tranh_chap   TEXT NOT NULL DEFAULT '',
     tai_dinh_cu  TEXT NOT NULL DEFAULT '',
     ghi_chu      TEXT NOT NULL DEFAULT '',
+    ghi_chu_ten  TEXT NOT NULL DEFAULT '',             -- 1.0.78: dòng hiện dưới tên hộ (file cũ: csdl.MO_RONG)
     trang_thai   TEXT NOT NULL DEFAULT 'Chưa lập phương án',
     -- chính sách theo QĐ 42/2025 (dùng cho gợi ý hỗ trợ ở giai đoạn 2)
     phai_di_chuyen  INTEGER NOT NULL DEFAULT 0,
@@ -104,6 +105,7 @@ CREATE TABLE IF NOT EXISTS ct_dat (
     ghi_chu      TEXT NOT NULL DEFAULT '',
     thanh_tien_excel TEXT,                             -- thành tiền đọc từ file Excel (để đối chiếu)
     cong_thuc    TEXT NOT NULL DEFAULT '',             -- công thức đã gõ ra diện tích
+    ap_gia       TEXT NOT NULL DEFAULT '',             -- JSON thông tin pháp lý khi áp đơn giá đất (1.0.69)
     lan          INTEGER NOT NULL DEFAULT 1            -- v17: lần lập phương án của hộ (1 = lần đầu, 2.. = bổ sung) - pa_lan
 );
 CREATE INDEX IF NOT EXISTS ix_ctdat_ho ON ct_dat(ma_ho);
@@ -292,6 +294,7 @@ CREATE TABLE IF NOT EXISTS y_kien_du_thao (
     chuyen_dot_id INTEGER,
     ngay_cap_nhat TEXT NOT NULL DEFAULT '',
     lan INTEGER,                                      -- 30/10/2026: lần phương án được niêm yết (NULL = dòng cũ = lần 1)
+    y_kien_doi_thoai TEXT NOT NULL DEFAULT '',        -- 1.0.91: ý kiến sau đối thoại ('' = chưa đối thoại)
     UNIQUE (dot_id, ma_ho)
 );
 CREATE TABLE IF NOT EXISTS doi_thoai_ho (
@@ -304,7 +307,8 @@ CREATE TABLE IF NOT EXISTS doi_thoai_ho (
     thanh_phan TEXT NOT NULL DEFAULT '',
     dien_bien TEXT NOT NULL DEFAULT '',
     ket_luan TEXT NOT NULL DEFAULT '',
-    bien_ban_so TEXT NOT NULL DEFAULT ''
+    bien_ban_so TEXT NOT NULL DEFAULT '',
+    y_kien TEXT NOT NULL DEFAULT ''                    -- 1.0.91: ý kiến của hộ ở lần đối thoại này
 );
 CREATE INDEX IF NOT EXISTS ix_ykien_dot_ho ON y_kien_du_thao(dot_id, ma_ho);
 CREATE INDEX IF NOT EXISTS ix_doithoai_ho ON doi_thoai_ho(dot_id, ma_ho);
@@ -345,6 +349,15 @@ CREATE TRIGGER IF NOT EXISTS audit_logs_khong_sua BEFORE UPDATE ON audit_logs
 BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được sửa.'); END;
 CREATE TRIGGER IF NOT EXISTS audit_logs_khong_xoa BEFORE DELETE ON audit_logs
 BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được xóa.'); END;
+-- 1.0.55: chuỗi băm kiểm toán (kiem_toan.SQL_BAM)
+CREATE TABLE IF NOT EXISTS audit_bam (
+    id   INTEGER PRIMARY KEY,                -- = audit_logs.id của dòng được ký
+    bam  TEXT NOT NULL                       -- SHA-256 (32 ký tự đầu) nối chuỗi: băm dòng ký trước + nội dung dòng nhật ký
+);
+CREATE TRIGGER IF NOT EXISTS audit_bam_khong_sua BEFORE UPDATE ON audit_bam
+BEGIN SELECT RAISE(ABORT, 'Chuỗi băm kiểm toán không được sửa.'); END;
+CREATE TRIGGER IF NOT EXISTS audit_bam_khong_xoa BEFORE DELETE ON audit_bam
+BEGIN SELECT RAISE(ABORT, 'Chuỗi băm kiểm toán không được xóa.'); END;
 
 -- bản đồ thửa từ bản vẽ địa chính CAD .dxf (0.9.87, ban_do_cad.py): số tờ, số thửa, diện tích, tọa độ ranh thửa
 CREATE TABLE IF NOT EXISTS thua_ban_do (
@@ -360,6 +373,7 @@ CREATE TABLE IF NOT EXISTS thua_ban_do (
     lop TEXT NOT NULL DEFAULT '',
     nguon TEXT NOT NULL DEFAULT '',     -- tên file .dxf
     luc TEXT NOT NULL,
+    chi_tiet TEXT NOT NULL DEFAULT '',  -- JSON (bản vẽ đường - ban_do_ghep): đối chiếu với nhãn, các phần DT, mốc, ghi chú
     UNIQUE (so_to, so_thua)
 );
 

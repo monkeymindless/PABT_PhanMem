@@ -32,9 +32,20 @@ TEN_GIAI_DOAN = dict(GIAI_DOAN_HO)
 TEN_NGAN_GIAI_DOAN = {'chua_lap': 'Chưa lập', 'da_lap': 'Đã lập', 'niem_yet': 'Niêm yết', 'cho_trinh': 'Chờ trình',
                       'cho_phe_duyet': 'Chờ phê duyệt', 'cho_chi_tra': 'Chờ chi trả', 'cho_ban_giao': 'Chờ bàn giao',
                       'hoan_tat': 'Hoàn tất'}
+THU_TU_GIAI_DOAN = [k for k, _ in GIAI_DOAN_HO]
+# Ô chú giải "Đã lập" / "Niêm yết" = số hộ ĐÃ ĐẾN mốc (lũy kế), không phải chỉ hộ đang đứng đúng ô đó.
+# Hộ đã trình / đã duyệt vẫn là "đã lập" và "đã niêm yết" — trước đây đếm độc quyền nên hai ô báo 0 (1.0.48).
+MOC_LUY_KE = frozenset(('da_lap', 'niem_yet'))
+_TEN_SANG_KHOA = {ten: k for k, ten in TEN_GIAI_DOAN.items()}
+_TEN_SANG_KHOA.update({ten: k for k, ten in TEN_NGAN_GIAI_DOAN.items()})
+CHU_THICH_MOC = {
+    'da_lap': 'Số hộ đã lập phương án (kể cả hộ đã niêm yết, trình hoặc phê duyệt). Bấm để xem danh sách.',
+    'niem_yet': 'Số hộ đã đưa vào đợt niêm yết (kể cả hộ đã có ý kiến, trình hoặc phê duyệt). Bấm để xem danh sách.',
+}
 CO = (                                          # cờ "cần kiểm tra" - không đổi giai đoạn
     ('xu_ly_khi_chua_co_pa', 'Đã đưa vào đợt niêm yết / đợt trình nhưng chưa có dòng phương án'),
     ('trinh_thieu_y_kien', 'Đã trình nhưng ý kiến niêm yết còn "chưa lấy"'),
+    ('xep_dot_chua_trinh', 'Đã xếp vào đợt trình nhưng đợt chưa có số, ngày văn bản trình (chưa trình)'),
     ('pa_0_dong', 'Có dòng phương án nhưng tổng 0 đồng'),
     ('tu_lap', 'Phần mềm tự lập, chưa soát lại'),
     ('ngay_bg_chua_qd', 'Có ngày bàn giao nhưng chưa có quyết định phê duyệt'),
@@ -69,9 +80,27 @@ class KetQuaPheu:
         return len(self.ho)
 
     def dem(self, ds=None) -> dict:
-        """{giai đoạn: số hộ} đủ mọi giai đoạn (0 khi không có)."""
-        c = Counter(x.giai_doan for x in (self.ho if ds is None else ds))
+        """{giai đoạn: số hộ đang đứng} đủ mọi giai đoạn (0 khi không có). Giai đoạn lạ quy về khóa hợp lệ / suy từ cờ."""
+        c = Counter(_giai_doan_cua(x) for x in (self.ho if ds is None else ds))
         return {k: c.get(k, 0) for k, _ in GIAI_DOAN_HO}
+
+    def dem_hien_thi(self, ds=None) -> dict:
+        """Số trên ô chú giải: 'Đã lập' / 'Niêm yết' = lũy kế đã đến mốc; ô 'Chờ…' / 'Chưa lập' / 'Hoàn tất' = đang đứng."""
+        hien = self.dem(ds)
+        kq = dict(hien)
+        for k in MOC_LUY_KE:
+            i = THU_TU_GIAI_DOAN.index(k)
+            kq[k] = sum(hien[x] for x in THU_TU_GIAI_DOAN[i:])
+        return kq
+
+    def theo_moc(self, gd: str, ds=None) -> list:
+        """Hộ bấm ô chú giải: mốc lũy kế = mọi hộ đã đến giai đoạn đó; ô khác = đang đứng đúng ô."""
+        ds = self.ho if ds is None else ds
+        if gd in MOC_LUY_KE:
+            i = THU_TU_GIAI_DOAN.index(gd)
+            moc = set(THU_TU_GIAI_DOAN[i:])
+            return [x for x in ds if _giai_doan_cua(x) in moc]
+        return [x for x in ds if _giai_doan_cua(x) == gd]
 
     def dem_co(self, ds=None) -> dict:
         c = Counter(k for x in (self.ho if ds is None else ds) for k in x.co)
@@ -82,7 +111,7 @@ class KetQuaPheu:
         return sum(self.dem().values()) == self.so_ho and all(x.giai_doan in TEN_GIAI_DOAN for x in self.ho)
 
     def theo_giai_doan(self, gd: str) -> list:
-        return [x for x in self.ho if x.giai_doan == gd]
+        return [x for x in self.ho if _giai_doan_cua(x) == gd]
 
     def theo_co(self, co: str) -> list:
         return [x for x in self.ho if co in x.co]
@@ -122,6 +151,31 @@ def viec_tiep(kq: KetQuaPheu, ds=None, toi_da: int = 7) -> list:
     return viec[:toi_da]
 
 
+def ten_giai_doan(x) -> str:
+    """Tên đầy đủ giai đoạn của hộ (hoặc của khóa / tên đã có)."""
+    k = _giai_doan_cua(x) if not isinstance(x, str) else _giai_doan_hop_le(x)
+    return TEN_GIAI_DOAN[k]
+
+
+def _giai_doan_hop_le(gd) -> str:
+    """Khóa giai đoạn; nhận mã, tên đầy đủ hoặc tên ngắn; mã lạ không làm mọi ô về 0."""
+    if gd in TEN_GIAI_DOAN:
+        return gd
+    return _TEN_SANG_KHOA.get(gd, 'chua_lap') if isinstance(gd, str) else 'chua_lap'
+
+
+def _giai_doan_cua(x) -> str:
+    """Khóa để đếm một hộ: mã hợp lệ, hoặc kéo lên mốc có bằng chứng (cờ) khi mã lạ / còn 'chưa lập'."""
+    gd = _giai_doan_hop_le(getattr(x, 'giai_doan', ''))
+    co = getattr(x, 'co', None) or ()
+    i = THU_TU_GIAI_DOAN.index(gd)
+    if 'trinh_thieu_y_kien' in co and i < THU_TU_GIAI_DOAN.index('cho_phe_duyet'):
+        return 'cho_phe_duyet'
+    if gd == 'chua_lap' and ('pa_0_dong' in co or 'tu_lap' in co):
+        return 'da_lap'
+    return gd
+
+
 def _bang(con) -> set:
     return {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
 
@@ -132,7 +186,24 @@ def _cot(con, bang: str) -> set:
 
 def tinh(con, lap: dict | None = None, che_do: str = 'mo', tong_hop: list | None = None) -> KetQuaPheu:
     """Phễu của cả dự án. che_do 'mo' (lần đang mở, mặc định) | 'goc' (lần 1 - phương án gốc). lap = lap_pa.phan_loai_lap(con);
-    tong_hop = theo_doi.tong_hop(con, tinh_pa=True) nếu nơi gọi đã có (không tính lại)."""
+    tong_hop = theo_doi.tong_hop(con, tinh_pa=True) nếu nơi gọi đã có (không tính lại).
+    1.0.51: nhớ kết quả trên kết nối (csdl.nho - tự tính lại khi dữ liệu đổi): chuyển qua lại các trang không tính lại phễu
+    (5.000 hộ ~50 ms). Đối tượng trả về DÙNG CHUNG - không sửa."""
+    if tong_hop is not None:
+        return _tinh(con, lap, che_do, tong_hop)
+    from . import csdl
+    try:
+        dau_lap = None if lap is None else hash(frozenset(lap.items()))
+    except TypeError:
+        return _tinh(con, lap, che_do, None)
+    # 1.0.58: một khóa cố định, kiểm dấu lap bên trong: khóa theo dấu làm mỗi lần đổi trạng thái giữ thêm một bản phễu cả dự án (rò ~1,5 MB/lần)
+    cu = csdl.nho(con, ('pheu_tien_do.tinh', che_do, lap is None), lambda: [None, None])
+    if cu[1] is None or cu[0] != dau_lap:
+        cu[0], cu[1] = dau_lap, _tinh(con, lap, che_do, None)
+    return cu[1]
+
+
+def _tinh(con, lap: dict | None, che_do: str, tong_hop: list | None) -> KetQuaPheu:
     from . import theo_doi
     from .lap_pa import phan_loai_lap
     if lap is None:
@@ -165,12 +236,15 @@ def tinh(con, lap: dict | None = None, che_do: str = 'mo', tong_hop: list | None
         c = _cot(con, 'y_kien_du_thao')
         lan_sql = 'lan' if 'lan' in c else 'NULL'
         chuyen = 'chuyen_dot_id' if 'chuyen_dot_id' in c else 'NULL'
-        for r in con.execute(f'SELECT ma_ho, {lan_sql}, dot_id, loai, {chuyen} FROM y_kien_du_thao ORDER BY dot_id, id'):
+        from .du_thao import hieu_luc                 # 1.0.91: ý kiến sau đối thoại thay ý kiến lần lấy ý kiến
+        for r in con.execute(f'SELECT ma_ho, {lan_sql}, dot_id, {hieu_luc(con)}, {chuyen} FROM y_kien_du_thao ORDER BY dot_id, id'):
             k = (r[0], int(r[1] or 1))
             if r[4] is not None and k in y_kien:
                 continue                        # dòng đã chuyển sang đợt sau: giữ dòng của đợt mới (đọc sau)
             if r[4] is None or k not in y_kien:
                 y_kien[k] = (r[2], r[3] or 'chua')
+    from .quan_ly import dot_co_van_ban_trinh
+    dot_vb = dot_co_van_ban_trinh(con)          # 1.0.91: chỉ đợt có số + ngày văn bản trình là đã trình (B8)
     kq = []
     for x in tong_hop:
         ma = x.ma_ho
@@ -200,6 +274,9 @@ def tinh(con, lap: dict | None = None, che_do: str = 'mo', tong_hop: list | None
         dot_trinh = pl.get(lan, (False, 0, None))[2]
         if dot_trinh is None and not co_qd and dot_id_ho is not None:
             dot_trinh = dot_id_ho               # hộ chưa có quyết định nào: đợt trình của hộ là đợt của lần đang xét
+        if dot_trinh is not None and dot_trinh not in dot_vb:
+            h.co.add('xep_dot_chua_trinh')      # mới xếp đợt, chưa có tờ trình: chưa phải đã trình
+            dot_trinh = None
         h.dot_trinh = dot_trinh
         if lan in qd_lan:
             if any(not q['da_chi_tra'] for q in qd_lan[lan]):
@@ -233,5 +310,6 @@ def tinh(con, lap: dict | None = None, che_do: str = 'mo', tong_hop: list | None
             h.co.add('khong_thua')
         if lan > 1:
             h.co.add('pa_bo_sung')
+        h.giai_doan = _giai_doan_cua(h)
         kq.append(h)
     return KetQuaPheu(kq, che_do)

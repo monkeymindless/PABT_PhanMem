@@ -10,6 +10,8 @@ from pathlib import Path
 
 from pabt import csdl, don_gia
 from pabt import nhap_don_gia as ndg
+from PySide6.QtCore import Qt
+
 from tests import APP
 
 
@@ -209,12 +211,41 @@ class TestHop(_Co):
             self.assertIn('kiểm tra văn bản đã đọc ĐỦ', h.lb_canh_thay.text())     # văn bản thử ít mục, bỏ rất nhiều
             self.assertEqual(h.bang.columnCount(), len(COT))
             r = next(i for i, m in enumerate(h.ds) if m.ma_khop == self.vai[0]['ma'])
-            self.assertEqual(h.bang.item(r, 2).text(), 'Cây vải thiều - Năm thứ 1')
-            self.assertEqual(h.bang.item(r, 9).text(), self.vai[0]['ten'])
+            from pabt.man_hinh_nhap_don_gia import C_TEN, C_TEN_CU
+            self.assertEqual(h.bang.item(r, C_TEN).text(), 'Cây vải thiều - Năm thứ 1')
+            self.assertEqual(h.bang.item(r, C_TEN_CU).text(), self.vai[0]['ten'])
             self.assertIn('đổi tên / quy cách', h.lb.text())
             h.accept()
             self.assertIsNotNone(h.ket_qua)
             self.assertGreater(h.ket_qua['so_bo'], 0)
+        finally:
+            h.close()
+            h.deleteLater()
+
+    def test_chon_tat_ca_tim_dem(self):
+        """1.0.61: nút Chọn tất cả / menu / tiêu đề cột Dùng, ô tìm, bộ đếm; lưu ý nằm trong khung kèm theo."""
+        from pabt.man_hinh_nhap_don_gia import C_DUNG, HopNhapDonGia
+        import pabt.nhap_don_gia as ndg2
+        h = HopNhapDonGia(None, dong=self.dong, nguon='van_ban_moi.pdf', van_ban={}, nhom_uu_tien=3)
+        h.im_lang = True
+        try:
+            h.o_cach.setCurrentIndex(1)
+            ghi = [i for i, m in enumerate(h.ds) if m.trang_thai in ndg2.TRANG_THAI_GHI]
+            self.assertTrue(ghi)
+            h.chon_theo(False)
+            self.assertTrue(all(h.bang.item(i, C_DUNG).checkState() != Qt.CheckState.Checked for i in range(len(h.ds))))
+            self.assertEqual(h.chon_theo(True), len(ghi))
+            h._dem_chon()
+            self.assertIn(f'Đã chọn {len(ghi)} / {len(ghi)}', h.lb_dem.text())
+            h._bam_dau_cot(C_DUNG)                                                  # tiêu đề cột: đã chọn hết -> bỏ chọn
+            self.assertEqual(sum(h.bang.item(i, C_DUNG).checkState() == Qt.CheckState.Checked for i in ghi), 0)
+            h.o_cach.setCurrentIndex(0)
+            self.assertGreater(h.thay_toan_bo() + 1, 0)                             # chọn "thay cả nhóm" + chọn mọi dòng thay đổi
+            self.assertTrue(h.thay_the())
+            h.o_tim.setText('zzzkhongco')
+            self.assertTrue(all(h.bang.isRowHidden(i) for i in range(len(h.ds))))
+            h.o_tim.setText('')
+            self.assertFalse(h.b_phu.isChecked())                                   # khung lưu ý đóng sẵn khi không có cảnh báo nặng
         finally:
             h.close()
             h.deleteLater()

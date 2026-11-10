@@ -53,10 +53,10 @@ class TestDocBanDoMotLan(unittest.TestCase):
     @unittest.skipUnless(CO_QT, 'không có Qt')
     def test_hop_nhap_khong_phan_tich_trung_tham_so(self):
         from tests.test_toc_do import _du_an
-        from pabt.man_hinh_ban_do import HopNhapCad
+        from pabt.man_hinh_ban_do import KhungNhapBanDo
         con = csdl.mo(_du_an(self.td, 3))
         self.addCleanup(con.close)
-        h = HopNhapCad(con)
+        h = KhungNhapBanDo(con)
         h.im_lang = True
         self.assertTrue(h.chon_file(str(_ban_ve(self.td / 'To_3.dxf'))))
         h.cb_thua.setCurrentIndex(h.cb_thua.findData('RANH THUA'))

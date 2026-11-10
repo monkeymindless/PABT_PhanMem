@@ -308,8 +308,11 @@ def doc_danh_sach(chu: str) -> list:
     re_dvt = re.compile(rf'^({_MAU_DVT}|ha/vụ|ha/ vụ|100m3/vụ|nhân khẩu|khẩu|tháng|hộ|người|trụ|cánh|chậu|cây|con|kg)$', re.I)
     kq = []
     # 1.0.32: dòng biên bản ghi gộp nhiều cỡ ("Ống nhựa: ϕ 114: 3300m; ϕ 90: 3400m") tách thành từng dòng TRƯỚC khi chia ô theo ";"
+    from .ocr_ho_so import la_dong_mau_in, la_dong_rac_ocr
     for dong in (x for d0 in str(chu or '').splitlines() for x in tach_dong_qd42(d0)):
         if not dong.strip():
+            continue
+        if la_dong_mau_in(dong) or la_dong_rac_ocr(dong):
             continue
         o = [x.strip() for x in re.split(r'\t|;|\|', dong)]
         if len(o) == 1 and la_dong_tu_nhien(o[0]):        # viết tự nhiên: "Xoài: 16 cây, 17 năm tuổi", "Tràm cây 1500 d28"

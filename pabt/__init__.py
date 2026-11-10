@@ -1,12 +1,19 @@
 """Phần mềm lập phương án bồi thường, hỗ trợ (PABT): bộ đơn giá Đồng Nai tích hợp, dự án mới từ dữ liệu thô, bản in."""
 from __future__ import annotations
-__version__ = '1.0.47'
+__version__ = '1.0.97'
 # Bản thử nghiệm: giao diện ghi "BẢN THỬ NGHIỆM" (băng tiêu đề, tiêu đề cửa sổ chính, Giới thiệu, tự kiểm tra). Bản chính thức: False.
 BAN_THU_NGHIEM = False      # 0.9.24: bỏ nhãn - băng tiêu đề hiện gói bản quyền (ban_quyen.py)
 NHAN_THU_NGHIEM = 'BẢN THỬ NGHIỆM'
 
 import sys as _sys
 from pathlib import Path as _Path
+
+
+def exe_he_thong(ten: str, *con) -> str:
+    """1.0.58: đường dẫn tuyệt đối tới chương trình của Windows. Gọi tên trần ('cscript'): CreateProcess tìm thư mục hiện hành TRƯỚC
+    System32 - bấm đúp file dự án trong thư mục có cscript.exe lạ là chạy chương trình đó. exe_he_thong('powershell.exe', 'WindowsPowerShell', 'v1.0')."""
+    import os
+    return os.path.join(os.environ.get('SystemRoot') or r'C:\Windows', 'System32', *con, ten)
 
 
 def tai_nguyen(ten: str) -> _Path:

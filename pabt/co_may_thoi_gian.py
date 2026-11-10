@@ -137,15 +137,22 @@ def chup_moc(con, file, ly_do: str = 'tu_dong', ghi_chu: str = '', bat_buoc: boo
         bo_anh_ban_do_ban_sao(dc)                        # ảnh nền bản đồ tải lại được: mốc không chép thêm vài MB mỗi lần
     finally:
         dc.close()
+    from .an_toan import dong_goi_file_sao_luu
+    dong_goi_file_sao_luu(tam)                          # 1.0.55: nén zlib (không mã hóa - người dùng chọn)
     os.replace(tam, dich)
     so_ho, tong = tom_tat(con)
     moc = Moc(dich, luc, ly_do, ghi_chu, so_ho, tong, dau_file(file))
     du = dict(file=dich.name, luc=luc.isoformat(timespec='microseconds'), ly_do=ly_do, ghi_chu=ghi_chu, so_ho=so_ho, tong=tong,
               dau=moc.dau, goc=str(file))
     j = dich.with_suffix('.json')
-    j.write_text(json.dumps(du, ensure_ascii=False, indent=1), encoding='utf-8')
+    tam_j = j.with_name(j.name + '.tmp')
+    tam_j.write_text(json.dumps(du, ensure_ascii=False, indent=1), encoding='utf-8')
+    os.replace(tam_j, j)
     don_dep(file)
     return moc
+
+
+GIU_TOI_THIEU = 10
 
 
 def don_dep(file, bay_gio: datetime | None = None) -> int:
@@ -161,8 +168,16 @@ def don_dep(file, bay_gio: datetime | None = None) -> int:
         elif tuoi <= timedelta(days=GIU_NGAY) and m.luc.date() not in ngay_da_co:
             giu.append(m)
             ngay_da_co.add(m.luc.date())
+    for m in ds:                                        # 1.0.59: dự án nghỉ lâu: luôn còn vài mốc mới nhất dù đã quá hạn giữ
+        if len(giu) >= GIU_TOI_THIEU:
+            break
+        if not any(m is x for x in giu):
+            giu.append(m)
     tay = [m for m in giu if m.ly_do == 'tay']
-    khac = [m for m in giu if m.ly_do != 'tay'][:max(0, MOC_TOI_DA - len(tay))]
+    # 1.0.58: mốc ngày cũ không bị mốc trong ngày đẩy ra; mốc vừa chụp (mới nhất) luôn giữ
+    ngay = [m for m in giu if m.ly_do != 'tay' and bay_gio - m.luc > timedelta(hours=GIU_GIO)]
+    gan = [m for m in giu if m.ly_do != 'tay' and bay_gio - m.luc <= timedelta(hours=GIU_GIO)]
+    khac = ngay + gan[:max(1, MOC_TOI_DA - len(tay) - len(ngay))]
     con_lai = {id(m) for m in tay + khac}
     bo = 0
     for m in ds:
@@ -174,6 +189,19 @@ def don_dep(file, bay_gio: datetime | None = None) -> int:
                     pass
             bo += 1
     return bo
+
+
+def kiem_tra_file(p) -> str:
+    """'' nếu file SQLite p đọc được và PRAGMA quick_check = ok; còn lại: mô tả lỗi (1.0.97, kiểm toán dữ liệu 09/11/2026)."""
+    try:
+        c = sqlite3.connect(f'file:{Path(p).as_posix()}?mode=ro', uri=True)
+        try:
+            r = c.execute('PRAGMA quick_check').fetchone()
+        finally:
+            c.close()
+    except sqlite3.Error as e:
+        return str(e) or 'không đọc được'
+    return '' if r and r[0] == 'ok' else str(r[0] if r else 'không rõ')
 
 
 def khoi_phuc(file, moc: Moc) -> Moc | None:
@@ -188,9 +216,46 @@ def khoi_phuc(file, moc: Moc) -> Moc | None:
         finally:
             c.close()
     tam = file.with_name(file.name + '.khoi_phuc')
-    shutil.copyfile(moc.file, tam)
+    from .an_toan import mo_goi_file_sao_luu_ra_bytes
+    goc = mo_goi_file_sao_luu_ra_bytes(moc.file)        # 1.0.55: mốc nén -> giải nén; mốc cũ (SQLite thường) chép thẳng
+    if goc is None:
+        shutil.copyfile(moc.file, tam)
+        with open(tam, 'rb+') as f:                     # 1.0.97: ghi xuống đĩa trước khi thay file (mất điện giữa chừng)
+            os.fsync(f.fileno())
+    else:
+        with open(tam, 'wb') as f:
+            f.write(goc)
+            f.flush()
+            os.fsync(f.fileno())
+    loi = kiem_tra_file(tam)                           # 1.0.97: mốc hỏng KHÔNG được chép đè lên file dự án đang tốt
+    if loi:
+        try:
+            tam.unlink()
+        except OSError:
+            pass
+        raise sqlite3.DatabaseError(f'Mốc {moc.luc:%d/%m/%Y %H:%M} bị hỏng ({loi}): không khôi phục, file dự án giữ nguyên.')
     os.replace(tam, file)
+    _ghi_vet_khoi_phuc(file, moc, truoc)
     return truoc
+
+
+def _ghi_vet_khoi_phuc(file, moc: Moc, truoc) -> None:
+    """1.0.58: file đã về bản cũ, nhật ký kiểm toán phía sau mốc mất: ghi một dòng để biết đã khôi phục (lỗi ghi không hủy khôi phục)."""
+    from . import csdl, kiem_toan
+    chu = f'Về mốc {moc.luc:%d/%m/%Y %H:%M}; bản trước khôi phục: {truoc.file.name if truoc else "không có"}'
+    try:
+        c = csdl.mo(file)
+    except (sqlite3.Error, OSError):
+        return
+    try:
+        kiem_toan.gan_ky(c)
+        with csdl.giao_dich(c):
+            csdl.ghi_nhat_ky(c, 'Khôi phục mốc thời gian', chu)
+            kiem_toan.ghi_su_kien(c, 'Khôi phục mốc thời gian', chu)
+    except sqlite3.Error:
+        pass
+    finally:
+        c.close()
 
 
 # ---------------------------------------------------------------- so sánh hai trạng thái

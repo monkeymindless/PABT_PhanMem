@@ -1,6 +1,8 @@
 """Hộp "Quy trình 16 bước QĐ 18": bảng 16 bước thu hồi đất, bồi thường, hỗ trợ và chỗ làm từng bước trong phần mềm (liên kết chân
 trang màn hình chào)."""
 from __future__ import annotations
+from .giao_dien import vua_dong  # noqa: E402
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QDialog, QHBoxLayout, QHeaderView, QLabel, QPushButton, QTableWidget,
@@ -35,10 +37,10 @@ class HopQuyTrinh(QDialog):
             h.setSectionResizeMode(c, QHeaderView.ResizeMode.ResizeToContents)
         for c in (1, 3, 4):
             h.setSectionResizeMode(c, QHeaderView.ResizeMode.Stretch)
-        self.bang.resizeRowsToContents()
+        vua_dong(self.bang, None, None)
         ghi_chu = QLabel(GHI_CHU)
         ghi_chu.setWordWrap(True)
-        ghi_chu.setStyleSheet('QLabel { color: #64748B; font-size: 12px; }')
+        dat_kieu_theo_tong(ghi_chu, 'QLabel { color: #64748B; font-size: 12px; }')
         b_dong = QPushButton('Đóng')
         b_dong.clicked.connect(self.accept)
         hn = QHBoxLayout()

@@ -833,6 +833,7 @@ def la_file_pabt(file_excel) -> bool:
     """File theo mẫu PABT Excel (.xlsm có DB_HO, DB_THUA...) thì nhập bằng nhap_excel, còn lại nhập bằng module này."""
     if Path(file_excel).suffix.lower() not in ('.xlsx', '.xlsm'):
         return False
+    __import__('pabt.an_toan').an_toan.kiem_excel(file_excel)
     wb = openpyxl.load_workbook(str(file_excel), read_only=True)
     try:
         return all(s in wb.sheetnames for s in ('DB_HO', 'DB_THUA', 'DB_DATCT'))

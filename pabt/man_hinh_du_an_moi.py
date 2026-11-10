@@ -9,18 +9,19 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtGui import QBrush
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout,
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QPushButton, QStackedWidget,
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import csdl, don_gia, du_an_moi, in_an, lap_pa, may_chu, to_chuc
 from .giao_dien import ChonXoXuong, bang_to_chuc, chay_nen, con_tro_cho
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .lap_pa import LoiNhap
 from .thong_bao import TEN_UD, chu_loi
 
 BUOC = ['1. Thông tin dự án', '2. Danh sách hộ, thửa (nhập thô)', '3. Bảng giá đất của dự án', '4. Hoàn thiện, in']
-CAM, XAM = QColor('#FCE4D6'), QColor('#EEF1F4')
+CAM, XAM = mau_o_theo_tong(globals(), CAM='#FCE4D6', XAM='#EEF1F4')
 COT_GIA = [('loai_dat', 'Loại đất', 80), ('nhom', 'Nhóm', 110), ('vi_tri', 'Vị trí (theo dữ liệu)', 130),
            ('vi_tri_ap', 'Vị trí áp dụng', 110), ('so_thua', 'Số thửa', 70), ('gia', 'Giá bảng giá (đ/m²)', 150),
            ('he_so_k', 'Hệ số K', 80), ('ghi_chu', 'Lưu ý', 360)]
@@ -303,9 +304,9 @@ class HopDuAnMoi(QDialog):
         return self._dem_loi_tho()
 
     def _dem_loi_tho(self) -> int:
-        from .giao_dien import MAU_DONG_CANH_BAO
+        from .giao_dien import MAU_DONG_CANH_BAO, mau_theo_tong
         n = sum(1 for r in range(self.bang_tho.rowCount()) if self.bang_tho.item(r, 0) is not None
-                and self.bang_tho.item(r, 0).background().color().name().upper() == MAU_DONG_CANH_BAO.upper())
+                and self.bang_tho.item(r, 0).background().color().name().upper() == mau_theo_tong(MAU_DONG_CANH_BAO).upper())
         self.lb_kiem_tho.setText(f'{n} dòng cần xem lại (tô vàng)' if n else '')
         return n
 
@@ -328,7 +329,7 @@ class HopDuAnMoi(QDialog):
     def _trang_3(self):
         w = QWidget()
         lo = QVBoxLayout(w)
-        lo.addWidget(QLabel('Giá đất theo bảng giá đất của địa bàn (NQ 28/2025/NQ-HĐND hoặc văn bản thay thế) và hệ số K '
+        lo.addWidget(__import__('pabt.giao_dien').giao_dien.nhan_xuong_dong('Giá đất theo bảng giá đất của địa bàn (NQ 28/2025/NQ-HĐND hoặc văn bản thay thế) và hệ số K '
                             '(QĐ hệ số điều chỉnh giá đất hiện hành). Dòng thiếu vị trí: nhập "Vị trí áp dụng" cho các thửa đó.'))
         self.bang_gia = QTableWidget(0, len(COT_GIA))
         self.bang_gia.setHorizontalHeaderLabels([c[1] for c in COT_GIA])

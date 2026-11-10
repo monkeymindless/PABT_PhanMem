@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import json
 import re
+import unicodedata
 from dataclasses import dataclass, field
 
 MO_HINH = ('claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5')
@@ -87,7 +88,7 @@ def giai_thich_ho(con, ma_ho: int) -> GiaiThich:
             except Exception:                       # noqa: BLE001
                 continue
             g.dong.append(f'  - Lần {x.lan} ({x.nhan_trang_thai}): {vn(t)} đồng')
-            g.so_lieu['cac_lan'].append({'lan': x.lan, 'trang_thai': x.nhan_trang_thai, 'tong': str(t)})
+            g.so_lieu['cac_lan'].append({'lan': x.lan, 'trang_thai': x.nhan_trang_thai, 'tong': vn(t)})
         chua = [x.lan for x in ds if not x.khoa]
         if chua:
             g.dong.append(f'  Lần chưa phê duyệt: {", ".join(map(str, chua))} - số tiền các lần này chưa có trong quyết định nào.')
@@ -174,20 +175,98 @@ def nhap_to_trinh(con) -> str:
 
 # ---------------------------------------------------------------- che dữ liệu cá nhân
 _RE_CCCD = re.compile(r'(?<!\d)\d{9}(?:\d{3})?(?!\d)')
-_RE_SDT = re.compile(r'(?<!\d)(?:\+84|0)\d{9,10}(?!\d)')
+_RE_SDT = re.compile(r'(?<!\d)(?:\(\+84\)\s*|\+84|0)\d{9,10}(?!\d)')   # 1.0.55: cả "(+84) 912345678"
+# 1.0.51: dạng có dấu cách / chấm / gạch. Số CCCD có dấu ngăn chỉ che khi đứng sau nhãn (CCCD, CMND, căn cước…) - "120.000.000" là
+# số tiền, không phải CCCD; số điện thoại phải bắt đầu 0 / +84
+_RE_CCCD_NHAN = re.compile(r'((?i:cccd|cmnd|căn cước|chứng minh|định danh)[^\d\n]{0,24})((?:\d[\s.\-]?){8,11}\d)(?!\d)')
+_RE_SDT_NGAN = re.compile(r'(?<![\d.,])(?:\(\+84\)\s*|\+84[\s.\-]?|0)\d{2,3}[\s.\-]\d{3}[\s.\-]\d{3,4}(?![\d])')
+_RE_SO_GCN = re.compile(r'(?<![\w])[A-ZĐ]{2}[\s\-]?\d{6,8}(?![\w])')          # số phát hành giấy chứng nhận "CS 123456"
+_RE_TOA_DO = re.compile(r'(?<![\d.])\d{1,3}\.\d{4,}\s*[,;]\s*\d{1,3}\.\d{4,}(?![\d])'
+                        r'|(?<![\w])[XY]\s*[:=]\s*\d{6,7}(?:[.,]\d+)?(?![\d])')
+# 1.0.55: thêm nhãn người nhận tiền / đại diện / được ủy quyền / đồng sở hữu / chủ đất / chủ sở hữu / chủ sử dụng / họ và tên
+_RE_SAU_NHAN_TEN = re.compile(
+    r'((?i:hộ ông|hộ bà|anh|chị|cô|chú|chủ hộ|đồng sử dụng|đồng sở hữu|người thừa kế|người nhận tiền|người đại diện|người được ủy quyền|'
+    r'chủ đất|chủ sở hữu|chủ sử dụng|họ và tên|họ tên|ông|bà)\s*[:\-]?\s*)((?:[^\W\d_]+\s*){1,5})')
+
+
+def _che_ho_ten(m) -> str:
+    """Sau "ông / bà / chủ hộ…": các từ viết HOA chữ đầu liền nhau (>= 2 từ) là họ tên -> [HO_TEN]; "bà con nhân dân" giữ nguyên."""
+    du = m.group(2)
+    n, cuoi = 0, 0
+    for t in re.finditer(r'[^\W\d_]+', du):
+        if not t.group(0)[:1].isupper():
+            break
+        n, cuoi = n + 1, t.end()
+    if n < 2:
+        return m.group(0)
+    return m.group(1) + '[HO_TEN]' + du[cuoi:]
+
+
+_RE_EMAIL = re.compile(r'[\w.+\-]+@[\w\-]+(?:\.[\w\-]+)+')
+_RE_CCCD_NHOM = re.compile(r'(?<![\d.,])\d{3,4}(?:[\s.\-]\d{3,4}){2,3}(?!\d)')      # "0791 2345 6789", "079 123 456 789"
+
+
+def _gap(c: str) -> str:
+    """Một ký tự -> một ký tự bỏ dấu, chữ thường (giữ đúng vị trí trong chuỗi)."""
+    return unicodedata.normalize('NFD', c.replace('đ', 'd').replace('Đ', 'D'))[0].lower()
+
+
+def _che_ten_du_an(s: str, con) -> str:
+    """1.0.58: tên chủ hộ / đồng sử dụng của dự án: không phân biệt dấu, khoảng trắng, NFC / NFD, tách "A và B" - trước đây chỉ khớp nguyên văn."""
+    gap = ''.join(_gap(c) for c in s)
+    vung = []
+    for ma, ten in con.execute('SELECT ma_ho, ho_ten FROM ho'):
+        for phan in re.split(r'\s+(?:và|cùng|là)\s+|[,;]', unicodedata.normalize('NFC', ten or '')):
+            tu = [''.join(_gap(c) for c in t) for t in phan.split()]
+            if len(tu) >= 2:
+                mau = r'(?<!\w)' + r'\s+'.join(map(re.escape, tu)) + r'(?!\w)'
+                vung += [(m.start(), m.end(), ma) for m in re.finditer(mau, gap)]
+    vung.sort(key=lambda v: (v[0], v[0] - v[1]))        # cùng chỗ bắt đầu: vùng dài trước
+    kq, cuoi = [], 0
+    for a, b, ma in vung:
+        if a >= cuoi:                                   # bỏ vùng chồng lấn
+            kq.append(s[cuoi:a] + f'Hộ #{ma}')
+            cuoi = b
+    return ''.join(kq) + s[cuoi:]
 
 
 def an_danh(chu: str, con=None) -> str:
     """Thay họ tên chủ hộ có trong dự án (con) bằng "Hộ #<mã>", số CCCD / CMND bằng "[CCCD]", số điện thoại bằng "[SĐT]"."""
-    s = str(chu or '')
+    s = unicodedata.normalize('NFC', str(chu or ''))
+    s = _RE_EMAIL.sub('[EMAIL]', s)
+    s = _RE_CCCD_NHAN.sub(lambda m: m.group(1) + '[CCCD]', s)
+    s = _RE_SDT_NGAN.sub('[SĐT]', s)
     s = _RE_SDT.sub('[SĐT]', s)
+    s = _RE_CCCD_NHOM.sub(lambda m: '[CCCD]' if sum(c.isdigit() for c in m.group(0)) == 12 else m.group(0), s)
     s = _RE_CCCD.sub('[CCCD]', s)
+    s = _RE_SO_GCN.sub('[SO_GCN]', s)
+    s = _RE_TOA_DO.sub('[TOA_DO]', s)
+    s = _RE_SAU_NHAN_TEN.sub(_che_ho_ten, s)
     if con is not None:
-        ten = sorted(((r[1].strip(), r[0]) for r in con.execute('SELECT ma_ho, ho_ten FROM ho') if r[1] and len(r[1].strip()) >= 4),
-                     key=lambda x: -len(x[0]))
-        for t, ma in ten:
-            s = re.sub(re.escape(t), f'Hộ #{ma}', s, flags=re.I)
+        s = _che_ten_du_an(s, con)
+        ten = _ten_chu_ho(con)
+    else:
+        ten = _TEN_CHUP                                 # 1.0.91: không có kết nối (luồng nền, OCR, phân tích đơn giá): dùng ảnh chụp tên đã lấy ở luồng giao diện
+    for t, ma in ten:
+        s = re.sub(re.escape(t), f'Hộ #{ma}', s, flags=re.I)
     return s
+
+
+def _ten_chu_ho(con) -> list:
+    return sorted(((r[1].strip(), r[0]) for r in con.execute('SELECT ma_ho, ho_ten FROM ho') if r[1] and len(r[1].strip()) >= 4),
+                  key=lambda x: -len(x[0]))
+
+
+_TEN_CHUP: list = []         # [(họ tên, mã hộ)] của dự án đang mở; chụp ở luồng giao diện (chup_ten_che), đọc ở mọi luồng
+
+
+def chup_ten_che(con) -> None:
+    """Chụp danh sách họ tên chủ hộ của dự án đang mở cho an_danh khi KHÔNG có kết nối (kiểm toán 09/11/2026: đường OCR AI / phân tích
+    đơn giá gọi an_danh không truyền con nên tên đứng riêng không được che). Gọi khi mở dự án và trước mỗi lần nhờ AI; lỗi đọc: giữ bản cũ."""
+    try:
+        _TEN_CHUP[:] = _ten_chu_ho(con) if con is not None else []
+    except Exception:                                   # noqa: BLE001 - CSDL đang khóa / không đọc được: không chặn mở dự án
+        pass
 
 
 # ---------------------------------------------------------------- cài đặt: bật / tắt, khóa API (Windows DPAPI)
@@ -203,7 +282,8 @@ def doc_cai_dat() -> dict:
     except (OSError, ValueError):
         d = {}
     mh = d.get('mo_hinh') if d.get('mo_hinh') in MO_HINH else MO_HINH_MAC_DINH
-    return dict(bat=bool(d.get('bat')), mo_hinh=mh, gui_ca_nhan=bool(d.get('gui_ca_nhan')), co_khoa=bool(d.get('khoa')))
+    # 1.0.52 (người dùng 02/11/2026): LUÔN che dữ liệu cá nhân trước khi gửi - khóa gui_ca_nhan cũ trong file bỏ qua (luôn False)
+    return dict(bat=bool(d.get('bat')), mo_hinh=mh, gui_ca_nhan=False, co_khoa=bool(d.get('khoa')))
 
 
 def ghi_cai_dat(bat: bool | None = None, mo_hinh: str | None = None, gui_ca_nhan: bool | None = None, khoa: str | None = None,
@@ -219,8 +299,7 @@ def ghi_cai_dat(bat: bool | None = None, mo_hinh: str | None = None, gui_ca_nhan
         if mo_hinh not in MO_HINH:
             raise LoiTroLy(f'Mô hình không hỗ trợ: {mo_hinh}')
         d['mo_hinh'] = mo_hinh
-    if gui_ca_nhan is not None:
-        d['gui_ca_nhan'] = bool(gui_ca_nhan)
+    d.pop('gui_ca_nhan', None)                          # 1.0.52: không còn cho gửi dữ liệu cá nhân (tham số giữ cho mã cũ)
     if khoa:
         d['khoa'] = base64.b64encode(bao_ve(khoa.strip().encode('utf-8'))).decode('ascii')
     if xoa_khoa:
@@ -241,7 +320,12 @@ def _khoa_da_luu() -> str | None:
         return None
 
 
-def _dpapi(du: bytes, ma_hoa: bool) -> bytes:
+# 1.0.51: entropy riêng của phần mềm - chương trình khác chạy cùng tài khoản Windows không tự giải mã được khóa API. Khóa lưu trước
+# 1.0.51 (không entropy) vẫn đọc được (mo_khoa thử lại không entropy)
+ENTROPY_DPAPI = b'LARC_DPAPI_ENTROPY_2026'
+
+
+def _dpapi(du: bytes, ma_hoa: bool, entropy: bytes | None = None) -> bytes:
     import ctypes
     import sys
     if sys.platform != 'win32':
@@ -254,7 +338,11 @@ def _dpapi(du: bytes, ma_hoa: bool) -> bytes:
     ra = BLOB()
     crypt = ctypes.windll.crypt32
     ham = crypt.CryptProtectData if ma_hoa else crypt.CryptUnprotectData
-    if not ham(ctypes.byref(vao), None, None, None, None, 0x1, ctypes.byref(ra)):       # 0x1 = CRYPTPROTECT_UI_FORBIDDEN
+    them = None
+    if entropy:
+        them = BLOB(len(entropy), ctypes.cast(ctypes.create_string_buffer(entropy, len(entropy)), ctypes.POINTER(ctypes.c_char)))
+    if not ham(ctypes.byref(vao), None, ctypes.byref(them) if them is not None else None, None, None, 0x1,
+               ctypes.byref(ra)):                       # 0x1 = CRYPTPROTECT_UI_FORBIDDEN
         raise LoiTroLy('Không mã hóa / giải mã được khóa API (Windows DPAPI).')
     try:
         return ctypes.string_at(ra.pbData, ra.cbData)
@@ -263,11 +351,14 @@ def _dpapi(du: bytes, ma_hoa: bool) -> bytes:
 
 
 def bao_ve(du: bytes) -> bytes:
-    return _dpapi(du, True)
+    return _dpapi(du, True, ENTROPY_DPAPI)
 
 
 def mo_khoa(du: bytes) -> bytes:
-    return _dpapi(du, False)
+    try:
+        return _dpapi(du, False, ENTROPY_DPAPI)
+    except LoiTroLy:
+        return _dpapi(du, False)                        # khóa lưu bởi bản trước 1.0.51
 
 
 def co_thu_vien() -> bool:
@@ -279,15 +370,14 @@ def co_thu_vien() -> bool:
 
 
 # ---------------------------------------------------------------- trực tuyến: hỏi Claude (tùy chọn)
-def hoi_claude(cau_hoi: str, ngu_canh: str = '', con=None, khach=None) -> str:
+def hoi_claude(cau_hoi: str, ngu_canh: str = '', con=None, khach=None, gioi_han: float = 45) -> str:
     """Gửi câu hỏi (+ ngữ cảnh số liệu) tới Claude, trả lời bằng chữ. Chỉ chạy khi người dùng đã BẬT trợ lý trực tuyến. Che dữ liệu
-    cá nhân (an_danh) trừ khi đã bật gửi dữ liệu cá nhân. khach: client giả lập cho kiểm thử. Lỗi -> LoiTroLy (tiếng Việt)."""
+    cá nhân (an_danh) - LUÔN (1.0.52, không còn tùy chọn gửi nguyên). khach: client giả lập cho kiểm thử. Lỗi -> LoiTroLy (tiếng Việt)."""
     cd = doc_cai_dat()
     if not cd['bat']:
         raise LoiTroLy('Trợ lý trực tuyến đang TẮT: bật ở thẻ "Cài đặt" của cửa sổ Trợ lý (mặc định chỉ chạy ngoại tuyến).')
     noi_dung = (f'Số liệu / văn bản:\n{ngu_canh}\n\n' if ngu_canh else '') + f'Yêu cầu: {cau_hoi}'
-    if not cd['gui_ca_nhan']:
-        noi_dung = an_danh(noi_dung, con)
+    noi_dung = an_danh(noi_dung, con)
     if khach is None:
         try:
             import anthropic
@@ -295,7 +385,8 @@ def hoi_claude(cau_hoi: str, ngu_canh: str = '', con=None, khach=None) -> str:
             raise LoiTroLy('Máy này chưa có thư viện "anthropic" (cần Python 3.10 trở lên - bản Windows 10/11): trợ lý chỉ chạy '
                            'ngoại tuyến.') from None
         khoa = _khoa_da_luu()
-        khach = anthropic.Anthropic(api_key=khoa) if khoa else anthropic.Anthropic()
+        giay = max(float(gioi_han or 45), 5)
+        khach = anthropic.Anthropic(api_key=khoa, timeout=giay) if khoa else anthropic.Anthropic(timeout=giay)
         loi_api = (anthropic.AuthenticationError, anthropic.PermissionDeniedError, anthropic.RateLimitError,
                    anthropic.APIStatusError, anthropic.APIConnectionError)
     else:

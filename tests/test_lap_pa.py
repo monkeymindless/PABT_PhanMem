@@ -331,7 +331,7 @@ class TestTyLeTrongVaDaLap(unittest.TestCase):
         self.assertEqual(bo.o_dat(0)['ty_le'], '')
         self.assertEqual(con.execute('SELECT ty_le FROM ct_dat').fetchone()[0], '')
         tt = theo_doi.tong_hop(con, tinh_pa=False)[0].trang_thai
-        self.assertEqual(tt, 'Đã lập phương án')
+        self.assertEqual(tt, 'Đã lập phương án (B5)')
         self.assertEqual(lap_pa.phan_loai_lap(con)[ma], 'da_lap')
         dt = tu_du_an(con)
         self.assertEqual(dt.dong[0].he_so, D(1))
@@ -339,7 +339,7 @@ class TestTyLeTrongVaDaLap(unittest.TestCase):
         while bo.ds(1):
             bo.xoa(1, 0)
         bo.luu()
-        self.assertEqual(theo_doi.tong_hop(con, tinh_pa=False)[0].trang_thai, 'Đã lập phương án')
+        self.assertEqual(theo_doi.tong_hop(con, tinh_pa=False)[0].trang_thai, 'Đã lập phương án (B5)')
         self.assertEqual(lap_pa.phan_loai_lap(con)[ma], 'da_lap')
 
     def test_nguon_goc_khong_loi(self):

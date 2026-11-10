@@ -17,7 +17,9 @@ from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QProgressB
 from . import bao_cao_gpmb, van_dong
 from .bang_ao import BangAo
 from .giao_dien import NhanRutGon
-from .man_hinh_theo_doi import DO, VANG, XAM, _chu
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
+from . import man_hinh_theo_doi as _td  # noqa: E402  (màu ô đọc lúc vẽ - đổi theo tông nền)
+from .man_hinh_theo_doi import _chu
 from .tien import so_vn, vn
 
 # 1.0.02 (Hybrid Enterprise Navy, như thẻ số màn hình chính): nền trắng, viền slate, bo 6, vạch trái 3 px màu thẻ; thẻ đang lọc
@@ -27,7 +29,7 @@ QFrame#the_kpi {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3
 QFrame#the_kpi:hover {{ background: #F8FAFC; border-color: #94A3B8; border-left-color: {m}; }}
 QFrame#the_kpi[dang_loc="1"] {{ background: #EFF6FF; border: 1px solid #1E3A5F; border-left: 3px solid {m}; }}
 QLabel#kpi_tieu_de {{ color: #475569; font-size: 11px; font-weight: 600; background: transparent; border: 0; }}
-QLabel#kpi_so {{ color: #0F172A; font-size: 16px; font-weight: 700; background: transparent; border: 0; }}
+QLabel#kpi_so {{ color: #0F172A; font-family: "Segoe UI"; font-size: 16px; font-weight: 700; background: transparent; border: 0; }}
 QLabel#kpi_phu {{ color: #475569; font-size: 11px; background: transparent; border: 0; }}
 QProgressBar {{ background: #E2E8F0; border: 0; border-radius: 2px; }}
 '''
@@ -37,7 +39,7 @@ CAO_THE_KPI = 58                         # thẻ chỉ số (px): như thẻ s�
 # Thẻ "Thửa còn vướng" bỏ khỏi dải (chế độ xem có nút riêng "Thửa còn vướng")
 MAU_THE = dict(tong_ho='#1E3A5F', phe_duyet='#1F76A6', giai_ngan='#2F7D54', mat_bang='#1F6F66', van_dong='#C98A22',
                cuong_che='#B83A3A')
-NEN_MUC = {'gap': DO, 'cao': VANG, 'theo_doi': XAM}
+NEN_MUC = {'gap': 'DO', 'cao': 'VANG', 'theo_doi': 'XAM'}   # tên hằng ở man_hinh_theo_doi
 # 22/10/2026 (nâng cấp giao diện): tên thẻ chữ thường kiểu câu - cùng kiểu thẻ số liệu các trang khác (trước: chữ HOA)
 TIEU_DE_THE = dict(tong_ho='Tổng số hộ dự án', phe_duyet='Đã phê duyệt QĐ', giai_ngan='Đã chi trả tiền',
                    mat_bang='Đã bàn giao MB', van_dong='Đang vận động', cuong_che='Đủ ĐK cưỡng chế (Đ89)')
@@ -59,7 +61,7 @@ class _TheKPI(QFrame):
     def __init__(self, tieu_de: str, mau: str, goi_y: str = '', parent=None):
         super().__init__(parent)
         self.setObjectName('the_kpi')
-        self.setStyleSheet(_QSS_THE.format(m=mau))
+        dat_kieu_theo_tong(self, _QSS_THE.format(m=mau))     # 1.0.80: thẻ nền trắng trên tông Tối
         self.setProperty('dang_loc', '0')
         self.setFixedHeight(CAO_THE_KPI)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -218,8 +220,8 @@ class BangThuaVuong(QWidget):
         self.lb_trong = QLabel('')
         self.lb_trong.setWordWrap(True)
         self.lb_trong.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lb_trong.setStyleSheet('QLabel { color: #64748B; font-size: 13px; background: #FFFFFF; border: 1px solid #E2E8F0; '
-                                    'border-radius: 6px; padding: 24px; }')
+        dat_kieu_theo_tong(self.lb_trong, 'QLabel { color: #64748B; font-size: 13px; background: #FFFFFF; border: 1px solid #E2E8F0; '
+                                          'border-radius: 6px; padding: 24px; }')
         self.ngan = QStackedWidget()
         self.ngan.addWidget(self.bang)
         self.ngan.addWidget(self.lb_trong)
@@ -246,9 +248,9 @@ class BangThuaVuong(QWidget):
         ds = self.thua_hien()
         kieu = {}
         for r, x in enumerate(ds):
-            kieu[(r, 0)] = dict(nen=NEN_MUC[x['muc']], dam=x['muc'] == 'gap')
+            kieu[(r, 0)] = dict(nen=getattr(_td, NEN_MUC[x['muc']]), dam=x['muc'] == 'gap')
             if x['ma_van_dong'] == 'du_dk_cuong_che':
-                kieu[(r, 8)] = dict(nen=DO, dam=True)
+                kieu[(r, 8)] = dict(nen=_td.DO, dam=True)
         self.bang.dat_du_lieu([_chu([bao_cao_gpmb.TEN_MUC[x['muc']], x['ma_ho'], x['ho_ten'], x['so_to'], x['so_thua'], x['dt'],
                                      x['loai_dat'], x['ly_do'], x['van_dong'], x['cung_to'], x['moc_thu_hoi']], so=(5,))
                                for x in ds], [x['ma_ho'] for x in ds], kieu)

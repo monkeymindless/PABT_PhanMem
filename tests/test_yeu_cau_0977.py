@@ -245,13 +245,13 @@ class TestHopInCheDo(_Co):
 
     def test_mac_dinh_giu_nguyen_khi_khong_chon_che_do(self):
         h = self._hop()
-        self.assertTrue(h.r_chinh_thuc.isChecked())
+        self.assertTrue(h.r_du_thao.isChecked())            # 05/11/2026: mở bảng in mặc định ở Dự thảo
         self.assertFalse(h.o_tt.isChecked())                # như trước 0.9.77: không tự chọn mẫu khi chưa chọn đợt / chế độ
         # 16/10/2026: bỏ ô chọn mẫu từng bản in, dòng ghi chú chế độ (chữ DỰ THẢO do Chế độ phát hành); 20/10/2026: ô Báo cáo
         # tiếp thu ý kiến trở lại (chỉ chế độ chính thức - "trọn bộ 4 tài liệu"), chưa chọn sẵn khi chưa chọn đợt / chế độ
         for ten in ('cb_mau_ct', 'cb_mau_bth', 'lb_che_do'):
             self.assertFalse(hasattr(h, ten), ten)
-        self.assertTrue(h.o_bc.isEnabled())
+        self.assertFalse(h.o_bc.isEnabled())
         self.assertFalse(h.o_bc.isChecked())
 
     def test_che_do_du_thao(self):

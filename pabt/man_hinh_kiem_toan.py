@@ -9,12 +9,12 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialo
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from . import kiem_toan
-from .giao_dien import con_tro_cho, loc_khi_ngung_go
+from .giao_dien import CHINH_GOC, con_tro_cho, dat_trang_thai, loc_khi_ngung_go, mau_theo_tong, nap_o_chon
 from .thong_bao import TEN_UD, chu_loi
 
 COT = ['Thời gian', 'Người sửa', 'Máy', 'Thao tác', 'Mã hộ', 'Đối tượng', 'Trường', 'Giá trị cũ', 'Giá trị mới', 'Ghi chú']
 KY = [('Tất cả', None), ('Hôm nay', 0), ('7 ngày gần đây', 7), ('30 ngày gần đây', 30), ('Năm nay', 'nam')]
-MAU_HANH_DONG = {'them': '#1B5E20', 'sua': '#1F4E78', 'xoa': '#B3261E'}
+MAU_HANH_DONG = {'them': '#1B5E20', 'sua': CHINH_GOC[0], 'xoa': '#B3261E'}
 
 
 class HopKiemToan(QDialog):
@@ -24,9 +24,8 @@ class HopKiemToan(QDialog):
         self.setWindowTitle('Nhật ký kiểm toán - thay đổi số liệu')
         self.resize(1250, 720)
         self.cb_ho = QComboBox()
-        self.cb_ho.addItem('Mọi hộ và danh mục', None)
-        for r in con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho'):
-            self.cb_ho.addItem(f'{r["thu_tu"]}. {r["ho_ten"]}', r['ma_ho'])
+        nap_o_chon(self.cb_ho, [('Mọi hộ và danh mục', None, '')] + [(f'{r["thu_tu"]}. {r["ho_ten"]}', r['ma_ho'], '')
+                                                                     for r in con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho')])
         if ma_ho is not None and self.cb_ho.findData(ma_ho) >= 0:
             self.cb_ho.setCurrentIndex(self.cb_ho.findData(ma_ho))
         self.cb_ky = QComboBox()
@@ -58,8 +57,11 @@ class HopKiemToan(QDialog):
         b_xuat.clicked.connect(lambda: self.xuat())
         b_dong = QPushButton('Đóng')
         b_dong.clicked.connect(self.reject)
+        self.lb_toan_ven = QLabel('')                   # 1.0.55: kết quả đối chiếu chuỗi băm (kiem_toan.kiem_tra_toan_ven)
+        self.lb_toan_ven.setWordWrap(True)
         hd = QHBoxLayout()
-        hd.addWidget(self.lb, 1)
+        hd.addWidget(self.lb_toan_ven, 1)
+        hd.addWidget(self.lb, 2)
         hd.addWidget(b_xuat)
         hd.addWidget(b_dong)
         lo = QVBoxLayout(self)
@@ -67,7 +69,26 @@ class HopKiemToan(QDialog):
         lo.addWidget(self.bang, 1)
         lo.addLayout(hd)
         self.ds = []
+        self.kiem_toan_ven()
         self.nap()
+
+    def kiem_toan_ven(self) -> dict:
+        """Đối chiếu chuỗi băm của cả nhật ký (một lần khi mở cửa sổ - không theo bộ lọc) và hiện kết quả."""
+        with con_tro_cho():
+            kq = kiem_toan.kiem_tra_toan_ven(self.con)
+        self.kq_toan_ven = kq
+        chua = f'; {kq["so_chua_ky"]:,} dòng chưa ký (ghi trước 1.0.55 / bản cũ)'.replace(',', '.') if kq['so_chua_ky'] else ''
+        if kq['hop_le']:
+            dat_trang_thai(self.lb_toan_ven, 'dat', f'✓ Chuỗi băm kiểm toán toàn vẹn: {kq["so_dong_da_ky"]:,} dòng đã ký SHA-256'
+                           .replace(',', '.') + chua + '.')
+        else:
+            dat_trang_thai(self.lb_toan_ven, 'loi', f'Nhật ký bị can thiệp ngoài phần mềm: {len(kq["loi"])} chỗ - '
+                           + kq['loi'][0] + (' (xem chú thích)' if len(kq['loi']) > 1 else ''))
+        self.lb_toan_ven.setToolTip('\n'.join(kq['loi'][:30]) + ('\n\n' if kq['loi'] else '') +
+                                    'Mỗi dòng nhật ký ghi qua LARC được ký mã băm nối với dòng trước: sửa / xóa dòng bằng công cụ '
+                                    'SQLite ngoài phần mềm làm chuỗi gãy. Xóa các dòng CUỐI cùng không để lại dấu - đối chiếu với bản '
+                                    'Excel nhật ký đã xuất / nộp.')
+        return kq
 
     def _khoang(self) -> tuple:
         v = self.cb_ky.currentData()
@@ -90,7 +111,7 @@ class HopKiemToan(QDialog):
             for c, v in enumerate(gt):
                 it = QTableWidgetItem('' if v is None else str(v))
                 if c == 3:
-                    it.setForeground(QColor(MAU_HANH_DONG.get(d['hanh_dong'], '#202124')))
+                    it.setForeground(QColor(mau_theo_tong(MAU_HANH_DONG.get(d['hanh_dong'], '#202124'), 'chu')))
                 if c in (7, 8) and v is not None and len(str(v)) > 30:
                     it.setToolTip(str(v))
                 self.bang.setItem(i, c, it)

@@ -121,16 +121,18 @@ def file_dang_dung() -> Path:
 def ap_vao_du_an(con) -> dict:
     """Thay danh mục, tham số, biểu thưởng, văn bản của dự án bằng bộ đơn giá đang dùng (giữ giá đất, hồ sơ và quy ước /
     đơn giá thẩm định riêng của dự án)."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_gia', 'áp bộ đơn giá vào dự án')
     p = file_dang_dung()
     tt = thong_tin(p)
     from . import don_gia_rieng
     rieng = don_gia_rieng.doc_rieng(con)          # quy ước, đơn giá thẩm định riêng của dự án: giữ lại
-    csdl.chep_danh_muc(con, p, don_vi=False, bang=BANG_BO)
-    with con, csdl.mo_khoa_danh_muc(con):
+
+    def xong():                                   # 1.0.58: cùng một giao dịch: lỗi giữa chừng không mất đơn giá riêng
         don_gia_rieng.tra_rieng(con, rieng)
-    with con:
         con.execute('UPDATE du_an SET phien_ban_gia = ? WHERE id = 1', (tt['phien_ban'],))
         csdl.ghi_nhat_ky(con, 'Áp bộ đơn giá', f'Phiên bản {tt["phien_ban"]} ({tt["nguon"]})')
+    csdl.chep_danh_muc(con, p, don_vi=False, bang=BANG_BO, trong_gd=xong)
     return tt
 
 
@@ -149,7 +151,7 @@ def bo_sung_vat_nuoi(con) -> int:
     moi = [r for r in ds if r['ma'] not in co]
     if not moi:
         return 0
-    with con, csdl.mo_khoa_danh_muc(con):
+    with csdl.giao_dich(con), csdl.mo_khoa_danh_muc(con):
         for r in moi:
             k = [c for c in r if c in cot]
             con.execute(f'INSERT INTO dm_taisan ({", ".join(k)}) VALUES ({", ".join("?" * len(k))})', [r[c] for c in k])
@@ -190,7 +192,7 @@ def tao_bo_tu_excel(file_excel, file_ra, phien_ban: str = '', ghi_chu: str = '',
         con = csdl.tao_moi(ra)
         try:
             csdl.chep_danh_muc(con, tam, don_vi=False, bang=BANG_BO)
-            with con, csdl.mo_khoa_danh_muc(con):
+            with csdl.giao_dich(con), csdl.mo_khoa_danh_muc(con):
                 con.execute('DELETE FROM dm_xa')            # danh sách xã, phường của dự án nguồn: không đưa vào bộ
                 chuan_ten_danh_muc(con)                     # 'cây xoài' -> 'Cây xoài'
                 con.executemany('INSERT INTO van_ban (so_hieu, co_quan, noi_dung, trang_thai) VALUES (?,?,?,?)', list(theo_doi))
@@ -208,13 +210,16 @@ def tao_bo_tu_excel(file_excel, file_ra, phien_ban: str = '', ghi_chu: str = '',
 
 
 def cai_bo(p) -> dict:
-    """Cài một bộ đơn giá (đã kiểm tra) làm bộ đang dùng trên máy này."""
+    """Cài một bộ đơn giá (đã kiểm tra) làm bộ đang dùng trên máy này. 1.0.56: cần quyền quản trị (quan_tri_bo.kiem_quyen)."""
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('cập nhật bộ đơn giá')
     tt = kiem_tra_bo(p)
     dich = file_cap_nhat()
     dich.parent.mkdir(parents=True, exist_ok=True)
     tam = dich.with_suffix('.tai')
     shutil.copyfile(p, tam)
     os.replace(tam, dich)
+    quan_tri_bo.sau_khi_sua()
     return dict(tt, file=str(dich))
 
 
@@ -260,12 +265,15 @@ def sao_luu_bo(dich) -> Path:
 def khoi_phuc_bo_goc() -> dict:
     """Dùng lại bộ đơn giá chuẩn đóng gói kèm phần mềm (0.9.73): bản đã cập nhật / sửa trên máy KHÔNG xóa - đổi tên thành
     "<tên>.truoc_khoi_phuc_<giờ>.sqlite" cạnh đó (lấy lại được). Trả thông tin bộ gốc + file đã cất (hoặc '' nếu chưa có bản máy)."""
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('khôi phục bộ đơn giá')
     moi = file_cap_nhat()
     cat = ''
     if moi.exists():
         dich = moi.with_name(f'{moi.stem}.truoc_khoi_phuc_{datetime.now():%Y%m%d_%H%M%S}.sqlite')
         os.replace(moi, dich)
         cat = str(dich)
+    quan_tri_bo.sau_khi_sua()
     return dict(kiem_tra_bo(file_goc()), cat=cat)
 
 
@@ -280,10 +288,22 @@ def cap_nhat_tu_file(p, phien_ban: str = '') -> dict:
     return cai_bo(p)
 
 
+TOI_DA_TAI = 200 * 2 ** 20          # 1.0.97: trần dung lượng file bộ đơn giá tải về (bộ thật khoảng 5 MB)
+
+
+def _kiem_dia_chi(url, ten: str) -> None:
+    """1.0.97 (kiểm toán bảo mật 09/11/2026): chỉ https:// (máy chủ của đơn vị) hoặc file: (thư mục dùng chung) - http:// để lộ và bị
+    sửa nội dung trên đường truyền."""
+    dau = str(url or '').strip().lower()
+    if not (dau.startswith('https://') or dau.startswith('file:')):
+        raise LoiNhap(f'{ten} phải là địa chỉ https:// (hoặc file trong thư mục dùng chung), không dùng http:// hay giao thức khác.')
+
+
 def kiem_tra_mang(url: str, timeout: int = 20) -> dict | None:
     """Đọc thông báo cập nhật (JSON) tại url; trả thông báo nếu có phiên bản mới hơn bộ đang dùng, không thì None."""
     if not url:
         raise LoiNhap('Chưa có địa chỉ cập nhật. Nhập địa chỉ file thông báo (JSON) do đơn vị quản lý bộ đơn giá cung cấp.')
+    _kiem_dia_chi(url, 'Địa chỉ thông báo cập nhật')
     try:
         from .an_toan import ngu_canh_tls
         with urllib.request.urlopen(url, timeout=timeout, context=ngu_canh_tls()) as r:
@@ -296,16 +316,33 @@ def kiem_tra_mang(url: str, timeout: int = 20) -> dict | None:
 
 
 def tai_va_cai(tb: dict, timeout: int = 120) -> dict:
-    """Tải bộ đơn giá theo thông báo cập nhật, kiểm tra mã SHA-256 (nếu có) rồi cài."""
+    """Tải bộ đơn giá theo thông báo cập nhật, kiểm tra mã SHA-256 (BẮT BUỘC từ 1.0.97) rồi cài. Dừng khi vượt TOI_DA_TAI."""
+    import re
+    ma = str(tb.get('sha256') or '').strip()
+    if not re.fullmatch(r'[0-9a-fA-F]{64}', ma):
+        raise LoiNhap('Thông báo cập nhật thiếu mã kiểm tra SHA-256 (64 ký tự): không tải - đề nghị đơn vị phát hành bổ sung mã.')
+    _kiem_dia_chi(tb.get('tai_ve'), 'Địa chỉ tải bộ đơn giá')
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / TEN_FILE
+        bam = hashlib.sha256()
         try:
             from .an_toan import ngu_canh_tls
             with urllib.request.urlopen(tb['tai_ve'], timeout=timeout, context=ngu_canh_tls()) as r, open(p, 'wb') as f:
-                shutil.copyfileobj(r, f)
+                da = 0
+                while True:
+                    k = r.read(2 ** 16)
+                    if not k:
+                        break
+                    da += len(k)
+                    if da > TOI_DA_TAI:
+                        raise LoiNhap(f'File tải về lớn hơn {TOI_DA_TAI // 2 ** 20} MB: không phải bộ đơn giá, dừng tải.')
+                    bam.update(k)
+                    f.write(k)
+        except LoiNhap:
+            raise
         except Exception as e:
             raise LoiNhap(f'Không tải được bộ đơn giá:\n{e}') from None
-        if tb.get('sha256') and hashlib.sha256(p.read_bytes()).hexdigest().lower() != str(tb['sha256']).lower():
+        if bam.hexdigest().lower() != ma.lower():
             raise LoiNhap('File tải về sai mã kiểm tra (SHA-256): không cài.')
         return cai_bo(p)
 
@@ -398,13 +435,16 @@ def _mo_sua():
 
     @contextmanager
     def _trong():
+        from . import quan_tri_bo
+        quan_tri_bo.kiem_quyen()                        # 1.0.56: khóa ở tầng ghi (không chỉ ở hộp Bộ đơn giá)
         p = dam_bao_ban_sua()
         con = csdl.mo(p)
         try:
-            with con, csdl.mo_khoa_danh_muc(con):
+            with csdl.giao_dich(con), csdl.mo_khoa_danh_muc(con):
                 yield con
         finally:
             con.close()
+        quan_tri_bo.sau_khi_sua()                       # quản trị máy chủ: phát hành bộ vừa sửa lên máy chủ
 
     return _trong()
 
@@ -421,8 +461,9 @@ def doc_dong(bang: str, khoa, p=None) -> dict | None:
         con.close()
 
 
-def them_dong(bang: str, gt: dict, nhom=None) -> dict:
-    """Thêm một mục vào bộ đơn giá đang dùng (ghi bản máy). Trả dòng đã ghi."""
+def them_dong(bang: str, gt: dict, nhom=None, khu_vuc: str = '') -> dict:
+    """Thêm một mục vào bộ đơn giá đang dùng (ghi bản máy). Trả dòng đã ghi. khu_vuc (1.0.57): bộ tách theo khu vực giá - mục mới
+    thuộc phụ lục đang xem (khu_vuc_gia KVMUC)."""
     d = _sach_dong(bang, gt, nhom)
     ck = KHOA_SUA[bang]
     with _mo_sua() as con:
@@ -433,6 +474,9 @@ def them_dong(bang: str, gt: dict, nhom=None) -> dict:
                     [d[c] for c in cot])
         if ck == 'id':
             d['id'] = con.execute('SELECT last_insert_rowid()').fetchone()[0]
+        if khu_vuc and bang in ('dm_taisan', 'dm_hotro') and d.get(ck):
+            from . import khu_vuc_gia
+            khu_vuc_gia.ghi(con, {d[ck]: khu_vuc}, can_cu='thêm tay')
         csdl.ghi_nhat_ky(con, 'Sửa bộ đơn giá: thêm mục', f'{bang} {d.get(ck, d.get("ten") or d.get("ten_thuc_te") or "")}')
     return d
 
@@ -464,6 +508,8 @@ def xoa_dong(bang: str, khoa) -> dict:
         if r is None:
             raise LoiNhap(f'Không thấy mục {ck} = "{khoa}" để xóa.')
         con.execute(f'DELETE FROM {bang} WHERE {ck} = ?', (khoa,))
+        if bang in ('dm_taisan', 'dm_hotro'):           # 1.0.57: khu vực giá của mục (khu_vuc_gia)
+            con.execute('DELETE FROM tham_so WHERE ma = ?', ('KVMUC:' + str(khoa),))
         csdl.ghi_nhat_ky(con, 'Sửa bộ đơn giá: xóa mục', f'{bang} {khoa}')
         return dict(r)
 
@@ -480,6 +526,8 @@ def thay_the_dong(bang: str, khoa, gt: dict, nhom=None) -> dict:
             if con.execute(f'SELECT 1 FROM {bang} WHERE {ck} = ?', (moi_khoa,)).fetchone():
                 raise LoiNhap(f'Đã có mục {ck} = "{moi_khoa}", không thay được.')
         con.execute(f'DELETE FROM {bang} WHERE {ck} = ?', (khoa,))
+        if bang in ('dm_taisan', 'dm_hotro') and str(moi_khoa) != str(khoa):     # 1.0.57: mã mới giữ khu vực giá của mục cũ
+            con.execute('UPDATE OR REPLACE tham_so SET ma = ? WHERE ma = ?', ('KVMUC:' + str(moi_khoa), 'KVMUC:' + str(khoa)))
         cot = list(d)
         if ck == 'id':
             d['id'] = khoa

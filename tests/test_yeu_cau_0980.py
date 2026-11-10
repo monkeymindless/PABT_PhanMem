@@ -10,7 +10,7 @@ from unittest import mock
 
 from tests.test_toc_do import _du_an
 
-NHOM_MO = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…', 'Xuất báo cáo đối chiếu…', 'Tổng hợp tiền theo phương án',
+NHOM_MO = ('Lập phương án hộ…', 'Dự thảo PABT…', 'Kiểm tra lỗi…', 'Tổng hợp tiền theo phương án',
            'Đợt trình…', 'In / Xuất…', 'Quyết định phê duyệt', 'Theo dõi tiến độ')
 NHOM_SANG = ('Màn hình chính', 'Thông tin dự án…', 'Bộ đơn giá…', 'Bảng giá đất NQ 28…', 'Dự toán & khái toán')   # 0.9.88: Đơn giá đặc biệt cần dự án
 

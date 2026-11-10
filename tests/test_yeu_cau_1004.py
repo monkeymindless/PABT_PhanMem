@@ -75,7 +75,7 @@ class TestNhom2(_Co):
         self.assertTrue(ws.row_dimensions[r7].hidden)
         self.assertTrue(ws.column_dimensions['N'].hidden)                                         # cột 11 Vị trí đất
         for c in 'PQRSTUV':
-            self.assertGreaterEqual(float(ws.column_dimensions[c].width), in_an.RONG_COT_TIEN_BTH)
+            self.assertGreaterEqual(float(ws.column_dimensions[c].width), in_an.RONG_COT_KHONG_BTH)    # cột toàn 0 cố ý thu theo tiêu đề (thu_cot_khong_bth)
         d0 = in_an.DONG_DAU_BTH
         self.assertEqual(ws.cell(d0, 23).alignment.horizontal, 'justify')
         for c in (2, 3, 24, 25):

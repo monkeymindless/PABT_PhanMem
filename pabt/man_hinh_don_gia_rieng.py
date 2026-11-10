@@ -1,10 +1,11 @@
 """Cửa sổ "Đơn giá riêng của dự án": quy ước giá tương đương nhập tay (tài sản đặc biệt của từng dự án) và nhập đơn giá
 thẩm định giá được phê duyệt (file Excel / Word / PDF / CSV). Lưu vào bảng quy_uoc của file dự án (don_gia_rieng)."""
 from __future__ import annotations
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtGui import QBrush
 from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QGridLayout, QHBoxLayout, QInputDialog, QLabel,
                                QLineEdit, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout,
                                QWidget)
@@ -16,7 +17,7 @@ from .thong_bao import TEN_UD
 
 COT_QU = [('ten_thuc_te', 'Tên tài sản thực tế (in ra phương án)', 300), ('ten_tuong_duong', 'Áp giá theo / nguồn giá', 260),
           ('dvt', 'ĐVT', 60), ('don_gia', 'Đơn giá (đ)', 100), ('can_cu', 'Căn cứ', 300), ('nguon', 'Thuộc', 100)]
-MAU_RIENG, MAU_TD = QColor('#E8F5E9'), QColor('#E3F2FD')
+MAU_RIENG, MAU_TD = mau_o_theo_tong(globals(), MAU_RIENG='#E8F5E9', MAU_TD='#E3F2FD')
 
 
 class HopDonGiaRieng(QDialog):
@@ -33,7 +34,7 @@ class HopDonGiaRieng(QDialog):
         self.resize(1250, 680)
         self.tab = QTabWidget()
         self.tab.addTab(self._the_quy_uoc(), 'Quy ước giá tương đương')
-        self.tab.addTab(self._the_tham_dinh(), 'Nhập đơn giá thẩm định (tài sản đặc biệt)')
+        self.tab.addTab(self._the_tham_dinh(), 'Đơn giá thẩm định')
         self.tab.setCurrentIndex(the)
         b_dong = QPushButton('Đóng')
         b_dong.clicked.connect(self.reject)
@@ -78,6 +79,7 @@ class HopDonGiaRieng(QDialog):
         self.b_xoa = QPushButton('Xóa dòng chọn')
         self.b_xoa.clicked.connect(self.xoa_dong)
         self.b_luu = QPushButton('Lưu thay đổi')
+        self.b_luu.setToolTip('Ghi đơn giá riêng vào dự án (bật khi bảng có thay đổi chưa lưu)')   # 1.0.94: nút tắt có lý do
         self.b_luu.setDefault(True)
         from .giao_dien import KieuNut, ap_kieu_nut
         ap_kieu_nut(self.b_luu, KieuNut.LUU)            # xanh lá đậm; chỉ bật khi có thay đổi chưa lưu
@@ -213,6 +215,7 @@ class HopDonGiaRieng(QDialog):
         self.b_file.setEnabled(not self.chi_doc)
         self.lb_file = QLabel('')
         self.b_dua = QPushButton('Đưa vào đơn giá của dự án')
+        self.b_dua.setToolTip('Thêm các dòng đã đọc từ file thẩm định giá vào đơn giá riêng của dự án (bật sau khi chọn file)')
         self.b_dua.setEnabled(False)
         self.b_dua.clicked.connect(lambda: self.dua_vao())
         ap_kieu_nut(self.b_dua, KieuNut.CHINH)

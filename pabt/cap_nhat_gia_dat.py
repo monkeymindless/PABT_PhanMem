@@ -191,8 +191,9 @@ def doc_scan(file, xa: str = '', bao=None, cho=None, chu_ra: list | None = None)
 
 
 def _gan_tinh(dong: list, tinh: str, xa: str, vb: str, chu: str) -> tuple:
-    """Một lối ra cho mọi loại file: lọc đúng địa bàn, gắn tỉnh, đặt tên văn bản khi file không có tiêu đề."""
-    dong = loc_xa(dong, xa)
+    """Một lối ra cho mọi loại file: lọc đúng địa bàn, gắn tỉnh, đặt tên văn bản khi file không có tiêu đề. 1.0.90: gộp dòng hai phụ lục
+    cho mọi loại file (Excel / CSV / PDF / ảnh), trước chỉ Word - xem trước không hiện một đoạn hai lần."""
+    dong = _gop_dong(loc_xa(dong, xa))
     if tinh.strip():
         for r in dong:
             r['tinh'] = tinh.strip()
@@ -226,14 +227,41 @@ def chu_quy_tac(quy_tac: list, them: int) -> str:
 def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> dict:
     """Như doc_file nhưng CHƯA dựng vị trí theo quy tắc: {'dong_goc': dòng của bảng, 'quy_tac': [QuyTac] đọc trong lời văn,
     'van_ban', 'chu'} - màn hình cho người dùng sửa quy tắc rồi tính lại (ap_quy_tac_file)."""
-    from .quy_tac_vi_tri import doc_quy_tac
+    from .quy_tac_vi_tri import doc_quy_tac, doc_toan_van_nghi_quyet, la_van_ban_toan_van_nq28
     chu_vb = []
-    dong, vb, chu = _doc_file(file, tinh, xa, bao, cho, chu_vb)
+    toan_van = None
+    try:
+        dong, vb, chu = _doc_file(file, tinh, xa, bao, cho, chu_vb)
+    except nq.LoiBangGia:
+        # 1.0.81: toàn văn Nghị quyết (Điều 1 -> 10, không có bảng Tên đường): không báo lỗi - đọc quy tắc trong lời văn, bảng phía
+        # trên là bảng giá đường đang dùng của địa bàn đang chọn
+        if not la_van_ban_toan_van_nq28(chu_vb):
+            raise
+        dong = [dict(r) for r in nq.tat_ca() if xa and nq.khop_xa(xa, r['xa'])]
+        vb, chu = Path(file).stem, ('Toàn văn nghị quyết (không có bảng Tên đường): đã đọc quy tắc trong lời văn; bảng phía trên là '
+                                   f'bảng giá đường đang dùng của {xa or "địa bàn đang chọn (chưa nhập xã)"}.')
+    if la_van_ban_toan_van_nq28(chu_vb):
+        try:
+            toan_van = doc_toan_van_nghi_quyet(chu_vb, luu=True)
+            chu += f' Toàn văn: {len(toan_van["quy_tac"])} quy tắc ở {len(toan_van["dieu"])} điều (lưu {toan_van["file"]}).'
+        except Exception:                               # noqa: BLE001 - lời văn lạ không làm hỏng việc đọc bảng
+            toan_van = None
+    elif chu_vb:
+        # Bảng giá kèm một phần nghị quyết (chưa đủ 5 điều): vẫn lưu quy tắc có hệ số / tỷ lệ để bảng tính dùng, không ghi đè khi file không có điều.
+        try:
+            from .quy_tac_vi_tri import so_dieu_toan_van_da_luu
+            thu = doc_toan_van_nghi_quyet(chu_vb, luu=False)
+            # 1.0.90: file chỉ có vài điều (bảng giá một xã kèm trích đoạn) không ghi đè toàn văn đầy đủ hơn đã lưu (trước: mất toàn văn)
+            if thu.get('dieu') and thu.get('quy_tac') and len(thu['dieu']) >= so_dieu_toan_van_da_luu():
+                toan_van = doc_toan_van_nghi_quyet(chu_vb, luu=True)
+                chu += f' Đã cập nhật {len(toan_van["quy_tac"])} quy tắc Nghị quyết 28 cho bảng tính.'
+        except Exception:                               # noqa: BLE001
+            pass
     try:
         qt = doc_quy_tac(chu_vb)
     except Exception:                                   # noqa: BLE001 - lời văn lạ không được làm hỏng việc đọc bảng
         qt = []
-    return {'dong_goc': dong, 'quy_tac': qt, 'van_ban': vb, 'chu': chu}
+    return {'dong_goc': dong, 'quy_tac': qt, 'van_ban': vb, 'chu': chu, 'toan_van': toan_van}
 
 
 def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
@@ -286,7 +314,8 @@ def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
                 except nq.LoiBangGia:
                     if not dong:
                         raise
-            chu = 'Giá trong văn bản.'
+            chu = ('Giá trong văn bản. Đã tách tên đường, điểm đầu, điểm cuối và giá theo nhóm đất của bảng tính '
+                   '(cây lâu năm, cây hằng năm, rừng sản xuất, nuôi trồng thủy sản, đất ở, thương mại, sản xuất).')
         else:
             try:
                 dong, chu = _dong_tu_o(o, p.name, xa)
@@ -307,6 +336,7 @@ def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
 def ap_dung(dong: list, van_ban: str = '', nguon: str = '', bo_sung: bool = False) -> list:
     """Ghi bảng này vào bảng giá đang dùng. bo_sung=False: THAY toàn bộ (bốn địa bàn gắn sẵn không còn hiện); bo_sung=True: thêm vào
     bảng đang dùng, địa bàn trùng tên thì thay, địa bàn khác (cả bốn địa bàn gắn sẵn) giữ nguyên (gia_dat_nq28.ghi_bo_sung)."""
+    dong = _gop_dong(list(dong))
     if not dong:
         raise nq.LoiBangGia('Không có dòng giá để ghi.')
     if bo_sung:
@@ -328,23 +358,58 @@ def _module_web():
 
 
 def _loai_gia(chu: str):
+    ds = cot_gia_tieu_de(chu)
+    return ds[0] if ds else None
+
+
+def cot_gia_tieu_de(chu: str) -> list:
+    """Một ô tiêu đề giá -> các cột bảng giá cùng số đó. Cột gộp "cây lâu năm, cây hằng năm" ghi cả nn_cay, nn_cln, nn_chn
+    để bảng tính chọn nhóm nào cũng ra đúng giá. Cột tách riêng thì chỉ ghi nhóm đó."""
     k = bo_dau(chu)
-    if 'thuong mai' in k:
-        return 'tmdv'
-    if 'san xuat' in k or 'khoang san' in k:
-        return 'sxkd'
-    if 'rung' in k or 'thuy san' in k:
-        return 'nn_rung_nts'
-    if 'cay lau' in k or 'cay hang' in k:
-        return 'nn_cay'
-    if re.search(r'dat o\b', k):
-        return 'dat_o'
-    return None
+    ra = []
+    if 'thuong mai' in k or re.search(r'\btmd\b', k):
+        ra.append('tmdv')
+    dat_o = re.search(r'dat o\b', k) is not None
+    # "phi nông nghiệp" chỉ là cột SX-KD khi không phải tiêu đề đất ở ("Đất ở Nhóm đất phi nông nghiệp" của trang tra cứu là ĐẤT Ở - 1.0.90)
+    if 'khoang san' in k or 'sxkd' in k or ('phi nong nghiep' in k and not dat_o):
+        ra.append('sxkd')
+    if dat_o:
+        ra.append('dat_o')
+    lau, hang = 'cay lau' in k, ('cay hang' in k or 'hang nam' in k)
+    if lau or hang:
+        ra.append('nn_cay')
+        if lau:
+            ra.append('nn_cln')
+        if hang:
+            ra.append('nn_chn')
+    rung = re.search(r'\brung\b', k) is not None
+    ts = 'thuy san' in k or 'nuoi trong' in k
+    if rung or ts:
+        ra.append('nn_rung_nts')
+        if rung:
+            ra.append('nn_rsx')
+        if ts:
+            ra.append('nn_nts')
+    return list(dict.fromkeys(ra))
+
+
+def _chuan_o_gia(x) -> str:
+    """Ô giá gõ lỗi trong văn bản (1.0.90, NQ 28 thật): "'500", ". 224" (dấu thừa đầu ô), "7,200" (phẩy ngăn nghìn) -> "500", "224", "7.200".
+    ".600" (có thể là 1.600 mất chữ số), "5Io": KHÔNG đoán - để trống, người dùng nhập theo văn bản gốc."""
+    t = re.sub(r"^(?:['`’]+|\.\s+)", '', str(x or '').strip()).strip()
+    if re.fullmatch(r'\d{1,3}(?:,\d{3})+', t):
+        t = t.replace(',', '.')
+    return t
+
+
+def _la_o_gia(x: str) -> bool:
+    t = _chuan_o_gia(x)
+    return bool(_so_nghin(t) and re.fullmatch(r'[\d.\s]+', t))
 
 
 def _so_nghin(s) -> int:
     """'15.300' trong nghị quyết = 15.300 nghìn đồng/m². Số từ 1 triệu trở lên hiểu là đồng/m²."""
-    t = str(s or '').strip()
+    t = _chuan_o_gia(s)
     if not re.search(r'\d', t):
         return 0
     from .tien import doc_so_vn
@@ -382,62 +447,159 @@ def _gia_tu_loi_van(cac_dong: list, xa: str = '') -> list:
 
 
 def phan_tich_nghi_quyet(cac_dong: list) -> list:
-    """Bảng Word/PDF kiểu Nghị quyết bảng giá đất: mỗi địa bàn một mục, 7 mức vị trí một tuyến."""
+    """Bảng Word/PDF kiểu Nghị quyết bảng giá đất: mỗi địa bàn một mục, 7 mức vị trí một tuyến.
+    Cột Điểm đầu / Điểm cuối lấy theo tiêu đề, không lấy ô chữ dài nhất. Cột giá gộp ghi đủ nhóm đất của bảng tính.
+    1.0.90 - PHÂN LOẠI THEO PHỤ LỤC (người dùng 09/11/2026; NQ 28: Phụ lục I đất nông nghiệp, III đất phi nông nghiệp theo tuyến đường;
+    II đảo / cù lao, IV-V khu công nghiệp / công nghệ cao, VI tái định cư, VII tuyến chính, VIII trần sàn NN): mỗi dòng ghi phu_luc
+    ('I' / 'III'), gặp tiêu đề phụ lục khác thì bỏ qua tới phụ lục I / III kế tiếp (không lẫn mã TT của bảng khác). Ô Tên đường bỏ trống
+    trong văn bản (PL III Trấn Biên TT 345): lấy tên tuyến của dòng cùng xã, cùng TT, cùng điểm đầu / cuối ở phụ lục kia - trước lấy nhầm
+    ô Điểm đầu làm tên tuyến. Giá ghép theo VỊ TRÍ CỘT của tiêu đề khi dòng đủ ô (ô trống / "-" không làm giá cột sau trượt sang cột trước)."""
     xa, cot_gia, dong = '', [], []
+    c_ten = c_dau = c_cuoi = None
+    vi_tri_gia, so_o_tieu_de = [], 0
     dem = {'t': 0, 'k': 0}
-    duong = ''
+    duong, dau_seg, cuoi_seg = '', '', ''
+    phu_luc, bo_qua = '', False
+    mat_tien = {}                                       # (khóa xã, TT) -> {phụ lục: (tên đường, điểm đầu, điểm cuối)} của dòng mặt tiền
+    tt_mt = None
     for r in cac_dong:
         o = [str(x or '').strip() for x in r]
         chu = [x for x in o if x]
         gop = ' '.join(chu)
+        m_pl = re.fullmatch(r'phu luc (viii|vii|vi|iv|v|iii|ii|i)\b.{0,160}', bo_dau(gop)) if len(chu) <= 2 else None
+        if m_pl and len(gop) < 200:
+            phu_luc = m_pl.group(1).upper()
+            bo_qua = phu_luc not in ('I', 'III')
+            xa, cot_gia, vi_tri_gia = '', [], []
+            c_ten = c_dau = c_cuoi = None
+            continue
+        if bo_qua:
+            continue
         # "Xã Trị An" hoặc "53. Xã Trị An" (mục trong phụ lục). Không nhận câu "Giáp ranh xã …".
         tieu = re.fullmatch(r'(?:\d+\.\s*)?((?:Xã|Phường|Thị trấn)\s+.+)', gop.strip(), re.I)
         if tieu and len(gop) < 60 and not re.search(r'(?i)đường|giáp|tuyến', gop):
             xa = tieu.group(1).strip()
-            cot_gia = []
-            duong = ''
+            cot_gia, tt_mt = [], None
+            c_ten = c_dau = c_cuoi = None
+            duong, dau_seg, cuoi_seg = '', '', ''
+            dem = {'t': 0, 'k': 0}
             continue
-        loai = [(_loai_gia(x), x) for x in o]
-        if any(x[0] for x in loai) and any('ten duong' in bo_dau(x) for x in o):
-            cot_gia = [k for k, _ in loai if k]
+        if any('ten duong' in bo_dau(x) for x in o) and any(cot_gia_tieu_de(x) for x in o):
+            cot_gia, vi_tri_gia, so_o_tieu_de = [], [], len(o)
+            c_ten = c_dau = c_cuoi = None
+            for i, x in enumerate(o):
+                b = bo_dau(x)
+                if 'ten duong' in b:
+                    c_ten = i
+                elif 'diem dau' in b:
+                    c_dau = i
+                elif 'diem cuoi' in b:
+                    c_cuoi = i
+                else:
+                    khoa = cot_gia_tieu_de(x)
+                    if khoa:
+                        cot_gia.append(khoa)
+                        vi_tri_gia.append((i, khoa))
             continue
         if not chu or not re.fullmatch(r'\d+', chu[0]):
             continue
-        so = []
-        chu_ten = ''
-        for x in chu[1:]:
-            n = _so_nghin(x)
-            if n and re.fullmatch(r'[\d.\s]+', x):
-                so.append(n)
-            elif len(x) > len(chu_ten):
-                chu_ten = x
-        if not chu_ten or not so:
+        van = [(i, x) for i, x in enumerate(o) if i and x and not _la_o_gia(x)]
+        so = [_so_nghin(x) for i, x in enumerate(o) if i and _la_o_gia(x)]
+        if not van or not so:
             continue
-        vt = _vi_tri_dong(chu_ten, dem)
+
+        def chu_cot(chi):
+            if chi is None:
+                return ''
+            for i, x in van:
+                if i == chi:
+                    return x
+            return ''
+
+        dau, cuoi = chu_cot(c_dau), chu_cot(c_cuoi)
+        ten = chu_cot(c_ten)
+        du_o = bool(vi_tri_gia) and len(o) == so_o_tieu_de          # dòng đủ ô như tiêu đề: đọc theo vị trí cột
+        if not ten and du_o and c_ten is not None and dau:
+            # ô Tên đường bỏ trống trong văn bản: tuyến của dòng cùng xã + TT + điểm đầu / cuối ở phụ lục kia
+            for pl, (t_k, d_k, c_k) in (mat_tien.get((_khoa_doan(xa), int(chu[0]))) or {}).items():
+                if pl != phu_luc and (_khoa_doan(d_k) == _khoa_doan(dau) or _khoa_doan(c_k) == _khoa_doan(cuoi)):
+                    ten = t_k
+                    break
+        ten = ten or van[0][1]
+        vt = _vi_tri_dong(ten, dem)
         if vt == 'MT':
-            duong = chu_ten
+            duong, dau_seg, cuoi_seg = ten, dau, cuoi
+            tt_mt = int(chu[0])
+            mat_tien.setdefault((_khoa_doan(xa), tt_mt), {})[phu_luc] = (ten, dau, cuoi)
+        else:
+            dau = dau or dau_seg
+            cuoi = cuoi or cuoi_seg
         gia = {k: 0 for k, _ in nq.COT}
-        for k, n in zip(cot_gia, so):
-            gia[k] = n
-        dong.append(dict(xa=xa or '', tt=int(chu[0]), ten_duong=duong or chu_ten,
-                         diem_dau='', diem_cuoi='', vi_tri=vt, dieu_kien='' if vt == 'MT' else chu_ten,
-                         nguong=[1000, 500], trang={'pl3': '', 'pl1': ''}, **gia))
-    return dong
+        so_cot_gia = len(vi_tri_gia)
+        # dòng gộp ô (mô tả T / K trải 3 cột) nhưng các cột giá nằm cuối bảng: ghép giá theo cột tính từ phải (ô "-" vẫn giữ chỗ)
+        canh_phai = (not du_o and so_cot_gia and o and o[-1] and len(o) >= so_cot_gia + 2
+                     and [i for i, _ in vi_tri_gia] == list(range(so_o_tieu_de - so_cot_gia, so_o_tieu_de)))
+        if du_o or canh_phai:
+            lech = 0 if du_o else len(o) - so_o_tieu_de
+            for i, khoa in vi_tri_gia:
+                x = o[i + lech]
+                n = _so_nghin(x) if _la_o_gia(x) else 0
+                for k in khoa:
+                    if n:
+                        gia[k] = n
+        else:
+            for n, khoa in zip(so, cot_gia):
+                for k in khoa:
+                    if n:
+                        gia[k] = n
+        if not any(gia.values()):
+            continue
+        r_moi = dict(xa=xa or '', tt=int(chu[0]), ten_duong=duong or ten,
+                     diem_dau=dau, diem_cuoi=cuoi, vi_tri=vt, dieu_kien='' if vt == 'MT' else ten,
+                     nguong=[1000, 500], trang={'pl3': '', 'pl1': ''}, **gia)
+        if phu_luc:
+            r_moi['phu_luc'] = [phu_luc]
+        if vt != 'MT':
+            r_moi['_tt_mt'] = tt_mt
+        dong.append(r_moi)
+    # Dòng mặt tiền bị thiếu ở một phụ lục (PL I Hố Nai không có TT 71 - đoạn 2 đường Lê Ngô Cát): các dòng T / K sau đó kế thừa nhầm đoạn
+    # trước. Một đoạn có tối đa 6 dòng sau mặt tiền: dòng xa hơn thì lấy đoạn theo dòng mặt tiền gần nhất phía trên ở phụ lục bất kỳ.
+    for r in dong:
+        t0 = r.pop('_tt_mt', None)
+        if t0 is None or r['tt'] - t0 <= 6:
+            continue
+        kx = _khoa_doan(r['xa'])
+        for t in range(r['tt'] - 1, max(t0, r['tt'] - 7), -1):
+            mt = mat_tien.get((kx, t))
+            if mt:
+                r['ten_duong'], r['diem_dau'], r['diem_cuoi'] = next(iter(mt.values()))
+                break
+    return _gop_dong(dong)
+
+
+def _khoa_doan(s: str) -> str:
+    """Khóa một đoạn đường khi gộp phụ lục: bỏ dấu và dấu câu (phụ lục đất ở ghi "số 9,", phụ lục nông nghiệp ghi "số 9.")."""
+    return ' '.join(re.sub(r'[^a-z0-9]+', ' ', bo_dau(s or '')).split())
 
 
 def _gop_dong(ds: list) -> list:
-    """Nhiều phụ lục (đất ở / nông nghiệp) cùng một tuyến: gộp cột giá."""
+    """Nhiều phụ lục (đất ở / nông nghiệp) cùng một tuyến: gộp cột giá, không để hai dòng trùng xã / trùng đoạn. 1.0.90: khóa có cả số TT
+    (hai đoạn ghi cùng chữ ở hai TT khác nhau không bị gộp mất giá đoạn sau); dòng gộp giữ danh sách phụ lục nguồn (phu_luc)."""
     thu, gop = [], {}
     for r in ds:
-        k = (bo_dau(r.get('xa') or ''), bo_dau(r.get('ten_duong') or ''), r.get('vi_tri') or '')
+        k = (_khoa_doan(r.get('xa') or ''), str(r.get('tt') or ''), _khoa_doan(r.get('ten_duong') or ''), r.get('vi_tri') or '',
+             _khoa_doan(r.get('diem_dau') or ''), _khoa_doan(r.get('diem_cuoi') or ''))
         cu = gop.get(k)
         if cu is None:
             gop[k] = dict(r)
             thu.append(k)
             continue
-        for cot, _ in nq.COT:
-            if r.get(cot) and not cu.get(cot):
-                cu[cot] = r[cot]
+        for cot in list(nq.COT) + list(nq.LOAI_NN):
+            khoa = cot[0]
+            if r.get(khoa) and not cu.get(khoa):
+                cu[khoa] = r[khoa]
+        if r.get('phu_luc'):
+            cu['phu_luc'] = sorted(set(cu.get('phu_luc') or ()) | set(r['phu_luc']), key=lambda x: (len(x), x))
     return [gop[k] for k in thu]
 
 
@@ -499,8 +661,8 @@ def tim_tren_web(tinh: str, xa: str, thu_muc=None, url: str = '', tham_khao: boo
     url = (url or '').strip()
     if url and not url.lower().startswith('https://'):
         raise LoiWeb('Đường dẫn phải bắt đầu bằng https:// (trang văn bản hoặc file phụ lục bảng giá đất).')
-    if not xa:
-        raise LoiWeb('Nhập tên địa bàn, ví dụ Trị An, Trảng Bom, Nhơn Trạch, Vũng Tàu.')
+    if not xa and not tinh and not url:
+        raise LoiWeb('Nhập tên tỉnh / thành phố hoặc tên xã / phường. Chỉ cần một trong hai. Có trang nghị quyết thì dán vào ô Đường dẫn văn bản.')
     tu_tao = thu_muc is None
     thu = Path(thu_muc) if thu_muc else Path(tempfile.mkdtemp(prefix='pabt_gia_dat_'))
     thu.mkdir(parents=True, exist_ok=True)
@@ -564,7 +726,8 @@ def _tim_va_boc(cap_nhat_web, tinh: str, xa: str, thu: Path, url: str = '') -> t
         da_url.add(URL_BANG_GIA_DONG_NAI)
     if not trang and not tep_truoc:
         q = urllib.parse.quote(f'bảng giá đất {tinh}'.strip())
-        raise LoiWeb(f'Không thấy văn bản bảng giá đất của {xa}' + (f', {tinh}' if tinh else '') +
+        dia = xa or tinh or 'tỉnh đã nhập'
+        raise LoiWeb(f'Không thấy văn bản bảng giá đất của {dia}' + (f', {tinh}' if tinh and xa else '') +
                      ('.\n' + loi[0] if loi else '.') +
                      '\nTìm nghị quyết bảng giá đất của tỉnh trên Công báo / cổng thông tin tỉnh hoặc '
                      f'https://vbpl.vn/van-ban/dia-phuong?keyword={q} rồi dán đường dẫn trang văn bản (hoặc file phụ lục) vào ô '

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from decimal import Decimal
 from pathlib import Path
 
 import openpyxl
@@ -224,6 +225,66 @@ class TestCapNhatGiaDat(unittest.TestCase):
         self.assertEqual(dong[1]['ten_duong'], 'Đường A')
         self.assertEqual((dong[0]['dat_o'], dong[0]['tmdv'], dong[0]['sxkd']), (15300, 10700, 9200))
         self.assertEqual(nq.gia_dong(dong[0], 'dat_o'), 15_300_000)
+        self.assertEqual(dong[0]['diem_dau'], '')
+
+    def test_doc_diem_dau_cuoi_va_nhom_dat(self):
+        from pabt.cap_nhat_gia_dat import phan_tich_nghi_quyet
+        rows = [
+            ['1. Phường Biên Hòa'],
+            ['TT', 'Tên đường giao thông', 'Điểm đầu', 'Điểm cuối',
+             'Giá đất trồng cây lâu năm, đất trồng cây hằng năm',
+             'Giá đất trồng rừng sản xuất và nuôi trồng thủy sản'],
+            ['1', 'Đường Bùi Hữu Nghĩa', 'Giáp ranh giới thành phố Hồ Chí Minh', 'Đường Nguyễn Tri Phương', '1.500', '970'],
+            ['2', 'Các tuyến đường giao thông đấu nối trực tiếp ra Đường Bùi Hữu Nghĩa', '1.030', '680'],
+        ]
+        dong = phan_tich_nghi_quyet(rows)
+        self.assertEqual(dong[0]['ten_duong'], 'Đường Bùi Hữu Nghĩa')
+        self.assertEqual(dong[0]['diem_dau'], 'Giáp ranh giới thành phố Hồ Chí Minh')
+        self.assertEqual(dong[0]['diem_cuoi'], 'Đường Nguyễn Tri Phương')
+        self.assertEqual(dong[0]['vi_tri'], 'MT')
+        self.assertEqual((dong[0]['nn_cln'], dong[0]['nn_chn'], dong[0]['nn_cay']), (1500, 1500, 1500))
+        self.assertEqual((dong[0]['nn_rsx'], dong[0]['nn_nts'], dong[0]['nn_rung_nts']), (970, 970, 970))
+        self.assertEqual(dong[1]['ten_duong'], 'Đường Bùi Hữu Nghĩa')
+        self.assertEqual(dong[1]['vi_tri'], 'T1')
+        self.assertEqual(dong[1]['diem_dau'], dong[0]['diem_dau'])
+        self.assertEqual(dong[1]['diem_cuoi'], dong[0]['diem_cuoi'])
+        self.assertEqual(dong[1]['nn_chn'], 1030)
+
+    def test_gop_hai_phu_luc_khong_trung_xa(self):
+        """Phụ lục đất ở và nông nghiệp cùng một đoạn: một dòng, đủ cả hai nhóm giá. Dấu phẩy và dấu chấm ở điểm cuối vẫn khớp."""
+        from pabt.cap_nhat_gia_dat import phan_tich_nghi_quyet
+        rows = [
+            ['Phường Biên Hòa'],
+            ['TT', 'Tên đường giao thông', 'Điểm đầu', 'Điểm cuối',
+             'Giá đất trồng cây lâu năm, đất trồng cây hằng năm',
+             'Giá đất trồng rừng sản xuất và nuôi trồng thủy sản'],
+            ['1', 'Đường Trần Văn Ơn', 'Đường Bùi Hữu Nghĩa',
+             'Chạm tới giữa ranh thửa đất số 9. tờ BĐĐC số 124', '1.430', '970'],
+            ['Phường Biên Hòa'],
+            ['TT', 'Tên đường giao thông', 'Điểm đầu', 'Điểm cuối', 'Giá đất ở',
+             'Giá đất thương mại, dịch vụ', 'Giá đất sản xuất phi nông nghiệp'],
+            ['1', 'Đường Trần Văn Ơn', 'Đường Bùi Hữu Nghĩa',
+             'Chạm tới giữa ranh thửa đất số 9, tờ BĐĐC số 124', '15.400', '10.800', '9.200'],
+        ]
+        dong = phan_tich_nghi_quyet(rows)
+        self.assertEqual(len(dong), 1)
+        self.assertEqual(dong[0]['nn_cay'], 1430)
+        self.assertEqual(dong[0]['dat_o'], 15400)
+        self.assertEqual(dong[0]['tmdv'], 10800)
+
+    def test_tra_gia_theo_diem_va_nhom(self):
+        from unittest import mock
+        from pabt import gia_dat_qd03 as gd
+        doan = dict(ten_duong='Đường tỉnh 761', diem_dau='Giáp ranh xã Trị An', diem_cuoi='Cầu suối Kộp', tt_bat_dau=99)
+        dong = [dict(xa='Xã Phú Lý', tt=1, ten_duong='Đường tỉnh 761', diem_dau='Giáp ranh xã Trị An',
+                     diem_cuoi='Cầu suối Kộp', vi_tri='MT', dat_o=0, tmdv=0, sxkd=0, nn_cay=1500,
+                     nn_cln=1800, nn_chn=230, nn_rung_nts=970, nn_rsx=970, nn_nts=400)]
+        with mock.patch('pabt.gia_dat_nq28.dong_cua_xa', return_value=dong):      # 1.0.90: tra theo chỉ mục xã
+
+            hang = gd.gia_bang_gia('Bảng 55. Xã Phú Lý', doan, 'DAT_NONG_NGHIEP', 'MAT_TIEN_VT1', 'nn_chn')
+            lau = gd.gia_bang_gia('Bảng 55. Xã Phú Lý', doan, 'DAT_NONG_NGHIEP', 'MAT_TIEN_VT1', 'nn_cln')
+        self.assertEqual(hang, Decimal(230000))
+        self.assertEqual(lau, Decimal(1800000))
 
     def test_thieu_module_web_ra_loi_tieng_viet(self):
         import sys
@@ -255,6 +316,18 @@ class TestCapNhatGiaDat(unittest.TestCase):
                 tim_tren_web('Bình Dương', 'Phường Thử')
         self.assertFalse(nq.dang_thay())
         self.assertEqual(nq.ds_xa(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều'])
+
+    def test_tim_web_chi_can_ten_tinh(self):
+        from unittest import mock
+        from pabt.cap_nhat_gia_dat import LoiWeb, tim_tren_web
+        with self.assertRaises(LoiWeb) as ctx:
+            tim_tren_web('', '')
+        self.assertIn('tỉnh', str(ctx.exception).lower())
+        mau = ([{'xa': 'Xã A', 'ten_duong': 'Đường 1'}], 'VB', 'chu', 'https://vi-du')
+        with mock.patch('pabt.cap_nhat_gia_dat._tim_va_boc', return_value=mau):
+            dong, vb, _chu, _nguon = tim_tren_web('Đồng Nai', '')
+        self.assertEqual(dong[0]['xa'], 'Xã A')
+        self.assertEqual(vb, 'VB')
 
     def test_csv_va_excel_thay_bon_xa(self):
         from pabt.cap_nhat_gia_dat import ap_dung, doc_file
@@ -303,6 +376,8 @@ class TestCapNhatGiaDat(unittest.TestCase):
         hop = w.cap_nhat_bang_gia_dat(cho=False)
         self.assertIsInstance(hop, HopTraNQ28)
         self.assertEqual(hop.tabs.currentIndex(), HopTraNQ28.THE_CAP_NHAT)
+        self.assertEqual(hop.tabs.tabText(HopTraNQ28.THE_QUY_TAC), 'Bộ quy tắc giá đất')
+        self.assertFalse(hop.khung_goi.isWindow())
         d = hop.khung_cn
         self.assertIsInstance(d, KhungCapNhatGiaDat)
         p = Path(self._td.name) / 'gia.csv'
@@ -320,6 +395,10 @@ class TestCapNhatGiaDat(unittest.TestCase):
         self.assertEqual(nq.ds_xa(), ['Xã Mới'])
         d.khoi_phuc()
         self.assertEqual(nq.ds_xa(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều'])
+        self.assertEqual(d.b_thay.text(), 'Thay cả bảng')
+        self.assertTrue(d.b_thay.isEnabled())
+        self.assertEqual(d.ghi(thay=True), ['Xã Mới'])
+        self.assertEqual(nq.ds_xa(), ['Xã Mới'])
         hop.close()
         w.close()
 

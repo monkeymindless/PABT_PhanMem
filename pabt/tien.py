@@ -5,6 +5,8 @@ import functools
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 KHONG = Decimal(0)
+_MOT = Decimal(1)
+_KHONG_DUONG = Decimal(0)
 
 
 def D(x) -> Decimal:
@@ -83,11 +85,13 @@ def _so_trong_cong_thuc(t: str) -> Decimal:
         raise ValueError(f'không đọc được số "{t}"') from None
 
 
+_RE_CONG_THUC = re.compile(r'[+*/x×:()]|\d\s*-')
+
+
 def la_cong_thuc(s) -> bool:
     """Chuỗi người dùng gõ có phải công thức (=4,2*5,7 / 12+3,5 / (10-2)x3) chứ không phải một số."""
-    import re
     s = str(s or '').strip()
-    return s.startswith('=') or bool(re.search(r'[+*/x×:()]|\d\s*-', s.lower()))
+    return s.startswith('=') or bool(_RE_CONG_THUC.search(s.lower()))
 
 
 CONG_THUC_DAI_TOI_DA = 1000          # ký tự - công thức thật trong ô số chỉ vài chục ký tự
@@ -180,10 +184,13 @@ def co_so(x) -> bool:
 def lam_tron(x, so_chu_so: int = 0) -> Decimal:
     """ROUND(x, so_chu_so) của Excel: làm tròn nửa xa số 0; so_chu_so âm = làm tròn hàng chục, trăm, nghìn..."""
     x = D(x)
+    if so_chu_so == 0:                           # đường nhanh (hàng chục nghìn lần mỗi bảng): ROUND_HALF_UP của Decimal đã là nửa xa số 0
+        q = x.quantize(_MOT, rounding=ROUND_HALF_UP)
+        return q if q else _KHONG_DUONG          # -0,4 -> 0, không phải -0
     mau = Decimal(1).scaleb(-so_chu_so)          # -3 -> 1E+3
-    q = (abs(x) / mau).quantize(Decimal(1), rounding=ROUND_HALF_UP) * mau
+    q = (abs(x) / mau).quantize(_MOT, rounding=ROUND_HALF_UP) * mau
     q = q if x >= 0 else -q
-    return q.quantize(Decimal(1)) if so_chu_so <= 0 else q
+    return q.quantize(_MOT) if so_chu_so <= 0 else q
 
 
 def chuoi(x) -> str:
@@ -197,8 +204,7 @@ def vn(x, so_le: int = 0) -> str:
     """Định dạng số kiểu Việt Nam: 1.480.500 ; 143,8"""
     x = D(x)
     if so_le == 0:
-        s = f'{lam_tron(x, 0):,.0f}'
-        return s.replace(',', '.')
+        return f'{int(lam_tron(x, 0)):,}'.replace(',', '.')
     # làm tròn trước như ROUND của Excel: định dạng Decimal tự làm tròn kiểu ngân hàng (0,25 -> "0,2"; 23.450.000 -> "23,4 triệu")
     s = f'{lam_tron(x, so_le):,.{so_le}f}'
     return s.replace(',', '#').replace('.', ',').replace('#', '.')

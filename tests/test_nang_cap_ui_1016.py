@@ -100,7 +100,7 @@ class TestNangCapUi(CoSo):
         for b in cs.thanh_tren.findChildren(QPushButton):
             if b.isVisibleTo(cs) and b.text():
                 self.assertTrue(b.text().strip())
-        self.assertEqual(cs.b_luu.text(), 'Lưu')
+        self.assertEqual(cs.b_luu.text(), 'Lưu' if cs.width() < cs.RONG_THANH_TREN_GON else 'Lưu (Ctrl+S)')   # 06/11/2026: cửa sổ hẹp chữ ngắn, phím tắt ở chú thích
         self.assertEqual(cs.btn_toggle_preview.text(), 'Xem trước')
         self.assertIn('Ctrl+S', cs.b_luu.toolTip())
         self.assertIn('F4', cs.btn_toggle_preview.toolTip())

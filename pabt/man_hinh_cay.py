@@ -20,6 +20,9 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDialog, QDialogBut
 from . import cay_trong as ct
 from . import csdl
 from .giao_dien import loc_khi_ngung_go
+from .giao_dien import mau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
+from .giao_dien import vua_dong  # noqa: E402
 from .lap_pa import LoiNhap, doc_so, doc_ty_le
 from .nghiep_vu import NGUON_DM
 from .tien import D, KHONG, so_vn, vn
@@ -131,7 +134,7 @@ class HopCayChuVi(_Hop):
         if loi:
             tb = f'Chu vi không thuộc khoảng nào của {ten}: ' + ', '.join(so_vn(x) for x in loi)
         if tb:
-            self.lb.setText(f'<span style="color:#B83A3A">{tb}</span>')
+            self.lb.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">{tb}</span>')
         else:
             tong = sum(so for _, so, _, _ in self.nhom)
             self.lb.setText(f'{tong} cây, {len(self.nhom)} quy cách. Chu vi = π × đường kính (π ≈ {ct.pi_chuoi()}).')
@@ -157,7 +160,7 @@ class HopCayChuVi(_Hop):
             self.bao('Chọn loại cây và nhập ít nhất một chu vi hợp lệ.')
             return
         if loi and not self.im_lang and QMessageBox.question(
-                self, TIEU_DE, self.lb.text().replace('<span style="color:#B83A3A">', '').replace('</span>', '') +
+                self, TIEU_DE, re.sub(r'</?span[^>]*>', '', self.lb.text()) +
                 '\n\nVẫn thêm các cây còn lại?') != QMessageBox.StandardButton.Yes:
             return
         self.dong_moi = self.them()
@@ -406,8 +409,8 @@ class HopMatDoNhieuCay(_Hop):
         self.lb.setWordWrap(True)
         self.lb.setTextFormat(Qt.TextFormat.RichText)
         self.lb.setObjectName('ket_qua_mat_do')
-        self.lb.setStyleSheet('QLabel#ket_qua_mat_do { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
-                              'padding: 8px 12px; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel#ket_qua_mat_do { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
+                                    'padding: 8px 12px; }')
         lo = QVBoxLayout(self)
         lo.addLayout(form)
         lo.addWidget(ghi)
@@ -465,11 +468,11 @@ class HopMatDoNhieuCay(_Hop):
         try:
             dt, tl, hs = self._doc()
         except LoiNhap as e:
-            self.lb.setText(f'<span style="color:#B83A3A">{e}</span>')
+            self.lb.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">{e}</span>')
             return None
         kq = phan_bo_nhom(self.nhom, dt, hs)
         self.bang.blockSignals(True)
-        do, xanh = QColor('#B83A3A'), QColor('#2E7D32')
+        do, xanh = QColor(mau_theo_tong('#B83A3A', 'chu')), QColor(mau_theo_tong('#2E7D32', 'chu'))
         for r, k in enumerate(self.thu_tu):
             g = self.nhom[k]
             x = g.dong
@@ -494,20 +497,20 @@ class HopMatDoNhieuCay(_Hop):
             ('Diện tích trồng', f'{so_vn(dt)} m²; đã dùng <b>{so_vn((dt - kq["dt_con"]).quantize(D("0.01")))} m²</b>, còn '
                                 f'{so_vn(kq["dt_con"].quantize(D("0.01")))} m²'),
             ('Trong mật độ', f'<b>{trong} cây</b> (tỷ lệ của từng dòng) - giá trị cây trồng chính {vn(kq["gia_tri_chinh"])} đ'),
-            ('Vượt mật độ', (f'<span style="color:#B83A3A"><b>{ngoai} cây</b></span> - dòng riêng, tỷ lệ {so_vn(tl * 100)}%')
-             if ngoai else '<span style="color:#2E7D32"><b>Không có cây vượt mật độ</b></span>'),
+            ('Vượt mật độ', (f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}"><b>{ngoai} cây</b></span> - dòng riêng, tỷ lệ {so_vn(tl * 100)}%')
+             if ngoai else f'<span style="color:{mau_theo_tong("#2E7D32", "chu")}"><b>Không có cây vượt mật độ</b></span>'),
         ]
         if xen:
             vuot_xen = sum(x.ngoai for x in xen)
             dong.append(('Cây trồng xen', f'tối đa {so_vn(hs)} × {vn(kq["gia_tri_chinh"])} = <b>{vn(kq["toi_da_xen"])} đ</b>; '
                          f'được tính {sum(x.trong for x in xen)} cây = {vn(ct.gia_tri_cay(xen))} đ' +
-                         (f'; <span style="color:#B83A3A"><b>vượt {vuot_xen} cây</b></span> (không bồi thường)' if vuot_xen else '')))
+                         (f'; <span style="color:{mau_theo_tong("#B83A3A", "chu")}"><b>vượt {vuot_xen} cây</b></span> (không bồi thường)' if vuot_xen else '')))
         if khong:
             dong.append(('Chưa có mật độ', ', '.join(khong) + ' - không tính, giữ nguyên số cây (nhập mật độ hoặc đánh dấu cây xen)'))
         if not self.nhom:
             dong = [('Không có dòng', 'Hộ chưa có dòng cây trồng tính theo cây (ĐVT cây / bụi / khóm, số nguyên) ở mục 3.')]
         self.lb.setText('<table cellspacing="0" cellpadding="3">' + ''.join(
-            f'<tr><td style="color:#1F4E79; font-weight:600; padding-right:14px">{a}</td><td>{b}</td></tr>' for a, b in dong) +
+            f'<tr><td style="color:{mau_theo_tong("#1F4E79", "chu")}; font-weight:600; padding-right:14px">{a}</td><td>{b}</td></tr>' for a, b in dong) +
             '</table>')
         return trong, ngoai
 
@@ -558,8 +561,8 @@ class HopMatDo(_Hop):
         self.lb.setWordWrap(True)
         self.lb.setTextFormat(Qt.TextFormat.RichText)
         self.lb.setObjectName('ket_qua_mat_do')
-        self.lb.setStyleSheet('QLabel#ket_qua_mat_do { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
-                              'padding: 10px 12px; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel#ket_qua_mat_do { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
+                                    'padding: 10px 12px; }')
         self.resize(700, 520)
         form = QFormLayout()
         form.addRow('Cây trồng:', QLabel(f'<b>{d.ten}</b>' + (f'  (mã {d.ma})' if d.ma else '')))
@@ -594,14 +597,14 @@ class HopMatDo(_Hop):
         try:
             dt, so, md, tl = self._doc()
         except LoiNhap as e:
-            self.lb.setText(f'<span style="color:#B83A3A">{e}</span>')
+            self.lb.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">{e}</span>')
             return None
         if md is None:
             self.lb.setText('Chưa có mật độ quy chuẩn: nhập mật độ (cây/ha).')
             return None
         trong, ngoai = ct.tach_mat_do(so, dt, md)
         p = ct.phan_tich_mat_do(so, dt, md)
-        do = '#B83A3A'
+        do = mau_theo_tong('#B83A3A', 'chu')
         dong = [
             ('Mật độ quy định', f'{so_vn(md)} cây/ha (= {so_vn(p["m2_moi_cay"])} m²/cây)' +
                                 (f' - <i>{self.q.can_cu}</i>' if self.q.nguon == 'gần đúng' else '')),
@@ -610,12 +613,12 @@ class HopMatDo(_Hop):
             ('Số cây kiểm đếm', f'{so} cây → cần diện tích <b>{so_vn(p["dt_can"])} m²</b> theo mật độ'),
             ('Đối chiếu', (f'<span style="color:{do}"><b>VƯỢT mật độ {ngoai} cây</b> '
                            f'(thiếu {so_vn(p["dt_thieu"])} m² diện tích trồng)</span>') if ngoai else
-                          '<span style="color:#2E7D32"><b>Không vượt mật độ</b></span>'),
+                          f'<span style="color:{mau_theo_tong("#2E7D32", "chu")}"><b>Không vượt mật độ</b></span>'),
             ('Bồi thường', f'<b>Đảm bảo mật độ {trong} cây</b> (100%)' +
                            (f'; <b>vượt mật độ {ngoai} cây</b> ({so_vn(tl * 100)}%)' if ngoai else '')),
         ]
         self.lb.setText('<table cellspacing="0" cellpadding="3">' + ''.join(
-            f'<tr><td style="color:#1F4E79; font-weight:600; padding-right:14px">{a}</td><td>{b}</td></tr>' for a, b in dong) +
+            f'<tr><td style="color:{mau_theo_tong("#1F4E79", "chu")}; font-weight:600; padding-right:14px">{a}</td><td>{b}</td></tr>' for a, b in dong) +
             '</table>')
         return trong, ngoai
 
@@ -696,7 +699,7 @@ class HopRanh(_Hop):
             tong, trong, tl = self._doc()
             r = ct.tach_ranh(tong, trong, self.o_kc.isChecked(), tl)
         except (LoiNhap, ValueError) as e:
-            self.lb.setText(f'<span style="color:#B83A3A">{e}</span>')
+            self.lb.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">{e}</span>')
             return None
         s = f'Tính 100%: <b>{so_vn(r["trong"])}</b>'
         if r['ngoai'] > 0:
@@ -745,8 +748,8 @@ class HopDienTichXayDung(_Hop):
         self.lb.setWordWrap(True)
         self.lb.setTextFormat(Qt.TextFormat.RichText)
         self.lb.setObjectName('kq_dtxd')
-        self.lb.setStyleSheet('QLabel#kq_dtxd { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
-                              'padding: 10px 12px; font-size: 13px; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel#kq_dtxd { background: #FFFFFF; border: 1px solid #D5DEE7; border-radius: 8px; '
+                                    'padding: 10px 12px; font-size: 13px; }')
         self.bang = QTableWidget(0, len(self.COT))
         self.bang.setHorizontalHeaderLabels(self.COT)
         self.bang.verticalHeader().setVisible(False)
@@ -762,7 +765,7 @@ class HopDienTichXayDung(_Hop):
                      'diện tích chiếm đất hay diện tích sàn. Phần vượt diện tích thu hồi: xem xét điều kiện bồi thường (phần ngoài '
                      'ranh thu hồi) theo quy định.')
         ghi.setWordWrap(True)
-        ghi.setStyleSheet('QLabel { color: #4A5B6C; }')
+        dat_kieu_theo_tong(ghi, 'QLabel { color: #4A5B6C; }')
         lo = QVBoxLayout(self)
         lo.addWidget(self.lb)
         lo.addWidget(self.bang, 1)
@@ -794,17 +797,17 @@ class HopDienTichXayDung(_Hop):
                     if c in (1, 3, 5, 6):
                         it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                     if c == 7 and x['vuot'] > 0:
-                        it.setForeground(QColor('#B8433A'))
+                        it.setForeground(QColor(mau_theo_tong('#B8433A', 'chu')))
                         f = it.font()
                         f.setBold(True)
                         it.setFont(f)
                     self.bang.setItem(r, c, it)
-            self.bang.resizeRowsToContents()
+            vua_dong(self.bang, None, None)
         finally:
             self._dang_ve = False
         vuot = kq['vuot']
-        ket = (f'<span style="color:#B8433A"><b>VƯỢT {so_vn(vuot)} m²</b> so với diện tích thu hồi</span>' if vuot > 0 else
-               '<span style="color:#2F7A4F"><b>Không vượt</b> diện tích thu hồi</span>')
+        ket = (f'<span style="color:{mau_theo_tong("#B8433A", "chu")}"><b>VƯỢT {so_vn(vuot)} m²</b> so với diện tích thu hồi</span>' if vuot > 0 else
+               f'<span style="color:{mau_theo_tong("#2F7A4F", "chu")}"><b>Không vượt</b> diện tích thu hồi</span>')
         self.lb.setText(f'Tổng diện tích thu hồi của hộ: <b>{so_vn(kq["thu_hoi"])} m²</b> &nbsp;·&nbsp; '
                         f'Tổng diện tích tài sản xây dựng đã lập: <b>{so_vn(kq["tong"])} m²</b> &nbsp;→&nbsp; {ket}')
         lt = kq['loai_tru']

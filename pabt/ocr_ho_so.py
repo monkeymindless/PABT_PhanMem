@@ -6,6 +6,13 @@ Nhận dạng chữ: lớp chữ của PDF nếu có, không thì Tesseract (ocr
 13/2023; người dùng chọn 14/10/2026 thay PaddleOCR / API thị giác máy tính). Tesseract đọc CHỮ IN; chữ viết tay (biên bản điền tay) đọc
 không được / sai nhiều - người dùng soát lại trên bảng trước khi điền.
 
+1.0.48: Dán tài sản KHÔNG đổ cả trang OCR (mẫu in hành chính + rác Tesseract). loc_dong_viet_tay / dong_dua_vao_dan chỉ giữ dòng
+có số lượng + đơn vị / tên tài sản. Trợ lý AI (tùy chọn, mặc định tắt) chỉ nhận các dòng đã lọc — không gửi file ảnh / PDF.
+
+1.0.49: một đường đọc file (doc_chu / doc_va_phan_tich): PDF ảnh (OCR, lớp chữ thưa thì đọc lại ảnh), Word / Excel / CSV
+(bảng; Word/Excel chỉ có ảnh nhúng thì OCR ảnh trong file), rồi lọc tự động. Trợ lý AI bật thì viết lại dòng đã lọc (vẫn không
+gửi file). Chữ viết tay: nếu lần OCR khối chữ không ra dòng tài sản thì đọc lại kiểu cột thưa (psm 4).
+
 Bóc tách (boc_tach, theo nhãn của mẫu giấy tờ, không phụ thuộc vị trí):
 - chủ sử dụng: họ tên sau "Ông / Bà / Hộ ông (bà) / Họ và tên (chủ hộ)", số CCCD / CMND / định danh (9 hoặc 12 chữ số), địa chỉ
   ("Địa chỉ thường trú / Địa chỉ / Thường trú");
@@ -16,12 +23,24 @@ Bóc tách (boc_tach, theo nhãn của mẫu giấy tờ, không phụ thuộc v
 """
 from __future__ import annotations
 import re
+import shutil
+import tempfile
 import unicodedata
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 
-DUOI = ('.pdf',) + ('.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp')
+DUOI_VAN_BAN = ('.xlsx', '.xlsm', '.xls', '.docx', '.doc', '.csv', '.txt')
+DUOI = ('.pdf', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp', '.webp') + DUOI_VAN_BAN
+LOC_FILE = (
+    'Ảnh, PDF, Word, Excel (*.pdf *.jpg *.jpeg *.png *.tif *.tiff *.bmp *.webp *.docx *.doc *.xlsx *.xlsm *.xls *.csv);;'
+    'PDF (*.pdf);;Word (*.docx *.doc);;Excel (*.xlsx *.xlsm *.xls *.csv);;'
+    'Ảnh (*.jpg *.jpeg *.png *.tif *.tiff *.bmp *.webp);;Tất cả (*.*)'
+)
+CHU_MONG = 80                   # PDF / Word có ít chữ cái hơn mức này = lớp chữ thưa, nên OCR ảnh
+PSM4_TRANG_TOI_DA = 8           # đọc lại psm 4 chỉ khi ít trang (biên bản viết tay); GCN nhiều trang không đọc 2 lần
+GIOI_HAN_AI = 45                # giây: Trợ lý AI sau OCR — hết giờ / mất mạng thì bỏ qua
 
 
 @dataclass
@@ -38,15 +57,94 @@ class KetQuaOcr:
     nhan_khau: int | None = None
     nguon_goc: str = ''
     tai_dinh_cu: str = ''
+    # 1.0.48: dòng mẫu in / rác OCR đã bỏ khi đưa vào Dán tài sản
+    dong_bo: list = field(default_factory=list)
+
+
+@dataclass
+class LocOcr:
+    """Kết quả lọc chữ OCR: chỉ dòng viết tay / điền số liệu tài sản (đưa vào Dán tài sản)."""
+    giu: list = field(default_factory=list)
+    bo: list = field(default_factory=list)
+    ly_do: str = ''
+    da_ai: bool = False
 
 
 # ---------------------------------------------------------------- đọc file
+def chu_tu_bang(dong) -> str:
+    """Hàng bảng (danh sách ô) -> chữ, ô cách Tab (giữ cột Excel / Word / PA chi tiết)."""
+    return '\n'.join('\t'.join(str(o).strip() for o in d if str(o or '').strip()) for d in (dong or []) if d)
+
+
+def _chu_mong(chu: str) -> bool:
+    """Lớp chữ quá ít — PDF ảnh / Word scan thường chỉ có vài từ rác, cần OCR ảnh."""
+    return len(_RE_CHU_CAI.findall(chu or '')) < CHU_MONG
+
+
+def _ocr_anh_trong_office(file, bao_tien_do=None, cho=None) -> str:
+    """Word / Excel .docx/.xlsx là zip: OCR ảnh nhúng (biên bản scan dán vào Word). Không gửi file ra ngoài."""
+    from . import an_toan, ocr
+    p = Path(file)
+    try:
+        an_toan.kiem_tra_zip(p)
+    except an_toan.LoiAnToan:
+        return ''
+    with zipfile.ZipFile(p) as z:
+        ten = [n for n in z.namelist()
+               if n.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff', '.bmp', '.gif', '.webp'))
+               and not n.replace('\\', '/').startswith('__MACOSX')
+               and '..' not in n.replace('\\', '/')]
+        if not ten:
+            return ''
+        td = Path(tempfile.mkdtemp(prefix='PABT_ocr_off_'))
+        chu_all = []
+        try:
+            for i, n in enumerate(ten, 1):
+                if cho and cho():
+                    raise ocr.DaHuy()
+                if bao_tien_do:
+                    bao_tien_do(i, len(ten))
+                duoi = Path(n).suffix.lower() or '.png'
+                f = td / ('a%03d%s' % (i, duoi))
+                f.write_bytes(z.read(n))
+                try:
+                    chu_all.append('\n'.join(ocr.doc_chu(f, None, cho)))
+                except ocr.LoiOCR:
+                    continue
+        finally:
+            shutil.rmtree(td, ignore_errors=True)
+    return '\n'.join(x for x in chu_all if x.strip())
+
+
 def doc_chu(file, bao_tien_do=None, cho=None) -> tuple:
-    """(chữ toàn văn, đã phải OCR?) của PDF / ảnh. Lỗi -> ocr.LoiOCR / LoiNhap (thông báo tiếng Việt)."""
+    """(chữ toàn văn, đã phải OCR?) của PDF / ảnh / Word / Excel. Lỗi -> ocr.LoiOCR / LoiNhap (thông báo tiếng Việt).
+    PDF có lớp chữ thưa: đọc lại bằng OCR ảnh. Word/Excel ít chữ: OCR ảnh nhúng trong file."""
     from .quan_ly import doc_van_ban
-    dong, da_ocr = doc_van_ban(Path(file), bao_tien_do, cho)
+    from . import ocr
+    p = Path(file)
+    duoi = p.suffix.lower()
+    dong, da_ocr = doc_van_ban(p, bao_tien_do, cho)
     # 0.9.95: ô của một hàng nối bằng Tab (giữ cột bảng phương án chi tiết: Tên \t ĐVT \t Số lượng \t Đơn giá…)
-    chu = '\n'.join('\t'.join(str(o).strip() for o in d if str(o or '').strip()) for d in dong)
+    chu = chu_tu_bang(dong)
+    if not da_ocr and duoi == '.pdf' and _chu_mong(chu):
+        try:
+            chu2 = '\n'.join(ocr.doc_chu(p, bao_tien_do, cho))
+            if chu2.strip() and (not chu.strip() or len(loc_dong_viet_tay(chu2).giu) >= len(loc_dong_viet_tay(chu).giu)):
+                return chu2, True
+        except ocr.DaHuy:
+            raise
+        except ocr.LoiOCR:
+            pass
+    if not da_ocr and duoi in ('.docx', '.xlsx', '.xlsm') and _chu_mong(chu):
+        try:
+            chu2 = _ocr_anh_trong_office(p, bao_tien_do, cho)
+            if chu2.strip():
+                gop = (chu + '\n' + chu2).strip() if chu.strip() else chu2
+                return gop, True
+        except ocr.DaHuy:
+            raise
+        except (ocr.LoiOCR, OSError):
+            pass
     return chu, da_ocr
 
 
@@ -222,8 +320,252 @@ def _dong_tai_san(chu: str) -> list:
             continue                                       # tiêu đề nhóm ("I. NHÀ, CÔNG TRÌNH", "2. Cây trồng")
         x = re.sub(r'^\s*\d{1,3}(?:\.\d{1,2})?[.)]?\s+', '', x)       # STT "1", "1.2", "3)"
         if re.search(r'[A-Za-zÀ-ỹ]', x) and re.search(r'\d', x):
-            kq.append(' '.join(x.split()))
+            gon = ' '.join(x.split())
+            if not la_dong_mau_in(gon) and not la_dong_rac_ocr(gon):
+                kq.append(gon)
     return kq
+
+
+# ---------------------------------------------------------------- lọc viết tay / tài sản (1.0.48) — không đổ mẫu in vào Dán tài sản
+TOI_DA_DONG_DAN = 80            # quá số này = OCR còn rối: chỉ giữ dòng điểm cao nhất
+# mẫu in hành chính / nhãn ô form (chữ IN trên biên bản, GCN) — không phải dòng tài sản
+_RE_MAU_IN = re.compile(
+    r'(cong hoa xa hoi|doc lap.{0,8}tu do|hanh phuc|'
+    r'\bubnd\b|uy ban nhan dan|cong hoa xa|'
+    r'bien ban (kiem ke|kiem dem|dieu tra|xac minh)|'
+    r'nguoi co dat thu hoi|chu su dung dat|'
+    r'^(ho va ten|ho ten|ong \(ba\)|ong/ba|ba:|ong:)|'
+    r'\b(so cccd|so cmnd|cccd|cmnd|can cuoc cong dan|chung minh nhan dan|so dinh danh)\b|'
+    r'^(dia chi|thuong tru|noi thuong tru)\b|'
+    r'^(thua dat so|to ban do so|muc dich su dung|loai dat|dien tich( thu hoi)?)\b|'
+    r'^(ngay|thang|nam)\s+\d|(ngay\s+\d{1,2}\s+thang\s+\d{1,2}\s+nam)|'
+    r'\d{1,2}\s+thang\s+\d{1,2}\s+nam\s+\d{4}|'
+    r'(dai dien|nguoi lap|can bo kiem|chu ho ky|xac nhan cua)|'
+    r'(quoc huy|huy hieu|ky ten|chu ky)|'
+    r'^(stt|ten tai san|hang muc|don vi tinh|so luong|ghi chu|thanh tien)\b|'
+    r'^(i{1,3}|iv|v)\.\s*(nha|cay|ho tro|cong trinh|vat nuoi)|'
+    r'phuong an (boi thuong|chi tiet)|can cu (luat|nghi dinh|quyet dinh))',
+    re.I)
+# số lượng + đơn vị tính = tín hiệu mạnh nhất của dòng tài sản (kể cả OCR lệch dấu / viết tay)
+_RE_SL_DVT = re.compile(
+    r'\d[\d.,]*\s*(?:cây|cay|cái|cai|con|m\s*2|m2|m²|m\s*3|m3|m³|ha|kg|bụi|bui|gốc|goc|md|'
+    r'bộ|bo|trụ|tru|mộ|mo|hộ|ho|tháng|thang|khẩu|khau|vụ|vu|mét|met)\b',
+    re.I)
+_RE_TU_TAI_SAN = re.compile(
+    r'\b(nha|mai che|mai hien|hang rao|mang rao|gieng|chuong|ao nuoi|be nuoc|'
+    r'cong trinh|vat kien|nen nha|san be tong|cot dien|dong ho dien|'
+    r'cay|mit|xoai|sau rieng|tram|keo|cao su|dua|ca phe|lua|khoai|mia|'
+    r'buoi|chom chom|dieu|nhan|tieu|hoi|chuoi|thanh long|'
+    r'ga ta|vit|heo|trau|tom|ca nuoi|vat nuoi)\b',
+    re.I)
+_RE_CHU_CAI = re.compile(r'[A-Za-zÀ-ỹ]')
+_RE_RAC_DAC_BIET = re.compile(r'[|\\/_~`^#@$%*]{3,}|^[^\wÀ-ỹ]{4,}$')
+
+
+def la_dong_mau_in(dong: str) -> bool:
+    """Dòng chữ IN của mẫu hành chính / nhãn ô form — không đưa vào Dán tài sản."""
+    x = ' '.join(str(dong or '').split())
+    if not x or len(x) > 240:
+        return True
+    return bool(_RE_MAU_IN.search(_bo_dau(x)))
+
+
+def la_dong_rac_ocr(dong: str) -> bool:
+    """Rác Tesseract: ít chữ cái, toàn dấu, chuỗi ký tự lạ. Hàng bảng 'Sàn m2 20' (nhiều số) không phải rác."""
+    x = ' '.join(str(dong or '').split())
+    if not x or len(x) < 2:
+        return True
+    if _RE_RAC_DAC_BIET.search(x):
+        return True
+    chu = _RE_CHU_CAI.findall(x)
+    if not chu:
+        return True
+    if len(chu) < 2 and not re.search(r'\d', x):
+        return True
+    ty = len(chu) / max(len(x), 1)
+    return ty < 0.2 and not re.search(r'\d', x)
+
+
+def _diem_dong_ts(dong: str) -> int:
+    """Điểm 0..6: dòng có vẻ là tài sản (số lượng + ĐVT / tên cây-nhà). Không cộng điểm chỉ vì dấu ':' (nhãn CCCD / Họ tên)."""
+    x = ' '.join(str(dong or '').split())
+    if not x:
+        return 0
+    k = _bo_dau(x)
+    d = 0
+    if _RE_SL_DVT.search(x) or _RE_SL_DVT.search(k):
+        d += 3
+    if _RE_TU_TAI_SAN.search(k):
+        d += 2
+    if re.search(r'\d', x) and re.search(r'[A-Za-zÀ-ỹ]', x):
+        d += 1
+    return d
+
+
+def la_dong_ung_vien(dong: str) -> bool:
+    """Giữ khi có số lượng+ĐVT hoặc (tên tài sản + số), không phải mẫu in / rác OCR."""
+    if la_dong_mau_in(dong) or la_dong_rac_ocr(dong):
+        return False
+    x = ' '.join(str(dong or '').split())
+    k = _bo_dau(x)
+    if _RE_SL_DVT.search(x) or _RE_SL_DVT.search(k):
+        return True
+    return bool(_RE_TU_TAI_SAN.search(k) and re.search(r'\d', x) and _diem_dong_ts(dong) >= 3)
+
+
+def loc_dong_viet_tay(chu: str) -> LocOcr:
+    """Tách dòng viết tay / điền số liệu tài sản khỏi mẫu in và rác OCR của cả trang scan."""
+    kq = LocOcr()
+    for x in unicodedata.normalize('NFC', chu or '').splitlines():
+        x = ' '.join(x.replace('\t', ' ').split())
+        if not x:
+            continue
+        if la_dong_ung_vien(x):
+            kq.giu.append(x)
+        else:
+            kq.bo.append(x)
+    if len(kq.giu) > TOI_DA_DONG_DAN:
+        xep = sorted(kq.giu, key=_diem_dong_ts, reverse=True)
+        kq.bo.extend(xep[TOI_DA_DONG_DAN:])
+        kq.giu = xep[:TOI_DA_DONG_DAN]
+        kq.ly_do = (f'OCR còn rối: giữ {TOI_DA_DONG_DAN} dòng tài sản điểm cao nhất, '
+                    f'bỏ {len(kq.bo)} dòng mẫu in / rác.')
+    else:
+        kq.ly_do = (f'Giữ {len(kq.giu)} dòng tài sản / viết tay; '
+                    f'bỏ {len(kq.bo)} dòng mẫu in hoặc rác nhận dạng.')
+    return kq
+
+
+def dong_dua_vao_dan(chu: str) -> LocOcr:
+    """Dòng đưa vào ô Dán tài sản: ưu tiên bảng kiểm kê đã bóc, không có thì lọc cả trang."""
+    bang = _dong_tai_san(chu)
+    loc = loc_dong_viet_tay(chu)
+    if bang:
+        kq = LocOcr(giu=bang, bo=[x for x in loc.bo if x not in bang],
+                    ly_do=f'Lấy {len(bang)} dòng bảng tài sản; bỏ {len(loc.bo)} dòng mẫu in / rác.')
+        return kq
+    return loc
+
+
+CAU_HOI_OCR = (
+    'Các dòng dưới đây là chữ nhận dạng từ biên bản kiểm đếm (Tesseract; chữ viết tay dễ sai). '
+    'Chỉ giữ dòng là tài sản trên đất (nhà, công trình, cây trồng, vật nuôi) có số lượng. '
+    'Viết lại mỗi dòng đúng dạng: Tên: số lượng ĐVT[, quy cách]. '
+    'Bỏ mẫu in hành chính, chữ ký, họ tên, CCCD, địa chỉ, thửa đất. '
+    'Không bịa số lượng không có trong chữ gốc. Mỗi dòng một tài sản, không giải thích thêm.'
+)
+
+
+def _hoi_ai_gioi_han(ham, cho=None, gioi_han: float = GIOI_HAN_AI):
+    """Chạy ham() (gọi mạng) có hết giờ + hủy. Luồng phụ daemon; hết giờ / Dừng -> LoiTroLy."""
+    import threading
+    import time
+    from . import tro_ly
+    kq = {}
+
+    def chay():
+        try:
+            kq['gt'] = ham()
+        except BaseException as e:                      # noqa: B036
+            kq['loi'] = e
+
+    t = threading.Thread(target=chay, daemon=True)
+    t.start()
+    het = time.monotonic() + max(float(gioi_han or GIOI_HAN_AI), 1)
+    while t.is_alive():
+        if cho and cho():
+            raise tro_ly.LoiTroLy('Đã bỏ qua trợ lý AI.')
+        if time.monotonic() > het:
+            raise tro_ly.LoiTroLy('Trợ lý AI quá lâu hoặc mất mạng: đã bỏ qua.')
+        t.join(0.05)
+    if 'loi' in kq:
+        raise kq['loi']
+    return kq.get('gt')
+
+
+def chinh_dong_ocr_ai(dong, khach=None, cho=None, gioi_han: float = GIOI_HAN_AI, con=None) -> list:
+    """Nhờ Trợ lý AI viết lại dòng OCR đã lọc (không gửi file ảnh / PDF). Trợ lý tắt / lỗi -> LoiTroLy.
+    khach giả lập: gọi thẳng. Máy thật: hết giờ / Dừng thì bỏ qua, không treo cửa sổ.
+    con (1.0.51): kết nối dự án đang mở - họ tên chủ hộ có trong dự án được che NGAY ở luồng gọi (kết nối CSDL không dùng ở luồng nền),
+    trừ khi đã bật gửi dữ liệu cá nhân."""
+    from . import tro_ly
+    ds = [str(x).strip() for x in (dong or []) if str(x).strip() and la_dong_ung_vien(x)][:TOI_DA_DONG_DAN]
+    if not ds:
+        return []
+    if con is not None and not tro_ly.doc_cai_dat().get('gui_ca_nhan'):
+        ds = [tro_ly.an_danh(x, con) for x in ds]
+
+    def goi():
+        return tro_ly.hoi_claude(CAU_HOI_OCR, '\n'.join(ds), khach=khach, gioi_han=gioi_han)
+
+    chu = goi() if khach is not None else _hoi_ai_gioi_han(goi, cho, gioi_han)
+    kq = []
+    for x in (chu or '').splitlines():
+        x = x.strip().lstrip('-•* ').strip()
+        if x and not x.startswith('#') and la_dong_ung_vien(x):
+            kq.append(x)
+    return kq or ds
+
+
+def phan_tich_tu_dong(chu: str, khach=None, dung_ai=None, cho=None,
+                      gioi_han_ai: float = GIOI_HAN_AI) -> LocOcr:
+    """Lọc dòng tài sản / viết tay; nếu Trợ lý AI đang bật thì viết lại dòng đã lọc (không gửi file)."""
+    from . import tro_ly
+    loc = dong_dua_vao_dan(chu)
+    if dung_ai is None:
+        dung_ai = bool(tro_ly.doc_cai_dat().get('bat'))
+    if dung_ai and loc.giu:
+        try:
+            moi = chinh_dong_ocr_ai(loc.giu, khach=khach, cho=cho, gioi_han=gioi_han_ai)
+            if moi:
+                loc.giu = moi
+                loc.da_ai = True
+                loc.ly_do += ' Đã nhờ Trợ lý AI viết lại (không gửi file ảnh / PDF).'
+        except tro_ly.LoiTroLy as e:
+            loc.ly_do += ' Trợ lý AI bỏ qua: %s.' % e
+    return loc
+
+
+def _la_gcn(chu: str) -> bool:
+    """Chữ giống Giấy chứng nhận QSDĐ (không phải biên bản kiểm đếm viết tay)."""
+    kd = _bo_dau(chu or '')
+    return bool(re.search(r'giay chung nhan|quyen su dung dat', kd))
+
+
+def can_psm4(file, chu: str) -> bool:
+    """Đọc lại psm 4: biên bản ít trang, không phải GCN (GCN không có tài sản thì khỏi OCR lần 2)."""
+    from . import ocr
+    if _la_gcn(chu):
+        return False
+    duoi = Path(file).suffix.lower()
+    if duoi not in ocr.DUOI_ANH and duoi != '.pdf':
+        return False
+    try:
+        n = ocr.so_trang(file)
+    except Exception:                                   # noqa: BLE001
+        n = 1
+    return n <= PSM4_TRANG_TOI_DA
+
+
+def doc_va_phan_tich(file, bao_tien_do=None, cho=None, khach=None, dung_ai=None,
+                     psm_viet_tay: bool = True) -> tuple:
+    """(LocOcr, chữ gốc, đã OCR?) — đọc PDF/ảnh/Word/Excel, lọc, tùy chọn AI.
+    Chữ viết tay: lần OCR khối chữ không ra dòng tài sản thì đọc lại kiểu cột thưa — chỉ khi ít trang, không phải GCN."""
+    from . import ocr
+    chu, da_ocr = doc_chu(file, bao_tien_do, cho)
+    loc = phan_tich_tu_dong(chu, khach=khach, dung_ai=dung_ai, cho=cho)
+    if psm_viet_tay and da_ocr and not loc.giu and can_psm4(file, chu):
+        try:
+            chu2 = '\n'.join(ocr.doc_chu(file, bao_tien_do, cho, psm=4))
+            loc2 = phan_tich_tu_dong(chu2, khach=khach, dung_ai=dung_ai, cho=cho)
+            if loc2.giu:
+                loc2.ly_do += ' Đọc lại kiểu viết tay (cột thưa).'
+                return loc2, chu2, True
+        except ocr.DaHuy:
+            raise
+        except ocr.LoiOCR:
+            pass
+    return loc, chu, da_ocr
 
 
 # ---------------------------------------------------------------- phương án chi tiết của hộ đã số hóa (0.9.95)
@@ -425,7 +767,9 @@ def boc_tach(chu: str) -> KetQuaOcr:
             kq.nhan_khau = nk
     else:
         kq.thua = _thua(c)
-        kq.dong_tai_san = _dong_tai_san(c)
+        loc = dong_dua_vao_dan(c)
+        kq.dong_tai_san = loc.giu
+        kq.dong_bo = loc.bo
     if kq.dong_tai_san:
         from .phan_loai_tai_san import doc_danh_sach
         try:
@@ -444,10 +788,39 @@ def boc_tach(chu: str) -> KetQuaOcr:
     return kq
 
 
-def doc_va_boc_tach(file, bao_tien_do=None, cho=None) -> tuple:
-    """(KetQuaOcr, chữ toàn văn, đã OCR?) của một file."""
+def doc_va_boc_tach(file, bao_tien_do=None, cho=None, dung_ai=None, khach=None,
+                    psm_viet_tay: bool = True) -> tuple:
+    """(KetQuaOcr, chữ toàn văn, đã OCR?) của một file. Trợ lý AI bật: viết lại dòng tài sản đã lọc.
+    Chữ viết tay: lần đọc khối chữ không ra tài sản thì đọc lại psm 4 — chỉ khi ít trang, không phải GCN."""
+    from . import ocr, tro_ly
     chu, da_ocr = doc_chu(file, bao_tien_do, cho)
-    return boc_tach(chu), chu, da_ocr
+    kq = boc_tach(chu)
+    if psm_viet_tay and da_ocr and not kq.dong_tai_san and not kq.tai_san and can_psm4(file, chu):
+        try:
+            chu2 = '\n'.join(ocr.doc_chu(file, bao_tien_do, cho, psm=4))
+            kq2 = boc_tach(chu2)
+            if kq2.dong_tai_san or kq2.tai_san:
+                chu, kq = chu2, kq2
+                kq.canh_bao.append('Đọc lại kiểu viết tay (cột thưa).')
+        except ocr.DaHuy:
+            raise
+        except ocr.LoiOCR:
+            pass
+    if dung_ai is None:
+        dung_ai = bool(tro_ly.doc_cai_dat().get('bat'))
+    if dung_ai and kq.dong_tai_san:
+        try:
+            moi = chinh_dong_ocr_ai(kq.dong_tai_san, khach=khach, cho=cho)
+            if moi:
+                kq.dong_tai_san = moi
+                from .phan_loai_tai_san import doc_danh_sach
+                try:
+                    kq.tai_san = doc_danh_sach('\n'.join(moi))
+                except Exception:                        # noqa: BLE001 - dòng lạ: giữ chữ gốc
+                    pass
+        except tro_ly.LoiTroLy:
+            pass
+    return kq, chu, da_ocr
 
 
 def gop(ds: list) -> KetQuaOcr:

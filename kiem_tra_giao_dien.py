@@ -55,6 +55,11 @@ class KiemTra:
         try:
             ham()
             QApplication.processEvents()
+            # 1.0.55: processEvents() ở mức vòng sự kiện gốc KHÔNG xử lý deleteLater - widget / hộp thoại xóa trễ của mọi thao tác trước
+            # dồn lại tới vòng exec lồng đầu tiên (QMenu.exec của "menu chuột phải": đo nhầm 6-9 giây, có lần 53-57 giây ở nút khác).
+            # Phần mềm thật luôn chạy trong vòng sự kiện chính nên xóa dần - dọn ngay để tính đúng thời gian cho thao tác gây ra nó
+            from PySide6.QtCore import QEvent
+            QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
         except Exception:                                   # noqa: BLE001 - ghi mọi lỗi, thử tiếp
             self.loi.append((' > '.join(self.duong), traceback.format_exc()))
         dt = time.perf_counter() - t
@@ -220,21 +225,26 @@ def chan_tac_dong(kt: KiemTra) -> None:
     # chờ người bấm: bắt sự kiện hiện menu, chạy từng mục rồi đóng menu (exec trả None như khi người dùng bấm ra ngoài).
     from PySide6.QtCore import QEvent, QObject, QTimer
 
+    def _danh_thuc():
+        from PySide6.QtCore import QAbstractEventDispatcher
+        d = QAbstractEventDispatcher.instance()
+        if d is not None:
+            d.wakeUp()
+
     def chay_menu(m):
         try:
             ds = [x for x in m.actions() if x.text() and x.isEnabled() and not x.isSeparator() and x.menu() is None]
+            # 1.0.55: đóng menu TRƯỚC rồi mới chạy từng mục - như người dùng thật (Qt đóng menu rồi mới phát triggered). Trước đây
+            # chạy mục khi menu còn mở: hộp thoại con lồng trong vòng exec của menu, vòng đó mất tín hiệu đánh thức -> đo nhầm 6-9 giây
+            m.close()
         except RuntimeError:                                 # menu đã bị xóa
             return
+        # menu ẩn: tạo một sự kiện + đánh thức vòng exec để nó thoát ngay (người dùng thật luôn có sự kiện chuột)
+        QTimer.singleShot(0, lambda: None)
+        _danh_thuc()
         for x in ds:
             kt.dem['menu'] += 1
             kt.lam(f'menu → "{x.text()}"', x.trigger)
-        try:
-            m.close()
-        except RuntimeError:
-            pass
-        # menu bị ẩn trong một vòng sự kiện lồng (hộp thoại mở từ mục menu): Qt trên Windows đã "tiêu" tín hiệu đánh thức, vòng
-        # exec của menu chờ tới sự kiện kế tiếp (người dùng thật luôn có sự kiện chuột) - tạo một sự kiện để không đo nhầm 28 giây
-        QTimer.singleShot(0, lambda: None)
 
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QMainWindow, QWidget as QW
@@ -244,6 +254,9 @@ def chan_tac_dong(kt: KiemTra) -> None:
             if ev.type() == QEvent.Type.Show:
                 if isinstance(obj, QMenu):
                     QTimer.singleShot(0, lambda m=obj: chay_menu(m))
+                    # 1.0.55: chạy không màn hình (offscreen), hẹn giờ 0 ms đặt trong sự kiện Show của menu không đánh thức vòng exec của
+                    # menu - nằm chờ tới sự kiện nền kế tiếp (đo: 7 giây trước khi mục đầu tiên chạy; ghi nhầm "menu chuột phải 6-9 giây")
+                    _danh_thuc()
                 elif isinstance(obj, QW) and obj.isWindow() and not isinstance(obj, (QDialog, QMainWindow)) and \
                         obj.windowType() == Qt.WindowType.Window:
                     # 1.0.16: widget không cha bị setVisible(True) / show() trước khi đặt vào bố cục = cửa sổ rỗng nhấp nháy (người dùng
@@ -268,6 +281,10 @@ def chan_tac_dong(kt: KiemTra) -> None:
     in_an.mo_file = lambda p: kt.dem.update(['mo_file'])
     in_an.chay_excel = lambda *a, **k: []            # không mở Excel, không in
     van_ban_trinh.chay_word = lambda *a, **k: []    # không mở Word, không in
+    from pabt import thanh_phan_in, xem_truoc_tai_lieu
+    xem_truoc_tai_lieu.in_theo_tuy_chon = lambda *a, **k: kt.dem.update(['in_may']) or 0
+    xem_truoc_tai_lieu.in_co_hop_thoai = lambda *a, **k: kt.dem.update(['in_may']) or 0
+    thanh_phan_in.mo_thuoc_tinh = lambda *a, **k: kt.dem.update(['thuoc_tinh_may_in'])
 
     def khong_mang(*a, **k):
         raise OSError('Kiểm tra giao diện: không kết nối mạng')
@@ -401,6 +418,12 @@ def main(argv) -> int:
                 kt.dem_hop_an = f'{ten}: ' + ', '.join(sorted({type(h).__name__ for h in an}))
             if ten in ud.TRANG and w.con is not None:                       # trang bên phải: thử các điều khiển của trang
                 kt.lam(f'Trang "{ten}"', lambda: kt.thu(w.trang.currentWidget()))
+            # cửa sổ KHÔNG chặn (Bản đồ thửa đất...): lệnh trả về ngay nên trước đây không được thử nút nào (05/11/2026)
+            for h in [h for h in w.findChildren(QDialog) if h.isVisible() and not h.isModal()]:
+                kt.dem['hop'] += 1
+                ten_hop = f'[{type(h).__name__}: {h.windowTitle()[:50]}]'
+                kt.lam(ten_hop, lambda h=h, ten_hop=ten_hop: kt.thu(h, ten_hop))
+                kt.lam('đóng cửa sổ không chặn', h.close)
             thu_trang_nhung(kt, w)
             faulthandler.cancel_dump_traceback_later()
         kt.dem_trang_thai[TRANG_THAI[tt]] = len(kt.loi) - loi_truoc

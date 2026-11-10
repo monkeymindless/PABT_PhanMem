@@ -14,6 +14,11 @@ NGUON = 'esri'
 URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 GHI_NGUON = 'Ảnh nền: Esri, Maxar, Earthstar Geographics và cộng đồng người dùng GIS'
 Z_TOI_DA = 17                    # sâu hơn nhiều vùng Việt Nam chỉ có ảnh "Map data not yet available" (như LARC Mobile)
+Z_ANH_TOI_DA = 19                # 05/11/2026 máy tính: thử tới mức này (khu Đồng Nai có ảnh thật tới 19); ô giữ chỗ bị nhận ra, giữ ảnh mức <= Z_TOI_DA làm nền
+KHONG_CO_ANH = b''               # tai_o: máy chủ trả ô "Map data not yet available" (khác None = lỗi mạng)
+# ô giữ chỗ của Esri World Imagery: JPEG giống hệt nhau ở mọi vị trí, mọi mức
+CO_O_GIU_CHO = 2521
+BAM_O_GIU_CHO = '9eafd300d61393184a4abc1d458564cfd1cd9b6f9c4e9c74687045c0a0e5b858'
 Z_TOI_THIEU = 10
 O_TOI_DA = 64                    # số ô tối đa một lần nạp (khung dự án lớn: mức phóng thấp hơn)
 CHO_GIAY = 10
@@ -72,12 +77,14 @@ LOP = {'esri': URL,
        'esri_dia_danh': _esri('Reference/World_Boundaries_and_Places'),
        'esri_dia_hinh': _esri('World_Topo_Map'),
        'osm': 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'}
-NEN = {'ve_tinh': ('Vệ tinh', ('esri',), 17, GHI_NGUON),
-       've_tinh_ten': ('Vệ tinh + tên đường, địa danh', ('esri', 'esri_duong', 'esri_dia_danh'), 17,
+NEN = {'ve_tinh': ('Vệ tinh', ('esri',), Z_ANH_TOI_DA, GHI_NGUON),
+       've_tinh_ten': ('Vệ tinh + tên đường, địa danh', ('esri', 'esri_duong', 'esri_dia_danh'), Z_ANH_TOI_DA,
                        'Ảnh nền, đường, địa danh: Esri, Maxar, Earthstar Geographics, HERE, Garmin'),
        'duong': ('Bản đồ đường phố', ('osm',), 19, '© Những người đóng góp OpenStreetMap'),
        'dia_hinh': ('Địa hình', ('esri_dia_hinh',), 18, 'Bản đồ địa hình: Esri, HERE, Garmin, USGS')}
 NEN_MAC_DINH = 've_tinh_ten'
+KHONG_NEN = 'khong_nen'          # ô "Nền bản đồ" của máy tính: không tải ảnh, không giữ ô nền trong cảnh - tô màu ô thửa nhẹ máy nhất
+TEN_KHONG_NEN = 'Không nền'
 O_TOI_DA_KHUNG = 80              # số ô tối đa của vùng đang xem (mỗi lớp) - nhiều hơn thì lùi một mức phóng
 CO_O = 256
 
@@ -100,6 +107,14 @@ def o_cua_khung(khung: tuple, z: int, toi_da: int = O_TOI_DA_KHUNG, z_toi_thieu:
         if (x1 - x0 + 1) * (y1 - y0 + 1) <= toi_da or z <= z_toi_thieu:
             return z, [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)][:toi_da]
         z -= 1
+
+
+def la_o_giu_cho(du: bytes) -> bool:
+    """Ô "Map data not yet available" (không phải ảnh thật): không đặt lên bản đồ, không lưu đệm."""
+    if len(du) != CO_O_GIU_CHO:
+        return False
+    import hashlib
+    return hashlib.sha256(du).hexdigest() == BAM_O_GIU_CHO
 
 
 def thu_muc_dem() -> Path:
@@ -139,7 +154,8 @@ def tai_o(z: int, x: int, y: int, lay=None, lop: str = NGUON) -> bytes | None:
     p = file_dem(z, x, y, lop)
     if p is not None:
         try:
-            return p.read_bytes()
+            du = p.read_bytes()
+            return KHONG_CO_ANH if la_o_giu_cho(du) else du
         except OSError:
             pass
     try:
@@ -148,6 +164,8 @@ def tai_o(z: int, x: int, y: int, lay=None, lop: str = NGUON) -> bytes | None:
         return None
     if not du or len(du) > KICH_TOI_DA:
         return None
+    if la_o_giu_cho(du):
+        return KHONG_CO_ANH
     loai = an_toan.nhan_dang_dau_tep(du[:16])
     if loai not in ('jpeg', 'png'):
         return None

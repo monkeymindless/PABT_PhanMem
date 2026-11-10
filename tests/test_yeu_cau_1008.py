@@ -103,8 +103,9 @@ class TestSaoLuuTuDong(_Co):
         ds = csdl.ds_sao_luu_tu_dong(f)
         self.assertEqual(len(ds), csdl.SAO_LUU_GIU)
         self.assertEqual(ds[0], ra[-1])                                 # mới nhất trước
-        import sqlite3
-        c2 = sqlite3.connect(str(ds[0]))
+        from pabt import an_toan
+        self.assertTrue(an_toan.la_goi_sao_luu(ds[0]))                   # 1.0.55: bản sao lưu nén zlib (không mã hóa)
+        c2 = csdl.mo(ds[0], chi_doc=True)                               # mở trong suốt: giải nén ra file tạm, chỉ xem
         self.assertEqual(c2.execute('SELECT COUNT(*) FROM ho').fetchone()[0], 3)
         c2.close()
         self.assertFalse(list(csdl.thu_muc_sao_luu_tu_dong().glob('*.tmp')))

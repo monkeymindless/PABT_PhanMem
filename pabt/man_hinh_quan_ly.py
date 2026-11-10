@@ -16,14 +16,15 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 from . import csdl, du_thao, kiem_loi, quan_ly, thoi_han
 from .lap_pa import LoiNhap
 from .tien import D, vn
-from .giao_dien import KieuNut, XepDong, ap_kieu_nut, cac_dong_da_chon, con_tro_cho, dat_trang_thai
+from .giao_dien import TOKEN, KieuNut, XepDong, ap_kieu_nut, cac_dong_da_chon, con_tro_cho, dat_trang_thai
+from .giao_dien import mau_o_theo_tong, mau_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .thong_bao import chu_loi
 
 TIEU_DE = 'Quản lý hồ sơ trình phương án'
 # huy hiệu danh sách kiểm tra hồ sơ đợt trình (1.0.03): {đạt?: (nền, chữ)} - True đạt, None xem lại, False thiếu
 HUY_HIEU_KIEM = {True: ('#DCFCE7', '#2F7D54'), None: ('#FEF3C7', '#9A5A12'), False: ('#FEE2E2', '#B83A3A')}
 SO_CHU_SO_PA = 2                    # số PA chi tiết đánh ở hộp "Đánh số": 01, 02, 03… (NĐ 30/2020/NĐ-CP); 0 = không thêm số 0
-DO, VANG, XANH = QColor('#F8CBAD'), QColor('#FFF2CC'), QColor('#E2EFDA')
+DO, VANG, XANH = mau_o_theo_tong(globals(), DO='#F8CBAD', VANG=TOKEN['canh_bao_nhat'], XANH='#E2EFDA')
 
 
 def _html(s: str) -> str:
@@ -276,7 +277,7 @@ class HopDotTrinh(_Hop):
         self.b_xoa_so.clicked.connect(lambda: self.xoa_so())
         # một chạm: lấy hộ đã niêm yết xong ở Nhóm 4 (Niêm yết & Lấy ý kiến) vào đợt đang chọn
         self.b_niem_yet = QToolButton()
-        self.b_niem_yet.setText('Lấy hộ đã niêm yết xong từ Nhóm 4')
+        self.b_niem_yet.setText('Lấy hộ đã niêm yết xong')
         self.b_niem_yet.setToolTip('Nạp vào đợt các hộ đã hết thời hạn niêm yết công khai (không vướng pháp lý) - '
                                    'chọn tất cả, chỉ hộ đã đồng thuận, hoặc theo từng đợt niêm yết')
         self.b_niem_yet.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -475,7 +476,7 @@ class HopDotTrinh(_Hop):
             muc = 'dat' if dat == len(self.kiem) else 'loi' if any(ok is False for ok, _ in self.kiem) else 'canh_bao'
             xem = [chu for ok, chu in self.kiem if ok is not True]
             # 1.0.03: huy hiệu màu theo từng loại (Đạt / Xem lại / Thiếu) - đủ từng điều kiện ở chú thích
-            huy = ''.join(f'&nbsp;<span style="background-color:{nen}; color:{chu_mau}; font-weight:600">&nbsp;{ten[ok]} {n}&nbsp;</span>'
+            huy = ''.join(f'&nbsp;<span style="background-color:{mau_theo_tong(nen, "nen")}; color:{mau_theo_tong(chu_mau, "chu")}; font-weight:600">&nbsp;{ten[ok]} {n}&nbsp;</span>'
                           for ok, (nen, chu_mau) in HUY_HIEU_KIEM.items()
                           for n in [sum(1 for x, _ in self.kiem if x is ok)] if n)
             dat_trang_thai(self.lb_kiem, muc, f'Hồ sơ Bước 8: <b>đạt {dat}/{len(self.kiem)}</b> điều kiện&nbsp;{huy}'
@@ -671,7 +672,11 @@ class HopDotTrinh(_Hop):
         d = quan_ly.lay_dot(self.con, dot)
         if not self.hoi(f'Xóa {d.ten}? {d.so_ho} hộ của đợt trở về "chưa xếp đợt" (hồ sơ, thư mục đã xuất giữ nguyên).'):
             return None
-        quan_ly.xoa_dot(self.con, dot)
+        try:
+            quan_ly.xoa_dot(self.con, dot)
+        except LoiNhap as e:
+            self.bao(str(e))
+            return None
         self.thay_doi = True
         self.ve_dot()
         return dot
@@ -1155,7 +1160,11 @@ class HopKiemLoi(_Hop):
     def sua_tu_dong(self):
         if not self.hoi('Sửa tự động các lỗi trình bày (khoảng trắng, viết hoa họ tên, chữ tổ hợp, số CCCD) cho toàn dự án?'):
             return 0
-        n = kiem_loi.sua_tu_dong(self.con)
+        try:
+            n = kiem_loi.sua_tu_dong(self.con)
+        except LoiNhap as e:
+            self.bao(str(e))
+            return 0
         self.da_sua = self.da_sua or n > 0
         self.kiem_tra()
         self.bao(f'Đã sửa {n} ô.', loi=False)
@@ -1163,7 +1172,8 @@ class HopKiemLoi(_Hop):
 
     def xuat(self, file=None):
         if file is None:
-            file, _ = QFileDialog.getSaveFileName(self, 'Lưu kết quả kiểm tra', 'KiemTraLoi.xlsx', 'File Excel (*.xlsx)')
+            from .csdl import duong_goi_y
+            file, _ = QFileDialog.getSaveFileName(self, 'Lưu kết quả kiểm tra', duong_goi_y(self.con, 'KiemTraLoi.xlsx'), 'File Excel (*.xlsx)')
             if not file:
                 return None
         try:

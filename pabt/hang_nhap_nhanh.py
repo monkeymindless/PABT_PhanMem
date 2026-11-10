@@ -248,11 +248,12 @@ class HangNhapNhanh(QWidget):
                     ty_le=self.o_tl.text().strip(), kieu=k, ghi_chu=self.o_gc.text().strip(),
                     so_do=self.o_do.text().strip() if k in GOI_Y_DO and self.o_do is not None else '')
 
-    def xoa(self) -> None:
+    def xoa(self, giu_tieu_diem: bool = False) -> None:
         self.o_chon.xoa()
         if self.o_do is not None:
             self.o_do.clear()
         self.o_sl.clear()
         self.o_tl.clear()
         self.o_gc.clear()
-        self.o_chon.o.setFocus()
+        if not giu_tieu_diem:
+            self.o_chon.o.setFocus()

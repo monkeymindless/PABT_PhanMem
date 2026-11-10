@@ -127,7 +127,7 @@ class TestMau(unittest.TestCase):
         self.assertEqual(nut['Nhập file Excel'], 'nhap')            # Qt bỏ dấu … trên nút thanh lệnh
         self.assertEqual(nut['Lập phương án chi tiết'], 'pa')       # chữ trên menu (app.NHAN_MENU, 0.9.70)
         self.assertEqual(nut['Thêm hộ'], 'them')
-        self.assertEqual(nut['Xuất hồ sơ && Bản in'], 'in')         # Mẫu in: thanh menu Công cụ (0.9.23)
+        self.assertEqual(nut['In / Xuất hồ sơ'], 'in')         # Mẫu in: thanh menu Công cụ (0.9.23)
         self.assertIn('QHeaderView::section', self.app.styleSheet())
         w.close()
         from pabt.giao_dien import bo_ap_dung
@@ -389,7 +389,8 @@ class TestMau(unittest.TestCase):
     def test_app_user_model_id(self):
         """Taskbar Windows nhận đúng biểu tượng PABT (không gộp vào python.exe): đặt AppUserModelID trước QApplication."""
         from pabt import app as ud
-        self.assertEqual(ud.APP_USER_MODEL_ID, 'gov.pabt.boithuong.enterprise.2026')
+        self.assertEqual(ud.APP_USER_MODEL_ID, 'vn.larc.desktop.enterprise')                   # 1.0.52
+        self.assertEqual(ud.dinh_danh_ung_dung(), ud.APP_USER_MODEL_ID)                         # mã nguồn: định danh mới
         if sys.platform == 'win32':
             import ctypes
             from ctypes import wintypes
@@ -423,7 +424,7 @@ class TestMau(unittest.TestCase):
                 w.mo(str(_du_an(Path(td), 6)), chi_doc=True)
                 a = w.lenh['Xuất danh sách hộ…']
                 self.assertNotIn('Xuất danh sách hộ…', w.nut_ds)            # 0.9.66: chỉ ở menu Dữ liệu (bỏ nút trùng)
-                self.assertIn(a, w.menu_tren['Dữ liệu'].actions())
+                self.assertNotIn(a, w.menu_tren['Dữ liệu'].actions())       # 05/11/2026: xuất dữ liệu một chỗ, thẻ Xuất dữ liệu của bảng In / Xuất
                 self.assertTrue(a.isEnabled())
                 ten = {h['ma_ho']: h['o'][1] for h in w.mo_hinh.dong}
                 w.o_tim.setText('Hộ thử 3')

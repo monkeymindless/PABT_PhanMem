@@ -490,6 +490,7 @@ def _thong_tin_du_an(hang: list) -> dict:
 
 def _mo(file):
     import openpyxl
+    __import__('pabt.an_toan').an_toan.kiem_excel(file)
     return openpyxl.load_workbook(file, read_only=True, data_only=True)
 
 
@@ -693,6 +694,9 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
     tác cả lô.
     trung: 'bo_qua' (hộ đã có trong dự án - cùng CCCD / họ tên - thì bỏ qua), 'thay' (thay hồ sơ, thửa, phương án của hộ đó;
     giữ mã hộ, đợt trình, quyết định), 'them' (vẫn thêm thành hộ mới). du_an: điền các ô thông tin dự án còn trống."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')                 # vai trò tài khoản máy chủ (phan_quyen)
+    kiem_quyen(con, 'sua_khoi_luong')
     if trung not in ('bo_qua', 'thay', 'them'):
         raise ValueError(trung)
     bc = BaoCaoNhap()
@@ -719,6 +723,12 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
             ma = chi_muc.tim(h) if chi_muc is not None else None
             if ma is not None and trung == 'bo_qua':
                 bc.bo_qua.append((h.sheet, f'trùng hộ {ma} đã có trong dự án'))
+                continue
+            if ma is not None and trung == 'thay' and con.execute(
+                    'SELECT 1 FROM qd_ho WHERE ma_ho = ? UNION ALL SELECT 1 FROM pa_lan WHERE ma_ho = ? AND khoa = 1 LIMIT 1',
+                    (ma, ma)).fetchone():
+                # 1.0.58: không xóa phương án đã có quyết định / đã khóa (BoSoan.luu cũng chặn) - số không còn khớp quyết định đã ban hành
+                bc.bo_qua.append((h.sheet, f'hộ {ma} đã có quyết định phê duyệt / đã khóa: không thay (lập phương án bổ sung, điều chỉnh)'))
                 continue
             ten_ho = f'Sheet "{h.sheet}" ({h.ten_ngan})'
             dat_tinh = any((d.don_gia or KHONG) > 0 or (d.thanh_tien or KHONG) > 0 for d in h.dat)
@@ -787,7 +797,8 @@ def ghi(con, ds_ho: list, trung: str = 'bo_qua', nguon: str = 'file Excel', du_a
             g = dict(h.tong)
             if g.get(MUC_VN) is not None:                   # tong_excel 5 cột: cây trồng gồm cả vật nuôi
                 g[3] = (g.get(3) or KHONG) + g[MUC_VN]
-            con.execute('INSERT OR REPLACE INTO tong_excel VALUES (?,?,?,?,?,?,?)',
+            con.execute('DELETE FROM tong_excel WHERE ma_ho = ?', (ma,))      # 1.0.58: Ctrl+Z khôi phục được (REPLACE không chạy trigger xóa)
+            con.execute('INSERT INTO tong_excel VALUES (?,?,?,?,?,?,?)',
                         (ma, *(_chuoi(g.get(m) if g.get(m) is not None else (KHONG if g.get('tong') is not None else None))
                                for m in (1, 2, 3, 4, 5)), _chuoi(g.get('tong'))))
             bc.canh_bao += [f'{ten_ho}: {x}' for x in h.canh_bao]

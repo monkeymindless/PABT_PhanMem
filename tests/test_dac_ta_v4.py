@@ -134,7 +134,7 @@ class TestGiaoDien(CoSo):
             cb.setCurrentIndex(1)
         self.assertEqual(doi, [])
         self.assertFalse(cb.signalsBlocked())                                # trả lại trạng thái cũ
-        self.assertEqual(giao_dien.TOKEN['chinh'], '#1E3A5F')
+        self.assertEqual(giao_dien.TOKEN['chinh'], '#345678')
 
     def test_o_tim_cho_ngung_go(self):
         from PySide6.QtCore import QEventLoop, QTimer
@@ -184,13 +184,15 @@ class TestGiaoDien(CoSo):
             w.con.execute("UPDATE ho SET so_cccd = '075092001234', ngay_cap = '01/01/2021' WHERE thu_tu = 1")
         ma = w.con.execute('SELECT ma_ho FROM ho WHERE thu_tu = 1').fetchone()[0]
         from pabt.man_hinh import HopIn
-        d = HopIn(w.con, w, [ma])
+        d = HopIn(w.con, w, [ma], che_do='chinh_thuc')
         self.addCleanup(d.close)
         self.assertFalse(d.o_che_cccd.isChecked())
         self.assertTrue(d.o_che_cccd.isHidden())
         self.assertFalse(hasattr(d, '_luu_che_cccd'))
-        tt = du_lieu_in._thong_tin_ho(w.con, ma, du_lieu_in._thong_tin_du_an(w.con), True)    # che=True cũ: bỏ qua
-        self.assertEqual(tt['cccd'], '075092001234 - Ngày cấp: 01/01/2021')
+        da = du_lieu_in._thong_tin_du_an(w.con)
+        self.assertEqual(du_lieu_in._thong_tin_ho(w.con, ma, da)['cccd'], '075092001234 - Ngày cấp: 01/01/2021')
+        tt = du_lieu_in._thong_tin_ho(w.con, ma, da, True)    # 1.0.52: che=True = bản niêm yết công khai
+        self.assertEqual(tt['cccd'], '075092***234')
         from pabt import van_ban_trinh
         _, dong = van_ban_trinh.du_lieu(w.con, [ma])
         self.assertIn('075092001234', dong[0]['ho.cccd'])

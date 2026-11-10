@@ -2,6 +2,7 @@
 kiểm tra / sửa file dự án (chua_benh_csdl) và xuất gói chẩn đoán .zip (dự án đã ẩn danh) gửi tác giả. Hộp báo lỗi không mong muốn
 (giao_dien.cai_bat_loi) cũng có nút xuất gói này (xuat_goi_chan_doan)."""
 from __future__ import annotations
+from .giao_dien import mau_theo_tong, vua_dong  # noqa: E402
 from datetime import datetime
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from . import chua_benh_csdl, csdl
 
 MAU_MUC = {'dat': '#047857', 'canh_bao': '#9A5A12', 'loi': '#B83A3A'}
 CHU_MUC = {'dat': 'Đạt', 'canh_bao': 'Lưu ý', 'loi': 'Lỗi'}
-NUT_GOI = 'Xuất gói chẩn đoán ẩn danh gửi tác giả (.zip)…'
+NUT_GOI = 'Xuất gói chẩn đoán ẩn danh (.zip)…'
 # 20/10/2026 (ảnh mẫu người dùng): 5 chỉ số kiểm toán kỹ thuật (khóa, mã chỉ số, nhãn) + 4 nút bảo trì 1-click (việc chua_benh_csdl.
 # sua_tep_pabt, chữ nút, biểu tượng Segoe MDL2) - không emoji (Win 7)
 CHI_SO = (('khoa', '1. Trạng thái tệp khóa CSDL (.khoa)'), ('toan_ven', '2. Kiểm tra toàn vẹn CSDL (integrity_check)'),
@@ -199,9 +200,9 @@ class HopChanDoanHeThong(QDialog):
                 o = QTableWidgetItem(chu)
                 o.setToolTip(chu)
                 if c == 1:
-                    o.setForeground(QColor(MAU_MUC.get(m['muc'], '#202124')))
+                    o.setForeground(QColor(mau_theo_tong(MAU_MUC.get(m['muc'], '#202124'), 'chu')))
                 self.bang.setItem(r, c, o)
-        self.bang.resizeRowsToContents()
+        vua_dong(self.bang, None, None)
         if self.file_pabt and Path(self.file_pabt).is_file():
             self.kiem_tra_file = chua_benh_csdl.kiem_tra_tep_pabt(self.file_pabt)
             self.lb_tep.setText(f'Dự án đang mở ({Path(self.file_pabt).name}): {self.kiem_tra_file["thong_bao"]}')

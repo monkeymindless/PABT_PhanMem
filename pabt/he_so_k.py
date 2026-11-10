@@ -25,7 +25,7 @@ from decimal import Decimal, InvalidOperation
 from functools import lru_cache
 from pathlib import Path
 
-from .lap_pa import bo_dau
+from .lap_pa import bo_dau, cung_dia_ban, khoa_dia_ban, trung_dia_ban
 
 TEN_FILE = 'he_so_k.json'
 FILE_GAN_SAN = 'he_so_k_qd03.json'
@@ -184,7 +184,9 @@ def tom_tat() -> str:
 
 
 def ghi(dong: list, vb: str = '', nguon: str = '') -> Path:
-    """Ghi bảng hệ số K của máy (ghi file tạm rồi os.replace). Dòng không có hệ số hợp lệ bị bỏ."""
+    """Ghi bảng hệ số K của máy (ghi file tạm rồi os.replace). Dòng không có hệ số hợp lệ bị bỏ. 1.0.56: cần quyền quản trị."""
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('cập nhật hệ số K')
     ds = []
     for r in dong:
         r = chuan_dong(r)
@@ -199,15 +201,19 @@ def ghi(dong: list, vb: str = '', nguon: str = '') -> Path:
                               separators=(',', ':')).replace('},{', '},\n{'), encoding='utf-8')
     os.replace(tam, p)
     _quen()
+    quan_tri_bo.sau_khi_sua()
     return p
 
 
 def xoa() -> bool:
+    from . import quan_tri_bo
+    quan_tri_bo.kiem_quyen('đổi bảng hệ số K')
     p = file_he_so()
     _quen()
     if not p.is_file():
         return False
     p.unlink()
+    quan_tri_bo.sau_khi_sua()
     return True
 
 
@@ -343,8 +349,16 @@ def _ten_xa(s: str) -> str:
 
 
 def khop_dia_ban(dong_xa: str, xa: str) -> bool:
-    a, b = _ten_xa(dong_xa), _ten_xa(xa)
-    return bool(a and b) and (a == b or a in b or b in a)
+    """1.0.90: so nguyên chữ, giữ dấu khi hai bên cùng có dấu (trước: chuỗi con không dấu - "An Lộc" khớp "Xuân Lộc")."""
+    return cung_dia_ban(dong_xa, xa)
+
+
+def _dung_xa(ds, dia_ban: str, cm) -> list:
+    """Chỉ mục khóa theo tên KHÔNG dấu: "Lộc Thành" và "Lộc Thạnh" chung một ô. Bảng có đúng tên (giữ dấu) của xã hỏi thì chỉ lấy
+    dòng của xã đó; không có (gõ không dấu, chữ PDF mất dấu) thì giữ cả ô như trước."""
+    if not ds or khoa_dia_ban(dia_ban) not in cm.khoa_co_dau:
+        return list(ds)
+    return [r for r in ds if trung_dia_ban(r['dia_ban'], dia_ban)]
 
 
 # ---------------------------------------------------------------- tra cứu
@@ -354,6 +368,7 @@ class _ChiMuc:
     def __init__(self, ds):
         self.theo_tt, self.theo_vt, self.chung = {}, {}, []
         self.vt_xa = {}                                 # {vị trí: [(xã, dòng)]} - nhánh "thửa thuộc xã khác" không duyệt hết bảng
+        self.khoa_co_dau = {khoa_dia_ban(x) for x in {r['dia_ban'] for r in ds}}
         for r in ds:
             if r['tt'] != '':
                 x = _ten_xa(r['dia_ban'])
@@ -418,9 +433,9 @@ def tra(dia_ban: str = '', loai_dat: str = '', vi_tri: str = '', tuyen_duong: st
 
     r = None
     if _so_tt(tt) != '':
-        r = tot_nhat(cm.theo_tt.get((x, _so_tt(tt)), ()), 64)
+        r = tot_nhat(_dung_xa(cm.theo_tt.get((x, _so_tt(tt)), ()), dia_ban, cm), 64)
     if r is None and vt and cm.theo_vt:
-        r = tot_nhat([d for d in cm.theo_vt.get((x, vt), ()) if _co_doan(d, td)], 32)
+        r = tot_nhat([d for d in _dung_xa(cm.theo_vt.get((x, vt), ()), dia_ban, cm) if _co_doan(d, td)], 32)
         if r is None:                                   # thửa thuộc xã khác của dự án (mô tả vị trí ghi đủ tên đường + đoạn)
             r = tot_nhat([d for xa, d in cm.vt_xa.get(vt, ()) if xa != x and _co_doan(d, td)], 32)
     if r is None:
@@ -701,7 +716,7 @@ def _hang_bang(khoi: list, so_cot: int, canh_bao: list, ten: str) -> list:
 def doc_phu_luc(trang: list, ds_xa=None) -> tuple:
     """Chữ từng trang (pypdf / nhận dạng chữ) của Phụ lục I.1 / I.2 -> (dòng hệ số, cảnh báo). ds_xa: chỉ lấy các xã / phường này
     (so tên bỏ chữ Xã / Phường: "Phường Trị An" = "Xã Trị An"); None / rỗng = mọi bảng."""
-    can = {_ten_xa(x) for x in (ds_xa or ()) if _ten_xa(x)}
+    can = [x for x in (ds_xa or ()) if _ten_xa(x)]
     dong_chu = []
     for t in trang:
         ls = (t or '').splitlines()
@@ -712,7 +727,7 @@ def doc_phu_luc(trang: list, ds_xa=None) -> tuple:
     kq, canh_bao = [], []
     for j, (i, m) in enumerate(dau):
         ten = re.sub(r'\s+', ' ', m.group(2)).strip()
-        if can and _ten_xa(ten) not in can:
+        if can and not any(trung_dia_ban(ten, x) for x in can):
             continue
         khoi = dong_chu[i + 1:(dau[j + 1][0] if j + 1 < len(dau) else len(dong_chu))]
         cot = _cot_bang(' '.join(khoi[:30]))

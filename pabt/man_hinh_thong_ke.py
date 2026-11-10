@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QHBoxLa
                                QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from .tien import D, lam_tron, so_luong_vn, vn
-from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
+from .giao_dien import dat_kieu_theo_tong, mau_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 
 TIEU_DE = 'Bảng thống kê nhanh Hộ · Thửa · Diện tích toàn dự án (Ctrl+Shift+T)'
 COT_TRANG_THAI = ['Hạng mục trạng thái', 'Số hộ', 'Tỷ lệ hộ', 'Số thửa', 'Tỷ lệ thửa', 'DT thu hồi (m²)', 'Quy đổi (ha)',
@@ -138,7 +138,7 @@ class HopThongKeDiaChinh(QDialog):
     @staticmethod
     def _tieu_de(chu: str) -> QLabel:
         lb = QLabel(chu)
-        lb.setStyleSheet('QLabel { color: #0F172A; padding-top: 4px; }')
+        dat_kieu_theo_tong(lb, 'QLabel { color: #0F172A; padding-top: 4px; }')
         f = lb.font()
         f.setBold(True)
         lb.setFont(f)
@@ -165,7 +165,7 @@ class HopThongKeDiaChinh(QDialog):
             f.setBold(True)
             it.setFont(f)
         if nen:
-            it.setBackground(QBrush(QColor(nen)))
+            it.setBackground(QBrush(QColor(mau_theo_tong(nen, 'nen'))))
         b.setItem(r, c, it)
 
     def _vua(self, b) -> None:

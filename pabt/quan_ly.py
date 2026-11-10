@@ -16,7 +16,7 @@ from pathlib import Path
 
 from . import an_toan as _an_toan
 from . import csdl
-from .lap_pa import LoiNhap, bo_dau, kiem_ds_ho_nhan_viec
+from .lap_pa import LoiNhap, bo_dau, kiem_ds_ho_nhan_viec, kiem_quyen
 from .pdf_bang import loai_cot
 from .nghiep_vu import muc_5_cot
 from .tien import D, KHONG, chuoi, doc_so_vn, vn
@@ -78,6 +78,7 @@ def doc_trang_thai(con, ma_ho: int) -> dict:
 def cap_nhat_trang_thai(con, ds_ma_ho: list, gia_tri: dict) -> int:
     """Ghi các trường trạng thái có trong gia_tri cho các hộ (trường vắng mặt: giữ nguyên). Trả số hộ đã ghi."""
     kiem_ds_ho_nhan_viec(con, ds_ma_ho)
+    kiem_quyen(con, 'qd_chi_tra')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     gt = {}
     for k, v in gia_tri.items():
         if k not in TRUONG_TT:
@@ -172,9 +173,19 @@ def _truong_dot(ngay_trinh, so_to_trinh, ghi_chu, loai_van_ban, so_pa_tong, ngay
             chuan_ngay(ngay_pa_tong))
 
 
+def dot_co_van_ban_trinh(con) -> set:
+    """Id các đợt trình ĐÃ TRÌNH THẬT (Bước 8 QĐ 18/2026): có văn bản trình - đủ số và ngày tờ trình / văn bản. Đợt chỉ mới xếp hộ (chưa có
+    số, ngày) chưa phải đã trình (người dùng 09/11/2026: "chưa có văn bản trình mà 6 nấc đã ghi đã trình"). File cũ không có bảng: rỗng."""
+    try:
+        return {r[0] for r in con.execute("SELECT id FROM dot_trinh WHERE TRIM(so_to_trinh) <> '' AND TRIM(ngay_trinh) <> ''")}
+    except sqlite3.OperationalError:
+        return set()
+
+
 def tao_dot(con, ten: str = '', ngay_trinh: str = '', so_to_trinh: str = '', ghi_chu: str = '', loai_van_ban: str = 'Tờ trình',
             so_pa_tong: str = '', ngay_pa_tong: str = '', ky_hieu_so: str | None = None) -> int:
     """ky_hieu_so None: lấy ký hiệu của đợt gần nhất, không có thì của dự án (cột du_an cũ / tổ chức mặc định)."""
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     so = (con.execute('SELECT MAX(so) FROM dot_trinh').fetchone()[0] or 0) + 1
     ten = ' '.join(str(ten or '').split()) or f'Đợt {so}'
     if con.execute('SELECT 1 FROM dot_trinh WHERE ten = ?', (ten,)).fetchone():
@@ -199,6 +210,7 @@ def ky_hieu_mac_dinh(con) -> str:
 
 def sua_dot(con, dot_id: int, ten: str, ngay_trinh: str = '', so_to_trinh: str = '', ghi_chu: str = '',
             loai_van_ban: str = 'Tờ trình', so_pa_tong: str = '', ngay_pa_tong: str = '', ky_hieu_so: str | None = None) -> None:
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     ten = ' '.join(str(ten or '').split())
     if not ten:
         raise LoiNhap('Tên đợt không được để trống.')
@@ -226,6 +238,7 @@ def so_pa_cua_ho(con, ds_ma_ho: list) -> dict:
 def dat_so_pa(con, ds: list) -> int:
     """Ghi số / ngày phương án chi tiết: ds = [(ma_ho, số, ngày)] (ngày sai -> LoiNhap, không ghi gì). Trả số hộ."""
     kiem_ds_ho_nhan_viec(con, [m for m, *_ in ds])
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     gt = [(' '.join(str(so or '').split()), chuan_ngay(ngay), m) for m, so, ngay in ds]
     if not gt:
         return 0
@@ -262,6 +275,7 @@ def danh_so_pa(con, ds_ma_ho: list, bat_dau, ngay: str = '', chi_ho_chua_co: boo
 
 def xoa_dot(con, dot_id: int) -> int:
     """Xóa đợt; các hộ của đợt trở về "chưa xếp đợt" (hồ sơ, thư mục đã xuất giữ nguyên). Trả số hộ được bỏ ra."""
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     with csdl.giao_dich(con):
         n = con.execute('UPDATE ho SET dot_id = NULL WHERE dot_id = ?', (dot_id,)).rowcount
         if 'dot_trinh_id' in {r[1] for r in con.execute('PRAGMA table_info(pa_lan)')}:
@@ -274,6 +288,7 @@ def xoa_dot(con, dot_id: int) -> int:
 def gan_dot(con, ds_ma_ho: list, dot_id) -> int:
     """Đưa các hộ vào đợt (dot_id None: bỏ khỏi đợt). Trả số hộ."""
     kiem_ds_ho_nhan_viec(con, ds_ma_ho)
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     if dot_id is not None and not con.execute('SELECT 1 FROM dot_trinh WHERE id = ?', (dot_id,)).fetchone():
         raise LoiNhap('Đợt trình không còn trong dự án.')
     from . import lan_pa

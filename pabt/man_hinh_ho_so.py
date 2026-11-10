@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
                                QStyledItemDelegate, QStyleOptionViewItem, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import ho_so
-from .giao_dien import MAU_CANH_BAO_CHU, MAU_CANH_BAO_NEN, ChonXoXuong
+from .giao_dien import MAU_CANH_BAO_CHU, MAU_CANH_BAO_NEN, TOKEN, ChonXoXuong, mau_theo_tong, qmau_theo_tong
 from .lap_pa import LoiNhap
 from .tien import so_vn
 from .thong_bao import TEN_UD
@@ -323,7 +323,7 @@ class ONguonGoc(QStyledItemDelegate):
         y = vung.top() + max(0.0, (vung.height() - 2 * cao) / 2)
         chon = bool(op.state & QStyle.StateFlag.State_Selected)
         mau = op.palette.highlightedText().color() if chon else op.palette.text().color()
-        phu = mau if chon else QColor('#64748B')
+        phu = mau if chon else qmau_theo_tong('#64748B', 'chu')     # 1.0.93: đổi theo tông (Tối 3,1:1 trước đây)
         p.save()
         lk = self.vung_lien_ket(op.rect, font)
         for i, (nhan, gt) in enumerate((('• Vị trí: ', vt), ('• Nguồn gốc: ', chu))):
@@ -338,7 +338,7 @@ class ONguonGoc(QStyledItemDelegate):
                 p.setPen(mau)
                 hien = fm.elidedText(gt, Qt.TextElideMode.ElideRight, max(10.0, con))
             else:
-                p.setPen(QColor('#94A3B8'))
+                p.setPen(phu)                                   # 1.0.93: #94A3B8 chỉ 2,6:1 trên nền sáng
                 hien = '(chưa ghi)'
             p.drawText(QRectF(vung.left() + rn, yy, max(10.0, con), cao),
                        int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter), hien)
@@ -396,20 +396,20 @@ class OThaoTac(QStyledItemDelegate):
         tat = getattr(self.khung, 'chi_doc', False)
         p.save()
         p.setRenderHint(p.RenderHint.Antialiasing, True)
-        p.setPen(QPen(QColor('#CBD5E1')))
-        p.setBrush(QColor('#FFFFFF'))
+        p.setPen(QPen(QColor(TOKEN['vach'])))                 # 1.0.93: nút theo tông (Tối trước đây nút trắng chữ navy)
+        p.setBrush(QColor(TOKEN['khung']))
         p.drawRoundedRect(sua, 4, 4)
         f = QFont(option.font)
         f.setBold(True)
         p.setFont(f)
-        p.setPen(QColor('#94A3B8' if tat else '#1E3A5F'))
+        p.setPen(qmau_theo_tong('#94A3B8' if tat else '#1E3A5F', 'chu'))
         p.drawText(sua, CAN_GIUA, 'Sửa')
         from .giao_dien import icon_ky_hieu
-        ic = icon_ky_hieu(0xE74D, '#94A3B8' if tat else '#B83A3A', 16)
+        ic = icon_ky_hieu(0xE74D, mau_theo_tong('#94A3B8' if tat else '#B83A3A', 'chu'), 16)
         if ic is not None:
             p.drawPixmap(int(xoa.center().x() - 8), int(xoa.center().y() - 8), ic.pixmap(16, 16))
         else:
-            p.setPen(QColor('#94A3B8' if tat else '#B83A3A'))
+            p.setPen(qmau_theo_tong('#94A3B8' if tat else '#B83A3A', 'chu'))
             p.drawText(xoa, CAN_GIUA, '×')
         p.restore()
 
@@ -431,19 +431,18 @@ class OThaoTac(QStyledItemDelegate):
 CAO_TOM_TAT_THUA = 34
 # nhãn ô thông tin chủ sử dụng (tổ chức: "Tổ chức" / "Địa chỉ", ẩn các ô AN_KHI_TO_CHUC - 1.0.04)
 NHAN_HO = {'ho_ten': 'Họ và tên', 'so_cccd': 'Số CCCD/Định danh', 'ngay_cap': 'Ngày cấp / Nơi cấp', 'dia_chi': 'Địa chỉ thường trú',
-           'dien_thoai': 'Số điện thoại', 'phap_ly': 'Tình trạng pháp lý', 'ghi_chu': 'Ghi chú hồ sơ hộ', 'tranh_chap': 'Tranh chấp',
+           'dien_thoai': 'Số điện thoại', 'phap_ly': 'Tình trạng pháp lý', 'ghi_chu': 'Ghi chú hồ sơ hộ', 'ghi_chu_ten': 'Ghi chú dưới tên', 'tranh_chap': 'Tranh chấp',
            'tai_dinh_cu': 'Tái định cư', 'trang_thai': 'Trạng thái'}
 AN_KHI_TO_CHUC = ('so_cccd', 'ngay_cap', 'noi_cap', 'dien_thoai')
 # lưới 3 cột khối I (20/10/2026, theo ảnh người dùng): khóa -> (hàng, cột). Ngày cấp + nơi cấp chung một ô; "Hồ sơ đính kèm" (nút
 # NutHoSoScan) ở hàng 2 cột 2. Trường không có ở đây (an=) không hiện
 O_LUOI_HO = {'ho_ten': (0, 0), 'so_cccd': (0, 1), 'ngay_cap': (0, 2), 'dia_chi': (1, 0), 'dien_thoai': (1, 1), 'phap_ly': (1, 2),
-             'ghi_chu': (2, 0), 'tranh_chap': (2, 1), 'tai_dinh_cu': (3, 0), 'trang_thai': (3, 1)}
+             'ghi_chu': (2, 0), 'tranh_chap': (2, 1), 'tai_dinh_cu': (3, 0), 'trang_thai': (3, 1), 'ghi_chu_ten': (4, 0)}
 O_HO_SO_DINH_KEM = (2, 2)
 # tên thuộc tính theo đặc tả (bí danh của self.o / self.nhan_o)
 BI_DANH_O = {'ho_ten': ('lb_ten', 'o_ten'), 'so_cccd': ('lb_cccd', 'o_cccd'), 'ngay_cap': ('lb_ngay_cap', 'o_ngay_cap'),
              'dia_chi': ('lb_dia_chi', 'o_dia_chi'), 'dien_thoai': ('lb_sdt', 'o_sdt'), 'ghi_chu': ('lb_ghi_chu', 'o_ghi_chu'),
              'phap_ly': ('lb_tinh_trang', 'o_phap_ly')}
-GOI_Y_SAO_CHEP = 'Ctrl+C: sao chép ô'
 # mẫu câu nguồn gốc đất (HopNguonGoc - chèn tại con trỏ; '…' là chỗ điền). Không ghi số liệu thật.
 MAU_CAU_NGUON_GOC = (
     ('Mở đầu thửa', 'Thửa đất số …, tờ bản đồ số …, xã …: '),
@@ -533,9 +532,8 @@ class KhungHoSo(QWidget):
         h.addStretch(1)
         self.the_loai_doi_tuong = _the_nho('', 'vang')
         self.the_cccd = _the_nho('', 'xanh')
-        self.the_sao_chep = _the_nho(GOI_Y_SAO_CHEP, 'lam')
-        self.the_sao_chep.setToolTip('Bảng thửa: nhấp một lần chọn ô, Ctrl+C chép giá trị ô, Ctrl+Shift+C chép cả dòng thửa.')
-        for t in (self.the_loai_doi_tuong, self.the_cccd, self.the_sao_chep):
+        # 06/11/2026: bỏ huy hiệu "Ctrl+C: sao chép ô" (trông như nút, đã có ở dải đáy)
+        for t in (self.the_loai_doi_tuong, self.the_cccd):
             h.addWidget(t)
         lo.addLayout(h)
         luoi = QGridLayout()
@@ -566,6 +564,9 @@ class KhungHoSo(QWidget):
                 self.o['noi_cap'].setPlaceholderText('Nơi cấp')
                 hh.addWidget(self.o['noi_cap'], 1)
                 luoi.addLayout(hh, hang, cot * 2 + 1)
+            elif k == 'ghi_chu_ten':                           # 1.0.78: nội dung dài: rộng hết hàng
+                w.setPlaceholderText('Hiện dưới tên hộ; bản in ghi liền sau tên. Ví dụ: xây dựng trên một phần thửa đất số …, tờ bản đồ số … của ông bà …')
+                luoi.addWidget(w, hang, cot * 2 + 1, 1, 5)
             else:
                 luoi.addWidget(w, hang, cot * 2 + 1)
         nhan = QLabel('Hồ sơ đính kèm:')
@@ -620,7 +621,11 @@ class KhungHoSo(QWidget):
         self.lb_tieu_de_thua.setProperty('vai', 'tieu_de')
         h.addWidget(self.lb_tieu_de_thua)
         h.addWidget(self.lb, 1)
-        self.the_goi_y_bang = _the_nho('Bấm đúp Nguồn gốc: xem / sửa đủ', 'lam')
+        self.the_goi_y_bang = QLabel('Bấm đúp Nguồn gốc: xem / sửa đủ')   # chữ gợi ý, không phải nút
+        self.the_goi_y_bang.setProperty('vai', 'phu')
+        f_gy = self.the_goi_y_bang.font()
+        f_gy.setItalic(True)
+        self.the_goi_y_bang.setFont(f_gy)
         h.addWidget(self.the_goi_y_bang)
         h.addWidget(b_them)
         h.addWidget(self.b_thao_tac)
@@ -674,6 +679,8 @@ class KhungHoSo(QWidget):
         b.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         b.customContextMenuRequested.connect(lambda pos: self.menu_bang(pos))
         cho_phep_sao_chep_bang(b)
+        from .giao_dien import cat_khoi_bang, dan_vao_bang, gan_cat_dan
+        gan_cat_dan(b, lambda: dan_vao_bang(b), lambda: cat_khoi_bang(b))       # 1.0.78
         return b
 
     def _thanh_tom_tat(self) -> QFrame:
@@ -723,6 +730,64 @@ class KhungHoSo(QWidget):
         self.ban_dau = self.thu_thap()
         if getattr(self, '_ht_bang', None) is not None:
             self._ht_bang.ghi_nho()
+        self._tu_dien_khi_nap()
+
+    def _tu_dien_khi_nap(self) -> None:
+        """Sau khi nạp hộ (06/11/2026, người dùng): ô họ tên ghi cả câu thì tách tên riêng, phần diễn giải sang Tình trạng pháp lý; thửa có DT thu hồi 0 mà mục 1 đã có diện tích thì
+        điền. Chỉ đổi trên form: người dùng thấy, bấm Lưu mới ghi (đúng đường lưu thường: quyền, nhật ký, hoàn tác). Dự án chỉ xem: chỉ hiện, không tính là thay đổi."""
+        if self.ma_ho is None:
+            return
+        doi = []
+        w_ten, w_pl = self.o.get('ho_ten'), self.o.get('ghi_chu_ten')     # 1.0.78: sang ô riêng (trước: Tình trạng pháp lý)
+        if w_ten is not None and w_pl is not None:
+            ten, dg = ho_so.tach_ho_ten(w_ten.text())
+            if dg:
+                w_ten.setText(ten)
+                w_ten.setCursorPosition(0)
+                cu = w_pl.text().strip()
+                if dg not in cu:
+                    w_pl.setText(f'{cu}; {dg}' if cu else dg)
+                    w_pl.setCursorPosition(0)
+                doi.append('tách họ tên')
+        n = self._dien_dt_tu_muc_1()
+        if n:
+            doi.append(f'điền DT thu hồi {n} thửa từ mục 1')
+        if not doi:
+            return
+        self.cap_nhat_tom_tat_thua()
+        self.cap_nhat_nhan_to_chuc()
+        if getattr(self, 'chi_doc', False):
+            self.ban_dau = self.thu_thap()
+        else:
+            self.lb.setText('Đã tự ' + ', '.join(doi) + ': xem lại rồi bấm Lưu. ' + self.lb.text())
+
+    def _dien_dt_tu_muc_1(self) -> int:
+        """Dòng thửa DT thu hồi trống / 0 mà mục 1 có diện tích của đúng thửa đó: điền. Trả số thửa đã điền."""
+        from .tien import D, KHONG, doc_so_vn
+        c_dt = self.cot.index('dt_thu_hoi')
+        tong = {}
+        for r in self.con.execute('SELECT ma_thua, dien_tich FROM ct_dat WHERE ma_ho = ? AND ma_thua IS NOT NULL', (self.ma_ho,)):
+            tong[r['ma_thua']] = tong.get(r['ma_thua'], KHONG) + D(r['dien_tich'] or 0)
+        if not any(v > 0 for v in tong.values()):
+            return 0
+        n = 0
+        cu = self.bang.blockSignals(True)
+        try:
+            ma_cac_dong = [self.bang.item(r, 0).data(Qt.ItemDataRole.UserRole) if self.bang.item(r, 0) is not None else None for r in range(self.bang.rowCount())]
+            for r, ma in enumerate(ma_cac_dong):
+                it = self.bang.item(r, c_dt)
+                if it is None or ma is None or ma_cac_dong.count(ma) != 1 or tong.get(ma, KHONG) <= 0:
+                    continue
+                try:
+                    gia_tri = doc_so_vn(it.text()) if it.text().strip() else KHONG
+                except (ValueError, ArithmeticError):
+                    continue
+                if gia_tri == 0:
+                    it.setText(so_vn(tong[ma]))
+                    n += 1
+        finally:
+            self.bang.blockSignals(cu)
+        return n
 
     def _vi_tri_gia(self) -> dict:
         """{mã thửa: vị trí giá đất ở mục 1 (mọi lần lập phương án, không trùng)} - cột "Vị trí đất" chỉ xem."""
@@ -829,7 +894,7 @@ class KhungHoSo(QWidget):
                     con = ng - th_cua[(self._chu(r, 'so_to'), self._chu(r, 'so_thua'))]
                     chu = so_vn(con)
                     tip = 'DT nguyên thửa - tổng DT thu hồi các dòng cùng tờ / thửa'
-                    mau = QColor(MAU_CANH_BAO_CHU) if con < 0 else None       # 20/10/2026: cảnh báo = hổ phách (một màu)
+                    mau = QColor(mau_theo_tong(MAU_CANH_BAO_CHU, 'chu')) if con < 0 else None       # 20/10/2026: cảnh báo = hổ phách (một màu)
                     if con < 0:
                         tip = 'DT thu hồi lớn hơn DT nguyên thửa - kiểm tra lại số liệu.'
                 # chỉ đặt khi đổi: mỗi lần đặt phát dataChanged -> hẹn tính lại tóm tắt (đặt mãi thì vòng lặp khi rảnh)
@@ -842,7 +907,7 @@ class KhungHoSo(QWidget):
                     it.setData(Qt.ItemDataRole.UserRole + 1, do)
                     if do:
                         it.setForeground(mau)
-                        it.setBackground(QColor(MAU_CANH_BAO_NEN))
+                        it.setBackground(QColor(mau_theo_tong(MAU_CANH_BAO_NEN, 'nen')))
                     else:
                         it.setData(Qt.ItemDataRole.ForegroundRole, None)
                         it.setData(Qt.ItemDataRole.BackgroundRole, None)
@@ -855,7 +920,7 @@ class KhungHoSo(QWidget):
 
         def m2(v):
             return '—' if v is None else f'{so_vn(v)} m²'
-        self.lb_tieu_de_thua.setText(f'II. Thửa đất thu hồi && nguồn gốc ({tt["so_thua"]} thửa)')
+        self.lb_tieu_de_thua.setText(f'II. Thửa đất thu hồi & nguồn gốc ({tt["so_thua"]} thửa)')
         self.lb_tom_tat_thua.setText(
             f'<b>Tổng hợp địa chính hộ:</b> Tổng số thửa: <b>{tt["so_thua"]}</b> thửa  ·  Số tờ bản đồ: <b>{tt["so_to"]}</b> tờ  ·  '
             f'Tổng DT nguyên thửa: <b>{m2(tt["dt_nguyen_thua"])}</b>  ·  Tổng DT thu hồi: <b>{m2(tt["dt_thu_hoi"])}</b>  ·  '
@@ -866,13 +931,14 @@ class KhungHoSo(QWidget):
                                         if loai else '')
         for t in self.the_loai:                           # thẻ cơ cấu loại đất (dựng lại - vài thẻ)
             self.khoi_the_loai.removeWidget(t)
+            t.hide()                                      # gọi hai lần trong một lượt: thẻ chờ xóa không đè lên chữ
             t.deleteLater()
         self.the_loai = []
         for ten, dt, n, ma in self.co_cau_loai():
             t = QLabel(f'{ten}: {so_vn(dt)} m² ({n} thửa)')
             nen, mau = mau_loai_dat(ma) if ma else MAU_LOAI_KHAC
             t.setProperty('the_nho', 'loai')
-            t.setStyleSheet(f'background: {nen}; color: {mau};')      # màu theo nhóm - nhãn lá, không phải khung chứa
+            t.setStyleSheet(f'background: {mau_theo_tong(nen, "nen")}; color: {mau_theo_tong(mau, "chu")};')      # màu theo nhóm - nhãn lá, không phải khung chứa
             self.khoi_the_loai.addWidget(t)
             self.the_loai.append(t)
 
@@ -1131,12 +1197,16 @@ class KhungHoSo(QWidget):
         return True
 
     # ---------------------------------------------- lưu
-    def luu(self) -> bool:
+    def luu(self, im_lang: bool = False) -> bool:
+        """im_lang=True (lưu tự động 1.0.51): lỗi nhập không hiện hộp thoại - lý do ở self.loi_luu."""
         tt, ds = self.thu_thap()
+        self.loi_luu = ''
         try:
             self.ma_ho = ho_so.luu_ho(self.con, self.ma_ho, tt, ds)
         except LoiNhap as e:
-            self._bao(str(e))
+            self.loi_luu = ' '.join(str(e).split())
+            if not im_lang:
+                self._bao(str(e))
             return False
         self.canh_bao = ho_so.thua_trung_ho_khac(self.con, self.ma_ho)
         self._da_ghi()

@@ -38,6 +38,8 @@ def _bay_gio() -> str:
 # ---------------------------------------------------------------- lớp KML
 def luu_lop(con, ds: list) -> int:
     """ds = [(tên, XML KML bytes)] -> lưu (tên trùng thì thay). Trả số lớp."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')                 # vai trò tài khoản máy chủ (phan_quyen)
     ds = [(str(t), bytes(x)) for t, x in ds if x and len(x) <= KML_TOI_DA]
     if not ds:
         return 0
@@ -64,6 +66,8 @@ def ds_lop(con) -> list:
 
 def xoa_lop(con, ten: list | None = None) -> int:
     """Bỏ lớp KML đã lưu (ten None = tất cả). Trả số lớp bỏ."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')                 # vai trò tài khoản máy chủ (phan_quyen)
     if not co_bang(con, BANG_LOP):
         return 0
     with csdl.giao_dich(con):
@@ -81,6 +85,8 @@ def xoa_lop(con, ten: list | None = None) -> int:
 # ---------------------------------------------------------------- ô ảnh nền
 def luu_o(con, ds: list) -> int:
     """ds = [(lớp, z, x, y, ảnh bytes)] -> lưu (chỉ JPEG / PNG). Trả số ô đã lưu."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')                 # vai trò tài khoản máy chủ (phan_quyen)
     from .an_toan import nhan_dang_dau_tep
     hop = [(lp, int(z), int(x), int(y), bytes(a)) for lp, z, x, y, a in ds
            if a and nhan_dang_dau_tep(bytes(a[:16])) in ('jpeg', 'png')]
@@ -123,6 +129,8 @@ def tom_tat(con) -> dict:
 
 
 def xoa_o(con) -> int:
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')                 # vai trò tài khoản máy chủ (phan_quyen)
     if not co_bang(con, BANG_O):
         return 0
     with csdl.giao_dich(con):

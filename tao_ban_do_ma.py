@@ -30,7 +30,7 @@ QT_GHI_DE = {
     'focusOutEvent', 'contextMenuEvent', 'changeEvent', 'event', 'eventFilter', 'nativeEvent', 'timerEvent', 'dragEnterEvent',
     'dropEvent', 'dragMoveEvent', 'moveEvent', 'sizeHint', 'minimumSizeHint', 'hasHeightForWidth', 'heightForWidth', 'data',
     'setData', 'rowCount', 'columnCount', 'headerData', 'flags', 'index', 'parent', 'sort', 'filterAcceptsRow', 'lessThan',
-    'createEditor', 'setEditorData', 'setModelData', 'updateEditorGeometry', 'paint', 'editorEvent', 'displayText', 'validate',
+    'createHandle', 'createEditor', 'setEditorData', 'setModelData', 'updateEditorGeometry', 'paint', 'editorEvent', 'displayText', 'validate',
     'fixup', 'textFromValue', 'valueFromText', 'stepBy', 'stepEnabled', 'done', 'accept', 'reject', 'exec', 'addItem', 'count',
     'itemAt', 'takeAt', 'setGeometry', 'expandingDirections', 'sizeHintForColumn', 'sizeHintForRow', 'initStyleOption',
     'showPopup', 'hidePopup', 'boundingRect', 'shape', 'hoverEnterEvent', 'hoverLeaveEvent', 'itemChange', 'inputMethodEvent',

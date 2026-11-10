@@ -206,9 +206,12 @@ class HopCauHinhNghiepVu(QDialog):
             self.o_hm[k] = o
             f.addRow(f'Hạn mức đất ở tại {nhan} (m²):', o)
         bi = self.hs['ban_in']
-        self.o_che = QCheckBox('Che số CCCD')       # 1.0.04: bỏ che CCCD - ô ẩn, luôn tắt
-        self.o_che.setChecked(False)
-        self.o_che.setVisible(False)
+        # 1.0.52: mặc định che số CCCD trên bản niêm yết công khai cho dự án chưa tự chọn (Xuất hồ sơ & Bản in > Dự thảo)
+        self.o_che = QCheckBox('Che số CCCD trên bản niêm yết công khai')
+        self.o_che.setToolTip('Bản dự thảo dán tại điểm dân cư và file bảng niêm yết: 075092***456. Văn bản chính thức in đủ số.')
+        self.o_che.setChecked(bool(bi.get('che_cccd_ban_du_thao')))
+        from .giao_dien import nut_co_mo_ta
+        f.addRow('', nut_co_mo_ta(self.o_che, 'Mặc định cho dự án chưa tự chọn.'))
         self.cb_doc = QComboBox()
         for t, v in CAN_DOC:
             self.cb_doc.addItem(t, v)
@@ -278,7 +281,7 @@ class HopCauHinhNghiepVu(QDialog):
         qt['nhan_khau_canh_bao'] = self.o_nk.value()
         for k, o in self.o_hm.items():
             qt['han_muc_dat_o_m2'][k] = _doc_so(o.text(), f'Hạn mức đất ở ({k})') if o.text().strip() else None
-        hs['ban_in']['che_cccd_ban_du_thao'] = False
+        hs['ban_in']['che_cccd_ban_du_thao'] = bool(self.o_che.isChecked())
         hs['ban_in']['nguon_goc']['can_doc'] = self.cb_doc.currentData()
         tong_hop = hs['ban_in'].setdefault('le_trang', {}).setdefault('tong_hop', {})
         for k, o in self.o_le.items():                    # cm -> inch (hồ sơ tính bằng inch, 0 - 3)

@@ -19,19 +19,24 @@ PY38 = DEV / 'venv38_32' / 'Scripts' / 'python.exe'
 TAM = DEV / 'nguon38'
 RA = GOC / 'dist' / 'PABT_Win7'
 CHEP = ('chay.py', 'nap_cap_nhat.py', 'pabt', 'HUONG_DAN.md')      # 1.0.20: không đóng mau_in (bảng tổng hợp dựng bằng mã: pabt/mau_bang_tong_hop.py)
-DU_LIEU = ('pabt/schema.sql', 'pabt/bo_don_gia.sqlite', 'pabt/bang_gia_nq28.json', 'pabt/he_so_k_qd03.json', 'pabt/bieu_tuong.png', 'pabt/pabt_profile.json')
+DU_LIEU = ('pabt/schema.sql', 'pabt/bo_don_gia.sqlite', 'pabt/bang_gia_nq28.json', 'pabt/he_so_k_qd03.json', 'pabt/gia_dat_qd03.json', 'pabt/bieu_tuong.png', 'pabt/pabt_profile.json')
 # cập nhật đơn giá từ trang web phát hành riêng bằng gói .pabtcn: không đóng vào exe, nhưng giữ thư viện chuẩn nó cần
 # cap_nhat_web đóng trong bản cài từ 0.9.49. Màn hình quét web riêng đã xóa ở 1.0.27.
 LOAI_TRU_WEB = ['--hidden-import', 'html.parser', '--hidden-import', 'urllib.request', '--hidden-import', 'difflib', '--hidden-import', 'pabt.mau_bang_tong_hop',
-                '--hidden-import', 'pabt.in_word']
+                '--hidden-import', 'pabt.in_word', '--hidden-import', 'pabt.lenh']
 
 
 def main() -> int:
+    global TAM
     if not PY38.exists():
         print(f'Chưa có môi trường Python 3.8 32-bit ({PY38}): chạy CAI_DAT_PHAT_HANH.bat trước.')
         return 1
     if TAM.exists():
-        shutil.rmtree(TAM)
+        shutil.rmtree(TAM, ignore_errors=True)
+    if TAM.exists():                                # 1.0.51: ứng dụng Claude (MSIX) ảo hóa %LOCALAPPDATA% - bản thật còn sau rmtree
+        for cu in DEV.glob('nguon38_*'):
+            shutil.rmtree(cu, ignore_errors=True)
+        TAM = DEV / f'nguon38_{os.getpid()}'
     TAM.mkdir(parents=True)
     for x in CHEP:
         nguon = GOC / x
@@ -39,13 +44,13 @@ def main() -> int:
             shutil.copytree(nguon, TAM / x, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
         else:
             shutil.copy2(nguon, TAM / x)
-    lenh = [str(PY38), '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir', '--windowed', '--name', 'PABT',
+    lenh = [str(PY38), '-OO', '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir', '--windowed', '--name', 'PABT',
             '--distpath', str(TAM / 'dist'), '--workpath', str(TAM / 'build'), '--specpath', str(TAM),
             '--icon', str(TAM / 'pabt' / 'bieu_tuong.ico'), '--log-level', 'WARN',
             # Qt6 không có trong môi trường này; mã nhận PySide2 qua bí danh (pabt._qt5_lam_qt6)
             '--exclude-module', 'PySide6', *LOAI_TRU_WEB,
             # máy yếu (16/10/2026): bản vẽ CAD đọc bằng pabt.dxf_thuan - không đóng ezdxf / numpy / thư viện chỉ dùng lúc phát triển
-            *[x for m in ['numpy', 'scipy', 'matplotlib', 'PIL', 'tkinter', 'unittest', 'pydoc', 'doctest', 'ezdxf', 'fontTools', 'asyncio', 'multiprocessing', 'concurrent', 'xmlrpc'] for x in ('--exclude-module', m)]]
+            *[x for m in ['numpy', 'scipy', 'matplotlib', 'PIL', 'tkinter', 'unittest', 'pydoc', 'doctest', 'ezdxf', 'fontTools', 'asyncio', 'multiprocessing', 'concurrent', 'xmlrpc', '_wmi'] for x in ('--exclude-module', m)]]
     for f in DU_LIEU:
         lenh += ['--add-data', f'{TAM / f};pabt']
     # HUONG_DAN.md: Trợ giúp -> Hướng dẫn sử dụng (F1) đọc trong _internal (0.9.23)

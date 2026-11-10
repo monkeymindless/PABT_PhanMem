@@ -177,6 +177,27 @@ def main(argv) -> int:
             kq['lenh2'].append((ten, ms))
             print(f'    LỖI {e}', flush=True)
 
+    # 1.0.51: các lệnh còn lại của cửa sổ chính (QAction) - đo đủ mọi lệnh, trừ lệnh đóng / xóa / thoát làm hỏng phần đo sau
+    da_do = {x[0] for x in kq['lenh']} | {x[0] for x in kq['trang']}
+    bo_qua = {'Thoát', 'Xóa dự án…', 'Đóng dự án', 'Xóa hộ…'}
+    for ten, act in list(w.lenh.items()):
+        if ten in da_do or ten in bo_qua or not act.isEnabled():
+            continue
+        print(f'  {ten} (QAction)', flush=True)
+        t0 = time.perf_counter()
+        try:
+            act.trigger()
+            qa.processEvents()
+            ms = (time.perf_counter() - t0) * 1000
+            kq['lenh'].append((ten, ms, None))
+            kq['lenh2'].append((ten, ms))
+        except Exception as e:  # noqa: BLE001
+            ms = (time.perf_counter() - t0) * 1000
+            kq['lenh'].append((ten, ms, str(e)[:120]))
+            kq['lenh2'].append((ten, ms))
+            print(f'    LỖI {e}', flush=True)
+        w.don_hop_da_dong() if hasattr(w, 'don_hop_da_dong') else None
+
     w.mo_trang(0)
     qa.processEvents()
     t0 = time.perf_counter()

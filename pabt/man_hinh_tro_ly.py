@@ -37,8 +37,9 @@ class HopTroLy(QDialog):
         self.cb_ho = QComboBox()
         self.cb_ho.setEditable(True)
         self.cb_ho.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        for r in self.con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho'):
-            self.cb_ho.addItem(f'{r["thu_tu"]}. {r["ho_ten"] or ""}', r['ma_ho'])
+        from .giao_dien import nap_o_chon
+        nap_o_chon(self.cb_ho, [(f'{r["thu_tu"]}. {r["ho_ten"] or ""}', r['ma_ho'], '')
+                                for r in self.con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho')])
         if ma_ho is not None:
             i = self.cb_ho.findData(ma_ho)
             if i >= 0:
@@ -164,9 +165,11 @@ class HopTroLy(QDialog):
             self.cb_mh.addItem(m, m)
         self.cb_mh.setCurrentIndex(self.cb_mh.findData(cd['mo_hinh']))
         self.cb_mh.activated.connect(lambda _: tro_ly.ghi_cai_dat(mo_hinh=self.cb_mh.currentData()))
-        self.o_ca_nhan = QCheckBox('Gửi cả dữ liệu cá nhân (họ tên, CCCD, số điện thoại) - chỉ bật khi đơn vị cho phép')
-        self.o_ca_nhan.setChecked(cd['gui_ca_nhan'])
-        self.o_ca_nhan.toggled.connect(lambda b: tro_ly.ghi_cai_dat(gui_ca_nhan=b))
+        # 1.0.52 (người dùng 02/11/2026): luôn che dữ liệu cá nhân - ô chỉ để báo, không đổi được
+        self.o_ca_nhan = QCheckBox('Luôn che thông tin cá nhân trước khi gửi (bắt buộc)')
+        self.o_ca_nhan.setToolTip('Nghị định 13/2023/NĐ-CP: dữ liệu cá nhân không gửi ra máy chủ bên ngoài. Che ngay trên máy này.')
+        self.o_ca_nhan.setChecked(True)
+        self.o_ca_nhan.setEnabled(False)
         self.o_khoa = QLineEdit()
         self.o_khoa.setEchoMode(QLineEdit.EchoMode.Password)
         self.o_khoa.setPlaceholderText('Đã lưu khóa (mã hóa)' if cd['co_khoa'] else 'Dán khóa API (sk-ant-…) - hoặc dùng biến ANTHROPIC_API_KEY')
@@ -183,7 +186,8 @@ class HopTroLy(QDialog):
         f = QFormLayout()
         f.addRow(self.o_bat)
         f.addRow('Mô hình:', self.cb_mh)
-        f.addRow(self.o_ca_nhan)
+        from .giao_dien import nut_co_mo_ta
+        f.addRow(nut_co_mo_ta(self.o_ca_nhan, 'Họ tên, số CCCD, số điện thoại, số giấy chứng nhận, tọa độ.'))
         f.addRow('Khóa API:', hk)
         lo = QVBoxLayout(w)
         lo.addWidget(gt)

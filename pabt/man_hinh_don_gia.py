@@ -14,6 +14,7 @@ from . import csdl, don_gia, quan_tri_bo
 from .lap_pa import LoiNhap, bo_dau
 from .tien import vn
 from .giao_dien import con_tro_cho, loc_khi_ngung_go
+from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 from .thong_bao import TEN_UD, chu_loi
 
 _TS = 'SELECT ma, phan_loai, ten, dvt, don_gia, ghi_chu FROM dm_taisan WHERE '
@@ -21,25 +22,30 @@ _COT_TS = (['Mã', 'Phân loại', 'Tên', 'ĐVT', 'Đơn giá (đ)', 'Ghi chú'
 # vật nuôi (mục 3 của phương án như cây trồng): mã VN.. của bộ tích hợp (QĐ 31/2025/QĐ-UBND) hoặc mục cập nhật từ văn bản vật
 # nuôi (nhap_don_gia.ap_dung ghi phân loại PHAN_LOAI_VAT_NUOI) - thẻ riêng để thấy ngay, không lẫn trong 5.500 dòng cây trồng
 _VAT_NUOI = f"(ma LIKE 'VN%' OR phan_loai LIKE '{don_gia.PHAN_LOAI_VAT_NUOI}%')"
+TEN_DAY_THE = {'Chính sách hỗ trợ': 'Chính sách hỗ trợ (QĐ 42/2025)', 'Tham số, hạn mức': 'Tham số, hạn mức đất NN', 'Thưởng bàn giao': 'Thưởng bàn giao mặt bằng'}      # chú thích thẻ: tên thẻ rút gọn để cửa sổ 1536 px không phải cuộn thanh thẻ
 THE = [
     # chỉ nhóm 2: các dòng HT / TH (nhóm 4, 5) trong dm_taisan trùng thẻ Chính sách hỗ trợ / Thưởng (người dùng 12/10/2026)
     ('Nhà, công trình', _TS + 'nhom = 2 ORDER BY rowid', *_COT_TS),
     ('Cây trồng', _TS + f'nhom = 3 AND NOT {_VAT_NUOI} ORDER BY rowid', *_COT_TS),
     ('Vật nuôi', _TS + f'nhom = 3 AND {_VAT_NUOI} ORDER BY LENGTH(ma), ma', *_COT_TS),
-    ('Chính sách hỗ trợ (QĐ 42/2025)', 'SELECT ma, ten, dvt, don_gia, can_cu, cach_tinh FROM dm_hotro ORDER BY LENGTH(ma), ma',
+    ('Chính sách hỗ trợ', 'SELECT ma, ten, dvt, don_gia, can_cu, cach_tinh FROM dm_hotro ORDER BY LENGTH(ma), ma',
      ['Mã', 'Khoản hỗ trợ', 'ĐVT', 'Đơn giá / hệ số', 'Căn cứ', 'Cách tính'], [55, 420, 90, 110, 330, 330]),
-    ('Tham số, hạn mức đất NN', 'SELECT ma, ten, gia_tri, dvt, can_cu, trang_thai FROM tham_so',
+    ('Tham số, hạn mức', "SELECT ma, ten, gia_tri, dvt, can_cu, trang_thai FROM tham_so WHERE ma NOT LIKE 'QDCT:%' "
+                                "AND ma NOT LIKE 'KV%:%'",
      ['Mã', 'Tham số', 'Giá trị', 'ĐVT', 'Căn cứ', 'Trạng thái'], [120, 430, 90, 90, 330, 160]),
-    ('Thưởng bàn giao mặt bằng', 'SELECT tu, muc FROM bieu_thuong ORDER BY CAST(tu AS REAL)',
+    ('Thưởng bàn giao', 'SELECT tu, muc FROM bieu_thuong ORDER BY CAST(tu AS REAL)',
      ['Mã', 'Tổng bồi thường, hỗ trợ từ (đ)', 'Mức thưởng (đ/hộ)'], [60, 220, 180]),     # Mã TH1… chỉ hiển thị (0.9.69)
     ('Văn bản căn cứ', 'SELECT id, so_hieu, co_quan, noi_dung, trang_thai FROM van_ban ORDER BY id',
      ['Văn bản', 'Cơ quan', 'Nội dung áp dụng', 'Trạng thái'], [380, 200, 440, 230]),
+    # 1.0.56: quy định cách tính trích từ văn bản đơn giá (quy_dinh_van_ban - tham_so mã QDCT:<nhóm>:<số hiệu>:<stt>)
+    ('Quy định cách tính', "SELECT ma, ten, can_cu, gia_tri FROM tham_so WHERE ma LIKE 'QDCT:%' ORDER BY ma",
+     ['Mã', 'Nhóm', 'Văn bản, điều khoản', 'Quy định'], [150, 150, 260, 760]),
 ]
 # bảng + cột khóa từng thẻ (cột 0 của SQL là khóa khi bang in quy_uoc/van_ban — không hiện)
 THE_BANG = (
     ('dm_taisan', 'ma'), ('dm_taisan', 'ma'), ('dm_taisan', 'ma'),
     ('dm_hotro', 'ma'), ('tham_so', 'ma'), ('bieu_thuong', 'tu'),
-    ('van_ban', 'id'),
+    ('van_ban', 'id'), ('tham_so', 'ma'),
 )
 # 0.9.69: bỏ thẻ "Quy ước giá tương đương" (người dùng: quy ước tùy biến từng máy / dự án - nhập ở Đơn giá đặc biệt)
 I_QUY_UOC = -1
@@ -85,8 +91,10 @@ class HopBoDonGia(QDialog):
         self.lb = QLabel()
         self.lb.setObjectName('dai_bo_don_gia')
         self.lb.setFixedHeight(28)
-        self.lb.setStyleSheet('QLabel#dai_bo_don_gia { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; '
-                              'padding: 0 10px; color: #0F172A; }')
+        from PySide6.QtWidgets import QSizePolicy
+        self.lb.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)      # 1.0.58: chữ dài không ép hộp rộng hơn màn hình
+        dat_kieu_theo_tong(self.lb, 'QLabel#dai_bo_don_gia { background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 5px; '
+                                    'padding: 0 10px; color: #0F172A; }')
         self.o_tim = QLineEdit()
         self.o_tim.setPlaceholderText('Tìm trong thẻ đang xem (không cần dấu): xoai, nha cap 4, CS9…')
         loc_khi_ngung_go(self.o_tim, self.loc)
@@ -103,7 +111,7 @@ class HopBoDonGia(QDialog):
         self.b_cap = QPushButton('Cập nhật đơn giá')
         self.b_cap.setToolTip('Nạp bộ đơn giá từ file định mức, hoặc sao lưu bộ đang dùng ra file')
         m = QMenu(self.b_cap)
-        m.addAction('Nạp từ file định mức (Excel, Word, PDF, gói .sqlite, CSV)…', lambda: self.cap_nhat_file())
+        m.addAction('Nạp từ file định mức…', lambda: self.cap_nhat_file())
         m.addAction('Nạp từ file — thay cả nhóm theo văn bản mới…', lambda: self.cap_nhat_file(thay_the=True))
         m.addAction('Dán bảng / văn bản đơn giá (Ctrl+Shift+V)', lambda: self.dan_don_gia())
         m.addAction('Sao lưu bộ đơn giá ra file (.sqlite / Excel)…', lambda: self.sao_luu())
@@ -116,6 +124,9 @@ class HopBoDonGia(QDialog):
         m.addAction('Đổi mật khẩu quản trị…', lambda: self.doi_mat_khau_quan_tri())
         m.addSeparator()
         m.addAction('Khôi phục bộ đơn giá chuẩn gốc của Tỉnh…', lambda: self.khoi_phuc_goc())
+        m.addSeparator()                            # 1.0.56: đồng bộ bộ đơn giá qua máy chủ LAN
+        m.addAction('Phát hành bộ đơn giá lên máy chủ (quản trị)', lambda: self.dong_bo_may_chu(True))
+        m.addAction('Nhận bộ đơn giá từ máy chủ', lambda: self.dong_bo_may_chu(False))
         self.b_qt.setMenu(m)
         self.b_ap = QPushButton('Áp bộ đơn giá vào dự án đang mở')
         self.b_ap.clicked.connect(lambda: self.ap_du_an())
@@ -139,6 +150,7 @@ class HopBoDonGia(QDialog):
         h_tim.addWidget(self.o_tim, 1)
         h_tim.addWidget(self.lb_loc)
         lo.addLayout(h_tim)
+        self._dung_thanh_phu_luc(lo)
         lo.addWidget(self.the, 1)
         lo.addLayout(nut)
         # dán bảng / chữ đơn giá đã chép (Excel, Word, Snipping Tool "Chép văn bản", Zalo OCR) hoặc ảnh chụp màn hình (nhận dạng chữ)
@@ -149,13 +161,213 @@ class HopBoDonGia(QDialog):
         self._phim_dan.activated.connect(lambda: self.dan_don_gia())
         self.nap()
 
+    # ------------------------------------------------------------ 1.0.57: phụ lục theo khu vực giá (khu_vuc_gia)
+    def _dung_thanh_phu_luc(self, lo):
+        """Thanh "Phụ lục I - khu vực 1 | Phụ lục II - khu vực 2" trên thẻ Nhà, công trình (người dùng 04/11/2026: "phân tách làm sao
+        để có 2 bảng Phụ lục I và Phụ lục II tách bạch, không dồn vào nhau"). Chỉ hiện khi bộ đơn giá đã tách theo khu vực."""
+        from PySide6.QtWidgets import QButtonGroup
+        self.kv_dl = None
+        self.kv_xem = ''
+        self.nut_pl = {}
+        self.thanh_pl = QWidget()
+        self.thanh_pl.setObjectName('thanh_phu_luc')
+        h = QHBoxLayout(self.thanh_pl)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(6)
+        n = QLabel('Phụ lục:')
+        n.setProperty('vai', 'nhan')
+        h.addWidget(n)
+        self._h_pl = h
+        self.nhom_nut_pl = QButtonGroup(self)
+        self.nhom_nut_pl.setExclusive(True)
+        self.lb_pl = QLabel()
+        self.lb_pl.setWordWrap(True)
+        h.addWidget(self.lb_pl, 1)
+        self.lb_kv_da = QLabel('Khu vực của dự án:')
+        self.lb_kv_da.setProperty('vai', 'nhan')
+        h.addWidget(self.lb_kv_da)
+        self.cb_kv_da = QComboBox()
+        self.cb_kv_da.setToolTip('Dự án dùng phụ lục của khu vực này; phụ lục khu vực khác bị khóa ẩn khi lập phương án. Mặc định theo xã '
+                                 'dự án (Thông tin dự án > Địa bàn) và danh sách xã / phường của văn bản đơn giá.')
+        self.cb_kv_da.activated.connect(lambda _: self.doi_khu_vuc_du_an(self.cb_kv_da.currentData()))
+        h.addWidget(self.cb_kv_da)
+        self.b_xa_kv = QPushButton('Xã / phường từng khu vực…')
+        self.b_xa_kv.clicked.connect(lambda: self.xem_xa_khu_vuc())
+        h.addWidget(self.b_xa_kv)
+        lo.addWidget(self.thanh_pl)
+        self.thanh_pl.setVisible(False)
+
+    def _nap_khu_vuc(self, con):
+        """Đọc khu vực giá của bộ đơn giá; dựng lại nút phụ lục khi danh sách khu vực đổi."""
+        from . import khu_vuc_gia as kvg
+        kvd = kvg.doc(con)
+        self.kv_dl = kvd if kvg.co_khu_vuc(kvd) else None
+        if self.kv_dl is None:
+            self.kv_xem = ''
+            return
+        ds_kv = sorted(set(kvd['muc'].values()), key=lambda k: (len(k), k))
+        if list(self.nut_pl) != ds_kv:
+            for b in self.nut_pl.values():
+                self.nhom_nut_pl.removeButton(b)
+                self._h_pl.removeWidget(b)
+                b.deleteLater()
+            self.nut_pl = {}
+            for j, k in enumerate(ds_kv):
+                b = QPushButton(kvg.ten_kv(kvd, k))
+                b.setCheckable(True)
+                b.setProperty('kieu', 'phan_doan')
+                b.clicked.connect(lambda _=False, k=k: self.chon_phu_luc(k))
+                self.nhom_nut_pl.addButton(b)
+                self._h_pl.insertWidget(1 + j, b)
+                self.nut_pl[k] = b
+        kv_da = self.khu_vuc_du_an()
+        if self.kv_xem not in ds_kv:
+            self.kv_xem = kv_da if kv_da in ds_kv else ds_kv[0]
+
+    def khu_vuc_du_an(self) -> str | None:
+        """Khu vực giá của dự án đang mở (theo xã / người dùng chọn) - None: không có dự án / chưa xác định."""
+        if self.con_du_an is None or self.kv_dl is None:
+            return None
+        from . import khu_vuc_gia as kvg
+        try:
+            return kvg.khu_vuc_du_an(self.con_du_an, self.kv_dl)
+        except Exception:                               # noqa: BLE001 - dự án đã đóng
+            return None
+
+    def _ve_thanh_phu_luc(self):
+        """Chữ / trạng thái nút phụ lục theo dự án đang mở; thanh chỉ hiện ở thẻ Nhà, công trình."""
+        if self.kv_dl is None:
+            self.thanh_pl.setVisible(False)
+            return
+        from . import khu_vuc_gia as kvg
+        kv_da = self.khu_vuc_du_an()
+        dem = {}
+        for k in self.kv_dl['muc'].values():
+            dem[k] = dem.get(k, 0) + 1
+        for k, b in self.nut_pl.items():
+            khoa = kv_da is not None and k != kv_da
+            b.setText(f'{kvg.ten_kv(self.kv_dl, k)} ({dem.get(k, 0)} mục)' + (' - khóa' if khoa else ''))
+            b.setChecked(k == self.kv_xem)
+            # phụ lục khu vực khác của dự án đang mở: khóa (quản trị mở khóa được xem / sửa bộ đơn giá)
+            b.setEnabled(not khoa or self._da_mo_khoa or k == self.kv_xem)
+            b.setToolTip(f'Dự án đang mở thuộc {kvg.ten_kv(self.kv_dl, kv_da)}: phụ lục này KHÔNG dùng cho dự án (khóa ẩn khi lập '
+                         'phương án). Quản trị mở khóa để xem / sửa bộ đơn giá.' if khoa else
+                         f'Bảng {kvg.ten_kv(self.kv_dl, k)} - mục dùng chung (không thuộc phụ lục nào) hiện ở cả hai bảng.')
+        co_da = self.con_du_an is not None
+        self.lb_kv_da.setVisible(co_da)
+        self.cb_kv_da.setVisible(co_da)
+        if co_da:
+            try:
+                r = self.con_du_an.execute('SELECT ten_dia_ban FROM du_an WHERE id = 1').fetchone()
+                xa = (r[0] if r else '') or ''
+                r = self.con_du_an.execute('SELECT gia_tri FROM cai_dat WHERE ma = ?', (kvg.KHOA_CAI_DAT,)).fetchone()
+                chon = (r[0] if r else '') or ''
+            except Exception:                           # noqa: BLE001
+                xa, chon = '', ''
+            self.cb_kv_da.blockSignals(True)
+            self.cb_kv_da.clear()
+            theo_xa = kvg.khu_vuc_cua_xa(self.kv_dl, xa) if xa else None
+            self.cb_kv_da.addItem('Theo xã dự án' + (f' ({kvg.ten_kv(self.kv_dl, theo_xa)})' if theo_xa else ' (chưa xác định)'), '')
+            for k in self.nut_pl:
+                self.cb_kv_da.addItem(kvg.ten_kv(self.kv_dl, k), k)
+            self.cb_kv_da.setCurrentIndex(max(0, self.cb_kv_da.findData(chon)))
+            self.cb_kv_da.setEnabled(not self.chi_doc)
+            self.cb_kv_da.blockSignals(False)
+            if kv_da is None:
+                chu = (f'Chưa xác định được khu vực của dự án (địa bàn "{xa or "trống"}" không có trong danh sách xã của văn bản): '
+                       'chọn ở ô "Khu vực của dự án" - đang hiện cả hai phụ lục khi lập phương án.')
+                from .giao_dien import dat_trang_thai
+                dat_trang_thai(self.lb_pl, 'canh_bao', chu)
+            else:
+                self.lb_pl.setText(f'Dự án áp <b>{kvg.ten_kv(self.kv_dl, kv_da)}</b>' + (f' (xã {xa})' if xa and not chon else
+                                                                                       ' (chọn tay)' if chon else '') +
+                                   '; phụ lục khác khóa ẩn.')
+                self.lb_pl.setStyleSheet('')
+        else:
+            self.lb_pl.setText('Mỗi phụ lục một bảng; dự án chỉ dùng phụ lục của khu vực có xã dự án.')
+            self.lb_pl.setStyleSheet('')
+        self.thanh_pl.setVisible(self.the.currentIndex() == 0)
+
+    def chon_phu_luc(self, kv: str):
+        """Xem bảng phụ lục của khu vực kv trên thẻ Nhà, công trình (dựng lại bảng thẻ 0)."""
+        if self.kv_dl is None or kv not in self.nut_pl or kv == self.kv_xem:
+            self._ve_thanh_phu_luc()
+            return
+        self.kv_xem = kv
+        self.nap()
+
+    def _loc_phu_luc(self, ds: list) -> list:
+        """Dòng thẻ Nhà của phụ lục đang xem: mục gắn khu vực đó + mục dùng chung (không gắn khu vực)."""
+        if self.kv_dl is None or not self.kv_xem:
+            return ds
+        m = self.kv_dl['muc']
+        return [r for r in ds if m.get(str(r[0]), self.kv_xem) == self.kv_xem]
+
+    def doi_khu_vuc_du_an(self, kv) -> bool:
+        """Người dùng chọn khu vực giá của dự án ('' = theo xã). Danh mục dự án lọc lại khi đóng hộp (da_ap)."""
+        if self.con_du_an is None or self.chi_doc:
+            return False
+        from . import khu_vuc_gia as kvg
+        from .lap_pa import kiem_quyen
+        try:
+            kiem_quyen(self.con_du_an, 'sua_gia', 'chọn khu vực giá của dự án')
+            kvg.dat_khu_vuc_du_an(self.con_du_an, kv or None)
+        except LoiNhap as e:
+            self._bao(QMessageBox.warning, str(e))
+            self._ve_thanh_phu_luc()
+            return False
+        self.da_ap = True
+        kv_moi = self.khu_vuc_du_an()
+        if kv_moi:
+            self.kv_xem = kv_moi
+        self.nap()
+        return True
+
+    def xem_xa_khu_vuc(self, hien: bool = True):
+        """Danh sách xã / phường của từng khu vực (đọc từ văn bản đơn giá)."""
+        if self.kv_dl is None:
+            return None
+        from . import khu_vuc_gia as kvg
+        theo = {}
+        for khoa, (k, ten) in self.kv_dl['xa'].items():
+            theo.setdefault(k, []).append(ten)
+        dong = []
+        for k in sorted(theo, key=lambda x: (len(x), x)):
+            dong.append(f'{kvg.ten_kv(self.kv_dl, k).upper()} ({len(theo[k])} xã / phường):')
+            dong.extend(f'  - {t}' for t in sorted(theo[k], key=bo_dau))
+        from .giao_dien import hop_ket_qua
+        return hop_ket_qua(self, f'Xã / phường theo khu vực giá ({sum(len(v) for v in theo.values())}) - dự án thuộc xã nào thì áp '
+                                 'phụ lục của khu vực đó.', dong, 'Danh sách', hien=hien and not self.im_lang)
+
     def trang_thai_khoa(self) -> str:
         """Trạng thái quyền sửa bộ đơn giá hiện trên dải thông tin."""
         if self._da_mo_khoa:
             return 'Đã mở khóa (sửa được)'
         if quan_tri_bo.la_quan_tri_may_chu():
             return 'Tài khoản quản trị máy chủ'
+        if quan_tri_bo.bi_chan_may_chu() or quan_tri_bo.may_duoc_quan_ly():
+            return 'Chỉ quản trị máy chủ sửa được'
         return 'Đã kích hoạt' if quan_tri_bo.da_dat() else 'Chưa đặt mật khẩu'
+
+    def dong_bo_may_chu(self, phat_hanh: bool) -> str:
+        """1.0.56: phát hành (quản trị) / nhận bộ đơn giá qua thư mục máy chủ LAN. Trả chữ kết quả."""
+        from . import dong_bo_don_gia as db, may_chu
+        try:
+            if may_chu.PHIEN is None:
+                raise db.LoiDongBo('Chưa đăng nhập máy chủ LAN (Cài đặt > Kết nối máy chủ LAN).')
+            if phat_hanh:
+                pb = db.phat_hanh()
+                chu = f'Đã phát hành {db.mo_ta(pb)} lên máy chủ - các máy khác nhận khi đăng nhập.'
+            else:
+                kq = db.nhan(ep=True)
+                chu = f'Đã nhận {db.mo_ta(kq)} từ máy chủ.' if kq else 'Máy chủ chưa có bộ đơn giá nào được phát hành.'
+                self.nap()
+        except (LoiNhap, OSError) as e:
+            chu = str(e)
+            self._bao(QMessageBox.warning, chu)
+            return chu
+        self._bao(QMessageBox.information, chu)
+        return chu
 
     def _dat_tieu(self):
         tt = don_gia.thong_tin()
@@ -166,7 +378,8 @@ class HopBoDonGia(QDialog):
             if m and not sh.lower().startswith('dự thảo') and f'QĐ {m.group(1)}' not in so_vb:
                 so_vb.append(f'QĐ {m.group(1)}')
         vb = (' (' + ', '.join(so_vb[:6]) + (', …' if len(so_vb) > 6 else '') + ')') if so_vb else ''
-        self.lb.setText(f'<b>{tt["ten"]}</b> {tt["phien_ban"]}{vb}  ·  Khóa quản trị: <b>{self.trang_thai_khoa()}</b>')
+        self.lb.setText(f'<b>{tt["ten"]}</b> {tt["phien_ban"]}{vb}  ·  Khóa quản trị: <b>{self.trang_thai_khoa()}</b>'
+                        + (f'  ·  <b>{quan_tri_bo.LOI_PHAT_HANH}</b>' if quan_tri_bo.LOI_PHAT_HANH else ''))
         them = ('\nThẻ "Quy ước giá tương đương" đang hiện quy ước của dự án mở - đồng bộ với Đơn giá đặc biệt.'
                 if self.con_du_an is not None else '')
         self.lb.setToolTip(f'{tt["ten"]} - phiên bản {tt["phien_ban"]} (nguồn {tt["nguon"]}, đóng gói {tt["ngay"][:10]})\n'
@@ -208,10 +421,17 @@ class HopBoDonGia(QDialog):
             if b.item(r, 0) is not None:
                 b.item(r, 0).setData(Qt.ItemDataRole.UserRole, khoa)
         b.setUpdatesEnabled(True)
-        nhan = f'{ten} ({len(ds)})'
+        nhan = f'{self._ten_the(i)} ({len(ds)})'
         if i == I_QUY_UOC and self.con_du_an is not None:
             nhan = f'{ten} · dự án ({len(ds)})'
         return b, nhan
+
+    def _ten_the(self, i: int) -> str:
+        """Tên thẻ; thẻ Nhà, công trình của bộ tách khu vực: kèm phụ lục đang xem (1.0.57)."""
+        ten = THE[i][0]
+        if i == 0 and getattr(self, 'kv_dl', None) is not None and self.kv_xem:
+            ten = f'{ten} - {self.kv_dl["ten"].get(self.kv_xem) or "khu vực " + self.kv_xem}'
+        return ten
 
     def _menu_bang(self, b, pos):
         """Chuột phải trên bảng: thêm / sửa / thay thế / xóa mục của thẻ đang xem (tự hỏi mở khóa quản trị khi cần)."""
@@ -271,6 +491,8 @@ class HopBoDonGia(QDialog):
 
     def _khi_doi_the(self, i: int = 0):
         self._dam_bao_the(i)
+        if hasattr(self, 'thanh_pl'):
+            self.thanh_pl.setVisible(i == 0 and self.kv_dl is not None)
         chu = self.o_tim.text()
         if chu.strip():
             self.loc(chu)
@@ -311,14 +533,20 @@ class HopBoDonGia(QDialog):
         self._the_da_dung = set()
         con = csdl.mo(don_gia.file_dang_dung(), chi_doc=True)
         try:
+            self._nap_khu_vuc(con)
             for i, (ten, sql, _cot, _rong) in enumerate(THE):
                 src = self.con_du_an if i == I_QUY_UOC and self.con_du_an is not None else con
                 ds = src.execute(sql).fetchall()
+                if i == 0 and self.kv_dl is not None:   # 1.0.57: bảng của phụ lục đang xem
+                    ds = self._loc_phu_luc(ds)
+                    ten = self._ten_the(0)
                 self._ds_the[i] = ds
                 nhan = f'{ten} ({len(ds)})'
                 if i == I_QUY_UOC and self.con_du_an is not None:
                     nhan = f'{ten} · dự án ({len(ds)})'
                 self.the.addTab(QWidget(), nhan)
+                if ten in TEN_DAY_THE:
+                    self.the.setTabToolTip(self.the.count() - 1, TEN_DAY_THE[ten])
         finally:
             con.close()
         self.the.blockSignals(False)
@@ -326,6 +554,7 @@ class HopBoDonGia(QDialog):
             i_giu = 0
         self._dam_bao_the(i_giu)
         self.the.setCurrentIndex(i_giu)
+        self._ve_thanh_phu_luc()
         self._dem_loc()
 
     def _dem_loc(self, *_):
@@ -373,9 +602,14 @@ class HopBoDonGia(QDialog):
             self._da_mo_khoa = True
             self._dat_tieu()
             return True
-        if quan_tri_bo.bi_chan_may_chu():
-            self._bao(QMessageBox.warning, quan_tri_bo.mo_ta_quyen())
+        if quan_tri_bo.bi_chan_may_chu() or quan_tri_bo.may_duoc_quan_ly():
+            # 1.0.56: máy dùng máy chủ LAN - chỉ tài khoản quản trị máy chủ (mật khẩu máy không thay được)
+            self._bao(QMessageBox.warning, quan_tri_bo.ly_do_khong_sua())
             return False
+        if quan_tri_bo.da_dat() and quan_tri_bo.co_quyen_sua():      # đã mở khóa trong phiên này (hộp khác / lần trước)
+            self._da_mo_khoa = True
+            self._dat_tieu()
+            return True
         if self.im_lang:
             if mat_khau is None:
                 return False
@@ -386,6 +620,7 @@ class HopBoDonGia(QDialog):
                     return False
             except LoiNhap:
                 return False
+            quan_tri_bo.mo_khoa_phien()
             self._da_mo_khoa = True
             return True
         d = HopXacThucBo(self)
@@ -393,10 +628,11 @@ class HopBoDonGia(QDialog):
             d.o_mk.setText(mat_khau)
             if hasattr(d, 'o_lai'):
                 d.o_lai.setText(mat_khau2 if mat_khau2 is not None else mat_khau)
-            if d.thu():
-                d.accept()
+            if not d.thu():                             # sai mật khẩu: không mở khóa (trước 1.0.56 vẫn mở khóa)
+                return False
         elif d.exec() != QDialog.DialogCode.Accepted:
             return False
+        quan_tri_bo.mo_khoa_phien()
         self._da_mo_khoa = True
         self._dat_tieu()
         return True
@@ -441,7 +677,8 @@ class HopBoDonGia(QDialog):
         if not self.im_lang and d.exec() != QDialog.DialogCode.Accepted:
             return None
         try:
-            kq = don_gia.them_dong(bang, d.gia_tri(), self._nhom_the())
+            kv = self.kv_xem if i == 0 and self.kv_dl is not None else ''     # 1.0.57: mục mới thuộc phụ lục đang xem
+            kq = don_gia.them_dong(bang, d.gia_tri(), self._nhom_the(), khu_vuc=kv)
         except LoiNhap as e:
             self._bao(QMessageBox.warning, str(e))
             return None
@@ -564,7 +801,7 @@ class HopBoDonGia(QDialog):
             return None
         if p is None:
             p, _ = QFileDialog.getOpenFileName(self, 'Chọn file đơn giá', '',
-                                               'File đơn giá (*.xlsx *.xlsm *.docx *.pdf *.csv *.sqlite);;Tất cả (*.*)')
+                                               'File đơn giá (*.xlsx *.xlsm *.docx *.doc *.pdf *.csv *.sqlite);;Tất cả (*.*)')
             if not p:
                 return None
         from .nhap_tho import la_file_pabt
@@ -693,7 +930,11 @@ class HopBoDonGia(QDialog):
                                                           'giữ đơn giá cũ; dùng Rà soát giá để kiểm tra).') == QMessageBox.StandardButton.Yes
         if not xac_nhan:
             return None
-        tt = don_gia.ap_vao_du_an(self.con_du_an)
+        try:
+            tt = don_gia.ap_vao_du_an(self.con_du_an)
+        except (LoiNhap, csdl.sqlite3.Error) as e:
+            self._bao(QMessageBox.warning, chu_loi('Chưa áp được bộ đơn giá vào dự án', e))
+            return None
         self.da_ap = True
         self._bao(QMessageBox.information, f'Đã áp bộ đơn giá phiên bản {tt["phien_ban"]} vào dự án.')
         return tt
@@ -708,6 +949,23 @@ _NHAN_O = {
     'ten_thuc_te': 'Tên thực tế', 'ten_tuong_duong': 'Áp giá tương đương',
     'so_hieu': 'Số hiệu văn bản', 'co_quan': 'Cơ quan', 'noi_dung': 'Nội dung áp dụng',
 }
+
+
+def xin_quyen_sua(cha=None, im_lang: bool = False) -> bool:
+    """1.0.56: trước khi ghi bảng giá đất / hệ số K / bộ đơn giá từ màn hình khác hộp Bộ đơn giá. Đã có quyền -> True; máy dùng máy chủ
+    LAN mà không phải quản trị -> báo, False; máy đơn đã đặt mật khẩu -> hỏi mật khẩu (đúng thì mở khóa cả phiên)."""
+    if quan_tri_bo.co_quyen_sua():
+        return True
+    if im_lang:
+        return False
+    from .thong_bao import TEN_UD
+    if quan_tri_bo.bi_chan_may_chu() or quan_tri_bo.may_duoc_quan_ly():
+        QMessageBox.warning(cha, TEN_UD, quan_tri_bo.ly_do_khong_sua())
+        return False
+    if HopXacThucBo(cha).exec() != QDialog.DialogCode.Accepted:
+        return False
+    quan_tri_bo.mo_khoa_phien()
+    return True
 
 
 class HopXacThucBo(QDialog):
@@ -746,7 +1004,7 @@ class HopXacThucBo(QDialog):
         lo.addLayout(f)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
-        self.lb.setStyleSheet('QLabel { color: #B83A3A; }')
+        dat_kieu_theo_tong(self.lb, 'QLabel { color: #B83A3A; }')
         lo.addWidget(self.lb)
         nut = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         nut.accepted.connect(self.thu)

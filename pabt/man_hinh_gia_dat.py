@@ -2,15 +2,17 @@
 KhungCapNhatGiaDat: thẻ "Cập nhật, bổ sung giá đất" của cửa sổ Bảng giá đất (man_hinh_du_toan.HopTraNQ28)."""
 from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont
+from PySide6.QtGui import QBrush, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel,
                                QLineEdit, QMessageBox, QPushButton, QSplitter, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import gia_dat_nq28 as nq
-from .giao_dien import loc_khi_ngung_go
+from .giao_dien import loc_khi_ngung_go, qmau_theo_tong
+from .lap_pa import LoiNhap
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .tien import vn
 
-XANH = QColor('#DDEBF7')
+XANH = mau_o_theo_tong(globals(), XANH='#DDEBF7')[0]
 
 
 class HopTraGiaDat(QDialog):
@@ -119,6 +121,9 @@ def khoi_phuc_bang(cha, xac_nhan=None, hien: bool = True):
             return False
     elif not xac_nhan:
         return False
+    from .man_hinh_don_gia import xin_quyen_sua
+    if not xin_quyen_sua(cha, not hien):                         # 1.0.56: chỉ quản trị đổi bảng giá đất
+        return False
     nq.xoa_thay()
     if hien:
         QMessageBox.information(cha, TEN_UD, 'Đã dùng lại bảng gắn sẵn: ' + ', '.join(nq.ds_xa()) + '.')
@@ -146,9 +151,9 @@ class KhungCapNhatGiaDat(QWidget):
         self.van_ban = ''
         self.nguon = ''
         self.o_xa = QLineEdit(xa)
-        self.o_xa.setPlaceholderText('Trị An, Trảng Bom, Nhơn Trạch, Vũng Tàu')
+        self.o_xa.setPlaceholderText('Không bắt buộc nếu đã nhập tỉnh. Ví dụ: Trị An, Tân Triều')
         self.o_tinh = QLineEdit()
-        self.o_tinh.setPlaceholderText('Đồng Nai, Hồ Chí Minh, Lâm Đồng (gõ tên tỉnh cũ cũng được)')
+        self.o_tinh.setPlaceholderText('Chỉ cần tên tỉnh để tìm giá cả tỉnh. Ví dụ: Đồng Nai, Hồ Chí Minh')
         self.o_url = QLineEdit()
         self.o_url.setPlaceholderText('https://… trang nghị quyết bảng giá đất hoặc file phụ lục - không bắt buộc, phần mềm nhớ cho lần sau')
         self.o_url.setToolTip('Dán đường dẫn văn bản chính thức (Công báo, cổng thông tin tỉnh) khi tìm tự động không ra.\n'
@@ -163,7 +168,7 @@ class KhungCapNhatGiaDat(QWidget):
         self.b_file.setToolTip('Đọc bảng có cột Tên đường và Đất ở hoặc Đơn giá (PDF scan: nhận dạng chữ). Lời văn có hướng dẫn tính '
                                'vị trí 2, 3, 4 thì các vị trí đó được dựng thêm theo hướng dẫn.')
         self.b_web = QPushButton('Tải từ web')
-        self.b_web.setToolTip('Tìm văn bản bảng giá đất theo xã và tỉnh. Không thấy bảng giá thì chuyển sang chọn file.')
+        self.b_web.setToolTip('Tìm bảng giá đất theo tên tỉnh, hoặc theo xã / phường. Không cần nhập đủ cả hai. Không thấy bảng thì chuyển sang chọn file.')
         self.b_file.clicked.connect(lambda: self.chon_file())
         self.b_web.clicked.connect(lambda: self.tai_web())
         hang.addWidget(self.b_file)
@@ -204,9 +209,16 @@ class KhungCapNhatGiaDat(QWidget):
         self.b_them_qt.clicked.connect(lambda: self.them_quy_tac())
         self.b_xoa_qt.clicked.connect(lambda: self.xoa_quy_tac())
         self.b_tinh.clicked.connect(lambda: self.tinh_lai())
+        # 1.0.81: 4 loại đất nông nghiệp (Điều 5) và giá tái định cư / trường hợp cụ thể Điều 8-10 NQ 28
+        self.b_4_loai = QPushButton('4 loại đất NN…')
+        self.b_4_loai.setToolTip('Giá 4 loại đất nông nghiệp (CLN, HNK, NTS, RSX) của dòng đang chọn và trần / sàn Phụ lục VIII')
+        self.b_4_loai.clicked.connect(lambda: self.phan_tich_4_loai())
+        self.b_tdc = QPushButton('Giá TĐC, Điều 8-10…')
+        self.b_tdc.setToolTip('Tính giá đất tái định cư (Điều 1, 6, 8) và các trường hợp cụ thể Điều 8-10 NQ 28 từ giá dòng đang chọn')
+        self.b_tdc.clicked.connect(lambda: self.tinh_tdc())
         h_qt.addWidget(self.lb_qt, 1)
         h_qt.addStretch()
-        for b in (self.b_them_qt, self.b_xoa_qt, self.b_tinh):
+        for b in (self.b_4_loai, self.b_tdc, self.b_them_qt, self.b_xoa_qt, self.b_tinh):
             h_qt.addWidget(b)
         lo_qt.addLayout(h_qt)
         lo_qt.addWidget(self.bang_qt)
@@ -227,12 +239,18 @@ class KhungCapNhatGiaDat(QWidget):
         self.b_ghi = QPushButton('Ghi vào bảng giá đất')
         self.b_ghi.setEnabled(False)
         self.b_ghi.clicked.connect(lambda: self.ghi())
+        self.b_thay = QPushButton('Thay cả bảng')        # 1.0.94: chữ ngắn (1093 x 614 cắt chữ); ý nghĩa ở chú thích
+        self.b_thay.setEnabled(False)
+        self.b_thay.setToolTip('Xóa toàn bộ bảng giá đang dùng (mọi xã, mọi giá cũ) rồi ghi đúng bảng vừa đọc. '
+                               'Không giữ xã cũ, không ghép trùng giá.')
+        self.b_thay.clicked.connect(lambda: self.ghi(thay=True))
         self.b_khoi_phuc = QPushButton('Dùng lại bảng gắn sẵn')
         self.b_khoi_phuc.setToolTip('Bỏ mọi bảng đã thay / bổ sung trên máy này, trở lại bốn địa bàn gắn sẵn.')
         self.b_khoi_phuc.clicked.connect(lambda: self.khoi_phuc())
         h_ghi.addWidget(l)
         h_ghi.addWidget(self.cb_cach, 1)
         h_ghi.addWidget(self.b_ghi)
+        h_ghi.addWidget(self.b_thay)
         h_ghi.addSpacing(16)
         h_ghi.addWidget(self.b_khoi_phuc)
         lo = QVBoxLayout(self)
@@ -243,6 +261,7 @@ class KhungCapNhatGiaDat(QWidget):
         lo.addLayout(h_ghi)
         from .giao_dien import KieuNut, ap_kieu_nut
         ap_kieu_nut(self.b_ghi, KieuNut.CHINH)
+        ap_kieu_nut(self.b_thay, KieuNut.NGUY_HIEM)
 
     # ---------------------------------------------------------------- hiển thị
     def _bao(self, loai, chu: str):
@@ -255,21 +274,24 @@ class KhungCapNhatGiaDat(QWidget):
     def _hien(self, dong, vb, chu, nguon: str):
         self.dong, self.van_ban, self.nguon = dong, vb, nguon
         self.b_ghi.setEnabled(bool(dong))
+        self.b_thay.setEnabled(bool(dong))
         self.bang.setUpdatesEnabled(False)
-        vang = QBrush(QColor('#FFF4D6'))
+        vang = QBrush(qmau_theo_tong('#FFF6D6'))           # 1.0.93: đổi theo tông (Tối: nền vàng sẫm)
         try:
             self.bang.setRowCount(len(dong))
             for i, r in enumerate(dong):
-                gia_o = nq.gia_dong(r, 'dat_o')
-                if gia_o:
-                    cot_gia = vn(gia_o)
+                nhan = (('dat_o', 'đất ở'), ('tmdv', 'thương mại'), ('sxkd', 'sản xuất'),
+                        ('nn_cln', 'cây lâu năm'), ('nn_chn', 'cây hằng năm'),
+                        ('nn_rsx', 'rừng sản xuất'), ('nn_nts', 'nuôi trồng thủy sản'))
+                phan = [f'{vn(nq.gia_dong(r, khoa))} {ten}' for khoa, ten in nhan if r.get(khoa)]
+                if phan:
+                    cot_gia = '; '.join(phan)
                 else:
                     cot_gia = ''
                     for khoa, ten in (('nn_cay', 'nông nghiệp'), ('nn_rung_nts', 'rừng / nuôi trồng'),
-                                      ('tmdv', 'thương mại'), ('sxkd', 'sản xuất')):
-                        g = nq.gia_dong(r, khoa)
-                        if g:
-                            cot_gia = f'{vn(g)} · {ten}'
+                                      ('tmdv', 'thương mại'), ('sxkd', 'sản xuất'), ('dat_o', 'đất ở')):
+                        if r.get(khoa):
+                            cot_gia = f'{vn(nq.gia_dong(r, khoa))} · {ten}'
                             break
                 o = [r['xa'], r['ten_duong'], f'{r["diem_dau"]} → {r["diem_cuoi"]}'.strip(' →'), r['vi_tri'], cot_gia,
                      r.get('tinh_tu') or ('Theo bảng giá' if r.get('vi_tri') else '')]
@@ -341,11 +363,32 @@ class KhungCapNhatGiaDat(QWidget):
                 tt = int(doc_so_vn(o(4)) / 1000) if o(4) else 0
             except (ValueError, InvalidOperation, ArithmeticError):
                 continue
-            if not (1 <= sv < vt <= 5) or not (0 < tl <= 1):
+            if not (1 <= sv < vt <= 5) or not (0 < tl <= Decimal('1.2')):     # 1.0.81: giữ 110%, 120% (Khoản 3 Điều 8 NQ 28)
                 continue
             cb = b.cellWidget(r, 3)
             ra.append(QuyTac(vt, tl.normalize(), sv, cb.currentData() if cb is not None else '', tt, o(5)))
         return gon(ra)
+
+    def _dong_chon(self) -> dict | None:
+        r = self.bang.currentRow()
+        if 0 <= r < len(self.dong):
+            return self.dong[r]
+        ds = nq.tim(self.o_xa.text().strip())
+        return ds[0] if ds else None
+
+    def phan_tich_4_loai(self, hien: bool = True):
+        from .man_hinh_gia_dat_nq28 import HopPhanTich4LoaiDatNN
+        hop = HopPhanTich4LoaiDatNN(self, self._dong_chon(), self.o_xa.text().strip())
+        if hien and not self.im_lang:
+            hop.exec()
+        return hop
+
+    def tinh_tdc(self, hien: bool = True):
+        from .man_hinh_gia_dat_nq28 import HopTinhGiaTaiDinhCuVaDieu8
+        hop = HopTinhGiaTaiDinhCuVaDieu8(self, self._dong_chon())
+        if hien and not self.im_lang:
+            hop.exec()
+        return hop
 
     def them_quy_tac(self, vi_tri: int = 2, ty_le: str = '70', so_voi: int = 1, loai: str = ''):
         from decimal import Decimal
@@ -377,8 +420,8 @@ class KhungCapNhatGiaDat(QWidget):
     def tai_web(self):
         from .cap_nhat_gia_dat import LoiWeb, tim_tren_web
         xa, tinh, url = self.o_xa.text().strip(), self.o_tinh.text().strip(), self.o_url.text().strip()
-        if not xa:
-            self._bao('canh_bao', 'Nhập tên xã hoặc phường.')
+        if not xa and not tinh and not url:
+            self._bao('canh_bao', 'Nhập tên tỉnh / thành phố, hoặc tên xã / phường. Không cần nhập đủ cả hai.')
             return None
         self.lb.setText('Đang tìm bảng giá đất trên web…')
         try:
@@ -458,18 +501,28 @@ class KhungCapNhatGiaDat(QWidget):
         return dong
 
     # ---------------------------------------------------------------- ghi
-    def ghi(self) -> list | None:
+    def ghi(self, thay: bool = False) -> list | None:
+        """thay=True: xóa bảng giá đang dùng rồi ghi bảng vừa đọc. thay=False: theo ô Cách ghi."""
         from .cap_nhat_gia_dat import ap_dung
         if not self.dong:
             return None
-        bo_sung = self.cb_cach.currentData() == 'bo_sung'
+        bo_sung = False if thay else self.cb_cach.currentData() == 'bo_sung'
         xs = ', '.join(dict.fromkeys(r['xa'] for r in self.dong))
+        from .man_hinh_don_gia import xin_quyen_sua
+        if not xin_quyen_sua(self, self.im_lang):               # 1.0.56: chỉ quản trị sửa bảng giá đất
+            self._bao('canh_bao', 'Chưa ghi: cần quyền quản trị bộ đơn giá.')
+            return None
         if not self.im_lang:
             from .thong_bao import TEN_UD
-            hoi = (f'Bổ sung {len(self.dong)} dòng của {xs} vào bảng giá đang dùng?\nĐịa bàn trùng tên được thay, các địa bàn khác giữ '
-                   'nguyên.' if bo_sung else
-                   f'Thay bảng giá đang dùng bằng {len(self.dong)} dòng của {xs}?\nCác địa bàn khác (cả bốn địa bàn gắn sẵn) sẽ không '
-                   'còn hiện.')
+            if thay:
+                hoi = (f'Xóa toàn bộ bảng giá đang dùng rồi ghi {len(self.dong)} dòng vừa đọc?\n'
+                       'Mọi xã và mọi giá cũ sẽ không còn. Không ghép trùng.')
+            elif bo_sung:
+                hoi = (f'Bổ sung {len(self.dong)} dòng của {xs} vào bảng giá đang dùng?\n'
+                       'Địa bàn trùng tên được thay, các địa bàn khác giữ nguyên.')
+            else:
+                hoi = (f'Thay bảng giá đang dùng bằng {len(self.dong)} dòng của {xs}?\n'
+                       'Các địa bàn khác (cả bốn địa bàn gắn sẵn) sẽ không còn hiện.')
             if QMessageBox.question(
                     self, TEN_UD,
                     ('BẢNG NÀY LÀ GIÁ THAM KHẢO từ trang doanh nghiệp, chưa phải căn cứ pháp lý: căn cứ in trên phương án ghi '
@@ -478,7 +531,7 @@ class KhungCapNhatGiaDat(QWidget):
                 return None
         try:
             ra = ap_dung(self.dong, self.van_ban, self.nguon, bo_sung=bo_sung)
-        except (nq.LoiBangGia, OSError) as e:
+        except (nq.LoiBangGia, LoiNhap, OSError) as e:
             self._bao('canh_bao', str(e))
             return None
         self._bao('tin', 'Đã ghi. Bảng giá đang dùng: ' + ', '.join(ra) + f' ({len(nq.tat_ca())} dòng).')

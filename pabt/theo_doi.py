@@ -20,7 +20,7 @@ from pathlib import Path
 
 from . import an_toan as _an_toan
 from . import csdl
-from .lap_pa import LoiNhap, bo_dau, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec
+from .lap_pa import LoiNhap, bo_dau, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec, kiem_quyen
 from .nghiep_vu import muc_5_cot
 from .quan_ly import chuan_ngay
 from .tien import D, KHONG, chuoi, doc_so_vn
@@ -131,6 +131,7 @@ def _khoa_so(so: str) -> str:
 
 def luu_qd(con, qd_id, so: str, ngay: str = '', trich_yeu: str = '', tong_tien='', file: str = '', ghi_chu: str = '') -> int:
     """Thêm (qd_id None) hoặc sửa quyết định. Trả id."""
+    kiem_quyen(con, 'qd_chi_tra')                 # vai trò tài khoản máy chủ (phan_quyen)
     so = ' '.join(str(so or '').split())
     if not so:
         raise LoiNhap('Nhập số quyết định (ví dụ 1234/QĐ-UBND).')
@@ -155,6 +156,7 @@ def luu_qd(con, qd_id, so: str, ngay: str = '', trich_yeu: str = '', tong_tien='
 
 def xoa_qd(con, qd_id: int) -> int:
     """Xóa quyết định và các dòng hộ của nó (hồ sơ hộ, phương án giữ nguyên). Trả số hộ bị bỏ ra."""
+    kiem_quyen(con, 'qd_chi_tra')                 # vai trò tài khoản máy chủ (phan_quyen)
     ds = ho_cua_qd(con, qd_id)
     with csdl.giao_dich(con):
         so = con.execute('SELECT so FROM quyet_dinh WHERE id = ?', (qd_id,)).fetchone()
@@ -191,6 +193,7 @@ def ghi_qd_ho(con, qd_id: int, ma_ho: int, gia_tri: dict, ghi_nhat_ky: bool = Tr
     """Thêm hộ vào quyết định hoặc sửa dòng đã có: chỉ ghi các trường có trong gia_tri. lan (1.0.05): quyết định phê duyệt lần
     phương án thứ mấy của hộ (None = lần chưa duyệt sớm nhất); lần đó khóa bảo vệ."""
     kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'qd_chi_tra')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     gt = {}
     for k, v in gia_tri.items():
         if k not in TRUONG_QD_HO:
@@ -237,6 +240,7 @@ def _lan_cua_qd_ho(con, qd_id: int, ma_ho: int) -> int:
 def bo_ho_khoi_qd(con, qd_id: int, ma_ho: int) -> None:
     from . import lan_pa
     kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'qd_chi_tra')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     with csdl.giao_dich(con):
         lan = _lan_cua_qd_ho(con, qd_id, ma_ho)
         con.execute('DELETE FROM qd_ho WHERE qd_id = ? AND ma_ho = ?', (qd_id, ma_ho))
@@ -252,6 +256,7 @@ def them_ho_theo_pa(con, qd_id: int, ds_ma: list, lan: int | None = None) -> int
     from . import lan_pa
     from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, tinh_chenh_lech_lan, tinh_pa
     kiem_ds_ho_nhan_viec(con, ds_ma)
+    kiem_quyen(con, 'qd_chi_tra')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     bc = BoiCanh.tu(con)
     pas = doc_tat_ca_phuong_an(con, list(ds_ma))
     nhieu = lan_pa.ho_nhieu_lan(con) if lan_pa.co_bang(con) else set()
@@ -283,6 +288,7 @@ def them_ho_theo_pa(con, qd_id: int, ds_ma: list, lan: int | None = None) -> int
 def bo_cac_ho_khoi_qd(con, qd_id: int, ds_ma: list) -> int:
     from . import lan_pa
     kiem_ds_ho_nhan_viec(con, ds_ma)
+    kiem_quyen(con, 'qd_chi_tra')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     with csdl.giao_dich(con):
         for m in ds_ma:
             lan = _lan_cua_qd_ho(con, qd_id, m)
@@ -308,6 +314,7 @@ def _chi_tiet_kq(k) -> dict:
 def ghi_chi_tra(con, ds: list, ngay: str = '', chung_tu: str = '', theo_qd: bool = True) -> int:
     """Ghi nhận đã nhận tiền cho các cặp (qd_id, ma_ho): số tiền nhận = số tiền phê duyệt (nếu chưa nhập). Trả số dòng."""
     kiem_ds_ho_nhan_viec(con, [ma for _, ma in ds])
+    kiem_quyen(con, 'qd_chi_tra')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     n = 0
     with csdl.giao_dich(con):
         for qd_id, ma in ds:
@@ -373,6 +380,7 @@ def ghi_ban_giao(con, ds_ma_ho: list, gia_tri: dict) -> int:
     if not gt or not ds_ma_ho:
         return 0
     kiem_ds_ho_nhan_viec(con, ds_ma_ho)
+    kiem_quyen(con, 'qd_chi_tra')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     if gt.get('da_ban_giao') == 1:
         gt.setdefault('ly_do_ban_giao', '')
     with csdl.giao_dich(con):
@@ -414,6 +422,9 @@ def _khoa_ngay(s: str):
 
 
 # ---------------------------------------------------------------- tổng hợp theo hộ
+SO_NAC_QD18 = 6          # 1.0.83: thang 0..6 theo 16 bước QĐ 18/2026/QĐ-UBND
+
+
 @dataclass
 class TongHopHo:
     ma_ho: int
@@ -430,6 +441,12 @@ class TongHopHo:
     theo_doi: str = ''
     muc_pa: dict = field(default_factory=dict)
     da_lap: bool = False              # đã lưu phương án, kể cả mọi mục 0 đồng / ô bỏ trống
+    da_niem_yet: bool = False         # Bước 6–7 QĐ 18: hộ đã đưa vào đợt niêm yết (ho.dot_du_thao_id)
+    da_trinh: bool = False            # Bước 8 QĐ 18: hộ ĐÃ TRÌNH - trong đợt trình có văn bản trình (số + ngày tờ trình; 1.0.91)
+    xep_dot_trinh: bool = False       # 1.0.91: đã xếp vào đợt trình nhưng đợt chưa có số / ngày văn bản trình (chưa trình)
+    y_kien: str = ''                  # 1.0.91: ý kiến lần lấy ý kiến (B7) ở đợt niêm yết của hộ: 'chua' | 'dong_y' | 'khong_dong_y' | 'y_kien_khac'
+    y_kien_doi_thoai: str = ''        # 1.0.91: ý kiến sau đối thoại ('' = chưa ghi)
+    so_doi_thoai: int = 0             # 1.0.91: số lần đối thoại (biên bản) ở đợt niêm yết của hộ
     # 1.0.05 - nhiều lần lập phương án: số lần (có dòng), các lần chưa có quyết định, tiền phương án của các lần ĐÃ duyệt (5 cột)
     so_lan: int = 1
     lan_chua_duyet: list = field(default_factory=list)
@@ -460,32 +477,59 @@ class TongHopHo:
     def trang_thai(self) -> str:
         """Trạng thái ngắn gọn cho danh sách hộ - theo tiến độ phân tích tuần tự (+ điểm cần xem lại)."""
         td = self.tien_do
-        if td.nac == 4:
+        if td.da_bg:
             chu = 'Đã bàn giao MB'
-        elif td.nac == 3:
+        elif td.da_ct:
             chu = 'Đã nhận tiền, chưa bàn giao'
-        elif td.nac == 2 and len(self.qd_chua_nhan) < len(self.qd):
+        elif td.da_pd and len(self.qd_chua_nhan) < len(self.qd):
             chu = f'Đã nhận {len(self.qd) - len(self.qd_chua_nhan)}/{len(self.qd)} QĐ'
-        elif td.nac == 2:
+        elif td.da_pd:
             chu = 'Đã phê duyệt' + (f' ({len(self.qd)} QĐ)' if len(self.qd) > 1 else '') + ', chưa nhận tiền'
+        elif td.nac == 3:
+            chu = 'Đã trình thẩm định (B8)'
+        elif td.nac == 2:
+            chu = _chu_nac_2(self)
         elif td.nac == 1:
-            chu = 'Đã lập phương án'
+            chu = 'Đã lập phương án (B5)'
         else:
             chu = 'Chưa lập phương án'
         return chu + (f' · {td.canh_bao}' if td.canh_bao else '')
 
 
-# ---------------------------------------------------------------- phân tích tiến độ TỰ ĐỘNG (thanh 4 nấc danh sách hộ)
+_TEN_Y_KIEN = {'dong_y': 'đồng ý', 'khong_dong_y': 'không đồng ý', 'y_kien_khac': 'ý kiến khác'}
+
+
+def _chu_nac_2(x) -> str:
+    """Nấc 2 (B6-7 QĐ 18) ghi đúng việc đã làm (1.0.91): niêm yết, đang chờ ý kiến / đã lấy ý kiến / đã đối thoại; xếp đợt trình nhưng
+    chưa có tờ trình thì nói rõ (chưa phải đã trình - B8)."""
+    yk, dt, n_dt = getattr(x, 'y_kien', ''), getattr(x, 'y_kien_doi_thoai', ''), getattr(x, 'so_doi_thoai', 0)
+    if dt:                                              # chữ "lấy ý kiến" giữ màu xanh dương của nấc 2 (giao_dien.MAU_VIEN_THUOC)
+        chu = f'Đã lấy ý kiến, đối thoại (B7): {_TEN_Y_KIEN.get(dt, dt)}'
+    elif n_dt:
+        chu = f'Đã đối thoại {n_dt} lần (B7), chưa lấy ý kiến sau đối thoại'
+    elif yk in _TEN_Y_KIEN:
+        chu = f'Đã lấy ý kiến (B7): {_TEN_Y_KIEN[yk]}' + (', cần đối thoại' if yk != 'dong_y' else '')
+    else:
+        chu = 'Đã niêm yết, đang lấy ý kiến (B6–7)'
+    if getattr(x, 'xep_dot_trinh', False):
+        chu += ' · đã xếp đợt trình, chưa có tờ trình'
+    return chu
+
+
+# ---------------------------------------------------------------- phân tích tiến độ TỰ ĐỘNG (thanh 6 nấc danh sách hộ, QĐ 18/2026)
 @dataclass
 class TienDoHo:
-    """nac 0-4 (□□□□ chưa lập PA … ■■■■ đã bàn giao); da_pd / da_ct / da_bg: từng bước ĐÃ ĐỦ theo thứ tự; canh_bao: dữ liệu
-    nhập tay chưa khớp thứ tự / chứng cứ (vd. tích "đã bàn giao" khi chưa có quyết định, chưa có biên bản)."""
+    """nac 0-6 (□□□□□□ chưa lập PA … ■■■■■■ đã bàn giao); da_pd / da_ct / da_bg: từng bước ĐÃ ĐỦ theo thứ tự;
+    da_ny / da_tr: đã niêm yết (B6–7) / đã trình thẩm định (B8); canh_bao: dữ liệu nhập tay chưa khớp thứ tự / chứng cứ
+    (vd. tích "đã bàn giao" khi chưa có quyết định, chưa có biên bản)."""
     nac: int
     da_lap: bool
     da_pd: bool
     da_ct: bool
     da_bg: bool
     canh_bao: str = ''
+    da_ny: bool = False
+    da_tr: bool = False
 
 
 def co_bien_ban_ban_giao(x) -> bool:
@@ -495,19 +539,24 @@ def co_bien_ban_ban_giao(x) -> bool:
 
 
 def phan_tich_tien_do(x) -> TienDoHo:
-    """Tiến độ một hộ (TongHopHo) TUẦN TỰ từ dữ liệu thật (người dùng 17/10/2026 - "khi đã phê duyệt tăng nấc phê duyệt, đã bàn giao
-    tăng nấc bàn giao, tự động chạy"; chọn: tuần tự, bàn giao cần biên bản):
-      nấc 1 Lập PA: đã lưu phương án / có tiền phương án;
-      nấc 2 Phê duyệt: hộ có trong ít nhất một quyết định phê duyệt (qd_ho);
-      nấc 3 Chi trả: đã phê duyệt và MỌI quyết định của hộ đã ghi nhận tiền;
-      nấc 4 Bàn giao: đã chi trả + đã tích bàn giao có ngày biên bản (co_bien_ban_ban_giao).
+    """Tiến độ một hộ (TongHopHo) TUẦN TỰ từ dữ liệu thật (người dùng 17/10/2026 - tuần tự, bàn giao cần biên bản;
+    1.0.83 nâng thang 0..6 theo 16 bước QĐ 18/2026/QĐ-UBND):
+      nấc 1 Lập PA (B5): đã lưu phương án / có tiền phương án;
+      nấc 2 Niêm yết, lấy ý kiến, đối thoại (B6–7): đã lập và có đợt niêm yết, hoặc đã trình;
+      nấc 3 Trình thẩm định (B8): đã lập và nằm trong đợt trình CÓ VĂN BẢN TRÌNH (số + ngày tờ trình - 1.0.91; đợt mới xếp hộ chưa tính);
+      nấc 4 Phê duyệt (B9–11): hộ có trong ít nhất một quyết định phê duyệt (qd_ho);
+      nấc 5 Chi trả (B12–14): đã phê duyệt và MỌI quyết định của hộ đã ghi nhận tiền;
+      nấc 6 Bàn giao (B15–16): đã chi trả + đã tích bàn giao có ngày biên bản (co_bien_ban_ban_giao).
     Tích "đã bàn giao" mà thiếu ngày biên bản / chưa đủ bước trước: KHÔNG tăng nấc, ghi canh_bao (bàn giao trước, thiếu ngày)."""
+    da_tr = bool(getattr(x, 'da_trinh', False))
+    da_ny = bool(getattr(x, 'da_niem_yet', False)) or da_tr
+    # 1.0.90: gắn đợt niêm yết / trình không biến hộ CHƯA lập phương án thành đã lập (trước nhảy cóc lên nấc 2 / 3) - giữ nấc 0, cảnh báo
     da_lap = bool(x.da_lap or x.tong_pa > 0)
     da_pd = bool(x.qd)
     da_ct = da_pd and not x.qd_chua_nhan
     bien_ban = co_bien_ban_ban_giao(x)
     da_bg = da_ct and bien_ban
-    nac = 4 if da_bg else 3 if da_ct else 2 if da_pd else 1 if da_lap else 0
+    nac = 6 if da_bg else 5 if da_ct else 4 if da_pd else 3 if (da_lap and da_tr) else 2 if (da_lap and da_ny) else 1 if da_lap else 0
     canh_bao = ''
     if x.da_ban_giao and not da_bg:
         thieu = ([] if da_ct else ['chưa ' + ('nhận đủ tiền' if da_pd else 'phê duyệt')]) + ([] if bien_ban else ['chưa có ngày biên bản'])
@@ -515,7 +564,30 @@ def phan_tich_tien_do(x) -> TienDoHo:
     cho = [n for n in getattr(x, 'lan_chua_duyet', []) if n > 1] if da_pd else []
     if cho:                                             # 1.0.05: đã có quyết định, còn phương án bổ sung chưa phê duyệt
         canh_bao = '; '.join(c for c in (canh_bao, 'PA bổ sung lần ' + ', '.join(map(str, cho)) + ' chưa phê duyệt') if c)
-    return TienDoHo(nac, da_lap, da_pd, da_ct, da_bg, canh_bao)
+    if not da_lap and (da_ny or da_tr):
+        canh_bao = '; '.join(c for c in (canh_bao, 'đã gắn đợt niêm yết / trình nhưng hộ chưa lập phương án (tổng phương án = 0)') if c)
+    if da_tr and not da_pd:                             # 1.0.91: B8 trước khi xong B7
+        yk = getattr(x, 'y_kien_doi_thoai', '') or getattr(x, 'y_kien', '')
+        if bool(getattr(x, 'da_niem_yet', False)) and yk in ('', 'chua'):
+            canh_bao = '; '.join(c for c in (canh_bao, 'đã trình nhưng chưa có ý kiến của hộ (B7)') if c)
+        elif yk in ('khong_dong_y', 'y_kien_khac') and not getattr(x, 'so_doi_thoai', 0):
+            canh_bao = '; '.join(c for c in (canh_bao, 'đã trình khi hộ chưa đồng ý mà chưa đối thoại (B7)') if c)
+    return TienDoHo(nac, da_lap, da_pd, da_ct, da_bg, canh_bao, da_ny, da_tr)
+
+
+def _y_kien_va_doi_thoai(con) -> tuple:
+    """({(đợt niêm yết, mã hộ): (ý kiến lần lấy ý kiến, ý kiến sau đối thoại)}, {(đợt, mã hộ): số lần đối thoại}). File cũ: rỗng."""
+    yk, dt = {}, {}
+    try:
+        cot = {r[1] for r in con.execute('PRAGMA table_info(y_kien_du_thao)')}
+        sau = 'y_kien_doi_thoai' if 'y_kien_doi_thoai' in cot else "''"
+        for r in con.execute(f'SELECT dot_id, ma_ho, loai, {sau} FROM y_kien_du_thao'):
+            yk[(r[0], r[1])] = (r[2] or 'chua', r[3] or '')
+        for r in con.execute('SELECT dot_id, ma_ho, COUNT(*) FROM doi_thoai_ho GROUP BY dot_id, ma_ho'):
+            dt[(r[0], r[1])] = r[2]
+    except sqlite3.OperationalError:
+        pass
+    return yk, dt
 
 
 LOC_SQL_TOI_DA = 400         # tong_hop(ds_ma_ho) lọc bằng IN (?, …) khi danh sách không quá chừng này (giới hạn tham số SQLite cũ 999)
@@ -527,8 +599,27 @@ def tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
     Đối tượng TongHopHo DÙNG CHUNG: không sửa; danh sách trả là bản sao (sắp xếp / lọc thoải mái)."""
     from . import csdl
     if ds_ma_ho is None and isinstance(con, csdl.KetNoi):
-        return list(csdl.nho(con, ('theo_doi.tong_hop', bool(tinh_pa)), lambda: _tong_hop(con, None, tinh_pa)))
+        return list(csdl.nho(con, ('theo_doi.tong_hop', bool(tinh_pa)), (lambda: _tong_hop_co_pa(con)) if tinh_pa else (lambda: _tong_hop(con, None, False))))
     return _tong_hop(con, ds_ma_ho, tinh_pa)
+
+
+def _tong_hop_co_pa(con) -> list:
+    """1.0.79: cả dự án có tiền phương án = bản không tiền (đã nhớ, danh sách hộ vừa đọc) + tiền từ ket_qua_ho: mở dự án trước đây đọc toàn bộ
+    thửa / quyết định / hộ hai lần. Đối tượng có tiền là bản chép nông, không sửa đối tượng đang nhớ của bản không tiền."""
+    from . import csdl
+    from .nghiep_vu import ket_qua_ho
+    goc = csdl.nho(con, ('theo_doi.tong_hop', False), lambda: _tong_hop(con, None, False))
+    kqh = ket_qua_ho(con)
+    kq = []
+    for x in goc:
+        k = kqh.get(x.ma_ho)
+        if k is not None:
+            moi = TongHopHo.__new__(TongHopHo)
+            moi.__dict__.update(x.__dict__)
+            moi.tong_pa, moi.muc_pa = k[0].tong, muc_5_cot(k[0].muc)
+            x = moi
+        kq.append(x)
+    return kq
 
 
 def _tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
@@ -568,6 +659,9 @@ def _tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
     else:
         co_dong = {r[0] for r in con.execute('SELECT DISTINCT ma_ho FROM ct_dat UNION SELECT DISTINCT ma_ho FROM ct_khoan')}
     kq = []
+    from .quan_ly import dot_co_van_ban_trinh
+    dot_vb = dot_co_van_ban_trinh(con)             # 1.0.91: đợt trình có số + ngày văn bản trình
+    yk_dot, dt_dot = _y_kien_va_doi_thoai(con)
     for h in con.execute('SELECT * FROM ho' + (f' WHERE {loc}' if it else '') + ' ORDER BY thu_tu, ma_ho', ts):
         if chon is not None and h['ma_ho'] not in chon:
             continue
@@ -575,7 +669,14 @@ def _tong_hop(con, ds_ma_ho: list | None = None, tinh_pa: bool = True) -> list:
         da_lap = str(h['trang_thai'] or '').startswith('Đã lập') or h['ma_ho'] in co_dong
         x = TongHopHo(h['ma_ho'], h['thu_tu'], h['ho_ten'], h['dia_chi'], thua.get(h['ma_ho'], []), qd.get(h['ma_ho'], []),
                       da_ban_giao=bool(h['da_ban_giao']), ban_giao_ngay=h['ban_giao_ngay'], ly_do_ban_giao=h['ly_do_ban_giao'],
-                      bien_ban_ban_giao=h['bien_ban_ban_giao'], theo_doi=h['theo_doi'], da_lap=da_lap)
+                      bien_ban_ban_giao=h['bien_ban_ban_giao'], theo_doi=h['theo_doi'], da_lap=da_lap,
+                      da_niem_yet=bool(h['dot_du_thao_id']) if 'dot_du_thao_id' in h.keys() else False,
+                      da_trinh=bool(h['dot_id']) and h['dot_id'] in dot_vb if 'dot_id' in h.keys() else False,
+                      xep_dot_trinh=bool(h['dot_id']) and h['dot_id'] not in dot_vb if 'dot_id' in h.keys() else False)
+        dny = h['dot_du_thao_id'] if 'dot_du_thao_id' in h.keys() else None
+        if dny:
+            x.y_kien, x.y_kien_doi_thoai = yk_dot.get((dny, h['ma_ho']), ('', ''))
+            x.so_doi_thoai = dt_dot.get((dny, h['ma_ho']), 0)
         if tinh_pa and h['ma_ho'] in kqh:
             k = kqh[h['ma_ho']][0]
             x.tong_pa, x.muc_pa = k.tong, muc_5_cot(k.muc)

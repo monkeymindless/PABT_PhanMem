@@ -69,7 +69,7 @@ class TestPheu(_Co):
         for m in (a, b, c):
             du_thao.doi_y_kien_nhanh(self.con, ny, m)                   # chua -> dong_y
         self.assertEqual(self.pheu().dem()['cho_trinh'], 3)
-        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1')
+        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.con, [a, b, d], dt)                        # d chưa có ý kiến
         kq = self.pheu()
         self.assertEqual(kq.dem()['cho_phe_duyet'], 3)
@@ -88,7 +88,7 @@ class TestPheu(_Co):
 
     def test_phuong_an_bo_sung_xet_theo_lan_dang_mo(self):
         a = self.ma[0]
-        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1')
+        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.con, [a], dt)
         q = theo_doi.luu_qd(self.con, None, '1/QĐ-UBND', '05/10/2026')
         theo_doi.them_ho_theo_pa(self.con, q, [a])
@@ -109,7 +109,7 @@ class TestPheu(_Co):
         self.assertEqual(self.con.execute('SELECT lan FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (ny, a)).fetchone()[0], 2)
         self.assertEqual(self.gd(self.pheu(), a).giai_doan, 'niem_yet')
         du_thao.doi_y_kien_nhanh(self.con, ny, a)
-        dt2 = quan_ly.tao_dot(self.con, 'Đợt trình 2')
+        dt2 = quan_ly.tao_dot(self.con, 'Đợt trình 2', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.con, [a], dt2)
         h = self.gd(self.pheu(), a)
         self.assertEqual((h.giai_doan, h.dot_trinh), ('cho_phe_duyet', dt2))
@@ -120,7 +120,7 @@ class TestPheu(_Co):
 
     def test_xoa_dot_trinh_xoa_theo_lan(self):
         a = self.ma[0]
-        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1')
+        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
         quan_ly.gan_dot(self.con, [a], dt)
         quan_ly.xoa_dot(self.con, dt)
         self.assertIsNone(self.con.execute('SELECT dot_trinh_id FROM pa_lan WHERE ma_ho = ? AND lan = 1', (a,)).fetchone()[0])
@@ -135,6 +135,39 @@ class TestPheu(_Co):
         self.assertIn('ngay_bg_chua_qd', self.gd(kq, a).co)
         self.assertEqual(self.gd(kq, a).giai_doan, 'da_lap')            # ngày từ Excel không làm hộ "hoàn tất"
         self.assertIn('vuong', self.gd(kq, b).co)
+
+    def test_da_lap_niem_yet_dem_luy_ke_khi_da_trinh(self):
+        """Ô Đã lập / Niêm yết = lũy kế: hộ đã trình (chờ phê duyệt) vẫn là đã lập và đã niêm yết."""
+        a, b, c = self.ma[:3]
+        dt = quan_ly.tao_dot(self.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
+        quan_ly.gan_dot(self.con, [a, b, c], dt)
+        kq = self.pheu()
+        self.assertEqual(kq.dem()['cho_phe_duyet'], 3)
+        self.assertEqual(kq.dem()['da_lap'], self.N - 3)     # 5 hộ chưa trình: đang đứng đúng ô đã lập
+        self.assertEqual(kq.dem()['niem_yet'], 0)
+        hien = kq.dem_hien_thi()
+        self.assertEqual(hien['da_lap'], self.N)             # lũy kế: cả 8 hộ đã lập
+        self.assertEqual(hien['niem_yet'], 3)                # lũy kế: 3 hộ đã đến mốc niêm yết / trình
+        self.assertEqual(hien['cho_phe_duyet'], 3)
+        self.assertEqual(len(kq.theo_moc('da_lap')), self.N)
+        self.assertEqual(sorted(x.ma_ho for x in kq.theo_moc('niem_yet')), sorted((a, b, c)))
+        self.assertEqual(kq.theo_moc('cho_phe_duyet'), kq.theo_giai_doan('cho_phe_duyet'))
+
+    def test_co_trinh_thieu_y_kien_keo_giai_doan_khi_ma_la(self):
+        """Mã giai đoạn lạ + cờ đã trình → vẫn đếm Chờ phê duyệt / lũy kế Đã lập, Niêm yết (không để cả 8 ô = 0)."""
+        self.assertEqual(ph._giai_doan_hop_le('Đã trình, chờ phê duyệt'), 'cho_phe_duyet')
+        self.assertEqual(ph._giai_doan_hop_le('Đã lập'), 'da_lap')
+        kq = ph.KetQuaPheu([
+            ph.HoPheu(1, 1, 'A', '', co={'trinh_thieu_y_kien', 'pa_0_dong'}),
+            ph.HoPheu(2, 2, 'B', 'xyz', co={'trinh_thieu_y_kien'}),
+            ph.HoPheu(3, 3, 'C', 'khong_phai_ma', co={'pa_0_dong'}),
+        ])
+        self.assertEqual(kq.dem()['cho_phe_duyet'], 2)
+        self.assertEqual(kq.dem()['da_lap'], 1)              # hộ C: mã lạ + PA 0 đồng, chưa có cờ trình
+        hien = kq.dem_hien_thi()
+        self.assertEqual(hien['da_lap'], 3)
+        self.assertEqual(hien['niem_yet'], 2)
+        self.assertEqual(hien['chua_lap'], 0)
 
 
 class TestLuocDo(_Co):
@@ -162,6 +195,7 @@ class TestLuocDo(_Co):
         shutil.copy2(self.file, cu)
         c = sqlite3.connect(cu)
         c.execute('ALTER TABLE y_kien_du_thao DROP COLUMN lan')
+        c.execute('DROP INDEX IF EXISTS ix_pa_lan_dot_trinh')                  # 1.0.52: chỉ mục trên cột (file cũ không có)
         c.execute('ALTER TABLE pa_lan DROP COLUMN dot_trinh_id')
         c.commit()
         c.close()

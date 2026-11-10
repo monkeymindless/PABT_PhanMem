@@ -255,6 +255,14 @@ def dong_goi_pho_quat(pb: str) -> Path:
         file += [ten_ds] + phang
         n[ban], cay[ban] = len(ct), ct
         ds_zip[ten_ds] = [f'{BAN[ban]["zip"]}\\{d}' for d in dz]          # nguồn trong zip: x64\… / x86\…
+    # Tesseract giống hệt ở hai bản (24,3 MB sau nén): zip chỉ giữ ở x64\; danh sách x86 lấy nguồn từ đó, chạy ngay x86\PABT.exe tìm ở ..\x64\tesseract (ocr)
+    bam_x64 = {d.split('\t')[1]: d.split('\t')[3] for d in ds_zip['danh_sach_x64.txt']}
+    bo_x86 = set()
+    for i, d in enumerate(ds_zip['danh_sach_x86.txt']):
+        x = d.split('\t')
+        if x[1].lower().startswith('tesseract\\') and bam_x64.get(x[1]) == x[3]:
+            ds_zip['danh_sach_x86.txt'][i] = '\t'.join([f'{BAN["win10"]["zip"]}\\{x[1]}', *x[1:]])
+            bo_x86.add(x[1].replace('\\', '/'))
     file = _chep_cai_dat(goi, 'universal', pb) + file + _chep_kb(goi, BAN['win7']['kb'])
     dich = _iexpress(goi, file, 'LARC_Setup_Universal', IEXPRESS, f'LARC_Setup_Universal_{pb}.exe')
     print(f'{dich.name}: {dich.stat().st_size / 2**20:.1f} MB, vỏ {kien_truc(dich)}, x64 {n["win10"]} + x86 {n["win7"]} file')
@@ -264,6 +272,8 @@ def dong_goi_pho_quat(pb: str) -> Path:
     with zipfile.ZipFile(z_ten, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for ban in ('win10', 'win7'):
             for ten, f in cay[ban]:
+                if ban == 'win7' and ten in bo_x86:
+                    continue
                 z.write(f, f'{BAN[ban]["zip"]}/{ten}')
         for ten_ds, dong in ds_zip.items():
             z.writestr(ten_ds, ('\r\n'.join(dong) + '\r\n').encode('utf-8'))

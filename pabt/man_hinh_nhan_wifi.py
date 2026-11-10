@@ -3,6 +3,7 @@
 Mở hộp = bật máy chủ nhận (nhan_wifi.MayNhan) trên mạng nội bộ; đóng hộp = tắt. Hiện mã QR + địa chỉ để điện thoại mở bằng trình duyệt;
 file .json nhận về liệt kê trong bảng, người dùng bấm Nhập (phieu_kiem_dem qua hàm nhap của hộp Phiếu kiểm đếm - kiểm đủ, hỏi thêm hộ mới)."""
 from __future__ import annotations
+from .giao_dien import dat_kieu_theo_tong, qmau_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
 
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QDesktopServices, QImage, QPixmap
@@ -45,7 +46,7 @@ class HopNhanWifi(QDialog):
         self.lb_qr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lb_url = QLabel('')
         self.lb_url.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self.lb_url.setStyleSheet('QLabel { font-size: 15px; font-weight: 600; color: #1E3A5F; }')
+        dat_kieu_theo_tong(self.lb_url, 'QLabel { font-size: 16px; font-weight: 600; color: #1E3A5F; }')
         self.cb_ip = QComboBox()
         self.cb_ip.setToolTip('Địa chỉ mạng của máy tính - chọn địa chỉ cùng mạng Wi-Fi với điện thoại')
         self.cb_ip.activated.connect(lambda _: self.bat_dau(self.cb_ip.currentData()))
@@ -81,7 +82,7 @@ class HopNhanWifi(QDialog):
         self.b_nhap = QPushButton('Nhập file đã chọn vào dự án')
         self.b_nhap.clicked.connect(lambda: self.nhap_dong(sorted({i.row() for i in self.bang.selectedIndexes()})))
         self.b_tat_ca = QPushButton('Nhập mọi file chưa nhập')
-        self.b_tat_ca.clicked.connect(lambda: self.nhap_dong([r for r, x in enumerate(self.ds) if x['tt'] == 'moi']))
+        self.b_tat_ca.clicked.connect(lambda: self.nhap_dong([r for r, x in enumerate(self.ds) if x['tt'] == 'moi' and x.get('ma_hoa', True)]))
         b_tm = QPushButton('Mở thư mục nhận')
         b_tm.clicked.connect(self._mo_thu_muc)
         b_dong = QPushButton('Đóng')
@@ -120,7 +121,7 @@ class HopNhanWifi(QDialog):
             self.lb_tt.setText(str(e))
             return ''
         self.lb_url.setText(url)
-        self.lb_qr.setPixmap(anh_qr(url))
+        self.lb_qr.setPixmap(anh_qr(self.may.url_qr or url))   # 1.0.55: QR mang khóa mã hóa (#k=…); chữ hiện không kèm khóa
         self.lb_tt.setText('Đang chờ điện thoại gửi file…')
         self.nhip.start()
         return url
@@ -145,10 +146,10 @@ class HopNhanWifi(QDialog):
     def _ve(self) -> None:
         self.bang.setRowCount(len(self.ds))
         for r, x in enumerate(self.ds):
-            for c, chu in enumerate((x['luc'], x['file'].name, f'{max(1, x["co"] // 1024):,} KB'.replace(',', '.'), x['ket_qua'])):
+            for c, chu in enumerate((x['luc'], x['file'].name + ('' if x.get('ma_hoa', True) else ' (KHÔNG mã hóa: chọn dòng rồi nhập nếu chắc chắn)'), f'{max(1, x["co"] // 1024):,} KB'.replace(',', '.'), x['ket_qua'])):
                 it = QTableWidgetItem(chu)
                 if c == 3:
-                    it.setForeground(QColor({'moi': '#475569', 'xong': '#166534', 'loi': '#B91C1C'}[x['tt']]))
+                    it.setForeground(qmau_theo_tong({'moi': '#475569', 'xong': '#166534', 'loi': '#B91C1C'}[x['tt']], 'chu'))
                 self.bang.setItem(r, c, it)
 
     def nhap_dong(self, ds_dong: list) -> int:

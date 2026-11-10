@@ -31,7 +31,12 @@ THU_MUC_DU_AN = 'DuAn'
 THU_MUC_SAO_LUU = 'SaoLuu'
 LAP_BAM = 120000                       # số vòng PBKDF2-HMAC-SHA256
 QUAN_TRI, NGUOI_DUNG = 'quan_tri', 'nguoi_dung'
-TEN_VAI_TRO = {QUAN_TRI: 'Quản trị', NGUOI_DUNG: 'Người dùng'}
+TEN_VAI_TRO = {QUAN_TRI: 'Quản trị', NGUOI_DUNG: 'Người dùng (mọi việc lập phương án)'}
+# 1.0.57: 6 vai trò nghiệp vụ (phan_quyen - đề án LARC V2.0); quản trị = quan_tri hoặc lãnh đạo
+TEN_VAI_TRO.update({'lanh_dao': 'Lãnh đạo (phê duyệt, mở khóa)', 'tham_dinh': 'Thẩm định viên',
+                    'chuyen_vien': 'Chuyên viên lập phương án', 'kiem_dem': 'Kiểm đếm viên', 'ke_toan': 'Kế toán chi trả',
+                    'thanh_tra': 'Thanh tra, kiểm toán (chỉ xem)'})
+VAI_TRO_QUAN_TRI = (QUAN_TRI, 'lanh_dao')
 
 _LUOC_DO = '''
 CREATE TABLE IF NOT EXISTS nguoi_dung (
@@ -78,7 +83,7 @@ class Phien:
 
     @property
     def la_quan_tri(self) -> bool:
-        return self.vai_tro == QUAN_TRI
+        return self.vai_tro in VAI_TRO_QUAN_TRI
 
     @property
     def ten_hien(self) -> str:
@@ -183,9 +188,12 @@ def bam_mat_khau(mat_khau: str, muoi: str | None = None) -> tuple:
     return bam, muoi
 
 
+MAT_KHAU_TOI_THIEU = 8              # 1.0.97 (kiểm toán bảo mật 09/11/2026: 6 ký tự quá ngắn) - chỉ áp khi tạo / đổi mật khẩu
+
+
 def _kiem_mat_khau(mk: str) -> None:
-    if len(str(mk or '')) < 6:
-        raise LoiMayChu('Mật khẩu cần ít nhất 6 ký tự.')
+    if len(str(mk or '')) < MAT_KHAU_TOI_THIEU:
+        raise LoiMayChu(f'Mật khẩu cần ít nhất {MAT_KHAU_TOI_THIEU} ký tự.')
 
 
 def _kiem_tai_khoan(tk: str) -> str:
@@ -235,10 +243,14 @@ def dang_nhap(goc, tai_khoan: str, mat_khau: str) -> Phien:
         bam, _ = bam_mat_khau(mat_khau, r['muoi'])
         if not hmac.compare_digest(bam, r['bam']):
             sai = r['sai_lien_tiep'] + 1
+            # 1.0.58: không khóa quản trị cuối cùng (ai gõ sai 5 lần cũng khóa được, cả đơn vị mất quyền quản trị, không có đường mở)
+            con_qt = con.execute(f"SELECT 1 FROM nguoi_dung WHERE khoa = 0 AND tai_khoan <> ? AND vai_tro IN "
+                                 f"({','.join('?' * len(VAI_TRO_QUAN_TRI))})", (tk, *VAI_TRO_QUAN_TRI)).fetchone()
+            khoa_moi = 1 if sai >= 5 and (r['vai_tro'] not in VAI_TRO_QUAN_TRI or con_qt) else 0
             with con:
-                con.execute('UPDATE nguoi_dung SET sai_lien_tiep = ?, khoa = ? WHERE tai_khoan = ?', (sai, 1 if sai >= 5 else 0, tk))
+                con.execute('UPDATE nguoi_dung SET sai_lien_tiep = ?, khoa = ? WHERE tai_khoan = ?', (sai, khoa_moi, tk))
                 _ghi_nhat_ky(con, tk, 'Đăng nhập sai', f'lần {sai}')
-            raise LoiMayChu('Sai tài khoản hoặc mật khẩu.' + (' Tài khoản đã bị khóa do nhập sai 5 lần.' if sai >= 5 else ''))
+            raise LoiMayChu('Sai tài khoản hoặc mật khẩu.' + (' Tài khoản đã bị khóa do nhập sai 5 lần.' if khoa_moi else ''))
         with con:
             con.execute('UPDATE nguoi_dung SET sai_lien_tiep = 0, dang_nhap_cuoi = ?, may_cuoi = ? WHERE tai_khoan = ?',
                         (_bay_gio(), _may(), tk))
@@ -318,7 +330,7 @@ def sua_nguoi_dung(phien, tai_khoan: str, ho_ten: str | None = None, chuc_vu: st
         r = con.execute('SELECT * FROM nguoi_dung WHERE tai_khoan = ?', (tai_khoan,)).fetchone()
         if r is None:
             raise LoiMayChu(f'Không có tài khoản "{tai_khoan}".')
-        if tai_khoan == phien.tai_khoan and (khoa or (vai_tro and vai_tro != QUAN_TRI)):
+        if tai_khoan == phien.tai_khoan and (khoa or (vai_tro and vai_tro not in VAI_TRO_QUAN_TRI)):
             raise LoiMayChu('Không tự khóa hoặc bỏ quyền quản trị của chính mình.')
         gt = {}
         if ho_ten is not None:
@@ -537,14 +549,22 @@ def ds_lay_ve_cuc_bo() -> list:
     """Dự án đã mang về máy này: [dict(ban_sao, goc, file_goc, tai_khoan, luc, sua_goc)]."""
     try:
         ds = json.loads(_so_lay_ve().read_text(encoding='utf-8'))
-    except (OSError, ValueError):
+    except ValueError:                                  # 1.0.58: sổ hỏng: giữ lại để cứu, không để lần ghi sau đè mất
+        try:
+            os.replace(_so_lay_ve(), str(_so_lay_ve()) + '.hong')
+        except OSError:
+            pass
+        return []
+    except OSError:
         return []
     return [x for x in ds if Path(x['ban_sao']).exists()]
 
 
 def _ghi_so(ds: list) -> None:
     _so_lay_ve().parent.mkdir(parents=True, exist_ok=True)
-    _so_lay_ve().write_text(json.dumps(ds, ensure_ascii=False, indent=1), encoding='utf-8')
+    tam = _so_lay_ve().with_name(_so_lay_ve().name + '.tam')      # 1.0.58: ghi nguyên tử (mất điện giữa chừng không mất sổ)
+    tam.write_text(json.dumps(ds, ensure_ascii=False, indent=1), encoding='utf-8')
+    os.replace(tam, _so_lay_ve())
 
 
 def lay_ve(file, phien=None) -> Path:
@@ -557,6 +577,7 @@ def lay_ve(file, phien=None) -> Path:
     rel = _tuong_doi(phien.goc, f)
     con = _mo(phien.goc)
     try:
+        con.execute('BEGIN IMMEDIATE')                  # 1.0.58: kiểm + giữ chỗ một giao dịch (như lay_ve_theo_ho): hai người không cùng mang về
         r = con.execute('SELECT * FROM lay_ve WHERE duong_dan = ?', (rel,)).fetchone()
         if r is not None and r['tai_khoan'] != phien.tai_khoan:
             raise LoiMayChu(f'Dự án đang được "{r["tai_khoan"]}" mang về máy {r["may"]} từ {r["luc"]}: chờ người đó đưa lên lại.')
@@ -570,16 +591,25 @@ def lay_ve(file, phien=None) -> Path:
             raise LoiMayChu(f'Dự án đang được sửa trên {khoa.mo_ta(k)}: chờ đóng rồi mới mang về.')
         dich = thu_muc_offline() / f'{f.stem}__{phien.tai_khoan}{f.suffix}'
         dich.parent.mkdir(parents=True, exist_ok=True)
-        _chep_nhat_quan(f, dich)                        # sqlite backup: ảnh chụp nhất quán kể cả khi máy khác đang ghi (copy2 thì không)
-        sua = f.stat().st_mtime
-        with con:
-            con.execute('INSERT OR REPLACE INTO lay_ve (duong_dan, tai_khoan, may, luc, sua_goc) VALUES (?,?,?,?,?)',
-                        (rel, phien.tai_khoan, _may(), _bay_gio(), sua))
-            _ghi_nhat_ky(con, phien.tai_khoan, 'Mang dự án về làm offline', rel)
+        sua = f.stat().st_mtime                         # 1.0.58: mốc lấy TRƯỚC khi chép (lấy sau: sửa đổi trong lúc chép bị ghi đè không báo)
+        con.execute('INSERT OR REPLACE INTO lay_ve (duong_dan, tai_khoan, may, luc, sua_goc) VALUES (?,?,?,?,?)',
+                    (rel, phien.tai_khoan, _may(), _bay_gio(), sua))
+        _ghi_nhat_ky(con, phien.tai_khoan, 'Mang dự án về làm offline', rel)
+        con.commit()
+        try:
+            _chep_nhat_quan(f, dich)
+            if f.stat().st_mtime != sua:
+                raise LoiMayChu('Dự án vừa được sửa trong lúc chép: mang về lại.')
+        except (OSError, sqlite3.Error, LoiMayChu):
+            with con:
+                con.execute('DELETE FROM lay_ve WHERE duong_dan = ? AND tai_khoan = ?', (rel, phien.tai_khoan))
+            raise
+        # thì không)
     finally:
         con.close()
     ds = [x for x in ds_lay_ve_cuc_bo() if x['ban_sao'] != str(dich)]
-    ds.append(dict(ban_sao=str(dich), goc=str(phien.goc), file_goc=str(f), tai_khoan=phien.tai_khoan, luc=_bay_gio(), sua_goc=sua))
+    ds.append(dict(ban_sao=str(dich), goc=str(phien.goc), file_goc=str(f), tai_khoan=phien.tai_khoan, luc=_bay_gio(), sua_goc=sua,
+                   vai_tro=phien.vai_tro))
     _ghi_so(ds)
     return dich
 
@@ -613,6 +643,17 @@ def dua_len(ban_sao, phien=None, ep: bool = False) -> Path:
     if f.exists():
         sl = goc / THU_MUC_SAO_LUU / f'{f.stem}_{datetime.now():%Y%m%d_%H%M%S}{f.suffix}'
         sl.parent.mkdir(parents=True, exist_ok=True)
+        # 1.0.58: giao dịch dở (máy kia mất điện): SQLite tự rollback trên đúng file của nó trước khi thay file. 1.0.90 (journal TRUNCATE):
+        # file -journal 0 byte luôn có sau khi mở dự án, không phải giao dịch dở - chỉ xét file có nội dung
+        if csdl.journal_do_dang(f):
+            c = sqlite3.connect(str(f), timeout=15)
+            try:
+                c.execute('BEGIN IMMEDIATE')
+                c.rollback()
+            finally:
+                c.close()
+            if csdl.journal_do_dang(f):
+                raise LoiMayChu('Dự án trên máy chủ đang có giao dịch dở: thử lại sau.')
         shutil.copy2(f, sl)
     f.parent.mkdir(parents=True, exist_ok=True)
     tam = f.with_name(f.name + '.dang_dua_len')
@@ -707,9 +748,15 @@ def dau_vet_ho(con, ds_ma_ho) -> dict:
         if 'ma_ho' not in cot:
             continue
         i = cot.index('ma_ho')
+        # 1.0.78: cột ghi_chu_ten trống không tính vào dấu vết: máy khác mở file làm thêm cột (csdl.MO_RONG) không phải "hộ đã sửa";
+        # đổi dấu vết ở đây sẽ báo XUNG ĐỘT giả cho mọi hộ đang nhận về
+        i_gc = cot.index('ghi_chu_ten') if bang == 'ho' and 'ghi_chu_ten' in cot else None
         for nhom in _nhom(cac):
             for r in con.execute(f'SELECT * FROM {bang} WHERE ma_ho IN ({",".join("?" * len(nhom))}) ORDER BY rowid', nhom):
-                bam[r[i]].update(repr((bang, tuple(r))).encode('utf-8'))
+                gt = tuple(r)
+                if i_gc is not None and not gt[i_gc]:
+                    gt = gt[:i_gc] + gt[i_gc + 1:]
+                bam[r[i]].update(repr((bang, gt)).encode('utf-8'))
     return {m: h.hexdigest() for m, h in bam.items()}
 
 
@@ -820,7 +867,7 @@ def lay_ve_theo_ho(file, ds_ma_ho, phien=None) -> Path:
     ds = ds_lay_ve_cuc_bo()
     ds.append(dict(ban_sao=str(dich), goc=str(phien.goc), file_goc=str(f), tai_khoan=phien.tai_khoan, luc=luc,
                    sua_goc=f.stat().st_mtime, ds_ma_ho=cac_ho, dau_vet={str(m): v for m, v in dau_vet.items()},
-                   audit_max=audit or 0, nhat_ky_max=nk or 0))
+                   audit_max=audit or 0, nhat_ky_max=nk or 0, vai_tro=phien.vai_tro))
     _ghi_so(ds)
     return dich
 

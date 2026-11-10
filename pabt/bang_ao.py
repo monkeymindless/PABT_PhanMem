@@ -30,8 +30,25 @@ _NEN, _MAU_CHU, _CHU, _GOI_Y = (Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.
 # thành tiền chữ navy đậm. Chỉ ô chưa có màu chữ riêng (kieu['mau_chu'])
 # 20/10/2026: hằng / phông số dùng chung ở giao_dien (một nguồn cho BangHo, BangMuc, Khái toán) - cột canh phải dùng phông số
 from .giao_dien import MAU_SO_KHONG, MAU_SO_TIEN, SO_KHONG, cac_dong_da_chon, cho_phep_sao_chep_bang, phong_so  # noqa: E402
-_BUT_SO_KHONG = QBrush(QColor(MAU_SO_KHONG))
-_BUT_SO_TIEN = QBrush(QColor(MAU_SO_TIEN))
+_NHO_BUT = {}
+
+
+def _but_theo_tong(mau: str) -> QBrush:
+    """1.0.51: cọ chữ theo tông nền đang dùng (tông Tối: số tiền navy trên nền tối 1,27:1 -> xanh sáng) - nhớ theo (màu, tông)."""
+    from . import giao_dien
+    k = (mau, giao_dien.TONG_NEN[0])
+    b = _NHO_BUT.get(k)
+    if b is None:
+        b = _NHO_BUT[k] = QBrush(QColor(giao_dien.mau_theo_tong(mau, 'chu')))
+    return b
+
+
+def _but_so_khong() -> QBrush:
+    return _but_theo_tong(MAU_SO_KHONG)
+
+
+def _but_so_tien() -> QBrush:
+    return _but_theo_tong(MAU_SO_TIEN)
 
 
 def la_cot_tien(tieu_de: str) -> bool:
@@ -109,11 +126,11 @@ class _MoHinhAo(QAbstractTableModel):
                 return QBrush(k['mau_chu'])
             v = self.dong[r][c].strip()
             if v in SO_KHONG:
-                return _BUT_SO_KHONG
+                return _but_so_khong()
             if c in self.cot_tien and v and (v[0].isdigit() or v[0] == '-'):
-                return _BUT_SO_TIEN
+                return _but_so_tien()
             return None
-        if role == _CHU and c in self.can_phai:          # cột số: phông số (Consolas) cùng cỡ phông ứng dụng
+        if role == _CHU and c in self.can_phai:          # cột số: phông số chung (PHONG_SO) cùng cỡ phông ứng dụng
             return phong_so(None, dam=bool(k and k.get('dam')))
         if k is None:
             return None
@@ -153,6 +170,7 @@ class BangAo(QTableView):
     """Bảng chỉ đọc chọn theo dòng, chạy trên mô hình ảo. dat_du_lieu(dòng, dữ liệu dòng, kiểu ô, gộp ô) thay cho setRowCount +
     setItem từng ô."""
     cellDoubleClicked = Signal(int, int)
+    cellClicked = Signal(int, int)
 
     def __init__(self, cot: list, can_phai=(), parent=None, sap_xep: bool = False, tu_cao: bool = True):
         super().__init__(parent)
@@ -174,6 +192,7 @@ class BangAo(QTableView):
             dau.setSortIndicator(0, Qt.SortOrder.AscendingOrder)    # mặc định Qt: cột 0 GIẢM dần (STT ngược)
             self.setSortingEnabled(True)
         self.doubleClicked.connect(lambda i: self.cellDoubleClicked.emit(i.row(), i.column()))
+        self.clicked.connect(lambda i: self.cellClicked.emit(i.row(), i.column()))
         cho_phep_sao_chep_bang(self)                    # cuộn mượt, Ctrl+C, chọn vùng ô, bộ đếm (giao_dien)
 
     def dat_du_lieu(self, dong: list, du_lieu: list | None = None, kieu: dict | None = None, gop=(),

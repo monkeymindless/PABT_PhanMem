@@ -222,7 +222,8 @@ def tao_du_an(file_pabt, thong_tin: dict, dong: list, bang_gia: list, tu_lap: bo
                         (nguon or 'Nhập thô (Dự án mới)',))
             csdl.ghi_nhat_ky(con, 'Lập dự án mới', f'{len(ho)} hộ, {len(thua)} thửa, {len(gia)} giá đất')
         if tu_lap:
-            cb += tu_lap_phuong_an(con)
+            with csdl.giao_dich(con):                  # file đang tạo (lỗi thì bỏ cả file): cả loạt một giao dịch, không phải mỗi hộ một lần COMMIT
+                cb += tu_lap_phuong_an(con)
         kq = tinh_tat_ca(con)
         bao_cao = dict(file=str(p), so_ho=len(ho), so_thua=len(thua), so_ho_co_pa=sum(1 for k in kq if k.tong > 0),
                        tong=sum((k.tong for k in kq), KHONG), canh_bao=cb)
@@ -247,19 +248,7 @@ def tu_lap_phuong_an(con, ds_ma_ho: list | None = None) -> list:
         if bo.pa.dat or any(bo.pa.khoan[m] for m in MUC_KHOAN):
             continue
         ten = f'Hộ {ma} {bo.pa.ho.ho_ten}'
-        for mt, mo_ta, con_lai in bo.thua_cua_ho():
-            if con_lai <= 0:
-                continue
-            i, tb = bo.them_thua(mt)
-            d = bo.pa.dat[i]
-            if not d.loai_dat or d.loai_dat not in bo.bc.loai_dat:      # mã lạ (không thuộc danh mục chuẩn / bảng giá): không tự lập
-                bo.xoa(1, i)
-                cb.append(f'{ten}: {bo.ten_thua(mt)} loại đất {d.loai_dat or ""} không có trong danh mục, chưa đưa vào mục 1.'
-                          .replace('đất  không', 'đất không'))
-            elif d.gia_bang_gia <= 0:
-                cb.append(f'{ten}: {bo.ten_thua(mt)} chưa có giá {d.loai_dat} vị trí {d.vi_tri or "?"}.')
-            elif tb.startswith('Kiểm kê ghi'):
-                cb.append(f'{ten}: {tb}')
+        cb.extend(bo.them_dong_tu_thua(ten)[1])
         de_xuat, _ = bo.goi_y()
         bo.ap_dung_goi_y(de_xuat)
         if bo.pa.dat or any(bo.pa.khoan[m] for m in MUC_KHOAN):

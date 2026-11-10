@@ -91,7 +91,7 @@ class TestManHinhLapPA(unittest.TestCase):
         self.assertIsNotNone(m)
         i = w.them_hang_muc_khac(2, 'Mái che khung sắt lợp tôn', m_tuong_duong=m)
         self.assertEqual(w.bang[2].bang.rowCount(), 10)
-        self.assertEqual(w.bang[2].bang.item(i, self._cot(w, 2, 'nguon')).text(), f'tương đương: {m.ma}')
+        self.assertEqual(w.bang[2].bang.item(i, self._cot(w, 2, 'nguon')).text(), f'Tương đương: {m.ma}')
         w.bang[2].bang.item(i, self._cot(w, 2, 'so_luong')).setText('10')
         self.assertEqual(w.bo.pa.khoan[2][i].so_luong, 10)
         # thêm từ danh mục (cây trồng)
@@ -176,14 +176,16 @@ class TestManHinhLapPA(unittest.TestCase):
         dlg.o_thu_muc.setText(str(Path(self.tmp.name) / 'in_gui'))
         dlg.r_excel.setChecked(True)
         kq = dlg.thuc_hien(xac_nhan=False)
-        self.assertEqual(len(kq['excel']), 1)
+        self.assertEqual(len(kq['word']), 1)                        # 1.0.19+: phương án chi tiết là Word
+        self.assertEqual(kq['excel'], [])
         if sys.platform == 'win32' and os.environ.get('PABT_THU_EXCEL', '1') != '0':
-            dlg.o_bth.setChecked(True)
+            dlg.o_bth.setChecked(True)                              # còn tích từ nhiều hộ: một hộ không xuất bảng tổng hợp
             dlg.r_pdf.setChecked(True)
             kq = dlg.thuc_hien(xac_nhan=False)
             self.assertEqual(kq['loi'], [])
-            self.assertEqual(len(kq['pdf']), 2)
-        dlg.cb_pham_vi.setCurrentIndex(1)
+            self.assertEqual(len(kq['pdf']), 1)
+        dlg.hang_pham_vi.dat('pa')                                  # 1.0.66: mở từ một hộ là chế độ Một hộ; chuyển sang nhiều hộ
+        self.assertEqual(dlg.cb_pham_vi.currentData(), 'pa')
         self.assertEqual(len(dlg.ds_ho()), 2)                       # các hộ đã lập phương án
         # tự chọn: bỏ đánh dấu một hộ -> phạm vi thành "Tự chọn"; lọc + chọn các hộ đang hiện; bỏ chọn tất cả
         from PySide6.QtCore import Qt
@@ -198,9 +200,9 @@ class TestManHinhLapPA(unittest.TestCase):
         dlg.o_tim.setText(ten)
         dlg._danh_dau(dlg._dang_hien(), giu=True)
         self.assertIn(dlg.bang_ho.item(0, 0).data(Qt.ItemDataRole.UserRole), dlg.ds_ho())
-        self.assertFalse(dlg.o_so_ban.isEnabled())                 # số bản chỉ dùng khi in ra máy in
+        self.assertTrue(dlg.o_so_ban.isEnabled())                  # 1.0.66: Số bản sao luôn ở cạnh nút In, như bảng In của Word
         dlg.r_in.setChecked(True)
-        self.assertTrue(dlg.o_so_ban.isEnabled() and not dlg.o_gop.isEnabled())
+        self.assertFalse(dlg.o_gop.isEnabled())                    # gộp một file chỉ dùng khi xuất PDF
         w.close()
 
 

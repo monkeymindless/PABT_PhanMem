@@ -153,7 +153,6 @@ class TestBanSaoBoAnhBanDo(_Co):
     """A5: sao lưu tự động / mốc khôi phục không chép ảnh nền bản đồ đã lưu trong dự án."""
 
     def test_sao_luu_va_moc(self):
-        import sqlite3
         from pabt import ban_do_luu, co_may_thoi_gian
         from tests.test_ban_do_pa4 import _png
         con = self._con(2)
@@ -162,7 +161,7 @@ class TestBanSaoBoAnhBanDo(_Co):
         ban_do_luu.luu_lop(con, [('a.kml', b'<kml/>')])
         f = con.execute('PRAGMA database_list').fetchone()[2]
         for p in (csdl.sao_luu_tu_dong(con, f), co_may_thoi_gian.chup_moc(con, f, bat_buoc=True).file):
-            c = sqlite3.connect(str(p))
+            c = csdl.mo(p, chi_doc=True)                    # 1.0.55: bản sao lưu / mốc nén - mở trong suốt
             try:
                 self.assertEqual(c.execute('SELECT COUNT(*) FROM ban_do_o').fetchone()[0], 0)
                 self.assertEqual(c.execute('SELECT COUNT(*) FROM ban_do_lop').fetchone()[0], 1)     # lớp KML (nhỏ) giữ

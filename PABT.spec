@@ -18,16 +18,16 @@ a = Analysis(
     binaries=[],
     # 1.0.20: KHÔNG đóng thư mục mau_in - bảng tổng hợp dựng bằng mã (pabt/mau_bang_tong_hop.py), mẫu Word (chi tiết / bổ sung / điều chỉnh) dựng bằng
     # mã + thông số ban_in.mau_word của pabt_profile.json
-    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/he_so_k_qd03.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'),
+    datas=[('pabt/schema.sql', 'pabt'), ('pabt/bo_don_gia.sqlite', 'pabt'), ('pabt/bang_gia_nq28.json', 'pabt'), ('pabt/he_so_k_qd03.json', 'pabt'), ('pabt/gia_dat_qd03.json', 'pabt'), ('pabt/bieu_tuong.png', 'pabt'),
            (HO_SO, 'pabt'), ('HUONG_DAN.md', '.')],
-    hiddenimports=['pabt.mau_bang_tong_hop', 'pabt.in_word', 'html.parser','urllib.request', 'difflib', 'PySide6.QtPdfWidgets', 'PySide6.QtPrintSupport'],
+    hiddenimports=['pabt.mau_bang_tong_hop', 'pabt.in_word', 'pabt.lenh', 'html.parser','urllib.request', 'difflib', 'PySide6.QtPdfWidgets', 'PySide6.QtPrintSupport'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     # cap_nhat_web đi cùng bản cài từ 0.9.49 (nút Tải từ web của bảng giá đất). Màn hình quét web (man_hinh_quet_web) đã xóa ở 1.0.27.
     excludes=LOAI_TRU,
     noarchive=False,
-    optimize=0,
+    optimize=2,
 )
 # DLL lấy nhầm từ PATH của máy dựng (dựng trong Git Bash: C:\Program Files\Git\mingw64\bin\libssl-3-x64.dll,
 # libcrypto-3-x64.dll - OpenSSL của Git, +6,5 MB, không dùng: Python đã kèm libssl-3.dll / libcrypto-3.dll của nó)

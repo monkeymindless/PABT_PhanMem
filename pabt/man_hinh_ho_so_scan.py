@@ -16,12 +16,24 @@ from .thong_bao import TEN_UD, chu_loi
 TEN_NUT = 'HS đính kèm'          # người dùng 16/10/2026 (trước: "Hồ sơ scan")
 
 
+DUOI_MO_DUOC = {'.pdf', '.jpg', '.jpeg', '.png', '.webp', '.bmp', '.heic', '.tif', '.tiff', '.doc', '.docx', '.xls', '.xlsx', '.xlsm'}
+
+
 def mo_file(p) -> bool:
-    """Mở file bằng chương trình mặc định của Windows. False: không mở được (file đã chuyển / xóa)."""
+    """Mở file bằng chương trình mặc định của Windows. False: không mở được (file đã chuyển / xóa / không phải loại hồ sơ).
+    1.0.58: đường dẫn lấy từ CSDL - file .pabt nhận từ ngoài có thể trỏ tới .exe / .bat: chỉ mở đuôi hồ sơ, đúng chữ ký đầu tệp."""
     import os
     p = Path(p)
     if not p.exists():
         return False
+    if p.is_file():
+        from .an_toan import LoiAnToan, kiem_tra_magic_bytes
+        if p.suffix.lower() not in DUOI_MO_DUOC:
+            return False
+        try:
+            kiem_tra_magic_bytes(p)
+        except LoiAnToan:
+            return False
     try:
         os.startfile(str(p))                         # noqa: S606 - file người dùng tự đính kèm
     except (OSError, AttributeError):

@@ -39,9 +39,9 @@ class TestHamThuan(unittest.TestCase):
 
     def test_thanh_nac_khong_emoji(self):
         from pabt import app as ud
-        self.assertEqual(len(ud.THANH_NAC), 5)
+        self.assertEqual(len(ud.THANH_NAC), 7)
         for t in ud.THANH_NAC:
-            self.assertEqual(len(t), 4)
+            self.assertEqual(len(t), 6)
             self.assertTrue(set(t) <= {'■', '□'})                       # U+25A0 / U+25A1: có trong Segoe UI / Arial của Windows 7
         nguon = inspect.getsource(ud)
         for e in ('📌', '📍'):                                            # emoji ghim cũ (Windows 7 hiện ô vuông)
@@ -101,7 +101,7 @@ class TestMenuTrai(CoNavy):
         qss = giao_dien._qss_day_du()
         # 1.0.35 PA1: menu sáng liền mạch, viên đang chọn nền xanh nhạt + vạch trái 4 px
         for chu in ('QFrame[vai="menu_trai"] { background: #E8EEF5', 'border-right: 1px solid #D5DEE8', 'width: 6px',
-                    'border-left: 4px solid #2563EB', 'background: #DBEAFE', 'color: #1E3A5F', 'border-radius: 8px'):
+                    'border-left: 4px solid #2563EB', 'background: #DBEAFE', f'color: {giao_dien.mau_menu()["chon_chu"]}', 'border-radius: 8px'):
             self.assertIn(chu, qss)
 
 
@@ -130,9 +130,9 @@ class TestTheSoVaDanhSach(CoNavy):
         w.bam_the_so('so_ho')
         self.assertTrue(all(k.property('dang_loc') == '0' for k in w.the_khung.values()))
         self.assertEqual(w.CAO_THE_SO, 62)
-        self.assertEqual(w.the_khung['so_ho'].height(), 62)
+        self.assertEqual(w.the_khung['so_ho'].cao_toi_thieu, 62)      # mốc thiết kế: chưa áp bảng kiểu thì thẻ tự giãn
 
-    def test_trang_thai_4_nac_giu_gia_tri_loc(self):
+    def test_trang_thai_6_nac_giu_gia_tri_loc(self):
         from PySide6.QtCore import Qt
         ud, w = self._cua_so(6)
         m = w.mo_hinh
@@ -158,8 +158,8 @@ class TestTheSoVaDanhSach(CoNavy):
         theo_doi.ghi_ban_giao(w.con, [ma], dict(da_ban_giao=True, ban_giao_ngay='10/10/2026'))   # ngày biên bản
         w.tai_lai()
         d0 = next(d for d in m.dong if d['ma_ho'] == ma)
-        self.assertEqual(d0['nac'], 4)
-        self.assertTrue(m.data(m.index(m.dong.index(d0), 5), Qt.ItemDataRole.DisplayRole).startswith('■■■■'))
+        self.assertEqual(d0['nac'], 6)
+        self.assertTrue(m.data(m.index(m.dong.index(d0), 5), Qt.ItemDataRole.DisplayRole).startswith('■■■■■■'))
         self.assertNotIn('■', ''.join(d['o'][5] for d in m.dong))       # giá trị lọc / tìm không lẫn ký tự thanh
         self.assertEqual(len(goc), len(m.dong))
         w.cb_tt.setCurrentIndex(w.cb_tt.findData('da_bg'))              # bộ lọc trạng thái như cũ
@@ -194,7 +194,7 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertEqual(w.dai_cong_ds.chu['so_ho'][0], f'CỘNG ({n} HỘ · {t} THỬA)')
         tong = sum((d['tong'] for d in w.mo_hinh.dong), D(0))
         self.assertEqual(w.dai_cong_ds.chu['tong'][0], f'TỔNG CỘNG: {vn(tong)} đ')
-        self.assertIn(f'<b style="color:#1E3A5F">{n}</b>/{n} hộ', w.lb_loc.text())
+        self.assertIn(f'<b style="color:#345678">{n}</b>/{n} hộ', w.lb_loc.text())
         # lọc còn một hộ: dải cộng và huy hiệu theo các hộ đang hiện
         with w.con:
             for i, m in enumerate(r[0] for r in w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 2').fetchall()):
@@ -227,7 +227,7 @@ class TestTheSoVaDanhSach(CoNavy):
         self.assertEqual(w.cb_tt.itemText(0), ud.TAT_CA_TRANG_THAI)
         from pabt import giao_dien
         qss = giao_dien._qss_day_du()
-        self.assertIn('QHeaderView::section:horizontal { background: #1E3A5F; color: #FFFFFF', qss)
+        self.assertIn('QHeaderView::section:horizontal { background: #345678; color: #FFFFFF', qss)
         self.assertIn('selection-background-color: #DBEAFE', qss)
         self.assertEqual(giao_dien.CAO_DONG_BANG, 30)
         self.assertEqual(w.bang.verticalHeader().defaultSectionSize(), 30)

@@ -20,7 +20,7 @@ class TestBangMau(unittest.TestCase):
     def test_token_flagship(self):
         t = giao_dien.TOKEN
         self.assertEqual((t['chinh'], t['chinh_re'], t['nhan'], t['thanh_cong'], t['canh_bao'], t['nguy_hiem']),
-                         ('#1E3A5F', '#152C48', '#2563EB', '#059669', '#D97706', '#DC2626'))
+                         ('#345678', '#284460', '#2563EB', '#059669', '#D97706', '#DC2626'))
         self.assertEqual((t['nen'], t['nen_the'], t['vien']), ('#F3F6FA', '#FFFFFF', '#D5DEE8'))      # 1.0.35: PA1 Slate-Navy
         qss = giao_dien._qss_day_du()
         for cu in ('#2F5F9E', '#3B6FCE', '#264E83'):
@@ -37,7 +37,7 @@ class TestBangMau(unittest.TestCase):
             self.assertIn('background: #0B1120', day_du)
             self.assertIn('background: #1E293B', day_du)
             self.assertNotRegex(day_du, r'(?<![\w-])color: #0F172A')     # chữ chính sáng (dòng xen kẽ nền tối thì được)
-            self.assertTrue(day_du.endswith(giao_dien.QSS_TOI + giao_dien._qss_menu_trai('toi')))   # khối Tối + menu đặt cuối
+            self.assertTrue(day_du.endswith(giao_dien.QSS_TOI + giao_dien._qss_o_tich_toi() + giao_dien._qss_menu_trai('toi')))   # khối Tối + ô tích Tối (1.0.91) + menu đặt cuối
             self.assertIn('QFrame[vai="menu_trai"] { background: #0F172A;', day_du)
             self.assertIn('background: #2563EB', day_du)                 # màu chính tông Tối (nút đặc)
         finally:
@@ -51,14 +51,15 @@ class TestBangMau(unittest.TestCase):
     def test_menu_trai_theo_tong(self):
         # 1.0.35: PA1 mặc định menu SÁNG liền mạch; Titan / Tối menu tối
         q = giao_dien._qss_menu_trai()
+        chinh = giao_dien.mau_menu()['chon_chu']          # 1.0.79: chữ menu theo màu chính của phương án Navy
         for chu in ('QFrame[vai="menu_trai"] { background: #E8EEF5', 'border-right: 1px solid #D5DEE8', 'border-radius: 8px',
-                    'background: #DBEAFE; color: #1E3A5F', 'border-left: 4px solid #2563EB', 'color: #1E3A5F; font-size: 11px',
+                    f'background: #DBEAFE; color: {chinh}', 'border-left: 4px solid #2563EB', f'color: {chinh}; font-size: 12px',        # 1.0.91: tiêu đề nhóm 12 px (trước 11 px nhỏ hơn mục lệnh 13 px)
                     'letter-spacing: 0'):
             self.assertIn(chu, q)
         t = giao_dien._qss_menu_trai('titan')
         self.assertIn('QFrame[vai="menu_trai"] { background: #1E293B', t)
         self.assertIn('border-left: 4px solid #60A5FA', t)
-        self.assertEqual((giao_dien.mau_menu()['icon'], giao_dien.mau_menu()['icon_chon']), ('#475569', '#1E3A5F'))
+        self.assertEqual((giao_dien.mau_menu()['icon'], giao_dien.mau_menu()['icon_chon']), ('#475569', chinh))
         for ten in chu_de.MAU_TONG:                                      # màu chính khác nhau theo tông, map đúng
             giao_dien.TONG_NEN[0] = ten
             try:

@@ -13,6 +13,9 @@ import zipfile
 from pathlib import Path
 
 
+TOI_DA_GIAI_NEN = 2 ** 31 - 1          # không vượt ssize_t của bản 32-bit
+
+
 class LoiAnToan(Exception):
     pass
 
@@ -67,14 +70,43 @@ def luu_xlsx(wb, duong_dan) -> int:
 KHOA_CHE_CCCD = 'CHE_CCCD'          # cai_dat của dự án: '1' = bản in / văn bản trình che số CCCD (bản niêm yết công khai)
 
 
-def che_cccd(chu: str) -> str:
-    """1.0.04 (người dùng 19/10/2026): BỎ che số CCCD trên toàn hệ thống - luôn trả nguyên chuỗi (giữ tên hàm cho mã gọi cũ:
-    bản in, văn bản trình, Niêm yết, phiếu kiểm đếm)."""
-    return chu or ''
+def che_cccd(chu: str, che: bool = False) -> str:
+    """Số CCCD / CMND để in. Mặc định (che=False) trả nguyên chuỗi - văn bản nội bộ (tờ trình, quyết định, bảng ký nhận) in đủ số
+    (1.0.04). 1.0.52 (người dùng 02/11/2026): che=True dùng cho bản NIÊM YẾT CÔNG KHAI tại điểm dân cư (NĐ 13/2023/NĐ-CP):
+    12 số giữ 6 đầu + 3 cuối "075092***456"; 9 số (CMND) giữ 3 đầu + 3 cuối; chữ khác (không phải số) để nguyên."""
+    chu = chu or ''
+    if not che:
+        return chu
+    so = ''.join(c for c in chu if c.isdigit())
+    if len(so) == 12 and len(so) >= len(chu.strip()) - 3:
+        return so[:6] + '***' + so[-3:]
+    if len(so) == 9 and len(so) >= len(chu.strip()) - 3:
+        return so[:3] + '***' + so[-3:]
+    return chu
+
+
+KHOA_CHE_NIEM_YET = 'CHE_CCCD_NIEM_YET'          # cai_dat của dự án: '1' che / '0' không; trống -> hồ sơ địa phương
+
+
+def che_cccd_niem_yet(con) -> bool:
+    """1.0.52: bản niêm yết công khai (bảng niêm yết, bản in DỰ THẢO phương án chi tiết) có che số CCCD không. Mặc định TẮT; cài đặt
+    của dự án (HopIn chế độ Dự thảo) thắng hồ sơ địa phương ban_in.che_cccd_ban_du_thao."""
+    from . import csdl, dia_phuong
+    v = csdl.doc_cai_dat(con, KHOA_CHE_NIEM_YET, '') if con is not None else ''
+    if v in ('0', '1'):
+        return v == '1'
+    return bool(dia_phuong.lay('ban_in.che_cccd_ban_du_thao'))
+
+
+def dat_che_cccd_niem_yet(con, bat: bool) -> None:
+    from . import csdl
+    with csdl.giao_dich(con):
+        csdl.ghi_cai_dat(con, KHOA_CHE_NIEM_YET, '1' if bat else '0')
+        csdl.ghi_nhat_ky(con, 'Che số CCCD trên bản niêm yết', 'Bật' if bat else 'Tắt')
 
 
 def can_che_cccd(con) -> bool:
-    """1.0.04: không còn chế độ che CCCD - luôn False (khóa cai_dat CHE_CCCD của dự án cũ bỏ qua)."""
+    """Văn bản nội bộ (tờ trình, quyết định): luôn in đủ số - False (khóa cai_dat CHE_CCCD cũ bỏ qua). Bản niêm yết: che_cccd_niem_yet."""
     return False
 
 
@@ -120,7 +152,7 @@ def nap_goc_ca_windows(url: str, cho: int = 20) -> bool:
             "try{$x=$r.GetResponse();$x.Close();exit 0}catch [Net.WebException]{"
             "if($_.Exception.Status -eq 'TrustFailure'){exit 2};if($_.Exception.Response){exit 0};exit 3}")
     try:
-        kq = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', lenh], capture_output=True,
+        kq = subprocess.run([__import__('pabt').exe_he_thong('powershell.exe', 'WindowsPowerShell', 'v1.0'), '-NoProfile', '-NonInteractive', '-Command', lenh], capture_output=True,
                             timeout=cho + 10, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         ok = kq.returncode == 0
     except (OSError, subprocess.SubprocessError):
@@ -151,8 +183,8 @@ def kiem_tra_zip(p, toi_da: int = 400 * 2 ** 20, ti_le: int = 250, so_muc: int =
 
 def kiem_tra_xml(du: bytes, ten: str = '') -> None:
     """Chặn XML có khai báo DOCTYPE / ENTITY (tấn công mở rộng thực thể, đọc file máy qua thực thể ngoài)."""
-    dau = du[:4096].upper()
-    if b'<!DOCTYPE' in dau or b'<!ENTITY' in du.upper():
+    hoa = bytes(du).replace(b'\x00', b'').upper()      # bỏ byte 0: XML UTF-16; cả file: chú thích dài đẩy DOCTYPE qua khỏi phần đầu
+    if b'<!DOCTYPE' in hoa or b'<!ENTITY' in hoa:
         raise LoiAnToan(f'Nội dung XML {ten} có khai báo DOCTYPE / ENTITY: nghi file độc, không mở.')
 
 
@@ -222,3 +254,70 @@ def kiem_tra_magic_bytes(nguon, loai_cho_phep=None, ten: str = '') -> str:
         can = ', '.join(TEN_LOAI_TEP.get(x, x) for x in sorted(loai_cho_phep))
         raise LoiAnToan(f'"{ten}" không phải {can} (nội dung là {TEN_LOAI_TEP.get(loai, loai)}).')
     return loai
+
+
+# ---------------------------------------------------------------- bản sao lưu / mốc thời gian nén (1.0.55)
+# Người dùng 03/11/2026 chọn CHỈ NÉN (không mã hóa DPAPI: bản sao lưu phải mở được sau khi cài lại Windows / đổi máy / đặt lại mật khẩu).
+# Định dạng: DAU_SAO_LUU + 1 byte cờ (0 = zlib) + dữ liệu nén của file SQLite. csdl.mo(chi_doc=True) / co_may_thoi_gian.khoi_phuc đọc
+# trong suốt; file SQLite thường (bản cũ, kiểm thử) đọc như trước.
+DAU_SAO_LUU = b'LARC_BAK1\x00'
+DAU_SQLITE = b'SQLite format 3\x00'
+CO_NEN_ZLIB = 0
+
+
+def la_goi_sao_luu(duong_dan) -> bool:
+    try:
+        with open(duong_dan, 'rb') as f:
+            return f.read(len(DAU_SAO_LUU)) == DAU_SAO_LUU
+    except OSError:
+        return False
+
+
+def dong_goi_file_sao_luu(duong_dan) -> bool:
+    """Nén tại chỗ một file SQLite (bản sao vừa ghi, chưa đổi tên): ghi tạm + os.replace. File không phải SQLite / đã nén: để nguyên
+    (False)."""
+    import os
+    import zlib
+    p = Path(duong_dan)
+    du = p.read_bytes()
+    if not du.startswith(DAU_SQLITE):
+        return False
+    tam = p.with_name(p.name + '.nen')
+    with open(tam, 'wb') as f:
+        f.write(DAU_SAO_LUU + bytes((CO_NEN_ZLIB,)) + zlib.compress(du, 6))
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tam, p)
+    return True
+
+
+def mo_goi_file_sao_luu_ra_bytes(duong_dan) -> bytes | None:
+    """Nội dung SQLite gốc của bản sao lưu nén; None khi file không phải bản nén (đọc thẳng như cũ). Hỏng -> LoiAnToan."""
+    import zlib
+    du = Path(duong_dan).read_bytes()
+    if not du.startswith(DAU_SAO_LUU):
+        return None
+    co = du[len(DAU_SAO_LUU):len(DAU_SAO_LUU) + 1]
+    if co != bytes((CO_NEN_ZLIB,)):
+        raise LoiAnToan('Bản sao lưu dùng định dạng của phiên bản mới hơn - hãy cập nhật phần mềm.')
+    try:
+        d = zlib.decompressobj()                        # 1.0.58: kiểm đầu trước, giới hạn cỡ (file lạ đổi đuôi nở hàng GB ngay khi mở)
+        goc = d.decompress(du[len(DAU_SAO_LUU) + 1:], 1024)
+        if not goc.startswith(DAU_SQLITE):
+            raise LoiAnToan('Bản sao lưu bị hỏng (không phải dữ liệu dự án).')
+        goc += d.decompress(d.unconsumed_tail, TOI_DA_GIAI_NEN)
+        if d.unconsumed_tail or not d.eof:
+            raise LoiAnToan('Bản sao lưu quá lớn hoặc bị hỏng.')
+    except zlib.error as e:
+        raise LoiAnToan(f'Bản sao lưu bị hỏng, không giải nén được ({e}).') from None
+    return goc
+
+
+def kiem_excel(file) -> None:
+    """1.0.58: chặn bom nén trước load_workbook; file không phải zip (.xls, file lạ) để openpyxl báo như cũ."""
+    if zipfile.is_zipfile(file):
+        try:
+            kiem_tra_zip(file)
+        except LoiAnToan as e:
+            from .loi import LoiNhap
+            raise LoiNhap(str(e)) from None

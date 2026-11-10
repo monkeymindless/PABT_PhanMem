@@ -21,6 +21,7 @@ matkhau.txt cạnh nó; chưa có thì tạo). GIỮ KỸ khóa này: bản cậ
 from __future__ import annotations
 import json
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -50,9 +51,20 @@ MAU = DAY / 'ung_dung' / 'index.html'
 BIEU_TUONG = DAY / 'bieu_tuong.png'
 DANH_MUC_MAC_DINH = DAY / 'danh_muc_mac_dinh.json'
 NGUON_ANDROID = DAY / 'android'
-CONG_CU = Path(os.environ.get('LARC_ANDROID') or REPO.parent / 'cong_cu_android')
-KHOA = Path(os.environ.get('LARC_KHOA_APK') or REPO.parent / 'khoa_android' / 'larc_field.jks')
+
+
+def _noi_mac_dinh(*ten) -> Path:
+    """Thư mục cha của repo trước, rồi trong repo (công cụ, khóa có thể nằm một trong hai nơi)."""
+    p = REPO.parent.joinpath(*ten)
+    q = REPO.joinpath(*ten)
+    return q if not p.exists() and q.exists() else p
+
+
+CONG_CU = Path(os.environ.get('LARC_ANDROID') or _noi_mac_dinh('cong_cu_android'))
+KHOA = Path(os.environ.get('LARC_KHOA_APK') or _noi_mac_dinh('khoa_android', 'larc_field.jks'))
 BIET_DANH = 'larc_field'
+# SHA-256 chứng chỉ ký của LARC Mobile đang phát hành (Pages) - đổi = điện thoại đã cài phải gỡ.
+CHUNG_CHI_PHAT_HANH = '07c02414c3f499ae167f2ef03298d7e4201f3a8bfe03a19dd03ee4cea0bb19a9'
 RA = REPO / 'bo_cai'
 API_MIN, API_DICH, BUILD_TOOLS = 24, 34, '34.0.0'
 CHE_DO = ('pwa', 'android')
@@ -237,10 +249,13 @@ def cong_cu() -> dict:
 
 
 def khoa_ky(cc: dict) -> tuple:
-    """(file khóa, mật khẩu). Chưa có: tạo khóa RSA 4096, hạn 30 năm."""
+    """(file khóa, mật khẩu). Không thấy khóa thì DỪNG: khóa mới làm điện thoại đã cài không cài đè được (phải gỡ, mất dữ liệu trên máy); bản 1.0.60 từng bị ký nhầm khóa tự sinh như vậy.
+    Chủ ý tạo khóa mới: đặt LARC_TAO_KHOA_MOI=1 (khóa RSA 4096, hạn 30 năm)."""
     mk_file = KHOA.with_name('matkhau.txt')
     if KHOA.exists():
         return KHOA, mk_file.read_text(encoding='utf-8').strip()
+    if os.environ.get('LARC_TAO_KHOA_MOI') != '1':
+        raise SystemExit(f'Không thấy khóa ký: {KHOA}. Đặt LARC_KHOA_APK trỏ tới khóa đang dùng. Khóa mới làm điện thoại đã cài không cài đè được; chủ ý tạo thì đặt LARC_TAO_KHOA_MOI=1.')
     KHOA.parent.mkdir(parents=True, exist_ok=True)
     mk = secrets.token_urlsafe(24)
     _chay([cc['keytool'], '-genkeypair', '-keystore', KHOA, '-alias', BIET_DANH, '-keyalg', 'RSA', '-keysize', '4096',
@@ -249,6 +264,20 @@ def khoa_ky(cc: dict) -> tuple:
     mk_file.write_text(mk + '\n', encoding='utf-8')
     print(f'Đã tạo khóa ký mới: {KHOA} (mật khẩu: {mk_file}) - GIỮ KỸ, sao lưu ra nơi khác.')
     return KHOA, mk
+
+
+def kiem_chung_chi(cc: dict, apk: Path) -> str:
+    """Dừng nếu APK không ký bằng chứng chỉ đang phát hành (CHUNG_CHI_PHAT_HANH). 1.0.91: thư mục cha của repo có một
+    khoa_android khác (tạo 05/11/2026) mà _noi_mac_dinh ưu tiên - ký nhầm thì điện thoại đã cài không cài đè được.
+    Chủ ý đổi khóa: LARC_TAO_KHOA_MOI=1."""
+    kq = subprocess.run([str(cc['java']), '-jar', str(cc['apksigner']), 'verify', '--print-certs', str(apk)],
+                        capture_output=True, text=True, encoding='utf-8', errors='replace')
+    m = re.search(r'certificate SHA-256 digest:\s*([0-9a-f]+)', kq.stdout)
+    so = m.group(1) if m else ''
+    if so != CHUNG_CHI_PHAT_HANH and os.environ.get('LARC_TAO_KHOA_MOI') != '1':
+        raise SystemExit(f'APK ký bằng chứng chỉ {so[:8] or "?"}…, không phải chứng chỉ đang phát hành {CHUNG_CHI_PHAT_HANH[:8]}… '
+                         f'(khóa {KHOA}). Đặt LARC_KHOA_APK trỏ tới khóa đúng.')
+    return so
 
 
 def dung_pwa(ver: str = PHIEN_BAN) -> Path:
@@ -305,6 +334,7 @@ def dung_apk(ver: str = PHIEN_BAN) -> Path:
         _chay([cc['java'], '-jar', cc['apksigner'], 'sign', '--ks', khoa, '--ks-key-alias', BIET_DANH, '--ks-pass', f'pass:{mk}',
                '--key-pass', f'pass:{mk}', '--out', t / 'da_ky.apk', t / 'can.apk'])
         _chay([cc['java'], '-jar', cc['apksigner'], 'verify', '--min-sdk-version', API_MIN, t / 'da_ky.apk'])
+        kiem_chung_chi(cc, t / 'da_ky.apk')
         shutil.copy(t / 'da_ky.apk', ra.with_name(ra.name + '.tmp'))
         ra.with_name(ra.name + '.tmp').replace(ra)
     print('APK:', ra, f'({ra.stat().st_size // 1024} KB)')

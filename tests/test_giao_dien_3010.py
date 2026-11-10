@@ -229,7 +229,6 @@ class TestXemTruocExcel(CoSoXem):
         h = HopIn(self.con, None, file_du_an=self.p)
         h.im_lang = True
         self.addCleanup(h.w_preview.don_dep)
-        self.assertTrue(h.b_xem_excel.text().startswith('Xem trước bản Excel'))
         h._danh_dau([r[0] for r in self.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho')][:2])
         khoa = h.xem_truoc_excel_chi_tiet(ngay=True)
         self.assertEqual(khoa[0], 'excel_ct')

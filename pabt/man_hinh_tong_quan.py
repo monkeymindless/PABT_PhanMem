@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFrame, QHBoxLayout, 
 from . import pheu_tien_do as ph
 from . import quy_trinh as qt
 from . import tong_quan_du_an as tq
-from .giao_dien import cai_dat_nho, dat_kieu_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
+from .giao_dien import cai_dat_nho, dat_kieu_theo_tong, qmau_theo_tong  # noqa: E402  (1.0.34: kiểu riêng đổi theo tông nền)
 from .tien import so_luong_vn, vn, vn_gon
 
 LENH_KHOI_TAO = (                    # (khóa self.lenh, chữ trên thẻ, mô tả)
@@ -45,23 +45,27 @@ QFrame#the_phap_ly[muc="canh_bao"] { border-left-color: #C98A22; background: #FF
 QFrame#the_phap_ly[muc="nguy"] { border-left-color: #B83A3A; background: #FEF2F2; }
 QFrame#the_phap_ly[muc="dat"] { border-left-color: #1F6F66; }
 QLabel#tq_dong_ho { font-size: 12px; color: #0F172A; background: transparent; border: 0; }
-QPushButton#nut_lap_pa { background: transparent; color: #1E3A5F; border: 1px solid #CBD5E1; border-radius: 4px; padding: 1px 10px;
+/* 1.0.93: nút trong dòng = cấp BA (liên kết phẳng, viền chỉ hiện khi rê chuột) - người dùng chọn hệ nút 3 cấp 10/11/2026 */
+QPushButton#nut_lap_pa { background: transparent; color: #2563EB; border: 1px solid transparent; border-radius: 4px; padding: 1px 10px;
     margin: 3px 6px; font-weight: 600; }
-QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #1E3A5F; }
+QPushButton#nut_lap_pa:hover { background: #EFF6FF; border-color: #CBD5E1; }
 QFrame#khung_pheu { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; }
 QLabel#ph_tieu_de { font-size: 13px; font-weight: 700; color: #1E3A5F; background: transparent; border: 0; }
 QLabel#ph_phu { font-size: 12px; color: #475569; background: transparent; border: 0; }
 QToolButton#ph_chu_giai { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; font-size: 12px;
     color: #0F172A; text-align: left; }
+QToolButton#ph_chu_giai[rong="0"] { color: #64748B; }
+QToolButton#ph_chu_giai[rong="1"] { color: #0F172A; font-weight: 600; }
 QToolButton#ph_chu_giai:hover { background: #F1F5F9; border-color: #CBD5E1; }
 QToolButton#ph_co { background: #FFFBEB; border: 1px solid #F1D9A0; border-radius: 10px; padding: 1px 9px; font-size: 12px; color: #7A4B00; }
 QToolButton#ph_co:hover { border-color: #C98A22; }
 QLabel#qt_viec { font-size: 12px; color: #0F172A; background: transparent; border: 0; }
-QPushButton#nut_viec { background: transparent; color: #1E3A5F; border: 1px solid #CBD5E1; border-radius: 4px; padding: 2px 10px;
+QPushButton#nut_viec { background: transparent; color: #2563EB; border: 1px solid transparent; border-radius: 4px; padding: 2px 10px;
     min-height: 22px; font-weight: 600; }
-QPushButton#nut_viec:hover { background: #EFF6FF; border-color: #1E3A5F; }
+QPushButton#nut_viec:hover { background: #EFF6FF; border-color: #CBD5E1; }
 '''
 # màu chấm trạng thái của việc (theo mức) - chữ trên nền trắng của khung
+TOI_DA_VIEC_HIEN = 5                 # 1.0.94: Việc nên làm tiếp - số việc thấy ngay
 MAU_MUC_VIEC = {'loi': '#DC2626', 'can': '#2563EB', 'nhac': '#B45309'}
 TEN_MUC_VIEC = {'loi': 'Cần xử lý ngay', 'can': 'Việc cần làm', 'nhac': 'Nhắc việc'}
 
@@ -110,7 +114,7 @@ class DaiPheu(QWidget):
         vien = QPainterPath()
         vien.addRoundedRect(r, self.height() / 2, self.height() / 2)
         p.setClipPath(vien)
-        p.fillRect(r, QColor('#E2E8F0'))
+        p.fillRect(r, qmau_theo_tong('#F1F5F9'))         # 1.0.93: nền thanh theo tông (Tối trước đây vẫn sáng)
         for k, x, rong in self._doan():
             p.fillRect(QRectF(x, 0, rong + 0.5, self.height()), QColor(MAU_GIAI_DOAN[k]))
         p.end()
@@ -183,8 +187,9 @@ class KhungPheu(QFrame):
             n = QToolButton()
             n.setObjectName('ph_chu_giai')
             n.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)      # mặc định QToolButton chỉ vẽ biểu tượng
+            n.setAutoRaise(True)
             n.setCursor(Qt.CursorShape.PointingHandCursor)
-            n.setToolTip(f'{ten} - bấm để xem danh sách hộ')
+            n.setToolTip(ph.CHU_THICH_MOC.get(k) or f'{ten} - bấm để xem danh sách hộ')
             n.clicked.connect(lambda _=False, k=k: self._chon_giai_doan(k))
             self.chu_giai[k] = n
             x.addWidget(n)
@@ -256,12 +261,12 @@ class KhungPheu(QFrame):
         cu = self.cb_pham_vi.currentData()
         self.cb_pham_vi.blockSignals(True)
         self.cb_pham_vi.clear()
-        self.cb_pham_vi.addItem('Cả dự án', None)
+        self.cb_pham_vi.addItem('Cả dự án', 'ca')
         for i, ten in dot_ny:
             self.cb_pham_vi.addItem(f'Niêm yết: {ten}', ('ny', i))
         for i, ten in dot_trinh:
             self.cb_pham_vi.addItem(f'Trình: {ten}', ('tr', i))
-        j = self.cb_pham_vi.findData(cu)
+        j = self.cb_pham_vi.findData(cu if cu not in (None, '') else 'ca')
         self.cb_pham_vi.setCurrentIndex(max(j, 0))
         self.cb_pham_vi.blockSignals(False)
         for b, n in self.nut_du_an.items():
@@ -278,22 +283,39 @@ class KhungPheu(QFrame):
         if kq is None:
             return []
         pv = self.cb_pham_vi.currentData()
-        if not pv:
+        if pv in (None, '', 'ca') or not isinstance(pv, (tuple, list)) or len(pv) != 2:
             return kq.ho
-        return kq.loc_dot(dot_niem_yet=pv[1]) if pv[0] == 'ny' else kq.loc_dot(dot_trinh=pv[1])
+        if pv[0] == 'ny':
+            return kq.loc_dot(dot_niem_yet=pv[1])
+        if pv[0] == 'tr':
+            return kq.loc_dot(dot_trinh=pv[1])
+        return kq.ho
 
     def _ve(self) -> None:
         kq = self.ket_qua
         if kq is None:
             return
         ds = self.ds_dang_xem()
-        dem = kq.dem(ds)
+        dem = kq.dem(ds)                    # dải phễu: mỗi hộ đúng một đoạn
+        hien = kq.dem_hien_thi(ds)          # ô chú giải: Đã lập / Niêm yết = lũy kế
         self.dai.dat(dem)
         for k, n in self.chu_giai.items():
-            n.setText(f'{ph.TEN_NGAN_GIAI_DOAN[k]}  {dem[k]}')
+            so = hien.get(k, 0)
+            n.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            n.setText(f'{ph.TEN_NGAN_GIAI_DOAN[k]}  {so}')
             n.setIcon(self._bieu_tuong(MAU_GIAI_DOAN[k]))
+            n.setProperty('rong', '1' if so else '0')
+            n.setVisible(bool(so))                         # 1.0.94: ẩn trạng thái 0 hộ (tên ở chú thích dòng tóm tắt)
+            n.style().unpolish(n)
+            n.style().polish(n)
+            if k in ph.MOC_LUY_KE:
+                n.setToolTip(ph.CHU_THICH_MOC[k] + (f' Đang đứng đúng ô này: {dem.get(k, 0)} hộ.' if dem.get(k) else ''))
+            else:
+                n.setToolTip(f'{ph.TEN_GIAI_DOAN[k]} - bấm để xem danh sách hộ')
         bs = sum(1 for x in ds if 'pa_bo_sung' in x.co)
         self.lb_tom_tat.setText(f'{len(ds)} hộ' + (f' · {bs} hộ đang xét phương án bổ sung / điều chỉnh' if bs else ''))
+        an = [ph.TEN_NGAN_GIAI_DOAN[k] for k in self.chu_giai if not hien.get(k, 0)]
+        self.lb_tom_tat.setToolTip(('Chưa có hộ ở: ' + ', '.join(an)) if an else '')
         co = kq.dem_co(ds)
         for k, n in self.nut_co.items():
             n.setText(f'{co.get(k, 0)} hộ: {ph.TEN_CO[k].lower()}')
@@ -303,8 +325,11 @@ class KhungPheu(QFrame):
     def _chon_giai_doan(self, k: str) -> None:
         if self.ket_qua is None:
             return
-        ds = [x for x in self.ds_dang_xem() if x.giai_doan == k]
-        self.mo_ds.emit(f'{ph.TEN_GIAI_DOAN[k]} ({len(ds)} hộ)', ds)
+        ds = self.ket_qua.theo_moc(k, self.ds_dang_xem())
+        ten = ph.TEN_GIAI_DOAN.get(k, k)
+        if k in ph.MOC_LUY_KE:
+            ten = ph.CHU_THICH_MOC[k].split('.')[0]
+        self.mo_ds.emit(f'{ten} ({len(ds)} hộ)', ds)
 
     def _chon_co(self, k: str) -> None:
         if self.ket_qua is None:
@@ -343,7 +368,7 @@ class HopHoPheu(QDialog):
             it.setTextAlignment(int(Qt.AlignmentFlag.AlignCenter))
             self.bang.setItem(r, 0, it)
             self.bang.setItem(r, 1, QTableWidgetItem(x.ho_ten or ''))
-            self.bang.setItem(r, 2, QTableWidgetItem(ph.TEN_GIAI_DOAN[x.giai_doan]))
+            self.bang.setItem(r, 2, QTableWidgetItem(ph.ten_giai_doan(x)))
             it = QTableWidgetItem(str(x.lan))
             it.setTextAlignment(int(Qt.AlignmentFlag.AlignCenter))
             self.bang.setItem(r, 3, it)
@@ -417,6 +442,24 @@ class KhungViecTiep(QFrame):
             h.addWidget(nut)
             lo.addLayout(h)
             self.dong.append((lb, nut))
+        if len(muc) > TOI_DA_VIEC_HIEN:                  # 1.0.94
+            an = [(lb, nut) for lb, nut in self.dong[TOI_DA_VIEC_HIEN:]]
+            for lb, nut in an:
+                lb.setVisible(False)
+                nut.setVisible(False)
+            them = QPushButton(f'Xem thêm {len(an)} việc')
+            them.setObjectName('nut_viec')
+            them.setCursor(Qt.CursorShape.PointingHandCursor)
+            them.setToolTip('Hiện / ẩn các việc còn lại (đã xếp theo mức ưu tiên)')
+
+            def bat_tat(_=False, an=an, them=them):
+                hien = not an[0][0].isVisible()
+                for lb, nut in an:
+                    lb.setVisible(hien)
+                    nut.setVisible(hien)
+                them.setText('Thu gọn' if hien else f'Xem thêm {len(an)} việc')
+            them.clicked.connect(bat_tat)
+            lo.addWidget(them, 0, Qt.AlignmentFlag.AlignRight)
         lo.addStretch(1)
 
 
@@ -649,6 +692,8 @@ class KhungTongQuanDuAn(QWidget):
             b.setItem(r, 2, QTableWidgetItem(x['trang_thai'] or ('Đã lập, chưa duyệt' if x['da_lap'] else 'Chưa lập phương án')))
             t = QTableWidgetItem(vn(x['tong']) if x['tong'] else '-')
             t.setTextAlignment(int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter))
+            from .giao_dien import phong_so
+            t.setFont(phong_so())                       # 1.0.51: số tiền phông số
             b.setItem(r, 3, t)
             nut = QPushButton('Lập PA →')
             nut.setObjectName('nut_lap_pa')

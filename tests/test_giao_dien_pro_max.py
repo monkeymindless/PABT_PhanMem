@@ -29,7 +29,7 @@ class TestBangMau(unittest.TestCase):
     def test_token(self):
         t = giao_dien.TOKEN
         self.assertEqual((t['chinh'], t['chinh_nhat'], t['nhan'], t['phu'], t['nguy_hiem']),
-                         ('#1E3A5F', '#EFF6FF', '#2563EB', '#059669', '#DC2626'))       # 1.0.34 Flagship Sapphire
+                         ('#345678', '#EFF6FF', '#2563EB', '#059669', '#DC2626'))       # 1.0.34 Flagship Sapphire
         self.assertEqual((t['chu'], t['chu_phu'], t['nen'], t['khung'], t['vach']),
                          ('#0F172A', '#475569', '#F3F6FA', '#FFFFFF', '#D5DEE8'))     # 1.0.35: PA1 Slate-Navy
         self.assertEqual(giao_dien.MAU_SO_KHONG, '#64748B')          # 1.0.42: WCAG AA ≥ 4,5:1 trên trắng
@@ -57,8 +57,8 @@ class TestBangMau(unittest.TestCase):
     def test_tieu_de_bang(self):
         qss = giao_dien._qss_day_du()
         td = _quy_tac(qss, 'QHeaderView::section:horizontal')
-        for chu in ('background: #1E3A5F', 'color: #FFFFFF', 'font-weight: 600', 'border-right: 1px solid #152C48',
-                    'border-bottom: 2px solid #2563EB'):
+        for chu in ('background: #345678', 'color: #FFFFFF', 'font-weight: 600', 'border-right: 1px solid #43688E',
+                    'border-bottom: 2px solid #608AB5'):
             self.assertIn(chu, td)
         self.assertIn(f'min-height: {giao_dien.CAO_TIEU_DE_BANG - 10}px', td)    # chiều cao tiêu đề giữ nguyên
         chon = _quy_tac(qss, 'QTableView::item:selected')
@@ -74,7 +74,7 @@ class TestBangMau(unittest.TestCase):
         self.assertNotIn('font', chon)                                    # phông chỉ ở mức QTabBar (Qt5 cắt chữ)
         self.assertIn('border-bottom: 3px solid transparent', _quy_tac(qss, 'QTabBar[vai="gach_chan"]::tab'))  # không đổi cao
         tong = _quy_tac(qss, 'QLabel#tong_dinh_danh')
-        for chu in ('background: #FEF3C7', 'border: 1px solid #E5A93A', 'color: #7C4A12', 'Consolas', 'font-weight: 700',
+        for chu in ('background: #FEF3C7', 'border: 1px solid #E5A93A', 'color: #7C4A12', 'Segoe UI', 'font-weight: 700',
                     'border-radius: 5px', 'padding: 2px 10px'):
             self.assertIn(chu, tong)
 

@@ -6,6 +6,7 @@ import sqlite3
 from datetime import date
 from decimal import Decimal
 
+from .ho_so import ten_day_du_in  # noqa: E402
 from . import nghiep_vu
 from .nghiep_vu import BoiCanh, doc_phuong_an, tinh_pa
 from .tien import D, KHONG
@@ -129,7 +130,7 @@ def dong_chi_tiet(con, ma_ho: int, bc: BoiCanh | None = None, pa=None, pa_truoc=
     dong = []
     # 1. đất
     d1 = [d for d in kq.dong if d.muc == 1]
-    dong.append(['H', ['1', 'Bồi thường đất', None, None, None, None, None, None]])
+    dong.append(['H', ['1', TEN_MUC_DAT, None, None, None, None, None, None]])
     hdr = dong[-1][1]
     if d1:
         # 1.0.04 (người dùng 19/10/2026): mỗi dòng in diện tích thật của thửa (ct_dat -> dt_boi_thuong -> dt_thu_hoi); đơn giá 0 thì
@@ -200,7 +201,50 @@ def dong_chi_tiet(con, ma_ho: int, bc: BoiCanh | None = None, pa=None, pa_truoc=
     # gộp ô sang hết các cột đó trong lap_chi_tiet; trước đây "1,0 | 20.000.000 | 100%"); thành tiền in đậm
     dong.append(['R', [str(nghiep_vu.so_muc(5)), nghiep_vu.TEN_MUC[5], None, None, None, None, kq.muc[5], None]])
     dong.append(['T', [None, 'TỔNG CỘNG', None, None, None, None, kq.tong, None]])
-    return dong, kq
+    return an_muc_trong(dong, kq), kq
+
+
+TEN_MUC_DAT = 'Bồi thường đất'
+
+
+def la_muc_nha(gt) -> bool:
+    """Dòng đề mục là mục nhà, công trình (số lượng kiểu kế toán 2 chữ số lẻ) - theo TÊN, số mục đổi khi ẩn mục trống."""
+    return str(gt[1] or '') == nghiep_vu.TEN_MUC[2]
+
+
+def an_muc_trong(dong: list, kq) -> list:
+    """1.0.57 (người dùng 03/11/2026): mục 2 - 6 (nhà, cây trồng, vật nuôi, hỗ trợ, thưởng) không có tiền VÀ không có dòng nào thì ẩn
+    khỏi bảng mục III; còn dòng (tài sản có ghi chú, tài sản chưa có giá - 0 đồng) hoặc tiền > 0 thì giữ. Mục 1 (đất) luôn giữ. Các mục
+    còn lại đánh số liền nhau (1, 2, 3…) - số thứ tự dòng con ("3.1" -> "2.1") đổi theo."""
+    khoi, hien = [], None
+    for x in dong:
+        if x[0] in ('H', 'R', 'T'):
+            hien = [x]
+            khoi.append(hien)
+        elif hien is not None:
+            hien.append(x)
+        else:
+            khoi.append([x])
+    giu = []
+    for k in khoi:
+        dau = k[0]
+        if dau[0] == 'H' and str(dau[1][0]) != '1' and len(k) == 1 and not dau[1][6]:
+            continue                                        # mục 2 - 5 không dòng, 0 đồng
+        if dau[0] == 'R' and not dau[1][6]:
+            continue                                        # thưởng 0 đồng
+        giu.append(k)
+    ra, so = [], 0
+    for k in giu:
+        dau = k[0]
+        if dau[0] in ('H', 'R'):
+            so += 1
+            cu, moi = str(dau[1][0]), str(so)
+            if cu != moi:
+                dau = [dau[0], [moi] + list(dau[1][1:])] + list(dau[2:])
+                k = [dau] + [[x[0], [moi + str(x[1][0])[len(cu):]] + list(x[1][1:])] + list(x[2:])
+                             if str(x[1][0] or '').startswith(cu + '.') else x for x in k[1:]]
+        ra += k
+    return ra
 
 
 _RE_SO_DAU_DOAN = re.compile(r'^(\s*(?:\d+|[a-zđ])[.)]\s*)?')
@@ -260,11 +304,14 @@ def _thong_tin_ho(con, ma_ho: int, da: dict, che: bool | None = None) -> dict:
     if ' là ' in ten:
         ten = ten.split(' là ')[0].strip()
     cccd = (h['so_cccd'] or '').strip()
-    if (h['ngay_cap'] or '').strip() and h['ngay_cap'] != '0':
-        cccd += f' - Ngày cấp: {h["ngay_cap"].strip()}'
-    if (h['noi_cap'] or '').strip():
-        cccd += f' - Nơi cấp: {h["noi_cap"].strip()}'
-    # 1.0.04: luôn in đủ số CCCD + ngày / nơi cấp (bỏ che CCCD; tham số che giữ cho mã gọi cũ)
+    if che:                                     # 1.0.52: bản niêm yết công khai - che số giữa, bỏ ngày / nơi cấp
+        from .an_toan import che_cccd
+        cccd = che_cccd(cccd, True)
+    else:                                       # văn bản nội bộ: in đủ số CCCD + ngày / nơi cấp (1.0.04)
+        if (h['ngay_cap'] or '').strip() and h['ngay_cap'] != '0':
+            cccd += f' - Ngày cấp: {h["ngay_cap"].strip()}'
+        if (h['noi_cap'] or '').strip():
+            cccd += f' - Nơi cấp: {h["noi_cap"].strip()}'
     from .ho_so import chuan_nguon_goc, lam_sach_doan_van
     ng = []                                     # nguồn gốc các thửa (bỏ trùng, giữ thứ tự): mỗi nội dung một đoạn
     for nguon_goc in _nguon_goc_cac_thua(con, ma_ho):
@@ -277,7 +324,8 @@ def _thong_tin_ho(con, ma_ho: int, da: dict, che: bool | None = None) -> dict:
         f'Sau khi UBND {da["cap_dia_ban_thuong"] or "xã, phường"} xác nhận điều kiện tái định cư (nếu có).'
     dt = (h['dien_thoai'] or '').strip()
     k = h.keys()
-    return dict(ma_ho=ma_ho, ho_ten=ten, cccd=cccd.strip(' -'), dia_chi=(h['dia_chi'] or '').strip(),
+    ho_ten_in = ten_day_du_in(h['ho_ten'], h['phap_ly'], h['ghi_chu_ten'] if 'ghi_chu_ten' in h.keys() else '')     # 1.0.78: bản in ghi liền tên + ghi chú
+    return dict(ma_ho=ma_ho, ho_ten=ten, ho_ten_in=ho_ten_in, cccd=cccd.strip(' -'), dia_chi=(h['dia_chi'] or '').strip(),
                 dien_thoai='' if dt == '0' else dt, nguon_goc='\n'.join(ng), tai_dinh_cu=tdc,
                 so_pa=(h['so_pa'] or '').strip() if 'so_pa' in k else '', ngay_pa=(h['ngay_pa'] or '') if 'ngay_pa' in k else '')
 
@@ -319,5 +367,6 @@ def ten_file_ho(con, ma_ho: int) -> str:
     ten = ' '.join(str(h['ho_ten'] or '').split())
     # "Nguyễn Văn A là chủ sở hữu tài sản gắn liền với thửa đất số…" (họ tên nhập kèm diễn giải): tên file chỉ lấy phần họ tên
     ten = re.split(r'\s+là\s+(?:chủ|người|đại diện|đồng)\b', ten, maxsplit=1, flags=re.I)[0]
-    ten = re.sub(r'[\\/:*?"<>|\r\n\t]+', ' ', ten)[:60].strip()
+    # 1.0.55: cả ký tự điều khiển (\x00 - \x1f, \x7f) dính vào khi dán từ OCR / PDF lỗi - \x00 làm Path / zipfile báo "embedded null byte"
+    ten = re.sub(r'[\\/:*?"<>|\x00-\x1f\x7f]+', ' ', ten)[:60].strip(' .')
     return f'PA_{h["thu_tu"]:03d}_ma{ma_ho}_{ten}'

@@ -27,7 +27,7 @@ QLabel#xb_buoc { color: #475569; background: #F1F5F9; border: 1px solid #E2E8F0;
     font-size: 12px; font-weight: 600; }
 QLabel#xb_buoc[dang="1"] { color: #FFFFFF; background: #1E3A5F; border-color: #1E3A5F; }
 QLabel#xb_buoc[xong="1"] { color: #1E3A5F; background: #EFF6FF; border-color: #BFDBFE; }
-QLabel#xb_tieu_de { font-size: 15px; font-weight: 700; color: #0F172A; }
+QLabel#xb_tieu_de { font-size: 16px; font-weight: 700; color: #0F172A; }
 QLabel#xb_mo_ta { font-size: 12px; color: #475569; }
 '''
 MUC_KIEM = {True: ('dat', 'Đạt'), None: ('canh_bao', 'Xem lại'), False: ('loi', 'Thiếu')}
@@ -361,6 +361,7 @@ class HopXuatBanDot(QDialog):
             return None
         hop = HopIn(self.con, self, ma_ho_chon=ds, file_du_an=self.file_du_an, che_do=self.che_do(), dot_id=d.id)
         try:
+            hop.chi_tiet_theo_word = True                    # bỏ tích phương án chi tiết ở đây là không xuất phương án chi tiết
             hop.o_ct.setChecked(self.o_ct.isChecked())
             hop.o_ct_excel.setChecked(False)
             hop.o_bth.setChecked(self.o_bth.isChecked())

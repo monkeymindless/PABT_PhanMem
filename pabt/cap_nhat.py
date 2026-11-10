@@ -24,7 +24,7 @@ DUOI = '.larcud'                     # 16/10/2026 (người dùng): gói cập n
 DUOI_NHAN = ('.larcud', '.pabtcn')   # vẫn mở được gói .pabtcn cũ (cùng nội dung zip, chỉ khác đuôi)
 UNG_DUNG = 'PABT'
 BAN_GOC_TOI_THIEU = '0.8.0'          # bản cài đầu tiên chạy Python 3.8 + Qt5 (Win 7 - 11)
-DU_LIEU = ('schema.sql', 'bo_don_gia.sqlite', 'bang_gia_nq28.json', 'he_so_k_qd03.json', 'bieu_tuong.png', 'pabt_profile.json')
+DU_LIEU = ('schema.sql', 'bo_don_gia.sqlite', 'bang_gia_nq28.json', 'he_so_k_qd03.json', 'gia_dat_qd03.json', 'bieu_tuong.png', 'pabt_profile.json')
 
 
 class LoiCapNhat(Exception):
@@ -108,7 +108,7 @@ def doc_goi(file) -> dict:
         raise LoiCapNhat('File không phải gói cập nhật LARC (không đọc được).') from e
     with z:
         m, _ = _doc_json(z)
-        if m.get('ung_dung') != UNG_DUNG or not so(m.get('phien_ban')):
+        if not isinstance(m, dict) or m.get('ung_dung') != UNG_DUNG or not re.fullmatch(r'\d+(\.\d+){0,3}', str(m.get('phien_ban') or '')):
             raise LoiCapNhat('File không phải gói cập nhật LARC.')
         ds = m.get('file') or {}
         if 'pabt/__init__.py' not in ds:
@@ -134,10 +134,20 @@ def kiem_tra(m: dict) -> None:
                          'hãy cài bộ cài đầy đủ mới.')
 
 
+def _dang_chay() -> str:
+    """Tên thư mục bản cập nhật mà tiến trình này đang chạy ('' = bản gốc)."""
+    p = Path(__file__).resolve().parent.parent
+    try:
+        return p.name if p.parent == thu_muc().resolve() else ''
+    except OSError:
+        return ''
+
+
 def _don(d: Path, giu: str = '') -> None:
-    """Xóa các bản cập nhật cũ (bỏ qua bản đang được dùng, sẽ xóa ở lần sau)."""
+    """Xóa các bản cập nhật cũ, GIỮ bản mới và bản đang chạy (1.0.58: xóa bản đang chạy làm màn hình chưa nạp lỗi thiếu module), xóa ở lần sau."""
+    dang = _dang_chay()
     for x in d.iterdir() if d.exists() else ():
-        if x.is_dir() and x.name != giu:
+        if x.is_dir() and x.name not in (giu, dang):
             shutil.rmtree(x, ignore_errors=True)
 
 

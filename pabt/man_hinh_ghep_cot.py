@@ -2,8 +2,10 @@
 tên, địa chỉ, tờ, thửa, diện tích... bằng tay khi phần mềm không tự nhận ra (hoặc nhận chưa đúng). Xem trước bảng gốc và kết quả (số hộ,
 số thửa) ngay khi đổi. Cột file không có thì để "(không có)" - phần mềm bỏ qua."""
 from __future__ import annotations
+from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
+from .giao_dien import mau_theo_tong, qmau_theo_tong  # noqa: E402  (màu rich text theo tông nền)
 
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtGui import QBrush
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton,
                                QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
@@ -17,8 +19,8 @@ TRUONG = [('ho_ten', 'Họ và tên'), ('dia_chi', 'Địa chỉ'), ('so_cccd', 
           ('stt', 'STT (để gộp dòng gãy)')]
 SO_DONG_XEM = 40
 SO_COT_XEM = 40
-MAU_DU_LIEU = QColor('#EEF6FF')
-MAU_CHON = QColor('#FFF3C4')
+MAU_DU_LIEU = mau_o_theo_tong(globals(), MAU_DU_LIEU='#EEF6FF')[0]
+MAU_CHON = mau_o_theo_tong(globals(), MAU_CHON='#FFF3C4')[0]
 
 
 class HopGhepCot(QDialog):
@@ -156,7 +158,7 @@ class HopGhepCot(QDialog):
                 if i + 1 >= dau:
                     it.setBackground(QBrush(MAU_DU_LIEU))
                 if j in ten:
-                    it.setBackground(QBrush(MAU_CHON if i + 1 < dau else QColor('#DFF0D8')))
+                    it.setBackground(QBrush(MAU_CHON if i + 1 < dau else qmau_theo_tong('#ECFDF5')))          # 1.0.93: đổi theo tông
                 self.bang.setItem(i, j, it)
         self.bang.resizeColumnsToContents()
         for j in range(cot_hien):
@@ -194,7 +196,7 @@ class HopGhepCot(QDialog):
         if kq.ho:
             self.lb_kq.setText(f'Đọc được <b>{len(kq.ho)} hộ, {len(kq.thua)} thửa</b>; {len(kq.canh_bao)} điểm cần xem lại.')
         else:
-            self.lb_kq.setText('<span style="color:#B83A3A">' + ' '.join(kq.loi[:1]) + '</span>')
+            self.lb_kq.setText(f'<span style="color:{mau_theo_tong("#B83A3A", "chu")}">' + ' '.join(kq.loi[:1]) + '</span>')
 
     def nhan_tu_dong(self) -> None:
         self._chon_nguon(None)

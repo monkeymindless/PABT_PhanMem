@@ -65,6 +65,8 @@ def _sach(d: dict) -> tuple:
 def luu(con, ds: list) -> dict:
     """Ghi lại toàn bộ bảng quy ước của dự án theo ds (các dict như doc(); dòng mới không có id).
     Dòng của bộ đơn giá giữ nguyên nội dung thì giữ id; dòng sửa / thêm thành dòng riêng của dự án (id >= ID_RIENG)."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_gia', 'sửa đơn giá riêng của dự án')
     cu = {r['id']: r for r in doc(con)}
     ra, loi = [], []
     for i, d in enumerate(ds, 1):
@@ -196,6 +198,8 @@ def doc_file_tham_dinh(file, dong: list | None = None) -> tuple:
 def them_tham_dinh(con, ds: list, can_cu: str, nhan: str = TD_THAM_DINH) -> dict:
     """Ghi các mục đơn giá thẩm định đã chọn vào quy ước của dự án (dòng riêng). Trùng tên + ĐVT với dòng thẩm định đã có
     thì cập nhật giá, căn cứ. ds: [nhap_don_gia.Muc] (chỉ lấy mục chon)."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_gia', 'ghi đơn giá thẩm định')
     chon = [m for m in ds if getattr(m, 'chon', True)]
     if not chon:
         raise LoiNhap('Chưa chọn dòng đơn giá nào.')

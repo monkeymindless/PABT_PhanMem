@@ -7,6 +7,370 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.0.97', '10/11/2026', (
+        'Nhật ký kiểm toán: phần mềm nhớ điểm cuối nhật ký trên máy này - nếu file dự án bị sửa ngoài phần mềm (xóa bớt dòng cuối, tính lại mã) thì báo ngay khi mở.',
+        'Khôi phục mốc thời gian: mốc bị hỏng không còn ghi đè lên dự án đang tốt; bản sao lưu tự động được kiểm tra trước khi giữ.',
+        'File dự án hỏng: báo rõ "File dự án bị hỏng" và gợi ý khôi phục, không còn làm phần mềm tắt đột ngột.',
+        'Cập nhật bộ đơn giá qua mạng chỉ nhận địa chỉ https:// và file có mã kiểm tra SHA-256; mật khẩu tài khoản máy chủ LAN tối thiểu 8 ký tự.',
+    )),
+    ('1.0.96', '10/11/2026', (
+        'Bên trong phần mềm sắp xếp lại gọn hơn (tách các phần đọc file đơn giá, màu giao diện, thông báo lỗi thành phần riêng): chức năng và cách dùng không đổi, nền móng cho các bản nâng cấp sau.',
+    )),
+    ('1.0.95', '10/11/2026', (
+        'Phím tắt mới: Ctrl+Shift+H Thêm hộ, Ctrl+Shift+G Tính đơn giá đất, Ctrl+Shift+E Xuất danh sách hộ.',
+        'Tìm nhanh (Ctrl+K): chưa gõ gì thì lệnh vừa dùng đứng đầu; gõ > để chỉ tìm lệnh, @ để chỉ tìm hộ; lệnh đang tắt ghi rõ lý do (chưa mở dự án, vai trò không có quyền, dự án đang mở chỉ xem).',
+    )),
+    ('1.0.94', '10/11/2026', (
+        'Màn hình chính gọn hơn: chú giải tiến độ chỉ hiện trạng thái đang có hộ; Việc nên làm tiếp hiện 5 việc quan trọng nhất, bấm Xem thêm để thấy phần còn lại.',
+        'Giao diện tối: biểu tượng các nút lớn ở màn hình chính và thanh lệnh hiện rõ (trước đây gần như chìm vào nền).',
+        'Bảng giá đất, thẻ Hệ số K: chữ nút không còn bị cắt trên màn hình 1366 x 768 (tỷ lệ 125%).',
+        'Nút đang tắt có chú thích lý do (rê chuột để xem); dọn bộ nhớ khi in mẫu so sánh phiên bản.',
+    )),
+    ('1.0.93', '10/11/2026', (
+        'Nút bấm gọn mắt hơn: mỗi cửa sổ chỉ nút Lưu có nền đặc; Chốt V1, Đối chiếu, In / Xuất cùng một kiểu; nút Đóng không còn màu đỏ; '
+        'nút Lập PA, Xem hộ, Làm ngay ở màn hình chính thành dạng liên kết.',
+        'Thẻ mục ở cửa sổ lập phương án: thẻ đang mở có vạch xanh bên dưới (không còn nền xanh đặc); tổng kinh phí hộ hiển thị chữ đậm, bỏ nền cam.',
+        'Trạng thái hộ dùng 4 nhóm màu dễ nhận: xám chưa làm, xanh dương đang xử lý, vàng cần chú ý, xanh lục đã xong (đỏ chỉ cho không đồng ý, cưỡng chế).',
+        'Giao diện tối: trạng thái hộ, nút Sửa thửa, thanh tiến độ, bảng giá đất, nhập đơn giá đổi đúng màu tối, chữ rõ hơn.',
+    )),
+    ('1.0.92', '10/11/2026', (
+        'An toàn file dự án: phần mềm kiểm chặt các "trigger" (lệnh tự chạy) nằm trong file .pabt nhận từ nơi khác và gỡ trigger lạ ngay khi mở, '
+        'trước mọi lần ghi - kể cả nhập Excel bằng dòng lệnh và dự án trên máy chủ LAN; có ghi nhật ký.',
+        'Phân quyền máy chủ LAN: nút Nhập phương án chi tiết tắt đúng theo vai trò; sửa Thông tin dự án và Gợi ý đủ điều kiện cũng kiểm quyền '
+        '(bản offline theo hộ chỉ đánh dấu các hộ đã nhận).',
+        'Trợ lý AI: họ tên chủ hộ luôn được che trước khi gửi, kể cả khi nhờ AI viết lại dòng OCR hay phân tích văn bản đơn giá.',
+        'Bảng tổng hợp: tổng diện tích dòng "Đối với ... m2" làm tròn như Excel (0,25 thành 0,3).',
+        'Giao diện: menu trái chữ nhóm rõ hơn; ô tích tông Tối có khung; tùy chọn dài (Điều 79, 127, 122, mật độ bảng, che CCCD) có tiêu đề ngắn '
+        'và dòng mô tả bên dưới; nhãn ở hộp Tiếp nhận pháp lý không còn bị cắt.',
+    )),
+    ('1.0.91', '09/11/2026', (
+        'Đối thoại ghi được ý kiến của hộ SAU đối thoại (lấy ý kiến không đồng ý, đối thoại xong đồng ý): cột Ý kiến sau đối thoại ở thẻ 3 bấm một chạm, ô Sau đối thoại trong hộp ghi biên bản; tỷ lệ đồng thuận, tổng hợp ý kiến, lọc hộ, chuyển đợt tính theo ý kiến sau đối thoại, ý kiến lần đầu giữ làm chứng cứ.',
+        'Thang 6 nấc theo đúng trình tự QĐ 18/2026: hộ chỉ được tính Đã trình thẩm định (B8) khi đợt trình có văn bản trình (số và ngày tờ trình); mới xếp vào đợt trình thì vẫn ở bước niêm yết, lấy ý kiến, đối thoại (B6-7) và ghi rõ chưa có tờ trình. Trạng thái nấc 2 ghi đúng việc đã làm: đang lấy ý kiến / đã lấy ý kiến (đồng ý, không đồng ý cần đối thoại) / đã đối thoại; cảnh báo trình khi chưa có ý kiến hoặc chưa đối thoại.',
+    )),
+    ('1.0.90', '09/11/2026', (
+        'Gói cài giá đất (.larcgia): xuất rồi nhập lại không còn báo "số TT phải tăng dần" (đoạn đường bị tách đôi do Phụ lục I.1 / I.2 ghi khác dấu câu); gói đã xuất từ bản cũ tự gộp khi nhập. Tạo gói từ bảng hệ số K toàn tỉnh được: đoạn có hệ số K khác nhau theo vị trí giữ riêng từng vị trí.',
+        'Bảng giá đất đọc từ Nghị quyết phân loại theo PHỤ LỤC: chỉ lấy Phụ lục I (nông nghiệp) và III (phi nông nghiệp) - không còn lẫn dòng đảo / cù lao, khu công nghiệp, tái định cư vào bảng đường của xã; giá đất ở tra ở Phụ lục III, đất nông nghiệp ở Phụ lục I; ô Tên đường bỏ trống hoặc dòng mặt tiền thiếu ở một phụ lục lấy theo phụ lục kia; hai đoạn ghi cùng chữ ở hai số TT không bị gộp mất. Nên đọc lại file bảng giá NQ 28 để cập nhật bảng đang dùng.',
+        'Tên xã so nguyên chữ và giữ dấu: "An Lộc" không còn lẫn với "Xuân Lộc", "Lộc Thành" khác "Lộc Thạnh" (giá, đoạn đường, hệ số K, bổ sung bảng giá không xóa nhầm xã khác).',
+        'Bảng tính đơn giá đất nhanh hơn với bảng giá toàn tỉnh (chỉ đọc dòng của xã đang chọn, nhớ đoạn đường).',
+        'Thẻ 1. Đất gọn hơn: Áp giá nhanh xếp một hàng (màn hình hẹp tự xuống dòng), ô Vị trí có thêm Vị trí 1 phạm vi 2, 3 và Vị trí 2, còn lại (tính theo giá Dòng 1, tỷ lệ và trần sàn như bảng tính đầy đủ); nút giữ đúng cỡ chữ, ô Hộ / ô Thửa không còn kéo dài để trống.',
+        'Chống lỗi "database is locked" khi file dự án nằm trên Google Drive / thư mục mạng: chờ khóa tới 30 giây, ghi lại khi bị từ chối tức thời, giao dịch treo được ghi xuống; mở bảng tính giá đất không còn văng lỗi.',
+        'Quét file thông minh: đọc đủ Word (số, gạch đầu dòng tự động, ngắt dòng), đổi chữ phông cũ TCVN3 / VNI sang Unicode, PDF scan có lớp chữ hỏng (máy scan nhận dạng sai, mất dấu) tự nhận dạng lại trên máy; thẻ Cấu trúc văn bản phân cấp Phần / Chương / Mục / Điều / Khoản / Điểm / Bảng có ô lọc; tìm trong nội dung, lưu ra .txt; cột Cách đọc, chất lượng từng file; địa bàn chỉ tự nhận khi văn bản nói rõ một xã.',
+        'Hộ chưa lập phương án mà đã gắn đợt niêm yết / trình không nhảy nấc tiến độ, có cảnh báo; hộp thoại con kéo giãn được tới cỡ màn hình; lưu quy tắc toàn văn NQ 28 cần quyền quản trị và không bị file trích đoạn ghi đè; cập nhật vị trí dòng đất ghi luôn văn bản căn cứ vào dự án.',
+    )),
+    ('1.0.89', '09/11/2026', (
+        'Bảng tính đơn giá đất bồi thường tự hiện đủ xã / phường có trong bảng giá đất đã cập nhật; đoạn đường thiếu trong gói được dựng từ bảng giá, hệ số K lấy từ bảng đã nhập.',
+        'Bộ quy tắc: Xuất / Nhập gói cài (.larcgia) — chọn xã, đóng kèm đơn giá đất + hệ số K (luôn đi cùng) và bộ quy tắc để dùng trên máy khác.',
+    )),
+    ('1.0.88', '08/11/2026', (
+        'Thẻ Cập nhật bảng giá đất có nút Xóa bảng cũ, ghi bảng mới: xóa mọi xã và mọi giá cũ rồi ghi đúng bảng vừa đọc.',
+        'Hai phụ lục đất ở và nông nghiệp của cùng một đoạn đường được gộp thành một dòng, không còn dòng 0 đồng vì thiếu một phụ lục.',
+    )),
+    ('1.0.87', '08/11/2026', (
+        'Mọi cửa sổ con khi mở được kéo về giữa màn hình đang dùng, thu vừa vùng làm việc, không tràn mất góc hay mất nút.',
+    )),
+    ('1.0.86', '08/11/2026', (
+        'Đọc bảng giá: lấy đủ điểm đầu, điểm cuối và tách giá theo nhóm đất của bảng tính (cây lâu năm, cây hằng năm, rừng sản xuất, nuôi trồng thủy sản, đất ở, thương mại, sản xuất).',
+        'Bảng tính đơn giá đọc giá Nghị quyết 28 từ bảng giá đang dùng, đúng nhóm đất và đúng đoạn đường. File có điều khoản nghị quyết thì cập nhật quy tắc Nghị quyết 28, không chỉ Quyết định 03.',
+    )),
+    ('1.0.85', '08/11/2026', (
+        'Cập nhật bảng giá đất: nhập tên tỉnh / thành phố là đủ để tìm giá cả tỉnh. Xã / phường không bắt buộc.',
+        'Bộ quy tắc giá đất nằm trong cửa sổ Bảng giá đất (thẻ Bộ quy tắc giá đất), cùng chỗ nhập văn bản đơn giá và bảng giá.',
+    )),
+    ('1.0.84', '08/11/2026', (
+        'Bảng tính đơn giá đất NQ 28 và QĐ 03: thêm Phường Tân Triều (Bảng 8, 55 đoạn đường), cùng bộ với bảng giá đất và hệ số K.',
+        'Quét file đọc được Word 97-2003 (.doc): nhờ Word hoặc LibreOffice nếu có, không thì đọc chữ ngay trong phần mềm. Xem toàn văn, trích quy định / đơn giá / quy tắc tính bồi thường. Nghị quyết bảng giá đất bấm Lưu quy tắc toàn văn để bảng tính dùng.',
+    )),
+    ('1.0.83', '08/11/2026', (
+        'Danh sách hộ: thanh trạng thái 6 nấc (0/6 đến 6/6) theo 16 bước Quyết định 18/2026/QĐ-UBND — kiểm đếm và hồ sơ, lập dự thảo, niêm yết và lấy ý kiến, trình thẩm định, phê duyệt, chi trả, bàn giao mặt bằng.',
+        'Lập phương án, mục 1. Đất: ô Vị trí mở bảng tính đơn giá đất NQ 28 và QĐ 03. Bảng tính nhớ vị trí, hệ số K và thuộc tính đã chọn, kể cả đất công đơn giá 0 đồng.',
+    )),
+    ('1.0.82', '08/11/2026', (
+        'Bảng tính giá đất (NQ 28 & QĐ 03): ô Nhóm đất tách 4 loại đất nông nghiệp - cây lâu năm, cây hằng năm (lúa), nuôi trồng thủy sản, rừng sản xuất (rừng phòng hộ, đặc dụng tính theo rừng sản xuất); giá trần, sàn Phụ lục VIII theo đúng loại đã chọn.',
+        'Bảng tính giá đất: thêm ô Trường hợp NQ 28 - tái định cư, thửa nhiều mặt tiền, lòng chợ, khu công nghiệp mới, đất dạng tuyến, đường đất, dạ cầu, qua kênh rạch, hành lang an toàn đường bộ, giáp ranh tỉnh, đất có thời hạn. Hệ số nhân vào giá NQ 28 trước hệ số K, ghi vào giải trình và Ghi chú dòng đất khi áp giá.',
+        'Đọc toàn văn Nghị quyết 28: hệ số trong văn bản được dùng ngay cho bảng tính (thay hệ số mặc định), giải trình ghi câu văn bản.',
+        'Đọc file bổ sung, sửa đổi, thay thế bảng giá đất, hệ số K, bộ quy tắc hoặc toàn văn nghị quyết: Bảng tính giá đất đang mở tự cập nhật theo.',
+    )),
+    ('1.0.81', '08/11/2026', (
+        'Lập phương án: xóa, sửa hoặc thêm thửa ở thẻ Hồ sơ & Thửa rồi Lưu không còn báo lỗi FOREIGN KEY; dòng đất của thửa đã xóa được giữ lại (bỏ gắn thửa), thửa mới tự có dòng ở mục 1. Đất.',
+        'Bôi đen ô ở bảng trong hộp thoại nhúng hoặc bảng mở thêm sau cũng hiện tổng nhanh (số dòng, tổng diện tích, tổng thành tiền).',
+        'Bảng giá đất: tách 4 loại đất nông nghiệp theo Điều 5 Nghị quyết 28 (cây lâu năm, cây hằng năm, nuôi trồng thủy sản, rừng sản xuất); rừng phòng hộ, đặc dụng tính theo rừng sản xuất. Nút Phân tích 4 loại đất NN xem giá và trần, sàn Phụ lục VIII.',
+        'Đọc file toàn văn Nghị quyết 28 (không có bảng Tên đường) không còn báo lỗi: đọc các quy tắc tỷ lệ, phạm vi, khoảng cách trong lời văn.',
+        'Nút Giá TĐC, Điều 8-10: tính giá đất tái định cư, phạm vi, thửa nhiều mặt tiền, các trường hợp cụ thể Điều 8, giáp ranh Điều 9, đất có thời hạn Điều 10.',
+    )),
+    ('1.0.80', '07/11/2026', (
+        'Bảng tính giá đất: khi chọn Vị trí, Phạm vi, màn hình và Ghi chú dòng đất hiện đủ phép tính, ví dụ 230.000 × 30% = 69.000 đ/m², vượt giá tối đa của Xã Phú Lý nên lấy 60.000 đ/m² (Phụ lục VIII). Cách tính không đổi.',
+        'Tông Tối: sửa lỗi của 1.0.79 làm các nhãn (Hộ, Thửa, Họ và tên, Tên dự án...) tối mờ khó đọc.',
+        'Tông Tối: thẻ số liệu Theo dõi tiến độ, nút Đóng, nút thu phóng bản đồ, dòng nhóm hồ sơ pháp lý, bảng thống kê không còn nền sáng; cột STT, trạng thái, hệ số K, giá x K và các dòng cảnh báo đọc rõ.',
+        'Đổi phương án màu Navy: nhãn và tiêu đề đổi màu đồng bộ ngay.',
+    )),
+    ('1.0.79', '07/11/2026', (
+        'Bảng tính giá đất: thêm ô Vị trí, phạm vi theo Điều 5, Điều 6 Nghị quyết 28: Vị trí 1 Phạm vi 1 (100%), Phạm vi 2 (80%), Phạm vi 3 (60%); Vị trí 2 (đất nông nghiệp 30%, đất phi nông nghiệp 15% hoặc 10%), có áp giá tối thiểu, tối đa theo Phụ lục VIII và ghi căn cứ vào giải trình.',
+        'Bảng tính giá đất: nhãn Vị trí kết nối ghi đúng ngưỡng mét của địa bàn đang chọn (phường 600 m, 400 m; xã 1.000 m, 500 m).',
+        'Màu Navy dịu mắt: 6 phương án trong hộp Giao diện, mặc định phương án Nordic; tiêu đề bảng, nút thẻ, viên trạng thái, Sổ vận động đồng bộ một màu.',
+        'Nhanh hơn với dự án lớn (đo 3.000 hộ): mở cửa sổ lập phương án 490 -> 256 ms, mở dự án 1,30 -> 1,18 giây, mở danh sách xổ chọn hộ 72 -> 37 ms.',
+        'Bảng tính giá đất: cột Thông số không còn bị cắt chữ bên phải trên màn hình thấp.',
+    )),
+    ('1.0.78', '07/11/2026', (
+        'Bảng In: thêm Hộp in Windows như Word, Excel: chọn máy in, trang, số bản, Preferences của máy in (khay giấy, chất lượng…) cho lần in đó. Bản Windows 7 in qua Word / Excel.',
+        'Lập phương án: Ctrl+V dán, Ctrl+X cắt ô như Excel (dán khối từ Excel, Word; một giá trị điền mọi ô đang chọn; Ctrl+Z hoàn tác cả lần dán). Có ở các mục và bảng thửa; menu chuột phải có Cắt, Dán.',
+        'Sang hộ khác (nút, Ctrl + mũi tên, danh sách xổ xuống, danh sách hộ): luôn mở thẻ Hồ sơ & Thửa để nhập theo thứ tự.',
+        'Hồ sơ hộ: thêm ô Ghi chú dưới tên: nội dung bất kỳ, hiện ngay dưới tên hộ ở Danh sách hộ, Bảng kinh phí chi tiết, Niêm yết công khai. Dòng "Là chủ sở hữu…" đang nằm ở Tình trạng pháp lý cũng hiện lại.',
+        'Gõ cả câu vào ô Họ và tên (ví dụ "Phan Văn Minh xây dựng trên một phần thửa đất số …"): tự tách tên riêng, phần câu sang ô Ghi chú dưới tên; bấm Lưu mới ghi. Tổ chức, nhiều chủ cùng tên không tách.',
+        'Bản in phương án chi tiết (Word) và bảng tổng hợp ghi liền cả tên và ghi chú: "Phan Văn Minh là chủ sở hữu tài sản trên thửa…".',
+        'Bảng kinh phí chi tiết: hết khoảng trống giữa TT và Họ tên, đủ cột trong khung; họ tên dài xuống dòng hiện đủ chữ, dòng tự cao theo chữ.',
+    )),
+    ('1.0.77', '07/11/2026', (
+        'Số tiền, diện tích, khối lượng trên màn hình đổi sang kiểu chữ Segoe UI dễ đọc: số 0 không còn gạch chéo, số gọn hơn, cột vẫn thẳng hàng. Số CCCD và thẻ số liệu dùng cùng kiểu.',
+    )),
+    ('1.0.76', '07/11/2026', (
+        'Tài khoản máy chủ không có quyền sửa hồ sơ: lưu, bỏ lớp bản đồ và ảnh nền trong dự án báo rõ không có quyền.',
+        'Lập phương án mục Đất: nút mũi tên chọn thửa rộng hơn, không bị cắt; nút Thuộc tính máy in, Thiết lập trang đủ chữ.',
+    )),
+    ('1.0.75', '07/11/2026', (
+        'An toàn: file dự án nhận từ ngoài có trigger giả tên của phần mềm được gỡ khi mở; chặn chặt hơn file XML độc; file khóa hỏng không còn gây lỗi khi mở dự án.',
+        'Tài khoản máy chủ không đủ quyền: đợt trình, đợt niêm yết, quyết định, nhập phương án chi tiết, sửa lỗi tự động, lưu bản vẽ báo rõ không có quyền. Thông báo lỗi trên một số màn hình đổi màu theo tông nền.',
+        'Lập phương án: các nút Dán, Tính mật độ, KT diện tích, Lên, Xuống, Gọn cột lên cùng hàng nhập nhanh (cửa sổ hẹp thì xuống hàng dưới); thêm nút Tự tính hỗ trợ; bảng cao hơn.',
+        'Hồ sơ hộ: ô họ tên ghi cả câu thì tách tên riêng, phần còn lại sang Tình trạng pháp lý; thửa có DT thu hồi 0 mà mục Đất đã có diện tích thì tự điền. Chỉ ghi khi bấm Lưu.',
+        'Nút Lưu xanh khi có thay đổi, "Đã lưu" khi xong; số lượng theo cây, con, cái không còn đuôi ,0; cột Nguồn giá tô màu theo loại; một thanh chân bảng, quét chọn nhiều ô là hiện ngay tổng số lượng, đơn giá trung bình, thành tiền.',
+        'Bảng tổng hợp kinh phí: bảng Cơ cấu rộng hết màn hình (khung đối soát Pre-F/S sang thẻ Đối soát); bảng Chi tiết không còn cắt số tiền, có hàng tổng cố định thẳng cột, nút Ẩn cột trống, cột Thao tác mở phương án, họ tên hai dòng.',
+    )),
+    ('1.0.74', '06/11/2026', (
+        'Niêm yết công khai: hai bảng "DS hộ niêm yết trong đợt" và "Hộ chưa đủ ĐK / Vướng pháp lý" chuyển bằng nút, mỗi bảng dùng trọn chiều cao màn hình; không còn thanh ngăn kéo. Hàng nút chỉ hiện nút của bảng đang mở.',
+        'Bấm thẻ "Vướng pháp lý" mở thẳng bảng hộ vướng; bấm "Đã niêm yết" hoặc "Đủ điều kiện lập PA" mở bảng hộ trong đợt. Nút hộ vướng tô cam khi có hộ cần xử lý.',
+        'Bảng hộ niêm yết: cột Họ và tên giãn rộng, cột Địa điểm đủ rộng, số tiền đậm canh phải; rê chuột xem đủ họ tên, thửa, địa điểm.',
+    )),
+    ('1.0.73', '06/11/2026', (
+        'Bản bảo trì: sắp xếp lại mã nguồn bên trong (bảng tổng hợp, bảng điều chỉnh, nhập Excel, đọc văn bản đơn giá, các màn hình lớn) để dễ sửa lỗi và nâng cấp về sau. Chức năng, số liệu, bản in, giao diện không đổi.',
+    )),
+    ('1.0.72', '06/11/2026', (
+        'Niêm yết & Lấy ý kiến: nút không còn che thẻ; nút của thẻ đang mở nằm ở một hàng riêng dưới thanh thẻ.',
+        'Lập phương án trên màn hình nhỏ: số tổng cộng và tổng kinh phí không còn bị cắt; thẻ mục, hàng trên tự rút gọn chữ, chữ đầy đủ ở chú thích.',
+        'Bảng In: nút Thuộc tính máy in, Thiết lập trang dễ bấm hơn. Rút gọn chữ vài nút và tên thẻ Bộ đơn giá để không bị cắt.',
+        'Sửa lỗi hao bộ nhớ: mở Bộ đơn giá hoặc lập phương án rồi Đóng dự án, phần mềm không trả lại bộ nhớ (mỗi lần khoảng 3 MB với Bộ đơn giá). Dùng cả ngày không còn nặng dần vì lỗi này.',
+    )),
+    ('1.0.71', '06/11/2026', (
+        'Nhanh hơn với dự án lớn: tạo dự án mới 3.000 hộ nhanh gần gấp đôi, lập bảng tổng hợp nhanh hơn khoảng 19%. Số liệu, bản in không đổi.',
+        'Bảng In: đóng bảng giờ giải phóng hết bộ nhớ, dùng cả ngày không nặng dần.',
+        'Bản đồ thửa đất: xuất KML / KMZ mang theo màu tô tay, nhập lại vẫn còn màu.',
+        'Bản đồ thửa đất: cửa sổ thấp nhường nhiều chỗ hơn cho bảng bên dưới.',
+        'Gói chạy ngay (.zip) nhẹ hơn khoảng 24 MB.',
+    )),
+    ('1.0.70', '06/11/2026', (
+        'Bản đồ thửa đất: tô màu từng ô thửa bằng tay. Chuột phải lên thửa, chọn Tô màu ô thửa: 8 màu nhanh, Màu khác…, Bỏ màu đã tô. Màu lưu cùng dự án, đổi cách tô hay nạp lại file bản vẽ vẫn giữ; chú giải và tỷ lệ đồng thuận vẫn theo trạng thái thật của thửa.',
+        'Bản đồ thửa đất: bảng bên phải không còn bị che chữ, mất mục. Thông tin thửa tự cuộn, kéo thanh ngăn để chia chỗ với bảng dưới; thẻ Nhập vào dự án cuộn được, nút Lưu luôn thấy ở đáy.',
+        'Mục Tính đơn giá đất ở menu trái có biểu tượng.',
+    )),
+    ('1.0.69', '06/11/2026', (
+        'Cửa sổ Nhập phương án chi tiết gọn còn 4 tầng: một thanh hộ + phiên bản + Lưu, In; 6 thẻ mục nổi bật (Alt+0 đến Alt+5, xanh đậm là mục đang chọn, xanh lá là mục có dữ liệu) kèm Tổng kinh phí hộ; một hàng công cụ; một dải đáy. Thông tin hộ xem ở chú thích ô Hộ.',
+        'Phiên bản phương án chọn bằng một ô có huy hiệu màu; nút Chốt V1 / Tạo nhánh V2 theo ngữ cảnh; menu ⋯ thêm Nhân bản, Khôi phục số đang lập, Xóa nhánh nháp. Menu In / Xuất gồm Xem trước và 4 mẫu.',
+        'Áp giá nhanh là ngăn đóng / mở hai hàng, đọc đủ tên đường. Bảng tính giá đất: gọn hơn, tiền tự chấm hàng nghìn, hệ số luôn 2 chữ số lẻ (1,45; 1,00; 0,90), đơn vị thống nhất đ/m². Dòng đất lưu riêng giá NQ 28, K1, K2, K3, câu diễn giải.',
+        'Bộ đếm khi chọn ô không còn cộng lẫn STT, vị trí, hệ số K, tỷ lệ: Đang chọn N dòng | Tổng DT/KL | Đơn giá TB | Tổng Thành tiền, nằm dưới chân bảng, không che dòng.',
+        'Đọc kết quả từ file: tìm cột Mã hộ, thêm tầng tên gần đúng khi khớp tổng tiền; nhận tên có hậu tố cắt cụt "là chủ sở...". Văn bản căn cứ sắp theo đúng 13 bậc mới: Sở, ngành bậc 12, cấp xã bậc 13.',
+        'Thông tin dự án: nhãn gọn, ô đơn vị đủ chữ, Cấp địa bàn + Tên xã + Năm một hàng, tên xã tự viết hoa chữ đầu. Niêm yết: 4 thẻ không còn bị khuất chữ, cột Họ và tên rộng, thanh ngăn có tay nắm.',
+    )),
+    ('1.0.68', '05/11/2026', (
+        'Tính đơn giá đất: khung bên phải luôn có các dòng đất của mọi hộ, không phải chọn hộ trước. Chọn phạm vi (tất cả hộ, hộ đang chọn, một hộ), lọc theo tên chủ hộ, số tờ, số thửa, loại đất; Chọn tất cả / Bỏ chọn các dòng đang hiện. Đơn giá mới, Thành tiền mới của dòng đã tích đổi ngay khi đổi thông số.',
+        'Thêm dòng đất cho hộ ngay trong bảng tính (Tờ, Thửa, Loại đất, Diện tích); tự tạo dòng đất từ thông tin thửa cho hộ có thửa mà mục 1 còn trống.',
+        'Mục 1. Đất có thanh áp giá nhanh một hàng: Đoạn đường -> Vị trí -> Mặt đường -> Giá NQ 28 -> công thức, kết quả; Áp vào dòng đất đang chọn, Thêm thành dòng đất mới. Nút và menu chuột phải Mở bảng tính đầy đủ (NQ 28 & QĐ 03): chọn sẵn hộ, tích sẵn dòng đang thao tác; áp xong bảng Đất cập nhật ngay.',
+        'Áp giá ghi đủ công thức G × K1 × K2 × K3 vào ghi chú dòng đất (ra bản in), ghi vị trí theo đoạn đường, gộp văn bản căn cứ vào dự án, tính lại khoản đào tạo chuyển đổi nghề theo giá đất và tổng phương án.',
+        'Hộ đã có V1 niêm yết: áp giá ghi vào nhánh V2 (chưa có thì tự tạo), V1 giữ nguyên; áp hàng loạt báo danh sách hộ chuyển nhánh, hộ không ghi được.',
+    )),
+    ('1.0.67', '05/11/2026', (
+        'Bản đồ thửa đất: file KML, KMZ của phần mềm CAD chỉ có đường và nhãn nay tự ghép thành ô thửa (số tờ, số thửa, loại đất, diện tích, mốc ranh, ghi chú), đối chiếu diện tích hình với nhãn; thửa lệch được báo, không tự ghi vào hồ sơ.',
+        'Diện tích thu hồi tính theo ranh thu hồi qua mốc và đối chiếu với nhãn bản vẽ (trước đây lấy nhãn "(xxx)" gần số thửa nhất, có thể là phần ngoài ranh).',
+        'Cửa sổ Nhập bản đồ gộp vào Bản đồ thửa đất: nút Mở bản đồ (.kml, .kmz, .dxf), thẻ Nhập vào dự án. Bảng thông tin bên phải bản đồ, kéo thanh chia để chỉnh to nhỏ, nút Ẩn bảng.',
+        'Đo đường, đo vùng, đọc tọa độ VN-2000 và GPS (tự bắt đúng đỉnh thửa); la bàn, mũi tên, thanh thu phóng trên bản đồ; nút Định vị: thửa đang chọn, tọa độ gõ tay, vị trí của máy.',
+        'Bấm ô thửa hiện số tờ, số thửa, diện tích, diện tích thu hồi, hộ, trạng thái, mốc ranh; nhấp đúp mở phương án. Gắn hộ, tạo hộ mới, đổi hộ ngay trên ô thửa; tên hộ hiện trên bản đồ.',
+        'Nền bản đồ thêm "Không nền" để tô màu theo trạng thái hộ nhẹ máy; đổi cách tô không phải vẽ lại cả bản đồ. Ảnh vệ tinh nét hơn (tới mức 19 nơi có ảnh). Số thửa, DT, mốc trên bản vẽ lớn không còn bị mất.',
+    )),
+    ('1.0.66', '05/11/2026', (
+        'Bảng In làm lại theo cấu trúc bảng In của Word, Excel: cột trái In, Xuất, Xuất dữ liệu; nút In lớn, Số bản sao; chọn Máy in, Thuộc tính máy in; Thiết đặt: hộ, tài liệu, bản, Trang, In hai mặt, Xếp bộ, Khổ giấy; bản xem trước bên phải, trang và thu phóng ở đáy.',
+        'Tài liệu đang xem là tài liệu sẽ in. In nhiều hộ thành một lệnh in, đúng thứ tự, xếp bộ và hai mặt được. Ô Hộ gõ như ô Trang của Word: 1-3, 5.',
+    )),
+    ('1.0.65', '05/11/2026', (
+        'Bảng In / Xuất làm lại cho gọn: chọn Một hộ, Nhiều hộ hoặc Xuất dữ liệu; mở lên ở Dự thảo. Phương án chi tiết tích riêng Word, Excel, PDF; chỉ tích PDF thì không để lại file Word.',
+        'Xem trước một hàng nút: Word, Excel, PDF gộp, Bảng tổng hợp. Danh sách hộ gọn hơn, bản xem trước rộng hơn, bỏ các ghi chú và thẻ nhỏ.',
+        'File tự lưu vào thư mục chứa file dự án, không hỏi; đổi thư mục khi cần. Danh sách hộ, báo cáo đối chiếu xuất ở một chỗ: thẻ Xuất dữ liệu.',
+        'Được mở khóa từng phiên bản V1, V2, V3 để sửa trực tiếp, khóa lại khi xong; bản V1 lúc chốt vẫn giữ riêng, trả về được ở nút "…". V0, V2, V3 của lần đã phê duyệt dùng nút Mở khóa của lần.',
+        'Sửa lỗi: chọn chính sách hỗ trợ hiện một hộp thoại trống.',
+    )),
+    ('1.0.64', '05/11/2026', (
+        'Bộ quy tắc giá đất: văn bản mới về giá đất nhập thành một gói có ngày hiệu lực (hệ số, yếu tố ảnh hưởng, công thức nhân, làm tròn, câu giải trình), không phải chờ sửa phần mềm, cài lại từng máy. Mở ở nút Bộ quy tắc trong bảng Tính đơn giá đất.',
+        'Tạo gói từ gói cũ rồi sửa, từ bảng hệ số K đã nhập (thêm được xã mới, như Tân Triều), hoặc nhập từ file. Xem khác gì gói cũ trước khi lưu. Máy chủ LAN tự phát hành gói cho các máy.',
+        'Số đã áp vào hộ không tự đổi khi có gói mới: dòng đất ghi rõ văn bản đã dùng, dự án giữ gói đã chọn, V1 nguyên vẹn. Bảng tính nhắc khi hôm nay đã có gói khác đang hiệu lực hoặc xã của dự án chưa có trong gói.',
+        'Bảng tính đơn giá đất nay dùng đúng hệ số K đã nhập ở thẻ Hệ số K và ghi rõ trong giải trình; trước đây là hai nguồn riêng.',
+    )),
+    ('1.0.63', '05/11/2026', (
+        'Đa phiên bản phương án: V0 bản đang lập, V1 dự thảo niêm yết (khóa, không bao giờ bị ghi đè), V2.1, V2.2… sau ý kiến, đối thoại, V3 trình duyệt. Thanh chọn phiên bản ngay trên màn hình '
+        'Lập phương án. Trả về số niêm yết một chạm, cho một hộ hoặc đồng loạt cả đợt, không phải nhập lại; ghép được đất theo V1, nhà, cây theo V2.',
+        'Bảng đối chiếu V1, V2, V3 kèm chênh lệch và lý do giải trình, cho từng hộ và toàn đợt (Lập phương án; Niêm yết: thẻ 3, 4).',
+        'Bố cục gọn hơn: dải Lần lập PA một dòng với các nút V0 → V1 → V2 → V3 (lệnh ít dùng gom vào nút ...); bảng đối chiếu danh sách hộ bên trái, chi tiết bên phải; bảng tính đơn giá đất hai cột, đơn giá to dễ thấy, phần ít dùng thu gọn.',
+        'Bốn mẫu in tách riêng: 01 dự thảo niêm yết (V1), 02 dự thảo đối thoại (V2.n), 03 bảng đối chiếu, 04 chính thức trình duyệt (V3). In dự thảo, xuất bảng niêm yết tự chốt V1.',
+        'Đọc kết quả từ file ở Niêm yết: khớp hộ theo mã định danh, CCCD (kể cả mất số 0 đầu), số thửa + tờ, họ tên (bỏ "là chủ sở hữu", "quản lý"; trùng tên dùng STT). Hộ không đồng ý được tạo sẵn nhánh V2.',
+    )),
+    ('1.0.62', '05/11/2026', (
+        'Quét file thông minh nay nhận loại TỪNG file và đưa vào đúng chỗ: file dự án / danh sách hộ, phương án chi tiết, phụ lục hệ số K, bảng giá đất, '
+        'bảng đơn giá nhà, cây, biên bản kiểm đếm, văn bản căn cứ. Nhận sai thì đổi được loại trước khi xử lý.',
+        'Biên bản kiểm đếm, giấy tờ của hộ: nút Đưa vào phương án của hộ thêm dòng đất theo tờ + thửa, tài sản qua hộp Dán danh sách tài sản; tự gợi ý '
+        'hộ theo CCCD / họ tên. Chưa ghi vào file cho tới khi bạn soát và bấm Lưu.',
+        'Bản scan chỉ nhận dạng chữ một lần: quét xong mở màn hình xử lý không phải chờ đọc lại.',
+    )),
+    ('1.0.61', '05/11/2026', (
+        'Bảng tính đơn giá đất bồi thường mới (lệnh Tính đơn giá đất, menu Đơn giá & bảng giá): Đơn giá = ROUND(giá NQ 28 × K1 × K2 × K3 × K khác). '
+        'Chọn tuyến đường và ĐOẠN đường (điểm đầu → điểm cuối, 106 đoạn Phường Trị An, Xã Tân An, Xã Phú Lý theo QĐ 03/2026/QĐ-UBND), vị trí kết nối '
+        '(cụm 7 dòng NQ 27 / NQ 28): K1 theo phụ lục I.1 / I.2 và giá NQ 28 tự điền; K3 = 0,90 cho đất nông nghiệp tiếp giáp đường đất, đá, sỏi, '
+        'cấp phối nhưng tự khóa 1,00 nếu tuyến đã có quy định riêng (VB 1201/SNNMT-ĐĐ, VB 29/5/2026); quy định chuyển tiếp khoản 3 Điều 4. '
+        'Có nhật ký giải trình từng bước; áp thẳng vào dòng đất của các hộ đang chọn.',
+        'Mục Văn bản căn cứ tự khử trùng lặp và sắp xếp theo 13 bậc hiệu lực pháp lý (Hiến pháp, Luật … đến văn bản Sở) mỗi khi quét thêm hoặc sửa xong, '
+        'lưu theo dự án.',
+        'Một bộ quét file dùng chung (lệnh Quét file thông minh…, ba nút Quét ở thẻ Niêm yết, hai nút Quét trong bảng tính giá): đọc PDF, Word, Excel, '
+        'ảnh scan ngay trên máy (không gửi ra ngoài), hiện kết quả để xem trước rồi mới ghi.',
+        'Mọi hộp thoại luôn nằm giữa màn hình, cao và rộng tối đa bằng màn hình trừ 32 px, phần thân cuộn riêng, hàng nút luôn hiện.',
+    )),
+    ('1.0.60', '05/11/2026', (
+        'Đọc được toàn văn Quyết định chính sách bồi thường, hỗ trợ, tái định cư (bản scan, PDF chữ, Word): nhận đúng số hiệu, ngày, các văn bản bị thay thế; không nhầm với dòng Căn cứ.',
+        'Đơn giá đọc theo Điều / khoản / điểm và khớp đúng mã CS đang dùng; số tiền trong Ví dụ và biểu thưởng không thành mục; mục dẫn chiếu Luật, Nghị định không còn bị báo bỏ.',
+        'Quy định cách tính trích từ văn bản sạch hơn, ghi đúng Điều, khoản, điểm.',
+    )),
+    ('1.0.59', '04/11/2026', (
+        'Cài đè / gỡ cài không xóa file Excel, Word, PDF của bạn để trong thư mục cài; cài gói cập nhật không xóa bản đang chạy.',
+        'Hai máy mở cùng lúc: máy sau mở chỉ xem; đồng hồ máy lệch không làm khóa sai; mang dự án về / đưa lên an toàn hơn khi có người đang sửa.',
+        'Chặn file nén độc; bản vẽ DXF bị cắt cụt được báo; giữ tối thiểu 10 mốc thời gian mới nhất dù dự án nghỉ lâu; gói Wi-Fi không mã hóa không nhập hàng loạt.',
+        'Ctrl+Shift+L chạy cả khi đã mở dự án; ô nhập nhanh gõ dở không theo sang hộ khác; mở hộ đặt sẵn con trỏ vào ô nhập; tông Tối đọc được dòng cảnh báo.',
+    )),
+    ('1.0.58', '04/11/2026', (
+        'Niêm yết và lấy ý kiến: nút Văn bản, biên bản… theo từng mục (Thông báo niêm yết, Giấy mời lấy ý kiến, Giấy mời / Thông báo đối thoại, '
+        'các Biên bản): gõ nội dung hoặc đính kèm file, đọc sẵn số hiệu, ngày. Nút Đọc kết quả từ file…: PDF scan, ảnh, Word, Excel -> nhận ra từng hộ '
+        'trong đợt và kết quả, xem trước rồi mới ghi.',
+        'Đã sửa theo rà soát: đóng phần mềm bấm Hủy không còn thoát mất dữ liệu; Ctrl+S và chuyển hộ khi đang gõ dở ô không còn bỏ số vừa gõ; '
+        'thưởng trong quyết định điều chỉnh của hộ có lần bổ sung; không ghi nhầm DT thu hồi khi thửa có nhiều dòng hồ sơ; DT trong ranh của '
+        'ranh từ 30 đỉnh; nhập "Thay" không xóa phương án đã có quyết định; khái toán chưa lưu được hỏi khi thoát.',
+        'An toàn: gọi cscript / PowerShell bằng đường dẫn đầy đủ; HS đính kèm chỉ mở đúng loại hồ sơ; gỡ trigger lạ trong file nhận từ ngoài; '
+        'khôi phục mốc và hoàn tác để lại dấu vết kiểm toán; không khóa quản trị cuối cùng; che tên, CCCD, email kỹ hơn trước khi gửi AI.',
+        'Cửa sổ lập phương án: nút "DS hộ" (Ctrl+B) ghim danh sách hộ bên trái - bấm tên để chuyển hộ, gõ để lọc không dấu.',
+        'Nút "Gọn cột" trên bảng nhà, cây, vật nuôi, hỗ trợ: ẩn cột Mã, Nguồn giá, Quy cách, Căn cứ giá để cột Tên rộng hơn (mặc định tắt, nhớ cho '
+        'lần sau). Phím Space trên bảng: khung chi tiết dòng dưới bảng - xem cách tính, sửa quy cách, căn cứ giá, ghi chú ngay tại đó.',
+        'Đối chiếu hai hộ (nút dưới danh sách hộ ghim, hoặc chuột phải một hộ): so phương án đã lưu, báo cùng tài sản khác đơn giá, khác số '
+        'lượng, chỉ một hộ có, chênh lệch tổng tiền. Chỉ đọc, mở song song khi đang soạn.',
+        'Đọc bản PDF đơn giá Phụ lục II đúng như bản Word: đủ các dòng nhà, tên không còn rác ("đồng/m2", "STT Danh mục"), ĐVT xuống dòng '
+        '("m sâu", "m dài", "giếng"), số tiền trong ngoặc giải thích hoặc câu hướng dẫn không còn thành mục.',
+    )),
+    ('1.0.57', '04/11/2026', (
+        'Phương án chi tiết (bản Word, bản Excel): mục nhà / cây trồng / vật nuôi / hỗ trợ / thưởng không có tiền và không có dòng tài sản '
+        'nào thì KHÔNG in; mục có tài sản (kể cả tài sản chưa có giá, chỉ có ghi chú) hoặc có tiền thì giữ. Các mục còn lại đánh số liền '
+        'nhau (1, 2, 3…).',
+        'Dòng thưởng chấp hành bàn giao mặt bằng in đậm; cột STT căn giữa ở mọi dòng (cả "1.1", "2.1").',
+        'Cập nhật đơn giá từ văn bản: đọc đúng tên bảng đơn giá nhà ("Nhà từ 05 tầng trở lên - Kết cấu loại 1"…) khi PDF ghi ĐVT '
+        '"Đồng/m² sàn" xuống dòng (trước: tên mục thành "Đồng/m² sàn"); biệt thự, chuồng trại, công đào, mồ mả, miếu thờ (hai trường hợp '
+        'nghĩa trang) khớp đúng mục bộ đơn giá.',
+        'Văn bản có nhiều khu vực giá (QĐ hợp nhất: Phụ lục I khu vực 1, Phụ lục II khu vực 2): chỉ lấy dòng của MỘT khu vực - ô "Khu vực '
+        'giá" (mặc định khu vực khớp bộ đơn giá đang dùng); trước đây trộn hai khu vực, báo hàng trăm mục "mới" và đổi giá sai.',
+        'PHÂN QUYỀN 6 VAI TRÒ cho máy chủ LAN (Quản lý tài khoản > ô Vai trò > Đổi vai trò): Lãnh đạo (quản trị, mở khóa phương án, '
+        'quyết định, chi trả), Thẩm định viên (khóa thẩm định), Chuyên viên lập phương án, Kiểm đếm viên (chỉ khối lượng - không sửa '
+        'đơn giá, chính sách hỗ trợ), Kế toán chi trả (quyết định, chi trả, bàn giao), Thanh tra (mở dự án chỉ xem). Hai vai trò cũ '
+        'giữ nguyên quyền. Không vai trò nào xóa được hộ đã có quyết định phê duyệt / đã chi trả.',
+        'Nhanh hơn: chuyển hộ ◀ ▶ trong cửa sổ lập phương án không đọc lại cả danh sách hộ (3.000 hộ: 32 -> 24 ms); bảng tổng hợp '
+        'điều chỉnh chỉ đọc hộ có phương án điều chỉnh.',
+        'HAI PHỤ LỤC THEO KHU VỰC GIÁ: văn bản đơn giá nhà, công trình có Phụ lục I (khu vực 1) và Phụ lục II (khu vực 2) - Cập nhật '
+        'đơn giá mặc định nhập CẢ HAI phụ lục, mỗi mục gắn khu vực của phụ lục, danh sách xã / phường từng khu vực đọc từ phần ghi chú '
+        'của văn bản. Dự án chỉ dùng phụ lục của khu vực có xã dự án (Địa bàn), phụ lục kia khóa ẩn khi lập phương án (không chọn, '
+        'không tìm, không thêm được). Bộ đơn giá > thẻ Nhà, công trình: nút Phụ lục I / Phụ lục II - hai bảng tách bạch; ô "Khu vực '
+        'của dự án" chọn tay khi địa bàn không có trong danh sách xã; nút "Xã / phường từng khu vực".',
+        'Hộp Cập nhật đơn giá chia HAI PHẦN: bên trái bộ đơn giá hiện hành (mã, tên, đơn giá, ghi chú), bên phải văn bản mới (mã, tên, '
+        'ĐVT, đơn giá, ghi chú) - đối chiếu từng dòng cũ / mới; cột Khu vực.',
+        'Đọc file Word (.doc, .docx) đơn giá nhà: tên "Nhà từ 05 tầng trở lên - Kết cấu loại 1" (mô tả kết cấu vào ghi chú, trước đây '
+        'dính cả đoạn mô tả vào tên), "Biệt thự Song lập", dòng "Kết cấu: … / Vật liệu hoàn thiện: …" của bảng Phụ lục II, nhà loại 4…8 '
+        'cùng tên thêm "(nhà loại N)", "a) Bồn nhựa / b) Bồn inox", ĐVT "Đồng/m² sàn" -> m²; "Ống bi … < 1m" / "≥ 1m" không nhầm nhau.',
+    )),
+    ('1.0.56', '03/11/2026', (
+        'KHÓA BẢO MẬT BỘ ĐƠN GIÁ: máy dùng máy chủ LAN chỉ tài khoản QUẢN TRỊ máy chủ (đang đăng nhập) sửa được bộ đơn giá - tài sản, '
+        'cây trồng, vật nuôi, chính sách hỗ trợ, bảng giá đất, hệ số K (cả nạp từ file, quét văn bản, khôi phục). Máy đơn: cần mở khóa bằng '
+        'mật khẩu quản trị bộ đơn giá.',
+        'ĐỒNG BỘ BỘ ĐƠN GIÁ QUA MÁY CHỦ: quản trị sửa xong, bộ đơn giá tự phát hành lên máy chủ; máy khác nhận khi đăng nhập (có kiểm tra '
+        'mã băm, file hỏng thì giữ bộ cũ). Quản trị bảo mật > Phát hành / Nhận bộ đơn giá để làm ngay.',
+        'Cập nhật đơn giá từ văn bản: đọc cả LỜI VĂN các điều khoản, trích các quy định cách tính (mật độ, cây trồng xen, phần vượt, tỷ lệ '
+        '%, trường hợp không bồi thường…) - lưu vào bộ đơn giá (thẻ "Quy định cách tính"), ghi vào ghi chú mục liên quan và hiện ở Giải '
+        'trình cách tính (Ctrl+I) khi lập phương án.',
+        'Tự chọn sẵn mọi dòng thay đổi (mới, đổi giá, đổi tên, bỏ); văn bản dài chỉ hiện các dòng cần xử lý; nút "Chọn mọi dòng thay '
+        'đổi" / "Bỏ chọn tất cả". Văn bản đã có (bản hợp nhất gồm đủ văn bản sửa đổi): dòng đổi giá cũng được chọn sẵn.',
+        'Kiểm tra bằng AI (tùy chọn, cần bật Trợ lý trực tuyến): AI đọc toàn văn văn bản như cán bộ thẩm định, xác minh tên / ĐVT / đơn '
+        'giá các dòng cần xem, tìm thêm quy định cách tính. Chỉ gửi chữ văn bản đơn giá (công khai); không bao giờ tự đổi giá - dòng AI đọc '
+        'khác được bỏ chọn để đối chiếu.',
+    )),
+    ('1.0.55', '03/11/2026', (
+        'Nhật ký kiểm toán có CHUỖI BĂM: mỗi dòng ghi qua LARC được ký nối với dòng trước - dòng bị sửa / xóa bằng công cụ khác ngoài '
+        'phần mềm được báo ngay trên cửa sổ Nhật ký kiểm toán.',
+        'Giải trình cách tính từng dòng phương án: chuột phải dòng > "Giải trình cách tính & căn cứ…" (hoặc Ctrl+I) - công thức, thay '
+        'số, căn cứ / nguồn giá, có nút Chép; cửa sổ Xem chi tiết tính tiền: rê chuột lên dòng tiền để đọc giải trình.',
+        'Bản sao lưu tự động và mốc của Cỗ máy thời gian được NÉN (nhỏ hơn khoảng 5 lần, không mã hóa - luôn khôi phục được). Mở bản '
+        'sao lưu: phần mềm tự giải nén, mở chỉ xem.',
+        'Nhận phiếu qua Wi-Fi: quét mã QR thì gói tin được mã hóa (khóa nằm trong mã QR, không đi qua mạng) và kiểm tra không bị sửa '
+        'trên đường truyền.',
+        'Dải lần lập phương án gọn hơn: "+ PA bổ sung" là nút phụ; hộ chỉ có một lần phương án không hiện nút Xóa lần.',
+        'Sửa lỗi của 1.0.54 có thể làm phần mềm tự đóng (hiếm, sau khi mở - đóng nhiều cửa sổ): phần đọc tên ô nhập cho trình đọc màn hình.',
+        'Sửa lỗi: họ tên dán từ bản scan / PDF có ký tự điều khiển ẩn làm xuất hồ sơ báo lỗi "embedded null byte"; Trợ lý AI che thêm '
+        'họ tên sau "Người nhận tiền / Người đại diện / Người được ủy quyền / Chủ sở hữu / Họ và tên…" và số điện thoại dạng (+84).',
+    )),
+    ('1.0.54', '03/11/2026', (
+        'Tông nền Tối / Ấm / Titan: nền ô trạng thái các bảng (xanh = khớp, cam = lệch, vàng = cần xem) và các dải, thẻ, khung viền riêng của '
+        'từng màn hình đổi màu theo tông - không còn ô nền sáng dưới chữ sáng.',
+        'Bấm A+ / A− khi đang ở tỷ lệ khác 100%: dải, thẻ, nhãn đổi màu sau khi cửa sổ đã mở vẫn giữ đúng cỡ chữ; đổi tỷ lệ / đổi tông nhanh '
+        'hơn (phần đang ẩn áp kiểu khi hiện ra).',
+        'Cỡ chữ thống nhất một thang (11 - 12 - 13 - 14 - 16 - 18 px): huy hiệu, nhãn phụ trên thẻ số liệu không còn chữ 10 px khó đọc.',
+        'Trình đọc màn hình (Narrator): ô nhập đọc đúng tên theo nhãn đứng cạnh ("Họ và tên", "Số CCCD"…). Bảng mật độ cây, chẩn đoán, '
+        'nhập chi tiết, quy trình: dòng cao vừa chữ.',
+    )),
+    ('1.0.53', '03/11/2026', (
+        'Cập nhật đơn giá từ văn bản (Word, PDF, bản scan): dòng con "- Ống 1 m Φ1m" giữ tên dòng cha, khớp mục cũ theo cỡ Φ, kết cấu, '
+        'số đo, ĐVT dù tên văn bản ghi khác bộ đơn giá - không còn báo nhầm "mục mới". Dòng giá chung ("Trụ cổng, bờ kè và các loại tài sản '
+        'khác có kết cấu") cập nhật mọi mục cùng kết cấu. Ô giá "259.000 - 720.000" tách mức thấp / mức cao (mục có dấu chấm cuối tên).',
+        'Dòng hướng dẫn không có giá ("giếng sâu từ 10m … tính thêm 50%", gác lửng 40% / 20%) hiện riêng ở khung "Quy định cách tính".',
+        'Văn bản đơn giá cây trồng: dòng ghi nhiều loài ("Cây cải xanh, cải ngọt, cải thìa", "Si cảnh, Sanh cảnh…") tách thành từng loài như '
+        'bộ đơn giá; giá nhiều mùa vụ trong một ô ("Đông Xuân: … Hè Thu: …"); loài cây lâm nghiệp đọc sai tên nhận ra theo nhóm giá.',
+        'Bản scan: giá đọc sai chữ số ("S27.312", "157.000" thay "187.000"), ô giá không đọc được, cỡ đường kính đọc hỏng được đánh dấu '
+        '"giá cần xem lại" và không chọn sẵn; chế độ thay cả nhóm không tự chọn xóa mục chỉ vì bản scan đọc thiếu dòng.',
+    )),
+    ('1.0.52', '02/11/2026', (
+        'Niêm yết công khai: tùy chọn che số CCCD (075092***456) trên bản dự thảo dán tại điểm dân cư và file bảng niêm yết - ô ở Xuất hồ sơ & '
+        'Bản in (chế độ Dự thảo), nhớ theo dự án, mặc định tắt. Tờ trình, quyết định, bảng ký nhận vẫn in đủ 12 số.',
+        'Nút Lưu màu xanh lục, khác nút thao tác chính. Số trên các thẻ số liệu dùng phông số thẳng cột.',
+        'Trợ lý AI luôn che họ tên, CCCD, số điện thoại, số giấy chứng nhận, tọa độ trước khi gửi (bỏ tùy chọn gửi nguyên).',
+        'Dự án lớn (10.000 hộ trở lên): thêm chỉ mục dữ liệu, mở dự án / lọc theo đợt nhanh hơn. Ghi dữ liệu nhiều bước gộp một lần ghi đĩa. '
+        'Biểu tượng LARC trên thanh tác vụ dùng định danh mới khi cài bằng bộ cài 1.0.52 (bộ cài tự cập nhật lối tắt đã ghim).',
+    )),
+    ('1.0.51', '02/11/2026', (
+        'Lưu tự động: cửa sổ lập phương án tự ghi phương án / hồ sơ hộ sau 10 giây ngừng thao tác (chọn 10 giây, 1 phút, 2 phút hoặc '
+        'Tắt ở dải dưới cùng cửa sổ hoặc Cài đặt > Giao diện). Không hộp thoại, không cắt ngang ô đang gõ, bảng giữ nguyên ô đang chọn; '
+        'nhãn "● Chưa lưu" / "✓ Đã tự lưu giờ:phút:giây". Khái toán đã có file .pabtdt cũng tự lưu. LARC Mobile vốn lưu ngay mỗi lần ghi - '
+        'nay hiện giờ đã tự lưu.',
+        'Hộp tiến độ (đọc file scan, Trợ lý AI): nút Dừng / Bỏ qua bấm được ngay. Danh sách gợi ý ô nhập gần đáy màn hình lật lên trên. '
+        'Màn hình thấp (laptop 1366 x 768): cửa sổ lập phương án nhường thêm chỗ cho bảng.',
+        'Tông Tối: số tiền, thanh thông báo, biểu tượng nút sáng rõ. Nút Xóa viền đỏ rõ hơn; nút đang chọn bằng phím Tab có viền xanh.',
+        'Trợ lý AI: che thêm số CCCD / điện thoại có dấu cách, số giấy chứng nhận, tọa độ, họ tên sau "ông / bà / chủ hộ" trước khi gửi; '
+        'khóa API mã hóa riêng cho LARC. Nhận phiếu qua Wi-Fi: mã phiên dài hơn, giới hạn dung lượng mỗi phiên.',
+    )),
+    ('1.0.50', '02/11/2026', (
+        'Quét giấy tờ / Dán tài sản: ảnh xem trước thu như lúc nhận dạng (ảnh điện thoại vài MB cửa sổ vẫn kéo được); '
+        'Tesseract chạy nền, hộp tiến độ còn nút Dừng. Giấy chứng nhận không có tài sản không đọc hai lần; biên bản viết tay '
+        'vẫn đọc thêm kiểu cột thưa (ô chọn, tối đa 8 trang). Trợ lý AI sau OCR có nút Bỏ qua và hết giờ khi mất mạng.',
+        'Tông Tối: chú thích (tooltip) và ô nhập không còn chữ tối trên nền tối. Màu cảnh báo / vàng ô gom vào bảng màu chung. '
+        'Bảng dự toán và cập nhật đơn giá giãn dòng nhanh hơn. Lỗi tải lại từng hộ ghi vào loi.log.',
+    )),
+    ('1.0.49', '02/11/2026', (
+        'Quét giấy tờ / Dán tài sản → Mở file: đọc PDF ảnh OCR (chủ yếu), Word, Excel, ảnh chụp. Tự lọc dòng tài sản / viết tay, '
+        'bỏ mẫu in hành chính. PDF lớp chữ thưa thì nhận dạng lại ảnh; Word/Excel chỉ có ảnh nhúng thì OCR ảnh trong file. '
+        'Chữ viết tay: lần đọc khối chữ không ra dòng tài sản thì đọc lại kiểu cột thưa.',
+        'Trợ lý AI (nếu đã bật ở Công cụ → Trợ lý) tự viết lại dòng đã lọc thành "Tên: số lượng ĐVT" — vẫn không gửi file ảnh / PDF. '
+        'Nút Trợ lý AI viết lại còn để chạy lại khi cần.',
+    )),
+    ('1.0.48', '02/11/2026', (
+        'Dán tài sản → Mở ảnh / PDF: file lớn (ảnh điện thoại, PDF scan vài MB) không còn làm cửa sổ "Không phản hồi". '
+        'Hộp tiến độ từng trang, nút Dừng; ảnh thu về cỡ A4 300 dpi trước khi nhận dạng.',
+        'Chỉ lấy dòng tài sản / viết tay vào Dán tài sản — không đổ mẫu in hành chính (CỘNG HÒA, tiêu đề biên bản, chữ ký) '
+        'và rác OCR. Nút Chữ OCR gốc để soát cả trang. Trợ lý AI viết lại dòng đã lọc là tùy chọn (mặc định tắt, không gửi file ảnh / PDF).',
+        'Màn hình chính: ô Đã lập / Niêm yết đếm lũy kế số hộ đã đến mốc đó (hộ đã trình, đã duyệt vẫn được tính) — không còn báo 0 '
+        'khi hộ đã sang bước sau. Bấm ô để xem đủ danh sách. Thanh phễu vẫn chia theo giai đoạn đang đứng.',
+    )),
     ('1.0.47', '01/11/2026', (
         'Thẻ số liệu giữ 62 px (không nới, chừa chỗ bảng hộ trên màn 21"): dòng 2 diện tích xếp sát số thửa, không bị bo góc cắt. '
         'Bấm mở Bộ đơn giá / lập phương án / cửa sổ lệnh: chỉ dựng thẻ đang xem lúc mở, lần 2 dưới 0,1 giây.',

@@ -187,19 +187,11 @@ class TestKhung(CoSoXem):
 class TestHopIn(CoSoXem):
     def test_chia_doi_bam_ho_va_doi_che_do(self):
         from pabt.man_hinh import HopIn
-        h = HopIn(self.con, None, file_du_an=self.p)
-        self.assertEqual(h.tach.count(), 2)
-        self.assertIs(h.tach.widget(1), h.w_preview)
-        self.assertEqual(h.w_preview.minimumWidth(), 520)
+        h = HopIn(self.con, None, file_du_an=self.p, che_do='chinh_thuc')
+        self.assertTrue(h.w_preview.kieu_office)
         h.show()
         APP.processEvents()
         APP.processEvents()
-        a, b = h.tach.sizes()
-        trai = h.cuon_trai.minimumWidth()                      # 1.0.29: khung tùy chọn không hẹp hơn nội dung (không cuộn ngang)
-        if a + b >= 2 * max(520, trai):
-            self.assertLessEqual(abs(a - b), 2)                 # 50/50
-        else:                                                    # màn hình nhỏ / phông offscreen rộng: trái đủ nội dung hoặc phải 520
-            self.assertTrue(a >= trai - 2 or b == 520, (a, b, trai))
         h.bang_ho.setCurrentCell(0, 1)                           # bấm hộ -> lập bản xem trước của hộ
         self.assertTrue(h.w_preview.cho_xong(30))
         ma = h.bang_ho.item(0, 0).data(256)
@@ -237,7 +229,7 @@ class TestCuaSoLapPA(CoSoXem):
         b = w.btn_toggle_preview
         self.assertEqual(b.objectName(), 'btn_toggle_preview')
         self.assertEqual(b.text(), 'Xem trước')
-        self.assertIn('#1E3A5F', b.styleSheet())
+        self.assertIn('#345678', b.styleSheet())
         self.assertIn('#2563EB', b.styleSheet())
         # 16/10/2026 (máy yếu): khung xem trước tạo khi bật lần đầu - mở cửa sổ chưa có khung
         self.assertIsNone(w._w_preview)

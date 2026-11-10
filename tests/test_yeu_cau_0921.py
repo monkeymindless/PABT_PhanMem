@@ -45,10 +45,15 @@ class TestVatNuoi(_CoDuAn):
         self.assertEqual(nghiep_vu.muc_5_cot(kq.muc)[3], kq.muc[3] + kq.muc[MUC_VN])     # bảng 5 cột: cây gồm vật nuôi
         dong, _ = du_lieu_in.dong_chi_tiet(self.con, self.ma[0])
         tieu_de = [(x[1][0], x[1][1]) for x in dong if x[0] in ('H', 'R')]
-        self.assertEqual([s for s, _ in tieu_de], ['1', '2', '3', '4', '5', '6'])
-        self.assertEqual(tieu_de[3][1], 'Bồi thường, hỗ trợ về vật nuôi')
-        self.assertIn('hỗ trợ', tieu_de[4][1].lower())
-        self.assertIn('Thưởng', tieu_de[5][1])
+        # 1.0.57: mục nhà, cây trồng không dòng + 0 đồng ẩn khỏi bản in, số mục đánh lại liền nhau (vật nuôi vẫn đứng sau cây trồng)
+        ten = [t for _, t in tieu_de]
+        self.assertEqual([s for s, _ in tieu_de], [str(i) for i in range(1, len(tieu_de) + 1)])
+        self.assertNotIn(nghiep_vu.TEN_MUC[2], ten)
+        self.assertNotIn(nghiep_vu.TEN_MUC[3], ten)
+        i_vn = ten.index('Bồi thường, hỗ trợ về vật nuôi')
+        self.assertIn('hỗ trợ', ten[i_vn + 1].lower())
+        if kq.muc[5]:
+            self.assertIn('Thưởng', ten[i_vn + 2])
 
     def test_nang_cap_v11_chuyen_vat_nuoi(self):
         self.con.execute("INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia) VALUES (3, ?, 9, 'VN5', 'x', "
@@ -137,7 +142,7 @@ class TestCuaSoLapPA(_CoDuAn):
         w = CuaSoLapPA(self.con, self.ma[0])
         try:
             ten = [w.tab.tabText(i).rsplit(' (', 1)[0] for i in range(w.tab.count())]
-            self.assertEqual(ten[1:], ['1. Đất', '2. Nhà, công trình', '3. Cây trồng', '4. Vật nuôi', '5. Hỗ trợ'])
+            self.assertEqual(ten[1:], ['1. Đất', '2. Nhà, công trình', '3. Cây trồng', '4. Vật nuôi', '5. Hỗ trợ && TĐC'])
             self.assertEqual((the_cua(MUC_VN), the_cua(4)), (4, 5))
             w.them_nhanh(MUC_VN, w.bo.dm.lay('VN5'), so_luong='3')
             self.assertEqual(w.tab.currentIndex(), 4)

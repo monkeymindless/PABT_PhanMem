@@ -26,12 +26,12 @@ class HopGiaoDien(QDialog):
         self.r_mat_do = {}
         hien = giao_dien.MAT_DO[0]
         for ten, (nhan, cao, _td) in chu_de.MAT_DO.items():
-            r = QRadioButton(f'{nhan}  (dòng {cao} px) - {GOI_Y_MAT_DO[ten]}')
+            r = QRadioButton(f'{nhan}  (dòng {cao} px)')
             r.setChecked(ten == hien)          # đặt trạng thái TRƯỚC khi nối tín hiệu: mở hộp không được tự đổi / lưu mật độ
             self.nhom_mat_do.addButton(r)
             self.r_mat_do[ten] = r
             r.toggled.connect(lambda dung, t=ten: dung and self.doi_mat_do(t))
-            hn.addWidget(r)
+            hn.addWidget(giao_dien.nut_co_mo_ta(r, GOI_Y_MAT_DO[ten]))
         lo.addWidget(nhom)
         nhom_tn = QGroupBox('Tông nền bề mặt')                 # 1.0.33: áp ngay cho mọi cửa sổ đang mở
         hn = QVBoxLayout(nhom_tn)
@@ -57,6 +57,13 @@ class HopGiaoDien(QDialog):
             hn.addLayout(dong)
         lo.addWidget(nhom_tn)
         f = QFormLayout()
+        self.cb_navy = QComboBox()                              # 1.0.79: 6 phương án màu Navy, áp ngay; Tối, Titan, Ngọc giữ màu riêng
+        for ma, x in chu_de.PHUONG_AN_NAVY.items():
+            self.cb_navy.addItem(x['ten'], ma)
+        self.cb_navy.setCurrentIndex(max(0, self.cb_navy.findData(chu_de.phuong_an_hien())))
+        self.cb_navy.setToolTip('Màu chính, tiêu đề bảng, đầu khung phụ. Áp cho các tông Sáng, Dịu mắt, Trắng tương phản, Ấm áp.')
+        self.cb_navy.activated.connect(lambda *_: self.doi_navy(self.cb_navy.currentData()))
+        f.addRow('Màu Navy:', self.cb_navy)
         self.cb_tuong_phan = QComboBox()
         cd = chu_de.doc(giao_dien.cai_dat_nho())
         for khoa, nhan in chu_de.TUONG_PHAN.items():
@@ -65,6 +72,14 @@ class HopGiaoDien(QDialog):
         self.cb_tuong_phan.setToolTip('Windows bật chủ đề tương phản cao (Cài đặt > Trợ năng): phần mềm dùng màu hệ thống thay cho màu riêng.')
         self.cb_tuong_phan.activated.connect(lambda *_: self.doi_tuong_phan(self.cb_tuong_phan.currentData()))
         f.addRow('Tương phản cao:', self.cb_tuong_phan)
+        self.cb_tu_luu = QComboBox()                            # 1.0.51: lưu tự động (cửa sổ lập phương án, Khái toán)
+        for giay, nhan in chu_de.CAC_MUC_LUU_TU_DONG:
+            self.cb_tu_luu.addItem(nhan, giay)
+        self.cb_tu_luu.setCurrentIndex(max(0, self.cb_tu_luu.findData(chu_de.chu_ky_luu_tu_dong())))
+        self.cb_tu_luu.setToolTip('Phương án / hồ sơ hộ, Khái toán (đã có file) tự ghi sau khoảng thời gian NGỪNG thao tác. Tắt: chỉ lưu '
+                                  'khi bấm Lưu / Ctrl+S.')
+        self.cb_tu_luu.activated.connect(lambda *_: self.doi_tu_luu(self.cb_tu_luu.currentData()))
+        f.addRow('Lưu tự động:', self.cb_tu_luu)
         lo.addLayout(f)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
@@ -91,6 +106,15 @@ class HopGiaoDien(QDialog):
         """Áp ngay tông nền cho mọi cửa sổ đang mở và nhớ cho lần sau."""
         giao_dien.dat_tong_nen(ten, luu=True)
         self._thong_bao('Đã áp tông nền.')
+
+    def doi_navy(self, ma: str) -> None:
+        """Áp ngay phương án màu Navy cho mọi cửa sổ đang mở và nhớ cho lần sau."""
+        giao_dien.dat_phuong_an_navy(ma, luu=True)
+        self._thong_bao('Đã áp màu Navy.')
+
+    def doi_tu_luu(self, giay) -> None:
+        giay = chu_de.dat_chu_ky_luu_tu_dong(int(giay or 0))
+        self._thong_bao('Đã tắt lưu tự động.' if giay <= 0 else f'Lưu tự động sau {chu_de.nhan_chu_ky(giay)} ngừng thao tác.')
 
     def doi_tuong_phan(self, khoa: str) -> None:
         chu_de.ghi(giao_dien.cai_dat_nho(), tuong_phan=khoa)

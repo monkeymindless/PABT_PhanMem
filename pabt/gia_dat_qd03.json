@@ -1,0 +1,3886 @@
+{
+ "metadata": {
+  "quyet_dinh": "03/2026/QĐ-UBND",
+  "ngay_ban_hanh": "11/05/2026",
+  "ngay_hieu_luc": "11/05/2026",
+  "co_quan_ban_hanh": "Ủy ban nhân dân thành phố Đồng Nai",
+  "nghi_quyet_bang_gia_dat": "28/2025/NQ-HĐND",
+  "nghi_quyet_tieu_chi_vi_tri": "27/2025/NQ-HĐND",
+  "van_ban_huong_dan": [
+   "1201/SNNMT-ĐĐ ngày 20/05/2026 của Sở Nông nghiệp và Môi trường",
+   "Văn bản hướng dẫn ngày 29/05/2026 của Sở Nông nghiệp và Môi trường về xác định giá đất nông nghiệp tiếp giáp đường đất, sỏi, đá, cấp phối"
+  ],
+  "cong_thuc_chuan": "Gia_Dat = Gia_Bang_Gia_NQ28 * K_BienDongThiTruong_PL1 * K_QuyHoach_PL2 * K_YeuToKhac_PL3",
+  "nguon_file": "CSDL_HeSoDieuChinhGiaDat_QD03_2026_DongNai.json (người dùng cung cấp 05/11/2026); đã bỏ 2 bảng chi tiết 742 dòng (K1 đồng nhất trong cụm 7 dòng - đã kiểm), 161 đoạn (106 đoạn ba xã cũ + Bảng 8 Phường Tân Triều, 55 đoạn) + Phụ lục III"
+ },
+ "goi": {
+  "ma": "QD03_2026_DONG_NAI",
+  "ten": "QĐ 03/2026/QĐ-UBND (Đồng Nai)",
+  "so_hieu": "QĐ 03/2026/QĐ-UBND",
+  "bang_gia": "NQ 28/2025/NQ-HĐND",
+  "hieu_luc_tu": "2026-05-11",
+  "hieu_luc_den": "",
+  "van_ban_can_cu": [
+   "Quyết định số 03/2026/QĐ-UBND ngày 11/5/2026 của UBND thành phố Đồng Nai quy định hệ số điều chỉnh giá đất trên địa bàn thành phố Đồng Nai năm 2026"
+  ],
+  "cong_thuc": {
+   "he_so": [
+    "K1",
+    "K2",
+    "K3",
+    "K_KHAC"
+   ],
+   "lam_tron_he_so": 6,
+   "lam_tron_tam": 4,
+   "lam_tron": 0
+  },
+  "he_so_them": [],
+  "chuyen_tiep": {
+   "bat": true
+  },
+  "nhom_dat": [
+   {
+    "ma": "DAT_NONG_NGHIEP",
+    "ten": "Đất nông nghiệp (CLN, BHK, LUC, RSX, NTS) - PL I.2",
+    "cot_k1": "k1_nong_nghiep",
+    "cot_gia": "nn_cay",
+    "phu_luc": "I.2",
+    "la_nong_nghiep": true
+   },
+   {
+    "ma": "DAT_O",
+    "ten": "Đất ở (ONT, ODT) - PL I.1",
+    "cot_k1": "k1_dat_o",
+    "cot_gia": "dat_o",
+    "phu_luc": "I.1",
+    "la_nong_nghiep": false
+   },
+   {
+    "ma": "DAT_TMDV",
+    "ten": "Đất thương mại, dịch vụ (TMD) - PL I.1",
+    "cot_k1": "k1_tmdv",
+    "cot_gia": "tmdv",
+    "phu_luc": "I.1",
+    "la_nong_nghiep": false
+   },
+   {
+    "ma": "DAT_SXKD_KHOANGSAN",
+    "ten": "Đất cơ sở SX phi nông nghiệp & Khoáng sản (SKC, SKS) - PL I.1",
+    "cot_k1": "k1_sxkd",
+    "cot_gia": "sxkd",
+    "phu_luc": "I.1",
+    "la_nong_nghiep": false
+   },
+   {
+    "ma": "DAT_NONG_NGHIEP",
+    "ten": "Đất rừng sản xuất, nuôi trồng thủy sản - PL I.2",
+    "cot_k1": "k1_nong_nghiep",
+    "cot_gia": "nn_rung_nts",
+    "phu_luc": "I.2",
+    "la_nong_nghiep": true
+   }
+  ],
+  "vi_tri": [
+   {
+    "ma": "MAT_TIEN_VT1",
+    "vi_tri": "MT",
+    "ten": "Dòng 1 (VT1): Mặt tiền đường chính"
+   },
+   {
+    "ma": "DAU_NOI_TRUC_TIEP_M1",
+    "vi_tri": "T1",
+    "ten": "Dòng 2: Đấu nối trực tiếp - Mức 1 (Rộng ≥5m cách ≤1000m; 3-<5m cách ≤500m)"
+   },
+   {
+    "ma": "DAU_NOI_TRUC_TIEP_M2",
+    "vi_tri": "T2",
+    "ten": "Dòng 3: Đấu nối trực tiếp - Mức 2 (Rộng ≥5m cách >1000m; 3-<5m cách 500-1000m; <3m cách ≤200m)"
+   },
+   {
+    "ma": "DAU_NOI_TRUC_TIEP_M3",
+    "vi_tri": "T3",
+    "ten": "Dòng 4: Đấu nối trực tiếp - Mức 3 (Rộng 3-<5m cách >1000m; <3m cách >200m)"
+   },
+   {
+    "ma": "KHONG_DAU_NOI_M1",
+    "vi_tri": "K1",
+    "ten": "Dòng 5: Không đấu nối trực tiếp - Mức 1"
+   },
+   {
+    "ma": "KHONG_DAU_NOI_M2",
+    "vi_tri": "K2",
+    "ten": "Dòng 6: Không đấu nối trực tiếp - Mức 2"
+   },
+   {
+    "ma": "KHONG_DAU_NOI_M3",
+    "vi_tri": "K3",
+    "ten": "Dòng 7: Không đấu nối trực tiếp - Mức 3"
+   }
+  ],
+  "ket_cau": [
+   {
+    "ma": "NHUA_BETONG",
+    "ten": "Đường nhựa, bê tông xi măng (K3 = 1,00)"
+   },
+   {
+    "ma": "DAT_SOI_DA_CAPPHOI",
+    "ten": "Đường đất, đá, cuội, sỏi hỗn hợp, cấp phối (Đất NN: K3 = 0,90)"
+   }
+  ],
+  "yeu_to": [
+   {
+    "ma": "PNN_TTTM_200M",
+    "he_so": "1.05",
+    "ap_cho": "pnn",
+    "can_cu": "Mục I.1 Phụ lục III",
+    "ten": "Đất PNN trong phạm vi ≤200m từ mép ngoài TTTM, trung tâm hành chính, siêu thị (×1,05)",
+    "dien_giai": "Phạm vi ≤200m TTTM/TTHC/Siêu thị (×1,05)"
+   },
+   {
+    "ma": "PNN_NGHIATRANG_100M",
+    "he_so": "0.95",
+    "ap_cho": "pnn",
+    "can_cu": "Mục I.2 Phụ lục III",
+    "ten": "Đất PNN trong phạm vi ≤100m từ mép ngoài nghĩa trang, nghĩa địa, nhà tang lễ, hỏa táng (×0,95)",
+    "dien_giai": "Phạm vi ≤100m Nghĩa trang/Nhà tang lễ/Hỏa táng (×0,95)"
+   },
+   {
+    "ma": "PNN_HANHLANG_50M",
+    "he_so": "0.95",
+    "ap_cho": "pnn",
+    "can_cu": "Mục I.3 Phụ lục III",
+    "ten": "Đất PNN trong phạm vi ≤50m từ mép ngoài hành lang an toàn đường sắt, cao tốc, hầm chui (×0,95)",
+    "dien_giai": "Phạm vi ≤50m Hành lang đường sắt/Cao tốc/Hầm chui (×0,95)"
+   },
+   {
+    "ma": "NN_DUONG_DAT_SOI_DA",
+    "he_so": "0.90",
+    "ap_cho": "nn",
+    "can_cu": "Mục II.1 Phụ lục III",
+    "kich_hoat_ket_cau": "DAT_SOI_DA_CAPPHOI",
+    "khoa_neu_quy_dinh_rieng": true,
+    "ten": "Đất NN tiếp giáp mặt đường đất, đá, cuội, sỏi hỗn hợp, cấp phối (×0,90)",
+    "dien_giai": "Đất nông nghiệp tiếp giáp mặt đường bằng đất, đá, cuội, sỏi hỗn hợp, đường cấp phối (chưa quy định riêng tại Phụ lục I.2)"
+   }
+  ],
+  "cau_chu": {
+   "buoc_1": "Bước 1 (Bảng giá đất {bang_gia}): Xác định đơn giá gốc theo khu vực ({dia_ban}) và vị trí kết nối ({vi_tri}) = {gia} đ/m².",
+   "buoc_2_doan": "Bước 2 (Phụ lục {phu_luc} {so_hieu}): Tuyến \"{ten_duong}\" (Đoạn từ \"{diem_dau}\" đến \"{diem_cuoi}\"), nhóm đất {nhom} -> Hệ số biến động thị trường K1 = {k1}.",
+   "buoc_2_tay": "Bước 2 (Hệ số biến động thị trường K1 - {so_hieu}): K1 = {k1}.",
+   "k2_co": "Bước 3 (Phụ lục II {so_hieu}): Khu đất thực hiện dự án đầu tư có thông tin hệ số sử dụng đất (FAR) -> Áp dụng hệ số điều chỉnh theo quy hoạch K2 = {k2}.",
+   "k2_khong": "Bước 3 (Phụ lục II {so_hieu}): Theo Văn bản 1201/SNNMT-ĐĐ, trường hợp không phải dự án đầu tư xác định theo hệ số sử dụng đất (FAR) -> Không áp dụng Phụ lục II (K2 = 1,00).",
+   "k3_khoa": "Bước 4 (Phụ lục III {so_hieu}): Tuyến đường đã có hệ số riêng cho đường đất tại Phụ lục I.2 -> Giữ nguyên K3 = 1,00.",
+   "k3_nn_co": "Bước 4 (Mục II.1 Phụ lục III QĐ 03 & Văn bản hướng dẫn ngày 29/5/2026 của Sở NN&MT): {yeu_to} -> Áp dụng quy trình 3 bước, nhân hệ số K3 = {k3_2}.",
+   "k3_nn_khong": "Bước 4 (Phụ lục III {so_hieu}): Đất nông nghiệp tiếp giáp đường nhựa, bê tông xi măng -> K3 = 1,00.",
+   "k3_pnn_co": "Bước 4 (Mục I Phụ lục III {so_hieu}): Áp dụng yếu tố ảnh hưởng đất phi nông nghiệp [{yeu_to}] -> Hệ số K3 = {k3}.",
+   "k3_pnn_khong": "Bước 4 (Phụ lục III {so_hieu}): Không có yếu tố ảnh hưởng đặc biệt tại Mục I Phụ lục III -> K3 = 1,00.",
+   "canh_bao_khoa": "Cảnh báo chống nhân trùng (Văn bản 1201 & Văn bản 29/5/2026): Tuyến đường này đã được quy định hệ số K riêng cho đường đất/sỏi/đá (hoặc các tuyến đường còn lại) tại Phụ lục I.2, nên KHÔNG nhân thêm hệ số 0,90 tại Phụ lục III (K3 = 1,00).",
+   "loai_tru_nn": "Lưu ý pháp lý: Các hệ số 1,05 (phạm vi 200m TTTM) và 0,95 (phạm vi 100m nghĩa trang / 50m hành lang đường sắt, cao tốc) tại Mục I Phụ lục III chỉ áp dụng cho Đất phi nông nghiệp, hệ thống đã tự động loại trừ khỏi Đất nông nghiệp.",
+   "loai_tru_pnn": "Lưu ý pháp lý: Hệ số 0,90 (mặt đường đất, đá, sỏi, cấp phối tại Mục II.1 Phụ lục III) chỉ áp dụng cho Đất nông nghiệp, hệ thống đã tự động loại trừ khỏi Đất phi nông nghiệp.",
+   "ct_cao": "Bước 5 (Quy định chuyển tiếp - Tiết 2 Điểm a Khoản 3 Điều 4 {so_hieu}): Giá đất cụ thể đã phê duyệt/thẩm định ({gia_cu_the} đ/m²) ≥ Giá tính theo Bảng giá đất × Hệ số K ({gia_tinh} đ/m²) -> Tiếp tục áp dụng theo Giá đất cụ thể đã phê duyệt/thẩm định = {gia_cu_the} đ/m².",
+   "ct_thap": "Bước 5 (Quy định chuyển tiếp - Tiết 1 Điểm a Khoản 3 Điều 4 {so_hieu}): Giá đất cụ thể đã phê duyệt/thẩm định ({gia_cu_the} đ/m²) < Giá tính theo Bảng giá đất × Hệ số K ({gia_tinh} đ/m²) -> Chuyển sang áp dụng theo {so_hieu} = {gia_tinh} đ/m².",
+   "ghi_chu_ct": "giữ giá đất cụ thể đã phê duyệt - khoản 3 Điều 4 QĐ 03",
+   "nhan_k2": "Dự án đầu tư có hệ số sử dụng đất (FAR): áp dụng Phụ lục II",
+   "nhan_rieng": "Tuyến đã có hệ số riêng cho đường đất, sỏi, \"các tuyến còn lại\" ở Phụ lục I.2 (khóa K3 = 1,00)",
+   "nhan_cu_the": "Trống nếu không có (khoản 3 Điều 4 QĐ 03)",
+   "vt_ngan": "{gia_goc} × {ty_le}% = {gia_tinh} đ/m²{gioi_han}",
+   "buoc_1_vt": "Bước 1a ({can_cu}): {muc}: {gia_goc} × {ty_le}% = {gia_tinh} đ/m²{gioi_han}. Đơn giá gốc để nhân hệ số = {gia} đ/m²."
+  },
+  "vi_tri_dat": {
+   "can_cu": "Điều 5, Điều 6 NQ 28/2025/NQ-HĐND",
+   "muc": [
+    {
+     "ma": "VT1_PV1",
+     "ten": "Vị trí 1 - Phạm vi 1 (đất NN đến mét 100; PNN đến mét 50): 100%",
+     "vi_tri": 1,
+     "nn": "1",
+     "pnn": "1"
+    },
+    {
+     "ma": "VT1_PV2",
+     "ten": "Vị trí 1 - Phạm vi 2 (đất NN trên 100-200 m; PNN trên 50-100 m): 80%",
+     "vi_tri": 1,
+     "nn": "0.8",
+     "pnn": "0.8"
+    },
+    {
+     "ma": "VT1_PV3",
+     "ten": "Vị trí 1 - Phạm vi 3 (đất NN trên 200 m; PNN trên 100 m): 60%",
+     "vi_tri": 1,
+     "nn": "0.6",
+     "pnn": "0.6"
+    },
+    {
+     "ma": "VT2_PV1",
+     "ten": "Vị trí 2, còn lại - Phạm vi 1 (đất NN 30%; PNN đến mét 50: 15%)",
+     "vi_tri": 2,
+     "nn": "0.3",
+     "pnn": "0.15"
+    },
+    {
+     "ma": "VT2_PV2",
+     "ten": "Vị trí 2, còn lại - Phạm vi 2 (đất NN 30%; PNN trên 50 m: 10%)",
+     "vi_tri": 2,
+     "nn": "0.3",
+     "pnn": "0.1"
+    }
+   ],
+   "phu_luc_viii": {
+    "Phường Biên Hòa": {
+     "toi_thieu": {
+      "cln": 350,
+      "hang_nam": 350,
+      "nts": 240,
+      "rung": 240
+     },
+     "toi_da": {
+      "cln": 630,
+      "hang_nam": 630,
+      "nts": 430,
+      "rung": 430
+     }
+    },
+    "Phường Trấn Biên": {
+     "toi_thieu": {
+      "cln": 370,
+      "hang_nam": 370,
+      "nts": 250,
+      "rung": 250
+     },
+     "toi_da": {
+      "cln": 670,
+      "hang_nam": 670,
+      "nts": 450,
+      "rung": 450
+     }
+    },
+    "Phường Tam Hiệp": {
+     "toi_thieu": {
+      "cln": 370,
+      "hang_nam": 370,
+      "nts": 250,
+      "rung": 250
+     },
+     "toi_da": {
+      "cln": 670,
+      "hang_nam": 670,
+      "nts": 450,
+      "rung": 450
+     }
+    },
+    "Phường Long Bình": {
+     "toi_thieu": {
+      "cln": 370,
+      "hang_nam": 370,
+      "nts": 250,
+      "rung": 250
+     },
+     "toi_da": {
+      "cln": 670,
+      "hang_nam": 670,
+      "nts": 450,
+      "rung": 450
+     }
+    },
+    "Phường Trảng Dài": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 80,
+      "rung": 80
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 140,
+      "rung": 140
+     }
+    },
+    "Phường Hố Nai": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 120,
+      "rung": 120
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 220,
+      "rung": 220
+     }
+    },
+    "Phường Long Hưng": {
+     "toi_thieu": {
+      "cln": 350,
+      "hang_nam": 350,
+      "nts": 240,
+      "rung": 240
+     },
+     "toi_da": {
+      "cln": 460,
+      "hang_nam": 460,
+      "nts": 310,
+      "rung": 310
+     }
+    },
+    "Phường Tân Triều": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 80,
+      "rung": 80
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 140,
+      "rung": 140
+     }
+    },
+    "Phường Phước Tân": {
+     "toi_thieu": {
+      "cln": 350,
+      "hang_nam": 350,
+      "nts": 240,
+      "rung": 240
+     },
+     "toi_da": {
+      "cln": 460,
+      "hang_nam": 460,
+      "nts": 310,
+      "rung": 310
+     }
+    },
+    "Phường Tam Phước": {
+     "toi_thieu": {
+      "cln": 350,
+      "hang_nam": 350,
+      "nts": 240,
+      "rung": 240
+     },
+     "toi_da": {
+      "cln": 460,
+      "hang_nam": 460,
+      "nts": 310,
+      "rung": 310
+     }
+    },
+    "Xã Long Thành": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 180,
+      "rung": 180
+     }
+    },
+    "Xã Bình An": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 130,
+      "rung": 130
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 230,
+      "rung": 230
+     }
+    },
+    "Xã An Phước": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 130,
+      "rung": 130
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 230,
+      "rung": 230
+     }
+    },
+    "Xã Long Phước": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 130,
+      "rung": 130
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 230,
+      "rung": 230
+     }
+    },
+    "Xã Phước Thái": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 130,
+      "rung": 130
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 230,
+      "rung": 230
+     }
+    },
+    "Xã Nhơn Trạch": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 180,
+      "rung": 180
+     }
+    },
+    "Xã Đại Phước": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 180,
+      "rung": 180
+     }
+    },
+    "Xã Phước An": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 180,
+      "rung": 180
+     }
+    },
+    "Phường Long Khánh": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 140,
+      "hang_nam": 140,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Phường Bảo Vinh": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 140,
+      "hang_nam": 140,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Phường Xuân Lập": {
+     "toi_thieu": {
+      "cln": 170,
+      "hang_nam": 170,
+      "nts": 150,
+      "rung": 150
+     },
+     "toi_da": {
+      "cln": 240,
+      "hang_nam": 240,
+      "nts": 210,
+      "rung": 210
+     }
+    },
+    "Phường Hàng Gòn": {
+     "toi_thieu": {
+      "cln": 120,
+      "hang_nam": 120,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 170,
+      "hang_nam": 170,
+      "nts": 140,
+      "rung": 140
+     }
+    },
+    "Phường Bình Lộc": {
+     "toi_thieu": {
+      "cln": 110,
+      "hang_nam": 110,
+      "nts": 100,
+      "rung": 100
+     },
+     "toi_da": {
+      "cln": 140,
+      "hang_nam": 140,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Xã Xuân Lộc": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Hòa": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Thành": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Bắc": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Xuân Phú": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Định": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Cẩm Mỹ": {
+     "toi_thieu": {
+      "cln": 110,
+      "hang_nam": 110,
+      "nts": 70,
+      "rung": 70
+     },
+     "toi_da": {
+      "cln": 200,
+      "hang_nam": 200,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Xã Xuân Quế": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Đường": {
+     "toi_thieu": {
+      "cln": 110,
+      "hang_nam": 110,
+      "nts": 70,
+      "rung": 70
+     },
+     "toi_da": {
+      "cln": 200,
+      "hang_nam": 200,
+      "nts": 130,
+      "rung": 130
+     }
+    },
+    "Xã Sông Ray": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Xuân Đông": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 60,
+      "rung": 60
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 110,
+      "rung": 110
+     }
+    },
+    "Xã Trảng Bom": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 115,
+      "rung": 115
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 210,
+      "rung": 210
+     }
+    },
+    "Xã An Viễn": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 120,
+      "rung": 120
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 220,
+      "rung": 220
+     }
+    },
+    "Xã Bàu Hàm": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 160,
+      "rung": 160
+     }
+    },
+    "Xã Bình Minh": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 115,
+      "rung": 115
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 210,
+      "rung": 210
+     }
+    },
+    "Xã Hưng Thịnh": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 160,
+      "rung": 160
+     }
+    },
+    "Xã Dầu Giây": {
+     "toi_thieu": {
+      "cln": 100,
+      "hang_nam": 100,
+      "nts": 90,
+      "rung": 90
+     },
+     "toi_da": {
+      "cln": 180,
+      "hang_nam": 180,
+      "nts": 160,
+      "rung": 160
+     }
+    },
+    "Xã Gia Kiệm": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 115,
+      "rung": 115
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 210,
+      "rung": 210
+     }
+    },
+    "Xã Thống Nhất": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Định Quán": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Phú Vinh": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã La Ngà": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Phú Hòa": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 70,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Thanh Sơn": {
+     "toi_thieu": {
+      "cln": 20,
+      "hang_nam": 20,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 40,
+      "hang_nam": 40,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Tân Phú": {
+     "toi_thieu": {
+      "cln": 30,
+      "hang_nam": 30,
+      "nts": 25,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 55,
+      "hang_nam": 55,
+      "nts": 50,
+      "rung": 50
+     }
+    },
+    "Xã Tà Lài": {
+     "toi_thieu": {
+      "cln": 25,
+      "hang_nam": 25,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 50,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Nam Cát Tiên": {
+     "toi_thieu": {
+      "cln": 25,
+      "hang_nam": 25,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 50,
+      "nts": 40,
+      "rung": 40
+     }
+    },
+    "Xã Phú Lâm": {
+     "toi_thieu": {
+      "cln": 30,
+      "hang_nam": 30,
+      "nts": 25,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 55,
+      "hang_nam": 55,
+      "nts": 50,
+      "rung": 50
+     }
+    },
+    "Xã Đak Lua": {
+     "toi_thieu": {
+      "cln": 15,
+      "hang_nam": 15,
+      "nts": 15,
+      "rung": 15
+     },
+     "toi_da": {
+      "cln": 30,
+      "hang_nam": 30,
+      "nts": 30,
+      "rung": 30
+     }
+    },
+    "Xã Trị An": {
+     "toi_thieu": {
+      "cln": 35,
+      "hang_nam": 35,
+      "nts": 25,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 60,
+      "nts": 50,
+      "rung": 50
+     }
+    },
+    "Xã Tân An": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 130,
+      "nts": 80,
+      "rung": 80
+     },
+     "toi_da": {
+      "cln": 230,
+      "hang_nam": 230,
+      "nts": 140,
+      "rung": 140
+     }
+    },
+    "Xã Phú Lý": {
+     "toi_thieu": {
+      "cln": 35,
+      "hang_nam": 35,
+      "nts": 25,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 60,
+      "nts": 50,
+      "rung": 50
+     }
+    },
+    "Phường Bình Phước": {
+     "toi_thieu": {
+      "cln": 240,
+      "hang_nam": 170,
+      "nts": 25,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 280,
+      "hang_nam": 220,
+      "nts": 130,
+      "rung": null
+     }
+    },
+    "Phường Đồng Xoài": {
+     "toi_thieu": {
+      "cln": 240,
+      "hang_nam": 170,
+      "nts": 25,
+      "rung": 16
+     },
+     "toi_da": {
+      "cln": 280,
+      "hang_nam": 220,
+      "nts": 130,
+      "rung": 39
+     }
+    },
+    "Phường Minh Hưng": {
+     "toi_thieu": {
+      "cln": 152,
+      "hang_nam": 110,
+      "nts": 30,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 250,
+      "hang_nam": 200,
+      "nts": 120,
+      "rung": null
+     }
+    },
+    "Phường Chơn Thành": {
+     "toi_thieu": {
+      "cln": 152,
+      "hang_nam": 110,
+      "nts": 30,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 250,
+      "hang_nam": 200,
+      "nts": 120,
+      "rung": null
+     }
+    },
+    "Xã Nha Bích": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 90,
+      "nts": 30,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 250,
+      "hang_nam": 121,
+      "nts": 72,
+      "rung": null
+     }
+    },
+    "Phường Bình Long": {
+     "toi_thieu": {
+      "cln": 70,
+      "hang_nam": 50,
+      "nts": 20,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 112,
+      "hang_nam": 90,
+      "nts": 63,
+      "rung": null
+     }
+    },
+    "Phường An Lộc": {
+     "toi_thieu": {
+      "cln": 130,
+      "hang_nam": 90,
+      "nts": 20,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 210,
+      "hang_nam": 168,
+      "nts": 118,
+      "rung": null
+     }
+    },
+    "Phường Phước Bình": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 20,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 140,
+      "hang_nam": 112,
+      "nts": 90,
+      "rung": null
+     }
+    },
+    "Phường Phước Long": {
+     "toi_thieu": {
+      "cln": 120,
+      "hang_nam": 80,
+      "nts": 20,
+      "rung": 15
+     },
+     "toi_da": {
+      "cln": 210,
+      "hang_nam": 168,
+      "nts": 134,
+      "rung": 37
+     }
+    },
+    "Xã Thuận Lợi": {
+     "toi_thieu": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 20,
+      "rung": 22
+     },
+     "toi_da": {
+      "cln": 98,
+      "hang_nam": 78,
+      "nts": 63,
+      "rung": 54
+     }
+    },
+    "Xã Tân Lợi": {
+     "toi_thieu": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 20,
+      "rung": 22
+     },
+     "toi_da": {
+      "cln": 110,
+      "hang_nam": 88,
+      "nts": 70,
+      "rung": 54
+     }
+    },
+    "Xã Đồng Tâm": {
+     "toi_thieu": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 20,
+      "rung": 19
+     },
+     "toi_da": {
+      "cln": 113,
+      "hang_nam": 90,
+      "nts": 72,
+      "rung": 47
+     }
+    },
+    "Xã Đồng Phú": {
+     "toi_thieu": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 20,
+      "rung": 22
+     },
+     "toi_da": {
+      "cln": 90,
+      "hang_nam": 72,
+      "nts": 58,
+      "rung": 54
+     }
+    },
+    "Xã Lộc Ninh": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Lộc Thành": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Lộc Hưng": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 56,
+      "nts": 45,
+      "rung": 44
+     }
+    },
+    "Xã Lộc Tấn": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 56,
+      "nts": 45,
+      "rung": 44
+     }
+    },
+    "Xã Lộc Thạnh": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Lộc Quang": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 30,
+      "nts": 18,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Tân Khai": {
+     "toi_thieu": {
+      "cln": 70,
+      "hang_nam": 50,
+      "nts": 20,
+      "rung": 25
+     },
+     "toi_da": {
+      "cln": 96,
+      "hang_nam": 77,
+      "nts": 61,
+      "rung": 42
+     }
+    },
+    "Xã Tân Hưng": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": null
+     }
+    },
+    "Xã Tân Quan": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": null
+     }
+    },
+    "Xã Minh Đức": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 15,
+      "rung": 17
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Phước Sơn": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 13,
+      "rung": 10
+     },
+     "toi_da": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 48,
+      "rung": 25
+     }
+    },
+    "Xã Nghĩa Trung": {
+     "toi_thieu": {
+      "cln": 50,
+      "hang_nam": 35,
+      "nts": 15,
+      "rung": 13
+     },
+     "toi_da": {
+      "cln": 75,
+      "hang_nam": 60,
+      "nts": 48,
+      "rung": 32
+     }
+    },
+    "Xã Bù Đăng": {
+     "toi_thieu": {
+      "cln": 48,
+      "hang_nam": 34,
+      "nts": 15,
+      "rung": 13
+     },
+     "toi_da": {
+      "cln": 88,
+      "hang_nam": 70,
+      "nts": 56,
+      "rung": 32
+     }
+    },
+    "Xã Thọ Sơn": {
+     "toi_thieu": {
+      "cln": 48,
+      "hang_nam": 34,
+      "nts": 15,
+      "rung": 13
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 56,
+      "nts": 45,
+      "rung": 32
+     }
+    },
+    "Xã Đắk Nhau": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 13,
+      "rung": 10
+     },
+     "toi_da": {
+      "cln": 65,
+      "hang_nam": 52,
+      "nts": 42,
+      "rung": 25
+     }
+    },
+    "Xã Bom Bo": {
+     "toi_thieu": {
+      "cln": 48,
+      "hang_nam": 34,
+      "nts": 15,
+      "rung": 13
+     },
+     "toi_da": {
+      "cln": 70,
+      "hang_nam": 56,
+      "nts": 45,
+      "rung": 32
+     }
+    },
+    "Xã Thiện Hưng": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 13,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Tân Tiến": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 13,
+      "rung": 18
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Hưng Phước": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 13,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Đắk Ơ": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Phú Nghĩa": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 60,
+      "hang_nam": 48,
+      "nts": 38,
+      "rung": 38
+     }
+    },
+    "Xã Đa Kia": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 20,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 55,
+      "hang_nam": 44,
+      "nts": 35,
+      "rung": null
+     }
+    },
+    "Xã Bù Gia Mập": {
+     "toi_thieu": {
+      "cln": 40,
+      "hang_nam": 30,
+      "nts": 20,
+      "rung": 20
+     },
+     "toi_da": {
+      "cln": 50,
+      "hang_nam": 40,
+      "nts": 32,
+      "rung": 32
+     }
+    },
+    "Xã Phú Riềng": {
+     "toi_thieu": {
+      "cln": 48,
+      "hang_nam": 34,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 81,
+      "hang_nam": 65,
+      "nts": 52,
+      "rung": null
+     }
+    },
+    "Xã Phú Trung": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 77,
+      "hang_nam": 62,
+      "nts": 49,
+      "rung": null
+     }
+    },
+    "Xã Long Hà": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 77,
+      "hang_nam": 62,
+      "nts": 49,
+      "rung": null
+     }
+    },
+    "Xã Bình Tân": {
+     "toi_thieu": {
+      "cln": 45,
+      "hang_nam": 32,
+      "nts": 15,
+      "rung": null
+     },
+     "toi_da": {
+      "cln": 77,
+      "hang_nam": 62,
+      "nts": 49,
+      "rung": null
+     }
+    }
+   }
+  }
+ },
+ "phu_luc_III_yeu_to_anh_huong": {
+  "dat_phi_nong_nghiep": [
+   {
+    "ma": "PNN_TTTM_200M",
+    "stt": "I.1",
+    "yeu_to": "Vị trí, địa điểm",
+    "noi_dung": "Thửa đất, khu đất nằm trong phạm vi 200m kể từ mép ngoài ranh trung tâm thương mại, trung tâm hành chính, siêu thị",
+    "he_so_k3": 1.05
+   },
+   {
+    "ma": "PNN_NGHIATRANG_100M",
+    "stt": "I.2",
+    "yeu_to": "Các yếu tố ảnh hưởng đến giá đất phù hợp với điều kiện thực tế, truyền thống văn hóa, phong tục tập quán của địa phương",
+    "noi_dung": "Thửa đất, khu đất nằm trong phạm vi 100m kể từ mép ngoài ranh khu nghĩa trang, nghĩa địa, nhà tang lễ, nhà hỏa táng",
+    "he_so_k3": 0.95
+   },
+   {
+    "ma": "PNN_HANHLANG_50M",
+    "stt": "I.3",
+    "yeu_to": "Các yếu tố ảnh hưởng đến giá đất phù hợp với điều kiện thực tế, truyền thống văn hóa, phong tục tập quán của địa phương",
+    "noi_dung": "Thửa đất, khu đất nằm trong phạm vi 50m kể từ mép ngoài hành lang an toàn của đường ray xe lửa, cao tốc, hầm chui",
+    "he_so_k3": 0.95
+   }
+  ],
+  "dat_nong_nghiep": [
+   {
+    "ma": "NN_DUONG_DAT_SOI_DA",
+    "stt": "II.1",
+    "yeu_to": "Kết cấu, chất liệu của mặt đường giao thông",
+    "noi_dung": "Các thửa đất, khu đất tiếp giáp mặt đường bằng đất, đá, cuội, sỏi hỗn hợp, đường cấp phối (không phải đường nhựa, bê tông)",
+    "he_so_k3": 0.9,
+    "dieu_kien_loai_tru": "Không áp dụng hệ số 0,90 này nếu tại Phụ lục I.2 đã quy định riêng hệ số K cho tuyến đường đất/đá/sỏi/cấp phối hoặc mục Các tuyến đường giao thông còn lại."
+   }
+  ],
+  "yeu_to_khac_mac_dinh": 1.0
+ },
+ "danh_muc_doan_duong_rut_gon_106_tuyen": {
+  "Bảng 53. Phường Trị An": [
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_01",
+    "tt_bat_dau": 1,
+    "tt_ket_thuc": 7,
+    "ten_duong": "Đường Xóm Huế",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Đường Hóc Lai",
+    "k1_dat_o": 1.24,
+    "k1_tmdv": 1.24,
+    "k1_sxkd": 1.24,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_02",
+    "tt_bat_dau": 8,
+    "tt_ket_thuc": 14,
+    "ten_duong": "Đường Hóc Lai",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Đường xóm Huế",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_03",
+    "tt_bat_dau": 15,
+    "tt_ket_thuc": 21,
+    "ten_duong": "Đường Kim Liên",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_04",
+    "tt_bat_dau": 22,
+    "tt_ket_thuc": 28,
+    "ten_duong": "Đường Bà Bèn",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_05",
+    "tt_bat_dau": 29,
+    "tt_ket_thuc": 35,
+    "ten_duong": "Đường Bến Vịnh A",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_06",
+    "tt_bat_dau": 36,
+    "tt_ket_thuc": 42,
+    "ten_duong": "Đường Bến Vịnh B",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_07",
+    "tt_bat_dau": 43,
+    "tt_ket_thuc": 49,
+    "ten_duong": "Đường đồi 74",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Đường tỉnh 768",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_08",
+    "tt_bat_dau": 50,
+    "tt_ket_thuc": 56,
+    "ten_duong": "Đường Bến Be",
+    "diem_dau": "Đường tỉnh 767",
+    "diem_cuoi": "Nhà máy đường Trị An",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_09",
+    "tt_bat_dau": 57,
+    "tt_ket_thuc": 63,
+    "ten_duong": "Đường Nhà máy đường Trị An",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Hết Nhà máy đường Trị An",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_10",
+    "tt_bat_dau": 64,
+    "tt_ket_thuc": 70,
+    "ten_duong": "Đường Bến Phà",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Bến đò Trị An",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_11",
+    "tt_bat_dau": 71,
+    "tt_ket_thuc": 77,
+    "ten_duong": "Đường Hàng Ba",
+    "diem_dau": "Đường Bến Phà",
+    "diem_cuoi": "Hết ranh thửa đất số 19, tờ bản đồ số 242 về bên phải và hết ranh thửa đất số 30, tờ bản đồ số 241 về bên trái, BĐĐC xã Trị An.",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_12",
+    "tt_bat_dau": 78,
+    "tt_ket_thuc": 84,
+    "ten_duong": "Đường tỉnh 768",
+    "diem_dau": "Cầu Bà Giá (cầu 19)",
+    "diem_cuoi": "Chân dốc lớn (cống thoát nước) xã Trị An",
+    "k1_dat_o": 1.32,
+    "k1_tmdv": 1.32,
+    "k1_sxkd": 1.32,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_13",
+    "tt_bat_dau": 85,
+    "tt_ket_thuc": 91,
+    "ten_duong": "Đường tỉnh 768",
+    "diem_dau": "Chân dốc lớn (cống thoát nước) xã Trị An",
+    "diem_cuoi": "Đầu Trường Tiểu học Cây Gáo B - phân hiệu 2 (ấp Vĩnh An 4)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_14",
+    "tt_bat_dau": 92,
+    "tt_ket_thuc": 98,
+    "ten_duong": "Đường tỉnh 768",
+    "diem_dau": "Đầu Trường Tiểu học Cây Gáo B - phân hiệu 2 (Ấp Vĩnh An 4)",
+    "diem_cuoi": "Đầu Trường Tiểu học Cây Gáo B - phân hiệu 1 (Ấp Vĩnh An 3 )",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_15",
+    "tt_bat_dau": 99,
+    "tt_ket_thuc": 105,
+    "ten_duong": "Đường Trảng Cày",
+    "diem_dau": "Đường Trị An - Tân An",
+    "diem_cuoi": "Đường xóm Huế",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_16",
+    "tt_bat_dau": 106,
+    "tt_ket_thuc": 112,
+    "ten_duong": "Đường Hiếu Liêm",
+    "diem_dau": "Đường Nhà máy thủy điện Trị An",
+    "diem_cuoi": "Cầu số 4",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_17",
+    "tt_bat_dau": 113,
+    "tt_ket_thuc": 119,
+    "ten_duong": "Đường Xóm Mới ấp 3",
+    "diem_dau": "Đường Hiếu Liêm",
+    "diem_cuoi": "Hết ranh dự án điểm dân cư số 6(thửa đất số 181, tờ bản đồ số 239)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_18",
+    "tt_bat_dau": 120,
+    "tt_ket_thuc": 126,
+    "ten_duong": "Đường Nhà máy thủy điện Trị An",
+    "diem_dau": "Ngã ba Lâm Sản",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_19",
+    "tt_bat_dau": 127,
+    "tt_ket_thuc": 133,
+    "ten_duong": "Đường tỉnh 767",
+    "diem_dau": "Giáp ranh xã Tân An",
+    "diem_cuoi": "Ngã ba đường Hồ Xuân Hương",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_20",
+    "tt_bat_dau": 134,
+    "tt_ket_thuc": 140,
+    "ten_duong": "Đường tỉnh 767",
+    "diem_dau": "Cầu Cứng (cầu Đồng Nai)",
+    "diem_cuoi": "Cầu Chiến khu D",
+    "k1_dat_o": 1.28,
+    "k1_tmdv": 1.28,
+    "k1_sxkd": 1.28,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_21",
+    "tt_bat_dau": 141,
+    "tt_ket_thuc": 147,
+    "ten_duong": "Đường tỉnh 767",
+    "diem_dau": "Cầu Chiến khu D",
+    "diem_cuoi": "Ngã ba rẽ đi xã Phú Lý",
+    "k1_dat_o": 1.28,
+    "k1_tmdv": 1.28,
+    "k1_sxkd": 1.28,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_22",
+    "tt_bat_dau": 148,
+    "tt_ket_thuc": 154,
+    "ten_duong": "Đường tỉnh 761",
+    "diem_dau": "Ngã ba xã Mã Đà rẽ đi xã Phú Lý",
+    "diem_cuoi": "Đường dân sinh Mã Đà - Hiếu Liêm",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_23",
+    "tt_bat_dau": 155,
+    "tt_ket_thuc": 161,
+    "ten_duong": "Đường tỉnh 761",
+    "diem_dau": "Đường dân sinh Mã Đà - Hiếu Liêm",
+    "diem_cuoi": "Giáp ranh xã Phú Lý",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_24",
+    "tt_bat_dau": 162,
+    "tt_ket_thuc": 168,
+    "ten_duong": "Đường giáp ranh giữa xã Vĩnh Tân và thị trấn Vĩnh An cũ (thuộc xã Trị An mới)",
+    "diem_dau": "Đường tỉnh 767",
+    "diem_cuoi": "Giáp ranh xã Bàu Hàm",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_25",
+    "tt_bat_dau": 169,
+    "tt_ket_thuc": 175,
+    "ten_duong": "Đường Tân An - Vĩnh Tân",
+    "diem_dau": "Giáp ranh xã Bàu Hàm",
+    "diem_cuoi": "Đường Trị An - Vĩnh Tân",
+    "k1_dat_o": 1.22,
+    "k1_tmdv": 1.22,
+    "k1_sxkd": 1.22,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_26",
+    "tt_bat_dau": 176,
+    "tt_ket_thuc": 182,
+    "ten_duong": "Đường Tân An - Vĩnh Tân",
+    "diem_dau": "Đường Trị An - Vĩnh Tân",
+    "diem_cuoi": "Đường tỉnh 768",
+    "k1_dat_o": 1.22,
+    "k1_tmdv": 1.22,
+    "k1_sxkd": 1.22,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_27",
+    "tt_bat_dau": 183,
+    "tt_ket_thuc": 189,
+    "ten_duong": "Đường Lạc Long Quân",
+    "diem_dau": "Đầu Trường Tiểu học Cây Gáo B, phân hiệu 1",
+    "diem_cuoi": "Ngã ba đường Kho Mìn",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_28",
+    "tt_bat_dau": 190,
+    "tt_ket_thuc": 196,
+    "ten_duong": "Đường Lạc Long Quân",
+    "diem_dau": "Ngã ba đường Kho Mìn",
+    "diem_cuoi": "Đường Quang Trung",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_29",
+    "tt_bat_dau": 197,
+    "tt_ket_thuc": 203,
+    "ten_duong": "Đường Phan Chu Trinh",
+    "diem_dau": "Đường Quang Trung",
+    "diem_cuoi": "Ngã ba Điện lực",
+    "k1_dat_o": 1.32,
+    "k1_tmdv": 1.32,
+    "k1_sxkd": 1.32,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_30",
+    "tt_bat_dau": 204,
+    "tt_ket_thuc": 210,
+    "ten_duong": "Đường Tôn Đức Thắng",
+    "diem_dau": "Ngã ba Điện lực",
+    "diem_cuoi": "Suối Láng Nguyên",
+    "k1_dat_o": 1.22,
+    "k1_tmdv": 1.22,
+    "k1_sxkd": 1.22,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_31",
+    "tt_bat_dau": 211,
+    "tt_ket_thuc": 217,
+    "ten_duong": "Đường Lê Duẩn",
+    "diem_dau": "Đường Phan Chu Trinh",
+    "diem_cuoi": "Đường Võ Văn Tần (ngã ba)",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_32",
+    "tt_bat_dau": 218,
+    "tt_ket_thuc": 224,
+    "ten_duong": "Đường Hùng Vương",
+    "diem_dau": "Đường tỉnh 762",
+    "diem_cuoi": "Đường Lê Đại Hành",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_33",
+    "tt_bat_dau": 225,
+    "tt_ket_thuc": 231,
+    "ten_duong": "Đường Kho Mìn",
+    "diem_dau": "Đường Lạc Long Quân",
+    "diem_cuoi": "Kho Mìn",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_34",
+    "tt_bat_dau": 232,
+    "tt_ket_thuc": 238,
+    "ten_duong": "Đường Võ Văn Tần",
+    "diem_dau": "Đường Tôn Đức Thắng (từ ngã ba Điện lực đến suối Láng Nguyên)",
+    "diem_cuoi": "Hết ranh chùa Vĩnh An (ngã ba)",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_35",
+    "tt_bat_dau": 239,
+    "tt_ket_thuc": 245,
+    "ten_duong": "Đường tỉnh 762",
+    "diem_dau": "Suối láng Nguyên",
+    "diem_cuoi": "Ranh giới xã Bàu Hàm",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.14,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_36",
+    "tt_bat_dau": 246,
+    "tt_ket_thuc": 252,
+    "ten_duong": "Đường Đoàn Thị Điểm",
+    "diem_dau": "Đường Nguyễn Tất Thành (ĐT 767)",
+    "diem_cuoi": "Ranh giới xã Bàu Hàm",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_37",
+    "tt_bat_dau": 253,
+    "tt_ket_thuc": 259,
+    "ten_duong": "Đường Hồ Xuân Hương",
+    "diem_dau": "Đường Nguyễn Tất Thành (ĐT 767)",
+    "diem_cuoi": "Bên phải: hết ranh thửa đất số 20, tờ bản đồ số 8. Bên trái: hết ranh thửa đất số 140, tờ bản đồ số 87",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_38",
+    "tt_bat_dau": 260,
+    "tt_ket_thuc": 266,
+    "ten_duong": "Đường từ Trường TH Cây Gáo cơ sở 2",
+    "diem_dau": "Đường tỉnh 767",
+    "diem_cuoi": "Bên phải: hết ranh thửa đất số 239, tờ bản đồ số 121. Bên trái: hết ranh thửa đất số 694, tờ bản đồ số 121.",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_39",
+    "tt_bat_dau": 267,
+    "tt_ket_thuc": 273,
+    "ten_duong": "Đường vào Mỏ đá Cây Gáo",
+    "diem_dau": "Đường tỉnh 767 đoạn từ ranh xã Vĩnh Tân đến ngã ba Hồ Xuân Hương",
+    "diem_cuoi": "Giáp ranh xã Tân An",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_40",
+    "tt_bat_dau": 274,
+    "tt_ket_thuc": 280,
+    "ten_duong": "Đường Chu Văn An",
+    "diem_dau": "Đường tỉnh 762",
+    "diem_cuoi": "Bên phải: hết ranh thửa đất số 18, tờ bản đồ số 66, BĐĐC xã Trị An. Bên trái: hết ranh thửa đất số 32, tờ bản đồ số 66, BĐĐC xã Trị An.",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_41",
+    "tt_bat_dau": 281,
+    "tt_ket_thuc": 287,
+    "ten_duong": "Đường Trần Hữu Trang",
+    "diem_dau": "Đường Quang Trung, Đoạn từ ngã ba huyện Vĩnh Cửu cũ đến hết Trường THPT Trị An",
+    "diem_cuoi": "Đường Chu Văn An",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_42",
+    "tt_bat_dau": 288,
+    "tt_ket_thuc": 294,
+    "ten_duong": "Đường Nguyễn Tất Thành",
+    "diem_dau": "Ngã ba đường Hồ Xuân Hương",
+    "diem_cuoi": "Cầu Vĩnh An",
+    "k1_dat_o": 1.23,
+    "k1_tmdv": 1.23,
+    "k1_sxkd": 1.23,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_43",
+    "tt_bat_dau": 295,
+    "tt_ket_thuc": 301,
+    "ten_duong": "Đường Nguyễn Tất Thành",
+    "diem_dau": "Cầu Vĩnh An",
+    "diem_cuoi": "Ngã ba huyện Vĩnh Cửu cũ",
+    "k1_dat_o": 1.23,
+    "k1_tmdv": 1.23,
+    "k1_sxkd": 1.23,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_44",
+    "tt_bat_dau": 302,
+    "tt_ket_thuc": 308,
+    "ten_duong": "Đường Nguyễn Tất Thành",
+    "diem_dau": "Ngã ba huyện Vĩnh Cửu cũ",
+    "diem_cuoi": "Đường Lê Đại Hành",
+    "k1_dat_o": 1.23,
+    "k1_tmdv": 1.23,
+    "k1_sxkd": 1.23,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_45",
+    "tt_bat_dau": 309,
+    "tt_ket_thuc": 315,
+    "ten_duong": "Đường Nguyễn Tất Thành",
+    "diem_dau": "Đường Lê Đại Hành",
+    "diem_cuoi": "Ngã tư đường Phan Chu Trinh",
+    "k1_dat_o": 1.23,
+    "k1_tmdv": 1.23,
+    "k1_sxkd": 1.23,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_46",
+    "tt_bat_dau": 316,
+    "tt_ket_thuc": 322,
+    "ten_duong": "Đường Nguyễn Tất Thành",
+    "diem_dau": "Ngã tư đường Phan Chu Trinh",
+    "diem_cuoi": "Ngã ba Đập tràn",
+    "k1_dat_o": 1.23,
+    "k1_tmdv": 1.23,
+    "k1_sxkd": 1.23,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_47",
+    "tt_bat_dau": 323,
+    "tt_ket_thuc": 329,
+    "ten_duong": "Đường Quang Trung",
+    "diem_dau": "Đường Nguyễn Tất Thành",
+    "diem_cuoi": "Hết trường THPT Trị An",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_48",
+    "tt_bat_dau": 330,
+    "tt_ket_thuc": 336,
+    "ten_duong": "Đường Quang Trung",
+    "diem_dau": "Trường THPT Trị An",
+    "diem_cuoi": "Cầu Đồng Nai (cầu Cứng)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_49",
+    "tt_bat_dau": 337,
+    "tt_ket_thuc": 343,
+    "ten_duong": "Đường Quang Trung",
+    "diem_dau": "Đường Nguyễn Tất Thành",
+    "diem_cuoi": "Đường Nguyễn Trung Trực",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_50",
+    "tt_bat_dau": 344,
+    "tt_ket_thuc": 350,
+    "ten_duong": "Đường Quang Trung",
+    "diem_dau": "Đường bổ sung liên khu phố 1,2",
+    "diem_cuoi": "Đường Tôn Đức Thắng (từ ngã ba Điện lực đến suối Láng Nguyên)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_51",
+    "tt_bat_dau": 351,
+    "tt_ket_thuc": 357,
+    "ten_duong": "Đường Huỳnh Thúc Kháng",
+    "diem_dau": "Đường Quang Trung",
+    "diem_cuoi": "Đường Phan Chu Trinh",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_52",
+    "tt_bat_dau": 358,
+    "tt_ket_thuc": 364,
+    "ten_duong": "Đường Nguyễn Trung Trực",
+    "diem_dau": "Đường Lê Đại Hành, đoạn từ đường Nguyễn Tất Thành đến đường Hoàng Văn Thụ (ngã 3 có tiệm sửa xe)",
+    "diem_cuoi": "Bên phải: hết ranh thửa đất số 388, tờ bản đồ số 91, BĐĐC xã Trị An. Bên trái: hết ranh thửa đất số 289, tờ bản đồ số 91, BĐĐC xã Trị An.",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_53",
+    "tt_bat_dau": 365,
+    "tt_ket_thuc": 371,
+    "ten_duong": "Đường Bà Huyện Thanh Quan",
+    "diem_dau": "Đường Nguyễn Tất Thành (ĐT 767)",
+    "diem_cuoi": "Đường Nguyễn Trung Trực",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_54",
+    "tt_bat_dau": 372,
+    "tt_ket_thuc": 378,
+    "ten_duong": "Đường Ngô Quyền",
+    "diem_dau": "Đường tỉnh 762",
+    "diem_cuoi": "Đường Lê Đại Hành( đoạn từ đường Hoàng Văn Thụ đến đường Tôn Đức Thắng)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_55",
+    "tt_bat_dau": 379,
+    "tt_ket_thuc": 385,
+    "ten_duong": "Đường Lê Đại Hành",
+    "diem_dau": "Đường Hoàng Văn Thụ",
+    "diem_cuoi": "Đường Tôn Đức Thắng",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_56",
+    "tt_bat_dau": 386,
+    "tt_ket_thuc": 392,
+    "ten_duong": "Đường liên khu phố 1 - 2 của thị trấn Vĩnh An",
+    "diem_dau": "Đường Lê Đại Hành",
+    "diem_cuoi": "Đường Quang Trung",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.17,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_57",
+    "tt_bat_dau": 393,
+    "tt_ket_thuc": 399,
+    "ten_duong": "Đường Phan Đình Phùng",
+    "diem_dau": "Đầu hẻm tổ 11 khu phố 2",
+    "diem_cuoi": "Đường Quang Trung (đoạn từ đường Tôn Đức Thắng đến suối Hồ Đồng Lớn)",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_58",
+    "tt_bat_dau": 400,
+    "tt_ket_thuc": 406,
+    "ten_duong": "Đường Hoàng Văn Thụ",
+    "diem_dau": "Đường Lê Đại Hành",
+    "diem_cuoi": "Bên phải: hết ranh thửa đất số 315, tờ bản đồ số 61, BĐĐC xã Trị An. Bên trái: hết ranh thửa đất số 389, tờ bản đồ số 62,",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_59",
+    "tt_bat_dau": 407,
+    "tt_ket_thuc": 413,
+    "ten_duong": "Đường Trung tâm Khu phố 2",
+    "diem_dau": "Ngã tư chùa Vĩnh An",
+    "diem_cuoi": "Đường Nguyễn Trung Trực",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_60",
+    "tt_bat_dau": 414,
+    "tt_ket_thuc": 420,
+    "ten_duong": "Đường Lý Thái Tổ",
+    "diem_dau": "Đường Tôn Đức Thắng (từ ngã ba Điện lực đến suối Láng Nguyên)",
+    "diem_cuoi": "Bên phải: hết ranh thửa đất số 113, tờ bản đồ số 61, BĐĐC xã Trị An. Bên trái: hết ranh thửa đất số 135, tờ bản đồ số 61, BĐĐC xã Trị An.",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_53_DOAN_61",
+    "tt_bat_dau": 421,
+    "tt_ket_thuc": 427,
+    "ten_duong": "Hương lộ 24",
+    "diem_dau": "Đường tỉnh 762",
+    "diem_cuoi": "Giáp ranh xã Bàu Hàm",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   }
+  ],
+  "Bảng 54. Xã Tân An": [
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_01",
+    "tt_bat_dau": 1,
+    "tt_ket_thuc": 7,
+    "ten_duong": "Đường tỉnh 768",
+    "diem_dau": "Giáp ranh phường Trảng Dài",
+    "diem_cuoi": "Cầu Thủ Biên",
+    "k1_dat_o": 1.32,
+    "k1_tmdv": 1.32,
+    "k1_sxkd": 1.32,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_02",
+    "tt_bat_dau": 8,
+    "tt_ket_thuc": 14,
+    "ten_duong": "Đường tỉnh 768",
+    "diem_dau": "Cầu Thủ Biên",
+    "diem_cuoi": "Đường vào bến đò Đại An",
+    "k1_dat_o": 1.32,
+    "k1_tmdv": 1.32,
+    "k1_sxkd": 1.32,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_03",
+    "tt_bat_dau": 15,
+    "tt_ket_thuc": 21,
+    "ten_duong": "Đường tỉnh 768",
+    "diem_dau": "Đường vào bến đò Đại An",
+    "diem_cuoi": "Cầu Chùm Bao",
+    "k1_dat_o": 1.32,
+    "k1_tmdv": 1.32,
+    "k1_sxkd": 1.32,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_04",
+    "tt_bat_dau": 22,
+    "tt_ket_thuc": 28,
+    "ten_duong": "Đường tỉnh 768",
+    "diem_dau": "Cầu Chùm Bao",
+    "diem_cuoi": "Cầu Bà Giá (Cầu 19)",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.32,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_05",
+    "tt_bat_dau": 29,
+    "tt_ket_thuc": 35,
+    "ten_duong": "Đường ấp 3 (cũ)",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Đường Cộ - Cây Xoài",
+    "k1_dat_o": 1.34,
+    "k1_tmdv": 1.34,
+    "k1_sxkd": 1.34,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_06",
+    "tt_bat_dau": 36,
+    "tt_ket_thuc": 42,
+    "ten_duong": "Đường Cộ - Cây Xoài",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Khu tái định cư 3,8 ha xã Tân An (Cũ)",
+    "k1_dat_o": 1.27,
+    "k1_tmdv": 1.27,
+    "k1_sxkd": 1.27,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_07",
+    "tt_bat_dau": 43,
+    "tt_ket_thuc": 49,
+    "ten_duong": "Đường Cộ - Cây Xoài",
+    "diem_dau": "Khu tái định cư 3,8 ha xã Tân An (Cũ)",
+    "diem_cuoi": "Cầu số 1",
+    "k1_dat_o": 1.27,
+    "k1_tmdv": 1.27,
+    "k1_sxkd": 1.27,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_08",
+    "tt_bat_dau": 50,
+    "tt_ket_thuc": 56,
+    "ten_duong": "Đường Cộ - Cây Xoài",
+    "diem_dau": "Cầu số 1",
+    "diem_cuoi": "Đường tỉnh 767",
+    "k1_dat_o": 1.27,
+    "k1_tmdv": 1.27,
+    "k1_sxkd": 1.27,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_09",
+    "tt_bat_dau": 57,
+    "tt_ket_thuc": 63,
+    "ten_duong": "Đường Kênh N3",
+    "diem_dau": "Giáp ranh giữa xã Tân An và Phường Trảng Dài",
+    "diem_cuoi": "Giáp ranh xã Bình Minh",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_10",
+    "tt_bat_dau": 64,
+    "tt_ket_thuc": 70,
+    "ten_duong": "Đường Bến Xúc",
+    "diem_dau": "Đường Cộ - Cây Xoài",
+    "diem_cuoi": "Ngã ba (Công ty TNHH Gỗ Châu Âu EUROWOOD CO.LTD)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_11",
+    "tt_bat_dau": 71,
+    "tt_ket_thuc": 77,
+    "ten_duong": "Đường Bến Xúc",
+    "diem_dau": "Ngã ba (Công ty TNHH Gỗ Châu Âu EUROWOOD CO.LTD)",
+    "diem_cuoi": "Trạm Biến áp 500kv Sông Mây",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_12",
+    "tt_bat_dau": 78,
+    "tt_ket_thuc": 84,
+    "ten_duong": "Đường Tân An - Vĩnh Tân",
+    "diem_dau": "Đường tỉnh 767",
+    "diem_cuoi": "Đường vào chùa Vĩnh Phước",
+    "k1_dat_o": 1.22,
+    "k1_tmdv": 1.22,
+    "k1_sxkd": 1.22,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_13",
+    "tt_bat_dau": 85,
+    "tt_ket_thuc": 91,
+    "ten_duong": "Đường Tân An - Vĩnh Tân",
+    "diem_dau": "Đường vào chùa Vĩnh Phước",
+    "diem_cuoi": "Trung tâm ấp 5",
+    "k1_dat_o": 1.22,
+    "k1_tmdv": 1.22,
+    "k1_sxkd": 1.22,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_14",
+    "tt_bat_dau": 92,
+    "tt_ket_thuc": 98,
+    "ten_duong": "Đường Tân An - Vĩnh Tân",
+    "diem_dau": "Trung tâm ấp 5",
+    "diem_cuoi": "Đường Trị An - Vĩnh Tân",
+    "k1_dat_o": 1.22,
+    "k1_tmdv": 1.22,
+    "k1_sxkd": 1.22,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_15",
+    "tt_bat_dau": 99,
+    "tt_ket_thuc": 105,
+    "ten_duong": "Đường Tân An - Vĩnh Tân",
+    "diem_dau": "Đường Trị An - Vĩnh Tân",
+    "diem_cuoi": "Đường tỉnh 768",
+    "k1_dat_o": 1.22,
+    "k1_tmdv": 1.22,
+    "k1_sxkd": 1.22,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_16",
+    "tt_bat_dau": 106,
+    "tt_ket_thuc": 112,
+    "ten_duong": "Đường tổ 7 - ấp Cây Xoài",
+    "diem_dau": "Đường Cộ - Cây Xoài",
+    "diem_cuoi": "Đường Trị An-Vĩnh Tân",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_17",
+    "tt_bat_dau": 113,
+    "tt_ket_thuc": 119,
+    "ten_duong": "Đường hồ Mo Nang",
+    "diem_dau": "Đường Tân An - Vĩnh Tân",
+    "diem_cuoi": "Đường Cộ - Cây Xoài",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_18",
+    "tt_bat_dau": 120,
+    "tt_ket_thuc": 126,
+    "ten_duong": "Đường Suối Ngang",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Đường Tân An - Vĩnh Tân",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_19",
+    "tt_bat_dau": 127,
+    "tt_ket_thuc": 133,
+    "ten_duong": "Đường Vĩnh Tân - Cây Điệp",
+    "diem_dau": "Đường tỉnh 767",
+    "diem_cuoi": "Cây xăng Tín Nghĩa",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_20",
+    "tt_bat_dau": 134,
+    "tt_ket_thuc": 140,
+    "ten_duong": "Đường Vĩnh Tân - Cây Điệp",
+    "diem_dau": "Cây xăng Tín Nghĩa",
+    "diem_cuoi": "Giáp ranh xã Trảng Bom và xã Bàu Hàm",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_21",
+    "tt_bat_dau": 141,
+    "tt_ket_thuc": 147,
+    "ten_duong": "Đường Sở Quýt",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Mép ngoài đường điện 220KV đầu tiên (tính từ Đường tỉnh 768 đi vào)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_22",
+    "tt_bat_dau": 148,
+    "tt_ket_thuc": 154,
+    "ten_duong": "Đường tỉnh 767",
+    "diem_dau": "Giáp ranh xã Trảng Bom",
+    "diem_cuoi": "Đường điện 500KV Phú Mỹ - Sông Mây",
+    "k1_dat_o": 1.28,
+    "k1_tmdv": 1.28,
+    "k1_sxkd": 1.28,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_23",
+    "tt_bat_dau": 155,
+    "tt_ket_thuc": 161,
+    "ten_duong": "Đường tỉnh 767",
+    "diem_dau": "Đường điện 500KV Phú Mỹ - Sông Mây",
+    "diem_cuoi": "Cầu suối Đá Bàn",
+    "k1_dat_o": 1.28,
+    "k1_tmdv": 1.28,
+    "k1_sxkd": 1.28,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_24",
+    "tt_bat_dau": 162,
+    "tt_ket_thuc": 168,
+    "ten_duong": "Đường tỉnh 767",
+    "diem_dau": "Cầu suối Đá Bàn",
+    "diem_cuoi": "Giáp ranh xã Trị An",
+    "k1_dat_o": 1.28,
+    "k1_tmdv": 1.28,
+    "k1_sxkd": 1.28,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_25",
+    "tt_bat_dau": 169,
+    "tt_ket_thuc": 175,
+    "ten_duong": "Đường giáp ranh giữa xã Vĩnh Tân và thị trấn Vĩnh An cũ (thuộc xã Tân An mới)",
+    "diem_dau": "Đường tỉnh 767",
+    "diem_cuoi": "Giáp ranh xã Bàu Hàm",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_54_DOAN_26",
+    "tt_bat_dau": 176,
+    "tt_ket_thuc": 182,
+    "ten_duong": "Đường Trị An-Vĩnh Tân",
+    "diem_dau": "đường tỉnh 767",
+    "diem_cuoi": "đường Tân An - Vĩnh Tân",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   }
+  ],
+  "Bảng 55. Xã Phú Lý": [
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_01",
+    "tt_bat_dau": 1,
+    "tt_ket_thuc": 7,
+    "ten_duong": "Đường tỉnh 761",
+    "diem_dau": "Giáp ranh xã Trị An",
+    "diem_cuoi": "Cầu suối Kóp",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_02",
+    "tt_bat_dau": 8,
+    "tt_ket_thuc": 14,
+    "ten_duong": "Đường tỉnh 761",
+    "diem_dau": "Cầu suối Kóp",
+    "diem_cuoi": "Hết chợ Phú Lý",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_03",
+    "tt_bat_dau": 15,
+    "tt_ket_thuc": 21,
+    "ten_duong": "Đường tỉnh 761",
+    "diem_dau": "Hết chợ Phú Lý",
+    "diem_cuoi": "Hết Trung tâm văn hóa xã Phú Lý",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_04",
+    "tt_bat_dau": 22,
+    "tt_ket_thuc": 28,
+    "ten_duong": "Đường tỉnh 761",
+    "diem_dau": "Hết Trung tâm văn hóa xã Phú Lý",
+    "diem_cuoi": "Ngã tư đường 322A",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_05",
+    "tt_bat_dau": 29,
+    "tt_ket_thuc": 35,
+    "ten_duong": "Đường tỉnh 761",
+    "diem_dau": "Ngã tư đường 322A",
+    "diem_cuoi": "Ngã ba đường 322B",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.29,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_06",
+    "tt_bat_dau": 36,
+    "tt_ket_thuc": 42,
+    "ten_duong": "Đường tỉnh 761",
+    "diem_dau": "Ngã ba đường 322B",
+    "diem_cuoi": "Hết ranh Khu bảo tồn thiên nhiên - văn hóa Đồng Nai",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.29,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_07",
+    "tt_bat_dau": 43,
+    "tt_ket_thuc": 49,
+    "ten_duong": "Đường Bàu Điền",
+    "diem_dau": "Đường tỉnh 761",
+    "diem_cuoi": "Hết ranh thửa đất số 209, tờ BĐĐC số 37 về bên phải và hết ranh thửa đất số 210, tờ BĐĐC số 37 về bên trái, xã Phú Lý",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_08",
+    "tt_bat_dau": 50,
+    "tt_ket_thuc": 56,
+    "ten_duong": "Đường vào khu khuyến khích phát triển chăn nuôi",
+    "diem_dau": "Đường tỉnh 761",
+    "diem_cuoi": "Bên phải: hết ranh thửa đất số 194, tờ bản đồ số 37, BĐĐC xã Phú Lý. Bên trái: hết ranh thửa đất số 234, tờ bản đồ số 37, BĐĐC xã Phú Lý",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_09",
+    "tt_bat_dau": 57,
+    "tt_ket_thuc": 63,
+    "ten_duong": "Đường 322B",
+    "diem_dau": "Đường tỉnh 761(đoạn giáp ranh xã Trị An đến cầu suối Kóp)",
+    "diem_cuoi": "Đường tỉnh 761 (Đoạn từ ngã ba đường 322B đến ranh Khu bảo tồn thiên nhiên - văn hóa Đồng Nai)",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_10",
+    "tt_bat_dau": 64,
+    "tt_ket_thuc": 70,
+    "ten_duong": "Đường 322A",
+    "diem_dau": "Đường tỉnh 761 (đoạn hết chợ Phú Lý đến Trung tâm Văn hóa xã)",
+    "diem_cuoi": "Đường tỉnh 761 (đoạn từ ngã tư đường 322A đến ngã ba đường 322B)",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_11",
+    "tt_bat_dau": 71,
+    "tt_ket_thuc": 77,
+    "ten_duong": "Đường Trảng Tranh",
+    "diem_dau": "Đường tỉnh 761",
+    "diem_cuoi": "Đường Lý Lịch 2 - Bình Chánh (xã Phú Lý)",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_12",
+    "tt_bat_dau": 78,
+    "tt_ket_thuc": 84,
+    "ten_duong": "Đường Lý Lịch 2 - Bình Chánh",
+    "diem_dau": "Đường tỉnh 761(Đoạn tiếp theo đến cầu suối Kóp)",
+    "diem_cuoi": "Ranh code 62 của Hồ Trị An",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_13",
+    "tt_bat_dau": 85,
+    "tt_ket_thuc": 91,
+    "ten_duong": "Đường Bình Chánh - Cây Cầy",
+    "diem_dau": "Đường Lý Lịch 2 - Bình Chánh",
+    "diem_cuoi": "Đường ấp 4 - Bình Chánh",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_14",
+    "tt_bat_dau": 92,
+    "tt_ket_thuc": 98,
+    "ten_duong": "Đường Cây Cầy đi Long Thành",
+    "diem_dau": "Đường Bình Chánh - Cây Cầy",
+    "diem_cuoi": "Bên phải: hết ranh thửa đất số 13, tờ bản đồ số 65, BĐ ĐC xã Phú Lý. Bên trái: hết ranh thửa đất số 05, tờ bản đồ số 65, BĐ ĐC xã Phú Lý",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_15",
+    "tt_bat_dau": 99,
+    "tt_ket_thuc": 105,
+    "ten_duong": "Đường ấp 4 - Bình Chánh",
+    "diem_dau": "Đường tỉnh 761",
+    "diem_cuoi": "Ranh code 62 của hồ Trị An",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_16",
+    "tt_bat_dau": 106,
+    "tt_ket_thuc": 112,
+    "ten_duong": "Đường tổ 1, 2 ấp Bình Chánh",
+    "diem_dau": "Nhà thờ Tin Lành",
+    "diem_cuoi": "Hết ranh thửa 150, tờ BĐĐC số 62, xã Phú Lý",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_17",
+    "tt_bat_dau": 113,
+    "tt_ket_thuc": 119,
+    "ten_duong": "Đường tổ 3 ấp Bình Chánh",
+    "diem_dau": "Đường Lý Lịch 2- Bình Chánh (xã Phú Lý)",
+    "diem_cuoi": "Hết nhà thờ Tin Lành",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_18",
+    "tt_bat_dau": 120,
+    "tt_ket_thuc": 126,
+    "ten_duong": "Đường N7, liên ấp 1-3, xã Phú Lý",
+    "diem_dau": "Đường ĐT 761 (Đoạn từ Trung tâm văn hóa xã Phú Lý đến ngã ba đường 322A)",
+    "diem_cuoi": "Đường 322B",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_55_DOAN_19",
+    "tt_bat_dau": 127,
+    "tt_ket_thuc": 133,
+    "ten_duong": "Đường Tổ 8, N2, ấp bàu Phụng, xã Phú Lý",
+    "diem_dau": "Đường ĐT 761 (giáp ranh xã Trị An đến cầu suối Kóp)",
+    "diem_cuoi": "Hết ranh thửa đất số 72, tờ BĐĐC số 58",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   }
+  ],
+  "Bảng 8. Phường Tân Triều": [
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_01",
+    "tt_bat_dau": 1,
+    "tt_ket_thuc": 7,
+    "ten_duong": "Đường Nguyễn Ái Quốc",
+    "diem_dau": "Giáp ranh phường Trấn Biên",
+    "diem_cuoi": "Đường Đồng Khởi",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_02",
+    "tt_bat_dau": 8,
+    "tt_ket_thuc": 14,
+    "ten_duong": "Đường Đồng Khởi",
+    "diem_dau": "Đường Nguyễn Ái Quốc",
+    "diem_cuoi": "Cầu Đồng Khởi",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_03",
+    "tt_bat_dau": 15,
+    "tt_ket_thuc": 21,
+    "ten_duong": "Đường Đồng Khởi",
+    "diem_dau": "Cầu Đồng Khởi",
+    "diem_cuoi": "Đường Nguyễn Văn Tiên",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_04",
+    "tt_bat_dau": 22,
+    "tt_ket_thuc": 28,
+    "ten_duong": "Đường Đồng Khởi",
+    "diem_dau": "Đường Nguyễn Văn Tiên",
+    "diem_cuoi": "Đường vào công ty Trấn Biên",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_05",
+    "tt_bat_dau": 29,
+    "tt_ket_thuc": 35,
+    "ten_duong": "Đường Đồng Khởi",
+    "diem_dau": "Đường vào công ty Trấn Biên",
+    "diem_cuoi": "Đường tỉnh 768",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_06",
+    "tt_bat_dau": 36,
+    "tt_ket_thuc": 42,
+    "ten_duong": "Đường Nguyễn Văn Tiên",
+    "diem_dau": "Đường Đồng Khởi",
+    "diem_cuoi": "Hết ranh khu dân cư Hốc Bà Thức",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_07",
+    "tt_bat_dau": 43,
+    "tt_ket_thuc": 49,
+    "ten_duong": "Đường Nguyễn Văn Tiên",
+    "diem_dau": "Khu dân cư Hốc Bà Thức",
+    "diem_cuoi": "Đường ranh tường rào sân bay",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_08",
+    "tt_bat_dau": 50,
+    "tt_ket_thuc": 56,
+    "ten_duong": "Đường Trần Công An thuộc phường Tân Triều",
+    "diem_dau": "",
+    "diem_cuoi": "",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_09",
+    "tt_bat_dau": 57,
+    "tt_ket_thuc": 63,
+    "ten_duong": "Đường Lương Văn Nho",
+    "diem_dau": "Đường Nguyễn Ái Quốc",
+    "diem_cuoi": "Đường vào cư xá Tỉnh đội",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_10",
+    "tt_bat_dau": 64,
+    "tt_ket_thuc": 70,
+    "ten_duong": "Đường Lương Văn Nho",
+    "diem_dau": "Đường vào cư xá Tỉnh đội",
+    "diem_cuoi": "Ngã rẽ giáp đường Hồ Hòa",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_11",
+    "tt_bat_dau": 71,
+    "tt_ket_thuc": 77,
+    "ten_duong": "Đường Hồ Hòa",
+    "diem_dau": "Đường Nguyễn Ái Quốc",
+    "diem_cuoi": "Đường Lương Văn Nho",
+    "k1_dat_o": 1.22,
+    "k1_tmdv": 1.22,
+    "k1_sxkd": 1.22,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_12",
+    "tt_bat_dau": 78,
+    "tt_ket_thuc": 84,
+    "ten_duong": "Đường Nguyễn Văn Hoài",
+    "diem_dau": "Đường Nguyễn Ái Quốc",
+    "diem_cuoi": "Hết ranh thửa đất số 5, tờ BĐĐC số 168 về bên phải và hết ranh thửa đất số 2, tờ BĐĐC số 160 về bên trái, phường Tân Triều",
+    "k1_dat_o": 1.27,
+    "k1_tmdv": 1.27,
+    "k1_sxkd": 1.27,
+    "k1_nong_nghiep": 1.4,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_13",
+    "tt_bat_dau": 85,
+    "tt_ket_thuc": 91,
+    "ten_duong": "Đường tỉnh 768",
+    "diem_dau": "Giáp ranh phường Trấn Biên",
+    "diem_cuoi": "Đường liên xã Thạnh Phú - Tân Bình - Bình Lợi cũ",
+    "k1_dat_o": 1.32,
+    "k1_tmdv": 1.32,
+    "k1_sxkd": 1.32,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_14",
+    "tt_bat_dau": 92,
+    "tt_ket_thuc": 98,
+    "ten_duong": "Đường tỉnh 768",
+    "diem_dau": "Đường liên xã Thạnh Phú - Tân Bình - Bình Lợi cũ",
+    "diem_cuoi": "Giáp ranh phường Trảng Dài",
+    "k1_dat_o": 1.32,
+    "k1_tmdv": 1.32,
+    "k1_sxkd": 1.32,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_15",
+    "tt_bat_dau": 99,
+    "tt_ket_thuc": 105,
+    "ten_duong": "Đường vào Phi Trường",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Ranh Sân bay Biên Hòa",
+    "k1_dat_o": 1.22,
+    "k1_tmdv": 1.22,
+    "k1_sxkd": 1.22,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_16",
+    "tt_bat_dau": 106,
+    "tt_ket_thuc": 112,
+    "ten_duong": "Đường Cây Quéo ấp 4",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Ranh thửa đất số 193, tờ BĐĐC số 37 về bên trái, phường Tân Triều",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_17",
+    "tt_bat_dau": 113,
+    "tt_ket_thuc": 119,
+    "ten_duong": "Đường trục chính vào khu dân cư Tín Khải",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Hết khu dân cư Tín Khải",
+    "k1_dat_o": 1.34,
+    "k1_tmdv": 1.34,
+    "k1_sxkd": 1.34,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_18",
+    "tt_bat_dau": 120,
+    "tt_ket_thuc": 126,
+    "ten_duong": "Đường 16",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Đường D1",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_19",
+    "tt_bat_dau": 127,
+    "tt_ket_thuc": 133,
+    "ten_duong": "Đường 16",
+    "diem_dau": "Đường D1",
+    "diem_cuoi": "Hết đường",
+    "k1_dat_o": 1.29,
+    "k1_tmdv": 1.29,
+    "k1_sxkd": 1.29,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_20",
+    "tt_bat_dau": 134,
+    "tt_ket_thuc": 140,
+    "ten_duong": "Đường 5 - 7",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Bên phải: Hết ranh thửa đất số 947, tờ bản đồ số 25, phường Tân Triều; Bên trái: hết ranh thửa đất số 948, tờ bản đồ số 25, phường Tân Triều",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_21",
+    "tt_bat_dau": 141,
+    "tt_ket_thuc": 147,
+    "ten_duong": "Hương lộ 15",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Ngã ba Hương lộ 6",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_22",
+    "tt_bat_dau": 148,
+    "tt_ket_thuc": 154,
+    "ten_duong": "Hương lộ 15",
+    "diem_dau": "Ngã ba Hương lộ 6",
+    "diem_cuoi": "Cổng số 10 (ấp 6 cũ)",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_23",
+    "tt_bat_dau": 155,
+    "tt_ket_thuc": 161,
+    "ten_duong": "Hương lộ 15",
+    "diem_dau": "Cổng số 10 (ấp 6 cũ)",
+    "diem_cuoi": "Bên trái: hết ranh thửa đất số 36, tờ BĐĐC số 63; Bên phải: hết ranh thửa đất số 249, tờ BĐĐC số 2",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_24",
+    "tt_bat_dau": 162,
+    "tt_ket_thuc": 168,
+    "ten_duong": "Hương lộ 15",
+    "diem_dau": "Bên trái: hết ranh thửa đất số 36, tờ BĐĐC số 63; Bên phải: hết ranh thửa đất số 249, tờ BĐĐC số 2",
+    "diem_cuoi": "Bên trái: hết ranh thửa đất số 114, tờ BĐĐC số 54; bên phải: hết ranh thửa đất số 361, tờ BĐĐC số 51",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_25",
+    "tt_bat_dau": 169,
+    "tt_ket_thuc": 175,
+    "ten_duong": "Hương lộ 15",
+    "diem_dau": "Bên trái: hết ranh thửa đất số 114, tờ BĐĐC số 54; bên phải: hết ranh thửa đất số 361, tờ BĐĐC số 51",
+    "diem_cuoi": "Hương lộ 7",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_26",
+    "tt_bat_dau": 176,
+    "tt_ket_thuc": 182,
+    "ten_duong": "Hương lộ 15",
+    "diem_dau": "Hương lộ 7",
+    "diem_cuoi": "Bến đò Tân Uyên",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_27",
+    "tt_bat_dau": 183,
+    "tt_ket_thuc": 189,
+    "ten_duong": "Đường Bình Hòa - Cây Dương",
+    "diem_dau": "Từ trụ sở UBND xã Bình Hòa (cũ)",
+    "diem_cuoi": "Đường Mỹ",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_28",
+    "tt_bat_dau": 190,
+    "tt_ket_thuc": 196,
+    "ten_duong": "Đường Bình Hòa - Cây Dương",
+    "diem_dau": "Đường Mỹ",
+    "diem_cuoi": "Hết Miếu Hàm Hòa",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_29",
+    "tt_bat_dau": 197,
+    "tt_ket_thuc": 203,
+    "ten_duong": "Đường Bình Hòa - Cây Dương",
+    "diem_dau": "Hết Miếu Hàm Hòa",
+    "diem_cuoi": "Đường tỉnh 768",
+    "k1_dat_o": 1.3,
+    "k1_tmdv": 1.3,
+    "k1_sxkd": 1.3,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_30",
+    "tt_bat_dau": 204,
+    "tt_ket_thuc": 210,
+    "ten_duong": "Đường Mỹ",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Đường Bình Hòa - Cây Dương",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_31",
+    "tt_bat_dau": 211,
+    "tt_ket_thuc": 217,
+    "ten_duong": "Hương lộ 9",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Đến hết Km+200",
+    "k1_dat_o": 1.23,
+    "k1_tmdv": 1.23,
+    "k1_sxkd": 1.23,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_32",
+    "tt_bat_dau": 218,
+    "tt_ket_thuc": 224,
+    "ten_duong": "Hương lộ 9",
+    "diem_dau": "Đến hết Km+200",
+    "diem_cuoi": "Nhà thờ Tân Triều",
+    "k1_dat_o": 1.23,
+    "k1_tmdv": 1.23,
+    "k1_sxkd": 1.23,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_33",
+    "tt_bat_dau": 225,
+    "tt_ket_thuc": 231,
+    "ten_duong": "Hương lộ 9",
+    "diem_dau": "Nhà thờ Tân Triều",
+    "diem_cuoi": "Hết Miếu Ngói Vĩnh Hiệp",
+    "k1_dat_o": 1.23,
+    "k1_tmdv": 1.23,
+    "k1_sxkd": 1.23,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_34",
+    "tt_bat_dau": 232,
+    "tt_ket_thuc": 238,
+    "ten_duong": "Đường Thành Đức - Tân Triều",
+    "diem_dau": "Đường Hương lộ 9",
+    "diem_cuoi": "Miếu ngói Vĩnh Hiệp",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_35",
+    "tt_bat_dau": 239,
+    "tt_ket_thuc": 245,
+    "ten_duong": "Hương lộ 7",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Đường Bình Lục - Long Phú (gần Đình Bình Thảo)",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_36",
+    "tt_bat_dau": 246,
+    "tt_ket_thuc": 252,
+    "ten_duong": "Hương lộ 7",
+    "diem_dau": "Đường Bình Lục - Long Phú (gần Đình Bình Thảo)",
+    "diem_cuoi": "Ranh giới xã Bình Lợi (cũ)",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_37",
+    "tt_bat_dau": 253,
+    "tt_ket_thuc": 259,
+    "ten_duong": "Hương lộ 7",
+    "diem_dau": "Ranh giới xã Bình Lợi (cũ)",
+    "diem_cuoi": "Hương lộ 15",
+    "k1_dat_o": 1.25,
+    "k1_tmdv": 1.25,
+    "k1_sxkd": 1.25,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_38",
+    "tt_bat_dau": 260,
+    "tt_ket_thuc": 266,
+    "ten_duong": "Đường Bình Lục - Long Phú",
+    "diem_dau": "Ngã ba Hương lộ 7",
+    "diem_cuoi": "Hương lộ 7",
+    "k1_dat_o": 1.27,
+    "k1_tmdv": 1.27,
+    "k1_sxkd": 1.27,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_39",
+    "tt_bat_dau": 267,
+    "tt_ket_thuc": 273,
+    "ten_duong": "Đường liên xã Thạnh Phú - Tân Bình - Bình Lợi cũ",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Ranh xã Tân Bình và Bình Lợi (cũ)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_40",
+    "tt_bat_dau": 274,
+    "tt_ket_thuc": 280,
+    "ten_duong": "Đường liên xã Thạnh Phú - Tân Bình - Bình Lợi cũ",
+    "diem_dau": "Ranh xã Tân Bình và Bình Lợi (cũ)",
+    "diem_cuoi": "Ranh xã Thạnh Phú và Tân Bình (cũ)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_41",
+    "tt_bat_dau": 281,
+    "tt_ket_thuc": 287,
+    "ten_duong": "Đường liên xã Thạnh Phú - Tân Bình - Bình Lợi cũ",
+    "diem_dau": "Hương lộ 7",
+    "diem_cuoi": "Ranh xã Tân Bình và Bình Lợi (cũ)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_42",
+    "tt_bat_dau": 288,
+    "tt_ket_thuc": 294,
+    "ten_duong": "Đường Bến Đôi 2-4",
+    "diem_dau": "Giáp Hương lộ 15",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.2,
+    "k1_tmdv": 1.2,
+    "k1_sxkd": 1.2,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_43",
+    "tt_bat_dau": 295,
+    "tt_ket_thuc": 301,
+    "ten_duong": "Đường Cầu Ốc",
+    "diem_dau": "Hương lộ 7",
+    "diem_cuoi": "Bên phải: hết ranh thửa đất số 166, tờ bản đồ số 62, phường Tân Triều; Bên trái: hết ranh thửa đất số 147, tờ bản đồ số 62, phường Tân Triều",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_44",
+    "tt_bat_dau": 302,
+    "tt_ket_thuc": 308,
+    "ten_duong": "Đường Đất Cát",
+    "diem_dau": "Hương lộ 15",
+    "diem_cuoi": "Giáp ranh thửa đất số 305, tờ bản đồ số 62, phường Tân Triều",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_45",
+    "tt_bat_dau": 309,
+    "tt_ket_thuc": 315,
+    "ten_duong": "Đường liên ấp 3 - 4",
+    "diem_dau": "Hương lộ 15",
+    "diem_cuoi": "Hương lộ 7",
+    "k1_dat_o": 1.39,
+    "k1_tmdv": 1.39,
+    "k1_sxkd": 1.39,
+    "k1_nong_nghiep": 1.19,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_46",
+    "tt_bat_dau": 316,
+    "tt_ket_thuc": 322,
+    "ten_duong": "Đường Long Chiến",
+    "diem_dau": "Hương lộ 15",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_47",
+    "tt_bat_dau": 323,
+    "tt_ket_thuc": 329,
+    "ten_duong": "Đường Xóm Rạch",
+    "diem_dau": "Hương lộ 15",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.2,
+    "k1_tmdv": 1.2,
+    "k1_sxkd": 1.2,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_48",
+    "tt_bat_dau": 330,
+    "tt_ket_thuc": 336,
+    "ten_duong": "Đường Đa Lộc",
+    "diem_dau": "Hương lộ 15",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_49",
+    "tt_bat_dau": 337,
+    "tt_ket_thuc": 343,
+    "ten_duong": "Đường Bàu Tre",
+    "diem_dau": "Hương lộ 15",
+    "diem_cuoi": "Hương lộ 6",
+    "k1_dat_o": 1.28,
+    "k1_tmdv": 1.28,
+    "k1_sxkd": 1.28,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_50",
+    "tt_bat_dau": 344,
+    "tt_ket_thuc": 350,
+    "ten_duong": "Hương lộ 6",
+    "diem_dau": "Hương lộ 15",
+    "diem_cuoi": "Bờ sông Đồng Nai",
+    "k1_dat_o": 1.31,
+    "k1_tmdv": 1.31,
+    "k1_sxkd": 1.31,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_51",
+    "tt_bat_dau": 351,
+    "tt_ket_thuc": 357,
+    "ten_duong": "Đường Tân Hiền",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Giáp ranh phường Trảng Dài",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_52",
+    "tt_bat_dau": 358,
+    "tt_ket_thuc": 364,
+    "ten_duong": "Đường Lò Thối",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Giáp ranh xã Thạnh Phú cũ",
+    "k1_dat_o": 1.32,
+    "k1_tmdv": 1.32,
+    "k1_sxkd": 1.32,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_53",
+    "tt_bat_dau": 365,
+    "tt_ket_thuc": 371,
+    "ten_duong": "Đường Chùa Cao Đài",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Hương lộ 15",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_54",
+    "tt_bat_dau": 372,
+    "tt_ket_thuc": 378,
+    "ten_duong": "Đường ranh phường Tân Triều - phường Trảng Dài",
+    "diem_dau": "Đường tỉnh 768",
+    "diem_cuoi": "Ngã ba (hết ranh thửa đất số 121, tờ bản đồ số 19)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   },
+   {
+    "ma_doan_duong": "Bảng_8_DOAN_55",
+    "tt_bat_dau": 379,
+    "tt_ket_thuc": 385,
+    "ten_duong": "Đường ranh phường Tân Triều - phường Trảng Dài",
+    "diem_dau": "Ngã ba (hết ranh thửa đất số 121, tờ bản đồ số 19)",
+    "diem_cuoi": "Giáp ranh xã Thạnh Phú (cũ)",
+    "k1_dat_o": 1.19,
+    "k1_tmdv": 1.19,
+    "k1_sxkd": 1.19,
+    "k1_nong_nghiep": 1.45,
+    "co_quy_dinh_rieng_duong_dat_tai_pl1": false
+   }
+  ]
+ },
+ "quy_tac_nq28": {
+  "van_ban": "Nghị quyết 28/2025/NQ-HĐND ngày 10/12/2025 của HĐND tỉnh Đồng Nai",
+  "ghi_chu": "Tỷ lệ, hệ số theo danh sách quy tắc người dùng cung cấp ngày 08/11/2026 (Điều 1, 5, 6, 8, 9, 10). Đối chiếu văn bản gốc trước khi dùng chính thức; sửa số tại đây, không sửa mã.",
+  "loai_nn": [
+   {
+    "ma": "nn_cln",
+    "ten": "Đất trồng cây lâu năm",
+    "ma_dat": [
+     "CLN",
+     "CNT",
+     "NKH"
+    ],
+    "cot_gia": "nn_cay",
+    "pl_viii": "cln",
+    "can_cu": "Điều 5"
+   },
+   {
+    "ma": "nn_chn",
+    "ten": "Đất trồng cây hằng năm",
+    "ma_dat": [
+     "HNK",
+     "CHN",
+     "BHK",
+     "NHK",
+     "NHP",
+     "LUA",
+     "LUC",
+     "LUK",
+     "LUN"
+    ],
+    "cot_gia": "nn_cay",
+    "pl_viii": "hang_nam",
+    "can_cu": "Điều 5"
+   },
+   {
+    "ma": "nn_nts",
+    "ten": "Đất nuôi trồng thủy sản",
+    "ma_dat": [
+     "NTS",
+     "MNC"
+    ],
+    "cot_gia": "nn_rung_nts",
+    "pl_viii": "nts",
+    "can_cu": "Điều 5",
+    "ghi_chu": "MNC chỉ khi mặt nước chuyên dùng sử dụng nuôi trồng thủy sản"
+   },
+   {
+    "ma": "nn_rsx",
+    "ten": "Đất rừng sản xuất",
+    "ma_dat": [
+     "RSX",
+     "RPH",
+     "RDD"
+    ],
+    "cot_gia": "nn_rung_nts",
+    "pl_viii": "rung",
+    "can_cu": "Điều 5",
+    "ghi_chu": "Rừng phòng hộ, rừng đặc dụng tính 100% giá rừng sản xuất"
+   }
+  ],
+  "tai_dinh_cu": {
+   "can_cu": "Khoản 2 Điều 1, Khoản 7 Điều 6, Khoản 4 Điều 8",
+   "muc": [
+    {
+     "ma": "pl_vi",
+     "ten": "Đất ở KDC / Khu TĐC có giá tại Phụ lục VI",
+     "he_so": "1"
+    },
+    {
+     "ma": "tiep_giap_pl_vii",
+     "ten": "Đường nội bộ chưa có giá - thửa tiếp giáp đường Phụ lục VII",
+     "he_so": "1"
+    },
+    {
+     "ma": "noi_bo",
+     "ten": "Thửa nội bộ bên trong KDC tiếp giáp đường Phụ lục VII (theo đường có giá cao nhất)",
+     "he_so": "0.5"
+    },
+    {
+     "ma": "gan_duong",
+     "ten": "KDC cách đường Phụ lục VII không quá 500 m (đô thị) / 1.000 m (nông thôn)",
+     "he_so": "0.5",
+     "cach_do_thi_m": 500,
+     "cach_nong_thon_m": 1000
+    },
+    {
+     "ma": "con_lai",
+     "ten": "KDC còn lại",
+     "he_so": "0.4"
+    }
+   ],
+   "tmdv": "0.7",
+   "sxkd": "0.6"
+  },
+  "pham_vi": {
+   "can_cu": "Điều 8",
+   "nn": {
+    "PV1": "1",
+    "PV2": "0.8",
+    "PV3": "0.6",
+    "VT2": "0.3",
+    "san": "Phụ lục VIII"
+   },
+   "pnn": {
+    "PV1": "1",
+    "PV2": "0.8",
+    "PV3": "0.6",
+    "VT2-PV1": "0.15",
+    "VT2-PV2": "0.1",
+    "san": "CLN VT1-PV1"
+   }
+  },
+  "nhieu_mat_tien": {
+   "can_cu": "Khoản 3 Điều 8",
+   "lop_m": 50,
+   "hai_duong_pl_vii": "1.2",
+   "mot_pl_vii_va_duong_khac": "1.1"
+  },
+  "truong_hop": [
+   {
+    "ma": "long_cho",
+    "ten": "Mặt tiền lòng chợ",
+    "can_cu": "Khoản 5 Điều 8",
+    "he_so": "1"
+   },
+   {
+    "ma": "kcn_moi",
+    "ten": "Khu, cụm công nghiệp mới",
+    "can_cu": "Khoản 6 Điều 8",
+    "he_so": "0.9"
+   },
+   {
+    "ma": "nga_ba",
+    "ten": "Ngã ba, ngã tư - theo đường có giá cao nhất",
+    "can_cu": "Khoản 7 Điều 8",
+    "he_so": "1",
+    "theo_duong_cao_nhat": true
+   },
+   {
+    "ma": "dang_tuyen",
+    "ten": "Đất dạng tuyến",
+    "can_cu": "Khoản 8 Điều 8",
+    "he_so": "0.2"
+   },
+   {
+    "ma": "duong_dat",
+    "ten": "Đường đất, đá, cấp phối",
+    "can_cu": "Khoản 9 Điều 8",
+    "he_so": "0.8"
+   },
+   {
+    "ma": "da_cau",
+    "ten": "Dạ cầu, cầu vượt",
+    "can_cu": "Khoản 10 Điều 8",
+    "he_so": "0.8"
+   },
+   {
+    "ma": "kenh_rach_pl_vii",
+    "ten": "Qua kênh, rạch - đường Phụ lục VII",
+    "can_cu": "Khoản 11 Điều 8",
+    "he_so": "0.4"
+   },
+   {
+    "ma": "kenh_rach_khac",
+    "ten": "Qua kênh, rạch - đường ngoài Phụ lục VII",
+    "can_cu": "Khoản 11 Điều 8",
+    "he_so": "0.5"
+   },
+   {
+    "ma": "hlat_duong_bo",
+    "ten": "Đất từ mép đường đến hết hành lang an toàn đường bộ",
+    "can_cu": "Khoản 12 Điều 8",
+    "he_so": "1"
+   }
+  ],
+  "giap_ranh": {
+   "can_cu": "Điều 9",
+   "nguong_chenh_lech": "0.3",
+   "ty_le_gia_tinh_ban": "0.7"
+  },
+  "thoi_han": {
+   "can_cu": "Điều 10",
+   "nam_chuan": 70
+  }
+ }
+}

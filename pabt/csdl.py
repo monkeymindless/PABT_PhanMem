@@ -90,7 +90,7 @@ def ds_sao_luu_tu_dong(file) -> list:
     if not tm.is_dir():
         return []
     goc = _goc_sao_luu(file)
-    return sorted((f for f in tm.iterdir() if f.is_file() and f.name.startswith(goc + '_') and not f.name.endswith('.tmp')),
+    return sorted((f for f in tm.iterdir() if f.is_file() and f.name.startswith(goc + '_') and not f.name.endswith(('.tmp', '.tmp.nen'))),
                   key=lambda f: f.name, reverse=True)
 
 
@@ -126,8 +126,17 @@ def sao_luu_tu_dong(con, file, giu: int = SAO_LUU_GIU) -> Path | None:
         con.backup(dc)
         dc.commit()
         bo_anh_ban_do_ban_sao(dc)
+        kt = dc.execute('PRAGMA quick_check').fetchone()     # 1.0.97: không giữ bản sao lưu hỏng (tưởng có mà khôi phục không được)
     finally:
         dc.close()
+    if not kt or kt[0] != 'ok':
+        try:
+            tam.unlink()
+        except OSError:
+            pass
+        raise sqlite3.DatabaseError(f'Bản sao lưu tự động không qua kiểm tra toàn vẹn ({kt[0] if kt else "không rõ"}) - đã bỏ.')
+    from .an_toan import dong_goi_file_sao_luu
+    dong_goi_file_sao_luu(tam)                          # 1.0.55: nén zlib (không mã hóa - người dùng chọn)
     os.replace(tam, dich)
     for cu in ds_sao_luu_tu_dong(file)[max(1, giu):]:
         try:
@@ -331,6 +340,49 @@ class KetNoi(sqlite3.Connection):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.bo_nho = {}
+        self._file_tam = None
+
+    def __exit__(self, t, v, tb):
+        """1.0.58: Python 3.8 (bản Win7) không rollback khi COMMIT lỗi ('database is locked'): giao dịch còn mở, giữ khóa ghi, thao tác
+        đã báo lỗi lại được ghi ở lần commit sau."""
+        try:
+            return super().__exit__(t, v, tb)
+        except sqlite3.Error:
+            if self.in_transaction:
+                try:
+                    self.rollback()
+                except sqlite3.Error:
+                    pass
+            raise
+
+    def close(self):
+        """Đóng; bản sao lưu nén mở chỉ xem: xóa file tạm đã giải nén (1.0.55)."""
+        super().close()
+        tam, self._file_tam = getattr(self, '_file_tam', None), None
+        if tam is not None:
+            try:
+                Path(tam).unlink()
+            except OSError:
+                pass
+
+
+def _file_tam_sao_luu(goc_file: Path, du: bytes) -> Path:
+    """Ghi nội dung SQLite đã giải nén ra %TEMP%\\pabt_sao_luu_mo\\<tên>_<số>.<đuôi> (xóa khi đóng kết nối; sót lại thì dọn lần sau)."""
+    import tempfile
+    import time
+    tm = Path(tempfile.gettempdir()) / 'pabt_sao_luu_mo'
+    tm.mkdir(parents=True, exist_ok=True)
+    for cu in tm.iterdir():                             # bản tạm của lần trước quên đóng (> 1 ngày)
+        try:
+            if time.time() - cu.stat().st_mtime > 86400:
+                cu.unlink()
+        except OSError:
+            pass
+    fd, ten = tempfile.mkstemp(prefix=goc_file.stem[:40] + '_', suffix=goc_file.suffix or DUOI_DU_AN, dir=str(tm))
+    with os.fdopen(fd, 'wb') as fo:                      # đóng ngay: Windows không xóa được file còn mở
+        fo.write(du)
+    f = Path(ten)
+    return f
 
 
 def _trang_thai(con) -> tuple:
@@ -390,23 +442,64 @@ def uri_chi_doc(duong_dan) -> str:
     return ('file://' + s if s.startswith('/') else 'file:///' + s) + '?mode=ro'
 
 
+CHO_KHOA_GIAY = 30.0       # 1.0.90: chờ khóa file (máy khác / Google Drive đang ghi) tối đa chừng này giây rồi mới báo "database is locked"
+
+
+def journal_do_dang(file) -> bool:
+    """File -journal của dự án là giao dịch dở (máy kia mất điện giữa lúc ghi). File -journal 0 byte (công cụ / bản khác dùng chế độ TRUNCATE
+    hoặc PERSIST để lại) không phải giao dịch dở: chỉ file có nội dung mới là (SQLite cũng chỉ coi journal có nội dung là "hot journal")."""
+    try:
+        return Path(str(file) + '-journal').stat().st_size > 0
+    except OSError:
+        return False
+
+
+def giai_phong_khoa_treo(con) -> None:
+    """Giao dịch ngầm còn mở trên kết nối (lệnh ghi chưa COMMIT, ngoài mọi khối giao_dich) giữ khóa file làm máy khác / kết nối khác chờ:
+    ghi hẳn xuống như nút Lưu (app.luu cũng COMMIT giao dịch ngầm). Đang trong giao_dich thì không đụng. Lỗi: hủy giao dịch ngầm."""
+    if con is None or _SAU_GD.get(id(con), 0) > 0 or not getattr(con, 'in_transaction', False):
+        return
+    try:
+        con.commit()
+    except sqlite3.Error:
+        try:
+            con.rollback()
+        except sqlite3.Error:
+            pass
+
+
+def _la_loi_khoa(e: Exception) -> bool:
+    s = str(e).lower()
+    return isinstance(e, sqlite3.OperationalError) and ('locked' in s or 'busy' in s)
+
+
 def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connection:
     """Mở file dự án (tự nâng cấp file cũ). chi_doc: mở chỉ xem, mọi lệnh ghi đều bị SQLite từ chối."""
     p = Path(duong_dan)
     if not tao and not p.exists():
         raise FileNotFoundError(str(p))
+    tam = None
+    if not tao and p.is_file():
+        from .an_toan import mo_goi_file_sao_luu_ra_bytes
+        goc = mo_goi_file_sao_luu_ra_bytes(p)           # 1.0.55: bản sao lưu / mốc nén - giải nén ra file tạm, luôn mở CHỈ XEM
+        if goc is not None:
+            tam = _file_tam_sao_luu(p, goc)
+            p, chi_doc = tam, True
     if chi_doc:
-        con = sqlite3.connect(uri_chi_doc(p), uri=True, factory=KetNoi)
+        con = sqlite3.connect(uri_chi_doc(p), uri=True, factory=KetNoi, timeout=CHO_KHOA_GIAY)
+        con._file_tam = tam
         try:
             con.row_factory = sqlite3.Row
+            con.execute('PRAGMA trusted_schema = OFF')  # 1.0.97: như nhánh mở để sửa (_mo_tiep)
             ver = con.execute('PRAGMA user_version').fetchone()[0]
             if not 3 <= ver <= PHIEN_BAN_CSDL:
                 raise RuntimeError(f'File dự án phiên bản CSDL v{ver} cần được mở để sửa một lần (nâng cấp) trước khi mở chỉ xem.')
+            _kiem_luoc_do(con)                          # 1.0.97: lược đồ hỏng -> báo ngay, không văng UnicodeDecodeError về sau
         except BaseException:
             con.close()                                 # file hỏng / không phải CSDL: không để Windows giữ khóa file (26/10/2026)
             raise
         return con
-    con = sqlite3.connect(str(p), factory=KetNoi)
+    con = sqlite3.connect(str(p), factory=KetNoi, timeout=CHO_KHOA_GIAY)
     try:
         return _mo_tiep(con, tao)
     except BaseException:
@@ -417,13 +510,21 @@ def mo(duong_dan, tao: bool = False, chi_doc: bool = False) -> sqlite3.Connectio
 def _mo_tiep(con, tao: bool):
     """Phần sau khi kết nối của mo (nâng cấp lược đồ, khóa danh mục, bảng phụ)."""
     con.row_factory = sqlite3.Row
+    con.execute(f'PRAGMA busy_timeout = {int(CHO_KHOA_GIAY * 1000)}')
     con.execute('PRAGMA foreign_keys = ON')
-    # file dự án có thể nằm trong thư mục Google Drive: không dùng WAL (Drive đồng bộ kém các file -wal, -shm)
+    con.execute('PRAGMA trusted_schema = OFF')          # 1.0.91: trigger / view trong file ngoài không gọi được hàm SQL không "vô hại"
+    # file dự án có thể nằm trong thư mục Google Drive: không dùng WAL (Drive đồng bộ kém các file -wal, -shm).
+    # 1.0.90: GIỮ DELETE. Đã thử TRUNCATE (yêu cầu đại phẫu): kết nối TRUNCATE giữ mở file -journal, kết nối khác ở chế độ DELETE (bản cũ ở máy
+    # khác cùng thư mục Drive / LAN, may_chu, co_may_thoi_gian, chua_benh_csdl mở sqlite3.connect thẳng) không xóa được journal khi COMMIT
+    # -> "disk I/O error" (tests/test_toc_do.test_may_khac_ghi_vao_file, test_tai_lai). Chống khóa bằng busy_timeout 30 s + giao_dich thử lại.
     con.execute('PRAGMA journal_mode = DELETE')
     # bảng tạm của Hoàn tác (_ht_nhat_ky), dấu vết hộ (_dv_ho), kiểm toán (_kt_phien) nằm trên RAM - không ghi file tạm ra đĩa mỗi lần
     # lưu (máy yếu, ổ HDD - 16/10/2026). Thiết lập của kết nối, không ghi vào file
     con.execute('PRAGMA temp_store = MEMORY')
     ver = con.execute('PRAGMA user_version').fetchone()[0]
+    if ver != 0:
+        _kiem_luoc_do(con)
+    da_go = _go_trigger_la_som(con) if ver != 0 else []      # trước mọi lần ghi bên dưới (nâng cấp, mở rộng, ghi tối thiểu)
     if ver == 0:
         con.executescript(_SCHEMA.read_text(encoding='utf-8'))
         con.execute(f'PRAGMA user_version = {PHIEN_BAN_CSDL}')
@@ -459,47 +560,66 @@ def _mo_tiep(con, tao: bool):
     elif ver > PHIEN_BAN_CSDL:
         raise RuntimeError(f'File dự án được tạo bằng phiên bản phần mềm mới hơn (CSDL v{ver}); hãy cập nhật phần mềm.')
     _dam_bao_khoa(con)
-    # file v16 nâng cấp lúc CHƯA có hộ (dự án trống) không có bảng phụ: tạo khi đã có hộ - trước khi Hoàn tác liệt kê bảng
-    # (bộ đơn giá / file chỉ có danh mục không có hộ: không bị ghi)
-    if not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anh_hien_trang'").fetchone() \
-            and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                _tao_bang_phu(con)
-        except sqlite3.OperationalError:                # file đang bị khóa: các hàm dùng bảng phụ tự tạo khi ghi
-            pass
-    if not co_cot_pa_lan(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                dam_bao_cot_pa_lan(con)
-        except sqlite3.OperationalError:                # chỉ xem / file khóa: lan_pa tự thêm khi ghi
-            pass
-    if not co_cot_y_kien(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                dam_bao_cot_y_kien(con)
-        except sqlite3.OperationalError:                # chỉ xem / file khóa: du_thao tự thêm khi ghi
-            pass
-    if not co_cot_thua(con) and con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                dam_bao_cot_thua(con)
-        except sqlite3.OperationalError:                # chỉ xem / file khóa: ho_so.luu_ho thêm khi ghi
-            pass
-    if any(k not in {r[1] for r in con.execute('PRAGMA table_info(du_an)')} for k, _ in COT_DU_AN_THEM) and \
-            con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
-        try:
-            with con:
-                dam_bao_cot_du_an(con)
-        except sqlite3.OperationalError:                # chỉ xem / file khóa: lap_pa.luu_du_an thêm khi ghi
-            pass
+    # P2 (03/11/2026): các phần mở rộng lược đồ KHÔNG đổi PHIEN_BAN_CSDL (bảng phụ, cột thêm, chỉ mục) - một sổ MO_RONG, chỉ file có hộ
+    # (bộ đơn giá / file chỉ danh mục không bị ghi), một giao dịch cho mọi phần còn thiếu (trước: tối đa 6 lần ghi đĩa mỗi lần mở)
+    dam_bao_mo_rong(con)
     dat_ghi_toi_thieu(con)                              # CLI / nhập / GUI: cùng một chỗ (bộ đơn giá đóng gói tự bỏ)
+    if da_go:                                           # nhật ký sau khi lược đồ đủ bảng (không ghi được: bỏ qua, trigger đã gỡ)
+        try:
+            ghi_nhat_ky(con, 'Gỡ trigger lạ trong file dự án', ', '.join(da_go))
+            con.commit()
+        except sqlite3.Error:
+            pass
     return con
+
+
+# 1.0.52 (người dùng 02/11/2026): chỉ mục cho dự án lớn (10.000 - 50.000 hộ). KHÔNG đổi PHIEN_BAN_CSDL: tạo ở csdl.mo khi file có hộ
+# (bộ đơn giá đóng gói không hộ - không bị ghi); bản cũ mở file vẫn được (chỉ mục thừa vô hại). Đo 5.000 hộ: dòng công thức 1,1 ->
+# 0,2 ms, danh sách hộ theo thứ tự 2,8 -> 1,8 ms, tra thửa theo tờ / số 0,36 -> 0,04 ms mỗi lần
+CHI_MUC_THEM = (
+    ('ix_ho_dot', 'CREATE INDEX IF NOT EXISTS ix_ho_dot ON ho(dot_id)'),
+    ('ix_ho_dot_dt', 'CREATE INDEX IF NOT EXISTS ix_ho_dot_dt ON ho(dot_du_thao_id)'),
+    ('ix_thua_to_thua', 'CREATE INDEX IF NOT EXISTS ix_thua_to_thua ON thua(so_to, so_thua, ma_ho)'),
+    ('ix_pa_lan_dot_trinh', 'CREATE INDEX IF NOT EXISTS ix_pa_lan_dot_trinh ON pa_lan(dot_trinh_id, ma_ho, lan)'),
+    ('ix_ct_dat_cong_thuc', "CREATE INDEX IF NOT EXISTS ix_ct_dat_cong_thuc ON ct_dat(ma_ho, lan) WHERE cong_thuc <> ''"),
+    ('ix_ct_khoan_cong_thuc', "CREATE INDEX IF NOT EXISTS ix_ct_khoan_cong_thuc ON ct_khoan(ma_ho, lan) WHERE cong_thuc <> ''"),
+    ('ix_ho_thutu', 'CREATE INDEX IF NOT EXISTS ix_ho_thutu ON ho(thu_tu, ma_ho)'),        # cuối: dấu hiệu đã tạo đủ
+    ('ix_ykien_ho', 'CREATE INDEX IF NOT EXISTS ix_ykien_ho ON y_kien_du_thao(ma_ho)'),  # cuối: dấu hiệu đã tạo đủ
+)
+
+
+def dam_bao_chi_muc(con) -> int:
+    """Tạo các chỉ mục CHI_MUC_THEM còn thiếu (cột chưa có ở file cũ -> bỏ qua chỉ mục đó). Chạy trong giao dịch của nơi gọi."""
+    n = 0
+    for _ten, sql in CHI_MUC_THEM:
+        try:
+            con.execute(sql)
+            n += 1
+        except sqlite3.OperationalError:                # file cũ thiếu cột (pa_lan.dot_trinh_id, cong_thuc, lan...)
+            continue
+    return n
 
 
 # cột thêm vào bảng thua KHÔNG đổi PHIEN_BAN_CSDL (20/10/2026 - thẻ Thông tin hộ, thửa đất): file mới có sẵn (schema.sql); file cũ
 # thêm ở csdl.mo khi đã có hộ (trước khi Hoàn tác liệt kê cột) hoặc lúc ghi thửa (ho_so.luu_ho). Bản cũ mở file vẫn được (cột thừa)
 COT_THUA_THEM = (('dt_nguyen_thua', "TEXT NOT NULL DEFAULT ''"), ('so_gcn', "TEXT NOT NULL DEFAULT ''"))
+
+
+def co_cot_ghi_chu_ten(con) -> bool:
+    """1.0.78: cột ho.ghi_chu_ten (dòng ghi chú hiện dưới tên hộ)."""
+    return any(r[1] == 'ghi_chu_ten' for r in con.execute('PRAGMA table_info(ho)'))
+
+
+def dam_bao_cot_ghi_chu_ten(con) -> None:
+    if not co_cot_ghi_chu_ten(con):
+        con.execute("ALTER TABLE ho ADD COLUMN ghi_chu_ten TEXT NOT NULL DEFAULT ''")
+
+
+def sql_ghi_chu_ten(con, bang: str = '') -> str:
+    """Biểu thức SELECT an toàn với file chưa có cột (mở chỉ xem file cũ)."""
+    if not co_cot_ghi_chu_ten(con):
+        return "'' AS ghi_chu_ten"
+    return f'{bang}.ghi_chu_ten' if bang else 'ghi_chu_ten'
 
 
 def co_cot_thua(con) -> bool:
@@ -556,21 +676,29 @@ def dam_bao_cot_pa_lan(con) -> None:
 
 
 # 30/10/2026: lần phương án của dòng ý kiến niêm yết - KHÔNG đổi PHIEN_BAN_CSDL; NULL = dòng cũ (trước khi có cột) = lần 1
-COT_Y_KIEN_THEM = (('lan', 'INTEGER'),)
+COT_Y_KIEN_THEM = (('lan', 'INTEGER'),
+                   # 1.0.91 (người dùng 09/11/2026): ý kiến của hộ SAU đối thoại ('' = chưa đối thoại; ý kiến hiệu lực = cột này, không thì loai)
+                   ('y_kien_doi_thoai', "TEXT NOT NULL DEFAULT ''"))
+COT_DOI_THOAI_THEM = (('y_kien', "TEXT NOT NULL DEFAULT ''"),)      # 1.0.91: ý kiến của hộ ở từng lần đối thoại
+
+
+def _cot_cua(con, bang: str) -> set:
+    return {r[1] for r in con.execute(f'PRAGMA table_info({bang})')}
 
 
 def co_cot_y_kien(con) -> bool:
-    """y_kien_du_thao chưa có (file cũ) hoặc đã đủ cột COT_Y_KIEN_THEM: True (không cần thêm)."""
-    co = {r[1] for r in con.execute('PRAGMA table_info(y_kien_du_thao)')}
-    return not co or all(k in co for k, _ in COT_Y_KIEN_THEM)
+    """y_kien_du_thao / doi_thoai_ho chưa có (file cũ) hoặc đã đủ cột thêm: True (không cần thêm)."""
+    co, dt = _cot_cua(con, 'y_kien_du_thao'), _cot_cua(con, 'doi_thoai_ho')
+    return (not co or all(k in co for k, _ in COT_Y_KIEN_THEM)) and (not dt or all(k in dt for k, _ in COT_DOI_THOAI_THEM))
 
 
 def dam_bao_cot_y_kien(con) -> None:
-    """Thêm cột còn thiếu của y_kien_du_thao (trong giao dịch của nơi gọi). Bảng chưa có: không làm gì."""
-    co = {r[1] for r in con.execute('PRAGMA table_info(y_kien_du_thao)')}
-    for k, kieu in COT_Y_KIEN_THEM:
-        if co and k not in co:
-            con.execute(f'ALTER TABLE y_kien_du_thao ADD COLUMN {k} {kieu}')
+    """Thêm cột còn thiếu của y_kien_du_thao, doi_thoai_ho (trong giao dịch của nơi gọi). Bảng chưa có: không làm gì."""
+    for bang, ds in (('y_kien_du_thao', COT_Y_KIEN_THEM), ('doi_thoai_ho', COT_DOI_THOAI_THEM)):
+        co = _cot_cua(con, bang)
+        for k, kieu in ds:
+            if co and k not in co:
+                con.execute(f'ALTER TABLE {bang} ADD COLUMN {k} {kieu}')
 
 
 def _tao_pa_lan(con) -> None:
@@ -604,6 +732,9 @@ def _tao_bang_phu(con) -> bool:
     if not kiem_toan.co_bang(con):
         for cau in kiem_toan._cau(kiem_toan.SQL_BANG):
             con.execute(cau)
+    if not kiem_toan.co_bang_bam(con):
+        for cau in kiem_toan._cau(kiem_toan.SQL_BAM):
+            con.execute(cau)
     con.execute(ban_do_cad.SQL_BANG)
     from .phieu_kiem_dem import SQL_BANG_ANH
     con.execute(SQL_BANG_ANH)
@@ -625,6 +756,20 @@ def _dam_bao_khoa(con) -> None:
                                 BEGIN SELECT RAISE(ABORT, '{THONG_BAO_KHOA}'); END''')
 
 
+@contextmanager
+def tam_tat_gc():
+    """Tắt dọn rác của Python trong một thao tác hàng loạt (đo 3.000 hộ: mở dự án -10%, bảng tổng hợp -11%: dữ liệu vừa tạo còn dùng tiếp,
+    dọn rác chỉ duyệt lại nó nhiều lần). Lồng được, trả lại trạng thái cũ kể cả khi lỗi. Dùng làm with hoặc @decorator."""
+    import gc
+    bat = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if bat:
+            gc.enable()
+
+
 _SAU_GD = {}              # id(kết nối) -> số tầng giao_dich đang mở
 
 
@@ -641,8 +786,24 @@ def giao_dich(con):
         if sau:
             yield con
         else:
-            with con:
+            try:
                 yield con
+            except BaseException:
+                con.rollback()
+                raise
+            # như `with con:` nhưng COMMIT bị từ chối NGAY vì khóa (SQLite không chờ được - hai bên cùng đợi nhau) thì thử lại vài lần, giao
+            # dịch vẫn còn nguyên. Đã chờ hết busy_timeout (30 s) mà vẫn khóa: không thử lại, tránh treo vài phút
+            import time
+            for lan in range(5):
+                bat_dau = time.monotonic()
+                try:
+                    con.commit()
+                    break
+                except sqlite3.OperationalError as e:
+                    if not _la_loi_khoa(e) or lan == 4 or time.monotonic() - bat_dau > 2:
+                        con.rollback()
+                        raise
+                    time.sleep(0.15 * (lan + 1))
     finally:
         if sau:
             _SAU_GD[k] = sau
@@ -664,7 +825,93 @@ def _cot(con, so_do: str, bang: str) -> list:
     return [r[1] for r in con.execute(f'PRAGMA {so_do}.table_info("{bang}")')]
 
 
-def chep_danh_muc(con, file_nguon, don_vi: bool = True, bang=DANH_MUC) -> None:
+_RE_TRIGGER_HOP_LE = re.compile(r'^(audit_logs_khong_(sua|xoa)|audit_bam_khong_(sua|xoa)|khoa_\w+_(INSERT|UPDATE|DELETE))$')
+# 1.0.91 (kiểm toán 09/11/2026): kiểm TOÀN BỘ câu lệnh, neo đầu và cuối - trước chỉ `.search` phần "BEGIN SELECT RAISE… END" ở cuối nên thân
+# `UPDATE ho SET tien='0'; -- BEGIN SELECT RAISE(ABORT,'x'); <xuống dòng> END` (lệnh thật + chú thích giả) lọt qua. Hai dạng hợp lệ duy nhất:
+# trigger khóa danh mục (có WHEN đọc khoa_dm) và trigger nhật ký (không WHEN); thân chỉ là SELECT RAISE(ABORT, '<chữ>').
+_RE_TRIGGER_NGUYEN_VAN = re.compile(
+    r'^\s*CREATE\s+TRIGGER\s+(?:IF\s+NOT\s+EXISTS\s+)?"?(?P<ten>\w+)"?\s+BEFORE\s+(?P<viec>INSERT|UPDATE|DELETE)\s+ON\s+"?(?P<bang>\w+)"?\s+'
+    r'(?:WHEN\s+\(\s*SELECT\s+mo\s+FROM\s+khoa_dm\s+WHERE\s+id\s*=\s*1\s*\)\s*=\s*0\s+)?'
+    r"BEGIN\s+SELECT\s+RAISE\s*\(\s*ABORT\s*,\s*'[^']*'\s*\)\s*;\s*END\s*;?\s*$", re.I)
+_RE_TRIGGER_KHOA_DM = re.compile(r'^khoa_(?P<bang>\w+)_(?P<viec>INSERT|UPDATE|DELETE)$')
+_RE_TRIGGER_NHAT_KY = re.compile(r'^(?P<bang>audit_logs|audit_bam)_khong_(?P<viec>sua|xoa)$')
+
+
+def trigger_hop_le(ten: str, sql) -> bool:
+    """Trigger do chính phần mềm tạo: tên đúng mẫu, bảng và biến cố khớp tên, thân nguyên văn (xem _RE_TRIGGER_NGUYEN_VAN)."""
+    m = _RE_TRIGGER_NGUYEN_VAN.match(sql or '')
+    if m is None or m.group('ten') != ten:
+        return False
+    viec, bang, co_when = m.group('viec').upper(), m.group('bang'), bool(re.search(r'\bWHEN\b', sql, re.I))
+    k = _RE_TRIGGER_KHOA_DM.match(ten)
+    if k is not None:
+        return co_when and k.group('bang') == bang and bang in DANH_MUC and k.group('viec') == viec
+    n = _RE_TRIGGER_NHAT_KY.match(ten)
+    if n is not None:
+        return (not co_when) and n.group('bang') == bang and viec == ('UPDATE' if n.group('viec') == 'sua' else 'DELETE')
+    return False
+
+
+def trigger_la(con) -> list:
+    """Tên các trigger trong file KHÔNG phải do phần mềm tạo (chỉ đọc, không ghi gì)."""
+    return [r[0] for r in con.execute("SELECT name, sql FROM main.sqlite_master WHERE type = 'trigger'")
+            if not trigger_hop_le(r[0], r[1])]
+
+
+def go_trigger_la(con) -> list:
+    """1.0.58: phần mềm chỉ tạo các trigger bền trên; file nhận từ ngoài có trigger khác có thể âm thầm đổi tiền mỗi lần lưu: gỡ + ghi nhật ký.
+    Mở chỉ xem: không ghi được, bỏ qua (không có lần ghi nào để trigger chạy). Trả tên đã gỡ."""
+    # tên đúng chưa đủ: file ngoài có thể đặt tên giống trigger của phần mềm nhưng thân làm việc khác -> kiểm cả thân (1.0.91: nguyên văn)
+    la = trigger_la(con)
+    if la:
+        try:
+            with giao_dich(con):
+                for t in la:
+                    con.execute('DROP TRIGGER main."{}"'.format(t.replace('"', '""')))
+                ghi_nhat_ky(con, 'Gỡ trigger lạ trong file dự án', ', '.join(la))
+        except sqlite3.OperationalError:
+            return []
+    return la
+
+
+def _kiem_luoc_do(con) -> None:
+    """1.0.97 (thử file hỏng ngẫu nhiên): lược đồ có byte hỏng làm MỌI câu lệnh sau ném UnicodeDecodeError (Python không giải mã được
+    thông báo lỗi của SQLite) - không phải sqlite3.Error nên các hộp thoại không bắt, phần mềm văng. Đọc trọn lược đồ (vài KB) ngay khi
+    mở: hỏng -> sqlite3.DatabaseError có lời rõ ràng."""
+    try:
+        con.execute('SELECT type, name, tbl_name, sql FROM main.sqlite_master').fetchall()
+        try:                                            # câu chạm bảng: SQLite mới PHÂN TÍCH lược đồ (đọc sqlite_master thì chưa)
+            con.execute('SELECT 1 FROM main.ho LIMIT 0').fetchall()
+        except sqlite3.OperationalError as e:
+            if 'no such table' not in str(e):           # file chỉ danh mục / bộ đơn giá không có bảng ho: lược đồ vẫn đọc được
+                raise
+    except (UnicodeDecodeError, sqlite3.DatabaseError) as e:
+        raise sqlite3.DatabaseError('File dự án bị hỏng (không đọc được cấu trúc bảng). Mở bản sao lưu tự động hoặc Cỗ máy thời gian '
+                                    'để khôi phục.') from e
+
+
+def _go_trigger_la_som(con) -> list:
+    """1.0.91: gỡ trigger lạ NGAY khi mở (trước nâng cấp lược đồ / mở rộng / ghi tối thiểu - những lần ghi đầu tiên mà trigger lạ có thể
+    can thiệp; trước đây chỉ GUI quét, sau khi csdl.mo đã ghi: CLI nhập / đối chiếu, máy chủ LAN, chữa bệnh không quét). Không ghi nhật ký ở
+    đây (file cũ có thể chưa có bảng nhật ký): trả tên để nơi gọi ghi sau. Mở chỉ xem: không gỡ được, trả []."""
+    la = trigger_la(con)
+    if not la:
+        return []
+    try:
+        con.execute('BEGIN IMMEDIATE')
+        for t in la:
+            con.execute('DROP TRIGGER main."{}"'.format(t.replace('"', '""')))
+        con.execute('COMMIT')
+    except sqlite3.OperationalError:
+        try:
+            con.execute('ROLLBACK')
+        except sqlite3.OperationalError:
+            pass
+        return []
+    return la
+
+
+def chep_danh_muc(con, file_nguon, don_vi: bool = True, bang=DANH_MUC, trong_gd=None) -> None:
     """Chép các bảng danh mục (và thông tin đơn vị lập, người ký nếu don_vi) từ một file .pabt / bộ đơn giá khác.
     File nguồn chỉ được ĐỌC (trước 0.9.16 được mở ghi để nâng cấp lược đồ: bộ đơn giá đóng gói / trong gói cập nhật bị sửa ->
     sai mã SHA-256, gói cập nhật tự tắt; file dự án khác bị nâng cấp ngầm). Chép theo các cột có ở cả hai bên - cột nguồn cũ
@@ -685,6 +932,8 @@ def chep_danh_muc(con, file_nguon, don_vi: bool = True, bang=DANH_MUC) -> None:
                 cot = ', '.join(c for c in TRUONG_DON_VI if c in nguon)
                 if cot:
                     con.execute(f'UPDATE du_an SET ({cot}) = (SELECT {cot} FROM nguon.du_an WHERE id = 1) WHERE id = 1')
+            if trong_gd is not None:                    # 1.0.58: việc phải cùng giao dịch với chép (ATTACH thì phải ngoài giao dịch)
+                trong_gd()
     finally:
         con.execute('DETACH DATABASE nguon')
 
@@ -705,6 +954,84 @@ def dam_bao_cot_du_an(con) -> None:
             con.execute(f'ALTER TABLE du_an ADD COLUMN {k} {kieu}')
 
 
+# P2 (03/11/2026): sổ mở rộng lược đồ KHÔNG đổi PHIEN_BAN_CSDL (file mới có sẵn từ schema.sql; file cũ có hộ thêm ở csdl.mo). Thêm phần mở
+# rộng mới: viết hàm kiểm (con) -> True khi ĐÃ CÓ và hàm làm (con) chạy trong giao dịch của nơi gọi, rồi thêm một dòng vào đây (thứ tự =
+# thứ tự chạy: chỉ mục cuối vì cần cột). Bản cũ mở file có phần mở rộng vẫn được (bảng / cột thừa vô hại); phần nào làm bản cũ GHI SAI
+# dữ liệu thì tăng GHI_TOI_THIEU.
+def co_cot_ap_gia(con) -> bool:
+    return 'ap_gia' in {r[1] for r in con.execute('PRAGMA table_info(ct_dat)')}
+
+
+MO_RONG = (
+    ('cot_ghi_chu_ten', lambda con: co_cot_ghi_chu_ten(con), lambda con: dam_bao_cot_ghi_chu_ten(con)),      # 1.0.78
+    ('cot_ap_gia', lambda con: co_cot_ap_gia(con), lambda con: con.execute("ALTER TABLE ct_dat ADD COLUMN ap_gia TEXT NOT NULL DEFAULT ''")),   # 1.0.69: giá gốc, K1, K2, K3 của dòng đất
+    ('bang_phu', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anh_hien_trang'").fetchone()),
+     lambda con: _tao_bang_phu(con)),
+    ('bang_bam', lambda con: _co_bang_bam_kt(con), lambda con: _tao_bang_bam_kt(con)),        # 1.0.55: chuỗi băm kiểm toán
+    ('cot_pa_lan', lambda con: co_cot_pa_lan(con), lambda con: dam_bao_cot_pa_lan(con)),
+    ('cot_y_kien', lambda con: co_cot_y_kien(con), lambda con: dam_bao_cot_y_kien(con)),
+    ('cot_thua', lambda con: co_cot_thua(con), lambda con: dam_bao_cot_thua(con)),
+    ('cot_du_an', lambda con: all(k in {r[1] for r in con.execute('PRAGMA table_info(du_an)')} for k, _ in COT_DU_AN_THEM),
+     lambda con: dam_bao_cot_du_an(con)),
+    ('phien_ban_pa', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'pa_phien_ban'").fetchone()),
+     lambda con: _tao_bang_phien_ban(con)),                                                    # 1.0.63: V1, V2.n, V3
+    ('cot_ban_do', lambda con: _co_cot_ban_do(con), lambda con: con.execute("ALTER TABLE thua_ban_do ADD COLUMN chi_tiet TEXT NOT NULL DEFAULT ''")),
+    ('chi_muc', lambda con: bool(con.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?",
+                                             (CHI_MUC_THEM[-1][0],)).fetchone()), lambda con: dam_bao_chi_muc(con)),
+)
+
+
+def _co_cot_ban_do(con) -> bool:
+    """Bảng thua_ban_do chưa có (file chưa có hộ / bảng phụ chưa tạo - tạo sẽ đủ cột) hoặc đã có cột chi_tiet (ban_do_ghep)."""
+    cot = {r[1] for r in con.execute('PRAGMA table_info(thua_ban_do)')}
+    return not cot or 'chi_tiet' in cot
+
+
+def _tao_bang_phien_ban(con) -> None:
+    """Ảnh chụp phiên bản phương án (phien_ban_pa.py) + mã định danh hộ nhúng vào file xuất."""
+    con.execute('''CREATE TABLE IF NOT EXISTS pa_phien_ban (
+        id INTEGER PRIMARY KEY, ma_ho INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE, ma TEXT NOT NULL, lan INTEGER NOT NULL DEFAULT 1,
+        loai TEXT NOT NULL DEFAULT '', nhan TEXT NOT NULL DEFAULT '', tao_luc TEXT NOT NULL DEFAULT '', nguoi_tao TEXT NOT NULL DEFAULT '', khoa INTEGER NOT NULL DEFAULT 0,
+        cha TEXT NOT NULL DEFAULT '', ghi_chu TEXT NOT NULL DEFAULT '', nguon_nhom TEXT NOT NULL DEFAULT '{}', du_lieu TEXT NOT NULL, UNIQUE (ma_ho, ma))''')
+    con.execute('''CREATE TABLE IF NOT EXISTS ho_uuid (
+        ma_ho INTEGER PRIMARY KEY REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE, uuid TEXT NOT NULL UNIQUE)''')
+
+
+def _co_bang_bam_kt(con) -> bool:
+    """Đủ khi đã có audit_bam, hoặc file chưa có audit_logs (bảng phụ chưa tạo - bang_phu tạo cả hai)."""
+    ten = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('audit_logs', 'audit_bam')")}
+    return 'audit_bam' in ten or 'audit_logs' not in ten
+
+
+def _tao_bang_bam_kt(con) -> None:
+    from . import kiem_toan
+    for cau in kiem_toan._cau(kiem_toan.SQL_BAM):
+        con.execute(cau)
+
+
+def thieu_mo_rong(con) -> list:
+    """Tên các phần mở rộng lược đồ (MO_RONG) file còn thiếu - chỉ đọc (Bác sĩ CSDL, kiểm thử)."""
+    return [ten for ten, kiem, _lam in MO_RONG if not kiem(con)]
+
+
+def dam_bao_mo_rong(con) -> list:
+    """Thêm các phần mở rộng còn thiếu của file có hộ, MỘT giao dịch. Trả tên phần đã thêm ([] khi đủ / không có hộ / chỉ xem, file
+    khóa - các hàm ghi tự thêm phần của mình khi cần)."""
+    thieu = thieu_mo_rong(con)
+    if not thieu or not con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
+        return []
+    lam = {ten: f for ten, _k, f in MO_RONG}
+    try:
+        with con:
+            if not con.in_transaction:                  # sqlite3 không tự mở giao dịch trước ALTER / CREATE: mở tay cho cả lô
+                con.execute('BEGIN')                    # (một lần ghi đĩa; lỗi giữa chừng không để file nửa cũ nửa mới)
+            for ten in thieu:
+                lam[ten](con)
+    except sqlite3.OperationalError:                    # chỉ xem / file khóa: lần mở sau
+        return []
+    return thieu
+
+
 class DauVetHo:
     """Ghi lại các hộ có dữ liệu bị thêm / sửa / xóa trên một kết nối (trigger TẠM - chỉ sống trong phiên, không ghi vào file
     .pabt), để màn hình chỉ tính và vẽ lại các hộ đó thay vì cả dự án (3.000 hộ: ~0,6 giây mỗi lần lưu một hộ).
@@ -712,7 +1039,7 @@ class DauVetHo:
     lay(): tập mã hộ đã đổi kể từ lần lấy trước; None = phải nạp lại toàn bộ: thêm / xóa hộ, đổi thứ tự / mã hộ, ghi bảng không
     theo hộ (danh mục, dự án, quyết định, đợt trình, cài đặt...), hoặc kết nối / máy khác đã ghi vào file (PRAGMA data_version).
     Sổ ghi chỉ thêm dòng (không xóa sau mỗi lần lấy) để việc lấy không mở giao dịch, không làm đổi total_changes (csdl.nho)."""
-    BO_QUA = ('nhat_ky', 'khoa_dm', 'sqlite_sequence', 'tho_nhap')   # không ảnh hưởng số liệu hiển thị của hộ
+    BO_QUA = ('nhat_ky', 'khoa_dm', 'sqlite_sequence', 'tho_nhap', 'audit_bam')   # không ảnh hưởng số liệu hiển thị của hộ
     TOI_DA = 200000                                                  # sổ dài quá thì dọn (một lần, khi lấy)
 
     def __init__(self, con):
@@ -789,14 +1116,20 @@ def ghi_nhat_ky(con: sqlite3.Connection, viec: str, chi_tiet: str = '') -> None:
                 (datetime.now().isoformat(timespec='seconds'), ten_may(), nguoi_dung(), viec, chi_tiet))
 
 
+_TEN_MAY: list = []
+
+
 def ten_may() -> str:
     """Tên máy tính (ghi nhật ký, khóa file, máy chủ LAN). Bằng đúng platform.node() - hàm đó cũng gọi socket.gethostname() - nhưng
     không qua platform.uname(): từ Python 3.12 uname() đọc thông tin Windows qua WMI, lần gọi đầu mất ~50 ms."""
+    if _TEN_MAY:
+        return _TEN_MAY[0]
     import socket
     try:
-        return socket.gethostname()
+        _TEN_MAY.append(socket.gethostname())
     except OSError:
         return ''
+    return _TEN_MAY[0]
 
 
 def tham_so(con: sqlite3.Connection) -> dict:
@@ -837,6 +1170,19 @@ def qua_cu_de_ghi(con, phien_ban: str) -> str:
     """Phiên bản tối thiểu file yêu cầu nếu phien_ban THẤP hơn (phải mở chỉ xem); '' nếu được ghi."""
     yc = phan_mem_ghi_toi_thieu(con)
     return yc if yc and so_phien_ban(yc) > so_phien_ban(phien_ban) else ''
+
+
+def duong_goi_y(con, ten_file: str = '') -> str:
+    """Nơi lưu gợi ý cho hộp "Lưu thành": thư mục chứa file dự án + ten_file (người dùng 05/11/2026). Dự án trong bộ nhớ,
+    bản sao lưu đang mở (file giải nén tạm): chỉ trả ten_file, để Windows tự chọn thư mục."""
+    try:
+        dd = con.execute('PRAGMA database_list').fetchone()
+    except sqlite3.Error:
+        dd = None
+    if not dd or not dd[2] or getattr(con, '_file_tam', None):
+        return ten_file
+    goc = Path(dd[2]).parent
+    return str(goc / ten_file) if ten_file else str(goc)
 
 
 def dat_ghi_toi_thieu(con) -> bool:

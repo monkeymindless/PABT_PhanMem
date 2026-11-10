@@ -80,7 +80,8 @@ class TestToanCuc(Co0995):
         ud, w = self._cua_so()
         the = w.the_so['so_ho'].parentWidget()
         # 17/10/2026 (Hybrid Enterprise Navy - thay mức 0.9.95): thẻ 56 px (tên trên, số + chữ phụ dưới), cách 8 px; nút menu 32 px
-        self.assertEqual(the.maximumHeight(), ud.CuaSoChinh.CAO_THE_SO)
+        # mốc thiết kế, không đo chiều cao thật: chưa áp bảng kiểu (chạy riêng bài này) nội dung cao hơn, thẻ tự giãn 66 px; có bảng kiểu 62 px
+        self.assertEqual(the.cao_toi_thieu, ud.CuaSoChinh.CAO_THE_SO)
         self.assertEqual(w.hang_the.layout().spacing(), 8)
         self.assertEqual(giao_dien.CAO_NUT_MENU, 32)
         km = w.khung_menu
@@ -112,7 +113,7 @@ class TestToanCuc(Co0995):
 class TestLapPhuongAn(Co0995):
     def test_hang_tren_mot_hang_va_dieu_huong_chung_tong(self):
         from PySide6.QtWidgets import QPushButton
-        from pabt import man_hinh
+        from pabt import hang_nhap_nhanh, man_hinh
         ud, w = self._cua_so()
         ma = w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu LIMIT 1').fetchone()[0]
         c = w.mo_lap_pa(ma, cho=True)
@@ -121,7 +122,7 @@ class TestLapPhuongAn(Co0995):
         self.assertIn('Ctrl+Left', c.b_truoc.toolTip())
         self.assertIn('Ctrl+Right', c.b_sau.toolTip())
         from pabt.man_hinh import RONG_O_HO                                  # 16/10/2026: ô rộng hơn, đủ tên hộ
-        self.assertEqual((c.cb_ho.minimumWidth(), c.cb_ho.maximumWidth()), RONG_O_HO)
+        self.assertEqual((c.cb_ho.minimumWidth(), c.cb_ho.maximumWidth()), (150 if c.width() < c.RONG_THANH_TREN_GON else RONG_O_HO[0], RONG_O_HO[1]))
         for b in (c.b_dan, c.b_luu, c.btn_toggle_preview, c.b_dong):
             self.assertEqual(b.height() or b.minimumHeight(), man_hinh.CAO_NUT_TREN)
         # một hàng điều hướng chung với dải tổng cộng, thẻ mục không còn hàng nút riêng
@@ -132,7 +133,8 @@ class TestLapPhuongAn(Co0995):
         self.assertIsNotNone(lo)
         c.tab.setCurrentIndex(0)
         self.assertFalse(c.b_tro_lai.isVisibleTo(c))
-        self.assertTrue(c.b_tiep_theo.text().startswith('Tiếp theo: 1. Đất'))
+        self.assertEqual(c.b_tiep_theo.text(), 'Mục tiếp theo ▶')
+        self.assertIn('1. Đất', c.b_tiep_theo.toolTip())
         c.b_tiep_theo.click()
         self.assertEqual(c.tab.currentIndex(), 1)
         self.assertTrue(c.b_tro_lai.isVisibleTo(c))
@@ -142,7 +144,9 @@ class TestLapPhuongAn(Co0995):
         # 20/10/2026 (ảnh mẫu): "CỘNG MỤC k" ở dải chân bảng (mọi mục), không còn trên hàng chọn thửa
         self.assertIs(b1.lb_tong.parentWidget(), b1.dai_cong)
         for ten in ('▲ Lên', '▼ Xuống'):                                 # Xóa dòng: thùng rác cột cuối (18/10/2026)
-            self.assertEqual(c.bang[2].nut[ten].height() or c.bang[2].nut[ten].minimumHeight(), man_hinh.CAO_NUT_DONG)
+            self.assertEqual(c.bang[1].nut[ten].height() or c.bang[1].nut[ten].minimumHeight(), man_hinh.CAO_NUT_DONG)
+            # 1.0.75: mục 2 trở đi nút lên cùng hàng nhập nhanh, cao bằng hàng
+            self.assertEqual(c.bang[2].nut[ten].height() or c.bang[2].nut[ten].minimumHeight(), hang_nhap_nhanh.CAO_HANG)
 
     def test_cot_bang_muc_gon_va_gian(self):
         from PySide6.QtWidgets import QHeaderView
@@ -192,7 +196,8 @@ class TestKhaiToanNiemYet(Co0995):
         k.tabs.setCurrentIndex(3)
         self.assertTrue(k._nut['Xuất báo cáo tổng hợp ý kiến'].isVisibleTo(k))
         self.assertFalse(k._nut['Xuất biên bản đối thoại'].isVisibleTo(k))
-        self.assertIs(k.tabs.cornerWidget(), k._nut['Xuất báo cáo tổng hợp ý kiến'].parentWidget())
+        self.assertIsNone(k.tabs.cornerWidget())             # 06/11/2026: hàng nút riêng, không chiếm chỗ thanh thẻ
+        self.assertIs(k._goc_nut, k._nut['Xuất báo cáo tổng hợp ý kiến'].parentWidget())
         k.tabs.setCurrentIndex(2)
         self.assertTrue(k._nut['Xuất biên bản đối thoại'].isVisibleTo(k))
         self.assertGreaterEqual(k.bang_th.columnWidth(0), 185)

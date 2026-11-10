@@ -164,8 +164,8 @@ def _tu_xlsx(p: Path, thu_lai: bool = True) -> list:
         try:
             tam = Path(tempfile.mkdtemp(prefix='PABT_xl_'))
             try:
-                from . import nhap_don_gia
-                moi = nhap_don_gia.chuyen_office(p, '.xls', thu_muc=tam)
+                from . import nhap_don_gia_doc
+                moi = nhap_don_gia_doc.chuyen_office(p, '.xls', thu_muc=tam)
                 return _tu_xlsx(moi, thu_lai=False)
             finally:
                 shutil.rmtree(tam, ignore_errors=True)
@@ -191,9 +191,9 @@ def _tu_xls(p: Path) -> list:
     except doc_xls.LoiXls as e:
         tam = Path(tempfile.mkdtemp(prefix='PABT_xl_'))
         try:
-            from . import nhap_don_gia
+            from . import nhap_don_gia_doc
             try:
-                moi = nhap_don_gia.chuyen_office(p, '.xls', thu_muc=tam)
+                moi = nhap_don_gia_doc.chuyen_office(p, '.xls', thu_muc=tam)
             except LoiNhap as l:
                 raise LoiNhap(f'Không đọc được file Excel cũ "{p.name}" ({e}). {l}') from None
             return _tu_xlsx(moi, thu_lai=False)

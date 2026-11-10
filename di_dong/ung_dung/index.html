@@ -32,7 +32,7 @@ header .ten,header .huy{white-space:nowrap}
 .ho_bar select{flex:1 1 auto;min-width:0;padding:8px 6px;font-weight:600}
 .ho_bar button{flex:0 0 auto;min-height:40px;min-width:40px;padding:6px 9px}#b_gps_nhanh.co{color:#166534;border-color:#86EFAC;background:#F0FDF4}
 #b_tim_mo.co_loc{box-shadow:inset 0 0 0 2px var(--nhan)}
-@media (max-width:420px){.ho_bar{gap:3px;padding:5px}.ho_bar button{min-width:36px;padding:4px}.ho_bar .chu_nut{display:none}.ho_bar select{font-size:14px;padding:8px 4px}}
+@media (max-width:420px){#da_luu{display:none}.ho_bar{gap:3px;padding:5px}.ho_bar button{min-width:36px;padding:4px}.ho_bar .chu_nut{display:none}.ho_bar select{font-size:14px;padding:8px 4px}}
 [hidden]{display:none!important}.ngan_tim{display:flex;gap:6px;padding:6px 8px;background:#fff;border-bottom:1px solid var(--vach)}.ngan_tim[hidden]{display:none}
 .ngan_tim input{flex:1}.ngan_tim select{width:auto;flex:0 0 auto}
 .tam_tinh_ho{margin-left:auto;font-size:12px;font-weight:600;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:999px;padding:2px 9px;white-space:nowrap}
@@ -292,7 +292,7 @@ body.che_do_toi .hop_thu_am::before{background:#475569}
 <div id="app">
 <header><img alt="LARC" src="icon-180.png"/><div class="chu"><div class="ten">LARC Mobile</div>
 <div class="phu" title="Phương án bồi thường, hỗ trợ, tái định cư · kiểm đếm thực địa, không cần mạng">Kiểm đếm thực địa</div></div>
-<span class="huy">v@@PHIEN_BAN@@</span><button class="doi" id="b_xoay" type="button">🔄 Xoay ngang</button><button class="doi" id="b_tuong_phan" type="button"
+<span class="huy">v@@PHIEN_BAN@@</span><span class="huy" id="da_luu" title="Dữ liệu tự lưu trên điện thoại ngay sau mỗi lần ghi (không cần bấm Lưu)"></span><button class="doi" id="b_xoay" type="button">🔄 Xoay ngang</button><button class="doi" id="b_tuong_phan" type="button"
  title="Chế độ ngoài trời nắng: chữ đen, viền đậm (tương phản cao)">☀️<span class="chu_nut"> Nắng</span></button><button class="doi" id="b_ban_dem" type="button"
  title="Chế độ ban đêm chuyên gia: nền tối, đỡ chói mắt">🌙<span class="chu_nut"> Đêm</span></button>
 <button class="doi" id="b_doi_du_an" type="button" style="display:none">Dự án</button></header>
@@ -346,7 +346,8 @@ body.che_do_toi .hop_thu_am::before{background:#475569}
 <div class="luoi" id="o_dc"><div><label for="d_to">Tờ bản đồ</label><input id="d_to" inputmode="numeric"/></div>
 <div><label for="d_thua">Thửa</label><input id="d_thua" inputmode="numeric"/></div>
 <div><label for="d_loai">Loại đất</label><input id="d_loai" placeholder="ONT, CLN, RSX…"/></div>
-<div><label for="d_dt">Diện tích (m²)</label><input id="d_dt" inputmode="decimal"/></div></div>
+<div><label for="d_dt">Diện tích (m²)</label><input id="d_dt" inputmode="decimal"/></div>
+<div class="ghi canh_bao" id="d_dt_goi_y" style="grid-column:1/-1" hidden></div></div>
 <div class="luoi" id="o_ln" style="display:none"><div><label for="d_tk">Tiểu khu</label><input id="d_tk" inputmode="numeric"/></div>
 <div><label for="d_khoanh">Khoảnh</label><input id="d_khoanh" inputmode="numeric"/></div>
 <div><label for="d_lo">Lô</label><input id="d_lo"/></div><div><label for="d_ha">Diện tích (ha)</label><input id="d_ha" inputmode="decimal"/></div>
@@ -563,7 +564,7 @@ const TRANG_AI = 7;
 const $ = id => document.getElementById(id);
 let ST = {ho: {}, moi: 0, chon: "", the: TRANG_AI, the_ho: 0};
 try { ST = Object.assign(ST, JSON.parse(localStorage.getItem(KHOA_LUU) || "{}") || {}); } catch (e) { /* lưu hỏng: bắt đầu lại */ }
-function luu() { try { localStorage.setItem(KHOA_LUU, JSON.stringify(ST)); } catch (e) { bao("Bộ nhớ trình duyệt đầy: xuất .json rồi xóa bớt.", 1); } }
+function luu() { try { localStorage.setItem(KHOA_LUU, JSON.stringify(ST)); const t = document.getElementById("da_luu"); if (t) t.textContent = "✓ Đã tự lưu " + new Date().toTimeString().slice(0, 8); } catch (e) { bao("Bộ nhớ trình duyệt đầy: xuất .json rồi xóa bớt.", 1); } }
 function boDau(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase(); }
 function bao(chu, loi) { const t = $("thong_bao"); t.textContent = chu; t.style.background = loi ? "#B83A3A" : "#0F172A"; t.style.display = "block";
   clearTimeout(bao._h); bao._h = setTimeout(() => { t.style.display = "none"; }, 3200); }
@@ -719,7 +720,7 @@ function veHoSo() {
         el("button", {cls: "xoa nho", type: "button", text: "Xóa", onclick: () => { if (!confirm("Xóa dòng đất này?")) return; huySua(); h.dat.splice(i, 1); luu(); veTatCa(); }})])])));
     hop.appendChild(tb); }
 }
-function suaDat(d, i) { const ln = !!d.lo; doiDat(ln ? "ln" : "dc");
+function suaDat(d, i) { const ln = !!d.lo; doiDat(ln ? "ln" : "dc"); goiYDtDat(null);
   if (ln) { $("d_tk").value = d.tieu_khu || ""; $("d_khoanh").value = d.khoanh || ""; $("d_lo").value = d.lo || ""; $("d_ha").value = d.dt_ha || ""; $("d_loai2").value = d.loai_dat || ""; }
   else { $("d_to").value = d.so_to || ""; $("d_thua").value = d.so_thua || ""; $("d_loai").value = d.loai_dat || ""; $("d_dt").value = d.dt_thu_hoi || ""; }
   batSua("dat", i, ln ? "lô " + d.lo : "tờ " + d.so_to + " thửa " + d.so_thua, "b_them_dat", "Lưu sửa đất", ln ? "d_ha" : "d_dt"); }
@@ -740,7 +741,7 @@ function themDat() {
   else { d = {tieu_khu: $("d_tk").value.trim(), khoanh: $("d_khoanh").value.trim(), lo: $("d_lo").value.trim(), dt_ha: $("d_ha").value.trim(), loai_dat: $("d_loai2").value.trim().toUpperCase()};
     if (!d.lo || !(d.tieu_khu || d.khoanh)) { bao("Ghi tiểu khu, khoảnh, lô.", 1); return; } }
   const s = dangSua("dat"); if (s && h.dat[s.i]) { h.dat[s.i] = d; huySua(); } else h.dat.push(d);
-  luu(); for (const o of ["d_to", "d_thua", "d_dt", "d_lo", "d_ha"]) $(o).value = ""; veTatCa();
+  luu(); for (const o of ["d_to", "d_thua", "d_dt", "d_lo", "d_ha"]) $(o).value = ""; goiYDtDat(null); veTatCa();
 }
 function doiDat(k) { KIEU_DAT = k; $("o_dc").style.display = k === "dc" ? "" : "none"; $("o_ln").style.display = k === "ln" ? "" : "none";
   veKieu("kieu_dat", [["dc", "Địa chính (tờ / thửa)"], ["ln", "Lâm nghiệp (TK / khoảnh / lô)"]], k, doiDat); }
@@ -1633,9 +1634,12 @@ function loaiNhan(c, lop_cad) { c = String(c || "").trim();
   if (/^tờ\s*(?:bản\s*đồ\s*)?(?:số)?\s*\d+/i.test(c)) return "to";
   if (c.length <= 1) return "ky_hieu";
   return "ghi_chu"; }
-// ghép nhãn thửa: mỗi loại đất / DT / DT thu hồi về SỐ THỬA gần nhất trong ngưỡng (m, đo trên file thật: loại đất 90% < 10 m, DT < 4,5 m,
-// DT thu hồi trong ngoặc 75% < 30 m); một số thửa nhận nhãn gần nhất của mỗi loại
-const NGUONG_NHAN = {ld: 12, dt: 10, dt_th: 30};
+// ghép nhãn thửa: mỗi loại đất / DT / DT một phần về SỐ THỬA gần nhất trong ngưỡng (m, đo trên file thật: loại đất 90% < 10 m, DT < 4,5 m,
+// nhãn trong ngoặc 75% < 30 m); một số thửa nhận nhãn gần nhất của mỗi loại.
+// Nhãn "(xxx)" là DT MỘT PHẦN của thửa, có phần trong ranh, có phần ngoài ranh: KHÔNG phải DT thu hồi (đã gặp trên file thật: nhãn gần nhất là phần ngoài ranh,
+// lớn gấp nhiều lần phần trong ranh). Bản máy tính tính giao hình học với ranh rồi đối chiếu nhãn; Mobile không ghép thửa nên chỉ hiện nhãn, không điền vào phiếu.
+// Tên khóa dt_th / chu_dt_th giữ nguyên: cùng tên loại nhãn với máy tính, lớp KML đã lưu trong IndexedDB trên điện thoại dùng khóa này.
+const NGUONG_NHAN = {ld: 12, dt: 10, dt_th: 30}, CHUA_DOI_CHIEU_RANH = "chưa đối chiếu ranh thu hồi";
 function gomCumNhanThua(diem) { const neo = diem.filter(d => d.loai === "thua"), O = 40, luoi = new Map(), kx = d => Math.floor(d.x / O) + "," + Math.floor(d.y / O);
   for (const a of neo) { const k = kx(a); (luoi.get(k) || luoi.set(k, []).get(k)).push(a); }
   const ra = neo.map(a => ({kieu: "nhan_thua", neo: a, so_thua: a.chu.replace(/\s*\/\s*$/, ""), x: a.x, y: a.y, lat: a.lat, lon: a.lon, ld: null, dt: null, dt_th: null, to: null}));
@@ -1797,21 +1801,24 @@ function hienDoiTuong(o) { BD.chon = o; const hop = $("tt_thua"); hop.textConten
   const lopCad = x => [x.lop_cad, x.ban_ve ? "bản vẽ " + x.ban_ve : ""].filter(Boolean).join(" · ");
   if (o.kieu === "nhan_thua") { hop.appendChild(el("b", {text: "Thửa " + o.so_thua + (o.so_to ? " - tờ " + o.so_to : "")}));
     dongTT(hop, [["Số thửa", o.so_thua], ["Số tờ", o.so_to ? o.so_to + " (nhãn \"Tờ số\" cách " + soVN(o.cach_to, 0) + " m - kiểm tra lại)" : "chưa có nhãn tờ gần - ghi theo hồ sơ"],
-      ["Loại đất", o.chu_ld], ["DT nguyên thửa", o.chu_dt ? o.chu_dt + " m²" : ""], ["DT thu hồi", o.chu_dt_th ? o.chu_dt_th + " m²" : ""], ["Lớp CAD", lopCad(o.neo)],
+      ["Loại đất", o.chu_ld], ["DT nguyên thửa", o.chu_dt ? o.chu_dt + " m²" : ""], ["DT một phần", o.chu_dt_th ? o.chu_dt_th + " m² (nhãn gần số thửa nhất, " + CHUA_DOI_CHIEU_RANH + ")" : ""], ["Lớp CAD", lopCad(o.neo)],
       ...toaDoTT(o.lat, o.lon)]);
     hop.appendChild(el("button", {type: "button", text: "➕ Đưa thửa đất này vào hồ sơ hộ đang chọn", onclick: () => duaThuaVaoHo(o)})); return; }
-  if (o.kieu === "diem") { const ten = {moc: "Mốc ranh", ghi_chu: "Ghi chú", ld: "Loại đất", dt: "Diện tích", dt_th: "Diện tích thu hồi", to: "Số tờ", thua: "Số thửa"}[o.loai] || "Nhãn";
-    hop.appendChild(el("b", {text: ten + ": " + o.chu})); dongTT(hop, [["Lớp CAD", lopCad(o)], ...toaDoTT(o.lat, o.lon), ...Object.entries(o.du_lieu || {})]);
+  if (o.kieu === "diem") { const ten = {moc: "Mốc ranh", ghi_chu: "Ghi chú", ld: "Loại đất", dt: "Diện tích", dt_th: "Diện tích một phần", to: "Số tờ", thua: "Số thửa"}[o.loai] || "Nhãn";
+    hop.appendChild(el("b", {text: ten + ": " + o.chu})); dongTT(hop, [["Lưu ý", o.loai === "dt_th" ? "Một phần của thửa, " + CHUA_DOI_CHIEU_RANH : ""], ["Lớp CAD", lopCad(o)], ...toaDoTT(o.lat, o.lon), ...Object.entries(o.du_lieu || {})]);
     if (o.loai === "moc") hop.appendChild(el("button", {type: "button", text: "➕ Đưa mốc ranh này vào ghi chú hộ đang chọn", onclick: () => duaMocVaoHo(o)})); return; }
   if (o.kieu === "duong") { const p = o.p; let dai = 0; for (let i = 0; i + 3 < p.length; i += 2) dai += Math.hypot(p[i + 2] - p[i], p[i + 3] - p[i + 1]);
     hop.appendChild(el("b", {text: "Đường " + (o.ranh ? "ranh" : "ranh giới / lưới thửa")}));
     dongTT(hop, [["Lớp CAD", lopCad(o)], ["Màu", o.mau], ["Số đỉnh", p.length / 2], ["Chiều dài", soVN(dai * Math.cos(o.lat * Math.PI / 180), 1) + " m"], ["Tên", o.ten],
       ...toaDoTT(o.lat, o.lon), ...Object.entries(o.du_lieu || {})]); return; }
   hienThua(o); }
+// ô Diện tích của phiếu là DT thu hồi: để người đo nhập, chỉ nêu nhãn trên bản vẽ làm gợi ý (kể cả DT nguyên thửa: thửa có thể chỉ thu hồi một phần)
+function goiYDtDat(o) { const b = $("d_dt_goi_y"), ds = o ? [o.chu_dt && "DT nguyên thửa " + o.chu_dt + " m²", o.chu_dt_th && "DT một phần " + o.chu_dt_th + " m²"].filter(Boolean) : [];
+  b.hidden = !ds.length; b.textContent = ds.length ? "Nhãn trên bản vẽ: " + ds.join(", ") + " - " + CHUA_DOI_CHIEU_RANH + ". Nhập DT thu hồi theo đo đạc." : ""; }
 function duaThuaVaoHo(o) { if (!coHo()) return; doiDat("dc"); $("d_to").value = o.so_to || ""; $("d_thua").value = o.so_thua; $("d_loai").value = o.chu_ld;
-  $("d_dt").value = (o.chu_dt_th || o.chu_dt || "").replace(".", ","); moThe(0);
-  bao("Đã điền thửa " + o.so_thua + " vào ô Đất: kiểm tra số tờ, diện tích thu hồi rồi bấm Thêm.");
-  setTimeout(() => { const t = $("d_to"); if (t) { t.scrollIntoView({block: "center"}); if (!o.so_to) t.focus(); } }, 60); }
+  $("d_dt").value = ""; goiYDtDat(o); moThe(0);
+  bao("Đã điền thửa " + o.so_thua + " vào ô Đất: kiểm tra số tờ, nhập diện tích thu hồi rồi bấm Thêm.");
+  setTimeout(() => { const t = $("d_to"), d = $("d_dt"); if (t) { t.scrollIntoView({block: "center"}); (o.so_to ? d : t).focus(); } }, 60); }
 function duaMocVaoHo(o) { if (!coHo()) return; const h = hoST(ST.chon), cu = h.tt.ghi_chu || "", chu = "Mốc " + o.chu + " (VN-2000 " + chuVN2000(o.lat, o.lon) + ")";
   if (cu.includes("Mốc " + o.chu + " ")) { bao("Mốc " + o.chu + " đã có trong ghi chú hộ."); return; }
   h.tt.ghi_chu = (cu ? cu + "; " : "") + chu; luu(); veTatCa(); bao("Đã ghi " + chu + " vào ghi chú hộ."); }
@@ -1822,7 +1829,7 @@ function veBangKml() { const khung = $("khung_ds_kml"); khung.hidden = !LOP.some
   for (const [k, t] of THE_KML) hop.appendChild(el("button", {type: "button", cls: k === the ? "chon" : "", text: t, onclick: () => { ST.the_kml = k; veBangKml(); }}));
   const q = boDau($("o_tim_kml").value.trim()), ds = [];
   for (const l of LOP) {
-    if (the === "tat_ca" || the === "thua") for (const c of l.nhan_thua || []) ds.push([c, "Thửa " + c.so_thua + (c.so_to ? " · tờ " + c.so_to : ""), [c.chu_ld, c.chu_dt && c.chu_dt + " m²", c.chu_dt_th && "thu hồi " + c.chu_dt_th + " m²"].filter(Boolean).join(" · ")]);
+    if (the === "tat_ca" || the === "thua") for (const c of l.nhan_thua || []) ds.push([c, "Thửa " + c.so_thua + (c.so_to ? " · tờ " + c.so_to : ""), [c.chu_ld, c.chu_dt && c.chu_dt + " m²", c.chu_dt_th && "một phần " + c.chu_dt_th + " m²"].filter(Boolean).join(" · ")]);
     if (the === "tat_ca" || the === "moc") for (const d of l.diem || []) if (d.loai === "moc") ds.push([d, "Mốc " + d.chu, chuVN2000(d.lat, d.lon)]);
     if (the === "tat_ca" || the === "ghi_chu") for (const d of l.diem || []) if (d.loai === "ghi_chu") ds.push([d, d.chu, d.lop_cad]);
     if (the === "duong") for (const d of l.duong || []) ds.push([d, "Đường " + (d.lop_cad || "") , d.mau + " · " + d.p.length / 2 + " đỉnh"]); }
@@ -2179,6 +2186,7 @@ function khoiDong() {
     navigator.geolocation.getCurrentPosition(p => { hoST(ST.chon).gps = {lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy || 0, luc: new Date().toISOString()};
       luu(); veTatCa(); bao("Đã ghi tọa độ."); }, e => bao("Không lấy được vị trí: " + (e.message || ""), 1), {enableHighAccuracy: true, timeout: 20000}); });
   $("b_them_dat").addEventListener("click", themDat); $("b_them_nha").addEventListener("click", themNha);
+  $("d_thua").addEventListener("input", () => goiYDtDat(null));   // đổi số thửa: gợi ý nhãn của thửa cũ không còn đúng
   $("n_dt").addEventListener("input", () => { hienBieuThuc("n_dt", "n_dt_kq"); capNhatNha(); }); $("n_tl").addEventListener("input", capNhatNha);
   $("n_loai").addEventListener("change", () => { NHA_TAY = true;
     $("n_goi_y_kc").textContent = ""; capNhatNha(); });

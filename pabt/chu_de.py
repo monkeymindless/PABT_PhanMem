@@ -55,9 +55,61 @@ MAU_TONG = {
 }
 
 
+# 1.0.79 (người dùng 07/11/2026): 6 phương án Navy dịu mắt, chỉ áp cho các tông nền sáng trung tính + Ấm; Tối, Titan, Ngọc giữ màu riêng.
+# chinh, chinh_re: màu chính, rê chuột; chinh_am: màu chính ở tông Ấm; td_*: tiêu đề bảng ngang (nền, chữ, vạch cột, viền đáy, rê chuột);
+# dau_*: đầu khung phụ Sổ nhật ký vận động (nền, chữ, viền). Tương phản chữ / nền đã tính theo WCAG: tests/test_phuong_an_navy.py.
+PHUONG_AN_NAVY = {
+    'pa1_nordic': dict(ten='PA1: Xanh Đá Bắc Âu dịu mắt (Nordic Slate)', chinh='#345678', chinh_re='#284460', chinh_am='#3A5A78',
+                       td_nen='#345678', td_chu='#FFFFFF', td_vach='#43688E', td_day='#608AB5', td_re='#284460',
+                       dau_nen='#EAF1F8', dau_chu='#284460', dau_vien='#CBD9E8'),
+    'pa2_suong_nhat': dict(ten='PA2: Tiêu đề bảng Nền Sương Nhạt (Fluent Mist)', chinh='#2B4C73', chinh_re='#213B59', chinh_am='#325478',
+                           td_nen='#E6EEF7', td_chu='#1E3A5F', td_vach='#CBD9E8', td_day='#8FB0D4', td_re='#D8E4F2',
+                           dau_nen='#EBF2FA', dau_chu='#1E3A5F', dau_vien='#CBD9E8'),
+    'pa3_thep_diu': dict(ten='PA3: Xanh Thép Chân Trời hạ bão hòa (Horizon Steel)', chinh='#3B5978', chinh_re='#2E4761', chinh_am='#3E5C76',
+                         td_nen='#3B5978', td_chu='#FFFFFF', td_vach='#4A6B8C', td_day='#587A9E', td_re='#2E4761',
+                         dau_nen='#EDF2F7', dau_chu='#2E4761', dau_vien='#CBD5E1'),
+    'pa4_cobalt_diu': dict(ten='PA4: Xanh Lam Hành Chính chuẩn mực (Serene Cobalt)', chinh='#2F5275', chinh_re='#24405C', chinh_am='#35587A',
+                           td_nen='#2F5275', td_chu='#FFFFFF', td_vach='#3D658C', td_day='#4D78A3', td_re='#24405C',
+                           dau_nen='#E8F0F8', dau_chu='#24405C', dau_vien='#C5D7EA'),
+    'pa5_khoi_am': dict(ten='PA5: Xanh Khói Ấm chống mỏi mắt (Cashmere Slate)', chinh='#3A5874', chinh_re='#2D455C', chinh_am='#3A5874',
+                        td_nen='#3A5874', td_chu='#FFFFFF', td_vach='#496A8A', td_day='#5B7FA0', td_re='#2D455C',
+                        dau_nen='#EFECE6', dau_chu='#2D455C', dau_vien='#D8D0C5'),
+    'pa6_khoang_sang': dict(ten='PA6: Xanh Khoáng Chất sáng nhẹ (Airy Mineral)', chinh='#3D6082', chinh_re='#304D69', chinh_am='#406282',
+                            td_nen='#3D6082', td_chu='#FFFFFF', td_vach='#4C7296', td_day='#648CB3', td_re='#304D69',
+                            dau_nen='#EBF3FA', dau_chu='#304D69', dau_vien='#CFE0F0'),
+}
+MAC_DINH_PHUONG_AN = 'pa1_nordic'
+KHOA_PHUONG_AN = 'giao_dien/phuong_an_navy'
+TONG_THEO_PHUONG_AN = ('sang', 'diu', 'trang', 'am')
+_PHUONG_AN = [MAC_DINH_PHUONG_AN]
+
+
+def phuong_an_hien() -> str:
+    return _PHUONG_AN[0]
+
+
+def dat_phuong_an(ma: str) -> str:
+    _PHUONG_AN[0] = ma if ma in PHUONG_AN_NAVY else MAC_DINH_PHUONG_AN
+    return _PHUONG_AN[0]
+
+
+def mau_phuong_an(ten: str) -> dict | None:
+    """Màu của phương án đang chọn cho tông ten; tông giữ màu riêng: None."""
+    if ten not in TONG_THEO_PHUONG_AN:
+        return None
+    pa = PHUONG_AN_NAVY[_PHUONG_AN[0]]
+    return dict(pa, chinh=pa['chinh_am']) if ten == 'am' else pa
+
+
 def mau_tong(ten: str) -> dict:
-    """Màu chính / banner / menu của tông (tông lạ: mặc định)."""
-    return MAU_TONG.get(ten, MAU_TONG[MAC_DINH_TONG_NEN])
+    """Màu chính / banner / menu của tông (tông lạ: mặc định); tông theo phương án Navy lấy màu chính của phương án."""
+    mt = MAU_TONG.get(ten, MAU_TONG[MAC_DINH_TONG_NEN])
+    pa = mau_phuong_an(ten)
+    if not pa:
+        return mt
+    # 1.0.79: chữ nhóm, lệnh đang chọn của menu trái cùng màu chính với phần còn lại; nền, viền menu giữ nguyên
+    menu = {k: pa['chinh'] if isinstance(v, str) and v.upper() == '#1E3A5F' else v for k, v in mt['menu'].items()}
+    return dict(mt, chinh=pa['chinh'], chinh_re=pa['chinh_re'], menu=menu)
 
 
 MAC_DINH_TONG_NEN = 'sang'
@@ -106,11 +158,12 @@ def doc(cai_dat=None) -> dict:
     md = os.environ.get('PABT_MAT_DO') or lay(KHOA_MAT_DO)
     tp = os.environ.get('PABT_TUONG_PHAN_CAO') or lay(KHOA_TUONG_PHAN)
     tn = os.environ.get('PABT_TONG_NEN') or lay(KHOA_TONG_NEN)
+    pa = os.environ.get('PABT_PHUONG_AN_NAVY') or lay(KHOA_PHUONG_AN)
     return {'mat_do': _chon(md, MAT_DO, MAC_DINH_MAT_DO), 'tuong_phan': _chon(tp, TUONG_PHAN, MAC_DINH_TUONG_PHAN),
-            'tong_nen': _chon(tn, TONG_NEN, MAC_DINH_TONG_NEN)}
+            'tong_nen': _chon(tn, TONG_NEN, MAC_DINH_TONG_NEN), 'phuong_an_navy': _chon(pa, PHUONG_AN_NAVY, MAC_DINH_PHUONG_AN)}
 
 
-def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_nen: str | None = None) -> None:
+def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_nen: str | None = None, phuong_an_navy: str | None = None) -> None:
     """Ghi lựa chọn (chỉ phần được đưa vào) vào cai_dat (QSettings); không có cai_dat thì bỏ qua."""
     if cai_dat is None:
         return
@@ -120,6 +173,81 @@ def ghi(cai_dat, mat_do: str | None = None, tuong_phan: str | None = None, tong_
         cai_dat.setValue(KHOA_TUONG_PHAN, _chon(tuong_phan, TUONG_PHAN, MAC_DINH_TUONG_PHAN))
     if tong_nen is not None:
         cai_dat.setValue(KHOA_TONG_NEN, _chon(tong_nen, TONG_NEN, MAC_DINH_TONG_NEN))
+    if phuong_an_navy is not None:
+        cai_dat.setValue(KHOA_PHUONG_AN, _chon(phuong_an_navy, PHUONG_AN_NAVY, MAC_DINH_PHUONG_AN))
+
+
+# 1.0.51 (người dùng 02/11/2026): LƯU TỰ ĐỘNG cửa sổ lập phương án / Khái toán - lưu sau N giây NGỪNG thao tác (không cắt ngang ô đang
+# gõ, không hộp thoại). 0 = tắt. Nhớ ở QSettings (KHOA_LUU_TU_DONG); biến môi trường PABT_TU_LUU (giây) ghi đè. Không có QSettings
+# (chạy offscreen - kiểm thử) mà chưa đặt trong phiên: TẮT, để bài kiểm thử không tự ghi CSDL ngoài ý muốn.
+CAC_MUC_LUU_TU_DONG = ((10, '10 giây'), (30, '30 giây'), (60, '1 phút'), (120, '2 phút'), (0, 'Tắt'))
+CHU_KY_LUU_MAC_DINH = 30
+KHOA_LUU_TU_DONG = 'lap_pa/chu_ky_tu_luu'
+_CHU_KY_HOP_LE = tuple(g for g, _ in CAC_MUC_LUU_TU_DONG)
+_chu_ky_phien = None                # giá trị đặt trong phiên khi không có QSettings (kiểm thử)
+_chu_ky_nho = None                  # đã đọc QSettings (đọc mỗi lần gõ phím là thừa)
+
+
+def _so_chu_ky(gia_tri, mac_dinh: int) -> int:
+    try:
+        g = int(str(gia_tri).strip())
+    except (TypeError, ValueError):
+        return mac_dinh
+    return g if g in _CHU_KY_HOP_LE else mac_dinh
+
+
+def _cai_dat_mac_dinh():
+    try:
+        from .giao_dien import cai_dat_nho
+        return cai_dat_nho()
+    except Exception:                   # không có Qt / chưa có QApplication
+        return None
+
+
+def chu_ky_luu_tu_dong(cai_dat=None) -> int:
+    """Chu kỳ lưu tự động (giây): 10 / 60 / 120, 0 = tắt. PABT_TU_LUU > giá trị đặt trong phiên > QSettings > 10 giây."""
+    env = os.environ.get('PABT_TU_LUU')
+    if env:
+        return _so_chu_ky(env, 0)
+    global _chu_ky_nho
+    if _chu_ky_phien is not None:
+        return _chu_ky_phien
+    if cai_dat is None:
+        if _chu_ky_nho is not None:
+            return _chu_ky_nho
+        cai_dat = _cai_dat_mac_dinh()
+        if cai_dat is None:
+            return 0
+        nho = True
+    else:
+        nho = False
+    try:
+        g = _so_chu_ky(cai_dat.value(KHOA_LUU_TU_DONG, CHU_KY_LUU_MAC_DINH), CHU_KY_LUU_MAC_DINH)
+    except (AttributeError, RuntimeError):
+        g = CHU_KY_LUU_MAC_DINH
+    if nho:
+        _chu_ky_nho = g
+    return g
+
+
+def dat_chu_ky_luu_tu_dong(giay: int, cai_dat=None) -> int:
+    """Ghi chu kỳ lưu tự động (0, 10, 60, 120 giây; số lạ -> 10). Trả giá trị đã ghi."""
+    global _chu_ky_phien, _chu_ky_nho
+    giay = _so_chu_ky(giay, CHU_KY_LUU_MAC_DINH)
+    _chu_ky_nho = giay
+    cai_dat = cai_dat if cai_dat is not None else _cai_dat_mac_dinh()
+    if cai_dat is None:
+        _chu_ky_phien = giay
+    else:
+        try:
+            cai_dat.setValue(KHOA_LUU_TU_DONG, giay)
+        except (AttributeError, RuntimeError):
+            _chu_ky_phien = giay
+    return giay
+
+
+def nhan_chu_ky(giay: int) -> str:
+    return dict(CAC_MUC_LUU_TU_DONG).get(giay, f'{giay} giây')
 
 
 def dao_nhanh_tong_nen(hien_tai: str = MAC_DINH_TONG_NEN) -> str:

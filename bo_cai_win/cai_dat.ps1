@@ -32,7 +32,7 @@ $TEN_NGAN = 'LARC'
 $LOI_TAT_CU = @('PABT - Lập phương án bồi thường.lnk', 'PABT.lnk')
 # định danh ứng dụng trên taskbar - PHẢI trùng pabt.app.APP_USER_MODEL_ID (tiến trình PABT tự đăng ký khi mở): lối tắt mang cùng
 # định danh thì cửa sổ đang chạy nhập vào nút đã ghim, ghim lên taskbar giữ biểu tượng PABT (không tách hai nút / mất biểu tượng)
-$APP_ID = 'gov.pabt.boithuong.enterprise.2026'
+$APP_ID = 'vn.larc.desktop.enterprise'
 $TEN_DAY_DU = 'PHẦN MỀM LẬP PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ'
 $PHIEN_BAN = [System.IO.File]::ReadAllText((Join-Path $GOC 'phien_ban.txt')).Trim()
 $BAN = 'win10'
@@ -484,9 +484,9 @@ function KiemTraThuMuc($dich) {
         throw "Thư mục $dich đã có file khác (không phải bản cài PABT). Chọn thư mục trống hoặc thư mục PABT đã cài trước đây." }
     # lọc đuôi bằng Where-Object (-Include không có tác dụng với -LiteralPath); -LiteralPath: tên có "[" không bị hiểu là ký tự đại diện
     $da = @(Get-ChildItem -LiteralPath $dich -Recurse -Force -ErrorAction SilentlyContinue |
-            Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.larc' -or $_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
+            Where-Object { -not $_.PSIsContainer -and (@('.larc','.pabt','.pabtdt','.xlsx','.xlsm','.xls','.docx','.doc','.pdf','.csv') -contains $_.Extension.ToLower()) })
     if ($da.Count -gt 0) {
-        throw "Thư mục cài có $($da.Count) file dự án (ví dụ $($da[0].FullName)). Chuyển các file dự án ra thư mục khác rồi cài lại." }
+        throw "Thư mục cài có $($da.Count) file dự án / Excel / Word / PDF của bạn (ví dụ $($da[0].FullName)). Chuyển các file dự án ra thư mục khác rồi cài lại." }
 }
 
 function GoBanCu($cu, $dich) {
@@ -496,7 +496,7 @@ function GoBanCu($cu, $dich) {
     try { $cu = [System.IO.Path]::GetFullPath($cu).TrimEnd('\') } catch { return }
     if ($cu -eq $dich.TrimEnd('\') -or -not (Test-Path -LiteralPath (Join-Path $cu 'PABT.exe'))) { return }
     $da = @(Get-ChildItem -LiteralPath $cu -Recurse -Force -ErrorAction SilentlyContinue |
-            Where-Object { -not $_.PSIsContainer -and ($_.Extension -eq '.larc' -or $_.Extension -eq '.pabt' -or $_.Extension -eq '.pabtdt') })
+            Where-Object { -not $_.PSIsContainer -and (@('.larc','.pabt','.pabtdt','.xlsx','.xlsm','.xls','.docx','.doc','.pdf','.csv') -contains $_.Extension.ToLower()) })
     if ($da.Count -gt 0) { Ghi "Giữ bản cũ $cu (có $($da.Count) file dự án)"; return }
     try {
         XoaThuMucCu $cu

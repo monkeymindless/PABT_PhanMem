@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from . import csdl
 
 SO_BUOC = 50
-BO_QUA = ('nhat_ky', 'khoa_dm', 'sqlite_sequence', 'audit_logs',        # không hoàn tác nhật ký; cờ khóa danh mục do mo_khoa_danh_muc lo
+BO_QUA = ('nhat_ky', 'khoa_dm', 'sqlite_sequence', 'audit_logs', 'audit_bam',        # không hoàn tác nhật ký; cờ khóa danh mục do mo_khoa_danh_muc lo
           'ban_do_lop', 'ban_do_o')                  # bản đồ lưu trong dự án (31/10/2026): ảnh / KML lớn, không chép vào sổ hoàn tác
 _DANG_KY = csdl.HOAN_TAC                                   # id(con) -> HoanTac (để csdl.ghi_nhat_ky báo tên bước)
 
@@ -183,8 +183,10 @@ class HoanTac:
         self.chot()
         if not self.hoan_tac_ds:
             return ''
-        b = self.hoan_tac_ds.pop()
-        self.lam_lai_ds.append(self._ap(b))
+        b = self.hoan_tac_ds[-1]                        # 1.0.58: áp được mới bỏ khỏi ngăn xếp (lỗi khóa: thử lại đúng bước này)
+        moi = self._ap(b)
+        self.hoan_tac_ds.pop()
+        self.lam_lai_ds.append(moi)
         self._ghi(f'Hoàn tác: {b.viec}')
         self._bao()
         return b.viec
@@ -193,14 +195,20 @@ class HoanTac:
         self.chot()
         if not self.lam_lai_ds:
             return ''
-        b = self.lam_lai_ds.pop()
-        self.hoan_tac_ds.append(self._ap(b))
+        b = self.lam_lai_ds[-1]
+        moi = self._ap(b)
+        self.lam_lai_ds.pop()
+        self.hoan_tac_ds.append(moi)
         self._ghi(f'Làm lại: {b.viec}')
         self._bao()
         return b.viec
 
     def _ghi(self, viec: str):
-        self._chay_rieng(lambda: csdl.ghi_nhat_ky(self.con, viec))
+        def ghi():
+            csdl.ghi_nhat_ky(self.con, viec)
+            from .kiem_toan import ghi_su_kien          # 1.0.58: Ctrl+Z đổi số phương án: nhật ký kiểm toán phải có dấu vết
+            ghi_su_kien(self.con, viec)
+        self._chay_rieng(ghi)
 
     def _bao(self):
         for ham in list(self.khi_doi):

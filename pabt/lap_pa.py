@@ -6,6 +6,7 @@ Màn hình chỉ hiển thị và chuyển thao tác của người dùng vào �
 """
 from __future__ import annotations
 import copy
+import json
 import functools
 import re
 import sqlite3
@@ -19,11 +20,10 @@ from .nghiep_vu import (DA_LAP_LUU, MA_ON_DINH, MUC_KHOAN, MUC_VN, NGUON_DM, NGU
                         de_xuat_dao_tao_pa, doc_phuong_an, giu_ket_qua_ho, goi_y_ho_tro, goi_y_khoan, ket_qua_ho_san,
                         kiem_tra_pa, so_vi_tri, tap_ma_tdc, thanh_tien_dong, thanh_tien_dong_dat, tinh_pa)
 from .loai_dat import chuan_ma_loai_dat
-from .tien import D, KHONG, chuoi, so_luong_vn, so_vn, vn
+from .tien import D, KHONG, chuoi, la_cong_thuc, so_luong_vn, so_vn, tinh_cong_thuc, vn
 
 
-class LoiNhap(ValueError):
-    """Giá trị người dùng nhập không hợp lệ (thông báo tiếng Việt, hiện nguyên cho người dùng)."""
+from .loi import LoiNhap  # noqa: E402,F401  (1.0.96: định nghĩa ở module lá pabt/loi.py; lap_pa.LoiNhap giữ nguyên cho 65 file dùng)
 
 
 TB_HO_KHONG_NHAN = ('Hộ này không nằm trong danh sách nhận việc của bạn nên sẽ không được gộp lên máy chủ: không lưu được trên bản '
@@ -41,6 +41,14 @@ def kiem_ho_nhan_viec(con, ma_ho) -> None:
     if ds is not None and (ma_ho is None or int(ma_ho) not in ds):
         raise LoiNhap(TB_HO_KHONG_NHAN if ma_ho is not None else
                       'Bản offline theo hộ chỉ gộp các hộ đã nhận: hộ thêm mới ở đây sẽ không lên máy chủ. Thêm hộ trên máy chủ.')
+
+
+def kiem_quyen(con, quyen: str, viec: str = '') -> None:
+    """1.0.57: vai trò tài khoản máy chủ LAN gắn trên kết nối không có quyền -> LoiNhap (phan_quyen.kiem). Máy đơn: không làm gì."""
+    if getattr(con, '_vai_tro', None) is None:
+        return
+    from .phan_quyen import kiem
+    kiem(con, quyen, viec)
 
 
 BANG_KHONG_CHAN_HO = ('audit_logs', 'tho_nhap')     # sổ ghi / dữ liệu thô: không thuộc "việc" của hộ
@@ -124,9 +132,66 @@ def _bo_dau(s: str) -> str:
     return ' '.join(t.lower().split())
 
 
+_TIEN_TO_DIA_BAN = (('thi', 'tran'), ('dac', 'khu'), ('xa',), ('phuong',))
+
+
+@functools.lru_cache(maxsize=8192)
+def khoa_dia_ban(s) -> str:
+    """Khóa so sánh tên xã / phường (1.0.90): bỏ "Bảng 53.", bỏ tiền tố Xã / Phường / Thị trấn / Đặc khu, mỗi chữ = chữ không dấu
+    + '~' + các dấu của nó (sắp xếp - "Hòa" = "Hoà"). Giữ dấu để "Lộc Thành" khác "Lộc Thạnh" (bỏ dấu là trùng nhau)."""
+    t = unicodedata.normalize('NFD', str(s or '')).lower()
+    chu = []
+    for w in re.split(r'[^\ẁ-ͯ]+', t):
+        if not w:
+            continue
+        dau = sorted(c for c in w if unicodedata.combining(c)) + (['đ'] if 'đ' in w else [])
+        goc = ''.join(c for c in w if not unicodedata.combining(c)).replace('đ', 'd')
+        if goc:
+            chu.append((goc, ''.join(dau)))
+    if len(chu) >= 2 and chu[0][0] == 'bang' and chu[1][0].isdigit():
+        chu = chu[2:]
+    for tt in _TIEN_TO_DIA_BAN:
+        if len(chu) > len(tt) and tuple(x[0] for x in chu[:len(tt)]) == tt:
+            chu = chu[len(tt):]
+            break
+    return ' '.join(g + ('~' + d if d else '') for g, d in chu)
+
+
+def _khong_dau_khoa(k: str) -> str:
+    return ' '.join(w.split('~')[0] for w in k.split())
+
+
+def _cap_khoa(a, b) -> tuple:
+    """Hai khóa để so: hai bên cùng có dấu thì giữ dấu, một bên gõ không dấu thì bỏ dấu cả hai."""
+    ka, kb = khoa_dia_ban(a), khoa_dia_ban(b)
+    if ka and kb and ka != kb and ('~' not in ka or '~' not in kb):
+        ka, kb = _khong_dau_khoa(ka), _khong_dau_khoa(kb)
+    return ka, kb
+
+
+def trung_dia_ban(a, b) -> bool:
+    """Đúng cùng tên xã / phường (bỏ tiền tố Xã / Phường, "Bảng 53."): "Phường Trị An" = "Xã Trị An" = "tri an"; "Lộc Thành" khác "Lộc Thạnh"."""
+    ka, kb = _cap_khoa(a, b)
+    return bool(ka) and ka == kb
+
+
+@functools.lru_cache(maxsize=16384)
+def cung_dia_ban(a, b) -> bool:
+    """Hai tên chỉ cùng một xã / phường. So nguyên CHỮ (không so chuỗi con: "An Lộc" không khớp "Xuân Lộc"); hai bên cùng có dấu thì
+    so cả dấu ("Lộc Thành" khác "Lộc Thạnh"), một bên gõ không dấu thì so không dấu. Tên ngắn là đoạn chữ liên tiếp của tên dài
+    ("Trị An" khớp "Bảng 53. Phường Trị An")."""
+    ka, kb = _cap_khoa(a, b)
+    if not ka or not kb:
+        return False
+    if ka == kb:
+        return True
+    ngan, dai = sorted((ka.split(), kb.split()), key=len)
+    n = len(ngan)
+    return any(dai[i:i + n] == ngan for i in range(len(dai) - n + 1))
+
+
 def doc_so(text, ten_o: str, cho_phep_trong: bool = True, toi_thieu=KHONG, toi_da=None):
     """Đọc số người dùng gõ ('1.480.500', '143,8', '100%') hoặc công thức ('=4,2*5,7', '12x3+1,5'); sai thì báo LoiNhap."""
-    from .tien import la_cong_thuc, tinh_cong_thuc
     s = str(text if text is not None else '').strip()
     if s and la_cong_thuc(s):
         try:
@@ -232,8 +297,8 @@ def tinh_lai_cong_thuc(con) -> dict:
     if not sua:
         return kq
     with csdl.giao_dich(con):
-        for bang, cot, gt, i, _ in sua:
-            con.execute(f'UPDATE {bang} SET {cot} = ? WHERE id = ?', (gt, i))
+        for bang, cot in {(x[0], x[1]) for x in sua}:     # 1.0.51: một lệnh executemany mỗi bảng
+            con.executemany(f'UPDATE {bang} SET {cot} = ? WHERE id = ?', [(gt, i) for b, c, gt, i, _ in sua if (b, c) == (bang, cot)])
         so_ho = len({x[4] for x in sua})
         csdl.ghi_nhat_ky(con, 'Tính lại số lượng nhập bằng công thức',
                          f'{len(sua)} dòng / {so_ho} hộ: làm tròn 2 chữ số lẻ (ha 4) thay vì 1 chữ số')
@@ -329,15 +394,27 @@ class DanhMuc:
 
     def __init__(self, con):
         self.muc = {2: [], 3: [], MUC_VN: [], 4: [], 9: []}
+        # 1.0.57 (người dùng 04/11/2026): bộ đơn giá tách theo khu vực giá (Phụ lục I khu vực 1 / Phụ lục II khu vực 2) - chỉ mục của khu
+        # vực có xã dự án; mục khu vực khác KHÓA ẨN (không chọn / tìm / thêm được; dòng phương án cũ vẫn đọc được giá qua lay)
+        from . import khu_vuc_gia
+        self.kv_dl = khu_vuc_gia.doc(con)
+        self.kv = khu_vuc_gia.khu_vuc_du_an(con, self.kv_dl)
+        self.an = {}
         for r in con.execute('SELECT * FROM dm_taisan WHERE nhom IN (2, 3) ORDER BY rowid'):
             nhom = MUC_VN if r['nhom'] == 3 and la_vat_nuoi(r['phan_loai']) else r['nhom']    # vật nuôi: mục riêng (0.9.20)
             m = MucDanhMuc('taisan', r['ma'], r['ten'], r['dvt'], D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
                            r['phan_loai'], r['ghi_chu'], nhom)
-            self.muc[nhom].append(m)
+            if khu_vuc_gia.dung_duoc(self.kv_dl, m.ma, self.kv):
+                self.muc[nhom].append(m)
+            else:
+                self.an[m.ma] = m
         for r in con.execute('SELECT * FROM dm_hotro ORDER BY LENGTH(ma), ma'):    # CS2 trước CS10 (mã 0.9.69 không có số 0)
-            self.muc[4].append(MucDanhMuc('hotro', r['ma'], r['ten'], r['dvt'],
-                                          D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
-                                          r['cach_tinh'], r['can_cu'], 4))
+            m = MucDanhMuc('hotro', r['ma'], r['ten'], r['dvt'], D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
+                           r['cach_tinh'], r['can_cu'], 4)
+            if khu_vuc_gia.dung_duoc(self.kv_dl, m.ma, self.kv):
+                self.muc[4].append(m)
+            else:
+                self.an[m.ma] = m
         for r in con.execute('SELECT * FROM quy_uoc ORDER BY id'):
             self.muc[9].append(MucDanhMuc('quyuoc', f'QU{r["id"]}', r['ten_thuc_te'], r['dvt'],
                                           D(r['don_gia']) if r['don_gia'] not in (None, '') else None,
@@ -347,6 +424,18 @@ class DanhMuc:
             for m in ds:
                 m._khoa = bo_dau(f'{m.ma} {m.ten} {m.phan_loai}')
                 self.theo_ma.setdefault(m.ma, m)
+        for ma, m in self.an.items():
+            m._khoa = bo_dau(f'{m.ma} {m.ten} {m.phan_loai}')
+            self.theo_ma.setdefault(ma, m)
+
+    def bi_khoa(self, ma: str) -> str:
+        """Mục thuộc khu vực giá khác khu vực dự án: lý do (khóa) - '' nếu dùng được."""
+        if ma not in self.an:
+            return ''
+        from . import khu_vuc_gia
+        k = self.kv_dl['muc'].get(ma, '')
+        return (f'Mục {ma} thuộc {khu_vuc_gia.ten_kv(self.kv_dl, k)} - dự án áp '
+                f'{khu_vuc_gia.ten_kv(self.kv_dl, self.kv)} (theo xã dự án): phụ lục khu vực khác bị khóa.')
 
     def tim(self, nhom: int, tu_khoa: str = '', toi_da: int = 300) -> list:
         tu = bo_dau(tu_khoa).split()
@@ -447,14 +536,33 @@ class BoSoan:
         self.con = con
         self._mot_lan = mot_lan     # nơi gọi biết hộ chỉ có lần 1, chưa quyết định (dự án vừa tạo) - bỏ truy vấn kiểm tra
         self.dm = danh_muc or DanhMuc(con)
+        self.ho_tro_doi = []        # câu báo khoản hỗ trợ đã tính lại ở lần áp đơn giá đất gần nhất
         # bc: bối cảnh dùng chung cả loạt hộ (tự lập phương án Dự án mới - lưu phương án không đổi thửa / danh mục nên bối cảnh còn
         # đúng); không truyền: lấy theo csdl.nho (mỗi lần mở 1 truy vấn PRAGMA data_version - 3.000 hộ ~0,25 s)
         self._bc_chung = bc
         self.mo(ma_ho, lan)
 
     # ---------------------------------------------- mở / trạng thái
+    def mo_phien_ban(self, ma: str) -> None:
+        """Xem / sửa một phiên bản (phien_ban_pa): V0 = số hiện hành; phiên bản đang khóa (hoặc lần đã phê duyệt) chỉ xem; đang mở: Lưu ghi vào phiên bản đó."""
+        from . import phien_ban_pa as pb
+        ma_ho, lan = self.ma_ho, self.lan
+        self.mo(ma_ho, lan)
+        if ma in (None, pb.V0):
+            return
+        r = pb.lay(self.con, ma_ho, ma)
+        if r is None:
+            raise LoiNhap(f'Hộ {ma_ho} chưa có phiên bản {ma}.')
+        self.mo(ma_ho, r['lan'])
+        self.pa = pb.pa_tu_json(self.con, ma_ho, r['du_lieu'])
+        self.phien_ban = ma
+        self.khoa = self.khoa or bool(r['khoa'])
+        self._pa_goc = copy.deepcopy(self.pa)
+        self._goc = _dang_luu(self._pa_goc)
+
     def mo(self, ma_ho: int, lan: int | None = None):
         from . import lan_pa
+        self.phien_ban = None
         self.bc = self._bc_chung if self._bc_chung is not None else BoiCanh.tu(self.con)
         if lan in (None, 1) and (getattr(self, '_mot_lan', False) or _mot_lan_chua_duyet(self.con, ma_ho)):
             # đường tắt (hầu hết các hộ - tự lập Dự án mới 3.000 hộ): một lần, chưa quyết định -> một lần đọc như trước 1.0.05
@@ -528,12 +636,19 @@ class BoSoan:
         return kiem_tra_pa(self.pa, self.bc)
 
     def danh_sach_ho(self) -> list:
-        return [(r['ma_ho'], r['thu_tu'], r['ho_ten']) for r in self.con.execute('SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho')]
+        """[(mã hộ, thứ tự, họ tên)] theo thứ tự dự án - nhớ trên kết nối (csdl.nho, tự đọc lại khi dữ liệu đổi). 1.0.57 (đề án V2.0
+        Gói 4): trước đây mỗi lần chuyển hộ ◀ ▶ đọc lại cả bảng hộ 3 lần (3.000 hộ ~11 ms). KHÔNG sửa danh sách trả về (dùng chung)."""
+        return csdl.nho(self.con, 'lap_pa.danh_sach_ho', lambda: [(r['ma_ho'], r['thu_tu'], r['ho_ten']) for r in self.con.execute(
+            'SELECT ma_ho, thu_tu, ho_ten FROM ho ORDER BY thu_tu, ma_ho')])
 
     def ho_ke(self, buoc: int):
-        ds = [x[0] for x in self.danh_sach_ho()]
-        i = ds.index(self.ma_ho) + buoc
-        return ds[i] if 0 <= i < len(ds) else None
+        vt = csdl.nho(self.con, 'lap_pa.vi_tri_ho', lambda: {x[0]: i for i, x in enumerate(self.danh_sach_ho())})
+        ds = self.danh_sach_ho()
+        i = vt.get(self.ma_ho)
+        if i is None:
+            return None
+        i += buoc
+        return ds[i][0] if 0 <= i < len(ds) else None
 
     def thua_cua_ho(self) -> list:
         """Các thửa của hộ: (ma_thua, mô tả, DT còn chưa đưa vào mục 1)."""
@@ -676,6 +791,105 @@ class BoSoan:
         d.thanh_tien_excel = None
         return f' Hệ số K = {so_vn(k)} ({cc}).'
 
+    GHI_CHU_QD03 = 'Đơn giá đất theo NQ 28/2025/NQ-HĐND × QĐ 03/2026/QĐ-UBND:'
+
+    def ap_don_gia_qd03(self, chi_so, don_gia, ghi_chu: str = '', vi_tri: str = '', chi_tiet: dict | None = None) -> int:
+        """Áp đơn giá đất đã tính (gia_dat_qd03.tinh_don_gia - NQ 28 x QĐ 03, đã ROUND về đồng) vào các dòng mục 1: giá bảng giá = đơn giá
+        áp dụng, hệ số K = 1 (K1, K2, K3 đã nằm trong đơn giá; Thành tiền = diện tích x đơn giá áp dụng), căn cứ công thức ghi vào Ghi chú
+        (thay căn cứ cũ cùng loại / "Hệ số K theo ..."). vi_tri: chữ ghi vào cột Vị trí (đoạn đường đã dùng tính giá), '' giữ nguyên. Khoản đào tạo, chuyển
+        đổi nghề theo giá đất tính lại theo đơn giá mới (self.ho_tro_doi: câu báo). Chưa lưu: người gọi bấm luu(). Trả số dòng đã áp."""
+        don_gia = D(don_gia)
+        if don_gia <= 0:
+            raise LoiNhap('Đơn giá đất phải lớn hơn 0.')
+        khop = self._khop_dao_tao_theo_thua()               # theo mô tả thửa, mô tả có vị trí nên khớp trước khi đổi
+        da_ap = []
+        n = 0
+        for i in chi_so:
+            if not 0 <= i < len(self.pa.dat):
+                continue
+            d = self.pa.dat[i]
+            d.gia_bang_gia, d.he_so_k = don_gia, D(1)
+            bo = re.sub(r'\s*;?\s*(?:Đơn giá đất theo |Hệ số K theo )[^;]*', '', d.ghi_chu or '')           # căn cứ cũ, gói nào cũng thay
+            bo = re.sub(r'\s*;?\s*Giá đất nhập tay', '', bo).strip(' ;')
+            d.ghi_chu = ((bo + '; ') if bo else '') + (ghi_chu or self.GHI_CHU_QD03 + f' {vn(don_gia)} đ/m²')
+            d.thanh_tien_excel = None
+            if vi_tri:
+                d.vi_tri = vi_tri
+            d.ap_gia = json.dumps(chi_tiet, ensure_ascii=False) if chi_tiet else ''
+            da_ap.append(d)
+            n += 1
+        self.ho_tro_doi = self._tinh_lai_dao_tao_theo_thua(khop, da_ap) + self.tinh_lai_ho_tro(chi_dao_tao=True)
+        return n
+
+    def _khop_dao_tao_theo_thua(self) -> list:
+        """[(dòng hỗ trợ đào tạo nhập theo thửa, dòng đất của thửa đó)]. Dòng tên tự gõ không khớp thửa nào thì bỏ qua, giữ nguyên số người lập đã nhập."""
+        from . import chinh_sach as cs
+        from .nghiep_vu import _dao_tao_theo_thua, tap_ma_dao_tao
+        kq = []
+        for ma in tap_ma_dao_tao():
+            ds = cs.ds_thua_nn(self, ma)
+            for k in self.pa.dong_ho_tro(ma):
+                if _dao_tao_theo_thua(k):
+                    x = next((t for t in ds if t['mo_ta'] == k.ten and t['dien_tich'] == k.so_luong), None) or next((t for t in ds if t['mo_ta'] == k.ten), None)
+                    if x is not None:
+                        ds.remove(x)
+                        kq.append((k, x['dong']))
+        return kq
+
+    def _tinh_lai_dao_tao_theo_thua(self, khop: list, da_ap: list) -> list:
+        from . import chinh_sach as cs
+        kq = []
+        for k, d in khop:
+            if not any(d is x for x in da_ap):
+                continue
+            moi = D(d.gia_bang_gia) * d.he_so_k
+            mo_ta = next((t['mo_ta'] for t in cs.ds_thua_nn(self, k.ma) if t['dong'] is d), k.ten)
+            if k.don_gia != moi or k.ten != mo_ta:
+                kq.append(f'{k.ma} {mo_ta}: đơn giá {vn(k.don_gia)} -> {vn(moi)} đ/m²')
+                k.don_gia, k.ten, k.thanh_tien_excel = moi, mo_ta, None
+        return kq
+
+    def tinh_lai_ho_tro(self, chi_dao_tao: bool = False) -> list:
+        """Sửa các khoản hỗ trợ đã có theo số liệu mới (goi_y: chỉ 'sửa' / 'thay'; khoản đề xuất THÊM để người lập quyết định). chi_dao_tao: chỉ khoản tính theo giá đất,
+        vì đổi đơn giá không đổi diện tích: khoản ổn định đời sống người lập đã chọn không bị thay theo. Trả câu báo."""
+        from .nghiep_vu import tap_ma_dao_tao
+        ma_dt = tap_ma_dao_tao()
+        ds = [x for x in self.goi_y()[0] if x.viec in ('sửa', 'thay') and (not chi_dao_tao or x.ma in ma_dt)]
+        self.ap_dung_goi_y(ds)
+        return [f'{x.ma}: {x.ly_do}' for x in ds]
+
+    def them_dong_tu_thua(self, ten: str = '') -> tuple:
+        """Mục 1: một dòng cho mỗi thửa còn DT chưa đưa vào. Loại đất lạ (không có trong danh mục) không đưa vào, báo; chưa có giá vẫn giữ dòng, báo. Trả (số dòng, [cảnh báo])."""
+        cb = []
+        n = 0
+        ten = ten or f'Hộ {self.ma_ho} {self.pa.ho.ho_ten}'
+        for mt, _, con_lai in self.thua_cua_ho():
+            if con_lai <= 0:
+                continue
+            i, tb = self.them_thua(mt)
+            d = self.pa.dat[i]
+            if not d.loai_dat or d.loai_dat not in self.bc.loai_dat:      # mã lạ (không thuộc danh mục chuẩn / bảng giá): không tự lập
+                self.xoa(1, i)
+                cb.append(f'{ten}: {self.ten_thua(mt)} loại đất {d.loai_dat or ""} không có trong danh mục, chưa đưa vào mục 1.'
+                          .replace('đất  không', 'đất không'))
+                continue
+            n += 1
+            if d.gia_bang_gia <= 0:
+                cb.append(f'{ten}: {self.ten_thua(mt)} chưa có giá {d.loai_dat} vị trí {d.vi_tri or "?"}.')
+            elif tb.startswith('Kiểm kê ghi'):
+                cb.append(f'{ten}: {tb}')
+        return n, cb
+
+    def dat_dong_moi(self, i: int, loai_dat: str, dien_tich) -> None:
+        """Dòng vừa thêm: theo loại đất, diện tích người dùng nhập (không theo số kiểm kê của thửa); giá tra lại theo loại đất mới."""
+        d = self.pa.dat[i]
+        ld = chuan_ma_loai_dat(loai_dat)
+        if ld != d.loai_dat:
+            d.loai_dat, d.nhom_dat = ld, self.nhom_dat(ld)
+            self._dien_gia_dat(d)
+        d.dien_tich = D(dien_tich)
+        d.thanh_tien_excel = None
+
     def sua_dat(self, i: int, cot: str, text) -> str:
         if cot not in SUA_DUOC_DAT:
             raise LoiNhap('Ô này tự tính, không sửa được.')
@@ -683,6 +897,8 @@ class BoSoan:
         tb = ''
         if cot == 'thua':
             return self.doi_thua(i, text)
+        if cot in ('gia_bang_gia', 'he_so_k', 'loai_dat', 'vi_tri'):
+            d.ap_gia = ''                                # số đã khác lúc áp đơn giá: không còn đúng thuyết minh cũ
         if cot == 'loai_dat':
             ld = chuan_ma_loai_dat(text)
             if ld and any(x not in self.bc.loai_dat for x in ld.split('+')):
@@ -800,6 +1016,9 @@ class BoSoan:
             i = self.them_hang_muc_khac(muc, m.ten)
             self.ap_gia_tuong_duong(muc, i, m)
             return i, ''
+        khoa_kv = self.dm.bi_khoa(m.ma) if hasattr(self.dm, 'bi_khoa') else ''
+        if khoa_kv:
+            raise LoiNhap(khoa_kv)
         d = DongKhoan(muc=muc, ma=m.ma, ten=m.ten, dvt=m.dvt, don_gia=m.don_gia or KHONG, so_luong=D(1) if muc == 4 else KHONG,
                       quy_cach=(m.can_cu if muc == 4 else ''), nguon_gia=NGUON_DM)
         tb = ''
@@ -852,6 +1071,9 @@ class BoSoan:
         """Áp đơn giá, ĐVT của mục tương đương; tên in ra vẫn là tên đã gõ."""
         if m.don_gia is None:
             raise LoiNhap(f'{m.ma} chưa có đơn giá trong danh mục, không áp giá tương đương được.')
+        khoa_kv = self.dm.bi_khoa(m.ma) if m.nguon != 'quyuoc' and hasattr(self.dm, 'bi_khoa') else ''
+        if khoa_kv:
+            raise LoiNhap(khoa_kv)
         d = self.pa.khoan[muc][i]
         ma_td = m.ma
         if m.nguon == 'quyuoc':
@@ -934,6 +1156,49 @@ class BoSoan:
             self.them_thua(mt)
             n += 1
         return n
+
+    def dong_bo_dat_theo_thua_csdl(self, bc_moi=None) -> dict:
+        """Hồ sơ thửa vừa đổi trong CSDL (thẻ 0: xóa / sửa / thêm thửa, gộp hộ, chuyển thửa) - đồng bộ dòng mục 1 đang soạn (1.0.81):
+        - dòng gắn thửa không còn của hộ: gắn lại theo (số tờ, số thửa) nếu hộ còn thửa đó (thửa xóa rồi tạo lại), không có thì bỏ gắn
+          thửa (ma_thua = None - GIỮ dòng và số tiền để người dùng tự xem, không tự xóa);
+        - thửa MỚI của hộ (chưa có trong bối cảnh cũ) chưa có dòng mục 1: tự thêm dòng như them_thua (mọi loại đất, kể cả RDD, RPH,
+          MNC, DDT, DGT, DTL, SON - mã không có trong danh mục vẫn giữ, đơn giá 0 / nhập tay).
+        bc_moi: bối cảnh đọc lại sau khi ghi (None: đọc từ self.con); hàm đặt self.bc = bc_moi. Trả {'gan_lai', 'bo_gan', 'them'}."""
+        cu = {t['ma_thua']: t for t in self.bc.thua_cua(self.ma_ho)}
+        if bc_moi is None:
+            bc_moi = type(self.bc).tu(self.con)
+        self.bc = bc_moi
+        moi = {t['ma_thua']: t for t in bc_moi.thua_cua(self.ma_ho)}
+        theo_so = {(str(t['so_to'] or '').strip(), str(t['so_thua'] or '').strip()): mt for mt, t in moi.items()}
+        kq = dict(gan_lai=0, bo_gan=0, them=0)
+        for d in self.pa.dat:
+            if d.ma_thua is None or d.ma_thua in moi:
+                continue
+            t = cu.get(d.ma_thua)
+            mt = theo_so.get((str(t['so_to'] or '').strip(), str(t['so_thua'] or '').strip())) if t else None
+            d.ma_thua = mt
+            kq['gan_lai' if mt is not None else 'bo_gan'] += 1
+        da_co = {d.ma_thua for d in self.pa.dat + self.pa_khac.dat}
+        for mt in moi:
+            if mt not in cu and mt not in da_co:
+                self.them_thua(mt)
+                kq['them'] += 1
+        return kq
+
+    def _thua_hop_le_khi_luu(self) -> None:
+        """Lưới an toàn của luu (1.0.81 - lỗi "FOREIGN KEY constraint failed" khi thửa đã bị xóa / sửa ở nơi khác mà cửa sổ còn giữ
+        dòng đất gắn thửa cũ): dòng gắn thửa không còn trong CSDL -> gắn lại theo (tờ, thửa) của hộ, không có thì bỏ gắn thửa."""
+        ds = [d for d in self.pa.dat if d.ma_thua is not None]
+        if not ds:
+            return
+        con_lai = {r[0]: (str(r[1] or '').strip(), str(r[2] or '').strip())
+                   for r in self.con.execute('SELECT ma_thua, so_to, so_thua FROM thua WHERE ma_ho = ?', (self.ma_ho,))}
+        theo_so = {v: k for k, v in con_lai.items()}
+        for d in ds:
+            if d.ma_thua in con_lai:
+                continue
+            t = self.bc.thua.get(d.ma_thua)
+            d.ma_thua = theo_so.get((str(t['so_to'] or '').strip(), str(t['so_thua'] or '').strip())) if t else None
 
     def xoa_nhieu_dat(self, ds_chi_so) -> int:
         """Xóa nhiều dòng mục 1 (chỉ số dòng; trùng / ngoài phạm vi bỏ qua). Trả số dòng đã xóa."""
@@ -1020,7 +1285,19 @@ class BoSoan:
         """Lưu phương án đang soạn (một giao dịch). Trả mô tả để hiện cho người dùng.
         tu_dong: phương án phần mềm tự lập (Dự án mới) - trạng thái TU_LAP, chỉ thành "Đã lập" khi người dùng mở ra soát và Lưu.
         mo_lai=False: không đọc lại phương án vừa lưu (bộ soạn bỏ đi ngay - tự lập hàng loạt)."""
+        if getattr(self, 'phien_ban', None):              # đang mở V2.n / V3: ghi vào phiên bản, không đụng số hiện hành (V3 tự áp)
+            from . import phien_ban_pa as pb
+            ma = self.phien_ban
+            if self.khoa:
+                raise LoiNhap(f'{ma} đang khóa, chỉ xem: bấm Mở khóa để sửa.')
+            pb.sua(self.con, self.ma_ho, ma, self.pa)
+            if mo_lai:
+                self.mo_phien_ban(ma)
+            return f'Đã lưu {ma} của hộ {self.ma_ho} – {self.pa.ho.ho_ten}: tổng {vn(self.ket_qua.tong)} đồng.'
         kiem_ho_nhan_viec(self.con, self.ma_ho)
+        if getattr(self.con, '_vai_tro', None) is not None:      # 1.0.57: vai trò máy chủ LAN - phần phương án được sửa
+            from .phan_quyen import kiem_pa
+            kiem_pa(self.con, getattr(self, '_pa_goc', None), self.pa, getattr(self, 'dm', None))
         if self.khoa:
             from . import lan_pa
             x = lan_pa.lan_cua(self.con, self.ma_ho, self.lan)
@@ -1033,6 +1310,7 @@ class BoSoan:
         loi = self.loi_chan_luu()
         if loi:
             raise LoiNhap('Chưa lưu được:\n' + '\n'.join('- ' + x for x in loi))
+        self._thua_hop_le_khi_luu()
         con, pa = self.con, self.pa
         from . import lan_pa
         from .nghiep_vu import co_cot_lan, tinh_pa_lan
@@ -1045,7 +1323,7 @@ class BoSoan:
         # người dùng Lưu: luôn là đã lập phương án - mục không có / bỏ trống tính 0 đồng (0.9.21; trước: không dòng nào = chưa lập)
         trang_thai = f'{DA_LAP_LUU} {luc:%d/%m/%Y %H:%M})' if not tu_dong else TU_LAP if co_dong else 'Chưa lập phương án'
         truoc = csdl.trang_thai_nho(con)
-        with con:
+        with csdl.giao_dich(con):
             con.execute('''UPDATE ho SET nhan_khau = ?, phai_di_chuyen = ?, dt_nn_dang_dung = ?, trang_thai = ?, luu_luc = ?,
                            tai_dinh_cu = ? WHERE ma_ho = ?''',
                         (pa.ho.nhan_khau, int(pa.ho.phai_di_chuyen),
@@ -1056,13 +1334,16 @@ class BoSoan:
             con.execute(f'DELETE FROM ct_dat WHERE ma_ho = ?{loc}', ts)
             con.execute(f'DELETE FROM ct_khoan WHERE ma_ho = ?{loc}', ts)
             cot_lan, gt_lan = (', lan', (self.lan,)) if co_lan else ('', ())
+            co_ap_gia = csdl.co_cot_ap_gia(con)         # file chưa qua MO_RONG (0 hộ lúc mở): dữ liệu vẫn đủ trong ghi chú
+            cot_ag = ', ap_gia' if co_ap_gia else ''
             for k, d in enumerate(pa.dat, start=1):
-                con.execute(f'''INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia,
-                               he_so_k, ty_le, ghi_chu, thanh_tien_excel, cong_thuc{cot_lan})
-                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?{",?" if co_lan else ""})''',
+                con.execute(f"""INSERT INTO ct_dat (ma_ho, ma_thua, thu_tu, loai_dat, nhom_dat, dien_tich, vi_tri, gia_bang_gia,
+                               he_so_k, ty_le, ghi_chu, thanh_tien_excel, cong_thuc{cot_lan}{cot_ag})
+                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?{",?" if co_lan else ""}{",?" if co_ap_gia else ""})""",
                             (self.ma_ho, d.ma_thua, k, d.loai_dat, d.nhom_dat, chuoi(d.dien_tich), d.vi_tri, chuoi(d.gia_bang_gia),
                              chuoi(d.he_so_k), '' if d.ty_le is None else chuoi(d.ty_le), d.ghi_chu,
-                             chuoi(d.thanh_tien_excel) if d.thanh_tien_excel is not None else None, d.cong_thuc, *gt_lan))
+                             chuoi(d.thanh_tien_excel) if d.thanh_tien_excel is not None else None, d.cong_thuc, *gt_lan,
+                             *((d.ap_gia,) if co_ap_gia else ())))
             for muc in MUC_KHOAN:
                 for k, d in enumerate(pa.khoan[muc], start=1):
                     con.execute(f'''INSERT INTO ct_khoan (muc, ma_ho, thu_tu, ma, ten, dvt, so_luong, don_gia, ty_le, quy_cach, ghi_chu,
@@ -1097,6 +1378,18 @@ class BoSoan:
         return f'Đã lưu hộ {self.ma_ho} – {pa.ho.ho_ten}: tổng {vn(moi.tong)} đồng.'
 
 
+    def luu_tai_cho(self) -> str:
+        """1.0.51 lưu tự động: lưu như người dùng bấm Lưu nhưng KHÔNG đọc lại phương án - giữ nguyên đối tượng đang hiển thị (bảng
+        không dựng lại), chỉ dời mốc "đã lưu" (co_thay_doi, tổng cũ, nhật ký kiểm toán lần sau)."""
+        tb = self.luu(mo_lai=False)
+        r = self.con.execute('SELECT trang_thai FROM ho WHERE ma_ho = ?', (self.ma_ho,)).fetchone()
+        if r is not None:
+            self.pa.ho.trang_thai = r[0]
+        self._pa_goc = copy.deepcopy(self.pa)
+        self._goc = _dang_luu(self._pa_goc)
+        return tb
+
+
 # ---------------------------------------------------------------- dự án, rà soát giá
 # 0.9.72 (người dùng 13/10/2026): bỏ Tên đầy đủ (luu_du_an ghi ten_day_du = ten), Số phương án, Ký hiệu số (theo đợt trình:
 # dot_trinh.ky_hieu_so) khỏi hộp Thông tin dự án - cột CSDL giữ cho file cũ / nhập Excel
@@ -1122,8 +1415,25 @@ def doc_du_an(con) -> dict:
     return {k: ('' if k not in co or r[k] is None else str(r[k])) for k, _ in TRUONG_DU_AN}
 
 
+def chuan_ten_dia_ban(ten) -> str:
+    """Viết hoa chữ cái đầu mỗi từ: "bù đăng" -> "Bù Đăng". Tiền tố xã / phường giữ nguyên chữ người dùng nếu đã có."""
+    return ' '.join(w[:1].upper() + w[1:].lower() for w in unicodedata.normalize('NFC', str(ten or '')).split())
+
+
+def kiem_quyen_du_an(con) -> None:
+    """1.0.91: sửa thông tin dự án cần quyền sửa hồ sơ HOẶC quản trị (lãnh đạo có quản trị, không có sửa hồ sơ). Máy đơn: không làm gì."""
+    if getattr(con, '_vai_tro', None) is None:
+        return
+    from .phan_quyen import QUAN_TRI, quyen_cua, vai_tro_cua
+    if QUAN_TRI in quyen_cua(vai_tro_cua(con)):
+        return
+    kiem_quyen(con, 'sua_ho_so', 'sửa thông tin dự án')
+
+
 def luu_du_an(con, gia_tri: dict) -> None:
-    gt = {k: ' '.join(str(gia_tri.get(k, '') or '').split()) for k, _ in TRUONG_DU_AN}
+    kiem_quyen_du_an(con)
+    gt ={k: ' '.join(str(gia_tri.get(k, '') or '').split()) for k, _ in TRUONG_DU_AN}
+    gt['ten_dia_ban'] = chuan_ten_dia_ban(gt.get('ten_dia_ban'))
     if not gt['ten']:
         raise LoiNhap('Tên dự án không được để trống.')
     if gt['cap_dia_ban'] not in ('Xã', 'Phường', 'Thị trấn', 'Đặc khu'):
@@ -1134,7 +1444,7 @@ def luu_du_an(con, gia_tri: dict) -> None:
             raise LoiNhap('Năm: nhập 4 chữ số, ví dụ 2026.')
         nam = int(gt['nam'])
     cu = doc_du_an(con)
-    with con:
+    with csdl.giao_dich(con):
         csdl.dam_bao_cot_du_an(con)                     # file cũ chưa có cột dia_danh_don_vi (1.0.29)
         gt_ghi = dict(gt, nam=nam)
         # một tên dự án (0.9.72): ten_day_du (cột cũ, nhận loại kinh phí / kiểm lỗi) đi theo ten, trừ khi nơi gọi đưa riêng
@@ -1212,7 +1522,7 @@ def luu_kinh_phi_to_chuc(con, loai: str, ty_le: str = '') -> None:
     cu = (csdl.doc_cai_dat(con, 'LOAI_KINH_PHI', ''), csdl.doc_cai_dat(con, 'TL_KINH_PHI', ''))
     if cu == (loai, tl):
         return
-    with con:
+    with csdl.giao_dich(con):
         csdl.ghi_cai_dat(con, 'LOAI_KINH_PHI', loai)
         csdl.ghi_cai_dat(con, 'TL_KINH_PHI', tl)
         csdl.ghi_nhat_ky(con, 'Kinh phí tổ chức thực hiện', f'loại "{loai or "tự nhận"}", tỷ lệ "{tl or "mức tối đa"}"')

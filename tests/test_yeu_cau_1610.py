@@ -123,7 +123,6 @@ class TestXemTruocBangTongHop(CoSoXem):
         from pabt.man_hinh import HopIn
         h = HopIn(self.con, None, file_du_an=self.p)
         h.im_lang = True
-        self.assertEqual(h.b_xem_bth.text(), 'Xem trước bảng tổng hợp')
         from PySide6.QtCore import Qt
         for r in range(h.bang_ho.rowCount()):
             h.bang_ho.item(r, 0).setCheckState(Qt.CheckState.Unchecked)
@@ -180,7 +179,7 @@ class TestHangNutLapPhuongAn(_Co):
         self.assertEqual((c.b_dan.text(), c.btn_toggle_preview.text()), ('Dán tài sản', 'Xem trước'))
         self.assertTrue(c.cb_ho.currentText().endswith(dai))
         self.assertEqual(c.cb_ho.lineEdit().cursorPosition(), 0)            # chữ hiện từ đầu tên
-        self.assertEqual(c.cb_ho.toolTip(), c.cb_ho.currentText())
+        self.assertIn(c.cb_ho.currentText().split('. ', 1)[1], c.cb_ho.toolTip())     # 1.0.69: chú thích = Họ tên - CCCD - Địa chỉ - Đợt
 
 
 class TestToiUuKiemToan(_Co):

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import an_toan as _an_toan
-from .lap_pa import LoiNhap, ho_nhan_viec, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec
+from .lap_pa import LoiNhap, ho_nhan_viec, kiem_ds_ho_nhan_viec, kiem_ho_nhan_viec, kiem_quyen
 from .tien import vn
 
 # số ngày niêm yết / đối thoại: hồ sơ địa phương (pabt_profile.json mục thoi_han.niem_yet / doi_thoai - mặc định 10 / 30)
@@ -44,6 +44,18 @@ LOAI_Y_KIEN = (
     ('khong_dong_y', 'Không đồng ý'),
 )
 TEN_LOAI = dict(LOAI_Y_KIEN)
+LOAI_SAU_DOI_THOAI = (('', 'Chưa đối thoại'), ('dong_y', 'Đồng ý'), ('khong_dong_y', 'Không đồng ý'), ('y_kien_khac', 'Ý kiến khác'))
+TEN_SAU_DOI_THOAI = dict(LOAI_SAU_DOI_THOAI)
+VONG_SAU_DOI_THOAI = ('', 'dong_y', 'khong_dong_y', 'y_kien_khac')
+
+
+def hieu_luc(con, bi_danh: str = '') -> str:
+    """Biểu thức SQL ý kiến HIỆU LỰC của dòng y_kien_du_thao (1.0.91, người dùng 09/11/2026: lấy ý kiến lần 1 không đồng ý, đối thoại
+    lần 2 đồng ý): ý kiến sau đối thoại nếu đã ghi, không thì ý kiến khi lấy ý kiến (loai). File cũ chưa có cột (mở chỉ xem): loai."""
+    b = f'{bi_danh}.' if bi_danh else ''
+    if 'y_kien_doi_thoai' not in {r[1] for r in con.execute('PRAGMA table_info(y_kien_du_thao)')}:
+        return f'{b}loai'
+    return f"(CASE WHEN COALESCE({b}y_kien_doi_thoai, '') <> '' THEN {b}y_kien_doi_thoai ELSE {b}loai END)"
 NHOM_KIEN_NGHI = (
     ('', ''),
     ('gia_dat', 'Đơn giá đất'),
@@ -114,18 +126,19 @@ def thong_ke_y_kien(con, dot_id=None) -> dict:
     Hộ trong đợt mới tạo có loại 'chua' — không tính là đồng ý. Tỷ lệ đợt = số đồng ý / số hộ của đợt.
     """
     tong_da = con.execute('SELECT COUNT(*) FROM ho').fetchone()[0]
+    hl = hieu_luc(con)                          # 1.0.91: ý kiến sau đối thoại thay ý kiến lần lấy ý kiến
     if dot_id:
-        dem_rows = con.execute('SELECT loai, COUNT(*) FROM y_kien_du_thao WHERE dot_id = ? GROUP BY loai', (dot_id,))
+        dem_rows = con.execute(f'SELECT {hl} AS k, COUNT(*) FROM y_kien_du_thao WHERE dot_id = ? GROUP BY k', (dot_id,))
         n_dot = con.execute('SELECT COUNT(*) FROM y_kien_du_thao WHERE dot_id = ?', (dot_id,)).fetchone()[0]
     else:
-        dem_rows = con.execute('SELECT loai, COUNT(*) FROM y_kien_du_thao GROUP BY loai')
+        dem_rows = con.execute(f'SELECT {hl} AS k, COUNT(*) FROM y_kien_du_thao GROUP BY k')
         n_dot = con.execute('SELECT COUNT(*) FROM y_kien_du_thao').fetchone()[0]
     dem = {r[0]: r[1] for r in dem_rows}
     dong = dem.get('dong_y', 0)
     khac = dem.get('y_kien_khac', 0)
     khong = dem.get('khong_dong_y', 0)
     chua = dem.get('chua', 0)
-    luy_dong = con.execute("SELECT COUNT(DISTINCT ma_ho) FROM y_kien_du_thao WHERE loai = 'dong_y'").fetchone()[0]
+    luy_dong = con.execute(f"SELECT COUNT(DISTINCT ma_ho) FROM y_kien_du_thao WHERE {hl} = 'dong_y'").fetchone()[0]
     luy_ny = con.execute('SELECT COUNT(DISTINCT ma_ho) FROM y_kien_du_thao').fetchone()[0]
     return dict(dong_y=dong, y_kien_khac=khac, khong_dong_y=khong, chua=chua, so_ho_dot=n_dot,
                 pt_dot=_pt(dong, n_dot), luy_dong=luy_dong, luy_ny=luy_ny, pt_luy=_pt(luy_dong, luy_ny),
@@ -142,8 +155,13 @@ def goi_y_du_dieu_kien(con) -> int:
           AND EXISTS (SELECT 1 FROM thua t WHERE t.ma_ho = h.ma_ho AND TRIM(t.nguon_goc) <> '')
           AND (TRIM(IFNULL(h.luu_luc, '')) <> '' OR EXISTS (SELECT 1 FROM ct_dat d WHERE d.ma_ho = h.ma_ho))
     ''')]
+    nv = ho_nhan_viec(con)
+    if nv is not None:                          # 1.0.91: bản offline theo hộ chỉ đánh dấu các hộ đã nhận (gợi ý trên cả dự án, không báo lỗi)
+        ds = [m for m in ds if int(m) in nv]
     if not ds:
         return 0
+    kiem_quyen(con, 'niem_yet')                 # 1.0.91: cùng quyền với ghi_phap_ly (đánh dấu đủ điều kiện niêm yết)
+    kiem_ds_ho_nhan_viec(con, ds)
     with csdl.giao_dich(con):
         for ma in ds:
             con.execute('UPDATE ho SET du_dieu_kien = 1 WHERE ma_ho = ?', (ma,))
@@ -154,6 +172,7 @@ def goi_y_du_dieu_kien(con) -> int:
 def ghi_phap_ly(con, ma_ho: int, du_dieu_kien: int, ma_vuong: str, ghi_chu: str) -> None:
     from . import csdl
     kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     ma_vuong = (ma_vuong or '').strip().upper()
     if ma_vuong and ma_vuong not in TEN_VUONG:
         raise LoiNhap('Nhóm vướng không đúng. Chọn V1 đến V5, hoặc để trống nếu hết vướng.')
@@ -166,6 +185,7 @@ def ghi_phap_ly(con, ma_ho: int, du_dieu_kien: int, ma_vuong: str, ghi_chu: str)
 
 
 def tao_dot(con, ten: str, ngay_bat_dau: str, dia_diem: str) -> int:
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     from . import csdl
     ten = (ten or '').strip()
     if not ten:
@@ -182,6 +202,7 @@ def tao_dot(con, ten: str, ngay_bat_dau: str, dia_diem: str) -> int:
 def dat_ngay_hop(con, dot_id: int, ngay_hop: str, so_bb_bat_dau: str | None = None,
                  so_bb_ket_thuc: str | None = None) -> str:
     """Ghi ngày họp lấy ý kiến (+ số biên bản bắt đầu / kết thúc niêm yết khi truyền - in ở báo cáo tiếp thu ý kiến)."""
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     from . import csdl
     han = han_doi_thoai(ngay_hop)
     hop = ngay_iso(doc_ngay(ngay_hop))
@@ -228,14 +249,14 @@ def ds_de_them(con, dot_id: int, loc: str, dot_nguon: int | None = None) -> list
             ORDER BY thu_tu, ma_ho''')
         nhan = 'Chưa lấy ý kiến'
     elif loc == 'khong_dong_y':
-        rows = con.execute('''SELECT DISTINCT h.ma_ho, h.thu_tu, h.ho_ten, h.ma_vuong
+        rows = con.execute(f'''SELECT DISTINCT h.ma_ho, h.thu_tu, h.ho_ten, h.ma_vuong
             FROM y_kien_du_thao y JOIN ho h ON h.ma_ho = y.ma_ho
-            WHERE y.loai = 'khong_dong_y' ORDER BY h.thu_tu, h.ma_ho''')
+            WHERE {hieu_luc(con, 'y')} = 'khong_dong_y' ORDER BY h.thu_tu, h.ma_ho''')
         nhan = 'Chưa đồng thuận'
     elif loc == 'y_kien_khac':
-        rows = con.execute('''SELECT DISTINCT h.ma_ho, h.thu_tu, h.ho_ten, h.ma_vuong
+        rows = con.execute(f'''SELECT DISTINCT h.ma_ho, h.thu_tu, h.ho_ten, h.ma_vuong
             FROM y_kien_du_thao y JOIN ho h ON h.ma_ho = y.ma_ho
-            WHERE y.loai = 'y_kien_khac' ORDER BY h.thu_tu, h.ma_ho''')
+            WHERE {hieu_luc(con, 'y')} = 'y_kien_khac' ORDER BY h.thu_tu, h.ma_ho''')
         nhan = 'Ý kiến khác'
     else:
         return []
@@ -266,7 +287,7 @@ def ds_ho_cho_dot(con, dot_id: int) -> list:
     lap = phan_loai_lap(con, {m: kq.co_phuong_an for m, (kq, _) in kq_ho.items()} if kq_ho else None)
     ten_dot = {r[0]: r[1] for r in con.execute('SELECT id, ten FROM dot_du_thao')}
     y_kien = {}
-    for r in con.execute('SELECT ma_ho, loai FROM y_kien_du_thao ORDER BY dot_id'):
+    for r in con.execute(f'SELECT ma_ho, {hieu_luc(con)} FROM y_kien_du_thao ORDER BY dot_id'):
         y_kien[r[0]] = r[1] or 'chua'                   # đợt sau ghi đè: ý kiến ở đợt gần nhất
     kq = []
     for r in con.execute('''SELECT ma_ho, thu_tu, ho_ten, dia_chi, du_dieu_kien, ma_vuong, dot_du_thao_id FROM ho
@@ -299,6 +320,7 @@ def them_thu_cong(con, dot_id: int, ds_ma_ho: list, ca_vuong: bool = False) -> t
     30/10/2026: hộ chưa đủ điều kiện vẫn thêm được nếu người lập chọn). Trả (thêm, bỏ qua)."""
     from . import csdl
     kiem_ds_ho_nhan_viec(con, ds_ma_ho)
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     them, bo = 0, 0
     gio = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with csdl.giao_dich(con):
@@ -327,6 +349,7 @@ def dua_ho_vao_dot(con, dot_id: int, ds_ma_ho=None) -> tuple:
         if nhan is not None:
             ds_ma_ho = [m for m in ds_ma_ho if m in nhan]
     kiem_ds_ho_nhan_viec(con, ds_ma_ho)
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     them, bo = 0, 0
     gio = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with csdl.giao_dich(con):
@@ -350,6 +373,7 @@ def ghi_y_kien(con, dot_id: int, ma_ho: int, loai: str, nhom: str, noi_dung: str
     from . import csdl
     from .tien import doc_so_vn
     kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     if loai not in TEN_LOAI or loai == '':
         raise LoiNhap('Chọn loại ý kiến.')
     if nhom and nhom not in TEN_NHOM:
@@ -369,19 +393,71 @@ def ghi_y_kien(con, dot_id: int, ma_ho: int, loai: str, nhom: str, noi_dung: str
         csdl.ghi_nhat_ky(con, 'Ghi ý kiến dự thảo', f'Hộ {ma_ho}, đợt {dot_id}: {TEN_LOAI[loai]}')
 
 
-def ghi_doi_thoai(con, dot_id: int, ma_ho: int, ngay: str, dia_diem: str, ket_luan: str, dien_bien: str = '') -> None:
+def ghi_doi_thoai(con, dot_id: int, ma_ho: int, ngay: str, dia_diem: str, ket_luan: str, dien_bien: str = '',
+                  y_kien: str = '') -> int:
+    """Một lần đối thoại (biên bản) của hộ. y_kien (1.0.91): ý kiến của hộ SAU lần đối thoại này ('dong_y' | 'khong_dong_y' |
+    'y_kien_khac'; '' = không ghi) - thành ý kiến hiệu lực của hộ trong đợt, ý kiến lần lấy ý kiến (loai) giữ nguyên làm chứng cứ.
+    Trả số lần đối thoại."""
     from . import csdl
     kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
+    if y_kien and y_kien not in TEN_SAU_DOI_THOAI:
+        raise LoiNhap('Ý kiến sau đối thoại không đúng.')
     n = ngay_iso(doc_ngay(ngay))
+    if not con.execute('SELECT 1 FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_id, ma_ho)).fetchone():
+        raise LoiNhap('Hộ chưa nằm trong đợt dự thảo này.')
     lan = con.execute('SELECT COALESCE(MAX(lan), 0) + 1 FROM doi_thoai_ho WHERE dot_id = ? AND ma_ho = ?',
                       (dot_id, ma_ho)).fetchone()[0]
+    co_cot = 'y_kien' in {r[1] for r in con.execute('PRAGMA table_info(doi_thoai_ho)')}
     with csdl.giao_dich(con):
-        con.execute('''INSERT INTO doi_thoai_ho (dot_id, ma_ho, lan, ngay, dia_diem, dien_bien, ket_luan)
-                       VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                    (dot_id, ma_ho, lan, n, dia_diem or '', dien_bien or '', ket_luan or ''))
+        if co_cot:
+            con.execute('''INSERT INTO doi_thoai_ho (dot_id, ma_ho, lan, ngay, dia_diem, dien_bien, ket_luan, y_kien)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (dot_id, ma_ho, lan, n, dia_diem or '', dien_bien or '', ket_luan or '', y_kien or ''))
+        else:
+            con.execute('''INSERT INTO doi_thoai_ho (dot_id, ma_ho, lan, ngay, dia_diem, dien_bien, ket_luan)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                        (dot_id, ma_ho, lan, n, dia_diem or '', dien_bien or '', ket_luan or ''))
+        gio = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         con.execute('UPDATE y_kien_du_thao SET ket_qua_doi_thoai = ?, ngay_cap_nhat = ? WHERE dot_id = ? AND ma_ho = ?',
-                    (ket_luan or '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dot_id, ma_ho))
-        csdl.ghi_nhat_ky(con, 'Biên bản đối thoại', f'Hộ {ma_ho}, đợt {dot_id}, lần {lan}')
+                    (ket_luan or '', gio, dot_id, ma_ho))
+        if y_kien and co_cot:
+            con.execute('UPDATE y_kien_du_thao SET y_kien_doi_thoai = ? WHERE dot_id = ? AND ma_ho = ?', (y_kien, dot_id, ma_ho))
+        csdl.ghi_nhat_ky(con, 'Biên bản đối thoại', f'Hộ {ma_ho}, đợt {dot_id}, lần {lan}'
+                         + (f': {TEN_SAU_DOI_THOAI[y_kien]}' if y_kien else ''))
+    return lan
+
+
+def dat_y_kien_sau_doi_thoai(con, dot_id: int, ma_ho: int, y_kien: str) -> str:
+    """Ghi / sửa ý kiến của hộ sau đối thoại ('' = xóa, ý kiến hiệu lực về lại ý kiến khi lấy ý kiến); lần đối thoại gần nhất cũng ghi
+    theo. Trả ý kiến đã ghi."""
+    from . import csdl
+    kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'niem_yet')
+    if y_kien not in TEN_SAU_DOI_THOAI:
+        raise LoiNhap('Ý kiến sau đối thoại không đúng.')
+    if 'y_kien_doi_thoai' not in {r[1] for r in con.execute('PRAGMA table_info(y_kien_du_thao)')}:
+        raise LoiNhap('File dự án chưa nâng cấp (mở để sửa một lần rồi ghi lại).')
+    with csdl.giao_dich(con):
+        n = con.execute('UPDATE y_kien_du_thao SET y_kien_doi_thoai = ?, ngay_cap_nhat = ? WHERE dot_id = ? AND ma_ho = ?',
+                        (y_kien, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dot_id, ma_ho)).rowcount
+        if not n:
+            raise LoiNhap('Hộ chưa nằm trong đợt dự thảo này.')
+        if 'y_kien' in {r[1] for r in con.execute('PRAGMA table_info(doi_thoai_ho)')}:
+            con.execute('''UPDATE doi_thoai_ho SET y_kien = ? WHERE id = (SELECT id FROM doi_thoai_ho WHERE dot_id = ? AND ma_ho = ?
+                           ORDER BY lan DESC LIMIT 1)''', (y_kien, dot_id, ma_ho))
+        csdl.ghi_nhat_ky(con, 'Ý kiến sau đối thoại', f'Hộ {ma_ho}, đợt {dot_id}: {TEN_SAU_DOI_THOAI[y_kien]}')
+    return y_kien
+
+
+def doi_y_kien_sau_doi_thoai_nhanh(con, dot_id: int, ma_ho: int) -> str:
+    """Một chạm ở cột "Ý kiến sau đối thoại": Chưa đối thoại -> Đồng ý -> Không đồng ý -> Ý kiến khác -> Chưa đối thoại."""
+    r = con.execute('SELECT y_kien_doi_thoai FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_id, ma_ho)).fetchone()
+    if r is None:
+        raise LoiNhap('Hộ chưa nằm trong đợt dự thảo này.')
+    cu = r[0] or ''
+    moi = VONG_SAU_DOI_THOAI[(VONG_SAU_DOI_THOAI.index(cu) + 1) % len(VONG_SAU_DOI_THOAI)] if cu in VONG_SAU_DOI_THOAI else 'dong_y'
+    return dat_y_kien_sau_doi_thoai(con, dot_id, ma_ho, moi)
 
 
 def chuyen_sang_dot(con, dot_id: int, ds_ma_ho: list, dot_moi: int) -> int:
@@ -390,11 +466,12 @@ def chuyen_sang_dot(con, dot_id: int, ds_ma_ho: list, dot_moi: int) -> int:
     if dot_moi == dot_id:
         raise LoiNhap('Chọn một đợt khác đợt đang xem.')
     kiem_ds_ho_nhan_viec(con, ds_ma_ho)
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     gio = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     n = 0
     with csdl.giao_dich(con):
         for ma in ds_ma_ho:
-            y = con.execute('SELECT loai FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_id, ma)).fetchone()
+            y = con.execute(f'SELECT {hieu_luc(con)} AS loai FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_id, ma)).fetchone()
             if y is None or y['loai'] == 'dong_y':
                 continue
             con.execute('UPDATE y_kien_du_thao SET chuyen_dot_id = ? WHERE dot_id = ? AND ma_ho = ?', (dot_moi, dot_id, ma))
@@ -413,18 +490,23 @@ def _thua(con, ma_ho: int) -> str:
 
 
 def ds_ho_dot(con, dot_id: int) -> list:
-    from .an_toan import che_cccd
+    from .an_toan import che_cccd, che_cccd_niem_yet
+    che = che_cccd_niem_yet(con)
     tien = _tien_ho(con)
     kq = []
-    for r in con.execute('''SELECT y.*, h.ho_ten, h.so_cccd, h.dia_chi, h.thu_tu
+    from . import csdl
+    for r in con.execute(f'''SELECT y.*, h.ho_ten, h.so_cccd, h.dia_chi, h.thu_tu, h.phap_ly, {csdl.sql_ghi_chu_ten(con, 'h')}
                             FROM y_kien_du_thao y JOIN ho h ON h.ma_ho = y.ma_ho
                             WHERE y.dot_id = ? ORDER BY h.thu_tu, h.ma_ho''', (dot_id,)):
         d = dict(r)
         d['thua'] = _thua(con, r['ma_ho'])
-        d['cccd_che'] = che_cccd(r['so_cccd'] or '')
+        d['cccd_che'] = che_cccd(r['so_cccd'] or '', che)       # 1.0.52: file niêm yết; màn hình hiện số đủ (so_cccd)
         d['tien'] = tien.get(r['ma_ho'])
         d['lan_dt'] = con.execute('SELECT COUNT(*) FROM doi_thoai_ho WHERE dot_id = ? AND ma_ho = ?',
                                   (dot_id, r['ma_ho'])).fetchone()[0]
+        d.setdefault('y_kien_doi_thoai', '')
+        d['y_kien_doi_thoai'] = d['y_kien_doi_thoai'] or ''
+        d['hieu_luc'] = d['y_kien_doi_thoai'] or d['loai'] or 'chua'      # 1.0.91: ý kiến sau đối thoại thay ý kiến lần đầu
         kq.append(d)
     return kq
 
@@ -510,13 +592,17 @@ def xuat_niem_yet(con, dot_id: int, file) -> 'Path':
     dot = con.execute('SELECT * FROM dot_du_thao WHERE id = ?', (dot_id,)).fetchone()
     if dot is None:
         raise LoiNhap('Chưa chọn đợt dự thảo.')
+    from . import phien_ban_pa as pb
+    ho = ds_ho_dot(con, dot_id)
+    pb.khoa_v1_nhieu(con, [h['ma_ho'] for h in ho], dot['ten'])       # 1.0.63: niêm yết = chốt V1, số trên bảng theo V1
     dong = []
-    for i, h in enumerate(ds_ho_dot(con, dot_id), 1):
+    for i, h in enumerate(ho, 1):
+        tien = pb.tong(con, h['ma_ho'], pb.V1) if pb.lay(con, h['ma_ho'], pb.V1) is not None else h['tien']
         dong.append({
             'STT': i, 'Mã hộ': h['ma_ho'], 'Họ và tên': h['ho_ten'], 'CCCD': h['cccd_che'],
             'Địa chỉ': h['dia_chi'], 'Thửa': h['thua'],
-            'Tổng tiền dự thảo': vn(h['tien']) if h['tien'] is not None else '',
-            'Địa điểm niêm yết': dot['dia_diem'],
+            'Tổng tiền dự thảo': vn(tien) if tien is not None else '',
+            'Địa điểm niêm yết': dot['dia_diem'], 'Mã định danh': pb.uuid_ho(con, h['ma_ho']),
         })
     tieu = (f'DỰ THẢO PHƯƠNG ÁN BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ — {dot["ten"]}. '
             f'Niêm yết {hien_ngay(dot["ngay_bat_dau"])} đến {hien_ngay(dot["ngay_ket_thuc"])} '
@@ -533,6 +619,7 @@ def xuat_y_kien(con, dot_id: int, file) -> 'Path':
     for h in ds_ho_dot(con, dot_id):
         dong.append({
             'Mã hộ': h['ma_ho'], 'Họ và tên': h['ho_ten'], 'Ý kiến': TEN_LOAI.get(h['loai'], h['loai']),
+            'Sau đối thoại': TEN_SAU_DOI_THOAI.get(h['y_kien_doi_thoai'], '') if h['y_kien_doi_thoai'] else '',
             'Nhóm': TEN_NHOM.get(h['nhom'], h['nhom']), 'Nội dung': h['noi_dung'],
             'Hướng xử lý': h['huong_xu_ly'], 'Chênh lệch': h['so_tien_chenh'],
             'Đối thoại': h['ket_qua_doi_thoai'],
@@ -634,6 +721,7 @@ def ghi_danh_dau(con, danh_dau: dict) -> tuple:
         if bool(co) != cu:
             doi.append((1 if co else 0, m))
     kiem_ds_ho_nhan_viec(con, [m for _, m in doi])         # chỉ hộ thật sự đổi đánh dấu (hộp chọn gửi cả dự án)
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     if doi:
         with csdl.giao_dich(con):
             con.executemany('UPDATE ho SET du_dieu_kien = ? WHERE ma_ho = ?', doi)
@@ -670,6 +758,7 @@ def cap_nhat_y_kien(con, dot_id: int, ma_ho: int, **thay) -> str:
 def doi_y_kien_nhanh(con, dot_id: int, ma_ho: int) -> str:
     """Một chạm: chuyển ý kiến của hộ sang loại kế tiếp trong VONG_Y_KIEN. Trả loại mới."""
     kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'niem_yet')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     r = con.execute('SELECT loai FROM y_kien_du_thao WHERE dot_id = ? AND ma_ho = ?', (dot_id, ma_ho)).fetchone()
     if r is None:
         raise LoiNhap('Hộ chưa nằm trong đợt dự thảo này.')
@@ -684,10 +773,11 @@ def tong_hop_nhom(con, dot_id) -> list:
     (dot_id None: lũy kế các đợt). Mỗi nhóm: hộ có kiến nghị nhóm đó, trong đó đã đồng ý, chưa đồng thuận, tỷ lệ đồng thuận (%),
     nội dung tiêu biểu. Dòng cuối 'Toàn đợt': mọi hộ (kể cả hộ chưa lấy ý kiến). [dict(nhom, ten, so_ho, dong_y, chua_dong_y,
     pt_dong_y, noi_dung)]"""
+    hl = hieu_luc(con)                          # 1.0.91: đồng thuận theo ý kiến sau đối thoại
     if dot_id:
-        rows = con.execute('SELECT ma_ho, loai, nhom, noi_dung FROM y_kien_du_thao WHERE dot_id = ?', (dot_id,)).fetchall()
+        rows = con.execute(f'SELECT ma_ho, {hl} AS loai, nhom, noi_dung FROM y_kien_du_thao WHERE dot_id = ?', (dot_id,)).fetchall()
     else:
-        rows = con.execute('SELECT ma_ho, loai, nhom, noi_dung FROM y_kien_du_thao').fetchall()
+        rows = con.execute(f'SELECT ma_ho, {hl} AS loai, nhom, noi_dung FROM y_kien_du_thao').fetchall()
     kq = []
     gom = {}
     for r in rows:
@@ -726,7 +816,8 @@ def xuat_doi_thoai(con, dot_id: int, file) -> 'Path':
                          'Hướng xử lý': h['huong_xu_ly']})
         for x in lan:
             dong.append({**goc, 'Lần': x['lan'], 'Ngày': hien_ngay(x['ngay']), 'Địa điểm': x['dia_diem'],
-                         'Diễn biến': x['dien_bien'], 'Kết luận, tiếp thu': x['ket_luan'], 'Hướng xử lý': h['huong_xu_ly']})
+                         'Diễn biến': x['dien_bien'], 'Kết luận, tiếp thu': x['ket_luan'], 'Hướng xử lý': h['huong_xu_ly'],
+                         'Ý kiến sau đối thoại': TEN_SAU_DOI_THOAI.get(x['y_kien'], '') if 'y_kien' in x.keys() and x['y_kien'] else ''})
     tieu = (f'BIÊN BẢN ĐỐI THOẠI, GIẢI TRÌNH - {dot["ten"]}. Họp dân {hien_ngay(dot["ngay_hop"]) if dot["ngay_hop"] else "(chưa đặt)"}'
             f', hạn đối thoại {hien_ngay(dot["han_doi_thoai"]) if dot["han_doi_thoai"] else "(chưa đặt)"}. Hộ không đồng ý hoặc có '
             'ý kiến khác.')
@@ -749,7 +840,7 @@ def dot_niem_yet_xong(con, hom_nay=None) -> list:
         han = _han_xong(d['ngay_ket_thuc'])
         if han is None or han > nay:
             continue
-        r = con.execute("""SELECT COUNT(*), SUM(CASE WHEN y.loai = 'dong_y' THEN 1 ELSE 0 END)
+        r = con.execute(f"""SELECT COUNT(*), SUM(CASE WHEN {hieu_luc(con, 'y')} = 'dong_y' THEN 1 ELSE 0 END)
                            FROM y_kien_du_thao y JOIN ho h ON h.ma_ho = y.ma_ho
                            WHERE y.dot_id = ? AND TRIM(h.ma_vuong) = ''""", (d['id'],)).fetchone()
         if r[0]:
@@ -764,7 +855,7 @@ def ho_niem_yet_xong(con, hom_nay=None, chi_dong_y: bool = False, dot_id: int | 
     if dot_id is not None:
         xong &= {dot_id}
     moi_nhat = {}
-    for r in con.execute('''SELECT y.ma_ho, y.dot_id, y.loai, h.thu_tu, h.ma_vuong FROM y_kien_du_thao y
+    for r in con.execute(f'''SELECT y.ma_ho, y.dot_id, {hieu_luc(con, 'y')} AS loai, h.thu_tu, h.ma_vuong FROM y_kien_du_thao y
                             JOIN ho h ON h.ma_ho = y.ma_ho ORDER BY y.dot_id, y.id'''):
         if r['dot_id'] in xong and not (r['ma_vuong'] or '').strip():
             moi_nhat[r['ma_ho']] = (r['thu_tu'], r['loai'])
@@ -787,6 +878,7 @@ def xoa_dot(con, dot_id: int) -> dict:
     """Xóa một đợt niêm yết / lấy ý kiến: các hộ của đợt trở về danh sách chờ (vẫn "đủ điều kiện", chưa thuộc đợt nào - hoặc thuộc đợt
     gần nhất còn lại của hộ); ý kiến và biên bản đối thoại GHI TRONG ĐỢT NÀY bị xóa theo đợt. Phương án, thửa, hồ sơ hộ giữ nguyên 100%.
     Trả thong_tin_xoa_dot (số liệu trước khi xóa)."""
+    kiem_quyen(con, 'niem_yet')                 # vai trò tài khoản máy chủ (phan_quyen)
     from . import csdl
     tt = thong_tin_xoa_dot(con, dot_id)
     with csdl.giao_dich(con):

@@ -63,7 +63,10 @@ def _cap(file) -> list:
     if du_lieu.startswith(b'\xef\xbb\xbf'):
         du_lieu = du_lieu[3:]
     # bản vẽ cũ cp1258 ghi dấu thanh tiếng Việt tách rời (a + dấu sắc): dựng sẵn (NFC) để so khớp / hiện như chữ thường
-    dong = unicodedata.normalize('NFC', du_lieu.decode(ma, 'replace')).splitlines()
+    dong = unicodedata.normalize('NFC', du_lieu.decode(ma, 'replace'))
+    dong = re.split(r'\r\n|\n|\r', dong)                  # 1.0.58: không splitlines (MTEXT có \x0c làm cả file bị từ chối)
+    while dong and not dong[-1].strip():
+        dong.pop()
     if len(dong) < 2:
         raise LoiDxf(f'{p.name} không phải bản vẽ DXF.')
     kq = []
@@ -74,6 +77,8 @@ def _cap(file) -> list:
             raise LoiDxf(f'{p.name} hỏng cấu trúc DXF (dòng {i + 1}: "{dong[i].strip()[:20]}" không phải mã nhóm).') from None
     if not any(c == 0 and v.strip() == 'SECTION' for c, v in kq[:50]):
         raise LoiDxf(f'{p.name} không phải bản vẽ DXF.')
+    if not any(c == 0 and v.strip() == 'EOF' for c, v in kq[-3:]):       # 1.0.58: file chép dở: mất thửa mà không báo
+        raise LoiDxf(f'{p.name} bị cắt cụt (không thấy dấu kết thúc EOF): chép lại file rồi nhập.')
     return kq
 
 

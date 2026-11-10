@@ -14,7 +14,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 import openpyxl
 from PySide6.QtCore import QEvent, QPointF, Qt
 from PySide6.QtGui import QMouseEvent
-from PySide6.QtWidgets import QApplication, QDialog, QSplitter, QStyleOptionViewItem
+from PySide6.QtWidgets import QApplication, QDialog, QStyleOptionViewItem
 
 from pabt import csdl, du_thao
 from tests.test_toc_do import _du_an
@@ -66,15 +66,9 @@ class TestNiemYet(_Co):
 
     def test_the_1_keo_gian_va_che_cccd(self):
         k, dot = self._khung()
-        self.assertIsInstance(k.tach, QSplitter)
-        self.assertFalse(k.tach.childrenCollapsible())
-        self.assertEqual(k.tach.count(), 2)
-        self.assertTrue(k.tach.widget(0).isAncestorOf(k.bang_ny) and k.tach.widget(1).isAncestorOf(k.bang_vm))
-        k.resize(1000, 900)                                            # đủ cao để kéo giãn (cửa sổ nhỏ: Qt ép hai bảng bằng nhau)
-        self.app.processEvents()
-        k.tach.setSizes([k.tach.height() - 120, 100])
-        self.app.processEvents()
-        self.assertGreater(k.tach.sizes()[0], k.tach.sizes()[1])
+        # 06/11/2026: hai bảng con thay thanh ngăn kéo (tests/test_bang_con_niem_yet.py)
+        self.assertEqual(k.ngan_ny.count(), 2)
+        self.assertTrue(k.ngan_ny.widget(0).isAncestorOf(k.bang_ny) and k.ngan_ny.widget(1).isAncestorOf(k.bang_vm))
         self.assertEqual(k.bang_ny.horizontalHeaderItem(2).text(), 'CCCD')      # 1.0.04: số đầy đủ (bỏ che)
         self.assertIn('Xuất bảng niêm yết', k._nut)
 
@@ -164,8 +158,7 @@ class TestLapPA(_Co):
     def test_tra_gia_dat_nq28_o_muc_1(self):
         from pabt import gia_dat_nq28 as nq
         w = self._cua_so()
-        self.assertIn('Tra giá đất NQ 28…', w.bang[1].nut)
-        self.assertEqual(w.bang[1].nut['Tra giá đất NQ 28…'].text(), 'Tra giá đất NQ 28…')
+        self.assertIn('Tra giá đất NQ 28…', [a.text() for a in w.bang[1].menu_dong().actions()])     # 1.0.68: nút chuyển vào menu chuột phải của dòng
         self.assertTrue(w.bo.pa.dat, 'dự án giả lập phải có dòng đất')
         dong = next(r for r in nq.theo_dia_ban(w.bo.bc.ten_dia_ban or '') if nq.gia_dong(r, nq.cot_cua_loai(w.bo.pa.dat[0].loai_dat)))
         tb = w.tra_gia_dat_nq28(0, dong=dong)                           # một dòng đất: không cần chọn

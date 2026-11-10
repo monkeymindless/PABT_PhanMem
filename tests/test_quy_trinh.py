@@ -188,6 +188,7 @@ class TestBuongLai(unittest.TestCase):
         self.assertTrue(kq.doi_soat())
         self.assertEqual(kq.so_ho, 5)
         self.assertEqual(tq.pheu.chu_giai['da_lap'].text(), 'Đã lập  5')
+        self.assertEqual(tq.pheu.cb_pham_vi.itemData(0), 'ca')
         self.assertIn('5 hộ', tq.pheu.lb_tom_tat.text())
         self.assertTrue(tq.pheu.nut_co['tu_lap'].isVisible())
         self.assertTrue(tq.viec.dong)
@@ -195,6 +196,27 @@ class TestBuongLai(unittest.TestCase):
         self.addCleanup(h.close)
         self.assertEqual(h.bang.rowCount(), 5)
         self.assertEqual(tq.pheu.cb_pham_vi.itemText(0), 'Cả dự án')
+        self.assertEqual(len(tq.pheu.ds_dang_xem()), 5)
+
+    def test_chip_da_lap_niem_yet_luy_ke_sau_khi_trinh(self):
+        """Hộ đã đưa vào đợt trình: ô Đã lập / Niêm yết vẫn hiện đủ số hộ đã đến mốc, không về 0."""
+        from pabt import quan_ly
+        tq = self.w.tong_quan
+        ma = [r[0] for r in self.w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu')]
+        dt = quan_ly.tao_dot(self.w.con, 'Đợt trình 1', so_to_trinh='15/TTr-BBT', ngay_trinh='01/11/2026')
+        quan_ly.gan_dot(self.w.con, ma[:3], dt)
+        tq._nap_pheu(self.w.con, {m: 'da_lap' for m in ma})
+        self.app.processEvents()
+        kq = tq.ket_qua_pheu
+        self.assertEqual(kq.dem()['cho_phe_duyet'], 3)
+        self.assertEqual(tq.pheu.chu_giai['da_lap'].text(), 'Đã lập  5')
+        self.assertEqual(tq.pheu.chu_giai['niem_yet'].text(), 'Niêm yết  3')
+        self.assertEqual(tq.pheu.chu_giai['cho_phe_duyet'].text(), 'Chờ phê duyệt  3')
+        tq.pheu._chon_giai_doan('da_lap')
+        hop = tq.hop_ds[-1] if tq.hop_ds else None
+        self.addCleanup(hop.close if hop is not None else lambda: None)
+        self.assertIsNotNone(hop)
+        self.assertEqual(hop.bang.rowCount(), 5)
 
     def test_ghi_ngay_buoc_va_bam_buoc(self):
         self.assertTrue(self.w.ghi_ngay_buoc(2, '05/03/2026'))

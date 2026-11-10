@@ -29,12 +29,19 @@ NK_CO_BAN = 4                                   # QĐ 42/2025: mức cơ bản c
 _TAP_MA: list = [None, None]                    # [hồ sơ địa phương đã đọc (đối tượng dia_phuong.doc()), (ổn định, theo NK, TĐC, đào tạo)]
 
 
+_DIA_PHUONG: list = []
+
+
 def _tap_ma() -> tuple:
     """(mã ổn định đời sống, mã thuê nhà / tự lo chỗ ở, mã tái định cư, mã đào tạo) = mã chuẩn (Đồng Nai, QĐ 42/2025) HỢP với mã khai
     báo thêm ở hồ sơ địa phương chinh_sach_ho_tro.ma_on_dinh / ma_theo_nk / ma_tdc / ma_dao_tao (bộ đơn giá tỉnh khác). Mã ổn định / theo nhân khẩu KHÔNG BAO
     GIỜ là tái định cư (ưu tiên mã; hồ sơ ghi trùng thì bỏ khỏi tập TĐC). Nhớ theo đối tượng hồ sơ (dia_phuong.doc đổi khi nạp lại)."""
-    from . import dia_phuong
-    hs = dia_phuong.doc()
+    if _DIA_PHUONG:
+        hs = _DIA_PHUONG[0].doc()
+    else:
+        from . import dia_phuong
+        _DIA_PHUONG.append(dia_phuong)
+        hs = dia_phuong.doc()
     if _TAP_MA[0] is not hs:
         ch = hs.get('chinh_sach_ho_tro') if isinstance(hs, dict) else None
         ch = ch if isinstance(ch, dict) else {}
@@ -194,6 +201,7 @@ class DongDat:
     thanh_tien_excel: Decimal | None = None
     id: int | None = None
     cong_thuc: str = ''             # công thức đã gõ ra diện tích (=20*10,55); trống = gõ số
+    ap_gia: str = ''                # JSON don_gia, gia_bang_gia_nq28, he_so_k1 / k2 / k3, cong_thuc_dien_giai khi áp đơn giá đất (1.0.69)
 
 
 @dataclass
@@ -346,7 +354,8 @@ def _dong_dat(r) -> DongDat:
                    vi_tri=r['vi_tri'], gia_bang_gia=D(r['gia_bang_gia']), he_so_k=he_so(r['he_so_k']),
                    ty_le=None if r['ty_le'] in (None, '') else D(r['ty_le']), ghi_chu=r['ghi_chu'],
                    thanh_tien_excel=_dec_hoac_none(r['thanh_tien_excel']), id=r['id'],
-                   cong_thuc=(r['cong_thuc'] or '') if 'cong_thuc' in r.keys() else '')
+                   cong_thuc=(r['cong_thuc'] or '') if 'cong_thuc' in r.keys() else '',
+                   ap_gia=(r['ap_gia'] or '') if 'ap_gia' in r.keys() else '')
 
 
 def _dong_khoan(r) -> DongKhoan:
@@ -472,6 +481,12 @@ def tinh_chenh_lech_lan(con, ma_ho: int, lan: int, bc: BoiCanh | None = None) ->
     kq = KetQuaHo(ma_ho=moi.ma_ho, ho_ten=moi.ho_ten, dong=moi.dong, da_luu=moi.da_luu)
     for m in kq.muc:
         kq.muc[m] = moi.muc.get(m, KHONG) - cu.muc.get(m, KHONG)
+    # 1.0.58: thưởng theo bậc trên TỔNG của hộ: chênh lệch = thưởng tổng sau điều chỉnh - thưởng tổng trước điều chỉnh (cùng các lần
+    # khác). Trước đây lấy thưởng lũy tiến của hai lần trên hai nền khác nhau: hộ có lần bổ sung xen giữa ra số sai, cộng các QĐ lệch tổng.
+    khac = doc_phuong_an(con, ma_ho, ngoai_lan=lan)
+    sau = gop_phuong_an(khac, doc_phuong_an(con, ma_ho, lan=lan))
+    truoc = gop_phuong_an(khac, doc_phuong_an(con, ma_ho, lan=cu_lan))
+    kq.muc[5] = tinh_pa(sau, bc).muc[5] - tinh_pa(truoc, bc).muc[5]
     return kq
 
 
@@ -865,7 +880,14 @@ def kiem_tra_pa(pa: PhuongAn, bc: BoiCanh) -> list:
             ct.append(f'Thửa {t["so_thua"]} tờ {t["so_to"]}: tổng DT ở mục 1 = {so_vn(dtt)} m², kiểm kê ghi {so_vn(t["dt_thu_hoi"])} m².')
     for ma, gk in (('CS9', False), ('CS10', True)):
         co = pa.dong_ho_tro(ma)
-        if not co or any(_dao_tao_theo_thua(d) for d in co):
+        if co and any(_dao_tao_theo_thua(d) for d in co):
+            # 1.0.58: nhập theo từng thửa: báo khi tổng vượt hạn mức giao đất NN (Điều 13 QĐ 42/2025) - trước đây không kiểm
+            sl_hm, _ = de_xuat_dao_tao_pa(pa, bc, gk)
+            tong = sum((d.so_luong for d in co), KHONG)
+            if tong > sl_hm:
+                ct.append(f'{ma}: tổng {so_vn(tong)} m² nhập theo thửa vượt hạn mức giao đất nông nghiệp, tối đa {so_vn(sl_hm)} m².')
+            continue
+        if not co:
             continue
         sl, dg = de_xuat_dao_tao_pa(pa, bc, gk)
         if co[0].so_luong != sl or co[0].don_gia != dg:
@@ -898,3 +920,80 @@ def dong_bang_0(pa: PhuongAn) -> list:
 
 def kiem_tra_ho(con, ma_ho: int, bc: BoiCanh | None = None) -> list:
     return kiem_tra_pa(doc_phuong_an(con, ma_ho), bc or BoiCanh.tu(con))
+
+
+# ---------------------------------------------------------------- giải trình một dòng (1.0.55 - người dùng 03/11/2026)
+def chu_lam_tron(n: int) -> str:
+    """-3 -> 'làm tròn đến nghìn đồng' (tham số LAMTRON của dự án, ROUND của Excel)."""
+    return {0: 'làm tròn đến đồng', -1: 'làm tròn đến chục đồng', -2: 'làm tròn đến trăm đồng', -3: 'làm tròn đến nghìn đồng',
+            -4: 'làm tròn đến chục nghìn đồng', -5: 'làm tròn đến trăm nghìn đồng', -6: 'làm tròn đến triệu đồng'}.get(
+        int(n), f'làm tròn {n} chữ số')
+
+
+def giai_trinh_dong_pa(pa: PhuongAn, bc: BoiCanh, muc: int, chi_so: int) -> dict:
+    """Giải trình dòng chi_so (0-) của mục muc (1 đất; 2, 3, MUC_VN, 4 khoản) để trả lời thanh tra / người dân: ten_hang_muc,
+    cong_thuc_chu (công thức bằng chữ), thay_so [dòng thay số cụ thể], can_cu [căn cứ / nguồn giá], thanh_tien (Decimal - đúng như
+    tinh_pa), dong [mọi dòng gộp để hiện / chép]. Chỉ đọc, không đổi phương án."""
+    from .tien import so_vn, vn
+    tron = chu_lam_tron(bc.lamtron)
+    if muc == 1:
+        d = pa.dat[chi_so]
+        t = bc.thua.get(d.ma_thua) or {}
+        ten = mo_ta_thua(t.get('so_to', ''), t.get('so_thua', ''), d.loai_dat, bc.cap_dia_ban, bc.ten_dia_ban, d.vi_tri or t.get('vi_tri'))
+        k, tl = he_so(d.he_so_k), he_so(d.ty_le)
+        dg = D(d.gia_bang_gia) * k
+        tt = thanh_tien_dong_dat(d, bc)
+        cong_thuc = f'Thành tiền = ROUND(Diện tích × Giá đất theo bảng giá × Hệ số K × Tỷ lệ bồi thường; {tron})'
+        thay = []
+        if d.cong_thuc:
+            thay.append(f'Diện tích tính từ công thức đã nhập: {d.cong_thuc} = {so_vn(d.dien_tich)} m²')
+        thay.append(f'Đơn giá bồi thường = {vn(d.gia_bang_gia)} đ/m² × hệ số K {so_vn(k)} = {vn(dg)} đ/m²')
+        if d.ap_gia:
+            import json
+            try:
+                thay.append('Thuyết minh đơn giá đất: ' + json.loads(d.ap_gia).get('cong_thuc_dien_giai', ''))
+            except ValueError:
+                pass
+        thay.append(f'Thành tiền = {so_vn(d.dien_tich)} m² × {vn(dg)} đ/m² × {so_vn(tl * 100)}% = {vn(D(d.dien_tich) * dg * tl)} đồng'
+                    f' -> {tron}: {vn(tt)} đồng')
+        can_cu = [x for x in (f'Loại đất {d.loai_dat}' + (f', vị trí {d.vi_tri}' if d.vi_tri else '') if d.loai_dat else '',
+                              (f'Nguồn gốc sử dụng đất: {t.get("nguon_goc")}' if t.get('nguon_goc') else ''),
+                              (f'Ghi chú / căn cứ: {d.ghi_chu}' if d.ghi_chu else '')) if x]
+    else:
+        d = pa.khoan[muc][chi_so]
+        tl = he_so(d.ty_le)
+        tt = thanh_tien_dong(d, bc)
+        ten = (f'{d.ma} - ' if d.ma else '') + (d.ten or '')
+        cong_thuc = f'Thành tiền = ROUND(Số lượng × Đơn giá × Tỷ lệ; {tron})'
+        thay = []
+        if d.cong_thuc:
+            thay.append(f'Số lượng tính từ công thức đã nhập: {d.cong_thuc} = {so_vn(d.so_luong)} {d.dvt or ""}'.rstrip())
+        if muc == 4 and d.ma in tap_ma_theo_nk():
+            thay.append('Đơn giá theo nhân khẩu: ' + don_gia_theo_nhan_khau(bc, d.ma, pa.nhan_khau, bc.nguong_nk)[1])
+        if d.cach_tinh:
+            thay.append(f'Cách tính: {d.cach_tinh}')
+        if muc == 4 and d.ma in tap_ma_on_dinh():
+            cong_thuc += ' (ổn định đời sống: số lượng = nhân khẩu, đơn giá = kg gạo × giá gạo × số tháng × mức hỗ trợ)'
+        elif muc == 4 and d.ma in tap_ma_dao_tao():
+            cong_thuc += ' (đào tạo, chuyển đổi nghề: số lượng = diện tích đất nông nghiệp thu hồi, đơn giá = giá đất × tỷ lệ hỗ trợ)'
+        thay.append(f'Thành tiền = {so_vn(d.so_luong)} {d.dvt or ""} × {vn(d.don_gia)} đ × {so_vn(tl * 100)}% = '
+                    f'{vn(D(d.so_luong) * D(d.don_gia) * tl)} đồng -> {tron}: {vn(tt)} đồng')
+        nguon = {NGUON_DM: 'đơn giá theo danh mục bộ đơn giá', NGUON_TD: 'đơn giá theo mục tương đương'
+                 + (f' {d.ma_tuong_duong}' if d.ma_tuong_duong else ''), NGUON_TAY: 'đơn giá nhập tay'}.get(d.nguon_gia, d.nguon_gia)
+        ht = (bc.hotro.get(d.ma) or {}) if muc == 4 else {}
+        can_cu = [x for x in (f'Nguồn giá: {nguon}' if nguon else '',
+                              (f'Căn cứ giá: {d.can_cu_gia}' if d.can_cu_gia else ''),
+                              (f'{"Căn cứ" if muc == 4 else "Quy cách"}: {d.quy_cach}' if d.quy_cach else ''),
+                              (f'Căn cứ chính sách: {ht.get("can_cu")}' if ht.get('can_cu') and ht.get('can_cu') != d.quy_cach else ''),
+                              (f'Ghi chú: {d.ghi_chu}' if d.ghi_chu and d.ghi_chu not in (d.quy_cach, ht.get('can_cu')) else ''))
+                  if x]
+    dong = [f'Hạng mục: {ten}', '', 'Công thức:', f'  {cong_thuc}', '', 'Thay số:', *[f'  {x}' for x in thay]]
+    if can_cu:
+        dong += ['', 'Căn cứ, nguồn số liệu:', *[f'  {x}' for x in can_cu]]
+    # 1.0.56: quy định cách tính trích từ văn bản đơn giá (tham_so QDCT:…) có liên quan tới mục - xem để tính đúng (mật độ, tỷ lệ…)
+    from .quy_dinh_van_ban import quy_dinh_lien_quan
+    qd = quy_dinh_lien_quan(bc.ts, {1: 0, 2: 2, 3: 3, MUC_VN: 7, 4: 4}.get(muc, 0), ten) if muc != 1 else []
+    if qd:
+        dong += ['', 'Quy định cách tính trong văn bản đơn giá (liên quan):', *[f'  - {x}' for x in qd]]
+    return dict(muc=muc, chi_so=chi_so, ten_hang_muc=ten, cong_thuc_chu=cong_thuc, thay_so=thay, can_cu=can_cu, thanh_tien=tt,
+                dong=dong, quy_dinh=qd)

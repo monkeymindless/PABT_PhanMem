@@ -19,7 +19,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from . import csdl, thoi_han
-from .lap_pa import LoiNhap, kiem_ho_nhan_viec
+from .lap_pa import LoiNhap, kiem_ho_nhan_viec, kiem_quyen
 from .quan_ly import chuan_ngay
 
 BANG = 'nhat_ky_van_dong'
@@ -68,6 +68,7 @@ def ghi_buoi(con, ma_ho: int, viec: str, ngay: str, hinh_thuc: str = '', thanh_p
              ket_qua: str = 'chua_dong_y', bien_ban: str = '', ghi_chu: str = '', buoi_id: int | None = None) -> int:
     """Thêm (buoi_id None) hoặc sửa một buổi vận động. Trả id."""
     kiem_ho_nhan_viec(con, ma_ho)
+    kiem_quyen(con, 'qd_chi_tra')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     if viec not in VIEC:
         raise LoiNhap('Chọn việc vận động: không nhận tiền bồi thường hoặc không bàn giao mặt bằng.')
     if ket_qua not in TEN_KET_QUA:
@@ -101,6 +102,7 @@ def xoa_buoi(con, buoi_id: int) -> int:
     r = con.execute(f'SELECT ma_ho, ngay FROM {BANG} WHERE id = ?', (buoi_id,)).fetchone()
     if r is not None:
         kiem_ho_nhan_viec(con, r['ma_ho'])
+        kiem_quyen(con, 'qd_chi_tra')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
     with csdl.giao_dich(con):
         n = con.execute(f'DELETE FROM {BANG} WHERE id = ?', (buoi_id,)).rowcount
         if n and r:

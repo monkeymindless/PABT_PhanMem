@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QImage, QPixmap, QTransform
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
                                QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QProgressDialog, QPushButton, QScrollArea, QSplitter,
                                QStackedWidget, QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout, QWidget)
 
@@ -26,12 +26,13 @@ TRANG_TOI_DA = 200                # file quá nhiều trang: chỉ dựng chừn
 
 def anh_cac_trang(files) -> list:
     """[(tên file, số trang, QImage)] mọi trang của các file ảnh / PDF (PDF: QtPdf; Qt5 không có QtPdf: ảnh scan trong PDF qua pypdf).
-    Trang không dựng được: bỏ qua."""
+    Ảnh thu như OCR (_doc_qimage) — file điện thoại vài MB không nạp bitmap đầy đủ. Trang không dựng được: bỏ qua."""
+    from .ocr import CANH_DAI_TOI_DA, _doc_qimage
     kq = []
     for f in files:
         f = Path(f)
         if f.suffix.lower() != '.pdf':
-            im = QImage(str(f))
+            im = _doc_qimage(f, gioi=CANH_DAI_TOI_DA)
             if not im.isNull():
                 kq.append((f.name, 1, im))
             continue
@@ -54,6 +55,7 @@ def anh_cac_trang(files) -> list:
             finally:
                 doc.close()
             continue
+        import shutil
         import tempfile
         from . import ocr
         td = Path(tempfile.mkdtemp(prefix='PABT_xem_'))
@@ -61,11 +63,13 @@ def anh_cac_trang(files) -> list:
             for i, _tong, p in ocr._anh_trang_pypdf(f, td):
                 if i > TRANG_TOI_DA:
                     break
-                im = QImage(str(p)) if p is not None else QImage()
+                im = _doc_qimage(p, gioi=RONG_DUNG_TRANG) if p is not None else QImage()
                 if not im.isNull():
                     kq.append((f.name, i, im))
         except Exception:                                # noqa: BLE001 - PDF không có ảnh (lớp chữ): không xem được trên Qt5
             pass
+        finally:
+            shutil.rmtree(td, ignore_errors=True)
     return kq
 
 
@@ -93,7 +97,7 @@ class KhungXemFile(QScrollArea):
         self.goc = 0
         self.lb_trang = None
         self._keo = None
-        self.lb_trong = QLabel('Chọn ảnh chụp / PDF: các trang của file hiện ở đây để soát khi đọc.')
+        self.lb_trong = QLabel('Chọn PDF ảnh, Word, Excel hoặc ảnh: các trang hiện ở đây để soát khi đọc.')
         self.lb_trong.setStyleSheet('QLabel { color: #E2E8F0; background: transparent; }')
         self.lo.addWidget(self.lb_trong)
         self.verticalScrollBar().valueChanged.connect(lambda *_: self._bao_trang())
@@ -208,9 +212,10 @@ class HopQuetGiayTo(QDialog):
         self.files = []
         self.setWindowTitle('Quét giấy tờ (OCR) - Giấy chứng nhận QSDĐ, biên bản kiểm kê, phương án chi tiết đã số hóa')
         self.resize(1280, 760)
-        b_chon = QPushButton('Chọn ảnh chụp / PDF…')
-        b_chon.setToolTip('Ảnh chụp bằng điện thoại (.jpg, .png - chép qua Zalo / cáp), PDF scan hoặc PDF có chữ: giấy chứng nhận, biên '
-                          'bản kiểm kê, bảng phương án chi tiết của hộ đã số hóa. Chọn được nhiều file (mặt trước, mặt sau, nhiều trang).')
+        b_chon = QPushButton('Chọn file…')
+        b_chon.setToolTip('PDF ảnh OCR, ảnh chụp điện thoại, Word, Excel: giấy chứng nhận, biên bản kiểm kê, bảng phương án chi tiết '
+                          'đã số hóa. Chọn được nhiều file (mặt trước, mặt sau, nhiều trang). Tự lọc dòng tài sản; Trợ lý AI bật thì '
+                          'viết lại dòng đã lọc — không gửi file.')
         b_chon.clicked.connect(lambda: self.chon())
         self.lb_file = QLabel('Chưa chọn file.')
         self.lb_file.setWordWrap(True)
@@ -319,6 +324,10 @@ class HopQuetGiayTo(QDialog):
         self.lb = QLabel('Nhận dạng chữ trên máy (Tesseract OCR - không gửi giấy tờ ra ngoài). Chữ viết tay đọc không được / '
                          'sai nhiều: soát lại trước khi điền.')
         self.lb.setWordWrap(True)
+        self.o_viet_tay = QCheckBox('Chữ viết tay (đọc lại cột thưa)')
+        self.o_viet_tay.setChecked(True)
+        self.o_viet_tay.setToolTip('Biên bản điền tay: đọc thêm kiểu cột thưa khi lần đầu không ra dòng tài sản. '
+                                   'Tắt với Giấy chứng nhận (không có tài sản) để khỏi đọc hai lần.')
         self.b_ho = QPushButton('Thêm dòng đất')
         self.b_ho.clicked.connect(lambda: self.dien_ho_thua())
         self.b_ts = QPushButton('Đưa tài sản vào khái toán…')
@@ -326,6 +335,7 @@ class HopQuetGiayTo(QDialog):
         b_dong = QPushButton('Đóng')
         b_dong.clicked.connect(self.reject)
         hn = QHBoxLayout()
+        hn.addWidget(self.o_viet_tay)
         hn.addStretch(1)
         hn.addWidget(self.b_ho)
         hn.addWidget(self.b_ts)
@@ -349,49 +359,49 @@ class HopQuetGiayTo(QDialog):
             (QMessageBox.warning if loi else QMessageBox.information)(self, TEN_UD, chu)
 
     def chon(self) -> bool:
-        ds, _ = QFileDialog.getOpenFileNames(self, 'Chọn ảnh chụp / PDF giấy tờ', str(Path.home() / 'Downloads'),
-                                             'Ảnh, PDF (*.jpg *.jpeg *.png *.webp *.tif *.tiff *.bmp *.pdf)')
+        ds, _ = QFileDialog.getOpenFileNames(self, 'Chọn PDF ảnh, Word, Excel hoặc ảnh giấy tờ',
+                                             str(Path.home() / 'Downloads'), ocr_ho_so.LOC_FILE)
         return self.doc(ds) if ds else False
 
     def doc(self, files) -> bool:
         files = [Path(f) for f in files]
         self.files = files
         self.lb_file.setText(', '.join(f.name for f in files))
-        self.b_doi_xem.setChecked(False)
+        van_ban = any(f.suffix.lower() in ocr_ho_so.DUOI_VAN_BAN for f in files)
+        self.b_doi_xem.setChecked(van_ban)               # Word / Excel: xem chữ; ảnh / PDF: xem trước trang
         with con_tro_cho():
             self.khung_xem_file.nap(files)                # xem trước ngay - đọc chữ (lâu) sau
         QApplication.processEvents()
-        tien = None if self.im_lang else QProgressDialog('Đang nhận dạng chữ…', 'Dừng', 0, 0, self)
+        tien = None if self.im_lang else QProgressDialog('Đang đọc và phân tích file…', 'Dừng', 0, 0, self)
         if tien is not None:
             tien.setWindowTitle(TEN_UD)
             tien.setWindowModality(Qt.WindowModality.WindowModal)
             tien.setMinimumDuration(300)
-
-        def bao(i, n):
-            if tien is not None:
-                tien.setMaximum(n)
-                tien.setValue(i)
-                QApplication.processEvents()
-
-        def huy():
-            QApplication.processEvents()
-            return tien is not None and tien.wasCanceled()
+            tien.show()
         ds_kq, chu_all, loi = [], [], []
         from . import ocr
+        from .giao_dien import chay_nen_tien_do
+        psm_vt = bool(self.o_viet_tay.isChecked()) if hasattr(self, 'o_viet_tay') else True
+
+        def ham(bao, cho):
+            kq_f, chu_f, loi_f = [], [], []
+            for f in files:
+                if cho():
+                    raise ocr.DaHuy()
+                try:
+                    kq, chu, da_ocr = ocr_ho_so.doc_va_boc_tach(f, bao, cho, psm_viet_tay=psm_vt)
+                except ocr.DaHuy:
+                    raise
+                except Exception as e:                   # noqa: BLE001 - lỗi từng file: báo, đọc tiếp file khác
+                    loi_f.append(chu_loi(f'{f.name}', e))
+                    continue
+                kq_f.append(kq)
+                chu_f.append(f'===== {f.name}{" (nhận dạng ảnh)" if da_ocr else ""} =====\n{chu}')
+            return kq_f, chu_f, loi_f
+
         try:
             with con_tro_cho():
-                for f in files:
-                    if tien is not None:
-                        tien.setLabelText(f'Đang nhận dạng: {f.name}…')
-                    try:
-                        kq, chu, da_ocr = ocr_ho_so.doc_va_boc_tach(f, bao, huy)
-                    except ocr.DaHuy:
-                        raise
-                    except Exception as e:                       # noqa: BLE001 - lỗi từng file: báo, đọc tiếp file khác
-                        loi.append(chu_loi(f'{f.name}', e))
-                        continue
-                    ds_kq.append(kq)
-                    chu_all.append(f'===== {f.name}{" (nhận dạng ảnh)" if da_ocr else ""} =====\n{chu}')
+                ds_kq, chu_all, loi = chay_nen_tien_do(self, ham, tien)
         except ocr.DaHuy:
             loi.append('Đã dừng nhận dạng.')
         finally:

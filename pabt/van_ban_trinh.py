@@ -131,7 +131,7 @@ def them_mau(loai: str, file_nguon) -> tuple:
                 raise LoiNhap(f'Microsoft Word không chuyển được "{p.name}" sang .docx: ' + ('; '.join(loi) or 'không rõ lỗi'))
             tam, duoi = dich, '.docx'
         elif duoi == '.xls':
-            from .nhap_don_gia import chuyen_office
+            from .nhap_don_gia_doc import chuyen_office
             tam, duoi = chuyen_office(tam, '.xls'), '.xlsx'
         try:
             an_toan.kiem_tra_zip(tam)
@@ -425,8 +425,12 @@ def xuat_bo_ho_so(con, ds_ma_ho: list, thu_muc, dot=None, chi_tiet: bool = True,
         from . import in_word
         for i, ma in enumerate(ds_ma_ho, start=1):
             ten = du_lieu_in.ten_file_ho(con, ma)
-            kq['word'].append(in_word.xuat_chi_tiet_docx(con, ma, tm_ct / f'{ten}.docx', bc, du_thao=bool(du_thao), lan=lan))
-            ma_word[ten] = ma
+            try:
+                kq['word'].append(in_word.xuat_chi_tiet_docx(con, ma, tm_ct / f'{ten}.docx', bc, du_thao=bool(du_thao), lan=lan))
+                ma_word[ten] = ma
+            except (OSError, ValueError, KeyError) as e:   # 1.0.58: file đang mở trong Word...: báo hộ đó, làm tiếp các hộ khác
+                from .thong_bao import giai_thich
+                kq['loi'].append(f'LOI_HO\t{ten}\t{giai_thich(e)[0]}')
             if bao():
                 kq['loi'].append(f'DA_DUNG\t\tĐã dừng theo yêu cầu sau {i}/{len(ds_ma_ho)} hộ (chưa xuất PDF / in)')
                 return kq
@@ -570,7 +574,7 @@ KHONG_CO_WORD = 'Không mở được Microsoft Word trên máy này: chỉ tạ
 
 def _lenh_word(vbs, ds, dung) -> list:
     """Dòng lệnh chạy trình điều khiển Word (kiểm thử thay bằng chương trình giả lập Word)."""
-    return ['cscript', '//nologo', str(vbs), str(ds), str(dung)]
+    return [__import__('pabt').exe_he_thong('cscript.exe'), '//nologo', str(vbs), str(ds), str(dung)]
 
 
 def _chay_word_mot_lan(viec: list, cho_moi_file: int, bao, da: int, n: int) -> dict:
