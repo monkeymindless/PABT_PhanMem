@@ -206,6 +206,13 @@ def tu_du_an(con, ds_ma_ho: list | None = None, ten: str = '') -> DuToan:
     return dt
 
 
+def tu_du_an_nho(con) -> DuToan:
+    """tu_du_an(con) cả dự án, nhớ trên kết nối (csdl.nho, 1.1.00 - Đợt 9): So sánh với thực tế bấm lại khi dữ liệu chưa đổi không đọc lại
+    phương án 3.000 hộ. Chỉ cho nơi ĐỌC (so_sanh chép danh sách dòng); KHÔNG sửa đối tượng trả về."""
+    from .csdl import nho
+    return nho(con, ('du_toan.tu_du_an',), lambda: tu_du_an(con))
+
+
 def tu_file_pabt(file, ten: str = '') -> DuToan:
     from . import csdl
     con = csdl.mo(file, chi_doc=True)

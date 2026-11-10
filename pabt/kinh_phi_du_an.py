@@ -203,7 +203,7 @@ def dat_file_khai_toan(con, file) -> None:
 def doi_soat(con, goc) -> dict:
     """Khái toán `goc` (du_toan.DuToan) so với thực tế áp giá của dự án đang mở - du_toan.so_sanh, cùng cơ sở mục 6."""
     from . import du_toan
-    return du_toan.so_sanh(goc, du_toan.tu_du_an(con))
+    return du_toan.so_sanh(goc, du_toan.tu_du_an_nho(con))
 
 
 def danh_gia_chenh(khai_toan, thuc_te) -> tuple:

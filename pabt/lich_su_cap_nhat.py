@@ -7,6 +7,10 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.1.00', '11/11/2026', (
+        'Mở hộ khác khi đang lập phương án (chưa sửa gì ở hộ đang mở) gần như tức thì: phần mềm chuyển hộ ngay trong cửa sổ, không dựng lại cửa sổ (nhanh gấp 9 lần).',
+        'Bấm lại So sánh với thực tế khi dự án chưa đổi: có kết quả ngay; danh sách Chọn hộ niêm yết, Bảng giá đất NQ 28 hiện nhanh hơn.',
+    )),
     ('1.0.99', '11/11/2026', (
         'Nhanh hơn: Xuất danh sách hộ nhanh gấp 3 lần; mở lại Kiểm tra lỗi, Tính đơn giá đất khi chưa sửa gì gần như tức thì; về Màn hình chính không phải tính lại khi số liệu không đổi.',
         'Hộp thoại nhiều nút hiện nhanh hơn 28-39% (tô màu, biểu tượng nút không phải tính lại mỗi lần mở); bảng hộ của Đợt trình, danh sách chọn hộ khi In / Xuất dựng nhanh hơn.',

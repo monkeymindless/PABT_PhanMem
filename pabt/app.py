@@ -3437,6 +3437,19 @@ class CuaSoChinh(QMainWindow):
             QMessageBox.warning(self, TEN_UD, lap_pa.TB_HO_KHONG_NHAN)
         from .man_hinh import CuaSoLapPA
         khoa = ('ho', int(ma_ho))
+        if cho and hasattr(self, 'khung_tab') and khoa not in self.khung_tab.khoa:
+            # 1.1.00 (Đợt 9): cửa sổ hộ khác đang mở và SẠCH (không có thay đổi chưa lưu) -> chuyển hộ ngay trong cửa sổ đó (chuyen_ho,
+            # đường người dùng vẫn dùng ở danh sách hộ bên trái) thay vì đóng rồi dựng cửa sổ mới (~180 ms mỗi lần, 3.000 hộ)
+            for k in [k for k in self.khung_tab.khoa if isinstance(k, tuple) and k[0] == 'ho']:
+                ww = self.khung_tab.widget.get(k)
+                if ww is None or ww.bo.co_thay_doi or ww.ho_so.co_thay_doi() or not ww.chuyen_ho(int(ma_ho)):
+                    continue
+                # như cửa sổ mới: thẻ mục 1 khi hộ đã có dòng phương án, chưa có thì thẻ Hồ sơ & Thửa
+                ww.tab.setCurrentIndex(the if the is not None else
+                                       1 if ww.bo.pa.dat or any(ww.bo.pa.khoan[m] for m in nghiep_vu.MUC_KHOAN) else 0)
+                self._dam_bao_tab(khoa)
+                ww.dat_tieu_diem_dau()
+                return ww
         if cho and hasattr(self, 'khung_tab'):
             # không còn thanh tab (15/10/2026): hộ khác đang mở mà không có thay đổi chưa lưu thì đóng, khỏi chất cửa sổ ẩn trong
             # RAM; hộ còn thay đổi chưa lưu giữ lại (mở lại hộ đó là thấy; đóng dự án / thoát vẫn hỏi lưu)

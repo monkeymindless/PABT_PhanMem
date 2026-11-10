@@ -1452,7 +1452,18 @@ class HopChonNiemYet(QDialog):
     def _ve(self):
         self.dang_hien = [h for h in self.ds if self._hien(h)]
         self.bang.blockSignals(True)
+        self.bang.setUpdatesEnabled(False)
         self.bang.setRowCount(len(self.dang_hien))
+        # 1.1.00 (Đợt 9): ô chép từ ô mẫu bằng hàm dựng sao chép (không clone - PySide2), màu chữ tính một lần (trước: 3.000 lần / lần vẽ)
+        goc = _o('')
+        goc_tien = QTableWidgetItem(goc)
+        goc_tien.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        mau_du, mau_khong = QColor(mau_theo_tong('#008000', 'chu')), QColor(mau_theo_tong('#800000', 'chu'))
+
+        def o_chu(chu, mau=goc):
+            it = QTableWidgetItem(mau)
+            it.setText('' if chu is None else str(chu))
+            return it
         for i, h in enumerate(self.dang_hien):
             o = QTableWidgetItem('')
             co = Qt.ItemFlag.ItemIsEnabled | (Qt.ItemFlag.ItemIsUserCheckable if not h['vuong'] else Qt.ItemFlag.NoItemFlags)
@@ -1463,13 +1474,13 @@ class HopChonNiemYet(QDialog):
             tt = 'Đủ điều kiện' if h['du'] else '; '.join(h['ly_do'])
             if h['du'] and h['can_xem']:
                 tt += f' (kiểm tra phương án: {len(h["can_xem"])} điểm cần xem lại)'
-            o_tt = _o(tt)
+            o_tt = o_chu(tt)
             o_tt.setToolTip(chr(10).join(h['ly_do'] + h['can_xem']) or tt)
-            o_tt.setForeground(QColor(mau_theo_tong('#008000' if h['du'] else '#800000', 'chu')))
-            o_tien = _o('' if h['tien'] is None else vn(h['tien']))
-            o_tien.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            for c, x in enumerate((_o(h['thu_tu']), _o(h['ho_ten']), o_tien, o_tt, _o(h['dot'])), 1):
+            o_tt.setForeground(mau_du if h['du'] else mau_khong)
+            o_tien = o_chu('' if h['tien'] is None else vn(h['tien']), goc_tien)
+            for c, x in enumerate((o_chu(h['thu_tu']), o_chu(h['ho_ten']), o_tien, o_tt, o_chu(h['dot'])), 1):
                 self.bang.setItem(i, c, x)
+        self.bang.setUpdatesEnabled(True)
         self.bang.blockSignals(False)
         for c, w in enumerate((70, 50, 220, 130, 330)):
             self.bang.setColumnWidth(c, w)

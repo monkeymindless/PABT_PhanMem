@@ -162,5 +162,50 @@ class TestT5KiemLoiNho(unittest.TestCase):
             con.close()
 
 
+class TestDot9DungLaiLapPA(unittest.TestCase):
+    """Đợt 9 (1.1.00): mở hộ khác khi cửa sổ Lập PA đang mở SẠCH -> chuyển hộ trong cửa sổ đó (không dựng lại); còn thay đổi chưa lưu -> giữ
+    cửa sổ đó, mở cửa sổ mới như cũ."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        QApplication.instance() or QApplication([])
+        from pabt import app as ud
+        self.p = du_an_gia_lap(Path(tempfile.mkdtemp()))
+        self.w = ud.CuaSoChinh(menu_trai=True)
+        self.w.mo(self.p, chi_doc=False)
+        self.ma = [r[0] for r in self.w.con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu, ma_ho')]
+
+    def tearDown(self):
+        for k in list(self.w.khung_tab.khoa):
+            ww = self.w.khung_tab.widget.get(k)
+            if ww is not None and hasattr(ww, 'bo'):
+                ww.bo.mo(ww.bo.ma_ho)                               # bỏ thay đổi chưa lưu: đóng dự án không hỏi lưu
+        self.w.dong_du_an()
+        self.w.close()
+        self.w.deleteLater()
+
+    def test_dung_lai_cua_so_sach(self):
+        a = self.w.mo_lap_pa(self.ma[0])
+        b = self.w.mo_lap_pa(self.ma[1])
+        self.assertIs(b, a)                                         # cùng cửa sổ, không dựng lại
+        self.assertEqual(b.bo.ma_ho, self.ma[1])
+        self.assertIn(('ho', self.ma[1]), self.w.khung_tab.khoa)
+        self.assertNotIn(('ho', self.ma[0]), self.w.khung_tab.khoa)
+        self.assertEqual(b.tab.currentIndex(), 1 if b.bo.pa.dat else 0)   # như cửa sổ mới (hộ có dòng đất: thẻ mục 1)
+        c = self.w.mo_lap_pa(self.ma[2], the=0)
+        self.assertIs(c, a)
+        self.assertEqual(c.tab.currentIndex(), 0)
+
+    def test_khong_dung_lai_cua_so_con_thay_doi(self):
+        a = self.w.mo_lap_pa(self.ma[0])
+        a.bo.sua_dat(0, 'dien_tich', '77')                          # có thay đổi chưa lưu
+        self.assertTrue(a.bo.co_thay_doi)
+        b = self.w.mo_lap_pa(self.ma[1])
+        self.assertIsNot(b, a)
+        self.assertEqual(a.bo.ma_ho, self.ma[0])                    # hộ cũ vẫn giữ nguyên trong cửa sổ của nó
+        self.assertIn(('ho', self.ma[0]), self.w.khung_tab.khoa)
+
+
 if __name__ == '__main__':
     unittest.main()
