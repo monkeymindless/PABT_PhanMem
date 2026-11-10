@@ -3380,7 +3380,8 @@ class CuaSoChinh(QMainWindow):
         dang = self.trang.currentIndex()
         for i in [i for i in list(self.khung_trang) if i != dang or self.ngan_lv.currentWidget() is not self.trang]:
             k = self.khung_trang.pop(i)
-            k.setParent(None)
+            self.trang.removeWidget(k)              # 1.0.94: gỡ đúng cách (CLAUDE.md: không setParent(None) - widget hẹn hiện thành cửa sổ lạ)
+            k.hide()
             k.deleteLater()
             n += 1
         if hasattr(self, 'khung_tab'):

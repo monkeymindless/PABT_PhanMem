@@ -210,7 +210,7 @@ class KhungCapNhatGiaDat(QWidget):
         self.b_xoa_qt.clicked.connect(lambda: self.xoa_quy_tac())
         self.b_tinh.clicked.connect(lambda: self.tinh_lai())
         # 1.0.81: 4 loại đất nông nghiệp (Điều 5) và giá tái định cư / trường hợp cụ thể Điều 8-10 NQ 28
-        self.b_4_loai = QPushButton('Phân tích 4 loại đất NN…')
+        self.b_4_loai = QPushButton('4 loại đất NN…')
         self.b_4_loai.setToolTip('Giá 4 loại đất nông nghiệp (CLN, HNK, NTS, RSX) của dòng đang chọn và trần / sàn Phụ lục VIII')
         self.b_4_loai.clicked.connect(lambda: self.phan_tich_4_loai())
         self.b_tdc = QPushButton('Giá TĐC, Điều 8-10…')
@@ -239,7 +239,7 @@ class KhungCapNhatGiaDat(QWidget):
         self.b_ghi = QPushButton('Ghi vào bảng giá đất')
         self.b_ghi.setEnabled(False)
         self.b_ghi.clicked.connect(lambda: self.ghi())
-        self.b_thay = QPushButton('Xóa bảng cũ, ghi bảng mới')
+        self.b_thay = QPushButton('Thay cả bảng')        # 1.0.94: chữ ngắn (1093 x 614 cắt chữ); ý nghĩa ở chú thích
         self.b_thay.setEnabled(False)
         self.b_thay.setToolTip('Xóa toàn bộ bảng giá đang dùng (mọi xã, mọi giá cũ) rồi ghi đúng bảng vừa đọc. '
                                'Không giữ xã cũ, không ghép trùng giá.')

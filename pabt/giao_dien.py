@@ -2195,7 +2195,8 @@ class XepDong(QLayout):
 def mau_icon(chu: str) -> str:
     """Màu biểu tượng nút lệnh trên thanh (nút nền nhạt): màu chính của nhóm."""
     n = nhom_nut(chu)
-    return MAU[n][0] if n and n != 'nhat' else CHINH
+    # 1.0.94: theo tông (tông Tối trước đây biểu tượng navy trên nền tối - 4 nút lớn màn chính, nút thanh lệnh)
+    return mau_theo_tong(MAU[n][0] if n and n != 'nhat' else CHINH_GOC[0], 'chu')
 
 
 def nut_lenh(a, co_icon: int = 18, duoi: bool = False, mau: str | None = None) -> QToolButton:

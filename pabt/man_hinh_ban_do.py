@@ -1573,6 +1573,7 @@ class HopBanDo(QDialog):
                                  'Chưa ghi gì vào dự án cho tới khi bấm "Lưu vào dự án" (thẻ dưới bản đồ).')
         self.b_mo_kml.clicked.connect(lambda: self.mo_ban_do())
         self.b_bo_kml = QPushButton('Bỏ lớp KML')
+        self.b_bo_kml.setToolTip('Bỏ các lớp KML / KMZ đang chồng lên bản đồ (bật khi đã mở file KML / KMZ)')   # 1.0.94: nút tắt có lý do
         self.b_bo_kml.clicked.connect(lambda: self.bo_kml())
         self.b_luu = QPushButton('Lưu bản đồ vào dự án')
         self.b_luu.setToolTip('Ghi các ô thửa đã nhận diện, các lớp KML / KMZ đang mở và ảnh nền của vùng dự án (loại nền đang chọn) vào file dự án: lần sau mở bản '

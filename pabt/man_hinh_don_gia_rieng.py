@@ -79,6 +79,7 @@ class HopDonGiaRieng(QDialog):
         self.b_xoa = QPushButton('Xóa dòng chọn')
         self.b_xoa.clicked.connect(self.xoa_dong)
         self.b_luu = QPushButton('Lưu thay đổi')
+        self.b_luu.setToolTip('Ghi đơn giá riêng vào dự án (bật khi bảng có thay đổi chưa lưu)')   # 1.0.94: nút tắt có lý do
         self.b_luu.setDefault(True)
         from .giao_dien import KieuNut, ap_kieu_nut
         ap_kieu_nut(self.b_luu, KieuNut.LUU)            # xanh lá đậm; chỉ bật khi có thay đổi chưa lưu
@@ -214,6 +215,7 @@ class HopDonGiaRieng(QDialog):
         self.b_file.setEnabled(not self.chi_doc)
         self.lb_file = QLabel('')
         self.b_dua = QPushButton('Đưa vào đơn giá của dự án')
+        self.b_dua.setToolTip('Thêm các dòng đã đọc từ file thẩm định giá vào đơn giá riêng của dự án (bật sau khi chọn file)')
         self.b_dua.setEnabled(False)
         self.b_dua.clicked.connect(lambda: self.dua_vao())
         ap_kieu_nut(self.b_dua, KieuNut.CHINH)

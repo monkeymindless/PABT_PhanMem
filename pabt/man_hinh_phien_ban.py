@@ -126,7 +126,7 @@ class ThanhPhienBan(QWidget):
         try:
             return d.in_mau(ma, dich)
         finally:
-            d.deleteLater()
+            xoa_hop_da_dong(d)                      # 1.0.94: chuyển khỏi cây trước khi xóa (findChildren giữ vỏ Python - CLAUDE.md)
 
     def _dat_nut_khoa(self, r, sua_duoc: bool) -> None:
         """Nút mở khóa / khóa lại cho phiên bản đang xem. V0 và lần đã phê duyệt dùng nút Mở khóa của lần (b_mo_khoa)."""

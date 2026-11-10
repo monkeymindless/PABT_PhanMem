@@ -395,7 +395,7 @@ class TestCapNhatGiaDat(unittest.TestCase):
         self.assertEqual(nq.ds_xa(), ['Xã Mới'])
         d.khoi_phuc()
         self.assertEqual(nq.ds_xa(), ['Xã Trị An', 'Xã Tân An', 'Xã Phú Lý', 'Phường Tân Triều'])
-        self.assertEqual(d.b_thay.text(), 'Xóa bảng cũ, ghi bảng mới')
+        self.assertEqual(d.b_thay.text(), 'Thay cả bảng')
         self.assertTrue(d.b_thay.isEnabled())
         self.assertEqual(d.ghi(thay=True), ['Xã Mới'])
         self.assertEqual(nq.ds_xa(), ['Xã Mới'])

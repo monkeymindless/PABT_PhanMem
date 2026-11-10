@@ -41,17 +41,18 @@ class KhungHeSoK(QWidget):
             l.setProperty('vai', 'nhan')
             h1.addWidget(l)
             h1.addWidget(w, 1 if w is self.o_vb else 0)
-        self.b_file = QPushButton('Đọc hệ số K từ file…')
+        h1.addWidget(self.o_loc, 1)
+        self.b_file = QPushButton('Đọc từ file…')
         self.b_file.setToolTip('PDF Phụ lục I.1 / I.2 của QĐ 03/2026 (chọn nhiều file một lần: đất phi NN + đất NN), Excel, Word, PDF '
                                'ảnh / ảnh chụp (nhận dạng chữ). Chỉ lấy các địa bàn ở ô "Địa bàn" (trống = địa bàn của bảng giá đất '
                                'đang dùng). Dòng đọc được thay dòng cùng địa bàn / TT / loại đất trên bảng; kiểm tra rồi bấm Lưu.')
-        self.b_dan = QPushButton('Dán chữ hệ số K')
+        self.b_dan = QPushButton('Dán chữ')
         self.b_dan.setToolTip('Lấy chữ đã chép (Ctrl+C) từ văn bản / bảng tính, tự nhận các dòng hệ số K')
         self.b_them = QPushButton('Thêm dòng')
         self.b_xoa = QPushButton('Xóa dòng')
         self.b_luu = QPushButton('Lưu hệ số K')
         ap_kieu_nut(self.b_luu, KieuNut.LUU)
-        self.b_bo = QPushButton('Dùng lại bảng gắn sẵn')
+        self.b_bo = QPushButton('Dùng bảng gắn sẵn')
         self.b_bo.setToolTip('Bỏ bảng hệ số K đã nhập trên máy này, dùng lại bảng gắn sẵn của QĐ 03/2026 (4 địa bàn của bảng giá gắn '
                              'sẵn). Phương án đã lập không đổi.')
         ap_kieu_nut(self.b_bo, KieuNut.NGUY_HIEM)
@@ -64,7 +65,7 @@ class KhungHeSoK(QWidget):
         h2 = QHBoxLayout()
         for b in (self.b_file, self.b_dan, self.b_them, self.b_xoa):
             h2.addWidget(b)
-        h2.addWidget(self.o_loc, 1)
+        h2.addStretch(1)
         h2.addWidget(self.b_bo)
         h2.addWidget(self.b_luu)
         self.bang = QTableWidget(0, len(COT))

@@ -65,6 +65,7 @@ QPushButton#nut_viec { background: transparent; color: #2563EB; border: 1px soli
 QPushButton#nut_viec:hover { background: #EFF6FF; border-color: #CBD5E1; }
 '''
 # màu chấm trạng thái của việc (theo mức) - chữ trên nền trắng của khung
+TOI_DA_VIEC_HIEN = 5                 # 1.0.94: Việc nên làm tiếp - số việc thấy ngay
 MAU_MUC_VIEC = {'loi': '#DC2626', 'can': '#2563EB', 'nhac': '#B45309'}
 TEN_MUC_VIEC = {'loi': 'Cần xử lý ngay', 'can': 'Việc cần làm', 'nhac': 'Nhắc việc'}
 
@@ -304,6 +305,7 @@ class KhungPheu(QFrame):
             n.setText(f'{ph.TEN_NGAN_GIAI_DOAN[k]}  {so}')
             n.setIcon(self._bieu_tuong(MAU_GIAI_DOAN[k]))
             n.setProperty('rong', '1' if so else '0')
+            n.setVisible(bool(so))                         # 1.0.94: ẩn trạng thái 0 hộ (tên ở chú thích dòng tóm tắt)
             n.style().unpolish(n)
             n.style().polish(n)
             if k in ph.MOC_LUY_KE:
@@ -312,6 +314,8 @@ class KhungPheu(QFrame):
                 n.setToolTip(f'{ph.TEN_GIAI_DOAN[k]} - bấm để xem danh sách hộ')
         bs = sum(1 for x in ds if 'pa_bo_sung' in x.co)
         self.lb_tom_tat.setText(f'{len(ds)} hộ' + (f' · {bs} hộ đang xét phương án bổ sung / điều chỉnh' if bs else ''))
+        an = [ph.TEN_NGAN_GIAI_DOAN[k] for k in self.chu_giai if not hien.get(k, 0)]
+        self.lb_tom_tat.setToolTip(('Chưa có hộ ở: ' + ', '.join(an)) if an else '')
         co = kq.dem_co(ds)
         for k, n in self.nut_co.items():
             n.setText(f'{co.get(k, 0)} hộ: {ph.TEN_CO[k].lower()}')
@@ -438,6 +442,24 @@ class KhungViecTiep(QFrame):
             h.addWidget(nut)
             lo.addLayout(h)
             self.dong.append((lb, nut))
+        if len(muc) > TOI_DA_VIEC_HIEN:                  # 1.0.94
+            an = [(lb, nut) for lb, nut in self.dong[TOI_DA_VIEC_HIEN:]]
+            for lb, nut in an:
+                lb.setVisible(False)
+                nut.setVisible(False)
+            them = QPushButton(f'Xem thêm {len(an)} việc')
+            them.setObjectName('nut_viec')
+            them.setCursor(Qt.CursorShape.PointingHandCursor)
+            them.setToolTip('Hiện / ẩn các việc còn lại (đã xếp theo mức ưu tiên)')
+
+            def bat_tat(_=False, an=an, them=them):
+                hien = not an[0][0].isVisible()
+                for lb, nut in an:
+                    lb.setVisible(hien)
+                    nut.setVisible(hien)
+                them.setText('Thu gọn' if hien else f'Xem thêm {len(an)} việc')
+            them.clicked.connect(bat_tat)
+            lo.addWidget(them, 0, Qt.AlignmentFlag.AlignRight)
         lo.addStretch(1)
 
 
