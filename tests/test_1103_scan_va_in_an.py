@@ -643,5 +643,332 @@ class TestGianKhitTrangExcel(unittest.TestCase):
                 wb.close()
 
 
+# ---------------------------------------------------------------- hạng mục 3: Thiết lập trang, bản dựng trực tiếp, xem trước ngay
+class _CoMay(unittest.TestCase):
+    """Hồ sơ máy riêng cho từng bài (không đụng hồ sơ của bài khác), khôi phục thông số mẫu khi xong."""
+
+    @classmethod
+    def setUpClass(cls):
+        from PySide6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        from unittest import mock
+        from pabt import dia_phuong
+        self._td = tempfile.TemporaryDirectory()
+        self.td = Path(self._td.name)
+        self._moi = mock.patch.dict(os.environ, {'PABT_THU_MUC_MAY': str(self.td / 'may')})
+        self._moi.start()
+        dia_phuong.nap_lai()
+
+    def tearDown(self):
+        from pabt import dia_phuong
+        self.doCleanups()                                # đóng kết nối, hộp thoại TRƯỚC khi xóa thư mục tạm
+        self._moi.stop()
+        dia_phuong.nap_lai()
+        self._td.cleanup()
+
+
+class TestThietLapTrang(_CoMay):
+    def _hop(self):
+        from pabt.man_hinh_quan_ly_mau import HopQuanLyMauIn
+        hop = HopQuanLyMauIn(im_lang=True)
+        self.addCleanup(hop.deleteLater)
+        return hop
+
+    def test_ba_the_va_khong_sua_thi_khong_doi_gi(self):
+        from pabt import in_word
+        hop = self._hop()
+        self.assertEqual(hop.windowTitle(), 'Thiết lập trang')
+        self.assertEqual([hop.the.tabText(i) for i in range(hop.the.count())], ['Lề', 'Giấy', 'Bố trí'])
+        self.assertEqual(hop.thong_so(), in_word.thong_so_mau())                # mở rồi bấm OK: không đổi thông số nào
+        self.assertEqual(hop.ap_dung(), [])
+        self.assertEqual(in_word.trang_thai_thong_so(), 'Nhúng chuẩn')
+        self.assertTrue(hop.o_co_gian.isChecked())                              # tự co giãn: mặc định bật
+        self.assertIn(',', hop.o_le['trai'].text())                             # dấu phẩy thập phân kiểu Việt Nam
+        self.assertTrue(hop.o_le['trai'].text().endswith(' cm'))
+
+    def test_doi_le_ap_ngay_len_hinh_xem_truoc_va_mau(self):
+        from pabt import in_word
+        hop = self._hop()
+        rong_cu = in_word.rong_trang()
+        hop.o_le['trai'].setValue(2.0)
+        hop.o_le['duoi'].setValue(1.5)
+        self.assertEqual((hop.xem.le_mm['trai'], hop.xem.le_mm['duoi']), (20.0, 15.0))    # tờ giấy mẫu vẽ lại ngay
+        self.assertAlmostEqual(hop.xem.vung_in()[0], 210 - 20 - in_word.LE_MM['phai'], places=3)
+        self.assertEqual(in_word.LE_MM['trai'], 9)                              # chưa bấm OK: mẫu chưa đổi
+        doi = hop.ap_dung()
+        self.assertEqual(doi, ['le_mm'])
+        self.assertEqual((in_word.LE_MM['trai'], in_word.LE_MM['duoi']), (20, 15))
+        self.assertEqual(in_word.rong_trang(), rong_cu - in_word.twip(20) + in_word.twip(9))
+        self.assertTrue(hop.khoi_phuc_word(xac_nhan=True))
+        self.assertEqual(in_word.LE_MM['trai'], 9)
+
+    def test_le_qua_lon_thi_khong_ghi(self):
+        from pabt import in_word
+        hop = self._hop()
+        hop.o_le['tren'].setValue(6.0)
+        hop.o_le['duoi'].setValue(6.0)
+        for k in ('trai', 'phai'):
+            hop.o_le[k].setValue(6.0)
+        hop.o_le['tren'].setValue(6.0)
+        hop._le_word.update(tren=150.0, duoi=120.0)                             # vượt cả miền của ô nhập (file thông số sửa tay)
+        self.assertIsNone(hop.ap_dung())
+        self.assertFalse(hop.dong_y())
+        self.assertEqual(in_word.trang_thai_thong_so(), 'Nhúng chuẩn')
+
+    def test_a3_ngang_giu_dung_kho_va_huong_toi_pdf(self):
+        from xml.etree import ElementTree as ET
+        from pabt import csdl, docx_sang_pdf, in_word
+        hop = self._hop()
+        hop.cb_kho.setCurrentIndex(hop.cb_kho.findData('A3'))
+        hop.dat_huong(True)
+        self.assertEqual(hop.kho_trang_mm(), (420.0, 297.0))
+        self.assertEqual((hop.xem.rong_mm, hop.xem.cao_mm), (420.0, 297.0))
+        self.assertEqual(sorted(hop.ap_dung()), ['huong_giay', 'kho_giay'])
+        self.assertEqual(in_word.kho_trang(), (23811, 16838))
+        self.addCleanup(in_word.khoi_phuc_thong_so)
+        le = dict(in_word.LE_MM)
+        con = csdl.mo(_du_an_n_thua(self.td, 3))
+        try:
+            f = in_word.xuat_chi_tiet_docx(con, con.execute('SELECT ma_ho FROM ho').fetchone()[0], self.td / 'a3.docx')
+        finally:
+            con.close()
+        with zipfile.ZipFile(f) as z:
+            sp = ET.fromstring(z.read('word/document.xml')).find(f'{W}body/{W}sectPr')
+        pg = sp.find(W + 'pgSz')
+        self.assertEqual((pg.get(W + 'w'), pg.get(W + 'h'), pg.get(W + 'orient')), ('23811', '16838', 'landscape'))
+        self.assertEqual(int(sp.find(W + 'pgMar').get(W + 'left')), in_word.twip(le['trai']))        # lề không đổi theo khổ
+        _html, trang = docx_sang_pdf.html_tu_docx(f)
+        self.assertEqual((trang['kho'], trang['ngang']), ('A3', True))
+        from PySide6.QtGui import QPageLayout, QPageSize
+        hl = docx_sang_pdf.bo_cuc_trang(trang)
+        self.assertEqual(hl.orientation(), QPageLayout.Orientation.Landscape)
+        self.assertEqual(hl.pageSize().id(), QPageSize.PageSizeId.A3)
+        pdf = docx_sang_pdf.xuat_pdf_tu_docx(f, self.td / 'a3.pdf')
+        try:
+            from PySide6.QtPdf import QPdfDocument
+        except ImportError:                                                      # Qt5: không có QtPdf - đã kiểm bố cục trang ở trên
+            return
+        d = QPdfDocument()
+        d.load(str(pdf))
+        try:
+            co = d.pagePointSize(0)
+            self.assertAlmostEqual(co.width(), 420 / 25.4 * 72, delta=2)
+            self.assertAlmostEqual(co.height(), 297 / 25.4 * 72, delta=2)
+        finally:
+            d.close()
+
+    def test_le_bang_tong_hop_va_tat_co_gian(self):
+        from pabt import dia_phuong, in_word
+        hop = self._hop()
+        hop.cb_ap.setCurrentIndex(hop.cb_ap.findData('bth'))
+        self.assertEqual(hop.kho_trang_mm(), (420.0, 297.0))                    # bảng tổng hợp: A3 ngang
+        self.assertFalse(hop.b_ngang.isEnabled())
+        self.assertAlmostEqual(hop.o_le['tren'].value(), 1.5, places=1)
+        hop.o_le['tren'].setValue(2.0)
+        hop.o_co_gian.setChecked(False)
+        doi = hop.ap_dung()
+        self.assertIn('le_trang.tong_hop', doi)
+        self.assertIn('tu_co_gian', doi)
+        self.assertAlmostEqual(dia_phuong.lay('ban_in.le_trang')['tong_hop']['top'], 20 / 25.4, places=3)
+        self.assertEqual(in_word.LE_MM['tren'], 10)                             # lề bản Word không bị kéo theo
+        self.assertFalse(in_word.TU_CO_GIAN)
+        self.assertTrue(hop.khoi_phuc_word(xac_nhan=True))
+        self.assertTrue(in_word.TU_CO_GIAN)
+        self.assertAlmostEqual(dia_phuong.lay('ban_in.le_trang')['tong_hop']['top'], 0.5906, places=3)
+
+    def test_ho_so_cu_khong_co_muc_moi_van_hop_le(self):
+        from pabt import dia_phuong
+        mw = dict(dia_phuong.mac_dinh()['ban_in']['mau_word'])
+        for k in ('kho_giay', 'huong_giay', 'tu_co_gian'):
+            mw.pop(k, None)
+        self.assertEqual(dia_phuong.kiem_tra_mau_word(mw), [])
+        self.assertEqual(len(dia_phuong.kiem_tra_mau_word(dict(mw, kho_giay='B5', huong_giay='cheo', tu_co_gian='co'))), 3)
+
+
+class TestBanDungTrucTiep(_CoMay):
+    def setUp(self):
+        super().setUp()
+        from unittest import mock
+        from pabt import in_an
+        do = lambda s, ten, co, dam: len(s) * co * (0.52 if dam else 0.47)      # noqa: E731
+        self._vo = mock.patch.object(in_an, '_ham_do_chu', lambda: do)
+        self._vo.start()
+        self.addCleanup(self._vo.stop)
+
+    def _docx(self, che_do: str):
+        from pabt import csdl, in_word
+        for n in range(6, 26):
+            con = csdl.mo(_du_an_n_thua(self.td, n))
+            try:
+                ma = con.execute('SELECT ma_ho FROM ho').fetchone()[0]
+                ts, _ = in_word.du_doan_dan_trang(con, ma)
+                if ts.che_do == che_do:
+                    return in_word.xuat_chi_tiet_docx(con, ma, self.td / f'{che_do}.docx'), ts
+            finally:
+                con.close()
+        self.fail('không tìm được hộ ' + che_do)
+
+    def test_chieu_cao_dong_toi_thieu_duoc_ap(self):
+        from pabt import docx_sang_pdf
+        f, ts = self._docx('gian')
+        _html, trang = docx_sang_pdf.html_tu_docx(f)
+        cao = trang['_ngu_canh']['cao']
+        self.assertEqual(len(cao), len(ts.cao_hang))                            # mọi w:trHeight của file đều được đọc
+        doc, _hl, _trang = docx_sang_pdf.tai_lieu_tu_docx(f)
+        bang = docx_sang_pdf._cac_bang(doc)
+        (thu_tu, hang), toi_thieu = sorted(cao.items())[1]
+        o = bang[thu_tu].cellAt(hang, 0)
+        tren, duoi = docx_sang_pdf._vung_o(doc, o)
+        dem = o.format().toTableCellFormat()
+        self.assertGreaterEqual(duoi - tren + dem.topPadding() + dem.bottomPadding() + 1, toi_thieu * docx_sang_pdf.PX)
+        self.assertGreaterEqual(doc.pageCount(), 2)
+
+    def test_cum_cuoi_di_lien_va_chu_ky_ngay_duoi_bang(self):
+        from pabt import docx_sang_pdf
+        f, _ts = self._docx('thu_gon')
+        html, trang = docx_sang_pdf.html_tu_docx(f)
+        nc = trang['_ngu_canh']
+        self.assertIsNotNone(nc['cum'])                                         # cụm thưởng + tổng cộng + mục IV + chữ ký được nhận ra
+        self.assertEqual(nc['cum'][3], nc['bang'] - 1)                          # bảng chữ ký là đáy của cụm
+        self.assertLess(html.rfind('TỔNG CỘNG'), html.rfind('LẬP BIỂU'))
+        self.assertNotIn('page-break-before', html)
+        html2, _ = docx_sang_pdf.html_tu_docx(f, cat_cum_cuoi=True)             # cụm vắt trang: sang trang mới cả cụm, kèm dòng tiêu đề
+        self.assertEqual(html2.count('page-break-before:always'), 1)
+        sau = html2[html2.index('page-break-before:always'):]
+        self.assertIn('Tên tài sản', sau)
+        self.assertIn('TỔNG CỘNG', sau)
+        self.assertIn('LẬP BIỂU', sau)
+
+    def test_doan_rong_cao_nhu_word(self):
+        from xml.etree import ElementTree as ET
+        from pabt import docx_sang_pdf
+        p = ET.fromstring(f'<w:p xmlns:w="{W[1:-1]}"><w:pPr><w:spacing w:line="240" w:lineRule="auto"/></w:pPr></w:p>')
+        self.assertIn('font-size:13pt', docx_sang_pdf._doan(p, 300))
+        p = ET.fromstring(f'<w:p xmlns:w="{W[1:-1]}"><w:pPr><w:spacing w:line="20" w:lineRule="exact"/></w:pPr></w:p>')
+        self.assertIn('font-size:1pt', docx_sang_pdf._doan(p, 300))
+        self.assertEqual(docx_sang_pdf.ten_kho_giay(297, 210), 'A4')
+        self.assertEqual(docx_sang_pdf.ten_kho_giay(100, 100), '')
+
+
+class TestXemTruocNgay(_CoMay):
+    def _du_an(self):
+        from pabt import csdl
+        con = csdl.mo(_du_an_n_thua(self.td, 3))
+        self.addCleanup(con.close)
+        return con, con.execute('SELECT ma_ho FROM ho').fetchone()[0]
+
+    def test_ban_xem_nhanh_hien_ngay_roi_thay_bang_ban_word(self):
+        import shutil
+        import time
+        from unittest import mock
+        from pabt import docx_sang_pdf, in_word
+        from pabt import xem_truoc_tai_lieu as xt
+        con, ma = self._du_an()
+        mau = docx_sang_pdf.xuat_pdf_tu_docx(in_word.xuat_chi_tiet_docx(con, ma, self.td / 'm.docx'), self.td / 'word.pdf')
+        da_goi = []
+
+        def word_gia(docx, pdf):                         # "Word" mất 0,4 giây
+            da_goi.append(Path(docx))
+            time.sleep(0.4)
+            shutil.copy2(mau, pdf)
+            return ''
+        k = xt.KhungXemTruocTaiLieu()
+        self.addCleanup(k.deleteLater)
+        self.addCleanup(k.don_dep)
+        if k.doc is None:
+            self.skipTest('bản Qt này không có khung PDF')
+        with mock.patch.object(xt, 'chuyen_pdf', word_gia), mock.patch.object(xt, 'dung_duoc_word', lambda: ''):
+            t = time.perf_counter()
+            k.yeu_cau(('thu', 1), lambda d: in_word.xuat_chi_tiet_docx(con, ma, Path(d) / 'pa.docx'), 'Hộ thử', ngay=True)
+            giay = time.perf_counter() - t
+            self.assertTrue(k.xem_nhanh)                 # có trang để xem NGAY, không phải dòng chữ chờ Word
+            self.assertGreater(k.so_trang(), 0)
+            self.assertFalse(k.lb_gan_dung.isHidden())
+            self.assertEqual(k.lb_gan_dung.text(), xt.NHAN_XEM_NHANH)
+            self.assertTrue(k.dang_lap())                # bản để in vẫn đang lập: nút in tắt
+            self.assertFalse(k.b_in_hop.isEnabled())
+            self.assertLess(giay, 1.5)
+            self.assertTrue(k.cho_xong(20))
+        self.assertEqual(len(da_goi), 1)
+        self.assertFalse(k.xem_nhanh)
+        self.assertFalse(k.gan_dung)
+        self.assertTrue(k.lb_gan_dung.isHidden())
+        self.assertEqual(Path(k.pdf).name, 'pa.pdf')     # bản đang hiện là bản của Word
+        self.assertEqual(k.lb_gan_dung.text(), 'Bản gần đúng')
+
+    def test_hop_in_khong_kem_ho_van_co_ban_xem_truoc_ngay(self):
+        import time
+        from pabt.man_hinh import HopIn
+        from pabt import xem_truoc_tai_lieu as xt
+        con, ma = self._du_an()
+        with con:                                        # hộ đã được người dùng soát (không còn "tự lập, chưa soát")
+            con.execute("UPDATE ho SET trang_thai = 'Đã lập phương án', luu_luc = '2026-11-01T08:00:00'")
+        h = HopIn(con)
+        self.addCleanup(h.deleteLater)
+        self.addCleanup(lambda: h.w_preview.don_dep())
+        self.assertEqual(h.ds_pa, [ma])
+        self.assertEqual(h.cb_pham_vi.currentData(), 'pa')                      # không kèm hộ: vẫn in loạt như trước
+        self.assertTrue(h.w_preview.dang_lap())                                 # đã có yêu cầu xem trước, không chờ bấm chọn hộ
+        self.assertEqual(h.w_preview._hen.interval(), 0)                        # ... và không chờ 250 ms ngừng bấm
+        t = time.perf_counter()
+        self.assertTrue(h.w_preview.cho_xong(20))
+        self.assertLess(time.perf_counter() - t, 2.0)
+        self.assertEqual(h._ma_xem, ma)
+        if h.w_preview.doc is not None:
+            self.assertGreater(h.w_preview.so_trang(), 0)
+        self.assertEqual(xt.CHO_MS, 250)
+
+    def test_thiet_lap_trang_lap_lai_ban_xem_truoc(self):
+        from pabt import in_word
+        from pabt.man_hinh import HopIn
+        con, ma = self._du_an()
+        h = HopIn(con, ma_ho_chon=[ma])
+        self.addCleanup(h.deleteLater)
+        self.addCleanup(lambda: h.w_preview.don_dep())
+        self.assertTrue(h.w_preview.cho_xong(20))
+        khoa = h.khoa_xem_truoc()
+        self.assertIn(khoa, h.w_preview._nho)
+        hop = h.thiet_lap_trang(cho=False)                                      # mở hộp (không exec), đổi lề, OK
+        self.addCleanup(hop.deleteLater)
+        self.assertEqual([hop.the.tabText(i) for i in range(3)], ['Lề', 'Giấy', 'Bố trí'])
+        hop.o_le['trai'].setValue(2.5)
+        self.assertEqual(hop.ap_dung(), ['le_mm'])
+        h.ap_thiet_lap_trang()
+        self.assertTrue(h.w_preview.dang_lap() or khoa in h.w_preview._nho)
+        self.assertTrue(h.w_preview.cho_xong(20))
+        self.assertEqual(in_word.LE_MM['trai'], 25)
+        docx = h.w_preview.xlsx
+        with zipfile.ZipFile(docx) as z:
+            self.assertIn(f'w:left="{in_word.twip(25)}"', z.read('word/document.xml').decode('utf-8'))
+
+    def test_cua_so_chinh_dua_ho_dang_lam_vao_hop_in(self):
+        from pabt import app as ud
+        p = _du_an_n_thua(self.td, 2)
+        w = ud.CuaSoChinh()
+        self.addCleanup(w.deleteLater)
+        w.mo(str(p))
+        ma = w.con.execute('SELECT ma_ho FROM ho').fetchone()[0]
+        from unittest import mock
+        self.assertEqual(w._ho_dang_lam(), [])                                  # chưa chọn dòng nào: hộp tự in loạt
+        lp = w.mo_lap_pa(ma, cho=False)
+        self.addCleanup(lp.close)
+        # cửa sổ lập phương án của hộ đang ở trước mặt (cho=False không đưa cửa sổ vào khung làm việc: giả lập đúng hai chỗ được hỏi)
+        with mock.patch.object(w.ngan_lv, 'currentWidget', lambda: w.khung_tab.stack_phu), \
+                mock.patch.object(w.khung_tab.stack_phu, 'currentWidget', lambda: lp):
+            self.assertEqual(w._ho_dang_lam(), [ma])
+            dlg = w.in_xuat(cho=False)
+        self.addCleanup(dlg.deleteLater)
+        self.addCleanup(lambda: dlg.w_preview.don_dep())
+        self.assertEqual(dlg.ma_ho_chon, [ma])
+        self.assertEqual(dlg.cb_pham_vi.currentData(), 'chon')
+        self.assertEqual(dlg.pham_vi_in(), 'mot')
+        dlg.w_preview.cho_xong(20)
+        w.bang.selectRow(0)                                                     # không mở cửa sổ hộ: lấy hộ đang chọn trên danh sách
+        self.assertEqual(w._ho_dang_lam(), [ma])
+        self.addCleanup(w.close)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -11,6 +11,10 @@ MUC = (
         'Cập nhật bảng giá đất từ file / ảnh quét: phần mềm soi bảng vừa đọc và tô màu dòng cần đối chiếu văn bản gốc (giá vị trí sau cao hơn vị trí trước, giá nông nghiệp cao hơn đất ở, giá lẻ dưới 100 đồng, giá đổi quá 50% so với bảng đang dùng); có dòng đỏ thì hỏi lại trước khi ghi. Phép soi chỉ nhắc, không tự sửa số - số đọc nhầm mà vẫn đúng thứ tự thì vẫn phải đối chiếu bằng mắt.',
         'Bảng giá không ghi đơn vị: giá dạng 500.000 (mọi giá chia hết 1.000) không còn bị hiểu thành nghìn đồng (500 triệu đồng/m²); phần mềm nhắc xác nhận đơn vị. Bảng giá đất nông nghiệp có cột chỉ ghi "Đơn giá" không còn bị ghi vào cột đất ở.',
         'Gói cài giá đất .larcgia có mã băm SHA-256 từng phần: gói bị sửa hoặc hỏng sau khi xuất thì máy nhận từ chối.',
+        'Phương án chi tiết (Word) tự dàn trang cho cân, lề và bề rộng bảng giữ nguyên: phần cuối (tổng cộng, mục IV, chữ ký) chỉ thừa vài dòng thì thu khoảng cách để gọn về trang trước; phương án nhiều trang thì các dòng bảng giãn đều cho khung bảng xuống sát lề dưới, không còn hở chân trang. Hết lỗi thừa một trang trắng khi bảng kết thúc sát đáy trang. Tắt được ở Thiết lập trang.',
+        'Bảng tổng hợp: trang còn hở cuối trang được chia đều vào chiều cao các dòng (lề, tỷ lệ in, chỗ ngắt trang không đổi).',
+        'Hộp "Thiết lập trang" mới, ba thẻ Lề | Giấy | Bố trí như của Word: chỉnh lề (cm), khổ A4 / A3, giấy dọc / ngang, cỡ chữ, có hình tờ giấy xem trước; bấm OK là bản xem trước đang mở lập lại ngay.',
+        'In / Xuất: mở từ cửa sổ lập phương án thì chọn sẵn đúng hộ đang làm; bản xem trước hiện ngay (bản xem nhanh dựng trong khoảng 0,1 giây, vài giây sau tự thay bằng bản của Microsoft Word - bản đó mới là bản in ra).',
     )),
     ('1.1.02', '11/11/2026', (
         'Bên trong: thêm các bước kiểm tra tốc độ tự động trước mỗi lần phát hành (đo từng lệnh so với bản trước, ngưỡng tốc độ trong bộ kiểm thử) để các bản sau không bị chậm lại. Chức năng và cách dùng không đổi.',

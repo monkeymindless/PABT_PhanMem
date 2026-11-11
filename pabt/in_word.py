@@ -140,8 +140,14 @@ def nhap_thong_so(file) -> list:
         raise dia_phuong.LoiHoSo(f'Không đọc được file thông số mẫu Word: {e}') from None
     if not isinstance(x, dict) or x.get('loai') != LOAI_THONG_SO or not isinstance(x.get('mau_word'), dict):
         raise dia_phuong.LoiHoSo(f'File không phải thông số mẫu Word (cần "loai": "{LOAI_THONG_SO}" và mục "mau_word").')
+    return dat_thong_so(x['mau_word'])
+
+
+def dat_thong_so(mau_word: dict) -> list:
+    """Đặt thông số mẫu Word (chỉ cần các mục muốn đổi): kiểm tra, ghi phần KHÁC mặc định vào hồ sơ máy, áp dụng ngay - dùng chung cho
+    nhập file thông số và hộp Thiết lập trang (1.1.03). Trả danh sách mục đã đổi. Sai -> dia_phuong.LoiHoSo (chưa ghi gì)."""
     cu = thong_so_mau()
-    moi = dia_phuong.tron(cu, x['mau_word'])
+    moi = dia_phuong.tron(cu, mau_word)
     loi = dia_phuong.kiem_tra_mau_word(moi)
     if loi:
         raise dia_phuong.LoiHoSo('Thông số mẫu Word chưa hợp lệ:' + chr(10) + '- ' + (chr(10) + '- ').join(loi))
