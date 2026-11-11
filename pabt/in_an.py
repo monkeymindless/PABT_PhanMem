@@ -1090,6 +1090,12 @@ CAO_NEN_TOI_THIEU = 19.0        # nén khít: dòng một dòng chữ không th�
 NEN_TOI_DA = 0.14               # chỉ nén khi phần tràn sang trang cuối <= 14% chiều cao trang
 GIAN_TU, GIAN_DEN = 0.08, 0.22  # giãn cân đối khi đáy trang hở 8% - 22%
 GIAN_MOI_DONG = 3.0             # giãn tối đa mỗi dòng (pt)
+# 1.1.03 - giãn KHÍT trang (người dùng 11/11/2026: khung bảng chạm lề dưới, không đổi lề): đáy trang hở hơn HO_KHIT_TU đến HO_KHIT_DEN
+# (pt TRÊN GIẤY - nhân 100 / tỷ lệ in ra pt của sheet) thì chia đều cả phần hở cho các dòng số liệu của trang, mỗi dòng thêm không quá
+# KHIT_MOI_DONG pt trên giấy; chừa KHIT_CHUA pt của sheet. Dòng đã giãn tự nuốt phần AutoFit của Excel nhích thêm (VBS giữ max).
+HO_KHIT_TU, HO_KHIT_DEN = 10.0, 120.0
+KHIT_MOI_DONG = 14.0
+KHIT_CHUA = 2.0
 CON_CHO_HO_LON = 85.0           # hộ nhiều thửa: trang còn >= 85 pt (~3 dòng thửa) thì bắt đầu ngay, không đẩy cả hộ sang trang
 TEN_DEM = 'PABT_DEM_DONG'       # tên vùng báo VBS xuất PDF đệm dòng (phần mười pt) khi đã nén khít
 TEN_CAO_MIN = 'PABT_CAO_MIN'    # … và chiều cao tối thiểu (phần mười pt)
@@ -1264,6 +1270,34 @@ def co_gian_vua_trang(ws, khoi: list, cap: float, tieu_de: tuple | None, dong_ne
     return trang, da_nen
 
 
+def gian_khit_trang(ws, khoi: list, cap: float, tieu_de: tuple | None, dong_gian: set) -> list:
+    """1.1.03 - bước CUỐI của dàn trang (sau khi đã tách vùng gộp ở ranh trang - làm trước thì trang không còn chỗ cho dòng tách thêm,
+    một dòng bị đẩy sang trang sau): trang (trừ trang cuối) còn hở hơn HO_KHIT_TU pt trên giấy thì chia đều phần hở cho các dòng
+    dong_gian của trang đó, mỗi dòng thêm không quá KHIT_MOI_DONG pt trên giấy. Lề và tỷ lệ in không đổi. Cách xếp trang đổi sau khi
+    giãn (không được xảy ra) thì trả chiều cao cũ. Trả các trang (xep_trang)."""
+    cao = _ham_cao(ws)
+    trang = xep_trang(ws, khoi, cap, tieu_de)
+    he = 100.0 / max(10, int(ws.page_setup.scale or 100))          # pt trên giấy -> pt của sheet
+    cu = {}
+    for dau, cuoi, dung in trang[:-1]:
+        ho = cap - dung
+        ds = [r for r in range(dau, cuoi + 1) if r in dong_gian and cao(r) > 0]
+        if not ds or not HO_KHIT_TU * he < ho <= max(HO_KHIT_DEN * he, GIAN_DEN * cap):
+            continue
+        them = min(KHIT_MOI_DONG * he, (ho - KHIT_CHUA) / len(ds))
+        for r in ds:
+            cu[r] = ws.row_dimensions[r].height
+            ws.row_dimensions[r].height = min(CAO_TOI_DA, int((cao(r) + them) * 100) / 100)      # làm tròn XUỐNG: tổng không vượt trang
+    if not cu:
+        return trang
+    sau = xep_trang(ws, khoi, cap, tieu_de)
+    if [(d, c) for d, c, _ in sau] != [(d, c) for d, c, _ in trang]:
+        for r, h in cu.items():
+            ws.row_dimensions[r].height = h
+        return xep_trang(ws, khoi, cap, tieu_de)
+    return sau
+
+
 def ghi_ngat_trang(ws, trang: list, tu_dong: int = 1) -> list:
     """Ngắt trang tay ở cuối mọi trang (trừ trang cuối) - Excel in đúng cách xếp của phần mềm. Trả các dòng đã ngắt (ngắt SAU dòng)."""
     from openpyxl.worksheet.pagebreak import Break
@@ -1355,6 +1389,7 @@ def ngat_trang_bth(ws, khoi_ho: list, tong: int, n_cot: int, cuoi: int | None = 
         if not doi:                                     # tách xong mà phần sau đủ cao: giữ cách xếp
             break
         trang = xep_trang(ws, khoi, cap, dong_tieu_de)
+    trang = gian_khit_trang(ws, khoi, cap, dong_tieu_de, set(dong_du_lieu))
     return ghi_ngat_trang(ws, trang, d0)
 
 

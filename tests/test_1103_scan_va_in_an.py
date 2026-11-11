@@ -554,5 +554,94 @@ class TestDanTrangWordThat(unittest.TestCase):
         self.assertLess(ho, 16)                                                 # trước 1.1.03 hở 23 - 150 pt
 
 
+class TestGianKhitTrangExcel(unittest.TestCase):
+    """in_an.gian_khit_trang: bảng tổng hợp - chia khoảng hở cuối trang vào chiều cao dòng, không đổi lề / tỷ lệ in / chỗ ngắt."""
+
+    def _sheet(self, cao: list, ti_le: int = 55):
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.page_setup.scale = ti_le
+        for r, h in enumerate(cao, start=1):
+            ws.cell(r, 1, f'dòng {r}')
+            ws.row_dimensions[r].height = h
+        return wb, ws
+
+    def test_chia_deu_khoang_ho_trang_truoc(self):
+        from pabt import in_an
+        cao = [40.0] * 30
+        wb, ws = self._sheet(cao)
+        khoi = [('tu_do', [(r, r) for r in range(1, 31)])]
+        cap = 500.0                                     # 12 dòng một trang (480), hở 20 pt của sheet = 11 pt trên giấy
+        truoc = in_an.xep_trang(ws, khoi, cap)
+        self.assertEqual([(d, c) for d, c, _ in truoc], [(1, 12), (13, 24), (25, 30)])
+        le = (ws.page_margins.top, ws.page_margins.bottom, ws.page_margins.left, ws.page_margins.right)
+        sau = in_an.gian_khit_trang(ws, khoi, cap, None, set(range(1, 31)))
+        self.assertEqual([(d, c) for d, c, _ in sau], [(d, c) for d, c, _ in truoc])       # không dòng nào đổi trang
+        for d, c, dung in sau[:-1]:
+            self.assertLessEqual(dung, cap)
+            self.assertLessEqual(cap - dung, in_an.KHIT_CHUA + 0.2)                          # trang trước khít, chỉ chừa 2 pt
+        self.assertEqual(ws.row_dimensions[30].height, 40.0)                                # trang cuối không giãn
+        self.assertGreater(ws.row_dimensions[1].height, 41.0)
+        self.assertEqual((ws.page_margins.top, ws.page_margins.bottom, ws.page_margins.left, ws.page_margins.right), le)
+        self.assertEqual(ws.page_setup.scale, 55)
+        wb.close()
+
+    def test_ho_nho_hoac_khong_co_dong_gian_thi_giu_nguyen(self):
+        from pabt import in_an
+        wb, ws = self._sheet([40.0] * 30)
+        khoi = [('tu_do', [(r, r) for r in range(1, 31)])]
+        in_an.gian_khit_trang(ws, khoi, 490.0, None, set(range(1, 31)))                     # hở 10 pt sheet = 5,5 pt giấy: dưới ngưỡng
+        self.assertEqual({ws.row_dimensions[r].height for r in range(1, 31)}, {40.0})
+        in_an.gian_khit_trang(ws, khoi, 500.0, None, set())
+        self.assertEqual({ws.row_dimensions[r].height for r in range(1, 31)}, {40.0})
+        wb.close()
+
+    def test_moi_dong_them_khong_qua_muc(self):
+        from pabt import in_an
+        wb, ws = self._sheet([100.0] * 3 + [300.0] + [100.0] * 4, ti_le=100)
+        khoi = [('tu_do', [(r, r) for r in range(1, 9)])]
+        sau = in_an.gian_khit_trang(ws, khoi, 400.0, None, {1, 2, 3})                       # trang 1: 3 dòng, hở 100 pt
+        self.assertEqual([(d, c) for d, c, _ in sau][0], (1, 3))
+        self.assertEqual({ws.row_dimensions[r].height for r in (1, 2, 3)}, {100.0 + in_an.KHIT_MOI_DONG})
+        wb.close()
+
+    def test_bang_tong_hop_giu_le_va_ty_le(self):
+        from PySide6.QtWidgets import QApplication
+        from pabt import csdl, du_an_moi, in_an
+        QApplication.instance() or QApplication([])
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            dong = [dict(ho_ten=f'Hộ thử {i}', dia_chi='Ấp 1', so_to='3', so_thua=str(200 + i * 3 + j), loai_dat='CLN',
+                         dt_thu_hoi=str(100 + i), vi_tri='1') for i in range(60) for j in range(1 + i % 3)]
+            p = td / 'bth.pabt'
+            du_an_moi.tao_du_an(p, dict(ten='Thử', cap_dia_ban='Xã', ten_dia_ban='Mẫu', nam='2026'), dong,
+                                [dict(loai_dat='CLN', vi_tri='1', gia='250000')])
+            con = csdl.mo(p)
+            try:
+                ds = [r[0] for r in con.execute('SELECT ma_ho FROM ho ORDER BY thu_tu')]
+                f = in_an.lap_bang_tong_hop(con, td / 'bth.xlsx', ds)
+            finally:
+                con.close()
+            wb = openpyxl.load_workbook(f)
+            try:
+                ws = wb.worksheets[0]
+                chuan = dict(in_an.LE_TRANG['tong_hop'])
+                self.assertEqual({k: getattr(ws.page_margins, k) for k in ('top', 'bottom', 'left', 'right')},
+                                 {k: chuan[k] for k in ('top', 'bottom', 'left', 'right')})
+                self.assertEqual(ws.page_setup.scale, in_an.TI_LE_BTH)
+                ngat = sorted(b.id for b in ws.row_breaks.brk)
+                self.assertGreaterEqual(len(ngat), 2)
+                cap, cao = in_an.cao_trang_in(ws), in_an._ham_cao(ws)
+                t1, t2 = (int(x) for x in ws.print_title_rows.replace('$', '').split(':'))
+                ctd = sum(cao(r) for r in range(t1, t2 + 1))
+                dau = 1
+                for e in ngat:                                                           # mọi trang trước trang cuối không tràn
+                    dung = sum(cao(r) for r in range(dau, e + 1)) + (ctd if dau > t2 else 0)
+                    self.assertLessEqual(dung, cap + 0.01)
+                    dau = e + 1
+            finally:
+                wb.close()
+
+
 if __name__ == '__main__':
     unittest.main()
