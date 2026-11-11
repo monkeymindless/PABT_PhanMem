@@ -57,6 +57,16 @@
 > dự án in hoa; bảng tổng hợp có dòng **CHI NHÁNH …** dưới tên cơ quan. Lề bảng tổng hợp A3: trái 2,0 / phải 1,0 / trên 1,5 / dưới 1,5 cm
 > (đổi trong hồ sơ địa phương `ban_in.le_trang.tong_hop`).
 >
+> **1.1.03**: **Thiết lập trang** (Công cụ → Quản lý Mẫu in & Bản in…, Ctrl+Shift+M, hoặc liên kết "Thiết lập trang" ở bảng In / Xuất) có
+> ba thẻ như của Word: **Lề** (cm, giấy dọc / ngang, áp dụng cho bản Word hoặc bảng tổng hợp, hình tờ giấy xem trước), **Giấy** (A4 / A3),
+> **Bố trí** (tự co giãn cho khít trang, cỡ chữ, thụt đầu dòng). Bấm OK là dùng ngay. **Tự co giãn** (mặc định bật): phương án chi tiết
+> chỉ thừa vài dòng sang trang cuối được thu gọn về trang trước, phương án nhiều trang được giãn đều các dòng bảng cho khung bảng xuống
+> sát lề dưới - lề và bề rộng bảng không đổi. Bảng In / Xuất mở từ cửa sổ lập phương án chọn sẵn hộ đang làm; bản xem trước hiện ngay
+> ("Bản xem nhanh", vài giây sau tự thay bằng bản của Microsoft Word - bản của Word mới là bản in ra, chỗ ngắt trang của bản xem nhanh
+> có thể lệch). **Cập nhật bảng giá đất** từ file / ảnh quét: dòng tô đỏ / vàng là dòng phần mềm thấy bất thường (giá vị trí sau cao hơn
+> vị trí trước, giá nông nghiệp cao hơn đất ở, giá lẻ, giá đổi quá 50%) - rê chuột xem lý do, đối chiếu văn bản gốc; phần mềm không tự
+> sửa số và không bắt được số đọc nhầm mà vẫn đúng thứ tự, nên vẫn phải soát bằng mắt. Bảng không ghi đơn vị thì xem lại một giá.
+>
 > **1.0.20**: **bảng tổng hợp cũng không còn file mẫu Excel** - bố cục, định dạng và khổ giấy A3 dựng hoàn toàn bằng mã (kết quả in giữ
 > nguyên). Phần mềm không còn đọc bất kỳ file mẫu Excel nào; **Quản lý Mẫu in & Bản in** chỉ còn thông số mẫu Word (xuất / nhập / khôi phục).
 >

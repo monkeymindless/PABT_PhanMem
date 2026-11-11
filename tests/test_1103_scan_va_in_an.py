@@ -498,9 +498,13 @@ class TestDanTrangWordThat(unittest.TestCase):
             raise unittest.SkipTest('máy không có Microsoft Word')
 
     def _day_muc(self, pdf) -> list:
-        """[(cao trang pt, y thấp nhất có mực pt)] từng trang."""
+        """[(cao trang pt, y thấp nhất có mực pt)] từng trang. Bản Qt5 không có QtPdf: đếm trang bằng pypdf, y = None (không đo mực)."""
         from PySide6.QtCore import QSize
-        from PySide6.QtPdf import QPdfDocument
+        try:
+            from PySide6.QtPdf import QPdfDocument
+        except ImportError:
+            from pypdf import PdfReader
+            return [(float(t.mediabox.height), None) for t in PdfReader(str(pdf)).pages]
         d = QPdfDocument()
         d.load(str(pdf))
         kq = []
@@ -548,6 +552,8 @@ class TestDanTrangWordThat(unittest.TestCase):
         ts, truoc, trang = thay['gian']
         self.assertEqual(len(trang), 2)
         cao, duoi = trang[0]
+        if duoi is None:
+            return
         le_duoi = in_word.LE_MM['duoi'] / 25.4 * 72
         ho = cao - le_duoi - duoi
         self.assertGreaterEqual(ho, 0)                                          # không lấn lề dưới

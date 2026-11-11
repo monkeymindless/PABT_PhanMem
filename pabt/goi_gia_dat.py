@@ -503,9 +503,9 @@ def doc_goi_cai(file) -> dict:
                     raise LoiGoi('Gói cài đã bị sửa hoặc hỏng sau khi xuất (mã băm SHA-256 không khớp: ' + ', '.join(sai) +
                                  '). Xin lại file gói từ người đã thẩm định.')
                 mo['niem_phong_khop'] = True
-            goi = json.loads(tho['goi.json'].decode('utf-8-sig'))
-            bg = json.loads(tho['bang_gia_dat.json'].decode('utf-8-sig'))
-            hk = json.loads(tho['he_so_k.json'].decode('utf-8-sig'))
+            goi = json.loads(str(tho['goi.json'], 'utf-8-sig'))
+            bg = json.loads(str(tho['bang_gia_dat.json'], 'utf-8-sig'))
+            hk = json.loads(str(tho['he_so_k.json'], 'utf-8-sig'))
     except LoiGoi:
         raise
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as e:
