@@ -94,6 +94,10 @@ CO_CHU_WORD = ('co_quan', 'quoc_hieu', 'tieu_ngu', 'so_ngay', 'du_thao', 'ten_lo
                'nguon_goc', 'bang', 'ghi_chu', 'chu_ky')
 
 
+KHO_GIAY_WORD = ('A4', 'A3')
+HUONG_GIAY_WORD = ('doc', 'ngang')
+
+
 def kiem_tra_mau_word(mw) -> list:
     """Lỗi của mục ban_in.mau_word (thông số mẫu Word phương án chi tiết / bổ sung / điều chỉnh)."""
     loi = []
@@ -120,6 +124,13 @@ def kiem_tra_mau_word(mw) -> list:
     so(mw.get('thut_dau_dong_mm'), 'thut_dau_dong_mm', 0, 30)
     so(mw.get('gach_chan_ho_pt'), 'gach_chan_ho_pt', 0, 8)
     so(mw.get('duong_ke_du_an_mm'), 'duong_ke_du_an_mm', 0, 180)
+    # 1.1.03 - hộp Thiết lập trang: ba mục không bắt buộc (hồ sơ / gói .pabtcfg cũ không có: A4 dọc, tự co giãn)
+    if mw.get('kho_giay', 'A4') not in KHO_GIAY_WORD:
+        loi.append('ban_in.mau_word.kho_giay: ' + ' hoặc '.join(KHO_GIAY_WORD) + '.')
+    if mw.get('huong_giay', 'doc') not in HUONG_GIAY_WORD:
+        loi.append('ban_in.mau_word.huong_giay: "doc" (dọc) hoặc "ngang".')
+    if not isinstance(mw.get('tu_co_gian', True), bool):
+        loi.append('ban_in.mau_word.tu_co_gian: true / false.')
     return loi
 
 

@@ -280,5 +280,279 @@ class TestNiemPhong(unittest.TestCase):
             self.assertFalse(gg.doc_goi_cai(cu)['mo_ta'].get('niem_phong_khop'))
 
 
+# ---------------------------------------------------------------- hạng mục 2: dàn trang cân đối, giữ nguyên lề
+W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+CAU = 'Đất giả lập do hộ sử dụng ổn định từ năm 1995, không tranh chấp, phù hợp quy hoạch sử dụng đất. '
+
+
+def _du_an_n_thua(td: Path, n: int, k: int = 1) -> Path:
+    """Một hộ giả lập có n thửa (n dòng mục 1 của bảng mục III), nguồn gốc mỗi thửa k câu."""
+    from pabt import csdl, du_an_moi
+    dong = [dict(ho_ten='Nguyễn Văn Thử', dia_chi='Ấp 1, xã Mẫu', so_to='3', so_thua=str(200 + i), loai_dat='CLN',
+                 dt_thu_hoi=str(100 + i * 7), vi_tri='1') for i in range(n)]
+    p = td / f'dt_{n}_{k}.pabt'
+    du_an_moi.tao_du_an(p, dict(ten='Dự án thử dàn trang', cap_dia_ban='Xã', ten_dia_ban='Mẫu', nam='2026'), dong,
+                        [dict(loai_dat='CLN', vi_tri='1', gia='250000')])
+    con = csdl.mo(p)
+    try:
+        with con:
+            con.execute('UPDATE thua SET nguon_goc = ?', (CAU * k,))
+    finally:
+        con.close()
+    return p
+
+
+class TestMayDanTrang(unittest.TestCase):
+    """dan_trang: mô phỏng ngắt trang + chọn thông số, trên các khối giả lập (không Qt)."""
+
+    def _van_ban(self, so_hang: int, cao_hang: float = 30.0, dau: float = 200.0, cuoi: float = 150.0):
+        from pabt import dan_trang as dt
+
+        def dung(ts):
+            tru = (28 - ts.dem_doc) / 20 * 2
+            kh = [dt.Khoi('d', dau - (120 - ts.sau_doan) / 20, vai='muc2', sau=ts.sau_doan / 20),
+                  dt.Khoi('h', 30, phu=2.8, trong_bang=True, vai='tieu_de')]
+            for i in range(so_hang):
+                kh.append(dt.Khoi('h', max(cao_hang - tru, ts.cao_hang.get(i, 0) / 20 + ts.dem_doc / 10), phu=ts.dem_doc / 10,
+                                  trong_bang=True, chi_so=i, gian=True, vai='so_lieu'))
+            kh.append(dt.Khoi('h', 20, giu_sau=True, trong_bang=True, vai='bang'))
+            kh.append(dt.Khoi('h', cuoi - (4 - ts.dong_ky) * 15, trong_bang=True, vai='ky'))
+            return kh
+        return dung
+
+    def test_mot_trang_khong_dieu_tiet(self):
+        from pabt import dan_trang as dt
+        ts = dt.dieu_tiet(self._van_ban(5), 785.2)
+        self.assertEqual((ts.so_trang, ts.che_do, ts.cao_hang, ts.dem_doc, ts.sau_doan), (1, '', {}, 28, 120))
+        self.assertTrue(ts.la_chuan())
+
+    def test_tran_it_thi_thu_gon_ve_mot_trang(self):
+        from pabt import dan_trang as dt
+        dung = self._van_ban(13)                           # 200 + 31 + 13 x 31 + 21 + 151 = 806 > 785,2: thừa ~21 pt
+        self.assertEqual(len(dt.chia_trang(dung(dt.ThongSo()), 785.2, 31)), 2)
+        ts = dt.dieu_tiet(dung, 785.2)
+        self.assertEqual((ts.so_trang, ts.che_do), (1, 'thu_gon'))
+        self.assertLess(ts.dem_doc, 28)
+        self.assertEqual(ts.cao_hang, {})
+        self.assertGreaterEqual(ts.ho[0], dt.AN_TOAN_THU)
+
+    def test_nhieu_trang_thi_gian_deu_trang_truoc(self):
+        from pabt import dan_trang as dt
+        dung = self._van_ban(30)
+        truoc = dt.chia_trang(dung(dt.ThongSo()), 785.2, 31)
+        self.assertEqual(len(truoc), 2)
+        self.assertGreater(785.2 - truoc[0].dung, dt.HO_TOI_THIEU)
+        ts = dt.dieu_tiet(dung, 785.2)
+        self.assertEqual((ts.so_trang, ts.che_do), (2, 'gian'))
+        self.assertLessEqual(ts.ho[0], dt.AN_TOAN_DAU + 1)                 # trang 1 chỉ còn hở phần chừa an toàn
+        self.assertIn('tieu_de', ts.cao_hang)
+        sau = dt.chia_trang(dung(ts), 785.2, 31)
+        self.assertEqual(dt._trang_cua(sau), dt._trang_cua(truoc))         # không dòng nào đổi trang
+        them = [ts.cao_hang[i] / 20 + 2.8 - 30 for i in ts.cao_hang if i != 'tieu_de']
+        self.assertTrue(all(0 < x <= dt.GIAN_TOI_DA + 0.1 for x in them))
+
+    def test_khoi_di_lien_va_cat_dong(self):
+        from pabt import dan_trang as dt
+        kh = [dt.Khoi('d', 700), dt.Khoi('h', 40, giu_sau=True), dt.Khoi('h', 60)]
+        tr = dt.chia_trang(kh, 785.2)
+        self.assertEqual([[v for v, _ in t.khoi] for t in tr], [[0], [1, 2]])      # 40 vừa nhưng đi liền khối 60: cả hai sang trang
+        kh = [dt.Khoi('d', 700), dt.Khoi('d', 120, tach=True, so_dong=10, cao_dong=12)]
+        tr = dt.chia_trang(kh, 785.2)
+        self.assertEqual([round(t.dung, 1) for t in tr], [784.0, 36.0])             # 7 dòng ở trang 1, 3 dòng sang trang 2
+        self.assertEqual(dt.dem_dong('a b c d', 25, 10, False, lambda s, f, c, d: len(s) * 10.0), 4)
+        self.assertEqual(dt.dem_dong('', 25, 10, False, lambda s, f, c, d: 1.0), 1)
+
+    def test_hai_doan_lien_nhau_lay_khoang_cach_lon_hon(self):
+        from pabt import dan_trang as dt
+        kh = dt.gop_khoang_cach([dt.Khoi('d', 20, sau=6), dt.Khoi('d', 30, truoc=10), dt.Khoi('h', 5), dt.Khoi('d', 30, truoc=10)])
+        self.assertEqual([k.cao for k in kh], [20, 24, 5, 30])
+
+
+class TestDanTrangWord(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from PySide6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        from unittest import mock
+        from pabt import in_an
+        self._td = tempfile.TemporaryDirectory()
+        self.td = Path(self._td.name)
+        do = lambda s, ten, co, dam: len(s) * co * (0.52 if dam else 0.47)      # noqa: E731 - đo chữ cố định: kết quả không theo phông máy
+        self._vo = mock.patch.object(in_an, '_ham_do_chu', lambda: do)
+        self._vo.start()
+
+    def tearDown(self):
+        self._vo.stop()
+        self._td.cleanup()
+
+    def _xml(self, n: int, k: int = 1, du_thao: bool = False):
+        from pabt import csdl, in_word
+        from xml.etree import ElementTree as ET
+        con = csdl.mo(_du_an_n_thua(self.td, n, k))
+        try:
+            ma = con.execute('SELECT ma_ho FROM ho').fetchone()[0]
+            ts, truoc = in_word.du_doan_dan_trang(con, ma, du_thao=du_thao)
+            f = in_word.xuat_chi_tiet_docx(con, ma, self.td / f'pa_{n}.docx', du_thao=du_thao)
+        finally:
+            con.close()
+        with zipfile.ZipFile(f) as z:
+            goc = ET.fromstring(z.read('word/document.xml'))
+        return goc, ts, truoc, f
+
+    def _tim(self, che_do: str):
+        """Hộ nhỏ nhất (số thửa) mà bộ dàn trang chọn chế độ này."""
+        for n in range(6, 26):
+            goc, ts, truoc, f = self._xml(n)
+            if ts.che_do == che_do:
+                return n, goc, ts, truoc, f
+        self.fail(f'không hộ nào từ 6 đến 25 thửa vào chế độ {che_do}')
+
+    def _le_va_rong(self, goc):
+        from pabt import in_word
+        sp = goc.find(f'{W}body/{W}sectPr')
+        le = sp.find(W + 'pgMar')
+        kho = sp.find(W + 'pgSz')
+        bang = [t for t in goc.iter(W + 'tbl') if any(r.find(f'{W}trPr/{W}tblHeader') is not None for r in t.findall(W + 'tr'))][0]
+        self.assertEqual({k: int(le.get(W + v)) for k, v in (('trai', 'left'), ('phai', 'right'), ('tren', 'top'), ('duoi', 'bottom'))},
+                         {k: in_word.twip(v) for k, v in in_word.LE_MM.items()})
+        self.assertEqual((int(kho.get(W + 'w')), int(kho.get(W + 'h'))), in_word.KHO_A4)
+        self.assertEqual(int(bang.find(f'{W}tblPr/{W}tblW').get(W + 'w')), in_word.rong_trang())
+        self.assertEqual(sum(int(c.get(W + 'w')) for c in bang.find(W + 'tblGrid')), in_word.rong_trang())
+        return bang
+
+    def test_mot_trang_giu_bo_cuc_chuan(self):
+        goc, ts, truoc, _f = self._xml(3)
+        bang = self._le_va_rong(goc)
+        self.assertEqual((ts.so_trang, ts.che_do, len(truoc)), (1, '', 1))
+        self.assertEqual(list(bang.iter(W + 'trHeight')), [])
+        self.assertEqual(bang.find(f'{W}tblPr/{W}tblCellMar/{W}top').get(W + 'w'), '28')
+
+    def test_mo_coi_tu_thu_gon_ve_mot_trang(self):
+        """Khối cuối (thưởng + tổng cộng + mục IV + chữ ký) chỉ thừa vài dòng: thu khoảng cách, không đổi lề, về đúng một trang."""
+        _n, goc, ts, truoc, _f = self._tim('thu_gon')
+        bang = self._le_va_rong(goc)
+        self.assertEqual((len(truoc), ts.so_trang), (2, 1))
+        dem = int(bang.find(f'{W}tblPr/{W}tblCellMar/{W}top').get(W + 'w'))
+        self.assertEqual(dem, ts.dem_doc)
+        self.assertTrue(ts.sau_doan < 120 or ts.dem_doc < 28 or ts.dong_ky < 4)
+        self.assertEqual(list(bang.iter(W + 'trHeight')), [])
+        self.assertEqual(bang.find(f'{W}tblPr/{W}tblCellMar/{W}left').get(W + 'w'), '40')      # đệm trái / phải không đổi
+
+    def test_hai_trang_tu_gian_khong_ho_chan_trang(self):
+        _n, goc, ts, truoc, _f = self._tim('gian')
+        bang = self._le_va_rong(goc)
+        self.assertEqual((len(truoc), ts.so_trang), (2, 2))
+        self.assertGreater(truoc[0], ts.ho[0])                                 # khoảng hở cuối trang 1 giảm
+        self.assertLessEqual(ts.ho[0], 9)
+        cao = list(bang.iter(W + 'trHeight'))
+        self.assertGreaterEqual(len(cao), 5)
+        self.assertTrue(all(h.get(W + 'hRule') == 'atLeast' for h in cao))
+        # thứ tự thuộc tính dòng đúng lược đồ, dòng tiêu đề vẫn lặp đầu trang
+        dau = bang.findall(W + 'tr')[0].find(W + 'trPr')
+        self.assertEqual([c.tag[len(W):] for c in dau], ['cantSplit', 'trHeight', 'tblHeader'])
+
+    def test_tat_tu_co_gian_o_ho_so(self):
+        from pabt import in_word
+        n = self._tim('gian')[0]
+        cu = in_word.TU_CO_GIAN
+        in_word.TU_CO_GIAN = False
+        try:
+            goc, ts, _truoc, _f = self._xml(n)
+        finally:
+            in_word.TU_CO_GIAN = cu
+        self.assertEqual((ts.che_do, list(goc.iter(W + 'trHeight'))), ('', []))
+
+    def test_van_ban_ket_thuc_bang_doan_1_pt(self):
+        """Word tự thêm đoạn trống 13 pt sau bảng cuối văn bản (bảng sát đáy trang thì thành một trang trắng): đã đặt đoạn 1 pt."""
+        goc = self._xml(3)[0]
+        than = [c for c in goc.find(W + 'body') if c.tag != W + 'sectPr']
+        self.assertEqual(than[-1].tag, W + 'p')
+        sp = than[-1].find(f'{W}pPr/{W}spacing')
+        self.assertEqual((sp.get(W + 'line'), sp.get(W + 'lineRule')), ('20', 'exact'))
+        self.assertEqual(than[-2].tag, W + 'tbl')
+
+    def test_openxml_hang_va_bang(self):
+        from pabt import openxml_word as ox
+        h = ox.hang([ox.o(ox.doan(ox.chay('a')), 1000)], cao_twip=500)
+        self.assertIn('<w:trHeight w:val="500" w:hRule="atLeast"/>', h)
+        self.assertIn('w:hRule="exact"', ox.hang([ox.o('', 1000)], cao_twip=300, quy_tac_cao='exact'))
+        self.assertNotIn('trHeight', ox.hang([ox.o('', 1000)]))
+        b = ox.bang([h], [1000], dem_doc_twip=10)
+        self.assertIn('<w:top w:w="10" w:type="dxa"/>', b)
+        self.assertIn('<w:bottom w:w="10" w:type="dxa"/>', b)
+        self.assertIn('<w:top w:w="28" w:type="dxa"/>', ox.bang([h], [1000]))
+
+
+@unittest.skipUnless(os.name == 'nt' and os.environ.get('PABT_THU_WORD') != '0', 'cần Microsoft Word')
+class TestDanTrangWordThat(unittest.TestCase):
+    """Đối chiếu với Microsoft Word thật (đo chữ bằng phông thật): số trang và khoảng hở cuối trang trong file PDF Word xuất."""
+
+    @classmethod
+    def setUpClass(cls):
+        from PySide6.QtWidgets import QApplication
+        from pabt import van_ban_trinh
+        cls.app = QApplication.instance() or QApplication([])
+        if not van_ban_trinh.co_word():
+            raise unittest.SkipTest('máy không có Microsoft Word')
+
+    def _day_muc(self, pdf) -> list:
+        """[(cao trang pt, y thấp nhất có mực pt)] từng trang."""
+        from PySide6.QtCore import QSize
+        from PySide6.QtPdf import QPdfDocument
+        d = QPdfDocument()
+        d.load(str(pdf))
+        kq = []
+        try:
+            for i in range(d.pageCount()):
+                sz = d.pagePointSize(i)
+                anh = d.render(i, QSize(int(sz.width()), int(sz.height())))
+                duoi = 0
+                for y in range(anh.height() - 1, -1, -1):
+                    if any(anh.pixelColor(x, y).alpha() > 40 and anh.pixelColor(x, y).lightness() < 200 for x in range(0, anh.width(), 2)):
+                        duoi = y
+                        break
+                kq.append((sz.height(), duoi))
+        finally:
+            d.close()
+        return kq
+
+    def test_word_that(self):
+        from pabt import csdl, in_word
+        from pabt import xem_truoc_tai_lieu as xt
+        if in_word._ham_do() is None:
+            self.skipTest('không đo được chữ bằng Qt')
+        thay = {}
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            for n in range(8, 16):
+                con = csdl.mo(_du_an_n_thua(td, n))
+                try:
+                    ma = con.execute('SELECT ma_ho FROM ho').fetchone()[0]
+                    ts, truoc = in_word.du_doan_dan_trang(con, ma)
+                    if ts.che_do in thay or not ts.che_do:
+                        continue
+                    f = in_word.xuat_chi_tiet_docx(con, ma, td / f'w_{n}.docx')
+                finally:
+                    con.close()
+                loi = xt.chuyen_pdf(f, f.with_suffix('.pdf'))
+                if loi:
+                    self.skipTest(f'Word không xuất được PDF: {loi}')
+                thay[ts.che_do] = (ts, truoc, self._day_muc(f.with_suffix('.pdf')))
+                if len(thay) == 2:
+                    break
+        self.assertEqual(sorted(thay), ['gian', 'thu_gon'])
+        ts, truoc, trang = thay['thu_gon']
+        self.assertEqual((len(truoc), len(trang)), (2, 1))                     # trước 2 trang, Word thật còn 1 trang
+        ts, truoc, trang = thay['gian']
+        self.assertEqual(len(trang), 2)
+        cao, duoi = trang[0]
+        le_duoi = in_word.LE_MM['duoi'] / 25.4 * 72
+        ho = cao - le_duoi - duoi
+        self.assertGreaterEqual(ho, 0)                                          # không lấn lề dưới
+        self.assertLess(ho, 16)                                                 # trước 1.1.03 hở 23 - 150 pt
+
+
 if __name__ == '__main__':
     unittest.main()

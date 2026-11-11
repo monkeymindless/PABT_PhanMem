@@ -133,19 +133,32 @@ def o(noi_dung: str, rong: int, nhap: int = 1, doc: str = 'center', gop_doc: str
     return f'<w:tc><w:tcPr>{pr}</w:tcPr>{noi_dung or doan()}</w:tc>'
 
 
-def hang(cac_o: list, lap_dau_trang: bool = False, khong_tach: bool = False) -> str:
-    """Dòng bảng (w:tr). lap_dau_trang: dòng tiêu đề lặp ở đầu mỗi trang; khong_tach: không cắt đôi dòng qua trang."""
-    pr = ('<w:tblHeader/>' if lap_dau_trang else '') + f'<w:cantSplit w:val="{1 if (khong_tach or lap_dau_trang) else 0}"/>'
-    return f'<w:tr><w:trPr>{pr}</w:trPr>{"".join(cac_o)}</w:tr>'
+def xml_tr_pr(lap_dau_trang: bool = False, khong_tach: bool = False, cao_twip: int = 0, quy_tac_cao: str = 'atLeast') -> str:
+    """Thuộc tính dòng bảng (w:trPr) theo đúng thứ tự lược đồ: cantSplit, trHeight, tblHeader. cao_twip > 0: chiều cao dòng
+    (quy_tac_cao 'atLeast' = tối thiểu, chữ nhiều hơn thì dòng tự cao thêm; 'exact' = đúng bằng)."""
+    if quy_tac_cao not in ('atLeast', 'exact', 'auto'):
+        quy_tac_cao = 'atLeast'
+    return (f'<w:cantSplit w:val="{1 if (khong_tach or lap_dau_trang) else 0}"/>' +
+            (f'<w:trHeight w:val="{int(cao_twip)}" w:hRule="{quy_tac_cao}"/>' if cao_twip and cao_twip > 0 else '') +
+            ('<w:tblHeader/>' if lap_dau_trang else ''))
 
 
-def bang(cac_hang: list, rong_cot: list, vien: bool = True, le_o: int = 57, lui: int = 0, can: str = 'center') -> str:
-    """Bảng cố định bề rộng cột (w:tbl). vien: khung + lưới; lui (twip): bắt đầu lùi ra ngoài lề trái (canh trái)."""
+def hang(cac_o: list, lap_dau_trang: bool = False, khong_tach: bool = False, cao_twip: int = 0, quy_tac_cao: str = 'atLeast') -> str:
+    """Dòng bảng (w:tr). lap_dau_trang: dòng tiêu đề lặp ở đầu mỗi trang; khong_tach: không cắt đôi dòng qua trang; cao_twip > 0:
+    chiều cao dòng (w:trHeight, quy_tac_cao 'atLeast' / 'exact') - dàn trang cân đối chia khoảng hở cuối trang vào đây (1.1.03)."""
+    return f'<w:tr><w:trPr>{xml_tr_pr(lap_dau_trang, khong_tach, cao_twip, quy_tac_cao)}</w:trPr>{"".join(cac_o)}</w:tr>'
+
+
+def bang(cac_hang: list, rong_cot: list, vien: bool = True, le_o: int = 57, lui: int = 0, can: str = 'center',
+         dem_doc_twip: int = 28) -> str:
+    """Bảng cố định bề rộng cột (w:tbl). vien: khung + lưới; lui (twip): bắt đầu lùi ra ngoài lề trái (canh trái); dem_doc_twip:
+    đệm trên / dưới của ô (mặc định 28 twip = 1,4 pt; đệm trái / phải = le_o)."""
     luoi = ''.join('<w:gridCol w:w="%d"/>' % x for x in rong_cot)
     vt = f'<w:jc w:val="left"/><w:tblInd w:w="{-lui}" w:type="dxa"/>' if lui else f'<w:jc w:val="{can}"/>'
+    dem = max(0, int(dem_doc_twip))
     return (f'<w:tbl><w:tblPr><w:tblW w:w="{sum(rong_cot)}" w:type="dxa"/>{vt}{xml_tbl_borders(vien)}'
-            f'<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="28" w:type="dxa"/><w:left w:w="{le_o}" w:type="dxa"/>'
-            f'<w:bottom w:w="28" w:type="dxa"/><w:right w:w="{le_o}" w:type="dxa"/></w:tblCellMar></w:tblPr>'
+            f'<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="{dem}" w:type="dxa"/><w:left w:w="{le_o}" w:type="dxa"/>'
+            f'<w:bottom w:w="{dem}" w:type="dxa"/><w:right w:w="{le_o}" w:type="dxa"/></w:tblCellMar></w:tblPr>'
             f'<w:tblGrid>{luoi}</w:tblGrid>{"".join(cac_hang)}</w:tbl>')
 
 

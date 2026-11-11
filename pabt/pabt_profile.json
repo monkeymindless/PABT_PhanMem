@@ -113,7 +113,10 @@
       "trich_yeu": "BỒI THƯỜNG, HỖ TRỢ & TÁI ĐỊNH CƯ KHI NHÀ NƯỚC THU HỒI ĐẤT",
       "thut_dau_dong_mm": 8.5,
       "gach_chan_ho_pt": 2,
-      "duong_ke_du_an_mm": 50
+      "duong_ke_du_an_mm": 50,
+      "kho_giay": "A4",
+      "huong_giay": "doc",
+      "tu_co_gian": true
     },
     "nguon_goc": {
       "can_ngang": "justify",
