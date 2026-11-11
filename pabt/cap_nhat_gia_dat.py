@@ -88,9 +88,16 @@ def _dong_tu_o(cac_dong: list, ten_file: str, xa: str) -> tuple:
         c = _cot(o, *mau)
         if c is not None:
             c_gia[khoa] = c
+    from . import kiem_dinh_don_gia as kd
     if not c_gia:
         c = _cot(o, 'don gia', 'gia dat') or _cot(o, 'gia')
         if c is not None:
+            # 1.1.03: bảng đất nông nghiệp mà cột giá không ghi loại đất: không tự ghi vào cột đất ở (xem gia_dat_nq28.doc_excel)
+            tren = ' '.join(' '.join(r) for r in chuan[max(0, hang - 3):hang])
+            if kd.tieu_de_la_dat_nong_nghiep(f'{tren} {o[c]}'):
+                raise nq.LoiBangGia(
+                    f'{ten_file}: bảng giá đất nông nghiệp nhưng cột giá chỉ ghi "{chuan[hang][c]}". Đổi tiêu đề cột thành loại đất '
+                    '(ví dụ "Đất trồng cây lâu năm", "Đất rừng sản xuất") rồi đọc lại - phần mềm không tự ghi giá này vào cột đất ở.')
             c_gia['dat_o'] = c
     if c_ten is None or not c_gia:
         raise nq.LoiBangGia(f'{ten_file}: thiếu cột Tên đường hoặc cột giá.')
@@ -125,14 +132,19 @@ def _dong_tu_o(cac_dong: list, ten_file: str, xa: str) -> tuple:
                          trang={'pl3': '', 'pl1': ''}, **gia))
     if not dong:
         raise nq.LoiBangGia(f'{ten_file}: có tiêu đề nhưng không có dòng giá.')
+    nhac = ''
     if not don_vi:
-        don_vi = 'dong' if max(so or [0]) >= 1_000_000 else 'nghin'
+        # 1.1.03: bảng không ghi đơn vị - không tự nhân 1.000 khi mọi giá chia hết 1.000 và từ 10.000 trở lên (kiem_dinh_don_gia.doan_don_vi)
+        don_vi, chac = kd.doan_don_vi(so)
+        if not chac:
+            nhac = ' ' + kd.chu_don_vi_doan(don_vi)
     if don_vi == 'dong':
+        nhac += kd.chu_gia_le(so)
         for r in dong:
             for k, _ in nq.COT:
                 r[k] = int(lam_tron(r[k], -3)) // 1000
     chu = 'Giá hiểu theo đồng/m².' if don_vi == 'dong' else 'Giá hiểu theo nghìn đồng/m².'
-    return dong, chu
+    return dong, chu + nhac
 
 
 def _ten_ao(ten: str) -> bool:
@@ -407,17 +419,30 @@ def _la_o_gia(x: str) -> bool:
     return bool(_so_nghin(t) and re.fullmatch(r'[\d.\s]+', t))
 
 
-def _so_nghin(s) -> int:
-    """'15.300' trong nghị quyết = 15.300 nghìn đồng/m². Số từ 1 triệu trở lên hiểu là đồng/m²."""
+def _so_tho(s) -> int:
+    """Số nguyên đúng như ô ghi ('15.300' -> 15300), chưa đổi đơn vị; không đọc được -> 0."""
     t = _chuan_o_gia(s)
     if not re.search(r'\d', t):
         return 0
     from .tien import doc_so_vn
     try:
-        n = int(doc_so_vn(t))          # Decimal, không float: 15.300 nghìn giữ đúng 15300
+        return int(doc_so_vn(t))       # Decimal, không float: 15.300 nghìn giữ đúng 15300
     except (ValueError, ArithmeticError):
         return 0
+
+
+def _so_nghin(s) -> int:
+    """'15.300' trong nghị quyết = 15.300 nghìn đồng/m². Số từ 1 triệu trở lên hiểu là đồng/m²."""
+    n = _so_tho(s)
     return n // 1000 if n >= 1_000_000 else n
+
+
+def _bang_ghi_dong(tho: list) -> bool:
+    """1.1.03: cả bảng ghi bằng ĐỒNG/m² (không phải nghìn đồng) - có giá từ 1.000.000 trở lên VÀ mọi giá nhỏ hơn đều chia hết 1.000, từ
+    10.000 trở lên. Trước chỉ đổi từng ô >= 1.000.000: cùng một bảng, 1.200.000 thành 1.200 nghìn còn 500.000 vẫn là 500.000 nghìn (500
+    triệu đồng/m²). Bảng nghìn đồng lẫn một ô đọc sai thành số lớn (có giá lẻ như 7.200) không thuộc dạng này - vẫn đổi riêng ô đó."""
+    tho = [v for v in tho if v]
+    return any(v >= 1_000_000 for v in tho) and all(v >= 1_000_000 or (v % 1000 == 0 and v >= 10_000) for v in tho)
 
 
 def _vi_tri_dong(ten: str, dem: dict) -> str:
@@ -462,6 +487,7 @@ def phan_tich_nghi_quyet(cac_dong: list) -> list:
     phu_luc, bo_qua = '', False
     mat_tien = {}                                       # (khóa xã, TT) -> {phụ lục: (tên đường, điểm đầu, điểm cuối)} của dòng mặt tiền
     tt_mt = None
+    tho = []                                            # giá đúng như ô ghi (chưa đổi đơn vị) - xét đơn vị cho CẢ bảng ở cuối
     for r in cac_dong:
         o = [str(x or '').strip() for x in r]
         chu = [x for x in o if x]
@@ -504,7 +530,7 @@ def phan_tich_nghi_quyet(cac_dong: list) -> list:
         if not chu or not re.fullmatch(r'\d+', chu[0]):
             continue
         van = [(i, x) for i, x in enumerate(o) if i and x and not _la_o_gia(x)]
-        so = [_so_nghin(x) for i, x in enumerate(o) if i and _la_o_gia(x)]
+        so = [_so_tho(x) for i, x in enumerate(o) if i and _la_o_gia(x)]
         if not van or not so:
             continue
 
@@ -543,7 +569,7 @@ def phan_tich_nghi_quyet(cac_dong: list) -> list:
             lech = 0 if du_o else len(o) - so_o_tieu_de
             for i, khoa in vi_tri_gia:
                 x = o[i + lech]
-                n = _so_nghin(x) if _la_o_gia(x) else 0
+                n = _so_tho(x) if _la_o_gia(x) else 0
                 for k in khoa:
                     if n:
                         gia[k] = n
@@ -554,6 +580,7 @@ def phan_tich_nghi_quyet(cac_dong: list) -> list:
                         gia[k] = n
         if not any(gia.values()):
             continue
+        tho += [v for v in gia.values() if v]
         r_moi = dict(xa=xa or '', tt=int(chu[0]), ten_duong=duong or ten,
                      diem_dau=dau, diem_cuoi=cuoi, vi_tri=vt, dieu_kien='' if vt == 'MT' else ten,
                      nguong=[1000, 500], trang={'pl3': '', 'pl1': ''}, **gia)
@@ -574,6 +601,12 @@ def phan_tich_nghi_quyet(cac_dong: list) -> list:
             if mt:
                 r['ten_duong'], r['diem_dau'], r['diem_cuoi'] = next(iter(mt.values()))
                 break
+    ca_bang_dong = _bang_ghi_dong(tho)
+    for r in dong:
+        for cot in list(nq.COT) + list(nq.LOAI_NN):
+            v = r.get(cot[0])
+            if v and (ca_bang_dong or v >= 1_000_000):
+                r[cot[0]] = v // 1000
     return _gop_dong(dong)
 
 

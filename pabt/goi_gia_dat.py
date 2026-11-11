@@ -461,13 +461,20 @@ def xuat_goi_cai(file, ds_xa: list, goi: dict | None = None) -> str:
         p = p.with_suffix(DUOI_GOI_CAI)
     mo_ta = dict(loai=LOAI_GOI_CAI, xa=sorted(ten_gia), so_gia=len(dong_gia), so_k=len(dong_k),
                  goi_ma=goi_ra.get('ma', ''), goi_ten=goi_ra.get('ten', ''))
+    tep = {
+        'goi.json': json.dumps({k: v for k, v in goi_ra.items() if k != 'gan_san'}, ensure_ascii=False, indent=1),
+        'bang_gia_dat.json': json.dumps(dict(van_ban=nq.van_ban_dang_dung(), nguon='goi_cai', dong=dong_gia), ensure_ascii=False),
+        'he_so_k.json': json.dumps(dict(van_ban=hk.van_ban(), nguon='goi_cai', dong=hk._gon(dong_k)),
+                                   ensure_ascii=False, separators=(',', ':')).replace('},{', '},\n{'),
+    }
+    # 1.1.03: mã băm SHA-256 từng phần (kiem_dinh_don_gia.niemphong_sha256) - máy nhập so lại, gói bị sửa / hỏng sau khi xuất thì từ chối.
+    # Mã ĐỐI CHIẾU, không phải chữ ký số
+    from .kiem_dinh_don_gia import niemphong_sha256
+    mo_ta['niem_phong'] = {ten: niemphong_sha256(x.encode('utf-8')) for ten, x in tep.items()}
     with zipfile.ZipFile(p, 'w', compression=zipfile.ZIP_DEFLATED) as z:
         z.writestr('mo_ta.json', json.dumps(mo_ta, ensure_ascii=False, indent=1))
-        z.writestr('goi.json', json.dumps({k: v for k, v in goi_ra.items() if k != 'gan_san'}, ensure_ascii=False, indent=1))
-        z.writestr('bang_gia_dat.json', json.dumps(dict(van_ban=nq.van_ban_dang_dung(), nguon='goi_cai', dong=dong_gia),
-                                                   ensure_ascii=False))
-        z.writestr('he_so_k.json', json.dumps(dict(van_ban=hk.van_ban(), nguon='goi_cai', dong=hk._gon(dong_k)),
-                                              ensure_ascii=False, separators=(',', ':')).replace('},{', '},\n{'))
+        for ten, x in tep.items():
+            z.writestr(ten, x.encode('utf-8'))
     return str(p)
 
 
@@ -487,9 +494,18 @@ def doc_goi_cai(file) -> dict:
             mo = json.loads(z.read('mo_ta.json').decode('utf-8-sig'))
             if mo.get('loai') != LOAI_GOI_CAI:
                 raise LoiGoi('File không phải gói cài giá đất / hệ số K của LARC.')
-            goi = json.loads(z.read('goi.json').decode('utf-8-sig'))
-            bg = json.loads(z.read('bang_gia_dat.json').decode('utf-8-sig'))
-            hk = json.loads(z.read('he_so_k.json').decode('utf-8-sig'))
+            tho = {t: z.read(t) for t in ('goi.json', 'bang_gia_dat.json', 'he_so_k.json')}
+            np = mo.get('niem_phong')
+            if isinstance(np, dict) and np:               # gói từ 1.1.03 có mã băm từng phần; gói cũ không có: vẫn nhận
+                from .kiem_dinh_don_gia import kiem_niem_phong
+                sai = [t for t in tho if not kiem_niem_phong(tho[t], np.get(t, ''))]
+                if sai:
+                    raise LoiGoi('Gói cài đã bị sửa hoặc hỏng sau khi xuất (mã băm SHA-256 không khớp: ' + ', '.join(sai) +
+                                 '). Xin lại file gói từ người đã thẩm định.')
+                mo['niem_phong_khop'] = True
+            goi = json.loads(tho['goi.json'].decode('utf-8-sig'))
+            bg = json.loads(tho['bang_gia_dat.json'].decode('utf-8-sig'))
+            hk = json.loads(tho['he_so_k.json'].decode('utf-8-sig'))
     except LoiGoi:
         raise
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as e:
@@ -527,7 +543,7 @@ def nhap_goi_cai(file, bo_sung: bool = True) -> dict:
         hk.ghi(hk._mo_rong(bang_k.get('dong')), bang_k.get('van_ban') or hk.VAN_BAN, str(file))
     mo = goi_cai['mo_ta']
     return dict(xa=list(mo.get('xa') or []), so_gia=int(mo.get('so_gia') or len(bg['dong'])),
-                so_k=int(mo.get('so_k') or 0), goi_ma=goi.get('ma', ''))
+                so_k=int(mo.get('so_k') or 0), goi_ma=goi.get('ma', ''), niem_phong=bool(mo.get('niem_phong_khop')))
 
 
 def tao_goi_tu(goc: dict, ma: str, ten: str, hieu_luc_tu: str) -> dict:

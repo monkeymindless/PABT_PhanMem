@@ -176,6 +176,9 @@ class TestGoiCai(CoMay):
         goi['dia_ban']['Xã Trị An'] = [nua_pnn, nua_nn] + goi['dia_ban']['Xã Trị An'][1:]
         self.assertTrue(any('tăng dần' in x or 'tách đôi' in x for x in gg.kiem_goi(goi)))
         tep['goi.json'] = json.dumps(goi, ensure_ascii=False).encode('utf-8')
+        mo = json.loads(tep['mo_ta.json'].decode('utf-8'))       # gói của bản 1.0.89 chưa có mã băm từng phần (thêm ở 1.1.03)
+        mo.pop('niem_phong', None)
+        tep['mo_ta.json'] = json.dumps(mo, ensure_ascii=False).encode('utf-8')
         cu = self.td / 'cu_1089.larcgia'
         with zipfile.ZipFile(cu, 'w') as z:
             for n, b in tep.items():

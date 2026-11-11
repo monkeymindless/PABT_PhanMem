@@ -529,7 +529,9 @@ class HopGoiGiaDat(QDialog):
         self.da_doi = True
         self.nap(kq.get('goi_ma') or '')
         self._bao(f'Đã cài {len(kq.get("xa") or [])} địa bàn ({kq.get("so_gia", 0)} dòng giá, {kq.get("so_k", 0)} dòng hệ số K). '
-                  'Cửa sổ Tính đơn giá đất bồi thường sẽ hiện đủ xã vừa cài.', loi=False)
+                  'Cửa sổ Tính đơn giá đất bồi thường sẽ hiện đủ xã vừa cài.'
+                  + (' Mã băm SHA-256 của gói khớp (nội dung đúng như lúc xuất).' if kq.get('niem_phong') else
+                     ' Gói xuất từ bản trước 1.1.03, không có mã băm đối chiếu.'), loi=False)
         return True
 
     # ------------------------------------------------ lưu, xóa

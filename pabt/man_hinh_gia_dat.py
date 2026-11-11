@@ -311,7 +311,26 @@ class KhungCapNhatGiaDat(QWidget):
         self.lb.setText(
             ('GIÁ THAM KHẢO - chưa phải căn cứ pháp lý. ' if tk else '') +
             f'{len(dong)} dòng của {xs}' + (f' (trong đó {sinh} dòng vị trí dựng theo hướng dẫn trong văn bản, nền vàng)' if sinh else '')
-            + f'. {chu} Nguồn: {nguon}. Kiểm tra vài dòng rồi bấm "Ghi vào bảng giá đất".')
+            + f'. {chu} Nguồn: {nguon}. Kiểm tra vài dòng rồi bấm "Ghi vào bảng giá đất".' + self._kiem_dinh(dong, chu))
+
+    def _kiem_dinh(self, dong: list, chu: str) -> str:
+        """1.1.03: soi bảng vừa đọc (kiem_dinh_don_gia) - tô dòng cần đối chiếu (đỏ) / cần xác nhận (vàng), chú thích lý do ở từng ô.
+        Trả câu tóm tắt nối vào dòng trạng thái. Chỉ nhắc, không sửa số."""
+        from . import kiem_dinh_don_gia as kd
+        from .giao_dien import to_dong_bang
+        try:
+            self.kiem_dinh = kd.kiem_dinh_bang_gia_dat(dong, goc=[r for r in nq.tat_ca() if not r.get('tham_khao')],
+                                                       don_vi_chac='CHƯA RÕ ĐƠN VỊ' not in (chu or ''))
+        except Exception:                               # noqa: BLE001 - phép soi lỗi không được chặn việc đọc bảng
+            self.kiem_dinh = None
+            return ''
+        self.bang.setUpdatesEnabled(False)
+        try:
+            for x in self.kiem_dinh['can_xac_nhan']:
+                to_dong_bang(self.bang, x['i'], x['ly_do'], 'loi' if x['muc'] == 'do' else 'canh_bao')
+        finally:
+            self.bang.setUpdatesEnabled(True)
+        return ' ' + self.kiem_dinh['tom_tat'] + (' Rê chuột vào dòng tô màu để xem lý do.' if self.kiem_dinh['can_xac_nhan'] else '')
 
     def _ve_quy_tac(self, ds: list):
         b = self.bang_qt
@@ -501,6 +520,27 @@ class KhungCapNhatGiaDat(QWidget):
         return dong
 
     # ---------------------------------------------------------------- ghi
+    def _xac_nhan_kiem_dinh(self, kq: dict, xac_nhan=None) -> bool:
+        """Bảng có dòng đỏ / chưa rõ đơn vị: liệt kê và hỏi lại trước khi ghi (1.1.03). xac_nhan / self.xac_nhan_kiem_dinh: trả lời
+        sẵn cho kiểm thử."""
+        if xac_nhan is None:
+            xac_nhan = getattr(self, 'xac_nhan_kiem_dinh', None)
+        if xac_nhan is not None:
+            return bool(xac_nhan)
+        if self.im_lang:
+            return True                                 # như các câu hỏi khác của hộp: chế độ im lặng = đồng ý
+        from .thong_bao import TEN_UD
+        do = [x for x in kq['can_xac_nhan'] if x['muc'] == 'do']
+        ds = []
+        for x in do[:12]:
+            r = self.dong[x['i']]
+            ds.append(f'- {r.get("ten_duong", "")} ({r.get("vi_tri", "")}): {x["ly_do"][0]}')
+        chu = ((f'{len(do)} dòng cần đối chiếu văn bản gốc (tô đỏ):\n' + '\n'.join(ds) + ('\n…' if len(do) > 12 else '') + '\n\n') if do else '') + \
+            ('' if kq['don_vi_chac'] else 'Bảng không ghi đơn vị giá (nghìn đồng hay đồng/m²): xem một giá trong cột "Giá" có đúng với văn bản không.\n\n') + \
+            'Đã đối chiếu và vẫn ghi bảng này?'
+        return QMessageBox.question(self, TEN_UD, chu, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                    QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes
+
     def ghi(self, thay: bool = False) -> list | None:
         """thay=True: xóa bảng giá đang dùng rồi ghi bảng vừa đọc. thay=False: theo ô Cách ghi."""
         from .cap_nhat_gia_dat import ap_dung
@@ -511,6 +551,9 @@ class KhungCapNhatGiaDat(QWidget):
         from .man_hinh_don_gia import xin_quyen_sua
         if not xin_quyen_sua(self, self.im_lang):               # 1.0.56: chỉ quản trị sửa bảng giá đất
             self._bao('canh_bao', 'Chưa ghi: cần quyền quản trị bộ đơn giá.')
+            return None
+        kd_kq = getattr(self, 'kiem_dinh', None)
+        if kd_kq and (kd_kq['so_do'] or not kd_kq['don_vi_chac']) and not self._xac_nhan_kiem_dinh(kd_kq):
             return None
         if not self.im_lang:
             from .thong_bao import TEN_UD

@@ -462,8 +462,9 @@ def doc_excel(file) -> tuple:
     import openpyxl
     __import__('pabt.an_toan').an_toan.kiem_excel(file)
     wb = openpyxl.load_workbook(file, data_only=True)
+    from . import kiem_dinh_don_gia as _kd
     dong, van_ban = [], ''
-    thay_don_vi = []
+    thay_don_vi, nhac = [], []
     try:
         for ws in wb.worksheets:
             hang, o = _tieu_de(ws)
@@ -498,6 +499,13 @@ def doc_excel(file) -> tuple:
             if not c_gia:
                 c = _cot(o, 'don gia', 'gia dat') or _cot(o, 'gia')
                 if c:
+                    # 1.1.03: cột giá không rõ tên của bảng ĐẤT NÔNG NGHIỆP không được hiểu là đất ở (trước: giá đất trồng lúa ghi vào
+                    # cột đất ở) - tiêu đề phía trên bảng / tên sheet / chính ô tiêu đề cột nói loại đất
+                    if _kd.tieu_de_la_dat_nong_nghiep(f'{phan_dau} {ws.title} {o[c]}'):
+                        raise LoiBangGia(
+                            f'Sheet "{ws.title}": bảng giá đất nông nghiệp nhưng cột giá chỉ ghi "{str(ws.cell(hang, c).value).strip()}". '
+                            'Đổi tiêu đề cột thành loại đất (ví dụ "Đất trồng cây lâu năm", "Đất trồng cây hằng năm", "Đất rừng sản xuất") '
+                            'rồi đọc lại - phần mềm không tự ghi giá này vào cột đất ở.')
                     c_gia['dat_o'] = c
             if not c_gia:
                 raise LoiBangGia(f'Sheet "{ws.title}": chưa thấy cột giá. Cần cột "Đất ở" hoặc "Đơn giá" (đồng/m²).')
@@ -525,9 +533,16 @@ def doc_excel(file) -> tuple:
                                  vi_tri=vt, nguong=[1000, 500],
                                  trang={'pl3': '', 'pl1': ''}, **gia))
             if so_duong and not don_vi:
-                don_vi = 'dong' if max(so_duong) >= 1_000_000 else 'nghin'
+                # 1.1.03: bảng không ghi đơn vị - trước cứ dưới 1.000.000 là "nghìn" (xã nông thôn ghi 500.000 đồng/m² thành 500 triệu):
+                # mọi giá chia hết 1.000 và từ 10.000 trở lên giữ là đồng, không nhân 1.000; không chắc thì nhắc người dùng xác nhận
+                don_vi, chac = _kd.doan_don_vi(so_duong)
+                if not chac:
+                    nhac.append(_kd.chu_don_vi_doan(don_vi))
             thay_don_vi.append(don_vi or 'nghin')
             if don_vi == 'dong':
+                le = _kd.chu_gia_le(so_duong)
+                if le:
+                    nhac.append(le.strip())
                 for r in dong[bat:]:
                     for k, _ in COT:
                         r[k] = int(lam_tron(r[k], -3)) // 1000
@@ -538,7 +553,7 @@ def doc_excel(file) -> tuple:
     chu = 'Giá hiểu theo đồng/m².' if 'dong' in thay_don_vi and 'nghin' not in thay_don_vi else (
         'Giá hiểu theo nghìn đồng/m² (như văn bản).' if 'dong' not in thay_don_vi else
         'Một số sheet theo đồng/m², một số theo nghìn đồng/m².')
-    return dong, van_ban, chu
+    return dong, van_ban, ' '.join([chu] + list(dict.fromkeys(nhac)))
 
 
 def ghi_thay(dong: list, van_ban: str = '', nguon: str = '') -> Path:
