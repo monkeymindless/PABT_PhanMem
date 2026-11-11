@@ -3596,11 +3596,28 @@ class CuaSoChinh(QMainWindow):
             QMessageBox.information(self, TEN_UD, 'Hãy nhập hoặc mở một dự án trước.')
             return None
         from .man_hinh import HopIn
-        chon = sorted(ma_ho) if ma_ho is not None else self._ho_chon_ds()
+        chon = sorted(ma_ho) if ma_ho is not None else self._ho_dang_lam()
         dlg = HopIn(self.con, self, ma_ho_chon=chon, file_du_an=self.file, che_do=che_do, dot_id=dot_id)
         if cho:
             dlg.exec()
         return dlg
+
+    def _ho_dang_lam(self) -> list:
+        """Hộ đưa sẵn vào hộp In / Xuất (1.1.03 - người dùng: "tự chọn ngay hộ đang làm, không bắt chọn lại"), theo thứ tự: hộ của cửa
+        sổ lập phương án đang mở trước mặt; các hộ đang chọn trên danh sách; hộ ở dòng hiện hành. Không có: [] (hộp tự trỏ hộ đầu tiên
+        đã lập phương án)."""
+        try:
+            if hasattr(self, 'khung_tab') and self.ngan_lv.currentWidget() is self.khung_tab.stack_phu:
+                bo = getattr(self.khung_tab.stack_phu.currentWidget(), 'bo', None)
+                if getattr(bo, 'ma_ho', None) is not None:
+                    return [int(bo.ma_ho)]
+        except RuntimeError:                            # cửa sổ con đang bị hủy
+            pass
+        chon = self._ho_chon_ds()
+        if chon:
+            return chon
+        ma = self.ho_dang_chon()
+        return [ma] if ma is not None else []
 
     def quan_ly_mau_in(self, cho: bool = True):
         """1.0.07: hộp Quản lý Mẫu in & Bản in - 3 mẫu (chi tiết chính thức / dự thảo / tổng hợp): trạng thái nhúng / tùy chỉnh,

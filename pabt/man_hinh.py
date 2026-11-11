@@ -4066,6 +4066,9 @@ class HopIn(QDialog):
         self.setWindowTitle('In / Xuất hồ sơ')
         self.resize(1360, 820)                      # phần lớn bề rộng cho khung xem trước A4 (vua_man_hinh thu lại theo màn hình)
         self._doc_ds_ho(con, in_an, ma_ho_chon)
+        # 1.1.03: hộ đang làm do nơi mở đưa vào (CuaSoChinh._ho_dang_lam: hộ của cửa sổ lập phương án đang mở / hộ đang chọn / dòng hiện
+        # hành). Mở KHÔNG kèm hộ nào vẫn là in loạt "các hộ đã lập phương án" như trước (đã chốt, có kiểm thử) - nhưng bản xem trước của
+        # hộ đầu danh sách hiện ngay, không phải bấm chọn hộ mới thấy
         self._tao_trang_thai_xuat(con)
         self._dung_chon_ho(in_an)
         from . import xem_truoc_tai_lieu as xt
@@ -4115,6 +4118,30 @@ class HopIn(QDialog):
             if i is not None:
                 self.bang_ho.setCurrentCell(i, 1)
         self._dem()
+        # 1.1.03: bản xem trước lập NGAY khi hộp vừa hiện (không chờ 250 ms ngừng bấm) - hẹn ở vòng sự kiện kế tiếp để hộp hiện trước
+        if not self.w_preview.dang_lap() and self.w_preview.so_trang() == 0:
+            self._xem_lai()
+        self.w_preview.lap_ngay()
+
+    def thiet_lap_trang(self, cho: bool = True):
+        """Liên kết "Thiết lập trang": mở hộp Thiết lập trang (lề, giấy, bố trí - man_hinh_quan_ly_mau); đóng hộp thì bỏ các bản xem
+        trước đã lập và lập lại ngay theo thông số mới. Dùng lại QAction của cửa sổ chính khi có (một lệnh một chỗ)."""
+        a = self._lenh_thiet_lap
+        if a is not None and cho:
+            a.trigger()                                 # CuaSoChinh.quan_ly_mau_in: exec() - trở về khi hộp đã đóng
+            hop = None
+        else:
+            from .man_hinh_quan_ly_mau import HopQuanLyMauIn
+            hop = HopQuanLyMauIn(self, im_lang=not cho)
+            if cho:
+                hop.exec()
+        self.ap_thiet_lap_trang()
+        return hop
+
+    def ap_thiet_lap_trang(self) -> None:
+        """Thông số trang vừa đổi: quên bản xem trước cũ, lập lại ngay."""
+        self.w_preview.quen_ban_da_lap()
+        self._xem_lai(True)
 
     def _doc_ds_ho(self, con, in_an, ma_ho_chon) -> None:
         """Hộ + tình trạng lập phương án."""
@@ -4439,9 +4466,9 @@ class HopIn(QDialog):
             v_ith.addWidget(w)
         self._theo_may_in()
         self.b_thiet_lap = nut_lien_ket('Thiết lập trang')
-        self.b_thiet_lap.setToolTip('Lề, khổ giấy, phông chữ của mẫu in')
-        if 'Quản lý Mẫu in & Bản in…' in lenh:
-            self.b_thiet_lap.clicked.connect(lambda _=False, a=lenh['Quản lý Mẫu in & Bản in…']: a.trigger())
+        self.b_thiet_lap.setToolTip('Lề, khổ giấy, hướng giấy, cỡ chữ và cách dàn trang của mẫu in')
+        self._lenh_thiet_lap = lenh.get('Quản lý Mẫu in & Bản in…')
+        self.b_thiet_lap.clicked.connect(lambda _=False: self.thiet_lap_trang())
 
 
     def _dung_xuat_them(self, file_du_an) -> None:

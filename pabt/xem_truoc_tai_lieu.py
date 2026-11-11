@@ -37,6 +37,7 @@ MAU_ICON_XT = '#1E3A5F'         # biểu tượng nút thanh công cụ
 CAO_NUT_XT = 28
 MAU_GIAY = '#FFFFFF'
 CHO_MS = 250                    # chờ ngừng bấm (đổi hộ bằng phím mũi tên) rồi mới lập bản xem trước
+NHAN_XEM_NHANH = 'Bản xem nhanh'  # nhãn khi đang hiện bản dựng trực tiếp, chờ bản của Word
 NHIP_MS = 150                   # nhịp kiểm tra luồng nền đã xuất PDF xong chưa
 CHO_EXCEL_GIAY = 90             # một file xem trước Excel không xuất xong trong chừng này (cộng thời gian khởi động): báo lỗi
 PHONG_TO = (0.5, 0.67, 0.8, 1.0, 1.25, 1.5, 2.0, 3.0)
@@ -498,6 +499,8 @@ class KhungXemTruocTaiLieu(QFrame):
         self.lb_gan_dung.setToolTip(NHAN_GAN_DUNG + ': dựng bằng phần mềm khi máy không dùng được Microsoft Word / Excel - ngắt '
                                     'trang có thể khác bản in chính thức. In / xuất PDF chính thức cần Microsoft Office.')
         self.lb_gan_dung.setVisible(False)
+        self._chu_thich_gan_dung = self.lb_gan_dung.toolTip()
+        self.xem_nhanh = False                          # đang hiện bản dựng trực tiếp trong lúc Word lập bản chính xác (1.1.03)
         self.gan_dung = False
         self.ly_do_gan_dung = ''
         self.b_in = nut('In nhanh', 0xE749, 'In bản đang xem ra máy in mặc định (qua Microsoft Word / Excel)',
@@ -855,6 +858,16 @@ class KhungXemTruocTaiLieu(QFrame):
     def dang_lap(self) -> bool:
         return self._dang is not None or self._cho is not None
 
+    def lap_ngay(self) -> None:
+        """Yêu cầu đang chờ ngừng bấm (CHO_MS): lập ở vòng sự kiện kế tiếp, không chờ nữa (hộp vừa mở - 1.1.03). Không có gì chờ: thôi."""
+        if self._cho is not None and self._dang is None:
+            self._hen.start(0)
+
+    def quen_ban_da_lap(self) -> None:
+        """Bỏ các bản xem trước đã nhớ trong phiên (thông số trang vừa đổi: bản cũ không còn đúng)."""
+        self._nho.clear()
+        self._nho_muc.clear()
+
     def _bat_dau(self) -> None:
         if self._dang is not None or self._cho is None:
             return                                      # đang xuất: lập tiếp khi xong (_kiem_nen)
@@ -893,9 +906,31 @@ class KhungXemTruocTaiLieu(QFrame):
             else:
                 viec['ket_qua'] = chuyen_pdf(xlsx, pdf)
         self._dang = viec
-        self.bao(f'Microsoft {"Word" if word else "Excel"} đang tạo bản xem trước A4{": " + ten if ten else ""}…\n(vài giây)')
+        # 1.1.03: bản Word một hộ - hiện NGAY bản dựng trực tiếp (docx_sang_pdf, ~0,1 giây) trong lúc Word dựng bản chính xác ở nền;
+        # Word xong thì thay bằng bản của Word (giữ trang đang xem). Không dựng được bản xem ngay: thông báo chờ như trước
+        if not (muc is None and word and self._hien_ban_xem_ngay(xlsx)):
+            self.bao(f'Microsoft {"Word" if word else "Excel"} đang tạo bản xem trước A4{": " + ten if ten else ""}…\n(vài giây)')
         threading.Thread(target=chay, daemon=True).start()
         self._nhip.start()
+
+    def _hien_ban_xem_ngay(self, docx) -> bool:
+        """Dựng PDF trực tiếp từ file .docx (Qt, không Word) và hiện lên khung, gắn nhãn "Bản xem nhanh". Bản này chỉ để XEM trong lúc
+        chờ: nút in vẫn tắt tới khi có bản của Word (self._dang còn), cho_xong() vẫn chờ bản của Word. Trả False nếu không dựng được."""
+        if self.doc is None:                            # bản Qt5 không có QtPdf: không có khung hiện PDF
+            return False
+        try:
+            from .docx_sang_pdf import xuat_pdf_tu_docx
+            pdf = xuat_pdf_tu_docx(docx, Path(docx).with_name(Path(docx).stem + '_xem_ngay.pdf'))
+        except Exception:                               # noqa: BLE001 - bản xem ngay hỏng không được chặn bản của Word
+            return False
+        if not self.nap_tai_lieu(pdf):
+            return False
+        self.xem_nhanh = True
+        self.lb_gan_dung.setText(NHAN_XEM_NHANH)
+        self.lb_gan_dung.setToolTip(NHAN_XEM_NHANH + ': phần mềm dựng ngay để xem trong lúc Microsoft Word lập bản in chính xác (vài giây) - '
+                                    'chỗ ngắt dòng, ngắt trang có thể lệch. Bản của Word hiện lên là bản sẽ in.')
+        self.lb_gan_dung.setVisible(True)
+        return True
 
     def _kiem_nen(self) -> None:
         viec = self._dang
@@ -914,12 +949,17 @@ class KhungXemTruocTaiLieu(QFrame):
         if viec['ket_qua']:                             # Excel / Word lỗi / treo: dựng bản gần đúng bằng Qt
             self._du_phong(viec['khoa'], viec['xlsx'], viec['ket_qua'], viec.get('muc'))
         else:
+            trang_dang_xem = self.trang_hien_tai() if self.xem_nhanh else 0
             self._dat_gan_dung(False)
             self._dat_muc_luc(viec['muc_luc'] if viec.get('muc') is not None else [])
-            self.nap_tai_lieu(viec['pdf'])
+            if self.nap_tai_lieu(viec['pdf']) and 0 < trang_dang_xem < self.so_trang():
+                self.sang_trang(0, tuyet_doi=trang_dang_xem)     # đang đọc trang sau của bản xem nhanh: bản của Word mở đúng trang đó
 
     def _dat_gan_dung(self, co: bool) -> None:
         self.gan_dung = co
+        self.xem_nhanh = False
+        self.lb_gan_dung.setText('Bản gần đúng')
+        self.lb_gan_dung.setToolTip(self._chu_thich_gan_dung)
         self.lb_gan_dung.setVisible(co)
 
     def _du_phong(self, khoa, xlsx: Path | None, ly_do: str, muc: list | None = None) -> None:
