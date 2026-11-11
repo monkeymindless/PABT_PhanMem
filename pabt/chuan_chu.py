@@ -138,6 +138,57 @@ def doan_ma_cu(s: str) -> str:
     return ''
 
 
+# VNI đọc thẳng: chữ gốc + ký tự dấu Latin-1 đi sau ("Nguyeãn", "Vaên", "ñaát", "ngöôøi")
+_RE_VNI = re.compile(r'[aeoAEO][âáàåãäÂÁÀÅÃÄ]|[aA][êéèúüëÊÉÈÚÜË]|[aeiouyôöAEIOUYÔÖ][ùøûõïÙØÛÕÏ]|[ñÑ]')
+# mã TCVN3 đặc trưng (vùng 0xA1-0xBF: đ á à ư ơ ê ô â ă...) - chữ Việt Unicode thật hay chữ VNI gần như không dùng vùng này
+_MA_TCVN3_RIENG = frozenset(c for c in _MA_TCVN3 if 0xA1 <= ord(c) <= 0xBF)
+
+
+def _la_latin1(s: str) -> bool:
+    return bool(s) and max(map(ord, s)) <= 0xFF and any(ord(c) >= 0xA0 for c in s)
+
+
+def doan_ma_cu_cac_o(ds: list) -> str:
+    """Đoán mã phông cũ của CẢ MỘT BẢNG (1.0.98 - danh sách hộ / thửa từ Excel, CSV, DBF của phần mềm địa chính cũ): 'tcvn3' | 'vni' | ''.
+    Chỉ xét các ô toàn ký tự Latin-1 có dấu (ô Unicode thật có chữ ngoài Latin-1 như đ, ư, ạ); không chắc thì '' (không đổi gì)."""
+    ung = [s for s in ds if isinstance(s, str) and _la_latin1(s)]
+    if not ung:
+        return ''
+    that = sum(1 for s in ds if isinstance(s, str) and _so_viet_that(s))
+    if len(ung) < max(2, that):                      # bảng chủ yếu là chữ Unicode đúng: vài ô Latin-1 lạ không đủ để đổi
+        return ''
+    txt = ' '.join(ung)
+    chu = sum(1 for c in txt if c.isalpha()) or 1
+    n_t = sum(1 for c in txt if c in _MA_TCVN3_RIENG)
+    n_v = len(_RE_VNI.findall(txt))
+    diem, loai = max((n_t, 'tcvn3'), (n_v, 'vni'))
+    return loai if diem >= 3 and diem / chu > 0.02 else ''
+
+
+def sua_cac_o(luoi: list) -> tuple:
+    """Lưới ô (list[list]) -> (lưới đã đổi, 'tcvn3' | 'vni' | ''). Chỉ đổi ô toàn Latin-1 khi cả bảng đoán ra mã cũ; ô Unicode giữ nguyên."""
+    lp = doan_ma_cu_cac_o([v for r in luoi for v in r])
+    if not lp:
+        return luoi, ''
+    doi = tcvn3_sang_unicode if lp == 'tcvn3' else vni_sang_unicode
+    return [[doi(v) if isinstance(v, str) and _la_latin1(v) else v for v in r] for r in luoi], lp
+
+
+def giai_ma_byte(b: bytes) -> tuple:
+    """Byte của file chữ (CSV, TXT, DBF) -> (chữ, ghi chú mã). UTF-8 / UTF-16 (có BOM) trước; không phải thì đọc Latin-1 (giữ nguyên byte
+    để bảng TCVN3 / VNI đổi được) nếu thấy mã phông cũ, còn lại Windows-1258 (Excel lưu CSV trên Windows tiếng Việt)."""
+    if b.startswith((b'\xff\xfe', b'\xfe\xff')):
+        return b.decode('utf-16'), ''
+    try:
+        return b.decode('utf-8-sig'), ''
+    except UnicodeDecodeError:
+        pass
+    l1 = b.decode('latin-1')
+    if doan_ma_cu_cac_o(l1.split()):
+        return l1, ''                                # sua_cac_o đổi theo từng ô sau khi chia cột
+    return unicodedata.normalize('NFC', b.decode('cp1258', errors='replace')), 'Windows-1258'
+
+
 _VO_HINH = dict.fromkeys(map(ord, '​‌‍⁠﻿­'), None)
 _KHOANG = {ord(c): ' ' for c in '              　'}
 

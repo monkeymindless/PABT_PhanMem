@@ -42,13 +42,52 @@ def ram_vat_ly_mb() -> int | None:
         return None
 
 
+CHE_DO_MAY_YEU = {'tu_dong': 'Tự nhận theo RAM / CPU', 'bat': 'Bật (giảm hiệu ứng, ảnh xem trước nhẹ)', 'tat': 'Tắt'}
+FILE_MAY_YEU = 'may_yeu.txt'
+
+
+def _file_may_yeu() -> Path:
+    """<thư mục máy>/may_yeu.txt (như dia_phuong.thu_muc_may - csdl không nhập dia_phuong)."""
+    return Path(os.environ.get('PABT_THU_MUC_MAY') or Path(os.environ.get('APPDATA') or Path.home()) / 'PABT') / FILE_MAY_YEU
+
+
+def che_do_may_yeu() -> str:
+    """Lựa chọn của người dùng (hộp Giao diện, 1.1.01): 'tu_dong' | 'bat' | 'tat'."""
+    try:
+        gt = _file_may_yeu().read_text(encoding='utf-8').strip()
+    except OSError:
+        return 'tu_dong'
+    return gt if gt in CHE_DO_MAY_YEU else 'tu_dong'
+
+
+def dat_che_do_may_yeu(gt: str) -> str:
+    """Ghi lựa chọn chế độ máy yếu; áp cho các phần đọc la_may_yeu() từ lúc này (hiệu ứng, bóng đổ dựng mới), đủ hết khi mở lại."""
+    gt = gt if gt in CHE_DO_MAY_YEU else 'tu_dong'
+    f = _file_may_yeu()
+    try:
+        if gt == 'tu_dong':
+            f.unlink(missing_ok=True)
+        else:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(gt, encoding='utf-8')
+    except OSError:
+        pass
+    _MAY_YEU.clear()
+    return gt
+
+
 def la_may_yeu() -> bool:
-    """Máy cấu hình yếu: RAM vật lý < NGUONG_RAM_MAY_YEU_MB hoặc <= NGUONG_NHAN_MAY_YEU nhân CPU. PABT_MAY_YEU=1 / 0 ép (kiểm thử,
-    người dùng). Kết quả nhớ trong tiến trình (biến môi trường đọc lại mỗi lần)."""
+    """Máy cấu hình yếu: PABT_MAY_YEU=1 / 0 ép (kiểm thử); không có thì lựa chọn của người dùng (che_do_may_yeu, 1.1.01 - máy RAM đủ
+    nhưng ổ cứng cũ / CPU đời cũ vẫn bật được); 'tu_dong': RAM vật lý < NGUONG_RAM_MAY_YEU_MB hoặc <= NGUONG_NHAN_MAY_YEU nhân CPU.
+    Kết quả nhớ trong tiến trình (biến môi trường đọc lại mỗi lần; dat_che_do_may_yeu xóa bản nhớ)."""
     ep = os.environ.get('PABT_MAY_YEU')
     if ep in ('0', '1'):
         return ep == '1'
     if 'kq' not in _MAY_YEU:
+        cd = che_do_may_yeu()
+        if cd != 'tu_dong':
+            _MAY_YEU['kq'] = cd == 'bat'
+            return _MAY_YEU['kq']
         ram = ram_vat_ly_mb()
         nhan = os.cpu_count() or 1
         _MAY_YEU['kq'] = bool((ram is not None and ram < NGUONG_RAM_MAY_YEU_MB) or nhan <= NGUONG_NHAN_MAY_YEU)

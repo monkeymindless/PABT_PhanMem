@@ -4208,6 +4208,7 @@ class HopIn(QDialog):
         self.bang_ho.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         from .giao_dien import TOKEN
         mau_lap = {'da_lap': '#1B5E20', 'tu_lap': TOKEN['canh_bao_chu'], 'chua': '#5B6B7A'}   # 1.0.93: chữ đạt 4,5:1
+        mau_chu_lap = {k: QColor(mau_theo_tong(v, 'chu')) for k, v in mau_lap.items()}   # 1.0.99: màu tính một lần, không mỗi hộ
         for i, h in enumerate(self.ho):
             chk = QTableWidgetItem()
             chk.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
@@ -4225,7 +4226,7 @@ class HopIn(QDialog):
                 if c == 1:
                     it.setToolTip(' · '.join(x for x in (v, in_an.LAP[lap], f'Đợt {h["dot"]}' if h.get('dot') else '', dia_chi) if x))
                     if lap != 'da_lap':
-                        it.setForeground(QColor(mau_theo_tong(mau_lap[lap], 'chu')))
+                        it.setForeground(mau_chu_lap[lap])
                 if c == 3:
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang_ho.setItem(i, c, it)

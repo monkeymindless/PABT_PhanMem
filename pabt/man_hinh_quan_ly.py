@@ -55,6 +55,18 @@ def _o(b: QTableWidget, r: int, c: int, v, so: bool = False, nen=None):
     return it
 
 
+def _o_mau(so: bool = False, nen=None, sua: bool = True) -> QTableWidgetItem:
+    """Ô mẫu (chưa có chữ) cùng kiểu với _o - bảng lớn chép bằng QTableWidgetItem(ô mẫu) rồi setText / setToolTip (1.0.99)."""
+    it = QTableWidgetItem()
+    if so:
+        it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+    if nen is not None:
+        it.setBackground(QBrush(nen))
+    if not sua:
+        it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+    return it
+
+
 class _Hop(QDialog):
     im_lang = False
 
@@ -447,13 +459,22 @@ class HopDotTrinh(_Hop):
         self.bang_ho.setUpdatesEnabled(False)
         try:
             self.bang_ho.setRowCount(len(self.ho_hien))
+            # 1.0.99 (Đợt 8): ô chép từ ô mẫu (căn lề, cờ sửa, nền dựng một lần mỗi cột) - 3.000 hộ: 96 -> 52 ms; ô giống hệt cách cũ (_o)
+            mau = {}
+            dat = self.bang_ho.setItem
             for r, m in enumerate(self.ho_hien):
                 tt, ht, pd, qd = ten[m]
                 so, ngay = so_pa.get(m, ('', ''))
                 for c, v in enumerate((tt, m, ht, so, ngay, vn(self.tong.get(m, 0)), ('Đã PD ' + qd) if pd else '')):
-                    it = _o(self.bang_ho, r, c, v, so=c in (0, 1, 5), nen=XANH if pd and c == 6 else None)
-                    if c not in (3, 4):
-                        it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    k = (c, bool(pd and c == 6))
+                    goc = mau.get(k)
+                    if goc is None:
+                        goc = mau[k] = _o_mau(so=c in (0, 1, 5), nen=XANH if k[1] else None, sua=c in (3, 4))
+                    it = QTableWidgetItem(goc)              # hàm dựng sao chép (KHÔNG clone(): ô tạo ở C++, PySide2 giữ nhầm vỏ cũ)
+                    chu = '' if v is None else str(v)
+                    it.setText(chu)
+                    it.setToolTip(chu)
+                    dat(r, c, it)
         finally:
             self.bang_ho.setUpdatesEnabled(True)
             self.bang_ho.blockSignals(False)
@@ -1129,7 +1150,7 @@ class HopKiemLoi(_Hop):
     def kiem_tra(self):
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            self.ds = kiem_loi.kiem_tra(self.con, self.dm)
+            self.ds = kiem_loi.kiem_tra_nho(self.con, self.dm)   # 1.0.99: dữ liệu chưa đổi thì dùng kết quả lần trước
         finally:
             QApplication.restoreOverrideCursor()
         loi = sum(1 for x in self.ds if x.muc_do == kiem_loi.LOI)

@@ -156,23 +156,25 @@ class HopTraNQ28(QDialog):
         self.ds = nq.tim(self.cb_xa.currentData() or '', self.o_tim.text(),
                          (self.cb_vt.currentData() or '') if self.cb_vt is not None else '')[:500]
         cot = self.cb_cot.currentData()
+        self.bang.setUpdatesEnabled(False)
         self.bang.setRowCount(len(self.ds))
         cc = self.hk.can_cu() if self._ds_k else ''
+        # 1.1.00 (Đợt 9): ô mẫu mỗi cột (đậm / màu / căn lề dựng một lần), ô chép bằng hàm dựng sao chép (không clone - PySide2)
+        mau = [QTableWidgetItem() for _ in range(8)]
+        kieu_o_he_so_k(mau[6])
+        kieu_o_gia_k(mau[7])
+        mau[5].setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         for r, x in enumerate(self.ds):
             g = nq.gia_dong(x, cot)
             k = self._k(x, cot)
             for c, v in enumerate((x['xa'], x['ten_duong'], x['diem_dau'], x['diem_cuoi'],
                                    x['vi_tri'] if self.cb_vt is None else nq.ten_vi_tri(x['vi_tri']), vn(g),
                                    so_vn(k) if k is not None else '', vn(D(g) * k) if k is not None else '')):
-                it = QTableWidgetItem(str(v))
+                it = QTableWidgetItem(mau[c])
+                it.setText(str(v))
                 it.setToolTip(nq.mo_ta_vi_tri(x) if c == 4 else cc if c >= 6 and k is not None else str(v))
-                if c == 6:
-                    kieu_o_he_so_k(it)
-                elif c == 7:
-                    kieu_o_gia_k(it)
-                elif c >= 5:
-                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.bang.setItem(r, c, it)
+        self.bang.setUpdatesEnabled(True)
 
     def accept(self):
         r = self.bang.currentRow()
@@ -945,7 +947,7 @@ class KhungDuToan(QWidget):
         goc = self.dt_goc if self.dt_goc is not None else self.dt
         try:
             with con_tro_cho():
-                self.ss = du_toan.so_sanh(goc, du_toan.tu_du_an(self.con))
+                self.ss = du_toan.so_sanh(goc, du_toan.tu_du_an_nho(self.con))   # 1.1.00: nhớ khi dữ liệu chưa đổi
         except Exception as e:                          # dự án lỗi dữ liệu: báo, không làm hỏng trang
             self.bao(chu_loi('Không tính được thực tế áp giá', e))
             return None

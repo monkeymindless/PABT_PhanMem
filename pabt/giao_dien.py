@@ -4,6 +4,7 @@ Nút được tô tự động theo chữ trên nút (Lưu, Thêm, Xóa, Gộp, 
 mà không phải sửa từng màn hình. Muốn đổi màu một nhóm: sửa MAU.
 """
 from __future__ import annotations
+import functools
 import re
 from contextlib import contextmanager
 from enum import Enum
@@ -310,7 +311,10 @@ class OSoChuaNhap(QSpinBox):
         return super().eventFilter(o, e)
 
 
+@functools.lru_cache(maxsize=4096)
 def nhom_nut(chu: str) -> str | None:
+    """Nhóm màu của nút theo chữ (LUAT). 1.0.99: nhớ theo chữ - trước chạy hàng chục regex cho mỗi nút mỗi lần hiện hộp. LUAT là hằng:
+    sửa LUAT thì gọi nhom_nut.cache_clear()."""
     s = bo_dau(re.sub(r'[&….]', ' ', chu or '')).strip(' ◀▶')
     return next((n for m, n in LUAT if re.search(m, s)), None)
 
@@ -1277,6 +1281,7 @@ def huy_hieu_bieu_tuong(ma: int, mau: str, nen: str, co: int = 44, bo: int = 12)
     return kq
 
 
+@functools.lru_cache(maxsize=4096)
 def ky_hieu_nut(chu: str):
     s = bo_dau(re.sub(r'[&….]', ' ', chu or '')).strip(' ◀▶▲▼')
     return next((k for m, k in KY_HIEU if re.search(m, s)), None)
@@ -1290,8 +1295,9 @@ def to_mau(goc: QWidget) -> None:
         n = nhom_nut(b.text())
         if n and b.property('nhom') != n:
             b.setProperty('nhom', n)
-            b.style().unpolish(b)
-            b.style().polish(b)
+            if b.testAttribute(Qt.WidgetAttribute.WA_WState_Polished):   # 1.0.99: nút chưa áp kiểu thì Qt áp đúng nhóm khi polish
+                b.style().unpolish(b)
+                b.style().polish(b)
         if isinstance(b, QPushButton) and b.icon().isNull() and not b.property('khong_icon'):
             k = ky_hieu_nut(b.text())
             ic = icon_ky_hieu(k, mau_chu_nut(n), 16) if k else None
@@ -5532,6 +5538,8 @@ class _BoToMau(QObject):
                 chuan_o_chon(obj)
             if la_cua_so_con_pabt(obj):
                 chuan_hoa_cua_so_con(obj)
+            if isinstance(obj, QWidget) and obj.isWindow() and not obj.property('_da_to_mau'):
+                to_mau(obj)                              # 1.0.99: gán nhóm màu TRƯỚC khi các nút con áp kiểu (khỏi unpolish / polish lại)
             return False
         if t == QEvent.Type.Hide:                       # đóng cửa sổ con: nhớ kích thước cho lần mở sau
             if isinstance(obj, QWidget) and obj.property('pabt_cua_so_con') and obj.isWindow():

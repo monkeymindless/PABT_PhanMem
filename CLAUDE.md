@@ -13,6 +13,9 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   so từng file với mã nguồn).
 - Chạy `PHAN_TICH_PHIEN_BAN.bat` (= `phan_tich_phien_ban.py --so-sanh bo_cai\LARC_CapNhat_<bản trước>.larcud`): tốc độ mở / tắt,
   mở dự án, lưu + tải lại, lệnh dòng lệnh; module nạp lúc khởi động; mã lặp lại; file khác nhau -> `ket_qua_kiem_tra\PhanTich_*.md`.
+  Từ 1.1.02 có mục 1c: độ trễ TỪNG LỆNH (`do_phan_hoi.py`) hai bản; lệnh nghi chậm hơn được đo lại xen kẽ, chỉ báo lệnh chậm đã xác
+  nhận - có lệnh chậm thì tìm nguyên nhân (`do_phan_hoi.py --ho-so "Lệnh"`) trước khi phát hành. `tests/test_nguong_toc_do.py`: ngưỡng
+  mềm chia theo tốc độ máy (hỏng khi chạy cùng việc nặng: chạy riêng để xác nhận). Máy người dùng: `PABT.exe do-toc-do` / Chẩn đoán.
 - Chạy `KIEM_TRA_GIAO_DIEN.bat` (= `kiem_tra_giao_dien.py`): bấm mọi nút, gõ mọi ô nhập, chọn mọi mục chọn, sửa ô bảng của mọi
   hộp thoại (bản sao dự án; chặn in / Excel / Word / mạng) -> lỗi, chậm / đơ (> 5 s), treo -> `ket_qua_kiem_tra\GiaoDien_*.md`.
 - Báo cáo cho người dùng KÈM phân tích: điểm nghẽn, lệnh lặp lại, cách gọi lệnh nhanh nhất / đường tắt, cách gọi gói (nạp module
@@ -243,6 +246,7 @@ thêm vào CUỐI file lịch sử; chỉ quy tắc mới có hiệu lực lâu 
 - Hộp thoại tạo với cha, dọn bằng `don_hop_da_dong`; không `WA_DeleteOnClose` hàng loạt, không giữ hộp làm thuộc tính để dùng lại; QMenu tạm
   `deleteLater`; KHÔNG `takeAt(...).layout().deleteLater()` (hủy hai lần - sập) - thay cả widget chứa. QGraphicsItem không phải QObject.
 - Danh sách dài: `giao_dien.hop_ket_qua` (không ghép vào QMessageBox). Hộp thoại mới có `im_lang` / `cho=False` cho test.
+- Bảng QTableWidget lớn: ô chép từ ô mẫu bằng hàm dựng sao chép `QTableWidgetItem(o_mau)`, KHÔNG `clone()` (ô tạo phía C++ - PySide2 trả nhầm vỏ cũ cho widget sau, chỉ lượt Qt5). Xuất Excel nhiều ô: kiểu qua `ghi_xlsx_nhanh.KieuO` (không gán font / border từng ô). Kết quả cả dự án mở lại nhiều lần: nhớ bằng `csdl.nho` (khóa gồm ngày / hồ sơ địa phương nếu phụ thuộc), đo bằng `do_phan_hoi.py`.
 - Ô chọn nhiều mục (danh sách hộ): nạp bằng `giao_dien.nap_o_chon` (mô hình dựng sẵn + dòng đều: 12 ms so với 110 ms ở 3.000 hộ), không `addItem` trong vòng lặp. Hàm dữ liệu của mô hình bảng lớn: so số nguyên, không đọc `Qt.ItemDataRole.X` mỗi lần gọi (`BangHo.data`). QScrollArea chỉ cuộn dọc: `man_hinh_tinh_gia_dat._CuonDoc` để không cắt nội dung.
 - Bảng: chiều cao dòng `giao_dien.vua_dong` (không `resizeRowsToContents`); bảng lớn `bang_ao.BangAo`; lệnh theo hộ đọc dòng bằng
   `cac_dong_da_chon` (không `selectedRows`); cột theo tên (`self.cot.index(khóa)`), không viết số cột. Chữ "&" trên nút / thẻ: `chu_hien`.

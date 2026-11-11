@@ -472,6 +472,15 @@ def kiem_tra(con, dm: DanhMuc | None = None) -> list:
     return kq
 
 
+def kiem_tra_nho(con, dm: DanhMuc | None = None) -> list:
+    """kiem_tra nhớ trên kết nối (csdl.nho, 1.0.99 - Đợt 8): mở lại hộp Kiểm tra lỗi / bấm Kiểm tra lại khi dữ liệu chưa đổi thì có ngay
+    (3.000 hộ: 0,4-0,7 s mỗi lần). Khóa: dữ liệu (total_changes + data_version), ngày (so ngày cấp với hôm nay), hồ sơ địa phương đang
+    dùng (quy tắc kiểm tra). KHÔNG sửa danh sách / đối tượng Loi trả về (dùng chung)."""
+    from datetime import date
+    from . import dia_phuong
+    return csdl.nho(con, ('kiem_loi', date.today(), id(dia_phuong.doc())), lambda: kiem_tra(con, dm))
+
+
 def sua_tu_dong(con) -> int:
     """Sửa lỗi trình bày: họ tên (khoảng trắng, chữ hoa, chữ tổ hợp), địa chỉ / nơi cấp / ghi chú (khoảng trắng, chữ tổ hợp),
     số CCCD (bỏ ký tự khác số), tên / ghi chú / quy cách các dòng phương án (chữ tổ hợp, khoảng trắng). Trả số ô đã sửa.

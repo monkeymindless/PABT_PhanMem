@@ -80,6 +80,16 @@ class HopGiaoDien(QDialog):
                                   'khi bấm Lưu / Ctrl+S.')
         self.cb_tu_luu.activated.connect(lambda *_: self.doi_tu_luu(self.cb_tu_luu.currentData()))
         f.addRow('Lưu tự động:', self.cb_tu_luu)
+        from .csdl import CHE_DO_MAY_YEU, che_do_may_yeu, la_may_yeu
+        self.cb_may_yeu = QComboBox()                           # 1.1.01 (Đợt 10): chế độ máy yếu bật / tắt tay
+        for khoa, nhan in CHE_DO_MAY_YEU.items():
+            self.cb_may_yeu.addItem(nhan, khoa)
+        self.cb_may_yeu.setCurrentIndex(max(0, self.cb_may_yeu.findData(che_do_may_yeu())))
+        self.cb_may_yeu.setToolTip('Chế độ máy yếu: tắt hoạt ảnh chuyển trang, bóng đổ, ảnh xem trước in nhẹ hơn, trả bộ nhớ sớm. Bật khi '
+                                   f'máy chậm (ổ cứng cũ, CPU đời cũ) dù RAM đủ. Hiện máy này {"ĐANG" if la_may_yeu() else "không"} '
+                                   'dùng chế độ máy yếu.')
+        self.cb_may_yeu.activated.connect(lambda *_: self.doi_may_yeu(self.cb_may_yeu.currentData()))
+        f.addRow('Chế độ máy yếu:', self.cb_may_yeu)
         lo.addLayout(f)
         self.lb = QLabel('')
         self.lb.setWordWrap(True)
@@ -115,6 +125,11 @@ class HopGiaoDien(QDialog):
     def doi_tu_luu(self, giay) -> None:
         giay = chu_de.dat_chu_ky_luu_tu_dong(int(giay or 0))
         self._thong_bao('Đã tắt lưu tự động.' if giay <= 0 else f'Lưu tự động sau {chu_de.nhan_chu_ky(giay)} ngừng thao tác.')
+
+    def doi_may_yeu(self, khoa: str) -> None:
+        from .csdl import dat_che_do_may_yeu, la_may_yeu
+        dat_che_do_may_yeu(khoa)
+        self._thong_bao(f'Chế độ máy yếu: {"BẬT" if la_may_yeu() else "tắt"}. Có hiệu lực đầy đủ khi mở lại phần mềm.')
 
     def doi_tuong_phan(self, khoa: str) -> None:
         chu_de.ghi(giao_dien.cai_dat_nho(), tuong_phan=khoa)
