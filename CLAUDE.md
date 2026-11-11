@@ -13,6 +13,9 @@ không ghi cố định tên đơn vị / người ký) — đừng đưa dữ l
   so từng file với mã nguồn).
 - Chạy `PHAN_TICH_PHIEN_BAN.bat` (= `phan_tich_phien_ban.py --so-sanh bo_cai\LARC_CapNhat_<bản trước>.larcud`): tốc độ mở / tắt,
   mở dự án, lưu + tải lại, lệnh dòng lệnh; module nạp lúc khởi động; mã lặp lại; file khác nhau -> `ket_qua_kiem_tra\PhanTich_*.md`.
+  Từ 1.1.02 có mục 1c: độ trễ TỪNG LỆNH (`do_phan_hoi.py`) hai bản; lệnh nghi chậm hơn được đo lại xen kẽ, chỉ báo lệnh chậm đã xác
+  nhận - có lệnh chậm thì tìm nguyên nhân (`do_phan_hoi.py --ho-so "Lệnh"`) trước khi phát hành. `tests/test_nguong_toc_do.py`: ngưỡng
+  mềm chia theo tốc độ máy (hỏng khi chạy cùng việc nặng: chạy riêng để xác nhận). Máy người dùng: `PABT.exe do-toc-do` / Chẩn đoán.
 - Chạy `KIEM_TRA_GIAO_DIEN.bat` (= `kiem_tra_giao_dien.py`): bấm mọi nút, gõ mọi ô nhập, chọn mọi mục chọn, sửa ô bảng của mọi
   hộp thoại (bản sao dự án; chặn in / Excel / Word / mạng) -> lỗi, chậm / đơ (> 5 s), treo -> `ket_qua_kiem_tra\GiaoDien_*.md`.
 - Báo cáo cho người dùng KÈM phân tích: điểm nghẽn, lệnh lặp lại, cách gọi lệnh nhanh nhất / đường tắt, cách gọi gói (nạp module

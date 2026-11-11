@@ -1,7 +1,8 @@
 """Đo ĐỘ TRỄ PHẢN HỒI từng lệnh của cửa sổ chính (1.0.98): bấm lệnh -> cửa sổ / hộp hiện và rảnh. Lần đầu (lạnh: nạp module, dựng hộp)
 và lần sau (ấm). Dữ liệu GIẢ LẬP N hộ, không đụng dự án thật; chặn in / Excel / mạng như kiem_tra_giao_dien.
 
-  .venv\\Scripts\\python do_phan_hoi.py [--so-ho 3000] [--ra ket_qua_kiem_tra\\PhanHoi_<giờ>.md]
+  .venv\\Scripts\\python do_phan_hoi.py [--so-ho 3000] [--ra ket_qua_kiem_tra\\PhanHoi_<giờ>.md] [--lan 3] [--chi "Lệnh A|Lệnh B"]
+  --ra x.md còn ghi x.json ({lệnh: [lần đầu, trung vị lần sau]}) cho phan_tich_phien_ban (mục 1c, so với bản trước - Đợt 11).
 
 Ngưỡng (skill toc-do-phan-hoi): phản hồi < 100 ms tốt, < 300 ms chấp nhận, > 1 s phải có con trỏ chờ / tiến trình.
 Đo trên máy rảnh (không chạy cùng bộ test / dựng bộ cài)."""
@@ -21,6 +22,8 @@ sys.path.insert(0, os.getcwd())
 SO_HO = int(sys.argv[sys.argv.index('--so-ho') + 1]) if '--so-ho' in sys.argv else 3000
 RA = sys.argv[sys.argv.index('--ra') + 1] if '--ra' in sys.argv else ''
 HO_SO = sys.argv[sys.argv.index('--ho-so') + 1] if '--ho-so' in sys.argv else ''
+LAN = max(2, int(sys.argv[sys.argv.index('--lan') + 1])) if '--lan' in sys.argv else 3
+CHI = set(sys.argv[sys.argv.index('--chi') + 1].split('|')) if '--chi' in sys.argv else None
 sys.argv = sys.argv[:1]
 td = Path(tempfile.mkdtemp(prefix='dph_'))
 (td / 'luu').mkdir()
@@ -122,10 +125,10 @@ if HO_SO:                                         # --ho-so "Lệnh A|Lệnh B":
         print('--- tự tốn nhiều nhất (tottime)\n' + s.getvalue().split('ncalls', 1)[-1][:3500], flush=True)
     ctypes.windll.kernel32.TerminateProcess(ctypes.c_void_p(-1), 0)
 kq = []
-for ten, a in [(t_, a_) for t_, a_ in w.lenh.items() if t_ not in BO]:
+for ten, a in [(t_, a_) for t_, a_ in w.lenh.items() if t_ not in BO and (CHI is None or t_ in CHI)]:
     lan = []
     try:
-        for _ in range(3):
+        for _ in range(LAN):
             if w.con is None:
                 w.mo(str(p), chi_doc=False)
                 ranh()
@@ -143,7 +146,7 @@ for ten, a in [(t_, a_) for t_, a_ in w.lenh.items() if t_ not in BO]:
     kq.append((ten, lan[0], statistics.median(lan[1:]), ''))
 
 trang = []
-if hasattr(w, 'mo_trang') and hasattr(w, 'trang'):
+if CHI is None and hasattr(w, 'mo_trang') and hasattr(w, 'trang'):
     from pabt.lenh import TRANG
     for i in list(range(len(TRANG))) * 2:
         t = time.perf_counter()
@@ -179,6 +182,10 @@ bc = '\n'.join(dong) + '\n'
 ra = Path(RA) if RA else Path('ket_qua_kiem_tra') / f'PhanHoi_{pabt.__version__}_{datetime.now():%Y-%m-%d_%H%M}.md'
 ra.parent.mkdir(exist_ok=True)
 ra.write_text(bc, encoding='utf-8')
+import json  # noqa: E402
+ra.with_suffix('.json').write_text(json.dumps(dict(phien_ban=pabt.__version__, so_ho=SO_HO, lan=LAN,
+                                                  lenh={t: [round(a, 1), round(b, 1)] for t, a, b, l in kq if not l}),
+                                             ensure_ascii=False, indent=1), encoding='utf-8')
 print(bc, flush=True)
 print('Đã lưu:', ra, flush=True)
 try:                                                    # Qt có lúc sập khi thoát sau offscreen: kết quả đã ghi

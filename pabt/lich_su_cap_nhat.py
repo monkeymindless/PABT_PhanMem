@@ -7,6 +7,9 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.1.02', '11/11/2026', (
+        'Bên trong: thêm các bước kiểm tra tốc độ tự động trước mỗi lần phát hành (đo từng lệnh so với bản trước, ngưỡng tốc độ trong bộ kiểm thử) để các bản sau không bị chậm lại. Chức năng và cách dùng không đổi.',
+    )),
     ('1.1.01', '11/11/2026', (
         'Trợ giúp > Chẩn đoán & sửa lỗi hệ thống: nút "Đo tốc độ máy này" đo các thao tác thường dùng trên dự án giả lập (không đụng dự án thật), tốc độ ổ đĩa, các lần khởi động gần đây, kèm nhận xét (ổ cứng cũ, RAM, phần mềm diệt virus...). Gói chẩn đoán gửi tác giả có kèm báo cáo này.',
         'Giao diện: thêm mục "Chế độ máy yếu" (Tự nhận / Bật / Tắt) - bật cho máy chậm dù RAM đủ.',

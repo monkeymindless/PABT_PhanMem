@@ -2,6 +2,7 @@ r"""Phân tích một phiên bản PABT (chạy MỖI LẦN sửa phiên bản),
 
   .venv\Scripts\python phan_tich_phien_ban.py [--so-sanh bo_cai\LARC_CapNhat_0.9.94.pabtcn | <thư mục mã>] [--so-ho 3000]
       [--quy-mo-lon 10000 | 0]   (1.0.98: đo thêm bản mới ở quy mô lớn, so với NGƯỠNG; 0 = bỏ qua)
+      [--khong-phan-hoi]          (1.1.02: bỏ mục 1c - độ trễ từng lệnh của cửa sổ chính, do_phan_hoi.py, hai bản)
                                               [--du-an <file .pabt thật, chỉ đọc - chạy trên bản sao>] [--lan 3]
   Hoặc bấm đúp PHAN_TICH_PHIEN_BAN.bat (tự so với gói .pabtcn mới nhất trong bo_cai\ khác phiên bản mã nguồn).
 
@@ -141,6 +142,25 @@ def tra(goc: Path, so_sanh: str, tam: Path) -> Path:
     for f in ('chay.py', 'nap_cap_nhat.py'):                       # gói chỉ có pabt/: lệnh dòng lệnh dùng chay.py hiện tại
         shutil.copy2(goc / f, ra / f)
     shutil.copytree(goc / 'mau_in', ra / 'mau_in')                 # mẫu in nằm ở bản cài, không có trong gói cập nhật
+    shutil.copy2(goc / 'kiem_tra_giao_dien.py', ra / 'kiem_tra_giao_dien.py')   # do_phan_hoi (mục 1c) chặn in / Excel / mạng bằng file này
+    _bien_dich(ra)
+    return ra
+
+
+def _bien_dich(thu_muc: Path) -> None:
+    subprocess.run([str(PY), '-m', 'compileall', '-q', str(thu_muc)], capture_output=True, timeout=600)
+
+
+def ban_sao_hien_tai(goc: Path, tam: Path) -> Path:
+    """1.1.02: bản sao mã nguồn hiện tại CÙNG CHỖ với bản so sánh (thư mục tạm), cùng biên dịch .pyc. Trước đây bản mới chạy từ thư mục
+    dự án (ổ D: máy dựng ghi 246 MB/s) còn bản cũ giải nén vào %TEMP% (ổ C: 645 MB/s) và phải biên dịch lúc đo: các dòng "Nạp mã / Khởi
+    động / Mở dự án thật / Lập PA lần đầu" luôn lệch 28-38% (ghi từ 1.0.97) - không phải khác biệt của mã."""
+    ra = tam / 'hien_tai'
+    shutil.copytree(goc / 'pabt', ra / 'pabt', ignore=shutil.ignore_patterns('__pycache__'))
+    for f in ('chay.py', 'nap_cap_nhat.py', 'kiem_tra_giao_dien.py'):
+        shutil.copy2(goc / f, ra / f)
+    shutil.copytree(goc / 'mau_in', ra / 'mau_in')
+    _bien_dich(ra)
     return ra
 
 
@@ -238,6 +258,70 @@ def bao_cao_lon(kq: dict, so_ho: int) -> str:
     return '\n'.join(t) + '\n'
 
 
+# 1.1.02 (Đợt 11 - chống chậm trở lại): độ trễ TỪNG LỆNH của cửa sổ chính (do_phan_hoi.py) ở hai bản. Lệnh nghi chậm hơn (lần sau:
+# > CHAM_TY_LE lần và > CHAM_MS ms) được ĐO LẠI XEN KẼ (cũ, mới, cũ, mới - chỉ các lệnh đó, nhiều lần) trước khi báo: một lần đo lệch +-20-30%
+# khi máy bận (bài học 1.0.97, 1.1.00).
+CHAM_TY_LE = 1.25
+CHAM_MS = 20
+LAN_PHAN_HOI = 3
+LAN_DO_LAI = 6
+
+
+def do_phan_hoi(thu_muc: Path, so_ho: int, lan: int = LAN_PHAN_HOI, chi=None) -> dict:
+    """{lệnh: [lần đầu ms, trung vị lần sau ms]} - chạy do_phan_hoi.py của mã HIỆN TẠI trên mã nguồn thu_muc (cwd)."""
+    env = dict(os.environ, PYTHONIOENCODING='utf-8', QT_QPA_PLATFORM='offscreen')
+    with tempfile.TemporaryDirectory() as td:
+        ra = Path(td) / 'ph.md'
+        lenh = [str(PY), '-W', 'ignore', str(GOC / 'do_phan_hoi.py'), '--so-ho', str(so_ho), '--lan', str(lan), '--ra', str(ra)]
+        if chi:
+            lenh += ['--chi', '|'.join(chi)]
+        subprocess.run(lenh, capture_output=True, env=env, timeout=3600, cwd=str(thu_muc))
+        f = ra.with_suffix('.json')
+        return json.loads(f.read_text(encoding='utf-8'))['lenh'] if f.is_file() else {}
+
+
+def nghi_cham(moi: dict, cu: dict) -> list:
+    return [k for k, (_d, s) in moi.items() if k in cu and s > cu[k][1] * CHAM_TY_LE and s - cu[k][1] > CHAM_MS]
+
+
+def xac_nhan_cham(moi_dir: Path, cu_dir: Path, ds: list, so_ho: int) -> dict:
+    """Đo lại xen kẽ các lệnh nghi chậm: {lệnh: (trung vị cũ, trung vị mới)} - lấy trung vị của hai lượt mỗi bản."""
+    if not ds:
+        return {}
+    luot = {'cu': [], 'moi': []}
+    for _ in range(2):
+        luot['cu'].append(do_phan_hoi(cu_dir, so_ho, LAN_DO_LAI, ds))
+        luot['moi'].append(do_phan_hoi(moi_dir, so_ho, LAN_DO_LAI, ds))
+    return {k: (statistics.median(x[k][1] for x in luot['cu'] if k in x), statistics.median(x[k][1] for x in luot['moi'] if k in x))
+            for k in ds if all(k in x for x in luot['cu'] + luot['moi'])}
+
+
+def bao_cao_phan_hoi(moi: dict, cu: dict | None, xac_nhan: dict, so_ho: int) -> str:
+    t = ['', f'## 1c. Độ trễ phản hồi từng lệnh ({so_ho} hộ, do_phan_hoi.py)', '']
+    if not moi:
+        return '\n'.join(t + ['Không đo được (xem do_phan_hoi.py).']) + '\n'
+    tong_moi = sum(v[1] for v in moi.values())
+    if cu:
+        chung = [k for k in moi if k in cu]
+        tong_cu = sum(cu[k][1] for k in chung)
+        t.append(f'- Tổng {len(chung)} lệnh (lần bấm sau): {_o(tong_cu)} -> {_o(sum(moi[k][1] for k in chung))}')
+        cham = {k: v for k, v in xac_nhan.items() if v[1] > v[0] * CHAM_TY_LE and v[1] - v[0] > CHAM_MS}
+        nhieu = [k for k in xac_nhan if k not in cham]
+        t.append(f'- **Chậm hơn (đã đo lại xen kẽ xác nhận): {len(cham)} lệnh**' + (':' if cham else ''))
+        t += [f'  - {k}: {_o(a)} -> {_o(b)} (+{(b - a) / a * 100:.0f}%)' for k, (a, b) in cham.items()]
+        if nhieu:
+            t.append(f'- Nghi chậm ở lượt đầu nhưng đo lại xen kẽ không chậm (nhiễu): {", ".join(nhieu)}')
+        nhanh = sorted(((cu[k][1] - moi[k][1], k) for k in chung if moi[k][1] < cu[k][1] / CHAM_TY_LE and cu[k][1] - moi[k][1] > CHAM_MS),
+                       reverse=True)[:8]
+        if nhanh:
+            t.append('- Nhanh hơn rõ: ' + '; '.join(f'{k} {_o(cu[k][1])} -> {_o(moi[k][1])}' for _, k in nhanh))
+    else:
+        t.append(f'- Tổng {len(moi)} lệnh (lần bấm sau): {_o(tong_moi)}')
+    cham_nhat = sorted(moi.items(), key=lambda x: -x[1][1])[:8]
+    t.append('- Chậm nhất (lần sau) ở bản mới: ' + '; '.join(f'{k} {_o(v[1])}' for k, v in cham_nhat))
+    return '\n'.join(t) + '\n'
+
+
 def bao_cao(kq_moi: dict, kq_cu: dict | None, tinh_moi: dict, tinh_cu: dict | None, doi: list | None, so_ho: int) -> str:
     cu = kq_cu is not None
     t = [f'# Phân tích phiên bản PABT {kq_moi.get("phien_ban")}' + (f' so với {kq_cu.get("phien_ban")}' if cu else ''),
@@ -251,7 +335,9 @@ def bao_cao(kq_moi: dict, kq_cu: dict | None, tinh_moi: dict, tinh_cu: dict | No
         m, c = kq_moi.get(k), (kq_cu or {}).get(k)
         doi_ = ''
         if cu and isinstance(m, (int, float)) and isinstance(c, (int, float)) and not isinstance(m, bool) and c:
-            doi_ = f'{(m - c) / c * 100:+.0f}%' + (' (nhanh hơn)' if m < c * 0.9 else ' (CHẬM HƠN)' if m > c * 1.1 else '')
+            # 1.1.02: chênh dưới 5 ms (đóng cửa sổ 7 -> 8 ms) không gắn nhãn - nhiễu đo, không phải thay đổi của mã
+            doi_ = f'{(m - c) / c * 100:+.0f}%' + (' (nhanh hơn)' if m < c * 0.9 and c - m > 5 else
+                                                   ' (CHẬM HƠN)' if m > c * 1.1 and m - c > 5 else '')
         t.append(f'| {ten.replace("N hộ", f"{so_ho} hộ")} | ' + (f'{_o(c)} | ' if cu else '') + f'{_o(m)} |' + (f' {doi_} |' if cu else ''))
     t += ['', '## 2. Điểm nghẽn còn lại (thao tác chậm nhất của bản mới)', '']
     cham = sorted(((v, k) for k, v in kq_moi.items() if isinstance(v, float) and not k.startswith('cli_python')), reverse=True)[:5]
@@ -292,8 +378,9 @@ def main(argv) -> int:
         if goi:
             so_sanh = str(max(goi, key=lambda p: so(p.stem.split('_')[-1])))
     with tempfile.TemporaryDirectory() as td:
+        moi = ban_sao_hien_tai(GOC, Path(td)) if so_sanh else GOC     # cùng ổ đĩa, cùng .pyc với bản so sánh
         print(f'Đo mã nguồn hiện tại ({GOC})…', flush=True)
-        kq_moi = do_toc_do(GOC, du_an, so_ho, lan)
+        kq_moi = do_toc_do(moi, du_an, so_ho, lan)
         tinh_moi = phan_tich_tinh(GOC)
         kq_cu = tinh_cu = doi = None
         if so_sanh:
@@ -305,8 +392,22 @@ def main(argv) -> int:
         kq_lon = None
         if lon > so_ho:
             print(f'Đo quy mô lớn {lon} hộ (bản mới)…', flush=True)
-            kq_lon = do_toc_do(GOC, '', lon, 1)
+            kq_lon = do_toc_do(moi, '', lon, 1)
+        ph_moi = ph_cu = None
+        xn = {}
+        if '--khong-phan-hoi' not in argv:
+            print('Đo độ trễ từng lệnh (bản mới)…', flush=True)
+            ph_moi = do_phan_hoi(moi, so_ho)
+            if so_sanh:
+                print('Đo độ trễ từng lệnh (bản so sánh)…', flush=True)
+                ph_cu = do_phan_hoi(cu, so_ho)
+                ds = nghi_cham(ph_moi, ph_cu)
+                if ds:
+                    print(f'Đo lại xen kẽ {len(ds)} lệnh nghi chậm hơn…', flush=True)
+                    xn = xac_nhan_cham(moi, cu, ds, so_ho)
     bc = bao_cao(kq_moi, kq_cu, tinh_moi, tinh_cu, doi, so_ho)
+    if ph_moi is not None:
+        bc += bao_cao_phan_hoi(ph_moi, ph_cu, xn, so_ho)
     if kq_lon:
         bc += bao_cao_lon(kq_lon, lon)
     ra = GOC / 'ket_qua_kiem_tra' / f'PhanTich_{kq_moi.get("phien_ban")}_{datetime.now():%Y-%m-%d_%H%M}.md'
