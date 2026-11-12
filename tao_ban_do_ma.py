@@ -62,10 +62,26 @@ GIU_LAI = {
 _RE_THONG_SO = re.compile(r'^[A-Z][A-Z0-9_]+$')
 
 
+def _goc_trong_git():
+    """Tên các file .py ở gốc repo ĐÃ có trong git; None khi không dùng được git (bản chép không có .git, máy không cài git)."""
+    try:
+        r = subprocess.run(['git', '-c', 'safe.directory=*', 'ls-files', '--', '*.py'], cwd=str(GOC), capture_output=True,
+                           text=True, encoding='utf-8', timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        return None
+    return {x.strip() for x in r.stdout.splitlines() if x.strip() and '/' not in x.strip()}
+
+
 def _cac_file() -> list:
     ds = sorted((GOC / 'pabt').glob('*.py')) + sorted((GOC / 'tests').glob('*.py'))
     # tên file không phải tên module (có dấu cách...) = file người dùng để tạm ở gốc repo, không thuộc chương trình
-    ds += [p for p in sorted(GOC.glob('*.py')) if not p.name.startswith(('TU_DONG_',)) and p.stem.isidentifier()]
+    goc = [p for p in sorted(GOC.glob('*.py')) if not p.name.startswith(('TU_DONG_',)) and p.stem.isidentifier()]
+    # 1.1.07: chỉ file gốc đã theo dõi trong git - file người dùng để tạm (larc_chuyen_gia_kiem_toan_1104.py, sinh từ prompt, 4 import
+    # thừa) làm hỏng test_yeu_cau_0987 dù không thuộc mã phát hành. Không có git: như cũ
+    git = _goc_trong_git()
+    ds += [p for p in goc if git is None or p.name in git]
     return ds
 
 

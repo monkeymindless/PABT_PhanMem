@@ -97,6 +97,9 @@ def chuan_hoa(file, phien_ban: str = '') -> dict:
         kq = ma_tai_san.chuyen_csdl(con)               # đã nâng cấp lúc mở thì không đổi thêm
         kq['ten_khac'] = ten_cay_lam_nghiep.ap_ten_khac(con, ghi_nhat_ky=False)    # 26/10/2026: tên khác cây lâm nghiệp (Phụ lục VI QĐ 48)
         with con, csdl.mo_khoa_danh_muc(con):
+            # 1.1.07: bậc đầu đường kính "(d <3 cm)" -> "(d ≤3 cm)" như văn bản (bậc sau ">3-6"); so khớp tên bỏ ký hiệu nên không lệch
+            kq['dk_bac_dau'] = con.execute("UPDATE dm_taisan SET ten = replace(ten, '(d <', '(d ≤') "
+                                           "WHERE ten LIKE '%(d <%' AND ten NOT LIKE '%(d <%-%'").rowcount
             kq['bo_quy_uoc'] = con.execute('DELETE FROM quy_uoc').rowcount
             if phien_ban:
                 con.execute('UPDATE du_an SET phien_ban_gia = ?, ngay_nhap = ? WHERE id = 1',

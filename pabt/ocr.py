@@ -89,7 +89,6 @@ def moi_truong_ocr() -> dict:
 # 1.1.05 (máy mới Windows 11, người dùng 12/11/2026): Windows chặn nạp thư viện Tesseract đóng kèm (không có chữ ký số) - Smart App
 # Control / chính sách kiểm soát ứng dụng (WDAC) - thì trình nạp của Windows hiện hộp "tesseract.exe - Bad Image ... Error status
 # 0xc0e90002" (đứng giữa lúc cài: bước tự kiểm tra hỏi danh sách ngôn ngữ). Mã thoát của tesseract.exe khi trình nạp thất bại:
-MA_BI_CHAN = 0xC0E90002        # STATUS_SYSTEM_INTEGRITY_POLICY_VIOLATION: chính sách toàn vẹn của Windows chặn file (chưa ký số)
 MA_NAP_LOI = {0xC0E90002: 'chan', 0xC0E90003: 'chan', 0xC0000428: 'chan',     # chặn theo chính sách / chữ ký số
               0xC000007B: 'hong', 0xC0000135: 'hong', 0xC0000139: 'hong', 0xC0000142: 'hong',   # sai kiến trúc / thiếu / hỏng DLL
               0xC000012F: 'hong', 0xC0000130: 'hong', 0xC0000131: 'hong'}                      # file DLL không phải ảnh nạp được

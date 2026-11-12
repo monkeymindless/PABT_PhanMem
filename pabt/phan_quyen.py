@@ -313,7 +313,7 @@ def gan_chan_csdl(con, vai_tro: str) -> int:
 LENH_QUYEN = {
     'Thêm hộ…': SUA_HO_SO, 'Xóa hộ…': XOA_HO, 'Chọn hộ niêm yết…': NIEM_YET, 'Dự thảo PABT…': NIEM_YET, 'Đợt trình…': NIEM_YET,
     'Trạng thái hộ…': QD_CHI_TRA, 'Nhật ký kiểm toán…': XEM_KIEM_TOAN, 'Quản lý tài khoản…': QUAN_TRI,
-    'Nhập file Excel…': SUA_HO_SO, 'Nhập phương án chi tiết…': SUA_HO_SO, 'Nhập bản vẽ CAD (.dxf)…': SUA_HO_SO,
+    'Nhập file Excel…': SUA_HO_SO, 'Nhập phương án chi tiết…': SUA_HO_SO,
 }
 
 

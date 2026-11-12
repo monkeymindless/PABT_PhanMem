@@ -556,8 +556,15 @@ class KhungCapNhatGiaDat(QWidget):
         def cho():
             return hop[0] is not None and hop[0].wasCanceled()
 
+        def hoi_toan_van(ds):                           # 1.1.07 (tầng 4): toàn văn đổi hệ số tính giá -> so sánh, hỏi trước khi lưu
+            if hop[0] is not None:
+                hop[0].close()
+                hop[0] = None
+            return self._hoi_toan_van(ds)
+
         try:
-            kq = doc_file_day_du(file, self.o_tinh.text().strip(), self.o_xa.text().strip(), bao, cho)
+            kq = doc_file_day_du(file, self.o_tinh.text().strip(), self.o_xa.text().strip(), bao, cho,
+                                 hoi_toan_van=None if self.im_lang else hoi_toan_van)
         except nq.LoiBangGia as e:
             self._bao('canh_bao', str(e))
             return None
@@ -578,6 +585,30 @@ class KhungCapNhatGiaDat(QWidget):
         self._hien(dong, kq['van_ban'], chu, str(file))
         self.da_doc.emit(kq)
         return dong
+
+    def _hoi_toan_van(self, ds: list, hien: bool = True):
+        """1.1.07 (kiểm định tầng 4): bảng "quy tắc cũ / mới + tính thử trên 1 m² mẫu" trước khi lưu quy tắc toàn văn làm đổi hệ số
+        tính giá. Trả True = lưu quy tắc mới; Đóng = giữ quy tắc đang dùng. hien=False: trả hộp (kiểm thử)."""
+        from PySide6.QtWidgets import QDialog
+        from .giao_dien import hop_ket_qua
+        from .quy_tac_vi_tri import GIA_MAU_SO_SANH
+
+        def tien(x):
+            return '-' if x is None else vn(x)
+        chi = [f'{x["ten"]} ({x["can_cu"]}): hệ số {x["cu"]} -> {x["moi"]}; tính thử 1 m² giá {vn(GIA_MAU_SO_SANH)} đ: '
+               f'{tien(x["tien_cu"])} -> {tien(x["tien_moi"])} đ' + (f'. Văn bản: "{x["nguon"][:160]}"' if x['nguon'] else '')
+               for x in ds]
+        d = hop_ket_qua(self, f'Văn bản vừa đọc có quy tắc Nghị quyết 28 làm ĐỔI {len(ds)} hệ số tính giá đất so với quy tắc đang '
+                              'dùng. Đối chiếu từng dòng với văn bản: bấm "Lưu quy tắc mới" để bảng tính dùng hệ số mới; "Đóng" = giữ '
+                              'quy tắc đang dùng (bảng giá vẫn đọc bình thường). Số đã áp vào hộ không đổi.',
+                        chi, 'So sánh quy tắc cũ / mới', canh_bao=True, hien=False,
+                        nut_them=[('Lưu quy tắc mới', lambda h: h.accept())])
+        if not hien:
+            return d
+        try:
+            return d.exec() == QDialog.DialogCode.Accepted
+        finally:
+            d.deleteLater()
 
     # ---------------------------------------------------------------- ghi
     def _xac_nhan_kiem_dinh(self, kq: dict, xac_nhan=None) -> bool:

@@ -164,7 +164,10 @@ def mo_hop(dlg):
         qa.processEvents()
         rong, cao = CO_HIEN[0]
         if not dlg.parentWidget() or dlg.isWindow():
-            dlg.resize(min(dlg.width(), rong - 20), min(dlg.height(), cao - 60))
+            # 1.1.07: màn ảo offscreen chỉ 800 px - vua_man_hinh đã CO hộp và đặt TRẦN theo màn ảo (HopIn 764 px < cỡ tối thiểu 938:
+            # báo nhầm "Vừa trang" đè "Thiết lập trang"). Bỏ trần, đo theo cỡ màn đang thử.
+            dlg.setMaximumSize(16777215, 16777215)
+            dlg.resize(min(max(dlg.width(), dlg.sizeHint().width()), rong - 20), min(max(dlg.height(), dlg.sizeHint().height()), cao - 60))
             qa.processEvents()
         da_thu[ten] += 1
         duyet(dlg, f'[{ten}@{rong}]')

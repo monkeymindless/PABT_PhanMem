@@ -4646,11 +4646,74 @@ def them_muc_sao_chep(menu, bang, pos=None) -> list:
     return [a1, a2]
 
 
+def loc_nhanh_theo_o(bang, cot: int, gia_tri: str) -> int:
+    """1.1.07 (kiểu Excel): ẩn các dòng có ô cột `cot` khác gia_tri (chỉ ẨN dòng - thứ tự, dữ liệu không đổi). Nhớ dòng đã ẩn để Bỏ lọc
+    chỉ hiện lại đúng các dòng này (bộ lọc riêng của màn hình giữ nguyên). Trả số dòng còn hiện."""
+    m = bang.model()
+    if m is None:
+        return 0
+    da = set(bang.property('_loc_nhanh') or [])
+    con = 0
+    for r in range(m.rowCount()):
+        if bang.isRowHidden(r):
+            continue
+        if _chu_o_bang(bang, m.index(r, cot)) != gia_tri:
+            bang.setRowHidden(r, True)
+            da.add(r)
+        else:
+            con += 1
+    bang.setProperty('_loc_nhanh', sorted(da))
+    return con
+
+
+def bo_loc_nhanh(bang) -> int:
+    """Hiện lại các dòng Lọc nhanh đã ẩn. Trả số dòng hiện lại."""
+    da = list(bang.property('_loc_nhanh') or [])
+    m = bang.model()
+    n = m.rowCount() if m is not None else 0
+    for r in da:
+        if r < n:
+            bang.setRowHidden(r, False)
+    bang.setProperty('_loc_nhanh', [])
+    return len(da)
+
+
+def sap_xep_bang_theo_cot(bang, cot: int, tang_dan: bool = True) -> bool:
+    """Sắp xếp theo cột - CHỈ bảng đã bật sắp xếp (setSortingEnabled): bảng khác đọc dữ liệu theo số dòng, đảo thứ tự dòng sẽ lệch."""
+    if not bang.isSortingEnabled():
+        return False
+    bang.sortByColumn(cot, Qt.SortOrder.AscendingOrder if tang_dan else Qt.SortOrder.DescendingOrder)
+    return True
+
+
+def them_muc_loc_sap_xep(menu, bang) -> None:
+    """1.1.07: menu con Lọc nhanh (theo ô đang chọn / bỏ lọc) và Sắp xếp (bảng cho sắp xếp) cho menu chuột phải chung."""
+    from PySide6.QtWidgets import QMenu
+    if not isinstance(menu, QMenu) or bang.model() is None:
+        return
+    idx = bang.currentIndex()
+    gt = _chu_o_bang(bang, idx) if idx.isValid() else ''
+    menu.addSeparator()
+    if bang.isSortingEnabled():
+        s = QMenu('Sắp xếp', menu)
+        menu.addMenu(s)
+        menu.menu_sap_xep = s                           # giữ tham chiếu (Qt5)
+        s.addAction('Nhỏ đến lớn (A → Z)', lambda c=idx.column(): sap_xep_bang_theo_cot(bang, c, True)).setEnabled(idx.isValid())
+        s.addAction('Lớn đến nhỏ (Z → A)', lambda c=idx.column(): sap_xep_bang_theo_cot(bang, c, False)).setEnabled(idx.isValid())
+    lc = QMenu('Lọc nhanh', menu)
+    menu.addMenu(lc)
+    menu.menu_loc = lc
+    ngan = (gt if len(gt) <= 30 else gt[:28] + '…').replace('&', '&&')
+    lc.addAction(f'Chỉ hiện dòng có ô "{ngan}"', lambda c=idx.column(), g=gt: loc_nhanh_theo_o(bang, c, g)).setEnabled(idx.isValid())
+    lc.addAction('Hiện lại mọi dòng (bỏ lọc)', lambda: bo_loc_nhanh(bang)).setEnabled(bool(bang.property('_loc_nhanh')))
+
+
 def menu_sao_chep(bang, pos, hien: bool = True):
     """Menu chuột phải mặc định của bảng không có menu riêng."""
     from PySide6.QtWidgets import QMenu
     menu = QMenu(bang)
     them_muc_sao_chep(menu, bang, pos)
+    them_muc_loc_sap_xep(menu, bang)
     if hien:
         menu.exec(bang.viewport().mapToGlobal(pos))
         menu.deleteLater()
@@ -4873,6 +4936,15 @@ def dan_vao_bang(bang, chu=None, ghi=None, bo_cot=()) -> dict:
 def cat_khoi_bang(bang, ghi=None, bo_cot=()) -> dict:
     """Ctrl+X: chép vùng chọn rồi xóa chữ các ô sửa được (ô không sửa được: chỉ chép)."""
     sao_chep_bang(bang)
+    if bang.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers:
+        return dict(da_ghi=0, bo_qua=0)
+    chon = bang.selectionModel().selectedIndexes() or ([bang.currentIndex()] if bang.currentIndex().isValid() else [])
+    viec = [(i.row(), i.column(), '') for i in chon if _o_duoc_ghi(bang, i.row(), i.column(), bo_cot)]
+    return dict(da_ghi=_ghi_cac_o(bang, viec, ghi), bo_qua=len(chon) - len(viec))
+
+
+def xoa_noi_dung_bang(bang, ghi=None, bo_cot=()) -> dict:
+    """1.1.07: xóa chữ các ô đang chọn (ô sửa được), giữ dòng; không đụng bộ nhớ tạm."""
     if bang.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers:
         return dict(da_ghi=0, bo_qua=0)
     chon = bang.selectionModel().selectedIndexes() or ([bang.currentIndex()] if bang.currentIndex().isValid() else [])

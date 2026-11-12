@@ -427,6 +427,26 @@ def them_thua(con, ma_ho: int, dong: dict) -> int:
     return mt
 
 
+def bo_thua(con, ma_thua: int) -> str:
+    """1.1.07: bỏ MỘT thửa khỏi hồ sơ hộ (gắn nhầm hộ trên bản đồ) - thửa về "Chưa gắn hộ". Thửa đã có dòng bồi thường đất trong
+    phương án: KHÔNG bỏ (LoiNhap) - tiền đất sẽ mất thửa căn cứ; xóa dòng trong phương án trước hoặc dùng Đổi hộ."""
+    t = con.execute('SELECT * FROM thua WHERE ma_thua = ?', (ma_thua,)).fetchone()
+    if t is None:
+        raise LoiNhap(f'Không có thửa mã {ma_thua}.')
+    kiem_ho_nhan_viec(con, t['ma_ho'])
+    kiem_quyen(con, 'sua_ho_so')
+    so = con.execute('SELECT COUNT(*) FROM ct_dat WHERE ma_thua = ?', (ma_thua,)).fetchone()[0]
+    if so:
+        raise LoiNhap(f'Thửa {t["so_thua"]} tờ {t["so_to"]} đã có {so} dòng bồi thường đất trong phương án của hộ {t["ma_ho"]}: không '
+                      'bỏ gắn được (tiền đất sẽ mất thửa căn cứ). Xóa các dòng đó trong phương án trước, hoặc dùng "Đổi hộ" nếu gắn nhầm hộ.')
+    ten = con.execute('SELECT ho_ten FROM ho WHERE ma_ho = ?', (t['ma_ho'],)).fetchone()
+    with csdl.giao_dich(con):
+        con.execute('DELETE FROM thua WHERE ma_thua = ?', (ma_thua,))
+        tb = f'Đã bỏ thửa {t["so_thua"]} tờ {t["so_to"]} khỏi hồ sơ hộ {t["ma_ho"]} {ten[0] if ten else ""}'.rstrip() + '.'
+        csdl.ghi_nhat_ky(con, 'Bỏ gắn hộ khỏi thửa', tb)
+    return tb
+
+
 def chuyen_thua(con, ma_thua: int, ma_ho_moi: int) -> str:
     """Chuyển một thửa (kèm các dòng mục 1 gắn với thửa) sang hộ khác."""
     t = con.execute('SELECT * FROM thua WHERE ma_thua = ?', (ma_thua,)).fetchone()

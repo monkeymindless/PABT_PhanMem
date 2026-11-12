@@ -7,6 +7,14 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.1.07', '12/11/2026', (
+        'Nhập gói cài giá đất: thêm cách thứ ba "Mở để sửa và kiểm định trước khi lưu" - chưa ghi gì; đơn giá đất các xã đã chọn hiện ở thẻ Đọc văn bản (tô màu dòng cần đối chiếu), hệ số K ở thẻ Hệ số K, bộ quy tắc thành gói nháp. Sửa xong bấm Ghi vào bảng giá đất, Lưu hệ số K, Lưu gói.',
+        'Đọc toàn văn Nghị quyết bảng giá đất làm đổi hệ số tính giá (khu công nghiệp, dạng tuyến, nhiều mặt tiền…): hiện bảng so sánh hệ số cũ / mới và tiền tính thử trên 1 m² trước khi lưu; Đóng = giữ quy tắc đang dùng.',
+        'Cây trồng theo đường kính: bậc đầu "(d <3 cm)", "(d <5 cm)" tính đúng như văn bản "≤3", "≤5" - cây đường kính đúng 3 cm / 5 cm không còn lọt khe giữa hai bậc (cả dự án cũ); bộ đơn giá gắn sẵn ghi "(d ≤3 cm)", chu vi hiện "≤ 9,4 cm".',
+        'Bản đồ: điểm mang tên tự đặt của phần mềm vẽ (Style1, Style14, Placemark…) không còn tràn bản đồ và không hiện thành "Mốc Style1". Ô thửa có thêm Bỏ gắn hộ (gắn nhầm), Đặt lại thửa (bỏ hộ, màu, ghi chú), Xóa ô thửa khỏi bản đồ; hộp Sửa thửa có màu tô, ghi chú, bỏ gắn hộ. Thửa đã có dòng bồi thường đất thì không bỏ gắn được (báo rõ).',
+        'Bản in Word: chỉnh được Khoảng trống ký tên (2-12 dòng, mặc định 5) ở Thiết lập trang > Bố trí; tiêu ngữ "Độc lập - Tự do - Hạnh phúc" không còn bẻ dòng; tăng cỡ quốc hiệu / tiêu ngữ thì cột quốc hiệu tự nới cho vừa một dòng; nhãn mục I (Tổ chức:, Địa chỉ:) không còn cách xa giá trị.',
+        'Bảng: chuột phải có Lọc nhanh theo ô đang chọn / Hiện lại mọi dòng (và Sắp xếp ở bảng cho sắp xếp); bảng phương án có Điền xuống giống ô trên, Xóa nội dung ô (giữ dòng), di chuyển cả khối nhiều dòng lên / xuống.',
+    )),
     ('1.1.06', '12/11/2026', (
         'Bảng giá đất: gộp thẻ "Cập nhật, bổ sung giá đất" vào "Bộ quy tắc & cập nhật giá đất". Cột trái ba cụm: Gói văn bản và hiệu lực, Quy tắc vị trí và bảng dữ liệu của máy (thay / dùng lại bảng giá, đọc / dùng lại hệ số K), Gói cài và trao đổi.',
         'Đọc / scan văn bản giá đất hoặc hệ số K có nhiều xã: hiện danh sách xã để tích chọn (Chọn tất cả, Bỏ chọn, lọc theo tên) - chỉ xã được chọn đưa lên bảng, không phải xóa tay từng xã.',

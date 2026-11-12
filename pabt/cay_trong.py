@@ -71,7 +71,9 @@ def _khoang_duong_kinh(t: str):
         if b is not None:                                   # (d >21-24 cm): 21 < d ≤ 24
             return KhoangDK(a, _d(b), gom_tu=False, gom_den=True)
         if dau in ('<', '≤', '<='):
-            return KhoangDK(None, a, gom_den=dau != '<')
+            # 1.1.07: bậc đầu "(d <3 cm)" của bộ đơn giá = "≤3" của văn bản (bậc sau ghi ">3-6"): d đúng bằng 3 cm thuộc bậc đầu (trước
+            # lọt khe giữa hai bậc). Dự án cũ còn tên "<" cũng tính đúng.
+            return KhoangDK(None, a, gom_den=True)
         return KhoangDK(a, None, gom_tu=dau in ('≥', '>='))
     dk = r'(?:đk|đường kính)\s*(?:thân)?'
     m = re.search(_SO + r'\s*cm\s*(<|≤|<=)\s*' + dk + r'\s*(<|≤|<=)\s*' + _SO + r'\s*cm', t, re.I)

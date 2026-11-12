@@ -399,10 +399,16 @@ class KhungThongTinThua(QWidget):
         self.b_sua.setToolTip('Sửa số tờ, số thửa, loại đất của ô thửa trên bản đồ khi bản vẽ đọc nhầm nhãn (không đổi hồ sơ hộ)')
         self.b_chep = QPushButton('Sao chép')
         self.b_chep.setToolTip('Sao chép thông tin thửa và tọa độ các đỉnh (VN-2000) vào bộ nhớ tạm')
+        self.b_xoa_gan = QPushButton('Đặt lại thửa…')         # 1.1.07
+        self.b_xoa_gan.setToolTip('Bỏ gắn hộ (gắn nhầm), bỏ màu tô, bỏ ghi chú của ô thửa - hỏi lại trước khi làm')
+        self.b_xoa_o = QPushButton('Xóa ô thửa…')
+        self.b_xoa_o.setToolTip('Xóa ô thửa nạp nhầm khỏi bản đồ dự án (hồ sơ hộ không đổi; nạp lại bản vẽ thì có lại)')
+        from .giao_dien import KieuNut, ap_kieu_nut
+        ap_kieu_nut(self.b_xoa_gan, KieuNut.NGUY_HIEM)          # bỏ gắn hộ khỏi hồ sơ: viền đỏ như "Xóa ô thửa…"
         gn = QGridLayout()
         gn.setContentsMargins(0, 0, 0, 0)
         gn.setSpacing(4)
-        for i, b in enumerate((self.b_dinh_vi, self.b_mo, self.b_gan, self.b_ho, self.b_sua, self.b_chep)):
+        for i, b in enumerate((self.b_dinh_vi, self.b_mo, self.b_gan, self.b_ho, self.b_sua, self.b_chep, self.b_xoa_gan, self.b_xoa_o)):
             b.setAutoDefault(False)
             sp = b.sizePolicy()
             sp.setHorizontalPolicy(QSizePolicy.Policy.Ignored)   # hai cột chia đều bảng: chữ dài trên nút không ép bảng rộng ra (Qt5: chiếm tới 470 px)
@@ -411,7 +417,9 @@ class KhungThongTinThua(QWidget):
         v0.addLayout(gn)
         self.xoa()
 
-    def _dat_nut(self, dinh_vi=False, mo=False, gan=False, ho=False, sua=False, chep=False) -> None:
+    def _dat_nut(self, dinh_vi=False, mo=False, gan=False, ho=False, sua=False, chep=False, dat_lai=False, xoa_o=False) -> None:
+        self.b_xoa_gan.setEnabled(dat_lai)
+        self.b_xoa_o.setEnabled(xoa_o)
         self.b_dinh_vi.setEnabled(dinh_vi)
         self.b_mo.setEnabled(mo)
         self.b_gan.setEnabled(gan)
@@ -450,7 +458,9 @@ class KhungThongTinThua(QWidget):
         self._dat('moc', ', '.join(ct.get('moc') or []) or '-')
         self._dat('toa_do', toa_do.replace('  ·  ', '\n'))
         self._dat('ghi_chu', '; '.join(ct.get('ghi_chu') or []) or '-')
-        self._dat_nut(dinh_vi=True, mo=co_mo and t.ma_ho is not None, gan=co_gan, ho=t.ma_ho is not None, sua=co_sua, chep=True)
+        co_dat_lai = t.ma_ho is not None or bool(getattr(t, 'mau', '')) or bool(ct.get('ghi_chu'))
+        self._dat_nut(dinh_vi=True, mo=co_mo and t.ma_ho is not None, gan=co_gan, ho=t.ma_ho is not None, sua=co_sua, chep=True,
+                      dat_lai=co_gan and co_dat_lai, xoa_o=co_gan)
         self.b_gan.setText('Đổi hộ…' if t.ma_ho is not None else 'Gắn hộ…')
 
     def hien_doi_tuong(self, ten: str, chu: str, toa_do: str = '') -> None:
@@ -496,6 +506,11 @@ class HopGanHo(QDialog):
         self.o_moi.setPlaceholderText('Họ và tên hộ mới (bỏ trống nếu chọn hộ trong danh sách)')
         hop = QDialogButtonBox()
         self.b_gan = hop.addButton('Gắn vào thửa', QDialogButtonBox.ButtonRole.AcceptRole)
+        self.b_bo = None
+        if t.ma_ho is not None:                         # 1.1.07: gắn nhầm -> bỏ gắn, thửa về "Chưa gắn hộ"
+            self.b_bo = hop.addButton('Bỏ gắn hộ hiện tại', QDialogButtonBox.ButtonRole.ActionRole)
+            self.b_bo.setToolTip(f'Bỏ thửa khỏi hồ sơ hộ {t.ho_ten or t.ma_ho} (thửa đã có dòng bồi thường đất trong phương án thì không bỏ được)')
+            self.b_bo.clicked.connect(lambda: self.bo_gan() and self.accept())
         hop.addButton('Hủy', QDialogButtonBox.ButtonRole.RejectRole)
         hop.accepted.connect(self._dong_y)
         hop.rejected.connect(self.reject)
@@ -532,6 +547,18 @@ class HopGanHo(QDialog):
         it = self.ds.currentItem()
         if self.gan(it.data(Qt.ItemDataRole.UserRole) if it is not None and not self.o_moi.text().strip() else None, self.o_moi.text()):
             self.accept()
+
+    def bo_gan(self) -> bool:
+        """1.1.07: bỏ gắn hộ hiện tại của thửa (ban_do_cad.xoa_gan_ho_thua)."""
+        try:
+            ban_do_cad.xoa_gan_ho_thua(self.con, self.t.so_to, self.t.so_thua)
+        except (LoiNhap, ValueError) as e:
+            self._bao(str(e))
+            return False
+        except Exception as e:                           # noqa: BLE001 - file chỉ đọc / khóa
+            self._bao(chu_loi('Không bỏ gắn được hộ', e))
+            return False
+        return True
 
     def gan(self, ma_ho=None, ho_ten: str = '') -> bool:
         try:
@@ -576,25 +603,58 @@ def gan_ho_vao_thua(con, t, ma_ho=None, ho_ten: str = '') -> int:
 
 # ---------------------------------------------------------------- sửa số tờ, số thửa
 class HopSuaThua(QDialog):
-    """Sửa số tờ / số thửa / loại đất của ô thửa trên bản đồ. gia_tri(): dict sau khi Đồng ý."""
+    """Sửa số tờ / số thửa / loại đất của ô thửa trên bản đồ; 1.1.07: màu tô, ghi chú, bỏ gắn hộ. gia_tri(): dict sau khi Đồng ý
+    (mau / ghi_chu chỉ có khi đổi; xoa_gan_ho khi tích)."""
 
     def __init__(self, t, parent=None):
         super().__init__(parent)
+        from PySide6.QtGui import QIcon, QPixmap
+        from PySide6.QtWidgets import QCheckBox, QComboBox
         self.setWindowTitle(f'Sửa thửa {t.so_thua} tờ {t.so_to} trên bản đồ')
         self.o_to, self.o_thua, self.o_loai = QLineEdit(str(t.so_to)), QLineEdit(str(t.so_thua)), QLineEdit(str(t.loai_dat or ''))
+        self._mau_cu = ban_do_cad.chuan_mau(getattr(t, 'mau', ''))
+        self.cb_mau = QComboBox()
+        self.cb_mau.addItem('Không tô màu', '')
+        ds = list(ban_do_cad.MAU_TO_TAY)
+        if self._mau_cu and self._mau_cu not in {m for _, m in ds}:
+            ds.append(('Màu đang tô', self._mau_cu))
+        for ten, mau in ds:
+            anh = QPixmap(14, 14)
+            anh.fill(QColor(mau))
+            self.cb_mau.addItem(QIcon(anh), ten, mau)
+        self.cb_mau.setCurrentIndex(max(0, self.cb_mau.findData(self._mau_cu)))
+        self._ghi_chu_cu = '; '.join((getattr(t, 'chi_tiet', None) or {}).get('ghi_chu') or [])
+        self.o_ghi_chu = QLineEdit(self._ghi_chu_cu)
+        self.o_ghi_chu.setPlaceholderText('Ghi chú của ô thửa trên bản đồ (nhiều ý cách nhau dấu ;)')
+        self.o_bo_ho = QCheckBox('Bỏ gắn hộ hiện tại' + (f' ({t.ho_ten or t.ma_ho})' if t.ma_ho is not None else ''))
+        self.o_bo_ho.setToolTip('Thửa về "Chưa gắn hộ": bỏ thửa khỏi hồ sơ hộ (thửa đã có dòng bồi thường đất trong phương án thì không bỏ được)')
+        self.o_bo_ho.setEnabled(t.ma_ho is not None)
         f = QFormLayout(self)
         f.addRow('Số tờ:', self.o_to)
         f.addRow('Số thửa:', self.o_thua)
         f.addRow('Loại đất:', self.o_loai)
+        f.addRow('Màu tô ô thửa:', self.cb_mau)
+        f.addRow('Ghi chú:', self.o_ghi_chu)
+        f.addRow(self.o_bo_ho)
         lb = QLabel('Chỉ sửa trên bản đồ, để khớp đúng hồ sơ. Muốn đổi hồ sơ hộ: mở hồ sơ hộ.')
         lb.setProperty('vai', 'nhan')
         lb.setWordWrap(True)
         f.addRow(lb)
         hop = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        hop.button(QDialogButtonBox.StandardButton.Ok).setText('Đồng ý')          # 1.1.07: Qt không có bản dịch - hiện "Cancel"
+        hop.button(QDialogButtonBox.StandardButton.Cancel).setText('Hủy')
         hop.accepted.connect(self.accept)
         hop.rejected.connect(self.reject)
         f.addRow(hop)
+        self.setMinimumWidth(420)                       # câu ghi chú không bẻ vụn
 
     def gia_tri(self) -> dict:
-        return dict(so_to=self.o_to.text().strip(), so_thua=self.o_thua.text().strip(), loai_dat=self.o_loai.text().strip().upper())
+        moi = dict(so_to=self.o_to.text().strip(), so_thua=self.o_thua.text().strip(), loai_dat=self.o_loai.text().strip().upper())
+        if (self.cb_mau.currentData() or '') != self._mau_cu:
+            moi['mau'] = self.cb_mau.currentData() or ''
+        if ' '.join(self.o_ghi_chu.text().split()) != ' '.join(self._ghi_chu_cu.split()):
+            moi['ghi_chu'] = self.o_ghi_chu.text().strip()
+        if self.o_bo_ho.isEnabled() and self.o_bo_ho.isChecked():
+            moi['xoa_gan_ho'] = True
+        return moi
 

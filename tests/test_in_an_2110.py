@@ -314,11 +314,15 @@ class TestNghiDinh30CoChu(_Co):
         return [(''.join(t.text or '' for t in p.iter(W + 't')), p) for p in than.findall(f'{W}p')]
 
     def _co_gach_ho(self, x, chu) -> bool:
-        """Đoạn chứa đúng chữ chu có viền dưới cách chữ >= 1 pt (w:space) - gạch chân hở, không dùng gạch chân sát chữ của Word."""
-        for p in x.iter(W + 'p'):
+        """Gạch chân HỞ, không dùng gạch chân sát chữ của Word. 1.1.07: đường gạch là ĐOẠN RỖNG liền sau (viền dưới, cao >= 1 pt - khe
+        giữa chân chữ và đường gạch); đoạn chữ KHÔNG thụt (w:ind làm tiêu ngữ bẻ dòng "Hạnh / phúc")."""
+        ps = list(x.iter(W + 'p'))
+        for i, p in enumerate(ps[:-1]):
             if ''.join(t.text or '' for t in p.iter(W + 't')) == chu:
-                b = p.find(f'{W}pPr/{W}pBdr/{W}bottom')
-                return b is not None and int(b.get(W + 'space')) >= 1
+                q = ps[i + 1]
+                sp = q.find(f'{W}pPr/{W}spacing')
+                return (p.find(f'{W}pPr/{W}ind') is None and q.find(f'{W}pPr/{W}pBdr/{W}bottom') is not None
+                        and not any(True for _ in q.iter(W + 't')) and sp is not None and int(sp.get(W + 'line')) >= 20)
         return False
 
     def _co_gach_ngan(self, x, chu) -> bool:

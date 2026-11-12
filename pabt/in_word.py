@@ -65,7 +65,8 @@ LE_O = 40                                               # lề trái / phải tr
 DAI_CHO_TACH = 80                                       # dòng số liệu có tên / ghi chú dài hơn (ký tự): cho Word cắt đôi qua trang
 DEM_DOC = 28                                            # twip: đệm trên / dưới của ô bảng (1,4 pt)
 TRUOC_MUC, SAU_MUC = 120, 60                            # twip: khoảng cách trước / sau tiêu đề mục I, II, III
-DONG_KY = 4                                             # số dòng trống giữa chức danh và tên người ký
+DONG_KY_MAC_DINH, DONG_KY_MIN, DONG_KY_MAX = 5, 2, 12   # 1.1.07 (người dùng: 4 dòng quá hẹp để ký, đóng dấu): ban_in.mau_word.dong_ky
+DONG_KY = DONG_KY_MAC_DINH                              # số dòng trống giữa chức danh và tên người ký
 CO_MAC_DINH = 13.0                                      # cỡ chữ mặc định của tài liệu (van_ban_trinh._goi_docx) = cỡ dấu đoạn của đoạn rỗng
 TU_CO_GIAN = True                                       # tự co giãn dòng, đoạn cho khít trang (ban_in.mau_word.tu_co_gian)
 KHO_GIAY = 'A4'                                         # ban_in.mau_word.kho_giay: 'A4' / 'A3'
@@ -97,6 +98,11 @@ def _ap_mau(hs: dict) -> None:
     TU_CO_GIAN = bool(mw.get('tu_co_gian', True))
     KHO_GIAY = 'A3' if str(mw.get('kho_giay', 'A4')).upper() == 'A3' else 'A4'
     NGANG = str(mw.get('huong_giay', 'doc')) == 'ngang'
+    global DONG_KY                                      # 1.1.07: khoảng trống ký tên (số dòng) - hộp Thiết lập trang
+    try:
+        DONG_KY = max(DONG_KY_MIN, min(DONG_KY_MAX, int(mw.get('dong_ky', DONG_KY_MAC_DINH))))
+    except (TypeError, ValueError):
+        DONG_KY = DONG_KY_MAC_DINH
 
 
 dia_phuong.dang_ky(_ap_mau)
@@ -293,10 +299,14 @@ def _p_gach(chu: str, co: float, dam: bool, rong_o: int, do=None, khe: float = K
                 f'<w:p><w:pPr>{ox.xml_p_bdr_duoi(space="0")}'
                 f'<w:spacing w:before="0" w:after="0" w:line="{max(20, int(HO_GACH_PT * 20))}" w:lineRule="exact"/>'
                 f'<w:ind w:left="{ben}" w:right="{ben}"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p>')
+    # 1.1.07: đường gạch luôn ở ĐOẠN RỖNG RIÊNG dưới chữ (thụt hai bên cho dài đúng bằng chữ); đoạn chữ dùng trọn bề rộng ô. Trước:
+    # thụt w:ind ngay trên đoạn chữ - Word dựng phông đậm rộng hơn 1-2 pt là tiêu ngữ bẻ dòng "Hạnh / phúc"
     ben = max(0, int((rong_o - (_rong_do(chu, co, dam, do) + khe) * 20) // 2))
-    return (f'<w:p><w:pPr>{ox.xml_p_bdr_duoi(space=str(HO_GACH_PT))}'
-            f'<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="{ben}" w:right="{ben}"/>'
-            f'<w:jc w:val="center"/></w:pPr>{_r(chu, dam=dam, co=co)}</w:p>')
+    return (f'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr>'
+            f'{_r(chu, dam=dam, co=co)}</w:p>'
+            f'<w:p><w:pPr>{ox.xml_p_bdr_duoi(space="0")}'
+            f'<w:spacing w:before="0" w:after="0" w:line="{max(20, int(HO_GACH_PT * 20))}" w:lineRule="exact"/>'
+            f'<w:ind w:left="{ben}" w:right="{ben}"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p>')
 
 
 def rong_cot(chu_cot: dict | None = None, do=None) -> list:
@@ -351,10 +361,27 @@ def rong_bang_dau() -> int:
     return rong_trang() + twip(LAN_LE_DAU_MM[0]) + twip(LAN_LE_DAU_MM[1])
 
 
-def rong_cot_dau() -> tuple:
-    """(cột cơ quan, cột quốc hiệu) twip của bảng ẩn viền đầu văn bản."""
+QH_TOI_DA = 0.62                                        # 1.1.07: cột quốc hiệu nới rộng tối đa chừng này bề rộng bảng đầu
+
+
+def rong_cot_dau(do=None) -> tuple:
+    """(cột cơ quan, cột quốc hiệu) twip của bảng ẩn viền đầu văn bản. do (hàm đo chữ thật, 1.1.07): cỡ quốc hiệu / tiêu ngữ lớn (hoặc
+    vùng in hẹp) mà RONG_QUOC_HIEU không đủ một dòng thì nới cột quốc hiệu vừa chữ (tối đa QH_TOI_DA; cột cơ quan tự ngắt dòng cân
+    bằng). Cỡ mặc định: không đổi."""
     w = rong_bang_dau()
-    return w - RONG_QUOC_HIEU, RONG_QUOC_HIEU
+    r2 = RONG_QUOC_HIEU
+    if do is not None:
+        can = max(_rong_do('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', CO_QUOC_HIEU, True, do),
+                  _rong_do('Độc lập - Tự do - Hạnh phúc', CO_TIEU_NGU, True, do))
+        r2 = max(r2, min(int(w * QH_TOI_DA), int(round((can + KHE_GACH_PT) * 20)) + 2 * 57))
+    return w - r2, r2
+
+
+def rong_nhan_muc_i(hang_i, w: int, do=None) -> int:
+    """1.1.07: cột nhãn bảng mục I (Họ và tên:, Địa chỉ:…) vừa nhãn dài nhất (+ khe), tối đa 28% bề rộng - nhãn ngắn "Tổ chức:" không
+    còn cách xa giá trị."""
+    can = max([_rong_do(n, CO_THONG_TIN, False, do) for n, _ in hang_i] or [0])
+    return min(w * 28 // 100, int(round((can * (1.0 if do else DU_RONG) + 14) * 20)) + 2 * 57)
 
 
 def _so(v, muc=None, loai: str = 'tien') -> str:
@@ -615,7 +642,7 @@ def _khoi_dan_trang(x, rong: list, do, du_thao: bool, dan, nhan_du_thao: str = '
     dem28 = DEM_DOC / 20
     kq = []
     # ---- bảng đầu (ẩn viền): cơ quan | quốc hiệu; số | ngày
-    r1, r2 = rong_cot_dau()
+    r1, r2 = rong_cot_dau(do)
     vua_trai = r1 / 20 - le57
     n_cap = sum(len(_ngat_can_bang(d.strip().upper(), vua_trai, CO_CO_QUAN)) for d in x.cap_tren.split(chr(10)) if d.strip())
     n_cq = len(_ngat_can_bang(x.ten_cq, vua_trai, CO_CO_QUAN, True))
@@ -636,7 +663,7 @@ def _khoi_dan_trang(x, rong: list, do, du_thao: bool, dan, nhan_du_thao: str = '
     # ---- I. chủ sử dụng
     tm, sm = dan.truoc_muc / 20, dan.sau_muc / 20
     kq.append(K('d', tm + cd(CO_DE_MUC) + sm, giu_sau=True, truoc=tm, sau=sm))
-    c1, c0 = w * 28 // 100, w * 5 // 100
+    c1, c0 = rong_nhan_muc_i(x.hang_i, w, do), w * 5 // 100
     for nhan, gia_tri in x.hang_i:
         n = max(dem_dong(nhan, c1 / 20 - le57, CO_THONG_TIN, False, do),
                 dem_dong(gia_tri, (w - c0 - c1) / 20 - le57, CO_THONG_TIN, True, do))
@@ -830,7 +857,7 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     # cơ quan chủ quản 13 in hoa đứng (2 dòng); dòng 3 = cơ quan ban hành / chi nhánh 13 in hoa đậm GẠCH CHÂN đúng độ dài chữ
     # (PDF mẫu PA_01: "CHI NHÁNH X"; không còn dòng "____"); số, "(DỰ THẢO)" 13
     # đứng; quốc hiệu 13 in hoa đậm; tiêu ngữ 14 đậm, gạch dưới đúng độ dài chữ; địa danh / ngày 14 nghiêng (22/10/2026)
-    r1, r2 = rong_cot_dau()
+    r1, r2 = rong_cot_dau(do)
     vua_trai = (r1 - 2 * 57) / 20                        # pt chữ trong cột cơ quan (trừ lề ô)
     trai = ''.join(_p(_r(d, co=CO_CO_QUAN), can='center')
                    for x in cap_tren.split('\n') if x.strip()
@@ -856,7 +883,7 @@ def noi_dung_chi_tiet(con, ma_ho: int, bc=None, du_thao: bool = False, pa=None, 
     # 22/10/2026: tiêu đề mục I theo chủ sử dụng (du_lieu_in.tieu_de_muc_i - cùng bản Excel); tổ chức chỉ "Tổ chức:" / "Địa chỉ:"
     t.append(_p(_r(du_lieu_in.tieu_de_muc_i(to_chuc), dam=True, co=CO_DE_MUC), truoc=tm, sau=sm, giu_sau=True))
     # 22/10/2026 (mẫu PA_01 / PA_003 người dùng gửi): nhãn chữ thường, tên chủ sử dụng (hàng đầu) in đậm, nội dung khác thường
-    c1, c0 = w * 28 // 100, w * 5 // 100
+    c1, c0 = rong_nhan_muc_i(hang_i, w, do), w * 5 // 100
     t.append(_bang([_hang([_o(_p(), c0, vien=False, doc='top'), _o(_p(_r(n, co=CO_THONG_TIN), can='left'), c1, vien=False, doc='top'),
                            _o(_p(_r(v, dam=k == 0, co=CO_THONG_TIN), can='left'), w - c0 - c1, vien=False, doc='top')])
                     for k, (n, v) in enumerate(hang_i)],

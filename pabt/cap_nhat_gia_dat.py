@@ -269,9 +269,25 @@ def so_hieu_va_ngay(chu_vb: list, van_ban: str = '') -> dict:
     return dict(so_hieu=so_hieu, ngay='', ngay_tu='')
 
 
-def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> dict:
+def _luu_toan_van(chu_vb, hoi_toan_van) -> dict:
+    """1.1.07 (kiểm định tầng 4): hoi_toan_van(ds_doi) -> bool được gọi TRƯỚC khi lưu khi toàn văn mới làm đổi hệ số tính giá
+    (quy_tac_vi_tri.so_sanh_toan_van); trả False = giữ quy tắc cũ, không ghi file ('khong_luu': True, 'so_sanh'). None: lưu ngay như cũ."""
+    from .quy_tac_vi_tri import doc_toan_van_nghi_quyet, so_sanh_toan_van
+    if hoi_toan_van is not None:
+        thu = doc_toan_van_nghi_quyet(chu_vb, luu=False)
+        ss = so_sanh_toan_van(thu['quy_tac'])
+        if ss and not hoi_toan_van(ss):
+            return dict(thu, khong_luu=True, so_sanh=ss)
+        kq = doc_toan_van_nghi_quyet(chu_vb, luu=True)
+        kq['so_sanh'] = ss
+        return kq
+    return doc_toan_van_nghi_quyet(chu_vb, luu=True)
+
+
+def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None, hoi_toan_van=None) -> dict:
     """Như doc_file nhưng CHƯA dựng vị trí theo quy tắc: {'dong_goc': dòng của bảng, 'quy_tac': [QuyTac] đọc trong lời văn,
-    'van_ban', 'chu'} - màn hình cho người dùng sửa quy tắc rồi tính lại (ap_quy_tac_file)."""
+    'van_ban', 'chu'} - màn hình cho người dùng sửa quy tắc rồi tính lại (ap_quy_tac_file). hoi_toan_van (1.1.07): hỏi trước khi lưu
+    quy tắc toàn văn làm đổi hệ số (_luu_toan_van); None = lưu ngay (hành vi cũ, kiểm thử / dòng lệnh)."""
     from .quy_tac_vi_tri import doc_quy_tac, doc_toan_van_nghi_quyet, la_van_ban_toan_van_nq28
     chu_vb = []
     neo = []                                            # 1.1.05: ảnh cắt từng con số khi file là bản scan
@@ -288,8 +304,10 @@ def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> d
                                    f'bảng giá đường đang dùng của {xa or "địa bàn đang chọn (chưa nhập xã)"}.')
     if la_van_ban_toan_van_nq28(chu_vb):
         try:
-            toan_van = doc_toan_van_nghi_quyet(chu_vb, luu=True)
-            chu += f' Toàn văn: {len(toan_van["quy_tac"])} quy tắc ở {len(toan_van["dieu"])} điều (lưu {toan_van["file"]}).'
+            toan_van = _luu_toan_van(chu_vb, hoi_toan_van)
+            chu += f' Toàn văn: {len(toan_van["quy_tac"])} quy tắc ở {len(toan_van["dieu"])} điều' + (
+                ' - CHƯA LƯU: giữ quy tắc đang dùng (hệ số mới khác hệ số cũ, người dùng chọn giữ).' if toan_van.get('khong_luu')
+                else f' (lưu {toan_van["file"]}).')
         except Exception:                               # noqa: BLE001 - lời văn lạ không làm hỏng việc đọc bảng
             toan_van = None
     elif chu_vb:
@@ -299,8 +317,9 @@ def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> d
             thu = doc_toan_van_nghi_quyet(chu_vb, luu=False)
             # 1.0.90: file chỉ có vài điều (bảng giá một xã kèm trích đoạn) không ghi đè toàn văn đầy đủ hơn đã lưu (trước: mất toàn văn)
             if thu.get('dieu') and thu.get('quy_tac') and len(thu['dieu']) >= so_dieu_toan_van_da_luu():
-                toan_van = doc_toan_van_nghi_quyet(chu_vb, luu=True)
-                chu += f' Đã cập nhật {len(toan_van["quy_tac"])} quy tắc Nghị quyết 28 cho bảng tính.'
+                toan_van = _luu_toan_van(chu_vb, hoi_toan_van)
+                chu += (' Quy tắc Nghị quyết 28 trong văn bản CHƯA LƯU: giữ quy tắc đang dùng.' if toan_van.get('khong_luu') else
+                        f' Đã cập nhật {len(toan_van["quy_tac"])} quy tắc Nghị quyết 28 cho bảng tính.')
         except Exception:                               # noqa: BLE001
             pass
     try:

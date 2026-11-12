@@ -268,6 +268,14 @@ class HopQuanLyMauIn(QDialog):
         self.o_ho.setDecimals(0)
         self.o_ho.setAccessibleName('Độ hở gạch chân')
         f.addRow('Độ hở gạch chân:', self.o_ho)
+        from PySide6.QtWidgets import QSpinBox
+        self.o_dong_ky = QSpinBox()                      # 1.1.07: khoảng trống ký tên, đóng dấu
+        self.o_dong_ky.setRange(in_word.DONG_KY_MIN, in_word.DONG_KY_MAX)
+        self.o_dong_ky.setSuffix(' dòng')
+        self.o_dong_ky.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)     # thẳng cột với các ô số trên
+        self.o_dong_ky.setAccessibleName('Khoảng trống ký tên')
+        self.o_dong_ky.setToolTip('Số dòng trống giữa chức danh (LẬP BIỂU, KIỂM TRA, chức vụ) và họ tên người ký - chỗ ký và đóng dấu')
+        f.addRow('Khoảng trống ký tên:', self.o_dong_ky)
         lo.addWidget(g2)
         lo.addStretch(1)
         return w
@@ -289,6 +297,10 @@ class HopQuanLyMauIn(QDialog):
                 o.setValue(float(mw['co_chu'][khoa]))
             self.o_thut.setValue(float(mw['thut_dau_dong_mm']) / 10)
             self.o_ho.setValue(float(mw['gach_chan_ho_pt']))
+            try:
+                self.o_dong_ky.setValue(int(mw.get('dong_ky', in_word.DONG_KY_MAC_DINH)))
+            except (TypeError, ValueError):
+                self.o_dong_ky.setValue(in_word.DONG_KY_MAC_DINH)
             self._dien_le()
         finally:
             self._dang_nap = False
@@ -377,7 +389,8 @@ class HopQuanLyMauIn(QDialog):
         # ba mục của 1.1.03: hồ sơ đơn vị soạn từ bản trước chưa có - chỉ ghi khi khác mặc định (mở hộp rồi bấm OK không đổi gì)
         for khoa, gt, mac_dinh in (('kho_giay', self.cb_kho.currentData() or 'A4', 'A4'),
                                    ('huong_giay', 'ngang' if self.b_ngang.isChecked() else 'doc', 'doc'),
-                                   ('tu_co_gian', self.o_co_gian.isChecked(), True)):
+                                   ('tu_co_gian', self.o_co_gian.isChecked(), True),
+                                   ('dong_ky', self.o_dong_ky.value(), in_word.DONG_KY_MAC_DINH)):
             if khoa in mw or gt != mac_dinh:
                 mw[khoa] = gt
         for khoa, o in self.o_co.items():

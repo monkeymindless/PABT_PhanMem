@@ -1141,6 +1141,8 @@ class BangMuc(QWidget):
         sua_duoc = b.editTriggers() != QAbstractItemView.EditTrigger.NoEditTriggers
         them('Cắt\tCtrl+X', lambda: self.cat_o(), sua_duoc)
         them('Dán\tCtrl+V', lambda: self.dan_o(), sua_duoc)
+        them('Điền xuống giống ô trên\tCtrl+D', lambda: self.dien_xuong_o(), sua_duoc)      # 1.1.07
+        them('Làm trống nội dung ô (giữ dòng)', lambda: self.xoa_noi_dung_o(), sua_duoc)     # không mở đầu "Xóa": dễ nhầm Xóa dòng
         m.addSeparator()
         if muc == 1:
             them('Thêm thửa vào mục 1…', lambda: man.them_thua())
@@ -1154,8 +1156,9 @@ class BangMuc(QWidget):
         them('Nhân bản dòng', lambda: man.nhan_ban_dong(muc), len(chon) == 1)
         them(f'Xóa {len(chon)} dòng đã chọn' if len(chon) > 1 else 'Xóa dòng', lambda: man.xoa_dong(muc), co)
         m.addSeparator()
-        them('▲ Lên', lambda: man.di_chuyen(muc, -1), len(chon) == 1)
-        them('▼ Xuống', lambda: man.di_chuyen(muc, 1), len(chon) == 1)
+        n = len(man.bo.ds(muc)) if getattr(man, 'bo', None) is not None else b.rowCount()
+        them('▲ Lên' + (f' ({len(chon)} dòng)' if len(chon) > 1 else ''), lambda: man.di_chuyen_nhieu(muc, -1), co and chon[0] > 0)
+        them('▼ Xuống' + (f' ({len(chon)} dòng)' if len(chon) > 1 else ''), lambda: man.di_chuyen_nhieu(muc, 1), co and chon[-1] < n - 1)
         if muc == 1:
             them('Chọn mọi dòng (Ctrl+A)', lambda: b.selectAll(), b.rowCount() > 0)
             m.addSeparator()
@@ -1397,6 +1400,17 @@ class BangMuc(QWidget):
         bo = {i for i, c in enumerate(self.cot) if c[0] == 'thua'}
         return self._ghi_nhieu_o(lambda: cat_khoi_bang(self.bang, bo_cot=bo))
 
+    def xoa_noi_dung_o(self) -> dict:
+        """1.1.07: xóa chữ các ô đang chọn (ô sửa được), giữ dòng - như Cắt nhưng không chép vào bộ nhớ tạm."""
+        from .giao_dien import xoa_noi_dung_bang
+        bo = {i for i, c in enumerate(self.cot) if c[0] == 'thua'}
+        return self._ghi_nhieu_o(lambda: xoa_noi_dung_bang(self.bang, bo_cot=bo))
+
+    def dien_xuong_o(self) -> dict:
+        """1.1.07 (menu chuột phải; phím Ctrl+D đã có): chép ô trên cùng vùng chọn xuống các ô bên dưới - một bước Hoàn tác."""
+        from .giao_dien import dien_xuong
+        return self._ghi_nhieu_o(lambda: dict(da_ghi=dien_xuong(self.bang), bo_qua=0))
+
     def _doi_o(self, r: int, c: int):
         if self._dang_ve or c >= len(self.cot):
             return
@@ -1417,10 +1431,6 @@ CHO_XEM_SAU_SUA_MS = 1500          # khung xem trước đang hiện: sửa số
 from .giao_dien import QSS_THE_GACH_CHAN as QSS_THE_LAP_PA  # noqa: E402,F401  (tên cũ)
 
 
-# 1.0.05: dải "Lần phương án" dưới hàng nút trên cùng (lần đầu + các lần bổ sung của hộ, khóa lần đã phê duyệt)
-QSS_DAI_LAN = ('QFrame#dai_lan_pa { background: #FFFBEB; border: 0; border-bottom: 1px solid #FDE68A; }'
-               'QFrame#dai_lan_pa[khoa="1"] { background: #F1F5F9; border-bottom: 1px solid #CBD5E1; }'
-               'QLabel#lb_lan_pa { color: #0F172A; background: transparent; }')
 
 
 class HopLanPA(QDialog):
@@ -2927,6 +2937,25 @@ class CuaSoLapPA(DungGiaoDienLapPA, QDialog):
         j = self.bo.di_chuyen(muc, i, buoc)
         self.bang[muc].ve(chon=j)
         self.cap_nhat()
+
+    def di_chuyen_nhieu(self, muc: int, buoc: int) -> list:
+        """1.1.07: di chuyển CẢ KHỐI dòng đang chọn lên / xuống một bậc (giữ thứ tự trong khối); khối chạm đầu / cuối thì không đổi.
+        Trả vị trí mới của các dòng."""
+        b = self.bang[muc]
+        ds = b.cac_dong_chon()
+        if len(ds) <= 1:
+            self.di_chuyen(muc, buoc)
+            return [b.dong_chon()]
+        n = len(self.bo.ds(muc))
+        if (buoc < 0 and ds[0] + buoc < 0) or (buoc > 0 and ds[-1] + buoc >= n):
+            return ds
+        moi = sorted(self.bo.di_chuyen(muc, i, buoc) for i in (ds if buoc < 0 else reversed(ds)))
+        b.ve(chon=moi[0])
+        sm = b.bang.selectionModel()
+        for r in moi[1:]:
+            sm.select(b.bang.model().index(r, 0), sm.SelectionFlag.Select | sm.SelectionFlag.Rows)
+        self.cap_nhat()
+        return moi
 
     # ---------------------------------------------- gợi ý
     def goi_y(self, tu_dong: bool = False):

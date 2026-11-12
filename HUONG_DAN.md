@@ -57,6 +57,14 @@
 > dự án in hoa; bảng tổng hợp có dòng **CHI NHÁNH …** dưới tên cơ quan. Lề bảng tổng hợp A3: trái 2,0 / phải 1,0 / trên 1,5 / dưới 1,5 cm
 > (đổi trong hồ sơ địa phương `ban_in.le_trang.tong_hop`).
 >
+> **1.1.07**: **Nhập gói cài** có thêm cách **Mở để sửa và kiểm định trước khi lưu**: chưa ghi gì - đơn giá đất các xã đã chọn
+> hiện ở thẻ con Đọc văn bản (dòng cần đối chiếu tô màu), hệ số K ở thẻ Hệ số K, bộ quy tắc thành gói nháp; sửa xong bấm **Ghi vào
+> bảng giá đất**, **Lưu** (hệ số K), **Lưu gói**. Đọc toàn văn Nghị quyết bảng giá đất làm đổi hệ số tính giá: phần mềm hiện bảng
+> **so sánh hệ số cũ / mới và tiền tính thử trên 1 m²** trước khi lưu; bấm **Đóng** để giữ quy tắc đang dùng.
+> Cây theo đường kính: bậc đầu **≤3 cm / ≤5 cm** tính cả cây đúng 3 cm / 5 cm. Bản đồ: chuột phải ô thửa có **Bỏ gắn hộ**,
+> **Đặt lại thửa**, **Xóa ô thửa khỏi bản đồ**; điểm tên "Style…" của phần mềm vẽ không còn hiện. Bản in: **Thiết lập trang > Bố trí >
+> Khoảng trống ký tên** (mặc định 5 dòng). Bảng: chuột phải **Lọc nhanh** theo ô; bảng phương án có **Điền xuống**, **Xóa nội dung ô**.
+>
 > **1.1.06**: cửa sổ **Bảng giá đất** còn ba thẻ: **Bảng giá đất 2026**, **Hệ số K**, **Bộ quy tắc & cập nhật giá đất** (gộp thẻ
 > "Cập nhật, bổ sung giá đất" và "Bộ quy tắc giá đất"). Cột trái thẻ thứ ba có ba cụm: **Gói văn bản và hiệu lực** (Đọc thêm văn bản…,
 > danh sách gói, Tạo gói từ gói này / từ hệ số K), **Quy tắc vị trí và bảng dữ liệu của máy** (+ / Xóa quy tắc vị trí, Thay cả bảng giá,

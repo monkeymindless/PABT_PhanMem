@@ -500,6 +500,8 @@ def chuan_duong_kinh(chu: str) -> str:
     if not m:
         return ''
     dau = {'<=': '≤', '>=': '≥'}.get(m.group(1), m.group(1) or '')
+    if dau == '<' and not m.group(3):                   # 1.1.07: bậc đầu "≤3" bản scan mất nét gạch -> "<3"; bậc sau ">3-6" nên luôn là ≤
+        dau = '≤'
     return f'(d {dau}{m.group(2)}{"-" + m.group(3) if m.group(3) else ""} cm)'
 
 

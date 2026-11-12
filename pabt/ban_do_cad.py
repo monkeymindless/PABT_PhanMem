@@ -591,13 +591,33 @@ def thua_tu_ket_qua(con, kq: KetQuaCad) -> list:
 
 
 def sua_thua_ban_do(con, so_to: str, so_thua: str, moi: dict) -> tuple:
-    """Sửa số tờ / số thửa / loại đất của một thửa TRÊN BẢN ĐỒ (bản vẽ đọc nhầm nhãn) - hồ sơ hộ không đổi. moi: so_to, so_thua, loai_dat. Trả (tờ, thửa) mới."""
+    """Sửa số tờ / số thửa / loại đất của một thửa TRÊN BẢN ĐỒ (bản vẽ đọc nhầm nhãn) - hồ sơ hộ không đổi. moi: so_to, so_thua, loai_dat;
+    1.1.07 thêm (không bắt buộc): mau ('#RRGGBB', '' = bỏ), ghi_chu (chữ, '' = bỏ), xoa_gan_ho (True: bỏ gắn hộ - xoa_gan_ho_thua).
+    Trả (tờ, thửa) mới."""
     from .lap_pa import LoiNhap, kiem_quyen
     kiem_quyen(con, 'sua_ho_so')
     to, thua = str(moi.get('so_to', so_to)).strip(), str(moi.get('so_thua', so_thua)).strip()
     if not thua:
         raise LoiNhap('Số thửa không được để trống.')
+    if 'mau' in moi and moi['mau'] and not chuan_mau(moi['mau']):
+        raise LoiNhap(f'Mã màu không hợp lệ: {moi["mau"]}.')
     with csdl.giao_dich(con):
+        if moi.get('xoa_gan_ho'):
+            xoa_gan_ho_thua(con, so_to, so_thua)
+        if 'mau' in moi or 'ghi_chu' in moi:
+            def dat(ct):
+                if 'mau' in moi:
+                    if chuan_mau(moi['mau']):
+                        ct['mau'] = chuan_mau(moi['mau'])
+                    else:
+                        ct.pop('mau', None)
+                if 'ghi_chu' in moi:
+                    chu = ' '.join(str(moi['ghi_chu'] or '').split())
+                    if chu:
+                        ct['ghi_chu'] = [x.strip() for x in chu.split(';') if x.strip()]
+                    else:
+                        ct.pop('ghi_chu', None)
+            _sua_chi_tiet(con, so_to, so_thua, dat, 'màu / ghi chú')
         r = con.execute(f'SELECT id, loai_dat FROM {BANG} WHERE so_to = ? AND so_thua = ?', (so_to, so_thua)).fetchone()
         if r is None:
             raise LoiNhap(f'Bản đồ dự án không có thửa {so_thua} tờ {so_to}.')
@@ -607,6 +627,64 @@ def sua_thua_ban_do(con, so_to: str, so_thua: str, moi: dict) -> tuple:
         con.execute(f'UPDATE {BANG} SET so_to = ?, so_thua = ?, loai_dat = ? WHERE id = ?', (to, thua, loai, r['id']))
         csdl.ghi_nhat_ky(con, 'Sửa thửa trên bản đồ', f'Thửa {so_thua} tờ {so_to} -> thửa {thua} tờ {to}, loại đất {loai}')
     return to, thua
+
+
+def xoa_gan_ho_thua(con, so_to: str, so_thua: str) -> list:
+    """1.1.07: bỏ gắn hộ của ô thửa (gắn nhầm) - mọi dòng thửa hồ sơ cùng số tờ / số thửa ra khỏi hồ sơ hộ (ho_so.bo_thua: thửa đã có
+    dòng bồi thường đất thì từ chối, không đổi gì). Bản đồ giữ nguyên. Trả các câu đã làm; thửa chưa gắn hộ: []."""
+    from . import ho_so
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')
+    k = (_khoa(so_to), _khoa(so_thua))
+    ds = [r['ma_thua'] for r in con.execute('SELECT ma_thua, so_to, so_thua FROM thua') if (_khoa(r['so_to']), _khoa(r['so_thua'])) == k]
+    if not ds:
+        return []
+    with csdl.giao_dich(con):                           # nhiều dòng: một giao dịch - dòng sau bị từ chối thì dòng trước không bỏ
+        return [ho_so.bo_thua(con, mt) for mt in ds]
+
+
+def _sua_chi_tiet(con, so_to: str, so_thua: str, ham, nhat_ky: str) -> None:
+    from .lap_pa import LoiNhap
+    if not dam_bao_cot_chi_tiet(con):
+        raise LoiCad('File dự án đang mở chỉ xem / bị khóa: không ghi được bản đồ.')
+    r = con.execute(f'SELECT id, chi_tiet FROM {BANG} WHERE so_to = ? AND so_thua = ?', (so_to, so_thua)).fetchone()
+    if r is None:
+        raise LoiNhap(f'Bản đồ dự án không có thửa {so_thua} tờ {so_to}.')
+    try:
+        ct = json.loads(r['chi_tiet']) if r['chi_tiet'] else {}
+    except ValueError:
+        ct = {}
+    ham(ct)
+    con.execute(f'UPDATE {BANG} SET chi_tiet = ? WHERE id = ?', (json.dumps(ct, ensure_ascii=False) if ct else '', r['id']))
+    csdl.ghi_nhat_ky(con, 'Sửa thửa trên bản đồ', f'Thửa {so_thua} tờ {so_to}: {nhat_ky}')
+
+
+def dat_lai_thua_ban_do(con, so_to: str, so_thua: str, xoa_ho: bool = True, xoa_mau: bool = True, xoa_ghi_chu: bool = True) -> list:
+    """1.1.07: đặt lại ô thửa - bỏ gắn hộ (xoa_gan_ho_thua), bỏ màu tô tay, bỏ ghi chú. Một giao dịch. Trả các câu đã làm."""
+    from .lap_pa import kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')
+    ra = []
+    with csdl.giao_dich(con):
+        if xoa_ho:
+            ra += xoa_gan_ho_thua(con, so_to, so_thua)
+        if xoa_mau or xoa_ghi_chu:
+            def bo(ct):
+                if xoa_mau and ct.pop('mau', None):
+                    ra.append('Đã bỏ màu tô.')
+                if xoa_ghi_chu and ct.pop('ghi_chu', None):
+                    ra.append('Đã bỏ ghi chú.')
+            _sua_chi_tiet(con, so_to, so_thua, bo, 'đặt lại (màu, ghi chú)')
+    return ra
+
+
+def xoa_thua_ban_do(con, so_to: str, so_thua: str) -> None:
+    """1.1.07: xóa ô thửa khỏi BẢN ĐỒ dự án (nạp nhầm) - hồ sơ hộ không đổi; nạp lại bản vẽ thì ô thửa có lại."""
+    from .lap_pa import LoiNhap, kiem_quyen
+    kiem_quyen(con, 'sua_ho_so')
+    with csdl.giao_dich(con):
+        if not con.execute(f'DELETE FROM {BANG} WHERE so_to = ? AND so_thua = ?', (so_to, so_thua)).rowcount:
+            raise LoiNhap(f'Bản đồ dự án không có thửa {so_thua} tờ {so_to}.')
+        csdl.ghi_nhat_ky(con, 'Xóa ô thửa trên bản đồ', f'Thửa {so_thua} tờ {so_to} (hồ sơ hộ không đổi)')
 
 
 def doc_ban_do(con, so_to: str | None = None) -> list:

@@ -375,16 +375,17 @@ def _he_so_cua_cau(q: dict) -> list:
     return ra or [Decimal(x) / 100 for x in q.get('ty_le') or []]
 
 
-def quy_tac_nq28() -> dict:
+def quy_tac_nq28(tv: list | None = None) -> dict:
     """Quy tắc NQ 28 của gói (gia_dat_qd03.json, khóa quy_tac_nq28) + (1.0.82) hệ số đọc từ TOÀN VĂN đã nạp trên máy: khoản của
-    Điều 8 trùng căn cứ của trường hợp và có đúng một hệ số / tỷ lệ thì dùng số của văn bản, ghi 'nguon' (câu văn bản). Bản chép sâu."""
+    Điều 8 trùng căn cứ của trường hợp và có đúng một hệ số / tỷ lệ thì dùng số của văn bản, ghi 'nguon' (câu văn bản). Bản chép sâu.
+    tv (1.1.07): quy tắc toàn văn dùng thay bản đã lưu (so sánh trước khi lưu - so_sanh_toan_van)."""
     import copy
     from .goi_gia_dat import du_lieu_goc
     q = du_lieu_goc().get('quy_tac_nq28')
     if not q:
         raise LoiQuyTac('Gói dữ liệu chưa có quy tắc NQ 28 (khóa quy_tac_nq28 của gia_dat_qd03.json).')
     q = copy.deepcopy(q)
-    tv = doc_quy_tac_toan_van_da_luu()
+    tv = doc_quy_tac_toan_van_da_luu() if tv is None else tv
     if not tv:
         return q
     theo = {}
@@ -403,6 +404,37 @@ def quy_tac_nq28() -> dict:
             mt['nguon'] = c.get('noi_dung', '')
             break
     return q
+
+
+GIA_MAU_SO_SANH = Decimal(10000000)                     # giá gốc 1 m² dùng để tính thử khi so quy tắc cũ / mới (1.1.07)
+
+
+def so_sanh_toan_van(tv_moi: list, gia_mau: Decimal = GIA_MAU_SO_SANH) -> list:
+    """1.1.07 (kiểm định tầng 4): quy tắc toàn văn vừa đọc (chưa lưu) làm ĐỔI hệ số tính giá nào so với quy tắc đang dùng - [{ten, can_cu,
+    cu, moi, tien_cu, tien_moi, nguon}] (tiền: tính thử trên 1 m² giá gia_mau, làm tròn đồng). Rỗng = lưu toàn văn không đổi kết quả tính."""
+    from .tien import lam_tron
+    try:
+        cu, moi = quy_tac_nq28(), quy_tac_nq28(list(tv_moi or []))
+    except LoiQuyTac:
+        return []
+    ra = []
+
+    def them(ten, can_cu, a, b, nguon):
+        if str(a) == str(b):
+            return
+        ta = lam_tron(gia_mau * Decimal(str(a)), 0) if a not in (None, '') else None
+        tb = lam_tron(gia_mau * Decimal(str(b)), 0) if b not in (None, '') else None
+        ra.append(dict(ten=ten, can_cu=can_cu, cu=str(a), moi=str(b), tien_cu=ta, tien_moi=tb, nguon=nguon or ''))
+    theo_cu = {x['ma']: x for x in cu['truong_hop']}
+    for x in moi['truong_hop']:
+        y = theo_cu.get(x['ma'])
+        if y is not None:
+            them(x['ten'], x.get('can_cu', ''), y.get('he_so'), x.get('he_so'), x.get('nguon'))
+    for k, ten in (('hai_duong_pl_vii', 'PNN từ 2 mặt tiền - ít nhất 2 đường Phụ lục VII'),
+                   ('mot_pl_vii_va_duong_khac', 'PNN từ 2 mặt tiền - 1 đường Phụ lục VII + đường khác')):
+        them(ten, moi['nhieu_mat_tien'].get('can_cu', ''), cu['nhieu_mat_tien'].get(k), moi['nhieu_mat_tien'].get(k),
+             moi['nhieu_mat_tien'].get('nguon'))
+    return ra
 
 
 def _D(x, ten: str) -> Decimal:

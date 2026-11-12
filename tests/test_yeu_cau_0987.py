@@ -430,7 +430,7 @@ class TestLenhVaKiemTraTinh(unittest.TestCase):
             self.assertIn('Chẩn đoán && sửa lỗi hệ thống…', tg)
             self.assertIn('Phiếu kiểm đếm thực địa…', cc)
             # chưa mở dự án: VẪN bấm được (mục mờ bấm không phản ứng - người dùng tưởng hỏng), bấm thì báo mở dự án trước
-            for t in ('Phiếu kiểm đếm thực địa…', 'Nhập bản vẽ CAD (.dxf)…', 'Chẩn đoán & sửa lỗi hệ thống…',
+            for t in ('Phiếu kiểm đếm thực địa…', 'Chẩn đoán & sửa lỗi hệ thống…',      # 1.1.07: bỏ lệnh Nhập bản vẽ CAD (Ctrl+K)
                       'Trợ lý (giải thích, soạn nháp)…'):
                 self.assertNotIn(t, LENH_CAN_DU_AN)
                 self.assertTrue(w.lenh[t].isEnabled(), t)

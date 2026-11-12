@@ -143,10 +143,18 @@ def lop_cad_tu_mo_ta(mo_ta: str) -> tuple:
     return (m.group(1) or '').strip(), (m.group(2) or '').strip()
 
 
+# 1.1.07: tên CAD / MicroStation / gCadas tự đặt ("Style1", "Style14", "Placemark 3", "Polygon_001"): không phải nhãn địa chính
+TEN_TU_SINH = re.compile(r'(?:style|placemark|feature|point|line|polygon|polyline|path|text|cell|block)[ _-]?\d*', re.I)
+
+
+def la_ten_tu_sinh(chu) -> bool:
+    return bool(TEN_TU_SINH.fullmatch(str(chu or '').strip()))
+
+
 def loai_nhan(chu: str, lop_cad: str = '') -> str:
-    """Chữ của điểm KML -> loại nhãn địa chính (cùng quy tắc với LARC Mobile: loaiNhan)."""
+    """Chữ của điểm KML -> loại nhãn địa chính (cùng quy tắc với LARC Mobile: loaiNhan). Tên tự sinh -> ký hiệu (bỏ qua)."""
     c = str(chu or '').strip()
-    if not c:
+    if not c or TEN_TU_SINH.fullmatch(c):
         return 'ky_hieu'
     if re.fullmatch(r'[A-Z]{1,3}\d?\.[A-Z]{1,2}\d+[A-Z]?', c) or (
             re.fullmatch(r'Level 4[45]', str(lop_cad or '')) and re.fullmatch(r'[A-Z0-9.\-]{2,12}', c)):

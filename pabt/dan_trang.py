@@ -21,7 +21,6 @@ HO_TOI_THIEU = 10.0             # khoảng hở cuối trang từ chừng này (
 AN_TOAN_BANG = 3.0              # pt chừa lại ở trang chỉ có dòng bảng
 AN_TOAN_DAU = 7.0               # pt chừa lại ở trang có phần ngoài bảng (đầu văn bản, mục I, II)
 AN_TOAN_THU = 5.0               # thu gọn chỉ nhận khi trang cuối mới còn dư chừng này
-SAU_DOAN_GIAN = 60              # twip: khoảng cách đoạn mục II được nới thêm tối đa khi giãn (3 pt)
 # các nấc thu gọn, áp dồn theo thứ tự (twip; dong_ky = số dòng trống chỗ ký)
 NAC_THU_GON = (
     {'sau_doan': 60}, {'sau_doan': 40}, {'truoc_muc': 70, 'sau_muc': 30}, {'dem_doc': 16}, {'dem_doc': 10},
@@ -208,6 +207,8 @@ def dieu_tiet(dung_khoi, cao_trang: float, goc: ThongSo | None = None) -> ThongS
             thu = ts.ban_sao()
             for nac in NAC_THU_GON:
                 for ten, v in nac.items():
+                    if ten == 'dong_ky':                # 1.1.07: chỗ ký người dùng đặt (ban_in.mau_word.dong_ky) chỉ bớt MỘT dòng, không dưới 3
+                        v = max(3, ts.dong_ky - 1)
                     setattr(thu, ten, min(getattr(thu, ten), v))
                 kh = dung_khoi(thu)
                 tr = chia_trang(kh, cao_trang, _tieu_de(kh))

@@ -365,6 +365,16 @@ class KhungNhapBanDo(QWidget):
             raise LoiNhap(f'Bản đồ đã có thửa {thua} tờ {to}.')
         t.so_to, t.so_thua = to, thua
         t.loai_dat = str(moi.get('loai_dat', t.loai_dat)).strip().upper()
+        if 'mau' in moi:                                # 1.1.07: màu / ghi chú của thửa chưa lưu (ghi theo khi lưu bản đồ)
+            t.mau = ban_do_cad.chuan_mau(moi['mau'])
+        if 'ghi_chu' in moi:
+            ct = dict(t.chi_tiet or {})
+            chu = ' '.join(str(moi['ghi_chu'] or '').split())
+            if chu:
+                ct['ghi_chu'] = [x.strip() for x in chu.split(';') if x.strip()]
+            else:
+                ct.pop('ghi_chu', None)
+            t.chi_tiet = ct
         self._do_bang(ban_do_cad.chi_muc_thua(self.con) if self.con is not None else {})
 
     def kinh_tuyen(self) -> float:
@@ -458,7 +468,7 @@ LOP_BD = (('duong', 'Lưới thửa & ranh'), ('nhan', 'Số thửa, loại đ�
           ('ghi_chu', 'Ghi chú quy hoạch'))
 THE_KML = (('tat_ca', 'Tất cả'), ('thua', 'Thửa & DT'), ('moc', 'Mốc ranh'), ('ghi_chu', 'Ghi chú'), ('duong', 'Đường ranh'))
 _RE_THE_HTML = re.compile(r'<[^>]+>')
-_RE_TEN_TU_SINH = re.compile(r'(?:polygon|polyline|line|path|point)[ _]?\d*', re.I)       # "Polygon_001": CAD tự đặt, không phải nhãn
+_RE_TEN_TU_SINH = ban_do_kml.TEN_TU_SINH          # "Polygon_001", "Style14" (1.1.07): CAD tự đặt, không phải nhãn
 
 
 def _do_sang(hex_rgb: str) -> float:
@@ -976,7 +986,8 @@ class KhungBanDo(QGraphicsView):
                             it.setFlag(QGraphicsEllipseItem.GraphicsItemFlag.ItemIgnoresTransformations, True)
                             it.setPen(but('#FF3B30', 1.5))
                             it.setBrush(QBrush(Qt.BrushStyle.NoBrush))
-                            tt = dict(kieu='vong_moc', lop='moc', chu=pm.ten, lop_cad=pm.lop_cad, ban_ve=pm.ban_ve,
+                            tt = dict(kieu='vong_moc', lop='moc', chu='' if ban_do_kml.la_ten_tu_sinh(pm.ten) else pm.ten,
+                                      lop_cad=pm.lop_cad, ban_ve=pm.ban_ve,
                                       lat=ngoai[0][1], lon=ngoai[0][0])
                             self._them_kml(it, chu, 4, 'moc', tt, an_xa=True)
                             continue
@@ -1699,6 +1710,8 @@ class HopBanDo(QDialog):
         self.khung_tt.b_ho.clicked.connect(lambda: self.thua_chon is not None and self.xem_ho(self.thua_chon.ma_ho))
         self.khung_tt.b_sua.clicked.connect(lambda: self.sua_thua())
         self.khung_tt.b_chep.clicked.connect(lambda: self.sao_chep_thua())
+        self.khung_tt.b_xoa_gan.clicked.connect(lambda: self.dat_lai_thua())
+        self.khung_tt.b_xoa_o.clicked.connect(lambda: self.xoa_o_thua())
 
     def _tao_khung_do(self) -> None:
         """Kết quả đo, bộ nạp ảnh nền, các nhãn đáy."""
@@ -2240,6 +2253,8 @@ class HopBanDo(QDialog):
                 return False
         try:
             if t.tam:
+                if moi.get('xoa_gan_ho'):               # 1.1.07: hộ gắn ở hồ sơ dù ô thửa chưa lưu
+                    ban_do_cad.xoa_gan_ho_thua(self.con, t.so_to, t.so_thua)
                 self.khung_nhap.sua_thua_tam(t.so_to, t.so_thua, moi)
             else:
                 ban_do_cad.sua_thua_ban_do(self.con, t.so_to, t.so_thua, moi)
@@ -2252,8 +2267,89 @@ class HopBanDo(QDialog):
             self.lb.setText(chu_loi('Không sửa được thửa', e))
             return False
         self.thua_chon = ban_do_cad.ThuaBanDo(**{**t.__dict__, 'so_to': moi.get('so_to', t.so_to), 'so_thua': moi.get('so_thua', t.so_thua)})
+        if moi.get('xoa_gan_ho'):                       # 1.1.07: hồ sơ hộ đổi -> khớp lại hộ, tô lại
+            self._sau_doi_du_lieu()
+            return True
         self.ds_tam = ban_do_cad.thua_tu_ket_qua(self._con_doc(), self.khung_nhap.kq) if self.khung_nhap.kq is not None else []
         self.nap_to()
+        return True
+
+    # ---- 1.1.07: bỏ gắn hộ, đặt lại, xóa ô thửa
+    def _hoi(self, chu: str, xac_nhan) -> bool:
+        if xac_nhan is not None:
+            return bool(xac_nhan)
+        if self.im_lang:
+            return True
+        return QMessageBox.question(self, TEN_UD, chu) == QMessageBox.StandardButton.Yes
+
+    def _loi_ghi(self, e, viec: str) -> bool:
+        chu = str(e) if isinstance(e, (LoiNhap, ValueError, ban_do_cad.LoiCad)) else chu_loi(viec, e)
+        self.lb.setText(chu)
+        if not self.im_lang:
+            QMessageBox.warning(self, TEN_UD, chu)
+        return False
+
+    def bo_gan_ho(self, t=None, xac_nhan=None) -> bool:
+        """Bỏ gắn hộ của ô thửa (gắn nhầm): thửa ra khỏi hồ sơ hộ, về "Chưa gắn hộ". Thửa đã có dòng bồi thường đất: từ chối."""
+        t = t or self.thua_chon
+        if t is None or t.ma_ho is None or not self._con_song() or self.chi_doc:
+            return False
+        if not self._hoi(f'Bỏ gắn hộ {t.ho_ten or t.ma_ho} khỏi thửa {t.so_thua} tờ {t.so_to}? Thửa ra khỏi hồ sơ hộ, về "Chưa gắn hộ".',
+                         xac_nhan):
+            return False
+        try:
+            ban_do_cad.xoa_gan_ho_thua(self.con, t.so_to, t.so_thua)
+        except Exception as e:                          # noqa: BLE001 - LoiNhap (có dòng bồi thường), file chỉ đọc / khóa
+            return self._loi_ghi(e, 'Không bỏ gắn được hộ')
+        self._sau_doi_du_lieu()
+        self.lb.setText(f'Đã bỏ gắn hộ khỏi thửa {t.so_thua} tờ {t.so_to}.')
+        return True
+
+    def dat_lai_thua(self, t=None, xac_nhan=None) -> bool:
+        """Đặt lại ô thửa: bỏ gắn hộ + bỏ màu tô + bỏ ghi chú (một lần hỏi)."""
+        t = t or self.thua_chon
+        if t is None or self.chi_doc or self.con is None:
+            return False
+        phan = ([f'bỏ gắn hộ {t.ho_ten or t.ma_ho}'] if t.ma_ho is not None else []) + \
+            (['bỏ màu tô'] if t.mau else []) + (['bỏ ghi chú'] if (t.chi_tiet or {}).get('ghi_chu') else [])
+        if not phan:
+            self.lb.setText(f'Thửa {t.so_thua} tờ {t.so_to} chưa gắn hộ, chưa tô màu, chưa có ghi chú: không có gì để đặt lại.')
+            return False
+        if not self._hoi(f'Đặt lại thửa {t.so_thua} tờ {t.so_to}: ' + ', '.join(phan) + '?', xac_nhan):
+            return False
+        try:
+            if t.tam:                                   # thửa chưa lưu: hộ gắn ở hồ sơ, màu / ghi chú trong kết quả phân tích
+                if t.ma_ho is not None:
+                    ban_do_cad.xoa_gan_ho_thua(self.con, t.so_to, t.so_thua)
+                self.khung_nhap.sua_thua_tam(t.so_to, t.so_thua, dict(mau='', ghi_chu=''))
+            else:
+                ban_do_cad.dat_lai_thua_ban_do(self.con, t.so_to, t.so_thua)
+        except Exception as e:                          # noqa: BLE001
+            return self._loi_ghi(e, 'Không đặt lại được thửa')
+        self._sau_doi_du_lieu()
+        self.lb.setText(f'Đã đặt lại thửa {t.so_thua} tờ {t.so_to}: ' + ', '.join(phan) + '.')
+        return True
+
+    def xoa_o_thua(self, t=None, xac_nhan=None) -> bool:
+        """Xóa ô thửa nạp nhầm khỏi bản đồ dự án (thửa chưa lưu: khỏi kết quả phân tích). Hồ sơ hộ không đổi."""
+        t = t or self.thua_chon
+        if t is None or self.chi_doc or self.con is None:
+            return False
+        if not self._hoi(f'Xóa ô thửa {t.so_thua} tờ {t.so_to} khỏi bản đồ dự án? Hồ sơ hộ không đổi; nạp lại bản vẽ thì ô thửa có lại.',
+                         xac_nhan):
+            return False
+        try:
+            if t.tam:
+                kq = self.khung_nhap.kq
+                kq.thua = [x for x in kq.thua if (x.so_to, x.so_thua) != (t.so_to, t.so_thua)]
+            else:
+                ban_do_cad.xoa_thua_ban_do(self.con, t.so_to, t.so_thua)
+        except Exception as e:                          # noqa: BLE001
+            return self._loi_ghi(e, 'Không xóa được ô thửa')
+        self.thua_chon = None
+        self.khung_tt.xoa()
+        self._sau_doi_du_lieu()
+        self.lb.setText(f'Đã xóa ô thửa {t.so_thua} tờ {t.so_to} khỏi bản đồ.')
         return True
 
     # ---- nền bản đồ (ảnh vệ tinh, đường phố, địa hình) - tải theo VÙNG ĐANG XEM như LARC Mobile
@@ -2523,7 +2619,7 @@ class HopBanDo(QDialog):
             for rec in self.view.kml_cad:
                 tt = rec['tt']
                 if tt.get('loai') == 'moc' or tt.get('kieu') == 'vong_moc':
-                    ds.append((tt, 'Mốc', 'Mốc ' + (tt.get('chu') or ''), tt.get('lop_cad') or ''))
+                    ds.append((tt, 'Mốc', ('Mốc ' + tt['chu']) if tt.get('chu') else 'Mốc (không tên)', tt.get('lop_cad') or ''))
         if the in ('tat_ca', 'ghi_chu'):
             for rec in self.view.kml_cad:
                 tt = rec['tt']
@@ -2842,7 +2938,11 @@ class HopBanDo(QDialog):
         if self.con is not None and not self.chi_doc:
             m.addSeparator()
             m.addAction('Đổi hộ của thửa…' if t.ma_ho is not None else 'Gắn hộ vào thửa…', lambda: self.gan_ho(t))
-            m.addAction('Sửa số tờ, số thửa…', lambda: self.sua_thua(t))
+            if t.ma_ho is not None:                     # 1.1.07
+                m.addAction('Bỏ gắn hộ (về Chưa gắn hộ)…', lambda: self.bo_gan_ho(t))
+            m.addAction('Sửa thửa (số tờ, số thửa, màu, ghi chú)…', lambda: self.sua_thua(t))
+            m.addAction('Đặt lại thửa (bỏ hộ, màu, ghi chú)…', lambda: self.dat_lai_thua(t))
+            m.addAction('Xóa ô thửa khỏi bản đồ…', lambda: self.xoa_o_thua(t))
         if diem is None:
             return m
         m.exec(diem)

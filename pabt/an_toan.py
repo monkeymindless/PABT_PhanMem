@@ -67,7 +67,6 @@ def luu_xlsx(wb, duong_dan) -> int:
 
 
 # ---------------------------------------------------------------- dữ liệu cá nhân (Nghị định 13/2023/NĐ-CP)
-KHOA_CHE_CCCD = 'CHE_CCCD'          # cai_dat của dự án: '1' = bản in / văn bản trình che số CCCD (bản niêm yết công khai)
 
 
 def che_cccd(chu: str, che: bool = False) -> str:

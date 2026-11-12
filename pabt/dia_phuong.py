@@ -131,6 +131,9 @@ def kiem_tra_mau_word(mw) -> list:
         loi.append('ban_in.mau_word.huong_giay: "doc" (dọc) hoặc "ngang".')
     if not isinstance(mw.get('tu_co_gian', True), bool):
         loi.append('ban_in.mau_word.tu_co_gian: true / false.')
+    dk = mw.get('dong_ky', 5)                           # 1.1.07: khoảng trống ký tên (số dòng)
+    if isinstance(dk, bool) or not isinstance(dk, int) or not 2 <= dk <= 12:
+        loi.append('ban_in.mau_word.dong_ky: số dòng trống chỗ ký, từ 2 đến 12.')
     return loi
 
 

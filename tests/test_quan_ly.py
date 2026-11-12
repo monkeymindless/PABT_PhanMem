@@ -36,7 +36,7 @@ class TestKhongCanDuAn(unittest.TestCase):
         k = ct.khoang_duong_kinh('Sao đen (d >15-18 cm)')
         self.assertTrue(k.chua(D(16)) and k.chua(D(18)) and not k.chua(D(15)))
         self.assertEqual(ct.mo_ta_chu_vi('Sao đen (d >15-18 cm)'), 'chu vi > 47,1 đến ≤ 56,5 cm')
-        self.assertEqual(ct.mo_ta_chu_vi('Bách (d <3 cm)'), 'chu vi < 9,4 cm')
+        self.assertEqual(ct.mo_ta_chu_vi('Bách (d <3 cm)'), 'chu vi ≤ 9,4 cm')      # 1.1.07: bậc đầu = ≤3 của văn bản
         self.assertEqual(ct.mo_ta_chu_vi('Si cảnh - 10cm < Đk thân ≤ 20cm. đường kính tán > 1.5m'), 'chu vi > 31,4 đến ≤ 62,8 cm')
         self.assertIsNone(ct.khoang_duong_kinh('Hỗ trợ di dời chậu kiểng - Chậu có đường kính > 50 cm'))
         self.assertEqual(ct.ten_goc('Si cảnh - 10cm < Đk thân ≤ 20cm'), 'Si cảnh')
