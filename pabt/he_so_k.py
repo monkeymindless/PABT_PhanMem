@@ -818,7 +818,10 @@ def doc_file(file, dia_ban: str = '', bao=None, cho=None) -> tuple:
     p = Path(file)
     if not p.is_file():
         raise LoiHeSoK(f'Không thấy file {p.name}.')
-    if dia_ban.strip():
+    tat_ca = dia_ban.strip() == '*'                     # 1.1.06: đọc mọi xã của file - màn hình cho người dùng tích chọn xã sau
+    if tat_ca:
+        ds_xa, dia_ban = None, ''
+    elif dia_ban.strip():
         ds_xa = [x.strip() for x in dia_ban.split(',') if x.strip()]
     else:
         from . import gia_dat_nq28 as nq
@@ -844,7 +847,8 @@ def doc_file(file, dia_ban: str = '', bao=None, cho=None) -> tuple:
         if la_phu_luc(trang):
             dong, cb = doc_phu_luc(trang, ds_xa)
             if not dong:
-                raise LoiHeSoK(f'"{p.name}" không có bảng của {", ".join(ds_xa)} (hoặc không đọc được hệ số).')
+                raise LoiHeSoK(f'"{p.name}" không có bảng của {", ".join(ds_xa) if ds_xa else "xã / phường nào"} '
+                               '(hoặc không đọc được hệ số).')
             dong, cb2 = noi_bang_gia(dong)
             vb = tim_van_ban([[t[:3000]] for t in trang[:3]])
             xa = ', '.join(dict.fromkeys(r['dia_ban'] for r in dong))

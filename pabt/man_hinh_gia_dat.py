@@ -490,6 +490,10 @@ class KhungCapNhatGiaDat(QWidget):
         except Exception as e:
             self._bao('canh_bao', str(e))
             return None
+        dong = self._chon_xa(dong)                      # 1.1.06: trang web nhiều xã -> tích chọn xã
+        if dong is None:
+            self.lb.setText('Đã hủy: chưa đưa xã nào lên bảng.')
+            return None
         self.kq = {'dong_goc': dong, 'quy_tac': [], 'van_ban': vb, 'chu': chu}
         self._ve_quy_tac([])
         self._hien(dong, vb, chu, nguon)
@@ -505,7 +509,23 @@ class KhungCapNhatGiaDat(QWidget):
                 return None
         return self.nap_file(file)
 
-    def nap_file(self, file):
+    def _chon_xa(self, dong: list, chon=None):
+        """1.1.06: file / trang web có nhiều xã -> hộp tích chọn xã (man_hinh_chon_dia_ban). Tích sẵn: xã đã gõ ở ô Xã / phường; ô
+        trống thì các xã đang có trong bảng giá của máy. Trả các dòng của xã được chọn, None = Hủy."""
+        from .man_hinh_chon_dia_ban import chon_dia_ban
+        go = [x.strip() for x in self.o_xa.text().split(',') if x.strip()]
+        may = {}
+        for r in nq.tat_ca():
+            may[r.get('xa', '')] = may.get(r.get('xa', ''), 0) + 1
+
+        def tren_may(x):
+            return sum(n for k, n in may.items() if x and nq.khop_xa(x, k))
+
+        def chon_san(x):
+            return any(nq.khop_xa(g, x) or nq.khop_xa(x, g) for g in go) if go else tren_may(x) > 0
+        return chon_dia_ban(self, dong, 'xa', chon_san, tren_may, 'giá đất', chon)
+
+    def nap_file(self, file, chon_xa=None):
         from PySide6.QtWidgets import QApplication, QProgressDialog
         from .cap_nhat_gia_dat import ap_quy_tac_file, doc_file_day_du
         hop = [None]
@@ -533,6 +553,12 @@ class KhungCapNhatGiaDat(QWidget):
         finally:
             if hop[0] is not None:
                 hop[0].close()
+        goc = self._chon_xa(kq['dong_goc'], chon_xa)       # 1.1.06: chọn xã trước khi dựng vị trí theo quy tắc
+        if goc is None:
+            self.lb.setText('Đã hủy: chưa đưa xã nào lên bảng. Đọc lại file để chọn xã.')
+            return None
+        if len(goc) != len(kq['dong_goc']):
+            kq = dict(kq, dong_goc=goc, chu=kq['chu'] + f' Đã chọn {len({r.get("xa", "") for r in goc})} xã / phường.')
         self.kq = kq
         self._ve_quy_tac(kq['quy_tac'])
         dong, them = ap_quy_tac_file(kq)

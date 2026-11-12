@@ -216,7 +216,20 @@ class KhungHeSoK(QWidget):
             kq = (kq or []) + (d or [])
         return kq
 
-    def nap_file(self, file, gop: bool = False):
+    def _chon_xa(self, dong: list, chon=None):
+        """1.1.06: file có nhiều xã -> hộp tích chọn xã. Tích sẵn: xã ở ô Địa bàn; ô trống thì các xã của bảng giá đất đang dùng
+        (đúng phạm vi đọc cũ). Trả các dòng của xã được chọn, None = Hủy."""
+        from . import gia_dat_nq28 as nq
+        from .man_hinh_chon_dia_ban import chon_dia_ban
+        go = [x.strip() for x in self.o_db.text().split(',') if x.strip()] or nq.ds_xa()
+        may = {}
+        for r in hk.tat_ca():
+            may[r.get('dia_ban') or ''] = may.get(r.get('dia_ban') or '', 0) + 1
+        # so tên giữ dấu (khop_dia_ban, 1.0.90: "Lộc Thành" khác "Lộc Thạnh")
+        return chon_dia_ban(self, dong, 'dia_ban', lambda x: any(hk.khop_dia_ban(x, g) for g in go),
+                            lambda x: sum(n for k, n in may.items() if x and hk.khop_dia_ban(k, x)), 'hệ số K', chon)
+
+    def nap_file(self, file, gop: bool = False, chon_xa=None):
         from PySide6.QtWidgets import QProgressDialog
         hop = [None]
 
@@ -235,14 +248,23 @@ class KhungHeSoK(QWidget):
         def cho():
             return hop[0] is not None and hop[0].wasCanceled()
 
+        # 1.1.06: ô Địa bàn trống -> đọc MỌI xã của file rồi người dùng tích chọn (trước: chỉ lấy xã của bảng giá đang dùng, xã
+        # khác bị bỏ không báo). Chế độ im lặng không chọn xã (kiểm thử cũ): đọc như trước.
+        hoi = chon_xa is not None or not self.im_lang
+        db = self.o_db.text().strip() or ('*' if hoi else '')
         try:
-            dong, vb, cach = hk.doc_file(file, self.o_db.text().strip(), bao, cho)
+            dong, vb, cach = hk.doc_file(file, db, bao, cho)
         except hk.LoiHeSoK as e:
             self._bao(str(e))
             return None
         finally:
             if hop[0] is not None:
                 hop[0].close()
+        if hoi:
+            dong = self._chon_xa(dong, chon_xa)
+            if dong is None:
+                self._chu_trang_thai('Đã hủy: chưa đưa xã nào lên bảng.')
+                return None
         self._nhan(dong, vb, str(file), cach, gop)
         return dong
 
