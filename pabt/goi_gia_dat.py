@@ -521,29 +521,77 @@ def doc_goi_cai(file) -> dict:
     return dict(mo_ta=mo, goi=goi, bang_gia=bg, he_so_k=hk)
 
 
-def nhap_goi_cai(file, bo_sung: bool = True) -> dict:
-    """Cài gói: lưu bộ quy tắc + ghi đơn giá đất + hệ số K của các xã trong gói. bo_sung=True: giữ xã khác trên máy.
-    Trả {xa, so_gia, so_k, goi_ma}. Cần quyền quản trị."""
+def _cua_xa(ten_xa: str, chon: list) -> bool:
+    """Địa bàn ten_xa thuộc danh sách chọn (khóa giữ dấu - "Lộc Thành" khác "Lộc Thạnh")."""
+    k = _khoa_xa(ten_xa or '')
+    return bool(k) and any(k == _khoa_xa(x) for x in chon)
+
+
+def thong_ke_goi_cai(xem: dict) -> list:
+    """1.1.06 (hộp nhập gói cài): mỗi xã trong gói (doc_goi_cai) - [{ten, so_gia, so_k, gia_may, k_may}]: số dòng đơn giá / hệ số K
+    trong gói và đang có trên máy (0 = xã mới, sẽ thêm; > 0 = xã trùng, sẽ thay sạch)."""
+    from . import gia_dat_nq28 as nq, he_so_k as hk
+    dong_k = hk._mo_rong(xem['he_so_k'].get('dong'))
+    ten = list(dict.fromkeys([str(x) for x in (xem['mo_ta'].get('xa') or [])] +
+                             [(r.get('xa') or '').strip() for r in xem['bang_gia']['dong'] if (r.get('xa') or '').strip()]))
+    gia_may, k_may = {}, {}
+    for r in nq.tat_ca():
+        gia_may[_khoa_xa(r.get('xa') or '')] = gia_may.get(_khoa_xa(r.get('xa') or ''), 0) + 1
+    for r in hk.tat_ca():
+        k_may[_khoa_xa(r.get('dia_ban') or '')] = k_may.get(_khoa_xa(r.get('dia_ban') or ''), 0) + 1
+    ra, da = [], set()
+    for x in ten:
+        k = _khoa_xa(x)
+        if not k or k in da:
+            continue
+        da.add(k)
+        ra.append(dict(ten=x, so_gia=sum(1 for r in xem['bang_gia']['dong'] if _khoa_xa(r.get('xa') or '') == k),
+                       so_k=sum(1 for r in dong_k if _khoa_xa(r.get('dia_ban') or '') == k),
+                       gia_may=gia_may.get(k, 0), k_may=k_may.get(k, 0)))
+    return ra
+
+
+def nhap_goi_cai(file, bo_sung: bool = True, chi_xa: list | None = None) -> dict:
+    """Cài gói: lưu bộ quy tắc + ghi đơn giá đất + hệ số K của các xã trong gói. bo_sung=True: giữ xã khác trên máy, xã trùng tên
+    thay sạch; False: bảng giá đất và hệ số K của máy chỉ còn các xã của gói. chi_xa (1.1.06): chỉ cài các xã này (đơn giá, hệ số K
+    và đoạn đường riêng của gói đều lọc theo xã); None = mọi xã trong gói. Trả {xa, so_gia, so_k, goi_ma}. Cần quyền quản trị."""
     from . import gia_dat_nq28 as nq, he_so_k as hk, quan_tri_bo
     quan_tri_bo.kiem_quyen('cài gói giá đất và hệ số K')
     goi_cai = doc_goi_cai(file)
     goi, bg, bang_k = goi_cai['goi'], goi_cai['bang_gia'], goi_cai['he_so_k']
+    dong_gia, dong_k = list(bg['dong']), hk._mo_rong(bang_k.get('dong'))
+    mo = goi_cai['mo_ta']
+    xa_cai = list(mo.get('xa') or [])
+    if chi_xa is not None:
+        chi_xa = [str(x).strip() for x in chi_xa if str(x).strip()]
+        if not chi_xa:
+            raise LoiGoi('Chưa chọn xã / phường nào để cài.')
+        dong_gia = [r for r in dong_gia if _cua_xa(r.get('xa'), chi_xa)]
+        dong_k = [r for r in dong_k if _cua_xa(r.get('dia_ban'), chi_xa)]
+        if not dong_gia and not dong_k:
+            raise LoiGoi('Gói không có dòng đơn giá / hệ số K nào của các xã đã chọn.')
+        goi = dict(goi)
+        if isinstance(goi.get('dia_ban'), dict):         # đoạn đường / K1 riêng theo xã của gói: chỉ xã đã chọn
+            goi['dia_ban'] = {k: v for k, v in goi['dia_ban'].items() if _cua_xa(k, chi_xa)}
+        xa_cai = [x for x in xa_cai if _cua_xa(x, chi_xa)] or chi_xa
     if goi.get('ma') == MA_GAN_SAN:
         goi = dict(goi)
         goi['ma'] = (goi.get('ma') or 'CAI') + '_MAY'
     ghi_goi(goi)
     if bo_sung:
-        nq.ghi_bo_sung(list(bg['dong']), bg.get('van_ban') or '', str(file))
-        cu = hk.tat_ca()
-        xa_moi = {_khoa_xa(r.get('dia_ban') or '') for r in hk._mo_rong(bang_k.get('dong'))}
-        giu = [r for r in cu if _khoa_xa(r.get('dia_ban') or '') not in xa_moi]
-        hk.ghi(giu + hk._mo_rong(bang_k.get('dong')), bang_k.get('van_ban') or hk.VAN_BAN, str(file))
+        if dong_gia:
+            nq.ghi_bo_sung(dong_gia, bg.get('van_ban') or '', str(file))
+        if dong_k:
+            cu = hk.tat_ca()
+            xa_moi = {_khoa_xa(r.get('dia_ban') or '') for r in dong_k}
+            giu = [r for r in cu if _khoa_xa(r.get('dia_ban') or '') not in xa_moi]
+            hk.ghi(giu + dong_k, bang_k.get('van_ban') or hk.VAN_BAN, str(file))
     else:
-        nq.ghi_thay(list(bg['dong']), bg.get('van_ban') or '', str(file))
-        hk.ghi(hk._mo_rong(bang_k.get('dong')), bang_k.get('van_ban') or hk.VAN_BAN, str(file))
-    mo = goi_cai['mo_ta']
-    return dict(xa=list(mo.get('xa') or []), so_gia=int(mo.get('so_gia') or len(bg['dong'])),
-                so_k=int(mo.get('so_k') or 0), goi_ma=goi.get('ma', ''), niem_phong=bool(mo.get('niem_phong_khop')))
+        nq.ghi_thay(dong_gia, bg.get('van_ban') or '', str(file))
+        hk.ghi(dong_k, bang_k.get('van_ban') or hk.VAN_BAN, str(file))
+    return dict(xa=xa_cai, so_gia=len(dong_gia) if chi_xa is not None else int(mo.get('so_gia') or len(dong_gia)),
+                so_k=len(dong_k) if chi_xa is not None else int(mo.get('so_k') or 0), goi_ma=goi.get('ma', ''),
+                niem_phong=bool(mo.get('niem_phong_khop')))
 
 
 def tao_goi_tu(goc: dict, ma: str, ten: str, hieu_luc_tu: str) -> dict:

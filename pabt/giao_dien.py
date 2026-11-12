@@ -1168,6 +1168,7 @@ KY_HIEU = [
     (r'du thao|niem yet', 0xE8A5), (r'^so sanh', 0xE8AB),
     (r'^dot trinh', 0xE8B7), (r'trang thai ho', 0xE73A), (r'nhap quyet dinh', 0xE8A5), (r'bao cao tong hop|bao cao tien do', 0xE9F9),
     (r'doi chieu', 0xE7C3), (r'cap nhat mau in', 0xE72C), (r'cap nhat phan mem|^cap nhat', 0xE895),
+    (r'^(xuat|tao) goi', 0xEDE1), (r'^nhap goi', 0xE8B5),       # 1.1.06: "Xuất gói cài…" là xuất file, không phải in (trước biểu tượng máy in)
     (r'^(in|xuat)\b|pdf', 0xE749), (r'^xoa|^go ban', 0xE74D), (r'^them', 0xE710), (r'^(sua|ap don gia|ap dung)', 0xE70F),
     (r'^(huy|dong|cancel|close)', 0xE711), (r'goi y', 0xE82F), (r'^chon tat ca', 0xE73E), (r'^(chon|tra |tim)', 0xE721),
     (r'^tach', 0xE8C6),

@@ -21,6 +21,57 @@ def _o(x) -> QTableWidgetItem:
     return QTableWidgetItem('' if x is None else str(x))
 
 
+def _tao_hop_nhap_goi_cai(cha, xem: dict, ten_file: str = ''):
+    """1.1.06 - hộp nhập gói cài (.larcgia): bảng từng xã (trong gói / đang có trên máy, sẽ thêm / thay), tích chọn xã, Chọn tất cả,
+    Bỏ chọn; chọn cách ghi: Bổ sung (mặc định - xã chưa có thêm mới, xã trùng thay sạch, xã khác giữ) hoặc Thay toàn bộ."""
+    from PySide6.QtWidgets import QButtonGroup, QRadioButton
+    from .man_hinh_chon_dia_ban import HopChonDiaBan, _so
+
+    tk = gg.thong_ke_goi_cai(xem)
+
+    class HopNhapGoiCai(HopChonDiaBan):
+        def __init__(self):
+            super().__init__(cha, [(x['ten'], x['so_gia'] + x['so_k']) for x in tk], lambda x: True, None, 'giá đất và hệ số K')
+            self.setWindowTitle('Nhập gói cài đơn giá đất và hệ số K' + (f' - {ten_file}' if ten_file else ''))
+            self.resize(720, 600)
+            mo = xem['mo_ta']
+            self.lb.setText(f'Gói có {len(tk)} xã / phường: {_so(mo.get("so_gia", 0))} dòng đơn giá đất, {_so(mo.get("so_k", 0))} dòng hệ số K'
+                            + (f', bộ quy tắc "{mo.get("goi_ten")}"' if mo.get('goi_ten') else '') +
+                            '. Tích các xã cần cài; xã không tích giữ nguyên số liệu đang có trên máy.')
+            self.bang.setHorizontalHeaderLabels(['Chọn', 'Xã / phường', 'Trong gói: giá / K', 'Trên máy: giá / K  ->  sẽ'])
+            for r, x in enumerate(tk):
+                self.bang.item(r, 2).setText(f'{_so(x["so_gia"])} / {_so(x["so_k"])} dòng')
+                co = x['gia_may'] or x['k_may']
+                self.bang.item(r, 3).setText((f'{_so(x["gia_may"])} / {_so(x["k_may"])} dòng -> thay sạch' if co else 'chưa có -> thêm mới'))
+            self.r_bo_sung = QRadioButton('Bổ sung (khuyên dùng)')
+            self.r_thay = QRadioButton('Thay toàn bộ')
+            mo_ta = ((self.r_bo_sung, 'Xã chưa có thì thêm; xã trùng tên thì xóa sạch số cũ của xã đó rồi ghi số trong gói; các xã '
+                                      'khác trên máy giữ nguyên.'),
+                     (self.r_thay, 'Bảng giá đất và hệ số K của máy CHỈ còn các xã đã chọn: mọi xã khác, kể cả 4 địa bàn gắn sẵn, bị bỏ '
+                                   '(lấy lại bằng "Dùng lại bảng gắn sẵn").'))
+            self.nhom = QButtonGroup(self)
+            khung = QGroupBox('Cách ghi')
+            v = QVBoxLayout(khung)
+            for b, chu in mo_ta:
+                self.nhom.addButton(b)
+                b.setToolTip(chu)
+                lb = QLabel(chu)
+                lb.setWordWrap(True)
+                lb.setContentsMargins(22, 0, 0, 4)
+                v.addWidget(b)
+                v.addWidget(lb)
+            self.r_bo_sung.setChecked(True)
+            lo = self.layout()
+            lo.insertWidget(lo.count() - 1, khung)
+            self.b_ok.setText('Cài các xã đã chọn')
+
+        @property
+        def bo_sung(self) -> bool:
+            return not self.r_thay.isChecked()
+
+    return HopNhapGoiCai()
+
+
 class HopChonXaGoiCai(QDialog):
     """Chọn xã / phường để đóng gói cài: đơn giá đất và hệ số K luôn đi cùng; bộ quy tắc kèm theo."""
     im_lang = False
@@ -501,7 +552,9 @@ class HopGoiGiaDat(QDialog):
         self._bao(f'Đã xuất gói cài {len(ds_xa)} địa bàn (đơn giá + hệ số K + bộ quy tắc):\n{ra}', loi=False)
         return True
 
-    def nhap_goi_cai(self, file=None, bo_sung: bool = True) -> bool:
+    def nhap_goi_cai(self, file=None, bo_sung: bool = True, chi_xa: list | None = None) -> bool:
+        """1.1.06: hộp chọn xã + cách ghi (_tao_hop_nhap_goi_cai) thay câu hỏi Có / Không. Im lặng: dùng bo_sung / chi_xa truyền vào."""
+        from pathlib import Path
         if file is None:
             file, _ = QFileDialog.getOpenFileName(self, 'Chọn gói cài giá đất', '', f'Gói cài giá đất (*{gg.DUOI_GOI_CAI})')
             if not file:
@@ -511,17 +564,22 @@ class HopGoiGiaDat(QDialog):
         except gg.LoiGoi as e:
             self._bao(str(e))
             return False
-        xa = ', '.join(xem['mo_ta'].get('xa') or [])
         if not self.im_lang:
-            hoi = (f'Cài gói giá đất gồm {xem["mo_ta"].get("so_gia", 0)} dòng đơn giá và '
-                   f'{xem["mo_ta"].get("so_k", 0)} dòng hệ số K của: {xa}?\n'
-                   'Địa bàn trùng tên được thay; địa bàn khác trên máy giữ nguyên. Bộ quy tắc trong gói được lưu vào máy.')
-            if QMessageBox.question(self, TIEU_DE, hoi) != QMessageBox.StandardButton.Yes:
+            h = _tao_hop_nhap_goi_cai(self, xem, Path(file).name)
+            try:
+                if h.exec() != QDialog.DialogCode.Accepted:
+                    return False
+                bo_sung, chi_xa = h.bo_sung, h.chon
+            finally:
+                h.deleteLater()
+            if not bo_sung and QMessageBox.question(
+                    self, TIEU_DE, 'Thay TOÀN BỘ bảng giá đất và hệ số K của máy bằng ' + f'{len(chi_xa)} xã đã chọn? Mọi xã khác trên '
+                    'máy (kể cả 4 địa bàn gắn sẵn) bị bỏ khỏi bảng đang dùng. Số đã áp vào hộ không đổi.') != QMessageBox.StandardButton.Yes:
                 return False
         if not self._xin_quyen():
             return False
         try:
-            kq = gg.nhap_goi_cai(file, bo_sung=bo_sung)
+            kq = gg.nhap_goi_cai(file, bo_sung=bo_sung, chi_xa=chi_xa)
         except Exception as e:                                           # noqa: BLE001
             self._bao(str(e))
             return False
