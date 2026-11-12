@@ -7,6 +7,13 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.1.06', '12/11/2026', (
+        'Bảng giá đất: gộp thẻ "Cập nhật, bổ sung giá đất" vào "Bộ quy tắc & cập nhật giá đất". Cột trái ba cụm: Gói văn bản và hiệu lực, Quy tắc vị trí và bảng dữ liệu của máy (thay / dùng lại bảng giá, đọc / dùng lại hệ số K), Gói cài và trao đổi.',
+        'Đọc / scan văn bản giá đất hoặc hệ số K có nhiều xã: hiện danh sách xã để tích chọn (Chọn tất cả, Bỏ chọn, lọc theo tên) - chỉ xã được chọn đưa lên bảng, không phải xóa tay từng xã.',
+        'Đọc xong văn bản giá đất: tự tạo gói nháp theo số hiệu và ngày hiệu lực đọc được (dòng "Nháp - chưa lưu"); chỉ có hiệu lực khi bấm Lưu gói.',
+        'Nhập gói cài: bảng từng xã (trong gói / trên máy, thêm mới hay thay sạch), tích xã cần cài, chọn Bổ sung hoặc Thay toàn bộ. Nút xuất gói không còn biểu tượng máy in.',
+        'Cửa sổ Bảng giá đất vừa màn hình 1366 x 768 phóng 125% (trước rộng 1.173 px, cao 650 px - bị ép); màn thấp thì cuộn dọc.',
+    )),
     ('1.1.05', '12/11/2026', (
         'Cập nhật bảng giá đất từ bản scan / ảnh chụp: mỗi con số giá giữ độ tin cậy nhận dạng chữ; số đọc kém tin cậy (dưới 85%) làm dòng được tô màu nhắc đối chiếu. Rê chuột vào dòng tô màu thấy ngay ẢNH CẮT đúng con số trên bản scan (trang, độ tin cậy) để so với số phần mềm đã đọc, không phải mở lại file PDF.',
         'Trang Tổng hợp tiền theo phương án mở nhanh hơn ở dự án nhiều hộ (dùng lại kết quả đã tính khi mở dự án, không đọc lại toàn bộ phương án). Số liệu không đổi.',

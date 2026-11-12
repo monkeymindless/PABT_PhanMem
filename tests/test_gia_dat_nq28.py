@@ -376,7 +376,10 @@ class TestCapNhatGiaDat(unittest.TestCase):
         hop = w.cap_nhat_bang_gia_dat(cho=False)
         self.assertIsInstance(hop, HopTraNQ28)
         self.assertEqual(hop.tabs.currentIndex(), HopTraNQ28.THE_CAP_NHAT)
-        self.assertEqual(hop.tabs.tabText(HopTraNQ28.THE_QUY_TAC), 'Bộ quy tắc giá đất')
+        # 1.1.06: thẻ Cập nhật gộp vào Bộ quy tắc (một thẻ, khung đọc văn bản là thẻ con đầu)
+        self.assertEqual(hop.tabs.count(), 3)
+        self.assertEqual(hop.tabs.tabText(HopTraNQ28.THE_CAP_NHAT), 'Bộ quy tắc && cập nhật giá đất')
+        self.assertIs(hop.khung_goi.the.currentWidget(), hop.khung_cn)
         self.assertFalse(hop.khung_goi.isWindow())
         d = hop.khung_cn
         self.assertIsInstance(d, KhungCapNhatGiaDat)

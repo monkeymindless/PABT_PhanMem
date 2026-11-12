@@ -108,7 +108,11 @@ def xet(goc, man):
             t = a.text().replace('&&', 'x').replace('&', '')
             chi_bieu_tuong = isinstance(a, QToolButton) and a.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
             if t and '\n' not in t and not chi_bieu_tuong:      # nút chỉ biểu tượng (menu trái thu gọn): chữ ẩn là cố ý
-                can = a.fontMetrics().horizontalAdvance(t) + (a.iconSize().width() + 4 if not a.icon().isNull() else 0) + 12
+                rong_chu = a.fontMetrics().horizontalAdvance(t)
+                if isinstance(a, QToolButton) and a.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonTextUnderIcon:
+                    can = max(rong_chu, a.iconSize().width()) + 12      # 1.1.06: chữ DƯỚI biểu tượng - không cộng bề rộng biểu tượng
+                else:
+                    can = rong_chu + (a.iconSize().width() + 4 if not a.icon().isNull() else 0) + 12
                 if QPushButton.menu(a) if isinstance(a,QPushButton) else QToolButton.menu(a):
                     can += 14
                 if a.width() < can - 2:

@@ -136,6 +136,7 @@ class KhungCapNhatGiaDat(QWidget):
     dựng thêm từ vị trí 1 (quy_tac_vi_tri). Ghi: BỔ SUNG vào bảng đang dùng (giữ địa bàn khác, kể cả bốn địa bàn gắn sẵn) hoặc THAY toàn
     bộ. Tín hiệu da_ghi: bảng giá đang dùng đã đổi (cửa sổ nạp lại thẻ Bảng giá)."""
     da_ghi = Signal()
+    da_doc = Signal(dict)       # 1.1.06: đọc xong một văn bản (kết quả doc_file_day_du sau khi chọn xã) - thẻ Bộ quy tắc tạo gói nháp
     COT_QT = ['Vị trí', 'So với vị trí', 'Tỷ lệ (%)', 'Loại đất', 'Không thấp hơn (đ/m²)', 'Câu trong văn bản']
     CACH_GHI = [('bo_sung', 'Bổ sung vào bảng đang dùng (giữ các địa bàn khác, thay địa bàn trùng tên)'),
                 ('thay', 'Thay toàn bộ bảng đang dùng bằng bảng này')]
@@ -171,12 +172,12 @@ class KhungCapNhatGiaDat(QWidget):
         self.b_file.clicked.connect(lambda: self.chon_file())
         self.b_web.clicked.connect(lambda: self.tai_web())
         hang.addWidget(self.b_file)
-        hang.addWidget(self.b_web)
         hang_url = QHBoxLayout()
         l_url = QLabel('Đường dẫn văn bản:')
         l_url.setProperty('vai', 'nhan')
         hang_url.addWidget(l_url)
         hang_url.addWidget(self.o_url, 1)
+        hang_url.addWidget(self.b_web)                  # 1.1.06: cạnh ô đường dẫn (hàng trên hẹp khi nằm trong thẻ gộp)
         self.lb = QLabel(nq.tom_tat() + '.')
         self.lb.setWordWrap(True)
         self.bang = QTableWidget(0, 6)
@@ -215,10 +216,10 @@ class KhungCapNhatGiaDat(QWidget):
         self.b_tdc = QPushButton('Giá TĐC, Điều 8-10…')
         self.b_tdc.setToolTip('Tính giá đất tái định cư (Điều 1, 6, 8) và các trường hợp cụ thể Điều 8-10 NQ 28 từ giá dòng đang chọn')
         self.b_tdc.clicked.connect(lambda: self.tinh_tdc())
-        h_qt.addWidget(self.lb_qt, 1)
-        h_qt.addStretch()
+        h_qt.addStretch()                               # 1.1.06: câu hướng dẫn hàng riêng - nút không bị ép hẹp cắt chữ
         for b in (self.b_4_loai, self.b_tdc, self.b_them_qt, self.b_xoa_qt, self.b_tinh):
             h_qt.addWidget(b)
+        lo_qt.addWidget(self.lb_qt)
         lo_qt.addLayout(h_qt)
         lo_qt.addWidget(self.bang_qt)
         tach = QSplitter(Qt.Orientation.Vertical)
@@ -235,6 +236,9 @@ class KhungCapNhatGiaDat(QWidget):
         self.cb_cach = QComboBox()
         for k, t in self.CACH_GHI:
             self.cb_cach.addItem(t, k)
+            self.cb_cach.setItemData(self.cb_cach.count() - 1, t, Qt.ItemDataRole.ToolTipRole)
+        self.cb_cach.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.cb_cach.setMinimumContentsLength(16)       # 1.1.06: chữ dài không ép nút Ghi hẹp lại (đủ chữ trong danh sách xổ)
         self.b_ghi = QPushButton('Ghi vào bảng giá đất')
         self.b_ghi.setEnabled(False)
         self.b_ghi.clicked.connect(lambda: self.ghi())
@@ -261,6 +265,12 @@ class KhungCapNhatGiaDat(QWidget):
         from .giao_dien import KieuNut, ap_kieu_nut
         ap_kieu_nut(self.b_ghi, KieuNut.CHINH)
         ap_kieu_nut(self.b_thay, KieuNut.NGUY_HIEM)
+
+    def an_lenh_trung(self) -> None:
+        """1.1.06 - khung nằm trong thẻ "Bộ quy tắc & cập nhật giá đất": các lệnh Thêm / Xóa quy tắc vị trí, Thay cả bảng, Dùng lại bảng
+        gắn sẵn đặt ở cột trái của thẻ (mỗi lệnh một chỗ) - ẩn nút ở đây. Hàm giữ nguyên (cột trái gọi đúng các hàm này)."""
+        for b in (self.b_file, self.b_them_qt, self.b_xoa_qt, self.b_thay, self.b_khoi_phuc):     # b_file = "Đọc thêm văn bản…" cột trái
+            b.hide()
 
     # ---------------------------------------------------------------- hiển thị
     def _bao(self, loai, chu: str):
@@ -497,6 +507,7 @@ class KhungCapNhatGiaDat(QWidget):
         self.kq = {'dong_goc': dong, 'quy_tac': [], 'van_ban': vb, 'chu': chu}
         self._ve_quy_tac([])
         self._hien(dong, vb, chu, nguon)
+        self.da_doc.emit(self.kq)
         return dong
 
     def chon_file(self, file=None):
@@ -565,6 +576,7 @@ class KhungCapNhatGiaDat(QWidget):
         chu = kq['chu'] + (f' Văn bản có hướng dẫn tính vị trí ngoài bảng ({len(kq["quy_tac"])} quy tắc, xem bảng "Quy tắc vị trí" '
                            'phía dưới).' if kq['quy_tac'] else '')
         self._hien(dong, kq['van_ban'], chu, str(file))
+        self.da_doc.emit(kq)
         return dong
 
     # ---------------------------------------------------------------- ghi

@@ -129,6 +129,14 @@ def _ngay(s) -> str:
     return ''
 
 
+def chuan_so_hieu(s) -> str:
+    """Khóa so số hiệu văn bản (1.1.06 - đọc văn bản trùng gói đã có thì không tạo gói nháp): bỏ khoảng trắng, chữ "Số", chữ hoa,
+    QD = QĐ ("QĐ 03/2026/QĐ-UBND" = "03/2026/QD-UBND")."""
+    t = re.sub(r'\s+', '', str(s or '')).upper().replace('QD', 'QĐ')
+    t = re.sub(r'^(SỐ:?|QĐ|NQ)(?=\d)', '', t)
+    return t
+
+
 def ngay_vn(s) -> str:
     """'yyyy-mm-dd' -> 'dd/mm/yyyy' để hiện."""
     n = _ngay(s)

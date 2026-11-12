@@ -108,15 +108,16 @@ class HopTraNQ28(QDialog):
             self.tabs.addTab(trang, 'Bảng giá đất 2026')
             self.tabs.addTab(self.khung_k, 'Hệ số K (QĐ 03/2026/QĐ-UBND)')
             # 30/10/2026 (người dùng): công cụ cập nhật / bổ sung bảng giá đất là một thẻ của cửa sổ này (bỏ cửa sổ riêng)
+            # 1.1.06 (người dùng 12/11/2026): gộp thẻ "Cập nhật, bổ sung giá đất" vào "Bộ quy tắc giá đất" = một thẻ: cột trái 3 cụm
+            # (gói văn bản & hiệu lực / quy tắc vị trí & bảng dữ liệu / gói cài), khung đọc văn bản là thẻ con đầu; đọc xong tạo gói nháp
             from .man_hinh_gia_dat import KhungCapNhatGiaDat
+            from .man_hinh_goi_gia_dat import HopGoiGiaDat
             self.khung_cn = KhungCapNhatGiaDat(self, xa)
             self.khung_cn.da_ghi.connect(self.nap_lai_bang_gia)
-            self.tabs.addTab(self.khung_cn, 'Cập nhật, bổ sung giá đất')
-            # Bộ quy tắc giá đất (trước là cửa sổ riêng): nhập văn bản đơn giá và quy tắc cùng chỗ với bảng giá
-            from .man_hinh_goi_gia_dat import HopGoiGiaDat
-            self.khung_goi = HopGoiGiaDat(self, nhung=True)
-            self.tabs.addTab(self.khung_goi, 'Bộ quy tắc giá đất')
-            self.tabs.setCurrentIndex(the)
+            self.khung_goi = HopGoiGiaDat(self, nhung=True, khung_cn=self.khung_cn, khung_k=self.khung_k,
+                                          mo_the_k=lambda: self.tabs.setCurrentIndex(self.THE_HE_SO_K))
+            self.tabs.addTab(self.khung_goi, 'Bộ quy tắc && cập nhật giá đất')
+            self.mo_the(the)
             lo.addWidget(self.tabs)
         else:
             lo.addLayout(h)
@@ -128,8 +129,21 @@ class HopTraNQ28(QDialog):
             self.cb_vt.currentIndexChanged.connect(lambda *_: self.loc())
         self.loc()
 
-    THE_CAP_NHAT = 2                                     # chỉ số thẻ "Cập nhật, bổ sung giá đất"
-    THE_QUY_TAC = 3                                      # chỉ số thẻ "Bộ quy tắc giá đất"
+    THE_HE_SO_K = 1
+    THE_CAP_NHAT = 2                                     # thẻ "Bộ quy tắc & cập nhật giá đất", thẻ con Đọc văn bản
+    THE_QUY_TAC = 3                                      # 1.1.06: cùng thẻ 2 (đã gộp), thẻ con Quy tắc - giữ số cho nơi gọi cũ
+
+    def mo_the(self, the: int) -> None:
+        """Mở thẻ theo số cũ (0 bảng giá, 1 hệ số K, 2 cập nhật, 3 bộ quy tắc): 2 và 3 nay cùng một thẻ, khác thẻ con."""
+        if not hasattr(self, 'tabs'):
+            return
+        if the in (self.THE_CAP_NHAT, self.THE_QUY_TAC):
+            self.tabs.setCurrentIndex(self.THE_CAP_NHAT)
+            k = self.khung_goi
+            if k.the_doc is not None:
+                k.the.setCurrentIndex(k.the_doc if the == self.THE_CAP_NHAT else k.the_doc + 1)
+            return
+        self.tabs.setCurrentIndex(the)
 
     def nap_lai_bang_gia(self):
         """Bảng giá đang dùng vừa đổi (thẻ Cập nhật ghi / dùng lại bảng gắn sẵn): nạp lại danh sách địa bàn, tiêu đề, bảng."""

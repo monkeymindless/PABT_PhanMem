@@ -216,6 +216,13 @@ class KhungHeSoK(QWidget):
             kq = (kq or []) + (d or [])
         return kq
 
+    def an_lenh_trung(self) -> None:
+        """1.1.06 - "Đọc từ file…" và "Dùng bảng gắn sẵn" đặt ở cột trái thẻ "Bộ quy tắc & cập nhật giá đất" (mỗi lệnh một chỗ): ẩn ở
+        đây; thẻ này còn Dán chữ, Thêm / Xóa dòng, Lưu. Hàm giữ nguyên (cột trái gọi chon_file / bo_het)."""
+        for b in (self.b_file, self.b_bo):
+            b.hide()
+        self.lb_cot_trai = True
+
     def _chon_xa(self, dong: list, chon=None):
         """1.1.06: file có nhiều xã -> hộp tích chọn xã. Tích sẵn: xã ở ô Địa bàn; ô trống thì các xã của bảng giá đất đang dùng
         (đúng phạm vi đọc cũ). Trả các dòng của xã được chọn, None = Hủy."""

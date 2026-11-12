@@ -237,6 +237,38 @@ def chu_quy_tac(quy_tac: list, them: int) -> str:
             '"Quy tắc vị trí".')
 
 
+_RE_SO_HIEU_VB = re.compile(r'(?i)(?<![\w/])(\d{1,4}\s*/\s*\d{4}\s*/\s*(?:NQ|QĐ|QD|TT|NĐ|ND)\s*-\s*[A-ZĐa-zđ]+(?:\s*-\s*[A-ZĐ]+)?)')
+_RE_HIEU_LUC = re.compile(r'(?i)hiệu\s+lực[^0-9\n]{0,40}?(\d{1,2})\s*(?:/|-|\.|tháng)\s*(\d{1,2})\s*(?:/|-|\.|năm)\s*(\d{4})')
+_RE_NGAY_KY = re.compile(r'(?i)ngày\s*(\d{1,2})\s*(?:/|-|tháng)\s*(\d{1,2})\s*(?:/|-|năm)\s*(\d{4})')
+
+
+def so_hieu_va_ngay(chu_vb: list, van_ban: str = '') -> dict:
+    """1.1.06 (gói nháp khi đọc văn bản): số hiệu văn bản + ngày hiệu lực đọc được trong lời văn. {'so_hieu', 'ngay' (dd/mm/yyyy hoặc
+    ''), 'ngay_tu': 'hieu_luc' (câu "có hiệu lực từ ngày …") | 'ban_hanh' (ngày ký đầu văn bản - chỉ để gợi ý, người dùng sửa) | ''}.
+    Số hiệu: ở 60 dòng đầu, không thấy thì trong tên văn bản. Chỉ để ĐIỀN SẴN gói nháp - không có hiệu lực tới khi người dùng lưu."""
+    dong = []
+    for x in chu_vb or ():
+        dong.append(' '.join(str(o) for o in x if o is not None) if isinstance(x, (list, tuple)) else str(x))
+    dau = '\n'.join(dong[:60])
+    m = _RE_SO_HIEU_VB.search(dau) or _RE_SO_HIEU_VB.search(van_ban or '')
+    so_hieu = ''
+    if m:
+        so, nam, duoi = re.sub(r'\s+', '', m.group(1)).upper().split('/', 2)
+        loai, _, noi = duoi.partition('-')
+        so_hieu = f'{so}/{nam}/' + {'QD': 'QĐ', 'ND': 'NĐ'}.get(loai, loai) + (f'-{noi}' if noi else '')   # chỉ chuẩn loại (QD -> QĐ)
+    tat_ca = '\n'.join(dong)
+
+    def _ngay(mm) -> str:
+        d, t, n = (int(x) for x in mm.groups())
+        return f'{d:02d}/{t:02d}/{n}' if 1 <= d <= 31 and 1 <= t <= 12 and 2000 <= n <= 2100 else ''
+    for rx, nguon, chu in ((_RE_HIEU_LUC, 'hieu_luc', tat_ca), (_RE_NGAY_KY, 'ban_hanh', dau)):
+        for mm in rx.finditer(chu):
+            ngay = _ngay(mm)
+            if ngay:
+                return dict(so_hieu=so_hieu, ngay=ngay, ngay_tu=nguon)
+    return dict(so_hieu=so_hieu, ngay='', ngay_tu='')
+
+
 def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> dict:
     """Như doc_file nhưng CHƯA dựng vị trí theo quy tắc: {'dong_goc': dòng của bảng, 'quy_tac': [QuyTac] đọc trong lời văn,
     'van_ban', 'chu'} - màn hình cho người dùng sửa quy tắc rồi tính lại (ap_quy_tac_file)."""
@@ -275,7 +307,11 @@ def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> d
         qt = doc_quy_tac(chu_vb)
     except Exception:                                   # noqa: BLE001 - lời văn lạ không được làm hỏng việc đọc bảng
         qt = []
-    return {'dong_goc': dong, 'quy_tac': qt, 'van_ban': vb, 'chu': chu, 'toan_van': toan_van, 'neo_so': neo}
+    try:
+        vb_doc = so_hieu_va_ngay(chu_vb, vb)
+    except Exception:                                   # noqa: BLE001 - chỉ để điền sẵn gói nháp
+        vb_doc = dict(so_hieu='', ngay='', ngay_tu='')
+    return {'dong_goc': dong, 'quy_tac': qt, 'van_ban': vb, 'chu': chu, 'toan_van': toan_van, 'neo_so': neo, 'van_ban_doc': vb_doc}
 
 
 def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list, neo: list | None = None) -> tuple:

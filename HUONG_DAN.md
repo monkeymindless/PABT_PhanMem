@@ -57,6 +57,15 @@
 > dự án in hoa; bảng tổng hợp có dòng **CHI NHÁNH …** dưới tên cơ quan. Lề bảng tổng hợp A3: trái 2,0 / phải 1,0 / trên 1,5 / dưới 1,5 cm
 > (đổi trong hồ sơ địa phương `ban_in.le_trang.tong_hop`).
 >
+> **1.1.06**: cửa sổ **Bảng giá đất** còn ba thẻ: **Bảng giá đất 2026**, **Hệ số K**, **Bộ quy tắc & cập nhật giá đất** (gộp thẻ
+> "Cập nhật, bổ sung giá đất" và "Bộ quy tắc giá đất"). Cột trái thẻ thứ ba có ba cụm: **Gói văn bản và hiệu lực** (Đọc thêm văn bản…,
+> danh sách gói, Tạo gói từ gói này / từ hệ số K), **Quy tắc vị trí và bảng dữ liệu của máy** (+ / Xóa quy tắc vị trí, Thay cả bảng giá,
+> Bảng giá gắn sẵn, Đọc hệ số K, Hệ số K gắn sẵn), **Gói cài và trao đổi**. Đọc / scan văn bản có nhiều xã: phần mềm hiện **danh sách xã
+> để tích chọn** (Chọn tất cả, Bỏ chọn, lọc theo tên) - chỉ xã được chọn đưa lên bảng, không phải xóa tay. Đọc xong phần mềm tạo **gói
+> nháp** (dòng "Nháp - chưa lưu" đầu danh sách) theo số hiệu, ngày hiệu lực đọc được: kiểm tra rồi bấm **Lưu gói** mới có hiệu lực.
+> **Nhập gói cài** hiện bảng từng xã (trong gói / trên máy, sẽ thêm mới hay thay sạch), tích xã cần cài và chọn **Bổ sung** (mặc định)
+> hoặc **Thay toàn bộ**. Đọc bảng giá từ bản scan: rê chuột vào dòng tô màu thấy **ảnh cắt con số trên bản scan** và độ tin cậy nhận dạng.
+>
 > **1.1.03**: **Thiết lập trang** (Công cụ → Quản lý Mẫu in & Bản in…, Ctrl+Shift+M, hoặc liên kết "Thiết lập trang" ở bảng In / Xuất) có
 > ba thẻ như của Word: **Lề** (cm, giấy dọc / ngang, áp dụng cho bản Word hoặc bảng tổng hợp, hình tờ giấy xem trước), **Giấy** (A4 / A3),
 > **Bố trí** (tự co giãn cho khít trang, cỡ chữ, thụt đầu dòng). Bấm OK là dùng ngay. **Tự co giãn** (mặc định bật): phương án chi tiết
