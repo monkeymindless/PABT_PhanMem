@@ -10,6 +10,12 @@ from __future__ import annotations
 
 import re
 
+
+def la_vat_nuoi(phan_loai: str) -> bool:
+    """Mục danh mục (dm_taisan.phan_loai) thuộc nhóm vật nuôi (QĐ 31/2025)."""
+    return 'vật nuôi' in str(phan_loai or '').lower()
+
+
 # mã cây trồng cũ TS140 = cây đầu tiên (nhà TS1-TS139): CT1 = TS140
 CAY_TS_DAU = 140
 _RE_HT = re.compile(r'^HT0*(\d+)$')
@@ -56,7 +62,6 @@ def _so(ma: str, tien_to: str):
 def bang_doi(con) -> dict:
     """{(bảng, mã cũ): mã mới} cho dm_taisan / dm_hotro của file: theo quy tắc; mã ngoài quy tắc dạng cũ (HTN### / TSN####) cấp
     số tiếp theo của tiền tố mới - không trùng mã có sẵn."""
-    from .nghiep_vu import la_vat_nuoi
     doi = {}
     da_co = {}                                       # tiền tố -> số lớn nhất đã dùng
     ds_ts = [(r[0], int(r[1] or 0), r[2]) for r in con.execute('SELECT ma, nhom, phan_loai FROM dm_taisan ORDER BY rowid')]

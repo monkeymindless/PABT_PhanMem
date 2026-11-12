@@ -764,14 +764,14 @@ def _tao_bang_phu(con) -> bool:
     ix_ctdat_thua. Chỉ file có hộ - bộ đơn giá đóng gói (cùng lược đồ, không hộ) không bị ghi. Chạy trong giao dịch của nơi gọi."""
     if not con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
         return False
-    from . import kiem_toan, sql_bang_phu
+    from . import sql_bang_phu
     for lenh in sql_bang_phu.SQL_VAN_DONG:
         con.execute(lenh)
-    if not kiem_toan.co_bang(con):
-        for cau in kiem_toan._cau(kiem_toan.SQL_BANG):
+    if not sql_bang_phu.co_bang(con, sql_bang_phu.BANG_KIEM_TOAN):
+        for cau in sql_bang_phu.cau_lenh(sql_bang_phu.SQL_KIEM_TOAN):
             con.execute(cau)
-    if not kiem_toan.co_bang_bam(con):
-        for cau in kiem_toan._cau(kiem_toan.SQL_BAM):
+    if not sql_bang_phu.co_bang(con, sql_bang_phu.BANG_BAM):
+        for cau in sql_bang_phu.cau_lenh(sql_bang_phu.SQL_BAM):
             con.execute(cau)
     con.execute(sql_bang_phu.SQL_BAN_DO)
     con.execute(sql_bang_phu.SQL_ANH)
@@ -1040,8 +1040,8 @@ def _co_bang_bam_kt(con) -> bool:
 
 
 def _tao_bang_bam_kt(con) -> None:
-    from . import kiem_toan
-    for cau in kiem_toan._cau(kiem_toan.SQL_BAM):
+    from . import sql_bang_phu
+    for cau in sql_bang_phu.cau_lenh(sql_bang_phu.SQL_BAM):
         con.execute(cau)
 
 

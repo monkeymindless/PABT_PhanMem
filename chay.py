@@ -354,6 +354,8 @@ def tu_kiem(file_ra=None) -> int:
         if ly_do:
             if not ocr.windows_64bit():
                 return 'Windows 32-bit: không đọc được bản scan (dán chữ thay thế)'
+            if ocr.windows_chan():                      # 1.1.05: máy chặn file chưa ký số (Smart App Control) - không phải cài hỏng
+                return 'Windows chặn bộ nhận dạng chữ Tesseract (file chưa ký số): không đọc được bản scan trên máy này (dán chữ thay thế)'
             raise RuntimeError(ly_do)
         tess = ocr.tim_tesseract()
         return f'Tesseract ({tess.parent.name}\\{tess.name}), ngôn ngữ: {", ".join(ocr.ngon_ngu(tess))}'

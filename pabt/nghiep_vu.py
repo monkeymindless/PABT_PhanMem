@@ -133,9 +133,7 @@ def muc_5_cot(muc: dict) -> dict:
             5: muc.get(5, KHONG)}
 
 
-def la_vat_nuoi(phan_loai: str) -> bool:
-    """Mục danh mục (dm_taisan.phan_loai) thuộc nhóm vật nuôi (QĐ 31/2025)."""
-    return 'vật nuôi' in str(phan_loai or '').lower()
+from .ma_tai_san import la_vat_nuoi      # noqa: E402, F401 - tên cũ nghiep_vu.la_vat_nuoi; 1.1.05: định nghĩa ở ma_tai_san (module lá, csdl nâng cấp v13 gọi)
 
 
 def he_so(x) -> Decimal:
@@ -526,6 +524,7 @@ class Dong:
     id: int = 0
     thanh_tien_excel: Decimal | None = None
     cach_tinh: str = ''
+    nhom_dat: str = ''                # 1.1.05: dòng mục 1 - nhóm đất của dòng (kinh_phi_du_an.tien_dat_theo_nhom đọc, không đọc lại PA)
 
 
 # trạng thái hộ người dùng đã bấm Lưu trong cửa sổ lập phương án (lap_pa.BoSoan.luu): "Đã lập phương án (lưu dd/mm/yyyy hh:mm)"
@@ -586,7 +585,7 @@ def tinh_pa(pa: PhuongAn, bc: BoiCanh) -> KetQuaHo:
         ten = mo_ta_thua(t.get('so_to', ''), t.get('so_thua', ''), r.loai_dat, bc.cap_dia_ban, bc.ten_dia_ban,
                          r.vi_tri or t.get('vi_tri'))
         kq.dong.append(Dong(1, f'1.{k}', ten, 'm²', r.dien_tich, r.gia_bang_gia * r.he_so_k, r.ty_le, tt,
-                            r.loai_dat, r.ghi_chu, r.id or 0, r.thanh_tien_excel))
+                            r.loai_dat, r.ghi_chu, r.id or 0, r.thanh_tien_excel, nhom_dat=r.nhom_dat or ''))
         kq.muc[1] += tt
     for muc in MUC_KHOAN:
         for k, r in enumerate(pa.khoan[muc], start=1):

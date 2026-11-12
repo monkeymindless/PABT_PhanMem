@@ -317,8 +317,10 @@ class KhungCapNhatGiaDat(QWidget):
         Trả câu tóm tắt nối vào dòng trạng thái. Chỉ nhắc, không sửa số."""
         from . import kiem_dinh_don_gia as kd
         from .giao_dien import to_dong_bang
+        neo = (self.kq or {}).get('neo_so') or []       # 1.1.05: file là bản scan - ảnh cắt + độ tin cậy từng con số (ocr.doc_anh)
         try:
-            self.kiem_dinh = kd.kiem_dinh_bang_gia_dat(dong, goc=[r for r in nq.tat_ca() if not r.get('tham_khao')],
+            self.kiem_dinh = kd.kiem_dinh_bang_gia_dat(kd.gan_tin_cay_ocr(dong, neo) if neo else dong,
+                                                       goc=[r for r in nq.tat_ca() if not r.get('tham_khao')],
                                                        don_vi_chac='CHƯA RÕ ĐƠN VỊ' not in (chu or ''))
         except Exception:                               # noqa: BLE001 - phép soi lỗi không được chặn việc đọc bảng
             self.kiem_dinh = None
@@ -327,9 +329,30 @@ class KhungCapNhatGiaDat(QWidget):
         try:
             for x in self.kiem_dinh['can_xac_nhan']:
                 to_dong_bang(self.bang, x['i'], x['ly_do'], 'loi' if x['muc'] == 'do' else 'canh_bao')
+                if neo and x['i'] < len(dong):
+                    self._gan_anh_goc(x['i'], x['ly_do'], kd.neo_cua_dong(dong[x['i']], neo))
         finally:
             self.bang.setUpdatesEnabled(True)
         return ' ' + self.kiem_dinh['tom_tat'] + (' Rê chuột vào dòng tô màu để xem lý do.' if self.kiem_dinh['can_xac_nhan'] else '')
+
+    def _gan_anh_goc(self, r: int, ly_do: list, ds_neo: list) -> None:
+        """1.1.05 (kiểm định tầng 3): chú thích dòng r có thêm ảnh cắt đúng các con số trên bản scan (trang, độ tin cậy nhận dạng) -
+        rê chuột là thấy số gốc, không phải mở lại PDF. Chữ chú thích vẫn mở đầu "Cần xem lại:" (to_dong_bang dựa vào đó để xóa)."""
+        if not ds_neo:
+            return
+        from html import escape
+        from PySide6.QtCore import QUrl
+        anh = ''.join(f'<p>Trang {n.get("trang") or "?"} · đọc được "{escape(str(n.get("chu", "")))}" · tin cậy '
+                      f'{int(round(float(n.get("tin_cay") or 0)))}%<br><img src="{QUrl.fromLocalFile(n["anh"]).toString()}"></p>'
+                      for n in ds_neo if n.get('anh'))
+        if not anh:
+            return
+        chu = ('Cần xem lại:<br>' + '<br>'.join(escape(x) for x in ly_do) +
+               '<p><b>Số trên bản scan</b> (đối chiếu với cột giá của dòng này):</p>' + anh)
+        for c in range(self.bang.columnCount()):
+            it = self.bang.item(r, c)
+            if it is not None:
+                it.setToolTip(chu)
 
     def _ve_quy_tac(self, ds: list):
         b = self.bang_qt

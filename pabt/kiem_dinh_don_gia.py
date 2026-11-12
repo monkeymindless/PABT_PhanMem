@@ -376,3 +376,60 @@ def niem_phong_file(file) -> str:
         for khoi in iter(lambda: f.read(1 << 20), b''):
             h.update(khoi)
     return h.hexdigest()
+
+
+# ---------------------------------------------------------------- 1.1.05: neo ảnh gốc (tầng 3) + độ tin cậy nhận dạng từng dòng
+NEO_MOI_DONG = 4            # số ảnh cắt tối đa hiện cho một dòng
+
+
+def _chu_so(v) -> str:
+    return re.sub(r'\D', '', str(v or ''))
+
+
+def _khoa_so_cua_dong(r: dict) -> list:
+    """Các khóa chữ số của giá trong dòng: giá như đã lưu và giá x1.000 (văn bản ghi đồng/m², dòng lưu nghìn đồng/m²)."""
+    kq = []
+    for c in COT_GIA:
+        v = _so(r.get(c))
+        if v > 0 and v == v.to_integral_value():
+            for x in (v, v * 1000):
+                k = _chu_so(int(x))
+                if k and k not in kq:
+                    kq.append(k)
+    return kq
+
+
+def _theo_chu_so(neo: list) -> dict:
+    theo = {}
+    for n in neo or ():
+        k = n.get('so') or _chu_so(n.get('chu'))
+        if k:
+            theo.setdefault(k, []).append(n)
+    return theo
+
+
+def neo_cua_dong(r: dict, neo: list, toi_da: int = NEO_MOI_DONG, theo: dict | None = None) -> list:
+    """Ảnh cắt (ocr.doc_anh neo) của các con số giá trong dòng r: khớp theo CHỮ SỐ của con số (cùng con số xuất hiện nhiều chỗ thì lấy
+    các chỗ tin cậy thấp nhất trước - chỗ dễ đọc sai). Tối đa toi_da ảnh."""
+    theo = _theo_chu_so(neo) if theo is None else theo
+    kq = []
+    for k in _khoa_so_cua_dong(r):
+        for n in sorted(theo.get(k, ()), key=lambda n: n.get('tin_cay', 100)):
+            if n not in kq:
+                kq.append(n)
+    return sorted(kq, key=lambda n: n.get('tin_cay', 100))[:toi_da]
+
+
+def gan_tin_cay_ocr(dong: list, neo: list) -> list:
+    """Bản CHÉP các dòng (không sửa dòng gốc - dòng gốc được ghi vào bảng giá), dòng có con số tìm thấy trên ảnh thì thêm
+    'ocr_tin_cay' = độ tin cậy THẤP NHẤT trong các con số đó (kiem_dinh_bang_gia_dat xét ngưỡng NGUONG_OCR). Dòng không có con số nào
+    trên ảnh (dòng dựng theo quy tắc, giá đọc từ lời văn) giữ nguyên, không bị đánh dấu."""
+    theo = _theo_chu_so(neo)
+    kq = []
+    for r in dong:
+        tc = [n.get('tin_cay') for n in neo_cua_dong(r, neo, 10 ** 6, theo) if n.get('tin_cay') is not None]
+        if tc:
+            r = dict(r)
+            r['ocr_tin_cay'] = Decimal(str(min(tc))).quantize(Decimal(1))
+        kq.append(r)
+    return kq

@@ -116,6 +116,11 @@ class TestHamNong(_Co):
     def test_tien_dat_theo_nhom_nhu_cach_cu(self):
         from pabt.nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, thanh_tien_dong_dat
         from pabt.tien import KHONG
+        with self.con:                                  # mã đất lạ: nhóm lấy theo cột nhom_dat của dòng (1.1.05 đọc từ KetQuaHo)
+            ids = [r[0] for r in self.con.execute('SELECT id FROM ct_dat ORDER BY id LIMIT 3')]
+            self.con.execute("UPDATE ct_dat SET loai_dat = 'XYZ', nhom_dat = 'Đất ở' WHERE id = ?", (ids[0],))
+            self.con.execute("UPDATE ct_dat SET loai_dat = 'ABC', nhom_dat = 'Nông nghiệp' WHERE id = ?", (ids[1],))
+            self.con.execute("UPDATE ct_dat SET loai_dat = 'ONT+CLN', nhom_dat = '' WHERE id = ?", (ids[2],))
         bc = BoiCanh.tu(self.con)
         tien = {k: KHONG for k, _ in kinh_phi_du_an.NHOM_DAT_CON}
         ho = {k: set() for k, _ in kinh_phi_du_an.NHOM_DAT_CON}
@@ -150,7 +155,29 @@ class TestSqlBangPhu(unittest.TestCase):
 
     def test_module_la_va_csdl_khong_nhap_nguoc(self):
         self.assertEqual(self._nhap('sql_bang_phu.py'), set())
-        self.assertFalse(self._nhap('csdl.py') & {'van_dong', 'ban_do_cad', 'phieu_kiem_dem'})
+        # 1.1.05: csdl cũng không nhập kiem_toan (SQL nhật ký ở sql_bang_phu); ma_tai_san (csdl gọi khi nâng cấp v13) không kéo nghiep_vu
+        self.assertFalse(self._nhap('csdl.py') & {'van_dong', 'ban_do_cad', 'phieu_kiem_dem', 'kiem_toan', 'nghiep_vu', 'lap_pa'})
+        self.assertFalse(self._nhap('ma_tai_san.py') & {'nghiep_vu', 'lap_pa'})
+
+    def test_ten_cu_kiem_toan_va_vat_nuoi(self):
+        from pabt import kiem_toan, ma_tai_san, nghiep_vu
+        self.assertIs(kiem_toan.SQL_BANG, sql_bang_phu.SQL_KIEM_TOAN)
+        self.assertIs(kiem_toan.SQL_BAM, sql_bang_phu.SQL_BAM)
+        self.assertEqual((kiem_toan.BANG, kiem_toan.BANG_BAM), ('audit_logs', 'audit_bam'))
+        self.assertIs(kiem_toan._cau, sql_bang_phu.cau_lenh)
+        self.assertIs(nghiep_vu.la_vat_nuoi, ma_tai_san.la_vat_nuoi)
+        self.assertEqual(len(kiem_toan._cau(kiem_toan.SQL_BANG)), 5)               # bảng + 2 chỉ mục + 2 trigger
+        td = Path(tempfile.mkdtemp(prefix='pabt_1104_kt_'))
+        try:                                            # trigger nhật ký phải đúng mẫu csdl.trigger_hop_le (không thì bị gỡ khi mở)
+            con = csdl.mo(_du_an(td, 2))
+            try:
+                tg = {r[0]: r[1] for r in con.execute("SELECT name, sql FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'audit%'")}
+            finally:
+                con.close()
+            self.assertEqual(set(tg), {'audit_logs_khong_sua', 'audit_logs_khong_xoa', 'audit_bam_khong_sua', 'audit_bam_khong_xoa'})
+            self.assertTrue(all(csdl.trigger_hop_le(t, s) for t, s in tg.items()))
+        finally:
+            shutil.rmtree(td, ignore_errors=True)
 
     def test_file_co_ho_du_bang_phu(self):
         td = Path(tempfile.mkdtemp(prefix='pabt_1104_sql_'))

@@ -169,15 +169,16 @@ def loc_xa(dong: list, xa: str) -> list:
         f'Không thấy "{xa}" trong file. Các địa bàn đọc được: {", ".join(sorted(x for x in ten if x)) or "(không có tên)"}.')
 
 
-def doc_scan(file, xa: str = '', bao=None, cho=None, chu_ra: list | None = None) -> list:
+def doc_scan(file, xa: str = '', bao=None, cho=None, chu_ra: list | None = None, neo: list | None = None) -> list:
     """PDF ảnh hoặc file ảnh: nhận dạng từng trang, dừng khi đã đọc xong mục địa bàn (file lớn không đọc hết).
-    chu_ra: danh sách nhận các dòng chữ đã nhận dạng (đọc quy tắc vị trí 2-4 trong lời văn - quy_tac_vi_tri)."""
+    chu_ra: danh sách nhận các dòng chữ đã nhận dạng (đọc quy tắc vị trí 2-4 trong lời văn - quy_tac_vi_tri).
+    neo (1.1.05): danh sách nhận ảnh cắt + độ tin cậy từng con số giá (ocr.doc_anh) cho màn hình đối chiếu."""
     from . import ocr
     xa = (xa or '').strip()
     tim = ten_gon(xa)
     dong_chu = []
     da_thay = False
-    for chu in ocr.tung_trang(file, bao, cho, dpi=200):
+    for chu in ocr.tung_trang(file, bao, cho, dpi=200, neo=neo):
         if cho and cho():
             break
         dong_chu += [x.strip() for x in chu.splitlines() if x.strip()]
@@ -241,9 +242,10 @@ def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> d
     'van_ban', 'chu'} - màn hình cho người dùng sửa quy tắc rồi tính lại (ap_quy_tac_file)."""
     from .quy_tac_vi_tri import doc_quy_tac, doc_toan_van_nghi_quyet, la_van_ban_toan_van_nq28
     chu_vb = []
+    neo = []                                            # 1.1.05: ảnh cắt từng con số khi file là bản scan
     toan_van = None
     try:
-        dong, vb, chu = _doc_file(file, tinh, xa, bao, cho, chu_vb)
+        dong, vb, chu = _doc_file(file, tinh, xa, bao, cho, chu_vb, neo)
     except nq.LoiBangGia:
         # 1.0.81: toàn văn Nghị quyết (Điều 1 -> 10, không có bảng Tên đường): không báo lỗi - đọc quy tắc trong lời văn, bảng phía
         # trên là bảng giá đường đang dùng của địa bàn đang chọn
@@ -273,10 +275,10 @@ def doc_file_day_du(file, tinh: str = '', xa: str = '', bao=None, cho=None) -> d
         qt = doc_quy_tac(chu_vb)
     except Exception:                                   # noqa: BLE001 - lời văn lạ không được làm hỏng việc đọc bảng
         qt = []
-    return {'dong_goc': dong, 'quy_tac': qt, 'van_ban': vb, 'chu': chu, 'toan_van': toan_van}
+    return {'dong_goc': dong, 'quy_tac': qt, 'van_ban': vb, 'chu': chu, 'toan_van': toan_van, 'neo_so': neo}
 
 
-def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
+def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list, neo: list | None = None) -> tuple:
     from . import ocr
     from .nhap_don_gia import LoiPdfScan, doc_bang
     p = Path(file)
@@ -292,7 +294,7 @@ def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
             pass
     elif duoi in ocr.DUOI_ANH:
         try:
-            dong = doc_scan(p, xa, bao, cho, chu_vb)
+            dong = doc_scan(p, xa, bao, cho, chu_vb, neo)
         except Exception as e:
             raise nq.LoiBangGia(str(e)) from None
         vb, chu = p.stem, 'Đọc từ ảnh, nhận dạng chữ.'
@@ -305,7 +307,7 @@ def _doc_file(file, tinh: str, xa: str, bao, cho, chu_vb: list) -> tuple:
             o = doc_bang(p)
         except LoiPdfScan:
             try:
-                dong = doc_scan(p, xa, bao, cho, chu_vb)
+                dong = doc_scan(p, xa, bao, cho, chu_vb, neo)
             except Exception as e:
                 raise nq.LoiBangGia(str(e)) from None
             vb, chu = p.stem, 'PDF ảnh: nhận dạng từng trang.'

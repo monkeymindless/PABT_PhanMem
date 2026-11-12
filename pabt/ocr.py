@@ -86,11 +86,73 @@ def moi_truong_ocr() -> dict:
     return env
 
 
+# 1.1.05 (máy mới Windows 11, người dùng 12/11/2026): Windows chặn nạp thư viện Tesseract đóng kèm (không có chữ ký số) - Smart App
+# Control / chính sách kiểm soát ứng dụng (WDAC) - thì trình nạp của Windows hiện hộp "tesseract.exe - Bad Image ... Error status
+# 0xc0e90002" (đứng giữa lúc cài: bước tự kiểm tra hỏi danh sách ngôn ngữ). Mã thoát của tesseract.exe khi trình nạp thất bại:
+MA_BI_CHAN = 0xC0E90002        # STATUS_SYSTEM_INTEGRITY_POLICY_VIOLATION: chính sách toàn vẹn của Windows chặn file (chưa ký số)
+MA_NAP_LOI = {0xC0E90002: 'chan', 0xC0E90003: 'chan', 0xC0000428: 'chan',     # chặn theo chính sách / chữ ký số
+              0xC000007B: 'hong', 0xC0000135: 'hong', 0xC0000139: 'hong', 0xC0000142: 'hong',   # sai kiến trúc / thiếu / hỏng DLL
+              0xC000012F: 'hong', 0xC0000130: 'hong', 0xC0000131: 'hong'}                      # file DLL không phải ảnh nạp được
+SEM_FAILCRITICALERRORS, SEM_NOOPENFILEERRORBOX = 0x0001, 0x8000
+_LOI_NAP = {}                  # đường dẫn tesseract.exe -> mã thoát lỗi nạp lần chạy gần nhất (san_sang dùng để báo đúng lý do)
+
+
+def _tat_hop_loi_he_thong():
+    """Tiến trình con thừa hưởng chế độ lỗi của tiến trình cha (SetErrorMode): bật SEM_FAILCRITICALERRORS trước khi chạy tesseract.exe
+    để trình nạp KHÔNG hiện hộp lỗi hệ thống (tiến trình con thoát với mã lỗi, phần mềm báo bằng lời). Trả chế độ cũ (None: không
+    phải Windows / không đặt được) để _tra_hop_loi_he_thong khôi phục ngay sau khi tạo tiến trình."""
+    if sys.platform != 'win32':
+        return None
+    try:
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        cu = k32.SetErrorMode(0)                        # đọc chế độ hiện tại (SetErrorMode trả chế độ cũ)
+        k32.SetErrorMode(cu | SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX)
+        return cu
+    except (AttributeError, OSError, ImportError):
+        return None
+
+
+def _tra_hop_loi_he_thong(cu) -> None:
+    if cu is None:
+        return
+    try:
+        import ctypes
+        ctypes.windll.kernel32.SetErrorMode(cu)
+    except (AttributeError, OSError, ImportError):
+        pass
+
+
+def loai_loi_nap(ma) -> str:
+    """'chan' (Windows chặn theo chính sách / chữ ký số), 'hong' (thiếu / hỏng / sai kiến trúc DLL) hoặc '' theo mã thoát tiến trình."""
+    try:
+        return MA_NAP_LOI.get(int(ma) & 0xFFFFFFFF, '')
+    except (TypeError, ValueError):
+        return ''
+
+
+def chu_loi_nap(ma, tess=None) -> str:
+    """Câu giải thích khi tesseract.exe không nạp được (theo mã thoát), '' nếu không phải lỗi nạp."""
+    loai = loai_loi_nap(ma)
+    if loai == 'chan':
+        return ('Windows đã chặn thư viện của bộ nhận dạng chữ Tesseract đóng kèm (Smart App Control hoặc chính sách kiểm soát ứng dụng '
+                f'của máy chặn file chưa có chữ ký số, mã {int(ma) & 0xFFFFFFFF:#010x}). Phần mềm vẫn dùng bình thường; chỉ đọc bản scan là '
+                'không được trên máy này')
+    if loai == 'hong':
+        return (f'không nạp được bộ nhận dạng chữ Tesseract ({tess or "tesseract.exe"}, mã {int(ma) & 0xFFFFFFFF:#010x}: thiếu hoặc hỏng '
+                'file thư viện) - cài lại phần mềm')
+    return ''
+
+
 def _chay(lenh: list, cho=None, gioi_han: float = 300) -> subprocess.CompletedProcess:
     """Chạy lệnh; trong lúc chờ gọi cho() (giữ giao diện không treo, trả True = người dùng hủy)."""
     import threading
-    pr = subprocess.Popen(lenh, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=moi_truong_ocr(),
-                          creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    cu = _tat_hop_loi_he_thong()
+    try:
+        pr = subprocess.Popen(lenh, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=moi_truong_ocr(),
+                              creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    finally:
+        _tra_hop_loi_he_thong(cu)
     # đọc stdout / stderr SONG SONG (0.9.95): trước đây chỉ chờ tiến trình kết thúc rồi mới đọc - trang scan nhiều chữ (bảng giá,
     # bảng phương án: > ~64 KB kết quả) làm đầy ống, Tesseract chặn ghi, hai bên chờ nhau tới hết giờ ("quá lâu")
     ra, loi = [], []
@@ -130,6 +192,10 @@ def ngon_ngu(tess: Path | None = None) -> list:
             r = _chay([str(tess), *_thu_muc_du_lieu(tess), '--list-langs'], gioi_han=30)
         except (OSError, LoiOCR):
             return []                                   # không chạy được (Windows 32-bit, bị diệt virus chặn): không nhớ
+        if loai_loi_nap(r.returncode):                  # 1.1.05: Windows chặn / thiếu DLL - nhớ mã để san_sang báo đúng lý do
+            _LOI_NAP[str(tess)] = r.returncode
+            return []
+        _LOI_NAP.pop(str(tess), None)
         _NGON_NGU[khoa] = [x.strip() for x in (r.stdout + r.stderr).decode('utf-8', 'replace').splitlines()[1:] if x.strip()]
     return _NGON_NGU[khoa]
 
@@ -140,6 +206,9 @@ def _tesseract_san_sang() -> str:
         return 'chưa có Tesseract OCR (thư mục "tesseract" cạnh PABT.exe - cài lại phần mềm bằng bộ cài mới)'
     ds = ngon_ngu(tess)
     if not ds:
+        nap = chu_loi_nap(_LOI_NAP.get(str(tess)), tess)
+        if nap:
+            return nap
         if not windows_64bit():
             return 'Windows 32-bit không chạy được bộ nhận dạng chữ Tesseract 64-bit đóng kèm'
         return f'không chạy được Tesseract ({tess}) - phần mềm diệt virus chặn hoặc thiếu file, cài lại phần mềm'
@@ -153,6 +222,13 @@ def may_doc() -> tuple:
     if not _tesseract_san_sang():
         return 'tesseract', tim_tesseract()
     return '', None
+
+
+def windows_chan() -> bool:
+    """Lần chạy tesseract.exe gần nhất bị Windows chặn theo chính sách (Smart App Control / WDAC) - máy chặn, KHÔNG phải cài hỏng
+    (tự kiểm tra sau khi cài coi là lưu ý, không phải lỗi)."""
+    tess = tim_tesseract()
+    return tess is not None and loai_loi_nap(_LOI_NAP.get(str(tess))) == 'chan'
 
 
 def san_sang() -> str:
@@ -403,19 +479,89 @@ def _xoay(anh: Path, do: int) -> None:
 
 
 # ---------------------------------------------------------------- nhận dạng
-def _doc_tsv(tess: Path, anh: Path, du_lieu: list, cho=None, psm: int = 6) -> list:
+def _doc_tsv(tess: Path, anh: Path, du_lieu: list, cho=None, psm: int = 6, so: list | None = None) -> list:
+    """Các từ (tu_tsv). so: danh sách nhận các con số dạng giá kèm độ tin cậy (so_tin_cay_tsv) - 1.1.05, chỉ khi nơi gọi cần."""
     try:
         r = _chay([str(tess), str(anh), '-', *du_lieu, '-l', 'vie', '--psm', str(psm), 'tsv'], cho)
     except OSError as e:
         raise LoiOCR(san_sang() or f'Không chạy được Tesseract: {e}') from e
     if r.returncode != 0:
-        raise LoiOCR('Tesseract báo lỗi: ' + r.stderr.decode('utf-8', 'replace').strip()[:300])
-    return tu_tsv(r.stdout.decode('utf-8', 'replace'))
+        raise LoiOCR(chu_loi_nap(r.returncode, tess) or 'Tesseract báo lỗi: ' + r.stderr.decode('utf-8', 'replace').strip()[:300])
+    tsv = r.stdout.decode('utf-8', 'replace')
+    if so is not None:
+        so[:] = so_tin_cay_tsv(tsv)
+    return tu_tsv(tsv)
 
 
-def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = None, tra_ve: str = 'chu', psm: int = 6):
+# ---------------------------------------------------------------- 1.1.05: neo ảnh gốc từng con số giá (kiểm định đơn giá tầng 3)
+# Đọc bảng giá đất từ bản scan: mỗi con số dạng giá giữ độ tin cậy Tesseract (0-100) + ảnh cắt đúng chỗ đó trên trang đã đọc, để
+# màn hình đối chiếu cho người dùng nhìn ngay số gốc của dòng bị nghi (không phải mở lại PDF). Ảnh cắt ở thư mục tạm của phiên chạy,
+# xóa khi thoát; không gửi đi đâu. Chỉ chạy khi nơi gọi truyền `neo` (đọc bảng giá đất) - các đường OCR khác không đổi.
+RE_SO_GIA = re.compile(r'^\(?\d{1,3}(?:[.,]\d{3})+\)?[.,;:]?$|^\(?\d{3,}\)?[.,;:]?$')
+NEO_TOI_DA = 4000           # số ảnh cắt tối đa mỗi lần đọc một file
+NEO_LE = 6                  # điểm ảnh lề quanh con số khi cắt
+_THU_MUC_NEO = []
+_DEM_NEO = [0]
+
+
+def so_tin_cay_tsv(tsv: str) -> list:
+    """Các từ dạng con số giá (từ 3 chữ số, có thể có dấu chấm / phẩy nghìn) trong đầu ra TSV của Tesseract:
+    [(x, y, rộng, cao, chữ, độ tin cậy 0-100)]. Từ Tesseract báo -1 (không đánh giá) bỏ qua."""
+    kq = []
+    for d in tsv.splitlines()[1:]:
+        p = d.split('\t')
+        if len(p) >= 12 and p[0] == '5':
+            t = p[11].strip()
+            if t and RE_SO_GIA.match(t):
+                try:
+                    tc = float(p[10])
+                    if tc >= 0:
+                        kq.append((int(p[6]), int(p[7]), int(p[8]), int(p[9]), t, tc))
+                except ValueError:
+                    continue
+    return kq
+
+
+def chu_so(chu) -> str:
+    """Chỉ các chữ số của một con số ('1.200' -> '1200'): khóa so con số trên ảnh với ô giá đã đọc."""
+    return re.sub(r'\D', '', str(chu or ''))
+
+
+def thu_muc_neo() -> Path:
+    """Thư mục tạm chứa ảnh cắt của phiên chạy (tạo khi cần, xóa khi thoát phần mềm)."""
+    if not _THU_MUC_NEO:
+        import atexit
+        _THU_MUC_NEO.append(Path(tempfile.mkdtemp(prefix='PABT_neo_')))
+        atexit.register(shutil.rmtree, str(_THU_MUC_NEO[0]), True)
+    return _THU_MUC_NEO[0]
+
+
+def _cat_neo(anh: Path, so: list, neo: list, trang: int) -> None:
+    """Cắt từng con số trong so (tọa độ trên đúng ảnh anh Tesseract vừa đọc) ra PNG nhỏ, ghi vào neo:
+    {'so': chữ số, 'chu': chữ đọc được, 'tin_cay': 0-100, 'trang': số trang, 'anh': đường dẫn PNG}."""
+    if not so or len(neo) >= NEO_TOI_DA:
+        return
+    from PySide6.QtGui import QImage
+    im = QImage(str(anh))
+    if im.isNull():
+        return
+    tm = thu_muc_neo()
+    for x, y, w, h, t, tc in so:
+        if len(neo) >= NEO_TOI_DA:
+            break
+        x0, y0 = max(0, x - NEO_LE), max(0, y - NEO_LE)
+        cat = im.copy(x0, y0, min(im.width() - x0, w + 2 * NEO_LE), min(im.height() - y0, h + 2 * NEO_LE))
+        _DEM_NEO[0] += 1
+        f = tm / f'so_{_DEM_NEO[0]:06d}.png'
+        if not cat.isNull() and cat.save(str(f)):
+            neo.append({'so': chu_so(t), 'chu': t, 'tin_cay': tc, 'trang': trang, 'anh': str(f)})
+
+
+def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = None, tra_ve: str = 'chu', psm: int = 6,
+            neo: list | None = None, trang: int = 0):
     """Chữ trên một ảnh trang bằng Tesseract (trang nằm ngang tự xoay lại trước khi đọc): mỗi hàng ngang một dòng, cột cách Tab.
-    Đọc ảnh xám nguyên cỡ; chữ nhỏ thì phóng theo chiều cao chữ đo được (he_so_phong) rồi đọc lại."""
+    Đọc ảnh xám nguyên cỡ; chữ nhỏ thì phóng theo chiều cao chữ đo được (he_so_phong) rồi đọc lại.
+    neo (1.1.05): danh sách nhận ảnh cắt + độ tin cậy của các con số dạng giá (_cat_neo) - chỉ khi tra_ve = 'chu'."""
     tess = tess or tim_tesseract()
     if tess is None:
         raise LoiOCR(san_sang())
@@ -439,15 +585,21 @@ def doc_anh(anh: Path, tess: Path | None = None, cho=None, td: Path | None = Non
         sach, luoi = _xu_ly_khung(anh, td)
         if sach is not None:
             anh = sach
-    tu = _doc_tsv(tess, anh, du_lieu, cho, psm)
+    so1 = [] if neo is not None and tra_ve == 'chu' else None
+    tu = _doc_tsv(tess, anh, du_lieu, cho, psm, so1)
     k, he_so = he_so_phong(tu, _canh_ngan(anh)), 1.0
     lon = anh
+    so_dung, anh_doc = so1, anh
     if k > 1.15 and anh != goc:
         lon = _chuan_bi(anh, td, k)
         if lon != anh:
-            tu_lon = _doc_tsv(tess, lon, du_lieu, cho, psm)
+            so2 = [] if so1 is not None else None
+            tu_lon = _doc_tsv(tess, lon, du_lieu, cho, psm, so2)
             if len(''.join(t[4] for t in tu_lon)) >= len(''.join(t[4] for t in tu)) * 0.8:   # phóng mà đọc được ít hơn hẳn: giữ lần đầu
                 tu, he_so = tu_lon, k
+                so_dung, anh_doc = so2, lon
+    if so_dung:
+        _cat_neo(anh_doc, so_dung, neo, trang)
     if tra_ve == 'hang':                                # từng từ kèm vị trí (nhập danh sách hộ từ bản scan: chia cột bảng)
         return gom_hang(tu)
     if luoi is not None:
@@ -547,8 +699,9 @@ def _xu_ly_khung(anh: Path, td: Path | None):
         return None, None
 
 
-def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = 'chu', psm: int = 6):
-    """Đọc từng trang rồi xóa ảnh trang (không dựng hết file trước — file lớn không chiếm bộ nhớ). Yield chữ từng trang."""
+def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = 'chu', psm: int = 6, neo: list | None = None):
+    """Đọc từng trang rồi xóa ảnh trang (không dựng hết file trước — file lớn không chiếm bộ nhớ). Yield chữ từng trang.
+    neo (1.1.05): danh sách nhận ảnh cắt + độ tin cậy các con số dạng giá (doc_anh) - đọc bảng giá đất."""
     may, tess = may_doc()
     if not may:
         raise LoiOCR(san_sang())
@@ -560,7 +713,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = '
                 bao_tien_do(1, 1)
             if cho and cho():
                 raise DaHuy()
-            yield doc_anh(file, tess, cho, td, tra_ve, psm)
+            yield doc_anh(file, tess, cho, td, tra_ve, psm, neo, 1)
             return
         try:
             from PySide6.QtPdf import QPdfDocument
@@ -589,7 +742,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = '
                     if anh.isNull() or not anh.save(str(p)):
                         continue
                     try:
-                        yield doc_anh(p, tess, cho, td, tra_ve, psm)
+                        yield doc_anh(p, tess, cho, td, tra_ve, psm, neo, i + 1)
                     finally:
                         try:
                             p.unlink()
@@ -606,7 +759,7 @@ def tung_trang(file, bao_tien_do=None, cho=None, dpi: int = DPI, tra_ve: str = '
             if p is None:
                 continue
             try:
-                yield doc_anh(p, tess, cho, td, tra_ve, psm)
+                yield doc_anh(p, tess, cho, td, tra_ve, psm, neo, i)
             finally:
                 try:
                     p.unlink()

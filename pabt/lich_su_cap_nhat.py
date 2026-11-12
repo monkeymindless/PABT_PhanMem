@@ -7,6 +7,12 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.1.05', '12/11/2026', (
+        'Cập nhật bảng giá đất từ bản scan / ảnh chụp: mỗi con số giá giữ độ tin cậy nhận dạng chữ; số đọc kém tin cậy (dưới 85%) làm dòng được tô màu nhắc đối chiếu. Rê chuột vào dòng tô màu thấy ngay ẢNH CẮT đúng con số trên bản scan (trang, độ tin cậy) để so với số phần mềm đã đọc, không phải mở lại file PDF.',
+        'Trang Tổng hợp tiền theo phương án mở nhanh hơn ở dự án nhiều hộ (dùng lại kết quả đã tính khi mở dự án, không đọc lại toàn bộ phương án). Số liệu không đổi.',
+        'Cài đặt trên máy Windows 11 mới: không còn hộp lỗi "tesseract.exe - Bad Image ... 0xc0e90002" khi Windows (Smart App Control) chặn bộ nhận dạng chữ chưa có chữ ký số; cài vẫn hoàn tất, phần mềm báo rõ chỉ riêng đọc bản scan không dùng được trên máy đó.',
+        'Bên trong: tách phần màn hình chào / dự án gần đây khỏi cửa sổ chính, phần dựng giao diện khỏi cửa sổ lập phương án; câu lệnh tạo bảng nhật ký kiểm toán gom về một chỗ. Không đổi chức năng.',
+    )),
     ('1.1.04', '12/11/2026', (
         'Mở dự án: khoảng 1,5 giây sau khi mở, phần mềm chỉ sao chép và nén dự án MỘT lần cho cả bản sao lưu tự động lẫn mốc khôi phục (trước làm hai lần liền, dự án có nhiều ảnh / hồ sơ quét thì cửa sổ đứng lâu hơn). Hai nơi vẫn có đủ bản như trước.',
         'Trang Tổng hợp tiền theo phương án và Theo dõi tiến độ mở nhanh hơn ở dự án nhiều hộ (bớt việc tính lặp cho từng thửa, kết quả không đổi).',

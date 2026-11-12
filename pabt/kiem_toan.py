@@ -21,31 +21,8 @@ from datetime import datetime
 from . import an_toan as _an_toan
 from . import csdl
 
-BANG = 'audit_logs'
-SQL_BANG = f'''
-CREATE TABLE IF NOT EXISTS {BANG} (
-    id        INTEGER PRIMARY KEY,
-    luc       TEXT NOT NULL,                 -- ngày giờ máy (YYYY-MM-DDTHH:MM:SS)
-    nguoi     TEXT,                          -- tài khoản máy chủ LAN / tài khoản Windows
-    may       TEXT,                          -- tên máy tính
-    hanh_dong TEXT NOT NULL CHECK (hanh_dong IN ('them', 'sua', 'xoa')),
-    bang      TEXT NOT NULL,                 -- ho / thua / ct_dat / ct_khoan / gia_dat / dm_taisan / dm_hotro
-    khoa      TEXT,                          -- khóa dòng (mã hộ, mã thửa, mã danh mục…)
-    ma_ho     INTEGER,
-    ma_thua   INTEGER,
-    doi_tuong TEXT,                          -- mô tả người đọc được: họ tên, "Thửa 12 tờ 5", "2.3 Nhà cấp 4"…
-    truong    TEXT,                          -- tên cột (sửa); trống khi thêm / xóa cả dòng
-    cu        TEXT,
-    moi       TEXT,
-    thao_tac  TEXT                           -- thao tác (vd "Lưu phương án hộ")
-);
-CREATE INDEX IF NOT EXISTS ix_audit_logs_ho ON {BANG}(ma_ho, luc);
-CREATE INDEX IF NOT EXISTS ix_audit_logs_luc ON {BANG}(luc);
-CREATE TRIGGER IF NOT EXISTS {BANG}_khong_sua BEFORE UPDATE ON {BANG}
-BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được sửa.'); END;
-CREATE TRIGGER IF NOT EXISTS {BANG}_khong_xoa BEFORE DELETE ON {BANG}
-BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được xóa.'); END;
-'''
+from .sql_bang_phu import BANG_KIEM_TOAN as BANG      # noqa: E402 - câu SQL ở module lá (1.1.05)
+from .sql_bang_phu import SQL_KIEM_TOAN as SQL_BANG      # noqa: E402
 
 # 1.0.55 (người dùng 03/11/2026): CHUỖI BĂM - mỗi dòng audit_logs ghi qua phần mềm được ký SHA-256 nối với dòng ký trước (kiểu
 # blockchain), lưu ở bảng riêng audit_bam (audit_logs chặn UPDATE; trigger nhiều dòng INSERT … SELECT tính trước cả lô nên không nối
@@ -53,17 +30,8 @@ BEGIN SELECT RAISE(ABORT, 'Nhật ký kiểm toán không được xóa.'); END;
 # bằng công cụ SQLite ngoài phần mềm (sau khi DROP trigger chặn) làm chuỗi gãy -> kiem_tra_toan_ven báo đúng dòng. Giới hạn: không dùng
 # khóa bí mật (file dùng chung nhiều máy / Google Drive) - người biết thuật toán vẫn tính lại được cả chuỗi; xóa các dòng CUỐI cùng
 # không để lại dấu (so với bản in / bản xuất Excel nhật ký đã nộp). Dòng ghi bằng bản cũ / kết nối không gắn ký: "chưa ký", không phải lỗi.
-BANG_BAM = 'audit_bam'
-SQL_BAM = '''
-CREATE TABLE IF NOT EXISTS audit_bam (
-    id   INTEGER PRIMARY KEY,                -- = audit_logs.id của dòng được ký
-    bam  TEXT NOT NULL                       -- SHA-256 (32 ký tự đầu) nối chuỗi: băm dòng ký trước + nội dung dòng nhật ký
-);
-CREATE TRIGGER IF NOT EXISTS audit_bam_khong_sua BEFORE UPDATE ON audit_bam
-BEGIN SELECT RAISE(ABORT, 'Chuỗi băm kiểm toán không được sửa.'); END;
-CREATE TRIGGER IF NOT EXISTS audit_bam_khong_xoa BEFORE DELETE ON audit_bam
-BEGIN SELECT RAISE(ABORT, 'Chuỗi băm kiểm toán không được xóa.'); END;
-'''
+from .sql_bang_phu import BANG_BAM      # noqa: E402
+from .sql_bang_phu import SQL_BAM      # noqa: E402
 COT_BAM = ('id', 'luc', 'nguoi', 'may', 'hanh_dong', 'bang', 'khoa', 'ma_ho', 'ma_thua', 'doi_tuong', 'truong', 'cu', 'moi', 'thao_tac')
 MUOI_BAM = 'LARC_AUDIT_2026|'
 
@@ -261,17 +229,7 @@ def dam_bao_bang(con) -> bool:
     return True
 
 
-def _cau(sql: str) -> list:
-    """Tách script thành câu lệnh (trigger có ';' bên trong BEGIN … END)."""
-    kq, dang = [], ''
-    for dong in sql.strip().splitlines():
-        if dong.strip().startswith('--'):
-            continue
-        dang += dong + '\n'
-        if sqlite3.complete_statement(dang):
-            kq.append(dang.strip())
-            dang = ''
-    return kq
+from .sql_bang_phu import cau_lenh as _cau      # noqa: E402 - tách script thành câu lệnh (dùng chung với csdl)
 
 
 # ---------------------------------------------------------------- người, phiên

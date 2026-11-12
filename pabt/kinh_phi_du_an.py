@@ -65,19 +65,23 @@ def _nhom_dat_con(loai_dat: str, nhom_dat: str) -> str:
 
 
 def tien_dat_theo_nhom(con) -> dict:
-    """{khóa NHOM_DAT_CON: (tiền Decimal, số hộ)} - thành tiền các dòng mục 1 (mọi hộ, mọi lần lập phương án)."""
-    from .nghiep_vu import BoiCanh, doc_tat_ca_phuong_an, thanh_tien_dong_dat
-    bc = BoiCanh.tu(con)
+    """{khóa NHOM_DAT_CON: (tiền Decimal, số hộ)} - thành tiền các dòng mục 1 (mọi hộ, mọi lần lập phương án).
+    1.1.05: lấy từ nghiep_vu.ket_qua_ho (kết quả cả dự án đã tính, nhớ theo dữ liệu - danh sách hộ đã tính khi mở dự án) thay vì đọc
+    lại mọi phương án (3.000 hộ ~0,3 s mỗi lần mở trang Tổng hợp tiền). Dòng mục 1 của KetQuaHo: ma = loại đất, nhom_dat, thanh_tien
+    = thanh_tien_dong_dat của đúng dòng đó - cùng số với cách cũ."""
+    from .nghiep_vu import ket_qua_ho
     tien = {k: KHONG for k, _ in NHOM_DAT_CON}
     ho = {k: set() for k, _ in NHOM_DAT_CON}
     nhom = {}                                           # (loại đất, nhóm đất) -> khóa: dự án chỉ có vài cặp, khỏi bỏ dấu lại từng dòng
-    for ma, pa in doc_tat_ca_phuong_an(con).items():
-        for d in pa.dat:
-            cap = (d.loai_dat, d.nhom_dat)
+    for ma, (kq, _) in ket_qua_ho(con).items():
+        for d in kq.dong:
+            if d.muc != 1:
+                continue
+            cap = (d.ma, d.nhom_dat)
             k = nhom.get(cap)
             if k is None:
-                k = nhom[cap] = _nhom_dat_con(d.loai_dat, d.nhom_dat)
-            v = thanh_tien_dong_dat(d, bc)
+                k = nhom[cap] = _nhom_dat_con(d.ma, d.nhom_dat)
+            v = d.thanh_tien
             tien[k] += v
             if v > 0:
                 ho[k].add(ma)
