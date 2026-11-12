@@ -1,0 +1,15 @@
+[
+ {"a": ["pabt/in_word.py::noi_dung_chi_tiet", "pabt/in_word.py::_hang_tu_dong"],
+  "b": ["pabt/in_word.py::_khoi_dan_trang", "pabt/in_word.py::_cao_hang_bang"],
+  "vi_sao": "Dàn trang mô tả LẠI đúng nội dung bản Word: sửa bố cục một bên phải sửa bên kia (CLAUDE.md, 1.1.03)."},
+ {"a": ["pabt/schema.sql"], "b": ["pabt/csdl.py"],
+  "vi_sao": "Đổi lược đồ phải tăng PHIEN_BAN_CSDL + _NANG_CAP, hoặc thêm dòng csdl.MO_RONG."},
+ {"a": ["pabt/gia_dat_qd03.json"], "b": ["tests/vang_gia_dat_qd03.json"],
+  "vi_sao": "Đổi gói quy tắc gắn sẵn phải qua bộ ca vàng 3.935 ca."},
+ {"a": ["pabt/sql_bang_phu.py"], "b": ["pabt/hoan_tac.py", "pabt/chua_benh_csdl.py"],
+  "vi_sao": "Bảng phụ mới bị trigger cấm xóa phải vào hoan_tac.BO_QUA, DauVetHo.BO_QUA, chua_benh_csdl._XOA_BANG."},
+ {"a": ["pabt/lenh.py"], "b": ["pabt/app.py", "pabt/phan_quyen.py"],
+  "vi_sao": "Lệnh mới / đổi tên: PHIM_LENH, LENH_CAN_DU_AN, phan_quyen.LENH_QUYEN phải dùng đúng tên trong lenh.ds_lenh."},
+ {"a": ["pabt/quet_chung.py"], "b": ["pabt/app.py"],
+  "vi_sao": "Loại file quét mới: quet_chung.DICH + nhan_loai + CuaSoChinh.mo_file_quet."}
+]

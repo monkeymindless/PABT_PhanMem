@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Văn phòng kiểm định LARC</title>
+<style>
+:root{--nen:#f4f6f8;--the:#fff;--vien:#d5dbe3;--chu:#17202b;--mo:#5b6776;--chinh:#0f5fa8;--p0:#b3261e;--p1:#b8590a;
+--p2:#7a6400;--p3:#4d5a69;--xanh:#1b7a43;--nhan:#e8edf3}
+@media (prefers-color-scheme:dark){:root{--nen:#10151b;--the:#19212b;--vien:#2c3745;--chu:#e6ebf1;--mo:#9aa7b6;
+--chinh:#6db3f2;--p0:#ff8a80;--p1:#ffb074;--p2:#e6cf6a;--p3:#a9b5c3;--xanh:#6fd39a;--nhan:#232e3b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nen);color:var(--chu);font:14px/1.5 "Segoe UI",Tahoma,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;margin:0}h2{font-size:15px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--mo)}
+.phu{color:var(--mo);margin:4px 0 0}
+.luoi{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.the{background:var(--the);border:1px solid var(--vien);border-radius:8px;padding:12px 14px}
+.so{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.the small{color:var(--mo);display:block;margin-top:2px}
+.cg{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.cg b{display:block}.cg code{font-size:12px;color:var(--mo)}.cg p{margin:6px 0 8px;color:var(--mo);font-size:13px}
+.dem{font-size:12px;font-variant-numeric:tabular-nums}
+.loc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+select,input{font:inherit;color:var(--chu);background:var(--the);border:1px solid var(--vien);border-radius:6px;padding:6px 8px}
+input{flex:1;min-width:180px}
+.cuon{overflow-x:auto;background:var(--the);border:1px solid var(--vien);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--vien);vertical-align:top}
+th{font-size:12px;color:var(--mo);font-weight:600;white-space:nowrap}
+tr.d{cursor:pointer}tr.d:hover{background:var(--nhan)}tr:last-child td{border-bottom:0}
+.muc{font-weight:700}.P0{color:var(--p0)}.P1{color:var(--p1)}.P2{color:var(--p2)}.P3{color:var(--p3)}
+.tt{display:inline-block;padding:1px 8px;border-radius:10px;background:var(--nhan);font-size:12px;white-space:nowrap}
+.tt.da_sua{color:var(--xanh)}.tt.xac_nhan{color:var(--p0)}.tt.hoan{color:var(--p1)}
+.ct td{background:var(--nen)}.ct dl{margin:0;display:grid;grid-template-columns:140px 1fr;gap:4px 12px}
+.ct dt{color:var(--mo)}.ct dd{margin:0;white-space:pre-wrap;word-break:break-word}
+.ct dd.ma{font-family:Consolas,monospace;font-size:12.5px}
+.trong{padding:28px;text-align:center;color:var(--mo)}
+code{font-family:Consolas,monospace}
+</style>
+</head>
+<body>
+<main>
+<h1>Văn phòng kiểm định LARC</h1>
+<p class="phu" id="dau"></p>
+
+<h2>Sổ lỗi ẩn</h2>
+<div class="luoi" id="tong"></div>
+
+<h2>Chuyên gia</h2>
+<div class="luoi cg" id="cg"></div>
+
+<h2>Danh sách</h2>
+<div class="loc">
+ <select id="l_tt"><option value="mo">Còn mở</option><option value="">Mọi trạng thái</option></select>
+ <select id="l_muc"><option value="">Mọi mức</option></select>
+ <select id="l_cg"><option value="">Mọi chuyên gia</option></select>
+ <select id="l_ban"><option value="">Mọi phiên bản</option></select>
+ <input id="l_chu" placeholder="Tìm trong tiêu đề, tệp, hàm">
+</div>
+<div class="cuon"><table><thead><tr><th>Mã</th><th>Mức</th><th>Trạng thái</th><th>Lỗi</th><th>Tệp : dòng</th>
+<th>Từ bản</th><th>Số lượt</th></tr></thead><tbody id="bang"></tbody></table></div>
+<p class="phu">Số liệu lấy từ <code>docs/van_phong/so_loi.json</code>. Dựng lại: <code>python van_phong.py bang</code>.
+Chạy một lượt kiểm: lệnh <code>/van-phong-kiem-dinh</code> trong Claude Code.</p>
+</main>
+<script>
+const D = /*DU_LIEU*/null || {ban:'?',ngay:'',loi:[],chuyen_gia:[]};
+const TEN_TT = {nghi_van:'Nghi vấn',xac_nhan:'Đã xác nhận',da_sua:'Đã sửa',hoan:'Hoãn',khong_phai_loi:'Không phải lỗi'};
+const MO = ['nghi_van','xac_nhan','hoan'];
+const $ = id => document.getElementById(id);
+const moi = (the, lop, chu) => {const e = document.createElement(the); if (lop) e.className = lop;
+  if (chu !== undefined) e.textContent = chu; return e;};
+const L = D.loi;
+$('dau').textContent = 'Phiên bản đang kiểm: ' + D.ban + ' · cập nhật ' + D.ngay + ' · ' + L.length + ' mục trong sổ';
+
+const dem = f => L.filter(f).length;
+const taiPhat = x => (x.lich_su || []).some(h => (h.ghi_chu || '').indexOf('TÁI PHÁT') === 0);
+[['Đã xác nhận, chưa sửa', dem(x => x.trang_thai === 'xac_nhan'), 'có lệnh tái hiện và chứng cứ'],
+ ['Trong đó P0 / P1', dem(x => x.trang_thai === 'xac_nhan' && (x.muc === 'P0' || x.muc === 'P1')), 'mất dữ liệu, số sai, lệnh chính hỏng'],
+ ['Nghi vấn', dem(x => x.trang_thai === 'nghi_van'), 'chưa tái hiện được'],
+ ['Hoãn', dem(x => x.trang_thai === 'hoan'), 'biết mà chưa xử lý được'],
+ ['Qua từ 2 bản vẫn mở', dem(x => MO.includes(x.trang_thai) && new Set((x.lich_su || []).map(h => h.phien_ban)).size > 1), 'tồn đọng'],
+ ['Tái phát', dem(taiPhat), 'đã sửa rồi gặp lại'],
+ ['Đã sửa', dem(x => x.trang_thai === 'da_sua'), 'có test canh'],
+ ['Bị bác bỏ', dem(x => x.trang_thai === 'khong_phai_loi'), 'phản biện loại']
+].forEach(([ten, so, phu]) => {const t = moi('div', 'the'); t.append(moi('div', 'so', so), moi('div', '', ten), moi('small', '', phu)); $('tong').append(t);});
+
+D.chuyen_gia.forEach(c => {const t = moi('div', 'the'); const cua = L.filter(x => x.chuyen_gia === c.ma);
+  t.append(moi('b', '', c.ten), moi('code', '', c.ma), moi('p', '', c.viec),
+    moi('div', 'dem', cua.length ? cua.length + ' phát hiện · ' + cua.filter(x => x.trang_thai === 'xac_nhan' || x.trang_thai === 'da_sua').length + ' được xác nhận · ' + cua.filter(x => x.trang_thai === 'khong_phai_loi').length + ' bị bác' : 'Chưa có phát hiện trong sổ'));
+  $('cg').append(t);});
+
+const them = (sel, gt, chu) => {const o = moi('option', '', chu || gt); o.value = gt; sel.append(o);};
+Object.keys(TEN_TT).forEach(k => them($('l_tt'), k, TEN_TT[k]));
+['P0','P1','P2','P3'].forEach(m => them($('l_muc'), m));
+D.chuyen_gia.forEach(c => them($('l_cg'), c.ma, c.ten));
+[...new Set(L.map(x => x.phien_ban_phat_hien))].sort().reverse().forEach(b => them($('l_ban'), b));
+
+function ve() {
+  const tt = $('l_tt').value, muc = $('l_muc').value, cg = $('l_cg').value, ban = $('l_ban').value;
+  const chu = $('l_chu').value.trim().toLowerCase(), b = $('bang'); b.textContent = '';
+  const ds = L.filter(x => (tt === '' || (tt === 'mo' ? MO.includes(x.trang_thai) : x.trang_thai === tt)) &&
+    (!muc || x.muc === muc) && (!cg || x.chuyen_gia === cg) && (!ban || x.phien_ban_phat_hien === ban) &&
+    (!chu || [x.ma, x.tieu_de, x.tep, x.ham].join(' ').toLowerCase().includes(chu)))
+    .sort((a, c) => a.muc.localeCompare(c.muc) || a.ma.localeCompare(c.ma));
+  if (!ds.length) {const r = moi('tr'), o = moi('td', 'trong', L.length ? 'Không mục nào khớp bộ lọc.' :
+      'Sổ còn trống: chưa chạy lượt kiểm nào. Gõ /van-phong-kiem-dinh trong Claude Code.'); o.colSpan = 7; r.append(o); b.append(r); return;}
+  ds.forEach(x => {
+    const r = moi('tr', 'd'), o = t => {const e = moi('td', '', t); r.append(e); return e;};
+    o(x.ma); o(x.muc).className = 'muc ' + x.muc;
+    o('').append(moi('span', 'tt ' + x.trang_thai, (taiPhat(x) ? 'Tái phát · ' : '') + TEN_TT[x.trang_thai]));
+    o(x.tieu_de); o(x.tep + (x.dong ? ' : ' + x.dong : '')); o(x.phien_ban_phat_hien); o((x.lich_su || []).length);
+    const c = moi('tr', 'ct'), oc = moi('td'), dl = moi('dl'); oc.colSpan = 7; c.hidden = true;
+    [['Chuyên gia', x.chuyen_gia], ['Hàm', x.ham], ['Mô tả', x.mo_ta], ['Tái hiện', x.tai_hien, 1], ['Chứng cứ', x.bang_chung, 1],
+     ['Vì sao lọt', x.vi_sao_lot], ['Đề xuất chặn', x.de_xuat_chan], ['Phản biện', x.phan_bien], ['Test canh', x.kiem_chung, 1],
+     ['Lịch sử', (x.lich_su || []).map(h => h.ngay + ' · bản ' + h.phien_ban + ' · ' + TEN_TT[h.trang_thai] + (h.ghi_chu ? ' · ' + h.ghi_chu : '')).join('\n')]
+    ].forEach(([k, v, ma]) => {if (v) dl.append(moi('dt', '', k), moi('dd', ma ? 'ma' : '', String(v)));});
+    oc.append(dl); c.append(oc); r.onclick = () => {c.hidden = !c.hidden;}; b.append(r, c);
+  });
+}
+['l_tt','l_muc','l_cg','l_ban'].forEach(i => $(i).onchange = ve); $('l_chu').oninput = ve; ve();
+</script>
+</body>
+</html>
