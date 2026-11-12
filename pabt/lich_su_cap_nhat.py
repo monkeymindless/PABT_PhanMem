@@ -7,6 +7,11 @@ from __future__ import annotations
 
 # (phiên bản, ngày, các dòng người dùng đọc được)
 MUC = (
+    ('1.1.04', '12/11/2026', (
+        'Mở dự án: khoảng 1,5 giây sau khi mở, phần mềm chỉ sao chép và nén dự án MỘT lần cho cả bản sao lưu tự động lẫn mốc khôi phục (trước làm hai lần liền, dự án có nhiều ảnh / hồ sơ quét thì cửa sổ đứng lâu hơn). Hai nơi vẫn có đủ bản như trước.',
+        'Trang Tổng hợp tiền theo phương án và Theo dõi tiến độ mở nhanh hơn ở dự án nhiều hộ (bớt việc tính lặp cho từng thửa, kết quả không đổi).',
+        'Bên trong: dọn mã thừa (lệnh nạp lặp, hằng số không dùng), câu lệnh tạo bảng phụ gom về một chỗ. Không đổi chức năng, số liệu, bản in.',
+    )),
     ('1.1.03', '11/11/2026', (
         'Cập nhật bảng giá đất từ file / ảnh quét: phần mềm soi bảng vừa đọc và tô màu dòng cần đối chiếu văn bản gốc (giá vị trí sau cao hơn vị trí trước, giá nông nghiệp cao hơn đất ở, giá lẻ dưới 100 đồng, giá đổi quá 50% so với bảng đang dùng); có dòng đỏ thì hỏi lại trước khi ghi. Phép soi chỉ nhắc, không tự sửa số - số đọc nhầm mà vẫn đúng thứ tự thì vẫn phải đối chiếu bằng mắt.',
         'Bảng giá không ghi đơn vị: giá dạng 500.000 (mọi giá chia hết 1.000) không còn bị hiểu thành nghìn đồng (500 triệu đồng/m²); phần mềm nhắc xác nhận đơn vị. Bảng giá đất nông nghiệp có cột chỉ ghi "Đơn giá" không còn bị ghi vào cột đất ở.',

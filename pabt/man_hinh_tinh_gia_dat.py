@@ -680,7 +680,6 @@ class HopTinhGiaDat(QDialog):
 
     # ---------------------------------------------------------------- văn bản căn cứ
     def eventFilter(self, obj, e):
-        from PySide6.QtCore import QEvent
         if obj is self.o_can_cu and e.type() == QEvent.Type.FocusOut:
             self.sap_xep_can_cu()
         return False

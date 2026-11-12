@@ -26,7 +26,7 @@ from . import ban_do_cad, ban_do_kml, do_dac, nen_ban_do, toa_do
 from .giao_dien import TOKEN, XepDong, chan_tin_hieu, chay_nen, chu_hien, con_tro_cho, qmau_theo_tong
 from .man_hinh_ban_do_cong_cu import SNAP_PX, HopGanHo, HopSuaThua, KhungThongTinThua, LaBan, ThuocDo, chu_sao_chep
 from .giao_dien import dat_kieu_theo_tong  # noqa: E402  (kiểu riêng đổi theo tông nền)
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .thong_bao import TEN_UD, chu_loi
 from .tien import so_vn, vn
 
@@ -2810,7 +2810,6 @@ class HopBanDo(QDialog):
             if self.im_lang:
                 ra = chay()
             else:
-                from .giao_dien import chay_nen
                 ra = chay_nen(self, chay, f'Đang lưu ảnh nền vùng dự án ({len(viec)} ô) vào file dự án…')
             kq['loi'] = sum(1 for *_x, a in ra if not a)
             try:

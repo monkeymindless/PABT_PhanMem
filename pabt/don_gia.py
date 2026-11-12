@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import an_toan, csdl, nhap_excel
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 
 TEN_FILE = 'bo_don_gia.sqlite'
 TEN_BO = 'BỘ ĐƠN GIÁ BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ - ĐỒNG NAI'

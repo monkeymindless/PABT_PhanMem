@@ -1577,7 +1577,6 @@ class KhungTienDo(_Khung):
         self.ngan_xem.addWidget(self.w_ho)
         self.ngan_xem.addWidget(self.thua)
         # 20/10/2026 (ảnh mẫu): Sổ nhật ký vận động của hộ đang chọn - bên phải bảng (kéo thu gọn được: màn hình 1366 chật)
-        from PySide6.QtWidgets import QSplitter
         self.so_vd = KhungSoVanDong(self)
         self.tach_vd = QSplitter(Qt.Orientation.Horizontal)
         self.tach_vd.addWidget(self.ngan_xem)
@@ -1608,7 +1607,6 @@ class KhungTienDo(_Khung):
             self.hanh_dong_xuat[chu] = a
         self.nut['Xuất'].setMenu(self.menu_xuat)
         self.nut['Xuất'].setToolTip('Bảng theo dõi chi trả & bàn giao, báo cáo tiến độ GPMB, danh sách đề nghị cưỡng chế (Excel)')
-        from PySide6.QtWidgets import QSizePolicy
         for ten in ('Bàn giao mặt bằng các hộ đã chọn…', 'Hộ hoàn tất CTBT…', 'Xuất'):
             b = self.nut[ten]
             b.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)

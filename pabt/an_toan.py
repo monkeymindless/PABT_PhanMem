@@ -136,7 +136,6 @@ def nap_goc_ca_windows(url: str, cho: int = 20) -> bool:
     Python chỉ đọc các chứng chỉ gốc ĐÃ có trong kho -> lần đầu gặp CA gốc mới báo CERTIFICATE_VERIFY_FAILED dù trình duyệt mở
     bình thường (vbpl.vn - GlobalSign R46, đo 12/10/2026: Python lỗi, .NET mở được, sau đó Python mở được). Cho Windows kết nối
     thử (VẪN xác minh chứng chỉ đầy đủ - không tắt kiểm tra) để kho có gốc CA rồi gọi lại. True = Windows tin chứng chỉ."""
-    import re
     import subprocess
     import sys
     import urllib.parse

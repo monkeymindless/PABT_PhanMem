@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
 from . import csdl, don_gia, du_an_moi, in_an, lap_pa, may_chu, to_chuc
 from .giao_dien import ChonXoXuong, bang_to_chuc, chay_nen, con_tro_cho
 from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .thong_bao import TEN_UD, chu_loi
 
 BUOC = ['1. Thông tin dự án', '2. Danh sách hộ, thửa (nhập thô)', '3. Bảng giá đất của dự án', '4. Hoàn thiện, in']

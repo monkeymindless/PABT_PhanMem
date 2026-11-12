@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
                                QMessageBox, QPlainTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from . import du_thao, van_ban_dot as vbd
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .thong_bao import TEN_UD, chu_loi
 
 LOC_FILE = 'Văn bản, biên bản (*.pdf *.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.doc *.docx *.xls *.xlsx *.xlsm);;Tất cả (*.*)'

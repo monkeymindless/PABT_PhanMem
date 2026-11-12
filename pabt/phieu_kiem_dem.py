@@ -21,20 +21,11 @@ from .lap_pa import LoiNhap, bo_dau
 
 PHIEN_BAN_PHIEU = 2                 # phiên bản file .json phiếu ghi ra (1 = phiếu 0.9.87 - vẫn nhập được)
 LOAI_GOI_DU_LIEU = 'larc_field_du_lieu'   # file dữ liệu dự án gửi sang ứng dụng điện thoại (di_dong/README.md mục 1)
-MUC_PHIEU = ((2, 'Nhà, công trình'), (3, 'Cây trồng'), (7, 'Vật nuôi'))
 THU_MUC_ANH = 'Anh_kiem_dem'        # ảnh gửi kèm phiếu lưu ở <thư mục file dự án>/Anh_kiem_dem/<mã hộ>/
 ANH_TOI_DA = 25 * 1024 * 1024       # một ảnh gửi kèm (byte) - lớn hơn: bỏ, báo lại
 DUOI_ANH = ('.jpg', '.jpeg', '.png', '.webp', '.bmp', '.heic', '.tif', '.tiff')
-BANG_ANH = 'anh_hien_trang'
-SQL_BANG_ANH = f'''CREATE TABLE IF NOT EXISTS {BANG_ANH} (
-    id INTEGER PRIMARY KEY,
-    ma_ho INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE,
-    duong_dan TEXT NOT NULL,             -- đường dẫn đầy đủ của ảnh lúc gắn
-    ten_file TEXT NOT NULL,
-    khop_theo TEXT NOT NULL DEFAULT '',  -- cccd / ho_ten / stt
-    luc TEXT NOT NULL,
-    UNIQUE (ma_ho, duong_dan)
-)'''
+from .sql_bang_phu import BANG_ANH      # noqa: E402 - câu SQL ở module lá
+from .sql_bang_phu import SQL_ANH as SQL_BANG_ANH      # noqa: E402
 
 
 # ---------------------------------------------------------------- 1. dữ liệu dự án cho ứng dụng điện thoại

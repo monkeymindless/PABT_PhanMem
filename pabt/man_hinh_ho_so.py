@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 
 from . import ho_so
 from .giao_dien import MAU_CANH_BAO_CHU, MAU_CANH_BAO_NEN, TOKEN, ChonXoXuong, mau_theo_tong, qmau_theo_tong
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .tien import so_vn
 from .thong_bao import TEN_UD
 
@@ -33,7 +33,6 @@ RONG_COT_THUA = {'stt': 44, 'so_to': 60, 'so_thua': 66, 'loai_dat': 86, 'dt_nguy
                  'vi_tri_gia': 132, 'so_gcn': 116, 'thao_tac': 96}
 CAO_DONG_THUA = 44                      # cao_chuan: mọi dòng thửa cao bằng nhau (nguồn gốc rút gọn 2 dòng, xem đủ ở HopNguonGoc)
 CAO_DONG_TOI_DA = 104                   # (giữ tên cũ) dòng thửa không cao quá mức này
-CO_CHU_NHO_NHAT = 0.78
 LIEN_KET_XEM = '[Xem/Sửa đủ ↗]'
 MAU_LIEN_KET = '#2563EB'
 CAN_GIUA = Qt.AlignmentFlag.AlignCenter

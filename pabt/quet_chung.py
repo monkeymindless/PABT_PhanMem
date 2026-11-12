@@ -153,7 +153,7 @@ def doc_toan_van(file, bao_tien_do=None, cho=None) -> tuple:
         that = loai_that(p) if duoi in ('.docx', '.doc') else ''
         if that in ('.docx', '.doc'):
             from . import an_toan
-            from .lap_pa import LoiNhap
+            from .loi import LoiNhap
             from .nhap_don_gia_doc import _doc_docx, chuyen_office
             try:
                 f = p if that == '.docx' else chuyen_office(p, '.doc')
@@ -584,7 +584,7 @@ def quet(files, ngu_canh: str = AUTO, bao_tien_do=None, cho=None, doc=None) -> K
     doc(file) -> chữ: thay hàm đọc file (kiểm thử). cho() -> True: hủy (ocr.DaHuy được truyền lên). Lỗi từng file ghi vào kq.loi, quét tiếp."""
     if ngu_canh not in NGU_CANH:
         raise ValueError(f'Ngữ cảnh quét không có: {ngu_canh}')
-    from .lap_pa import LoiNhap
+    from .loi import LoiNhap
     bat_dau = time.perf_counter()
     kq = KetQuaQuet(ngu_canh=ngu_canh)
     loai = []

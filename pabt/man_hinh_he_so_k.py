@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QFileDialog, QHB
 
 from . import he_so_k as hk
 from .giao_dien import kieu_o_he_so_k
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 
 COT = [('chon', 'Lấy', 40), ('dia_ban', 'Địa bàn', 130), ('tt', 'TT', 45), ('loai_dat', 'Loại đất', 190), ('vi_tri', 'Vị trí', 55),
        ('he_so', 'Hệ số K', 70), ('tuyen_duong', 'Tuyến đường / khu vực', 220), ('diem_dau', 'Từ', 170), ('diem_cuoi', 'Đến', 170),

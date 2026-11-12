@@ -28,9 +28,6 @@ CAO = 34                 # chiều cao thanh (điểm logic) - như VS Code; 0.9
 RONG_NUT_CUA_SO = 46     # nút thu nhỏ / phóng to / đóng
 VIEN_KEO = 5             # mép cửa sổ dùng để kéo đổi cỡ (điểm logic)
 MAU_NEN = '#F3F6FA'      # 1.0.42: cùng TOKEN['nen'] — tông Tối đổi qua _mau_chrome
-MAU_VACH = '#D5DEE8'
-MAU_CHU = '#0F172A'
-MAU_CHU_MO = '#475569'   # cửa sổ không hoạt động
 MAU_DONG = '#C42B1C'     # nền nút Đóng khi rê chuột (màu Windows 11)
 
 

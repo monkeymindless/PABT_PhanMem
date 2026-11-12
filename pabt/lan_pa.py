@@ -233,7 +233,7 @@ def tao_lan_dieu_chinh(con, ma_ho: int, lan_goc: int | None = None, ten: str | N
     26/10/2026 (người dùng): lần gốc CHƯA có quyết định phê duyệt vẫn lập được (dự thảo phương án điều chỉnh) - lần gốc thành chỉ xem;
     quyết định sau này phê duyệt TOÀN BỘ số tiền lần điều chỉnh (nghiep_vu.tinh_chenh_lech_lan: chưa có gì được duyệt để trừ).
     Xóa lần điều chỉnh (chưa có quyết định) thì lần cũ tính lại. Trả số lần mới. LoiNhap: hộ chưa có phương án / lần đã bị thay."""
-    from .lap_pa import LoiNhap
+    from .loi import LoiNhap
     _kiem_ho(con, ma_ho)
     from .lap_pa import kiem_quyen
     kiem_quyen(con, 'lap_bo_sung')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)
@@ -343,7 +343,7 @@ def khoa_lai(con, ma_ho: int, lan: int) -> None:
 
 def xoa_lan(con, ma_ho: int, lan: int) -> int:
     """Xóa lần bổ sung CHƯA phê duyệt (dòng phương án của lần đó). Lần 1 / lần đã có quyết định: LoiNhap. Trả số dòng xóa."""
-    from .lap_pa import LoiNhap
+    from .loi import LoiNhap
     _kiem_ho(con, ma_ho)
     from .lap_pa import kiem_quyen
     kiem_quyen(con, 'lap_bo_sung')                 # 1.0.57: vai trò tài khoản máy chủ (phan_quyen)

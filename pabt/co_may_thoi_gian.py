@@ -111,9 +111,11 @@ def co_thay_doi(file) -> bool:
     return not ds or ds[0].dau != dau_file(file)
 
 
-def chup_moc(con, file, ly_do: str = 'tu_dong', ghi_chu: str = '', bat_buoc: bool = False) -> Moc | None:
+def chup_moc(con, file, ly_do: str = 'tu_dong', ghi_chu: str = '', bat_buoc: bool = False, tu_ban_sao=None) -> Moc | None:
     """Chụp mốc file dự án đang mở qua kết nối con. Không chụp (None): đang giữa giao dịch, hoặc file chưa đổi từ mốc trước (trừ
-    bat_buoc). Lỗi ghi đĩa ném OSError / sqlite3.Error để nơi gọi báo."""
+    bat_buoc). Lỗi ghi đĩa ném OSError / sqlite3.Error để nơi gọi báo.
+    tu_ban_sao (1.1.04): bản sao lưu tự động ĐÃ nén của đúng trạng thái này (csdl.sao_luu_tu_dong vừa ghi, chưa có lệnh ghi nào
+    chen giữa) - chép file đó làm mốc thay vì sao chép + nén cả dự án lần thứ hai trên luồng giao diện."""
     file = Path(file)
     if con.in_transaction:
         return None
@@ -129,16 +131,20 @@ def chup_moc(con, file, ly_do: str = 'tu_dong', ghi_chu: str = '', bat_buoc: boo
         k += 1
     dich = tm / ten
     tam = dich.with_name(dich.name + '.tmp')
-    dc = sqlite3.connect(str(tam))
-    try:
-        con.backup(dc)
-        dc.commit()
-        from .csdl import bo_anh_ban_do_ban_sao
-        bo_anh_ban_do_ban_sao(dc)                        # ảnh nền bản đồ tải lại được: mốc không chép thêm vài MB mỗi lần
-    finally:
-        dc.close()
-    from .an_toan import dong_goi_file_sao_luu
-    dong_goi_file_sao_luu(tam)                          # 1.0.55: nén zlib (không mã hóa - người dùng chọn)
+    san = Path(tu_ban_sao) if tu_ban_sao else None
+    if san is not None and san.is_file():
+        shutil.copyfile(str(san), str(tam))             # cùng nội dung: sao chép SQLite -> bỏ ảnh nền -> nén, đã làm một lần
+    else:
+        dc = sqlite3.connect(str(tam))
+        try:
+            con.backup(dc)
+            dc.commit()
+            from .csdl import bo_anh_ban_do_ban_sao
+            bo_anh_ban_do_ban_sao(dc)                    # ảnh nền bản đồ tải lại được: mốc không chép thêm vài MB mỗi lần
+        finally:
+            dc.close()
+        from .an_toan import dong_goi_file_sao_luu
+        dong_goi_file_sao_luu(tam)                      # 1.0.55: nén zlib (không mã hóa - người dùng chọn)
     os.replace(tam, dich)
     so_ho, tong = tom_tat(con)
     moc = Moc(dich, luc, ly_do, ghi_chu, so_ho, tong, dau_file(file))

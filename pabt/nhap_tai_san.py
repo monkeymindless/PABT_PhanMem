@@ -12,7 +12,7 @@ Không dùng Qt (chạy được trong test, dùng chung Qt5 / Qt6). Chính sác
 from __future__ import annotations
 
 from . import lap_pa
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .tien import D, KHONG, so_vn
 
 

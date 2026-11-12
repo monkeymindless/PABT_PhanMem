@@ -53,7 +53,7 @@ TOI_CHU = {'#0F3A63': '#93C5FD', '#991B1B': '#FCA5A5', '#1F76A6': '#7DD3FC', '#4
            # 1.0.80: chữ bảng / thanh trạng thái viết màu tối chưa có trong bảng đổi
            '#1B5E20': '#86EFAC', '#B3261E': '#FCA5A5', '#5F6368': '#CBD5E1', '#107C41': '#86EFAC', '#BE123C': '#FDA4AF', '#008000': '#86EFAC', '#800000': '#FCA5A5',
            '#1F5FA0': '#93C5FD', '#3F6212': '#BEF264',
-           '#B8433A': '#FCA5A5', '#2E7D32': '#86EFAC', '#1F5FA0': '#93C5FD',      # P1: chữ ô bảng (mau_o_theo_tong 'chu')
+           '#B8433A': '#FCA5A5', '#2E7D32': '#86EFAC',      # P1: chữ ô bảng (mau_o_theo_tong 'chu')
            # 1.0.93: chữ tối chưa có trong bảng đổi (Tối 1,9 - 2,9:1 trước đây)
            '#1D4ED8': '#93C5FD', '#B71C1C': '#FCA5A5', '#B45309': '#FCD34D', '#B91C1C': '#FCA5A5', '#166534': '#86EFAC',
            '#475569': '#CBD5E1', '#0F6E56': '#6EE7B7'}

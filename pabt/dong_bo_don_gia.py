@@ -18,7 +18,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 
 THU_MUC = 'BoDonGia'
 FILE_BO = 'bo_don_gia.sqlite'

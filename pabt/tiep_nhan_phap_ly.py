@@ -157,7 +157,7 @@ def luu_file(d: dict, file) -> Path:
 
 
 def mo_file(file) -> dict:
-    from .lap_pa import LoiNhap
+    from .loi import LoiNhap
     try:
         return chuan(json.loads(Path(file).read_text(encoding='utf-8-sig')))
     except FileNotFoundError:
@@ -407,7 +407,7 @@ def quet_excel(file) -> dict:
     from .loai_dat import LOAI_DAT, chuan_ma_loai_dat
     kq = nhap_tho.doc(file)
     if kq.bo_cot is None:
-        from .lap_pa import LoiNhap
+        from .loi import LoiNhap
         raise LoiNhap('; '.join(kq.loi) or 'Không tìm thấy bảng thửa đất trong file.')
     ma_hop_le = {m for m, _, _ in LOAI_DAT}
     ten_ho = {h['ma_ho']: (h.get('ho_ten') or '').strip() for h in kq.ho}

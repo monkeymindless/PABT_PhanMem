@@ -16,7 +16,11 @@ import re
 from datetime import date, datetime, timedelta
 
 from . import csdl
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
+from .loai_dat import NHOM as NHOM_LOAI_DAT
+from .loai_dat import NONG_NGHIEP, PHI_NONG_NGHIEP
+
+_RE_TACH_MA_DAT = re.compile(r'[\s+,;/&-]+')
 
 # khóa -> (khóa trong cai_dat, mặc định, nhãn, căn cứ)
 MOC = {
@@ -169,12 +173,10 @@ def han_tham_dinh(con, dot, hom_nay=None, da_phe_duyet: bool = False) -> dict:
 def phan_nhom_dat(loai_dat: str) -> str:
     """'nn' (mọi thành phần là đất nông nghiệp) / 'pnn' (có đất phi nông nghiệp, ví dụ ONT+CLN) / 'khong_ro' (trống hoặc có mã
     chưa có trong danh mục loại đất - loai_dat.LOAI_DAT: mốc thu hồi lấy theo đất phi nông nghiệp, thời hạn dài hơn, cho an toàn)."""
-    from .loai_dat import LOAI_DAT, NONG_NGHIEP, PHI_NONG_NGHIEP
-    nhom = {ma: g for ma, _, g in LOAI_DAT}
-    ma_ds = [m for m in re.split(r'[\s+,;/&-]+', str(loai_dat or '').upper()) if m]
+    ma_ds = [m for m in _RE_TACH_MA_DAT.split(str(loai_dat or '').upper()) if m]
     if not ma_ds:
         return 'khong_ro'
-    g = [nhom.get(m) for m in ma_ds]
+    g = [NHOM_LOAI_DAT.get(m) for m in ma_ds]       # bảng mã -> nhóm dựng sẵn (trước đây dựng lại mỗi thửa: 3.000 hộ ~0,1 s)
     if any(x == PHI_NONG_NGHIEP for x in g):
         return 'pnn'
     if all(x == NONG_NGHIEP for x in g):

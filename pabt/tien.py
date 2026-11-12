@@ -101,7 +101,6 @@ CONG_THUC_SAU_TOI_DA = 100           # tầng ngoặc / dấu âm lồng nhau
 def tinh_cong_thuc(s) -> Decimal:
     """Tính công thức cộng, trừ, nhân, chia, ngoặc: '=4,2*5,7' -> 23,94; '12x3 + 1,5' -> 37,5; '50%*200' -> 100.
     Nhân: * x × ; chia: / : ; số kiểu Việt Nam (dấu phẩy thập phân). Lỗi -> ValueError (thông báo tiếng Việt)."""
-    import re
     s = str(s or '').strip().lstrip('=').strip().lower()
     if not s:
         raise ValueError('công thức trống')

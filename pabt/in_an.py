@@ -550,7 +550,6 @@ def can_khoi_ky(ws, tim_tren: int = 12) -> int:
     phía trên (tối đa tim_tren dòng) phủ cột giữa của ô họ tên; bỏ dấu cách thừa đầu / cuối chức danh (mẫu "   KIỂM TRA     " - Excel
     căn giữa tính cả dấu cách nên chữ lệch khỏi họ tên), ô họ tên gộp ĐÚNG các cột của ô chức danh, cả hai căn giữa không thụt lề.
     Mẫu người dùng tự sửa lệch cột cũng được căn lại. Trả số ô họ tên đã căn."""
-    from copy import copy
     chu_dong = {}                                       # {dòng: [ô có chữ]} - một lượt duyệt (không gọi ws.cell từng cột: chậm,
     o_ten = []                                          # còn tạo ô rỗng thừa trong file in ra)
     for c in _o_chu(ws):
@@ -1097,8 +1096,6 @@ HO_KHIT_TU, HO_KHIT_DEN = 10.0, 120.0
 KHIT_MOI_DONG = 14.0
 KHIT_CHUA = 2.0
 CON_CHO_HO_LON = 85.0           # hộ nhiều thửa: trang còn >= 85 pt (~3 dòng thửa) thì bắt đầu ngay, không đẩy cả hộ sang trang
-TEN_DEM = 'PABT_DEM_DONG'       # tên vùng báo VBS xuất PDF đệm dòng (phần mười pt) khi đã nén khít
-TEN_CAO_MIN = 'PABT_CAO_MIN'    # … và chiều cao tối thiểu (phần mười pt)
 
 
 def chuan_le_trang(ws, loai: str = 'chi_tiet') -> dict:

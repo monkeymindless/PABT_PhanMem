@@ -70,9 +70,13 @@ def tien_dat_theo_nhom(con) -> dict:
     bc = BoiCanh.tu(con)
     tien = {k: KHONG for k, _ in NHOM_DAT_CON}
     ho = {k: set() for k, _ in NHOM_DAT_CON}
+    nhom = {}                                           # (loại đất, nhóm đất) -> khóa: dự án chỉ có vài cặp, khỏi bỏ dấu lại từng dòng
     for ma, pa in doc_tat_ca_phuong_an(con).items():
         for d in pa.dat:
-            k = _nhom_dat_con(d.loai_dat, d.nhom_dat)
+            cap = (d.loai_dat, d.nhom_dat)
+            k = nhom.get(cap)
+            if k is None:
+                k = nhom[cap] = _nhom_dat_con(d.loai_dat, d.nhom_dat)
             v = thanh_tien_dong_dat(d, bc)
             tien[k] += v
             if v > 0:
@@ -240,7 +244,7 @@ def ket_luan_doi_soat(ss) -> tuple:
 def mo_khai_toan(file):
     """Mở file khái toán .pabtdt; không đọc được -> LoiNhap (câu tiếng Việt)."""
     from . import du_toan
-    from .lap_pa import LoiNhap
+    from .loi import LoiNhap
     try:
         return du_toan.DuToan.mo(file)
     except FileNotFoundError:

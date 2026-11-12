@@ -517,7 +517,6 @@ def _doc_chi_muc(thu_muc: Path) -> dict:
     """Chỉ mục nhẹ của thư mục dự án trên máy chủ (đặc tả ARCH-PABT-2026-V4 mục 7.4): {đường dẫn tương đối: {ten, mtime, size}}.
     Liệt kê dự án chỉ đọc một file JSON vài KB thay vì mở từng file SQLite qua SMB (ổ mạng chậm: mỗi file vài trăm ms);
     file nào đổi (mtime / cỡ) mới mở lại để đọc tên. Hỏng / không đọc được: coi như chưa có (tự dựng lại)."""
-    import json
     try:
         d = json.loads((Path(thu_muc) / CHI_MUC).read_text(encoding='utf-8'))
         return d if isinstance(d, dict) else {}
@@ -526,7 +525,6 @@ def _doc_chi_muc(thu_muc: Path) -> dict:
 
 
 def _ghi_chi_muc(thu_muc: Path, d: dict) -> None:
-    import json
     f = Path(thu_muc) / CHI_MUC
     tam = f.with_name(f.name + '.tam')
     try:

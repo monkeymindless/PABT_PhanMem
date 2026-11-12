@@ -23,7 +23,7 @@ from pathlib import Path
 
 from . import du_lieu_in
 from . import openxml_word as ox
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 
 THU_MUC_CT, THU_MUC_TONG = 'PA CHI TIET', 'PA TONG'
 # loại mẫu -> (tên file, tên hiển thị, đuôi nhận)
@@ -782,7 +782,6 @@ def _p(*chay, can: str = 'both', truoc: int = 0, sau: int = 60, dau_dong: int = 
 
 def _bang(hang: list, rong: list, vien: bool = True, doc: str = 'center', lech: int = 0) -> str:
     """hang: [[nội dung ô (chuỗi các w:p)]]. Trang A4 dọc lề trái 3 cm, phải 2 cm: tổng độ rộng cột <= 9.071 (twip)."""
-    from . import openxml_word as ox
     luoi = ''.join(f'<w:gridCol w:w="{x}"/>' for x in rong)
     dong = ''.join('<w:tr>' + ''.join(
         f'<w:tc><w:tcPr><w:tcW w:w="{rong[i]}" w:type="dxa"/>{ox.xml_tc_borders(vien)}<w:vAlign w:val="{doc}"/></w:tcPr>'

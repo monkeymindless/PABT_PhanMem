@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
                                QToolButton, QVBoxLayout, QWidget)
 
 from . import csdl, du_thao, kiem_loi, quan_ly, thoi_han
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .tien import D, vn
 from .giao_dien import TOKEN, KieuNut, XepDong, ap_kieu_nut, cac_dong_da_chon, con_tro_cho, dat_trang_thai
 from .giao_dien import mau_o_theo_tong, mau_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)

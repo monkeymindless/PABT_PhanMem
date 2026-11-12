@@ -21,23 +21,8 @@ from pathlib import Path
 from . import csdl
 from .tien import D, chuoi
 
-BANG = 'thua_ban_do'
-SQL_BANG = f'''CREATE TABLE IF NOT EXISTS {BANG} (
-    id INTEGER PRIMARY KEY,
-    so_to TEXT NOT NULL,
-    so_thua TEXT NOT NULL,
-    loai_dat TEXT NOT NULL DEFAULT '',
-    dt_ban_ve TEXT,                     -- diện tích ghi trên nhãn bản vẽ (m²)
-    dt_hinh TEXT,                       -- diện tích tính theo hình (m²)
-    dt_trong_ranh TEXT,                 -- diện tích nằm trong ranh thu hồi (m²) - trống: không có lớp ranh
-    toa_do TEXT NOT NULL,               -- JSON [[x, y], …] hệ tọa độ bản vẽ
-    nhan TEXT NOT NULL DEFAULT '',      -- chữ nhãn gốc trong thửa
-    lop TEXT NOT NULL DEFAULT '',
-    nguon TEXT NOT NULL DEFAULT '',     -- tên file .dxf
-    luc TEXT NOT NULL,
-    chi_tiet TEXT NOT NULL DEFAULT '',  -- JSON (bản vẽ đường - ban_do_ghep): đối chiếu với nhãn, các phần DT, mốc, ghi chú
-    UNIQUE (so_to, so_thua)
-)'''
+from .sql_bang_phu import BANG_BAN_DO as BANG      # noqa: E402 - câu SQL ở module lá
+from .sql_bang_phu import SQL_BAN_DO as SQL_BANG      # noqa: E402
 
 
 class LoiCad(ValueError):

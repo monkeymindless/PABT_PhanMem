@@ -881,7 +881,6 @@ class CuaSoChinh(QMainWindow):
         for k in TRANG:                                  # "&" trong chữ QAction = phím tắt gạch dưới: viết "&&" để hiện "&"
             if '&' in k and k not in NHAN_MENU:
                 L[k].setText(k.replace('&', '&&'))
-        from .giao_dien import chu_hien
         da = set(NHAN_MENU) | {k for k in TRANG if '&' in k}
         for k, a in L.items():
             if k not in da:
@@ -1340,7 +1339,7 @@ class CuaSoChinh(QMainWindow):
                 thong_bao_noi(self, chu_tinh_lai_cong_thuc(tinh_lai), 'canh_bao' if tinh_lai['bo_qua_khoa'] else 'tin', 12000)
             if not chi_doc:                                 # 1.0.08: bản sao lưu tự động (máy HDD cũ, mất điện) - sau khi cửa sổ đã vẽ
                 c, f = self.con, self.file
-                QTimer.singleShot(SAO_LUU_SAU_MS, lambda: c is self.con and (self._sao_luu_tu_dong(c, f), self.chup_moc('mo')))
+                QTimer.singleShot(SAO_LUU_SAU_MS, lambda: c is self.con and self._sao_luu_va_moc_khi_mo(c, f))
                 self.dong_ho_moc.start()
             from .hang_nhap_nhanh import lam_san_nen      # lúc rảnh, luồng nền: dựng sẵn danh sách chọn của cửa sổ lập phương án
             dm = self.dm
@@ -1352,14 +1351,20 @@ class CuaSoChinh(QMainWindow):
             self.dong_du_an()
             QMessageBox.critical(self, TEN_UD, chu_loi('Không mở được dự án', e))
 
-    def chup_moc(self, ly_do: str = 'tu_dong', ghi_chu: str = '', bat_buoc: bool = False):
+    def _sao_luu_va_moc_khi_mo(self, con, file) -> None:
+        """Sau khi mở dự án: bản sao lưu tự động + mốc 'mo'. 1.1.04: mốc chép lại file sao lưu vừa nén (cùng trạng thái, không có
+        lệnh ghi chen giữa) - trước đây sao chép + nén cả dự án HAI lần liền trên luồng giao diện."""
+        ban_sao = self._sao_luu_tu_dong(con, file)
+        self.chup_moc('mo', tu_ban_sao=ban_sao)
+
+    def chup_moc(self, ly_do: str = 'tu_dong', ghi_chu: str = '', bat_buoc: bool = False, tu_ban_sao=None):
         """Chụp mốc cỗ máy thời gian cho dự án đang mở để sửa (co_may_thoi_gian.chup_moc). Không đổi từ mốc trước / chỉ xem: không
         chụp. Lỗi ghi đĩa: chỉ báo ở thanh trạng thái. Trả Moc hoặc None."""
         if self.con is None or self.file is None or self.chi_doc:
             return None
         from . import co_may_thoi_gian
         try:
-            return co_may_thoi_gian.chup_moc(self.con, self.file, ly_do, ghi_chu, bat_buoc)
+            return co_may_thoi_gian.chup_moc(self.con, self.file, ly_do, ghi_chu, bat_buoc, tu_ban_sao=tu_ban_sao)
         except (OSError, sqlite3.Error) as e:
             self.statusBar().showMessage(chu_loi('Không lưu được mốc khôi phục', e), 8000)
             return None
@@ -2812,7 +2817,6 @@ class CuaSoChinh(QMainWindow):
         -> đồng bộ các hộ lên máy chủ, vẫn giữ hộ (may_chu.dong_bo_ho ở luồng nền). Xung đột / mất mạng: chỉ báo, KHÔNG ghi đè."""
         if self.nhan_viec is None:
             return None
-        from . import may_chu
         if may_chu.PHIEN is None or not may_chu.tu_dong_bo_khi_luu():
             return None
         from .giao_dien import chay_nen, thong_bao_noi
@@ -3299,7 +3303,6 @@ class CuaSoChinh(QMainWindow):
         if hop.isWindow():                              # hộp tạo sẵn kiểu nhúng (CuaSoLapPA(nhung=True)): khỏi đặt lại cờ
             hop.setWindowFlags(Qt.WindowType.Widget)
         hop.setProperty('nhung_tab', True)
-        from PySide6.QtGui import QKeySequence
         for sc in getattr(hop, '_phim', []):
             if sc.key() == QKeySequence(QKeySequence.StandardKey.Save):
                 sc.setEnabled(False)

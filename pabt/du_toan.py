@@ -234,7 +234,7 @@ def tu_excel_pabt(file_excel, ten: str = '') -> DuToan:
         else:
             bc = nhap_tho.nhap(file_excel, tam, ten or Path(file_excel).stem)
         if bc.loi:
-            from .lap_pa import LoiNhap
+            from .loi import LoiNhap
             raise LoiNhap('Không đọc được file: ' + '; '.join(bc.loi))
         dt = tu_file_pabt(tam, ten or Path(file_excel).stem)
     dt.nguon = f'File Excel {Path(file_excel).name}'

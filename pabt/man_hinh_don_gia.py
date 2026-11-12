@@ -958,7 +958,6 @@ def xin_quyen_sua(cha=None, im_lang: bool = False) -> bool:
         return True
     if im_lang:
         return False
-    from .thong_bao import TEN_UD
     if quan_tri_bo.bi_chan_may_chu() or quan_tri_bo.may_duoc_quan_ly():
         QMessageBox.warning(cha, TEN_UD, quan_tri_bo.ly_do_khong_sua())
         return False

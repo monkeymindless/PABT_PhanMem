@@ -89,7 +89,6 @@ _LOAI_SO = r'(?:QĐ|QD|NQ|CT|NĐ|ND|TTLT|TT|QH|VBHN)'
 _RE_SO_VB = re.compile(r'(?i)\bs[ốoôơó]\s*(?:hi[ệe]u)?\s*:?\s*(\d+[a-z]?\s*/\s*(?:\d{4}\s*/\s*)?' + _LOAI_SO + r'[\w.Đđ-]*)')
 _RE_SO_TRONG = re.compile(r'(?i)\b(\d+[a-z]?\s*/\s*(?:\d{4}\s*/\s*)?(?:(?:QĐ|QD|NQ|NĐ|ND|TTLT|TT|VBHN)-[\wĐđ.]+|QH\d+))')
 _TIEU_DE_LOAI = ('quyet dinh', 'nghi quyet', 'nghi dinh', 'thong tu', 'thong tu lien tich', 'luat')
-_RE_NGAY_VB = re.compile(r'(?i)ngày\s*(\d{1,2})\s*(?:/|-|tháng)\s*(\d{1,2})\s*(?:/|-|năm)\s*(\d{4})')
 # 1.0.60: trên chữ đã bỏ dấu (bản OCR hay đọc "nắm", "thảng"): chỉ lấy số
 _RE_NGAY_KD = re.compile(r'\bngay\s*(\d{1,2})\s*(?:/|-|\.|thang)\s*(\d{1,2})\s*(?:/|-|\.|nam)\s*(\d{4})')
 _RE_NGAY_KY = re.compile(r'\bky\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{4})')          # chữ ký số: "Thời gian ký: 02.10.2025 05:08:38"

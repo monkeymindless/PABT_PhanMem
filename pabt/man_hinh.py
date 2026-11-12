@@ -373,7 +373,6 @@ class HopChonNhieuThua(QDialog):
 
     def __init__(self, thua: list, parent=None):
         super().__init__(parent)
-        from PySide6.QtGui import QKeySequence, QShortcut
         self.setWindowTitle('Chọn nhiều thửa đưa vào mục 1. Đất')
         self.resize(640, 520)
         self.thua = list(thua)
@@ -1244,7 +1243,6 @@ class BangMuc(QWidget):
 
     def vua_tieu_de(self) -> int:
         """Hàng tiêu đề cột đủ số dòng chữ của tiêu đề dài nhất ("Ghi chú (quy định, cách tính)" hai dòng) theo cỡ chữ hiện tại."""
-        from PySide6.QtGui import QFontMetrics
         hd = self._bang.horizontalHeader()
         f = QFont(hd.font())
         f.setBold(True)
@@ -1518,7 +1516,6 @@ class NhanTongPA(QLabel):
 
     def __init__(self):
         super().__init__('')
-        from PySide6.QtWidgets import QSizePolicy
         self.setTextFormat(Qt.TextFormat.RichText)
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self._chu = ('', '')
@@ -1771,7 +1768,6 @@ class CuaSoLapPA(QDialog):
         lo0.addWidget(self.ho_so, 1)
         # 22/10/2026 (nâng cấp giao diện): cửa sổ thấp (1366 / 1536 x 125%) thì thẻ hồ sơ CUỘN DỌC - trước đây bị ép: ô nhập chồng nhau,
         # bảng thửa chỉ còn một vạch. Đủ chỗ thì vẫn giãn hết khung (widgetResizable)
-        from PySide6.QtWidgets import QScrollArea
         cuon0 = QScrollArea()
         cuon0.setObjectName('cuon_ho_so')
         cuon0.setWidgetResizable(True)
@@ -2078,7 +2074,6 @@ class CuaSoLapPA(QDialog):
         if x is not None:
             # 22/10/2026 (nâng cấp giao diện): thẻ nhỏ gọn, KHÔNG kèm danh sách quyết định (chữ dài đẩy ô chọn lần / nút bị cắt)
             # - số, ngày quyết định ở chú thích; màu: đã duyệt chỉ xem xanh lá, đang mở khóa vàng, đang lập lam
-            import re
             day_du = x.nhan_trang_thai
             self.lb_trang_thai_lan.setText(re.sub(r'\s*\(QĐ[^)]*\)', '', day_du).replace('ĐÃ PHÊ DUYỆT - CHỈ XEM', 'ĐÃ DUYỆT'))
             self.lb_trang_thai_lan.setToolTip(day_du)
@@ -3293,7 +3288,6 @@ class CuaSoLapPA(QDialog):
             return None
         gt = giai_trinh_dong_pa(self.bo.pa, self.bo.bc, muc, i)
         from .giao_dien import hop_ket_qua
-        from .tien import vn
         hop_ket_qua(self, f'Mục {so_muc(muc)}, dòng {i + 1}: {gt["ten_hang_muc"]} - thành tiền {vn(gt["thanh_tien"])} đồng.', gt['dong'],
                     'Công thức, thay số và căn cứ', hien=cho, tieu_de='Giải trình cách tính')
         return gt
@@ -3971,7 +3965,6 @@ class HopDuAn(QDialog):
             QMessageBox.warning(self, TEN_UD, str(e))
             return
         except sqlite3.OperationalError as e:                # dự án mở chỉ xem / file chỉ đọc: báo rõ, không văng lỗi
-            from .thong_bao import chu_loi
             QMessageBox.warning(self, TEN_UD, chu_loi('Lưu thông tin dự án', e))
             return
         super().accept()
@@ -5045,7 +5038,6 @@ class HopIn(QDialog):
         self.o_che_cccd.setVisible(du_thao and self._rail != 'du_lieu')   # 1.0.52: chỉ bản dự thảo (niêm yết) mới che CCCD
 
     def _doi_che_cccd(self, bat: bool) -> None:
-        import sqlite3
         from .an_toan import che_cccd_niem_yet, dat_che_cccd_niem_yet
         if bool(bat) == che_cccd_niem_yet(self.con):
             return

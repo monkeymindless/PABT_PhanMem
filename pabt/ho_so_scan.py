@@ -52,7 +52,7 @@ def them_file(con, ma_ho: int, files) -> int:
     if not ds:
         return 0
     from .an_toan import LoiAnToan, kiem_tra_magic_bytes
-    from .lap_pa import LoiNhap
+    from .loi import LoiNhap
     for f in ds:                                        # 1.0.32: không đính kèm chương trình (đuôi .exe / .bat… hoặc đổi đuôi giả dạng)
         try:
             kiem_tra_magic_bytes(f) if f.is_file() else kiem_tra_magic_bytes(b'', ten=f.name)

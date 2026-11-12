@@ -13,7 +13,7 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 
 DUOI_EXCEL = ('.xlsx', '.xlsm', '.xls')
 DUOI_ANH = ('.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff')

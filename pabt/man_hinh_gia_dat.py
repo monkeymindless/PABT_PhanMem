@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 
 from . import gia_dat_nq28 as nq
 from .giao_dien import loc_khi_ngung_go, qmau_theo_tong
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .giao_dien import mau_o_theo_tong  # noqa: E402  (màu ô đổi theo tông nền)
 from .tien import vn
 
@@ -109,7 +109,6 @@ class HopTraGiaDat(QDialog):
 
 def khoi_phuc_bang(cha, xac_nhan=None, hien: bool = True):
     """Xóa bảng người dùng đã thay, dùng lại bảng gắn sẵn."""
-    from PySide6.QtWidgets import QMessageBox
     from .thong_bao import TEN_UD
     if not nq.dang_thay():
         if hien:

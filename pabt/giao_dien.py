@@ -1139,7 +1139,6 @@ class KhungLogo(QWidget):
         self._pm = None
 
     def paintEvent(self, e):
-        from PySide6.QtGui import QPainter
         tl = self.devicePixelRatioF() if hasattr(self, 'devicePixelRatioF') else 1.0
         n = max(1, int(round(self._canh * tl)))
         if self._pm is None or self._pm.width() != n:
@@ -1444,12 +1443,10 @@ class con_tro_cho:
     nhánh đó làm con trỏ kẹt đồng hồ cát - người dùng tưởng phần mềm treo. Lồng nhau được (Qt đếm số lần đặt / trả)."""
 
     def __enter__(self):
-        from PySide6.QtWidgets import QApplication
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         return self
 
     def __exit__(self, *_):
-        from PySide6.QtWidgets import QApplication
         QApplication.restoreOverrideCursor()
         return False                                    # không nuốt lỗi: để nơi gọi xử lý / báo
 
@@ -1527,7 +1524,6 @@ def _cho_luong(luong, moi_nhip, nhip: float = 0.05, hop=None):
     hop: hộp tiến độ có nút Dừng / Bỏ qua - 1.0.51: hộp chặn mọi cửa sổ khác (ApplicationModal) và vòng chờ nhận cả sự kiện chuột /
     phím, để nút Dừng bấm được (trước đây ExcludeUserInputEvents làm nút Dừng không phản hồi tới khi luồng nền tự xong)."""
     import time
-    from PySide6.QtWidgets import QApplication
     app = QApplication.instance()
     co = _co_su_kien_khong_nhap()
     if hop is not None:
@@ -1686,11 +1682,6 @@ VIEN_DAY = '#38BDF8'                           # viền đáy banner, 2px
 MAU_PHU_DE = '#E0F2FE'                         # dòng cơ quan: xanh băng trắng sáng
 MAU_DON_VI_BANNER = '#FCD34D'                  # 0.9.80: tên đơn vị trên banner navy - vàng kim nhạt (đọc rõ hơn xanh băng)
 VANG = TOKEN['nhan']                           # điểm nhấn nút (không còn tô dòng cơ quan)
-QSS_CHIP = (
-    'background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(148, 163, 184, 0.25); '
-    'border-radius: 8px; padding: 1px 8px; font-size: 11px; font-weight: 500;')
-MAU_MENU = '#081226'
-VIEN_MENU = '#1A2846'
 
 
 def _luoi_thua(cot: int = 7, hang: int = 3, hat: int = 7) -> list:
@@ -2525,7 +2516,6 @@ _THUNG_CHO_XOA: list = []
 def _thung_cho_xoa():
     """Widget ẩn, ngoài cây cửa sổ chính, chứa hộp đã gỡ tab trong lúc chờ deleteLater chạy. findChildren của tổ tiên gặp widget đang chờ xóa làm vỏ
     Python của nó sống mãi, giữ cả dữ liệu (06/11/2026: tab Bộ đơn giá rồi lệnh Đóng dự án: ~3 MB / lần, đo được; _chay_lenh gọi findChildren cuối lệnh)."""
-    from PySide6.QtWidgets import QWidget
     if _THUNG_CHO_XOA:
         try:
             _THUNG_CHO_XOA[0].objectName()
@@ -2701,7 +2691,6 @@ KHOA_NHOM_DONG = 'giao_dien/menu_trai_dong_4'    # 0.9.88: đổi thứ tự nh�
 
 
 def _doc_nhom_dong(mac_dinh: tuple) -> set:
-    from PySide6.QtCore import QSettings
     try:
         v = QSettings('PABT', 'PABT').value(KHOA_NHOM_DONG, None)
     except Exception:
@@ -2720,7 +2709,6 @@ TEN_NHOM_CU = {'Hồ sơ và phương án': 'Hồ sơ, phương án', 'Bảng t�
 
 
 def _ghi_nhom_dong(dong: set) -> None:
-    from PySide6.QtCore import QSettings
     try:
         QSettings('PABT', 'PABT').setValue(KHOA_NHOM_DONG, '|'.join(sorted(dong)) or '|')    # '|' = không nhóm nào đóng
     except Exception:
@@ -3147,7 +3135,6 @@ class VeOBangChuyenNghiep(QStyledItemDelegate):
                 p.drawRoundedRect(QRectF(ranh.left(), ranh.top(), dai, 3), 1.5, 1.5)
             p.restore()
             return
-        from PySide6.QtWidgets import QStyle, QStyleOptionViewItem
         o = QStyleOptionViewItem(option)
         self.initStyleOption(o, index)
         chu = (o.text or '').strip()
@@ -3247,7 +3234,6 @@ class _ChuKhiTrong(QWidget):
             pass
 
     def paintEvent(self, e):
-        from PySide6.QtGui import QPainter
         p = QPainter(self)
         r = self.rect()
         f = QFont(self.font())
@@ -3338,7 +3324,6 @@ def gan_chu_khi_trong(bang, chu_chinh: str, chu_phu: str = '', loai: str = 'bang
 
 def ve_mui_ten(delegate_cha, p, option, index) -> None:
     """Vẽ ô bảng có danh sách xổ xuống: nội dung như thường, thêm mũi tên ▾ ở mép phải (nhìn là biết bấm để chọn)."""
-    from PySide6.QtWidgets import QStyleOptionViewItem
     o = QStyleOptionViewItem(option)
     o.rect = option.rect.adjusted(0, 0, -18, 0)
     delegate_cha.paint(p, o, index)
@@ -3926,7 +3911,6 @@ CHUA_TIEU_DE_TOI_THIEU = 30    # khung + thanh tiêu đề của cửa sổ hệ
 
 def _man_hinh_mo(w: QWidget):
     """Màn hình người đang nhìn: màn hình cửa sổ cha, rồi cửa sổ đang dùng, rồi màn hình chính."""
-    from PySide6.QtWidgets import QApplication
     cha = w.parentWidget()
     while cha is not None:
         try:
@@ -4000,7 +3984,6 @@ class _PhimBang(QObject):
         self.bang = bang
 
     def eventFilter(self, obj, e):
-        from PySide6.QtWidgets import QAbstractItemView
         b = self.bang
         if e.type() != QEvent.Type.KeyPress:
             return False
@@ -4157,9 +4140,6 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
     """Đổi tỷ lệ giao diện (cỡ chữ, khoảng đệm) cho mọi cửa sổ; luu: nhớ cho lần mở sau.
     Việc tốn nhất là Qt áp lại kiểu (QSS) cho mọi widget: tắt vẽ lại các cửa sổ trong lúc đổi (không chớp, không vẽ dở),
     bảng chỉ giãn lại dòng cho bảng đang hiện, làm sau khi đã vẽ xong (_gian_bang)."""
-    from PySide6.QtCore import QTimer
-    from PySide6.QtGui import QFont
-    from PySide6.QtWidgets import QApplication
     app = QApplication.instance()
     t = round(min(1.6, max(0.8, t)), 2)
     _CHO[0] = None
@@ -4179,7 +4159,6 @@ def dat_ty_le(t: float, luu: bool = True) -> float:
         w.setUpdatesEnabled(False)
     # Qt áp lại bảng kiểu cho MỌI widget đã hiện (kể cả trang giữ trong RAM): ~0,5 ms / widget - con trỏ chờ cho người dùng biết đang
     # đổi cỡ (đo 16/10/2026: 785 widget ~0,9 s; bảng kiểu rỗng vẫn ~0,2 s - chi phí theo số widget, không theo số quy tắc)
-    from PySide6.QtCore import Qt
     app.setOverrideCursor(Qt.CursorShape.WaitCursor)
     try:
         f = QFont(app.font())
@@ -4224,7 +4203,6 @@ def _rong_do(b, c: int) -> int:
 def cao_can_dong(b, r: int, cao_chuan: int = CAO_DONG_CHUAN, cao_toi_da: int | None = CAO_DONG_TOI_DA, nho: dict | None = None) -> int:
     """Chiều cao cần cho dòng r: đo chữ từng ô bằng QFontMetrics.boundingRect trên bề rộng thật của cột (ô trống, chữ ngắn không
     làm dòng cao). Một dòng chữ: cao_chuan (tối đa 36 khi phông lớn); nhiều dòng: min(cao_toi_da, max(cao_chuan, chữ + 10))."""
-    from PySide6.QtCore import QRect
     from PySide6.QtGui import QFontMetrics
     nho = {} if nho is None else nho                    # nhiều dòng (vua_dong): QFontMetrics / bề rộng cột dùng chung một lượt
     if 'bang' not in nho:
@@ -4331,7 +4309,6 @@ def phong_to(buoc: int, cho_ms: int = 150) -> float:
     t = round(min(1.6, max(0.8, 1.0 if buoc == 0 else goc + 0.1 * buoc)), 2)
     if cho_ms <= 0:
         return dat_ty_le(t)
-    from PySide6.QtCore import QTimer
     _CHO[0] = t
     _bao_ty_le(t)
     if not _HEN:
@@ -4483,7 +4460,6 @@ def xu_ly_hoan_tac(lam_lai: bool) -> bool:
     """Ctrl+Z / Ctrl+Y ngoài ô chữ: khung / cửa sổ gần nhất (từ ô đang chọn đi lên) có hàm hoan_tac_phim(lam_lai) -> True nếu
     đã xử lý; không có thì cửa sổ chính (hoàn tác thao tác đã ghi file) - chỉ khi đang ở cửa sổ chính, để hộp thoại đang mở
     không hiện số liệu cũ."""
-    from PySide6.QtWidgets import QApplication
     app = QApplication.instance()
     w = app.focusWidget() or app.activeWindow()
     while w is not None:
@@ -4569,7 +4545,6 @@ class BangHoanTac(QObject):
 
 def _tieu_diem():
     """Widget nhận phím: ô đang chọn, không có thì cửa sổ đang dùng (sự kiện phím chỉ xử lý một lần, không lặp ở cha)."""
-    from PySide6.QtWidgets import QApplication
     app = QApplication.instance()
     return app.focusWidget() or app.activeWindow()
 
@@ -4711,7 +4686,6 @@ class _BoSaoChep(QObject):
             gan_bo_dem(obj.parent())                      # bảng đổi mô hình (selectionModel mới) sau khi gắn: gắn lại bộ đếm
             return False
         if t == QEvent.Type.ChildAdded and obj.property('_bang_sao_chep'):
-            from PySide6.QtWidgets import QLineEdit
             w = ev.child()
             if isinstance(w, QLineEdit):
                 bang = obj.parent()
@@ -4744,7 +4718,6 @@ def cuon_muot(bang, buoc: int = BUOC_CUON) -> None:
 
 def cho_phep_sao_chep_bang(bang) -> None:
     """Gắn sao chép ô / dòng cho một bảng (QTableView / QTableWidget / BangAo). Gọi lại không gắn thêm."""
-    from PySide6.QtWidgets import QTableView
     if not isinstance(bang, QTableView) or bang.property('_co_sao_chep'):
         return
     bang.setProperty('_co_sao_chep', True)
@@ -4866,7 +4839,6 @@ def _ghi_cac_o(bang, viec: list, ghi=None) -> int:
 def dan_vao_bang(bang, chu=None, ghi=None, bo_cot=()) -> dict:
     """Ctrl+V: một giá trị + nhiều ô đang chọn -> điền mọi ô chọn; còn lại dán khối từ ô trên cùng bên trái vùng chọn. Bỏ qua cột ẩn
     (dán theo cột đang thấy), ô không sửa được, phần tràn ngoài bảng. Trả {'da_ghi', 'bo_qua'}."""
-    from PySide6.QtWidgets import QAbstractItemView, QApplication
     if bang.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers:
         return dict(da_ghi=0, bo_qua=0)
     dl = doc_o_clipboard(QApplication.clipboard().text() if chu is None else chu)
@@ -4899,7 +4871,6 @@ def dan_vao_bang(bang, chu=None, ghi=None, bo_cot=()) -> dict:
 
 def cat_khoi_bang(bang, ghi=None, bo_cot=()) -> dict:
     """Ctrl+X: chép vùng chọn rồi xóa chữ các ô sửa được (ô không sửa được: chỉ chép)."""
-    from PySide6.QtWidgets import QAbstractItemView
     sao_chep_bang(bang)
     if bang.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers:
         return dict(da_ghi=0, bo_qua=0)
@@ -5310,7 +5281,6 @@ def _bo_cuc_doc_chua(lo, w):
 
 def cho_chon_vung_o(bang) -> None:
     """Bảng chọn từng ô + nhiều vùng (Excel); tiêu đề hàng dọc bấm được. Gọi lại không làm gì."""
-    from PySide6.QtWidgets import QTableView
     if not isinstance(bang, QTableView) or bang.property('_chon_vung'):
         return
     bang.setProperty('_chon_vung', True)
@@ -5325,7 +5295,6 @@ def cho_chon_vung_o(bang) -> None:
 
 def gan_bo_dem(bang) -> None:
     """Gắn bộ đếm + viền vùng chọn + bấm STT chọn dòng cho bảng (gọi lại: chỉ nối lại khi bảng đã đổi selectionModel)."""
-    from PySide6.QtWidgets import QTableView
     if not isinstance(bang, QTableView):
         return
     bo = next((x for x in bang.children() if isinstance(x, _BoChonVung)), None)
@@ -5490,7 +5459,6 @@ class OChonGiua(QStyledItemDelegate):
 
 def chuan_cot_chon(w) -> None:
     """Cột tiêu đề "Chọn" của các bảng trong w: rộng tối thiểu 50 px, ô đánh dấu giữa ô."""
-    from PySide6.QtWidgets import QTableView
     for b in w.findChildren(QTableView):
         m = b.model()
         if m is None or b.property('_cot_chon_xong'):
@@ -5586,7 +5554,6 @@ def ap_kieu_cay(obj: QWidget) -> None:
     if TY_LE[0] != 1:
         for w in [obj, *obj.findChildren(QWidget)]:
             _co_gian_widget(w, TY_LE[0])
-    from PySide6.QtWidgets import QLineEdit
     for o in obj.findChildren(QLineEdit):                # chữ dài: hiện từ đầu chữ thay vì phần cuối
         if not o.hasFocus() and o.text():
             o.setCursorPosition(0)
@@ -5721,7 +5688,6 @@ def cai_bat_loi() -> None:
             return
         _BAO_LOI['dang'], _BAO_LOI['luc'] = True, time.time()
         try:
-            from PySide6.QtWidgets import QApplication
             if QApplication.instance() is not None:
                 them = []
                 try:                                    # nút gói chẩn đoán: lỗi nạp module thì vẫn hiện hộp báo lỗi
@@ -5761,7 +5727,6 @@ def ap_dung(app) -> None:
     app.setStyle('Fusion')
     app.setWindowIcon(bieu_tuong())
     # phông Segoe UI (có đủ dấu tiếng Việt, có sẵn từ Windows 7): tránh Qt chọn phông thay thế làm lệch / mất dấu
-    from PySide6.QtGui import QFont
     f = QFont('Segoe UI')
     f.setPointSizeF(9.5)
     f.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)

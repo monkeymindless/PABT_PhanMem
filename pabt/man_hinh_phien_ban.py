@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 
 from . import phien_ban_pa as pb
 from .giao_dien import icon_ky_hieu
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .tien import vn
 
 TIEU_DE = 'LARC - Phiên bản phương án'

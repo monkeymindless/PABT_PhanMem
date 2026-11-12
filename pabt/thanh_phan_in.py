@@ -9,7 +9,7 @@ from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMenu, QPushButton, QToolButton, QVBoxLayout
 
 from .giao_dien import TOKEN, NhanRutGon, dat_kieu_theo_tong, icon_ky_hieu
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 
 # ký hiệu Segoe MDL2
 IC_IN, IC_XUAT, IC_DU_LIEU, IC_LUI = 0xE749, 0xEDE1, 0xE8A5, 0xE72B

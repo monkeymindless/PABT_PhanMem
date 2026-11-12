@@ -565,7 +565,6 @@ def _tien_ho(con) -> dict:
 def _ghi_excel(file, sheets: list) -> 'Path':
     import openpyxl
     from openpyxl.styles import Font, PatternFill
-    from pathlib import Path
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
     for ten, tieu_de, dong in sheets:

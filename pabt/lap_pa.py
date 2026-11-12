@@ -223,7 +223,6 @@ def doc_so(text, ten_o: str, cho_phep_trong: bool = True, toi_thieu=KHONG, toi_d
 
 def _cong_thuc(text) -> str:
     """Chuỗi công thức người dùng gõ (để hiện lại khi sửa ô); gõ số thường thì trả rỗng."""
-    from .tien import la_cong_thuc
     s = ' '.join(str(text or '').split())
     return ('=' + s.lstrip('=').strip()) if s and la_cong_thuc(s) else ''
 
@@ -249,7 +248,6 @@ def doc_so_luong(text, dvt: str = '', ten_o: str = 'Số lượng'):
     """Số lượng / diện tích / khối lượng (mục 1-4, khái toán). Số gõ trực tiếp GIỮ NGUYÊN (28,35 là 28,35 - người dùng 29/10/2026:
     làm tròn 1 chữ số lẻ làm sai tiền), quá 4 chữ số lẻ mới làm tròn 4. Công thức ("4,5*6,3", "10/3"): kết quả làm tròn theo
     so_le_so_luong (2 chữ số, ĐVT ha 4) như ROUND của Excel."""
-    from .tien import la_cong_thuc
     v = doc_so(text, ten_o)
     if la_cong_thuc(str(text if text is not None else '').strip()):
         return lam_tron_cong_thuc(v, dvt)
@@ -264,7 +262,6 @@ def tinh_lai_cong_thuc(con) -> dict:
     Một giao dịch, có nhật ký - Hoàn tác được. Trả {'so_dong', 'so_ho', 'bo_qua_khoa'}."""
     kq = dict(so_dong=0, so_ho=0, bo_qua_khoa=0)
     from .nghiep_vu import co_cot_lan
-    from .tien import tinh_cong_thuc
     try:
         co_lan = co_cot_lan(con)
         dong = []

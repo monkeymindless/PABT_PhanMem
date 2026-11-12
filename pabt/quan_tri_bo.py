@@ -22,7 +22,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 
 TEN_FILE = 'quan_tri_bo.json'
 MK_TOI_THIEU = 6

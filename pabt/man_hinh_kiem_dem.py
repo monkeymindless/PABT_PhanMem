@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QHBoxLay
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import phieu_kiem_dem as pk
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 
 
 class HopKiemDem(QDialog):

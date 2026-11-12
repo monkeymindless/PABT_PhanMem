@@ -22,7 +22,7 @@ from pathlib import Path
 import openpyxl
 
 from . import csdl, nhap_excel
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .nguon_luoi import DONG_TIM_COT, TRONG_LIEN_TIEP, Nguon, _co_chu, chuan_luoi, lay_nguon  # noqa: F401 (TRONG_LIEN_TIEP: tên cũ)
 from .nhap_excel import BaoCaoNhap, _txt, chuan_cccd, chuan_hoa
 from .tien import D, chuoi, doc_so_vn, la_cong_thuc, tinh_cong_thuc

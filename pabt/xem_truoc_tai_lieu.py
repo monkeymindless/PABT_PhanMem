@@ -339,7 +339,7 @@ def in_qua_excel(cha, pdf, xlsx, hoi: bool = True) -> bool:
     from PySide6.QtWidgets import QMessageBox
     from . import in_an
     from .giao_dien import chay_nen
-    from .lap_pa import LoiNhap
+    from .loi import LoiNhap
     from .thong_bao import TEN_UD
     if xlsx is None or not Path(xlsx).exists():
         return False

@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QDialog, QFileDialog, QGridLay
                                QWidget)
 
 from . import don_gia_rieng as dgr
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .tien import so_vn as vn
 from .thong_bao import TEN_UD
 

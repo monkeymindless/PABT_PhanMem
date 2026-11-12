@@ -409,7 +409,7 @@ class HopVanBanCanCu(QDialog):
         self.o.setPlainText(vb.gop_va_sap_xep([self.o.toPlainText()], kq.can_cu if kq is not None else ())[0])
 
     def luu(self) -> bool:
-        from .lap_pa import LoiNhap
+        from .loi import LoiNhap
         try:
             self.o.setPlainText(vb.ghi_can_cu_du_an(self.con, self.o.toPlainText()))
         except LoiNhap as e:

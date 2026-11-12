@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
                                QVBoxLayout, QWidget)
 
 from .giao_dien import TOKEN, qmau_theo_tong
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .phan_loai_tai_san import LOAI, BoPhanLoai, doc_danh_sach
 from .thong_bao import TEN_UD
 

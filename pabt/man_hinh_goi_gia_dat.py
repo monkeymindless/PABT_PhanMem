@@ -106,7 +106,6 @@ class HopGoiGiaDat(QDialog):
         super().__init__(parent)
         self._nhung = nhung
         if nhung:
-            from PySide6.QtCore import Qt
             self.setWindowFlags(Qt.WindowType.Widget)
         self.setWindowTitle(TIEU_DE)
         self.resize(1240, 680)

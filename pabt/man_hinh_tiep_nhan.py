@@ -388,7 +388,7 @@ class HopTiepNhanPhapLy(QDialog):
         file = file or self._chon(False, 'Mở hồ sơ tiếp nhận', f'Hồ sơ tiếp nhận (*{tn.DUOI})')
         if not file:
             return False
-        from .lap_pa import LoiNhap
+        from .loi import LoiNhap
         try:
             self.nap(tn.mo_file(file))
         except LoiNhap as e:
@@ -427,7 +427,7 @@ class HopTiepNhanPhapLy(QDialog):
         file = file or self._chon(False, 'Chọn file khái toán', 'Khái toán (*.pabtdt)')
         if not file:
             return False
-        from .lap_pa import LoiNhap
+        from .loi import LoiNhap
         try:
             self.nap(tn.tu_khai_toan(self.lay(), file))
         except LoiNhap as e:
@@ -439,7 +439,7 @@ class HopTiepNhanPhapLy(QDialog):
         file = file or self._chon(False, 'Chọn bảng kê thửa đất', 'Excel (*.xlsx *.xlsm)')
         if not file:
             return None
-        from .lap_pa import LoiNhap
+        from .loi import LoiNhap
         from .giao_dien import con_tro_cho
         try:
             with con_tro_cho():

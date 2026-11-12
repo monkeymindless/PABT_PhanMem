@@ -281,7 +281,6 @@ def nguoi_dung() -> str:
 
 def ghi_su_kien(con, viec: str, chi_tiet: str = '', bang: str = 'du_an') -> None:
     """1.0.58: một dòng nhật ký kiểm toán cho thao tác đổi cả khối số liệu (hoàn tác, khôi phục mốc). File chưa có bảng: bỏ qua."""
-    from datetime import datetime
     try:
         con.execute("INSERT INTO audit_logs (luc, nguoi, may, hanh_dong, bang, doi_tuong, moi, thao_tac) VALUES (?,?,?,'sua',?,?,?,?)",
                     (datetime.now().isoformat(timespec='seconds'), nguoi_dung(), csdl.ten_may(), bang, 'Cả dự án', chi_tiet or viec, viec))

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from . import in_word
 from . import phien_ban_pa as pb
-from .lap_pa import LoiNhap
+from .loi import LoiNhap
 from .tien import vn
 
 MAU = (('01', 'Mẫu 01: PA dự thảo niêm yết (V1)'), ('02', 'Mẫu 02: PA dự thảo đối thoại (V2.n)'),

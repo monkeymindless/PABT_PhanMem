@@ -695,10 +695,9 @@ class KhungDuThao(QWidget):
         if d is None:
             return None
         from . import ocr, van_ban_dot as vbd
-        from .lap_pa import LoiNhap
+        from .loi import LoiNhap
         from .man_hinh_quan_ly import doc_co_tien_do
         from .man_hinh_van_ban_dot import LOC_FILE, HopKetQuaFile
-        from .thong_bao import chu_loi
         if files is None:
             files, _ = QFileDialog.getOpenFileNames(self, 'Chọn file kết quả', '', LOC_FILE)
             if not files:

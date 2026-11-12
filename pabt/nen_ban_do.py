@@ -86,7 +86,6 @@ NEN_MAC_DINH = 've_tinh_ten'
 KHONG_NEN = 'khong_nen'          # ô "Nền bản đồ" của máy tính: không tải ảnh, không giữ ô nền trong cảnh - tô màu ô thửa nhẹ máy nhất
 TEN_KHONG_NEN = 'Không nền'
 O_TOI_DA_KHUNG = 80              # số ô tối đa của vùng đang xem (mỗi lớp) - nhiều hơn thì lùi một mức phóng
-CO_O = 256
 
 
 def z_cho_khung(m_moi_diem: float, vi_do: float, z_toi_da: int = Z_TOI_DA, z_toi_thieu: int = 3) -> int:

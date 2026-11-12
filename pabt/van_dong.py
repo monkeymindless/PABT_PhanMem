@@ -22,7 +22,7 @@ from . import csdl, thoi_han
 from .lap_pa import LoiNhap, kiem_ho_nhan_viec, kiem_quyen
 from .quan_ly import chuan_ngay
 
-BANG = 'nhat_ky_van_dong'
+from .sql_bang_phu import BANG_VAN_DONG as BANG      # noqa: E402 - câu SQL ở module lá
 VIEC = {'tien': 'Không nhận tiền bồi thường', 'mat_bang': 'Không bàn giao mặt bằng'}
 KET_QUA = (('chua_dong_y', 'Chưa đồng ý'), ('vang_mat', 'Vắng mặt / không gặp được'), ('dong_y', 'Đồng ý, chờ thực hiện'))
 TEN_KET_QUA = dict(KET_QUA)
@@ -32,12 +32,7 @@ CAN_CU_CUONG_CHE = 'Điều 89 Luật Đất đai 2024; Mục IV Quyết định
 # thứ tự nặng -> nhẹ khi gộp trạng thái của một hộ
 THU_TU_TT = ('du_dk_cuong_che', 'dang_van_dong', 'hoan_thanh')
 
-_SQL_TAO = (f'''CREATE TABLE IF NOT EXISTS {BANG} (
-    id INTEGER PRIMARY KEY,
-    ma_ho INTEGER NOT NULL REFERENCES ho(ma_ho) ON UPDATE CASCADE ON DELETE CASCADE,
-    viec TEXT NOT NULL, ngay TEXT NOT NULL, hinh_thuc TEXT NOT NULL DEFAULT '', thanh_phan TEXT NOT NULL DEFAULT '',
-    noi_dung TEXT NOT NULL DEFAULT '', ket_qua TEXT NOT NULL DEFAULT 'chua_dong_y', bien_ban TEXT NOT NULL DEFAULT '',
-    ghi_chu TEXT NOT NULL DEFAULT '')''', f'CREATE INDEX IF NOT EXISTS ix_van_dong_ho ON {BANG}(ma_ho, viec)')
+from .sql_bang_phu import SQL_VAN_DONG as _SQL_TAO      # noqa: E402
 
 
 def co_bang(con) -> bool:

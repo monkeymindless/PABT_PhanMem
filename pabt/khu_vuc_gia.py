@@ -18,7 +18,6 @@ KHOA_CAI_DAT = 'KHU_VUC_GIA'
 LA_MA = {'i': '1', 'ii': '2', 'iii': '3', 'iv': '4', 'v': '5'}
 _RE_KV_DAU = re.compile(r'khu vuc\s+([ivx]+|\d+)\s+bao gom', re.I)
 _RE_DS = re.compile(r'^[-–•+]?\s*(?:cac\s+)?(phuong|xa|thi tran|dac khu)\s*:\s*(.+)$')
-_RE_PHU_LUC_KV = re.compile(r'PH[UỤ]\s*L[UỤ]C\s+([IVX]+)\b.*?KHU V[UỰ]C\s+(\d+)', re.I)
 
 
 def so_kv(x: str) -> str:

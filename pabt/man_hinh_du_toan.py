@@ -1139,7 +1139,6 @@ class KhungDuToan(QWidget):
     def _thuc_hien_luu_tu_dong(self) -> bool:
         """Định kỳ theo chu kỳ lưu tự động: khái toán đã có file, có thay đổi, không đang sửa ô -> ghi file im lặng."""
         from . import chu_de
-        from PySide6.QtWidgets import QApplication
         giay = chu_de.chu_ky_luu_tu_dong()
         self._dong_ho_tu_luu.start(max(giay, 10) * 1000)
         if giay <= 0 or self.file is None or not self.isVisible():

@@ -121,7 +121,7 @@ def ghi_moc(con, buoc: int, ngay) -> None:
         raise KeyError(f'Bước {buoc} không đánh dấu bằng ngày.')
     d = thoi_han.doc_ngay(ngay) if ngay not in (None, '') else None
     if ngay not in (None, '') and d is None:
-        from .lap_pa import LoiNhap
+        from .loi import LoiNhap
         raise LoiNhap(f'Ngày "{ngay}" không đúng dạng ngày/tháng/năm (ví dụ 05/03/2026).')
     chu = d.strftime('%d/%m/%Y') if d else ''
     with csdl.giao_dich(con):

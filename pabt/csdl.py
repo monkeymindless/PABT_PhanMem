@@ -361,7 +361,6 @@ def huy_tao_moi(tam) -> None:
 def hoan_tat_tao_moi(tam, duong_dan) -> Path:
     """Kết nối tới file tạm đã đóng: ép ghi xuống đĩa (fsync) rồi os.replace thay file đích (thao tác nguyên tử trên NTFS).
     File đích đang mở ở chương trình khác (Excel, PABT khác…): PermissionError - file cũ còn nguyên, file tạm bị xóa."""
-    import os
     tam, p = Path(tam), Path(duong_dan)
     try:
         with open(tam, 'rb+') as f:
@@ -765,8 +764,8 @@ def _tao_bang_phu(con) -> bool:
     ix_ctdat_thua. Chỉ file có hộ - bộ đơn giá đóng gói (cùng lược đồ, không hộ) không bị ghi. Chạy trong giao dịch của nơi gọi."""
     if not con.execute('SELECT 1 FROM ho LIMIT 1').fetchone():
         return False
-    from . import ban_do_cad, kiem_toan, van_dong
-    for lenh in van_dong._SQL_TAO:
+    from . import kiem_toan, sql_bang_phu
+    for lenh in sql_bang_phu.SQL_VAN_DONG:
         con.execute(lenh)
     if not kiem_toan.co_bang(con):
         for cau in kiem_toan._cau(kiem_toan.SQL_BANG):
@@ -774,9 +773,8 @@ def _tao_bang_phu(con) -> bool:
     if not kiem_toan.co_bang_bam(con):
         for cau in kiem_toan._cau(kiem_toan.SQL_BAM):
             con.execute(cau)
-    con.execute(ban_do_cad.SQL_BANG)
-    from .phieu_kiem_dem import SQL_BANG_ANH
-    con.execute(SQL_BANG_ANH)
+    con.execute(sql_bang_phu.SQL_BAN_DO)
+    con.execute(sql_bang_phu.SQL_ANH)
     con.execute('CREATE INDEX IF NOT EXISTS ix_ctdat_thua ON ct_dat(ma_thua)')
     return True
 
@@ -864,7 +862,6 @@ def _cot(con, so_do: str, bang: str) -> list:
     return [r[1] for r in con.execute(f'PRAGMA {so_do}.table_info("{bang}")')]
 
 
-_RE_TRIGGER_HOP_LE = re.compile(r'^(audit_logs_khong_(sua|xoa)|audit_bam_khong_(sua|xoa)|khoa_\w+_(INSERT|UPDATE|DELETE))$')
 # 1.0.91 (kiểm toán 09/11/2026): kiểm TOÀN BỘ câu lệnh, neo đầu và cuối - trước chỉ `.search` phần "BEGIN SELECT RAISE… END" ở cuối nên thân
 # `UPDATE ho SET tien='0'; -- BEGIN SELECT RAISE(ABORT,'x'); <xuống dòng> END` (lệnh thật + chú thích giả) lọt qua. Hai dạng hợp lệ duy nhất:
 # trigger khóa danh mục (có WHEN đọc khoa_dm) và trigger nhật ký (không WHEN); thân chỉ là SELECT RAISE(ABORT, '<chữ>').

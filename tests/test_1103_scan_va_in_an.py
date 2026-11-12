@@ -44,7 +44,7 @@ class TestBienDich(unittest.TestCase):
     def test_phien_ban(self):
         import pabt
         from pabt import lich_su_cap_nhat
-        self.assertEqual(pabt.__version__, '1.1.03')
+        self.assertGreaterEqual(tuple(int(x) for x in pabt.__version__.split('.')), (1, 1, 3))     # bản sau vẫn phải có mục 1.1.03
         self.assertIn('1.1.03', Path(lich_su_cap_nhat.__file__).read_text(encoding='utf-8'))
 
 

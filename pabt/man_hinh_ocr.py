@@ -19,7 +19,6 @@ from .thong_bao import TEN_UD, chu_loi
 from .tien import so_vn
 
 COT_THUA = ['Lấy', 'Tờ', 'Thửa', 'Diện tích (m²)', 'Loại đất', 'Địa chỉ thửa']
-DUOI_XEM = ('.pdf', '.png', '.jpg', '.jpeg', '.bmp', '.webp', '.tif', '.tiff')
 RONG_DUNG_TRANG = 1100            # bề rộng (px) dựng ảnh mỗi trang PDF - đủ nét khi phóng to 150%
 TRANG_TOI_DA = 200                # file quá nhiều trang: chỉ dựng chừng này trang để xem (OCR vẫn đọc hết)
 

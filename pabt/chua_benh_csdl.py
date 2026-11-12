@@ -20,7 +20,6 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-DUOI_KHOA = '.khoa'
 
 
 def csdl_uri(p) -> str:

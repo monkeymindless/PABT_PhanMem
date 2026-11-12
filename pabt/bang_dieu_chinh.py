@@ -405,7 +405,7 @@ class _BangDieuChinh:
 def lap(con, file_ra, ds_ma_ho=None, du_thao: bool | None = None, so_pa: str = '', ngay_pa: str = '') -> Path:
     """Lập bảng tổng hợp điều chỉnh cho các hộ có phương án điều chỉnh (ds_ma_ho None = tất cả). Trả đường dẫn file .xlsx.
     LoiNhap khi không hộ nào có phương án điều chỉnh."""
-    from .lap_pa import LoiNhap
+    from .loi import LoiNhap
     ds = ho_dieu_chinh(con, ds_ma_ho)
     if not ds:
         raise LoiNhap('Chưa có hộ nào có phương án điều chỉnh để lập bảng tổng hợp điều chỉnh.')
